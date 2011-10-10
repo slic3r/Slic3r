@@ -1,0 +1,28 @@
+[blog]
+  description = STL-to-GCODE translator for RepRap printers
+  keywords = reprap,3D print,prusa,prusa mendel,skeinforge
+  lang = en_US
+  posts = 10
+  style = default.css
+  subtitle = STL-to-GCODE translator for RepRap printers
+  theme = default.html
+  title = Slic3r
+[color]
+  list = true
+  log = true
+[core]
+  doctype = html
+  editor = bbedit -w
+  encoding = UTF-8
+  extension = html
+[feed]
+  baseurl = http://slic3r.org/blog/
+  fullposts = true
+  posts = 10
+[post]
+  author = none
+  date = top
+  tags = none
+[user]
+  email = aar@cpan.org
+  name = Alessandro Ranellucci

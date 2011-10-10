@@ -1,0 +1,216 @@
+/* default.css, the default theme for BlazeBlogger
+ * Copyright (C) 2009, 2010 Jaromir Hradilek
+ *
+ * This program is free software:  you can redistribute it and/or modify it
+ * under  the terms of the  GNU General Public License  as published by the
+ * Free Software Foundation, version 3 of the License.
+ *
+ * This program  is  distributed  in the hope  that it will  be useful, but
+ * WITHOUT  ANY WARRANTY;  without  even the implied warranty of MERCHANTA-
+ * BILITY or  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+ * License for more details.
+ *
+ * You should have received a copy of the  GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+body {
+  margin: 0px 0px 10px 0px;
+  padding: 0px;
+  color: #000000;
+  background-color: #e7e7e7;
+  font-family: "DejaVu Sans", Arial, sans;
+  font-size: small;
+}
+
+#wrapper {
+  margin: auto;
+  padding: 0px;
+  width: 768px;
+  border-left: 1px solid #d6d6d6;
+  border-right: 1px solid #d6d6d6;
+  border-bottom: 1px solid #d6d6d6;
+  background-color: #ffffff;
+}
+
+#shadow {
+  margin: 0px;
+  padding: 0px;
+  border-bottom: 2px solid #e7e7e7;
+}
+
+#heading {
+  width: 728px;
+  padding: 20px;
+  background-color: #2e2e2e;
+  border-bottom: 2px solid #2a2a2a;
+  border-top: 2px solid #323232;
+  color: #d0d0d0;
+}
+
+#heading a, #heading h1 {
+  margin: 0px;
+  text-decoration: none;
+  color: #ffffff;
+}
+
+#heading a:hover {
+  text-decoration: underline;
+}
+
+#menu {
+  width: 768px;
+  border-top: 1px solid #5f5f5f;
+  border-bottom: 1px solid #3d3d3d;
+  background-color: #4e4e4e;
+}
+
+#menu ul {
+  padding: 4px 15px 4px 15px;
+  margin: 0px;
+  list-style-type: none;
+}
+
+#menu li {
+  display: inline;
+  padding: 4px 10px 5px 10px;
+  margin: 0px;
+}
+
+#menu li:hover {
+  background-color: #3d3d3d;
+  border-bottom: 2px solid #dddddd;
+  border-top: 1px solid #4e4e4e;
+}
+
+#menu a {
+  color: #ffffff;
+  font-size: x-small;
+  text-decoration: none;
+}
+
+#menu a:hover {
+  text-decoration: underline;
+}
+
+#content {
+  float: left;
+  margin: 0px;
+  padding: 10px 10px 20px 20px;
+  width: 528px;
+  text-align: justify;
+}
+
+#content h2.post {
+  margin-bottom: 0px;
+  padding-bottom: 0px;
+}
+
+#content .post a {
+  text-decoration: none;
+  color: #9acd32;
+}
+
+#content a {
+  text-decoration: none;
+  color: #4e9a06;
+}
+
+#content a:hover {
+  text-decoration: underline;
+}
+
+#content .information {
+  font-size: x-small;
+  color: #4e4e4e;
+}
+
+#content .information a {
+  color: #4e9a06;
+  text-decoration: underline;
+}
+
+#content .information a:hover {
+  text-decoration: none;
+}
+
+#content .post-footer {
+  font-size: x-small;
+  color: #4e4e4e;
+  padding: 4px 2px 4px 2px;
+  border-top: 1px solid #e7e7e7;
+  border-bottom: 1px solid #e7e7e7;
+  background-color: #f8f8f8;
+}
+
+#content .post-footer a {
+  color: #4e9a06;
+  text-decoration: underline;
+}
+
+#content .post-footer a:hover {
+  text-decoration: none;
+}
+
+#content .section {
+  text-align: right;
+  font-size: x-small;
+  color: #808080;
+}
+
+#content .previous {
+  padding: 10px 0px 10px 0px;
+  float: left;
+}
+
+#content .next {
+  padding: 10px 0px 10px 0px;
+  float: right;
+}
+
+#sidebar {
+  float: right;
+  margin: 0px;
+  padding: 10px 20px 20px 0px;
+  width: 180px;
+}
+
+#sidebar h2 {
+  font-size: small;
+}
+
+#sidebar ul {
+  list-style-type: none;
+  padding-left: 1em;
+  margin-left: 0px;
+}
+
+#sidebar a {
+  text-decoration: underline;
+  color: #4e9a06;
+}
+
+#sidebar a:hover {
+  text-decoration: none;
+}
+
+#footer {
+  clear: both;
+  margin: 0px;
+  padding: 10px 20px 10px 20px;
+  border-top: 2px solid #e7e7e7;
+  border-bottom: 1px solid #3d3d3d;
+  background-color: #4e4e4e;
+  text-align: right;
+  font-size: x-small;
+  color: #d0d0d0;
+}
+
+#footer a {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+#footer a:hover {
+  text-decoration: underline;
+}
