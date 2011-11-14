@@ -7,8 +7,8 @@
   <meta name="Date" content="Mon Nov 14 19:06:39 2011">
   <meta name="Description" content="STL-to-GCODE translator for RepRap printers">
   <meta name="Keywords" content="reprap,3D print,prusa,prusa mendel,skeinforge">
-  <link rel="stylesheet" href="default.css" type="text/css">
-  <link rel="alternate" href="index.rss" title="RSS Feed" type="application/rss+xml">
+  <link rel="stylesheet" href="../../../default.css" type="text/css">
+  <link rel="alternate" href="../../../index.rss" title="RSS Feed" type="application/rss+xml">
   <title>Slic3r - a STL-to-GCODE translator for RepRap 3D printers</title>
 <style type="text/css">
     body {
@@ -87,7 +87,7 @@
     <div style="float: right">
       <h3>Archive</h3>
       <ul id="archive">
-        <li><a href="2011/11">November 2011 (2)</a></li>
+        <li><a href="../../../2011/11">November 2011 (2)</a></li>
       </ul>
       <h3>Links</h3>
       <ul>
@@ -97,46 +97,7 @@
     </div>
     <div style="width: 500px">
       
-<h2 class="post"><a href="2011/11/1-050-is-out" rel="permalink">0.5.0 is out!</a></h2>
-<div class="information">
-   <span class="date">2011-11-14</span>
-</div>
-
-After 10 more days of work, a new release is out!
-
-<h4>New features:</h4>
-<ul>
-    <li><b>four</b> new exciting fill patterns (including <i>line</i>)!</li>
-    <li>new algorithm for re-processing layers with dirty geometry, this makes the parser more tolerant</li>
-    <li>start and end gcode is customizable in the GUI too</li>
-    <li>new --retract-lift option to lift Z while doing travel moves</li>
-    <li>new --no-extrusion option to disable E codes</li>
-    <li>new --skirt-height option</li>
-    <li>new --first-layer-height-ratio option</li>
-    <li>new --close-after-slicing for easy integration with external programs</li>
-    <li>new --g0 option to output G0 for fast retractions (experimental)</li>
-</ul>
-
-<h4>Improvements:</h4>
-<ul>
-    <li>perimeters are extruded at once for each island, saving on travel toolpaths</li>
-    <li>perimeters are extruded using a shortest path search, avoiding unnecessary travel</li>
-    <li>smarter toolpaths for infills with different density</li>
-    <li><i>multiply</i> was renamed to <i>duplicate</i></li>
-    <li>infill is now overlapped with perimeters by 15%</li>
-    <li>GUI was rearranged using tabs</li>
-</ul>
-
-<h4>Bugfixes:</h4>
-<ul>
-    <li>fixed fatal error occuring on Windows</li>
-    <li>infill solid layers even when --fill-density is set to zero</li>
-    <li>membranes were not printed correctly</li>
-    <li>G2/G3 coordinates for experimental arcs were wrong</li>
-    <li>print first layer at Z = 1 * layer height instead of zero</li>
-</ul>
-
-<h2 class="post"><a href="2011/11/2-the-birth-of-a-slic3r-community" rel="permalink">The birth of a Slic3r community</a></h2>
+<h2 class="post">The birth of a Slic3r community</h2>
 <div class="information">
    <span class="date">2011-11-13</span>
 </div>
