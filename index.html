@@ -4,7 +4,7 @@
   <meta http-equiv="Content-Type" content="txt/html; charset=UTF-8">
   <meta name="Generator" content="BlazeBlogger 1.2.0">
   <meta name="Copyright" content="&copy; 2011 Alessandro Ranellucci">
-  <meta name="Date" content="Mon Nov 14 19:06:39 2011">
+  <meta name="Date" content="Mon Nov 21 17:34:53 2011">
   <meta name="Description" content="STL-to-GCODE translator for RepRap printers">
   <meta name="Keywords" content="reprap,3D print,prusa,prusa mendel,skeinforge">
   <link rel="stylesheet" href="default.css" type="text/css">
@@ -172,11 +172,18 @@ After 10 more days of work, a new release is out!
     <p>If you want to stay current and don't wait for updates to the binary packages, 
         you can clone the project with <a href="http://git-scm.com">Git</a>
         and then install all dependencies by running these few commands:
+    </p>
       <pre>$ git clone git://github.com/alexrj/Slic3r
 $ cd Slic3r
 $ sudo perl Build.PL
 $ sudo cpan Wx</pre>
-    </p>
+        
+        <p><b>Note for Ubuntu users:</b> you must first install the <i>build-essential</i>, <i>libgtk2.0-dev</i>
+        and <i>libmodule-build-perl</i> packages.</p>
+        
+        <p><b>Note for Mac users:</b> you must first install the <i>Developer Tools</i> supplied on your OS X install disk.</p>
+        
+        <p><b>Note for Win users:</b> install <a href="http://strawberryperl.com/">Strawberry Perl</a> or <a href="http://www.citrusperl.com/">CitrusPerl</a>.</p>
 
 <h2>Author</h2>
 <p>Alessandro Ranellucci (aar@cpan.org, aka Sound on <a href="http://freenode.net/">FreeNode</a> IRC #slic3r channel -- try that before e-mailing!)</p>
