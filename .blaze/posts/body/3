@@ -1,0 +1,29 @@
+
+10 more days and a new release is there!
+
+<h4>New features:</h4>
+<ul>
+    <li>if <i>Temperature</i> is set to zero, no temperature control will
+    be added to the resulting gcode file</li>
+</ul>
+
+<h4>Improvements:</h4>
+<ul>
+    <li><b>large refactoring</b> of the bridging logic - all bridges should now be detected (although some work needs to be done on optimal infill direction); the quality of solid surfaces and regions near bridges and solid surfaces has improved a lot</li>
+    <li>use solid infill under pillars and small regions instead of
+    using an internal low-density infill</li>
+    <li>don't die on non-manifold models; always try to generate some output</li>
+</ul>
+
+<h4>Changes:</h4>
+<ul>
+    <li>print settings moved to first tab</li>
+    <li>M109 is used instead of M104 for temperature control</li>
+</ul>
+
+<h4>Bugfixes:</h4>
+<ul>
+    <li>bottom layer speed was ignored</li>
+    <li>some solid layers were skipped</li>
+    <li>some ghost lines were extruded in open air outside the object when a 45° infill angle was used</li>
+</ul>

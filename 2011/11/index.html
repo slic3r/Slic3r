@@ -4,7 +4,7 @@
   <meta http-equiv="Content-Type" content="txt/html; charset=UTF-8">
   <meta name="Generator" content="BlazeBlogger 1.2.0">
   <meta name="Copyright" content="&copy; 2011 Alessandro Ranellucci">
-  <meta name="Date" content="Mon Nov 21 18:04:12 2011">
+  <meta name="Date" content="Thu Nov 24 14:43:06 2011">
   <meta name="Description" content="STL-to-GCODE translator for RepRap printers">
   <meta name="Keywords" content="Archive for November 2011, reprap,3D print,prusa,prusa mendel,skeinforge">
   <link rel="stylesheet" href="../../default.css" type="text/css">
@@ -64,7 +64,7 @@
     <div class="download">
       <a href="http://dl.slic3r.org/mac/"><img border="0" width="90" src="/images/mac_icon.gif"></a> <a href="http://dl.slic3r.org/win/"><img border="0" width="90" src="/images/win_icon.png"></a> <a href="http://dl.slic3r.org/linux/"><img border="0" width="90" src="/images/linux_icon.png"></a>
       <div style="font-style: italic; text-align: right; font-size: 11px">
-        Last release: 0.5.0 (2011-11-14)
+        Last release: 0.5.1 (2011-11-24)
       </div>
     </div>
     <h1 style="margin-top: 0"><a href="http://github.com/alexrj/Slic3r">Slic3r</a></h1>
@@ -87,7 +87,7 @@
     <div style="float: right">
       <h3>Archive</h3>
       <ul id="archive">
-        <li><a href="../../2011/11">November 2011 (2)</a></li>
+        <li><a href="../../2011/11">November 2011 (3)</a></li>
       </ul>
       <h3>Links</h3>
       <ul>
@@ -97,6 +97,40 @@
     </div>
     <div style="width: 500px">
       <div class="section">Archive for November 2011</div>
+
+<h2 class="post"><a href="../../2011/11/3-051-is-out" rel="permalink">0.5.1 is out!</a></h2>
+<div class="information">
+   <span class="date">2011-11-24</span>
+</div>
+
+10 more days and a new release is there!
+
+<h4>New features:</h4>
+<ul>
+    <li>if <i>Temperature</i> is set to zero, no temperature control will
+    be added to the resulting gcode file</li>
+</ul>
+
+<h4>Improvements:</h4>
+<ul>
+    <li><b>large refactoring</b> of the bridging logic - all bridges should now be detected (although some work needs to be done on optimal infill direction); the quality of solid surfaces and regions near bridges and solid surfaces has improved a lot</li>
+    <li>use solid infill under pillars and small regions instead of
+    using an internal low-density infill</li>
+    <li>don't die on non-manifold models; always try to generate some output</li>
+</ul>
+
+<h4>Changes:</h4>
+<ul>
+    <li>print settings moved to first tab</li>
+    <li>M109 is used instead of M104 for temperature control</li>
+</ul>
+
+<h4>Bugfixes:</h4>
+<ul>
+    <li>bottom layer speed was ignored</li>
+    <li>some solid layers were skipped</li>
+    <li>some ghost lines were extruded in open air outside the object when a 45° infill angle was used</li>
+</ul>
 
 <h2 class="post"><a href="../../2011/11/1-050-is-out" rel="permalink">0.5.0 is out!</a></h2>
 <div class="information">
