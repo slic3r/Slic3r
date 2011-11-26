@@ -97,24 +97,37 @@
     </div>
     <div style="width: 500px">
       
-<h2 class="post">The birth of a Slic3r community</h2>
+<h2 class="post">0.5.2 is out!</h2>
 <div class="information">
-   <span class="date">2011-11-13</span>
+   <span class="date">2011-11-26</span>
 </div>
 
-<p>Here we are. After two months since I started to write this software from scratch, there are many people enjoying using it. And I'm enjoying to receive their feedback!</p>
+A new release just after two days!
 
-<p><a href="http://techpaladin.com/">Tech Paladin</a> published a post entitled <a href="http://techpaladin.com/2011/11/06/slic3r-0wns/">Slic3r 0wns</a> with some pictures:<br />
-<img src="http://techpaladin.com/wp-content/uploads/2011/11/magic-fish.jpg" width="350" height="225">
-</p>
+<h4>New features:</h4>
+<ul>
+    <li>new <b>Extrusion width ratio</b> option to force a given
+    ratio between extrusion width and layer height instead of 
+    having Slic3r calculate it automatically</li>
+    <li>new super-fast <b>concentric</b> infill pattern</li>
+</ul>
 
-<p>Joachim Glauche, owner of <a href="http://www.reprapsource.com/">RepRapSource.com</a> and creator of the <a href="http://www.shapercube.com/">ShaperCube</a> published some <a href="https://picasaweb.google.com/102048359095706720847/Prints">pictures of nice high-resolution prints</a> sliced thanks to the speed and accuracy of Slic3r.<br>
-<img src="https://lh5.googleusercontent.com/-ek2nHi3cjoY/TrllGsHhLlI/AAAAAAAAAOs/WuCuTnUWUvc/s800/IMG_0402.JPG" width="400" height="327">
-</p>
+<h4>Improvements:</h4>
+<ul>
+    <li>GUI progress bar is not determinate and shows some information</li>
+    <li>avoid unnecessary retractions during infill</li>
+</ul>
 
-<p>Some people printed the same object with Slic3r and Skeinforge and published pictures with the comparison: see <a href="http://www.flickr.com/photos/blue_metal/6341424872"> this picture</a> by Blue_Metal, <a href="http://www.flickr.com/photos/13659531@N03/6334203975/">this one</a> by John Ridley. Also, see <a href="http://www.flickr.com/photos/rgoodwin/6338090839/">this picture</a> by Richard Goodwin.</p>
+<h4>Changes:</h4>
+<ul>
+    <li><i>Filament packing density</i> was renamed to <i>Extrusion multiplier</i></li>
+</ul>
 
-<p>There are also a couple YouTube videos: <a href="http://www.youtube.com/watch?v=0r3hgcKZIVs">this</a> and <a href="http://www.youtube.com/watch?v=xjpbObDwwcI">that</a>.</p>
+<h4>Bugfixes:</h4>
+<ul>
+    <li><i>Infill every 'n' layers</i> was broken after recent changes</li>
+    <li>setting <i>Temperature</i> to zero didn't remove it from output</li>
+</ul>
 
       <div style="clear: both"></div>
     </div>
