@@ -1,0 +1,7 @@
+
+<h4>Bugfixes:</h4>
+<ul>
+    <li>options having zero values were broken 0.5.2</li>
+    <li>hollow objects were printed with wrong sparse infill</li>
+    <li>minor errors</li>
+</ul>
