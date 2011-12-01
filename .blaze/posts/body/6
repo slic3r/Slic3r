@@ -1,0 +1,33 @@
+
+A new juicy release is ready!
+
+<h4>New features:</h4>
+<ul>
+    <li>distinct speeds for perimeters, infill, solid infill and bridges</li>
+    <li>warn about non-manifold or dirty models</li>
+    <li>allow solid fill layers to be zero</li>
+    <li>new <i>--extrusion-axis</i> option</li>
+</ul>
+
+<h4>Improvements:</h4>
+<ul>
+    <li>high tolerance for dirty models; it will attempt to repair any missing layer (all Prusa Mendel parts now slice correctly!)</li>
+    <li>options on command line now override loaded config file</li>
+    <li>note used settings in exported gcode</li>
+</ul>
+
+<h4>Changes:</h4>
+<ul>
+    <li>all <i>feed rate</i> options were renamed using the word <i>speed</i></li>
+</ul>
+
+<h4>Bugfixes:</h4>
+<ul>
+    <li>concentric infill threw errors</li>
+    <li>plate was lifted erroneously at Z change</li>
+    <li>fill density = 0 prevented generation of extra solid layers</li>
+    <li>some bridges, when very close to other solid surfaces, could lead to       overlapping infill</li>
+    <li>the <i>extrusion width ratio</i> setting produced wrong flow rate sometimes</li>
+    <li>removed sparse errors</li>
+    <li>could not read back a config file with empty start or end gcode</li>
+</ul>
