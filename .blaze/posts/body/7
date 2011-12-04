@@ -1,0 +1,19 @@
+
+<h4>New features:</h4>
+<ul>
+    <li>optimal bridging direction is detected for more bridges</li>
+    <li>flow width is auto adjusted to avoid leaving gaps at the border of solid regions</li>
+    <li>customizable speed for small perimeters</li>
+    <li>customizable multiplier for the flow rate used when bridging</li>
+</ul>
+
+<h4>Improvements:</h4>
+<ul>
+    <li>important settings are marked in bold -- new users can start printing by  changing only those ones</li>
+    <li>infill segments are now connected to allow better sticking to the perimeters</li>
+</ul>
+
+<h4>Bugfixes:</h4>
+<ul>
+    <li>0.5.4 was less tolerant than 0.5.3 about dirty STL models</li>
+</ul>

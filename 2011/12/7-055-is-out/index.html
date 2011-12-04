@@ -6,9 +6,9 @@
   <meta name="Copyright" content="&copy; 2011 Alessandro Ranellucci">
   <meta name="Date" content="Sun Dec  4 21:46:42 2011">
   <meta name="Description" content="STL-to-GCODE translator for RepRap printers">
-  <meta name="Keywords" content="Archive for December 2011, reprap,3D print,prusa,prusa mendel,skeinforge">
-  <link rel="stylesheet" href="../../default.css" type="text/css">
-  <link rel="alternate" href="../../index.rss" title="RSS Feed" type="application/rss+xml">
+  <meta name="Keywords" content="reprap,3D print,prusa,prusa mendel,skeinforge">
+  <link rel="stylesheet" href="../../../default.css" type="text/css">
+  <link rel="alternate" href="../../../index.rss" title="RSS Feed" type="application/rss+xml">
   <title>Slic3r - a STL-to-GCODE translator for RepRap 3D printers</title>
 <style type="text/css">
     body {
@@ -103,8 +103,8 @@
     <div style="float: right" class="sidebar">
       <h3>News Archive</h3>
       <ul id="archive">
-        <li><a href="../../2011/12">December 2011 (2)</a></li>
-<li><a href="../../2011/11">November 2011 (5)</a></li>
+        <li><a href="../../../2011/12">December 2011 (2)</a></li>
+<li><a href="../../../2011/11">November 2011 (5)</a></li>
       </ul>
       <h3>Links</h3>
       <ul>
@@ -124,9 +124,8 @@
       </div>
     </div>
     <div style="width: 500px">
-      <div class="section">Archive for December 2011</div>
-
-<h2 class="post"><a href="../../2011/12/7-055-is-out" rel="permalink">0.5.5 is out!</a></h2>
+      
+<h2 class="post">0.5.5 is out!</h2>
 <div class="information">
    <span class="date">2011-12-04</span>
 </div>
@@ -148,44 +147,6 @@
 <h4>Bugfixes:</h4>
 <ul>
     <li>0.5.4 was less tolerant than 0.5.3 about dirty STL models</li>
-</ul>
-
-<h2 class="post"><a href="../../2011/12/6-054-is-out" rel="permalink">0.5.4 is out!</a></h2>
-<div class="information">
-   <span class="date">2011-12-01</span>
-</div>
-
-A new juicy release is ready!
-
-<h4>New features:</h4>
-<ul>
-    <li>distinct speeds for perimeters, infill, solid infill and bridges</li>
-    <li>warn about non-manifold or dirty models</li>
-    <li>allow solid fill layers to be zero</li>
-    <li>new <i>--extrusion-axis</i> option</li>
-</ul>
-
-<h4>Improvements:</h4>
-<ul>
-    <li>high tolerance for dirty models; it will attempt to repair any missing layer (all Prusa Mendel parts now slice correctly!)</li>
-    <li>options on command line now override loaded config file</li>
-    <li>note used settings in exported gcode</li>
-</ul>
-
-<h4>Changes:</h4>
-<ul>
-    <li>all <i>feed rate</i> options were renamed using the word <i>speed</i></li>
-</ul>
-
-<h4>Bugfixes:</h4>
-<ul>
-    <li>concentric infill threw errors</li>
-    <li>plate was lifted erroneously at Z change</li>
-    <li>fill density = 0 prevented generation of extra solid layers</li>
-    <li>some bridges, when very close to other solid surfaces, could lead to       overlapping infill</li>
-    <li>the <i>extrusion width ratio</i> setting produced wrong flow rate sometimes</li>
-    <li>removed sparse errors</li>
-    <li>could not read back a config file with empty start or end gcode</li>
 </ul>
 
       <div style="clear: both"></div>
