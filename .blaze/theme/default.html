@@ -34,6 +34,7 @@
         -webkit-box-shadow: 0px 0px 2px #ccc;
         box-shadow: 0px 0px 2px #ccc;
     }
+    .sidebar { margin-left: 10px; width: 200px; }
     h1 { font-size: 3.8em; color: #74740e; margin-bottom: 3px; }
     h1 .small { font-size: 0.4em; }
     h1 a { text-decoration: none }
@@ -86,11 +87,11 @@
     <div class="description">
       STL-to-GCODE translator for RepRap printers
     </div>
-    <p>So you've got a 3D printer and a STL file to print. You need to slice it (aka "skein"), that is, to convert it to a sequence of GCODE commands that you can send to your printer. You probably tried Skeinforge. Good: Skeinforge does its job well and it's probably the most complete one out there.</p><img src="/images/screenshot.png" style="float: right">
-    <p>So why a new slicer? Slic3r's goals are:</p>
+    <p>So you've got a 3D printer and a STL file to print. You need a software to convert it to a series of layers and to generate the toolpaths to build it.</p><img src="/images/screenshot.png" style="float: right">
+    <p>Slic3r's goals are:</p>
     <ul>
       <li><strong>speed</strong></li>
-      <li><strong>easy configuration</strong></li>
+      <li><strong>easy configuration</strong> and little or no calibration</li>
       <li>provide both a <strong>graphic interface</strong> and a complete <strong>command line</strong> one</li>
       <li><strong>open development</strong> (hosted on <a href="http://github.com/alexrj/Slic3r">Github</a> to allow for forks, pull request and contributions)</li>
       <li>new features</li>
@@ -99,8 +100,8 @@
     <p>See the <a href="https://github.com/alexrj/Slic3r/blob/master/README.markdown">README</a> for feature list, roadmap and usage.</p>
   </div>
   <div class="container">
-    <div style="float: right">
-      <h3>Archive</h3>
+    <div style="float: right" class="sidebar">
+      <h3>News Archive</h3>
       <ul id="archive">
         <!-- archive -->
       </ul>
@@ -109,6 +110,17 @@
         <li><a href="https://reprap.org/">RepRap Wiki</a></li>
         <li><a href="https://github.com/kliment/Printrun">Pronterface</a></li>
       </ul>
+      <h3>Donations</h3>
+      <div>
+        <p>If you find this software useful, want to say thanks and encourage development, please consider a donation:</p>
+        <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+            <input type="hidden" name="cmd" value="_s-xclick">
+            <input type="hidden" name="encrypted" value="-----BEGIN PKCS7-----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-----END PKCS7-----">
+            <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+            <img alt="" border="0" src="https://www.paypalobjects.com/it_IT/i/scr/pixel.gif" width="1" height="1">
+        </form>
+        <p><a href="/donations/">(More information about donations)</a></p>
+      </div>
     </div>
     <div style="width: 500px">
       <!-- content -->
