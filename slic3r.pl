@@ -172,9 +172,8 @@ Usage: slic3r.pl [ OPTIONS ] file.stl
     --duplicate-distance Distance in mm between copies (default: $Slic3r::duplicate_distance)
   
   Flow options (advanced):
-    --extrusion-width-ratio
-                        Calculate the extrusion width as the layer height multiplied by
-                        this value (> 0, default: calculated automatically)
+    --extrusion-width
+                        Use this extrusion width (default: 0 = calculated automatically)
     --bridge-flow-ratio Multiplier for extrusion when bridging (> 0, default: $Slic3r::bridge_flow_ratio)
     --overlap-ratio     Overlap between extrusion threads expressed as a ratio over extrusion
                         width (> 0, default: $Slic3r::overlap_ratio)

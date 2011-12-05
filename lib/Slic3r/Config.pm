@@ -127,9 +127,9 @@ our $Options = {
     },
     
     # flow options
-    'extrusion_width_ratio' => {
-        label   => 'Extrusion width (ratio over layer height; leave zero to calculate automatically)',
-        cli     => 'extrusion-width-ratio=f',
+    'extrusion_width' => {
+        label   => 'Extrusion width (leave zero to calculate automatically)',
+        cli     => 'extrusion-width=f',
         type    => 'f',
     },
     'bridge_flow_ratio' => {
@@ -370,9 +370,10 @@ sub validate {
         * $Slic3r::flow_speed_ratio * PI / (4 * $Slic3r::layer_height);
     
     my $max_flow_width = $Slic3r::layer_height + $Slic3r::nozzle_diameter;
-    if ($Slic3r::extrusion_width_ratio) {
-        my $flow_width = $Slic3r::layer_height * $Slic3r::extrusion_width_ratio;
-        $Slic3r::flow_speed_ratio = $flow_width / $Slic3r::flow_width;
+
+    if ($Slic3r::extrusion_width) {
+        my $flow_width = $Slic3r::extrusion_width;
+        # $Slic3r::flow_speed_ratio = $flow_width / $Slic3r::flow_width;
         $Slic3r::flow_width = $flow_width;
     } elsif ($Slic3r::flow_width > $max_flow_width) {
         $Slic3r::flow_speed_ratio = $max_flow_width / $Slic3r::flow_width;
