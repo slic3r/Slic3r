@@ -1,0 +1,42 @@
+# This and the following lines beginning with '#' are the page header. Ple-
+# ase take your time and replace these  options with  desired  values. Just
+# remember that the date has to be in the YYYY-MM-DD form, and the  url, if
+# provided, should  consist of alphanumeric characters,  hyphens and under-
+# scores only. Specifying your own url  is especially  recommended  in case
+# you use non-ASCII characters in your page title.
+#
+#   title:    Donations
+#   date:     2011-12-04
+#   keywords: 
+#   url:      donations
+#
+# The header ends here. The rest is the content of your page.
+
+<h4>Why donations?</h4>
+
+<p>Slic3r is a <b>one-man job</b>. I started this project in mid-September and it's already being widely used and appreciated. I spent much time on development: more or less a <b>couple months working full-time</b>. I'm a freelance developer, and reserving time for such a project has costs for me.</p>
+
+<p><a href="http://www.ohloh.net/p/slic3r/estimated_cost">Ohloh estimates</a>  the total cost of having developed Slic3r so far (although this has to be taken with a pinch of salt) at <b>nearly $57k</b>. This is probably too much, but you get the idea. I could have kept the code closed and started selling licenses, but I decided to <b>share my work</b> with the community.</p>
+
+<p>In the RepRap community, many people cover their costs by selling hardware. They honor the free software licenses, by publishing their designs, but they can also sell material things (kits, printed parts, hotends, heated beds, electronics etc.) to fund and continue their research. Software developers... well, they can't sell anything :-)</p>
+
+<p>I believe that building a new, fast, flexible, easy to use slicer is a fundamental contribution for the whole RepRap project. It also gives a boost to companies selling kits and printers.</p>
+
+<h4>What will donations be used for?</h4>
+
+<p>I will only use donations to fund my RepRap-related expenses. Plastic, for example, which is necessary to test a slicer.</p>
+
+<h4>Benefits of donating</h4>
+
+<ul>
+    <li>Your donation will be acknowledged in this website (unless you ask not to be listed)</li>
+    <li>A warm fuzzy feeling inside, knowing that your donation is helping a good project ;)</li>
+</ul>
+
+<h4>Can I become a corporate sponsor?</h4>
+
+<p>Sure. I'm open to anything that complies with Slic3r's free software license and with the interest of the project. Contact me and let's talk about your offer.</p>
+
+<h4>Do I get tax relief on these donations?</h4>
+
+<p>No, I'm not a registered charity so donations are not tax-deductable in any juristictions I'm aware of.</p>

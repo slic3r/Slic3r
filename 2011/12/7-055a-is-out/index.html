@@ -7,8 +7,8 @@
   <meta name="Date" content="Mon Dec  5 12:22:54 2011">
   <meta name="Description" content="STL-to-GCODE translator for RepRap printers">
   <meta name="Keywords" content="reprap,3D print,prusa,prusa mendel,skeinforge">
-  <link rel="stylesheet" href="default.css" type="text/css">
-  <link rel="alternate" href="index.rss" title="RSS Feed" type="application/rss+xml">
+  <link rel="stylesheet" href="../../../default.css" type="text/css">
+  <link rel="alternate" href="../../../index.rss" title="RSS Feed" type="application/rss+xml">
   <title>Slic3r - a STL-to-GCODE translator for RepRap 3D printers</title>
 <style type="text/css">
     body {
@@ -103,8 +103,8 @@
     <div style="float: right" class="sidebar">
       <h3>News Archive</h3>
       <ul id="archive">
-        <li><a href="2011/12">December 2011 (2)</a></li>
-<li><a href="2011/11">November 2011 (5)</a></li>
+        <li><a href="../../../2011/12">December 2011 (2)</a></li>
+<li><a href="../../../2011/11">November 2011 (5)</a></li>
       </ul>
       <h3>Links</h3>
       <ul>
@@ -125,7 +125,7 @@
     </div>
     <div style="width: 500px">
       
-<h2 class="post"><a href="2011/12/7-055a-is-out" rel="permalink">0.5.5a is out!</a></h2>
+<h2 class="post">0.5.5a is out!</h2>
 <div class="information">
    <span class="date">2011-12-05</span>
 </div>
@@ -148,180 +148,6 @@
 <ul>
     <li>0.5.4 was less tolerant than 0.5.3 about dirty STL models</li>
 </ul>
-
-<h2 class="post"><a href="2011/12/6-054-is-out" rel="permalink">0.5.4 is out!</a></h2>
-<div class="information">
-   <span class="date">2011-12-01</span>
-</div>
-
-A new juicy release is ready!
-
-<h4>New features:</h4>
-<ul>
-    <li>distinct speeds for perimeters, infill, solid infill and bridges</li>
-    <li>warn about non-manifold or dirty models</li>
-    <li>allow solid fill layers to be zero</li>
-    <li>new <i>--extrusion-axis</i> option</li>
-</ul>
-
-<h4>Improvements:</h4>
-<ul>
-    <li>high tolerance for dirty models; it will attempt to repair any missing layer (all Prusa Mendel parts now slice correctly!)</li>
-    <li>options on command line now override loaded config file</li>
-    <li>note used settings in exported gcode</li>
-</ul>
-
-<h4>Changes:</h4>
-<ul>
-    <li>all <i>feed rate</i> options were renamed using the word <i>speed</i></li>
-</ul>
-
-<h4>Bugfixes:</h4>
-<ul>
-    <li>concentric infill threw errors</li>
-    <li>plate was lifted erroneously at Z change</li>
-    <li>fill density = 0 prevented generation of extra solid layers</li>
-    <li>some bridges, when very close to other solid surfaces, could lead to       overlapping infill</li>
-    <li>the <i>extrusion width ratio</i> setting produced wrong flow rate sometimes</li>
-    <li>removed sparse errors</li>
-    <li>could not read back a config file with empty start or end gcode</li>
-</ul>
-
-<h2 class="post"><a href="2011/11/5-053-is-out" rel="permalink">0.5.3 is out!</a></h2>
-<div class="information">
-   <span class="date">2011-11-27</span>
-</div>
-
-<h4>Bugfixes:</h4>
-<ul>
-    <li>options having zero values were broken 0.5.2</li>
-    <li>hollow objects were printed with wrong sparse infill</li>
-    <li>minor errors</li>
-</ul>
-
-<h2 class="post"><a href="2011/11/4-052-is-out" rel="permalink">0.5.2 is out!</a></h2>
-<div class="information">
-   <span class="date">2011-11-26</span>
-</div>
-
-A new release just after two days!
-
-<h4>New features:</h4>
-<ul>
-    <li>new <b>Extrusion width ratio</b> option to force a given
-    ratio between extrusion width and layer height instead of 
-    having Slic3r calculate it automatically</li>
-    <li>new super-fast <b>concentric</b> infill pattern</li>
-</ul>
-
-<h4>Improvements:</h4>
-<ul>
-    <li>GUI progress bar is not determinate and shows some information</li>
-    <li>avoid unnecessary retractions during infill</li>
-</ul>
-
-<h4>Changes:</h4>
-<ul>
-    <li><i>Filament packing density</i> was renamed to <i>Extrusion multiplier</i></li>
-</ul>
-
-<h4>Bugfixes:</h4>
-<ul>
-    <li><i>Infill every 'n' layers</i> was broken after recent changes</li>
-    <li>setting <i>Temperature</i> to zero didn't remove it from output</li>
-</ul>
-
-<h2 class="post"><a href="2011/11/3-051-is-out" rel="permalink">0.5.1 is out!</a></h2>
-<div class="information">
-   <span class="date">2011-11-24</span>
-</div>
-
-10 more days and a new release is there!
-
-<h4>New features:</h4>
-<ul>
-    <li>if <i>Temperature</i> is set to zero, no temperature control will
-    be added to the resulting gcode file</li>
-</ul>
-
-<h4>Improvements:</h4>
-<ul>
-    <li><b>large refactoring</b> of the bridging logic - all bridges should now be detected (although some work needs to be done on optimal infill direction); the quality of solid surfaces and regions near bridges and solid surfaces has improved a lot</li>
-    <li>use solid infill under pillars and small regions instead of
-    using an internal low-density infill</li>
-    <li>don't die on non-manifold models; always try to generate some output</li>
-</ul>
-
-<h4>Changes:</h4>
-<ul>
-    <li>print settings moved to first tab</li>
-    <li>M109 is used instead of M104 for temperature control</li>
-</ul>
-
-<h4>Bugfixes:</h4>
-<ul>
-    <li>bottom layer speed was ignored</li>
-    <li>some solid layers were skipped</li>
-    <li>some ghost lines were extruded in open air outside the object when a 45° infill angle was used</li>
-</ul>
-
-<h2 class="post"><a href="2011/11/1-050-is-out" rel="permalink">0.5.0 is out!</a></h2>
-<div class="information">
-   <span class="date">2011-11-14</span>
-</div>
-
-After 10 more days of work, a new release is out!
-
-<h4>New features:</h4>
-<ul>
-    <li><b>four</b> new exciting fill patterns (including <i>line</i>)!</li>
-    <li>new algorithm for re-processing layers with dirty geometry, this makes the parser more tolerant</li>
-    <li>start and end gcode is customizable in the GUI too</li>
-    <li>new --retract-lift option to lift Z while doing travel moves</li>
-    <li>new --no-extrusion option to disable E codes</li>
-    <li>new --skirt-height option</li>
-    <li>new --first-layer-height-ratio option</li>
-    <li>new --close-after-slicing for easy integration with external programs</li>
-    <li>new --g0 option to output G0 for fast retractions (experimental)</li>
-</ul>
-
-<h4>Improvements:</h4>
-<ul>
-    <li>perimeters are extruded at once for each island, saving on travel toolpaths</li>
-    <li>perimeters are extruded using a shortest path search, avoiding unnecessary travel</li>
-    <li>smarter toolpaths for infills with different density</li>
-    <li><i>multiply</i> was renamed to <i>duplicate</i></li>
-    <li>infill is now overlapped with perimeters by 15%</li>
-    <li>GUI was rearranged using tabs</li>
-</ul>
-
-<h4>Bugfixes:</h4>
-<ul>
-    <li>fixed fatal error occuring on Windows</li>
-    <li>infill solid layers even when --fill-density is set to zero</li>
-    <li>membranes were not printed correctly</li>
-    <li>G2/G3 coordinates for experimental arcs were wrong</li>
-    <li>print first layer at Z = 1 * layer height instead of zero</li>
-</ul>
-
-<h2 class="post"><a href="2011/11/2-the-birth-of-a-slic3r-community" rel="permalink">The birth of a Slic3r community</a></h2>
-<div class="information">
-   <span class="date">2011-11-13</span>
-</div>
-
-<p>Here we are. After two months since I started to write this software from scratch, there are many people enjoying using it. And I'm enjoying to receive their feedback!</p>
-
-<p><a href="http://techpaladin.com/">Tech Paladin</a> published a post entitled <a href="http://techpaladin.com/2011/11/06/slic3r-0wns/">Slic3r 0wns</a> with some pictures:<br />
-<img src="http://techpaladin.com/wp-content/uploads/2011/11/magic-fish.jpg" width="350" height="225">
-</p>
-
-<p>Joachim Glauche, owner of <a href="http://www.reprapsource.com/">RepRapSource.com</a> and creator of the <a href="http://www.shapercube.com/">ShaperCube</a> published some <a href="https://picasaweb.google.com/102048359095706720847/Prints">pictures of nice high-resolution prints</a> sliced thanks to the speed and accuracy of Slic3r.<br>
-<img src="https://lh5.googleusercontent.com/-ek2nHi3cjoY/TrllGsHhLlI/AAAAAAAAAOs/WuCuTnUWUvc/s800/IMG_0402.JPG" width="400" height="327">
-</p>
-
-<p>Some people printed the same object with Slic3r and Skeinforge and published pictures with the comparison: see <a href="http://www.flickr.com/photos/blue_metal/6341424872"> this picture</a> by Blue_Metal, <a href="http://www.flickr.com/photos/13659531@N03/6334203975/">this one</a> by John Ridley. Also, see <a href="http://www.flickr.com/photos/rgoodwin/6338090839/">this picture</a> by Richard Goodwin.</p>
-
-<p>There are also a couple YouTube videos: <a href="http://www.youtube.com/watch?v=0r3hgcKZIVs">this</a> and <a href="http://www.youtube.com/watch?v=xjpbObDwwcI">that</a>.</p>
 
       <div style="clear: both"></div>
     </div>
