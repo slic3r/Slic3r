@@ -117,15 +117,32 @@ sub extrude {
     
     # compensate retraction
     $gcode .= $self->unretract if $self->retracted;
+
+	# work out height of this layer
+	my $lh = $Slic3r::layer_height * $path->depth_layers;
+
+	$lh *= $Slic3r::first_layer_height_ratio
+		if $self->layer->id == 0;
     
     # calculate extrusion length per distance unit
     my $e = $Slic3r::resolution
-        * (($Slic3r::nozzle_diameter**2) / ($Slic3r::filament_diameter ** 2))
-        * $Slic3r::flow_speed_ratio 
-        * $self->flow_ratio
+		* $Slic3r::extrusion_multiplier
         * ($path->flow_ratio || 1)
-        * $Slic3r::extrusion_multiplier
-        * $path->depth_layers;
+		* (   $Slic3r::flow_width
+			* $lh
+# convert rectanglular prism into squashed cylinder
+			- ($lh ** 2)
+			+ ((($lh / 2) ** 2) * PI)
+		)
+		/ ((($Slic3r::filament_diameter / 2) ** 2) * PI);
+
+	if ($path->role eq 'bridge') {
+		# different volume for bridges- draw a cylinder with diameter equal to nozzle diameter
+	    $e = $Slic3r::resolution
+			* $Slic3r::extrusion_multiplier
+			* ((($Slic3r::nozzle_diameter / 2) ** 2) * PI)
+			/ ((($Slic3r::filament_diameter / 2) ** 2) * PI);
+	}
     
     # extrude arc or line
     $self->print_feed_rate(
