@@ -59,7 +59,7 @@ sub new {
         },
         extrusion => {
             title => 'Extrusion',
-            options => [qw(extrusion_width_ratio bridge_flow_ratio overlap_ratio)],
+            options => [qw(extrusion_width bridge_flow_ratio overlap_ratio)],
         },
     );
     $self->{panels} = \%panels;
