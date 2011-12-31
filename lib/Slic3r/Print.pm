@@ -460,8 +460,19 @@ sub export_gcode {
         # assemble invoked post-processing scripts with options
         my @invocation;
         for (@{$Slic3r::invoke}) {
-            print "$_ > ";
-            push @invocation, "$FindBin::Bin/utils/post-processing/$_.pl $cmdline";
+			my $bin = "$FindBin::Bin/utils/post-processing/$_";
+			if (! -e $bin) {
+				my @g = glob("$bin*")
+					or die "cannot find post-processing script $_";
+				die "post-processing script name \"$_\" is ambiguous"
+					if @g > 1;
+				$bin = shift @g;
+			}
+			my $binname = $bin;
+			$binname =~ s:.*/::;
+			$binname =~ s/\.[^\.]*$//;
+            print "$binname > ";
+            push @invocation, "$bin $cmdline";
         }
         
         # assemble final command line

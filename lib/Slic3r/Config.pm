@@ -480,17 +480,12 @@ sub validate {
 
     # --invoke
     if ($Slic3r::invoke) {
-        my %found;
         $Slic3r::invoke = [ split /,/, $Slic3r::invoke ] unless ref $Slic3r::invoke;
-        $found{$_} = 0 for @{$Slic3r::invoke};
-        opendir(my $dh, "$FindBin::Bin/utils/post-processing") or die;
-        while (readdir $dh) {
-            if (/^(.*?)\.pl$/) {
-                $found{$1} = 1 if exists $found{$1};
-            }
-        }
-        for (keys %found) {
-            die "post-processing script \"$_\" not found!" unless $found{$_};
+        for (@{$Slic3r::invoke}) {
+			my @g = glob "$FindBin::Bin/utils/post-processing/$_*" or
+            	die "post-processing script \"$_\" not found!";
+			die "post-processing script name \"$_\" is ambiguous"
+				if @g > 1;
         }
     }
     
