@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
-use Getopt::Long qw(:config bundling);
+use Getopt::Long qw(:config bundling pass_through);
 
 # default values
 my $layer_height = 0.2;
@@ -13,6 +13,10 @@ GetOptions(
 	'first_layer_temp=f' => \$first_layer_temp,
 	'temperature=f' => \$rest_layers_temp,
 	'layer_height=f' => \$layer_height);
+
+while ($ARGV[0] =~ /^--/) {
+	shift; shift;
+}
 
 # set up state machine
 my $past_start_gcode = 0;
