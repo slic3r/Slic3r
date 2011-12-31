@@ -338,7 +338,10 @@ sub load {
         my $key = $1;
         if (!exists $Options->{$key}) {
             $key = +(grep { $Options->{$_}{aliases} && grep $_ eq $key, @{$Options->{$_}{aliases}} }
-                keys %$Options)[0] or warn "Unknown option $1 at line $.\n";
+                keys %$Options)[0] or do {
+                    $Options->{$1} = { cli => $1 };
+                    $key = $1;
+                }
         }
         next unless $key;
         my $opt = $Options->{$key};
@@ -482,10 +485,10 @@ sub validate {
     if ($Slic3r::invoke) {
         $Slic3r::invoke = [ split /,/, $Slic3r::invoke ] unless ref $Slic3r::invoke;
         for (@{$Slic3r::invoke}) {
-			my @g = glob "$FindBin::Bin/utils/post-processing/$_*" or
-            	die "post-processing script \"$_\" not found!";
-			die "post-processing script name \"$_\" is ambiguous"
-				if @g > 1;
+            my @g = glob "$FindBin::Bin/utils/post-processing/$_*" or
+                die "post-processing script \"$_\" not found!";
+            die "post-processing script name \"$_\" is ambiguous"
+                if @g > 1;
         }
     }
     
