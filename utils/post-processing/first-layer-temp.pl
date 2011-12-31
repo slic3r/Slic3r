@@ -18,6 +18,10 @@ while ($ARGV[0] =~ /^--/) {
 	shift; shift;
 }
 
+if ($rest_layers_temp == 0) {
+	die "first-layer-temp script is useless without a standard print temperature configured! Please set your temperature to something other than zero"
+}
+
 # set up state machine
 my $past_start_gcode = 0;
 
@@ -45,7 +49,7 @@ for (<>) {
 					print "M104 S$first_layer_temp\n";
 				}
 				# or if it's the next layer
-				elsif ($layer_count == 2) {
+				elsif (($layer_count == 2) && ($rest_layers_temp > 0)) {
 					# insert temperature for rest of print
 					print "M104 S$rest_layers_temp\n";
 					$past_start_gcode = 2;
