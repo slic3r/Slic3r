@@ -14,6 +14,14 @@ our $Options = {
         type    => 's',
     },
 
+    'invoke' => {
+        label    => 'Invoke',
+        cli        => 'invoke=s',
+        type    => 's',
+        serialize   => sub { join ',', @{$_[0]} },
+        deserialize => sub { [ split /,/, $_[0] ] },
+    },
+
     # printer options
     'nozzle_diameter' => {
         label   => 'Nozzle diameter',
@@ -469,6 +477,22 @@ sub validate {
     # --skirt-height
     die "Invalid value for --skirt-height\n"
         if $Slic3r::skirt_height < 0;
+
+    # --invoke
+    if ($Slic3r::invoke) {
+        my %found;
+        $Slic3r::invoke = [ split /,/, $Slic3r::invoke ] unless ref $Slic3r::invoke;
+        $found{$_} = 0 for @{$Slic3r::invoke};
+        opendir(my $dh, "$FindBin::Bin/utils/post-processing") or die;
+        while (readdir $dh) {
+            if (/^(.*?)\.pl$/) {
+                $found{$1} = 1 if exists $found{$1};
+            }
+        }
+        for (keys %found) {
+            die "post-processing script \"$_\" not found!" unless $found{$_};
+        }
+    }
     
     # legacy with existing config files
     $Slic3r::small_perimeter_speed ||= $Slic3r::perimeter_speed;
