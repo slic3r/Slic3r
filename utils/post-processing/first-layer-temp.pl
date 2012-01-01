@@ -57,6 +57,6 @@ for (<>) {
 			}
 		}
 	}
-	# write input data unmodified
-	print;
+	# write input data unmodified unless it's slic3r's temperature stuff which we remove
+	print unless /^M109 S\d+ ; wait for temperature to be reached$/ || /^M104 S\d+ ; set temperature/;
 }
