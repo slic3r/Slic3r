@@ -328,15 +328,32 @@ sub save {
 sub load {
     my $class = shift;
     my ($file) = @_;
+    my $fh;
     
-    open my $fh, '<', $file;
+    if (-e $file) {
+        printf "Opening %s... ", $file;
+        open $fh, '<', $file
+            or die $!;
+    } elsif (-e "$FindBin::Bin/$file") {
+        printf "Opening %s... ", "$FindBin::Bin/$file";
+        open $fh, '<', "$FindBin::Bin/$file"
+            or die $!;
+    } else {
+        die "Cannot find Configuration file \"$file\" in . or $FindBin::Bin";
+    }
+    printf " OK\n";
+    
     while (<$fh>) {
         next if /^\s+/;
         next if /^$/;
         next if /^\s*#/;
-        /^(\w+) = (.*)/ or die "Unreadable configuration file (invalid data at line $.)\n";
+        /^\s*(\w+)\s*=\s*([^\;\#]*\S)\s*/ or die "Unreadable configuration file (invalid data at line $.)\n";
         my $key = $1;
-        if (!exists $Options->{$key}) {
+        my $value = $2;
+        if ($key =~ /^(import|include)$/i) {
+            # import another config file
+            $class->load($value);
+        } elsif (!exists $Options->{$key}) {
             $key = +(grep { $Options->{$_}{aliases} && grep $_ eq $key, @{$Options->{$_}{aliases}} }
                 keys %$Options)[0] or do {
                     $Options->{$1} = { cli => $1 };
