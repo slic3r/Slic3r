@@ -4,6 +4,10 @@ use strict;
 
 my $z = 0;
 
+while ($ARGV[0] =~ '^--') {
+	shift; shift;
+}
+
 # read stdin and any/all files passed as parameters one line at a time
 for (<>) {
 	# if we find a Z word, save it

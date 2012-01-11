@@ -14,6 +14,14 @@ our $Options = {
         type    => 's',
     },
 
+    'invoke' => {
+        label    => 'Invoke',
+        cli        => 'invoke=s',
+        type    => 's',
+        serialize   => sub { join ',', @{$_[0]} },
+        deserialize => sub { [ split /,/, $_[0] ] },
+    },
+
     # printer options
     'nozzle_diameter' => {
         label   => 'Nozzle diameter',
@@ -195,6 +203,7 @@ our $Options = {
         height  => 150,
         serialize   => sub { join '\n', split /\R+/, $_[0] },
         deserialize => sub { join "\n", split /\\n/, $_[0] },
+        interpret => 1,
     },
     'end_gcode' => {
         label   => 'End GCODE',
@@ -205,6 +214,7 @@ our $Options = {
         height  => 150,
         serialize   => sub { join '\n', split /\R+/, $_[0] },
         deserialize => sub { join "\n", split /\\n/, $_[0] },
+        interpret => 1,
     },
     
     # retraction options
@@ -320,21 +330,50 @@ sub save {
 sub load {
     my $class = shift;
     my ($file) = @_;
+    my $fh;
     
-    open my $fh, '<', $file;
+    if (-e $file) {
+        printf "Opening %s... ", $file;
+        open $fh, '<', $file
+            or die $!;
+    } elsif (-e "$FindBin::Bin/$file") {
+        printf "Opening %s... ", "$FindBin::Bin/$file";
+        open $fh, '<', "$FindBin::Bin/$file"
+            or die $!;
+    } else {
+        die "Cannot find Configuration file \"$file\" in . or $FindBin::Bin";
+    }
+    printf " OK\n";
+    
     while (<$fh>) {
         next if /^\s+/;
         next if /^$/;
         next if /^\s*#/;
-        /^(\w+) = (.*)/ or die "Unreadable configuration file (invalid data at line $.)\n";
+        /^\s*(\w+)\s*=\s*([^\;\#]*\S)\s*/ or die "Unreadable configuration file (invalid data at line $.)\n";
         my $key = $1;
-        if (!exists $Options->{$key}) {
+        my $value = $2;
+        if ($key =~ /^(import|include)$/i) {
+            # import another config file
+            $class->load($value);
+        } elsif (!exists $Options->{$key}) {
             $key = +(grep { $Options->{$_}{aliases} && grep $_ eq $key, @{$Options->{$_}{aliases}} }
-                keys %$Options)[0] or warn "Unknown option $1 at line $.\n";
+                keys %$Options)[0] or do {
+                    $Options->{$1} = { cli => $1 };
+                    $key = $1;
+                }
         }
         next unless $key;
         my $opt = $Options->{$key};
-        set($key, $opt->{deserialize} ? $opt->{deserialize}->($2) : $2);
+        if ($opt->{interpret}) {
+            # build a regexp to match the available options
+            my $options = join '|',
+                grep !$Slic3r::Config::Options->{$_}{multiline},
+                keys %$Slic3r::Config::Options;
+    
+            # use that regexp to search and replace option names with option values
+            $value =~ s/\[($options)\]/Slic3r::Config->serialize($1)/eg;
+        }
+        set($key, $opt->{deserialize} ? $opt->{deserialize}->($value) : $value);
     }
     close $fh;
 }
@@ -469,6 +508,17 @@ sub validate {
     # --skirt-height
     die "Invalid value for --skirt-height\n"
         if $Slic3r::skirt_height < 0;
+
+    # --invoke
+    if ($Slic3r::invoke) {
+        $Slic3r::invoke = [ split /,/, $Slic3r::invoke ] unless ref $Slic3r::invoke;
+        for (@{$Slic3r::invoke}) {
+            my @g = glob "$FindBin::Bin/utils/post-processing/$_*" or
+                die "post-processing script \"$_\" not found!";
+            die "post-processing script name \"$_\" is ambiguous"
+                if @g > 1;
+        }
+    }
     
     # legacy with existing config files
     $Slic3r::small_perimeter_speed ||= $Slic3r::perimeter_speed;
