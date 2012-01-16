@@ -300,10 +300,10 @@ sub _Gx {
     
     # output speed if it's different from last one used
     # (goal: reduce gcode size)
-    if ($speed != $self->last_f) {
+#    if ($speed != $self->last_f) {
         $gcode .= sprintf " F%.${dec}f", $speed;
-        $self->last_f($speed);
-    }
+#        $self->last_f($speed);
+#    }
     
     # output extrusion distance
     if ($e && $Slic3r::extrusion_axis) {
@@ -312,7 +312,7 @@ sub _Gx {
         $self->total_extrusion_length($self->total_extrusion_length + $e);
         $gcode .= sprintf " %s%.5f", $Slic3r::extrusion_axis, $self->extrusion_distance;
     }
-    
+    $gcode =~ s/^( Z.*\s+)F[0-9][0-9.]*(.*)$/${1} F200.000${2}/;  
     $gcode .= sprintf " ; %s", $comment if $comment && $Slic3r::gcode_comments;
     return "$gcode\n";
 }
