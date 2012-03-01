@@ -589,6 +589,7 @@ sub export_gcode {
     printf $fh "M104 %s%d ; set temperature\n",
         ($Slic3r::gcode_flavor eq 'mach3' ? 'P' : 'S'), $Slic3r::first_layer_temperature
             if $Slic3r::first_layer_temperature && $Slic3r::start_gcode !~ /M10[49]/i;
+    print $fh "M106 S0\n" if $Slic3r::cooling && $Slic3r::disable_fan_first_layers > 0;
     print  $fh "$Slic3r::start_gcode\n";
     printf $fh "M109 %s%d ; wait for temperature to be reached\n", 
         ($Slic3r::gcode_flavor eq 'mach3' ? 'P' : 'S'), $Slic3r::first_layer_temperature
