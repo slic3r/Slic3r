@@ -8,7 +8,7 @@ BEGIN {
     use lib "$FindBin::Bin/lib";
 }
 
-use Getopt::Long qw(:config no_auto_abbrev);
+use Getopt::Long qw(:config no_auto_abbrev bundling pass_through);
 use Slic3r;
 use XXX;
 $|++;
@@ -59,6 +59,17 @@ Slic3r::Config->set($_ => $cli_options{$_})
 
 # validate configuration
 Slic3r::Config->validate;
+
+# check for unknown options
+while (@ARGV >= 2 && $ARGV[0] =~ /^--(\S*)/) {
+    my $name = shift;
+    my $value = shift;
+
+	$name =~ s/^--//;
+
+    $Slic3r::Config::Options->{$name} = { cli => $name } unless $Slic3r::Config::Options->{$name};
+    Slic3r::Config->set($name => $value);
+}
 
 # save configuration
 Slic3r::Config->save($opt{save}) if $opt{save};
