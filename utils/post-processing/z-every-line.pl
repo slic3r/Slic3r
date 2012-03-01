@@ -5,6 +5,14 @@ use warnings;
 
 my $z = 0;
 
+my %options;
+
+while ($ARGV[0] =~ '^--') {
+	my ($arg, $value) = (shift, shift);
+	$arg =~ s/^--//;
+	$options{$arg} = $value;
+}
+
 # read stdin and any/all files passed as parameters one line at a time
 while (<>) {
 	# if we find a Z word, save it
