@@ -447,7 +447,7 @@ sub load {
     my ($file) = @_;
     
     local $/ = "\n";
-    open my $fh, '<', $file;
+    open my $fh, '<', $file or die $@;
     binmode $fh, ':utf8';
     while (<$fh>) {
         s/\R+$//;
@@ -455,14 +455,24 @@ sub load {
         next if /^$/;
         next if /^\s*#/;
         /^(\w+) = (.*)/ or die "Unreadable configuration file (invalid data at line $.)\n";
-        my $key = $1;
-        if (!exists $Options->{$key}) {
+        my ($key, $value) = ($1, $2);
+        if ($key =~ /^(import|include)$/i) {
+            # include another config file
+        	if (-e $value) {
+	            $class->load($value);
+        	} elsif (-e "$FindBin::Bin/$value") {
+            	printf STDERR "Loading $FindBin::Bin/$value\n";
+	            $class->load("$FindBin::Bin/$value");
+        	} else {
+            	$Slic3r::ignore_nonexistent_config or die "Cannot find specified configuration file ($value).\n";
+        	}
+        } elsif (!exists $Options->{$key}) {
             $key = +(grep { $Options->{$_}{aliases} && grep $_ eq $key, @{$Options->{$_}{aliases}} }
                 keys %$Options)[0] or warn "Unknown option $1 at line $.\n";
         }
         next unless $key;
         my $opt = $Options->{$key};
-        set($key, $opt->{deserialize} ? $opt->{deserialize}->($2) : $2);
+        set($key, $opt->{deserialize} ? $opt->{deserialize}->($value) : $value);
     }
     close $fh;
 }
