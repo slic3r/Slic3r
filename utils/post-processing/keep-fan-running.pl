@@ -7,11 +7,15 @@ use XXX;
 # default values
 my $min_fan_speed = 35 * 255 / 100;
 my $layer_height = 0.2;
+my $max_fan_speed = 255;
+my $bridge_fan_speed = 255;
 
 # read specific options from command line
 GetOptions(
 	'min-fan-speed=i' => \$min_fan_speed,
 	'layer-height=f' => \$layer_height,
+	'max-fan-speed=i' => \$max_fan_speed,
+	'bridge-fan-speed=i' => \$bridge_fan_speed,
 );
 
 # read other options from command line
@@ -44,7 +48,7 @@ while (<>) {
 		# when we get a non-maximum fan speed, save it
 		if (/M106\s+S(\d+)/) {
 			$fan_speed = $1
-				if $1 >= ($min_fan_speed * 255 / 100) && $1 < 255;
+				if $1 >= ($min_fan_speed * 255 / 100) && $1 < ($max_fan_speed * 255 / 100) && $1 != int($bridge_fan_speed * 255 / 100);
 		}
 		# replace all M107 with the previous fan speed
 		else {
