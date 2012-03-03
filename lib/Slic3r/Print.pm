@@ -586,13 +586,17 @@ sub export_gcode {
     print  $fh "\n";
     
     # write start commands to file
+    printf $fh "M190 %s%d ; set bed temperature\n",
+        ($Slic3r::gcode_flavor eq 'mach3' ? 'P' : 'S'), $Slic3r::first_layer_bed_temperature
+            if $Slic3r::first_layer_bed_temperature && $Slic3r::start_gcode !~ /M190/i;
     printf $fh "M104 %s%d ; set temperature\n",
         ($Slic3r::gcode_flavor eq 'mach3' ? 'P' : 'S'), $Slic3r::first_layer_temperature
-            if $Slic3r::first_layer_temperature;
+            if $Slic3r::first_layer_temperature && $Slic3r::start_gcode !~ /M10[49]/i;
+    print $fh "M106 S0\n" if $Slic3r::cooling && $Slic3r::disable_fan_first_layers > 0;
     print  $fh "$Slic3r::start_gcode\n";
     printf $fh "M109 %s%d ; wait for temperature to be reached\n", 
         ($Slic3r::gcode_flavor eq 'mach3' ? 'P' : 'S'), $Slic3r::first_layer_temperature
-            if $Slic3r::first_layer_temperature && $Slic3r::gcode_flavor ne 'makerbot';
+            if $Slic3r::first_layer_temperature && $Slic3r::gcode_flavor ne 'makerbot' && $Slic3r::start_gcode !~ /M109/i;
     print  $fh "G90 ; use absolute coordinates\n";
     print  $fh "G21 ; set units to millimeters\n";
     if ($Slic3r::gcode_flavor =~ /^(?:reprap|teacup)$/) {
@@ -626,6 +630,9 @@ sub export_gcode {
             printf $fh "M104 %s%d ; set temperature\n",
                 ($Slic3r::gcode_flavor eq 'mach3' ? 'P' : 'S'), $Slic3r::temperature
                 if $Slic3r::temperature && $Slic3r::temperature != $Slic3r::first_layer_temperature;
+            printf $fh "M140 %s%d ; set bed temperature\n",
+                ($Slic3r::gcode_flavor eq 'mach3' ? 'P' : 'S'), $Slic3r::bed_temperature
+                if $Slic3r::bed_temperature && $Slic3r::bed_temperature != $Slic3r::first_layer_bed_temperature;
         }
         
         # go to layer

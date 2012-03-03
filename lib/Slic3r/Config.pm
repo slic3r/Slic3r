@@ -96,9 +96,20 @@ our $Options = {
         cli     => 'first-layer-temperature=i',
         type    => 'i',
     },
+    'first_layer_bed_temperature' => {
+        label   => 'First layer bed temperature (°C)',
+        cli     => 'first-layer-bed-temperature=i',
+        type    => 'i',
+    },
     'temperature' => {
         label   => 'Temperature (°C)',
         cli     => 'temperature=i',
+        type    => 'i',
+        important => 1,
+    },
+    'bed_temperature' => {
+        label   => 'Bed Temperature (°C)',
+        cli     => 'bed-temperature=i',
         type    => 'i',
         important => 1,
     },
@@ -441,7 +452,7 @@ sub load {
     my ($file) = @_;
     
     local $/ = "\n";
-    open my $fh, '<', $file;
+    open my $fh, '<', $file or die $@;
     binmode $fh, ':utf8';
     while (<$fh>) {
         s/\R+$//;
@@ -449,14 +460,28 @@ sub load {
         next if /^$/;
         next if /^\s*#/;
         /^(\w+) = (.*)/ or die "Unreadable configuration file (invalid data at line $.)\n";
-        my $key = $1;
-        if (!exists $Options->{$key}) {
+        my ($key, $value) = ($1, $2);
+        if ($key =~ /^(import|include)$/i) {
+            # include another config file
+        	if (-e $value) {
+	            $class->load($value);
+        	} elsif (-e "$FindBin::Bin/$value") {
+            	printf STDERR "Loading $FindBin::Bin/$value\n";
+	            $class->load("$FindBin::Bin/$value");
+        	} else {
+            	$Slic3r::ignore_nonexistent_config or die "Cannot find specified configuration file ($value).\n";
+        	}
+        } elsif (!exists $Options->{$key}) {
             $key = +(grep { $Options->{$_}{aliases} && grep $_ eq $key, @{$Options->{$_}{aliases}} }
-                keys %$Options)[0] or warn "Unknown option $1 at line $.\n";
+                keys %$Options)[0] or do {
+					warn "Unknown option $1 at line $.\n";
+					$Options->{$1} = { cli => $1 };
+					$key = $1;
+				}
         }
         next unless $key;
         my $opt = $Options->{$key};
-        set($key, $opt->{deserialize} ? $opt->{deserialize}->($2) : $2);
+        set($key, $opt->{deserialize} ? $opt->{deserialize}->($value) : $value);
     }
     close $fh;
 }
@@ -596,6 +621,12 @@ sub validate {
     # --bridge-flow-ratio
     die "Invalid value for --bridge-flow-ratio\n"
         if $Slic3r::bridge_flow_ratio <= 0;
+
+	# --first_layer_temperature
+	$Slic3r::first_layer_temperature = $Slic3r::temperature unless $Slic3r::first_layer_temperature;
+
+	# --first-layer-bed-temperature
+	$Slic3r::first_layer_bed_temperature = $Slic3r::bed_temperature unless $Slic3r::first_layer_bed_temperature;
     
     # G-code flavors
     $Slic3r::extrusion_axis = 'A' if $Slic3r::gcode_flavor eq 'mach3';

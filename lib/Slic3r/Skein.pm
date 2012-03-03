@@ -135,9 +135,21 @@ sub go {
     # run post-processing scripts
     if (@$Slic3r::post_process) {
         $self->status_cb->(95, "Running post-processing scripts");
+        my @opts;
+        foreach my $opt (sort keys %$Slic3r::Config::Options) {
+            my $value = Slic3r::Config::get($opt);
+            $value = $Slic3r::Config::Options->{$opt}{serialize}->($value) if $Slic3r::Config::Options->{$opt}{serialize};
+            $value =~ s/\\/\\\\/g;
+            $value =~ s/\s+/\\ /g;
+            my $cliname = $Slic3r::Config::Options->{$opt}->{cli};
+            $cliname =~ s/=.*//;
+            push @opts, "--$cliname", $value
+                if $value =~ /\S/;
+        }
         for (@$Slic3r::post_process) {
+	        $self->status_cb->(97, "--> $_");
             Slic3r::debugf "  '%s' '%s'\n", $_, $output_file;
-            system($_, $output_file);
+            system("$FindBin::Bin/utils/post-processing/$_", @opts, $output_file);
         }
     }
     
