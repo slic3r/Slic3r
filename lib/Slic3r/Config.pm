@@ -396,7 +396,6 @@ our $Options = {
         label    => 'Copies (auto arrange)',
         cli        => 'duplicate=i',
         type    => 'i',
-        aliases    => [qw(multiply copies count)],
     },
     'duplicate_x' => {
         label   => 'Copies along X',
