@@ -247,6 +247,11 @@ sub BUILD {
         $self->total_x_length(scale(($rx - $lx) * $partx));
         $self->total_y_length(scale(($by - $ty) * $party));
     }
+	else {
+        $self->total_x_length($self->x_length);
+        $self->total_y_length($self->y_length);
+        push @{$self->copies}, [0, 0];
+	}
 }
 
 sub layer_count {
