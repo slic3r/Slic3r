@@ -140,32 +140,9 @@ sub BUILD {
         }
     }
     elsif ($Slic3r::duplicate > 1) {
-        local *linint = sub {
+        my $linint = sub {
             my ($value, $oldmin, $oldmax, $newmin, $newmax) = @_;
             return ($value - $oldmin) * ($newmax - $newmin) / ($oldmax - $oldmin) + $newmin;
-        };
-        local *binaryInsertionSort = sub {
-            my ($array, $index, $object) = @_;
-            my @a = @{$array};
-            my $low = 0;
-            my $high = @a;
-            while ($low < $high) {
-                my $mid = ($low + (($high - $low) / 2)) | 0;
-                my $midval = $a[$mid]->[0];
-
-                if ($midval < $index) {
-                    $low = $mid + 1;
-                }
-                elsif ($midval > $index) {
-                    $high = $mid;
-                }
-                else {
-                    splice @{$array}, $mid, 0, [$index, $object];
-                    return @{$array};
-                }
-            }
-            splice @{$array}, $low, 0, [$index, $object];
-            return @{$array};
         };
 
         # use center location to determine print area
@@ -200,8 +177,8 @@ sub BUILD {
         # work out distance for all cells, sort into list
         for my $i (0..$cellw-1) {
             for my $j (0..$cellh-1) {
-                my $cx = linint($i + 0.5, 0, $cellw, $l, $r);
-                my $cy = linint($j + 0.5, 0, $cellh, $t, $b);
+                my $cx = $linint->($i + 0.5, 0, $cellw, $l, $r);
+                my $cy = $linint->($j + 0.5, 0, $cellh, $t, $b);
 
                 my $xd = abs(($printx / 2) - $cx);
                 my $yd = abs(($printy / 2) - $cy);
@@ -212,7 +189,27 @@ sub BUILD {
                     distance => $xd * $xd + $yd * $yd - abs(($cellw / 2) - ($i + 0.5)),
                     };
 
-                binaryInsertionSort(\@cellsorder, $c->{distance}, $c);
+				BINARYINSERTIONSORT: {
+            		my $index = $c->{distance};
+            		my $low = 0;
+            		my $high = @cellsorder;
+            		while ($low < $high) {
+                		my $mid = ($low + (($high - $low) / 2)) | 0;
+                		my $midval = $cellsorder[$mid]->[0];
+		
+                		if ($midval < $index) {
+                    		$low = $mid + 1;
+                		}
+                		elsif ($midval > $index) {
+                    		$high = $mid;
+                		}
+                		else {
+                    		splice @cellsorder, $mid, 0, [$index, $c];
+							last BINARYINSERTIONSORT;
+                		}
+            		}
+            		splice @cellsorder, $low, 0, [$index, $c];
+        		}
             }
         }
 
