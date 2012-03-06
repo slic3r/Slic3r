@@ -7,7 +7,6 @@ use Slic3r::Geometry qw(X Y Z PI MIN MAX scale unscale move_points);
 use Slic3r::Geometry::Clipper qw(explode_expolygons safety_offset diff_ex intersection_ex
     union_ex offset JT_ROUND JT_MITER);
 use XXX;
-use POSIX qw(floor ceil);
 
 has 'x_length'          => (is => 'ro', required => 1);
 has 'y_length'          => (is => 'ro', required => 1);
@@ -178,8 +177,8 @@ sub BUILD {
         my $party = unscale($self->y_length) + $Slic3r::duplicate_distance;
 
         # this is how many cells we have available into which to put parts
-        my $cellw = floor($printx / $partx);
-        my $cellh = floor($printy / $party);
+        my $cellw = int($printx / $partx);
+        my $cellh = int($printy / $party);
 
         die "$Slic3r::duplicate parts won't fit in your print area!" if $Slic3r::duplicate > ($cellw * $cellh);
 
