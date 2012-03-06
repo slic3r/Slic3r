@@ -157,7 +157,7 @@ sub BUILD {
         my $cellw = int($printx / $partx);
         my $cellh = int($printy / $party);
 
-        die "$Slic3r::duplicate parts won't fit in your print area!" if $Slic3r::duplicate > ($cellw * $cellh);
+        die "$Slic3r::duplicate parts won't fit in your print area!\n" if $Slic3r::duplicate > ($cellw * $cellh);
 
         # width and height of space used by cells
         my $w = $cellw * $partx;
