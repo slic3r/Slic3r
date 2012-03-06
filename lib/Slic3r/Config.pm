@@ -9,8 +9,8 @@ our $Options = {
 
     # miscellaneous options
     'notes' => {
-        label   => 'Configuration notes',
-        cli		=> 'notes=s',
+        label   => 'Configuraton notes',
+        cli     => 'notes=s',
         type    => 's',
         multiline => 1,
         width   => 350,
@@ -392,6 +392,12 @@ our $Options = {
         cli     => 'rotate=i',
         type    => 'i',
     },
+    'duplicate' => {
+        label    => 'Copies (auto arrange)',
+        cli        => 'duplicate=i',
+        type    => 'i',
+        aliases    => [qw(multiply copies count)],
+    },
     'duplicate_x' => {
         label   => 'Copies along X',
         cli     => 'duplicate-x=i',
@@ -599,6 +605,10 @@ sub validate {
     die "Invalid value for --scale\n"
         if $Slic3r::scale <= 0;
     
+    # --duplicate
+    die "Invalid value for --duplicate\n"
+        if $Slic3r::duplicate < 1;
+
     # --duplicate-x
     die "Invalid value for --duplicate-x\n"
         if $Slic3r::duplicate_x < 1;
@@ -606,6 +616,11 @@ sub validate {
     # --duplicate-y
     die "Invalid value for --duplicate-y\n"
         if $Slic3r::duplicate_y < 1;
+
+    # reflect actual quantity in 'duplicate' setting for use with output-filename-format, ie both --duplicate 15 and --duplicate-x 3 --duplicate-y 5 will make an appropriate filename
+    if ($Slic3r::duplicate == 1 && (($Slic3r::duplicate_x > 1) || ($Slic3r::duplicate_y > 1))) {
+        $Slic3r::duplicate = $Slic3r::duplicate_x * $Slic3r::duplicate_y;
+    }
     
     # --duplicate-distance
     die "Invalid value for --duplicate-distance\n"
