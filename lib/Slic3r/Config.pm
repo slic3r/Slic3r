@@ -9,7 +9,7 @@ our $Options = {
 
     # miscellaneous options
     'notes' => {
-        label   => 'Configuraton notes',
+        label   => 'Configuration notes',
         cli     => 'notes=s',
         type    => 's',
         multiline => 1,
