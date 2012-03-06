@@ -140,11 +140,11 @@ sub BUILD {
         }
     }
     elsif ($Slic3r::duplicate > 1) {
-        sub linint ($$$$$) {
+        local *linint = sub {
             my ($value, $oldmin, $oldmax, $newmin, $newmax) = @_;
             return ($value - $oldmin) * ($newmax - $newmin) / ($oldmax - $oldmin) + $newmin;
-        }
-        sub binaryInsertionSort ($$$) {
+        };
+        local *binaryInsertionSort = sub {
             my ($array, $index, $object) = @_;
             my @a = @{$array};
             my $low = 0;
@@ -166,7 +166,7 @@ sub BUILD {
             }
             splice @{$array}, $low, 0, [$index, $object];
             return @{$array};
-        }
+        };
 
         # use center location to determine print area
         my $printx = $Slic3r::print_center->[X] * 2;
