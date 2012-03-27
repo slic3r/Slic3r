@@ -633,8 +633,8 @@ sub validate {
     die "Invalid value for --bridge-flow-ratio\n"
         if $Slic3r::bridge_flow_ratio <= 0;
 
-	$Slic3r::first_layer_temperature //= $Slic3r::temperature;          #/
-	$Slic3r::first_layer_bed_temperature //= $Slic3r::bed_temperature;  #/
+    $Slic3r::first_layer_temperature //= $Slic3r::temperature;          #/
+    $Slic3r::first_layer_bed_temperature //= $Slic3r::bed_temperature;  #/
     
     # G-code flavors
     $Slic3r::extrusion_axis = 'A' if $Slic3r::gcode_flavor eq 'mach3';

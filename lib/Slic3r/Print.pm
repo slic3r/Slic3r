@@ -189,27 +189,27 @@ sub BUILD {
                     distance => $xd * $xd + $yd * $yd - abs(($cellw / 2) - ($i + 0.5)),
                     };
 
-				BINARYINSERTIONSORT: {
-            		my $index = $c->{distance};
-            		my $low = 0;
-            		my $high = @cellsorder;
-            		while ($low < $high) {
-                		my $mid = ($low + (($high - $low) / 2)) | 0;
-                		my $midval = $cellsorder[$mid]->[0];
-		
-                		if ($midval < $index) {
-                    		$low = $mid + 1;
-                		}
-                		elsif ($midval > $index) {
-                    		$high = $mid;
-                		}
-                		else {
-                    		splice @cellsorder, $mid, 0, [$index, $c];
-							last BINARYINSERTIONSORT;
-                		}
-            		}
-            		splice @cellsorder, $low, 0, [$index, $c];
-        		}
+                BINARYINSERTIONSORT: {
+                    my $index = $c->{distance};
+                    my $low = 0;
+                    my $high = @cellsorder;
+                    while ($low < $high) {
+                        my $mid = ($low + (($high - $low) / 2)) | 0;
+                        my $midval = $cellsorder[$mid]->[0];
+        
+                        if ($midval < $index) {
+                            $low = $mid + 1;
+                        }
+                        elsif ($midval > $index) {
+                            $high = $mid;
+                        }
+                        else {
+                            splice @cellsorder, $mid, 0, [$index, $c];
+                            last BINARYINSERTIONSORT;
+                        }
+                    }
+                    splice @cellsorder, $low, 0, [$index, $c];
+                }
             }
         }
 
@@ -247,11 +247,11 @@ sub BUILD {
         $self->total_x_length(scale(($rx - $lx) * $partx));
         $self->total_y_length(scale(($by - $ty) * $party));
     }
-	else {
+    else {
         $self->total_x_length($self->x_length);
         $self->total_y_length($self->y_length);
         push @{$self->copies}, [0, 0];
-	}
+    }
 }
 
 sub layer_count {
