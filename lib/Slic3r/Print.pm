@@ -145,9 +145,10 @@ sub BUILD {
             return ($value - $oldmin) * ($newmax - $newmin) / ($oldmax - $oldmin) + $newmin;
         };
 
-        # use center location to determine print area
-        my $printx = $Slic3r::print_center->[X] * 2;
-        my $printy = $Slic3r::print_center->[Y] * 2;
+        # use center location to determine print area. assume X200 Y200 if center is 0,0
+		# TODO: add user configuration for bed area with new gui
+        my $printx = $Slic3r::print_center->[X] * 2 || 200;
+        my $printy = $Slic3r::print_center->[Y] * 2 || 200;
 
         # use actual part size plus separation distance (half on each side) in spacing algorithm
         my $partx = unscale($self->x_length) + $Slic3r::duplicate_distance;
