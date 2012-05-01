@@ -440,6 +440,9 @@ sub set {
     my $class = @_ == 3 ? shift : undef;
     my ($opt_key, $value) = @_;
     no strict 'refs';
+    my $opt = $Options->{$opt_key};
+	$value = join ";", @$value if ref $value eq 'ARRAY';
+	$value = $opt->{deserialize}->($value) if $opt->{deserialize};
     ${"Slic3r::$opt_key"} = $value;
 }
 
@@ -497,7 +500,7 @@ sub load {
         }
         next unless $key;
         my $opt = $Options->{$key};
-        set($key, $opt->{deserialize} ? $opt->{deserialize}->($2) : $2);
+        set($key, $2);
     }
     close $fh;
 }
