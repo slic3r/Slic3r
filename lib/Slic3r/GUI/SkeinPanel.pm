@@ -110,7 +110,7 @@ sub new {
     };
     
     my @tabs = (
-        $make_tab->([qw(accuracy skirt retract)], [qw(print notes brim)]),
+        $make_tab->([qw(accuracy skirt retract brim)], [qw(print notes)]),
         $make_tab->([qw(cooling)]),
         $make_tab->([qw(printer filament)], [qw(print_speed speed)]),
         $make_tab->([qw(gcode)]),
