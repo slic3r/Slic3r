@@ -22,6 +22,13 @@ has 'layers' => (
 
 has 'total_extrusion_length' => (is => 'rw');
 
+has 'brims' => (
+    traits  => ['Array'],
+    is      => 'rw',
+    #isa     => 'ArrayRef[Slic3r::ExtrusionLoop]',
+    default => sub { [] },
+);
+
 sub new_from_mesh {
     my $class = shift;
     my ($mesh) = @_;
@@ -506,6 +513,29 @@ sub extrude_skirt {
     push @{$_->skirts}, @skirts for @layers;
 }
 
+sub extrude_brim {
+    my $self = shift;
+    return unless $Slic3r::brims > 0;
+    
+    # draw brims from inside to outside
+    my @brims = ();
+    for (my $i = 0; $i < $Slic3r::brims; $i++) {
+
+        my $offset = $Slic3r::flow_spacing * $i;
+        my @points = (
+            Slic3r::Point->new(scale ($Slic3r::print_center->[X] - $Slic3r::brim_size->[X]/2 - $offset), scale ($Slic3r::print_center->[Y] - $Slic3r::brim_size->[Y]/2 - $offset)),
+            Slic3r::Point->new(scale ($Slic3r::print_center->[X] + $Slic3r::brim_size->[X]/2 + $offset), scale ($Slic3r::print_center->[Y] - $Slic3r::brim_size->[Y]/2 - $offset)),
+            Slic3r::Point->new(scale ($Slic3r::print_center->[X] + $Slic3r::brim_size->[X]/2 + $offset), scale ($Slic3r::print_center->[Y] + $Slic3r::brim_size->[Y]/2 + $offset)),
+            Slic3r::Point->new(scale ($Slic3r::print_center->[X] - $Slic3r::brim_size->[X]/2 - $offset), scale ($Slic3r::print_center->[Y] + $Slic3r::brim_size->[Y]/2 + $offset))
+        );
+
+        push @{ $self->brims }, Slic3r::ExtrusionLoop->new(
+            polygon => Slic3r::Polygon->new($points[0],$points[1],$points[2],$points[3]),
+            role => 'brim',
+        );
+    }
+}
+
 # combine fill surfaces across layers
 sub infill_every_layers {
     my $self = shift;
@@ -770,7 +800,7 @@ sub export_gcode {
         print $fh $extruder->set_tool(0);
     }
     print $fh $extruder->set_fan(0, 1) if $Slic3r::cooling && $Slic3r::disable_fan_first_layers;
-    
+
     # write gcode commands layer by layer
     foreach my $layer (@{ $self->layers }) {
         if ($layer->id == 1) {
@@ -786,6 +816,9 @@ sub export_gcode {
         my $layer_gcode = $extruder->change_layer($layer);
         $extruder->elapsed_time(0);
         
+        if ($layer->id == 0) {
+            $layer_gcode .= $extruder->extrude_loop($_, 'brim') for @{ $self->brims };
+        }
         # extrude skirts
         $extruder->shift_x($shift[X]);
         $extruder->shift_y($shift[Y]);
@@ -882,3 +915,4 @@ sub total_extrusion_volume {
 }
 
 1;
+

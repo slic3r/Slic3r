@@ -145,6 +145,11 @@ our $bed_size           = [200,200];
 our $duplicate_grid     = [1,1];
 our $duplicate_distance = 6;    # mm
 
+# brim options
+our $brims              = 2;
+our $brim_size    = [160,160];
+
+
 sub parallelize {
     my %params = @_;
     

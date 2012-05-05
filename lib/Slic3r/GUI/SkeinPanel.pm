@@ -79,6 +79,10 @@ sub new {
             title => 'Notes',
             options => [qw(notes)],
         },
+        brim => {
+            title => 'Brim',
+            options => [qw(brims brim_size)],
+        },
     );
     $self->{panels} = \%panels;
 
@@ -110,7 +114,7 @@ sub new {
     };
     
     my @tabs = (
-        $make_tab->([qw(transform accuracy skirt)], [qw(print retract)]),
+        $make_tab->([qw(transform accuracy skirt)], [qw(print retract brim)]),
         $make_tab->([qw(cooling)]),
         $make_tab->([qw(printer filament)], [qw(print_speed speed)]),
         $make_tab->([qw(gcode)]),

@@ -130,6 +130,10 @@ sub go {
     # make skirt
     $self->status_cb->(88, "Generating skirt");
     $print->extrude_skirt;
+
+    # make brim
+    $self->status_cb->(89, "Generating brim");
+    $print->extrude_brim;
     
     # output everything to a G-code file
     my $output_file = $self->expanded_output_filepath;
