@@ -265,8 +265,8 @@ sub export_gcode {
     $self->make_skirt;
 
     # make brim
-    $self->status_cb->(89, "Generating brim");
-    $print->extrude_brim;
+    $status_cb->(89, "Generating brim");
+    $self->make_brim;
     
     # output everything to a G-code file
     my $output_file = $self->expanded_output_filepath($params{output_file});
@@ -497,7 +497,7 @@ sub write_gcode {
         $extruder->elapsed_time(0);
         
         # extrude brim
-        if ($layer->id == 0) {
+        if ($layer_id == 0) {
             $layer_gcode .= $extruder->extrude_loop($_, 'brim') for @{ $self->brims };
         }
 
