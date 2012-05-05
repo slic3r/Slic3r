@@ -45,7 +45,7 @@ sub change_layer {
     my $gcode = "";
     
     $gcode .= $self->retract(move_z => $z);
-    $gcode .= $self->G0(undef, $z, 0, 'move to next layer')
+    $gcode .= $self->G0(undef, $z, 0, 'move to next layer (' . $layer->id . ')')
         if $self->z != $z;
     
     $gcode .= Slic3r::Config->replace_options($Slic3r::layer_gcode) . "\n"
@@ -164,7 +164,9 @@ sub extrude_path {
     }
     
     if ($Slic3r::cooling) {
-        $self->elapsed_time($self->elapsed_time + (unscale($path_length) / $self->speeds->{$self->last_speed} * 60));
+        my $path_time = unscale($path_length) / $self->speeds->{$self->last_speed} * 60;
+        $path_time /= $Slic3r::bottom_layer_speed_ratio if $self->layer->id == 0;
+        $self->elapsed_time($self->elapsed_time + $path_time);
     }
     
     return $gcode;
@@ -339,7 +341,7 @@ sub set_tool {
     my $self = shift;
     my ($tool) = @_;
     
-    return sprintf "T%d%s\n", $tool, ($Slic3r::gcode_comments ? ' ; change tool' : '');
+    return $self->retract . sprintf "T%d%s\n", $tool, ($Slic3r::gcode_comments ? ' ; change tool' : '');
 }
 
 sub set_fan {

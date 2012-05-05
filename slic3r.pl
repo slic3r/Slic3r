@@ -19,6 +19,7 @@ my %cli_options = ();
         'help'                  => sub { usage() },
         
         'debug'                 => \$Slic3r::debug,
+        'gui'                   => \$opt{gui},
         'o|output=s'            => \$opt{output},
         
         'save=s'                => \$opt{save},
@@ -26,6 +27,7 @@ my %cli_options = ();
         'ignore-nonexistent-config' => \$opt{ignore_nonexistent_config},
         'threads|j=i'           => \$Slic3r::threads,
         'export-svg'            => \$opt{export_svg},
+        'merge|m'               => \$opt{merge},
     );
     foreach my $opt_key (keys %$Slic3r::Config::Options) {
         my $opt = $Slic3r::Config::Options->{$opt_key};
@@ -70,11 +72,18 @@ if (!@ARGV && !$opt{save} && eval "require Slic3r::GUI; 1") {
     Slic3r::GUI->new->MainLoop;
     exit;
 }
+die $@ if $@ && $opt{gui};
 
 if (@ARGV) {
-    foreach my $input_file ( @ARGV ) {
-        my $skein = Slic3r::Skein->new(
-            input_file  => $input_file,
+    while (my $input_file = shift @ARGV) {
+        my $print = Slic3r::Print->new;
+        $print->add_object_from_file($input_file);
+        if ($opt{merge}) {
+            $print->add_object_from_file($_) for splice @ARGV, 0;
+        }
+        $print->duplicate;
+        $print->arrange_objects if @{$print->objects} > 1;
+        my %params = (
             output_file => $opt{output},
             status_cb   => sub {
                 my ($percent, $message) = @_;
@@ -82,9 +91,9 @@ if (@ARGV) {
             },
         );
         if ($opt{export_svg}) {
-            $skein->export_svg;
+            $print->export_svg(%params);
         } else {
-            $skein->go;
+            $print->export_gcode(%params);
         }
     }
 } else {
@@ -123,6 +132,8 @@ $j
     --post-process      Generated G-code will be processed with the supplied script;
                         call this more than once to process through multiple scripts.
     --export-svg        Export a SVG file containing slices instead of G-code.
+    -m, --merge         If multiple files are supplied, they will be composed into a single 
+                        print rather than processed individually.
   
   Printer options:
     --nozzle-diameter   Diameter of nozzle in mm (default: $Slic3r::nozzle_diameter)

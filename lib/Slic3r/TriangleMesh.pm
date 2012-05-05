@@ -4,7 +4,7 @@ use Moo;
 use Slic3r::Geometry qw(X Y Z A B unscale same_point);
 
 # public
-has 'vertices'      => (is => 'ro', required => 1);         # id => [ [$x1,$y1],[$x2,$y2],[$x3,$y3] ]
+has 'vertices'      => (is => 'ro', required => 1);         # id => [$x,$y,$z]
 has 'facets'        => (is => 'ro', required => 1);         # id => [ $normal, $v1_id, $v2_id, $v3_id ]
 
 # private
@@ -14,6 +14,17 @@ has 'edges_facets'  => (is => 'ro', default => sub { [] }); # id => [ $f1_id, $f
 
 use constant MIN => 0;
 use constant MAX => 1;
+
+use constant I_B                => 0;
+use constant I_A_ID             => 1;
+use constant I_B_ID             => 2;
+use constant I_FACET_INDEX      => 3;
+use constant I_PREV_FACET_INDEX => 4;
+use constant I_NEXT_FACET_INDEX => 5;
+use constant I_FACET_EDGE       => 6;
+
+use constant FE_TOP             => 0;
+use constant FE_BOTTOM          => 1;
 
 # always make sure BUILD is idempotent
 sub BUILD {
@@ -56,6 +67,14 @@ sub BUILD {
             push @{$self->edges_facets->[$edge_id]}, $facet_id;
         }
     }
+}
+
+sub clone {
+    my $self = shift;
+    return (ref $self)->new(
+        vertices => [ map [ @$_ ], @{$self->vertices} ],
+        facets   => [ map [ @$_ ], @{$self->facets} ],
+    );
 }
 
 sub _facet_edges {
@@ -125,19 +144,19 @@ sub make_loops {
     # remove tangent edges
     {
         for (my $i = 0; $i <= $#lines; $i++) {
-            next unless defined $lines[$i] && $lines[$i]->facet_edge;
+            next unless defined $lines[$i] && defined $lines[$i][I_FACET_EDGE];
             # if the line is a facet edge, find another facet edge
             # having the same endpoints but in reverse order
             for (my $j = $i+1; $j <= $#lines; $j++) {
-                next unless defined $lines[$j] && $lines[$j]->facet_edge;
+                next unless defined $lines[$j] && defined $lines[$j][I_FACET_EDGE];
                 
                 # are these facets adjacent? (sharing a common edge on this layer)
-                if ($lines[$i]->a_id == $lines[$j]->b_id && $lines[$i]->b_id == $lines[$j]->a_id) {
+                if ($lines[$i][I_A_ID] == $lines[$j][I_B_ID] && $lines[$i][I_B_ID] == $lines[$j][I_A_ID]) {
                 
                     # if they are both oriented upwards or downwards (like a 'V')
                     # then we can remove both edges from this layer since it won't 
                     # affect the sliced shape
-                    if ($lines[$j]->facet_edge eq $lines[$i]->facet_edge) {
+                    if ($lines[$j][I_FACET_EDGE] == $lines[$i][I_FACET_EDGE]) {
                         $lines[$i] = undef;
                         $lines[$j] = undef;
                         last;
@@ -146,7 +165,7 @@ sub make_loops {
                     # if one of them is oriented upwards and the other is oriented
                     # downwards, let's only keep one of them (it doesn't matter which
                     # one since all 'top' lines were reversed at slicing)
-                    if ($lines[$i]->facet_edge eq 'top' && $lines[$j]->facet_edge eq 'bottom') {
+                    if ($lines[$i][I_FACET_EDGE] == FE_TOP && $lines[$j][I_FACET_EDGE] == FE_BOTTOM) {
                         $lines[$j] = undef;
                         last;
                     }
@@ -162,25 +181,25 @@ sub make_loops {
     my %prev_count = ();  # how many lines have the same prev_facet_index
     my %a_count    = ();  # how many lines have the same a_id
     foreach my $line (@lines) {
-        if (defined $line->prev_facet_index) {
-            $prev_count{$line->prev_facet_index}++;
+        if (defined $line->[I_PREV_FACET_INDEX]) {
+            $prev_count{$line->[I_PREV_FACET_INDEX]}++;
         }
-        if (defined $line->a_id) {
-            $a_count{$line->a_id}++;
+        if (defined $line->[I_A_ID]) {
+            $a_count{$line->[I_A_ID]}++;
         }
     }
     
     foreach my $point_id (grep $a_count{$_} > 1, keys %a_count) {
-        my @lines_starting_here = grep defined $_->a_id && $_->a_id == $point_id, @lines;
+        my @lines_starting_here = grep defined $_->[I_A_ID] && $_->[I_A_ID] == $point_id, @lines;
         Slic3r::debugf "%d lines start at point %d\n", scalar(@lines_starting_here), $point_id;
         
         # if two lines start at this point, one being a 'top' facet edge and the other being a 'bottom' one,
         # then remove the top one and those following it (removing the top or the bottom one is an arbitrary
         # choice)
-        if (@lines_starting_here == 2 && join(',', sort map $_->facet_edge, @lines_starting_here) eq 'bottom,top') {
-            my @to_remove = grep $_->facet_edge eq 'top', @lines_starting_here;
-            while (!grep defined $_->b_id && $_->b_id == $to_remove[-1]->b_id && $_ ne $to_remove[-1], @lines) {
-                push @to_remove, grep defined $_->a_id && $_->a_id == $to_remove[-1]->b_id, @lines;
+        if (@lines_starting_here == 2 && join('', sort map $_->[I_FACET_EDGE], @lines_starting_here) eq FE_TOP.FE_BOTTOM) {
+            my @to_remove = grep $_->[I_FACET_EDGE] == FE_TOP, @lines_starting_here;
+            while (!grep defined $_->[I_B_ID] && $_->[I_B_ID] == $to_remove[-1]->[I_B_ID] && $_ ne $to_remove[-1], @lines) {
+                push @to_remove, grep defined $_->[I_A_ID] && $_->[I_A_ID] == $to_remove[-1]->[I_B_ID], @lines;
             }
             my %to_remove = map {$_ => 1} @to_remove;
             @lines = grep !$to_remove{$_}, @lines;
@@ -189,8 +208,8 @@ sub make_loops {
             if (0) {
                 require "Slic3r/SVG.pm";
                 Slic3r::SVG::output(undef, "same_point.svg",
-                    lines       => [ map $_->line, grep !$_->facet_edge, @lines ],
-                    red_lines   => [ map $_->line, grep $_->facet_edge, @lines ],
+                    lines       => [ map $_->line, grep !defined $_->[I_FACET_EDGE], @lines ],
+                    red_lines   => [ map $_->line, grep defined $_->[I_FACET_EDGE], @lines ],
                     points      => [ $self->vertices->[$point_id] ],
                     no_arrows => 0,
                 );
@@ -199,11 +218,11 @@ sub make_loops {
     }
     
     # optimization: build indexes of lines
-    my %by_facet_index = map { $lines[$_]->facet_index => $_ }
-        grep defined $lines[$_]->facet_index,
+    my %by_facet_index = map { $lines[$_][I_FACET_INDEX] => $_ }
+        grep defined $lines[$_][I_FACET_INDEX],
         (0..$#lines);
-    my %by_a_id = map { $lines[$_]->a_id => $_ }
-        grep defined $lines[$_]->a_id,
+    my %by_a_id = map { $lines[$_][I_A_ID] => $_ }
+        grep defined $lines[$_][I_A_ID],
         (0..$#lines);
     
     my (@polygons, %visited_lines) = ();
@@ -211,14 +230,14 @@ sub make_loops {
         my $line = $lines[$i];
         next if $visited_lines{$line};
         my @points = ();
-        my $first_facet_index = $line->facet_index;
+        my $first_facet_index = $line->[I_FACET_INDEX];
         
         do {
             my $next_line;
-            if (defined $line->next_facet_index && exists $by_facet_index{$line->next_facet_index}) {
-                $next_line = $lines[$by_facet_index{$line->next_facet_index}];
-            } elsif (defined $line->b_id && exists $by_a_id{$line->b_id}) {
-                $next_line = $lines[$by_a_id{$line->b_id}];
+            if (defined $line->[I_NEXT_FACET_INDEX] && exists $by_facet_index{$line->[I_NEXT_FACET_INDEX]}) {
+                $next_line = $lines[$by_facet_index{$line->[I_NEXT_FACET_INDEX]}];
+            } elsif (defined $line->[I_B_ID] && exists $by_a_id{$line->[I_B_ID]}) {
+                $next_line = $lines[$by_a_id{$line->[I_B_ID]}];
             } else {
                 Slic3r::debugf "  line has no next_facet_index or b_id\n";
                 $layer->slicing_errors(1);
@@ -229,26 +248,25 @@ sub make_loops {
                 Slic3r::debugf "  failed to close this loop\n";
                 $layer->slicing_errors(1);
                 next CYCLE;
-            } elsif (defined $next_line->prev_facet_index && $next_line->prev_facet_index != $line->facet_index) {
+            } elsif (defined $next_line->[I_PREV_FACET_INDEX] && $next_line->[I_PREV_FACET_INDEX] != $line->[I_FACET_INDEX]) {
                 Slic3r::debugf "  wrong prev_facet_index\n";
                 $layer->slicing_errors(1);
                 next CYCLE;
-            } elsif (defined $next_line->a_id && $next_line->a_id != $line->b_id) {
+            } elsif (defined $next_line->[I_A_ID] && $next_line->[I_A_ID] != $line->[I_B_ID]) {
                 Slic3r::debugf "  wrong a_id\n";
                 $layer->slicing_errors(1);
                 next CYCLE;
             }
             
-            push @points, $next_line->b;
+            push @points, $next_line->[I_B];
             $visited_lines{$next_line} = 1;
             $line = $next_line;
-        } while ($first_facet_index != $line->facet_index);
+        } while ($first_facet_index != $line->[I_FACET_INDEX]);
     
         push @polygons, Slic3r::Polygon->new(@points);
         Slic3r::debugf "  Discovered %s polygon of %d points\n",
             ($polygons[-1]->is_counter_clockwise ? 'ccw' : 'cw'), scalar(@points)
             if $Slic3r::debug;
-        pop @polygons if !$polygons[-1]->cleanup;
     }
     
     return [@polygons];
@@ -284,7 +302,7 @@ sub move {
     
     # transform vertex coordinates
     foreach my $vertex (@{$self->vertices}) {
-        $vertex->[$_] += $shift[$_] for X,Y,Z;
+        $vertex->[$_] += $shift[$_] || 0 for X,Y,Z;
     }
 }
 
@@ -338,7 +356,7 @@ sub size {
 
 sub slice_facet {
     my $self = shift;
-    my ($print, $facet_id) = @_;
+    my ($print_object, $facet_id) = @_;
     my ($normal, @vertices) = @{$self->facets->[$facet_id]};
     Slic3r::debugf "\n==> FACET %d (%f,%f,%f - %f,%f,%f - %f,%f,%f):\n",
         $facet_id, map @{$self->vertices->[$_]}, @vertices
@@ -367,7 +385,7 @@ sub slice_facet {
     
     my $lines = {};  # layer_id => [ lines ]
     for (my $layer_id = $min_layer; $layer_id <= $max_layer; $layer_id++) {
-        my $layer = $print->layer($layer_id);
+        my $layer = $print_object->layer($layer_id);
         $lines->{$layer_id} ||= [];
         push @{ $lines->{$layer_id} }, $self->intersect_facet($facet_id, $layer->slice_z);
     }
@@ -392,19 +410,23 @@ sub intersect_facet {
         
         if ($a->[Z] == $b->[Z] && $a->[Z] == $z) {
             # edge is horizontal and belongs to the current layer
-            my $edge_type = (grep $self->vertices->[$_][Z] < $z, @vertices_ids) ? 'top' : 'bottom';
-            if ($edge_type eq 'top') {
+            my $edge_type = (grep $self->vertices->[$_][Z] < $z, @vertices_ids) ? FE_TOP : FE_BOTTOM;
+            if ($edge_type == FE_TOP) {
                 ($a, $b) = ($b, $a);
                 ($a_id, $b_id) = ($b_id, $a_id);
             }
-            push @lines, Slic3r::TriangleMesh::IntersectionLine->new(
-                a           => [$a->[X], $a->[Y]],
-                b           => [$b->[X], $b->[Y]],
-                a_id        => $a_id,
-                b_id        => $b_id,
-                facet_edge  => $edge_type,
-                facet_index => $facet_id,
-            );
+            push @lines, [
+                [$b->[X], $b->[Y]],     # I_B
+                $a_id,                  # I_A_ID
+                $b_id,                  # I_B_ID
+                $facet_id,              # I_FACET_INDEX
+                undef,                  # I_PREV_FACET_INDEX
+                undef,                  # I_NEXT_FACET_INDEX
+                $edge_type,             # I_FACET_EDGE
+                
+                # Unused data:
+                # a             => [$a->[X], $a->[Y]],
+            ];
             #print "Horizontal edge at $z!\n";
             
         } elsif ($a->[Z] == $z) {
@@ -453,17 +475,20 @@ sub intersect_facet {
         $next_facet_index = +(grep $_ != $facet_id, @{$self->edges_facets->[$points[A][3]]})[0]
             if defined $points[A][3];
         
-        return Slic3r::TriangleMesh::IntersectionLine->new(
-            a      => [$points[B][X], $points[B][Y]],
-            b      => [$points[A][X], $points[A][Y]],
-            a_id   => $points[B][2],
-            b_id   => $points[A][2],
-            facet_index => $facet_id,
-            prev_edge_id => $points[B][3],
-            next_edge_id => $points[A][3],
-            prev_facet_index => $prev_facet_index,
-            next_facet_index => $next_facet_index,
-        );
+        return [
+            [$points[A][X], $points[A][Y]],     # I_B
+            $points[B][2],                      # I_A_ID
+            $points[A][2],                      # I_B_ID
+            $facet_id,                          # I_FACET_INDEX
+            $prev_facet_index,                  # I_PREV_FACET_INDEX
+            $next_facet_index,                  # I_NEXT_FACET_INDEX
+            undef,                              # I_FACET_EDGE
+            
+            # Unused data:
+            # a             => [$points[B][X], $points[B][Y]],
+            # prev_edge_id  => $points[B][3],
+            # next_edge_id  => $points[A][3],
+        ];
         #printf "  intersection points at z = %f: %f,%f - %f,%f\n", $z, map @$_, @intersection_points;
     }
     
@@ -480,6 +505,46 @@ sub get_connected_facets {
     }
     delete $facets{$facet_id};
     return keys %facets;
+}
+
+sub split_mesh {
+    my $self = shift;
+    
+    my @meshes = ();
+    
+    # loop while we have remaining facets
+    while (1) {
+        # get the first facet
+        my @facet_queue = ();
+        my @facets = ();
+        for (my $i = 0; $i <= $#{$self->facets}; $i++) {
+            if (defined $self->facets->[$i]) {
+                push @facet_queue, $i;
+                last;
+            }
+        }
+        last if !@facet_queue;
+        
+        while (defined (my $facet_id = shift @facet_queue)) {
+            next unless defined $self->facets->[$facet_id];
+            push @facets, map [ @$_ ], $self->facets->[$facet_id];
+            push @facet_queue, $self->get_connected_facets($facet_id);
+            $self->facets->[$facet_id] = undef;
+        }
+        
+        my %vertices = map { $_ => 1 } map @$_[1,2,3], @facets;
+        my @new_vertices = keys %vertices;
+        my %new_vertices = map { $new_vertices[$_] => $_ } 0..$#new_vertices;
+        foreach my $facet (@facets) {
+            $facet->[$_] = $new_vertices{$facet->[$_]} for 1,2,3;
+        }
+        push @meshes, Slic3r::TriangleMesh->new(
+            facets => \@facets,
+            vertices => [ map $self->vertices->[$_], keys %vertices ],
+        );
+    }
+    
+    return @meshes;
 }
 
 1;

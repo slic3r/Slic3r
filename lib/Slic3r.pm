@@ -7,7 +7,7 @@ use strict;
 use warnings;
 require v5.10;
 
-our $VERSION = "0.7.2b";
+our $VERSION = "0.7.3-dev";
 
 our $debug = 0;
 sub debugf {
@@ -28,15 +28,13 @@ use Slic3r::Format::STL;
 use Slic3r::Geometry qw(PI);
 use Slic3r::Layer;
 use Slic3r::Line;
-use Slic3r::Perimeter;
 use Slic3r::Point;
 use Slic3r::Polygon;
 use Slic3r::Polyline;
 use Slic3r::Print;
-use Slic3r::Skein;
+use Slic3r::Print::Object;
 use Slic3r::Surface;
 use Slic3r::TriangleMesh;
-use Slic3r::TriangleMesh::IntersectionLine;
 
 our $have_threads       = $Config{useithreads} && eval "use threads; use Thread::Queue; 1";
 our $threads            = $have_threads ? 4 : undef;
@@ -83,6 +81,7 @@ our $infill_acceleration    = 50;   # mm/s^2
 
 # accuracy options
 our $scaling_factor         = 0.00000001;
+our $resolution             = 0.01;
 our $small_perimeter_area   = ((6.5 / $scaling_factor)**2)*PI;
 our $layer_height           = 0.4;
 our $first_layer_height_ratio = 1;
