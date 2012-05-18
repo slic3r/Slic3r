@@ -427,6 +427,20 @@ our $Options = {
         type    => 'i',
         aliases => [qw(multiply_distance)],
     },
+
+    # brim options
+    'brims' => {
+        label   => 'Loops',
+        cli     => 'brims=i',
+        type    => 'i',
+    },
+    'brim_size' => {
+        label   => 'Brim size (inner)',
+        cli     => 'brim-size=s',
+        type    => 'point',
+        serialize   => sub { join ',', @{$_[0]} },
+        deserialize => sub { [ split /,/, $_[0] ] },
+    },
 };
 
 sub get {

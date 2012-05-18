@@ -19,6 +19,14 @@ has 'skirt' => (
     default => sub { [] },
 );
 
+# ordered collection of extrusion paths to build brim loops
+has 'brims' => (
+    traits  => ['Array'],
+    is      => 'rw',
+    #isa     => 'ArrayRef[Slic3r::ExtrusionLoop]',
+    default => sub { [] },
+);
+
 sub add_object_from_file {
     my $self = shift;
     my ($input_file) = @_;
@@ -38,6 +46,7 @@ sub add_object_from_file {
     $object->input_file($input_file);
     return $object;
 }
+
 
 sub add_object_from_mesh {
     my $self = shift;
@@ -254,6 +263,10 @@ sub export_gcode {
     # make skirt
     $status_cb->(88, "Generating skirt");
     $self->make_skirt;
+
+    # make brim
+    $status_cb->(89, "Generating brim");
+    $self->make_brim;
     
     # output everything to a G-code file
     my $output_file = $self->expanded_output_filepath($params{output_file});
@@ -375,6 +388,31 @@ sub make_skirt {
     push @{$self->skirt}, @skirt;
 }
 
+
+sub make_brim {
+    my $self = shift;
+    return unless $Slic3r::brims > 0;
+    
+    # draw brims from inside to outside
+    my @brims = ();
+    for (my $i = 0; $i < $Slic3r::brims; $i++) {
+
+        my $offset = $Slic3r::flow_spacing * $i;
+        my @points = (
+            Slic3r::Point->new(scale ($Slic3r::print_center->[X] - $Slic3r::brim_size->[X]/2 - $offset), scale ($Slic3r::print_center->[Y] - $Slic3r::brim_size->[Y]/2 - $offset)),
+            Slic3r::Point->new(scale ($Slic3r::print_center->[X] + $Slic3r::brim_size->[X]/2 + $offset), scale ($Slic3r::print_center->[Y] - $Slic3r::brim_size->[Y]/2 - $offset)),
+            Slic3r::Point->new(scale ($Slic3r::print_center->[X] + $Slic3r::brim_size->[X]/2 + $offset), scale ($Slic3r::print_center->[Y] + $Slic3r::brim_size->[Y]/2 + $offset)),
+            Slic3r::Point->new(scale ($Slic3r::print_center->[X] - $Slic3r::brim_size->[X]/2 - $offset), scale ($Slic3r::print_center->[Y] + $Slic3r::brim_size->[Y]/2 + $offset))
+        );
+
+        push @{ $self->brims }, Slic3r::ExtrusionLoop->new(
+            polygon => Slic3r::Polygon->new($points[0],$points[1],$points[2],$points[3]),
+            role => 'brim',
+        );
+    }
+}
+
+
 sub write_gcode {
     my $self = shift;
     my ($file) = @_;
@@ -440,7 +478,7 @@ sub write_gcode {
         print $fh $extruder->set_tool(0);
     }
     print $fh $extruder->set_fan(0, 1) if $Slic3r::cooling && $Slic3r::disable_fan_first_layers;
-    
+
     # write gcode commands layer by layer
     for my $layer_id (0..$self->layer_count-1) {
         my @obj_idx = grep $self->objects->[$_]->layers->[$layer_id], 0..$#{$self->objects};
@@ -458,6 +496,11 @@ sub write_gcode {
         my $layer_gcode = $extruder->change_layer($obj_layers[0]);
         $extruder->elapsed_time(0);
         
+        # extrude brim
+        if ($layer_id == 0) {
+            $layer_gcode .= $extruder->extrude_loop($_, 'brim') for @{ $self->brims };
+        }
+
         # extrude skirt
         $extruder->shift_x($shift[X]);
         $extruder->shift_y($shift[Y]);
@@ -577,3 +620,4 @@ sub expanded_output_filepath {
 }
 
 1;
+

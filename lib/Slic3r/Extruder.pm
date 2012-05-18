@@ -143,7 +143,7 @@ sub extrude_path {
     
     # extrude arc or line
     $self->speed(
-        $path->role =~ /^(perimeter|skirt|support-material)$/o ? 'perimeter'
+        $path->role =~ /^(perimeter|skirt|support-material|brim)$/o ? 'perimeter'
             : $path->role eq 'small-perimeter'  ? 'small_perimeter'
             : $path->role eq 'fill'             ? 'infill'
             : $path->role eq 'solid-fill'       ? 'solid_infill'
