@@ -340,11 +340,6 @@ sub prepare_fill_surfaces {
         @surfaces = (grep($_->surface_type != S_TYPE_TOP, @surfaces), @top);
     }
     
-    # remove top/bottom surfaces
-    if ($Slic3r::solid_layers == 0) {
-        @surfaces = grep $_->surface_type == S_TYPE_INTERNAL, @surfaces;
-    }
-    
     # remove internal surfaces
     if ($Slic3r::fill_density == 0) {
         @surfaces = grep $_->surface_type != S_TYPE_INTERNAL, @surfaces;

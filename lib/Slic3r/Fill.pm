@@ -143,7 +143,9 @@ sub make_fill {
         
         # force 100% density and rectilinear fill for external surfaces
         if ($surface->surface_type != S_TYPE_INTERNAL) {
-            $density = 1;
+			if ($Slic3r::solid_layers != 0) {
+						$density = 1;
+			}
             $filler = $Slic3r::solid_fill_pattern;
             if ($is_bridge) {
                 $filler = 'rectilinear';
