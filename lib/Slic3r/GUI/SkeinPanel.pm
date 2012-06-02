@@ -169,6 +169,7 @@ sub new {
 our $model_wildcard = "STL files (*.stl)|*.stl;*.STL|OBJ files (*.obj)|*.obj;*.OBJ|AMF files (*.amf)|*.amf;*.AMF;*.xml;*.XML";
 our $ini_wildcard = "INI files *.ini|*.ini;*.INI";
 our $gcode_wildcard = "G-code files *.gcode|*.gcode;*.GCODE";
+our $svg_wildcard = "SVG files *.svg|*.svg;*.SVG";
 
 sub do_slice {
     my $self = shift;
@@ -193,7 +194,7 @@ sub do_slice {
 
         my $input_file;
         if (!$params{reslice}) {
-            my $dialog = Wx::FileDialog->new($self, 'Choose a file to slice (STL/OBJ/AMF):', $dir, "", $model_wildcard, wxFD_OPEN);
+            my $dialog = Wx::FileDialog->new($self, 'Choose a file to slice (STL/OBJ/AMF):', $dir, "", $model_wildcard, wxFD_OPEN | &Wx::wxFD_FILE_MUST_EXIST);
             if ($dialog->ShowModal != wxID_OK) {
                 $dialog->Destroy;
                 return;
@@ -229,7 +230,7 @@ sub do_slice {
             $output_file = $print->expanded_output_filepath($output_file);
             $output_file =~ s/\.gcode$/.svg/i if $params{export_svg};
             my $dlg = Wx::FileDialog->new($self, 'Save ' . ($params{export_svg} ? 'SVG' : 'G-code') . ' file as:', dirname($output_file),
-                basename($output_file), $gcode_wildcard, wxFD_SAVE);
+                basename($output_file), $params{export_svg} ? $svg_wildcard : $gcode_wildcard, wxFD_SAVE);
             if ($dlg->ShowModal != wxID_OK) {
                 $dlg->Destroy;
                 return;
@@ -246,7 +247,7 @@ sub do_slice {
         {
             my @warnings = ();
             local $SIG{__WARN__} = sub { push @warnings, $_[0] };
-            my %params = (
+            my %export_params = (
                 output_file => $output_file,
                 status_cb   => sub {
                     my ($percent, $message) = @_;
@@ -256,9 +257,9 @@ sub do_slice {
                 },
             );
             if ($params{export_svg}) {
-                $print->export_svg(%params);
+                $print->export_svg(%export_params);
             } else {
-                $print->export_gcode(%params);
+                $print->export_gcode(%export_params);
             }
             Slic3r::GUI::warning_catcher($self)->($_) for @warnings;
         }
@@ -294,7 +295,7 @@ sub save_config {
     my $dir = $last_config ? dirname($last_config) : $last_config_dir || $last_skein_dir || "";
     my $filename = $last_config ? basename($last_config) : "config.ini";
     my $dlg = Wx::FileDialog->new($self, 'Save configuration as:', $dir, $filename, 
-        $ini_wildcard, wxFD_SAVE);
+        $ini_wildcard, wxFD_SAVE | &Wx::wxFD_OVERWRITE_PROMPT);
     if ($dlg->ShowModal == wxID_OK) {
         my $file = $dlg->GetPath;
         $last_config_dir = dirname($file);
@@ -309,7 +310,7 @@ sub load_config {
     
     my $dir = $last_config ? dirname($last_config) : $last_config_dir || $last_skein_dir || "";
     my $dlg = Wx::FileDialog->new($self, 'Select configuration to load:', $dir, "config.ini", 
-        $ini_wildcard, wxFD_OPEN);
+        $ini_wildcard, wxFD_OPEN | &Wx::wxFD_FILE_MUST_EXIST);
     if ($dlg->ShowModal == wxID_OK) {
         my ($file) = $dlg->GetPaths;
         $last_config_dir = dirname($file);
