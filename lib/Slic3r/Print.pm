@@ -455,11 +455,11 @@ sub write_gcode {
     print $fh $extruder->set_fan(0, 1) if $Slic3r::cooling && $Slic3r::disable_fan_first_layers;
     
     # write start commands to file
+    printf $fh "%s\n", Slic3r::Config->replace_options($Slic3r::start_gcode); # allow for possible M80 in start_gcode to enable the PSU.
     printf $fh $extruder->set_bed_temperature($Slic3r::first_layer_bed_temperature, 1),
             if $Slic3r::first_layer_bed_temperature && $Slic3r::start_gcode !~ /M190/i;
     printf $fh $extruder->set_temperature($Slic3r::first_layer_temperature)
         if $Slic3r::first_layer_temperature;
-    printf $fh "%s\n", Slic3r::Config->replace_options($Slic3r::start_gcode);
     printf $fh $extruder->set_temperature($Slic3r::first_layer_temperature, 1)
             if $Slic3r::first_layer_temperature && $Slic3r::start_gcode !~ /M109/i;
     print  $fh "G90 ; use absolute coordinates\n";
