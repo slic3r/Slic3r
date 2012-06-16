@@ -21,13 +21,13 @@ sub OnInit {
     Slic3r::debugf "wxWidgets version %s\n", &Wx::wxVERSION_STRING;
     
     my $frame = Wx::Frame->new( undef, -1, 'Slic3r', [-1, -1], Wx::wxDefaultSize,
-         wxDEFAULT_FRAME_STYLE ^ (wxRESIZE_BORDER | wxMAXIMIZE_BOX) );
+         wxDEFAULT_FRAME_STYLE  );
     Wx::Image::AddHandler(Wx::PNGHandler->new);
     $frame->SetIcon(Wx::Icon->new("$Slic3r::var/Slic3r_128px.png", &Wx::wxBITMAP_TYPE_PNG) );
     
     my $panel = Slic3r::GUI::SkeinPanel->new($frame);
     my $box = Wx::BoxSizer->new(wxVERTICAL);
-    $box->Add($panel, 0);
+    $box->Add($panel, 0,wxEXPAND | wxALL, 10);
     
     if (eval "use Growl::GNTP; 1") {
         # register growl notifications
@@ -183,6 +183,7 @@ sub _Reposition {
 sub OnSize {
     my ($self, $event) = @_;
     
+    $self->SetSize([-1,28]);
     $self->{_changed} = 1;
     $self->_Reposition;
     $event->Skip;

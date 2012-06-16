@@ -4,6 +4,10 @@ use warnings;
 use utf8;
 
 use constant PI => 4 * atan2(1, 1);
+use Slic3r::GUI::OptionsGroup qw(OPT_LABEL_WIDTH OPT_FIELD_WIDTH OPT_HGAP_WIDTH);
+
+my $full_col_width = Slic3r::GUI::OptionsGroup::OPT_LABEL_WIDTH + Slic3r::GUI::OptionsGroup::OPT_FIELD_WIDTH + Slic3r::GUI::OptionsGroup::OPT_HGAP_WIDTH;
+sub Slic3r::debugf;
 
 # cemetery of old config settings
 our @Ignore = qw(duplicate_x duplicate_y multiply_x multiply_y);
@@ -16,7 +20,8 @@ our $Options = {
         cli     => 'notes=s',
         type    => 's',
         multiline => 1,
-        width   => 220,
+        vertical => 1,
+        width   => $full_col_width,
         height  => 130,
         serialize   => sub { join '\n', split /\R/, $_[0] },
         deserialize => sub { join "\n", split /\\n/, $_[0] },
@@ -32,17 +37,21 @@ our $Options = {
         label   => 'Output filename format',
         cli     => 'output-filename-format=s',
         type    => 's',
+        vertical => 1,
+        width   => $full_col_width,
     },
 
     # printer options
     'nozzle_diameter' => {
-        label   => 'Nozzle diameter (mm)',
+        label   => 'Nozzle diameter',
+       	tooltip => '(mm)',
         cli     => 'nozzle-diameter=f',
         type    => 'f',
         important => 1,
     },
     'print_center' => {
-        label   => 'Print center (mm)',
+        label   => 'Print center ',
+       	tooltip => '(mm)',
         cli     => 'print-center=s',
         type    => 'point',
         serialize   => sub { join ',', @{$_[0]} },
@@ -66,7 +75,8 @@ our $Options = {
         type    => 's',
     },
     'z_offset' => {
-        label   => 'Z offset (mm)',
+        label   => 'Z offset ',
+       	tooltip => '(mm)',
         cli     => 'z-offset=f',
         type    => 'f',
     },
@@ -88,7 +98,8 @@ our $Options = {
     
     # filament options
     'filament_diameter' => {
-        label   => 'Diameter (mm)',
+        label   => 'Diameter ',
+       	tooltip => '(mm)',
         cli     => 'filament-diameter=f',
         type    => 'f',
         important => 1,
@@ -100,73 +111,85 @@ our $Options = {
         aliases => [qw(filament_packing_density)],
     },
     'first_layer_temperature' => {
-        label   => 'First layer temperature (°C)',
+        label   => 'First layer temperature ',
+       	tooltip => '(°C)',
         cli     => 'first-layer-temperature=i',
         type    => 'i',
     },
     'first_layer_bed_temperature' => {
-        label   => 'First layer bed temperature (°C)',
+        label   => 'First layer bed temperature ',
+       	tooltip => '(°C)',
         cli     => 'first-layer-bed-temperature=i',
         type    => 'i',
     },
     'temperature' => {
-        label   => 'Temperature (°C)',
+        label   => 'Temperature ',
+       	tooltip => '(°C)',
         cli     => 'temperature=i',
         type    => 'i',
         important => 1,
     },
     'bed_temperature' => {
-        label   => 'Bed Temperature (°C)',
+        label   => 'Bed Temperature ',
+       	tooltip => '(°C)',
         cli     => 'bed-temperature=i',
         type    => 'i',
     },
     
     # speed options
     'travel_speed' => {
-        label   => 'Travel (mm/s)',
+        label   => 'Travel ',
+       	tooltip => '(mm/s)',
         cli     => 'travel-speed=f',
         type    => 'f',
         aliases => [qw(travel_feed_rate)],
     },
     'perimeter_speed' => {
-        label   => 'Perimeters (mm/s)',
+        label   => 'Perimeters ',
+       	tooltip => '(mm/s)',
         cli     => 'perimeter-speed=f',
         type    => 'f',
         aliases => [qw(perimeter_feed_rate)],
     },
     'small_perimeter_speed' => {
-        label   => 'Small perimeters (mm/s or %)',
+        label   => 'Small perimeters ',
+       	tooltip => '(mm/s or %)',
         cli     => 'small-perimeter-speed=f',
         type    => 'f',
         ratio_over => 'perimeter_speed',
     },
     'infill_speed' => {
-        label   => 'Infill (mm/s)',
+        label   => 'Infill ',
+       	tooltip => '(mm/s)',
         cli     => 'infill-speed=f',
         type    => 'f',
         aliases => [qw(print_feed_rate infill_feed_rate)],
     },
     'solid_infill_speed' => {
-        label   => 'Solid infill (mm/s or %)',
+        label   => 'Solid infill ',
+       	tooltip => '(mm/s or %)',
         cli     => 'solid-infill-speed=f',
         type    => 'f',
         ratio_over => 'infill_speed',
         aliases => [qw(solid_infill_feed_rate)],
     },
     'top_solid_infill_speed' => {
-        label   => 'Top solid infill (mm/s or %)',
+        label   => 'Top solid infill ',
+       	tooltip => '(mm/s or %)',
         cli     => 'top-solid-infill-speed=f',
         type    => 'f',
         ratio_over => 'solid_infill_speed',
     },
     'bridge_speed' => {
-        label   => 'Bridges (mm/s)',
+        label   => 'Bridges ',
+       	tooltip => '(mm/s)',
         cli     => 'bridge-speed=f',
         type    => 'f',
         aliases => [qw(bridge_feed_rate)],
     },
     'first_layer_speed' => {
-        label   => 'First layer speed (mm/s or %)',
+        label   => 'First layer speed ',
+       	tooltip => '(mm/s or %)',
         cli     => 'first-layer-speed=s',
         type    => 'f',
     },
@@ -190,12 +213,14 @@ our $Options = {
     
     # accuracy options
     'layer_height' => {
-        label   => 'Layer height (mm)',
+        label   => 'Layer height ',
+       	tooltip => '(mm)',
         cli     => 'layer-height=f',
         type    => 'f',
     },
     'first_layer_height' => {
-        label   => 'First layer height (mm or %)',
+        label   => 'First layer height ',
+       	tooltip => '(mm or %)',
         cli     => 'first-layer-height=s',
         type    => 'f',
         ratio_over => 'layer_height',
@@ -208,22 +233,26 @@ our $Options = {
     
     # flow options
     'extrusion_width' => {
-        label   => 'Extrusion width (mm or %; leave zero to calculate automatically)',
+        label   => 'Extrusion width ',
+       	tooltip => '(mm or %; leave zero to calculate automatically)',
         cli     => 'extrusion-width=s',
         type    => 'f',
     },
     'first_layer_extrusion_width' => {
-        label   => 'First layer extrusion width (mm or % or 0 for default)',
+        label   => 'First layer extrusion width ',
+       	tooltip => '(mm or % or 0 for default)',
         cli     => 'first-layer-extrusion-width=s',
         type    => 'f',
     },
     'perimeters_extrusion_width' => {
-        label   => 'Perimeters extrusion width (mm or % or 0 for default)',
+        label   => 'Perimeters extrusion width ',
+       	tooltip => '(mm or % or 0 for default)',
         cli     => 'perimeters-extrusion-width=s',
         type    => 'f',
     },
     'infill_extrusion_width' => {
-        label   => 'Infill extrusion width (mm or % or 0 for default)',
+        label   => 'Infill extrusion width ',
+       	tooltip => '(mm or % or 0 for default)',
         cli     => 'infill-extrusion-width=s',
         type    => 'f',
     },
@@ -329,27 +358,32 @@ our $Options = {
     
     # retraction options
     'retract_length' => {
-        label   => 'Length (mm)',
+        label   => 'Length ',
+       	tooltip => '(mm)',
         cli     => 'retract-length=f',
         type    => 'f',
     },
     'retract_speed' => {
-        label   => 'Speed (mm/s)',
+        label   => 'Speed ',
+       	tooltip => '(mm/s)',
         cli     => 'retract-speed=f',
         type    => 'i',
     },
     'retract_restart_extra' => {
-        label   => 'Extra length on restart (mm)',
+        label   => 'Extra length on restart ',
+       	tooltip => '(mm)',
         cli     => 'retract-restart-extra=f',
         type    => 'f',
     },
     'retract_before_travel' => {
-        label   => 'Minimum travel after retraction (mm)',
+        label   => 'Minimum travel after retraction ',
+       	tooltip => '(mm)',
         cli     => 'retract-before-travel=f',
         type    => 'f',
     },
     'retract_lift' => {
-        label   => 'Lift Z (mm)',
+        label   => 'Lift Z ',
+       	tooltip => '(mm)',
         cli     => 'retract-lift=f',
         type    => 'f',
     },
@@ -386,7 +420,8 @@ our $Options = {
         type    => 'i',
     },
     'min_print_speed' => {
-        label   => 'Min print speed (mm/s)',
+        label   => 'Min print speed ',
+       	tooltip => '(mm/s)',
         cli     => 'min-print-speed=f',
         type    => 'i',
     },
@@ -408,12 +443,14 @@ our $Options = {
         type    => 'i',
     },
     'skirt_distance' => {
-        label   => 'Distance from object (mm)',
+        label   => 'Distance from object ',
+       	tooltip => '(mm)',
         cli     => 'skirt-distance=f',
         type    => 'i',
     },
     'skirt_height' => {
-        label   => 'Skirt height (layers)',
+        label   => 'Skirt height ',
+       	tooltip => '(layers)',
         cli     => 'skirt-height=i',
         type    => 'i',
     },
@@ -442,7 +479,8 @@ our $Options = {
         type    => 'i',
     },
     'bed_size' => {
-        label   => 'Bed size (mm)',
+        label   => 'Bed size ',
+       	tooltip => '(mm)',
         cli     => 'bed-size=s',
         type    => 'point',
         serialize   => sub { join ',', @{$_[0]} },
@@ -469,12 +507,14 @@ our $Options = {
         type    => 'bool',
     },
     'extruder_clearance_radius' => {
-        label   => 'Extruder clearance radius (mm)',
+        label   => 'Extruder clearance radius ',
+       	tooltip => '(mm)',
         cli     => 'extruder-clearance-radius=f',
         type    => 'i',
     },
     'extruder_clearance_height' => {
-        label   => 'Extruder clearance height (mm)',
+        label   => 'Extruder clearance height ',
+       	tooltip => '(mm)',
         cli     => 'extruder-clearance-height=f',
         type    => 'i',
     },

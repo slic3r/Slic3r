@@ -87,7 +87,7 @@ sub new {
     );
     $self->{panels} = \%panels;
     
-    my $tabpanel = Wx::Notebook->new($self, -1, Wx::wxDefaultPosition, Wx::wxDefaultSize, &Wx::wxNB_TOP);
+    my $tabpanel = Wx::Notebook->new($self, -1, Wx::wxDefaultPosition, Wx::wxDefaultSize, &Wx::wxNB_TOP|wxEXPAND);
     my $make_tab = sub {
         my @cols = @_;
         
@@ -98,9 +98,9 @@ sub new {
             for my $optgroup (@$col) {
                 next unless @{ $panels{$optgroup}{options} };
                 my $optpanel = Slic3r::GUI::OptionsGroup->new($tab, %{$panels{$optgroup}});
-                $vertical_sizer->Add($optpanel, 0, wxEXPAND | wxALL, 10);
+                $vertical_sizer->Add($optpanel, 0, wxEXPAND | wxALL, 5);
             }
-            $sizer->Add($vertical_sizer);
+            $sizer->Add($vertical_sizer, 0);
         }
         
         $tab->SetSizer($sizer);
@@ -112,7 +112,7 @@ sub new {
         $make_tab->([qw(cooling)]),
         $make_tab->([qw(printer filament)], [qw(print_speed speed)]),
         $make_tab->([qw(gcode)]),
-        $make_tab->([qw(extrusion other sequential_printing)], [qw(output)]),
+        $make_tab->([qw(extrusion sequential_printing)], [qw(output other)]),
     );
     
     $tabpanel->AddPage(Slic3r::GUI::Plater->new($tabpanel), "Plater");
@@ -126,28 +126,30 @@ sub new {
     {
         $buttons_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         
-        my $slice_button = Wx::Button->new($self, -1, "Quick slice…");
+        my $slice_button = Wx::Button->new($self, -1, " Quick slice… ");
         $slice_button->SetDefault();
         $buttons_sizer->Add($slice_button, 0, wxRIGHT, 20);
         EVT_BUTTON($self, $slice_button, sub { $self->do_slice });
         
-        my $save_button = Wx::Button->new($self, -1, "Save config...");
+        my $save_button = Wx::Button->new($self, -1, " Save config… ");
         $buttons_sizer->Add($save_button, 0, wxRIGHT, 5);
         EVT_BUTTON($self, $save_button, sub { $self->save_config });
         
-        my $load_button = Wx::Button->new($self, -1, "Load config...");
-        $buttons_sizer->Add($load_button, 0, wxRIGHT, 5);
+        my $load_button = Wx::Button->new($self, -1, " Load config… ");
+        $buttons_sizer->Add($load_button, 0, wxRIGHT, 35);
         EVT_BUTTON($self, $load_button, sub { $self->load_config });
+        
+        $buttons_sizer->AddStretchSpacer();
         
         my $text = Wx::StaticText->new($self, -1, "Remember to check for updates at http://slic3r.org/\nVersion: $Slic3r::VERSION", Wx::wxDefaultPosition, Wx::wxDefaultSize, wxALIGN_RIGHT);
         my $font = Wx::Font->new(10, wxDEFAULT, wxNORMAL, wxNORMAL);
         $text->SetFont($font);
-        $buttons_sizer->Add($text, 1, wxEXPAND | wxALIGN_RIGHT);
+        $buttons_sizer->Add($text, 0, wxBOTTOM, 10);
     }
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
-    $sizer->Add($buttons_sizer, 0, wxEXPAND | wxALL, 10);
-    $sizer->Add($tabpanel);
+    $sizer->Add($buttons_sizer, 0, wxEXPAND | wxALL, 0);
+    $sizer->Add($tabpanel, 1, wxEXPAND);
     
     $sizer->SetSizeHints($self);
     $self->SetSizer($sizer);
