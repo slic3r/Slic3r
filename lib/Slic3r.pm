@@ -52,7 +52,21 @@ eval "use Slic3r::Build";
 our $threads            = $have_threads ? 2 : 1;
 
 # miscellaneous options
-our $notes              = '';
+our $notes              = <<"END";
+layer_height = [layer_height]
+perimeters = [perimeters]
+solid_layers = [solid_layers]
+fill_density = [fill_density]
+nozzle_diameter = [nozzle_diameter]
+filament_diameter = [filament_diameter]
+extrusion_multiplier = [extrusion_multiplier]
+perimeter_speed = [perimeter_speed]
+infill_speed = [infill_speed]
+travel_speed = [travel_speed]
+scale = [scale]
+single_wall_width = [single_wall_width]
+single_wall_width_first_layer = [single_wall_width_first_layer]
+END
 
 # output options
 our $output_filename_format = '[input_filename_base].gcode';
