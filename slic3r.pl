@@ -56,7 +56,9 @@ if ($opt{load}) {
         }
     }
 }else{
-	Slic3r::Config->load($Slic3r::Config::Settings->{last_config}->{value});
+	if ($Slic3r::Config::Settings->{last_config}->{value}){
+		Slic3r::Config->load($Slic3r::Config::Settings->{last_config}->{value});
+	}
 }
 
 # validate command line options

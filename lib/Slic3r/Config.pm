@@ -522,7 +522,7 @@ our $Options = {
 
 our $Settings = {
     'last_config' => {
-        value   => 'asdf',
+        value   => '',
     },
 };
 my $settings_file = '.slic3r';
@@ -650,7 +650,7 @@ sub load_settings {
     my %ignore = map { $_ => 1 } @Ignore;
     
     local $/ = "\n";
-    open my $fh, '<', $settings_file;
+    open my $fh, '<', $settings_file or return;
     binmode $fh, ':utf8';
     while (<$fh>) {
         s/\R+$//;
