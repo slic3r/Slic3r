@@ -2,6 +2,7 @@ package Slic3r::Config;
 use strict;
 use warnings;
 use utf8;
+use FindBin;
 
 use constant PI => 4 * atan2(1, 1);
 use Slic3r::GUI::OptionsGroup qw(OPT_LABEL_WIDTH OPT_FIELD_WIDTH OPT_HGAP_WIDTH);
@@ -525,7 +526,7 @@ our $Settings = {
         value   => '',
     },
 };
-my $settings_file = '.slic3r';
+my $settings_file = "$FindBin::Bin/.slic3r";
 
 sub get {
     my $class = @_ == 2 ? shift : undef;
