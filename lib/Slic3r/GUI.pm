@@ -43,6 +43,10 @@ sub OnInit {
     # status bar
     $frame->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($frame, -1);
     $frame->SetStatusBar($frame->{statusbar});
+    $Slic3r::GUI::SkeinPanel::statusbar = $frame->{statusbar};
+    if ($Slic3r::Config::Settings->{last_config}->{value}){
+    	$frame->{statusbar}->SetStatusText("Loaded $Slic3r::Config::Settings->{last_config}->{value}");
+    }
     
     # File menu
     my $fileMenu = Wx::Menu->new;

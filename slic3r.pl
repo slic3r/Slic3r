@@ -41,6 +41,8 @@ my %cli_options = ();
     GetOptions(%options) or usage(1);
 }
 
+Slic3r::Config->load_settings();
+
 # load configuration
 if ($opt{load}) {
     foreach my $configfile (@{$opt{load}}) {
@@ -53,6 +55,8 @@ if ($opt{load}) {
             $opt{ignore_nonexistent_config} or die "Cannot find specified configuration file ($configfile).\n";
         }
     }
+}else{
+	Slic3r::Config->load($Slic3r::Config::Settings->{last_config}->{value});
 }
 
 # validate command line options

@@ -520,6 +520,13 @@ our $Options = {
     },
 };
 
+our $Settings = {
+    'last_config' => {
+        value   => 'asdf',
+    },
+};
+my $settings_file = '.slic3r';
+
 sub get {
     my $class = @_ == 2 ? shift : undef;
     my ($opt_key) = @_;
@@ -566,6 +573,9 @@ sub save {
         printf $fh "%s = %s\n", $opt, $value;
     }
     close $fh;
+    
+	$Settings->{last_config}->{value} = $file;
+	save_settings();
 }
 
 sub setenv {
@@ -610,6 +620,52 @@ sub load {
         next unless $key;
         my $opt = $Options->{$key};
         set($key, $opt->{deserialize} ? $opt->{deserialize}->($val) : $val);
+    }
+    close $fh;
+    
+	$Settings->{last_config}->{value} = $file;
+	save_settings();
+	
+	if ($Slic3r::GUI::SkeinPanel::statusbar){
+		$Slic3r::GUI::SkeinPanel::statusbar->SetStatusText("Loaded $file");
+	}
+	
+}
+
+sub save_settings {
+    my $class = shift;
+    
+    open my $fh, '>', $settings_file;
+    binmode $fh, ':utf8';
+    foreach my $opt (sort keys %$Settings) {
+        my $value = $Settings->{$opt}->{value};
+        printf $fh "%s = %s\n", $opt, $value;
+    }
+    close $fh;
+}
+
+sub load_settings {
+    my $class = shift;
+    
+    my %ignore = map { $_ => 1 } @Ignore;
+    
+    local $/ = "\n";
+    open my $fh, '<', $settings_file;
+    binmode $fh, ':utf8';
+    while (<$fh>) {
+        s/\R+$//;
+        next if /^\s+/;
+        next if /^$/;
+        next if /^\s*#/;
+        /^(\w+) = (.*)/ or die "Unreadable settings file (invalid data at line $.)\n";
+        my ($key, $val) = ($1, $2);
+        
+        if (!exists $Settings->{$key}) {
+            $key = +(grep { $Settings->{$_}{aliases} && grep $_ eq $key, @{$Settings->{$_}{aliases}} }
+                keys %$Settings)[0] or warn "Unknown settings $key at line $.\n";
+        }
+        next unless $key;
+        $Settings->{$key}->{value} = $val;
     }
     close $fh;
 }
