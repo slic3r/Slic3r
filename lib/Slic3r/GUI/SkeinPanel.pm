@@ -15,7 +15,6 @@ our $last_config_dir;
 our $last_input_file;
 our $last_output_file;
 our $last_config;
-our $statusbar;
 
 sub new {
     my $class = shift;

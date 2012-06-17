@@ -627,8 +627,10 @@ sub load {
 	$Settings->{last_config}->{value} = $file;
 	save_settings();
 	
-	if ($Slic3r::GUI::SkeinPanel::statusbar){
-		$Slic3r::GUI::SkeinPanel::statusbar->SetStatusText("Loaded $file");
+	if ($Slic3r::GUI::frame->{statusbar}){
+		$Slic3r::GUI::frame->{statusbar}->SetStatusText("Loaded $file");
+		my $file_base = File::Basename::basename($file);
+		$Slic3r::GUI::frame->SetTitle("Slic3r - $file_base");
 	}
 	
 }

@@ -57,7 +57,11 @@ if ($opt{load}) {
     }
 }else{
 	if ($Slic3r::Config::Settings->{last_config}->{value}){
-		Slic3r::Config->load($Slic3r::Config::Settings->{last_config}->{value});
+		if (-e "$Slic3r::Config::Settings->{last_config}->{value}") {
+			Slic3r::Config->load($Slic3r::Config::Settings->{last_config}->{value});
+		}else{
+			$Slic3r::Config::Settings->{last_config}->{value} = '';
+		}
 	}
 }
 
