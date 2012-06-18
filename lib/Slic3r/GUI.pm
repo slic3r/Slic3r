@@ -12,6 +12,8 @@ use Wx 0.9901 qw(:sizer :frame wxID_EXIT wxID_ABOUT);
 use Wx::Event qw(EVT_MENU);
 use base 'Wx::App';
 
+our $frame;
+
 my $growler;
 
 sub OnInit {
@@ -20,14 +22,14 @@ sub OnInit {
     $self->SetAppName('Slic3r');
     Slic3r::debugf "wxWidgets version %s\n", &Wx::wxVERSION_STRING;
     
-    my $frame = Wx::Frame->new( undef, -1, 'Slic3r', [-1, -1], Wx::wxDefaultSize,
-         wxDEFAULT_FRAME_STYLE ^ (wxRESIZE_BORDER | wxMAXIMIZE_BOX) );
+    $frame = Wx::Frame->new( undef, -1, 'Slic3r', [-1, -1], Wx::wxDefaultSize,
+         wxDEFAULT_FRAME_STYLE  );
     Wx::Image::AddHandler(Wx::PNGHandler->new);
     $frame->SetIcon(Wx::Icon->new("$Slic3r::var/Slic3r_128px.png", &Wx::wxBITMAP_TYPE_PNG) );
     
     my $panel = Slic3r::GUI::SkeinPanel->new($frame);
     my $box = Wx::BoxSizer->new(wxVERTICAL);
-    $box->Add($panel, 0);
+    $box->Add($panel, 0,wxEXPAND | wxALL, 10);
     
     if (eval "use Growl::GNTP; 1") {
         # register growl notifications
@@ -43,6 +45,12 @@ sub OnInit {
     # status bar
     $frame->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($frame, -1);
     $frame->SetStatusBar($frame->{statusbar});
+    
+    if ($Slic3r::Config::Settings->{last_config}->{value}){
+    	$frame->{statusbar}->SetStatusText("Loaded $Slic3r::Config::Settings->{last_config}->{value}");
+    	my $file_base = File::Basename::basename($Slic3r::Config::Settings->{last_config}->{value});
+		$Slic3r::GUI::frame->SetTitle("Slic3r - $file_base");
+    }
     
     # File menu
     my $fileMenu = Wx::Menu->new;
@@ -183,6 +191,7 @@ sub _Reposition {
 sub OnSize {
     my ($self, $event) = @_;
     
+    $self->SetSize([-1,28]);
     $self->{_changed} = 1;
     $self->_Reposition;
     $event->Skip;
