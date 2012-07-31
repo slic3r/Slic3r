@@ -43,9 +43,7 @@ sub OnInit {
     
     $self->SetAppName('Slic3r');
     Slic3r::debugf "wxWidgets version %s\n", &Wx::wxVERSION_STRING;
-    
-    $self->{notifier} = Slic3r::GUI::Notifier->new;
-    
+        
     # locate or create data directory
     $datadir = Wx::StandardPaths::Get->GetUserDataDir;
     Slic3r::debugf "Data directory: %s\n", $datadir;
@@ -67,6 +65,8 @@ sub OnInit {
     $frame->SetIcon(Wx::Icon->new("$Slic3r::var/Slic3r_128px.png", wxBITMAP_TYPE_PNG) );
     $self->{skeinpanel} = Slic3r::GUI::SkeinPanel->new($frame);
     $self->SetTopWindow($frame);
+
+    $self->{notifier} = Slic3r::GUI::Notifier->new($frame);
     
     # status bar
     $frame->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($frame, -1);
@@ -351,12 +351,15 @@ sub IsBusy {
 }
 
 package Slic3r::GUI::Notifier;
+use Wx 0.9901 qw(:dialog);
 
 sub new {
     my $class = shift;
+    my $frame = shift;
     my $self;
 
     $self->{icon} = "$Slic3r::var/Slic3r.png";
+    $self->{frame} = $frame;
 
     if (eval 'use Growl::GNTP; 1') {
         # register with growl
@@ -375,11 +378,12 @@ sub notify {
     my ($self, $message) = @_;
     my $title = 'Slicing Done!';
 
-    eval {
-        $self->{growler}->notify(Event => 'SKEIN_DONE', Title => $title, Message => $message)
-            if $self->{growler};
-    };
-    if (eval 'use Net::DBus; 1') {
+    if ($self->{growler}) {
+	    eval {
+	        $self->{growler}->notify(Event => 'SKEIN_DONE', Title => $title, Message => $message)
+	    };
+	  }
+    elsif (eval 'use Net::DBus; 1') {
         eval {
             my $session = Net::DBus->session;
             my $serv = $session->get_service('org.freedesktop.Notifications');
@@ -387,6 +391,9 @@ sub notify {
                                              'org.freedesktop.Notifications');
             $notifier->Notify('Slic3r', 0, $self->{icon}, $title, $message, [], {}, -1);
         }
+    }
+    else {
+      Wx::MessageDialog->new($self->{frame}, $message, $title, wxOK)->ShowModal;
     };
 }
 
