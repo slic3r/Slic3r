@@ -5,7 +5,7 @@ use utf8;
 
 use File::Basename qw(basename dirname);
 use Math::ConvexHull qw(convex_hull);
-use Slic3r::Geometry qw(X Y Z X1 Y1 X2 Y2 scale unscale);
+use Slic3r::Geometry qw(X Y Z X1 Y1 X2 Y2 scale unscale remove_coinciding_points);
 use Slic3r::Geometry::Clipper qw(JT_ROUND);
 use threads::shared qw(shared_clone);
 use Wx qw(:bitmap :brush :button :cursor :dialog :filedialog :font :keycode :icon :id :listctrl :misc :panel :pen :sizer :toolbar :window);
@@ -693,6 +693,7 @@ sub make_thumbnail {
     my $cb = sub {
         my $object = $self->{print}->objects->[$obj_idx];
         my @points = map [ @$_[X,Y] ], @{$object->mesh->vertices};
+        remove_coinciding_points(\@points);
         my $convex_hull = Slic3r::Polygon->new(convex_hull(\@points));
         for (@$convex_hull) {
             @$_ = map $self->to_pixel($_), @$_;
