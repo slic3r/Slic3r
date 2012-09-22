@@ -944,6 +944,9 @@ sub set {
         $opt_key =~ s/^bottom_layer_speed$/first_layer_speed/;
         $value = $value =~ /^\d+(?:\.\d+)?$/ && $value != 0 ? ($value*100) . "%" : 0;
     }
+    if ($opt_key eq 'threads' && !$Slic3r::have_threads) {
+        $value = 1;
+    }
     
     if (!exists $Options->{$opt_key}) {
         $opt_key = +(grep { $Options->{$_}{aliases} && grep $_ eq $opt_key, @{$Options->{$_}{aliases}} } keys %$Options)[0]
@@ -1132,6 +1135,15 @@ sub replace_options {
     # use that regexp to search and replace option names with option values
     $string =~ s/\[($options)\]/$self->serialize($1)/eg;
     return $string;
+}
+
+# min object distance is max(duplicate_distance, clearance_radius)
+sub min_object_distance {
+    my $self = shift;
+    
+    return ($self->complete_objects && $self->extruder_clearance_radius > $self->duplicate_distance)
+        ? $self->extruder_clearance_radius
+        : $self->duplicate_distance;
 }
 
 # CLASS METHODS:
