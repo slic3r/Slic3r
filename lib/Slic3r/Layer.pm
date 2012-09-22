@@ -105,9 +105,8 @@ sub make_surfaces {
     my ($loops) = @_;
     
     {
-        my $safety_offset = scale 0.1;
         # merge everything
-        my $expolygons = [ map $_->offset_ex(-$safety_offset), @{union_ex(safety_offset($loops, $safety_offset))} ];
+        my $expolygons = union_ex($loops);
         
         Slic3r::debugf "  %d surface(s) having %d holes detected from %d polylines\n",
             scalar(@$expolygons), scalar(map $_->holes, @$expolygons), scalar(@$loops);
