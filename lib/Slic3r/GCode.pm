@@ -5,13 +5,14 @@ use List::Util qw(first);
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Geometry qw(scale unscale scaled_epsilon points_coincide PI X Y);
 
+has 'multiple_extruders' => (is => 'ro', default => sub {0} );
 has 'layer'              => (is => 'rw');
 has 'shift_x'            => (is => 'rw', default => sub {0} );
 has 'shift_y'            => (is => 'rw', default => sub {0} );
 has 'z'                  => (is => 'rw', default => sub {0} );
 has 'speed'              => (is => 'rw');
 
-has 'extruder_idx'       => (is => 'rw');
+has 'extruder'           => (is => 'rw');
 has 'extrusion_distance' => (is => 'rw', default => sub {0} );
 has 'elapsed_time'       => (is => 'rw', default => sub {0} );  # seconds
 has 'total_extrusion_length' => (is => 'rw', default => sub {0} );
@@ -48,11 +49,6 @@ my %role_speeds = (
     &EXTR_ROLE_SKIRT                        => 'perimeter',
     &EXTR_ROLE_SUPPORTMATERIAL              => 'perimeter',
 );
-
-sub extruder {
-    my $self = shift;
-    return $Slic3r::extruders->[$self->extruder_idx];
-}
 
 sub change_layer {
     my $self = shift;
@@ -105,7 +101,7 @@ sub extrude_loop {
     # clip the path to avoid the extruder to get exactly on the first point of the loop;
     # if polyline was shorter than the clipping distance we'd get a null polyline, so
     # we discard it in that case
-    $extrusion_path->clip_end(scale($self->layer ? $self->layer->flow->width : $Slic3r::flow->width) * 0.15);
+    $extrusion_path->clip_end($self->layer ? $self->layer->flow->scaled_width : $Slic3r::flow->scaled_width * 0.15);
     return '' if !@{$extrusion_path->polyline};
     
     # extrude along the path
@@ -135,7 +131,7 @@ sub extrude_path {
     {
         my $travel = Slic3r::Line->new($self->last_pos, $path->points->[0]);
         if ($travel->length >= scale $self->extruder->retract_before_travel) {
-            if (!$Slic3r::Config->only_retract_when_crossing_perimeters || $path->role != EXTR_ROLE_FILL || !first { $_->expolygon->encloses_line($travel, scaled_epsilon) } @{$self->layer->slices}) {
+            if (!$Slic3r::Config->only_retract_when_crossing_perimeters || $path->role != EXTR_ROLE_FILL || !first { $_->encloses_line($travel, scaled_epsilon) } @{$self->layer->slices}) {
                 $gcode .= $self->retract(travel_to => $path->points->[0]);
             }
         }
@@ -374,26 +370,26 @@ sub _Gx {
     return "$gcode\n";
 }
 
-sub set_tool {
+sub set_extruder {
     my $self = shift;
-    my ($tool) = @_;
+    my ($extruder) = @_;
     
-    # return nothing if this tool was already selected
-    return "" if (defined $self->extruder_idx) && ($self->extruder_idx == $tool);
+    # return nothing if this extruder was already selected
+    return "" if (defined $self->extruder) && ($self->extruder->id == $extruder);
     
     # if we are running a single-extruder setup, just set the extruder and return nothing
-    if (@{$Slic3r::extruders} == 1) {
-        $self->extruder_idx($tool);
+    if (!$self->multiple_extruders) {
+        $self->extruder($extruder);
         return "";
     }
     
-    # trigger retraction on the current tool (if any) 
+    # trigger retraction on the current extruder (if any) 
     my $gcode = "";
-    $gcode .= $self->retract(toolchange => 1) if defined $self->extruder_idx;
+    $gcode .= $self->retract(toolchange => 1) if defined $self->extruder;
     
-    # set the new tool
-    $self->extruder_idx($tool);
-    $gcode .= sprintf "T%d%s\n", $tool, ($Slic3r::Config->gcode_comments ? ' ; change tool' : '');
+    # set the new extruder
+    $self->extruder($extruder);
+    $gcode .= sprintf "T%d%s\n", $extruder, ($Slic3r::Config->gcode_comments ? ' ; change extruder' : '');
     $gcode .= $self->reset_e;
     
     return $gcode;
@@ -426,7 +422,7 @@ sub set_temperature {
         : ('M104', 'set temperature');
     my $gcode = sprintf "$code %s%d %s; $comment\n",
         ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature,
-        (defined $tool && $tool != $self->extruder_idx) ? "T$tool " : "";
+        (defined $tool && $tool != $self->extruder->id) ? "T$tool " : "";
     
     $gcode .= "M116 ; wait for temperature to be reached\n"
         if $Slic3r::Config->gcode_flavor eq 'teacup' && $wait;

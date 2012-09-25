@@ -502,7 +502,7 @@ sub export_gcode {
     {
         $self->{output_file} = $print->expanded_output_filepath($self->{output_file}, $self->{objects}[0]->input_file);
         my $dlg = Wx::FileDialog->new($self, 'Save G-code file as:', dirname($self->{output_file}),
-            basename($self->{output_file}), $Slic3r::GUI::SkeinPanel::gcode_wildcard, wxFD_SAVE);
+            basename($self->{output_file}), &Slic3r::GUI::SkeinPanel::FILE_WILDCARDS->{gcode}, wxFD_SAVE);
         if ($dlg->ShowModal != wxID_OK) {
             $dlg->Destroy;
             return;
@@ -556,7 +556,7 @@ sub _init_print {
     return Slic3r::Print->new(
         config => $self->skeinpanel->config,
         extra_variables => {
-            map { $_ => $self->skeinpanel->{options_tabs}{$_}->current_preset->{name} } qw(print filament printer),
+            map { +"${_}_preset" => $self->skeinpanel->{options_tabs}{$_}->current_preset->{name} } qw(print filament printer),
         },
     );
 }
@@ -601,7 +601,6 @@ sub export_gcode2 {
         }
         $message .= ".";
         $params{on_completed}->($message);
-        $print->cleanup;
     };
     $params{catch_error}->();
 }
@@ -655,7 +654,7 @@ sub _get_export_file {
         $output_file = $self->_init_print->expanded_output_filepath($output_file, $self->{objects}[0]->input_file);
         $output_file =~ s/\.gcode$/$suffix/i;
         my $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
-            basename($output_file), $Slic3r::GUI::SkeinPanel::model_wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+            basename($output_file), &Slic3r::GUI::SkeinPanel::MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
         if ($dlg->ShowModal != wxID_OK) {
             $dlg->Destroy;
             return undef;
