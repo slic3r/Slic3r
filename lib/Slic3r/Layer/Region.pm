@@ -68,7 +68,6 @@ sub make_surfaces {
     
     return if !@$loops;    
     {
-        my $safety_offset = scale 0.1;
         # merge everything
         my $expolygons = union_ex($loops);
         
