@@ -192,6 +192,7 @@ sub make_perimeters {
             my @new_offsets = ();
             foreach my $expolygon (@last_offsets) {
                 my @offsets = map $_->offset_ex(+0.5*$distance), $expolygon->offset_ex(-1.5*$distance);
+                @offsets = @{ union_ex([map {@{$_}} @offsets]) };
                 push @new_offsets, @offsets;
                 
                 my $diff = diff_ex(
