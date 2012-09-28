@@ -89,8 +89,12 @@ sub make_surfaces {
         foreach my $surface (@surfaces) {
             push @{$self->slices}, map Slic3r::Surface->new
                 (expolygon => $_, surface_type => S_TYPE_INTERNAL),
-                map $_->offset_ex(+$distance),
-                $surface->expolygon->offset_ex(-2*$distance);
+                @{union_ex([
+                    map @{$_},
+                        map $_->offset_ex(+$distance),
+                        $surface->expolygon->offset_ex(-2*$distance)
+                    ])
+                };
         }
         
         # now detect thin walls by re-outgrowing offsetted surfaces and subtracting
