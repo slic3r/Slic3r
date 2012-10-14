@@ -2,13 +2,20 @@ package Slic3r::Line;
 use strict;
 use warnings;
 
-use Boost::Geometry::Utils;
 use Slic3r::Geometry qw(A B X Y);
 
 sub new {
     my $class = shift;
     my $self;
-    $self = [ @_ ];
+    if (@_ == 2) {
+        $self = [ @_ ];
+    } elsif (ref $_[0] eq 'ARRAY') {
+        $self = [ $_[0][0], $_[0][1] ];
+    } elsif ($_[0]->isa(__PACKAGE__)) {
+        return $_[0];
+    } else {
+        die "Invalid argument for $class->new";
+    }
     bless $self, $class;
     bless $_, 'Slic3r::Point' for @$self;
     return $self;
@@ -17,14 +24,19 @@ sub new {
 sub a { $_[0][0] }
 sub b { $_[0][1] }
 
+sub id {
+    my $self = shift;
+    return $self->a->id . "-" . $self->b->id;
+}
+
+sub ordered_id {
+    my $self = shift;
+    return join('-', sort map $_->id, @$self);
+}
+
 sub coordinates {
     my $self = shift;
     return ($self->a->coordinates, $self->b->coordinates);
-}
-
-sub boost_linestring {
-    my $self = shift;
-    return Boost::Geometry::Utils::linestring($self);
 }
 
 sub coincides_with {

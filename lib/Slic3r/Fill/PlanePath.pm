@@ -4,6 +4,7 @@ use Moo;
 extends 'Slic3r::Fill::Base';
 
 use Slic3r::Geometry qw(scale bounding_box X1 Y1 X2 Y2);
+use XXX;
 
 sub multiplier () { 1 }
 
@@ -22,7 +23,7 @@ sub fill_surface {
     my ($surface, %params) = @_;
     
     # rotate polygons
-    my $expolygon = $surface->expolygon->clone;
+    my $expolygon = $surface->expolygon;
     my $rotate_vector = $self->infill_direction($surface);
     $self->rotate_points($expolygon, $rotate_vector);
     
@@ -60,7 +61,7 @@ sub fill_surface {
     # paths must be rotated back
     $self->rotate_points_back(\@paths, $rotate_vector);
     
-    return { flow_spacing => $params{flow_spacing} }, @paths;
+    return {}, @paths;
 }
 
 1;

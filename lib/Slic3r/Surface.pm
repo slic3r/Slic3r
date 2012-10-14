@@ -1,47 +1,21 @@
 package Slic3r::Surface;
-use strict;
-use warnings;
+use Moo;
 
-require Exporter;
-our @ISA = qw(Exporter);
-our @EXPORT_OK   = qw(S_TYPE_TOP S_TYPE_BOTTOM S_TYPE_INTERNAL S_TYPE_INTERNALSOLID);
-our %EXPORT_TAGS = (types => \@EXPORT_OK);
+has 'expolygon' => (
+    is => 'ro',
+    required => 1,
+    handles => [qw(encloses_point lines contour holes)],
+);
 
-use constant S_EXPOLYGON    => 0;
-use constant S_SURFACE_TYPE => 1;
-use constant S_DEPTH_LAYERS => 2;
-use constant S_BRIDGE_ANGLE => 3;
-use constant S_ADDITIONAL_INNER_PERIMETERS => 4;
+has 'surface_type' => (
+    is      => 'rw',
+    #isa     => enum([qw(internal internal-solid bottom top)]),
+);
 
-use constant S_TYPE_TOP             => 0;
-use constant S_TYPE_BOTTOM          => 1;
-use constant S_TYPE_INTERNAL        => 2;
-use constant S_TYPE_INTERNALSOLID   => 3;
+# this integer represents the thickness of the surface expressed in layers
+has 'depth_layers' => (is => 'ro', default => sub {1});
 
-sub new {
-    my $class = shift;
-    my %args = @_;
-    
-    my $self = [
-        map delete $args{$_}, qw(expolygon surface_type depth_layers bridge_angle additional_inner_perimeters),
-    ];
-    $self->[S_DEPTH_LAYERS] //= 1; #/
-    
-    bless $self, $class;
-    $self;
-}
-
-sub expolygon       { $_[0][S_EXPOLYGON] }
-sub surface_type    { $_[0][S_SURFACE_TYPE] = $_[1] if defined $_[1]; $_[0][S_SURFACE_TYPE] }
-sub depth_layers    { $_[0][S_DEPTH_LAYERS] } # this integer represents the thickness of the surface expressed in layers
-sub bridge_angle    { $_[0][S_BRIDGE_ANGLE] }
-sub additional_inner_perimeters { $_[0][S_ADDITIONAL_INNER_PERIMETERS] = $_[1] if $_[1]; $_[0][S_ADDITIONAL_INNER_PERIMETERS] }
-
-# delegate handles
-sub encloses_point  { $_[0]->expolygon->encloses_point }
-sub lines           { $_[0]->expolygon->lines }
-sub contour         { $_[0]->expolygon->contour }
-sub holes           { $_[0]->expolygon->holes }
+has 'bridge_angle' => (is => 'ro');
 
 # static method to group surfaces having same surface_type, bridge_angle and depth_layers
 sub group {
@@ -51,7 +25,7 @@ sub group {
     
     my %unique_types = ();
     foreach my $surface (@surfaces) {
-        my $type = ($params->{merge_solid} && grep { $surface->surface_type == $_ } S_TYPE_TOP, S_TYPE_BOTTOM, S_TYPE_INTERNALSOLID)
+        my $type = ($params->{merge_solid} && $surface->surface_type =~ /top|bottom|solid/)
             ? 'solid'
             : $surface->surface_type;
         $type .= "_" . ($surface->bridge_angle // ''); #/
@@ -63,14 +37,16 @@ sub group {
     return values %unique_types;
 }
 
-sub offset {
+sub add_hole {
     my $self = shift;
-    return map {
-        (ref $self)->new(
-            expolygon => $_,
-            map { $_ => $self->$_ } qw(surface_type depth_layers bridge_angle),
-        )
-    } $self->expolygon->offset_ex(@_);
+    my ($hole) = @_;
+    
+    push @$self, $hole;
+}
+
+sub id {
+    my $self = shift;
+    return $self->contour->id;
 }
 
 sub clipper_polygon {

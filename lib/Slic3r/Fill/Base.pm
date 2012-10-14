@@ -1,15 +1,12 @@
 package Slic3r::Fill::Base;
 use Moo;
 
+use XXX;
 
-has 'print'               => (is => 'rw');
 has 'layer'               => (is => 'rw');
 has 'max_print_dimension' => (is => 'rw');
-has 'angle'               => (is => 'rw', default => sub { $Slic3r::Config->fill_angle });
 
 use constant PI => 4 * atan2(1, 1);
-
-sub angles () { [0, PI/2] }
 
 sub infill_direction {
     my $self = shift;
@@ -17,19 +14,17 @@ sub infill_direction {
     
     # set infill angle
     my (@rotate, @shift);
-    $rotate[0] = Slic3r::Geometry::deg2rad($self->angle);
+    $rotate[0] = Slic3r::Geometry::deg2rad($Slic3r::fill_angle);
     $rotate[1] = [ $self->max_print_dimension * sqrt(2) / 2, $self->max_print_dimension * sqrt(2) / 2 ];
     @shift = @{$rotate[1]};
     
-    if ($self->layer) {
-        # alternate fill direction
-        my $layer_num = $self->layer->id / $surface->depth_layers;
-        my $angle = $self->angles->[$layer_num % @{$self->angles}];
-        $rotate[0] = Slic3r::Geometry::deg2rad($self->angle) + $angle if $angle;
+    # alternate fill direction
+    if (($self->layer->id / $surface->depth_layers) % 2) {
+        $rotate[0] = Slic3r::Geometry::deg2rad($Slic3r::fill_angle) + PI/2;
     }
-        
+    
     # use bridge angle
-    if (defined $surface->bridge_angle) {
+    if ($surface->surface_type eq 'bottom' && $self->layer->id > 0 && defined $surface->bridge_angle) {
         Slic3r::debugf "Filling bridge with angle %d\n", $surface->bridge_angle;
         $rotate[0] = Slic3r::Geometry::deg2rad($surface->bridge_angle);
     }

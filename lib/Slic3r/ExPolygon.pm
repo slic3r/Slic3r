@@ -4,9 +4,8 @@ use warnings;
 
 # an ExPolygon is a polygon with holes
 
-use Boost::Geometry::Utils;
 use Math::Geometry::Voronoi;
-use Slic3r::Geometry qw(X Y A B point_in_polygon same_line line_length);
+use Slic3r::Geometry qw(point_in_polygon X Y A B);
 use Slic3r::Geometry::Clipper qw(union_ex JT_MITER);
 
 # the constructor accepts an array of polygons 
@@ -54,19 +53,15 @@ sub clipper_expolygon {
     };
 }
 
-sub boost_polygon {
-    my $self = shift;
-    return Boost::Geometry::Utils::polygon(@$self);
-}
-
 sub offset {
     my $self = shift;
-    return Slic3r::Geometry::Clipper::offset($self, @_);
-}
-
-sub offset_ex {
-    my $self = shift;
-    return Slic3r::Geometry::Clipper::offset_ex($self, @_);
+    my ($distance, $scale, $joinType, $miterLimit) = @_;
+    $scale      ||= $Slic3r::resolution * 1000000;
+    $joinType   = JT_MITER if !defined $joinType;
+    $miterLimit ||= 2;
+    
+    my $offsets = Math::Clipper::offset($self, $distance, $scale, $joinType, $miterLimit);
+    return @$offsets;
 }
 
 sub safety_offset {
@@ -82,33 +77,20 @@ sub safety_offset {
     );
 }
 
+sub offset_ex {
+    my $self = shift;
+    my @offsets = $self->offset(@_);
+    
+    # apply holes to the right contours
+    return @{ union_ex(\@offsets) };
+}
+
 sub encloses_point {
     my $self = shift;
     my ($point) = @_;
     return $self->contour->encloses_point($point)
         && (!grep($_->encloses_point($point), $self->holes)
             || grep($_->point_on_segment($point), $self->holes));
-}
-
-# A version of encloses_point for use when hole borders do not matter.
-# Useful because point_on_segment is slow
-sub encloses_point_quick {
-    my $self = shift;
-    my ($point) = @_;
-    return $self->contour->encloses_point($point)
-        && !grep($_->encloses_point($point), $self->holes);
-}
-
-sub encloses_line {
-    my $self = shift;
-    my ($line, $tolerance) = @_;
-    my $clip = $self->clip_line($line);
-    if (!defined $tolerance) {
-        # optimization
-        return @$clip == 1 && same_line($clip->[0], $line);
-    } else {
-        return @$clip == 1 && abs(line_length($clip->[0]) - $line->length) < $tolerance;
-    }
 }
 
 sub point_on_segment {
@@ -126,30 +108,37 @@ sub bounding_box {
     return Slic3r::Geometry::bounding_box($self->contour);
 }
 
-sub bounding_box_polygon {
-    my $self = shift;
-    my @bb = $self->bounding_box;
-    return Slic3r::Polygon->new([
-        [ $bb[0], $bb[1] ],
-        [ $bb[2], $bb[1] ],
-        [ $bb[2], $bb[3] ],
-        [ $bb[0], $bb[3] ],
-    ]);
-}
-
 sub clip_line {
     my $self = shift;
-    my ($line) = @_;  # line must be a Slic3r::Line object
+    my ($line) = @_;
+    $line = Slic3r::Line->new($line) if ref $line eq 'ARRAY';
     
-    return Boost::Geometry::Utils::polygon_linestring_intersection(
-        $self->boost_polygon,
-        $line->boost_linestring,
+    my @intersections = grep $_, map $_->intersection($line, 1), map $_->lines, @$self;
+    my @dir = (
+        $line->[B][X] <=> $line->[A][X],
+        $line->[B][Y] <=> $line->[A][Y],
     );
-}
-
-sub simplify {
-    my $self = shift;
-    $_->simplify(@_) for @$self;
+    
+    @intersections = sort {
+        (($a->[X] <=> $b->[X]) == $dir[X]) && (($a->[Y] <=> $b->[Y]) == $dir[Y]) ? 1 : -1
+    } @intersections, @$line;
+    
+    shift @intersections if $intersections[0]->coincides_with($intersections[1]);
+    pop @intersections if $intersections[-1]->coincides_with($intersections[-2]);
+    
+    shift @intersections
+        if !$self->encloses_point($intersections[0])
+        && !$self->point_on_segment($intersections[0]);
+    
+    my @lines = ();
+    while (@intersections) {
+        # skip tangent points
+        my @points = splice @intersections, 0, 2;
+        next if !$points[1];
+        next if $points[0]->coincides_with($points[1]);
+        push @lines, [ @points ];
+    }
+    return [@lines];
 }
 
 sub translate {
@@ -204,7 +193,7 @@ sub medial_axis {
         $a = $vertices->[$edge->[1]];
         $b = $vertices->[$edge->[2]];
         
-        next if !$self->encloses_point_quick($a) || !$self->encloses_point_quick($b);
+        next if !$self->encloses_point($a) || !$self->encloses_point($b);
         
         push @skeleton_lines, [$edge->[1], $edge->[2]];
     }
@@ -217,75 +206,57 @@ sub medial_axis {
             $pointmap{$_->[A]} >= 2 && $pointmap{$_->[B]} >= 2
         } @skeleton_lines;
     }
-    return () if !@skeleton_lines;
+    return undef if !@skeleton_lines;
     
-    # now walk along the medial axis and build continuos polylines or polygons
-    my @polylines = ();
+    return undef if !@skeleton_lines;
+    
+    # now build a single polyline
+    my $polyline = [];
     {
-        # build a map of line endpoints
-        my %pointmap = ();  # point_idx => [line_idx, line_idx ...]
-        for my $line_idx (0 .. $#skeleton_lines) {
-            for my $point_idx (@{$skeleton_lines[$line_idx]}) {
-                $pointmap{$point_idx} ||= [];
-                push @{$pointmap{$point_idx}}, $line_idx;
+        my %pointmap = ();
+        foreach my $line (@skeleton_lines) {
+            foreach my $point_id (@$line) {
+                $pointmap{$point_id} ||= [];
+                push @{$pointmap{$point_id}}, $line;
             }
         }
         
-        # build the list of available lines
-        my %spare_lines = map {$_ => 1} (0 .. $#skeleton_lines);
-        
-        CYCLE: while (%spare_lines) {
-            push @polylines, [];
-            my $polyline = $polylines[-1];
-            
-            # start from a random line
-            my $first_line_idx = +(keys %spare_lines)[0];
-            delete $spare_lines{$first_line_idx};
-            push @$polyline, @{ $skeleton_lines[$first_line_idx] };
-            
-            while (1) {
-                my $last_point_id = $polyline->[-1];
-                my $lines_starting_here = $pointmap{$last_point_id};
-                
-                # remove all the visited lines from the array
-                shift @$lines_starting_here
-                    while @$lines_starting_here && !$spare_lines{$lines_starting_here->[0]};
-                
-                # do we have a line starting here?
-                my $next_line_idx = shift @$lines_starting_here;
-                if (!defined $next_line_idx) {
-                    delete $pointmap{$last_point_id};
-                    next CYCLE;
-                }
-                
-                # line is not available anymore
-                delete $spare_lines{$next_line_idx};
-                
-                # add the other point to our polyline and continue walking
-                push @$polyline, grep $_ ne $last_point_id, @{$skeleton_lines[$next_line_idx]};
+        # start from a point having only one line
+        foreach my $point_id (keys %pointmap) {
+            if (@{$pointmap{$point_id}} == 1) {
+                push @$polyline, grep $_ ne $point_id, map @$_, shift @{$pointmap{$point_id}};
+                last;
             }
         }
-    }
-    
-    my @result = ();
-    foreach my $polyline (@polylines) {
-        next unless @$polyline >= 2;
         
-        # now replace point indexes with coordinates
-        @$polyline = map $vertices->[$_], @$polyline;
+        # if no such point is found, pick a random one
+        push @$polyline, shift @{ +(values %pointmap)[0][0] } if !@$polyline;
         
-        # cleanup
-        $polyline = Slic3r::Geometry::douglas_peucker($polyline, $width / 7);
-        
-        if (Slic3r::Geometry::same_point($polyline->[0], $polyline->[-1])) {
-            next if @$polyline == 2;
-            push @result, Slic3r::Polygon->new(@$polyline[0..$#$polyline-1]);
-        } else {
-            push @result, Slic3r::Polyline->new($polyline);
+        my %visited_lines = ();
+        while (1) {
+            my $last_point_id = $polyline->[-1];
+            
+            shift @{ $pointmap{$last_point_id} }
+                while @{ $pointmap{$last_point_id} } && $visited_lines{$pointmap{$last_point_id}[0]};
+            my $next_line = shift @{ $pointmap{$last_point_id} } or last;
+            $visited_lines{$next_line} = 1;
+            push @$polyline, grep $_ ne $last_point_id, @$next_line;
         }
     }
     
-    return @result;
+    # now replace point indexes with coordinates
+    @$polyline = map $vertices->[$_], @$polyline;
+    
+    # cleanup
+    Slic3r::Geometry::polyline_remove_short_segments($polyline, $width / 2);
+    @$polyline = Slic3r::Geometry::Douglas_Peucker($polyline, $width / 100);
+    Slic3r::Geometry::polyline_remove_parallel_continuous_edges($polyline);
+    
+    if (Slic3r::Geometry::same_point($polyline->[0], $polyline->[-1])) {
+        return Slic3r::Polygon->new(@$polyline[0..$#$polyline-1]);
+    } else {
+        return Slic3r::Polyline->new($polyline);
+    }
 }
 
 1;

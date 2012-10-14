@@ -13,16 +13,17 @@ our @EXPORT_OK = qw(
     polygon_has_vertex polyline_length can_connect_points deg2rad rad2deg
     rotate_points move_points remove_coinciding_points clip_segment_polygon
     sum_vectors multiply_vector subtract_vectors dot perp polygon_points_visibility
-    line_intersection bounding_box bounding_box_intersect same_point same_line
+    line_intersection bounding_box bounding_box_intersect same_point
     longest_segment angle3points three_points_aligned line_direction
     polyline_remove_parallel_continuous_edges polyline_remove_acute_vertices
     polygon_remove_acute_vertices polygon_remove_parallel_continuous_edges
     shortest_path collinear scale unscale merge_collinear_lines
-    rad2deg_dir bounding_box_center line_intersects_any douglas_peucker
-    polyline_remove_short_segments normal triangle_normal polygon_is_convex
-    scaled_epsilon bounding_box_3D size_3D
+    rad2deg_dir bounding_box_center line_intersects_any
+    polyline_remove_short_segments
 );
 
+use Slic3r::Geometry::DouglasPeucker qw(Douglas_Peucker);
+use XXX;
 
 use constant PI => 4 * atan2(1, 1);
 use constant A => 0;
@@ -38,11 +39,11 @@ use constant MIN => 0;
 use constant MAX => 1;
 our $parallel_degrees_limit = abs(deg2rad(3));
 
-sub epsilon () { 1E-4 }
-sub scaled_epsilon () { epsilon / &Slic3r::SCALING_FACTOR }
+our $epsilon = 1E-4;
+sub epsilon () { $epsilon }
 
-sub scale   ($) { $_[0] / &Slic3r::SCALING_FACTOR }
-sub unscale ($) { $_[0] * &Slic3r::SCALING_FACTOR }
+sub scale   ($) { $_[0] / $Slic3r::resolution }
+sub unscale ($) { $_[0] * $Slic3r::resolution }
 
 sub slope {
     my ($line) = @_;
@@ -104,27 +105,9 @@ sub same_point {
     return $p1->[X] == $p2->[X] && $p1->[Y] == $p2->[Y];
 }
 
-sub same_line {
-    my ($line1, $line2) = @_;
-    return same_point($line1->[A], $line2->[A]) && same_point($line1->[B], $line2->[B]);
-}
-
 sub distance_between_points {
     my ($p1, $p2) = @_;
     return sqrt((($p1->[X] - $p2->[X])**2) + ($p1->[Y] - $p2->[Y])**2);
-}
-
-sub point_line_distance {
-    my ($point, $line) = @_;
-    return distance_between_points($point, $line->[A])
-        if same_point($line->[A], $line->[B]);
-    
-    my $n = ($line->[B][X] - $line->[A][X]) * ($line->[A][Y] - $point->[Y])
-        - ($line->[A][X] - $point->[X]) * ($line->[B][Y] - $line->[A][Y]);
-    
-    my $d = sqrt((($line->[B][X] - $line->[A][X]) ** 2) + (($line->[B][Y] - $line->[A][Y]) ** 2));
-    
-    return abs($n) / $d;
 }
 
 sub line_length {
@@ -156,12 +139,15 @@ sub point_in_polygon {
     my ($point, $polygon) = @_;
     
     my ($x, $y) = @$point;
-    my $n = @$polygon;
-    my @x = map $_->[X], @$polygon;
-    my @y = map $_->[Y], @$polygon;
+    my @xy = map @$_, @$polygon;
     
     # Derived from the comp.graphics.algorithms FAQ,
     # courtesy of Wm. Randolph Franklin
+    my $n = @xy / 2;                        # Number of points in polygon
+    my @i = map { 2*$_ } 0..(@xy/2);        # The even indices of @xy
+    my @x = map { $xy[$_]     } @i;         # Even indices: x-coordinates
+    my @y = map { $xy[$_ + 1] } @i;         # Odd indices:  y-coordinates
+    
     my ($i, $j);
     my $side = 0;                           # 0 = outside; 1 = inside
     for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
@@ -241,24 +227,17 @@ sub polygon_lines {
 
 sub nearest_point {
     my ($point, $points) = @_;
-    my $index = nearest_point_index(@_);
-    return undef if !defined $index;
-    return $points->[$index];
-}
-
-sub nearest_point_index {
-    my ($point, $points) = @_;
     
-    my ($nearest_point_index, $distance) = ();
-    for my $i (0..$#$points) {
-        my $d = distance_between_points($point, $points->[$i]);
+    my ($nearest_point, $distance) = ();
+    foreach my $p (@$points) {
+        my $d = distance_between_points($point, $p);
         if (!defined $distance || $d < $distance) {
-            $nearest_point_index = $i;
+            $nearest_point = $p;
             $distance = $d;
-            return $i if $distance < epsilon;
+            return $p if $distance < epsilon;
         }
     }
-    return $nearest_point_index;
+    return $nearest_point;
 }
 
 # given a segment $p1-$p2, get the point at $distance from $p1 along segment
@@ -302,16 +281,6 @@ sub polygon_has_vertex {
         return 1 if points_coincide($p, $point);
     }
     return 0;
-}
-
-# polygon must be simple (non complex) and ccw
-sub polygon_is_convex {
-    my ($points) = @_;
-    for (my $i = 0; $i <= $#$points; $i++) {
-        my $angle = angle3points($points->[$i-1], $points->[$i-2], $points->[$i]);
-        return 0 if $angle < PI;
-    }
-    return 1;
 }
 
 sub polyline_length {
@@ -445,25 +414,6 @@ sub subtract_vectors {
     return [ $line2->[X] - $line1->[X], $line2->[Y] - $line1->[Y] ];
 }
 
-sub normal {
-    my ($line1, $line2) = @_;
-    
-    return [
-         ($line1->[Y] * $line2->[Z]) - ($line1->[Z] * $line2->[Y]),
-        -($line2->[Z] * $line1->[X]) + ($line2->[X] * $line1->[Z]),
-         ($line1->[X] * $line2->[Y]) - ($line1->[Y] * $line2->[X]),
-    ];
-}
-
-sub triangle_normal {
-    my ($v1, $v2, $v3) = @_;
-    
-    my $u = [ map +($v2->[$_] - $v1->[$_]), (X,Y,Z) ];
-    my $v = [ map +($v3->[$_] - $v1->[$_]), (X,Y,Z) ];
-    
-    return normal($u, $v);
-}
-
 # 2D dot product
 sub dot {
     my ($u, $v) = @_;
@@ -558,7 +508,32 @@ sub merge_collinear_lines {
 }
 
 sub _line_intersection {
-  my ( $x0, $y0, $x1, $y1, $x2, $y2, $x3, $y3 ) = @_;
+  my ( $x0, $y0, $x1, $y1, $x2, $y2, $x3, $y3 );
+
+  if ( @_ == 8 ) {
+    ( $x0, $y0, $x1, $y1, $x2, $y2, $x3, $y3 ) = @_;
+
+    # The bounding boxes chop the lines into line segments.
+    # bounding_box() is defined later in this chapter.
+    my @box_a = bounding_box([ [$x0, $y0], [$x1, $y1] ]);
+    my @box_b = bounding_box([ [$x2, $y2], [$x3, $y3] ]);
+    
+    # Take this test away and the line segments are
+    # turned into lines going from infinite to another.
+    # bounding_box_intersect() defined later in this chapter.
+    ###return "out of bounding box" unless bounding_box_intersect( 2, @box_a, @box_b );
+  }
+  elsif ( @_ == 4 ) { # The parametric form.
+    $x0 = $x2 = 0;
+    ( $y0, $y2 ) = @_[ 1, 3 ];
+    # Need to multiply by 'enough' to get 'far enough'.
+    my $abs_y0 = abs $y0;
+    my $abs_y2 = abs $y2;
+    my $enough = 10 * ( $abs_y0 > $abs_y2 ? $abs_y0 : $abs_y2 );
+    $x1 = $x3 = $enough;
+    $y1 = $_[0] * $x1 + $y0;
+    $y3 = $_[2] * $x2 + $y2;
+  }
 
   my ($x, $y);  # The as-yet-undetermined intersection point.
 
@@ -574,7 +549,8 @@ sub _line_intersection {
 
   my $dyx10;                            # The slopes.
   my $dyx32;
-  
+
+
   $dyx10 = $dy10 / $dx10 unless $dx10z;
   $dyx32 = $dy32 / $dx32 unless $dx32z;
 
@@ -628,55 +604,12 @@ sub _line_intersection {
   return [Slic3r::Point->new($x, $y), $h10 >= 0 && $h10 <= 1 && $h32 >= 0 && $h32 <= 1];
 }
 
-# http://paulbourke.net/geometry/lineline2d/
-sub _line_intersection2 {
-    my ($line1, $line2) = @_;
-    
-    my $denom = ($line2->[B][Y] - $line2->[A][Y]) * ($line1->[B][X] - $line1->[A][X])
-        - ($line2->[B][X] - $line2->[A][X]) * ($line1->[B][Y] - $line1->[A][Y]);
-    my $numerA = ($line2->[B][X] - $line2->[A][X]) * ($line1->[A][Y] - $line2->[A][Y])
-        - ($line2->[B][Y] - $line2->[A][Y]) * ($line1->[A][X] - $line2->[A][X]);
-    my $numerB = ($line1->[B][X] - $line1->[A][X]) * ($line1->[A][Y] - $line2->[A][Y])
-        - ($line1->[B][Y] - $line1->[A][Y]) * ($line1->[A][X] - $line2->[A][X]);
-    
-    # are the lines coincident?
-    if (abs($numerA) < epsilon && abs($numerB) < epsilon && abs($denom) < epsilon) {
-        return Slic3r::Point->new(
-            ($line1->[A][X] + $line1->[B][X]) / 2,
-            ($line1->[A][Y] + $line1->[B][Y]) / 2,
-        );
-    }
-    
-    # are the lines parallel?
-    if (abs($denom) < epsilon) {
-        return undef;
-    }
-    
-    # is the intersection along the segments?
-    my $muA = $numerA / $denom;
-    my $muB = $numerB / $denom;
-    if ($muA < 0 || $muA > 1 || $muB < 0 || $muB > 1) {
-        return undef;
-    }
-    
-    return Slic3r::Point->new(
-        $line1->[A][X] + $muA * ($line1->[B][X] - $line1->[A][X]),
-        $line1->[A][Y] + $muA * ($line1->[B][Y] - $line1->[A][Y]),
-    );
-}
-
 # 2D
 sub bounding_box {
     my ($points) = @_;
     
-    my @x = (undef, undef);
-    my @y = (undef, undef);
-    for (@$points) {
-        $x[MIN] = $_->[X] if !defined $x[MIN] || $_->[X] < $x[MIN];
-        $x[MAX] = $_->[X] if !defined $x[MAX] || $_->[X] > $x[MAX];
-        $y[MIN] = $_->[Y] if !defined $y[MIN] || $_->[Y] < $y[MIN];
-        $y[MAX] = $_->[Y] if !defined $y[MAX] || $_->[Y] > $y[MAX];
-    }
+    my @x = sort { $a <=> $b } map $_->[X], @$points;
+    my @y = sort { $a <=> $b } map $_->[Y], @$points;
     
     return ($x[0], $y[0], $x[-1], $y[-1]);
 }
@@ -707,27 +640,6 @@ sub bounding_box_intersect {
     return 1;
 }
 
-# 3D
-sub bounding_box_3D {
-    my ($points) = @_;
-    
-    my @extents = (map [undef, undef], X,Y,Z);
-    foreach my $point (@$points) {
-        for (X,Y,Z) {
-            $extents[$_][MIN] = $point->[$_] if !defined $extents[$_][MIN] || $point->[$_] < $extents[$_][MIN];
-            $extents[$_][MAX] = $point->[$_] if !defined $extents[$_][MAX] || $point->[$_] > $extents[$_][MAX];
-        }
-    }
-    return @extents;
-}
-
-sub size_3D {
-    my ($points) = @_;
-    
-    my @extents = bounding_box_3D($points);
-    return map $extents[$_][MAX] - $extents[$_][MIN], (X,Y,Z);
-}
-
 sub angle3points {
     my ($p1, $p2, $p3) = @_;
     # p1 is the center
@@ -742,7 +654,7 @@ sub angle3points {
 sub polyline_remove_parallel_continuous_edges {
     my ($points, $isPolygon) = @_;
     
-    for (my $i = $isPolygon ? 0 : 2; $i <= $#$points && @$points >= 3; $i++) {
+    for (my $i = $isPolygon ? 0 : 2; $i <= $#$points; $i++) {
         if (Slic3r::Geometry::lines_parallel([$points->[$i-2], $points->[$i-1]], [$points->[$i-1], $points->[$i]])) {
             # we can remove $points->[$i-1]
             splice @$points, $i-1, 1;
@@ -807,213 +719,6 @@ sub shortest_path {
     }
     
     return $result;
-}
-
-sub douglas_peucker {
-    my ($points, $tolerance) = @_;
-    no warnings "recursion";
-    
-    my $results = [];
-    my $dmax = 0;
-    my $index = 0;
-    for my $i (1..$#$points) {
-        my $d = point_line_distance($points->[$i], [ $points->[0], $points->[-1] ]);
-        if ($d > $dmax) {
-            $index = $i;
-            $dmax = $d;
-        }
-    }
-    if ($dmax >= $tolerance) {
-        my $dp1 = douglas_peucker([ @$points[0..$index] ], $tolerance);
-        $results = [
-            @$dp1[0..($#$dp1-1)],
-            @{douglas_peucker([ @$points[$index..$#$points] ], $tolerance)},
-        ];
-    } else {
-        $results = [ $points->[0], $points->[-1] ];
-    }
-    return $results;
-}
-
-sub douglas_peucker2 {
-    my ($points, $tolerance) = @_;
-    
-    my $anchor = 0;
-    my $floater = $#$points;
-    my @stack = ();
-    my %keep = ();
-    
-    push @stack, [$anchor, $floater];
-    while (@stack) {
-        ($anchor, $floater) = @{pop @stack};
-        
-        # initialize line segment
-        my ($anchor_x, $anchor_y, $seg_len);
-        if (grep $points->[$floater][$_] != $points->[$anchor][$_], X, Y) {
-            $anchor_x = $points->[$floater][X] - $points->[$anchor][X];
-            $anchor_y = $points->[$floater][Y] - $points->[$anchor][Y];
-            $seg_len = sqrt(($anchor_x ** 2) + ($anchor_y ** 2));
-            # get the unit vector
-            $anchor_x /= $seg_len;
-            $anchor_y /= $seg_len;
-        } else {
-            $anchor_x = $anchor_y = $seg_len = 0;
-        }
-        
-        # inner loop:
-        my $max_dist = 0;
-        my $farthest = $anchor + 1;
-        for my $i (($anchor + 1) .. $floater) {
-            my $dist_to_seg = 0;
-            # compare to anchor
-            my $vecX = $points->[$i][X] - $points->[$anchor][X];
-            my $vecY = $points->[$i][Y] - $points->[$anchor][Y];
-            $seg_len = sqrt(($vecX ** 2) + ($vecY ** 2));
-            # dot product:
-            my $proj = $vecX * $anchor_x + $vecY * $anchor_y;
-            if ($proj < 0) {
-                $dist_to_seg = $seg_len;
-            } else {
-                # compare to floater
-                $vecX = $points->[$i][X] - $points->[$floater][X];
-                $vecY = $points->[$i][Y] - $points->[$floater][Y];
-                $seg_len = sqrt(($vecX ** 2) + ($vecY ** 2));
-                # dot product:
-                $proj = $vecX * (-$anchor_x) + $vecY * (-$anchor_y);
-                if ($proj < 0) {
-                    $dist_to_seg = $seg_len
-                } else {  # calculate perpendicular distance to line (pythagorean theorem):
-                    $dist_to_seg = sqrt(abs(($seg_len ** 2) - ($proj ** 2)));
-                }
-                if ($max_dist < $dist_to_seg) {
-                    $max_dist = $dist_to_seg;
-                    $farthest = $i;
-                }
-            }
-        }
-        
-        if ($max_dist <= $tolerance) { # use line segment
-            $keep{$_} = 1 for $anchor, $floater;
-        } else {
-            push @stack, [$anchor, $farthest];
-            push @stack, [$farthest, $floater];
-        }
-    }
-    
-    return [ map $points->[$_], sort keys %keep ];
-}
-
-sub arrange {
-    my ($total_parts, $partx, $party, $areax, $areay, $dist, $Config) = @_;
-    
-    my $linint = sub {
-        my ($value, $oldmin, $oldmax, $newmin, $newmax) = @_;
-        return ($value - $oldmin) * ($newmax - $newmin) / ($oldmax - $oldmin) + $newmin;
-    };
-    
-    # use actual part size (the largest) plus separation distance (half on each side) in spacing algorithm
-    $partx += $dist;
-    $party += $dist;
-    
-    # margin needed for the skirt
-    my $skirt_margin;		
-    if ($Config->skirts > 0) {
-        my $flow = Slic3r::Flow->new(
-            layer_height    => $Config->get_value('first_layer_height'),
-            nozzle_diameter => $Config->nozzle_diameter->[0],  # TODO: actually look for the extruder used for skirt
-            width           => $Config->get_value('first_layer_extrusion_width'),
-        );
-        $skirt_margin = ($flow->spacing * $Config->skirts + $Config->skirt_distance) * 2;
-    } else {
-        $skirt_margin = 0;		
-    }
-    
-    # this is how many cells we have available into which to put parts
-    my $cellw = int(($areax - $skirt_margin + $dist) / $partx);
-    my $cellh = int(($areay - $skirt_margin + $dist) / $party);
-    
-    die "$total_parts parts won't fit in your print area!\n" if $total_parts > ($cellw * $cellh);
-    
-    # width and height of space used by cells
-    my $w = $cellw * $partx;
-    my $h = $cellh * $party;
-    
-    # left and right border positions of space used by cells
-    my $l = ($areax - $w) / 2;
-    my $r = $l + $w;
-    
-    # top and bottom border positions
-    my $t = ($areay - $h) / 2;
-    my $b = $t + $h;
-    
-    # list of cells, sorted by distance from center
-    my @cellsorder;
-    
-    # work out distance for all cells, sort into list
-    for my $i (0..$cellw-1) {
-        for my $j (0..$cellh-1) {
-            my $cx = $linint->($i + 0.5, 0, $cellw, $l, $r);
-            my $cy = $linint->($j + 0.5, 0, $cellh, $t, $b);
-            
-            my $xd = abs(($areax / 2) - $cx);
-            my $yd = abs(($areay / 2) - $cy);
-            
-            my $c = {
-                location => [$cx, $cy],
-                index => [$i, $j],
-                distance => $xd * $xd + $yd * $yd - abs(($cellw / 2) - ($i + 0.5)),
-            };
-            
-            BINARYINSERTIONSORT: {
-                my $index = $c->{distance};
-                my $low = 0;
-                my $high = @cellsorder;
-                while ($low < $high) {
-                    my $mid = ($low + (($high - $low) / 2)) | 0;
-                    my $midval = $cellsorder[$mid]->[0];
-                    
-                    if ($midval < $index) {
-                        $low = $mid + 1;
-                    } elsif ($midval > $index) {
-                        $high = $mid;
-                    } else {
-                        splice @cellsorder, $mid, 0, [$index, $c];
-                        last BINARYINSERTIONSORT;
-                    }
-                }
-                splice @cellsorder, $low, 0, [$index, $c];
-            }
-        }
-    }
-    
-    # the extents of cells actually used by objects
-    my ($lx, $ty, $rx, $by) = (0, 0, 0, 0);
-
-    # now find cells actually used by objects, map out the extents so we can position correctly
-    for my $i (1..$total_parts) {
-        my $c = $cellsorder[$i - 1];
-        my $cx = $c->[1]->{index}->[0];
-        my $cy = $c->[1]->{index}->[1];
-        if ($i == 1) {
-            $lx = $rx = $cx;
-            $ty = $by = $cy;
-        } else {
-            $rx = $cx if $cx > $rx;
-            $lx = $cx if $cx < $lx;
-            $by = $cy if $cy > $by;
-            $ty = $cy if $cy < $ty;
-        }
-    }
-    # now we actually place objects into cells, positioned such that the left and bottom borders are at 0
-    my @positions = ();
-    for (1..$total_parts) {
-        my $c = shift @cellsorder;
-        my $cx = $c->[1]->{index}->[0] - $lx;
-        my $cy = $c->[1]->{index}->[1] - $ty;
-
-        push @positions, [$cx * $partx, $cy * $party];
-    }
-    return @positions;
 }
 
 1;

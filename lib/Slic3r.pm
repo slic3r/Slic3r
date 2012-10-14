@@ -1,33 +1,15 @@
 package Slic3r;
 
-# Copyright holder: Alessandro Ranellucci
-# This application is licensed under the GNU Affero General Public License, version 3
-
 use strict;
 use warnings;
-require v5.10;
 
-our $VERSION = "0.9.4-dev";
+our $VERSION = "0.6.0-beta";
 
 our $debug = 0;
 sub debugf {
     printf @_ if $debug;
 }
 
-# load threads before Moo as required by it
-our $have_threads;
-BEGIN {
-    use Config;
-    $have_threads = $Config{useithreads} && eval "use threads; use Thread::Queue; 1";
-}
-
-warn "Running Slic3r under Perl >= 5.16 is not supported nor recommended\n"
-    if $^V >= v5.16;
-
-use FindBin;
-our $var = "$FindBin::Bin/var";
-
-use Moo 0.091009;
 use Slic3r::Config;
 use Slic3r::ExPolygon;
 use Slic3r::Extruder;
@@ -36,52 +18,93 @@ use Slic3r::ExtrusionPath;
 use Slic3r::ExtrusionPath::Arc;
 use Slic3r::ExtrusionPath::Collection;
 use Slic3r::Fill;
-use Slic3r::Flow;
-use Slic3r::Format::AMF;
-use Slic3r::Format::OBJ;
-use Slic3r::Format::STL;
-use Slic3r::GCode;
 use Slic3r::Geometry qw(PI);
 use Slic3r::Layer;
-use Slic3r::Layer::Region;
 use Slic3r::Line;
-use Slic3r::Model;
+use Slic3r::Perimeter;
 use Slic3r::Point;
 use Slic3r::Polygon;
 use Slic3r::Polyline;
 use Slic3r::Print;
-use Slic3r::Print::Object;
-use Slic3r::Print::Region;
+use Slic3r::Skein;
+use Slic3r::STL;
 use Slic3r::Surface;
 use Slic3r::TriangleMesh;
-eval "use Slic3r::Build";
+use Slic3r::TriangleMesh::IntersectionLine;
 
-use constant SCALING_FACTOR         => 0.000001;
-use constant RESOLUTION             => 0.01;
-use constant OVERLAP_FACTOR         => 0.5;
-use constant SMALL_PERIMETER_LENGTH => (6.5 / SCALING_FACTOR) * 2 * PI;
+# output options
+our $output_filename_format = '[input_filename_base].gcode';
 
-# The following variables hold the objects used throughout the slicing
-# process.  They should belong to the Print object, but we are keeping 
-# them here because it makes accessing them slightly faster.
-our $Config;
-our $flow;
+# printer options
+our $nozzle_diameter    = 0.5;
+our $print_center       = [100,100];  # object will be centered around this point
+our $use_relative_e_distances = 0;
+our $extrusion_axis     = 'E';
+our $z_offset           = 0;
+our $gcode_arcs         = 0;
+our $g0                 = 0;
+our $gcode_comments     = 0;
 
-sub parallelize {
-    my %params = @_;
-    
-    if (!$params{disable} && $Slic3r::have_threads && $Config->threads > 1) {
-        my @items = (ref $params{items} eq 'CODE') ? $params{items}->() : @{$params{items}};
-        my $q = Thread::Queue->new;
-        $q->enqueue(@items, (map undef, 1..$Config->threads));
-        
-        my $thread_cb = sub { $params{thread_cb}->($q) };
-        foreach my $th (map threads->create($thread_cb), 1..$Config->threads) {
-            $params{collect_cb}->($th->join);
-        }
-    } else {
-        $params{no_threads_cb}->();
-    }
-}
+# filament options
+our $filament_diameter  = 3;    # mm
+our $extrusion_multiplier = 1;
+our $temperature        = 200;
+
+# speed options
+our $travel_speed           = 130;  # mm/sec
+our $perimeter_speed        = 30;   # mm/sec
+our $small_perimeter_speed  = 30;   # mm/sec
+our $infill_speed           = 60;   # mm/sec
+our $solid_infill_speed     = 60;   # mm/sec
+our $bridge_speed           = 60;   # mm/sec
+our $bottom_layer_speed_ratio   = 0.3;
+
+# accuracy options
+our $resolution             = 0.00000001;
+our $small_perimeter_area   = (5 / $resolution) ** 2;
+our $layer_height           = 0.4;
+our $first_layer_height_ratio = 1;
+our $infill_every_layers    = 1;
+
+# flow options
+our $extrusion_width_ratio  = 0;
+our $bridge_flow_ratio      = 1;
+our $overlap_factor         = 0.5;
+our $flow_width;
+our $min_flow_spacing;
+our $flow_spacing;
+
+# print options
+our $perimeters         = 3;
+our $solid_layers       = 3;
+our $fill_pattern       = 'rectilinear';
+our $solid_fill_pattern = 'rectilinear';
+our $fill_density       = 0.4;  # 1 = 100%
+our $fill_angle         = 45;
+our $start_gcode = "G28 ; home all axes";
+our $end_gcode = <<"END";
+M104 S0 ; turn off temperature
+G28 X0  ; home X axis
+M84     ; disable motors
+END
+
+# retraction options
+our $retract_length         = 1;    # mm
+our $retract_restart_extra  = 0;    # mm
+our $retract_speed          = 30;   # mm/sec
+our $retract_before_travel  = 2;    # mm
+our $retract_lift           = 0;    # mm
+
+# skirt options
+our $skirts             = 1;
+our $skirt_distance     = 6;    # mm
+our $skirt_height       = 1;    # layers
+
+# transform options
+our $scale              = 1;
+our $rotate             = 0;
+our $duplicate_x        = 1;
+our $duplicate_y        = 1;
+our $duplicate_distance = 6;    # mm
 
 1;

@@ -3,9 +3,9 @@ use strict;
 use warnings;
 
 use Math::Clipper qw();
-use Scalar::Util qw(reftype);
-use Slic3r::Geometry qw(A B X Y X1 X2 Y1 Y2 polyline_remove_parallel_continuous_edges polyline_remove_acute_vertices
-    polyline_lines move_points same_point);
+use Slic3r::Geometry qw(A B polyline_remove_parallel_continuous_edges polyline_remove_acute_vertices
+    move_points same_point);
+use XXX;
 
 # the constructor accepts an array(ref) of points
 sub new {
@@ -22,73 +22,63 @@ sub new {
     $self;
 }
 
-sub clone {
+sub id {
     my $self = shift;
-    return (ref $self)->new(map $_->clone, @$self);
-}
-
-sub serialize {
-    my $self = shift;
-    return pack 'l*', map @$_, @$self;
-}
-
-sub deserialize {
-    my $class = shift;
-    my ($s) = @_;
-    
-    my @v = unpack '(l2)*', $s;
-    return $class->new(map [ $v[2*$_], $v[2*$_+1] ], 0 .. int($#v/2));
-}
-
-sub is_serialized {
-    my $self = shift;
-    return (reftype $self) eq 'SCALAR' ? 1 : 0;
+    return join ' - ', sort map $_->id, @$self;
 }
 
 sub lines {
     my $self = shift;
-    return polyline_lines($self);
-}
-
-sub boost_linestring {
-    my $self = shift;
-    return Boost::Geometry::Utils::linestring($self);
+    my @lines = ();
+    my $previous_point;
+    foreach my $point (@$self) {
+        if ($previous_point) {
+            push @lines, Slic3r::Line->new($previous_point, $point);
+        }
+        $previous_point = $point;
+    }
+    return @lines;
 }
 
 sub merge_continuous_lines {
     my $self = shift;
+    
     polyline_remove_parallel_continuous_edges($self);
+    bless $_, 'Slic3r::Point' for @$self;
 }
 
 sub remove_acute_vertices {
     my $self = shift;
     polyline_remove_acute_vertices($self);
+    bless $_, 'Slic3r::Point' for @$self;
 }
 
 sub simplify {
     my $self = shift;
     my $tolerance = shift || 10;
     
-    @$self = @{ Slic3r::Geometry::douglas_peucker($self, $tolerance) };
+    @$self = Slic3r::Geometry::Douglas_Peucker($self, $tolerance);
     bless $_, 'Slic3r::Point' for @$self;
 }
 
-sub reverse {
+sub reverse_points {
     my $self = shift;
-    @$self = CORE::reverse @$self;
+    @{$self->points} = reverse @{$self->points};
 }
 
-sub length {
+sub is_counter_clockwise {
     my $self = shift;
-    my $length = 0;
-    $length += $_->length for $self->lines;
-    return $length;
+    return Math::Clipper::is_counter_clockwise($self->p);
 }
 
-# this only applies to polylines
-sub grow {
+sub make_counter_clockwise {
     my $self = shift;
-    return Slic3r::Polygon->new(@$self, CORE::reverse @$self[1..($#$self-1)])->offset(@_);
+    $self->reverse_points if !$self->is_counter_clockwise;
+}
+
+sub make_clockwise {
+    my $self = shift;
+    $self->reverse_points if $self->is_counter_clockwise;
 }
 
 sub nearest_point_to {
@@ -97,12 +87,6 @@ sub nearest_point_to {
     
     $point = Slic3r::Geometry::nearest_point($point, $self);
     return Slic3r::Point->new($point);
-}
-
-sub nearest_point_index_to {
-    my $self = shift;
-    my ($point) = @_;
-    return Slic3r::Geometry::nearest_point_index($point, $self);
 }
 
 sub has_segment {
@@ -126,59 +110,55 @@ sub clip_with_expolygon {
     my $self = shift;
     my ($expolygon) = @_;
     
-    my $result = Boost::Geometry::Utils::polygon_linestring_intersection(
-        $expolygon->boost_polygon,
-        $self->boost_linestring,
-    );
-    bless $_, 'Slic3r::Polyline' for @$result;
-    bless $_, 'Slic3r::Point' for map @$_, @$result;
-    return @$result;
+    my @polylines = ();
+    my $current_polyline = [];
+    foreach my $line ($self->lines) {
+        my ($first_line, @other_lines) = @{ $expolygon->clip_line($line) };
+        next unless $first_line;
+        
+        if (!@$current_polyline) {
+            push @$current_polyline, @$first_line;
+        } elsif ($first_line->[A]->coincides_with($current_polyline->[-1])) {
+            push @$current_polyline, $first_line->[B];
+        } else {
+            push @polylines, $current_polyline;
+            $current_polyline = [ @$first_line ];
+        }
+        
+        foreach my $other_line (@other_lines) {
+            if (@$current_polyline) {
+                push @polylines, $current_polyline;
+                $current_polyline = [];
+            }
+            push @polylines, [ @$other_line ];
+        }
+    }
+    if (@$current_polyline) {
+        push @polylines, $current_polyline;
+    }
+    
+    if (@polylines > 1 && same_point($polylines[-1][-1], $polylines[0][0])) {
+        if (scalar(@{$polylines[-1]}) == 2) {
+            unshift @{$polylines[0]}, $polylines[-1][0];
+            pop @polylines;
+        } else {
+            push @{$polylines[-1]}, $polylines[0][-1];
+            shift @polylines;
+        }
+    }
+    
+    return map Slic3r::Polyline->new($_), @polylines;
 }
 
 sub bounding_box {
     my $self = shift;
-    return Slic3r::Geometry::bounding_box($self);
-}
-
-sub size {
-    my $self = shift;
-    
-    my @extents = $self->bounding_box;
-    return [$extents[X2] - $extents[X1], $extents[Y2] - $extents[Y1]];
-}
-
-sub align_to_origin {
-    my $self = shift;
-    my @bb = $self->bounding_box;
-    return $self->translate(-$bb[X1], -$bb[Y1]);
-}
-
-sub rotate {
-    my $self = shift;
-    my ($angle, $center) = @_;
-    @$self = Slic3r::Geometry::rotate_points($angle, $center, @$self);
-    bless $_, 'Slic3r::Point' for @$self;
-    return $self;
+    return Slic3r::Geometry::bounding_box($self->points);
 }
 
 sub translate {
     my $self = shift;
     my ($x, $y) = @_;
-    @$self = Slic3r::Geometry::move_points([$x, $y], @$self);
-    bless $_, 'Slic3r::Point' for @$self;
-    return $self;
-}
-
-sub scale {
-    my $self = shift;
-    my ($factor) = @_;
-    return if $factor == 1;
-    
-    # transform point coordinates
-    foreach my $point (@$self) {
-        $point->[$_] *= $factor for X,Y;
-    }
-    return $self;
+    @{$self->points} = move_points([$x, $y], @{$self->points});
 }
 
 1;

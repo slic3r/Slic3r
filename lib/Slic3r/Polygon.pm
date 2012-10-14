@@ -6,32 +6,38 @@ use warnings;
 use parent 'Slic3r::Polyline';
 
 use Slic3r::Geometry qw(polygon_lines polygon_remove_parallel_continuous_edges
-    polygon_remove_acute_vertices polygon_segment_having_point point_in_polygon);
+    scale polygon_remove_acute_vertices
+    polygon_segment_having_point point_in_polygon move_points rotate_points);
 use Slic3r::Geometry::Clipper qw(JT_MITER);
+
+# the constructor accepts an array(ref) of points
+sub new {
+    my $class = shift;
+    my $self;
+    if (@_ == 1) {
+        $self = [ @{$_[0]} ];
+    } else {
+        $self = [ @_ ];
+    }
+    
+    bless $self, $class;
+    bless $_, 'Slic3r::Point' for @$self;
+    $self;
+}
+
+sub clone {
+    my $self = shift;
+    return (ref $self)->new(map $_->clone, @$self);
+}
 
 sub lines {
     my $self = shift;
-    return polygon_lines($self);
+    return map Slic3r::Line->new($_), polygon_lines($self);
 }
 
-sub boost_linestring {
+sub cleanup {
     my $self = shift;
-    return Boost::Geometry::Utils::linestring([@$self, $self->[0]]);
-}
-
-sub is_counter_clockwise {
-    my $self = shift;
-    return Math::Clipper::is_counter_clockwise($self);
-}
-
-sub make_counter_clockwise {
-    my $self = shift;
-    $self->reverse if !$self->is_counter_clockwise;
-}
-
-sub make_clockwise {
-    my $self = shift;
-    $self->reverse if $self->is_counter_clockwise;
+    $self->merge_continuous_lines;
 }
 
 sub merge_continuous_lines {
@@ -59,6 +65,18 @@ sub encloses_point {
     return point_in_polygon($point, $self);
 }
 
+sub translate {
+    my $self = shift;
+    my ($x, $y) = @_;
+    @$self = move_points([$x, $y], @$self);
+}
+
+sub rotate {
+    my $self = shift;
+    my ($angle, $center) = @_;
+    @$self = rotate_points($angle, $center, @$self);
+}
+
 sub area {
     my $self = shift;
     return Slic3r::Geometry::Clipper::area($self);
@@ -71,7 +89,13 @@ sub safety_offset {
 
 sub offset {
     my $self = shift;
-    return map Slic3r::Polygon->new($_), Slic3r::Geometry::Clipper::offset([$self], @_);
+    my ($distance, $scale, $joinType, $miterLimit) = @_;
+    $scale      ||= $Slic3r::resolution * 1000000;
+    $joinType   = JT_MITER if !defined $joinType;
+    $miterLimit ||= 2;
+    
+    my $offsets = Math::Clipper::offset([$self], $distance, $scale, $joinType, $miterLimit);
+    return @$offsets;
 }
 
 # this method subdivides the polygon segments to that no one of them
@@ -84,9 +108,9 @@ sub subdivide {
         my $len = Slic3r::Geometry::line_length([ $self->[$i-1], $self->[$i] ]);
         my $num_points = int($len / $max_length) - 1;
         $num_points++ if $len % $max_length;
+        next unless $num_points;
         
         # $num_points is the number of points to add between $i-1 and $i
-        next if $num_points == -1;
         my $spacing = $len / ($num_points + 1);
         my @new_points = map Slic3r::Point->new($_),
             map Slic3r::Geometry::point_along_segment($self->[$i-1], $self->[$i], $spacing * $_),
@@ -100,23 +124,19 @@ sub subdivide {
 # returns false if the polyline is too tight to be printed
 sub is_printable {
     my $self = shift;
-    my ($flow_width) = @_;
     
     # try to get an inwards offset
     # for a distance equal to half of the extrusion width;
-    # if no offset is possible, then polyline is not printable.
-    # we use flow_width here because this has to be consistent 
-    # with the thin wall detection in Layer->make_surfaces, 
-    # otherwise we could lose surfaces as that logic wouldn't
-    # detect them and we would be discarding them.
+    # if no offset is possible, then polyline is not printable
     my $p = $self->clone;
-    $p->make_counter_clockwise;
-    return $p->offset(Slic3r::Geometry::scale($flow_width || $Slic3r::flow->width) / 2) ? 1 : 0;
+    @$p = reverse @$p if !Math::Clipper::is_counter_clockwise($p);
+    my $offsets = Math::Clipper::offset([$p], -(scale $Slic3r::flow_spacing / 2), $Slic3r::resolution * 100000, JT_MITER, 2);
+    return @$offsets ? 1 : 0;
 }
 
 sub is_valid {
     my $self = shift;
-    return @$self >= 3;
+    return @{$self->points} >= 3;
 }
 
 1;

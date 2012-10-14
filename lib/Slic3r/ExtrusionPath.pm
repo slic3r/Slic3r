@@ -1,62 +1,29 @@
 package Slic3r::ExtrusionPath;
 use Moo;
 
-require Exporter;
-our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(EXTR_ROLE_PERIMETER EXTR_ROLE_SMALLPERIMETER EXTR_ROLE_EXTERNAL_PERIMETER 
-    EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER
-    EXTR_ROLE_FILL EXTR_ROLE_SOLIDFILL EXTR_ROLE_TOPSOLIDFILL EXTR_ROLE_BRIDGE EXTR_ROLE_SKIRT 
-    EXTR_ROLE_SUPPORTMATERIAL);
-our %EXPORT_TAGS = (roles => \@EXPORT_OK);
-
 use Slic3r::Geometry qw(PI X Y epsilon deg2rad rotate_points);
+use XXX;
 
 # the underlying Slic3r::Polyline objects holds the geometry
 has 'polyline' => (
-    is          => 'rw',
+    is          => 'ro',
     required    => 1,
-    handles     => [qw(merge_continuous_lines lines length reverse)],
+    handles     => [qw(merge_continuous_lines lines)],
 );
 
-# depth_layers is the vertical thickness of the extrusion expressed in layers
+# this integer represents the vertical thickness of the extrusion
+# expressed in layers
 has 'depth_layers' => (is => 'ro', default => sub {1});
+
 has 'flow_spacing' => (is => 'rw');
+
+# perimeter/fill/solid-fill/bridge/skirt
 has 'role'         => (is => 'rw', required => 1);
 
-use constant EXTR_ROLE_PERIMETER                    => 0;
-use constant EXTR_ROLE_SMALLPERIMETER               => 1;
-use constant EXTR_ROLE_EXTERNAL_PERIMETER           => 2;
-use constant EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER   => 3;
-use constant EXTR_ROLE_FILL                         => 4;
-use constant EXTR_ROLE_SOLIDFILL                    => 5;
-use constant EXTR_ROLE_TOPSOLIDFILL                 => 6;
-use constant EXTR_ROLE_BRIDGE                       => 7;
-use constant EXTR_ROLE_SKIRT                        => 8;
-use constant EXTR_ROLE_SUPPORTMATERIAL              => 9;
-
-use constant PACK_FMT => 'cfca*';
-
-# class or object method
-sub pack {
+sub BUILD {
     my $self = shift;
-    my %args = @_;
-    
-    if (ref $self) {
-        %args = map { $_ => $self->$_ } qw(depth_layers flow_spacing role polyline);
-    }
-    
-    my $o = \ pack PACK_FMT,
-        $args{depth_layers} || 1,
-        $args{flow_spacing} || -1,
-        $args{role}         // (die "Missing mandatory attribute 'role'"), #/
-        $args{polyline}->serialize;
-    
-    bless $o, 'Slic3r::ExtrusionPath::Packed';
-    return $o;
+    bless $self->polyline, 'Slic3r::Polyline';
 }
-
-# no-op, this allows to use both packed and non-packed objects in Collections
-sub unpack { $_[0] }
 
 sub clip_end {
     my $self = shift;
@@ -78,29 +45,6 @@ sub clip_end {
     }
 }
 
-sub clip_with_polygon {
-    my $self = shift;
-    my ($polygon) = @_;
-    
-    return $self->clip_with_expolygon(Slic3r::ExPolygon->new($polygon));
-}
-
-sub clip_with_expolygon {
-    my $self = shift;
-    my ($expolygon) = @_;
-    
-    my @paths = ();
-    foreach my $polyline ($self->polyline->clip_with_expolygon($expolygon)) {
-        push @paths, (ref $self)->new(
-            polyline        => $polyline,
-            depth_layers    => $self->depth_layers,
-            flow_spacing    => $self->flow_spacing,
-            role            => $self->role,
-        );
-    }
-    return @paths;
-}
-
 sub points {
     my $self = shift;
     return $self->polyline;
@@ -109,6 +53,11 @@ sub points {
 sub endpoints {
     my $self = shift;
     return ($self->points->[0], $self->points->[-1]);
+}
+
+sub reverse {
+    my $self = shift;
+    @{$self->points} = reverse @{$self->points};
 }
 
 sub is_printable { 1 }
@@ -159,7 +108,7 @@ sub detect_arcs {
     my ($max_angle, $len_epsilon) = @_;
     
     $max_angle = deg2rad($max_angle || 15);
-    $len_epsilon ||= 10 / &Slic3r::SCALING_FACTOR;
+    $len_epsilon ||= 10 / $Slic3r::resolution;
     
     my @points = @{$self->points};
     my @paths = ();
@@ -268,21 +217,6 @@ sub detect_arcs {
     ) if @points > 1;
     
     return @paths;
-}
-
-package Slic3r::ExtrusionPath::Packed;
-sub unpack {
-    my $self = shift;
-    
-    my ($depth_layers, $flow_spacing, $role, $polyline_s)
-        = unpack Slic3r::ExtrusionPath::PACK_FMT, $$self;
-    
-    return Slic3r::ExtrusionPath->new(
-        depth_layers    => $depth_layers,
-        flow_spacing    => ($flow_spacing == -1) ? undef : $flow_spacing,
-        role            => $role,
-        polyline        => Slic3r::Polyline->deserialize($polyline_s),
-    );
 }
 
 1;
