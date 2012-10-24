@@ -89,12 +89,9 @@ sub make_surfaces {
         foreach my $surface (@surfaces) {
             push @{$self->slices}, map Slic3r::Surface->new
                 (expolygon => $_, surface_type => S_TYPE_INTERNAL),
-                @{union_ex([
-                    map @{$_},
-                        map $_->offset_ex(+$distance),
-                        $surface->expolygon->offset_ex(-2*$distance)
-                    ])
-                };
+                @{union_ex([Slic3r::Geometry::Clipper::offset(
+                    [Slic3r::Geometry::Clipper::offset($surface->expolygon, -2*$distance)],
+                    +$distance)])};
         }
         
         # now detect thin walls by re-outgrowing offsetted surfaces and subtracting
@@ -191,8 +188,9 @@ sub make_perimeters {
             # offsetting a polygon can result in one or many offset polygons
             my @new_offsets = ();
             foreach my $expolygon (@last_offsets) {
-                my @offsets = map $_->offset_ex(+0.5*$distance), $expolygon->offset_ex(-1.5*$distance);
-                @offsets = @{ union_ex([map {@{$_}} @offsets]) };
+                my @offsets = @{union_ex([Slic3r::Geometry::Clipper::offset(
+                                  [Slic3r::Geometry::Clipper::offset($expolygon, -1.5*$distance)], 
+                                  +0.5*$distance)])};
                 push @new_offsets, @offsets;
                 
                 my $diff = diff_ex(
