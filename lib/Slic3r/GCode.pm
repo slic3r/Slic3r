@@ -55,6 +55,7 @@ sub move_z {
     $z *= &Slic3r::SCALING_FACTOR;
     
     my $gcode = "";
+            
     my $current_z = $self->z;
     if (!defined $current_z || $current_z != ($z + $self->lifted)) {
         $gcode .= $self->retract(move_z => $z);
@@ -149,6 +150,8 @@ sub extrude_path {
     # compensate retraction
     $gcode .= $self->unretract if $self->extruder->retracted;
     
+    $gcode .= sprintf "M101%s\n", $Slic3r::Config->gcode_comments ? ' ; enable extruder command for Sailfish' : '' if $Slic3r::Config->gcode_flavor eq "makerbot";
+        
     my $area;  # mm^3 of extrudate per mm of tool movement 
     if ($path->role == EXTR_ROLE_BRIDGE) {
         my $s = $path->flow_spacing;
@@ -188,6 +191,7 @@ sub extrude_path {
     }
     
     $self->last_path($path);
+    $gcode .= sprintf "M103%s\n", $Slic3r::Config->gcode_comments ? ' ; disable extruder command for Sailfish' : '' if $Slic3r::Config->gcode_flavor eq "makerbot";
     
     return $gcode;
 }
@@ -396,8 +400,14 @@ sub set_extruder {
     
     # set the new extruder
     $self->extruder($extruder);
-    $gcode .= sprintf "T%d%s\n", $extruder->id, ($Slic3r::Config->gcode_comments ? ' ; change extruder' : '');
+    
+    $gcode .= sprintf "M103%s\n", $Slic3r::Config->gcode_comments ? ' ; turn extruder off' : '' if $Slic3r::Config->gcode_flavor eq 'makerbot';
+    $gcode .= sprintf "%s%s\n", ($extruder->id == 0 ? 'G54' : 'G55'), $Slic3r::Config->gcode_comments ? ' ; change coordinate system' : '' if $Slic3r::Config->gcode_flavor eq 'makerbot';
+   
+    $gcode .= sprintf "%s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'makerbot' ? 'M108 T' : 'T'), $extruder->id, ($Slic3r::Config->gcode_comments ? ' ; change extruder' : '');
     $gcode .= $self->reset_e;
+    
+    $gcode .= sprintf "M101%s\n", $Slic3r::Config->gcode_comments ? ' ; turn extruder on' : '' if $Slic3r::Config->gcode_flavor eq 'makerbot';
     
     return $gcode;
 }
@@ -421,15 +431,16 @@ sub set_fan {
 sub set_temperature {
     my $self = shift;
     my ($temperature, $wait, $tool) = @_;
-    
+                
     return "" if $wait && $Slic3r::Config->gcode_flavor eq 'makerbot';
     
     my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
         ? ('M109', 'wait for temperature to be reached')
         : ('M104', 'set temperature');
+    
     my $gcode = sprintf "$code %s%d %s; $comment\n",
         ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature,
-        (defined $tool && $self->multiple_extruders) ? "T$tool " : "";
+        (defined $tool && ($self->multiple_extruders || $Slic3r::Config->gcode_flavor eq 'makerbot')) ? "T$tool " : "";
     
     $gcode .= "M116 ; wait for temperature to be reached\n"
         if $Slic3r::Config->gcode_flavor eq 'teacup' && $wait;

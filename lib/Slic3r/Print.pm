@@ -853,7 +853,9 @@ sub write_gcode {
             $gcode =~ s/^;_BRIDGE_FAN_START\n/ $gcodegen->set_fan($Slic3r::Config->bridge_fan_speed, 1) /gmex;
             $gcode =~ s/^;_BRIDGE_FAN_END\n/ $gcodegen->set_fan($fan_speed, 1) /gmex;
         }
-        
+                 
+        $gcode .= sprintf "M73 P%s%s\n", int( 100 * ($layer_id / ($self->layer_count - 1))), $Slic3r::Config->gcode_comments ? ' ; update progress' : '' if $Slic3r::Config->gcode_flavor eq "makerbot";
+            
         return $gcode;
     };
     
