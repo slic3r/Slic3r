@@ -1171,6 +1171,9 @@ sub replace_options {
     $string =~ s/\[second\]/$lt[0]/eg;
     $string =~ s/\[version\]/$Slic3r::VERSION/eg;
     
+    # really not sure how this gets in here in the first place but it causes problems
+    delete $Slic3r::Config::Options->{''};
+    
     # build a regexp to match the available options
     my @options = grep !$Slic3r::Config::Options->{$_}{multiline},
         grep $self->has($_),
