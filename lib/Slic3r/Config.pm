@@ -65,7 +65,7 @@ our $Options = {
         cli     => 'gcode-flavor=s',
         type    => 'select',
         values  => [qw(reprap teacup makerbot sailfish mach3 no-extrusion)],
-        labels  => ['RepRap (Marlin/Sprinter)', 'Teacup', 'MakerBot', 'Mach3/EMC', 'No extrusion', 'Sailfish'],
+        labels  => ['RepRap (Marlin/Sprinter)', 'Teacup', 'MakerBot', 'Sailfish', 'Mach3/EMC', 'No extrusion'],
         default => 'reprap',
     },
     'use_relative_e_distances' => {
