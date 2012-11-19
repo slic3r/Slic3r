@@ -416,6 +416,9 @@ sub rotate {
     
     my ($obj_idx, $object) = $self->selected_object;
     
+    # we need thumbnail to be computed before allowing rotation
+    return if !$object->thumbnail;
+    
     if (!defined $angle) {
         $angle = Wx::GetNumberFromUser("", "Enter the rotation angle:", "Rotate", $object->rotate, -364, 364, $self);
         return if !$angle || $angle == -1;
@@ -446,7 +449,7 @@ sub arrange {
     my $total_parts = sum(map $_->instances_count, @{$self->{objects}}) or return;
     my @size = ();
     for my $a (X,Y) {
-        $size[$a] = max(map $_->rotated_size->[$a], @{$self->{objects}});
+        $size[$a] = max(map $_->size->[$a], @{$self->{objects}});
     }
     
     eval {
@@ -705,7 +708,7 @@ sub make_model {
                 material_id => $volume->material_id,
                 facets      => $volume->facets,
             );
-            $model->materials->{$volume->material_id || 0} ||= {};
+            $model->set_material($volume->material_id || 0, {});
         }
         $new_model_object->scale($plater_object->scale);
         $new_model_object->add_instance(
@@ -721,9 +724,10 @@ sub make_thumbnail {
     my $self = shift;
     my ($obj_idx) = @_;
     
+    my $object = $self->{objects}[$obj_idx];
+    $object->thumbnail_scaling_factor($self->{scaling_factor});
     my $cb = sub {
-        my $object = $self->{objects}[$obj_idx];
-        my $thumbnail = $object->make_thumbnail(scaling_factor => $self->{scaling_factor});
+        my $thumbnail = $object->make_thumbnail;
         
         if ($Slic3r::have_threads) {
             Wx::PostEvent($self, Wx::PlThreadEvent->new(-1, $THUMBNAIL_DONE_EVENT, shared_clone([ $obj_idx, $thumbnail ])));
@@ -756,7 +760,7 @@ sub recenter {
             my $obj = $_;
             map {
                 my $instance = $_;
-                $instance, [ map $instance->[$_] + $obj->rotated_size->[$_], X,Y ];
+                $instance, [ map $instance->[$_] + $obj->size->[$_], X,Y ];
             } @{$obj->instances};
         } @{$self->{objects}},
     ]);
@@ -1059,6 +1063,7 @@ has 'scale'                 => (is => 'rw', default => sub { 1 });
 has 'rotate'                => (is => 'rw', default => sub { 0 });
 has 'instances'             => (is => 'rw', default => sub { [] }); # upward Y axis
 has 'thumbnail'             => (is => 'rw');
+has 'thumbnail_scaling_factor' => (is => 'rw');
 
 # statistics
 has 'facets'                => (is => 'rw');
@@ -1107,12 +1112,11 @@ sub instances_count {
 
 sub make_thumbnail {
     my $self = shift;
-    my %params = @_;
     
     my @points = map [ @$_[X,Y] ], @{$self->model_object->mesh->vertices};
     my $convex_hull = Slic3r::Polygon->new(convex_hull(\@points));
     for (@$convex_hull) {
-        @$_ = map $_ * $params{scaling_factor}, @$_;
+        @$_ = map $_ * $self->thumbnail_scaling_factor, @$_;
     }
     $convex_hull->simplify(0.3);
     $convex_hull->rotate(Slic3r::Geometry::deg2rad($self->rotate));
@@ -1132,6 +1136,8 @@ sub set_rotation {
     if ($self->thumbnail) {
         $self->thumbnail->rotate(Slic3r::Geometry::deg2rad($angle - $self->rotate));
         $self->thumbnail->align_to_origin;
+        my $z_size = $self->size->[Z];
+        $self->size([ (map $_ / $self->thumbnail_scaling_factor, @{$self->thumbnail->size}), $z_size ]);
     }
     $self->rotate($angle);
 }
@@ -1148,14 +1154,6 @@ sub set_scale {
         $self->thumbnail->align_to_origin;
     }
     $self->scale($scale);
-}
-
-sub rotated_size {
-    my $self = shift;
-    
-    return Slic3r::Polygon->new([0,0], [$self->size->[X], 0], [@{$self->size}], [0, $self->size->[Y]])
-        ->rotate(Slic3r::Geometry::deg2rad($self->rotate))
-        ->size;
 }
 
 package Slic3r::GUI::Plater::ObjectInfoDialog;

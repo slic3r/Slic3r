@@ -410,6 +410,14 @@ our $Options = {
         type    => 'f',
         default => 1,
     },
+    'vibration_limit' => {
+        label   => 'Vibration limit',
+        tooltip => 'This experimental option will slow down those moves hitting the configured frequency limit. The purpose of limiting vibrations is to avoid mechanical resonance. Set zero to disable.',
+        sidetext => 'Hz',
+        cli     => 'vibration-limit=f',
+        type    => 'f',
+        default => 25,
+    },
     
     # print options
     'perimeters' => {
@@ -985,8 +993,12 @@ sub set {
     }
     
     if (!exists $Options->{$opt_key}) {
-        $opt_key = +(grep { $Options->{$_}{aliases} && grep $_ eq $opt_key, @{$Options->{$_}{aliases}} } keys %$Options)[0]
-            or warn "Unknown option $opt_key\n";
+        my @keys = grep { $Options->{$_}{aliases} && grep $_ eq $opt_key, @{$Options->{$_}{aliases}} } keys %$Options;
+        if (!@keys) {
+            warn "Unknown option $opt_key\n";
+            return;
+        }
+        $opt_key = $keys[0];
     }
     
     # clone arrayrefs
@@ -1156,9 +1168,11 @@ sub replace_options {
     my $self = shift;
     my ($string, $more_variables) = @_;
     
-    if ($more_variables) {
-        my $variables = join '|', keys %$more_variables;
-        $string =~ s/\[($variables)\]/$more_variables->{$1}/eg;
+    $more_variables ||= {};
+    $more_variables->{$_} = $ENV{$_} for grep /^SLIC3R_/, keys %ENV;
+    {
+        my $variables_regex = join '|', keys %$more_variables;
+        $string =~ s/\[($variables_regex)\]/$more_variables->{$1}/eg;
     }
     
     my @lt = localtime; $lt[5] += 1900; $lt[4] += 1;

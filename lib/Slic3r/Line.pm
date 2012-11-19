@@ -32,6 +32,11 @@ sub length {
     return Slic3r::Geometry::line_length($self);
 }
 
+sub vector {
+    my $self = shift;
+    return (ref $self)->new([0,0], [map $self->[B][$_] - $self->[A][$_], X,Y]);
+}
+
 sub atan {
     my $self = shift;
     return Slic3r::Geometry::line_atan($self);
@@ -65,6 +70,14 @@ sub midpoint {
 sub reverse {
     my $self = shift;
     @$self = reverse @$self;
+}
+
+sub translate {
+    my $self = shift;
+    my ($x, $y) = @_;
+    @$self = Slic3r::Geometry::move_points([$x, $y], @$self);
+    bless $_, 'Slic3r::Point' for @$self;
+    return $self;
 }
 
 1;
