@@ -284,6 +284,14 @@ our $Options = {
         ratio_over => 'solid_infill_speed',
         default => 50,
     },
+    'support_material_speed' => {
+        label   => 'Support material',
+        tooltip => 'Speed for printing support material.',
+        sidetext => 'mm/s',
+        cli     => 'support-material-speed=f',
+        type    => 'f',
+        default => 60,
+    },
     'bridge_speed' => {
         label   => 'Bridges',
         tooltip => 'Speed for printing bridges.',
@@ -292,6 +300,14 @@ our $Options = {
         type    => 'f',
         aliases => [qw(bridge_feed_rate)],
         default => 60,
+    },
+    'gap_fill_speed' => {
+        label   => 'Gap fill',
+        tooltip => 'Speed for filling small gaps using short zigzag moves. Keep this reasonably low to avoid too much shaking and resonance issues.',
+        sidetext => 'mm/s',
+        cli     => 'gap-fill-speed=f',
+        type    => 'f',
+        default => 20,
     },
     'first_layer_speed' => {
         label   => 'First layer speed',
@@ -416,7 +432,7 @@ our $Options = {
         sidetext => 'Hz',
         cli     => 'vibration-limit=f',
         type    => 'f',
-        default => 25,
+        default => 0,
     },
     
     # print options
