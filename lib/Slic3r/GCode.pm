@@ -453,17 +453,37 @@ sub set_extruder {
 sub set_fan {
     my $self = shift;
     my ($speed, $dont_save) = @_;
+    my $code;
     
     if ($self->last_fan_speed != $speed || $dont_save) {
         $self->last_fan_speed($speed) if !$dont_save;
-        if ($speed == 0) {
-            my $code = $Slic3r::Config->gcode_flavor eq 'teacup'
-                ? 'M106 S0'
-                : 'M107';
+        if ($speed == 0) 
+        {
+            if ($Slic3r::Config->gcode_flavor eq 'teacup')
+            {
+                $code = 'M106 S0';
+            }
+            elsif ($Slic3r::Config->gcode_flavor eq 'makerbot' || $Slic3r::Config->gcode_flavor eq 'sailfish')
+            {
+                $code = 'M127';
+            }
+            else
+            {
+                $code = 'M107';
+            }
             return sprintf "$code%s\n", ($Slic3r::Config->gcode_comments ? ' ; disable fan' : '');
-        } else {
-            return sprintf "M106 %s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
+        } 
+        else 
+        {
+            if ($Slic3r::Config->gcode_flavor eq 'makerbot' || $Slic3r::Config->gcode_flavor eq 'sailfish')
+            {
+                return sprintf "M126%s\n", ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+            }
+            else
+            {
+                return sprintf "M106 %s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
                 (255 * $speed / 100), ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+            }
         }
     }
     return "";
