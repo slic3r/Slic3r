@@ -178,9 +178,7 @@ sub extrude_path {
     
     # compensate retraction
     $gcode .= $self->unretract if $self->extruder->retracted;
-    
-    #$gcode .= sprintf "M101%s\n", $Slic3r::Config->gcode_comments ? ' ; enable extruder command for Sailfish' : '' if $Slic3r::Config->gcode_flavor eq "sailfish";
-        
+            
     my $area;  # mm^3 of extrudate per mm of tool movement 
     if ($path->role == EXTR_ROLE_BRIDGE) {
         my $s = $path->flow_spacing;
@@ -220,8 +218,7 @@ sub extrude_path {
     }
     
     $self->last_path($path);
-    #$gcode .= sprintf "M103%s\n", $Slic3r::Config->gcode_comments ? ' ; disable extruder command for Sailfish' : '' if $Slic3r::Config->gcode_flavor eq "sailfish";
-    
+     
     return $gcode;
 }
 
