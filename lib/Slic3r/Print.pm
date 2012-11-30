@@ -58,7 +58,7 @@ sub _trigger_config {
     $self->config->set_ifndef('bottom_solid_layers',    $self->config->solid_layers);
     
     # G-code flavors
-    $self->config->set('extrusion_axis', 'A') if $self->config->gcode_flavor eq 'mach3';
+    $self->config->set('extrusion_axis', 'A') if ($self->config->gcode_flavor eq 'mach3' || $self->config->gcode_flavor eq 'replicator2');
     $self->config->set('extrusion_axis', '')  if $self->config->gcode_flavor eq 'no-extrusion';
 }
 
@@ -703,7 +703,7 @@ sub write_gcode {
     print  $fh "G21 ; set units to millimeters\n";
     if ($Slic3r::Config->gcode_flavor =~ /^(?:reprap|teacup)$/) {
         printf $fh $gcodegen->reset_e;
-        if ($Slic3r::Config->gcode_flavor =~ /^(?:reprap|makerbot)$/) {
+        if ($Slic3r::Config->gcode_flavor =~ /^(?:reprap|makerbot|replicator2)$/) {
             if ($Slic3r::Config->use_relative_e_distances) {
                 print $fh "M83 ; use relative distances for extrusion\n";
             } else {

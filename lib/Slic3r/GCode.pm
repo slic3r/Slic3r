@@ -271,7 +271,7 @@ sub retract {
     
     # reset extrusion distance during retracts
     # this makes sure we leave sufficient precision in the firmware
-    $gcode .= $self->reset_e if $Slic3r::Config->gcode_flavor !~ /^(?:mach3|makerbot)$/;
+    $gcode .= $self->reset_e if $Slic3r::Config->gcode_flavor !~ /^(?:mach3|makerbot|replicator2)$/;
     
     return $gcode;
 }
@@ -447,13 +447,25 @@ sub set_fan {
     if ($self->last_fan_speed != $speed || $dont_save) {
         $self->last_fan_speed($speed) if !$dont_save;
         if ($speed == 0) {
-            my $code = $Slic3r::Config->gcode_flavor eq 'teacup'
-                ? 'M106 S0'
-                : 'M107';
+			my $code;
+			if ($Slic3r::Config->gcode_flavor eq 'replicator2') {
+				$code = 'M127 T0';
+			} else {
+				$code = $Slic3r::Config->gcode_flavor eq 'teacup' 
+				? 'M106 S0' 
+				: 'M107';
+			}
             return sprintf "$code%s\n", ($Slic3r::Config->gcode_comments ? ' ; disable fan' : '');
         } else {
-            return sprintf "M106 %s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
-                (255 * $speed / 100), ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+
+			if ($Slic3r::Config->gcode_flavor eq 'replicator2') {
+				# Replicator fan is either on or off
+				return sprintf "M126 T0 %s\n", ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+					
+			} else {			
+				return sprintf "M106 %s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
+					(255 * $speed / 100), ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+			}
         }
     }
     return "";
@@ -463,7 +475,7 @@ sub set_temperature {
     my $self = shift;
     my ($temperature, $wait, $tool) = @_;
     
-    return "" if $wait && $Slic3r::Config->gcode_flavor eq 'makerbot';
+    return "" if $wait && ($Slic3r::Config->gcode_flavor eq 'makerbot' || $Slic3r::Config->gcode_flavor eq 'replicator2');
     
     my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
         ? ('M109', 'wait for temperature to be reached')
@@ -483,8 +495,7 @@ sub set_bed_temperature {
     my ($temperature, $wait) = @_;
     
     my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
-        ? (($Slic3r::Config->gcode_flavor eq 'makerbot' ? 'M109'
-            : 'M190'), 'wait for bed temperature to be reached')
+        ? ((($Slic3r::Config->gcode_flavor eq 'makerbot' || $Slic3r::Config->gcode_flavor eq 'replicator2') ? 'M109': 'M190'), 'wait for bed temperature to be reached')
         : ('M140', 'set bed temperature');
     my $gcode = sprintf "$code %s%d ; $comment\n",
         ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature;
