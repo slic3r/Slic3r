@@ -42,7 +42,6 @@ has 'speeds' => (
 # assign speeds to roles
 my %role_speeds = (
     &EXTR_ROLE_PERIMETER                    => 'perimeter',
-    &EXTR_ROLE_SMALLPERIMETER               => 'small_perimeter',
     &EXTR_ROLE_EXTERNAL_PERIMETER           => 'external_perimeter',
     &EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER   => 'perimeter',
     &EXTR_ROLE_FILL                         => 'infill',
@@ -98,7 +97,7 @@ sub extrude_loop {
     
     # extrude all loops ccw
     $loop = $loop->unpack if $loop->isa('Slic3r::ExtrusionLoop::Packed');
-    $loop->polygon->make_counter_clockwise;
+    my $was_clockwise = $loop->polygon->make_counter_clockwise;
     
     # find the point of the loop that is closest to the current extruder position
     # or randomize if requested
@@ -119,7 +118,27 @@ sub extrude_loop {
     return '' if !@{$extrusion_path->polyline};
     
     # extrude along the path
-    return $self->extrude_path($extrusion_path, $description);
+    my $gcode = $self->extrude_path($extrusion_path, $description);
+    
+    # make a little move inwards before leaving loop
+    if ($loop->role == EXTR_ROLE_EXTERNAL_PERIMETER) {
+        # detect angle between last and first segment
+        # the side depends on the original winding order of the polygon (left for contours, right for holes)
+        my @points = $was_clockwise ? (-2, 1) : (1, -2);
+        my $angle = Slic3r::Geometry::angle3points(@{$extrusion_path->polyline}[0, @points]) / 3;
+        $angle *= -1 if $was_clockwise;
+        
+        # create the destination point along the first segment and rotate it
+        my $point = Slic3r::Geometry::point_along_segment(@{$extrusion_path->polyline}[0,1], scale $extrusion_path->flow_spacing);
+        bless $point, 'Slic3r::Point';
+        $point->rotate($angle, $extrusion_path->polyline->[0]);
+        
+        # generate the travel move
+        $self->speed('travel');
+        $gcode .= $self->G0($point, undef, 0, "move inwards before travel");
+    }
+    
+    return $gcode;
 }
 
 sub extrude_path {
@@ -155,8 +174,7 @@ sub extrude_path {
         }
     }
     
-    # only apply vibration limiting to gap fill until the algorithm is more mature
-    $self->limit_frequency($path->role == EXTR_ROLE_GAPFILL) if 0;
+    $self->limit_frequency($path->role != EXTR_ROLE_PERIMETER && $path->role != EXTR_ROLE_EXTERNAL_PERIMETER && $path->role != EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER);
     
     # go to first point of extrusion path
     $self->speed('travel');
@@ -179,8 +197,15 @@ sub extrude_path {
     # calculate extrusion length per distance unit
     my $e = $self->extruder->e_per_mm3 * $area;
     
-    # extrude arc or line
+    # set speed
     $self->speed( $role_speeds{$path->role} || die "Unknown role: " . $path->role );
+    if ($path->role == EXTR_ROLE_PERIMETER || $path->role == EXTR_ROLE_EXTERNAL_PERIMETER || $path->role == EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER) {
+        if (abs($path->length) <= &Slic3r::SMALL_PERIMETER_LENGTH) {
+            $self->speed('small_perimeter');
+        }
+    }
+    
+    # extrude arc or line
     my $path_length = 0;
     if ($path->isa('Slic3r::ExtrusionPath::Arc')) {
         $path_length = unscale $path->length;
@@ -318,7 +343,9 @@ sub _G0_G1 {
         $gcode .= sprintf " X%.${dec}f Y%.${dec}f", 
             ($point->x * &Slic3r::SCALING_FACTOR) + $self->shift_x - $self->extruder->extruder_offset->[X], 
             ($point->y * &Slic3r::SCALING_FACTOR) + $self->shift_y - $self->extruder->extruder_offset->[Y]; #**
-        $speed_factor = $self->_limit_frequency($point) if $self->limit_frequency;
+        if ($self->limit_frequency) {
+            $gcode = $self->_limit_frequency($point) . $gcode;
+        }
         $self->last_pos($point->clone);
     }
     if (defined $z && (!defined $self->z || $z != $self->z)) {
@@ -515,14 +542,13 @@ sub _limit_frequency {
     my ($point) = @_;
     
     return if $Slic3r::Config->vibration_limit == 0;
-    my $min_time = 1 / ($Slic3r::Config->vibration_limit * 60);
+    my $min_time = 1 / ($Slic3r::Config->vibration_limit * 60);  # in minutes
     
     # calculate the move vector and move direction
     my @move = map unscale $_, @{ Slic3r::Line->new($self->last_pos, $point)->vector->[B] };
     my @dir = map { $move[$_] ? (($move[$_] > 0) ? 1 : -1) : 0 } X,Y;
     
-    my $factor = 1;
-    my $segment_time = abs(max(@move)) / $self->speeds->{$self->speed};
+    my $segment_time = abs(max(@move)) / $self->speeds->{$self->speed};  # in minutes
     if ($segment_time > 0) {
         my @max_segment_time = ();
         foreach my $axis (X,Y) {
@@ -537,11 +563,11 @@ sub _limit_frequency {
         
         my $min_segment_time = min(@max_segment_time);
         if ($min_segment_time < $min_time) {
-            $factor = $min_segment_time / $min_time;
+            return sprintf "G4 P%d\n", ($min_time - $min_segment_time) * 60 * 1000;
         }
     }
     
-    return $factor;
+    return '';
 }
 
 1;
