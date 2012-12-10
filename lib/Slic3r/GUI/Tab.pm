@@ -637,11 +637,17 @@ sub build {
     ]);
     
     $self->add_options_page('Custom G-code', 'cog.png', optgroups => [
-        {
+	    {
+			title => 'Enable',
+            options => [qw(overide_internal_start_end_gcode)],
+			#Slic3r::GUI::OptionsGroup->single_option_line('overide_internal_start_end_gcode'),
+			
+        },
+		{
             title => 'Start G-code',
             no_labels => 1,
             options => [qw(start_gcode)],
-        },
+        },	
         {
             title => 'End G-code',
             no_labels => 1,

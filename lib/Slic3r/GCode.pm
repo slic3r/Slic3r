@@ -288,7 +288,16 @@ sub unretract {
     }
     
     $self->speed('retract');
+	
+	# TODO: Neew to make this into a parameter in the "Retraction setting UI" for now this will do for the replicator 2
+	if ($Slic3r::Config->gcode_flavor ne 'replicator2') {
     $gcode .= $self->G0(undef, undef, $self->extruder->retracted, "compensate retraction");
+	} else {
+		#$gcode .= $self->G0(undef, undef, ($self->extruder->retracted * 0.75), "compensate retraction");
+		$gcode .= $self->G0(undef, undef, ($self->extruder->retracted ), "compensate retraction");	
+	}
+			
+    
     $self->extruder->retracted(0);
     
     return $gcode;
@@ -478,14 +487,17 @@ sub set_temperature {
     return "" if $wait && ($Slic3r::Config->gcode_flavor eq 'makerbot' || $Slic3r::Config->gcode_flavor eq 'replicator2');
     
     my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
-        ? ('M109', 'wait for temperature to be reached')
-        : ('M104', 'set temperature');
-    my $gcode = sprintf "$code %s%d %s; $comment\n",
+        ? ('M109', ' ; wait for temperature to be reached')
+        : ('M104', ' ; set temperature');
+    my $gcode = sprintf "$code %s%d%s%s\n",
         ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature,
-        (defined $tool && $self->multiple_extruders) ? "T$tool " : "";
+        (defined $tool && $self->multiple_extruders) ? " T$tool" : "", ($Slic3r::Config->gcode_comments ? $comment : '');
     
-    $gcode .= "M116 ; wait for temperature to be reached\n"
-        if $Slic3r::Config->gcode_flavor eq 'teacup' && $wait;
+	
+	if ($Slic3r::Config->gcode_flavor eq 'teacup' && $wait) {
+		$gcode .= sprintf "M116%s\n", ($Slic3r::Config->gcode_comments ? ' ; wait for temperature to be reached' : '');
+	}
+    
     
     return $gcode;
 }
