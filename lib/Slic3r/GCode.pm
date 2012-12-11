@@ -448,13 +448,8 @@ sub set_extruder {
     # set the new extruder
     $self->extruder($extruder);
     
-    $gcode .= sprintf "M103%s\n", $Slic3r::Config->gcode_comments ? ' ; turn extruder off' : '' if ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/);
-    $gcode .= sprintf "%s%s\n", ($extruder->id == 0 ? 'G54' : 'G55'), $Slic3r::Config->gcode_comments ? ' ; change coordinate system' : '' if ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/);
-   
+    $gcode .= $self->reset_e; 
     $gcode .= sprintf "%s%d%s\n", (($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) ? 'M108 T' : 'T'), $extruder->id, ($Slic3r::Config->gcode_comments ? ' ; change extruder' : '');
-    $gcode .= $self->reset_e;
-    
-    $gcode .= sprintf "M101%s\n", $Slic3r::Config->gcode_comments ? ' ; turn extruder on' : '' if ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/);
     
     return $gcode;
 }
