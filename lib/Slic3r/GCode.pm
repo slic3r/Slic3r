@@ -7,6 +7,7 @@ use Slic3r::Geometry qw(scale unscale scaled_epsilon points_coincide PI X Y B);
 
 has 'multiple_extruders' => (is => 'ro', default => sub {0} );
 has 'layer'              => (is => 'rw');
+has 'move_z_callback'    => (is => 'rw');
 has 'shift_x'            => (is => 'rw', default => sub {0} );
 has 'shift_y'            => (is => 'rw', default => sub {0} );
 has 'z'                  => (is => 'rw');
@@ -79,6 +80,7 @@ sub move_z {
         $self->speed('travel');
         $gcode .= $self->G0(undef, $z, 0, $comment || ('move to next layer (' . $self->layer->id . ')'))
             unless ($current_z // -1) != ($self->z // -1);
+        $gcode .= $self->move_z_callback->() if defined $self->move_z_callback;
     }
     
     return $gcode;
@@ -161,10 +163,11 @@ sub extrude_path {
     my $gcode = "";
     
     # skip retract for support material
-    if ($path->role != EXTR_ROLE_SUPPORTMATERIAL) {
+    {
         # retract if distance from previous position is greater or equal to the one specified by the user
         my $travel = Slic3r::Line->new($self->last_pos->clone, $path->points->[0]->clone);
-        if ($travel->length >= scale $self->extruder->retract_before_travel) {
+        if ($travel->length >= scale $self->extruder->retract_before_travel
+            && ($path->role != EXTR_ROLE_SUPPORTMATERIAL || !$self->layer->support_islands_enclose_line($travel))) {
             # move travel back to original layer coordinates.
             # note that we're only considering the current object's islands, while we should
             # build a more complete configuration space
@@ -181,7 +184,7 @@ sub extrude_path {
         if !points_coincide($self->last_pos, $path->points->[0]);
     
     # compensate retraction
-    $gcode .= $self->unretract if $self->extruder->retracted;
+    $gcode .= $self->unretract;
     
     my $area;  # mm^3 of extrudate per mm of tool movement 
     if ($path->role == EXTR_ROLE_BRIDGE) {
@@ -276,7 +279,8 @@ sub retract {
             $gcode .= $self->G1(@$lift);
         }
     }
-    $self->extruder->retracted($self->extruder->retracted + $length + $restart_extra);
+    $self->extruder->retracted($self->extruder->retracted + $length);
+    $self->extruder->restart_extra($restart_extra);
     $self->lifted($self->extruder->retract_lift) if $lift;
     
     # reset extrusion distance during retracts
@@ -297,9 +301,13 @@ sub unretract {
         $self->lifted(0);
     }
     
-    $self->speed('retract');
-    $gcode .= $self->G0(undef, undef, $self->extruder->retracted, "compensate retraction");
-    $self->extruder->retracted(0);
+    my $to_unretract = $self->extruder->retracted + $self->extruder->restart_extra;
+    if ($to_unretract) {
+        $self->speed('retract');
+        $gcode .= $self->G0(undef, undef, $to_unretract, "compensate retraction");
+        $self->extruder->retracted(0);
+        $self->extruder->restart_extra(0);
+    }
     
     return $gcode;
 }
