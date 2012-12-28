@@ -317,6 +317,30 @@ our $Options = {
         type    => 'f',
         default => '30%',
     },
+    'x_limit_speed' => {
+        label   => 'X',
+	tooltip => 'Slows any operation so as not to exceed this speed along the X axis',
+	sidetext => 'mm/s',
+	cli     => 'x-speed-limit=s',
+	type    => 'f',
+	default => '200',
+    },
+    'y_limit_speed' => {
+        label   => 'Y',
+	tooltip => 'Slows any operation so as not to exceed this speed along the Y axis',
+	sidetext => 'mm/s',
+	cli     => 'y-speed-limit=s',
+	type    => 'f',
+	default => '200',
+    },
+    'z_limit_speed' => {
+        label   => 'Z',
+	tooltip => 'Slows any operation so as not to exceed this speed along the Z axis',
+	sidetext => 'mm/s',
+	cli     => 'z-speed-limit=s',
+	type    => 'f',
+	default => '200',
+    },
     
     # acceleration options
     'acceleration' => {

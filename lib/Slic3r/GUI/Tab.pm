@@ -430,6 +430,10 @@ sub build {
             title => 'Modifiers',
             options => [qw(first_layer_speed)],
         },
+        {
+            title => 'Speed Limits',
+	        options => [qw(x_limit_speed y_limit_speed z_limit_speed)],
+        },
     ]);
     
     $self->add_options_page('Skirt and brim', 'box.png', optgroups => [
