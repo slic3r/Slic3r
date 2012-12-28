@@ -34,7 +34,7 @@ has 'speeds' => (
     default => sub {+{
         map { $_ => 60 * $Slic3r::Config->get_value("${_}_speed") }
             qw(travel perimeter small_perimeter external_perimeter infill
-                solid_infill top_solid_infill support_material bridge gap_fill),
+                solid_infill top_solid_infill support_material bridge gap_fill x_limit y_limit z_limit),
     }},
 );
 
@@ -344,20 +344,40 @@ sub _G0_G1 {
     my $self = shift;
     my ($gcode, $point, $z, $e, $comment) = @_;
     my $dec = $self->dec;
+
+    my $x_dist = 0;
+    my $y_dist = 0;
+    my $z_dist = 0;
     
     if ($point) {
         $gcode .= sprintf " X%.${dec}f Y%.${dec}f", 
             ($point->x * &Slic3r::SCALING_FACTOR) + $self->shift_x - $self->extruder->extruder_offset->[X], 
             ($point->y * &Slic3r::SCALING_FACTOR) + $self->shift_y - $self->extruder->extruder_offset->[Y]; #**
         $gcode = $self->_limit_frequency($point) . $gcode;
+	$x_dist = abs($point->x - $self->last_pos->[X]) * &Slic3r::SCALING_FACTOR;
+	$y_dist = abs($point->y - $self->last_pos->[Y]) * &Slic3r::SCALING_FACTOR;
         $self->last_pos($point->clone);
     }
     if (defined $z && (!defined $self->z || $z != $self->z)) {
+        # If previous Z is undefined, assume it is 0
+        $z_dist = abs($z - (defined $self->z ? $self->z : 0) ) * &Slic3r::SCALING_FACTOR;
         $self->z($z);
         $gcode .= sprintf " Z%.${dec}f", $z;
     }
+
+    # Based on the distances traveled
+    # determine the maximum allowable feed rate
+    # then pass it to _Gx
+    my $move_dist = sqrt( $x_dist**2 + $y_dist**2 + $z_dist**2);
+    my $x_time = $x_dist/$self->speeds->{x_limit};
+    my $y_time = $y_dist/$self->speeds->{y_limit};
+    my $z_time = $z_dist/$self->speeds->{z_limit};
+    my $move_time_limit = max($x_time,$y_time,$z_time);
+    my $f_limit = $move_dist > 0
+        ? $move_dist/$move_time_limit
+        : 0;
     
-    return $self->_Gx($gcode, $e, $comment);
+    return $self->_Gx($gcode, $e, $comment, $f_limit);
 }
 
 sub G2_G3 {
@@ -375,40 +395,48 @@ sub G2_G3 {
     $gcode .= sprintf " I%.${dec}f J%.${dec}f",
         ($center->[X] - $self->last_pos->[X]) * &Slic3r::SCALING_FACTOR,
         ($center->[Y] - $self->last_pos->[Y]) * &Slic3r::SCALING_FACTOR;
+
+    # Max feed rate not calculated for arcs
+    my $f_limit = 0;
     
     $self->last_pos($point);
-    return $self->_Gx($gcode, $e, $comment);
+    return $self->_Gx($gcode, $e, $comment, $f_limit);
 }
 
 sub _Gx {
     my $self = shift;
-    my ($gcode, $e, $comment) = @_;
+    my ($gcode, $e, $comment, $f_limit) = @_;
     my $dec = $self->dec;
     
-    # output speed if it's different from last one used
-    # (goal: reduce gcode size)
     my $append_bridge_off = 0;
     my $F;
-    if ($self->speed ne $self->last_speed) {
-        if ($self->speed eq 'bridge') {
-            $gcode = ";_BRIDGE_FAN_START\n$gcode";
-        } elsif ($self->last_speed eq 'bridge') {
-            $append_bridge_off = 1;
-        }
-        
-        # apply the speed reduction for print moves on bottom layer
-        $F = $self->speed eq 'retract'
-            ? ($self->extruder->retract_speed_mm_min)
-            : $self->speeds->{$self->speed} // $self->speed;
-        if ($e && $self->layer && $self->layer->id == 0 && $comment !~ /retract/) {
-            $F = $Slic3r::Config->first_layer_speed =~ /^(\d+(?:\.\d+)?)%$/
-                ? ($F * $1/100)
-                : $Slic3r::Config->first_layer_speed * 60;
-        }
+
+    if ($self->speed eq 'bridge') {
+        $gcode = ";_BRIDGE_FAN_START\n$gcode";
+    } elsif ($self->last_speed eq 'bridge') {
+        $append_bridge_off = 1;
+    }
+    
+    # apply the speed reduction for print moves on bottom layer
+    $F = $self->speed eq 'retract'
+        ? ($self->extruder->retract_speed_mm_min)
+        : $self->speeds->{$self->speed} // $self->speed;
+    if ($e && $self->layer && $self->layer->id == 0 && $comment !~ /retract/) {
+        $F = $Slic3r::Config->first_layer_speed =~ /^(\d+(?:\.\d+)?)%$/
+            ? ($F * $1/100)
+            : $Slic3r::Config->first_layer_speed * 60;
+    }
+
+    # apply reduction if $F is greater than the fastest allowable speed (0 mean unlimited speed)
+    if (($F > $f_limit) && ($f_limit > 0)) {$F = $f_limit;}
+
+    # output speed if it's different from last one used
+    # (goal: reduce gcode size)
+    if ($F ne $self->last_f) {
+        $gcode .= sprintf " F%.${dec}f", $F if defined $F;
         $self->last_speed($self->speed);
         $self->last_f($F);
     }
-    $gcode .= sprintf " F%.${dec}f", $F if defined $F;
     
     # output extrusion distance
     if ($e && $Slic3r::Config->extrusion_axis) {
