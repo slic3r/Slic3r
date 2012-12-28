@@ -339,7 +339,7 @@ our $Options = {
 	sidetext => 'mm/s',
 	cli     => 'z-speed-limit=s',
 	type    => 'f',
-	default => '1.3',
+	default => '200',
     },
     
     # acceleration options
