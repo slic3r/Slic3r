@@ -110,6 +110,41 @@ sub subdivide {
     }
 }
 
+# Split segments longer that given width in two, and if longer than 4 * width, 
+# add points at width distance from end points.
+# This results in a polygon that's pretty well conditioned for medial axis
+# approximation, without having to divide everything into tiny 
+# width-length segments.
+sub splitdivide {
+    my $self = shift;
+    my $corner_width = shift;
+    for (my $i = $#{$self}; $i > -1; $i--) {
+        my $len = Slic3r::Geometry::distance_between_points($self->[$i-1], $self->[$i]);
+        my @pts;
+
+        # make sure corners are bracketed with fairly
+        # evenly spaced points on either side
+        if ($len > 4 * $corner_width) {
+            push @pts, [$self->[$i-1]->[0] + (($self->[$i]->[0] - $self->[$i-1]->[0]) / $len) * $corner_width,
+                        $self->[$i-1]->[1] + (($self->[$i]->[1] - $self->[$i-1]->[1]) / $len) * $corner_width];
+        }
+
+        # divide in half,
+        # so square ends can be "seen" better
+        if ($len > $corner_width) {
+            push @pts, [($self->[$i-1]->[0] + $self->[$i]->[0]) / 2,
+                        ($self->[$i-1]->[1] + $self->[$i]->[1]) / 2];
+            }
+
+        if ($len > 4 * $corner_width) {
+            push @pts, [$self->[$i-1]->[0] + (($self->[$i]->[0] - $self->[$i-1]->[0]) / $len) * ($len - $corner_width),
+                        $self->[$i-1]->[1] + (($self->[$i]->[1] - $self->[$i-1]->[1]) / $len) * ($len - $corner_width)];
+        }
+
+        splice @{$self}, $i, 0, @pts;
+    }
+}
+
 # returns false if the polyline is too tight to be printed
 sub is_printable {
     my $self = shift;
