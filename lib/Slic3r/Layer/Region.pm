@@ -5,6 +5,7 @@ use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Geometry qw(scale shortest_path);
 use Slic3r::Geometry::Clipper qw(safety_offset union_ex diff_ex intersection_ex);
 use Slic3r::Surface ':types';
+use Slic3r::MedialAxis;
 
 has 'layer' => (
     is          => 'ro',
@@ -78,6 +79,7 @@ sub make_surfaces {
         my @surfaces = @{$self->slices};
         @{$self->slices} = ();
         foreach my $surface (@surfaces) {
+            my $slice_count = @{$self->slices};
             push @{$self->slices}, map Slic3r::Surface->new
                 (expolygon => $_, surface_type => S_TYPE_INTERNAL),
                 @{union_ex([
@@ -86,8 +88,32 @@ sub make_surfaces {
                         +$distance,
                     ),
                 ])};
+            if ($slice_count == @{$self->slices}) {
+
+                # This is a stand-alone thin wall surface (a thin wall calibration
+                # test object, for instance) that disappears in the offset above.
+                # Use the medial axis to generate a centerline thin wall path.
+                
+                my @ma = Slic3r::MedialAxis::medial_axis($surface->expolygon, $distance * 2, [0]);
+
+                my @thin_paths = Slic3r::MedialAxis::thin_paths_filter(
+                    \@ma,
+                    $distance * 2.1,
+                    0, 
+                    0, 
+                    $distance,
+                    Slic3r::Geometry::deg2rad(135)
+                    );
+
+                push @{$self->thin_walls},
+                    map $_->[0] == $_->[-1] ? Slic3r::Polygon->new($_) : Slic3r::Polyline->new($_),
+                    map [map $_->point, @$_], @thin_paths;
+                
+                Slic3r::debugf "  %d thin walls detected\n", scalar(@{$self->thin_walls}) if @{$self->thin_walls};
+            }
         }
         
+        if (0) {
         # now detect thin walls by re-outgrowing offsetted surfaces and subtracting
         # them from the original slices
         my $outgrown = [ Slic3r::Geometry::Clipper::offset([ map $_->p, @{$self->slices} ], $distance) ];
@@ -105,6 +131,7 @@ sub make_surfaces {
             @{$self->thin_walls} = map $_->medial_axis($self->perimeter_flow->scaled_width), @$diff;
             
             Slic3r::debugf "  %d thin walls detected\n", scalar(@{$self->thin_walls}) if @{$self->thin_walls};
+        }
         }
     }
     
