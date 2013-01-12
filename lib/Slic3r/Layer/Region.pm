@@ -98,9 +98,9 @@ sub make_surfaces {
 
                 my @thin_paths = Slic3r::MedialAxis::thin_paths_filter(
                     \@ma,
-                    $distance * 2.1,
-                    0, 
-                    0, 
+                    $distance * 2.25, # a bit oversized in this case to avoid noise from irregular walls
+                    0,
+                    0,
                     $distance,
                     Slic3r::Geometry::deg2rad(135)
                     );

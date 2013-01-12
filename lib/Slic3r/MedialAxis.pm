@@ -452,7 +452,11 @@ sub thin_paths_filter {
     foreach my $path (@$medial_paths) {
         my $previous_test_radius = $start_radius + $offset_radius;
         my $isloop = $path->[0] == $path->[-1];
-
+        # TODO: Need to better analyze just when to insert
+        # a new array ref for a new path. Right now we 
+        # insert some that don't get used, and weed out 
+        # the empties at the end.
+        push @outpaths, [];
         for (my $i = 0; $i < @$path; $i++) {
             my $minuswhat = ($isloop && $i == 0 && @$path > 3) ? 2 : 1;
             $minuswhat = 1;
@@ -511,6 +515,8 @@ sub thin_paths_filter {
         }
     }
 
+    #print "path lengths: ",join(', ',map scalar(@$_), @outpaths),"\n";
+
     @outpaths = grep @$_, @outpaths;
 
     # An angle threshold to cull short paths in the medial axis that
@@ -521,23 +527,29 @@ sub thin_paths_filter {
     # Small threshold angles correspond to wide angles we don't want to go into.
 
     foreach my $path (@outpaths) {
-        while (  @{$path} > 0
-               && @{$path->[0]->tangents} == 1
-               && abs(angle_reduce_pi(angle3points($path->[0]->point,  @{$path->[0]->tangents->[0]}))) <= $theta 
-               && !$path->[0]->tosplice
+        next if @{$path} < 2;
+        my $edge = $path->[0]->common_edge($path->[1]);
+        # we may need more conditions on these while()s to avoid
+        # overzealous trimming
+        while (  @{$path} > 1
+               && abs(angle_reduce_pi($path->[1]->central_angle($edge))) <= $theta 
               ) {
-            remove_edge($path->[0], $path->[1]) if @{$path} > 1;
+            remove_edge($path->[0], $path->[1]) if @$path > 1;
             shift @{$path};
+            $edge = $path->[0]->common_edge($path->[1]) if @$path > 1;
         }
-        while ( @{$path} > 0
-               && @{$path->[-1]->tangents} == 1
-               && abs(angle_reduce_pi(angle3points($path->[-1]->point,  @{$path->[-1]->tangents->[0]}))) <= $theta 
-               && !$path->[-1]->tosplice
+        next if @{$path} < 2;
+        $edge = $path->[-1]->common_edge($path->[-2]) if @$path > 1;
+        while ( @{$path} > 1
+               && abs(angle_reduce_pi($path->[-2]->central_angle($edge))) <= $theta 
               ) {
-            remove_edge($path->[-2], $path->[-1]) if @{$path} > 1;
+            remove_edge($path->[-2], $path->[-1]) if @$path > 1;
             pop @{$path};
+            $edge = $path->[-1]->common_edge($path->[-2]) if @$path > 1;
         }
     }
+
+    #print "path lengthspost angle filter: ",join(', ',map scalar(@$_), @outpaths),"\n";
 
     @outpaths = grep @$_ > 1, @outpaths;
 
