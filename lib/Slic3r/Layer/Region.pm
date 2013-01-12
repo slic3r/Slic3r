@@ -98,7 +98,7 @@ sub make_surfaces {
 
                 my @thin_paths = Slic3r::MedialAxis::thin_paths_filter(
                     \@ma,
-                    $distance * 2.25, # a bit oversized in this case to avoid noise from irregular walls
+                    $distance * 4.1, # thin wall junctions can get this wide
                     0,
                     0,
                     $distance,

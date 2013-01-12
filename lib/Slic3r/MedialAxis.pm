@@ -1139,6 +1139,9 @@ sub combine_fragments {
 
 
 # combine based on identical node refs at ends
+# TODO: When linking two paths at a junction of three paths, trim back the
+#       the third path that isn't getting linked.
+
 sub combine_polyedges {
     my ($polyedges, $by_parent) = @_;
 
