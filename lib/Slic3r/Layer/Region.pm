@@ -81,7 +81,7 @@ sub make_surfaces {
         foreach my $surface (@surfaces) {
             my $slice_count = @{$self->slices};
             push @{$self->slices}, map Slic3r::Surface->new
-                (expolygon => $_, surface_type => S_TYPE_INTERNAL),
+                (expolygon => $_, source_expolygon => $surface->expolygon, surface_type => S_TYPE_INTERNAL),
                 @{union_ex([
                     Slic3r::Geometry::Clipper::offset(
                         [Slic3r::Geometry::Clipper::offset($surface->expolygon, -2*$distance)],
@@ -201,7 +201,12 @@ sub make_perimeters {
     $self->perimeters([]);
     $self->fill_surfaces([]);
     $self->thin_fills([]);
-    
+ 
+    my %same_source_expolygon;
+    push @{$same_source_expolygon{$_->source_expolygon}} , $_ for @surfaces;
+    my %absorbed;
+    $absorbed{$_} = 1 for @surfaces;
+
     # for each island:
     foreach my $surface (@surfaces) {
         my @last_offsets = ($surface->expolygon);
@@ -234,7 +239,84 @@ sub make_perimeters {
         
         # generate perimeters inwards (loop 0 is the external one)
         my $loop_number = $Slic3r::Config->perimeters + ($surface->additional_inner_perimeters || 0);
-        push @perimeters, [[@last_offsets]] if $loop_number > 0;
+
+        # If this is first of a group of surfaces that came from the same source 
+        # expolygon, do thin wall detection for the outer perimeter on the whole group
+        # (because it might combine islands) and if there is a result, add that 
+        # as the outer perimeter for just this first one in the group.
+        if ($same_source_expolygon{$surface->source_expolygon}->[0] == $surface) {
+            
+            my @ma = Slic3r::MedialAxis::medial_axis($surface->source_expolygon, 
+                                                     $self->perimeter_flow->scaled_width/2, 
+                                                     [0]
+                                                    );
+            my @thin_passages = Slic3r::MedialAxis::thin_paths_filter(
+                                        \@ma,
+                                        $self->perimeter_flow->scaled_width,
+                                        0,
+                                        0,
+                                        $self->perimeter_flow->scaled_width / 2,
+                                        Slic3r::Geometry::deg2rad(135)
+                                        );
+            @thin_passages = Slic3r::MedialAxis::split(
+                                        \@thin_passages,
+                                        $self->perimeter_flow->scaled_width / 2,
+                                        0,
+                                        $self->perimeter_flow->scaled_width / 2,
+                                        $self->layer->id,
+                                        );
+
+            my ($original, $unspliced_frags, $modified) = Slic3r::MedialAxis::splice_into_perimeter(
+                                        [map @$_, map $_->expolygon, @{$same_source_expolygon{$surface->source_expolygon}}],
+                                        \@thin_passages,
+                                        $self->perimeter_flow->scaled_width,
+                                        $self->layer->id % 2
+                                        );
+
+
+#            for (my $i = $#thin_passages; $i > -1; $i--) {
+#                my $frag_length = 0;
+#                my $j=1;
+#                while ($frag_length < $self->perimeter_flow->scaled_width*2.5 && $j < @{$thin_passages[$i]}) {
+#                    $frag_length += Slic3r::Geometry::distance_between_points($thin_passages[$i]->[$j]->point, $thin_passages[$i]->[$j - 1]->point);
+#                    $j++;
+#                }
+#                if ($frag_length < $self->perimeter_flow->scaled_width*2.5) {
+#                    #push @too_short_frags, 
+#                    splice(@thin_passages, $i, 1);
+#                }
+#                print "eliminated short frag [ $frag_length < $self->perimeter_flow->scaled_width*2.5 ]\n" if $frag_length < $self->perimeter_flow->scaled_width*2.5;
+#            }
+
+            # Any thin sections that didn't get spliced into
+            # a loop will be treated as isolated thin walls
+            # Ideally this shouldn't happen here, but if it does,
+            # we still want to preserve the thin section.
+            push @{$self->thin_walls},
+                 #map $_->[0] == $_->[-1] ? Slic3r::Polygon->new($_) : Slic3r::Polyline->new($_),
+                 #map [map $_->point, @$_],
+                 @$unspliced_frags;
+
+           # this might not be working, to preserve unspliced-into loops
+           # by flagging that they should be added when their time comes
+           # But also find out why not spliced - thinking it's maybe 
+           # overzealos angle threshold trimming in narrow but square passages.(isolated gear teeth case)
+           $absorbed{$_} = 0 for grep $_ != $surface, @$original;
+
+            if (@$modified > 0 && $loop_number > 0) {
+                my @perim_polygons = map Slic3r::ExPolygon->new($_), grep $_->isa('Slic3r::Polygon'), @$modified;
+                # hack polylines into expolygon outers
+                my @perim_polylines = map {$_->[0] = Slic3r::Polyline->new(@{$_->[0]});$_} map Slic3r::ExPolygon->new($_), grep !$_->isa('Slic3r::Polygon'), @$modified;
+                push @perimeters, [[@perim_polygons, @perim_polylines]] if $loop_number > 0;
+            } else {
+                push @perimeters, [[@last_offsets]] if $loop_number > 0;
+            }
+        } elsif (!$absorbed{$surface}) {
+            print "leftovers\n";
+            push @perimeters, [[@last_offsets]] if $loop_number > 0;
+        }
+
+        #push @perimeters, [[@last_offsets]] if $loop_number > 0;
         
         # do one more loop (<= instead of <) so that we can detect gaps even after the desired
         # number of perimeters has been generated
@@ -425,12 +507,22 @@ sub _add_perimeter {
     my $self = shift;
     my ($polygon, $role) = @_;
     
-    return unless $polygon->is_printable($self->perimeter_flow->width);
-    push @{ $self->perimeters }, Slic3r::ExtrusionLoop->pack(
-        polygon         => $polygon,
-        role            => ($role // EXTR_ROLE_PERIMETER),
-        flow_spacing    => $self->perimeter_flow->spacing,
-    );
+    if ($polygon->isa('Slic3r::Polygon')) { 
+        return unless $polygon->is_printable($self->perimeter_flow->width);
+        push @{ $self->perimeters }, Slic3r::ExtrusionLoop->pack(
+            polygon         => $polygon,
+            role            => ($role // EXTR_ROLE_PERIMETER),
+            flow_spacing    => $self->perimeter_flow->spacing,
+        );
+
+    } else {
+        return if @$polygon < 2;
+        push @{ $self->perimeters }, Slic3r::ExtrusionPath->pack(
+            polyline        => $polygon,
+            role            => ($role // EXTR_ROLE_PERIMETER),
+            flow_spacing    => $self->perimeter_flow->spacing,
+        );
+    }
 }
 
 sub prepare_fill_surfaces {

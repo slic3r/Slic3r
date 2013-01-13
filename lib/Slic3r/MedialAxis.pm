@@ -98,7 +98,13 @@ sub medial_axis {
             # (If thresholds here have any other purpose in the future, this 
             # adjustment may not be what we want.)
             
-            my $threshold_radius_adj = adjusted_radius_for_miter_limit($node, $threshold_radius/2, $miterLimit);
+            # second arg is new and used with new MIC object which is not in 
+            # place at this point.
+            # with undef, we'll have the function work the old way.
+            # Ideally we get rid of all this interpolation
+            # here and only do it in filters later, when the new MIC object is
+            # what we're working with.
+            my $threshold_radius_adj = adjusted_radius_for_miter_limit($node, undef, $threshold_radius/2, $miterLimit);
 
             if ($node->{radius} < $threshold_radius_adj) {
 
@@ -465,8 +471,9 @@ sub thin_paths_filter {
             # of miter limit on the location of the two corner points where
             # a perimeter stops and turns around at the entry to a thin section.
 
+            my $edge = $path->[$i]->common_edge($path->[$i == $#$path ? $i - 1 : $i + 1]);
             my $test_radius = $offset_radius + 
-                              adjusted_radius_for_miter_limit($path->[$i], $start_radius/2, $miterLimit);
+                              adjusted_radius_for_miter_limit($path->[$i], $edge, $start_radius/2, $miterLimit);
 
             # Create a set of paths from the original path, where the endpoints
             # are roughly where the medial axis radius crosses the adjusted
@@ -481,12 +488,14 @@ sub thin_paths_filter {
                         # factor calc can probably be simpler
                         my $denom = $path->[$i]->radius/$test_radius - $path->[$i - $minuswhat]->radius/$previous_test_radius;
                         my $factor = $denom == 0 ? 1 :
-                                     ((1 - $path->[$i - $minuswhat]->radius/$previous_test_radius) / $denom);
+                                     ((1 - $path->[$i-1]->radius/$previous_test_radius) / $denom);
                         if ($path->[$i - $minuswhat]->radius < ($min_radius + $offset_radius)) {
                             $denom = $path->[$i]->radius - $path->[$i - $minuswhat]->radius;
                             if ($denom == 0) {$factor=1;}
                             else {$factor = (($min_radius + $offset_radius) - $path->[$i - $minuswhat]->radius)/$denom;}
                         }
+                        #print "fact:",$factor,"\n";
+                        $factor = abs($factor);
                         my $interp_node = $path->[$i - $minuswhat]->interpolate($path->[$i], $factor);
                         remove_edge($path->[$i - $minuswhat], $interp_node);
                         $interp_node->tosplice(1) if $path->[$i - $minuswhat]->radius > $previous_test_radius;
@@ -506,6 +515,8 @@ sub thin_paths_filter {
                     if ($denom == 0) {$factor=1;}
                     else {$factor = (($min_radius + $offset_radius) - $path->[$i - $minuswhat]->radius)/$denom;}
                 }
+                #print "fact:",$factor,"\n";
+                $factor = abs($factor);
                 my $interp_node = $path->[$i - $minuswhat]->interpolate($path->[$i], $factor);
                 remove_edge($interp_node, $path->[$i]);
                 $interp_node->tosplice(1) if $path->[$i]->radius > $test_radius;
@@ -533,6 +544,7 @@ sub thin_paths_filter {
         # overzealous trimming
         while (  @{$path} > 1
                && abs(angle_reduce_pi($path->[1]->central_angle($edge))) <= $theta 
+               
               ) {
             remove_edge($path->[0], $path->[1]) if @$path > 1;
             shift @{$path};
@@ -675,10 +687,10 @@ sub splice_into_perimeter {
 
     if (@$loops == 0) {
         #print "NO LOOPS to splice_into_perimeter(), returning frags\n";
-        return ([], [map Slic3r::Polyline->new([map $_->point, @$_]), grep @$_ > 0, @$frags]);
+        return ([], [map Slic3r::Polyline->new([map $_->point, @$_]), grep @$_ > 0, @$frags], []);
     }
 
-    #combine_fragments($frags, $match_dist);
+    combine_fragments($frags, $match_dist);
 
     my @frags_out = map Slic3r::Polyline->new([map $_->point, @$_]), grep @$_ > 0, grep !$_->[0]->tosplice && !$_->[-1]->tosplice, @$frags;
     my @frags = ((grep $_->[0]->tosplice, @$frags),
@@ -687,7 +699,7 @@ sub splice_into_perimeter {
 
     if (@frags == 0 && @frags_out == 0) {
         #print "NO FRAGS to splice_into_perimeter(), returning original loops\n";
-        return ($loops, []);
+        return ($loops, [], []);
     }
 
     my @loops = grep @$_ > 0, @$loops;
@@ -748,7 +760,7 @@ sub splice_into_perimeter {
             #@indsb = ();
         }
         if (@inds == 0 && @indsb == 0) {
-            #print "nothing close enough to either splice point\n";
+            print "nothing close enough to either splice point\n";
             push @frags_out, Slic3r::Polyline->new([map $_->point, @{$frags[$i]}]);
             #$DB::svg->appendPoints({r=>1000000,style=>'opacity:0.55;fill:yellow;'}, map $_->{point}, grep $_->{tosplice}, @{$frags[$i]});
             next;
@@ -980,7 +992,7 @@ sub splice_into_perimeter {
         }
     }
 
-    return ([@untouched], [@spliced_paths, @unspliced, @frags_out]);
+    return ([@untouched], [@frags_out], [@spliced_paths, @unspliced]);
 }
 
 
@@ -996,35 +1008,39 @@ sub splice_into_perimeter {
 # derived from the miter limit used to generate the Clipper offset, and the
 # formed by the walls heading into the corner or thin passage. Here we use the
 # angle formed by the two MIC radii of a medial axis node.
+# http://sheldrake.net/3D_printing/miterAdjRadius/
+
+sub acos { atan2( sqrt(1 - $_[0] * $_[0]), $_[0] ) }
 
 sub adjusted_radius_for_miter_limit {
-    my ($node, $ref_radius, $miter_limit) = @_;
+    my ($node, $edge, $ref_radius, $miter_limit) = @_;
 
     my $radius;
     
     my $split_theta;
-    if (ref $node eq 'HASH') {
+    if (ref $node eq 'HASH') { # transitional as we work out final data structure
         $split_theta = abs((angle3points($node->{point}, @{$node->{tangents}->[0]})));
     } else {
-        $split_theta = abs((angle3points($node->point, @{$node->tangents->[0]})));
+        #$split_theta = abs((angle3points($node->point, @{$node->tangents->[0]})));
+        $split_theta = abs(($node->central_angle($edge)));
     }
 
     $split_theta = PI * 2 - $split_theta if $split_theta > PI;
 
-    my $miter_threshold_theta = deg2rad(90);
+    my $miter_threshold_theta = 2 * acos(1 / $miter_limit);
 
     if ($split_theta <= $miter_threshold_theta) {
-        $radius = $ref_radius * 2;
+        #$radius = $ref_radius * 2;
+        $radius = $ref_radius;
     } else {
         my $miter_dist = $ref_radius * $miter_limit;
         # The inner portion of the test radius, accounting for miter limit and 
         # the path overlapping itself in a corner,
-        # (this formula might be further simplified with application of the 
-        # half-angle formulas to the cos()**2 cases, though that might introduce
-        # issues with the sign of the result of cos(), once it's not squared anymore)
-        $radius = ( $ref_radius * (1 + cos($split_theta/2)**2) - $miter_dist * cos($split_theta/2) )
-                  / (1 - cos($split_theta/2)**2);
+
+        $radius = (2 * $ref_radius * (1 - $miter_limit * cos($split_theta/2))) / (1 - cos($split_theta));
+
         # plus the outer half of the radius, which is just half extrusion width.
+
         $radius += $ref_radius;
     }
 
@@ -1138,16 +1154,16 @@ sub combine_fragments {
 }
 
 
-# combine based on identical node refs at ends
+# Combine based on identical node refs at ends.
+# Meant to work on MIC nodes and Tangent nodes (Tangents linked parents are identical).
 # TODO: When linking two paths at a junction of three paths, trim back the
 #       the third path that isn't getting linked.
 
 sub combine_polyedges {
     my ($polyedges, $by_parent) = @_;
 
-    # Combine chains of edges into longer chains where their ends meet.
-
     # Sort by length, where array length is rough proxy for edge length sum.
+    # Intent is to encourage attaching short paths to longer paths at junctions.
     @$polyedges = sort {@{$a} <=> @{$b}} @$polyedges;
 
     # Link polyedges with common end points.
