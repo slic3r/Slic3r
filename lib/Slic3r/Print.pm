@@ -700,7 +700,7 @@ sub write_gcode {
     print  $fh "G21 ; set units to millimeters\n";
     if ($Slic3r::Config->gcode_flavor =~ /^(?:reprap|teacup)$/) {
         printf $fh $gcodegen->reset_e;
-        if ($Slic3r::Config->gcode_flavor =~ /^(?:reprap|makerbot)$/) {
+        if ($Slic3r::Config->gcode_flavor =~ /^(?:reprap|makerbot|sailfish)$/) {
             if ($Slic3r::Config->use_relative_e_distances) {
                 print $fh "M83 ; use relative distances for extrusion\n";
             } else {
@@ -863,7 +863,9 @@ sub write_gcode {
             $gcode =~ s/^;_BRIDGE_FAN_START\n/ $gcodegen->set_fan($Slic3r::Config->bridge_fan_speed, 1) /gmex;
             $gcode =~ s/^;_BRIDGE_FAN_END\n/ $gcodegen->set_fan($fan_speed, 1) /gmex;
         }
-        
+                 
+        $gcode .= sprintf "M73 P%s%s\n", int( 100 * ($layer_id / ($self->layer_count - 1))), $Slic3r::Config->gcode_comments ? ' ; update progress' : '' if $Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/;
+            
         return $gcode;
     };
     

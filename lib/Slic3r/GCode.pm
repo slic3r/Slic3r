@@ -452,8 +452,9 @@ sub set_extruder {
     
     # set the new extruder
     $self->extruder($extruder);
-    $gcode .= sprintf "T%d%s\n", $extruder->id, ($Slic3r::Config->gcode_comments ? ' ; change extruder' : '');
-    $gcode .= $self->reset_e;
+    
+    $gcode .= $self->reset_e; 
+    $gcode .= sprintf "%s%d%s\n", (($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) ? 'M108 T' : 'T'), $extruder->id, ($Slic3r::Config->gcode_comments ? ' ; change extruder' : '');
     
     return $gcode;
 }
@@ -461,17 +462,37 @@ sub set_extruder {
 sub set_fan {
     my $self = shift;
     my ($speed, $dont_save) = @_;
+    my $code;
     
     if ($self->last_fan_speed != $speed || $dont_save) {
         $self->last_fan_speed($speed) if !$dont_save;
-        if ($speed == 0) {
-            my $code = $Slic3r::Config->gcode_flavor eq 'teacup'
-                ? 'M106 S0'
-                : 'M107';
+        if ($speed == 0) 
+        {
+            if ($Slic3r::Config->gcode_flavor eq 'teacup')
+            {
+                $code = 'M106 S0';
+            }
+            elsif ($Slic3r::Config->gcode_flavor eq 'makerbot' || $Slic3r::Config->gcode_flavor eq 'sailfish')
+            {
+                $code = 'M127';
+            }
+            else
+            {
+                $code = 'M107';
+            }
             return sprintf "$code%s\n", ($Slic3r::Config->gcode_comments ? ' ; disable fan' : '');
-        } else {
-            return sprintf "M106 %s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
+        } 
+        else 
+        {
+            if ($Slic3r::Config->gcode_flavor eq 'makerbot' || $Slic3r::Config->gcode_flavor eq 'sailfish')
+            {
+                return sprintf "M126%s\n", ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+            }
+            else
+            {
+                return sprintf "M106 %s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
                 (255 * $speed / 100), ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+            }
         }
     }
     return "";
@@ -480,15 +501,16 @@ sub set_fan {
 sub set_temperature {
     my $self = shift;
     my ($temperature, $wait, $tool) = @_;
-    
-    return "" if $wait && $Slic3r::Config->gcode_flavor eq 'makerbot';
+                
+    return "" if $wait && $Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/;
     
     my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
         ? ('M109', 'wait for temperature to be reached')
         : ('M104', 'set temperature');
+    
     my $gcode = sprintf "$code %s%d %s; $comment\n",
         ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature,
-        (defined $tool && $self->multiple_extruders) ? "T$tool " : "";
+        (defined $tool && ($self->multiple_extruders || $Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/)) ? "T$tool " : "";
     
     $gcode .= "M116 ; wait for temperature to be reached\n"
         if $Slic3r::Config->gcode_flavor eq 'teacup' && $wait;
@@ -501,7 +523,7 @@ sub set_bed_temperature {
     my ($temperature, $wait) = @_;
     
     my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
-        ? (($Slic3r::Config->gcode_flavor eq 'makerbot' ? 'M109'
+        ? ((($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) ? 'M109'
             : 'M190'), 'wait for bed temperature to be reached')
         : ('M140', 'set bed temperature');
     my $gcode = sprintf "$code %s%d ; $comment\n",
