@@ -10,6 +10,7 @@ BEGIN {
 
 use Getopt::Long qw(:config no_auto_abbrev);
 use List::Util qw(first);
+$ENV{LC_NUMERIC} = 'en_US.UTF-8';
 use Slic3r;
 $|++;
 
