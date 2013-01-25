@@ -142,12 +142,18 @@ use Moo;
 has 'object'        => (is => 'ro', weak_ref => 1, required => 1);
 has 'material_id'   => (is => 'rw');
 has 'facets'        => (is => 'rw', default => sub { [] });
+has 'facets_materials' => (is => 'rw', default => sub { [] });   # facet_idx => material_idx
+
+# maps the material numeric index used in the facets hashref to the alphanumeric model-wise material_id
+has 'materials'     => (is => 'rw', default => sub { [] });     # material_idx => material_id
 
 sub mesh {
     my $self = shift;
     return Slic3r::TriangleMesh->new(
         vertices => $self->object->vertices,
         facets   => $self->facets,
+        facets_materials => $self->facets_materials,
+        materials        => $self->materials,
     );
 }
 

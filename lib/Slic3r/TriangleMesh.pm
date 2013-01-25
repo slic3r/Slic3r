@@ -7,6 +7,8 @@ use Slic3r::Geometry::Clipper qw(union_ex);
 # public
 has 'vertices'      => (is => 'ro', required => 1);         # id => [$x,$y,$z]
 has 'facets'        => (is => 'ro', required => 1);         # id => [ $v1_id, $v2_id, $v3_id ]
+has 'materials'     => (is => 'ro', default => sub { [] }); # material_idx => material_id
+has 'facets_materials' => (is => 'ro');                     # facet_idx => material_idx
 
 # private
 has 'edges'         => (is => 'ro', default => sub { [] }); # id => [ $v1_id, $v2_id ]
