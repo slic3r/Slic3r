@@ -5,6 +5,7 @@ use Slic3r::Geometry qw(X Y Z);
 
 has 'materials' => (is => 'ro', default => sub { {} });
 has 'objects'   => (is => 'ro', default => sub { [] });
+has 'has_facet_materials' => (is => 'ro', default => sub { 0 });
 
 sub read_from_file {
     my $class = shift;

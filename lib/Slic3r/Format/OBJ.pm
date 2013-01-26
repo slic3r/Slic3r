@@ -40,14 +40,24 @@ sub read_file {
     }
     close $fh;
     
-    my $model = Slic3r::Model->new;
+    my $model = Slic3r::Model->new(
+        has_facet_materials => (%materials ? 1 : 0),
+    );
     my $object = $model->add_object(vertices => $vertices);
+    
+    # reverse %materials and turn it into an array
+    my @materials_array = ();
+    {
+        my %reversed_materials = reverse %materials;  # material_idx => material_id
+        $materials_array[$_] = $reversed_materials{$_} for keys %reversed_materials;
+    }
+    
     my $volume = $object->add_volume(
         facets           => $facets,
         facets_materials => $facets_materials,
-        materials        => { reverse %materials },
+        materials        => [ @materials_array ],
     );
-    $model->set_material($_) for keys %materials;use XXX; XXX $model;
+    $model->set_material($_) for keys %materials;
     return $model;
 }
 

@@ -88,6 +88,19 @@ sub slice {
     }
     die "Invalid input file\n" if !@{$self->layers};
     
+    # before freeing memory from mesh data, extract horizontal facets having materials
+    my @horiz_facets_with_material = ();  # region_id => [ facet1, facet2 ... ]
+    if (1) {
+        foreach my $mesh (@{$self->meshes}) {
+            push @horiz_facets_with_material, [];
+            next unless defined $mesh;
+            push @{$horiz_facets_with_material[-1]},
+                grep { $_->[0][Z] == $_->[1][Z] && $_->[1][Z] == $_->[2][Z] }
+                map [ map $mesh->vertices->[$_], @$_ ],
+                @{$mesh->facets};
+        }
+    }
+    use XXX; XXX \@horiz_facets_with_material;
     # free memory
     $self->meshes(undef) unless $params{keep_meshes};
     
@@ -110,10 +123,16 @@ sub slice {
         # inside a closed polyline)
         
         # build surfaces from sparse lines
+        my %surface_materials = ();  # region_id => { lines => [], horiz_facets => [] }
         foreach my $layerm (@{$layer->regions}) {
             my ($slicing_errors, $loops) = Slic3r::TriangleMesh::make_loops($layerm->lines);
             $layer->slicing_errors(1) if $slicing_errors;
             $layerm->make_surfaces($loops);
+            
+            if (1) {
+                # let's extract surface materials from $loops
+                # and from $self->meshes... whoops, we don't have meshes anymore!
+            }
             
             # free memory
             $layerm->lines(undef);
