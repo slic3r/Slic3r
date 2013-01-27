@@ -2,7 +2,7 @@ package Slic3r::MedialAxis;
 use strict;
 use warnings;
 
-use Math::Geometry::Delaunay 0.10;
+use Math::Geometry::Delaunay 0.10 qw(TRI_CONFORMING);
 use Slic3r::Geometry qw(PI angle3points distance_between_points deg2rad same_point polyline_remove_short_segments point_along_segment);
 
 use List::Util qw(first);
@@ -40,19 +40,17 @@ sub medial_axis {
         polyline_remove_short_segments($polygon, &Slic3r::SCALED_RESOLUTION);
         # minimally subdivide polygon segments so that the
         # triangulation captures important shape features, like corners 
-        $polygon->splitdivide($width / 2);
+        $polygon->splitdivide($width / 2) if $width;
         # the rest can be a coarser subdivision
-        $polygon->subdivide(5 * $width);
+        #$polygon->subdivide(5 * $width) if $width;
     }
     
     # get the Delaunay triangulation and Voronoi diagram topology
     
     my $tri = Math::Geometry::Delaunay->new();
-    $tri->doVoronoi(1);
-    $tri->doEdges(1);
     $tri->addPolygon($expolygon->contour);
     $tri->addHole($_) for $expolygon->holes;
-    my ($topo, $vtopo) = $tri->triangulate();
+    my ($topo, $vtopo) = $tri->triangulate(TRI_CONFORMING,'ev');
 
     # Move vertices in Voronoi diagram ($vtopo) to make them 
     # work much better as a medial axis approximation.
