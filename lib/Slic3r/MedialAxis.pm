@@ -222,13 +222,17 @@ sub medial_axis {
         push @start_nodes, $vnodes[0];
         $end_edges{$vnodes[0]->{edges}->[-1]} = 1;
     }
+
+    my @last_branch_start_nodes;
     
-    foreach my $start_node (@start_nodes) {
+    while (@start_nodes > 0 || @last_branch_start_nodes > 0) {
+        my $start_node = pop @start_nodes;
+        if (! defined($start_node)) { $start_node = pop @last_branch_start_nodes; }
 
         my @starts = @{$start_node->{edges}};
 
         if (@{$start_node->{edges}} == 3
-            && (grep $end_edges{$_}, @{$start_node->{edges}}) == 1) {
+            && scalar(grep $end_edges{$_}, @{$start_node->{edges}}) == 1) {
 
             # At a branch node with two unprocessed edges
             # always turn to the left, relative the
@@ -244,18 +248,19 @@ sub medial_axis {
             my $p4 = +(grep $_ != $start_node, @{$start_node->{edges}->[$other_ind]->{nodes}})[0];
             # Choose the edge that makes a larger angle with the processed edge.
             # Works because angle3points() converts negative angles to positive.
+            @starts = ($start_node->{edges}->[$next_ind], $start_node->{edges}->[$other_ind]);
             if (  angle3points($start_node->{point},$p1->{point},$p3->{point})
                 < angle3points($start_node->{point},$p1->{point},$p4->{point})
                ) {
-                $next_ind = $other_ind;
+                @starts = reverse @starts;
             }
-            @starts = ($start_node->{edges}->[$next_ind]);
         }
         
         foreach my $start_edge (@starts) {
 
             # don't go back over path already traveled
             next if $end_edges{$start_edge};
+            $end_edges{$start_edge} = 1;
 
             my $this_node = $start_node;
             push @polyedges, [];
@@ -282,11 +287,17 @@ sub medial_axis {
                             || $this_node->{depth} > $depth) {
                             $this_node->{depth} = $depth;
                         }
-                        # Only add branch nodes to the processing list as we
+                        # Only add branch nodes to the main processing list as we
                         # encounter them for the first time, so all paths from
                         # tip nodes get processed before any branch nodes.
                         if ((grep $end_edges{$_}, @{$this_node->{edges}}) == 1) {
                             push @start_nodes, $this_node;
+                        }
+                        # Two branches of the branch node processed. Add the node
+                        # to this secondary list that will get processed only when
+                        # the main list is empty.
+                        if ((grep $end_edges{$_}, @{$this_node->{edges}}) == 2) {
+                            push @last_branch_start_nodes, $this_node;
                         }
                     }
                     last;
