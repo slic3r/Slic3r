@@ -188,6 +188,39 @@ sub clip_end {
     }
 }
 
+sub clip_end_with_circle {
+
+    my $self = shift;
+    my ($which_end, $circle) = @_;
+
+    my $r_sq = $circle->[2]**2;
+    my $last_dist_sq = 0;
+    my $end_index = $which_end > 0 ? 0 : $#$self;
+
+    while ($end_index < @$self && $end_index > -1 && $r_sq > $last_dist_sq) {
+        $end_index += $which_end > 0 ? 1 : -1;
+        $last_dist_sq = ($self->[$end_index]->[0] - $circle->[0])**2 + ($self->[$end_index]->[1] - $circle->[1])**2;
+    }
+
+    my $previous_end_index = $end_index + ($which_end > 0 ? -1 : 1);
+
+    my ($new_pt1, $new_pt2) = &Slic3r::Geometry::circle_line_intersections($circle, [$self->[$previous_end_index], $self->[$end_index]]);
+
+    if (defined $new_pt1 && Slic3r::Geometry::point_in_segment($new_pt1, [$self->[$previous_end_index], $self->[$end_index]])) {
+        $self->[$previous_end_index] = Slic3r::Point->new($new_pt1);
+    } elsif (defined $new_pt2 && Slic3r::Geometry::point_in_segment($new_pt2, [$self->[$previous_end_index], $self->[$end_index]])) {
+        $self->[$previous_end_index] = Slic3r::Point->new($new_pt2);
+    } else {
+        Slic3r::debugf "Neither line-circle intersection point was on the segment to be clipped in clip_end_with_circle().";
+    }
+
+    if ($which_end > 0) {
+        @$self =  @$self[$previous_end_index .. $#$self];
+    } else {
+        @$self =  @$self[0 .. $previous_end_index];
+    }
+}
+
 package Slic3r::Polyline::Collection;
 use Moo;
 

@@ -87,6 +87,46 @@ sub offset {
     return map Slic3r::Polygon->new($_), Slic3r::Geometry::Clipper::offset([$self], @_);
 }
 
+sub clip_with_polylines {
+    my $self = shift;
+    my $polylines = shift;
+    my $epsilon = shift;
+    my $miter_limit = shift;
+    $epsilon //= &Slic3r::Geometry::scaled_epsilon; #/
+    $miter_limit //= 1; #/
+    my @bb = Slic3r::Geometry::bounding_box([@$self, (map @$_, @$polylines)]);
+    my $bb = (Slic3r::Polygon->new(
+        [ $bb[0], $bb[1] ],
+        [ $bb[2], $bb[1] ],
+        [ $bb[2], $bb[3] ],
+        [ $bb[0], $bb[3] ],
+        )->offset($epsilon * ($miter_limit + 1)))[0];
+
+    my $clip_expolygonbb = Slic3r::Geometry::Clipper::diff_ex(
+        [$bb],
+        [map $_->grow($epsilon, undef, &Math::Clipper::JT_MITER, $miter_limit), @$polylines]
+        );
+    my $polygon_as_polyline = Slic3r::Polyline->new([@$self,$self->[0]]);
+    my @frags = map $polygon_as_polyline->clip_with_expolygon($_), @$clip_expolygonbb;
+
+    # no intersection: return a Polygon copy of the original Polygon    
+    return $self->clone if @frags == 1;
+
+    # relink two fragments that came from the original start and end of the polygon
+    for (my $i = 0; $i < @frags; $i++) {
+        for (my $j = 0; $j < @frags; $j++) {
+            next if $i == $j;
+            if (Slic3r::Geometry::same_point($frags[$i]->[-1], $frags[$j]->[0])) {
+                pop @{$frags[$i]};
+                push @{$frags[$i]}, @{splice(@frags, $j, 1)};
+                last;
+            }
+        }
+    }
+
+    return @frags;
+}
+
 # this method subdivides the polygon segments to that no one of them
 # is longer than the length provided
 sub subdivide {

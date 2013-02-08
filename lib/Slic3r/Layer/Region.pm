@@ -80,30 +80,35 @@ sub make_surfaces {
         @{$self->slices} = ();
         foreach my $surface (@surfaces) {
             my $slice_count = @{$self->slices};
-            push @{$self->slices}, map Slic3r::Surface->new
-                (expolygon => $_, source_expolygon => $surface->expolygon, surface_type => S_TYPE_INTERNAL),
+
+            my @ma = Slic3r::MedialAxis::medial_axis($surface->expolygon, $distance * 2, [0]);
+            $DB::svg->appendPolylines({style=>'opacity:0.5;stroke-width:'.($distance/4).';stroke:red;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map Slic3r::Polyline->new([map $_->point, @$_]), @ma) if $DB::svg;
+            my @thin_paths = Slic3r::MedialAxis::thin_paths_filter(
+                \@ma,
+                200 * $distance * 4.1, # thin wall junctions can get this wide
+                0,
+                0,
+                $distance,
+                Slic3r::Geometry::deg2rad(135)
+                );
+
+            #push @{$self->slices}, map Slic3r::Surface->new
+            my @these_slices = map Slic3r::Surface->new
+                (expolygon => $_, source_expolygon => $surface->expolygon, medial_axis => \@thin_paths, surface_type => S_TYPE_INTERNAL),
                 @{union_ex([
                     Slic3r::Geometry::Clipper::offset(
                         [Slic3r::Geometry::Clipper::offset($surface->expolygon, -2*$distance)],
                         +$distance,
                     ),
                 ])};
-            if ($slice_count == @{$self->slices}) {
+            
+            if (@these_slices) {
+                push @{$self->slices}, @these_slices;
+            } else {
 
                 # This is a stand-alone thin wall surface (a thin wall calibration
                 # test object, for instance) that disappears in the offset above.
                 # Use the medial axis to generate a centerline thin wall path.
-                
-                my @ma = Slic3r::MedialAxis::medial_axis($surface->expolygon, $distance * 2, [0]);
-
-                my @thin_paths = Slic3r::MedialAxis::thin_paths_filter(
-                    \@ma,
-                    $distance * 4.1, # thin wall junctions can get this wide
-                    0,
-                    0,
-                    $distance,
-                    Slic3r::Geometry::deg2rad(135)
-                    );
 
                 push @{$self->thin_walls},
                     map $_->[0] == $_->[-1] ? Slic3r::Polygon->new($_) : Slic3r::Polyline->new($_),
@@ -132,7 +137,7 @@ sub make_surfaces {
             
             Slic3r::debugf "  %d thin walls detected\n", scalar(@{$self->thin_walls}) if @{$self->thin_walls};
         }
-        }
+        } # end disable section if block
     }
     
     if (0) {
@@ -204,8 +209,6 @@ sub make_perimeters {
  
     my %same_source_expolygon;
     push @{$same_source_expolygon{$_->source_expolygon}} , $_ for @surfaces;
-    my %absorbed;
-    $absorbed{$_} = 1 for @surfaces;
 
     # for each island:
     foreach my $surface (@surfaces) {
@@ -237,87 +240,97 @@ sub make_perimeters {
         my $distance = $self->perimeter_flow->scaled_spacing;
         my @gaps = ();
         
-        # generate perimeters inwards (loop 0 is the external one)
         my $loop_number = $Slic3r::Config->perimeters + ($surface->additional_inner_perimeters || 0);
 
+        # Handle thin walls and points for the outer perimeter.
+
         # If this is first of a group of surfaces that came from the same source 
-        # expolygon, do thin wall detection for the outer perimeter on the whole group
-        # (because it might combine islands) and if there is a result, add that 
-        # as the outer perimeter for just this first one in the group.
+        # expolygon, do thin wall detection for the outer perimeter on the whole 
+        # group (because it might combine islands) and if there is a result, add
+        # that as the outer perimeter for just this first one in the group.
+
         if ($same_source_expolygon{$surface->source_expolygon}->[0] == $surface) {
-            
-            my @ma = Slic3r::MedialAxis::medial_axis($surface->source_expolygon, 
-                                                     $self->perimeter_flow->scaled_width/2, 
-                                                     [0]
-                                                    );
-            my @thin_passages = Slic3r::MedialAxis::thin_paths_filter(
-                                        \@ma,
-                                        $self->perimeter_flow->scaled_width,
-                                        0,
-                                        0,
-                                        $self->perimeter_flow->scaled_width / 2,
-                                        Slic3r::Geometry::deg2rad(135)
-                                        );
-            @thin_passages = Slic3r::MedialAxis::split(
-                                        \@thin_passages,
-                                        $self->perimeter_flow->scaled_width / 2,
-                                        0,
-                                        $self->perimeter_flow->scaled_width / 2,
-                                        $self->layer->id,
-                                        );
+            my @ma = @{$surface->medial_axis};
+            my @all_expolygons = @{$same_source_expolygon{$surface->source_expolygon}};
 
-            my ($original, $unspliced_frags, $modified) = Slic3r::MedialAxis::splice_into_perimeter(
-                                        [map @$_, map $_->expolygon, @{$same_source_expolygon{$surface->source_expolygon}}],
-                                        \@thin_passages,
-                                        $self->perimeter_flow->scaled_width,
-                                        $self->layer->id % 2
-                                        );
+            # Get expolygon that is the original minus the offset polygon(s).
+            # This is the zone where thin walls and points live.
 
+            my $diff = Slic3r::Geometry::Clipper::diff_ex(
+                $surface->source_expolygon,
+                [map @$_, map $_->expolygon, @all_expolygons]
+                );
+            #$DB::svg->appendPolygons({style=>'opacity:0.8;stroke-width:'.($distance/12).';stroke:pink;fill:pink;stroke-linecap:round;stroke-linejoin:round;'}, @$diff) if $DB::svg;
 
-#            for (my $i = $#thin_passages; $i > -1; $i--) {
-#                my $frag_length = 0;
-#                my $j=1;
-#                while ($frag_length < $self->perimeter_flow->scaled_width*2.5 && $j < @{$thin_passages[$i]}) {
-#                    $frag_length += Slic3r::Geometry::distance_between_points($thin_passages[$i]->[$j]->point, $thin_passages[$i]->[$j - 1]->point);
-#                    $j++;
-#                }
-#                if ($frag_length < $self->perimeter_flow->scaled_width*2.5) {
-#                    #push @too_short_frags, 
-#                    splice(@thin_passages, $i, 1);
-#                }
-#                print "eliminated short frag [ $frag_length < $self->perimeter_flow->scaled_width*2.5 ]\n" if $frag_length < $self->perimeter_flow->scaled_width*2.5;
-#            }
+            # Do any additional MIC-based trim and split on the medial axis here,
+            # before flattening the node-edge topology to Polylines.
 
-            # Any thin sections that didn't get spliced into
-            # a loop will be treated as isolated thin walls
-            # Ideally this shouldn't happen here, but if it does,
-            # we still want to preserve the thin section.
-            push @{$self->thin_walls},
-                 #map $_->[0] == $_->[-1] ? Slic3r::Polygon->new($_) : Slic3r::Polyline->new($_),
-                 #map [map $_->point, @$_],
-                 @$unspliced_frags;
+            Slic3r::MedialAxis::trim_polyedge_junctions_by_radius(\@ma, $distance);
+            @{$surface->medial_axis} = grep @$_ > 1, @ma;
+            #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance).';stroke:green;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map Slic3r::Polyline->new([map $_->point, @$_]), @ma) if $DB::svg;
 
-           # this might not be working, to preserve unspliced-into loops
-           # by flagging that they should be added when their time comes
-           # But also find out why not spliced - thinking it's maybe 
-           # overzealos angle threshold trimming in narrow but square passages.(isolated gear teeth case)
-           $absorbed{$_} = 0 for grep $_ != $surface, @$original;
+            # Downgrade to Polylines.
+            my @ma_as_polylines = map Slic3r::Polyline->new([map $_->point, @$_]), @ma;
 
-            if (@$modified > 0 && $loop_number > 0) {
-                my @perim_polygons = map Slic3r::ExPolygon->new($_), grep $_->isa('Slic3r::Polygon'), @$modified;
-                # hack polylines into expolygon outers
-                my @perim_polylines = map {$_->[0] = Slic3r::Polyline->new(@{$_->[0]});$_} map Slic3r::ExPolygon->new($_), grep !$_->isa('Slic3r::Polygon'), @$modified;
-                push @perimeters, [[@perim_polygons, @perim_polylines]] if $loop_number > 0;
-            } else {
-                push @perimeters, [[@last_offsets]] if $loop_number > 0;
+            # Get the medial axis fragments that are in the thin wall zone.
+
+            my @boost_trimmed = map @{Boost::Geometry::Utils::polygon_multi_linestring_intersection
+                                      ($_, [@ma_as_polylines])
+                                     }, @$diff;
+            bless $_, 'Slic3r::Polyline' for @boost_trimmed;
+            bless $_, 'Slic3r::Point' for map @$_, @boost_trimmed;
+            #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance).';stroke:aqua;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @boost_trimmed) if $DB::svg;
+
+            # Break ExPolygons into fragments where they intersect with medial axis.
+
+            my @offset_clipped = map $_->clip_with_polylines(\@ma_as_polylines), map $_->contour, @all_expolygons;
+            my @offset_polygons = grep $_->isa('Slic3r::Polygon'), (@offset_clipped);
+            my @offset_polylines = grep !$_->isa('Slic3r::Polygon'), (@offset_clipped);
+            my @offset_holes_clipped = map $_->clip_with_polylines(\@ma_as_polylines), map $_->holes, @all_expolygons;
+            my @offset_holes_polygons = grep $_->isa('Slic3r::Polygon'), (@offset_holes_clipped);
+            my @offset_holes_polylines = grep !$_->isa('Slic3r::Polygon'), (@offset_holes_clipped);
+
+            # Trim one end of each polygon fragment for tool radius.
+            # This also has the effect of determining which way a medial axis 
+            # fragment will "turn" as it meets the original polygon boundary.
+
+            foreach my $offset_polyline (@offset_polylines, @offset_holes_polylines) {
+                # Alternate "turn" direction each layer
+                my $clip_front = $self->layer->id % 2;
+                my $circle = $clip_front > 0 
+                         ? [$offset_polyline->[0]->[0],  $offset_polyline->[0]->[1],  $distance]
+                         : [$offset_polyline->[-1]->[0], $offset_polyline->[-1]->[1], $distance];
+                $offset_polyline->clip_end_with_circle($clip_front, $circle) ;
             }
-        } elsif (!$absorbed{$surface}) {
-            print "leftovers\n";
-            push @perimeters, [[@last_offsets]] if $loop_number > 0;
+
+            # Splice together medial axis fragments
+            # and polygon fragments into continuous paths.
+
+            my @all_frags = (@offset_polylines, @offset_holes_polylines, @boost_trimmed);
+            Slic3r::Geometry::combine_polyline_fragments(\@all_frags, $distance/20);
+
+            # TODO: some of those might have turned back into polygons
+            # and some of those could be holes
+            # should detect that and leave them that way instead of treating as polylines
+            # and put the holes with other untouched holes
+            # Then, need to get fragmented holes in with the normal holes too, to 
+            # preserve the intended ordering from the hole sorting that happens below.
+            # But somehow that has to handle Polylines for it's nesting tests.
+
+            my @ex_frags = map Slic3r::ExPolygon->new($_), @all_frags;
+
+            # Hack Polylines into ExPolygon
+            bless($_->[0], 'Slic3r::Polyline') for @ex_frags;
+
+            # preserve polygons and holes that didn't get split up by the medial axis
+
+            push @ex_frags, @{union_ex([@offset_polygons, @offset_holes_polygons])};
+
+            push @perimeters, [[@ex_frags]] if $loop_number > 0;
         }
 
-        #push @perimeters, [[@last_offsets]] if $loop_number > 0;
-        
+        # generate perimeters inwards (loop 0 is the external one)
+
         # do one more loop (<= instead of <) so that we can detect gaps even after the desired
         # number of perimeters has been generated
         for (my $loop = 1; $loop <= $loop_number; $loop++) {

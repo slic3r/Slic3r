@@ -3,16 +3,17 @@ use strict;
 use warnings;
 
 use Math::Geometry::Delaunay 0.10 qw(TRI_CONFORMING);
-use Slic3r::Geometry qw(PI angle3points distance_between_points deg2rad same_point polyline_remove_short_segments point_along_segment);
+use Slic3r::Geometry qw(PI angle3points angle_reduce_pi distance_between_points deg2rad same_point polyline_remove_short_segments point_along_segment);
 
 use List::Util qw(first);
-use Scalar::Util qw(blessed); # until we make an ma object and can use isa() to tell between that and polygon/line
 
 require Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(medial_axis thin_paths_filter splice_into_perimeter);
+our @EXPORT_OK = qw(medial_axis thin_paths_filter split);
 
-our $miterLimit = 2; # cooridnate with what's used for Clipper offsets
+
+# get rid of this along with miter adjust phase out
+#our $miterLimit = 2; # cooridnate with what's used for Clipper offsets
 
 # Medial Axis
 
@@ -25,10 +26,10 @@ our $miterLimit = 2; # cooridnate with what's used for Clipper offsets
 # radius and tangent point data to the nodes.
 
 # Here we want to take an ExPolygon as input, get the Voronoi diagram,
-# straighten it out with mic_adjust(), and then do some additional pruning
-# and conditioning of the resulting topological structure to get something like
-# polygons and and polylines, but with each node/vertex retaining additional
-# attributes, like radius and MIC tangent points.
+# straighten it out with mic_adjust(), and then walk through the topological
+# structure to build up something like polygons and and polylines, but with 
+# each node/vertex retaining additional attributes, like radius and MIC 
+# tangent points.
 
 sub medial_axis {
     my ($expolygon, $width, $thresholds) = @_;
@@ -36,16 +37,22 @@ sub medial_axis {
     $expolygon = $expolygon->clone;
 
     foreach my $polygon (@$expolygon) {
-        # mostly to eliminate duplicate points
+        # Eliminate duplicate points.
         polyline_remove_short_segments($polygon, &Slic3r::SCALED_RESOLUTION);
-        # minimally subdivide polygon segments so that the
-        # triangulation captures important shape features, like corners 
+
+        # Minimally subdivide polygon segments so that the
+        # triangulation captures important shape features, like corners.
+        # Generally increases point count by a factor of 3 to 4. 
         $polygon->splitdivide($width / 2) if $width;
-        # the rest can be a coarser subdivision
-        #$polygon->subdivide(5 * $width) if $width;
+
+        # With Math::Geometry::Delaunay doing a conforming Delaunday 
+        # triangulation on the PSLG (options TRI_CONFORMING,'ev')
+        # we may not need further blind subdivision. So disabling this 
+        # until we find any problem cases that suggest we need it.
+        # $polygon->subdivide(5 * $width) if $width;
     }
     
-    # get the Delaunay triangulation and Voronoi diagram topology
+    # Get the Delaunay triangulation and Voronoi diagram topology.
     
     my $tri = Math::Geometry::Delaunay->new();
     $tri->addPolygon($expolygon->contour);
@@ -66,141 +73,11 @@ sub medial_axis {
                                        && $_->{vector}->[1] == 0 ),
                                      @{$node->{edges}};
     }
-    
-    # Insert interpolated nodes that have the given threshold radii.
-    # Because we want to use the medial axis to detect and fill narrow
-    # passages, we want it to have vertices exactly where the 
-    # transition to "narrow" happens, to cut at that point.
-    # Also, to facilitate splicing into Clipper offset polygons, we
-    # can make sure there's a point very close to where those polygons
-    # turn around in sharp corners. (Depends on miter limit and varies with
-    # local geometry, but with some coordination we should get close).
-    
-    # Consider doing this interpolation just where needed in other places
-    # like in a trimming sub, where you still have enough node, edge, tangent
-    # info to do it there. An general interpolate_nodes() sub would be good.
-    # but until then, this works well.
-
-    foreach my $threshold_radius (@$thresholds) {
-        next if !$threshold_radius;
-
-        my @adjust_queue = (0 .. $#{$vtopo->{nodes}});
-
-        while (scalar @adjust_queue) {
-            my $node_index = shift @adjust_queue;
-            my $node = $vtopo->{nodes}->[$node_index];
-
-            # This adjustment improves the result when the threshold
-            # is meant to get an interpolated point right where a Clipper
-            # offset has a point in a miterLimit-squared-off corner.
-            # (If thresholds here have any other purpose in the future, this 
-            # adjustment may not be what we want.)
-            
-            # second arg is new and used with new MIC object which is not in 
-            # place at this point.
-            # with undef, we'll have the function work the old way.
-            # Ideally we get rid of all this interpolation
-            # here and only do it in filters later, when the new MIC object is
-            # what we're working with.
-            my $threshold_radius_adj = adjusted_radius_for_miter_limit($node, undef, $threshold_radius/2, $miterLimit);
-
-            if ($node->{radius} < $threshold_radius_adj) {
-
-                for (my $i = $#{$node->{edges}}; $i > -1; $i--) {
-
-                    my ($other_node_index, $this_node_index) = $node == $node->{edges}->[$i]->{nodes}->[0] ? (1, 0) : (0, 1);
-                    my $other_node = $node->{edges}->[$i]->{nodes}->[$other_node_index];
-
-                    if ($other_node->{radius} > $threshold_radius_adj) {
-
-                        # All nodes directly connected to this one should 
-                        # reevaluate their situation after this one has been 
-                        # processed, so add them to the end of the queue again.
-                        for (my $j = $#{$node->{edges}}; $j > -1; $j--) {
-                            my $other_node_index = $node == $node->{edges}->[$j]->{nodes}->[0] ? 1 : 0;
-                            # convert to the index in $vtopo->{nodes} list
-                            $other_node_index = $node->{edges}->[$j]->{nodes}->[$other_node_index]->{index};
-                            push @adjust_queue, $other_node_index;
-                        }
-
-                        # clone
-                        my $this_node = {
-                                          index  => scalar(@{$vtopo->{nodes}}),
-                                          point  => [@{$node->{point}}],
-                                          radius => $node->{radius},
-                                          tangents  => [[map {[@$_]} @{$node->{tangents}->[$i]}]],
-                                          edges  => [],
-                                          elements => [],
-                                          segments => [],
-                                          marker => undef,
-                                          attributes => [],
-                                          };
-
-                        # attach current edge to new node, detach from old
-                        my $edge = $node->{edges}->[$i];
-                        splice @{$edge->{nodes}}, $this_node_index, 1, $this_node;
-                        @{$this_node->{edges}} = splice @{$node->{edges}}, $i, 1;
-
-                        # Tangents list order needs to match edge list order,
-                        # so remove and re-add to end of list, where new edge will be added.
-                        my $tmptan = splice @{$node->{tangents}}, $i, 1;
-
-                        # Add an edge that links the the new node to the old one.
-                        push @{$vtopo->{edges}}, {
-                                                  nodes    => [$node,$this_node],
-                                                  index    => scalar(@{$vtopo->{edges}}),
-                                                  vector   => [0,0],
-                                                  elements => [],
-                                                  };
-                        push @{$node->{edges}}, $vtopo->{edges}->[-1];
-                        push @{$node->{tangents}}, $tmptan;
-                        push @{$this_node->{edges}}, $vtopo->{edges}->[-1];
-                        push @{$vtopo->{nodes}}, $this_node;
-                        $this_node->{isinterp} = 1;
-
-                        # interpolate vertex to where radius == threshold_radius_adj
-                        my $factor = (($threshold_radius_adj) - $this_node->{radius}) / ($other_node->{radius} - $this_node->{radius});
-                        $this_node->{point} = [$this_node->{point}->[0] + $factor * ($other_node->{point}->[0] - $this_node->{point}->[0]),
-                                               $this_node->{point}->[1] + $factor * ($other_node->{point}->[1] - $this_node->{point}->[1])];
-                        $this_node->{radius} = $threshold_radius_adj;
-
-                        # interpolate tangent point pair
-                        my $other_edge_node_edge_index = +(grep $other_node->{edges}->[$_] == $this_node->{edges}->[0], (0..$#{$other_node->{edges}}))[0];
-                        my $other_tangents = $other_node->{tangents}->[$other_edge_node_edge_index];
-
-                        $this_node->{tangents}->[0]->[0] = [$this_node->{tangents}->[0]->[0]->[0] + $factor * ($other_tangents->[1]->[0] - $this_node->{tangents}->[0]->[0]->[0]),
-                                                            $this_node->{tangents}->[0]->[0]->[1] + $factor * ($other_tangents->[1]->[1] - $this_node->{tangents}->[0]->[0]->[1])];
-                        $this_node->{tangents}->[0]->[1] = [$this_node->{tangents}->[0]->[1]->[0] + $factor * ($other_tangents->[0]->[0] - $this_node->{tangents}->[0]->[1]->[0]),
-                                                            $this_node->{tangents}->[0]->[1]->[1] + $factor * ($other_tangents->[0]->[1] - $this_node->{tangents}->[0]->[1]->[1])];
-                        $this_node->{tangents}->[1]      = [$this_node->{tangents}->[0]->[1], 
-                                                            $this_node->{tangents}->[0]->[0]];
-
-                        $this_node->{color} = '#FFFF00'; # for SVG debug output
-                    }
-                }
-            }
-        }
-    }
-
-    # If the first, minimum threshold radius was greater than zero,
-    # remove any nodes with radius smaller than that.
-    if ($thresholds->[0]) {
-        foreach my $node (@{$vtopo->{nodes}}) {
-            if ($node->{radius} < $thresholds->[0]) {
-                for (my $i = $#{$node->{edges}}; $i > -1; $i--) {
-                    my $other = $node == $node->{edges}->[$i]->{nodes}->[0]
-                                ? $node->{edges}->[$i]->{nodes}->[1]
-                                : $node->{edges}->[$i]->{nodes}->[0];
-                    @{$other->{edges}} = grep $_ != $node->{edges}->[$i] ,@{$other->{edges}};
-                }
-                $node->{edges} = [];
-            }
-        }
-    }
 
     my @vnodes = grep @{$_->{edges}}, @{$vtopo->{nodes}};
 
-    # Walk the cross referenced nodes and edges to build up polyline-like node lists.
+    # Walk the cross referenced nodes and edges to build up 
+    # polyline-like node lists (that we've been calling polyedges).
 
     my @polyedges = ();
     my %end_edges;
@@ -234,9 +111,8 @@ sub medial_axis {
         if (@{$start_node->{edges}} == 3
             && scalar(grep $end_edges{$_}, @{$start_node->{edges}}) == 1) {
 
-            # At a branch node with two unprocessed edges
-            # always turn to the left, relative the
-            # one processed edge coming into the node.
+            # At a branch node with two unprocessed edges always turn to the
+            # left, relative the one processed edge coming into the node.
             # Tends to make rings that may not end up as polygons still
             # have component paths oriented in the same direction.
 
@@ -246,6 +122,7 @@ sub medial_axis {
             my $p1 = +(grep $_ != $start_node, @{$start_node->{edges}->[$seen_ind]->{nodes}})[0];
             my $p3 = +(grep $_ != $start_node, @{$start_node->{edges}->[$next_ind]->{nodes}})[0];
             my $p4 = +(grep $_ != $start_node, @{$start_node->{edges}->[$other_ind]->{nodes}})[0];
+            
             # Choose the edge that makes a larger angle with the processed edge.
             # Works because angle3points() converts negative angles to positive.
             @starts = ($start_node->{edges}->[$next_ind], $start_node->{edges}->[$other_ind]);
@@ -269,43 +146,45 @@ sub medial_axis {
             
             #step along nodes: next node is the node on current edge that isn't this one
             while ($this_node = +(grep $_ != $this_node, @{$this_edge->{nodes}})[0]) {
-                # stop at point too close to polygon (those nodes had all edges removed)
+                # stop at a point that's too close to the polygon
+                # (those nodes had all edges removed earlier)
                 if (@{$this_node->{edges}} == 0) {
                     $end_edges{$this_edge} = 1;
                     last;
                 }
-                # otherwise, always add the point (duplicate start and end lets us detect polygons later)
+                # otherwise, always add the point
+                # (duplicate start and end points let us detect polygons later)
                 push @{$polyedges[-1]}, $this_node;
-                # stop at a branch node or dead end, and remember the edge so we don't backtrack
-                if (@{$this_node->{edges}} > 2 || @{$this_node->{edges}} == 1) {
+                # stop at a dead end
+                if (@{$this_node->{edges}} == 1) { $end_edges{$this_edge} = 1; last; }
+                # stop at a branch node
+                if (@{$this_node->{edges}} > 2) {
                     $end_edges{$this_edge} = 1;
-                    if (@{$this_node->{edges}} > 2) {
-                        # what can we do with a branch node
-                        # depth attribute?
-                        my $depth = 1 + ($start_node->{depth} // 0); #/
-                        if (!defined $this_node->{depth}
-                            || $this_node->{depth} > $depth) {
-                            $this_node->{depth} = $depth;
-                        }
-                        # Only add branch nodes to the main processing list as we
-                        # encounter them for the first time, so all paths from
-                        # tip nodes get processed before any branch nodes.
-                        if ((grep $end_edges{$_}, @{$this_node->{edges}}) == 1) {
-                            push @start_nodes, $this_node;
-                        }
-                        # Two branches of the branch node processed. Add the node
-                        # to this secondary list that will get processed only when
-                        # the main list is empty.
-                        if ((grep $end_edges{$_}, @{$this_node->{edges}}) == 2) {
-                            push @last_branch_start_nodes, $this_node;
-                        }
+                    # what might we do with a branch node depth attribute?
+                    my $depth = 1 + ($start_node->{depth} // 0); #/
+                    if (!defined $this_node->{depth}
+                        || $this_node->{depth} > $depth) {
+                        $this_node->{depth} = $depth;
+                    }
+                    # Only add branch nodes to the main processing list as we
+                    # encounter them for the first time, so all paths from
+                    # tip nodes get processed before any branch nodes.
+                    if ((grep $end_edges{$_}, @{$this_node->{edges}}) == 1) {
+                        push @start_nodes, $this_node;
+                    }
+                    # When two branches of the branch node have already been
+                    # processed, add the node to this secondary list that will 
+                    # get processed only when the main list is empty.
+                    if ((grep $end_edges{$_}, @{$this_node->{edges}}) == 2) {
+                        push @last_branch_start_nodes, $this_node;
                     }
                     last;
                 }
                 my $last_edge = $this_edge;
                 # step to next edge
                 $this_edge = +(grep $_ != $this_edge, @{$this_node->{edges}})[0];
-                if (!$this_edge) {$end_edges{$last_edge} = 1;}
+                # stop if there is no next edge (branch tip)
+                if (!$this_edge) {$end_edges{$last_edge} = 1;last;}
                 # stop if we've looped around to start
                 if ($this_edge == $start_edge) {
                     $end_edges{$last_edge} = 1;
@@ -334,7 +213,8 @@ sub medial_axis {
     # Convert to the data structure we want to use here.
     # Should do this right after mic_adjust(), or even
     # change Math::Geometry::Delaunay's data structure
-    # to something similar.
+    # to something similar. OR, maybe data/object structure
+    # here will change. But for now, this conversion mess:
     
     
     my %dupnodes;
@@ -391,60 +271,45 @@ sub medial_axis {
         }
     }
 
-
-    foreach my $polyedge (@polyedges) {
-        for (my $i=1;$i<@$polyedge;$i++){
-            if (!$polyedge->[$i-1]->common_edge($polyedge->[$i])) {
-                print "no common\n\n";
-                exit;
-            } 
-        }
-    }
-
-
-
-    if (0) {
-    my $t = $polyedges[0]->[0];
-    print "node: ",$t,"\n";
-    print "radius: ",$t->radius,"\n";
-    print "point: ",$t->point," , [",$t->point->[0],", ",$t->point->[1],"]\n";
-    print "edges: ",join(',',@{$t->edges}),"\n    [\n",join("]\n    [",map {$_."\n[". join(',',$_->nodes) . "]  == \n["  . $_->[0].','.$_->[1] . "]\n and ". $_->[0]->[0].' == ' . $_->points->[0]} @{$t->edges}),"]\n";
-    print "tangents: ",$t->tangents->[0]->[0], " , ",$t->tangents->[0]->[1],"\n";
-    print "tangents array: ",join(', ',@{$t->tangents->[0]->[0]}), " and ",join(', ',@{$t->tangents->[0]->[1]}),"\n";
-    print "first edge points: ",$t->edges->[0]->points->[0], " , ",$t->edges->[0]->points->[1],"\n";
-
-    print "\n\nsecond\n\n";
-
-    $t = $polyedges[0]->[1];
-    print "node: ",$t,"\n";
-    print "radius: ",$t->radius,"\n";
-    print "point: ",$t->point," , [",$t->point->[0],", ",$t->point->[1],"]\n";
-    print "edges: ",join(',',@{$t->edges}),"\n    [\n",join("]\n    [",map {$_."\n[". join(',',$_->nodes) . "]  == \n["  . $_->[0].','.$_->[1] . "]\n and ". $_->[0]->[0].' == ' . $_->points->[0]} @{$t->edges}),"]\n";
-    print "tangents: ",$t->tangents->[0]->[0], " , ",$t->tangents->[0]->[1],"\n";
-    print "tangents array: ",join(', ',@{$t->tangents->[0]->[0]}), " and ",join(', ',@{$t->tangents->[0]->[1]}),"\n";
-    print "first edge points: ",$t->edges->[0]->points->[0], " , ",$t->edges->[0]->points->[1],"\n";
-
-    print "edge match? \n",join(',',@{$polyedges[0]->[0]->edges}),"\n",join(',',@{$polyedges[0]->[1]->edges}),"\n";
-
-    exit;
-    }
-
     combine_polyedges(\@polyedges);
-
-    foreach my $polyedge (@polyedges) {
-        for (my $i=1;$i<@$polyedge;$i++){
-            if (!$polyedge->[$i-1]->common_edge($polyedge->[$i])) {
-                print "ITS CPE\n\n";
-                exit;
-            } 
-        }
-    }
 
     return @polyedges;
 }
 
+# An angle threshold to cull short paths in the medial axis that
+# go into non-narrow corners. (We trust the normal offset-generated
+# paths to handle those areas.)
+# If the angle formed by the MIC center and two tangents is
+# less than the threshold (of say, 90 or 80 degrees), don't go into the corner.
+# Small threshold angles correspond to wide angles we don't want to go into.
 
+sub angle_filter {
+    my ($medial_paths, $theta) = @_;
 
+    foreach my $path (@$medial_paths) {
+        next if @{$path} < 2;
+        my $edge = $path->[0]->common_edge($path->[1]);
+        # we may need more conditions on these while()s to avoid
+        # overzealous trimming
+        while (  @{$path} > 1
+               && abs(angle_reduce_pi($path->[1]->central_angle($edge))) <= $theta 
+               
+              ) {
+            remove_edge($path->[0], $path->[1]) if @$path > 1;
+            shift @{$path};
+            $edge = $path->[0]->common_edge($path->[1]) if @$path > 1;
+        }
+        next if @{$path} < 2;
+        $edge = $path->[-1]->common_edge($path->[-2]) if @$path > 1;
+        while ( @{$path} > 1
+               && abs(angle_reduce_pi($path->[-2]->central_angle($edge))) <= $theta 
+              ) {
+            remove_edge($path->[-2], $path->[-1]) if @$path > 1;
+            pop @{$path};
+            $edge = $path->[-1]->common_edge($path->[-2]) if @$path > 1;
+        }
+    }
+}
 
 # Trim medial axis edge chains to a given maximum and minimum MIC radius.
 # Avoid going into corners that are too wide.
@@ -457,10 +322,10 @@ sub thin_paths_filter {
         $tool_radius,                  # 
         $theta,                        # MIC tangents-center angle filter threshold
         ) = @_;
-    $min_radius //= 0; #/
-    $theta //= deg2rad(100); #/
-    $tool_radius //= 0; #/
-    $offset_radius //= 0; #/
+    $min_radius    //= 0;            #/
+    $theta         //= deg2rad(100); #/
+    $tool_radius   //= 0;            #/
+    $offset_radius //= 0;            #/
 
     my @outpaths = ();
 
@@ -468,9 +333,9 @@ sub thin_paths_filter {
         my $previous_test_radius = $start_radius + $offset_radius;
         my $isloop = $path->[0] == $path->[-1];
         # TODO: Need to better analyze just when to insert
-        # a new array ref for a new path. Right now we 
-        # insert some that don't get used, and weed out 
-        # the empties at the end.
+        # a new array ref for a new path. (So simple, but still 
+        # easy to get wrong.) Right now we insert some that don't 
+        # get used, and weed out the empties at the end.
         push @outpaths, [];
         for (my $i = 0; $i < @$path; $i++) {
             my $minuswhat = ($isloop && $i == 0 && @$path > 3) ? 2 : 1;
@@ -480,9 +345,17 @@ sub thin_paths_filter {
             # of miter limit on the location of the two corner points where
             # a perimeter stops and turns around at the entry to a thin section.
 
-            my $edge = $path->[$i]->common_edge($path->[$i == $#$path ? $i - 1 : $i + 1]);
-            my $test_radius = $offset_radius + 
-                              adjusted_radius_for_miter_limit($path->[$i], $edge, $start_radius/2, $miterLimit);
+            #my $edge = $path->[$i]->common_edge($path->[$i == $#$path ? $i - 1 : $i + 1]);
+            #my $test_radius = $offset_radius + 
+            #                  adjusted_radius_for_miter_limit($path->[$i], $edge, $start_radius/2, $miterLimit);
+            
+            # TODO: Phase out the test radius adjustment above.
+            # First just do the simple thing:
+            my $test_radius = $offset_radius + $start_radius;
+            # Then redo the logic below to use just one threshold radius
+            # instead of $test_radius and $previous_test_radius.
+            # Also, might eliminate the tosplice flag setting, since we probably
+            # won't have a use for it with new intersection-based splicing.
 
             # Create a set of paths from the original path, where the endpoints
             # are roughly where the medial axis radius crosses the adjusted
@@ -535,46 +408,12 @@ sub thin_paths_filter {
         }
     }
 
-    #print "path lengths: ",join(', ',map scalar(@$_), @outpaths),"\n";
-
-    @outpaths = grep @$_, @outpaths;
-
-    # An angle threshold to cull short paths in the medial axis that
-    # go into non-narrow corners. (We trust the normal offset-generated
-    # paths to handle those areas.)
-    # If the angle formed by the MIC center and two tangents is
-    # less than the threshold (of say, 90 or 80 degrees), don't go into the corner.
-    # Small threshold angles correspond to wide angles we don't want to go into.
-
-    foreach my $path (@outpaths) {
-        next if @{$path} < 2;
-        my $edge = $path->[0]->common_edge($path->[1]);
-        # we may need more conditions on these while()s to avoid
-        # overzealous trimming
-        while (  @{$path} > 1
-               && abs(angle_reduce_pi($path->[1]->central_angle($edge))) <= $theta 
-               
-              ) {
-            remove_edge($path->[0], $path->[1]) if @$path > 1;
-            shift @{$path};
-            $edge = $path->[0]->common_edge($path->[1]) if @$path > 1;
-        }
-        next if @{$path} < 2;
-        $edge = $path->[-1]->common_edge($path->[-2]) if @$path > 1;
-        while ( @{$path} > 1
-               && abs(angle_reduce_pi($path->[-2]->central_angle($edge))) <= $theta 
-              ) {
-            remove_edge($path->[-2], $path->[-1]) if @$path > 1;
-            pop @{$path};
-            $edge = $path->[-1]->common_edge($path->[-2]) if @$path > 1;
-        }
-    }
-
-    #print "path lengthspost angle filter: ",join(', ',map scalar(@$_), @outpaths),"\n";
+    if ($theta) {angle_filter(\@outpaths,$theta);}
 
     @outpaths = grep @$_ > 1, @outpaths;
 
-    # Polygons have the same node in the first and last array entries.
+    # Polyedges that form Polygons have the same 
+    # node ref in the first and last array entries.
     # If that's all that's left, drop it.
     @outpaths = grep @$_ != 2 || $_->[0] != $_->[1], @outpaths;
 
@@ -583,12 +422,14 @@ sub thin_paths_filter {
     # Combine based on ends being really close.
     combine_fragments(\@outpaths, $tool_radius);
     
-    # we try to do left-right orientation of offset paths in split() generally
+    # We try to do left-right orientation of offset paths in split() generally
     # considering left or right in relation to leaving the wide-enough zone of
     # the part and entering the too-thin zone. If a fragment has a splice point
     # at just one end, we want it to be at the beginning, which corresponds to the
     # fragment leaving the wide-enough zone. If it's at the end, the left-right 
     # sense will be reversed.
+    # Note: We might eliminate splice point labeling. This may already be obsolete.
+    
     foreach my $path (@outpaths) {
         @$path = reverse @$path if $path->[-1]->tosplice && !$path->[0]->tosplice;
     }
@@ -601,6 +442,12 @@ sub thin_paths_filter {
 # edge chains, possibly favoring either the left or right side,
 # and adjusting for tool width in narrow corners or passages by omitting one
 # side if only one will fit, or centering where not even one will fit.
+
+# Experimental. 
+# Depends on MICs having correct left-right tangent ordering 
+# from Math::Geometry::Delaunay, which might not always be right at this point.
+# This can also be extended to adjust extrusion radius and path offset
+# for continuous dynamic flow filling of thin spaces.
 
 sub split {
     my ($medial_paths, $split_radius, $offset_radius, $tool_radius, $left_right) = @_;
@@ -637,7 +484,7 @@ sub split {
                     print " other: ",$other_node," this: ", $path->[$i],"\n";
                     print "poly",join(',',map '['.$_->point->[0].','.$_->point->[1].','.($_->[4]?'yes':'no').']', @$path),"\n";
                     print "each edge",join(',',map '['.join (',',@{$_->edges}).']', @$path),"\n";
-                    $DB::svg->appendPolylines({style=>'stroke-width:20000;stroke:blue;fill:none;'},[map $_->point, @$path]);
+                    $DB::svg->appendPolylines({style=>'stroke-width:20000;stroke:blue;fill:none;'},[map $_->point, @$path]) if $DB::svg;
                     next;
                 }
 
@@ -688,372 +535,6 @@ sub split {
     # but also returning it?
     # make up your mind
     return @$medial_paths;
-}
-
-
-sub splice_into_perimeter {
-    my ($loops, $frags, $match_dist, $left_right) = @_;
-
-    if (@$loops == 0) {
-        #print "NO LOOPS to splice_into_perimeter(), returning frags\n";
-        return ([], [map Slic3r::Polyline->new([map $_->point, @$_]), grep @$_ > 0, @$frags], []);
-    }
-
-    combine_fragments($frags, $match_dist);
-
-    my @frags_out = map Slic3r::Polyline->new([map $_->point, @$_]), grep @$_ > 0, grep !$_->[0]->tosplice && !$_->[-1]->tosplice, @$frags;
-    my @frags = ((grep $_->[0]->tosplice, @$frags),
-                 (map [reverse @$_], grep $_->[-1]->tosplice && !$_->[0]->tosplice, @$frags),
-                );
-
-    if (@frags == 0 && @frags_out == 0) {
-        #print "NO FRAGS to splice_into_perimeter(), returning original loops\n";
-        return ($loops, [], []);
-    }
-
-    my @loops = grep @$_ > 0, @$loops;
-
-    # Eliminate short frags.
-    # Only do this if you've already merged close frag ends, since sometimes
-    # it's the short frag that makes the connection to the perimeter splice point.
-    my @too_short_frags;
-
-    for (my $i = $#frags; $i > -1; $i--) {
-        my $frag_length = 0;
-        my $j=1;
-        while ($frag_length < $match_dist && $j < @{$frags[$i]}) {
-            $frag_length += Slic3r::Geometry::distance_between_points($frags[$i]->[$j]->point, $frags[$i]->[$j - 1]->point);
-            $j++;
-        }
-        if ($frag_length < $match_dist/2) {
-            push @too_short_frags, splice(@frags, $i, 1);
-        }
-        #print "eliminated short frag [ $frag_length < $match_dist/2 ]\n" if $frag_length < $match_dist;
-    }
-
-    #$DB::svg->appendPolylines({style=>'opacity:0.5;stroke-width:50000;stroke-dasharray:70000 70000;stroke:pink;fill:none;'},map [map $_->{point}, @{$_}], @$frags);
-    #$DB::svg->appendPolylines({style=>'opacity:0.5;stroke-width:50000;stroke-dasharray:70000 70000;stroke:pink;fill:none;'}, @loops);
-
-    my @nodes;
-    my @edges;
-    my %spliced_loops;
-    for (my $i = $#frags; $i > -1; $i--) {
-        next if @{$frags[$i]} == 0;
-
-        # get indeces of closest points on loops to frag splice end points, sorted by distance
-        my @inds = map Slic3r::Geometry::nearest_point_index($frags[$i]->[0]->point,$_), @loops;
-        @inds = sort {$a->[2] <=> $b->[2]} 
-                    map [$_, $inds[$_], distance_between_points(
-                                        $loops[$_]->[$inds[$_]],
-                                        $frags[$i]->[0]->point)
-                        ], (0 .. $#inds);
-        my @indsb;
-        if ($frags[$i]->[-1]->tosplice) {
-            @indsb = map Slic3r::Geometry::nearest_point_index($frags[$i]->[-1]->point,$_), @loops;
-            }
-        @indsb = sort {$a->[2] <=> $b->[2]}
-                    map [$_, $indsb[$_], distance_between_points(
-                                          $loops[$_]->[$indsb[$_]],
-                                          $frags[$i]->[-1]->point)
-                        ], (0 .. $#indsb);
-
-        
-        @inds = grep $_->[2] < $match_dist, @inds;
-        @indsb = grep $_->[2] < $match_dist, @indsb;
-        if (@inds == 0) {
-            #print "nothing close enough to front splice point\n";
-            #@inds = ();
-        }
-        if (@indsb == 0 && $frags[$i]->[-1]->tosplice) {
-            #print "nothing close enough to back splice point")\n";
-            #@indsb = ();
-        }
-        if (@inds == 0 && @indsb == 0) {
-            print "nothing close enough to either splice point\n";
-            push @frags_out, Slic3r::Polyline->new([map $_->point, @{$frags[$i]}]);
-            #$DB::svg->appendPoints({r=>1000000,style=>'opacity:0.55;fill:yellow;'}, map $_->{point}, grep $_->{tosplice}, @{$frags[$i]});
-            next;
-        }
-        if (@inds > 0 && @indsb> 0 && $inds[0]->[0] == $indsb[0]->[0] && $inds[0]->[1] == $indsb[0]->[1]) {
-            # frag with two splice ends has both matching up with  the same point on a loop
-            print "frag matches at same point\n";
-            # look for a different close point on a different polygon
-            # in case this should be a short link between islands
-            
-            #$DB::svg->appendPolylines({style=>'opacity:0.5;stroke-width:50000;stroke-dasharray:70000 70000;stroke:pink;fill:none;'}, [map $_->{point}, @{$frags[$i]}]);
-
-            #while (@indsb > 0 && $inds[0]->[0] == $indsb[0]->[0]) { shift @indsb; }
-            #if (@indsb > 0  && $indsb[0]->[2] > $match_dist) {
-                $frags[$i]->[-1]->tosplice(0);
-                @indsb = ();
-            #}
-            #print "   found alternate on different polygon\n" if @indsb > 0;
-        }
-
-        $spliced_loops{$loops[$inds[0]->[0]]}++  if @inds  > 0;
-        $spliced_loops{$loops[$indsb[0]->[0]]}++ if @indsb > 0;
-
-        # make enough of a node and edge graph structure to splice together
-        # loop subsections and fragments later
-
-        push @edges, { nodes => [], 
-                       isfrag => 1,
-                       frag => $frags[$i] 
-                     };
-
-        #$DB::svg->appendPolylines({style=>'opacity:0.5;stroke-width:50000;stroke-dasharray:70000 70000;stroke:red;fill:none;'},[map $_->{point}, @{$frags[$i]}]);
-        #$DB::svg->appendPoints({style=>'opacity:0.55;fill:blue;',r=>500000},map $_->{point}, grep $_->{tosplice}, @{$frags[$i]});
-        
-        if (@inds > 0) {       
-            push @nodes, {loop=>$loops[$inds[0]->[0]],
-                          index=>$inds[0]->[1],
-                          edges=>[$edges[-1]],
-                          frag=>$frags[$i],
-                          frag_index=>0,
-                          };
-            $edges[-1]->{nodes}->[0] = $nodes[-1];
-        }
-        if (@indsb > 0) {
-            push @nodes, {loop=>$loops[$indsb[0]->[0]],
-                          index=>$indsb[0]->[1],
-                          edges=>[$edges[-1]],
-                          frag=>$frags[$i],
-                          frag_index=>$#{$frags[$i]},
-                          };
-            $edges[-1]->{nodes}->[1] = $nodes[-1];
-        }
-    }
- 
-    for my $i (0 .. $#loops) {
-        my @loop_node_sort = sort {$a->{index} <=> $b->{index}} grep $_->{loop} == $loops[$i], @nodes;
-        for (my $j = 0; $j < @loop_node_sort; $j++) {
-            push @edges, {nodes=>[$loop_node_sort[$j-1],$loop_node_sort[$j]]};
-            $loop_node_sort[ $j ]->{edges}->[1] = $edges[-1];
-            $loop_node_sort[$j-1]->{edges}->[2] = $edges[-1];
-        }
-    }
-
-
-    # accounting
-    # Want to make sure all original loop points get returned in spliced paths
-    # or unmodified loops
-    if (1) {
-        my $origloopsum=0;
-        map {$origloopsum += scalar(@$_)} @$loops;
-        my $loopedgesum=0;
-        foreach my $edge (grep !$_->{isfrag}, @edges) {            
-            if ($edge->{nodes}->[0]->{index} >= $edge->{nodes}->[1]->{index}) {
-                $loopedgesum += @{$edge->{nodes}->[0]->{loop}} - $edge->{nodes}->[0]->{index};
-                $loopedgesum += $edge->{nodes}->[1]->{index};
-            } else { $loopedgesum += $edge->{nodes}->[1]->{index} - $edge->{nodes}->[0]->{index}; }
-        }
-        my $untouchedloopsum=0;
-        map {$untouchedloopsum += scalar(@$_)} grep !$spliced_loops{$_}, @loops;
-
-        if ($origloopsum != ($loopedgesum + $untouchedloopsum)) {
-            print  "origloopsum != (loopedgesum + untouchedloopsum) : $origloopsum != ($loopedgesum + $untouchedloopsum)\n";
-        }
-
-        my $fragedgecount = scalar(grep $_->{isfrag}, @edges);
-        my $origfragcount = scalar(@$frags);
-        my $filteredfragcount = scalar(@frags);
-        my $skipfragcount = @frags_out;
-        my $tooshortcount = @too_short_frags;
-        if ($skipfragcount + $fragedgecount != $filteredfragcount + $tooshortcount) {
-            print "frag counts wrong:  $skipfragcount + $fragedgecount != $filteredfragcount + $tooshortcount (from original $origfragcount)\n"; 
-        }
-    }
-    
-    # Once you've got this straightend out, flip all the uses
-    # below, instead of flipping the flag, and work up
-    # the visual doc of this and how it relates to anything
-    # upstream.
-    $left_right = !$left_right;
-
-    # Start point candidates for the graph walk.
-    # Everything but frag edges that have splice points at both ends - we
-    # expect to get on and over those from loop edges.
-    my @start_nodes = map $_->{nodes}->[$left_right ? 1 : 0], 
-                      grep { !($_->{isfrag}
-                               && defined $_->{nodes}->[0] 
-                               && defined $_->{nodes}->[1]
-                              )
-                           } @edges;
-
-    # Walk the cross referenced nodes and edges to build up polyline-like node lists.
-    my @polyedges = ();
-
-    foreach my $start_node (@start_nodes) {
-        my $start_edge = $start_node->{edges}->[ $left_right ? 1 : 2 ];
-        next if $start_edge->{stop};
-        my $this_node = $start_node;
-        push @polyedges, [];
-        push @{$polyedges[-1]}, [$this_node, $start_edge->{isfrag}];
-        my $this_edge = $start_edge;
-        # Step along nodes: The next node is the node on the current edge 
-        # that isn't this one, unless we happen to be on a loop with only
-        # one splice point.
-        
-        while ($this_node = +(grep {($_ != $this_node)
-                                # Special case: A loop with one splice point,
-                                # which becomes an edge with the same node at each end.
-                                || (!$this_edge->{isfrag} && $this_node->{edges}->[1] == $this_node->{edges}->[2])
-                              } @{$this_edge->{nodes}})[0]) {
-            if ($this_edge->{stop}) {
-                last;
-                }
-            $this_edge->{stop} = 1;
-            # always add the point (duplicate start and end lets us detect polygons later)
-            push @{$polyedges[-1]}, [$this_node, $this_edge->{isfrag}];
-            $this_edge->{spliced} = 1;
-            # step to next edge
-            if ($this_edge->{isfrag}) {
-                # We only get here if we started on a frag
-                # or got onto a frag with splice points on both ends.
-                $this_edge = $this_node->{edges}->[$left_right ? 1 : 2];
-                $this_node->{edges}->[$left_right ? 2 : 1]->{stop} = 1;
-            } else {
-                # We've just completed a loop edge, and will now step
-                # onto the frag edge at this node.
-                my $frag_end_nodes_count = grep defined $_, @{$this_node->{edges}->[0]->{nodes}};
-                if ($frag_end_nodes_count == 1) {
-                    # If the frag edge at this node has just one splice point
-                    # end the path with this node, flagged as a frag.
-                    $this_node->{edges}->[0]->{stop} = 1;
-                    push @{$polyedges[-1]}, [$this_node, 1];
-                    last;
-                } elsif ($frag_end_nodes_count == 2) {
-                    # If the frag has splice points on both ends
-                    # make it the next edge to follow.
-                    $this_edge = $this_node->{edges}->[0];
-                }
-            }
-            # stop if we've looped around to start
-            if ($this_edge == $start_edge) {
-                last;
-            }
-        }
-    }
-  
-    my @spliced_paths;
-    my @untouched = grep !$spliced_loops{$_}, @loops;
-    my @unspliced;
-
-    # Edges that were not spliced to frags : Make Polylines and trim ends.
-    foreach my $edge (grep !$_->{spliced} && !$_->{isfrag}, @edges) {
-        my $loop = $edge->{nodes}->[0]->{loop};
-        my ($start, $end) = ($edge->{nodes}->[0]->{index}, $edge->{nodes}->[1]->{index});
-        my @seq;
-        if ($start <= $end) { @seq = $start .. $end; }
-        else { @seq = -(@$loop - $start) .. $end; }
-        if (@seq > 1) {
-            my $p = Slic3r::Polyline->new(@$loop[@seq]);
-            $p->clip_end($match_dist);
-            $p->reverse;
-            $p->clip_end($match_dist);
-            $p->reverse;
-            push @unspliced, $p if @$p > 1, 
-        }
-    }
-    
-    # Turn polyedges splice info lists into Polylines and Polygons.
-    foreach my $pe (@polyedges) {
-        my @pts;
-        for (my $i = 1; $i < @$pe; $i++) {
-            if (! $pe->[$i]->[1]) {
-                # loop sections
-                my ($start, $end) = ($pe->[$i - 1]->[0]->{index}, $pe->[$i]->[0]->{index});
-                ($start, $end) = ($end, $start) if $left_right;
-                my @seq;
-                if ($start < $end) { @seq = $start .. $end; } 
-                else { @seq = ($start .. $#{$pe->[$i]->[0]->{loop}} , 0 .. $end); }
-                @seq = reverse @seq if $left_right;
-                push @pts, @{$pe->[$i]->[0]->{loop}}[@seq];
-            }
-            else {
-                # frag sections
-                my @seq = 0 .. $#{$pe->[$i]->[0]->{frag}};
-                if ($pe->[$i - 1]->[0]->{frag_index} != 0) {
-                    @seq = reverse @seq;
-                }
-                push @pts, map $_->point, @{$pe->[$i]->[0]->{frag}}[@seq];
-            }
-        }
-        if (@pts > 1) {
-            if ($pe->[0]->[0] == $pe->[-1]->[0] # same start and end node
-                    # and doesn't look like a single-splice loop
-                && !(@$pe > 2 && $pe->[0]->[0] == $pe->[1]->[0] 
-                              && $pe->[0]->[0] == $pe->[2]->[0]) 
-               ) {
-                pop @pts;
-                push @spliced_paths, Slic3r::Polygon->new(@pts);
-            }
-            else {
-                my $p = Slic3r::Polyline->new(@pts);
-                $p->clip_end($match_dist) if !$pe->[-1]->[1];
-                if (!$pe->[0]->[1]) {
-                    $p->reverse;
-                    $p->clip_end($match_dist);
-                    $p->reverse;
-                    }
-                push @spliced_paths, $p if @$p > 1;
-            }
-        }
-    }
-
-    return ([@untouched], [@frags_out], [@spliced_paths, @unspliced]);
-}
-
-
-# adjusted_radius_for_miter_limit()
-#
-# At the transition into a thin passage or corner, a Clipper offset polygon
-# typically has a two-point cusp where it turns around, where the passage is too thin.
-# We want medial axis fragments that start right at one of those points for a clean
-# splice. The offset polygons typically turn around when the passage gets down to
-# two extrusion widths - but you can't just look for a medial axis radius of
-# one extrusion width to find the splice point for the polygon corner. The
-# corner splice point will correspond to a slightly smaller radius which can be
-# derived from the miter limit used to generate the Clipper offset, and the
-# formed by the walls heading into the corner or thin passage. Here we use the
-# angle formed by the two MIC radii of a medial axis node.
-# http://sheldrake.net/3D_printing/miterAdjRadius/
-
-sub acos { atan2( sqrt(1 - $_[0] * $_[0]), $_[0] ) }
-
-sub adjusted_radius_for_miter_limit {
-    my ($node, $edge, $ref_radius, $miter_limit) = @_;
-
-    my $radius;
-    
-    my $split_theta;
-    if (ref $node eq 'HASH') { # transitional as we work out final data structure
-        $split_theta = abs((angle3points($node->{point}, @{$node->{tangents}->[0]})));
-    } else {
-        #$split_theta = abs((angle3points($node->point, @{$node->tangents->[0]})));
-        $split_theta = abs(($node->central_angle($edge)));
-    }
-
-    $split_theta = PI * 2 - $split_theta if $split_theta > PI;
-
-    my $miter_threshold_theta = 2 * acos(1 / $miter_limit);
-
-    if ($split_theta <= $miter_threshold_theta) {
-        #$radius = $ref_radius * 2;
-        $radius = $ref_radius;
-    } else {
-        my $miter_dist = $ref_radius * $miter_limit;
-        # The inner portion of the test radius, accounting for miter limit and 
-        # the path overlapping itself in a corner,
-
-        $radius = (2 * $ref_radius * (1 - $miter_limit * cos($split_theta/2))) / (1 - cos($split_theta));
-
-        # plus the outer half of the radius, which is just half extrusion width.
-
-        $radius += $ref_radius;
-    }
-
-    return $radius;
 }
 
 sub remove_edge {
@@ -1165,8 +646,6 @@ sub combine_fragments {
 
 # Combine based on identical node refs at ends.
 # Meant to work on MIC nodes and Tangent nodes (Tangents linked parents are identical).
-# TODO: When linking two paths at a junction of three paths, trim back the
-#       the third path that isn't getting linked.
 
 sub combine_polyedges {
     my ($polyedges, $by_parent) = @_;
@@ -1177,32 +656,40 @@ sub combine_polyedges {
 
     # Link polyedges with common end points.
     for (my $i = $#$polyedges; $i > -1; $i--) {
-        # polygons
+        # skip polygons
         next if ($polyedges->[$i]->[0] == $polyedges->[$i]->[-1]);
-        # polylines
-        my $this  = $polyedges->[$i];
+        my $this = $polyedges->[$i];
         for (my $j = 0; $j < $i ; $j++) {
             my $other = $polyedges->[$j];
+            # skip polygons
             next if ($other->[0] == $other->[-1]);
             # all the cases of ends matching up
-            if ($this->[$#$this] == $other->[0] || ($by_parent && $this->[$#$this]->parent == $other->[0]->parent)) {
+            if (                       $this->[ $#$this ]          ==  $other->[    0     ]       
+                     || ($by_parent && $this->[ $#$this ]->parent  ==  $other->[    0     ]->parent)) {
                 shift @{$other};
-                link_nodes($polyedges->[$i]->[-1], $other->[0]) if !$this->[$#$this]->common_edge($other->[0]);
+                link_nodes(            $this->[ $#$this ],             $other->[    0     ])
+                                   if !$this->[ $#$this ]->common_edge($other->[    0     ]);
                 @{$other} = (@{splice(@$polyedges, $i, 1)}, @{$other});
                 last;
-            } elsif ($this->[0] == $other->[$#$other] || ($by_parent && $this->[0]->parent == $other->[$#$other]->parent)) {
+            } elsif (                  $this->[    0    ]          ==  $other->[ $#$other ] 
+                     || ($by_parent && $this->[    0    ]->parent  ==  $other->[ $#$other ]->parent)) {
                 shift @{$this};
-                link_nodes($other->[-1], $polyedges->[$i]->[0]) if !$this->[0]->common_edge($other->[$#$other]);
+                link_nodes(           $other->[$#$other ],              $this->[    0     ])
+                                  if !$other->[$#$other ]->common_edge( $this->[    0     ]);
                 @{$other} = (@{$other}, @{splice(@$polyedges, $i, 1)});
                 last;
-            } elsif ($this->[0] == $other->[0] || ($by_parent && $this->[0]->parent == $other->[0]->parent)) {
+            } elsif (                  $this->[    0    ]          ==  $other->[    0     ]
+                     || ($by_parent && $this->[    0    ]->parent  ==  $other->[    0     ]->parent)) {
                 shift @{$this};
-                link_nodes($other->[0], $polyedges->[$i]->[0]) if !$this->[0]->common_edge($other->[0]);
+                link_nodes(           $other->[    0    ],              $this->[    0     ]) 
+                                  if !$other->[    0    ]->common_edge( $this->[    0     ]);
                 @{$other} = ((reverse @{$other}), @{splice(@$polyedges, $i, 1)});
                 last;
-            } elsif ($this->[$#$this] == $other->[$#$other] || ($by_parent && $this->[$#$this]->parent == $other->[$#$other]->parent)) {
+            } elsif (                  $this->[ $#$this ]          ==  $other->[ $#$other ]
+                     || ($by_parent && $this->[ $#$this ]->parent  ==  $other->[ $#$other ]->parent)) {
                 pop @{$other};
-                link_nodes($polyedges->[$i]->[-1], $other->[-1]) if !$this->[$#$this]->common_edge($other->[$#$other]);
+                link_nodes(            $this->[ $#$this ],             $other->[ $#$other ])
+                                   if !$this->[ $#$this ]->common_edge($other->[ $#$other ]);
                 @{$other} = (@{splice(@$polyedges, $i ,1)}, (reverse @{$other}));
                 last;
             }
@@ -1210,12 +697,90 @@ sub combine_polyedges {
     }
 }
 
-sub angle_reduce_pi {
-    my $a = shift;
-    while ($a >   &PI) { $a -= &PI * 2; }
-    while ($a <= -&PI) { $a += &PI * 2; }
-    return $a;
+sub trim_polyedge_junctions_by_radius {
+    my ($polyedges, $radius) = @_;
+
+    foreach my $polyedge (@$polyedges) {
+        for (my $i = 1; $i < $#$polyedge; $i++) {
+            if (@{$polyedge->[$i]->edges} == 3) {
+                my $e1 = $polyedge->[$i]->common_edge($polyedge->[$i - 1]);
+                my $e2 = $polyedge->[$i]->common_edge($polyedge->[$i + 1]);
+                my $edge_to_trim = +(grep $_ != $e1 && $_ != $e2, @{$polyedge->[$i]->edges})[0];
+                clip_linked_nodes_with_circle($polyedge->[$i], $edge_to_trim, [$polyedge->[$i]->point->[0], $polyedge->[$i]->point->[1], $radius]);
+            }
+        }   
+    }
+
+    # reconsider whether this is necessary
+    # - whether it's possible to get multiple polyedges from one with this circle trimming
+    # If the indeces on the for loop above went to 0 and $#$polyedge, then
+    # then this would apply, but we're avoiding that to avoid splitting polyedges.
+    foreach my $polyedge (@$polyedges) {
+        my $key = 'a';
+        my %connected_spans;
+        my @connected_spans;
+        for (0 .. $#$polyedge) {
+            $key++ if !$polyedge->[$_ - 1]->common_edge($polyedge->[$_]);
+            push @{$connected_spans{$key}}, $polyedge->[$_],
+        }
+        @connected_spans = grep @$_ > 1, values %connected_spans;
+        $polyedge = shift @connected_spans if @connected_spans;
+        push @$polyedges, @connected_spans;
+    }
+
 }
+
+sub clip_linked_nodes_with_circle {
+    my ($start_node, $start_edge, $circle) = @_;
+
+    my $r_sq = $circle->[2]**2;
+    my $last_dist_sq = 0;
+    my $this_node = $start_node;
+    my $previous_node = $start_node;
+    my $this_edge = $start_edge;
+    while ($r_sq > $last_dist_sq && ($this_node = +(grep $_ != $this_node, $this_edge->nodes)[0])) {
+        $last_dist_sq = ($this_node->point->[0] - $circle->[0])**2 + ($this_node->point->[1] - $circle->[1])**2;
+        my @next_edges = grep $_ != $this_edge, @{$this_node->edges};
+        $this_edge = pop @next_edges;
+        clip_linked_nodes_with_circle($this_node, $next_edges[0], $circle) if @next_edges;
+        if ($r_sq > $last_dist_sq && defined $this_edge) {
+            remove_edge($previous_node, $this_node); 
+        }
+        else { last; }
+        $previous_node = $this_node;
+    }
+
+    if (!defined($this_node)) {
+        # a chain of linked edges was clipped away completely
+        return;
+    }
+
+    my $dx = abs($this_node->point->[0] - $previous_node->point->[0]);
+    my $dy = abs($this_node->point->[1] - $previous_node->point->[1]);
+ 
+    my ($new_point1, $new_point2) = &Slic3r::Geometry::circle_line_intersections($circle, [$previous_node->point, $this_node->point]);
+
+    my $new_point = ($new_point1 && Slic3r::Geometry::point_in_segment($new_point1, [$previous_node->point, $this_node->point]))
+                    ? $new_point1
+                    : ($new_point2 && Slic3r::Geometry::point_in_segment($new_point2, [$previous_node->point, $this_node->point]))
+                      ? $new_point2
+                      : undef;
+
+    if ($new_point) {
+        my $dxi= abs($new_point->[0] - $previous_node->point->[0]);
+        my $dyi= abs($new_point->[1] - $previous_node->point->[1]);
+        my $factor = $dx > $dy ? $dxi / $dx : $dyi / $dy;
+        my $interp_node = $previous_node->interpolate($this_node, $factor);
+        remove_edge($previous_node, $interp_node);
+        # Preserve the ref, because that's what would be in a polyedge list
+        @{$previous_node} = @{$interp_node};
+    } else {
+        Slic3r::debugf "Neither line-circle intersection point was on the segment to be clipped in clip_linked_nodes_with_circle().";
+    }
+}
+
+
+
 
 package Slic3r::MedialAxis::MIC;
 

@@ -13,6 +13,7 @@ use constant S_DEPTH_LAYERS => 2;
 use constant S_BRIDGE_ANGLE => 3;
 use constant S_ADDITIONAL_INNER_PERIMETERS => 4;
 use constant S_SOURCE_EXPOLYGON => 5;
+use constant S_MEDIAL_AXIS => 6;
 
 use constant S_TYPE_TOP             => 0;
 use constant S_TYPE_BOTTOM          => 1;
@@ -24,7 +25,7 @@ sub new {
     my %args = @_;
     
     my $self = [
-        map delete $args{$_}, qw(expolygon surface_type depth_layers bridge_angle additional_inner_perimeters source_expolygon),
+        map delete $args{$_}, qw(expolygon surface_type depth_layers bridge_angle additional_inner_perimeters source_expolygon medial_axis),
     ];
     $self->[S_DEPTH_LAYERS] //= 1; #/
     
@@ -38,6 +39,7 @@ sub depth_layers    { $_[0][S_DEPTH_LAYERS] } # this integer represents the thic
 sub bridge_angle    { $_[0][S_BRIDGE_ANGLE] }
 sub additional_inner_perimeters { $_[0][S_ADDITIONAL_INNER_PERIMETERS] = $_[1] if $_[1]; $_[0][S_ADDITIONAL_INNER_PERIMETERS] }
 sub source_expolygon { $_[0][S_SOURCE_EXPOLYGON] }
+sub medial_axis { $_[0][S_MEDIAL_AXIS] }
 
 # delegate handles
 sub encloses_point  { $_[0]->expolygon->encloses_point }
