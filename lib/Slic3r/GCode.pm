@@ -4,8 +4,10 @@ use Moo;
 use List::Util qw(max first);
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Geometry qw(scale unscale scaled_epsilon points_coincide PI X Y B);
+use Slic3r::Geometry::Clipper qw(union_ex);
 
 has 'multiple_extruders' => (is => 'ro', default => sub {0} );
+has 'layer_count'        => (is => 'ro', required => 1 );
 has 'layer'              => (is => 'rw');
 has 'move_z_callback'    => (is => 'rw');
 has 'shift_x'            => (is => 'rw', default => sub {0} );
@@ -13,6 +15,10 @@ has 'shift_y'            => (is => 'rw', default => sub {0} );
 has 'z'                  => (is => 'rw');
 has 'speed'              => (is => 'rw');
 
+has 'external_mp'        => (is => 'rw');
+has 'layer_mp'           => (is => 'rw');
+has 'new_object'         => (is => 'rw', default => sub {0});
+has 'straight_once'      => (is => 'rw', default => sub {1});
 has 'extruder'           => (is => 'rw');
 has 'extrusion_distance' => (is => 'rw', default => sub {0} );
 has 'elapsed_time'       => (is => 'rw', default => sub {0} );  # seconds
@@ -56,13 +62,34 @@ sub set_shift {
     my $self = shift;
     my @shift = @_;
     
+    # if shift increases (goes towards right), last_pos decreases because it goes towards left
     $self->last_pos->translate(
-        scale ($shift[X] - $self->shift_x),
-        scale ($shift[Y] - $self->shift_y),
+        scale ($self->shift_x - $shift[X]),
+        scale ($self->shift_y - $shift[Y]),
     );
     
     $self->shift_x($shift[X]);
     $self->shift_y($shift[Y]);
+}
+
+sub change_layer {
+    my $self = shift;
+    my ($layer) = @_;
+    
+    $self->layer($layer);
+    if ($Slic3r::Config->avoid_crossing_perimeters) {
+        $self->layer_mp(Slic3r::GCode::MotionPlanner->new(
+            islands => union_ex([ map @$_, @{$layer->slices} ], undef, 1),
+        ));
+    }
+    
+    my $gcode = "";
+    if ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) {
+        $gcode .= sprintf "M73 P%s%s\n",
+            int(100 * ($layer->id / ($self->layer_count - 1))),
+            ($Slic3r::Config->gcode_comments ? ' ; update progress' : '');
+    }
+    return $gcode;
 }
 
 # this method accepts Z in scaled coordinates
@@ -137,8 +164,7 @@ sub extrude_loop {
         $point->rotate($angle, $extrusion_path->polyline->[0]);
         
         # generate the travel move
-        $self->speed('travel');
-        $gcode .= $self->G0($point, undef, 0, "move inwards before travel");
+        $gcode .= $self->travel_to($point, "move inwards before travel");
     }
     
     return $gcode;
@@ -179,9 +205,7 @@ sub extrude_path {
     }
     
     # go to first point of extrusion path
-    $self->speed('travel');
-    $gcode .= $self->G0($path->points->[0], undef, 0, "move to first $description point")
-        if !points_coincide($self->last_pos, $path->points->[0]);
+    $gcode .= $self->travel_to($path->points->[0], "move to first $description point");
     
     # compensate retraction
     $gcode .= $self->unretract;
@@ -229,6 +253,44 @@ sub extrude_path {
                 : $path_length / $Slic3r::Config->first_layer_speed * 60;
         }
         $self->elapsed_time($self->elapsed_time + $path_time);
+    }
+    
+    return $gcode;
+}
+
+sub travel_to {
+    my $self = shift;
+    my ($point, $comment) = @_;
+    
+    return "" if points_coincide($self->last_pos, $point);
+    $self->speed('travel');
+    my $gcode = "";
+    if ($Slic3r::Config->avoid_crossing_perimeters && $self->last_pos->distance_to($point) > scale 5 && !$self->straight_once) {
+        my $plan = sub {
+            my $mp = shift;
+            return join '', 
+                map $self->G0($_->[B], undef, 0, $comment || ""),
+                $mp->shortest_path($self->last_pos, $point)->lines;
+        };
+        
+        if ($self->new_object) {
+            $self->new_object(0);
+            
+            # represent $point in G-code coordinates
+            $point = $point->clone;
+            my @shift = ($self->shift_x, $self->shift_y);
+            $point->translate(map scale $_, @shift);
+            
+            # calculate path (external_mp uses G-code coordinates so we temporary need a null shift)
+            $self->set_shift(0,0);
+            $gcode .= $plan->($self->external_mp);
+            $self->set_shift(@shift);
+        } else {
+            $gcode .= $plan->($self->layer_mp);
+        }
+    } else {
+        $self->straight_once(0);
+        $gcode .= $self->G0($point, undef, 0, $comment || "");
     }
     
     return $gcode;
@@ -452,8 +514,18 @@ sub set_extruder {
     
     # set the new extruder
     $self->extruder($extruder);
-    $gcode .= sprintf "T%d%s\n", $extruder->id, ($Slic3r::Config->gcode_comments ? ' ; change extruder' : '');
-    $gcode .= $self->reset_e;
+    my $toolchange_gcode = sprintf "%s%d%s\n", 
+        ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/ ? 'M108 T' : 'T'),
+        $extruder->id,
+        ($Slic3r::Config->gcode_comments ? ' ; change extruder' : '');
+    
+    if ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) {
+        $gcode .= $self->reset_e;
+        $gcode .= $toolchange_gcode;
+    } else {
+        $gcode .= $toolchange_gcode;
+        $gcode .= $self->reset_e;
+    }
     
     return $gcode;
 }
@@ -467,11 +539,17 @@ sub set_fan {
         if ($speed == 0) {
             my $code = $Slic3r::Config->gcode_flavor eq 'teacup'
                 ? 'M106 S0'
-                : 'M107';
+                : $Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/
+                    ? 'M127'
+                    : 'M107';
             return sprintf "$code%s\n", ($Slic3r::Config->gcode_comments ? ' ; disable fan' : '');
         } else {
-            return sprintf "M106 %s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
-                (255 * $speed / 100), ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+            if ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) {
+                return sprintf "M126%s\n", ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+            } else {
+                return sprintf "M106 %s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
+                    (255 * $speed / 100), ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+            }
         }
     }
     return "";
@@ -481,14 +559,14 @@ sub set_temperature {
     my $self = shift;
     my ($temperature, $wait, $tool) = @_;
     
-    return "" if $wait && $Slic3r::Config->gcode_flavor eq 'makerbot';
+    return "" if $wait && $Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/;
     
     my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
         ? ('M109', 'wait for temperature to be reached')
         : ('M104', 'set temperature');
     my $gcode = sprintf "$code %s%d %s; $comment\n",
         ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature,
-        (defined $tool && $self->multiple_extruders) ? "T$tool " : "";
+        (defined $tool && ($self->multiple_extruders || $Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/)) ? "T$tool " : "";
     
     $gcode .= "M116 ; wait for temperature to be reached\n"
         if $Slic3r::Config->gcode_flavor eq 'teacup' && $wait;
@@ -501,8 +579,7 @@ sub set_bed_temperature {
     my ($temperature, $wait) = @_;
     
     my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
-        ? (($Slic3r::Config->gcode_flavor eq 'makerbot' ? 'M109'
-            : 'M190'), 'wait for bed temperature to be reached')
+        ? (($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/ ? 'M109' : 'M190'), 'wait for bed temperature to be reached')
         : ('M140', 'set bed temperature');
     my $gcode = sprintf "$code %s%d ; $comment\n",
         ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature;

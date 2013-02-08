@@ -108,7 +108,7 @@ The author of the Silk icon set is Mark James.
                             (default: 100,100)
         --z-offset          Additional height in mm to add to vertical coordinates
                             (+/-, default: 0)
-        --gcode-flavor      The type of G-code to generate (reprap/teacup/makerbot/mach3/no-extrusion,
+        --gcode-flavor      The type of G-code to generate (reprap/teacup/makerbot/sailfish/mach3/no-extrusion,
                             default: reprap)
         --use-relative-e-distances Enable this to get relative E values
         --gcode-arcs        Use G2/G3 commands for native arcs (experimental, not supported
@@ -190,6 +190,7 @@ The author of the Silk icon set is Mark James.
         --toolchange-gcode  Load tool-change G-code from the supplied file (default: nothing).
         --extra-perimeters  Add more perimeters when needed (default: yes)
         --randomize-start   Randomize starting point across layers (default: yes)
+        --avoid-crossing-perimeters Optimize travel moves so that no perimeters are crossed (default: no)
         --only-retract-when-crossing-perimeters
                             Disable retraction when travelling between infill paths inside the same island.
                             (default: no)
@@ -208,6 +209,14 @@ The author of the Silk icon set is Mark James.
                             Spacing between pattern lines (mm, default: 2.5)
         --support-material-angle
                             Support material angle in degrees (range: 0-90, default: 0)
+        --support-material-interface-layers
+                            Number of perpendicular layers between support material and object (0+, default: 0)
+        --support-material-interface-spacing
+                            Spacing between interface pattern lines (mm, set 0 to get a solid layer, default: 0)
+        --raft-layers       Number of layers to raise the printed objects by (range: 0+, default: 0)
+        --support-material-enforce-layers
+                            Enforce support material on the specified number of layers from bottom,
+                            regardless of --support-material and threshold (0+, default: 0)
       
        Retraction options:
         --retract-length    Length of retraction in mm when pausing extrusion (default: 1)
@@ -274,7 +283,7 @@ The author of the Silk icon set is Mark James.
                             (like 0.65) or a percentage over layer height (like 200%)
         --first-layer-extrusion-width
                             Set a different extrusion width for first layer
-        --perimeters-extrusion-width
+        --perimeter-extrusion-width
                             Set a different extrusion width for perimeters
         --infill-extrusion-width
                             Set a different extrusion width for infill
@@ -285,7 +294,7 @@ The author of the Silk icon set is Mark James.
        Multiple extruder options:
         --extruder-offset   Offset of each extruder, if firmware doesn't handle the displacement
                             (can be specified multiple times, default: 0x0)
-        --perimeters-extruder
+        --perimeter-extruder
                             Extruder to use for perimeters (1+, default: 1)
         --infill-extruder   Extruder to use for infill (1+, default: 1)
         --support-material-extruder

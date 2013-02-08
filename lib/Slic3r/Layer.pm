@@ -2,6 +2,7 @@ package Slic3r::Layer;
 use Moo;
 
 use List::Util qw(first);
+use Slic3r::Geometry qw(scale);
 use Slic3r::Geometry::Clipper qw(union_ex);
 
 has 'id'                => (is => 'rw', required => 1, trigger => 1); # sequential number of layer, 0-based
@@ -21,7 +22,7 @@ has 'slices'            => (is => 'rw');
 # ordered collection of extrusion paths to fill surfaces for support material
 has 'support_islands'           => (is => 'rw');
 has 'support_fills'             => (is => 'rw');
-has 'support_interface_fills'   => (is => 'rw');
+has 'support_contact_fills'     => (is => 'rw');
 
 sub _trigger_id {
     my $self = shift;
@@ -32,11 +33,16 @@ sub _trigger_id {
 sub _build_slice_z {
     my $self = shift;
     
-    if ($self->id == 0) {
-        return $Slic3r::Config->get_value('first_layer_height') / 2 / &Slic3r::SCALING_FACTOR;
+    if ($Slic3r::Config->raft_layers == 0) {
+        if ($self->id == 0) {
+            return scale $Slic3r::Config->get_value('first_layer_height') / 2;
+        }
+        return scale($Slic3r::Config->get_value('first_layer_height') + ($self->id-1 + 0.5) * $Slic3r::Config->layer_height);
+    } else {
+        return -1 if $self->id < $Slic3r::Config->raft_layers;
+        my $object_layer_id = $self->id - $Slic3r::Config->raft_layers;
+        return scale ($object_layer_id + 0.5) * $Slic3r::Config->layer_height;
     }
-    return ($Slic3r::Config->get_value('first_layer_height') + (($self->id-1) * $Slic3r::Config->layer_height) + ($Slic3r::Config->layer_height/2))
-        / &Slic3r::SCALING_FACTOR;  #/
 }
 
 # Z used for printing in scaled coordinates
@@ -53,8 +59,8 @@ sub _build_height {
 
 sub _build_flow { $Slic3r::flow }
 
-# layer height of interface paths in unscaled coordinates
-sub support_material_interface_height {
+# layer height of contact paths in unscaled coordinates
+sub support_material_contact_height {
     my $self = shift;
     
     return $self->height if $self->id == 0;
@@ -66,10 +72,10 @@ sub support_material_interface_height {
     return 2*$self->height - $self->flow->nozzle_diameter;
 }
 
-# Z used for printing support material interface in scaled coordinates
-sub support_material_interface_z {
+# Z used for printing support material contact in scaled coordinates
+sub support_material_contact_z {
     my $self = shift;
-    return $self->print_z - ($self->height - $self->support_material_interface_height) / &Slic3r::SCALING_FACTOR;
+    return $self->print_z - ($self->height - $self->support_material_contact_height) / &Slic3r::SCALING_FACTOR;
 }
 
 sub region {
