@@ -37,6 +37,7 @@ sub new {
             $self->{tabpanel},
             plater              => $self->{plater},
             on_value_change     => sub { $self->{plater}->on_config_change(@_) }, # propagate config change events to the plater
+            skeinpanel          => $self,
         );
         $self->{tabpanel}->AddPage($self->{options_tabs}{$tab_name}, $self->{options_tabs}{$tab_name}->title);
     }
@@ -186,6 +187,20 @@ sub export_config {
         $config->save($file);
     }
     $dlg->Destroy;
+}
+
+sub autoexport_config {
+    my $self = shift;
+    my $file = "$Slic3r::GUI::datadir/last_config.ini";
+
+    eval {
+	# FIXME. May fail if we are early in the initialisation, I
+	# need to understand why.
+	my $config = $self->config;
+
+        $config->validate;
+	$config->save($file);
+    };
 }
 
 sub load_config_file {

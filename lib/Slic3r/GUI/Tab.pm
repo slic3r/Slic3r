@@ -14,7 +14,7 @@ sub new {
     my ($parent, %params) = @_;
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxBK_LEFT | wxTAB_TRAVERSAL);
     $self->{options} = []; # array of option names handled by this tab
-    $self->{$_} = $params{$_} for qw(plater on_value_change);
+    $self->{$_} = $params{$_} for qw(plater on_value_change skeinpanel);
     
     # horizontal sizer
     $self->{sizer} = Wx::BoxSizer->new(wxHORIZONTAL);
@@ -276,6 +276,7 @@ sub reload_values {
     my $self = shift;
     
     $self->set_value($_, $self->{config}->get($_)) for keys %{$self->{config}};
+    $self->{skeinpanel}->autoexport_config();
 }
 
 sub update_tree {
