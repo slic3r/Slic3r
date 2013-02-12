@@ -15,6 +15,7 @@ my $build = Module::Build->new(
         'Math::Clipper'             => '1.17',
         'Math::ConvexHull::MonotoneChain' => '0.01',
         'Math::Geometry::Voronoi'   => '1.3',
+        'Math::Geometry::Delaunay'  => '0.15',
         'Math::PlanePath'           => '53',
         'Moo'                       => '0.091009',
         'perl'                      => '5.10.0',
