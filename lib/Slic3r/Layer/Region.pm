@@ -249,7 +249,9 @@ sub make_perimeters {
         # group (because it might combine islands) and if there is a result, add
         # that as the outer perimeter for just this first one in the group.
 
-        if ($same_source_expolygon{$surface->source_expolygon}->[0] == $surface) {
+        if ($same_source_expolygon{$surface->source_expolygon}->[0] == $surface
+            && @{$surface->medial_axis}) {
+
             my @ma = @{$surface->medial_axis};
             my @all_expolygons = @{$same_source_expolygon{$surface->source_expolygon}};
 
@@ -327,6 +329,8 @@ sub make_perimeters {
             push @ex_frags, @{union_ex([@offset_polygons, @offset_holes_polygons])};
 
             push @perimeters, [[@ex_frags]] if $loop_number > 0;
+        } else {
+            push @perimeters, [[@last_offsets]] if $loop_number > 0;
         }
 
         # generate perimeters inwards (loop 0 is the external one)
