@@ -206,6 +206,7 @@ The author of the Silk icon set is Mark James.
                             (mm^2, default: 70)
         --infill-only-where-needed
                             Only infill under ceilings (default: no)
+        --internal-support  Generate internal walls for supporting ceilings with low or no infill (default: no)
         --infill-first      Make infill before perimeters (default: no)
       
        Support material options:

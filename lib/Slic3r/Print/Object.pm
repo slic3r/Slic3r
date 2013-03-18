@@ -518,13 +518,11 @@ sub bridge_over_infill {
                         my @new_surfaces = ();
                         # subtract the area from all types of surfaces
                         foreach my $group (Slic3r::Surface->group(@{$lower_layerm->fill_surfaces})) {
-                            push @new_surfaces, map Slic3r::Surface->new(
-                                expolygon       => $_,
-                                surface_type    => $group->[0]->surface_type,
-                            ), @{diff_ex(
-                                [ map $_->p, @$group ],
-                                [ map @$_, @$to_bridge ],
-                            )};
+                            push @new_surfaces, map $group->[0]->clone(expolygon => $_),
+                                @{diff_ex(
+                                    [ map $_->p, @$group ],
+                                    [ map @$_, @$to_bridge ],
+                                )};
                             push @new_surfaces, map Slic3r::Surface->new(
                                 expolygon       => $_,
                                 surface_type    => S_TYPE_INTERNALVOID,
@@ -537,6 +535,43 @@ sub bridge_over_infill {
                     }
                     
                     $excess -= $self->layers->[$i]->height;
+                }
+            }
+            
+            # generate internal supports for bridges
+            if ($Slic3r::Config->internal_support) {
+                # generate the supporting ring by collapsing the bridge contours;
+                # make the support ring two infill lines thick (use solid infill
+                # and make sure Fill.pm does too)
+                my $thickness = 2 * $layerm->solid_infill_flow->scaled_spacing;
+                my $support = [ Slic3r::Geometry::Clipper::offset([ map @$_, @$to_bridge ], -$thickness) ];
+                # skip collapsing regions: shouldn't we?
+                if (@$support) {
+                    $support = diff_ex([ map @$_, @$to_bridge ], $support);
+                    for my $lower_layerm (map @{$self->layers->[$_]->regions}, reverse 0..$layerm->id-1) {
+                        
+                        # check what part of support applies to this layer
+                        $support = intersection_ex(
+                            [ map @$_, @$support ],
+                            [ map $_->p, grep $_->is_available_for_internal_supports, @{$lower_layerm->fill_surfaces} ],
+                        );
+                        
+                        my @new_surfaces = ();
+                        push @new_surfaces, map Slic3r::Surface->new(
+                                expolygon       => $_,
+                                surface_type    => S_TYPE_INTERNALSUPPORT,
+                            ), @$support;
+                        
+                        # subtract the area from all types of surfaces
+                        foreach my $group (Slic3r::Surface->group(@{$lower_layerm->fill_surfaces})) {
+                            push @new_surfaces, map $group->[0]->clone(expolygon => $_),
+                                @{diff_ex(
+                                    [ map $_->p, @$group ],
+                                    [ map @$_, @$support ],
+                                )};
+                        }
+                        @{$lower_layerm->fill_surfaces} = @new_surfaces;
+                    }
                 }
             }
         }
@@ -644,8 +679,7 @@ sub discover_horizontal_shells {
                             [ map @$_, @$internal_solid, @$internal ],
                             1,
                         );
-                        push @$neighbor_fill_surfaces, Slic3r::Surface->new
-                            (expolygon => $_, surface_type => $s->[0]->surface_type, bridge_angle => $s->[0]->bridge_angle)
+                        push @$neighbor_fill_surfaces, $s->[0]->clone(expolygon => $_)
                             for @$solid_surfaces;
                     }
                 }

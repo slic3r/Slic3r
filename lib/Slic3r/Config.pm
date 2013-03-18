@@ -404,6 +404,13 @@ our $Options = {
         type    => 'bool',
         default => 0,
     },
+    'internal_support' => {
+        label   => 'Internal support',
+        tooltip => 'Experimental feature: generate internal walls for supporting ceilings with low or no infill.',
+        cli     => 'internal-support!',
+        type    => 'bool',
+        default => 0,
+    },
     'infill_first' => {
         label   => 'Infill before perimeters',
         tooltip => 'This option will switch the print order of perimeters and infill, making the latter first.',

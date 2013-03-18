@@ -4,7 +4,7 @@ use warnings;
 
 require Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT_OK   = qw(S_TYPE_TOP S_TYPE_BOTTOM S_TYPE_INTERNAL S_TYPE_INTERNALSOLID S_TYPE_INTERNALBRIDGE S_TYPE_INTERNALVOID);
+our @EXPORT_OK   = qw(S_TYPE_TOP S_TYPE_BOTTOM S_TYPE_INTERNAL S_TYPE_INTERNALSOLID S_TYPE_INTERNALBRIDGE S_TYPE_INTERNALVOID S_TYPE_INTERNALSUPPORT);
 our %EXPORT_TAGS = (types => \@EXPORT_OK);
 
 use constant S_EXPOLYGON            => 0;
@@ -20,6 +20,7 @@ use constant S_TYPE_INTERNAL        => 2;
 use constant S_TYPE_INTERNALSOLID   => 3;
 use constant S_TYPE_INTERNALBRIDGE  => 4;
 use constant S_TYPE_INTERNALVOID    => 5;
+use constant S_TYPE_INTERNALSUPPORT => 6;
 
 sub new {
     my $class = shift;
@@ -32,6 +33,17 @@ sub new {
     
     bless $self, $class;
     $self;
+}
+
+sub clone {
+    my $self = shift;
+    my %p = @_;
+    
+    return (ref $self)->new(
+        (map { $_ => $self->$_ } qw(surface_type thickness thickness_layers bridge_angle)),
+        expolygon => ($p{expolygon} ? delete $p{expolygon} : $self->expolygon->clone),
+        %p,
+    );
 }
 
 sub expolygon       { $_[0][S_EXPOLYGON] }
@@ -85,22 +97,12 @@ sub group {
 
 sub offset {
     my $self = shift;
-    return map $self->_inflate_expolygon($_), $self->expolygon->offset_ex(@_);
+    return map $self->clone(expolygon => $_), $self->expolygon->offset_ex(@_);
 }
 
 sub simplify {
     my $self = shift;
-    return map $self->_inflate_expolygon($_), $self->expolygon->simplify(@_);
-}
-
-sub _inflate_expolygon {
-    my $self = shift;
-    my ($expolygon) = @_;
-    
-    return (ref $self)->new(
-        expolygon => $expolygon,
-        map { $_ => $self->$_ } qw(surface_type thickness thickness_layers bridge_angle),
-    );
+    return map $self->clone(expolygon => $_), $self->expolygon->simplify(@_);
 }
 
 sub p {
@@ -114,7 +116,8 @@ sub is_solid {
     # S_TYPE_INTERNALBRIDGE is not solid because we can't merge it with other solid types
     return $type == S_TYPE_TOP
         || $type == S_TYPE_BOTTOM
-        || $type == S_TYPE_INTERNALSOLID;
+        || $type == S_TYPE_INTERNALSOLID
+        || $type == S_TYPE_INTERNALSUPPORT;
 }
 
 sub is_bridge {
@@ -122,6 +125,15 @@ sub is_bridge {
     my $type = $self->surface_type;
     return $type == S_TYPE_BOTTOM
         || $type == S_TYPE_INTERNALBRIDGE;
+}
+
+sub is_available_for_internal_supports {
+    my $self = shift;
+    my $type = $self->surface_type;
+    return $type == S_TYPE_INTERNAL
+        # || $type == S_TYPE_INTERNALBRIDGE  # stop at bridges
+        || $type == S_TYPE_INTERNALVOID
+        || $type == S_TYPE_INTERNALSUPPORT;
 }
 
 1;
