@@ -774,8 +774,15 @@ sub generate_support_material {
         Slic3r::debugf "Threshold angle = %d°\n", rad2deg($threshold_rad);
     }
     my $flow                    = $self->print->support_material_flow;
-    my $distance_from_object    = 1.5 * $flow->scaled_width;
-    my $pattern_spacing = ($Slic3r::Config->support_material_spacing > $flow->spacing)
+ 
+    #don't know where the scaling 1,000,000 should actually be done
+	#but since this is an absolute value now and not based on a scaled flow, and it's in mm 
+	#(or % of support extrusion width) so it had to be scaled up.
+	#this is important hack fix for the support gap for when support extrusion width is small, 
+	#without this, the support is built too close to the object.
+
+	my $distance_from_object    = $Slic3r::Config->get_value('support_gap') * 1000000; 
+	my $pattern_spacing = ($Slic3r::Config->support_material_spacing > $flow->spacing)
         ? $Slic3r::Config->support_material_spacing
         : $flow->spacing;
     
