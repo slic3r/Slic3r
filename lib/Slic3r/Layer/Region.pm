@@ -290,8 +290,12 @@ sub make_perimeters {
             )};
             
             my $w = $self->perimeter_flow->width;
-            my @widths = (0.6 * $w, 0.3 * $w, 0.1 * $w);  # worth trying 0.2 too?
-            foreach my $width (@widths) {
+			
+            # 1.5 and 1.0 do nothing.  
+			# Anything 1.0 or bigger shoudl get filled with a single perimeter.  
+			# The settings below work really well, and almost completely fill the small slivers.
+			my @widths = (0.4 * $w, 0.04 * $w);  
+			foreach my $width (@widths) {
                 my $flow = $self->perimeter_flow->clone(width => $width);
                 
                 # extract the gaps having this width
