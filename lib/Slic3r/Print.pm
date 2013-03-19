@@ -881,24 +881,24 @@ sub write_gcode {
                 if ($Slic3r::Config->avoid_crossing_perimeters) {
                     push @islands, map +{ perimeters => [], fills => [] }, @{$layer->slices};
                     PERIMETER: foreach my $perimeter (@{$layerm->perimeters}) {
-                        $perimeter = $perimeter->unpack;
+                        my $p = $perimeter->unpack;
                         for my $i (0 .. $#{$layer->slices}-1) {
-                            if ($layer->slices->[$i]->contour->encloses_point($perimeter->first_point)) {
-                                push @{ $islands[$i]{perimeters} }, $perimeter;
+                            if ($layer->slices->[$i]->contour->encloses_point($p->first_point)) {
+                                push @{ $islands[$i]{perimeters} }, $p;
                                 next PERIMETER;
                             }
                         }
-                        push @{ $islands[-1]{perimeters} }, $perimeter; # optimization
+                        push @{ $islands[-1]{perimeters} }, $p; # optimization
                     }
                     FILL: foreach my $fill (@{$layerm->fills}) {
+                        my $f = $fill->unpack;
                         for my $i (0 .. $#{$layer->slices}-1) {
-                            $fill = $fill->unpack;
-                            if ($layer->slices->[$i]->contour->encloses_point($fill->first_point)) {
-                                push @{ $islands[$i]{fills} }, $fill;
+                            if ($layer->slices->[$i]->contour->encloses_point($f->first_point)) {
+                                push @{ $islands[$i]{fills} }, $f;
                                 next FILL;
                             }
                         }
-                        push @{ $islands[-1]{fills} }, $fill; # optimization
+                        push @{ $islands[-1]{fills} }, $f; # optimization
                     }
                 } else {
                     push @islands, {
@@ -927,9 +927,10 @@ sub write_gcode {
                         }
                     };
                     
-                    # give priority to infill if we were already using its extruder
+                    # give priority to infill if we were already using its extruder and it wouldn't
+                    # be good for perimeters
                     if ($Slic3r::Config->infill_first
-                        || ($gcodegen->multiple_extruders && $region->extruders->{infill} eq $gcodegen->extruder)) {
+                        || ($gcodegen->multiple_extruders && $region->extruders->{infill} eq $gcodegen->extruder) && $region->extruders->{infill} ne $region->extruders->{perimeter}) {
                         $extrude_fills->();
                         $extrude_perimeters->();
                     } else {
