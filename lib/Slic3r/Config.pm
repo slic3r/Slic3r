@@ -633,6 +633,15 @@ our $Options = {
         type    => 'i',
         default => 0,
     },
+	'support_gap' => {
+        label   => 'Gap between model and support',
+        tooltip => 'Set this to a non-zero value to control the gap between the model and support material.  If expressed as a percentage (for example 90%) it will be a percentage of support extrusion width.',
+        sidetext => 'mm or % (leave 0 for default)',
+        cli     => 'support-gap=s',
+        type    => 'f',
+		ratio_over => 'layer_height',
+        default => '150%',
+    },
     'support_material_interface_layers' => {
         label   => 'Interface layers',
         tooltip => 'Number of interface layers to insert between the object(s) and support material.',
