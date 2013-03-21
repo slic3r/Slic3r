@@ -715,6 +715,11 @@ sub bounding_box_3D {
             $extents[$_][MAX] = $point->[$_] if !defined $extents[$_][MAX] || $point->[$_] > $extents[$_][MAX];
         }
     }
+    #if the bottom of the object is above zero, it's probably for a reason?
+    #then again, it's possible we'll want to move to ground, so how can we do either?
+    Slic3r::debugf "If bottom extent ( %.2f ) is > 0.0, then replace with 0.0 to prevent dropping - now it's ",$extents[Z][MIN] ;
+    $extents[Z][MIN] = ($extents[Z][MIN] > 0) ? 0 : $extents[Z][MIN];
+    Slic3r::debugf "%.2f \n",$extents[Z][MIN] ;
     return @extents;
 }
 
