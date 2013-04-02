@@ -288,7 +288,10 @@ $j
                         Additional amount of filament in mm to push after
                         compensating retraction (default: $config->{retract_restart_extra}[0])
     --retract-before-travel
-                        Only retract before travel moves of this length in mm (default: $config->{retract_before_travel}[0])
+                        Do not retract, or reduce retraction, for travel moves below this length in mm (default: $config->{retract_before_travel}[0])
+    --retract-proportional
+                        Instead of disabling retraction for travel moves below the minimum,
+                        decrease retraction length and extra length proportionally (default: $config->{retract_proportional}[0])
     --retract-lift      Lift Z by the given distance in mm when retracting (default: $config->{retract_lift}[0])
     --wipe              Wipe the nozzle while doing a retraction (default: no)
    

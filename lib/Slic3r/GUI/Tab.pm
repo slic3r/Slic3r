@@ -692,7 +692,7 @@ sub build {
 }
 
 sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_speed retract_restart_extra retract_before_travel wipe
-    retract_length_layerchange retract_restart_extra_layerchange retract_length_toolchange retract_restart_extra_toolchange) }
+    retract_length_layerchange retract_restart_extra_layerchange retract_length_toolchange retract_restart_extra_toolchange retract_proportional) }
 
 sub config {
     my $self = shift;
@@ -725,7 +725,7 @@ sub _build_extruder_pages {
                 title => 'Retraction',
                 options => [
                     map "${_}#${extruder_idx}",
-                        qw(retract_length retract_lift retract_speed retract_restart_extra retract_before_travel wipe)
+                        qw(retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_proportional wipe)
                 ],
             },
             {

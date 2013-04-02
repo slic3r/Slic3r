@@ -767,13 +767,22 @@ END
     },
     'retract_before_travel' => {
         label   => 'Minimum travel after retraction',
-        tooltip => 'Retraction is not triggered when travel moves are shorter than this length.',
+        tooltip => 'Retraction is not triggered or is reduced when travel moves are shorter than this length (depending on whether proportional retraction is enabled).',
         sidetext => 'mm',
         cli     => 'retract-before-travel=f@',
         type    => 'f',
         serialize   => $serialize_comma,
         deserialize => $deserialize_comma,
         default => [2],
+    },
+    'retract_proportional' => {
+        label   => 'Proportional retraction length',
+        tooltip => 'Instead of disabling retraction for travel moves below the minimum, decrease retraction length and extra length proportionally.',
+        cli     => 'retract-proportional!',
+        type    => 'bool',
+        serialize   => $serialize_comma,
+        deserialize => $deserialize_comma,
+        default => [0],
     },
     'retract_lift' => {
         label   => 'Lift Z',
