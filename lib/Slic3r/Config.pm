@@ -785,14 +785,25 @@ END
         deserialize => $deserialize_comma,
         default => [0],
     },
-    'retract_layer_change' => {
-        label   => 'Retract on layer change',
-        tooltip => 'This flag enforces a retraction whenever a Z move is done.',
-        cli     => 'retract-layer-change!',
-        type    => 'bool',
+    'retract_length_layerchange' => {
+        label   => 'Length',
+        tooltip => 'When retraction is triggered before changing layer, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder).',
+        sidetext => 'mm (zero to disable)',
+        cli     => 'retract-length-layerchange=f@',
+        type    => 'f',
         serialize   => $serialize_comma,
         deserialize => $deserialize_comma,
         default => [1],
+    },
+    'retract_restart_extra_layerchange' => {
+        label   => 'Extra length on restart',
+        tooltip => 'When the retraction is compensated after changing layer, the extruder will push this additional amount of filament.',
+        sidetext => 'mm',
+        cli     => 'retract-restart-extra-layerchange=f@',
+        type    => 'f',
+        serialize   => $serialize_comma,
+        deserialize => $deserialize_comma,
+        default => [0],
     },
     'wipe' => {
         label   => 'Wipe before retract',
@@ -1074,7 +1085,7 @@ sub new_from_cli {
     }
     
     $args{$_} = $Options->{$_}{deserialize}->($args{$_})
-        for grep exists $args{$_}, qw(print_center bed_size duplicate_grid extruder_offset retract_layer_change wipe);
+        for grep exists $args{$_}, qw(print_center bed_size duplicate_grid extruder_offset retract_length_layerchange wipe);
     
     return $class->new(%args);
 }

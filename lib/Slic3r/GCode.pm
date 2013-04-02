@@ -107,7 +107,7 @@ sub move_z {
     my $gcode = "";
     my $current_z = $self->z;
     if (!defined $current_z || $current_z != ($z + $self->lifted)) {
-        $gcode .= $self->retract(move_z => $z) if $self->extruder->retract_layer_change;
+        $gcode .= $self->retract(move_z => $z, layerchange => 1);
         $self->speed('travel');
         $gcode .= $self->G0(undef, $z, 0, $comment || ('move to next layer (' . $self->layer->id . ')'))
             unless ($current_z // -1) != ($self->z // -1);
@@ -347,9 +347,14 @@ sub retract {
     my %params = @_;
     
     # get the retraction length and abort if none
-    my ($length, $restart_extra, $comment) = $params{toolchange}
-        ? ($self->extruder->retract_length_toolchange,  $self->extruder->retract_restart_extra_toolchange,  "retract for tool change")
-        : ($self->extruder->retract_length,             $self->extruder->retract_restart_extra,             "retract");
+    my ($length, $restart_extra, $comment);
+    if ($params{toolchange}) {
+        ($length, $restart_extra, $comment) = ($self->extruder->retract_length_toolchange,  $self->extruder->retract_restart_extra_toolchange,  "retract for tool change");
+    } elsif ($params{layerchange}) {
+        ($length, $restart_extra, $comment) = ($self->extruder->retract_length_layerchange, $self->extruder->retract_restart_extra_layerchange, "retract for layer change");
+    } else {
+        ($length, $restart_extra, $comment) = ($self->extruder->retract_length,             $self->extruder->retract_restart_extra,             "retract");
+    }
     
     # if we already retracted, reduce the required amount of retraction
     $length -= $self->extruder->retracted;
