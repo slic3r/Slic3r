@@ -530,6 +530,10 @@ sub export_gcode {
     # select output file
     $self->{output_file} = $main::opt{output};
     {
+        if (!exists($self->{objects}[0])) {
+            Wx::MessageDialog->new($self, "There are no objects loaded to be sliced.", 'Error', wxOK | wxICON_ERROR)->ShowModal;
+            return;
+        }
         $self->{output_file} = $print->expanded_output_filepath($self->{output_file}, $self->{objects}[0]->input_file);
         my $dlg = Wx::FileDialog->new($self, 'Save G-code file as:', dirname($self->{output_file}),
             basename($self->{output_file}), &Slic3r::GUI::SkeinPanel::FILE_WILDCARDS->{gcode}, wxFD_SAVE);
