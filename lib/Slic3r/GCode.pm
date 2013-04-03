@@ -107,7 +107,7 @@ sub move_z {
     my $gcode = "";
     my $current_z = $self->z;
     if (!defined $current_z || $current_z != ($z + $self->lifted)) {
-        $gcode .= $self->retract(move_z => $z) if $self->extruder->retract_layer_change;
+        $gcode .= $self->retract(move_z => $z, layerchange => 1);
         $self->speed('travel');
         $gcode .= $self->G0(undef, $z, 0, $comment || ('move to next layer (' . $self->layer->id . ')'))
             unless ($current_z // -1) != ($self->z // -1);
@@ -281,16 +281,24 @@ sub travel_to {
     # build a more complete configuration space
     $travel->translate(-$self->shift_x, -$self->shift_y);
     
-    if ($travel->length < scale $self->extruder->retract_before_travel
-        || ($Slic3r::Config->only_retract_when_crossing_perimeters && first { $_->encloses_line($travel, scaled_epsilon) } @{$self->layer->slices})
+    if (($Slic3r::Config->only_retract_when_crossing_perimeters && first { $_->encloses_line($travel, scaled_epsilon) } @{$self->layer->slices})
         || ($role == EXTR_ROLE_SUPPORTMATERIAL && $self->layer->support_islands_enclose_line($travel))
         ) {
         $self->straight_once(0);
         $self->speed('travel');
         $gcode .= $self->G0($point, undef, 0, $comment || "");
     } elsif (!$Slic3r::Config->avoid_crossing_perimeters || $self->straight_once) {
+        my $retract_proportion = 1.0;
+        my $min_travel = scale $self->extruder->retract_before_travel;
+        if ($travel->length < $min_travel) {
+            if ($Slic3r::Config->retract_proportional) {
+                $retract_proportion = $travel->length / $min_travel;
+            } else {
+                $retract_proportion = 0;
+            }
+        }
         $self->straight_once(0);
-        $gcode .= $self->retract(travel_to => $point);
+        $gcode .= $self->retract(travel_to => $point, proportion => $retract_proportion);
         $self->speed('travel');
         $gcode .= $self->G0($point, undef, 0, $comment || "");
     } else {
@@ -347,9 +355,21 @@ sub retract {
     my %params = @_;
     
     # get the retraction length and abort if none
-    my ($length, $restart_extra, $comment) = $params{toolchange}
-        ? ($self->extruder->retract_length_toolchange,  $self->extruder->retract_restart_extra_toolchange,  "retract for tool change")
-        : ($self->extruder->retract_length,             $self->extruder->retract_restart_extra,             "retract");
+    my ($length, $restart_extra, $comment);
+    if ($params{toolchange}) {
+        ($length, $restart_extra, $comment) = ($self->extruder->retract_length_toolchange,  $self->extruder->retract_restart_extra_toolchange,  "retract for tool change");
+    } elsif ($params{layerchange}) {
+        ($length, $restart_extra, $comment) = ($self->extruder->retract_length_layerchange, $self->extruder->retract_restart_extra_layerchange, "retract for layer change");
+    } else {
+        ($length, $restart_extra, $comment) = ($self->extruder->retract_length,             $self->extruder->retract_restart_extra,             "retract");
+    }
+    
+    # apply retract proportion
+    if (exists($params{proportion})) {
+        $length *= $params{proportion};
+        $restart_extra *= $params{proportion};
+        $comment .= " (proportion " . $params{proportion} . ")";
+    }
     
     # if we already retracted, reduce the required amount of retraction
     $length -= $self->extruder->retracted;

@@ -767,13 +767,22 @@ END
     },
     'retract_before_travel' => {
         label   => 'Minimum travel after retraction',
-        tooltip => 'Retraction is not triggered when travel moves are shorter than this length.',
+        tooltip => 'Retraction is not triggered or is reduced when travel moves are shorter than this length (depending on whether proportional retraction is enabled).',
         sidetext => 'mm',
         cli     => 'retract-before-travel=f@',
         type    => 'f',
         serialize   => $serialize_comma,
         deserialize => $deserialize_comma,
         default => [2],
+    },
+    'retract_proportional' => {
+        label   => 'Proportional retraction length',
+        tooltip => 'Instead of disabling retraction for travel moves below the minimum, decrease retraction length and extra length proportionally.',
+        cli     => 'retract-proportional!',
+        type    => 'bool',
+        serialize   => $serialize_comma,
+        deserialize => $deserialize_comma,
+        default => [0],
     },
     'retract_lift' => {
         label   => 'Lift Z',
@@ -785,14 +794,25 @@ END
         deserialize => $deserialize_comma,
         default => [0],
     },
-    'retract_layer_change' => {
-        label   => 'Retract on layer change',
-        tooltip => 'This flag enforces a retraction whenever a Z move is done.',
-        cli     => 'retract-layer-change!',
-        type    => 'bool',
+    'retract_length_layerchange' => {
+        label   => 'Length',
+        tooltip => 'When retraction is triggered before changing layer, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder).',
+        sidetext => 'mm (zero to disable)',
+        cli     => 'retract-length-layerchange=f@',
+        type    => 'f',
         serialize   => $serialize_comma,
         deserialize => $deserialize_comma,
         default => [1],
+    },
+    'retract_restart_extra_layerchange' => {
+        label   => 'Extra length on restart',
+        tooltip => 'When the retraction is compensated after changing layer, the extruder will push this additional amount of filament.',
+        sidetext => 'mm',
+        cli     => 'retract-restart-extra-layerchange=f@',
+        type    => 'f',
+        serialize   => $serialize_comma,
+        deserialize => $deserialize_comma,
+        default => [0],
     },
     'wipe' => {
         label   => 'Wipe before retract',
@@ -1074,7 +1094,7 @@ sub new_from_cli {
     }
     
     $args{$_} = $Options->{$_}{deserialize}->($args{$_})
-        for grep exists $args{$_}, qw(print_center bed_size duplicate_grid extruder_offset retract_layer_change wipe);
+        for grep exists $args{$_}, qw(print_center bed_size duplicate_grid extruder_offset retract_length_layerchange wipe);
     
     return $class->new(%args);
 }
