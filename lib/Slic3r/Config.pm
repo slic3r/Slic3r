@@ -639,7 +639,7 @@ our $Options = {
         sidetext => 'layers',
         cli     => 'support-material-interface-layers=i',
         type    => 'i',
-        default => 0,
+        default => 3,
     },
     'support_material_interface_spacing' => {
         label   => 'Interface pattern spacing',

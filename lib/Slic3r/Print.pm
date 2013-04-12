@@ -848,11 +848,11 @@ sub write_gcode {
             # and also because we avoid travelling on other things when printing it
             if ($self->has_support_material) {
                 $gcode .= $gcodegen->move_z($layer->support_material_contact_z)
-                    if ($layer->support_contact_fills && @{ $layer->support_contact_fills->paths });
+                    if (defined $layer->support_material_contact_height && @{$layer->support_contact_fills->paths});
                 $gcode .= $gcodegen->set_extruder($self->extruders->[$Slic3r::Config->support_material_extruder-1]);
                 if ($layer->support_contact_fills) {
-                    $gcode .= $gcodegen->extrude_path($_, 'support material contact area') 
-                        for $layer->support_contact_fills->chained_path($gcodegen->last_pos); 
+                    $gcode .= $gcodegen->extrude($_, 'support material contact area') 
+                        for $layer->support_contact_fills->chained_path($gcodegen->last_pos);
                 }
                 
                 $gcode .= $gcodegen->move_z($layer->print_z);
