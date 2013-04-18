@@ -960,12 +960,11 @@ sub generate_support_material {
         push @angles, $angles[0] + 90;
     }
     
+    my $fill = Slic3r::Fill->new(print => $self->print);
     my %fillers = (
-        interface   => Slic3r::Fill->filler('rectilinear'),
-        support     => Slic3r::Fill->filler($pattern),
+        interface   => $fill->filler('rectilinear'),
+        support     => $fill->filler($pattern),
     );
-    $_->bounding_box([ $self->print->bounding_box ])
-        for grep $_->can('bounding_box'), values %fillers;
     
     # if pattern is not cross-hatched, rotate the interface pattern by 90° degrees
     $fillers{interface}->angle($Slic3r::Config->support_material_angle + 90);
