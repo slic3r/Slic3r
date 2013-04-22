@@ -815,11 +815,11 @@ sub generate_support_material {
     
     # Move down?
     my $flow            = $self->print->support_material_flow;
-    my $circle_distance = 8 * $flow->scaled_width;
+    my $circle_distance = 5 * $flow->scaled_width;
     my $circle;
     {
         # TODO: make sure teeth between circles are compatible with support material flow
-        my $r = 3 * $flow->scaled_width;
+        my $r = 1.5 * $flow->scaled_width;
         $circle = Slic3r::Polygon->new([ map [ $r * cos $_, $r * sin $_ ], (5*PI/3, 4*PI/3, PI, 2*PI/3, PI/3, 0) ]);
     }
     my $pattern_spacing = ($Slic3r::Config->support_material_spacing > $flow->spacing)
@@ -890,7 +890,8 @@ sub generate_support_material {
                 $contact_layer = $self->layers->[$next];
             }
             
-            $contact_layer->support_material_contact_height($contact_layer->height - $h);
+            #$contact_layer->support_material_contact_height($contact_layer->height - $h);
+            $contact_layer->support_material_contact_height($contact_layer->height);
             $contact{$contact_layer->id}  = [ @contact ];
             $overhang{$contact_layer->id} = [ @overhang ];
         }
@@ -1018,7 +1019,7 @@ sub generate_support_material {
             @loops = @{ Boost::Geometry::Utils::multi_polygon_multi_linestring_intersection(
                 [ offset_ex([ map @$_, @{$overhang{$layer_id}} ], +$keep_margin) ],
                 [ map Slic3r::Polygon->new($_)->split_at_first_point, @loops, @inner ],
-            ) };
+            ) } if 0;
             @loops = map Slic3r::ExtrusionPath->pack(
                 polyline        => Slic3r::Polyline->new(@$_),
                 role            => EXTR_ROLE_SUPPORTMATERIAL,
