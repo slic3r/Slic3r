@@ -25,7 +25,7 @@ sub fill_surface {
     my $line_oscillation = $distance_between_lines - $min_spacing;
     my $is_line_pattern = $self->isa('Slic3r::Fill::Line');
     
-    my $cache_id = sprintf "d%s_s%s_a%s" . $self->layer_id,
+    my $cache_id = sprintf "d%s_s%s_a%s",
         $params{density}, $params{flow_spacing}, $rotate_vector->[0][0];
     
     if (!$self->cache->{$cache_id}) {
