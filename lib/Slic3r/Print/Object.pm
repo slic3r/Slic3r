@@ -806,6 +806,7 @@ sub generate_support_material {
     return if $self->layer_count < 2;
     
     my $margin      = scale 5;
+    my @margin_steps = (scale 1, scale 1, scale 1, scale 1, scale 1);
     my $keep_margin = scale 3;
     my $threshold_rad;
     if ($Slic3r::Config->support_material_threshold) {
@@ -863,12 +864,17 @@ sub generate_support_material {
             push @overhang, @{union_ex($diff)};
             
             # Let's define the required contact area by using a max gap of half the upper 
-            # extrusion width. 
-            $diff = diff_ex(
-                [ offset($diff, $fw/2 + $margin) ],
-                [ offset([ map @$_, @{$lower_layer->slices} ], $fw/2) ],
-            );
-            push @contact, @$diff;
+            # extrusion width.
+            {
+                my @slices_margin = offset([ map @$_, @{$lower_layer->slices} ], $fw/2);
+                for ($fw/2, @margin_steps) {
+                    $diff = diff(
+                        [ offset($diff, $_) ],
+                        [ @slices_margin ],
+                    );
+                }
+            }
+            push @contact, @{union_ex($diff)};
         }
         next if !@contact;
         
