@@ -988,9 +988,7 @@ sub generate_support_material {
         support     => $fill->filler($pattern),
     );
     
-    # if pattern is not cross-hatched, rotate the interface pattern by 90° degrees
-    $fillers{interface}->angle($Slic3r::Config->support_material_angle + 90);
-    
+    my $interface_angle = $Slic3r::Config->support_material_angle + 90;
     my $interface_spacing = $Slic3r::Config->support_material_interface_spacing;
     my $interface_density = $interface_spacing == 0 ? 1 : $flow->spacing / $interface_spacing;
     my $support_spacing = $Slic3r::Config->support_material_spacing;
@@ -1044,6 +1042,8 @@ sub generate_support_material {
             );
             
             # fill the interior
+            $fillers{interface}->angle($interface_angle);
+            
             my @paths = ();
             foreach my $expolygon (@$to_infill) {
                 my @p = $fillers{interface}->fill_surface(
@@ -1066,6 +1066,8 @@ sub generate_support_material {
         
         # interface
         {
+            $fillers{interface}->angle($interface_angle);
+            
             my @paths = ();
             foreach my $expolygon (@{ $interface{$layer_id} }) {
                 my @p = $fillers{interface}->fill_surface(
@@ -1094,6 +1096,7 @@ sub generate_support_material {
             
             # base flange
             if ($layer_id == 0) {
+                $fillers{support}->angle($Slic3r::Config->support_material_angle + 90);
                 $density        = 0.5;
                 $flow_spacing   = $self->print->first_layer_support_material_flow->spacing;
             }
