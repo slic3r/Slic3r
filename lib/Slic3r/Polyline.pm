@@ -213,6 +213,67 @@ sub clip_start {
     return (ref $self)->new($points);
 }
 
+sub clip_end_with_circle {
+
+    my $self = shift;
+    my ($which_end, $circle) = @_;
+
+    my $r_sq = $circle->[2]**2;
+    my $end_index = $which_end > 0 ? 0 : -1;
+    #my $last_dist_sq = 0;
+    my $last_dist_sq = ($self->[$end_index + ($which_end > 0 ? 1 : -1)]->[0] - $circle->[0])**2 + 
+                       ($self->[$end_index + ($which_end > 0 ? 1 : -1)]->[1] - $circle->[1])**2;
+
+    if (@$self < 2) {
+        @$self = [];
+        return;
+    }
+
+    while (abs($end_index    += $which_end > 0 ? 1 : -1) 
+                < @$self
+           && ($last_dist_sq  = ($self->[$end_index]->[0] - $circle->[0])**2 + 
+                                ($self->[$end_index]->[1] - $circle->[1])**2
+              ) < $r_sq
+          ) {}
+
+    if (
+       # positive index case - last $last_dist_sq is good to check against $r_sq
+       ( ($end_index >= 0 || abs($end_index) != scalar(@$self))
+        && $last_dist_sq < $r_sq)
+       # negative index case - need to check (and set) the next value
+       # for $last_dist_sq before comparing against $r_sq
+       || ($end_index < 0 
+          && abs($end_index) == scalar(@$self)
+          && ($last_dist_sq = ($self->[$end_index]->[0] - $circle->[0])**2 + 
+                              ($self->[$end_index]->[1] - $circle->[1])**2
+              ) < $r_sq
+          )
+       ) {
+        @$self = [];
+        return;
+    }
+    
+    $end_index += scalar(@$self) if $end_index < 0;
+
+    my $previous_end_index = $end_index + ($which_end > 0 ? -1 : 1);
+
+    my ($new_pt1, $new_pt2) = &Slic3r::Geometry::circle_line_intersections($circle, [$self->[$previous_end_index], $self->[$end_index]]);
+
+    if (defined $new_pt1 && Slic3r::Geometry::point_in_segment($new_pt1, [$self->[$previous_end_index], $self->[$end_index]])) {
+        $self->[$previous_end_index] = Slic3r::Point->new($new_pt1);
+    } elsif (defined $new_pt2 && Slic3r::Geometry::point_in_segment($new_pt2, [$self->[$previous_end_index], $self->[$end_index]])) {
+        $self->[$previous_end_index] = Slic3r::Point->new($new_pt2);
+    } else {
+        Slic3r::debugf "Neither line-circle intersection point was on the segment to be clipped in clip_end_with_circle().";
+    }
+
+    if ($which_end > 0) {
+        @$self =  @$self[$previous_end_index .. $#$self];
+    } else {
+        @$self =  @$self[0 .. $previous_end_index];
+    }
+}
+
 package Slic3r::Polyline::Collection;
 use Moo;
 

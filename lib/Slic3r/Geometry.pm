@@ -1036,4 +1036,76 @@ sub arrange {
     return @positions;
 }
 
+sub combine_polyline_fragments {
+    my ($frags, $match_dist) = @_;
+    
+    for (my $i = $#$frags; $i > -1; $i--) {
+        my $this = $frags->[$i];
+        for (my $j = 0; $j < $i; $j++) {
+            my $other = $frags->[$j];
+            if      (   abs($this->[0]->[0] - $other->[0]->[0]) < $match_dist
+                     && abs($this->[0]->[1] - $other->[0]->[1]) < $match_dist
+                    ) {
+                my @new_this =  reverse @{splice @$frags, $i, 1};
+                unshift @{$other}, @new_this;
+                last;
+            } elsif (   abs($this->[-1]->[0] - $other->[-1]->[0]) < $match_dist
+                     && abs($this->[-1]->[1] - $other->[-1]->[1]) < $match_dist
+                    ) {
+                my @new_this =  reverse @{splice @$frags, $i, 1};
+                push @{$other}, @new_this;
+                last;
+            } elsif (   abs($this->[-1]->[0] - $other->[0]->[0]) < $match_dist
+                     && abs($this->[-1]->[1] - $other->[0]->[1]) < $match_dist
+                    ) {
+                my @new_this = @{splice @$frags, $i, 1};
+                unshift @{$other}, @new_this;
+                last;
+            } elsif (   abs($this->[0]->[0] - $other->[-1]->[0]) < $match_dist
+                     && abs($this->[0]->[1] - $other->[-1]->[1]) < $match_dist
+                    ) {
+                my @new_this = @{splice @$frags, $i, 1};
+                push @{$other}, @new_this;
+                last;
+            }
+        }
+    }
+}
+
+sub circle_line_intersections {
+    my ($circle, $line) = @_;
+
+    my $dx21 = ($line->[1]->[0] - $line->[0]->[0]);
+    my $dy21 = ($line->[1]->[1] - $line->[0]->[1]);
+    my $dx13 = ($line->[0]->[0] - $circle->[0]);
+    my $dy13 = ($line->[0]->[1] - $circle->[1]);
+    my $a =  $dx21**2 + $dy21**2;
+    my $b = 2.0 * ( $dx21 * $dx13 + $dy21 * $dy13 );
+    my $c = ( ($circle->[0]**2 + $circle->[1]**2 + $line->[0]->[0]**2 + $line->[0]->[1]**2)
+              - 2.0 * ($circle->[0] * $line->[0]->[0] + $circle->[1] * $line->[0]->[1])
+            ) - $circle->[2]**2;
+    my $det = $b**2 - 4*$a*$c;
+    
+    if ($det < &Slic3r::Geometry::epsilon) {return ()}       # no intersection
+
+    if (abs($det) <= &Slic3r::Geometry::epsilon) {$det = 0}  # one tangent intersection
+
+    my $sqrt = CORE::sqrt($det);
+    my $u = (-$b + $sqrt) / (2.0 * $a);
+    my $int1  = [
+        $line->[0]->[0] + $u * $dx21,
+        $line->[0]->[1] + $u * $dy21
+        ];
+
+    if ($det == 0) { return $int1; }
+
+    $u = (-$b - $sqrt) / (2.0 * $a);
+    my $int2 = [
+        $line->[0]->[0] + $u * $dx21,
+        $line->[0]->[1] + $u * $dy21
+       ];
+
+   return $int1, $int2;
+}
+
 1;

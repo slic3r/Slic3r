@@ -93,32 +93,6 @@ sub make_surfaces {
     return if !@$loops;
     $self->slices([ _merge_loops($loops) ]);
     
-    # detect thin walls by offsetting slices by half extrusion inwards
-    {
-        my $width = $self->perimeter_flow->scaled_width;
-        my $outgrown = union_ex([
-            Slic3r::Geometry::Clipper::offset(
-                [Slic3r::Geometry::Clipper::offset([ map @$_, map $_->expolygon, @{$self->slices} ], -$width)], 
-                +$width,
-            ),
-        ]);
-        my $diff = diff_ex(
-            [ map $_->p, @{$self->slices} ],
-            [ map @$_, @$outgrown ],
-            1,
-        );
-        
-        $self->thin_walls([]);
-        if (@$diff) {
-            my $area_threshold = $self->perimeter_flow->scaled_spacing ** 2;
-            @$diff = grep $_->area > ($area_threshold), @$diff;
-            
-            @{$self->thin_walls} = map $_->medial_axis($self->perimeter_flow->scaled_width), @$diff;
-            
-            Slic3r::debugf "  %d thin walls detected\n", scalar(@{$self->thin_walls}) if @{$self->thin_walls};
-        }
-    }
-    
     if (0) {
         require "Slic3r/SVG.pm";
         Slic3r::SVG::output("surfaces.svg",
@@ -221,32 +195,79 @@ sub make_perimeters {
         my $loop_number = $Slic3r::Config->perimeters + ($surface->extra_perimeters || 0);
         push @perimeters, [] if $loop_number > 0;
         
+        # generate medial axis fragments for thin walls and gaps
+        my $ma = Slic3r::MedialAxis->new($surface->expolygon);
+        my @intervals = $ma->offset_interval_filter($self->perimeter_flow->scaled_spacing, $loop_number + 1, $self->perimeter_flow->scaled_spacing/2, $self->perimeter_flow->scaled_spacing/1.9, $self->perimeter_flow->scaled_spacing, $self->perimeter_flow->scaled_spacing/30);
+        # my @intervals = $ma->offset_interval_filter(
+            # offset => $self->perimeter_flow->scaled_spacing,
+            # count => $loop_number + 1,
+            # first_offset => $self->perimeter_flow->scaled_spacing / 2,
+            # nudge => $self->perimeter_flow->scaled_spacing * 0.1,
+            # max_radius => $self->perimeter_flow->scaled_spacing * 1.1,
+            # min_radius => $self->perimeter_flow->scaled_spacing / 2,
+            # );
+        my $medial_fragments = Slic3r::MedialAxis::get_offset_fragments([@intervals], $self->layer->id % 2);
+        Slic3r::debugf " %d thin walls detected with medial axis\n", scalar(@{$medial_fragments->[0]}) if @{$medial_fragments} && @{$medial_fragments->[0]};
+        Slic3r::debugf " %d thin gaps detected with medial axis\n", sum(map scalar(@$_) > 0, @{$medial_fragments}[1..$#$medial_fragments]) if @{$medial_fragments} > 1;
+        
         # do one more loop (<= instead of <) so that we can detect gaps even after the desired
         # number of perimeters has been generated
         for (my $loop = 0; $loop <= $loop_number; $loop++) {
             my $spacing = $perimeter_spacing;
-            $spacing /= 2 if $loop == 0;
+            #$spacing /= 2 if $loop == 0;
             
             # offsetting a polygon can result in one or many offset polygons
             my @new_offsets = ();
+            my @new_offsets_with_thins = ();
             foreach my $expolygon (@last_offsets) {
                 my @offsets = @{union_ex([
                     Slic3r::Geometry::Clipper::offset(
-                        [Slic3r::Geometry::Clipper::offset($expolygon, -1.5*$spacing)], 
+                        [Slic3r::Geometry::Clipper::offset($expolygon, -(1 + ($loop == 0 ? 0:0.5))*$spacing)], 
                         +0.5*$spacing,
                     ),
                 ])};
+                # Merge medial axis fragments for thin walls into offset loops.
+                # Limit this to outer perimeter until working as expected,
+                # then extend this to thin gaps, with variable flow width.
+                if (1 && $loop == 0  && 
+                    @{$medial_fragments->[$loop]}
+                    #@{$intervals[$loop]}
+                    ) {
+                    #my $medfrags;
+                    #$medfrags = Slic3r::MedialAxis::get_offset_fragments([$intervals[$loop]], $self->layer->id % 2);
+                    push @new_offsets_with_thins, 
+                        @{Slic3r::MedialAxis::merge_expolygon_and_medial_axis_fragments(
+                             $expolygon, 
+                             \@offsets, 
+                             $medial_fragments->[$loop],
+                             #$medfrags->[0],
+                             $perimeter_spacing, 
+                             $self->layer->id % 2
+                            )};
+                }
                 push @new_offsets, @offsets;
                 
                 # where the above check collapses the expolygon, then there's no room for an inner loop
                 # and we can extract the gap for later processing
-                my $diff = diff_ex(
+                if ($loop > 0) {
+                    my $diff = diff_ex(
                     [ map @$_, $expolygon->offset_ex(-0.5*$spacing) ],
                     # +2 on the offset here makes sure that Clipper float truncation 
                     # won't shrink the clip polygon to be smaller than intended.
                     [ Slic3r::Geometry::Clipper::offset([map @$_, @offsets], +0.5*$spacing + 2) ],
-                );
-                push @gaps, grep $_->area >= $gap_area_threshold, @$diff;
+                    );
+
+                    push @gaps, grep $_->area >= $gap_area_threshold, @$diff;
+                }
+            }
+            
+            # This will capture stand-alone thin walls that don't connect
+            # to any non-thin surfaces.
+            # Might let this capture stand-alone gaps too ($loop > 0), later.
+            # But for now, limit this to thin wall cases on the outer perimeter.
+            if ($loop == 0 && !@new_offsets && @new_offsets_with_thins) {    
+                push @{ $perimeters[-1] }, [@new_offsets_with_thins];
+                Slic3r::debugf " %d stand-alone thin walls detected\n", scalar(@new_offsets_with_thins);
             }
             
             last if !@new_offsets || $loop == $loop_number;
@@ -257,7 +278,14 @@ sub make_perimeters {
                 map [ $_->contour->[0], $_ ], @last_offsets,
             ])};
             
-            push @{ $perimeters[-1] }, [@last_offsets];
+            # sort any thinwall-including loops and paths in the same way
+            @new_offsets_with_thins = @{chained_path_items([
+                map [ $_->contour->[0], $_ ], @new_offsets_with_thins,
+            ])} if @new_offsets_with_thins;
+            
+            push @{ $perimeters[-1] }, [(@new_offsets_with_thins 
+                                       ? @new_offsets_with_thins
+                                       : @last_offsets)];
         }
         
         # create one more offset to be used as boundary for fill
@@ -443,12 +471,21 @@ sub _add_perimeter {
     my $self = shift;
     my ($polygon, $role) = @_;
     
-    return unless $polygon->is_printable($self->perimeter_flow->scaled_width);
-    push @{ $self->perimeters }, Slic3r::ExtrusionLoop->pack(
-        polygon         => $polygon,
-        role            => ($role // EXTR_ROLE_PERIMETER),
-        flow_spacing    => $self->perimeter_flow->spacing,
-    );
+    if ($polygon->isa('Slic3r::Polygon')) { 
+        return unless $polygon->is_printable($self->perimeter_flow->scaled_width);
+        push @{ $self->perimeters }, Slic3r::ExtrusionLoop->pack(
+            polygon         => $polygon,
+            role            => ($role // EXTR_ROLE_PERIMETER),
+            flow_spacing    => $self->perimeter_flow->spacing,
+        );
+    } else {
+        return if @$polygon < 2;
+        push @{ $self->perimeters }, Slic3r::ExtrusionPath->pack(
+            polyline        => $polygon,
+            role            => ($role // EXTR_ROLE_PERIMETER),
+            flow_spacing    => $self->perimeter_flow->spacing,
+        );
+    }
 }
 
 sub prepare_fill_surfaces {
