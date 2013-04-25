@@ -873,7 +873,7 @@ sub write_gcode {
             $gcode .= $gcodegen->move_z($layer->print_z);
             
             # tweak region ordering to save toolchanges
-            my @region_ids = 0 .. ($self->regions_count-1);
+            my @region_ids = 0 .. $#{$layer->regions};
             if ($gcodegen->multiple_extruders) {
                 my $last_extruder = $gcodegen->extruder;
                 my $best_region_id = first { $self->regions->[$_]->extruders->{perimeter} eq $last_extruder } @region_ids;

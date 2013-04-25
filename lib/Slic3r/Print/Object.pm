@@ -800,10 +800,12 @@ sub combine_infill {
         }
     }
 }
-
+my $generated = 0;
 sub generate_support_material {
     my $self = shift;
     return if $self->layer_count < 2;
+    return if $generated;  # TODO: ugly temporary hack
+    $generated = 1;
     
     my $margin      = scale 5;
     my @margin_steps = (scale 1, scale 1, scale 1, scale 1, scale 1);
@@ -828,8 +830,9 @@ sub generate_support_material {
         : $flow->spacing;
     
     # determine contact areas
-    my %contact  = ();  # layer_id => [ expolygons ]
-    my %overhang = ();  # layer_id => [ expolygons ] - this stores the actual overhang supported by each contact layer
+    my @contact_z = ();
+    my %contact  = ();  # contact_z => [ expolygons ]
+    my %overhang = ();  # contact_z => [ expolygons ] - this stores the actual overhang supported by each contact layer
     for my $layer_id (1 .. $#{$self->layers}) {
         my $layer = $self->layers->[$layer_id];
         my $lower_layer = $self->layers->[$layer_id-1];
@@ -886,51 +889,31 @@ sub generate_support_material {
                 @{$layer->regions};
             my $nozzle_diameter = sum(@nozzle_diameters)/@nozzle_diameters;
             
-            # find the layer of our contact areas
-            my $h = $nozzle_diameter;
-            my $contact_layer = $layer;
-            while ($h > $contact_layer->height) {
-                $h -= $contact_layer->height;
-                my $next = $contact_layer->id - 1;
-                last if $next < 0;
-                $contact_layer = $self->layers->[$next];
-            }
-            
-            #$contact_layer->support_material_contact_height($contact_layer->height - $h);
-            $contact_layer->support_material_contact_height($contact_layer->height);
-            $contact{$contact_layer->id}  = [ @contact ];
-            $overhang{$contact_layer->id} = [ @overhang ];
+            my $contact_z = unscale($layer->print_z) - $nozzle_diameter;
+            push @contact_z, $contact_z;
+            $contact{$contact_z}  = [ @contact ];
+            $overhang{$contact_z} = [ @overhang ];
         }
     }
     
-    # determine depth for each layer (similar logic as combine_infill) using the maximum allowed layer height
+    # determine layer height for any non-contact layer
     my $support_material_height = $flow->nozzle_diameter;
     
-    # define the combinations
-    my @combine = ();   # layer_id => thickness in layers
-    {
-        my @layer_heights = map $self->layers->[$_]->height, 0..$#{$self->layers};
-        my $current_height = 0;
-        my @layers = ();
-        for my $layer_id (1 .. $#layer_heights) {  # Layer 0 is not available for combination because of the flange!
-            my $height = $self->layers->[$layer_id]->height;
-            
-            if ($current_height + $height > $support_material_height) {
-                $combine[$layer_id-1] = [@layers];
-                $current_height = 0;
-                @layers = ();
-            }
-            
-            $current_height += $height;
-            push @layers, $layer_id;
+    # generate additional layers according to such max height
+    my @support_layers = @contact_z;
+    for (my $i = $#support_layers; $i >= 0; $i--) {
+        if (($i == 0 && $support_layers[$i] > $support_material_height)
+            || ($support_layers[$i] - $support_layers[$i-1] > $support_material_height)) {
+            splice @support_layers, $i, 0, ($support_layers[$i] - $support_material_height);
+            $i++;
         }
     }
     
     # Let's now determine shells (interface layers) and normal support below them.
     my %interface = ();  # layer_id => [ expolygons ]
     my %support   = ();  # layer_id => [ expolygons ]
-    for my $layer_id (sort keys %contact) {
-        my $this = $contact{$layer_id};
+    for my $layer_id (0 .. $#support_layers) {
+        my $this = $contact{$support_layers[$layer_id]};
         # count contact layer as interface layer
         for (my $i = $layer_id-1; $i >= 0 && $i > $layer_id-$Slic3r::Config->support_material_interface_layers; $i--) {
             my $layer = $self->layers->[$i];
@@ -947,13 +930,12 @@ sub generate_support_material {
                 ],
                 [
                     (map @$_, @{$layer->slices}),
-                    (map @$_, @{$contact{$i}}),
                 ],
             );
         }
         
         # determine what layers does our support belong to
-        for (my $i = $layer_id-$Slic3r::Config->support_material_interface_layers; $i >= 0; $i -= $combine[$i] ? @{$combine[$i]} : 1) {
+        for (my $i = $layer_id-$Slic3r::Config->support_material_interface_layers; $i >= 0; $i--) {
             my $layer = $self->layers->[$i];
             
             # Compute support area on this layer as diff of upper support area
@@ -965,12 +947,26 @@ sub generate_support_material {
                 ],
                 [
                     (map @$_, @{$layer->slices}),
-                    (map @$_, @{$contact{$i}}),
                     (map @$_, @{$interface{$i}}),
                 ],
             );
         }
     }
+    
+    # initialize support object
+    push @{$self->print->objects}, my $object = Slic3r::Print::Object->new(
+        print   => $self->print,
+        size    => $self->size,  # cheating!
+    );
+    @{$object->layers} = ();  # temporary hack
+    push @{$object->layers}, map Slic3r::Layer->new(
+        object  => $object,
+        id      => $_,
+        height  => ($_ == 0) ? $support_layers[$_] : ($support_layers[$_] - $support_layers[$_-1]),
+        print_z => scale $support_layers[$_],
+        slice_z => -1,
+        slices  => [],
+    ), 0 .. $#support_layers;
 
     Slic3r::debugf "Generating patterns\n";
     
@@ -996,12 +992,12 @@ sub generate_support_material {
     
     my $process_layer = sub {
         my ($layer_id) = @_;
-        my $layer = $self->layers->[$layer_id];
+        my $layer = $object->layers->[$layer_id];
         
         my $result = {};
         
         # contact
-        if ($contact{$layer_id} && @{$contact{$layer_id}}) {
+        if (0 && $contact{$layer_id} && @{$contact{$layer_id}}) {
             # find centerline of the external loop of the contours
             my @external_loops = offset([ map @$_, @{$contact{$layer_id}} ], -$flow->scaled_width/2);
             
@@ -1090,7 +1086,7 @@ sub generate_support_material {
         
         # support or flange
         {
-            $fillers{support}->angle($angles[ ($layer_id  / ($combine[$layer_id] ? @{$combine[$layer_id]} : 1)) % @angles ]);
+            $fillers{support}->angle($angles[ ($layer_id) % @angles ]);
             my $density         = $support_density;
             my $flow_spacing    = $flow->spacing;
             
@@ -1113,7 +1109,7 @@ sub generate_support_material {
                 push @paths, map Slic3r::ExtrusionPath->new(
                     polyline        => Slic3r::Polyline->new(@$_),
                     role            => EXTR_ROLE_SUPPORTMATERIAL,
-                    height          => $combine[$layer_id] ? sum(map $self->layers->[$_]->height, @{$combine[$layer_id]}) : undef,
+                    height          => undef,
                     flow_spacing    => $params->{flow_spacing},
                 ), @p;
             }
@@ -1123,7 +1119,7 @@ sub generate_support_material {
         
         # islands
         $result->{islands} = union_ex([
-            map @$_, @{$contact{$layer_id}}, @{$interface{$layer_id}}, @{$support{$layer_id}},
+            map @$_, @{$interface{$layer_id}}, @{$support{$layer_id}},
         ]);
         
         return $result;
@@ -1131,13 +1127,13 @@ sub generate_support_material {
     
     my $apply = sub {
         my ($layer_id, $result) = @_;
-        my $layer = $self->layers->[$layer_id];
+        my $layer = $object->layers->[$layer_id];
         $layer->support_contact_fills(Slic3r::ExtrusionPath::Collection->new(paths => $result->{contact})) if $result->{contact};
         $layer->support_fills(Slic3r::ExtrusionPath::Collection->new(paths => [ @{$result->{interface}}, @{$result->{support}} ]));
         $layer->support_islands($result->{islands});
     };
     Slic3r::parallelize(
-        items => [ 0 .. $#{$self->layers} ],
+        items => [ 0 .. $#{$object->layers} ],
         thread_cb => sub {
             my $q = shift;
             $Slic3r::Geometry::Clipper::clipper = Math::Clipper->new;
@@ -1152,7 +1148,7 @@ sub generate_support_material {
             $apply->($_, $result->{$_}) for keys %$result;
         },
         no_threads_cb => sub {
-            $apply->($_, $process_layer->($_)) for 0 .. $#{$self->layers};
+            $apply->($_, $process_layer->($_)) for 0 .. $#{$object->layers};
         },
     );
 }
