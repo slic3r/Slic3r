@@ -3,7 +3,6 @@ use Moo;
 
 extends 'Slic3r::Fill::Base';
 
-has 'bounding_box'  => (is => 'rw');
 has 'cache'         => (is => 'rw', default => sub {{}});
 
 use Slic3r::Geometry qw(X1 Y1 X2 Y2 A B X Y scale unscale scaled_epsilon);
@@ -19,7 +18,6 @@ sub fill_surface {
     
     my ($expolygon_off) = $expolygon->offset_ex(scale $params{flow_spacing}/2);
     return {} if !$expolygon_off;  # skip some very small polygons (which shouldn't arrive here)
-    my $bounding_box = [ $expolygon->bounding_box ];
     
     my $flow_spacing = $params{flow_spacing};
     my $min_spacing = scale $params{flow_spacing};
@@ -30,7 +28,16 @@ sub fill_surface {
     my $cache_id = sprintf "d%s_s%s_a%s",
         $params{density}, $params{flow_spacing}, $rotate_vector->[0][0];
     
-    if (!$self->cache->{$cache_id} || !defined $self->bounding_box) {
+    if (!$self->cache->{$cache_id}) {
+        # compute bounding box
+        my $bounding_box = $self->bounding_box;
+        {
+            my $bb_expolygon = Slic3r::ExPolygon->new(Slic3r::Polygon->new_from_bounding_box($bounding_box));
+            $self->rotate_points($bb_expolygon, $rotate_vector);
+            $bounding_box = [ $bb_expolygon->bounding_box ];
+        }
+        
+        # define flow spacing according to requested density
         if ($params{density} == 1 && !$params{dont_adjust}) {
             $distance_between_lines = $self->adjust_solid_spacing(
                 width       => $bounding_box->[X2] - $bounding_box->[X1],
@@ -39,6 +46,7 @@ sub fill_surface {
             $flow_spacing = unscale $distance_between_lines;
         }
         
+        # generate the basic pattern
         my $x = $bounding_box->[X1];
         my @vertical_lines = ();
         for (my $i = 0; $x <= $bounding_box->[X2] + scaled_epsilon; $i++) {

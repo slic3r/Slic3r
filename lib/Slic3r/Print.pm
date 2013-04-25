@@ -20,6 +20,7 @@ has 'regions'                => (is => 'rw', default => sub {[]});
 has 'support_material_flow'  => (is => 'rw');
 has 'first_layer_support_material_flow' => (is => 'rw');
 has 'has_support_material'   => (is => 'lazy');
+has 'fill_maker'             => (is => 'lazy');
 
 # ordered collection of extrusion paths to build skirt loops
 has 'skirt' => (
@@ -70,6 +71,11 @@ sub _build_has_support_material {
         || $self->config->support_material_enforce_layers > 0;
 }
 
+sub _build_fill_maker {
+    my $self = shift;
+    return Slic3r::Fill->new(print => $self);
+}
+
 sub add_model {
     my $self = shift;
     my ($model) = @_;
@@ -112,7 +118,8 @@ sub add_model {
             $mesh->scale($Slic3r::Config->scale / &Slic3r::SCALING_FACTOR);
         }
         
-        my $complete_mesh = Slic3r::TriangleMesh->merge(grep defined $_, @meshes);
+        my @defined_meshes = grep defined $_, @meshes;
+        my $complete_mesh = @defined_meshes == 1 ? $defined_meshes[0] : Slic3r::TriangleMesh->merge(@defined_meshes);
         
         # initialize print object
         my $print_object = Slic3r::Print::Object->new(
@@ -389,7 +396,7 @@ sub export_gcode {
     # this will generate extrusion paths for each layer
     $status_cb->(80, "Infilling layers");
     {
-        my $fill_maker = Slic3r::Fill->new('print' => $self);
+        my $fill_maker = $self->fill_maker;
         Slic3r::parallelize(
             items => sub {
                 my @items = ();  # [obj_idx, layer_id]

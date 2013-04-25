@@ -7,7 +7,7 @@ use warnings;
 use Boost::Geometry::Utils;
 use List::Util qw(first);
 use Math::Geometry::Voronoi;
-use Slic3r::Geometry qw(X Y A B point_in_polygon same_line line_length epsilon);
+use Slic3r::Geometry qw(X Y A B point_in_polygon same_line epsilon);
 use Slic3r::Geometry::Clipper qw(union_ex JT_MITER);
 
 # the constructor accepts an array of polygons 
@@ -131,7 +131,7 @@ sub encloses_line {
         # optimization
         return @$clip == 1 && same_line($clip->[0], $line);
     } else {
-        return @$clip == 1 && abs(line_length($clip->[0]) - $line->length) < $tolerance;
+        return @$clip == 1 && abs(Boost::Geometry::Utils::linestring_length($clip->[0]) - $line->length) < $tolerance;
     }
 }
 
@@ -159,11 +159,6 @@ sub bounding_box_polygon {
         [ $bb[2], $bb[3] ],
         [ $bb[0], $bb[3] ],
     ]);
-}
-
-sub bounding_box_center {
-    my $self = shift;
-    return Slic3r::Geometry::bounding_box_center($self->contour);
 }
 
 sub clip_line {
