@@ -897,7 +897,7 @@ sub generate_support_material {
     }
     
     # determine layer height for any non-contact layer
-    my $support_material_height = $flow->nozzle_diameter;
+    my $support_material_height = $flow->nozzle_diameter * 0.75;
     
     # generate additional layers according to such max height
     my @support_layers = @contact_z;
