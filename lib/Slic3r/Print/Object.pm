@@ -831,7 +831,7 @@ sub generate_support_material {
     
     # determine contact areas
     my @contact_z = ();
-    my %contact  = ();  # contact_z => [ expolygons ]
+    my %contact  = ();  # contact_z => [ polygons ]
     my %overhang = ();  # contact_z => [ expolygons ] - this stores the actual overhang supported by each contact layer
     for my $layer_id (1 .. $#{$self->layers}) {
         my $layer = $self->layers->[$layer_id];
@@ -877,7 +877,7 @@ sub generate_support_material {
                     );
                 }
             }
-            push @contact, @{union_ex($diff)};
+            push @contact, @$diff;
         }
         next if !@contact;
         
@@ -890,6 +890,7 @@ sub generate_support_material {
             my $nozzle_diameter = sum(@nozzle_diameters)/@nozzle_diameters;
             
             my $contact_z = unscale($layer->print_z) - $nozzle_diameter;
+            ###$contact_z = unscale($layer->print_z) - $layer->height;
             push @contact_z, $contact_z;
             $contact{$contact_z}  = [ @contact ];
             $overhang{$contact_z} = [ @overhang ];
@@ -910,12 +911,12 @@ sub generate_support_material {
     }
     
     # Let's now determine shells (interface layers) and normal support below them.
-    my %interface = ();  # layer_id => [ expolygons ]
-    my %support   = ();  # layer_id => [ expolygons ]
+    my %interface = ();  # layer_id => [ polygons ]
+    my %support   = ();  # layer_id => [ polygons ]
     for my $layer_id (0 .. $#support_layers) {
-        my $this = $contact{$support_layers[$layer_id]};
+        my $this = $contact{$support_layers[$layer_id]} || [];
         # count contact layer as interface layer
-        for (my $i = $layer_id-1; $i >= 0 && $i > $layer_id-$Slic3r::Config->support_material_interface_layers; $i--) {
+        for (my $i = $layer_id; $i >= 0 && $i > $layer_id-$Slic3r::Config->support_material_interface_layers; $i--) {
             my $layer = $self->layers->[$i];
             
             # Compute interface area on this layer as diff of upper contact area
@@ -923,13 +924,13 @@ sub generate_support_material {
             # This diff is responsible of the contact between support material and
             # the top surfaces of the object. We should probably offset the layer 
             # slices before performing the diff, but this needs investigation.
-            $this = $interface{$i} = diff_ex(
+            $this = $interface{$i} = diff(
                 [
-                    (map @$_, @$this),
-                    (map @$_, @{ $interface{$i} || [] }),
+                    @$this,
+                    @{ $interface{$i} || [] },
                 ],
                 [
-                    (map @$_, @{$layer->slices}),
+                    #(map @$_, @{$layer->slices}),
                 ],
             );
         }
@@ -940,14 +941,14 @@ sub generate_support_material {
             
             # Compute support area on this layer as diff of upper support area
             # and layer slices.
-            $this = $support{$i} = diff_ex(
+            $this = $support{$i} = diff(
                 [
-                    (map @$_, @$this),
-                    (map @$_, @{ $support{$i} || [] }),
+                    @$this,
+                    @{ $support{$i} || [] },
                 ],
                 [
-                    (map @$_, @{$layer->slices}),
-                    (map @$_, @{$interface{$i}}),
+                    #(map @$_, @{$layer->slices}),
+                    @{$interface{$i}},
                 ],
             );
         }
@@ -994,7 +995,7 @@ sub generate_support_material {
         my ($layer_id) = @_;
         my $layer = $object->layers->[$layer_id];
         
-        my $result = {};
+        my $result = { interface => [], support => [] };
         
         # contact
         if (0 && $contact{$layer_id} && @{$contact{$layer_id}}) {
@@ -1061,11 +1062,11 @@ sub generate_support_material {
         }
         
         # interface
-        {
+        if ($interface{$layer_id}) {
             $fillers{interface}->angle($interface_angle);
             
             my @paths = ();
-            foreach my $expolygon (@{ $interface{$layer_id} }) {
+            foreach my $expolygon (offset_ex($interface{$layer_id}, -$flow->scaled_width/2)) {
                 my @p = $fillers{interface}->fill_surface(
                     Slic3r::Surface->new(expolygon => $expolygon),
                     density         => $interface_density,
@@ -1085,7 +1086,7 @@ sub generate_support_material {
         }
         
         # support or flange
-        {
+        if ($support{$layer_id}) {
             $fillers{support}->angle($angles[ ($layer_id) % @angles ]);
             my $density         = $support_density;
             my $flow_spacing    = $flow->spacing;
@@ -1098,7 +1099,7 @@ sub generate_support_material {
             }
             
             my @paths = ();
-            foreach my $expolygon (@{ $support{$layer_id} }) {
+            foreach my $expolygon (@{union_ex($support{$layer_id})}) {
                 my @p = $fillers{support}->fill_surface(
                     Slic3r::Surface->new(expolygon => $expolygon),
                     density         => $density,
@@ -1119,7 +1120,8 @@ sub generate_support_material {
         
         # islands
         $result->{islands} = union_ex([
-            map @$_, @{$interface{$layer_id}}, @{$support{$layer_id}},
+            @{$interface{$layer_id} || []},
+            @{$support{$layer_id}   || []},
         ]);
         
         return $result;
