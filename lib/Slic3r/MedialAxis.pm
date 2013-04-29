@@ -1,36 +1,12 @@
 package Slic3r::MedialAxis;
 use strict;
-#use warnings;
 
 use List::Util qw(first min max);
 use Boost::Geometry::Utils qw(polygon_medial_axis);
 use Slic3r::Geometry qw(line_intersection);
 use Slic3r::Geometry::Clipper qw(union_ex diff_ex);
 
-my $pi = 4*atan2(1,1);
-my $medial_axis_hpp_debug_styles = '.ine1linearprimary circle {fill:green;}'.
-    '.ine1linearprimary line {stroke:purple;stroke-width:15000;}'.
-    '.ine1linearsecondary circle {fill:lightgreen;}'.
-    '.ine1linearsecondary line {stroke:purple;stroke-dasharray:3000 3000;stroke-width:15000;}'.
-    '.cirevtpt {fill:white;}'.
-    '.cirevtcir {fill:none;stroke:gray;stroke-width:10000}'.
-    '.edge12 {stroke:green;stroke-width:7000;stroke-dasharray:2000 2000;}'.
-    '.edge23 {stroke:lightgreen;stroke-width:7000;stroke-dasharray:2000 2000;}'.
-    '.siteseg1 {stroke:brown;stroke-width:40000;opacity:0.4;stroke-dasharray:5000 5000;}'.
-    '.siteseg3 {stroke:orange;stroke-width:40000;opacity:0.4;stroke-dasharray:5000 5000;}'.
-    '.sitept1 {fill:brown;opacity:0.4;}'.
-    '.sitept3 {fill:orange;opacity:0.4;}'.
-    '.evtfoot  {fill:red;stroke:white;stroke-width:20000;}'.
-    '.evtfoot2 {fill:red;stroke:blue;stroke-width:20000;}'.
-    '.evtfoot3 {fill:gray;stroke:red;stroke-width:20000;}'.
-    '.evtfootc {fill:pink;stroke:blue;stroke-width:20000;}'.
-    '.evtfootworking {fill:yellow;stroke:green;stroke-width:20000;}'.
-    '.edge_missing_foot {stroke:yellow;stroke-width:230000;opacity:0.5;stroke-dasharray:8000 8000;}'
-    ;
-
-# doesn't have to be medial axis specific
-# this should be just a half-edge graph representation that can work for
-# Voronoi or medial axis edges, maybe
+my $pi = 4 * atan2(1, 1);
 
 sub new {
     my $class = shift;
@@ -39,11 +15,6 @@ sub new {
     if (ref($_[0]) =~ /(ARRAY|Polygon)/) {
         $self = polygon_medial_axis($_[0]);
         bless $_, 'Slic3r::MedialAxis::Edge' for @{$self->{edges}};
-
-        if (0 && $DB::svg) {
-        $DB::svg->appendStyle($medial_axis_hpp_debug_styles);
-        $DB::svg->appendRaw($self->{events});# if ($DB::current_layer_id > 88 && $DB::current_layer_id < 93);
-        }
     }
     elsif (ref $_[0] eq 'HASH') {
         $self->{edges}    = $_[0]->{edges};
@@ -56,45 +27,30 @@ sub new {
             $self->{max_radius} = $edge->radius;
         }
         
+        # find the P1 control point for the quadratic Bezier curve
+        # that represents the parabolic arc
         if ($edge->curved && $edge->internal) {
-            # my $tan_angle_1 = (atan2($edge->[FOOT]->[Y] - $edge->[POINT]->[Y],
-                                     # $edge->[FOOT]->[X] - $edge->[POINT]->[X]) 
-                             # + atan2($edge->[TWIN]->[NEXT]->[FOOT]->[Y] - $edge->[POINT]->[Y],
-                                     # $edge->[TWIN]->[NEXT]->[FOOT]->[X] - $edge->[POINT]->[X])
-                               # ) / 2;
-            # my $tan_angle_2 = (atan2($edge->[NEXT]->[FOOT]->[Y] - $edge->[NEXT]->[POINT]->[Y],
-                                     # $edge->[NEXT]->[FOOT]->[X] - $edge->[NEXT]->[POINT]->[X]) 
-                             # + atan2($edge->[TWIN]->[FOOT]->[Y] - $edge->[NEXT]->[POINT]->[Y],
-                                     # $edge->[TWIN]->[FOOT]->[X] - $edge->[NEXT]->[POINT]->[X])
-                               # ) / 2;
-            my $tan_angle_1 = (atan2($edge->foot->[1] - $edge->vertex0->[1],
-                                     $edge->foot->[0] - $edge->vertex0->[0]) 
-                             + atan2($edge->twin->next->foot->[1] - $edge->vertex0->[1],
-                                     $edge->twin->next->foot->[0] - $edge->vertex0->[0])
-                               ) / 2;
-            my $tan_angle_2 = (atan2($edge->next->foot->[1] - $edge->next->vertex0->[1],
-                                     $edge->next->foot->[0] - $edge->next->vertex0->[0]) 
-                             + atan2($edge->twin->foot->[1] - $edge->next->vertex0->[1],
-                                     $edge->twin->foot->[0] - $edge->next->vertex0->[0])
-                               ) / 2;
-            
             my $line1 = [[@{$edge->vertex0}[0, 1]], 
-                         [$edge->vertex0->[0] + 100000 * CORE::cos($tan_angle_1),
-                          $edge->vertex0->[1] + 100000 * CORE::sin($tan_angle_1)]
+                         [$edge->vertex0->[0] + 100000 * CORE::cos($edge->theta),
+                          $edge->vertex0->[1] + 100000 * CORE::sin($edge->theta)]
                         ];
             my $line2 = [[@{$edge->next->vertex0}[0, 1]],
-                         [$edge->next->vertex0->[0] + 100000 * CORE::cos($tan_angle_2),
-                          $edge->next->vertex0->[1] + 100000 * CORE::sin($tan_angle_2)]
+                         [$edge->next->vertex0->[0] + 100000 * CORE::cos($edge->twin->theta),
+                          $edge->next->vertex0->[1] + 100000 * CORE::sin($edge->twin->theta)]
                         ];
 
             $edge->curved(line_intersection($line1, $line2));
 
-            # if $edge->[CURVED] is false the edge is straight
-            # line_intersection() will return undef (false) when
-            # the lines are practically parallel,
-            # so in that case the edge will now be treated as straight
+            # If $edge->[CURVED] is false the edge is just a straight
+            # line segment. line_intersection() will return undef (false) when
+            # the lines are practically parallel, so in that case the 
+            # curved edge will in effect be downgraded to a straight segment.
+
         }
     }
+    
+    #Slic3r::MedialAxis::EdgeView::edges_svg($self->{edges}) if ($DB::current_layer_id == 32);
+
     bless $self, $class;
     return $self;
 }
@@ -143,12 +99,11 @@ sub offset_interval_filter {
         my $er_max = ($er1 > $er2) ? $er1 : $er2;
         my $er_min = ($er1 > $er2) ? $er2 : $er1;
         my $ephi = $e->phi;
-        while ($ephi >  $pi) { $ephi-=2*$pi; }
-        while ($ephi < -$pi) { $ephi+=2*$pi; }
 
         # enforce a minimum resolution - corners interpreted by resolution
         # or tool diameter are better modeled as circular arcs that the 
         # tool edge will touch - meaning edge radius can never go to zero
+        # ... not really using this yet - might just turn into "lower bracket"
         my $resolution = $tool_diameter/2;
 
         my $ep = $e->prev;
@@ -186,39 +141,34 @@ sub offset_interval_filter {
                                 || (   $er2 >  $offset[$j]
                                     && $er1 <= $offset[$j] )
                                )
-                            && ($j != 0 ||
-                                $corner # checking $corner might be superfluous
+                            && ($j != 0 
+                                || $corner # checking $corner might be superfluous
                                )
                            ) ? 1 : 0;
             
             push @{$intervals[$j]}, []  if ($er1 > $bracket_threshold ) && @{$intervals[$j]->[-1]};
             push @{$intervals[$j]}, []  if ($j != 0 && $er1 && $er1 <= $offset[$j] && $er2 > $offset[$j]) && @{$intervals[$j]->[-1]};
 
-# corner issue not settled...
-# can we get around it?
-#$corner = 0;
+            # decide whether to keep this edge
             if ($er_min <= $bracket_threshold
                 && (!$corner || $twinturn
-                   
                    # trying to fix problem of false positive corner detection
-                   || $er_min >= $offset[$j]
-                   
+                   || $er_min >= $offset[$j] # seems good
                    )) {
 
-                # debug - save keeper edges for display
-                #push @dblines, [[$e->vertex0->[0], $e->vertex0->[1]], 
-                #                [$e->next->vertex0->[0], $e->next->vertex0->[1]]
-                #               ];
+                # DEBUG - save keeper edges for display
+                push @dblines, [[$e->vertex0->[0], $e->vertex0->[1]], 
+                                [$e->next->vertex0->[0], $e->next->vertex0->[1]]];               
 
                 push @{$intervals[$j]->[-1]},  Slic3r::MedialAxis::EdgeView->new(
-                              $e,
-                              $offset[$j],
-                              $resolution,
-                              ($er1  > $bracket_threshold || $er2  > $bracket_threshold)
+                              edge => $e,
+                              offset => $offset[$j],
+                              resolution => $resolution,
+                              interpolate => ($er1  > $bracket_threshold || $er2  > $bracket_threshold)
                                   ? $bracket_threshold
                                   : undef,
-                              $edge_intersect,
-                              $twinturn
+                              intersect => $edge_intersect,
+                              twinturn => $twinturn
                               );
                 
                 # set up next, prev, and twin references between EdgeViews
@@ -243,7 +193,7 @@ sub offset_interval_filter {
                 # A loop just ended.
                 # Does the last sequence of edges include the entire loop?
                 # If not, we may have two or more subsequences of the loop
-                # colloected so far. The first of those subsequences may start
+                # collected so far. The first of those subsequences may start
                 # with the first edge of the loop. If so, and if the last edge 
                 # we processed was a keeper, we should merge that last sequence 
                 # and the sequence holding the beginning of the loop.
@@ -276,22 +226,9 @@ sub offset_interval_filter {
                     # it's edge list to the loop start subset
                 
                     if ($match) {
-                        $DB::svg->appendPoints({r=>100000, style=>"fill:aqua;"},
-                          [$intervals[$j]->[-1]->[-1]->point->[0], $intervals[$j]->[-1]->[-1]->point->[1]],
-                          [$intervals[$j]->[$last_loop_starts[$j]]->[0]->point->[0], $intervals[$j]->[$last_loop_starts[$j]]->[0]->point->[1]],
-                          ) if 0 && $DB::svg;
-                        $DB::svg->appendPolylines({style=>"stroke:aqua;stroke-width:30000;fill:none;"},
-                          [map [@{$_->point}[0,1]], @{$intervals[$j]->[$last_loop_starts[$j]]}],
-                          [map [@{$_->point}[0,1]], @{$intervals[$j]->[-1]}]
-                          ) if 0 && $DB::svg;
-
-                        # doesn't work quite the same when done in one line
-                        # so do the splice and unshift separately, unless you
-                        # figure out why it didn't work as one line
                         my ($last_one) = splice(@{$intervals[$j]}, -1, 1);
                         unshift @{$intervals[$j]->[$last_loop_starts[$j]]},
                                 @$last_one;
-                        
                         # fix prev,next,twin references
                         if ($#{$intervals[$j]->[$last_loop_starts[$j]]} > $#$last_one) {
                             if (   $intervals[$j]->[$last_loop_starts[$j]]->[$#$last_one]->edge->twin
@@ -330,7 +267,7 @@ sub offset_interval_filter {
     # edge has an edge->next reference to the earlier one's first edge.
     foreach my $interval (@intervals) {
         # if later one ends where earlier one begins, prepend later to earlier
-#$DB::svg->appendPolylines({style=>"stroke:blue;stroke-width:30000;fill:none;"}, map {[map {$_->points} @$_]} @$interval) if 1 && $DB::svg;
+        #$DB::svg->appendPolylines({style=>"stroke:blue;stroke-width:30000;fill:none;"}, map {[map {$_->points} @$_]} @$interval) if 1 && $DB::svg;
         for (my $i = $#{$interval}; $i > -1; $i--) {
             for (my $j = 0; $j < $i; $j++) {
                 next if $i == $j;
@@ -358,14 +295,14 @@ sub offset_interval_filter {
                         $interval->[$j]->[$ind]->next($interval->[$j]->[$ind + 1]);
                         $interval->[$j]->[$ind + 1]->next($interval->[$j]->[$ind]);
                         last;
-                     }                
+                    }                
                 }
             }
         }
     }
-    foreach my $interval (@intervals) {
-#        $DB::svg->appendPolylines({style=>"stroke:red;stroke-width:20000;fill:none;"}, map {[map {$_->points} @$_]} @$interval) if 1 && $DB::svg;
-    }
+    #foreach my $interval (@intervals) {
+    #    $DB::svg->appendPolylines({style=>"stroke:red;stroke-width:20000;fill:none;"}, map {[map {$_->points} @$_]} @$interval) if 1 && $DB::svg;
+    #}
 
     return @intervals;
 }
@@ -381,14 +318,10 @@ sub get_offset_fragments {
     my ($intervals, $keep_marked) = @_;
     my @interval_thin_paths;
 
-for (my $i = 0; $i < @$intervals; $i++) {
-foreach my $polyedge (@{$intervals->[$i]}) {
-print "visited\n" if @{$polyedge} && ($polyedge->[0]->visited || $polyedge->[-1]->visited);
-}
-}
-
     for (my $i = 0; $i < @$intervals; $i++) {
+
         my @new_outer_frags = ([]);
+
         foreach my $polyedge (@{$intervals->[$i]}) {
             $_->visited(0) for @$polyedge;
         }
@@ -397,37 +330,20 @@ print "visited\n" if @{$polyedge} && ($polyedge->[0]->visited || $polyedge->[-1]
 
         foreach my $polyedge (@{$intervals->[$i]}) {
 
-# this didn't fix immediate issue
-# but seems like a good strategy in genereral here to make sure we're
-# only dealing with one level of branching when "thin wall" is anything less
-# than _2_ extrusion widths, not one
-# so fix other thing, then come back and consider this
-#$DB::svg->appendRaw('<g>');
-#my @polyedge = map {$_->[1]/=2.1;$_} grep scalar($_->points) > 0, map {$_->[1]*=2.1;$_} @$polyedge;
-
-#my $lp = $polyedge->[-1]->end_point;
-
-#print "len:",scalar(@$polyedge),"\n";
-
-my @polyedge = map {$_->[1]*=2.1;$_} @$polyedge;
-$polyedge[-1]->next->[1] *= 2.1;
-
-my @polyedge = grep scalar($_->points) > 0, @polyedge;
-
-#$DB::svg->appendPolylines({style=>"stroke:blue;opacity:0.51;stroke-width:50000;fill:none;"},  [map {$_->points} @polyedge]) if (@polyedge) && $DB::svg;
-@polyedge = map {$_->[1]/=2.1;$_} @polyedge;
-$polyedge[-1]->next->[1] /= 2.1;
-#$DB::svg->appendPolylines({style=>"stroke:lightblue;opacity:1;stroke-width:40000;fill:none;"},  [map {$_->points} @polyedge]) if (@polyedge) && $DB::svg;
-#$DB::svg->appendRaw('</g>');
+            #Slic3r::MedialAxis::EdgeView::edges_svg($polyedge) if ($DB::current_layer_id >= 32);
+            my @polyedge = map {$_->[1] *= 2.1; $_} @$polyedge;
+            $polyedge[-1]->next->[1]    *= 2.1;
+            my @polyedge = grep scalar($_->points) > 0, @polyedge;
+            #$DB::svg->appendPolylines({style=>"stroke:blue;opacity:0.51;stroke-width:50000;fill:none;"},  [map {$_->points} @polyedge]) if (@polyedge) && $DB::svg;
+            @polyedge = map {$_->[1] /= 2.1; $_} @polyedge;
+            $polyedge[-1]->next->[1] /= 2.1;
+            #$DB::svg->appendPolylines({style=>"stroke:lightblue;opacity:1;stroke-width:40000;fill:none;"},  [map {$_->points} @polyedge]) if (@polyedge) && $DB::svg;
+            #Slic3r::MedialAxis::EdgeView::edges_svg(\@polyedge) if ($DB::current_layer_id >= 32);
 
             # Initial pass sets up a rough left-right edge distinction
             # for thin wall sections, that we will then refine.
-            # Processing an earlier polyedge can take care of one that comes
-            # later, so don't reprocess that later one if eiter end has already
-            # been marked.
-            #if (@{$polyedge} && !$polyedge->[0]->visited) {
-            #    foreach my $edge (@$polyedge) {
-            if (@polyedge && !$polyedge[0]->visited) {
+
+            if (@polyedge && first {!$_->visited} @polyedge) {
                 foreach my $edge (@polyedge) {
                     if ($edge->visited != 2) {
                         $edge->twin->visited(2);
@@ -441,59 +357,17 @@ $polyedge[-1]->next->[1] /= 2.1;
             # return no points, so we can discard those edges, reducing the
             # left-right distinction task to dealing with just one level of
             # branching.
-        #$DB::svg->appendRaw('<g>');
-        #    my @polyedge = grep scalar($_->points) > 0, @$polyedge;
-        #    #my @polyedge = grep 1 || scalar($_->points) > 0, @$polyedge;
-        #$DB::svg->appendRaw('</g>');
-            # TODO Should save and use those points instead of regenerating 
-            # them at the end. 
-#$DB::svg->appendRaw('<g>');            
-#$DB::svg->appendPolylines({style=>"stroke:red;opacity:1;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited != 2 || $_->visited != 1} @polyedge]) if (grep {$_->visited != 2 || $_->visited != 1} @polyedge) && $DB::svg;
-#$DB::svg->appendPolylines({style=>"stroke:yellow;opacity:1;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited==2} @polyedge]) if (grep {$_->visited==2} @polyedge) && $DB::svg;
-#$DB::svg->appendPolylines({style=>"stroke:pink;opacity:1;stroke-width:20000;fill:none;"},    [map {$_->points} grep {$_->visited==1} @polyedge]) if (grep {$_->visited==1} @polyedge) && $DB::svg;
-#$DB::svg->appendPoints({style=>"",r=>20000},  map {[@{$_->start_point},$_->visited == 1 ? 'blue':'red']} @polyedge) if $DB::svg;
-#$DB::svg->appendRaw('</g>');            
+            #$DB::svg->appendRaw('<g>');            
+            #$DB::svg->appendPolylines({style=>"stroke:red;opacity:1;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited != 2 || $_->visited != 1} @polyedge]) if (grep {$_->visited != 2 || $_->visited != 1} @polyedge) && $DB::svg;
+            #$DB::svg->appendPolylines({style=>"stroke:yellow;opacity:1;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited==2} @polyedge]) if (grep {$_->visited==2} @polyedge) && $DB::svg;
+            #$DB::svg->appendPolylines({style=>"stroke:pink;opacity:1;stroke-width:20000;fill:none;"},    [map {$_->points} grep {$_->visited==1} @polyedge]) if (grep {$_->visited==1} @polyedge) && $DB::svg;
+            #$DB::svg->appendPoints({style=>"",r=>20000},  map {[@{$_->start_point},$_->visited == 1 ? 'blue':'red']} @polyedge) if $DB::svg;
+            #$DB::svg->appendRaw('</g>');            
 
-if (0) {
-            # Fix up visited to be same for all consecutive edges (even out 
-            # to nested branches) at start and finish of edge sequence.
-            my $start_mark = $polyedge[0]->visited;
-            #foreach my $edge (@polyedge) {
-            for (my $i = 0; $i < @polyedge; $i++) {
-                my $edge = $polyedge[$i];
-                my $nextedge = $i != $#polyedge ? $polyedge[$i+1] : $edge->next; # not ideal
-                if ($edge->radius >= $edge->offset*2
-|| ($edge->radius == 0 && $nextedge->radius >= $edge->offset*2)
-                   
-                   ) {
-                    $edge->visited($start_mark);                            
-                } else {last;}
-                #last if $edge->radius <= $edge->offset && $nextedge->radius <= $edge->offset
-            }
-            if ($polyedge[0]->twin == $polyedge[-1]) {
-                $start_mark = $start_mark == 1 ? 2 : 1;
-            }
-            #foreach my $edge (reverse @polyedge) {
-            for (my $i = $#polyedge; $i > -1; $i--) {
-                my $edge = $polyedge[$i];
-                my $nextedge = $i != $#polyedge ? $polyedge[$i+1] : $edge->next; # not ideal
-                if ($nextedge->radius >= $edge->offset*2
-|| ($nextedge->radius == 0 && $edge->radius >= $edge->offset*2)
-                   ) {
-                    $edge->visited($start_mark);                            
-                } else {last;}
-                #last if $edge->radius <= $edge->offset && $nextedge->radius <= $edge->offset
-            }
-#$DB::svg->appendRaw('<g>');
-#$DB::svg->appendPolylines({style=>"stroke:white;opacity:0.5;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited == 2} @polyedge]) if (grep {$_->visited == 2} @polyedge) && $DB::svg;
-#$DB::svg->appendPolylines({style=>"stroke:purple;opacity:0.5;stroke-width:20000;fill:none;"}, [map {$_->points} grep {$_->visited == 1} @polyedge]) if (grep {$_->visited == 1} @polyedge) && $DB::svg;
-#$DB::svg->appendPoints({style=>"",r=>15000},  map {[@{$_->start_point},$_->visited == 1 ? 'green':'yellow']} @polyedge) if $DB::svg;
-#$DB::svg->appendRaw('</g>');
-}
             # these two for()s do one level of branch visited flag fixup
             # and one level should be all we need when handling just the 
             # edges with points when radius < offset
-if (1) {
+
             for (my $i = 1; $i < $#polyedge; $i++) {
                 if (
                        $polyedge[$i - 1]->visited == 2
@@ -512,7 +386,11 @@ if (1) {
                     $polyedge[$i]->visited(1);                            
                 }
             }
-}
+            #$DB::svg->appendRaw('<g>');
+            #$DB::svg->appendPolylines({style=>"stroke:white;opacity:0.5;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited == 2} @polyedge]) if (grep {$_->visited == 2} @polyedge) && $DB::svg;
+            #$DB::svg->appendPolylines({style=>"stroke:purple;opacity:0.5;stroke-width:20000;fill:none;"}, [map {$_->points} grep {$_->visited == 1} @polyedge]) if (grep {$_->visited == 1} @polyedge) && $DB::svg;
+            #$DB::svg->appendPoints({style=>"",r=>15000},  map {[@{$_->start_point},$_->visited == 1 ? 'green':'yellow']} @polyedge) if $DB::svg;
+            #$DB::svg->appendRaw('</g>');
             
             # add the left or right edge to our collection
             push(@new_outer_frags, []) if @{$new_outer_frags[-1]};
@@ -527,91 +405,7 @@ if (1) {
             }
         }
 
-        # filter out frags that don't actually go into thin sections
-
-        @new_outer_frags = grep {
-            #$DB::svg->appendPolylines({style=>"stroke:orange;opacity:1;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited == 2} @$_]) if (grep {$_->visited == 2} @$_) && $DB::svg;
-            #$DB::svg->appendPolylines({style=>"stroke:lime;opacity:1;stroke-width:20000;fill:none;"},    [map {$_->points} grep {$_->visited == 1} @$_]) if (grep {$_->visited == 1} @$_) && $DB::svg;
-
-             (grep {
-                  (
-                   (       $_->radius  >= $_->offset*2
-                   && $_->next->radius <  $_->offset*2
-                   && $_->next->radius != 0
-                   && ! $_->twinturn
-                   )
-                  ||
-                   (        $_->radius <  $_->offset*2
-                   && $_->next->radius >= $_->offset*2
-                   && $_->radius != 0
-                   && ! $_->twinturn
-                   )
-                 )
-             } @$_)
-             # || 
-              # (grep {
-                  # (        $_->radius <= $_->offset*2
-                  # && $_->next->radius <= $_->offset*2
-                  # )                     
-              # } @$_)
-              || (grep {
-                   ($_->radius < $_->offset*2.1 && ! $_->twinturn)                     
-               } @$_)
-              
-              
-             # || (@$_ &&
-                     # (    
-                      # # special case from above sets this up to detect to keep
-                      # $_->[-1]->radius == 0
-                      # ||
-                      # # similar where we start at edge coming out of corner
-                      # # TWINTURN is the key to distinguishing those cases
-                      # # from other corner cases we mean to filter out, where TWINTURN == 1 or true
-                        # ($_->[0]->radius == 0
-                         # && !$_->[0]->twinturn
-                        # )
-                     # )
-                 # )
-            } @new_outer_frags
-            if 1;
-
-if (0) { # instead of these, try using an endpoint() function on the last EdgeView edge when collecting final points after this disabled section
-    
-        # for last edge, add copy of edge after last edge, to 
-        # get the end point of the last edge
-        for (my $i = 0; $i < @new_outer_frags; $i++) {
-            if (@{$new_outer_frags[$i]} 
-                #skip loop case handled next
-                && $new_outer_frags[$i]->[-1]->next != $new_outer_frags[$i]->[0]->edge
-               ) {
-                my $end = Slic3r::MedialAxis::EdgeView->new(
-                    #($edge, $offset, $resolution, $interpolate, $intersect, $twinturn)
-                    $new_outer_frags[$i]->[-1]->next,
-                    $new_outer_frags[$i]->[-1]->offset,
-                    $new_outer_frags[$i]->[-1]->[&Slic3r::MedialAxis::EdgeView::RESOLUTION],
-                    undef,
-                    0,
-                    0
-                    );
-                push @{$new_outer_frags[$i]}, $end;
-            }
-        }
-}
-if (0) {
-        # for loops, add copy of first edge at end, to close the loop
-        # (will be trimmed for extrusion radius later)
-        for (my $i = 0; $i < @new_outer_frags; $i++) {
-            if (@{$new_outer_frags[$i]}
-                && $new_outer_frags[$i]->[-1]->next == $new_outer_frags[$i]->[0]->edge
-               ) {
-                my $end = Slic3r::MedialAxis::EdgeView->new(@{$new_outer_frags[$i]->[0]});
-                $end->[&Slic3r::MedialAxis::EdgeView::INTERPOLATE] = undef;
-                $end->[&Slic3r::MedialAxis::EdgeView::INTERSECT] = 0; # turn off if it was on
-                push @{$new_outer_frags[$i]}, $end;
-            }
-        }
-}
-
+        # convert EdgeView sequences to Polylines 
         my $thin_paths = [
             grep @$_ > 1, 
             map [(map {(grep $_, ($_->start_point, $_->mid_points))} @$_),
@@ -625,6 +419,14 @@ if (0) {
 
         push @interval_thin_paths, $thin_paths;
     }
+
+    # reset visited values to zero
+    for (my $i = 0; $i < @$intervals; $i++) {
+        foreach my $polyedge (@{$intervals->[$i]}) {
+            $_->visited(0) for @$polyedge;
+        }
+    }
+
     return \@interval_thin_paths;
 }
 
@@ -635,9 +437,7 @@ sub merge_expolygon_and_medial_axis_fragments {
     my @all_expolygons = @$offset_expolygons;
     my @loops_and_paths;
 
-    if (!@ma) {
-        return $offset_expolygons;
-    }
+    return $offset_expolygons if !@ma;
 
     # Get expolygon that is the original minus the offset polygon(s).
     # This is the zone where thin walls and points live.
@@ -698,18 +498,7 @@ sub merge_expolygon_and_medial_axis_fragments {
     # and polygon fragments into continuous paths.
 
     my @all_frags = grep @$_ > 1, (@offset_polylines, @offset_holes_polylines, @boost_trimmed);
-
     Slic3r::Geometry::combine_polyline_fragments(\@all_frags, $distance/20);
-
-    # TODO: some of those might have turned back into polygons
-    # and some of those could be holes
-    # should detect that and leave them that way instead of treating as polylines
-    # and put the holes with other untouched holes
-    # Then, need to get fragmented holes in with the normal holes too, to 
-    # preserve the intended ordering from the hole sorting that happens below.
-    # But somehow that has to handle Polylines for it's nesting tests.
-    # ... reconsider above - things have changed a bit since then
-
     my @ex_frags = map Slic3r::ExPolygon->new($_), @all_frags;
 
     # Hack Polylines into ExPolygons.
@@ -727,15 +516,15 @@ package Slic3r::MedialAxis::Edge;
 use strict;
 
 use constant SOURCE_INDEX => 0;
-use constant POINT    => 1; # should rename this 'vertex0' and use 'point' for the polygon point, or foot
-use constant TWIN     => 2;
-use constant NEXT     => 3;
-use constant PREV     => 4;
-use constant THETA    => 5;
-use constant PHI      => 6;
-use constant CURVED   => 7;
-use constant PRIMARY  => 8;
-use constant INTERNAL => 9;
+use constant VERTEX0  =>  1;
+use constant TWIN     =>  2;
+use constant NEXT     =>  3;
+use constant PREV     =>  4;
+use constant THETA    =>  5;
+use constant PHI      =>  6;
+use constant CURVED   =>  7;
+use constant PRIMARY  =>  8;
+use constant INTERNAL =>  9;
 use constant FOOT     => 10;
 use constant VISITED  => 11;
 use constant X => 0;
@@ -751,14 +540,15 @@ sub new {
 
 # generate accessors for the edge data fields
 eval('sub '.lc($_).' {return $_[0]->['.$_.'];} ') 
-   for qw(SOURCE_INDEX POINT TWIN NEXT PREV THETA PHI PRIMARY INTERNAL FOOT);
-sub vertex0 { $_[0]->point }
-sub vertex1 { $_[0]->next->point }
-sub point0 { $_[0]->foot }
-sub point1 { $_[0]->next->foot }
-sub radius { $_[0]->point->[RADIUS] }
-sub curved { $_[0]->[CURVED] = $_[1] if @_ > 1; $_[0]->[CURVED] }
+   for qw(SOURCE_INDEX VERTEX0 TWIN NEXT PREV THETA PHI PRIMARY INTERNAL FOOT);
+sub vertex1 { $_[0]->next->vertex0 }
+sub point0  { $_[0]->foot }
+sub point1  { $_[0]->next->foot }
+sub radius  { $_[0]->vertex0->[RADIUS] }
+sub curved  { $_[0]->[CURVED] = $_[1] if @_ > 1; $_[0]->[CURVED] }
 sub visited { $_[0]->[VISITED] = $_[1] if @_ > 1; $_[0]->[VISITED] }
+sub edge    { $_[0] }
+
 
 sub start_point { $_[0]->point0 }
 sub end_point { $_[0]->next->point0 }
@@ -770,29 +560,31 @@ sub rot_prev { $_[0]->prev->twin }
 
 # EdgeView
 # Extends the medial axis half-edge graph Edge objects to enable 
-# offset polygons and radius filters radius filters.
+# offset edges or polygons and radius filters.
 
 package Slic3r::MedialAxis::EdgeView;
 use strict;
 
-use constant EDGE => 0;
-use constant OFFSET => 1;
-use constant RESOLUTION => 2;
+use constant EDGE        => 0;
+use constant OFFSET      => 1;
+use constant RESOLUTION  => 2;
 use constant INTERPOLATE => 3;
-use constant INTERSECT => 4;
-use constant TWINTURN => 5;
-use constant EVTWIN => 6;
-use constant EVNEXT => 7;
-use constant EVPREV => 8;
+use constant INTERSECT   => 4;
+use constant TWINTURN    => 5;
+use constant EVTWIN      => 6;
+use constant EVNEXT      => 7;
+use constant EVPREV      => 8;
 
 # generate accessors for most of the underlying edge data fields
 eval('sub '.lc($_).' {return $_[0]->[0]->[&Slic3r::MedialAxis::Edge::'.$_.'];}')
-    for qw(SOURCE_INDEX POINT THETA PHI CURVED PRIMARY INTERNAL FOOT);
+    for qw(SOURCE_INDEX VERTEX0 THETA PHI CURVED PRIMARY INTERNAL FOOT);
 
 sub new {
     my $class = shift;
-    # edge, offset, resolution, interpolate, intersect, twinturn
-    my $self = [@_];
+    my %args = @_;
+    my $self = [
+        map delete $args{$_}, qw(edge offset resolution interpolate intersect twinturn twin next prev)
+    ];
     bless $self, $class;
     return $self;
 }
@@ -802,60 +594,61 @@ sub offset      { return $_[0]->[OFFSET]; }
 sub resolution  { return $_[0]->[RESOLUTION]; }
 sub intersect   { return $_[0]->[INTERSECT]; }
 sub interpolate { return $_[0]->[INTERPOLATE]; }
-sub radius      { return $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::POINT]->[&Slic3r::MedialAxis::Edge::RADIUS]; }
+sub radius      { return $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::VERTEX0]->[&Slic3r::MedialAxis::Edge::RADIUS]; }
 sub visited     { my $self = shift; return $self->edge->visited(@_); }
 sub twinturn    { $_[0]->[TWINTURN] = $_[1] if @_ > 1; return $_[0]->[TWINTURN]; }
 
-# These probably shouldn't return Edge objects in the fall-through cases.
-# Maybe either allow null references at ends of EdgeView sequences, or upgrade
-# Edge there to EdgeView.
+# Override next, prev, twin for Edges
+# If the EdgeView doesn't already have a reference to 
+# another EdgeView for any of these, upgrade the underlying next/prev/twin
+# Edge to an EdgeView, and save and return that.
 
 sub next {
     $_[0]->[EVNEXT] = $_[1] if @_ > 1;
     return $_[0]->[EVNEXT]
            ? $_[0]->[EVNEXT]
            : $_[0]->[INTERSECT] && $_[0]->[TWINTURN] 
-             ? 
-               #$_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::TWIN]
-                $_[0]->[EVNEXT] = Slic3r::MedialAxis::EdgeView->new(
-                $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::TWIN],
-                $_[0]->offset,
-                $_[0]->resolution,
-                undef,
-                0,
-                0,
-                undef,
-                undef,
-                $_[0]
-                )
-             : 
-               #$_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::NEXT]
-                $_[0]->[EVNEXT] = Slic3r::MedialAxis::EdgeView->new(
-                $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::NEXT],
-                $_[0]->offset,
-                $_[0]->resolution,
-                undef,
-                0,
-                0,
-                undef,
-                undef,
-                $_[0]
-                )
-             ;
+             ? $_[0]->[EVNEXT] = Slic3r::MedialAxis::EdgeView->new(
+                   edge => $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::TWIN],
+                   offset => $_[0]->offset,
+                   resolution => $_[0]->resolution,
+                   prev => $_[0]
+               )
+             : $_[0]->[EVNEXT] = Slic3r::MedialAxis::EdgeView->new(
+                   edge => $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::NEXT],
+                   offset => $_[0]->offset,
+                   resolution => $_[0]->resolution,
+                   prev => $_[0]
+               );
 }
 sub prev {
     $_[0]->[EVPREV] = $_[1] if @_ > 1;
     return $_[0]->[EVPREV]
            ? $_[0]->[EVPREV]
            : $_[0]->[INTERSECT] && $_[0]->[TWINTURN] 
-             ? $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::TWIN]
-             : $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::PREV];
+             ? $_[0]->[EVPREV] = Slic3r::MedialAxis::EdgeView->new(
+                   edge => $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::TWIN],
+                   offset => $_[0]->offset,
+                   resolution => $_[0]->resolution,
+                   next => $_[0],
+               )
+             : $_[0]->[EVPREV] = Slic3r::MedialAxis::EdgeView->new(
+                   edge => $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::PREV],
+                   offset => $_[0]->offset,
+                   resolution => $_[0]->resolution,
+                   next => $_[0],
+               );
 }
 sub twin {
     $_[0]->[EVTWIN] = $_[1] if @_ > 1;
     return $_[0]->[EVTWIN]
            ? $_[0]->[EVTWIN]
-           : $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::TWIN];
+           : $_[0]->[EVPREV] = Slic3r::MedialAxis::EdgeView->new(
+                   edge => $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::TWIN],
+                   offset => $_[0]->offset,
+                   resolution => $_[0]->resolution,
+                   twin => $_[0],
+               );
 }
 
 # point0, point_i and point1 return points on, or offset from, 
@@ -866,15 +659,14 @@ sub twin {
 # or is offset and parallel to it.
 
 sub point0 {
-    my ($self, $off) = @_;
+    my ($self, $off, $raw) = @_;
 
     $off //= $self->offset;
     
-    my $thetaphi = $self->theta + $self->phi;     # precalculate this
-    while ($thetaphi >  $pi) {$thetaphi-=2*$pi;}  # somewhere maybe
-    while ($thetaphi < -$pi) {$thetaphi+=2*$pi;}
+    my $thetaphi = $self->theta + $self->phi;
     
-    if (   $self->offset >= $self->radius
+    if (   !$raw
+        && $self->offset >= $self->radius
         && $self->offset >= $self->next->radius) {        
         return [$self->vertex0->[0], $self->vertex0->[1]];
     }
@@ -884,9 +676,9 @@ sub point0 {
     # But this convention might change with the evolution of the Edge and 
     # EdgeView models.
     my $radius =  defined($off) && $off > 0 ? $self->radius - $off : -$off;
-
-    my $pointx = $radius * cos($thetaphi) + $self->point->[0];
-    my $pointy = $radius * sin($thetaphi) + $self->point->[1];
+    
+    my $pointx = $radius * cos($thetaphi) + $self->vertex0->[0];
+    my $pointy = $radius * sin($thetaphi) + $self->vertex0->[1];
     
     # watch for any cases of offset distance coming out with too much error
     if (0) {
@@ -902,11 +694,13 @@ sub point0 {
     }
 
 sub point1 { 
-    my $self = shift;
+    my ($self, $off, $raw) = @_;
     my $p;
     
+    $off //= $self->offset;
+    
     if ($self->next->isa('Slic3r::MedialAxis::EdgeView')) {
-        $p = $self->next->point0;
+        $p = $self->next->point0($off, $raw);
     } else {
         # at the ends of a sequence of EdgeViews that represents a fragment
         # of the medial axis or offset polygon, the next and prev references
@@ -915,21 +709,16 @@ sub point1 {
         # for now, fixing that here for the "next" edge case.
         $self->[EVNEXT] = 
             Slic3r::MedialAxis::EdgeView->new(
-            $self->next,
-            $self->offset,
-            $self->resolution,
-            undef,
-            0,
-            0,
-            undef,
-            undef,
-            $self
-            )
-        ;
-        $p = $self->[EVNEXT]->point0;
+            edge => $self->next,
+            offset => $self->offset,
+            resolution => $self->resolution,
+            next => $self
+            );
+        $p = $self->[EVNEXT]->point0($off, $raw);
     }
     
     if ($self->edge->next == $self->edge->twin) {
+        # (note we're checking underlying Edges, not EdgeViews)
         # account for phi not being the same for consecutive edges
         # in corners, where the medial axis touches the polygon
         $p = _reflect($p, $self->vertex0, $self->vertex1);
@@ -937,7 +726,7 @@ sub point1 {
     return $p;
     }
 
-#point_i is an interpolated point between point0 and point1.
+# point_i is an interpolated point between point0 and point1.
 # $target is a target radius
 # The idea is to find the point between point0 and point1 where the
 # interpolated radius matches target. So this is only meant to work when
@@ -958,8 +747,8 @@ sub point_i {
         $p1 = $self->vertex0;
         $p2 = $self->vertex1;
     } else {
-        $p1 = $self->point0;
-        $p2 = $self->point1;
+        $p1 = $self->point0($self->offset, 1);
+        $p2 = $self->point1($self->offset, 1);
     }
 
     my $r1 = $self->radius;
@@ -992,7 +781,6 @@ sub vertex_i {
 
 sub start_point {
     my $self = shift;
-    die "EDGE" if !$self->isa('Slic3r::MedialAxis::EdgeView');    
     my $ret;
     if (defined($self->interpolate) &&  $self->interpolate < $self->radius - $self->offset) {
         $ret = $self->point_i($self->interpolate);
@@ -1010,28 +798,25 @@ sub start_point {
 
 sub end_point {
     my $self = shift;
-    die "EDGE" if !$self->isa('Slic3r::MedialAxis::EdgeView');    
     my $ret;
-    if (defined($self->interpolate) &&  $self->interpolate < $self->next->radius - $self->offset) {
+    if (defined($self->interpolate) && $self->interpolate < $self->next->radius - $self->offset) {
         $ret = $self->point_i($self->interpolate);
     } elsif ($self->radius > $self->offset && $self->next->radius < $self->offset) {
         # the medial axis edge-intersecting point
-        if ($self->twinturn) { $ret= $self->point_i; }
+        if ($self->twinturn) { $ret= $self->point_i;}
         else { $ret = $self->vertex1; }
     } elsif ($self->radius < $self->offset && $self->next->radius < $self->offset) {
         $ret = $self->vertex1;
     } else {
         $ret = $self->point1;
-        die "EDGE" if !$self->next->isa('Slic3r::MedialAxis::EdgeView');    
     }
     return $ret;
 }
 
 sub mid_points {
     my $self = shift;
-    die "EDGE" if !$self->isa('Slic3r::MedialAxis::EdgeView');    
-
-    if (!$self->twinturn &&
+    if ( 
+        #!$self->twinturn &&
           (  ($self->radius > $self->offset && $self->next->radius < $self->offset)
           || ($self->radius < $self->offset && $self->next->radius > $self->offset)
           )
@@ -1049,7 +834,9 @@ sub mid_points {
 sub points {
     my $self = shift;
 
+    #if ($DB::current_layer_id == 32) {
     #$self->edge_svg; # for debug
+    #}
     
     return grep $_, (
              $self->start_point, 
@@ -1058,6 +845,7 @@ sub points {
              );
 }
 
+# debug visual output
 sub edge_svg {
     my $self = shift;
     
@@ -1093,20 +881,84 @@ sub edge_svg {
 
 }
 
+# debug visual output
+sub edges_svg {
+    my $edges = shift;
+    
+    return if !$DB::svg;
+    
+    my @quads = map {
+          [ [@{$_->vertex0}[0,1]], 
+            ($_->curved ? [@{$_->curved}, @{$_->vertex1}[0,1]]
+                           : [            @{$_->vertex1}[0,1]]), 
+            [@{$_->edge->point1}[0,1]], 
+            [@{$_->edge->point0}[0,1]], 
+            []
+          ]
+        } @$edges;
+    my @theta_rays = map {
+        [ $_->vertex0, [$_->vertex0->[0] + 200000*cos($_->theta), $_->vertex0->[1] + 200000*sin($_->theta)]]
+        } @$edges;
+    my @phi_rays = map {
+        [ $_->vertex0, [$_->vertex0->[0] + 200000*cos($_->theta + $_->phi), $_->vertex0->[1] + 200000*sin($_->theta + $_->phi)]]
+        } @$edges;
+    #my @offset_segs_whole = map {
+    #    [ grep $_, ( $_->point0($_->offset, 1), $_->point1($_->offset, 1) )]
+    #    } @$edges;
+    my @offset_segs = map {
+        [ grep $_, ( $_->start_point, $_->mid_points, $_->end_point )]
+        } @$edges;
+    my @offset_pts = map {
+        map [@{$_->[0]}[0,1],$_->[1]], grep $_->[0], 
+          (      [$_->start_point || undef, 'green' ], 
+            (map [$_              || undef, 'yellow'], $_->mid_points), 
+                 [$_->end_point   || undef, 'red'   ] )
+        } @$edges;
+    $DB::svg->appendRaw('<g>');
+    
+    # the edges of the cell
+    $DB::svg->appendCurves({style=>"stroke:darkgray;stroke-width:20000;opacity:0.4;fill:gray;"},
+      @quads
+    ); 
+    
+    # the offset-from-polygon segment without any "interpolate" or "intersect" limits
+    #$DB::svg->appendPolylines({style=>"stroke:white;opacity:0.5;stroke-width:40000;fill:none;"},
+    #  grep @$_>1, @offset_segs_whole);
+    # the offset-from-polygon segment
+    $DB::svg->appendPolylines({style=>"stroke:white;stroke-width:40000;fill:none;"},
+      grep @$_>1, @offset_segs);
+    # theta rays
+    $DB::svg->appendPolylines({style=>"stroke:aqua;stroke-width:20000;fill:none;",markerend => 'url(#dirend)'},
+      @theta_rays);
+    # phi rays
+    $DB::svg->appendPolylines({style=>"stroke:purple;stroke-width:20000;fill:none;",markerend => 'url(#dirend)'},
+      @phi_rays);
+    # the start point, any midpoints, and the end point of the offset segment
+    $DB::svg->appendPoints({r=>20000,style=>"opacity:0.4;"},
+       @offset_pts
+     );
+
+    $DB::svg->appendRaw('</g>');
+
+}
+
 sub _rotate_2d {
     my ($p1, $theta, $origin) = @_;
-    return [
-            (($p1->[0] - $origin->[0]) * CORE::cos($theta) - ($p1->[1] - $origin->[1]) * CORE::sin($theta)) + $origin->[0],
-            (($p1->[1] - $origin->[1]) * CORE::cos($theta) + ($p1->[0] - $origin->[0]) * CORE::sin($theta)) + $origin->[1]
+    return [(  ($p1->[0] - $origin->[0]) * CORE::cos($theta) 
+             - ($p1->[1] - $origin->[1]) * CORE::sin($theta)
+            ) + $origin->[0],
+            (  ($p1->[1] - $origin->[1]) * CORE::cos($theta) 
+             + ($p1->[0] - $origin->[0]) * CORE::sin($theta)
+            ) + $origin->[1]
            ];
-  }
+}
 
 sub _reflect {
     my ($p1, $p2, $p3) = @_;
     my $dy = $p3->[1] - $p2->[1];
     my $dx = $p3->[0] - $p2->[0];
     if ($dy == 0 && $dx == 0) {
-        #warn "Can't reflect about a point";
+        # warn "Can't reflect about a point";
         return $p1;
         }
     my $theta = atan2($dy, $dx);
@@ -1115,6 +967,6 @@ sub _reflect {
     $p1->[1] *= -1.0;
     $p1->[1] += $p2->[1];
     return _rotate_2d($p1, $theta, $p2);
-  }
+}
 
 1;
