@@ -1087,20 +1087,22 @@ sub generate_support_material {
         
         # support or flange
         if ($support{$layer_id}) {
-            $fillers{support}->angle($angles[ ($layer_id) % @angles ]);
+            my $filler = $fillers{support};
+            $filler->angle($angles[ ($layer_id) % @angles ]);
             my $density         = $support_density;
             my $flow_spacing    = $flow->spacing;
             
             # base flange
             if ($layer_id == 0) {
-                $fillers{support}->angle($Slic3r::Config->support_material_angle + 90);
+                $filler = $fillers{interface};
+                $filler->angle($Slic3r::Config->support_material_angle + 90);
                 $density        = 0.5;
                 $flow_spacing   = $self->print->first_layer_support_material_flow->spacing;
             }
             
             my @paths = ();
             foreach my $expolygon (@{union_ex($support{$layer_id})}) {
-                my @p = $fillers{support}->fill_surface(
+                my @p = $filler->fill_surface(
                     Slic3r::Surface->new(expolygon => $expolygon),
                     density         => $density,
                     flow_spacing    => $flow_spacing,
