@@ -1092,16 +1092,30 @@ sub generate_support_material {
             my $density         = $support_density;
             my $flow_spacing    = $flow->spacing;
             
+            my $to_infill = union_ex($support{$layer_id});
+            my @paths = ();
+            
             # base flange
             if ($layer_id == 0) {
                 $filler = $fillers{interface};
                 $filler->angle($Slic3r::Config->support_material_angle + 90);
                 $density        = 0.5;
                 $flow_spacing   = $self->print->first_layer_support_material_flow->spacing;
+            } else {
+                # draw a perimeter all around support infill
+                # TODO: use brim ordering algorithm
+                push @paths, map Slic3r::ExtrusionPath->new(
+                    polyline        => $_->split_at_first_point,
+                    role            => EXTR_ROLE_SUPPORTMATERIAL,
+                    height          => undef,
+                    flow_spacing    => $flow->spacing,
+                ), map @$_, @$to_infill;
+                
+                # TODO: use offset2_ex()
+                $to_infill = [ offset_ex([ map @$_, @$to_infill ], -$flow->scaled_spacing) ];
             }
             
-            my @paths = ();
-            foreach my $expolygon (@{union_ex($support{$layer_id})}) {
+            foreach my $expolygon (@$to_infill) {
                 my @p = $filler->fill_surface(
                     Slic3r::Surface->new(expolygon => $expolygon),
                     density         => $density,
