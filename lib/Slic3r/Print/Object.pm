@@ -4,7 +4,7 @@ use Moo;
 use List::Util qw(min sum first);
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Geometry qw(Z PI scale unscale deg2rad rad2deg scaled_epsilon chained_path_points);
-use Slic3r::Geometry::Clipper qw(diff diff_ex intersection_ex union_ex offset offset_ex collapse_ex);
+use Slic3r::Geometry::Clipper qw(diff diff_ex intersection_ex union_ex offset offset_ex union);
 use Slic3r::Surface ':types';
 
 has 'print'             => (is => 'ro', weak_ref => 1, required => 1);
@@ -986,9 +986,9 @@ sub generate_support_material {
     );
     
     my $interface_angle = $Slic3r::Config->support_material_angle + 90;
-    my $interface_spacing = $Slic3r::Config->support_material_interface_spacing;
+    my $interface_spacing = $Slic3r::Config->support_material_interface_spacing + $flow->spacing;
     my $interface_density = $interface_spacing == 0 ? 1 : $flow->spacing / $interface_spacing;
-    my $support_spacing = $Slic3r::Config->support_material_spacing;
+    my $support_spacing = $Slic3r::Config->support_material_spacing + $flow->spacing;
     my $support_density = $support_spacing == 0 ? 1 : $flow->spacing / $support_spacing;
     
     my $process_layer = sub {
@@ -1092,7 +1092,8 @@ sub generate_support_material {
             my $density         = $support_density;
             my $flow_spacing    = $flow->spacing;
             
-            my $to_infill = union_ex($support{$layer_id});
+            # TODO: use offset2_ex()
+            my $to_infill = [ offset_ex(union($support{$layer_id}), -$flow->scaled_width/2) ];
             my @paths = ();
             
             # base flange
