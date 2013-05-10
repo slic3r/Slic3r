@@ -222,7 +222,8 @@ sub make_perimeters {
         # number of perimeters has been generated
         for (my $loop = 0; $loop <= $loop_number; $loop++) {
             my $spacing = $perimeter_spacing;
-            $spacing /= 2 if $loop == 0;
+            $spacing = scale($self->perimeter_flow->nozzle_diameter / 2) if $loop == 0;
+            $spacing = scale($self->perimeter_flow->nozzle_diameter / 2) + $perimeter_spacing / 2 if $loop == 1;
             
             # offsetting a polygon can result in one or many offset polygons
             my @new_offsets = ();
@@ -440,7 +441,7 @@ sub _add_perimeter {
     push @{ $self->perimeters }, Slic3r::ExtrusionLoop->pack(
         polygon         => $polygon,
         role            => ($role // EXTR_ROLE_PERIMETER),
-        flow_spacing    => $self->perimeter_flow->spacing,
+        flow_spacing    => (defined $role && $role == EXTR_ROLE_EXTERNAL_PERIMETER) ? $self->perimeter_flow->nozzle_diameter : $self->perimeter_flow->spacing,
     );
 }
 

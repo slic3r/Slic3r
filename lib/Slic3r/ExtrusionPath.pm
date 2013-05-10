@@ -114,7 +114,8 @@ sub is_fill {
 sub is_bridge {
     my $self = shift;
     return $self->role == EXTR_ROLE_BRIDGE
-        || $self->role == EXTR_ROLE_INTERNALBRIDGE;
+        || $self->role == EXTR_ROLE_INTERNALBRIDGE
+        || $self->role == EXTR_ROLE_EXTERNAL_PERIMETER;
 }
 
 sub split_at_acute_angles {

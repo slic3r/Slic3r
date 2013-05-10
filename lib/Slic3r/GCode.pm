@@ -214,7 +214,7 @@ sub extrude_path {
     $gcode .= $self->set_acceleration($acceleration) if $acceleration;
     
     my $area;  # mm^3 of extrudate per mm of tool movement 
-    if ($path->role == EXTR_ROLE_BRIDGE || $path->role == EXTR_ROLE_INTERNALBRIDGE) {
+    if ($path->is_bridge) {
         my $s = $path->flow_spacing;
         $area = ($s**2) * PI/4;
     } else {
