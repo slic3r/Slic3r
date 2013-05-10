@@ -615,7 +615,7 @@ our $Options = {
         type    => 'select',
         values  => [qw(rectilinear rectilinear-grid honeycomb)],
         labels  => ['rectilinear', 'rectilinear grid', 'honeycomb'],
-        default => 'rectilinear',
+        default => 'honeycomb',
     },
     'support_material_spacing' => {
         label   => 'Pattern spacing',
@@ -647,7 +647,7 @@ our $Options = {
         sidetext => 'mm',
         cli     => 'support-material-interface-spacing=f',
         type    => 'f',
-        default => 0,
+        default => 1.5,
     },
     'support_material_enforce_layers' => {
         label   => 'Enforce support for the first',
