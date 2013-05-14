@@ -978,7 +978,9 @@ sub write_gcode {
                     gcodegen    => $gcodegen,
                 );
                 
-                for my $layer (@{$self->objects->[$obj_idx]->layers}) {
+                my $object = $self->objects->[$obj_idx];
+                my @layers = sort { $a->print_z <=> $b->print_z } @{$object->layers}, @{$object->support_layers};
+                for my $layer (@layers) {
                     # if we are printing the bottom layer of an object, and we have already finished
                     # another one, set first layer temperatures. this happens before the Z move
                     # is triggered, so machine has more time to reach such temperatures
@@ -999,7 +1001,7 @@ sub write_gcode {
             gcodegen    => $gcodegen,
         );
         print $fh $buffer->append($extrude_layer->($_, $_->object->copies), $_)
-            for sort { $a->print_z <=> $b->print_z } map @{$_->layers}, @{$self->objects};
+            for sort { $a->print_z <=> $b->print_z } map { @{$_->layers}, @{$_->support_layers} } @{$self->objects};
         print $fh $buffer->flush;
     }
     

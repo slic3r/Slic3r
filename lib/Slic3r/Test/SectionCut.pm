@@ -80,7 +80,7 @@ sub _plot {
     
     foreach my $object (@{$self->print->objects}) {
         foreach my $copy (@{$object->copies}) {
-            foreach my $layer (@{$object->layers}) {
+            foreach my $layer (@{$object->layers}, @{$object->support_layers}) {
                 # get all ExtrusionPath objects
                 my @paths = 
                     map { $_->polyline->translate(@$copy); $_ }

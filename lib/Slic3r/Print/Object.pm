@@ -13,6 +13,7 @@ has 'meshes'            => (is => 'rw', default => sub { [] });  # by region_id
 has 'size'              => (is => 'rw', required => 1);
 has 'copies'            => (is => 'rw', default => sub {[ [0,0] ]}, trigger => 1);
 has 'layers'            => (is => 'rw', default => sub { [] });
+has 'support_layers'    => (is => 'rw', default => sub { [] });
 has 'layer_height_ranges' => (is => 'rw', default => sub { [] }); # [ z_min, z_max, layer_height ]
 
 sub BUILD {
@@ -954,14 +955,8 @@ sub generate_support_material {
         }
     }
     
-    # initialize support object
-    push @{$self->print->objects}, my $object = Slic3r::Print::Object->new(
-        print   => $self->print,
-        size    => $self->size,  # cheating!
-    );
-    @{$object->layers} = ();  # temporary hack
-    push @{$object->layers}, map Slic3r::Layer->new(
-        object  => $object,
+    push @{$self->support_layers}, map Slic3r::Layer->new(
+        object  => $self,
         id      => $_,
         height  => ($_ == 0) ? $support_layers[$_] : ($support_layers[$_] - $support_layers[$_-1]),
         print_z => scale $support_layers[$_],
@@ -993,7 +988,7 @@ sub generate_support_material {
     
     my $process_layer = sub {
         my ($layer_id) = @_;
-        my $layer = $object->layers->[$layer_id];
+        my $layer = $self->support_layers->[$layer_id];
         
         my $result = { interface => [], support => [] };
         
@@ -1146,13 +1141,13 @@ sub generate_support_material {
     
     my $apply = sub {
         my ($layer_id, $result) = @_;
-        my $layer = $object->layers->[$layer_id];
+        my $layer = $self->support_layers->[$layer_id];
         $layer->support_contact_fills(Slic3r::ExtrusionPath::Collection->new(paths => $result->{contact})) if $result->{contact};
         $layer->support_fills(Slic3r::ExtrusionPath::Collection->new(paths => [ @{$result->{interface}}, @{$result->{support}} ]));
         $layer->support_islands($result->{islands});
     };
     Slic3r::parallelize(
-        items => [ 0 .. $#{$object->layers} ],
+        items => [ 0 .. $#{$self->support_layers} ],
         thread_cb => sub {
             my $q = shift;
             $Slic3r::Geometry::Clipper::clipper = Math::Clipper->new;
@@ -1167,7 +1162,7 @@ sub generate_support_material {
             $apply->($_, $result->{$_}) for keys %$result;
         },
         no_threads_cb => sub {
-            $apply->($_, $process_layer->($_)) for 0 .. $#{$object->layers};
+            $apply->($_, $process_layer->($_)) for 0 .. $#{$self->support_layers};
         },
     );
 }
