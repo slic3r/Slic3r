@@ -954,7 +954,7 @@ sub generate_support_material {
                 ],
                 [
                     #(map @$_, @{$layer->slices}),
-                    @{$interface{$i}},
+                    @{ $interface{$i} || [] },
                 ],
             );
         }
