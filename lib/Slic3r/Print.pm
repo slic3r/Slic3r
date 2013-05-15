@@ -7,7 +7,8 @@ use List::Util qw(max first);
 use Math::ConvexHull::MonotoneChain qw(convex_hull);
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Geometry qw(X Y Z X1 Y1 X2 Y2 MIN PI scale unscale move_points nearest_point);
-use Slic3r::Geometry::Clipper qw(diff_ex union_ex intersection_ex offset JT_ROUND JT_SQUARE);
+use Slic3r::Geometry::Clipper qw(diff_ex union_ex union_pt intersection_ex offset
+    offset2 traverse_pt JT_ROUND JT_SQUARE PFT_EVENODD);
 use Time::HiRes qw(gettimeofday tv_interval);
 
 has 'config'                 => (is => 'rw', default => sub { Slic3r::Config->new_from_defaults }, trigger => 1);
@@ -62,6 +63,16 @@ sub _trigger_config {
     # G-code flavors
     $self->config->set('extrusion_axis', 'A') if $self->config->gcode_flavor eq 'mach3';
     $self->config->set('extrusion_axis', '')  if $self->config->gcode_flavor eq 'no-extrusion';
+    
+    # enforce some settings when spiral_vase is set
+    if ($self->config->spiral_vase) {
+        $self->config->set('perimeters', 1);
+        $self->config->set('fill_density', 0);
+        $self->config->set('top_solid_layers', 0);
+        $self->config->set('support_material', 0);
+        $self->config->set('support_material_enforce_layers', 0);
+        $self->config->set('retract_layer_change', [0]);  # TODO: only apply this to the spiral layers
+    }
 }
 
 sub _build_has_support_material {
@@ -181,6 +192,15 @@ sub validate {
             if (grep { +($_->size)[Z] > $scaled_clearance } map @{$self->objects->[$_->[0]]->meshes}, @obj_copies) {
                 die "Some objects are too tall and cannot be printed without extruder collisions.\n";
             }
+        }
+    }
+    
+    if ($Slic3r::Config->spiral_vase) {
+        if ((map @{$_->copies}, @{$self->objects}) > 1) {
+            die "The Spiral Vase option can only be used when printing a single object.\n";
+        }
+        if (@{$self->regions} > 1) {
+            die "The Spiral Vase option can only be used when printing single material objects.\n";
         }
     }
 }
@@ -673,16 +693,20 @@ sub make_brim {
         push @islands, map $_->unpack->split_at_first_point->polyline->grow($grow_distance), @{$self->skirt};
     }
     
+    my @loops = ();
     my $num_loops = sprintf "%.0f", $Slic3r::Config->brim_width / $flow->width;
     for my $i (reverse 1 .. $num_loops) {
         # JT_SQUARE ensures no vertex is outside the given offset distance
-        push @{$self->brim}, Slic3r::ExtrusionLoop->pack(
-            polygon         => Slic3r::Polygon->new($_),
-            role            => EXTR_ROLE_SKIRT,
-            flow_spacing    => $flow->spacing,
-        ) for Slic3r::Geometry::Clipper::offset(\@islands, ($i - 0.5) * $flow->scaled_spacing, undef, JT_SQUARE); # -0.5 because islands are not represented by their centerlines
+        # -0.5 because islands are not represented by their centerlines
         # TODO: we need the offset inwards/offset outwards logic to avoid overlapping extrusions
+        push @loops, offset2(\@islands, ($i - 2) * $flow->scaled_spacing, ($i + 1.5) * $flow->scaled_spacing, undef, JT_SQUARE);
     }
+    
+    @{$self->brim} = map Slic3r::ExtrusionLoop->pack(
+        polygon         => Slic3r::Polygon->new($_),
+        role            => EXTR_ROLE_SKIRT,
+        flow_spacing    => $flow->spacing,
+    ), reverse traverse_pt( union_pt(\@loops, PFT_EVENODD) );
 }
 
 sub write_gcode {
@@ -788,6 +812,11 @@ sub write_gcode {
             no_internal => 1,
         ));
     }
+    
+    # prepare the SpiralVase processor if it's possible
+    my $spiralvase = $Slic3r::Config->spiral_vase
+        ? Slic3r::GCode::SpiralVase->new
+        : undef;
     
     # prepare the logic to print one layer
     my $skirt_done = 0;  # count of skirt layers done
@@ -951,6 +980,14 @@ sub write_gcode {
                 }
             }
         }
+        
+        # apply spiral vase post-processing if this layer contains suitable geometry
+        $gcode = $spiralvase->process_layer($gcode, $layer)
+            if defined $spiralvase
+            && ($layer->id > 0 || $Slic3r::Config->brim_width == 0)
+            && ($layer->id >= $Slic3r::Config->skirt_height)
+            && ($layer->id >= $Slic3r::Config->bottom_solid_layers);
+        
         return $gcode;
     };
     

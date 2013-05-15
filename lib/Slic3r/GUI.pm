@@ -37,6 +37,7 @@ use constant MI_TAB_PRINTER   => &Wx::NewId;
 
 use constant MI_CONF_WIZARD   => &Wx::NewId;
 use constant MI_WEBSITE       => &Wx::NewId;
+use constant MI_VERSIONCHECK  => &Wx::NewId;
 use constant MI_DOCUMENTATION => &Wx::NewId;
 
 our $datadir;
@@ -46,6 +47,7 @@ our $mode;
 our $Settings = {
     _ => {
         mode => 'simple',
+        version_check => 1,
     },
 };
 
@@ -126,8 +128,9 @@ sub OnInit {
     }
     
     # Plater menu
-    my $platerMenu = Wx::Menu->new;
-    {
+    my $platerMenu;
+    unless ($no_plater) {
+        $platerMenu = Wx::Menu->new;
         $platerMenu->Append(MI_PLATER_EXPORT_GCODE, "Export G-code...", 'Export current plate as G-code');
         $platerMenu->Append(MI_PLATER_EXPORT_STL, "Export STL...", 'Export current plate as STL');
         $platerMenu->Append(MI_PLATER_EXPORT_AMF, "Export AMF...", 'Export current plate as AMF');
@@ -139,14 +142,15 @@ sub OnInit {
     # Window menu
     my $windowMenu = Wx::Menu->new;
     {
-        $windowMenu->Append(MI_TAB_PLATER, "Select &Plater Tab\tCtrl+1", 'Show the plater');
+        my $tab_count = $no_plater ? 3 : 4;
+        $windowMenu->Append(MI_TAB_PLATER, "Select &Plater Tab\tCtrl+1", 'Show the plater') unless $no_plater;
         $windowMenu->Append(MI_TAB_PRINT, "Select P&rint Settings Tab\tCtrl+2", 'Show the print settings');
         $windowMenu->Append(MI_TAB_FILAMENT, "Select &Filament Settings Tab\tCtrl+3", 'Show the filament settings');
         $windowMenu->Append(MI_TAB_PRINTER, "Select Print&er Settings Tab\tCtrl+4", 'Show the printer settings');
-        EVT_MENU($frame, MI_TAB_PLATER, sub { $self->{skeinpanel}->select_tab(0) });
-        EVT_MENU($frame, MI_TAB_PRINT, sub { $self->{skeinpanel}->select_tab(1) });
-        EVT_MENU($frame, MI_TAB_FILAMENT, sub { $self->{skeinpanel}->select_tab(2) });
-        EVT_MENU($frame, MI_TAB_PRINTER, sub { $self->{skeinpanel}->select_tab(3) });
+        EVT_MENU($frame, MI_TAB_PLATER, sub { $self->{skeinpanel}->select_tab(0) }) unless $no_plater;
+        EVT_MENU($frame, MI_TAB_PRINT, sub { $self->{skeinpanel}->select_tab($tab_count-3) });
+        EVT_MENU($frame, MI_TAB_FILAMENT, sub { $self->{skeinpanel}->select_tab($tab_count-2) });
+        EVT_MENU($frame, MI_TAB_PRINTER, sub { $self->{skeinpanel}->select_tab($tab_count-1) });
     }
     
     # Help menu
@@ -155,11 +159,14 @@ sub OnInit {
         $helpMenu->Append(MI_CONF_WIZARD, "&Configuration $Slic3r::GUI::ConfigWizard::wizard…", "Run Configuration $Slic3r::GUI::ConfigWizard::wizard");
         $helpMenu->AppendSeparator();
         $helpMenu->Append(MI_WEBSITE, "Slic3r &Website", 'Open the Slic3r website in your browser');
+        my $versioncheck = $helpMenu->Append(MI_VERSIONCHECK, "Check for &Updates...", 'Check for new Slic3r versions');
+        $versioncheck->Enable(Slic3r::GUI->have_version_check);
         $helpMenu->Append(MI_DOCUMENTATION, "&Documentation", 'Open the Slic3r documentation in your browser');
         $helpMenu->AppendSeparator();
         $helpMenu->Append(wxID_ABOUT, "&About Slic3r", 'Show about dialog');
         EVT_MENU($frame, MI_CONF_WIZARD, sub { $self->{skeinpanel}->config_wizard });
         EVT_MENU($frame, MI_WEBSITE, sub { Wx::LaunchDefaultBrowser('http://slic3r.org/') });
+        EVT_MENU($frame, MI_VERSIONCHECK, sub { Slic3r::GUI->check_version(manual => 1) });
         EVT_MENU($frame, MI_DOCUMENTATION, sub { Wx::LaunchDefaultBrowser('https://github.com/alexrj/Slic3r/wiki/Documentation') });
         EVT_MENU($frame, wxID_ABOUT, \&about);
     }
@@ -170,7 +177,7 @@ sub OnInit {
     {
         my $menubar = Wx::MenuBar->new;
         $menubar->Append($fileMenu, "&File");
-        $menubar->Append($platerMenu, "&Plater");
+        $menubar->Append($platerMenu, "&Plater") if $platerMenu;
         $menubar->Append($windowMenu, "&Window");
         $menubar->Append($helpMenu, "&Help");
         $frame->SetMenuBar($menubar);
@@ -191,6 +198,11 @@ sub OnInit {
     $frame->Layout;
     
     $self->{skeinpanel}->config_wizard if $run_wizard;
+    
+    Slic3r::GUI->check_version
+        if Slic3r::GUI->have_version_check
+            && ($Settings->{_}{version_check} // 1)
+            && (!$Settings->{_}{last_version_check} || (time - $Settings->{_}{last_version_check}) >= 86400);
     
     return 1;
 }
@@ -220,6 +232,12 @@ sub show_error {
     my $self = shift;
     my ($message) = @_;
     Wx::MessageDialog->new($self, $message, 'Error', wxOK | wxICON_ERROR)->ShowModal;
+}
+
+sub show_info {
+    my $self = shift;
+    my ($message, $title) = @_;
+    Wx::MessageDialog->new($self, $message, $title || 'Notice', wxOK | wxICON_INFORMATION)->ShowModal;
 }
 
 sub fatal_error {
@@ -255,6 +273,46 @@ sub save_settings {
     my $class = shift;
     
     Slic3r::Config->write_ini("$datadir/slic3r.ini", $Settings);
+}
+
+sub have_version_check {
+    my $class = shift;
+    
+    return $Slic3r::have_threads && $Slic3r::build && eval "use LWP::UserAgent; 1";
+}
+
+sub check_version {
+    my $class = shift;
+    my %p = @_;
+    Slic3r::debugf "Checking for updates...\n";
+    
+    threads->create(sub {
+        my $ua = LWP::UserAgent->new;
+        $ua->timeout(10);
+        my $response = $ua->get('http://slic3r.org/updatecheck');
+        if ($response->is_success) {
+            if ($response->decoded_content =~ /^obsolete ?= ?([a-z0-9.-]+,)*\Q$Slic3r::VERSION\E(?:,|$)/) {
+                my $res = Wx::MessageDialog->new(undef, "A new version is available. Do you want to open the Slic3r website now?",
+                    'Update', wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxICON_INFORMATION | wxICON_ERROR)->ShowModal;
+                Wx::LaunchDefaultBrowser('http://slic3r.org/') if $res == wxID_YES;
+            } else {
+                Slic3r::GUI::show_info(undef, "You're using the latest version. No updates are available.") if $p{manual};
+            }
+            $Settings->{_}{last_version_check} = time();
+            Slic3r::GUI->save_settings;
+        } else {
+            Slic3r::GUI::show_error(undef, "Failed to check for updates. Try later.") if $p{manual};
+        }
+    })->detach;
+}
+
+sub output_path {
+    my $class = shift;
+    my ($dir) = @_;
+    
+    return ($Settings->{_}{last_output_path} && $Settings->{_}{remember_output_path})
+        ? $Settings->{_}{last_output_path}
+        : $dir;
 }
 
 package Slic3r::GUI::ProgressStatusBar;
@@ -424,7 +482,8 @@ sub notify {
         $self->{growler}->notify(Event => 'SKEIN_DONE', Title => $title, Message => $message)
             if $self->{growler};
     };
-    if (eval 'use Net::DBus; 1') {
+    # Net::DBus is broken in multithreaded environment
+    if (0 && eval 'use Net::DBus; 1') {
         eval {
             my $session = Net::DBus->session;
             my $serv = $session->get_service('org.freedesktop.Notifications');

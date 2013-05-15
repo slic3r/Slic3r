@@ -525,18 +525,20 @@ sub export_gcode {
     }
     
     # get config before spawning the thread because ->config needs GetParent and it's not available there
-    my $print = $self->_init_print;
+    my $print = $self->skeinpanel->init_print;
     
     # select output file
     $self->{output_file} = $main::opt{output};
     {
         $self->{output_file} = $print->expanded_output_filepath($self->{output_file}, $self->{objects}[0]->input_file);
-        my $dlg = Wx::FileDialog->new($self, 'Save G-code file as:', dirname($self->{output_file}),
+        my $dlg = Wx::FileDialog->new($self, 'Save G-code file as:', Slic3r::GUI->output_path(dirname($self->{output_file})),
             basename($self->{output_file}), &Slic3r::GUI::SkeinPanel::FILE_WILDCARDS->{gcode}, wxFD_SAVE);
         if ($dlg->ShowModal != wxID_OK) {
             $dlg->Destroy;
             return;
         }
+        $Slic3r::GUI::Settings->{_}{last_output_path} = dirname($dlg->GetPath);
+        Slic3r::GUI->save_settings;
         $self->{output_file} = $Slic3r::GUI::SkeinPanel::last_output_file = $dlg->GetPath;
         $dlg->Destroy;
     }
@@ -578,21 +580,6 @@ sub export_gcode {
             catch_error => sub { Slic3r::GUI::catch_error($self, @_) && $self->on_export_failed },
         );
     }
-}
-
-sub _init_print {
-    my $self = shift;
-    
-    my %extra_variables = ();
-    if ($self->skeinpanel->{mode} eq 'expert') {
-        $extra_variables{"${_}_preset"} = $self->skeinpanel->{options_tabs}{$_}->current_preset->{name}
-            for qw(print filament printer);
-    }
-    
-    return Slic3r::Print->new(
-        config => $self->skeinpanel->config,
-        extra_variables => { %extra_variables },
-    );
 }
 
 sub export_gcode2 {
@@ -685,7 +672,7 @@ sub _get_export_file {
     
     my $output_file = $main::opt{output};
     {
-        $output_file = $self->_init_print->expanded_output_filepath($output_file, $self->{objects}[0]->input_file);
+        $output_file = $self->skeinpanel->init_print->expanded_output_filepath($output_file, $self->{objects}[0]->input_file);
         $output_file =~ s/\.gcode$/$suffix/i;
         my $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
             basename($output_file), &Slic3r::GUI::SkeinPanel::MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
@@ -705,6 +692,12 @@ sub make_model {
     my $model = Slic3r::Model->new;
     foreach my $plater_object (@{$self->{objects}}) {
         my $model_object = $plater_object->get_model_object;
+        
+        # if we need to alter the mesh, clone it first
+        if ($plater_object->scale != 1) {
+            $model_object = $model_object->clone;
+        }
+        
         my $new_model_object = $model->add_object(
             vertices    => $model_object->vertices,
             input_file  => $plater_object->input_file,
@@ -1104,7 +1097,7 @@ sub free_model_object {
     my $self = shift;
     
     # only delete mesh from memory if we can retrieve it from the original file
-    return unless $self->input_file && $self->input_file_object_id;
+    return unless $self->input_file && defined $self->input_file_object_id;
     $self->model_object(undef);
 }
 

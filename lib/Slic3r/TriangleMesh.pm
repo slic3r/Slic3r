@@ -3,6 +3,7 @@ use Moo;
 
 use Slic3r::Geometry qw(X Y Z A B unscale same_point);
 use Slic3r::Geometry::Clipper qw(union_ex);
+use Storable;
 
 # public
 has 'vertices'      => (is => 'ro', required => 1);         # id => [$x,$y,$z]
@@ -28,8 +29,8 @@ use constant I_FACET_EDGE       => 6;
 use constant FE_TOP             => 0;
 use constant FE_BOTTOM          => 1;
 
-# always make sure BUILD is idempotent
-sub BUILD {
+# always make sure this method is idempotent
+sub analyze {
     my $self = shift;
     
     @{$self->edges} = ();
@@ -92,11 +93,7 @@ sub merge {
 }
 
 sub clone {
-    my $self = shift;
-    return (ref $self)->new(
-        vertices => [ map [ @$_ ], @{$self->vertices} ],
-        facets   => [ map [ @$_ ], @{$self->facets} ],
-    );
+  Storable::dclone($_[0])
 }
 
 sub _facet_edges {
@@ -148,6 +145,8 @@ sub clean {
 sub check_manifoldness {
     my $self = shift;
     
+    $self->analyze;
+    
     # look for any edges not connected to exactly two facets
     my ($first_bad_edge_id) =
         grep { @{ $self->edges_facets->[$_] } != 2 } 0..$#{$self->edges_facets};
@@ -157,6 +156,10 @@ sub check_manifoldness {
             map @{$self->vertices->[$_]}, @{$self->edges->[$first_bad_edge_id]};
         return 0;
     }
+    
+    # empty the edges array as we don't really need it anymore
+    @{$self->edges} = ();
+    
     return 1;
 }
 

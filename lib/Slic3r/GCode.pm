@@ -49,6 +49,7 @@ has 'speeds' => (
 my %role_speeds = (
     &EXTR_ROLE_PERIMETER                    => 'perimeter',
     &EXTR_ROLE_EXTERNAL_PERIMETER           => 'external_perimeter',
+    &EXTR_ROLE_OVERHANG_PERIMETER           => 'external_perimeter',
     &EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER   => 'perimeter',
     &EXTR_ROLE_FILL                         => 'infill',
     &EXTR_ROLE_SOLIDFILL                    => 'solid_infill',
@@ -156,7 +157,7 @@ sub extrude_loop {
     $self->wipe_path($extrusion_path->polyline);
     
     # make a little move inwards before leaving loop
-    if ($loop->role == EXTR_ROLE_EXTERNAL_PERIMETER) {
+    if ($loop->role == EXTR_ROLE_EXTERNAL_PERIMETER && $Slic3r::Config->perimeters > 1) {
         # detect angle between last and first segment
         # the side depends on the original winding order of the polygon (left for contours, right for holes)
         my @points = $was_clockwise ? (-2, 1) : (1, -2);
@@ -208,7 +209,7 @@ sub extrude_path {
         $acceleration = $Slic3r::Config->perimeter_acceleration;
     } elsif ($Slic3r::Config->infill_acceleration && $path->is_fill) {
         $acceleration = $Slic3r::Config->infill_acceleration;
-    } elsif ($Slic3r::Config->infill_acceleration && ($path->role == EXTR_ROLE_BRIDGE || $path->role == EXTR_ROLE_INTERNALBRIDGE)) {
+    } elsif ($Slic3r::Config->infill_acceleration && $path->is_bridge) {
         $acceleration = $Slic3r::Config->bridge_acceleration;
     }
     $gcode .= $self->set_acceleration($acceleration) if $acceleration;

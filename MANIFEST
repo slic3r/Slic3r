@@ -26,6 +26,8 @@ lib/Slic3r/Format/STL.pm
 lib/Slic3r/GCode.pm
 lib/Slic3r/GCode/CoolingBuffer.pm
 lib/Slic3r/GCode/MotionPlanner.pm
+lib/Slic3r/GCode/Reader.pm
+lib/Slic3r/GCode/SpiralVase.pm
 lib/Slic3r/Geometry.pm
 lib/Slic3r/Geometry/Clipper.pm
 lib/Slic3r/GUI.pm
@@ -78,6 +80,7 @@ t/support.t
 t/vibrationlimit.t
 utils/amf-to-stl.pl
 utils/file_info.pl
+utils/gcode_sectioncut.pl
 utils/post-processing/filament-weight.pl
 utils/post-processing/prowl-notification.pl
 utils/post-processing/z-every-line.pl

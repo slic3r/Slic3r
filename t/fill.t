@@ -19,7 +19,10 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
 {
     my $print = Slic3r::Print->new;
     $print->init_extruders;
-    my $filler = Slic3r::Fill::Rectilinear->new(print => $print);
+    my $filler = Slic3r::Fill::Rectilinear->new(
+        print           => $print,
+        bounding_box    => [ 0, 0, 10, 10 ],
+    );
     my $surface_width = 250;
     my $distance = $filler->adjust_solid_spacing(
         width       => $surface_width,
@@ -30,10 +33,13 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
 }
 
 {
-    my $filler = Slic3r::Fill::Rectilinear->new;
+    my $expolygon = Slic3r::ExPolygon->new([ scale_points [0,0], [50,0], [50,50], [0,50] ]);
+    my $filler = Slic3r::Fill::Rectilinear->new(
+        bounding_box => [ $expolygon->bounding_box ],
+    );
     my $surface = Slic3r::Surface->new(
         surface_type    => S_TYPE_TOP,
-        expolygon       => Slic3r::ExPolygon->new([ scale_points [0,0], [50,0], [50,50], [0,50] ]),
+        expolygon       => $expolygon,
     );
     foreach my $angle (0, 45) {
         $surface->expolygon->rotate(Slic3r::Geometry::deg2rad($angle), [0,0]);
@@ -105,7 +111,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
     $config->set('solid_infill_below_area', 20000000);
     
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
-    Slic3r::Test::GCodeReader->new(gcode => Slic3r::Test::gcode($print))->parse(sub {
+    Slic3r::GCode::Reader->new(gcode => Slic3r::Test::gcode($print))->parse(sub {
         my ($self, $cmd, $args, $info) = @_;
         
         fail "solid_infill_below_area should be ignored when fill_density is 0"
