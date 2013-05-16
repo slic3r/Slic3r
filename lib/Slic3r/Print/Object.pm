@@ -909,7 +909,8 @@ sub generate_support_material {
     # generate additional layers according to such max height
     my @support_layers = @contact_z;
     for (my $i = $#support_layers; $i >= 0; $i--) {
-        if (($i == 0 && $support_layers[$i] > $support_material_height)
+        # enforce first layer height
+        if (($i == 0 && $support_layers[$i] > $support_material_height + $Slic3r::Config->first_layer_height)
             || ($support_layers[$i] - $support_layers[$i-1] > $support_material_height)) {
             splice @support_layers, $i, 0, ($support_layers[$i] - $support_material_height);
             $i++;
