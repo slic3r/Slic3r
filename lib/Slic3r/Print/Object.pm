@@ -11,10 +11,11 @@ has 'print'             => (is => 'ro', weak_ref => 1, required => 1);
 has 'input_file'        => (is => 'rw', required => 0);
 has 'meshes'            => (is => 'rw', default => sub { [] });  # by region_id
 has 'size'              => (is => 'rw', required => 1);
-has 'copies'            => (is => 'rw', default => sub {[ [0,0] ]}, trigger => 1);
+has 'copies'            => (is => 'rw', trigger => 1);  # in scaled coordinates
 has 'layers'            => (is => 'rw', default => sub { [] });
 has 'support_layers'    => (is => 'rw', default => sub { [] });
 has 'layer_height_ranges' => (is => 'rw', default => sub { [] }); # [ z_min, z_max, layer_height ]
+has 'fill_maker'        => (is => 'lazy');
 
 sub BUILD {
     my $self = shift;
@@ -77,6 +78,12 @@ sub BUILD {
     }
 }
 
+sub _build_fill_maker {
+    my $self = shift;
+    return Slic3r::Fill->new(object => $self);
+}
+
+# This should be probably moved in Print.pm at the point where we sort Layer objects
 sub _trigger_copies {
     my $self = shift;
     return unless @{$self->copies} > 1;
@@ -127,6 +134,13 @@ sub get_layer_range {
     return ($min_layer, $max_layer);
 }
 
+sub bounding_box {
+    my $self = shift;
+    
+    # since the object is aligned to origin, bounding box coincides with size
+    return Slic3r::Geometry::bounding_box([ [0,0], $self->size ]);
+}
+
 sub slice {
     my $self = shift;
     my %params = @_;
@@ -167,6 +181,8 @@ sub slice {
                 }
             },
         );
+        
+        $self->meshes->[$region_id] = undef;  # free memory
     }
     die "Invalid input file\n" if !@{$self->layers};
     
@@ -980,10 +996,9 @@ sub generate_support_material {
         push @angles, $angles[0] + 90;
     }
     
-    my $fill = Slic3r::Fill->new(print => $self->print);
     my %fillers = (
-        interface   => $fill->filler('rectilinear'),
-        support     => $fill->filler($pattern),
+        interface   => $self->fill_maker->filler('rectilinear'),
+        support     => $self->fill_maker->filler($pattern),
     );
     
     my $interface_angle = $Slic3r::Config->support_material_angle + 90;
