@@ -29,7 +29,7 @@ our $var = "$FindBin::Bin/var";
 
 use Encode;
 use Encode::Locale;
-use Boost::Geometry::Utils 0.08;
+use Boost::Geometry::Utils 0.12;
 use Moo 0.091009;
 
 use Slic3r::Config;
@@ -84,6 +84,7 @@ sub parallelize {
         $q->enqueue(@items, (map undef, 1..$Config->threads));
         
         my $thread_cb = sub { $params{thread_cb}->($q) };
+        @_ = ();
         foreach my $th (map threads->create($thread_cb), 1..$Config->threads) {
             $params{collect_cb}->($th->join);
         }

@@ -544,7 +544,13 @@ sub export_gcode {
     }
     
     $self->statusbar->StartBusy;
+    
+    # It looks like declaring a local $SIG{__WARN__} prevents the ugly
+    # "Attempt to free unreferenced scalar" warning...
+    local $SIG{__WARN__} = Slic3r::GUI::warning_catcher($self);
+    
     if ($Slic3r::have_threads) {
+        @_ = ();
         $self->{export_thread} = threads->create(sub {
             $self->export_gcode2(
                 $print,
@@ -739,6 +745,7 @@ sub make_thumbnail {
         }
     };
     
+    @_ = ();
     $Slic3r::have_threads ? threads->create($cb)->detach : $cb->();
 }
 
@@ -875,7 +882,7 @@ sub repaint {
             # if sequential printing is enabled and we have more than one object
             if ($parent->{config}->complete_objects && (map @{$_->instances}, @{$parent->{objects}}) > 1) {
             	my $convex_hull = Slic3r::Polygon->new(convex_hull([ map @{$_->contour}, @{$parent->{object_previews}->[-1][2]->expolygons} ]));
-                my ($clearance) = offset([$convex_hull], $parent->{config}->extruder_clearance_radius / 2 * $parent->{scaling_factor}, 1, JT_ROUND);
+                my ($clearance) = @{offset([$convex_hull], $parent->{config}->extruder_clearance_radius / 2 * $parent->{scaling_factor}, 100, JT_ROUND)};
                 $dc->SetPen($parent->{clearance_pen});
                 $dc->SetBrush($parent->{transparent_brush});
                 $dc->DrawPolygon($parent->_y($clearance), 0, 0);
@@ -886,7 +893,7 @@ sub repaint {
     # draw skirt
     if (@{$parent->{object_previews}} && $parent->{config}->skirts) {
         my $convex_hull = Slic3r::Polygon->new(convex_hull([ map @{$_->contour}, map @{$_->[2]->expolygons}, @{$parent->{object_previews}} ]));
-        ($convex_hull) = offset([$convex_hull], $parent->{config}->skirt_distance * $parent->{scaling_factor}, 1, JT_ROUND);
+        ($convex_hull) = @{offset([$convex_hull], $parent->{config}->skirt_distance * $parent->{scaling_factor}, 100, JT_ROUND)};
         $dc->SetPen($parent->{skirt_pen});
         $dc->SetBrush($parent->{transparent_brush});
         $dc->DrawPolygon($parent->_y($convex_hull), 0, 0) if $convex_hull;
