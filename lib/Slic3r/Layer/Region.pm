@@ -197,7 +197,19 @@ sub make_perimeters {
         
         # generate medial axis fragments for thin walls and gaps
         my $ma = Slic3r::MedialAxis->new($surface->expolygon);
-        my @intervals = $ma->offset_interval_filter($self->perimeter_flow->scaled_spacing, $loop_number + 1, $self->perimeter_flow->scaled_spacing/2, $self->perimeter_flow->scaled_spacing/1.9, $self->perimeter_flow->scaled_spacing, $self->perimeter_flow->scaled_spacing/30);
+        #my @intervals = $ma->offset_interval_filter($self->perimeter_flow->scaled_spacing, $loop_number + 1, $self->perimeter_flow->scaled_spacing/2, $self->perimeter_flow->scaled_spacing/1.9, $self->perimeter_flow->scaled_spacing, $self->perimeter_flow->scaled_spacing/30);
+        my @intervals = $ma->offset_interval_filter($self->perimeter_flow->scaled_spacing * 2, # tool diam, or normal offset (used after initial offset)
+                                                    $loop_number + 1, # how many offsets to do
+                                                    $self->perimeter_flow->scaled_spacing ,#/2, # initial offset
+                                                    0, # bracket - added to offset for each level to determine upper MIC radius bound (edges up to that bound are collected)
+                                                       # when using double wide tool diam, bracket should be zero (was using 1.9 with 1x tool diam)
+                                                    $self->perimeter_flow->scaled_spacing, # initial offset bracket - not using this yet, maybe don't want to
+                                                    0, #$self->perimeter_flow->scaled_spacing/30
+                                                       # use nudge to slightly increase offsets so results end up intersecting Clipper offset loops later
+                                                       # can use zero nudge when doing double wide fully centered thinwalls
+                                                    );
+
+        # hash args not set up yet in offset_interval_filter()
         # my @intervals = $ma->offset_interval_filter(
             # offset => $self->perimeter_flow->scaled_spacing,
             # count => $loop_number + 1,
@@ -206,7 +218,8 @@ sub make_perimeters {
             # max_radius => $self->perimeter_flow->scaled_spacing * 1.1,
             # min_radius => $self->perimeter_flow->scaled_spacing / 2,
             # );
-        my $medial_fragments = Slic3r::MedialAxis::get_offset_fragments([@intervals], $self->layer->id % 2);
+
+        my $medial_fragments = Slic3r::MedialAxis::get_offset_fragments([@intervals], $self->layer->id % 2, $self->perimeter_flow->scaled_spacing);
         Slic3r::debugf " %d thin walls detected with medial axis\n", scalar(@{$medial_fragments->[0]}) if @{$medial_fragments} && @{$medial_fragments->[0]};
         Slic3r::debugf " %d thin gaps detected with medial axis\n", sum(map scalar(@$_) > 0, @{$medial_fragments}[1..$#$medial_fragments]) if @{$medial_fragments} > 1;
         

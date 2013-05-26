@@ -169,7 +169,7 @@ sub offset_interval_filter {
                               edge => $e,
                               offset => $offset[$j],
                               resolution => $resolution,
-                              interpolate => ($er1  > $bracket_threshold || $er2  > $bracket_threshold)
+                              interpolate => ($er1  > $bracket_threshold || $er2  > $bracket_threshold) #&& $bracket > 0
                                   ? $bracket_threshold
                                   : undef,
                               intersect => $edge_intersect,
@@ -372,11 +372,16 @@ sub get_offset_fragments {
 
         foreach my $polyedge (@{$intervals->[$i]}) {
 
-            Slic3r::MedialAxis::EdgeView::edges_svg($polyedge) if ($DB::current_layer_id >= 32);
+            #Slic3r::MedialAxis::EdgeView::edges_svg($polyedge) if ($DB::current_layer_id >= 32);
             my $keep_all = 1;
             for (@$polyedge) {if ($_->interpolate) {$keep_all = 0; last;}}
             my @polyedge = @$polyedge;
-            if (!$keep_all) {
+            if (0 && !$keep_all) {
+                
+                # This worked at one point, but improvements elsewhere
+                # now make this break things up into small segments.
+                # Revise this approach (probably in concert with point_i())
+                # or come up with something equivalent.
                 
                 # We temporarily double the offset for each edge in this
                 # sequence, then filter out those edges that no longer generate
@@ -390,7 +395,9 @@ sub get_offset_fragments {
                 $polyedge[-1]->next->[1]    *= 2.1;
                 @polyedge = grep scalar($_->points) > 0, @polyedge;
                 #$DB::svg->appendPolylines({style=>"stroke:blue;opacity:0.51;stroke-width:50000;fill:none;"},  [map {$_->points} @polyedge]) if (@polyedge) && $DB::svg;
-                @polyedge = map {$_->[1] /= 2.1 if $_->radius > $width; $_} @polyedge;
+                @polyedge = map {$_->[1] /= 2.1 
+                 #if $_->radius > $width
+                 ; $_} @polyedge;
                 $polyedge[-1]->next->[1] /= 2.1;
 
                 @polyedge = map {$_->[1] = $_->radius; $_} @polyedge;
@@ -491,7 +498,9 @@ sub get_offset_fragments {
             }
         }
 
-        # convert EdgeCollections to Polylines 
+        # convert EdgeCollections to Polylines
+        # TODO: toward dynamic flow: the "points" should include original
+        # underlying edge radius as a third coordinate
         my $thin_paths = [grep @$_ > 1, map [$_->points], grep @$_, @new_outer_frags];
         
         # cull any really short results
@@ -1181,7 +1190,7 @@ sub mid_points {
         # of the MIC is tanget to a point too, and the MIC is just growing 
         # (with center tracing out a straight ma edge) as it passes through
         # the two points.
-        while ($e2e->next  && Slic3r::Geometry::points_coincide($e2e->edge->point1, $self->edge->point1)) {
+        while ($e2->next  && Slic3r::Geometry::points_coincide($e2->edge->point1, $self->edge->point1)) {
            $e2 = $e2->next;
         }
 
