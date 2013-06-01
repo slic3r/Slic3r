@@ -346,33 +346,61 @@ sub get_offset_fragments {
 
         
         for ( # experimental stuff for issue # 226
-             my $j = -2;                              # to disable loop
-             #my $j = $#{$intervals->[$i]};
+             #my $j = -2;                              # to disable loop
+             my $j = $#{$intervals->[$i]};
              $j > -1; $j--) {
             my $polyedge = $intervals->[$i]->[$j];
 
+            # rewind polyedge to start at widest point
+            my $max_r_index = 0;
+            for (1 .. $#$polyedge) {
+                $max_r_index = $_ if $polyedge->[$max_r_index]->radius <= $polyedge->[$_]->radius;
+            }
+            if ($max_r_index > 0) {
+                @$polyedge = (@{$polyedge}[$max_r_index .. $#$polyedge], 
+                    #@{$polyedge}[0 .. $max_r_index - 1]
+                   @{$polyedge}[0 .. $max_r_index] # we're probably dealing with a closed loop, so need to include that last point again as duplicate??
+                                                   # but then do we do circle trim on that end too - prob. here or later - figure that next
+                );
+                
+                print "REWOUND INDECES (",$DB::current_layer_id,")\n";
+            }
+                
+# something above or below gave extraneous fragments, so needs to be fixed, if this is done at all
             # find cut points where radius goes from under threshold to over
-            my @cuts = grep {$polyedge->[$_]->radius       < 1 * $width
-                         &&  $polyedge->[$_]->next->radius >= 1 * $width
+            my @cuts = grep {#(   $polyedge->[$_]->radius       < 1 * $width
+                             # && $polyedge->[$_]->next->radius >= 1 * $width
+                             #)
+                            #||
+                             (   $polyedge->[$_]->radius == $polyedge->[$max_r_index]->radius
+                              &&  (
+                                  $polyedge->[$_]->edge->next != $polyedge->[$_]->edge->twin  # underlying edge pair that go out to touch the original polygon
+                                  #$polyedge->[$_]->next != $polyedge->[$_]->twin # twinturn condition for an EdgeView
+                                  && $polyedge->[$_]->next->radius != $polyedge->[$max_r_index]->radius
+                                  )
+                             )
                        } (1 .. $#$polyedge);
 
             #$_->[1] *= 2.1 for @$polyedge;
             #$polyedge->[-1]->next->[1]    *= 2.1;
             #my @polyedge = grep scalar($_->points) > 0, @polyedge;
 
-            if (@cuts) {
+            # just rewinding the polygon to start at the widest point
+            # might work, in conjunction with simple left-right strategy,
+            # without out having to make these cuts... fixed the "sharp points" test model issues... going bach to check other stuff
+            if (0 && @cuts && $cuts[-1] != $#$polyedge) {
                 @cuts = (0, @cuts, $#$polyedge);
-                $intervals->[$i]->[$j] = [@{$polyedge}[$cuts[0] .. $cuts[1]]];
-                #print "cut ",join(',',@cuts),"\n";
+                $intervals->[$i]->[$j] = [@{$polyedge}[map $_, ($cuts[0] .. $cuts[1])]];
+                print "cut ",join(',',@cuts),"\n";
                 for (my $k = 2; $k < @cuts; $k++) {
-                    push @{$intervals->[$i]}, [@{$polyedge}[$cuts[$k - 1] .. $cuts[$k]]];
+                    push @{$intervals->[$i]}, [@{$polyedge}[map $_, ($cuts[$k - 1] .. $cuts[$k])]];
                 }
             }
         }
 
         foreach my $polyedge (@{$intervals->[$i]}) {
 
-            #Slic3r::MedialAxis::EdgeView::edges_svg($polyedge) if ($DB::current_layer_id >= 32);
+            #Slic3r::MedialAxis::EdgeView::edges_svg($polyedge) if ($DB::current_layer_id >= 55);
             my $keep_all = 1;
             for (@$polyedge) {if ($_->interpolate) {$keep_all = 0; last;}}
             my @polyedge = @$polyedge;
@@ -478,8 +506,8 @@ sub get_offset_fragments {
             }                        
             
             #$DB::svg->appendRaw('<g>');
-            $DB::svg->appendPolylines({style=>"stroke:white;opacity:0.5;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited == 2} @polyedge]) if (grep {$_->visited == 2} @polyedge) && $DB::svg;
-            $DB::svg->appendPolylines({style=>"stroke:purple;opacity:0.5;stroke-width:20000;fill:none;"}, [map {$_->points} grep {$_->visited == 1} @polyedge]) if (grep {$_->visited == 1} @polyedge) && $DB::svg;
+            #$DB::svg->appendPolylines({style=>"stroke:white;opacity:0.5;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited == 2} @polyedge]) if (grep {$_->visited == 2} @polyedge) && $DB::svg;
+            #$DB::svg->appendPolylines({style=>"stroke:purple;opacity:0.5;stroke-width:20000;fill:none;"}, [map {$_->points} grep {$_->visited == 1} @polyedge]) if (grep {$_->visited == 1} @polyedge) && $DB::svg;
             #$DB::svg->appendPoints({style=>"",r=>15000},  map {[@{$_->start_point},$_->visited == 1 ? 'green':'yellow']} @polyedge) if $DB::svg;
             #$DB::svg->appendRaw('</g>');
             
@@ -536,27 +564,40 @@ sub merge_expolygon_and_medial_axis_fragments {
         $expolygon,
         [map @$_, @all_expolygons]
         );
-    #$DB::svg->appendPolygons({style=>'opacity:0.8;stroke-width:'.(0*$distance/12).';stroke:pink;fill:pink;stroke-linecap:round;stroke-linejoin:round;'}, @$diff) if $DB::svg;
+    $DB::svg->appendPolygons({style=>'opacity:0.8;stroke-width:'.(0*$distance/12).';stroke:pink;fill:pink;stroke-linecap:round;stroke-linejoin:round;'}, @$diff) if $DB::svg;
 
     # need to reimplement trim-at-junctions for this boost::polygon::voronoi based version
     #Slic3r::MedialAxis::trim_polyedge_junctions_by_radius(\@ma, $distance);
 
     #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance).';stroke:green;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map Slic3r::Polyline->new([map $_, @$_]), @ma) if $DB::svg;
 
-    my @ma_as_polylines = map Slic3r::Polyline->new($_), grep @$_ > 1, @ma;
-    $DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/3).';stroke:brown;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @ma_as_polylines) if $DB::svg;
+    my @ma_as_polylines = map Slic3r::Polyline->new($_), 
+        # Filter the point coords to just have x and y - because somewhere 
+        # downstream extra coords (probably radius here) cause far-out
+        # false points to be inserted between each legit point.
+        # (But eventually we will want to let any radius coords through here
+        # to do dynamic flow.)  
+                          map [map [@{$_}[0,1]], @$_],
+                          grep @$_ > 1, @ma;
+    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/3).';stroke:brown;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @ma_as_polylines) if $DB::svg;
 
     return $offset_expolygons if !@ma_as_polylines;
     
     # Get the medial axis fragments that are in the thin wall zone.
-    my @boost_trimmed = map @{Boost::Geometry::Utils::polygon_multi_linestring_intersection
+    my @boost_trimmed;
+    if (@{$diff->[0]} > 1) {
+        @boost_trimmed = map @{Boost::Geometry::Utils::polygon_multi_linestring_intersection
                               ($_, [@ma_as_polylines])
                              }, @$diff;
+    } else {
+        # no hole in the thin wall zone, so don't need to clip
+        @boost_trimmed = @ma_as_polylines;
+    }
 
     bless $_, 'Slic3r::Polyline' for @boost_trimmed;
     bless $_, 'Slic3r::Point' for map @$_, @boost_trimmed;
     
-    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance).';stroke:aqua;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @boost_trimmed) if $DB::svg;
+    $DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance).';stroke:aqua;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @boost_trimmed) if $DB::svg;
 
     # Break ExPolygons into fragments where they intersect with the medial axis.
 
@@ -567,7 +608,7 @@ sub merge_expolygon_and_medial_axis_fragments {
     my @offset_holes_polygons = grep $_->isa('Slic3r::Polygon'), (@offset_holes_clipped);
     my @offset_holes_polylines = grep !$_->isa('Slic3r::Polygon'), (@offset_holes_clipped);
 
-    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/2).';stroke:aqua;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @offset_polylines) if $DB::svg;
+    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/5).';stroke:pink;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @offset_polylines) if $DB::svg;
 
     # Trim one end of each polygon fragment for tool radius.
     # This also has the effect of determining which way a medial axis 
@@ -582,17 +623,21 @@ sub merge_expolygon_and_medial_axis_fragments {
                  : [$offset_polyline->[-1]->[0], $offset_polyline->[-1]->[1], $distance];
         $offset_polyline->clip_end_with_circle($clip_front, $circle);
     }
-    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/4).';stroke:purple;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @offset_polylines) if $DB::svg;
+    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/6).';stroke:purple;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @offset_polylines) if $DB::svg;
 
     # Splice together medial axis fragments
     # and polygon fragments into continuous paths.
 
-    my @all_frags = grep @$_ > 1, (@offset_polylines, @offset_holes_polylines, @boost_trimmed);
+    my @all_frags = grep @$_ > 1, ( @offset_polylines, @offset_holes_polylines, @boost_trimmed);
+    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/6).';stroke:blue;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @all_frags) if $DB::svg;
+
     Slic3r::Geometry::combine_polyline_fragments(\@all_frags, $distance/20);
     my @ex_frags = map Slic3r::ExPolygon->new($_), @all_frags;
+    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/8).';stroke:red;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map $_->contour, @ex_frags) if $DB::svg;
 
     # Hack Polylines into ExPolygons.
     bless($_->[0], 'Slic3r::Polyline') for @ex_frags;
+    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/8).';stroke:red;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map $_->contour, @ex_frags) if $DB::svg;
 
     # Preserve polygons and holes that didn't get split up by the medial axis.
     push @ex_frags, @{union_ex([@offset_polygons, @offset_holes_polygons])};
