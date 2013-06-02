@@ -476,7 +476,7 @@ sub split_object {
     my $model_object = $current_object->get_model_object;
     
     if (@{$model_object->volumes} > 1) {
-        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be splitted because it contains more than one volume/material.");
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be split because it contains more than one volume/material.");
         return;
     }
     
@@ -485,7 +485,7 @@ sub split_object {
     
     my @new_meshes = $mesh->split_mesh;
     if (@new_meshes == 1) {
-        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be splitted because it already contains a single part.");
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be split because it already contains a single part.");
         return;
     }
     
@@ -718,12 +718,12 @@ sub make_model {
         }
         $new_model_object->scale($plater_object->scale);
         $new_model_object->add_instance(
-            rotation    => $plater_object->rotate,
-            offset      => [ @$_ ],
+            rotation    => $plater_object->rotate,  # around center point
+            offset      => Slic3r::Point->new($_),
         ) for @{$plater_object->instances};
-        $new_model_object->align_to_origin;
     }
     
+    $model->align_to_origin;
     return $model;
 }
 
@@ -1128,7 +1128,6 @@ sub instances_count {
 sub make_thumbnail {
     my $self = shift;
     
-    my @points = map [ @$_[X,Y] ], @{$self->model_object->mesh->vertices};
     my $mesh = $self->model_object->mesh;
     my $thumbnail = Slic3r::ExPolygon::Collection->new(
     	expolygons => (@{$mesh->facets} <= 5000)

@@ -324,14 +324,14 @@ sub make_loops {
 
 sub rotate {
     my $self = shift;
-    my ($deg) = @_;
+    my ($deg, $center) = @_;
     return if $deg == 0;
     
     my $rad = Slic3r::Geometry::deg2rad($deg);
     
     # transform vertex coordinates
     foreach my $vertex (@{$self->vertices}) {
-        @$vertex = (@{ +(Slic3r::Geometry::rotate_points($rad, undef, [ $vertex->[X], $vertex->[Y] ]))[0] }, $vertex->[Z]);
+        @$vertex = (@{ +(Slic3r::Geometry::rotate_points($rad, $center, [ $vertex->[X], $vertex->[Y] ]))[0] }, $vertex->[Z]);
     }
 }
 
@@ -398,14 +398,19 @@ sub duplicate {
     $self->BUILD;
 }
 
+sub used_vertices {
+    my $self = shift;
+    return [ map $self->vertices->[$_], map @$_, @{$self->facets} ];
+}
+
 sub extents {
     my $self = shift;
-    return Slic3r::Geometry::bounding_box_3D($self->vertices);
+    return Slic3r::Geometry::bounding_box_3D($self->used_vertices);
 }
 
 sub size {
     my $self = shift;
-    return Slic3r::Geometry::size_3D($self->vertices);
+    return Slic3r::Geometry::size_3D($self->used_vertices);
 }
 
 sub slice_facet {

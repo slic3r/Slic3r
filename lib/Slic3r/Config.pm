@@ -9,6 +9,7 @@ use List::Util qw(first);
 our @Ignore = qw(duplicate_x duplicate_y multiply_x multiply_y support_material_tool acceleration);
 
 my $serialize_comma     = sub { join ',', @{$_[0]} };
+my $serialize_comma_bool = sub { join ',', map $_ // 0, @{$_[0]} };
 my $deserialize_comma   = sub { [ split /,/, $_[0] ] };
 
 our $Options = {
@@ -797,7 +798,7 @@ END
         tooltip => 'This flag enforces a retraction whenever a Z move is done.',
         cli     => 'retract-layer-change!',
         type    => 'bool',
-        serialize   => $serialize_comma,
+        serialize   => $serialize_comma_bool,
         deserialize => $deserialize_comma,
         default => [1],
     },
@@ -806,7 +807,7 @@ END
         tooltip => 'This flag will move the nozzle while retracting to minimize the possible blob on leaky extruders.',
         cli     => 'wipe!',
         type    => 'bool',
-        serialize   => $serialize_comma,
+        serialize   => $serialize_comma_bool,
         deserialize => $deserialize_comma,
         default => [0],
     },
@@ -1328,6 +1329,10 @@ sub validate {
         if $self->extruder_clearance_radius <= 0;
     die "Invalid value for --extruder-clearance-height\n"
         if $self->extruder_clearance_height <= 0;
+    
+    # --extrusion-multiplier
+    die "Invalid value for --extrusion-multiplier\n"
+        if defined first { $_ <= 0 } @{$self->extrusion_multiplier};
 }
 
 sub replace_options {
