@@ -13,7 +13,12 @@ sub new {
     my $polygon = $_[0]; # expolygon: [[contour], [hole1], [hole2], ...]
     my $self;
     if (ref($_[0]) =~ /(ARRAY|Polygon)/) {
-        $self = polygon_medial_axis($_[0]);
+        # polygon_medial_axis() should probably do it's own
+        # polygon simplification that's limited to removing
+        # degeneracies and near-degeneracies that Boost::Voronoi can't handle.
+        # Until then, do an ExPolygon simplify here that should remove almost
+        # duplicate vertices which can come from safety_offset() cycle upstream.
+        $self = polygon_medial_axis($_[0]->simplify(2));
         bless $_, 'Slic3r::MedialAxis::Edge' for @{$self->{edges}};
     }
     elsif (ref $_[0] eq 'HASH') {
@@ -22,6 +27,7 @@ sub new {
         }
     
     $self->{max_radius} = $self->{edges}->[0]->radius;
+
     foreach my $edge (@{$self->{edges}}) {
         if ($self->{max_radius} < $edge->radius) {
             $self->{max_radius} = $edge->radius;
@@ -49,7 +55,7 @@ sub new {
         }
     }
     
-    #Slic3r::MedialAxis::EdgeView::edges_svg($self->{edges}) if ($DB::svg && $DB::current_layer_id == 32);
+    #Slic3r::MedialAxis::EdgeView::edges_svg($self->{edges}) if ($DB::svg && $DB::current_layer_id == 22);
 
     bless $self, $class;
     return $self;
@@ -112,6 +118,11 @@ sub offset_interval_filter {
         my $er_max = ($er1 > $er2) ? $er1 : $er2;
         my $er_min = ($er1 > $er2) ? $er2 : $er1;
         my $ephi = $e->phi;
+        # TODO: fix this upstream in Boost::Geometry::Utils
+        # phi should always be between 0 and +pi
+        # but sometimes you get something very close to -pi, 
+        # which probably should be +pi - but needs investigation
+        $ephi += 2*&Slic3r::Geometry::PI if $ephi < 0;
 
         # TODO: enforce a minimum resolution - corners interpreted by resolution
         # or tool diameter are better modeled as circular arcs that the 
@@ -134,7 +145,7 @@ sub offset_interval_filter {
             # edge list order matches edge->next order, except where
             # one edge loop subset ends and the next begins
             
-            my $edge_intersect = ($er1 >  $offset[$j] && $er2 <= $offset[$j]) 
+            my $edge_intersect = ($er1 > $offset[$j] && $er2 <= $offset[$j]) 
                                ? 1 : 0;
 
             my $bracket_threshold = defined($bracket)
@@ -145,10 +156,13 @@ sub offset_interval_filter {
             # TODO: make phi threshold used here a parameter
             # TODO: avoid this hard threshold for sharp corners - ramp the depth
             #       of incursion into sharp corners relative to sharpness/depth
+
             my $shallow_corner = (  $ephi < &Slic3r::Geometry::deg2rad(60)
-                         || $ephi > &Slic3r::Geometry::deg2rad(120) 
-                         )
-                       ? 1 : 0;
+                                 || $ephi > &Slic3r::Geometry::deg2rad(120) 
+                                 )
+                               ? 1 : 0;
+
+
 
             my $twinturn = (  ($edge_intersect
                                 # both edges involved in the twinturn
@@ -278,8 +292,7 @@ sub offset_interval_filter {
         $last_loop_start = $i if ($i > $last_loop_start && $ep != $self->{edges}->[$i - 1]);
     }
 
-    $DB::svg->appendLines({style=>"stroke:green;stroke-width:40000;"}, @dblines
-    ) if @dblines && $DB::svg;
+    $DB::svg->appendLines({style=>"stroke:green;stroke-width:40000;"}, @dblines) if @dblines && $DB::svg;
 
     foreach my $interval (@intervals) {
         @$interval  = grep @$_ > 0, @$interval;
@@ -329,6 +342,10 @@ sub offset_interval_filter {
             $DB::svg->appendPolylines(
                 {style=>"stroke:red;stroke-width:20000;fill:none;"},
                 map {[map {$_->points} @$_]} @$interval
+            ) if $DB::svg;
+            $DB::svg->appendPoints(
+                {r=>200000, style=>"fill:red;"},
+                map {map {[@{$_}[0,1]]} ($_->[-1]->points)} @$interval
             ) if $DB::svg;
         }
     }
@@ -405,7 +422,7 @@ sub get_offset_fragments {
         
         foreach my $polyedge (@{$intervals->[$i]}) {
 
-            #Slic3r::MedialAxis::EdgeView::edges_svg($polyedge) if ($DB::sv && $DB::current_layer_id >= 5 && $DB::current_layer_id <= 8);
+            #Slic3r::MedialAxis::EdgeView::edges_svg($polyedge) if ($DB::svg && $DB::current_layer_id >= 20 && $DB::current_layer_id <= 24);
 
             my @polyedge = @$polyedge;
 
@@ -1055,18 +1072,18 @@ sub edges_svg {
     my @phi_rays = map {
         [ $_->vertex0, [$_->vertex0->[0] + 200000*cos($_->theta + $_->phi), $_->vertex0->[1] + 200000*sin($_->theta + $_->phi)]]
         } @$edges;
-    #my @offset_segs_whole = map {
-    #    [ grep $_, ( $_->point0($_->offset, 1), $_->point1($_->offset, 1) )]
-    #    } @$edges;
+    my @offset_segs_whole = map {
+        [ grep $_, ( $_->point0($_->offset/6, 1), $_->point1($_->offset/6, 1) )]
+        } @$edges if $edges->[0]->isa('Slic3r::MedialAxis::EdgeView');
     my @offset_segs = map {
         [ grep $_, ( $_->start_point, $_->mid_points, $_->end_point )]
-        } @$edges;
+        } @$edges if $edges->[0]->isa('Slic3r::MedialAxis::EdgeView');
     my @offset_pts = map {
         map [@{$_->[0]}[0,1],$_->[1]], grep $_->[0], 
           (      [$_->start_point || undef, 'green' ], 
             (map [$_              || undef, 'yellow'], $_->mid_points), 
                  [$_->end_point   || undef, 'red'   ] )
-        } @$edges;
+        } @$edges if $edges->[0]->isa('Slic3r::MedialAxis::EdgeView');
     $DB::svg->appendRaw('<g>');
     
     # the edges of the cell
@@ -1079,11 +1096,11 @@ sub edges_svg {
     ); 
     
     # the offset-from-polygon segment without any "interpolate" or "intersect" limits
-    #$DB::svg->appendPolylines({style=>"stroke:orange;opacity:0.5;stroke-width:40000;fill:none;"},
-    #  grep @$_>1, @offset_segs_whole);
+    $DB::svg->appendPolylines({style=>"stroke:orange;opacity:0.5;stroke-width:40000;fill:none;"},
+      grep @$_>1, @offset_segs_whole) if $edges->[0]->isa('Slic3r::MedialAxis::EdgeView');
     # the offset-from-polygon segment
     $DB::svg->appendPolylines({style=>"stroke:white;stroke-width:40000;fill:none;"},
-      grep @$_>1, @offset_segs);
+      grep @$_>1, @offset_segs) if $edges->[0]->isa('Slic3r::MedialAxis::EdgeView');
     # theta rays
     $DB::svg->appendPolylines({style=>"stroke:aqua;stroke-width:20000;fill:none;",markerend => 'url(#dirend)'},
       @theta_rays);
@@ -1092,8 +1109,7 @@ sub edges_svg {
       @phi_rays);
     # the start point, any midpoints, and the end point of the offset segment
     $DB::svg->appendPoints({r=>20000,style=>"opacity:0.4;"},
-       @offset_pts
-     );
+       @offset_pts) if $edges->[0]->isa('Slic3r::MedialAxis::EdgeView');
 
     $DB::svg->appendRaw('</g>');
 
