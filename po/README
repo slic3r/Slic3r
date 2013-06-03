@@ -1,5 +1,49 @@
+
+libintl-perl
+
 help:
 Available targets:
 make update-po              - merge po files
 make update-mo             - regenerate mo files
 make all							- all of the above
+
+Agigungere una nuova lingua
+Copiare il file Slic3r.pot in "nuovalingua.po". Aprire il file con un editor di testo o un edito specifico per la gestione dei file po (es .. poedit). 
+Il file è così 
+
+#: ../lib/Slic3r/Config.pm:30
+msgid "Configuration notes"
+msgstr ""
+
+msgid è la stringa originale, presente nel codice.
+msgstr è la stringa tradotta.
+
+Dopo lanciate il comando
+make update-mo
+per creare/ricreare il binario che verrà usato dal programma e lo trovate nella directory 
+lib/LocaleData/(nuova_lingua)/LC_MESSAGES/Slic3r.mo
+
+Se si effetuano modifiche nel codice sorgente, aggiungendo nuove stringhe, lanciate il comando
+make update-po
+per aggiornare il file .po con le nuove stringhe. Aggiungete le nuove traduzioni e rilanciate
+make update-mo
+
+PACKAGE file
+Inserisci qui le lingue supportate
+
+POTFILES.in
+Inserisci qui i file da far processare da xgettext, file sorgente dove estrapolare le stringhe da tradurre.
+
+PER GLI SVILUPPATORI
+Usate le funzioni __"" __() N__() in tutte le stringhe che volete che siano tradotte. Inoltre aggiuntete gli include delle librerie
+
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
+
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
