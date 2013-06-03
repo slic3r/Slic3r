@@ -2,7 +2,16 @@ package Slic3r::GUI::ConfigWizard;
 use strict;
 use warnings;
 use utf8;
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 use Wx;
 use base 'Wx::Wizard';
 
@@ -13,7 +22,7 @@ $wizard = 'Assistant' if &Wx::wxMAC || &Wx::wxGTK;
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Configuration $wizard");
+    my $self = $class->SUPER::new($parent, -1, __("Configuration")." $wizard");
 
     # initialize an empty repository
     $self->{config} = Slic3r::Config->new;
@@ -253,28 +262,46 @@ sub build_index {
 
 package Slic3r::GUI::ConfigWizard::Page::Welcome;
 use base 'Slic3r::GUI::ConfigWizard::Page';
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, "Welcome to the Slic3r Configuration $wizard", 'Welcome');
+    my $self = $class->SUPER::new($parent, __("Welcome to the Slic3r Configuration")." $wizard", __("Welcome"));
 
-    $self->append_text('Hello, welcome to Slic3r! This '.lc($wizard).' helps you with the initial configuration; just a few settings and you will be ready to print.');
-    $self->append_text('To import an existing configuration instead, cancel this '.lc($wizard).' and use the Open Config menu item found in the File menu.');
-    $self->append_text('To continue, click Next.');
+    $self->append_text(__("Hello, welcome to Slic3r! This")." ".lc($wizard)." ". __(" helps you with the initial configuration; just a few settings and you will be ready to print."));
+    $self->append_text(__("To import an existing configuration instead, cancel this")." ".lc($wizard)." ". __(" and use the Open Config menu item found in the File menu."));
+    $self->append_text(__("To continue, click Next."));
 
     return $self;
 }
 
 package Slic3r::GUI::ConfigWizard::Page::Firmware;
 use base 'Slic3r::GUI::ConfigWizard::Page';
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, 'Firmware Type');
+    my $self = $class->SUPER::new($parent, __("Firmware Type"));
 
-    $self->append_text('Choose the type of firmware used by your printer, then click Next.');
+    $self->append_text(__("Choose the type of firmware used by your printer, then click Next."));
     $self->append_option('gcode_flavor');
 
     return $self;
@@ -282,13 +309,22 @@ sub new {
 
 package Slic3r::GUI::ConfigWizard::Page::Bed;
 use base 'Slic3r::GUI::ConfigWizard::Page';
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, 'Bed Size');
+    my $self = $class->SUPER::new($parent, __("Bed Size"));
 
-    $self->append_text('Enter the size of your printers bed, then click Next.');
+    $self->append_text(__("Enter the size of your printers bed, then click Next."));
     $self->append_option('bed_size');
 
     return $self;
@@ -296,13 +332,22 @@ sub new {
 
 package Slic3r::GUI::ConfigWizard::Page::Nozzle;
 use base 'Slic3r::GUI::ConfigWizard::Page';
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, 'Nozzle Diameter');
+    my $self = $class->SUPER::new($parent, __("Nozzle Diameter"));
 
-    $self->append_text('Enter the diameter of your printers hot end nozzle, then click Next.');
+    $self->append_text(__("Enter the diameter of your printers hot end nozzle, then click Next."));
     $self->append_option('nozzle_diameter#0');
 
     return $self;
@@ -310,14 +355,23 @@ sub new {
 
 package Slic3r::GUI::ConfigWizard::Page::Filament;
 use base 'Slic3r::GUI::ConfigWizard::Page';
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, 'Filament Diameter');
+    my $self = $class->SUPER::new($parent, __("Filament Diameter"));
 
-    $self->append_text('Enter the diameter of your filament, then click Next.');
-    $self->append_text('Good precision is required, so use a caliper and do multiple measurements along the filament, then compute the average.');
+    $self->append_text(__("Enter the diameter of your filament, then click Next."));
+    $self->append_text(__("Good precision is required, so use a caliper and do multiple measurements along the filament, then compute the average."));
     $self->append_option('filament_diameter#0');
 
     return $self;
@@ -325,14 +379,23 @@ sub new {
 
 package Slic3r::GUI::ConfigWizard::Page::Temperature;
 use base 'Slic3r::GUI::ConfigWizard::Page';
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, 'Extrusion Temperature');
+    my $self = $class->SUPER::new($parent, __("Extrusion Temperature"));
 
-    $self->append_text('Enter the temperature needed for extruding your filament, then click Next.');
-    $self->append_text('A rule of thumb is 160 to 230 °C for PLA, and 215 to 250 °C for ABS.');
+    $self->append_text(__("Enter the temperature needed for extruding your filament, then click Next."));
+    $self->append_text(__("A rule of thumb is 160 to 230 °C for PLA, and 215 to 250 °C for ABS."));
     $self->append_option('temperature#0');
 
     return $self;
@@ -340,14 +403,23 @@ sub new {
 
 package Slic3r::GUI::ConfigWizard::Page::BedTemperature;
 use base 'Slic3r::GUI::ConfigWizard::Page';
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, 'Bed Temperature');
+    my $self = $class->SUPER::new($parent, __("Bed Temperature"));
 
-    $self->append_text('Enter the bed temperature needed for getting your filament to stick to your heated bed, then click Next.');
-    $self->append_text('A rule of thumb is 60 °C for PLA and 110 °C for ABS.');
+    $self->append_text(__("Enter the bed temperature needed for getting your filament to stick to your heated bed, then click Next."));
+    $self->append_text(__("A rule of thumb is 60 °C for PLA and 110 °C for ABS."));
     $self->append_option('bed_temperature');
 
     return $self;
@@ -355,15 +427,24 @@ sub new {
 
 package Slic3r::GUI::ConfigWizard::Page::Finished;
 use base 'Slic3r::GUI::ConfigWizard::Page';
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, 'Congratulations!', 'Finish');
+    my $self = $class->SUPER::new($parent, __("Congratulations!"), __("Finish"));
 
-    $self->append_text("You have successfully completed the Slic3r Configuration $wizard. " .
-                       'Slic3r is now configured for your printer and filament.');
-    $self->append_text('To close this '.lc($wizard).' and apply the newly created configuration, click Finish.');
+    $self->append_text(__("You have successfully completed the Slic3r Configuration")." $wizard. " .
+                       __("Slic3r is now configured for your printer and filament."));
+    $self->append_text(__("To close this")." ".lc($wizard)." ". __("and apply the newly created configuration, click Finish."));
 
     return $self;
 }

@@ -3,6 +3,17 @@
 use strict;
 use warnings;
 
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
+
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
+
 BEGIN {
     use FindBin;
     use lib "$FindBin::Bin/lib";

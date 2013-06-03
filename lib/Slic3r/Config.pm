@@ -3,6 +3,17 @@ use strict;
 use warnings;
 use utf8;
 
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
+
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
+
 use List::Util qw(first);
 
 # cemetery of old config settings
@@ -16,8 +27,8 @@ our $Options = {
 
     # miscellaneous options
     'notes' => {
-        label   => 'Configuration notes',
-        tooltip => 'You can put here your personal notes. This text will be added to the G-code header comments.',
+        label   => __"Configuration notes",
+        tooltip => __"You can put here your personal notes. This text will be added to the G-code header comments.",
         cli     => 'notes=s',
         type    => 's',
         multiline => 1,
@@ -28,9 +39,9 @@ our $Options = {
         default => '',
     },
     'threads' => {
-        label   => 'Threads',
-        tooltip => 'Threads are used to parallelize long-running tasks. Optimal threads number is slightly above the number of available cores/processors. Beware that more threads consume more memory.',
-        sidetext => '(more speed but more memory usage)',
+        label   => __"Threads",
+        tooltip => __"Threads are used to parallelize long-running tasks. Optimal threads number is slightly above the number of available cores/processors. Beware that more threads consume more memory.",
+        sidetext => __"(more speed but more memory usage)",
         cli     => 'threads|j=i',
         type    => 'i',
         min     => 1,
@@ -39,9 +50,9 @@ our $Options = {
         readonly => !$Slic3r::have_threads,
     },
     'resolution' => {
-        label   => 'Resolution',
-        tooltip => 'Minimum detail resolution, used to simplify the input file for speeding up the slicing job and reducing memory usage. High-resolution models often carry more detail than printers can render. Set to zero to disable any simplification and use full resolution from input.',
-        sidetext => 'mm',
+        label   => __"Resolution",
+        tooltip => __"Minimum detail resolution, used to simplify the input file for speeding up the slicing job and reducing memory usage. High-resolution models often carry more detail than printers can render. Set to zero to disable any simplification and use full resolution from input.",
+        sidetext => __"mm",
         cli     => 'resolution=f',
         type    => 'f',
         min     => 0,
@@ -50,8 +61,8 @@ our $Options = {
 
     # output options
     'output_filename_format' => {
-        label   => 'Output filename format',
-        tooltip => 'You can use all configuration options as variables inside this template. For example: [layer_height], [fill_density] etc. You can also use [timestamp], [year], [month], [day], [hour], [minute], [second], [version], [input_filename], [input_filename_base].',
+        label   => __"Output filename format",
+        tooltip => __"You can use all configuration options as variables inside this template. For example: [layer_height], [fill_density] etc. You can also use [timestamp], [year], [month], [day], [hour], [minute], [second], [version], [input_filename], [input_filename_base].",
         cli     => 'output-filename-format=s',
         type    => 's',
         full_width => 1,
@@ -60,9 +71,9 @@ our $Options = {
 
     # printer options
     'print_center' => {
-        label   => 'Print center',
-        tooltip => 'Enter the G-code coordinates of the point you want to center your print around.',
-        sidetext => 'mm',
+        label   => __"Print center",
+        tooltip => __"Enter the G-code coordinates of the point you want to center your print around.",
+        sidetext => __"mm",
         cli     => 'print-center=s',
         type    => 'point',
         serialize   => $serialize_comma,
@@ -70,8 +81,8 @@ our $Options = {
         default => [100,100],
     },
     'gcode_flavor' => {
-        label   => 'G-code flavor',
-        tooltip => 'Some G/M-code commands, including temperature control and others, are not universal. Set this option to your printer\'s firmware to get a compatible output. The "No extrusion" flavor prevents Slic3r from exporting any extrusion value at all.',
+        label   => __"G-code flavor",
+        tooltip => __"Some G/M-code commands, including temperature control and others, are not universal. Set this option to your printer\'s firmware to get a compatible output. The \"No extrusion\" flavor prevents Slic3r from exporting any extrusion value at all.",
         cli     => 'gcode-flavor=s',
         type    => 'select',
         values  => [qw(reprap teacup makerbot sailfish mach3 no-extrusion)],
@@ -79,44 +90,44 @@ our $Options = {
         default => 'reprap',
     },
     'use_relative_e_distances' => {
-        label   => 'Use relative E distances',
-        tooltip => 'If your firmware requires relative E values, check this, otherwise leave it unchecked. Most firmwares use absolute values.',
+        label   => __"Use relative E distances",
+        tooltip => __"If your firmware requires relative E values, check this, otherwise leave it unchecked. Most firmwares use absolute values.",
         cli     => 'use-relative-e-distances!',
         type    => 'bool',
         default => 0,
     },
     'extrusion_axis' => {
-        label   => 'Extrusion axis',
-        tooltip => 'Use this option to set the axis letter associated to your printer\'s extruder (usually E but some printers use A).',
+        label   => __"Extrusion axis",
+        tooltip => __"Use this option to set the axis letter associated to your printer\'s extruder (usually E but some printers use A).",
         cli     => 'extrusion-axis=s',
         type    => 's',
         default => 'E',
     },
     'z_offset' => {
-        label   => 'Z offset',
-        tooltip => 'This value will be added (or subtracted) from all the Z coordinates in the output G-code. It is used to compensate for bad Z endstop position: for example, if your endstop zero actually leaves the nozzle 0.3mm far from the print bed, set this to -0.3 (or fix your endstop).',
-        sidetext => 'mm',
+        label   => __"Z offset",
+        tooltip => __"This value will be added (or subtracted) from all the Z coordinates in the output G-code. It is used to compensate for bad Z endstop position: for example, if your endstop zero actually leaves the nozzle 0.3mm far from the print bed, set this to -0.3 (or fix your endstop).",
+        sidetext => __"mm",
         cli     => 'z-offset=f',
         type    => 'f',
         default => 0,
     },
     'gcode_arcs' => {
-        label   => 'Use native G-code arcs',
-        tooltip => 'This experimental feature tries to detect arcs from segments and generates G2/G3 arc commands instead of multiple straight G1 commands.',
+        label   => __"Use native G-code arcs",
+        tooltip => __"This experimental feature tries to detect arcs from segments and generates G2/G3 arc commands instead of multiple straight G1 commands.",
         cli     => 'gcode-arcs!',
         type    => 'bool',
         default => 0,
     },
     'g0' => {
-        label   => 'Use G0 for travel moves',
-        tooltip => 'Only enable this if your firmware supports G0 properly (thus decouples all axes using their maximum speeds instead of synchronizing them). Travel moves and retractions will be combined in single commands, speeding them print up.',
+        label   => __"Use G0 for travel moves",
+        tooltip => __"Only enable this if your firmware supports G0 properly (thus decouples all axes using their maximum speeds instead of synchronizing them). Travel moves and retractions will be combined in single commands, speeding them print up.",
         cli     => 'g0!',
         type    => 'bool',
         default => 0,
     },
     'gcode_comments' => {
-        label   => 'Verbose G-code',
-        tooltip => 'Enable this to get a commented G-code file, with each line explained by a descriptive text. If you print from SD card, the additional weight of the file could make your firmware slow down.',
+        label   => __"Verbose G-code",
+        tooltip => __"Enable this to get a commented G-code file, with each line explained by a descriptive text. If you print from SD card, the additional weight of the file could make your firmware slow down.",
         cli     => 'gcode-comments!',
         type    => 'bool',
         default => 0,
@@ -124,9 +135,9 @@ our $Options = {
     
     # extruders options
     'extruder_offset' => {
-        label   => 'Extruder offset',
-        tooltip => 'If your firmware doesn\'t handle the extruder displacement you need the G-code to take it into account. This option lets you specify the displacement of each extruder with respect to the first one. It expects positive coordinates (they will be subtracted from the XY coordinate).',
-        sidetext => 'mm',
+        label   => __"Extruder offset",
+        tooltip => __"If your firmware doesn\'t handle the extruder displacement you need the G-code to take it into account. This option lets you specify the displacement of each extruder with respect to the first one. It expects positive coordinates (they will be subtracted from the XY coordinate).",
+        sidetext => __"mm",
         cli     => 'extruder-offset=s@',
         type    => 'point',
         serialize   => sub { join ',', map { join 'x', @$_ } @{$_[0]} },
@@ -134,19 +145,19 @@ our $Options = {
         default => [[0,0]],
     },
     'nozzle_diameter' => {
-        label   => 'Nozzle diameter',
-        tooltip => 'This is the diameter of your extruder nozzle (for example: 0.5, 0.35 etc.)',
+        label   => __"Nozzle diameter",
+        tooltip => __"This is the diameter of your extruder nozzle (for example: 0.5, 0.35 etc.)",
         cli     => 'nozzle-diameter=f@',
         type    => 'f',
-        sidetext => 'mm',
+        sidetext => __"mm",
         serialize   => $serialize_comma,
         deserialize => $deserialize_comma,
         default => [0.5],
     },
     'filament_diameter' => {
-        label   => 'Diameter',
-        tooltip => 'Enter your filament diameter here. Good precision is required, so use a caliper and do multiple measurements along the filament, then compute the average.',
-        sidetext => 'mm',
+        label   => __"Diameter",
+        tooltip => __"Enter your filament diameter here. Good precision is required, so use a caliper and do multiple measurements along the filament, then compute the average.",
+        sidetext => __"mm",
         cli     => 'filament-diameter=f@',
         type    => 'f',
         serialize   => $serialize_comma,
@@ -154,8 +165,8 @@ our $Options = {
         default     => [3],
     },
     'extrusion_multiplier' => {
-        label   => 'Extrusion multiplier',
-        tooltip => 'This factor changes the amount of flow proportionally. You may need to tweak this setting to get nice surface finish and correct single wall widths. Usual values are between 0.9 and 1.1. If you think you need to change this more, check filament diameter and your firmware E steps.',
+        label   => __"Extrusion multiplier",
+        tooltip => __"This factor changes the amount of flow proportionally. You may need to tweak this setting to get nice surface finish and correct single wall widths. Usual values are between 0.9 and 1.1. If you think you need to change this more, check filament diameter and your firmware E steps.",
         cli     => 'extrusion-multiplier=f@',
         type    => 'f',
         serialize   => $serialize_comma,
@@ -163,9 +174,9 @@ our $Options = {
         default => [1],
     },
     'temperature' => {
-        label   => 'Other layers',
-        tooltip => 'Extruder temperature for layers after the first one. Set this to zero to disable temperature control commands in the output.',
-        sidetext => '°C',
+        label   => __"Other layers",
+        tooltip => __"Extruder temperature for layers after the first one. Set this to zero to disable temperature control commands in the output.",
+        sidetext => __"°C",
         cli     => 'temperature=i@',
         type    => 'i',
         max     => 400,
@@ -174,9 +185,9 @@ our $Options = {
         default => [200],
     },
     'first_layer_temperature' => {
-        label   => 'First layer',
-        tooltip => 'Extruder temperature for first layer. If you want to control temperature manually during print, set this to zero to disable temperature control commands in the output file.',
-        sidetext => '°C',
+        label   => __"First layer",
+        tooltip => __"Extruder temperature for first layer. If you want to control temperature manually during print, set this to zero to disable temperature control commands in the output file.",
+        sidetext => __"°C",
         cli     => 'first-layer-temperature=i@',
         type    => 'i',
         serialize   => $serialize_comma,
@@ -187,23 +198,23 @@ our $Options = {
     
     # extruder mapping
     'perimeter_extruder' => {
-        label   => 'Perimeter extruder',
-        tooltip => 'The extruder to use when printing perimeters.',
+        label   => __"Perimeter extruder",
+        tooltip => __"The extruder to use when printing perimeters.",
         cli     => 'perimeter-extruder=i',
         type    => 'i',
         aliases => [qw(perimeters_extruder)],
         default => 1,
     },
     'infill_extruder' => {
-        label   => 'Infill extruder',
-        tooltip => 'The extruder to use when printing infill.',
+        label   => __"Infill extruder",
+        tooltip => __"The extruder to use when printing infill.",
         cli     => 'infill-extruder=i',
         type    => 'i',
         default => 1,
     },
     'support_material_extruder' => {
-        label   => 'Support material extruder',
-        tooltip => 'The extruder to use when printing support material. This affects brim too.',
+        label   => __"Support material extruder",
+        tooltip => __"The extruder to use when printing support material. This affects brim too.",
         cli     => 'support-material-extruder=i',
         type    => 'i',
         default => 1,
@@ -211,18 +222,18 @@ our $Options = {
     
     # filament options
     'first_layer_bed_temperature' => {
-        label   => 'First layer',
-        tooltip => 'Heated build plate temperature for the first layer. Set this to zero to disable bed temperature control commands in the output.',
-        sidetext => '°C',
+        label   => __"First layer",
+        tooltip => __"Heated build plate temperature for the first layer. Set this to zero to disable bed temperature control commands in the output.",
+        sidetext => __"°C",
         cli     => 'first-layer-bed-temperature=i',
         type    => 'i',
         max     => 300,
         default => 0,
     },
     'bed_temperature' => {
-        label   => 'Other layers',
-        tooltip => 'Bed temperature for layers after the first one. Set this to zero to disable bed temperature control commands in the output.',
-        sidetext => '°C',
+        label   => __"Other layers",
+        tooltip => __"Bed temperature for layers after the first one. Set this to zero to disable bed temperature control commands in the output.",
+        sidetext => __"°C",
         cli     => 'bed-temperature=i',
         type    => 'i',
         max     => 300,
@@ -231,54 +242,54 @@ our $Options = {
     
     # speed options
     'travel_speed' => {
-        label   => 'Travel',
-        tooltip => 'Speed for travel moves (jumps between distant extrusion points).',
-        sidetext => 'mm/s',
+        label   => __"Travel",
+        tooltip => __"Speed for travel moves (jumps between distant extrusion points).",
+        sidetext => __"mm/s",
         cli     => 'travel-speed=f',
         type    => 'f',
         aliases => [qw(travel_feed_rate)],
         default => 130,
     },
     'perimeter_speed' => {
-        label   => 'Perimeters',
-        tooltip => 'Speed for perimeters (contours, aka vertical shells).',
-        sidetext => 'mm/s',
+        label   => __"Perimeters",
+        tooltip => __"Speed for perimeters (contours, aka vertical shells).",
+        sidetext => __"mm/s",
         cli     => 'perimeter-speed=f',
         type    => 'f',
         aliases => [qw(perimeter_feed_rate)],
         default => 30,
     },
     'small_perimeter_speed' => {
-        label   => 'Small perimeters',
-        tooltip => 'This separate setting will affect the speed of perimeters having radius <= 6.5mm (usually holes). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above.',
-        sidetext => 'mm/s or %',
+        label   => __"Small perimeters",
+        tooltip => __"This separate setting will affect the speed of perimeters having radius <= 6.5mm (usually holes). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above.",
+        sidetext => __"mm/s or %",
         cli     => 'small-perimeter-speed=s',
         type    => 'f',
         ratio_over => 'perimeter_speed',
         default => 30,
     },
     'external_perimeter_speed' => {
-        label   => 'External perimeters',
-        tooltip => 'This separate setting will affect the speed of external perimeters (the visible ones). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above.',
-        sidetext => 'mm/s or %',
+        label   => __"External perimeters",
+        tooltip => __"This separate setting will affect the speed of external perimeters (the visible ones). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above.",
+        sidetext => __"mm/s or %",
         cli     => 'external-perimeter-speed=s',
         type    => 'f',
         ratio_over => 'perimeter_speed',
         default => '70%',
     },
     'infill_speed' => {
-        label   => 'Infill',
-        tooltip => 'Speed for printing the internal fill.',
-        sidetext => 'mm/s',
+        label   => __"Infill",
+        tooltip => __"Speed for printing the internal fill.",
+        sidetext => __"mm/s",
         cli     => 'infill-speed=f',
         type    => 'f',
         aliases => [qw(print_feed_rate infill_feed_rate)],
         default => 60,
     },
     'solid_infill_speed' => {
-        label   => 'Solid infill',
-        tooltip => 'Speed for printing solid regions (top/bottom/internal horizontal shells). This can be expressed as a percentage (for example: 80%) over the default infill speed above.',
-        sidetext => 'mm/s or %',
+        label   => __"Solid infill",
+        tooltip => __"Speed for printing solid regions (top/bottom/internal horizontal shells). This can be expressed as a percentage (for example: 80%) over the default infill speed above.",
+        sidetext => __"mm/s or %",
         cli     => 'solid-infill-speed=s',
         type    => 'f',
         ratio_over => 'infill_speed',
@@ -286,43 +297,43 @@ our $Options = {
         default => 60,
     },
     'top_solid_infill_speed' => {
-        label   => 'Top solid infill',
-        tooltip => 'Speed for printing top solid regions. You may want to slow down this to get a nicer surface finish. This can be expressed as a percentage (for example: 80%) over the solid infill speed above.',
-        sidetext => 'mm/s or %',
+        label   => __"Top solid infill",
+        tooltip => __"Speed for printing top solid regions. You may want to slow down this to get a nicer surface finish. This can be expressed as a percentage (for example: 80%) over the solid infill speed above.",
+        sidetext => __"mm/s or %",
         cli     => 'top-solid-infill-speed=s',
         type    => 'f',
         ratio_over => 'solid_infill_speed',
         default => 50,
     },
     'support_material_speed' => {
-        label   => 'Support material',
-        tooltip => 'Speed for printing support material.',
-        sidetext => 'mm/s',
+        label   => __"Support material",
+        tooltip => __"Speed for printing support material.",
+        sidetext => __"mm/s",
         cli     => 'support-material-speed=f',
         type    => 'f',
         default => 60,
     },
     'bridge_speed' => {
-        label   => 'Bridges',
-        tooltip => 'Speed for printing bridges.',
-        sidetext => 'mm/s',
+        label   => __"Bridges",
+        tooltip => __"Speed for printing bridges.",
+        sidetext => __"mm/s",
         cli     => 'bridge-speed=f',
         type    => 'f',
         aliases => [qw(bridge_feed_rate)],
         default => 60,
     },
     'gap_fill_speed' => {
-        label   => 'Gap fill',
-        tooltip => 'Speed for filling small gaps using short zigzag moves. Keep this reasonably low to avoid too much shaking and resonance issues. Set zero to disable gaps filling.',
-        sidetext => 'mm/s',
+        label   => __"Gap fill",
+        tooltip => __"Speed for filling small gaps using short zigzag moves. Keep this reasonably low to avoid too much shaking and resonance issues. Set zero to disable gaps filling.",
+        sidetext => __"mm/s",
         cli     => 'gap-fill-speed=f',
         type    => 'f',
         default => 20,
     },
     'first_layer_speed' => {
-        label   => 'First layer speed',
-        tooltip => 'If expressed as absolute value in mm/s, this speed will be applied to all the print moves of the first layer, regardless of their type. If expressed as a percentage (for example: 40%) it will scale the default speeds.',
-        sidetext => 'mm/s or %',
+        label   => __"First layer speed",
+        tooltip => __"If expressed as absolute value in mm/s, this speed will be applied to all the print moves of the first layer, regardless of their type. If expressed as a percentage (for example: 40%) it will scale the default speeds.",
+        sidetext => __"mm/s or %",
         cli     => 'first-layer-speed=s',
         type    => 'f',
         default => '30%',
@@ -330,33 +341,33 @@ our $Options = {
     
     # acceleration options
     'default_acceleration' => {
-        label   => 'Default',
-        tooltip => 'This is the acceleration your printer will be reset to after the role-specific acceleration values are used (perimeter/infill). Set zero to prevent resetting acceleration at all.',
-        sidetext => 'mm/s²',
+        label   => __"Default",
+        tooltip => __"This is the acceleration your printer will be reset to after the role-specific acceleration values are used (perimeter/infill). Set zero to prevent resetting acceleration at all.",
+        sidetext => __"mm/s²",
         cli     => 'default-acceleration=f',
         type    => 'f',
         default => 0,
     },
     'perimeter_acceleration' => {
-        label   => 'Perimeters',
-        tooltip => 'This is the acceleration your printer will use for perimeters. A high value like 9000 usually gives good results if your hardware is up to the job. Set zero to disable acceleration control for perimeters.',
-        sidetext => 'mm/s²',
+        label   => __"Perimeters",
+        tooltip => __"This is the acceleration your printer will use for perimeters. A high value like 9000 usually gives good results if your hardware is up to the job. Set zero to disable acceleration control for perimeters.",
+        sidetext => __"mm/s²",
         cli     => 'perimeter-acceleration=f',
         type    => 'f',
         default => 0,
     },
     'infill_acceleration' => {
-        label   => 'Infill',
-        tooltip => 'This is the acceleration your printer will use for infill. Set zero to disable acceleration control for infill.',
-        sidetext => 'mm/s²',
+        label   => __"Infill",
+        tooltip => __"This is the acceleration your printer will use for infill. Set zero to disable acceleration control for infill.",
+        sidetext => __"mm/s²",
         cli     => 'infill-acceleration=f',
         type    => 'f',
         default => 0,
     },
     'bridge_acceleration' => {
-        label   => 'Bridge',
-        tooltip => 'This is the acceleration your printer will use for bridges. Set zero to disable acceleration control for bridges.',
-        sidetext => 'mm/s²',
+        label   => __"Bridge",
+        tooltip => __"This is the acceleration your printer will use for bridges. Set zero to disable acceleration control for bridges.",
+        sidetext => __"mm/s²",
         cli     => 'bridge-acceleration=f',
         type    => 'f',
         default => 0,
@@ -364,50 +375,50 @@ our $Options = {
     
     # accuracy options
     'layer_height' => {
-        label   => 'Layer height',
-        tooltip => 'This setting controls the height (and thus the total number) of the slices/layers. Thinner layers give better accuracy but take more time to print.',
+        label   => __"Layer height",
+        tooltip => __"This setting controls the height (and thus the total number) of the slices/layers. Thinner layers give better accuracy but take more time to print.",
         sidetext => 'mm',
         cli     => 'layer-height=f',
         type    => 'f',
         default => 0.4,
     },
     'first_layer_height' => {
-        label   => 'First layer height',
-        tooltip => 'When printing with very low layer heights, you might still want to print a thicker bottom layer to improve adhesion and tolerance for non perfect build plates. This can be expressed as an absolute value or as a percentage (for example: 150%) over the default layer height.',
-        sidetext => 'mm or %',
+        label   => __"First layer height",
+        tooltip => __"When printing with very low layer heights, you might still want to print a thicker bottom layer to improve adhesion and tolerance for non perfect build plates. This can be expressed as an absolute value or as a percentage (for example: 150%) over the default layer height.",
+        sidetext => __"mm or %",
         cli     => 'first-layer-height=s',
         type    => 'f',
         ratio_over => 'layer_height',
         default => 0.35,
     },
     'infill_every_layers' => {
-        label   => 'Infill every',
-        tooltip => 'This feature allows to combine infill and speed up your print by extruding thicker infill layers while preserving thin perimeters, thus accuracy.',
-        sidetext => 'layers',
+        label   => __"Infill every",
+        tooltip => __"This feature allows to combine infill and speed up your print by extruding thicker infill layers while preserving thin perimeters, thus accuracy.",
+        sidetext => __"layers",
         cli     => 'infill-every-layers=i',
         type    => 'i',
         min     => 1,
         default => 1,
     },
     'solid_infill_every_layers' => {
-        label   => 'Solid infill every',
-        tooltip => 'This feature allows to force a solid layer every given number of layers. Zero to disable.',
-        sidetext => 'layers',
+        label   => __"Solid infill every",
+        tooltip => __"This feature allows to force a solid layer every given number of layers. Zero to disable.",
+        sidetext => __"layers",
         cli     => 'solid-infill-every-layers=i',
         type    => 'i',
         min     => 0,
         default => 0,
     },
     'infill_only_where_needed' => {
-        label   => 'Only infill where needed',
-        tooltip => 'This option will limit infill to the areas actually needed for supporting ceilings (it will act as internal support material).',
+        label   => __"Only infill where needed",
+        tooltip => __"This option will limit infill to the areas actually needed for supporting ceilings (it will act as internal support material).",
         cli     => 'infill-only-where-needed!',
         type    => 'bool',
         default => 0,
     },
     'infill_first' => {
-        label   => 'Infill before perimeters',
-        tooltip => 'This option will switch the print order of perimeters and infill, making the latter first.',
+        label   => __"Infill before perimeters",
+        tooltip => __"This option will switch the print order of perimeters and infill, making the latter first.",
         cli     => 'infill-first!',
         type    => 'bool',
         default => 0,
@@ -415,50 +426,50 @@ our $Options = {
     
     # flow options
     'extrusion_width' => {
-        label   => 'Default extrusion width',
-        tooltip => 'Set this to a non-zero value to set a manual extrusion width. If left to zero, Slic3r calculates a width automatically. If expressed as percentage (for example: 230%) it will be computed over layer height.',
-        sidetext => 'mm or % (leave 0 for auto)',
+        label   => __"Default extrusion width",
+        tooltip => __"Set this to a non-zero value to set a manual extrusion width. If left to zero, Slic3r calculates a width automatically. If expressed as percentage (for example: 230%) it will be computed over layer height.",
+        sidetext => __"mm or % (leave 0 for auto)",
         cli     => 'extrusion-width=s',
         type    => 'f',
         default => 0,
     },
     'first_layer_extrusion_width' => {
-        label   => 'First layer',
-        tooltip => 'Set this to a non-zero value to set a manual extrusion width for first layer. You can use this to force fatter extrudates for better adhesion. If expressed as percentage (for example 120%) if will be computed over layer height.',
-        sidetext => 'mm or % (leave 0 for default)',
+        label   => __"First layer",
+        tooltip => __"Set this to a non-zero value to set a manual extrusion width for first layer. You can use this to force fatter extrudates for better adhesion. If expressed as percentage (for example 120%) if will be computed over layer height.",
+        sidetext => __"mm or % (leave 0 for default)",
         cli     => 'first-layer-extrusion-width=s',
         type    => 'f',
         default => '200%',
     },
     'perimeter_extrusion_width' => {
-        label   => 'Perimeters',
-        tooltip => 'Set this to a non-zero value to set a manual extrusion width for perimeters. You may want to use thinner extrudates to get more accurate surfaces. If expressed as percentage (for example 90%) if will be computed over layer height.',
-        sidetext => 'mm or % (leave 0 for default)',
+        label   => __"Perimeters",
+        tooltip => __"Set this to a non-zero value to set a manual extrusion width for perimeters. You may want to use thinner extrudates to get more accurate surfaces. If expressed as percentage (for example 90%) if will be computed over layer height.",
+        sidetext => __"mm or % (leave 0 for default)",
         cli     => 'perimeter-extrusion-width=s',
         type    => 'f',
         aliases => [qw(perimeters_extrusion_width)],
         default => 0,
     },
     'infill_extrusion_width' => {
-        label   => 'Infill',
-        tooltip => 'Set this to a non-zero value to set a manual extrusion width for infill. You may want to use fatter extrudates to speed up the infill and make your parts stronger. If expressed as percentage (for example 90%) if will be computed over layer height.',
-        sidetext => 'mm or % (leave 0 for default)',
+        label   => __"Infill",
+        tooltip => __"Set this to a non-zero value to set a manual extrusion width for infill. You may want to use fatter extrudates to speed up the infill and make your parts stronger. If expressed as percentage (for example 90%) if will be computed over layer height.",
+        sidetext => __"mm or % (leave 0 for default)",
         cli     => 'infill-extrusion-width=s',
         type    => 'f',
         default => 0,
     },
     'solid_infill_extrusion_width' => {
-        label   => 'Solid infill',
-        tooltip => 'Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. If expressed as percentage (for example 90%) if will be computed over layer height.',
-        sidetext => 'mm or % (leave 0 for default)',
+        label   => __"Solid infill",
+        tooltip => __"Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. If expressed as percentage (for example 90%) if will be computed over layer height.",
+        sidetext => __"mm or % (leave 0 for default)",
         cli     => 'solid-infill-extrusion-width=s',
         type    => 'f',
         default => 0,
     },
     'top_infill_extrusion_width' => {
-        label   => 'Top solid infill',
-        tooltip => 'Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. If expressed as percentage (for example 90%) if will be computed over layer height.',
-        sidetext => 'mm or % (leave 0 for default)',
+        label   => __"Top solid infill",
+        tooltip => __"Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. If expressed as percentage (for example 90%) if will be computed over layer height.",
+        sidetext => __"mm or % (leave 0 for default)",
         cli     => 'top-infill-extrusion-width=s',
         type    => 'f',
         default => 0,
@@ -489,37 +500,37 @@ our $Options = {
     
     # print options
     'perimeters' => {
-        label   => 'Perimeters (minimum)',
-        tooltip => 'This option sets the number of perimeters to generate for each layer. Note that Slic3r will increase this number automatically when it detects sloping surfaces which benefit from a higher number of perimeters.',
+        label   => __"Perimeters (minimum)",
+        tooltip => __"This option sets the number of perimeters to generate for each layer. Note that Slic3r will increase this number automatically when it detects sloping surfaces which benefit from a higher number of perimeters.",
         cli     => 'perimeters=i',
         type    => 'i',
         aliases => [qw(perimeter_offsets)],
         default => 3,
     },
     'solid_layers' => {
-        label   => 'Solid layers',
-        tooltip => 'Number of solid layers to generate on top and bottom surfaces.',
+        label   => __"Solid layers",
+        tooltip => __"Number of solid layers to generate on top and bottom surfaces.",
         cli     => 'solid-layers=i',
         type    => 'i',
         shortcut => [qw(top_solid_layers bottom_solid_layers)],
     },
     'top_solid_layers' => {
-        label   => 'Top',
-        tooltip => 'Number of solid layers to generate on top surfaces.',
+        label   => __"Top",
+        tooltip => __"Number of solid layers to generate on top surfaces.",
         cli     => 'top-solid-layers=i',
         type    => 'i',
         default => 3,
     },
     'bottom_solid_layers' => {
-        label   => 'Bottom',
-        tooltip => 'Number of solid layers to generate on bottom surfaces.',
+        label   => __"Bottom",
+        tooltip => __"Number of solid layers to generate on bottom surfaces.",
         cli     => 'bottom-solid-layers=i',
         type    => 'i',
         default => 3,
     },
     'fill_pattern' => {
-        label   => 'Fill pattern',
-        tooltip => 'Fill pattern for general low-density infill.',
+        label   => __"Fill pattern",
+        tooltip => __"Fill pattern for general low-density infill.",
         cli     => 'fill-pattern=s',
         type    => 'select',
         values  => [qw(rectilinear line concentric honeycomb hilbertcurve archimedeanchords octagramspiral)],
@@ -527,8 +538,8 @@ our $Options = {
         default => 'honeycomb',
     },
     'solid_fill_pattern' => {
-        label   => 'Top/bottom fill pattern',
-        tooltip => 'Fill pattern for top/bottom infill.',
+        label   => __"Top/bottom fill pattern",
+        tooltip => __"Fill pattern for top/bottom infill.",
         cli     => 'solid-fill-pattern=s',
         type    => 'select',
         values  => [qw(rectilinear concentric hilbertcurve archimedeanchords octagramspiral)],
@@ -536,53 +547,53 @@ our $Options = {
         default => 'rectilinear',
     },
     'fill_density' => {
-        label   => 'Fill density',
-        tooltip => 'Density of internal infill, expressed in the range 0 - 1.',
+        label   => __"Fill density",
+        tooltip => __"Density of internal infill, expressed in the range 0 - 1.",
         cli     => 'fill-density=f',
         type    => 'f',
         default => 0.4,
     },
     'fill_angle' => {
-        label   => 'Fill angle',
-        tooltip => 'Default base angle for infill orientation. Cross-hatching will be applied to this. Bridges will be infilled using the best direction Slic3r can detect, so this setting does not affect them.',
-        sidetext => '°',
+        label   => __"Fill angle",
+        tooltip => __"Default base angle for infill orientation. Cross-hatching will be applied to this. Bridges will be infilled using the best direction Slic3r can detect, so this setting does not affect them.",
+        sidetext => __"°",
         cli     => 'fill-angle=i',
         type    => 'i',
         max     => 359,
         default => 45,
     },
     'solid_infill_below_area' => {
-        label   => 'Solid infill threshold area',
-        tooltip => 'Force solid infill for regions having a smaller area than the specified threshold.',
-        sidetext => 'mm²',
+        label   => __"Solid infill threshold area",
+        tooltip => __"Force solid infill for regions having a smaller area than the specified threshold.",
+        sidetext => __"mm²",
         cli     => 'solid-infill-below-area=f',
         type    => 'f',
         default => 70,
     },
     'extra_perimeters' => {
-        label   => 'Generate extra perimeters when needed',
-        tooltip => 'Add more perimeters when needed for avoiding gaps in sloping walls.',
+        label   => __"Generate extra perimeters when needed",
+        tooltip => __"Add more perimeters when needed for avoiding gaps in sloping walls.",
         cli     => 'extra-perimeters!',
         type    => 'bool',
         default => 1,
     },
     'randomize_start' => {
-        label   => 'Randomize starting points',
-        tooltip => 'Start each layer from a different vertex to prevent plastic build-up on the same corner.',
+        label   => __"Randomize starting points",
+        tooltip => __"Start each layer from a different vertex to prevent plastic build-up on the same corner.",
         cli     => 'randomize-start!',
         type    => 'bool',
         default => 0,
     },
     'avoid_crossing_perimeters' => {
-        label   => 'Avoid crossing perimeters',
-        tooltip => 'Optimize travel moves in order to minimize the crossing of perimeters. This is mostly useful with Bowden extruders which suffer from oozing. This feature slows down both the print and the G-code generation.',
+        label   => __"Avoid crossing perimeters",
+        tooltip => __"Optimize travel moves in order to minimize the crossing of perimeters. This is mostly useful with Bowden extruders which suffer from oozing. This feature slows down both the print and the G-code generation.",
         cli     => 'avoid-crossing-perimeters!',
         type    => 'bool',
         default => 0,
     },
     'external_perimeters_first' => {
-        label   => 'External perimeters first',
-        tooltip => 'Print contour perimeters from the outermost one to the innermost one instead of the default inverse order.',
+        label   => __"External perimeters first",
+        tooltip => __"Print contour perimeters from the outermost one to the innermost one instead of the default inverse order.",
         cli     => 'external-perimeters-first!',
         type    => 'bool',
         default => 0,
@@ -595,30 +606,30 @@ our $Options = {
         default => 0,
     },
     'only_retract_when_crossing_perimeters' => {
-        label   => 'Only retract when crossing perimeters',
-        tooltip => 'Disables retraction when travelling between infill paths inside the same island.',
+        label   => __"Only retract when crossing perimeters",
+        tooltip => __"Disables retraction when travelling between infill paths inside the same island.",
         cli     => 'only-retract-when-crossing-perimeters!',
         type    => 'bool',
         default => 1,
     },
     'support_material' => {
-        label   => 'Generate support material',
-        tooltip => 'Enable support material generation.',
+        label   => __"Generate support material",
+        tooltip => __"Enable support material generation.",
         cli     => 'support-material!',
         type    => 'bool',
         default => 0,
     },
     'support_material_threshold' => {
-        label   => 'Overhang threshold',
-        tooltip => 'Support material will not generated for overhangs whose slope angle is above the given threshold. Set to zero for automatic detection.',
-        sidetext => '°',
+        label   => __"Overhang threshold",
+        tooltip => __"Support material will not generated for overhangs whose slope angle is above the given threshold. Set to zero for automatic detection.",
+        sidetext => __"°",
         cli     => 'support-material-threshold=i',
         type    => 'i',
         default => 0,
     },
     'support_material_pattern' => {
-        label   => 'Pattern',
-        tooltip => 'Pattern used to generate support material.',
+        label   => __"Pattern",
+        tooltip => __"Pattern used to generate support material.",
         cli     => 'support-material-pattern=s',
         type    => 'select',
         values  => [qw(rectilinear rectilinear-grid honeycomb)],
@@ -626,56 +637,56 @@ our $Options = {
         default => 'rectilinear',
     },
     'support_material_spacing' => {
-        label   => 'Pattern spacing',
-        tooltip => 'Spacing between support material lines.',
-        sidetext => 'mm',
+        label   => __"Pattern spacing",
+        tooltip => __"Spacing between support material lines.",
+        sidetext => __"mm",
         cli     => 'support-material-spacing=f',
         type    => 'f',
         default => 2.5,
     },
     'support_material_angle' => {
-        label   => 'Pattern angle',
-        tooltip => 'Use this setting to rotate the support material pattern on the horizontal plane.',
-        sidetext => '°',
+        label   => __"Pattern angle",
+        tooltip => __"Use this setting to rotate the support material pattern on the horizontal plane.",
+        sidetext => __"°",
         cli     => 'support-material-angle=i',
         type    => 'i',
         default => 0,
     },
     'support_material_interface_layers' => {
-        label   => 'Interface layers',
-        tooltip => 'Number of interface layers to insert between the object(s) and support material.',
+        label   => __"Interface layers",
+        tooltip => __"Number of interface layers to insert between the object(s) and support material.",
         sidetext => 'layers',
         cli     => 'support-material-interface-layers=i',
         type    => 'i',
         default => 0,
     },
     'support_material_interface_spacing' => {
-        label   => 'Interface pattern spacing',
-        tooltip => 'Spacing between interface lines. Set zero to get a solid interface.',
-        sidetext => 'mm',
+        label   => __"Interface pattern spacing",
+        tooltip => __"Spacing between interface lines. Set zero to get a solid interface.",
+        sidetext => __"mm",
         cli     => 'support-material-interface-spacing=f',
         type    => 'f',
         default => 0,
     },
     'support_material_enforce_layers' => {
-        label   => 'Enforce support for the first',
-        tooltip => 'Generate support material for the specified number of layers counting from bottom, regardless of whether normal support material is enabled or not and regardless of any angle threshold. This is useful for getting more adhesion of objects having a very thin or poor footprint on the build plate.',
+        label   => __"Enforce support for the first",
+        tooltip => __"Generate support material for the specified number of layers counting from bottom, regardless of whether normal support material is enabled or not and regardless of any angle threshold. This is useful for getting more adhesion of objects having a very thin or poor footprint on the build plate.",
         sidetext => 'layers',
         cli     => 'support-material-enforce-layers=f',
         type    => 'i',
         default => 0,
     },
     'raft_layers' => {
-        label   => 'Raft layers',
-        tooltip => 'Number of total raft layers to insert below the object(s).',
+        label   => __"Raft layers",
+        tooltip => __"Number of total raft layers to insert below the object(s).",
         sidetext => 'layers',
         cli     => 'raft-layers=i',
         type    => 'i',
         default => 0,
     },
     'start_gcode' => {
-        label   => 'Start G-code',
-        tooltip => 'This start procedure is inserted at the beginning of the output file, right after the temperature control commands for extruder and bed. If Slic3r detects M104 or M190 in your custom codes, such commands will not be prepended automatically. Note that you can use placeholder variables for all Slic3r settings, so you can put a "M104 S[first_layer_temperature]" command wherever you want.',
+        label   => __"Start G-code",
+        tooltip => __"This start procedure is inserted at the beginning of the output file, right after the temperature control commands for extruder and bed. If Slic3r detects M104 or M190 in your custom codes, such commands will not be prepended automatically. Note that you can use placeholder variables for all Slic3r settings, so you can put a \"M104 S[first_layer_temperature]\" command wherever you want.",
         cli     => 'start-gcode=s',
         type    => 's',
         multiline => 1,
@@ -689,8 +700,8 @@ G1 Z5 F5000 ; lift nozzle
 END
     },
     'end_gcode' => {
-        label   => 'End G-code',
-        tooltip => 'This end procedure is inserted at the end of the output file. Note that you can use placeholder variables for all Slic3r settings.',
+        label   => __"End G-code",
+        tooltip => __"This end procedure is inserted at the end of the output file. Note that you can use placeholder variables for all Slic3r settings.",
         cli     => 'end-gcode=s',
         type    => 's',
         multiline => 1,
@@ -705,8 +716,8 @@ M84     ; disable motors
 END
     },
     'layer_gcode' => {
-        label   => 'Layer change G-code',
-        tooltip => 'This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings.',
+        label   => __"Layer change G-code",
+        tooltip => __"This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings.",
         cli     => 'layer-gcode=s',
         type    => 's',
         multiline => 1,
@@ -717,8 +728,8 @@ END
         default => '',
     },
     'toolchange_gcode' => {
-        label   => 'Tool change G-code',
-        tooltip => 'This custom code is inserted at every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder] and [next_extruder].',
+        label   => __"Tool change G-code",
+        tooltip => __"This custom code is inserted at every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder] and [next_extruder].",
         cli     => 'toolchange-gcode=s',
         type    => 's',
         multiline => 1,
@@ -729,8 +740,8 @@ END
         default => '',
     },
     'post_process' => {
-        label   => 'Post-processing scripts',
-        tooltip => 'If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts with a semicolon. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Slic3r config settings by reading environment variables.',
+        label   => __"Post-processing scripts",
+        tooltip => __"If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts with a semicolon. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Slic3r config settings by reading environment variables.",
         cli     => 'post-process=s@',
         type    => 's@',
         multiline => 1,
@@ -743,9 +754,9 @@ END
     
     # retraction options
     'retract_length' => {
-        label   => 'Length',
-        tooltip => 'When retraction is triggered, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder).',
-        sidetext => 'mm (zero to disable)',
+        label   => __"Length",
+        tooltip => __"When retraction is triggered, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder).",
+        sidetext => __"mm (zero to disable)",
         cli     => 'retract-length=f@',
         type    => 'f',
         serialize   => $serialize_comma,
@@ -753,9 +764,9 @@ END
         default => [1],
     },
     'retract_speed' => {
-        label   => 'Speed',
-        tooltip => 'The speed for retractions (it only applies to the extruder motor).',
-        sidetext => 'mm/s',
+        label   => __"Speed",
+        tooltip => __"The speed for retractions (it only applies to the extruder motor).",
+        sidetext => __"mm/s",
         cli     => 'retract-speed=f@',
         type    => 'i',
         max     => 1000,
@@ -764,9 +775,9 @@ END
         default => [30],
     },
     'retract_restart_extra' => {
-        label   => 'Extra length on restart',
-        tooltip => 'When the retraction is compensated after the travel move, the extruder will push this additional amount of filament. This setting is rarely needed.',
-        sidetext => 'mm',
+        label   => __"Extra length on restart",
+        tooltip => __"When the retraction is compensated after the travel move, the extruder will push this additional amount of filament. This setting is rarely needed.",
+        sidetext => __"mm",
         cli     => 'retract-restart-extra=f@',
         type    => 'f',
         serialize   => $serialize_comma,
@@ -774,9 +785,9 @@ END
         default => [0],
     },
     'retract_before_travel' => {
-        label   => 'Minimum travel after retraction',
-        tooltip => 'Retraction is not triggered when travel moves are shorter than this length.',
-        sidetext => 'mm',
+        label   => __"Minimum travel after retraction",
+        tooltip => __"Retraction is not triggered when travel moves are shorter than this length.",
+        sidetext => __"mm",
         cli     => 'retract-before-travel=f@',
         type    => 'f',
         serialize   => $serialize_comma,
@@ -784,9 +795,9 @@ END
         default => [2],
     },
     'retract_lift' => {
-        label   => 'Lift Z',
-        tooltip => 'If you set this to a positive value, Z is quickly raised every time a retraction is triggered.',
-        sidetext => 'mm',
+        label   => __"Lift Z",
+        tooltip => __"If you set this to a positive value, Z is quickly raised every time a retraction is triggered.",
+        sidetext => __"mm",
         cli     => 'retract-lift=f@',
         type    => 'f',
         serialize   => $serialize_comma,
@@ -794,8 +805,8 @@ END
         default => [0],
     },
     'retract_layer_change' => {
-        label   => 'Retract on layer change',
-        tooltip => 'This flag enforces a retraction whenever a Z move is done.',
+        label   => __"Retract on layer change",
+        tooltip => __"This flag enforces a retraction whenever a Z move is done.",
         cli     => 'retract-layer-change!',
         type    => 'bool',
         serialize   => $serialize_comma_bool,
@@ -803,8 +814,8 @@ END
         default => [1],
     },
     'wipe' => {
-        label   => 'Wipe before retract',
-        tooltip => 'This flag will move the nozzle while retracting to minimize the possible blob on leaky extruders.',
+        label   => __"Wipe before retract",
+        tooltip => __"This flag will move the nozzle while retracting to minimize the possible blob on leaky extruders.",
         cli     => 'wipe!',
         type    => 'bool',
         serialize   => $serialize_comma_bool,
@@ -812,9 +823,9 @@ END
         default => [0],
     },
     'retract_length_toolchange' => {
-        label   => 'Length',
-        tooltip => 'When retraction is triggered before changing tool, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder).',
-        sidetext => 'mm (zero to disable)',
+        label   => __"Length",
+        tooltip => __"When retraction is triggered before changing tool, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder).",
+        sidetext => __"mm (zero to disable)",
         cli     => 'retract-length-toolchange=f@',
         type    => 'f',
         serialize   => $serialize_comma,
@@ -822,9 +833,9 @@ END
         default => [10],
     },
     'retract_restart_extra_toolchange' => {
-        label   => 'Extra length on restart',
-        tooltip => 'When the retraction is compensated after changing tool, the extruder will push this additional amount of filament.',
-        sidetext => 'mm',
+        label   => __"Extra length on restart",
+        tooltip => __"When the retraction is compensated after changing tool, the extruder will push this additional amount of filament.",
+        sidetext => __"mm",
         cli     => 'retract-restart-extra-toolchange=f@',
         type    => 'f',
         serialize   => $serialize_comma,
@@ -834,43 +845,43 @@ END
     
     # cooling options
     'cooling' => {
-        label   => 'Enable auto cooling',
-        tooltip => 'This flag enables the automatic cooling logic that adjusts print speed and fan speed according to layer printing time.',
+        label   => __"Enable auto cooling",
+        tooltip => __"This flag enables the automatic cooling logic that adjusts print speed and fan speed according to layer printing time.",
         cli     => 'cooling!',
         type    => 'bool',
         default => 1,
     },
     'min_fan_speed' => {
-        label   => 'Min',
-        tooltip => 'This setting represents the minimum PWM your fan needs to work.',
-        sidetext => '%',
+        label   =>  __"Min",
+        tooltip => __"This setting represents the minimum PWM your fan needs to work.",
+        sidetext => __"%",
         cli     => 'min-fan-speed=i',
         type    => 'i',
         max     => 1000,
         default => 35,
     },
     'max_fan_speed' => {
-        label   => 'Max',
-        tooltip => 'This setting represents the maximum speed of your fan.',
-        sidetext => '%',
+        label   => __"Max",
+        tooltip => __"This setting represents the maximum speed of your fan.",
+        sidetext => __"%",
         cli     => 'max-fan-speed=i',
         type    => 'i',
         max     => 1000,
         default => 100,
     },
     'bridge_fan_speed' => {
-        label   => 'Bridges fan speed',
-        tooltip => 'This fan speed is enforced during all bridges.',
-        sidetext => '%',
+        label   => __"Bridges fan speed",
+        tooltip => __"This fan speed is enforced during all bridges.",
+        sidetext => __"%",
         cli     => 'bridge-fan-speed=i',
         type    => 'i',
         max     => 1000,
         default => 100,
     },
     'fan_below_layer_time' => {
-        label   => 'Enable fan if layer print time is below',
-        tooltip => 'If layer print time is estimated below this number of seconds, fan will be enabled and its speed will be calculated by interpolating the minimum and maximum speeds.',
-        sidetext => 'approximate seconds',
+        label   => __"Enable fan if layer print time is below",
+        tooltip => __"If layer print time is estimated below this number of seconds, fan will be enabled and its speed will be calculated by interpolating the minimum and maximum speeds.",
+        sidetext => __"approximate seconds",
         cli     => 'fan-below-layer-time=i',
         type    => 'i',
         max     => 1000,
@@ -878,9 +889,9 @@ END
         default => 60,
     },
     'slowdown_below_layer_time' => {
-        label   => 'Slow down if layer print time is below',
-        tooltip => 'If layer print time is estimated below this number of seconds, print moves speed will be scaled down to extend duration to this value.',
-        sidetext => 'approximate seconds',
+        label   => __"Slow down if layer print time is below",
+        tooltip => __"If layer print time is estimated below this number of seconds, print moves speed will be scaled down to extend duration to this value.",
+        sidetext => __"approximate seconds",
         cli     => 'slowdown-below-layer-time=i',
         type    => 'i',
         max     => 1000,
@@ -888,26 +899,26 @@ END
         default => 30,
     },
     'min_print_speed' => {
-        label   => 'Min print speed',
-        tooltip => 'Slic3r will not scale speed down below this speed.',
-        sidetext => 'mm/s',
+        label   => __"Min print speed",
+        tooltip => __"Slic3r will not scale speed down below this speed.",
+        sidetext => __"mm/s",
         cli     => 'min-print-speed=f',
         type    => 'i',
         max     => 1000,
         default => 10,
     },
     'disable_fan_first_layers' => {
-        label   => 'Disable fan for the first',
-        tooltip => 'You can set this to a positive value to disable fan at all during the first layers, so that it does not make adhesion worse.',
-        sidetext => 'layers',
+        label   => __"Disable fan for the first",
+        tooltip => __"You can set this to a positive value to disable fan at all during the first layers, so that it does not make adhesion worse.",
+        sidetext => __"layers",
         cli     => 'disable-fan-first-layers=i',
         type    => 'i',
         max     => 1000,
         default => 1,
     },
     'fan_always_on' => {
-        label   => 'Keep fan always on',
-        tooltip => 'If this is enabled, fan will never be disabled and will be kept running at least at its minimum speed. Useful for PLA, harmful for ABS.',
+        label   => __"Keep fan always on",
+        tooltip => __"If this is enabled, fan will never be disabled and will be kept running at least at its minimum speed. Useful for PLA, harmful for ABS.",
         cli     => 'fan-always-on!',
         type    => 'bool',
         default => 0,
@@ -915,41 +926,41 @@ END
     
     # skirt/brim options
     'skirts' => {
-        label   => 'Loops',
-        tooltip => 'Number of loops for this skirt, in other words its thickness. Set this to zero to disable skirt.',
+        label   => __"Loops",
+        tooltip => __"Number of loops for this skirt, in other words its thickness. Set this to zero to disable skirt.",
         cli     => 'skirts=i',
         type    => 'i',
         default => 1,
     },
     'min_skirt_length' => {
-        label   => 'Minimum extrusion length',
-        tooltip => 'Generate no less than the number of skirt loops required to consume the specified amount of filament on the bottom layer. For multi-extruder machines, this minimum applies to each extruder.',
-        sidetext => 'mm',
+        label   => __"Minimum extrusion length",
+        tooltip => __"Generate no less than the number of skirt loops required to consume the specified amount of filament on the bottom layer. For multi-extruder machines, this minimum applies to each extruder.",
+        sidetext => __"mm",
         cli     => 'min-skirt-length=f',
         type    => 'f',
         default => 0,
         min     => 0,
     },
     'skirt_distance' => {
-        label   => 'Distance from object',
-        tooltip => 'Distance between skirt and object(s). Set this to zero to attach the skirt to the object(s) and get a brim for better adhesion.',
-        sidetext => 'mm',
+        label   => __"Distance from object",
+        tooltip => __"Distance between skirt and object(s). Set this to zero to attach the skirt to the object(s) and get a brim for better adhesion.",
+        sidetext => __"mm",
         cli     => 'skirt-distance=f',
         type    => 'f',
         default => 6,
     },
     'skirt_height' => {
-        label   => 'Skirt height',
-        tooltip => 'Height of skirt expressed in layers. Set this to a tall value to use skirt as a shield against drafts.',
-        sidetext => 'layers',
+        label   => __"Skirt height",
+        tooltip => __"Height of skirt expressed in layers. Set this to a tall value to use skirt as a shield against drafts.",
+        sidetext => __"layers",
         cli     => 'skirt-height=i',
         type    => 'i',
         default => 1,
     },
     'brim_width' => {
-        label   => 'Brim width',
-        tooltip => 'Horizontal width of the brim that will be printed around each object on the first layer.',
-        sidetext => 'mm',
+        label   => __"Brim width",
+        tooltip => __"Horizontal width of the brim that will be printed around each object on the first layer.",
+        sidetext => __"mm",
         cli     => 'brim-width=f',
         type    => 'f',
         default => 0,
@@ -957,30 +968,30 @@ END
     
     # transform options
     'scale' => {
-        label   => 'Scale',
+        label   => __"Scale",
         cli     => 'scale=f',
         type    => 'f',
         default => 1,
     },
     'rotate' => {
-        label   => 'Rotate',
-        sidetext => '°',
+        label   => __"Rotate",
+        sidetext => __"°",
         cli     => 'rotate=i',
         type    => 'i',
         max     => 359,
         default => 0,
     },
     'duplicate' => {
-        label   => 'Copies (autoarrange)',
+        label   => __"Copies (autoarrange)",
         cli     => 'duplicate=i',
         type    => 'i',
         min     => 1,
         default => 1,
     },
     'bed_size' => {
-        label   => 'Bed size',
-        tooltip => 'Size of your bed. This is used to adjust the preview in the plater and for auto-arranging parts in it.',
-        sidetext => 'mm',
+        label   => __"Bed size",
+        tooltip => __"Size of your bed. This is used to adjust the preview in the plater and for auto-arranging parts in it.",
+        sidetext => __"mm",
         cli     => 'bed-size=s',
         type    => 'point',
         serialize   => $serialize_comma,
@@ -988,7 +999,7 @@ END
         default => [200,200],
     },
     'duplicate_grid' => {
-        label   => 'Copies (grid)',
+        label   => __"Copies (grid)",
         cli     => 'duplicate-grid=s',
         type    => 'point',
         serialize   => $serialize_comma,
@@ -996,9 +1007,9 @@ END
         default => [1,1],
     },
     'duplicate_distance' => {
-        label   => 'Distance between copies',
-        tooltip => 'Distance used for the auto-arrange feature of the plater.',
-        sidetext => 'mm',
+        label   => __"Distance between copies",
+        tooltip => __"Distance used for the auto-arrange feature of the plater.",
+        sidetext => __"mm",
         cli     => 'duplicate-distance=f',
         type    => 'f',
         aliases => [qw(multiply_distance)],
@@ -1007,24 +1018,24 @@ END
     
     # sequential printing options
     'complete_objects' => {
-        label   => 'Complete individual objects',
-        tooltip => 'When printing multiple objects or copies, this feature will complete each object before moving onto next one (and starting it from its bottom layer). This feature is useful to avoid the risk of ruined prints. Slic3r should warn and prevent you from extruder collisions, but beware.',
+        label   => __"Complete individual objects",
+        tooltip => __"When printing multiple objects or copies, this feature will complete each object before moving onto next one (and starting it from its bottom layer). This feature is useful to avoid the risk of ruined prints. Slic3r should warn and prevent you from extruder collisions, but beware.",
         cli     => 'complete-objects!',
         type    => 'bool',
         default => 0,
     },
     'extruder_clearance_radius' => {
-        label   => 'Radius',
-        tooltip => 'Set this to the clearance radius around your extruder. If the extruder is not centered, choose the largest value for safety. This setting is used to check for collisions and to display the graphical preview in the plater.',
-        sidetext => 'mm',
+        label   => __"Radius",
+        tooltip => __"Set this to the clearance radius around your extruder. If the extruder is not centered, choose the largest value for safety. This setting is used to check for collisions and to display the graphical preview in the plater.",
+        sidetext => __"mm",
         cli     => 'extruder-clearance-radius=f',
         type    => 'f',
         default => 20,
     },
     'extruder_clearance_height' => {
-        label   => 'Height',
-        tooltip => 'Set this to the vertical distance between your nozzle tip and (usually) the X carriage rods. In other words, this is the height of the clearance cylinder around your extruder, and it represents the maximum depth the extruder can peek before colliding with other printed objects.',
-        sidetext => 'mm',
+        label   => __"Height",
+        tooltip => __"Set this to the vertical distance between your nozzle tip and (usually) the X carriage rods. In other words, this is the height of the clearance cylinder around your extruder, and it represents the maximum depth the extruder can peek before colliding with other printed objects.",
+        sidetext => __"mm",
         cli     => 'extruder-clearance-height=f',
         type    => 'f',
         default => 20,
@@ -1165,7 +1176,7 @@ sub set {
     if (!exists $Options->{$opt_key}) {
         my @keys = grep { $Options->{$_}{aliases} && grep $_ eq $opt_key, @{$Options->{$_}{aliases}} } keys %$Options;
         if (!@keys) {
-            warn "Unknown option $opt_key\n";
+            warn __("Unknown option")." $opt_key\n";
             return;
         }
         $opt_key = $keys[0];
@@ -1235,99 +1246,99 @@ sub validate {
     my $self = shift;
     
     # -j, --threads
-    die "Invalid value for --threads\n"
+    die __"Invalid value for --threads\n"
         if $self->threads < 1;
-    die "Your perl wasn't built with multithread support\n"
+    die __"Your perl wasn't built with multithread support\n"
         if $self->threads > 1 && !$Slic3r::have_threads;
 
     # --layer-height
-    die "Invalid value for --layer-height\n"
+    die __"Invalid value for --layer-height\n"
         if $self->layer_height <= 0;
-    die "--layer-height must be a multiple of print resolution\n"
+    die __"--layer-height must be a multiple of print resolution\n"
         if $self->layer_height / &Slic3r::SCALING_FACTOR % 1 != 0;
     
     # --first-layer-height
-    die "Invalid value for --first-layer-height\n"
+    die __"Invalid value for --first-layer-height\n"
         if $self->first_layer_height !~ /^(?:\d*(?:\.\d+)?)%?$/;
     
     # --filament-diameter
-    die "Invalid value for --filament-diameter\n"
+    die __"Invalid value for --filament-diameter\n"
         if grep $_ < 1, @{$self->filament_diameter};
     
     # --nozzle-diameter
-    die "Invalid value for --nozzle-diameter\n"
+    die __"Invalid value for --nozzle-diameter\n"
         if grep $_ < 0, @{$self->nozzle_diameter};
-    die "--layer-height can't be greater than --nozzle-diameter\n"
+    die __"--layer-height can't be greater than --nozzle-diameter\n"
         if grep $self->layer_height > $_, @{$self->nozzle_diameter};
     die "First layer height can't be greater than --nozzle-diameter\n"
         if grep $self->get_value('first_layer_height') > $_, @{$self->nozzle_diameter};
     
     # --perimeters
-    die "Invalid value for --perimeters\n"
+    die __"Invalid value for --perimeters\n"
         if $self->perimeters < 0;
     
     # --solid-layers
-    die "Invalid value for --solid-layers\n" if defined $self->solid_layers && $self->solid_layers < 0;
-    die "Invalid value for --top-solid-layers\n"    if $self->top_solid_layers      < 0;
-    die "Invalid value for --bottom-solid-layers\n" if $self->bottom_solid_layers   < 0;
+    die __"Invalid value for --solid-layers\n" if defined $self->solid_layers && $self->solid_layers < 0;
+    die __"Invalid value for --top-solid-layers\n"    if $self->top_solid_layers      < 0;
+    die __"Invalid value for --bottom-solid-layers\n" if $self->bottom_solid_layers   < 0;
     
     # --print-center
-    die "Invalid value for --print-center\n"
+    die __"Invalid value for --print-center\n"
         if !ref $self->print_center 
             && (!$self->print_center || $self->print_center !~ /^\d+,\d+$/);
     
     # --fill-pattern
-    die "Invalid value for --fill-pattern\n"
+    die __"Invalid value for --fill-pattern\n"
         if !first { $_ eq $self->fill_pattern } @{$Options->{fill_pattern}{values}};
     
     # --solid-fill-pattern
-    die "Invalid value for --solid-fill-pattern\n"
+    die __"Invalid value for --solid-fill-pattern\n"
         if !first { $_ eq $self->solid_fill_pattern } @{$Options->{solid_fill_pattern}{values}};
     
     # --fill-density
-    die "Invalid value for --fill-density\n"
+    die __"Invalid value for --fill-density\n"
         if $self->fill_density < 0 || $self->fill_density > 1;
-    die "The selected fill pattern is not supposed to work at 100% density\n"
+    die __"The selected fill pattern is not supposed to work at 100% density\n"
         if $self->fill_density == 1
             && !first { $_ eq $self->fill_pattern } @{$Options->{solid_fill_pattern}{values}};
     
     # --infill-every-layers
-    die "Invalid value for --infill-every-layers\n"
+    die __"Invalid value for --infill-every-layers\n"
         if $self->infill_every_layers !~ /^\d+$/ || $self->infill_every_layers < 1;
     
     # --scale
-    die "Invalid value for --scale\n"
+    die __"Invalid value for --scale\n"
         if $self->scale <= 0;
     
     # --bed-size
-    die "Invalid value for --bed-size\n"
+    die __"Invalid value for --bed-size\n"
         if !ref $self->bed_size 
             && (!$self->bed_size || $self->bed_size !~ /^\d+,\d+$/);
     
     # --duplicate-grid
-    die "Invalid value for --duplicate-grid\n"
+    die __"Invalid value for --duplicate-grid\n"
         if !ref $self->duplicate_grid 
             && (!$self->duplicate_grid || $self->duplicate_grid !~ /^\d+,\d+$/);
     
     # --duplicate
-    die "Invalid value for --duplicate or --duplicate-grid\n"
+    die __"Invalid value for --duplicate or --duplicate-grid\n"
         if !$self->duplicate || $self->duplicate < 1 || !$self->duplicate_grid
             || (grep !$_, @{$self->duplicate_grid});
-    die "Use either --duplicate or --duplicate-grid (using both doesn't make sense)\n"
+    die __"Use either --duplicate or --duplicate-grid (using both doesn't make sense)\n"
         if $self->duplicate > 1 && $self->duplicate_grid && (grep $_ && $_ > 1, @{$self->duplicate_grid});
     
     # --skirt-height
-    die "Invalid value for --skirt-height\n"
+    die __"Invalid value for --skirt-height\n"
         if $self->skirt_height < 0;
     
     # --bridge-flow-ratio
-    die "Invalid value for --bridge-flow-ratio\n"
+    die __"Invalid value for --bridge-flow-ratio\n"
         if $self->bridge_flow_ratio <= 0;
     
     # extruder clearance
-    die "Invalid value for --extruder-clearance-radius\n"
+    die __"Invalid value for --extruder-clearance-radius\n"
         if $self->extruder_clearance_radius <= 0;
-    die "Invalid value for --extruder-clearance-height\n"
+    die __"Invalid value for --extruder-clearance-height\n"
         if $self->extruder_clearance_height <= 0;
     
     # --extrusion-multiplier
@@ -1393,7 +1404,7 @@ sub write_ini {
     Slic3r::open(\my $fh, '>', $file);
     binmode $fh, ':utf8';
     my $localtime = localtime;
-    printf $fh "# generated by Slic3r $Slic3r::VERSION on %s\n", "$localtime";
+    printf $fh __("# generated by Slic3r")." $Slic3r::VERSION ".__("on")." %s\n", "$localtime";
     foreach my $category (sort keys %$ini) {
         printf $fh "\n[%s]\n", $category if $category ne '_';
         foreach my $key (sort keys %{$ini->{$category}}) {
@@ -1422,7 +1433,7 @@ sub read_ini {
             $category = $1;
             next;
         }
-        /^(\w+) = (.*)/ or die "Unreadable configuration file (invalid data at line $.)\n";
+        /^(\w+) = (.*)/ or die __("Unreadable configuration file (invalid data at line ")."$.)\n";
         $ini->{$category}{$1} = $2;
     }
     close $fh;

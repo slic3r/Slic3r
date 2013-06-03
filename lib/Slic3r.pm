@@ -32,6 +32,21 @@ use Encode::Locale;
 use Boost::Geometry::Utils 0.12;
 use Moo 0.091009;
 
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
+
+# Our script contains translatable messages.  We have to assign
+# it a text domain.  Note that this is only needed here because the 
+# script *itself* contains translatable messages from the text domain
+# "org.imperia.simplecal".
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
+
 use Slic3r::Config;
 use Slic3r::ExPolygon;
 use Slic3r::Extruder;

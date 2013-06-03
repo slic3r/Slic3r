@@ -2,7 +2,16 @@ package Slic3r::GUI::SimpleTab;
 use strict;
 use warnings;
 use utf8;
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 use File::Basename qw(basename);
 use List::Util qw(first);
 use Wx qw(:bookctrl :dialog :keycode :icon :id :misc :panel :sizer :window :systemsettings);
@@ -26,7 +35,7 @@ sub new {
     $self->build;
     
     {
-        my $label = Wx::StaticText->new($self, -1, "Want more options? Switch to the Expert Mode.", wxDefaultPosition, wxDefaultSize);
+        my $label = Wx::StaticText->new($self, -1, __("Want more options? Switch to the Expert Mode."), wxDefaultPosition, wxDefaultSize);
         $label->SetFont(Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
         $self->{vsizer}->Add($label, 0, wxEXPAND | wxALL, 10);
     }

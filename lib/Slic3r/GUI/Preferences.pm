@@ -2,22 +2,31 @@ package Slic3r::GUI::Preferences;
 use Wx qw(:dialog :id :misc :sizer :systemsettings);
 use Wx::Event qw(EVT_BUTTON EVT_TEXT_ENTER);
 use base 'Wx::Dialog';
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 sub new {
     my $class = shift;
     my ($parent, %params) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Preferences", wxDefaultPosition, [500,200]);
+    my $self = $class->SUPER::new($parent, -1, __("Preferences"), wxDefaultPosition, [500,200]);
     $self->{values};
     
     my $optgroup = Slic3r::GUI::OptionsGroup->new(
         parent  => $self,
-        title   => 'General',
+        title   => __("General"),
         options => [
             {
                 opt_key     => 'mode',
                 type        => 'select',
-                label       => 'Mode',
-                tooltip     => 'Choose between a simpler, basic mode and an expert mode with more options and more complicated interface.',
+                label       => __("Mode"),
+                tooltip     => __("Choose between a simpler, basic mode and an expert mode with more options and more complicated interface."),
                 labels      => ['Simple','Expert'],
                 values      => ['simple','expert'],
                 default     => $Slic3r::GUI::Settings->{_}{mode},
@@ -25,16 +34,16 @@ sub new {
             {
                 opt_key     => 'version_check',
                 type        => 'bool',
-                label       => 'Check for updates',
-                tooltip     => 'If this is enabled, Slic3r will check for updates daily and display a reminder if a newer version is available.',
+                label       => __("Check for updates"),
+                tooltip     => __("If this is enabled, Slic3r will check for updates daily and display a reminder if a newer version is available."),
                 default     => $Slic3r::GUI::Settings->{_}{version_check} // 1,
                 readonly    => !Slic3r::GUI->have_version_check,
             },
             {
                 opt_key     => 'remember_output_path',
                 type        => 'bool',
-                label       => 'Remember output directory',
-                tooltip     => 'If this is enabled, Slic3r will prompt the last output directory instead of the one containing the input files.',
+                label       => __("Remember output directory"),
+                tooltip     => __("If this is enabled, Slic3r will prompt the last output directory instead of the one containing the input files."),
                 default     => $Slic3r::GUI::Settings->{_}{remember_output_path},
             },
         ],
@@ -59,7 +68,7 @@ sub _accept {
     $self->EndModal(wxID_OK);
     
     if ($self->{values}{mode}) {
-        Slic3r::GUI::warning_catcher($self)->("You need to restart Slic3r to make the changes effective.");
+        Slic3r::GUI::warning_catcher($self)->(__("You need to restart Slic3r to make the changes effective."));
     }
     
     $Slic3r::GUI::Settings->{_}{$_} = $self->{values}{$_} for keys %{$self->{values}};
