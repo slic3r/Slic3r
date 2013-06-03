@@ -1,0 +1,5 @@
+help:
+Available targets:
+make update-po              - merge po files
+make update-mo             - regenerate mo files
+make all							- all of the above
