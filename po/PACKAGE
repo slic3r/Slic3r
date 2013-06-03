@@ -1,0 +1,27 @@
+# Makefile snippet that holds all package-dependent information.
+
+# Add more languages here!  Beware that this is a makefile snippet and
+# you have to adhere to make syntax.
+#LINGUAS = de \
+#	  de_AT \
+#	  it \
+#	  ru \
+#	  fr \
+#	  ar \
+#	  ar_SA \
+#	  ga \
+#	  pt \
+#	  pt_BR \
+#	  nl \
+LINGUAS = it \
+
+# Textdomain for our package.
+TEXTDOMAIN = Slic3r
+
+# Initial copyright holder added to pot and po files.
+#COPYRIGHT_HOLDER = Guido Flohr
+COPYRIGHT_HOLDER = Edit the file PACKAGE to change this.
+
+# Where to send msgid bugs?  
+#MSGID_BUGS_ADDRESS = Guido Flohr <guido@imperia.net>
+MSGID_BUGS_ADDRESS = Edit the file PACAKGE to change this.

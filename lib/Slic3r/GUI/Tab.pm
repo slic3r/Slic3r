@@ -3,6 +3,17 @@ use strict;
 use warnings;
 use utf8;
 
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
+
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
+
 use File::Basename qw(basename);
 use List::Util qw(first);
 use Wx qw(:bookctrl :dialog :keycode :icon :id :misc :panel :sizer :treectrl :window);
@@ -114,7 +125,7 @@ sub new {
     EVT_BUTTON($self, $self->{btn_delete_preset}, sub {
         my $i = $self->{presets_choice}->GetSelection;
         return if $i == 0;  # this shouldn't happen but let's trap it anyway
-        my $res = Wx::MessageDialog->new($self, "Are you sure you want to delete the selected preset?", 'Delete Preset', wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION)->ShowModal;
+        my $res = Wx::MessageDialog->new($self, __"Are you sure you want to delete the selected preset?", 'Delete Preset', wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION)->ShowModal;
         return unless $res == wxID_YES;
         if (-e $self->{presets}[$i]{file}) {
             unlink $self->{presets}[$i]{file};
@@ -385,52 +396,63 @@ sub load_config_file {
 package Slic3r::GUI::Tab::Print;
 use base 'Slic3r::GUI::Tab';
 
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
+
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
+
 sub name { 'print' }
-sub title { 'Print Settings' }
+sub title { __"Print Settings" }
 
 sub build {
     my $self = shift;
     
-    $self->add_options_page('Layers and perimeters', 'layers.png', optgroups => [
+    $self->add_options_page(__"Layers and perimeters", 'layers.png', optgroups => [
         {
-            title => 'Layer height',
+            title => __"Layer height",
             options => [qw(layer_height first_layer_height)],
         },
         {
-            title => 'Vertical shells',
+            title => __"Vertical shells",
             options => [qw(perimeters randomize_start extra_perimeters)],
         },
         {
-            title => 'Horizontal shells',
+            title => __"Horizontal shells",
             options => [qw(top_solid_layers bottom_solid_layers)],
             lines => [
                 {
-                    label   => 'Solid layers',
+                    label   => __"Solid layers",
                     options => [qw(top_solid_layers bottom_solid_layers)],
                 },
             ],
         },
         {
-            title => 'Advanced',
+            title => __"Advanced",
             options => [qw(avoid_crossing_perimeters external_perimeters_first spiral_vase)],
         },
     ]);
     
     $self->add_options_page('Infill', 'shading.png', optgroups => [
         {
-            title => 'Infill',
+            title => __"Infill",
             options => [qw(fill_density fill_pattern solid_fill_pattern)],
         },
         {
-            title => 'Advanced',
+            title => __"Advanced",
             options => [qw(infill_every_layers infill_only_where_needed solid_infill_every_layers fill_angle
                 solid_infill_below_area only_retract_when_crossing_perimeters infill_first)],
         },
     ]);
     
-    $self->add_options_page('Speed', 'time.png', optgroups => [
+    $self->add_options_page(__"Speed", 'time.png', optgroups => [
         {
-            title => 'Speed for print moves',
+            title => __"Speed for print moves",
             options => [qw(perimeter_speed small_perimeter_speed external_perimeter_speed infill_speed solid_infill_speed top_solid_infill_speed support_material_speed bridge_speed gap_fill_speed)],
         },
         {
@@ -534,36 +556,47 @@ sub hidden_options { !$Slic3r::have_threads ? qw(threads) : () }
 package Slic3r::GUI::Tab::Filament;
 use base 'Slic3r::GUI::Tab';
 
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
+
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
+
 sub name { 'filament' }
-sub title { 'Filament Settings' }
+sub title { __"Filament Settings" }
 
 sub build {
     my $self = shift;
     
-    $self->add_options_page('Filament', 'spool.png', optgroups => [
+    $self->add_options_page(__"Filament", 'spool.png', optgroups => [
         {
-            title => 'Filament',
+            title => __"Filament",
             options => ['filament_diameter#0', 'extrusion_multiplier#0'],
         },
         {
-            title => 'Temperature (°C)',
+            title => __"Temperature (°C)",
             options => ['temperature#0', 'first_layer_temperature#0', qw(bed_temperature first_layer_bed_temperature)],
             lines => [
                 {
-                    label   => 'Extruder',
+                    label   => __"Extruder",
                     options => ['first_layer_temperature#0', 'temperature#0'],
                 },
                 {
-                    label   => 'Bed',
+                    label   => __"Bed",
                     options => [qw(first_layer_bed_temperature bed_temperature)],
                 },
             ],
         },
     ]);
     
-    $self->add_options_page('Cooling', 'hourglass.png', optgroups => [
+    $self->add_options_page(__"Cooling", 'hourglass.png', optgroups => [
         {
-            title => 'Enable',
+            title => __"Enable",
             options => [qw(fan_always_on cooling)],
             lines => [
                 Slic3r::GUI::OptionsGroup->single_option_line('fan_always_on'),
@@ -575,11 +608,11 @@ sub build {
             ],
         },
         {
-            title => 'Fan settings',
+            title => __"Fan settings",
             options => [qw(min_fan_speed max_fan_speed bridge_fan_speed disable_fan_first_layers)],
             lines => [
                 {
-                    label   => 'Fan speed',
+                    label   => __"Fan speed",
                     options => [qw(min_fan_speed max_fan_speed)],
                 },
                 Slic3r::GUI::OptionsGroup->single_option_line('bridge_fan_speed'),
@@ -587,7 +620,7 @@ sub build {
             ],
         },
         {
-            title => 'Cooling thresholds',
+            title => __"Cooling thresholds",
             label_width => 250,
             options => [qw(fan_below_layer_time slowdown_below_layer_time min_print_speed)],
         },
@@ -634,30 +667,41 @@ sub on_value_change {
 package Slic3r::GUI::Tab::Printer;
 use base 'Slic3r::GUI::Tab';
 
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
+
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
+
 sub name { 'printer' }
-sub title { 'Printer Settings' }
+sub title {__"Printer Settings" }
 
 sub build {
     my $self = shift;
     
     $self->{extruders_count} = 1;
     
-    $self->add_options_page('General', 'printer_empty.png', optgroups => [
+    $self->add_options_page(__"General", 'printer_empty.png', optgroups => [
         {
-            title => 'Size and coordinates',
+            title => __"Size and coordinates",
             options => [qw(bed_size print_center z_offset)],
         },
         {
-            title => 'Firmware',
+            title => __"Firmware",
             options => [qw(gcode_flavor use_relative_e_distances)],
         },
         {
-            title => 'Capabilities',
+            title => __"Capabilities",
             options => [
                 {
                     opt_key => 'extruders_count',
-                    label   => 'Extruders',
-                    tooltip => 'Number of extruders of the printer.',
+                    label   => __"Extruders",
+                    tooltip => __"Number of extruders of the printer.",
                     type    => 'i',
                     min     => 1,
                     default => 1,
@@ -666,29 +710,29 @@ sub build {
             ],
         },
         {
-            title => 'Advanced',
+            title => __"Advanced",
             options => [qw(vibration_limit)],
         },
     ]);
     
-    $self->add_options_page('Custom G-code', 'cog.png', optgroups => [
+    $self->add_options_page(__"Custom G-code", 'cog.png', optgroups => [
         {
-            title => 'Start G-code',
+            title => __"Start G-code",
             no_labels => 1,
             options => [qw(start_gcode)],
         },
         {
-            title => 'End G-code',
+            title => __"End G-code",
             no_labels => 1,
             options => [qw(end_gcode)],
         },
         {
-            title => 'Layer change G-code',
+            title => __"Layer change G-code",
             no_labels => 1,
             options => [qw(layer_gcode)],
         },
         {
-            title => 'Tool change G-code',
+            title => __"Tool change G-code",
             no_labels => 1,
             options => [qw(toolchange_gcode)],
         },
@@ -719,24 +763,24 @@ sub _build_extruder_pages {
     
     foreach my $extruder_idx (0 .. $self->{extruders_count}-1) {
         # build page if it doesn't exist
-        $self->{extruder_pages}[$extruder_idx] ||= $self->add_options_page("Extruder " . ($extruder_idx + 1), 'funnel.png', optgroups => [
+        $self->{extruder_pages}[$extruder_idx] ||= $self->add_options_page(__"Extruder " . ($extruder_idx + 1), 'funnel.png', optgroups => [
             {
-                title => 'Size',
+                title => __"Size",
                 options => ['nozzle_diameter#' . $extruder_idx],
             },
             {
-                title => 'Position (for multi-extruder printers)',
+                title => __"Position (for multi-extruder printers)",
                 options => ['extruder_offset#' . $extruder_idx],
             },
             {
-                title => 'Retraction',
+                title => __"Retraction",
                 options => [
                     map "${_}#${extruder_idx}",
                         qw(retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe)
                 ],
             },
             {
-                title => 'Retraction when tool is disabled (advanced settings for multi-extruder setups)',
+                title => __"Retraction when tool is disabled (advanced settings for multi-extruder setups)",
                 options => [
                     map "${_}#${extruder_idx}",
                         qw(retract_length_toolchange retract_restart_extra_toolchange)
@@ -793,9 +837,9 @@ sub load_config_file {
     $self->SUPER::load_config_file(@_);
     
     Slic3r::GUI::warning_catcher($self)->(
-        "Your configuration was imported. However, Slic3r is currently only able to import settings "
-        . "for the first defined filament. We recommend you don't use exported configuration files "
-        . "for multi-extruder setups and rely on the built-in preset management system instead.")
+        __"Your configuration was imported. However, Slic3r is currently only able to import settings "
+        . __"for the first defined filament. We recommend you don't use exported configuration files "
+        . __"for multi-extruder setups and rely on the built-in preset management system instead.")
         if @{ $self->{config}->nozzle_diameter } > 1;
 }
 
@@ -861,9 +905,9 @@ use base 'Wx::Dialog';
 sub new {
     my $class = shift;
     my ($parent, %params) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Save preset", wxDefaultPosition, wxDefaultSize);
+    my $self = $class->SUPER::new($parent, -1, __("Save preset"), wxDefaultPosition, wxDefaultSize);
     
-    my $text = Wx::StaticText->new($self, -1, "Save " . lc($params{title}) . " as:", wxDefaultPosition, wxDefaultSize);
+    my $text = Wx::StaticText->new($self, -1, __("Save ") . lc($params{title}) . " as:", wxDefaultPosition, wxDefaultSize);
     $self->{combo} = Wx::ComboBox->new($self, -1, $params{default}, wxDefaultPosition, wxDefaultSize, $params{values},
                                        wxTE_PROCESS_ENTER);
     my $buttons = $self->CreateStdDialogButtonSizer(wxOK | wxCANCEL);

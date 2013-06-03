@@ -1,0 +1,1954 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Edit the file PACKAGE to change this.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: Edit the file PACAKGE to change this.\n"
+"POT-Creation-Date: 2013-06-03 11:59+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../lib/Slic3r/Config.pm:30
+msgid "Configuration notes"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:31
+msgid ""
+"You can put here your personal notes. This text will be added to the G-code "
+"header comments."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:42
+msgid "Threads"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:43
+msgid ""
+"Threads are used to parallelize long-running tasks. Optimal threads number "
+"is slightly above the number of available cores/processors. Beware that more "
+"threads consume more memory."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:44
+msgid "(more speed but more memory usage)"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:53
+msgid "Resolution"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:54
+msgid ""
+"Minimum detail resolution, used to simplify the input file for speeding up "
+"the slicing job and reducing memory usage. High-resolution models often "
+"carry more detail than printers can render. Set to zero to disable any "
+"simplification and use full resolution from input."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:55 ../lib/Slic3r/Config.pm:76
+#: ../lib/Slic3r/Config.pm:109 ../lib/Slic3r/Config.pm:140
+#: ../lib/Slic3r/Config.pm:152 ../lib/Slic3r/Config.pm:160
+#: ../lib/Slic3r/Config.pm:642 ../lib/Slic3r/Config.pm:666
+#: ../lib/Slic3r/Config.pm:780 ../lib/Slic3r/Config.pm:790
+#: ../lib/Slic3r/Config.pm:800 ../lib/Slic3r/Config.pm:838
+#: ../lib/Slic3r/Config.pm:938 ../lib/Slic3r/Config.pm:947
+#: ../lib/Slic3r/Config.pm:963 ../lib/Slic3r/Config.pm:994
+#: ../lib/Slic3r/Config.pm:1012 ../lib/Slic3r/Config.pm:1030
+#: ../lib/Slic3r/Config.pm:1038
+msgid "mm"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:64
+msgid "Output filename format"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:65
+msgid ""
+"You can use all configuration options as variables inside this template. For "
+"example: [layer_height], [fill_density] etc. You can also use [timestamp], "
+"[year], [month], [day], [hour], [minute], [second], [version], "
+"[input_filename], [input_filename_base]."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:74
+msgid "Print center"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:75
+msgid ""
+"Enter the G-code coordinates of the point you want to center your print "
+"around."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:84
+msgid "G-code flavor"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:85
+msgid ""
+"Some G/M-code commands, including temperature control and others, are not "
+"universal. Set this option to your printer's firmware to get a compatible "
+"output. The \"No extrusion\" flavor prevents Slic3r from exporting any "
+"extrusion value at all."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:93
+msgid "Use relative E distances"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:94
+msgid ""
+"If your firmware requires relative E values, check this, otherwise leave it "
+"unchecked. Most firmwares use absolute values."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:100
+msgid "Extrusion axis"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:101
+msgid ""
+"Use this option to set the axis letter associated to your printer's extruder "
+"(usually E but some printers use A)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:107
+msgid "Z offset"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:108
+msgid ""
+"This value will be added (or subtracted) from all the Z coordinates in the "
+"output G-code. It is used to compensate for bad Z endstop position: for "
+"example, if your endstop zero actually leaves the nozzle 0.3mm far from the "
+"print bed, set this to -0.3 (or fix your endstop)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:115
+msgid "Use native G-code arcs"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:116
+msgid ""
+"This experimental feature tries to detect arcs from segments and generates "
+"G2/G3 arc commands instead of multiple straight G1 commands."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:122
+msgid "Use G0 for travel moves"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:123
+msgid ""
+"Only enable this if your firmware supports G0 properly (thus decouples all "
+"axes using their maximum speeds instead of synchronizing them). Travel moves "
+"and retractions will be combined in single commands, speeding them print up."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:129
+msgid "Verbose G-code"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:130
+msgid ""
+"Enable this to get a commented G-code file, with each line explained by a "
+"descriptive text. If you print from SD card, the additional weight of the "
+"file could make your firmware slow down."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:138
+msgid "Extruder offset"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:139
+msgid ""
+"If your firmware doesn't handle the extruder displacement you need the G-"
+"code to take it into account. This option lets you specify the displacement "
+"of each extruder with respect to the first one. It expects positive "
+"coordinates (they will be subtracted from the XY coordinate)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:148
+msgid "Nozzle diameter"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:149
+msgid ""
+"This is the diameter of your extruder nozzle (for example: 0.5, 0.35 etc.)"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:158
+msgid "Diameter"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:159
+msgid ""
+"Enter your filament diameter here. Good precision is required, so use a "
+"caliper and do multiple measurements along the filament, then compute the "
+"average."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:168
+msgid "Extrusion multiplier"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:169
+msgid ""
+"This factor changes the amount of flow proportionally. You may need to tweak "
+"this setting to get nice surface finish and correct single wall widths. "
+"Usual values are between 0.9 and 1.1. If you think you need to change this "
+"more, check filament diameter and your firmware E steps."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:177 ../lib/Slic3r/Config.pm:234
+msgid "Other layers"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:178
+msgid ""
+"Extruder temperature for layers after the first one. Set this to zero to "
+"disable temperature control commands in the output."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:179 ../lib/Slic3r/Config.pm:190
+#: ../lib/Slic3r/Config.pm:227 ../lib/Slic3r/Config.pm:236
+msgid "°C"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:188 ../lib/Slic3r/Config.pm:225
+#: ../lib/Slic3r/Config.pm:437
+msgid "First layer"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:189
+msgid ""
+"Extruder temperature for first layer. If you want to control temperature "
+"manually during print, set this to zero to disable temperature control "
+"commands in the output file."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:201
+msgid "Perimeter extruder"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:202
+msgid "The extruder to use when printing perimeters."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:209
+msgid "Infill extruder"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:210
+msgid "The extruder to use when printing infill."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:216
+msgid "Support material extruder"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:217
+msgid ""
+"The extruder to use when printing support material. This affects brim too."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:226
+msgid ""
+"Heated build plate temperature for the first layer. Set this to zero to "
+"disable bed temperature control commands in the output."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:235
+msgid ""
+"Bed temperature for layers after the first one. Set this to zero to disable "
+"bed temperature control commands in the output."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:245
+msgid "Travel"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:246
+msgid "Speed for travel moves (jumps between distant extrusion points)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:247 ../lib/Slic3r/Config.pm:256
+#: ../lib/Slic3r/Config.pm:283 ../lib/Slic3r/Config.pm:311
+#: ../lib/Slic3r/Config.pm:319 ../lib/Slic3r/Config.pm:328
+#: ../lib/Slic3r/Config.pm:769 ../lib/Slic3r/Config.pm:904
+msgid "mm/s"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:254 ../lib/Slic3r/Config.pm:352
+#: ../lib/Slic3r/Config.pm:445
+msgid "Perimeters"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:255
+msgid "Speed for perimeters (contours, aka vertical shells)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:263
+msgid "Small perimeters"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:264
+msgid ""
+"This separate setting will affect the speed of perimeters having radius <= "
+"6.5mm (usually holes). If expressed as percentage (for example: 80%) it will "
+"be calculated on the perimeters speed setting above."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:265 ../lib/Slic3r/Config.pm:274
+#: ../lib/Slic3r/Config.pm:292 ../lib/Slic3r/Config.pm:302
+#: ../lib/Slic3r/Config.pm:336
+msgid "mm/s or %"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:272
+msgid "External perimeters"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:273
+msgid ""
+"This separate setting will affect the speed of external perimeters (the "
+"visible ones). If expressed as percentage (for example: 80%) it will be "
+"calculated on the perimeters speed setting above."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:281 ../lib/Slic3r/Config.pm:360
+#: ../lib/Slic3r/Config.pm:454 ../lib/Slic3r/GUI/Tab.pm:443
+msgid "Infill"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:282
+msgid "Speed for printing the internal fill."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:290 ../lib/Slic3r/Config.pm:462
+msgid "Solid infill"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:291
+msgid ""
+"Speed for printing solid regions (top/bottom/internal horizontal shells). "
+"This can be expressed as a percentage (for example: 80%) over the default "
+"infill speed above."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:300 ../lib/Slic3r/Config.pm:470
+msgid "Top solid infill"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:301
+msgid ""
+"Speed for printing top solid regions. You may want to slow down this to get "
+"a nicer surface finish. This can be expressed as a percentage (for example: "
+"80%) over the solid infill speed above."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:309
+msgid "Support material"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:310
+msgid "Speed for printing support material."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:317
+msgid "Bridges"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:318
+msgid "Speed for printing bridges."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:326
+msgid "Gap fill"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:327
+msgid ""
+"Speed for filling small gaps using short zigzag moves. Keep this reasonably "
+"low to avoid too much shaking and resonance issues. Set zero to disable gaps "
+"filling."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:334
+msgid "First layer speed"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:335
+msgid ""
+"If expressed as absolute value in mm/s, this speed will be applied to all "
+"the print moves of the first layer, regardless of their type. If expressed "
+"as a percentage (for example: 40%) it will scale the default speeds."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:344
+msgid "Default"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:345
+msgid ""
+"This is the acceleration your printer will be reset to after the role-"
+"specific acceleration values are used (perimeter/infill). Set zero to "
+"prevent resetting acceleration at all."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:346 ../lib/Slic3r/Config.pm:354
+#: ../lib/Slic3r/Config.pm:362 ../lib/Slic3r/Config.pm:370
+msgid "mm/s²"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:353
+msgid ""
+"This is the acceleration your printer will use for perimeters. A high value "
+"like 9000 usually gives good results if your hardware is up to the job. Set "
+"zero to disable acceleration control for perimeters."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:361
+msgid ""
+"This is the acceleration your printer will use for infill. Set zero to "
+"disable acceleration control for infill."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:368
+msgid "Bridge"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:369
+msgid ""
+"This is the acceleration your printer will use for bridges. Set zero to "
+"disable acceleration control for bridges."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:378 ../lib/Slic3r/GUI/Tab.pm:418
+msgid "Layer height"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:379
+msgid ""
+"This setting controls the height (and thus the total number) of the slices/"
+"layers. Thinner layers give better accuracy but take more time to print."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:386
+msgid "First layer height"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:387
+msgid ""
+"When printing with very low layer heights, you might still want to print a "
+"thicker bottom layer to improve adhesion and tolerance for non perfect build "
+"plates. This can be expressed as an absolute value or as a percentage (for "
+"example: 150%) over the default layer height."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:388
+msgid "mm or %"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:395
+msgid "Infill every"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:396
+msgid ""
+"This feature allows to combine infill and speed up your print by extruding "
+"thicker infill layers while preserving thin perimeters, thus accuracy."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:397 ../lib/Slic3r/Config.pm:406
+#: ../lib/Slic3r/Config.pm:913 ../lib/Slic3r/Config.pm:955
+msgid "layers"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:404
+msgid "Solid infill every"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:405
+msgid ""
+"This feature allows to force a solid layer every given number of layers. "
+"Zero to disable."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:413
+msgid "Only infill where needed"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:414
+msgid ""
+"This option will limit infill to the areas actually needed for supporting "
+"ceilings (it will act as internal support material)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:420
+msgid "Infill before perimeters"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:421
+msgid ""
+"This option will switch the print order of perimeters and infill, making the "
+"latter first."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:429
+msgid "Default extrusion width"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:430
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width. If left to "
+"zero, Slic3r calculates a width automatically. If expressed as percentage "
+"(for example: 230%) it will be computed over layer height."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:431
+msgid "mm or % (leave 0 for auto)"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:438
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for first "
+"layer. You can use this to force fatter extrudates for better adhesion. If "
+"expressed as percentage (for example 120%) if will be computed over layer "
+"height."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:439 ../lib/Slic3r/Config.pm:447
+#: ../lib/Slic3r/Config.pm:456 ../lib/Slic3r/Config.pm:464
+#: ../lib/Slic3r/Config.pm:472
+msgid "mm or % (leave 0 for default)"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:446
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for perimeters. "
+"You may want to use thinner extrudates to get more accurate surfaces. If "
+"expressed as percentage (for example 90%) if will be computed over layer "
+"height."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:455
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for infill. You "
+"may want to use fatter extrudates to speed up the infill and make your parts "
+"stronger. If expressed as percentage (for example 90%) if will be computed "
+"over layer height."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:463
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for infill for "
+"solid surfaces. If expressed as percentage (for example 90%) if will be "
+"computed over layer height."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:471
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for infill for "
+"top surfaces. You may want to use thinner extrudates to fill all narrow "
+"regions and get a smoother finish. If expressed as percentage (for example "
+"90%) if will be computed over layer height."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:503
+msgid "Perimeters (minimum)"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:504
+msgid ""
+"This option sets the number of perimeters to generate for each layer. Note "
+"that Slic3r will increase this number automatically when it detects sloping "
+"surfaces which benefit from a higher number of perimeters."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:511 ../lib/Slic3r/GUI/Tab.pm:430
+msgid "Solid layers"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:512
+msgid "Number of solid layers to generate on top and bottom surfaces."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:518
+msgid "Top"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:519
+msgid "Number of solid layers to generate on top surfaces."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:525
+msgid "Bottom"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:526
+msgid "Number of solid layers to generate on bottom surfaces."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:532
+msgid "Fill pattern"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:533
+msgid "Fill pattern for general low-density infill."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:541
+msgid "Top/bottom fill pattern"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:542
+msgid "Fill pattern for top/bottom infill."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:550
+msgid "Fill density"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:551
+msgid "Density of internal infill, expressed in the range 0 - 1."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:557
+msgid "Fill angle"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:558
+msgid ""
+"Default base angle for infill orientation. Cross-hatching will be applied to "
+"this. Bridges will be infilled using the best direction Slic3r can detect, "
+"so this setting does not affect them."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:559 ../lib/Slic3r/Config.pm:625
+#: ../lib/Slic3r/Config.pm:650 ../lib/Slic3r/Config.pm:978
+msgid "°"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:566
+msgid "Solid infill threshold area"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:567
+msgid ""
+"Force solid infill for regions having a smaller area than the specified "
+"threshold."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:568
+msgid "mm²"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:574
+msgid "Generate extra perimeters when needed"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:575
+msgid "Add more perimeters when needed for avoiding gaps in sloping walls."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:581
+msgid "Randomize starting points"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:582
+msgid ""
+"Start each layer from a different vertex to prevent plastic build-up on the "
+"same corner."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:588
+msgid "Avoid crossing perimeters"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:589
+msgid ""
+"Optimize travel moves in order to minimize the crossing of perimeters. This "
+"is mostly useful with Bowden extruders which suffer from oozing. This "
+"feature slows down both the print and the G-code generation."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:595
+msgid "External perimeters first"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:596
+msgid ""
+"Print contour perimeters from the outermost one to the innermost one instead "
+"of the default inverse order."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:609
+msgid "Only retract when crossing perimeters"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:610
+msgid ""
+"Disables retraction when travelling between infill paths inside the same "
+"island."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:616
+msgid "Generate support material"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:617
+msgid "Enable support material generation."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:623
+msgid "Overhang threshold"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:624
+msgid ""
+"Support material will not generated for overhangs whose slope angle is above "
+"the given threshold. Set to zero for automatic detection."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:631
+msgid "Pattern"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:632
+msgid "Pattern used to generate support material."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:640
+msgid "Pattern spacing"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:641
+msgid "Spacing between support material lines."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:648
+msgid "Pattern angle"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:649
+msgid ""
+"Use this setting to rotate the support material pattern on the horizontal "
+"plane."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:656
+msgid "Interface layers"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:657
+msgid ""
+"Number of interface layers to insert between the object(s) and support "
+"material."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:664
+msgid "Interface pattern spacing"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:665
+msgid "Spacing between interface lines. Set zero to get a solid interface."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:672
+msgid "Enforce support for the first"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:673
+msgid ""
+"Generate support material for the specified number of layers counting from "
+"bottom, regardless of whether normal support material is enabled or not and "
+"regardless of any angle threshold. This is useful for getting more adhesion "
+"of objects having a very thin or poor footprint on the build plate."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:680
+msgid "Raft layers"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:681
+msgid "Number of total raft layers to insert below the object(s)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:688 ../lib/Slic3r/GUI/Tab.pm:720
+msgid "Start G-code"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:689
+msgid ""
+"This start procedure is inserted at the beginning of the output file, right "
+"after the temperature control commands for extruder and bed. If Slic3r "
+"detects M104 or M190 in your custom codes, such commands will not be "
+"prepended automatically. Note that you can use placeholder variables for all "
+"Slic3r settings, so you can put a \"M104 S[first_layer_temperature]\" "
+"command wherever you want."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:703 ../lib/Slic3r/GUI/Tab.pm:725
+msgid "End G-code"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:704
+msgid ""
+"This end procedure is inserted at the end of the output file. Note that you "
+"can use placeholder variables for all Slic3r settings."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:719 ../lib/Slic3r/GUI/Tab.pm:730
+msgid "Layer change G-code"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:720
+msgid ""
+"This custom code is inserted at every layer change, right after the Z move "
+"and before the extruder moves to the first layer point. Note that you can "
+"use placeholder variables for all Slic3r settings."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:731 ../lib/Slic3r/GUI/Tab.pm:735
+msgid "Tool change G-code"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:732
+msgid ""
+"This custom code is inserted at every extruder change. Note that you can use "
+"placeholder variables for all Slic3r settings as well as [previous_extruder] "
+"and [next_extruder]."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:743
+msgid "Post-processing scripts"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:744
+msgid ""
+"If you want to process the output G-code through custom scripts, just list "
+"their absolute paths here. Separate multiple scripts with a semicolon. "
+"Scripts will be passed the absolute path to the G-code file as the first "
+"argument, and they can access the Slic3r config settings by reading "
+"environment variables."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:757 ../lib/Slic3r/Config.pm:826
+msgid "Length"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:758
+msgid ""
+"When retraction is triggered, filament is pulled back by the specified "
+"amount (the length is measured on raw filament, before it enters the "
+"extruder)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:759 ../lib/Slic3r/Config.pm:828
+msgid "mm (zero to disable)"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:767 ../lib/Slic3r/GUI/Tab.pm:453
+msgid "Speed"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:768
+msgid "The speed for retractions (it only applies to the extruder motor)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:778 ../lib/Slic3r/Config.pm:836
+msgid "Extra length on restart"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:779
+msgid ""
+"When the retraction is compensated after the travel move, the extruder will "
+"push this additional amount of filament. This setting is rarely needed."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:788
+msgid "Minimum travel after retraction"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:789
+msgid ""
+"Retraction is not triggered when travel moves are shorter than this length."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:798
+msgid "Lift Z"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:799
+msgid ""
+"If you set this to a positive value, Z is quickly raised every time a "
+"retraction is triggered."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:808
+msgid "Retract on layer change"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:809
+msgid "This flag enforces a retraction whenever a Z move is done."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:817
+msgid "Wipe before retract"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:818
+msgid ""
+"This flag will move the nozzle while retracting to minimize the possible "
+"blob on leaky extruders."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:827
+msgid ""
+"When retraction is triggered before changing tool, filament is pulled back "
+"by the specified amount (the length is measured on raw filament, before it "
+"enters the extruder)."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:837
+msgid ""
+"When the retraction is compensated after changing tool, the extruder will "
+"push this additional amount of filament."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:848
+msgid "Enable auto cooling"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:849
+msgid ""
+"This flag enables the automatic cooling logic that adjusts print speed and "
+"fan speed according to layer printing time."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:855
+msgid "Min"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:856
+msgid "This setting represents the minimum PWM your fan needs to work."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:857 ../lib/Slic3r/Config.pm:866
+#: ../lib/Slic3r/Config.pm:875
+msgid "%"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:864
+msgid "Max"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:865
+msgid "This setting represents the maximum speed of your fan."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:873
+msgid "Bridges fan speed"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:874
+msgid "This fan speed is enforced during all bridges."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:882
+msgid "Enable fan if layer print time is below"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:883
+msgid ""
+"If layer print time is estimated below this number of seconds, fan will be "
+"enabled and its speed will be calculated by interpolating the minimum and "
+"maximum speeds."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:884 ../lib/Slic3r/Config.pm:894
+msgid "approximate seconds"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:892
+msgid "Slow down if layer print time is below"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:893
+msgid ""
+"If layer print time is estimated below this number of seconds, print moves "
+"speed will be scaled down to extend duration to this value."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:902
+msgid "Min print speed"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:903
+msgid "Slic3r will not scale speed down below this speed."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:911
+msgid "Disable fan for the first"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:912
+msgid ""
+"You can set this to a positive value to disable fan at all during the first "
+"layers, so that it does not make adhesion worse."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:920
+msgid "Keep fan always on"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:921
+msgid ""
+"If this is enabled, fan will never be disabled and will be kept running at "
+"least at its minimum speed. Useful for PLA, harmful for ABS."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:929
+msgid "Loops"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:930
+msgid ""
+"Number of loops for this skirt, in other words its thickness. Set this to "
+"zero to disable skirt."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:936
+msgid "Minimum extrusion length"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:937
+msgid ""
+"Generate no less than the number of skirt loops required to consume the "
+"specified amount of filament on the bottom layer. For multi-extruder "
+"machines, this minimum applies to each extruder."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:945
+msgid "Distance from object"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:946
+msgid ""
+"Distance between skirt and object(s). Set this to zero to attach the skirt "
+"to the object(s) and get a brim for better adhesion."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:953
+msgid "Skirt height"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:954
+msgid ""
+"Height of skirt expressed in layers. Set this to a tall value to use skirt "
+"as a shield against drafts."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:961
+msgid "Brim width"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:962
+msgid ""
+"Horizontal width of the brim that will be printed around each object on the "
+"first layer."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:971 ../lib/Slic3r/GUI/Plater.pm:96
+#: ../lib/Slic3r/GUI/Plater.pm:449
+msgid "Scale"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:977 ../lib/Slic3r/GUI/Plater.pm:434
+msgid "Rotate"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:985
+msgid "Copies (autoarrange)"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:992
+msgid "Bed size"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:993
+msgid ""
+"Size of your bed. This is used to adjust the preview in the plater and for "
+"auto-arranging parts in it."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1002
+msgid "Copies (grid)"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1010
+msgid "Distance between copies"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1011
+msgid "Distance used for the auto-arrange feature of the plater."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1021
+msgid "Complete individual objects"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1022
+msgid ""
+"When printing multiple objects or copies, this feature will complete each "
+"object before moving onto next one (and starting it from its bottom layer). "
+"This feature is useful to avoid the risk of ruined prints. Slic3r should "
+"warn and prevent you from extruder collisions, but beware."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1028
+msgid "Radius"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1029
+msgid ""
+"Set this to the clearance radius around your extruder. If the extruder is "
+"not centered, choose the largest value for safety. This setting is used to "
+"check for collisions and to display the graphical preview in the plater."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1036
+msgid "Height"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1037
+msgid ""
+"Set this to the vertical distance between your nozzle tip and (usually) the "
+"X carriage rods. In other words, this is the height of the clearance "
+"cylinder around your extruder, and it represents the maximum depth the "
+"extruder can peek before colliding with other printed objects."
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1179
+msgid "Unknown option"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1249
+msgid "Invalid value for --threads\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1251
+msgid "Your perl wasn't built with multithread support\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1255
+msgid "Invalid value for --layer-height\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1257
+msgid "--layer-height must be a multiple of print resolution\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1261
+msgid "Invalid value for --first-layer-height\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1265
+msgid "Invalid value for --filament-diameter\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1269
+msgid "Invalid value for --nozzle-diameter\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1271
+msgid "--layer-height can't be greater than --nozzle-diameter\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1277
+msgid "Invalid value for --perimeters\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1281
+msgid "Invalid value for --solid-layers\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1282
+msgid "Invalid value for --top-solid-layers\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1283
+msgid "Invalid value for --bottom-solid-layers\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1286
+msgid "Invalid value for --print-center\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1291
+msgid "Invalid value for --fill-pattern\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1295
+msgid "Invalid value for --solid-fill-pattern\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1299
+msgid "Invalid value for --fill-density\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1301
+#, perl-format
+msgid "The selected fill pattern is not supposed to work at 100% density\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1306
+msgid "Invalid value for --infill-every-layers\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1310
+msgid "Invalid value for --scale\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1314
+msgid "Invalid value for --bed-size\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1319
+msgid "Invalid value for --duplicate-grid\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1324
+msgid "Invalid value for --duplicate or --duplicate-grid\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1327
+msgid ""
+"Use either --duplicate or --duplicate-grid (using both doesn't make sense)\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1331
+msgid "Invalid value for --skirt-height\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1335
+msgid "Invalid value for --bridge-flow-ratio\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1339
+msgid "Invalid value for --extruder-clearance-radius\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1341
+msgid "Invalid value for --extruder-clearance-height\n"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1407
+msgid "# generated by Slic3r"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1407
+msgid "on"
+msgstr ""
+
+#: ../lib/Slic3r/Config.pm:1436
+msgid "Unreadable configuration file (invalid data at line "
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:116
+msgid "&Load Config…\tCtrl+L"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:116
+msgid "Load exported configuration file"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:117
+msgid "&Export Config…\tCtrl+E"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:117
+msgid "Export current configuration to file"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:119
+msgid "Q&uick Slice…\tCtrl+U"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:119
+msgid "Slice file"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:120
+msgid "Quick Slice and Save &As…\tCtrl+Alt+U"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:120
+msgid "Slice file and save as"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:121
+msgid "&Repeat Last Quick Slice\tCtrl+Shift+U"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:121
+msgid "Repeat last quick slice"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:124
+msgid "Slice to SV&G…\tCtrl+G"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:124
+msgid "Slice file to SVG"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:126
+msgid "Combine multi-material STL files…"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:126
+msgid "Combine multiple STL files into a single multi-material AMF file"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:128
+msgid "Preferences…"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:128
+msgid "Application preferences"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:130
+msgid "&Quit"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:130
+msgid "Quit Slic3r"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:173
+msgid "&Configuration "
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:173
+msgid "Run Configuration "
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:175
+msgid "Slic3r &Website"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:175
+msgid "Open the Slic3r website in your browser"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:176
+msgid "Check for &Updates..."
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:176
+msgid "Check for new Slic3r versions"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:178
+msgid "&Documentation"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:178
+msgid "Open the Slic3r documentation in your browser"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:180
+msgid "&About Slic3r"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:180
+msgid "Show about dialog"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:193
+msgid "&File"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:194
+msgid "&Plater"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:195
+msgid "&Window"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:196
+msgid "&Help"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:236 ../lib/Slic3r/GUI.pm:248
+#: ../lib/Slic3r/GUI/Plater.pm:532
+msgid "Error"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:254
+msgid "Notice"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:267
+msgid "Warning"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:310
+msgid "A new version is available. Do you want to open the Slic3r website now?"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:311
+msgid "Update"
+msgstr ""
+
+#: ../lib/Slic3r/GUI.pm:319
+msgid "Failed to check for updates. Try later."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/AboutDialog.pm:24
+msgid "About Slic3r"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:25
+msgid "Configuration"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:278
+msgid "Welcome to the Slic3r Configuration"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:278
+msgid "Welcome"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:280
+msgid "Hello, welcome to Slic3r! This"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:280
+msgid ""
+" helps you with the initial configuration; just a few settings and you will "
+"be ready to print."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:281
+msgid "To import an existing configuration instead, cancel this"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:281
+msgid " and use the Open Config menu item found in the File menu."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:282
+msgid "To continue, click Next."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:302
+msgid "Firmware Type"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:304
+msgid "Choose the type of firmware used by your printer, then click Next."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:325
+msgid "Bed Size"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:327
+msgid "Enter the size of your printers bed, then click Next."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:348
+msgid "Nozzle Diameter"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:350
+msgid "Enter the diameter of your printers hot end nozzle, then click Next."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:371
+msgid "Filament Diameter"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:373
+msgid "Enter the diameter of your filament, then click Next."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:374
+msgid ""
+"Good precision is required, so use a caliper and do multiple measurements "
+"along the filament, then compute the average."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:395
+msgid "Extrusion Temperature"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:397
+msgid ""
+"Enter the temperature needed for extruding your filament, then click Next."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:398
+msgid "A rule of thumb is 160 to 230 °C for PLA, and 215 to 250 °C for ABS."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:419
+msgid "Bed Temperature"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:421
+msgid ""
+"Enter the bed temperature needed for getting your filament to stick to your "
+"heated bed, then click Next."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:422
+msgid "A rule of thumb is 60 °C for PLA and 110 °C for ABS."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:443
+msgid "Congratulations!"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:443
+msgid "Finish"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:445
+msgid "You have successfully completed the Slic3r Configuration"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:446
+msgid "Slic3r is now configured for your printer and filament."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:447
+msgid "To close this"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/ConfigWizard.pm:447
+msgid "and apply the newly created configuration, click Finish."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/OptionsGroup.pm:231
+msgid "Unsupported option type: "
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:41
+msgid "What do you want to print today?"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:42
+msgid "Drag your objects here"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:73 ../lib/Slic3r/GUI/Plater.pm:84
+msgid "More"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:74
+msgid "Fewer"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:76
+msgid "45° ccw"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:77
+msgid "45° cw"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:78 ../lib/Slic3r/GUI/Plater.pm:85
+msgid "Rotate…"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:80 ../lib/Slic3r/GUI/Plater.pm:85
+msgid "Scale…"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:82 ../lib/Slic3r/GUI/Plater.pm:85
+msgid "Split"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:84
+msgid "Less"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:84
+msgid "45°"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:94
+msgid "Name"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:95
+msgid "Copies"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:110
+msgid "Add…"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:111
+msgid "Delete"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:112
+msgid "Delete All"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:113
+msgid "Autoarrange"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:114
+msgid "Export G-code…"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:115
+msgid "Export STL…"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:317
+msgid "Processing input file…"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:345
+msgid "Loaded"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:434
+msgid "Enter the rotation angle:"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:449
+#, perl-format
+msgid "Enter the scale % for the selected object:"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:488
+msgid ""
+"The selected object couldn't be split because it contains more than one "
+"volume/material."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:497
+msgid ""
+"The selected object couldn't be split because it already contains a single "
+"part."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:532
+msgid "Another slicing job is currently running."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:582
+msgid "Export cancelled"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:605
+msgid "Exporting cancelled; exiting thread...\n"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:631
+msgid "Your files were successfully sliced"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:635 ../lib/Slic3r/GUI/SkeinPanel.pm:193
+msgid "minutes and"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:636 ../lib/Slic3r/GUI/SkeinPanel.pm:194
+msgid "seconds"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:652
+msgid "G-code file exported to"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:663
+msgid "Export failed"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:671
+msgid "STL file exported to"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:679
+msgid "AMF file exported to"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:692
+msgid "Save"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Plater.pm:692
+msgid "file as:"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Preferences.pm:18
+msgid "Preferences"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Preferences.pm:23 ../lib/Slic3r/GUI/Tab.pm:689
+msgid "General"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Preferences.pm:28
+msgid "Mode"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Preferences.pm:29
+msgid ""
+"Choose between a simpler, basic mode and an expert mode with more options "
+"and more complicated interface."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Preferences.pm:37
+msgid "Check for updates"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Preferences.pm:38
+msgid ""
+"If this is enabled, Slic3r will check for updates daily and display a "
+"reminder if a newer version is available."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Preferences.pm:45
+msgid "Remember output directory"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Preferences.pm:46
+msgid ""
+"If this is enabled, Slic3r will prompt the last output directory instead of "
+"the one containing the input files."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Preferences.pm:71
+msgid "You need to restart Slic3r to make the changes effective."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SimpleTab.pm:38
+msgid "Want more options? Switch to the Expert Mode."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:44
+msgid "Plater"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:102
+msgid "Are you sure you want to slice"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:102
+msgid "copies?"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:103
+msgid "Multiple Copies"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:122
+msgid "No previously sliced file."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:127
+msgid "Previously sliced file"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:127
+msgid "not found."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:128
+msgid "File Not Found"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:163
+msgid "Slicing…"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:163
+msgid "Processing"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:189
+msgid "was successfully sliced"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:300
+msgid " or hit Cancel if you have finished"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:399
+msgid "You have unsaved changes"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:399
+msgid "Discard changes and continue anyway?"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/SkeinPanel.pm:400
+msgid "Unsaved Presets"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:128
+msgid "Are you sure you want to delete the selected preset?"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:411
+msgid "Print Settings"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:416
+msgid "Layers and perimeters"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:422
+msgid "Vertical shells"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:426
+msgid "Horizontal shells"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:436 ../lib/Slic3r/GUI/Tab.pm:447
+#: ../lib/Slic3r/GUI/Tab.pm:713
+msgid "Advanced"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:455
+msgid "Speed for print moves"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:571
+msgid "Filament Settings"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:576 ../lib/Slic3r/GUI/Tab.pm:578
+msgid "Filament"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:582
+msgid "Temperature (°C)"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:586
+msgid "Extruder"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:590
+msgid "Bed"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:597
+msgid "Cooling"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:599
+msgid "Enable"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:611
+msgid "Fan settings"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:615
+msgid "Fan speed"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:623
+msgid "Cooling thresholds"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:682
+msgid "Printer Settings"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:691
+msgid "Size and coordinates"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:695
+msgid "Firmware"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:699
+msgid "Capabilities"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:703
+msgid "Extruders"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:704
+msgid "Number of extruders of the printer."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:718
+msgid "Custom G-code"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:766
+msgid "Extruder "
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:768
+msgid "Size"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:772
+msgid "Position (for multi-extruder printers)"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:776
+msgid "Retraction"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:783
+msgid ""
+"Retraction when tool is disabled (advanced settings for multi-extruder "
+"setups)"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:840
+msgid ""
+"Your configuration was imported. However, Slic3r is currently only able to "
+"import settings "
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:841
+msgid ""
+"for the first defined filament. We recommend you don't use exported "
+"configuration files "
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:842
+msgid ""
+"for multi-extruder setups and rely on the built-in preset management system "
+"instead."
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:908
+msgid "Save preset"
+msgstr ""
+
+#: ../lib/Slic3r/GUI/Tab.pm:910
+msgid "Save "
+msgstr ""

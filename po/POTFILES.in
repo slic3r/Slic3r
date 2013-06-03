@@ -1,0 +1,13 @@
+../slic3r.pl
+../lib/Slic3r.pm
+../lib/Slic3r/Config.pm
+../lib/Slic3r/GUI.pm
+../lib/Slic3r/GUI/AboutDialog.pm
+../lib/Slic3r/GUI/ConfigWizard.pm
+../lib/Slic3r/GUI/OptionsGroup.pm
+../lib/Slic3r/GUI/Plater.pm
+../lib/Slic3r/GUI/Preferences.pm
+../lib/Slic3r/GUI/SimpleTab.pm
+../lib/Slic3r/GUI/SkeinPanel.pm
+../lib/Slic3r/GUI/Tab.pm
+../lib/Slic3r/GUI/Plater/ObjectDialog.pm

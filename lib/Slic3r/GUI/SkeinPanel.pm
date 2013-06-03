@@ -2,7 +2,16 @@ package Slic3r::GUI::SkeinPanel;
 use strict;
 use warnings;
 use utf8;
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 use File::Basename qw(basename dirname);
 use Slic3r::Geometry qw(X Y);
 use Wx qw(:dialog :filedialog :font :icon :id :misc :notebook :panel :sizer);
@@ -32,7 +41,7 @@ sub new {
     $self->{mode} = 'expert' if $self->{mode} !~ /^(?:simple|expert)$/;
     
     $self->{tabpanel} = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
-    $self->{tabpanel}->AddPage($self->{plater} = Slic3r::GUI::Plater->new($self->{tabpanel}), "Plater")
+    $self->{tabpanel}->AddPage($self->{plater} = Slic3r::GUI::Plater->new($self->{tabpanel}), __("Plater"))
         unless $params{no_plater};
     $self->{options_tabs} = {};
     
@@ -90,8 +99,8 @@ sub quick_slice {
         my $copies = $config->duplicate_grid->[X] * $config->duplicate_grid->[Y];
         $copies = $config->duplicate if $config->duplicate > 1;
         if ($copies > 1) {
-            my $confirmation = Wx::MessageDialog->new($self, "Are you sure you want to slice $copies copies?",
-                                                      'Multiple Copies', wxICON_QUESTION | wxOK | wxCANCEL);
+            my $confirmation = Wx::MessageDialog->new($self, __("Are you sure you want to slice")." $copies ". __("copies?"),
+                                                      __("Multiple Copies"), wxICON_QUESTION | wxOK | wxCANCEL);
             return unless $confirmation->ShowModal == wxID_OK;
         }
         
@@ -110,13 +119,13 @@ sub quick_slice {
             $last_input_file = $input_file unless $params{export_svg};
         } else {
             if (!defined $last_input_file) {
-                Wx::MessageDialog->new($self, "No previously sliced file.",
+                Wx::MessageDialog->new($self, __("No previously sliced file."),
                                        'Error', wxICON_ERROR | wxOK)->ShowModal();
                 return;
             }
             if (! -e $last_input_file) {
-                Wx::MessageDialog->new($self, "Previously sliced file ($last_input_file) not found.",
-                                       'File Not Found', wxICON_ERROR | wxOK)->ShowModal();
+                Wx::MessageDialog->new($self, __("Previously sliced file")." ($last_input_file) ". __("not found."),
+                                       __("File Not Found"), wxICON_ERROR | wxOK)->ShowModal();
                 return;
             }
             $input_file = $last_input_file;
@@ -151,7 +160,7 @@ sub quick_slice {
         }
         
         # show processbar dialog
-        $process_dialog = Wx::ProgressDialog->new('Slicing…', "Processing $input_file_basename…", 
+        $process_dialog = Wx::ProgressDialog->new(__("Slicing…"), __("Processing") ." $input_file_basename…", 
             100, $self, 0);
         $process_dialog->Pulse;
         
@@ -177,12 +186,12 @@ sub quick_slice {
         $process_dialog->Destroy;
         undef $process_dialog;
         
-        my $message = "$input_file_basename was successfully sliced";
+        my $message = "$input_file_basename ". __("was successfully sliced");
         if ($print->processing_time) {
             $message .= ' in';
             my $minutes = int($print->processing_time/60);
-            $message .= sprintf " %d minutes and", $minutes if $minutes;
-            $message .= sprintf " %.1f seconds", $print->processing_time - $minutes*60;
+            $message .= sprintf " %d ". __("minutes and"), $minutes if $minutes;
+            $message .= sprintf " %.1f ". __("seconds"), $print->processing_time - $minutes*60;
         }
         $message .= ".";
         &Wx::wxTheApp->notify($message);
@@ -288,7 +297,7 @@ sub combine_stls {
             }
             push @input_files, $dialog->GetPaths;
             $dialog->Destroy;
-            $dlg_message .= " or hit Cancel if you have finished";
+            $dlg_message .= __(" or hit Cancel if you have finished");
             $dir = dirname($input_files[0]);
         }
         return if !@input_files;
@@ -387,8 +396,8 @@ sub check_unsaved_changes {
     my @dirty = map $_->title, grep $_->is_dirty, values %{$self->{options_tabs}};
     if (@dirty) {
         my $titles = join ', ', @dirty;
-        my $confirm = Wx::MessageDialog->new($self, "You have unsaved changes ($titles). Discard changes and continue anyway?",
-                                             'Unsaved Presets', wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT);
+        my $confirm = Wx::MessageDialog->new($self, __("You have unsaved changes"). " ($titles) ". __("Discard changes and continue anyway?"),
+                                             __("Unsaved Presets"), wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT);
         return ($confirm->ShowModal == wxID_YES);
     }
     

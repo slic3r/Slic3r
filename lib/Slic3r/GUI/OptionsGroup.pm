@@ -1,6 +1,15 @@
 package Slic3r::GUI::OptionsGroup;
 use Moo;
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 use List::Util qw(first);
 use Wx qw(:combobox :font :misc :sizer :systemsettings :textctrl);
 use Wx::Event qw(EVT_CHECKBOX EVT_COMBOBOX EVT_SPINCTRL EVT_TEXT);
@@ -18,9 +27,9 @@ Slic3r::GUI::OptionsGroup - pre-filled Wx::StaticBoxSizer wrapper containing one
             {
                 opt_key     => 'layer_height',  # mandatory
                 type        => 'f',             # mandatory
-                label       => 'Layer height',
-                tooltip     => 'This setting controls the height (and thus the total number) of the slices/layers.',
-                sidetext    => 'mm',
+                label       => __("Layer height"),
+                tooltip     => __("This setting controls the height (and thus the total number) of the slices/layers."),
+                sidetext    => __("mm"),
                 width       => 200,
                 full_width  => 0,
                 height      => 50,
@@ -219,7 +228,7 @@ sub _build_field {
                  . $opt->{labels}[ first { $opt->{values}[$_] eq $opt->{default} } 0..$#{$opt->{values}} ] 
                  . ")" if ($opt->{default});
     } else {
-        die "Unsupported option type: " . $opt->{type};
+        die __("Unsupported option type: ") . $opt->{type};
     }
     if ($tooltip && $field->can('SetToolTipString')) {
         $field->SetToolTipString($tooltip);
@@ -277,7 +286,7 @@ Slic3r::GUI::ConfigOptionsGroup - pre-filled Wx::StaticBoxSizer wrapper containi
 
     my $optgroup = Slic3r::GUI::ConfigOptionsGroup->new(
         parent      => $self->parent,
-        title       => 'Layers',
+        title       => __("Layers"),
         config      => $config,
         options     => ['layer_height'],
         on_change   => sub { print "new value for $_[0] is $_[1]\n" },

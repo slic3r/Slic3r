@@ -2,7 +2,16 @@ package Slic3r::GUI::AboutDialog;
 use strict;
 use warnings;
 use utf8;
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
 
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
 use Wx qw(:font :html :misc :sizer :systemsettings);
 use Wx::Event qw(EVT_HTML_LINK_CLICKED);
 use Wx::Print;
@@ -12,7 +21,7 @@ use base 'Wx::Dialog';
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, -1, 'About Slic3r', wxDefaultPosition, [600, 270]);
+    my $self = $class->SUPER::new($parent, -1, __("About Slic3r"), wxDefaultPosition, [600, 270]);
 
     $self->SetBackgroundColour(Wx::wxWHITE);
     my $hsizer = Wx::BoxSizer->new(wxHORIZONTAL);

@@ -3,6 +3,17 @@ use strict;
 use warnings;
 use utf8;
 
+#==============================================
+# For setlocale.
+use POSIX qw (setlocale);
+use Locale::Messages qw (LC_MESSAGES);
+
+use Locale::TextDomain ('Slic3r');
+
+# Set the locale according to the environment.
+setlocale (LC_MESSAGES, "");
+#==============================================
+
 use FindBin;
 use Slic3r::GUI::AboutDialog;
 use Slic3r::GUI::ConfigWizard;
@@ -96,27 +107,27 @@ sub OnInit {
     
     # status bar
     $frame->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($frame, -1);
-    $frame->{statusbar}->SetStatusText("Version $Slic3r::VERSION - Remember to check for updates at http://slic3r.org/");
+    $frame->{statusbar}->SetStatusText(__("Version") ." $Slic3r::VERSION - ". __("Remember to check for updates at") ." http://slic3r.org/");
     $frame->SetStatusBar($frame->{statusbar});
     
     # File menu
     my $fileMenu = Wx::Menu->new;
     {
-        $fileMenu->Append(MI_LOAD_CONF, "&Load Config…\tCtrl+L", 'Load exported configuration file');
-        $fileMenu->Append(MI_EXPORT_CONF, "&Export Config…\tCtrl+E", 'Export current configuration to file');
+        $fileMenu->Append(MI_LOAD_CONF, __"&Load Config…\tCtrl+L", __"Load exported configuration file");
+        $fileMenu->Append(MI_EXPORT_CONF, __("&Export Config…\tCtrl+E"), __"Export current configuration to file");
         $fileMenu->AppendSeparator();
-        $fileMenu->Append(MI_QUICK_SLICE, "Q&uick Slice…\tCtrl+U", 'Slice file');
-        $fileMenu->Append(MI_QUICK_SAVE_AS, "Quick Slice and Save &As…\tCtrl+Alt+U", 'Slice file and save as');
-        my $repeat = $fileMenu->Append(MI_REPEAT_QUICK, "&Repeat Last Quick Slice\tCtrl+Shift+U", 'Repeat last quick slice');
+        $fileMenu->Append(MI_QUICK_SLICE, __"Q&uick Slice…\tCtrl+U", __"Slice file");
+        $fileMenu->Append(MI_QUICK_SAVE_AS, __"Quick Slice and Save &As…\tCtrl+Alt+U", __"Slice file and save as");
+        my $repeat = $fileMenu->Append(MI_REPEAT_QUICK, __"&Repeat Last Quick Slice\tCtrl+Shift+U", __"Repeat last quick slice");
         $repeat->Enable(0);
         $fileMenu->AppendSeparator();
-        $fileMenu->Append(MI_SLICE_SVG, "Slice to SV&G…\tCtrl+G", 'Slice file to SVG');
+        $fileMenu->Append(MI_SLICE_SVG, __"Slice to SV&G…\tCtrl+G", __"Slice file to SVG");
         $fileMenu->AppendSeparator();
-        $fileMenu->Append(MI_COMBINE_STLS, "Combine multi-material STL files…", 'Combine multiple STL files into a single multi-material AMF file');
+        $fileMenu->Append(MI_COMBINE_STLS, __"Combine multi-material STL files…", __"Combine multiple STL files into a single multi-material AMF file");
         $fileMenu->AppendSeparator();
-        $fileMenu->Append(wxID_PREFERENCES, "Preferences…", 'Application preferences');
+        $fileMenu->Append(wxID_PREFERENCES, __"Preferences…", __"Application preferences");
         $fileMenu->AppendSeparator();
-        $fileMenu->Append(wxID_EXIT, "&Quit", 'Quit Slic3r');
+        $fileMenu->Append(wxID_EXIT, __"&Quit", __"Quit Slic3r");
         EVT_MENU($frame, MI_LOAD_CONF, sub { $self->{skeinpanel}->load_config_file });
         EVT_MENU($frame, MI_EXPORT_CONF, sub { $self->{skeinpanel}->export_config });
         EVT_MENU($frame, MI_QUICK_SLICE, sub { $self->{skeinpanel}->quick_slice;
@@ -159,18 +170,18 @@ sub OnInit {
     # Help menu
     my $helpMenu = Wx::Menu->new;
     {
-        $helpMenu->Append(MI_CONF_WIZARD, "&Configuration $Slic3r::GUI::ConfigWizard::wizard…", "Run Configuration $Slic3r::GUI::ConfigWizard::wizard");
+        $helpMenu->Append(MI_CONF_WIZARD, __"&Configuration ".$Slic3r::GUI::ConfigWizard::wizard."…", __"Run Configuration ".$Slic3r::GUI::ConfigWizard::wizard);
         $helpMenu->AppendSeparator();
-        $helpMenu->Append(MI_WEBSITE, "Slic3r &Website", 'Open the Slic3r website in your browser');
-        my $versioncheck = $helpMenu->Append(MI_VERSIONCHECK, "Check for &Updates...", 'Check for new Slic3r versions');
+        $helpMenu->Append(MI_WEBSITE, __"Slic3r &Website", __"Open the Slic3r website in your browser");
+        my $versioncheck = $helpMenu->Append(MI_VERSIONCHECK, __"Check for &Updates...", __"Check for new Slic3r versions");
         $versioncheck->Enable(Slic3r::GUI->have_version_check);
-        $helpMenu->Append(MI_DOCUMENTATION, "&Documentation", 'Open the Slic3r documentation in your browser');
+        $helpMenu->Append(MI_DOCUMENTATION, __"&Documentation", __"Open the Slic3r documentation in your browser");
         $helpMenu->AppendSeparator();
-        $helpMenu->Append(wxID_ABOUT, "&About Slic3r", 'Show about dialog');
+        $helpMenu->Append(wxID_ABOUT, __"&About Slic3r", __"Show about dialog");
         EVT_MENU($frame, MI_CONF_WIZARD, sub { $self->{skeinpanel}->config_wizard });
-        EVT_MENU($frame, MI_WEBSITE, sub { Wx::LaunchDefaultBrowser('http://slic3r.org/') });
+        EVT_MENU($frame, MI_WEBSITE, sub { Wx::LaunchDefaultBrowser("http://slic3r.org/") });
         EVT_MENU($frame, MI_VERSIONCHECK, sub { Slic3r::GUI->check_version(manual => 1) });
-        EVT_MENU($frame, MI_DOCUMENTATION, sub { Wx::LaunchDefaultBrowser('https://github.com/alexrj/Slic3r/wiki/Documentation') });
+        EVT_MENU($frame, MI_DOCUMENTATION, sub { Wx::LaunchDefaultBrowser("https://github.com/alexrj/Slic3r/wiki/Documentation") });
         EVT_MENU($frame, wxID_ABOUT, \&about);
     }
     
@@ -179,10 +190,10 @@ sub OnInit {
     # will not be handled correctly
     {
         my $menubar = Wx::MenuBar->new;
-        $menubar->Append($fileMenu, "&File");
-        $menubar->Append($platerMenu, "&Plater") if $platerMenu;
-        $menubar->Append($windowMenu, "&Window");
-        $menubar->Append($helpMenu, "&Help");
+        $menubar->Append($fileMenu, __"&File");
+        $menubar->Append($platerMenu, __"&Plater") if $platerMenu;;
+        $menubar->Append($windowMenu, __"&Window");
+        $menubar->Append($helpMenu, __"&Help");
         $frame->SetMenuBar($menubar);
     }
     
@@ -222,7 +233,7 @@ sub catch_error {
     my ($self, $cb, $message_dialog) = @_;
     if (my $err = $@) {
         $cb->() if $cb;
-        my @params = ($err, 'Error', wxOK | wxICON_ERROR);
+        my @params = ($err, __"Error", wxOK | wxICON_ERROR);
         $message_dialog
             ? $message_dialog->(@params)
             : Wx::MessageDialog->new($self, @params)->ShowModal;
@@ -234,13 +245,13 @@ sub catch_error {
 sub show_error {
     my $self = shift;
     my ($message) = @_;
-    Wx::MessageDialog->new($self, $message, 'Error', wxOK | wxICON_ERROR)->ShowModal;
+    Wx::MessageDialog->new($self, $message, __"Error", wxOK | wxICON_ERROR)->ShowModal;
 }
 
 sub show_info {
     my $self = shift;
     my ($message, $title) = @_;
-    Wx::MessageDialog->new($self, $message, $title || 'Notice', wxOK | wxICON_INFORMATION)->ShowModal;
+    Wx::MessageDialog->new($self, $message, $title || __"Notice", wxOK | wxICON_INFORMATION)->ShowModal;
 }
 
 sub fatal_error {
@@ -253,7 +264,7 @@ sub warning_catcher {
     my ($self, $message_dialog) = @_;
     return sub {
         my $message = shift;
-        my @params = ($message, 'Warning', wxOK | wxICON_WARNING);
+        my @params = ($message, __"Warning", wxOK | wxICON_WARNING);
         $message_dialog
             ? $message_dialog->(@params)
             : Wx::MessageDialog->new($self, @params)->ShowModal;
@@ -293,19 +304,19 @@ sub check_version {
     threads->create(sub {
         my $ua = LWP::UserAgent->new;
         $ua->timeout(10);
-        my $response = $ua->get('http://slic3r.org/updatecheck');
+        my $response = $ua->get("http://slic3r.org/updatecheck");
         if ($response->is_success) {
             if ($response->decoded_content =~ /^obsolete ?= ?([a-z0-9.-]+,)*\Q$Slic3r::VERSION\E(?:,|$)/) {
-                my $res = Wx::MessageDialog->new(undef, "A new version is available. Do you want to open the Slic3r website now?",
-                    'Update', wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxICON_INFORMATION | wxICON_ERROR)->ShowModal;
-                Wx::LaunchDefaultBrowser('http://slic3r.org/') if $res == wxID_YES;
+                my $res = Wx::MessageDialog->new(undef, __"A new version is available. Do you want to open the Slic3r website now?",
+                    __"Update", wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxICON_INFORMATION | wxICON_ERROR)->ShowModal;
+                Wx::LaunchDefaultBrowser("http://slic3r.org/") if $res == wxID_YES;
             } else {
-                Slic3r::GUI::show_info(undef, "You're using the latest version. No updates are available.") if $p{manual};
+                Slic3r::GUI::show_info(undef, "You\'re using the latest version. No updates are available.") if $p{manual};
             }
             $Settings->{_}{last_version_check} = time();
             Slic3r::GUI->save_settings;
         } else {
-            Slic3r::GUI::show_error(undef, "Failed to check for updates. Try later.") if $p{manual};
+            Slic3r::GUI::show_error(undef, __"Failed to check for updates. Try later.") if $p{manual};
         }
     })->detach;
 }
