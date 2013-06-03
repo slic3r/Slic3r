@@ -107,7 +107,7 @@ sub OnInit {
     
     # status bar
     $frame->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($frame, -1);
-    $frame->{statusbar}->SetStatusText("Version $Slic3r::VERSION - Remember to check for updates at http://slic3r.org/");
+    $frame->{statusbar}->SetStatusText(__("Version") ." $Slic3r::VERSION - ". __("Remember to check for updates at") ." http://slic3r.org/");
     $frame->SetStatusBar($frame->{statusbar});
     
     # File menu
