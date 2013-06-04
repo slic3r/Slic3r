@@ -610,6 +610,14 @@ sub merge_expolygon_and_medial_axis_fragments {
                  ? [$offset_polyline->[0]->[0],  $offset_polyline->[0]->[1],  $distance]
                  : [$offset_polyline->[-1]->[0], $offset_polyline->[-1]->[1], $distance];
         $offset_polyline->clip_end_with_circle($clip_front, $circle);
+        # This is to get any medial axis fragments to always be added to 
+        # the _end_ of a polyline derived from a Clipper offset loop, so we're
+        # always _going out_ into a thin point, not starting at the tip of a
+        # thin point. This helps a bit with thin points that are also overhangs,
+        # so the extrusion doesn't start where there's little or no support.
+        # Where this reverse happens, the path replacing the original contour
+        # will then be clockwise, which could be a problem downstream.
+        @{$offset_polyline} = reverse @{$offset_polyline} if !$clip_front;
     }
     #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/6).';stroke:purple;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @offset_polylines) if $DB::svg;
 
