@@ -37,7 +37,7 @@ sub offset_ex {
     my ($polygons, $distance, $scale, $joinType, $miterLimit) = @_;
     $scale      ||= 100000;
     $joinType   //= JT_MITER;
-    $miterLimit //= 3;
+    $miterLimit //= 2;
     
     my $offsets = Math::Clipper::ex_int_offset($polygons, $distance, $scale, $joinType, $miterLimit);
     return map Slic3r::ExPolygon->new($_), @$offsets;
@@ -106,7 +106,7 @@ sub ex_int_offset2 {
     my ($polygons, $delta1, $delta2, $scale, $joinType, $miterLimit) = @_;
     $scale      ||= 100000;
     $joinType   //= JT_MITER;
-    $miterLimit //= 3;
+    $miterLimit //= 2;
     
     my $offsets = Math::Clipper::ex_int_offset2($polygons, $delta1, $delta2, $scale, $joinType, $miterLimit);
     return map Slic3r::ExPolygon->new($_), @$offsets;
