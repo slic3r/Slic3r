@@ -20,6 +20,7 @@ sub new {
         # duplicate vertices which can come from safety_offset() cycle upstream.
         $self = polygon_medial_axis($_[0]->simplify(2));
         bless $_, 'Slic3r::MedialAxis::Edge' for @{$self->{edges}};
+        bless $_->vertex0, 'Slic3r::MedialAxis::Vertex' for @{$self->{edges}};
     }
     elsif (ref $_[0] eq 'HASH') {
         $self->{edges}    = $_[0]->{edges};
@@ -55,7 +56,7 @@ sub new {
         }
     }
     
-    #Slic3r::MedialAxis::EdgeView::edges_svg($self->{edges}) if ($DB::svg && $DB::current_layer_id == 22);
+    #Slic3r::MedialAxis::EdgeView::edges_svg($self->{edges}) if ($DB::svg && 1||$DB::current_layer_id == 22);
 
     bless $self, $class;
     return $self;
@@ -96,7 +97,8 @@ sub offset_interval_filter {
     my @offset = map $_ * $tool_diameter + $initial_offset + $nudge, (0 .. $intervals_count);
 
     # an "interval" is a set of polyedges all at the same offset level
-    # so one interval per offset level, and zero or more polyedges per interval
+    # so one interval per offset level, and zero or more polyedges per interval.
+    # Should rethink terms here to harmonize with Slic3r and other CNC vocabulary.
     my @intervals;
     $#intervals = $#offset;
     $_ = [] for @intervals;
@@ -157,12 +159,39 @@ sub offset_interval_filter {
             # TODO: avoid this hard threshold for sharp corners - ramp the depth
             #       of incursion into sharp corners relative to sharpness/depth
 
-            my $shallow_corner = (  $ephi < &Slic3r::Geometry::deg2rad(60)
-                                 || $ephi > &Slic3r::Geometry::deg2rad(120) 
-                                 )
+            my $shallow_corner =   $ephi < &Slic3r::Geometry::deg2rad(60)
+                                || $ephi > &Slic3r::Geometry::deg2rad(120)
                                ? 1 : 0;
 
+            # now make sure that's not a false positive by scanning the corner
+            # ahead or behind to see if it has any non-shallow phi angles
+            if ($shallow_corner && $ephi < &Slic3r::Geometry::deg2rad(60)) {
+                my $n = $e->next;
+                while ($n != $e->twin) {
+                    if (   $n->phi < &Slic3r::Geometry::deg2rad(60)
+                        || $n->phi > &Slic3r::Geometry::deg2rad(120)) {
+                        $n = $n->next;
+                        next;
+                    } else { 
+                        $shallow_corner = 0;
+                        last;
+                    }
+                }
+            }
 
+            if ($shallow_corner && $ephi > &Slic3r::Geometry::deg2rad(120)) {
+                my $p = $e->prev;
+                while ($p != $e->twin) {
+                    if (   $p->phi < &Slic3r::Geometry::deg2rad(60)
+                        || $p->phi > &Slic3r::Geometry::deg2rad(120)) {
+                        $p = $p->prev;
+                        next;
+                    } else { 
+                        $shallow_corner = 0;
+                        last;
+                    }
+                }
+            }
 
             my $twinturn = (  ($edge_intersect
                                 # both edges involved in the twinturn
@@ -182,13 +211,8 @@ sub offset_interval_filter {
 
             # decide whether to keep this edge
             if ($er_min <= $bracket_threshold
-                && (!$shallow_corner
-                   || $twinturn
-                   # trying to fix problem of some false positive or irrelevant
-                   # shallow corner detections 
-                   || $er_min >= $offset[$j] # seems good                   
-                   )
-                   ) {
+                && (!$shallow_corner || $twinturn)
+               ) {
 
                 if (0) { # DEBUG - collect keeper edges for display later
                     push @dblines, 
@@ -297,6 +321,23 @@ sub offset_interval_filter {
     foreach my $interval (@intervals) {
         @$interval  = grep @$_ > 0, @$interval;
     }
+
+    # eliminate some troublesome two-edge but zero-length fragments that the 
+    # logic above lets slip through
+    foreach my $interval (@intervals) {
+        for (my $pi = $#$interval; $pi > -1; $pi--) {
+            my $p = $interval->[$pi];
+            if (@$p == 2
+               && $p->[0]->twinturn 
+               && $p->[1]->twinturn
+               &&  abs($p->[0]->start_point->[0] - $p->[1]->end_point->[0]) < 2
+               &&  abs($p->[0]->start_point->[1] - $p->[1]->end_point->[1]) < 2
+               ) {
+               $DB::svg->appendPolylines({style=>"stroke:yellow;stroke-width:40000;stroke-linecap:round;"}, [map $_->points, @$p]) if $DB::svg;
+               splice @$interval, $pi, 1;
+            }
+        }
+    }
     
     # Merge contiguous sequences.
     # Some sequences of edges will be in two fragments - the last part of the 
@@ -337,19 +378,6 @@ sub offset_interval_filter {
         }
     }
 
-    if (0) {
-        foreach my $interval (@intervals) {
-            $DB::svg->appendPolylines(
-                {style=>"stroke:red;stroke-width:20000;fill:none;"},
-                map {[map {$_->points} @$_]} @$interval
-            ) if $DB::svg;
-            $DB::svg->appendPoints(
-                {r=>200000, style=>"fill:red;"},
-                map {map {[@{$_}[0,1]]} ($_->[-1]->points)} @$interval
-            ) if $DB::svg;
-        }
-    }
-
     # fix up next refs - seems this should have all been done above,
     # but some slipped through without proper references
     foreach my $interval (@intervals) {
@@ -362,6 +390,23 @@ sub offset_interval_filter {
         }
     }
 
+    if (0) {
+        foreach my $interval (@intervals) {
+            $DB::svg->appendPolylines(
+                {style=>"stroke:red;stroke-width:20000;fill:none;"},
+                map {[map {$_->points} @$_]} @$interval
+            ) if $DB::svg;
+            $DB::svg->appendPoints(
+                {r=>200000, style=>"fill:red;"},
+                map {map {[@{$_}[0,1]]} ($_->[-1]->points)} @$interval
+            ) if $DB::svg;
+            $DB::svg->appendPoints(
+                {r=>200000, style=>"fill:green;"},
+                map {map {[@{$_}[0,1]]} ($_->[0]->points)} @$interval
+            ) if $DB::svg;
+        }
+    }
+    
     foreach my $interval (@intervals) {
         @$interval = map Slic3r::MedialAxis::EdgeCollection->new($_), @$interval;
     }
@@ -391,7 +436,6 @@ sub get_offset_fragments {
 
         @{$intervals->[$i]} = grep @$_ > 1, @{$intervals->[$i]};
 
-        
         # pre-process any loops
         # this should handle cases where the part is so thin that it's 
         # completely thinwall, so that what we're dealing with is
@@ -404,15 +448,11 @@ sub get_offset_fragments {
         for (my $j = $#{$intervals->[$i]}; $j > -1; $j--) {
 
             my $polyedge = $intervals->[$i]->[$j];
-
             next if $polyedge->[-1]->edge->next != $polyedge->[0]->edge;
-
             my $max_r_index = 0;
-
             for (1 .. $#$polyedge) {
                 $max_r_index = $_ if $polyedge->[$max_r_index]->radius <= $polyedge->[$_]->radius;
             }
-
             if ($max_r_index > 0) {
                 @$polyedge = (@{$polyedge}[$max_r_index .. $#$polyedge], 
                               @{$polyedge}[0 .. $max_r_index - 1]
@@ -432,7 +472,9 @@ sub get_offset_fragments {
             # Initial pass sets up a rough left-right edge distinction
             # for thin wall sections, that we will then refine.
             
-            if (@polyedge && first {!$_->visited} @polyedge) {
+            if (@polyedge 
+                && first {!$_->visited} @polyedge
+                ) {
                 foreach my $edge (@polyedge) {
                     if ($edge->visited != 2) {
                         $edge->twin->visited(2);
@@ -448,7 +490,7 @@ sub get_offset_fragments {
             # branching.
 
             #$DB::svg->appendRaw('<g>') if $DB::svg;            
-            #$DB::svg->appendPolylines({style=>"stroke:red;opacity:1;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited != 2 || $_->visited != 1} @polyedge]) if (grep {$_->visited != 2 || $_->visited != 1} @polyedge) && $DB::svg;
+            #$DB::svg->appendPolylines({style=>"stroke:pink;opacity:1;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited != 2 || $_->visited != 1} @polyedge]) if (grep {$_->visited != 2 || $_->visited != 1} @polyedge) && $DB::svg;
             #$DB::svg->appendPolylines({style=>"stroke:yellow;opacity:1;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited==2} @polyedge]) if (grep {$_->visited==2} @polyedge) && $DB::svg;
             #$DB::svg->appendPolylines({style=>"stroke:pink;opacity:1;stroke-width:20000;fill:none;"},    [map {$_->points} grep {$_->visited==1} @polyedge]) if (grep {$_->visited==1} @polyedge) && $DB::svg;
             #$DB::svg->appendPoints({style=>"",r=>20000},  map {[@{$_->start_point},$_->visited == 1 ? 'blue':'red']} @polyedge) if $DB::svg;
@@ -457,17 +499,18 @@ sub get_offset_fragments {
 
             # maybe... if twin has same color, but is on a different edge sequence, it should really have a different color
             # might happen with hole loops up against outer loops 
-            #for (my $i = 0; $i < $#polyedge; $i++) {
-            #    if (
-            #           $polyedge[$i]->twin->visited == $polyedge[$i]->visited
-            #        # && ? if twin not in this polyedge
-            #        ) {
-            #        print "left-right distinction probably foiled by hole\n";
-            #        # yes this did happen sometimes
-            #        # should it be fixed here or somehow avoided before this point?
-            #        #$polyedge[$i]->twin->visited($polyedge[$i]->visited == 1 ? 2 : 1);                            
-            #    }
-            #}
+            for (my $i = 0; $i < $#polyedge; $i++) {
+               if (
+                      $polyedge[$i]->twin->visited == $polyedge[$i]->visited
+                   # && ? if twin not in this polyedge
+                   ) {
+                   print "left-right distinction probably foiled by hole\n";
+                   # yes this did happen sometimes
+                   # ... but not seeing it now, after other improvements ...
+                   # should it be fixed here or somehow avoided before this point?
+                   #$polyedge[$i]->twin->visited($polyedge[$i]->visited == 1 ? 2 : 1);                            
+               }
+            }
 
             # these two for()s do one level of branch visited flag fixup
             # and one level should be all we need when handling just the 
@@ -491,7 +534,41 @@ sub get_offset_fragments {
                     $polyedge[$i]->visited(1);                            
                 }
             }                        
-            
+
+            # for loops do the same branch fixup across ends
+            # (is that right?)
+            #if ($polyedge[-1]->edge->next == $polyedge[0]->edge) {print "we have a loop\n\n";}
+            if ($polyedge[-1]->edge->next == $polyedge[0]->edge) {
+                if (
+                       $polyedge[-2]->visited == 2
+                    && $polyedge[-1]->visited == 1
+                    && $polyedge[0]->visited  == 2
+                    ) {
+                    $polyedge[-1]->visited(2);                            
+                }
+                if (
+                       $polyedge[-1]->visited == 2
+                    && $polyedge[0]->visited  == 1
+                    && $polyedge[1]->visited  == 2
+                    ) {
+                    $polyedge[0]->visited(2);                            
+                }
+                if (
+                       $polyedge[-2]->visited == 1
+                    && $polyedge[-1]->visited == 2
+                    && $polyedge[0]->visited  == 1
+                    ) {
+                    $polyedge[-1]->visited(1);                            
+                }
+                if (
+                       $polyedge[-1]->visited == 1
+                    && $polyedge[0]->visited  == 2
+                    && $polyedge[1]->visited  == 1
+                    ) {
+                    $polyedge[0]->visited(1);
+                }
+            }
+
             #$DB::svg->appendRaw('<g>');
             #$DB::svg->appendPolylines({style=>"stroke:white;opacity:0.5;stroke-width:20000;fill:none;"},  [map {$_->points} grep {$_->visited == 2} @polyedge]) if (grep {$_->visited == 2} @polyedge) && $DB::svg;
             #$DB::svg->appendPolylines({style=>"stroke:purple;opacity:0.5;stroke-width:20000;fill:none;"}, [map {$_->points} grep {$_->visited == 1} @polyedge]) if (grep {$_->visited == 1} @polyedge) && $DB::svg;
@@ -513,11 +590,110 @@ sub get_offset_fragments {
             }
         }
 
-        # convert EdgeCollections to Polylines
-        # TODO: toward dynamic flow: the points should include original
-        # underlying edge radius as a third coordinate
-        my $thin_paths = [grep @$_ > 1, map [$_->points], grep @$_, @new_outer_frags];
+        @new_outer_frags = grep @$_, @new_outer_frags;
+
+        # $DB::svg->appendRaw("<g>");
+        # $DB::svg->appendPolylines({markerstart => 'url(#dirstart)', style=>'opacity:0.4;stroke-width:'.($width).';stroke:red;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map {[$_->points]} grep @$_, @new_outer_frags) if $DB::svg;
+        # $DB::svg->appendRaw("</g>");
+
+        combine_polyedge_fragments(\@new_outer_frags);
         
+        # $DB::svg->appendRaw("<g>");
+        # $DB::svg->appendPolylines({markerstart => 'url(#dirstart)', style=>'opacity:0.4;stroke-width:'.($width).';stroke:blue;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map {[$_->points]} grep @$_, @new_outer_frags) if $DB::svg;
+        # $DB::svg->appendRaw("</g>");
+
+        my $thin_paths = [];
+
+        ################################################################################
+        # junction trim
+        # There may be some medial axis fragment ends that overlap the middle of
+        # other fragements. Detect this and trim back those ends.
+
+        my $junc_trim_width = $width * 0.7; # less than 1 for a little overlap
+                                            # where the end of one thinwall butts
+                                            # against the side of another thinwall
+
+        # Mark all vertices but the ones at the ends of each fragment.
+        # Where a vertex occurs at the end of one fragment but also in the
+        # middle of another, it will end up marked, and that's what tells us
+        # that that fragment end needs to be trimmed back.
+        foreach my $frag (grep @$_ > 2, @new_outer_frags) {
+            #if (1) { $DB::svg->appendPolylines({markerstart => 'url(#dirstart)', style=>'opacity:1;stroke-width:'.($width*0.35).';stroke:purple;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, [$frag->points]) if $DB::svg;}
+            
+            # Set both vertex0 and vertex1 visited -
+            # even though setting vertex1 is usually redundant -
+            # because the sequence of EdgeViews might sometimes skip over some 
+            # Edges in the original sequence, making vertex1 not the same as 
+            # the next EdgeView's vertex0.
+            $frag->[0]->vertex1->visited(1);
+            for (1 .. $#$frag - 1) {
+                $frag->[$_]->vertex0->visited(1) ;
+                $frag->[$_]->vertex1->visited(1) ;
+            }
+            $frag->[-1]->vertex0->visited(1);
+        }
+        foreach my $frag (grep @$_, @new_outer_frags) {
+
+            my $trim_front = $frag->[0]->vertex0->visited;
+            my $trim_back =  $frag->[-1]->vertex1->visited;
+
+            # convert EdgeCollections to Polylines
+            # TODO: toward dynamic flow: the points should include original
+            #       underlying edge radius as a third coordinate
+            # TODO: Make it a Slic3r Polygon if it's actually a complete loop
+            #       and make sure that designation stays in effect downstream
+            #       so randomize start points, and anything else like that
+            #       will be applied.
+            
+            push @$thin_paths, Slic3r::Polyline->new(map [$_->[0], $_->[1]], $frag->points);
+            
+            #$DB::svg->appendRaw("<g>");
+            #$DB::svg->appendPolylines({markerstart => 'url(#dirstar)', style=>'opacity:0.4;stroke-width:'.($width).';stroke:aqua;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, $thin_paths->[-1]) if $DB::svg;
+            #$DB::svg->appendPoints({r=>11000*15, style=>'opacity:1;fill:aqua;'}, (map [$_->vertex0->[0],$_->vertex0->[1],($_->vertex0->visited?'red':'green')], @{$frag}),
+            #                                               [$frag->[-1]->vertex1->[0],$frag->[-1]->vertex1->[1],($frag->[-1]->vertex1->visited?'red':'green')]
+            #) if $DB::svg;
+            
+            if ($trim_front && @{$thin_paths->[-1]} > 1) {
+                my $circle = [@{$frag->[0]->vertex0->point}, $junc_trim_width];
+                my $count = @{$thin_paths->[-1]};
+                $thin_paths->[-1]->clip_end_with_circle(1, $circle);                
+                #$DB::svg->appendCircles({style=>'stroke-width:'.($junc_trim_width/17).';stroke:'.($frag->[0]->vertex0->visited?'yellow':'orange').';fill:none;'}, $circle, [@{$circle}[0,1],$circle->[2]/17]) if $DB::svg;
+                my $f = $frag->[0]->vertex0->visited ? $frag->[0] : $frag->[0]->edge->prev;
+                for (0 .. ($count - @{$thin_paths->[-1]}) - 0) {$f->vertex0->visited(0);$f->vertex1->visited(0);$f=$f->next}
+                if ($frag->[0]->vertex0->visited) {
+                    $frag->[0]->vertex0->visited(0);
+                } else {
+                   $frag->[0]->edge->prev->vertex0->visited(0);
+                }
+            }
+            if ($trim_back && @{$thin_paths->[-1]} > 1) {
+                my $circle = [@{$frag->[-1]->vertex1->point}, $junc_trim_width];
+                my $count = @{$thin_paths->[-1]};
+                $thin_paths->[-1]->clip_end_with_circle(0, $circle);
+                #$DB::svg->appendCircles({style=>'stroke-width:'.($junc_trim_width/17).';stroke:'.($frag->[-1]->vertex1->visited?'blue':'aqua').';fill:none;'}, $circle, [@{$circle}[0,1],$circle->[2]/17]) if $DB::svg;
+                my $f = $frag->[-1]->vertex1->visited ? $frag->[-1] : $frag->[-1]->edge->next;
+                for (0 .. ($count - @{$thin_paths->[-1]}) - 0) {$f->vertex1->visited(0);$f->vertex0->visited(0);$f=$f->prev}
+                if ($frag->[-1]->vertex1->visited) {
+                    $frag->[-1]->vertex1->visited(0);
+                } else {
+                   $frag->[-1]->edge->next->vertex1->visited(0);
+                }
+            }
+            #$DB::svg->appendPolylines({markerstart => 'url(#dirstar)', style=>'opacity:0.8;stroke-width:'.($width).';stroke:aqua;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, $thin_paths->[-1]) if $DB::svg;
+            #$DB::svg->appendRaw("</g>");
+
+        }
+        
+        #reset visited to 0 for vertices
+        foreach my $frag (grep @$_ > 2, @new_outer_frags) {
+            for (0 .. $#$frag) {
+                $frag->[$_]->vertex0->visited(0) ;
+                $frag->[$_]->vertex1->visited(0) ;
+            }
+        }
+        #
+        ################################################################################
+
         # cull any really short results
         @$thin_paths = grep {   @$_ >  2
             || (@$_ == 2 && &Slic3r::Geometry::distance_between_points($_->[0], $_->[1]) > &Slic3r::SCALED_RESOLUTION)
@@ -526,7 +702,7 @@ sub get_offset_fragments {
         push @interval_thin_paths, $thin_paths;
     }
 
-    # reset visited values to zero
+    # reset visited values to zero for edges
     for (my $i = 0; $i < @$intervals; $i++) {
         foreach my $polyedge (@{$intervals->[$i]}) {
             $_->visited(0) for @$polyedge;
@@ -535,6 +711,65 @@ sub get_offset_fragments {
 
     return \@interval_thin_paths;
 }
+
+
+sub combine_polyedge_fragments {
+    my ($frags, $match_dist) = @_;
+    
+    for (my $i = $#$frags; $i > -1; $i--) {
+        my $this = $frags->[$i];
+        for (my $j = 0; $j < $i; $j++) {
+            my $other = $frags->[$j];
+            if      ($this->[0]->edge->prev == $other->[0]->edge->twin
+                     ||
+                     $this->[0]->prev->edge == $other->[0]->edge->twin
+                     ||
+                     $this->[0]->prev->edge == $other->[0]->twin->edge
+                    ) {
+                my @new_this =  map {$_->twin} reverse @{splice @$frags, $i, 1};
+                $other->[0]->prev($new_this[-1]);
+                $new_this[-1]->next($other->[0]);
+                unshift @{$other}, @new_this;
+                last;
+            } elsif ($this->[-1]->edge == $other->[-1]->edge->next->twin
+                     ||
+                     $this->[-1]->edge == $other->[-1]->next->edge->twin
+                     ||
+                     $this->[-1]->edge == $other->[-1]->next->twin->edge
+                    ) {
+                my @new_this =  map {$_->twin} reverse @{splice @$frags, $i, 1};
+                $other->[-1]->next($new_this[0]);
+                $new_this[0]->prev($other->[-1]);
+                push @{$other}, @new_this;
+                last;
+            } elsif ($this->[-1]->edge->next == $other->[0]->edge
+                     ||
+                     $this->[-1]->next->edge == $other->[0]->edge
+                    ) {
+                my @new_this = @{splice @$frags, $i, 1};
+                $other->[0]->prev($new_this[-1]);
+                $new_this[-1]->next($other->[0]);
+                unshift @{$other}, @new_this;
+                last;
+            } elsif ($this->[0]->edge->prev == $other->[-1]->edge
+                     ||
+                     $this->[0]->prev->edge == $other->[-1]->edge
+                    ) {
+                my @new_this = @{splice @$frags, $i, 1};
+                $other->[-1]->next($new_this[0]);
+                $new_this[0]->prev($other->[-1]);
+                push @{$other}, @new_this;
+                last;
+            }
+        }
+    }
+}
+
+
+
+
+
+
 
 sub merge_expolygon_and_medial_axis_fragments {
     my ($expolygon, $offset_expolygons, $medial_axis_fragments, $distance, $direction) = @_;
@@ -553,11 +788,6 @@ sub merge_expolygon_and_medial_axis_fragments {
         );
     #$DB::svg->appendPolygons({style=>'opacity:0.8;stroke-width:'.(0*$distance/12).';stroke:pink;fill:pink;stroke-linecap:round;stroke-linejoin:round;'}, @$diff) if $DB::svg;
 
-    # TODO: need to reimplement trim-at-junctions to avoid overlap of some medial
-    # axis fragments. Abundant examples in #979 hex grid. But often this
-    # isn't an issue.
-    #Slic3r::MedialAxis::trim_polyedge_junctions_by_radius(\@ma, $distance);
-    #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance).';stroke:green;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map Slic3r::Polyline->new([map $_, @$_]), @ma) if $DB::svg;
 
     my @ma_as_polylines = map Slic3r::Polyline->new($_), 
         # Filter the point coords to just have x and y - because somewhere 
@@ -585,7 +815,7 @@ sub merge_expolygon_and_medial_axis_fragments {
     bless $_, 'Slic3r::Polyline' for @boost_trimmed;
     bless $_, 'Slic3r::Point' for map @$_, @boost_trimmed;
     
-    $DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance).';stroke:aqua;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @boost_trimmed) if $DB::svg;
+    #$DB::svg->appendPolylines({markerstart => 'url(#dirstart)', style=>'opacity:0.8;stroke-width:'.($distance).';stroke:aqua;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @boost_trimmed) if $DB::svg;
 
     # Break ExPolygons into fragments where they intersect with the medial axis.
 
@@ -690,6 +920,23 @@ sub points {
                     );
 }
 
+# Vertex
+# A bit nicer interface to the half-edge graph vertices
+package Slic3r::MedialAxis::Vertex;
+use strict;
+
+sub new {
+    my $class = shift;
+    my $self = $_[0];
+    bless $self, $class;
+    return $self;
+}
+sub point   { [$_[0]->[0], $_[0]->[1]]; }
+sub radius  { $_[0]->[2]; }
+sub circle  { [$_[0]->[0], $_[0]->[1], $_[0]->[2]]; }
+sub edge    { $_[0]->[3]; }
+sub visited { $_[0]->[4] = $_[1] if @_ > 1; $_[0]->[4]; }
+
 # Edge
 # A bit nicer interface to the half-edge graph edges
 package Slic3r::MedialAxis::Edge;
@@ -710,6 +957,8 @@ use constant VISITED  => 11;
 use constant X => 0;
 use constant Y => 1;
 use constant RADIUS => 2;
+use constant VEDGE => 3;
+use constant VVISITED => 4;
 
 sub new {
     my $class = shift;
@@ -935,7 +1184,7 @@ sub point_i {
 # while vertex_i is an interpolated point between them
 
 sub vertex0 { $_[0]->edge->vertex0 }
-sub vertex1 { $_[0]->next->vertex0 }
+sub vertex1 { $_[0]->edge->next->vertex0 }
 sub vertex_i {
     my ($self, $factor) = @_;
     my ($p1, $p2) = ($self->vertex0, $self->vertex1);
