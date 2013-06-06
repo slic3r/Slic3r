@@ -322,8 +322,7 @@ sub offset_interval_filter {
         @$interval  = grep @$_ > 0, @$interval;
     }
 
-    # eliminate some troublesome two-edge but zero-length fragments that the 
-    # logic above lets slip through
+    # eliminate some troublesome two-edge but zero-length fragments
     foreach my $interval (@intervals) {
         for (my $pi = $#$interval; $pi > -1; $pi--) {
             my $p = $interval->[$pi];
@@ -378,13 +377,15 @@ sub offset_interval_filter {
         }
     }
 
-    # fix up next refs - seems this should have all been done above,
-    # but some slipped through without proper references
+    # fix up prev & next refs
     foreach my $interval (@intervals) {
         foreach my $polyedge (@$interval) {
             for (my $i = 0; $i < $#$polyedge; $i++) {
                 if ($polyedge->[$i + 1] != $polyedge->[$i]->next) {
                     $polyedge->[$i]->next($polyedge->[$i + 1]);
+                }
+                if ($polyedge->[$i + 1]->prev != $polyedge->[$i]) {
+                    $polyedge->[$i + 1]->prev($polyedge->[$i]);
                 }
             }
         }
@@ -454,12 +455,16 @@ sub get_offset_fragments {
                 $max_r_index = $_ if $polyedge->[$max_r_index]->radius <= $polyedge->[$_]->radius;
             }
             if ($max_r_index > 0) {
+                $polyedge->[$max_r_index]->prev($polyedge->[$max_r_index - 1]);
+                $polyedge->[$max_r_index - 1]->next($polyedge->[$max_r_index]);
+                $polyedge->[$#$polyedge]->next($polyedge->[0]);
+                $polyedge->[0]->prev($polyedge->[$#$polyedge]);
                 @$polyedge = (@{$polyedge}[$max_r_index .. $#$polyedge], 
                               @{$polyedge}[0 .. $max_r_index - 1]
                              );
             }
         }
-        
+
         foreach my $polyedge (@{$intervals->[$i]}) {
 
             #Slic3r::MedialAxis::EdgeView::edges_svg($polyedge) if ($DB::svg && $DB::current_layer_id >= 20 && $DB::current_layer_id <= 24);
@@ -535,9 +540,7 @@ sub get_offset_fragments {
                 }
             }                        
 
-            # for loops do the same branch fixup across ends
-            # (is that right?)
-            #if ($polyedge[-1]->edge->next == $polyedge[0]->edge) {print "we have a loop\n\n";}
+            # For loops, do the same branch fixup across ends.
             if ($polyedge[-1]->edge->next == $polyedge[0]->edge) {
                 if (
                        $polyedge[-2]->visited == 2
@@ -578,7 +581,7 @@ sub get_offset_fragments {
             # add the left or right edge to our collection
             push(@new_outer_frags, Slic3r::MedialAxis::EdgeCollection->new) if @{$new_outer_frags[-1]};
             foreach my $edge (@polyedge) {
-                if (!$keep_marked) {                        
+                if (!$keep_marked) {
                     push(@{$new_outer_frags[-1]}, $edge) if $edge->visited == 1;
                     push(@new_outer_frags, Slic3r::MedialAxis::EdgeCollection->new)
                         if ($edge->visited == 2 && @{$new_outer_frags[-1]});
@@ -617,20 +620,34 @@ sub get_offset_fragments {
         # Where a vertex occurs at the end of one fragment but also in the
         # middle of another, it will end up marked, and that's what tells us
         # that that fragment end needs to be trimmed back.
+        
         foreach my $frag (grep @$_ > 2, @new_outer_frags) {
-            #if (1) { $DB::svg->appendPolylines({markerstart => 'url(#dirstart)', style=>'opacity:1;stroke-width:'.($width*0.35).';stroke:purple;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, [$frag->points]) if $DB::svg;}
+            #$DB::svg->appendPolylines({markerstart => 'url(#dirstart)', style=>'opacity:1;stroke-width:'.($width*0.35).';stroke:purple;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, [$frag->points]) if $DB::svg;
             
             # Set both vertex0 and vertex1 visited -
             # even though setting vertex1 is usually redundant -
             # because the sequence of EdgeViews might sometimes skip over some 
             # Edges in the original sequence, making vertex1 not the same as 
             # the next EdgeView's vertex0.
+
+            my $first_already = $frag->[0]->vertex0->visited;
+            my $last_already = $frag->[-1]->vertex1->visited;
+
             $frag->[0]->vertex1->visited(1);
             for (1 .. $#$frag - 1) {
                 $frag->[$_]->vertex0->visited(1) ;
                 $frag->[$_]->vertex1->visited(1) ;
             }
+
             $frag->[-1]->vertex0->visited(1);
+
+            # Sometimes these end vertices are shared with an edge near the end,
+            # so they get marked when they shouldn't. Restore visited value of 0
+            # if that's what they started with.
+            
+            $frag->[0]->vertex0->visited(0)  unless $first_already;
+            $frag->[-1]->vertex1->visited(0) unless $last_already;
+
         }
         foreach my $frag (grep @$_, @new_outer_frags) {
 
@@ -684,7 +701,7 @@ sub get_offset_fragments {
 
         }
         
-        #reset visited to 0 for vertices
+        #reset visited to zero for vertices
         foreach my $frag (grep @$_ > 2, @new_outer_frags) {
             for (0 .. $#$frag) {
                 $frag->[$_]->vertex0->visited(0) ;
@@ -764,11 +781,6 @@ sub combine_polyedge_fragments {
         }
     }
 }
-
-
-
-
-
 
 
 sub merge_expolygon_and_medial_axis_fragments {
@@ -1074,12 +1086,12 @@ sub twin {
     $_[0]->[EVTWIN] = $_[1] if @_ > 1;
     return $_[0]->[EVTWIN]
            ? $_[0]->[EVTWIN]
-           : $_[0]->[EVPREV] = Slic3r::MedialAxis::EdgeView->new(
+           : $_[0]->[EVTWIN] = Slic3r::MedialAxis::EdgeView->new(
                    edge => $_[0]->[EDGE]->[&Slic3r::MedialAxis::Edge::TWIN],
                    offset => $_[0]->offset,
                    resolution => $_[0]->resolution,
                    twin => $_[0],
-               );
+             );
 }
 
 # point0, point_i and point1 return points on, or offset from, 
