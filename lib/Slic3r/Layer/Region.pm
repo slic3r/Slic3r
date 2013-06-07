@@ -202,9 +202,9 @@ sub make_perimeters {
         # There are different strategies to explore with these offset edge
         # settings, hence the messy notes.
         my @intervals = $ma->offset_interval_filter(
-            $self->perimeter_flow->scaled_spacing * 2, # tool diam, or normal offset (used after initial offset)
+          2    * $self->perimeter_flow->scaled_spacing, # tool diam, or normal offset (used after initial offset)
             1, # $loop_number + 1, # how many offsets to do - just the first for now
-            2 * $self->perimeter_flow->scaled_spacing , #/2, # initial offset
+          2    * $self->perimeter_flow->scaled_spacing , #/2, # initial offset
             0, # bracket - added to offset for each level to determine upper MIC radius bound (edges up to that bound are collected)
                # when using double wide tool diam, bracket should be zero (was using 1.9 with 1x tool diam)
             $self->perimeter_flow->scaled_spacing, # initial offset bracket - not using this yet, maybe don't want to

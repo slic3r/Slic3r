@@ -641,27 +641,35 @@ sub get_offset_fragments {
 
             $frag->[-1]->vertex0->visited(1);
 
-            # Sometimes these end vertices are shared with an edge near the end,
-            # so they get marked when they shouldn't. Restore visited value of 0
-            # if that's what they started with.
+            # Rarely, the end vertex is shared with the second-to-last edge,
+            # so it gets marked when it shouldn't. Restore visited value of 0
+            # if that's what happened.
             
-            $frag->[0]->vertex0->visited(0)  unless $first_already;
-            $frag->[-1]->vertex1->visited(0) unless $last_already;
+            $frag->[0]->vertex0->visited(0)  if !$first_already && $frag->[0]->vertex0  == $frag->[1]->vertex0;
+            $frag->[-1]->vertex1->visited(0) if !$last_already  && $frag->[-1]->vertex1 == $frag->[-2]->vertex1;
 
         }
         foreach my $frag (grep @$_, @new_outer_frags) {
 
-            my $trim_front = $frag->[0]->vertex0->visited;
-            my $trim_back =  $frag->[-1]->vertex1->visited;
+            # Ends of complete loops should survive - often loops
+            # won't be involved in any clipping or merging, and can
+            # later on be detected by the overlapping start and end,
+            # and be treated as normal Polygons.
+            my $is_loop = $frag->[-1]->edge->next == $frag->[0]->edge;
+
+            my $trim_front = $frag->[0]->vertex0->visited && !$is_loop;
+            my $trim_back = $frag->[-1]->vertex1->visited && !$is_loop;
 
             # convert EdgeCollections to Polylines
             # TODO: toward dynamic flow: the points should include original
-            #       underlying edge radius as a third coordinate
-            # TODO: Make it a Slic3r Polygon if it's actually a complete loop
-            #       and make sure that designation stays in effect downstream
-            #       so randomize start points, and anything else like that
-            #       will be applied.
-            
+            #       underlying edge radius as a third coordinate ( or a modified
+            #       radius value that considers an EdgeView offset). But at the 
+            #       moment, the various points() functions only sometimes
+            #       include that, and then some downstream code can't handle
+            #       three-coordinate Slic3r::Points. (A 2D Circle class might
+            #       be good to convey the path points with radius info that we
+            #       need to modify flow continuously along the path.)
+
             push @$thin_paths, Slic3r::Polyline->new(map [$_->[0], $_->[1]], $frag->points);
             
             #$DB::svg->appendRaw("<g>");
@@ -800,13 +808,12 @@ sub merge_expolygon_and_medial_axis_fragments {
         );
     #$DB::svg->appendPolygons({style=>'opacity:0.8;stroke-width:'.(0*$distance/12).';stroke:pink;fill:pink;stroke-linecap:round;stroke-linejoin:round;'}, @$diff) if $DB::svg;
 
-
     my @ma_as_polylines = map Slic3r::Polyline->new($_), 
         # Filter the point coords to just have x and y - because somewhere 
         # downstream extra coords (probably radius here) cause far-out
         # false points to be inserted between each legit point.
         # (But eventually we will want to let any radius coords through here
-        # to do dynamic flow.)  
+        # to do dynamic flow.)
                           map [map [@{$_}[0,1]], @$_],
                           grep @$_ > 1, @ma;
     #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/3).';stroke:brown;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, @ma_as_polylines) if $DB::svg;
@@ -873,8 +880,14 @@ sub merge_expolygon_and_medial_axis_fragments {
     my @ex_frags = map Slic3r::ExPolygon->new($_), @all_frags;
     #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/8).';stroke:red;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map $_->contour, @ex_frags) if $DB::svg;
 
-    # Hack Polylines into ExPolygons.
-    bless($_->[0], 'Slic3r::Polyline') for @ex_frags;
+    # Hack Polylines into ExPolygons
+    # unless the medial axis derived fragment really is a complete loop
+    foreach (@ex_frags) {
+        if (Slic3r::Geometry::points_coincide($_->[0]->[-1], $_->[0]->[0])) {
+            pop @{$_->[0]};
+        } else { bless($_->[0], 'Slic3r::Polyline'); }
+            
+    }
     #$DB::svg->appendPolylines({style=>'opacity:0.8;stroke-width:'.($distance/8).';stroke:red;fill:none;stroke-linecap:round;stroke-linejoin:round;'}, map $_->contour, @ex_frags) if $DB::svg;
 
     # Preserve polygons and holes that didn't get split up by the medial axis.
