@@ -695,9 +695,6 @@ sub write_gcode {
     for (qw(layer_height perimeters top_solid_layers bottom_solid_layers fill_density perimeter_speed infill_speed travel_speed)) {
         printf $fh "; %s = %s\n", $_, $Slic3r::Config->$_;
     }
-    for (qw(nozzle_diameter filament_diameter extrusion_multiplier)) {
-        printf $fh "; %s = %s\n", $_, $Slic3r::Config->$_->[0];
-    }
     printf $fh "; perimeters extrusion width = %.2fmm\n", $self->regions->[0]->flows->{perimeter}->width;
     printf $fh "; infill extrusion width = %.2fmm\n", $self->regions->[0]->flows->{infill}->width;
     printf $fh "; solid infill extrusion width = %.2fmm\n", $self->regions->[0]->flows->{solid_infill}->width;
@@ -706,6 +703,15 @@ sub write_gcode {
         if $self->support_material_flow;
     printf $fh "; first layer extrusion width = %.2fmm\n", $self->regions->[0]->first_layer_flows->{perimeter}->width
         if $self->regions->[0]->first_layer_flows->{perimeter};
+    
+    foreach my $extruder_idx (0 .. @{$self->extruders}-1) {
+    	print  $fh "\n";
+    	printf  $fh "; Extruder #%s\n", $extruder_idx;
+	    for (qw(nozzle_diameter filament_diameter extrusion_multiplier)) {
+	        printf $fh "; %s = %s\n", $_, $Slic3r::Config->$_->[$extruder_idx];
+	    }
+    }
+        
     print  $fh "\n";
     
     # set up our extruder object
