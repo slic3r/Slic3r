@@ -850,7 +850,7 @@ sub generate_support_material {
         my $layer = $self->layers->[$layer_id];
         my $lower_layer = $self->layers->[$layer_id-1];
         
-        # detect contact areas needed to support this layer
+        # detect overhangs and contact areas needed to support them
         my (@overhang, @contact) = ();
         foreach my $layerm (@{$layer->regions}) {
             my $fw = $layerm->perimeter_flow->scaled_width;
@@ -877,7 +877,7 @@ sub generate_support_material {
             }
             
             next if !@$diff;
-            push @overhang, @{union_ex($diff)};
+            push @overhang, @{union_ex($diff)};  # NOTE: this is not the full overhang as it misses the outermost half of the perimeter width!
             
             # Let's define the required contact area by using a max gap of half the upper 
             # extrusion width.
