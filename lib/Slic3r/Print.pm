@@ -581,10 +581,11 @@ sub make_skirt {
         my $skirt_height = $Slic3r::Config->skirt_height;
         $skirt_height = $self->objects->[$obj_idx]->layer_count if $skirt_height > $self->objects->[$obj_idx]->layer_count;
         my @layers = map $self->objects->[$obj_idx]->layers->[$_], 0..($skirt_height-1);
+        my @support_layers = map $self->objects->[$obj_idx]->support_layers->[$_], 0..($skirt_height-1);
         my @layer_points = (
             (map @$_, map @$_, map @{$_->slices}, @layers),
             (map @$_, map @{$_->thin_walls}, map @{$_->regions}, @layers),
-            (map @{$_->unpack->polyline}, map @{$_->support_fills->paths}, grep $_->support_fills, @layers),
+            (map @{$_->unpack->polyline}, map @{$_->support_fills->paths}, grep $_->support_fills, @support_layers),
         );
         push @points, map move_points($_, @layer_points), @{$self->objects->[$obj_idx]->copies};
     }

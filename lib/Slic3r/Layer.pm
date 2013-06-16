@@ -19,11 +19,6 @@ has 'support_material_contact_height' => (is => 'rw');  # layer height of contac
 # also known as 'islands' (all regions are merged here)
 has 'slices'            => (is => 'rw');
 
-# ordered collection of extrusion paths to fill surfaces for support material
-has 'support_islands'           => (is => 'rw');
-has 'support_fills'             => (is => 'rw');
-has 'support_contact_fills'     => (is => 'rw');
-
 sub _trigger_id {
     my $self = shift;
     $_->_trigger_layer for @{$self->regions || []};
@@ -86,5 +81,10 @@ sub support_islands_enclose_line {
 package Slic3r::Layer::Support;
 use Moo;
 extends 'Slic3r::Layer';
+
+# ordered collection of extrusion paths to fill surfaces for support material
+has 'support_islands'           => (is => 'rw');
+has 'support_fills'             => (is => 'rw');
+has 'support_contact_fills'     => (is => 'rw');
 
 1;

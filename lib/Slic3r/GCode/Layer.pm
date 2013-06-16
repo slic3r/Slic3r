@@ -86,7 +86,7 @@ sub process_layer {
         
         # extrude support material before other things because it might use a lower Z
         # and also because we avoid travelling on other things when printing it
-        if ($self->print->has_support_material) {
+        if ($self->print->has_support_material && $layer->isa('Slic3r::Layer::Support')) {
             $gcode .= $self->gcodegen->move_z($layer->support_material_contact_z)
                 if ($layer->support_contact_fills && @{ $layer->support_contact_fills->paths });
             $gcode .= $self->gcodegen->set_extruder($self->extruders->[$Slic3r::Config->support_material_extruder-1]);
