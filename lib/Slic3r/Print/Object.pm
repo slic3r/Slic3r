@@ -821,7 +821,7 @@ sub generate_support_material {
     $generated = 1;
     
     my $margin      = scale 5;
-    my @margin_steps = (scale 1, scale 1, scale 1, scale 1, scale 1);
+    my $margin_step = scale 1;
     my $keep_margin = scale 3;
     my $threshold_rad;
     if ($Slic3r::Config->support_material_threshold) {
@@ -880,13 +880,15 @@ sub generate_support_material {
             push @overhang, @{union_ex($diff)};  # NOTE: this is not the full overhang as it misses the outermost half of the perimeter width!
             
             # Let's define the required contact area by using a max gap of half the upper 
-            # extrusion width.
+            # extrusion width and extending the area according to the configured margin.
+            # We increment the area in steps because we don't want our support to overflow
+            # on the other side of the object (if it's very thin).
             {
                 my @slices_margin = offset([ map @$_, @{$lower_layer->slices} ], $fw/2);
-                for ($fw/2, @margin_steps) {
+                for ($fw/2, map {$margin_step} 1..($margin / $margin_step)) {
                     $diff = diff(
                         [ offset($diff, $_) ],
-                        [ @slices_margin ],
+                        \@slices_margin,
                     );
                 }
             }
