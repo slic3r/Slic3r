@@ -11,7 +11,7 @@ use Slic3r::Surface ':types';
 has 'print'             => (is => 'ro', weak_ref => 1, required => 1);
 has 'input_file'        => (is => 'rw', required => 0);
 has 'meshes'            => (is => 'rw', default => sub { [] });  # by region_id
-has 'size'              => (is => 'rw', required => 1);
+has 'size'              => (is => 'rw', required => 1); # XYZ in scaled coordinates
 has 'copies'            => (is => 'rw', trigger => 1);  # in scaled coordinates
 has 'layers'            => (is => 'rw', default => sub { [] });
 has 'support_layers'    => (is => 'rw', default => sub { [] });
@@ -191,7 +191,6 @@ sub slice {
     
     # remove last layer(s) if empty
     pop @{$self->layers} while @{$self->layers} && (!map @{$_->lines}, @{$self->layers->[-1]->regions});
-    die "Invalid or too thin input file: no layers could be generated\n" if !@{$self->layers};
     
     foreach my $layer (@{ $self->layers }) {
         # make sure all layers contain layer region objects for all regions
@@ -278,9 +277,6 @@ sub slice {
             $self->layers->[$i]->id($i);
         }
     }
-    
-    warn "No layers were detected. You might want to repair your STL file and retry.\n"
-        if !@{$self->layers};
 }
 
 sub make_perimeters {
@@ -388,7 +384,6 @@ sub detect_surfaces_type {
             1,
         );
         return map Slic3r::Surface->new(expolygon => $_, surface_type => $result_type),
-            grep $_->is_printable($layerm->perimeter_flow->scaled_width),
             @$expolygons;
     };
     
@@ -602,7 +597,8 @@ sub discover_horizontal_shells {
         for (my $i = 0; $i < $self->layer_count; $i++) {
             my $layerm = $self->layers->[$i]->regions->[$region_id];
             
-            if ($Slic3r::Config->solid_infill_every_layers && ($i % $Slic3r::Config->solid_infill_every_layers) == 0) {
+            if ($Slic3r::Config->solid_infill_every_layers && $Slic3r::Config->fill_density > 0
+                && ($i % $Slic3r::Config->solid_infill_every_layers) == 0) {
                 $_->surface_type(S_TYPE_INTERNALSOLID)
                     for grep $_->surface_type == S_TYPE_INTERNAL, @{$layerm->fill_surfaces};
             }

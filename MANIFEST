@@ -30,6 +30,7 @@ lib/Slic3r/GCode/MotionPlanner.pm
 lib/Slic3r/GCode/Reader.pm
 lib/Slic3r/GCode/SpiralVase.pm
 lib/Slic3r/Geometry.pm
+lib/Slic3r/Geometry/BoundingBox.pm
 lib/Slic3r/Geometry/Clipper.pm
 lib/Slic3r/GUI.pm
 lib/Slic3r/GUI/AboutDialog.pm
@@ -75,12 +76,14 @@ t/geometry.t
 t/layers.t
 t/loops.t
 t/polyclip.t
+t/print.t
 t/retraction.t
 t/serialize.t
 t/shells.t
 t/slice.t
 t/skirt_brim.t
 t/support.t
+t/svg.t
 t/vibrationlimit.t
 utils/amf-to-stl.pl
 utils/file_info.pl

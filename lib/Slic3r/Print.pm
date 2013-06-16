@@ -6,7 +6,8 @@ use File::Spec;
 use List::Util qw(max first);
 use Math::ConvexHull::MonotoneChain qw(convex_hull);
 use Slic3r::ExtrusionPath ':roles';
-use Slic3r::Geometry qw(X Y Z X1 Y1 X2 Y2 MIN MAX PI scale unscale move_points nearest_point);
+use Slic3r::Geometry qw(X Y Z X1 Y1 X2 Y2 MIN MAX PI scale unscale move_points
+    nearest_point chained_path);
 use Slic3r::Geometry::Clipper qw(diff_ex union_ex union_pt intersection_ex offset
     offset2 traverse_pt JT_ROUND JT_SQUARE PFT_EVENODD);
 use Time::HiRes qw(gettimeofday tv_interval);
@@ -105,6 +106,9 @@ sub add_model {
     $model->split_meshes if $Slic3r::Config->avoid_crossing_perimeters && !$Slic3r::Config->complete_objects;
     
     foreach my $object (@{ $model->objects }) {
+        # we align object to origin before applying transformations
+        my @align = $object->align_to_origin;
+        
         # extract meshes by material
         my @meshes = ();  # by region_id
         foreach my $volume (@{$object->volumes}) {
@@ -119,21 +123,24 @@ sub add_model {
         foreach my $mesh (grep $_, @meshes) {
             $mesh->check_manifoldness;
             
-            # we ignore the per-instance rotation currently and only 
+            # the order of these transformations must be the same as the one used in plater
+            # to make the object positioning consistent with the visual preview
+            
+            # we ignore the per-instance transformations currently and only 
             # consider the first one
-            $mesh->rotate($object->instances->[0]->rotation, $mesh->center)
-                if @{ $object->instances // [] };
+            if ($object->instances && @{$object->instances}) {
+                $mesh->rotate($object->instances->[0]->rotation, $object->center);
+                $mesh->scale($object->instances->[0]->scaling_factor);
+            }
             
             $mesh->scale(1 / &Slic3r::SCALING_FACTOR);
         }
         
-        # align the object to origin; not sure this is required by the toolpath generation
-        # algorithms, but it's good practice to avoid negative coordinates; it probably 
-        # provides also some better performance in infill generation
-        my @extents = Slic3r::Geometry::bounding_box_3D([ map @{$_->used_vertices}, grep $_, @meshes ]);
-        foreach my $mesh (grep $_, @meshes) {
-            $mesh->move(map -$extents[$_][MIN], X,Y,Z);
-        }
+        # we also align object after transformations so that we only work with positive coordinates
+        # and the assumption that bounding_box === size works
+        my $bb = Slic3r::Geometry::BoundingBox->new_from_points_3D([ map @{$_->used_vertices}, grep $_, @meshes ]);
+        my @align2 = map -$bb->extents->[$_][MIN], (X,Y,Z);
+        $_->move(@align2) for grep $_, @meshes;
         
         # initialize print object
         push @{$self->objects}, Slic3r::Print::Object->new(
@@ -141,10 +148,10 @@ sub add_model {
             meshes      => [ @meshes ],
             copies      => [
                 $object->instances
-                    ? (map [ (scale $_->offset->[X]) + $extents[X][MIN], (scale $_->offset->[Y]) + $extents[Y][MIN] ], @{$object->instances})
+                    ? (map [ scale($_->offset->[X] - $align[X]) - $align2[X], scale($_->offset->[Y] - $align[Y]) - $align2[Y] ], @{$object->instances})
                     : [0,0],
             ],
-            size        => [ map $extents[$_][MAX] - $extents[$_][MIN], (X,Y,Z) ],
+            size        => $bb->size,  # transformed size
             input_file  => $object->input_file,
             layer_height_ranges => $object->layer_height_ranges,
         );
@@ -322,6 +329,13 @@ sub export_gcode {
     $status_cb->(10, "Processing triangulated mesh");
     $_->slice for @{$self->objects};
     
+    # remove empty layers and abort if there are no more
+    # as some algorithms assume all objects have at least one layer
+    # note: this will change object indexes
+    @{$self->objects} = grep @{$_->layers}, @{$self->objects};
+    die "No layers were detected. You might want to repair your STL file(s) or check their size and retry.\n"
+        if !@{$self->objects};
+    
     if ($Slic3r::Config->resolution) {
         $status_cb->(15, "Simplifying input");
         $self->_simplify_slices(scale $Slic3r::Config->resolution);
@@ -480,13 +494,15 @@ sub export_svg {
     $self->init_extruders;
     
     $_->slice for @{$self->objects};
-    $self->arrange_objects;
     
-    my $output_file = $self->expanded_output_filepath($params{output_file});
-    $output_file =~ s/\.gcode$/.svg/i;
+    my $fh = $params{output_fh};
+    if ($params{output_file}) {
+        my $output_file = $self->expanded_output_filepath($params{output_file});
+        $output_file =~ s/\.gcode$/.svg/i;
+        Slic3r::open(\$fh, ">", $output_file) or die "Failed to open $output_file for writing\n";
+        print "Exporting to $output_file..." unless $params{quiet};
+    }
     
-    Slic3r::open(\my $fh, ">", $output_file) or die "Failed to open $output_file for writing\n";
-    print "Exporting to $output_file...";
     my $print_size = $self->size;
     print $fh sprintf <<"EOF", unscale($print_size->[X]), unscale($print_size->[Y]);
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -555,7 +571,7 @@ EOF
     
     print $fh "</svg>\n";
     close $fh;
-    print "Done.\n";
+    print "Done.\n" unless $params{quiet};
 }
 
 sub make_skirt {
@@ -704,7 +720,7 @@ sub write_gcode {
         multiple_extruders  => (@{$self->extruders} > 1),
         layer_count         => $self->layer_count,
     );
-    print $fh "G21 ; set units to millimeters\n";
+    print $fh "G21 ; set units to millimeters\n" if $Slic3r::Config->gcode_flavor ne 'makerware';
     print $fh $gcodegen->set_fan(0, 1) if $Slic3r::Config->cooling && $Slic3r::Config->disable_fan_first_layers;
     
     # write start commands to file
@@ -722,15 +738,13 @@ sub write_gcode {
         printf $fh $gcodegen->set_temperature($self->extruders->[$t]->first_layer_temperature, 1, $t)
             if $self->extruders->[$t]->first_layer_temperature && $Slic3r::Config->start_gcode !~ /M(?:109|104)/i;
     }
-    print  $fh "G90 ; use absolute coordinates\n";
+    print  $fh "G90 ; use absolute coordinates\n" if $Slic3r::Config->gcode_flavor ne 'makerware';
     if ($Slic3r::Config->gcode_flavor =~ /^(?:reprap|teacup)$/) {
         printf $fh $gcodegen->reset_e;
-        if ($Slic3r::Config->gcode_flavor =~ /^(?:reprap|teacup|makerbot|sailfish)$/) {
-            if ($Slic3r::Config->use_relative_e_distances) {
-                print $fh "M83 ; use relative distances for extrusion\n";
-            } else {
-                print $fh "M82 ; use absolute distances for extrusion\n";
-            }
+        if ($Slic3r::Config->use_relative_e_distances) {
+            print $fh "M83 ; use relative distances for extrusion\n";
+        } else {
+            print $fh "M82 ; use absolute distances for extrusion\n";
         }
     }
     
@@ -778,7 +792,7 @@ sub write_gcode {
         
         # print objects from the smallest to the tallest to avoid collisions
         # when moving onto next object starting point
-        my @obj_idx = sort { $self->objects->[$a]->layer_count <=> $self->objects->[$b]->layer_count } 0..$#{$self->objects};
+        my @obj_idx = sort { $self->objects->[$a]->size->[Z] <=> $self->objects->[$b]->size->[Z] } 0..$#{$self->objects};
         
         my $finished_objects = 0;
         for my $obj_idx (@obj_idx) {
@@ -820,18 +834,35 @@ sub write_gcode {
             }
         }
     } else {
+        # order objects using a nearest neighbor search
+        my @obj_idx = chained_path([ map $_->copies->[0], @{$self->objects} ]);
+        
+        # sort layers by Z
+        my %layers = ();  # print_z => [ [layers], [layers], [layers] ]  by obj_idx
+        foreach my $obj_idx (0 .. $#{$self->objects}) {
+            my $object = $self->objects->[$obj_idx];
+            foreach my $layer (@{$object->layers}, @{$object->support_layers}) {
+                $layers{ $layer->print_z } ||= [];
+                $layers{ $layer->print_z }[$obj_idx] ||= [];
+                push @{$layers{ $layer->print_z }[$obj_idx]}, $layer;
+            }
+        }
+        
         my $buffer = Slic3r::GCode::CoolingBuffer->new(
             config      => $Slic3r::Config,
             gcodegen    => $gcodegen,
         );
-        my @layers = sort { $a->print_z <=> $b->print_z } map { @{$_->layers}, @{$_->support_layers} } @{$self->objects};
-        foreach my $layer (@layers) {
-            print $fh $buffer->append(
-                $layer_gcode->process_layer($layer, $layer->object->copies),
-                $layer->object."",
-                $layer->id,
-                $layer->print_z,
-            );
+        foreach my $print_z (sort { $a <=> $b } keys %layers) {
+            foreach my $obj_idx (@obj_idx) {
+                foreach my $layer (@{ $layers{$print_z}[$obj_idx] // [] }) {
+                    print $fh $buffer->append(
+                        $layer_gcode->process_layer($layer, $layer->object->copies),
+                        $layer->object . ref($layer),  # differentiate $obj_id between normal layers and support layers
+                        $layer->id,
+                        $layer->print_z,
+                    );
+                }
+            }
         }
         print $fh $buffer->flush;
     }

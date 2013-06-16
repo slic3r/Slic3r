@@ -22,7 +22,6 @@ has 'layer_mp'           => (is => 'rw');
 has 'new_object'         => (is => 'rw', default => sub {0});
 has 'straight_once'      => (is => 'rw', default => sub {1});
 has 'extruder'           => (is => 'rw');
-has 'extrusion_distance' => (is => 'rw', default => sub {0} );
 has 'elapsed_time'       => (is => 'rw', default => sub {0} );  # seconds
 has 'total_extrusion_length' => (is => 'rw', default => sub {0} );
 has 'lifted'             => (is => 'rw', default => sub {0} );
@@ -90,7 +89,7 @@ sub change_layer {
     }
     
     my $gcode = "";
-    if ($self->config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) {
+    if ($self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/) {
         $gcode .= sprintf "M73 P%s%s\n",
             int(99 * ($layer->id / ($self->layer_count - 1))),
             ($self->config->gcode_comments ? ' ; update progress' : '');
@@ -284,7 +283,7 @@ sub travel_to {
     $travel->translate(-$self->shift_x, -$self->shift_y);
     
     if ($travel->length < scale $self->extruder->retract_before_travel
-        || ($self->config->only_retract_when_crossing_perimeters && first { $_->encloses_line($travel, scaled_epsilon) } @{$self->layer->slices})
+        || ($self->config->only_retract_when_crossing_perimeters && first { $_->encloses_line($travel, scaled_epsilon) } @{$self->layer->upper_layer_slices})
         || ($role == EXTR_ROLE_SUPPORTMATERIAL && $self->layer->support_islands_enclose_line($travel))
         ) {
         $self->straight_once(0);
@@ -327,7 +326,7 @@ sub _plan {
     my $need_retract = !$self->config->only_retract_when_crossing_perimeters;
     if (!$need_retract) {
         $need_retract = 1;
-        foreach my $slice (@{$self->layer->slices}) {
+        foreach my $slice (@{$self->layer->upper_layer_slices}) {
             # discard the island if at any line is not enclosed in it
             next if first { !$slice->encloses_line($_, scaled_epsilon) } @travel;
             # okay, this island encloses the full travel path
@@ -341,7 +340,8 @@ sub _plan {
     
     # append the actual path and return
     $self->speed('travel');
-    $gcode .= join '', map $self->G0($_->[B], undef, 0, $comment || ""), @travel;
+    # use G1 because we rely on paths being straight (G0 may make round paths)
+    $gcode .= join '', map $self->G1($_->[B], undef, 0, $comment || ""), @travel;
     return $gcode;
 }
 
@@ -419,7 +419,9 @@ sub retract {
     
     # reset extrusion distance during retracts
     # this makes sure we leave sufficient precision in the firmware
-    $gcode .= $self->reset_e if $self->config->gcode_flavor !~ /^(?:mach3|makerbot)$/;
+    $gcode .= $self->reset_e;
+    
+    $gcode .= "M103 ; extruder off\n" if $self->config->gcode_flavor eq 'makerware';
     
     return $gcode;
 }
@@ -428,6 +430,7 @@ sub unretract {
     my $self = shift;
     
     my $gcode = "";
+    $gcode .= "M101 ; extruder on\n" if $self->config->gcode_flavor eq 'makerware';
     
     if ($self->lifted) {
         $self->speed('travel');
@@ -438,7 +441,8 @@ sub unretract {
     my $to_unretract = $self->extruder->retracted + $self->extruder->restart_extra;
     if ($to_unretract) {
         $self->speed('retract');
-        $gcode .= $self->G0(undef, undef, $to_unretract, "compensate retraction");
+        # use G1 instead of G0 because G0 will blend the restart with the previous travel move
+        $gcode .= $self->G1(undef, undef, $to_unretract, "compensate retraction");
         $self->extruder->retracted(0);
         $self->extruder->restart_extra(0);
     }
@@ -448,8 +452,9 @@ sub unretract {
 
 sub reset_e {
     my $self = shift;
+    return "" if $self->config->gcode_flavor =~ /^(?:mach3|makerware)$/;
     
-    $self->extrusion_distance(0);
+    $self->extruder->e(0) if $self->extruder;
     return sprintf "G92 %s0%s\n", $self->config->extrusion_axis, ($self->config->gcode_comments ? ' ; reset extrusion distance' : '')
         if $self->config->extrusion_axis && !$self->config->use_relative_e_distances;
 }
@@ -546,10 +551,10 @@ sub _Gx {
     
     # output extrusion distance
     if ($e && $self->config->extrusion_axis) {
-        $self->extrusion_distance(0) if $self->config->use_relative_e_distances;
-        $self->extrusion_distance($self->extrusion_distance + $e);
+        $self->extruder->e(0) if $self->config->use_relative_e_distances;
+        $self->extruder->e($self->extruder->e + $e);
         $self->total_extrusion_length($self->total_extrusion_length + $e);
-        $gcode .= sprintf " %s%.5f", $self->config->extrusion_axis, $self->extrusion_distance;
+        $gcode .= sprintf " %s%.5f", $self->config->extrusion_axis, $self->extruder->e;
     }
     
     $gcode .= sprintf " ; %s", $comment if $comment && $self->config->gcode_comments;
@@ -586,18 +591,16 @@ sub set_extruder {
     
     # set the new extruder
     $self->extruder($extruder);
-    my $toolchange_gcode = sprintf "%s%d%s\n", 
-        ($self->config->gcode_flavor =~ /^(?:makerbot|sailfish)$/ ? 'M108 T' : 'T'),
+    $gcode .= sprintf "%s%d%s\n", 
+        ($self->config->gcode_flavor eq 'makerware'
+            ? 'M135 T'
+            : $self->config->gcode_flavor eq 'sailfish'
+                ? 'M108 T'
+                : 'T'),
         $extruder->id,
         ($self->config->gcode_comments ? ' ; change extruder' : '');
     
-    if ($self->config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) {
-        $gcode .= $self->reset_e;
-        $gcode .= $toolchange_gcode;
-    } else {
-        $gcode .= $toolchange_gcode;
-        $gcode .= $self->reset_e;
-    }
+    $gcode .= $self->reset_e;
     
     return $gcode;
 }
@@ -611,12 +614,12 @@ sub set_fan {
         if ($speed == 0) {
             my $code = $self->config->gcode_flavor eq 'teacup'
                 ? 'M106 S0'
-                : $self->config->gcode_flavor =~ /^(?:makerbot|sailfish)$/
+                : $self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/
                     ? 'M127'
                     : 'M107';
             return sprintf "$code%s\n", ($self->config->gcode_comments ? ' ; disable fan' : '');
         } else {
-            if ($self->config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) {
+            if ($self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/) {
                 return sprintf "M126%s\n", ($self->config->gcode_comments ? ' ; enable fan' : '');
             } else {
                 return sprintf "M106 %s%d%s\n", ($self->config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
@@ -631,14 +634,14 @@ sub set_temperature {
     my $self = shift;
     my ($temperature, $wait, $tool) = @_;
     
-    return "" if $wait && $self->config->gcode_flavor =~ /^(?:makerbot|sailfish)$/;
+    return "" if $wait && $self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/;
     
     my ($code, $comment) = ($wait && $self->config->gcode_flavor ne 'teacup')
         ? ('M109', 'wait for temperature to be reached')
         : ('M104', 'set temperature');
     my $gcode = sprintf "$code %s%d %s; $comment\n",
         ($self->config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature,
-        (defined $tool && ($self->multiple_extruders || $self->config->gcode_flavor =~ /^(?:makerbot|sailfish)$/)) ? "T$tool " : "";
+        (defined $tool && ($self->multiple_extruders || $self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/)) ? "T$tool " : "";
     
     $gcode .= "M116 ; wait for temperature to be reached\n"
         if $self->config->gcode_flavor eq 'teacup' && $wait;
@@ -651,7 +654,7 @@ sub set_bed_temperature {
     my ($temperature, $wait) = @_;
     
     my ($code, $comment) = ($wait && $self->config->gcode_flavor ne 'teacup')
-        ? (($self->config->gcode_flavor =~ /^(?:makerbot|sailfish)$/ ? 'M109' : 'M190'), 'wait for bed temperature to be reached')
+        ? (($self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/ ? 'M109' : 'M190'), 'wait for bed temperature to be reached')
         : ('M140', 'set bed temperature');
     my $gcode = sprintf "$code %s%d ; $comment\n",
         ($self->config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature;
