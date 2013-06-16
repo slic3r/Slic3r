@@ -970,7 +970,7 @@ sub generate_support_material {
         }
     }
     
-    push @{$self->support_layers}, map Slic3r::Layer->new(
+    push @{$self->support_layers}, map Slic3r::Layer::Support->new(
         object  => $self,
         id      => $_,
         height  => ($_ == 0) ? $support_layers[$_] : ($support_layers[$_] - $support_layers[$_-1]),

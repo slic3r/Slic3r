@@ -83,4 +83,8 @@ sub support_islands_enclose_line {
     return (first { $_->encloses_line($line) } @{$self->support_islands}) ? 1 : 0;
 }
 
+package Slic3r::Layer::Support;
+use Moo;
+extends 'Slic3r::Layer';
+
 1;
