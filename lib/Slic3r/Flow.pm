@@ -38,7 +38,9 @@ sub _build_width {
     
     my $min = $self->nozzle_diameter * 1.05;
     my $max;
-    if ($self->role ne 'infill') {
+    if ($self->role eq 'perimeter') {
+        $min = $max = $self->nozzle_diameter;
+    } elsif ($self->role ne 'infill') {
         # do not limit width for sparse infill so that we use full native flow for it
         $max = $self->nozzle_diameter * 1.7;
     }
@@ -96,8 +98,7 @@ sub _build_width {
 
 sub _build_spacing {
     my $self = shift;
-    my $width = $self->width;
-    return $width + &Slic3r::OVERLAP_FACTOR * ($width * PI / 4 - $width);
+    return $self->width + 0.05;
 }
 
 1;

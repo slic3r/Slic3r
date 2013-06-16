@@ -5,6 +5,7 @@ use warnings;
 use Scalar::Util qw(reftype);
 use Slic3r::Geometry qw(A B X Y X1 X2 Y1 Y2 polyline_remove_parallel_continuous_edges polyline_remove_acute_vertices
     polyline_lines move_points same_point);
+use Slic3r::Geometry::Clipper qw(JT_SQUARE);
 
 # the constructor accepts an array(ref) of points
 sub new {
@@ -44,11 +45,6 @@ sub lines {
     return polyline_lines($self);
 }
 
-sub boost_linestring {
-    my $self = shift;
-    return Boost::Geometry::Utils::linestring($self);
-}
-
 sub wkt {
     my $self = shift;
     return sprintf "LINESTRING((%s))", join ',', map "$_->[0] $_->[1]", @$self;
@@ -79,14 +75,19 @@ sub reverse {
 
 sub length {
     my $self = shift;
-    my $length = 0;
-    $length += $_->length for $self->lines;
-    return $length;
+    return Boost::Geometry::Utils::linestring_length($self);
 }
 
 sub grow {
     my $self = shift;
-    return Slic3r::Polygon->new(@$self, CORE::reverse @$self[1..($#$self-1)])->offset(@_);
+    my ($distance, $scale, $joinType, $miterLimit) = @_;
+    $joinType //= JT_SQUARE;
+    
+    return map Slic3r::Polygon->new($_),
+        Slic3r::Geometry::Clipper::offset(
+            [ Slic3r::Polygon->new(@$self, CORE::reverse @$self[1..($#$self-1)]) ],
+            $distance, $scale, $joinType, $miterLimit,
+        );
 }
 
 sub nearest_point_to {
@@ -155,15 +156,17 @@ sub translate {
 sub scale {
     my $self = shift;
     my ($factor) = @_;
-    return if $factor == 1;
     
     # transform point coordinates
-    foreach my $point (@$self) {
-        $point->[$_] *= $factor for X,Y;
+    if ($factor != 1) {
+        foreach my $point (@$self) {
+            $point->[$_] *= $factor for X,Y;
+        }
     }
     return $self;
 }
 
+# removes the given distance from the end of the polyline
 sub clip_end {
     my $self = shift;
     my ($distance) = @_;
@@ -182,6 +185,30 @@ sub clip_end {
         push @$self, Slic3r::Point->new($new_point);
         $distance = 0;
     }
+}
+
+# only keeps the given distance at the beginning of the polyline
+sub clip_start {
+    my $self = shift;
+    my ($distance) = @_;
+    
+    my $points = [ $self->[0] ];
+    
+    for (my $i = 1; $distance > 0 && $i <= $#$self; $i++) {
+        my $point = $self->[$i];
+        my $segment_length = $point->distance_to($self->[$i-1]);
+        if ($segment_length <= $distance) {
+            $distance -= $segment_length;
+            push @$points, $point;
+            next;
+        }
+        
+        my $new_point = Slic3r::Geometry::point_along_segment($self->[$i-1], $point, $distance);
+        push @$points, Slic3r::Point->new($new_point);
+        $distance = 0;
+    }
+    
+    return (ref $self)->new($points);
 }
 
 package Slic3r::Polyline::Collection;

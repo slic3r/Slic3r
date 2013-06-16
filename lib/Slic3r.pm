@@ -7,7 +7,7 @@ use strict;
 use warnings;
 require v5.10;
 
-our $VERSION = "0.9.9-dev";
+our $VERSION = "0.9.11-dev";
 
 our $debug = 0;
 sub debugf {
@@ -29,7 +29,7 @@ our $var = "$FindBin::Bin/var";
 
 use Encode;
 use Encode::Locale;
-use Boost::Geometry::Utils 0.06;
+use Boost::Geometry::Utils 0.12;
 use Moo 0.091009;
 
 use Slic3r::Config;
@@ -45,8 +45,14 @@ use Slic3r::Format::AMF;
 use Slic3r::Format::OBJ;
 use Slic3r::Format::STL;
 use Slic3r::GCode;
+use Slic3r::GCode::CoolingBuffer;
+use Slic3r::GCode::Layer;
 use Slic3r::GCode::MotionPlanner;
+use Slic3r::GCode::Reader;
+use Slic3r::GCode::SpiralVase;
 use Slic3r::Geometry qw(PI);
+use Slic3r::Geometry::BoundingBox;
+use Slic3r::Geometry::Clipper;
 use Slic3r::Layer;
 use Slic3r::Layer::Region;
 use Slic3r::Line;
@@ -59,7 +65,7 @@ use Slic3r::Print::Object;
 use Slic3r::Print::Region;
 use Slic3r::Surface;
 use Slic3r::TriangleMesh;
-eval "use Slic3r::Build";
+our $build = eval "use Slic3r::Build; 1";
 
 use constant SCALING_FACTOR         => 0.000001;
 use constant RESOLUTION             => 0.0125;
@@ -80,6 +86,7 @@ sub parallelize {
         $q->enqueue(@items, (map undef, 1..$Config->threads));
         
         my $thread_cb = sub { $params{thread_cb}->($q) };
+        @_ = ();
         foreach my $th (map threads->create($thread_cb), 1..$Config->threads) {
             $params{collect_cb}->($th->join);
         }

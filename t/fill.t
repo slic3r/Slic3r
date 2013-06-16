@@ -2,7 +2,7 @@ use Test::More;
 use strict;
 use warnings;
 
-plan tests => 9;
+plan tests => 10;
 
 BEGIN {
     use FindBin;
@@ -19,7 +19,10 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
 {
     my $print = Slic3r::Print->new;
     $print->init_extruders;
-    my $filler = Slic3r::Fill::Rectilinear->new(print => $print);
+    my $filler = Slic3r::Fill::Rectilinear->new(
+        print           => $print,
+        bounding_box    => [ 0, 0, 10, 10 ],
+    );
     my $surface_width = 250;
     my $distance = $filler->adjust_solid_spacing(
         width       => $surface_width,
@@ -30,10 +33,13 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
 }
 
 {
-    my $filler = Slic3r::Fill::Rectilinear->new;
+    my $expolygon = Slic3r::ExPolygon->new([ scale_points [0,0], [50,0], [50,50], [0,50] ]);
+    my $filler = Slic3r::Fill::Rectilinear->new(
+        bounding_box => [ $expolygon->bounding_box ],
+    );
     my $surface = Slic3r::Surface->new(
         surface_type    => S_TYPE_TOP,
-        expolygon       => Slic3r::ExPolygon->new([ scale_points [0,0], [50,0], [50,50], [0,50] ]),
+        expolygon       => $expolygon,
     );
     foreach my $angle (0, 45) {
         $surface->expolygon->rotate(Slic3r::Geometry::deg2rad($angle), [0,0]);
@@ -93,6 +99,27 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
     $config->set('fill_pattern', 'hilbertcurve');
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     ok Slic3r::Test::gcode($print), 'successful hilbertcurve infill generation';
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('skirts', 0);
+    $config->set('perimeters', 0);
+    $config->set('fill_density', 0);
+    $config->set('top_solid_layers', 0);
+    $config->set('bottom_solid_layers', 0);
+    $config->set('solid_infill_below_area', 20000000);
+    $config->set('solid_infill_every_layers', 2);
+    
+    my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
+    my %layers_with_extrusion = ();
+    Slic3r::GCode::Reader->new(gcode => Slic3r::Test::gcode($print))->parse(sub {
+        my ($self, $cmd, $args, $info) = @_;
+        $layers_with_extrusion{$self->Z} = 1 if $info->{extruding};
+    });
+    
+    ok !%layers_with_extrusion,
+        "solid_infill_below_area and solid_infill_every_layers are ignored when fill_density is 0";
 }
 
 __END__

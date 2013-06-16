@@ -9,6 +9,7 @@ use List::Util qw(first);
 our @Ignore = qw(duplicate_x duplicate_y multiply_x multiply_y support_material_tool acceleration);
 
 my $serialize_comma     = sub { join ',', @{$_[0]} };
+my $serialize_comma_bool = sub { join ',', map $_ // 0, @{$_[0]} };
 my $deserialize_comma   = sub { [ split /,/, $_[0] ] };
 
 our $Options = {
@@ -73,8 +74,8 @@ our $Options = {
         tooltip => 'Some G/M-code commands, including temperature control and others, are not universal. Set this option to your printer\'s firmware to get a compatible output. The "No extrusion" flavor prevents Slic3r from exporting any extrusion value at all.',
         cli     => 'gcode-flavor=s',
         type    => 'select',
-        values  => [qw(reprap teacup makerbot sailfish mach3 no-extrusion)],
-        labels  => ['RepRap (Marlin/Sprinter)', 'Teacup', 'MakerBot', 'Sailfish', 'Mach3/EMC', 'No extrusion'],
+        values  => [qw(reprap teacup makerware sailfish mach3 no-extrusion)],
+        labels  => ['RepRap (Marlin/Sprinter/Repetier)', 'Teacup', 'MakerWare (MakerBot)', 'Sailfish (MakerBot)', 'Mach3/EMC', 'No extrusion'],
         default => 'reprap',
     },
     'use_relative_e_distances' => {
@@ -593,9 +594,16 @@ our $Options = {
         type    => 'bool',
         default => 0,
     },
+    'spiral_vase' => {
+        label   => 'Spiral vase',
+        tooltip => 'This experimental feature will raise Z gradually while printing a single-walled object in order to remove any visible seam. By enabling this option other settings will be overridden to enforce a single perimeter, no infill, no top solid layers, no support material. You can still set any number of bottom solid layers as well as skirt/brim loops. It won\'t work when printing more than an object.',
+        cli     => 'spiral-vase!',
+        type    => 'bool',
+        default => 0,
+    },
     'only_retract_when_crossing_perimeters' => {
         label   => 'Only retract when crossing perimeters',
-        tooltip => 'Disables retraction when travelling between infill paths inside the same island.',
+        tooltip => 'Disables retraction when the travel path does not exceed the upper layer\'s perimeters (and thus any ooze will be probably invisible).',
         cli     => 'only-retract-when-crossing-perimeters!',
         type    => 'bool',
         default => 1,
@@ -797,9 +805,18 @@ END
         tooltip => 'This flag enforces a retraction whenever a Z move is done.',
         cli     => 'retract-layer-change!',
         type    => 'bool',
-        serialize   => $serialize_comma,
+        serialize   => $serialize_comma_bool,
         deserialize => $deserialize_comma,
         default => [1],
+    },
+    'wipe' => {
+        label   => 'Wipe before retract',
+        tooltip => 'This flag will move the nozzle while retracting to minimize the possible blob on leaky extruders.',
+        cli     => 'wipe!',
+        type    => 'bool',
+        serialize   => $serialize_comma_bool,
+        deserialize => $deserialize_comma,
+        default => [0],
     },
     'retract_length_toolchange' => {
         label   => 'Length',
@@ -824,8 +841,8 @@ END
     
     # cooling options
     'cooling' => {
-        label   => 'Enable cooling',
-        tooltip => 'This flag enables all the cooling features.',
+        label   => 'Enable auto cooling',
+        tooltip => 'This flag enables the automatic cooling logic that adjusts print speed and fan speed according to layer printing time.',
         cli     => 'cooling!',
         type    => 'bool',
         default => 1,
@@ -1072,7 +1089,7 @@ sub new_from_cli {
     }
     
     $args{$_} = $Options->{$_}{deserialize}->($args{$_})
-        for grep exists $args{$_}, qw(print_center bed_size duplicate_grid extruder_offset retract_layer_change);
+        for grep exists $args{$_}, qw(print_center bed_size duplicate_grid extruder_offset retract_layer_change wipe);
     
     return $class->new(%args);
 }
@@ -1131,7 +1148,7 @@ sub set {
     my ($opt_key, $value, $deserialize) = @_;
     
     # handle legacy options
-    return if $opt_key ~~ @Ignore;
+    return if first { $_ eq $opt_key } @Ignore;
     if ($opt_key =~ /^(extrusion_width|bottom_layer_speed|first_layer_height)_ratio$/) {
         $opt_key = $1;
         $opt_key =~ s/^bottom_layer_speed$/first_layer_speed/;
@@ -1139,6 +1156,9 @@ sub set {
     }
     if ($opt_key eq 'threads' && !$Slic3r::have_threads) {
         $value = 1;
+    }
+    if ($opt_key eq 'gcode_flavor' && $value eq 'makerbot') {
+        $value = 'makerware';
     }
     
     # For historical reasons, the world's full of configs having these very low values;
@@ -1261,6 +1281,10 @@ sub validate {
     die "Invalid value for --top-solid-layers\n"    if $self->top_solid_layers      < 0;
     die "Invalid value for --bottom-solid-layers\n" if $self->bottom_solid_layers   < 0;
     
+    # --gcode-flavor
+    die "Invalid value for --gcode-flavor\n"
+        if !first { $_ eq $self->gcode_flavor } @{$Options->{gcode_flavor}{values}};
+    
     # --print-center
     die "Invalid value for --print-center\n"
         if !ref $self->print_center 
@@ -1319,6 +1343,10 @@ sub validate {
         if $self->extruder_clearance_radius <= 0;
     die "Invalid value for --extruder-clearance-height\n"
         if $self->extruder_clearance_height <= 0;
+    
+    # --extrusion-multiplier
+    die "Invalid value for --extrusion-multiplier\n"
+        if defined first { $_ <= 0 } @{$self->extrusion_multiplier};
 }
 
 sub replace_options {
@@ -1399,7 +1427,7 @@ sub read_ini {
     
     my $ini = { _ => {} };
     my $category = '_';
-    while (my $_ = <$fh>) {
+    while (<$fh>) {
         s/\R+$//;
         next if /^\s+/;
         next if /^$/;

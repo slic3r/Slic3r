@@ -4,7 +4,7 @@ use Moo;
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(EXTR_ROLE_PERIMETER EXTR_ROLE_EXTERNAL_PERIMETER 
-    EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER
+    EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER EXTR_ROLE_OVERHANG_PERIMETER
     EXTR_ROLE_FILL EXTR_ROLE_SOLIDFILL EXTR_ROLE_TOPSOLIDFILL EXTR_ROLE_BRIDGE 
     EXTR_ROLE_INTERNALBRIDGE EXTR_ROLE_SKIRT EXTR_ROLE_SUPPORTMATERIAL EXTR_ROLE_GAPFILL);
 our %EXPORT_TAGS = (roles => \@EXPORT_OK);
@@ -20,11 +20,12 @@ has 'polyline' => (
 
 # height is the vertical thickness of the extrusion expressed in mm
 has 'height'       => (is => 'rw');
-has 'flow_spacing' => (is => 'rw');
+has 'flow_spacing' => (is => 'rw', required => 1);
 has 'role'         => (is => 'rw', required => 1);
 
 use constant EXTR_ROLE_PERIMETER                    => 0;
-use constant EXTR_ROLE_EXTERNAL_PERIMETER           => 2;
+use constant EXTR_ROLE_EXTERNAL_PERIMETER           => 1;
+use constant EXTR_ROLE_OVERHANG_PERIMETER           => 2;
 use constant EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER   => 3;
 use constant EXTR_ROLE_FILL                         => 4;
 use constant EXTR_ROLE_SOLIDFILL                    => 5;
@@ -97,12 +98,11 @@ sub first_point {
     return $self->polyline->[0];
 }
 
-sub is_printable { 1 }
-
 sub is_perimeter {
     my $self = shift;
     return $self->role == EXTR_ROLE_PERIMETER
         || $self->role == EXTR_ROLE_EXTERNAL_PERIMETER
+        || $self->role == EXTR_ROLE_OVERHANG_PERIMETER
         || $self->role == EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER;
 }
 
@@ -111,6 +111,13 @@ sub is_fill {
     return $self->role == EXTR_ROLE_FILL
         || $self->role == EXTR_ROLE_SOLIDFILL
         || $self->role == EXTR_ROLE_TOPSOLIDFILL;
+}
+
+sub is_bridge {
+    my $self = shift;
+    return $self->role == EXTR_ROLE_BRIDGE
+        || $self->role == EXTR_ROLE_INTERNALBRIDGE
+        || $self->role == EXTR_ROLE_OVERHANG_PERIMETER;
 }
 
 sub split_at_acute_angles {
@@ -237,6 +244,7 @@ sub detect_arcs {
             my $arc = Slic3r::ExtrusionPath::Arc->new(
                 polyline    => Slic3r::Polyline->new(\@arc_points),
                 role        => $self->role,
+                flow_spacing => $self->flow_spacing,
                 orientation => $orientation,
                 center      => $arc_center,
                 radius      => $arc_center->distance_to($points[$i]),
@@ -246,6 +254,7 @@ sub detect_arcs {
             push @paths, (ref $self)->new(
                 polyline        => Slic3r::Polyline->new(@points[0..$i]),
                 role            => $self->role,
+                flow_spacing    => $self->flow_spacing,
                 height          => $self->height,
             ) if $i > 0;
             
@@ -265,6 +274,7 @@ sub detect_arcs {
     push @paths, (ref $self)->new(
         polyline        => Slic3r::Polyline->new(\@points),
         role            => $self->role,
+        flow_spacing    => $self->flow_spacing,
         height          => $self->height,
     ) if @points > 1;
     

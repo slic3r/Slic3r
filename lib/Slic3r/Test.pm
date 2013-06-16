@@ -16,7 +16,7 @@ my %cuboids = (
 );
 
 sub model {
-    my ($model_name) = @_;
+    my ($model_name, %params) = @_;
     
     my ($vertices, $facets);
     if ($cuboids{$model_name}) {
@@ -27,10 +27,22 @@ sub model {
         $facets = [
             [0,1,2], [0,2,3], [4,5,6], [4,6,7], [0,4,7], [0,7,1], [1,7,6], [1,6,2], [2,6,5], [2,5,3], [4,0,3], [4,3,5],
         ],
+    } elsif ($model_name eq 'V') {
+        $vertices = [
+            [-14,0,20],[-14,15,20],[0,0,0],[0,15,0],[-4,0,20],[-4,15,20],[5,0,7.14286],[10,0,0],[24,0,20],[14,0,20],[10,15,0],[5,15,7.14286],[14,15,20],[24,15,20]
+        ];
+        $facets = [
+            [0,1,2],[2,1,3],[1,0,4],[5,1,4],[4,0,2],[6,4,2],[7,6,2],[8,9,7],[9,6,7],[2,3,7],[7,3,10],[1,5,3],[3,5,11],[11,12,13],[11,13,3],[3,13,10],[5,4,6],[11,5,6],[6,9,11],[11,9,12],[12,9,8],[13,12,8],[8,7,10],[13,8,10]
+        ],
     }
     
     my $model = Slic3r::Model->new;
-    $model->add_object(vertices => $vertices)->add_volume(facets => $facets);
+    my $object = $model->add_object(vertices => $vertices);
+    $object->add_volume(facets => $facets);
+    $object->add_instance(
+        offset      => [0,0],
+        rotation    => $params{rotation} // 0,
+    );
     return $model;
 }
 
@@ -42,7 +54,9 @@ sub init_print {
     $config->set('gcode_comments', 1) if $ENV{SLIC3R_TESTS_GCODE};
     
     my $print = Slic3r::Print->new(config => $config);
-    $print->add_model(model($model_name));
+    
+    $model_name = [$model_name] if ref($model_name) ne 'ARRAY';
+    $print->add_model(model($_, %params)) for @$model_name;
     $print->validate;
     
     return $print;
@@ -74,70 +88,6 @@ sub add_facet {
             $v = $#$vertices;
         }
         $facets->[-1][$i] = $v;
-    }
-}
-
-package Slic3r::Test::GCodeReader;
-use Moo;
-
-has 'gcode' => (is => 'ro', required => 1);
-has 'X' => (is => 'rw', default => sub {0});
-has 'Y' => (is => 'rw', default => sub {0});
-has 'Z' => (is => 'rw', default => sub {0});
-has 'E' => (is => 'rw', default => sub {0});
-has 'F' => (is => 'rw', default => sub {0});
-
-our $Verbose = 0;
-my @AXES = qw(X Y Z E);
-
-sub parse {
-    my $self = shift;
-    my ($cb) = @_;
-    
-    foreach my $line (split /\n/, $self->gcode) {
-        print "$line\n" if $Verbose || $ENV{SLIC3R_TESTS_GCODE};
-        $line =~ s/\s*;(.*)//; # strip comment
-        next if $line eq '';
-        my $comment = $1;
-        
-        # parse command
-        my ($command, @args) = split /\s+/, $line;
-        my %args = map { /([A-Z])(.*)/; ($1 => $2) } @args;
-        my %info = ();
-        
-        # check retraction
-        if ($command =~ /^G[01]$/) {
-            if (!exists $args{E}) {
-                $info{travel} = 1;
-            }
-            foreach my $axis (@AXES) {
-                if (!exists $args{$axis}) {
-                    $info{"dist_$axis"} = 0;
-                    next;
-                }
-                $info{"dist_$axis"} = $args{$axis} - $self->$axis;
-            }
-            $info{dist_XY} = Slic3r::Line->new([0,0], [@info{qw(dist_X dist_Y)}])->length;
-            if (exists $args{E}) {
-                if ($info{dist_E} > 0) {
-                    $info{extruding} = 1;
-                } elsif ($info{dist_E} < 0) {
-                    $info{retracting} = 1
-                }
-            }
-        }
-        
-        # run callback
-        $cb->($self, $command, \%args, \%info);
-        
-        # update coordinates
-        if ($command =~ /^(?:G[01]|G92)$/) {
-            for (@AXES, 'F') {
-                $self->$_($args{$_}) if exists $args{$_};
-            }
-        }
-        
-        # TODO: update temperatures
     }
 }
 

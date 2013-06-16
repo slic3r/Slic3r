@@ -7,7 +7,7 @@ use warnings;
 use Boost::Geometry::Utils;
 use List::Util qw(first);
 use Math::Geometry::Voronoi;
-use Slic3r::Geometry qw(X Y A B point_in_polygon same_line line_length epsilon);
+use Slic3r::Geometry qw(X Y A B point_in_polygon same_line epsilon);
 use Slic3r::Geometry::Clipper qw(union_ex JT_MITER);
 
 # the constructor accepts an array of polygons 
@@ -62,9 +62,15 @@ sub is_valid {
         && (!first { $_->is_counter_clockwise } $self->holes);
 }
 
-sub boost_polygon {
+# returns false if the expolygon is too tight to be printed
+sub is_printable {
     my $self = shift;
-    return Boost::Geometry::Utils::polygon(@$self);
+    my ($width) = @_;
+    
+    # try to get an inwards offset
+    # for a distance equal to half of the extrusion width;
+    # if no offset is possible, then expolygon is not printable.
+    return Slic3r::Geometry::Clipper::offset($self, -$width / 2) ? 1 : 0;
 }
 
 sub wkt {
@@ -85,15 +91,7 @@ sub offset_ex {
 
 sub safety_offset {
     my $self = shift;
-    
-    # we're offsetting contour and holes separately
-    # because Clipper doesn't return polygons in the same order as 
-    # we feed them to it
-    
-    return (ref $self)->new(
-        $self->contour->safety_offset,
-        @{ Slic3r::Geometry::Clipper::safety_offset([$self->holes]) },
-    );
+    return Slic3r::Geometry::Clipper::safety_offset_ex($self, @_);
 }
 
 sub noncollapsing_offset_ex {
@@ -128,7 +126,7 @@ sub encloses_line {
         # optimization
         return @$clip == 1 && same_line($clip->[0], $line);
     } else {
-        return @$clip == 1 && abs(line_length($clip->[0]) - $line->length) < $tolerance;
+        return @$clip == 1 && abs(Boost::Geometry::Utils::linestring_length($clip->[0]) - $line->length) < $tolerance;
     }
 }
 
@@ -156,11 +154,6 @@ sub bounding_box_polygon {
         [ $bb[2], $bb[3] ],
         [ $bb[0], $bb[3] ],
     ]);
-}
-
-sub bounding_box_center {
-    my $self = shift;
-    return Slic3r::Geometry::bounding_box_center($self->contour);
 }
 
 sub clip_line {
@@ -342,11 +335,25 @@ sub align_to_origin {
     
     my @bb = Slic3r::Geometry::bounding_box([ map @$_, map @$_, @{$self->expolygons} ]);
     $_->translate(-$bb[X1], -$bb[Y1]) for @{$self->expolygons};
+    $self;
+}
+
+sub scale {
+    my $self = shift;
+    $_->scale(@_) for @{$self->expolygons};
+    $self;
 }
 
 sub rotate {
     my $self = shift;
     $_->rotate(@_) for @{$self->expolygons};
+    $self;
+}
+
+sub translate {
+    my $self = shift;
+    $_->translate(@_) for @{$self->expolygons};
+    $self;
 }
 
 sub size {

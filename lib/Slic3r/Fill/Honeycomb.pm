@@ -3,7 +3,6 @@ use Moo;
 
 extends 'Slic3r::Fill::Base';
 
-has 'bounding_box'  => (is => 'rw');
 has 'cache'         => (is => 'rw', default => sub {{}});
 
 use Slic3r::Geometry qw(PI X1 Y1 X2 Y2 X Y scale);
@@ -25,7 +24,7 @@ sub fill_surface {
     
     my $cache_id = sprintf "d%s_s%s_a%s",
         $params{density}, $params{flow_spacing}, $rotate_vector->[0][0];
-    if (!$self->cache->{$cache_id} || !defined $self->bounding_box) {
+    if (!$self->cache->{$cache_id}) {
         
         # hexagons math
         my $hex_side = $distance / (sqrt(3)/2);
@@ -39,10 +38,12 @@ sub fill_surface {
         
         # adjust actual bounding box to the nearest multiple of our hex pattern
         # and align it so that it matches across layers
-        my $bounding_box = [ $self->bounding_box ? @{$self->bounding_box} : $expolygon->bounding_box ];
+        
+        my $bounding_box = [ @{$self->bounding_box} ];  # clone
         $bounding_box->[$_] = 0 for X1, Y1;
         {
             my $bb_polygon = Slic3r::Polygon->new_from_bounding_box($bounding_box);
+            $bb_polygon->scale(sqrt 2);
             $bb_polygon->rotate($rotate_vector->[0][0], $hex_center);
             $bounding_box = [ Slic3r::Geometry::bounding_box($bb_polygon) ];
             # $bounding_box->[X1] and [Y1] represent the displacement between new bounding box offset and old one
@@ -78,13 +79,14 @@ sub fill_surface {
         $self->cache->{$cache_id} = [@polygons];
     }
     
-    # build polylines from polygons without re-appending the initial point:
+    # consider polygons as polylines without re-appending the initial point:
     # this cuts the last segment on purpose, so that the jump to the next 
     # path is more straight
-    my @paths = map Slic3r::Polyline->new(@$_), map @$_, @{intersection_ex(
-        $self->cache->{$cache_id},
-        $expolygon,
-    )};
+    my @paths = map Slic3r::Polyline->new($_),
+        @{ Boost::Geometry::Utils::polygon_multi_linestring_intersection(
+            $expolygon,
+            $self->cache->{$cache_id},
+        ) };
     
     return { flow_spacing => $params{flow_spacing} },
         Slic3r::Polyline::Collection->new(polylines => \@paths)->chained_path;

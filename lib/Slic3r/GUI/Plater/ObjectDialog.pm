@@ -10,10 +10,12 @@ use base 'Wx::Dialog';
 sub new {
     my $class = shift;
     my ($parent, %params) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Object", wxDefaultPosition, [500,350]);
+    my $self = $class->SUPER::new($parent, -1, "Object", wxDefaultPosition, [500,350], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     $self->{object} = $params{object};
     
     $self->{tabpanel} = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
+    $self->{tabpanel}->AddPage($self->{preview} = Slic3r::GUI::Plater::ObjectDialog::PreviewTab->new($self->{tabpanel}, object => $self->{object}), "Preview")
+        if $Slic3r::GUI::have_OpenGL;
     $self->{tabpanel}->AddPage($self->{info} = Slic3r::GUI::Plater::ObjectDialog::InfoTab->new($self->{tabpanel}, object => $self->{object}), "Info");
     $self->{tabpanel}->AddPage($self->{layers} = Slic3r::GUI::Plater::ObjectDialog::LayersTab->new($self->{tabpanel}, object => $self->{object}), "Layers");
     
@@ -33,6 +35,7 @@ sub new {
     $sizer->Add($buttons, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     
     $self->SetSizer($sizer);
+    $self->SetMinSize($self->GetSize);
     
     return $self;
 }
@@ -75,12 +78,30 @@ sub get_properties {
 	my $object = $self->{object};
 	return [
 		['Name'			=> $object->name],
-		['Size'			=> sprintf "%.2f x %.2f x %.2f", @{$object->size}],
+		['Size'			=> sprintf "%.2f x %.2f x %.2f", @{$object->transformed_size}],
 		['Facets'		=> $object->facets],
 		['Vertices'		=> $object->vertices],
 		['Materials' 	=> $object->materials],
 		['Two-Manifold' => $object->is_manifold ? 'Yes' : 'No'],
 	];
+}
+
+package Slic3r::GUI::Plater::ObjectDialog::PreviewTab;
+use Wx qw(:dialog :id :misc :sizer :systemsettings);
+use base 'Wx::Panel';
+
+sub new {
+    my $class = shift;
+    my ($parent, %params) = @_;
+    my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize);
+    $self->{object} = $params{object};
+    
+    my $sizer = Wx::BoxSizer->new(wxVERTICAL);
+    $sizer->Add(Slic3r::GUI::PreviewCanvas->new($self, $self->{object}->get_model_object->mesh), 1, wxEXPAND, 0);
+    $self->SetSizer($sizer);
+    $sizer->SetSizeHints($self);
+    
+    return $self;
 }
 
 package Slic3r::GUI::Plater::ObjectDialog::LayersTab;
@@ -98,7 +119,7 @@ sub new {
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     
     {
-        my $label = Wx::StaticText->new($self, -1, "You can use this section to override the default layer height for parts of this object.",
+        my $label = Wx::StaticText->new($self, -1, "You can use this section to override the default layer height for parts of this object. Set layer height to zero to skip portions of the input file.",
             wxDefaultPosition, [-1, 25]);
         $label->SetFont(Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
         $sizer->Add($label, 0, wxEXPAND | wxALL, 10);
@@ -162,7 +183,7 @@ sub CanClose {
             Slic3r::GUI::show_error($self, "Invalid Z range $min-$max.");
             return 0;
         }
-        if ($height <= 0) {
+        if ($height < 0) {
             Slic3r::GUI::show_error($self, "Invalid layer height $height.");
             return 0;
         }

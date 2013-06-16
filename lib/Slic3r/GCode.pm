@@ -6,6 +6,7 @@ use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Geometry qw(scale unscale scaled_epsilon points_coincide PI X Y B);
 use Slic3r::Geometry::Clipper qw(union_ex);
 
+has 'config'             => (is => 'ro', required => 1);
 has 'multiple_extruders' => (is => 'ro', default => sub {0} );
 has 'layer_count'        => (is => 'ro', required => 1 );
 has 'layer'              => (is => 'rw');
@@ -15,12 +16,12 @@ has 'shift_y'            => (is => 'rw', default => sub {0} );
 has 'z'                  => (is => 'rw');
 has 'speed'              => (is => 'rw');
 
+has 'speeds'             => (is => 'lazy');  # mm/min
 has 'external_mp'        => (is => 'rw');
 has 'layer_mp'           => (is => 'rw');
 has 'new_object'         => (is => 'rw', default => sub {0});
 has 'straight_once'      => (is => 'rw', default => sub {1});
 has 'extruder'           => (is => 'rw');
-has 'extrusion_distance' => (is => 'rw', default => sub {0} );
 has 'elapsed_time'       => (is => 'rw', default => sub {0} );  # seconds
 has 'total_extrusion_length' => (is => 'rw', default => sub {0} );
 has 'lifted'             => (is => 'rw', default => sub {0} );
@@ -28,26 +29,27 @@ has 'last_pos'           => (is => 'rw', default => sub { Slic3r::Point->new(0,0
 has 'last_speed'         => (is => 'rw', default => sub {""});
 has 'last_f'             => (is => 'rw', default => sub {""});
 has 'last_fan_speed'     => (is => 'rw', default => sub {0});
+has 'wipe_path'          => (is => 'rw');
 has 'dec'                => (is => 'ro', default => sub { 3 } );
 
 # used for vibration limit:
 has 'last_dir'           => (is => 'ro', default => sub { [0,0] });
 has 'dir_time'           => (is => 'ro', default => sub { [0,0] });
 
-# calculate speeds (mm/min)
-has 'speeds' => (
-    is      => 'ro',
-    default => sub {+{
-        map { $_ => 60 * $Slic3r::Config->get_value("${_}_speed") }
+sub _build_speeds {
+    my $self = shift;
+    return {
+        map { $_ => 60 * $self->config->get_value("${_}_speed") }
             qw(travel perimeter small_perimeter external_perimeter infill
                 solid_infill top_solid_infill support_material bridge gap_fill retract),
-    }},
-);
+    };
+}
 
 # assign speeds to roles
 my %role_speeds = (
     &EXTR_ROLE_PERIMETER                    => 'perimeter',
     &EXTR_ROLE_EXTERNAL_PERIMETER           => 'external_perimeter',
+    &EXTR_ROLE_OVERHANG_PERIMETER           => 'external_perimeter',
     &EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER   => 'perimeter',
     &EXTR_ROLE_FILL                         => 'infill',
     &EXTR_ROLE_SOLIDFILL                    => 'solid_infill',
@@ -64,10 +66,12 @@ sub set_shift {
     my @shift = @_;
     
     # if shift increases (goes towards right), last_pos decreases because it goes towards left
-    $self->last_pos->translate(
+    my @translate = (
         scale ($self->shift_x - $shift[X]),
         scale ($self->shift_y - $shift[Y]),
     );
+    $self->last_pos->translate(@translate);
+    $self->wipe_path->translate(@translate) if $self->wipe_path;
     
     $self->shift_x($shift[X]);
     $self->shift_y($shift[Y]);
@@ -78,17 +82,17 @@ sub change_layer {
     my ($layer) = @_;
     
     $self->layer($layer);
-    if ($Slic3r::Config->avoid_crossing_perimeters) {
+    if ($self->config->avoid_crossing_perimeters) {
         $self->layer_mp(Slic3r::GCode::MotionPlanner->new(
             islands => union_ex([ map @$_, @{$layer->slices} ], undef, 1),
         ));
     }
     
     my $gcode = "";
-    if ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) {
+    if ($self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/) {
         $gcode .= sprintf "M73 P%s%s\n",
             int(99 * ($layer->id / ($self->layer_count - 1))),
-            ($Slic3r::Config->gcode_comments ? ' ; update progress' : '');
+            ($self->config->gcode_comments ? ' ; update progress' : '');
     }
     return $gcode;
 }
@@ -99,7 +103,7 @@ sub move_z {
     my ($z, $comment) = @_;
     
     $z *= &Slic3r::SCALING_FACTOR;
-    $z += $Slic3r::Config->z_offset;
+    $z += $self->config->z_offset;
     
     my $gcode = "";
     my $current_z = $self->z;
@@ -133,9 +137,9 @@ sub extrude_loop {
     # find the point of the loop that is closest to the current extruder position
     # or randomize if requested
     my $last_pos = $self->last_pos;
-    if ($Slic3r::Config->randomize_start && $loop->role == EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER) {
-        $last_pos = Slic3r::Point->new(scale $Slic3r::Config->print_center->[X], scale $Slic3r::Config->bed_size->[Y]);
-        $last_pos->rotate(rand(2*PI), $Slic3r::Config->print_center);
+    if ($self->config->randomize_start && $loop->role == EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER) {
+        $last_pos = Slic3r::Point->new(scale $self->config->print_center->[X], scale $self->config->bed_size->[Y]);
+        $last_pos->rotate(rand(2*PI), $self->config->print_center);
     }
     my $start_index = $loop->nearest_point_index_to($last_pos);
     
@@ -150,9 +154,10 @@ sub extrude_loop {
     
     # extrude along the path
     my $gcode = $self->extrude_path($extrusion_path, $description);
+    $self->wipe_path($extrusion_path->polyline);
     
     # make a little move inwards before leaving loop
-    if ($loop->role == EXTR_ROLE_EXTERNAL_PERIMETER) {
+    if ($loop->role == EXTR_ROLE_EXTERNAL_PERIMETER && $self->config->perimeters > 1) {
         # detect angle between last and first segment
         # the side depends on the original winding order of the polygon (left for contours, right for holes)
         my @points = $was_clockwise ? (-2, 1) : (1, -2);
@@ -183,7 +188,7 @@ sub extrude_path {
     $path->simplify(&Slic3r::SCALED_RESOLUTION);
     
     # detect arcs
-    if ($Slic3r::Config->gcode_arcs && !$recursive) {
+    if ($self->config->gcode_arcs && !$recursive) {
         my $gcode = "";
         foreach my $arc_path ($path->detect_arcs) {
             $gcode .= $self->extrude_path($arc_path, $description, 1);
@@ -200,17 +205,17 @@ sub extrude_path {
     
     # adjust acceleration
     my $acceleration;
-    if ($Slic3r::Config->perimeter_acceleration && $path->is_perimeter) {
-        $acceleration = $Slic3r::Config->perimeter_acceleration;
-    } elsif ($Slic3r::Config->infill_acceleration && $path->is_fill) {
-        $acceleration = $Slic3r::Config->infill_acceleration;
-    } elsif ($Slic3r::Config->infill_acceleration && ($path->role == EXTR_ROLE_BRIDGE || $path->role == EXTR_ROLE_INTERNALBRIDGE)) {
-        $acceleration = $Slic3r::Config->bridge_acceleration;
+    if ($self->config->perimeter_acceleration && $path->is_perimeter) {
+        $acceleration = $self->config->perimeter_acceleration;
+    } elsif ($self->config->infill_acceleration && $path->is_fill) {
+        $acceleration = $self->config->infill_acceleration;
+    } elsif ($self->config->infill_acceleration && $path->is_bridge) {
+        $acceleration = $self->config->bridge_acceleration;
     }
     $gcode .= $self->set_acceleration($acceleration) if $acceleration;
     
     my $area;  # mm^3 of extrudate per mm of tool movement 
-    if ($path->role == EXTR_ROLE_BRIDGE || $path->role == EXTR_ROLE_INTERNALBRIDGE) {
+    if ($path->is_bridge) {
         my $s = $path->flow_spacing;
         $area = ($s**2) * PI/4;
     } else {
@@ -236,27 +241,30 @@ sub extrude_path {
         $path_length = unscale $path->length;
         $gcode .= $self->G2_G3($path->points->[-1], $path->orientation, 
             $path->center, $e * unscale $path_length, $description);
+        $self->wipe_path(undef);
     } else {
         foreach my $line ($path->lines) {
             my $line_length = unscale $line->length;
             $path_length += $line_length;
             $gcode .= $self->G1($line->[B], undef, $e * $line_length, $description);
         }
+        $self->wipe_path(Slic3r::Polyline->new([ reverse @{$path->points} ]))
+            if $self->extruder->wipe;
     }
     
-    if ($Slic3r::Config->cooling) {
+    if ($self->config->cooling) {
         my $path_time = $path_length / $self->speeds->{$self->last_speed} * 60;
         if ($self->layer->id == 0) {
-            $path_time = $Slic3r::Config->first_layer_speed =~ /^(\d+(?:\.\d+)?)%$/
+            $path_time = $self->config->first_layer_speed =~ /^(\d+(?:\.\d+)?)%$/
                 ? $path_time / ($1/100)
-                : $path_length / $Slic3r::Config->first_layer_speed * 60;
+                : $path_length / $self->config->first_layer_speed * 60;
         }
         $self->elapsed_time($self->elapsed_time + $path_time);
     }
     
     # reset acceleration
-    $gcode .= $self->set_acceleration($Slic3r::Config->default_acceleration)
-        if $acceleration && $Slic3r::Config->default_acceleration;
+    $gcode .= $self->set_acceleration($self->config->default_acceleration)
+        if $acceleration && $self->config->default_acceleration;
     
     return $gcode;
 }
@@ -275,46 +283,18 @@ sub travel_to {
     $travel->translate(-$self->shift_x, -$self->shift_y);
     
     if ($travel->length < scale $self->extruder->retract_before_travel
-        || ($Slic3r::Config->only_retract_when_crossing_perimeters && first { $_->encloses_line($travel, scaled_epsilon) } @{$self->layer->slices})
+        || ($self->config->only_retract_when_crossing_perimeters && first { $_->encloses_line($travel, scaled_epsilon) } @{$self->layer->upper_layer_slices})
         || ($role == EXTR_ROLE_SUPPORTMATERIAL && $self->layer->support_islands_enclose_line($travel))
         ) {
         $self->straight_once(0);
         $self->speed('travel');
         $gcode .= $self->G0($point, undef, 0, $comment || "");
-    } elsif (!$Slic3r::Config->avoid_crossing_perimeters || $self->straight_once) {
+    } elsif (!$self->config->avoid_crossing_perimeters || $self->straight_once) {
         $self->straight_once(0);
         $gcode .= $self->retract(travel_to => $point);
         $self->speed('travel');
         $gcode .= $self->G0($point, undef, 0, $comment || "");
     } else {
-        my $plan = sub {
-            my $mp = shift;
-            
-            my $gcode = "";
-            my @travel = $mp->shortest_path($self->last_pos, $point)->lines;
-            
-            # if the path is not contained in a single island we need to retract
-            my $need_retract = !$Slic3r::Config->only_retract_when_crossing_perimeters;
-            if (!$need_retract) {
-                $need_retract = 1;
-                foreach my $slice (@{$self->layer->slices}) {
-                    # discard the island if at any line is not enclosed in it
-                    next if first { !$slice->encloses_line($_, scaled_epsilon) } @travel;
-                    # okay, this island encloses the full travel path
-                    $need_retract = 0;
-                    last;
-                }
-            }
-            
-            # do the retract (the travel_to argument is broken)
-            $gcode .= $self->retract(travel_to => $point) if $need_retract;
-            
-            # append the actual path and return
-            $self->speed('travel');
-            $gcode .= join '', map $self->G0($_->[B], undef, 0, $comment || ""), @travel;
-            return $gcode;
-        };
-        
         if ($self->new_object) {
             $self->new_object(0);
             
@@ -325,13 +305,43 @@ sub travel_to {
             
             # calculate path (external_mp uses G-code coordinates so we temporary need a null shift)
             $self->set_shift(0,0);
-            $gcode .= $plan->($self->external_mp);
+            $gcode .= $self->_plan($self->external_mp, $point, $comment);
             $self->set_shift(@shift);
         } else {
-            $gcode .= $plan->($self->layer_mp);
+            $gcode .= $self->_plan($self->layer_mp, $point, $comment);
         }
     }
     
+    return $gcode;
+}
+
+sub _plan {
+    my $self = shift;
+    my ($mp, $point, $comment) = @_;
+    
+    my $gcode = "";
+    my @travel = $mp->shortest_path($self->last_pos, $point)->lines;
+    
+    # if the path is not contained in a single island we need to retract
+    my $need_retract = !$self->config->only_retract_when_crossing_perimeters;
+    if (!$need_retract) {
+        $need_retract = 1;
+        foreach my $slice (@{$self->layer->upper_layer_slices}) {
+            # discard the island if at any line is not enclosed in it
+            next if first { !$slice->encloses_line($_, scaled_epsilon) } @travel;
+            # okay, this island encloses the full travel path
+            $need_retract = 0;
+            last;
+        }
+    }
+    
+    # do the retract (the travel_to argument is broken)
+    $gcode .= $self->retract(travel_to => $point) if $need_retract;
+    
+    # append the actual path and return
+    $self->speed('travel');
+    # use G1 because we rely on paths being straight (G0 may make round paths)
+    $gcode .= join '', map $self->G1($_->[B], undef, 0, $comment || ""), @travel;
     return $gcode;
 }
 
@@ -347,16 +357,23 @@ sub retract {
     # if we already retracted, reduce the required amount of retraction
     $length -= $self->extruder->retracted;
     return "" unless $length > 0;
+    my $gcode = "";
+    
+    # wipe
+    my $wipe_path;
+    if ($self->extruder->wipe && $self->wipe_path) {
+        $wipe_path = Slic3r::Polyline->new([ $self->last_pos, @{$self->wipe_path}[1..$#{$self->wipe_path}] ])
+            ->clip_start($self->extruder->scaled_wipe_distance);
+    }
     
     # prepare moves
-    $self->speed('retract');
     my $retract = [undef, undef, -$length, $comment];
     my $lift    = ($self->extruder->retract_lift == 0 || defined $params{move_z}) && !$self->lifted
         ? undef
         : [undef, $self->z + $self->extruder->retract_lift, 0, 'lift plate during travel'];
     
-    my $gcode = "";
-    if (($Slic3r::Config->g0 || $Slic3r::Config->gcode_flavor eq 'mach3') && $params{travel_to}) {
+    if (($self->config->g0 || $self->config->gcode_flavor eq 'mach3') && $params{travel_to}) {
+        $self->speed('travel');
         if ($lift) {
             # combine lift and retract
             $lift->[2] = $retract->[2];
@@ -366,13 +383,27 @@ sub retract {
             my $travel = [$params{travel_to}, undef, $retract->[2], "travel and $comment"];
             $gcode .= $self->G0(@$travel);
         }
-    } elsif (($Slic3r::Config->g0 || $Slic3r::Config->gcode_flavor eq 'mach3') && defined $params{move_z}) {
+    } elsif (($self->config->g0 || $self->config->gcode_flavor eq 'mach3') && defined $params{move_z}) {
         # combine Z change and retraction
+        $self->speed('travel');
         my $travel = [undef, $params{move_z}, $retract->[2], "change layer and $comment"];
         $gcode .= $self->G0(@$travel);
     } else {
-        $gcode .= $self->G1(@$retract);
+        # check that we have a positive wipe length
+        if ($wipe_path && (my $total_wipe_length = $wipe_path->length)) {
+            $self->speed('travel');
+            
+            # subdivide the retraction
+            for (1 .. $#$wipe_path) {
+                my $segment_length = $wipe_path->[$_-1]->distance_to($wipe_path->[$_]);
+                $gcode .= $self->G1($wipe_path->[$_], undef, $retract->[2] * ($segment_length / $total_wipe_length), $retract->[3] . ";_WIPE");
+            }
+        } else {
+            $self->speed('retract');
+            $gcode .= $self->G1(@$retract);
+        }
         if (!$self->lifted) {
+            $self->speed('travel');
             if (defined $params{move_z} && $self->extruder->retract_lift > 0) {
                 my $travel = [undef, $params{move_z} + $self->extruder->retract_lift, 0, 'move to next layer (' . $self->layer->id . ') and lift'];
                 $gcode .= $self->G0(@$travel);
@@ -388,7 +419,9 @@ sub retract {
     
     # reset extrusion distance during retracts
     # this makes sure we leave sufficient precision in the firmware
-    $gcode .= $self->reset_e if $Slic3r::Config->gcode_flavor !~ /^(?:mach3|makerbot)$/;
+    $gcode .= $self->reset_e;
+    
+    $gcode .= "M103 ; extruder off\n" if $self->config->gcode_flavor eq 'makerware';
     
     return $gcode;
 }
@@ -397,6 +430,7 @@ sub unretract {
     my $self = shift;
     
     my $gcode = "";
+    $gcode .= "M101 ; extruder on\n" if $self->config->gcode_flavor eq 'makerware';
     
     if ($self->lifted) {
         $self->speed('travel');
@@ -407,7 +441,8 @@ sub unretract {
     my $to_unretract = $self->extruder->retracted + $self->extruder->restart_extra;
     if ($to_unretract) {
         $self->speed('retract');
-        $gcode .= $self->G0(undef, undef, $to_unretract, "compensate retraction");
+        # use G1 instead of G0 because G0 will blend the restart with the previous travel move
+        $gcode .= $self->G1(undef, undef, $to_unretract, "compensate retraction");
         $self->extruder->retracted(0);
         $self->extruder->restart_extra(0);
     }
@@ -417,10 +452,11 @@ sub unretract {
 
 sub reset_e {
     my $self = shift;
+    return "" if $self->config->gcode_flavor =~ /^(?:mach3|makerware)$/;
     
-    $self->extrusion_distance(0);
-    return sprintf "G92 %s0%s\n", $Slic3r::Config->extrusion_axis, ($Slic3r::Config->gcode_comments ? ' ; reset extrusion distance' : '')
-        if $Slic3r::Config->extrusion_axis && !$Slic3r::Config->use_relative_e_distances;
+    $self->extruder->e(0) if $self->extruder;
+    return sprintf "G92 %s0%s\n", $self->config->extrusion_axis, ($self->config->gcode_comments ? ' ; reset extrusion distance' : '')
+        if $self->config->extrusion_axis && !$self->config->use_relative_e_distances;
 }
 
 sub set_acceleration {
@@ -429,12 +465,12 @@ sub set_acceleration {
     return "" if !$acceleration;
     
     return sprintf "M204 S%s%s\n",
-        $acceleration, ($Slic3r::Config->gcode_comments ? ' ; adjust acceleration' : '');
+        $acceleration, ($self->config->gcode_comments ? ' ; adjust acceleration' : '');
 }
 
 sub G0 {
     my $self = shift;
-    return $self->G1(@_) if !($Slic3r::Config->g0 || $Slic3r::Config->gcode_flavor eq 'mach3');
+    return $self->G1(@_) if !($self->config->g0 || $self->config->gcode_flavor eq 'mach3');
     return $self->_G0_G1("G0", @_);
 }
 
@@ -504,9 +540,9 @@ sub _Gx {
             ? ($self->extruder->retract_speed_mm_min)
             : $self->speeds->{$self->speed} // $self->speed;
         if ($e && $self->layer && $self->layer->id == 0 && $comment !~ /retract/) {
-            $F = $Slic3r::Config->first_layer_speed =~ /^(\d+(?:\.\d+)?)%$/
+            $F = $self->config->first_layer_speed =~ /^(\d+(?:\.\d+)?)%$/
                 ? ($F * $1/100)
-                : $Slic3r::Config->first_layer_speed * 60;
+                : $self->config->first_layer_speed * 60;
         }
         $self->last_speed($self->speed);
         $self->last_f($F);
@@ -514,14 +550,14 @@ sub _Gx {
     $gcode .= sprintf " F%.${dec}f", $F if defined $F;
     
     # output extrusion distance
-    if ($e && $Slic3r::Config->extrusion_axis) {
-        $self->extrusion_distance(0) if $Slic3r::Config->use_relative_e_distances;
-        $self->extrusion_distance($self->extrusion_distance + $e);
+    if ($e && $self->config->extrusion_axis) {
+        $self->extruder->e(0) if $self->config->use_relative_e_distances;
+        $self->extruder->e($self->extruder->e + $e);
         $self->total_extrusion_length($self->total_extrusion_length + $e);
-        $gcode .= sprintf " %s%.5f", $Slic3r::Config->extrusion_axis, $self->extrusion_distance;
+        $gcode .= sprintf " %s%.5f", $self->config->extrusion_axis, $self->extruder->e;
     }
     
-    $gcode .= sprintf " ; %s", $comment if $comment && $Slic3r::Config->gcode_comments;
+    $gcode .= sprintf " ; %s", $comment if $comment && $self->config->gcode_comments;
     if ($append_bridge_off) {
         $gcode .= "\n;_BRIDGE_FAN_END";
     }
@@ -546,8 +582,8 @@ sub set_extruder {
     $gcode .= $self->retract(toolchange => 1) if defined $self->extruder;
     
     # append custom toolchange G-code
-    if (defined $self->extruder && $Slic3r::Config->toolchange_gcode) {
-        $gcode .= sprintf "%s\n", $Slic3r::Config->replace_options($Slic3r::Config->toolchange_gcode, {
+    if (defined $self->extruder && $self->config->toolchange_gcode) {
+        $gcode .= sprintf "%s\n", $self->config->replace_options($self->config->toolchange_gcode, {
             previous_extruder   => $self->extruder->id,
             next_extruder       => $extruder->id,
         });
@@ -555,18 +591,16 @@ sub set_extruder {
     
     # set the new extruder
     $self->extruder($extruder);
-    my $toolchange_gcode = sprintf "%s%d%s\n", 
-        ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/ ? 'M108 T' : 'T'),
+    $gcode .= sprintf "%s%d%s\n", 
+        ($self->config->gcode_flavor eq 'makerware'
+            ? 'M135 T'
+            : $self->config->gcode_flavor eq 'sailfish'
+                ? 'M108 T'
+                : 'T'),
         $extruder->id,
-        ($Slic3r::Config->gcode_comments ? ' ; change extruder' : '');
+        ($self->config->gcode_comments ? ' ; change extruder' : '');
     
-    if ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) {
-        $gcode .= $self->reset_e;
-        $gcode .= $toolchange_gcode;
-    } else {
-        $gcode .= $toolchange_gcode;
-        $gcode .= $self->reset_e;
-    }
+    $gcode .= $self->reset_e;
     
     return $gcode;
 }
@@ -578,18 +612,18 @@ sub set_fan {
     if ($self->last_fan_speed != $speed || $dont_save) {
         $self->last_fan_speed($speed) if !$dont_save;
         if ($speed == 0) {
-            my $code = $Slic3r::Config->gcode_flavor eq 'teacup'
+            my $code = $self->config->gcode_flavor eq 'teacup'
                 ? 'M106 S0'
-                : $Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/
+                : $self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/
                     ? 'M127'
                     : 'M107';
-            return sprintf "$code%s\n", ($Slic3r::Config->gcode_comments ? ' ; disable fan' : '');
+            return sprintf "$code%s\n", ($self->config->gcode_comments ? ' ; disable fan' : '');
         } else {
-            if ($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/) {
-                return sprintf "M126%s\n", ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+            if ($self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/) {
+                return sprintf "M126%s\n", ($self->config->gcode_comments ? ' ; enable fan' : '');
             } else {
-                return sprintf "M106 %s%d%s\n", ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
-                    (255 * $speed / 100), ($Slic3r::Config->gcode_comments ? ' ; enable fan' : '');
+                return sprintf "M106 %s%d%s\n", ($self->config->gcode_flavor eq 'mach3' ? 'P' : 'S'),
+                    (255 * $speed / 100), ($self->config->gcode_comments ? ' ; enable fan' : '');
             }
         }
     }
@@ -600,17 +634,17 @@ sub set_temperature {
     my $self = shift;
     my ($temperature, $wait, $tool) = @_;
     
-    return "" if $wait && $Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/;
+    return "" if $wait && $self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/;
     
-    my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
+    my ($code, $comment) = ($wait && $self->config->gcode_flavor ne 'teacup')
         ? ('M109', 'wait for temperature to be reached')
         : ('M104', 'set temperature');
     my $gcode = sprintf "$code %s%d %s; $comment\n",
-        ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature,
-        (defined $tool && ($self->multiple_extruders || $Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/)) ? "T$tool " : "";
+        ($self->config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature,
+        (defined $tool && ($self->multiple_extruders || $self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/)) ? "T$tool " : "";
     
     $gcode .= "M116 ; wait for temperature to be reached\n"
-        if $Slic3r::Config->gcode_flavor eq 'teacup' && $wait;
+        if $self->config->gcode_flavor eq 'teacup' && $wait;
     
     return $gcode;
 }
@@ -619,14 +653,14 @@ sub set_bed_temperature {
     my $self = shift;
     my ($temperature, $wait) = @_;
     
-    my ($code, $comment) = ($wait && $Slic3r::Config->gcode_flavor ne 'teacup')
-        ? (($Slic3r::Config->gcode_flavor =~ /^(?:makerbot|sailfish)$/ ? 'M109' : 'M190'), 'wait for bed temperature to be reached')
+    my ($code, $comment) = ($wait && $self->config->gcode_flavor ne 'teacup')
+        ? (($self->config->gcode_flavor =~ /^(?:makerware|sailfish)$/ ? 'M109' : 'M190'), 'wait for bed temperature to be reached')
         : ('M140', 'set bed temperature');
     my $gcode = sprintf "$code %s%d ; $comment\n",
-        ($Slic3r::Config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature;
+        ($self->config->gcode_flavor eq 'mach3' ? 'P' : 'S'), $temperature;
     
     $gcode .= "M116 ; wait for bed temperature to be reached\n"
-        if $Slic3r::Config->gcode_flavor eq 'teacup' && $wait;
+        if $self->config->gcode_flavor eq 'teacup' && $wait;
     
     return $gcode;
 }
@@ -636,8 +670,8 @@ sub _limit_frequency {
     my $self = shift;
     my ($point) = @_;
     
-    return '' if $Slic3r::Config->vibration_limit == 0;
-    my $min_time = 1 / ($Slic3r::Config->vibration_limit * 60);  # in minutes
+    return '' if $self->config->vibration_limit == 0;
+    my $min_time = 1 / ($self->config->vibration_limit * 60);  # in minutes
     
     # calculate the move vector and move direction
     my $vector = Slic3r::Line->new($self->last_pos, $point)->vector;

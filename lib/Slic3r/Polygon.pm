@@ -27,16 +27,6 @@ sub lines {
     return polygon_lines($self);
 }
 
-sub boost_polygon {
-    my $self = shift;
-    return Boost::Geometry::Utils::polygon($self);
-}
-
-sub boost_linestring {
-    my $self = shift;
-    return Boost::Geometry::Utils::linestring([@$self, $self->[0]]);
-}
-
 sub wkt {
     my $self = shift;
     return sprintf "POLYGON((%s))", join ',', map "$_->[0] $_->[1]", @$self;
@@ -95,16 +85,6 @@ sub area {
     return Slic3r::Geometry::Clipper::area($self);
 }
 
-sub safety_offset {
-    my $self = shift;
-    return (ref $self)->new(Slic3r::Geometry::Clipper::safety_offset([$self])->[0]);
-}
-
-sub offset {
-    my $self = shift;
-    return map Slic3r::Polygon->new($_), Slic3r::Geometry::Clipper::offset([$self], @_);
-}
-
 sub grow {
     my $self = shift;
     return $self->split_at_first_point->grow(@_);
@@ -138,7 +118,7 @@ sub subdivide {
     }
 }
 
-# returns false if the polyline is too tight to be printed
+# returns false if the polygon is too tight to be printed
 sub is_printable {
     my $self = shift;
     my ($width) = @_;
@@ -152,7 +132,7 @@ sub is_printable {
     # detect them and we would be discarding them.
     my $p = $self->clone;
     $p->make_counter_clockwise;
-    return $p->offset(-$width / 2) ? 1 : 0;
+    return Slic3r::Geometry::Clipper::offset([$p], -$width / 2) ? 1 : 0;
 }
 
 sub is_valid {

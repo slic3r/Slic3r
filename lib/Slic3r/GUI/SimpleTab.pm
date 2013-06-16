@@ -78,6 +78,17 @@ sub load_config {
     }
 }
 
+sub set_value {
+    my $self = shift;
+    my ($opt_key, $value) = @_;
+    
+    my $changed = 0;
+    foreach my $optgroup (@{$self->{optgroups}}) {
+        $changed = 1 if $optgroup->set_value($opt_key, $value);
+    }
+    return $changed;
+}
+
 sub is_dirty { 0 }
 sub config { $_[0]->{config}->clone }
 
@@ -171,11 +182,6 @@ sub build {
                 options => [qw(first_layer_bed_temperature bed_temperature)],
             },
         ],
-    );
-    
-    $self->append_optgroup(
-        title => 'Cooling',
-        options => [qw(cooling)],
     );
 }
 
