@@ -3,7 +3,7 @@ use Moo;
 
 use File::Basename qw(basename fileparse);
 use File::Spec;
-use List::Util qw(max first);
+use List::Util qw(min max first);
 use Math::ConvexHull::MonotoneChain qw(convex_hull);
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Geometry qw(X Y Z X1 Y1 X2 Y2 MIN MAX PI scale unscale move_points
@@ -578,16 +578,18 @@ sub make_skirt {
     # collect points from all layers contained in skirt height
     my @points = ();
     foreach my $obj_idx (0 .. $#{$self->objects}) {
-        my $skirt_height = $Slic3r::Config->skirt_height;
-        $skirt_height = $self->objects->[$obj_idx]->layer_count if $skirt_height > $self->objects->[$obj_idx]->layer_count;
-        my @layers = map $self->objects->[$obj_idx]->layers->[$_], 0..($skirt_height-1);
-        my @support_layers = map $self->objects->[$obj_idx]->support_layers->[$_], 0..($skirt_height-1);
+        my $object = $self->objects->[$obj_idx];
+        my @layers = map $object->layers->[$_], 0..min($Slic3r::Config->skirt_height-1, $#{$object->layers});
         my @layer_points = (
             (map @$_, map @$_, map @{$_->slices}, @layers),
             (map @$_, map @{$_->thin_walls}, map @{$_->regions}, @layers),
-            (map @{$_->unpack->polyline}, map @{$_->support_fills->paths}, grep $_->support_fills, @support_layers),
         );
-        push @points, map move_points($_, @layer_points), @{$self->objects->[$obj_idx]->copies};
+        if (@{ $object->support_layers }) {
+            my @support_layers = map $object->support_layers->[$_], 0..min($Slic3r::Config->skirt_height-1, $#{$object->support_layers});
+            push @layer_points,
+                (map @{$_->unpack->polyline}, map @{$_->support_fills->paths}, grep $_->support_fills, @support_layers);
+        }
+        push @points, map move_points($_, @layer_points), @{$object->copies};
     }
     return if @points < 3;  # at least three points required for a convex hull
     
@@ -642,13 +644,18 @@ sub make_brim {
     my $grow_distance = $flow->scaled_width / 2;
     my @islands = (); # array of polygons
     foreach my $obj_idx (0 .. $#{$self->objects}) {
-        my $layer0 = $self->objects->[$obj_idx]->layers->[0];
+        my $object = $self->objects->[$obj_idx];
+        my $layer0 = $object->layers->[0];
         my @object_islands = (
             (map $_->contour, @{$layer0->slices}),
             (map { $_->isa('Slic3r::Polygon') ? $_ : $_->grow($grow_distance) } map @{$_->thin_walls}, @{$layer0->regions}),
-            (map $_->unpack->polyline->grow($grow_distance), map @{$_->support_fills->paths}, grep $_->support_fills, $layer0),
         );
-        foreach my $copy (@{$self->objects->[$obj_idx]->copies}) {
+        if (@{ $object->support_layers }) {
+            my $support_layer0 = $object->support_layers->[0];
+            push @object_islands,
+                (map $_->unpack->polyline->grow($grow_distance), map @{$_->support_fills->paths}, $support_layer0);
+        }
+        foreach my $copy (@{$object->copies}) {
             push @islands, map $_->clone->translate(@$copy), @object_islands;
         }
     }
