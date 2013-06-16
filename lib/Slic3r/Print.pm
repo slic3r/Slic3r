@@ -103,7 +103,8 @@ sub add_model {
     # optimization: if avoid_crossing_perimeters is enabled, split
     # this mesh into distinct objects so that we reduce the complexity
     # of the graphs 
-    $model->split_meshes if $Slic3r::Config->avoid_crossing_perimeters && !$Slic3r::Config->complete_objects;
+    # -- Disabling this one because there are too many legit objects having nested shells
+    ###$model->split_meshes if $Slic3r::Config->avoid_crossing_perimeters && !$Slic3r::Config->complete_objects;
     
     foreach my $object (@{ $model->objects }) {
         # we align object to origin before applying transformations
@@ -291,19 +292,15 @@ sub bounding_box {
         foreach my $copy (@{$object->copies}) {
             push @points,
                 [ $copy->[X], $copy->[Y] ],
-                [ $copy->[X] + $object->size->[X], $copy->[Y] ],
-                [ $copy->[X] + $object->size->[X], $copy->[Y] + $object->size->[Y] ],
-                [ $copy->[X], $copy->[Y] + $object->size->[Y] ];
+                [ $copy->[X] + $object->size->[X], $copy->[Y] + $object->size->[Y] ];
         }
     }
-    return Slic3r::Geometry::bounding_box(\@points);
+    return Slic3r::Geometry::BoundingBox->new_from_points(\@points);
 }
 
 sub size {
     my $self = shift;
-    
-    my @bb = $self->bounding_box;
-    return [ $bb[X2] - $bb[X1], $bb[Y2] - $bb[Y1] ];
+    return $self->bounding_box->size;
 }
 
 sub _simplify_slices {
@@ -749,10 +746,11 @@ sub write_gcode {
     }
     
     # calculate X,Y shift to center print around specified origin
-    my @print_bb = $self->bounding_box;
+    my $print_bb = $self->bounding_box;
+    my $print_size = $print_bb->size;
     my @shift = (
-        $Slic3r::Config->print_center->[X] - (unscale ($print_bb[X2] - $print_bb[X1]) / 2) - unscale $print_bb[X1],
-        $Slic3r::Config->print_center->[Y] - (unscale ($print_bb[Y2] - $print_bb[Y1]) / 2) - unscale $print_bb[Y1],
+        $Slic3r::Config->print_center->[X] - unscale($print_size->[X]/2 - $print_bb->x_min),
+        $Slic3r::Config->print_center->[Y] - unscale($print_size->[Y]/2 - $print_bb->y_min),
     );
     
     # initialize a motion planner for object-to-object travel moves

@@ -139,7 +139,7 @@ sub bounding_box {
     my $self = shift;
     
     # since the object is aligned to origin, bounding box coincides with size
-    return Slic3r::Geometry::bounding_box([ [0,0], $self->size ]);
+    return Slic3r::Geometry::BoundingBox->new_from_points([ [0,0], $self->size ]);
 }
 
 sub slice {
@@ -1087,8 +1087,7 @@ sub generate_support_material {
                     height          => undef,
                     flow_spacing    => $params->{flow_spacing},
                 ), @p;
-            }
-            
+            }            
             $result->{interface} = [ @paths ];
         }
         
