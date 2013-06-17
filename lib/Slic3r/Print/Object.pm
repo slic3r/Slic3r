@@ -1056,6 +1056,7 @@ sub generate_support_material {
                     Slic3r::Surface->new(expolygon => $expolygon),
                     density         => $interface_density,
                     flow_spacing    => $flow->spacing,
+                    complete        => 1,
                 );
                 my $params = shift @p;
                 
@@ -1080,6 +1081,7 @@ sub generate_support_material {
                     Slic3r::Surface->new(expolygon => $expolygon),
                     density         => $interface_density,
                     flow_spacing    => $flow->spacing,
+                    complete        => 1,
                 );
                 my $params = shift @p;
                 
@@ -1129,6 +1131,7 @@ sub generate_support_material {
                     Slic3r::Surface->new(expolygon => $expolygon),
                     density         => $density,
                     flow_spacing    => $flow_spacing,
+                    complete        => 1,
                 );
                 my $params = shift @p;
                 
