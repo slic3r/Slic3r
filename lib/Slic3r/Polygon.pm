@@ -56,16 +56,10 @@ sub remove_acute_vertices {
     bless $_, 'Slic3r::Point' for @$self;
 }
 
-sub point_on_segment {
-    my $self = shift;
-    my ($point) = @_;
-    return polygon_segment_having_point($self, $point);
-}
-
 sub encloses_point {
     my $self = shift;
     my ($point) = @_;
-    return point_in_polygon($point, $self);
+    return Boost::Geometry::Utils::point_covered_by_polygon($point, [$self]);
 }
 
 sub area {
