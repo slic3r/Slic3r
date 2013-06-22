@@ -7,20 +7,8 @@ use parent 'Slic3r::Polyline';
 
 use Slic3r::Geometry qw(polygon_lines polygon_remove_parallel_continuous_edges
     polygon_remove_acute_vertices polygon_segment_having_point point_in_polygon
-    X1 X2 Y1 Y2);
+    PI X1 X2 Y1 Y2);
 use Slic3r::Geometry::Clipper qw(JT_MITER);
-
-sub new_from_bounding_box {
-    my $class = shift;
-    my ($bounding_box) = @_;
-    
-    return $class->new([
-        [ $bounding_box->[X1], $bounding_box->[Y1] ],
-        [ $bounding_box->[X2], $bounding_box->[Y1] ],
-        [ $bounding_box->[X2], $bounding_box->[Y2] ],
-        [ $bounding_box->[X1], $bounding_box->[Y2] ],
-    ]);
-}
 
 sub lines {
     my $self = shift;
@@ -68,16 +56,10 @@ sub remove_acute_vertices {
     bless $_, 'Slic3r::Point' for @$self;
 }
 
-sub point_on_segment {
-    my $self = shift;
-    my ($point) = @_;
-    return polygon_segment_having_point($self, $point);
-}
-
 sub encloses_point {
     my $self = shift;
     my ($point) = @_;
-    return point_in_polygon($point, $self);
+    return Boost::Geometry::Utils::point_covered_by_polygon($point, [$self]);
 }
 
 sub area {
@@ -170,6 +152,15 @@ sub split_at {
 sub split_at_first_point {
     my $self = shift;
     return $self->split_at_index(0);
+}
+
+# for cw polygons this will return convex points!
+sub concave_points {
+    my $self = shift;
+    
+    return map $self->[$_],
+        grep Slic3r::Geometry::angle3points(@$self[$_, $_-1, $_+1]) < PI,
+        -1 .. ($#$self-1);
 }
 
 1;

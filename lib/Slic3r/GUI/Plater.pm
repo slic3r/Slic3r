@@ -7,7 +7,7 @@ use File::Basename qw(basename dirname);
 use List::Util qw(max sum first);
 use Math::Clipper qw(offset JT_ROUND);
 use Math::ConvexHull::MonotoneChain qw(convex_hull);
-use Slic3r::Geometry qw(X Y Z X1 Y1 X2 Y2 MIN MAX);
+use Slic3r::Geometry qw(X Y Z MIN MAX);
 use threads::shared qw(shared_clone);
 use Wx qw(:bitmap :brush :button :cursor :dialog :filedialog :font :keycode :icon :id :listctrl :misc :panel :pen :sizer :toolbar :window);
 use Wx::Event qw(EVT_BUTTON EVT_COMMAND EVT_KEY_DOWN EVT_LIST_ITEM_ACTIVATED EVT_LIST_ITEM_DESELECTED EVT_LIST_ITEM_SELECTED EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL EVT_CHOICE);
@@ -503,7 +503,7 @@ sub split_object {
     my $new_model = Slic3r::Model->new;
     
     foreach my $mesh (@new_meshes) {
-        my @extents = $mesh->extents;
+        my $bb = $mesh->bounding_box;
         my $model_object = $new_model->add_object(vertices => $mesh->vertices);
         $model_object->add_volume(facets => $mesh->facets);
         my $object = Slic3r::GUI::Plater::Object->new(
@@ -511,7 +511,7 @@ sub split_object {
             input_file              => $current_object->input_file,
             input_file_object_id    => undef,
             model_object            => $model_object,
-            instances               => [ map [$extents[X][MIN], $extents[Y][MIN]], 1..$current_copies_num ],
+            instances               => [ map $bb->min_point, 1..$current_copies_num ],
         );
         push @{ $self->{objects} }, $object;
         $self->object_loaded($#{ $self->{objects} }, no_arrange => 1);
@@ -765,7 +765,7 @@ sub recenter {
     return unless @{$self->{objects}};
     
     # calculate displacement needed to center the print
-    my @print_bb = Slic3r::Geometry::bounding_box([
+    my $print_bb = Slic3r::Geometry::BoundingBox->new_from_points([
         map {
             my $obj = $_;
             my $bb = $obj->transformed_bounding_box;
@@ -776,9 +776,10 @@ sub recenter {
     
     # $self->{shift} contains the offset in pixels to add to object instances in order to center them
     # it is expressed in upwards Y
+    my $print_size = $print_bb->size;
     $self->{shift} = [
-        $self->to_pixel(-$print_bb[X1]) + ($self->{canvas}->GetSize->GetWidth  - $self->to_pixel($print_bb[X2] - $print_bb[X1])) / 2,
-        $self->to_pixel(-$print_bb[Y1]) + ($self->{canvas}->GetSize->GetHeight - $self->to_pixel($print_bb[Y2] - $print_bb[Y1])) / 2,
+        $self->to_pixel(-$print_bb->x_min) + ($self->{canvas}->GetSize->GetWidth  - $self->to_pixel($print_size->[X])) / 2,
+        $self->to_pixel(-$print_bb->y_min) + ($self->{canvas}->GetSize->GetHeight - $self->to_pixel($print_size->[Y])) / 2,
     ];
 }
 

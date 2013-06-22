@@ -138,12 +138,18 @@ sub bounding_box {
     my $self = shift;
     
     # since the object is aligned to origin, bounding box coincides with size
-    return Slic3r::Geometry::bounding_box([ [0,0], $self->size ]);
+    return Slic3r::Geometry::BoundingBox->new_from_points([ [0,0], $self->size ]);
 }
 
 sub slice {
     my $self = shift;
     my %params = @_;
+    
+    # make sure all layers contain layer region objects for all regions
+    my $regions_count = $self->print->regions_count;
+    foreach my $layer (@{ $self->layers }) {
+        $layer->region($_) for 0 .. ($regions_count-1);
+    }
     
     # process facets
     for my $region_id (0 .. $#{$self->meshes}) {
@@ -152,8 +158,7 @@ sub slice {
         my $apply_lines = sub {
             my $lines = shift;
             foreach my $layer_id (keys %$lines) {
-                my $layerm = $self->layers->[$layer_id]->region($region_id);
-                push @{$layerm->lines}, @{$lines->{$layer_id}};
+                push @{$self->layers->[$layer_id]->regions->[$region_id]->lines}, @{$lines->{$layer_id}};
             }
         };
         Slic3r::parallelize(
@@ -192,9 +197,6 @@ sub slice {
     pop @{$self->layers} while @{$self->layers} && (!map @{$_->lines}, @{$self->layers->[-1]->regions});
     
     foreach my $layer (@{ $self->layers }) {
-        # make sure all layers contain layer region objects for all regions
-        $layer->region($_) for 0 .. ($self->print->regions_count-1);
-        
         Slic3r::debugf "Making surfaces for layer %d (slice z = %f):\n",
             $layer->id, unscale $layer->slice_z if $Slic3r::debug;
         
@@ -1038,7 +1040,7 @@ sub generate_support_material {
                         $_;
                     }
                     map $_->clip_with_expolygon($expolygon),
-                    ###map $_->clip_with_polygon($expolygon->bounding_box_polygon),  # currently disabled as a workaround for Boost failing at being idempotent
+                    ###map $_->clip_with_polygon($expolygon->bounding_box->polygon),  # currently disabled as a workaround for Boost failing at being idempotent
                     ($is_interface && @$support_interface_patterns)
                         ? @{$support_interface_patterns->[ $layer_id % @$support_interface_patterns ]}
                         : @{$support_patterns->[ $layer_id % @$support_patterns ]};

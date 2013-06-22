@@ -104,18 +104,16 @@ sub noncollapsing_offset_ex {
 sub encloses_point {
     my $self = shift;
     my ($point) = @_;
-    return $self->contour->encloses_point($point)
-        && (!grep($_->encloses_point($point), $self->holes)
-            || grep($_->point_on_segment($point), $self->holes));
+    return Boost::Geometry::Utils::point_covered_by_polygon($point, $self);
 }
 
 # A version of encloses_point for use when hole borders do not matter.
-# Useful because point_on_segment is slow
+# Useful because point_on_segment is probably slower (this was true
+# before the switch to Boost.Geometry, not sure about now)
 sub encloses_point_quick {
     my $self = shift;
     my ($point) = @_;
-    return $self->contour->encloses_point($point)
-        && !grep($_->encloses_point($point), $self->holes);
+    return Boost::Geometry::Utils::point_within_polygon($point, $self);
 }
 
 sub encloses_line {
@@ -130,30 +128,9 @@ sub encloses_line {
     }
 }
 
-sub point_on_segment {
-    my $self = shift;
-    my ($point) = @_;
-    for (@$self) {
-        my $line = $_->point_on_segment($point);
-        return $line if $line;
-    }
-    return undef;
-}
-
 sub bounding_box {
     my $self = shift;
-    return Slic3r::Geometry::bounding_box($self->contour);
-}
-
-sub bounding_box_polygon {
-    my $self = shift;
-    my @bb = $self->bounding_box;
-    return Slic3r::Polygon->new([
-        [ $bb[0], $bb[1] ],
-        [ $bb[2], $bb[1] ],
-        [ $bb[2], $bb[3] ],
-        [ $bb[0], $bb[3] ],
-    ]);
+    return $self->contour->bounding_box;
 }
 
 sub clip_line {
