@@ -113,11 +113,11 @@ sub p {
 sub is_solid {
     my $self = shift;
     my $type = $self->surface_type;
-    # S_TYPE_INTERNALBRIDGE is not solid because we can't merge it with other solid types
+    # S_TYPE_INTERNALBRIDGE and S_TYPE_INTERNALSUPPORT are not solid
+    # because we can't merge it with other solid types
     return $type == S_TYPE_TOP
         || $type == S_TYPE_BOTTOM
-        || $type == S_TYPE_INTERNALSOLID
-        || $type == S_TYPE_INTERNALSUPPORT;
+        || $type == S_TYPE_INTERNALSOLID;
 }
 
 sub is_bridge {
