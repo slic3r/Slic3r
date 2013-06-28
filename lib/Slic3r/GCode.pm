@@ -141,6 +141,25 @@ sub extrude_loop {
     $loop = $loop->unpack if $loop->isa('Slic3r::ExtrusionLoop::Packed');
     my $was_clockwise = $loop->polygon->make_counter_clockwise;
     
+    # find candidate starting points
+    # start looking for concave vertices not being overhangs
+    my @concave = $loop->polygon->concave_points;
+    my @candidates = grep Boost::Geometry::Utils::point_covered_by_multi_polygon($_, $self->_layer_overhangs),
+        @concave;
+    if (!@candidates) {
+        # if none, look for any concave vertex
+        @candidates = @concave;
+        if (!@candidates) {
+            # if none, look for any non-overhang vertex
+            @candidates = grep Boost::Geometry::Utils::point_covered_by_multi_polygon($_, $self->_layer_overhangs),
+                @{$loop->polygon};
+            if (!@candidates) {
+                # if none, all points are valid candidates
+                @candidates = @{$loop->polygon};
+            }
+        }
+    }
+    
     # find the point of the loop that is closest to the current extruder position
     # or randomize if requested
     my $last_pos = $self->last_pos;
@@ -148,10 +167,9 @@ sub extrude_loop {
         $last_pos = Slic3r::Point->new(scale $self->config->print_center->[X], scale $self->config->bed_size->[Y]);
         $last_pos->rotate(rand(2*PI), $self->config->print_center);
     }
-    my $start_index = $loop->nearest_point_index_to($last_pos);
     
     # split the loop at the starting point and make a path
-    my $extrusion_path = $loop->split_at_index($start_index);
+    my $extrusion_path = $loop->split_at(Slic3r::Geometry::nearest_point($last_pos, \@candidates));
     
     # clip the path to avoid the extruder to get exactly on the first point of the loop;
     # if polyline was shorter than the clipping distance we'd get a null polyline, so
@@ -172,8 +190,6 @@ sub extrude_loop {
             $extrusion_path->intersect_expolygons($self->_layer_overhangs);
         
         # reapply the nearest point search for starting point
-        # (TODO: choose the nearest point not on an overhang - make sure wipe and
-        # inwards move consider the new actual starting point)
         @paths = Slic3r::ExtrusionPath::Collection
             ->new(paths => [@paths])
             ->chained_path($last_pos, 1);
@@ -425,9 +441,16 @@ sub retract {
             $self->speed('travel');
             
             # subdivide the retraction
+            my $retracted = 0;
             for (1 .. $#$wipe_path) {
                 my $segment_length = $wipe_path->[$_-1]->distance_to($wipe_path->[$_]);
-                $gcode .= $self->G1($wipe_path->[$_], undef, $retract->[2] * ($segment_length / $total_wipe_length), $retract->[3] . ";_WIPE");
+                $retracted += my $e = $retract->[2] * ($segment_length / $total_wipe_length);
+                $gcode .= $self->G1($wipe_path->[$_], undef, $e, $retract->[3] . ";_WIPE");
+            }
+            if ($retracted > $retract->[2]) {
+                # if we retracted less than we had to, retract the remainder
+                # TODO: add regression test
+                $gcode .= $self->G1(undef, undef, $retract->[2] - $retracted, $comment);
             }
         } else {
             $self->speed('retract');
