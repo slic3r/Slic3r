@@ -1,7 +1,7 @@
 package Slic3r::Print::Object;
 use Moo;
 
-use List::Util qw(min sum first);
+use List::Util qw(min max sum first);
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Geometry qw(Z PI scale unscale deg2rad rad2deg scaled_epsilon chained_path_points);
 use Slic3r::Geometry::Clipper qw(diff diff_ex intersection intersection_ex union union_ex 
@@ -915,14 +915,16 @@ sub generate_support_material {
     }
     
     # determine layer height for any non-contact layer
-    my $support_material_height = $flow->nozzle_diameter * 0.75;
+    # we use max() to prevent many ultra-thin layers to be inserted in case
+    # layer_height > nozzle_diameter * 0.75
+    my $support_material_height = max($Slic3r::Config->layer_height, $flow->nozzle_diameter * 0.75);
     
     # generate additional layers according to such max height
     my @support_layers = @contact_z;
     for (my $i = $#support_layers; $i >= 0; $i--) {
         # enforce first layer height
         if (($i == 0 && $support_layers[$i] > $support_material_height + $Slic3r::Config->first_layer_height)
-            || ($support_layers[$i] - $support_layers[$i-1] > $support_material_height)) {
+            || ($support_layers[$i] - $support_layers[$i-1] > $support_material_height + Slic3r::Geometry::epsilon)) {
             splice @support_layers, $i, 0, ($support_layers[$i] - $support_material_height);
             $i++;
         }
