@@ -317,6 +317,7 @@ sub load_file {
             input_file              => $input_file,
             input_file_object_id    => $i,
             model_object            => $model->objects->[$i],
+            mesh_stats              => $model->objects->[$i]->mesh_stats,  # so that we can free model_object
             instances               => [
                 $model->objects->[$i]->instances
                     ? (map $_->offset, @{$model->objects->[$i]->instances})
@@ -888,7 +889,7 @@ sub repaint {
             
             # if sequential printing is enabled and we have more than one object
             if ($parent->{config}->complete_objects && (map @{$_->instances}, @{$parent->{objects}}) > 1) {
-            	my $convex_hull = Slic3r::Polygon->new(convex_hull([ map @{$_->contour}, @{$parent->{object_previews}->[-1][2]->expolygons} ]));
+            	my $convex_hull = Slic3r::Polygon->new(@{convex_hull([ map @{$_->contour}, @{$parent->{object_previews}->[-1][2]->expolygons} ])});
                 my ($clearance) = @{offset([$convex_hull], $parent->{config}->extruder_clearance_radius / 2 * $parent->{scaling_factor}, 100, JT_ROUND)};
                 $dc->SetPen($parent->{clearance_pen});
                 $dc->SetBrush($parent->{transparent_brush});
@@ -899,7 +900,7 @@ sub repaint {
     
     # draw skirt
     if (@{$parent->{object_previews}} && $parent->{config}->skirts) {
-        my $convex_hull = Slic3r::Polygon->new(convex_hull([ map @{$_->contour}, map @{$_->[2]->expolygons}, @{$parent->{object_previews}} ]));
+        my $convex_hull = Slic3r::Polygon->new(@{convex_hull([ map @{$_->contour}, map @{$_->[2]->expolygons}, @{$parent->{object_previews}} ])});
         ($convex_hull) = @{offset([$convex_hull], $parent->{config}->skirt_distance * $parent->{scaling_factor}, 100, JT_ROUND)};
         $dc->SetPen($parent->{skirt_pen});
         $dc->SetBrush($parent->{transparent_brush});
@@ -1068,6 +1069,7 @@ sub OnDropFiles {
 package Slic3r::GUI::Plater::Object;
 use Moo;
 
+use List::Util qw(first);
 use Math::ConvexHull::MonotoneChain qw();
 use Slic3r::Geometry qw(X Y Z MIN MAX deg2rad);
 
@@ -1084,6 +1086,7 @@ has 'thumbnail'             => (is => 'rw', trigger => \&_transform_thumbnail);
 has 'transformed_thumbnail' => (is => 'rw');
 has 'thumbnail_scaling_factor' => (is => 'rw', trigger => \&_transform_thumbnail);
 has 'layer_height_ranges'   => (is => 'rw', default => sub { [] }); # [ z_min, z_max, layer_height ]
+has 'mesh_stats'            => (is => 'rw');
 
 # statistics
 has 'facets'                => (is => 'rw');
@@ -1098,7 +1101,7 @@ sub _trigger_model_object {
 	    $self->bounding_box($self->model_object->bounding_box);
 	    
     	my $mesh = $self->model_object->mesh;
-        $self->convex_hull(Slic3r::Polygon->new(Math::ConvexHull::MonotoneChain::convex_hull($mesh->used_vertices)));
+        $self->convex_hull(Slic3r::Polygon->new(@{Math::ConvexHull::MonotoneChain::convex_hull($mesh->used_vertices)}));
 	    $self->facets(scalar @{$mesh->facets});
 	    $self->vertices(scalar @{$mesh->vertices});
 	    
@@ -1109,7 +1112,18 @@ sub _trigger_model_object {
 sub check_manifoldness {
 	my $self = shift;
 	
-	$self->is_manifold($self->get_model_object->check_manifoldness);
+	if ($self->mesh_stats) {
+	    if (first { $self->mesh_stats->{$_} > 0 } qw(degenerate_facets edges_fixed facets_removed facets_added facets_reversed backwards_edges)) {
+	        warn "Warning: the input file contains manifoldness errors. "
+	            . "Slic3r repaired it successfully by guessing what the correct shape should be, "
+	            . "but you might still want to inspect the G-code before printing.\n";
+	        $self->is_manifold(0);
+	    } else {
+	        $self->is_manifold(1);
+	    }
+	} else {
+    	$self->is_manifold($self->get_model_object->check_manifoldness);
+    }
 	return $self->is_manifold;
 }
 

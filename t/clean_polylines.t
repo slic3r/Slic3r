@@ -2,7 +2,7 @@ use Test::More;
 use strict;
 use warnings;
 
-plan tests => 7;
+plan tests => 10;
 
 BEGIN {
     use FindBin;
@@ -12,26 +12,26 @@ BEGIN {
 use Slic3r;
 
 {
-    my $polygon = Slic3r::Polygon->new([
+    my $polygon = Slic3r::Polygon->new(
         [5,0], [10,0], [15,0], [20,0], [20,10], [20,30], [0,0],
-    ]);
+    );
     
     $polygon->merge_continuous_lines;
     is scalar(@$polygon), 3, 'merge_continuous_lines';
 }
 
 {
-    my $polyline = Slic3r::Polyline->new([
+    my $polyline = Slic3r::Polyline->new(
         [0,0],[1,0],[2,0],[2,1],[2,2],[1,2],[0,2],[0,1],[0,0],
-    ]);
+    );
     $polyline = $polyline->simplify(1);
     is_deeply $polyline, [ [0, 0], [2, 0], [2, 2], [0, 2], [0, 0] ], 'Douglas-Peucker';
 }
 
 {
-    my $polyline = Slic3r::Polyline->new([
+    my $polyline = Slic3r::Polyline->new(
         [0,0],[0.5,0.5],[1,0],[1.25,-0.25],[1.5,.5],
-    ]);
+    );
     $polyline->scale(100);
     $polyline = $polyline->simplify(25);
     is_deeply $polyline, [ [0, 0], [50, 50], [125, -25], [150, 50] ], 'Douglas-Peucker';
@@ -69,7 +69,7 @@ use Slic3r;
         [197.307,292.831], [199.808,313.1906], [191.5298,315.0787], [187.3082,299.8172], [186.4201,295.3766], 
         [180.595,296.0487], [161.7854,297.4248], [156.8058,297.6214], [154.3395,317.8592],
     ];
-    my $polygon = Slic3r::Polygon->new($gear);
+    my $polygon = Slic3r::Polygon->new(@$gear);
     $polygon->merge_continuous_lines;
     note sprintf "original points: %d\nnew points: %d", scalar(@$gear), scalar(@$polygon);
     ok @$polygon < @$gear, 'gear was simplified using merge_continuous_lines';
@@ -79,6 +79,28 @@ use Slic3r;
     ok @simplified == 1, 'gear simplified to a single polygon';
     note sprintf "original points: %d\nnew points: %d", $num_points, scalar(@{$simplified[0]});
     ok @{$simplified[0]} < $num_points, 'gear was further simplified using Douglas-Peucker';
+    
+    my @simplified_ex = Slic3r::ExPolygon->new($polygon)->simplify(10);
+    is_deeply \@simplified_ex, [ \@simplified ], 'simplified polygon equals simplified expolygon';
+}
+
+{
+    my $square = Slic3r::Polygon->new(  # ccw
+        [100, 100],
+        [200, 100],
+        [200, 200],
+        [100, 200],
+    );
+    my $hole_in_square = Slic3r::Polygon->new(  # cw
+        [140, 140],
+        [140, 160],
+        [160, 160],
+        [160, 140],
+    );
+    my $expolygon = Slic3r::ExPolygon->new($square, $hole_in_square);
+    my @simplified = $hole_in_square->simplify;
+    is scalar(@simplified), 1, 'hole simplification returns one polygon';
+    ok $simplified[0]->is_counter_clockwise, 'hole simplification turns cw polygon into ccw polygon';
 }
 
 {
@@ -114,7 +136,7 @@ use Slic3r;
         [3368.3,7868.6],[3409.2,7889.5],[3553.8,7963.2],[3596,7981.4],
     ];
     
-    my $polygon = Slic3r::Polygon->new($circle);
+    my $polygon = Slic3r::Polygon->new(@$circle);
     $polygon->merge_continuous_lines;
     note sprintf "original points: %d\nnew points: %d", scalar(@$circle), scalar(@$polygon);
     ok @$polygon >= @$circle/3, 'circle was simplified using merge_continuous_lines';

@@ -2,6 +2,8 @@ package Slic3r::Point;
 use strict;
 use warnings;
 
+use Storable qw();
+
 sub new {
     my $class = shift;
     my $self;
@@ -19,6 +21,10 @@ sub new {
 }
 
 sub clone {
+    Storable::dclone($_[0])
+}
+
+sub threadsafe_clone {
     my $self = shift;
     return (ref $self)->new(@$self);
 }

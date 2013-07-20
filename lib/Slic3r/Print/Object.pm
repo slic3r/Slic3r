@@ -17,6 +17,7 @@ has 'layers'            => (is => 'rw', default => sub { [] });
 has 'support_layers'    => (is => 'rw', default => sub { [] });
 has 'layer_height_ranges' => (is => 'rw', default => sub { [] }); # [ z_min, z_max, layer_height ]
 has 'fill_maker'        => (is => 'lazy');
+has '_z_table'          => (is => 'lazy');
 
 sub BUILD {
     my $self = shift;
@@ -84,6 +85,11 @@ sub _build_fill_maker {
     return Slic3r::Fill->new(object => $self);
 }
 
+sub _build__z_table {
+    my $self = shift;
+    return Slic3r::Object::XS::ZTable->new([ map $_->slice_z, @{$self->layers} ]);
+}
+
 # This should be probably moved in Print.pm at the point where we sort Layer objects
 sub _trigger_copies {
     my $self = shift;
@@ -100,39 +106,7 @@ sub layer_count {
 
 sub get_layer_range {
     my $self = shift;
-    my ($min_z, $max_z) = @_;
-    
-    # $min_layer is the uppermost layer having slice_z <= $min_z
-    # $max_layer is the lowermost layer having slice_z >= $max_z
-    my ($min_layer, $max_layer);
-
-    my ($bottom, $top) = (0, $#{$self->layers});
-    while (1) {
-        my $mid = $bottom+int(($top - $bottom)/2);
-        if ($mid == $top || $mid == $bottom) {
-            $min_layer = $mid;
-            last;
-        }
-        if ($self->layers->[$mid]->slice_z >= $min_z) {
-            $top = $mid;
-        } else {
-            $bottom = $mid;
-        }
-    }
-    $top = $#{$self->layers};
-    while (1) {
-        my $mid = $bottom+int(($top - $bottom)/2);
-        if ($mid == $top || $mid == $bottom) {
-            $max_layer = $mid;
-            last;
-        }
-        if ($self->layers->[$mid]->slice_z < $max_z) {
-            $bottom = $mid;
-        } else {
-            $top = $mid;
-        }
-    }
-    return ($min_layer, $max_layer);
+    return @{ $self->_z_table->get_range(@_) };
 }
 
 sub bounding_box {
@@ -156,10 +130,12 @@ sub slice {
     for my $region_id (0 .. $#{$self->meshes}) {
         my $mesh = $self->meshes->[$region_id];  # ignore undef meshes
         
+        my %lines = ();  # layer_id => [ lines ]
         my $apply_lines = sub {
             my $lines = shift;
             foreach my $layer_id (keys %$lines) {
-                push @{$self->layers->[$layer_id]->regions->[$region_id]->lines}, @{$lines->{$layer_id}};
+                $lines{$layer_id} ||= [];
+                push @{$lines{$layer_id}}, @{$lines->{$layer_id}};
             }
         };
         Slic3r::parallelize(
@@ -188,36 +164,31 @@ sub slice {
             },
         );
         
-        $self->meshes->[$region_id] = undef;  # free memory
+        # free memory
+        undef $mesh;
+        undef $self->meshes->[$region_id];
+        
+        foreach my $layer (@{ $self->layers }) {
+            Slic3r::debugf "Making surfaces for layer %d (slice z = %f):\n",
+                $layer->id, unscale $layer->slice_z if $Slic3r::debug;
+            
+            my $layerm = $layer->regions->[$region_id];
+            my ($slicing_errors, $loops) = Slic3r::TriangleMesh::make_loops($lines{$layer->id});
+            $layer->slicing_errors(1) if $slicing_errors;
+            $layerm->make_surfaces($loops);
+            
+            # free memory
+            delete $lines{$layer->id};
+        }
     }
     
     # free memory
     $self->meshes(undef);
     
     # remove last layer(s) if empty
-    pop @{$self->layers} while @{$self->layers} && (!map @{$_->lines}, @{$self->layers->[-1]->regions});
+    pop @{$self->layers} while @{$self->layers} && (!map @{$_->slices}, @{$self->layers->[-1]->regions});
     
     foreach my $layer (@{ $self->layers }) {
-        Slic3r::debugf "Making surfaces for layer %d (slice z = %f):\n",
-            $layer->id, unscale $layer->slice_z if $Slic3r::debug;
-        
-        # layer currently has many lines representing intersections of
-        # model facets with the layer plane. there may also be lines
-        # that we need to ignore (for example, when two non-horizontal
-        # facets share a common edge on our plane, we get a single line;
-        # however that line has no meaning for our layer as it's enclosed
-        # inside a closed polyline)
-        
-        # build surfaces from sparse lines
-        foreach my $layerm (@{$layer->regions}) {
-            my ($slicing_errors, $loops) = Slic3r::TriangleMesh::make_loops($layerm->lines);
-            $layer->slicing_errors(1) if $slicing_errors;
-            $layerm->make_surfaces($loops);
-            
-            # free memory
-            $layerm->lines(undef);
-        }
-        
         # merge all regions' slices to get islands
         $layer->make_slices;
     }

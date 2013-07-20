@@ -9,6 +9,7 @@ use List::Util qw(first);
 use Math::Geometry::Voronoi;
 use Slic3r::Geometry qw(X Y A B point_in_polygon same_line epsilon);
 use Slic3r::Geometry::Clipper qw(union_ex JT_MITER);
+use Storable qw();
 
 # the constructor accepts an array of polygons 
 # or a Math::Clipper ExPolygon (hashref)
@@ -17,19 +18,23 @@ sub new {
     my $self;
     if (@_ == 1 && ref $_[0] eq 'HASH') {
         $self = [
-            Slic3r::Polygon->new($_[0]{outer}),
-            map Slic3r::Polygon->new($_), @{$_[0]{holes}},
+            Slic3r::Polygon->new(@{$_[0]{outer}}),
+            map Slic3r::Polygon->new(@$_), @{$_[0]{holes}},
         ];
     } else {
-        $self = [ map Slic3r::Polygon->new($_), @_ ];
+        $self = [ map Slic3r::Polygon->new(@$_), @_ ];
     }
     bless $self, $class;
     $self;
 }
 
 sub clone {
+    Storable::dclone($_[0])
+}
+
+sub threadsafe_clone {
     my $self = shift;
-    return (ref $self)->new(map $_->clone, @$self);
+    return (ref $self)->new(map $_->threadsafe_clone, @$self);
 }
 
 sub contour {
@@ -140,15 +145,21 @@ sub clip_line {
     return Boost::Geometry::Utils::polygon_multi_linestring_intersection($self, [$line]);
 }
 
-sub simplify {
+sub simplify_as_polygons {
     my $self = shift;
     my ($tolerance) = @_;
     
     # it would be nice to have a multilinestring_simplify method in B::G::U
-    my @simplified = Slic3r::Geometry::Clipper::simplify_polygons(
+    return Slic3r::Geometry::Clipper::simplify_polygons(
         [ map Boost::Geometry::Utils::linestring_simplify($_, $tolerance), @$self ],
     );
-    return @{ Slic3r::Geometry::Clipper::union_ex([ @simplified ]) };
+}
+
+sub simplify {
+    my $self = shift;
+    my ($tolerance) = @_;
+    
+    return @{ Slic3r::Geometry::Clipper::union_ex([ $self->simplify_as_polygons($tolerance) ]) };
 }
 
 sub scale {
@@ -287,7 +298,7 @@ sub medial_axis {
             next if @$polyline == 2;
             push @result, Slic3r::Polygon->new(@$polyline[0..$#$polyline-1]);
         } else {
-            push @result, Slic3r::Polyline->new($polyline);
+            push @result, Slic3r::Polyline->new(@$polyline);
         }
     }
     
@@ -303,7 +314,7 @@ has 'expolygons' => (is => 'ro', default => sub { [] });
 sub clone {
     my $self = shift;
     return (ref $self)->new(
-        expolygons => [ map $_->clone, @{$self->expolygons} ],
+        expolygons => [ map $_->threadsafe_clone, @{$self->expolygons} ],
     );
 }
 

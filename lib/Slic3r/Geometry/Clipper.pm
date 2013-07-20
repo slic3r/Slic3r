@@ -83,7 +83,7 @@ sub diff {
     $clipper->add_subject_polygons($subject);
     $clipper->add_clip_polygons($safety_offset ? safety_offset($clip) : $clip);
     return [
-        map Slic3r::Polygon->new($_),
+        map Slic3r::Polygon->new(@$_),
             @{ $clipper->execute(CT_DIFFERENCE, PFT_NONZERO, PFT_NONZERO) },
     ];
 }
@@ -137,7 +137,7 @@ sub intersection {
     $clipper->add_subject_polygons($subject);
     $clipper->add_clip_polygons($safety_offset ? safety_offset($clip) : $clip);
     return [
-        map Slic3r::Polygon->new($_),
+        map Slic3r::Polygon->new(@$_),
             @{ $clipper->execute(CT_INTERSECTION, $jointype, $jointype) },
     ];
 }
@@ -161,12 +161,14 @@ sub collapse_ex {
 
 sub simplify_polygon {
     my ($polygon, $pft) = @_;
-    return @{ Math::Clipper::simplify_polygon($polygon, $pft // PFT_NONZERO) };
+    return map Slic3r::Polygon->new(@$_),
+        @{ Math::Clipper::simplify_polygon($polygon, $pft // PFT_NONZERO) };
 }
 
 sub simplify_polygons {
     my ($polygons, $pft) = @_;
-    return @{ Math::Clipper::simplify_polygons($polygons, $pft // PFT_NONZERO) };
+    return map Slic3r::Polygon->new(@$_),
+        @{ Math::Clipper::simplify_polygons($polygons, $pft // PFT_NONZERO) };
 }
 
 sub traverse_pt {

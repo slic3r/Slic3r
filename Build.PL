@@ -28,9 +28,15 @@ my %recommends = qw(
     Growl::GNTP                     0.15
     XML::SAX::ExpatXS               0
 );
-
-# removed:
-# Wx 0.9901
+if (defined $ARGV[0] && $ARGV[0] eq '--gui') {
+    %prereqs = qw(
+    Wx                              0.9901
+    );
+    %recommends = qw(
+    Wx::GLCanvas                    0
+    OpenGL                          0
+    );
+}
 
 my $missing_prereqs = 0;
 if ($ENV{SLIC3R_NO_AUTO}) {
@@ -80,12 +86,20 @@ If it is installed in a non-standard location you can do:
 EOF
         if !$cpanm;
     
+    # make sure our cpanm is updated (old ones don't support the ~ syntax)
+    system $cpanm, 'App::cpanminus';
+    
     my %modules = (%prereqs, %recommends);
     foreach my $module (sort keys %modules) {
         my $version = $modules{$module};
         my $res = system $cpanm, "$module~$version";
         $missing_prereqs = 1 if $res != 0 && exists $prereqs{$module};
     }
+    
+    # temporarily require this dev version until this upstream bug
+    # is resolved: https://rt.cpan.org/Ticket/Display.html?id=86367
+    system $cpanm, 'SMUELLER/ExtUtils-ParseXS-3.18_04.tar.gz';
+    system $cpanm, '--reinstall', './xs';
 }
 
 if (eval "use App::Prove; 1" && !$missing_prereqs) {
