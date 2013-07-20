@@ -17,7 +17,7 @@ has 'layers'            => (is => 'rw', default => sub { [] });
 has 'support_layers'    => (is => 'rw', default => sub { [] });
 has 'layer_height_ranges' => (is => 'rw', default => sub { [] }); # [ z_min, z_max, layer_height ]
 has 'fill_maker'        => (is => 'lazy');
-has '_z_table'          => (is => 'lazy');
+has '_slice_z_table'    => (is => 'lazy');
 
 sub BUILD {
     my $self = shift;
@@ -85,7 +85,7 @@ sub _build_fill_maker {
     return Slic3r::Fill->new(object => $self);
 }
 
-sub _build__z_table {
+sub _build__slice_z_table {
     my $self = shift;
     return Slic3r::Object::XS::ZTable->new([ map $_->slice_z, @{$self->layers} ]);
 }
@@ -106,7 +106,13 @@ sub layer_count {
 
 sub get_layer_range {
     my $self = shift;
-    return @{ $self->_z_table->get_range(@_) };
+    my ($min_z, $max_z) = @_;
+    
+    my $min_layer = $self->_slice_z_table->lower_bound($min_z); # first layer whose slice_z is >= $min_z
+    return (
+        $min_layer,
+        $self->_slice_z_table->upper_bound($max_z, $min_layer)-1, # last layer whose slice_z is <= $max_z
+    );
 }
 
 sub bounding_box {
