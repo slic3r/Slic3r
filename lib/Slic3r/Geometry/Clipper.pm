@@ -94,7 +94,7 @@ sub union {
     $clipper->clear;
     $clipper->add_subject_polygons($safety_offset ? safety_offset($polygons) : $polygons);
     return [
-        map Slic3r::Polygon->new($_),
+        map Slic3r::Polygon->new(@$_),
             @{ $clipper->execute(CT_UNION, $jointype, $jointype) },
     ];
 }

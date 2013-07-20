@@ -786,22 +786,25 @@ sub combine_infill {
         }
     }
 }
-my $generated = 0;
+
 sub generate_support_material {
     my $self = shift;
     return if $self->layer_count < 2;
-    return if $generated;  # TODO: ugly temporary hack
-    $generated = 1;
     
+    # how much we extend support around the actual contact area
     my $margin      = scale 5;
+    
+    # increment used to reach $margin in steps to avoid trespassing thin objects
     my $margin_step = scale 1;
-    my $keep_margin = scale 3;
+    
+    # if user specified a custom angle threshold, convert it to radians
     my $threshold_rad;
     if ($Slic3r::Config->support_material_threshold) {
         $threshold_rad = deg2rad($Slic3r::Config->support_material_threshold + 1);  # +1 makes the threshold inclusive
         Slic3r::debugf "Threshold angle = %d°\n", rad2deg($threshold_rad);
     }
     
+    # shape of contact area
     # Move down?
     my $flow            = $self->print->support_material_flow;
     my $circle_distance = 5 * $flow->scaled_width;
@@ -811,9 +814,6 @@ sub generate_support_material {
         my $r = 1.5 * $flow->scaled_width;
         $circle = Slic3r::Polygon->new([ map [ $r * cos $_, $r * sin $_ ], (5*PI/3, 4*PI/3, PI, 2*PI/3, PI/3, 0) ]);
     }
-    my $pattern_spacing = ($Slic3r::Config->support_material_spacing > $flow->spacing)
-        ? $Slic3r::Config->support_material_spacing
-        : $flow->spacing;
     
     # determine contact areas
     my @contact_z = ();
@@ -847,6 +847,8 @@ sub generate_support_material {
                 );
                 # $diff now contains the ring or stripe comprised between the boundary of 
                 # lower slices and the centerline of the last perimeter in this overhanging layer.
+                # Void $diff means that there's no upper perimeter whose centerline is
+                # outside the lower slice boundary, thus no overhang
             }
             
             next if !@$diff;
@@ -1004,7 +1006,7 @@ sub generate_support_material {
             
             # clip such loops to the side oriented towards the object
             @loops = @{ Boost::Geometry::Utils::multi_polygon_multi_linestring_intersection(
-                [ offset_ex([ map @$_, @{$overhang{$layer_id}} ], +$keep_margin) ],
+                [ offset_ex([ map @$_, @{$overhang{$layer_id}} ], +$margin) ],
                 [ map Slic3r::Polygon->new($_)->split_at_first_point, @loops ],
             ) };
             
