@@ -18,6 +18,7 @@ has 'support_layers'    => (is => 'rw', default => sub { [] });
 has 'layer_height_ranges' => (is => 'rw', default => sub { [] }); # [ z_min, z_max, layer_height ]
 has 'fill_maker'        => (is => 'lazy');
 has '_slice_z_table'    => (is => 'lazy');
+has '_print_z_table'    => (is => 'lazy');
 
 sub BUILD {
     my $self = shift;
@@ -88,6 +89,11 @@ sub _build_fill_maker {
 sub _build__slice_z_table {
     my $self = shift;
     return Slic3r::Object::XS::ZTable->new([ map $_->slice_z, @{$self->layers} ]);
+}
+
+sub _build__print_z_table {
+    my $self = shift;
+    return Slic3r::Object::XS::ZTable->new([ map $_->print_z, @{$self->layers} ]);
 }
 
 # This should be probably moved in Print.pm at the point where we sort Layer objects
