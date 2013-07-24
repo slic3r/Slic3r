@@ -19,6 +19,10 @@ our $have_threads;
 BEGIN {
     use Config;
     $have_threads = $Config{useithreads} && eval "use threads; use threads::shared; use Thread::Queue; 1";
+    
+    ### temporarily disable threads if using the broken Moo version
+    use Moo;
+    $have_threads = 0 if $Moo::VERSION == 1.003000;
 }
 
 warn "Running Slic3r under Perl >= 5.16 is not supported nor recommended\n"
@@ -86,7 +90,12 @@ sub parallelize {
         my $q = Thread::Queue->new;
         $q->enqueue(@items, (map undef, 1..$Config->threads));
         
-        my $thread_cb = sub { $params{thread_cb}->($q) };
+        my $thread_cb = sub {
+            my $result = $params{thread_cb}->($q);
+            Slic3r::thread_cleanup();
+            return $result;
+        };
+            
         @_ = ();
         foreach my $th (map threads->create($thread_cb), 1..$Config->threads) {
             $params{collect_cb}->($th->join);
@@ -94,6 +103,18 @@ sub parallelize {
     } else {
         $params{no_threads_cb}->();
     }
+}
+
+# call this at the very end of each thread (except the main one)
+# so that it does not try to free existing objects.
+# at that stage, existing objects are only those that we 
+# inherited at the thread creation (thus shared) and those 
+# that we are returning: destruction will be handled by the
+# main thread in both cases.
+sub thread_cleanup {
+    # prevent destruction of shared objects
+    no warnings 'redefine';
+    *Slic3r::Object::XS::ZTable::DESTROY    = sub {};
 }
 
 sub encode_path {
