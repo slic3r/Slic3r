@@ -819,13 +819,13 @@ sub generate_support_material {
     }
     
     # shape of contact area
-    # Move down?
+    my $contact_loops = 1;
     my $circle_distance = 5 * $flow->scaled_width;
     my $circle;
     {
         # TODO: make sure teeth between circles are compatible with support material flow
         my $r = 1.5 * $flow->scaled_width;
-        $circle = Slic3r::Polygon->new([ map [ $r * cos $_, $r * sin $_ ], (5*PI/3, 4*PI/3, PI, 2*PI/3, PI/3, 0) ]);
+        $circle = Slic3r::Polygon->new(map [ $r * cos $_, $r * sin $_ ], (5*PI/3, 4*PI/3, PI, 2*PI/3, PI/3, 0));
     }
     
     # determine contact areas
@@ -1009,72 +1009,51 @@ sub generate_support_material {
         $support{$layer_id}     ||= [];
         
         # contact
-        if (0 && @{$contact{$layer_id}}) {
-            # remove contact areas from interface areas of this layer
-            $interface{$layer_id} = diff(
-                $interface{$layer_id},
-                $contact{$layer_id},
-            );
+        if ((my $contact = $contact{$support_layers[$layer_id]}) && $contact_loops > 0) {
+            my $overhang = $overhang{$support_layers[$layer_id]};
+            $contact = [ grep $_->is_counter_clockwise, @$contact ];
             
             # find centerline of the external loop of the contours
-            my @external_loops = offset($contact{$layer_id}, -$flow->scaled_width/2);
+            my @external_loops = offset($contact, -$flow->scaled_width/2);
             
             # apply a pattern to the loop
-            my @loops;
+            my @loops0;
             {
                 my @positions = map Slic3r::Polygon->new(@$_)->split_at_first_point->regular_points($circle_distance), @external_loops;
-                @loops = @{diff(
+                @loops0 = @{diff(
                     [ @external_loops ],
                     [ map $circle->clone->translate(@$_), @positions ],
                 )};
             }
             
-            # make a second loop
-            push @loops, offset(
-                [ offset([ @loops ], -1.5*$flow->scaled_spacing) ], 
-                +0.5*$flow->scaled_spacing,
-            );
+            # make more loops
+            my @loops = @loops0;
+            for my $i (2..$contact_loops) {
+                my $d = ($i-1) * $flow->scaled_spacing;
+                push @loops, offset2(\@loops0, -$d -0.5*$flow->scaled_spacing, +0.5*$flow->scaled_spacing);
+            }
             
             # clip such loops to the side oriented towards the object
-            @loops = @{ Boost::Geometry::Utils::multi_polygon_multi_linestring_intersection(
-                [ offset_ex([ map @$_, @{$overhang{$layer_id}} ], +$margin) ],
-                [ map Slic3r::Polygon->new(@$_)->split_at_first_point, @loops ],
-            ) };
+            @loops = map Slic3r::Polyline->new(@$_),
+                @{ Boost::Geometry::Utils::multi_polygon_multi_linestring_intersection(
+                    [ offset_ex([ map @$_, @$overhang ], +scale 3) ],
+                    [ map Slic3r::Polygon->new(@$_)->split_at_first_point, @loops ],
+                ) };
+            
+            # subtract loops from the contact area to detect the remaining part
+            $interface{$layer_id} = diff(
+                $interface{$layer_id},
+                [ map $_->grow($flow->scaled_width), @loops ],
+            );
             
             # transform loops into ExtrusionPath objects
             @loops = map Slic3r::ExtrusionPath->pack(
-                polyline        => Slic3r::Polyline->new(@$_),
+                polyline        => $_,
                 role            => EXTR_ROLE_SUPPORTMATERIAL,
                 flow_spacing    => $flow->spacing,
             ), @loops;
             
-            # subtract such paths from the contact area to detect the remaining part
-            my $to_infill = diff_ex(
-                [ @external_loops ],
-                [ map $_->unpack->polyline->grow($flow->scaled_width), @loops ],
-            );
-            
-            # fill the interior
-            $fillers{interface}->angle($interface_angle);
-            
-            my @paths = ();
-            foreach my $expolygon (@$to_infill) {
-                my @p = $fillers{interface}->fill_surface(
-                    Slic3r::Surface->new(expolygon => $expolygon),
-                    density         => $interface_density,
-                    flow_spacing    => $flow->spacing,
-                    complete        => 1,
-                );
-                my $params = shift @p;
-                
-                push @paths, map Slic3r::ExtrusionPath->new(
-                    polyline        => Slic3r::Polyline->new(@$_),
-                    role            => EXTR_ROLE_SUPPORTMATERIAL,
-                    flow_spacing    => $params->{flow_spacing},
-                ), @p;
-            }
-            
-            $result->{contact} = [ @loops, @paths ];
+            $result->{contact} = [ @loops ];
         }
         
         # interface
@@ -1101,7 +1080,7 @@ sub generate_support_material {
                 );
                 my $params = shift @p;
                 
-                push @paths, map Slic3r::ExtrusionPath->new(
+                push @paths, map Slic3r::ExtrusionPath->pack(
                     polyline        => Slic3r::Polyline->new(@$_),
                     role            => EXTR_ROLE_SUPPORTMATERIAL,
                     height          => undef,
@@ -1131,7 +1110,7 @@ sub generate_support_material {
             } else {
                 # draw a perimeter all around support infill
                 # TODO: use brim ordering algorithm
-                push @paths, map Slic3r::ExtrusionPath->new(
+                push @paths, map Slic3r::ExtrusionPath->pack(
                     polyline        => $_->split_at_first_point,
                     role            => EXTR_ROLE_SUPPORTMATERIAL,
                     height          => undef,
@@ -1151,7 +1130,7 @@ sub generate_support_material {
                 );
                 my $params = shift @p;
                 
-                push @paths, map Slic3r::ExtrusionPath->new(
+                push @paths, map Slic3r::ExtrusionPath->pack(
                     polyline        => Slic3r::Polyline->new(@$_),
                     role            => EXTR_ROLE_SUPPORTMATERIAL,
                     height          => undef,
