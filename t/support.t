@@ -1,4 +1,4 @@
-use Test::More tests => 10;
+use Test::More tests => 13;
 use strict;
 use warnings;
 
@@ -7,7 +7,9 @@ BEGIN {
     use lib "$FindBin::Bin/../lib";
 }
 
+use List::Util qw(first);
 use Slic3r;
+use Slic3r::Geometry qw(epsilon);
 use Slic3r::Test;
 
 {
@@ -22,8 +24,19 @@ use Slic3r::Test;
             'first layer height is honored';
         is scalar(grep { $support_layers[$_]-$support_layers[$_-1] <= 0 } 1..$#support_layers), 0,
             'no null or negative support layers';
-        is scalar(grep { $support_layers[$_]-$support_layers[$_-1] > $flow->nozzle_diameter } 1..$#support_layers), 0,
+        is scalar(grep { $support_layers[$_]-$support_layers[$_-1] > $flow->nozzle_diameter + epsilon } 1..$#support_layers), 0,
             'no layers thicker than nozzle diameter';
+        
+        my $wrong_top_spacing = 0;
+        foreach my $top_z (@top_z) {
+            # find layer index of this top surface
+            my $layer_id = first { abs($support_layers[$_] - $top_z) < epsilon } 0..$#support_layers;
+            
+            # check that first support layer above this top surface is spaced with nozzle diameter
+            $wrong_top_spacing = 1
+                if ($support_layers[$layer_id+1] - $support_layers[$layer_id]) != $flow->nozzle_diameter;
+        }
+        ok !$wrong_top_spacing, 'layers above top surfaces are spaced correctly';
     };
     
     $config->set('layer_height', 0.2);

@@ -1177,12 +1177,16 @@ sub generate_support_material {
 sub _compute_support_layers {
     my ($contact_z, $top_z, $config, $flow) = @_;
     
+    # quick table to check whether a given Z is a top surface
+    my %top = map { $_ => 1 } @$top_z;
+    
     # determine layer height for any non-contact layer
     # we use max() to prevent many ultra-thin layers to be inserted in case
     # layer_height > nozzle_diameter * 0.75
     my $support_material_height = max($config->layer_height, $flow->nozzle_diameter * 0.75);
     
-    my @support_layers = sort { $a <=> $b } @$contact_z, @$top_z;
+    my @support_layers = sort { $a <=> $b } @$contact_z, @$top_z,
+        (map { $_ + $flow->nozzle_diameter } @$top_z);
     
     # enforce first layer height
     my $first_layer_height = $config->get_value('first_layer_height');
@@ -1190,16 +1194,21 @@ sub _compute_support_layers {
     unshift @support_layers, $first_layer_height;
     
     for (my $i = $#support_layers; $i >= 0; $i--) {
+        my $target_height = $support_material_height;
+        if ($i > 0 && $top{ $support_layers[$i-1] }) {
+            $target_height = $flow->nozzle_diameter;
+        }
+        
         # enforce first layer height
-        if (($i == 0 && $support_layers[$i] > $support_material_height + $first_layer_height)
-            || ($support_layers[$i] - $support_layers[$i-1] > $support_material_height + Slic3r::Geometry::epsilon)) {
-            splice @support_layers, $i, 0, ($support_layers[$i] - $support_material_height);
+        if (($i == 0 && $support_layers[$i] > $target_height + $first_layer_height)
+            || ($support_layers[$i] - $support_layers[$i-1] > $target_height + Slic3r::Geometry::epsilon)) {
+            splice @support_layers, $i, 0, ($support_layers[$i] - $target_height);
             $i++;
         }
     }
     
     # round layer Z because we get many
-    @support_layers = map { sprintf "%.2f", $_ } @support_layers;
+    @support_layers = map { 1 * sprintf "%.2f", $_ } @support_layers;
     
     # remove duplicates
     {
