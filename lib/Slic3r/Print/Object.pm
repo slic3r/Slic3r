@@ -1002,19 +1002,27 @@ sub generate_support_material {
     
     my $process_layer = sub {
         my ($layer_id) = @_;
-        my $layer = $self->support_layers->[$layer_id];
-        
         my $result = { interface => [], support => [] };
         
+        $contact{$layer_id}     ||= [];
+        $interface{$layer_id}   ||= [];
+        $support{$layer_id}     ||= [];
+        
         # contact
-        if (0 && $contact{$layer_id} && @{$contact{$layer_id}}) {
+        if (0 && @{$contact{$layer_id}}) {
+            # remove contact areas from interface areas of this layer
+            $interface{$layer_id} = diff(
+                $interface{$layer_id},
+                $contact{$layer_id},
+            );
+            
             # find centerline of the external loop of the contours
-            my @external_loops = offset([ map @$_, @{$contact{$layer_id}} ], -$flow->scaled_width/2);
+            my @external_loops = offset($contact{$layer_id}, -$flow->scaled_width/2);
             
             # apply a pattern to the loop
             my @loops;
             {
-                my @positions = map Slic3r::Polygon->new($_)->split_at_first_point->regular_points($circle_distance), @external_loops;
+                my @positions = map Slic3r::Polygon->new(@$_)->split_at_first_point->regular_points($circle_distance), @external_loops;
                 @loops = @{diff(
                     [ @external_loops ],
                     [ map $circle->clone->translate(@$_), @positions ],
@@ -1030,14 +1038,13 @@ sub generate_support_material {
             # clip such loops to the side oriented towards the object
             @loops = @{ Boost::Geometry::Utils::multi_polygon_multi_linestring_intersection(
                 [ offset_ex([ map @$_, @{$overhang{$layer_id}} ], +$margin) ],
-                [ map Slic3r::Polygon->new($_)->split_at_first_point, @loops ],
+                [ map Slic3r::Polygon->new(@$_)->split_at_first_point, @loops ],
             ) };
             
             # transform loops into ExtrusionPath objects
             @loops = map Slic3r::ExtrusionPath->pack(
                 polyline        => Slic3r::Polyline->new(@$_),
                 role            => EXTR_ROLE_SUPPORTMATERIAL,
-                height          => $layer->support_material_contact_height,
                 flow_spacing    => $flow->spacing,
             ), @loops;
             
@@ -1063,7 +1070,6 @@ sub generate_support_material {
                 push @paths, map Slic3r::ExtrusionPath->new(
                     polyline        => Slic3r::Polyline->new(@$_),
                     role            => EXTR_ROLE_SUPPORTMATERIAL,
-                    height          => $layer->support_material_contact_height,
                     flow_spacing    => $params->{flow_spacing},
                 ), @p;
             }
@@ -1072,8 +1078,18 @@ sub generate_support_material {
         }
         
         # interface
-        if ($interface{$layer_id}) {
+        if (@{$interface{$layer_id}}) {
             $fillers{interface}->angle($interface_angle);
+            
+            # steal some space from support
+            $interface{$layer_id} = intersection(
+                [ offset($interface{$layer_id}, scale 3) ],
+                [ @{$interface{$layer_id}}, @{$support{$layer_id}} ],
+            );
+            $support{$layer_id} = diff(
+                $support{$layer_id},
+                $interface{$layer_id},
+            );
             
             my @paths = ();
             foreach my $expolygon (offset_ex($interface{$layer_id}, -$flow->scaled_width/2)) {
@@ -1096,7 +1112,7 @@ sub generate_support_material {
         }
         
         # support or flange
-        if ($support{$layer_id}) {
+        if (@{$support{$layer_id}}) {
             my $filler = $fillers{support};
             $filler->angle($angles[ ($layer_id) % @angles ]);
             my $density         = $support_density;
