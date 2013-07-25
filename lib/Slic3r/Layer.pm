@@ -70,6 +70,6 @@ extends 'Slic3r::Layer';
 # ordered collection of extrusion paths to fill surfaces for support material
 has 'support_islands'           => (is => 'rw');
 has 'support_fills'             => (is => 'rw');
-has 'support_contact_fills'     => (is => 'rw');
+has 'support_interface_fills'   => (is => 'rw');
 
 1;

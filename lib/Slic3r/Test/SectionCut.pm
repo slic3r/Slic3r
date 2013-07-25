@@ -58,7 +58,7 @@ sub export_svg {
     );
     
     $group->(
-        filter => sub { $_[0]->isa('Slic3r::Layer::Support') ? ($_[0]->support_fills, $_[0]->support_contact_fills) : () },
+        filter => sub { $_[0]->isa('Slic3r::Layer::Support') ? ($_[0]->support_fills, $_[0]->support_interface_fills) : () },
         style  => {
             'stroke-width'  => 1,
             'stroke'        => '#444444',

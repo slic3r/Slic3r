@@ -58,6 +58,7 @@ use Slic3r::Test;
     $config->set('brim_width',  6);
     $config->set('skirts', 0);
     $config->set('support_material_extruder', 2);
+    $config->set('support_material_interface_extruder', 2);
     $config->set('layer_height', 0.4);
     $config->set('first_layer_height', '100%');
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);

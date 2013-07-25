@@ -1002,7 +1002,7 @@ sub generate_support_material {
     
     my $process_layer = sub {
         my ($layer_id) = @_;
-        my $result = { interface => [], support => [] };
+        my $result = { contact => [], interface => [], support => [] };
         
         $contact{$layer_id}     ||= [];
         $interface{$layer_id}   ||= [];
@@ -1153,8 +1153,13 @@ sub generate_support_material {
     my $apply = sub {
         my ($layer_id, $result) = @_;
         my $layer = $self->support_layers->[$layer_id];
-        $layer->support_contact_fills(Slic3r::ExtrusionPath::Collection->new(paths => $result->{contact})) if $result->{contact};
-        $layer->support_fills(Slic3r::ExtrusionPath::Collection->new(paths => [ @{$result->{interface}}, @{$result->{support}} ]));
+        
+        my $interface_collection = Slic3r::ExtrusionPath::Collection->new(paths => [ @{$result->{contact}}, @{$result->{interface}} ]);
+        $layer->support_interface_fills($interface_collection) if @{$interface_collection->paths} > 0;
+        
+        my $support_collection = Slic3r::ExtrusionPath::Collection->new(paths => $result->{support});
+        $layer->support_fills($support_collection) if @{$support_collection->paths} > 0;
+        
         $layer->support_islands($result->{islands});
     };
     Slic3r::parallelize(

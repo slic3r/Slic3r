@@ -257,6 +257,7 @@ sub init_extruders {
     }
     
     # calculate support material flow
+    # Note: we should calculate a different flow for support material interface
     if ($self->has_support_material) {
         my $extruder = $self->extruders->[$self->config->support_material_extruder-1];
         $self->support_material_flow($extruder->make_flow(

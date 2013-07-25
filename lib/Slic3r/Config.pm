@@ -204,8 +204,15 @@ our $Options = {
     },
     'support_material_extruder' => {
         label   => 'Support material extruder',
-        tooltip => 'The extruder to use when printing support material. This affects brim too.',
+        tooltip => 'The extruder to use when printing support material. This affects brim and raft too.',
         cli     => 'support-material-extruder=i',
+        type    => 'i',
+        default => 1,
+    },
+    'support_material_interface_extruder' => {
+        label   => 'Support material interface extruder',
+        tooltip => 'The extruder to use when printing support material interface. This affects raft too.',
+        cli     => 'support-material-interface-extruder=i',
         type    => 'i',
         default => 1,
     },
