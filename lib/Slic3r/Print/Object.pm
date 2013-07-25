@@ -803,11 +803,13 @@ sub generate_support_material {
     my $self = shift;
     return if $self->layer_count < 2;
     
+    my $flow = $self->print->support_material_flow;
+    
     # how much we extend support around the actual contact area
-    my $margin      = scale 0;
+    my $margin      = $flow->scaled_width / 2;
     
     # increment used to reach $margin in steps to avoid trespassing thin objects
-    my $margin_step = scale 1;
+    my $margin_step = $margin/1;
     
     # if user specified a custom angle threshold, convert it to radians
     my $threshold_rad;
@@ -818,7 +820,6 @@ sub generate_support_material {
     
     # shape of contact area
     # Move down?
-    my $flow            = $self->print->support_material_flow;
     my $circle_distance = 5 * $flow->scaled_width;
     my $circle;
     {
