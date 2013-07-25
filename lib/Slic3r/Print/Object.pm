@@ -842,16 +842,24 @@ sub generate_support_material {
             my $diff;
             
             # If a threshold angle was specified, use a different logic for detecting overhangs.
-            if (defined $threshold_rad) {
-                my $d = scale $lower_layer->height * ((cos $threshold_rad) / (sin $threshold_rad));
+            if (defined $threshold_rad || $layer_id <= $Slic3r::Config->support_material_enforce_layers) {
+                my $d = defined $threshold_rad
+                    ? scale $lower_layer->height * ((cos $threshold_rad) / (sin $threshold_rad))
+                    : 0;
+                
                 $diff = diff(
                     [ offset([ map $_->p, @{$layerm->slices} ], -$d) ],
                     [ map @$_, @{$lower_layer->slices} ],
                 );
+                
+                # only enforce spacing from the object ($fw/2) if the threshold angle
+                # is not too high: in that case, $d will be very small (as we need to catch
+                # very short overhangs), and such contact area would be eaten by the
+                # enforced spacing, resulting in high threshold angles to be almost ignored
                 $diff = diff(
                     [ offset($diff, $d - $fw/2) ],
                     [ map @$_, @{$lower_layer->slices} ],
-                );
+                ) if $d > $fw/2;
             } else {
                 $diff = diff(
                     [ offset([ map $_->p, @{$layerm->slices} ], -$fw/2) ],
