@@ -828,7 +828,6 @@ sub generate_support_material {
     }
     
     # determine contact areas
-    my @contact_z = ();
     my %contact  = ();  # contact_z => [ polygons ]
     my %overhang = ();  # contact_z => [ expolygons ] - this stores the actual overhang supported by each contact layer
     for my $layer_id (1 .. $#{$self->layers}) {
@@ -893,33 +892,37 @@ sub generate_support_material {
             
             my $contact_z = unscale($layer->print_z) - $nozzle_diameter;
             ###$contact_z = unscale($layer->print_z) - $layer->height;
-            push @contact_z, $contact_z;
             $contact{$contact_z}  = [ @contact ];
             $overhang{$contact_z} = [ @overhang ];
         }
     }
+    my @contact_z = sort keys %contact;
     
-    # determine layer height for any non-contact layer
-    # we use max() to prevent many ultra-thin layers to be inserted in case
-    # layer_height > nozzle_diameter * 0.75
-    my $support_material_height = max($Slic3r::Config->layer_height, $flow->nozzle_diameter * 0.75);
-    
-    # generate additional layers according to such max height
-    my @support_layers = @contact_z;
-    for (my $i = $#support_layers; $i >= 0; $i--) {
-        # enforce first layer height
-        if (($i == 0 && $support_layers[$i] > $support_material_height + $Slic3r::Config->first_layer_height)
-            || ($support_layers[$i] - $support_layers[$i-1] > $support_material_height + Slic3r::Geometry::epsilon)) {
-            splice @support_layers, $i, 0, ($support_layers[$i] - $support_material_height);
-            $i++;
+    # find object top surfaces
+    # we'll use them to clip our support and detect where does it stick
+    my %top = ();  # print_z => [ expolygons ]
+    foreach my $layer (@{$self->layers}) {
+        if (my @top = grep $_->surface_type == S_TYPE_TOP, map @{$_->slices}, @{$layer->regions}) {
+            $top{ unscale($layer->print_z) } = [ map $_->p, @top ];
         }
     }
+    my @top_z = sort keys %top;
+    
+    # we now know the upper and lower boundaries for our support material object
+    # (@contact_z and @top_z), so we can generate intermediate layers
+    my @support_layers = _compute_support_layers(\@contact_z, \@top_z, $Slic3r::Config, $flow);
+    
+    # if we wanted to apply some special logic to the first support layers lying on
+    # object's top surfaces this is the place to detect them
     
     # Let's now determine shells (interface layers) and normal support below them.
+    # Let's now fill each support layer by generating shells (interface layers) and
+    # clipping support area to the actual object boundaries.
     my %interface = ();  # layer_id => [ polygons ]
     my %support   = ();  # layer_id => [ polygons ]
     for my $layer_id (0 .. $#support_layers) {
-        my $this = $contact{$support_layers[$layer_id]} || [];
+        my $z = $support_layers[$layer_id];
+        my $this = $contact{$z} || [];
         # count contact layer as interface layer
         for (my $i = $layer_id; $i >= 0 && $i > $layer_id-$Slic3r::Config->support_material_interface_layers; $i--) {
             my $layer = $self->layers->[$i];
@@ -935,7 +938,7 @@ sub generate_support_material {
                     @{ $interface{$i} || [] },
                 ],
                 [
-                    #(map @$_, @{$layer->slices}),
+                    @{ $top{$z} || [] },
                 ],
             );
         }
@@ -952,7 +955,7 @@ sub generate_support_material {
                     @{ $support{$i} || [] },
                 ],
                 [
-                    #(map @$_, @{$layer->slices}),
+                    @{ $top{$z} || [] },
                     @{ $interface{$i} || [] },
                 ],
             );
@@ -1170,6 +1173,42 @@ sub generate_support_material {
             $apply->($_, $process_layer->($_)) for 0 .. $#{$self->support_layers};
         },
     );
+}
+
+sub _compute_support_layers {
+    my ($contact_z, $top_z, $config, $flow) = @_;
+    
+    # determine layer height for any non-contact layer
+    # we use max() to prevent many ultra-thin layers to be inserted in case
+    # layer_height > nozzle_diameter * 0.75
+    my $support_material_height = max($config->layer_height, $flow->nozzle_diameter * 0.75);
+    
+    my @support_layers = sort { $a <=> $b } @$contact_z, @$top_z;
+    
+    # enforce first layer height
+    my $first_layer_height = $config->get_value('first_layer_height');
+    shift @support_layers while @support_layers && $support_layers[0] < $first_layer_height;
+    unshift @support_layers, $first_layer_height;
+    
+    for (my $i = $#support_layers; $i >= 0; $i--) {
+        # enforce first layer height
+        if (($i == 0 && $support_layers[$i] > $support_material_height + $first_layer_height)
+            || ($support_layers[$i] - $support_layers[$i-1] > $support_material_height + Slic3r::Geometry::epsilon)) {
+            splice @support_layers, $i, 0, ($support_layers[$i] - $support_material_height);
+            $i++;
+        }
+    }
+    
+    # round layer Z because we get many
+    @support_layers = map { sprintf "%.2f", $_ } @support_layers;
+    
+    # remove duplicates
+    {
+        my %sl = map { $_ => 1 } @support_layers;
+        @support_layers = sort { $a <=> $b } keys %sl;
+    }
+    
+    return @support_layers;
 }
 
 1;
