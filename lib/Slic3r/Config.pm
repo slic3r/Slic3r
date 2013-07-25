@@ -684,7 +684,7 @@ our $Options = {
         sidetext => 'mm',
         cli     => 'support-material-interface-spacing=f',
         type    => 'f',
-        default => 1.5,
+        default => 0,
     },
     'support_material_enforce_layers' => {
         label   => 'Enforce support for the first',

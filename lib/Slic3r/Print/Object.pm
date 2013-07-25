@@ -804,7 +804,7 @@ sub generate_support_material {
     return if $self->layer_count < 2;
     
     # how much we extend support around the actual contact area
-    my $margin      = scale 5;
+    my $margin      = scale 0;
     
     # increment used to reach $margin in steps to avoid trespassing thin objects
     my $margin_step = scale 1;
@@ -920,18 +920,18 @@ sub generate_support_material {
     # clipping support area to the actual object boundaries.
     my %interface = ();  # layer_id => [ polygons ]
     my %support   = ();  # layer_id => [ polygons ]
+    my $interface_layers = $Slic3r::Config->support_material_interface_layers;
     for my $layer_id (0 .. $#support_layers) {
         my $z = $support_layers[$layer_id];
-        my $this = $contact{$z} || [];
+        my $this = $contact{$z} // next;
         # count contact layer as interface layer
-        for (my $i = $layer_id; $i >= 0 && $i > $layer_id-$Slic3r::Config->support_material_interface_layers; $i--) {
-            my $layer = $self->layers->[$i];
-            
+        for (my $i = $layer_id; $i >= 0 && $i > $layer_id-$interface_layers; $i--) {
+            $z = $support_layers[$i];
             # Compute interface area on this layer as diff of upper contact area
             # (or upper interface area) and layer slices.
             # This diff is responsible of the contact between support material and
-            # the top surfaces of the object. We should probably offset the layer 
-            # slices before performing the diff, but this needs investigation.
+            # the top surfaces of the object. We should probably offset the top 
+            # surfaces before performing the diff, but this needs investigation.
             $this = $interface{$i} = diff(
                 [
                     @$this,
@@ -944,9 +944,8 @@ sub generate_support_material {
         }
         
         # determine what layers does our support belong to
-        for (my $i = $layer_id-$Slic3r::Config->support_material_interface_layers; $i >= 0; $i--) {
-            my $layer = $self->layers->[$i];
-            
+        for (my $i = $layer_id-$interface_layers; $i >= 0; $i--) {
+            $z = $support_layers[$i];
             # Compute support area on this layer as diff of upper support area
             # and layer slices.
             $this = $support{$i} = diff(
