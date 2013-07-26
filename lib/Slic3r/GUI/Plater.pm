@@ -447,7 +447,7 @@ sub changescale {
     return if !$scale || $scale == -1;
     
     $self->{list}->SetItem($obj_idx, 2, "$scale%");
-    $object->scale($scale / 100);
+    $object->changescale($scale / 100);
     $self->arrange;
 }
 
@@ -1109,6 +1109,18 @@ sub _trigger_model_object {
 	}
 }
 
+sub changescale {
+    my $self = shift;
+    my ($scale) = @_;
+    
+    my $variation = $scale / $self->scale;
+    foreach my $range (@{ $self->layer_height_ranges }) {
+        $range->[0] *= $variation;
+        $range->[1] *= $variation;
+    }
+    $self->scale($scale);
+}
+
 sub check_manifoldness {
 	my $self = shift;
 	
@@ -1188,6 +1200,7 @@ sub transformed_bounding_box {
     
     my $bb = Slic3r::Geometry::BoundingBox->new_from_points($self->_apply_transform($self->convex_hull));
     $bb->extents->[Z] = $self->bounding_box->clone->extents->[Z];
+    $bb->extents->[Z][MAX] *= $self->scale;
     return $bb;
 }
 
