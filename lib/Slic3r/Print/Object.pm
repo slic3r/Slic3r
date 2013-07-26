@@ -14,7 +14,7 @@ has 'meshes'            => (is => 'rw', default => sub { [] });  # by region_id
 has 'size'              => (is => 'rw', required => 1); # XYZ in scaled coordinates
 has 'copies'            => (is => 'rw', trigger => 1);  # in scaled coordinates
 has 'layers'            => (is => 'rw', default => sub { [] });
-has 'support_layers'    => (is => 'rw', default => sub { [] });
+has 'support_layers'    => (is => 'rw');
 has 'layer_height_ranges' => (is => 'rw', default => sub { [] }); # [ z_min, z_max, layer_height ]
 has 'fill_maker'        => (is => 'lazy');
 has '_slice_z_table'    => (is => 'lazy');
@@ -970,6 +970,7 @@ sub generate_support_material {
         }
     }
     
+    $self->support_layers([]);
     push @{$self->support_layers}, map Slic3r::Layer::Support->new(
         object  => $self,
         id      => $_,

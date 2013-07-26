@@ -651,7 +651,8 @@ sub make_brim {
         if (@{ $object->support_layers }) {
             my $support_layer0 = $object->support_layers->[0];
             push @object_islands,
-                (map $_->unpack->polyline->grow($grow_distance), map @{$_->support_fills->paths}, $support_layer0);
+                (map $_->unpack->polyline->grow($grow_distance), @{$support_layer0->support_fills->paths})
+                if $support_layer0->support_fills;
         }
         foreach my $copy (@{$object->copies}) {
             push @islands, map $_->clone->translate(@$copy), @object_islands;
