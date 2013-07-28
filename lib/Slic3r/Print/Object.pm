@@ -833,7 +833,7 @@ sub generate_support_material {
     
     # shape of contact area
     my $contact_loops = 1;
-    my $circle_distance = 5 * $flow->scaled_width;
+    my $circle_distance = 3 * $flow->scaled_width;
     my $circle;
     {
         # TODO: make sure teeth between circles are compatible with support material flow
@@ -912,7 +912,7 @@ sub generate_support_material {
                 @{$layer->regions};
             my $nozzle_diameter = sum(@nozzle_diameters)/@nozzle_diameters;
             
-            my $contact_z = unscale($layer->print_z) - $nozzle_diameter;
+            my $contact_z = unscale($layer->print_z) - $nozzle_diameter * 1.5;
             ###$contact_z = unscale($layer->print_z) - $layer->height;
             $contact{$contact_z}  = [ @contact ];
             $overhang{$contact_z} = [ @overhang ];
@@ -923,9 +923,28 @@ sub generate_support_material {
     # find object top surfaces
     # we'll use them to clip our support and detect where does it stick
     my %top = ();  # print_z => [ expolygons ]
-    foreach my $layer (@{$self->layers}) {
-        if (my @top = grep $_->surface_type == S_TYPE_TOP, map @{$_->slices}, @{$layer->regions}) {
-            $top{ unscale($layer->print_z) } = [ map $_->p, @top ];
+    {
+        my $projection = [];
+        foreach my $layer (reverse @{$self->layers}) {
+            if (my @top = grep $_->surface_type == S_TYPE_TOP, map @{$_->slices}, @{$layer->regions}) {
+                # compute projection of the contact areas above this top layer
+                # first add all the 'new' contact areas to the current projection
+                # ('new' means all the areas that are lower than the last top layer
+                # we considered)
+                my $unscaled_print_z = unscale $layer->print_z;
+                my $min_top = min(keys %top) // max(keys %contact);
+                push @$projection, map @{$contact{$_}}, grep { $_ > $unscaled_print_z && $_ < $min_top } keys %contact;
+                
+                # now find whether any projection falls onto this top surface
+                my $touching = intersection($projection, [ map $_->p, @top ]);
+                if (@$touching) {
+                    $top{ unscale($layer->print_z) } = $touching;
+                }
+                
+                # remove the areas that touched from the projection that will continue on 
+                # next, lower, top surfaces
+                $projection = diff($projection, $touching);
+            }
         }
     }
     my @top_z = sort keys %top;
@@ -1026,12 +1045,13 @@ sub generate_support_material {
             my $overhang = $overhang{$support_layers[$layer_id]};
             $contact = [ grep $_->is_counter_clockwise, @$contact ];
             
-            # find centerline of the external loop of the contours
-            my @external_loops = offset($contact, -$flow->scaled_width/2);
-            
-            # apply a pattern to the loop
+            # generate the outermost loop
             my @loops0;
             {
+                # find centerline of the external loop of the contours
+                my @external_loops = offset($contact, -$flow->scaled_width/2);
+                
+                # apply a pattern to the loop
                 my @positions = map Slic3r::Polygon->new(@$_)->split_at_first_point->regular_points($circle_distance), @external_loops;
                 @loops0 = @{diff(
                     [ @external_loops ],
@@ -1054,9 +1074,9 @@ sub generate_support_material {
                 ) };
             
             # subtract loops from the contact area to detect the remaining part
-            $interface{$layer_id} = diff(
+            $interface{$layer_id} = intersection(
                 $interface{$layer_id},
-                [ map $_->grow($flow->scaled_width), @loops ],
+                [ offset2(\@loops0, -($contact_loops) * $flow->scaled_spacing, +0.5*$flow->scaled_spacing) ],
             );
             
             # transform loops into ExtrusionPath objects
@@ -1228,9 +1248,6 @@ sub _compute_support_layers {
             $i++;
         }
     }
-    
-    # round layer Z because we get many
-    @support_layers = map { 1 * sprintf "%.2f", $_ } @support_layers;
     
     # remove duplicates
     {
