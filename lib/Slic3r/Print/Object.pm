@@ -18,7 +18,6 @@ has 'support_layers'    => (is => 'rw', default => sub { [] });
 has 'layer_height_ranges' => (is => 'rw', default => sub { [] }); # [ z_min, z_max, layer_height ]
 has 'fill_maker'        => (is => 'lazy');
 has '_slice_z_table'    => (is => 'lazy');
-has '_print_z_table'    => (is => 'lazy');
 
 sub BUILD {
     my $self = shift;
@@ -38,7 +37,7 @@ sub BUILD {
             object  => $self,
             id      => $id,
             height  => $height,
-            print_z => scale $print_z,
+            print_z => $print_z,
             slice_z => -1,
         );
     }
@@ -73,7 +72,7 @@ sub BUILD {
             object  => $self,
             id      => $id,
             height  => $height,
-            print_z => scale $print_z,
+            print_z => $print_z,
             slice_z => scale $slice_z,
         );
         
@@ -89,11 +88,6 @@ sub _build_fill_maker {
 sub _build__slice_z_table {
     my $self = shift;
     return Slic3r::Object::XS::ZTable->new([ map $_->slice_z, @{$self->layers} ]);
-}
-
-sub _build__print_z_table {
-    my $self = shift;
-    return Slic3r::Object::XS::ZTable->new([ map $_->print_z, @{$self->layers} ]);
 }
 
 # This should be probably moved in Print.pm at the point where we sort Layer objects
@@ -912,8 +906,8 @@ sub generate_support_material {
                 @{$layer->regions};
             my $nozzle_diameter = sum(@nozzle_diameters)/@nozzle_diameters;
             
-            my $contact_z = unscale($layer->print_z) - $nozzle_diameter * 1.5;
-            ###$contact_z = unscale($layer->print_z) - $layer->height;
+            my $contact_z = $layer->print_z - $nozzle_diameter * 1.5;
+            ###$contact_z = $layer->print_z - $layer->height;
             $contact{$contact_z}  = [ @contact ];
             $overhang{$contact_z} = [ @overhang ];
         }
@@ -931,14 +925,13 @@ sub generate_support_material {
                 # first add all the 'new' contact areas to the current projection
                 # ('new' means all the areas that are lower than the last top layer
                 # we considered)
-                my $unscaled_print_z = unscale $layer->print_z;
                 my $min_top = min(keys %top) // max(keys %contact);
-                push @$projection, map @{$contact{$_}}, grep { $_ > $unscaled_print_z && $_ < $min_top } keys %contact;
+                push @$projection, map @{$contact{$_}}, grep { $_ > $layer->print_z && $_ < $min_top } keys %contact;
                 
                 # now find whether any projection falls onto this top surface
                 my $touching = intersection($projection, [ map $_->p, @top ]);
                 if (@$touching) {
-                    $top{ unscale($layer->print_z) } = $touching;
+                    $top{ $layer->print_z } = $touching;
                 }
                 
                 # remove the areas that touched from the projection that will continue on 
@@ -1006,7 +999,7 @@ sub generate_support_material {
         object  => $self,
         id      => $_,
         height  => ($_ == 0) ? $support_layers[$_] : ($support_layers[$_] - $support_layers[$_-1]),
-        print_z => scale $support_layers[$_],
+        print_z => $support_layers[$_],
         slice_z => -1,
         slices  => [],
     ), 0 .. $#support_layers;
