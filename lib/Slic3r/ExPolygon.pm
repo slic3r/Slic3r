@@ -84,6 +84,12 @@ sub wkt {
         join ',', map "($_)", map { join ',', map "$_->[0] $_->[1]", @$_ } @$self;
 }
 
+sub dump_perl {
+    my $self = shift;
+    return sprintf "[%s]", 
+        join ',', map "[$_]", map { join ',', map "[$_->[0],$_->[1]]", @$_ } @$self;
+}
+
 sub offset {
     my $self = shift;
     return Slic3r::Geometry::Clipper::offset($self, @_);
@@ -170,6 +176,14 @@ sub scale {
 sub translate {
     my $self = shift;
     $_->translate(@_) for @$self;
+    $self;
+}
+
+sub align_to_origin {
+    my $self = shift;
+    
+    my $bb = $self->bounding_box;
+    $self->translate(-$bb->x_min, -$bb->y_min);
     $self;
 }
 
