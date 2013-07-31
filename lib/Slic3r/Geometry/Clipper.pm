@@ -7,7 +7,7 @@ our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(safety_offset safety_offset_ex offset offset_ex collapse_ex
     diff_ex diff union_ex intersection_ex xor_ex PFT_EVENODD JT_MITER JT_ROUND
     JT_SQUARE is_counter_clockwise union_pt offset2 offset2_ex traverse_pt
-    intersection union);
+    intersection union collapse);
 
 use Math::Clipper 1.22 qw(:cliptypes :polyfilltypes :jointypes is_counter_clockwise area);
 use Slic3r::Geometry qw(scale);
@@ -31,7 +31,7 @@ sub offset {
     $miterLimit //= 3;
     
     my $offsets = Math::Clipper::int_offset($polygons, $distance, $scale, $joinType, $miterLimit);
-    return @$offsets;
+    return map Slic3r::Polygon->new(@$_), @$offsets;
 }
 
 sub offset2 {
@@ -41,7 +41,7 @@ sub offset2 {
     $miterLimit //= 3;
     
     my $offsets = Math::Clipper::int_offset2($polygons, $distance1, $distance2, $scale, $joinType, $miterLimit);
-    return @$offsets;
+    return map Slic3r::Polygon->new(@$_), @$offsets;
 }
 
 sub offset_ex {
@@ -157,6 +157,11 @@ sub xor_ex {
 sub collapse_ex {
     my ($polygons, $width) = @_;
     return [ offset2_ex($polygons, -$width/2, +$width/2) ];
+}
+
+sub collapse {
+    my ($polygons, $width) = @_;
+    return [ offset2($polygons, -$width/2, +$width/2) ];
 }
 
 sub simplify_polygon {

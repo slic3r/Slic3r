@@ -5,7 +5,7 @@ use List::Util qw(min max sum first);
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Geometry qw(Z PI scale unscale deg2rad rad2deg scaled_epsilon chained_path_points);
 use Slic3r::Geometry::Clipper qw(diff diff_ex intersection intersection_ex union union_ex 
-    offset offset_ex offset2);
+    offset offset_ex offset2 collapse);
 use Slic3r::Surface ':types';
 
 has 'print'             => (is => 'ro', weak_ref => 1, required => 1);
@@ -912,6 +912,10 @@ sub generate_support_material {
             # ignore this contact area if it's too low
             next if $contact_z < $Slic3r::Config->first_layer_height;
             
+            # make sure nothing collapses, and even small areas get support
+            if (my $collapsed = collapse(\@contact, $flow->scaled_width)) {
+                push @contact, offset(diff(\@contact, $collapsed), $flow->scaled_width);
+            }
             $contact{$contact_z}  = [ @contact ];
             $overhang{$contact_z} = [ @overhang ];
         }
