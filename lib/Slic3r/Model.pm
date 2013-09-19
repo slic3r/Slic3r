@@ -214,14 +214,14 @@ sub mesh {
     foreach my $object (@{$self->objects}) {
         my @instances = $object->instances ? @{$object->instances} : (undef);
         foreach my $instance (@instances) {
-            my $mesh = $object->mesh->clone;
+            my $inst_obj = $instance->object;
             if ($instance) {
-                $mesh->rotate($instance->rotation);
-                $mesh->scale($instance->scaling_factor);
-                $mesh->align_to_origin;
-                $mesh->move(@{$instance->offset});
+                $inst_obj->rotate($instance->rotation);
+                $inst_obj->scale($instance->scaling_factor);
+                $inst_obj->align_to_origin;
+                $inst_obj->move(@{$instance->offset});
             }
-            push @meshes, $mesh;
+            push @meshes, $inst_obj->mesh;
         }
     }
     
@@ -387,7 +387,11 @@ sub move {
     my $self = shift;
     my @shift = @_;
     
-    $_->mesh->translate(@shift) for @{$self->volumes};
+    if(scalar @shift == 2)
+    {
+        push(@shift, 0.0);
+    }
+    $_->mesh->translate($shift[X], $shift[Y], $shift[Z]) for @{$self->volumes};
     $self->_bounding_box->translate(@shift) if defined $self->_bounding_box;
 }
 
@@ -405,7 +409,7 @@ sub rotate {
     my ($deg) = @_;
     return if $deg == 0;
     
-    $_->mesh->rotate($deg, Slic3r::Point->(0,0)) for @{$self->volumes};
+    $_->mesh->rotate($deg, Slic3r::Point->new(0,0)) for @{$self->volumes};
     $self->_bounding_box(undef);
 }
 
