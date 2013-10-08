@@ -145,7 +145,7 @@ our $Options = {
         default => [0.5],
     },
     'filament_diameter' => {
-        label   => 'Diameter',
+        label   => 'Filament diameter',
         tooltip => 'Enter your filament diameter here. Good precision is required, so use a caliper and do multiple measurements along the filament, then compute the average.',
         sidetext => 'mm',
         cli     => 'filament-diameter=f@',

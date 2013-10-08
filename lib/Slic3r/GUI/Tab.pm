@@ -561,20 +561,12 @@ sub title { 'Filament Settings' }
 
 sub build {
     my $self = shift;
-    
-    $self->add_options_page('Filament', 'spool.png', optgroups => [
-        {
-            title => 'Filament',
-            options => ['filament_diameter#0', 'extrusion_multiplier#0'],
-        },
+    # Icon: CC Attribution 3.0, backlink to http://www.fatcow.com/free-icons
+    $self->add_options_page('Temperature', 'temperature.png', optgroups => [
         {
             title => 'Temperature (°C)',
-            options => ['temperature#0', 'first_layer_temperature#0', qw(bed_temperature first_layer_bed_temperature)],
+            options => [qw(bed_temperature first_layer_bed_temperature)],
             lines => [
-                {
-                    label   => 'Extruder',
-                    options => ['first_layer_temperature#0', 'temperature#0'],
-                },
                 {
                     label   => 'Bed',
                     options => [qw(first_layer_bed_temperature bed_temperature)],
@@ -720,7 +712,7 @@ sub build {
     $self->_build_extruder_pages;
 }
 
-sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_speed retract_restart_extra retract_before_travel wipe
+sub _extruder_options { qw(nozzle_diameter filament_diameter extrusion_multiplier extruder_offset retract_length retract_lift retract_speed retract_restart_extra retract_before_travel wipe
     retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
 
 sub config {
@@ -744,8 +736,18 @@ sub _build_extruder_pages {
         $self->{extruder_pages}[$extruder_idx] ||= $self->add_options_page("Extruder " . ($extruder_idx + 1), 'funnel.png', optgroups => [
             {
                 title => 'Size',
-                options => ['nozzle_diameter#' . $extruder_idx],
+                options => ['nozzle_diameter#' . $extruder_idx, 'filament_diameter#' . $extruder_idx, 'extrusion_multiplier#' . $extruder_idx],
             },
+            {
+            title => 'Temperature (°C)',
+	            options => ['temperature#' .$extruder_idx, 'first_layer_temperature#' .$extruder_idx],
+	            lines => [
+	                {
+	                    label   => 'Extruder temperature',
+	                    options => ['first_layer_temperature#' .$extruder_idx, 'temperature#' .$extruder_idx],
+	                },
+	            ],
+	        },
             {
                 title => 'Position (for multi-extruder printers)',
                 options => ['extruder_offset#' . $extruder_idx],
