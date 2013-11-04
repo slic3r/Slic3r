@@ -13,9 +13,9 @@ typedef std::vector<Point> Points;
 class Point
 {
     public:
-    long x;
-    long y;
-    explicit Point(long _x = 0, long _y = 0): x(_x), y(_y) {};
+    double x;
+    double y;
+    explicit Point(double _x = 0, double _y = 0): x(_x), y(_y) {};
     void scale(double factor);
     void translate(double x, double y);
     void rotate(double angle, Point* center);

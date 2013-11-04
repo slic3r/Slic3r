@@ -6,7 +6,7 @@
 %}
 
 %name{Slic3r::Point} class Point {
-    Point(long _x = 0, long _y = 0);
+    Point(double _x = 0, double _y = 0);
     ~Point();
     Point* clone()
         %code{% const char* CLASS = "Slic3r::Point"; RETVAL = new Point(*THIS); %};
@@ -16,9 +16,9 @@
         %code{% RETVAL = THIS->to_SV_pureperl(); %};
     SV* pp()
         %code{% RETVAL = THIS->to_SV_pureperl(); %};
-    long x()
+    double x()
         %code{% RETVAL = THIS->x; %};
-    long y()
+    double y()
         %code{% RETVAL = THIS->y; %};
     int nearest_point_index(Points points);
     Point* nearest_point(Points points)
