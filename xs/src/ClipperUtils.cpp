@@ -2,6 +2,11 @@
 
 namespace Slic3r {
 
+inline ClipperLib::long64 Round(double val)
+{
+  return (val < 0) ? static_cast<ClipperLib::long64>(val - 0.5) : static_cast<ClipperLib::long64>(val + 0.5);
+}
+
 //-----------------------------------------------------------
 // legacy code from Clipper documentation
 void AddOuterPolyNodeToExPolygons(ClipperLib::PolyNode& polynode, Slic3r::ExPolygons& expolygons)
@@ -71,7 +76,7 @@ Slic3rPolygon_to_ClipperPolygon(const Slic3r::Polygon &input, ClipperLib::Polygo
 {
     output.clear();
     for (Slic3r::Points::const_iterator pit = input.points.begin(); pit != input.points.end(); ++pit) {
-        output.push_back(ClipperLib::IntPoint( (*pit).x, (*pit).y ));
+        output.push_back(ClipperLib::IntPoint( Round((*pit).x), Round((*pit).y) ));
     }
 }
 

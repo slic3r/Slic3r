@@ -21,10 +21,10 @@ Point::translate(double x, double y)
 void
 Point::rotate(double angle, Point* center)
 {
-    double cur_x = (double)this->x;
-    double cur_y = (double)this->y;
-    this->x = (long)round( (double)center->x + cos(angle) * (cur_x - (double)center->x) - sin(angle) * (cur_y - (double)center->y) );
-    this->y = (long)round( (double)center->y + cos(angle) * (cur_y - (double)center->y) + sin(angle) * (cur_x - (double)center->x) );
+    double cur_x = this->x;
+    double cur_y = this->y;
+    this->x = center->x + cos(angle) * (cur_x - center->x) - sin(angle) * (cur_y - center->y);
+    this->y = center->y + cos(angle) * (cur_y - center->y) + sin(angle) * (cur_x - center->x);
 }
 
 bool
@@ -68,8 +68,8 @@ Point::nearest_point(Points points) const
 double
 Point::distance_to(const Point* point) const
 {
-    double dx = ((double)point->x - this->x);
-    double dy = ((double)point->y - this->y);
+    double dx = point->x - this->x;
+    double dy = point->y - this->y;
     return sqrt(dx*dx + dy*dy);
 }
 
@@ -103,8 +103,8 @@ SV*
 Point::to_SV_pureperl() const {
     AV* av = newAV();
     av_fill(av, 1);
-    av_store(av, 0, newSViv(this->x));
-    av_store(av, 1, newSViv(this->y));
+    av_store(av, 0, newSVnv(this->x));
+    av_store(av, 1, newSVnv(this->y));
     return newRV_noinc((SV*)av);
 }
 
@@ -112,8 +112,8 @@ void
 Point::from_SV(SV* point_sv)
 {
     AV* point_av = (AV*)SvRV(point_sv);
-    this->x = (long)SvIV(*av_fetch(point_av, 0, 0));
-    this->y = (long)SvIV(*av_fetch(point_av, 1, 0));
+    this->x = SvNV(*av_fetch(point_av, 0, 0));
+    this->y = SvNV(*av_fetch(point_av, 1, 0));
 }
 
 void
