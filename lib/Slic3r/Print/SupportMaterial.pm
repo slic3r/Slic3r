@@ -13,7 +13,7 @@ has 'flow'   => (is => 'rw', required => 1);
 use constant DEBUG_CONTACT_ONLY => 0;
 
 #margin expressed as multiples of the step increment so that step count can be integer.
-use constant MARGIN_STEP_COUNT => 10; 
+use constant MARGIN_STEP_COUNT => 6; 
 
 # increment used to reach MARGIN in steps to avoid trespassing thin objects
 # WAS: use constant MARGIN_STEP => MARGIN/3;
@@ -382,6 +382,14 @@ sub generate_toolpaths {
     my $contact_loops   = 1;
     my $circle_radius   = 1.5 * $flow->scaled_width;
     my $circle_distance = 3 * $circle_radius;
+    
+    # place the circles on a path offset from perimeters so
+    # that the intersection point has an obtuse angle instead of 90 deg
+	# which would lower the chance of any excess material deposit from
+	# support
+   
+    my $circle_offset   = $circle_radius /4;
+
 	# better circle mostly for easier understanding during dev, but might make
 	# cleaner print anyway.  I've found fewer instances of the circles being on
 	# wrong side.
@@ -465,6 +473,9 @@ sub generate_toolpaths {
             {
                 # find centerline of the external loop of the contours
                 my @external_loops = @{offset($contact, -$flow->scaled_width/2)};
+
+                # make a loop outside the external loop for the location of the circle-centers
+                my @overhang_loops = @{offset($contact, $circle_offset )};
                 
                 # only consider the loops facing the overhang
                 {
@@ -478,7 +489,7 @@ sub generate_toolpaths {
                 }
                 
                 # apply a pattern to the loop
-                my @positions = map @{Slic3r::Polygon->new(@$_)->equally_spaced_points($circle_distance)}, @external_loops;
+                my @positions = map @{Slic3r::Polygon->new(@$_)->equally_spaced_points($circle_distance)}, @overhang_loops;
                 @loops0 = @{diff(
                     [ @external_loops ],
                     [ map { my $c = $circle->clone; $c->translate(@$_); $c } @positions ],
