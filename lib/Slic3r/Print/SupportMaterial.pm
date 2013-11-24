@@ -12,11 +12,16 @@ has 'flow'   => (is => 'rw', required => 1);
 
 use constant DEBUG_CONTACT_ONLY => 0;
 
-# how much we extend support around the actual contact area
-use constant MARGIN => 1.5;
-    
+#margin expressed as multiples of the step increment so that step count can be integer.
+use constant MARGIN_STEP_COUNT => 10; 
+
 # increment used to reach MARGIN in steps to avoid trespassing thin objects
-use constant MARGIN_STEP => MARGIN/3;
+# WAS: use constant MARGIN_STEP => MARGIN/3;
+use constant MARGIN_INCREMENT => 0.5;
+
+# how much we extend support around the actual contact area
+# WAS: use constant MARGIN => 1.5;
+use constant MARGIN => MARGIN_INCREMENT * MARGIN_STEP_COUNT;
 
 sub generate {
     my ($self, $object) = @_;
@@ -143,8 +148,8 @@ sub contact_area {
             # We increment the area in steps because we don't want our support to overflow
             # on the other side of the object (if it's very thin).
             {
-                my @slices_margin = @{offset([ map @$_, @{$lower_layer->slices} ], $fw/2)};
-                for ($fw/2, map {scale MARGIN_STEP} 1..(MARGIN / MARGIN_STEP)) {
+                my @slices_margin = @{offset([ map @$_, @{$lower_layer->slices} ], $fw/2 )};
+                for ($fw/2, map {scale MARGIN_INCREMENT} 1..MARGIN_STEP_COUNT) {
                     $diff = diff(
                         offset($diff, $_),
                         \@slices_margin,
