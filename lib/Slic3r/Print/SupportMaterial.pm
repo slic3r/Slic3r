@@ -382,8 +382,29 @@ sub generate_toolpaths {
     my $contact_loops   = 1;
     my $circle_radius   = 1.5 * $flow->scaled_width;
     my $circle_distance = 3 * $circle_radius;
-    my $circle          = Slic3r::Polygon->new(map [ $circle_radius * cos $_, $circle_radius * sin $_ ],
-                            (5*PI/3, 4*PI/3, PI, 2*PI/3, PI/3, 0));
+	# better circle mostly for easier understanding during dev, but might make
+	# cleaner print anyway.  I've found fewer instances of the circles being on
+	# wrong side.
+    use constant UNIT_CIRCUMF => 2*PI/16;    
+    my $circle          = Slic3r::Polygon->new(map [ $circle_radius * cos $_, $circle_radius * sin $_  ],
+                            (
+                            	UNIT_CIRCUMF * 15, 
+                            	UNIT_CIRCUMF * 14, 
+                            	UNIT_CIRCUMF * 13, 
+                            	UNIT_CIRCUMF * 12, 
+                            	UNIT_CIRCUMF * 11, 
+                            	UNIT_CIRCUMF * 10,
+                            	UNIT_CIRCUMF * 9, 
+                            	UNIT_CIRCUMF * 8,
+                            	UNIT_CIRCUMF * 7,
+                            	UNIT_CIRCUMF * 6, 
+                            	UNIT_CIRCUMF * 5, 
+                            	UNIT_CIRCUMF * 4, 
+                            	UNIT_CIRCUMF * 3, 
+                            	UNIT_CIRCUMF * 2,
+                            	UNIT_CIRCUMF * 1, 
+                            	UNIT_CIRCUMF * 0)
+                            );
     
     Slic3r::debugf "Generating patterns\n";
     
