@@ -380,8 +380,8 @@ sub generate_toolpaths {
     
     # shape of contact area
     my $contact_loops   = 1;
-    my $circle_radius   = 1.5 * $flow->scaled_width;
-    my $circle_distance = 3 * $circle_radius;
+    my $circle_radius   = 2.5 * $flow->scaled_width;
+    my $circle_distance = 2.5 * $circle_radius;
     
     # place the circles on a path offset from perimeters so
     # that the intersection point has an obtuse angle instead of 90 deg
