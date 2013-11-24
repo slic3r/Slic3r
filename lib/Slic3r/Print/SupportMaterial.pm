@@ -467,10 +467,10 @@ sub generate_toolpaths {
             # make more loops
             my @loops = @loops0;
             for my $i (2..$contact_loops) {
-                my $d = ($i-1) * $flow->scaled_spacing;
-                push @loops, @{offset2(\@loops0, -$d -0.5*$flow->scaled_spacing, +0.5*$flow->scaled_spacing)};
+            	    my $d = ($i-1) * $flow->scaled_spacing;
+	                push @loops, @{offset2(\@loops0, -$d -0.5*$flow->scaled_spacing, +0.5*$flow->scaled_spacing)};
             }
-            
+
             # clip such loops to the side oriented towards the object
             @loops = map Slic3r::Polyline->new(@$_),
                 @{ Boost::Geometry::Utils::multi_polygon_multi_linestring_intersection(
@@ -483,10 +483,11 @@ sub generate_toolpaths {
             # extrusions are left inside the circles; however it creates
             # a very large gap between loops and contact_infill, so maybe another
             # solution should be found to achieve both goals
-            $contact_infill = diff(
-                $contact,
-                [ map $_->grow($circle_radius*1.1), @loops ],
-            );
+            
+			# this works well, it basically offsets the contact perimeter by the number
+			# of contact loops, I see no down side to this, do you?
+			my @loops_of_contact = @{offset(\@loops0, -$contact_loops * $flow->scaled_spacing)};
+		    $contact_infill = [ map $_, @loops_of_contact ];
             
             # transform loops into ExtrusionPath objects
             @loops = map Slic3r::ExtrusionPath->new(
