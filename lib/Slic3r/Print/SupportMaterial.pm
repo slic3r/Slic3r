@@ -12,11 +12,16 @@ has 'flow'   => (is => 'rw', required => 1);
 
 use constant DEBUG_CONTACT_ONLY => 0;
 
-# how much we extend support around the actual contact area
-use constant MARGIN => 1.5;
-    
+#margin expressed as multiples of the step increment so that step count can be integer.
+use constant MARGIN_STEP_COUNT => 6; 
+
 # increment used to reach MARGIN in steps to avoid trespassing thin objects
-use constant MARGIN_STEP => MARGIN/3;
+# WAS: use constant MARGIN_STEP => MARGIN/3;
+use constant MARGIN_INCREMENT => 0.5;
+
+# how much we extend support around the actual contact area
+# WAS: use constant MARGIN => 1.5;
+use constant MARGIN => MARGIN_INCREMENT * MARGIN_STEP_COUNT;
 
 sub generate {
     my ($self, $object) = @_;
@@ -143,8 +148,8 @@ sub contact_area {
             # We increment the area in steps because we don't want our support to overflow
             # on the other side of the object (if it's very thin).
             {
-                my @slices_margin = @{offset([ map @$_, @{$lower_layer->slices} ], $fw/2)};
-                for ($fw/2, map {scale MARGIN_STEP} 1..(MARGIN / MARGIN_STEP)) {
+                my @slices_margin = @{offset([ map @$_, @{$lower_layer->slices} ], $fw/2 )};
+                for ($fw/2, map {scale MARGIN_INCREMENT} 1..MARGIN_STEP_COUNT) {
                     $diff = diff(
                         offset($diff, $_),
                         \@slices_margin,
@@ -375,10 +380,39 @@ sub generate_toolpaths {
     
     # shape of contact area
     my $contact_loops   = 1;
-    my $circle_radius   = 1.5 * $flow->scaled_width;
-    my $circle_distance = 3 * $circle_radius;
-    my $circle          = Slic3r::Polygon->new(map [ $circle_radius * cos $_, $circle_radius * sin $_ ],
-                            (5*PI/3, 4*PI/3, PI, 2*PI/3, PI/3, 0));
+    my $circle_radius   = 2.5 * $flow->scaled_width;
+    my $circle_distance = 2.5 * $circle_radius;
+    
+    # place the circles on a path offset from perimeters so
+    # that the intersection point has an obtuse angle instead of 90 deg
+	# which would lower the chance of any excess material deposit from
+	# support
+   
+    my $circle_offset   = $circle_radius /4;
+
+	# better circle mostly for easier understanding during dev, but might make
+	# cleaner print anyway.  I've found fewer instances of the circles being on
+	# wrong side.
+    use constant UNIT_CIRCUMF => 2*PI/16;    
+    my $circle          = Slic3r::Polygon->new(map [ $circle_radius * cos $_, $circle_radius * sin $_  ],
+                            (
+                            	UNIT_CIRCUMF * 15, 
+                            	UNIT_CIRCUMF * 14, 
+                            	UNIT_CIRCUMF * 13, 
+                            	UNIT_CIRCUMF * 12, 
+                            	UNIT_CIRCUMF * 11, 
+                            	UNIT_CIRCUMF * 10,
+                            	UNIT_CIRCUMF * 9, 
+                            	UNIT_CIRCUMF * 8,
+                            	UNIT_CIRCUMF * 7,
+                            	UNIT_CIRCUMF * 6, 
+                            	UNIT_CIRCUMF * 5, 
+                            	UNIT_CIRCUMF * 4, 
+                            	UNIT_CIRCUMF * 3, 
+                            	UNIT_CIRCUMF * 2,
+                            	UNIT_CIRCUMF * 1, 
+                            	UNIT_CIRCUMF * 0)
+                            );
     
     Slic3r::debugf "Generating patterns\n";
     
@@ -439,6 +473,9 @@ sub generate_toolpaths {
             {
                 # find centerline of the external loop of the contours
                 my @external_loops = @{offset($contact, -$flow->scaled_width/2)};
+
+                # make a loop outside the external loop for the location of the circle-centers
+                my @overhang_loops = @{offset($contact, $circle_offset )};
                 
                 # only consider the loops facing the overhang
                 {
@@ -452,7 +489,7 @@ sub generate_toolpaths {
                 }
                 
                 # apply a pattern to the loop
-                my @positions = map @{Slic3r::Polygon->new(@$_)->equally_spaced_points($circle_distance)}, @external_loops;
+                my @positions = map @{Slic3r::Polygon->new(@$_)->equally_spaced_points($circle_distance)}, @overhang_loops;
                 @loops0 = @{diff(
                     [ @external_loops ],
                     [ map { my $c = $circle->clone; $c->translate(@$_); $c } @positions ],
@@ -462,10 +499,10 @@ sub generate_toolpaths {
             # make more loops
             my @loops = @loops0;
             for my $i (2..$contact_loops) {
-                my $d = ($i-1) * $flow->scaled_spacing;
-                push @loops, @{offset2(\@loops0, -$d -0.5*$flow->scaled_spacing, +0.5*$flow->scaled_spacing)};
+            	    my $d = ($i-1) * $flow->scaled_spacing;
+	                push @loops, @{offset2(\@loops0, -$d -0.5*$flow->scaled_spacing, +0.5*$flow->scaled_spacing)};
             }
-            
+
             # clip such loops to the side oriented towards the object
             @loops = map Slic3r::Polyline->new(@$_),
                 @{ Boost::Geometry::Utils::multi_polygon_multi_linestring_intersection(
@@ -478,10 +515,11 @@ sub generate_toolpaths {
             # extrusions are left inside the circles; however it creates
             # a very large gap between loops and contact_infill, so maybe another
             # solution should be found to achieve both goals
-            $contact_infill = diff(
-                $contact,
-                [ map $_->grow($circle_radius*1.1), @loops ],
-            );
+            
+			# this works well, it basically offsets the contact perimeter by the number
+			# of contact loops, I see no down side to this, do you?
+			my @loops_of_contact = @{offset(\@loops0, -$contact_loops * $flow->scaled_spacing)};
+		    $contact_infill = [ map $_, @loops_of_contact ];
             
             # transform loops into ExtrusionPath objects
             @loops = map Slic3r::ExtrusionPath->new(
