@@ -11,6 +11,8 @@
         %code{% const char* CLASS = "Slic3r::Polyline::Collection"; RETVAL = new PolylineCollection(*THIS); %};
     void clear()
         %code{% THIS->polylines.clear(); %};
+    void scale(double factor);
+    void translate(double x, double y);
     PolylineCollection* chained_path(bool no_reverse)
         %code{% const char* CLASS = "Slic3r::Polyline::Collection"; RETVAL = THIS->chained_path(no_reverse); %};
     PolylineCollection* chained_path_from(Point* start_near, bool no_reverse)

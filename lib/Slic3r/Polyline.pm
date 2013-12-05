@@ -33,4 +33,11 @@ sub align_to_origin {
     return $self->translate(-$bb->x_min, -$bb->y_min);
 }
 
+package Slic3r::Polyline::Collection;
+
+sub bounding_box {
+    my $self = shift;
+    return Slic3r::Geometry::BoundingBox->new_from_points([ map @$_, @$self ]);
+}
+
 1;

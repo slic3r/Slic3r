@@ -2,6 +2,20 @@
 
 namespace Slic3r {
 
+void
+PolylineCollection::scale(double factor)
+{
+    for (Polylines::iterator it = this->polylines.begin(); it != this->polylines.end(); ++it)
+        it->scale(factor);
+}
+
+void
+PolylineCollection::translate(double x, double y)
+{
+   for (Polylines::iterator it = this->polylines.begin(); it != this->polylines.end(); ++it)
+        it->translate(x, y);
+}
+
 PolylineCollection*
 PolylineCollection::chained_path(bool no_reverse) const
 {

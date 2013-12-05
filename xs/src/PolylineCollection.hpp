@@ -10,6 +10,8 @@ class PolylineCollection
 {
     public:
     Polylines polylines;
+    void scale(double factor);
+    void translate(double x, double y);
     PolylineCollection* chained_path(bool no_reverse) const;
     PolylineCollection* chained_path_from(const Point* start_near, bool no_reverse) const;
     Point* leftmost_point() const;
