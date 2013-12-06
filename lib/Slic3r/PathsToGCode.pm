@@ -124,7 +124,7 @@ sub add_coords
 
 # The following regular expression splits the path into pieces
  
-my $split_re = qr/(?:,|(?=-)|\s+)/;
+my $split_re = qr/(?:,|(?<!e)(?=-)|\s+)/;
  
 sub extract_path_info
 {
@@ -171,11 +171,11 @@ sub extract_path_info
     };
     # Deal with the rest of the path.
     my @curves;
-    while ($curves =~ /([cslqtahvz])\s*([-0-9.,\s]*)/gi) {
+    while ($curves =~ /([cslqtahvz])\s*([-0-9.,e\s]*)/gi) {
         push @curves, [$1, $2];
     }
     if (@curves == 0) {
-        croak "No curves found in '$curves'";
+        croak "No curves found in '$curves' (full: $path)";
     }
     for my $curve_data (@curves) {
         my ($curve_type, $curve) = @$curve_data;
