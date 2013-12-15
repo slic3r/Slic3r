@@ -26,6 +26,7 @@ my %opt = ();
 
 {
     my $model = Slic3r::Model->read_from_file($ARGV[0]);
+    die( "no model loaded" ) unless defined $model;
     
     $Slic3r::ViewMesh::object = $model->objects->[0];
     my $app = Slic3r::ViewMesh->new;

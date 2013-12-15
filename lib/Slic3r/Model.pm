@@ -14,9 +14,12 @@ sub read_from_file {
     my $model = $input_file =~ /\.stl$/i            ? Slic3r::Format::STL->read_file($input_file)
               : $input_file =~ /\.obj$/i            ? Slic3r::Format::OBJ->read_file($input_file)
               : $input_file =~ /\.amf(\.xml)?$/i    ? Slic3r::Format::AMF->read_file($input_file)
-              : die "Input file must have .stl, .obj or .amf(.xml) extension\n";
+              : undef;
+    warn "Input file must have .stl, .obj or .amf(.xml) extension\n" unless defined $model;
     
-    $_->input_file($input_file) for @{$model->objects};
+    if(defined $model) {
+        $_->input_file($input_file) for @{$model->objects};
+    }
     return $model;
 }
 

@@ -116,9 +116,12 @@ if (@ARGV) {  # slicing from command line
         my $model;
         if ($opt{merge}) {
             my @models = map Slic3r::Model->read_from_file($_), $input_file, (splice @ARGV, 0);
+            @models = grep { defined $_ } @models;
+            die( "no valid modules loaded" ) unless scalar @models > 0;
             $model = Slic3r::Model->merge(@models);
         } else {
             $model = Slic3r::Model->read_from_file($input_file);
+            die( "unrecognized file format" ) unless defined $model;
         }
         
         my $need_arrange = $model->has_objects_with_no_instances;

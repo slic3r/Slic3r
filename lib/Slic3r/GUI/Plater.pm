@@ -383,6 +383,12 @@ sub load_file {
     
     local $SIG{__WARN__} = Slic3r::GUI::warning_catcher($self);
     my $model = Slic3r::Model->read_from_file($input_file);
+    if( !defined $model ) {
+        $process_dialog->Destroy;
+        $self->statusbar->SetStatusText("Unrecognized file format");
+        return;
+    }
+
     $self->load_model_object($_) for @{$model->objects};
     
     $process_dialog->Destroy;

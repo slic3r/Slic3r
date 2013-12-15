@@ -135,6 +135,12 @@ sub quick_slice {
         
         my $print = $self->init_print;
         my $model = Slic3r::Model->read_from_file($input_file);
+
+        if( !defined $model ) {
+            Wx::MessageDialog->new( $self, "Invalid file format.",
+                                    'Error', wxICON_ERROR | wxOK )->ShowModal();
+            return;
+        }
         
         if ($model->has_objects_with_no_instances) {
             # apply a default position to all objects not having one
@@ -375,6 +381,13 @@ sub combine_stls {
     }
     
     my @models = map Slic3r::Model->read_from_file($_), @input_files;
+    @models = grep { defined $_ } @models;
+    if( scalar @models <= 0 ) {
+        Wx::MessageDialog->new( $self, "No valid models were found.",
+                                'Error', wxICON_ERROR | wxOK )->ShowModal();
+        return;
+    }
+
     my $new_model = Slic3r::Model->new;
     my $new_object = $new_model->add_object;
     for my $m (0 .. $#models) {
