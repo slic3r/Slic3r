@@ -223,7 +223,8 @@ sub make_perimeters {
     
     # process thin walls by collapsing slices to single passes
     if (@thin_walls) {
-        my @p = map $_->medial_axis($pspacing), @thin_walls;
+        #my @p = map $_->medial_axis($pspacing), @thin_walls;
+        my @p = map @{$_->medial_axis}, @thin_walls;
         my @paths = ();
         for my $p (@p) {
             next if $p->length <= $pspacing * 2;

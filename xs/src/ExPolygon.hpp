@@ -1,6 +1,7 @@
 #ifndef slic3r_ExPolygon_hpp_
 #define slic3r_ExPolygon_hpp_
 
+#include "BoundingBox.hpp"
 #include "Polygon.hpp"
 #include <vector>
 
@@ -15,6 +16,7 @@ class ExPolygon
     Polygon contour;
     Polygons holes;
     operator Polygons() const;
+    operator Points() const;
     void scale(double factor);
     void translate(double x, double y);
     void rotate(double angle, Point* center);
@@ -25,6 +27,8 @@ class ExPolygon
     Polygons simplify_p(double tolerance) const;
     ExPolygons simplify(double tolerance) const;
     void simplify(double tolerance, ExPolygons &expolygons) const;
+    void medial_axis(Polylines* polylines) const;
+    BoundingBox bounding_box() const;
     
     #ifdef SLIC3RXS
     void from_SV(SV* poly_sv);

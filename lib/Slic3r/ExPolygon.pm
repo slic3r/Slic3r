@@ -46,7 +46,7 @@ sub bounding_box {
 # this method only works for expolygons having only a contour or
 # a contour and a hole, and not being thicker than the supplied 
 # width. it returns a polyline or a polygon
-sub medial_axis {
+sub ____medial_axis {
     my ($self, $width) = @_;
     return $self->_medial_axis_voronoi($width);
 }

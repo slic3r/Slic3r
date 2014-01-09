@@ -24,6 +24,10 @@ src/ExtrusionEntity.cpp
 src/ExtrusionEntity.hpp
 src/ExtrusionEntityCollection.cpp
 src/ExtrusionEntityCollection.hpp
+src/evg-thin/datatypes.hpp
+src/evg-thin/evg-thin.cpp
+src/evg-thin/evg-thin.hpp
+src/evg-thin/heap.hpp
 src/Flow.cpp
 src/Flow.hpp
 src/Geometry.cpp

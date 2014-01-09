@@ -104,4 +104,16 @@ is $expolygon->area, 100*100-20*20, 'area';
     is_deeply $collection->[0]->clone->pp, $collection->[0]->pp, 'clone collection item';
 }
 
+{
+    my $square = [  # ccw
+        [100, 100],
+        [200, 100],
+        [200, 500],
+        [100, 500],
+    ];
+    my $expolygon = Slic3r::ExPolygon->new($square);
+    $expolygon->scale(1 / 0.000001);
+    use XXX; YYY (map $_->pp, map @$_, $expolygon->medial_axis);
+}
+
 __END__
