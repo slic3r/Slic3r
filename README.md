@@ -58,6 +58,7 @@ it will run without the need for any dependency.
 If you want to compile the source yourself just do the following (checkout
 [slic3r.org](http://slic3r.org/download) for more details):
 
+For *nix systems
 ```
 $ git clone https://github.com/alexrj/Slic3r.git
 $ cd Slic3r
@@ -65,7 +66,32 @@ $ sudo perl Build.PL
 $ sudo perl Build.PL --gui
 $ ./slic3r.pl
 ```
+For Windows
+$ git clone https://github.com/alexrj/Slic3r.git
+$ cd Slic3r
+$ perl Build.PL
+$ perl Build.PL --gui
+$ ./slic3r.pl
 
+### Windows & PowerShell 
+What if Build has errors!
+ a) If you are running Windows Power Shell from GitHub, GitHub "provides" an old version of Perl.
+    TO verify you are running Citrus Perl or Strawberry Perl, type:
+    where.exe perl
+    If it shows a folder in Appdata/local/github... you must rename or remove it to run your perl version.
+ b) You need perl 5.12 or later. perl Build.pl will complain if you need to update perl.
+ c) On Windows, you must load the MingW package, for dmake.exe and gcc.
+ d) Also, your <perl folder>/bin and <mingw folder>/bin must be on the windows $PATH.
+ e) Build will also need the cpanminus module. You may already have it.
+    run "perl Build.pl" and if it needs you to install package cpanminus, follow the instructions from Build.PL
+ f) Loading the many modules used inludes a regression test.
+    Many of these tests are not tested on windows, and are either *nix only tests
+    accidently run on Windows, or are indeed platform dependent bugs.
+    In either case, cpanm will not load those modules, unless run with -force
+    By default, Build.Pl defaults to not using -force.
+    If you determine you want the modules installed even is some tests fail,
+    you may uncomment out the line which appends "-force" to the cpanm command
+    inside Build.pl.
 ### Can I help?
 
 Sure! Drop me a line at aar@cpan.org. You can also 
