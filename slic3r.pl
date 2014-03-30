@@ -25,6 +25,7 @@ my %cli_options = ();
         'debug'                 => \$Slic3r::debug,
         'gui'                   => \$opt{gui},
         'o|output=s'            => \$opt{output},
+        'output-dir=s'          => \$opt{output_dir},
         
         'save=s'                => \$opt{save},
         'load=s@'               => \$opt{load},
@@ -158,6 +159,11 @@ if (@ARGV) {  # slicing from command line
             $opt{duplicate_grid} = [ split /[,x]/, $opt{duplicate_grid}, 2 ];
         }
         
+        if (!defined $opt{output} && defined $opt{output_dir}) {
+            $opt{output} = File::Spec->join(
+                $opt{output_dir}, $config->output_filename_format);
+        }
+
         my $sprint = Slic3r::Print::Simple->new(
             scale           => $opt{scale}          // 1,
             rotate          => $opt{rotate}         // 0,
@@ -218,7 +224,7 @@ Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
     --load <file>       Load configuration from the specified file. It can be used 
                         more than once to load options from multiple files.
     -o, --output <file> File to output gcode to (by default, the file will be saved
-                        into the same directory as the input file using the 
+                        into the --output-dir directory, using the
                         --output-filename-format to generate the filename)
   
   Non-slicing actions (no G-code will be generated):
@@ -234,6 +240,8 @@ $j
     --autosave <file>   Automatically export current configuration to the specified file
 
   Output options:
+    --output-dir <dir>  Output directory (by default, the file will be saved
+                        into the same directory as the input file)
     --output-filename-format
                         Output file name format; all config options enclosed in brackets
                         will be replaced by their values, as well as [input_filename_base]
