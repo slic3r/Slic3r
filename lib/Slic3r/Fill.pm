@@ -204,18 +204,20 @@ sub make_fill {
             next SURFACE unless $density > 0;
         }
         
+        my $h = $surface->thickness;
+        $h = $layerm->height if $h == -1;
+
         my $f = $self->filler($filler);
         $f->layer_id($layerm->id);
         $f->angle($layerm->config->fill_angle);
         my ($params, @polylines) = $f->fill_surface(
             $surface,
-            density => $density/100,
-            flow    => $flow,
+            density       => $density/100,
+            flow          => $flow,
+            layer_height  => $h,
         );
         next unless @polylines;
         
-        my $h = $surface->thickness;
-        $h = $layerm->height if $h == -1;
         my $mm3_per_mm = $params->{flow}->mm3_per_mm($h);
         
         # save into layer
