@@ -33,7 +33,7 @@ sub fill_surface {
         $flow = Slic3r::Flow->new_from_spacing(
             spacing             => unscale($line_spacing),
             nozzle_diameter     => $flow->nozzle_diameter,
-            layer_height        => $surface->thickness,
+            layer_height        => $params{layer_height},
             bridge              => $flow->bridge,
         );
     } else {
