@@ -46,6 +46,18 @@ offset_ex(polygons, delta, scale = CLIPPER_OFFSET_SCALE, joinType = ClipperLib::
         RETVAL
 
 Polygons
+offset_pl(polylines, delta, scale = CLIPPER_OFFSET_SCALE, joinType = ClipperLib::jtMiter, miterLimit = 3)
+    Polylines               polylines
+    const float             delta
+    double                  scale
+    ClipperLib::JoinType    joinType
+    double                  miterLimit
+    CODE:
+        offset(polylines, RETVAL, delta, scale, joinType, miterLimit);
+    OUTPUT:
+        RETVAL
+
+Polygons
 offset2(polygons, delta1, delta2, scale = CLIPPER_OFFSET_SCALE, joinType = ClipperLib::jtMiter, miterLimit = 3)
     Polygons                polygons
     const float             delta1
