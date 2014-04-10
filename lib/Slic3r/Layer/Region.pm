@@ -6,7 +6,7 @@ use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(PI A B scale unscale chained_path points_coincide);
 use Slic3r::Geometry::Clipper qw(union_ex diff_ex intersection_ex 
-    offset offset_ex offset2 offset2_ex union_pt diff intersection
+    offset offset_ex offset_pl offset2 offset2_ex union_pt diff intersection
     union diff);
 use Slic3r::Surface ':types';
 
@@ -76,8 +76,10 @@ sub make_perimeters {
     my @contours    = ();    # array of Polygons with ccw orientation
     my @holes       = ();    # array of Polygons with cw orientation
     my @thin_walls  = ();    # array of ExPolygons
-    my @gaps        = ();    # array of ExPolygons
-    
+    my @pgaps       = ();    # perimeter gaps, array of ExPolygons
+    my @fgaps       = ();    # infill gaps, array of ExPolygons
+    my @fills       = ();    # area to be filles, array of polygons
+
     # we need to process each island separately because we might have different
     # extra perimeters for each one
     foreach my $surface (@{$self->slices}) {
@@ -85,7 +87,6 @@ sub make_perimeters {
         my $loop_number = $self->config->perimeters + ($surface->extra_perimeters || 0);
         
         my @last = @{$surface->expolygon};
-        my @last_gaps = ();
         if ($loop_number > 0) {
             # we loop one time more than needed in order to find gaps after the last perimeter was applied
             for my $i (1 .. ($loop_number+1)) {  # outer loop is 1
@@ -112,8 +113,13 @@ sub make_perimeters {
                         my $diff = diff_ex(
                             offset(\@last, -0.5*$pspacing),
                             offset(\@offsets, +0.5*$pspacing),
-                        );
-                        push @gaps, @last_gaps = grep abs($_->area) >= $gap_area_threshold, @$diff;
+                            );
+                        if ($i <= $loop_number) {
+                            push @pgaps, grep abs($_->area) >= $gap_area_threshold, @$diff;
+                        } else {
+                            push @fgaps, grep abs($_->area) >= $gap_area_threshold, @$diff;                            
+                        }
+                        
                     }
                 }
             
@@ -132,22 +138,7 @@ sub make_perimeters {
             }
         }
         
-        # make sure we don't infill narrow parts that are already gap-filled
-        # (we only consider this surface's gaps to reduce the diff() complexity)
-        @last = @{diff(\@last, [ map @$_, @last_gaps ])};
-        
-        # create one more offset to be used as boundary for fill
-        # we offset by half the perimeter spacing (to get to the actual infill boundary)
-        # and then we offset back and forth by half the infill spacing to only consider the
-        # non-collapsing regions
-        $self->fill_surfaces->append(
-            map Slic3r::Surface->new(expolygon => $_, surface_type => S_TYPE_INTERNAL),  # use a bogus surface type
-            @{offset2_ex(
-                [ map @{$_->simplify_p(&Slic3r::SCALED_RESOLUTION)}, @{union_ex(\@last)} ],
-                -($pspacing/2 + $ispacing/2),
-                +$ispacing/2,
-            )}
-        );
+        push @fills, @last;
     }
     
     # process thin walls by collapsing slices to single passes
@@ -283,13 +274,14 @@ sub make_perimeters {
     $self->perimeters->append(@loops);
     
     # fill gaps
+    my @filled_gaps=();    # collect actual gap-filled area here
     {
         my $fill_gaps = sub {
-            my ($min, $max, $w) = @_;
+            my ($min, $max, $w, $gaps) = @_;
             
             my $this = diff_ex(
-                offset2([ map @$_, @gaps ], -$min/2, +$min/2),
-                offset2([ map @$_, @gaps ], -$max/2, +$max/2),
+                offset2([ map @$_, @{$gaps} ], -$min/2, +$min/2),
+                offset2([ map @$_, @{$gaps} ], -$max/2, +$max/2),
                 1,
             );
             
@@ -299,6 +291,7 @@ sub make_perimeters {
                 mm3_per_mm  => $flow->mm3_per_mm($self->height),
             );
             my @polylines = map @{$_->medial_axis($max, $min/2)}, @$this;
+            push @filled_gaps, @{offset_pl(\@polylines, scale $w/2)};
             $self->thin_fills->append(map {
                 $_->isa('Slic3r::Polygon')
                     ? Slic3r::ExtrusionLoop->new(polygon => $_, %path_args)->split_at_first_point  # should we keep these as loops?
@@ -311,8 +304,25 @@ sub make_perimeters {
         
         # where $pwidth < thickness < 2*$pspacing, infill with width = 1.5*$pwidth
         # where 0.5*$pwidth < thickness < $pwidth, infill with width = 0.5*$pwidth
-        $fill_gaps->($pwidth, 2*$pspacing, unscale 1.5*$pwidth);
-        $fill_gaps->(0.5*$pwidth, $pwidth, unscale 0.5*$pwidth);
+        $fill_gaps->($pwidth, 2*$pspacing, unscale 1.5*$pwidth, [@pgaps, @fgaps]);
+        $fill_gaps->(0.5*$pwidth, $pwidth, unscale 0.5*$pwidth, [@pgaps, @fgaps]);
+
+        # substract filled gaps from fill area        
+        @fills = @{diff(\@fills, \@filled_gaps)};
+              
+
+        # create one more offset to be used as boundary for fill
+        # we offset by half the perimeter spacing (to get to the actual infill boundary)
+        # and then we offset back and forth by half the infill spacing to only consider the
+        # non-collapsing regions
+        $self->fill_surfaces->append(
+            map Slic3r::Surface->new(expolygon => $_, surface_type => S_TYPE_INTERNAL),  # use a bogus surface type
+            @{offset2_ex(
+                  [ map @{$_->simplify_p(&Slic3r::SCALED_RESOLUTION)}, @{union_ex(\@fills)} ],
+                  -($pspacing/2 + $ispacing/2),
+                  +$ispacing/2,
+                  )}
+            );
     }
 }
 
