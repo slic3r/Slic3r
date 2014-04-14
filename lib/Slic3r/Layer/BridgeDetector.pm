@@ -69,23 +69,23 @@ sub detect_angle {
             # we'll now try several directions using a rudimentary visibility check:
             # bridge in several directions and then sum the length of lines having both
             # endpoints within anchors
-            my %directions = ();  # angle => score
+            my %directions = ();  # angle => score; zero is east and counting counterclockwise
             my $line_increment = $self->infill_flow->scaled_width;
             for (my $angle = 0; $angle < PI; $angle += $self->resolution) {
                 my $my_inset   = [ map $_->clone, @$inset ];
                 my $my_anchors = [ map $_->clone, @$anchors ];
                 
                 # rotate everything - the center point doesn't matter
-                $_->rotate($angle, [0,0]) for @$my_inset, @$my_anchors;
+                $_->rotate(-$angle, [0,0]) for @$my_inset, @$my_anchors;  # rotate everything in oposite direction
             
                 # generate lines in this direction
                 my $bounding_box = Slic3r::Geometry::BoundingBox->new_from_points([ map @$_, map @$_, @$my_anchors ]);
             
                 my @lines = ();
-                for (my $x = $bounding_box->x_min; $x <= $bounding_box->x_max; $x += $line_increment) {
+                for (my $y = $bounding_box->y_min; $y <= $bounding_box->y_max; $y += $line_increment) {
                     push @lines, Slic3r::Polyline->new(
-                        [$x, $bounding_box->y_min + scaled_epsilon],
-                        [$x, $bounding_box->y_max - scaled_epsilon],
+                        [$bounding_box->x_min - scaled_epsilon, $y],
+                        [$bounding_box->x_max + scaled_epsilon, $y],
                     );
                 }
                 
@@ -113,6 +113,7 @@ sub detect_angle {
     }
     
     if (defined $bridge_angle) {
+        $bridge_angle=PI+PI/2-$bridge_angle;   # Infill zero is north and clockwise
         if ($bridge_angle >= PI - epsilon) {
             $bridge_angle -= PI;
         }
