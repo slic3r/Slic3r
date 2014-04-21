@@ -197,6 +197,7 @@ sub _build_field {
             $field = Wx::SpinCtrl->new($self->parent, -1, $opt->{default}, wxDefaultPosition, $size, $style, $opt->{min} || 0, $opt->{max} || 2147483647, $opt->{default});
             $self->_setters->{$opt_key} = sub { $field->SetValue($_[0]) };
             EVT_SPINCTRL ($self->parent, $field, $on_change);
+            EVT_TEXT ($self->parent, $field, $on_change);
             EVT_KILL_FOCUS($field, $on_kill_focus);
         } elsif ($opt->{values}) {
             $field = Wx::ComboBox->new($self->parent, -1, $opt->{default}, wxDefaultPosition, $size, $opt->{labels} || $opt->{values});
@@ -204,8 +205,11 @@ sub _build_field {
                 $field->SetValue($_[0]);
             };
             EVT_COMBOBOX($self->parent, $field, sub {
-                $field->SetValue($opt->{values}[ $field->GetSelection ]);  # set the text field to the selected value
-                $self->_on_change($opt_key, $on_change);
+                # Without CallAfter, the field text is not populated on Windows.
+                Slic3r::GUI->CallAfter(sub {
+                    $field->SetValue($opt->{values}[ $field->GetSelection ]);  # set the text field to the selected value
+                    $self->_on_change($opt_key, $on_change);
+                });
             });
             EVT_TEXT($self->parent, $field, $on_change);
             EVT_KILL_FOCUS($field, $on_kill_focus);
