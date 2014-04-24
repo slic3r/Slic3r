@@ -21,14 +21,15 @@ class ExPolygon
     void rotate(double angle, const Point &center);
     double area() const;
     bool is_valid() const;
-    bool contains_line(const Line* line) const;
-    bool contains_point(const Point* point) const;
+    bool contains_line(const Line &line) const;
+    bool contains_point(const Point &point) const;
     Polygons simplify_p(double tolerance) const;
     ExPolygons simplify(double tolerance) const;
     void simplify(double tolerance, ExPolygons &expolygons) const;
     void medial_axis(double max_width, double min_width, Polylines* polylines) const;
     void get_trapezoids(Polygons* polygons) const;
     void get_trapezoids(Polygons* polygons, double angle) const;
+    void triangulate(Polygons* polygons) const;
     
     #ifdef SLIC3RXS
     void from_SV(SV* poly_sv);

@@ -12,12 +12,20 @@
     void clear()
         %code{% THIS->polylines.clear(); %};
     PolylineCollection* chained_path(bool no_reverse)
-        %code{% const char* CLASS = "Slic3r::Polyline::Collection"; RETVAL = THIS->chained_path(no_reverse); %};
+        %code{%
+            const char* CLASS = "Slic3r::Polyline::Collection";
+            RETVAL = new PolylineCollection();
+            THIS->chained_path(RETVAL, no_reverse);
+        %};
     PolylineCollection* chained_path_from(Point* start_near, bool no_reverse)
-        %code{% const char* CLASS = "Slic3r::Polyline::Collection"; RETVAL = THIS->chained_path_from(start_near, no_reverse); %};
+        %code{%
+            const char* CLASS = "Slic3r::Polyline::Collection";
+            RETVAL = new PolylineCollection();
+            THIS->chained_path_from(*start_near, RETVAL, no_reverse);
+        %};
     int count()
         %code{% RETVAL = THIS->polylines.size(); %};
-    Point* leftmost_point();
+    PointClone leftmost_point();
 %{
 
 PolylineCollection*

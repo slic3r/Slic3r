@@ -18,8 +18,8 @@
     ExtrusionPath* split_at_first_point()
         %code{% const char* CLASS = "Slic3r::ExtrusionPath"; RETVAL = THIS->split_at_first_point(); %};
     bool make_counter_clockwise();
-    Point* first_point();
-    Point* last_point();
+    PointClone first_point();
+    PointClone last_point();
     bool is_perimeter();
     bool is_fill();
     bool is_bridge();

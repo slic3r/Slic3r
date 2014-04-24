@@ -12,10 +12,10 @@ Polygon::operator Polygons() const
     return pp;
 }
 
-Point*
+Point
 Polygon::last_point() const
 {
-    return new Point(this->points.front());  // last point == first point for polygons
+    return this->points.front();  // last point == first point for polygons
 }
 
 Lines
@@ -37,7 +37,7 @@ Polygon::lines(Lines* lines) const
 }
 
 Polyline*
-Polygon::split_at(const Point* point) const
+Polygon::split_at(const Point &point) const
 {
     // find index of point
     for (Points::const_iterator it = this->points.begin(); it != this->points.end(); ++it) {
@@ -124,15 +124,15 @@ Polygon::is_valid() const
 }
 
 bool
-Polygon::contains_point(const Point* point) const
+Polygon::contains_point(const Point &point) const
 {
     // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
     bool result = false;
     Points::const_iterator i = this->points.begin();
     Points::const_iterator j = this->points.end() - 1;
     for (; i != this->points.end(); j = i++) {
-        if ( ((i->y > point->y) != (j->y > point->y))
-            && (point->x < (j->x - i->x) * (point->y - i->y) / (j->y - i->y) + i->x) )
+        if ( ((i->y > point.y) != (j->y > point.y))
+            && (point.x < (j->x - i->x) * (point.y - i->y) / (j->y - i->y) + i->x) )
             result = !result;
     }
     return result;
@@ -156,6 +156,22 @@ Polygon::simplify(double tolerance, Polygons &polygons) const
     Polygons pp = this->simplify(tolerance);
     polygons.reserve(polygons.size() + pp.size());
     polygons.insert(polygons.end(), pp.begin(), pp.end());
+}
+
+// Only call this on convex polygons or it will return invalid results
+void
+Polygon::triangulate_convex(Polygons* polygons) const
+{
+    for (Points::const_iterator it = this->points.begin() + 2; it != this->points.end(); ++it) {
+        Polygon p;
+        p.points.reserve(3);
+        p.points.push_back(this->points.front());
+        p.points.push_back(*(it-1));
+        p.points.push_back(*it);
+        
+        // this should be replaced with a more efficient call to a merge_collinear_segments() method
+        if (p.area() > 0) polygons->push_back(p);
+    }
 }
 
 #ifdef SLIC3RXS

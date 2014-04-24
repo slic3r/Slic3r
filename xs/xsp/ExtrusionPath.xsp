@@ -17,8 +17,8 @@
     void reverse();
     Lines lines()
         %code{% RETVAL = THIS->polyline.lines(); %};
-    Point* first_point();
-    Point* last_point();
+    PointClone first_point();
+    PointClone last_point();
     void clip_end(double distance);
     void simplify(double tolerance);
     double length();
