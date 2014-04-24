@@ -16,6 +16,9 @@ typedef std::vector<Point> Points;
 typedef std::vector<Point*> PointPtrs;
 typedef std::vector<Pointf> Pointfs;
 
+typedef Point PointClone;
+typedef Point PointRef;
+
 class Point
 {
     public:
@@ -31,7 +34,7 @@ class Point
     bool coincides_with(const Point* point) const;
     int nearest_point_index(Points &points) const;
     int nearest_point_index(PointPtrs &points) const;
-    Point* nearest_point(Points points) const;
+    Point* nearest_point(Points &points) const;
     double distance_to(const Point* point) const;
     double distance_to(const Line* line) const;
     double distance_to(const Line &line) const;
@@ -45,6 +48,8 @@ class Point
     SV* to_SV_ref();
     SV* to_SV_clone_ref() const;
     SV* to_SV_pureperl() const;
+    static const char* CLASS() { return "Slic3r::Point"; }
+    static const char* CLASS_Ref() { return "Slic3r::Point::Ref"; }
     #endif
 };
 

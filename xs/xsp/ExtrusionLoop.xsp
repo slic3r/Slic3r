@@ -18,10 +18,8 @@
     ExtrusionPath* split_at_first_point()
         %code{% const char* CLASS = "Slic3r::ExtrusionPath"; RETVAL = THIS->split_at_first_point(); %};
     bool make_counter_clockwise();
-    Point* first_point()
-        %code{% const char* CLASS = "Slic3r::Point"; RETVAL = THIS->first_point(); %};
-    Point* last_point()
-        %code{% const char* CLASS = "Slic3r::Point"; RETVAL = THIS->last_point(); %};
+    Point* first_point();
+    Point* last_point();
     bool is_perimeter();
     bool is_fill();
     bool is_bridge();
@@ -41,10 +39,8 @@ _new(CLASS, polygon_sv, role, mm3_per_mm)
     OUTPUT:
         RETVAL
 
-Polygon*
+PolygonRef*
 ExtrusionLoop::polygon(...)
-    PREINIT:
-        const char* CLASS = "Slic3r::Polygon::Ref";
     CODE:
         if (items > 1) {
             THIS->polygon.from_SV_check( ST(1) );

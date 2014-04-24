@@ -91,7 +91,7 @@ Point::nearest_point_index(PointPtrs &points) const
 }
 
 Point*
-Point::nearest_point(Points points) const
+Point::nearest_point(Points &points) const
 {
     return &(points.at(this->nearest_point_index(points)));
 }
@@ -150,14 +150,14 @@ Point::ccw(const Line &line) const
 SV*
 Point::to_SV_ref() {
     SV* sv = newSV(0);
-    sv_setref_pv( sv, "Slic3r::Point::Ref", (void*)this );
+    sv_setref_pv( sv, CLASS_Ref(), (void*)this );
     return sv;
 }
 
 SV*
 Point::to_SV_clone_ref() const {
     SV* sv = newSV(0);
-    sv_setref_pv( sv, "Slic3r::Point", new Point(*this) );
+    sv_setref_pv( sv, CLASS(), new Point(*this) );
     return sv;
 }
 
@@ -184,9 +184,9 @@ void
 Point::from_SV_check(SV* point_sv)
 {
     if (sv_isobject(point_sv) && (SvTYPE(SvRV(point_sv)) == SVt_PVMG)) {
-        if (!sv_isa(point_sv, "Slic3r::Point") && !sv_isa(point_sv, "Slic3r::Point::Ref"))
-            CONFESS("Not a valid Slic3r::Point object");
-        *this = *(Point*)SvIV((SV*)SvRV( point_sv ));
+      if (!sv_isa(point_sv, CLASS()) && !sv_isa(point_sv, CLASS_Ref()))
+        CONFESS("Not a valid %s object (got %s)", CLASS(), HvNAME(SvSTASH(SvRV(point_sv))));
+      *this = *(Point*)SvIV((SV*)SvRV( point_sv ));
     } else {
         this->from_SV(point_sv);
     }

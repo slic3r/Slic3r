@@ -185,8 +185,6 @@ TriangleMesh::bb3()
 
 Polygon*
 TriangleMesh::convex_hull()
-    PREINIT:
-        const char* CLASS = "Slic3r::Polygon";
     CODE:
         RETVAL = new Polygon ();
         THIS->convex_hull(RETVAL);

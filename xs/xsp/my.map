@@ -2,7 +2,7 @@ std::vector<Points::size_type>  T_STD_VECTOR_INT
 std::vector<size_t>  T_STD_VECTOR_INT
 t_config_option_key T_STD_STRING
 
-BoundingBox*         O_OBJECT
+BoundingBox*         O_OBJECT_SLIC3R
 BoundingBoxf3*         O_OBJECT
 DynamicPrintConfig*  O_OBJECT
 PrintObjectConfig*  O_OBJECT
@@ -11,12 +11,12 @@ PrintConfig*  O_OBJECT
 FullPrintConfig*  O_OBJECT
 ZTable*         O_OBJECT
 TriangleMesh*         O_OBJECT
-Point*         O_OBJECT
+Point*         O_OBJECT_SLIC3R
 Pointf3*         O_OBJECT
 Line*           O_OBJECT
 Polyline*       O_OBJECT
 PolylineCollection*    O_OBJECT
-Polygon*        O_OBJECT
+Polygon*        O_OBJECT_SLIC3R
 ExPolygon*      O_OBJECT
 ExPolygonCollection*    O_OBJECT
 ExtrusionEntityCollection*    O_OBJECT
@@ -43,6 +43,13 @@ Polylines       T_ARRAYREF
 ExPolygons      T_ARRAYREF
 Surfaces        T_ARRAYREF
 
+PointClone      O_OBJECT_SLIC3R_CLONE
+PointClone*     O_OBJECT_SLIC3R_CLONEPTR
+PointRef*       O_OBJECT_SLIC3R_REF
+
+PolygonClone*   O_OBJECT_SLIC3R_CLONEPTR
+PolygonRef*     O_OBJECT_SLIC3R_REF
+
 # we return these types whenever we want the items to be returned
 # by reference and marked ::Ref because they're contained in another
 # Perl object
@@ -54,6 +61,19 @@ Polygons*       T_ARRAYREF_PTR
 TriangleMeshPtrs T_PTR_ARRAYREF
 
 INPUT
+
+O_OBJECT_SLIC3R
+    if( sv_isobject($arg) && (SvTYPE(SvRV($arg)) == SVt_PVMG) ) {
+        if ( sv_isa($arg, ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}::CLASS() ) ||  sv_isa($arg, ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}::CLASS_Ref() )) {
+              $var = ($type)SvIV((SV*)SvRV( $arg ));
+        } else {
+              croak(\"$var is not of type %s (got %s)\", ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}::CLASS(), HvNAME(SvSTASH(SvRV($arg))));
+              XSRETURN_UNDEF;
+        }
+    } else {
+        warn( \"${Package}::$func_name() -- $var is not a blessed SV reference\" );
+        XSRETURN_UNDEF;
+    }
 
 T_ARRAYREF
     if (SvROK($arg) && SvTYPE(SvRV($arg)) == SVt_PVAV) {
@@ -72,6 +92,23 @@ T_ARRAYREF
 	             \"$var\");
 
 OUTPUT
+# return object from pointer
+O_OBJECT_SLIC3R
+        sv_setref_pv( $arg, $var->CLASS(), (void*)$var );
+
+# allocate new object using new and return in (by value)
+O_OBJECT_SLIC3R_CLONE
+        sv_setref_pv( $arg, $var.CLASS(), (void*)new $type( $var ) );
+
+# allocate new object using new and return in (by pointer)
+O_OBJECT_SLIC3R_CLONEPTR
+        sv_setref_pv( $arg, ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}::CLASS(), new ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}( *$var ) );
+
+# return object::Ref from pointer
+O_OBJECT_SLIC3R_REF
+        sv_setref_pv( $arg, $var->CLASS_Ref(), (void*)$var );
+
+
 
 T_ARRAYREF
 	AV* av = newAV();

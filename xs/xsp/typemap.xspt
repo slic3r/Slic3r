@@ -10,6 +10,9 @@
 %typemap{SV*};
 %typemap{AV*};
 %typemap{Point*};
+%typemap{PointClone}{simple};
+%typemap{PointClone*}{simple};
+%typemap{PointRef*}{simple};
 %typemap{Pointf3*};
 %typemap{BoundingBox*};
 %typemap{BoundingBoxf3*};
@@ -24,6 +27,8 @@
 %typemap{Line*};
 %typemap{Polyline*};
 %typemap{Polygon*};
+%typemap{PolygonClone*}{simple};
+%typemap{PolygonRef*}{simple};
 %typemap{ExtrusionEntityCollection*};
 %typemap{ExtrusionPath*};
 %typemap{ExtrusionLoop*};

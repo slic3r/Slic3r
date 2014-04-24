@@ -7,8 +7,8 @@
 
 %name{Slic3r::Polygon} class Polygon {
     ~Polygon();
-    Polygon* clone()
-        %code{% const char* CLASS = "Slic3r::Polygon"; RETVAL = new Polygon(*THIS); %};
+    PolygonClone* clone()
+        %code{% RETVAL = THIS; %};
     SV* arrayref()
         %code{% RETVAL = THIS->to_AV(); %};
     SV* pp()
@@ -31,8 +31,7 @@
     bool make_counter_clockwise();
     bool make_clockwise();
     bool is_valid();
-    Point* first_point()
-        %code{% const char* CLASS = "Slic3r::Point"; RETVAL = THIS->first_point(); %};
+    Point* first_point();
     bool contains_point(Point* point);
     Polygons simplify(double tolerance);
 %{
