@@ -390,7 +390,7 @@ sub clip_with_object {
         
         $support->{$i} = diff(
             $support->{$i},
-            offset([ map @$_, map @{$_->slices}, @layers ], +$self->flow->scaled_width),
+            offset([ map @$_, map @{$_->slices}, @layers ], +($self->flow->scaled_width)*1.5),
         );
     }
 }
