@@ -1,6 +1,10 @@
 #include "ExtrusionEntityCollection.hpp"
 #include <algorithm>
 #include <map>
+#ifdef SLIC3RXS
+#include "perlglue.hpp"
+#endif
+
 
 namespace Slic3r {
 
@@ -106,5 +110,10 @@ ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEntityCo
         start_near = retval->entities.back()->last_point();
     }
 }
+
+#ifdef SLIC3RXS
+// there is no ExtrusionLoop::Collection or ExtrusionEntity::Collection
+REGISTER_CLASS(ExtrusionEntityCollection, "ExtrusionPath::Collection");
+#endif
 
 }

@@ -8,8 +8,8 @@
 
 %name{Slic3r::Polyline} class Polyline {
     ~Polyline();
-    Polyline* clone()
-        %code{% const char* CLASS = "Slic3r::Polyline"; RETVAL = new Polyline(*THIS); %};
+    Clone<Polyline> clone()
+        %code{% RETVAL = THIS; %};
     SV* arrayref()
         %code{% RETVAL = THIS->to_AV(); %};
     SV* pp()

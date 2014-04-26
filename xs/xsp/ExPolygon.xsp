@@ -7,8 +7,7 @@
 
 %name{Slic3r::ExPolygon} class ExPolygon {
     ~ExPolygon();
-    ExPolygon* clone()
-        %code{% const char* CLASS = "Slic3r::ExPolygon"; RETVAL = new ExPolygon(*THIS); %};
+    Clone<ExPolygon> clone() %code{% RETVAL = THIS; %};
     SV* arrayref()
         %code{% RETVAL = THIS->to_AV(); %};
     SV* pp()

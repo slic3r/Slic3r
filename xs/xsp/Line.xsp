@@ -7,8 +7,7 @@
 
 %name{Slic3r::Line} class Line {
     ~Line();
-    Line* clone()
-        %code{% const char* CLASS = "Slic3r::Line"; RETVAL = new Line(*THIS); %};
+    Clone<Line> clone() %code{% RETVAL = THIS; %};
     SV* arrayref()
         %code{% RETVAL = THIS->to_AV(); %};
     SV* pp()
@@ -24,7 +23,7 @@
     Point* midpoint();
     Clone<Point> point_at(double distance);
     Polyline* as_polyline()
-        %code{% const char* CLASS = "Slic3r::Polyline"; RETVAL = new Polyline(*THIS); %};
+        %code{% RETVAL = new Polyline(*THIS); %};
 %{
 
 Line*

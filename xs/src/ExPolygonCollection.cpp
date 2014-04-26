@@ -1,6 +1,11 @@
 #include "ExPolygonCollection.hpp"
 #include "Geometry.hpp"
 
+#ifdef SLIC3RXS
+#include "perlglue.hpp"
+#endif
+
+
 namespace Slic3r {
 
 ExPolygonCollection::operator Polygons() const
@@ -66,5 +71,9 @@ ExPolygonCollection::convex_hull(Polygon* hull) const
         pp.insert(pp.end(), it->contour.points.begin(), it->contour.points.end());
     Slic3r::Geometry::convex_hull(pp, hull);
 }
+
+#ifdef SLIC3RXS
+REGISTER_CLASS(ExPolygonCollection, "ExPolygon::Collection");
+#endif
 
 }

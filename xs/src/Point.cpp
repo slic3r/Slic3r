@@ -1,8 +1,10 @@
-#include <cmath>
-#include <sstream>
 #include "Point.hpp"
 #include "Line.hpp"
+#include <cmath>
+#include <sstream>
+#ifdef SLIC3RXS
 #include "perlglue.hpp"
+#endif
 
 namespace Slic3r {
 
@@ -188,6 +190,26 @@ Point::from_SV_check(SV* point_sv)
     }
 }
 
+#endif
+
+void
+Pointf::scale(double factor)
+{
+    this->x *= factor;
+    this->y *= factor;
+}
+
+void
+Pointf::translate(double x, double y)
+{
+    this->x += x;
+    this->y += y;
+}
+
+#ifdef SLIC3RXS
+
+REGISTER_CLASS(Pointf, "Pointf");
+
 SV*
 Pointf::to_SV_pureperl() const {
     AV* av = newAV();
@@ -212,20 +234,6 @@ Pointf::from_SV(SV* point_sv)
 #endif
 
 void
-Pointf::scale(double factor)
-{
-    this->x *= factor;
-    this->y *= factor;
-}
-
-void
-Pointf::translate(double x, double y)
-{
-    this->x += x;
-    this->y += y;
-}
-
-void
 Pointf3::scale(double factor)
 {
     Pointf::scale(factor);
@@ -238,5 +246,7 @@ Pointf3::translate(double x, double y, double z)
     Pointf::translate(x, y);
     this->z += z;
 }
-
+#ifdef SLIC3RXS
+REGISTER_CLASS(Pointf3, "Pointf3");
+#endif
 }

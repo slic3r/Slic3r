@@ -13,10 +13,8 @@
         %code{% RETVAL = THIS->polygon.to_SV_pureperl(); %};
     void reverse()
         %code{% THIS->polygon.reverse(); %};
-    ExtrusionPath* split_at_index(int index)
-        %code{% const char* CLASS = "Slic3r::ExtrusionPath"; RETVAL = THIS->split_at_index(index); %};
-    ExtrusionPath* split_at_first_point()
-        %code{% const char* CLASS = "Slic3r::ExtrusionPath"; RETVAL = THIS->split_at_first_point(); %};
+    ExtrusionPath* split_at_index(int index);
+    ExtrusionPath* split_at_first_point();
     bool make_counter_clockwise();
     Clone<Point> first_point();
     Clone<Point> last_point();

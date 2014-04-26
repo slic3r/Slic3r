@@ -19,11 +19,11 @@
     void reverse();
     Lines lines();
     Polyline* split_at(Point* point)
-        %code{% const char* CLASS = "Slic3r::Polyline"; RETVAL = THIS->split_at(*point); %};
+        %code{% RETVAL = THIS->split_at(*point); %};
     Polyline* split_at_index(int index)
-        %code{% const char* CLASS = "Slic3r::Polyline"; RETVAL = THIS->split_at_index(index); %};
+        %code{% RETVAL = THIS->split_at_index(index); %};
     Polyline* split_at_first_point()
-        %code{% const char* CLASS = "Slic3r::Polyline"; RETVAL = THIS->split_at_first_point(); %};
+        %code{% RETVAL = THIS->split_at_first_point(); %};
     Points equally_spaced_points(double distance);
     double length();
     double area();
