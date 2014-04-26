@@ -1,4 +1,5 @@
 #include "BoundingBox.hpp"
+#include "perlglue.hpp"
 #include <algorithm>
 
 namespace Slic3r {
@@ -156,4 +157,9 @@ BoundingBox3Base<PointClass>::center() const
 }
 template Pointf3 BoundingBox3Base<Pointf3>::center() const;
 
+#ifdef SLIC3RXS
+REGISTER_CLASS(BoundingBox, "Geometry::BoundingBox");
+#endif
+
 }
+

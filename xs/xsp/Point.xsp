@@ -3,12 +3,13 @@
 %{
 #include <myinit.h>
 #include "Point.hpp"
+#include "perlglue.hpp"
 %}
 
 %name{Slic3r::Point} class Point {
     Point(long _x = 0, long _y = 0);
     ~Point();
-    PointClone* clone()
+    Clone<Point> clone()
         %code{% RETVAL=THIS; %}; 
     void scale(double factor);
     void translate(double x, double y);

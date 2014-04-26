@@ -2,6 +2,7 @@
 #include "ClipperUtils.hpp"
 #include "Polygon.hpp"
 #include "Polyline.hpp"
+#include "perlglue.hpp"
 
 namespace Slic3r {
 
@@ -175,6 +176,8 @@ Polygon::triangulate_convex(Polygons* polygons) const
 }
 
 #ifdef SLIC3RXS
+REGISTER_CLASS(Polygon, "Polygon");
+
 SV*
 Polygon::to_SV_ref() {
     SV* sv = newSV(0);

@@ -11,8 +11,6 @@ namespace Slic3r {
 
 class Polygon;
 typedef std::vector<Polygon> Polygons;
-typedef Polygon PolygonRef;
-typedef Polygon PolygonClone;
 
 class Polygon : public MultiPoint {
     public:

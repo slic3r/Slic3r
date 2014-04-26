@@ -22,8 +22,8 @@
             RETVAL = new ExtrusionEntityCollection();
             THIS->chained_path_from(*start_near, RETVAL, no_reverse);
         %};
-    PointClone first_point();
-    PointClone last_point();
+    Clone<Point> first_point();
+    Clone<Point> last_point();
     int count()
         %code{% RETVAL = THIS->entities.size(); %};
     std::vector<size_t> orig_indices()

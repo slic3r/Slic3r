@@ -43,12 +43,11 @@ Polylines       T_ARRAYREF
 ExPolygons      T_ARRAYREF
 Surfaces        T_ARRAYREF
 
-PointClone      O_OBJECT_SLIC3R_CLONE
-PointClone*     O_OBJECT_SLIC3R_CLONEPTR
-PointRef*       O_OBJECT_SLIC3R_REF
+Ref<Point>      O_OBJECT_SLIC3R_T
+Clone<Point>    O_OBJECT_SLIC3R_T
 
-PolygonClone*   O_OBJECT_SLIC3R_CLONEPTR
-PolygonRef*     O_OBJECT_SLIC3R_REF
+Ref<Polygon>    O_OBJECT_SLIC3R_T
+Clone<Polygon>  O_OBJECT_SLIC3R_T
 
 # we return these types whenever we want the items to be returned
 # by reference and marked ::Ref because they're contained in another
@@ -64,10 +63,10 @@ INPUT
 
 O_OBJECT_SLIC3R
     if( sv_isobject($arg) && (SvTYPE(SvRV($arg)) == SVt_PVMG) ) {
-        if ( sv_isa($arg, ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}::CLASS() ) ||  sv_isa($arg, ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}::CLASS_Ref() )) {
+        if ( sv_isa($arg, perl_class_name($var) ) ||  sv_isa($arg, perl_class_name_ref($var) )) {
               $var = ($type)SvIV((SV*)SvRV( $arg ));
         } else {
-              croak(\"$var is not of type %s (got %s)\", ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}::CLASS(), HvNAME(SvSTASH(SvRV($arg))));
+              croak(\"$var is not of type %s (got %s)\", perl_class_name($var), HvNAME(SvSTASH(SvRV($arg))));
               XSRETURN_UNDEF;
         }
     } else {
@@ -94,20 +93,11 @@ T_ARRAYREF
 OUTPUT
 # return object from pointer
 O_OBJECT_SLIC3R
-        sv_setref_pv( $arg, $var->CLASS(), (void*)$var );
+        sv_setref_pv( $arg, perl_class_name($var), (void*)$var );
 
-# allocate new object using new and return in (by value)
-O_OBJECT_SLIC3R_CLONE
-        sv_setref_pv( $arg, $var.CLASS(), (void*)new $type( $var ) );
-
-# allocate new object using new and return in (by pointer)
-O_OBJECT_SLIC3R_CLONEPTR
-        sv_setref_pv( $arg, ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}::CLASS(), new ${(my $ntt=$type)=~s/\s*\*//g;\$ntt}( *$var ) );
-
-# return object::Ref from pointer
-O_OBJECT_SLIC3R_REF
-        sv_setref_pv( $arg, $var->CLASS_Ref(), (void*)$var );
-
+# return value handled by template class
+O_OBJECT_SLIC3R_T
+        sv_setref_pv( $arg, $type\::CLASS(), (void*)$var );
 
 
 T_ARRAYREF

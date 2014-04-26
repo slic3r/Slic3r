@@ -3,11 +3,12 @@
 %{
 #include <myinit.h>
 #include "Polygon.hpp"
+#include "perlglue.hpp"
 %}
 
 %name{Slic3r::Polygon} class Polygon {
     ~Polygon();
-    PolygonClone* clone()
+    Clone<Polygon> clone()
         %code{% RETVAL = THIS; %};
     SV* arrayref()
         %code{% RETVAL = THIS->to_AV(); %};
@@ -32,7 +33,7 @@
     bool make_clockwise();
     bool is_valid();
 
-    PointClone first_point();
+    Clone<Point> first_point();
     bool contains_point(Point* point)
         %code{% RETVAL = THIS->contains_point(*point); %};
     Polygons simplify(double tolerance);

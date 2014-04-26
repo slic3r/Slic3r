@@ -25,7 +25,7 @@
         %};
     int count()
         %code{% RETVAL = THIS->polylines.size(); %};
-    PointClone leftmost_point();
+    Clone<Point> leftmost_point();
 %{
 
 PolylineCollection*

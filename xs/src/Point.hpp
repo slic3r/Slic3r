@@ -17,9 +17,6 @@ typedef std::vector<Point*> PointPtrs;
 typedef std::vector<const Point*> PointConstPtrs;
 typedef std::vector<Pointf> Pointfs;
 
-typedef Point PointClone;
-typedef Point PointRef;
-
 class Point
 {
     public:
@@ -48,8 +45,6 @@ class Point
     SV* to_SV_ref();
     SV* to_SV_clone_ref() const;
     SV* to_SV_pureperl() const;
-    static const char* CLASS() { return "Slic3r::Point"; }
-    static const char* CLASS_Ref() { return "Slic3r::Point::Ref"; }
     #endif
 };
 

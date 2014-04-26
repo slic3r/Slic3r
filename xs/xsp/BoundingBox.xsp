@@ -4,6 +4,7 @@
 #include <myinit.h>
 #include "BoundingBox.hpp"
 #include "Point.hpp"
+#include "perlglue.hpp"
 %}
 
 %name{Slic3r::Geometry::BoundingBox} class BoundingBox {
@@ -16,10 +17,10 @@
     void translate(double x, double y);
     Polygon* polygon()
         %code{% RETVAL = new Polygon(); THIS->polygon(RETVAL); %};
-    PointClone size();
-    PointClone center();
-    PointClone* min_point() %code{% RETVAL = &THIS->min; %};
-    PointClone* max_point() %code{% RETVAL = &THIS->max; %};
+    Clone<Point> size();
+    Clone<Point> center();
+    Clone<Point> min_point() %code{% RETVAL = THIS->min; %};
+    Clone<Point> max_point() %code{% RETVAL = THIS->max; %};
     double x_min() %code{% RETVAL = THIS->min.x; %};
     double x_max() %code{% RETVAL = THIS->max.x; %};
     double y_min() %code{% RETVAL = THIS->min.y; %};

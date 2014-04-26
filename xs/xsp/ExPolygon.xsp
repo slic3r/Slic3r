@@ -13,7 +13,7 @@
         %code{% RETVAL = THIS->to_AV(); %};
     SV* pp()
         %code{% RETVAL = THIS->to_SV_pureperl(); %};
-    PolygonRef* contour()
+    Ref<Polygon> contour()
         %code{% RETVAL = &(THIS->contour); %};
     Polygons* holes()
         %code{% RETVAL = &(THIS->holes); %};

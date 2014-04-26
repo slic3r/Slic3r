@@ -2,8 +2,11 @@
 #include <sstream>
 #include "Point.hpp"
 #include "Line.hpp"
+#include "perlglue.hpp"
 
 namespace Slic3r {
+
+
 
 bool
 Point::operator==(const Point& rhs) const
@@ -139,17 +142,20 @@ Point::ccw(const Line &line) const
 }
 
 #ifdef SLIC3RXS
+
+REGISTER_CLASS(Point, "Point");
+
 SV*
 Point::to_SV_ref() {
     SV* sv = newSV(0);
-    sv_setref_pv( sv, CLASS_Ref(), (void*)this );
+    sv_setref_pv( sv, perl_class_name_ref(this), (void*)this );
     return sv;
 }
 
 SV*
 Point::to_SV_clone_ref() const {
     SV* sv = newSV(0);
-    sv_setref_pv( sv, CLASS(), new Point(*this) );
+    sv_setref_pv( sv, perl_class_name(this), new Point(*this) );
     return sv;
 }
 
@@ -176,8 +182,8 @@ void
 Point::from_SV_check(SV* point_sv)
 {
     if (sv_isobject(point_sv) && (SvTYPE(SvRV(point_sv)) == SVt_PVMG)) {
-      if (!sv_isa(point_sv, CLASS()) && !sv_isa(point_sv, CLASS_Ref()))
-        CONFESS("Not a valid %s object (got %s)", CLASS(), HvNAME(SvSTASH(SvRV(point_sv))));
+      if (!sv_isa(point_sv, perl_class_name(this)) && !sv_isa(point_sv, perl_class_name_ref(this)))
+        CONFESS("Not a valid %s object (got %s)", perl_class_name(this), HvNAME(SvSTASH(SvRV(point_sv))));
       *this = *(Point*)SvIV((SV*)SvRV( point_sv ));
     } else {
         this->from_SV(point_sv);
