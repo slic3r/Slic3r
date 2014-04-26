@@ -50,11 +50,6 @@ class BoundingBox : public BoundingBoxBase<Point>
     BoundingBox() {};
     BoundingBox(const Points &points) : BoundingBoxBase<Point>(points) {};
     BoundingBox(const Lines &lines);
-
-    #ifdef SLIC3RXS
-    static const char* CLASS() { return "Slic3r::Geometry::BoundingBox"; }
-    static const char* CLASS_Ref() { return "Slic3r::Geometry::BoundingBox::Ref"; }
-    #endif
 };
 
 /*

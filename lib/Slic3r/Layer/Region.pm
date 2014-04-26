@@ -30,6 +30,9 @@ has 'thin_fills' => (is => 'rw', default => sub { Slic3r::ExtrusionPath::Collect
 # collection of surfaces for infill generation
 has 'fill_surfaces' => (is => 'rw', default => sub { Slic3r::Surface::Collection->new });
 
+# collection of expolygons representing the bridged areas (thus not needing support material)
+has 'bridged' => (is => 'rw', default => sub { Slic3r::ExPolygon::Collection->new });
+
 # ordered collection of extrusion paths/loops to build all perimeters
 has 'perimeters' => (is => 'rw', default => sub { Slic3r::ExtrusionPath::Collection->new });
 
@@ -55,6 +58,7 @@ sub flow {
         $bridge // 0,
         $self->layer->id == 0,
         $width,
+        $self->object,
     );
 }
 
@@ -284,8 +288,16 @@ sub make_perimeters {
         
         # use a nearest neighbor search to order these children
         # TODO: supply second argument to chained_path() too?
-        my $sorted_collection = $collection->chained_path_indices(0);
-        my @orig_indices = @{$sorted_collection->orig_indices};
+        # Optimization: since islands are going to be sorted by slice anyway in the 
+        # G-code export process, we skip chained_path here
+        my ($sorted_collection, @orig_indices);
+        if ($is_contour && $depth == 0) {
+            $sorted_collection = $collection;
+            @orig_indices = (0..$#$sorted_collection);
+        } else {
+            $sorted_collection = $collection->chained_path_indices(0);
+            @orig_indices = @{$sorted_collection->orig_indices};
+        }
         
         my @loops = ();
         foreach my $loop (@$sorted_collection) {
@@ -403,6 +415,10 @@ sub process_external_surfaces {
             );
             Slic3r::debugf "Processing bridge at layer %d:\n", $self->id;
             $angle = $bridge_detector->detect_angle;
+            
+            if (defined $angle && $self->object->config->support_material) {
+                $self->bridged->append(@{ $bridge_detector->coverage($angle) });
+            }
         }
         
         push @bottom, map $surface->clone(expolygon => $_, bridge_angle => $angle), @$grown;

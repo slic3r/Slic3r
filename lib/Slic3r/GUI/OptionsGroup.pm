@@ -3,7 +3,7 @@ use Moo;
 
 use List::Util qw(first);
 use Wx qw(:combobox :font :misc :sizer :systemsettings :textctrl);
-use Wx::Event qw(EVT_CHECKBOX EVT_COMBOBOX EVT_SPINCTRL EVT_TEXT EVT_KILL_FOCUS);
+use Wx::Event qw(EVT_CHECKBOX EVT_COMBOBOX EVT_SPINCTRL EVT_TEXT EVT_KILL_FOCUS EVT_SLIDER);
 
 =head1 NAME
 
@@ -77,7 +77,9 @@ sub BUILD {
     $self->sizer->Add($grid_sizer, 0, wxEXPAND | wxALL, &Wx::wxMAC ? 0 : 5);
     
     foreach my $line (@{$self->lines}) {
-        if ($line->{widget}) {
+        if ($line->{sizer}) {
+            $self->sizer->Add($line->{sizer}, 0, wxEXPAND | wxALL, &Wx::wxMAC ? 0 : 15);
+        } elsif ($line->{widget}) {
             my $window = $line->{widget}->GetWindow($self->parent);
             $self->sizer->Add($window, 0, wxEXPAND | wxALL, &Wx::wxMAC ? 0 : 15);
         } else {
@@ -182,7 +184,7 @@ sub _build_field {
     
     my $field;
     my $tooltip = $opt->{tooltip};
-    if ($opt->{type} =~ /^(i|f|s|s@|percent)$/) {
+    if ($opt->{type} =~ /^(i|f|s|s@|percent|slider)$/) {
         my $style = 0;
         $style = wxTE_MULTILINE if $opt->{multiline};
         # default width on Windows is too large
@@ -213,6 +215,20 @@ sub _build_field {
             });
             EVT_TEXT($self->parent, $field, $on_change);
             EVT_KILL_FOCUS($field, $on_kill_focus);
+        } elsif ($opt->{type} eq 'slider') {
+            my $scale = 10;
+            $field = Wx::BoxSizer->new(wxHORIZONTAL);
+            my $slider = Wx::Slider->new($self->parent, -1, ($opt->{default} // $opt->{min})*$scale, ($opt->{min} // 0)*$scale, ($opt->{max} // 100)*$scale, wxDefaultPosition, $size);
+            my $statictext = Wx::StaticText->new($self->parent, -1, $slider->GetValue/$scale);
+            $field->Add($_, 0, wxALIGN_CENTER_VERTICAL, 0) for $slider, $statictext;
+            $self->_setters->{$opt_key} = sub {
+                $field->SetValue($_[0]*$scale);
+            };
+            EVT_SLIDER($self->parent, $slider, sub {
+                my $value = $slider->GetValue/$scale;
+                $statictext->SetLabel($value);
+                $self->_on_change($opt_key, $value);
+            });
         } else {
             $field = Wx::TextCtrl->new($self->parent, -1, $opt->{default}, wxDefaultPosition, $size, $style);
             $self->_setters->{$opt_key} = sub { $field->ChangeValue($_[0]) };

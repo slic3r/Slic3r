@@ -6,8 +6,6 @@
 
 namespace Slic3r {
 
-
-
 bool
 Point::operator==(const Point& rhs) const
 {

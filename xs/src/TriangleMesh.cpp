@@ -126,6 +126,17 @@ TriangleMesh::repair() {
 }
 
 void
+TriangleMesh::reset_repair_stats() {
+    this->stl.stats.degenerate_facets   = 0;
+    this->stl.stats.edges_fixed         = 0;
+    this->stl.stats.facets_removed      = 0;
+    this->stl.stats.facets_added        = 0;
+    this->stl.stats.facets_reversed     = 0;
+    this->stl.stats.backwards_edges     = 0;
+    this->stl.stats.normals_fixed       = 0;
+}
+
+void
 TriangleMesh::WriteOBJFile(char* output_file) {
     stl_generate_shared_vertices(&stl);
     stl_write_obj(&stl, output_file);
@@ -148,6 +159,21 @@ void TriangleMesh::scale(std::vector<double> versor)
 void TriangleMesh::translate(float x, float y, float z)
 {
     stl_translate_relative(&(this->stl), x, y, z);
+}
+
+void TriangleMesh::rotate_x(float angle)
+{
+    stl_rotate_x(&(this->stl), angle);
+}
+
+void TriangleMesh::rotate_y(float angle)
+{
+    stl_rotate_y(&(this->stl), angle);
+}
+
+void TriangleMesh::rotate_z(float angle)
+{
+    stl_rotate_z(&(this->stl), angle);
 }
 
 void TriangleMesh::align_to_origin()

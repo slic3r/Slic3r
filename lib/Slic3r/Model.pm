@@ -2,7 +2,7 @@ package Slic3r::Model;
 use Moo;
 
 use List::Util qw(first max);
-use Slic3r::Geometry qw(X Y Z MIN move_points);
+use Slic3r::Geometry qw(X Y Z move_points);
 
 has 'materials' => (is => 'ro', default => sub { {} });
 has 'objects'   => (is => 'ro', default => sub { [] });
@@ -331,7 +331,7 @@ use Moo;
 
 use File::Basename qw(basename);
 use List::Util qw(first sum);
-use Slic3r::Geometry qw(X Y Z MIN MAX);
+use Slic3r::Geometry qw(X Y Z rad2deg);
 
 has 'input_file'            => (is => 'rw');
 has 'model'                 => (is => 'ro', weak_ref => 1, required => 1);
@@ -504,6 +504,16 @@ sub translate {
     $self->_bounding_box->translate(@shift) if defined $self->_bounding_box;
 }
 
+sub rotate_x {
+    my ($self, $angle) = @_;
+    
+    # we accept angle in radians but mesh currently uses degrees
+    $angle = rad2deg($angle);
+    
+    $_->mesh->rotate_x($angle) for @{$self->volumes};
+    $self->_bounding_box(undef);
+}
+
 sub materials_count {
     my $self = shift;
     
@@ -560,6 +570,59 @@ sub print_info {
     } else {
         printf "  number of facets:  %d\n", scalar(map @{$_->facets}, grep !$_->modifier, @{$self->volumes});
     }
+}
+
+sub cut {
+    my ($self, $z) = @_;
+    
+    # clone this one
+    my $upper = Slic3r::Model::Object->new(
+        input_file          => $self->input_file,
+        model               => $self->model,
+        config              => $self->config->clone,
+        layer_height_ranges => $self->layer_height_ranges,
+        origin_translation  => $self->origin_translation->clone,
+    );
+    my $lower = Slic3r::Model::Object->new(
+        input_file          => $self->input_file,
+        model               => $self->model,
+        config              => $self->config->clone,
+        layer_height_ranges => $self->layer_height_ranges,
+        origin_translation  => $self->origin_translation->clone,
+    );
+    foreach my $instance (@{$self->instances}) {
+        $upper->add_instance(offset => $instance->offset);
+        $lower->add_instance(offset => $instance->offset);
+    }
+    
+    foreach my $volume (@{$self->volumes}) {
+        if ($volume->modifier) {
+            # don't cut modifiers
+            $upper->add_volume($volume);
+            $lower->add_volume($volume);
+        } else {
+            my $upper_mesh = Slic3r::TriangleMesh->new;
+            my $lower_mesh = Slic3r::TriangleMesh->new;
+            $volume->mesh->cut($z + $volume->mesh->bounding_box->z_min, $upper_mesh, $lower_mesh);
+            $upper_mesh->repair;
+            $lower_mesh->repair;
+            $upper_mesh->reset_repair_stats;
+            $lower_mesh->reset_repair_stats;
+            
+            $upper->add_volume(
+                material_id => $volume->material_id,
+                mesh        => $upper_mesh,
+                modifier    => $volume->modifier,
+            );
+            $lower->add_volume(
+                material_id => $volume->material_id,
+                mesh        => $lower_mesh,
+                modifier    => $volume->modifier,
+            );
+        }
+    }
+    
+    return ($upper, $lower);
 }
 
 package Slic3r::Model::Volume;
