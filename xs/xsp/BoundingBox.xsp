@@ -9,8 +9,8 @@
 
 %name{Slic3r::Geometry::BoundingBox} class BoundingBox {
     ~BoundingBox();
-    BoundingBox* clone()
-        %code{% RETVAL = new BoundingBox(*THIS); %};
+    Clone<BoundingBox> clone()
+        %code{% RETVAL = THIS; %};
     void merge(BoundingBox* bb) %code{% THIS->merge(*bb); %};
     void merge_point(Point* point) %code{% THIS->merge(*point); %};
     void scale(double factor);

@@ -1,10 +1,8 @@
 #include "ExPolygonCollection.hpp"
 #include "Geometry.hpp"
-
 #ifdef SLIC3RXS
 #include "perlglue.hpp"
 #endif
-
 
 namespace Slic3r {
 

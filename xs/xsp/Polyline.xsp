@@ -4,6 +4,7 @@
 #include <myinit.h>
 #include "ClipperUtils.hpp"
 #include "Polyline.hpp"
+#include "perlglue.hpp"
 %}
 
 %name{Slic3r::Polyline} class Polyline {

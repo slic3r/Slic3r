@@ -134,7 +134,7 @@ Line::from_SV_check(SV* line_sv)
 {
     if (sv_isobject(line_sv) && (SvTYPE(SvRV(line_sv)) == SVt_PVMG)) {
         if (!sv_isa(line_sv, perl_class_name(this)) && !sv_isa(line_sv, perl_class_name_ref(this)))
-          CONFESS("Not a valid %s object", perl_class_name(this));
+            CONFESS("Not a valid %s object", perl_class_name(this));
         *this = *(Line*)SvIV((SV*)SvRV( line_sv ));
     } else {
         this->from_SV(line_sv);

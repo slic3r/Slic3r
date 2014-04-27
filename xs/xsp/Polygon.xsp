@@ -32,7 +32,6 @@
     bool make_counter_clockwise();
     bool make_clockwise();
     bool is_valid();
-
     Clone<Point> first_point();
     bool contains_point(Point* point)
         %code{% RETVAL = THIS->contains_point(*point); %};

@@ -3,11 +3,13 @@
 %{
 #include <myinit.h>
 #include "ExPolygon.hpp"
+#include "perlglue.hpp"
 %}
 
 %name{Slic3r::ExPolygon} class ExPolygon {
     ~ExPolygon();
-    Clone<ExPolygon> clone() %code{% RETVAL = THIS; %};
+    Clone<ExPolygon> clone()
+        %code{% RETVAL = THIS; %};
     SV* arrayref()
         %code{% RETVAL = THIS->to_AV(); %};
     SV* pp()

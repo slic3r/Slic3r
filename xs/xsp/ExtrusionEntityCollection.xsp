@@ -3,6 +3,7 @@
 %{
 #include <myinit.h>
 #include "ExtrusionEntityCollection.hpp"
+#include "perlglue.hpp"
 %}
 
 %name{Slic3r::ExtrusionPath::Collection} class ExtrusionEntityCollection {
@@ -69,7 +70,7 @@ ExtrusionEntityCollection::append(...)
             }
             ExtrusionEntity* entity = (ExtrusionEntity *)SvIV((SV*)SvRV( ST(i) ));
             // append COPIES
-            if ( ExtrusionPath* path = dynamic_cast<ExtrusionPath*>(entity)) {
+            if (ExtrusionPath* path = dynamic_cast<ExtrusionPath*>(entity)) {
                 THIS->entities.push_back( new ExtrusionPath(*path) );
             } else if (ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(entity)) {
                 THIS->entities.push_back( new ExtrusionLoop(*loop) );

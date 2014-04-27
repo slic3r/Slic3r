@@ -10,11 +10,11 @@ BoundingBoxf3*             O_OBJECT_SLIC3R
 Ref<BoundingBoxf3>         O_OBJECT_SLIC3R_T
 Clone<BoundingBoxf3>       O_OBJECT_SLIC3R_T
 
-DynamicPrintConfig*        O_OBJECT
-PrintObjectConfig*         O_OBJECT
-PrintRegionConfig*         O_OBJECT
-PrintConfig*               O_OBJECT
-FullPrintConfig*           O_OBJECT
+DynamicPrintConfig*        O_OBJECT_SLIC3R
+PrintObjectConfig*         O_OBJECT_SLIC3R
+PrintRegionConfig*         O_OBJECT_SLIC3R
+PrintConfig*               O_OBJECT_SLIC3R
+FullPrintConfig*           O_OBJECT_SLIC3R
 ZTable*                    O_OBJECT
 
 TriangleMesh*              O_OBJECT_SLIC3R
@@ -69,13 +69,13 @@ Flow*                      O_OBJECT_SLIC3R
 Ref<Flow>                  O_OBJECT_SLIC3R_T
 Clone<Flow>                O_OBJECT_SLIC3R_T
 
-PrintState*                O_OBJECT
+PrintState*                O_OBJECT_SLIC3R
 
-Surface*                   O_OBJECT
+Surface*                   O_OBJECT_SLIC3R
 Ref<Surface>               O_OBJECT_SLIC3R_T
 Clone<Surface>             O_OBJECT_SLIC3R_T
 
-SurfaceCollection*         O_OBJECT
+SurfaceCollection*         O_OBJECT_SLIC3R
 
 ExtrusionRole     T_UV
 FlowRole     T_UV

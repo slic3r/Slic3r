@@ -7,7 +7,6 @@
 #include "perlglue.hpp"
 #endif
 
-
 namespace Slic3r {
 
 bool

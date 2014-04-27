@@ -3,17 +3,21 @@
 %{
 #include <myinit.h>
 #include "Line.hpp"
+#include "perlglue.hpp"
 %}
 
 %name{Slic3r::Line} class Line {
     ~Line();
-    Clone<Line> clone() %code{% RETVAL = THIS; %};
+    Clone<Line> clone()
+        %code{% RETVAL = THIS; %};
     SV* arrayref()
         %code{% RETVAL = THIS->to_AV(); %};
     SV* pp()
         %code{% RETVAL = THIS->to_SV_pureperl(); %};
-    Ref<Point> a() %code{% RETVAL=&THIS->a; %};
-    Ref<Point> b() %code{% RETVAL=&THIS->b; %};
+    Ref<Point> a()
+        %code{% RETVAL=&THIS->a; %};
+    Ref<Point> b()
+        %code{% RETVAL=&THIS->b; %};
     void reverse();
     void scale(double factor);
     void translate(double x, double y);

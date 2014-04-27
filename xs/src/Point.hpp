@@ -29,7 +29,6 @@ class Point
     void translate(double x, double y);
     void rotate(double angle, const Point &center);
     bool coincides_with(const Point &point) const;
-
     int nearest_point_index(const Points &points) const;
     int nearest_point_index(const PointConstPtrs &points) const;
     int nearest_point_index(const PointPtrs &points) const;

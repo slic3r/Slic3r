@@ -148,7 +148,7 @@ void
 Polyline::from_SV_check(SV* poly_sv)
 {
     if (!sv_isa(poly_sv, perl_class_name(this)) && !sv_isa(poly_sv, perl_class_name_ref(this)))
-      CONFESS("Not a valid %s object",perl_class_name(this));
+        CONFESS("Not a valid %s object",perl_class_name(this));
     
     MultiPoint::from_SV_check(poly_sv);
 }

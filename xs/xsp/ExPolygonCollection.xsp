@@ -3,11 +3,13 @@
 %{
 #include <myinit.h>
 #include "ExPolygonCollection.hpp"
+#include "perlglue.hpp"
 %}
 
 %name{Slic3r::ExPolygon::Collection} class ExPolygonCollection {
     ~ExPolygonCollection();
-    Clone<ExPolygonCollection> clone() %code{% RETVAL = THIS; %};
+    Clone<ExPolygonCollection> clone() 
+        %code{% RETVAL = THIS; %};
     void clear()
         %code{% THIS->expolygons.clear(); %};
     void scale(double factor);

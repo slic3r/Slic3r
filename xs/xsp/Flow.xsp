@@ -3,6 +3,7 @@
 %{
 #include <myinit.h>
 #include "Flow.hpp"
+#include "perlglue.hpp"
 %}
 
 %name{Slic3r::Flow} class Flow {
@@ -10,7 +11,8 @@
     %name{_new} Flow(float width, float spacing, float nozzle_diameter);
     void set_bridge(bool bridge)
         %code{% THIS->bridge = bridge; %};
-    Clone<Flow> clone() %code{% RETVAL = THIS; %};
+    Clone<Flow> clone()
+        %code{% RETVAL = THIS; %};
     
     float width()
         %code{% RETVAL = THIS->width; %};

@@ -4,7 +4,6 @@
 #include "perlglue.hpp"
 #endif
 
-
 namespace Slic3r {
 
 template <class PointClass>

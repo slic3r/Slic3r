@@ -4,7 +4,6 @@
 #include "Line.hpp"
 #include "ClipperUtils.hpp"
 #include "polypartition.h"
-
 #ifdef SLIC3RXS
 #include "perlglue.hpp"
 #endif

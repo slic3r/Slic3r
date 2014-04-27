@@ -5,7 +5,6 @@
 #include "perlglue.hpp"
 #endif
 
-
 namespace Slic3r {
 
 ExtrusionEntityCollection::ExtrusionEntityCollection(const ExtrusionEntityCollection& collection)
