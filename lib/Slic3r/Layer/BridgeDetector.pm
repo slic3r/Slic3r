@@ -105,6 +105,23 @@ sub detect_angle {
         
         my @clipped_lines = map Slic3r::Line->new(@$_), @{ intersection_pl(\@lines, [ map @$_, @$my_clip_area ]) };
         
+        if (0) {
+            require "Slic3r/SVG.pm";
+            Slic3r::SVG::output("bridge_" . rad2deg($angle) . ".svg",
+                                red_expolygons      => [ @$my_anchors ],
+                                green_expolygons    => [ @$my_clip_area ],
+                                black_polylines       => [ grep {
+                                    my $line = $_;
+                                    (first { $_->contains_point($line->a) } @$my_anchors)
+                                        && (first { $_->contains_point($line->b) } @$my_anchors);
+                                                           } @clipped_lines],
+                                red_polylines       => [ grep {
+                                    my $line = $_;
+                                    !((first { $_->contains_point($line->a) } @$my_anchors)
+                                      && (first { $_->contains_point($line->b) } @$my_anchors));
+                                                         } @clipped_lines],
+                );             
+        }
         # remove any line not having both endpoints within anchors
         # NOTE: these calls to contains_point() probably need to check whether the point 
         # is on the anchor boundaries too

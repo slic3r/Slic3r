@@ -5,13 +5,15 @@ has 'islands'           => (is => 'ro', required => 1);  # arrayref of ExPolygon
 has 'internal'          => (is => 'ro', default => sub { 1 });
 has '_space'            => (is => 'ro', default => sub { Slic3r::GCode::MotionPlanner::ConfigurationSpace->new });
 has '_inner'            => (is => 'ro', default => sub { [] });  # arrayref of ExPolygons
+has '_outer'            => (is => 'ro', default => sub { [] });  # arrayref of ExPolygons
+has '_contour'          => (is => 'ro', default => sub { [] });  # arrayref of ExPolygons
 
 use List::Util qw(first max);
-use Slic3r::Geometry qw(A B scale epsilon);
-use Slic3r::Geometry::Clipper qw(offset offset_ex diff_ex intersection_pl);
+use Slic3r::Geometry qw(A B scale epsilon scaled_epsilon);
+use Slic3r::Geometry::Clipper qw(offset offset_ex diff diff_ex intersection_pl union_ex);
 
 # clearance (in mm) from the perimeters
-has '_inner_margin' => (is => 'ro', default => sub { scale 1 });
+has '_inner_margin' => (is => 'ro', default => sub { scale .3 });
 has '_outer_margin' => (is => 'ro', default => sub { scale 2 });
 
 # this factor weigths the crossing of a perimeter 
@@ -21,9 +23,9 @@ has '_outer_margin' => (is => 'ro', default => sub { scale 2 });
 # follow if we decided to cross the perimeter.
 # a nearly-infinite value for this will only permit
 # perimeter crossing when there's no alternative path.
-use constant CROSSING_PENALTY => 20;
+use constant CROSSING_PENALTY => 200;
 
-use constant POINT_DISTANCE => 10;  # unscaled
+use constant POINT_DISTANCE => 1;  # unscaled
 
 # setup our configuration space
 sub BUILD {
@@ -32,13 +34,29 @@ sub BUILD {
     my $point_distance = scale POINT_DISTANCE;
     my $nodes = $self->_space->nodes;
     my $edges = $self->_space->edges;
+
+ #   $DB::single=1;
+
+    # create outside space
+    my $grown_islands=offset( [map @$_, @{$self->islands}], +($self->_outer_margin - scale .1));
     
+    my $bb=Slic3r::Geometry::BoundingBox->new_from_points([ map @$_, @$grown_islands]);
+    my $ofs=scale 3;
+    
+    my $outside=diff_ex(
+        [Slic3r::Polygon->new([$bb->x_min-$ofs,$bb->y_min-$ofs], [$bb->x_min-$ofs,$bb->y_max+$ofs], 
+                              [$bb->x_max+$ofs,$bb->y_max+$ofs], [$bb->x_max+$ofs,$bb->y_min-$ofs])],
+        $grown_islands
+        );
+
+    my @inner_spaces;
+
     # process individual islands
     for my $i (0 .. $#{$self->islands}) {
         my $expolygon = $self->islands->[$i];
             
         # find external margin
-        my $outer = offset([ @$expolygon ], +$self->_outer_margin);
+        my $outer = offset([ @$expolygon ], $self->_outer_margin);
         my @outer_points = map @{$_->equally_spaced_points($point_distance)}, @$outer;
         
         # add outer points to graph
@@ -48,13 +66,9 @@ sub BUILD {
         for my $i (0 .. $#outer_points) {
             for my $j (($i+1) .. $#outer_points) {
                 my ($a, $b) = ($outer_points[$i], $outer_points[$j]);
-                my $line = Slic3r::Polyline->new($a, $b);
+                my $line = Slic3r::Line->new($a, $b);
                 # outer points are visible when their line has empty intersection with islands
-                my $intersection = intersection_pl(
-                    [ $line ],
-                    [ map @$_, @{$self->islands} ],
-                );
-                if (!@$intersection) {
+                if (first { $_->contains_line($line) } @$outside) {
                     $self->_space->add_edge($i+$o_outer, $j+$o_outer, $line->length);
                 }
             }
@@ -63,6 +77,7 @@ sub BUILD {
         if ($self->internal) {
             # find internal margin
             my $inner = offset_ex([ @$expolygon ], -$self->_inner_margin);
+            my $inner_mask = offset_ex([ @$expolygon ], -($self->_inner_margin - scale .1));
             push @{ $self->_inner }, @$inner;
             my @inner_points = map @{$_->equally_spaced_points($point_distance)}, map @$_, @$inner;
             
@@ -75,18 +90,20 @@ sub BUILD {
                     my ($a, $b) = ($inner_points[$i], $inner_points[$j]);
                     my $line = Slic3r::Line->new($a, $b);
                     # turn $inner into an ExPolygonCollection and use $inner->contains_line()
-                    if (first { $_->contains_line($line) } @$inner) {
+                    if (first { $_->contains_line($line) } @$inner_mask) {
                         $self->_space->add_edge($i+$o_inner, $j+$o_inner, $line->length);
                     }
                 }
             }
-            
+#            $DB::single=1;
             # generate the stripe around slice contours
-            my $contour = diff_ex(
-                $outer,
-                [ map @$_, @$inner ],
-            );
-            
+            my $contour = offset_ex(
+                diff(
+                    $outer,
+                    [ map @$_, @$inner ],
+                ),
+                scale .1);
+            push @{ $self->_contour }, @$contour;
             # find pairs of visible points in this area and add them to the graph
             for my $i (0 .. $#inner_points) {
                 for my $j (0 .. $#outer_points) {
@@ -103,16 +120,20 @@ sub BUILD {
     
     # since Perl has no infinity symbol and we don't want to overcomplicate
     # the Dijkstra algorithm with string constants or -1 values
-    $self->_space->_infinity(10 * (max(map values %$_, values %{$self->_space->edges}) // 0));
-    
-    if (0) {
+    $self->_space->_infinity(($bb->size->x+$bb->size->y) * CROSSING_PENALTY);
+#    $DB::single=1;
+    if (1) {
         require "Slic3r/SVG.pm";
         Slic3r::SVG::output("space.svg",
-            no_arrows       => 1,
-            expolygons      => $self->islands,
-            lines           => $self->_space->get_lines,
-            points          => $self->_space->nodes,
-        );
+                            no_arrows       => 1,
+                            line_width      => .03,
+                            cyan_expolygons => $self->islands,
+                            red_expolygons  => $outside,
+                            green_expolygons => $self->_inner,
+                            blue_expolygons => $self->_contour,
+                            lines           => $self->_space->get_lines,
+                            points          => $self->_space->nodes,
+            );
         printf "%d islands\n", scalar @{$self->islands};
         
         eval "use Devel::Size";
@@ -123,7 +144,7 @@ sub BUILD {
             for qw(nodes edges);
         printf "  %-19s = %.1fMb\n", 'self', Devel::Size::total_size($self)/1024/1024;
         
-        exit if $self->internal;
+        #exit if $self->internal;
     }
 }
 
@@ -144,23 +165,26 @@ sub shortest_path {
     # compute shortest path
     my $path = $space->shortest_path($node_from, $node_to);
     
+    
+    if (1) {
+        require "Slic3r/SVG.pm";
+        Slic3r::SVG::output("path.svg",
+                            no_arrows       => 1,
+                            line_width      => .1,
+                            expolygons      => $self->islands,
+                            lines           => $space->get_lines,
+                            red_points      => [$from, $to],
+                            red_polylines   => [$path],
+        );
+#        exit;
+    }
+ 
     if (!$path->is_valid) {
+        $DB::single=1;
         Slic3r::debugf "Failed to compute shortest path.\n";
         return Slic3r::Polyline->new($from, $to);
     }
-    
-    if (0) {
-        require "Slic3r/SVG.pm";
-        Slic3r::SVG::output("path.svg",
-            no_arrows       => 1,
-            expolygons      => $self->islands,
-            lines           => $space->get_lines,
-            red_points      => [$from, $to],
-            red_polylines   => [$path],
-        );
-        exit;
-    }
-    
+     
     return $path;
 }
 
@@ -171,34 +195,38 @@ sub _add_point_to_space {
     my $n = $space->add_nodes($point);
     
     # check whether we are inside an island or outside
-    my $inside = defined first { $self->islands->[$_]->contains_point($point) } 0..$#{$self->islands};
+    my $inside = defined first { $_->contains_point($point) } @{ $self->_inner };
+    my $contour = defined first { $_->contains_point($point) } @{ $self->_contour };
+    my $outside = !$inside && !$contour;
 
     # find candidates by checking visibility from $from to them
     foreach my $idx (0..$#{$space->nodes}) {
         my $line = Slic3r::Line->new($point, $space->nodes->[$idx]);
-        # if $point is inside an island, it is visible from $idx when island contains their line
-        # if $point is outside an island, it is visible from $idx when their line does not cross any island
-        if (
-            ($inside && defined first { $_->contains_line($line) } @{$self->_inner})
-                || (!$inside && !@{intersection_pl(
-                    [ $line->as_polyline ],
-                    [ map @$_, @{$self->islands} ],
-                )})
-            ) {
-            # $n ($point) and $idx are visible
+        if ($inside && defined first { $_->contains_line($line) } @{$self->_inner}) {
             $space->add_edge($n, $idx, $line->length);
+        } 
+        if ($contour && defined first { $_->contains_line($line) } @{$self->_contour}) {
+            $space->add_edge($n, $idx, $line->length * CROSSING_PENALTY);
         }
+        if ($outside && defined first { $_->contains_line($line) } @{$self->_outer}) {
+            $space->add_edge($n, $idx, $line->length);
+        }          
     }
     
-    # if we found no visibility, retry with larger margins
-    if (!exists $space->edges->{$n} && $inside) {
-        foreach my $idx (0..$#{$space->nodes}) {
+    # if we found no visibility, find closest existing point and add it with penalty
+    if (!exists $space->edges->{$n}) {
+        $DB::single=1;
+        my $min_idx=0;
+        my $min_l=$space->_infinity;
+        
+        foreach my $idx (0..($#{$space->nodes}-1)) {  #do not consider new point
             my $line = Slic3r::Line->new($point, $space->nodes->[$idx]);
-            if (defined first { $_->contains_line($line) } @{$self->islands}) {
-                # $n ($point) and $idx are visible
-                $space->add_edge($n, $idx, $line->length);
+            if($line->length<$min_l) {
+                $min_idx=$idx;
+                $min_l=$line->length;
             }
         }
+        $space->add_edge($n, $min_idx, $min_l*CROSSING_PENALTY);
     }
     
     warn "Temporary node is not visible from any other node"
