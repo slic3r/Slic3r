@@ -3,6 +3,7 @@
 %{
 #include <myinit.h>
 #include "Line.hpp"
+#include "Polyline.hpp"
 #include "perlglue.hpp"
 %}
 
@@ -24,6 +25,9 @@
     double length();
     double atan2_();
     double direction();
+    bool parallel_to(double angle);
+    bool parallel_to_line(Line* line)
+        %code{% RETVAL = THIS->parallel_to(*line); %};
     Point* midpoint();
     Clone<Point> point_at(double distance);
     Polyline* as_polyline()

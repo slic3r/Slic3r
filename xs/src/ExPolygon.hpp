@@ -32,7 +32,8 @@ class ExPolygon
     void get_trapezoids2(Polygons* polygons) const;
     void get_trapezoids2(Polygons* polygons, double angle) const;
     void triangulate(Polygons* polygons) const;
-    void triangulate2(Polygons* polygons) const;
+    void triangulate_pp(Polygons* polygons) const;
+    void triangulate_p2t(Polygons* polygons) const;
     
     #ifdef SLIC3RXS
     void from_SV(SV* poly_sv);

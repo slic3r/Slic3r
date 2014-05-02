@@ -6,7 +6,7 @@ use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(scale scaled_epsilon PI rad2deg deg2rad convex_hull);
 use Slic3r::Geometry::Clipper qw(offset diff union union_ex intersection offset_ex offset2
-    intersection_pl);
+    intersection_pl offset2_ex diff_pl);
 use Slic3r::Surface ':types';
 
 has 'print_config'      => (is => 'rw', required => 1);
@@ -146,8 +146,8 @@ sub contact_area {
                     ) if $d > $fw/2;
                 } else {
                     $diff = diff(
-                        offset([ map $_->p, @{$layerm->slices} ], -$fw/2),
-                        [ map @$_, @{$lower_layer->slices} ],
+                        [ map $_->p, @{$layerm->slices} ],
+                        offset([ map @$_, @{$lower_layer->slices} ], +$fw*2),
                     );
                 
                     # collapse very tiny spots
@@ -160,22 +160,71 @@ sub contact_area {
                 }
                 
                 if ($self->object_config->dont_support_bridges) {
+                    # compute the area of bridging perimeters
+                    # Note: this is duplicate code from GCode.pm, we need to refactor
+                    
+                    my $bridged_perimeters;  # Polygons
+                    {
+                        my $bridge_flow = $layerm->flow(FLOW_ROLE_PERIMETER, 1);
+                        
+                        my $nozzle_diameter = $self->print_config->get_at('nozzle_diameter', $layerm->region->config->perimeter_extruder-1);
+                        my $lower_grown_slices = offset([ map @$_, @{$lower_layer->slices} ], +scale($nozzle_diameter/2));
+                        
+                        # TODO: split_at_first_point() could split a bridge mid-way
+                        my @overhang_perimeters =
+                            map { $_->isa('Slic3r::ExtrusionLoop') ? $_->polygon->split_at_first_point : $_->polyline->clone }
+                            @{$layerm->perimeters};
+                        
+                        # workaround for Clipper bug, see Slic3r::Polygon::clip_as_polyline()
+                        $_->[0]->translate(1,0) for @overhang_perimeters;
+                        @overhang_perimeters = @{diff_pl(
+                            \@overhang_perimeters,
+                            $lower_grown_slices,
+                        )};
+                        
+                        # only consider straight overhangs
+                        @overhang_perimeters = grep $_->is_straight, @overhang_perimeters;
+                        
+                        # only consider overhangs having endpoints inside layer's slices
+                        foreach my $polyline (@overhang_perimeters) {
+                            $polyline->extend_start($fw);
+                            $polyline->extend_end($fw);
+                        }
+                        @overhang_perimeters = grep {
+                            $layer->slices->contains_point($_->first_point) && $layer->slices->contains_point($_->last_point)
+                        } @overhang_perimeters;
+                        
+                        # convert bridging polylines into polygons by inflating them with their thickness
+                        {
+                            # since we're dealing with bridges, we can't assume width is larger than spacing,
+                            # so we take the largest value and also apply safety offset to be ensure no gaps
+                            # are left in between
+                            my $w = max($bridge_flow->scaled_width, $bridge_flow->scaled_spacing);
+                            $bridged_perimeters = union([
+                                map @{$_->grow($w/2 + 10)}, @overhang_perimeters
+                            ]);
+                        }
+                    }
+                    
                     if (1) {
                         # remove the entire bridges and only support the unsupported edges
                         my @bridges = map $_->expolygon,
                             grep $_->bridge_angle != -1,
                             @{$layerm->fill_surfaces->filter_by_type(S_TYPE_BOTTOMBRIDGE)};
-                    
+                            
                         $diff = diff(
                             $diff,
-                            [ map @$_, @bridges ],
+                            [
+                                (map @$_, @bridges),
+                                @$bridged_perimeters,
+                            ],
                             1,
                         );
-                    
+                        
                         push @$diff, @{intersection(
                             [ map @{$_->grow(+scale MARGIN)}, @{$layerm->unsupported_bridge_edges} ],
                             [ map @$_, @bridges ],
-                        )}
+                        )};
                     
                     } else {
                         # just remove bridged areas
@@ -195,7 +244,7 @@ sub contact_area {
                 # We increment the area in steps because we don't want our support to overflow
                 # on the other side of the object (if it's very thin).
                 {
-                    my @slices_margin = @{offset([ map @$_, @{$lower_layer->slices} ], $fw/2)};
+                    my @slices_margin = @{offset([ map @$_, @{$lower_layer->slices} ], +$fw/2)};
                     for ($fw/2, map {scale MARGIN_STEP} 1..(MARGIN / MARGIN_STEP)) {
                         $diff = diff(
                             offset($diff, $_),
@@ -332,13 +381,13 @@ sub generate_interface_layers {
     
     # let's now generate interface layers below contact areas
     my %interface = ();  # layer_id => [ polygons ]
-    my $interface_layers = $self->object_config->support_material_interface_layers;
+    my $interface_layers_num = $self->object_config->support_material_interface_layers;
     for my $layer_id (0 .. $#$support_z) {
         my $z = $support_z->[$layer_id];
         my $this = $contact->{$z} // next;
         
         # count contact layer as interface layer
-        for (my $i = $layer_id-1; $i >= 0 && $i > $layer_id-$interface_layers; $i--) {
+        for (my $i = $layer_id-1; $i >= 0 && $i > $layer_id-$interface_layers_num; $i--) {
             $z = $support_z->[$i];
             my @overlapping_layers = $self->overlapping_layers($i, $support_z);
             my @overlapping_z = map $support_z->[$_], @overlapping_layers;
@@ -403,6 +452,9 @@ sub generate_base_layers {
     return $base;
 }
 
+# This method removes object silhouette from support material
+# (it's used with interface and base only). It removes a bit more,
+# leaving a thin gap between object and support in the XY plane.
 sub clip_with_object {
     my ($self, $support, $support_z, $object) = @_;
     
@@ -414,6 +466,10 @@ sub clip_with_object {
         my @layers = grep { $_->print_z > $zmin && ($_->print_z - $_->height) < $zmax }
             @{$object->layers};
         
+        # $layer->slices contains the full shape of layer, thus including
+        # perimeter's width. $support contains the full shape of support
+        # material, thus including the width of its foremost extrusion.
+        # We leave a gap equal to a full extrusion width.
         $support->{$i} = diff(
             $support->{$i},
             offset([ map @$_, map @{$_->slices}, @layers ], +$self->flow->scaled_width),
@@ -491,10 +547,14 @@ sub generate_toolpaths {
             push @$base, @$contact;
         } elsif (@$contact && $contact_loops > 0) {
             # generate the outermost loop
+            
+            # find centerline of the external loop (or any other kind of extrusions should the loop be skipped)
+            $contact = offset($contact, -$interface_flow->scaled_width/2);
+            
             my @loops0 = ();
             {
                 # find centerline of the external loop of the contours
-                my @external_loops = @{offset($contact, -$interface_flow->scaled_width/2)};
+                my @external_loops = @$contact;
                 
                 # only consider the loops facing the overhang
                 {
@@ -544,6 +604,8 @@ sub generate_toolpaths {
                 polyline    => $_,
                 role        => EXTR_ROLE_SUPPORTMATERIAL,
                 mm3_per_mm  => $mm3_per_mm,
+                width       => $interface_flow->width,
+                height      => $layer->height,
             ), @loops;
             
             $layer->support_interface_fills->append(@loops);
@@ -552,6 +614,9 @@ sub generate_toolpaths {
         # interface and contact infill
         if (@$interface || @$contact_infill) {
             $fillers{interface}->angle($interface_angle);
+            
+            # find centerline of the external loop
+            $interface = offset2($interface, +scaled_epsilon, -(scaled_epsilon + $interface_flow->scaled_width/2));
             
             # join regions by offsetting them to ensure they're merged
             $interface = offset([ @$interface, @$contact_infill ], scaled_epsilon);
@@ -587,6 +652,8 @@ sub generate_toolpaths {
                     polyline    => Slic3r::Polyline->new(@$_),
                     role        => EXTR_ROLE_SUPPORTMATERIAL,
                     mm3_per_mm  => $mm3_per_mm,
+                    width       => $params->{flow}->width,
+                    height      => $layer->height,
                 ), @p;
             }
             
@@ -600,8 +667,9 @@ sub generate_toolpaths {
             my $density     = $support_density;
             my $base_flow   = $flow;
             
-            # TODO: use offset2_ex()
-            my $to_infill = union_ex($base, 1);
+            # find centerline of the external loop/extrusions
+            my $to_infill = offset2_ex($base, +scaled_epsilon, -(scaled_epsilon + $flow->scaled_width/2));
+            
             my @paths = ();
             
             # base flange
@@ -618,6 +686,8 @@ sub generate_toolpaths {
                     polyline    => $_->split_at_first_point,
                     role        => EXTR_ROLE_SUPPORTMATERIAL,
                     mm3_per_mm  => $mm3_per_mm,
+                    width       => $flow->width,
+                    height      => $layer->height,
                 ), map @$_, @$to_infill;
                 
                 # TODO: use offset2_ex()
@@ -638,6 +708,8 @@ sub generate_toolpaths {
                     polyline    => Slic3r::Polyline->new(@$_),
                     role        => EXTR_ROLE_SUPPORTMATERIAL,
                     mm3_per_mm  => $mm3_per_mm,
+                    width       => $params->{flow}->width,
+                    height      => $layer->height,
                 ), @p;
             }
             
@@ -749,6 +821,9 @@ sub clip_with_shape {
     my ($self, $support, $shape) = @_;
     
     foreach my $i (keys %$support) {
+        # don't clip bottom layer with shape so that we 
+        # can generate a continuous base flange
+        next if $i == 0;
         $support->{$i} = intersection(
             $support->{$i},
             $shape->[$i],

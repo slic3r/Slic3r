@@ -77,15 +77,27 @@ sub detect_angle {
     
     # we also test angles of each open supporting edge
     # (this finds the optimal angle for C-shaped supports)
-    push @angles, map Slic3r::Line->new($_->first_point, $_->last_point)->direction,
+    push @angles,
+        map Slic3r::Line->new($_->first_point, $_->last_point)->direction,
         grep { !$_->first_point->coincides_with($_->last_point) }
         @edges;
+    
+    # remove duplicates
+    my $min_resolution = PI/180; # 1 degree
+    @angles = map { ($_ >= &PI-&epsilon) ? ($_-&PI) : $_ } @angles;
+    @angles = sort @angles;
+    for (my $i = 1; $i <= $#angles; ++$i) {
+        if (abs($angles[$i] - $angles[$i-1]) < $min_resolution) {
+            splice @angles, $i, 1;
+            --$i;
+        }
+    }
     
     my %directions_coverage     = ();  # angle => score
     my %directions_avg_length   = ();  # angle => score
     my $line_increment = $self->extrusion_width;
     my %unique_angles = map { $_ => 1 } @angles;
-    for my $angle (keys %unique_angles) {
+    for my $angle (@angles) {
         my $my_clip_area    = [ map $_->clone, @$clip_area ];
         my $my_anchors      = [ map $_->clone, @$anchors ];
         
@@ -123,8 +135,6 @@ sub detect_angle {
                 );             
         }
         # remove any line not having both endpoints within anchors
-        # NOTE: these calls to contains_point() probably need to check whether the point 
-        # is on the anchor boundaries too
         @clipped_lines = grep {
             my $line = $_;
             (first { $_->contains_point($line->a) } @$my_anchors)
@@ -135,7 +145,11 @@ sub detect_angle {
         
         # sum length of bridged lines
         $directions_coverage{$angle} = sum(@lengths) // 0;
-    
+        
+        ### The following produces more correct results in some cases and more broken in others.
+        ### TODO: investigate, as it looks more reliable than line clipping.
+        ###$directions_coverage{$angle} = sum(map $_->area, @{$self->coverage($angle)}) // 0;
+        
         # max length of bridged lines
         $directions_avg_length{$angle} = @lengths ? (max(@lengths)) : -1;
     }
@@ -248,6 +262,12 @@ sub unsupported_edges {
         $grown_lower,
     );
     
+    # split into individual segments and filter out edges parallel to the bridging angle
+    @$unsupported = map $_->as_polyline,
+        grep !$_->parallel_to($angle),
+        map @{$_->lines},
+        @$unsupported;
+    
     if (0) {
         require "Slic3r/SVG.pm";
         Slic3r::SVG::output(
@@ -256,7 +276,7 @@ sub unsupported_edges {
             green_expolygons    => $self->_anchors,
             red_expolygons      => union_ex($grown_lower),
             no_arrows           => 1,
-            polylines           => [ map $_->split_at_first_point, @{$self->expolygon} ],
+            polylines           => \@bridge_edges,
             red_polylines       => $unsupported,
         );
     }
