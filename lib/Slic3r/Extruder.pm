@@ -29,6 +29,11 @@ sub retract_speed_mm_min {
     return $self->retract_speed * 60;
 }
 
+sub unretract_speed_mm_min {
+    my $self = shift;
+    return $self->unretract_speed * 60;
+}
+
 sub scaled_wipe_distance {
     my ($self, $travel_speed) = @_;
     

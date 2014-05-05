@@ -639,6 +639,20 @@ class PrintConfigDef
         Options["retract_speed"].cli = "retract-speed=f@";
         Options["retract_speed"].max = 1000;
 
+        Options["unretract_speed"].type = coInts;
+        Options["unretract_speed"].label = "Unretract Speed";
+        Options["unretract_speed"].tooltip = "The speed for unretractions (retract compensation). Set zero to disable and use the same as retract speed.";
+        Options["unretract_speed"].sidetext = "mm/s";
+        Options["unretract_speed"].cli = "unretract-speed=f@";
+        Options["unretract_speed"].max = 1000;
+
+        Options["pressure_multiplier"].type = coFloats;
+        Options["pressure_multiplier"].label = "Pressure advance constant";
+        Options["pressure_multiplier"].tooltip = "Pressure management multiplier. If greater than zero, it will inject or retract additional filament to control the pressure in the bowden tube. 1 means 100%. It adjusts only the amount of input raw filament that will be pushed or pulled, proportional.";
+        Options["pressure_multiplier"].sidetext = "(zero to disable)";
+        Options["pressure_multiplier"].cli = "pressure-multiplier=f@";
+        Options["pressure_multiplier"].max = 200;
+
         Options["skirt_distance"].type = coFloat;
         Options["skirt_distance"].label = "Distance from object";
         Options["skirt_distance"].tooltip = "Distance between skirt and object(s). Set this to zero to attach the skirt to the object(s) and get a brim for better adhesion.";
@@ -1179,6 +1193,8 @@ class PrintConfig : public virtual StaticPrintConfig
     ConfigOptionFloats              retract_restart_extra;
     ConfigOptionFloats              retract_restart_extra_toolchange;
     ConfigOptionInts                retract_speed;
+    ConfigOptionInts                unretract_speed;
+    ConfigOptionFloats              pressure_multiplier;
     ConfigOptionFloat               skirt_distance;
     ConfigOptionInt                 skirt_height;
     ConfigOptionInt                 skirts;
@@ -1279,6 +1295,10 @@ class PrintConfig : public virtual StaticPrintConfig
         this->retract_restart_extra_toolchange.values[0]         = 0;
         this->retract_speed.values.resize(1);
         this->retract_speed.values[0]                            = 30;
+        this->unretract_speed.values.resize(1);
+        this->unretract_speed.values[0]                          = 0;
+        this->pressure_multiplier.values.resize(1);
+        this->pressure_multiplier.values[0]                      = 0;
         this->skirt_distance.value                               = 6;
         this->skirt_height.value                                 = 1;
         this->skirts.value                                       = 1;
@@ -1370,6 +1390,8 @@ class PrintConfig : public virtual StaticPrintConfig
         if (opt_key == "retract_restart_extra")                      return &this->retract_restart_extra;
         if (opt_key == "retract_restart_extra_toolchange")           return &this->retract_restart_extra_toolchange;
         if (opt_key == "retract_speed")                              return &this->retract_speed;
+        if (opt_key == "unretract_speed")                            return &this->unretract_speed;
+        if (opt_key == "pressure_multiplier")                        return &this->pressure_multiplier;
         if (opt_key == "skirt_distance")                             return &this->skirt_distance;
         if (opt_key == "skirt_height")                               return &this->skirt_height;
         if (opt_key == "skirts")                                     return &this->skirts;

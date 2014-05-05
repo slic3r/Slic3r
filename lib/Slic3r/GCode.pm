@@ -41,6 +41,8 @@ has 'last_speed'         => (is => 'rw', default => sub {""});
 has 'last_f'             => (is => 'rw', default => sub {""});
 has 'last_fan_speed'     => (is => 'rw', default => sub {0});
 has 'wipe_path'          => (is => 'rw');
+has 'adv_last_speed'     => (is => 'rw', default => sub {0} );
+has 'adv_last_amnt'      => (is => 'rw', default => sub {0} );
 
 sub BUILD {
     my ($self) = @_;
@@ -344,6 +346,45 @@ sub extrude_path {
         $F = $self->print_config->get_abs_value_over('first_layer_speed', $F/60) * 60;
     }
     
+	# Advance algorithm to compensate pressure during speed change
+	if ($self->extruder->pressure_multiplier > 0) {
+		my $v1 = $self->adv_last_speed/60;
+		my $v2 = $F/60;
+
+		# Verify change
+		if (($v1 != $v2)) {
+			
+			# Advance algorithm
+			my $adv_amnt = $e * $v2**2 * ($self->extruder->pressure_multiplier/100);
+
+			# Edit unretract to account for advance
+			my $eaxis = $self->_extrusion_axis;
+			if ($gcode !~ s/G1 ${eaxis}(\d+\.?\d*) F(\d+\.?\d*)( ?)(.*)\n/
+							my $str = sprintf("G1 %s%.5f F$2$3$4", 
+										$eaxis,
+										($self->print_config->use_relative_e_distances ? $1 : 0) + 
+										 $self->extruder->extrude($adv_amnt - $self->adv_last_amnt));
+							$str .= " + pressure advance" if $self->print_config->gcode_comments;
+							$str .= "\n";
+							sprintf("%s", $str);
+					      /ge) {
+
+  			    # There were no unretraction before
+				$gcode .= sprintf "G1 %s%.5f F%.3f",
+					$eaxis,
+					$self->extruder->extrude($adv_amnt - $self->adv_last_amnt),
+					($self->extruder->unretract_speed > 0 &&  ($adv_amnt - $self->adv_last_amnt) > 0 ) ?
+						$self->extruder->unretract_speed_mm_min :
+						$self->extruder->retract_speed_mm_min;
+				$gcode .= " ; pressure advance"
+					if $self->print_config->gcode_comments;
+				$gcode .= "\n";
+			}
+			$self->adv_last_amnt($adv_amnt);
+		}
+		$self->adv_last_speed($F);
+	}
+
     # extrude arc or line
     $gcode .= ";_BRIDGE_FAN_START\n" if $path->is_bridge;
     my $path_length = unscale $path->length;
@@ -549,7 +590,7 @@ sub unretract {
             $gcode .= sprintf "G1 %s%.5f F%.3f",
                 $self->_extrusion_axis,
                 $self->extruder->extrude($to_unretract),
-                $self->extruder->retract_speed_mm_min;
+                $self->extruder->unretract_speed > 0 ? $self->extruder->unretract_speed_mm_min : $self->extruder->retract_speed_mm_min;
             $gcode .= " ; compensate retraction" if $self->print_config->gcode_comments;
             $gcode .= "\n";
         }
