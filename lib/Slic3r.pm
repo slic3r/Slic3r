@@ -36,6 +36,9 @@ use Encode;
 use Encode::Locale;
 use Moo 1.003001;
 
+use lib "$FindBin::Bin/xs/blib/lib";
+use lib "$FindBin::Bin/xs/blib/arch/auto/Slic3r/XS";
+
 use Slic3r::XS;   # import all symbols (constants etc.) before they get parsed
 use Slic3r::Config;
 use Slic3r::ExPolygon;
