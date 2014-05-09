@@ -11,9 +11,6 @@
 #include <algorithm>
 #include <math.h>
 #include <assert.h>
-#ifdef SLIC3RXS
-#include "perlglue.hpp"
-#endif
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -48,6 +45,23 @@ TriangleMesh::TriangleMesh(const TriangleMesh &other)
         this->stl.v_shared = (stl_vertex*)calloc(other.stl.stats.shared_vertices, sizeof(stl_vertex));
         std::copy(other.stl.v_shared, other.stl.v_shared + other.stl.stats.shared_vertices, this->stl.v_shared);
     }
+}
+
+TriangleMesh& TriangleMesh::operator= (TriangleMesh other)
+{
+    this->swap(other);
+    return *this;
+}
+
+void
+TriangleMesh::swap(TriangleMesh &other)
+{
+    std::swap(this->stl,                 other.stl);
+    std::swap(this->repaired,            other.repaired);
+    std::swap(this->stl.facet_start,     other.stl.facet_start);
+    std::swap(this->stl.neighbors_start, other.stl.neighbors_start);
+    std::swap(this->stl.v_indices,       other.stl.v_indices);
+    std::swap(this->stl.v_shared,        other.stl.v_shared);
 }
 
 TriangleMesh::~TriangleMesh() {

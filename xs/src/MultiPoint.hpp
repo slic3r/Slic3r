@@ -1,6 +1,7 @@
 #ifndef slic3r_MultiPoint_hpp_
 #define slic3r_MultiPoint_hpp_
 
+#include <myinit.h>
 #include "Line.hpp"
 #include "Point.hpp"
 #include <algorithm>
@@ -21,6 +22,7 @@ class MultiPoint
     virtual Lines lines() const = 0;
     double length() const;
     bool is_valid() const;
+    int find_point(const Point &point) const;
     static Points _douglas_peucker(const Points &points, const double tolerance);
     
     #ifdef SLIC3RXS

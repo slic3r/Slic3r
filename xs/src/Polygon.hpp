@@ -15,15 +15,16 @@ typedef std::vector<Polygon> Polygons;
 class Polygon : public MultiPoint {
     public:
     operator Polygons() const;
+    operator Polyline() const;
     Point& operator[](Points::size_type idx);
     const Point& operator[](Points::size_type idx) const;
     Point last_point() const;
     Lines lines() const;
     void lines(Lines* lines) const;
-    Polyline* split_at(const Point &point) const;
-    Polyline* split_at_index(int index) const;
-    Polyline* split_at_first_point() const;
-    Points equally_spaced_points(double distance) const;
+    void split_at(const Point &point, Polyline* polyline) const;
+    void split_at_index(int index, Polyline* polyline) const;
+    void split_at_first_point(Polyline* polyline) const;
+    void equally_spaced_points(double distance, Points* points) const;
     double area() const;
     bool is_counter_clockwise() const;
     bool is_clockwise() const;
@@ -37,8 +38,6 @@ class Polygon : public MultiPoint {
     
     #ifdef SLIC3RXS
     void from_SV_check(SV* poly_sv);
-    SV* to_SV_ref();
-    SV* to_SV_clone_ref() const;
     #endif
 };
 
