@@ -11,8 +11,6 @@ namespace Slic3r {
 
 class Polygon;
 typedef std::vector<Polygon> Polygons;
-typedef Polygon PolygonRef;
-typedef Polygon PolygonClone;
 
 class Polygon : public MultiPoint {
     public:
@@ -41,8 +39,6 @@ class Polygon : public MultiPoint {
     void from_SV_check(SV* poly_sv);
     SV* to_SV_ref();
     SV* to_SV_clone_ref() const;
-    static const char* CLASS() { return "Slic3r::Polygon"; }
-    static const char* CLASS_Ref() { return "Slic3r::Polygon::Ref"; }    
     #endif
 };
 
