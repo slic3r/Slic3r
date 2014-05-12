@@ -104,8 +104,9 @@ sub apply_config {
     if ($rearrange_regions) {
         # the current subdivision of regions does not make sense anymore.
         # we need to remove all objects and re-add them
+        my @model_objects = map $_->model_object, @{$self->objects};
         $self->clear_objects;
-        $self->add_model_object($_->model_object) for @{$self->objects};
+        $self->add_model_object($_) for @model_objects;
     }
 }
 
@@ -137,7 +138,7 @@ sub add_model_object {
         $config->apply_dynamic($object_config);
         
         if (defined $volume->material_id) {
-            my $material_config = $object->model->get_material($volume->material_id)->config->clone;
+            my $material_config = $volume->material->config->clone;
             $material_config->normalize;
             $config->apply_dynamic($material_config);
         }
@@ -624,10 +625,13 @@ EOF
 
 sub make_skirt {
     my $self = shift;
+    
+    # since this method must be idempotent, we clear skirt paths *before*
+    # checking whether we need to generate them
+    $self->skirt->clear;
+    
     return unless $self->config->skirts > 0
         || ($self->config->ooze_prevention && @{$self->extruders} > 1);
-    
-    $self->skirt->clear;  # method must be idempotent
     
     # First off we need to decide how tall the skirt must be.
     # The skirt_height option from config is expressed in layers, but our
@@ -736,9 +740,12 @@ sub make_skirt {
 
 sub make_brim {
     my $self = shift;
-    return unless $self->config->brim_width > 0;
     
-    $self->brim->clear;  # method must be idempotent
+    # since this method must be idempotent, we clear brim paths *before*
+    # checking whether we need to generate them
+    $self->brim->clear;
+    
+    return unless $self->config->brim_width > 0;
     
     # brim is only printed on first layer and uses support material extruder
     my $first_layer_height = $self->objects->[0]->config->get_abs_value('first_layer_height');
