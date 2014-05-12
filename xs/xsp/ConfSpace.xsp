@@ -1,0 +1,38 @@
+%module{Slic3r::XS};
+
+%{
+#include <myinit.h>
+#include "ConfSpace.hpp"
+%}
+
+%name{Slic3r::ConfSpace} class ConfSpace {
+    ConfSpace();
+    ~ConfSpace();
+    Clone<ConfSpace> clone()
+        %code{% RETVAL = THIS; %};
+  
+    int insert_point(Point* point)
+        %code{% RETVAL=THIS->insert(*point).first; %};
+    int find_point(Point* point) 
+        %code{% RETVAL=THIS->find(*point); %};  
+    bool insert_edge(Point* from, Point* to, float weigth, bool create=true)
+        %code{% RETVAL=THIS->insert_edge(*from, *to, weigth, create); %};
+
+    Lines lines()
+        %code{% THIS->edge_lines(&RETVAL); %};
+    Points points()
+        %code{% THIS->points(&RETVAL); %};
+    Points points_in_range(Point* from, float range)
+        %code{% THIS->points_in_range(*from, range, &RETVAL); %};
+    Ref<Point> nearest_point(Point* from)
+        %code{% 
+                ConfSpace::idx_type idx=THIS->nearest_point(*from);
+                if(idx<0) XSRETURN_UNDEF;
+                RETVAL=&(*THIS)[idx].point;
+        %};
+    Polyline* dijkstra(Point* from, Point* to)
+        %code{% 
+                RETVAL=new Polyline();
+                THIS->path_dijkstra(*from, *to, RETVAL); 
+        %};
+};

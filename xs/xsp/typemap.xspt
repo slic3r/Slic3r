@@ -105,6 +105,9 @@
 %typemap{ModelInstancePtrs*};
 %typemap{Ref<ModelInstancePtrs>}{simple};
 %typemap{Clone<ModelInstancePtrs>}{simple};
+%typemap{ConfSpace*};
+%typemap{Ref<ConfSpace>}{simple};
+%typemap{Clone<ConfSpace>}{simple};
 
 %typemap{SurfaceType}{parsed}{
   %cpp_type{SurfaceType};

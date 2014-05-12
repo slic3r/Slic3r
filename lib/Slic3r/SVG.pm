@@ -112,7 +112,7 @@ sub output {
                 );
             }
         } elsif ($type =~ /^(?:(.+?)_)?lines$/) {
-            my $colour = $1;
+            my $colour = $1 // 'black';
             $value = [ map $_->pp, @$value ];
             
             my $g = $svg->group(
@@ -127,7 +127,7 @@ sub output {
                     x2 => $line->[1][X] * factor(),
                     y2 => $line->[1][Y] * factor(),
                     style => {
-                        'stroke' => $colour || 'black',
+                        'stroke' => $colour,
                     },
                     'marker-end' => !$arrows ? "" : "url(#endArrow)",
                 );

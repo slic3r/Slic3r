@@ -177,6 +177,7 @@ package main;
 for my $class (qw(
         Slic3r::Config
         Slic3r::Config::Print
+        Slic3r::ConfSpace
         Slic3r::ExPolygon
         Slic3r::ExtrusionLoop
         Slic3r::ExtrusionPath
