@@ -25,6 +25,8 @@ class Extruder
     double retract_length() const;
     double retract_lift() const;
     int retract_speed() const;
+    int unretract_speed() const;
+    double pressure_multiplier() const;
     double retract_restart_extra() const;
     double retract_before_travel() const;
     bool retract_layer_change() const;

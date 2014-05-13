@@ -731,7 +731,7 @@ sub build {
     $self->_build_extruder_pages;
 }
 
-sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_speed retract_restart_extra retract_before_travel wipe
+sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_speed pressure_multiplier unretract_speed retract_restart_extra retract_before_travel wipe
     retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
 
 sub _build_extruder_pages {
@@ -770,6 +770,13 @@ sub _build_extruder_pages {
                 options => [
                     map "${_}#${extruder_idx}",
                         qw(retract_length_toolchange retract_restart_extra_toolchange)
+                ],
+            },
+            {
+                title => 'Advanced Retraction and Pressure Control',
+                options => [
+                    map "${_}#${extruder_idx}",
+                        qw(pressure_multiplier unretract_speed)
                 ],
             },
         ]);

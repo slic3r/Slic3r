@@ -84,6 +84,18 @@ Extruder::retract_speed() const
     return this->config->retract_speed.get_at(this->id);
 }
 
+int
+Extruder::unretract_speed() const
+{
+    return this->config->unretract_speed.get_at(this->id);
+}
+
+double
+Extruder::pressure_multiplier() const
+{
+    return this->config->pressure_multiplier.get_at(this->id);
+}
+
 double
 Extruder::retract_restart_extra() const
 {
