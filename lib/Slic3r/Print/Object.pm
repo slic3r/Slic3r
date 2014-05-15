@@ -118,7 +118,6 @@ sub slice {
     
         # make layers taking custom heights into account
         my $print_z = my $slice_z = my $height = my $id = 0;
-        my $first_object_layer_height = -1;
     
         # add raft layers
         if ($self->config->raft_layers > 0) {
@@ -136,7 +135,7 @@ sub slice {
         
             # force first layer print_z according to the contact distance
             # (the loop below will raise print_z by such height)
-            $first_object_layer_height = $distance;
+            $print_z += $distance;
         }
     
         # loop until we have at least one layer and the max slice_z reaches the object height
@@ -156,10 +155,6 @@ sub slice {
                     $slice_z += $range->[1] - $range->[0];
                     next;
                 }
-            }
-            
-            if ($first_object_layer_height != -1 && !@{$self->layers}) {
-                $height = $first_object_layer_height;
             }
             
             $print_z += $height;
