@@ -85,7 +85,12 @@ sub load {
     my $class = shift;
     my ($file) = @_;
     
-    my $ini = __PACKAGE__->read_ini($file);
+    my $ini;
+    if ($file =~ /\.(gcode|gco|g|ngc)$/i) {
+        $ini = __PACKAGE__->read_ini_from_gcode($file);
+    } else {
+        $ini = __PACKAGE__->read_ini($file);
+    }
     return $class->load_ini_hash($ini->{_});
 }
 
@@ -438,6 +443,29 @@ sub read_ini {
     }
     close $fh;
     
+    return $ini;
+}
+
+sub read_ini_from_gcode {
+    my $class = shift;
+    my ($file) = @_;
+
+    local $/ = "\n";
+    Slic3r::open(\my $fh, '<', $file);
+    binmode $fh, ':utf8';
+
+    my $ini = { _ => {} };
+    while (<$fh>) {
+        next if /^[GMT]/;
+        s/\R+$//;
+        /^; (\w+) = (.*)/ or next;
+        $ini->{'_'}{$1} = $2; #There will be fasle positives, expect unknown option warnings
+    }
+    close $fh;
+
+    exists $ini->{'_'}{'bed_size'} or die "There is no configuration in this G-code file, export with Verbose G-code to use this feature.\n";
+    #bed_size is an option I expect to stay put that is not also in the synopsis at the top of the gcode file
+
     return $ini;
 }
 
