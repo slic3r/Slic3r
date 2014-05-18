@@ -130,40 +130,22 @@ sub contact_area {
                 my $diff;
             
                 # If a threshold angle was specified, use a different logic for detecting overhangs.
-                if (defined $threshold_rad
-                    || $layer_id < $self->object_config->support_material_enforce_layers
-                    || $self->object_config->raft_layers > 0) {
-                    my $d = defined $threshold_rad
-                        ? scale $lower_layer->height * ((cos $threshold_rad) / (sin $threshold_rad))
-                        : 0;
-                
-                    $diff = diff(
-                        offset([ map $_->p, @{$layerm->slices} ], -$d),
-                        [ map @$_, @{$lower_layer->slices} ],
-                    );
-                
-                    # only enforce spacing from the object ($fw/2) if the threshold angle
-                    # is not too high: in that case, $d will be very small (as we need to catch
-                    # very short overhangs), and such contact area would be eaten by the
-                    # enforced spacing, resulting in high threshold angles to be almost ignored
-                    $diff = diff(
-                        offset($diff, $d - $fw/2),
-                        [ map @$_, @{$lower_layer->slices} ],
-                    ) if $d > $fw/2;
-                } else {
-                    $diff = diff(
-                        [ map $_->p, @{$layerm->slices} ],
-                        offset([ map @$_, @{$lower_layer->slices} ], +$fw*2),
-                    );
-                
-                    # collapse very tiny spots
-                    $diff = offset2($diff, -$fw/10, +$fw/10);
-                
-                    # $diff now contains the ring or stripe comprised between the boundary of 
-                    # lower slices and the centerline of the last perimeter in this overhanging layer.
-                    # Void $diff means that there's no upper perimeter whose centerline is
-                    # outside the lower slice boundary, thus no overhang
-                }
+                my $d = defined $threshold_rad
+                    ? scale $lower_layer->height * ((cos $threshold_rad) / (sin $threshold_rad))
+                    : $fw*2;
+            
+                $diff = diff(
+                    [ map $_->p, @{$layerm->slices} ],
+                    offset([ map @$_, @{$lower_layer->slices} ], +$d),
+                );
+
+                # collapse very tiny spots
+                $diff = offset2($diff, -$fw/10, +$fw/10);
+            
+                # $diff now contains the ring or stripe comprised between the boundary of 
+                # lower slices and the centerline of the last perimeter in this overhanging layer.
+                # Void $diff means that there's no upper perimeter whose centerline is
+                # outside the lower slice boundary, thus no overhang
                 
                 if ($self->object_config->dont_support_bridges) {
                     # compute the area of bridging perimeters
@@ -271,7 +253,7 @@ sub contact_area {
                 @{$layer->regions};
             my $nozzle_diameter = sum(@nozzle_diameters)/@nozzle_diameters;
             
-            my $contact_z = $layer->print_z - contact_distance($nozzle_diameter);
+            my $contact_z = $layer->print_z - contact_distance($nozzle_diameter) - $layer->height;
             ###$contact_z = $layer->print_z - $layer->height;
             
             # ignore this contact area if it's too low
@@ -339,7 +321,7 @@ sub support_layers_z {
     # we use max() to prevent many ultra-thin layers to be inserted in case
     # layer_height > nozzle_diameter * 0.75
     my $nozzle_diameter = $self->print_config->get_at('nozzle_diameter', $self->object_config->support_material_extruder-1);
-    my $support_material_height = max($max_object_layer_height, $nozzle_diameter * 0.75);
+    my $support_material_height = $max_object_layer_height;#max($max_object_layer_height, $nozzle_diameter * 0.75);
     
     my @z = sort { $a <=> $b } @$contact_z, @$top_z, (map $_ + $nozzle_diameter, @$top_z);
     
@@ -356,7 +338,7 @@ sub support_layers_z {
         splice @z, 1, 0,
             map { int($_*100)/100 }
             map { $z[0] + $height * $_ }
-            0..($self->object_config->raft_layers - 1);
+            1..($self->object_config->raft_layers - 2);
     }
     
     for (my $i = $#z; $i >= 0; $i--) {
@@ -851,10 +833,10 @@ sub overlapping_layers {
     } 0..$#$support_z;
 }
 
-# class method
+# wanted Z distance between support/raft material and next object layer
 sub contact_distance {
     my ($nozzle_diameter) = @_;
-    return $nozzle_diameter * 1.5;
+    return 0; #$nozzle_diameter * 0.5;
 }
 
 1;
