@@ -20,6 +20,7 @@ use constant FILE_WILDCARDS => {
     obj     => 'OBJ files (*.obj)|*.obj;*.OBJ',
     amf     => 'AMF files (*.amf)|*.amf;*.AMF;*.xml;*.XML',
     ini     => 'INI files *.ini|*.ini;*.INI',
+    inigco  => 'INI or G-code files (*.ini, *.gcode, *.gco, *.g, *.ngc)|*.ini;*.INI;*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC',
     gcode   => 'G-code files (*.gcode, *.gco, *.g, *.ngc)|*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC',
     svg     => 'SVG files *.svg|*.svg;*.SVG',
 };
@@ -267,7 +268,7 @@ sub load_config_file {
         return unless $self->check_unsaved_changes;
         my $dir = $last_config ? dirname($last_config) : $Slic3r::GUI::Settings->{recent}{config_directory} || $Slic3r::GUI::Settings->{recent}{skein_directory} || '';
         my $dlg = Wx::FileDialog->new($self, 'Select configuration to load:', $dir, "config.ini", 
-                FILE_WILDCARDS->{ini}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+                FILE_WILDCARDS->{inigco}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
         return unless $dlg->ShowModal == wxID_OK;
         ($file) = $dlg->GetPaths;
         $dlg->Destroy;
