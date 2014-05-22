@@ -1735,6 +1735,7 @@ t/15_config.t
 t/16_flow.t
 t/17_boundingbox.t
 t/18_confspace.t
+t/19_model.t
 xsp/BoundingBox.xsp
 xsp/Clipper.xsp
 xsp/Config.xsp

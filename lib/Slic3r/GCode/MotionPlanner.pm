@@ -180,7 +180,7 @@ sub BUILD {
 
 
 #    $DB::single=1;
-    if (1) {
+    if (0) {
         require "Slic3r/SVG.pm";
         Slic3r::SVG::output("space.svg",
                             no_arrows       => 1,
@@ -222,7 +222,7 @@ sub shortest_path {
 
     $DB::single=1;
     
-    if (1) {
+    if (0) {
         require "Slic3r/SVG.pm";
         Slic3r::SVG::output("path.svg",
                             no_arrows       => 1,
@@ -253,7 +253,7 @@ sub _add_point_to_space {
     my $outside = !$inside && !$contour;
 
     # find candidates by checking visibility from $from to them
-    my $nodes=$space->points;
+    my $nodes=$space->points_in_range($point, scale 5);
     foreach my $idx (0..$#{$nodes}) {
         my $line = Slic3r::Line->new($point, $nodes->[$idx]);
         if ($inside && defined first { $_->contains_line($line) } @{$self->_inner}) {

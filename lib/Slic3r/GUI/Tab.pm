@@ -454,7 +454,7 @@ sub build {
     $self->add_options_page('Speed', 'time.png', optgroups => [
         {
             title => 'Speed for print moves',
-            options => [qw(perimeter_speed small_perimeter_speed external_perimeter_speed infill_speed solid_infill_speed top_solid_infill_speed support_material_speed bridge_speed gap_fill_speed)],
+            options => [qw(perimeter_speed small_perimeter_speed external_perimeter_speed infill_speed solid_infill_speed top_solid_infill_speed support_material_speed support_material_interface_speed bridge_speed gap_fill_speed)],
         },
         {
             title => 'Speed for non-print moves',
@@ -743,7 +743,13 @@ sub _build_extruder_pages {
         # extend options
         foreach my $opt_key ($self->_extruder_options) {
             my $values = $self->{config}->get($opt_key);
-            $values->[$extruder_idx] //= $default_config->get_at($opt_key, 0);
+            if (!defined $values) {
+                $values = [ $default_config->get_at($opt_key, 0) ];
+            } else {
+                # use last extruder's settings for the new one
+                my $last_value = $values->[-1];
+                $values->[$extruder_idx] //= $last_value;
+            }
             $self->{config}->set($opt_key, $values)
                 or die "Unable to extend $opt_key";
         }

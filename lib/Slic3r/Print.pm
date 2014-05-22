@@ -857,11 +857,11 @@ sub write_gcode {
     
     # set up our helper object
     my $gcodegen = Slic3r::GCode->new(
-        print_config        => $self->config,
         placeholder_parser  => $self->placeholder_parser,
         layer_count         => $self->layer_count,
     );
-    $gcodegen->set_extruders($self->extruders);
+    $gcodegen->config->apply_print_config($self->config);
+    $gcodegen->set_extruders($self->extruders, $self->config);
     
     print $fh "G21 ; set units to millimeters\n" if $self->config->gcode_flavor ne 'makerware';
     print $fh $gcodegen->set_fan(0, 1) if $self->config->cooling && $self->config->disable_fan_first_layers;
@@ -960,7 +960,7 @@ sub write_gcode {
                 if ($finished_objects > 0) {
                     $gcodegen->set_shift(map unscale $copy->[$_], X,Y);
                     print $fh $gcodegen->retract;
-                    print $fh $gcodegen->G0(Slic3r::Point->new(0,0), undef, 0, 'move to origin position for next object');
+                    print $fh $gcodegen->G0(Slic3r::Point->new(0,0), undef, 0, $gcodegen->config->travel_speed*60, 'move to origin position for next object');
                 }
                 
                 my $buffer = Slic3r::GCode::CoolingBuffer->new(
@@ -1046,9 +1046,11 @@ sub write_gcode {
     
     # append full config
     print $fh "\n";
-    foreach my $opt_key (sort @{$self->config->get_keys}) {
-        next if $Slic3r::Config::Options->{$opt_key}{shortcut};
-        printf $fh "; %s = %s\n", $opt_key, $self->config->serialize($opt_key);
+    foreach my $config ($self->config, $self->default_object_config, $self->default_region_config) {
+        foreach my $opt_key (sort @{$config->get_keys}) {
+            next if $Slic3r::Config::Options->{$opt_key}{shortcut};
+            printf $fh "; %s = %s\n", $opt_key, $config->serialize($opt_key);
+        }
     }
     
     # close our gcode file

@@ -2,6 +2,7 @@ package Slic3r::Layer::Region;
 use Moo;
 
 use List::Util qw(sum first);
+use Slic3r::ExtrusionLoop ':roles';
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(PI A B scale unscale chained_path points_coincide);
@@ -127,7 +128,7 @@ sub make_perimeters {
                     )};
                 
                     # look for gaps
-                    if ($self->print->config->gap_fill_speed > 0 && $self->config->fill_density > 0) {
+                    if ($self->region->config->gap_fill_speed > 0 && $self->config->fill_density > 0) {
                         # not using safety offset here would "detect" very narrow gaps
                         # (but still long enough to escape the area threshold) that gap fill
                         # won't be able to fill but we'd still remove from infill area
@@ -248,7 +249,7 @@ sub make_perimeters {
     
     # prepare grown lower layer slices for overhang detection
     my $lower_slices = Slic3r::ExPolygon::Collection->new;
-    if ($self->layer->lower_layer && $self->layer->print->config->overhangs) {
+    if ($self->layer->lower_layer && $self->region->config->overhangs) {
         # We consider overhang any part where the entire nozzle diameter is not supported by the
         # lower layer, so we take lower slices and offset them by half the nozzle diameter used 
         # in the current layer
@@ -272,18 +273,20 @@ sub make_perimeters {
         foreach my $polynode (@$polynodes) {
             my $polygon = ($polynode->{outer} // $polynode->{hole})->clone;
             
-            my $role = EXTR_ROLE_PERIMETER;
+            my $role        = EXTR_ROLE_PERIMETER;
+            my $loop_role   = EXTRL_ROLE_DEFAULT;
             if ($is_contour ? $depth == 0 : !@{ $polynode->{children} }) {
                 # external perimeters are root level in case of contours
                 # and items with no children in case of holes
-                $role = EXTR_ROLE_EXTERNAL_PERIMETER;
+                $role       = EXTR_ROLE_EXTERNAL_PERIMETER;
+                $loop_role  = EXTRL_ROLE_EXTERNAL_PERIMETER;
             } elsif ($depth == 1 && $is_contour) {
-                $role = EXTR_ROLE_CONTOUR_INTERNAL_PERIMETER;
+                $loop_role  = EXTRL_ROLE_CONTOUR_INTERNAL_PERIMETER;
             }
             
             # detect overhanging/bridging perimeters
             my @paths = ();
-            if ($self->layer->print->config->overhangs && $lower_slices->count > 0) {
+            if ($self->region->config->overhangs && $lower_slices->count > 0) {
                 # get non-overhang paths by intersecting this loop with the grown lower slices
                 foreach my $polyline (@{ intersection_ppl([ $polygon ], $lower_slices_p) }) {
                     push @paths, Slic3r::ExtrusionPath->new(
@@ -324,6 +327,7 @@ sub make_perimeters {
                 );
             }
             my $loop = Slic3r::ExtrusionLoop->new_from_paths(@paths);
+            $loop->role($loop_role);
             
             # return ccw contours and cw holes
             # GCode.pm will convert all of them to ccw, but it needs to know
