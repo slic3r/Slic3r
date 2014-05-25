@@ -2,24 +2,12 @@
 #include <queue>
 
 #include "Polyline.hpp"
+#include "Line.hpp"
 #include "ConfSpace.hpp"
 
 namespace Slic3r {
 
 bool zorder_compare(const Point& r, const Point& l) { return r.x<l.x || (r.x==l.x && r.y<l.y); }
-
-bool
-ConfSpace::Vertex::add_edge(idx_type to, weight_type w) {
-    std::pair<edges_type::iterator,bool> i;
-    i=edges.insert(edges_type::value_type(to, w));
-    
-    if(i.second) return true;
-    if(i.first->second>w) {   // decrease edge value
-        i.first->second=w;
-        return true;
-    }
-    return false;
-}
 
 ConfSpace::ConfSpace() : infinity(std::numeric_limits<weight_type>::max())  {
 }
@@ -43,22 +31,6 @@ ConfSpace::find(const Point& val) {
     return i->second;
 }
 
-bool
-ConfSpace::insert_edge(idx_type from, idx_type to, weight_type weight) {
-    bool ret=false;
-    ret|=vertices[from].add_edge(to, weight);
-    ret|=vertices[to].add_edge(from, weight);
-}
-
-bool
-ConfSpace::insert_edge(Point& from, Point& to, weight_type weight, bool create) {
-    idx_type p1=create?(insert(from).first):find(from);
-    if(p1<0) return false;
-    idx_type p2=create?(insert(to).first):find(to);
-    if(p2<0) return false;
-    return insert_edge(p1,p2,weight);
-}
-
 void
 ConfSpace::points(Points* p) {
     p->reserve(p->size()+vertices.size());
@@ -68,12 +40,10 @@ ConfSpace::points(Points* p) {
 
 void
 ConfSpace::edge_lines(Lines* l) {
-    for(std::vector<Vertex>::const_iterator vertex = vertices.begin(); vertex != vertices.end(); ++vertex) {
-        idx_type vertex_idx=vertex-vertices.begin();
-        for(Vertex::edges_type::const_iterator it = vertex->edges.begin(); it != vertex->edges.end(); ++it)
-            if(it->first > vertex_idx)
-                l->push_back(Line(vertex->point, vertices[it->first].point));
-    }
+    // TODO - remove duplicate lines
+    for(std::vector<Poly>::const_iterator poly = polys.begin(); poly != polys.end(); ++poly) 
+        for(int i=0;i<poly->vertCount;i++) 
+            l->push_back(Line(vertices[poly->verts[i]].point, vertices[poly->verts[(i+1)%poly->vertCount]].point));
 }
 
 void 
@@ -98,67 +68,93 @@ ConfSpace::nearest_point(Point& from) {
     return best-vertices.begin();
 }
 
+ConfSpace::idx_type 
+ConfSpace::find_poly(const Point& p) 
+{
+    Poly* poly=&polys[0];
+new_poly:
+    for(int i=0;i<poly->vertCount;i++) {
+        Point& p1=vertices[poly->verts[i]].point;
+        Point& p2=vertices[poly->verts[(i+1)%poly->vertCount]].point;
+        if((p2.x - p1.x)*(p.y - p1.y) - (p2.y - p1.y)*(p.x - p1.x) > 0 ) {  // point is on other side of this edge, walk
+            idx_type nxt=poly->neis[i];
+            if(nxt<0) return -1; // no polygon behind this edge
+            poly=&polys[nxt];
+            goto new_poly;
+        }
+    }
+    // point is inside or on edge
+    return poly-&polys[0];
+}
+
+
 
 void
 ConfSpace::path_init() {
-    for(std::vector<Vertex>::iterator it = vertices.begin(); it != vertices.end(); ++it) {
-        it->distance=infinity;
-        it->parent=-1;
-        it->color=Vertex::White;
+    for(std::vector<Poly>::iterator it = polys.begin(); it != polys.end(); ++it) {
+        it->cost=it->total=infinity;
+        it->parent=NULL;
+        it->color=Poly::White;
     }
 }
 
 // compare distance of gray verices, in ascending order. If distance is equal, compare pointers
-struct DistanceCompare { bool operator ()(const ConfSpace::Vertex* a, const ConfSpace::Vertex* b) { return (a->distance==b->distance)?(a<b):(a->distance < b->distance); } };
+struct CostCompare { bool operator ()(const ConfSpace::Poly* a, const ConfSpace::Poly* b) { return (a->total==b->total)?(a<b):(a->total < b->total); } };
 
 bool
-ConfSpace::path_dijkstra(idx_type from, idx_type to, Polyline* ret) {
+ConfSpace::path_dijkstra(const Point& from, const Point& to, Polyline* ret) {
     path_init();  // reset all distances
-    std::set<Vertex*,DistanceCompare> queue;   
+    std::set<Poly*,CostCompare> queue;   
 
-    queue.insert(&vertices[from]);
+    idx_type pfrom=find_poly(from);
+    idx_type pto=find_poly(to);
+
+    queue.insert(&polys[pfrom]);
     while(!queue.empty()) {
-        Vertex* vmin=*queue.begin();
-        queue.erase(queue.begin());
-        vmin->color=Vertex::Black;
-        if(vmin==&vertices[to]) { // path found, stop here
+        Poly* best=*queue.begin();
+        queue.erase(best);
+        best->color=Poly::Black;
+        if(best==&polys[pto]) { // path found to target polygon, do last step TODO
+            best->color=Poly::Black;
             break;
         }
-        for(Vertex::edges_type::const_iterator e = vmin->edges.begin(); e != vmin->edges.end(); ++e) {
-            Vertex* v=&vertices[e->first];
-            weight_type vdist=vmin->distance+e->second;
-            if(v->color==Vertex::White) {  // vertex is discovered first time
-                v->color=Vertex::Gray;
-                v->distance=vdist;
-                v->parent=vmin-&*vertices.begin();
-                queue.insert(v);
-            } else if(v->color==Vertex::Gray && v->distance>vdist) { // found better edge, update vertex
-                queue.erase(v);
-                v->distance=vdist;
-                v->parent=vmin-&*vertices.begin();
-                queue.insert(v);
+        Poly* parent=best->parent;
+ 
+        for(int i=0;i<best->vertCount;i++) {
+            Poly* next=&polys[best->neis[i]];
+            if(next==parent) continue;  // don't go back
+            if(next->color==Poly::White) {  // new polygon discovered, compute it's position
+                Point mid=0.5*(vertices[i].point+vertices[(i+1)%best->vertCount].point);
+                next->entry_point=mid;
             }
-                
+            // todo - check for target polygon
+            weight_type cost=best->cost+best->entry_point.distance_to(next->entry_point);
+            weight_type heuristic=best->entry_point.distance_to(to);
+
+            weight_type total=cost+heuristic;
+            
+            if(next->color==Poly::Gray && total>=next->total) continue; // better path already exists
+            if(next->color==Poly::Black && total>=next->total) continue; // closed node and closer anyway
+            
+            // update node
+            if(next->color==Poly::Gray) {  // remove from queue first
+                queue.erase(next);
+            }
+            next->parent=best;
+            next->cost=cost;
+            next->total=total;
+            next->color=Poly::Gray;
+            queue.insert(next);
         }
-       
     }
-    if(vertices[to].color==Vertex::Black) { // path found
-        for(idx_type vi=to;vi>=0;vi=vertices[vi].parent) 
-            ret->points.push_back(vertices[vi].point);
+    if(polys[pto].color==Poly::Black) { // path found
+        for(Poly* p=&polys[pto];p!=NULL;p=p->parent) 
+            ret->points.push_back(p->entry_point);
         ret->reverse();
         return true;
     } else {
         return false;
     }
-}
-
-bool
-ConfSpace::path_dijkstra(const Point& from, const Point& to, Polyline* ret) {
-    idx_type p1=find(from);
-    if(p1<0) return false;
-    idx_type p2=find(to);
-    if(p2<0) return false;
-    return path_dijkstra(p1, p2, ret);
 }
 
 #ifdef SLIC3RXS
