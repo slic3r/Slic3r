@@ -22,7 +22,7 @@ my $hole = [
 
 my $points = [
    [0,0],
-   [120,120],
+   [90,50],
 ];
 
 my $slice=Slic3r::ExPolygon->new_scale($square, $hole);

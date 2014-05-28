@@ -1,9 +1,12 @@
 #include <limits>
 #include <queue>
+#include <stack>
 
 #include "Polyline.hpp"
+#include "ExPolygon.hpp"
 #include "Line.hpp"
 #include "ConfSpace.hpp"
+#include "SVG.hpp"
 
 namespace Slic3r {
 
@@ -31,6 +34,126 @@ ConfSpace::find(const Point& val) {
     return i->second;
 }
 
+// create vertices from polygon points and append p2t adresses to dst vector
+void
+ConfSpace::p2t_polygon(const MultiPoint& src, std::vector<p2t::Point*> *dst, std::vector<p2t::Point> *storage) {
+    dst->reserve(dst->size()+src.points.size());
+    for(Points::const_iterator it=src.points.begin(); it!=src.points.end();++it) {
+        storage->push_back(p2t::Point(it->x,it->y));
+        dst->push_back(&storage->back());
+    }
+}
+
+void
+ConfSpace::add_Polygon(const Polygon poly, int r, int l) {
+    tri_polygons.push_back(tri_polygon_type(poly, r,l));
+}
+
+void
+ConfSpace::triangulate() {
+    std::vector<p2t::Point*> pts;
+    // prepare space for all vertices first, so that p2t::Point is not realocated
+    int required=0;
+    for(std::vector<tri_polygon_type>::const_iterator it=tri_polygons.begin();it!=tri_polygons.end(); ++it)
+        required+=it->poly.points.size();
+    std::vector<p2t::Point> storage;
+    storage.reserve(required);
+
+
+    p2t_polygon(tri_polygons.front().poly, &pts, &storage);
+    p2t::CDT cdt(pts);
+
+    for(std::vector<tri_polygon_type>::const_iterator it=tri_polygons.begin()+1;it!=tri_polygons.end(); ++it) {
+        pts.clear();
+        p2t_polygon(it->poly, &pts, &storage);
+        cdt.AddHole(pts);
+    }
+    cdt.Triangulate();
+    
+    std::list<p2t::Triangle*> tri=cdt.GetMap();  // we want all triangles here
+    for(std::list<p2t::Triangle*>::const_iterator triangle=tri.begin();triangle!=tri.end();++triangle) {
+        Poly poly;
+        idx_type tv[3];
+        poly.vertCount=3;
+        for(int i=0;i<3;i++) {
+            p2t::Point* pt=(*triangle)->GetPoint(i);
+            tv[i]=insert(Point(pt->x, pt->y)).first;  // find triangle vertex
+            poly.verts[i]=tv[i];                              // set it in polygon
+        }
+        // fill neighbor (list)
+        for(int i=0;i<3;i++) {
+            idx_type v1i=tv[i];
+            Vertex& v1=vertices[v1i];            
+            idx_type v2i=tv[(i+1)%3];
+            poly.neis[i]=-1; // will be updated below
+            poly.constrained[i]=(*triangle)->constrained_edge[(i+2)%3];
+            for(std::vector<idx_type>::const_iterator neib=v1.polys.begin();neib!=v1.polys.end();++neib) {
+                for(int j1=0;j1<polys[*neib].vertCount;++j1) {
+                    idx_type j2=(j1+1)%polys[*neib].vertCount;
+                    if(polys[*neib].verts[j2]==v1i && polys[*neib].verts[j1]==v2i) {  // edge must have opposite orientation in neighbor polygon (both have same direction)
+                        poly.neis[i]=*neib;
+                        polys[*neib].neis[j1]=polys.size();
+                        // TODO - we are done, only one neighbour possible
+                    }
+                }
+            }
+            v1.polys.push_back(polys.size());
+        }
+        polys.push_back(poly);
+    }
+    // mark polygons
+    for(std::vector<tri_polygon_type>::const_iterator it=tri_polygons.begin()+1;it!=tri_polygons.end(); ++it) {
+        if(it->left>=0) {
+            idx_type tri=poly_find_left(it->poly.points[0], it->poly.points[1]);
+            if(tri>0) polys_set_class(tri, it->left);
+        }
+        if(it->right>=0) {
+            idx_type tri=poly_find_left(it->poly.points[1], it->poly.points[0]);
+            if(tri>0) polys_set_class(tri, it->right);
+        }
+    }
+    storage.clear();
+    tri_polygons.clear();
+}
+
+ConfSpace::idx_type
+ConfSpace::poly_find_left(idx_type v1, idx_type v2) {
+    for(std::vector<idx_type>::iterator it=vertices[v1].polys.begin();it!=vertices[v1].polys.end();++it) {
+        Poly& poly(polys[*it]);
+        for(int i=0;i<poly.vertCount;i++)
+            if(poly.verts[i]==v1) {
+                if(poly.verts[(i+1)%poly.vertCount]==v2)
+                    return &poly-&polys.front();
+                else 
+                    break; // not looking for this polygon
+            }
+    }
+    return -1;
+}
+
+
+ConfSpace::idx_type 
+ConfSpace::poly_find_left(const Point& p1, const Point& p2) {
+    idx_type v1=find(p1); 
+    if(v1<0) return -1;
+    idx_type v2=find(p2);
+    if(v2<0) return -1;
+    return poly_find_left(v1,v2);
+}
+
+void 
+ConfSpace::polys_set_class(idx_type first, int type) {
+    std::stack<idx_type> stack;
+    stack.push(first);
+    while(!stack.empty()) {
+        Poly &p(polys[stack.top()]); stack.pop();
+        if(p.type==type) continue;
+        p.type=type;
+        for(int i=0;i<p.vertCount;i++)
+            if(!p.constrained[i]) stack.push(p.neis[i]);
+    }
+}
+
 void
 ConfSpace::points(Points* p) {
     p->reserve(p->size()+vertices.size());
@@ -40,10 +163,10 @@ ConfSpace::points(Points* p) {
 
 void
 ConfSpace::edge_lines(Lines* l) {
-    // TODO - remove duplicate lines
     for(std::vector<Poly>::const_iterator poly = polys.begin(); poly != polys.end(); ++poly) 
         for(int i=0;i<poly->vertCount;i++) 
-            l->push_back(Line(vertices[poly->verts[i]].point, vertices[poly->verts[(i+1)%poly->vertCount]].point));
+            if(poly->neis[i]<poly-polys.begin())  // emit only one edge from bigger oly, no neighbor case also hadled here
+                l->push_back(Line(vertices[poly->verts[i]].point, vertices[poly->verts[(i+1)%poly->vertCount]].point));
 }
 
 void 
@@ -71,12 +194,13 @@ ConfSpace::nearest_point(Point& from) {
 ConfSpace::idx_type 
 ConfSpace::find_poly(const Point& p) 
 {
+    if(polys.empty()) return -1;
     Poly* poly=&polys[0];
 new_poly:
     for(int i=0;i<poly->vertCount;i++) {
         Point& p1=vertices[poly->verts[i]].point;
         Point& p2=vertices[poly->verts[(i+1)%poly->vertCount]].point;
-        if((p2.x - p1.x)*(p.y - p1.y) - (p2.y - p1.y)*(p.x - p1.x) > 0 ) {  // point is on other side of this edge, walk
+        if((p2.x - p1.x)*(p.y - p1.y) - (p2.y - p1.y)*(p.x - p1.x) < 0 ) {  // point is on other side of this edge, walk
             idx_type nxt=poly->neis[i];
             if(nxt<0) return -1; // no polygon behind this edge
             poly=&polys[nxt];
@@ -94,7 +218,7 @@ ConfSpace::path_init() {
     for(std::vector<Poly>::iterator it = polys.begin(); it != polys.end(); ++it) {
         it->cost=it->total=infinity;
         it->parent=NULL;
-        it->color=Poly::White;
+        it->color=Poly::Open;
     }
 }
 
@@ -109,52 +233,117 @@ ConfSpace::path_dijkstra(const Point& from, const Point& to, Polyline* ret) {
     idx_type pfrom=find_poly(from);
     idx_type pto=find_poly(to);
 
+    if (pfrom<0 || pto<0) return false;
+    {
+        Poly* first=&polys[pfrom];
+        first->color=Poly::Visited;
+        first->entry_point=from;
+        first->cost=0;
+        first->total=from.distance_to(to);
+    }
+
     queue.insert(&polys[pfrom]);
     while(!queue.empty()) {
-        Poly* best=*queue.begin();
-        queue.erase(best);
-        best->color=Poly::Black;
+        Poly* best=*queue.begin(); queue.erase(best);
+        idx_type besti=best-&polys.front();
+        best->color=Poly::Closed;
         if(best==&polys[pto]) { // path found to target polygon, do last step TODO
-            best->color=Poly::Black;
+            best->color=Poly::Closed;
             break;
         }
         Poly* parent=best->parent;
  
         for(int i=0;i<best->vertCount;i++) {
-            Poly* next=&polys[best->neis[i]];
+            idx_type nexti=best->neis[i];
+            if(nexti<0) continue; // no polygon behind this edge
+            Poly* next=&polys[nexti];
             if(next==parent) continue;  // don't go back
-            if(next->color==Poly::White) {  // new polygon discovered, compute it's position
-                Point mid=0.5*(vertices[i].point+vertices[(i+1)%best->vertCount].point);
-                next->entry_point=mid;
+            Point mid;
+            if(next->color==Poly::Open || next->color==Poly::Visited) {
+                int j;
+                for(j=0;j<next->vertCount;j++) 
+                    if(next->neis[j]==besti) break;
+                mid=0.5*(vertices[next->verts[j]].point+vertices[next->verts[(j+1)%best->vertCount]].point);
+                if(next->color==Poly::Open) {  // new polygon discovered, compute it's position
+                    next->entry_point=mid;
+                } 
+            } else {
+                mid=next->entry_point;
             }
-            // todo - check for target polygon
-            weight_type cost=best->cost+best->entry_point.distance_to(next->entry_point);
-            weight_type heuristic=best->entry_point.distance_to(to);
-
+            weight_type cost,heuristic;
+            if(nexti==pto) { // in target polygon, use different heuristic
+                cost=best->cost+(best->entry_point.distance_to(mid)+mid.distance_to(to))*std::max(best->type,1);
+                heuristic=0;
+            } else {
+                cost=best->cost+best->entry_point.distance_to(mid)*std::max(best->type,1);
+                heuristic=next->entry_point.distance_to(to);
+            }
             weight_type total=cost+heuristic;
             
-            if(next->color==Poly::Gray && total>=next->total) continue; // better path already exists
-            if(next->color==Poly::Black && total>=next->total) continue; // closed node and closer anyway
+            if(next->color==Poly::Visited && total>=next->total) continue; // better path already exists
+            if(next->color==Poly::Closed && total>=next->total) continue; // closed node and closer anyway
             
             // update node
-            if(next->color==Poly::Gray) {  // remove from queue first
+            if(next->color==Poly::Visited) {  // remove from queue first
                 queue.erase(next);
+                next->entry_point=mid;
             }
             next->parent=best;
             next->cost=cost;
             next->total=total;
-            next->color=Poly::Gray;
+            next->color=Poly::Visited;
             queue.insert(next);
         }
     }
-    if(polys[pto].color==Poly::Black) { // path found
-        for(Poly* p=&polys[pto];p!=NULL;p=p->parent) 
+    if(polys[pto].color==Poly::Closed) { // path found
+        ret->points.push_back(to);
+        for(Poly* p=&polys[pto];p!=NULL;p=p->parent) {
+            p->color=Poly::Path;
             ret->points.push_back(p->entry_point);
+        }
         ret->reverse();
         return true;
     } else {
         return false;
     }
+}
+
+void
+ConfSpace::SVG_dump_path(const char* fname, Point& from, Point& to) {
+    SVG svg(fname);
+    for(std::vector<Poly>::const_iterator p=polys.begin();p!=polys.end();++p) {
+        Polygon pol;
+        pol.points.reserve(p->vertCount);
+        for(int i=0;i<p->vertCount;++i)
+            pol.points.push_back(vertices[p->verts[i]].point);
+        char buff[256]="";
+        if(p->color!=Poly::Open)
+            sprintf(buff,"c=%.3f t=%.3f", unscale(p->cost), unscale(p->total));
+        svg.AddPolygon(pol, "", (p->type>1)?"red":"green", buff);
+        std::string color;
+        switch(p->color) {
+        case Poly::Open: color="white"; break;
+        case Poly::Visited: color="gray"; break;
+        case Poly::Closed: color="black"; break;
+        case Poly::Path: color="yellow"; break;
+        }
+        svg.AddPoint(pol.centroid(), color, 1.5, buff);
+        if(p->parent) {
+            svg.AddLine(Line(p->entry_point, p->parent->entry_point), "DarkBlue");
+        }
+    }
+    svg.AddPoint(from, "DarkGreen", 3);
+    svg.AddPoint(to, "DarkGreen", 3);
+    idx_type pto=find_poly(to);
+    if(pto>0) {
+        Polyline pl;
+        pl.points.push_back(to);
+        for(Poly* p=&polys[pto];p!=NULL;p=p->parent) {
+            pl.points.push_back(p->entry_point); 
+        }
+        svg.AddPolyline(pl, "red", .5);
+    }
+    svg.Close();
 }
 
 #ifdef SLIC3RXS

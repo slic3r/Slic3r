@@ -15,8 +15,9 @@
         %code{% RETVAL=THIS->insert(*point).first; %};
     int find_point(Point* point) 
         %code{% RETVAL=THIS->find(*point); %};  
-    bool insert_edge(Point* from, Point* to, float weigth, bool create=true)
-        %code{% RETVAL=THIS->insert_edge(*from, *to, weigth, create); %};
+    void add_Polygon(Polygon* poly, int left=-1, int right=-1)
+        %code{% THIS->add_Polygon(*poly, left, right); %};
+    void triangulate();
 
     Lines lines()
         %code{% THIS->edge_lines(&RETVAL); %};
@@ -35,4 +36,7 @@
                 RETVAL=new Polyline();
                 THIS->path_dijkstra(*from, *to, RETVAL); 
         %};
+    void SVG_dump_path(const char* fname, Point* from, Point* to)
+        %code{% THIS->SVG_dump_path(fname, *from, *to); %};
+                
 };
