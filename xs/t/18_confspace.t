@@ -24,16 +24,16 @@ use Test::More tests => 2;
     is $n->distance_to($point2), 0, 'Correct nearest point';
     }
     my $square = [
-        [10,10],[110,10],[110,110],[10,110],
+        [10e6,10e6],[110e6,10e6],[110e6,110e6],[10e6,110e6],
         ];
 
     my $hole = [
-        [30,30],[30,80],[80,80],[80,30],
+        [30e6,30e6],[30e6,80e6],[80e6,80e6],[80e6,30e6],
         ];
     
     my $points = [
-        [15,15],
-        [90,90],
+        [15e6,15e6],
+        [90e6,90e6],
         ];
     
    
@@ -43,9 +43,9 @@ use Test::More tests => 2;
     $cs->triangulate();
     my $lines=$cs->lines;
     $DB::single=1;
-    my $path=$cs->dijkstra(Slic3r::Point->new(@{$points->[0]}), Slic3r::Point->new(@{$points->[1]}));
+    my $path=$cs->path(Slic3r::Point->new(@{$points->[0]}), Slic3r::Point->new(@{$points->[1]}));
     is scalar @$path, 5, 'path found';
-    $cs->SVG_dump_path('confspace.svg', Slic3r::Point->new(@{$points->[0]}), Slic3r::Point->new(@{$points->[1]}));
+    $cs->SVG_dump_path('confspace.svg', Slic3r::Point->new(@{$points->[0]}), Slic3r::Point->new(@{$points->[1]}), $path);
 }
 
 __END__

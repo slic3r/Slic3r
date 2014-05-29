@@ -3,10 +3,12 @@ use Moo;
 
 has 'islands'           => (is => 'ro', required => 1);  # arrayref of ExPolygons
 has 'internal'          => (is => 'ro', default => sub { 1 });
+has 'id'                => (is => 'ro', default => sub { '' });  # for debugging
 has '_space'            => (is => 'ro', default => sub { Slic3r::ConfSpace->new });
 has '_inner'            => (is => 'ro', default => sub { [] });  # arrayref of ExPolygons
 has '_outer'            => (is => 'ro', default => sub { [] });  # arrayref of ExPolygons
 has '_contour'          => (is => 'ro', default => sub { [] });  # arrayref of ExPolygons
+has '_id_path'          => (is => 'rw', default => sub { 1 });   # path index for debugging
 
 use List::Util qw(first max);
 use Slic3r::Geometry qw(A B scale unscale epsilon scaled_epsilon);
@@ -102,11 +104,11 @@ sub shortest_path {
     #$self->_add_point_to_space($to, $space);
     
     # compute shortest path
-    my $path = $space->dijkstra($from, $to);
+    my $path = $space->path($from, $to);
 
 #    $DB::single=1;
-    $space->SVG_dump_path("path-$self.svg", $from, $to);
-
+    $space->SVG_dump_path("path-" . $self->id . "-" . $self->_id_path . ".svg", $from, $to, $path);    
+    $self->_id_path($self->_id_path + 1);
     if (0) {
         require "Slic3r/SVG.pm";
         Slic3r::SVG::output("path.svg",

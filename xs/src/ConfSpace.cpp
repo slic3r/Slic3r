@@ -225,8 +225,10 @@ ConfSpace::path_init() {
 // compare distance of gray verices, in ascending order. If distance is equal, compare pointers
 struct CostCompare { bool operator ()(const ConfSpace::Poly* a, const ConfSpace::Poly* b) { return (a->total==b->total)?(a<b):(a->total < b->total); } };
 
+// this code is heavily inspired by Recast/Detour (https://github.com/memononen/recastnavigation/blob/master/Detour/Source/DetourNavMeshQuery.cpp)
+
 bool
-ConfSpace::path_dijkstra(const Point& from, const Point& to, Polyline* ret) {
+ConfSpace::path_dijkstra(const Point& from, const Point& to, std::vector<idx_type>* ret) {
     path_init();  // reset all distances
     std::set<Poly*,CostCompare> queue;   
 
@@ -296,20 +298,111 @@ ConfSpace::path_dijkstra(const Point& from, const Point& to, Polyline* ret) {
         }
     }
     if(polys[pto].color==Poly::Closed) { // path found
-        ret->points.push_back(to);
         for(Poly* p=&polys[pto];p!=NULL;p=p->parent) {
             p->color=Poly::Path;
-            ret->points.push_back(p->entry_point);
+            ret->push_back(p-&polys.front());
         }
-        ret->reverse();
+        std::reverse(ret->begin(), ret->end());
         return true;
     } else {
         return false;
     }
 }
 
+
+
 void
-ConfSpace::SVG_dump_path(const char* fname, Point& from, Point& to) {
+ConfSpace::poly_get_portal(idx_type from, idx_type to, Point* left, Point* right) {
+    Poly& p=polys[from];
+    // TODO - there may be more edges between two polygons
+    for(int i=0;i<p.vertCount;++i) {
+        if(p.neis[i]==to) {
+            *left=vertices[p.verts[i]].point;
+            *right=vertices[p.verts[(i+1)%p.vertCount]].point;
+            return;
+        }
+    }
+    throw "Passed polygons are not neighbors";
+}
+
+// this code is basically stripped version of dtNavMeshQuery::findStraightPath from Recast/Detour (https://github.com/memononen/recastnavigation/blob/master/Detour/Source/DetourNavMeshQuery.cpp)
+
+void
+ConfSpace::path_straight(const Point& from, const Point& to, const std::vector<idx_type>& path, Polyline* ret) {
+    ret->points.push_back(from);
+    if(path.size()>1) {
+        Point portalApex(from), portalLeft(from), portalRight(from);
+        std::vector<idx_type>::const_iterator apexIndex = path.begin();
+        std::vector<idx_type>::const_iterator leftIndex = path.begin();
+        std::vector<idx_type>::const_iterator rightIndex = path.begin();
+        for(std::vector<idx_type>::const_iterator poly=path.begin();poly!=path.end();++poly) {            
+            Point left,right;
+            if(poly+1<path.end()) {
+                poly_get_portal(*poly, *(poly+1), &left, &right);
+                if(poly==path.begin()) {
+                    // If starting really close the portal, advance
+                    if(portalApex.distance_to(Line(left,right))<SCALED_EPSILON)
+                        continue;
+                }
+            } else {
+                left=right=to;
+            }
+            if(right.ccw(portalApex, portalRight)<=0) {
+                if ((portalApex==portalRight) || right.ccw(portalApex, portalLeft) > 0) {
+                    portalRight=right;
+                    rightIndex = poly;
+                } else {
+                    portalApex=portalLeft;
+                    apexIndex = leftIndex;
+                    if(ret->points.back()!=portalApex)
+                        ret->points.push_back(portalApex);
+                    portalLeft=portalApex;
+                    portalRight=portalApex;
+                    leftIndex = apexIndex;
+                    rightIndex = apexIndex;
+
+                    // Restart
+                    poly = apexIndex;
+                    
+                    continue;
+                }
+            }
+            if(left.ccw(portalApex, portalLeft)>=0) {
+                if ((portalApex==portalLeft) || left.ccw(portalApex, portalRight) < 0) {
+                    portalLeft=left;
+                    leftIndex = poly;
+                } else {
+                    portalApex=portalRight;
+                    apexIndex = rightIndex;
+                    if(ret->points.back()!=portalApex)
+                        ret->points.push_back(portalApex);
+                    portalLeft=portalApex;
+                    portalRight=portalApex;
+                    leftIndex = apexIndex;
+                    rightIndex = apexIndex;
+
+                    // Restart
+                    poly = apexIndex;
+                    
+                    continue;
+                }
+            }
+        }
+    }
+    if(ret->points.back()!=to)
+        ret->points.push_back(to);
+}
+
+bool
+ConfSpace::path(const Point& from, const Point& to, Polyline*  ret) {
+    std::vector<idx_type> path_polys;
+    bool found=path_dijkstra(from, to, &path_polys);
+    path_straight(from, to, path_polys, ret);
+    return found;
+}
+
+void
+ConfSpace::SVG_dump_path(const char* fname, Point& from, Point& to, const Polyline& straight_path) {
     SVG svg(fname);
     for(std::vector<Poly>::const_iterator p=polys.begin();p!=polys.end();++p) {
         Polygon pol;
@@ -343,6 +436,7 @@ ConfSpace::SVG_dump_path(const char* fname, Point& from, Point& to) {
         }
         svg.AddPolyline(pl, "red", .5);
     }
+    svg.AddPolyline(straight_path, "DarkGreen", .5);
     svg.Close();
 }
 

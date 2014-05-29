@@ -85,10 +85,13 @@ public:
 
     idx_type find_poly(const Point& val);
 
-    bool path_dijkstra(idx_type from, idx_type to, Polyline* ret);
-    bool path_dijkstra(const Point& from, const Point& to, Polyline* ret);
+    void poly_get_portal(idx_type from, idx_type to, Point* left, Point* right);
+    bool path_dijkstra(const Point& from, const Point& to, std::vector<idx_type>* ret);
+    void path_straight(const Point& from, const Point& to, const std::vector<idx_type>& path, Polyline* ret);
 
-    void SVG_dump_path(const char* fname, Point& from, Point& to);
+    bool path(const Point& from, const Point& to, Polyline*  ret);
+
+    void SVG_dump_path(const char* fname, Point& from, Point& to, const Polyline& straight_path);
 protected:
     void path_init();
     void p2t_polygon(const MultiPoint& src, std::vector<p2t::Point*> *dst, std::vector<p2t::Point> *storage);
