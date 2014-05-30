@@ -121,7 +121,8 @@ sub contact_area {
         if ($layer_id == 0) {
             # this is the first object layer, so we're here just to get the object
             # footprint for the raft
-            push @overhang, map $_->clone, map @$_, @{$layer->slices};
+            # we only consider contours and discard holes to get a more continuous raft
+            push @overhang, map $_->clone, map $_->contour, @{$layer->slices};
             push @contact, @{offset(\@overhang, scale +MARGIN)};
         } else {
             my $lower_layer = $object->layers->[$layer_id-1];
@@ -132,7 +133,7 @@ sub contact_area {
                 # If a threshold angle was specified, use a different logic for detecting overhangs.
                 if (defined $threshold_rad
                     || $layer_id < $self->object_config->support_material_enforce_layers
-                    || $self->object_config->raft_layers > 0) {
+                    || ($self->object_config->raft_layers > 0 && $layer_id == 0)) {
                     my $d = defined $threshold_rad
                         ? scale $lower_layer->height * ((cos $threshold_rad) / (sin $threshold_rad))
                         : 0;

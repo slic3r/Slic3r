@@ -580,7 +580,7 @@ EOF
         
         my @current_layer_slices = ();
         # sort slices so that the outermost ones come first
-        my @slices = sort { $a->contour->encloses_point($b->contour->[0]) ? 0 : 1 } @{$layer->slices};
+        my @slices = sort { $a->contour->contains_point($b->contour->[0]) ? 0 : 1 } @{$layer->slices};
         foreach my $copy (@{$layer->object->copies}) {
             foreach my $slice (@slices) {
                 my $expolygon = $slice->clone;
@@ -783,7 +783,7 @@ sub make_brim {
     # if brim touches skirt, make it around skirt too
     # TODO: calculate actual skirt width (using each extruder's flow in multi-extruder setups)
     if ($self->config->skirt_distance + (($self->config->skirts - 1) * $flow->spacing) <= $self->config->brim_width) {
-        push @islands, map @{$_->split_at_first_point->polyline->grow($grow_distance)}, @{$self->skirt};
+        push @islands, map @{$_->polygon->split_at_first_point->grow($grow_distance)}, @{$self->skirt};
     }
     
     my @loops = ();
@@ -954,6 +954,7 @@ sub write_gcode {
         
         my $finished_objects = 0;
         for my $obj_idx (@obj_idx) {
+            my $object = $self->objects->[$obj_idx];
             for my $copy (@{ $self->objects->[$obj_idx]->_shifted_copies }) {
                 # move to the origin position for the copy we're going to print.
                 # this happens before Z goes down to layer 0 again, so that 
@@ -961,7 +962,7 @@ sub write_gcode {
                 if ($finished_objects > 0) {
                     $gcodegen->set_shift(map unscale $copy->[$_], X,Y);
                     print $fh $gcodegen->retract;
-                    print $fh $gcodegen->G0(Slic3r::Point->new(0,0), undef, 0, $gcodegen->config->travel_speed*60, 'move to origin position for next object');
+                    print $fh $gcodegen->G0($object->_copies_shift->negative, undef, 0, $gcodegen->config->travel_speed*60, 'move to origin position for next object');
                 }
                 
                 my $buffer = Slic3r::GCode::CoolingBuffer->new(
@@ -969,7 +970,6 @@ sub write_gcode {
                     gcodegen    => $gcodegen,
                 );
                 
-                my $object = $self->objects->[$obj_idx];
                 my @layers = sort { $a->print_z <=> $b->print_z } @{$object->layers}, @{$object->support_layers};
                 for my $layer (@layers) {
                     # if we are printing the bottom layer of an object, and we have already finished
