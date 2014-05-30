@@ -128,12 +128,28 @@ BoundingBoxBase<PointClass>::translate(coordf_t x, coordf_t y)
 template void BoundingBoxBase<Point>::translate(coordf_t x, coordf_t y);
 
 template <class PointClass> void
+BoundingBoxBase<PointClass>::grow(coordf_t x, coordf_t y)
+{
+    this->min.translate(-x, -y);
+    this->max.translate(x, y);
+}
+template void BoundingBoxBase<Point>::grow(coordf_t x, coordf_t y);
+
+template <class PointClass> void
 BoundingBox3Base<PointClass>::translate(coordf_t x, coordf_t y, coordf_t z)
 {
     this->min.translate(x, y, z);
     this->max.translate(x, y, z);
 }
 template void BoundingBox3Base<Pointf3>::translate(coordf_t x, coordf_t y, coordf_t z);
+
+template <class PointClass> void
+BoundingBox3Base<PointClass>::grow(coordf_t x, coordf_t y, coordf_t z)
+{
+    this->min.translate(-x, -y, -z);
+    this->max.translate(x, y, z);
+}
+template void BoundingBox3Base<Pointf3>::grow(coordf_t x, coordf_t y, coordf_t z);
 
 template <class PointClass> PointClass
 BoundingBoxBase<PointClass>::center() const

@@ -26,6 +26,7 @@ class BoundingBoxBase
     void scale(double factor);
     PointClass size() const;
     void translate(coordf_t x, coordf_t y);
+    void grow(coordf_t x, coordf_t y);
     PointClass center() const;
 };
 
@@ -39,6 +40,7 @@ class BoundingBox3Base : public BoundingBoxBase<PointClass>
     void merge(const BoundingBox3Base<PointClass> &bb);
     PointClass size() const;
     void translate(coordf_t x, coordf_t y, coordf_t z);
+    void grow(coordf_t x, coordf_t y, coordf_t z);
     PointClass center() const;
 };
 

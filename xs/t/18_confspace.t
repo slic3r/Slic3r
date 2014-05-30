@@ -44,7 +44,7 @@ use Test::More tests => 2;
     my $lines=$cs->lines;
     $DB::single=1;
     my $path=$cs->path(Slic3r::Point->new(@{$points->[0]}), Slic3r::Point->new(@{$points->[1]}));
-    is scalar @$path, 5, 'path found';
+    is scalar @$path, 3, 'path found';
     $cs->SVG_dump_path('confspace.svg', Slic3r::Point->new(@{$points->[0]}), Slic3r::Point->new(@{$points->[1]}), $path);
 }
 

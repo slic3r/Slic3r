@@ -12,10 +12,10 @@ has '_id_path'          => (is => 'rw', default => sub { 1 });   # path index fo
 
 use List::Util qw(first max);
 use Slic3r::Geometry qw(A B scale unscale epsilon scaled_epsilon);
-use Slic3r::Geometry::Clipper qw(offset offset_ex diff diff_ex diff_pl intersection_pl union_ex);
+use Slic3r::Geometry::Clipper qw(offset offset_ex diff diff_ex diff_pl intersection_pl union_ex union);
 
 # clearance (in mm) from the perimeters
-has '_inner_margin' => (is => 'ro', default => sub { scale .3 });
+has '_inner_margin' => (is => 'ro', default => sub { scale .7 });
 has '_outer_margin' => (is => 'ro', default => sub { scale 1 });
 
 # this factor weigths the crossing of a perimeter 
@@ -25,7 +25,7 @@ has '_outer_margin' => (is => 'ro', default => sub { scale 1 });
 # follow if we decided to cross the perimeter.
 # a nearly-infinite value for this will only permit
 # perimeter crossing when there's no alternative path.
-use constant CROSSING_PENALTY => 10;
+use constant CROSSING_PENALTY => 1000;
 
 use constant POINT_DISTANCE => 1;  # unscaled
 
@@ -42,55 +42,18 @@ sub BUILD {
         return;
     }
     # create outside space
-    my $grown_islands=offset( [map @$_, @{$self->islands}], +$self->_outer_margin);
-    
-    my $bb=Slic3r::Geometry::BoundingBox->new_from_points([ map @$_, @$grown_islands]);
-    my $ofs=scale 10;
-    
-    my $bb_poly=Slic3r::Polygon->new([$bb->x_min-$ofs,$bb->y_min-$ofs], [$bb->x_min-$ofs,$bb->y_max+$ofs], 
-                                     [$bb->x_max+$ofs,$bb->y_max+$ofs], [$bb->x_max+$ofs,$bb->y_min-$ofs]);
-    my $outside=diff_ex(
-        [ $bb_poly ],
-        $grown_islands
+    my $bb=Slic3r::Geometry::BoundingBox->new_from_points([ map @$_, map @$_, @{$self->islands} ]);
+    $bb->grow(scale 20, scale 20);
+    $self->_space->add_Polygon($bb->polygon,1);
+    # find restricted area
+    my $contour = diff(
+        offset([map @$_, @{$self->islands}], +$self->_outer_margin),
+        offset([map @$_, @{$self->islands}], -$self->_inner_margin)
         );
-
-    $self->_space->add_Polygon($bb_poly,1);
+    my $spaced_contour=[map Slic3r::Polygon->new(splice($_->equally_spaced_points($point_distance), 1)), @$contour];
     
-    for my $i (0 .. $#{$self->islands}) {
-        my $expolygon = $self->islands->[$i];
-
-        # find external margin
-        my $outer = offset_ex(\@$expolygon, +$self->_outer_margin);
-        my $inner = offset_ex(\@$expolygon, -$self->_inner_margin);
-
-        my $contour = diff_ex(
-            [ map @$_, @$outer ],
-            [ map @$_, @$inner ],
-            );
-        for my $poly (map @$_, @$contour) {
-            my @pts=@{$poly->equally_spaced_points($point_distance)};
-            shift @pts;
-            $self->_space->add_Polygon(Slic3r::Polygon->new(@pts),1,CROSSING_PENALTY);
-        }
-        push @{ $self->_inner }, @$inner;
-        push @{ $self->_contour }, @$contour;
-    }
+    $self->_space->add_Polygon($_, 1, CROSSING_PENALTY) for @$spaced_contour;
     $self->_space->triangulate();
-#    $DB::single=1;
-    if (0) {
-        require "Slic3r/SVG.pm";
-        Slic3r::SVG::output("space.svg",
-                            no_arrows       => 1,
-                            line_width      => .03,
-                            cyan_expolygons => $self->islands,
-                            red_expolygons  => $outside,
-                            green_expolygons => $self->_inner,
-                            blue_expolygons => $self->_contour,
-                            lines           => $self->_space->lines,
-                            points          => $self->_space->points,
-            );
-        printf "%d islands\n", scalar @{$self->islands};
-    }
 }
 
 sub shortest_path {
@@ -100,18 +63,16 @@ sub shortest_path {
     # create a temporary configuration space
     my $space = $self->_space;
     
-    #$self->_add_point_to_space($from, $space);
-    #$self->_add_point_to_space($to, $space);
-    
     # compute shortest path
     my $path = $space->path($from, $to);
 
 #    $DB::single=1;
-    $space->SVG_dump_path("path-" . $self->id . "-" . $self->_id_path . ".svg", $from, $to, $path);    
+    my $fid=$self->id . "-" . $self->_id_path;
+    $space->SVG_dump_path("path-$fid.svg", $from, $to, $path);    
     $self->_id_path($self->_id_path + 1);
     if (0) {
         require "Slic3r/SVG.pm";
-        Slic3r::SVG::output("path.svg",
+        Slic3r::SVG::output("path-p-$fid.svg",
                             no_arrows       => 1,
                             line_width      => .1,
                             green_expolygons   => $self->islands,

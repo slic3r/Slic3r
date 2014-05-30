@@ -436,7 +436,7 @@ ConfSpace::SVG_dump_path(const char* fname, Point& from, Point& to, const Polyli
         }
         svg.AddPolyline(pl, "red", .5);
     }
-    svg.AddPolyline(straight_path, "DarkGreen", .5);
+    svg.AddPolyline(straight_path, "DarkGreen", 3);
     svg.Close();
 }
 
