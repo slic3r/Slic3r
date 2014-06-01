@@ -1,7 +1,3 @@
-_Q: Oh cool, a new RepRap slicer?_
-
-A: Yes.
-
 Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.png?branch=master)](https://travis-ci.org/alexrj/Slic3r)
 ======
 
@@ -80,7 +76,7 @@ Slic3r is licensed under the _GNU Affero General Public License, version 3_.
 The author is Alessandro Ranellucci.
 
 The [Silk icon set](http://www.famfamfam.com/lab/icons/silk/) used in Slic3r is
-licensed under the _Creative Commons Attribution 3.0 License_.
+licensed under the [_Creative Commons Attribution 3.0 License](https://creativecommons.org/licenses/by/3.0/)_.
 The author of the Silk icon set is Mark James.
 
 ### How can I invoke slic3r.pl using the command line?
