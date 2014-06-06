@@ -324,7 +324,6 @@ P2trTriangle* p2tr_mesh_find_point2     (P2trMesh          *self,
 P2trTriangle* p2tr_mesh_find_point_local (P2trMesh *self,
                                           const P2trVector2 *pt,
                                           P2trTriangle *initial_guess);
-
 /**
  * Exactly like \ref p2tr_mesh_find_point_local, except for the fact
  * that this variant also returns the UV coordinates of the point
@@ -344,7 +343,6 @@ P2trTriangle* p2tr_mesh_find_point_local2 (P2trMesh *self,
                                            P2trTriangle *initial_guess,
                                            gdouble *u,
                                            gdouble *v);
-
 /**
  * Find the bounding rectangle containing this mesh.
  * @param[in] self The mesh whose bounding rectangle should be computed

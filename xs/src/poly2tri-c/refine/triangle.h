@@ -89,6 +89,8 @@ P2trInTriangle p2tr_triangle_contains_point2 (P2trTriangle      *self,
                                               const P2trVector2 *pt,
                                               gdouble           *u,
                                               gdouble           *v);
+P2trInTriangle p2tr_triangle_contains_point_cw (P2trTriangle      *self,
+                                                const P2trVector2 *pt);
 
 #define P2TR_TRIANGLE_GET_POINT(tr,index) ((tr)->edges[((index)+3-1)%3]->end)
 #endif

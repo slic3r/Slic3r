@@ -294,8 +294,15 @@ P2trTriangle*
 p2tr_mesh_find_point (P2trMesh *self,
                       const P2trVector2 *pt)
 {
-  gdouble u, v;
-  return p2tr_mesh_find_point2 (self, pt, &u, &v);
+  P2trHashSetIter iter;
+  P2trTriangle *result;
+  
+  p2tr_hash_set_iter_init (&iter, self->triangles);
+  while (p2tr_hash_set_iter_next (&iter, (gpointer*)&result))
+    if (p2tr_triangle_contains_point_cw (result, pt) != P2TR_INTRIANGLE_OUT)
+      return p2tr_triangle_ref (result);
+
+  return NULL;
 }
 
 P2trTriangle*
@@ -304,15 +311,10 @@ p2tr_mesh_find_point2 (P2trMesh          *self,
                        gdouble           *u,
                        gdouble           *v)
 {
-  P2trHashSetIter iter;
-  P2trTriangle *result;
-  
-  p2tr_hash_set_iter_init (&iter, self->triangles);
-  while (p2tr_hash_set_iter_next (&iter, (gpointer*)&result))
-    if (p2tr_triangle_contains_point2 (result, pt, u, v) != P2TR_INTRIANGLE_OUT)
-      return p2tr_triangle_ref (result);
-
-  return NULL;
+    P2trTriangle* tri=p2tr_mesh_find_point(self, pt);
+    if(tri)
+        p2tr_triangle_contains_point2(tri, pt, u, v);
+    return tri;
 }
 
 P2trTriangle*
@@ -320,23 +322,12 @@ p2tr_mesh_find_point_local (P2trMesh          *self,
                             const P2trVector2 *pt,
                             P2trTriangle      *initial_guess)
 {
-  gdouble u, v;
-  return p2tr_mesh_find_point_local2 (self, pt, initial_guess, &u, &v);
-}
-
-P2trTriangle*
-p2tr_mesh_find_point_local2 (P2trMesh          *self,
-                             const P2trVector2 *pt,
-                             P2trTriangle      *initial_guess,
-                             gdouble           *u,
-                             gdouble           *v)
-{
   P2trHashSet *checked_tris;
   GQueue to_check;
   P2trTriangle *result = NULL;
 
   if (initial_guess == NULL)
-    return p2tr_mesh_find_point2(self, pt, u, v);
+    return p2tr_mesh_find_point(self, pt);
 
   checked_tris = p2tr_hash_set_new_default ();
   g_queue_init (&to_check);
@@ -347,7 +338,7 @@ p2tr_mesh_find_point_local2 (P2trMesh          *self,
       P2trTriangle *tri = (P2trTriangle*) g_queue_pop_head (&to_check);
       
       p2tr_hash_set_insert (checked_tris, tri);
-      if (p2tr_triangle_contains_point2 (tri, pt, u, v) != P2TR_INTRIANGLE_OUT)
+      if (p2tr_triangle_contains_point_cw (tri, pt) != P2TR_INTRIANGLE_OUT)
         {
           result = tri;
           break;
@@ -376,6 +367,20 @@ p2tr_mesh_find_point_local2 (P2trMesh          *self,
 
   return result;
 }
+
+P2trTriangle*
+p2tr_mesh_find_point_local2 (P2trMesh          *self,
+                             const P2trVector2 *pt,
+                             P2trTriangle      *initial_guess,
+                             gdouble           *u,
+                             gdouble           *v)
+{
+    P2trTriangle* tri=p2tr_mesh_find_point_local(self, pt, initial_guess);
+    if(tri)
+        p2tr_triangle_contains_point2(tri, pt, u, v);
+    return tri;
+}
+
 
 void
 p2tr_mesh_get_bounds (P2trMesh    *self,
@@ -458,7 +463,7 @@ p2tr_mesh_save_to_file (P2trMesh *self,
       for (pt_index = 0; pt_index < 3; ++pt_index)
         {
           pt = P2TR_TRIANGLE_GET_POINT (tr, pt_index);
-          pt_indexes[pt_index] = g_hash_table_lookup (point2index, pt);
+          pt_indexes[pt_index] = (guint*)g_hash_table_lookup (point2index, pt);
         }
 
       fprintf (out, "%u %u %u %u\n", 3,

@@ -293,8 +293,11 @@ p2t_sweepcontext_mesh_clean (P2tSweepContext *THIS, P2tTriangle* triangle)
           g_ptr_array_add (THIS->triangles_, t);
           for (i = 0; i < 3; i++)
             {
-              if (! t->constrained_edge[i])
-                g_queue_push_tail (&triangles, p2t_triangle_get_neighbor (t, i));
+              P2tTriangle* tn=p2t_triangle_get_neighbor (t, i);
+              if (tn && !p2t_triangle_is_interior (tn) 
+                  && !p2t_triangle_contains_pt(tn, THIS->head_) 
+                  && !p2t_triangle_contains_pt(tn, THIS->tail_))
+                g_queue_push_tail (&triangles, tn);
             }
         }
     }

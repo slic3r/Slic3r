@@ -161,7 +161,7 @@ p2tr_math_triangle_barcycentric (const P2trVector2 *A,
   *v = (dot00 * dot12 - dot01 * dot02) * invDenom;
 }
 
-#define INTRIANGLE_EPSILON 0e-9
+#define INTRIANGLE_EPSILON 1e-9
 
 P2trInTriangle
 p2tr_math_intriangle (const P2trVector2 *A,
@@ -192,6 +192,24 @@ p2tr_math_intriangle2 (const P2trVector2 *A,
   else
     return P2TR_INTRIANGLE_OUT;
 }
+
+P2trInTriangle
+p2tr_math_intriangle_cw (const P2trVector2 *A,
+                         const P2trVector2 *B,
+                         const P2trVector2 *C,
+                         const P2trVector2 *P)
+{
+    P2trOrientation ab=p2tr_math_orient2d(A,B,P);
+    if(ab==P2TR_ORIENTATION_CCW) return P2TR_INTRIANGLE_OUT;
+    P2trOrientation bc=p2tr_math_orient2d(B,C,P);
+    if(bc==P2TR_ORIENTATION_CCW) return P2TR_INTRIANGLE_OUT;
+    P2trOrientation ca=p2tr_math_orient2d(C,A,P);
+    if(ca==P2TR_ORIENTATION_CCW) return P2TR_INTRIANGLE_OUT;
+    
+    if(ab==P2TR_ORIENTATION_LINEAR || bc==P2TR_ORIENTATION_LINEAR || ca==P2TR_ORIENTATION_LINEAR) return P2TR_INTRIANGLE_ON;
+    return P2TR_INTRIANGLE_IN;
+}
+
 
 /* The point in triangle circumcircle test, and the 3-point orientation
  * test, are both based on the work of Jonathan Richard Shewchuk. The

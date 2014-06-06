@@ -311,3 +311,14 @@ p2tr_triangle_contains_point2 (P2trTriangle      *self,
       &P2TR_TRIANGLE_GET_POINT(self,2)->c,
       pt, u, v);
 }
+
+P2trInTriangle
+p2tr_triangle_contains_point_cw  (P2trTriangle      *self,
+                                  const P2trVector2 *pt)
+{
+  return p2tr_math_intriangle_cw (
+      &P2TR_TRIANGLE_GET_POINT(self,0)->c,
+      &P2TR_TRIANGLE_GET_POINT(self,1)->c,
+      &P2TR_TRIANGLE_GET_POINT(self,2)->c,
+      pt);
+}

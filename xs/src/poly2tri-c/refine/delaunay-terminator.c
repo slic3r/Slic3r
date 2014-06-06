@@ -201,7 +201,10 @@ static void
 p2tr_dt_enqueue_tri (P2trDelaunayTerminator *self,
                      P2trTriangle           *tri)
 {
-  g_sequence_insert_sorted (self->Qt, p2tr_vtriangle_new (tri), (GCompareDataFunc)vtriangle_quality_compare, NULL);
+  P2trCircle cc;
+  p2tr_triangle_get_circum_circle(tri,  &cc);
+  if(cc.radius>1e6)
+      g_sequence_insert_sorted (self->Qt, p2tr_vtriangle_new (tri), (GCompareDataFunc)vtriangle_quality_compare, NULL);
 }
 
 static inline gboolean
@@ -268,7 +271,7 @@ p2tr_dt_refine (P2trDelaunayTerminator   *self,
     return;
 
   p2tr_hash_set_iter_init (&hs_iter, self->cdt->mesh->edges);
-    while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&s))
+  while (p2tr_hash_set_iter_next (&hs_iter, (gpointer*)&s))
     if (s->constrained && p2tr_cdt_is_encroached (s))
       p2tr_dt_enqueue_segment (self, s);
 
