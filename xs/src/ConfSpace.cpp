@@ -2,6 +2,9 @@
 #include <queue>
 #include <stack>
 
+#include <poly2tri-c/p2t/poly2tri.h>
+#include <poly2tri-c/refine/refine.h>
+
 #include "Polyline.hpp"
 #include "ExPolygon.hpp"
 #include "Line.hpp"
@@ -35,12 +38,12 @@ ConfSpace::find(const Point& val) {
 }
 
 // create vertices from polygon points and append p2t adresses to dst vector
-void
-ConfSpace::p2t_polygon(const MultiPoint& src, std::vector<p2t::Point*> *dst, std::vector<p2t::Point> *storage) {
-    dst->reserve(dst->size()+src.points.size());
+static void p2t_polygon(const MultiPoint& src, P2tPointPtrArray dst, std::vector<_P2tPoint*> *storage) {
+    ::P2tPoint* p;
     for(Points::const_iterator it=src.points.begin(); it!=src.points.end();++it) {
-        storage->push_back(p2t::Point(it->x,it->y));
-        dst->push_back(&storage->back());
+        p=p2t_point_new_dd(it->x,it->y);
+        g_ptr_array_add(dst, p);
+        storage->push_back(p);
     }
 }
 
@@ -51,34 +54,47 @@ ConfSpace::add_Polygon(const Polygon poly, int r, int l) {
 
 void
 ConfSpace::triangulate() {
-    std::vector<p2t::Point*> pts;
-    // prepare space for all vertices first, so that p2t::Point is not realocated
+    P2tPointPtrArray pts=g_ptr_array_new();
     int required=0;
     for(std::vector<tri_polygon_type>::const_iterator it=tri_polygons.begin();it!=tri_polygons.end(); ++it)
         required+=it->poly.points.size();
-    std::vector<p2t::Point> storage;
+    std::vector< ::P2tPoint*> storage;
     storage.reserve(required);
 
 
-    p2t_polygon(tri_polygons.front().poly, &pts, &storage);
-    p2t::CDT cdt(pts);
+    p2t_polygon(tri_polygons.front().poly, pts, &storage);
+    P2tCDT* cdt=p2t_cdt_new(pts);
 
     for(std::vector<tri_polygon_type>::const_iterator it=tri_polygons.begin()+1;it!=tri_polygons.end(); ++it) {
-        pts.clear();
-        p2t_polygon(it->poly, &pts, &storage);
-        cdt.AddHole(pts);
+        g_ptr_array_set_size(pts, 0);
+        p2t_polygon(it->poly, pts, &storage);
+        p2t_cdt_add_hole(cdt, pts);
     }
-    cdt.Triangulate();
+
+    g_ptr_array_free(pts, TRUE);
+
+    p2t_cdt_triangulate(cdt);
+
+    P2trCDT *rcdt=p2tr_cdt_new (cdt);
+    p2t_cdt_free (cdt);
     
-    std::list<p2t::Triangle*> tri=cdt.GetMap();  // we want all triangles here
-    for(std::list<p2t::Triangle*>::const_iterator triangle=tri.begin();triangle!=tri.end();++triangle) {
+    P2trRefiner *refiner;
+    refiner = p2tr_refiner_new (G_PI / 6, p2tr_refiner_false_too_big, rcdt);
+    p2tr_refiner_refine (refiner, storage.size()*20, NULL);
+    p2tr_refiner_free (refiner);
+
+    P2trHashSetIter iter;
+    p2tr_hash_set_iter_init(&iter, rcdt->mesh->triangles);
+
+    P2trTriangle* tri;
+    while (p2tr_hash_set_iter_next (&iter, (gpointer*)&tri)) {
         Poly poly;
         idx_type tv[3];
         poly.vertCount=3;
         for(int i=0;i<3;i++) {
-            p2t::Point* pt=(*triangle)->GetPoint(i);
-            tv[i]=insert(Point(pt->x, pt->y)).first;  // find triangle vertex
-            poly.verts[i]=tv[i];                              // set it in polygon
+            ::P2trPoint* pt=P2TR_TRIANGLE_GET_POINT(tri,2-i);     // reverse points
+            tv[i]=insert(Point(pt->c.x, pt->c.y)).first;          // find triangle vertex
+            poly.verts[i]=tv[i];                                  // store point as polygon vertex
         }
         // fill neighbor (list)
         for(int i=0;i<3;i++) {
@@ -86,7 +102,7 @@ ConfSpace::triangulate() {
             Vertex& v1=vertices[v1i];            
             idx_type v2i=tv[(i+1)%3];
             poly.neis[i]=-1; // will be updated below
-            poly.constrained[i]=(*triangle)->constrained_edge[(i+2)%3];
+            poly.constrained[i]=tri->edges[(4-i)%3]->constrained;
             for(std::vector<idx_type>::const_iterator neib=v1.polys.begin();neib!=v1.polys.end();++neib) {
                 for(int j1=0;j1<polys[*neib].vertCount;++j1) {
                     idx_type j2=(j1+1)%polys[*neib].vertCount;
@@ -112,17 +128,23 @@ ConfSpace::triangulate() {
             if(tri>0) polys_set_class(tri, it->right);
         }
     }
+    
+    p2tr_cdt_free (rcdt);
     storage.clear();
     tri_polygons.clear();
 }
 
 ConfSpace::idx_type
 ConfSpace::poly_find_left(idx_type v1, idx_type v2) {
+    const Line edge(vertices[v1].point, vertices[v2].point);
+    
     for(std::vector<idx_type>::iterator it=vertices[v1].polys.begin();it!=vertices[v1].polys.end();++it) {
         Poly& poly(polys[*it]);
         for(int i=0;i<poly.vertCount;i++)
             if(poly.verts[i]==v1) {
-                if(poly.verts[(i+1)%poly.vertCount]==v2)
+                Point pp2(vertices[poly.verts[(i+1)%poly.vertCount]].point);                
+                // look for edge colinear with [v1,v2] starting at v1
+                if( pp2.projection_onto(edge).coincides_with(pp2) )  // next point is on search edge
                     return &poly-&polys.front();
                 else 
                     break; // not looking for this polygon
@@ -202,7 +224,8 @@ new_poly:
         Point& p2=vertices[poly->verts[(i+1)%poly->vertCount]].point;
         if((p2.x - p1.x)*(p.y - p1.y) - (p2.y - p1.y)*(p.x - p1.x) < 0 ) {  // point is on other side of this edge, walk
             idx_type nxt=poly->neis[i];
-            if(nxt<0) return -1; // no polygon behind this edge
+            if(nxt<0) 
+                return -1; // no polygon behind this edge
             poly=&polys[nxt];
             goto new_poly;
         }
@@ -410,9 +433,14 @@ ConfSpace::SVG_dump_path(const char* fname, Point& from, Point& to, const Polyli
         for(int i=0;i<p->vertCount;++i)
             pol.points.push_back(vertices[p->verts[i]].point);
         char buff[256]="";
+        sprintf(buff, "id=%d", p-polys.begin());
         if(p->color!=Poly::Open)
-            sprintf(buff,"c=%.3f t=%.3f", unscale(p->cost), unscale(p->total));
+            sprintf(buff+strlen(buff)," c=%.3f t=%.3f", unscale(p->cost), unscale(p->total));
         svg.AddPolygon(pol, "", (p->type>1)?"red":"green", buff);
+        svg.arrows=false;
+        for(int i=0;i<p->vertCount;++i)
+            if(p->constrained[i])
+                svg.AddLine(Line(vertices[p->verts[i]].point, vertices[p->verts[(i+1)%p->vertCount]].point), "Yellow", 1);
         std::string color;
         switch(p->color) {
         case Poly::Open: color="white"; break;

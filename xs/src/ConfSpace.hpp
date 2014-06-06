@@ -4,7 +4,7 @@
 #include <vector>
 #include <set>
 #include <utility>
-#include <poly2tri/poly2tri.h>
+
 #include "Point.hpp"
 #include "Line.hpp"
 
@@ -13,6 +13,7 @@ namespace Slic3r {
 bool zorder_compare(const Point& r, const Point& l);
 
 class Polyline;
+class P2tPoint;
 
 static const int VERTS_PER_POLYGON=6;
 
@@ -94,7 +95,6 @@ public:
     void SVG_dump_path(const char* fname, Point& from, Point& to, const Polyline& straight_path);
 protected:
     void path_init();
-    void p2t_polygon(const MultiPoint& src, std::vector<p2t::Point*> *dst, std::vector<p2t::Point> *storage);
 };
 
 

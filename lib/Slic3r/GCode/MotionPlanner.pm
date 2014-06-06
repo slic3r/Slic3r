@@ -25,7 +25,7 @@ has '_outer_margin' => (is => 'ro', default => sub { scale 1 });
 # follow if we decided to cross the perimeter.
 # a nearly-infinite value for this will only permit
 # perimeter crossing when there's no alternative path.
-use constant CROSSING_PENALTY => 1000;
+use constant CROSSING_PENALTY => 30;
 
 use constant POINT_DISTANCE => 1;  # unscaled
 
@@ -44,7 +44,7 @@ sub BUILD {
     # create outside space
     my $bb=Slic3r::Geometry::BoundingBox->new_from_points([ map @$_, map @$_, @{$self->islands} ]);
     $bb->grow(scale 20, scale 20);
-    $self->_space->add_Polygon($bb->polygon,1);
+    $self->_space->add_Polygon($bb->polygon, CROSSING_PENALTY, 1);  # penalize region outside of BBox (helper triangles)
     # find restricted area
     my $contour = diff(
         offset([map @$_, @{$self->islands}], +$self->_outer_margin),
@@ -52,7 +52,7 @@ sub BUILD {
         );
     my $spaced_contour=[map Slic3r::Polygon->new(splice($_->equally_spaced_points($point_distance), 1)), @$contour];
     
-    $self->_space->add_Polygon($_, 1, CROSSING_PENALTY) for @$spaced_contour;
+    $self->_space->add_Polygon($_, -1, CROSSING_PENALTY) for @$spaced_contour;
     $self->_space->triangulate();
 }
 
