@@ -251,6 +251,59 @@ sub slice {
     pop @{$self->layers} while @{$self->layers} && (!map @{$_->slices}, @{$self->layers->[-1]->regions});
     
     foreach my $layer (@{ $self->layers }) {
+        # apply size compensation
+        if ($self->config->xy_size_compensation != 0) {
+            my $delta = scale($self->config->xy_size_compensation);
+            if (@{$layer->regions} == 1) {
+                # single region
+                my $layerm = $layer->regions->[0];
+                my $slices = [ map $_->p, @{$layerm->slices} ];
+                $layerm->slices->clear;
+                $layerm->slices->append(Slic3r::Surface->new(
+                    expolygon    => $_,
+                    surface_type => S_TYPE_INTERNAL,
+                )) for @{offset_ex($slices, $delta)};
+            } else {
+                if ($delta < 0) {
+                    # multiple regions, shrinking
+                    # we apply the offset to the combined shape, then intersect it
+                    # with the original slices for each region
+                    my $slices = union([ map $_->p, map @{$_->slices}, @{$layer->regions} ]);
+                    $slices = offset($slices, $delta);
+                    foreach my $layerm (@{$layer->regions}) {
+                        my $this_slices = intersection_ex(
+                            $slices,
+                            [ map $_->p, @{$layerm->slices} ],
+                        );
+                        $layerm->slices->clear;
+                        $layerm->slices->append(Slic3r::Surface->new(
+                            expolygon    => $_,
+                            surface_type => S_TYPE_INTERNAL,
+                        )) for @$this_slices;
+                    }
+                } else {
+                    # multiple regions, growing
+                    # this is an ambiguous case, since it's not clear how to grow regions where they are going to overlap
+                    # so we give priority to the first one and so on
+                    for my $i (0..$#{$layer->regions}) {
+                        my $layerm = $layer->regions->[$i];
+                        my $slices = offset_ex([ map $_->p, @{$layerm->slices} ], $delta);
+                        if ($i > 0) {
+                            $slices = diff_ex(
+                                [ map @$_, @$slices ],
+                                [ map $_->p, map @{$_->slices}, map $layer->regions->[$_], 0..($i-1) ],  # slices of already processed regions
+                            );
+                        }
+                        $layerm->slices->clear;
+                        $layerm->slices->append(Slic3r::Surface->new(
+                            expolygon    => $_,
+                            surface_type => S_TYPE_INTERNAL,
+                        )) for @$slices;
+                    }
+                }
+            }
+        }
+        
         # merge all regions' slices to get islands
         $layer->make_slices;
     }
@@ -372,11 +425,12 @@ sub make_perimeters {
                 my $layerm          = $self->layers->[$i]->regions->[$region_id];
                 my $upper_layerm    = $self->layers->[$i+1]->regions->[$region_id];
                 my $perimeter_spacing       = $layerm->flow(FLOW_ROLE_PERIMETER)->scaled_spacing;
+                my $ext_perimeter_spacing   = $layerm->flow(FLOW_ROLE_EXTERNAL_PERIMETER)->scaled_spacing;
                 
                 my $overlap = $perimeter_spacing;  # one perimeter
                 
                 my $diff = diff(
-                    offset([ map @{$_->expolygon}, @{$layerm->slices} ], -($region_perimeters * $perimeter_spacing)),
+                    offset([ map @{$_->expolygon}, @{$layerm->slices} ], -($ext_perimeter_spacing + ($region_perimeters-1) * $perimeter_spacing)),
                     offset([ map @{$_->expolygon}, @{$upper_layerm->slices} ], -$overlap),
                 );
                 next if !@$diff;
@@ -453,7 +507,7 @@ sub detect_surfaces_type {
                 );
                 
                 # collapse very narrow parts (using the safety offset in the diff is not enough)
-                my $offset = $layerm->flow(FLOW_ROLE_PERIMETER)->scaled_width / 10;
+                my $offset = $layerm->flow(FLOW_ROLE_EXTERNAL_PERIMETER)->scaled_width / 10;
                 return map Slic3r::Surface->new(expolygon => $_, surface_type => $result_type),
                     @{ offset2_ex($diff, -$offset, +$offset) };
             };
@@ -769,7 +823,7 @@ sub discover_horizontal_shells {
                         # than a perimeter width, since it's probably just crossing a sloping wall
                         # and it's not wanted in a hollow print even if it would make sense when
                         # obeying the solid shell count option strictly (DWIM!)
-                        my $margin = $neighbor_layerm->flow(FLOW_ROLE_PERIMETER)->scaled_width;
+                        my $margin = $neighbor_layerm->flow(FLOW_ROLE_EXTERNAL_PERIMETER)->scaled_width;
                         my $too_narrow = diff(
                             $new_internal_solid,
                             offset2($new_internal_solid, -$margin, +$margin, CLIPPER_OFFSET_SCALE, JT_MITER, 5),
