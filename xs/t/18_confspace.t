@@ -39,7 +39,7 @@ use Test::More tests => 2;
    
     my $expolygon = Slic3r::ExPolygon->new($square,$hole);
     
-    $cs->add_Polygon($_,10) for @$expolygon;
+    $cs->add_Polygon($_,1,10) for @$expolygon;  # we want restricted hole
     $cs->triangulate();
     $DB::single=1;
     my $path=$cs->path(Slic3r::Point->new(@{$points->[0]}), Slic3r::Point->new(@{$points->[1]}));

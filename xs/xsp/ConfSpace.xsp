@@ -11,10 +11,6 @@
     Clone<ConfSpace> clone()
         %code{% RETVAL = THIS; %};
   
-    int insert_point(Point* point)
-        %code{% RETVAL=THIS->insert(*point).first; %};
-    int find_point(Point* point) 
-        %code{% RETVAL=THIS->find(*point); %};  
     void add_Polygon(Polygon* poly, int left=-1, int right=-1)
         %code{% THIS->add_Polygon(*poly, left, right); %};
     void triangulate();
@@ -23,13 +19,11 @@
         %code{% THIS->edge_lines(&RETVAL); %};
     Points points()
         %code{% THIS->points(&RETVAL); %};
-    Points points_in_range(Point* from, float range)
-        %code{% THIS->points_in_range(*from, range, &RETVAL); %};
-    Ref<Point> nearest_point(Point* from)
+    Clone<Point> nearest_point(Point* from)
         %code{% 
-                ConfSpace::idx_type idx=THIS->nearest_point(*from);
-                if(idx<0) XSRETURN_UNDEF;
-                RETVAL=&(*THIS)[idx].point;
+                ConfSpace::Vertex* v=THIS->vertex_nearest(*from);
+                if(!v) XSRETURN_UNDEF;
+                RETVAL=v->point;
         %};
     Polyline* path(Point* from, Point* to)
         %code{% 
