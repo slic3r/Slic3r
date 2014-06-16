@@ -152,7 +152,7 @@ sub contact_area {
                 } else {
                     $diff = diff(
                         [ map $_->p, @{$layerm->slices} ],
-                        offset([ map @$_, @{$lower_layer->slices} ], +$fw*2),
+                        offset([ map @$_, @{$lower_layer->slices} ], +$fw/2),
                     );
                 
                     # collapse very tiny spots
