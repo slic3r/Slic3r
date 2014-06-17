@@ -10,7 +10,7 @@ BEGIN {
 }
 
 use Slic3r;
-use Slic3r::Geometry qw(scale);
+use Slic3r::Geometry qw(scale unscale);
 
 my $square = [
    [10,10],[110,10],[110,110],[10,110],
@@ -34,4 +34,4 @@ my $mp=Slic3r::GCode::MotionPlanner->new(
 
 my $path=$mp->shortest_path(Slic3r::Point->new_scale(@{$points->[0]}), Slic3r::Point->new_scale(@{$points->[1]}));
 
-is $path->length, 10, 'Path found';
+is int(unscale($path->length)+0.5), 110, 'Path found';
