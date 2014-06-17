@@ -5,6 +5,7 @@ use utf8;
 
 use Wx;
 use base 'Wx::Wizard';
+use Slic3r::Geometry qw(unscale);
 
 # adhere to various human interface guidelines
 our $wizard = 'Wizard';
@@ -52,10 +53,6 @@ sub run {
         # it would be cleaner to have these defined inside each page class,
         # in some event getting called before leaving the page
         {
-            # set print_center to centre of bed_size
-            my $bed_size = $self->{config}->bed_size;
-            $self->{config}->set('print_center', [$bed_size->[0]/2, $bed_size->[1]/2]);
-            
             # set first_layer_height + layer_height based on nozzle_diameter
             my $nozzle = $self->{config}->nozzle_diameter;
             $self->{config}->set('first_layer_height', $nozzle->[0]);
@@ -204,17 +201,22 @@ sub append_option {
     # populate repository with the factory default
     my $opt_key = $full_key;
     $opt_key =~ s/#.+//;
-    $self->GetParent->{config}->apply(Slic3r::Config->new_from_defaults($opt_key));
+    $self->config->apply(Slic3r::Config->new_from_defaults($opt_key));
     
     # draw the control
     my $optgroup = Slic3r::GUI::ConfigOptionsGroup->new(
         parent      => $self,
         title       => '',
-        config      => $self->GetParent->{config},
+        config      => $self->config,
         options     => [$full_key],
         full_labels => 1,
     );
     $self->{vsizer}->Add($optgroup->sizer, 0, wxEXPAND | wxTOP | wxBOTTOM, 10);
+}
+
+sub append_panel {
+    my ($self, $panel) = @_;
+    $self->{vsizer}->Add($panel, 0, wxEXPAND | wxTOP | wxBOTTOM, 10);
 }
 
 sub set_previous_page {
@@ -251,6 +253,11 @@ sub build_index {
     $self->{index}->prepend_title($page->get_short_title) while ($page = $page->GetPrev);
     $page = $self;
     $self->{index}->append_title($page->get_short_title) while ($page = $page->GetNext);
+}
+
+sub config {
+    my ($self) = @_;
+    return $self->GetParent->{config};
 }
 
 package Slic3r::GUI::ConfigWizard::Page::Welcome;
@@ -290,9 +297,14 @@ sub new {
     my ($parent) = @_;
     my $self = $class->SUPER::new($parent, 'Bed Size');
 
-    $self->append_text('Enter the size of your printers bed, then click Next.');
-    $self->append_option('bed_size');
-
+    $self->append_text('Set the shape of your printer\'s bed, then click Next.');
+    
+    $self->config->apply(Slic3r::Config->new_from_defaults('bed_shape'));
+    $self->{bed_shape_panel} = my $panel = Slic3r::GUI::BedShapePanel->new($self, $self->config->bed_shape);
+    $self->{bed_shape_panel}->on_change(sub {
+        $self->config->set('bed_shape', $self->{bed_shape_panel}->GetValue);
+    });
+    $self->append_panel($self->{bed_shape_panel});
     return $self;
 }
 
@@ -304,7 +316,7 @@ sub new {
     my ($parent) = @_;
     my $self = $class->SUPER::new($parent, 'Nozzle Diameter');
 
-    $self->append_text('Enter the diameter of your printers hot end nozzle, then click Next.');
+    $self->append_text('Enter the diameter of your printer\'s hot end nozzle, then click Next.');
     $self->append_option('nozzle_diameter#0');
 
     return $self;

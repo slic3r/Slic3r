@@ -5,7 +5,8 @@ use utf8;
 
 use File::Basename qw(basename);
 use List::Util qw(first);
-use Wx qw(:bookctrl :dialog :keycode :icon :id :misc :panel :sizer :treectrl :window);
+use Wx qw(:bookctrl :dialog :keycode :icon :id :misc :panel :sizer :treectrl :window
+    wxTheApp);
 use Wx::Event qw(EVT_BUTTON EVT_CHOICE EVT_KEY_DOWN EVT_TREE_SEL_CHANGED);
 use base 'Wx::Panel';
 
@@ -217,7 +218,7 @@ sub on_select_preset {
         $self->select_default_preset;
     }
     
-    Slic3r::GUI->save_settings;
+    wxTheApp->save_settings;
 }
 
 sub get_preset_config {
@@ -347,7 +348,7 @@ sub load_presets {
         name    => '- default -',
     }];
     
-    my %presets = Slic3r::GUI->presets($self->name);
+    my %presets = wxTheApp->presets($self->name);
     foreach my $preset_name (sort keys %presets) {
         push @{$self->{presets}}, {
             name => $preset_name,
@@ -598,7 +599,11 @@ sub build {
                 Slic3r::GUI::OptionsGroup->single_option_line('cooling'),
                 {
                     label => '',
-                    widget => ($self->{description_line} = Slic3r::GUI::OptionsGroup::StaticTextLine->new),
+                    full_width => 1,
+                    widget => sub {
+                        my ($parent) = @_;
+                        return $self->{description_line} = Slic3r::GUI::OptionsGroup::StaticTextLine->new($parent);
+                    },
                 },
             ],
         },
@@ -661,6 +666,8 @@ sub on_value_change {
 
 package Slic3r::GUI::Tab::Printer;
 use base 'Slic3r::GUI::Tab';
+use Wx qw(:sizer :button :bitmap :misc :id);
+use Wx::Event qw(EVT_BUTTON);
 
 sub name { 'printer' }
 sub title { 'Printer Settings' }
@@ -670,10 +677,43 @@ sub build {
     
     $self->{extruders_count} = 1;
     
+    my $bed_shape_widget = sub {
+        my ($parent) = @_;
+        
+        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+        $btn->SetFont($Slic3r::GUI::small_font);
+        if ($Slic3r::GUI::have_button_icons) {
+            $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/cog.png", wxBITMAP_TYPE_PNG));
+        }
+        
+        my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+        $sizer->Add($btn);
+        
+        EVT_BUTTON($self, $btn, sub {
+            my $dlg = Slic3r::GUI::BedShapeDialog->new($self, $self->{config}->bed_shape);
+            if ($dlg->ShowModal == wxID_OK) {
+                my $value = $dlg->GetValue;
+                $self->{config}->set('bed_shape', $value);
+                $self->set_dirty(1);
+                $self->on_value_change('bed_shape', $value);
+            }
+        });
+        
+        return $sizer;
+    };
+    
     $self->add_options_page('General', 'printer_empty.png', optgroups => [
         {
             title => 'Size and coordinates',
-            options => [qw(bed_size print_center z_offset)],
+            options => [qw(bed_shape z_offset)],
+            lines => [
+                {
+                    label => 'Bed shape',
+                    widget => $bed_shape_widget,
+                    options => ['bed_shape'],
+                },
+                Slic3r::GUI::OptionsGroup->single_option_line('z_offset'),
+            ],
         },
         {
             title => 'Firmware',

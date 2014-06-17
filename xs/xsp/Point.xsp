@@ -3,6 +3,8 @@
 %{
 #include <myinit.h>
 #include "Point.hpp"
+#include "Polygon.hpp"
+#include "Polyline.hpp"
 %}
 
 %name{Slic3r::Point} class Point {
@@ -37,6 +39,8 @@
         %code{% RETVAL = new Point(THIS->projection_onto(*line)); %};
     Clone<Point> negative()
         %code{% RETVAL = new Point(THIS->negative()); %};
+    bool coincides_with_epsilon(Point* point)
+        %code{% RETVAL = THIS->coincides_with_epsilon(*point); %};
 
 %{
 
@@ -61,6 +65,19 @@ Point::coincides_with(point_sv)
 
 %}
 
+};
+
+%name{Slic3r::Point3} class Point3 {
+    Point3(long _x = 0, long _y = 0, long _z = 0);
+    ~Point3();
+    Clone<Point3> clone()
+        %code{% RETVAL = THIS; %};
+    long x()
+        %code{% RETVAL = THIS->x; %};
+    long y()
+        %code{% RETVAL = THIS->y; %};
+    long z()
+        %code{% RETVAL = THIS->z; %};
 };
 
 %name{Slic3r::Pointf} class Pointf {

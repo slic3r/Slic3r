@@ -59,7 +59,7 @@ sub concave_points {
     
     my @concave = ();
     for my $i (-1 .. ($#points-1)) {
-        next if $points[$i-1]->coincides_with($points[$i]);
+        next if $points[$i-1]->coincides_with_epsilon($points[$i]) || $points[$i+1]->coincides_with_epsilon($points[$i]);
         # angle is measured in ccw orientation
         my $vertex_angle = Slic3r::Geometry::angle3points(@points_pp[$i, $i-1, $i+1]);
         if ($vertex_angle <= $ccw_angle) {
@@ -83,7 +83,7 @@ sub convex_points {
     
     my @convex = ();
     for my $i (-1 .. ($#points-1)) {
-        next if $points[$i-1]->coincides_with($points[$i]);
+        next if $points[$i-1]->coincides_with_epsilon($points[$i]) || $points[$i+1]->coincides_with_epsilon($points[$i]);
         # angle is measured in ccw orientation
         my $vertex_angle = Slic3r::Geometry::angle3points(@points_pp[$i, $i-1, $i+1]);
         if ($vertex_angle >= $ccw_angle) {

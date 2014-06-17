@@ -1,5 +1,6 @@
 package Slic3r::Print;
-use Moo;
+use strict;
+use warnings;
 
 use File::Basename qw(basename fileparse);
 use File::Spec;
@@ -12,22 +13,26 @@ use Slic3r::Geometry::Clipper qw(diff_ex union_ex union_pt intersection_ex inter
     offset2 union union_pt_chained JT_ROUND JT_SQUARE);
 use Slic3r::Print::State ':steps';
 
-has 'config'                 => (is => 'ro', default => sub { Slic3r::Config::Print->new });
-has 'default_object_config'  => (is => 'ro', default => sub { Slic3r::Config::PrintObject->new });
-has 'default_region_config'  => (is => 'ro', default => sub { Slic3r::Config::PrintRegion->new });
-has 'placeholder_parser'     => (is => 'rw', default => sub { Slic3r::GCode::PlaceholderParser->new });
-has 'objects'                => (is => 'rw', default => sub {[]});
-has 'status_cb'              => (is => 'rw');
-has 'regions'                => (is => 'rw', default => sub {[]});
-has 'total_used_filament'    => (is => 'rw');
-has 'total_extruded_volume'  => (is => 'rw');
-has '_state'                 => (is => 'ro', default => sub { Slic3r::Print::State->new });
+our $status_cb;
 
-# ordered collection of extrusion paths to build skirt loops
-has 'skirt' => (is => 'rw', default => sub { Slic3r::ExtrusionPath::Collection->new });
+sub new {
+    # TODO: port PlaceholderParser methods to C++, then its own constructor
+    # can call them and no need for this new() method at all
+    my ($class) = @_;
+    my $self = $class->_new;
+    $self->placeholder_parser->apply_env_variables;
+    $self->placeholder_parser->update_timestamp;
+    return $self;
+}
 
-# ordered collection of extrusion paths to build a brim
-has 'brim' => (is => 'rw', default => sub { Slic3r::ExtrusionPath::Collection->new });
+sub set_status_cb {
+    my ($class, $cb) = @_;
+    $status_cb = $cb;
+}
+
+sub status_cb {
+    return $status_cb // sub {};
+}
 
 sub apply_config {
     my ($self, $config) = @_;
@@ -38,13 +43,15 @@ sub apply_config {
     # apply variables to placeholder parser
     $self->placeholder_parser->apply_config($config);
     
+    my $invalidated = 0;
+    
     # handle changes to print config
     my $print_diff = $self->config->diff($config);
     if (@$print_diff) {
         $self->config->apply_dynamic($config);
         
-        # TODO: only invalidate changed steps
-        $self->_state->invalidate_all;
+        $invalidated = 1
+            if $self->invalidate_state_by_config_options($print_diff);
     }
     
     # handle changes to object config defaults
@@ -53,6 +60,7 @@ sub apply_config {
         # we don't assume that $config contains a full ObjectConfig,
         # so we base it on the current print-wise default
         my $new = $self->default_object_config->clone;
+        $new->apply_dynamic($config);
         
         # we override the new config with object-specific options
         my $model_object_config = $object->model_object->config->clone;
@@ -63,8 +71,9 @@ sub apply_config {
         my $diff = $object->config->diff($new);
         if (@$diff) {
             $object->config->apply($new);
-            # TODO: only invalidate changed steps
-            $object->_state->invalidate_all;
+            
+            $invalidated = 1
+                if $self->invalidate_state_by_config_options($diff);
         }
     }
     
@@ -74,9 +83,12 @@ sub apply_config {
     # All regions now have distinct settings.
     # Check whether applying the new region config defaults we'd get different regions.
     my $rearrange_regions = 0;
-    REGION: foreach my $region_id (0..$#{$self->regions}) {
+    my @other_region_configs = ();
+    REGION: foreach my $region_id (0..($self->region_count - 1)) {
+        my $region = $self->regions->[$region_id];
+        my @this_region_configs = ();
         foreach my $object (@{$self->objects}) {
-            foreach my $volume_id (@{ $object->region_volumes->[$region_id] }) {
+            foreach my $volume_id (@{ $object->get_region_volumes($region_id) }) {
                 my $volume = $object->model_object->volumes->[$volume_id];
                 
                 my $new = $self->default_region_config->clone;
@@ -90,24 +102,50 @@ sub apply_config {
                     $material_config->normalize;
                     $new->apply_dynamic($material_config);
                 }
-                if (!$new->equals($self->regions->[$region_id]->config)) {
+                if (defined first { !$_->equals($new) } @this_region_configs) {
+                    # if the new config for this volume differs from the other
+                    # volume configs currently associated to this region, it means
+                    # the region subdivision does not make sense anymore
                     $rearrange_regions = 1;
                     last REGION;
                 }
+                push @this_region_configs, $new;
+                
+                if (defined first { $_->equals($new) } @other_region_configs) {
+                    # if the new config for this volume equals any of the other
+                    # volume configs that are not currently associated to this
+                    # region, it means the region subdivision does not make
+                    # sense anymore
+                    $rearrange_regions = 1;
+                    last REGION;
+                }
+                
+                # if we're here and the new region config is different from the old
+                # one, we need to apply the new config and invalidate all objects
+                # (possible optimization: only invalidate objects using this region)
+                my $region_config_diff = $region->config->diff($new);
+                if (@$region_config_diff) {
+                    $region->config->apply($new);
+                    foreach my $o (@{$self->objects}) {
+                        $invalidated = 1
+                            if $o->invalidate_state_by_config_options($region_config_diff);
+                    }
+                }
             }
         }
+        push @other_region_configs, @this_region_configs;
     }
     
-    # Some optimization is possible: if the volumes-regions mappings don't change
-    # but still region configs are changed somehow, we could just apply the diff
-    # and invalidate the affected steps.
     if ($rearrange_regions) {
         # the current subdivision of regions does not make sense anymore.
         # we need to remove all objects and re-add them
         my @model_objects = map $_->model_object, @{$self->objects};
         $self->clear_objects;
         $self->add_model_object($_) for @model_objects;
+        $invalidated = 1;
     }
+    
+    return $invalidated;
 }
 
 sub has_support_material {
@@ -125,8 +163,22 @@ sub add_model_object {
     
     my $object_config = $object->config->clone;
     $object_config->normalize;
-    
-    my %volumes = ();           # region_id => [ volume_id, ... ]
+
+    # initialize print object and store it at the given position
+    my $o;
+    if (defined $obj_idx) {
+        $o = $self->set_new_object($obj_idx, $object, $object->bounding_box);
+    } else {
+        $o = $self->add_object($object, $object->bounding_box);
+    }
+
+    $o->set_copies([ map Slic3r::Point->new_scale(@{ $_->offset }), @{ $object->instances } ]);
+    $o->set_layer_height_ranges($object->layer_height_ranges);
+
+    # TODO: translate _trigger_copies to C++, then this can be done by
+        # PrintObject constructor
+    $o->_trigger_copies;
+
     foreach my $volume_id (0..$#{$object->volumes}) {
         my $volume = $object->volumes->[$volume_id];
         
@@ -145,7 +197,7 @@ sub add_model_object {
         
         # find an existing print region with the same config
         my $region_id;
-        foreach my $i (0..$#{$self->regions}) {
+        foreach my $i (0..($self->region_count - 1)) {
             my $region = $self->regions->[$i];
             if ($config->equals($region->config)) {
                 $region_id = $i;
@@ -155,60 +207,18 @@ sub add_model_object {
         
         # if no region exists with the same config, create a new one
         if (!defined $region_id) {
-            push @{$self->regions}, my $r = Slic3r::Print::Region->new(
-                print  => $self,
-            );
+            my $r = $self->add_region();
             $r->config->apply($config);
-            $region_id = $#{$self->regions};
+            $region_id = $self->region_count - 1;
         }
         
         # assign volume to region
-        $volumes{$region_id} //= [];
-        push @{ $volumes{$region_id} }, $volume_id;
+        $o->add_region_volume($region_id, $volume_id);
     }
-    
-    # initialize print object
-    my $o = Slic3r::Print::Object->new(
-        print               => $self,
-        model_object        => $object,
-        region_volumes      => [ map $volumes{$_}, 0..$#{$self->regions} ],
-        copies              => [ map Slic3r::Point->new_scale(@{ $_->offset }), @{ $object->instances } ],
-        layer_height_ranges => $object->layer_height_ranges,
-    );
-    
+
     # apply config to print object
     $o->config->apply($self->default_object_config);
     $o->config->apply_dynamic($object_config);
-    
-    # store print object at the given position
-    if (defined $obj_idx) {
-        splice @{$self->objects}, $obj_idx, 0, $o;
-    } else {
-        push @{$self->objects}, $o;
-    }
-    
-    $self->_state->invalidate(STEP_SKIRT);
-    $self->_state->invalidate(STEP_BRIM);
-}
-
-sub delete_object {
-    my ($self, $obj_idx) = @_;
-    
-    splice @{$self->objects}, $obj_idx, 1;
-    # TODO: purge unused regions
-    
-    $self->_state->invalidate(STEP_SKIRT);
-    $self->_state->invalidate(STEP_BRIM);
-}
-
-sub clear_objects {
-    my ($self) = @_;
-    
-    @{$self->objects} = ();
-    @{$self->regions} = ();
-    
-    $self->_state->invalidate(STEP_SKIRT);
-    $self->_state->invalidate(STEP_BRIM);
 }
 
 sub reload_object {
@@ -315,19 +325,24 @@ sub extruders {
 sub init_extruders {
     my $self = shift;
     
+    return if $self->step_done(STEP_INIT_EXTRUDERS);
+    $self->set_step_started(STEP_INIT_EXTRUDERS);
+    
     # enforce tall skirt if using ooze_prevention
     # FIXME: this is not idempotent (i.e. switching ooze_prevention off will not revert skirt settings)
     if ($self->config->ooze_prevention && @{$self->extruders} > 1) {
         $self->config->set('skirt_height', -1);
         $self->config->set('skirts', 1) if $self->config->skirts == 0;
     }
+    
+    $self->set_step_done(STEP_INIT_EXTRUDERS);
 }
 
 # this value is not supposed to be compared with $layer->id
 # since they have different semantics
-sub layer_count {
+sub total_layer_count {
     my $self = shift;
-    return max(map $_->layer_count, @{$self->objects});
+    return max(map $_->total_layer_count, @{$self->objects});
 }
 
 sub regions_count {
@@ -367,131 +382,11 @@ sub _simplify_slices {
 sub process {
     my ($self) = @_;
     
-    my $status_cb = $self->status_cb // sub {};
-    
-    my $print_step = sub {
-        my ($step, $cb) = @_;
-        if (!$self->_state->done($step)) {
-            $self->_state->set_started($step);
-            $cb->();
-            ### Re-enable this for step-based slicing:
-            ### $self->_state->set_done($step);
-        }
-    };
-    my $object_step = sub {
-        my ($step, $cb) = @_;
-        for my $obj_idx (0..$#{$self->objects}) {
-            my $object = $self->objects->[$obj_idx];
-            if (!$object->_state->done($step)) {
-                $object->_state->set_started($step);
-                $cb->($obj_idx);
-                ### Re-enable this for step-based slicing:
-                ### $object->_state->set_done($step);
-            }
-        }
-    };
-    
-    # STEP_INIT_EXTRUDERS
-    $print_step->(STEP_INIT_EXTRUDERS, sub {
-        $self->init_extruders;
-    });
-    
-    # STEP_SLICE
-    # skein the STL into layers
-    # each layer has surfaces with holes
-    $status_cb->(10, "Processing triangulated mesh");
-    $object_step->(STEP_SLICE, sub {
-        $self->objects->[$_[0]]->slice;
-    });
-    
-    die "No layers were detected. You might want to repair your STL file(s) or check their size and retry.\n"
-        if !grep @{$_->layers}, @{$self->objects};
-    
-    # make perimeters
-    # this will add a set of extrusion loops to each layer
-    # as well as generate infill boundaries
-    $status_cb->(20, "Generating perimeters");
-    $object_step->(STEP_PERIMETERS, sub {
-        $self->objects->[$_[0]]->make_perimeters;
-    });
-    
-    $status_cb->(30, "Preparing infill");
-    $object_step->(STEP_PREPARE_INFILL, sub {
-        my $object = $self->objects->[$_[0]];
-        
-        # this will assign a type (top/bottom/internal) to $layerm->slices
-        # and transform $layerm->fill_surfaces from expolygon 
-        # to typed top/bottom/internal surfaces;
-        $object->detect_surfaces_type;
-    
-        # decide what surfaces are to be filled
-        $_->prepare_fill_surfaces for map @{$_->regions}, @{$object->layers};
-    
-        # this will detect bridges and reverse bridges
-        # and rearrange top/bottom/internal surfaces
-        $object->process_external_surfaces;
-    
-        # detect which fill surfaces are near external layers
-        # they will be split in internal and internal-solid surfaces
-        $object->discover_horizontal_shells;
-        $object->clip_fill_surfaces;
-        
-        # the following step needs to be done before combination because it may need
-        # to remove only half of the combined infill
-        $object->bridge_over_infill;
-    
-        # combine fill surfaces to honor the "infill every N layers" option
-        $object->combine_infill;
-    });
-    
-    # this will generate extrusion paths for each layer
-    $status_cb->(70, "Infilling layers");
-    $object_step->(STEP_INFILL, sub {
-        my $object = $self->objects->[$_[0]];
-        
-        Slic3r::parallelize(
-            threads => $self->config->threads,
-            items => sub {
-                my @items = ();  # [layer_id, region_id]
-                for my $region_id (0 .. ($self->regions_count-1)) {
-                    push @items, map [$_, $region_id], 0..$#{$object->layers};
-                }
-                @items;
-            },
-            thread_cb => sub {
-                my $q = shift;
-                while (defined (my $obj_layer = $q->dequeue)) {
-                    my ($i, $region_id) = @$obj_layer;
-                    my $layerm = $object->layers->[$i]->regions->[$region_id];
-                    $layerm->fills->append( $object->fill_maker->make_fill($layerm) );
-                }
-            },
-            collect_cb => sub {},
-            no_threads_cb => sub {
-                foreach my $layerm (map @{$_->regions}, @{$object->layers}) {
-                    $layerm->fills->append($object->fill_maker->make_fill($layerm));
-                }
-            },
-        );
-    
-        ### we could free memory now, but this would make this step not idempotent
-        ### $_->fill_surfaces->clear for map @{$_->regions}, @{$object->layers};
-    });
-    
-    # generate support material
-    $status_cb->(85, "Generating support material") if $self->has_support_material;
-    $object_step->(STEP_SUPPORTMATERIAL, sub {
-        $self->objects->[$_[0]]->generate_support_material;
-    });
-    
-    # make skirt
-    $status_cb->(88, "Generating skirt/brim");
-    $print_step->(STEP_SKIRT, sub {
-        $self->make_skirt;
-    });
-    $print_step->(STEP_BRIM, sub {
-        $self->make_brim;  # must come after make_skirt
-    });
+    $_->make_perimeters for @{$self->objects};
+    $_->infill for @{$self->objects};
+    $_->generate_support_material for @{$self->objects};
+    $self->make_skirt;
+    $self->make_brim;  # must come after make_skirt
     
     # time to make some statistics
     if (0) {
@@ -514,16 +409,17 @@ sub export_gcode {
     my $self = shift;
     my %params = @_;
     
-    my $status_cb = $self->status_cb // sub {};
+    # prerequisites
+    $self->process;
     
     # output everything to a G-code file
     my $output_file = $self->expanded_output_filepath($params{output_file});
-    $status_cb->(90, "Exporting G-code" . ($output_file ? " to $output_file" : ""));
+    $self->status_cb->(90, "Exporting G-code" . ($output_file ? " to $output_file" : ""));
     $self->write_gcode($params{output_fh} || $output_file);
     
     # run post-processing scripts
     if (@{$self->config->post_process}) {
-        $status_cb->(95, "Running post-processing scripts");
+        $self->status_cb->(95, "Running post-processing scripts");
         $self->config->setenv;
         for (@{$self->config->post_process}) {
             Slic3r::debugf "  '%s' '%s'\n", $_, $output_file;
@@ -626,12 +522,24 @@ EOF
 sub make_skirt {
     my $self = shift;
     
+    # prerequisites
+    $_->make_perimeters for @{$self->objects};
+    $_->infill for @{$self->objects};
+    $_->generate_support_material for @{$self->objects};
+    
+    return if $self->step_done(STEP_SKIRT);
+    $self->set_step_started(STEP_SKIRT);
+    
     # since this method must be idempotent, we clear skirt paths *before*
     # checking whether we need to generate them
     $self->skirt->clear;
     
-    return unless $self->config->skirts > 0
-        || ($self->config->ooze_prevention && @{$self->extruders} > 1);
+    if ($self->config->skirts == 0
+        && (!$self->config->ooze_prevention || @{$self->extruders} == 1)) {
+        $self->set_step_done(STEP_SKIRT);
+        return;
+    }
+    $self->status_cb->(88, "Generating skirt");
     
     # First off we need to decide how tall the skirt must be.
     # The skirt_height option from config is expressed in layers, but our
@@ -649,7 +557,7 @@ sub make_skirt {
             ? scalar(@{$object->layers})
             : min($self->config->skirt_height, scalar(@{$object->layers}));
         
-        my $highest_layer = $object->layers->[$skirt_height-1];
+        my $highest_layer = $object->get_layer($skirt_height - 1);
         $skirt_height_z = max($skirt_height_z, $highest_layer->print_z);
     }
     
@@ -697,7 +605,7 @@ sub make_skirt {
         bridge_flow_ratio   => 0,
     );
     my $spacing = $flow->spacing;
-    my $mm3_per_mm = $flow->mm3_per_mm($first_layer_height);
+    my $mm3_per_mm = $flow->mm3_per_mm;
     
     my @extruders_e_per_mm = ();
     my $extruder_idx = 0;
@@ -736,16 +644,31 @@ sub make_skirt {
     }
     
     $self->skirt->reverse;
+    
+    $self->set_step_done(STEP_SKIRT);
 }
 
 sub make_brim {
     my $self = shift;
     
+    # prerequisites
+    $_->make_perimeters for @{$self->objects};
+    $_->infill for @{$self->objects};
+    $_->generate_support_material for @{$self->objects};
+    $self->make_skirt;
+    
+    return if $self->step_done(STEP_BRIM);
+    $self->set_step_started(STEP_BRIM);
+    
     # since this method must be idempotent, we clear brim paths *before*
     # checking whether we need to generate them
     $self->brim->clear;
     
-    return unless $self->config->brim_width > 0;
+    if ($self->config->brim_width == 0) {
+        $self->set_step_done(STEP_BRIM);
+        return;
+    }
+    $self->status_cb->(88, "Generating brim");
     
     # brim is only printed on first layer and uses support material extruder
     my $first_layer_height = $self->objects->[0]->config->get_abs_value('first_layer_height');
@@ -756,13 +679,13 @@ sub make_brim {
         layer_height        => $first_layer_height,
         bridge_flow_ratio   => 0,
     );
-    my $mm3_per_mm = $flow->mm3_per_mm($first_layer_height);
+    my $mm3_per_mm = $flow->mm3_per_mm;
     
     my $grow_distance = $flow->scaled_width / 2;
     my @islands = (); # array of polygons
-    foreach my $obj_idx (0 .. $#{$self->objects}) {
+    foreach my $obj_idx (0 .. ($self->object_count - 1)) {
         my $object = $self->objects->[$obj_idx];
-        my $layer0 = $object->layers->[0];
+        my $layer0 = $object->get_layer(0);
         my @object_islands = (
             (map $_->contour, @{$layer0->slices}),
         );
@@ -805,6 +728,8 @@ sub make_brim {
             height          => $first_layer_height,
         ),
     ), reverse @{union_pt_chained(\@loops)});
+    
+    $self->set_step_done(STEP_BRIM);
 }
 
 sub write_gcode {
@@ -861,10 +786,10 @@ sub write_gcode {
     # TODO: only do this when M73 is enabled
     my $layer_count;
     if ($self->config->complete_objects) {
-        $layer_count = sum(map { $_->layer_count * @{$_->copies} } @{$self->objects});
+        $layer_count = sum(map { $_->total_layer_count * @{$_->copies} } @{$self->objects});
     } else {
         # if sequential printing is not enable, all copies of the same object share the same layer change command(s)
-        $layer_count = sum(map { $_->layer_count } @{$self->objects});
+        $layer_count = sum(map { $_->total_layer_count } @{$self->objects});
     }
     
     # set up our helper object
@@ -914,7 +839,7 @@ sub write_gcode {
         my $distance_from_objects = 1;
         # compute the offsetted convex hull for each object and repeat it for each copy.
         my @islands = ();
-        foreach my $obj_idx (0 .. $#{$self->objects}) {
+        foreach my $obj_idx (0 .. ($self->object_count - 1)) {
             my $convex_hull = convex_hull([
                 map @{$_->contour}, map @{$_->slices}, @{$self->objects->[$obj_idx]->layers},
             ]);
@@ -962,7 +887,7 @@ sub write_gcode {
     if ($self->config->complete_objects) {
         # print objects from the smallest to the tallest to avoid collisions
         # when moving onto next object starting point
-        my @obj_idx = sort { $self->objects->[$a]->size->[Z] <=> $self->objects->[$b]->size->[Z] } 0..$#{$self->objects};
+        my @obj_idx = sort { $self->objects->[$a]->size->[Z] <=> $self->objects->[$b]->size->[Z] } 0..($self->object_count - 1);
         
         my $finished_objects = 0;
         for my $obj_idx (@obj_idx) {
@@ -994,7 +919,7 @@ sub write_gcode {
                     }
                     print $fh $buffer->append(
                         $layer_gcode->process_layer($layer, [$copy]),
-                        $layer->object."",
+                        $layer->object->ptr,
                         $layer->id,
                         $layer->print_z,
                     );
@@ -1009,7 +934,7 @@ sub write_gcode {
         
         # sort layers by Z
         my %layers = ();  # print_z => [ [layers], [layers], [layers] ]  by obj_idx
-        foreach my $obj_idx (0 .. $#{$self->objects}) {
+        foreach my $obj_idx (0 .. ($self->object_count - 1)) {
             my $object = $self->objects->[$obj_idx];
             foreach my $layer (@{$object->layers}, @{$object->support_layers}) {
                 $layers{ $layer->print_z } ||= [];
@@ -1027,7 +952,7 @@ sub write_gcode {
                 foreach my $layer (@{ $layers{$print_z}[$obj_idx] // [] }) {
                     print $fh $buffer->append(
                         $layer_gcode->process_layer($layer, $layer->object->_shifted_copies),
-                        $layer->object . ref($layer),  # differentiate $obj_id between normal layers and support layers
+                        $layer->object->ptr . ref($layer),  # differentiate $obj_id between normal layers and support layers
                         $layer->id,
                         $layer->print_z,
                     );
@@ -1102,27 +1027,6 @@ sub expanded_output_filepath {
     # make sure we use an up-to-date timestamp
     $self->placeholder_parser->update_timestamp;
     return $self->placeholder_parser->process($path, $extra);
-}
-
-sub invalidate_step {
-    my ($self, $step, $obj_idx) = @_;
-    
-    # invalidate $step in the correct state object
-    if ($Slic3r::Print::State::print_step->{$step}) {
-        $self->_state->invalidate($step);
-    } else {
-        # object step
-        if (defined $obj_idx) {
-            $self->objects->[$obj_idx]->_state->invalidate($step);
-        } else {
-            $_->_state->invalidate($step) for @{$self->objects};
-        }
-    }
-    
-    # recursively invalidate steps depending on $step
-    $self->invalidate_step($_)
-        for grep { grep { $_ == $step } @{$Slic3r::Print::State::prereqs{$_}} }
-            keys %Slic3r::Print::State::prereqs;
 }
 
 # This method assigns extruders to the volumes having a material

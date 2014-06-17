@@ -71,17 +71,14 @@ sub generate {
     
     # Install support layers into object.
     for my $i (0 .. $#$support_z) {
-        push @{$object->support_layers}, Slic3r::Layer::Support->new(
-            object  => $object,
-            id      => $i,
-            height  => ($i == 0) ? $support_z->[$i] : ($support_z->[$i] - $support_z->[$i-1]),
-            print_z => $support_z->[$i],
-            slice_z => -1,
-            slices  => [],
-        );
+        $object->add_support_layer(
+            $i, # id
+            ($i == 0) ? $support_z->[$i] : ($support_z->[$i] - $support_z->[$i-1]), # height
+            $support_z->[$i], # print_z
+            -1); # slice_z
         if ($i >= 1) {
-            $object->support_layers->[-2]->upper_layer($object->support_layers->[-1]);
-            $object->support_layers->[-1]->lower_layer($object->support_layers->[-2]);
+            $object->support_layers->[-2]->set_upper_layer($object->support_layers->[-1]);
+            $object->support_layers->[-1]->set_lower_layer($object->support_layers->[-2]);
         }
     }
     
@@ -114,7 +111,7 @@ sub contact_area {
             # the 'overhangs' of the first object layer
             last if $layer_id > 0;
         }
-        my $layer = $object->layers->[$layer_id];
+        my $layer = $object->get_layer($layer_id);
         
         # detect overhangs and contact areas needed to support them
         my (@overhang, @contact) = ();
@@ -125,7 +122,7 @@ sub contact_area {
             push @overhang, map $_->clone, map $_->contour, @{$layer->slices};
             push @contact, @{offset(\@overhang, scale +MARGIN)};
         } else {
-            my $lower_layer = $object->layers->[$layer_id-1];
+            my $lower_layer = $object->get_layer($layer_id-1);
             foreach my $layerm (@{$layer->regions}) {
                 my $fw = $layerm->flow(FLOW_ROLE_EXTERNAL_PERIMETER)->scaled_width;
                 my $diff;
@@ -341,7 +338,6 @@ sub support_layers_z {
     # layer_height > nozzle_diameter * 0.75
     my $nozzle_diameter = $self->print_config->get_at('nozzle_diameter', $self->object_config->support_material_extruder-1);
     my $support_material_height = max($max_object_layer_height, $nozzle_diameter * 0.75);
-    
     my @z = sort { $a <=> $b } @$contact_z, @$top_z, (map $_ + $nozzle_diameter, @$top_z);
     
     # enforce first layer height
@@ -355,7 +351,7 @@ sub support_layers_z {
         # $z[1] is last raft layer (contact layer for the first layer object)
         my $height = ($z[1] - $z[0]) / ($self->object_config->raft_layers - 1);
         splice @z, 1, 0,
-            map { int($_*100)/100 }
+            map { sprintf "%.2f", $_ }
             map { $z[0] + $height * $_ }
             0..($self->object_config->raft_layers - 1);
     }
@@ -606,7 +602,7 @@ sub generate_toolpaths {
             );
             
             # transform loops into ExtrusionPath objects
-            my $mm3_per_mm = $interface_flow->mm3_per_mm($layer->height);
+            my $mm3_per_mm = $interface_flow->mm3_per_mm;
             @loops = map Slic3r::ExtrusionPath->new(
                 polyline    => $_,
                 role        => EXTR_ROLE_SUPPORTMATERIAL_INTERFACE,
@@ -653,7 +649,7 @@ sub generate_toolpaths {
                     layer_height => $layer->height,
                     complete    => 1,
                 );
-                my $mm3_per_mm = $params->{flow}->mm3_per_mm($layer->height);
+                my $mm3_per_mm = $params->{flow}->mm3_per_mm;
                 
                 push @paths, map Slic3r::ExtrusionPath->new(
                     polyline    => Slic3r::Polyline->new(@$_),
@@ -688,7 +684,7 @@ sub generate_toolpaths {
             } else {
                 # draw a perimeter all around support infill
                 # TODO: use brim ordering algorithm
-                my $mm3_per_mm = $flow->mm3_per_mm($layer->height);
+                my $mm3_per_mm = $flow->mm3_per_mm;
                 push @paths, map Slic3r::ExtrusionPath->new(
                     polyline    => $_->split_at_first_point,
                     role        => EXTR_ROLE_SUPPORTMATERIAL,
@@ -709,7 +705,7 @@ sub generate_toolpaths {
                     layer_height => $layer->height,
                     complete    => 1,
                 );
-                my $mm3_per_mm = $params->{flow}->mm3_per_mm($layer->height);
+                my $mm3_per_mm = $params->{flow}->mm3_per_mm;
                 
                 push @paths, map Slic3r::ExtrusionPath->new(
                     polyline    => Slic3r::Polyline->new(@$_),
@@ -830,7 +826,9 @@ sub clip_with_shape {
     foreach my $i (keys %$support) {
         # don't clip bottom layer with shape so that we 
         # can generate a continuous base flange
+        # also don't clip raft layers
         next if $i == 0;
+        next if $i < $self->object_config->raft_layers;
         $support->{$i} = intersection(
             $support->{$i},
             $shape->[$i],

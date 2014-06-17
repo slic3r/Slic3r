@@ -1,5 +1,5 @@
 package Slic3r::GUI::Preferences;
-use Wx qw(:dialog :id :misc :sizer :systemsettings);
+use Wx qw(:dialog :id :misc :sizer :systemsettings wxTheApp);
 use Wx::Event qw(EVT_BUTTON EVT_TEXT_ENTER);
 use base 'Wx::Dialog';
 
@@ -28,7 +28,7 @@ sub new {
                 label       => 'Check for updates',
                 tooltip     => 'If this is enabled, Slic3r will check for updates daily and display a reminder if a newer version is available.',
                 default     => $Slic3r::GUI::Settings->{_}{version_check} // 1,
-                readonly    => !Slic3r::GUI->have_version_check,
+                readonly    => !wxTheApp->have_version_check,
             },
             {
                 opt_key     => 'remember_output_path',
@@ -43,6 +43,14 @@ sub new {
                 label       => 'Auto-center parts',
                 tooltip     => 'If this is enabled, Slic3r will auto-center objects around the configured print center.',
                 default     => $Slic3r::GUI::Settings->{_}{autocenter},
+            },
+            {
+                opt_key     => 'background_processing',
+                type        => 'bool',
+                label       => 'Background processing',
+                tooltip     => 'If this is enabled, Slic3r will pre-process objects as soon as they\'re loaded in order to save time when exporting G-code.',
+                default     => $Slic3r::GUI::Settings->{_}{background_processing},
+                readonly    => !$Slic3r::have_threads,
             },
         ],
         on_change => sub { $self->{values}{$_[0]} = $_[1] },
@@ -69,7 +77,7 @@ sub _accept {
     }
     
     $Slic3r::GUI::Settings->{_}{$_} = $self->{values}{$_} for keys %{$self->{values}};
-    Slic3r::GUI->save_settings;
+    wxTheApp->save_settings;
     
     $self->EndModal(wxID_OK);
     $self->Close;  # needed on Linux

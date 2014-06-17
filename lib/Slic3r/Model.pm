@@ -146,6 +146,7 @@ sub duplicate {
 sub _arrange {
     my ($self, $sizes, $distance, $bb) = @_;
     
+    # we supply unscaled data to arrange()
     return Slic3r::Geometry::arrange(
         scalar(@$sizes),                # number of parts
         max(map $_->x, @$sizes),        # cell width
@@ -233,6 +234,15 @@ sub mesh {
     
     my $mesh = Slic3r::TriangleMesh->new;
     $mesh->merge($_->mesh) for @{$self->objects};
+    return $mesh;
+}
+
+# flattens everything to a single mesh
+sub raw_mesh {
+    my $self = shift;
+    
+    my $mesh = Slic3r::TriangleMesh->new;
+    $mesh->merge($_->raw_mesh) for @{$self->objects};
     return $mesh;
 }
 
@@ -463,13 +473,39 @@ sub translate {
     $self->_bounding_box->translate(@shift) if defined $self->_bounding_box;
 }
 
-sub rotate_x {
-    my ($self, $angle) = @_;
+sub rotate {
+    my ($self, $angle, $axis) = @_;
     
     # we accept angle in radians but mesh currently uses degrees
     $angle = rad2deg($angle);
     
-    $_->mesh->rotate_x($angle) for @{$self->volumes};
+    if ($axis == X) {
+        $_->mesh->rotate_x($angle) for @{$self->volumes};
+    } elsif ($axis == Y) {
+        $_->mesh->rotate_y($angle) for @{$self->volumes};
+    } elsif ($axis == Z) {
+        $_->mesh->rotate_z($angle) for @{$self->volumes};
+    }
+    $self->invalidate_bounding_box;
+}
+
+sub flip {
+    my ($self, $axis) = @_;
+    
+    if ($axis == X) {
+        $_->mesh->flip_x for @{$self->volumes};
+    } elsif ($axis == Y) {
+        $_->mesh->flip_y for @{$self->volumes};
+    } elsif ($axis == Z) {
+        $_->mesh->flip_z for @{$self->volumes};
+    }
+    $self->invalidate_bounding_box;
+}
+
+sub scale_xyz {
+    my ($self, $versor) = @_;
+    
+    $_->mesh->scale_xyz($versor) for @{$self->volumes};
     $self->invalidate_bounding_box;
 }
 
@@ -534,14 +570,12 @@ sub print_info {
 sub cut {
     my ($self, $z) = @_;
     
-    # clone this one
-    my $upper = $self->model->add_object($self);
-    my $lower = $self->model->add_object($self);
-    
-    foreach my $instance (@{$self->instances}) {
-        $upper->add_instance(offset => Slic3r::Pointf->new(@{$instance->offset}));
-        $lower->add_instance(offset => Slic3r::Pointf->new(@{$instance->offset}));
-    }
+    # clone this one to duplicate instances, materials etc.
+    my $model = Slic3r::Model->new;
+    my $upper = $model->add_object($self);
+    my $lower = $model->add_object($self);
+    $upper->clear_volumes;
+    $lower->clear_volumes;
     
     foreach my $volume (@{$self->volumes}) {
         if ($volume->modifier) {
@@ -565,7 +599,7 @@ sub cut {
                 );
             }
             if ($lower_mesh->facets_count > 0) {
-            $lower->add_volume(
+                $lower->add_volume(
                     material_id => $volume->material_id,
                     mesh        => $lower_mesh,
                     modifier    => $volume->modifier,
@@ -576,7 +610,7 @@ sub cut {
     
     $upper = undef if !@{$upper->volumes};
     $lower = undef if !@{$lower->volumes};
-    return ($upper, $lower);
+    return ($model, $upper, $lower);
 }
 
 package Slic3r::Model::Volume;

@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use utf8;
 
-use Slic3r::Geometry qw(PI);
+use Slic3r::Geometry qw(PI X);
 use Wx qw(:dialog :id :misc :sizer wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_CLOSE EVT_BUTTON);
 use base 'Wx::Dialog';
@@ -125,7 +125,8 @@ sub new {
 sub perform_cut {
     my ($self) = @_;
     
-    my ($upper_object, $lower_object) = $self->{model_object}->cut($self->{cut_options}{z});
+    my ($new_model, $upper_object, $lower_object) = $self->{model_object}->cut($self->{cut_options}{z});
+    $self->{new_model} = $new_model;
     $self->{new_model_objects} = [];
     if ($self->{cut_options}{keep_upper} && defined $upper_object) {
         push @{$self->{new_model_objects}}, $upper_object;
@@ -133,7 +134,7 @@ sub perform_cut {
     if ($self->{cut_options}{keep_lower} && defined $lower_object) {
         push @{$self->{new_model_objects}}, $lower_object;
         if ($self->{cut_options}{rotate_lower}) {
-            $lower_object->rotate_x(PI);
+            $lower_object->rotate(PI, X);
         }
     }
     

@@ -63,6 +63,12 @@ Point::coincides_with(const Point &point) const
     return this->x == point.x && this->y == point.y;
 }
 
+bool
+Point::coincides_with_epsilon(const Point &point) const
+{
+    return std::abs(this->x - point.x) < SCALED_EPSILON && std::abs(this->y - point.y) < SCALED_EPSILON;
+}
+
 int
 Point::nearest_point_index(const Points &points) const
 {
@@ -251,6 +257,9 @@ Point::from_SV_check(SV* point_sv)
     }
 }
 
+
+REGISTER_CLASS(Point3, "Point3");
+
 #endif
 
 void
@@ -291,6 +300,18 @@ Pointf::from_SV(SV* point_sv)
     this->x = SvNV(sv_x);
     this->y = SvNV(sv_y);
     return true;
+}
+
+void
+Pointf::from_SV_check(SV* point_sv)
+{
+    if (sv_isobject(point_sv) && (SvTYPE(SvRV(point_sv)) == SVt_PVMG)) {
+        if (!sv_isa(point_sv, perl_class_name(this)) && !sv_isa(point_sv, perl_class_name_ref(this)))
+            CONFESS("Not a valid %s object (got %s)", perl_class_name(this), HvNAME(SvSTASH(SvRV(point_sv))));
+        *this = *(Pointf*)SvIV((SV*)SvRV( point_sv ));
+    } else {
+        this->from_SV(point_sv);
+    }
 }
 #endif
 

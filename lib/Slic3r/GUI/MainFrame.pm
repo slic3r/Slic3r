@@ -1,40 +1,76 @@
-package Slic3r::GUI::SkeinPanel;
+package Slic3r::GUI::MainFrame;
 use strict;
 use warnings;
 use utf8;
 
-use File::Basename qw(basename dirname);
+use File::Basename qw/dirname/;
 use List::Util qw(min);
-use Slic3r::Geometry qw(X Y);
-use Wx qw(:dialog :filedialog :font :icon :id :misc :notebook :panel :sizer);
-use Wx::Event qw(EVT_BUTTON);
-use base 'Wx::Panel';
+use Slic3r::Geometry qw(X Y Z);
+use Wx qw(:frame :bitmap :id :misc :notebook :panel :sizer :menu :dialog :filedialog
+    :font :icon wxTheApp);
+use Wx::Event qw(EVT_CLOSE EVT_MENU);
+use base 'Wx::Frame';
 
 our $last_input_file;
 our $last_output_file;
 our $last_config;
 
-use constant FILE_WILDCARDS => {
-    known   => 'Known files (*.stl, *.obj, *.amf, *.xml)|*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML',
-    stl     => 'STL files (*.stl)|*.stl;*.STL',
-    obj     => 'OBJ files (*.obj)|*.obj;*.OBJ',
-    amf     => 'AMF files (*.amf)|*.amf;*.AMF;*.xml;*.XML',
-    ini     => 'INI files *.ini|*.ini;*.INI',
-    gcode   => 'G-code files (*.gcode, *.gco, *.g, *.ngc)|*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC',
-    svg     => 'SVG files *.svg|*.svg;*.SVG',
-};
-use constant MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(known stl obj amf)};
-
 sub new {
-    my $class = shift;
-    my ($parent, %params) = @_;
-    my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    my ($class, %params) = @_;
+    
+    my $self = $class->SUPER::new(undef, -1, 'Slic3r', wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE);
+    $self->SetIcon(Wx::Icon->new("$Slic3r::var/Slic3r_128px.png", wxBITMAP_TYPE_PNG) );
+    
+    # store input params
     $self->{mode} = $params{mode};
     $self->{mode} = 'expert' if $self->{mode} !~ /^(?:simple|expert)$/;
+    $self->{no_plater} = $params{no_plater};
+    $self->{loaded} = 0;
     
-    $self->{tabpanel} = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
-    $self->{tabpanel}->AddPage($self->{plater} = Slic3r::GUI::Plater->new($self->{tabpanel}), "Plater")
-        unless $params{no_plater};
+    # initialize tabpanel and menubar
+    $self->_init_tabpanel;
+    $self->_init_menubar;
+    
+    # initialize status bar
+    $self->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($self, -1);
+    $self->{statusbar}->SetStatusText("Version $Slic3r::VERSION - Remember to check for updates at http://slic3r.org/");
+    $self->SetStatusBar($self->{statusbar});
+    
+    $self->{loaded} = 1;
+    
+    # declare events
+    EVT_CLOSE($self, sub {
+        my (undef, $event) = @_;
+        if ($event->CanVeto && !$self->check_unsaved_changes) {
+            $event->Veto;
+            return;
+        }
+        $event->Skip;
+    });
+    
+    # initialize layout
+    {
+        my $sizer = Wx::BoxSizer->new(wxVERTICAL);
+        $sizer->Add($self->{tabpanel}, 1, wxEXPAND);
+        $sizer->SetSizeHints($self);
+        $self->SetSizer($sizer);
+        $self->Fit;
+        $self->SetMinSize([760, 470]);
+        $self->SetSize($self->GetMinSize);
+        $self->Show;
+        $self->Layout;
+    }
+    
+    return $self;
+}
+
+sub _init_tabpanel {
+    my ($self) = @_;
+    
+    $self->{tabpanel} = my $panel = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
+    
+    $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater")
+        unless $self->{no_plater};
     $self->{options_tabs} = {};
     
     my $simple_config;
@@ -44,14 +80,13 @@ sub new {
     }
     
     my $class_prefix = $self->{mode} eq 'simple' ? "Slic3r::GUI::SimpleTab::" : "Slic3r::GUI::Tab::";
-    my $init = 0;
     for my $tab_name (qw(print filament printer)) {
         my $tab;
         $tab = $self->{options_tabs}{$tab_name} = ($class_prefix . ucfirst $tab_name)->new(
-            $self->{tabpanel},
+            $panel,
             on_value_change     => sub {
                 $self->{plater}->on_config_change(@_) if $self->{plater}; # propagate config change events to the plater
-                if ($init) {  # don't save while loading for the first time
+                if ($self->{loaded}) {  # don't save while loading for the first time
                     if ($self->{mode} eq 'simple') {
                         # save config
                         $self->config->save("$Slic3r::GUI::datadir/simple.ini");
@@ -60,7 +95,7 @@ sub new {
                         # so that user gets the config when switching to expert mode
                         $tab->config->save(sprintf "$Slic3r::GUI::datadir/%s/%s.ini", $tab->name, 'Simple Mode');
                         $Slic3r::GUI::Settings->{presets}{$tab->name} = 'Simple Mode.ini';
-                        Slic3r::GUI->save_settings;
+                        wxTheApp->save_settings;
                     }
                     $self->config->save($Slic3r::GUI::autosave) if $Slic3r::GUI::autosave;
                 }
@@ -69,19 +104,149 @@ sub new {
                 $self->{plater}->update_presets($tab_name, @_) if $self->{plater};
             },
         );
-        $self->{tabpanel}->AddPage($tab, $tab->title);
+        $panel->AddPage($tab, $tab->title);
         $tab->load_config($simple_config) if $simple_config;
     }
-    $init = 1;
+}
+
+sub _init_menubar {
+    my ($self) = @_;
     
-    my $sizer = Wx::BoxSizer->new(wxVERTICAL);
-    $sizer->Add($self->{tabpanel}, 1, wxEXPAND);
+    # File menu
+    my $fileMenu = Wx::Menu->new;
+    {
+        $self->_append_menu_item($fileMenu, "&Load Config…\tCtrl+L", 'Load exported configuration file', sub {
+            $self->load_config_file;
+        });
+        $self->_append_menu_item($fileMenu, "&Export Config…\tCtrl+E", 'Export current configuration to file', sub {
+            $self->export_config;
+        });
+        $self->_append_menu_item($fileMenu, "&Load Config Bundle…", 'Load presets from a bundle', sub {
+            $self->load_configbundle;
+        });
+        $self->_append_menu_item($fileMenu, "&Export Config Bundle…", 'Export all presets to file', sub {
+            $self->export_configbundle;
+        });
+        $fileMenu->AppendSeparator();
+        my $repeat;
+        $self->_append_menu_item($fileMenu, "Q&uick Slice…\tCtrl+U", 'Slice file', sub {
+            $self->quick_slice;
+            $repeat->Enable(defined $Slic3r::GUI::MainFrame::last_input_file);
+        });
+        $self->_append_menu_item($fileMenu, "Quick Slice and Save &As…\tCtrl+Alt+U", 'Slice file and save as', sub {
+            $self->quick_slice(save_as => 1);
+            $repeat->Enable(defined $Slic3r::GUI::MainFrame::last_input_file);
+        });
+        $repeat = $self->_append_menu_item($fileMenu, "&Repeat Last Quick Slice\tCtrl+Shift+U", 'Repeat last quick slice', sub {
+            $self->quick_slice(reslice => 1);
+        });
+        $repeat->Enable(0);
+        $fileMenu->AppendSeparator();
+        $self->_append_menu_item($fileMenu, "Slice to SV&G…\tCtrl+G", 'Slice file to SVG', sub {
+            $self->quick_slice(save_as => 1, export_svg => 1);
+        });
+        $fileMenu->AppendSeparator();
+        $self->_append_menu_item($fileMenu, "Repair STL file…", 'Automatically repair an STL file', sub {
+            $self->repair_stl;
+        });
+        $self->_append_menu_item($fileMenu, "Combine multi-material STL files…", 'Combine multiple STL files into a single multi-material AMF file', sub {
+            $self->combine_stls;
+        });
+        $fileMenu->AppendSeparator();
+        $self->_append_menu_item($fileMenu, "Preferences…", 'Application preferences', sub {
+            Slic3r::GUI::Preferences->new($self)->ShowModal;
+        });
+        $fileMenu->AppendSeparator();
+        $self->_append_menu_item($fileMenu, "&Quit", 'Quit Slic3r', sub {
+            $self->Close(0);
+        });
+    }
     
-    $sizer->SetSizeHints($self);
-    $self->SetSizer($sizer);
-    $self->Layout;
+    # Plater menu
+    unless ($self->{no_plater}) {
+        my $plater = $self->{plater};
+        
+        $self->{plater_menu} = Wx::Menu->new;
+        $self->_append_menu_item($self->{plater_menu}, "Export G-code...", 'Export current plate as G-code', sub {
+            $plater->export_gcode;
+        });
+        $self->_append_menu_item($self->{plater_menu}, "Export STL...", 'Export current plate as STL', sub {
+            $plater->export_stl;
+        });
+        $self->_append_menu_item($self->{plater_menu}, "Export AMF...", 'Export current plate as AMF', sub {
+            $plater->export_amf;
+        });
+        
+        $self->{object_menu} = $self->{plater}->object_menu;
+        $self->on_plater_selection_changed(0);
+    }
     
-    return $self;
+    # Window menu
+    my $windowMenu = Wx::Menu->new;
+    {
+        my $tab_count = $self->{no_plater} ? 3 : 4;
+        $self->_append_menu_item($windowMenu, "Select &Plater Tab\tCtrl+1", 'Show the plater', sub {
+            $self->select_tab(0);
+        }) unless $self->{no_plater};
+        $self->_append_menu_item($windowMenu, "Select P&rint Settings Tab\tCtrl+2", 'Show the print settings', sub {
+            $self->select_tab($tab_count-3);
+        });
+        $self->_append_menu_item($windowMenu, "Select &Filament Settings Tab\tCtrl+3", 'Show the filament settings', sub {
+            $self->select_tab($tab_count-2);
+        });
+        $self->_append_menu_item($windowMenu, "Select Print&er Settings Tab\tCtrl+4", 'Show the printer settings', sub {
+            $self->select_tab($tab_count-1);
+        });
+    }
+    
+    # Help menu
+    my $helpMenu = Wx::Menu->new;
+    {
+        $self->_append_menu_item($helpMenu, "&Configuration $Slic3r::GUI::ConfigWizard::wizard…", "Run Configuration $Slic3r::GUI::ConfigWizard::wizard", sub {
+            $self->config_wizard;
+        });
+        $helpMenu->AppendSeparator();
+        $self->_append_menu_item($helpMenu, "Slic3r &Website", 'Open the Slic3r website in your browser', sub {
+            Wx::LaunchDefaultBrowser('http://slic3r.org/');
+        });
+        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", 'Check for new Slic3r versions', sub {
+            wxTheApp->check_version(manual => 1);
+        });
+        $versioncheck->Enable(wxTheApp->have_version_check);
+        $self->_append_menu_item($helpMenu, "Slic3r &Manual", 'Open the Slic3r manual in your browser', sub {
+            Wx::LaunchDefaultBrowser('http://manual.slic3r.org/');
+        });
+        $helpMenu->AppendSeparator();
+        $self->_append_menu_item($helpMenu, "&About Slic3r", 'Show about dialog', sub {
+            wxTheApp->about;
+        });
+    }
+    
+    # menubar
+    # assign menubar to frame after appending items, otherwise special items
+    # will not be handled correctly
+    {
+        my $menubar = Wx::MenuBar->new;
+        $menubar->Append($fileMenu, "&File");
+        $menubar->Append($self->{plater_menu}, "&Plater") if $self->{plater_menu};
+        $menubar->Append($self->{object_menu}, "&Object") if $self->{object_menu};
+        $menubar->Append($windowMenu, "&Window");
+        $menubar->Append($helpMenu, "&Help");
+        $self->SetMenuBar($menubar);
+    }
+}
+
+sub is_loaded {
+    my ($self) = @_;
+    return $self->{loaded};
+}
+
+sub on_plater_selection_changed {
+    my ($self, $have_selection) = @_;
+    
+    return if !defined $self->{object_menu};
+    $self->{object_menu}->Enable($_->GetId, $have_selection)
+        for $self->{object_menu}->GetMenuItems;
 }
 
 sub quick_slice {
@@ -98,7 +263,7 @@ sub quick_slice {
         my $input_file;
         my $dir = $Slic3r::GUI::Settings->{recent}{skein_directory} || $Slic3r::GUI::Settings->{recent}{config_directory} || '';
         if (!$params{reslice}) {
-            my $dialog = Wx::FileDialog->new($self, 'Choose a file to slice (STL/OBJ/AMF):', $dir, "", MODEL_WILDCARD, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+            my $dialog = Wx::FileDialog->new($self, 'Choose a file to slice (STL/OBJ/AMF):', $dir, "", &Slic3r::GUI::MODEL_WILDCARD, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
             if ($dialog->ShowModal != wxID_OK) {
                 $dialog->Destroy;
                 return;
@@ -121,7 +286,7 @@ sub quick_slice {
         }
         my $input_file_basename = basename($input_file);
         $Slic3r::GUI::Settings->{recent}{skein_directory} = dirname($input_file);
-        Slic3r::GUI->save_settings;
+        wxTheApp->save_settings;
         
         my $sprint = Slic3r::Print::Simple->new(
             status_cb       => sub {
@@ -147,8 +312,8 @@ sub quick_slice {
             $output_file = $sprint->expanded_output_filepath;
             $output_file =~ s/\.gcode$/.svg/i if $params{export_svg};
             my $dlg = Wx::FileDialog->new($self, 'Save ' . ($params{export_svg} ? 'SVG' : 'G-code') . ' file as:',
-                Slic3r::GUI->output_path(dirname($output_file)),
-                basename($output_file), $params{export_svg} ? FILE_WILDCARDS->{svg} : FILE_WILDCARDS->{gcode}, wxFD_SAVE);
+                wxTheApp->output_path(dirname($output_file)),
+                basename($output_file), $params{export_svg} ? &Slic3r::GUI::FILE_WILDCARDS->{svg} : &Slic3r::GUI::FILE_WILDCARDS->{gcode}, wxFD_SAVE);
             if ($dlg->ShowModal != wxID_OK) {
                 $dlg->Destroy;
                 return;
@@ -156,7 +321,7 @@ sub quick_slice {
             $output_file = $dlg->GetPath;
             $last_output_file = $output_file unless $params{export_svg};
             $Slic3r::GUI::Settings->{_}{last_output_path} = dirname($output_file);
-            Slic3r::GUI->save_settings;
+            wxTheApp->save_settings;
             $dlg->Destroy;
         }
         
@@ -182,7 +347,7 @@ sub quick_slice {
         undef $progress_dialog;
         
         my $message = "$input_file_basename was successfully sliced.";
-        &Wx::wxTheApp->notify($message);
+        wxTheApp->notify($message);
         Wx::MessageDialog->new($self, $message, 'Slicing Done!', 
             wxOK | wxICON_INFORMATION)->ShowModal;
     };
@@ -195,7 +360,7 @@ sub repair_stl {
     my $input_file;
     {
         my $dir = $Slic3r::GUI::Settings->{recent}{skein_directory} || $Slic3r::GUI::Settings->{recent}{config_directory} || '';
-        my $dialog = Wx::FileDialog->new($self, 'Select the STL file to repair:', $dir, "", FILE_WILDCARDS->{stl}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+        my $dialog = Wx::FileDialog->new($self, 'Select the STL file to repair:', $dir, "", &Slic3r::GUI::FILE_WILDCARDS->{stl}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
         if ($dialog->ShowModal != wxID_OK) {
             $dialog->Destroy;
             return;
@@ -208,7 +373,7 @@ sub repair_stl {
     {
         $output_file =~ s/\.stl$/_fixed.obj/i;
         my $dlg = Wx::FileDialog->new($self, "Save OBJ file (less prone to coordinate errors than STL) as:", dirname($output_file),
-            basename($output_file), &Slic3r::GUI::SkeinPanel::FILE_WILDCARDS->{obj}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+            basename($output_file), &Slic3r::GUI::FILE_WILDCARDS->{obj}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
         if ($dlg->ShowModal != wxID_OK) {
             $dlg->Destroy;
             return undef;
@@ -248,11 +413,11 @@ sub export_config {
     my $dir = $last_config ? dirname($last_config) : $Slic3r::GUI::Settings->{recent}{config_directory} || $Slic3r::GUI::Settings->{recent}{skein_directory} || '';
     my $filename = $last_config ? basename($last_config) : "config.ini";
     my $dlg = Wx::FileDialog->new($self, 'Save configuration as:', $dir, $filename, 
-        FILE_WILDCARDS->{ini}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+        &Slic3r::GUI::FILE_WILDCARDS->{ini}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     if ($dlg->ShowModal == wxID_OK) {
         my $file = $dlg->GetPath;
         $Slic3r::GUI::Settings->{recent}{config_directory} = dirname($file);
-        Slic3r::GUI->save_settings;
+        wxTheApp->save_settings;
         $last_config = $file;
         $config->save($file);
     }
@@ -267,13 +432,13 @@ sub load_config_file {
         return unless $self->check_unsaved_changes;
         my $dir = $last_config ? dirname($last_config) : $Slic3r::GUI::Settings->{recent}{config_directory} || $Slic3r::GUI::Settings->{recent}{skein_directory} || '';
         my $dlg = Wx::FileDialog->new($self, 'Select configuration to load:', $dir, "config.ini", 
-                FILE_WILDCARDS->{ini}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+                &Slic3r::GUI::FILE_WILDCARDS->{ini}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
         return unless $dlg->ShowModal == wxID_OK;
         ($file) = $dlg->GetPaths;
         $dlg->Destroy;
     }
     $Slic3r::GUI::Settings->{recent}{config_directory} = dirname($file);
-    Slic3r::GUI->save_settings;
+    wxTheApp->save_settings;
     $last_config = $file;
     for my $tab (values %{$self->{options_tabs}}) {
         $tab->load_config_file($file);
@@ -292,11 +457,11 @@ sub export_configbundle {
     my $dir = $last_config ? dirname($last_config) : $Slic3r::GUI::Settings->{recent}{config_directory} || $Slic3r::GUI::Settings->{recent}{skein_directory} || '';
     my $filename = "Slic3r_config_bundle.ini";
     my $dlg = Wx::FileDialog->new($self, 'Save presets bundle as:', $dir, $filename, 
-        FILE_WILDCARDS->{ini}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+        &Slic3r::GUI::FILE_WILDCARDS->{ini}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     if ($dlg->ShowModal == wxID_OK) {
         my $file = $dlg->GetPath;
         $Slic3r::GUI::Settings->{recent}{config_directory} = dirname($file);
-        Slic3r::GUI->save_settings;
+        wxTheApp->save_settings;
         
         # leave default category empty to prevent the bundle from being parsed as a normal config file
         my $ini = { _ => {} };
@@ -308,7 +473,7 @@ sub export_configbundle {
         }
         
         foreach my $section (qw(print filament printer)) {
-            my %presets = Slic3r::GUI->presets($section);
+            my %presets = wxTheApp->presets($section);
             foreach my $preset_name (keys %presets) {
                 my $config = Slic3r::Config->load($presets{$preset_name});
                 $ini->{"$section:$preset_name"} = $config->as_ini->{_};
@@ -325,24 +490,24 @@ sub load_configbundle {
     
     my $dir = $last_config ? dirname($last_config) : $Slic3r::GUI::Settings->{recent}{config_directory} || $Slic3r::GUI::Settings->{recent}{skein_directory} || '';
     my $dlg = Wx::FileDialog->new($self, 'Select configuration to load:', $dir, "config.ini", 
-            FILE_WILDCARDS->{ini}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+            &Slic3r::GUI::FILE_WILDCARDS->{ini}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
     return unless $dlg->ShowModal == wxID_OK;
     my ($file) = $dlg->GetPaths;
     $dlg->Destroy;
     
     $Slic3r::GUI::Settings->{recent}{config_directory} = dirname($file);
-    Slic3r::GUI->save_settings;
+    wxTheApp->save_settings;
     
     # load .ini file
     my $ini = Slic3r::Config->read_ini($file);
     
     if ($ini->{settings}) {
         $Slic3r::GUI::Settings->{_}{$_} = $ini->{settings}{$_} for keys %{$ini->{settings}};
-        Slic3r::GUI->save_settings;
+        wxTheApp->save_settings;
     }
     if ($ini->{presets}) {
         $Slic3r::GUI::Settings->{presets} = $ini->{presets};
-        Slic3r::GUI->save_settings;
+        wxTheApp->save_settings;
     }
     if ($ini->{simple}) {
         my $config = Slic3r::Config->load_ini_hash($ini->{simple});
@@ -411,7 +576,7 @@ sub combine_stls {
     {
         my $dlg_message = 'Choose one or more files to combine (STL/OBJ)';
         while (1) {
-            my $dialog = Wx::FileDialog->new($self, "$dlg_message:", $dir, "", MODEL_WILDCARD, 
+            my $dialog = Wx::FileDialog->new($self, "$dlg_message:", $dir, "", &Slic3r::GUI::MODEL_WILDCARD, 
                 wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST);
             if ($dialog->ShowModal != wxID_OK) {
                 $dialog->Destroy;
@@ -430,7 +595,7 @@ sub combine_stls {
     {
         $output_file =~ s/\.(?:stl|obj)$/.amf.xml/i;
         my $dlg = Wx::FileDialog->new($self, 'Save multi-material AMF file as:', dirname($output_file),
-            basename($output_file), FILE_WILDCARDS->{amf}, wxFD_SAVE);
+            basename($output_file), &Slic3r::GUI::FILE_WILDCARDS->{amf}, wxFD_SAVE);
         if ($dlg->ShowModal != wxID_OK) {
             $dlg->Destroy;
             return;
@@ -542,6 +707,15 @@ sub check_unsaved_changes {
 sub select_tab {
     my ($self, $tab) = @_;
     $self->{tabpanel}->ChangeSelection($tab);
+}
+
+sub _append_menu_item {
+    my ($self, $menu, $string, $description, $cb) = @_;
+    
+    my $id = &Wx::NewId();
+    my $item = $menu->Append($id, $string, $description);
+    EVT_MENU($self, $id, $cb);
+    return $item;
 }
 
 1;
