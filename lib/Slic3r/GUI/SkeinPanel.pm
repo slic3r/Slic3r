@@ -132,7 +132,10 @@ sub quick_slice {
         );
         
         $sprint->apply_config($config);
-        $sprint->set_model(Slic3r::Model->read_from_file($input_file));
+        
+        # keep model
+        my $model = Slic3r::Model->read_from_file($input_file);
+        $sprint->set_model($model);
         
         {
             my $extra = $self->extra_variables;
