@@ -129,6 +129,10 @@ ModelInstance*             O_OBJECT_SLIC3R
 Ref<ModelInstance>         O_OBJECT_SLIC3R_T
 Clone<ModelInstance>       O_OBJECT_SLIC3R_T
 
+ConfSpace*                 O_OBJECT_SLIC3R
+Ref<ConfSpace>             O_OBJECT_SLIC3R_T
+Clone<ConfSpace>           O_OBJECT_SLIC3R_T
+
 PrintRegion*               O_OBJECT_SLIC3R
 Ref<PrintRegion>           O_OBJECT_SLIC3R_T
 
@@ -151,7 +155,6 @@ Ref<SupportLayer>          O_OBJECT_SLIC3R_T
 PlaceholderParser*         O_OBJECT_SLIC3R
 Ref<PlaceholderParser>     O_OBJECT_SLIC3R_T
 Clone<PlaceholderParser>   O_OBJECT_SLIC3R_T
-
 
 ExtrusionLoopRole     T_UV
 ExtrusionRole     T_UV

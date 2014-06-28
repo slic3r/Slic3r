@@ -855,6 +855,7 @@ sub write_gcode {
         $gcodegen->external_mp(Slic3r::GCode::MotionPlanner->new(
             islands     => union_ex([ map @$_, @islands ]),
             internal    => 0,
+            id => 'E',
         ));
     }
     

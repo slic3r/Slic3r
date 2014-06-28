@@ -718,6 +718,7 @@ sub detect_surfaces_type {
                 $layerm->id, scalar(@bottom), scalar(@top), scalar(@internal) if $Slic3r::debug;
         }
         
+#        $DB::single=1;
         # clip surfaces to the fill boundaries
         foreach my $layer (@{$self->layers}) {
             my $layerm = $layer->regions->[$region_id];

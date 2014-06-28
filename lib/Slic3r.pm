@@ -23,6 +23,7 @@ BEGIN {
     ### temporarily disable threads if using the broken Moo version
     use Moo;
     $have_threads = 0 if $Moo::VERSION == 1.003000;
+    $have_threads = 0;
 }
 
 warn "Running Slic3r under Perl >= 5.16 is not supported nor recommended\n"
@@ -34,6 +35,11 @@ our $var = "$FindBin::Bin/var";
 use Encode;
 use Encode::Locale;
 use Moo 1.003001;
+
+use lib "$FindBin::Bin/xs/blib/lib";
+use lib "$FindBin::Bin/xs/blib/arch/auto/Slic3r/XS";
+use lib "$FindBin::Bin/../xs/blib/lib";
+use lib "$FindBin::Bin/../xs/blib/arch/auto/Slic3r/XS";
 
 use Slic3r::XS;   # import all symbols (constants etc.) before they get parsed
 use Slic3r::Config;

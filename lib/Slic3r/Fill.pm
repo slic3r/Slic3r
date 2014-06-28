@@ -168,11 +168,17 @@ sub make_fill {
     # add spacing between surfaces
     @surfaces = map @{$_->offset(-$distance_between_surfaces / 2)}, @surfaces;
     
-    if (0) {
+    if (1) {
         require "Slic3r/SVG.pm";
-        Slic3r::SVG::output("fill_" . $layerm->print_z . ".svg",
-            expolygons      => [ map $_->expolygon, grep !$_->is_solid, @surfaces ],
-            red_expolygons  => [ map $_->expolygon, grep  $_->is_solid, @surfaces ],
+        Slic3r::SVG::output("fill_" . $layerm->id . ".svg",
+        red_expolygons   => [ map $_->expolygon, grep $_->surface_type == S_TYPE_TOP, @surfaces ],
+        green_expolygons => [ map $_->expolygon, grep $_->surface_type == S_TYPE_BOTTOM, @surfaces ],
+        blue_expolygons => [ map $_->expolygon, grep $_->surface_type == S_TYPE_BOTTOMBRIDGE, @surfaces ],
+        purple_expolygons => [ map $_->expolygon, grep $_->surface_type == S_TYPE_INTERNAL, @surfaces ],
+        cyan_expolygons => [ map $_->expolygon, grep $_->surface_type == S_TYPE_INTERNALSOLID, @surfaces ],
+        gray_expolygons => [ map $_->expolygon, grep $_->surface_type == S_TYPE_INTERNALBRIDGE, @surfaces ],
+        magenta_expolygons => [ map $_->expolygon, grep $_->surface_type == S_TYPE_INTERNALVOID, @surfaces ],
+
         );
     }
     

@@ -185,6 +185,7 @@ for my $class (qw(
         Slic3r::Config::Print
         Slic3r::Config::PrintObject
         Slic3r::Config::PrintRegion
+        Slic3r::ConfSpace
         Slic3r::ExPolygon
         Slic3r::ExPolygon::Collection
         Slic3r::Extruder

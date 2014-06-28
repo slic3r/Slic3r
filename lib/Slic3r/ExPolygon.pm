@@ -8,6 +8,20 @@ use List::Util qw(first);
 use Slic3r::Geometry qw(X Y A B point_in_polygon epsilon scaled_epsilon);
 use Slic3r::Geometry::Clipper qw(union_ex diff_pl);
 
+sub scale_points {
+    my @points= map { ref($_) eq 'Slic3r::Point' ? $_->pp : $_ } @_;
+    @points=map [ Slic3r::Geometry::scale($_->[X]), Slic3r::Geometry::scale($_->[Y]) ], @points;
+    return @points;
+}
+
+sub new_scale {
+    my $class = shift;
+    my $contour = shift;
+    $contour = [ scale_points(@$contour) ];
+    my @holes = map [  scale_points(@$_) ], @_;
+    return $class->new($contour, @holes);
+}
+
 sub wkt {
     my $self = shift;
     return sprintf "POLYGON(%s)", 

@@ -22,6 +22,7 @@
 
 #define STL_MAX(A,B) ((A)>(B)? (A):(B))
 #define STL_MIN(A,B) ((A)<(B)? (A):(B))
+#undef ABS
 #define ABS(X)  ((X) < 0 ? -(X) : (X))
 
 #define LABEL_SIZE             80

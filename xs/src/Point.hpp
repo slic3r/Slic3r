@@ -28,6 +28,7 @@ class Point
     Point(long long _x, long long _y): x(_x), y(_y) {};  // for Clipper
     Point(double x, double y);
     bool operator==(const Point& rhs) const;
+    bool operator!=(const Point& rhs) const;
     std::string wkt() const;
     void scale(double factor);
     void translate(double x, double y);

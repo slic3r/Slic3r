@@ -14,7 +14,7 @@ sub factor {
 }
 
 sub svg {
-    my $svg = SVG->new(width => 200 * 10, height => 200 * 10);
+    my $svg = SVG->new(width => "20 cm" , height => "20 cm", viewBox => "-500 -500 1000 1000");
     my $marker_end = $svg->marker(
         id => "endArrow",
         viewBox => "0 0 10 10",
@@ -38,22 +38,27 @@ sub output {
     
     my $svg = svg();
     my $arrows = 1;
+    my $line_width = .1;
     
     while (my $type = shift @things) {
         my $value = shift @things;
         
         if ($type eq 'no_arrows') {
             $arrows = 0;
+        } elsif ($type eq 'line_width') {
+            $line_width = $value;
+        } elsif ($type eq 'filltype') {
+            $filltype = $value;
         } elsif ($type =~ /^(?:(.+?)_)?expolygons$/) {
             my $colour = $1;
             $value = [ map $_->pp, @$value ];
-            
             my $g = $svg->group(
                 style => {
                     'stroke-width' => 0,
                     'stroke' => $colour || 'black',
                     'fill' => ($type !~ /polygons/ ? 'none' : ($colour || 'grey')),
                     'fill-type' => $filltype,
+            'fill-opacity' => 0.3
                 },
             );
             foreach my $expolygon (@$value) {
@@ -62,15 +67,18 @@ sub output {
                     d => $points,
                 );
             }
-        } elsif ($type =~ /^(?:(.+?)_)?(polygon|polyline)s$/) {
-            my ($colour, $method) = ($1, $2);
+        } elsif ($type =~ /^(?:(.+?)_)?(polygon|polyline)s(?:_(.+?))?$/) {
+            my ($colour, $method, $mode) = ($1, $2, $3);
+            $mode //= '';
+
             $value = [ map $_->pp, @$value ];
             
             my $g = $svg->group(
                 style => {
-                    'stroke-width' => ($method eq 'polyline') ? 1 : 0,
+                    'stroke-width' => ($method eq 'polyline' || ($mode eq 'outline') ) ? ($line_width * 10 ) :  0,
                     'stroke' => $colour || 'black',
-                    'fill' => ($type !~ /polygons/ ? 'none' : ($colour || 'grey')),
+                    'fill' => (($type !~ /polygons/ || $mode eq 'outline') ? 'none' : ($colour || 'grey')),
+                    'fill-opacity' => 0.3
                 },
             );
             foreach my $polygon (@$value) {
@@ -104,12 +112,12 @@ sub output {
                 );
             }
         } elsif ($type =~ /^(?:(.+?)_)?lines$/) {
-            my $colour = $1;
+            my $colour = $1 // 'black';
             $value = [ map $_->pp, @$value ];
             
             my $g = $svg->group(
                 style => {
-                    'stroke-width' => 2,
+                    'stroke-width' => $line_width,
                 },
             );
             foreach my $line (@$value) {
@@ -119,12 +127,14 @@ sub output {
                     x2 => $line->[1][X] * factor(),
                     y2 => $line->[1][Y] * factor(),
                     style => {
-                        'stroke' => $colour || 'black',
+                        'stroke' => $colour,
                     },
                     'marker-end' => !$arrows ? "" : "url(#endArrow)",
                 );
             }
-        }
+        } else {
+        print "Unknown type '$type'";
+    }
     }
     
     write_svg($svg, $filename);

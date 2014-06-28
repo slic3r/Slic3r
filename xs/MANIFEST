@@ -1656,6 +1656,8 @@ src/ClipperUtils.cpp
 src/ClipperUtils.hpp
 src/Config.cpp
 src/Config.hpp
+src/ConfSpace.cpp
+src/ConfSpace.hpp
 src/ExPolygon.cpp
 src/ExPolygon.hpp
 src/ExPolygonCollection.cpp
@@ -1735,11 +1737,13 @@ t/14_geometry.t
 t/15_config.t
 t/16_flow.t
 t/17_boundingbox.t
+t/18_confspace.t
 t/19_model.t
 t/20_print.t
 xsp/BoundingBox.xsp
 xsp/Clipper.xsp
 xsp/Config.xsp
+xsp/ConfSpace.xsp
 xsp/ExPolygon.xsp
 xsp/ExPolygonCollection.xsp
 xsp/Extruder.xsp

@@ -24,6 +24,8 @@ if (ExtUtils::CppGuess->new->is_gcc) {
     }
 }
 
+push @cflags, ''.`pkg-config  --cflags glib-2.0`;
+
 my $build = Module::Build::WithXSpp->new(
     module_name     => 'Slic3r::XS',
     dist_abstract   => 'XS code for Slic3r',
@@ -41,18 +43,18 @@ my $build = Module::Build::WithXSpp->new(
         Module::Build::WithXSpp     0.13
     )},
     extra_compiler_flags => \@cflags,
-    
+    extra_linker_flags => ''.`pkg-config  --libs glib-2.0`,
     # Provides extra C typemaps that are auto-merged
     extra_typemap_modules => {
         'ExtUtils::Typemaps::Default' => '1.03',
     },
-    
+
     # for MSVC builds
     early_includes => [qw(
         cstring
         cstdlib
         ostream
-		sstream
+	sstream
     )]
 );
 

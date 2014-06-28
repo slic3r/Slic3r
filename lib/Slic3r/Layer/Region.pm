@@ -75,7 +75,7 @@ sub make_perimeters {
     $self->perimeters->clear;
     $self->fill_surfaces->clear;
     $self->thin_fills->clear;
-    
+    $self->dbg_gaps->clear;
     my @contours    = ();    # array of Polygons with ccw orientation
     my @holes       = ();    # array of Polygons with cw orientation
     my @thin_walls  = ();    # array of ExPolygons
@@ -146,7 +146,19 @@ sub make_perimeters {
                 }
             }
         }
-        
+
+        if (0) {
+            require "Slic3r/SVG.pm";
+            Slic3r::SVG::output(
+                "perimeters_b_" . $self->layer->id . ".svg",
+                no_arrows => 1,
+                green_polygons_outline => \@contours,
+                blue_polygons_outline => \@holes,
+                magenta_polygons => \@last,
+                cyan_expolygons => \@gaps,
+                );
+        }
+    
         # fill gaps
         if (@gaps) {
             if (0) {
@@ -210,10 +222,10 @@ sub make_perimeters {
         @thin_wall_polylines = map @{$_->medial_axis($pwidth + $pspacing, $min_width)}, @thin_walls;
         Slic3r::debugf "  %d thin walls detected\n", scalar(@thin_wall_polylines) if $Slic3r::debug;
         
-        if (0) {
+        if (1) {
             require "Slic3r/SVG.pm";
             Slic3r::SVG::output(
-                "medial_axis.svg",
+                "medial_axis_".$self->layer->id.".svg",
                 no_arrows => 1,
                 expolygons      => \@thin_walls,
                 green_polylines => [ map $_->polygon->split_at_first_point, @{$self->perimeters} ],
@@ -473,7 +485,22 @@ sub process_external_surfaces {
     
     my @surfaces = @{$self->fill_surfaces};
     my $margin = scale &Slic3r::EXTERNAL_INFILL_MARGIN;
-    
+ 
+    if (1) {
+    require "Slic3r/SVG.pm";
+    Slic3r::SVG::output(
+        "surfaces_before_" . $self->layer->id . ".svg",
+        red_polygons   => [ map $_->p, grep $_->surface_type == S_TYPE_TOP, @surfaces ],
+        green_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_BOTTOM, @surfaces ],
+        blue_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_BOTTOMBRIDGE, @surfaces ],
+        magenta_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_INTERNAL, @surfaces ],
+        cyan_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_INTERNALSOLID, @surfaces ],
+        gray_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_INTERNALBRIDGE, @surfaces ],
+        magenta_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_INTERNALVOID, @surfaces ],
+        no_arrows => 1,
+            );
+    }
+  
     my @bottom = ();
     foreach my $surface (grep $_->is_bottom, @surfaces) {
         my $grown = $surface->expolygon->offset_ex(+$margin);
@@ -539,6 +566,22 @@ sub process_external_surfaces {
     }
     $self->fill_surfaces->clear;
     $self->fill_surfaces->append(@new_surfaces);
+
+    if (1) {
+    require "Slic3r/SVG.pm";
+    Slic3r::SVG::output(
+        "surfaces_" . $self->layer->id . ".svg",
+        red_polygons   => [ map $_->p, grep $_->surface_type == S_TYPE_TOP, @new_surfaces ],
+        green_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_BOTTOM, @new_surfaces ],
+        blue_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_BOTTOMBRIDGE, @new_surfaces ],
+        yellow_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_INTERNAL, @new_surfaces ],
+        cyan_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_INTERNALSOLID, @new_surfaces ],
+        gray_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_INTERNALBRIDGE, @new_surfaces ],
+        magenta_polygons => [ map $_->p, grep $_->surface_type == S_TYPE_INTERNALVOID, @new_surfaces ],
+        no_arrows => 1,
+            );
+    }
+
 }
 
 1;

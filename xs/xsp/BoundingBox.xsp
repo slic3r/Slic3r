@@ -13,6 +13,7 @@
     void merge(BoundingBox* bb) %code{% THIS->merge(*bb); %};
     void merge_point(Point* point) %code{% THIS->merge(*point); %};
     void scale(double factor);
+    void grow(double x, double y);
     void translate(double x, double y);
     Polygon* polygon()
         %code{% RETVAL = new Polygon(); THIS->polygon(RETVAL); %};
@@ -77,6 +78,7 @@ new_from_points(CLASS, points)
     void merge(BoundingBoxf3* bb) %code{% THIS->merge(*bb); %};
     void scale(double factor);
     void translate(double x, double y, double z);
+    void grow(double x, double y, double z);    
     Clone<Pointf3> size();
     Clone<Pointf3> center();
     double x_min() %code{% RETVAL = THIS->min.x; %};
