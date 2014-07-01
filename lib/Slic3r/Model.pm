@@ -535,13 +535,11 @@ sub cut {
     my ($self, $z) = @_;
     
     # clone this one
-    my $upper = $self->model->add_object($self);
-    my $lower = $self->model->add_object($self);
-    
-    foreach my $instance (@{$self->instances}) {
-        $upper->add_instance(offset => Slic3r::Pointf->new(@{$instance->offset}));
-        $lower->add_instance(offset => Slic3r::Pointf->new(@{$instance->offset}));
-    }
+    my $model = Slic3r::Model->new;
+    my $upper = $model->add_object($self);
+    my $lower = $model->add_object($self);
+    $upper->clear_volumes;
+    $lower->clear_volumes;
     
     foreach my $volume (@{$self->volumes}) {
         if ($volume->modifier) {
@@ -576,7 +574,7 @@ sub cut {
     
     $upper = undef if !@{$upper->volumes};
     $lower = undef if !@{$lower->volumes};
-    return ($upper, $lower);
+    return ($model, $upper, $lower);
 }
 
 package Slic3r::Model::Volume;
