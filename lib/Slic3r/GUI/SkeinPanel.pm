@@ -452,9 +452,9 @@ sub combine_stls {
         my $material_name = basename($input_files[$m]);
         $material_name =~ s/\.(stl|obj)$//i;
         
-        $new_model->set_material($m, { Name => $material_name });
+        $new_model->set_material("$m", { Name => $material_name });
         $new_object->add_volume(
-            material_id => $m,
+            material_id => "$m",
             mesh        => $model->objects->[0]->volumes->[0]->mesh,
         );
     }
