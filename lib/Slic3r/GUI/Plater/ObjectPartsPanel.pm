@@ -158,12 +158,10 @@ sub selection_changed {
             
             # attach volume material config to settings panel
             my $volume = $self->{model_object}->volumes->[ $itemData->{volume_id} ];
-            my $material = $self->{model_object}->model->get_material($volume->material_id // '_');
-            $material //= $volume->assign_unique_material;
             $self->{staticbox}->SetLabel('Part Settings');
             $self->{settings_panel}->enable;
             $self->{settings_panel}->set_opt_keys([ 'extruder', @{Slic3r::Config::PrintRegion->new->get_keys} ]);
-            $self->{settings_panel}->set_config($material->config);
+            $self->{settings_panel}->set_config($volume->config);
         } elsif ($itemData->{type} eq 'object') {
             # select all object volumes in 3D preview
             if ($self->{canvas}) {
@@ -198,21 +196,12 @@ sub on_btn_load {
             foreach my $volume (@{$object->volumes}) {
                 my $new_volume = $self->{model_object}->add_volume($volume);
                 $new_volume->set_modifier($is_modifier);
-                if (!defined $new_volume->material_id) {
-                    # it looks like this block is never entered because all input volumes seem to have an assigned material
-                    # TODO: check we can assume that for any input format
-                    my $material_name = basename($input_file);
-                    $material_name =~ s/\.(stl|obj)$//i;
-                    my $material = $self->{model_object}->model->set_material($material_name);
-                    $new_volume->material_id($material_name);
-                }
                 
                 # apply the same translation we applied to the object
                 $new_volume->mesh->translate(@{$self->{model_object}->origin_translation}, 0);
                 
                 # set a default extruder value, since user can't add it manually
-                my $material = $self->{model_object}->model->get_material($new_volume->material_id);
-                $material->config->set_ifndef('extruder', 1);
+                $new_volume->config->set_ifndef('extruder', 0);
                 
                 $self->{parts_changed} = 1;
             }
