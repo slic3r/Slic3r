@@ -21,9 +21,15 @@ class ConfigOption {
     public:
     virtual ~ConfigOption() {};
     virtual std::string serialize() const = 0;
-    virtual bool deserialize(std::string str) = 0;
+    bool deserialize(std::string str)
+    {
+        std::locale::global(std::locale("C"));
+        return _deserialize(str);
+    }
     virtual int getInt() const { return 0; };
     virtual void setInt(int val) {};
+    private:
+    virtual bool _deserialize(std::string str) = 0;
 };
 
 template <class T>
@@ -56,7 +62,7 @@ class ConfigOptionFloat : public ConfigOption
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         this->value = ::atof(str.c_str());
         return true;
     };
@@ -75,7 +81,7 @@ class ConfigOptionFloats : public ConfigOption, public ConfigOptionVector<double
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         this->values.clear();
         std::istringstream is(str);
         std::string item_str;
@@ -102,7 +108,7 @@ class ConfigOptionInt : public ConfigOption
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         this->value = ::atoi(str.c_str());
         return true;
     };
@@ -121,7 +127,7 @@ class ConfigOptionInts : public ConfigOption, public ConfigOptionVector<int>
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         this->values.clear();
         std::istringstream is(str);
         std::string item_str;
@@ -153,7 +159,7 @@ class ConfigOptionString : public ConfigOption
         return str; 
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         // s/\\n/\n/g
         size_t pos = 0;
         while ((pos = str.find("\\n", pos)) != std::string::npos) {
@@ -180,7 +186,7 @@ class ConfigOptionStrings : public ConfigOption, public ConfigOptionVector<std::
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         this->values.clear();
         std::istringstream is(str);
         std::string item_str;
@@ -209,7 +215,7 @@ class ConfigOptionPercent : public ConfigOption
         return s;
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         // don't try to parse the trailing % since it's optional
         int res = sscanf(str.c_str(), "%lf", &this->value);
         return res == 1;
@@ -239,7 +245,7 @@ class ConfigOptionFloatOrPercent : public ConfigOption
         return s;
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         if (str.find_first_of("%") != std::string::npos) {
             int res = sscanf(str.c_str(), "%lf%%", &this->value);
             if (res == 0) return false;
@@ -268,7 +274,7 @@ class ConfigOptionPoint : public ConfigOption
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         if (strncmp(str.c_str(), "0x", 2) == 0) {
             this->point.x = 0;
             int res = sscanf(str.c_str()+2, "%lf", &this->point.y);
@@ -295,7 +301,7 @@ class ConfigOptionPoints : public ConfigOption, public ConfigOptionVector<Pointf
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         std::vector<Pointf> values;
         std::istringstream is(str);
         std::string point_str;
@@ -330,7 +336,7 @@ class ConfigOptionBool : public ConfigOption
         return std::string(this->value ? "1" : "0");
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         this->value = (str.compare("1") == 0);
         return true;
     };
@@ -349,7 +355,7 @@ class ConfigOptionBools : public ConfigOption, public ConfigOptionVector<bool>
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         this->values.clear();
         std::istringstream is(str);
         std::string item_str;
@@ -378,7 +384,7 @@ class ConfigOptionEnum : public ConfigOption
         return "";
     };
 
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         t_config_enum_values enum_keys_map = ConfigOptionEnum<T>::get_enum_values();
         if (enum_keys_map.count(str) == 0) return false;
         this->value = static_cast<T>(enum_keys_map[str]);
@@ -405,7 +411,7 @@ class ConfigOptionEnumGeneric : public ConfigOption
         return "";
     };
 
-    bool deserialize(std::string str) {
+    bool _deserialize(std::string str) {
         if (this->keys_map->count(str) == 0) return false;
         this->value = (*this->keys_map)[str];
         return true;
