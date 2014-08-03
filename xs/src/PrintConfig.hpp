@@ -71,7 +71,7 @@ class PrintConfigDef
         t_optiondef_map Options;
         
         Options["avoid_crossing_perimeters"].type = coBool;
-        Options["avoid_crossing_perimeters"].label = "Avoid crossing perimeters";
+        Options["avoid_crossing_perimeters"].label = "Avoid crossing perimeters (slow)";
         Options["avoid_crossing_perimeters"].tooltip = "Optimize travel moves in order to minimize the crossing of perimeters. This is mostly useful with Bowden extruders which suffer from oozing. This feature slows down both the print and the G-code generation.";
         Options["avoid_crossing_perimeters"].cli = "avoid-crossing-perimeters!";
 
