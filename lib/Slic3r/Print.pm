@@ -597,7 +597,7 @@ EOF
             foreach my $expolygon (@current_layer_slices) {
                 my $intersection = intersection_ex(
                     [ map @$_, @previous_layer_slices ],
-                    $expolygon,
+                    [ @$expolygon ],
                 );
                 @$intersection
                     ? push @supported_slices, $expolygon
