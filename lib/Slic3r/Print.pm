@@ -148,13 +148,6 @@ sub apply_config {
     return $invalidated;
 }
 
-sub has_support_material {
-    my $self = shift;
-    return (first { $_->config->support_material } @{$self->objects})
-        || (first { $_->config->raft_layers > 0 } @{$self->objects})
-        || (first { $_->config->support_material_enforce_layers > 0 } @{$self->objects});
-}
-
 # caller is responsible for supplying models whose objects don't collide
 # and have explicit instance positions
 sub add_model_object {
@@ -300,43 +293,15 @@ sub validate {
             die "The Spiral Vase option can only be used when printing single material objects.\n";
         }
     }
-}
-
-# 0-based indices of used extruders
-sub extruders {
-    my ($self) = @_;
     
-    # initialize all extruder(s) we need
-    my @used_extruders = ();
-    foreach my $region (@{$self->regions}) {
-        push @used_extruders,
-            map $region->config->get("${_}_extruder")-1,
-            qw(perimeter infill);
+    {
+        my $max_layer_height = max(
+            map { $_->config->layer_height, $_->config->get_value('first_layer_height') } @{$self->objects},
+        );
+        my $extruders = $self->extruders;
+        die "Layer height can't be greater than nozzle diameter\n"
+            if grep { $max_layer_height > $self->config->get_at('nozzle_diameter', $_) } @$extruders;
     }
-    foreach my $object (@{$self->objects}) {
-        push @used_extruders,
-            map $object->config->get("${_}_extruder")-1,
-            qw(support_material support_material_interface);
-    }
-    
-    my %h = map { $_ => 1 } @used_extruders;
-    return [ sort keys %h ];
-}
-
-sub init_extruders {
-    my $self = shift;
-    
-    return if $self->step_done(STEP_INIT_EXTRUDERS);
-    $self->set_step_started(STEP_INIT_EXTRUDERS);
-    
-    # enforce tall skirt if using ooze_prevention
-    # FIXME: this is not idempotent (i.e. switching ooze_prevention off will not revert skirt settings)
-    if ($self->config->ooze_prevention && @{$self->extruders} > 1) {
-        $self->config->set('skirt_height', -1);
-        $self->config->set('skirts', 1) if $self->config->skirts == 0;
-    }
-    
-    $self->set_step_done(STEP_INIT_EXTRUDERS);
 }
 
 # this value is not supposed to be compared with $layer->id
@@ -344,16 +309,6 @@ sub init_extruders {
 sub total_layer_count {
     my $self = shift;
     return max(map $_->total_layer_count, @{$self->objects});
-}
-
-sub regions_count {
-    my $self = shift;
-    return scalar @{$self->regions};
-}
-
-sub max_layer_height {
-    my ($self) = @_;
-    return max(@{$self->config->nozzle_diameter});
 }
 
 # the bounding box of objects placed in copies position
@@ -399,16 +354,6 @@ sub total_bounding_box {
 sub size {
     my $self = shift;
     return $self->bounding_box->size;
-}
-
-sub _simplify_slices {
-    my $self = shift;
-    my ($distance) = @_;
-    
-    foreach my $layer (map @{$_->layers}, @{$self->objects}) {
-        $layer->slices->simplify($distance);
-        $_->slices->simplify($distance) for @{$layer->regions};
-    }
 }
 
 sub process {
@@ -524,7 +469,7 @@ EOF
             foreach my $expolygon (@current_layer_slices) {
                 my $intersection = intersection_ex(
                     [ map @$_, @previous_layer_slices ],
-                    $expolygon,
+                    [ @$expolygon ],
                 );
                 @$intersection
                     ? push @supported_slices, $expolygon
@@ -792,20 +737,20 @@ sub write_gcode {
     my $layer_height = $first_object->config->layer_height;
     for my $region_id (0..$#{$self->regions}) {
         printf $fh "; external perimeters extrusion width = %.2fmm\n",
-            $self->regions->[$region_id]->flow(FLOW_ROLE_EXTERNAL_PERIMETER, $layer_height, 0, 0, undef, $first_object)->width;
+            $self->regions->[$region_id]->flow(FLOW_ROLE_EXTERNAL_PERIMETER, $layer_height, 0, 0, -1, $first_object)->width;
         printf $fh "; perimeters extrusion width = %.2fmm\n",
-            $self->regions->[$region_id]->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 0, undef, $first_object)->width;
+            $self->regions->[$region_id]->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 0, -1, $first_object)->width;
         printf $fh "; infill extrusion width = %.2fmm\n",
-            $self->regions->[$region_id]->flow(FLOW_ROLE_INFILL, $layer_height, 0, 0, undef, $first_object)->width;
+            $self->regions->[$region_id]->flow(FLOW_ROLE_INFILL, $layer_height, 0, 0, -1, $first_object)->width;
         printf $fh "; solid infill extrusion width = %.2fmm\n",
-            $self->regions->[$region_id]->flow(FLOW_ROLE_SOLID_INFILL, $layer_height, 0, 0, undef, $first_object)->width;
+            $self->regions->[$region_id]->flow(FLOW_ROLE_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object)->width;
         printf $fh "; top infill extrusion width = %.2fmm\n",
-            $self->regions->[$region_id]->flow(FLOW_ROLE_TOP_SOLID_INFILL, $layer_height, 0, 0, undef, $first_object)->width;
+            $self->regions->[$region_id]->flow(FLOW_ROLE_TOP_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object)->width;
         printf $fh "; support material extrusion width = %.2fmm\n",
             $self->objects->[0]->support_material_flow->width
             if $self->has_support_material;
         printf $fh "; first layer extrusion width = %.2fmm\n",
-            $self->regions->[$region_id]->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 1, undef, $self->objects->[0])->width
+            $self->regions->[$region_id]->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 1, -1, $self->objects->[0])->width
             if $self->regions->[$region_id]->config->first_layer_extrusion_width;
         print  $fh "\n";
     }

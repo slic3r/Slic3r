@@ -4,6 +4,7 @@
 #include <myinit.h>
 #include <set>
 #include <vector>
+#include "Flow.hpp"
 #include "PrintConfig.hpp"
 #include "Point.hpp"
 #include "Layer.hpp"
@@ -13,6 +14,7 @@
 namespace Slic3r {
 
 class Print;
+class PrintObject;
 class ModelObject;
 
 
@@ -47,6 +49,7 @@ class PrintRegion
     PrintRegionConfig config;
 
     Print* print();
+    Flow flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, const PrintObject &object) const;
 
     private:
     Print* _print;
@@ -160,11 +163,24 @@ class Print
     bool invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
     bool invalidate_step(PrintStep step);
     bool invalidate_all_steps();
-
+    
+    void init_extruders();
+    
+    std::set<size_t> extruders() const;
+    void _simplify_slices(double distance);
+    double max_allowed_layer_height() const;
+    bool has_support_material() const;
+    
     private:
     void clear_regions();
     void delete_region(size_t idx);
 };
+
+#define FOREACH_BASE(type, container, iterator) for (type::const_iterator iterator = (container).begin(); iterator != (container).end(); ++iterator)
+#define FOREACH_REGION(print, region)       FOREACH_BASE(PrintRegionPtrs, (print)->regions, region)
+#define FOREACH_OBJECT(print, object)       FOREACH_BASE(PrintObjectPtrs, (print)->objects, object)
+#define FOREACH_LAYER(object, layer)        FOREACH_BASE(LayerPtrs, (object)->layers, layer)
+#define FOREACH_LAYERREGION(layer, layerm)  FOREACH_BASE(LayerRegionPtrs, (layer)->regions, layerm)
 
 }
 

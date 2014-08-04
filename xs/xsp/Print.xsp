@@ -2,8 +2,8 @@
 
 %{
 #include <myinit.h>
-#include "Print.hpp"
-#include "PlaceholderParser.hpp"
+#include "libslic3r/Print.hpp"
+#include "libslic3r/PlaceholderParser.hpp"
 %}
 
 %package{Slic3r::Print::State};
@@ -34,6 +34,9 @@ _constant()
     Ref<PrintRegionConfig> config()
         %code%{ RETVAL = &THIS->config; %};
     Ref<Print> print();
+    
+    Flow* flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, PrintObject* object)
+        %code%{ RETVAL = new Flow(THIS->flow(role, layer_height, bridge, first_layer, width, *object)); %};
 };
 
 
@@ -153,6 +156,20 @@ _constant()
         %code%{ THIS->state.set_done(step); %};
     void set_step_started(PrintStep step)
         %code%{ THIS->state.set_started(step); %};
+    
+    std::vector<int> extruders()
+        %code%{
+            std::set<size_t> extruders = THIS->extruders();
+            RETVAL.reserve(extruders.size());
+            for (std::set<size_t>::const_iterator e = extruders.begin(); e != extruders.end(); ++e) {
+                RETVAL.push_back(*e);
+            }
+        %};
+    void _simplify_slices(double distance);
+    double max_allowed_layer_height() const;
+    bool has_support_material() const;
+    
+    void init_extruders();
 %{
 
 double

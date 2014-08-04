@@ -2,8 +2,7 @@
 
 %{
 #include <myinit.h>
-#include "Layer.hpp"
-#include "perlglue.hpp"
+#include "libslic3r/Layer.hpp"
 %}
 
 %name{Slic3r::Layer::Region} class LayerRegion {
@@ -26,6 +25,9 @@
         %code%{ RETVAL = &THIS->perimeters; %};
     Ref<ExtrusionEntityCollection> fills()
         %code%{ RETVAL = &THIS->fills; %};
+    
+    Flow* flow(FlowRole role, bool bridge = false, double width = -1)
+        %code%{ RETVAL = new Flow(THIS->flow(role, bridge, width)); %};
 };
 
 %name{Slic3r::Layer} class Layer {
@@ -60,6 +62,8 @@
     
     int ptr()
         %code%{ RETVAL = (int)(intptr_t)THIS; %};
+    
+    void make_slices();
 };
 
 %name{Slic3r::Layer::Support} class SupportLayer {
