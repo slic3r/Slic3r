@@ -107,7 +107,7 @@ sub slice {
         $self->clear_layers;
     
         # make layers taking custom heights into account
-        my $print_z = my $slice_z = my $height = my $id = 0;
+        my $print_z = my $slice_z = my $height = my $cusp_height = my $id = 0;
         my $first_object_layer_height = -1;
         my $first_object_layer_distance = -1;
     
@@ -134,6 +134,11 @@ sub slice {
         # loop until we have at least one layer and the max slice_z reaches the object height
         my $max_z = unscale($self->size->z);
         while (($slice_z - $height) <= $max_z) {
+        	
+        	if ($self->config->adaptive_slicing) {
+        		#dummy
+        	}
+        	
             # assign the default height to the layer according to the general settings
             $height = ($id == 0)
                 ? $self->config->get_value('first_layer_height')

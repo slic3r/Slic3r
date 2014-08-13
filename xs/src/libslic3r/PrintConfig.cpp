@@ -6,6 +6,11 @@ t_optiondef_map
 PrintConfigDef::build_def() {
     t_optiondef_map Options;
     
+    Options["adaptive_slicing"].type = coBool;
+    Options["adaptive_slicing"].label = "Use adaptive slicing";
+    Options["adaptive_slicing"].tooltip = "Automatically determine layer heights by the objects topology instead of using the static value.";
+    Options["adaptive_slicing"].cli = "adaptive-slicing!";
+
     Options["avoid_crossing_perimeters"].type = coBool;
     Options["avoid_crossing_perimeters"].label = "Avoid crossing perimeters";
     Options["avoid_crossing_perimeters"].tooltip = "Optimize travel moves in order to minimize the crossing of perimeters. This is mostly useful with Bowden extruders which suffer from oozing. This feature slows down both the print and the G-code generation.";
@@ -77,6 +82,14 @@ PrintConfigDef::build_def() {
     Options["cooling"].label = "Enable auto cooling";
     Options["cooling"].tooltip = "This flag enables the automatic cooling logic that adjusts print speed and fan speed according to layer printing time.";
     Options["cooling"].cli = "cooling!";
+
+    Options["cusp_value"].type = coFloat;
+    Options["cusp_value"].label = "Cusp value";
+    Options["cusp_value"].tooltip = "This value determines the maximum deviaton from the objects original surface caused by the stair-stepping effect (approximation of the surface by discrete layers). Use a value between 0 (highest possible resolution) and [max_layer_height] (lowest possible resolution). Typical values are 0.1 - 0.2.";
+    Options["cusp_value"].sidetext = "mm";
+    Options["cusp_value"].cli = "cusp_value=f";
+    Options["cusp_value"].min = 0;
+    Options["cusp_value"].max = 1;
 
     Options["default_acceleration"].type = coFloat;
     Options["default_acceleration"].label = "Default";

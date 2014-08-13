@@ -114,6 +114,8 @@ class StaticPrintConfig : public virtual StaticConfig
 class PrintObjectConfig : public virtual StaticPrintConfig
 {
     public:
+	ConfigOptionBool				adaptive_slicing;
+	ConfigOptionFloat				cusp_value;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloatOrPercent      extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_height;
@@ -138,6 +140,8 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionFloat               xy_size_compensation;
     
     PrintObjectConfig() : StaticPrintConfig() {
+    	this->adaptive_slicing.value                             = false;
+    	this->cusp_value.value                                   = 0.15;
         this->dont_support_bridges.value                         = true;
         this->extrusion_width.value                              = 0;
         this->extrusion_width.percent                            = false;
@@ -167,6 +171,8 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     };
     
     ConfigOption* option(const t_config_option_key opt_key, bool create = false) {
+    	if (opt_key == "adaptive_slicing")                           return &this->adaptive_slicing;
+    	if (opt_key == "cusp_value")                                 return &this->cusp_value;
         if (opt_key == "dont_support_bridges")                       return &this->dont_support_bridges;
         if (opt_key == "extrusion_width")                            return &this->extrusion_width;
         if (opt_key == "first_layer_height")                         return &this->first_layer_height;

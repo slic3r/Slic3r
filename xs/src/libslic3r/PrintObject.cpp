@@ -145,7 +145,9 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "layer_height"
             || *opt_key == "first_layer_height"
             || *opt_key == "xy_size_compensation"
-            || *opt_key == "raft_layers") {
+            || *opt_key == "adaptive_slicing"
+        	|| *opt_key == "cusp_value"
+        	|| *opt_key == "raft_layers") {
             steps.insert(posSlice);
         } else if (*opt_key == "support_material"
             || *opt_key == "support_material_angle"

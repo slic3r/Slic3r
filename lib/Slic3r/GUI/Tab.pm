@@ -416,6 +416,7 @@ sub build {
     
     $self->init_config_options(qw(
         layer_height first_layer_height
+        adaptive_slicing cusp_value
         perimeters spiral_vase
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
@@ -458,6 +459,8 @@ sub build {
             my $optgroup = $page->new_optgroup('Layer height');
             $optgroup->append_single_option_line('layer_height');
             $optgroup->append_single_option_line('first_layer_height');
+            $optgroup->append_single_option_line('adaptive_slicing');
+            $optgroup->append_single_option_line('cusp_value');
         }
         {
             my $optgroup = $page->new_optgroup('Vertical shells');
@@ -694,6 +697,12 @@ sub _update {
     my $have_perimeters = $config->perimeters > 0;
     $self->get_field($_)->toggle($have_perimeters)
         for qw(extra_perimeters thin_walls overhangs seam_position external_perimeters_first);
+        
+    my $have_adaptive_slicing = $config->adaptive_slicing;
+    $self->get_field($_)->toggle($have_adaptive_slicing)
+        for qw(cusp_value);
+    $self->get_field($_)->toggle(!$have_adaptive_slicing)
+        for qw(layer_height);
     
     my $have_infill = $config->fill_density > 0;
     $self->get_field($_)->toggle($have_infill)
