@@ -461,6 +461,12 @@ PrintConfigDef::build_def() {
     Options["max_fan_speed"].min = 0;
     Options["max_fan_speed"].max = 100;
 
+    Options["max_layer_height"].type = coFloats;
+    Options["max_layer_height"].label = "max";
+    Options["max_layer_height"].tooltip = "This is the highest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are slightly smaller than nozzle_diameter.";
+    Options["max_layer_height"].sidetext = "mm";
+    Options["max_layer_height"].cli = "max-layer-height=f@";
+
     Options["min_fan_speed"].type = coInt;
     Options["min_fan_speed"].label = "Min";
     Options["min_fan_speed"].tooltip = "This setting represents the minimum PWM your fan needs to work.";
@@ -468,6 +474,12 @@ PrintConfigDef::build_def() {
     Options["min_fan_speed"].cli = "min-fan-speed=i";
     Options["min_fan_speed"].min = 0;
     Options["min_fan_speed"].max = 100;
+
+    Options["min_layer_height"].type = coFloats;
+    Options["min_layer_height"].label = "min";
+    Options["min_layer_height"].tooltip = "TThis is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";
+    Options["min_layer_height"].sidetext = "mm";
+    Options["min_layer_height"].cli = "min-layer-height=f@";
 
     Options["min_print_speed"].type = coInt;
     Options["min_print_speed"].label = "Min print speed";

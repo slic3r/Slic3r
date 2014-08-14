@@ -348,7 +348,9 @@ class PrintConfig : public virtual StaticPrintConfig
     ConfigOptionBool                infill_first;
     ConfigOptionString              layer_gcode;
     ConfigOptionInt                 max_fan_speed;
+    ConfigOptionFloats              max_layer_height;
     ConfigOptionInt                 min_fan_speed;
+    ConfigOptionFloats              min_layer_height;
     ConfigOptionInt                 min_print_speed;
     ConfigOptionFloat               min_skirt_length;
     ConfigOptionString              notes;
@@ -427,7 +429,11 @@ class PrintConfig : public virtual StaticPrintConfig
         this->infill_first.value                                 = false;
         this->layer_gcode.value                                  = "";
         this->max_fan_speed.value                                = 100;
+        this->max_layer_height.values.resize(1);
+        this->max_layer_height.values[0]                         = 0.3;
         this->min_fan_speed.value                                = 35;
+        this->min_layer_height.values.resize(1);
+        this->min_layer_height.values[0]                         = 0.1;
         this->min_print_speed.value                              = 10;
         this->min_skirt_length.value                             = 0;
         this->notes.value                                        = "";
@@ -508,7 +514,9 @@ class PrintConfig : public virtual StaticPrintConfig
         if (opt_key == "infill_first")                               return &this->infill_first;
         if (opt_key == "layer_gcode")                                return &this->layer_gcode;
         if (opt_key == "max_fan_speed")                              return &this->max_fan_speed;
+        if (opt_key == "max_layer_height")                           return &this->max_layer_height;
         if (opt_key == "min_fan_speed")                              return &this->min_fan_speed;
+        if (opt_key == "min_layer_height")                           return &this->min_layer_height;
         if (opt_key == "min_print_speed")                            return &this->min_print_speed;
         if (opt_key == "min_skirt_length")                           return &this->min_skirt_length;
         if (opt_key == "notes")                                      return &this->notes;

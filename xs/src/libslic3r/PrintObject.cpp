@@ -143,6 +143,8 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             steps.insert(posPerimeters);
         } else if (*opt_key == "resolution"
             || *opt_key == "layer_height"
+            || *opt_key == "min_layer_height"
+            || *opt_key == "max_layer_height"
             || *opt_key == "first_layer_height"
             || *opt_key == "xy_size_compensation"
             || *opt_key == "adaptive_slicing"
