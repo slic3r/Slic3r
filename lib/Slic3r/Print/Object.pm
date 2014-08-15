@@ -130,19 +130,65 @@ sub slice {
             $first_object_layer_height = $nozzle_diameter;
             $first_object_layer_distance = $distance;
         }
+        
+        # create stateful objects and variables for the adaptive slicing process
+        my @adaptive_slicing;
+        my $min_height = 0;
+		my $max_height = 0;
+        if ($self->config->adaptive_slicing) {
+	        for my $region_id (0 .. ($self->region_count - 1)) {
+	        	my $mesh;
+			    foreach my $volume_id (@{ $self->get_region_volumes($region_id) }) {
+			        my $volume = $self->model_object->volumes->[$volume_id];
+			        next if $volume->modifier;
+			        if (defined $mesh) {
+			            $mesh->merge($volume->mesh);
+			        } else {
+			            $mesh = $volume->mesh->clone;
+			        }
+			    }
+	        	
+				$adaptive_slicing[$region_id] = Slic3r::AdaptiveSlicing->new(
+					mesh => $mesh
+				);
+			}
+			
+			# determine min and max layer height from perimeter extruder capabilities.
+			if($self->region_count > 1) { # multimaterial object
+				$min_height = max(map {$self->print->config->get_at('min_layer_height', $_)} (0..($self->region_count-1)));
+				$max_height = min(map {$self->print->config->get_at('max_layer_height', $_)} (0..($self->region_count-1)));
+			}else{ #single material object
+				my $perimeter_extruder = $self->print->get_region(0)->config->get('perimeter_extruder')-1;
+				$min_height = $self->print->config->get_at('min_layer_height', $perimeter_extruder);
+				$max_height = $self->print->config->get_at('max_layer_height', $perimeter_extruder);
+			}
+        }
     
         # loop until we have at least one layer and the max slice_z reaches the object height
         my $max_z = unscale($self->size->z);
         while (($slice_z - $height) <= $max_z) {
         	
         	if ($self->config->adaptive_slicing) {
-        		#dummy
+        		my $cusp_value = $self->config->get_value('cusp_value');
+        		
+        		Slic3r::debugf "\n Slice layer: %d\n", $id;
+       	
+       			# determine next layer height
+       			for my $region_id (0 .. ($self->region_count - 1)) {
+	       			# get cusp height
+	       			my $cusp_height = $adaptive_slicing[$region_id]->cusp_height(scale $slice_z, $cusp_value, $min_height, $max_height);
+
+			       	$height = ($id == 0)
+                		? $self->config->get_value('first_layer_height')
+                		: $cusp_height;
+		       	}
+
+        	}else{
+	        	# assign the default height to the layer according to the general settings
+	            $height = ($id == 0)
+	                ? $self->config->get_value('first_layer_height')
+	                : $self->config->layer_height;	
         	}
-        	
-            # assign the default height to the layer according to the general settings
-            $height = ($id == 0)
-                ? $self->config->get_value('first_layer_height')
-                : $self->config->layer_height;
         
             # look for an applicable custom range
             if (my $range = first { $_->[0] <= $slice_z && $_->[1] > $slice_z } @{$self->layer_height_ranges}) {
