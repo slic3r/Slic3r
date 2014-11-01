@@ -422,8 +422,8 @@ sub retract {
         
         # get the retraction length
         my $length = $toolchange
-            ? $self->writer->extruder->retract_length
-            : $self->writer->extruder->retract_length_toolchange;
+            ? $self->writer->extruder->retract_length_toolchange
+            : $self->writer->extruder->retract_length;
         
         # Calculate how long we need to travel in order to consume the required
         # amount of retraction. In other words, how far do we move in XY at $wipe_speed
