@@ -5,6 +5,7 @@ use utf8;
 
 use File::Basename qw(basename dirname);
 use List::Util qw(sum first);
+use PDF::API2;
 use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad);
 use threads::shared qw(shared_clone);
 use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :listctrl :misc 
@@ -169,9 +170,11 @@ sub new {
     # right pane buttons
     $self->{btn_export_gcode} = Wx::Button->new($self, -1, "Export G-code…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     $self->{btn_export_stl} = Wx::Button->new($self, -1, "Export STL…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
+    $self->{btn_export_pdf} = Wx::Button->new($self, -1, "Export PDF…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     $self->{btn_toolpaths_preview} = Wx::Button->new($self, -1, "Toolpaths preview…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     $self->{btn_export_gcode}->SetFont($Slic3r::GUI::small_font);
     $self->{btn_export_stl}->SetFont($Slic3r::GUI::small_font);
+    $self->{btn_export_pdf}->SetFont($Slic3r::GUI::small_font);
     $self->{btn_toolpaths_preview}->SetFont($Slic3r::GUI::small_font);
     $self->{btn_toolpaths_preview}->Disable;
     
@@ -183,6 +186,7 @@ sub new {
             arrange         bricks.png
             export_gcode    cog_go.png
             export_stl      brick_go.png
+            export_pdf      layers.png
             toolpaths_preview joystick.png
             
             increase        add.png
@@ -205,6 +209,7 @@ sub new {
         Slic3r::thread_cleanup();
     });
     EVT_BUTTON($self, $self->{btn_export_stl}, \&export_stl);
+    EVT_BUTTON($self, $self->{btn_export_pdf}, \&export_pdf);
     EVT_BUTTON($self, $self->{btn_toolpaths_preview}, \&toolpaths_preview);
     
     if ($self->{htoolbar}) {
@@ -348,6 +353,7 @@ sub new {
         $right_buttons_sizer->Add($self->{btn_export_gcode}, 0, wxEXPAND | wxTOP, 8);
         $right_buttons_sizer->Add($self->{btn_toolpaths_preview}, 0, wxEXPAND | wxTOP, 2);
         $right_buttons_sizer->Add($self->{btn_export_stl}, 0, wxEXPAND | wxTOP, 2);
+        $right_buttons_sizer->Add($self->{btn_export_pdf}, 0, wxEXPAND | wxTOP, 2);
         
         my $right_top_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $right_top_sizer->Add($self->{list}, 1, wxEXPAND | wxLEFT, 5);
@@ -1073,6 +1079,81 @@ sub export_stl {
     Slic3r::thread_cleanup() if $Slic3r::have_threads;
 }
 
+sub export_pdf {
+    my $self = shift;
+    
+    return if !@{$self->{objects}};
+        
+    my $options_dialog = Slic3r::GUI::Plater::ExportPDFDialog->new($self);
+    if ($options_dialog->ShowModal != wxID_OK) {
+        $options_dialog->Destroy;
+        return;
+    }
+    
+    my $output_file = $self->_get_export_file('PDF') or return;
+    
+    my $mm = 25.4 / 72;
+    
+    # prepare config
+    my $config = Slic3r::Config->new;
+    $config->set('layer_height', $options_dialog->{values}{layer_height});
+    
+    # read model
+    my $model = Slic3r::Model->new;
+    {
+        my $object = $model->add_object();
+        my $volume = $object->add_volume(
+            mesh => $self->{model}->mesh,
+        );
+    }
+    
+    # init print object
+    my $sprint = Slic3r::Print::Simple->new(
+        print_center => Slic3r::Pointf->new(0,0),
+    );
+    $sprint->apply_config($config);
+    $sprint->set_model($model);
+    my $print = $sprint->_print;
+    
+    # compute sizes
+    my $bb = $print->bounding_box;
+    my $size = $bb->size;
+    my $mediabox = [ map unscale($_)/$mm, @{$size} ];
+    
+    # init PDF
+    my $pdf = PDF::API2->new();
+    my $color = $pdf->colorspace_separation($options_dialog->{values}{color}, 'darkblue');  # RDG_GLOSS
+    
+    # slice and build output geometry
+    $_->slice for @{$print->objects};
+    foreach my $object (@{ $print->objects }) {
+        my $shift = $object->_shifted_copies->[0];
+        $shift->translate(map $_/2, @$size);
+        
+        foreach my $layer (@{ $object->layers }) {
+            my $page = $pdf->page();
+            $page->mediabox(@$mediabox);
+            my $content = $page->gfx;
+            $content->fillcolor($color, 1);
+        
+            foreach my $expolygon (@{$layer->slices}) {
+                $expolygon = $expolygon->clone;
+                $expolygon->translate(@$shift);
+                $content->poly(map { unscale($_->x)/$mm, unscale($_->y)/$mm } @{$expolygon->contour});  #)
+                $content->close;
+                foreach my $hole (@{$expolygon->holes}) {
+                    $content->poly(map { unscale($_->x)/$mm, unscale($_->y)/$mm } @$hole);  #)
+                    $content->close;
+                }
+                $content->fill;  # non-zero by default
+            }
+        }
+    }
+    
+    # write output file
+    $pdf->saveas($output_file);
+}
+
 sub export_amf {
     my $self = shift;
     
@@ -1090,14 +1171,14 @@ sub _get_export_file {
     my $self = shift;
     my ($format) = @_;
     
-    my $suffix = $format eq 'STL' ? '.stl' : '.amf.xml';
+    my $suffix = ($format eq 'STL') ? '.stl' : ($format eq 'PDF') ? '.pdf' : '.amf.xml';
     
     my $output_file = $main::opt{output};
     {
         $output_file = $self->{print}->expanded_output_filepath($output_file);
         $output_file =~ s/\.gcode$/$suffix/i;
         my $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
-            basename($output_file), &Slic3r::GUI::MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+            basename($output_file), &Slic3r::GUI::FILE_WILDCARDS()->{pdf}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
         if ($dlg->ShowModal != wxID_OK) {
             $dlg->Destroy;
             return undef;
@@ -1300,7 +1381,7 @@ sub object_list_changed {
     my $have_objects = @{$self->{objects}} ? 1 : 0;
     my $method = $have_objects ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
-        for grep $self->{"btn_$_"}, qw(reset arrange export_gcode export_stl);
+        for grep $self->{"btn_$_"}, qw(reset arrange export_gcode export_stl export_pdf);
     
     if ($self->{htoolbar}) {
         $self->{htoolbar}->EnableTool($_, $have_objects)
@@ -1554,6 +1635,61 @@ sub transform_thumbnail {
     $t->scale($model_instance->scaling_factor);
     
     $self->transformed_thumbnail($t);
+}
+
+package Slic3r::GUI::Plater::ExportPDFDialog;
+use Wx qw(:dialog :id :misc :sizer :systemsettings wxTheApp);
+use Wx::Event qw(EVT_BUTTON EVT_TEXT_ENTER);
+use base 'Wx::Dialog';
+
+sub new {
+    my ($class, $parent) = @_;
+    my $self = $class->SUPER::new($parent, -1, "Export PDF", wxDefaultPosition, [600,200]);
+    $self->{values} = {
+        layer_height    => 0.1,
+        color           => 'RDG_GLOSS',
+    };
+    
+    my $optgroup;
+    $optgroup = Slic3r::GUI::OptionsGroup->new(
+        parent  => $self,
+        title   => 'Export Options',
+        on_change => sub {
+            my ($opt_id) = @_;
+            $self->{values}{$opt_id} = $optgroup->get_value($opt_id);
+        },
+        label_width => 100,
+    );
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'layer_height',
+        type        => 'f',
+        label       => 'Layer height',
+        tooltip     => 'Layer height to use for slicing.',
+        default     => $self->{values}{layer_height},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'color',
+        type        => 's',
+        label       => 'Color',
+        tooltip     => 'The color name to use in the PDF file.',
+        default     => $self->{values}{color},
+        width       => 150,
+    ));
+    
+    my $sizer = Wx::BoxSizer->new(wxVERTICAL);
+    $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+    
+    my $buttons = $self->CreateStdDialogButtonSizer(wxOK | wxCANCEL);
+    EVT_BUTTON($self, wxID_OK, sub {
+        $self->EndModal(wxID_OK);
+        $self->Close;  # needed on Linux
+    });
+    $sizer->Add($buttons, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+    
+    $self->SetSizer($sizer);
+    $sizer->SetSizeHints($self);
+    
+    return $self;
 }
 
 1;

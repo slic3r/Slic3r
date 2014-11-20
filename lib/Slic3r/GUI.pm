@@ -41,6 +41,7 @@ use constant FILE_WILDCARDS => {
     ini     => 'INI files *.ini|*.ini;*.INI',
     gcode   => 'G-code files (*.gcode, *.gco, *.g, *.ngc)|*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC',
     svg     => 'SVG files *.svg|*.svg;*.SVG',
+    pdf     => 'PDF files *.pdf|*.pdf;*.PDF',
 };
 use constant MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(known stl obj amf)};
 
@@ -55,7 +56,7 @@ our $Settings = {
         mode => 'simple',
         version_check => 1,
         autocenter => 1,
-        background_processing => 1,
+        background_processing => 0,
     },
 };
 
@@ -68,7 +69,7 @@ $medium_font->SetPointSize(12);
 sub OnInit {
     my ($self) = @_;
     
-    $self->SetAppName('Slic3r');
+    $self->SetAppName('UV-Slic3r');
     Slic3r::debugf "wxWidgets version %s, Wx version %s\n", &Wx::wxVERSION_STRING, $Wx::VERSION;
     
     $self->{notifier} = Slic3r::GUI::Notifier->new;

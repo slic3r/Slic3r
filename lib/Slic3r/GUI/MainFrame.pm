@@ -55,7 +55,7 @@ sub new {
         $sizer->SetSizeHints($self);
         $self->SetSizer($sizer);
         $self->Fit;
-        $self->SetMinSize([760, 490]);
+        $self->SetMinSize([760, 550]);
         $self->SetSize($self->GetMinSize);
         $self->Show;
         $self->Layout;
