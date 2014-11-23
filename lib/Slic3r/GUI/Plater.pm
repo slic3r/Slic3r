@@ -1680,10 +1680,6 @@ sub new {
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     
     my $buttons = $self->CreateStdDialogButtonSizer(wxOK | wxCANCEL);
-    EVT_BUTTON($self, wxID_OK, sub {
-        $self->EndModal(wxID_OK);
-        $self->Close;  # needed on Linux
-    });
     $sizer->Add($buttons, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     
     $self->SetSizer($sizer);
