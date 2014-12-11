@@ -23,7 +23,7 @@ sub new {
         $self, -1,
         0,                              # default
         0,                              # min
-        0,                              # max
+        1,                              # max
         wxDefaultPosition,
         wxDefaultSize,
         wxVERTICAL | wxSL_INVERSE,
