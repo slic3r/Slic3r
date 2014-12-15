@@ -460,7 +460,7 @@ class PrintConfig : public GCodeConfig
         this->default_acceleration.value                         = 0;
         this->disable_fan_first_layers.value                     = 1;
         this->duplicate_distance.value                           = 6;
-        this->end_gcode.value                                    = "M104 S0 ; turn off temperature\nG28 X0  ; home X axis\nM84     ; disable motors\n";
+        this->end_gcode.value                                    = "M104 S0 ; turn off temperature for hotend\nM140 S0; turn off temperature for bed\nG28 X0  ; home X axis\nM84     ; disable motors\n";
         this->extruder_clearance_height.value                    = 20;
         this->extruder_clearance_radius.value                    = 20;
         this->extruder_offset.values.resize(1);
