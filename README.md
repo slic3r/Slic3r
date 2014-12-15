@@ -215,9 +215,10 @@ The author of the Silk icon set is Mark James.
         --solid-fill-pattern Pattern to use to fill solid layers (default: rectilinear)
         --start-gcode       Load initial G-code from the supplied file. This will overwrite
                             the default command (home all axes [G28]).
-        --end-gcode         Load final G-code from the supplied file. This will overwrite
-                            the default commands (turn off temperature [M104 S0],
-                            home X axis [G28 X], disable motors [M84]).
+    --end-gcode         Load final G-code from the supplied file. This will overwrite 
+                        the default commands (turn off temperature for hotend [M104 S0],
+                        turn off temperature for bed [M140 S0] home X axis [G28 X],
+                        disable motors [M84]).
         --layer-gcode       Load layer-change G-code from the supplied file (default: nothing).
         --toolchange-gcode  Load tool-change G-code from the supplied file (default: nothing).
         --seam-position     Position of loop starting points (random/nearest/aligned, default: aligned).
