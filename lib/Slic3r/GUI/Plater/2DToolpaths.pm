@@ -292,7 +292,7 @@ sub Render {
         }
     }
     
-    gluDeleteTess($tess);
+    #gluDeleteTess($tess);
     glFlush();
     $self->SwapBuffers;
 }
