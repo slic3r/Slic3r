@@ -3,6 +3,8 @@
 
 #include <myinit.h>
 #include "ExPolygon.hpp"
+#include "Line.hpp"
+#include "Polyline.hpp"
 
 namespace Slic3r {
 
@@ -22,7 +24,7 @@ class ExPolygonCollection
     void scale(double factor);
     void translate(double x, double y);
     void rotate(double angle, const Point &center);
-    bool contains_point(const Point &point) const;
+    template <class T> bool contains(const T &item) const;
     void simplify(double tolerance);
     void convex_hull(Polygon* hull) const;
 };

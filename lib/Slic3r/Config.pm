@@ -174,19 +174,6 @@ sub _handle_legacy {
     return ($opt_key, $value);
 }
 
-sub set_ifndef {
-    my $self = shift;
-    my ($opt_key, $value, $deserialize) = @_;
-    
-    if (!$self->has($opt_key)) {
-        if ($deserialize) {
-            $self->set_deserialize($opt_key, $value);
-        } else {
-            $self->set($opt_key, $value);
-        }
-    }
-}
-
 sub as_ini {
     my ($self) = @_;
     
@@ -211,23 +198,6 @@ sub setenv {
     foreach my $opt_key (@{$self->get_keys}) {
         $ENV{"SLIC3R_" . uc $opt_key} = $self->serialize($opt_key);
     }
-}
-
-sub equals {
-    my ($self, $other) = @_;
-    return @{ $self->diff($other) } == 0;
-}
-
-# this will *ignore* options not present in both configs
-sub diff {
-    my ($self, $other) = @_;
-    
-    my @diff = ();
-    foreach my $opt_key (sort @{$self->get_keys}) {
-        push @diff, $opt_key
-            if $other->has($opt_key) && $other->serialize($opt_key) ne $self->serialize($opt_key);
-    }
-    return [@diff];
 }
 
 # this method is idempotent by design and only applies to ::DynamicConfig or ::Full
@@ -280,14 +250,14 @@ sub validate {
     die "Invalid value for --fill-pattern\n"
         if !first { $_ eq $self->fill_pattern } @{$Options->{fill_pattern}{values}};
     
-    # --solid-fill-pattern
-    die "Invalid value for --solid-fill-pattern\n"
-        if !first { $_ eq $self->solid_fill_pattern } @{$Options->{solid_fill_pattern}{values}};
+    # --external-fill-pattern
+    die "Invalid value for --external-fill-pattern\n"
+        if !first { $_ eq $self->external_fill_pattern } @{$Options->{external_fill_pattern}{values}};
     
     # --fill-density
     die "The selected fill pattern is not supposed to work at 100% density\n"
         if $self->fill_density == 100
-            && !first { $_ eq $self->fill_pattern } @{$Options->{solid_fill_pattern}{values}};
+            && !first { $_ eq $self->fill_pattern } @{$Options->{external_fill_pattern}{values}};
     
     # --infill-every-layers
     die "Invalid value for --infill-every-layers\n"
@@ -410,7 +380,8 @@ sub read_ini {
     my ($file) = @_;
     
     local $/ = "\n";
-    Slic3r::open(\my $fh, '<', $file);
+    Slic3r::open(\my $fh, '<', $file)
+        or die "Unable to open $file: $!\n";
     binmode $fh, ':utf8';
     
     my $ini = { _ => {} };
@@ -424,7 +395,7 @@ sub read_ini {
             $category = $1;
             next;
         }
-        /^(\w+) = (.*)/ or die "Unreadable configuration file (invalid data at line $.)\n";
+        /^(\w+) *= *(.*)/ or die "Unreadable configuration file (invalid data at line $.)\n";
         $ini->{$category}{$1} = $2;
     }
     close $fh;

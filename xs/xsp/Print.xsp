@@ -56,12 +56,16 @@ _constant()
     Ref<ModelObject> model_object();
     Ref<PrintObjectConfig> config()
         %code%{ RETVAL = &THIS->config; %};
-    Points copies()
-        %code%{ RETVAL = THIS->copies; %};
+    Points copies();
     t_layer_height_ranges layer_height_ranges()
         %code%{ RETVAL = THIS->layer_height_ranges; %};
     Ref<Point3> size()
         %code%{ RETVAL = &THIS->size; %};
+    BoundingBox* bounding_box()
+        %code{%
+            RETVAL = new BoundingBox();
+            THIS->bounding_box(RETVAL);
+        %};
     Ref<Point> _copies_shift()
         %code%{ RETVAL = &THIS->_copies_shift; %};
     
@@ -75,11 +79,16 @@ _constant()
     void set_shifted_copies(Points value)
         %code%{ THIS->_shifted_copies = value; %};
 
-    void set_copies(Points copies)
-        %code%{ THIS->copies = copies; %};
+    bool add_copy(Pointf* point)
+        %code%{ RETVAL = THIS->add_copy(*point); %};
+    bool delete_last_copy();
+    bool delete_all_copies();
+    bool set_copies(Points copies);
+    bool reload_model_instances();
     void set_layer_height_ranges(t_layer_height_ranges layer_height_ranges)
         %code%{ THIS->layer_height_ranges = layer_height_ranges; %};
 
+    size_t total_layer_count();
     size_t layer_count();
     void clear_layers();
     Ref<Layer> get_layer(int idx);
@@ -130,13 +139,8 @@ _constant()
         %code%{ RETVAL = &THIS->objects; %};
     void clear_objects();
     Ref<PrintObject> get_object(int idx);
-    Ref<PrintObject> add_object(ModelObject* model_object,
-        BoundingBoxf3 *modobj_bbox)
-        %code%{ RETVAL = THIS->add_object(model_object, *modobj_bbox); %};
-    Ref<PrintObject> set_new_object(size_t idx, ModelObject* model_object,
-        BoundingBoxf3 *modobj_bbox)
-        %code%{ RETVAL = THIS->set_new_object(idx, model_object, *modobj_bbox); %};
     void delete_object(int idx);
+    void reload_object(int idx);
     size_t object_count()
         %code%{ RETVAL = THIS->objects.size(); %};
 
@@ -152,6 +156,8 @@ _constant()
     bool invalidate_all_steps();
     bool step_done(PrintStep step)
         %code%{ RETVAL = THIS->state.is_done(step); %};
+    bool object_step_done(PrintObjectStep step)
+        %code%{ RETVAL = THIS->step_done(step); %};
     void set_step_done(PrintStep step)
         %code%{ THIS->state.set_done(step); %};
     void set_step_started(PrintStep step)
@@ -169,7 +175,23 @@ _constant()
     double max_allowed_layer_height() const;
     bool has_support_material() const;
     
+    void add_model_object(ModelObject* model_object, int idx = -1);
+    bool apply_config(DynamicPrintConfig* config)
+        %code%{ RETVAL = THIS->apply_config(*config); %};
     void init_extruders();
+    void validate()
+        %code%{
+            try {
+                THIS->validate();
+            } catch (PrintValidationException &e) {
+                croak("%s\n", e.what());
+            }
+        %};
+    Clone<BoundingBox> bounding_box();
+    Clone<BoundingBox> total_bounding_box();
+    double skirt_first_layer_height();
+    Clone<Flow> brim_flow();
+    Clone<Flow> skirt_flow();
 %{
 
 double

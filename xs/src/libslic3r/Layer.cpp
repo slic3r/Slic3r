@@ -98,7 +98,7 @@ Layer::make_slices()
             Polygons region_slices_p = (*layerm)->slices;
             slices_p.insert(slices_p.end(), region_slices_p.begin(), region_slices_p.end());
         }
-        union_(slices_p, slices);
+        union_(slices_p, &slices);
     }
     
     this->slices.expolygons.clear();
@@ -119,6 +119,18 @@ Layer::make_slices()
         this->slices.expolygons.push_back(slices[*it]);
     }
 }
+
+template <class T>
+bool
+Layer::any_internal_region_slice_contains(const T &item) const
+{
+    FOREACH_LAYERREGION(this, layerm) {
+        if ((*layerm)->slices.any_internal_contains(item)) return true;
+    }
+    return false;
+}
+template bool Layer::any_internal_region_slice_contains<Line>(const Line &item) const;
+template bool Layer::any_internal_region_slice_contains<Polyline>(const Polyline &item) const;
 
 
 #ifdef SLIC3RXS

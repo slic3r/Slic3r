@@ -1,5 +1,6 @@
 #include "Print.hpp"
 #include "BoundingBox.hpp"
+#include "Geometry.hpp"
 
 namespace Slic3r {
 
@@ -21,12 +22,13 @@ PrintObject::PrintObject(Print* print, ModelObject* model_object, const Bounding
         this->_copies_shift = Point(
             scale_(modobj_bbox.min.x), scale_(modobj_bbox.min.y));
 
-        // TODO: $self->_trigger_copies;
-
         // Scale the object size and store it
         Pointf3 size = modobj_bbox.size();
         this->size = Point3(scale_(size.x), scale_(size.y), scale_(size.z));
     }
+    
+    this->reload_model_instances();
+    this->layer_height_ranges = model_object->layer_height_ranges;
 }
 
 PrintObject::~PrintObject()
@@ -45,6 +47,80 @@ PrintObject::model_object()
     return this->_model_object;
 }
 
+Points
+PrintObject::copies() const
+{
+    return this->_copies;
+}
+
+bool
+PrintObject::add_copy(const Pointf &point)
+{
+    Points points = this->_copies;
+    points.push_back(Point::new_scale(point.x, point.y));
+    return this->set_copies(points);
+}
+
+bool
+PrintObject::delete_last_copy()
+{
+    Points points = this->_copies;
+    points.pop_back();
+    return this->set_copies(points);
+}
+
+bool
+PrintObject::delete_all_copies()
+{
+    Points points;
+    return this->set_copies(points);
+}
+
+bool
+PrintObject::set_copies(const Points &points)
+{
+    this->_copies = points;
+    
+    // order copies with a nearest neighbor search and translate them by _copies_shift
+    this->_shifted_copies.clear();
+    this->_shifted_copies.reserve(points.size());
+    
+    // order copies with a nearest-neighbor search
+    std::vector<Points::size_type> ordered_copies;
+    Slic3r::Geometry::chained_path(points, ordered_copies);
+    
+    for (std::vector<Points::size_type>::const_iterator it = ordered_copies.begin(); it != ordered_copies.end(); ++it) {
+        Point copy = points[*it];
+        copy.translate(this->_copies_shift);
+        this->_shifted_copies.push_back(copy);
+    }
+    
+    bool invalidated = false;
+    if (this->_print->invalidate_step(psSkirt)) invalidated = true;
+    if (this->_print->invalidate_step(psBrim)) invalidated = true;
+    return invalidated;
+}
+
+bool
+PrintObject::reload_model_instances()
+{
+    Points copies;
+    for (ModelInstancePtrs::const_iterator i = this->_model_object->instances.begin(); i != this->_model_object->instances.end(); ++i) {
+        copies.push_back(Point::new_scale((*i)->offset.x, (*i)->offset.y));
+    }
+    return this->set_copies(copies);
+}
+
+void
+PrintObject::bounding_box(BoundingBox* bb) const
+{
+    // since the object is aligned to origin, bounding box coincides with size
+    Points pp;
+    pp.push_back(Point(0,0));
+    pp.push_back(this->size);
+    *bb = BoundingBox(pp);
+}
+
 void
 PrintObject::add_region_volume(int region_id, int volume_id)
 {
@@ -55,8 +131,17 @@ PrintObject::add_region_volume(int region_id, int volume_id)
     region_volumes[region_id].push_back(volume_id);
 }
 
+/*  This is the *total* layer count (including support layers)
+    this value is not supposed to be compared with Layer::id
+    since they have different semantics */
 size_t
-PrintObject::layer_count()
+PrintObject::total_layer_count() const
+{
+    return this->layer_count() + this->support_layer_count();
+}
+
+size_t
+PrintObject::layer_count() const
 {
     return this->layers.size();
 }
@@ -91,7 +176,7 @@ PrintObject::delete_layer(int idx)
 }
 
 size_t
-PrintObject::support_layer_count()
+PrintObject::support_layer_count() const
 {
     return this->support_layers.size();
 }
@@ -137,6 +222,7 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "extra_perimeters"
             || *opt_key == "gap_fill_speed"
             || *opt_key == "overhangs"
+            || *opt_key == "first_layer_extrusion_width"
             || *opt_key == "perimeter_extrusion_width"
             || *opt_key == "thin_walls"
             || *opt_key == "external_perimeters_first") {
@@ -158,22 +244,25 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "support_material_pattern"
             || *opt_key == "support_material_spacing"
             || *opt_key == "support_material_threshold"
-            || *opt_key == "dont_support_bridges") {
+            || *opt_key == "dont_support_bridges"
+            || *opt_key == "first_layer_extrusion_width") {
             steps.insert(posSupportMaterial);
         } else if (*opt_key == "interface_shells"
             || *opt_key == "infill_only_where_needed"
+            || *opt_key == "infill_every_layers"
+            || *opt_key == "solid_infill_every_layers"
             || *opt_key == "bottom_solid_layers"
             || *opt_key == "top_solid_layers"
+            || *opt_key == "solid_infill_below_area"
             || *opt_key == "infill_extruder"
+            || *opt_key == "solid_infill_extruder"
             || *opt_key == "infill_extrusion_width") {
             steps.insert(posPrepareInfill);
-        } else if (*opt_key == "fill_angle"
+        } else if (*opt_key == "external_fill_pattern"
+            || *opt_key == "fill_angle"
             || *opt_key == "fill_pattern"
-            || *opt_key == "solid_fill_pattern"
-            || *opt_key == "infill_every_layers"
-            || *opt_key == "solid_infill_below_area"
-            || *opt_key == "solid_infill_every_layers"
-            || *opt_key == "top_infill_extrusion_width") {
+            || *opt_key == "top_infill_extrusion_width"
+            || *opt_key == "first_layer_extrusion_width") {
             steps.insert(posInfill);
         } else if (*opt_key == "fill_density"
             || *opt_key == "solid_infill_extrusion_width") {

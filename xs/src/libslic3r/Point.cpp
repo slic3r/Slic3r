@@ -41,6 +41,12 @@ Point::translate(double x, double y)
 }
 
 void
+Point::translate(const Vector &vector)
+{
+    this->translate(vector.x, vector.y);
+}
+
+void
 Point::rotate(double angle, const Point &center)
 {
     double cur_x = (double)this->x;
@@ -154,6 +160,13 @@ Point::ccw(const Line &line) const
     return this->ccw(line.a, line.b);
 }
 
+// returns the CCW angle between this-p1 and this-p2
+double
+Point::ccw_angle(const Point &p1, const Point &p2) const
+{
+    return Line(*this, p1).orientation() - Line(*this, p2).orientation();
+}
+
 Point
 Point::projection_onto(const MultiPoint &poly) const
 {
@@ -203,6 +216,12 @@ Point
 Point::negative() const
 {
     return Point(-this->x, -this->y);
+}
+
+Vector
+Point::vector_to(const Point &point) const
+{
+    return Vector(point.x - this->x, point.y - this->y);
 }
 
 Point
@@ -280,6 +299,18 @@ Pointf::rotate(double angle, const Pointf &center)
     this->y = center.y + cos(angle) * (cur_y - center.y) + sin(angle) * (cur_x - center.x);
 }
 
+Pointf
+Pointf::negative() const
+{
+    return Pointf(-this->x, -this->y);
+}
+
+Vectorf
+Pointf::vector_to(const Pointf &point) const
+{
+    return Vectorf(point.x - this->x, point.y - this->y);
+}
+
 #ifdef SLIC3RXS
 
 REGISTER_CLASS(Pointf, "Pointf");
@@ -306,15 +337,16 @@ Pointf::from_SV(SV* point_sv)
     return true;
 }
 
-void
+bool
 Pointf::from_SV_check(SV* point_sv)
 {
     if (sv_isobject(point_sv) && (SvTYPE(SvRV(point_sv)) == SVt_PVMG)) {
         if (!sv_isa(point_sv, perl_class_name(this)) && !sv_isa(point_sv, perl_class_name_ref(this)))
             CONFESS("Not a valid %s object (got %s)", perl_class_name(this), HvNAME(SvSTASH(SvRV(point_sv))));
         *this = *(Pointf*)SvIV((SV*)SvRV( point_sv ));
+        return true;
     } else {
-        this->from_SV(point_sv);
+        return this->from_SV(point_sv);
     }
 }
 #endif
@@ -327,10 +359,37 @@ Pointf3::scale(double factor)
 }
 
 void
+Pointf3::translate(const Vectorf3 &vector)
+{
+    this->translate(vector.x, vector.y, vector.z);
+}
+
+void
 Pointf3::translate(double x, double y, double z)
 {
     Pointf::translate(x, y);
     this->z += z;
+}
+
+double
+Pointf3::distance_to(const Pointf3 &point) const
+{
+    double dx = ((double)point.x - this->x);
+    double dy = ((double)point.y - this->y);
+    double dz = ((double)point.z - this->z);
+    return sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+Pointf3
+Pointf3::negative() const
+{
+    return Pointf3(-this->x, -this->y, -this->z);
+}
+
+Vectorf3
+Pointf3::vector_to(const Pointf3 &point) const
+{
+    return Vectorf3(point.x - this->x, point.y - this->y, point.z - this->z);
 }
 
 #ifdef SLIC3RXS

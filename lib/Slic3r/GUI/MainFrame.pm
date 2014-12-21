@@ -38,16 +38,6 @@ sub new {
     
     $self->{loaded} = 1;
     
-    # declare events
-    EVT_CLOSE($self, sub {
-        my (undef, $event) = @_;
-        if ($event->CanVeto && !$self->check_unsaved_changes) {
-            $event->Veto;
-            return;
-        }
-        $event->Skip;
-    });
-    
     # initialize layout
     {
         my $sizer = Wx::BoxSizer->new(wxVERTICAL);
@@ -56,10 +46,35 @@ sub new {
         $self->SetSizer($sizer);
         $self->Fit;
         $self->SetMinSize([760, 490]);
-        $self->SetSize($self->GetMinSize);
+        if (defined $Slic3r::GUI::Settings->{_}{main_frame_size}) {
+            $self->SetSize([ split ',', $Slic3r::GUI::Settings->{_}{main_frame_size}, 2 ]);
+            $self->Move([ split ',', $Slic3r::GUI::Settings->{_}{main_frame_pos}, 2 ]);
+            $self->Maximize(1) if $Slic3r::GUI::Settings->{_}{main_frame_maximized};
+        } else {
+            $self->SetSize($self->GetMinSize);
+        }
         $self->Show;
         $self->Layout;
     }
+    
+    # declare events
+    EVT_CLOSE($self, sub {
+        my (undef, $event) = @_;
+        
+        if ($event->CanVeto && !$self->check_unsaved_changes) {
+            $event->Veto;
+            return;
+        }
+        
+        # save window size
+        $Slic3r::GUI::Settings->{_}{main_frame_pos}  = join ',', $self->GetScreenPositionXY;
+        $Slic3r::GUI::Settings->{_}{main_frame_size} = join ',', $self->GetSizeWH;
+        $Slic3r::GUI::Settings->{_}{main_frame_maximized} = $self->IsMaximized;
+        wxTheApp->save_settings;
+        
+        # propagate event
+        $event->Skip;
+    });
     
     return $self;
 }
@@ -77,7 +92,7 @@ sub _init_tabpanel {
     my $simple_config;
     if ($self->{mode} eq 'simple') {
         $simple_config = Slic3r::Config->load("$Slic3r::GUI::datadir/simple.ini")
-            if -e "$Slic3r::GUI::datadir/simple.ini";
+            if -e Slic3r::encode_path("$Slic3r::GUI::datadir/simple.ini");
     }
     
     my $class_prefix = $self->{mode} eq 'simple' ? "Slic3r::GUI::SimpleTab::" : "Slic3r::GUI::Tab::";
@@ -191,10 +206,6 @@ sub _init_menubar {
         });
         $self->_append_menu_item($self->{plater_menu}, "Export AMF...", 'Export current plate as AMF', sub {
             $plater->export_amf;
-        });
-        $self->{plater_menu}->AppendSeparator();
-        $self->_append_menu_item($self->{plater_menu}, "Toolpaths preview…", 'Open a viewer with toolpaths preview', sub {
-            $plater->toolpaths_preview;
         });
         
         $self->{object_menu} = $self->{plater}->object_menu;

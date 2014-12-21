@@ -418,6 +418,8 @@ sub set_value {
 package Slic3r::GUI::Tab::Print;
 use base 'Slic3r::GUI::Tab';
 
+use Wx qw(:icon :dialog :id);
+
 sub name { 'print' }
 sub title { 'Print Settings' }
 
@@ -430,7 +432,7 @@ sub build {
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
         seam_position external_perimeters_first
-        fill_density fill_pattern solid_fill_pattern
+        fill_density fill_pattern external_fill_pattern
         infill_every_layers infill_only_where_needed
         solid_infill_every_layers fill_angle solid_infill_below_area 
         only_retract_when_crossing_perimeters infill_first
@@ -452,7 +454,8 @@ sub build {
         complete_objects extruder_clearance_radius extruder_clearance_height
         gcode_comments output_filename_format
         post_process
-        perimeter_extruder infill_extruder support_material_extruder support_material_interface_extruder
+        perimeter_extruder infill_extruder solid_infill_extruder
+        support_material_extruder support_material_interface_extruder
         ooze_prevention standby_temperature_delta
         interface_shells
         extrusion_width first_layer_extrusion_width perimeter_extrusion_width 
@@ -503,7 +506,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Infill');
             $optgroup->append_single_option_line('fill_density');
             $optgroup->append_single_option_line('fill_pattern');
-            $optgroup->append_single_option_line('solid_fill_pattern');
+            $optgroup->append_single_option_line('external_fill_pattern');
         }
         {
             my $optgroup = $page->new_optgroup('Reducing printing time');
@@ -646,6 +649,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Extruders');
             $optgroup->append_single_option_line('perimeter_extruder');
             $optgroup->append_single_option_line('infill_extruder');
+            $optgroup->append_single_option_line('solid_infill_extruder');
             $optgroup->append_single_option_line('support_material_extruder');
             $optgroup->append_single_option_line('support_material_interface_extruder');
         }
@@ -693,13 +697,21 @@ sub _update {
     
     my $config = $self->{config};
     
-    # we enable spiral vase if other settings are compatible with it
-    # or if it is enabled (this prevents the checkbox from being disabled
-    # when an incompatible setting is set)
-    $self->get_field('spiral_vase')->toggle(
-        ($config->perimeters == 1 && $config->top_solid_layers == 0 && $config->fill_density == 0)
-            || $config->spiral_vase
-    );
+    if ($config->spiral_vase && !($config->perimeters == 1 && $config->top_solid_layers == 0 && $config->fill_density == 0)) {
+        my $dialog = Wx::MessageDialog->new($self, "The Spiral Vase mode requires one perimeter, no top solid layers and 0% fill density. Shall I adjust those settings in order to enable Spiral Vase?",
+            'Spiral Vase', wxICON_WARNING | wxYES | wxNO);
+        if ($dialog->ShowModal() == wxID_YES) {
+            my $new_conf = Slic3r::Config->new;
+            $new_conf->set("perimeters", 1);
+            $new_conf->set("top_solid_layers", 0);
+            $new_conf->set("fill_density", 0);
+            $self->load_config($new_conf);
+        } else {
+            my $new_conf = Slic3r::Config->new;
+            $new_conf->set("spiral_vase", 0);
+            $self->load_config($new_conf);
+        }
+    }
     
     my $have_perimeters = $config->perimeters > 0;
     $self->get_field($_)->toggle($have_perimeters)
@@ -884,7 +896,7 @@ sub build {
     $self->init_config_options(qw(
         bed_shape z_offset
         gcode_flavor use_relative_e_distances
-        use_firmware_retraction vibration_limit
+        use_firmware_retraction pressure_advance vibration_limit
         start_gcode end_gcode layer_gcode toolchange_gcode
         nozzle_diameter extruder_offset
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
@@ -960,6 +972,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Advanced');
             $optgroup->append_single_option_line('use_firmware_retraction');
+            $optgroup->append_single_option_line('pressure_advance');
             $optgroup->append_single_option_line('vibration_limit');
         }
     }

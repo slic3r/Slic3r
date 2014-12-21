@@ -1,19 +1,28 @@
 package Slic3r::GCode::Reader;
 use Moo;
 
+has 'config'    => (is => 'ro', default => sub { Slic3r::Config::GCode->new });
 has 'X' => (is => 'rw', default => sub {0});
 has 'Y' => (is => 'rw', default => sub {0});
 has 'Z' => (is => 'rw', default => sub {0});
 has 'E' => (is => 'rw', default => sub {0});
 has 'F' => (is => 'rw', default => sub {0});
+has '_extrusion_axis' => (is => 'rw', default => sub {"E"});
 
 our $Verbose = 0;
 my @AXES = qw(X Y Z E);
 
+sub apply_print_config {
+    my ($self, $print_config) = @_;
+    
+    $self->config->apply_print_config($print_config);
+    $self->_extrusion_axis($self->config->get_extrusion_axis);
+}
+
 sub clone {
     my $self = shift;
     return (ref $self)->new(
-        map { $_ => $self->$_ } (@AXES, 'F'),
+        map { $_ => $self->$_ } (@AXES, 'F', '_extrusion_axis'),
     );
 }
 
@@ -32,10 +41,16 @@ sub parse {
         $command //= '';
         my %args = map { /([A-Z])(.*)/; ($1 => $2) } @args;
         
+        # convert extrusion axis
+        if (exists $args{ $self->_extrusion_axis }) {
+            $args{E} = $args{ $self->_extrusion_axis };
+        }
+        
         # check motion
         if ($command =~ /^G[01]$/) {
             foreach my $axis (@AXES) {
                 if (exists $args{$axis}) {
+                    $self->$axis(0) if $axis eq 'E' && $self->config->use_relative_e_distances;
                     $info{"dist_$axis"} = $args{$axis} - $self->$axis;
                     $info{"new_$axis"}  = $args{$axis};
                 } else {
@@ -43,7 +58,7 @@ sub parse {
                     $info{"new_$axis"}  = $self->$axis;
                 }
             }
-            $info{dist_XY} = Slic3r::Geometry::unscale(Slic3r::Line->new_scale([0,0], [@info{qw(dist_X dist_Y)}])->length);
+            $info{dist_XY} = sqrt(($info{dist_X}**2) + ($info{dist_Y}**2));
             if (exists $args{E}) {
                 if ($info{dist_E} > 0) {
                     $info{extruding} = 1;

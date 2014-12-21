@@ -40,18 +40,22 @@ class LayerRegion
 
     // collection of expolygons representing the bridged areas (thus not
     // needing support material)
+    // (this could be just a Polygons object)
     ExPolygonCollection bridged;
 
     // collection of polylines representing the unsupported bridge edges
     PolylineCollection unsupported_bridge_edges;
 
     // ordered collection of extrusion paths/loops to build all perimeters
+    // (this collection contains both ExtrusionPath and ExtrusionLoop objects)
     ExtrusionEntityCollection perimeters;
 
     // ordered collection of extrusion paths to fill surfaces
+    // (this collection contains only ExtrusionEntityCollection objects)
     ExtrusionEntityCollection fills;
     
     Flow flow(FlowRole role, bool bridge = false, double width = -1) const;
+    void merge_slices();
     
     private:
     Layer *_layer;
@@ -89,6 +93,7 @@ class Layer {
     LayerRegion* add_region(PrintRegion* print_region);
     
     void make_slices();
+    template <class T> bool any_internal_region_slice_contains(const T &item) const;
 
     protected:
     int _id;     // sequential number of layer, 0-based

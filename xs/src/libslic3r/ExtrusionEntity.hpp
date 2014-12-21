@@ -29,7 +29,6 @@ enum ExtrusionRole {
 /* Special flags describing loop */
 enum ExtrusionLoopRole {
     elrDefault,
-    elrExternalPerimeter,
     elrContourInternalPerimeter,
 };
 
@@ -65,7 +64,8 @@ class ExtrusionPath : public ExtrusionEntity
     void simplify(double tolerance);
     double length() const;
     bool is_perimeter() const;
-    bool is_fill() const;
+    bool is_infill() const;
+    bool is_solid_infill() const;
     bool is_bridge() const;
     std::string gcode(Extruder* extruder, double e, double F,
         double xofs, double yofs, std::string extrusion_axis,
@@ -93,10 +93,13 @@ class ExtrusionLoop : public ExtrusionEntity
     Point last_point() const;
     void polygon(Polygon* polygon) const;
     double length() const;
-    void split_at_vertex(const Point &point);
+    bool split_at_vertex(const Point &point);
     void split_at(const Point &point);
     void clip_end(double distance, ExtrusionPaths* paths) const;
     bool has_overhang_point(const Point &point) const;
+    bool is_perimeter() const;
+    bool is_infill() const;
+    bool is_solid_infill() const;
 };
 
 }

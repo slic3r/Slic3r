@@ -39,7 +39,7 @@ class Model
     void swap(Model &other);
     ~Model();
     ModelObject* add_object();
-    ModelObject* add_object(const ModelObject &other);
+    ModelObject* add_object(const ModelObject &other, bool copy_volumes = true);
     void delete_object(size_t idx);
     void clear_objects();
     
@@ -60,7 +60,6 @@ class Model
     void translate(coordf_t x, coordf_t y, coordf_t z);
     void mesh(TriangleMesh* mesh) const;
     void raw_mesh(TriangleMesh* mesh) const;
-    // void split_meshes();
     // std::string get_material_name(t_model_material_id material_id);
 
     
@@ -100,7 +99,7 @@ class ModelObject
         center_around_origin() method. Callers might want to apply the same translation
         to new volumes before adding them to this object in order to preset alignment
         when user expects that. */
-    Pointf origin_translation;
+    Pointf3 origin_translation;
     
     // these should be private but we need to expose them via XS until all methods are ported
     BoundingBoxf3 _bounding_box;
@@ -127,19 +126,21 @@ class ModelObject
     void raw_bounding_box(BoundingBoxf3* bb) const;
     void instance_bounding_box(size_t instance_idx, BoundingBoxf3* bb) const;
     void center_around_origin();
+    void translate(const Vectorf3 &vector);
     void translate(coordf_t x, coordf_t y, coordf_t z);
     void scale(const Pointf3 &versor);
     size_t materials_count() const;
     size_t facets_count() const;
     bool needed_repair() const;
     void cut(coordf_t z, Model* model) const;
+    void split(ModelObjectPtrs* new_objects);
     void update_bounding_box();   // this is a private method but we expose it until we need to expose it via XS
     
     private:
     Model* model;
     
     ModelObject(Model *model);
-    ModelObject(Model *model, const ModelObject &other);
+    ModelObject(Model *model, const ModelObject &other, bool copy_volumes = true);
     ModelObject& operator= (ModelObject other);
     void swap(ModelObject &other);
     ~ModelObject();

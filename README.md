@@ -139,6 +139,8 @@ The author of the Silk icon set is Mark James.
         --gcode-comments    Make G-code verbose by adding comments (default: no)
         --vibration-limit   Limit the frequency of moves on X and Y axes (Hz, set zero to disable;
                             default: 0)
+        --pressure-advance  Adjust pressure using the experimental advance algorithm (K constant,
+                            set zero to disable; default: 0)
     
       Filament options:
         --filament-diameter Diameter in mm of your raw filament (default: 3)
@@ -349,10 +351,11 @@ The author of the Silk icon set is Mark James.
         --extruder-offset   Offset of each extruder, if firmware doesn't handle the displacement
                             (can be specified multiple times, default: 0x0)
         --perimeter-extruder
-                            Extruder to use for perimeters (1+, default: 1)
+                            Extruder to use for perimeters and brim (1+, default: 1)
         --infill-extruder   Extruder to use for infill (1+, default: 1)
+        --solid-infill-extruder   Extruder to use for solid infill (1+, default: 1)
         --support-material-extruder
-                            Extruder to use for support material (1+, default: 1)
+                            Extruder to use for support material, raft and skirt (1+, default: 1)
         --support-material-interface-extruder
                             Extruder to use for support material interface (1+, default: 1)
                             --ooze-prevention   Drop temperature and park extruders outside a full skirt for automatic wiping

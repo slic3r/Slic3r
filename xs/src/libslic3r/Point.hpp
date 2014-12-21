@@ -12,11 +12,15 @@ class Line;
 class MultiPoint;
 class Point;
 class Pointf;
+class Pointf3;
 typedef Point Vector;
+typedef Pointf Vectorf;
+typedef Pointf3 Vectorf3;
 typedef std::vector<Point> Points;
 typedef std::vector<Point*> PointPtrs;
 typedef std::vector<const Point*> PointConstPtrs;
 typedef std::vector<Pointf> Pointfs;
+typedef std::vector<Pointf3> Pointf3s;
 
 class Point
 {
@@ -27,10 +31,14 @@ class Point
     Point(int _x, int _y): x(_x), y(_y) {};
     Point(long long _x, long long _y): x(_x), y(_y) {};  // for Clipper
     Point(double x, double y);
+    static Point new_scale(coordf_t x, coordf_t y) {
+        return Point(scale_(x), scale_(y));
+    };
     bool operator==(const Point& rhs) const;
     std::string wkt() const;
     void scale(double factor);
     void translate(double x, double y);
+    void translate(const Vector &vector);
     void rotate(double angle, const Point &center);
     bool coincides_with(const Point &point) const;
     bool coincides_with_epsilon(const Point &point) const;
@@ -42,9 +50,11 @@ class Point
     double distance_to(const Line &line) const;
     double ccw(const Point &p1, const Point &p2) const;
     double ccw(const Line &line) const;
+    double ccw_angle(const Point &p1, const Point &p2) const;
     Point projection_onto(const MultiPoint &poly) const;
     Point projection_onto(const Line &line) const;
     Point negative() const;
+    Vector vector_to(const Point &point) const;
     
     #ifdef SLIC3RXS
     void from_SV(SV* point_sv);
@@ -72,10 +82,12 @@ class Pointf
     void scale(double factor);
     void translate(double x, double y);
     void rotate(double angle, const Pointf &center);
+    Pointf negative() const;
+    Vectorf vector_to(const Pointf &point) const;
     
     #ifdef SLIC3RXS
     bool from_SV(SV* point_sv);
-    void from_SV_check(SV* point_sv);
+    bool from_SV_check(SV* point_sv);
     SV* to_SV_pureperl() const;
     #endif
 };
@@ -86,7 +98,11 @@ class Pointf3 : public Pointf
     coordf_t z;
     explicit Pointf3(coordf_t _x = 0, coordf_t _y = 0, coordf_t _z = 0): Pointf(_x, _y), z(_z) {};
     void scale(double factor);
+    void translate(const Vectorf3 &vector);
     void translate(double x, double y, double z);
+    double distance_to(const Pointf3 &point) const;
+    Pointf3 negative() const;
+    Vectorf3 vector_to(const Pointf3 &point) const;
 };
 
 }

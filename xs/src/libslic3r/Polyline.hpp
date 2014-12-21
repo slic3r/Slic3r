@@ -3,6 +3,7 @@
 
 #include "Line.hpp"
 #include "MultiPoint.hpp"
+#include <string>
 
 namespace Slic3r {
 
@@ -12,6 +13,7 @@ typedef std::vector<Polyline> Polylines;
 class Polyline : public MultiPoint {
     public:
     operator Polylines() const;
+    operator Line() const;
     Point last_point() const;
     Point leftmost_point() const;
     Lines lines() const;
@@ -22,6 +24,8 @@ class Polyline : public MultiPoint {
     void equally_spaced_points(double distance, Points* points) const;
     void simplify(double tolerance);
     void split_at(const Point &point, Polyline* p1, Polyline* p2) const;
+    bool is_straight() const;
+    std::string wkt() const;
     
     #ifdef SLIC3RXS
     void from_SV_check(SV* poly_sv);

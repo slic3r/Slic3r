@@ -9,6 +9,8 @@
 %typemap{std::vector<unsigned int>*};
 %typemap{std::vector<double>};
 %typemap{std::vector<double>*};
+%typemap{std::vector<unsigned int>};
+%typemap{std::vector<unsigned int>*};
 %typemap{std::vector<std::string>};
 %typemap{t_layer_height_ranges};
 %typemap{SV*};
@@ -58,6 +60,9 @@
 %typemap{Line*};
 %typemap{Ref<Line>}{simple};
 %typemap{Clone<Line>}{simple};
+%typemap{Linef3*};
+%typemap{Ref<Linef3>}{simple};
+%typemap{Clone<Linef3>}{simple};
 %typemap{Polyline*};
 %typemap{Ref<Polyline>}{simple};
 %typemap{Clone<Polyline>}{simple};
@@ -82,6 +87,16 @@
 %typemap{MotionPlanner*};
 %typemap{Ref<MotionPlanner>}{simple};
 %typemap{Clone<MotionPlanner>}{simple};
+%typemap{GCodeWriter*};
+%typemap{Ref<GCodeWriter>}{simple};
+%typemap{Clone<GCodeWriter>}{simple};
+%typemap{BridgeDetector*};
+%typemap{Ref<BridgeDetector>}{simple};
+%typemap{Clone<BridgeDetector>}{simple};
+
+%typemap{Surface*};
+%typemap{Ref<Surface>}{simple};
+%typemap{Clone<Surface>}{simple};
 
 %typemap{PrintState*};
 %typemap{Ref<PrintState>}{simple};
@@ -123,6 +138,8 @@
 %typemap{TriangleMeshPtrs};
 %typemap{Ref<SurfaceCollection>}{simple};
 %typemap{Extruder*};
+%typemap{Ref<Extruder>}{simple};
+%typemap{Clone<Extruder>}{simple};
 %typemap{Model*};
 %typemap{Ref<Model>}{simple};
 %typemap{Clone<Model>}{simple};

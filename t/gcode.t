@@ -1,4 +1,4 @@
-use Test::More tests => 11;
+use Test::More tests => 19;
 use strict;
 use warnings;
 
@@ -39,6 +39,34 @@ use Slic3r::Test;
     
     ok $have_wipe, "wipe";
     ok !defined (first { abs($_ - $config->retract_speed->[0]*60) < 5 } @retract_speeds), 'wipe moves don\'t retract faster than configured speed';
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('z_offset', 5);
+    $config->set('start_gcode', '');
+    
+    my $test = sub {
+        my ($comment) = @_;
+        my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
+        my $moves_below_z_offset = 0;
+        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+            my ($self, $cmd, $args, $info) = @_;
+            
+            if ($info->{travel} && exists $args->{Z}) {
+                $moves_below_z_offset++ if $args->{Z} < $config->z_offset;
+            }
+        });
+        is $moves_below_z_offset, 0, "no Z moves below Z offset ($comment)";
+    };
+    
+    $test->("no lift");
+    
+    $config->set('retract_lift', [3]);
+    $test->("lift < z_offset");
+    
+    $config->set('retract_lift', [6]);
+    $test->("lift > z_offset");
 }
 
 {
@@ -88,11 +116,7 @@ use Slic3r::Test;
     $config->set('retract_length', [1000000]);
     $config->set('use_relative_e_distances', 1);
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
-    Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
-        my ($self, $cmd, $args, $info) = @_;
-        
-        
-    });
+    Slic3r::Test::gcode($print);
     ok $print->print->total_used_filament > 0, 'final retraction is not considered in total used filament';
 }
 
@@ -101,15 +125,22 @@ use Slic3r::Test;
         my ($print, $comment) = @_;
         
         my @percent = ();
+        my $got_100 = 0;
+        my $extruding_after_100 = 0;
         Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
             my ($self, $cmd, $args, $info) = @_;
         
             if ($cmd eq 'M73') {
                 push @percent, $args->{P};
+                $got_100 = 1 if $args->{P} eq '100';
+            }
+            if ($info->{extruding} && $got_100) {
+                $extruding_after_100 = 1;
             }
         });
         # the extruder heater is turned off when M73 P100 is reached
         ok !(defined first { $_ > 100 } @percent), "M73 is never given more than 100% ($comment)";
+        ok !$extruding_after_100, "no extrusions after M73 P100 ($comment)";
     };
     
     {
@@ -132,6 +163,13 @@ use Slic3r::Test;
         $config->set('gcode_flavor', 'sailfish');
         my $print = Slic3r::Test::init_print(['20mm_cube','20mm_cube'], config => $config);
         $test->($print, 'two objects');
+    }
+    
+    {
+        my $config = Slic3r::Config->new_from_defaults;
+        $config->set('gcode_flavor', 'sailfish');
+        my $print = Slic3r::Test::init_print('20mm_cube', config => $config, scale_xyz => [1,1, 1/(20/$config->layer_height) ]);
+        $test->($print, 'one layer object');
     }
 }
 

@@ -83,7 +83,7 @@ sub make_fill {
                         ? $layerm->flow(FLOW_ROLE_TOP_SOLID_INFILL)->width
                         : $solid_infill_flow->width;
                     $pattern[$i] = $groups[$i][0]->is_external
-                        ? $layerm->config->solid_fill_pattern
+                        ? $layerm->config->external_fill_pattern
                         : 'rectilinear';
                 } else {
                     $is_solid[$i]   = 0;
@@ -179,7 +179,6 @@ sub make_fill {
     }
     
     my @fills = ();
-    my @fills_ordering_points =  ();
     SURFACE: foreach my $surface (@surfaces) {
         next if $surface->surface_type == S_TYPE_INTERNALVOID;
         my $filler          = $layerm->config->fill_pattern;
@@ -190,14 +189,11 @@ sub make_fill {
         my $is_bridge       = $layerm->id > 0 && $surface->is_bridge;
         my $is_solid        = $surface->is_solid;
         
-        # force 100% density and rectilinear fill for external surfaces
-        if ($surface->surface_type != S_TYPE_INTERNAL) {
+        if ($surface->is_solid) {
             $density = 100;
-            $filler = $layerm->config->solid_fill_pattern;
-            if ($is_bridge) {
-                $filler = 'rectilinear';
-            } elsif ($surface->surface_type == S_TYPE_INTERNALSOLID) {
-                $filler = 'rectilinear';
+            $filler = 'rectilinear';
+            if ($surface->is_external) {
+                $filler = $layerm->config->external_fill_pattern;
             }
         } else {
             next SURFACE unless $density > 0;
@@ -228,33 +224,31 @@ sub make_fill {
         my $mm3_per_mm = $flow->mm3_per_mm;
         
         # save into layer
-        push @fills, my $collection = Slic3r::ExtrusionPath::Collection->new;
-        $collection->no_sort($params->{no_sort});
-        
-        $collection->append(
-            map Slic3r::ExtrusionPath->new(
-                polyline => $_,
-                role => ($is_bridge
-                        ? EXTR_ROLE_BRIDGE
-                        : $is_solid
-                            ? (($surface->surface_type == S_TYPE_TOP) ? EXTR_ROLE_TOPSOLIDFILL : EXTR_ROLE_SOLIDFILL)
-                            : EXTR_ROLE_FILL),
-                mm3_per_mm  => $mm3_per_mm,
-                width       => $flow->width,
-                height      => ($is_bridge ? $flow->width : $h),
-            ), @polylines,
-        );
-        push @fills_ordering_points, $polylines[0]->first_point;
+        {
+            my $role = $is_bridge ? EXTR_ROLE_BRIDGE
+                : $is_solid ? (($surface->surface_type == S_TYPE_TOP) ? EXTR_ROLE_TOPSOLIDFILL : EXTR_ROLE_SOLIDFILL)
+                : EXTR_ROLE_FILL;
+    
+            my $extrusion_height = $is_bridge ? $flow->width : $h;
+            
+            push @fills, my $collection = Slic3r::ExtrusionPath::Collection->new;
+            $collection->no_sort($params->{no_sort});
+            $collection->append(
+                map Slic3r::ExtrusionPath->new(
+                    polyline    => $_,
+                    role        => $role,
+                    mm3_per_mm  => $mm3_per_mm,
+                    width       => $flow->width,
+                    height      => $extrusion_height,
+                ), @polylines,
+            );
+        }
     }
     
     # add thin fill regions
     foreach my $thin_fill (@{$layerm->thin_fills}) {
         push @fills, Slic3r::ExtrusionPath::Collection->new($thin_fill);
-        push @fills_ordering_points, $thin_fill->first_point;
     }
-    
-    # organize infill paths using a nearest-neighbor search
-    @fills = @fills[ @{chained_path(\@fills_ordering_points)} ];
     
     return @fills;
 }

@@ -41,7 +41,7 @@ MotionPlanner::initialize()
     Polygons outer_holes;
     for (ExPolygons::const_iterator island = this->islands.begin(); island != this->islands.end(); ++island) {
         this->inner.push_back(ExPolygonCollection());
-        offset_ex(*island, this->inner.back(), -MP_INNER_MARGIN);
+        offset(*island, &this->inner.back().expolygons, -MP_INNER_MARGIN);
         
         outer_holes.push_back(island->contour);
     }
@@ -49,7 +49,7 @@ MotionPlanner::initialize()
     // grow island contours in order to prepare holes of the outer environment
     // This is actually wrong because it might merge contours that are close,
     // thus confusing the island check in shortest_path() below
-    //offset(outer_holes, outer_holes, +MP_OUTER_MARGIN);
+    //offset(outer_holes, &outer_holes, +MP_OUTER_MARGIN);
     
     // generate outer contour as bounding box of everything
     Points points;
@@ -59,12 +59,12 @@ MotionPlanner::initialize()
     
     // grow outer contour
     Polygons contour;
-    offset(bb.polygon(), contour, +MP_OUTER_MARGIN);
+    offset(bb.polygon(), &contour, +MP_OUTER_MARGIN);
     assert(contour.size() == 1);
     
     // make expolygon for outer environment
     ExPolygons outer;
-    diff(contour, outer_holes, outer);
+    diff(contour, outer_holes, &outer);
     assert(outer.size() == 1);
     this->outer = outer.front();
     
@@ -86,10 +86,10 @@ MotionPlanner::shortest_path(const Point &from, const Point &to, Polyline* polyl
     // Are both points in the same island?
     int island_idx = -1;
     for (ExPolygons::const_iterator island = this->islands.begin(); island != this->islands.end(); ++island) {
-        if (island->contains_point(from) && island->contains_point(to)) {
+        if (island->contains(from) && island->contains(to)) {
             // since both points are in the same island, is a direct move possible?
             // if so, we avoid generating the visibility environment
-            if (island->contains_line(Line(from, to))) {
+            if (island->contains(Line(from, to))) {
                 polyline->points.push_back(from);
                 polyline->points.push_back(to);
                 return;
@@ -104,20 +104,20 @@ MotionPlanner::shortest_path(const Point &from, const Point &to, Polyline* polyl
     Point inner_to      = to;
     bool from_is_inside, to_is_inside;
     if (island_idx == -1) {
-        if (!(from_is_inside = this->outer.contains_point(from))) {
+        if (!(from_is_inside = this->outer.contains(from))) {
             // Find the closest inner point to start from.
             from.nearest_point(this->outer, &inner_from);
         }
-        if (!(to_is_inside = this->outer.contains_point(to))) {
+        if (!(to_is_inside = this->outer.contains(to))) {
             // Find the closest inner point to start from.
             to.nearest_point(this->outer, &inner_to);
         }
     } else {
-        if (!(from_is_inside = this->inner[island_idx].contains_point(from))) {
+        if (!(from_is_inside = this->inner[island_idx].contains(from))) {
             // Find the closest inner point to start from.
             from.nearest_point(this->inner[island_idx], &inner_from);
         }
-        if (!(to_is_inside = this->inner[island_idx].contains_point(to))) {
+        if (!(to_is_inside = this->inner[island_idx].contains(to))) {
             // Find the closest inner point to start from.
             to.nearest_point(this->inner[island_idx], &inner_to);
         }
@@ -175,12 +175,12 @@ MotionPlanner::init_graph(int island_idx)
                 const VD::vertex_type* v1 = edge->vertex1();
                 Point p0 = Point(v0->x(), v0->y());
                 Point p1 = Point(v1->x(), v1->y());
-                // contains_point() should probably be faster than contains_line(),
+                // contains() should probably be faster than contains(),
                 // and should it fail on any boundary points it's not a big problem
                 if (island_idx == -1) {
-                    if (!this->outer.contains_point(p0) || !this->outer.contains_point(p1)) continue;
+                    if (!this->outer.contains(p0) || !this->outer.contains(p1)) continue;
                 } else {
-                    if (!this->inner[island_idx].contains_point(p0) || !this->inner[island_idx].contains_point(p1)) continue;
+                    if (!this->inner[island_idx].contains(p0) || !this->inner[island_idx].contains(p1)) continue;
                 }
                 
                 t_vd_vertices::const_iterator i_v0 = vd_vertices.find(v0);

@@ -1,4 +1,5 @@
 #include "Geometry.hpp"
+#include "ExPolygon.hpp"
 #include "Line.hpp"
 #include "PolylineCollection.hpp"
 #include "clipper.hpp"
@@ -25,7 +26,7 @@ sort_points (Point a, Point b)
 
 /* This implementation is based on Andrew's monotone chain 2D convex hull algorithm */
 void
-convex_hull(Points &points, Polygon* hull)
+convex_hull(Points points, Polygon* hull)
 {
     assert(points.size() >= 3);
     // sort input points
@@ -52,15 +53,25 @@ convex_hull(Points &points, Polygon* hull)
     hull->points.pop_back();
 }
 
+void
+convex_hull(const Polygons &polygons, Polygon* hull)
+{
+    Points pp;
+    for (Polygons::const_iterator p = polygons.begin(); p != polygons.end(); ++p) {
+        pp.insert(pp.end(), p->points.begin(), p->points.end());
+    }
+    convex_hull(pp, hull);
+}
+
 /* accepts an arrayref of points and returns a list of indices
    according to a nearest-neighbor walk */
 void
-chained_path(Points &points, std::vector<Points::size_type> &retval, Point start_near)
+chained_path(const Points &points, std::vector<Points::size_type> &retval, Point start_near)
 {
-    PointPtrs my_points;
-    std::map<Point*,Points::size_type> indices;
+    PointConstPtrs my_points;
+    std::map<const Point*,Points::size_type> indices;
     my_points.reserve(points.size());
-    for (Points::iterator it = points.begin(); it != points.end(); ++it) {
+    for (Points::const_iterator it = points.begin(); it != points.end(); ++it) {
         my_points.push_back(&*it);
         indices[&*it] = it - points.begin();
     }
@@ -75,7 +86,7 @@ chained_path(Points &points, std::vector<Points::size_type> &retval, Point start
 }
 
 void
-chained_path(Points &points, std::vector<Points::size_type> &retval)
+chained_path(const Points &points, std::vector<Points::size_type> &retval)
 {
     if (points.empty()) return;  // can't call front() on empty vector
     chained_path(points, retval, points.front());
@@ -99,6 +110,37 @@ directions_parallel(double angle1, double angle2, double max_diff)
     double diff = fabs(angle1 - angle2);
     max_diff += EPSILON;
     return diff < max_diff || fabs(diff - PI) < max_diff;
+}
+
+template<class T>
+bool
+contains(const std::vector<T> &vector, const Point &point)
+{
+    for (typename std::vector<T>::const_iterator it = vector.begin(); it != vector.end(); ++it) {
+        if (it->contains(point)) return true;
+    }
+    return false;
+}
+template bool contains(const ExPolygons &vector, const Point &point);
+
+double
+rad2deg(double angle)
+{
+    return angle / PI * 180.0;
+}
+
+double
+rad2deg_dir(double angle)
+{
+    angle = (angle < PI) ? (-angle + PI/2.0) : (angle + PI/2.0);
+    if (angle < 0) angle += PI;
+    return rad2deg(angle);
+}
+
+double
+deg2rad(double angle)
+{
+    return PI * angle / 180.0;
 }
 
 Line

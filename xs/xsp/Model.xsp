@@ -14,12 +14,14 @@
         %code%{ RETVAL = THIS; %};
     
     %name{_add_object} Ref<ModelObject> add_object();
-    Ref<ModelObject> _add_object_clone(ModelObject* other)
-        %code%{ RETVAL = THIS->add_object(*other); %};
+    Ref<ModelObject> _add_object_clone(ModelObject* other, bool copy_volumes = true)
+        %code%{ RETVAL = THIS->add_object(*other, copy_volumes); %};
     void delete_object(size_t idx);
     void clear_objects();
     size_t objects_count()
         %code%{ RETVAL = THIS->objects.size(); %};
+    Ref<ModelObject> get_object(int idx)
+        %code%{ RETVAL = THIS->objects.at(idx); %};
 
     Ref<ModelMaterial> get_material(t_model_material_id material_id)
         %code%{
@@ -188,9 +190,9 @@ ModelMaterial::attributes()
     void set_layer_height_ranges(t_layer_height_ranges ranges)
         %code%{ THIS->layer_height_ranges = ranges; %};
 
-    Ref<Pointf> origin_translation()
+    Ref<Pointf3> origin_translation()
         %code%{ RETVAL = &THIS->origin_translation; %};
-    void set_origin_translation(Pointf* point)
+    void set_origin_translation(Pointf3* point)
         %code%{ THIS->origin_translation = *point; %};
     
     bool needed_repair() const;
@@ -205,6 +207,12 @@ ModelMaterial::attributes()
         %code%{
             RETVAL = new Model();
             THIS->cut(z, RETVAL);
+        %};
+
+    ModelObjectPtrs* split_object()
+        %code%{
+            RETVAL = new ModelObjectPtrs();  // leak?
+            THIS->split(RETVAL);
         %};
 };
 

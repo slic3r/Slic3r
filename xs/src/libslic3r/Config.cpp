@@ -27,6 +27,27 @@ ConfigBase::apply(const ConfigBase &other, bool ignore_nonexistent) {
     }
 }
 
+bool
+ConfigBase::equals(ConfigBase &other) {
+    return this->diff(other).empty();
+}
+
+// this will *ignore* options not present in both configs
+t_config_option_keys
+ConfigBase::diff(ConfigBase &other) {
+    t_config_option_keys diff;
+    
+    t_config_option_keys my_keys;
+    this->keys(&my_keys);
+    for (t_config_option_keys::const_iterator opt_key = my_keys.begin(); opt_key != my_keys.end(); ++opt_key) {
+        if (other.has(*opt_key) && other.serialize(*opt_key) != this->serialize(*opt_key)) {
+            diff.push_back(*opt_key);
+        }
+    }
+    
+    return diff;
+}
+
 std::string
 ConfigBase::serialize(const t_config_option_key opt_key) {
     ConfigOption* opt = this->option(opt_key);
@@ -209,7 +230,7 @@ ConfigBase::set(t_config_option_key opt_key, SV* value) {
             optv->values.push_back(std::string(SvPV_nolen(*elem), SvCUR(*elem)));
         }
     } else if (ConfigOptionPoint* optv = dynamic_cast<ConfigOptionPoint*>(opt)) {
-        return optv->point.from_SV(value);
+        return optv->point.from_SV_check(value);
     } else if (ConfigOptionPoints* optv = dynamic_cast<ConfigOptionPoints*>(opt)) {
         std::vector<Pointf> values;
         AV* av = (AV*)SvRV(value);
@@ -217,7 +238,7 @@ ConfigBase::set(t_config_option_key opt_key, SV* value) {
         for (size_t i = 0; i < len; i++) {
             SV** elem = av_fetch(av, i, 0);
             Pointf point;
-            if (elem == NULL || !point.from_SV(*elem)) return false;
+            if (elem == NULL || !point.from_SV_check(*elem)) return false;
             values.push_back(point);
         }
         optv->values = values;
@@ -247,6 +268,18 @@ ConfigBase::set_deserialize(const t_config_option_key opt_key, SV* str) {
     std::string value(c, len);
     
     return this->set_deserialize(opt_key, value);
+}
+
+void
+ConfigBase::set_ifndef(t_config_option_key opt_key, SV* value, bool deserialize)
+{
+    if (!this->has(opt_key)) {
+        if (deserialize) {
+            this->set_deserialize(opt_key, value);
+        } else {
+            this->set(opt_key, value);
+        }
+    }
 }
 #endif
 
@@ -328,6 +361,7 @@ DynamicConfig::opt(const t_config_option_key opt_key, bool create) {
 template ConfigOptionInt* DynamicConfig::opt<ConfigOptionInt>(const t_config_option_key opt_key, bool create);
 template ConfigOptionBool* DynamicConfig::opt<ConfigOptionBool>(const t_config_option_key opt_key, bool create);
 template ConfigOptionBools* DynamicConfig::opt<ConfigOptionBools>(const t_config_option_key opt_key, bool create);
+template ConfigOptionPercent* DynamicConfig::opt<ConfigOptionPercent>(const t_config_option_key opt_key, bool create);
 
 const ConfigOption*
 DynamicConfig::option(const t_config_option_key opt_key) const {

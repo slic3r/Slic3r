@@ -60,6 +60,7 @@ my %cli_options = ();
 my @external_configs = ();
 if ($opt{load}) {
     foreach my $configfile (@{$opt{load}}) {
+        $configfile = Slic3r::decode_path($configfile);
         if (-e $configfile) {
             push @external_configs, Slic3r::Config->load($configfile);
         } elsif (-e "$FindBin::Bin/$configfile") {
@@ -92,7 +93,7 @@ my $gui;
 if (!@ARGV && !$opt{save} && eval "require Slic3r::GUI; 1") {
     {
         no warnings 'once';
-        $Slic3r::GUI::datadir   = $opt{datadir};
+        $Slic3r::GUI::datadir   = Slic3r::decode_path($opt{datadir});
         $Slic3r::GUI::no_plater = $opt{no_plater};
         $Slic3r::GUI::mode      = $opt{gui_mode};
         $Slic3r::GUI::autosave  = $opt{autosave};
@@ -111,6 +112,7 @@ if (@ARGV) {  # slicing from command line
     
     if ($opt{repair}) {
         foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
             die "Repair is currently supported only on STL files\n"
                 if $file !~ /\.stl$/i;
             
@@ -126,6 +128,7 @@ if (@ARGV) {  # slicing from command line
     
     if ($opt{cut}) {
         foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
             my $model = Slic3r::Model->read_from_file($file);
             $model->add_default_instances;
             my $mesh = $model->mesh;
@@ -145,6 +148,7 @@ if (@ARGV) {  # slicing from command line
     
     if ($opt{split}) {
         foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
             my $model = Slic3r::Model->read_from_file($file);
             $model->add_default_instances;
             my $mesh = $model->mesh;
@@ -161,6 +165,7 @@ if (@ARGV) {  # slicing from command line
     }
     
     while (my $input_file = shift @ARGV) {
+        $input_file = Slic3r::decode_path($input_file);
         my $model;
         if ($opt{merge}) {
             my @models = map Slic3r::Model->read_from_file($_), $input_file, (splice @ARGV, 0);
@@ -286,6 +291,8 @@ $j
     --gcode-comments    Make G-code verbose by adding comments (default: no)
     --vibration-limit   Limit the frequency of moves on X and Y axes (Hz, set zero to disable;
                         default: $config->{vibration_limit})
+    --pressure-advance  Adjust pressure using the experimental advance algorithm (K constant,
+                        set zero to disable; default: $config->{pressure_advance})
     
   Filament options:
     --filament-diameter Diameter in mm of your raw filament (default: $config->{filament_diameter}->[0])
@@ -357,7 +364,7 @@ $j
     --fill-density      Infill density (range: 0%-100%, default: $config->{fill_density}%)
     --fill-angle        Infill angle in degrees (range: 0-90, default: $config->{fill_angle})
     --fill-pattern      Pattern to use to fill non-solid layers (default: $config->{fill_pattern})
-    --solid-fill-pattern Pattern to use to fill solid layers (default: $config->{solid_fill_pattern})
+    --external-fill-pattern Pattern to use to fill solid layers (default: $config->{external_fill_pattern})
     --start-gcode       Load initial G-code from the supplied file. This will overwrite
                         the default command (home all axes [G28]).
     --end-gcode         Load final G-code from the supplied file. This will overwrite 
@@ -496,10 +503,11 @@ $j
     --extruder-offset   Offset of each extruder, if firmware doesn't handle the displacement
                         (can be specified multiple times, default: 0x0)
     --perimeter-extruder
-                        Extruder to use for perimeters (1+, default: $config->{perimeter_extruder})
+                        Extruder to use for perimeters and brim (1+, default: $config->{perimeter_extruder})
     --infill-extruder   Extruder to use for infill (1+, default: $config->{infill_extruder})
+    --solid-infill-extruder   Extruder to use for solid infill (1+, default: $config->{solid_infill_extruder})
     --support-material-extruder
-                        Extruder to use for support material (1+, default: $config->{support_material_extruder})
+                        Extruder to use for support material, raft and skirt (1+, default: $config->{support_material_extruder})
     --support-material-interface-extruder
                         Extruder to use for support material interface (1+, default: $config->{support_material_interface_extruder})
     --ooze-prevention   Drop temperature and park extruders outside a full skirt for automatic wiping

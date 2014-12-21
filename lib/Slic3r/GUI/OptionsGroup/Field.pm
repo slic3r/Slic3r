@@ -203,6 +203,8 @@ sub BUILD {
         $self->option->labels || $self->option->values, wxCB_READONLY);
     $self->wxWindow($field);
     
+    $self->set_value($self->option->default);
+    
     EVT_COMBOBOX($self->parent, $field, sub {
         $self->_on_change($self->option->opt_id);
     });
@@ -229,7 +231,7 @@ use Moo;
 extends 'Slic3r::GUI::OptionsGroup::Field::wxWindow';
 
 use List::Util qw(first);
-use Wx qw(:misc :combobox);
+use Wx qw(wxTheApp :misc :combobox);
 use Wx::Event qw(EVT_COMBOBOX EVT_TEXT);
 
 sub BUILD {
@@ -256,7 +258,17 @@ sub BUILD {
             $label = $value;
         }
         
-        $field->SetValue($label);
+        # The MSW implementation of wxComboBox will leave the field blank if we call
+        # SetValue() in the EVT_COMBOBOX event handler, so we postpone the call.
+        wxTheApp->CallAfter(sub {
+            my $dce = $self->disable_change_event;
+            $self->disable_change_event(1);
+            
+            # ChangeValue() is not exported in wxPerl
+            $field->SetValue($label);
+            
+            $self->disable_change_event($dce);
+        });
         
         $self->disable_change_event($disable_change_event);
         $self->_on_change($self->option->opt_id);
@@ -419,10 +431,12 @@ sub BUILD {
     );
     $self->slider($slider);
     
-    my $statictext = Wx::StaticText->new($self->parent, -1, $slider->GetValue/$self->scale);
+    my $statictext = Wx::StaticText->new($self->parent, -1, $slider->GetValue/$self->scale,
+        wxDefaultPosition, [20,-1]);
     $self->statictext($statictext);
     
-    $sizer->Add($_, 0, wxALIGN_CENTER_VERTICAL, 0) for $slider, $statictext;
+    $sizer->Add($slider, 1, wxALIGN_CENTER_VERTICAL, 0);
+    $sizer->Add($statictext, 0, wxALIGN_CENTER_VERTICAL, 0);
     
     EVT_SLIDER($self->parent, $slider, sub {
         $self->_update_statictext;

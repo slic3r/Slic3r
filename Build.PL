@@ -22,6 +22,7 @@ my %prereqs = qw(
     Test::More                      0
     Thread::Semaphore               0
     IO::Scalar                      0
+    threads                         1.96
     Time::HiRes                     0
 );
 my %recommends = qw(
@@ -34,6 +35,7 @@ my $gui     = grep { $_ eq '--gui' } @ARGV;
 my $xs_only = grep { $_ eq '--xs' }  @ARGV;
 if ($gui) {
     %prereqs = qw(
+    Class::Accessor                 0
     Wx                              0.9918
     );
     %recommends = qw(

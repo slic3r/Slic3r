@@ -183,9 +183,11 @@ sub mouse_event {
     my $point = $self->point_to_model_units([ $pos->x, $pos->y ]);  #]]
     if ($event->ButtonDown) {
         $self->{on_select_object}->(undef);
-        OBJECTS: for my $obj_idx (0 .. $#{$self->{objects}}) {
+        # traverse objects and instances in reverse order, so that if they're overlapping
+        # we get the one that gets drawn last, thus on top (as user expects that to move)
+        OBJECTS: for my $obj_idx (reverse 0 .. $#{$self->{objects}}) {
             my $object = $self->{objects}->[$obj_idx];
-            for my $instance_idx (0 .. $#{ $object->instance_thumbnails }) {
+            for my $instance_idx (reverse 0 .. $#{ $object->instance_thumbnails }) {
                 my $thumbnail = $object->instance_thumbnails->[$instance_idx];
                 if (defined first { $_->contour->contains_point($point) } @$thumbnail) {
                     $self->{on_select_object}->($obj_idx);
@@ -208,13 +210,13 @@ sub mouse_event {
             }
         }
         $self->Refresh;
-    } elsif ($event->ButtonUp(&Wx::wxMOUSE_BTN_LEFT)) {
-        $self->{on_instance_moved}->();
-        $self->Refresh;
+    } elsif ($event->LeftUp) {
+        $self->{on_instance_moved}->(@{ $self->{drag_object} })
+            if $self->{drag_object};
         $self->{drag_start_pos} = undef;
         $self->{drag_object} = undef;
         $self->SetCursor(wxSTANDARD_CURSOR);
-    } elsif ($event->ButtonDClick) {
+    } elsif ($event->LeftDClick) {
     	$self->{on_double_click}->();
     } elsif ($event->Dragging) {
         return if !$self->{drag_start_pos}; # concurrency problems

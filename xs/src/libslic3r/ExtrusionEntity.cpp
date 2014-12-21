@@ -36,7 +36,7 @@ ExtrusionPath::intersect_expolygons(const ExPolygonCollection &collection, Extru
 {
     // perform clipping
     Polylines clipped;
-    intersection<Polylines,Polylines>(this->polyline, collection, clipped);
+    intersection<Polylines,Polylines>(this->polyline, collection, &clipped);
     return this->_inflate_collection(clipped, retval);
 }
 
@@ -45,7 +45,7 @@ ExtrusionPath::subtract_expolygons(const ExPolygonCollection &collection, Extrus
 {
     // perform clipping
     Polylines clipped;
-    diff<Polylines,Polylines>(this->polyline, collection, clipped);
+    diff<Polylines,Polylines>(this->polyline, collection, &clipped);
     return this->_inflate_collection(clipped, retval);
 }
 
@@ -76,9 +76,18 @@ ExtrusionPath::is_perimeter() const
 }
 
 bool
-ExtrusionPath::is_fill() const
+ExtrusionPath::is_infill() const
 {
-    return this->role == erInternalInfill
+    return this->role == erBridgeInfill
+        || this->role == erInternalInfill
+        || this->role == erSolidInfill
+        || this->role == erTopSolidInfill;
+}
+
+bool
+ExtrusionPath::is_solid_infill() const
+{
+    return this->role == erBridgeInfill
         || this->role == erSolidInfill
         || this->role == erTopSolidInfill;
 }
@@ -224,7 +233,7 @@ ExtrusionLoop::length() const
     return len;
 }
 
-void
+bool
 ExtrusionLoop::split_at_vertex(const Point &point)
 {
     for (ExtrusionPaths::iterator path = this->paths.begin(); path != this->paths.end(); ++path) {
@@ -261,10 +270,10 @@ ExtrusionLoop::split_at_vertex(const Point &point)
                 // we can now override the old path list with the new one and stop looping
                 this->paths = new_paths;
             }
-            return;
+            return true;
         }
     }
-    CONFESS("Point not found");
+    return false;
 }
 
 void
@@ -330,6 +339,31 @@ ExtrusionLoop::has_overhang_point(const Point &point) const
         }
     }
     return false;
+}
+
+bool
+ExtrusionLoop::is_perimeter() const
+{
+    return this->paths.front().role == erPerimeter
+        || this->paths.front().role == erExternalPerimeter
+        || this->paths.front().role == erOverhangPerimeter;
+}
+
+bool
+ExtrusionLoop::is_infill() const
+{
+    return this->paths.front().role == erBridgeInfill
+        || this->paths.front().role == erInternalInfill
+        || this->paths.front().role == erSolidInfill
+        || this->paths.front().role == erTopSolidInfill;
+}
+
+bool
+ExtrusionLoop::is_solid_infill() const
+{
+    return this->paths.front().role == erBridgeInfill
+        || this->paths.front().role == erSolidInfill
+        || this->paths.front().role == erTopSolidInfill;
 }
 
 #ifdef SLIC3RXS
