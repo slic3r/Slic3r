@@ -53,7 +53,11 @@
         %code%{ THIS->upper_layer = layer; %};
     void set_lower_layer(Layer *layer)
         %code%{ THIS->lower_layer = layer; %};
-
+    bool has_upper_layer()
+        %code%{ RETVAL = (THIS->upper_layer != NULL); %};
+    bool has_lower_layer()
+        %code%{ RETVAL = (THIS->lower_layer != NULL); %};
+    
     size_t region_count();
     Ref<LayerRegion> get_region(int idx);
     Ref<LayerRegion> add_region(PrintRegion* print_region);
@@ -65,6 +69,12 @@
         %code%{ RETVAL = (int)(intptr_t)THIS; %};
     
     void make_slices();
+    bool any_internal_region_slice_contains_line(Line* line)
+        %code%{ RETVAL = THIS->any_internal_region_slice_contains(*line); %};
+    bool any_internal_region_fill_surface_contains_line(Line* line)
+        %code%{ RETVAL = THIS->any_internal_region_fill_surface_contains(*line); %};
+    bool any_internal_region_fill_surface_contains_polyline(Polyline* polyline)
+        %code%{ RETVAL = THIS->any_internal_region_fill_surface_contains(*polyline); %};
 };
 
 %name{Slic3r::Layer::Support} class SupportLayer {
@@ -99,6 +109,10 @@
         %code%{ THIS->upper_layer = layer; %};
     void set_lower_layer(SupportLayer *layer)
         %code%{ THIS->lower_layer = layer; %};
+    bool has_upper_layer()
+        %code%{ RETVAL = (THIS->upper_layer != NULL); %};
+    bool has_lower_layer()
+        %code%{ RETVAL = (THIS->lower_layer != NULL); %};
 
     size_t region_count();
     Ref<LayerRegion> get_region(int idx);
@@ -106,4 +120,11 @@
 
     Ref<ExPolygonCollection> slices()
         %code%{ RETVAL = &THIS->slices; %};
+    
+    bool any_internal_region_slice_contains_line(Line* line)
+        %code%{ RETVAL = THIS->any_internal_region_slice_contains(*line); %};
+    bool any_internal_region_fill_surface_contains_line(Line* line)
+        %code%{ RETVAL = THIS->any_internal_region_fill_surface_contains(*line); %};
+    bool any_internal_region_fill_surface_contains_polyline(Polyline* polyline)
+        %code%{ RETVAL = THIS->any_internal_region_fill_surface_contains(*polyline); %};
 };

@@ -7,6 +7,7 @@ use File::Basename qw(basename);
 use FindBin;
 use Slic3r::GUI::AboutDialog;
 use Slic3r::GUI::BedShapeDialog;
+use Slic3r::GUI::BonjourBrowser;
 use Slic3r::GUI::ConfigWizard;
 use Slic3r::GUI::MainFrame;
 use Slic3r::GUI::Notifier;
@@ -27,6 +28,7 @@ use Slic3r::GUI::SimpleTab;
 use Slic3r::GUI::Tab;
 
 our $have_OpenGL = eval "use Slic3r::GUI::PreviewCanvas; 1";
+our $have_LWP    = eval "use LWP::UserAgent; 1";
 
 use Wx 0.9901 qw(:bitmap :dialog :icon :id :misc :systemsettings :toplevelwindow
     :filedialog);
@@ -60,7 +62,7 @@ our $Settings = {
     },
 };
 
-our $have_button_icons = &Wx::wxVERSION_STRING =~ / 2\.9\.[1-9]/;
+our $have_button_icons = &Wx::wxVERSION_STRING =~ / (?:2\.9\.[1-9]|3\.)/;
 our $small_font = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 $small_font->SetPointSize(11) if !&Wx::wxMSW;
 our $medium_font = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
@@ -76,20 +78,20 @@ sub OnInit {
     
     # locate or create data directory
     $datadir ||= Wx::StandardPaths::Get->GetUserDataDir;
-    $datadir = Slic3r::encode_path($datadir);
+    my $enc_datadir = Slic3r::encode_path($datadir);
     Slic3r::debugf "Data directory: %s\n", $datadir;
     
     # just checking for existence of $datadir is not enough: it may be an empty directory
     # supplied as argument to --datadir; in that case we should still run the wizard
-    my $run_wizard = (-d $datadir && -e "$datadir/slic3r.ini") ? 0 : 1;
-    for ($datadir, "$datadir/print", "$datadir/filament", "$datadir/printer") {
+    my $run_wizard = (-d $enc_datadir && -e "$enc_datadir/slic3r.ini") ? 0 : 1;
+    for ($enc_datadir, "$enc_datadir/print", "$enc_datadir/filament", "$enc_datadir/printer") {
         mkdir or $self->fatal_error("Slic3r was unable to create its data directory at $_ (errno: $!).")
             unless -d $_;
     }
     
     # load settings
     my $last_version;
-    if (-f "$datadir/slic3r.ini") {
+    if (-f "$enc_datadir/slic3r.ini") {
         my $ini = eval { Slic3r::Config->read_ini("$datadir/slic3r.ini") };
         $Settings = $ini if $ini;
         $last_version = $Settings->{_}{version};
@@ -213,7 +215,8 @@ sub presets {
     my ($self, $section) = @_;
     
     my %presets = ();
-    opendir my $dh, "$Slic3r::GUI::datadir/$section" or die "Failed to read directory $Slic3r::GUI::datadir/$section (errno: $!)\n";
+    opendir my $dh, Slic3r::encode_path("$Slic3r::GUI::datadir/$section")
+        or die "Failed to read directory $Slic3r::GUI::datadir/$section (errno: $!)\n";
     foreach my $file (grep /\.ini$/i, readdir $dh) {
         my $name = basename($file);
         $name =~ s/\.ini$//;
@@ -228,7 +231,7 @@ sub have_version_check {
     my ($self) = @_;
     
     # return an explicit 0
-    return ($Slic3r::have_threads && $Slic3r::build && eval "use LWP::UserAgent; 1") || 0;
+    return ($Slic3r::have_threads && $Slic3r::build && $have_LWP) || 0;
 }
 
 sub check_version {

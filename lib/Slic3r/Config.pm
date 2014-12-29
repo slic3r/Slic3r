@@ -250,14 +250,14 @@ sub validate {
     die "Invalid value for --fill-pattern\n"
         if !first { $_ eq $self->fill_pattern } @{$Options->{fill_pattern}{values}};
     
-    # --solid-fill-pattern
-    die "Invalid value for --solid-fill-pattern\n"
-        if !first { $_ eq $self->solid_fill_pattern } @{$Options->{solid_fill_pattern}{values}};
+    # --external-fill-pattern
+    die "Invalid value for --external-fill-pattern\n"
+        if !first { $_ eq $self->external_fill_pattern } @{$Options->{external_fill_pattern}{values}};
     
     # --fill-density
     die "The selected fill pattern is not supposed to work at 100% density\n"
         if $self->fill_density == 100
-            && !first { $_ eq $self->fill_pattern } @{$Options->{solid_fill_pattern}{values}};
+            && !first { $_ eq $self->fill_pattern } @{$Options->{external_fill_pattern}{values}};
     
     # --infill-every-layers
     die "Invalid value for --infill-every-layers\n"
@@ -380,7 +380,8 @@ sub read_ini {
     my ($file) = @_;
     
     local $/ = "\n";
-    Slic3r::open(\my $fh, '<', $file);
+    Slic3r::open(\my $fh, '<', $file)
+        or die "Unable to open $file: $!\n";
     binmode $fh, ':utf8';
     
     my $ini = { _ => {} };

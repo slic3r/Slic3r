@@ -6,7 +6,7 @@
 #include <iostream>
 #include <sstream>
 
-#define SLIC3R_VERSION "UV-1.2.2-dev"
+#define SLIC3R_VERSION "UV-1.2.3"
 
 #define EPSILON 1e-4
 #define SCALING_FACTOR 0.000001

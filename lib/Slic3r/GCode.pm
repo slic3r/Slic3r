@@ -4,10 +4,8 @@ use Moo;
 use List::Util qw(min max first);
 use Slic3r::ExtrusionLoop ':roles';
 use Slic3r::ExtrusionPath ':roles';
-use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(epsilon scale unscale PI X Y B);
-use Slic3r::Geometry::Clipper qw(union_ex offset_ex);
-use Slic3r::Surface ':types';
+use Slic3r::Geometry::Clipper qw(union_ex);
 
 # Origin of print coordinates expressed in unscaled G-code coordinates.
 # This affects the input arguments supplied to the extrude*() and travel_to()
@@ -17,24 +15,18 @@ has 'origin'             => (is => 'rw', default => sub { Slic3r::Pointf->new })
 has 'config'             => (is => 'ro', default => sub { Slic3r::Config::Full->new });
 has 'writer'             => (is => 'ro', default => sub { Slic3r::GCode::Writer->new });
 has 'placeholder_parser' => (is => 'rw', default => sub { Slic3r::GCode::PlaceholderParser->new });
-has 'ooze_prevention'    => (is => 'rw');
+has 'ooze_prevention'    => (is => 'rw', default => sub { Slic3r::GCode::OozePrevention->new });
+has 'wipe'               => (is => 'rw', default => sub { Slic3r::GCode::Wipe->new });
+has 'avoid_crossing_perimeters' => (is => 'rw', default => sub { Slic3r::GCode::AvoidCrossingPerimeters->new });
 has 'enable_loop_clipping' => (is => 'rw', default => sub {1});
-has 'enable_wipe'        => (is => 'rw', default => sub {0});   # at least one extruder has wipe enabled
 has 'enable_cooling_markers' => (is =>'rw', default => sub {0});
 has 'layer_count'        => (is => 'ro');
 has '_layer_index'       => (is => 'rw', default => sub {-1});  # just a counter
 has 'layer'              => (is => 'rw');
-has '_layer_islands'     => (is => 'rw');
-has '_upper_layer_islands'  => (is => 'rw');
 has '_seam_position'     => (is => 'ro', default => sub { {} });  # $object => pos
-has '_external_mp'       => (is => 'rw');
-has '_layer_mp'          => (is => 'rw');
-has 'new_object'         => (is => 'rw', default => sub {0});   # this flag triggers the use of the external configuration space for avoid_crossing_perimeters for the next travel move
-has 'straight_once'      => (is => 'rw', default => sub {1});   # this flag disables avoid_crossing_perimeters just for the next travel move
 has 'first_layer'        => (is => 'rw', default => sub {0});   # this flag triggers first layer speeds
 has 'elapsed_time'       => (is => 'rw', default => sub {0} );  # seconds
 has 'last_pos'           => (is => 'rw', default => sub { Slic3r::Point->new(0,0) } );
-has '_wipe_path'         => (is => 'rw');
 
 sub apply_print_config {
     my ($self, $print_config) = @_;
@@ -49,7 +41,7 @@ sub set_extruders {
     $self->writer->set_extruders($extruder_ids);
     
     # enable wipe path generation if any extruder has wipe enabled
-    $self->enable_wipe(defined first { $self->config->get_at('wipe', $_) } @$extruder_ids);
+    $self->wipe->enable(defined first { $self->config->get_at('wipe', $_) } @$extruder_ids);
 }
 
 sub set_origin {
@@ -61,14 +53,9 @@ sub set_origin {
         scale ($self->origin->y - $pointf->y),  #-
     );
     $self->last_pos->translate(@translate);
-    $self->_wipe_path->translate(@translate) if $self->_wipe_path;
+    $self->wipe->path->translate(@translate) if $self->wipe->path;
     
     $self->origin($pointf);
-}
-
-sub init_external_mp {
-    my ($self, $islands) = @_;
-    $self->_external_mp(Slic3r::MotionPlanner->new($islands));
 }
 
 sub preamble {
@@ -93,17 +80,14 @@ sub change_layer {
     $self->first_layer($layer->id == 0);
     
     # avoid computing islands and overhangs if they're not needed
-    $self->_layer_islands($layer->islands);
-    $self->_upper_layer_islands($layer->upper_layer ? $layer->upper_layer->islands : []);
     if ($self->config->avoid_crossing_perimeters) {
-        $self->_layer_mp(Slic3r::MotionPlanner->new(
+        $self->avoid_crossing_perimeters->init_layer_mp(
             union_ex([ map @$_, @{$layer->slices} ], 1),
-        ));
+        );
     }
     
     my $gcode = "";
     if (defined $self->layer_count) {
-        # TODO: cap this to 99% and add an explicit M73 P100 in the end G-code
         $gcode .= $self->writer->update_progress($self->_layer_index, $self->layer_count);
     }
     
@@ -112,6 +96,10 @@ sub change_layer {
         $gcode .= $self->retract;
     }
     $gcode .= $self->writer->travel_to_z($z, 'move to next layer (' . $self->layer->id . ')');
+    
+    # forget last wiping path as wiping after raising Z is pointless
+    $self->wipe->path(undef);
+    
     return $gcode;
 }
 
@@ -205,7 +193,6 @@ sub extrude_loop {
     if ($paths[0]->is_perimeter && $loop->length <= &Slic3r::SMALL_PERIMETER_LENGTH) {
         $speed //= $self->config->get_abs_value('small_perimeter_speed');
     }
-    $speed //= -1;
     
     # extrude along the path
     my $gcode = join '', map $self->_extrude_path($_, $description, $speed), @paths;
@@ -213,7 +200,7 @@ sub extrude_loop {
     # reset acceleration
     $gcode .= $self->writer->set_acceleration($self->config->default_acceleration);
     
-    $self->_wipe_path($paths[0]->polyline->clone) if $self->enable_wipe;  # TODO: don't limit wipe to last path
+    $self->wipe->path($paths[0]->polyline->clone) if $self->wipe->enable;  # TODO: don't limit wipe to last path
     
     # make a little move inwards before leaving loop
     if ($paths[-1]->role == EXTR_ROLE_EXTERNAL_PERIMETER && defined $self->layer && $self->config->perimeters > 1) {
@@ -227,10 +214,10 @@ sub extrude_loop {
         # create the destination point along the first segment and rotate it
         # we make sure we don't exceed the segment length because we don't know
         # the rotation of the second segment so we might cross the object boundary
-        my $first_segment = Slic3r::Line->new(@$last_path_polyline[0,1]);
+        my $first_segment = Slic3r::Line->new(@{$paths[0]->polyline}[0,1]);
         my $distance = min(scale($self->config->get_at('nozzle_diameter', $self->writer->extruder->id)), $first_segment->length);
         my $point = $first_segment->point_at($distance);
-        $point->rotate($angle, $last_path_polyline->first_point);
+        $point->rotate($angle, $first_segment->a);
         
         # generate the travel move
         $gcode .= $self->travel_to($point, $paths[-1]->role, "move inwards before travel");
@@ -273,10 +260,10 @@ sub _extrude_path {
             $acceleration = $self->config->first_layer_acceleration;
         } elsif ($self->config->perimeter_acceleration && $path->is_perimeter) {
             $acceleration = $self->config->perimeter_acceleration;
-        } elsif ($self->config->infill_acceleration && $path->is_fill) {
-            $acceleration = $self->config->infill_acceleration;
         } elsif ($self->config->bridge_acceleration && $path->is_bridge) {
             $acceleration = $self->config->bridge_acceleration;
+        } elsif ($self->config->infill_acceleration && $path->is_infill) {
+            $acceleration = $self->config->infill_acceleration;
         } else {
             $acceleration = $self->config->default_acceleration;
         }
@@ -288,26 +275,27 @@ sub _extrude_path {
     $e_per_mm = 0 if !$self->writer->extrusion_axis;
     
     # set speed
-    my $F;
-    if ($path->role == EXTR_ROLE_PERIMETER) {
-        $F = $self->config->get_abs_value('perimeter_speed');
-    } elsif ($path->role == EXTR_ROLE_EXTERNAL_PERIMETER) {
-        $F = $self->config->get_abs_value('external_perimeter_speed');
-    } elsif ($path->role == EXTR_ROLE_OVERHANG_PERIMETER || $path->role == EXTR_ROLE_BRIDGE) {
-        $F = $self->config->get_abs_value('bridge_speed');
-    } elsif ($path->role == EXTR_ROLE_FILL) {
-        $F = $self->config->get_abs_value('infill_speed');
-    } elsif ($path->role == EXTR_ROLE_SOLIDFILL) {
-        $F = $self->config->get_abs_value('solid_infill_speed');
-    } elsif ($path->role == EXTR_ROLE_TOPSOLIDFILL) {
-        $F = $self->config->get_abs_value('top_solid_infill_speed');
-    } elsif ($path->role == EXTR_ROLE_GAPFILL) {
-        $F = $self->config->get_abs_value('gap_fill_speed');
-    } else {
-        $F = $speed // -1;
-        die "Invalid speed" if $F < 0;   # $speed == -1
+    $speed //= -1;
+    if ($speed == -1) {
+        if ($path->role == EXTR_ROLE_PERIMETER) {
+            $speed = $self->config->get_abs_value('perimeter_speed');
+        } elsif ($path->role == EXTR_ROLE_EXTERNAL_PERIMETER) {
+            $speed = $self->config->get_abs_value('external_perimeter_speed');
+        } elsif ($path->role == EXTR_ROLE_OVERHANG_PERIMETER || $path->role == EXTR_ROLE_BRIDGE) {
+            $speed = $self->config->get_abs_value('bridge_speed');
+        } elsif ($path->role == EXTR_ROLE_FILL) {
+            $speed = $self->config->get_abs_value('infill_speed');
+        } elsif ($path->role == EXTR_ROLE_SOLIDFILL) {
+            $speed = $self->config->get_abs_value('solid_infill_speed');
+        } elsif ($path->role == EXTR_ROLE_TOPSOLIDFILL) {
+            $speed = $self->config->get_abs_value('top_solid_infill_speed');
+        } elsif ($path->role == EXTR_ROLE_GAPFILL) {
+            $speed = $self->config->get_abs_value('gap_fill_speed');
+        } else {
+            die "Invalid speed";
+        }
     }
-    $F *= 60;  # convert mm/sec to mm/min
+    my $F = $speed * 60;  # convert mm/sec to mm/min
     
     if ($self->first_layer) {
         $F = $self->config->get_abs_value_over('first_layer_speed', $F/60) * 60;
@@ -324,9 +312,9 @@ sub _extrude_path {
             $self->writer->extrusion_axis,
             $self->config->gcode_comments ? " ; $description" : "");
 
-        if ($self->enable_wipe) {
-            $self->_wipe_path($path->polyline->clone);
-            $self->_wipe_path->reverse;
+        if ($self->wipe->enable) {
+            $self->wipe->path($path->polyline->clone);
+            $self->wipe->path->reverse;
         }
     }
     $gcode .= ";_BRIDGE_FAN_END\n" if $path->is_bridge && $self->enable_cooling_markers;
@@ -340,6 +328,7 @@ sub _extrude_path {
     return $gcode;
 }
 
+# This method accepts $point in print coordinates.
 sub travel_to {
     my ($self, $point, $role, $comment) = @_;
     
@@ -353,78 +342,35 @@ sub travel_to {
     # Skip retraction at all in the following cases:
     # - travel length is shorter than the configured threshold
     # - user has enabled "Only retract when crossing perimeters" and the travel move is
-    #   contained in a single island of the current layer *and* a single island in the
-    #   upper layer (so that ooze will not be visible)
+    #   contained in a single internal fill_surface (this includes the bottom layer when
+    #   bottom_solid_layers == 0) or in a single internal slice (this would exclude such
+    #   bottom layer but preserve perimeter-to-infill moves in all the other layers)
     # - the path that will be extruded after this travel move is a support material
     #   extrusion and the travel move is contained in a single support material island
     if ($travel->length < scale $self->config->get_at('retract_before_travel', $self->writer->extruder->id)
         || ($self->config->only_retract_when_crossing_perimeters
             && $self->config->fill_density > 0
-            && (first { $_->contains_line($travel) } @{$self->_upper_layer_islands})
-            && (first { $_->contains_line($travel) } @{$self->_layer_islands}))
-        || (defined $role && $role == EXTR_ROLE_SUPPORTMATERIAL && (first { $_->contains_line($travel) } @{$self->layer->support_islands}))
+            && defined($self->layer)
+            && ($self->layer->any_internal_region_slice_contains_line($travel)
+             || $self->layer->any_internal_region_fill_surface_contains_line($travel)))
+        || (defined $role && $role == EXTR_ROLE_SUPPORTMATERIAL && $self->layer->support_islands->contains_line($travel))
         ) {
         # Just perform a straight travel move without any retraction.
-        $gcode .= $self->writer->travel_to_xy($self->point_to_gcode($point), $comment);
-    } elsif ($self->config->avoid_crossing_perimeters && !$self->straight_once) {
-        # If avoid_crossing_perimeters is enabled and the straight_once flag is not set
+        $gcode .= $self->writer->travel_to_xy($self->point_to_gcode($point), $comment || '');
+    } elsif ($self->config->avoid_crossing_perimeters && !$self->avoid_crossing_perimeters->disable_once) {
+        # If avoid_crossing_perimeters is enabled and the disable_once flag is not set
         # we need to plan a multi-segment travel move inside the configuration space.
-        if ($self->new_object) {
-            # If we're moving to a new object we need to use the external configuration space.
-            $self->new_object(0);
-            
-            # represent $point in G-code coordinates
-            $point = $point->clone;
-            my $origin = $self->origin;
-            $point->translate(map scale $_, @$origin);
-            
-            # calculate path (external_mp uses G-code coordinates so we set a temporary null origin)
-            $self->set_origin(Slic3r::Pointf->new(0,0));
-            $gcode .= $self->_plan($self->_external_mp, $point, $comment);
-            $self->set_origin($origin);
-        } else {
-            $gcode .= $self->_plan($self->_layer_mp, $point, $comment);
-        }
+        $gcode .= $self->avoid_crossing_perimeters->travel_to($self, $point, $comment || '');
     } else {
-        # If avoid_crossing_perimeters is disabled or the straight_once flag is set,
+        # If avoid_crossing_perimeters is disabled or the disable_once flag is set,
         # perform a straight move with a retraction.
         $gcode .= $self->retract;
         $gcode .= $self->writer->travel_to_xy($self->point_to_gcode($point), $comment || '');
     }
     
     # Re-allow avoid_crossing_perimeters for the next travel moves
-    $self->straight_once(0);
+    $self->avoid_crossing_perimeters->disable_once(0);
     
-    return $gcode;
-}
-
-sub _plan {
-    my ($self, $mp, $point, $comment) = @_;
-    
-    my $gcode = "";
-    my @travel = @{$mp->shortest_path($self->last_pos, $point)->lines};
-    
-    # if the path is not contained in a single island we need to retract
-    my $need_retract = !$self->config->only_retract_when_crossing_perimeters;
-    if (!$need_retract) {
-        $need_retract = 1;
-        foreach my $island (@{$self->_upper_layer_islands}) {
-            # discard the island if at any line is not enclosed in it
-            next if first { !$island->contains_line($_) } @travel;
-            # okay, this island encloses the full travel path
-            $need_retract = 0;
-            last;
-        }
-    }
-    
-    # perform the retraction
-    $gcode .= $self->retract if $need_retract;
-    
-    # append the actual path and return
-    # use G1 because we rely on paths being straight (G0 may make round paths)
-    $gcode .= join '',
-        map $self->writer->travel_to_xy($self->point_to_gcode($_->b), $comment),
-        @travel;
     return $gcode;
 }
 
@@ -436,48 +382,8 @@ sub retract {
     my $gcode = "";
     
     # wipe (if it's enabled for this extruder and we have a stored wipe path)
-    if ($self->config->get_at('wipe', $self->writer->extruder->id) && $self->_wipe_path) {
-        # Reduce feedrate a bit; travel speed is often too high to move on existing material.
-        # Too fast = ripping of existing material; too slow = short wipe path, thus more blob.
-        my $wipe_speed = $self->writer->config->get('travel_speed') * 0.8;
-        
-        # get the retraction length
-        my $length = $toolchange
-            ? $self->writer->extruder->retract_length_toolchange
-            : $self->writer->extruder->retract_length;
-        
-        if ($length) {
-            # Calculate how long we need to travel in order to consume the required
-            # amount of retraction. In other words, how far do we move in XY at $wipe_speed
-            # for the time needed to consume retract_length at retract_speed?
-            my $wipe_dist = scale($length / $self->writer->extruder->retract_speed * $wipe_speed);
-        
-            # Take the stored wipe path and replace first point with the current actual position
-            # (they might be different, for example, in case of loop clipping).
-            my $wipe_path = Slic3r::Polyline->new(
-                $self->last_pos,
-                @{$self->_wipe_path}[1..$#{$self->_wipe_path}],
-            );
-            # 
-            $wipe_path->clip_end($wipe_path->length - $wipe_dist);
-        
-            # subdivide the retraction in segments
-            my $retracted = 0;
-            foreach my $line (@{$wipe_path->lines}) {
-                my $segment_length = $line->length;
-                # Reduce retraction length a bit to avoid effective retraction speed to be greater than the configured one
-                # due to rounding (TODO: test and/or better math for this)
-                my $dE = $length * ($segment_length / $wipe_dist) * 0.95;
-                $gcode .= $self->writer->set_speed($wipe_speed*60);
-                $gcode .= $self->writer->extrude_to_xy(
-                    $self->point_to_gcode($line->b),
-                    -$dE,
-                    'retract' . ($self->enable_cooling_markers ? ';_WIPE' : ''),
-                );
-                $retracted += $dE;
-            }
-            $self->writer->extruder->set_retracted($self->writer->extruder->retracted + $retracted);
-        }
+    if ($self->config->get_at('wipe', $self->writer->extruder->id) && $self->wipe->path) {
+        $gcode .= $self->wipe->wipe($self, $toolchange);
     }
     
     # The parent class will decide whether we need to perform an actual retraction
@@ -488,7 +394,7 @@ sub retract {
     
     $gcode .= $self->writer->reset_e;
     $gcode .= $self->writer->lift
-        if $self->writer->extruder->retract_length > 0;
+        if $self->writer->extruder->retract_length > 0 || $self->config->use_firmware_retraction;
     
     return $gcode;
 }
@@ -537,14 +443,185 @@ sub set_extruder {
     # if ooze prevention is enabled, park current extruder in the nearest
     # standby point and set it to the standby temperature
     $gcode .= $self->ooze_prevention->pre_toolchange($self)
-        if $self->ooze_prevention && defined $self->writer->extruder;
+        if $self->ooze_prevention->enable && defined $self->writer->extruder;
     
     # append the toolchange command
     $gcode .= $self->writer->toolchange($extruder_id);
     
     # set the new extruder to the operating temperature
     $gcode .= $self->ooze_prevention->post_toolchange($self)
-        if $self->ooze_prevention;
+        if $self->ooze_prevention->enable;
+    
+    return $gcode;
+}
+
+package Slic3r::GCode::OozePrevention;
+use Moo;
+
+use Slic3r::Geometry qw(scale);
+
+has 'enable'            => (is => 'rw', default => sub { 0 });
+has 'standby_points'    => (is => 'rw');
+
+sub pre_toolchange {
+    my ($self, $gcodegen) = @_;
+    
+    my $gcode = "";
+    
+    # move to the nearest standby point
+    if (@{$self->standby_points}) {
+        my $last_pos = $gcodegen->last_pos->clone;
+        $last_pos->translate(scale +$gcodegen->origin->x, scale +$gcodegen->origin->y);  #))
+        my $standby_point = $last_pos->nearest_point($self->standby_points);
+        $standby_point->translate(scale -$gcodegen->origin->x, scale -$gcodegen->origin->y);  #))
+        $gcode .= $gcodegen->travel_to($standby_point, undef, 'move to standby position');
+    }
+    
+    if ($gcodegen->config->standby_temperature_delta != 0) {
+        my $temp = defined $gcodegen->layer && $gcodegen->layer->id == 0
+            ? $gcodegen->config->get_at('first_layer_temperature', $gcodegen->writer->extruder->id)
+            : $gcodegen->config->get_at('temperature', $gcodegen->writer->extruder->id);
+        # we assume that heating is always slower than cooling, so no need to block
+        $gcode .= $gcodegen->writer->set_temperature($temp + $gcodegen->config->standby_temperature_delta, 0);
+    }
+    
+    return $gcode;
+}
+
+sub post_toolchange {
+    my ($self, $gcodegen) = @_;
+    
+    my $gcode = "";
+    
+    if ($gcodegen->config->standby_temperature_delta != 0) {
+        my $temp = defined $gcodegen->layer && $gcodegen->layer->id == 0
+            ? $gcodegen->config->get_at('first_layer_temperature', $gcodegen->writer->extruder->id)
+            : $gcodegen->config->get_at('temperature', $gcodegen->writer->extruder->id);
+        $gcode .= $gcodegen->writer->set_temperature($temp, 1);
+    }
+    
+    return $gcode;
+}
+
+package Slic3r::GCode::Wipe;
+use Moo;
+
+use Slic3r::Geometry qw(scale);
+
+has 'enable'            => (is => 'rw', default => sub { 0 });
+has 'path'              => (is => 'rw');
+
+sub wipe {
+    my ($self, $gcodegen, $toolchange) = @_;
+    
+    my $gcode = "";
+    
+    # Reduce feedrate a bit; travel speed is often too high to move on existing material.
+    # Too fast = ripping of existing material; too slow = short wipe path, thus more blob.
+    my $wipe_speed = $gcodegen->writer->config->get('travel_speed') * 0.8;
+    
+    # get the retraction length
+    my $length = $toolchange
+        ? $gcodegen->writer->extruder->retract_length_toolchange
+        : $gcodegen->writer->extruder->retract_length;
+    
+    if ($length) {
+        # Calculate how long we need to travel in order to consume the required
+        # amount of retraction. In other words, how far do we move in XY at $wipe_speed
+        # for the time needed to consume retract_length at retract_speed?
+        my $wipe_dist = scale($length / $gcodegen->writer->extruder->retract_speed * $wipe_speed);
+    
+        # Take the stored wipe path and replace first point with the current actual position
+        # (they might be different, for example, in case of loop clipping).
+        my $wipe_path = Slic3r::Polyline->new(
+            $gcodegen->last_pos,
+            @{$self->path}[1..$#{$self->path}],
+        );
+        # 
+        $wipe_path->clip_end($wipe_path->length - $wipe_dist);
+    
+        # subdivide the retraction in segments
+        my $retracted = 0;
+        foreach my $line (@{$wipe_path->lines}) {
+            my $segment_length = $line->length;
+            # Reduce retraction length a bit to avoid effective retraction speed to be greater than the configured one
+            # due to rounding (TODO: test and/or better math for this)
+            my $dE = $length * ($segment_length / $wipe_dist) * 0.95;
+            $gcode .= $gcodegen->writer->set_speed($wipe_speed*60);
+            $gcode .= $gcodegen->writer->extrude_to_xy(
+                $gcodegen->point_to_gcode($line->b),
+                -$dE,
+                'retract' . ($gcodegen->enable_cooling_markers ? ';_WIPE' : ''),
+            );
+            $retracted += $dE;
+        }
+        $gcodegen->writer->extruder->set_retracted($gcodegen->writer->extruder->retracted + $retracted);
+    }
+    
+    return $gcode;
+}
+
+package Slic3r::GCode::AvoidCrossingPerimeters;
+use Moo;
+
+has '_external_mp'          => (is => 'rw');
+has '_layer_mp'             => (is => 'rw');
+has 'use_external_mp'       => (is => 'rw', default => sub {0});
+has 'use_external_mp_once'  => (is => 'rw', default => sub {0});   # this flag triggers the use of the external configuration space for avoid_crossing_perimeters for the next travel move
+has 'disable_once'          => (is => 'rw', default => sub {1});   # this flag disables avoid_crossing_perimeters just for the next travel move
+
+use Slic3r::Geometry qw(scale);
+
+sub init_external_mp {
+    my ($self, $islands) = @_;
+    $self->_external_mp(Slic3r::MotionPlanner->new($islands));
+}
+
+sub init_layer_mp {
+    my ($self, $islands) = @_;
+    $self->_layer_mp(Slic3r::MotionPlanner->new($islands));
+}
+
+sub travel_to {
+    my ($self, $gcodegen, $point, $comment) = @_;
+    
+    my $gcode = "";
+    
+    if ($self->use_external_mp || $self->use_external_mp_once) {
+        $self->use_external_mp_once(0);
+        
+        # represent $point in G-code coordinates
+        $point = $point->clone;
+        my $origin = $gcodegen->origin;
+        $point->translate(map scale $_, @$origin);
+        
+        # calculate path (external_mp uses G-code coordinates so we set a temporary null origin)
+        $gcodegen->set_origin(Slic3r::Pointf->new(0,0));
+        $gcode .= $self->_plan($gcodegen, $self->_external_mp, $point, $comment);
+        $gcodegen->set_origin($origin);
+    } else {
+        $gcode .= $self->_plan($gcodegen, $self->_layer_mp, $point, $comment);
+    }
+    
+    return $gcode;
+}
+
+sub _plan {
+    my ($self, $gcodegen, $mp, $point, $comment) = @_;
+    
+    my $gcode = "";
+    my $travel = $mp->shortest_path($gcodegen->last_pos, $point);
+    
+    # if the path is not contained in a single island we need to retract
+    $gcode .= $gcodegen->retract
+        if !$gcodegen->config->only_retract_when_crossing_perimeters
+        || !$gcodegen->layer->any_internal_region_fill_surface_contains_polyline($travel);
+    
+    # append the actual path and return
+    # use G1 because we rely on paths being straight (G0 may make round paths)
+    $gcode .= join '',
+        map $gcodegen->writer->travel_to_xy($gcodegen->point_to_gcode($_->b), $comment),
+        @{$travel->lines};
     
     return $gcode;
 }

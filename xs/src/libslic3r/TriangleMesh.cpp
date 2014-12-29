@@ -29,6 +29,7 @@ TriangleMesh::TriangleMesh(const TriangleMesh &other)
 {
     this->stl.heads = NULL;
     this->stl.tail  = NULL;
+    this->stl.error = other.stl.error;
     if (other.stl.facet_start != NULL) {
         this->stl.facet_start = (stl_facet*)calloc(other.stl.stats.number_of_facets, sizeof(stl_facet));
         std::copy(other.stl.facet_start, other.stl.facet_start + other.stl.stats.number_of_facets, this->stl.facet_start);
@@ -125,6 +126,7 @@ TriangleMesh::repair() {
     // fill_holes
     if (stl.stats.connected_facets_3_edge < stl.stats.number_of_facets) {
         stl_fill_holes(&stl);
+        stl_clear_error(&stl);
     }
     
     // normal_directions
@@ -280,6 +282,7 @@ TriangleMesh::split() const
         mesh->stl.stats.type = inmemory;
         mesh->stl.stats.number_of_facets = facets.size();
         mesh->stl.stats.original_num_facets = mesh->stl.stats.number_of_facets;
+        stl_clear_error(&mesh->stl);
         stl_allocate(&mesh->stl);
         
         int first = 1;
@@ -389,6 +392,7 @@ TriangleMesh::to_SV() {
 
 void TriangleMesh::ReadFromPerl(SV* vertices, SV* facets)
 {
+    stl.error = 0;
     stl.stats.type = inmemory;
     
     // count facets and allocate memory
@@ -788,7 +792,7 @@ TriangleMeshSlicer::make_expolygons_simple(std::vector<IntersectionLine> &lines,
         int slice_idx = -1;
         double current_contour_area = -1;
         for (ExPolygons::iterator slice = slices->begin(); slice != slices->end(); ++slice) {
-            if (slice->contour.contains_point(loop->points.front())) {
+            if (slice->contour.contains(loop->points.front())) {
                 double area = slice->contour.area();
                 if (area < current_contour_area || current_contour_area == -1) {
                     slice_idx = slice - slices->begin();
@@ -816,7 +820,7 @@ TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slices)
         supply everything to offset() instead of performing several union/diff calls.
     
         we sort by area assuming that the outermost loops have larger area;
-        the previous sorting method, based on $b->contains_point($a->[0]), failed to nest
+        the previous sorting method, based on $b->contains($a->[0]), failed to nest
         loops correctly in some edge cases when original model had overlapping facets
     */
 
