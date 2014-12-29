@@ -199,7 +199,7 @@ sub new {
             export_gcode    cog_go.png
             send_gcode      arrow_up.png
             export_stl      brick_go.png
-            export_pdf      layers.png
+            export_pdf      page_white_acrobat.png
             toolpaths_preview joystick.png
             
             increase        add.png
