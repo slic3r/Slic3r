@@ -65,7 +65,7 @@ sub new {
         } else {
             $self->on_progress_event($percent, $message);
         }
-    });
+    }) if 0;
     
     # Initialize preview notebook
     $self->{preview_notebook} = Wx::Notebook->new($self, -1, wxDefaultPosition, [335,335], wxNB_BOTTOM);
@@ -1159,6 +1159,7 @@ sub export_pdf {
         $options_dialog->Destroy;
         return;
     }
+    my $options = $options_dialog->{values};
     
     my $output_file = $self->_get_export_file('PDF') or return;
     
@@ -1166,7 +1167,7 @@ sub export_pdf {
     
     # prepare config
     my $config = Slic3r::Config->new;
-    $config->set('layer_height', $options_dialog->{values}{layer_height});
+    $config->set('layer_height', $options->{layer_height});
     
     # read model
     my $model = Slic3r::Model->new;
@@ -1192,7 +1193,8 @@ sub export_pdf {
     
     # init PDF
     my $pdf = PDF::API2->new();
-    my $color = $pdf->colorspace_separation($options_dialog->{values}{color}, 'darkblue');  # RDG_GLOSS
+    my $fill_color      = $pdf->colorspace_separation($options->{fill_color}, 'darkblue');  # RDG_GLOSS
+    my $contour_color   = $pdf->colorspace_separation($options->{contour_color}, 'black');  # CutContour
     
     # slice and build output geometry
     $_->slice for @{$print->objects};
@@ -1204,7 +1206,9 @@ sub export_pdf {
             my $page = $pdf->page();
             $page->mediabox(@$mediabox);
             my $content = $page->gfx;
-            $content->fillcolor($color, 1);
+            $content->fillcolor($fill_color, 1);
+            $content->strokecolor($contour_color, 1);
+            $content->linewidth(0.1);
         
             foreach my $expolygon (@{$layer->slices}) {
                 $expolygon = $expolygon->clone;
@@ -1215,13 +1219,20 @@ sub export_pdf {
                     $content->poly(map { unscale($_->x)/$mm, unscale($_->y)/$mm } @$hole);  #)
                     $content->close;
                 }
-                $content->fill;  # non-zero by default
+                if ($options->{fill} && $options->{contour}) {
+                    $content->fillstroke;
+                } elsif ($options->{fill}) {
+                    $content->fill;  # nonzero by default
+                } elsif ($options->{contour}) {
+                    $content->stroke;
+                }
             }
         }
     }
     
     # write output file
     $pdf->saveas($output_file);
+    $self->statusbar->SetStatusText("PDF file exported to $output_file");
 }
 
 sub export_amf {
@@ -1722,7 +1733,10 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, "Export PDF", wxDefaultPosition, [600,200]);
     $self->{values} = {
         layer_height    => 0.1,
-        color           => 'RDG_GLOSS',
+        fill            => 1,
+        contour         => 0,
+        fill_color      => 'RDG_GLOSS',
+        contour_color   => 'CutContour',
     };
     
     my $optgroup;
@@ -1743,11 +1757,33 @@ sub new {
         default     => $self->{values}{layer_height},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
-        opt_id      => 'color',
+        opt_id      => 'fill',
+        type        => 'bool',
+        label       => 'Fill',
+        tooltip     => 'Enable fill.',
+        default     => $self->{values}{fill},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'fill_color',
         type        => 's',
-        label       => 'Color',
-        tooltip     => 'The color name to use in the PDF file.',
-        default     => $self->{values}{color},
+        label       => 'Fill color',
+        tooltip     => 'The color name to use in the PDF file for fill.',
+        default     => $self->{values}{fill_color},
+        width       => 150,
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'contour',
+        type        => 'bool',
+        label       => 'Contour',
+        tooltip     => 'Enable contours.',
+        default     => $self->{values}{contour},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'contour_color',
+        type        => 's',
+        label       => 'Contour color',
+        tooltip     => 'The color name to use in the PDF file for contours.',
+        default     => $self->{values}{contour_color},
         width       => 150,
     ));
     
