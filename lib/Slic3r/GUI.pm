@@ -15,6 +15,7 @@ use Slic3r::GUI::Plater;
 use Slic3r::GUI::Plater::2D;
 use Slic3r::GUI::Plater::2DToolpaths;
 use Slic3r::GUI::Plater::3D;
+use Slic3r::GUI::Plater::3DPreview;
 use Slic3r::GUI::Plater::ObjectPartsPanel;
 use Slic3r::GUI::Plater::ObjectCutDialog;
 use Slic3r::GUI::Plater::ObjectSettingsDialog;
@@ -217,6 +218,7 @@ sub presets {
     opendir my $dh, Slic3r::encode_path("$Slic3r::GUI::datadir/$section")
         or die "Failed to read directory $Slic3r::GUI::datadir/$section (errno: $!)\n";
     foreach my $file (grep /\.ini$/i, readdir $dh) {
+        $file = Slic3r::decode_path($file);
         my $name = basename($file);
         $name =~ s/\.ini$//;
         $presets{$name} = "$Slic3r::GUI::datadir/$section/$file";
