@@ -1,5 +1,4 @@
 #!/bin/sh
 DIR="$( cd "$( dirname "$0" )" && pwd )"
-echo $DIR
 cpanm --local-lib=$DIR/perl5 local::lib >> /dev/null && eval $(perl -I $DIR/perl5/lib/perl5/ -Mlocal::lib) >> /dev/null
 perl $DIR/Build.PL $@
