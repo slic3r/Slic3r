@@ -1158,9 +1158,15 @@ sub send_gcode {
     my $ua = LWP::UserAgent->new;
     $ua->timeout(180);
 
-    my $res = $ua->post(
+    # make sure the upload location is valid even if user does not enter valid location
+    my $final_uploadLoc="local";
+    
+    if($self->{config}->octoprint_uploadLoc eq "sdcard"){
+        $final_uploadLoc = "sdcard";
+    }
 
-        "http://" . $self->{config}->octoprint_host . "/api/files/" . $self->{config}->octoprint_uploadLoc. "",
+    my $res = $ua->post(
+        "http://" . $self->{config}->octoprint_host . "/api/files/$final_uploadLoc",
 
         Content_Type => 'form-data',
         'X-Api-Key' => $self->{config}->octoprint_apikey,
