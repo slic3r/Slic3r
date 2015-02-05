@@ -5,7 +5,7 @@ namespace Slic3r {
 t_optiondef_map
 PrintConfigDef::build_def() {
     t_optiondef_map Options;
-    
+
     Options["avoid_crossing_perimeters"].type = coBool;
     Options["avoid_crossing_perimeters"].label = "Avoid crossing perimeters";
     Options["avoid_crossing_perimeters"].tooltip = "Optimize travel moves in order to minimize the crossing of perimeters. This is mostly useful with Bowden extruders which suffer from oozing. This feature slows down both the print and the G-code generation.";
@@ -519,6 +519,12 @@ PrintConfigDef::build_def() {
     Options["octoprint_apikey"].tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the API Key required for authentication.";
     Options["octoprint_apikey"].cli = "octoprint-apikey=s";
 
+    Options["octoprint_loc"].type = coString;
+    Options["octoprint_loc"].label = "Upload Location";
+    Options["octoprint_loc"].tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the desired upload location.";
+    Options["octoprint_loc"].sidetext = "'sdcard' or 'local'";
+    Options["octoprint_loc"].cli = "octoprint-uploadLoc=s";
+
     Options["octoprint_host"].type = coString;
     Options["octoprint_host"].label = "Host or IP";
     Options["octoprint_host"].tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the hostname or IP address of the OctoPrint instance.";
@@ -695,7 +701,7 @@ PrintConfigDef::build_def() {
     Options["skirts"].tooltip = "Number of loops for the skirt. If the Minimum Extrusion Length option is set, the number of loops might be greater than the one configured here. Set this to zero to disable skirt completely.";
     Options["skirts"].cli = "skirts=i";
     Options["skirts"].min = 0;
-    
+
     Options["slowdown_below_layer_time"].type = coInt;
     Options["slowdown_below_layer_time"].label = "Slow down if layer print time is below";
     Options["slowdown_below_layer_time"].tooltip = "If layer print time is estimated below this number of seconds, print moves speed will be scaled down to extend duration to this value.";
@@ -1003,7 +1009,7 @@ PrintConfigDef::build_def() {
     Options["z_offset"].tooltip = "This value will be added (or subtracted) from all the Z coordinates in the output G-code. It is used to compensate for bad Z endstop position: for example, if your endstop zero actually leaves the nozzle 0.3mm far from the print bed, set this to -0.3 (or fix your endstop).";
     Options["z_offset"].sidetext = "mm";
     Options["z_offset"].cli = "z-offset=f";
-    
+
     return Options;
 };
 

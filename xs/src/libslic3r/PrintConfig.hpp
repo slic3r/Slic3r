@@ -67,7 +67,7 @@ class PrintConfigDef
 {
     public:
     static t_optiondef_map def;
-    
+
     static t_optiondef_map build_def();
 };
 
@@ -77,7 +77,7 @@ class DynamicPrintConfig : public DynamicConfig
     DynamicPrintConfig() {
         this->def = &PrintConfigDef::def;
     };
-    
+
     void normalize() {
         if (this->has("extruder")) {
             int extruder = this->option("extruder")->getInt();
@@ -93,10 +93,10 @@ class DynamicPrintConfig : public DynamicConfig
                     this->option("support_material_interface_extruder", true)->setInt(extruder);
             }
         }
-        
+
         if (!this->has("solid_infill_extruder") && this->has("infill_extruder"))
             this->option("solid_infill_extruder", true)->setInt(this->option("infill_extruder")->getInt());
-        
+
         if (this->has("spiral_vase") && this->opt<ConfigOptionBool>("spiral_vase", true)->value) {
             {
                 // this should be actually done only on the spiral layers instead of all
@@ -146,7 +146,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionFloat               support_material_speed;
     ConfigOptionInt                 support_material_threshold;
     ConfigOptionFloat               xy_size_compensation;
-    
+
     PrintObjectConfig() : StaticPrintConfig() {
         this->dont_support_bridges.value                         = true;
         this->extrusion_width.value                              = 0;
@@ -176,7 +176,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         this->support_material_threshold.value                   = 0;
         this->xy_size_compensation.value                         = 0;
     };
-    
+
     ConfigOption* option(const t_config_option_key opt_key, bool create = false) {
         if (opt_key == "dont_support_bridges")                       return &this->dont_support_bridges;
         if (opt_key == "extrusion_width")                            return &this->extrusion_width;
@@ -201,7 +201,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         if (opt_key == "support_material_speed")                     return &this->support_material_speed;
         if (opt_key == "support_material_threshold")                 return &this->support_material_threshold;
         if (opt_key == "xy_size_compensation")                       return &this->xy_size_compensation;
-        
+
         return NULL;
     };
 };
@@ -241,7 +241,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionFloatOrPercent      top_infill_extrusion_width;
     ConfigOptionInt                 top_solid_layers;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
-    
+
     PrintRegionConfig() : StaticPrintConfig() {
         this->bottom_solid_layers.value                          = 3;
         this->bridge_flow_ratio.value                            = 1;
@@ -286,7 +286,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         this->top_solid_infill_speed.percent                     = false;
         this->top_solid_layers.value                             = 3;
     };
-    
+
     ConfigOption* option(const t_config_option_key opt_key, bool create = false) {
         if (opt_key == "bottom_solid_layers")                        return &this->bottom_solid_layers;
         if (opt_key == "bridge_flow_ratio")                          return &this->bridge_flow_ratio;
@@ -320,7 +320,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         if (opt_key == "top_infill_extrusion_width")                 return &this->top_infill_extrusion_width;
         if (opt_key == "top_solid_infill_speed")                     return &this->top_solid_infill_speed;
         if (opt_key == "top_solid_layers")                           return &this->top_solid_layers;
-        
+
         return NULL;
     };
 };
@@ -349,7 +349,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_firmware_retraction;
     ConfigOptionBool                use_relative_e_distances;
     ConfigOptionBool                use_volumetric_e;
-    
+
     GCodeConfig() : StaticPrintConfig() {
         this->before_layer_gcode.value                           = "";
         this->end_gcode.value                                    = "M104 S0 ; turn off temperature\nG28 X0  ; home X axis\nM84     ; disable motors\n";
@@ -381,7 +381,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         this->use_relative_e_distances.value                     = false;
         this->use_volumetric_e.value                             = false;
     };
-    
+
     ConfigOption* option(const t_config_option_key opt_key, bool create = false) {
         if (opt_key == "before_layer_gcode")                         return &this->before_layer_gcode;
         if (opt_key == "end_gcode")                                  return &this->end_gcode;
@@ -404,10 +404,10 @@ class GCodeConfig : public virtual StaticPrintConfig
         if (opt_key == "use_firmware_retraction")                    return &this->use_firmware_retraction;
         if (opt_key == "use_relative_e_distances")                   return &this->use_relative_e_distances;
         if (opt_key == "use_volumetric_e")                           return &this->use_volumetric_e;
-        
+
         return NULL;
     };
-    
+
     std::string get_extrusion_axis() const
     {
         if (this->gcode_flavor.value == gcfMach3) {
@@ -472,7 +472,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionFloat               vibration_limit;
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
-    
+
     PrintConfig() : GCodeConfig() {
         this->avoid_crossing_perimeters.value                    = false;
         this->bed_shape.values.push_back(Pointf(0,0));
@@ -535,7 +535,7 @@ class PrintConfig : public GCodeConfig
         this->wipe.values[0]                                     = false;
         this->z_offset.value                                     = 0;
     };
-    
+
     ConfigOption* option(const t_config_option_key opt_key, bool create = false) {
         if (opt_key == "avoid_crossing_perimeters")                  return &this->avoid_crossing_perimeters;
         if (opt_key == "bed_shape")                                  return &this->bed_shape;
@@ -586,11 +586,11 @@ class PrintConfig : public GCodeConfig
         if (opt_key == "vibration_limit")                            return &this->vibration_limit;
         if (opt_key == "wipe")                                       return &this->wipe;
         if (opt_key == "z_offset")                                   return &this->z_offset;
-        
+
         // look in parent class
         ConfigOption* opt;
         if ((opt = GCodeConfig::option(opt_key, create)) != NULL) return opt;
-        
+
         return NULL;
     };
 };
@@ -600,16 +600,19 @@ class HostConfig : public virtual StaticPrintConfig
     public:
     ConfigOptionString              octoprint_host;
     ConfigOptionString              octoprint_apikey;
-    
+    ConfigOptionString              octoprint_loc;
+
     HostConfig() : StaticPrintConfig() {
         this->octoprint_host.value                              = "";
         this->octoprint_apikey.value                            = "";
+        this->octoprint_loc.value                            = "local";
     };
-    
+
     ConfigOption* option(const t_config_option_key opt_key, bool create = false) {
         if (opt_key == "octoprint_host")                        return &this->octoprint_host;
         if (opt_key == "octoprint_apikey")                      return &this->octoprint_apikey;
-        
+        if (opt_key == "octoprint_loc")                      return &this->octoprint_loc;
+
         return NULL;
     };
 };
