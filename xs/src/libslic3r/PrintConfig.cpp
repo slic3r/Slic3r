@@ -519,11 +519,11 @@ PrintConfigDef::build_def() {
     Options["octoprint_apikey"].tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the API Key required for authentication.";
     Options["octoprint_apikey"].cli = "octoprint-apikey=s";
 
-    Options["octoprint_uploadLoc"].type = coString;
-    Options["octoprint_uploadLoc"].label = "Upload Location";
-    Options["octoprint_uploadLoc"].tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the desired upload location.";
-    Options["octoprint_uploadLoc"].sidetext = "'sdcard' or 'local'";
-    Options["octoprint_uploadLoc"].cli = "octoprint-uploadLoc=s";
+    Options["octoprint_loc"].type = coString;
+    Options["octoprint_loc"].label = "Upload Location";
+    Options["octoprint_loc"].tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the desired upload location.";
+    Options["octoprint_loc"].sidetext = "'sdcard' or 'local'";
+    Options["octoprint_loc"].cli = "octoprint-uploadLoc=s";
 
     Options["octoprint_host"].type = coString;
     Options["octoprint_host"].label = "Host or IP";

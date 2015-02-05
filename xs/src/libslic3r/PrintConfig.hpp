@@ -600,18 +600,18 @@ class HostConfig : public virtual StaticPrintConfig
     public:
     ConfigOptionString              octoprint_host;
     ConfigOptionString              octoprint_apikey;
-    ConfigOptionString              octoprint_uploadLoc;
+    ConfigOptionString              octoprint_loc;
 
     HostConfig() : StaticPrintConfig() {
         this->octoprint_host.value                              = "";
         this->octoprint_apikey.value                            = "";
-        this->octoprint_uploadLoc.value                            = "";
+        this->octoprint_loc.value                            = "local";
     };
 
     ConfigOption* option(const t_config_option_key opt_key, bool create = false) {
         if (opt_key == "octoprint_host")                        return &this->octoprint_host;
         if (opt_key == "octoprint_apikey")                      return &this->octoprint_apikey;
-        if (opt_key == "octoprint_uploadLoc")                      return &this->octoprint_uploadLoc;
+        if (opt_key == "octoprint_loc")                      return &this->octoprint_loc;
 
         return NULL;
     };

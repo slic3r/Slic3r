@@ -47,7 +47,7 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{config} = Slic3r::Config->new_from_defaults(qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width
-        octoprint_host octoprint_apikey octoprint_uploadLoc
+        octoprint_host octoprint_apikey octoprint_loc
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
@@ -1159,14 +1159,14 @@ sub send_gcode {
     $ua->timeout(180);
 
     # make sure the upload location is valid even if user does not enter valid location
-    my $final_uploadLoc="local";
-    
-    if($self->{config}->octoprint_uploadLoc eq "sdcard"){
-        $final_uploadLoc = "sdcard";
+    my $final_loc="local";
+
+    if($self->{config}->octoprint_loc eq "sdcard"){
+        $final_loc = "sdcard";
     }
 
     my $res = $ua->post(
-        "http://" . $self->{config}->octoprint_host . "/api/files/$final_uploadLoc",
+        "http://" . $self->{config}->octoprint_host . "/api/files/$final_loc",
 
         Content_Type => 'form-data',
         'X-Api-Key' => $self->{config}->octoprint_apikey,
