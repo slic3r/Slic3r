@@ -41,6 +41,7 @@ sub GetValue {
 package Slic3r::GUI::BedShapePanel;
 
 use List::Util qw(min max sum first);
+use List::MoreUtils qw(natatime);
 use Slic3r::Geometry qw(PI X Y scale unscale scaled_epsilon deg2rad);
 use Slic3r::Geometry::Clipper qw(intersection_pl);
 use Wx qw(:font :id :misc :sizer :choicebook :filedialog :pen :brush wxTAB_TRAVERSAL);
@@ -307,7 +308,14 @@ sub _repaint_canvas {
         @polylines = @{intersection_pl(\@polylines, [$bed_polygon])};
         
         $dc->SetPen(Wx::Pen->new(Wx::Colour->new(230,230,230), 1, wxSOLID));
-        $dc->DrawLine(map @{$to_pixel->([map unscale($_), @$_])}, @$_) for @polylines;
+        for (@polylines) {
+            my $it = natatime(2, map @{$to_pixel->([map unscale($_), @$_])}, @$_);
+            my @points;
+            while (my @pair = $it->()) {
+                push @points, \@pair;
+            }
+            $dc->DrawLines(\@points);
+        }
     }
     
     # draw bed contour
