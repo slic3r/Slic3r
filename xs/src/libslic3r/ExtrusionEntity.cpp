@@ -114,7 +114,7 @@ REGISTER_CLASS(ExtrusionPath, "ExtrusionPath");
 #endif
 
 std::string
-ExtrusionPath::gcode(Extruder* extruder, double mm3_per_mm,
+ExtrusionPath::gcode(GCodeWriter *writer,  double mm3_per_mm,
     double F, double xofs, double yofs, std::string extrusion_axis,
     std::string gcode_line_suffix) const
 {
@@ -124,6 +124,7 @@ ExtrusionPath::gcode(Extruder* extruder, double mm3_per_mm,
     stream.setf(std::ios::fixed);
 
     double local_F = F;
+    Extruder *extruder = writer->extruder();
 
     Lines lines = this->polyline.lines();
     for (Lines::const_iterator line_it = lines.begin();
