@@ -247,6 +247,13 @@ sub validate {
     
     die "--use-firmware-retraction is not compatible with --wipe\n"
         if $self->use_firmware_retraction && first {$_} @{$self->wipe};
+
+    # --use-velocity-extrusion
+    die "--use-velocity-extrusion is only supported by Machinekit firmware\n"
+        if $self->use_velocity_extrusion && $self->gcode_flavor ne 'machinekit';
+
+    die "--use-velocity-extrusion must be used in combination with --use-firmware-retraction\n"
+        if $self->use_velocity_extrusion && !$self->use_firmware_retraction;
     
     # --fill-pattern
     die "Invalid value for --fill-pattern\n"
