@@ -284,7 +284,13 @@ sub _extrude_path {
     # calculate extrusion length per distance unit
     my $e_per_mm = $self->writer->extruder->e_per_mm3 * $path->mm3_per_mm;
     $e_per_mm = 0 if !$self->writer->extrusion_axis;
-    
+
+    if (($e_per_mm > 0) && $self->config->use_velocity_extrusion) {
+        $gcode .= $self->writer->set_cross_section($path->mm3_per_mm,
+                                                   $self->config->gcode_comments ? " ; $description" : "");
+        $e_per_mm = 0;
+    }
+
     # set speed
     $speed //= -1;
     if ($speed == -1) {
@@ -378,6 +384,11 @@ sub travel_to {
     # generate G-code for the travel move
     my $gcode = "";
     $gcode .= $self->retract if $needs_retraction;
+
+    # set extrusion to 0 for unretracted moves
+    if (!$needs_retraction && $self->config->use_velocity_extrusion) {
+        $gcode .= $self->writer->set_cross_section(0.0, $comment);
+    }
     
     # use G1 because we rely on paths being straight (G0 may make round paths)
     $gcode .= $self->writer->travel_to_xy($self->point_to_gcode($_->b), $comment)
