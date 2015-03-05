@@ -30,6 +30,7 @@
     std::string set_extruder(unsigned int extruder_id);
     std::string toolchange(unsigned int extruder_id);
     std::string set_speed(double F, std::string comment = std::string());
+    std::string set_cross_section(double mm2, std::string comment = std::string());
     std::string travel_to_xy(Pointf* point, std::string comment = std::string())
         %code{% RETVAL = THIS->travel_to_xy(*point, comment); %};
     std::string travel_to_xyz(Pointf3* point, std::string comment = std::string())

@@ -10,6 +10,7 @@
 #define PRECISION(val, precision) std::fixed << std::setprecision(precision) << val
 #define XYZF_NUM(val) PRECISION(val, 3)
 #define E_NUM(val) PRECISION(val, 5)
+#define CROSS_NUM(val) PRECISION(val, 6)
 
 namespace Slic3r {
 
@@ -205,7 +206,9 @@ GCodeWriter::reset_e(bool force)
         this->_extruder->E = 0;
     }
     
-    if (!this->_extrusion_axis.empty() && !this->config.use_relative_e_distances) {
+    if (!this->_extrusion_axis.empty() &&
+        !this->config.use_relative_e_distances &&
+        !this->config.use_velocity_extrusion) {
         std::ostringstream gcode;
         gcode << "G92 " << this->_extrusion_axis << "0";
         if (this->config.gcode_comments) gcode << " ; reset extrusion distance";
@@ -277,6 +280,16 @@ GCodeWriter::set_speed(double F, const std::string &comment)
 {
     std::ostringstream gcode;
     gcode << "G1 F" << XYZF_NUM(F);
+    COMMENT(comment);
+    gcode << "\n";
+    return gcode.str();
+}
+
+std::string
+GCodeWriter::set_cross_section(double mm2, const std::string &comment)
+{
+    std::ostringstream gcode;
+    gcode << "M600 P" << CROSS_NUM(mm2);
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
