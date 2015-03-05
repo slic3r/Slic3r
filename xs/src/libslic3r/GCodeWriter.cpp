@@ -276,7 +276,7 @@ std::string
 GCodeWriter::set_speed(double F, const std::string &comment)
 {
     std::ostringstream gcode;
-    gcode << "G1 F" << F;
+    gcode << "G1 F" << XYZF_NUM(F);
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
@@ -370,33 +370,52 @@ GCodeWriter::will_move_z(double z) const
 }
 
 std::string
-GCodeWriter::extrude_to_xy(const Pointf &point, double dE, const std::string &comment)
+GCodeWriter::extrude_to_xy(const Pointf &point, double mm3_per_mm, double line_length, double F, const std::string &comment)
 {
+    double e = this->_extruder->e_per_mm(mm3_per_mm);
     this->_pos.x = point.x;
     this->_pos.y = point.y;
-    this->_extruder->extrude(dE);
-    
+
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x)
-          <<   " Y" << XYZF_NUM(point.y)
-          <<    " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
+          <<   " Y" << XYZF_NUM(point.y);
+
+    // calculate extrusion length for this line
+    if (e > 0) {
+        this->_extruder->extrude(e * line_length);
+        gcode << " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
+    }
+
+    if (F > 0) {
+        gcode << " F" << XYZF_NUM(F);
+    }
+
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
 }
 
 std::string
-GCodeWriter::extrude_to_xyz(const Pointf3 &point, double dE, const std::string &comment)
+GCodeWriter::extrude_to_xyz(const Pointf3 &point, double mm3_per_mm, double line_length, double F, const std::string &comment)
 {
+    double e = this->_extruder->e_per_mm(mm3_per_mm);
     this->_pos = point;
     this->_lifted = 0;
-    this->_extruder->extrude(dE);
-    
+
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x)
           <<   " Y" << XYZF_NUM(point.y)
-          <<   " Z" << XYZF_NUM(point.z)
-          <<    " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
+          <<   " Z" << XYZF_NUM(point.z);
+
+    if (e > 0) {
+        this->_extruder->extrude(e * line_length);
+        gcode << " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
+    }
+
+    if (F > 0) {
+        gcode << " F" << XYZF_NUM(F);
+    }
+
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();

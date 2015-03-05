@@ -273,12 +273,10 @@ sub _extrude_path {
         $gcode .= $self->writer->set_acceleration($acceleration);
     }
     
-    # calculate extrusion length per distance unit
+    # calculate extrusion volume
     my $mm3_per_mm = $path->mm3_per_mm;
     $mm3_per_mm = 0 if !$self->writer->extrusion_axis;
 
-    
-    
     # set speed
     $speed //= -1;
     if ($speed == -1) {
@@ -581,14 +579,16 @@ sub wipe {
             my $segment_length = $line->length;
             # Reduce retraction length a bit to avoid effective retraction speed to be greater than the configured one
             # due to rounding (TODO: test and/or better math for this)
-            my $dE = $length * ($segment_length / $wipe_dist) * 0.95;
+            my $mm3_per_mm = ($segment_length / $wipe_dist) * 0.95;
             $gcode .= $gcodegen->writer->set_speed($wipe_speed*60);
             $gcode .= $gcodegen->writer->extrude_to_xy(
                 $gcodegen->point_to_gcode($line->b),
-                -$dE,
+                $mm3_per_mm,
+                -$length,
+                $wipe_speed*60,
                 'wipe and retract' . ($gcodegen->enable_cooling_markers ? ';_WIPE' : ''),
             );
-            $retracted += $dE;
+            $retracted += $length * $mm3_per_mm;
         }
         $gcodegen->writer->extruder->set_retracted($gcodegen->writer->extruder->retracted + $retracted);
         
