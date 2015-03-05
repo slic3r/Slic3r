@@ -309,7 +309,7 @@ sub _extrude_path {
     my $path_length = unscale $path->length;
     {
         my $extruder_offset = $self->config->get_at('extruder_offset', $self->writer->extruder->id);
-        $gcode .= $path->gcode($self->writer->extruder, $e_per_mm, $F,
+        $gcode .= $path->gcode($self->writer, $e_per_mm, $F,
             $self->origin->x - $extruder_offset->x,
             $self->origin->y - $extruder_offset->y,  #-
             $self->writer->extrusion_axis,
