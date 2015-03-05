@@ -321,6 +321,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_firmware_retraction;
     ConfigOptionBool                use_relative_e_distances;
     ConfigOptionBool                use_volumetric_e;
+    ConfigOptionBool                use_velocity_extrusion;
     
     GCodeConfig() : StaticPrintConfig() {
         this->before_layer_gcode.value                           = "";
@@ -354,6 +355,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         this->use_firmware_retraction.value                      = false;
         this->use_relative_e_distances.value                     = false;
         this->use_volumetric_e.value                             = false;
+        this->use_velocity_extrusion.value                       = false;
     };
     
     ConfigOption* option(const t_config_option_key opt_key, bool create = false) {
@@ -380,6 +382,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         if (opt_key == "use_firmware_retraction")                    return &this->use_firmware_retraction;
         if (opt_key == "use_relative_e_distances")                   return &this->use_relative_e_distances;
         if (opt_key == "use_volumetric_e")                           return &this->use_volumetric_e;
+        if (opt_key == "use_velocity_extrusion")                     return &this->use_velocity_extrusion;
         
         return NULL;
     };
