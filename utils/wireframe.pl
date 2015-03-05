@@ -131,7 +131,7 @@ my %opt = (
                 
                     # extrude segments
                     foreach my $point (@points) {
-                        print $fh $gcodegen->writer->extrude_to_xyz($point, $e * $gcodegen->writer->get_position->distance_to($point));
+                        print $fh $gcodegen->writer->extrude_to_xyz($point, $e, $gcodegen->writer->get_position->distance_to($point));
                     }
                 }
             }
@@ -144,7 +144,7 @@ my %opt = (
                 
                 foreach my $line (@{$polyline->lines}) {
                     my $point = Slic3r::Pointf->new_unscale(@{ $line->b });
-                    print $fh $gcodegen->writer->extrude_to_xy($point, $e * unscale($line->length));
+                    print $fh $gcodegen->writer->extrude_to_xy($point, $e, unscale($line->length));
                 }
             }
         }
