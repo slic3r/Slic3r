@@ -242,7 +242,7 @@ sub validate {
     die "Invalid value for --gcode-flavor\n"
         if !first { $_ eq $self->gcode_flavor } @{$Options->{gcode_flavor}{values}};
     
-    die "--use-firmware-retraction is only supported by Marlin firmware\n"
+    die "--use-firmware-retraction is only supported by Marlin and Machinekit firmware\n"
         if $self->use_firmware_retraction && $self->gcode_flavor ne 'reprap' && $self->gcode_flavor ne 'machinekit';
     
     die "--use-firmware-retraction is not compatible with --wipe\n"
