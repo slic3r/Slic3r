@@ -114,8 +114,8 @@ REGISTER_CLASS(ExtrusionPath, "ExtrusionPath");
 #endif
 
 std::string
-ExtrusionPath::gcode(Extruder* extruder, double e, double F,
-    double xofs, double yofs, std::string extrusion_axis,
+ExtrusionPath::gcode(Extruder* extruder, double mm3_per_mm,
+    double F, double xofs, double yofs, std::string extrusion_axis,
     std::string gcode_line_suffix) const
 {
     dSP;
@@ -132,6 +132,7 @@ ExtrusionPath::gcode(Extruder* extruder, double e, double F,
         const double line_length = line_it->length() * SCALING_FACTOR;
 
         // calculate extrusion length for this line
+        double e = extruder->e_per_mm(mm3_per_mm);
         double E = 0;
         if (e > 0) {
             extruder->extrude(e * line_length);

@@ -71,7 +71,7 @@ class ExtrusionPath : public ExtrusionEntity
     bool is_infill() const;
     bool is_solid_infill() const;
     bool is_bridge() const;
-    std::string gcode(Extruder* extruder, double e, double F,
+    std::string gcode(Extruder* extruder, double mm3_per_mm, double F,
         double xofs, double yofs, std::string extrusion_axis,
         std::string gcode_line_suffix) const;
     Polygons grow() const;

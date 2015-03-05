@@ -274,8 +274,10 @@ sub _extrude_path {
     }
     
     # calculate extrusion length per distance unit
-    my $e_per_mm = $self->writer->extruder->e_per_mm3 * $path->mm3_per_mm;
-    $e_per_mm = 0 if !$self->writer->extrusion_axis;
+    my $mm3_per_mm = $path->mm3_per_mm;
+    $mm3_per_mm = 0 if !$self->writer->extrusion_axis;
+
+    
     
     # set speed
     $speed //= -1;
@@ -309,7 +311,7 @@ sub _extrude_path {
     my $path_length = unscale $path->length;
     {
         my $extruder_offset = $self->config->get_at('extruder_offset', $self->writer->extruder->id);
-        $gcode .= $path->gcode($self->writer->extruder, $e_per_mm, $F,
+        $gcode .= $path->gcode($self->writer->extruder, $mm3_per_mm, $F,
             $self->origin->x - $extruder_offset->x,
             $self->origin->y - $extruder_offset->y,  #-
             $self->writer->extrusion_axis,
