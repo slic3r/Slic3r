@@ -222,8 +222,12 @@ sub extrude_loop {
         my $point = $first_segment->point_at($distance);
         $point->rotate($angle, $first_segment->a);
         
-        # generate the travel move
-        $gcode .= $self->writer->travel_to_xy($self->point_to_gcode($point), "move inwards before travel");
+        # generate the travel move, usually unretracted -> also set cross section
+        my $comment = "move inwards before travel";
+        if ($self->config->use_velocity_extrusion) {
+            $gcode .= $self->writer->set_cross_section(0.0, $comment);
+        }
+        $gcode .= $self->writer->travel_to_xy($self->point_to_gcode($point), $comment);
     }
     
     return $gcode;
