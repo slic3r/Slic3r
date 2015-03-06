@@ -279,7 +279,7 @@ sub _extrude_path {
 
     if (($mm3_per_mm > 0) && $self->config->use_velocity_extrusion) {
         $gcode .= $self->writer->set_cross_section($mm3_per_mm,
-                                                   $self->config->gcode_comments ? " ; $description" : "");
+                                                   $description);
         $mm3_per_mm = 0;
     }
 
@@ -319,7 +319,7 @@ sub _extrude_path {
             $self->origin->x - $extruder_offset->x,
             $self->origin->y - $extruder_offset->y,  #-
             $self->writer->extrusion_axis,
-            $self->config->gcode_comments ? " ; $description" : "");
+            $description);
 
         if ($self->wipe->enable) {
             $self->wipe->path($path->polyline->clone);
