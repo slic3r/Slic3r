@@ -222,8 +222,12 @@ sub extrude_loop {
         my $point = $first_segment->point_at($distance);
         $point->rotate($angle, $first_segment->a);
         
-        # generate the travel move
-        $gcode .= $self->writer->travel_to_xy($self->point_to_gcode($point), "move inwards before travel");
+        # generate the travel move, usually unretracted -> also set cross section
+        my $comment = "move inwards before travel";
+        if ($self->config->use_velocity_extrusion) {
+            $gcode .= $self->writer->set_cross_section(0.0, $comment);
+        }
+        $gcode .= $self->writer->travel_to_xy($self->point_to_gcode($point), $comment);
     }
     
     return $gcode;
@@ -273,10 +277,16 @@ sub _extrude_path {
         $gcode .= $self->writer->set_acceleration($acceleration);
     }
     
-    # calculate extrusion length per distance unit
-    my $e_per_mm = $self->writer->extruder->e_per_mm3 * $path->mm3_per_mm;
-    $e_per_mm = 0 if !$self->writer->extrusion_axis;
-    
+    # calculate extrusion volume
+    my $mm3_per_mm = $path->mm3_per_mm;
+    $mm3_per_mm = 0 if !$self->writer->extrusion_axis;
+
+    if (($mm3_per_mm > 0) && $self->config->use_velocity_extrusion) {
+        $gcode .= $self->writer->set_cross_section($mm3_per_mm,
+                                                   $description);
+        $mm3_per_mm = 0;
+    }
+
     # set speed
     $speed //= -1;
     if ($speed == -1) {
@@ -309,11 +319,11 @@ sub _extrude_path {
     my $path_length = unscale $path->length;
     {
         my $extruder_offset = $self->config->get_at('extruder_offset', $self->writer->extruder->id);
-        $gcode .= $path->gcode($self->writer->extruder, $e_per_mm, $F,
+        $gcode .= $path->gcode($self->writer, $mm3_per_mm, $F,
             $self->origin->x - $extruder_offset->x,
             $self->origin->y - $extruder_offset->y,  #-
             $self->writer->extrusion_axis,
-            $self->config->gcode_comments ? " ; $description" : "");
+            $description);
 
         if ($self->wipe->enable) {
             $self->wipe->path($path->polyline->clone);
@@ -361,6 +371,11 @@ sub travel_to {
     # generate G-code for the travel move
     my $gcode = "";
     $gcode .= $self->retract if $needs_retraction;
+
+    # set extrusion to 0 for unretracted moves
+    if (!$needs_retraction && $self->config->use_velocity_extrusion) {
+        $gcode .= $self->writer->set_cross_section(0.0, $comment);
+    }
     
     # use G1 because we rely on paths being straight (G0 may make round paths)
     $gcode .= $self->writer->travel_to_xy($self->point_to_gcode($_->b), $comment)
@@ -579,14 +594,16 @@ sub wipe {
             my $segment_length = $line->length;
             # Reduce retraction length a bit to avoid effective retraction speed to be greater than the configured one
             # due to rounding (TODO: test and/or better math for this)
-            my $dE = $length * ($segment_length / $wipe_dist) * 0.95;
+            my $mm3_per_mm = ($segment_length / $wipe_dist) * 0.95;
             $gcode .= $gcodegen->writer->set_speed($wipe_speed*60);
             $gcode .= $gcodegen->writer->extrude_to_xy(
                 $gcodegen->point_to_gcode($line->b),
-                -$dE,
+                $mm3_per_mm,
+                -$length,
+                $wipe_speed*60,
                 'wipe and retract' . ($gcodegen->enable_cooling_markers ? ';_WIPE' : ''),
             );
-            $retracted += $dE;
+            $retracted += $length * $mm3_per_mm;
         }
         $gcodegen->writer->extruder->set_retracted($gcodegen->writer->extruder->retracted + $retracted);
         

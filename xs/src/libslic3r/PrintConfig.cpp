@@ -981,6 +981,11 @@ PrintConfigDef::build_def() {
     Options["use_volumetric_e"].tooltip = "This experimental setting uses outputs the E values in cubic millimeters instead of linear millimeters. If your firmware doesn't already know filament diameter(s), you can put commands like 'M200 D[filament_diameter_0] T0' in your start G-code in order to turn volumetric mode on and use the filament diameter associated to the filament selected in Slic3r. This is only supported in recent Marlin.";
     Options["use_volumetric_e"].cli = "use-volumetric-e!";
 
+    Options["use_velocity_extrusion"].type = coBool;
+    Options["use_velocity_extrusion"].label = "Use velocity extrusion";
+    Options["use_velocity_extrusion"].tooltip = "This experimental setting uses additional M600 commands to set the cross area of a printed line. Instead of generating the movement of the extruder per extruder axis, the movement of the extruder is calculated by the firmware based on the velocity of the printing nozzle. This option does only work in combination with firmware retraction.";
+    Options["use_velocity_extrusion"].cli = "use-velocity-extrusion!";
+
     Options["vibration_limit"].type = coFloat;
     Options["vibration_limit"].label = "Vibration limit (deprecated)";
     Options["vibration_limit"].tooltip = "This experimental option will slow down those moves hitting the configured frequency limit. The purpose of limiting vibrations is to avoid mechanical resonance. Set zero to disable.";

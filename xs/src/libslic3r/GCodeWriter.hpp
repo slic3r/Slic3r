@@ -35,12 +35,13 @@ class GCodeWriter {
     std::string set_extruder(unsigned int extruder_id);
     std::string toolchange(unsigned int extruder_id);
     std::string set_speed(double F, const std::string &comment = std::string());
+    std::string set_cross_section(double mm2, const std::string &comment = std::string());
     std::string travel_to_xy(const Pointf &point, const std::string &comment = std::string());
     std::string travel_to_xyz(const Pointf3 &point, const std::string &comment = std::string());
     std::string travel_to_z(double z, const std::string &comment = std::string());
     bool will_move_z(double z) const;
-    std::string extrude_to_xy(const Pointf &point, double dE, const std::string &comment = std::string());
-    std::string extrude_to_xyz(const Pointf3 &point, double dE, const std::string &comment = std::string());
+    std::string extrude_to_xy(const Pointf &point, double mm3_per_mm, double line_length, double F = 0, const std::string &comment = std::string());
+    std::string extrude_to_xyz(const Pointf3 &point, double mm3_per_mm, double line_length, double F = 0, const std::string &comment = std::string());
     std::string retract();
     std::string retract_for_toolchange();
     std::string unretract();
