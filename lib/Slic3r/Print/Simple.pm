@@ -36,17 +36,14 @@ has 'status_cb' => (
     default => sub { sub {} },
 );
 
-has 'print_center' => (
-    is      => 'rw',
-    default => sub { Slic3r::Pointf->new(100,100) },
-);
-
 has 'output_file' => (
     is      => 'rw',
 );
 
 sub set_model {
     my ($self, $model) = @_;
+    my $bed_shape = $self->_print->config->bed_shape;
+    my $bb = Slic3r::Geometry::BoundingBoxf->new_from_points($bed_shape);
     
     # make method idempotent so that the object is reusable
     $self->_print->clear_objects;
@@ -63,13 +60,13 @@ sub set_model {
     if ($self->duplicate_grid->[X] > 1 || $self->duplicate_grid->[Y] > 1) {
         $model->duplicate_objects_grid($self->duplicate_grid, $self->_print->config->duplicate_distance);
     } elsif ($need_arrange) {
-        $model->duplicate_objects($self->duplicate, $self->_print->config->min_object_distance);
+        $model->duplicate_objects($self->duplicate, $self->_print->config->min_object_distance, $bb);
     } elsif ($self->duplicate > 1) {
         # if all input objects have defined position(s) apply duplication to the whole model
-        $model->duplicate($self->duplicate, $self->_print->config->min_object_distance);
+        $model->duplicate($self->duplicate, $self->_print->config->min_object_distance, $bb);
     }
     $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects};
-    $model->center_instances_around_point($self->print_center);
+    $model->center_instances_around_point($bb->center);
     
     foreach my $model_object (@{$model->objects}) {
         $self->_print->auto_assign_extruders($model_object);
