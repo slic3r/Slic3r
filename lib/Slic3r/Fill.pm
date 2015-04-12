@@ -221,7 +221,7 @@ sub make_fill {
             # layer height
             my $internal_flow = $layerm->region->flow(
                 FLOW_ROLE_INFILL,
-                $layerm->layer->object->config->layer_height,  # TODO: handle infill_every_layers?
+                $layerm->object->config->layer_height*$layerm->config->infill_every_layers,  # TODO: handle infill_every_layers?
                 0,  # no bridge
                 0,  # no first layer
                 -1, # auto width
