@@ -3,6 +3,10 @@
 #include "Geometry.hpp"
 #include <algorithm>
 
+#ifdef SLIC3R_DEBUG
+#include <stdio.h>
+#endif
+
 namespace Slic3r {
 
 class BridgeDirectionComparator {
