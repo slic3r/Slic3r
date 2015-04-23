@@ -597,7 +597,7 @@ void union_pt_chained(const Slic3r::Polygons &subject, Slic3r::Polygons* retval,
     traverse_pt(pt.Childs, retval);
 }
 
-static void traverse_pt(ClipperLib::PolyNodes &nodes, Slic3r::Polygons* retval)
+void traverse_pt(ClipperLib::PolyNodes &nodes, Slic3r::Polygons* retval)
 {
     /* use a nearest neighbor search to order these children
        TODO: supply start_near to chained_path() too? */
