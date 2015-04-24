@@ -92,12 +92,14 @@ Slic3rMultiPoints_to_ClipperPaths(const T &input, ClipperLib::Paths* output)
 void
 scaleClipperPolygons(ClipperLib::Paths &polygons, const double scale)
 {
+  if (scale!=1.0) {
     for (ClipperLib::Paths::iterator it = polygons.begin(); it != polygons.end(); ++it) {
         for (ClipperLib::Path::iterator pit = (*it).begin(); pit != (*it).end(); ++pit) {
             (*pit).X *= scale;
             (*pit).Y *= scale;
         }
     }
+  }
 }
 
 void
