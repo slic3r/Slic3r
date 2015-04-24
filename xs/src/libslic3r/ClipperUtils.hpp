@@ -27,6 +27,8 @@ template <class T>
 void Slic3rMultiPoints_to_ClipperPaths(const T &input, ClipperLib::Paths* output);
 template <class T>
 void ClipperPath_to_Slic3rMultiPoint(const ClipperLib::Path &input, T* output, bool eraseOutput = true);
+void Add_Slic3rExPolygon_to_ClipperPaths(const Slic3r::ExPolygon &input, ClipperLib::Paths* output);
+void Slic3rExPolygons_to_ClipperPaths(const Slic3r::ExPolygons &input, ClipperLib::Paths* output);
 template <class T>
 void ClipperPaths_to_Slic3rMultiPoints(const ClipperLib::Paths &input, T* output, bool eraseOutput = true);
 void ClipperPaths_to_Slic3rExPolygons(const ClipperLib::Paths &input, Slic3r::ExPolygons* output, bool eraseOutput = true);
@@ -62,6 +64,9 @@ Slic3r::ExPolygons offset_ex(const Slic3r::Polygons &polygons, const float delta
     double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
 
+void offset2(const ClipperLib::Paths &paths, ClipperLib::Paths* retval, const float delta1,
+    const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double miterLimit = 3);
 void offset2(const Slic3r::Polygons &polygons, ClipperLib::Paths* retval, const float delta1,
     const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
@@ -77,7 +82,22 @@ void offset2(const Slic3r::Polygons &polygons, Slic3r::ExPolygons* retval, const
 Slic3r::ExPolygons offset2_ex(const Slic3r::Polygons &polygons, const float delta1,
     const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
+void offset2(const Slic3r::ExPolygons &polygons, Slic3r::ExPolygons* retval, const float delta1,
+    const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double miterLimit = 3, bool eraseOutput = true);
+void offset2(const Slic3r::ExPolygons &polygons, Slic3r::Polygons* retval, const float delta1,
+    const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double miterLimit = 3, bool eraseOutput = true);
+void offset2(const Slic3r::ExPolygon &polygon, Slic3r::ExPolygons* retval, const float delta1,
+    const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double miterLimit = 3, bool eraseOutput = true);
+void offset2(const Slic3r::ExPolygon &polygon, Slic3r::Polygons* retval, const float delta1,
+    const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double miterLimit = 3, bool eraseOutput = true);
 
+template <class T>
+void _clipper_do(ClipperLib::ClipType clipType, const Slic3r::ExPolygons &subject, 
+    const Slic3r::Polygons &clip, T* retval, bool safety_offset_);
 template <class T>
 void _clipper_do(ClipperLib::ClipType clipType, const Slic3r::Polygons &subject, 
     const Slic3r::Polygons &clip, T* retval, bool safety_offset_);
