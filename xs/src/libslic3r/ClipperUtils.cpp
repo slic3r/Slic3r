@@ -538,7 +538,7 @@ template <class SubjectType>
 bool intersects(const SubjectType &subject, const Slic3r::Polygons &clip, bool safety_offset_)
 {
     SubjectType retval;
-    intersection(subject, clip, &retval, safety_offset_);
+    intersection(subject, clip, &retval, safety_offset_, true); //eraseOutput=true for default semantics here
     return !retval.empty();
 }
 template bool intersects<Slic3r::Polygons>(const Slic3r::Polygons &subject, const Slic3r::Polygons &clip, bool safety_offset_);
