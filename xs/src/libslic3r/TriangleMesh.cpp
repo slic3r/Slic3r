@@ -829,9 +829,8 @@ TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slices)
     }
 
     // perform a safety offset to merge very close facets (TODO: find test case for this)
-    double safety_offset = scale_(0.0499);
     ExPolygons ex_slices;
-    offset2(p_slices, &ex_slices, +safety_offset, -safety_offset);
+    offset2(p_slices, &ex_slices, +this->safety_offset, -this->safety_offset);
     
     #ifdef SLIC3R_DEBUG
     size_t holes_count = 0;
@@ -1010,7 +1009,7 @@ TriangleMeshSlicer::cut(float z, TriangleMesh* upper, TriangleMesh* lower)
     
 }
 
-TriangleMeshSlicer::TriangleMeshSlicer(TriangleMesh* _mesh) : mesh(_mesh), v_scaled_shared(NULL)
+TriangleMeshSlicer::TriangleMeshSlicer(TriangleMesh* _mesh, double _safety_offset) : mesh(_mesh), safety_offset(_safety_offset), v_scaled_shared(NULL)
 {
     // build a table to map a facet_idx to its three edge indices
     this->mesh->require_shared_vertices();

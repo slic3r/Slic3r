@@ -82,11 +82,14 @@ class IntersectionLine : public Line
 typedef std::vector<IntersectionLine> IntersectionLines;
 typedef std::vector<IntersectionLine*> IntersectionLinePtrs;
 
+#define DEFAULT_SLICING_SAFETY_OFFSET scale_(0.0499)
+
 class TriangleMeshSlicer
 {
     public:
     TriangleMesh* mesh;
-    TriangleMeshSlicer(TriangleMesh* _mesh);
+    double safety_offset;
+    TriangleMeshSlicer(TriangleMesh* _mesh, double _safety_offset=DEFAULT_SLICING_SAFETY_OFFSET);
     ~TriangleMeshSlicer();
     void slice(const std::vector<float> &z, std::vector<Polygons>* layers);
     void slice(const std::vector<float> &z, std::vector<ExPolygons>* layers);
