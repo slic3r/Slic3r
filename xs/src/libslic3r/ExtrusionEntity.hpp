@@ -4,12 +4,13 @@
 #include <myinit.h>
 #include "Polygon.hpp"
 #include "Polyline.hpp"
+#include "GCodeWriter.hpp"
 
 namespace Slic3r {
 
 class ExPolygonCollection;
 class ExtrusionEntityCollection;
-class Extruder;
+class GCodeWriter;
 
 /* Each ExtrusionRole value identifies a distinct set of { extruder, speed } */
 enum ExtrusionRole {
@@ -78,7 +79,7 @@ class ExtrusionPath : public ExtrusionEntity
     bool is_infill() const;
     bool is_solid_infill() const;
     bool is_bridge() const;
-    std::string gcode(Extruder* extruder, double e, double F,
+    std::string gcode(GCodeWriter *writer, double e, double F,
         double xofs, double yofs, std::string extrusion_axis,
         std::string gcode_line_suffix) const;
     Polygons grow() const;
