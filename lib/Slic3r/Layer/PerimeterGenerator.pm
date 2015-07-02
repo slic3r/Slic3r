@@ -283,8 +283,11 @@ sub process {
             # where $pwidth < thickness < 2*$pspacing, infill with width = 2*$pwidth
             # where 0.1*$pwidth < thickness < $pwidth, infill with width = 1*$pwidth
             my @gap_sizes = (
-                [ $pwidth, 2*$pspacing, unscale 2*$pwidth ],
-                [ 0.1*$pwidth, $pwidth, unscale 1*$pwidth ],
+                [ 1.5*$pwidth, 2.0*$pspacing, unscale 1.8*$pwidth ],
+                [ 1.0*$pwidth, 1.5*$pspacing, unscale 1.2*$pwidth ],
+                [ 0.7*$pwidth, 1.0*$pwidth,   unscale 0.9*$pwidth ],
+                [ 0.4*$pwidth, 0.7*$pwidth,   unscale 0.6*$pwidth ],
+                [ 0.1*$pwidth, 0.4*$pwidth,   unscale 0.3*$pwidth ],
             );
             foreach my $gap_size (@gap_sizes) {
                 my @gap_fill = $self->_fill_gaps(@$gap_size, \@gaps);
