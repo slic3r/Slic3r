@@ -79,7 +79,7 @@ putenv_impl( cstring name, cstring value )
 {
     using namespace std;
     // !! this may actually fail. What should we do?
-    _putenv_s( name.begin(), value.begin());
+    setenv( name.begin(), value.begin(), 1 );
 }
 #else
 inline void
