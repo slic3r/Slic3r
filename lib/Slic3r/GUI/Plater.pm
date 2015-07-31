@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use utf8;
 
-use File::Basename qw(basename dirname);
+use File::Basename qw(basename dirname fileparse);
 use List::Util qw(sum first max);
 use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad);
 use threads::shared qw(shared_clone);
@@ -1098,6 +1098,19 @@ sub export_gcode {
         my $default_output_file = $self->{print}->expanded_output_filepath($main::opt{output});
         my $dlg = Wx::FileDialog->new($self, 'Save G-code file as:', wxTheApp->output_path(dirname($default_output_file)),
             basename($default_output_file), &Slic3r::GUI::FILE_WILDCARDS->{gcode}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+        
+        # select correct filter
+        my ($filedir, $filename, $fileext) = fileparse($default_output_file, '\..*');
+        if (grep {$_ eq $fileext} ('.gcode', '.GCODE', '.gco', '.GCO.', '.g', '.G')) {
+            $dlg->SetFilterIndex(0);
+	}
+        elsif (grep {$_ eq $fileext} ('.ngc', '.NGC')) {
+            $dlg->SetFilterIndex(1);
+        }
+        else {
+            $dlg->SetFilterIndex(2);
+        }
+
         if ($dlg->ShowModal != wxID_OK) {
             $dlg->Destroy;
             return;
