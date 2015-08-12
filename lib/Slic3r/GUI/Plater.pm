@@ -48,6 +48,7 @@ sub new {
     $self->{config} = Slic3r::Config->new_from_defaults(qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width
         octoprint_host octoprint_apikey
+        repetier_host repetier_apikey repetier_printer
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
@@ -1201,9 +1202,16 @@ sub on_export_completed {
     
     my $message;
     my $send_gcode = 0;
+
     if ($result) {
         if ($self->{send_gcode_file}) {
-            $message = "Sending G-code file to the OctoPrint server...";
+            if ($self->{config}->octoprint_host) {
+                $message = "Sending G-code file to the OctoPrint server...";
+            } elsif ($self->{config}->repetier_host) {
+                $message = "Sending G-code file to the Repetier-Server...";
+            } else {
+                $message = "Sending G-code file to the remote server...";
+            }
             $send_gcode = 1;
         } else {
             $message = "G-code file exported to " . $self->{export_gcode_output_file};
@@ -1224,32 +1232,59 @@ sub on_export_completed {
 
 sub send_gcode {
     my ($self) = @_;
+
+    if ($self->{config}->octoprint_host) {
+        $self->statusbar->StartBusy;
+        my $ua = LWP::UserAgent->new;
+        $ua->timeout(180);
+
+        my $path = Slic3r::encode_path($self->{send_gcode_file});
+        my $res = $ua->post(
+            "http://" . $self->{config}->octoprint_host . "/api/files/local",
+            Content_Type => 'form-data',
+            'X-Api-Key' => $self->{config}->octoprint_apikey,
+            Content => [
+                # OctoPrint doesn't like Windows paths so we use basename()
+                # Also, since we need to read from filesystem we process it through encode_path()
+                file => [ $path, basename($path) ],
+            ],
+        );
+        $self->statusbar->StopBusy;
     
-    $self->statusbar->StartBusy;
-    
-    my $ua = LWP::UserAgent->new;
-    $ua->timeout(180);
-    
-    my $path = Slic3r::encode_path($self->{send_gcode_file});
-    my $res = $ua->post(
-        "http://" . $self->{config}->octoprint_host . "/api/files/local",
-        Content_Type => 'form-data',
-        'X-Api-Key' => $self->{config}->octoprint_apikey,
-        Content => [
-            # OctoPrint doesn't like Windows paths so we use basename()
-            # Also, since we need to read from filesystem we process it through encode_path()
-            file => [ $path, basename($path) ],
-        ],
-    );
-    
-    $self->statusbar->StopBusy;
-    
-    if ($res->is_success) {
-        $self->statusbar->SetStatusText("G-code file successfully uploaded to the OctoPrint server");
-    } else {
-        my $message = "Error while uploading to the OctoPrint server: " . $res->status_line;
-        Slic3r::GUI::show_error($self, $message);
-        $self->statusbar->SetStatusText($message);
+        if ($res->is_success) {
+            $self->statusbar->SetStatusText("G-code file successfully uploaded to the OctoPrint server");
+        } else {
+            my $message = "Error while uploading to the OctoPrint server: " . $res->status_line;
+            Slic3r::GUI::show_error($self, $message);
+            $self->statusbar->SetStatusText($message);
+        }
+    } elsif ($self->{config}->repetier_host) {
+        $self->statusbar->StartBusy;
+        my $ua = LWP::UserAgent->new;
+        $ua->timeout(180);
+
+        my $path = Slic3r::encode_path($self->{send_gcode_file});
+        my $pretty_name = basename($path);
+        $pretty_name =~ s/\.gcode//g;
+        my $res = $ua->post(
+            "http://" . $self->{config}->repetier_host . "/printer/model/" . $self->{config}->repetier_printer,
+            Content_Type => 'multipart/form-data',
+            'x-api-key' => $self->{config}->repetier_apikey,
+            Content => [
+                'a' => 'upload',
+                'name' => $pretty_name,
+                'filename' => [ $path, basename($path) ],
+            ],
+        );
+        $self->statusbar->StopBusy;
+
+        if ($res->is_success) {
+            $self->statusbar->SetStatusText("G-code file successfully uploaded to the Repetier-Server");
+        } else {
+            my $message = "Error while uploading to the Repetier-Server: " . $res->status_line;
+            Slic3r::GUI::show_error($self, $message);
+            $self->statusbar->SetStatusText($message);
+        }
     }
 }
 
@@ -1427,6 +1462,13 @@ sub on_config_change {
             $self->update;
         } elsif ($opt_key eq 'octoprint_host') {
             if ($config->get('octoprint_host')) {
+                $self->{btn_send_gcode}->Show;
+            } else {
+                $self->{btn_send_gcode}->Hide;
+            }
+            $self->Layout;
+        } elsif ($opt_key eq 'repetier_host') {
+            if ($config->get('repetier_host')) {
                 $self->{btn_send_gcode}->Show;
             } else {
                 $self->{btn_send_gcode}->Hide;

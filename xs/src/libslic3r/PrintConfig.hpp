@@ -582,16 +582,25 @@ class HostConfig : public virtual StaticPrintConfig
     public:
     ConfigOptionString              octoprint_host;
     ConfigOptionString              octoprint_apikey;
-    
+    ConfigOptionString              repetier_host;
+    ConfigOptionString              repetier_apikey;
+    ConfigOptionString              repetier_printer;
+ 
     HostConfig() : StaticPrintConfig() {
         this->octoprint_host.value                              = "";
         this->octoprint_apikey.value                            = "";
+        this->repetier_host.value                               = "";
+        this->repetier_apikey.value                             = "";
+        this->repetier_printer.value                            = "";
     };
     
     ConfigOption* option(const t_config_option_key opt_key, bool create = false) {
         OPT_PTR(octoprint_host);
         OPT_PTR(octoprint_apikey);
-        
+        OPT_PTR(repetier_host);
+        OPT_PTR(repetier_apikey);        
+        OPT_PTR(repetier_printer);
+
         return NULL;
     };
 };

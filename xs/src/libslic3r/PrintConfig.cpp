@@ -537,6 +537,21 @@ PrintConfigDef::build_def() {
     Options["nozzle_diameter"].sidetext = "mm";
     Options["nozzle_diameter"].cli = "nozzle-diameter=f@";
 
+    Options["repetier_apikey"].type = coString;
+    Options["repetier_apikey"].label = "API Key";
+    Options["repetier_apikey"].tooltip = "Slic3r can upload G-code files to repetier. This field should contain the API Key required for authentication.";
+    Options["repetier_apikey"].cli = "repetier-apikey=s";
+
+    Options["repetier_host"].type = coString;
+    Options["repetier_host"].label = "Host or IP";
+    Options["repetier_host"].tooltip = "Slic3r can upload G-code files to Repetier. This field should contain the hostname or IP address of the Repetier instance.";
+    Options["repetier_host"].cli = "repetier-host=s";
+
+    Options["repetier_printer"].type = coString;
+    Options["repetier_printer"].label = "Printer Name";
+    Options["repetier_printer"].tooltip = "Slic3r can upload G-code files to Repetier. This field should contain the name of the printer connected to Repetier-Server that you would like to upload the G-Code to.";
+    Options["repetier_printer"].cli = "repetier-printer=s";
+
     Options["octoprint_apikey"].type = coString;
     Options["octoprint_apikey"].label = "API Key";
     Options["octoprint_apikey"].tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the API Key required for authentication.";

@@ -988,6 +988,7 @@ sub build {
         bed_shape z_offset
         gcode_flavor use_relative_e_distances
         octoprint_host octoprint_apikey
+        repetier_host repetier_apikey repetier_printer
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode
@@ -1059,6 +1060,47 @@ sub build {
                 }
             });
         }
+
+
+        {
+            my $optgroup = $page->new_optgroup('Repetier-Server upload');
+
+            my $repetier_host_test = sub {
+                my ($parent) = @_;
+
+                my $btn = $self->{repetier_host_test_btn} = Wx::Button->new($parent, -1, "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+                $btn->SetFont($Slic3r::GUI::small_font);
+                if ($Slic3r::GUI::have_button_icons) {
+                    $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/wrench.png", wxBITMAP_TYPE_PNG));
+                }
+
+                EVT_BUTTON($self, $btn, sub {
+                    my $ua = LWP::UserAgent->new;
+                    $ua->timeout(10);
+
+                    my $res = $ua->get(
+                        "http://" . $self->{config}->repetier_host . "/printer/list",
+                        'X-Api-Key' => $self->{config}->repetier_apikey,
+                    );
+                    if ($res->is_success) {
+                        Slic3r::GUI::show_info($self, "Connection to Repetier-Server works correctly.\n" . $res->decoded_content, "Success!");
+                    } else {
+                        Slic3r::GUI::show_error($self,
+                            "I wasn't able to connect to Repetier-Server (" . $res->status_line . "). "
+                            . "Check hostname and Repetier-Server version (at least 1.1.0 is required).");
+                    }
+                });
+                return $btn;
+            };
+
+            my $host_line = $optgroup->create_single_option_line('repetier_host');
+            $host_line->append_widget($repetier_host_test);
+            $optgroup->append_line($host_line);
+            $optgroup->append_single_option_line('repetier_apikey');
+            $optgroup->append_single_option_line('repetier_printer');
+        }
+
+
         {
             my $optgroup = $page->new_optgroup('OctoPrint upload');
             
@@ -1269,6 +1311,13 @@ sub _update {
     my ($self) = @_;
     
     my $config = $self->{config};
+
+    if ($config->get('repetier_host') && eval "use LWP::UserAgent; 1") {
+        $self->{repetier_host_test_btn}->Enable;
+    } else {
+        $self->{repetier_host_test_btn}->Disable;
+    }
+    $self->get_field('repetier_apikey')->toggle($config->get('repetier_host'));
     
     if ($config->get('octoprint_host') && eval "use LWP::UserAgent; 1") {
         $self->{octoprint_host_test_btn}->Enable;
