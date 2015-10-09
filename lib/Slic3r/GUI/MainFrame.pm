@@ -228,6 +228,9 @@ sub _init_menubar {
         $self->_append_menu_item($self->{plater_menu}, "Export G-code...", 'Export current plate as G-code', sub {
             $plater->export_gcode;
         }, undef, 'cog_go.png');
+        $self->_append_menu_item($self->{plater_menu}, "Slice &now...", 'Slice model without actually writing G-code', sub {
+            $plater->export_gcode(Wx::StandardPaths::Get->GetTempDir());
+        }, undef, 'cog_go.png');
         $self->_append_menu_item($self->{plater_menu}, "Export plate as STL...", 'Export current plate as STL', sub {
             $plater->export_stl;
         }, undef, 'brick_go.png');
