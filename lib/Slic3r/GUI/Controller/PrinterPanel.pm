@@ -4,12 +4,12 @@ use warnings;
 use utf8;
 
 use Wx qw(wxTheApp :panel :id :misc :sizer :button :bitmap :window :gauge :timer
-    :textctrl :font :systemsettings);
+    :textctrl :font :systemsettings wxBORDER_NONE);
 use Wx::Event qw(EVT_BUTTON EVT_MOUSEWHEEL EVT_TIMER);
 use base qw(Wx::Panel Class::Accessor);
 
 __PACKAGE__->mk_accessors(qw(printer_name config sender jobs 
-    printing status_timer temp_timer));
+    printing status_timer temp_timer collapsed _container _collapsed_container));
 
 use constant CONNECTION_TIMEOUT => 3;               # seconds
 use constant STATUS_TIMER_INTERVAL => 1000;         # milliseconds
@@ -17,7 +17,7 @@ use constant TEMP_TIMER_INTERVAL   => 5000;         # milliseconds
 
 sub new {
     my ($class, $parent, $printer_name, $config) = @_;
-    my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, [500, 250]);
+    my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize);
     
     $self->printer_name($printer_name || 'Printer');
     $self->config($config);
@@ -72,12 +72,83 @@ sub new {
     }
     
     my $box = Wx::StaticBox->new($self, -1, "");
-    my $sizer = Wx::StaticBoxSizer->new($box, wxHORIZONTAL);
+    my $sizer = Wx::StaticBoxSizer->new($box, wxVERTICAL);
+    
+    # COLLAPSED STATE
+    {
+        $self->_collapsed_container(Wx::Panel->new($box, -1));
+        #$self->_collapsed_container->SetMinSize([-1, 50]);
+        $sizer->Add($self->_collapsed_container, 0, wxEXPAND);
+        my $container_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+        
+        # expand button
+        {
+            my $btn = Wx::Button->new($self->_collapsed_container, -1, "", wxDefaultPosition, wxDefaultSize,
+                wxBORDER_NONE | wxBU_EXACTFIT);
+        
+            if ($Slic3r::GUI::have_button_icons) {
+                $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/control_pause.png", wxBITMAP_TYPE_PNG));
+                $btn->SetBitmapCurrent(Wx::Bitmap->new("$Slic3r::var/control_pause_blue.png", wxBITMAP_TYPE_PNG));
+            }
+        
+            EVT_BUTTON($self, $btn, sub {
+                $self->_collapsed_container->Hide;
+                $self->_container->Show;
+                $self->Layout;
+                $self->Fit;
+                $self->GetParent->Layout;
+            });
+        
+            $container_sizer->Add($btn, 0, wxALL, 0);
+        }
+    
+        # printer name
+        {
+            my $text = Wx::StaticText->new($self->_collapsed_container, -1, $self->printer_name, wxDefaultPosition, [220,-1]);
+            my $font = $text->GetFont;
+            $font->SetPointSize(20);
+            $text->SetFont($font);
+            $container_sizer->Add($text, 1, wxEXPAND, 0);
+        }
+        
+        $self->_collapsed_container->SetSizer($container_sizer);
+        $self->_collapsed_container->Layout;
+        $self->_collapsed_container->Fit;
+    }
+    
+    # EXPANDED STATE
+    $self->_container(Wx::Panel->new($box, -1));
+    $sizer->Add($self->_container, 0, wxEXPAND);
+    $self->_container->SetMinSize([-1, 250]);
+    $self->_container->Hide;
+    my $container_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+    
     my $left_sizer = Wx::BoxSizer->new(wxVERTICAL);
+    
+    # collapse button
+    {
+        my $btn = Wx::Button->new($self->_container, -1, "", wxDefaultPosition, wxDefaultSize,
+            wxBORDER_NONE | wxBU_EXACTFIT);
+        
+        if ($Slic3r::GUI::have_button_icons) {
+            $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/control_pause.png", wxBITMAP_TYPE_PNG));
+            $btn->SetBitmapCurrent(Wx::Bitmap->new("$Slic3r::var/control_pause_blue.png", wxBITMAP_TYPE_PNG));
+        }
+        
+        EVT_BUTTON($self, $btn, sub {
+            $self->_collapsed_container->Show;
+            #$self->_container->Hide;
+            $sizer->Hide($self->_container);
+            $self->Layout;
+            $self->Fit;
+        });
+        
+        $left_sizer->Add($btn, 0, wxALL, 0);
+    }
     
     # printer name
     {
-        my $text = Wx::StaticText->new($box, -1, $self->printer_name, wxDefaultPosition, [220,-1]);
+        my $text = Wx::StaticText->new($self->_container, -1, $self->printer_name, wxDefaultPosition, [220,-1]);
         my $font = $text->GetFont;
         $font->SetPointSize(20);
         $text->SetFont($font);
@@ -91,19 +162,19 @@ sub new {
         $conn_sizer->AddGrowableCol(1, 1);
         $left_sizer->Add($conn_sizer, 0, wxEXPAND | wxTOP, 5);
         {
-            my $text = Wx::StaticText->new($box, -1, "Port:", wxDefaultPosition, wxDefaultSize);
+            my $text = Wx::StaticText->new($self->_container, -1, "Port:", wxDefaultPosition, wxDefaultSize);
             $text->SetFont($Slic3r::GUI::small_font);
             $conn_sizer->Add($text, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
         }
         my $serial_port_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         {
-            $self->{serial_port_combobox} = Wx::ComboBox->new($box, -1, $config->serial_port, wxDefaultPosition, wxDefaultSize, []);
+            $self->{serial_port_combobox} = Wx::ComboBox->new($self->_container, -1, $config->serial_port, wxDefaultPosition, wxDefaultSize, []);
             $self->{serial_port_combobox}->SetFont($Slic3r::GUI::small_font);
             $self->update_serial_ports;
             $serial_port_sizer->Add($self->{serial_port_combobox}, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 1);
         }
         {
-            $self->{btn_rescan_serial} = my $btn = Wx::BitmapButton->new($box, -1, Wx::Bitmap->new("$Slic3r::var/arrow_rotate_clockwise.png", wxBITMAP_TYPE_PNG),
+            $self->{btn_rescan_serial} = my $btn = Wx::BitmapButton->new($self->_container, -1, Wx::Bitmap->new("$Slic3r::var/arrow_rotate_clockwise.png", wxBITMAP_TYPE_PNG),
                 wxDefaultPosition, wxDefaultSize, &Wx::wxBORDER_NONE);
             $btn->SetToolTipString("Rescan serial ports")
                 if $btn->can('SetToolTipString');
@@ -113,19 +184,19 @@ sub new {
         $conn_sizer->Add($serial_port_sizer, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
         
         {
-            my $text = Wx::StaticText->new($box, -1, "Speed:", wxDefaultPosition, wxDefaultSize);
+            my $text = Wx::StaticText->new($self->_container, -1, "Speed:", wxDefaultPosition, wxDefaultSize);
             $text->SetFont($Slic3r::GUI::small_font);
             $conn_sizer->Add($text, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
         }
         my $serial_speed_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         {
-            $self->{serial_speed_combobox} = Wx::ComboBox->new($box, -1, $config->serial_speed, wxDefaultPosition, wxDefaultSize,
+            $self->{serial_speed_combobox} = Wx::ComboBox->new($self->_container, -1, $config->serial_speed, wxDefaultPosition, wxDefaultSize,
                 ["115200", "250000"]);
             $self->{serial_speed_combobox}->SetFont($Slic3r::GUI::small_font);
             $serial_speed_sizer->Add($self->{serial_speed_combobox}, 0, wxALIGN_CENTER_VERTICAL, 0);
         }
         {
-            $self->{btn_disconnect} = my $btn = Wx::Button->new($box, -1, "Disconnect", wxDefaultPosition, wxDefaultSize);
+            $self->{btn_disconnect} = my $btn = Wx::Button->new($self->_container, -1, "Disconnect", wxDefaultPosition, wxDefaultSize);
             $btn->SetFont($Slic3r::GUI::small_font);
             if ($Slic3r::GUI::have_button_icons) {
                 $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/delete.png", wxBITMAP_TYPE_PNG));
@@ -138,7 +209,7 @@ sub new {
     
     # buttons
     {
-        $self->{btn_connect} = my $btn = Wx::Button->new($box, -1, "Connect to printer", wxDefaultPosition, [-1, 40]);
+        $self->{btn_connect} = my $btn = Wx::Button->new($self->_container, -1, "Connect to printer", wxDefaultPosition, [-1, 40]);
         my $font = $btn->GetFont;
         $font->SetPointSize($font->GetPointSize + 2);
         $btn->SetFont($font);
@@ -151,18 +222,18 @@ sub new {
     
     # print progress bar
     {
-        my $gauge = $self->{gauge} = Wx::Gauge->new($self, wxGA_HORIZONTAL, 100, wxDefaultPosition, wxDefaultSize);
+        my $gauge = $self->{gauge} = Wx::Gauge->new($self->_container, wxGA_HORIZONTAL, 100, wxDefaultPosition, wxDefaultSize);
         $left_sizer->Add($self->{gauge}, 0, wxEXPAND | wxTOP, 15);
         $gauge->Hide;
     }
     
     # status
-    $self->{status_text} = Wx::StaticText->new($box, -1, "", wxDefaultPosition, [200,-1]);
+    $self->{status_text} = Wx::StaticText->new($self->_container, -1, "", wxDefaultPosition, [200,-1]);
     $left_sizer->Add($self->{status_text}, 1, wxEXPAND | wxTOP, 15);
     
     # manual control
     {
-        $self->{btn_manual_control} = my $btn = Wx::Button->new($box, -1, "Manual control", wxDefaultPosition, wxDefaultSize);
+        $self->{btn_manual_control} = my $btn = Wx::Button->new($self->_container, -1, "Manual control", wxDefaultPosition, wxDefaultSize);
         $btn->SetFont($Slic3r::GUI::small_font);
         if ($Slic3r::GUI::have_button_icons) {
             $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/cog.png", wxBITMAP_TYPE_PNG));
@@ -170,14 +241,14 @@ sub new {
         $btn->Hide;
         $left_sizer->Add($btn, 0, wxTOP, 15);
         EVT_BUTTON($self, $btn, sub {
-            my $dlg = Slic3r::GUI::Controller::ManualControlDialog->new($self);
+            my $dlg = Slic3r::GUI::Controller::ManualControlDialog->new($self->_container);
             $dlg->ShowModal;
         });
     }
     
     # temperature
     {
-        my $temp_panel = $self->{temp_panel} = Wx::Panel->new($box, -1);
+        my $temp_panel = $self->{temp_panel} = Wx::Panel->new($self->_container, -1);
         my $temp_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         
         my $temp_font = Wx::Font->new($Slic3r::GUI::small_font);
@@ -210,11 +281,11 @@ sub new {
     # print jobs panel
     $self->{print_jobs_sizer} = my $print_jobs_sizer = Wx::BoxSizer->new(wxVERTICAL);
     {
-        my $text = Wx::StaticText->new($box, -1, "Queue:", wxDefaultPosition, wxDefaultSize);
+        my $text = Wx::StaticText->new($self->_container, -1, "Queue:", wxDefaultPosition, wxDefaultSize);
         $text->SetFont($Slic3r::GUI::small_font);
         $print_jobs_sizer->Add($text, 0, wxEXPAND, 0);
         
-        $self->{jobs_panel} = Wx::ScrolledWindow->new($box, -1, wxDefaultPosition, wxDefaultSize,
+        $self->{jobs_panel} = Wx::ScrolledWindow->new($self->_container, -1, wxDefaultPosition, wxDefaultSize,
             wxVSCROLL | wxBORDER_NONE);
         $self->{jobs_panel}->SetScrollbars(0, 1, 0, 1);
         $self->{jobs_panel_sizer} = Wx::BoxSizer->new(wxVERTICAL);
@@ -224,24 +295,25 @@ sub new {
     
     my $log_sizer = Wx::BoxSizer->new(wxVERTICAL);
     {
-        my $text = Wx::StaticText->new($box, -1, "Log:", wxDefaultPosition, wxDefaultSize);
+        my $text = Wx::StaticText->new($self->_container, -1, "Log:", wxDefaultPosition, wxDefaultSize);
         $text->SetFont($Slic3r::GUI::small_font);
         $log_sizer->Add($text, 0, wxEXPAND, 0);
         
-        my $log = $self->{log_textctrl} = Wx::TextCtrl->new($box, -1, "", wxDefaultPosition, wxDefaultSize,
+        my $log = $self->{log_textctrl} = Wx::TextCtrl->new($self->_container, -1, "", wxDefaultPosition, wxDefaultSize,
             wxTE_MULTILINE | wxBORDER_NONE);
-        $log->SetBackgroundColour($box->GetBackgroundColour);
+        $log->SetBackgroundColour($self->_container->GetBackgroundColour);
         $log->SetFont($Slic3r::GUI::small_font);
         $log->SetEditable(0);
         $log_sizer->Add($self->{log_textctrl}, 1, wxEXPAND, 0);
     }
     
-    $sizer->Add($left_sizer, 0, wxEXPAND | wxALL, 0);
-    $sizer->Add($print_jobs_sizer, 2, wxEXPAND | wxALL, 0);
-    $sizer->Add($log_sizer, 1, wxEXPAND | wxLEFT, 15);
+    $container_sizer->Add($left_sizer, 0, wxEXPAND | wxALL, 0);
+    $container_sizer->Add($print_jobs_sizer, 2, wxEXPAND | wxALL, 0);
+    $container_sizer->Add($log_sizer, 1, wxEXPAND | wxLEFT, 15);
     
-    $self->SetSizer($sizer);
-    $self->SetMinSize($self->GetSize);
+    $self->_container->SetSizer($container_sizer);
+    $self->SetSizerAndFit($sizer);
+    $self->Layout;
     
     $self->_update_connection_controls;
     
