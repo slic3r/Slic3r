@@ -77,16 +77,16 @@ use Slic3r::Test;
     {
         my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
         my $gcode = Slic3r::Test::gcode($print);
-        ok $gcode =~ /M104 S205 T1/, 'temperature set correctly for non-zero yet single extruder';
-        ok $gcode !~ /M104 S\d+ T0/, 'unused extruder correctly ignored';
+        ok $gcode =~ /T1\nM104 S205/, 'temperature set correctly for non-zero yet single extruder';
+        ok $gcode !~ /T0\nM104 S\d+/m, 'unused extruder correctly ignored' . substr($gcode, 0, 400);
     }
     
     $config->set('infill_extruder', 1);
     {
         my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
         my $gcode = Slic3r::Test::gcode($print);
-        ok $gcode =~ /M104 S200 T0/, 'temperature set correctly for first extruder';
-        ok $gcode =~ /M104 S205 T1/, 'temperature set correctly for second extruder';
+        ok $gcode =~ /T0\nM104 S200/m, 'temperature set correctly for first extruder';
+        ok $gcode =~ /T1\nM104 S205/m, 'temperature set correctly for second extruder';
     }
     
     $config->set('start_gcode', qq!
