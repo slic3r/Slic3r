@@ -100,7 +100,7 @@ TriangleMesh::repair() {
     stl.stats.facets_w_3_bad_edge = (stl.stats.number_of_facets - stl.stats.connected_facets_1_edge);
     
     // checking nearby
-    int last_edges_fixed = 0;
+    //int last_edges_fixed = 0;
     float tolerance = stl.stats.shortest_edge;
     float increment = stl.stats.bounding_diameter / 10000.0;
     int iterations = 2;
@@ -110,7 +110,7 @@ TriangleMesh::repair() {
                 //printf("Checking nearby. Tolerance= %f Iteration=%d of %d...", tolerance, i + 1, iterations);
                 stl_check_facets_nearby(&stl, tolerance);
                 //printf("  Fixed %d edges.\n", stl.stats.edges_fixed - last_edges_fixed);
-                last_edges_fixed = stl.stats.edges_fixed;
+                //last_edges_fixed = stl.stats.edges_fixed;
                 tolerance += increment;
             } else {
                 break;
@@ -316,7 +316,7 @@ TriangleMesh::split() const
         stl_allocate(&mesh->stl);
         
         int first = 1;
-        for (std::deque<int>::const_iterator facet = facets.begin(); facet != facets.end(); facet++) {
+        for (std::deque<int>::const_iterator facet = facets.begin(); facet != facets.end(); ++facet) {
             mesh->stl.facet_start[facet - facets.begin()] = this->stl.facet_start[*facet];
             stl_facet_stats(&mesh->stl, this->stl.facet_start[*facet], first);
             first = 0;
@@ -429,7 +429,7 @@ void TriangleMesh::ReadFromPerl(SV* vertices, SV* facets)
     
     // read geometry
     AV* vertices_av = (AV*)SvRV(vertices);
-    for (unsigned int i = 0; i < stl.stats.number_of_facets; i++) {
+    for (int i = 0; i < stl.stats.number_of_facets; i++) {
         AV* facet_av = (AV*)SvRV(*av_fetch(facets_av, i, 0));
         stl_facet facet;
         facet.normal.x = 0;
