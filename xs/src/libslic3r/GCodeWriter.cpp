@@ -90,11 +90,13 @@ GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool)
         comment = "set temperature";
     }
     
-    int original_extruder;
+    int restore_extruder = -1;
     std::ostringstream gcode;
 
     if(tool != -1 && this->multiple_extruders && FLAVOR_IS(gcfRepRap)) {
-        original_extruder = this->_extruder->id;
+        if(this->_extruder != NULL) {
+            restore_extruder = this->_extruder->id;
+        }
         gcode << this->set_extruder(tool);
     }
 
@@ -113,8 +115,8 @@ GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool)
     if (FLAVOR_IS(gcfTeacup) && wait)
         gcode << "M116 ; wait for temperature to be reached\n";
 
-    if(tool != -1 && this->multiple_extruders && FLAVOR_IS(gcfRepRap)) {
-        gcode << this->set_extruder(original_extruder);
+    if(restore_extruder != -1) {
+        gcode << this->set_extruder(restore_extruder);
     }
     
     return gcode.str();
