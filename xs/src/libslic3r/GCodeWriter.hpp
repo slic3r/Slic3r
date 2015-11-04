@@ -58,6 +58,7 @@ class GCodeWriter {
     
     std::string _travel_to_z(double z, const std::string &comment);
     std::string _retract(double length, double restart_extra, const std::string &comment);
+    std::string _toolchange(unsigned int extruder_id, bool reset_e);
 };
 
 }

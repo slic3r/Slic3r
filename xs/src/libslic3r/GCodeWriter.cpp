@@ -94,10 +94,13 @@ GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool)
     std::ostringstream gcode;
 
     if(tool != -1 && this->multiple_extruders && FLAVOR_IS(gcfRepRap)) {
-        if(this->_extruder != NULL) {
+        if(this->_extruder == NULL) {
+            gcode << this->_toolchange(tool, false);
+        }
+        else if(this->_extruder->id != tool) {
+            gcode << this->_toolchange(tool, false);
             restore_extruder = this->_extruder->id;
         }
-        gcode << this->set_extruder(tool);
     }
 
     gcode << code << " ";
@@ -116,7 +119,7 @@ GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool)
         gcode << "M116 ; wait for temperature to be reached\n";
 
     if(restore_extruder != -1) {
-        gcode << this->set_extruder(restore_extruder);
+        gcode << this->_toolchange(restore_extruder, false);
     }
     
     return gcode.str();
@@ -262,6 +265,12 @@ GCodeWriter::set_extruder(unsigned int extruder_id)
 std::string
 GCodeWriter::toolchange(unsigned int extruder_id)
 {
+    return this->_toolchange(extruder_id, true);
+}
+
+std::string
+GCodeWriter::_toolchange(unsigned int extruder_id, bool reset_e)
+{
     // set the new extruder
     this->_extruder = &this->extruders.find(extruder_id)->second;
     
@@ -280,7 +289,9 @@ GCodeWriter::toolchange(unsigned int extruder_id)
         if (this->config.gcode_comments) gcode << " ; change extruder";
         gcode << "\n";
         
-        gcode << this->reset_e(true);
+        if(reset_e) {
+            gcode << this->reset_e(true);
+        }
     }
     return gcode.str();
 }
