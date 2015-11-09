@@ -1678,26 +1678,26 @@ sub object_menu {
     my $rotateMenu = Wx::Menu->new;
     my $rotateMenuItem = $menu->AppendSubMenu($rotateMenu, "Rotate", 'Rotate the selected object by an arbitrary angle');
     $frame->_set_menu_item_icon($rotateMenuItem, 'textfield.png');
-    $frame->_append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
+    $frame->_append_menu_item($rotateMenu, "Around X axis (Red)…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
         $self->rotate(undef, X);
     });
-    $frame->_append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
+    $frame->_append_menu_item($rotateMenu, "Around Y axis (Green)…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
         $self->rotate(undef, Y);
     });
-    $frame->_append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
+    $frame->_append_menu_item($rotateMenu, "Around Z axis (Blue)…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
         $self->rotate(undef, Z);
     });
     
     my $mirrorMenu = Wx::Menu->new;
     my $mirrorMenuItem = $menu->AppendSubMenu($mirrorMenu, "Mirror", 'Mirror the selected object');
     $frame->_set_menu_item_icon($mirrorMenuItem, 'shape_flip_horizontal.png');
-    $frame->_append_menu_item($mirrorMenu, "Along X axis…", 'Mirror the selected object along the X axis', sub {
+    $frame->_append_menu_item($mirrorMenu, "Along X axis (Red)…", 'Mirror the selected object along the X axis', sub {
         $self->mirror(X);
     });
-    $frame->_append_menu_item($mirrorMenu, "Along Y axis…", 'Mirror the selected object along the Y axis', sub {
+    $frame->_append_menu_item($mirrorMenu, "Along Y axis (Green)…", 'Mirror the selected object along the Y axis', sub {
         $self->mirror(Y);
     });
-    $frame->_append_menu_item($mirrorMenu, "Along Z axis…", 'Mirror the selected object along the Z axis', sub {
+    $frame->_append_menu_item($mirrorMenu, "Along Z axis (Blue)…", 'Mirror the selected object along the Z axis', sub {
         $self->mirror(Z);
     });
     
@@ -1707,13 +1707,13 @@ sub object_menu {
     $frame->_append_menu_item($scaleMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
         $self->changescale(undef);
     });
-    $frame->_append_menu_item($scaleMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
+    $frame->_append_menu_item($scaleMenu, "Along X axis (Red)…", 'Scale the selected object along the X axis', sub {
         $self->changescale(X);
     });
-    $frame->_append_menu_item($scaleMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
+    $frame->_append_menu_item($scaleMenu, "Along Y axis (Green)…", 'Scale the selected object along the Y axis', sub {
         $self->changescale(Y);
     });
-    $frame->_append_menu_item($scaleMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
+    $frame->_append_menu_item($scaleMenu, "Along Z axis (Blue)…", 'Scale the selected object along the Z axis', sub {
         $self->changescale(Z);
     });
     
