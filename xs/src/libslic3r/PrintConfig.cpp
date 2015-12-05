@@ -572,6 +572,9 @@ PrintConfigDef::build_def() {
     Options["overhangs"].tooltip = "Experimental option to adjust flow for overhangs (bridge flow will be used), to apply bridge speed to them and enable fan.";
     Options["overhangs"].cli = "overhangs!";
 
+    Options["overridable"].type = coStrings;
+    Options["overridable"].label = "Overridable options";
+
     Options["perimeter_acceleration"].type = coFloat;
     Options["perimeter_acceleration"].label = "Perimeters";
     Options["perimeter_acceleration"].tooltip = "This is the acceleration your printer will use for perimeters. A high value like 9000 usually gives good results if your hardware is up to the job. Set zero to disable acceleration control for perimeters.";

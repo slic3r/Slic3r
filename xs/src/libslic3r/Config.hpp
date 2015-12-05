@@ -552,6 +552,7 @@ class DynamicConfig : public ConfigBase
     const ConfigOption* option(const t_config_option_key &opt_key) const;
     t_config_option_keys keys() const;
     void erase(const t_config_option_key &opt_key);
+    void clear();
     
     private:
     typedef std::map<t_config_option_key,ConfigOption*> t_options_map;

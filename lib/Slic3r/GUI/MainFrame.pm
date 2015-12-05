@@ -698,6 +698,10 @@ sub config {
         $filament_config,
     );
     
+    if ($self->{plater}) {
+        $config->apply($self->{plater}->{settings_override_config});
+    }
+    
     if ($self->{mode} eq 'simple') {
         # set some sensible defaults
         $config->set('first_layer_height', $config->nozzle_diameter->[0]);

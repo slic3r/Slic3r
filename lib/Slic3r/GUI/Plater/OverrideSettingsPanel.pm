@@ -20,6 +20,7 @@ sub new {
     $self->{default_config} = Slic3r::Config->new;
     $self->{config} = Slic3r::Config->new;
     $self->{on_change} = $params{on_change};
+    $self->{editable} = 1;
     $self->{fixed_options} = {};
     
     $self->{sizer} = Wx::BoxSizer->new(wxVERTICAL);
@@ -94,6 +95,8 @@ sub update_optgroup {
     $self->{options_sizer}->Clear(1);
     return if !defined $self->{config};
     
+    $self->{btn_add}->Show($self->{editable});
+    
     my %categories = ();
     foreach my $opt_key (@{$self->{config}->get_keys}) {
         my $category = $Slic3r::Config::Options->{$opt_key}{category};
@@ -116,7 +119,7 @@ sub update_optgroup {
                 my $opt_key = $line->get_options->[0]->opt_id;  # we assume that we have one option per line
                 
                 # disallow deleting fixed options
-                return undef if $self->{fixed_options}{$opt_key};
+                return undef if $self->{fixed_options}{$opt_key} || !$self->{editable};
                 
                 my $btn = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new("$Slic3r::var/delete.png", wxBITMAP_TYPE_PNG),
                     wxDefaultPosition, wxDefaultSize, Wx::wxBORDER_NONE);
@@ -149,6 +152,12 @@ sub disable {
     
     $self->{btn_add}->Disable;
     $self->Disable;
+}
+
+sub set_editable {
+    my ($self, $editable) = @_;
+    
+    $self->{editable} = $editable;
 }
 
 1;

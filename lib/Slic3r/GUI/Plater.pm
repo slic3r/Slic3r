@@ -7,10 +7,9 @@ use File::Basename qw(basename dirname);
 use List::Util qw(sum first max);
 use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad);
 use threads::shared qw(shared_clone);
-use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :listctrl :misc 
+use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :misc 
     :panel :sizer :toolbar :window wxTheApp :notebook :combobox);
-use Wx::Event qw(EVT_BUTTON EVT_COMMAND EVT_KEY_DOWN EVT_LIST_ITEM_ACTIVATED 
-    EVT_LIST_ITEM_DESELECTED EVT_LIST_ITEM_SELECTED EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL 
+use Wx::Event qw(EVT_BUTTON EVT_COMMAND EVT_KEY_DOWN EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL 
     EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED);
 use base 'Wx::Panel';
 
@@ -38,8 +37,6 @@ our $PROCESS_COMPLETED_EVENT : shared = Wx::NewEventType;
 
 use constant FILAMENT_CHOOSERS_SPACING => 0;
 use constant PROCESS_DELAY => 0.5 * 1000; # milliseconds
-
-my $PreventListEvents = 0;
 
 sub new {
     my $class = shift;
@@ -172,23 +169,6 @@ sub new {
         }
     }
 
-    $self->{list} = Wx::ListView->new($self, -1, wxDefaultPosition, wxDefaultSize,
-        wxLC_SINGLE_SEL | wxLC_REPORT | wxBORDER_SUNKEN | wxTAB_TRAVERSAL | wxWANTS_CHARS );
-    $self->{list}->InsertColumn(0, "Name", wxLIST_FORMAT_LEFT, 145);
-    $self->{list}->InsertColumn(1, "Copies", wxLIST_FORMAT_CENTER, 45);
-    $self->{list}->InsertColumn(2, "Scale", wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    EVT_LIST_ITEM_SELECTED($self, $self->{list}, \&list_item_selected);
-    EVT_LIST_ITEM_DESELECTED($self, $self->{list}, \&list_item_deselected);
-    EVT_LIST_ITEM_ACTIVATED($self, $self->{list}, \&list_item_activated);
-    EVT_KEY_DOWN($self->{list}, sub {
-        my ($list, $event) = @_;
-        if ($event->GetKeyCode == WXK_TAB) {
-            $list->Navigate($event->ShiftDown ? &Wx::wxNavigateBackward : &Wx::wxNavigateForward);
-        } else {
-            $event->Skip;
-        }
-    });
-    
     # right pane buttons
     $self->{btn_export_gcode} = Wx::Button->new($self, -1, "Export G-code…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     $self->{btn_print} = Wx::Button->new($self, -1, "Print…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
@@ -266,7 +246,7 @@ sub new {
     
     $_->SetDropTarget(Slic3r::GUI::Plater::DropTarget->new($self))
         for grep defined($_),
-            $self, $self->{canvas}, $self->{canvas3D}, $self->{preview3D}, $self->{list};
+            $self, $self->{canvas}, $self->{canvas3D}, $self->{preview3D};
     
     EVT_COMMAND($self, -1, $THUMBNAIL_DONE_EVENT, sub {
         my ($self, $event) = @_;
@@ -345,6 +325,18 @@ sub new {
             }
         }
         
+        {
+            $self->{settings_override_panel} = Slic3r::GUI::Plater::OverrideSettingsPanel->new($self,
+                on_change => sub {
+                    # (re)start timer
+                    $self->schedule_background_process;
+                });
+            $self->{settings_override_panel}->set_editable(0);
+            $self->{settings_override_config} = Slic3r::Config->new;
+            $self->{settings_override_panel}->set_default_config($self->{settings_override_config});
+            $self->{settings_override_panel}->set_config($self->{settings_override_config});
+        }
+        
         my $object_info_sizer;
         {
             my $box = Wx::StaticBox->new($self, -1, "Info");
@@ -357,6 +349,8 @@ sub new {
             $object_info_sizer->Add($grid_sizer, 0, wxEXPAND);
             
             my @info = (
+                name        => "Name",
+                copies      => "Copies",
                 size        => "Size",
                 volume      => "Volume",
                 facets      => "Facets",
@@ -395,7 +389,7 @@ sub new {
         my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
         $right_sizer->Add($presets, 0, wxEXPAND | wxTOP, 10) if defined $presets;
         $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
-        $right_sizer->Add($self->{list}, 1, wxEXPAND, 5);
+        $right_sizer->Add($self->{settings_override_panel}, 1, wxEXPAND, 5);
         $right_sizer->Add($object_info_sizer, 0, wxEXPAND, 0);
         
         my $hsizer = Wx::BoxSizer->new(wxHORIZONTAL);
@@ -584,18 +578,7 @@ sub load_model_objects {
         );
     }
     
-    foreach my $obj_idx (@obj_idx) {
-        my $object = $self->{objects}[$obj_idx];
-        my $model_object = $self->{model}->objects->[$obj_idx];
-        $self->{list}->InsertStringItem($obj_idx, $object->name);
-        $self->{list}->SetItemFont($obj_idx, Wx::Font->new(10, wxDEFAULT, wxNORMAL, wxNORMAL))
-            if $self->{list}->can('SetItemFont');  # legacy code for wxPerl < 0.9918 not supporting SetItemFont()
-    
-        $self->{list}->SetItem($obj_idx, 1, $model_object->instances_count);
-        $self->{list}->SetItem($obj_idx, 2, ($model_object->instances->[0]->scaling_factor * 100) . "%");
-    
-        $self->make_thumbnail($obj_idx);
-    }
+    $self->make_thumbnail($_) for @obj_idx;
     $self->arrange if $need_arrange;
     $self->update;
     
@@ -603,8 +586,6 @@ sub load_model_objects {
     $self->{canvas3D}->zoom_to_volumes
         if $self->{canvas3D};
     
-    $self->{list}->Update;
-    $self->{list}->Select($obj_idx[-1], 1);
     $self->object_list_changed;
     
     $self->schedule_background_process;
@@ -636,7 +617,6 @@ sub remove {
     splice @{$self->{objects}}, $obj_idx, 1;
     $self->{model}->delete_object($obj_idx);
     $self->{print}->delete_object($obj_idx);
-    $self->{list}->DeleteItem($obj_idx);
     $self->object_list_changed;
     
     $self->select_object(undef);
@@ -656,7 +636,6 @@ sub reset {
     @{$self->{objects}} = ();
     $self->{model}->clear_objects;
     $self->{print}->clear_objects;
-    $self->{list}->DeleteAllItems;
     $self->object_list_changed;
     
     $self->select_object(undef);
@@ -678,7 +657,6 @@ sub increase {
         );
         $self->{print}->objects->[$obj_idx]->add_copy($instance->offset);
     }
-    $self->{list}->SetItem($obj_idx, 1, $model_object->instances_count);
     
     # only autoarrange if user has autocentering enabled
     $self->stop_background_process;
@@ -703,15 +681,10 @@ sub decrease {
             $model_object->delete_last_instance;
             $self->{print}->objects->[$obj_idx]->delete_last_copy;
         }
-        $self->{list}->SetItem($obj_idx, 1, $model_object->instances_count);
     } else {
         $self->remove;
     }
     
-    if ($self->{objects}[$obj_idx]) {
-        $self->{list}->Select($obj_idx, 0);
-        $self->{list}->Select($obj_idx, 1);
-    }
     $self->update;
     $self->schedule_background_process;
 }
@@ -876,8 +849,7 @@ sub changescale {
                 $model_instance->scaling_factor*100, 0, 100000, $self);
         }
         return if !$scale || $scale < 0;
-    
-        $self->{list}->SetItem($obj_idx, 2, "$scale%");
+        
         $scale /= 100;  # turn percent into factor
         
         my $variation = $scale / $model_instance->scaling_factor;
@@ -1492,36 +1464,20 @@ sub on_config_change {
         }
     }
     
+    $self->{settings_override_config}->clear;
+    if ($config->has('overridable')) {
+        my $overridable = $config->get('overridable');
+        if (@$overridable) {
+            my $overridable_config = Slic3r::Config->new_from_defaults(@$overridable);
+            $self->{settings_override_config}->apply($overridable_config);
+        }
+    }
+    $self->{settings_override_panel}->update_optgroup;
+    
     return if !$self->GetFrame->is_loaded;
     
     # (re)start timer
     $self->schedule_background_process;
-}
-
-sub list_item_deselected {
-    my ($self, $event) = @_;
-    return if $PreventListEvents;
-    
-    if ($self->{list}->GetFirstSelected == -1) {
-        $self->select_object(undef);
-        $self->refresh_canvases;
-    }
-}
-
-sub list_item_selected {
-    my ($self, $event) = @_;
-    return if $PreventListEvents;
-    
-    my $obj_idx = $event->GetIndex;
-    $self->select_object($obj_idx);
-    $self->refresh_canvases;
-}
-
-sub list_item_activated {
-    my ($self, $event, $obj_idx) = @_;
-    
-    $obj_idx //= $event->GetIndex;
-	$self->object_settings_dialog($obj_idx);
 }
 
 sub object_cut_dialog {
@@ -1625,9 +1581,17 @@ sub selection_changed {
     
     if ($self->{object_info_size}) { # have we already loaded the info pane?
         if ($have_sel) {
+            $self->{object_info_name}->SetLabel($object->name);
             my $model_object = $self->{model}->objects->[$obj_idx];
+            $self->{object_info_copies}->SetLabel($model_object->instances_count);
             my $model_instance = $model_object->instances->[0];
-            $self->{object_info_size}->SetLabel(sprintf("%.2f x %.2f x %.2f", @{$model_object->instance_bounding_box(0)->size}));
+            {
+                my $size_string = sprintf "%.2f x %.2f x %.2f", @{$model_object->instance_bounding_box(0)->size};
+                if ($model_instance->scaling_factor != 1) {
+                    $size_string .= sprintf " (%s%%)", $model_instance->scaling_factor * 100;
+                }
+                $self->{object_info_size}->SetLabel($size_string);
+            }
             $self->{object_info_materials}->SetLabel($model_object->materials_count);
             
             if (my $stats = $model_object->mesh_stats) {
@@ -1667,15 +1631,6 @@ sub select_object {
     $_->selected(0) for @{ $self->{objects} };
     if (defined $obj_idx) {
         $self->{objects}->[$obj_idx]->selected(1);
-        
-        # We use this flag to avoid circular event handling
-        # Select() happens to fire a wxEVT_LIST_ITEM_SELECTED on Windows, 
-        # whose event handler calls this method again and again and again
-        $PreventListEvents = 1;
-        $self->{list}->Select($obj_idx, 1);
-        $PreventListEvents = 0;
-    } else {
-        # TODO: deselect all in list
     }
     $self->selection_changed(1);
 }

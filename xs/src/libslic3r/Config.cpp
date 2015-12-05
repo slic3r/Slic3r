@@ -415,6 +415,11 @@ DynamicConfig::erase(const t_config_option_key &opt_key) {
     this->options.erase(opt_key);
 }
 
+void
+DynamicConfig::clear() {
+    this->options.clear();
+}
+
 t_config_option_keys
 StaticConfig::keys() const {
     t_config_option_keys keys;

@@ -29,6 +29,7 @@
         %code{% THIS->apply(*other, true); %};
     %name{get_keys} std::vector<std::string> keys();
     void erase(t_config_option_key opt_key);
+    void clear();
     void normalize();
     %name{setenv} void setenv_();
 };

@@ -446,7 +446,8 @@ package Slic3r::GUI::Tab::Print;
 use base 'Slic3r::GUI::Tab';
 
 use List::Util qw(first);
-use Wx qw(:icon :dialog :id);
+use Wx qw(:icon :dialog :id :misc :button :sizer);
+use Wx::Event qw(EVT_BUTTON);
 
 sub name { 'print' }
 sub title { 'Print Settings' }
@@ -491,8 +492,49 @@ sub build {
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
         infill_overlap bridge_flow_ratio
-        xy_size_compensation threads resolution
+        xy_size_compensation threads resolution overridable
     ));
+    
+    my $overridable_widget = sub {
+        my ($parent) = @_;
+        
+        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
+            wxBU_LEFT | wxBU_EXACTFIT);
+        $btn->SetFont($Slic3r::GUI::small_font);
+        if ($Slic3r::GUI::have_button_icons) {
+            $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/cog.png", wxBITMAP_TYPE_PNG));
+        }
+        
+        my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+        $sizer->Add($btn);
+        
+        EVT_BUTTON($self, $btn, sub {
+            my %options = (
+                map { $_ => sprintf('%s > %s', $Slic3r::Config::Options->{$_}{category}, $Slic3r::Config::Options->{$_}{full_label} // $Slic3r::Config::Options->{$_}{label}) }
+                    map @{$_->get_keys}, Slic3r::Config::PrintObject->new, Slic3r::Config::PrintRegion->new
+            );
+            my @opt_keys = sort { $options{$a} cmp $options{$b} } keys %options;
+            
+            my $dlg = Wx::MultiChoiceDialog->new($self, "Selected options will be displayed in the plater screen for quick changes.",
+                "Overridable options",
+                [ map $options{$_}, @opt_keys ]);
+            
+            my @selections = ();
+            foreach my $opt_key (@{ $self->{config}->get('overridable') }) {
+                push @selections, first { $opt_keys[$_] eq $opt_key } 0..$#opt_keys;
+            }
+            $dlg->SetSelections(@selections);
+            
+            if ($dlg->ShowModal == wxID_OK) {
+                my $value = [ @opt_keys[$dlg->GetSelections] ];
+                $self->{config}->set('overridable', $value);
+                $self->update_dirty;
+                $self->_on_value_change('overridable', $value);
+            }
+        });
+        
+        return $sizer;
+    };
     
     {
         my $page = $self->add_options_page('Layers and perimeters', 'layers.png');
@@ -678,6 +720,12 @@ sub build {
             $optgroup->append_single_option_line('xy_size_compensation');
             $optgroup->append_single_option_line('threads') if $Slic3r::have_threads;
             $optgroup->append_single_option_line('resolution');
+            
+            my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                label       => 'Overridable settings',
+                widget      => $overridable_widget,
+            );
+            $optgroup->append_line($line);
         }
     }
     
