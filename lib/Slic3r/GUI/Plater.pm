@@ -1464,8 +1464,10 @@ sub on_config_change {
         }
     }
     
-    $self->{settings_override_config}->clear;
     if ($config->has('overridable')) {
+        # this method is called also for other tabs' configs, which of course lack 
+        # overridable; in those cases we must not clear the overrides
+        $self->{settings_override_config}->clear;
         my $overridable = $config->get('overridable');
         if (@$overridable) {
             my $overridable_config = Slic3r::Config->new_from_defaults(@$overridable);
