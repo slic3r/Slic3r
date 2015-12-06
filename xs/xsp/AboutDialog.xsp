@@ -1,0 +1,14 @@
+%module{Slic3r::XS};
+%loadplugin{feature::default_xs_typemap};
+
+%{
+#include "slic3r/GUI/AboutDialog.hpp"
+#include <myinit.h>
+%}
+
+%name{Slic3r::GUI::AboutDialog} class Slic3r::GUI::AboutDialog {
+    AboutDialog();
+    ~AboutDialog();
+    void ShowModal();
+    void Destroy();
+};

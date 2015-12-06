@@ -6,7 +6,6 @@ use utf8;
 use File::Basename qw(basename);
 use FindBin;
 use Slic3r::GUI::2DBed;
-use Slic3r::GUI::AboutDialog;
 use Slic3r::GUI::BedShapeDialog;
 use Slic3r::GUI::BonjourBrowser;
 use Slic3r::GUI::ConfigWizard;
@@ -178,7 +177,7 @@ sub OnInit {
 sub about {
     my ($self) = @_;
     
-    my $about = Slic3r::GUI::AboutDialog->new(undef);
+    my $about = Slic3r::GUI::AboutDialog->new;
     $about->ShowModal;
     $about->Destroy;
 }

@@ -12,6 +12,7 @@ my %prereqs = qw(
     Encode::Locale                  1.05
     ExtUtils::MakeMaker             6.80
     ExtUtils::ParseXS               3.22
+    ExtUtils::XSpp                  0.18
     File::Basename                  0
     File::Spec                      0
     Getopt::Long                    0
@@ -35,9 +36,11 @@ my %recommends = qw(
 
 my $sudo    = grep { $_ eq '--sudo' } @ARGV;
 my $gui     = grep { $_ eq '--gui' } @ARGV;
+my $no_gui  = grep { $_ eq '--no-gui' }  @ARGV;
 my $xs_only = grep { $_ eq '--xs' }  @ARGV;
 if ($gui) {
     %prereqs = qw(
+    Alien::wxWidgets                0
     Class::Accessor                 0
     Wx                              0.9918
     Socket                          2.016
@@ -156,6 +159,7 @@ EOF
                 system './xs/Build', 'distclean';
             }
         }
+        $ENV{SLIC3R_GUI} = !$no_gui;
         my $res = system $cpanm, @cpanm_args, '--reinstall', '--verbose', './xs';
         if ($res != 0) {
             die "The XS/C++ code failed to compile, aborting\n";

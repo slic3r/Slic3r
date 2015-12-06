@@ -6,8 +6,11 @@
 #include <Windows.h>
 #pragma comment(lib, "user32.lib")
 #endif
+#include <string>
 
 namespace Slic3r { namespace GUI {
+
+std::string VAR_PATH;
 
 #if __APPLE__
 IOPMAssertionID assertionID;

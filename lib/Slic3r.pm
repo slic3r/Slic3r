@@ -71,6 +71,9 @@ use Encode::Locale 1.05;
 use Encode;
 use Unicode::Normalize;
 
+# pass path to the var directory to the XS code
+Slic3r::GUI::set_var_path($var);
+
 use constant SCALING_FACTOR         => 0.000001;
 use constant RESOLUTION             => 0.0125;
 use constant SCALED_RESOLUTION      => RESOLUTION / SCALING_FACTOR;

@@ -95,10 +95,13 @@ src/poly2tri/sweep/sweep_context.h
 src/polypartition.cpp
 src/polypartition.h
 src/ppport.h
-src/slic3r/GUI/GUI.cpp
-src/slic3r/GUI/GUI.hpp
 src/slic3r/GUI/3DScene.cpp
 src/slic3r/GUI/3DScene.hpp
+src/slic3r/GUI/AboutDialog.cpp
+src/slic3r/GUI/AboutDialog.hpp
+src/slic3r/GUI/GUI.cpp
+src/slic3r/GUI/GUI.hpp
+src/slic3r/GUI/wxinit.h
 t/01_trianglemesh.t
 t/03_point.t
 t/04_expolygon.t
@@ -119,6 +122,7 @@ t/18_motionplanner.t
 t/19_model.t
 t/20_print.t
 t/21_gcode.t
+xsp/AboutDialog.xsp
 xsp/BoundingBox.xsp
 xsp/BridgeDetector.xsp
 xsp/Clipper.xsp
@@ -130,8 +134,8 @@ xsp/ExtrusionEntityCollection.xsp
 xsp/ExtrusionLoop.xsp
 xsp/ExtrusionPath.xsp
 xsp/Flow.xsp
-xsp/GCodeSender.xsp
 xsp/GCode.xsp
+xsp/GCodeSender.xsp
 xsp/GCodeWriter.xsp
 xsp/Geometry.xsp
 xsp/GUI.xsp

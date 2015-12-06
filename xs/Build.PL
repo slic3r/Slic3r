@@ -20,6 +20,16 @@ if ($^O eq 'darwin') {
 my @INC  = qw();
 my @LIBS = qw();
 
+if ($ENV{SLIC3R_GUI}) {
+    print "Slic3r will be built with GUI support\n";
+    push @cflags, qw(-DSLIC3R_GUI);
+    require Alien::wxWidgets;
+    Alien::wxWidgets->load;
+    push @INC, Alien::wxWidgets->include_path;
+    push @cflags, Alien::wxWidgets->defines, Alien::wxWidgets->c_flags;
+    push @ldflags, Alien::wxWidgets->link_flags, Alien::wxWidgets->libraries(qw(core gl html));
+}
+
 # search for Boost in a number of places
 my @boost_include = my @boost_libs = ();
 if (defined $ENV{BOOST_DIR}) {
@@ -135,6 +145,7 @@ my $build = Module::Build::WithXSpp->new(
         ostream
         sstream
         libslic3r/GCodeSender.hpp
+        slic3r/GUI/wxinit.h
     )]
 );
 
