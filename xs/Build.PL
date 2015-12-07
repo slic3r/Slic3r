@@ -17,8 +17,8 @@ if ($^O eq 'darwin') {
     push @ldflags, qw(-framework IOKit -framework CoreFoundation);
 }
 
-my @INC  = qw();
-my @LIBS = qw();
+my @INC  = qw(-Isrc/libslic3r);
+my @LIBS = qw(-Lsrc/libslic3r);
 
 if ($ENV{SLIC3R_GUI}) {
     print "Slic3r will be built with GUI support\n";

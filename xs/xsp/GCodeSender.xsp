@@ -3,8 +3,8 @@
 #ifdef BOOST_LIBS
 
 %{
+#include <xsinit.h>
 #include "libslic3r/GCodeSender.hpp"
-#include <myinit.h>
 %}
 
 %name{Slic3r::GCode::Sender} class GCodeSender {
