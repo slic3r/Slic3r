@@ -54,8 +54,6 @@ use Slic3r::GCode::VibrationLimit;
 use Slic3r::Geometry qw(PI);
 use Slic3r::Geometry::Clipper;
 use Slic3r::Layer;
-use Slic3r::Layer::PerimeterGenerator;
-use Slic3r::Layer::Region;
 use Slic3r::Line;
 use Slic3r::Model;
 use Slic3r::Point;
@@ -78,8 +76,6 @@ use constant RESOLUTION             => 0.0125;
 use constant SCALED_RESOLUTION      => RESOLUTION / SCALING_FACTOR;
 use constant LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER => 0.15;
 use constant INFILL_OVERLAP_OVER_SPACING  => 0.3;
-use constant EXTERNAL_INFILL_MARGIN => 3;
-use constant INSET_OVERLAP_TOLERANCE => 0.4;
 
 # keep track of threads we created
 my @my_threads = ();
@@ -176,6 +172,11 @@ sub parallelize {
 sub thread_cleanup {
     return if !$Slic3r::have_threads;
     
+    if (threads->tid == 0) {
+        warn "Calling thread_cleanup() from main thread\n";
+        return;
+    }
+    
     # prevent destruction of shared objects
     no warnings 'redefine';
     *Slic3r::BridgeDetector::DESTROY        = sub {};
@@ -196,11 +197,13 @@ sub thread_cleanup {
     *Slic3r::GCode::AvoidCrossingPerimeters::DESTROY = sub {};
     *Slic3r::GCode::OozePrevention::DESTROY = sub {};
     *Slic3r::GCode::PlaceholderParser::DESTROY = sub {};
+    *Slic3r::GCode::Sender::DESTROY         = sub {};
     *Slic3r::GCode::Wipe::DESTROY           = sub {};
     *Slic3r::GCode::Writer::DESTROY         = sub {};
     *Slic3r::Geometry::BoundingBox::DESTROY = sub {};
     *Slic3r::Geometry::BoundingBoxf::DESTROY = sub {};
     *Slic3r::Geometry::BoundingBoxf3::DESTROY = sub {};
+    *Slic3r::Layer::PerimeterGenerator::DESTROY = sub {};
     *Slic3r::Line::DESTROY                  = sub {};
     *Slic3r::Linef3::DESTROY                = sub {};
     *Slic3r::Model::DESTROY                 = sub {};

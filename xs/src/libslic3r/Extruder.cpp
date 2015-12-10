@@ -2,7 +2,7 @@
 
 namespace Slic3r {
 
-Extruder::Extruder(int id, GCodeConfig *config)
+Extruder::Extruder(unsigned int id, GCodeConfig *config)
 :   id(id),
     config(config)
 {
@@ -152,10 +152,5 @@ Extruder::retract_restart_extra_toolchange() const
 {
     return this->config->retract_restart_extra_toolchange.get_at(this->id);
 }
-
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(Extruder, "Extruder");
-#endif
 
 }

@@ -1,7 +1,7 @@
 #ifndef slic3r_Print_hpp_
 #define slic3r_Print_hpp_
 
-#include <myinit.h>
+#include "libslic3r.h"
 #include <set>
 #include <vector>
 #include <stdexcept>
@@ -135,6 +135,7 @@ class PrintObject
     bool invalidate_all_steps();
     
     bool has_support_material() const;
+    void process_external_surfaces();
     void bridge_over_infill();
     
     private:
@@ -162,6 +163,7 @@ class Print
     PlaceholderParser placeholder_parser;
     // TODO: status_cb
     double total_used_filament, total_extruded_volume;
+    std::map<size_t,float> filament_stats;
     PrintState<PrintStep> state;
 
     // ordered collections of extrusion paths to build skirt loops and brim
@@ -204,6 +206,7 @@ class Print
     void _simplify_slices(double distance);
     double max_allowed_layer_height() const;
     bool has_support_material() const;
+    void auto_assign_extruders(ModelObject* model_object) const;
     
     private:
     void clear_regions();

@@ -2,6 +2,11 @@
 
 namespace Slic3r {
 
+Surface::operator Polygons() const
+{
+    return this->expolygon;
+}
+
 double
 Surface::area() const
 {
@@ -48,19 +53,5 @@ Surface::is_bridge() const
     return this->surface_type == stBottomBridge
         || this->surface_type == stInternalBridge;
 }
-
-#ifdef SLIC3RXS
-
-REGISTER_CLASS(Surface, "Surface");
-
-void
-Surface::from_SV_check(SV* surface_sv)
-{
-    if (!sv_isa(surface_sv, perl_class_name(this)) && !sv_isa(surface_sv, perl_class_name_ref(this)))
-        CONFESS("Not a valid %s object", perl_class_name(this));
-    // a XS Surface was supplied
-    *this = *(Surface *)SvIV((SV*)SvRV( surface_sv ));
-}
-#endif
 
 }

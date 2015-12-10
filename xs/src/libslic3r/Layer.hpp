@@ -1,7 +1,7 @@
 #ifndef slic3r_Layer_hpp_
 #define slic3r_Layer_hpp_
 
-#include <myinit.h>
+#include "libslic3r.h"
 #include "Flow.hpp"
 #include "SurfaceCollection.hpp"
 #include "ExtrusionEntityCollection.hpp"
@@ -40,8 +40,7 @@ class LayerRegion
 
     // collection of expolygons representing the bridged areas (thus not
     // needing support material)
-    // (this could be just a Polygons object)
-    ExPolygonCollection bridged;
+    Polygons bridged;
 
     // collection of polylines representing the unsupported bridge edges
     PolylineCollection unsupported_bridge_edges;
@@ -57,6 +56,9 @@ class LayerRegion
     Flow flow(FlowRole role, bool bridge = false, double width = -1) const;
     void merge_slices();
     void prepare_fill_surfaces();
+    void make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces);
+    void process_external_surfaces(const Layer* lower_layer);
+    double infill_area_threshold() const;
     
     private:
     Layer *_layer;
@@ -91,7 +93,7 @@ class Layer {
     ExPolygonCollection slices;
 
 
-    size_t region_count();
+    size_t region_count() const;
     LayerRegion* get_region(int idx);
     LayerRegion* add_region(PrintRegion* print_region);
     
@@ -99,6 +101,7 @@ class Layer {
     void merge_slices();
     template <class T> bool any_internal_region_slice_contains(const T &item) const;
     template <class T> bool any_bottom_region_slice_contains(const T &item) const;
+    void make_perimeters();
     
     protected:
     size_t _id;     // sequential number of layer, 0-based

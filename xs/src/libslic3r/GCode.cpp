@@ -65,10 +65,6 @@ AvoidCrossingPerimeters::travel_to(GCode &gcodegen, Point point)
     }
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(AvoidCrossingPerimeters, "GCode::AvoidCrossingPerimeters");
-#endif
-
 OozePrevention::OozePrevention()
     : enable(false)
 {
@@ -124,10 +120,6 @@ OozePrevention::_get_temp(GCode &gcodegen)
         ? gcodegen.config.first_layer_temperature.get_at(gcodegen.writer.extruder()->id)
         : gcodegen.config.temperature.get_at(gcodegen.writer.extruder()->id);
 }
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(OozePrevention, "GCode::OozePrevention");
-#endif
 
 Wipe::Wipe()
     : enable(false)
@@ -202,16 +194,12 @@ Wipe::wipe(GCode &gcodegen, bool toolchange)
     return gcode;
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(Wipe, "GCode::Wipe");
-#endif
-
 #define EXTRUDER_CONFIG(OPT) this->config.OPT.get_at(this->writer.extruder()->id)
 
 GCode::GCode()
-    : enable_loop_clipping(true), enable_cooling_markers(false), layer_count(0),
-        layer_index(-1), first_layer(false), elapsed_time(0), volumetric_speed(0),
-        _last_pos_defined(false), layer(NULL), placeholder_parser(NULL)
+    : placeholder_parser(NULL), enable_loop_clipping(true), enable_cooling_markers(false), layer_count(0),
+        layer_index(-1), layer(NULL), first_layer(false), elapsed_time(0), volumetric_speed(0),
+        _last_pos_defined(false)
 {
 }
 
@@ -435,7 +423,6 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
     
     // make a little move inwards before leaving loop
     if (paths.back().role == erExternalPerimeter && this->layer != NULL && this->config.perimeters > 1) {
-        Polyline &last_path_polyline = paths.back().polyline;
         // detect angle between last and first segment
         // the side depends on the original winding order of the polygon (left for contours, right for holes)
         Point a = paths.front().polyline.points[1];  // second point
@@ -576,7 +563,7 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     gcode += this->writer.set_speed(F);
     double path_length = 0;
     {
-        std::string comment = this->config.gcode_comments ? (" ; " + description) : "";
+        std::string comment = this->config.gcode_comments ? description : "";
         Lines lines = path.polyline.lines();
         for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
             const double line_length = line->length() * SCALING_FACTOR;
@@ -766,9 +753,5 @@ GCode::point_to_gcode(const Point &point)
         unscale(point.y) + this->origin.y - extruder_offset.y
     );
 }
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(GCode, "GCode");
-#endif
 
 }

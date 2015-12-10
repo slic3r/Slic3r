@@ -1,6 +1,7 @@
 #ifndef slic3r_Surface_hpp_
 #define slic3r_Surface_hpp_
 
+#include "libslic3r.h"
 #include "ExPolygon.hpp"
 
 namespace Slic3r {
@@ -21,16 +22,13 @@ class Surface
         : surface_type(_surface_type), expolygon(_expolygon),
             thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0)
         {};
+    operator Polygons() const;
     double area() const;
     bool is_solid() const;
     bool is_external() const;
     bool is_internal() const;
     bool is_bottom() const;
     bool is_bridge() const;
-    
-    #ifdef SLIC3RXS
-    void from_SV_check(SV* surface_sv);
-    #endif
 };
 
 typedef std::vector<Surface> Surfaces;

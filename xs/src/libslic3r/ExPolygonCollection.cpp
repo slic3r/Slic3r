@@ -122,8 +122,10 @@ ExPolygonCollection::contours() const
     return contours;
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(ExPolygonCollection, "ExPolygon::Collection");
-#endif
+void
+ExPolygonCollection::append(const ExPolygons &expp)
+{
+    this->expolygons.insert(this->expolygons.end(), expp.begin(), expp.end());
+}
 
 }

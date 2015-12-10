@@ -168,15 +168,15 @@ linint(double value, double oldmin, double oldmax, double newmin, double newmax)
 }
 
 Pointfs
-arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf &bb)
+arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb)
 {
     // use actual part size (the largest) plus separation distance (half on each side) in spacing algorithm
     part.x += dist;
     part.y += dist;
     
     Pointf area;
-    if (bb.defined) {
-        area = bb.size();
+    if (bb != NULL && bb->defined) {
+        area = bb->size();
     } else {
         // bogus area size, large enough not to trigger the error below
         area.x = part.x * total_parts;
@@ -186,7 +186,6 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf &bb)
     // this is how many cells we have available into which to put parts
     size_t cellw = floor((area.x + dist) / part.x);
     size_t cellh = floor((area.x + dist) / part.x);
-    
     if (total_parts > (cellw * cellh))
         CONFESS("%zu parts won't fit in your print area!\n", total_parts);
     
@@ -279,10 +278,10 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf &bb)
         positions.push_back(Pointf(cx * part.x, cy * part.y));
     }
     
-    if (bb.defined) {
+    if (bb != NULL && bb->defined) {
         for (Pointfs::iterator p = positions.begin(); p != positions.end(); ++p) {
-            p->x += bb.min.x;
-            p->y += bb.min.y;
+            p->x += bb->min.x;
+            p->y += bb->min.y;
         }
     }
     return positions;

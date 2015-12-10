@@ -119,7 +119,7 @@ Polyline::equally_spaced_points(double distance) const
         double take = segment_length - (len - distance);  // how much we take of this segment
         Line segment(*(it-1), *it);
         points.push_back(segment.point_at(take));
-        it--;
+        --it;
         len = -take;
     }
     return points;
@@ -246,19 +246,5 @@ Polyline::wkt() const
     wkt << "))";
     return wkt.str();
 }
-
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(Polyline, "Polyline");
-
-void
-Polyline::from_SV_check(SV* poly_sv)
-{
-    if (!sv_isa(poly_sv, perl_class_name(this)) && !sv_isa(poly_sv, perl_class_name_ref(this)))
-        CONFESS("Not a valid %s object",perl_class_name(this));
-    
-    MultiPoint::from_SV_check(poly_sv);
-}
-#endif
 
 }

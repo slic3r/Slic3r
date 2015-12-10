@@ -9,4 +9,13 @@ branches:
   only:
     - master
     - stable
-
+sudo: false
+cache:
+    - apt
+addons:
+  apt:
+    sources:
+    - boost-latest
+    packages:
+    - libboost-thread1.55-dev
+    - libboost-system1.55-dev

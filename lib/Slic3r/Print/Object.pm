@@ -308,7 +308,7 @@ sub slice {
     
     # remove empty layers from bottom
     while (@{$self->layers} && !@{$self->get_layer(0)->slices}) {
-        shift @{$self->layers};
+        $self->delete_layer(0);
         for (my $i = 0; $i <= $#{$self->layers}; $i++) {
             $self->get_layer($i)->set_id( $self->get_layer($i)->id-1 );
         }
@@ -319,7 +319,7 @@ sub slice {
         $self->_simplify_slices(scale($self->print->config->resolution));
     }
     
-    die "No layers were detected. You might want to repair your STL file(s) or check their size and retry.\n"
+    die "No layers were detected. You might want to repair your STL file(s) or check their size or thickness and retry.\n"
         if !@{$self->layers};
     
     $self->set_typed_slices(0);
@@ -437,7 +437,7 @@ sub make_perimeters {
                     $slice->extra_perimeters($slice->extra_perimeters + 1);
                 }
                 Slic3r::debugf "  adding %d more perimeter(s) at layer %d\n",
-                    $slice->extra_perimeters, $layerm->id
+                    $slice->extra_perimeters, $layerm->layer->id
                     if $slice->extra_perimeters > 0;
             }
         }
@@ -686,7 +686,7 @@ sub detect_surfaces_type {
             # as bottom surfaces (to allow for bridge detection)
             if (@top && @bottom) {
                 my $overlapping = intersection_ex([ map $_->p, @top ], [ map $_->p, @bottom ]);
-                Slic3r::debugf "  layer %d contains %d membrane(s)\n", $layerm->id, scalar(@$overlapping)
+                Slic3r::debugf "  layer %d contains %d membrane(s)\n", $layerm->layer->id, scalar(@$overlapping)
                     if $Slic3r::debug;
                 @top = $difference->([map $_->expolygon, @top], $overlapping, S_TYPE_TOP);
             }
@@ -703,7 +703,7 @@ sub detect_surfaces_type {
             $layerm->slices->append($_) for (@bottom, @top, @internal);
             
             Slic3r::debugf "  layer %d has %d bottom, %d top and %d internal surfaces\n",
-                $layerm->id, scalar(@bottom), scalar(@top), scalar(@internal) if $Slic3r::debug;
+                $layerm->layer->id, scalar(@bottom), scalar(@top), scalar(@internal) if $Slic3r::debug;
         }
         
         # clip surfaces to the fill boundaries
@@ -830,17 +830,6 @@ sub clip_fill_surfaces {
     }
 }
 
-sub process_external_surfaces {
-    my ($self) = @_;
-    
-    for my $region_id (0 .. ($self->print->region_count-1)) {
-        $self->get_layer(0)->regions->[$region_id]->process_external_surfaces(undef);
-        for my $i (1 .. ($self->layer_count - 1)) {
-            $self->get_layer($i)->regions->[$region_id]->process_external_surfaces($self->get_layer($i-1));
-        }
-    }
-}
-
 sub discover_horizontal_shells {
     my $self = shift;
     
@@ -850,8 +839,8 @@ sub discover_horizontal_shells {
         for (my $i = 0; $i < $self->layer_count; $i++) {
             my $layerm = $self->get_layer($i)->regions->[$region_id];
             
-            if ($layerm->config->solid_infill_every_layers && $layerm->config->fill_density > 0
-                && ($i % $layerm->config->solid_infill_every_layers) == 0) {
+            if ($layerm->region->config->solid_infill_every_layers && $layerm->region->config->fill_density > 0
+                && ($i % $layerm->region->config->solid_infill_every_layers) == 0) {
                 $_->surface_type(S_TYPE_INTERNALSOLID) for @{$layerm->fill_surfaces->filter_by_type(S_TYPE_INTERNAL)};
             }
             
@@ -873,8 +862,8 @@ sub discover_horizontal_shells {
                 Slic3r::debugf "Layer %d has %s surfaces\n", $i, ($type == S_TYPE_TOP) ? 'top' : 'bottom';
                 
                 my $solid_layers = ($type == S_TYPE_TOP)
-                    ? $layerm->config->top_solid_layers
-                    : $layerm->config->bottom_solid_layers;
+                    ? $layerm->region->config->top_solid_layers
+                    : $layerm->region->config->bottom_solid_layers;
                 NEIGHBOR: for (my $n = ($type == S_TYPE_TOP) ? $i-1 : $i+1; 
                         abs($n - $i) <= $solid_layers-1; 
                         ($type == S_TYPE_TOP) ? $n-- : $n++) {
@@ -902,7 +891,7 @@ sub discover_horizontal_shells {
                     );
                     next EXTERNAL if !@$new_internal_solid;
                     
-                    if ($layerm->config->fill_density == 0) {
+                    if ($layerm->region->config->fill_density == 0) {
                         # if we're printing a hollow object we discard any solid shell thinner
                         # than a perimeter width, since it's probably just crossing a sloping wall
                         # and it's not wanted in a hollow print even if it would make sense when
@@ -1083,7 +1072,7 @@ sub combine_infill {
                      + $layerms[-1]->flow(FLOW_ROLE_PERIMETER)->scaled_width / 2
                      # Because fill areas for rectilinear and honeycomb are grown 
                      # later to overlap perimeters, we need to counteract that too.
-                     + (($type == S_TYPE_INTERNALSOLID || $region->config->fill_pattern =~ /(rectilinear|honeycomb)/)
+                     + (($type == S_TYPE_INTERNALSOLID || $region->config->fill_pattern =~ /(rectilinear|grid|line|honeycomb)/)
                        ? $layerms[-1]->flow(FLOW_ROLE_SOLID_INFILL)->scaled_width
                        : 0)
                      )}, @$intersection;
@@ -1100,12 +1089,12 @@ sub combine_infill {
                         )};
                     
                     # apply surfaces back with adjusted depth to the uppermost layer
-                    if ($layerm->id == $self->get_layer($layer_idx)->id) {
+                    if ($layerm->layer->id == $self->get_layer($layer_idx)->id) {
                         push @new_this_type,
                             map Slic3r::Surface->new(
                                 expolygon        => $_,
                                 surface_type     => $type,
-                                thickness        => sum(map $_->height, @layerms),
+                                thickness        => sum(map $_->layer->height, @layerms),
                                 thickness_layers => scalar(@layerms),
                             ),
                             @$intersection;

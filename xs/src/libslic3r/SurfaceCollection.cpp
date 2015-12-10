@@ -111,8 +111,10 @@ SurfaceCollection::filter_by_type(SurfaceType type, Polygons* polygons)
     }
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(SurfaceCollection, "Surface::Collection");
-#endif
+void
+SurfaceCollection::append(const SurfaceCollection &coll)
+{
+    this->surfaces.insert(this->surfaces.end(), coll.surfaces.begin(), coll.surfaces.end());
+}
 
 }

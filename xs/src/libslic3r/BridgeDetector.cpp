@@ -30,7 +30,7 @@ class BridgeDirectionComparator {
 BridgeDetector::BridgeDetector(const ExPolygon &_expolygon, const ExPolygonCollection &_lower_slices,
     coord_t _extrusion_width)
     : expolygon(_expolygon), lower_slices(_lower_slices), extrusion_width(_extrusion_width),
-        angle(-1), resolution(PI/36.0)
+        resolution(PI/36.0), angle(-1)
 {
     /*  outset our bridge by an arbitrary amout; we'll use this outer margin
         for detecting anchors */
@@ -186,15 +186,11 @@ BridgeDetector::detect_angle()
 }
 
 void
-BridgeDetector::coverage(Polygons* coverage) const
-{
-    if (this->angle == -1) return;
-    return this->coverage(angle, coverage);
-}
-
-void
 BridgeDetector::coverage(double angle, Polygons* coverage) const
 {
+    if (angle == -1) angle = this->angle;
+    if (angle == -1) return;
+    
     // Clone our expolygon and rotate it so that we work with vertical lines.
     ExPolygon expolygon = this->expolygon;
     expolygon.rotate(PI/2.0 - angle, Point(0,0));
@@ -263,19 +259,23 @@ BridgeDetector::coverage(double angle, Polygons* coverage) const
     */
 }
 
+Polygons
+BridgeDetector::coverage(double angle) const
+{
+    Polygons pp;
+    this->coverage(angle, &pp);
+    return pp;
+}
+
 /*  This method returns the bridge edges (as polylines) that are not supported
     but would allow the entire bridge area to be bridged with detected angle
     if supported too */
 void
-BridgeDetector::unsupported_edges(Polylines* unsupported) const
-{
-    if (this->angle == -1) return;
-    return this->unsupported_edges(this->angle, unsupported);
-}
-
-void
 BridgeDetector::unsupported_edges(double angle, Polylines* unsupported) const
 {
+    if (angle == -1) angle = this->angle;
+    if (angle == -1) return;
+    
     // get bridge edges (both contour and holes)
     Polylines bridge_edges;
     {
@@ -293,8 +293,8 @@ BridgeDetector::unsupported_edges(double angle, Polylines* unsupported) const
         TODO: angle tolerance should probably be based on segment length and flow width,
         so that we build supports whenever there's a chance that at least one or two bridge
         extrusions would be anchored within such length (i.e. a slightly non-parallel bridging
-        direction might still benefit from anchors if long enough) */
-    double angle_tolerance = PI / 180.0 * 5.0;
+        direction might still benefit from anchors if long enough)
+        double angle_tolerance = PI / 180.0 * 5.0; */
     for (Polylines::const_iterator polyline = _unsupported.begin(); polyline != _unsupported.end(); ++polyline) {
         Lines lines = polyline->lines();
         for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
@@ -319,8 +319,12 @@ BridgeDetector::unsupported_edges(double angle, Polylines* unsupported) const
     */
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(BridgeDetector, "BridgeDetector");
-#endif
+Polylines
+BridgeDetector::unsupported_edges(double angle) const
+{
+    Polylines pp;
+    this->unsupported_edges(angle, &pp);
+    return pp;
+}
 
 }

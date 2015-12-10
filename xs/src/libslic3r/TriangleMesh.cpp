@@ -100,7 +100,7 @@ TriangleMesh::repair() {
     stl.stats.facets_w_3_bad_edge = (stl.stats.number_of_facets - stl.stats.connected_facets_1_edge);
     
     // checking nearby
-    int last_edges_fixed = 0;
+    //int last_edges_fixed = 0;
     float tolerance = stl.stats.shortest_edge;
     float increment = stl.stats.bounding_diameter / 10000.0;
     int iterations = 2;
@@ -110,7 +110,7 @@ TriangleMesh::repair() {
                 //printf("Checking nearby. Tolerance= %f Iteration=%d of %d...", tolerance, i + 1, iterations);
                 stl_check_facets_nearby(&stl, tolerance);
                 //printf("  Fixed %d edges.\n", stl.stats.edges_fixed - last_edges_fixed);
-                last_edges_fixed = stl.stats.edges_fixed;
+                //last_edges_fixed = stl.stats.edges_fixed;
                 tolerance += increment;
             } else {
                 break;
@@ -230,7 +230,7 @@ void TriangleMesh::rotate_z(float angle)
     this->rotate(angle, Z);
 }
 
-void TriangleMesh::flip(const Axis &axis)
+void TriangleMesh::mirror(const Axis &axis)
 {
     if (axis == X) {
         stl_mirror_yz(&this->stl);
@@ -242,19 +242,19 @@ void TriangleMesh::flip(const Axis &axis)
     stl_invalidate_shared_vertices(&this->stl);
 }
 
-void TriangleMesh::flip_x()
+void TriangleMesh::mirror_x()
 {
-    this->flip(X);
+    this->mirror(X);
 }
 
-void TriangleMesh::flip_y()
+void TriangleMesh::mirror_y()
 {
-    this->flip(Y);
+    this->mirror(Y);
 }
 
-void TriangleMesh::flip_z()
+void TriangleMesh::mirror_z()
 {
-    this->flip(Z);
+    this->mirror(Z);
 }
 
 void TriangleMesh::align_to_origin()
@@ -316,7 +316,7 @@ TriangleMesh::split() const
         stl_allocate(&mesh->stl);
         
         int first = 1;
-        for (std::deque<int>::const_iterator facet = facets.begin(); facet != facets.end(); facet++) {
+        for (std::deque<int>::const_iterator facet = facets.begin(); facet != facets.end(); ++facet) {
             mesh->stl.facet_start[facet - facets.begin()] = this->stl.facet_start[*facet];
             stl_facet_stats(&mesh->stl, this->stl.facet_start[*facet], first);
             first = 0;
@@ -404,52 +404,6 @@ TriangleMesh::require_shared_vertices()
     if (!this->repaired) this->repair();
     if (this->stl.v_shared == NULL) stl_generate_shared_vertices(&(this->stl));
 }
-
-#ifdef SLIC3RXS
-
-REGISTER_CLASS(TriangleMesh, "TriangleMesh");
-
-SV*
-TriangleMesh::to_SV() {
-    SV* sv = newSV(0);
-    sv_setref_pv( sv, perl_class_name(this), (void*)this );
-    return sv;
-}
-
-void TriangleMesh::ReadFromPerl(SV* vertices, SV* facets)
-{
-    stl.error = 0;
-    stl.stats.type = inmemory;
-    
-    // count facets and allocate memory
-    AV* facets_av = (AV*)SvRV(facets);
-    stl.stats.number_of_facets = av_len(facets_av)+1;
-    stl.stats.original_num_facets = stl.stats.number_of_facets;
-    stl_allocate(&stl);
-    
-    // read geometry
-    AV* vertices_av = (AV*)SvRV(vertices);
-    for (unsigned int i = 0; i < stl.stats.number_of_facets; i++) {
-        AV* facet_av = (AV*)SvRV(*av_fetch(facets_av, i, 0));
-        stl_facet facet;
-        facet.normal.x = 0;
-        facet.normal.y = 0;
-        facet.normal.z = 0;
-        for (unsigned int v = 0; v <= 2; v++) {
-            AV* vertex_av = (AV*)SvRV(*av_fetch(vertices_av, SvIV(*av_fetch(facet_av, v, 0)), 0));
-            facet.vertex[v].x = SvNV(*av_fetch(vertex_av, 0, 0));
-            facet.vertex[v].y = SvNV(*av_fetch(vertex_av, 1, 0));
-            facet.vertex[v].z = SvNV(*av_fetch(vertex_av, 2, 0));
-        }
-        facet.extra[0] = 0;
-        facet.extra[1] = 0;
-        
-        stl.facet_start[i] = facet;
-    }
-    
-    stl_get_size(&(this->stl));
-}
-#endif
 
 void
 TriangleMeshSlicer::slice(const std::vector<float> &z, std::vector<Polygons>* layers)

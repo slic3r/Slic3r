@@ -50,7 +50,7 @@ PrintRegion::flow(FlowRole role, double layer_height, bool bridge, bool first_la
     
     // get the configured nozzle_diameter for the extruder associated
     // to the flow role requested
-    size_t extruder;  // 1-based
+    size_t extruder = 0;    // 1-based
     if (role == frPerimeter || role == frExternalPerimeter) {
         extruder = this->config.perimeter_extruder;
     } else if (role == frInfill) {
@@ -64,9 +64,5 @@ PrintRegion::flow(FlowRole role, double layer_height, bool bridge, bool first_la
     
     return Flow::new_from_config_width(role, config_width, nozzle_diameter, layer_height, bridge ? (float)this->config.bridge_flow_ratio : 0.0);
 }
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(PrintRegion, "Print::Region");
-#endif
 
 }

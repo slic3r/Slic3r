@@ -310,11 +310,14 @@ sub export {
     print $fh $gcodegen->writer->update_progress($gcodegen->layer_count, $gcodegen->layer_count, 1);  # 100%
     print $fh $gcodegen->writer->postamble;
     
+    # get filament stats
+    $self->print->clear_filament_stats;
     $self->print->total_used_filament(0);
     $self->print->total_extruded_volume(0);
     foreach my $extruder (@{$gcodegen->writer->extruders}) {
         my $used_filament = $extruder->used_filament;
         my $extruded_volume = $extruder->extruded_volume;
+        $self->print->set_filament_stats($extruder->id, $used_filament);
         
         printf $fh "; filament used = %.1fmm (%.1fcm3)\n",
             $used_filament, $extruded_volume/1000;
@@ -357,7 +360,7 @@ sub process_layer {
         $self->_spiral_vase->enable(
             ($layer->id > 0 || $self->print->config->brim_width == 0)
                 && ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt)
-                && !defined(first { $_->config->bottom_solid_layers > $layer->id } @{$layer->regions})
+                && !defined(first { $_->region->config->bottom_solid_layers > $layer->id } @{$layer->regions})
                 && !defined(first { $_->perimeters->items_count > 1 } @{$layer->regions})
                 && !defined(first { $_->fills->items_count > 0 } @{$layer->regions})
         );

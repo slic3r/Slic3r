@@ -493,6 +493,7 @@ sub build {
         infill_overlap bridge_flow_ratio
         xy_size_compensation threads resolution
     ));
+    $self->{config}->set('print_settings_id', '');
     
     {
         my $page = $self->add_options_page('Layers and perimeters', 'layers.png');
@@ -856,6 +857,7 @@ sub build {
         min_fan_speed max_fan_speed bridge_fan_speed disable_fan_first_layers
         fan_below_layer_time slowdown_below_layer_time min_print_speed
     ));
+    $self->{config}->set('filament_settings_id', '');
     
     {
         my $page = $self->add_options_page('Filament', 'spool.png');
@@ -975,7 +977,7 @@ sub _update_description {
 
 package Slic3r::GUI::Tab::Printer;
 use base 'Slic3r::GUI::Tab';
-use Wx qw(wxTheApp :sizer :button :bitmap :misc :id);
+use Wx qw(wxTheApp :sizer :button :bitmap :misc :id :icon :dialog);
 use Wx::Event qw(EVT_BUTTON);
 
 sub name { 'printer' }
@@ -987,6 +989,7 @@ sub build {
     $self->init_config_options(qw(
         bed_shape z_offset
         gcode_flavor use_relative_e_distances
+        serial_port serial_speed
         octoprint_host octoprint_apikey
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
@@ -995,11 +998,13 @@ sub build {
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
         retract_length_toolchange retract_restart_extra_toolchange
     ));
+    $self->{config}->set('printer_settings_id', '');
     
     my $bed_shape_widget = sub {
         my ($parent) = @_;
         
-        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
+            wxBU_LEFT | wxBU_EXACTFIT);
         $btn->SetFont($Slic3r::GUI::small_font);
         if ($Slic3r::GUI::have_button_icons) {
             $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/cog.png", wxBITMAP_TYPE_PNG));
@@ -1060,6 +1065,52 @@ sub build {
             });
         }
         {
+            my $optgroup = $page->new_optgroup('USB/Serial connection');
+            my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                label => 'Serial port',
+            );
+            my $serial_port = $optgroup->get_option('serial_port');
+            $serial_port->side_widget(sub {
+                my ($parent) = @_;
+                
+                my $btn = Wx::BitmapButton->new($parent, -1, Wx::Bitmap->new("$Slic3r::var/arrow_rotate_clockwise.png", wxBITMAP_TYPE_PNG),
+                    wxDefaultPosition, wxDefaultSize, &Wx::wxBORDER_NONE);
+                $btn->SetToolTipString("Rescan serial ports")
+                    if $btn->can('SetToolTipString');
+                EVT_BUTTON($self, $btn, \&_update_serial_ports);
+                
+                return $btn;
+            });
+            my $serial_test = sub {
+                my ($parent) = @_;
+                
+                my $btn = $self->{serial_test_btn} = Wx::Button->new($parent, -1,
+                    "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
+                $btn->SetFont($Slic3r::GUI::small_font);
+                if ($Slic3r::GUI::have_button_icons) {
+                    $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/wrench.png", wxBITMAP_TYPE_PNG));
+                }
+                
+                EVT_BUTTON($self, $btn, sub {
+                    my $sender = Slic3r::GCode::Sender->new;
+                    my $res = $sender->connect(
+                        $self->{config}->serial_port,
+                        $self->{config}->serial_speed,
+                    );
+                    if ($res && $sender->wait_connected) {
+                        Slic3r::GUI::show_info($self, "Connection to printer works correctly.", "Success!");
+                    } else {
+                        Slic3r::GUI::show_error($self, "Connection failed.");
+                    }
+                });
+                return $btn;
+            };
+            $line->append_option($serial_port);
+            $line->append_option($optgroup->get_option('serial_speed'));
+            $line->append_widget($serial_test);
+            $optgroup->append_line($line);
+        }
+        {
             my $optgroup = $page->new_optgroup('OctoPrint upload');
             
             # append two buttons to the Host line
@@ -1092,7 +1143,8 @@ sub build {
             my $octoprint_host_test = sub {
                 my ($parent) = @_;
                 
-                my $btn = $self->{octoprint_host_test_btn} = Wx::Button->new($parent, -1, "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+                my $btn = $self->{octoprint_host_test_btn} = Wx::Button->new($parent, -1,
+                    "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
                 $btn->SetFont($Slic3r::GUI::small_font);
                 if ($Slic3r::GUI::have_button_icons) {
                     $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/wrench.png", wxBITMAP_TYPE_PNG));
@@ -1187,6 +1239,13 @@ sub build {
     
     $self->{extruder_pages} = [];
     $self->_build_extruder_pages;
+    $self->_update_serial_ports;
+}
+
+sub _update_serial_ports {
+    my ($self) = @_;
+    
+    $self->get_field('serial_port')->set_values([ wxTheApp->scan_serial_ports ]);
 }
 
 sub _extruders_count_changed {
@@ -1270,6 +1329,12 @@ sub _update {
     
     my $config = $self->{config};
     
+    $self->get_field('serial_speed')->toggle($config->get('serial_port'));
+    if ($config->get('serial_speed') && $config->get('serial_port')) {
+        $self->{serial_test_btn}->Enable;
+    } else {
+        $self->{serial_test_btn}->Disable;
+    }
     if ($config->get('octoprint_host') && eval "use LWP::UserAgent; 1") {
         $self->{octoprint_host_test_btn}->Enable;
     } else {
@@ -1298,6 +1363,22 @@ sub _update {
         # some options only apply when not using firmware retraction
         $self->get_field($_, $i)->toggle($retraction && !$config->use_firmware_retraction)
             for qw(retract_speed retract_restart_extra wipe);
+        if ($config->use_firmware_retraction && $config->get_at('wipe', $i)) {
+            my $dialog = Wx::MessageDialog->new($self,
+                "The Wipe option is not available when using the Firmware Retraction mode.\n"
+                . "\nShall I disable it in order to enable Firmware Retraction?",
+                'Firmware Retraction', wxICON_WARNING | wxYES | wxNO);
+            
+            my $new_conf = Slic3r::Config->new;
+            if ($dialog->ShowModal() == wxID_YES) {
+                my $wipe = $config->wipe;
+                $wipe->[$i] = 0;
+                $new_conf->set("wipe", $wipe);
+            } else {
+                $new_conf->set("use_firmware_retraction", 0);
+            }
+            $self->load_config($new_conf);
+        }
         
         $self->get_field('retract_length_toolchange', $i)->toggle($have_multiple_extruders);
         
