@@ -1,5 +1,6 @@
 #include "Config.hpp"
 #include <stdlib.h>  // for setenv()
+#include <assert.h>
 
 #if defined(_WIN32) && !defined(setenv) && defined(_putenv_s)
 #define setenv(k, v, o) _putenv_s(k, v)
@@ -25,6 +26,14 @@ ConfigDef::~ConfigDef()
         if (it->second.default_value != NULL)
             delete it->second.default_value;
     }
+}
+
+ConfigOptionDef*
+ConfigDef::add(const t_config_option_key &opt_key, ConfigOptionType type)
+{
+    ConfigOptionDef* opt = &this->options[opt_key];
+    opt->type = type;
+    return opt;
 }
 
 const ConfigOptionDef*
@@ -149,6 +158,16 @@ ConfigBase::setenv_()
 #endif
 }
 
+const ConfigOption*
+ConfigBase::option(const t_config_option_key &opt_key) const {
+    return const_cast<ConfigBase*>(this)->option(opt_key, false);
+}
+
+ConfigOption*
+ConfigBase::option(const t_config_option_key &opt_key, bool create) {
+    return this->optptr(opt_key, create);
+}
+
 DynamicConfig& DynamicConfig::operator= (DynamicConfig other)
 {
     this->swap(other);
@@ -174,7 +193,7 @@ DynamicConfig::DynamicConfig (const DynamicConfig& other) {
 }
 
 ConfigOption*
-DynamicConfig::option(const t_config_option_key &opt_key, bool create) {
+DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
     if (this->options.count(opt_key) == 0) {
         if (create) {
             const ConfigOptionDef* optdef = this->def->get(opt_key);
@@ -230,11 +249,6 @@ template ConfigOptionBool* DynamicConfig::opt<ConfigOptionBool>(const t_config_o
 template ConfigOptionBools* DynamicConfig::opt<ConfigOptionBools>(const t_config_option_key &opt_key, bool create);
 template ConfigOptionPercent* DynamicConfig::opt<ConfigOptionPercent>(const t_config_option_key &opt_key, bool create);
 
-const ConfigOption*
-DynamicConfig::option(const t_config_option_key &opt_key) const {
-    return const_cast<DynamicConfig*>(this)->option(opt_key, false);
-}
-
 t_config_option_keys
 DynamicConfig::keys() const {
     t_config_option_keys keys;
@@ -253,6 +267,7 @@ DynamicConfig::clear() {
     this->options.clear();
 }
 
+void
 StaticConfig::set_defaults()
 {
     // use defaults from definition
@@ -274,12 +289,6 @@ StaticConfig::keys() const {
         if (opt != NULL) keys.push_back(it->first);
     }
     return keys;
-}
-
-const ConfigOption*
-StaticConfig::option(const t_config_option_key &opt_key) const
-{
-    return const_cast<StaticConfig*>(this)->option(opt_key, false);
 }
 
 }

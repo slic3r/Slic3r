@@ -129,7 +129,7 @@ sub new {
         my ($opt_id, $value) = @_;
         
         $self->config2->{$opt_id} = $value;
-        $self->position_screen;
+        $self->screen->reposition;
         $self->show_print_time;
         
         my $serialized = {};
@@ -394,7 +394,7 @@ sub new {
         $self->screen(Slic3r::GUI::Projector::Screen->new($parent, $self->config, $self->config2));
         $Slic3r::GUI::DLP_projection_screen = $self->screen;
     }
-    $self->position_screen;
+    $self->screen->reposition;
     $self->screen->Show;
     wxTheApp->{mainframe}->Hide;
     
@@ -418,6 +418,7 @@ sub new {
         on_print_completed => sub {
             $self->_update_buttons;
             $self->_set_status('');
+            Wx::Bell();
         },
     ));
     {
@@ -465,19 +466,6 @@ sub show_print_time {
     my $duration = $self->controller->print_time;
     $self->_set_status(sprintf "Estimated print time: %d minutes and %d seconds",
         int($duration/60), ($duration - int($duration/60)*60));  # % truncates to integer
-}
-
-sub position_screen {
-    my ($self) = @_;
-    
-    my $display = Wx::Display->new($self->config2->{display});
-    my $area = $display->GetGeometry;
-    $self->screen->Move($area->GetPosition);
-    # ShowFullScreen doesn't use the right screen
-    #$self->screen->ShowFullScreen($self->config2->{fullscreen});
-    $self->screen->SetSize($area->GetSize);
-    $self->screen->_resize;
-    $self->screen->Refresh;
 }
 
 sub _close {
@@ -532,6 +520,8 @@ has '_timer_cb'             => (is => 'rw');
 
 sub BUILD {
     my ($self) = @_;
+    
+    Slic3r::GUI::disable_screensaver();
     
     $self->set_print(wxTheApp->{mainframe}->{plater}->{print});
     
@@ -595,8 +585,6 @@ sub current_layer_height {
 sub start_print {
     my ($self) = @_;
     
-    Slic3r::GUI::disable_screensaver();
-    
     {
         $self->sender(Slic3r::GCode::Sender->new);
         my $res = $self->sender->connect(
@@ -634,7 +622,6 @@ sub stop_print {
     my ($self) = @_;
     
     $self->is_printing(0);
-    Slic3r::GUI::enable_screensaver();
     $self->timer->Stop;
     $self->_timer_cb(undef);
     $self->screen->project_layers(undef);
@@ -649,10 +636,12 @@ sub print_completed {
         $self->sender->disconnect;
     }
     
+    # call this before the on_print_completed callback otherwise buttons
+    # won't be updated correctly
+    $self->stop_print;
+    
     $self->on_print_completed->()
         if $self->is_printing && $self->on_print_completed;
-    
-    $self->stop_print;
 }
 
 sub is_projecting {
@@ -737,10 +726,11 @@ sub DESTROY {
     
     $self->timer->Stop if $self->timer;
     $self->sender->disconnect if $self->sender;
+    Slic3r::GUI::enable_screensaver();
 }
 
 package Slic3r::GUI::Projector::Screen;
-use Wx qw(:dialog :id :misc :sizer :colour :pen :brush :font);
+use Wx qw(:dialog :id :misc :sizer :colour :pen :brush :font wxBG_STYLE_CUSTOM);
 use Wx::Event qw(EVT_PAINT EVT_SIZE);
 use base qw(Wx::Dialog Class::Accessor);
 
@@ -756,11 +746,25 @@ sub new {
     
     $self->config($config);
     $self->config2($config2);
+    $self->SetBackgroundStyle(wxBG_STYLE_CUSTOM);
     EVT_SIZE($self, \&_resize);
     EVT_PAINT($self, \&_repaint);
     $self->_resize;
     
     return $self;
+}
+
+sub reposition {
+    my ($self) = @_;
+    
+    my $display = Wx::Display->new($self->config2->{display});
+    my $area = $display->GetGeometry;
+    $self->Move($area->GetPosition);
+    # ShowFullScreen doesn't use the right screen
+    #$self->ShowFullScreen($self->config2->{fullscreen});
+    $self->SetSize($area->GetSize);
+    $self->_resize;
+    $self->Refresh;
 }
 
 sub _resize {
@@ -804,7 +808,7 @@ sub project_layers {
 sub _repaint {
     my ($self) = @_;
     
-    my $dc = Wx::PaintDC->new($self);
+    my $dc = Wx::AutoBufferedPaintDC->new($self);
     my ($cw, $ch) = $self->GetSizeWH;
     return if $cw == 0;  # when canvas is not rendered yet, size is 0,0
     
