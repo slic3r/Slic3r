@@ -58,7 +58,8 @@ sub process {
     # external perimeters
     $self->_ext_mm3_per_mm($self->ext_perimeter_flow->mm3_per_mm);
     my $ext_pwidth          = $self->ext_perimeter_flow->scaled_width;
-    my $ext_pspacing        = scale($self->ext_perimeter_flow->spacing_to($self->perimeter_flow));
+    my $ext_pspacing        = $self->ext_perimeter_flow->scaled_spacing;
+    my $ext_pspacing2       = scale($self->ext_perimeter_flow->spacing_to($self->perimeter_flow));
     
     # overhang perimeters
     $self->_mm3_per_mm_overhang($self->overhang_flow->mm3_per_mm);
@@ -137,7 +138,7 @@ sub process {
                         
                         # the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                         @thin_walls = grep $_->length > $ext_pwidth*2,
-                            map @{$_->medial_axis($ext_pwidth + $ext_pspacing, $min_width)}, @thin_walls;
+                            map @{$_->medial_axis($ext_pwidth + $ext_pspacing2, $min_width)}, @thin_walls;
                         Slic3r::debugf "  %d thin walls detected\n", scalar(@thin_walls) if $Slic3r::debug;
         
                         if (0) {
@@ -151,7 +152,7 @@ sub process {
                         }
                     }
                 } else {
-                    my $distance = ($i == 1) ? $ext_pspacing : $pspacing;
+                    my $distance = ($i == 1) ? $ext_pspacing2 : $pspacing;
                     
                     if ($self->config->thin_walls) {
                         @offsets = @{offset2(
@@ -313,7 +314,7 @@ sub process {
         my $inset = 0;
         if ($loop_number == 0) {
             # one loop
-            $inset += $ext_pspacing/2;
+            $inset += $ext_pspacing2/2;
         } elsif ($loop_number > 0) {
             # two or more loops
             $inset += $pspacing/2;
