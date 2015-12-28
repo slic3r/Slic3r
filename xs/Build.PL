@@ -16,19 +16,19 @@ my @ldflags = qw();
 if ($^O eq 'darwin') {
     push @ldflags, qw(-framework IOKit -framework CoreFoundation);
 }
+my @early_includes = ();
 
 my @INC  = qw(-Isrc/libslic3r);
 my @LIBS = qw(-Lsrc/libslic3r);
 
 if ($ENV{SLIC3R_GUI}) {
     print "Slic3r will be built with GUI support\n";
-    push @cflags, qw(-DSLIC3R_GUI);
     require Alien::wxWidgets;
     Alien::wxWidgets->load;
-    push @cflags, qw(-DUNICODE);
     push @INC, Alien::wxWidgets->include_path;
-    push @cflags, Alien::wxWidgets->defines, Alien::wxWidgets->c_flags;
+    push @cflags, qw(-DSLIC3R_GUI -DUNICODE), Alien::wxWidgets->defines, Alien::wxWidgets->c_flags;
     push @ldflags, Alien::wxWidgets->link_flags, Alien::wxWidgets->libraries(qw(gl html));
+    push @early_includes, qw(slic3r/GUI/wxinit.h);
 }
 
 # search for Boost in a number of places
@@ -146,8 +146,7 @@ my $build = Module::Build::WithXSpp->new(
         ostream
         sstream
         libslic3r/GCodeSender.hpp
-        slic3r/GUI/wxinit.h
-    )]
+    ), @early_includes]
 );
 
 $build->create_build_script;
