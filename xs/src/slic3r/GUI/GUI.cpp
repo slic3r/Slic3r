@@ -1,3 +1,4 @@
+#ifdef SLIC3R_GUI
 #include "GUI.hpp"
 
 #if __APPLE__
@@ -40,3 +41,4 @@ enable_screensaver()
 }
 
 } }
+#endif

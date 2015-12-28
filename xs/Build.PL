@@ -12,7 +12,7 @@ use Module::Build::WithXSpp;
 # NOGDI            : prevents inclusion of wingdi.h which defines functions Polygon() and Polyline() in global namespace
 # BOOST_ASIO_DISABLE_KQUEUE : prevents a Boost ASIO bug on OS X: https://svn.boost.org/trac/boost/ticket/5339
 my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE);
-my @ldflags = ();
+my @ldflags = qw();
 if ($^O eq 'darwin') {
     push @ldflags, qw(-framework IOKit -framework CoreFoundation);
 }
@@ -25,9 +25,10 @@ if ($ENV{SLIC3R_GUI}) {
     push @cflags, qw(-DSLIC3R_GUI);
     require Alien::wxWidgets;
     Alien::wxWidgets->load;
+    push @cflags, qw(-DUNICODE);
     push @INC, Alien::wxWidgets->include_path;
     push @cflags, Alien::wxWidgets->defines, Alien::wxWidgets->c_flags;
-    push @ldflags, Alien::wxWidgets->link_flags, Alien::wxWidgets->libraries(qw(core gl html));
+    push @ldflags, Alien::wxWidgets->link_flags, Alien::wxWidgets->libraries(qw(gl html));
 }
 
 # search for Boost in a number of places

@@ -2,6 +2,7 @@
 %loadplugin{feature::default_xs_typemap};
 
 %{
+#ifdef SLIC3R_GUI
 #include <xsinit.h>
 #include "slic3r/GUI/AboutDialog.hpp"
 %}
@@ -12,3 +13,7 @@
     void ShowModal();
     void Destroy();
 };
+
+%{
+#endif
+%}

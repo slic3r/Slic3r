@@ -4,6 +4,12 @@ use strict;
 
 our $VERSION = '0.01';
 
+# We have to load these modules in order to have Wx.pm find the correct paths
+# for wxWidgets dlls on MSW.
+# TODO: only load these when compiling with GUI support
+use Wx;
+use Wx::Html;
+
 use Carp qw();
 use XSLoader;
 XSLoader::load(__PACKAGE__, $VERSION);
