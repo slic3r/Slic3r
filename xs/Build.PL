@@ -63,8 +63,8 @@ my $have_boost = 0;
 $have_boost = 1
     if check_lib(
         lib     => "boost_system",
-        INC     => join(' ', map "-I$_", @INC, @boost_include),
-        LIBS    => join(' ', map "-L$_", @INC, @boost_libs),
+        INC     => join(' ', @INC,  map "-I$_", @boost_include),
+        LIBS    => join(' ', @LIBS, map "-L$_", @boost_libs),
     );
 
 if ($have_boost) {
@@ -78,7 +78,7 @@ if ($have_boost) {
             my $suffix = $1;
             check_lib(
                 lib     => "boost_system$suffix",
-                INC     => join(' ', map "-I$_", @INC,  @boost_include),
+                INC     => join(' ', @INC, map "-I$_", @boost_include),
                 LIBS    => "-L$path",
             ) or next;
         
