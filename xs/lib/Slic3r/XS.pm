@@ -9,6 +9,7 @@ our $VERSION = '0.01';
 # TODO: only load these when compiling with GUI support
 use Wx;
 use Wx::Html;
+use Wx::Print;  # because of some Wx bug, thread creation fails if we don't have this (looks like Wx::Printout is hard-coded in some thread cleanup code)
 
 use Carp qw();
 use XSLoader;
