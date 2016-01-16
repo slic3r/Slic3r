@@ -823,8 +823,7 @@ sub _update {
             support_material_interface_layers dont_support_bridges
             support_material_extrusion_width support_material_contact_distance);
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
-        for qw(support_material_interface_spacing support_material_interface_extruder
-            support_material_interface_speed);
+        for qw(support_material_interface_spacing support_material_interface_speed);
     
     $self->get_field('perimeter_extrusion_width')->toggle($have_perimeters || $have_skirt || $have_brim);
     $self->get_field('support_material_extruder')->toggle($have_support_material || $have_skirt);
