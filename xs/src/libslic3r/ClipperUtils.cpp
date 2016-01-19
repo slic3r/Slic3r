@@ -37,6 +37,7 @@ ClipperPath_to_Slic3rMultiPoint(const ClipperLib::Path &input, T* output)
         output->points.push_back(Slic3r::Point( (*pit).X, (*pit).Y ));
     }
 }
+template void ClipperPath_to_Slic3rMultiPoint<Slic3r::Polygon>(const ClipperLib::Path &input, Slic3r::Polygon* output);
 
 template <class T>
 void
@@ -210,6 +211,15 @@ offset(const Slic3r::Polygons &polygons, Slic3r::ExPolygons* retval, const float
     
     // convert into ExPolygons
     ClipperPaths_to_Slic3rExPolygons(output, retval);
+}
+
+Slic3r::ExPolygons
+offset_ex(const Slic3r::Polygons &polygons, const float delta,
+    double scale, ClipperLib::JoinType joinType, double miterLimit)
+{
+    Slic3r::ExPolygons expp;
+    offset(polygons, &expp, delta, scale, joinType, miterLimit);
+    return expp;
 }
 
 void
@@ -472,13 +482,16 @@ diff(const Slic3r::Polygons &subject, const Slic3r::Polygons &clip, bool safety_
     return pp;
 }
 
+template <class SubjectType, class ClipType>
 Slic3r::ExPolygons
-diff_ex(const Slic3r::Polygons &subject, const Slic3r::Polygons &clip, bool safety_offset_)
+diff_ex(const SubjectType &subject, const ClipType &clip, bool safety_offset_)
 {
     Slic3r::ExPolygons expp;
     diff(subject, clip, &expp, safety_offset_);
     return expp;
 }
+template Slic3r::ExPolygons diff_ex<Slic3r::Polygons, Slic3r::Polygons>(const Slic3r::Polygons &subject, const Slic3r::Polygons &clip, bool safety_offset_);
+template Slic3r::ExPolygons diff_ex<Slic3r::Polygons, Slic3r::ExPolygons>(const Slic3r::Polygons &subject, const Slic3r::ExPolygons &clip, bool safety_offset_);
 
 template <class SubjectType, class ResultType>
 void intersection(const SubjectType &subject, const Slic3r::Polygons &clip, ResultType* retval, bool safety_offset_)
@@ -491,20 +504,24 @@ template void intersection<Slic3r::Polygons, Slic3r::Polylines>(const Slic3r::Po
 template void intersection<Slic3r::Polylines, Slic3r::Polylines>(const Slic3r::Polylines &subject, const Slic3r::Polygons &clip, Slic3r::Polylines* retval, bool safety_offset_);
 template void intersection<Slic3r::Lines, Slic3r::Lines>(const Slic3r::Lines &subject, const Slic3r::Polygons &clip, Slic3r::Lines* retval, bool safety_offset_);
 
-Slic3r::Polygons
-intersection(const Slic3r::Polygons &subject, const Slic3r::Polygons &clip, bool safety_offset_)
+template <class SubjectType>
+SubjectType intersection(const SubjectType &subject, const Slic3r::Polygons &clip, bool safety_offset_)
 {
-    Slic3r::Polygons pp;
+    SubjectType pp;
     intersection(subject, clip, &pp, safety_offset_);
     return pp;
 }
 
-Slic3r::Polylines
-intersection(const Slic3r::Polylines &subject, const Slic3r::Polygons &clip, bool safety_offset_)
+template Slic3r::Polygons intersection<Slic3r::Polygons>(const Slic3r::Polygons &subject, const Slic3r::Polygons &clip, bool safety_offset_);
+template Slic3r::Polylines intersection<Slic3r::Polylines>(const Slic3r::Polylines &subject, const Slic3r::Polygons &clip, bool safety_offset_);
+template Slic3r::Lines intersection<Slic3r::Lines>(const Slic3r::Lines &subject, const Slic3r::Polygons &clip, bool safety_offset_);
+
+Slic3r::ExPolygons
+intersection_ex(const Slic3r::Polygons &subject, const Slic3r::Polygons &clip, bool safety_offset_)
 {
-    Slic3r::Polylines pp;
-    intersection(subject, clip, &pp, safety_offset_);
-    return pp;
+    Slic3r::ExPolygons expp;
+    intersection(subject, clip, &expp, safety_offset_);
+    return expp;
 }
 
 template <class SubjectType>
@@ -547,6 +564,17 @@ union_ex(const Slic3r::Polygons &subject, bool safety_offset)
     ExPolygons expp;
     union_(subject, &expp, safety_offset);
     return expp;
+}
+
+Slic3r::ExPolygons
+union_ex(const Slic3r::Surfaces &subject, bool safety_offset)
+{
+    Polygons pp;
+    for (Slic3r::Surfaces::const_iterator s = subject.begin(); s != subject.end(); ++s) {
+        Polygons spp = *s;
+        pp.insert(pp.end(), spp.begin(), spp.end());
+    }
+    return union_ex(pp, safety_offset);
 }
 
 void union_(const Slic3r::Polygons &subject1, const Slic3r::Polygons &subject2, Slic3r::Polygons* retval, bool safety_offset)
@@ -657,36 +685,5 @@ void safety_offset(ClipperLib::Paths* paths)
     // unscale output
     scaleClipperPolygons(*paths, 1.0/CLIPPER_OFFSET_SCALE);
 }
-
-///////////////////////
-
-#ifdef SLIC3RXS
-SV*
-polynode_children_2_perl(const ClipperLib::PolyNode& node)
-{
-    AV* av = newAV();
-    const unsigned int len = node.ChildCount();
-    if (len > 0) av_extend(av, len-1);
-    for (int i = 0; i < len; ++i) {
-        av_store(av, i, polynode2perl(*node.Childs[i]));
-    }
-    return (SV*)newRV_noinc((SV*)av);
-}
-
-SV*
-polynode2perl(const ClipperLib::PolyNode& node)
-{
-    HV* hv = newHV();
-    Slic3r::Polygon p;
-    ClipperPath_to_Slic3rMultiPoint(node.Contour, &p);
-    if (node.IsHole()) {
-        (void)hv_stores( hv, "hole", Slic3r::perl_to_SV_clone_ref(p) );
-    } else {
-        (void)hv_stores( hv, "outer", Slic3r::perl_to_SV_clone_ref(p) );
-    }
-    (void)hv_stores( hv, "children", polynode_children_2_perl(node) );
-    return (SV*)newRV_noinc((SV*)hv);
-}
-#endif
 
 }

@@ -1,7 +1,7 @@
 #ifndef slic3r_TriangleMesh_hpp_
 #define slic3r_TriangleMesh_hpp_
 
-#include <myinit.h>
+#include "libslic3r.h"
 #include <admesh/stl.h>
 #include <vector>
 #include "BoundingBox.hpp"
@@ -36,10 +36,10 @@ class TriangleMesh
     void rotate_x(float angle);
     void rotate_y(float angle);
     void rotate_z(float angle);
-    void flip(const Axis &axis);
-    void flip_x();
-    void flip_y();
-    void flip_z();
+    void mirror(const Axis &axis);
+    void mirror_x();
+    void mirror_y();
+    void mirror_z();
     void align_to_origin();
     void rotate(double angle, Point* center);
     TriangleMeshPtrs split() const;
@@ -52,11 +52,6 @@ class TriangleMesh
     size_t facets_count() const;
     stl_file stl;
     bool repaired;
-    
-    #ifdef SLIC3RXS
-    SV* to_SV();
-    void ReadFromPerl(SV* vertices, SV* facets);
-    #endif
     
     private:
     void require_shared_vertices();

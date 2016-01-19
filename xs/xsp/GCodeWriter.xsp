@@ -1,7 +1,7 @@
 %module{Slic3r::XS};
 
 %{
-#include <myinit.h>
+#include <xsinit.h>
 #include "libslic3r/GCodeWriter.hpp"
 %}
 
@@ -9,7 +9,7 @@
     GCodeWriter();
     ~GCodeWriter();
     
-    Ref<GCodeConfig> config()
+    Ref<StaticPrintConfig> config()
         %code%{ RETVAL = &THIS->config; %};
     bool multiple_extruders()
         %code{% RETVAL = THIS->multiple_extruders; %};

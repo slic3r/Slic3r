@@ -121,29 +121,6 @@ Model::get_material(t_model_material_id material_id)
     }
 }
 
-/*
-void
-Model::duplicate_objects_grid(unsigned int x, unsigned int y, coordf_t distance)
-{
-    if (this->objects.size() > 1) throw "Grid duplication is not supported with multiple objects";
-    if (this->objects.empty()) throw "No objects!";
-
-    ModelObject* object = this->objects.front();
-    object->clear_instances();
-
-    BoundingBoxf3 bb = object->bounding_box();
-    Sizef3 size = bb.size();
-
-    for (unsigned int x_copy = 1; x_copy <= x; ++x_copy) {
-        for (unsigned int y_copy = 1; y_copy <= y; ++y_copy) {
-            ModelInstance* instance = object->add_instance();
-            instance->offset.x = (size.x + distance) * (x_copy-1);
-            instance->offset.y = (size.y + distance) * (y_copy-1);
-        }
-    }
-}
-*/
-
 bool
 Model::has_objects_with_no_instances() const
 {
@@ -162,12 +139,10 @@ Model::has_objects_with_no_instances() const
 bool
 Model::add_default_instances()
 {
-    bool added = false;
     // apply a default position to all objects not having one
     for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
         if ((*o)->instances.empty()) {
             (*o)->add_instance();
-            added = true;
         }
     }
     return true;
@@ -190,14 +165,13 @@ Model::center_instances_around_point(const Pointf &point)
     BoundingBoxf3 bb = this->bounding_box();
     
     Sizef3 size = bb.size();
-    double shift_x = -bb.min.x + point.x - size.x/2;
-    double shift_y = -bb.min.y + point.y - size.y/2;
-    
+    coordf_t shift_x = -bb.min.x + point.x - size.x/2;
+    coordf_t shift_y = -bb.min.y + point.y - size.y/2;
     for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
         for (ModelInstancePtrs::const_iterator i = (*o)->instances.begin(); i != (*o)->instances.end(); ++i) {
             (*i)->offset.translate(shift_x, shift_y);
         }
-        (*o)->update_bounding_box();
+        (*o)->invalidate_bounding_box();
     }
 }
 
@@ -241,14 +215,105 @@ Model::raw_mesh() const
     return mesh;
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(Model, "Model");
-#endif
+Pointfs
+Model::_arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb) const
+{
+    // we supply unscaled data to arrange()
+    return Slic3r::Geometry::arrange(
+        sizes.size(),               // number of parts
+        BoundingBoxf(sizes).max,    // width and height of a single cell
+        dist,                       // distance between cells
+        bb                          // bounding box of the area to fill
+    );
+}
 
+/*  arrange objects preserving their instance count
+    but altering their instance positions */
+void
+Model::arrange_objects(coordf_t dist, const BoundingBoxf* bb)
+{
+    // get the (transformed) size of each instance so that we take
+    // into account their different transformations when packing
+    Pointfs instance_sizes;
+    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
+        for (size_t i = 0; i < (*o)->instances.size(); ++i) {
+            instance_sizes.push_back((*o)->instance_bounding_box(i).size());
+        }
+    }
+    
+    Pointfs positions = this->_arrange(instance_sizes, dist, bb);
+    
+    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
+        for (ModelInstancePtrs::const_iterator i = (*o)->instances.begin(); i != (*o)->instances.end(); ++i) {
+            (*i)->offset = positions.back();
+            positions.pop_back();
+        }
+        (*o)->invalidate_bounding_box();
+    }
+}
+
+/*  duplicate the entire model preserving instance relative positions */
+void
+Model::duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb)
+{
+    Pointfs model_sizes(copies_num-1, this->bounding_box().size());
+    Pointfs positions = this->_arrange(model_sizes, dist, bb);
+    
+    // note that this will leave the object count unaltered
+    
+    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
+        // make a copy of the pointers in order to avoid recursion when appending their copies
+        ModelInstancePtrs instances = (*o)->instances;
+        for (ModelInstancePtrs::const_iterator i = instances.begin(); i != instances.end(); ++i) {
+            for (Pointfs::const_iterator pos = positions.begin(); pos != positions.end(); ++pos) {
+                ModelInstance* instance = (*o)->add_instance(**i);
+                instance->offset.translate(*pos);
+            }
+        }
+        (*o)->invalidate_bounding_box();
+    }
+}
+
+/*  this will append more instances to each object
+    and then automatically rearrange everything */
+void
+Model::duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb)
+{
+    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
+        // make a copy of the pointers in order to avoid recursion when appending their copies
+        ModelInstancePtrs instances = (*o)->instances;
+        for (ModelInstancePtrs::const_iterator i = instances.begin(); i != instances.end(); ++i) {
+            for (size_t k = 2; k <= copies_num; ++k)
+                (*o)->add_instance(**i);
+        }
+    }
+    
+    this->arrange_objects(dist, bb);
+}
+
+void
+Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
+{
+    if (this->objects.size() > 1) throw "Grid duplication is not supported with multiple objects";
+    if (this->objects.empty()) throw "No objects!";
+
+    ModelObject* object = this->objects.front();
+    object->clear_instances();
+
+    Sizef3 size = object->bounding_box().size();
+
+    for (size_t x_copy = 1; x_copy <= x; ++x_copy) {
+        for (size_t y_copy = 1; y_copy <= y; ++y_copy) {
+            ModelInstance* instance = object->add_instance();
+            instance->offset.x = (size.x + dist) * (x_copy-1);
+            instance->offset.y = (size.y + dist) * (y_copy-1);
+        }
+    }
+}
 
 ModelMaterial::ModelMaterial(Model *model) : model(model) {}
 ModelMaterial::ModelMaterial(Model *model, const ModelMaterial &other)
-    : model(model), config(other.config), attributes(other.attributes)
+    : attributes(other.attributes), config(other.config), model(model)
 {}
 
 void
@@ -258,18 +323,12 @@ ModelMaterial::apply(const t_model_material_attributes &attributes)
 }
 
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(ModelMaterial, "Model::Material");
-#endif
-
-
 ModelObject::ModelObject(Model *model)
     : model(model)
 {}
 
 ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volumes)
-:   model(model),
-    name(other.name),
+:   name(other.name),
     input_file(other.input_file),
     instances(),
     volumes(),
@@ -277,7 +336,8 @@ ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volum
     layer_height_ranges(other.layer_height_ranges),
     origin_translation(other.origin_translation),
     _bounding_box(other._bounding_box),
-    _bounding_box_valid(other._bounding_box_valid)
+    _bounding_box_valid(other._bounding_box_valid),
+    model(model)
 {
     if (copy_volumes) {
         this->volumes.reserve(other.volumes.size());
@@ -489,7 +549,7 @@ ModelObject::center_around_origin()
             v.scale((*i)->scaling_factor);
             (*i)->offset.translate(v.x, v.y);
         }
-        this->update_bounding_box();
+        this->invalidate_bounding_box();
     }
 }
 
@@ -531,10 +591,10 @@ ModelObject::rotate(float angle, const Axis &axis)
 }
 
 void
-ModelObject::flip(const Axis &axis)
+ModelObject::mirror(const Axis &axis)
 {
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->mesh.flip(axis);
+        (*v)->mesh.mirror(axis);
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
@@ -641,18 +701,14 @@ ModelObject::split(ModelObjectPtrs* new_objects)
     return;
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(ModelObject, "Model::Object");
-#endif
-
 
 ModelVolume::ModelVolume(ModelObject* object, const TriangleMesh &mesh)
-:   object(object), mesh(mesh), modifier(false)
+:   mesh(mesh), modifier(false), object(object)
 {}
 
 ModelVolume::ModelVolume(ModelObject* object, const ModelVolume &other)
-:   object(object), name(other.name), mesh(other.mesh), config(other.config),
-    modifier(other.modifier)
+:   name(other.name), mesh(other.mesh), config(other.config),
+    modifier(other.modifier), object(object)
 {
     this->material_id(other.material_id());
 }
@@ -695,17 +751,13 @@ ModelVolume::assign_unique_material()
     return model->add_material(this->_material_id);
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(ModelVolume, "Model::Volume");
-#endif
-
 
 ModelInstance::ModelInstance(ModelObject *object)
-:   object(object), rotation(0), scaling_factor(1)
+:   rotation(0), scaling_factor(1), object(object)
 {}
 
 ModelInstance::ModelInstance(ModelObject *object, const ModelInstance &other)
-:   object(object), rotation(other.rotation), scaling_factor(other.scaling_factor), offset(other.offset)
+:   rotation(other.rotation), scaling_factor(other.scaling_factor), offset(other.offset), object(object)
 {}
 
 void
@@ -723,9 +775,5 @@ ModelInstance::transform_polygon(Polygon* polygon) const
     polygon->rotate(this->rotation, Point(0,0));    // rotate around polygon origin
     polygon->scale(this->scaling_factor);           // scale around polygon origin
 }
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(ModelInstance, "Model::Instance");
-#endif
 
 }

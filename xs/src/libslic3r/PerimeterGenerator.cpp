@@ -14,8 +14,9 @@ PerimeterGenerator::process()
     
     // external perimeters
     this->_ext_mm3_per_mm       = this->ext_perimeter_flow.mm3_per_mm();
-    coord_t ext_pwidth        = this->ext_perimeter_flow.scaled_width();
-    coord_t ext_pspacing      = scale_(this->ext_perimeter_flow.spacing(this->perimeter_flow));
+    coord_t ext_pwidth          = this->ext_perimeter_flow.scaled_width();
+    coord_t ext_pspacing        = this->ext_perimeter_flow.scaled_spacing();
+    coord_t ext_pspacing2       = this->ext_perimeter_flow.scaled_spacing(this->perimeter_flow);
     
     // overhang perimeters
     this->_mm3_per_mm_overhang  = this->overhang_flow.mm3_per_mm();
@@ -29,6 +30,11 @@ PerimeterGenerator::process()
     // with some tolerance in order to avoid triggering medial axis when
     // some squishing might work. Loops are still spaced by the entire
     // flow spacing; this only applies to collapsing parts.
+    // For ext_min_spacing we use the ext_pspacing calculated for two adjacent
+    // external loops (which is the correct way) instead of using ext_pspacing2
+    // which is the spacing between external and internal, which is not correct
+    // and would make the collapsing (thus the details resolution) dependent on 
+    // internal flow which is unrelated.
     coord_t min_spacing         = pspacing      * (1 - INSET_OVERLAP_TOLERANCE);
     coord_t ext_min_spacing     = ext_pspacing  * (1 - INSET_OVERLAP_TOLERANCE);
     
@@ -47,7 +53,7 @@ PerimeterGenerator::process()
     for (Surfaces::const_iterator surface = this->slices->surfaces.begin();
         surface != this->slices->surfaces.end(); ++surface) {
         // detect how many perimeters must be generated for this island
-        short loop_number = this->config->perimeters + surface->extra_perimeters;
+        signed short loop_number = this->config->perimeters + surface->extra_perimeters;
         loop_number--;  // 0-indexed loops
         
         Polygons gaps;
@@ -60,7 +66,7 @@ PerimeterGenerator::process()
             Polylines thin_walls;
             
             // we loop one time more than needed in order to find gaps after the last perimeter was applied
-            for (unsigned short i = 0; i <= loop_number+1; ++i) {  // outer loop is 0
+            for (signed short i = 0; i <= loop_number+1; ++i) {  // outer loop is 0
                 Polygons offsets;
                 if (i == 0) {
                     // the minimum thickness of a single loop is:
@@ -68,18 +74,18 @@ PerimeterGenerator::process()
                     if (this->config->thin_walls) {
                         offsets = offset2(
                             last,
-                            -(0.5*ext_pwidth + 0.5*ext_min_spacing - 1),
-                            +(0.5*ext_min_spacing - 1)
+                            -(ext_pwidth/2 + ext_min_spacing/2 - 1),
+                            +(ext_min_spacing/2 - 1)
                         );
                     } else {
-                        offsets = offset(last, -0.5*ext_pwidth);
+                        offsets = offset(last, -ext_pwidth/2);
                     }
                     
                     // look for thin walls
                     if (this->config->thin_walls) {
                         Polygons diffpp = diff(
                             last,
-                            offset(offsets, +0.5*ext_pwidth),
+                            offset(offsets, +ext_pwidth/2),
                             true  // medial axis requires non-overlapping geometry
                         );
                         
@@ -91,9 +97,9 @@ PerimeterGenerator::process()
                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                         Polylines pp;
                         for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex)
-                            ex->medial_axis(ext_pwidth + ext_pspacing, min_width, &pp);
+                            ex->medial_axis(ext_pwidth + ext_pspacing2, min_width, &pp);
                         
-                        double threshold = ext_pwidth * ext_pwidth;
+                        double threshold = ext_pwidth * 2;
                         for (Polylines::const_iterator p = pp.begin(); p != pp.end(); ++p) {
                             if (p->length() > threshold) {
                                 thin_walls.push_back(*p);
@@ -117,13 +123,13 @@ PerimeterGenerator::process()
                         */
                     }
                 } else {
-                    coord_t distance = (i == 1) ? ext_pspacing : pspacing;
+                    coord_t distance = (i == 1) ? ext_pspacing2 : pspacing;
                     
                     if (this->config->thin_walls) {
                         offsets = offset2(
                             last,
-                            -(distance + 0.5*min_spacing - 1),
-                            +(0.5*min_spacing - 1)
+                            -(distance + min_spacing/2 - 1),
+                            +(min_spacing/2 - 1)
                         );
                     } else {
                         offsets = offset(
@@ -166,16 +172,16 @@ PerimeterGenerator::process()
             }
             
             // nest loops: holes first
-            for (unsigned short d = 0; d <= loop_number; ++d) {
+            for (signed short d = 0; d <= loop_number; ++d) {
                 PerimeterGeneratorLoops &holes_d = holes[d];
                 
                 // loop through all holes having depth == d
-                for (unsigned short i = 0; i < holes_d.size(); ++i) {
+                for (signed short i = 0; i < holes_d.size(); ++i) {
                     const PerimeterGeneratorLoop &loop = holes_d[i];
                     
                     // find the hole loop that contains this one, if any
-                    for (unsigned short t = d+1; t <= loop_number; ++t) {
-                        for (unsigned short j = 0; j < holes[t].size(); ++j) {
+                    for (signed short t = d+1; t <= loop_number; ++t) {
+                        for (signed short j = 0; j < holes[t].size(); ++j) {
                             PerimeterGeneratorLoop &candidate_parent = holes[t][j];
                             if (candidate_parent.polygon.contains(loop.polygon.first_point())) {
                                 candidate_parent.children.push_back(loop);
@@ -185,10 +191,10 @@ PerimeterGenerator::process()
                             }
                         }
                     }
-                
+                    
                     // if no hole contains this hole, find the contour loop that contains it
-                    for (short t = loop_number; t >= 0; --t) {
-                        for (unsigned short j = 0; j < contours[t].size(); ++j) {
+                    for (signed short t = loop_number; t >= 0; --t) {
+                        for (signed short j = 0; j < contours[t].size(); ++j) {
                             PerimeterGeneratorLoop &candidate_parent = contours[t][j];
                             if (candidate_parent.polygon.contains(loop.polygon.first_point())) {
                                 candidate_parent.children.push_back(loop);
@@ -203,16 +209,16 @@ PerimeterGenerator::process()
             }
         
             // nest contour loops
-            for (short d = loop_number; d >= 1; --d) {
+            for (signed short d = loop_number; d >= 1; --d) {
                 PerimeterGeneratorLoops &contours_d = contours[d];
                 
                 // loop through all contours having depth == d
-                for (unsigned short i = 0; i < contours_d.size(); ++i) {
+                for (signed short i = 0; i < contours_d.size(); ++i) {
                     const PerimeterGeneratorLoop &loop = contours_d[i];
                 
                     // find the contour loop that contains it
-                    for (short t = d-1; t >= 0; --t) {
-                        for (unsigned short j = 0; j < contours[t].size(); ++j) {
+                    for (signed short t = d-1; t >= 0; --t) {
+                        for (signed short j = 0; j < contours[t].size(); ++j) {
                             PerimeterGeneratorLoop &candidate_parent = contours[t][j];
                             if (candidate_parent.polygon.contains(loop.polygon.first_point())) {
                                 candidate_parent.children.push_back(loop);
@@ -237,7 +243,7 @@ PerimeterGenerator::process()
             if (this->config->external_perimeters_first
                 || (this->layer_id == 0 && this->print_config->brim_width.value > 0))
                     entities.reverse();
-        
+            
             // append perimeters for this slice as a collection
             if (!entities.empty())
                 this->loops->append(entities);
@@ -291,7 +297,7 @@ PerimeterGenerator::process()
         coord_t inset = 0;
         if (loop_number == 0) {
             // one loop
-            inset += ext_pspacing/2;
+            inset += ext_pspacing2/2;
         } else if (loop_number > 0) {
             // two or more loops
             inset += pspacing/2;
@@ -400,34 +406,35 @@ PerimeterGenerator::_traverse_loops(const PerimeterGeneratorLoops &loops,
     }
     
     // append thin walls to the nearest-neighbor search (only for first iteration)
-    if (!thin_walls.empty()) {
-        for (Polylines::const_iterator polyline = thin_walls.begin(); polyline != thin_walls.end(); ++polyline) {
-            ExtrusionPath path(erExternalPerimeter);
-            path.polyline   = *polyline;
-            path.mm3_per_mm = this->_mm3_per_mm;
-            path.width      = this->perimeter_flow.width;
-            path.height     = this->layer_height;
-            coll.append(path);
-        }
-        
-        thin_walls.clear();
+    for (Polylines::const_iterator polyline = thin_walls.begin(); polyline != thin_walls.end(); ++polyline) {
+        ExtrusionPath path(erExternalPerimeter);
+        path.polyline   = *polyline;
+        path.mm3_per_mm = this->_mm3_per_mm;
+        path.width      = this->perimeter_flow.width;
+        path.height     = this->layer_height;
+        coll.append(path);
     }
+    thin_walls.clear();
     
-    // sort entities
+    // sort entities into a new collection using a nearest-neighbor search,
+    // preserving the original indices which are useful for detecting thin walls
     ExtrusionEntityCollection sorted_coll;
     coll.chained_path(&sorted_coll, false, &sorted_coll.orig_indices);
     
-    // traverse children
+    // traverse children and build the final collection
     ExtrusionEntityCollection entities;
-    for (unsigned short i = 0; i < sorted_coll.orig_indices.size(); ++i) {
-        size_t idx = sorted_coll.orig_indices[i];
-        if (idx >= loops.size()) {
+    for (std::vector<size_t>::const_iterator idx = sorted_coll.orig_indices.begin();
+        idx != sorted_coll.orig_indices.end();
+        ++idx) {
+        
+        if (*idx >= loops.size()) {
             // this is a thin wall
             // let's get it from the sorted collection as it might have been reversed
+            size_t i = idx - sorted_coll.orig_indices.begin();
             entities.append(*sorted_coll.entities[i]);
         } else {
-            const PerimeterGeneratorLoop &loop = loops[i];
-            ExtrusionLoop eloop = *dynamic_cast<ExtrusionLoop*>(coll.entities[idx]);
+            const PerimeterGeneratorLoop &loop = loops[*idx];
+            ExtrusionLoop eloop = *dynamic_cast<ExtrusionLoop*>(coll.entities[*idx]);
             
             ExtrusionEntityCollection children = this->_traverse_loops(loop.children, thin_walls);
             if (loop.is_contour) {
@@ -495,10 +502,6 @@ PerimeterGenerator::_fill_gaps(double min, double max, double w,
     
     return coll;
 }
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(PerimeterGenerator, "Layer::PerimeterGenerator");
-#endif
 
 bool
 PerimeterGeneratorLoop::is_external() const

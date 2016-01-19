@@ -39,6 +39,8 @@
 %typemap{Clone<BoundingBoxf3>}{simple};
 %typemap{DynamicPrintConfig*};
 %typemap{Ref<DynamicPrintConfig>}{simple};
+%typemap{StaticPrintConfig*};
+%typemap{Ref<StaticPrintConfig>}{simple};
 %typemap{PrintObjectConfig*};
 %typemap{Ref<PrintObjectConfig>}{simple};
 %typemap{PrintRegionConfig*};
@@ -91,6 +93,9 @@
 %typemap{GCodeWriter*};
 %typemap{Ref<GCodeWriter>}{simple};
 %typemap{Clone<GCodeWriter>}{simple};
+%typemap{GCodeSender*};
+%typemap{Ref<GCodeSender>}{simple};
+%typemap{Clone<GCodeSender>}{simple};
 %typemap{BridgeDetector*};
 %typemap{Ref<BridgeDetector>}{simple};
 %typemap{Clone<BridgeDetector>}{simple};

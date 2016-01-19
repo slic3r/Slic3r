@@ -1,7 +1,7 @@
 %module{Slic3r::XS};
 
 %{
-#include <myinit.h>
+#include <xsinit.h>
 #include "libslic3r/Layer.hpp"
 %}
 
@@ -17,8 +17,8 @@
         %code%{ RETVAL = &THIS->thin_fills; %};
     Ref<SurfaceCollection> fill_surfaces()
         %code%{ RETVAL = &THIS->fill_surfaces; %};
-    Ref<ExPolygonCollection> bridged()
-        %code%{ RETVAL = &THIS->bridged; %};
+    Polygons bridged()
+        %code%{ RETVAL = THIS->bridged; %};
     Ref<PolylineCollection> unsupported_bridge_edges()
         %code%{ RETVAL = &THIS->unsupported_bridge_edges; %};
     Ref<ExtrusionEntityCollection> perimeters()
@@ -32,6 +32,7 @@
     void prepare_fill_surfaces();
     void make_perimeters(SurfaceCollection* slices, SurfaceCollection* fill_surfaces)
         %code%{ THIS->make_perimeters(*slices, fill_surfaces); %};
+    double infill_area_threshold();
 };
 
 %name{Slic3r::Layer} class Layer {
@@ -84,6 +85,7 @@
         %code%{ RETVAL = THIS->any_internal_region_slice_contains(*polyline); %};
     bool any_bottom_region_slice_contains_polyline(Polyline* polyline)
         %code%{ RETVAL = THIS->any_bottom_region_slice_contains(*polyline); %};
+    void make_perimeters();
 };
 
 %name{Slic3r::Layer::Support} class SupportLayer {

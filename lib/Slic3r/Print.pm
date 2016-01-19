@@ -5,6 +5,7 @@ use warnings;
 use File::Basename qw(basename fileparse);
 use File::Spec;
 use List::Util qw(min max first sum);
+use Slic3r::ExtrusionLoop ':roles';
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(X Y Z X1 Y1 X2 Y2 MIN MAX PI scale unscale convex_hull);
@@ -273,7 +274,7 @@ sub make_skirt {
     for (my $i = $skirts; $i > 0; $i--) {
         $distance += scale $spacing;
         my $loop = offset([$convex_hull], $distance, 1, JT_ROUND, scale(0.1))->[0];
-        $self->skirt->append(Slic3r::ExtrusionLoop->new_from_paths(
+        my $eloop = Slic3r::ExtrusionLoop->new_from_paths(
             Slic3r::ExtrusionPath->new(
                 polyline        => Slic3r::Polygon->new(@$loop)->split_at_first_point,
                 role            => EXTR_ROLE_SKIRT,
@@ -281,13 +282,15 @@ sub make_skirt {
                 width           => $flow->width,
                 height          => $first_layer_height, # this will be overridden at G-code export time
             ),
-        ));
+        );
+        $eloop->role(EXTRL_ROLE_SKIRT);
+        $self->skirt->append($eloop);
         
         if ($self->config->min_skirt_length > 0) {
             $extruded_length[$extruder_idx] ||= 0;
             if (!$extruders_e_per_mm[$extruder_idx]) {
                 my $config = Slic3r::Config::GCode->new;
-                $config->apply_print_config($self->config);
+                $config->apply_static($self->config);
                 my $extruder = Slic3r::Extruder->new($extruder_idx, $config);
                 $extruders_e_per_mm[$extruder_idx] = $extruder->e_per_mm($mm3_per_mm);
             }
@@ -442,24 +445,6 @@ sub expanded_output_filepath {
     # make sure we use an up-to-date timestamp
     $self->placeholder_parser->update_timestamp;
     return $self->placeholder_parser->process($path);
-}
-
-# This method assigns extruders to the volumes having a material
-# but not having extruders set in the volume config.
-sub auto_assign_extruders {
-    my ($self, $model_object) = @_;
-    
-    # only assign extruders if object has more than one volume
-    return if @{$model_object->volumes} == 1;
-    
-    my $extruders = scalar @{ $self->config->nozzle_diameter };
-    foreach my $i (0..$#{$model_object->volumes}) {
-        my $volume = $model_object->volumes->[$i];
-        if ($volume->material_id ne '') {
-            my $extruder_id = $i + 1;
-            $volume->config->set_ifndef('extruder', $extruder_id);
-        }
-    }
 }
 
 1;

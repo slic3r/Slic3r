@@ -110,10 +110,6 @@ ExtrusionPath::_inflate_collection(const Polylines &polylines, ExtrusionEntityCo
     }
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(ExtrusionPath, "ExtrusionPath");
-#endif
-
 Polygons
 ExtrusionPath::grow() const
 {
@@ -283,7 +279,7 @@ ExtrusionLoop::has_overhang_point(const Point &point) const
         if (pos != -1) {
             // point belongs to this path
             // we consider it overhang only if it's not an endpoint
-            return (path->is_bridge() && pos > 0 && pos != path->polyline.points.size()-1);
+            return (path->is_bridge() && pos > 0 && pos != (int)(path->polyline.points.size())-1);
         }
     }
     return false;
@@ -338,9 +334,5 @@ ExtrusionLoop::min_mm3_per_mm() const
     }
     return min_mm3_per_mm;
 }
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(ExtrusionLoop, "ExtrusionLoop");
-#endif
 
 }

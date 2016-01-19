@@ -178,20 +178,13 @@ sub export {
         # compute the offsetted convex hull for each object and repeat it for each copy.
         my @islands_p = ();
         foreach my $object (@{$self->objects}) {
-            # compute the convex hull of the entire object
-            my $convex_hull = convex_hull([
-                map @{$_->contour}, map @{$_->slices}, @{$object->layers},
-            ]);
-            
             # discard objects only containing thin walls (offset would fail on an empty polygon)
-            next if !@$convex_hull;
-            
-            # grow convex hull by the wanted clearance
-            my @obj_islands_p = @{offset([$convex_hull], $distance_from_objects, 1, JT_SQUARE)};
+            my @polygons = map $_->contour, map @{$_->slices}, @{$object->layers};
+            next if !@polygons;
             
             # translate convex hull for each object copy and append it to the islands array
             foreach my $copy (@{ $object->_shifted_copies }) {
-                my @copy_islands_p = map $_->clone, @obj_islands_p;
+                my @copy_islands_p = map $_->clone, @polygons;
                 $_->translate(@$copy) for @copy_islands_p;
                 push @islands_p, @copy_islands_p;
             }
@@ -310,11 +303,14 @@ sub export {
     print $fh $gcodegen->writer->update_progress($gcodegen->layer_count, $gcodegen->layer_count, 1);  # 100%
     print $fh $gcodegen->writer->postamble;
     
+    # get filament stats
+    $self->print->clear_filament_stats;
     $self->print->total_used_filament(0);
     $self->print->total_extruded_volume(0);
     foreach my $extruder (@{$gcodegen->writer->extruders}) {
         my $used_filament = $extruder->used_filament;
         my $extruded_volume = $extruder->extruded_volume;
+        $self->print->set_filament_stats($extruder->id, $used_filament);
         
         printf $fh "; filament used = %.1fmm (%.1fcm3)\n",
             $used_filament, $extruded_volume/1000;
@@ -350,14 +346,14 @@ sub process_layer {
     my $gcode = "";
     
     my $object = $layer->object;
-    $self->_gcodegen->config->apply_object_config($object->config);
+    $self->_gcodegen->config->apply_static($object->config);
     
     # check whether we're going to apply spiralvase logic
     if (defined $self->_spiral_vase) {
         $self->_spiral_vase->enable(
             ($layer->id > 0 || $self->print->config->brim_width == 0)
                 && ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt)
-                && !defined(first { $_->config->bottom_solid_layers > $layer->id } @{$layer->regions})
+                && !defined(first { $_->region->config->bottom_solid_layers > $layer->id } @{$layer->regions})
                 && !defined(first { $_->perimeters->items_count > 1 } @{$layer->regions})
                 && !defined(first { $_->fills->items_count > 0 } @{$layer->regions})
         );
@@ -591,7 +587,7 @@ sub _extrude_perimeters {
     
     my $gcode = "";
     foreach my $region_id (sort keys %$entities_by_region) {
-        $self->_gcodegen->config->apply_region_config($self->print->get_region($region_id)->config);
+        $self->_gcodegen->config->apply_static($self->print->get_region($region_id)->config);
         $gcode .= $self->_gcodegen->extrude($_, 'perimeter', -1)
             for @{ $entities_by_region->{$region_id} };
     }
@@ -603,7 +599,7 @@ sub _extrude_infill {
     
     my $gcode = "";
     foreach my $region_id (sort keys %$entities_by_region) {
-        $self->_gcodegen->config->apply_region_config($self->print->get_region($region_id)->config);
+        $self->_gcodegen->config->apply_static($self->print->get_region($region_id)->config);
         
         my $collection = Slic3r::ExtrusionPath::Collection->new(@{ $entities_by_region->{$region_id} });
         for my $fill (@{$collection->chained_path_from($self->_gcodegen->last_pos, 0)}) {

@@ -87,7 +87,7 @@ ExPolygonCollection::simplify(double tolerance)
 {
     ExPolygons expp;
     for (ExPolygons::const_iterator it = this->expolygons.begin(); it != this->expolygons.end(); ++it) {
-        it->simplify(tolerance, expp);
+        it->simplify(tolerance, &expp);
     }
     this->expolygons = expp;
 }
@@ -122,8 +122,10 @@ ExPolygonCollection::contours() const
     return contours;
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(ExPolygonCollection, "ExPolygon::Collection");
-#endif
+void
+ExPolygonCollection::append(const ExPolygons &expp)
+{
+    this->expolygons.insert(this->expolygons.end(), expp.begin(), expp.end());
+}
 
 }

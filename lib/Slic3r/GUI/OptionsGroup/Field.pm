@@ -35,7 +35,7 @@ sub toggle {
 sub _on_change {
     my ($self, $opt_id) = @_;
     
-    $self->on_change->($opt_id)
+    $self->on_change->($opt_id, $self->get_value)
         unless $self->disable_change_event;
 }
 
@@ -213,13 +213,15 @@ extends 'Slic3r::GUI::OptionsGroup::Field::wxWindow';
 
 use List::Util qw(first);
 use Wx qw(:misc :combobox);
-use Wx::Event qw(EVT_COMBOBOX);
+use Wx::Event qw(EVT_COMBOBOX EVT_TEXT);
 
 sub BUILD {
     my ($self) = @_;
     
+    my $style = 0;
+    $style |= wxCB_READONLY if defined $self->option->gui_type && $self->option->gui_type ne 'select_open';
     my $field = Wx::ComboBox->new($self->parent, -1, "", wxDefaultPosition, $self->_default_size,
-        $self->option->labels || $self->option->values, wxCB_READONLY);
+        $self->option->labels || $self->option->values || [], $style);
     $self->wxWindow($field);
     
     $self->set_value($self->option->default);
@@ -227,23 +229,58 @@ sub BUILD {
     EVT_COMBOBOX($self->parent, $field, sub {
         $self->_on_change($self->option->opt_id);
     });
+    EVT_TEXT($self->parent, $field, sub {
+        $self->_on_change($self->option->opt_id);
+    });
 }
 
 sub set_value {
     my ($self, $value) = @_;
     
-    my $idx = first { $self->option->values->[$_] eq $value } 0..$#{$self->option->values};
+    $self->disable_change_event(1);
+    
+    my $idx;
+    if ($self->option->values) {
+        $idx = first { $self->option->values->[$_] eq $value } 0..$#{$self->option->values};
+        # if value is not among indexes values we use SetValue()
+    }
+    
+    if (defined $idx) {
+        $self->wxWindow->SetSelection($idx);
+    } else {
+        $self->wxWindow->SetValue($value);
+    }
+    
+    $self->disable_change_event(0);
+}
+
+sub set_values {
+    my ($self, $values) = @_;
     
     $self->disable_change_event(1);
-    $self->wxWindow->SetSelection($idx);
+    
+    # it looks that Clear() also clears the text field in recent wxWidgets versions,
+    # but we want to preserve it
+    my $ww = $self->wxWindow;
+    my $value = $ww->GetValue;
+    $ww->Clear;
+    $ww->Append($_) for @$values;
+    $ww->SetValue($value);
+    
     $self->disable_change_event(0);
 }
 
 sub get_value {
     my ($self) = @_;
-    return $self->option->values->[$self->wxWindow->GetSelection];
+    
+    if ($self->option->values) {
+        my $idx = $self->wxWindow->GetSelection;
+        if ($idx != &Wx::wxNOT_FOUND) {
+            return $self->option->values->[$idx];
+        }
+    }
+    return $self->wxWindow->GetValue;
 }
-
 
 package Slic3r::GUI::OptionsGroup::Field::NumericChoice;
 use Moo;
@@ -333,12 +370,14 @@ sub get_value {
     my ($self) = @_;
     
     my $label = $self->wxWindow->GetValue;
-    my $value_idx = first { $self->option->labels->[$_] eq $label } 0..$#{$self->option->labels};
-    if (defined $value_idx) {
-        if ($self->option->values) {
-            return $self->option->values->[$value_idx];
+    if ($self->option->labels) {
+        my $value_idx = first { $self->option->labels->[$_] eq $label } 0..$#{$self->option->labels};
+        if (defined $value_idx) {
+            if ($self->option->values) {
+                return $self->option->values->[$value_idx];
+            }
+            return $value_idx;
         }
-        return $value_idx;
     }
     return $label;
 }
@@ -473,11 +512,11 @@ extends 'Slic3r::GUI::OptionsGroup::Field::wxSizer';
 
 has 'scale'         => (is => 'rw', default => sub { 10 });
 has 'slider'        => (is => 'rw');
-has 'statictext'    => (is => 'rw');
+has 'textctrl'      => (is => 'rw');
 
 use Slic3r::Geometry qw(X Y);
 use Wx qw(:misc :sizer);
-use Wx::Event qw(EVT_SLIDER);
+use Wx::Event qw(EVT_SLIDER EVT_TEXT EVT_KILL_FOCUS);
 
 sub BUILD {
     my ($self) = @_;
@@ -495,16 +534,26 @@ sub BUILD {
     );
     $self->slider($slider);
     
-    my $statictext = Wx::StaticText->new($self->parent, -1, $slider->GetValue/$self->scale,
-        wxDefaultPosition, [20,-1]);
-    $self->statictext($statictext);
+    my $textctrl = Wx::TextCtrl->new($self->parent, -1, $slider->GetValue/$self->scale,
+        wxDefaultPosition, [50,-1]);
+    $self->textctrl($textctrl);
     
     $sizer->Add($slider, 1, wxALIGN_CENTER_VERTICAL, 0);
-    $sizer->Add($statictext, 0, wxALIGN_CENTER_VERTICAL, 0);
+    $sizer->Add($textctrl, 0, wxALIGN_CENTER_VERTICAL, 0);
     
     EVT_SLIDER($self->parent, $slider, sub {
-        $self->_update_statictext;
+        $self->_update_textctrl;
         $self->_on_change($self->option->opt_id);
+    });
+    EVT_TEXT($self->parent, $textctrl, sub {
+        my $value = $textctrl->GetValue;
+        if ($value =~ /^-?\d+(\.\d*)?$/) {
+            $self->set_value($value);
+            $self->_on_change($self->option->opt_id);
+        }
+    });
+    EVT_KILL_FOCUS($textctrl, sub {
+        $self->_on_kill_focus($self->option->opt_id, @_);
     });
 }
 
@@ -512,8 +561,8 @@ sub set_value {
     my ($self, $value) = @_;
     
     $self->disable_change_event(1);
-    $self->slider->SetValue($value);
-    $self->_update_statictext;
+    $self->slider->SetValue($value*$self->scale);
+    $self->_update_textctrl;
     $self->disable_change_event(0);
 }
 
@@ -522,9 +571,25 @@ sub get_value {
     return $self->slider->GetValue/$self->scale;
 }
 
-sub _update_statictext {
+sub _update_textctrl {
     my ($self) = @_;
-    $self->statictext->SetLabel($self->get_value);
+    $self->textctrl->SetLabel($self->get_value);
+}
+
+sub enable {
+    my ($self) = @_;
+    
+    $self->slider->Enable;
+    $self->textctrl->Enable;
+    $self->textctrl->SetEditable(1);
+}
+
+sub disable {
+    my ($self) = @_;
+    
+    $self->slider->Disable;
+    $self->textctrl->Disable;
+    $self->textctrl->SetEditable(0);
 }
 
 1;

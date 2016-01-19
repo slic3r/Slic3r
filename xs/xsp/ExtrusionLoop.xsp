@@ -1,7 +1,7 @@
 %module{Slic3r::XS};
 
 %{
-#include <myinit.h>
+#include <xsinit.h>
 #include "libslic3r/ExtrusionEntity.hpp"
 %}
 
@@ -66,6 +66,7 @@ _constant()
   ALIAS:
     EXTRL_ROLE_DEFAULT                      = elrDefault
     EXTRL_ROLE_CONTOUR_INTERNAL_PERIMETER   = elrContourInternalPerimeter
+    EXTRL_ROLE_SKIRT                        = elrSkirt
   PROTOTYPE:
   CODE:
     RETVAL = ix;

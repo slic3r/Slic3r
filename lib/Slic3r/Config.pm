@@ -31,7 +31,8 @@ sub new_from_defaults {
     my $self = $class->new;
     my $defaults = Slic3r::Config::Full->new;
     if (@opt_keys) {
-        $self->set($_, $defaults->get($_)) for @opt_keys;
+        $self->set($_, $defaults->get($_))
+            for grep $defaults->has($_), @opt_keys;
     } else {
         $self->apply_static($defaults);
     }
@@ -340,15 +341,6 @@ sub validate {
     return 1;
 }
 
-# min object distance is max(duplicate_distance, clearance_radius)
-sub min_object_distance {
-    my $self = shift;
-    
-    return ($self->complete_objects && $self->extruder_clearance_radius > $self->duplicate_distance)
-        ? $self->extruder_clearance_radius
-        : $self->duplicate_distance;
-}
-
 # CLASS METHODS:
 
 sub write_ini {
@@ -397,19 +389,13 @@ sub read_ini {
     return $ini;
 }
 
-package Slic3r::Config::GCode;
+package Slic3r::Config::Static;
 use parent 'Slic3r::Config';
 
-package Slic3r::Config::Print;
-use parent 'Slic3r::Config';
-
-package Slic3r::Config::PrintObject;
-use parent 'Slic3r::Config';
-
-package Slic3r::Config::PrintRegion;
-use parent 'Slic3r::Config';
-
-package Slic3r::Config::Full;
-use parent 'Slic3r::Config';
+sub Slic3r::Config::GCode::new { Slic3r::Config::Static::new_GCodeConfig }
+sub Slic3r::Config::Print::new { Slic3r::Config::Static::new_PrintConfig }
+sub Slic3r::Config::PrintObject::new { Slic3r::Config::Static::new_PrintObjectConfig }
+sub Slic3r::Config::PrintRegion::new { Slic3r::Config::Static::new_PrintRegionConfig }
+sub Slic3r::Config::Full::new { Slic3r::Config::Static::new_FullPrintConfig }
 
 1;

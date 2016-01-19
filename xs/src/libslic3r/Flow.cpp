@@ -1,5 +1,6 @@
 #include "Flow.hpp"
 #include <cmath>
+#include <assert.h>
 
 namespace Slic3r {
 
@@ -113,9 +114,5 @@ Flow::_width_from_spacing(float spacing, float nozzle_diameter, float height, bo
     // rectangle with semicircles at the ends
     return spacing + OVERLAP_FACTOR * height * (1 - PI/4.0);
 }
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(Flow, "Flow");
-#endif
 
 }

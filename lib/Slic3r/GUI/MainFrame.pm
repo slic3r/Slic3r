@@ -8,7 +8,7 @@ use List::Util qw(min);
 use Slic3r::Geometry qw(X Y Z);
 use Wx qw(:frame :bitmap :id :misc :notebook :panel :sizer :menu :dialog :filedialog
     :font :icon wxTheApp);
-use Wx::Event qw(EVT_CLOSE EVT_MENU);
+use Wx::Event qw(EVT_CLOSE EVT_MENU EVT_NOTEBOOK_PAGE_CHANGED);
 use base 'Wx::Frame';
 
 our $qs_last_input_file;
@@ -89,9 +89,14 @@ sub _init_tabpanel {
     my ($self) = @_;
     
     $self->{tabpanel} = my $panel = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
+    EVT_NOTEBOOK_PAGE_CHANGED($self, $self->{tabpanel}, sub {
+        my $panel = $self->{tabpanel}->GetCurrentPage;
+        $panel->OnActivate if $panel->can('OnActivate');
+    });
     
     if (!$self->{no_plater}) {
         $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
+        $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
     }
     $self->{options_tabs} = {};
     
@@ -131,6 +136,7 @@ sub _init_tabpanel {
             if ($self->{plater}) {
                 $self->{plater}->update_presets($tab_name, @_);
                 $self->{plater}->on_config_change($tab->config);
+                $self->{controller}->update_presets($tab_name, @_);
             }
         });
         $tab->load_presets;
@@ -220,6 +226,13 @@ sub _init_menubar {
         $self->_append_menu_item($self->{plater_menu}, "Export plate as AMF...", 'Export current plate as AMF', sub {
             $plater->export_amf;
         }, undef, 'brick_go.png');
+        $self->_append_menu_item($self->{plater_menu}, "Open DLP Projector…\tCtrl+L", 'Open projector window for DLP printing', sub {
+            my $projector = Slic3r::GUI::Projector->new($self);
+            
+            # this double invocation is needed for properly hiding the MainFrame
+            $projector->Show;
+            $projector->ShowModal;
+        }, undef, 'film.png');
         
         $self->{object_menu} = $self->{plater}->object_menu;
         $self->on_plater_selection_changed(0);
@@ -228,18 +241,25 @@ sub _init_menubar {
     # Window menu
     my $windowMenu = Wx::Menu->new;
     {
-        my $tab_count = $self->{no_plater} ? 3 : 4;
-        $self->_append_menu_item($windowMenu, "Select &Plater Tab\tCtrl+1", 'Show the plater', sub {
-            $self->select_tab(0);
-        }, undef, 'application_view_tile.png') unless $self->{no_plater};
+        my $tab_offset = 0;
+        if (!$self->{no_plater}) {
+            $self->_append_menu_item($windowMenu, "Select &Plater Tab\tCtrl+1", 'Show the plater', sub {
+                $self->select_tab(0);
+            }, undef, 'application_view_tile.png');
+            $self->_append_menu_item($windowMenu, "Select &Controller Tab\tCtrl+T", 'Show the printer controller', sub {
+                $self->select_tab(1);
+            }, undef, 'printer_empty.png');
+            $windowMenu->AppendSeparator();
+            $tab_offset += 2;
+        }
         $self->_append_menu_item($windowMenu, "Select P&rint Settings Tab\tCtrl+2", 'Show the print settings', sub {
-            $self->select_tab($tab_count-3);
+            $self->select_tab($tab_offset+0);
         }, undef, 'cog.png');
         $self->_append_menu_item($windowMenu, "Select &Filament Settings Tab\tCtrl+3", 'Show the filament settings', sub {
-            $self->select_tab($tab_count-2);
+            $self->select_tab($tab_offset+1);
         }, undef, 'spool.png');
         $self->_append_menu_item($windowMenu, "Select Print&er Settings Tab\tCtrl+4", 'Show the printer settings', sub {
-            $self->select_tab($tab_count-1);
+            $self->select_tab($tab_offset+2);
         }, undef, 'printer_empty.png');
     }
     
@@ -540,14 +560,16 @@ sub export_configbundle {
 }
 
 sub load_configbundle {
-    my $self = shift;
+    my ($self, $file, $skip_no_id) = @_;
     
-    my $dir = $last_config ? dirname($last_config) : $Slic3r::GUI::Settings->{recent}{config_directory} || $Slic3r::GUI::Settings->{recent}{skein_directory} || '';
-    my $dlg = Wx::FileDialog->new($self, 'Select configuration to load:', $dir, "config.ini", 
-            &Slic3r::GUI::FILE_WILDCARDS->{ini}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-    return unless $dlg->ShowModal == wxID_OK;
-    my $file = Slic3r::decode_path($dlg->GetPaths);
-    $dlg->Destroy;
+    if (!$file) {
+        my $dir = $last_config ? dirname($last_config) : $Slic3r::GUI::Settings->{recent}{config_directory} || $Slic3r::GUI::Settings->{recent}{skein_directory} || '';
+        my $dlg = Wx::FileDialog->new($self, 'Select configuration to load:', $dir, "config.ini", 
+                &Slic3r::GUI::FILE_WILDCARDS->{ini}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+        return unless $dlg->ShowModal == wxID_OK;
+        $file = Slic3r::decode_path($dlg->GetPaths);
+        $dlg->Destroy;
+    }
     
     $Slic3r::GUI::Settings->{recent}{config_directory} = dirname($file);
     wxTheApp->save_settings;
@@ -573,11 +595,23 @@ sub load_configbundle {
         }
     }
     my $imported = 0;
-    foreach my $ini_category (sort keys %$ini) {
+    INI_BLOCK: foreach my $ini_category (sort keys %$ini) {
         next unless $ini_category =~ /^(print|filament|printer):(.+)$/;
         my ($section, $preset_name) = ($1, $2);
         my $config = Slic3r::Config->load_ini_hash($ini->{$ini_category});
+        next if $skip_no_id && !$config->get($section . "_settings_id");
+        
+        {
+            my %current_presets = Slic3r::GUI->presets($section);
+            my %current_ids = map { $_ => 1 }
+                grep $_,
+                map Slic3r::Config->load($_)->get($section . "_settings_id"),
+                values %current_presets;
+            next INI_BLOCK if exists $current_ids{$config->get($section . "_settings_id")};
+        }
+        
         $config->save(sprintf "$Slic3r::GUI::datadir/%s/%s.ini", $section, $preset_name);
+        Slic3r::debugf "Imported %s preset %s\n", $section, $preset_name;
         $imported++;
     }
     if ($self->{mode} eq 'expert') {
@@ -585,6 +619,9 @@ sub load_configbundle {
             $tab->load_presets;
         }
     }
+    
+    return if !$imported;
+    
     my $message = sprintf "%d presets successfully imported.", $imported;
     if ($self->{mode} eq 'simple' && $Slic3r::GUI::Settings->{_}{mode} eq 'expert') {
         Slic3r::GUI::show_info($self, "$message You need to restart Slic3r to make the changes effective.");
@@ -692,6 +729,17 @@ sub config {
     return $config;
 }
 
+sub filament_preset_names {
+    my ($self) = @_;
+    
+    if ($self->{mode} eq 'simple') {
+        return '';
+    }
+    
+    return map $self->{options_tabs}{filament}->get_preset($_)->name,
+        $self->{plater}->filament_presets;
+}
+
 sub check_unsaved_changes {
     my $self = shift;
     
@@ -712,7 +760,7 @@ sub check_unsaved_changes {
 
 sub select_tab {
     my ($self, $tab) = @_;
-    $self->{tabpanel}->ChangeSelection($tab);
+    $self->{tabpanel}->SetSelection($tab);
 }
 
 sub _append_menu_item {

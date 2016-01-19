@@ -49,6 +49,7 @@ sub new {
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width
         octoprint_host octoprint_apikey
         repetier_host repetier_apikey repetier_printer
+        serial_port serial_speed octoprint_host octoprint_apikey
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
@@ -192,10 +193,12 @@ sub new {
     
     # right pane buttons
     $self->{btn_export_gcode} = Wx::Button->new($self, -1, "Export G-code…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
+    $self->{btn_print} = Wx::Button->new($self, -1, "Print…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     $self->{btn_send_gcode} = Wx::Button->new($self, -1, "Send to printer", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     $self->{btn_export_stl} = Wx::Button->new($self, -1, "Export STL…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     #$self->{btn_export_gcode}->SetFont($Slic3r::GUI::small_font);
     #$self->{btn_export_stl}->SetFont($Slic3r::GUI::small_font);
+    $self->{btn_print}->Hide;
     $self->{btn_send_gcode}->Hide;
     
     if ($Slic3r::GUI::have_button_icons) {
@@ -205,6 +208,7 @@ sub new {
             reset           cross.png
             arrange         bricks.png
             export_gcode    cog_go.png
+            print           arrow_up.png
             send_gcode      arrow_up.png
             export_stl      brick_go.png
             
@@ -225,11 +229,12 @@ sub new {
     $self->object_list_changed;
     EVT_BUTTON($self, $self->{btn_export_gcode}, sub {
         $self->export_gcode;
-        Slic3r::thread_cleanup();
+    });
+    EVT_BUTTON($self, $self->{btn_print}, sub {
+        $self->{print_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
     });
     EVT_BUTTON($self, $self->{btn_send_gcode}, sub {
         $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
-        Slic3r::thread_cleanup();
     });
     EVT_BUTTON($self, $self->{btn_export_stl}, \&export_stl);
     
@@ -292,7 +297,6 @@ sub new {
     EVT_COMMAND($self, -1, $PROCESS_COMPLETED_EVENT, sub {
         my ($self, $event) = @_;
         $self->on_process_completed($event->GetData);
-        Slic3r::thread_cleanup();
     });
     
     if ($Slic3r::have_threads) {
@@ -386,6 +390,7 @@ sub new {
         my $buttons_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $buttons_sizer->AddStretchSpacer(1);
         $buttons_sizer->Add($self->{btn_export_stl}, 0, wxALIGN_RIGHT, 0);
+        $buttons_sizer->Add($self->{btn_print}, 0, wxALIGN_RIGHT, 0);
         $buttons_sizer->Add($self->{btn_send_gcode}, 0, wxALIGN_RIGHT, 0);
         $buttons_sizer->Add($self->{btn_export_gcode}, 0, wxALIGN_RIGHT, 0);
         
@@ -787,7 +792,7 @@ sub rotate {
     $self->schedule_background_process;
 }
 
-sub flip {
+sub mirror {
     my ($self, $axis) = @_;
     
     my ($obj_idx, $object) = $self->selected_object;
@@ -796,13 +801,13 @@ sub flip {
     my $model_object = $self->{model}->objects->[$obj_idx];
     my $model_instance = $model_object->instances->[0];
     
-    # apply Z rotation before flipping
+    # apply Z rotation before mirroring
     if ($model_instance->rotation != 0) {
         $model_object->rotate($model_instance->rotation, Z);
         $_->set_rotation(0) for @{ $model_object->instances };
     }
     
-    $model_object->flip($axis);
+    $model_object->mirror($axis);
     $model_object->update_bounding_box;
     
     # realign object to Z = 0
@@ -819,7 +824,7 @@ sub flip {
 }
 
 sub changescale {
-    my ($self, $axis) = @_;
+    my ($self, $axis, $tosize) = @_;
     
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
@@ -830,9 +835,22 @@ sub changescale {
     # we need thumbnail to be computed before allowing scaling
     return if !$object->thumbnail;
     
+    my $object_size = $model_object->bounding_box->size;
+    my $bed_size = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape})->bounding_box->size;
+    
     if (defined $axis) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
-        my $scale = Wx::GetNumberFromUser("", "Enter the scale % for the selected object:", "Scale along $axis_name", 100, 0, 100000, $self);
+        my $scale;
+        if ($tosize) {
+            my $cursize = $object_size->[$axis];
+            my $newsize = Wx::GetNumberFromUser("", "Enter the new size for the selected object:", "Scale along $axis_name",
+                $cursize, 0, $bed_size->[$axis], $self);
+            return if !$newsize || $newsize < 0;
+            $scale = $newsize / $cursize * 100;
+        } else {
+            $scale = Wx::GetNumberFromUser("", "Enter the scale % for the selected object:", "Scale along $axis_name",
+                100, 0, 100000, $self);
+        }
         return if !$scale || $scale < 0;
         
         # apply Z rotation before scaling
@@ -847,8 +865,18 @@ sub changescale {
         # object was already aligned to Z = 0, so no need to realign it
         $self->make_thumbnail($obj_idx);
     } else {
-        # max scale factor should be above 2540 to allow importing files exported in inches
-        my $scale = Wx::GetNumberFromUser("", "Enter the scale % for the selected object:", 'Scale', $model_instance->scaling_factor*100, 0, 100000, $self);
+        my $scale;
+        if ($tosize) {
+            my $cursize = max(@$object_size);
+            my $newsize = Wx::GetNumberFromUser("", "Enter the new max size for the selected object:", "Scale",
+                $cursize, 0, max(@$bed_size), $self);
+            return if !$newsize || $newsize < 0;
+            $scale = $newsize / $cursize * 100;
+        } else {
+            # max scale factor should be above 2540 to allow importing files exported in inches
+            $scale = Wx::GetNumberFromUser("", "Enter the scale % for the selected object:", 'Scale',
+                $model_instance->scaling_factor*100, 0, 100000, $self);
+        }
         return if !$scale || $scale < 0;
     
         $self->{list}->SetItem($obj_idx, 2, "$scale%");
@@ -1002,7 +1030,7 @@ sub start_background_process {
             $self->{print}->process;
         };
         if ($@) {
-            Slic3r::debugf "Discarding background process error: $@\n";
+            Slic3r::debugf "Background process error: $@\n";
             Wx::PostEvent($self, Wx::PlThreadEvent->new(-1, $PROCESS_COMPLETED_EVENT, $@));
         } else {
             Wx::PostEvent($self, Wx::PlThreadEvent->new(-1, $PROCESS_COMPLETED_EVENT, undef));
@@ -1153,6 +1181,12 @@ sub on_process_completed {
     $self->{process_thread}->detach if $self->{process_thread};
     $self->{process_thread} = undef;
     
+    # if we're supposed to perform an explicit export let's display the error in a dialog
+    if ($error && $self->{export_gcode_output_file}) {
+        $self->{export_gcode_output_file} = undef;
+        Slic3r::GUI::show_error($self, $error);
+    }
+    
     return if $error;
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
@@ -1203,8 +1237,12 @@ sub on_export_completed {
     my $message;
     my $send_gcode = 0;
 
+    my $do_print = 0;
     if ($result) {
-        if ($self->{send_gcode_file}) {
+        if ($self->{print_file}) {
+            $message = "File added to print queue";
+            $do_print = 1;
+        } elsif ($self->{send_gcode_file}) {
             if ($self->{config}->octoprint_host) {
                 $message = "Sending G-code file to the OctoPrint server...";
             } elsif ($self->{config}->repetier_host) {
@@ -1223,11 +1261,30 @@ sub on_export_completed {
     $self->statusbar->SetStatusText($message);
     wxTheApp->notify($message);
     
+    $self->do_print if $do_print;
     $self->send_gcode if $send_gcode;
+    $self->{print_file} = undef;
     $self->{send_gcode_file} = undef;
     
     # this updates buttons status
     $self->object_list_changed;
+}
+
+sub do_print {
+    my ($self) = @_;
+    
+    my $printer_tab = $self->GetFrame->{options_tabs}{printer};
+    my $printer_name = $printer_tab->get_current_preset->name;
+    
+    my $controller = $self->GetFrame->{controller};
+    my $printer_panel = $controller->add_printer($printer_name, $printer_tab->config);
+    
+    my $filament_stats = $self->{print}->filament_stats;
+    my @filament_names = $self->GetFrame->filament_preset_names;
+    $filament_stats = { map { $filament_names[$_] => $filament_stats->{$_} } keys %$filament_stats };
+    $printer_panel->load_print_job($self->{print_file}, $filament_stats);
+    
+    $self->GetFrame->select_tab(1);
 }
 
 sub send_gcode {
@@ -1296,9 +1353,6 @@ sub export_stl {
     my $output_file = $self->_get_export_file('STL') or return;
     Slic3r::Format::STL->write_file($output_file, $self->{model}, binary => 1);
     $self->statusbar->SetStatusText("STL file exported to $output_file");
-    
-    # this method gets executed in a separate thread by wxWidgets since it's a button handler
-    Slic3r::thread_cleanup() if $Slic3r::have_threads;
 }
 
 sub export_object_stl {
@@ -1322,9 +1376,6 @@ sub export_amf {
     my $output_file = $self->_get_export_file('AMF') or return;
     Slic3r::Format::AMF->write_file($output_file, $self->{model});
     $self->statusbar->SetStatusText("AMF file exported to $output_file");
-    
-    # this method gets executed in a separate thread by wxWidgets since it's a menu handler
-    Slic3r::thread_cleanup() if $Slic3r::have_threads;
 }
 
 sub _get_export_file {
@@ -1460,6 +1511,13 @@ sub on_config_change {
             $self->{preview3D}->set_bed_shape($self->{config}->bed_shape)
                 if $self->{preview3D};
             $self->update;
+        } elsif ($opt_key eq 'serial_port') {
+            if ($config->get('serial_port')) {
+                $self->{btn_print}->Show;
+            } else {
+                $self->{btn_print}->Hide;
+            }
+            $self->Layout;
         } elsif ($opt_key eq 'octoprint_host') {
             if ($config->get('octoprint_host')) {
                 $self->{btn_send_gcode}->Show;
@@ -1526,7 +1584,7 @@ sub object_cut_dialog {
 		object              => $self->{objects}[$obj_idx],
 		model_object        => $self->{model}->objects->[$obj_idx],
 	);
-	$dlg->ShowModal;
+	return unless $dlg->ShowModal == wxID_OK;
 	
 	if (my @new_objects = $dlg->NewModelObjects) {
 	    $self->remove($obj_idx);
@@ -1579,10 +1637,11 @@ sub object_list_changed {
     my $have_objects = @{$self->{objects}} ? 1 : 0;
     my $method = $have_objects ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
-        for grep $self->{"btn_$_"}, qw(reset arrange export_gcode export_stl send_gcode);
+        for grep $self->{"btn_$_"}, qw(reset arrange export_gcode export_stl print send_gcode);
     
     if ($self->{export_gcode_output_file} || $self->{send_gcode_file}) {
         $self->{btn_export_gcode}->Disable;
+        $self->{btn_print}->Disable;
         $self->{btn_send_gcode}->Disable;
     }
     
@@ -1725,26 +1784,26 @@ sub object_menu {
     $frame->_set_menu_item_icon($rotateMenuItem, 'textfield.png');
     $frame->_append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
         $self->rotate(undef, X);
-    });
+    }, undef, 'bullet_red.png');
     $frame->_append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
         $self->rotate(undef, Y);
-    });
+    }, undef, 'bullet_green.png');
     $frame->_append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
         $self->rotate(undef, Z);
-    });
+    }, undef, 'bullet_blue.png');
     
-    my $flipMenu = Wx::Menu->new;
-    my $flipMenuItem = $menu->AppendSubMenu($flipMenu, "Flip", 'Mirror the selected object');
-    $frame->_set_menu_item_icon($flipMenuItem, 'shape_flip_horizontal.png');
-    $frame->_append_menu_item($flipMenu, "Along X axis…", 'Mirror the selected object along the X axis', sub {
-        $self->flip(X);
-    });
-    $frame->_append_menu_item($flipMenu, "Along Y axis…", 'Mirror the selected object along the Y axis', sub {
-        $self->flip(Y);
-    });
-    $frame->_append_menu_item($flipMenu, "Along Z axis…", 'Mirror the selected object along the Z axis', sub {
-        $self->flip(Z);
-    });
+    my $mirrorMenu = Wx::Menu->new;
+    my $mirrorMenuItem = $menu->AppendSubMenu($mirrorMenu, "Mirror", 'Mirror the selected object');
+    $frame->_set_menu_item_icon($mirrorMenuItem, 'shape_flip_horizontal.png');
+    $frame->_append_menu_item($mirrorMenu, "Along X axis…", 'Mirror the selected object along the X axis', sub {
+        $self->mirror(X);
+    }, undef, 'bullet_red.png');
+    $frame->_append_menu_item($mirrorMenu, "Along Y axis…", 'Mirror the selected object along the Y axis', sub {
+        $self->mirror(Y);
+    }, undef, 'bullet_green.png');
+    $frame->_append_menu_item($mirrorMenu, "Along Z axis…", 'Mirror the selected object along the Z axis', sub {
+        $self->mirror(Z);
+    }, undef, 'bullet_blue.png');
     
     my $scaleMenu = Wx::Menu->new;
     my $scaleMenuItem = $menu->AppendSubMenu($scaleMenu, "Scale", 'Scale the selected object along a single axis');
@@ -1754,13 +1813,29 @@ sub object_menu {
     });
     $frame->_append_menu_item($scaleMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
         $self->changescale(X);
-    });
+    }, undef, 'bullet_red.png');
     $frame->_append_menu_item($scaleMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
         $self->changescale(Y);
-    });
+    }, undef, 'bullet_green.png');
     $frame->_append_menu_item($scaleMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
         $self->changescale(Z);
+    }, undef, 'bullet_blue.png');
+    
+    my $scaleToSizeMenu = Wx::Menu->new;
+    my $scaleToSizeMenuItem = $menu->AppendSubMenu($scaleToSizeMenu, "Scale to size", 'Scale the selected object along a single axis');
+    $frame->_set_menu_item_icon($scaleToSizeMenuItem, 'arrow_out.png');
+    $frame->_append_menu_item($scaleToSizeMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
+        $self->changescale(undef, 1);
     });
+    $frame->_append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
+        $self->changescale(X, 1);
+    }, undef, 'bullet_red.png');
+    $frame->_append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
+        $self->changescale(Y, 1);
+    }, undef, 'bullet_green.png');
+    $frame->_append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
+        $self->changescale(Z, 1);
+    }, undef, 'bullet_blue.png');
     
     $frame->_append_menu_item($menu, "Split", 'Split the selected object into individual parts', sub {
         $self->split_object;

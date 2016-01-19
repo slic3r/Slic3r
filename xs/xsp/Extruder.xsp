@@ -1,12 +1,13 @@
 %module{Slic3r::XS};
 
 %{
-#include <myinit.h>
+#include <xsinit.h>
 #include "libslic3r/Extruder.hpp"
 %}
 
 %name{Slic3r::Extruder} class Extruder {
-    Extruder(int id, GCodeConfig *config);
+    Extruder(unsigned int id, StaticPrintConfig* config)
+        %code%{ RETVAL = new Extruder (id, dynamic_cast<GCodeConfig*>(config)); %};
     ~Extruder();
     void reset();
     double extrude(double dE);
@@ -16,7 +17,7 @@
     double extruded_volume();
     double used_filament();
     
-    int id()
+    unsigned int id()
         %code%{ RETVAL = THIS->id; %};
     
     double E()

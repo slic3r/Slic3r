@@ -10,6 +10,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <assert.h>
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -168,15 +169,15 @@ linint(double value, double oldmin, double oldmax, double newmin, double newmax)
 }
 
 Pointfs
-arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf &bb)
+arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb)
 {
     // use actual part size (the largest) plus separation distance (half on each side) in spacing algorithm
     part.x += dist;
     part.y += dist;
     
     Pointf area;
-    if (bb.defined) {
-        area = bb.size();
+    if (bb != NULL && bb->defined) {
+        area = bb->size();
     } else {
         // bogus area size, large enough not to trigger the error below
         area.x = part.x * total_parts;
@@ -185,8 +186,7 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf &bb)
     
     // this is how many cells we have available into which to put parts
     size_t cellw = floor((area.x + dist) / part.x);
-    size_t cellh = floor((area.x + dist) / part.x);
-    
+    size_t cellh = floor((area.y + dist) / part.y);
     if (total_parts > (cellw * cellh))
         CONFESS("%zu parts won't fit in your print area!\n", total_parts);
     
@@ -200,8 +200,8 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf &bb)
     
     // center bounding box to area
     cells_bb.translate(
-        -(area.x - cells.x) / 2,
-        -(area.y - cells.y) / 2
+        (area.x - cells.x) / 2,
+        (area.y - cells.y) / 2
     );
     
     // list of cells, sorted by distance from center
@@ -211,7 +211,7 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf &bb)
     for (size_t i = 0; i <= cellw-1; ++i) {
         for (size_t j = 0; j <= cellh-1; ++j) {
             coordf_t cx = linint(i + 0.5, 0, cellw, cells_bb.min.x, cells_bb.max.x);
-            coordf_t cy = linint(j + 0.5, 0, cellh, cells_bb.max.y, cells_bb.min.y);
+            coordf_t cy = linint(j + 0.5, 0, cellh, cells_bb.min.y, cells_bb.max.y);
             
             coordf_t xd = fabs((area.x / 2) - cx);
             coordf_t yd = fabs((area.y / 2) - cy);
@@ -279,12 +279,13 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf &bb)
         positions.push_back(Pointf(cx * part.x, cy * part.y));
     }
     
-    if (bb.defined) {
+    if (bb != NULL && bb->defined) {
         for (Pointfs::iterator p = positions.begin(); p != positions.end(); ++p) {
-            p->x += bb.min.x;
-            p->y += bb.min.y;
+            p->x += bb->min.x;
+            p->y += bb->min.y;
         }
     }
+    
     return positions;
 }
 

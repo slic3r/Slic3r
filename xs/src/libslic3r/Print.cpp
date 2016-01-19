@@ -218,6 +218,8 @@ Print::invalidate_state_by_config_options(const std::vector<t_config_option_key>
             || *opt_key == "retract_length"
             || *opt_key == "retract_length_toolchange"
             || *opt_key == "retract_lift"
+            || *opt_key == "retract_lift_above"
+            || *opt_key == "retract_lift_below"
             || *opt_key == "retract_restart_extra"
             || *opt_key == "retract_restart_extra_toolchange"
             || *opt_key == "retract_speed"
@@ -824,10 +826,22 @@ Print::has_support_material() const
     return false;
 }
 
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(Print, "Print");
-#endif
-
+/*  This method assigns extruders to the volumes having a material
+    but not having extruders set in the volume config. */
+void
+Print::auto_assign_extruders(ModelObject* model_object) const
+{
+    // only assign extruders if object has more than one volume
+    if (model_object->volumes.size() < 2) return;
+    
+    size_t extruders = this->config.nozzle_diameter.values.size();
+    for (ModelVolumePtrs::const_iterator v = model_object->volumes.begin(); v != model_object->volumes.end(); ++v) {
+        if (!(*v)->material_id().empty()) {
+            size_t extruder_id = (v - model_object->volumes.begin()) + 1;
+            if (!(*v)->config.has("extruder"))
+                (*v)->config.opt<ConfigOptionInt>("extruder", true)->value = extruder_id;
+        }
+    }
+}
 
 }

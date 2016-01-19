@@ -29,7 +29,7 @@ SurfaceCollection::simplify(double tolerance)
     Surfaces ss;
     for (Surfaces::const_iterator it_s = this->surfaces.begin(); it_s != this->surfaces.end(); ++it_s) {
         ExPolygons expp;
-        it_s->expolygon.simplify(tolerance, expp);
+        it_s->expolygon.simplify(tolerance, &expp);
         for (ExPolygons::const_iterator it_e = expp.begin(); it_e != expp.end(); ++it_e) {
             Surface s = *it_s;
             s.expolygon = *it_e;
@@ -111,8 +111,10 @@ SurfaceCollection::filter_by_type(SurfaceType type, Polygons* polygons)
     }
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(SurfaceCollection, "Surface::Collection");
-#endif
+void
+SurfaceCollection::append(const SurfaceCollection &coll)
+{
+    this->surfaces.insert(this->surfaces.end(), coll.surfaces.begin(), coll.surfaces.end());
+}
 
 }
