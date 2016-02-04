@@ -61,6 +61,10 @@ GCodeWriter::preamble()
             gcode << "M82 ; use absolute distances for extrusion\n";
         }
         gcode << this->reset_e(true);
+
+        if (!this->config.use_volumetric_e) {
+            gcode << "M200 D0 ; reset filament diameter (due to disabled volumetric extrusion)\n";
+        }
     }
     
     return gcode.str();
