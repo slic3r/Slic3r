@@ -1,4 +1,4 @@
-use Test::More tests => 18;
+use Test::More tests => 22;
 use strict;
 use warnings;
 
@@ -7,6 +7,7 @@ BEGIN {
     use lib "$FindBin::Bin/../lib";
 }
 
+use List::Util qw(any);
 use Slic3r;
 use Slic3r::Test qw(_eq);
 
@@ -198,6 +199,39 @@ use Slic3r::Test qw(_eq);
     });
     
     ok $retracted, 'retracting also when --retract-length is 0 but --use-firmware-retraction is enabled';
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('start_gcode', '');
+    $config->set('retract_lift', [3]);
+    
+    my @lifted_at = ();
+    my $test = sub {
+        my $print = Slic3r::Test::init_print('20mm_cube', config => $config, duplicate => 2);
+        @lifted_at = ();
+        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+            my ($self, $cmd, $args, $info) = @_;
+        
+            if ($cmd eq 'G1' && $info->{dist_Z} < 0) {
+                push @lifted_at, $info->{new_Z};
+            }
+        });
+    };
+    
+    $config->set('retract_lift_above', [0]);
+    $config->set('retract_lift_below', [0]);
+    $test->();
+    ok !!@lifted_at, 'lift takes place when above/below == 0';
+    
+    $config->set('retract_lift_above', [5]);
+    $config->set('retract_lift_below', [15]);
+    $test->();
+    ok !!@lifted_at, 'lift takes place when above/below != 0';
+    ok !(any { $_ < $config->get_at('retract_lift_above', 0) } @lifted_at),
+        'Z is not lifted below the configured value';
+    ok !(any { $_ > $config->get_at('retract_lift_below', 0) } @lifted_at),
+        'Z is not lifted above the configured value';
 }
 
 __END__

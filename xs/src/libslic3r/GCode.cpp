@@ -55,7 +55,7 @@ AvoidCrossingPerimeters::travel_to(GCode &gcodegen, Point point)
         
         // calculate path
         Polyline travel = this->_external_mp->shortest_path(last_pos, point);
-        
+        //exit(0);
         // translate the path back into the shifted coordinate system that gcodegen
         // is currently using for writing coordinates
         travel.translate(scaled_origin.negative());
@@ -203,8 +203,8 @@ GCode::GCode()
 {
 }
 
-Point&
-GCode::last_pos()
+const Point&
+GCode::last_pos() const
 {
     return this->_last_pos;
 }
@@ -249,13 +249,12 @@ void
 GCode::set_origin(const Pointf &pointf)
 {    
     // if origin increases (goes towards right), last_pos decreases because it goes towards left
-    Point translate(
+    const Point translate(
         scale_(this->origin.x - pointf.x),
         scale_(this->origin.y - pointf.y)
     );
     this->_last_pos.translate(translate);
     this->wipe.path.translate(translate);
-    
     this->origin = pointf;
 }
 
@@ -317,13 +316,16 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
     // extrude all loops ccw
     bool was_clockwise = loop.make_counter_clockwise();
     
+    SeamPosition seam_position = this->config.seam_position;
+    if (loop.role == elrSkirt) seam_position = spNearest;
+    
     // find the point of the loop that is closest to the current extruder position
     // or randomize if requested
     Point last_pos = this->last_pos();
     if (this->config.spiral_vase) {
         loop.split_at(last_pos);
-    } else if (this->config.seam_position == spNearest || this->config.seam_position == spAligned) {
-        Polygon polygon = loop.polygon();
+    } else if (seam_position == spNearest || seam_position == spAligned) {
+        const Polygon polygon = loop.polygon();
         
         // simplify polygon in order to skip false positives in concave/convex detection
         // (loop is always ccw as polygon.simplify() only works on ccw polygons)
@@ -357,7 +359,7 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
         }
         
         Point point;
-        if (this->config.seam_position == spNearest) {
+        if (seam_position == spNearest) {
             if (candidates.empty()) candidates = polygon.points;
             last_pos.nearest_point(candidates, &point);
             
@@ -383,7 +385,7 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
         }
         if (this->layer != NULL)
             this->_seam_position[this->layer->object()] = point;
-    } else if (this->config.seam_position == spRandom) {
+    } else if (seam_position == spRandom) {
         if (loop.role == elrContourInternalPerimeter) {
             Polygon polygon = loop.polygon();
             Point centroid = polygon.centroid();
@@ -614,6 +616,7 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
         
         // check again whether the new travel path still needs a retraction
         needs_retraction = this->needs_retraction(travel, role);
+        //if (needs_retraction && this->layer_index > 1) exit(0);
     }
     
     // Re-allow avoid_crossing_perimeters for the next travel moves

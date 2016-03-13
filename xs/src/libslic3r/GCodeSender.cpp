@@ -8,16 +8,25 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
 
+#if defined(__APPLE__) || defined(__linux) || defined(__OpenBSD__)
+#include <termios.h>
+#endif
 #if __APPLE__
 #include <sys/ioctl.h>
-#include <termios.h>
 #include <IOKit/serial/ioss.h>
 #endif
 #ifdef __linux
 #include <sys/ioctl.h>
-#include <termios.h>
 #include <linux/serial.h>
 #endif
+
+//#define DEBUG_SERIAL
+#ifdef DEBUG_SERIAL
+#include <fstream>
+std::fstream fs;
+#endif
+
+#define KEEP_SENT 20
 
 namespace Slic3r {
 
@@ -61,6 +70,11 @@ GCodeSender::connect(std::string devname, unsigned int baud_rate)
     this->open = true;
     this->reset();
     
+    /* Initialize debugger */
+#ifdef DEBUG_SERIAL
+    fs.open("serial.txt", std::fstream::out | std::fstream::trunc);
+#endif
+    
     // this gives some work to the io_service before it is started
     // (post() runs the supplied function in its thread)
     this->io.post(boost::bind(&GCodeSender::do_read, this));
@@ -88,8 +102,7 @@ GCodeSender::set_baud_rate(unsigned int baud_rate)
         speed_t newSpeed = baud_rate;
         ioctl(handle, IOSSIOSPEED, &newSpeed);
         ::tcsetattr(handle, TCSANOW, &ios);
-#endif
-#ifdef __linux
+#elif __linux
         termios ios;
         ::tcgetattr(handle, &ios);
         ::cfsetispeed(&ios, B38400);
@@ -110,6 +123,13 @@ GCodeSender::set_baud_rate(unsigned int baud_rate)
         }
 
         ioctl(handle, TIOCSSERIAL, &ss);
+		printf("< set_baud_rate: %u\n", baud_rate);
+#elif __OpenBSD__
+		struct termios ios;
+		::tcgetattr(handle, &ios);
+		::cfsetspeed(&ios, baud_rate);
+		if (::tcsetattr(handle, TCSAFLUSH, &ios) != 0)
+			printf("Failed to set baud rate: %s\n", strerror(errno));
 #else
         //throw invalid_argument ("OS does not currently support custom bauds");
 #endif
@@ -125,10 +145,16 @@ GCodeSender::disconnect()
     this->io.post(boost::bind(&GCodeSender::do_close, this));
     this->background_thread.join();
     this->io.reset();
+    /*
     if (this->error_status()) {
         throw(boost::system::system_error(boost::system::error_code(),
             "Error while closing the device"));
     }
+    */
+    
+#ifdef DEBUG_SERIAL
+    fs.close();
+#endif
 }
 
 bool
@@ -177,12 +203,13 @@ void
 GCodeSender::purge_queue(bool priority)
 {
     boost::lock_guard<boost::mutex> l(this->queue_mutex);
-    std::queue<std::string> empty;
     if (priority) {
         // clear priority queue
+        std::list<std::string> empty;
         std::swap(this->priqueue, empty);
     } else {
         // clear queue
+        std::queue<std::string> empty;
         std::swap(this->queue, empty);
         this->queue_paused = false;
     }
@@ -283,6 +310,10 @@ GCodeSender::on_read(const boost::system::error_code& error,
     std::string line;
     std::getline(is, line);
     if (!line.empty()) {
+#ifdef DEBUG_SERIAL
+    fs << "<< " << line << std::endl << std::flush;
+#endif
+        
         // note that line might contain \r at its end
         // parse incoming line
         if (!this->connected
@@ -307,16 +338,27 @@ GCodeSender::on_read(const boost::system::error_code& error,
             // extract the first number from line
             boost::algorithm::trim_left_if(line, !boost::algorithm::is_digit());
             size_t toresend = boost::lexical_cast<size_t>(line.substr(0, line.find_first_not_of("0123456789")));
-            if (toresend == this->sent) {
+            if (toresend >= this->sent - this->last_sent.size()) {
                 {
                     boost::lock_guard<boost::mutex> l(this->queue_mutex);
-                    this->priqueue.push(this->last_sent);
-                    this->sent--;  // resend it with the same line number
+                    
+                    // move the unsent lines to priqueue
+                    this->priqueue.insert(
+                        this->priqueue.begin(),  // insert at the beginning
+                        this->last_sent.begin() + toresend - (this->sent - this->last_sent.size()) - 1,
+                        this->last_sent.end()
+                    );
+                    
+                    // we can empty last_sent because it's not useful anymore
+                    this->last_sent.clear();
+                    
+                    // start resending with the requested line number
+                    this->sent = toresend - 1;
                     this->can_send = true;
                 }
                 this->send();
             } else {
-                printf("Cannot resend %zu (last was %zu)\n", toresend, this->sent);
+                printf("Cannot resend %zu (oldest we have is %zu)\n", toresend, this->sent - this->last_sent.size());
             }
         } else if (boost::starts_with(line, "wait")) {
             // ignore
@@ -342,7 +384,6 @@ GCodeSender::on_read(const boost::system::error_code& error,
             }
         }
     }
-    
     this->do_read();
 }
 
@@ -354,7 +395,7 @@ GCodeSender::send(const std::vector<std::string> &lines, bool priority)
         boost::lock_guard<boost::mutex> l(this->queue_mutex);
         for (std::vector<std::string>::const_iterator line = lines.begin(); line != lines.end(); ++line) {
             if (priority) {
-                this->priqueue.push(*line);
+                this->priqueue.push_back(*line);
             } else {
                 this->queue.push(*line);
             }
@@ -370,7 +411,7 @@ GCodeSender::send(const std::string &line, bool priority)
     {
         boost::lock_guard<boost::mutex> l(this->queue_mutex);
         if (priority) {
-            this->priqueue.push(line);
+            this->priqueue.push_back(line);
         } else {
             this->queue.push(line);
         }
@@ -392,11 +433,11 @@ GCodeSender::do_send()
     // printer is not connected or we're still waiting for the previous ack
     if (!this->can_send) return;
     
+    std::string line;
     while (!this->priqueue.empty() || (!this->queue.empty() && !this->queue_paused)) {
-        std::string line;
         if (!this->priqueue.empty()) {
             line = this->priqueue.front();
-            this->priqueue.pop();
+            this->priqueue.pop_front();
         } else {
             line = this->queue.front();
             this->queue.pop();
@@ -409,18 +450,11 @@ GCodeSender::do_send()
         boost::algorithm::trim(line);
         
         // if line is not empty, send it
-        if (!line.empty()) {
-            this->do_send(line);
-            return;
-        }
+        if (!line.empty()) break;
         // if line is empty, process next item in queue
     }
-}
-
-// caller is responsible for holding queue_mutex
-void
-GCodeSender::do_send(const std::string &line)
-{
+    if (line.empty()) return;
+    
     // compute full line
     this->sent++;
     std::string full_line = "N" + boost::lexical_cast<std::string>(this->sent) + " " + line;
@@ -434,10 +468,39 @@ GCodeSender::do_send(const std::string &line)
     full_line += "*";
     full_line += boost::lexical_cast<std::string>(cs);
     full_line += "\n";
-    asio::async_write(this->serial, asio::buffer(full_line), boost::bind(&GCodeSender::do_send, this));
     
-    this->last_sent = line;
+#ifdef DEBUG_SERIAL
+    fs << ">> " << full_line << std::flush;
+#endif
+    
+    this->last_sent.push_back(line);
     this->can_send = false;
+    
+    if (this->last_sent.size() > KEEP_SENT)
+        this->last_sent.erase(this->last_sent.begin(), this->last_sent.end() - KEEP_SENT);
+    
+    // we can't supply asio::buffer(full_line) to async_write() because full_line is on the
+    // stack and the buffer would lose its underlying storage causing memory corruption
+    std::ostream os(&this->write_buffer);
+    os << full_line;
+    asio::async_write(this->serial, this->write_buffer, boost::bind(&GCodeSender::on_write, this, boost::asio::placeholders::error,
+                boost::asio::placeholders::bytes_transferred));
+}
+
+void
+GCodeSender::on_write(const boost::system::error_code& error,
+    size_t bytes_transferred)
+{
+    this->set_error_status(false);
+    if (error) {
+        if (this->open) {
+            this->do_close();
+            this->set_error_status(true);
+        }
+        return;
+    }
+    
+    this->do_send();
 }
 
 void
@@ -470,6 +533,10 @@ GCodeSender::reset()
     boost::this_thread::sleep(boost::posix_time::milliseconds(200));
     this->set_DTR(false);
     boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+    {
+        boost::lock_guard<boost::mutex> l(this->queue_mutex);
+        this->can_send = true;
+    }
 }
 
 }

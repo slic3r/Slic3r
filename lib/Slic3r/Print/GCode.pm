@@ -178,20 +178,13 @@ sub export {
         # compute the offsetted convex hull for each object and repeat it for each copy.
         my @islands_p = ();
         foreach my $object (@{$self->objects}) {
-            # compute the convex hull of the entire object
-            my $convex_hull = convex_hull([
-                map @{$_->contour}, map @{$_->slices}, @{$object->layers},
-            ]);
-            
             # discard objects only containing thin walls (offset would fail on an empty polygon)
-            next if !@$convex_hull;
-            
-            # grow convex hull by the wanted clearance
-            my @obj_islands_p = @{offset([$convex_hull], $distance_from_objects, 1, JT_SQUARE)};
+            my @polygons = map $_->contour, map @{$_->slices}, @{$object->layers};
+            next if !@polygons;
             
             # translate convex hull for each object copy and append it to the islands array
             foreach my $copy (@{ $object->_shifted_copies }) {
-                my @copy_islands_p = map $_->clone, @obj_islands_p;
+                my @copy_islands_p = map $_->clone, @polygons;
                 $_->translate(@$copy) for @copy_islands_p;
                 push @islands_p, @copy_islands_p;
             }
@@ -353,7 +346,7 @@ sub process_layer {
     my $gcode = "";
     
     my $object = $layer->object;
-    $self->_gcodegen->config->apply_object_config($object->config);
+    $self->_gcodegen->config->apply_static($object->config);
     
     # check whether we're going to apply spiralvase logic
     if (defined $self->_spiral_vase) {
@@ -487,6 +480,7 @@ sub process_layer {
         # - for each extruder, we group extrusions by island
         # - for each island, we extrude perimeters first, unless user set the infill_first
         #   option
+        # (Still, we have to keep track of regions because we need to apply their config)
         
         # group extrusions by extruder and then by island
         my %by_extruder = ();  # extruder_id => [ { perimeters => \@perimeters, infill => \@infill } ]
@@ -594,7 +588,7 @@ sub _extrude_perimeters {
     
     my $gcode = "";
     foreach my $region_id (sort keys %$entities_by_region) {
-        $self->_gcodegen->config->apply_region_config($self->print->get_region($region_id)->config);
+        $self->_gcodegen->config->apply_static($self->print->get_region($region_id)->config);
         $gcode .= $self->_gcodegen->extrude($_, 'perimeter', -1)
             for @{ $entities_by_region->{$region_id} };
     }
@@ -606,7 +600,7 @@ sub _extrude_infill {
     
     my $gcode = "";
     foreach my $region_id (sort keys %$entities_by_region) {
-        $self->_gcodegen->config->apply_region_config($self->print->get_region($region_id)->config);
+        $self->_gcodegen->config->apply_static($self->print->get_region($region_id)->config);
         
         my $collection = Slic3r::ExtrusionPath::Collection->new(@{ $entities_by_region->{$region_id} });
         for my $fill (@{$collection->chained_path_from($self->_gcodegen->last_pos, 0)}) {

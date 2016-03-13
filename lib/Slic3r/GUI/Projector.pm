@@ -39,7 +39,7 @@ sub new {
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     
     $self->config(Slic3r::Config->new_from_defaults(
-        qw(serial_port serial_speed bed_shape start_gcode end_gcode)
+        qw(serial_port serial_speed bed_shape start_gcode end_gcode z_offset)
     ));
     $self->config->apply(wxTheApp->{mainframe}->config);
     
@@ -599,8 +599,6 @@ sub start_print {
         
         # send custom start G-code
         $self->sender->send($_, 1) for grep !/^;/, split /\n/, $self->config->start_gcode;
-        $self->sender->send(sprintf("G1 Z%.5f F%d",
-            $self->config2->{z_lift}, $self->config2->{z_lift_speed}*60), 1);
     }
     
     $self->is_printing(1);
@@ -621,6 +619,10 @@ sub start_print {
 sub stop_print {
     my ($self) = @_;
     
+    if ($self->sender) {
+        $self->sender->disconnect;
+    }
+    
     $self->is_printing(0);
     $self->timer->Stop;
     $self->_timer_cb(undef);
@@ -633,7 +635,6 @@ sub print_completed {
     # send custom end G-code
     if ($self->sender) {
         $self->sender->send($_, 1) for grep !/^;/, split /\n/, $self->config->end_gcode;
-        $self->sender->disconnect;
     }
     
     # call this before the on_print_completed callback otherwise buttons
@@ -675,7 +676,7 @@ sub project_next_layer {
     $self->on_project_layer->($self->_layer_num) if $self->on_project_layer;
     
     if ($self->sender) {
-        my $z = $self->current_layer_height;
+        my $z = $self->current_layer_height + $self->config->z_offset;
         my $F = $self->config2->{z_lift_speed} * 60;
         if ($self->config2->{z_lift} != 0) {
             $self->sender->send(sprintf("G1 Z%.5f F%d", $z + $self->config2->{z_lift}, $F), 1);
@@ -730,7 +731,7 @@ sub DESTROY {
 }
 
 package Slic3r::GUI::Projector::Screen;
-use Wx qw(:dialog :id :misc :sizer :colour :pen :brush :font);
+use Wx qw(:dialog :id :misc :sizer :colour :pen :brush :font wxBG_STYLE_CUSTOM);
 use Wx::Event qw(EVT_PAINT EVT_SIZE);
 use base qw(Wx::Dialog Class::Accessor);
 
@@ -746,6 +747,7 @@ sub new {
     
     $self->config($config);
     $self->config2($config2);
+    $self->SetBackgroundStyle(wxBG_STYLE_CUSTOM);
     EVT_SIZE($self, \&_resize);
     EVT_PAINT($self, \&_repaint);
     $self->_resize;
@@ -807,7 +809,7 @@ sub project_layers {
 sub _repaint {
     my ($self) = @_;
     
-    my $dc = Wx::PaintDC->new($self);
+    my $dc = Wx::AutoBufferedPaintDC->new($self);
     my ($cw, $ch) = $self->GetSizeWH;
     return if $cw == 0;  # when canvas is not rendered yet, size is 0,0
     

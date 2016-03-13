@@ -14,8 +14,9 @@ PerimeterGenerator::process()
     
     // external perimeters
     this->_ext_mm3_per_mm       = this->ext_perimeter_flow.mm3_per_mm();
-    coord_t ext_pwidth        = this->ext_perimeter_flow.scaled_width();
-    coord_t ext_pspacing      = scale_(this->ext_perimeter_flow.spacing(this->perimeter_flow));
+    coord_t ext_pwidth          = this->ext_perimeter_flow.scaled_width();
+    coord_t ext_pspacing        = this->ext_perimeter_flow.scaled_spacing();
+    coord_t ext_pspacing2       = this->ext_perimeter_flow.scaled_spacing(this->perimeter_flow);
     
     // overhang perimeters
     this->_mm3_per_mm_overhang  = this->overhang_flow.mm3_per_mm();
@@ -29,6 +30,11 @@ PerimeterGenerator::process()
     // with some tolerance in order to avoid triggering medial axis when
     // some squishing might work. Loops are still spaced by the entire
     // flow spacing; this only applies to collapsing parts.
+    // For ext_min_spacing we use the ext_pspacing calculated for two adjacent
+    // external loops (which is the correct way) instead of using ext_pspacing2
+    // which is the spacing between external and internal, which is not correct
+    // and would make the collapsing (thus the details resolution) dependent on 
+    // internal flow which is unrelated.
     coord_t min_spacing         = pspacing      * (1 - INSET_OVERLAP_TOLERANCE);
     coord_t ext_min_spacing     = ext_pspacing  * (1 - INSET_OVERLAP_TOLERANCE);
     
@@ -68,18 +74,18 @@ PerimeterGenerator::process()
                     if (this->config->thin_walls) {
                         offsets = offset2(
                             last,
-                            -(0.5*ext_pwidth + 0.5*ext_min_spacing - 1),
-                            +(0.5*ext_min_spacing - 1)
+                            -(ext_pwidth/2 + ext_min_spacing/2 - 1),
+                            +(ext_min_spacing/2 - 1)
                         );
                     } else {
-                        offsets = offset(last, -0.5*ext_pwidth);
+                        offsets = offset(last, -ext_pwidth/2);
                     }
                     
                     // look for thin walls
                     if (this->config->thin_walls) {
                         Polygons diffpp = diff(
                             last,
-                            offset(offsets, +0.5*ext_pwidth),
+                            offset(offsets, +ext_pwidth/2),
                             true  // medial axis requires non-overlapping geometry
                         );
                         
@@ -91,9 +97,9 @@ PerimeterGenerator::process()
                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                         Polylines pp;
                         for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex)
-                            ex->medial_axis(ext_pwidth + ext_pspacing, min_width, &pp);
+                            ex->medial_axis(ext_pwidth + ext_pspacing2, min_width, &pp);
                         
-                        double threshold = ext_pwidth * ext_pwidth;
+                        double threshold = ext_pwidth * 2;
                         for (Polylines::const_iterator p = pp.begin(); p != pp.end(); ++p) {
                             if (p->length() > threshold) {
                                 thin_walls.push_back(*p);
@@ -117,13 +123,13 @@ PerimeterGenerator::process()
                         */
                     }
                 } else {
-                    coord_t distance = (i == 1) ? ext_pspacing : pspacing;
+                    coord_t distance = (i == 1) ? ext_pspacing2 : pspacing;
                     
                     if (this->config->thin_walls) {
                         offsets = offset2(
                             last,
-                            -(distance + 0.5*min_spacing - 1),
-                            +(0.5*min_spacing - 1)
+                            -(distance + min_spacing/2 - 1),
+                            +(min_spacing/2 - 1)
                         );
                     } else {
                         offsets = offset(
@@ -258,13 +264,13 @@ PerimeterGenerator::process()
             // where $pwidth < thickness < 2*$pspacing, infill with width = 2*$pwidth
             // where 0.1*$pwidth < thickness < $pwidth, infill with width = 1*$pwidth
             std::vector<PerimeterGeneratorGapSize> gap_sizes;
-            gap_sizes.push_back(PerimeterGeneratorGapSize(pwidth, 2*pspacing, unscale(2*pwidth)));
-            gap_sizes.push_back(PerimeterGeneratorGapSize(0.1*pwidth, pwidth, unscale(1*pwidth)));
+            gap_sizes.push_back(PerimeterGeneratorGapSize(pwidth, 2*pspacing, 2*pwidth));
+            gap_sizes.push_back(PerimeterGeneratorGapSize(0.1*pwidth, pwidth, 1*pwidth));
             
             for (std::vector<PerimeterGeneratorGapSize>::const_iterator gap_size = gap_sizes.begin();
                 gap_size != gap_sizes.end(); ++gap_size) {
                 ExtrusionEntityCollection gap_fill = this->_fill_gaps(gap_size->min, 
-                    gap_size->max, gap_size->width, gaps);
+                    gap_size->max, unscale(gap_size->width), gaps);
                 this->gap_fill->append(gap_fill.entities);
                 
                 // Make sure we don't infill narrow parts that are already gap-filled
@@ -273,12 +279,14 @@ PerimeterGenerator::process()
                 // are not subtracted from fill surfaces (they might be too short gaps
                 // that medial axis skips but infill might join with other infill regions
                 // and use zigzag).
-                double dist = scale_(gap_size->width/2);
+                coord_t dist = gap_size->width/2;
                 Polygons filled;
                 for (ExtrusionEntitiesPtr::const_iterator it = gap_fill.entities.begin();
-                    it != gap_fill.entities.end(); ++it)
-                    offset((*it)->as_polyline(), &filled, dist);
-                
+                    it != gap_fill.entities.end(); ++it) {
+                    Polygons f;
+                    offset((*it)->as_polyline(), &f, dist);
+                    filled.insert(filled.end(), f.begin(), f.end());
+                }
                 last = diff(last, filled);
                 gaps = diff(gaps, filled);  // prevent more gap fill here
             }
@@ -291,7 +299,7 @@ PerimeterGenerator::process()
         coord_t inset = 0;
         if (loop_number == 0) {
             // one loop
-            inset += ext_pspacing/2;
+            inset += ext_pspacing2/2;
         } else if (loop_number > 0) {
             // two or more loops
             inset += pspacing/2;
