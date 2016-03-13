@@ -359,7 +359,7 @@ PrintConfigDef::build_def() {
     Options["first_layer_temperature"].tooltip = "Extruder temperature for first layer. If you want to control temperature manually during print, set this to zero to disable temperature control commands in the output file.";
     Options["first_layer_temperature"].cli = "first-layer-temperature=i@";
     Options["first_layer_temperature"].min = 0;
-    Options["first_layer_temperature"].max = 400;
+    Options["first_layer_temperature"].max = 500;
 
     Options["gap_fill_speed"].type = coFloat;
     Options["gap_fill_speed"].label = "Gap fill";
@@ -799,8 +799,8 @@ PrintConfigDef::build_def() {
     Options["standby_temperature_delta"].tooltip = "Temperature difference to be applied when an extruder is not active.";
     Options["standby_temperature_delta"].sidetext = "∆°C";
     Options["standby_temperature_delta"].cli = "standby-temperature-delta=i";
-    Options["standby_temperature_delta"].min = -400;
-    Options["standby_temperature_delta"].max = 400;
+    Options["standby_temperature_delta"].min = -500;
+    Options["standby_temperature_delta"].max = 500;
 
     Options["start_gcode"].type = coString;
     Options["start_gcode"].label = "Start G-code";
@@ -939,7 +939,7 @@ PrintConfigDef::build_def() {
     Options["temperature"].cli = "temperature=i@";
     Options["temperature"].full_label = "Temperature";
     Options["temperature"].max = 0;
-    Options["temperature"].max = 400;
+    Options["temperature"].max = 500;
 
     Options["thin_walls"].type = coBool;
     Options["thin_walls"].label = "Detect thin walls";
