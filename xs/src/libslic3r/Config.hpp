@@ -87,7 +87,7 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
     
     bool deserialize(std::string str) {
         std::istringstream iss(str);
-        return iss >> this->value;
+        return static_cast<bool>(iss >> this->value);
     };
 };
 
@@ -145,7 +145,7 @@ class ConfigOptionInt : public ConfigOptionSingle<int>
     
     bool deserialize(std::string str) {
         std::istringstream iss(str);
-        return iss >> this->value;
+        return static_cast<bool>(iss >> this->value);
     };
 };
 
@@ -268,7 +268,7 @@ class ConfigOptionPercent : public ConfigOptionFloat
     bool deserialize(std::string str) {
         // don't try to parse the trailing % since it's optional
         std::istringstream iss(str);
-        return iss >> this->value;
+        return static_cast<bool>(iss >> this->value);
     };
 };
 
@@ -307,7 +307,7 @@ class ConfigOptionFloatOrPercent : public ConfigOptionPercent
     bool deserialize(std::string str) {
         this->percent = str.find_first_of("%") != std::string::npos;
         std::istringstream iss(str);
-        return iss >> this->value;
+        return static_cast<bool>(iss >> this->value);
     };
 };
 
