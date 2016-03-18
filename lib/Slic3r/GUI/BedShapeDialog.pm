@@ -273,7 +273,6 @@ sub _repaint_canvas {
     my $bcenter = $bb->center;
     
     # calculate the scaling factor for fitting bed shape in canvas area
-    use XXX; ZZZ $bw if !$bw;
     my $sfactor = min($cw/$bw, $ch/$bh);
     my $shift = [
         $ccenter->x - $bcenter->x * $sfactor,
