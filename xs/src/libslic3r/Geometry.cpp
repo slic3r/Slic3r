@@ -289,6 +289,62 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb)
     return positions;
 }
 
+#ifdef SCALE_VORONOI
+
+class Transformation
+{
+    public:
+    bool maybenottrivial;
+    coord_t dx, dy;
+    double scale, invscale;
+    Transformation() : maybenottrivial(false) {}
+    Transformation(coord_t _dx, coord_t _dy, double s) : dx(_dx), dy(_dy), scale(s), invscale(1.0/s), maybenottrivial(true) {}
+    inline bool notTrivial() { return maybenottrivial && ((dx != 0) || (dy != 0) || (scale != 1.0)); }
+};
+
+void
+applyTransform(Transformation &t, Lines &lines)
+{
+    if (t.scale != 1.0) { //scale only if necessary
+        for (Lines::iterator line = lines.begin(); line != lines.end(); ++line) {
+            line->translate(t.dx, t.dy);
+            line->scale(t.scale);
+        }
+    } else {
+        for (Lines::iterator line = lines.begin(); line != lines.end(); ++line) {
+            line->translate(t.dx, t.dy);
+        }
+    }
+}
+
+void
+reverseTransform(Transformation &t, Polyline &polyline)
+{
+    if (t.invscale != 1.0) { //scale only if necessary
+        polyline.scale(t.invscale);
+    }
+    polyline.translate(-t.dx, -t.dy);
+}
+
+const coord_t maxpower = 31;
+const coord_t MAX32 = (((coord_t)1) << maxpower) - 1;
+const coord_t MIN32 = -MAX32;
+const double TRANSFORMATION_CEILING = MAX32 - (1 << 10); //do not feel confortable using up all the space in int32, so give it a little slack
+
+Transformation
+fitToInt32(BoundingBox &bb)
+{
+    if ((bb.min.x > MIN32) && (bb.max.x < MAX32) &&
+        (bb.min.y > MIN32) && (bb.max.y < MAX32))
+        return Transformation(); //32 bits are OK in this case
+    coord_t mx = (bb.max.x - bb.min.x) / 2;
+    coord_t my = (bb.max.y - bb.min.y) / 2;
+    double factor = TRANSFORMATION_CEILING / (double)std::max(mx, my);
+    return Transformation(-(bb.min.x + mx), -(bb.min.y + my), (factor<1.0) ? factor : 1.0 );
+}
+
+#endif
+
 Line
 MedialAxis::edge_to_line(const VD::edge_type &edge) const
 {
@@ -303,6 +359,14 @@ MedialAxis::edge_to_line(const VD::edge_type &edge) const
 void
 MedialAxis::build(Polylines* polylines)
 {
+#ifdef SCALE_VORONOI
+    Transformation t = fitToInt32(this->bb);
+    bool doFit = t.notTrivial();
+
+    if (doFit) {
+        applyTransform(t, this->lines);
+    }
+#endif
     /*
     // build bounding box (we use it for clipping infinite segments)
     // --> we have no infinite segments
@@ -417,9 +481,14 @@ MedialAxis::build(Polylines* polylines)
             this->process_edge_neighbors(*edge.twin(), &pp);
             polyline.points.insert(polyline.points.begin(), pp.rbegin(), pp.rend());
         }
-        
+
+#ifdef SCALE_VORONOI
+        if (doFit) reverseTransform(t, polyline);
+#endif
+
         // append polyline to result
         polylines->push_back(polyline);
+        
     }
 }
 

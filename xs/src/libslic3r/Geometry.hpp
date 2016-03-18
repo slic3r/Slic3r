@@ -39,10 +39,20 @@ class ArrangeItemIndex {
 double linint(double value, double oldmin, double oldmax, double newmin, double newmax);
 Pointfs arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb);
 
+//comment this macro to deactivate the code to adapt the voronoi code when coordinates do not fit in 32 bits.
+//#define SCALE_VORONOI
+
+#ifndef __LP64__
+#undef SCALE_VORONOI
+#endif
+
 class MedialAxis {
     public:
     Points points;
     Lines lines;
+#ifdef SCALE_VORONOI
+    BoundingBox bb;
+#endif
     double max_width;
     double min_width;
     MedialAxis(double _max_width, double _min_width) : max_width(_max_width), min_width(_min_width) {};

@@ -176,6 +176,10 @@ ExPolygon::medial_axis(double max_width, double min_width, Polylines* polylines)
     // init helper object
     Slic3r::Geometry::MedialAxis ma(max_width, min_width);
     
+#ifdef SCALE_VORONOI
+    ma.bb = BoundingBox((Points)*this);
+#endif
+
     // populate list of segments for the Voronoi diagram
     ma.lines = this->contour.lines();
     for (Polygons::const_iterator hole = this->holes.begin(); hole != this->holes.end(); ++hole) {
