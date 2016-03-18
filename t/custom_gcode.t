@@ -1,4 +1,4 @@
-use Test::More tests => 15;
+use Test::More tests => 16;
 use strict;
 use warnings;
 
@@ -58,13 +58,10 @@ use Slic3r::Test;
             my ($self, $cmd, $args, $info) = @_;
             
             if ($last_move_was_z_change && $cmd ne $config->layer_gcode) {
-                fail 'custom layer G-code was not applied after Z change';
-            }
-            if (!$last_move_was_z_change && $cmd eq $config->layer_gcode) {
-                fail 'custom layer G-code was not applied after Z change';
+                fail 'custom post-object G-code was not applied after final print move for object';
             }
             
-            $last_move_was_z_change = (defined $info->{dist_Z} && $info->{dist_Z} > 0);
+            $last_move_was_extrusion = (defined $info->{dist_E} && $info->{dist_E} > 0);
         });
         
         1;
