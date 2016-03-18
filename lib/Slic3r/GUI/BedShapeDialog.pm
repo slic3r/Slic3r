@@ -41,6 +41,7 @@ sub GetValue {
 package Slic3r::GUI::BedShapePanel;
 
 use List::Util qw(min max sum first);
+use Scalar::Util qw(looks_like_number);
 use Slic3r::Geometry qw(PI X Y scale unscale scaled_epsilon deg2rad);
 use Slic3r::Geometry::Clipper qw(intersection_pl);
 use Wx qw(:font :id :misc :sizer :choicebook :filedialog :pen :brush wxTAB_TRAVERSAL);
@@ -193,12 +194,13 @@ sub _update_shape {
         my $rect_size = $self->{optgroups}[SHAPE_RECTANGULAR]->get_value('rect_size');
         my $rect_origin = $self->{optgroups}[SHAPE_RECTANGULAR]->get_value('rect_origin');
         my ($x, $y) = @$rect_size;
-        return if !$x || !$y;  # empty strings
+        return if !looks_like_number($x) || !looks_like_number($y);  # empty strings or '-' or other things
+        return if $x < 0 || $y < 0;
         my ($x0, $y0) = (0,0);
         my ($x1, $y1) = ($x,$y);
         {
             my ($dx, $dy) = @$rect_origin;
-            return if $dx eq '' || $dy eq '';  # empty strings
+            return if !looks_like_number($dx) || !looks_like_number($dy);  # empty strings or '-' or other things
             $x0 -= $dx;
             $x1 -= $dx;
             $y0 -= $dy;
@@ -271,6 +273,7 @@ sub _repaint_canvas {
     my $bcenter = $bb->center;
     
     # calculate the scaling factor for fitting bed shape in canvas area
+    use XXX; ZZZ $bw if !$bw;
     my $sfactor = min($cw/$bw, $ch/$bh);
     my $shift = [
         $ccenter->x - $bcenter->x * $sfactor,
