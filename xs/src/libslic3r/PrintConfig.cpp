@@ -561,6 +561,15 @@ PrintConfigDef::PrintConfigDef()
     def->height = 50;
     def->default_value = new ConfigOptionString("");
 
+    def = this->add("after_object_gcode", coString);
+    def->label = "After layer change G-code";
+    def->tooltip = "This custom code is inserted after every object during sequential printing ONLY. It is placed immediately after the object's gcode so the user is expected to travel away from the object. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z].";
+    def->cli = "after-object-gcode|object-gcode=s";
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 50;
+    def->default_value = new ConfigOptionString("");
+
     def = this->add("layer_height", coFloat);
     def->label = "Layer height";
     def->category = "Layers and Perimeters";

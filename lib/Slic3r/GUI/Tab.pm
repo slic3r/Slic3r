@@ -993,7 +993,7 @@ sub build {
         octoprint_host octoprint_apikey
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
-        start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode
+        start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode after_object_gcode
         nozzle_diameter extruder_offset
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
         retract_length_toolchange retract_restart_extra_toolchange
@@ -1235,6 +1235,15 @@ sub build {
             $option->height(150);
             $optgroup->append_single_option_line($option);
         }
+        {
+            my $optgroup = $page->new_optgroup('Post-object Gcode (sequential printing)',
+                label_width => 0,
+            );
+            my $option = $optgroup->get_option('after_object_gcode');
+            $option->full_width(1);
+            $option->height(150);
+            $optgroup->append_single_option_line($option);
+	}
     }
     
     $self->{extruder_pages} = [];
