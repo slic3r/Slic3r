@@ -264,7 +264,7 @@ REGISTER_CLASS(ModelMaterial, "Model::Material");
 
 
 ModelObject::ModelObject(Model *model)
-    : model(model)
+    : model(model), _bounding_box_valid(false)
 {}
 
 ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volumes)
