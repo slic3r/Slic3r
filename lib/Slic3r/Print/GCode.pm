@@ -269,9 +269,9 @@ sub export {
                 $self->flush_filters;
                 $finished_objects++;
                 $self->_second_layer_things_done(0);
+                # print after-object gcode
+                printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->after_object_gcode);
             }
-            # print after-object gcode
-            printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->after_object_gcode);
         }
     } else {
         # order objects using a nearest neighbor search
