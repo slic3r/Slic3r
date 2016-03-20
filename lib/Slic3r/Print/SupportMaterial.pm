@@ -315,7 +315,7 @@ sub object_top {
                 # grow top surfaces so that interface and support generation are generated
                 # with some spacing from object - it looks we don't need the actual
                 # top shapes so this can be done here
-                $top{ $layer->print_z } = offset($touching, $self->flow->scaled_width);
+                $top{ $layer->print_z } = offset($touching, $self->flow->scaled_width + $self->object_config->support_material_xy_spacing);
             }
             
             # remove the areas that touched from the projection that will continue on 
@@ -525,10 +525,11 @@ sub clip_with_object {
         # $layer->slices contains the full shape of layer, thus including
         # perimeter's width. $support contains the full shape of support
         # material, thus including the width of its foremost extrusion.
-        # We leave a gap equal to a full extrusion width.
+        # We leave a gap equal to a full extrusion width + an offset
+        # if the user wants to play around with this setting.
         $support->{$i} = diff(
             $support->{$i},
-            offset([ map @$_, map @{$_->slices}, @layers ], +$self->flow->scaled_width),
+            offset([ map @$_, map @{$_->slices}, @layers ], +$self->object_config->support_material_xy_spacing),
         );
     }
 }
