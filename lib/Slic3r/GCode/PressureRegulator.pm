@@ -62,7 +62,7 @@ sub process {
             }
         } elsif (($info->{retracting} || $cmd eq 'G10') && $self->_advance != 0) {
             # We need to bring pressure to zero when retracting.
-            $new_gcode .= $self->_discharge($args->{F});
+            $new_gcode .= $self->_discharge($args->{F}, $args->{F} // $reader->F);
         }
         
         $new_gcode .= "$info->{raw}\n";
@@ -76,14 +76,14 @@ sub process {
 }
 
 sub _discharge {
-    my ($self, $F) = @_;
+    my ($self, $F, $oldSpeed) = @_;
     
     my $new_E = ($self->config->use_relative_e_distances ? 0 : $self->reader->E) - $self->_advance;
     my $gcode = sprintf "G1 %s%.5f F%.3f ; pressure discharge\n",
         $self->_extrusion_axis, $new_E, $F // $self->_unretract_speed;
     $gcode .= sprintf "G92 %s%.5f ; restore E\n", $self->_extrusion_axis, $self->reader->E
         if !$self->config->use_relative_e_distances;
-	$gcode .= sprintf "G1 F%.3f ; restore F\n", $args->{F} // $reader->F;
+	$gcode .= sprintf "G1 F%.3f ; restore F\n", $oldSpeed;
     $self->_advance(0);
     
     return $gcode;
