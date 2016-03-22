@@ -36,7 +36,7 @@ sub process {
         } elsif ($info->{extruding} && $info->{dist_XY} > 0) {
             # This is a print move.
             my $F = $args->{F} // $reader->F;
-            if ($F != $self->_last_print_F || ($F == $self->_last_print_F && $self->_advance = 0)) {
+            if ($F != $self->_last_print_F || ($F == $self->_last_print_F && $self->_advance == 0)) {
                 # We are setting a (potentially) new speed or a discharge event happend since the last speed change, so we calculate the new advance amount.
             
                 # First calculate relative flow rate (mm of filament over mm of travel)
