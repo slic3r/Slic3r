@@ -66,7 +66,6 @@ sub process {
     
     # solid infill
     my $ispacing            = $self->solid_infill_flow->scaled_spacing;
-    my $gap_area_threshold  = $pwidth ** 2;
     
     # Calculate the minimum required spacing between two adjacent traces.
     # This should be equal to the nominal flow spacing but we experiment
@@ -176,7 +175,7 @@ sub process {
                             offset(\@last, -0.5*$distance),
                             offset(\@offsets, +0.5*$distance + 10),  # safety offset
                         );
-                        push @gaps, map $_->clone, map @$_, grep abs($_->area) >= $gap_area_threshold, @$diff;
+                        push @gaps, map $_->clone, map @$_, @$diff;
                     }
                 }
             
@@ -484,6 +483,7 @@ sub _fill_gaps {
     
     my @entities = ();
     foreach my $polyline (@polylines) {
+        next if $polyline->length < scale($w*2);
         #if ($polylines[$i]->isa('Slic3r::Polygon')) {
         #    my $loop = Slic3r::ExtrusionLoop->new;
         #    $loop->append(Slic3r::ExtrusionPath->new(polyline => $polylines[$i]->split_at_first_point, %path_args));
