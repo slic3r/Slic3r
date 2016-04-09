@@ -823,7 +823,7 @@ sub _update {
         for qw(support_material_threshold support_material_pattern
             support_material_spacing support_material_angle
             support_material_interface_layers dont_support_bridges
-            support_material_extrusion_width support_material_contact_distance);
+            support_material_extrusion_width support_material_contact_distance support_material_xy_spacing);
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
             support_material_interface_speed);
