@@ -31,7 +31,8 @@ class ExPolygon
     void simplify_p(double tolerance, Polygons* polygons) const;
     Polygons simplify_p(double tolerance) const;
     ExPolygons simplify(double tolerance) const;
-    void simplify(double tolerance, ExPolygons &expolygons) const;
+    void simplify(double tolerance, ExPolygons* expolygons) const;
+    void medial_axis(double max_width, double min_width, ThickPolylines* polylines) const;
     void medial_axis(double max_width, double min_width, Polylines* polylines) const;
     void get_trapezoids(Polygons* polygons) const;
     void get_trapezoids(Polygons* polygons, double angle) const;
@@ -41,6 +42,7 @@ class ExPolygon
     void triangulate_pp(Polygons* polygons) const;
     void triangulate_p2t(Polygons* polygons) const;
     Lines lines() const;
+    std::string dump_perl() const;
 };
 
 }

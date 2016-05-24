@@ -273,11 +273,13 @@ GCodeWriter::toolchange(unsigned int extruder_id)
 }
 
 std::string
-GCodeWriter::set_speed(double F, const std::string &comment) const
+GCodeWriter::set_speed(double F, const std::string &comment,
+                       const std::string &cooling_marker) const
 {
     std::ostringstream gcode;
     gcode << "G1 F" << F;
     COMMENT(comment);
+    gcode << cooling_marker;
     gcode << "\n";
     return gcode.str();
 }
@@ -495,7 +497,14 @@ GCodeWriter::unretract()
 std::string
 GCodeWriter::lift()
 {
-    double target_lift = this->config.retract_lift.get_at(0);
+    // check whether the above/below conditions are met
+    double target_lift = 0;
+    {
+        double above = this->config.retract_lift_above.get_at(0);
+        double below = this->config.retract_lift_below.get_at(0);
+        if (this->_pos.z >= above && (below == 0 || this->_pos.z <= below))
+            target_lift = this->config.retract_lift.get_at(0);
+    }
     if (this->_lifted == 0 && target_lift > 0) {
         this->_lifted = target_lift;
         return this->_travel_to_z(this->_pos.z + target_lift, "lift Z");

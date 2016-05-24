@@ -19,11 +19,13 @@ sub new {
     my ($class, %params) = @_;
     
     my $self = $class->SUPER::new(undef, -1, 'Slic3r', wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE);
-    $self->SetIcon(Wx::Icon->new("$Slic3r::var/Slic3r_128px.png", wxBITMAP_TYPE_PNG) );
+    $self->SetIcon(Wx::Icon->new($Slic3r::var->("Slic3r_128px.png"), wxBITMAP_TYPE_PNG) );
     
     # store input params
     $self->{mode} = $params{mode};
     $self->{mode} = 'expert' if $self->{mode} !~ /^(?:simple|expert)$/;
+    # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
+    $self->{no_controller} = $params{no_controller};
     $self->{no_plater} = $params{no_plater};
     $self->{loaded} = 0;
     
@@ -96,7 +98,9 @@ sub _init_tabpanel {
     
     if (!$self->{no_plater}) {
         $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
-        $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
+        if (!$self->{no_controller}) {
+            $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
+        }
     }
     $self->{options_tabs} = {};
     
@@ -109,7 +113,9 @@ sub _init_tabpanel {
     my $class_prefix = $self->{mode} eq 'simple' ? "Slic3r::GUI::SimpleTab::" : "Slic3r::GUI::Tab::";
     for my $tab_name (qw(print filament printer)) {
         my $tab;
-        $tab = $self->{options_tabs}{$tab_name} = ($class_prefix . ucfirst $tab_name)->new($panel);
+        $tab = $self->{options_tabs}{$tab_name} = ($class_prefix . ucfirst $tab_name)->new(
+            $panel, 
+            no_controller => $self->{no_controller});
         $tab->on_value_change(sub {
             my ($opt_key, $value) = @_;
             
@@ -136,7 +142,9 @@ sub _init_tabpanel {
             if ($self->{plater}) {
                 $self->{plater}->update_presets($tab_name, @_);
                 $self->{plater}->on_config_change($tab->config);
-                $self->{controller}->update_presets($tab_name, @_);
+                if ($self->{controller}) {
+                    $self->{controller}->update_presets($tab_name, @_);
+                }
             }
         });
         $tab->load_presets;
@@ -246,9 +254,11 @@ sub _init_menubar {
             $self->_append_menu_item($windowMenu, "Select &Plater Tab\tCtrl+1", 'Show the plater', sub {
                 $self->select_tab(0);
             }, undef, 'application_view_tile.png');
-            $self->_append_menu_item($windowMenu, "Select &Controller Tab\tCtrl+T", 'Show the printer controller', sub {
-                $self->select_tab(1);
-            }, undef, 'printer_empty.png');
+            if (!$self->{no_controller}) {
+                $self->_append_menu_item($windowMenu, "Select &Controller Tab\tCtrl+T", 'Show the printer controller', sub {
+                    $self->select_tab(1);
+                }, undef, 'printer_empty.png');
+            }
             $windowMenu->AppendSeparator();
             $tab_offset += 2;
         }
@@ -619,6 +629,9 @@ sub load_configbundle {
             $tab->load_presets;
         }
     }
+    
+    return if !$imported;
+    
     my $message = sprintf "%d presets successfully imported.", $imported;
     if ($self->{mode} eq 'simple' && $Slic3r::GUI::Settings->{_}{mode} eq 'expert') {
         Slic3r::GUI::show_info($self, "$message You need to restart Slic3r to make the changes effective.");
@@ -780,7 +793,7 @@ sub _set_menu_item_icon {
     
     # SetBitmap was not available on OS X before Wx 0.9927
     if ($icon && $menuItem->can('SetBitmap')) {
-        $menuItem->SetBitmap(Wx::Bitmap->new("$Slic3r::var/$icon", wxBITMAP_TYPE_PNG));
+        $menuItem->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG));
     }
 }
 

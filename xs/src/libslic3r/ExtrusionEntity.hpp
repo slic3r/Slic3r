@@ -31,6 +31,7 @@ enum ExtrusionRole {
 enum ExtrusionLoopRole {
     elrDefault,
     elrContourInternalPerimeter,
+    elrSkirt,
 };
 
 class ExtrusionEntity
@@ -53,6 +54,7 @@ class ExtrusionEntity
     virtual Polygons grow() const = 0;
     virtual double min_mm3_per_mm() const = 0;
     virtual Polyline as_polyline() const = 0;
+    virtual double length() const { return 0; };
 };
 
 typedef std::vector<ExtrusionEntity*> ExtrusionEntitiesPtr;
@@ -75,7 +77,7 @@ class ExtrusionPath : public ExtrusionEntity
     void subtract_expolygons(const ExPolygonCollection &collection, ExtrusionEntityCollection* retval) const;
     void clip_end(double distance);
     void simplify(double tolerance);
-    double length() const;
+    virtual double length() const;
     bool is_perimeter() const;
     bool is_infill() const;
     bool is_solid_infill() const;
@@ -103,6 +105,10 @@ class ExtrusionLoop : public ExtrusionEntity
     ExtrusionLoop(ExtrusionLoopRole role = elrDefault) : role(role) {};
     ExtrusionLoop(const ExtrusionPaths &paths, ExtrusionLoopRole role = elrDefault)
         : paths(paths), role(role) {};
+    ExtrusionLoop(const ExtrusionPath &path, ExtrusionLoopRole role = elrDefault)
+        : role(role) {
+        this->paths.push_back(path);
+    };
     bool is_loop() const {
         return true;
     };
@@ -116,7 +122,7 @@ class ExtrusionLoop : public ExtrusionEntity
     Point first_point() const;
     Point last_point() const;
     Polygon polygon() const;
-    double length() const;
+    virtual double length() const;
     bool split_at_vertex(const Point &point);
     void split_at(const Point &point);
     void clip_end(double distance, ExtrusionPaths* paths) const;

@@ -36,9 +36,9 @@ sub new {
         $self->{presets_choice}->SetFont($Slic3r::GUI::small_font);
         
         # buttons
-        $self->{btn_save_preset} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new("$Slic3r::var/disk.png", wxBITMAP_TYPE_PNG), 
+        $self->{btn_save_preset} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("disk.png"), wxBITMAP_TYPE_PNG), 
             wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
-        $self->{btn_delete_preset} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new("$Slic3r::var/delete.png", wxBITMAP_TYPE_PNG), 
+        $self->{btn_delete_preset} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG), 
             wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
         $self->{btn_save_preset}->SetToolTipString("Save current " . lc($self->title));
         $self->{btn_delete_preset}->SetToolTipString("Delete this preset");
@@ -107,7 +107,7 @@ sub new {
     });
     
     $self->{config} = Slic3r::Config->new;
-    $self->build;
+    $self->build(%params);
     $self->update_tree;
     $self->_update;
     if ($self->hidden_options) {
@@ -285,7 +285,7 @@ sub add_options_page {
     my ($title, $icon, %params) = @_;
     
     if ($icon) {
-        my $bitmap = Wx::Bitmap->new("$Slic3r::var/$icon", wxBITMAP_TYPE_PNG);
+        my $bitmap = Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG);
         $self->{icons}->Add($bitmap);
         $self->{iconcount}++;
     }
@@ -573,7 +573,7 @@ sub build {
     }
     
     {
-        my $page = $self->add_options_page('Infill', 'shading.png');
+        my $page = $self->add_options_page('Infill', 'infill.png');
         {
             my $optgroup = $page->new_optgroup('Infill');
             $optgroup->append_single_option_line('fill_density');
@@ -866,8 +866,8 @@ sub _update {
     my $have_support_material = $config->support_material || $config->raft_layers > 0;
     my $have_support_interface = $config->support_material_interface_layers > 0;
     $self->get_field($_)->toggle($have_support_material)
-        for qw(support_material_threshold support_material_enforce_layers
-            support_material_pattern support_material_spacing support_material_angle
+        for qw(support_material_threshold support_material_pattern
+            support_material_spacing support_material_angle
             support_material_interface_layers dont_support_bridges
             support_material_extrusion_width support_material_contact_distance);
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
@@ -1033,6 +1033,7 @@ sub title { 'Printer Settings' }
 
 sub build {
     my $self = shift;
+    my (%params) = @_;
     
     $self->init_config_options(qw(
         bed_shape z_offset
@@ -1055,7 +1056,7 @@ sub build {
             wxBU_LEFT | wxBU_EXACTFIT);
         $btn->SetFont($Slic3r::GUI::small_font);
         if ($Slic3r::GUI::have_button_icons) {
-            $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/cog.png", wxBITMAP_TYPE_PNG));
+            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG));
         }
         
         my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
@@ -1112,6 +1113,7 @@ sub build {
                 }
             });
         }
+        if (!$params{no_controller})
         {
             my $optgroup = $page->new_optgroup('USB/Serial connection');
             my $line = Slic3r::GUI::OptionsGroup::Line->new(
@@ -1121,7 +1123,7 @@ sub build {
             $serial_port->side_widget(sub {
                 my ($parent) = @_;
                 
-                my $btn = Wx::BitmapButton->new($parent, -1, Wx::Bitmap->new("$Slic3r::var/arrow_rotate_clockwise.png", wxBITMAP_TYPE_PNG),
+                my $btn = Wx::BitmapButton->new($parent, -1, Wx::Bitmap->new($Slic3r::var->("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG),
                     wxDefaultPosition, wxDefaultSize, &Wx::wxBORDER_NONE);
                 $btn->SetToolTipString("Rescan serial ports")
                     if $btn->can('SetToolTipString');
@@ -1136,7 +1138,7 @@ sub build {
                     "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
                 $btn->SetFont($Slic3r::GUI::small_font);
                 if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/wrench.png", wxBITMAP_TYPE_PNG));
+                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("wrench.png"), wxBITMAP_TYPE_PNG));
                 }
                 
                 EVT_BUTTON($self, $btn, sub {
@@ -1168,7 +1170,7 @@ sub build {
                 my $btn = Wx::Button->new($parent, -1, "Browse…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
                 $btn->SetFont($Slic3r::GUI::small_font);
                 if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/zoom.png", wxBITMAP_TYPE_PNG));
+                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("zoom.png"), wxBITMAP_TYPE_PNG));
                 }
                 
                 if (!eval "use Net::Bonjour; 1") {
@@ -1195,7 +1197,7 @@ sub build {
                     "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
                 $btn->SetFont($Slic3r::GUI::small_font);
                 if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/wrench.png", wxBITMAP_TYPE_PNG));
+                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("wrench.png"), wxBITMAP_TYPE_PNG));
                 }
                 
                 EVT_BUTTON($self, $btn, sub {
@@ -1287,7 +1289,7 @@ sub build {
     
     $self->{extruder_pages} = [];
     $self->_build_extruder_pages;
-    $self->_update_serial_ports;
+    $self->_update_serial_ports if (!$params{no_controller});
 }
 
 sub _update_serial_ports {
@@ -1305,7 +1307,7 @@ sub _extruders_count_changed {
     $self->_update;
 }
 
-sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_speed retract_restart_extra retract_before_travel wipe
+sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
     retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
 
 sub _build_extruder_pages {
@@ -1341,7 +1343,19 @@ sub _build_extruder_pages {
         {
             my $optgroup = $page->new_optgroup('Retraction');
             $optgroup->append_single_option_line($_, $extruder_idx)
-                for qw(retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe);
+                for qw(retract_length retract_lift);
+            
+            {
+                my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                    label => 'Only lift Z',
+                );
+                $line->append_option($optgroup->get_option('retract_lift_above', $extruder_idx));
+                $line->append_option($optgroup->get_option('retract_lift_below', $extruder_idx));
+                $optgroup->append_line($line);
+            }
+            
+            $optgroup->append_single_option_line($_, $extruder_idx)
+                for qw(retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe);
         }
         {
             my $optgroup = $page->new_optgroup('Retraction when tool is disabled (advanced settings for multi-extruder setups)');
@@ -1377,11 +1391,14 @@ sub _update {
     
     my $config = $self->{config};
     
-    $self->get_field('serial_speed')->toggle($config->get('serial_port'));
-    if ($config->get('serial_speed') && $config->get('serial_port')) {
-        $self->{serial_test_btn}->Enable;
-    } else {
-        $self->{serial_test_btn}->Disable;
+    my $serial_speed = $self->get_field('serial_speed');
+    if ($serial_speed) {
+        $self->get_field('serial_speed')->toggle($config->get('serial_port'));
+        if ($config->get('serial_speed') && $config->get('serial_port')) {
+            $self->{serial_test_btn}->Enable;
+        } else {
+            $self->{serial_test_btn}->Disable;
+        }
     }
     if ($config->get('octoprint_host') && eval "use LWP::UserAgent; 1") {
         $self->{octoprint_host_test_btn}->Enable;
@@ -1407,6 +1424,10 @@ sub _update {
         my $retraction = ($have_retract_length || $config->use_firmware_retraction);
         $self->get_field($_, $i)->toggle($retraction)
             for qw(retract_lift retract_layer_change);
+        
+        # retract lift above/below only applies if using retract lift
+        $self->get_field($_, $i)->toggle($retraction && $config->get_at('retract_lift', $i) > 0)
+            for qw(retract_lift_above retract_lift_below);
         
         # some options only apply when not using firmware retraction
         $self->get_field($_, $i)->toggle($retraction && !$config->use_firmware_retraction)

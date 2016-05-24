@@ -32,6 +32,7 @@ my %cli_options = ();
         'load=s@'               => \$opt{load},
         'autosave=s'            => \$opt{autosave},
         'ignore-nonexistent-config' => \$opt{ignore_nonexistent_config},
+        'no-controller'         => \$opt{no_controller},
         'no-plater'             => \$opt{no_plater},
         'gui-mode=s'            => \$opt{gui_mode},
         'datadir=s'             => \$opt{datadir},
@@ -54,6 +55,7 @@ my %cli_options = ();
         $options{ "$opt_key|$cli" } = \$cli_options{$opt_key};
     }
     
+    @ARGV = grep !/^-psn_\d/, @ARGV if $^O eq 'darwin';
     GetOptions(%options) or usage(1);
 }
 
@@ -98,10 +100,11 @@ my $gui;
 if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
     {
         no warnings 'once';
-        $Slic3r::GUI::datadir   = Slic3r::decode_path($opt{datadir} // '');
-        $Slic3r::GUI::no_plater = $opt{no_plater};
-        $Slic3r::GUI::mode      = $opt{gui_mode};
-        $Slic3r::GUI::autosave  = $opt{autosave};
+        $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
+        $Slic3r::GUI::no_controller = $opt{no_controller};
+        $Slic3r::GUI::no_plater     = $opt{no_plater};
+        $Slic3r::GUI::mode          = $opt{gui_mode};
+        $Slic3r::GUI::autosave      = $opt{autosave};
     }
     $gui = Slic3r::GUI->new;
     setlocale(LC_NUMERIC, 'C');
@@ -439,6 +442,8 @@ $j
     --retract-before-travel
                         Only retract before travel moves of this length in mm (default: $config->{retract_before_travel}[0])
     --retract-lift      Lift Z by the given distance in mm when retracting (default: $config->{retract_lift}[0])
+    --retract-lift-above Only lift Z when above the specified height (default: $config->{retract_lift_above}[0])
+    --retract-lift-below Only lift Z when below the specified height (default: $config->{retract_lift_below}[0])
     --retract-layer-change
                         Enforce a retraction before each Z move (default: no)
     --wipe              Wipe the nozzle while doing a retraction (default: no)
