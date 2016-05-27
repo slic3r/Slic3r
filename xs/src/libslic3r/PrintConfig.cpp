@@ -1058,8 +1058,8 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->enum_values.push_back("0");
     def->enum_values.push_back("0.2");
-    def->enum_labels.push_back("0 (soluble)");
-    def->enum_labels.push_back("0.2 (detachable)");
+    def->enum_labels.push_back("0");
+    def->enum_labels.push_back("0.2");
     def->default_value = new ConfigOptionFloat(0.2);
 
     def = this->add("support_material_enforce_layers", coInt);
