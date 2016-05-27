@@ -564,9 +564,7 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     if (path.is_bridge() && this->enable_cooling_markers)
         gcode += ";_BRIDGE_FAN_START\n";
 
-    if (F > 0) 
-      // don't reset speed if nonpositive
-      gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? ";_EXTRUDE_SET_SPEED" : "");
+    gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? ";_EXTRUDE_SET_SPEED" : "");
     double path_length = 0;
     {
         std::string comment = this->config.gcode_comments ? description : "";
