@@ -558,12 +558,15 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
             this->config.max_volumetric_speed.value / path.mm3_per_mm
         );
     }
-    double F = speed * 60;  // convert mm/sec to mm/min
+    double F = speed * 60.0;  // convert mm/sec to mm/min
     
     // extrude arc or line
     if (path.is_bridge() && this->enable_cooling_markers)
         gcode += ";_BRIDGE_FAN_START\n";
-    gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? ";_EXTRUDE_SET_SPEED" : "");
+
+    if (F <= 0) 
+      // don't reset speed if nonpositive
+      gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? ";_EXTRUDE_SET_SPEED" : "");
     double path_length = 0;
     {
         std::string comment = this->config.gcode_comments ? description : "";
