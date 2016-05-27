@@ -276,7 +276,10 @@ std::string
 GCodeWriter::set_speed(double F, const std::string &comment)
 {
     std::ostringstream gcode;
-    gcode << "G1 F" << F;
+    if (F < 0.0)
+      gcode << "; Skipped writing G1 F" << F << " because it was <= 0";
+    else 
+      gcode << "G1 F" << F;
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
