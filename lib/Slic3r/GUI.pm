@@ -191,14 +191,6 @@ sub OnInit {
     return 1;
 }
 
-sub about {
-    my ($self) = @_;
-    
-    my $about = Slic3r::GUI::AboutDialog->new;
-    $about->ShowModal;
-    $about->Destroy;
-}
-
 # static method accepting a wxWindow object as first parameter
 sub catch_error {
     my ($self, $cb, $message_dialog) = @_;

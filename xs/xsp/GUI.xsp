@@ -9,6 +9,9 @@
 
 %package{Slic3r::GUI};
 
+void about()
+    %code{% Slic3r::GUI::about(); %};
+
 void set_var_path(std::string path)
     %code{% Slic3r::GUI::VAR_PATH = path; %};
 

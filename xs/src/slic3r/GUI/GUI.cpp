@@ -1,5 +1,6 @@
 #ifdef SLIC3R_GUI
 #include "GUI.hpp"
+#include "AboutDialog.hpp"
 
 #if __APPLE__
 #import <IOKit/pwr_mgt/IOPMLib.h>
@@ -12,6 +13,14 @@
 namespace Slic3r { namespace GUI {
 
 std::string VAR_PATH;
+
+void
+about()
+{
+    AboutDialog dlg;
+    dlg.ShowModal();
+    dlg.Destroy();
+}
 
 #if __APPLE__
 IOPMAssertionID assertionID;

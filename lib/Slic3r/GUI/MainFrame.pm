@@ -282,7 +282,7 @@ sub _init_menubar {
         });
         $helpMenu->AppendSeparator();
         $self->_append_menu_item($helpMenu, "&About Slic3r", 'Show about dialog', sub {
-            wxTheApp->about;
+            Slic3r::GUI::about();
         });
     }
     
