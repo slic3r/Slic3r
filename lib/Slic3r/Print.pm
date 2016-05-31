@@ -257,10 +257,23 @@ sub make_skirt {
     # skirt may be printed on several layers, having distinct layer heights,
     # but loops must be aligned so can't vary width/spacing
     # TODO: use each extruder's own flow
+
+    my $role = @_;
+    $role //= FLOW_ROLE_SUPPORT_MATERIAL;
+    my $extruder = ($role == FLOW_ROLE_SUPPORT_MATERIAL)
+        ? $self->config->support_material_extruder
+        : $self->config->support_material_interface_extruder;
+
     my $first_layer_height = $self->skirt_first_layer_height;
     my $flow = $self->skirt_flow;
     my $spacing = $flow->spacing;
+    my $width = $flow->width;
     my $mm3_per_mm = $flow->mm3_per_mm;
+    if ($self->config->skirt_width != 0) {
+      $width = $self->config->skirt_width;
+      $spacing = $flow->spacing_width($width);
+      $mm3_per_mm = $flow->mm3_per_mm_width($width);
+    }
     
     my @extruders_e_per_mm = ();
     my $extruder_idx = 0;
@@ -279,7 +292,7 @@ sub make_skirt {
                 polyline        => Slic3r::Polygon->new(@$loop)->split_at_first_point,
                 role            => EXTR_ROLE_SKIRT,
                 mm3_per_mm      => $mm3_per_mm,         # this will be overridden at G-code export time
-                width           => $flow->width,
+                width           => $width,
                 height          => $first_layer_height, # this will be overridden at G-code export time
             ),
         );

@@ -622,6 +622,14 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
 
+    def = this->add("skirt_width", coFloat);
+    def->label = "Skirt extrusion width";
+    def->tooltip = "Specify the width of the skirt placement in mm. Useful for priming moves. Use '0' to use the default extrusion width for the first layer.";
+    def->sidetext = "mm";
+    def->cli = "skirt-width=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
+
     def = this->add("notes", coString);
     def->label = "Configuration notes";
     def->tooltip = "You can put here your personal notes. This text will be added to the G-code header comments.";

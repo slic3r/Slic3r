@@ -29,8 +29,10 @@ class Flow
     Flow(float _w, float _h, float _nd, bool _bridge = false)
         : width(_w), height(_h), nozzle_diameter(_nd), bridge(_bridge) {};
     float spacing() const;
+    float spacing(const float width) const;
     float spacing(const Flow &other) const;
     double mm3_per_mm() const;
+    double mm3_per_mm(float width) const;
     coord_t scaled_width() const {
         return scale_(this->width);
     };

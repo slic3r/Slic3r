@@ -355,6 +355,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionFloat               resolution;
     ConfigOptionFloats              retract_before_travel;
     ConfigOptionBools               retract_layer_change;
+    ConfigOptionFloat               skirt_width;
     ConfigOptionFloat               skirt_distance;
     ConfigOptionInt                 skirt_height;
     ConfigOptionInt                 skirts;
@@ -411,6 +412,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(resolution);
         OPT_PTR(retract_before_travel);
         OPT_PTR(retract_layer_change);
+        OPT_PTR(skirt_width);
         OPT_PTR(skirt_distance);
         OPT_PTR(skirt_height);
         OPT_PTR(skirts);

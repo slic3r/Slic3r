@@ -167,6 +167,7 @@ Print::invalidate_state_by_config_options(const std::vector<t_config_option_key>
             || *opt_key == "skirt_height"
             || *opt_key == "skirt_distance"
             || *opt_key == "min_skirt_length"
+            || *opt_key == "skirt_width"
             || *opt_key == "ooze_prevention") {
             steps.insert(psSkirt);
         } else if (*opt_key == "brim_width") {

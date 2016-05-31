@@ -49,6 +49,19 @@ Flow::spacing() const {
     float min_flow_spacing = this->width - this->height * (1 - PI/4.0);
     return this->width - OVERLAP_FACTOR * (this->width - min_flow_spacing);
 }
+/* This method returns the centerline spacing between two adjacent extrusions 
+   having the same supplied extrusion width (and other properties) */
+
+float
+Flow::spacing(const float width) const {
+    if (this->bridge) {
+        return width + BRIDGE_EXTRA_SPACING;
+    }
+    
+    // rectangle with semicircles at the ends
+    float min_flow_spacing = width - this->height * (1 - PI/4.0);
+    return width - OVERLAP_FACTOR * (width - min_flow_spacing);
+}
 
 /* This method returns the centerline spacing between an extrusion using this
    flow and another one using another flow.
@@ -74,6 +87,17 @@ Flow::mm3_per_mm() const {
     
     // rectangle with semicircles at the ends
     return this->width * this->height + (this->height*this->height) / 4.0 * (PI-4.0);
+}
+
+/* This method returns extrusion volume per head move unit for a different width */
+double
+Flow::mm3_per_mm(float width) const {
+    if (this->bridge) {
+        return (width * width) * PI/4.0;
+    }
+    
+    // rectangle with semicircles at the ends
+    return width * this->height + (this->height*this->height) / 4.0 * (PI-4.0);
 }
 
 /* This static method returns bridge width for a given nozzle diameter. */
