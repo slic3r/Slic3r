@@ -30,7 +30,6 @@ include_directories(${LIBDIR}/admesh/)
 include_directories(${LIBDIR}/poly2tri/)
 include_directories(${LIBDIR}/poly2tri/sweep)
 include_directories(${LIBDIR}/poly2tri/common)
-add_library(slic3r_gui STATIC ${LIBDIR}/slic3r/GUI/3DScene.cpp ${LIBDIR}/slic3r/GUI/GUI.cpp)
 add_library(libslic3r STATIC ${LIBDIR}/libslic3r/BoundingBox.cpp
                         ${LIBDIR}/libslic3r/ExPolygon.cpp
                         ${LIBDIR}/libslic3r/GCode.cpp
@@ -95,6 +94,8 @@ ENDIF(CMAKE_HOST_UNIX)
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
     INCLUDE("${wxWidgets_USE_FILE}")
+    add_library(slic3r_gui STATIC ${LIBDIR}/slic3r/GUI/3DScene.cpp ${LIBDIR}/slic3r/GUI/GUI.cpp)
+    #only build GUI lib if building with wx
     target_link_libraries (slic3r slic3r_gui libslic3r admesh clipper polypartition poly2tri ${Boost_LIBRARIES} ${wxWidgets_LIBRARIES})
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
