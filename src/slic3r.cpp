@@ -25,6 +25,7 @@ void exportSVG(const char* stlname, const char* svgname, float layerheight=0.2, 
     t.repair();
     t.scale(scale);
     t.rotate_z(rotate);
+    t.mirror_x();
     t.align_to_origin();
     SVGExport e(t,layerheight,initialheight);
     const char* svgfilename=outname.data();
