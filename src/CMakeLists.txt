@@ -7,7 +7,7 @@ set(workaround "-fno-inline-small-functions")
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.3)
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
 
-set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -std=c++14 ${workaround}")
+set(CMAKE_CXX_FLAGS "-DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -std=c++14 ${workaround}")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 IF(CMAKE_HOST_APPLE)
@@ -88,14 +88,18 @@ set_target_properties(bthread PROPERTIES IMPORTED_LOCATION ${bthread_l})
 include_directories(${Boost_INCLUDE_DIRS})
 
 #find_package(wxWidgets)
-
+#disable wx for the time being - we're not building any of the gui yet
+IF(CMAKE_HOST_UNIX)
+    set(Boost_LIBRARIES bsystem bthread)
+ENDIF(CMAKE_HOST_UNIX)
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
     INCLUDE("${wxWidgets_USE_FILE}")
-    target_link_libraries (slic3r slic3r_gui libslic3r admesh clipper polypartition poly2tri bsystem bthread ${wxWidgets_LIBRARIES})
+    target_link_libraries (slic3r slic3r_gui libslic3r admesh clipper polypartition poly2tri ${Boost_LIBRARIES} ${wxWidgets_LIBRARIES})
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
     MESSAGE("wx not found!")
-    target_link_libraries (slic3r slic3r_gui libslic3r admesh clipper polypartition poly2tri bsystem bthread)
+    target_link_libraries (slic3r libslic3r admesh clipper polypartition poly2tri ${Boost_LIBRARIES})
+    #skip gui when no wx included
 ENDIF(wxWidgets_FOUND)
 
