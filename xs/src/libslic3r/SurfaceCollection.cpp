@@ -29,7 +29,7 @@ SurfaceCollection::simplify(double tolerance)
     Surfaces ss;
     for (Surfaces::const_iterator it_s = this->surfaces.begin(); it_s != this->surfaces.end(); ++it_s) {
         ExPolygons expp;
-        it_s->expolygon.simplify(tolerance, expp);
+        it_s->expolygon.simplify(tolerance, &expp);
         for (ExPolygons::const_iterator it_e = expp.begin(); it_e != expp.end(); ++it_e) {
             Surface s = *it_s;
             s.expolygon = *it_e;
@@ -68,8 +68,53 @@ SurfaceCollection::group(std::vector<SurfacesPtr> *retval)
     }
 }
 
-#ifdef SLIC3RXS
-REGISTER_CLASS(SurfaceCollection, "Surface::Collection");
-#endif
+template <class T>
+bool
+SurfaceCollection::any_internal_contains(const T &item) const
+{
+    for (Surfaces::const_iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
+        if (surface->is_internal() && surface->expolygon.contains(item)) return true;
+    }
+    return false;
+}
+template bool SurfaceCollection::any_internal_contains<Polyline>(const Polyline &item) const;
+
+template <class T>
+bool
+SurfaceCollection::any_bottom_contains(const T &item) const
+{
+    for (Surfaces::const_iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
+        if (surface->is_bottom() && surface->expolygon.contains(item)) return true;
+    }
+    return false;
+}
+template bool SurfaceCollection::any_bottom_contains<Polyline>(const Polyline &item) const;
+
+SurfacesPtr
+SurfaceCollection::filter_by_type(SurfaceType type)
+{
+    SurfacesPtr ss;
+    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
+        if (surface->surface_type == type) ss.push_back(&*surface);
+    }
+    return ss;
+}
+
+void
+SurfaceCollection::filter_by_type(SurfaceType type, Polygons* polygons)
+{
+    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
+        if (surface->surface_type == type) {
+            Polygons pp = surface->expolygon;
+            polygons->insert(polygons->end(), pp.begin(), pp.end());
+        }
+    }
+}
+
+void
+SurfaceCollection::append(const SurfaceCollection &coll)
+{
+    this->surfaces.insert(this->surfaces.end(), coll.surfaces.begin(), coll.surfaces.end());
+}
 
 }

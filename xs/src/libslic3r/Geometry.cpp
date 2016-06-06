@@ -1,12 +1,16 @@
 #include "Geometry.hpp"
+#include "ClipperUtils.hpp"
+#include "ExPolygon.hpp"
 #include "Line.hpp"
 #include "PolylineCollection.hpp"
 #include "clipper.hpp"
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <list>
 #include <map>
 #include <set>
+#include <utility>
 #include <vector>
 
 #ifdef SLIC3R_DEBUG
@@ -24,43 +28,56 @@ sort_points (Point a, Point b)
 }
 
 /* This implementation is based on Andrew's monotone chain 2D convex hull algorithm */
-void
-convex_hull(Points &points, Polygon* hull)
+Polygon
+convex_hull(Points points)
 {
     assert(points.size() >= 3);
     // sort input points
     std::sort(points.begin(), points.end(), sort_points);
     
     int n = points.size(), k = 0;
-    hull->points.resize(2*n);
+    Polygon hull;
+    hull.points.resize(2*n);
 
     // Build lower hull
     for (int i = 0; i < n; i++) {
-        while (k >= 2 && points[i].ccw(hull->points[k-2], hull->points[k-1]) <= 0) k--;
-        hull->points[k++] = points[i];
+        while (k >= 2 && points[i].ccw(hull.points[k-2], hull.points[k-1]) <= 0) k--;
+        hull.points[k++] = points[i];
     }
 
     // Build upper hull
     for (int i = n-2, t = k+1; i >= 0; i--) {
-        while (k >= t && points[i].ccw(hull->points[k-2], hull->points[k-1]) <= 0) k--;
-        hull->points[k++] = points[i];
+        while (k >= t && points[i].ccw(hull.points[k-2], hull.points[k-1]) <= 0) k--;
+        hull.points[k++] = points[i];
     }
 
-    hull->points.resize(k);
+    hull.points.resize(k);
     
-    assert( hull->points.front().coincides_with(hull->points.back()) );
-    hull->points.pop_back();
+    assert( hull.points.front().coincides_with(hull.points.back()) );
+    hull.points.pop_back();
+    
+    return hull;
+}
+
+Polygon
+convex_hull(const Polygons &polygons)
+{
+    Points pp;
+    for (Polygons::const_iterator p = polygons.begin(); p != polygons.end(); ++p) {
+        pp.insert(pp.end(), p->points.begin(), p->points.end());
+    }
+    return convex_hull(pp);
 }
 
 /* accepts an arrayref of points and returns a list of indices
    according to a nearest-neighbor walk */
 void
-chained_path(Points &points, std::vector<Points::size_type> &retval, Point start_near)
+chained_path(const Points &points, std::vector<Points::size_type> &retval, Point start_near)
 {
-    PointPtrs my_points;
-    std::map<Point*,Points::size_type> indices;
+    PointConstPtrs my_points;
+    std::map<const Point*,Points::size_type> indices;
     my_points.reserve(points.size());
-    for (Points::iterator it = points.begin(); it != points.end(); ++it) {
+    for (Points::const_iterator it = points.begin(); it != points.end(); ++it) {
         my_points.push_back(&*it);
         indices[&*it] = it - points.begin();
     }
@@ -75,7 +92,7 @@ chained_path(Points &points, std::vector<Points::size_type> &retval, Point start
 }
 
 void
-chained_path(Points &points, std::vector<Points::size_type> &retval)
+chained_path(const Points &points, std::vector<Points::size_type> &retval)
 {
     if (points.empty()) return;  // can't call front() on empty vector
     chained_path(points, retval, points.front());
@@ -101,26 +118,181 @@ directions_parallel(double angle1, double angle2, double max_diff)
     return diff < max_diff || fabs(diff - PI) < max_diff;
 }
 
-Line
-MedialAxis::edge_to_line(const VD::edge_type &edge) const
+template<class T>
+bool
+contains(const std::vector<T> &vector, const Point &point)
 {
-    Line line;
-    line.a.x = edge.vertex0()->x();
-    line.a.y = edge.vertex0()->y();
-    line.b.x = edge.vertex1()->x();
-    line.b.y = edge.vertex1()->y();
-    return line;
+    for (typename std::vector<T>::const_iterator it = vector.begin(); it != vector.end(); ++it) {
+        if (it->contains(point)) return true;
+    }
+    return false;
+}
+template bool contains(const ExPolygons &vector, const Point &point);
+
+double
+rad2deg(double angle)
+{
+    return angle / PI * 180.0;
+}
+
+double
+rad2deg_dir(double angle)
+{
+    angle = (angle < PI) ? (-angle + PI/2.0) : (angle + PI/2.0);
+    if (angle < 0) angle += PI;
+    return rad2deg(angle);
+}
+
+double
+deg2rad(double angle)
+{
+    return PI * angle / 180.0;
 }
 
 void
-MedialAxis::build(Polylines* polylines)
+simplify_polygons(const Polygons &polygons, double tolerance, Polygons* retval)
 {
-    /*
-    // build bounding box (we use it for clipping infinite segments)
-    // --> we have no infinite segments
-    this->bb = BoundingBox(this->lines);
-    */
+    Polygons pp;
+    for (Polygons::const_iterator it = polygons.begin(); it != polygons.end(); ++it) {
+        Polygon p = *it;
+        p.points.push_back(p.points.front());
+        p.points = MultiPoint::_douglas_peucker(p.points, tolerance);
+        p.points.pop_back();
+        pp.push_back(p);
+    }
+    Slic3r::simplify_polygons(pp, retval);
+}
+
+double
+linint(double value, double oldmin, double oldmax, double newmin, double newmax)
+{
+    return (value - oldmin) * (newmax - newmin) / (oldmax - oldmin) + newmin;
+}
+
+Pointfs
+arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb)
+{
+    // use actual part size (the largest) plus separation distance (half on each side) in spacing algorithm
+    part.x += dist;
+    part.y += dist;
     
+    Pointf area;
+    if (bb != NULL && bb->defined) {
+        area = bb->size();
+    } else {
+        // bogus area size, large enough not to trigger the error below
+        area.x = part.x * total_parts;
+        area.y = part.y * total_parts;
+    }
+    
+    // this is how many cells we have available into which to put parts
+    size_t cellw = floor((area.x + dist) / part.x);
+    size_t cellh = floor((area.y + dist) / part.y);
+    if (total_parts > (cellw * cellh))
+        CONFESS("%zu parts won't fit in your print area!\n", total_parts);
+    
+    // total space used by cells
+    Pointf cells(cellw * part.x, cellh * part.y);
+    
+    // bounding box of total space used by cells
+    BoundingBoxf cells_bb;
+    cells_bb.merge(Pointf(0,0)); // min
+    cells_bb.merge(cells);  // max
+    
+    // center bounding box to area
+    cells_bb.translate(
+        (area.x - cells.x) / 2,
+        (area.y - cells.y) / 2
+    );
+    
+    // list of cells, sorted by distance from center
+    std::vector<ArrangeItemIndex> cellsorder;
+    
+    // work out distance for all cells, sort into list
+    for (size_t i = 0; i <= cellw-1; ++i) {
+        for (size_t j = 0; j <= cellh-1; ++j) {
+            coordf_t cx = linint(i + 0.5, 0, cellw, cells_bb.min.x, cells_bb.max.x);
+            coordf_t cy = linint(j + 0.5, 0, cellh, cells_bb.min.y, cells_bb.max.y);
+            
+            coordf_t xd = fabs((area.x / 2) - cx);
+            coordf_t yd = fabs((area.y / 2) - cy);
+            
+            ArrangeItem c;
+            c.pos.x = cx;
+            c.pos.y = cy;
+            c.index_x = i;
+            c.index_y = j;
+            c.dist = xd * xd + yd * yd - fabs((cellw / 2) - (i + 0.5));
+            
+            // binary insertion sort
+            {
+                coordf_t index = c.dist;
+                size_t low = 0;
+                size_t high = cellsorder.size();
+                while (low < high) {
+                    size_t mid = (low + ((high - low) / 2)) | 0;
+                    coordf_t midval = cellsorder[mid].index;
+                    
+                    if (midval < index) {
+                        low = mid + 1;
+                    } else if (midval > index) {
+                        high = mid;
+                    } else {
+                        cellsorder.insert(cellsorder.begin() + mid, ArrangeItemIndex(index, c));
+                        goto ENDSORT;
+                    }
+                }
+                cellsorder.insert(cellsorder.begin() + low, ArrangeItemIndex(index, c));
+            }
+            ENDSORT: true;
+        }
+    }
+    
+    // the extents of cells actually used by objects
+    coordf_t lx = 0;
+    coordf_t ty = 0;
+    coordf_t rx = 0;
+    coordf_t by = 0;
+
+    // now find cells actually used by objects, map out the extents so we can position correctly
+    for (size_t i = 1; i <= total_parts; ++i) {
+        ArrangeItemIndex c = cellsorder[i - 1];
+        coordf_t cx = c.item.index_x;
+        coordf_t cy = c.item.index_y;
+        if (i == 1) {
+            lx = rx = cx;
+            ty = by = cy;
+        } else {
+            if (cx > rx) rx = cx;
+            if (cx < lx) lx = cx;
+            if (cy > by) by = cy;
+            if (cy < ty) ty = cy;
+        }
+    }
+    // now we actually place objects into cells, positioned such that the left and bottom borders are at 0
+    Pointfs positions;
+    for (size_t i = 1; i <= total_parts; ++i) {
+        ArrangeItemIndex c = cellsorder.front();
+        cellsorder.erase(cellsorder.begin());
+        coordf_t cx = c.item.index_x - lx;
+        coordf_t cy = c.item.index_y - ty;
+        
+        positions.push_back(Pointf(cx * part.x, cy * part.y));
+    }
+    
+    if (bb != NULL && bb->defined) {
+        for (Pointfs::iterator p = positions.begin(); p != positions.end(); ++p) {
+            p->x += bb->min.x;
+            p->y += bb->min.y;
+        }
+    }
+    
+    return positions;
+}
+
+void
+MedialAxis::build(ThickPolylines* polylines)
+{
     construct_voronoi(this->lines.begin(), this->lines.end(), &this->vd);
     
     /*
@@ -129,7 +301,7 @@ MedialAxis::build(Polylines* polylines)
         for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
             if (edge->is_infinite()) continue;
             
-            Polyline polyline;
+            ThickPolyline polyline;
             polyline.points.push_back(Point( edge->vertex0()->x(), edge->vertex0()->y() ));
             polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
             polylines->push_back(polyline);
@@ -138,197 +310,230 @@ MedialAxis::build(Polylines* polylines)
     }
     */
     
+    typedef const VD::vertex_type vert_t;
+    typedef const VD::edge_type   edge_t;
+    
     // collect valid edges (i.e. prune those not belonging to MAT)
-    // note: this keeps twins, so it contains twice the number of the valid edges
-    this->edges.clear();
-    for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
-        // if we only process segments representing closed loops, none if the
-        // infinite edges (if any) would be part of our MAT anyway
-        if (edge->is_secondary() || edge->is_infinite()) continue;
-        this->edges.insert(&*edge);
-    }
-    
-    // count valid segments for each vertex
-    std::map< const VD::vertex_type*,std::set<const VD::edge_type*> > vertex_edges;
-    std::set<const VD::vertex_type*> entry_nodes;
-    for (VD::const_vertex_iterator vertex = this->vd.vertices().begin(); vertex != this->vd.vertices().end(); ++vertex) {
-        // get a reference to the list of valid edges originating from this vertex
-        std::set<const VD::edge_type*>& edges = vertex_edges[&*vertex];
+    // note: this keeps twins, so it inserts twice the number of the valid edges
+    this->valid_edges.clear();
+    {
+        std::set<const VD::edge_type*> seen_edges;
+        for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
+            // if we only process segments representing closed loops, none if the
+            // infinite edges (if any) would be part of our MAT anyway
+            if (edge->is_secondary() || edge->is_infinite()) continue;
         
-        // get one random edge originating from this vertex
-        const VD::edge_type* edge = vertex->incident_edge();
-        do {
-            if (this->edges.count(edge) > 0)    // only count valid edges
-                edges.insert(edge);
-            edge = edge->rot_next();            // next edge originating from this vertex
-        } while (edge != vertex->incident_edge());
-        
-        // if there's only one edge starting at this vertex then it's a leaf
-        size_t edge_count = edges.size();
-        if (edge_count == 1) {
-            entry_nodes.insert(&*vertex);
+            // don't re-validate twins
+            if (seen_edges.find(&*edge) != seen_edges.end()) continue;  // TODO: is this needed?
+            seen_edges.insert(&*edge);
+            seen_edges.insert(edge->twin());
+            
+            if (!this->validate_edge(&*edge)) continue;
+            this->valid_edges.insert(&*edge);
+            this->valid_edges.insert(edge->twin());
         }
     }
-    
-    // prune recursively
-    while (!entry_nodes.empty()) {
-        // get a random entry node
-        const VD::vertex_type* v = *entry_nodes.begin();
-    
-        // get edge starting from v
-        assert(!vertex_edges[v].empty());
-        const VD::edge_type* edge = *vertex_edges[v].begin();
-        
-        if (!this->is_valid_edge(*edge)) {
-            // if edge is not valid, erase it from edge list
-            (void)this->edges.erase(edge);
-            (void)this->edges.erase(edge->twin());
-            
-            // decrement edge counters for the affected nodes
-            const VD::vertex_type* v1 = edge->vertex1();
-            (void)vertex_edges[v].erase(edge);
-            (void)vertex_edges[v1].erase(edge->twin());
-            
-            // also, check whether the end vertex is a new leaf
-            if (vertex_edges[v1].size() == 1) {
-                entry_nodes.insert(v1);
-            } else if (vertex_edges[v1].empty()) {
-                entry_nodes.erase(v1);
-            }
-        }
-        
-        // remove node from the set to prevent it from being visited again
-        entry_nodes.erase(v);
-    }
+    this->edges = this->valid_edges;
     
     // iterate through the valid edges to build polylines
     while (!this->edges.empty()) {
-        const VD::edge_type& edge = **this->edges.begin();
+        const edge_t* edge = *this->edges.begin();
         
         // start a polyline
-        Polyline polyline;
-        polyline.points.push_back(Point( edge.vertex0()->x(), edge.vertex0()->y() ));
-        polyline.points.push_back(Point( edge.vertex1()->x(), edge.vertex1()->y() ));
+        ThickPolyline polyline;
+        polyline.points.push_back(Point( edge->vertex0()->x(), edge->vertex0()->y() ));
+        polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
+        polyline.width.push_back(this->thickness[edge].first);
+        polyline.width.push_back(this->thickness[edge].second);
         
         // remove this edge and its twin from the available edges
-        (void)this->edges.erase(&edge);
-        (void)this->edges.erase(edge.twin());
+        (void)this->edges.erase(edge);
+        (void)this->edges.erase(edge->twin());
         
         // get next points
-        this->process_edge_neighbors(edge, &polyline.points);
+        this->process_edge_neighbors(edge, &polyline);
         
         // get previous points
-        Points pp;
-        this->process_edge_neighbors(*edge.twin(), &pp);
-        polyline.points.insert(polyline.points.begin(), pp.rbegin(), pp.rend());
+        {
+            ThickPolyline rpolyline;
+            this->process_edge_neighbors(edge->twin(), &rpolyline);
+            polyline.points.insert(polyline.points.begin(), rpolyline.points.rbegin(), rpolyline.points.rend());
+            polyline.width.insert(polyline.width.begin(), rpolyline.width.rbegin(), rpolyline.width.rend());
+            polyline.endpoints.first = rpolyline.endpoints.second;
+        }
         
-        // append polyline to result if it's not too small
-        if (polyline.length() > this->max_width)
-            polylines->push_back(polyline);
+        assert(polyline.width.size() == polyline.points.size()*2 - 2);
+        
+        // prevent loop endpoints from being extended
+        if (polyline.first_point().coincides_with(polyline.last_point())) {
+            polyline.endpoints.first = false;
+            polyline.endpoints.second = false;
+        }
+        
+        // append polyline to result
+        polylines->push_back(polyline);
     }
 }
 
 void
-MedialAxis::process_edge_neighbors(const VD::edge_type& edge, Points* points)
+MedialAxis::build(Polylines* polylines)
 {
-    // Since rot_next() works on the edge starting point but we want
-    // to find neighbors on the ending point, we just swap edge with
-    // its twin.
-    const VD::edge_type& twin = *edge.twin();
+    ThickPolylines tp;
+    this->build(&tp);
+    polylines->insert(polylines->end(), tp.begin(), tp.end());
+}
+
+void
+MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* polyline)
+{
+    while (true) {
+        // Since rot_next() works on the edge starting point but we want
+        // to find neighbors on the ending point, we just swap edge with
+        // its twin.
+        const VD::edge_type* twin = edge->twin();
     
-    // count neighbors for this edge
-    std::vector<const VD::edge_type*> neighbors;
-    for (const VD::edge_type* neighbor = twin.rot_next(); neighbor != &twin; neighbor = neighbor->rot_next()) {
-        if (this->edges.count(neighbor) > 0) neighbors.push_back(neighbor);
-    }
+        // count neighbors for this edge
+        std::vector<const VD::edge_type*> neighbors;
+        for (const VD::edge_type* neighbor = twin->rot_next(); neighbor != twin;
+            neighbor = neighbor->rot_next()) {
+            if (this->valid_edges.count(neighbor) > 0) neighbors.push_back(neighbor);
+        }
     
-    // if we have a single neighbor then we can continue recursively
-    if (neighbors.size() == 1) {
-        const VD::edge_type& neighbor = *neighbors.front();
-        points->push_back(Point( neighbor.vertex1()->x(), neighbor.vertex1()->y() ));
-        (void)this->edges.erase(&neighbor);
-        (void)this->edges.erase(neighbor.twin());
-        this->process_edge_neighbors(neighbor, points);
+        // if we have a single neighbor then we can continue recursively
+        if (neighbors.size() == 1) {
+            const VD::edge_type* neighbor = neighbors.front();
+            
+            // break if this is a closed loop
+            if (this->edges.count(neighbor) == 0) return;
+            
+            Point new_point(neighbor->vertex1()->x(), neighbor->vertex1()->y());
+            polyline->points.push_back(new_point);
+            polyline->width.push_back(this->thickness[neighbor].first);
+            polyline->width.push_back(this->thickness[neighbor].second);
+            (void)this->edges.erase(neighbor);
+            (void)this->edges.erase(neighbor->twin());
+            edge = neighbor;
+        } else if (neighbors.size() == 0) {
+            polyline->endpoints.second = true;
+            return;
+        } else {
+            // T-shaped or star-shaped joint
+            return;
+        }
     }
 }
 
 bool
-MedialAxis::is_valid_edge(const VD::edge_type& edge) const
+MedialAxis::validate_edge(const VD::edge_type* edge)
 {
-    /* If the cells sharing this edge have a common vertex, we're not interested
-       in this edge. Why? Because it means that the edge lies on the bisector of
-       two contiguous input lines and it was included in the Voronoi graph because
-       it's the locus of centers of circles tangent to both vertices. Due to the 
-       "thin" nature of our input, these edges will be very short and not part of
-       our wanted output. */
+    // construct the line representing this edge of the Voronoi diagram
+    const Line line(
+        Point( edge->vertex0()->x(), edge->vertex0()->y() ),
+        Point( edge->vertex1()->x(), edge->vertex1()->y() )
+    );
     
-    const VD::cell_type &cell1 = *edge.cell();
-    const VD::cell_type &cell2 = *edge.twin()->cell();
-    if (cell1.contains_segment() && cell2.contains_segment()) {
-        Line segment1 = this->retrieve_segment(cell1);
-        Line segment2 = this->retrieve_segment(cell2);
-        if (segment1.a == segment2.b || segment1.b == segment2.a) return false;
-        
-        // calculate relative angle between the two boundary segments
-        double angle = fabs(segment2.orientation() - segment1.orientation());
+    // discard edge if it lies outside the supplied shape
+    // this could maybe be optimized (checking inclusion of the endpoints
+    // might give false positives as they might belong to the contour itself)
+    if (this->expolygon != NULL) {
+        if (line.a.coincides_with(line.b)) {
+            // in this case, contains(line) returns a false positive
+            if (!this->expolygon->contains(line.a)) return false;
+        } else {
+            if (!this->expolygon->contains(line)) return false;
+        }
+    }
+    
+    // retrieve the original line segments which generated the edge we're checking
+    const VD::cell_type* cell_l = edge->cell();
+    const VD::cell_type* cell_r = edge->twin()->cell();
+    const Line &segment_l = this->retrieve_segment(cell_l);
+    const Line &segment_r = this->retrieve_segment(cell_r);
+    
+    /*
+    SVG svg("edge.svg");
+    svg.draw(*this->expolygon);
+    svg.draw(line);
+    svg.draw(segment_l, "red");
+    svg.draw(segment_r, "blue");
+    svg.Close();
+    */
+    
+    /*  Calculate thickness of the cross-section at both the endpoints of this edge.
+        Our Voronoi edge is part of a CCW sequence going around its Voronoi cell 
+        located on the left side. (segment_l).
+        This edge's twin goes around segment_r. Thus, segment_r is 
+        oriented in the same direction as our main edge, and segment_l is oriented
+        in the same direction as our twin edge.
+        We used to only consider the (half-)distances to segment_r, and that works
+        whenever segment_l and segment_r are almost specular and facing. However, 
+        at curves they are staggered and they only face for a very little length
+        (our very short edge represents such visibility).
+        Both w0 and w1 can be calculated either towards cell_l or cell_r with equal
+        results by Voronoi definition.
+        When cell_l or cell_r don't refer to the segment but only to an endpoint, we
+        calculate the distance to that endpoint instead.  */
+    
+    coordf_t w0 = cell_r->contains_segment()
+        ? line.a.distance_to(segment_r)*2
+        : line.a.distance_to(this->retrieve_endpoint(cell_r))*2;
+    
+    coordf_t w1 = cell_l->contains_segment()
+        ? line.b.distance_to(segment_l)*2
+        : line.b.distance_to(this->retrieve_endpoint(cell_l))*2;
+    
+    if (cell_l->contains_segment() && cell_r->contains_segment()) {
+        // calculate the relative angle between the two boundary segments
+        double angle = fabs(segment_r.orientation() - segment_l.orientation());
+        if (angle > PI) angle = 2*PI - angle;
+        assert(angle >= 0 && angle <= PI);
         
         // fabs(angle) ranges from 0 (collinear, same direction) to PI (collinear, opposite direction)
         // we're interested only in segments close to the second case (facing segments)
-        // so we allow some tolerance (say, 30°)
-        if (angle < PI*2/3 ) {
+        // so we allow some tolerance.
+        // this filter ensures that we're dealing with a narrow/oriented area (longer than thick)
+        // we don't run it on edges not generated by two segments (thus generated by one segment
+        // and the endpoint of another segment), since their orientation would not be meaningful
+        if (PI - angle > PI/8) {
+            // angle is not narrow enough
+            
+            // only apply this filter to segments that are not too short otherwise their 
+            // angle could possibly be not meaningful
+            if (w0 < SCALED_EPSILON || w1 < SCALED_EPSILON || line.length() >= this->min_width)
+                return false;
+        }
+    } else {
+        if (w0 < SCALED_EPSILON || w1 < SCALED_EPSILON)
             return false;
-        }
-        
-        // each vertex is equidistant to both cell segments
-        // but such distance might differ between the two vertices;
-        // in this case it means the shape is getting narrow (like a corner)
-        // and we might need to skip the edge since it's not really part of
-        // our skeleton
-        Point v0( edge.vertex0()->x(), edge.vertex0()->y() );
-        Point v1( edge.vertex1()->x(), edge.vertex1()->y() );
-        double dist0 = v0.distance_to(segment1);
-        double dist1 = v1.distance_to(segment1);
-        
-        /*
-        double diff = fabs(dist1 - dist0);
-        double dist_between_segments1 = segment1.a.distance_to(segment2);
-        double dist_between_segments2 = segment1.b.distance_to(segment2);
-        printf("w = %f/%f, dist0 = %f, dist1 = %f, diff = %f, seg1len = %f, seg2len = %f, edgelen = %f, s2s = %f / %f\n",
-            unscale(this->max_width), unscale(this->min_width),
-            unscale(dist0), unscale(dist1), unscale(diff),
-            unscale(segment1.length()), unscale(segment2.length()),
-            unscale(this->edge_to_line(edge).length()),
-            unscale(dist_between_segments1), unscale(dist_between_segments2)
-            );
-        */
-        
-        // if this segment is the centerline for a very thin area, we might want to skip it
-        // in case the area is too thin
-        if (dist0 < this->min_width/2 || dist1 < this->min_width/2) {
-            //printf(" => too thin, skipping\n");
-            return false;
-        }
-        
-        /*
-        // if distance between this edge and the thin area boundary is greater
-        // than half the max width, then it's not a true medial axis segment
-        if (dist1 > this->width*2) {
-            printf(" => too fat, skipping\n");
-            //return false;
-        }
-        */
-        
-        return true;
     }
     
-    return false;
+    if (w0 < this->min_width && w1 < this->min_width)
+        return false;
+    
+    if (w0 > this->max_width && w1 > this->max_width)
+        return false;
+    
+    this->thickness[edge]         = std::make_pair(w0, w1);
+    this->thickness[edge->twin()] = std::make_pair(w1, w0);
+    
+    return true;
 }
 
-Line
-MedialAxis::retrieve_segment(const VD::cell_type& cell) const
+const Line&
+MedialAxis::retrieve_segment(const VD::cell_type* cell) const
 {
-    VD::cell_type::source_index_type index = cell.source_index() - this->points.size();
-    return this->lines[index];
+    return this->lines[cell->source_index()];
+}
+
+const Point&
+MedialAxis::retrieve_endpoint(const VD::cell_type* cell) const
+{
+    const Line& line = this->retrieve_segment(cell);
+    if (cell->source_category() == SOURCE_CATEGORY_SEGMENT_START_POINT) {
+        return line.a;
+    } else {
+        return line.b;
+    }
 }
 
 } }

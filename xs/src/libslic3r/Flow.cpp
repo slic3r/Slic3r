@@ -1,5 +1,6 @@
 #include "Flow.hpp"
 #include <cmath>
+#include <assert.h>
 
 namespace Slic3r {
 
@@ -13,7 +14,7 @@ Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &wid
     float w;
     if (bridge_flow_ratio > 0) {
         // if bridge flow was requested, calculate bridge width
-        w = Flow::_bridge_width(nozzle_diameter, bridge_flow_ratio);
+        height = w = Flow::_bridge_width(nozzle_diameter, bridge_flow_ratio);
     } else if (!width.percent && width.value == 0) {
         // if user left option to 0, calculate a sane default width
         w = Flow::_auto_width(role, nozzle_diameter, height);
@@ -32,6 +33,7 @@ Flow::new_from_spacing(float spacing, float nozzle_diameter, float height, bool 
     if (height <= 0 && !bridge) CONFESS("Invalid flow height supplied to new_from_spacing()");
 
     float w = Flow::_width_from_spacing(spacing, nozzle_diameter, height, bridge);
+    if (bridge) height = w;
     return Flow(w, height, nozzle_diameter, bridge);
 }
 
@@ -90,7 +92,7 @@ Flow::_auto_width(FlowRole role, float nozzle_diameter, float height) {
     
     float min = nozzle_diameter * 1.05;
     float max = -1;
-    if (role == frExternalPerimeter || role == frSupportMaterial) {
+    if (role == frExternalPerimeter || role == frSupportMaterial || role == frSupportMaterialInterface) {
         min = max = nozzle_diameter;
     } else if (role != frInfill) {
         // do not limit width for sparse infill so that we use full native flow for it
@@ -112,9 +114,5 @@ Flow::_width_from_spacing(float spacing, float nozzle_diameter, float height, bo
     // rectangle with semicircles at the ends
     return spacing + OVERLAP_FACTOR * height * (1 - PI/4.0);
 }
-
-#ifdef SLIC3RXS
-REGISTER_CLASS(Flow, "Flow");
-#endif
 
 }

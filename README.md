@@ -8,7 +8,7 @@ Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.png?branch=master)](
 Slic3r takes 3D models (STL, OBJ, AMF) and converts them into G-code instructions for 
 3D printers. It's compatible with any modern printer based on the RepRap toolchain,
 including all those based on the Marlin, Sprinter and Repetier firmware. It also works
-with Mach3 and LinuxCNC controllers.
+with Mach3, LinuxCNC and Machinekit controllers.
 
 See the [project homepage](http://slic3r.org/) at slic3r.org and the
 [manual](http://manual.slic3r.org/) for more information.
@@ -30,7 +30,7 @@ Key features are:
 * **multi-platform** (Linux/Mac/Win) and packaged as standalone-app with no dependencies required
 * complete **command-line interface** to use it with no GUI
 * multi-material **(multiple extruders)** object printing
-* multiple G-code flavors supported (RepRap, Makerbot, Mach3 etc.)
+* multiple G-code flavors supported (RepRap, Makerbot, Mach3, Machinekit etc.)
 * ability to plate **multiple objects having distinct print settings**
 * **multithread** processing
 * **STL auto-repair** (tolerance for broken models)
@@ -61,8 +61,8 @@ If you want to compile the source yourself just do the following (checkout
 ```
 $ git clone https://github.com/alexrj/Slic3r.git
 $ cd Slic3r
-$ sudo perl Build.PL
-$ sudo perl Build.PL --gui
+$ perl Build.PL --sudo
+$ perl Build.PL --sudo --gui
 $ ./slic3r.pl
 ```
 
@@ -109,6 +109,8 @@ The author of the Silk icon set is Mark James.
         -j, --threads <num> Number of threads to use (1+, default: 2)
     
       GUI options:
+        --gui               Forces the GUI launch instead of command line slicing (if you
+                            supply a model file, it will be loaded into the plater)
         --no-plater         Disable the plater tab
         --gui-mode          Overrides the configured mode (simple/expert)
         --autosave <file>   Automatically export current configuration to the specified file
@@ -130,17 +132,18 @@ The author of the Silk icon set is Mark James.
                             (default: 100,100)
         --z-offset          Additional height in mm to add to vertical coordinates
                             (+/-, default: 0)
-        --gcode-flavor      The type of G-code to generate (reprap/teacup/makerware/sailfish/mach3/no-extrusion,
+        --gcode-flavor      The type of G-code to generate (reprap/teacup/makerware/sailfish/mach3/machinekit/no-extrusion,
                             default: reprap)
         --use-relative-e-distances Enable this to get relative E values (default: no)
         --use-firmware-retraction  Enable firmware-controlled retraction using G10/G11 (default: no)
+        --use-volumetric-e  Express E in cubic millimeters and prepend M200 (default: no)
         --gcode-arcs        Use G2/G3 commands for native arcs (experimental, not supported
                             by all firmwares)
-        --g0                Use G0 commands for retraction (experimental, not supported by all
-                            firmwares)
         --gcode-comments    Make G-code verbose by adding comments (default: no)
         --vibration-limit   Limit the frequency of moves on X and Y axes (Hz, set zero to disable;
                             default: 0)
+        --pressure-advance  Adjust pressure using the experimental advance algorithm (K constant,
+                            set zero to disable; default: 0)
     
       Filament options:
         --filament-diameter Diameter in mm of your raw filament (default: 3)
@@ -194,7 +197,7 @@ The author of the Silk icon set is Mark James.
                             to disable; default: 0)
         --default-acceleration
                             Acceleration will be reset to this value after the specific settings above
-                            have been applied. (mm/s^2, set zero to disable; default: 130)
+                            have been applied. (mm/s^2, set zero to disable; default: 0)
     
       Accuracy options:
         --layer-height      Layer height in mm (default: 0.3)
@@ -218,7 +221,8 @@ The author of the Silk icon set is Mark James.
         --end-gcode         Load final G-code from the supplied file. This will overwrite
                             the default commands (turn off temperature [M104 S0],
                             home X axis [G28 X], disable motors [M84]).
-        --layer-gcode       Load layer-change G-code from the supplied file (default: nothing).
+        --before-layer-gcode  Load before-layer-change G-code from the supplied file (default: nothing).
+        --layer-gcode       Load after-layer-change G-code from the supplied file (default: nothing).
         --toolchange-gcode  Load tool-change G-code from the supplied file (default: nothing).
         --seam-position     Position of loop starting points (random/nearest/aligned, default: aligned).
         --external-perimeters-first Reverse perimeter order. (default: no)
@@ -252,6 +256,9 @@ The author of the Silk icon set is Mark James.
                             Spacing between pattern lines (mm, default: 2.5)
         --support-material-angle
                             Support material angle in degrees (range: 0-90, default: 0)
+        --support-material-contact-distance
+                            Vertical distance between object and support material
+                            (0+, default: 0.2)
         --support-material-interface-layers
                             Number of perpendicular layers between support material and object (0+, default: 3)
         --support-material-interface-spacing
@@ -272,14 +279,16 @@ The author of the Silk icon set is Mark James.
         --retract-before-travel
                             Only retract before travel moves of this length in mm (default: 2)
         --retract-lift      Lift Z by the given distance in mm when retracting (default: 0)
+        --retract-lift-above Only lift Z when above the specified height (default: 0)
+        --retract-lift-below Only lift Z when below the specified height (default: 0)
         --retract-layer-change
-                            Enforce a retraction before each Z move (default: yes)
+                            Enforce a retraction before each Z move (default: no)
         --wipe              Wipe the nozzle while doing a retraction (default: no)
     
        Retraction options for multi-extruder setups:
         --retract-length-toolchange
-                            Length of retraction in mm when disabling tool (default: 1)
-        --retract-restart-extra-toolchnage
+                            Length of retraction in mm when disabling tool (default: 10)
+        --retract-restart-extra-toolchange
                             Additional amount of filament in mm to push after
                             switching tool (default: 0)
     
@@ -345,16 +354,18 @@ The author of the Silk icon set is Mark James.
                             Set a different extrusion width for top infill
         --support-material-extrusion-width
                             Set a different extrusion width for support material
+        --infill-overlap    Overlap between infill and perimeters (default: 15%)
         --bridge-flow-ratio Multiplier for extrusion when bridging (> 0, default: 1)
     
        Multiple extruder options:
         --extruder-offset   Offset of each extruder, if firmware doesn't handle the displacement
                             (can be specified multiple times, default: 0x0)
         --perimeter-extruder
-                            Extruder to use for perimeters (1+, default: 1)
+                            Extruder to use for perimeters and brim (1+, default: 1)
         --infill-extruder   Extruder to use for infill (1+, default: 1)
+        --solid-infill-extruder   Extruder to use for solid infill (1+, default: 1)
         --support-material-extruder
-                            Extruder to use for support material (1+, default: 1)
+                            Extruder to use for support material, raft and skirt (1+, default: 1)
         --support-material-interface-extruder
                             Extruder to use for support material interface (1+, default: 1)
                             --ooze-prevention   Drop temperature and park extruders outside a full skirt for automatic wiping

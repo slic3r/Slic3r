@@ -1,4 +1,4 @@
-use Test::More tests => 4;
+use Test::More tests => 6;
 use strict;
 use warnings;
 
@@ -81,6 +81,15 @@ use Slic3r::Test;
 
 {
     my $config = Slic3r::Config->new_from_defaults;
+    $config->set('skirts', 1);
+    $config->set('skirt_height', 0);
+    
+    my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
+    ok Slic3r::Test::gcode($print), 'successful G-code generation when skirt_height = 0 and skirts > 0';
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
     $config->set('layer_height', 0.4);
     $config->set('first_layer_height', 0.4);
     $config->set('skirts', 1);
@@ -122,6 +131,13 @@ use Slic3r::Test;
     my $convex_hull = convex_hull(\@extrusion_points);
     my $hull_perimeter = unscale($convex_hull->split_at_first_point->length);
     ok $skirt_length > $hull_perimeter, 'skirt lenght is large enough to contain object with support';
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('min_skirt_length', 20);
+    my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
+    ok Slic3r::Test::gcode($print), 'no crash when using min_skirt_length';
 }
 
 __END__

@@ -1,7 +1,7 @@
 %module{Slic3r::XS};
 
 %{
-#include <myinit.h>
+#include <xsinit.h>
 #include "libslic3r/TriangleMesh.hpp"
 %}
 
@@ -13,41 +13,68 @@
     void ReadSTLFile(char* input_file);
     void write_ascii(char* output_file);
     void write_binary(char* output_file);
-    void ReadFromPerl(SV* vertices, SV* facets);
     void repair();
     void WriteOBJFile(char* output_file);
     void scale(float factor);
-    void scale_xyz(std::vector<double> versor)
-        %code{% THIS->scale(versor); %};
+    void scale_xyz(Pointf3* versor)
+        %code{% THIS->scale(*versor); %};
     void translate(float x, float y, float z);
     void rotate_x(float angle);
     void rotate_y(float angle);
     void rotate_z(float angle);
-    void flip_x();
-    void flip_y();
-    void flip_z();
+    void mirror_x();
+    void mirror_y();
+    void mirror_z();
     void align_to_origin();
     void rotate(double angle, Point* center);
     TriangleMeshPtrs split();
     void merge(TriangleMesh* mesh)
         %code{% THIS->merge(*mesh); %};
-    ExPolygons horizontal_projection()
-        %code{% THIS->horizontal_projection(RETVAL); %};
-    BoundingBoxf3* bounding_box()
-        %code{%
-            RETVAL = new BoundingBoxf3();
-            THIS->bounding_box(RETVAL);
-        %};
-    Pointf3* center()
-        %code{%
-            BoundingBoxf3 bb;
-            THIS->bounding_box(&bb);
-            RETVAL = new Pointf3(bb.center());
-        %};
-    int facets_count()
-        %code{% RETVAL = THIS->stl.stats.number_of_facets; %};
+    ExPolygons horizontal_projection();
+    Clone<Polygon> convex_hull();
+    Clone<BoundingBoxf3> bounding_box();
+    Clone<Pointf3> center()
+        %code{% RETVAL = THIS->bounding_box().center(); %};
+    int facets_count();
     void reset_repair_stats();
 %{
+
+void
+TriangleMesh::ReadFromPerl(vertices, facets)
+    SV* vertices
+    SV* facets
+    CODE:
+        stl_file &stl = THIS->stl;
+        stl.error = 0;
+        stl.stats.type = inmemory;
+    
+        // count facets and allocate memory
+        AV* facets_av = (AV*)SvRV(facets);
+        stl.stats.number_of_facets = av_len(facets_av)+1;
+        stl.stats.original_num_facets = stl.stats.number_of_facets;
+        stl_allocate(&stl);
+    
+        // read geometry
+        AV* vertices_av = (AV*)SvRV(vertices);
+        for (int i = 0; i < stl.stats.number_of_facets; i++) {
+            AV* facet_av = (AV*)SvRV(*av_fetch(facets_av, i, 0));
+            stl_facet facet;
+            facet.normal.x = 0;
+            facet.normal.y = 0;
+            facet.normal.z = 0;
+            for (unsigned int v = 0; v <= 2; v++) {
+                AV* vertex_av = (AV*)SvRV(*av_fetch(vertices_av, SvIV(*av_fetch(facet_av, v, 0)), 0));
+                facet.vertex[v].x = SvNV(*av_fetch(vertex_av, 0, 0));
+                facet.vertex[v].y = SvNV(*av_fetch(vertex_av, 1, 0));
+                facet.vertex[v].z = SvNV(*av_fetch(vertex_av, 2, 0));
+            }
+            facet.extra[0] = 0;
+            facet.extra[1] = 0;
+        
+            stl.facet_start[i] = facet;
+        }
+    
+        stl_get_size(&stl);
 
 SV*
 TriangleMesh::stats()
@@ -150,11 +177,10 @@ TriangleMesh::size()
 
 SV*
 TriangleMesh::slice(z)
-    std::vector<double>* z
+    std::vector<double> z
     CODE:
         // convert doubles to floats
-        std::vector<float> z_f(z->begin(), z->end());
-        delete z;
+        std::vector<float> z_f(z.begin(), z.end());
         
         std::vector<ExPolygons> layers;
         TriangleMeshSlicer mslicer(THIS);
@@ -195,14 +221,6 @@ TriangleMesh::bb3()
         RETVAL.push_back(THIS->stl.stats.max.y);
         RETVAL.push_back(THIS->stl.stats.min.z);
         RETVAL.push_back(THIS->stl.stats.max.z);
-    OUTPUT:
-        RETVAL
-
-Polygon*
-TriangleMesh::convex_hull()
-    CODE:
-        RETVAL = new Polygon ();
-        THIS->convex_hull(RETVAL);
     OUTPUT:
         RETVAL
 

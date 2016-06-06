@@ -1,12 +1,15 @@
 %module{Slic3r::XS};
 
 %{
-#include <myinit.h>
+#include <xsinit.h>
 #include "libslic3r/Geometry.hpp"
 %}
 
 
 %package{Slic3r::Geometry};
+
+Pointfs arrange(size_t total_parts, Pointf* part, coordf_t dist, BoundingBoxf* bb = NULL)
+    %code{% RETVAL = Slic3r::Geometry::arrange(total_parts, *part, dist, bb); %};
 
 %{
 
@@ -29,12 +32,11 @@ directions_parallel_within(angle1, angle2, max_diff)
     OUTPUT:
         RETVAL
 
-Polygon*
+Clone<Polygon>
 convex_hull(points)
     Points      points
     CODE:
-        RETVAL = new Polygon ();
-        Slic3r::Geometry::convex_hull(points, RETVAL);
+        RETVAL = Slic3r::Geometry::convex_hull(points);
     OUTPUT:
         RETVAL
 
@@ -55,4 +57,50 @@ chained_path_from(points, start_from)
     OUTPUT:
         RETVAL
 
+double
+rad2deg(angle)
+    double      angle
+    CODE:
+        RETVAL = Slic3r::Geometry::rad2deg(angle);
+    OUTPUT:
+        RETVAL
+
+double
+rad2deg_dir(angle)
+    double      angle
+    CODE:
+        RETVAL = Slic3r::Geometry::rad2deg_dir(angle);
+    OUTPUT:
+        RETVAL
+
+double
+deg2rad(angle)
+    double      angle
+    CODE:
+        RETVAL = Slic3r::Geometry::deg2rad(angle);
+    OUTPUT:
+        RETVAL
+
+Polygons
+simplify_polygons(polygons, tolerance)
+    Polygons    polygons
+    double      tolerance
+    CODE:
+        Slic3r::Geometry::simplify_polygons(polygons, tolerance, &RETVAL);
+    OUTPUT:
+        RETVAL
+
+
+IV
+_constant()
+  ALIAS:
+    X           = X
+    Y           = Y
+    Z           = Z
+  PROTOTYPE:
+  CODE:
+    RETVAL = ix;
+  OUTPUT: RETVAL
+
 %}
+

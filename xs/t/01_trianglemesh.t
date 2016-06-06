@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Slic3r::XS;
-use Test::More tests => 46;
+use Test::More tests => 49;
 
 is Slic3r::TriangleMesh::hello_world(), 'Hello world!',
     'hello world';
@@ -40,7 +40,7 @@ my $cube = {
     $m->scale(2);
     ok abs($m->stats->{volume} - 40*40*40) < 1E-2, 'scale';
     
-    $m->scale_xyz([2,1,1]);
+    $m->scale_xyz(Slic3r::Pointf3->new(2,1,1));
     ok abs($m->stats->{volume} - 2*40*40*40) < 1E-2, 'scale_xyz';
     
     $m->translate(5,10,0);
@@ -51,7 +51,7 @@ my $cube = {
     
     is_deeply $m->size, [80,40,40], 'size';
     
-    $m->scale_xyz([0.5,1,1]);
+    $m->scale_xyz(Slic3r::Pointf3->new(0.5,1,1));
     $m->rotate(45, Slic3r::Point->new(20,20));
     ok abs($m->size->[0] - sqrt(2)*40) < 1E-4, 'rotate';
     
@@ -79,7 +79,7 @@ my $cube = {
     my $m = Slic3r::TriangleMesh->new;
     $m->ReadFromPerl($cube->{vertices}, $cube->{facets});
     $m->repair;
-    my @z = (2,4,8,6,8,10,12,14,16,18,20);
+    my @z = (0,2,4,8,6,8,10,12,14,16,18,20);
     my $result = $m->slice(\@z);
     my $SCALING_FACTOR = 0.000001;
     for my $i (0..$#z) {
@@ -95,8 +95,19 @@ my $cube = {
         [ [0,1,2],[2,1,3],[1,0,4],[5,1,4],[0,2,4],[4,2,6],[7,6,8],[4,6,7],[9,4,7],[7,8,10],[2,3,6],[11,3,12],[7,12,9],[13,12,7],[6,3,11],[11,12,13],[3,1,5],[12,3,5],[5,4,9],[12,5,9],[13,7,10],[14,13,10],[8,15,10],[10,15,14],[6,11,8],[8,11,15],[15,11,13],[14,15,13] ],
     );
     $m->repair;
-    my $slices = $m->slice([ 5, 10 ]);
-    is $slices->[0][0]->area, $slices->[1][0]->area, 'slicing a tangent plane includes its area';
+    {
+        # at Z = 10 we have a top horizontal surface
+        my $slices = $m->slice([ 5, 10 ]);
+        is $slices->[0][0]->area, $slices->[1][0]->area, 'slicing a top tangent plane includes its area';
+    }
+    $m->mirror_z;
+    {
+        # this second test also checks that performing a second slice on a mesh after
+        # a transformation works properly (shared_vertices is correctly invalidated);
+        # at Z = -10 we have a bottom horizontal surface
+        my $slices = $m->slice([ -5, -10 ]);
+        is $slices->[0][0]->area, $slices->[1][0]->area, 'slicing a bottom tangent plane includes its area';
+    }
 }
 
 {

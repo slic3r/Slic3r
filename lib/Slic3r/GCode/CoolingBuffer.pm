@@ -27,7 +27,7 @@ sub append {
     $self->last_z->{$obj_id} = $print_z;
     $self->gcode($self->gcode . $gcode);
     $self->elapsed_time($self->elapsed_time + $self->gcodegen->elapsed_time);
-    $self->gcodegen->elapsed_time(0);
+    $self->gcodegen->set_elapsed_time(0);
     
     return $return;
 }
@@ -56,23 +56,24 @@ sub flush {
         Slic3r::debugf "  fan = %d%%, speed = %d%%\n", $fan_speed, $speed_factor * 100;
         
         if ($speed_factor < 1) {
-            $gcode =~ s/^(?=.*? [XY])(?=.*? E)(?!;_WIPE)(?<!;_BRIDGE_FAN_START\n)(G1 .*?F)(\d+(?:\.\d+)?)/
+            $gcode =~ s/^(?=.*?;_EXTRUDE_SET_SPEED)(?!.*?;_WIPE)(?<!;_BRIDGE_FAN_START\n)(G1\sF)(\d+(?:\.\d+)?)/
                 my $new_speed = $2 * $speed_factor;
                 $1 . sprintf("%.3f", $new_speed < $self->min_print_speed ? $self->min_print_speed : $new_speed)
                 /gexm;
         }
     }
     $fan_speed = 0 if $self->layer_id < $self->config->disable_fan_first_layers;
-    $gcode = $self->gcodegen->set_fan($fan_speed) . $gcode;
+    $gcode = $self->gcodegen->writer->set_fan($fan_speed) . $gcode;
     
     # bridge fan speed
     if (!$self->config->cooling || $self->config->bridge_fan_speed == 0 || $self->layer_id < $self->config->disable_fan_first_layers) {
         $gcode =~ s/^;_BRIDGE_FAN_(?:START|END)\n//gm;
     } else {
-        $gcode =~ s/^;_BRIDGE_FAN_START\n/ $self->gcodegen->set_fan($self->config->bridge_fan_speed, 1) /gmex;
-        $gcode =~ s/^;_BRIDGE_FAN_END\n/ $self->gcodegen->set_fan($fan_speed, 1) /gmex;
+        $gcode =~ s/^;_BRIDGE_FAN_START\n/ $self->gcodegen->writer->set_fan($self->config->bridge_fan_speed, 1) /gmex;
+        $gcode =~ s/^;_BRIDGE_FAN_END\n/ $self->gcodegen->writer->set_fan($fan_speed, 1) /gmex;
     }
     $gcode =~ s/;_WIPE//g;
+    $gcode =~ s/;_EXTRUDE_SET_SPEED//g;
     
     return $gcode;
 }

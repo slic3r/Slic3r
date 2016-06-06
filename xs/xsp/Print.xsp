@@ -1,7 +1,7 @@
 %module{Slic3r::XS};
 
 %{
-#include <myinit.h>
+#include <xsinit.h>
 #include "libslic3r/Print.hpp"
 #include "libslic3r/PlaceholderParser.hpp"
 %}
@@ -12,7 +12,6 @@
 IV
 _constant()
   ALIAS:
-    STEP_INIT_EXTRUDERS     = psInitExtruders
     STEP_SLICE              = posSlice
     STEP_PERIMETERS         = posPerimeters
     STEP_PREPARE_INFILL     = posPrepareInfill
@@ -31,12 +30,12 @@ _constant()
 %name{Slic3r::Print::Region} class PrintRegion {
     // owned by Print, no constructor/destructor
 
-    Ref<PrintRegionConfig> config()
+    Ref<StaticPrintConfig> config()
         %code%{ RETVAL = &THIS->config; %};
     Ref<Print> print();
     
-    Flow* flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, PrintObject* object)
-        %code%{ RETVAL = new Flow(THIS->flow(role, layer_height, bridge, first_layer, width, *object)); %};
+    Clone<Flow> flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, PrintObject* object)
+        %code%{ RETVAL = THIS->flow(role, layer_height, bridge, first_layer, width, *object); %};
 };
 
 
@@ -54,14 +53,14 @@ _constant()
 
     Ref<Print> print();
     Ref<ModelObject> model_object();
-    Ref<PrintObjectConfig> config()
+    Ref<StaticPrintConfig> config()
         %code%{ RETVAL = &THIS->config; %};
-    Points copies()
-        %code%{ RETVAL = THIS->copies; %};
+    Points copies();
     t_layer_height_ranges layer_height_ranges()
         %code%{ RETVAL = THIS->layer_height_ranges; %};
     Ref<Point3> size()
         %code%{ RETVAL = &THIS->size; %};
+    Clone<BoundingBox> bounding_box();
     Ref<Point> _copies_shift()
         %code%{ RETVAL = &THIS->_copies_shift; %};
     
@@ -75,11 +74,16 @@ _constant()
     void set_shifted_copies(Points value)
         %code%{ THIS->_shifted_copies = value; %};
 
-    void set_copies(Points copies)
-        %code%{ THIS->copies = copies; %};
+    bool add_copy(Pointf* point)
+        %code%{ RETVAL = THIS->add_copy(*point); %};
+    bool delete_last_copy();
+    bool delete_all_copies();
+    bool set_copies(Points copies);
+    bool reload_model_instances();
     void set_layer_height_ranges(t_layer_height_ranges layer_height_ranges)
         %code%{ THIS->layer_height_ranges = layer_height_ranges; %};
 
+    size_t total_layer_count();
     size_t layer_count();
     void clear_layers();
     Ref<Layer> get_layer(int idx);
@@ -90,7 +94,7 @@ _constant()
     size_t support_layer_count();
     void clear_support_layers();
     Ref<SupportLayer> get_support_layer(int idx);
-    Ref<SupportLayer> add_support_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z);
+    Ref<SupportLayer> add_support_layer(int id, coordf_t height, coordf_t print_z);
     void delete_support_layer(int idx);
     
     bool invalidate_state_by_config_options(std::vector<std::string> opt_keys);
@@ -103,20 +107,23 @@ _constant()
     void set_step_started(PrintObjectStep step)
         %code%{ THIS->state.set_started(step); %};
     
+    void process_external_surfaces();
+    void bridge_over_infill();
+    
     int ptr()
         %code%{ RETVAL = (int)(intptr_t)THIS; %};
 };
 
 
 %name{Slic3r::Print} class Print {
-    %name{_new} Print();
+    Print();
     ~Print();
 
-    Ref<PrintConfig> config()
+    Ref<StaticPrintConfig> config()
         %code%{ RETVAL = &THIS->config; %};
-    Ref<PrintObjectConfig> default_object_config()
+    Ref<StaticPrintConfig> default_object_config()
         %code%{ RETVAL = &THIS->default_object_config; %};
-    Ref<PrintRegionConfig> default_region_config()
+    Ref<StaticPrintConfig> default_region_config()
         %code%{ RETVAL = &THIS->default_region_config; %};
     Ref<PlaceholderParser> placeholder_parser()
         %code%{ RETVAL = &THIS->placeholder_parser; %};
@@ -130,13 +137,9 @@ _constant()
         %code%{ RETVAL = &THIS->objects; %};
     void clear_objects();
     Ref<PrintObject> get_object(int idx);
-    Ref<PrintObject> add_object(ModelObject* model_object,
-        BoundingBoxf3 *modobj_bbox)
-        %code%{ RETVAL = THIS->add_object(model_object, *modobj_bbox); %};
-    Ref<PrintObject> set_new_object(size_t idx, ModelObject* model_object,
-        BoundingBoxf3 *modobj_bbox)
-        %code%{ RETVAL = THIS->set_new_object(idx, model_object, *modobj_bbox); %};
     void delete_object(int idx);
+    void reload_object(int idx);
+    bool reload_model_instances();
     size_t object_count()
         %code%{ RETVAL = THIS->objects.size(); %};
 
@@ -152,11 +155,29 @@ _constant()
     bool invalidate_all_steps();
     bool step_done(PrintStep step)
         %code%{ RETVAL = THIS->state.is_done(step); %};
+    bool object_step_done(PrintObjectStep step)
+        %code%{ RETVAL = THIS->step_done(step); %};
     void set_step_done(PrintStep step)
         %code%{ THIS->state.set_done(step); %};
     void set_step_started(PrintStep step)
         %code%{ THIS->state.set_started(step); %};
     
+    std::vector<int> object_extruders()
+        %code%{
+            std::set<size_t> extruders = THIS->object_extruders();
+            RETVAL.reserve(extruders.size());
+            for (std::set<size_t>::const_iterator e = extruders.begin(); e != extruders.end(); ++e) {
+                RETVAL.push_back(*e);
+            }
+        %};
+    std::vector<int> support_material_extruders()
+        %code%{
+            std::set<size_t> extruders = THIS->support_material_extruders();
+            RETVAL.reserve(extruders.size());
+            for (std::set<size_t>::const_iterator e = extruders.begin(); e != extruders.end(); ++e) {
+                RETVAL.push_back(*e);
+            }
+        %};
     std::vector<int> extruders()
         %code%{
             std::set<size_t> extruders = THIS->extruders();
@@ -165,11 +186,51 @@ _constant()
                 RETVAL.push_back(*e);
             }
         %};
+    void clear_filament_stats()
+        %code%{
+            THIS->filament_stats.clear();
+        %};
+    void set_filament_stats(int extruder_id, float length)
+        %code%{
+            THIS->filament_stats.insert(std::pair<size_t,float>(extruder_id, 0));
+            THIS->filament_stats[extruder_id] += length;
+        %};
+    SV* filament_stats()
+        %code%{
+            HV* hv = newHV();
+            for (std::map<size_t,float>::const_iterator it = THIS->filament_stats.begin(); it != THIS->filament_stats.end(); ++it) {
+                // stringify extruder_id
+                std::ostringstream ss;
+                ss << it->first;
+                std::string str = ss.str();
+                
+                (void)hv_store( hv, str.c_str(), str.length(), newSViv(it->second), 0 );
+                RETVAL = newRV_noinc((SV*)hv);
+            }
+        %};
     void _simplify_slices(double distance);
     double max_allowed_layer_height() const;
     bool has_support_material() const;
+    void auto_assign_extruders(ModelObject* model_object);
     
-    void init_extruders();
+    void add_model_object(ModelObject* model_object, int idx = -1);
+    bool apply_config(DynamicPrintConfig* config)
+        %code%{ RETVAL = THIS->apply_config(*config); %};
+    bool has_infinite_skirt();
+    bool has_skirt();
+    void validate()
+        %code%{
+            try {
+                THIS->validate();
+            } catch (PrintValidationException &e) {
+                croak("%s\n", e.what());
+            }
+        %};
+    Clone<BoundingBox> bounding_box();
+    Clone<BoundingBox> total_bounding_box();
+    double skirt_first_layer_height();
+    Clone<Flow> brim_flow();
+    Clone<Flow> skirt_flow();
 %{
 
 double

@@ -6,8 +6,8 @@
 #include "ClipperUtils.hpp"
 #include "polypartition.h"
 #include "poly2tri/poly2tri.h"
-
 #include <algorithm>
+#include <cassert>
 #include <list>
 
 namespace Slic3r {
@@ -82,27 +82,51 @@ ExPolygon::is_valid() const
 }
 
 bool
-ExPolygon::contains_line(const Line &line) const
+ExPolygon::contains(const Line &line) const
 {
-    return this->contains_polyline(line);
+    return this->contains((Polyline)line);
 }
 
 bool
-ExPolygon::contains_polyline(const Polyline &polyline) const
+ExPolygon::contains(const Polyline &polyline) const
 {
     Polylines pl_out;
-    diff((Polylines)polyline, *this, pl_out);
+    diff((Polylines)polyline, *this, &pl_out);
     return pl_out.empty();
 }
 
 bool
-ExPolygon::contains_point(const Point &point) const
+ExPolygon::contains(const Point &point) const
 {
-    if (!this->contour.contains_point(point)) return false;
+    if (!this->contour.contains(point)) return false;
     for (Polygons::const_iterator it = this->holes.begin(); it != this->holes.end(); ++it) {
-        if (it->contains_point(point)) return false;
+        if (it->contains(point)) return false;
     }
     return true;
+}
+
+// inclusive version of contains() that also checks whether point is on boundaries
+bool
+ExPolygon::contains_b(const Point &point) const
+{
+    return this->contains(point) || this->has_boundary_point(point);
+}
+
+bool
+ExPolygon::has_boundary_point(const Point &point) const
+{
+    if (this->contour.has_boundary_point(point)) return true;
+    for (Polygons::const_iterator h = this->holes.begin(); h != this->holes.end(); ++h) {
+        if (h->has_boundary_point(point)) return true;
+    }
+    return false;
+}
+
+void
+ExPolygon::simplify_p(double tolerance, Polygons* polygons) const
+{
+    Polygons pp = this->simplify_p(tolerance);
+    polygons->insert(polygons->end(), pp.begin(), pp.end());
 }
 
 Polygons
@@ -112,17 +136,23 @@ ExPolygon::simplify_p(double tolerance) const
     pp.reserve(this->holes.size() + 1);
     
     // contour
-    Polygon p = this->contour;
-    p.points = MultiPoint::_douglas_peucker(p.points, tolerance);
-    pp.push_back(p);
+    {
+        Polygon p = this->contour;
+        p.points.push_back(p.points.front());
+        p.points = MultiPoint::_douglas_peucker(p.points, tolerance);
+        p.points.pop_back();
+        pp.push_back(p);
+    }
     
     // holes
     for (Polygons::const_iterator it = this->holes.begin(); it != this->holes.end(); ++it) {
-        p = *it;
+        Polygon p = *it;
+        p.points.push_back(p.points.front());
         p.points = MultiPoint::_douglas_peucker(p.points, tolerance);
+        p.points.pop_back();
         pp.push_back(p);
     }
-    simplify_polygons(pp, pp);
+    simplify_polygons(pp, &pp);
     return pp;
 }
 
@@ -130,48 +160,135 @@ ExPolygons
 ExPolygon::simplify(double tolerance) const
 {
     Polygons pp = this->simplify_p(tolerance);
-    ExPolygons expp;
-    union_(pp, expp);
-    return expp;
+    return union_ex(pp);
 }
 
 void
-ExPolygon::simplify(double tolerance, ExPolygons &expolygons) const
+ExPolygon::simplify(double tolerance, ExPolygons* expolygons) const
 {
     ExPolygons ep = this->simplify(tolerance);
-    expolygons.reserve(expolygons.size() + ep.size());
-    expolygons.insert(expolygons.end(), ep.begin(), ep.end());
+    expolygons->insert(expolygons->end(), ep.begin(), ep.end());
+}
+
+void
+ExPolygon::medial_axis(double max_width, double min_width, ThickPolylines* polylines) const
+{
+    // init helper object
+    Slic3r::Geometry::MedialAxis ma(max_width, min_width, this);
+    ma.lines = this->lines();
+    
+    // compute the Voronoi diagram and extract medial axis polylines
+    ThickPolylines pp;
+    ma.build(&pp);
+    
+    /*
+    SVG svg("medial_axis.svg");
+    svg.draw(*this);
+    svg.draw(pp);
+    svg.Close();
+    */
+    
+    /* Find the maximum width returned; we're going to use this for validating and 
+       filtering the output segments. */
+    double max_w = 0;
+    for (ThickPolylines::const_iterator it = pp.begin(); it != pp.end(); ++it)
+        max_w = fmaxf(max_w, *std::max_element(it->width.begin(), it->width.end()));
+    
+    /* Loop through all returned polylines in order to extend their endpoints to the 
+       expolygon boundaries */
+    bool removed = false;
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline& polyline = pp[i];
+        
+        // extend initial and final segments of each polyline if they're actual endpoints
+        /* We assign new endpoints to temporary variables because in case of a single-line
+           polyline, after we extend the start point it will be caught by the intersection()
+           call, so we keep the inner point until we perform the second intersection() as well */
+        Point new_front = polyline.points.front();
+        Point new_back  = polyline.points.back();
+        if (polyline.endpoints.first && !this->has_boundary_point(new_front)) {
+            Line line(polyline.points.front(), polyline.points[1]);
+            
+            // prevent the line from touching on the other side, otherwise intersection() might return that solution
+            if (polyline.points.size() == 2) line.b = line.midpoint();
+            
+            line.extend_start(max_width);
+            (void)this->contour.intersection(line, &new_front);
+        }
+        if (polyline.endpoints.second && !this->has_boundary_point(new_back)) {
+            Line line(
+                *(polyline.points.end() - 2),
+                polyline.points.back()
+            );
+            
+            // prevent the line from touching on the other side, otherwise intersection() might return that solution
+            if (polyline.points.size() == 2) line.a = line.midpoint();
+            line.extend_end(max_width);
+            
+            (void)this->contour.intersection(line, &new_back);
+        }
+        polyline.points.front() = new_front;
+        polyline.points.back()  = new_back;
+        
+        /*  remove too short polylines
+            (we can't do this check before endpoints extension and clipping because we don't
+            know how long will the endpoints be extended since it depends on polygon thickness
+            which is variable - extension will be <= max_width/2 on each side)  */
+        if ((polyline.endpoints.first || polyline.endpoints.second)
+            && polyline.length() < max_w*2) {
+            pp.erase(pp.begin() + i);
+            --i;
+            removed = true;
+            continue;
+        }
+    }
+    
+    /*  If we removed any short polylines we now try to connect consecutive polylines
+        in order to allow loop detection. Note that this algorithm is greedier than 
+        MedialAxis::process_edge_neighbors() as it will connect random pairs of 
+        polylines even when more than two start from the same point. This has no 
+        drawbacks since we optimize later using nearest-neighbor which would do the 
+        same, but should we use a more sophisticated optimization algorithm we should
+        not connect polylines when more than two meet.  */
+    if (removed) {
+        for (size_t i = 0; i < pp.size(); ++i) {
+            ThickPolyline& polyline = pp[i];
+            if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
+            
+            // find another polyline starting here
+            for (size_t j = i+1; j < pp.size(); ++j) {
+                ThickPolyline& other = pp[j];
+                if (polyline.last_point().coincides_with(other.last_point())) {
+                    other.reverse();
+                } else if (polyline.first_point().coincides_with(other.last_point())) {
+                    polyline.reverse();
+                    other.reverse();
+                } else if (polyline.first_point().coincides_with(other.first_point())) {
+                    polyline.reverse();
+                } else if (!polyline.last_point().coincides_with(other.first_point())) {
+                    continue;
+                }
+                
+                polyline.points.insert(polyline.points.end(), other.points.begin() + 1, other.points.end());
+                polyline.width.insert(polyline.width.end(), other.width.begin(), other.width.end());
+                polyline.endpoints.second = other.endpoints.second;
+                assert(polyline.width.size() == polyline.points.size()*2 - 2);
+                
+                pp.erase(pp.begin() + j);
+                j = i;  // restart search from i+1
+            }
+        }
+    }
+    
+    polylines->insert(polylines->end(), pp.begin(), pp.end());
 }
 
 void
 ExPolygon::medial_axis(double max_width, double min_width, Polylines* polylines) const
 {
-    // init helper object
-    Slic3r::Geometry::MedialAxis ma(max_width, min_width);
-    
-    // populate list of segments for the Voronoi diagram
-    this->contour.lines(&ma.lines);
-    for (Polygons::const_iterator hole = this->holes.begin(); hole != this->holes.end(); ++hole)
-        hole->lines(&ma.lines);
-    
-    // compute the Voronoi diagram
-    ma.build(polylines);
-    
-    // clip segments to our expolygon area
-    // (do this before extending endpoints as external segments coule be extended into
-    // expolygon, this leaving wrong things inside)
-    intersection(*polylines, *this, *polylines);
-    
-    // extend initial and final segments of each polyline (they will be clipped)
-    // unless they represent closed loops
-    for (Polylines::iterator polyline = polylines->begin(); polyline != polylines->end(); ++polyline) {
-        if (polyline->points.front().distance_to(polyline->points.back()) < min_width) continue;
-        polyline->extend_start(max_width);
-        polyline->extend_end(max_width);
-    }
-    
-    // clip again after extending endpoints to prevent them from exceeding the expolygon boundaries
-    intersection(*polylines, *this, *polylines);
+    ThickPolylines tp;
+    this->medial_axis(max_width, min_width, &tp);
+    polylines->insert(polylines->end(), tp.begin(), tp.end());
 }
 
 void
@@ -230,7 +347,7 @@ ExPolygon::get_trapezoids2(Polygons* polygons) const
         
         // intersect with this expolygon
         Polygons trapezoids;
-        intersection<Polygons,Polygons>(poly, *this, trapezoids);
+        intersection<Polygons,Polygons>(poly, *this, &trapezoids);
         
         // append results to return value
         polygons->insert(polygons->end(), trapezoids.begin(), trapezoids.end());
@@ -268,9 +385,9 @@ ExPolygon::triangulate_pp(Polygons* polygons) const
     std::list<TPPLPoly> input;
     
     Polygons pp = *this;
-    simplify_polygons(pp, pp, true);
+    simplify_polygons(pp, &pp, true);
     ExPolygons expp;
-    union_(pp, expp);
+    union_(pp, &expp);
     
     for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
         // contour
@@ -324,34 +441,32 @@ void
 ExPolygon::triangulate_p2t(Polygons* polygons) const
 {
     ExPolygons expp;
-    simplify_polygons(*this, expp, true);
+    simplify_polygons(*this, &expp, true);
     
     for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
-        p2t::CDT* cdt;
-        
         // TODO: prevent duplicate points
-        
+
         // contour
-        {
-            std::vector<p2t::Point*> points;
-            for (Points::const_iterator point = ex->contour.points.begin(); point != ex->contour.points.end(); ++point) {
-                points.push_back(new p2t::Point(point->x, point->y));
-            }
-            cdt = new p2t::CDT(points);
+        std::vector<p2t::Point*> ContourPoints;
+        for (Points::const_iterator point = ex->contour.points.begin(); point != ex->contour.points.end(); ++point) {
+            // We should delete each p2t::Point object
+            ContourPoints.push_back(new p2t::Point(point->x, point->y));
         }
-    
+        p2t::CDT cdt(ContourPoints);
+
         // holes
         for (Polygons::const_iterator hole = ex->holes.begin(); hole != ex->holes.end(); ++hole) {
             std::vector<p2t::Point*> points;
             for (Points::const_iterator point = hole->points.begin(); point != hole->points.end(); ++point) {
+                // will be destructed in SweepContext::~SweepContext
                 points.push_back(new p2t::Point(point->x, point->y));
             }
-            cdt->AddHole(points);
+            cdt.AddHole(points);
         }
         
         // perform triangulation
-        cdt->Triangulate();
-        std::vector<p2t::Triangle*> triangles = cdt->GetTriangles();
+        cdt.Triangulate();
+        std::vector<p2t::Triangle*> triangles = cdt.GetTriangles();
         
         for (std::vector<p2t::Triangle*>::const_iterator triangle = triangles.begin(); triangle != triangles.end(); ++triangle) {
             Polygon p;
@@ -361,68 +476,33 @@ ExPolygon::triangulate_p2t(Polygons* polygons) const
             }
             polygons->push_back(p);
         }
+
+        for(std::vector<p2t::Point*>::iterator it = ContourPoints.begin(); it != ContourPoints.end(); ++it) {
+            delete *it;
+        }
     }
 }
 
-#ifdef SLIC3RXS
-
-REGISTER_CLASS(ExPolygon, "ExPolygon");
-
-SV*
-ExPolygon::to_AV() {
-    const unsigned int num_holes = this->holes.size();
-    AV* av = newAV();
-    av_extend(av, num_holes);  // -1 +1
-    
-    av_store(av, 0, perl_to_SV_ref(this->contour));
-    
-    for (unsigned int i = 0; i < num_holes; i++) {
-        av_store(av, i+1, perl_to_SV_ref(this->holes[i]));
-    }
-    return newRV_noinc((SV*)av);
-}
-
-SV*
-ExPolygon::to_SV_pureperl() const
+Lines
+ExPolygon::lines() const
 {
-    const unsigned int num_holes = this->holes.size();
-    AV* av = newAV();
-    av_extend(av, num_holes);  // -1 +1
-    av_store(av, 0, this->contour.to_SV_pureperl());
-    for (unsigned int i = 0; i < num_holes; i++) {
-        av_store(av, i+1, this->holes[i].to_SV_pureperl());
+    Lines lines = this->contour.lines();
+    for (Polygons::const_iterator h = this->holes.begin(); h != this->holes.end(); ++h) {
+        Lines hole_lines = h->lines();
+        lines.insert(lines.end(), hole_lines.begin(), hole_lines.end());
     }
-    return newRV_noinc((SV*)av);
+    return lines;
 }
 
-void
-ExPolygon::from_SV(SV* expoly_sv)
+std::string
+ExPolygon::dump_perl() const
 {
-    AV* expoly_av = (AV*)SvRV(expoly_sv);
-    const unsigned int num_polygons = av_len(expoly_av)+1;
-    this->holes.resize(num_polygons-1);
-    
-    SV** polygon_sv = av_fetch(expoly_av, 0, 0);
-    this->contour.from_SV(*polygon_sv);
-    for (unsigned int i = 0; i < num_polygons-1; i++) {
-        polygon_sv = av_fetch(expoly_av, i+1, 0);
-        this->holes[i].from_SV(*polygon_sv);
-    }
+    std::ostringstream ret;
+    ret << "[" << this->contour.dump_perl();
+    for (Polygons::const_iterator h = this->holes.begin(); h != this->holes.end(); ++h)
+        ret << "," << h->dump_perl();
+    ret << "]";
+    return ret.str();
 }
-
-void
-ExPolygon::from_SV_check(SV* expoly_sv)
-{
-    if (sv_isobject(expoly_sv) && (SvTYPE(SvRV(expoly_sv)) == SVt_PVMG)) {
-        if (!sv_isa(expoly_sv, perl_class_name(this)) && !sv_isa(expoly_sv, perl_class_name_ref(this)))
-          CONFESS("Not a valid %s object", perl_class_name(this));
-        // a XS ExPolygon was supplied
-        *this = *(ExPolygon *)SvIV((SV*)SvRV( expoly_sv ));
-    } else {
-        // a Perl arrayref was supplied
-        this->from_SV(expoly_sv);
-    }
-}
-#endif
 
 }

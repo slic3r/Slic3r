@@ -1,8 +1,10 @@
 #ifndef slic3r_ExPolygonCollection_hpp_
 #define slic3r_ExPolygonCollection_hpp_
 
-#include <myinit.h>
+#include "libslic3r.h"
 #include "ExPolygon.hpp"
+#include "Line.hpp"
+#include "Polyline.hpp"
 
 namespace Slic3r {
 
@@ -15,6 +17,7 @@ class ExPolygonCollection
     ExPolygons expolygons;
     
     ExPolygonCollection() {};
+    ExPolygonCollection(const ExPolygon &expolygon);
     ExPolygonCollection(const ExPolygons &expolygons) : expolygons(expolygons) {};
     operator Points() const;
     operator Polygons() const;
@@ -22,9 +25,13 @@ class ExPolygonCollection
     void scale(double factor);
     void translate(double x, double y);
     void rotate(double angle, const Point &center);
-    bool contains_point(const Point &point) const;
+    template <class T> bool contains(const T &item) const;
+    bool contains_b(const Point &point) const;
     void simplify(double tolerance);
-    void convex_hull(Polygon* hull) const;
+    Polygon convex_hull() const;
+    Lines lines() const;
+    Polygons contours() const;
+    void append(const ExPolygons &expolygons);
 };
 
 }

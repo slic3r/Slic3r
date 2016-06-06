@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Slic3r::XS;
-use Test::More tests => 16;
+use Test::More tests => 18;
 
 my $points = [
     [100, 100],
@@ -26,7 +26,9 @@ my $loop = Slic3r::ExtrusionLoop->new_from_paths(
     ),
 );
 
-my $collection = Slic3r::ExtrusionPath::Collection->new($path);
+my $collection = Slic3r::ExtrusionPath::Collection->new(
+    $path,
+);
 isa_ok $collection, 'Slic3r::ExtrusionPath::Collection', 'collection object with items in constructor';
 ok !$collection->no_sort, 'no_sort is false by default';
 
@@ -83,6 +85,13 @@ is scalar(@{$collection->[1]}), 1, 'appended collection was duplicated';
     $collection->no_sort(1);
     my @foo = @{$collection->chained_path(0)};
     pass 'chained_path with no_sort';
+}
+
+{
+    my $coll2 = $collection->clone;
+    ok !$coll2->no_sort, 'expected no_sort value';
+    $coll2->no_sort(1);
+    ok $coll2->clone->no_sort, 'no_sort is kept after clone';
 }
 
 __END__

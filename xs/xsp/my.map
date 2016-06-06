@@ -1,11 +1,20 @@
 coordf_t T_NV
 
-std::vector<Points::size_type>  T_STD_VECTOR_INT
-std::vector<size_t>  T_STD_VECTOR_INT
+std::string                     T_STD_STRING
+t_config_option_key             T_STD_STRING
+t_model_material_id             T_STD_STRING
 
-t_config_option_key T_STD_STRING
-t_model_material_id T_STD_STRING
-t_layer_height_ranges   T_LAYER_HEIGHT_RANGES
+std::vector<std::string>	    T_STD_VECTOR_STD_STRING
+
+std::vector<int>		        T_STD_VECTOR_INT
+std::vector<Points::size_type>  T_STD_VECTOR_INT
+std::vector<size_t>             T_STD_VECTOR_INT
+
+std::vector<unsigned int>	    T_STD_VECTOR_UINT
+
+std::vector<double>	            T_STD_VECTOR_DOUBLE
+
+t_layer_height_ranges           T_LAYER_HEIGHT_RANGES
 
 
 BoundingBox*               O_OBJECT_SLIC3R
@@ -23,11 +32,17 @@ Clone<BoundingBoxf3>       O_OBJECT_SLIC3R_T
 DynamicPrintConfig*        O_OBJECT_SLIC3R
 Ref<DynamicPrintConfig>    O_OBJECT_SLIC3R_T
 
+StaticPrintConfig*         O_OBJECT_SLIC3R
+Ref<StaticPrintConfig>     O_OBJECT_SLIC3R_T
+
 PrintObjectConfig*         O_OBJECT_SLIC3R
 Ref<PrintObjectConfig>     O_OBJECT_SLIC3R_T
 
 PrintRegionConfig*         O_OBJECT_SLIC3R
 Ref<PrintRegionConfig>     O_OBJECT_SLIC3R_T
+
+GCodeConfig*               O_OBJECT_SLIC3R
+Ref<GCodeConfig>           O_OBJECT_SLIC3R_T
 
 PrintConfig*               O_OBJECT_SLIC3R
 Ref<PrintConfig>           O_OBJECT_SLIC3R_T
@@ -60,6 +75,10 @@ Clone<Pointf3>             O_OBJECT_SLIC3R_T
 Line*                      O_OBJECT_SLIC3R
 Ref<Line>                  O_OBJECT_SLIC3R_T
 Clone<Line>                O_OBJECT_SLIC3R_T
+
+Linef3*                    O_OBJECT_SLIC3R
+Ref<Linef3>                O_OBJECT_SLIC3R_T
+Clone<Linef3>              O_OBJECT_SLIC3R_T
 
 Polyline*                  O_OBJECT_SLIC3R
 Ref<Polyline>              O_OBJECT_SLIC3R_T
@@ -108,6 +127,8 @@ SurfaceCollection*         O_OBJECT_SLIC3R
 Ref<SurfaceCollection>     O_OBJECT_SLIC3R_T
 
 Extruder*                  O_OBJECT_SLIC3R
+Ref<Extruder>              O_OBJECT_SLIC3R_T
+Clone<Extruder>            O_OBJECT_SLIC3R_T
 
 Model*                     O_OBJECT_SLIC3R
 Ref<Model>                 O_OBJECT_SLIC3R_T
@@ -152,10 +173,45 @@ PlaceholderParser*         O_OBJECT_SLIC3R
 Ref<PlaceholderParser>     O_OBJECT_SLIC3R_T
 Clone<PlaceholderParser>   O_OBJECT_SLIC3R_T
 
+AvoidCrossingPerimeters*         O_OBJECT_SLIC3R
+Ref<AvoidCrossingPerimeters>     O_OBJECT_SLIC3R_T
+Clone<AvoidCrossingPerimeters>   O_OBJECT_SLIC3R_T
+
+Wipe*         O_OBJECT_SLIC3R
+Ref<Wipe>     O_OBJECT_SLIC3R_T
+Clone<Wipe>   O_OBJECT_SLIC3R_T
+
+OozePrevention*             O_OBJECT_SLIC3R
+Ref<OozePrevention>         O_OBJECT_SLIC3R_T
+Clone<OozePrevention>       O_OBJECT_SLIC3R_T
+
+GCode*                      O_OBJECT_SLIC3R
+Ref<GCode>                  O_OBJECT_SLIC3R_T
+Clone<GCode>                O_OBJECT_SLIC3R_T
+
 MotionPlanner*             O_OBJECT_SLIC3R
 Ref<MotionPlanner>         O_OBJECT_SLIC3R_T
 Clone<MotionPlanner>       O_OBJECT_SLIC3R_T
 
+GCodeSender*               O_OBJECT_SLIC3R
+Ref<GCodeSender>           O_OBJECT_SLIC3R_T
+Clone<GCodeSender>         O_OBJECT_SLIC3R_T
+
+GCodeWriter*               O_OBJECT_SLIC3R
+Ref<GCodeWriter>           O_OBJECT_SLIC3R_T
+Clone<GCodeWriter>         O_OBJECT_SLIC3R_T
+
+BridgeDetector*            O_OBJECT_SLIC3R
+Ref<BridgeDetector>        O_OBJECT_SLIC3R_T
+Clone<BridgeDetector>      O_OBJECT_SLIC3R_T
+
+PerimeterGenerator*         O_OBJECT_SLIC3R
+Ref<PerimeterGenerator>     O_OBJECT_SLIC3R_T
+Clone<PerimeterGenerator>   O_OBJECT_SLIC3R_T
+
+GLVertexArray*             O_OBJECT_SLIC3R
+
+Axis                  T_UV
 ExtrusionLoopRole     T_UV
 ExtrusionRole     T_UV
 FlowRole     T_UV
@@ -195,12 +251,99 @@ TriangleMeshPtrs T_PTR_ARRAYREF
 
 INPUT
 
+T_STD_STRING
+    {
+      size_t len;
+      const char * c = SvPV($arg, len);
+      $var = std::string(c, len);
+    }
+
+T_STD_VECTOR_STD_STRING
+	if (SvROK($arg) && SvTYPE(SvRV($arg))==SVt_PVAV) {
+	  AV* av = (AV*)SvRV($arg);
+	  const unsigned int alen = av_len(av)+1;
+	  $var = std::vector<std::string>(alen);
+	  STRLEN len;
+	  char* tmp;
+	  SV** elem;
+	  for (unsigned int i = 0; i < alen; i++) {
+	    elem = av_fetch(av, i, 0);
+	    if (elem != NULL) {
+	    tmp = SvPV(*elem, len);
+	      ${var}[i] = std::string(tmp, len);
+	    }
+	    else
+	      ${var}[i] = std::string(\"\");
+	  }
+	}
+	else
+	  Perl_croak(aTHX_ \"%s: %s is not an array reference\",
+	             ${$ALIAS?\q[GvNAME(CvGV(cv))]:\qq[\"$pname\"]},
+	             \"$var\");
+
+T_STD_VECTOR_INT
+	if (SvROK($arg) && SvTYPE(SvRV($arg))==SVt_PVAV) {
+	  AV* av = (AV*)SvRV($arg);
+	  const unsigned int len = av_len(av)+1;
+	  $var = std::vector<int>(len);
+	  SV** elem;
+	  for (unsigned int i = 0; i < len; i++) {
+	    elem = av_fetch(av, i, 0);
+	    if (elem != NULL)
+	      ${var}[i] = SvIV(*elem);
+	    else
+	      ${var}[i] = 0;
+	  }
+	}
+	else
+	  Perl_croak(aTHX_ \"%s: %s is not an array reference\",
+	             ${$ALIAS?\q[GvNAME(CvGV(cv))]:\qq[\"$pname\"]},
+	             \"$var\");
+
+T_STD_VECTOR_UINT
+	if (SvROK($arg) && SvTYPE(SvRV($arg))==SVt_PVAV) {
+	  AV* av = (AV*)SvRV($arg);
+	  const unsigned int len = av_len(av)+1;
+	  $var = std::vector<unsigned int>(len);
+	  SV** elem;
+	  for (unsigned int i = 0; i < len; i++) {
+	    elem = av_fetch(av, i, 0);
+	    if (elem != NULL)
+	      ${var}[i] = SvUV(*elem);
+	    else
+	      ${var}[i] = 0;
+	  }
+	}
+	else
+	  Perl_croak(aTHX_ \"%s: %s is not an array reference\",
+	             ${$ALIAS?\q[GvNAME(CvGV(cv))]:\qq[\"$pname\"]},
+	             \"$var\");
+
+T_STD_VECTOR_DOUBLE
+	if (SvROK($arg) && SvTYPE(SvRV($arg))==SVt_PVAV) {
+	  AV* av = (AV*)SvRV($arg);
+	  const unsigned int len = av_len(av)+1;
+	  $var = std::vector<double>(len);
+	  SV** elem;
+	  for (unsigned int i = 0; i < len; i++) {
+	    elem = av_fetch(av, i, 0);
+	    if (elem != NULL)
+	      ${var}[i] = SvNV(*elem);
+	    else
+	      ${var}[i] = 0.;
+	  }
+	}
+	else
+	  Perl_croak(aTHX_ \"%s: %s is not an array reference\",
+	             ${$ALIAS?\q[GvNAME(CvGV(cv))]:\qq[\"$pname\"]},
+	             \"$var\");
+
 O_OBJECT_SLIC3R
     if( sv_isobject($arg) && (SvTYPE(SvRV($arg)) == SVt_PVMG) ) {
-        if ( sv_isa($arg, perl_class_name($var) ) ||  sv_isa($arg, perl_class_name_ref($var) )) {
+        if ( sv_isa($arg, Slic3r::perl_class_name($var) ) ||  sv_isa($arg, Slic3r::perl_class_name_ref($var) )) {
               $var = ($type)SvIV((SV*)SvRV( $arg ));
         } else {
-              croak(\"$var is not of type %s (got %s)\", perl_class_name($var), HvNAME(SvSTASH(SvRV($arg))));
+              croak(\"$var is not of type %s (got %s)\", Slic3r::perl_class_name($var), HvNAME(SvSTASH(SvRV($arg))));
               XSRETURN_UNDEF;
         }
     } else {
@@ -212,13 +355,11 @@ T_ARRAYREF
     if (SvROK($arg) && SvTYPE(SvRV($arg)) == SVt_PVAV) {
         AV* av = (AV*)SvRV($arg);
         const unsigned int len = av_len(av)+1;
-        $type* tmp = new $type(len);
+        $var.resize(len);
         for (unsigned int i = 0; i < len; i++) {
             SV** elem = av_fetch(av, i, 0);
-            (*tmp)[i].from_SV_check(*elem);
+            from_SV_check(*elem, &$var\[i]);
         }
-        $var = *tmp;
-	    delete tmp;
     } else
         Perl_croak(aTHX_ \"%s: %s is not an array reference\",
 	             ${$ALIAS?\q[GvNAME(CvGV(cv))]:\qq[\"$pname\"]},
@@ -272,11 +413,61 @@ T_LAYER_HEIGHT_RANGES
 
 
 OUTPUT
+
+T_STD_STRING
+    $arg = newSVpvn_utf8( $var.c_str(), $var.length(), true );
+
+T_STD_VECTOR_STD_STRING
+	AV* av = newAV();
+	$arg = newRV_noinc((SV*)av);
+	sv_2mortal($arg);
+	const unsigned int len = $var.size();
+        if (len)
+          av_extend(av, len-1);
+	for (unsigned int i = 0; i < len; i++) {
+	  const std::string& str = ${var}[i];
+	  STRLEN len = str.length();
+	  av_store(av, i, newSVpvn_utf8(str.c_str(), len, true));
+	}
+
+T_STD_VECTOR_INT
+	AV* av = newAV();
+	$arg = newRV_noinc((SV*)av);
+	sv_2mortal($arg);
+	const unsigned int len = $var.size();
+        if (len)
+          av_extend(av, len-1);
+	for (unsigned int i = 0; i < len; i++) {
+	  av_store(av, i, newSViv(${var}[i]));
+	}
+
+T_STD_VECTOR_UINT
+	AV* av = newAV();
+	$arg = newRV_noinc((SV*)av);
+	sv_2mortal($arg);
+	const unsigned int len = $var.size();
+        if (len)
+          av_extend(av, len-1);
+	for (unsigned int i = 0; i < len; i++) {
+	  av_store(av, i, newSVuv(${var}[i]));
+	}
+
+T_STD_VECTOR_DOUBLE
+	AV* av = newAV();
+	$arg = newRV_noinc((SV*)av);
+	sv_2mortal($arg);
+	const unsigned int len = $var.size();
+        if (len)
+          av_extend(av, len-1);
+	for (unsigned int i = 0; i < len; i++) {
+	  av_store(av, i, newSVnv(${var}[i]));
+	}
+
 # return object from pointer
 O_OBJECT_SLIC3R
         if ($var == NULL)
             XSRETURN_UNDEF;
-        sv_setref_pv( $arg, perl_class_name($var), (void*)$var );
+        sv_setref_pv( $arg, Slic3r::perl_class_name($var), (void*)$var );
 
 # return value handled by template class
 O_OBJECT_SLIC3R_T
@@ -295,7 +486,6 @@ T_ARRAYREF
     for (${type}::const_iterator it = $var.begin(); it != $var.end(); ++it) {
         av_store(av, i++, perl_to_SV_clone_ref(*it));
 	}
-	$var.clear();
 
 T_ARRAYREF_PTR
     AV* av = newAV();
@@ -327,7 +517,7 @@ T_PTR_ARRAYREF
 	if (len > 0) av_extend(av, len-1);
 	int i = 0;
     for (${type}::iterator it = $var.begin(); it != $var.end(); ++it) {
-        av_store(av, i++, (*it)->to_SV());
+        av_store(av, i++, to_SV(*it));
 	}
 
 T_LAYER_HEIGHT_RANGES

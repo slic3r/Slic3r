@@ -3,8 +3,8 @@ use strict;
 use warnings;
 use utf8;
 
-use Wx qw(:font :html :misc :sizer :systemsettings);
-use Wx::Event qw(EVT_HTML_LINK_CLICKED);
+use Wx qw(:font :html :misc :dialog :sizer :systemsettings :frame :id);
+use Wx::Event qw(EVT_HTML_LINK_CLICKED EVT_LEFT_DOWN EVT_BUTTON);
 use Wx::Print;
 use Wx::Html;
 use base 'Wx::Dialog';
@@ -12,7 +12,7 @@ use base 'Wx::Dialog';
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, -1, 'About Slic3r', wxDefaultPosition, [600, 270]);
+    my $self = $class->SUPER::new($parent, -1, 'About Slic3r', wxDefaultPosition, [600, 340], wxCAPTION);
 
     $self->SetBackgroundColour(Wx::wxWHITE);
     my $hsizer = Wx::BoxSizer->new(wxHORIZONTAL);
@@ -47,7 +47,7 @@ sub new {
         '<html>' .
         '<body bgcolor="#ffffff" link="#808080">' .
         '<font color="#808080">' .
-        'Copyright &copy; 2011-2014 Alessandro Ranellucci. <br />' .
+        'Copyright &copy; 2011-2016 Alessandro Ranellucci. <br />' .
         '<a href="http://slic3r.org/">Slic3r</a> is licensed under the ' .
         '<a href="http://www.gnu.org/licenses/agpl-3.0.html">GNU Affero General Public License, version 3</a>.' .
         '<br /><br /><br />' .
@@ -65,7 +65,18 @@ sub new {
     $html->SetPage($text);
     $vsizer->Add($html, 1, wxEXPAND | wxALIGN_LEFT | wxRIGHT | wxBOTTOM, 20);
     EVT_HTML_LINK_CLICKED($self, $html, \&link_clicked);
-
+    
+    my $buttons = $self->CreateStdDialogButtonSizer(wxOK);
+    $self->SetEscapeId(wxID_CLOSE);
+    EVT_BUTTON($self, wxID_CLOSE, sub {
+        $self->EndModal(wxID_CLOSE);
+        $self->Close;
+    });
+    $vsizer->Add($buttons, 0, wxEXPAND | wxRIGHT | wxBOTTOM, 3);
+    
+    EVT_LEFT_DOWN($self, sub { $self->Close });
+    EVT_LEFT_DOWN($logo, sub { $self->Close });
+    
     return $self;
 }
 
@@ -85,7 +96,7 @@ sub new {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
 
-    $self->{logo} = Wx::Bitmap->new("$Slic3r::var/Slic3r_192px.png", wxBITMAP_TYPE_PNG);
+    $self->{logo} = Wx::Bitmap->new($Slic3r::var->("Slic3r_192px.png"), wxBITMAP_TYPE_PNG);
     $self->SetMinSize(Wx::Size->new($self->{logo}->GetWidth, $self->{logo}->GetHeight));
 
     EVT_PAINT($self, \&repaint);

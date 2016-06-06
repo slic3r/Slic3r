@@ -23,6 +23,11 @@ use overload
     '@{}' => sub { [ $_[0]->x, $_[0]->y, $_[0]->z ] },  #,
     'fallback' => 1;
 
+sub pp {
+    my ($self) = @_;
+    return [ @$self ];
+}
+
 package Slic3r::Pointf;
 use overload
     '@{}' => sub { $_[0]->arrayref },
@@ -32,6 +37,11 @@ package Slic3r::Pointf3;
 use overload
     '@{}' => sub { [ $_[0]->x, $_[0]->y, $_[0]->z ] },  #,
     'fallback' => 1;
+
+sub pp {
+    my ($self) = @_;
+    return [ @$self ];
+}
 
 package Slic3r::ExPolygon;
 use overload
@@ -178,13 +188,27 @@ use overload
     '@{}' => sub { $_[0]->arrayref },
     'fallback' => 1;
 
+sub new {
+    my ($class, @surfaces) = @_;
+    
+    my $self = $class->_new;
+    $self->append($_) for @surfaces;
+    return $self;
+}
+
+package Slic3r::GUI::_3DScene::GLVertexArray;
+sub CLONE_SKIP { 1 }
+
 package main;
 for my $class (qw(
+        Slic3r::BridgeDetector
         Slic3r::Config
         Slic3r::Config::Full
+        Slic3r::Config::GCode
         Slic3r::Config::Print
         Slic3r::Config::PrintObject
         Slic3r::Config::PrintRegion
+        Slic3r::Config::Static
         Slic3r::ExPolygon
         Slic3r::ExPolygon::Collection
         Slic3r::Extruder
@@ -192,7 +216,12 @@ for my $class (qw(
         Slic3r::ExtrusionPath
         Slic3r::ExtrusionPath::Collection
         Slic3r::Flow
+        Slic3r::GCode
+        Slic3r::GCode::AvoidCrossingPerimeters
+        Slic3r::GCode::OozePrevention
         Slic3r::GCode::PlaceholderParser
+        Slic3r::GCode::Wipe
+        Slic3r::GCode::Writer
         Slic3r::Geometry::BoundingBox
         Slic3r::Geometry::BoundingBoxf
         Slic3r::Geometry::BoundingBoxf3
@@ -200,6 +229,7 @@ for my $class (qw(
         Slic3r::Layer::Region
         Slic3r::Layer::Support
         Slic3r::Line
+        Slic3r::Linef3
         Slic3r::Model
         Slic3r::Model::Instance
         Slic3r::Model::Material

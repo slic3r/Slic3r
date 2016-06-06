@@ -15,6 +15,7 @@ use POSIX qw(setlocale LC_NUMERIC);
 use Slic3r;
 use Time::HiRes qw(gettimeofday tv_interval);
 $|++;
+binmode STDOUT, ':utf8';
 
 our %opt = ();
 my %cli_options = ();
@@ -31,6 +32,7 @@ my %cli_options = ();
         'load=s@'               => \$opt{load},
         'autosave=s'            => \$opt{autosave},
         'ignore-nonexistent-config' => \$opt{ignore_nonexistent_config},
+        'no-controller'         => \$opt{no_controller},
         'no-plater'             => \$opt{no_plater},
         'gui-mode=s'            => \$opt{gui_mode},
         'datadir=s'             => \$opt{datadir},
@@ -53,6 +55,7 @@ my %cli_options = ();
         $options{ "$opt_key|$cli" } = \$cli_options{$opt_key};
     }
     
+    @ARGV = grep !/^-psn_\d/, @ARGV if $^O eq 'darwin';
     GetOptions(%options) or usage(1);
 }
 
@@ -60,6 +63,7 @@ my %cli_options = ();
 my @external_configs = ();
 if ($opt{load}) {
     foreach my $configfile (@{$opt{load}}) {
+        $configfile = Slic3r::decode_path($configfile);
         if (-e $configfile) {
             push @external_configs, Slic3r::Config->load($configfile);
         } elsif (-e "$FindBin::Bin/$configfile") {
@@ -80,7 +84,11 @@ foreach my $c (@external_configs, Slic3r::Config->new_from_cli(%cli_options)) {
 
 # save configuration
 if ($opt{save}) {
-    $cli_config->save($opt{save});
+    if (@{$cli_config->get_keys} > 0) {
+        $cli_config->save($opt{save});
+    } else {
+        Slic3r::Config->new_from_defaults->save($opt{save});
+    }
 }
 
 # apply command line config on top of default config
@@ -89,18 +97,23 @@ $config->apply($cli_config);
 
 # launch GUI
 my $gui;
-if (!@ARGV && !$opt{save} && eval "require Slic3r::GUI; 1") {
+if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
     {
         no warnings 'once';
-        $Slic3r::GUI::datadir   = $opt{datadir};
-        $Slic3r::GUI::no_plater = $opt{no_plater};
-        $Slic3r::GUI::mode      = $opt{gui_mode};
-        $Slic3r::GUI::autosave  = $opt{autosave};
+        $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
+        $Slic3r::GUI::no_controller = $opt{no_controller};
+        $Slic3r::GUI::no_plater     = $opt{no_plater};
+        $Slic3r::GUI::mode          = $opt{gui_mode};
+        $Slic3r::GUI::autosave      = $opt{autosave};
     }
     $gui = Slic3r::GUI->new;
     setlocale(LC_NUMERIC, 'C');
     $gui->{mainframe}->load_config_file($_) for @{$opt{load}};
     $gui->{mainframe}->load_config($cli_config);
+    foreach my $input_file (@ARGV) {
+        $input_file = Slic3r::decode_path($input_file);
+        $gui->{mainframe}{plater}->load_file($input_file) unless $opt{no_plater};
+    }
     $gui->MainLoop;
     exit;
 }
@@ -111,6 +124,7 @@ if (@ARGV) {  # slicing from command line
     
     if ($opt{repair}) {
         foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
             die "Repair is currently supported only on STL files\n"
                 if $file !~ /\.stl$/i;
             
@@ -126,6 +140,7 @@ if (@ARGV) {  # slicing from command line
     
     if ($opt{cut}) {
         foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
             my $model = Slic3r::Model->read_from_file($file);
             $model->add_default_instances;
             my $mesh = $model->mesh;
@@ -145,6 +160,7 @@ if (@ARGV) {  # slicing from command line
     
     if ($opt{split}) {
         foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
             my $model = Slic3r::Model->read_from_file($file);
             $model->add_default_instances;
             my $mesh = $model->mesh;
@@ -161,6 +177,7 @@ if (@ARGV) {  # slicing from command line
     }
     
     while (my $input_file = shift @ARGV) {
+        $input_file = Slic3r::decode_path($input_file);
         my $model;
         if ($opt{merge}) {
             my @models = map Slic3r::Model->read_from_file($_), $input_file, (splice @ARGV, 0);
@@ -178,7 +195,7 @@ if (@ARGV) {  # slicing from command line
             $opt{duplicate_grid} = [ split /[,x]/, $opt{duplicate_grid}, 2 ];
         }
         if (defined $opt{print_center}) {
-            $opt{print_center} = [ split /[,x]/, $opt{print_center}, 2 ];
+            $opt{print_center} = Slic3r::Pointf->new(split /[,x]/, $opt{print_center}, 2);
         }
         
         my $sprint = Slic3r::Print::Simple->new(
@@ -186,7 +203,7 @@ if (@ARGV) {  # slicing from command line
             rotate          => $opt{rotate}         // 0,
             duplicate       => $opt{duplicate}      // 1,
             duplicate_grid  => $opt{duplicate_grid} // [1,1],
-            print_center    => $opt{print_center}   // [100,100],
+            print_center    => $opt{print_center}   // Slic3r::Pointf->new(100,100),
             status_cb       => sub {
                 my ($percent, $message) = @_;
                 printf "=> %s\n", $message;
@@ -256,6 +273,8 @@ Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
     
 $j
   GUI options:
+    --gui               Forces the GUI launch instead of command line slicing (if you
+                        supply a model file, it will be loaded into the plater)
     --no-plater         Disable the plater tab
     --gui-mode          Overrides the configured mode (simple/expert)
     --autosave <file>   Automatically export current configuration to the specified file
@@ -277,17 +296,18 @@ $j
                         (default: 100,100)
     --z-offset          Additional height in mm to add to vertical coordinates
                         (+/-, default: $config->{z_offset})
-    --gcode-flavor      The type of G-code to generate (reprap/teacup/makerware/sailfish/mach3/no-extrusion,
+    --gcode-flavor      The type of G-code to generate (reprap/teacup/makerware/sailfish/mach3/machinekit/no-extrusion,
                         default: $config->{gcode_flavor})
     --use-relative-e-distances Enable this to get relative E values (default: no)
     --use-firmware-retraction  Enable firmware-controlled retraction using G10/G11 (default: no)
+    --use-volumetric-e  Express E in cubic millimeters and prepend M200 (default: no)
     --gcode-arcs        Use G2/G3 commands for native arcs (experimental, not supported
                         by all firmwares)
-    --g0                Use G0 commands for retraction (experimental, not supported by all
-                        firmwares)
     --gcode-comments    Make G-code verbose by adding comments (default: no)
     --vibration-limit   Limit the frequency of moves on X and Y axes (Hz, set zero to disable;
                         default: $config->{vibration_limit})
+    --pressure-advance  Adjust pressure using the experimental advance algorithm (K constant,
+                        set zero to disable; default: $config->{pressure_advance})
     
   Filament options:
     --filament-diameter Diameter in mm of your raw filament (default: $config->{filament_diameter}->[0])
@@ -341,7 +361,7 @@ $j
                         to disable; default: $config->{first_layer_acceleration})
     --default-acceleration
                         Acceleration will be reset to this value after the specific settings above
-                        have been applied. (mm/s^2, set zero to disable; default: $config->{travel_speed})
+                        have been applied. (mm/s^2, set zero to disable; default: $config->{default_acceleration})
     
   Accuracy options:
     --layer-height      Layer height in mm (default: $config->{layer_height})
@@ -359,12 +379,13 @@ $j
     --fill-density      Infill density (range: 0%-100%, default: $config->{fill_density}%)
     --fill-angle        Infill angle in degrees (range: 0-90, default: $config->{fill_angle})
     --fill-pattern      Pattern to use to fill non-solid layers (default: $config->{fill_pattern})
-    --solid-fill-pattern Pattern to use to fill solid layers (default: $config->{solid_fill_pattern})
+    --external-fill-pattern Pattern to use to fill solid layers (default: $config->{external_fill_pattern})
     --start-gcode       Load initial G-code from the supplied file. This will overwrite
                         the default command (home all axes [G28]).
     --end-gcode         Load final G-code from the supplied file. This will overwrite 
                         the default commands (turn off temperature [M104 S0],
                         home X axis [G28 X], disable motors [M84]).
+    --before-layer-gcode  Load before-layer-change G-code from the supplied file (default: nothing).
     --layer-gcode       Load layer-change G-code from the supplied file (default: nothing).
     --toolchange-gcode  Load tool-change G-code from the supplied file (default: nothing).
     --seam-position     Position of loop starting points (random/nearest/aligned, default: $config->{seam_position}).
@@ -399,6 +420,8 @@ $j
                         Spacing between pattern lines (mm, default: $config->{support_material_spacing})
     --support-material-angle
                         Support material angle in degrees (range: 0-90, default: $config->{support_material_angle})
+    --support-material-contact-distance
+                        Vertical distance between object and support material (0+, default: $config->{support_material_contact_distance})
     --support-material-interface-layers
                         Number of perpendicular layers between support material and object (0+, default: $config->{support_material_interface_layers})
     --support-material-interface-spacing
@@ -419,16 +442,18 @@ $j
     --retract-before-travel
                         Only retract before travel moves of this length in mm (default: $config->{retract_before_travel}[0])
     --retract-lift      Lift Z by the given distance in mm when retracting (default: $config->{retract_lift}[0])
+    --retract-lift-above Only lift Z when above the specified height (default: $config->{retract_lift_above}[0])
+    --retract-lift-below Only lift Z when below the specified height (default: $config->{retract_lift_below}[0])
     --retract-layer-change
-                        Enforce a retraction before each Z move (default: yes)
+                        Enforce a retraction before each Z move (default: no)
     --wipe              Wipe the nozzle while doing a retraction (default: no)
     
    Retraction options for multi-extruder setups:
     --retract-length-toolchange
-                        Length of retraction in mm when disabling tool (default: $config->{retract_length}[0])
-    --retract-restart-extra-toolchnage
+                        Length of retraction in mm when disabling tool (default: $config->{retract_length_toolchange}[0])
+    --retract-restart-extra-toolchange
                         Additional amount of filament in mm to push after
-                        switching tool (default: $config->{retract_restart_extra}[0])
+                        switching tool (default: $config->{retract_restart_extra_toolchange}[0])
    
    Cooling options:
     --cooling           Enable fan and cooling control
@@ -492,16 +517,18 @@ $j
                         Set a different extrusion width for top infill
     --support-material-extrusion-width
                         Set a different extrusion width for support material
+    --infill-overlap    Overlap between infill and perimeters (default: $config->{infill_overlap})
     --bridge-flow-ratio Multiplier for extrusion when bridging (> 0, default: $config->{bridge_flow_ratio})
   
    Multiple extruder options:
     --extruder-offset   Offset of each extruder, if firmware doesn't handle the displacement
                         (can be specified multiple times, default: 0x0)
     --perimeter-extruder
-                        Extruder to use for perimeters (1+, default: $config->{perimeter_extruder})
+                        Extruder to use for perimeters and brim (1+, default: $config->{perimeter_extruder})
     --infill-extruder   Extruder to use for infill (1+, default: $config->{infill_extruder})
+    --solid-infill-extruder   Extruder to use for solid infill (1+, default: $config->{solid_infill_extruder})
     --support-material-extruder
-                        Extruder to use for support material (1+, default: $config->{support_material_extruder})
+                        Extruder to use for support material, raft and skirt (1+, default: $config->{support_material_extruder})
     --support-material-interface-extruder
                         Extruder to use for support material interface (1+, default: $config->{support_material_interface_extruder})
     --ooze-prevention   Drop temperature and park extruders outside a full skirt for automatic wiping

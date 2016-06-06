@@ -17,23 +17,25 @@ use Slic3r::Test;
     my $config = Slic3r::Config->new_from_defaults;
     $config->set('raft_layers', 2);
     $config->set('infill_extruder', 2);
-    $config->set('support_material_extruder', 3);
+    $config->set('solid_infill_extruder', 3);
+    $config->set('support_material_extruder', 4);
     $config->set('ooze_prevention', 1);
-    $config->set('extruder_offset', [ [0,0], [20,0], [0,20] ]);
-    $config->set('temperature', [200, 180, 170]);
-    $config->set('first_layer_temperature', [206, 186, 166]);
+    $config->set('extruder_offset', [ [0,0], [20,0], [0,20], [20,20] ]);
+    $config->set('temperature', [200, 180, 170, 160]);
+    $config->set('first_layer_temperature', [206, 186, 166, 156]);
     $config->set('toolchange_gcode', ';toolchange');  # test that it doesn't crash when this is supplied
     
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     
     my $tool = undef;
-    my @tool_temp = (0,0,0);
+    my @tool_temp = (0,0,0,0);
     my @toolchange_points = ();
     my @extrusion_points = ();
     Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
         my ($self, $cmd, $args, $info) = @_;
         
         if ($cmd =~ /^T(\d+)/) {
+            # ignore initial toolchange
             if (defined $tool) {
                 my $expected_temp = $self->Z == ($config->get_value('first_layer_height') + $config->z_offset)
                     ? $config->first_layer_temperature->[$tool]
@@ -41,8 +43,7 @@ use Slic3r::Test;
                 die 'standby temperature was not set before toolchange'
                     if $tool_temp[$tool] != $expected_temp + $config->standby_temperature_delta;
                 
-                # ignore initial toolchange
-                push @toolchange_points, Slic3r::Point->new_scale($self->X, $self->Y);
+                push @toolchange_points, my $point = Slic3r::Point->new_scale($self->X, $self->Y);
             }
             $tool = $1;
         } elsif ($cmd eq 'M104' || $cmd eq 'M109') {
@@ -54,11 +55,30 @@ use Slic3r::Test;
             $tool_temp[$t] = $args->{S};
         } elsif ($cmd eq 'G1' && $info->{extruding} && $info->{dist_XY} > 0) {
             push @extrusion_points, my $point = Slic3r::Point->new_scale($args->{X}, $args->{Y});
-            $point->translate(map scale($_), @{ $config->extruder_offset->[$tool] });
+            $point->translate(map +scale($_), @{ $config->extruder_offset->[$tool] });
         }
     });
     my $convex_hull = convex_hull(\@extrusion_points);
-    ok !(defined first { $convex_hull->contains_point($_) } @toolchange_points), 'all toolchanges happen outside skirt';
+    
+    my @t = ();
+    foreach my $point (@toolchange_points) {
+        foreach my $offset (@{$config->extruder_offset}) {
+            push @t, my $p = $point->clone;
+            $p->translate(map +scale($_), @$offset);
+        }
+    }
+    ok !(defined first { $convex_hull->contains_point($_) } @t), 'all nozzles are outside skirt at toolchange';
+    
+    if (0) {
+        require "Slic3r/SVG.pm";
+        Slic3r::SVG::output(
+            "ooze_prevention_test.svg",
+            no_arrows   => 1,
+            polygons    => [$convex_hull],
+            red_points  => \@t,
+            points      => \@toolchange_points,
+        );
+    }
     
     # offset the skirt by the maximum displacement between extruders plus a safety extra margin
     my $delta = scale(20 * sqrt(2) + 1);
@@ -148,6 +168,7 @@ use Slic3r::Test;
 
 {
     my $model = stacked_cubes();
+    my $object = $model->objects->[0];
     
     my $config = Slic3r::Config->new_from_defaults;
     $config->set('layer_height', 0.4);
@@ -155,8 +176,8 @@ use Slic3r::Test;
     $config->set('skirts', 0);
     my $print = Slic3r::Test::init_print($model, config => $config);
     
-    is $model->get_material('lower')->config->extruder, 1, 'auto_assign_extruders() assigned correct extruder to first volume';
-    is $model->get_material('upper')->config->extruder, 2, 'auto_assign_extruders() assigned correct extruder to second volume';
+    is $object->volumes->[0]->config->extruder, 1, 'auto_assign_extruders() assigned correct extruder to first volume';
+    is $object->volumes->[1]->config->extruder, 2, 'auto_assign_extruders() assigned correct extruder to second volume';
     
     my $tool = undef;
     my %T0 = my %T1 = ();  # Z => 1

@@ -1,7 +1,7 @@
 #ifndef slic3r_MotionPlanner_hpp_
 #define slic3r_MotionPlanner_hpp_
 
-#include <myinit.h>
+#include "libslic3r.h"
 #include "ClipperUtils.hpp"
 #include "ExPolygonCollection.hpp"
 #include "Polyline.hpp"
@@ -14,30 +14,26 @@
 
 namespace Slic3r {
 
-class MotionPlannerGraph;
+class MotionPlanner;
 
-class MotionPlanner
+class MotionPlannerEnv
 {
+    friend class MotionPlanner;
+    
     public:
-    MotionPlanner(const ExPolygons &islands);
-    ~MotionPlanner();
-    void shortest_path(const Point &from, const Point &to, Polyline* polyline);
-    
-    private:
-    ExPolygons islands;
-    bool initialized;
-    ExPolygon outer;
-    ExPolygonCollections inner;
-    std::vector<MotionPlannerGraph*> graphs;
-    
-    void initialize();
-    MotionPlannerGraph* init_graph(int island_idx);
+    ExPolygon island;
+    ExPolygonCollection env;
+    MotionPlannerEnv() {};
+    MotionPlannerEnv(const ExPolygon &island) : island(island) {};
+    Point nearest_env_point(const Point &from, const Point &to) const;
 };
 
 class MotionPlannerGraph
 {
+    friend class MotionPlanner;
+    
     private:
-    typedef size_t node_t;
+    typedef int node_t;
     typedef double weight_t;
     struct neighbor {
         node_t target;
@@ -53,7 +49,26 @@ class MotionPlannerGraph
     //std::map<std::pair<size_t,size_t>, double> edges;
     void add_edge(size_t from, size_t to, double weight);
     size_t find_node(const Point &point) const;
-    void shortest_path(size_t from, size_t to, Polyline* polyline);
+    Polyline shortest_path(size_t from, size_t to);
+};
+
+class MotionPlanner
+{
+    public:
+    MotionPlanner(const ExPolygons &islands);
+    ~MotionPlanner();
+    Polyline shortest_path(const Point &from, const Point &to);
+    size_t islands_count() const;
+    
+    private:
+    bool initialized;
+    std::vector<MotionPlannerEnv> islands;
+    MotionPlannerEnv outer;
+    std::vector<MotionPlannerGraph*> graphs;
+    
+    void initialize();
+    MotionPlannerGraph* init_graph(int island_idx);
+    const MotionPlannerEnv& get_env(int island_idx) const;
 };
 
 }

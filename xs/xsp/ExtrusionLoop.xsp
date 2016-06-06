@@ -1,7 +1,7 @@
 %module{Slic3r::XS};
 
 %{
-#include <myinit.h>
+#include <xsinit.h>
 #include "libslic3r/ExtrusionEntity.hpp"
 %}
 
@@ -15,19 +15,22 @@
     bool make_counter_clockwise();
     Clone<Point> first_point();
     Clone<Point> last_point();
-    Polygon* polygon()
-        %code{% RETVAL = new Polygon (*THIS); %};
+    Clone<Polygon> polygon();
     void append(ExtrusionPath* path)
         %code{% THIS->paths.push_back(*path); %};
     double length();
-    void split_at_vertex(Point* point)
-        %code{% THIS->split_at_vertex(*point); %};
+    bool split_at_vertex(Point* point)
+        %code{% RETVAL = THIS->split_at_vertex(*point); %};
     void split_at(Point* point)
         %code{% THIS->split_at(*point); %};
     ExtrusionPaths clip_end(double distance)
         %code{% THIS->clip_end(distance, &RETVAL); %};
     bool has_overhang_point(Point* point)
         %code{% RETVAL = THIS->has_overhang_point(*point); %};
+    bool is_perimeter();
+    bool is_infill();
+    bool is_solid_infill();
+    Polygons grow();
 %{
 
 SV*
@@ -35,9 +38,8 @@ ExtrusionLoop::arrayref()
     CODE:
         AV* av = newAV();
         av_fill(av, THIS->paths.size()-1);
-        int i = 0;
         for (ExtrusionPaths::iterator it = THIS->paths.begin(); it != THIS->paths.end(); ++it) {
-            av_store(av, i++, perl_to_SV_ref(*it));
+            av_store(av, it - THIS->paths.begin(), perl_to_SV_ref(*it));
         }
         RETVAL = newRV_noinc((SV*)av);
     OUTPUT:
@@ -63,8 +65,8 @@ IV
 _constant()
   ALIAS:
     EXTRL_ROLE_DEFAULT                      = elrDefault
-    EXTRL_ROLE_EXTERNAL_PERIMETER           = elrExternalPerimeter
     EXTRL_ROLE_CONTOUR_INTERNAL_PERIMETER   = elrContourInternalPerimeter
+    EXTRL_ROLE_SKIRT                        = elrSkirt
   PROTOTYPE:
   CODE:
     RETVAL = ix;

@@ -87,11 +87,11 @@ sub new {
     push @{$self->{titles}}, $title;
     $self->{own_index} = 0;
 
-    $self->{bullets}->{before} = Wx::Bitmap->new("$Slic3r::var/bullet_black.png", wxBITMAP_TYPE_PNG);
-    $self->{bullets}->{own}    = Wx::Bitmap->new("$Slic3r::var/bullet_blue.png",  wxBITMAP_TYPE_PNG);
-    $self->{bullets}->{after}  = Wx::Bitmap->new("$Slic3r::var/bullet_white.png", wxBITMAP_TYPE_PNG);
+    $self->{bullets}->{before} = Wx::Bitmap->new($Slic3r::var->("bullet_black.png"), wxBITMAP_TYPE_PNG);
+    $self->{bullets}->{own}    = Wx::Bitmap->new($Slic3r::var->("bullet_blue.png"),  wxBITMAP_TYPE_PNG);
+    $self->{bullets}->{after}  = Wx::Bitmap->new($Slic3r::var->("bullet_white.png"), wxBITMAP_TYPE_PNG);
 
-    $self->{background} = Wx::Bitmap->new("$Slic3r::var/Slic3r_192px_transparent.png", wxBITMAP_TYPE_PNG);
+    $self->{background} = Wx::Bitmap->new($Slic3r::var->("Slic3r_192px_transparent.png"), wxBITMAP_TYPE_PNG);
     $self->SetMinSize(Wx::Size->new($self->{background}->GetWidth, $self->{background}->GetHeight));
 
     EVT_PAINT($self, \&repaint);
@@ -199,8 +199,7 @@ sub append_option {
     my ($full_key) = @_;
     
     # populate repository with the factory default
-    my $opt_key = $full_key;
-    $opt_key =~ s/#.+//;
+    my ($opt_key, $opt_index) = split /#/, $full_key, 2;
     $self->config->apply(Slic3r::Config->new_from_defaults($opt_key));
     
     # draw the control
@@ -208,9 +207,9 @@ sub append_option {
         parent      => $self,
         title       => '',
         config      => $self->config,
-        options     => [$full_key],
         full_labels => 1,
     );
+    $optgroup->append_single_option_line($opt_key, $opt_index);
     $self->{vsizer}->Add($optgroup->sizer, 0, wxEXPAND | wxTOP | wxBOTTOM, 10);
 }
 

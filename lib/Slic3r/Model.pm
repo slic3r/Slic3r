@@ -1,6 +1,6 @@
 package Slic3r::Model;
 
-use List::Util qw(first max);
+use List::Util qw(first max any);
 use Slic3r::Geometry qw(X Y Z move_points);
 
 sub read_from_file {
@@ -11,6 +11,9 @@ sub read_from_file {
               : $input_file =~ /\.obj$/i            ? Slic3r::Format::OBJ->read_file($input_file)
               : $input_file =~ /\.amf(\.xml)?$/i    ? Slic3r::Format::AMF->read_file($input_file)
               : die "Input file must have .stl, .obj or .amf(.xml) extension\n";
+    
+    die "The supplied file couldn't be read because it's empty.\n"
+        if $model->objects_count == 0;
     
     $_->set_input_file($input_file) for @{$model->objects};
     return $model;
@@ -64,226 +67,36 @@ sub set_material {
     return $material;
 }
 
-sub duplicate_objects_grid {
-    my ($self, $grid, $distance) = @_;
-
-    die "Grid duplication is not supported with multiple objects\n"
-        if @{$self->objects} > 1;
-
-    my $object = $self->objects->[0];
-    $object->clear_instances;
-
-    my $size = $object->bounding_box->size;
-    for my $x_copy (1..$grid->[X]) {
-        for my $y_copy (1..$grid->[Y]) {
-            $object->add_instance(
-                offset => Slic3r::Pointf->new(
-                    ($size->[X] + $distance) * ($x_copy-1),
-                    ($size->[Y] + $distance) * ($y_copy-1),
-                ),
-            );
-        }
-    }
-}
-
-# this will append more instances to each object
-# and then automatically rearrange everything
-sub duplicate_objects {
-    my ($self, $copies_num, $distance, $bb) = @_;
-    
-    foreach my $object (@{$self->objects}) {
-        my @instances = @{$object->instances};
-        foreach my $instance (@instances) {
-            $object->add_instance($instance) for 2..$copies_num;
-        }
-    }
-    
-    $self->arrange_objects($distance, $bb);
-}
-
-# arrange objects preserving their instance count
-# but altering their instance positions
-sub arrange_objects {
-    my ($self, $distance, $bb) = @_;
-    
-    # get the (transformed) size of each instance so that we take
-    # into account their different transformations when packing
-    my @instance_sizes = ();
-    foreach my $object (@{$self->objects}) {
-        push @instance_sizes, map $object->instance_bounding_box($_)->size, 0..$#{$object->instances};
-    }
-    
-    my @positions = $self->_arrange(\@instance_sizes, $distance, $bb);
-    
-    foreach my $object (@{$self->objects}) {
-        $_->set_offset(Slic3r::Pointf->new(@{shift @positions})) for @{$object->instances};
-        $object->update_bounding_box;
-    }
-}
-
-# duplicate the entire model preserving instance relative positions
-sub duplicate {
-    my ($self, $copies_num, $distance, $bb) = @_;
-    
-    my $model_size = $self->bounding_box->size;
-    my @positions = $self->_arrange([ map $model_size, 2..$copies_num ], $distance, $bb);
-    
-    # note that this will leave the object count unaltered
-    
-    foreach my $object (@{$self->objects}) {
-        my @instances = @{$object->instances};  # store separately to avoid recursion from add_instance() below
-        foreach my $instance (@instances) {
-            foreach my $pos (@positions) {
-                $object->add_instance(
-                    offset          => Slic3r::Pointf->new($instance->offset->[X] + $pos->[X], $instance->offset->[Y] + $pos->[Y]),
-                    rotation        => $instance->rotation,
-                    scaling_factor  => $instance->scaling_factor,
-                );
-            }
-        }
-        $object->update_bounding_box;
-    }
-}
-
-sub _arrange {
-    my ($self, $sizes, $distance, $bb) = @_;
-    
-    # we supply unscaled data to arrange()
-    return Slic3r::Geometry::arrange(
-        scalar(@$sizes),                # number of parts
-        max(map $_->x, @$sizes),        # cell width
-        max(map $_->y, @$sizes),        # cell height ,
-        $distance,                      # distance between cells
-        $bb,                            # bounding box of the area to fill (can be undef)
-    );
-}
-
-# this returns the bounding box of the *transformed* instances
-sub bounding_box {
-    my $self = shift;
-    
-    return undef if !@{$self->objects};
-    my $bb = $self->objects->[0]->bounding_box;
-    $bb->merge($_->bounding_box) for @{$self->objects}[1..$#{$self->objects}];
-    return $bb;
-}
-
-# input point is expressed in unscaled coordinates
-sub center_instances_around_point {
-    my ($self, $point) = @_;
-    
-    my $bb = $self->bounding_box;
-    return if !defined $bb;
-    
-    my $size = $bb->size;
-    my @shift = (
-        -$bb->x_min + $point->[X] - $size->x/2,
-        -$bb->y_min + $point->[Y] - $size->y/2,  #//
-    );
-    
-    foreach my $object (@{$self->objects}) {
-        foreach my $instance (@{$object->instances}) {
-            $instance->set_offset(Slic3r::Pointf->new(
-                $instance->offset->x + $shift[X],
-                $instance->offset->y + $shift[Y],  #++
-            ));
-        }
-        $object->update_bounding_box;
-    }
-}
-
-sub align_instances_to_origin {
-    my ($self) = @_;
-    
-    my $bb = $self->bounding_box;
-    return if !defined $bb;
-    
-    my $new_center = $bb->size;
-    $new_center->translate(-$new_center->x/2, -$new_center->y/2);  #//
-    $self->center_instances_around_point($new_center);
-}
-
-sub translate {
-    my $self = shift;
-    my @shift = @_;
-    
-    $_->translate(@shift) for @{$self->objects};
-}
-
-# flattens everything to a single mesh
-sub mesh {
-    my $self = shift;
-    
-    my $mesh = Slic3r::TriangleMesh->new;
-    $mesh->merge($_->mesh) for @{$self->objects};
-    return $mesh;
-}
-
-# flattens everything to a single mesh
-sub raw_mesh {
-    my $self = shift;
-    
-    my $mesh = Slic3r::TriangleMesh->new;
-    $mesh->merge($_->raw_mesh) for @{$self->objects};
-    return $mesh;
-}
-
-# this method splits objects into multiple distinct objects by walking their meshes
-sub split_meshes {
-    my $self = shift;
-    
-    my @objects = @{$self->objects};
-    @{$self->objects} = ();
-    
-    foreach my $object (@objects) {
-        if (@{$object->volumes} > 1) {
-            # We can't split meshes if there's more than one material, because
-            # we can't group the resulting meshes by object afterwards
-            $self->_add_object($object);
-            next;
-        }
-        
-        my $volume = $object->volumes->[0];
-        foreach my $mesh (@{$volume->mesh->split}) {
-            my $new_object = $self->add_object(
-                input_file          => $object->input_file,
-                config              => $object->config->clone,
-                layer_height_ranges => $object->layer_height_ranges,   # TODO: this needs to be cloned
-                origin_translation  => $object->origin_translation,
-            );
-            $new_object->add_volume(
-                mesh        => $mesh,
-                name        => $volume->name,
-                material_id => $volume->material_id,
-                config      => $volume->config,
-            );
-            
-            # add one instance per original instance
-            $new_object->add_instance(
-                offset          => Slic3r::Pointf->new(@{$_->offset}),
-                rotation        => $_->rotation,
-                scaling_factor  => $_->scaling_factor,
-            ) for @{ $object->instances // [] };
-        }
-    }
-}
-
 sub print_info {
     my $self = shift;
     $_->print_info for @{$self->objects};
 }
 
-sub get_material_name {
-    my $self = shift;
-    my ($material_id) = @_;
+sub looks_like_multipart_object {
+    my ($self) = @_;
     
-    my $name;
-    if ($self->has_material($material_id)) {
-        $name //= $self->get_material($material_id)
-            ->attributes->{$_} for qw(Name name);
+    return 0 if $self->objects_count == 1;
+    return 0 if any { $_->volumes_count > 1 } @{$self->objects};
+    return 0 if any { @{$_->config->get_keys} > 1 } @{$self->objects};
+    
+    my %heights = map { $_ => 1 } map $_->mesh->bounding_box->z_min, map @{$_->volumes}, @{$self->objects};
+    return scalar(keys %heights) > 1;
+}
+
+sub convert_multipart_object {
+    my ($self) = @_;
+    
+    my @objects = @{$self->objects};
+    my $object = $self->add_object(
+        input_file          => $objects[0]->input_file,
+    );
+    foreach my $v (map @{$_->volumes}, @objects) {
+        my $volume = $object->add_volume($v);
+        $volume->set_name($v->object->name);
     }
-    $name //= $material_id;
-    return $name;
+    $object->add_instance($_) for map @{$_->instances}, @objects;
+    
+    $self->delete_object($_) for reverse 0..($self->objects_count-2);
 }
 
 package Slic3r::Model::Material;
@@ -369,157 +182,6 @@ sub add_instance {
     }
 }
 
-sub raw_bounding_box {
-    my $self = shift;
-    
-    my @meshes = map $_->mesh->clone, grep !$_->modifier, @{ $self->volumes };
-    die "No meshes found" if !@meshes;
-    
-    my $instance = $self->instances->[0];
-    $instance->transform_mesh($_, 1) for @meshes;
-    
-    my $bb = (shift @meshes)->bounding_box;
-    $bb->merge($_->bounding_box) for @meshes;
-    return $bb;
-}
-
-# flattens all volumes and instances into a single mesh
-sub mesh {
-    my $self = shift;
-    
-    my $mesh = $self->raw_mesh;
-    
-    my @instance_meshes = ();
-    foreach my $instance (@{ $self->instances }) {
-        my $m = $mesh->clone;
-        $instance->transform_mesh($m);
-        push @instance_meshes, $m;
-    }
-    
-    my $full_mesh = Slic3r::TriangleMesh->new;
-    $full_mesh->merge($_) for @instance_meshes;
-    return $full_mesh;
-}
-
-sub update_bounding_box {
-    my ($self) = @_;
-    $self->_bounding_box($self->mesh->bounding_box);
-}
-
-# this returns the bounding box of the *transformed* instances
-sub bounding_box {
-    my $self = shift;
-    
-    $self->update_bounding_box if !defined $self->_bounding_box;
-    return $self->_bounding_box->clone;
-}
-
-# this returns the bounding box of the *transformed* given instance
-sub instance_bounding_box {
-    my ($self, $instance_idx) = @_;
-    
-    $instance_idx //= 0;
-    
-    my $mesh = $self->raw_mesh;
-    $self->instances->[$instance_idx]->transform_mesh($mesh);
-    return $mesh->bounding_box;
-}
-
-sub center_around_origin {
-    my $self = shift;
-    
-    # calculate the displacements needed to 
-    # center this object around the origin
-    my $bb = $self->raw_mesh->bounding_box;
-    
-    # first align to origin on XY
-    my @shift = (
-        -$bb->x_min,
-        -$bb->y_min,
-        0,
-    );
-    
-    # then center it on XY
-    my $size = $bb->size;
-    $shift[X] -= $size->x/2;
-    $shift[Y] -= $size->y/2;  #//
-    
-    $self->translate(@shift);
-    $self->origin_translation->translate(@shift[X,Y]);
-    
-    if ($self->instances_count > 0) {
-        foreach my $instance (@{ $self->instances }) {
-            $instance->set_offset(Slic3r::Pointf->new(
-                $instance->offset->x - $shift[X],
-                $instance->offset->y - $shift[Y],   #--
-            ));
-        }
-        $self->update_bounding_box;
-    }
-    
-    return @shift;
-}
-
-sub translate {
-    my $self = shift;
-    my @shift = @_;
-    
-    $_->mesh->translate(@shift) for @{$self->volumes};
-    $self->_bounding_box->translate(@shift) if defined $self->_bounding_box;
-}
-
-sub rotate {
-    my ($self, $angle, $axis) = @_;
-    
-    # we accept angle in radians but mesh currently uses degrees
-    $angle = rad2deg($angle);
-    
-    if ($axis == X) {
-        $_->mesh->rotate_x($angle) for @{$self->volumes};
-    } elsif ($axis == Y) {
-        $_->mesh->rotate_y($angle) for @{$self->volumes};
-    } elsif ($axis == Z) {
-        $_->mesh->rotate_z($angle) for @{$self->volumes};
-    }
-    $self->invalidate_bounding_box;
-}
-
-sub flip {
-    my ($self, $axis) = @_;
-    
-    if ($axis == X) {
-        $_->mesh->flip_x for @{$self->volumes};
-    } elsif ($axis == Y) {
-        $_->mesh->flip_y for @{$self->volumes};
-    } elsif ($axis == Z) {
-        $_->mesh->flip_z for @{$self->volumes};
-    }
-    $self->invalidate_bounding_box;
-}
-
-sub scale_xyz {
-    my ($self, $versor) = @_;
-    
-    $_->mesh->scale_xyz($versor) for @{$self->volumes};
-    $self->invalidate_bounding_box;
-}
-
-sub materials_count {
-    my $self = shift;
-    
-    my %materials = map { $_->material_id // '_default' => 1 } @{$self->volumes};
-    return scalar keys %materials;
-}
-
-sub unique_materials {
-    my $self = shift;
-    
-    my %materials = ();
-    $materials{ $_->material_id } = 1
-        for grep { defined $_->material_id } @{$self->volumes};
-    return sort keys %materials;
-}
-
 sub mesh_stats {
     my $self = shift;
     
@@ -550,56 +212,6 @@ sub print_info {
     } else {
         printf "  number of facets:  %d\n", scalar(map @{$_->facets}, grep !$_->modifier, @{$self->volumes});
     }
-}
-
-sub cut {
-    my ($self, $z) = @_;
-    
-    # clone this one to duplicate instances, materials etc.
-    my $model = Slic3r::Model->new;
-    my $upper = $model->add_object($self);
-    my $lower = $model->add_object($self);
-    $upper->clear_volumes;
-    $lower->clear_volumes;
-    
-    foreach my $volume (@{$self->volumes}) {
-        if ($volume->modifier) {
-            # don't cut modifiers
-            $upper->add_volume($volume);
-            $lower->add_volume($volume);
-        } else {
-            my $upper_mesh = Slic3r::TriangleMesh->new;
-            my $lower_mesh = Slic3r::TriangleMesh->new;
-            $volume->mesh->cut($z + $volume->mesh->bounding_box->z_min, $upper_mesh, $lower_mesh);
-            $upper_mesh->repair;
-            $lower_mesh->repair;
-            $upper_mesh->reset_repair_stats;
-            $lower_mesh->reset_repair_stats;
-            
-            if ($upper_mesh->facets_count > 0) {
-                $upper->add_volume(
-                    name        => $volume->name,
-                    material_id => $volume->material_id,
-                    mesh        => $upper_mesh,
-                    modifier    => $volume->modifier,
-                    config      => $volume->config,
-                );
-            }
-            if ($lower_mesh->facets_count > 0) {
-                $lower->add_volume(
-                    name        => $volume->name,
-                    material_id => $volume->material_id,
-                    mesh        => $lower_mesh,
-                    modifier    => $volume->modifier,
-                    config      => $volume->config,
-                );
-            }
-        }
-    }
-    
-    $upper = undef if !@{$upper->volumes};
-    $lower = undef if !@{$lower->volumes};
-    return ($model, $upper, $lower);
 }
 
 1;

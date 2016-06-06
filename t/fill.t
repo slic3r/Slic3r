@@ -12,7 +12,7 @@ BEGIN {
 use List::Util qw(first sum);
 use Slic3r;
 use Slic3r::Geometry qw(X Y scale unscale convex_hull);
-use Slic3r::Geometry::Clipper qw(union diff_ex offset);
+use Slic3r::Geometry::Clipper qw(union diff diff_ex offset offset2_ex);
 use Slic3r::Surface qw(:types);
 use Slic3r::Test;
 
@@ -20,7 +20,6 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
 
 {
     my $print = Slic3r::Print->new;
-    $print->init_extruders;
     my $filler = Slic3r::Fill::Rectilinear->new(
         print           => $print,
         bounding_box    => Slic3r::Geometry::BoundingBox->new_from_points([ Slic3r::Point->new(0, 0), Slic3r::Point->new(10, 10) ]),
@@ -49,9 +48,10 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
         height          => 0.4,
         nozzle_diameter => 0.50,
     );
+    $filler->spacing($flow->spacing);
     foreach my $angle (0, 45) {
         $surface->expolygon->rotate(Slic3r::Geometry::deg2rad($angle), [0,0]);
-        my ($params, @paths) = $filler->fill_surface($surface, flow => $flow, layer_height => 0.4, density => 0.4);
+        my @paths = $filler->fill_surface($surface, layer_height => 0.4, density => 0.4);
         is scalar @paths, 1, 'one continuous path';
     }
 }
@@ -73,15 +73,15 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
             height          => 0.4,
             nozzle_diameter => $flow_spacing,
         );
-        my ($params, @paths) = $filler->fill_surface(
+        $filler->spacing($flow->spacing);
+        my @paths = $filler->fill_surface(
             $surface,
-            flow            => $flow,
             layer_height    => $flow->height,
             density         => $density // 1,
         );
         
         # check whether any part was left uncovered
-        my @grown_paths = map @{Slic3r::Polyline->new(@$_)->grow(scale $params->{flow}->spacing/2)}, @paths;
+        my @grown_paths = map @{Slic3r::Polyline->new(@$_)->grow(scale $filler->spacing/2)}, @paths;
         my $uncovered = diff_ex([ @$expolygon ], [ @grown_paths ], 1);
         
         # ignore very small dots
@@ -171,7 +171,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
 for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
     my $config = Slic3r::Config->new_from_defaults;
     $config->set('fill_pattern', $pattern);
-    $config->set('solid_fill_pattern', $pattern);
+    $config->set('external_fill_pattern', $pattern);
     $config->set('perimeters', 1);
     $config->set('skirts', 0);
     $config->set('fill_density', 20);
@@ -205,6 +205,7 @@ for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
     $config->set('bottom_solid_layers', 0);
     $config->set('infill_extruder', 2);
     $config->set('infill_extrusion_width', 0.5);
+    $config->set('fill_density', 40);
     $config->set('cooling', 0);                 # for preventing speeds from being altered
     $config->set('first_layer_speed', '100%');  # for preventing speeds from being altered
     
@@ -247,18 +248,27 @@ for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
 {
     my $config = Slic3r::Config->new_from_defaults;
     $config->set('skirts', 0);
-    $config->set('perimeters', 0);
+    $config->set('perimeters', 1);
     $config->set('fill_density', 0);
     $config->set('top_solid_layers', 0);
     $config->set('bottom_solid_layers', 0);
     $config->set('solid_infill_below_area', 20000000);
     $config->set('solid_infill_every_layers', 2);
+    $config->set('perimeter_speed', 99);
+    $config->set('external_perimeter_speed', 99);
+    $config->set('cooling', 0);
+    $config->set('first_layer_speed', '100%');
     
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     my %layers_with_extrusion = ();
     Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
         my ($self, $cmd, $args, $info) = @_;
-        $layers_with_extrusion{$self->Z} = 1 if $info->{extruding};
+        
+        if ($cmd eq 'G1' && $info->{dist_XY} > 0 && $info->{extruding}) {
+            if (($args->{F} // $self->F) != $config->perimeter_speed*60) {
+                $layers_with_extrusion{$self->Z} = ($args->{F} // $self->F);
+            }
+        }
     });
     
     ok !%layers_with_extrusion,
@@ -274,6 +284,7 @@ for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
     $config->set('first_layer_height', 0.2);
     $config->set('nozzle_diameter', [0.35]);
     $config->set('infill_extruder', 2);
+    $config->set('solid_infill_extruder', 2);
     $config->set('infill_extrusion_width', 0.52);
     $config->set('solid_infill_extrusion_width', 0.52);
     $config->set('first_layer_extrusion_width', 0);
@@ -300,7 +311,9 @@ for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
     my $grow_d = scale($config->infill_extrusion_width)/2;
     my $layer0_infill = union([ map @{$_->grow($grow_d)}, @{ $infill{0.2} } ]);
     my $layer1_infill = union([ map @{$_->grow($grow_d)}, @{ $infill{0.4} } ]);
-    my $diff = [ grep { $_->area > 2*(($grow_d*2)**2) } @{diff_ex($layer0_infill, $layer1_infill)} ];
+    my $diff = diff($layer0_infill, $layer1_infill);
+    $diff = offset2_ex($diff, -$grow_d, +$grow_d);
+    $diff = [ grep { $_->area > 2*(($grow_d*2)**2) } @$diff ];
     is scalar(@$diff), 0, 'no missing parts in solid shell when fill_density is 0';
 }
 

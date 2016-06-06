@@ -1,7 +1,7 @@
 #ifndef slic3r_Layer_hpp_
 #define slic3r_Layer_hpp_
 
-#include <myinit.h>
+#include "libslic3r.h"
 #include "Flow.hpp"
 #include "SurfaceCollection.hpp"
 #include "ExtrusionEntityCollection.hpp"
@@ -40,18 +40,25 @@ class LayerRegion
 
     // collection of expolygons representing the bridged areas (thus not
     // needing support material)
-    ExPolygonCollection bridged;
+    Polygons bridged;
 
     // collection of polylines representing the unsupported bridge edges
     PolylineCollection unsupported_bridge_edges;
 
     // ordered collection of extrusion paths/loops to build all perimeters
+    // (this collection contains only ExtrusionEntityCollection objects)
     ExtrusionEntityCollection perimeters;
 
     // ordered collection of extrusion paths to fill surfaces
+    // (this collection contains only ExtrusionEntityCollection objects)
     ExtrusionEntityCollection fills;
     
     Flow flow(FlowRole role, bool bridge = false, double width = -1) const;
+    void merge_slices();
+    void prepare_fill_surfaces();
+    void make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces);
+    void process_external_surfaces(const Layer* lower_layer);
+    double infill_area_threshold() const;
     
     private:
     Layer *_layer;
@@ -68,8 +75,10 @@ class Layer {
     friend class PrintObject;
 
     public:
-    int id();
+    size_t id() const;
+    void set_id(size_t id);
     PrintObject* object();
+    const PrintObject* object() const;
 
     Layer *upper_layer;
     Layer *lower_layer;
@@ -84,18 +93,22 @@ class Layer {
     ExPolygonCollection slices;
 
 
-    size_t region_count();
+    size_t region_count() const;
     LayerRegion* get_region(int idx);
     LayerRegion* add_region(PrintRegion* print_region);
     
     void make_slices();
-
+    void merge_slices();
+    template <class T> bool any_internal_region_slice_contains(const T &item) const;
+    template <class T> bool any_bottom_region_slice_contains(const T &item) const;
+    void make_perimeters();
+    
     protected:
-    int _id;     // sequential number of layer, 0-based
+    size_t _id;     // sequential number of layer, 0-based
     PrintObject *_object;
 
 
-    Layer(int id, PrintObject *object, coordf_t height, coordf_t print_z,
+    Layer(size_t id, PrintObject *object, coordf_t height, coordf_t print_z,
         coordf_t slice_z);
     virtual ~Layer();
 
@@ -113,7 +126,7 @@ class SupportLayer : public Layer {
     ExtrusionEntityCollection support_interface_fills;
 
     protected:
-    SupportLayer(int id, PrintObject *object, coordf_t height, coordf_t print_z,
+    SupportLayer(size_t id, PrintObject *object, coordf_t height, coordf_t print_z,
         coordf_t slice_z);
     virtual ~SupportLayer();
 };

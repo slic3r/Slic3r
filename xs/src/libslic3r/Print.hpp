@@ -1,13 +1,16 @@
 #ifndef slic3r_Print_hpp_
 #define slic3r_Print_hpp_
 
-#include <myinit.h>
+#include "libslic3r.h"
 #include <set>
 #include <vector>
+#include <stdexcept>
+#include "BoundingBox.hpp"
 #include "Flow.hpp"
 #include "PrintConfig.hpp"
 #include "Point.hpp"
 #include "Layer.hpp"
+#include "Model.hpp"
 #include "PlaceholderParser.hpp"
 
 
@@ -19,11 +22,16 @@ class ModelObject;
 
 
 enum PrintStep {
-    psInitExtruders, psSkirt, psBrim,
+    psSkirt, psBrim,
 };
 enum PrintObjectStep {
     posSlice, posPerimeters, posPrepareInfill,
     posInfill, posSupportMaterial,
+};
+
+class PrintValidationException : public std::runtime_error {
+    public:
+    PrintValidationException(const std::string &error) : std::runtime_error(error) {};
 };
 
 template <class StepType>
@@ -53,7 +61,7 @@ class PrintRegion
 
     private:
     Print* _print;
-
+    
     PrintRegion(Print* print);
     ~PrintRegion();
 };
@@ -68,9 +76,10 @@ class PrintObject
     friend class Print;
 
     public:
-    // vector of (vectors of volume ids), indexed by region_id
-    std::vector<std::vector<int> > region_volumes;
-    Points copies;      // Slic3r::Point objects in scaled G-code coordinates
+    // map of (vectors of volume ids), indexed by region_id
+    /* (we use map instead of vector so that we don't have to worry about
+       resizing it and the [] operator adds new items automagically) */
+    std::map< size_t,std::vector<int> > region_volumes;
     PrintObjectConfig config;
     t_layer_height_ranges layer_height_ranges;
     
@@ -95,20 +104,29 @@ class PrintObject
     
     Print* print();
     ModelObject* model_object();
-
+    
+    Points copies() const;
+    bool add_copy(const Pointf &point);
+    bool delete_last_copy();
+    bool delete_all_copies();
+    bool set_copies(const Points &points);
+    bool reload_model_instances();
+    BoundingBox bounding_box() const;
+    
     // adds region_id, too, if necessary
     void add_region_volume(int region_id, int volume_id);
 
-    size_t layer_count();
+    size_t total_layer_count() const;
+    size_t layer_count() const;
     void clear_layers();
     Layer* get_layer(int idx);
     Layer* add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z);
     void delete_layer(int idx);
 
-    size_t support_layer_count();
+    size_t support_layer_count() const;
     void clear_support_layers();
     SupportLayer* get_support_layer(int idx);
-    SupportLayer* add_support_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z);
+    SupportLayer* add_support_layer(int id, coordf_t height, coordf_t print_z);
     void delete_support_layer(int idx);
     
     // methods for handling state
@@ -116,9 +134,14 @@ class PrintObject
     bool invalidate_step(PrintObjectStep step);
     bool invalidate_all_steps();
     
+    bool has_support_material() const;
+    void process_external_surfaces();
+    void bridge_over_infill();
+    
     private:
     Print* _print;
     ModelObject* _model_object;
+    Points _copies;      // Slic3r::Point objects in scaled G-code coordinates
 
     // TODO: call model_object->get_bounding_box() instead of accepting
         // parameter
@@ -140,6 +163,7 @@ class Print
     PlaceholderParser placeholder_parser;
     // TODO: status_cb
     double total_used_filament, total_extruded_volume;
+    std::map<size_t,float> filament_stats;
     PrintState<PrintStep> state;
 
     // ordered collections of extrusion paths to build skirt loops and brim
@@ -151,9 +175,9 @@ class Print
     // methods for handling objects
     void clear_objects();
     PrintObject* get_object(size_t idx);
-    PrintObject* add_object(ModelObject *model_object, const BoundingBoxf3 &modobj_bbox);
-    PrintObject* set_new_object(size_t idx, ModelObject *model_object, const BoundingBoxf3 &modobj_bbox);
     void delete_object(size_t idx);
+    void reload_object(size_t idx);
+    bool reload_model_instances();
 
     // methods for handling regions
     PrintRegion* get_region(size_t idx);
@@ -163,17 +187,31 @@ class Print
     bool invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
     bool invalidate_step(PrintStep step);
     bool invalidate_all_steps();
+    bool step_done(PrintObjectStep step) const;
     
-    void init_extruders();
+    void add_model_object(ModelObject* model_object, int idx = -1);
+    bool apply_config(DynamicPrintConfig config);
+    bool has_infinite_skirt() const;
+    bool has_skirt() const;
+    void validate() const;
+    BoundingBox bounding_box() const;
+    BoundingBox total_bounding_box() const;
+    double skirt_first_layer_height() const;
+    Flow brim_flow() const;
+    Flow skirt_flow() const;
     
+    std::set<size_t> object_extruders() const;
+    std::set<size_t> support_material_extruders() const;
     std::set<size_t> extruders() const;
     void _simplify_slices(double distance);
     double max_allowed_layer_height() const;
     bool has_support_material() const;
+    void auto_assign_extruders(ModelObject* model_object) const;
     
     private:
     void clear_regions();
     void delete_region(size_t idx);
+    PrintRegionConfig _region_config_from_model_volume(const ModelVolume &volume);
 };
 
 #define FOREACH_BASE(type, container, iterator) for (type::const_iterator iterator = (container).begin(); iterator != (container).end(); ++iterator)

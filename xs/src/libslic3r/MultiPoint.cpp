@@ -25,6 +25,12 @@ MultiPoint::translate(double x, double y)
 }
 
 void
+MultiPoint::translate(const Point &vector)
+{
+    this->translate(vector.x, vector.y);
+}
+
+void
 MultiPoint::rotate(double angle, const Point &center)
 {
     for (Points::iterator it = points.begin(); it != points.end(); ++it) {
@@ -70,10 +76,69 @@ MultiPoint::find_point(const Point &point) const
     return -1;  // not found
 }
 
-void
-MultiPoint::bounding_box(BoundingBox* bb) const
+bool
+MultiPoint::has_boundary_point(const Point &point) const
 {
-    *bb = BoundingBox(this->points);
+    double dist = point.distance_to(point.projection_onto(*this));
+    return dist < SCALED_EPSILON;
+}
+
+BoundingBox
+MultiPoint::bounding_box() const
+{
+    return BoundingBox(this->points);
+}
+
+void
+MultiPoint::remove_duplicate_points()
+{
+    for (size_t i = 1; i < this->points.size(); ++i) {
+        if (this->points.at(i).coincides_with(this->points.at(i-1))) {
+            this->points.erase(this->points.begin() + i);
+            --i;
+        }
+    }
+}
+
+void
+MultiPoint::append(const Point &point)
+{
+    this->points.push_back(point);
+}
+
+void
+MultiPoint::append(const Points &points)
+{
+    this->append(points.begin(), points.end());
+}
+
+void
+MultiPoint::append(const Points::const_iterator &begin, const Points::const_iterator &end)
+{
+    this->points.insert(this->points.end(), begin, end);
+}
+
+bool
+MultiPoint::intersection(const Line& line, Point* intersection) const
+{
+    Lines lines = this->lines();
+    for (Lines::const_iterator it = lines.begin(); it != lines.end(); ++it) {
+        if (it->intersection(line, intersection)) return true;
+    }
+    return false;
+}
+
+std::string
+MultiPoint::dump_perl() const
+{
+    std::ostringstream ret;
+    ret << "[";
+    for (Points::const_iterator p = this->points.begin(); p != this->points.end(); ++p) {
+        ret << p->dump_perl();
+        if (p != this->points.end()-1) ret << ",";
+    }
+    ret << "]";
+    return ret.str();
 }
 
 Points
@@ -84,6 +149,7 @@ MultiPoint::_douglas_peucker(const Points &points, const double tolerance)
     size_t index = 0;
     Line full(points.front(), points.back());
     for (Points::const_iterator it = points.begin() + 1; it != points.end(); ++it) {
+        // we use shortest distance, not perpendicular distance
         double d = it->distance_to(full);
         if (d > dmax) {
             index = it - points.begin();
@@ -110,52 +176,5 @@ MultiPoint::_douglas_peucker(const Points &points, const double tolerance)
     }
     return results;
 }
-
-#ifdef SLIC3RXS
-void
-MultiPoint::from_SV(SV* poly_sv)
-{
-    AV* poly_av = (AV*)SvRV(poly_sv);
-    const unsigned int num_points = av_len(poly_av)+1;
-    this->points.resize(num_points);
-    
-    for (unsigned int i = 0; i < num_points; i++) {
-        SV** point_sv = av_fetch(poly_av, i, 0);
-        this->points[i].from_SV_check(*point_sv);
-    }
-}
-
-void
-MultiPoint::from_SV_check(SV* poly_sv)
-{
-    if (sv_isobject(poly_sv) && (SvTYPE(SvRV(poly_sv)) == SVt_PVMG)) {
-        *this = *(MultiPoint*)SvIV((SV*)SvRV( poly_sv ));
-    } else {
-        this->from_SV(poly_sv);
-    }
-}
-
-SV*
-MultiPoint::to_AV() {
-    const unsigned int num_points = this->points.size();
-    AV* av = newAV();
-    if (num_points > 0) av_extend(av, num_points-1);
-    for (unsigned int i = 0; i < num_points; i++) {
-        av_store(av, i, perl_to_SV_ref(this->points[i]));
-    }
-    return newRV_noinc((SV*)av);
-}
-
-SV*
-MultiPoint::to_SV_pureperl() const {
-    const unsigned int num_points = this->points.size();
-    AV* av = newAV();
-    if (num_points > 0) av_extend(av, num_points-1);
-    for (unsigned int i = 0; i < num_points; i++) {
-        av_store(av, i, this->points[i].to_SV_pureperl());
-    }
-    return newRV_noinc((SV*)av);
-}
-#endif
 
 }

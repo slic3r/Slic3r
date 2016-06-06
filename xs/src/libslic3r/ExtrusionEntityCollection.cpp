@@ -1,15 +1,20 @@
 #include "ExtrusionEntityCollection.hpp"
 #include <algorithm>
+#include <cmath>
 #include <map>
 
 namespace Slic3r {
 
 ExtrusionEntityCollection::ExtrusionEntityCollection(const ExtrusionEntityCollection& collection)
-    : no_sort(collection.no_sort), orig_indices(collection.orig_indices)
+    : orig_indices(collection.orig_indices), no_sort(collection.no_sort)
 {
-    this->entities.reserve(collection.entities.size());
-    for (ExtrusionEntitiesPtr::const_iterator it = collection.entities.begin(); it != collection.entities.end(); ++it)
-        this->entities.push_back((*it)->clone());
+    this->append(collection.entities);
+}
+
+ExtrusionEntityCollection::ExtrusionEntityCollection(const ExtrusionPaths &paths)
+    : no_sort(false)
+{
+    this->append(paths);
 }
 
 ExtrusionEntityCollection& ExtrusionEntityCollection::operator= (const ExtrusionEntityCollection &other)
@@ -27,17 +32,39 @@ ExtrusionEntityCollection::swap (ExtrusionEntityCollection &c)
     std::swap(this->no_sort, c.no_sort);
 }
 
+ExtrusionEntityCollection::~ExtrusionEntityCollection()
+{
+    for (ExtrusionEntitiesPtr::iterator it = this->entities.begin(); it != this->entities.end(); ++it)
+        delete *it;
+}
+
+ExtrusionEntityCollection::operator ExtrusionPaths() const
+{
+    ExtrusionPaths paths;
+    for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+        if (const ExtrusionPath* path = dynamic_cast<const ExtrusionPath*>(*it))
+            paths.push_back(*path);
+    }
+    return paths;
+}
+
 ExtrusionEntityCollection*
 ExtrusionEntityCollection::clone() const
 {
-    return new ExtrusionEntityCollection(*this);
+    ExtrusionEntityCollection* coll = new ExtrusionEntityCollection(*this);
+    for (size_t i = 0; i < coll->entities.size(); ++i) {
+        coll->entities[i] = this->entities[i]->clone();
+    }
+    return coll;
 }
 
 void
 ExtrusionEntityCollection::reverse()
 {
     for (ExtrusionEntitiesPtr::iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
-        (*it)->reverse();
+        // Don't reverse it if it's a loop, as it doesn't change anything in terms of elements ordering
+        // and caller might rely on winding order
+        if (!(*it)->is_loop()) (*it)->reverse();
     }
     std::reverse(this->entities.begin(), this->entities.end());
 }
@@ -52,6 +79,48 @@ Point
 ExtrusionEntityCollection::last_point() const
 {
     return this->entities.back()->last_point();
+}
+
+void
+ExtrusionEntityCollection::append(const ExtrusionEntity &entity)
+{
+    this->entities.push_back(entity.clone());
+}
+
+void
+ExtrusionEntityCollection::append(const ExtrusionEntitiesPtr &entities)
+{
+    for (ExtrusionEntitiesPtr::const_iterator ptr = entities.begin(); ptr != entities.end(); ++ptr)
+        this->append(**ptr);
+}
+
+void
+ExtrusionEntityCollection::append(const ExtrusionPaths &paths)
+{
+    for (ExtrusionPaths::const_iterator path = paths.begin(); path != paths.end(); ++path)
+        this->append(*path);
+}
+
+void
+ExtrusionEntityCollection::replace(size_t i, const ExtrusionEntity &entity)
+{
+    delete this->entities[i];
+    this->entities[i] = entity.clone();
+}
+
+void
+ExtrusionEntityCollection::remove(size_t i)
+{
+    delete this->entities[i];
+    this->entities.erase(this->entities.begin() + i);
+}
+
+ExtrusionEntityCollection
+ExtrusionEntityCollection::chained_path(bool no_reverse, std::vector<size_t>* orig_indices) const
+{
+    ExtrusionEntityCollection coll;
+    this->chained_path(&coll, no_reverse, orig_indices);
+    return coll;
 }
 
 void
@@ -84,7 +153,7 @@ ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEntityCo
     Points endpoints;
     for (ExtrusionEntitiesPtr::iterator it = my_paths.begin(); it != my_paths.end(); ++it) {
         endpoints.push_back((*it)->first_point());
-        if (no_reverse) {
+        if (no_reverse || !(*it)->can_reverse()) {
             endpoints.push_back((*it)->first_point());
         } else {
             endpoints.push_back((*it)->last_point());
@@ -96,7 +165,8 @@ ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEntityCo
         int start_index = start_near.nearest_point_index(endpoints);
         int path_index = start_index/2;
         ExtrusionEntity* entity = my_paths.at(path_index);
-        if (start_index % 2 && !no_reverse) {
+        // never reverse loops, since it's pointless for chained path and callers might depend on orientation
+        if (start_index % 2 && !no_reverse && entity->can_reverse()) {
             entity->reverse();
         }
         retval->entities.push_back(my_paths.at(path_index));
@@ -107,9 +177,68 @@ ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEntityCo
     }
 }
 
-#ifdef SLIC3RXS
-// there is no ExtrusionLoop::Collection or ExtrusionEntity::Collection
-REGISTER_CLASS(ExtrusionEntityCollection, "ExtrusionPath::Collection");
-#endif
+Polygons
+ExtrusionEntityCollection::grow() const
+{
+    Polygons pp;
+    for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+        Polygons entity_pp = (*it)->grow();
+        pp.insert(pp.end(), entity_pp.begin(), entity_pp.end());
+    }
+    return pp;
+}
+
+/* Recursively count paths and loops contained in this collection */
+size_t
+ExtrusionEntityCollection::items_count() const
+{
+    size_t count = 0;
+    for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+        if ((*it)->is_collection()) {
+            ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
+            count += collection->items_count();
+        } else {
+            ++count;
+        }
+    }
+    return count;
+}
+
+/* Returns a single vector of pointers to all non-collection items contained in this one */
+void
+ExtrusionEntityCollection::flatten(ExtrusionEntityCollection* retval) const
+{
+    for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+        if ((*it)->is_collection()) {
+            ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
+            retval->append(collection->flatten().entities);
+        } else {
+            retval->append(**it);
+        }
+    }
+}
+
+ExtrusionEntityCollection
+ExtrusionEntityCollection::flatten() const
+{
+    ExtrusionEntityCollection coll;
+    this->flatten(&coll);
+    return coll;
+}
+
+double
+ExtrusionEntityCollection::min_mm3_per_mm() const
+{
+    double min_mm3_per_mm = 0;
+    for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+        double mm3_per_mm = (*it)->min_mm3_per_mm();
+        if (min_mm3_per_mm == 0) {
+            min_mm3_per_mm = mm3_per_mm;
+        } else {
+            min_mm3_per_mm = fmin(min_mm3_per_mm, mm3_per_mm);
+        }
+    }
+    return min_mm3_per_mm;
+}
 
 }

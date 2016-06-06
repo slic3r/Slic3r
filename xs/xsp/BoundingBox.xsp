@@ -1,12 +1,13 @@
 %module{Slic3r::XS};
 
 %{
-#include <myinit.h>
+#include <xsinit.h>
 #include "libslic3r/BoundingBox.hpp"
 #include "libslic3r/Point.hpp"
 %}
 
 %name{Slic3r::Geometry::BoundingBox} class BoundingBox {
+    BoundingBox();
     ~BoundingBox();
     Clone<BoundingBox> clone()
         %code{% RETVAL = THIS; %};
@@ -15,8 +16,7 @@
     void scale(double factor);
     void translate(double x, double y);
     void offset(double delta);
-    Polygon* polygon()
-        %code{% RETVAL = new Polygon(); THIS->polygon(RETVAL); %};
+    Clone<Polygon> polygon();
     Clone<Point> size();
     Clone<Point> center();
     Clone<Point> min_point() %code{% RETVAL = THIS->min; %};
@@ -41,6 +41,7 @@ new_from_points(CLASS, points)
 };
 
 %name{Slic3r::Geometry::BoundingBoxf} class BoundingBoxf {
+    BoundingBoxf();
     ~BoundingBoxf();
     Clone<BoundingBoxf> clone()
         %code{% RETVAL = THIS; %};
@@ -76,14 +77,18 @@ new_from_points(CLASS, points)
 };
 
 %name{Slic3r::Geometry::BoundingBoxf3} class BoundingBoxf3 {
+    BoundingBoxf3();
     ~BoundingBoxf3();
     Clone<BoundingBoxf3> clone()
         %code{% RETVAL = THIS; %};
     void merge(BoundingBoxf3* bb) %code{% THIS->merge(*bb); %};
+    void merge_point(Pointf3* point) %code{% THIS->merge(*point); %};
     void scale(double factor);
     void translate(double x, double y, double z);
     Clone<Pointf3> size();
     Clone<Pointf3> center();
+    Clone<Pointf3> min_point() %code{% RETVAL = THIS->min; %};
+    Clone<Pointf3> max_point() %code{% RETVAL = THIS->max; %};
     double x_min() %code{% RETVAL = THIS->min.x; %};
     double x_max() %code{% RETVAL = THIS->max.x; %};
     double y_min() %code{% RETVAL = THIS->min.y; %};

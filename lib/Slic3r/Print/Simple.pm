@@ -38,7 +38,7 @@ has 'status_cb' => (
 
 has 'print_center' => (
     is      => 'rw',
-    default => sub { [100,100] },
+    default => sub { Slic3r::Pointf->new(100,100) },
 );
 
 has 'output_file' => (
@@ -68,6 +68,7 @@ sub set_model {
         # if all input objects have defined position(s) apply duplication to the whole model
         $model->duplicate($self->duplicate, $self->_print->config->min_object_distance);
     }
+    $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects};
     $model->center_instances_around_point($self->print_center);
     
     foreach my $model_object (@{$model->objects}) {

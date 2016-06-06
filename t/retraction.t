@@ -1,4 +1,4 @@
-use Test::More tests => 18;
+use Test::More tests => 22;
 use strict;
 use warnings;
 
@@ -7,6 +7,7 @@ BEGIN {
     use lib "$FindBin::Bin/../lib";
 }
 
+use List::Util qw(any);
 use Slic3r;
 use Slic3r::Test qw(_eq);
 
@@ -17,7 +18,7 @@ use Slic3r::Test qw(_eq);
     my $test = sub {
         my ($conf) = @_;
         $conf ||= $config;
-    
+        
         my $print = Slic3r::Test::init_print('20mm_cube', config => $conf, duplicate => $duplicate);
     
         my $tool = 0;
@@ -44,7 +45,7 @@ use Slic3r::Test qw(_eq);
                 # lift move or lift + change layer
                 if (_eq($info->{dist_Z}, $print->print->config->get_at('retract_lift', $tool))
                     || (_eq($info->{dist_Z}, $conf->layer_height + $print->print->config->get_at('retract_lift', $tool)) && $print->print->config->get_at('retract_lift', $tool) > 0)) {
-                    fail 'only lifting while retracted' if !$retracted[$tool] && !($conf->g0 && $info->{retracting});
+                    fail 'only lifting while retracted' if !$retracted[$tool];
                     fail 'double lift' if $lifted;
                     $lifted = 1;
                 }
@@ -67,8 +68,6 @@ use Slic3r::Test qw(_eq);
                 } else {
                     fail 'retracted by the correct amount';
                 }
-                fail 'combining retraction and travel with G0'
-                    if $cmd ne 'G0' && $conf->g0 && ($info->{dist_Z} || $info->{dist_XY});
             }
             if ($info->{extruding}) {
                 fail 'only extruding while not lifted' if $lifted;
@@ -78,7 +77,7 @@ use Slic3r::Test qw(_eq);
                         $expected_amount = $print->print->config->get_at('retract_length_toolchange', $tool) + $print->print->config->get_at('retract_restart_extra_toolchange', $tool);
                         $changed_tool = 0;
                     }
-                    fail 'unretracted by the correct amount'
+                    fail 'unretracted by the correct amount' && exit
                         if !_eq($info->{dist_E}, $expected_amount);
                     $retracted[$tool] = 0;
                     $retracted_length[$tool] = 0;
@@ -120,11 +119,7 @@ use Slic3r::Test qw(_eq);
     $duplicate = 2;
     $retract_tests->(' (duplicate)');
 
-    $config->set('g0', 1);
-    $retract_tests->(' (G0 and duplicate)');
-
     $duplicate = 1;
-    $config->set('g0', 0);
     $config->set('infill_extruder', 2);
     $config->set('skirts', 4);
     $config->set('skirt_height', 3);
@@ -133,16 +128,21 @@ use Slic3r::Test qw(_eq);
 
 {
     my $config = Slic3r::Config->new_from_defaults;
+    $config->set('start_gcode', '');  # prevent any default priming Z move from affecting our lift detection
+    $config->set('retract_length', [0]);
     $config->set('retract_layer_change', [0]);
+    $config->set('retract_lift', [0.2]);
     
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     my $retracted = 0;
     my $layer_changes_with_retraction = 0;
+    my $retractions = my $z_restores = 0;
     Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
         my ($self, $cmd, $args, $info) = @_;
         
         if ($info->{retracting}) {
             $retracted = 1;
+            $retractions++;
         } elsif ($info->{extruding} && $retracted) {
             $retracted = 0;
         }
@@ -150,34 +150,88 @@ use Slic3r::Test qw(_eq);
         if ($info->{dist_Z} && $retracted) {
             $layer_changes_with_retraction++;
         }
+        if ($info->{dist_Z} && $args->{Z} < $self->Z) {
+            $z_restores++;
+        }
     });
     
     is $layer_changes_with_retraction, 0, 'no retraction on layer change';
+    is $retractions, 0, 'no retractions';
+    is $z_restores, 0, 'no lift';
 }
 
 {
     my $config = Slic3r::Config->new_from_defaults;
-    $config->set('only_retract_when_crossing_perimeters', 1);
-    $config->set('fill_density', 0);
+    $config->set('use_firmware_retraction', 1);
     
-    my $print = Slic3r::Test::init_print('cube_with_hole', config => $config);
+    my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     my $retracted = 0;
-    my $traveling_without_retraction = 0;
+    my $double_retractions = my $double_unretractions = 0;
     Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
         my ($self, $cmd, $args, $info) = @_;
         
-        if ($info->{retracting}) {
+        if ($cmd eq 'G10') {
+            $double_retractions++ if $retracted;
             $retracted = 1;
-        } elsif ($info->{extruding} && $retracted) {
+        } elsif ($cmd eq 'G11') {
+            $double_unretractions++ if !$retracted;
             $retracted = 0;
-        } elsif ($info->{travel} && !$retracted) {
-            if ($info->{dist_XY} > $config->retract_before_travel->[0]) {
-                $traveling_without_retraction = 1;
-            }
         }
     });
     
-    ok !$traveling_without_retraction, 'always retract when using only_retract_when_crossing_perimeters and fill_density = 0';
+    is $double_retractions, 0, 'no double retractions';
+    is $double_unretractions, 0, 'no double unretractions';
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('use_firmware_retraction', 1);
+    $config->set('retract_length', [0]);
+    
+    my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
+    my $retracted = 0;
+    Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+        my ($self, $cmd, $args, $info) = @_;
+        
+        if ($cmd eq 'G10') {
+            $retracted = 1;
+        }
+    });
+    
+    ok $retracted, 'retracting also when --retract-length is 0 but --use-firmware-retraction is enabled';
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('start_gcode', '');
+    $config->set('retract_lift', [3]);
+    
+    my @lifted_at = ();
+    my $test = sub {
+        my $print = Slic3r::Test::init_print('20mm_cube', config => $config, duplicate => 2);
+        @lifted_at = ();
+        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+            my ($self, $cmd, $args, $info) = @_;
+        
+            if ($cmd eq 'G1' && $info->{dist_Z} < 0) {
+                push @lifted_at, $info->{new_Z};
+            }
+        });
+    };
+    
+    $config->set('retract_lift_above', [0]);
+    $config->set('retract_lift_below', [0]);
+    $test->();
+    ok !!@lifted_at, 'lift takes place when above/below == 0';
+    
+    $config->set('retract_lift_above', [5]);
+    $config->set('retract_lift_below', [15]);
+    $test->();
+    ok !!@lifted_at, 'lift takes place when above/below != 0';
+    ok !(any { $_ < $config->get_at('retract_lift_above', 0) } @lifted_at),
+        'Z is not lifted below the configured value';
+    ok !(any { $_ > $config->get_at('retract_lift_below', 0) } @lifted_at),
+        'Z is not lifted above the configured value';
 }
 
 __END__

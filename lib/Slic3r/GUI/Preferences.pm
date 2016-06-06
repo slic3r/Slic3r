@@ -5,7 +5,7 @@ use base 'Wx::Dialog';
 
 sub new {
     my ($class, $parent) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Preferences", wxDefaultPosition, [500,200]);
+    my $self = $class->SUPER::new($parent, -1, "Preferences", wxDefaultPosition, wxDefaultSize);
     $self->{values} = {};
     
     my $optgroup;
@@ -16,7 +16,7 @@ sub new {
             my ($opt_id) = @_;
             $self->{values}{$opt_id} = $optgroup->get_value($opt_id);
         },
-        label_width => 100,
+        label_width => 200,
     );
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'mode',
@@ -26,6 +26,7 @@ sub new {
         labels      => ['Simple','Expert'],
         values      => ['simple','expert'],
         default     => $Slic3r::GUI::Settings->{_}{mode},
+        width       => 100,
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'version_check',
@@ -57,6 +58,13 @@ sub new {
         default     => $Slic3r::GUI::Settings->{_}{background_processing},
         readonly    => !$Slic3r::have_threads,
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'no_controller',
+        type        => 'bool',
+        label       => 'Disable USB/serial connection',
+        tooltip     => 'Disable communication with the printer over a serial / USB cable. This simplifies the user interface in case the printer is never attached to the computer.',
+        default     => $Slic3r::GUI::Settings->{_}{no_controller},
+    ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
@@ -74,7 +82,7 @@ sub new {
 sub _accept {
     my $self = shift;
     
-    if ($self->{values}{mode}) {
+    if ($self->{values}{mode} || defined($self->{values}{no_controller})) {
         Slic3r::GUI::warning_catcher($self)->("You need to restart Slic3r to make the changes effective.");
     }
     

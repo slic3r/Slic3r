@@ -7,7 +7,6 @@ has 'parent'                => (is => 'ro', required => 1);
 has 'option'                => (is => 'ro', required => 1);     # Slic3r::GUI::OptionsGroup::Option
 has 'on_change'             => (is => 'rw', default => sub { sub {} });
 has 'on_kill_focus'         => (is => 'rw', default => sub { sub {} });
-has 'wxSsizer'              => (is => 'rw');                    # alternatively, wxSizer object
 has 'disable_change_event'  => (is => 'rw', default => sub { 0 });
 
 # This method should not fire the on_change event
@@ -36,7 +35,7 @@ sub toggle {
 sub _on_change {
     my ($self, $opt_id) = @_;
     
-    $self->on_change->($opt_id)
+    $self->on_change->($opt_id, $self->get_value)
         unless $self->disable_change_event;
 }
 
@@ -128,6 +127,8 @@ extends 'Slic3r::GUI::OptionsGroup::Field::wxWindow';
 use Wx qw(:misc);
 use Wx::Event qw(EVT_SPINCTRL EVT_TEXT EVT_KILL_FOCUS);
 
+has 'tmp_value' => (is => 'rw');
+
 sub BUILD {
     my ($self) = @_;
     
@@ -136,14 +137,32 @@ sub BUILD {
     $self->wxWindow($field);
     
     EVT_SPINCTRL($self->parent, $field, sub {
+        $self->tmp_value(undef);
         $self->_on_change($self->option->opt_id);
     });
     EVT_TEXT($self->parent, $field, sub {
+        my ($s, $event) = @_;
+        
+        # On OSX/Cocoa, wxSpinCtrl::GetValue() doesn't return the new value
+        # when it was changed from the text control, so the on_change callback
+        # gets the old one, and on_kill_focus resets the control to the old value.
+        # As a workaround, we get the new value from $event->GetString and store
+        # here temporarily so that we can return it from $self->get_value
+        $self->tmp_value($event->GetString) if $event->GetString =~ /^\d+$/;
         $self->_on_change($self->option->opt_id);
+        # We don't reset tmp_value here because _on_change might put callbacks
+        # in the CallAfter queue, and we want the tmp value to be available from
+        # them as well.
     });
     EVT_KILL_FOCUS($field, sub {
+        $self->tmp_value(undef);
         $self->_on_kill_focus($self->option->opt_id, @_);
     });
+}
+
+sub get_value {
+    my ($self) = @_;
+    return $self->tmp_value // $self->wxWindow->GetValue;
 }
 
 
@@ -194,16 +213,23 @@ extends 'Slic3r::GUI::OptionsGroup::Field::wxWindow';
 
 use List::Util qw(first);
 use Wx qw(:misc :combobox);
-use Wx::Event qw(EVT_COMBOBOX);
+use Wx::Event qw(EVT_COMBOBOX EVT_TEXT);
 
 sub BUILD {
     my ($self) = @_;
     
+    my $style = 0;
+    $style |= wxCB_READONLY if defined $self->option->gui_type && $self->option->gui_type ne 'select_open';
     my $field = Wx::ComboBox->new($self->parent, -1, "", wxDefaultPosition, $self->_default_size,
-        $self->option->labels || $self->option->values, wxCB_READONLY);
+        $self->option->labels || $self->option->values || [], $style);
     $self->wxWindow($field);
     
+    $self->set_value($self->option->default);
+    
     EVT_COMBOBOX($self->parent, $field, sub {
+        $self->_on_change($self->option->opt_id);
+    });
+    EVT_TEXT($self->parent, $field, sub {
         $self->_on_change($self->option->opt_id);
     });
 }
@@ -211,26 +237,61 @@ sub BUILD {
 sub set_value {
     my ($self, $value) = @_;
     
-    my $idx = first { $self->option->values->[$_] eq $value } 0..$#{$self->option->values};
+    $self->disable_change_event(1);
+    
+    my $idx;
+    if ($self->option->values) {
+        $idx = first { $self->option->values->[$_] eq $value } 0..$#{$self->option->values};
+        # if value is not among indexes values we use SetValue()
+    }
+    
+    if (defined $idx) {
+        $self->wxWindow->SetSelection($idx);
+    } else {
+        $self->wxWindow->SetValue($value);
+    }
+    
+    $self->disable_change_event(0);
+}
+
+sub set_values {
+    my ($self, $values) = @_;
     
     $self->disable_change_event(1);
-    $self->wxWindow->SetSelection($idx);
+    
+    # it looks that Clear() also clears the text field in recent wxWidgets versions,
+    # but we want to preserve it
+    my $ww = $self->wxWindow;
+    my $value = $ww->GetValue;
+    $ww->Clear;
+    $ww->Append($_) for @$values;
+    $ww->SetValue($value);
+    
     $self->disable_change_event(0);
 }
 
 sub get_value {
     my ($self) = @_;
-    return $self->option->values->[$self->wxWindow->GetSelection];
+    
+    if ($self->option->values) {
+        my $idx = $self->wxWindow->GetSelection;
+        if ($idx != &Wx::wxNOT_FOUND) {
+            return $self->option->values->[$idx];
+        }
+    }
+    return $self->wxWindow->GetValue;
 }
-
 
 package Slic3r::GUI::OptionsGroup::Field::NumericChoice;
 use Moo;
 extends 'Slic3r::GUI::OptionsGroup::Field::wxWindow';
 
 use List::Util qw(first);
-use Wx qw(:misc :combobox);
+use Wx qw(wxTheApp :misc :combobox);
 use Wx::Event qw(EVT_COMBOBOX EVT_TEXT);
+
+# if option has no 'values', indices are values
+# if option has no 'labels', values are labels
 
 sub BUILD {
     my ($self) = @_;
@@ -245,18 +306,28 @@ sub BUILD {
         my $disable_change_event = $self->disable_change_event;
         $self->disable_change_event(1);
         
-        my $value = $field->GetSelection;
+        my $idx = $field->GetSelection;  # get index of selected value
         my $label;
         
-        if ($self->option->values) {
-            $label = $value = $self->option->values->[$value];
-        } elsif ($value <= $#{$self->option->labels}) {
-            $label = $self->option->labels->[$value];
+        if ($self->option->labels && $idx <= $#{$self->option->labels}) {
+            $label = $self->option->labels->[$idx];
+        } elsif ($self->option->values && $idx <= $#{$self->option->values}) {
+            $label = $self->option->values->[$idx];
         } else {
-            $label = $value;
+            $label = $idx;
         }
         
-        $field->SetValue($label);
+        # The MSW implementation of wxComboBox will leave the field blank if we call
+        # SetValue() in the EVT_COMBOBOX event handler, so we postpone the call.
+        wxTheApp->CallAfter(sub {
+            my $dce = $self->disable_change_event;
+            $self->disable_change_event(1);
+            
+            # ChangeValue() is not exported in wxPerl
+            $field->SetValue($label);
+            
+            $self->disable_change_event($dce);
+        });
         
         $self->disable_change_event($disable_change_event);
         $self->_on_change($self->option->opt_id);
@@ -283,8 +354,8 @@ sub set_value {
                 $self->disable_change_event(0);
                 return;
             }
-        }
-        if ($self->option->labels && $value <= $#{$self->option->labels}) {
+        } elsif ($self->option->labels && $value <= $#{$self->option->labels}) {
+            # if we have no values, we expect value to be an index
             $field->SetValue($self->option->labels->[$value]);
             $self->disable_change_event(0);
             return;
@@ -299,14 +370,57 @@ sub get_value {
     my ($self) = @_;
     
     my $label = $self->wxWindow->GetValue;
-    my $value_idx = first { $self->option->labels->[$_] eq $label } 0..$#{$self->option->labels};
-    if (defined $value_idx) {
-        if ($self->option->values) {
-            return $self->option->values->[$value_idx];
+    if ($self->option->labels) {
+        my $value_idx = first { $self->option->labels->[$_] eq $label } 0..$#{$self->option->labels};
+        if (defined $value_idx) {
+            if ($self->option->values) {
+                return $self->option->values->[$value_idx];
+            }
+            return $value_idx;
         }
-        return $value_idx;
     }
     return $label;
+}
+
+
+package Slic3r::GUI::OptionsGroup::Field::ColourPicker;
+use Moo;
+extends 'Slic3r::GUI::OptionsGroup::Field::wxWindow';
+
+use Wx qw(:misc :colour);
+use Wx::Event qw(EVT_COLOURPICKER_CHANGED);
+
+sub BUILD {
+    my ($self) = @_;
+    
+    my $field = Wx::ColourPickerCtrl->new($self->parent, -1, 
+        $self->_string_to_colour($self->option->default), wxDefaultPosition, 
+        $self->_default_size);
+    $self->wxWindow($field);
+    
+    EVT_COLOURPICKER_CHANGED($self->parent, $field, sub {
+        $self->_on_change($self->option->opt_id);
+    });
+}
+
+sub set_value {
+    my ($self, $value) = @_;
+    
+    $self->disable_change_event(1);
+    $self->wxWindow->SetColour($self->_string_to_colour($value));
+    $self->disable_change_event(0);
+}
+
+sub get_value {
+    my ($self) = @_;
+    return $self->wxWindow->GetColour->GetAsString(wxC2S_HTML_SYNTAX);
+}
+
+sub _string_to_colour {
+    my ($self, $string) = @_;
+    
+    $string =~ s/^#//;
+    return Wx::Colour->new(unpack 'C*', pack 'H*', $string);
 }
 
 
@@ -335,6 +449,7 @@ sub BUILD {
     $self->wxSizer($sizer);
     
     my $field_size = Wx::Size->new(40, -1);
+    
     $self->x_textctrl(Wx::TextCtrl->new($self->parent, -1, $self->option->default->[X], wxDefaultPosition, $field_size));
     $self->y_textctrl(Wx::TextCtrl->new($self->parent, -1, $self->option->default->[Y], wxDefaultPosition, $field_size));
     
@@ -397,11 +512,11 @@ extends 'Slic3r::GUI::OptionsGroup::Field::wxSizer';
 
 has 'scale'         => (is => 'rw', default => sub { 10 });
 has 'slider'        => (is => 'rw');
-has 'statictext'    => (is => 'rw');
+has 'textctrl'      => (is => 'rw');
 
 use Slic3r::Geometry qw(X Y);
 use Wx qw(:misc :sizer);
-use Wx::Event qw(EVT_SLIDER);
+use Wx::Event qw(EVT_SLIDER EVT_TEXT EVT_KILL_FOCUS);
 
 sub BUILD {
     my ($self) = @_;
@@ -419,14 +534,26 @@ sub BUILD {
     );
     $self->slider($slider);
     
-    my $statictext = Wx::StaticText->new($self->parent, -1, $slider->GetValue/$self->scale);
-    $self->statictext($statictext);
+    my $textctrl = Wx::TextCtrl->new($self->parent, -1, $slider->GetValue/$self->scale,
+        wxDefaultPosition, [50,-1]);
+    $self->textctrl($textctrl);
     
-    $sizer->Add($_, 0, wxALIGN_CENTER_VERTICAL, 0) for $slider, $statictext;
+    $sizer->Add($slider, 1, wxALIGN_CENTER_VERTICAL, 0);
+    $sizer->Add($textctrl, 0, wxALIGN_CENTER_VERTICAL, 0);
     
     EVT_SLIDER($self->parent, $slider, sub {
-        $self->_update_statictext;
+        $self->_update_textctrl;
         $self->_on_change($self->option->opt_id);
+    });
+    EVT_TEXT($self->parent, $textctrl, sub {
+        my $value = $textctrl->GetValue;
+        if ($value =~ /^-?\d+(\.\d*)?$/) {
+            $self->set_value($value);
+            $self->_on_change($self->option->opt_id);
+        }
+    });
+    EVT_KILL_FOCUS($textctrl, sub {
+        $self->_on_kill_focus($self->option->opt_id, @_);
     });
 }
 
@@ -434,8 +561,8 @@ sub set_value {
     my ($self, $value) = @_;
     
     $self->disable_change_event(1);
-    $self->slider->SetValue($value);
-    $self->_update_statictext;
+    $self->slider->SetValue($value*$self->scale);
+    $self->_update_textctrl;
     $self->disable_change_event(0);
 }
 
@@ -444,9 +571,25 @@ sub get_value {
     return $self->slider->GetValue/$self->scale;
 }
 
-sub _update_statictext {
+sub _update_textctrl {
     my ($self) = @_;
-    $self->statictext->SetLabel($self->get_value);
+    $self->textctrl->SetLabel($self->get_value);
+}
+
+sub enable {
+    my ($self) = @_;
+    
+    $self->slider->Enable;
+    $self->textctrl->Enable;
+    $self->textctrl->SetEditable(1);
+}
+
+sub disable {
+    my ($self) = @_;
+    
+    $self->slider->Disable;
+    $self->textctrl->Disable;
+    $self->textctrl->SetEditable(0);
 }
 
 1;

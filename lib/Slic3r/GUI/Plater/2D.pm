@@ -27,7 +27,7 @@ sub new {
     $self->{on_select_object}   = sub {};
     $self->{on_double_click}    = sub {};
     $self->{on_right_click}     = sub {};
-    $self->{on_instance_moved}  = sub {};
+    $self->{on_instances_moved} = sub {};
     
     $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(210,210,210), wxSOLID);
     $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
@@ -63,15 +63,15 @@ sub on_right_click {
     $self->{on_right_click} = $cb;
 }
 
-sub on_instance_moved {
+sub on_instances_moved {
     my ($self, $cb) = @_;
-    $self->{on_instance_moved} = $cb;
+    $self->{on_instances_moved} = $cb;
 }
 
 sub repaint {
     my ($self, $event) = @_;
     
-    my $dc = Wx::PaintDC->new($self);
+    my $dc = Wx::AutoBufferedPaintDC->new($self);
     my $size = $self->GetSize;
     my @size = ($size->GetWidth, $size->GetHeight);
     
@@ -183,9 +183,11 @@ sub mouse_event {
     my $point = $self->point_to_model_units([ $pos->x, $pos->y ]);  #]]
     if ($event->ButtonDown) {
         $self->{on_select_object}->(undef);
-        OBJECTS: for my $obj_idx (0 .. $#{$self->{objects}}) {
+        # traverse objects and instances in reverse order, so that if they're overlapping
+        # we get the one that gets drawn last, thus on top (as user expects that to move)
+        OBJECTS: for my $obj_idx (reverse 0 .. $#{$self->{objects}}) {
             my $object = $self->{objects}->[$obj_idx];
-            for my $instance_idx (0 .. $#{ $object->instance_thumbnails }) {
+            for my $instance_idx (reverse 0 .. $#{ $object->instance_thumbnails }) {
                 my $thumbnail = $object->instance_thumbnails->[$instance_idx];
                 if (defined first { $_->contour->contains_point($point) } @$thumbnail) {
                     $self->{on_select_object}->($obj_idx);
@@ -208,13 +210,13 @@ sub mouse_event {
             }
         }
         $self->Refresh;
-    } elsif ($event->ButtonUp(&Wx::wxMOUSE_BTN_LEFT)) {
-        $self->{on_instance_moved}->();
-        $self->Refresh;
+    } elsif ($event->LeftUp) {
+        $self->{on_instances_moved}->()
+            if $self->{drag_object};
         $self->{drag_start_pos} = undef;
         $self->{drag_object} = undef;
         $self->SetCursor(wxSTANDARD_CURSOR);
-    } elsif ($event->ButtonDClick) {
+    } elsif ($event->LeftDClick) {
     	$self->{on_double_click}->();
     } elsif ($event->Dragging) {
         return if !$self->{drag_start_pos}; # concurrency problems
@@ -274,7 +276,7 @@ sub update_bed_size {
             push @polylines, Slic3r::Polyline->new([$bb->x_min, $y], [$bb->x_max, $y]);
         }
         @polylines = @{intersection_pl(\@polylines, [$polygon])};
-        $self->{grid} = [ map $self->scaled_points_to_pixel(\@$_, 1), @polylines ];
+        $self->{grid} = [ map $self->scaled_points_to_pixel([ @$_[0,-1] ], 1), @polylines ];
     }
 }
 

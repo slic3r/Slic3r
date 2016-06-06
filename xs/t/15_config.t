@@ -4,9 +4,9 @@ use strict;
 use warnings;
 
 use Slic3r::XS;
-use Test::More tests => 105;
+use Test::More tests => 110;
 
-foreach my $config (Slic3r::Config->new, Slic3r::Config::Full->new) {
+foreach my $config (Slic3r::Config->new, Slic3r::Config::Static::new_FullPrintConfig) {
     $config->set('layer_height', 0.3);
     ok abs($config->get('layer_height') - 0.3) < 1e-4, 'set/get float';
     is $config->serialize('layer_height'), '0.3', 'serialize float';
@@ -30,6 +30,7 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Full->new) {
     is $config->serialize('first_layer_height'), '0.3', 'serialize absolute floatOrPercent';
     
     $config->set('first_layer_height', '50%');
+    $config->get_abs_value('first_layer_height');
     ok abs($config->get_abs_value('first_layer_height') - 0.15) < 1e-4, 'set/get relative floatOrPercent';
     is $config->serialize('first_layer_height'), '50%', 'serialize relative floatOrPercent';
     
@@ -51,6 +52,8 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Full->new) {
     is $config->serialize('gcode_flavor'), 'teacup', 'serialize enum';
     $config->set_deserialize('gcode_flavor', 'mach3');
     is $config->get('gcode_flavor'), 'mach3', 'deserialize enum (gcode_flavor)';
+    $config->set_deserialize('gcode_flavor', 'machinekit');
+    is $config->get('gcode_flavor'), 'machinekit', 'deserialize enum (gcode_flavor)';
     
     $config->set_deserialize('fill_pattern', 'line');
     is $config->get('fill_pattern'), 'line', 'deserialize enum (fill_pattern)';
@@ -59,12 +62,14 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Full->new) {
     is $config->get('support_material_pattern'), 'pillars', 'deserialize enum (support_material_pattern)';
     
     $config->set('extruder_offset', [[10,20],[30,45]]);
-    is_deeply $config->get('extruder_offset'), [[10,20],[30,45]], 'set/get points';
+    is_deeply [ map $_->pp, @{$config->get('extruder_offset')} ], [[10,20],[30,45]], 'set/get points';
+    $config->set('extruder_offset', [Slic3r::Pointf->new(10,20),Slic3r::Pointf->new(30,45)]);
+    is_deeply [ map $_->pp, @{$config->get('extruder_offset')} ], [[10,20],[30,45]], 'set/get points';
     is $config->serialize('extruder_offset'), '10x20,30x45', 'serialize points';
     $config->set_deserialize('extruder_offset', '20x10');
-    is_deeply $config->get('extruder_offset'), [[20,10]], 'deserialize points';
+    is_deeply [ map $_->pp, @{$config->get('extruder_offset')} ], [[20,10]], 'deserialize points';
     $config->set_deserialize('extruder_offset', '0x0');
-    is_deeply $config->get('extruder_offset'), [[0,0]], 'deserialize points';
+    is_deeply [ map $_->pp, @{$config->get('extruder_offset')} ], [[0,0]], 'deserialize points';
     {
         my @values = ([10,20]);
         $values[2] = [10,20];  # implicitely extend array; this is not the same as explicitely assigning undef to second item
@@ -135,13 +140,13 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Full->new) {
     # test that no crash happens when using set_deserialize() with a key that hasn't been set() yet
     $config->set_deserialize('filament_diameter', '3');
     
-    my $config2 = Slic3r::Config::Full->new;
+    my $config2 = Slic3r::Config::Static::new_FullPrintConfig;
     $config2->apply_dynamic($config);
     is $config2->get('perimeters'), 2, 'apply_dynamic';
 }
 
 {
-    my $config = Slic3r::Config::Full->new;
+    my $config = Slic3r::Config::Static::new_FullPrintConfig;
     my $config2 = Slic3r::Config->new;
     $config2->apply_static($config);
     is $config2->get('perimeters'), Slic3r::Config::print_config_def()->{perimeters}{default}, 'apply_static and print_config_def';
@@ -166,7 +171,8 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Full->new) {
     $config->set('extruder_offset', [ [0,0], [20,0], [0,20] ]);
     my $config2 = Slic3r::Config->new;
     $config2->apply($config);
-    is_deeply $config->get('extruder_offset'), $config2->get('extruder_offset'), 'apply dynamic over dynamic';
+    is_deeply [ map $_->pp, @{$config->get('extruder_offset')} ], [ map $_->pp, @{$config2->get('extruder_offset')} ],
+        'apply dynamic over dynamic';
 }
 
 {
@@ -177,6 +183,13 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Full->new) {
     ok !$config->has('extruder'), 'extruder option is removed after normalize()';
     is $config->get('infill_extruder'), 2, 'undefined extruder is populated with default extruder';
     is $config->get('perimeter_extruder'), 3, 'defined extruder is not overwritten by default extruder';
+}
+
+{
+    my $config = Slic3r::Config->new;
+    $config->set('infill_extruder', 2);
+    $config->normalize;
+    is $config->get('solid_infill_extruder'), 2, 'undefined solid infill extruder is populated with infill extruder';
 }
 
 {

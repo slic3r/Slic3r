@@ -16,6 +16,13 @@ Line::wkt() const
     return ss.str();
 }
 
+Line::operator Lines() const
+{
+    Lines lines;
+    lines.push_back(*this);
+    return lines;
+}
+
 Line::operator Polyline() const
 {
     Polyline pl;
@@ -57,10 +64,10 @@ Line::length() const
     return this->a.distance_to(this->b);
 }
 
-Point*
+Point
 Line::midpoint() const
 {
-    return new Point ((this->a.x + this->b.x) / 2.0, (this->a.y + this->b.y) / 2.0);
+    return Point((this->a.x + this->b.x) / 2.0, (this->a.y + this->b.y) / 2.0);
 }
 
 void
@@ -80,6 +87,23 @@ Line::point_at(double distance) const
     Point p;
     this->point_at(distance, &p);
     return p;
+}
+
+bool
+Line::intersection_infinite(const Line &other, Point* point) const
+{
+    Vector x = this->a.vector_to(other.a);
+    Vector d1 = this->vector();
+    Vector d2 = other.vector();
+
+    double cross = d1.x * d2.y - d1.y * d2.x;
+    if (std::fabs(cross) < EPSILON)
+        return false;
+
+    double t1 = (x.x * d2.y - x.y * d2.x)/cross;
+    point->x = this->a.x + d1.x * t1;
+    point->y = this->a.y + d1.y * t1;
+    return true;
 }
 
 bool
@@ -133,49 +157,82 @@ Line::vector() const
     return Vector(this->b.x - this->a.x, this->b.y - this->a.y);
 }
 
-#ifdef SLIC3RXS
-
-REGISTER_CLASS(Line, "Line");
-
-void
-Line::from_SV(SV* line_sv)
+Vector
+Line::normal() const
 {
-    AV* line_av = (AV*)SvRV(line_sv);
-    this->a.from_SV_check(*av_fetch(line_av, 0, 0));
-    this->b.from_SV_check(*av_fetch(line_av, 1, 0));
+    return Vector((this->b.y - this->a.y), -(this->b.x - this->a.x));
 }
 
 void
-Line::from_SV_check(SV* line_sv)
+Line::extend_end(double distance)
 {
-    if (sv_isobject(line_sv) && (SvTYPE(SvRV(line_sv)) == SVt_PVMG)) {
-        if (!sv_isa(line_sv, perl_class_name(this)) && !sv_isa(line_sv, perl_class_name_ref(this)))
-            CONFESS("Not a valid %s object", perl_class_name(this));
-        *this = *(Line*)SvIV((SV*)SvRV( line_sv ));
-    } else {
-        this->from_SV(line_sv);
+    // relocate last point by extending the segment by the specified length
+    Line line = *this;
+    line.reverse();
+    this->b = line.point_at(-distance);
+}
+
+void
+Line::extend_start(double distance)
+{
+    // relocate first point by extending the first segment by the specified length
+    this->a = this->point_at(-distance);
+}
+
+bool
+Line::intersection(const Line& line, Point* intersection) const
+{
+    double denom = ((double)(line.b.y - line.a.y)*(this->b.x - this->a.x)) -
+                   ((double)(line.b.x - line.a.x)*(this->b.y - this->a.y));
+
+    double nume_a = ((double)(line.b.x - line.a.x)*(this->a.y - line.a.y)) -
+                    ((double)(line.b.y - line.a.y)*(this->a.x - line.a.x));
+
+    double nume_b = ((double)(this->b.x - this->a.x)*(this->a.y - line.a.y)) -
+                    ((double)(this->b.y - this->a.y)*(this->a.x - line.a.x));
+    
+    if (fabs(denom) < EPSILON) {
+        if (fabs(nume_a) < EPSILON && fabs(nume_b) < EPSILON) {
+            return false; // coincident
+        }
+        return false; // parallel
     }
+
+    double ua = nume_a / denom;
+    double ub = nume_b / denom;
+
+    if (ua >= 0 && ua <= 1.0f && ub >= 0 && ub <= 1.0f)
+    {
+        // Get the intersection point.
+        intersection->x = this->a.x + ua*(this->b.x - this->a.x);
+        intersection->y = this->a.y + ua*(this->b.y - this->a.y);
+        return true;
+    }
+    
+    return false;  // not intersecting
 }
 
-SV*
-Line::to_AV() {
-    AV* av = newAV();
-    av_extend(av, 1);
-    
-    av_store(av, 0, perl_to_SV_ref(this->a));
-    av_store(av, 1, perl_to_SV_ref(this->b));
-    
-    return newRV_noinc((SV*)av);
+double
+Line::ccw(const Point& point) const
+{
+    return point.ccw(*this);
 }
 
-SV*
-Line::to_SV_pureperl() const {
-    AV* av = newAV();
-    av_extend(av, 1);
-    av_store(av, 0, this->a.to_SV_pureperl());
-    av_store(av, 1, this->b.to_SV_pureperl());
-    return newRV_noinc((SV*)av);
+Pointf3
+Linef3::intersect_plane(double z) const
+{
+    return Pointf3(
+        this->a.x + (this->b.x - this->a.x) * (z - this->a.z) / (this->b.z - this->a.z),
+        this->a.y + (this->b.y - this->a.y) * (z - this->a.z) / (this->b.z - this->a.z),
+        z
+    );
 }
-#endif
+
+void
+Linef3::scale(double factor)
+{
+    this->a.scale(factor);
+    this->b.scale(factor);
+}
 
 }
