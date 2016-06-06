@@ -6,6 +6,7 @@ use Slic3r::Geometry qw(X Y Z triangle_normal scale unscale);
 
 # public
 has 'mesh' => (is => 'ro', required => 1);
+has 'size' => (is => 'ro', required => 1);
 
 #private
 has 'normal_z'  			=> (is => 'ro', default => sub { [] }); # facet_id => [normal];
@@ -156,6 +157,38 @@ sub _facet_cusp_height {
 	my $normal_z = $self->normal_z->[$self->ordered_facets->[$ordered_id]->[0]];
 	my $cusp = ($normal_z == 0) ? 9999 : abs($cusp_value/$normal_z);
 	return $cusp;
+}
+
+# Returns the distance to the next horizontal facet in Z-dir 
+# to consider horizontal object features in slice thickness
+sub horizontal_facet_distance {
+	my $self = shift;
+	my ($z, $max_height) = @_;
+	$max_height = scale $max_height;
+	
+	my $ordered_id = $self->current_facet;
+	while ($ordered_id <= $#{$self->ordered_facets}) {
+		
+		# facet's minimum is higher than max forward distance -> end loop
+		if($self->ordered_facets->[$ordered_id]->[1] > $z+$max_height) {
+			last;
+		}
+		 
+		# min_z == max_z -> horizontal facet
+		if($self->ordered_facets->[$ordered_id]->[1] > $z) {
+			if($self->ordered_facets->[$ordered_id]->[1] == $self->ordered_facets->[$ordered_id]->[2]) {
+				return unscale $self->ordered_facets->[$ordered_id]->[1] - $z;
+			}
+		}
+		
+		$ordered_id++;
+	}
+	
+	# objects maximum?
+	if($z + $max_height > $self->size) {
+		return 	max(unscale $self->size - $z, 0);
+	}
+	return unscale $max_height;
 }
 
 

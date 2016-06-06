@@ -46,7 +46,8 @@ my $test = sub {
 my $print = Slic3r::Test::init_print('slopy_cube', config => $config);
 $print->models->[0]->mesh->repair();
 my $adaptive_slicing = Slic3r::AdaptiveSlicing->new(
-	mesh => Slic3r::Test::mesh('slopy_cube')
+	mesh => Slic3r::Test::mesh('slopy_cube'),
+	size => 20
 );
 
 

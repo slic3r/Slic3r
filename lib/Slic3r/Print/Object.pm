@@ -108,7 +108,8 @@ sub slice {
 			    }
 	        	
 				$adaptive_slicing[$region_id] = Slic3r::AdaptiveSlicing->new(
-					mesh => $mesh
+					mesh => $mesh,
+					size => $self->size->z
 				);
 			}
 			
@@ -136,6 +137,24 @@ sub slice {
        			for my $region_id (0 .. ($self->region_count - 1)) {
 	       			# get cusp height
 	       			my $cusp_height = $adaptive_slicing[$region_id]->cusp_height(scale $slice_z, $cusp_value, $min_height, $max_height);
+	       			
+	       			# check for horizontal features and object size
+	       			if($self->config->get_value('match_horizontal_surfaces')) {
+				       	my $horizontal_dist = $adaptive_slicing[$region_id]->horizontal_facet_distance(scale $slice_z+$cusp_height, $min_height);
+				       	if(($horizontal_dist < $min_height) && ($horizontal_dist > 0)) {
+				       		Slic3r::debugf "Horizontal feature ahead, distance: %f\n", $horizontal_dist;
+				       		# can we shrink the current layer a bit?
+				       		if($cusp_height-($min_height-$horizontal_dist) > $min_height) {
+				       			# yes we can
+				       			$cusp_height = $cusp_height-($min_height-$horizontal_dist);
+				       			Slic3r::debugf "Shrink layer height to %f\n", $cusp_height;
+				       		}else{
+				       			# no, current layer would become too thin
+				       			$cusp_height = $cusp_height+$horizontal_dist;
+				       			Slic3r::debugf "Widen layer height to %f\n", $cusp_height;
+				       		}
+				       	}
+	       			}
 
 			       	$height = ($id == 0)
                 		? $self->config->get_value('first_layer_height')

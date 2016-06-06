@@ -455,7 +455,7 @@ sub build {
     my $self = shift;
     
     $self->init_config_options(qw(
-    	adaptive_slicing cusp_value
+    	adaptive_slicing cusp_value match_horizontal_surfaces
         layer_height first_layer_height
         perimeters spiral_vase
         top_solid_layers bottom_solid_layers
@@ -504,6 +504,7 @@ sub build {
             $optgroup->append_single_option_line('first_layer_height');
             $optgroup->append_single_option_line('adaptive_slicing');
             $optgroup->append_single_option_line('cusp_value');
+            $optgroup->append_single_option_line('match_horizontal_surfaces');
         }
         {
             my $optgroup = $page->new_optgroup('Vertical shells');
@@ -787,7 +788,7 @@ sub _update {
 
     my $have_adaptive_slicing = $config->adaptive_slicing;
     $self->get_field($_)->toggle($have_adaptive_slicing)
-        for qw(cusp_value);
+        for qw(cusp_value match_horizontal_surfaces);
     $self->get_field($_)->toggle(!$have_adaptive_slicing)
         for qw(layer_height);
     

@@ -585,6 +585,12 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0.3);
 
+    def = this->add("match_horizontal_surfaces", coBool);
+    def->label = "Match horizontal surfaces";
+    def->tooltip = "Try to match horizontal surfaces during the slicing process. Matching is not guaranteed, very small surfaces and multiple surfaces with low vertical distance might cause bad results.";
+    def->cli = "match-horizontal-surfaces!";
+    def->default_value = new ConfigOptionBool(true);
+
     def = this->add("max_fan_speed", coInt);
     def->label = "Max";
     def->tooltip = "This setting represents the maximum speed of your fan.";
@@ -599,7 +605,7 @@ PrintConfigDef::PrintConfigDef()
 	def->tooltip = "This is the highest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are slightly smaller than nozzle_diameter.";
 	def->sidetext = "mm";
 	def->cli = "max-layer-height=f@";
-	//def->min = 0;
+	def->min = 0;
 	{
 		ConfigOptionFloats* opt = new ConfigOptionFloats();
 		opt->values.push_back(0.3);
@@ -636,7 +642,7 @@ PrintConfigDef::PrintConfigDef()
 	def->tooltip = "This is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";
 	def->sidetext = "mm";
 	def->cli = "min-layer-height=f@";
-	//def->min = 0;
+	def->min = 0;
 	{
 		ConfigOptionFloats* opt = new ConfigOptionFloats();
 		opt->values.push_back(0.15);

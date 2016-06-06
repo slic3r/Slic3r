@@ -110,6 +110,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionBool                infill_only_where_needed;
     ConfigOptionBool                interface_shells;
     ConfigOptionFloat               layer_height;
+    ConfigOptionBool                match_horizontal_surfaces;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
     ConfigOptionBool                support_material;
@@ -141,6 +142,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
+        OPT_PTR(match_horizontal_surfaces);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);
         OPT_PTR(support_material);
