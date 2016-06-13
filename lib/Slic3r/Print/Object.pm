@@ -107,10 +107,12 @@ sub slice {
 			        }
 			    }
 	        	
-				$adaptive_slicing[$region_id] = Slic3r::AdaptiveSlicing->new(
-					mesh => $mesh,
-					size => $self->size->z
-				);
+	        	if (defined $mesh) {
+					$adaptive_slicing[$region_id] = Slic3r::AdaptiveSlicing->new(
+						mesh => $mesh,
+						size => $self->size->z
+					);
+	        	}
 			}
 			
 			# determine min and max layer height from perimeter extruder capabilities.
@@ -129,6 +131,7 @@ sub slice {
         while (($slice_z - $height) <= $max_z) {
         	
         	if ($self->config->adaptive_slicing) {
+        		$height = 999;
         		my $cusp_value = $self->config->get_value('cusp_value');
         		
         		Slic3r::debugf "\n Slice layer: %d\n", $id;
@@ -136,6 +139,7 @@ sub slice {
        			# determine next layer height
        			for my $region_id (0 .. ($self->region_count - 1)) {
 	       			# get cusp height
+	       			next if(!defined $adaptive_slicing[$region_id]);
 	       			my $cusp_height = $adaptive_slicing[$region_id]->cusp_height(scale $slice_z, $cusp_value, $min_height, $max_height);
 	       			
 	       			# check for horizontal features and object size
@@ -158,7 +162,7 @@ sub slice {
 
 			       	$height = ($id == 0)
                 		? $self->config->get_value('first_layer_height')
-                		: $cusp_height;
+                		: min($cusp_height, $height);
 		       	}
 
         	}else{
