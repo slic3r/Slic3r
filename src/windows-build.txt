@@ -29,6 +29,10 @@ click configure, select "mingw makefiles" from list, select "default native comp
 click generate
 close cmake gui
 
+alternatively, do it from command line:
+cmake ..\src -G "MinGW Makefiles" -DBOOST_ROOT="c:\program files\boost\boost_1_61_0"
+(in case cmake can't find the libs, -DBoost_DEBUG=1 and -DBoost_COMPILER=-mgw46 are useful)
+
 go back to cmd window
 > cd c:\slic3r\build
 > mingw32-make.exe
