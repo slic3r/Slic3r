@@ -70,20 +70,20 @@ TriangleMesh::~TriangleMesh() {
 }
 
 void
-TriangleMesh::ReadSTLFile(char* input_file) {
-    stl_open(&stl, input_file);
+TriangleMesh::ReadSTLFile(const std::string &input_file) {
+    stl_open(&stl, input_file.c_str());
 }
 
 void
-TriangleMesh::write_ascii(char* output_file)
+TriangleMesh::write_ascii(const std::string &output_file)
 {
-    stl_write_ascii(&this->stl, output_file, "");
+    stl_write_ascii(&this->stl, output_file.c_str(), "");
 }
 
 void
-TriangleMesh::write_binary(char* output_file)
+TriangleMesh::write_binary(const std::string &output_file)
 {
-    stl_write_binary(&this->stl, output_file, "");
+    stl_write_binary(&this->stl, output_file.c_str(), "");
 }
 
 void
@@ -173,9 +173,9 @@ TriangleMesh::facets_count() const
 }
 
 void
-TriangleMesh::WriteOBJFile(char* output_file) {
+TriangleMesh::WriteOBJFile(const std::string &output_file) {
     stl_generate_shared_vertices(&stl);
-    stl_write_obj(&stl, output_file);
+    stl_write_obj(&stl, output_file.c_str());
 }
 
 void TriangleMesh::scale(float factor)
