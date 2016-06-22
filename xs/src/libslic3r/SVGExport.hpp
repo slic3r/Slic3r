@@ -12,7 +12,7 @@ class SVGExport
 {
     public:
     SVGExport(TriangleMesh &t, float layerheight, float firstlayerheight=0.0);
-    void writeSVG(const char* outputfile);
+    void writeSVG(const std::string &outputfile);
     private:
     TriangleMesh *t;
     std::vector<ExPolygons> layers;

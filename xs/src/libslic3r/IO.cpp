@@ -4,7 +4,7 @@
 namespace Slic3r { namespace IO {
 
 bool
-STL::read_file(std::string input_file, Model* model)
+STL::read(std::string input_file, Model* model)
 {
     // TODO: encode file name
     // TODO: check that file exists

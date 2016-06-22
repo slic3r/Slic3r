@@ -22,9 +22,9 @@ SVGExport::SVGExport(TriangleMesh &t, float layerheight, float firstlayerheight)
 
 //<g id="layer0" slic3r:z="0.1"> <path...> <path...> </g>
 
-void SVGExport::writeSVG(const char* outputfile){
+void SVGExport::writeSVG(const std::string &outputfile){
     if(sliced){
-        FILE* f = fopen(outputfile, "w");
+        FILE* f = fopen(outputfile.c_str(), "w");
         fprintf(f,
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.0//EN\" \"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n"
@@ -32,7 +32,7 @@ void SVGExport::writeSVG(const char* outputfile){
         "<!-- Generated using Slic3r %s http://slic3r.org/ -->\n"
         ,t->stl.stats.max.x*10,t->stl.stats.max.y*10,SLIC3R_VERSION);
         for (int i=0;i<heights.size();i++){
-            fprintf(f,"\t<g id=\"layer%d\" slic3r:z=\"%0.4f\">",i,heights[i]);
+            fprintf(f,"\t<g id=\"layer%d\" slic3r:z=\"%0.4f\">\n",i,heights[i]);
             for (ExPolygons::const_iterator it = layers[i].begin(); it != layers[i].end(); ++it){
                 std::string pd;
                 Polygons pp = *it;

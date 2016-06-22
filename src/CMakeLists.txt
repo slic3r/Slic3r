@@ -40,6 +40,7 @@ add_library(libslic3r STATIC ${LIBDIR}/libslic3r/BoundingBox.cpp
                         ${LIBDIR}/libslic3r/BridgeDetector.cpp
                         ${LIBDIR}/libslic3r/Extruder.cpp
                         ${LIBDIR}/libslic3r/GCodeSender.cpp
+                        ${LIBDIR}/libslic3r/IO.cpp
                         ${LIBDIR}/libslic3r/Line.cpp
                         ${LIBDIR}/libslic3r/PlaceholderParser.cpp
                         ${LIBDIR}/libslic3r/PrintConfig.cpp
