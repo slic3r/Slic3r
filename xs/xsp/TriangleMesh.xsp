@@ -10,11 +10,11 @@
     ~TriangleMesh();
     Clone<TriangleMesh> clone()
         %code{% RETVAL = THIS; %};
-    void ReadSTLFile(char* input_file);
-    void write_ascii(char* output_file);
-    void write_binary(char* output_file);
+    void ReadSTLFile(std::string input_file);
+    void write_ascii(std::string output_file);
+    void write_binary(std::string output_file);
     void repair();
-    void WriteOBJFile(char* output_file);
+    void WriteOBJFile(std::string output_file);
     void scale(float factor);
     void scale_xyz(Pointf3* versor)
         %code{% THIS->scale(*versor); %};

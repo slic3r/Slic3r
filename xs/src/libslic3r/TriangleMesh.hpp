@@ -24,11 +24,11 @@ class TriangleMesh
     TriangleMesh& operator= (TriangleMesh other);
     void swap(TriangleMesh &other);
     ~TriangleMesh();
-    void ReadSTLFile(char* input_file);
-    void write_ascii(char* output_file);
-    void write_binary(char* output_file);
+    void ReadSTLFile(const std::string &input_file);
+    void write_ascii(const std::string &output_file);
+    void write_binary(const std::string &output_file);
     void repair();
-    void WriteOBJFile(char* output_file);
+    void WriteOBJFile(const std::string &output_file);
     void scale(float factor);
     void scale(const Pointf3 &versor);
     void translate(float x, float y, float z);
