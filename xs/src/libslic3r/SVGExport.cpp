@@ -9,7 +9,6 @@ namespace Slic3r {
 SVGExport::SVGExport(TriangleMesh &t, float layerheight, float firstlayerheight)
     :t(&t), sliced(false)
 {
-    heights={};
     if(layerheight>0){
         for(float f=firstlayerheight;f<=t.stl.stats.max.z;f+=layerheight){
             heights.push_back(f);

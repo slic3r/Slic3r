@@ -11,7 +11,7 @@ set(CMAKE_CXX_FLAGS "-DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 IF(CMAKE_HOST_APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -framework IOKit -framework CoreFoundation")
+    set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
 ELSE(CMAKE_HOST_APPLE)
     set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
 ENDIF(CMAKE_HOST_APPLE)
@@ -89,7 +89,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 #find_package(wxWidgets)
 #disable wx for the time being - we're not building any of the gui yet
 IF(CMAKE_HOST_UNIX)
-    set(Boost_LIBRARIES bsystem bthread)
+    #set(Boost_LIBRARIES bsystem bthread)
 ENDIF(CMAKE_HOST_UNIX)
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
