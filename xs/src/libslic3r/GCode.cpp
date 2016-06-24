@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <math.h>
 
+#define FLAVOR_IS(val) this->config.gcode_flavor == val
+
 namespace Slic3r {
 
 AvoidCrossingPerimeters::AvoidCrossingPerimeters()
@@ -700,8 +702,8 @@ GCode::retract(bool toolchange)
         methods even if we performed wipe, since this will ensure the entire retraction
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? this->writer.retract_for_toolchange() : this->writer.retract();
-    
-    gcode += this->writer.reset_e();
+    if (!(FLAVOR_IS(gcfSmoothie) && this->config.use_firmware_retraction))
+        gcode += this->writer.reset_e();
     if (this->writer.extruder()->retract_length() > 0 || this->config.use_firmware_retraction)
         gcode += this->writer.lift();
     

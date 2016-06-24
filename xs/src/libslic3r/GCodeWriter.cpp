@@ -54,7 +54,7 @@ GCodeWriter::preamble()
         gcode << "G21 ; set units to millimeters\n";
         gcode << "G90 ; use absolute coordinates\n";
     }
-    if (FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfTeacup)) {
+    if (FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfTeacup) || FLAVOR_IS(gcfSmoothie)) {
         if (this->config.use_relative_e_distances) {
             gcode << "M83 ; use relative distances for extrusion\n";
         } else {
@@ -441,7 +441,7 @@ GCodeWriter::_retract(double length, double restart_extra, const std::string &co
         length = length * area;
         restart_extra = restart_extra * area;
     }
-    
+
     double dE = this->_extruder->retract(length, restart_extra);
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
