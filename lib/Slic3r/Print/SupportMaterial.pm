@@ -982,7 +982,7 @@ sub contact_distance {
     if ($extra == 0) {
         return $layer_height;
     } else {
-        return $nozzle_diameter + $extra;
+        return $layer_height + $extra;
     }
 }
 
