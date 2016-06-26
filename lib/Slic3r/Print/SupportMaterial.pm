@@ -976,7 +976,7 @@ sub overlapping_layers {
 }
 
 sub contact_distance {
-    my ($self, $layer_height, $nozzle_diameter) = @_;
+    my ($self, $layer_height) = @_;
     
     my $extra = $self->object_config->support_material_contact_distance;
     if ($extra == 0) {
