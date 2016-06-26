@@ -977,13 +977,9 @@ sub overlapping_layers {
 
 sub contact_distance {
     my ($self, $layer_height) = @_;
-    
     my $extra = $self->object_config->support_material_contact_distance;
-    if ($extra == 0) {
-        return $layer_height;
-    } else {
-        return $layer_height + $extra;
-    }
+
+    return $layer_height + $extra;
 }
 
 1;
