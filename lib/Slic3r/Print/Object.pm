@@ -723,7 +723,9 @@ sub detect_surfaces_type {
 # fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
 sub clip_fill_surfaces {
     my $self = shift;
-    return unless $self->config->infill_only_where_needed;
+    # sanity check for incompatible options: 
+    #   spiral_vase and infill_only_where_needed
+    return unless $self->config->infill_only_where_needed and not $self->config->spiral_vase;
     
     # We only want infill under ceilings; this is almost like an
     # internal support material.
