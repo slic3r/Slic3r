@@ -1,4 +1,5 @@
 #include "ExtrusionEntityCollection.hpp"
+#include "ExtrusionEntity.hpp"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -232,10 +233,16 @@ ExtrusionEntityCollection::min_mm3_per_mm() const
     double min_mm3_per_mm = 0;
     for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
         double mm3_per_mm = (*it)->min_mm3_per_mm();
+        if (!(*it)->is_loop() && !(*it)->is_collection()) {
+          // gapfill is never a loop,  but need to be sure
+          ExtrusionPath* path = dynamic_cast<ExtrusionPath*>(*it);
+          if (path->role == erGapFill)
+            continue; // don't add gapfill to the minimum mm3... may be side effects
+        }
         if (min_mm3_per_mm == 0) {
-            min_mm3_per_mm = mm3_per_mm;
+          min_mm3_per_mm = mm3_per_mm;
         } else {
-            min_mm3_per_mm = fmin(min_mm3_per_mm, mm3_per_mm);
+          min_mm3_per_mm = fmin(min_mm3_per_mm, mm3_per_mm);
         }
     }
     return min_mm3_per_mm;
