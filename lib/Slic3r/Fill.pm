@@ -214,6 +214,14 @@ sub make_fill {
         
         # calculate flow spacing for infill pattern generation
         my $using_internal_flow = 0;
+        my $infill_combined_flow = 0; # multiply the required layer height by infill_every_layers
+        if ($layerm->region->config->infill_every_layers > 1) {
+          $infill_combined_flow = 
+            $layerm->layer->object->config->layer_height*$layerm->region->config->infill_every_layers;
+        } else {
+          $infill_combined_flow = 
+            $layerm->layer->object->config->layer_height;
+        }
         if (!$is_solid && !$is_bridge) {
             # it's internal infill, so we can calculate a generic flow spacing 
             # for all layers, for avoiding the ugly effect of
@@ -221,7 +229,8 @@ sub make_fill {
             # layer height
             my $internal_flow = $layerm->region->flow(
                 FLOW_ROLE_INFILL,
-                $layerm->object->config->layer_height*$layerm->config->infill_every_layers,  # TODO: handle infill_every_layers?
+                $infill_combined_flow,
+
                 0,  # no bridge
                 0,  # no first layer
                 -1, # auto width
