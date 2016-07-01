@@ -4,6 +4,7 @@ A: Yes.
 
 Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.png?branch=master)](https://travis-ci.org/alexrj/Slic3r)
 ======
+Prebuilt Win32 builds https://bintray.com/lordofhyphens/Slic3r/slic3r_dev/view
 
 Slic3r takes 3D models (STL, OBJ, AMF) and converts them into G-code instructions for 
 3D printers. It's compatible with any modern printer based on the RepRap toolchain,
