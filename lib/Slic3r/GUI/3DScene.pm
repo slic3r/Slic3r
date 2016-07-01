@@ -1167,7 +1167,7 @@ sub load_print_object_toolpaths {
                 }
                 
                 if ($object->step_done(STEP_INFILL)) {
-                    $self->_extrusionentity_to_verts($layerm->fills, $top_z, $copy,
+                    $self->_extrusionentity_to_verts($layerm->all_fills, $top_z, $copy,
                         $infill_qverts, $infill_tverts);
                 }
             }

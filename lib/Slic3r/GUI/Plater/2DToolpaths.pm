@@ -383,7 +383,7 @@ sub Render {
             
             if ($object->step_done(STEP_INFILL)) {
                 $self->color([0, 0, 0.7]);
-                $self->_draw($object, $print_z, $_) for map @$_, @{$layerm->fills};
+                $self->_draw($object, $print_z, $_) for map @$_, @{$layerm->all_fills};
             }
         }
         

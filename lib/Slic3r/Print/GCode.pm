@@ -361,7 +361,7 @@ sub process_layer {
                 && ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt)
                 && !defined(first { $_->region->config->bottom_solid_layers > $layer->id } @{$layer->regions})
                 && !defined(first { $_->perimeters->items_count > 1 } @{$layer->regions})
-                && !defined(first { $_->fills->items_count > 0 } @{$layer->regions})
+                && !defined(first { ($_->fills->items_count + $_->thin_fills->items_count) > 0 } @{$layer->regions})
         );
     }
     
@@ -535,11 +535,11 @@ sub process_layer {
             }
             
             # process infill
-            # $layerm->fills is a collection of ExtrusionPath::Collection objects, each one containing
+            # $layerm->all_fills is a collection of ExtrusionPath::Collection objects, each one containing
             # the ExtrusionPath objects of a certain infill "group" (also called "surface"
             # throughout the code). We can redefine the order of such Collections but we have to 
             # do each one completely at once.
-            foreach my $fill (@{$layerm->fills}) {
+            foreach my $fill (@{$layerm->all_fills}) {
                 next if $fill->empty;  # this shouldn't happen but first_point() would fail
                 
                 # init by_extruder item only if we actually use the extruder
@@ -555,7 +555,7 @@ sub process_layer {
                         || $point_inside_surface->($i, $fill->first_point)) {
                         $by_extruder{$extruder_id}[$i] //= { infill => {} };
                         $by_extruder{$extruder_id}[$i]{infill}{$region_id} //= [];
-                        push @{ $by_extruder{$extruder_id}[$i]{infill}{$region_id} }, $fill;
+                        push @{ $by_extruder{$extruder_id}[$i]{infill}{$region_id} }, $fill->clone;
                         last;
                     }
                 }

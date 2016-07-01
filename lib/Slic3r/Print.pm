@@ -54,6 +54,7 @@ sub process {
         printf "  region slices = %.1fMb\n", List::Util::sum(map Devel::Size::total_size($_->slices), map @{$_->regions}, map @{$_->layers}, @{$self->objects})/1024/1024;
         printf "  perimeters    = %.1fMb\n", List::Util::sum(map Devel::Size::total_size($_->perimeters), map @{$_->regions}, map @{$_->layers}, @{$self->objects})/1024/1024;
         printf "  fills         = %.1fMb\n", List::Util::sum(map Devel::Size::total_size($_->fills), map @{$_->regions}, map @{$_->layers}, @{$self->objects})/1024/1024;
+        printf "  thin fills    = %.1fMb\n", List::Util::sum(map Devel::Size::total_size($_->thin_fills), map @{$_->regions}, map @{$_->layers}, @{$self->objects})/1024/1024;
         printf "  print object  = %.1fMb\n", Devel::Size::total_size($self)/1024/1024;
     }
     if (0) {

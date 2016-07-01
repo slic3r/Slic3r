@@ -293,12 +293,7 @@ sub make_fill {
             );
         }
     }
-    
-    # add thin fill regions
-    foreach my $thin_fill (@{$layerm->thin_fills}) {
-        push @fills, Slic3r::ExtrusionPath::Collection->new($thin_fill);
-    }
-    
+
     return @fills;
 }
 
