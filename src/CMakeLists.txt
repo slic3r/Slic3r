@@ -1,10 +1,14 @@
 cmake_minimum_required (VERSION 2.8)
 project (slic3r)
+
+# only on newer GCCs: -ftemplate-backtrace-limit=0
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSLIC3R_DEBUG")
+
 set(workaround "")
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
-if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.3)
-set(workaround "-fno-inline-small-functions")
-endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.3)
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.3)
+       set(workaround "-fno-inline-small-functions")
+    endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.3)
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
 
 set(CMAKE_CXX_FLAGS "-DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE ${workaround}")

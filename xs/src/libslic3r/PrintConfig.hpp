@@ -466,6 +466,59 @@ class FullPrintConfig
     };
 };
 
+class SVGExportConfig
+    : public virtual StaticPrintConfig
+{
+    public:
+    ConfigOptionFloatOrPercent      first_layer_height;
+    ConfigOptionFloat               layer_height;
+    
+    SVGExportConfig() : StaticPrintConfig() {
+        this->set_defaults();
+    };
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(first_layer_height);
+        OPT_PTR(layer_height);
+        
+        return NULL;
+    };
+};
+
+class CLIConfigDef : public ConfigDef
+{
+    public:
+    CLIConfigDef();
+};
+
+extern CLIConfigDef cli_config_def;
+
+class CLIConfig
+    : public virtual ConfigBase, public StaticConfig
+{
+    public:
+    ConfigOptionBool                export_obj;
+    ConfigOptionBool                export_svg;
+    ConfigOptionString              output;
+    ConfigOptionFloat               rotate;
+    ConfigOptionFloat               scale;
+    
+    CLIConfig() : ConfigBase(), StaticConfig() {
+        this->def = &cli_config_def;
+        this->set_defaults();
+    };
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(export_obj);
+        OPT_PTR(export_svg);
+        OPT_PTR(output);
+        OPT_PTR(rotate);
+        OPT_PTR(scale);
+        
+        return NULL;
+    };
+};
+
 }
 
 #endif

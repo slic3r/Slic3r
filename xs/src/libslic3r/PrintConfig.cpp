@@ -1342,4 +1342,43 @@ PrintConfigBase::min_object_distance() const
         : duplicate_distance;
 }
 
+CLIConfigDef::CLIConfigDef()
+{
+    t_optiondef_map &Options = this->options;
+    
+    ConfigOptionDef* def;
+    
+    def = this->add("export_obj", coBool);
+    def->label = "Export SVG";
+    def->tooltip = "Export the model to OBJ.";
+    def->cli = "export-obj";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("export_svg", coBool);
+    def->label = "Export SVG";
+    def->tooltip = "Slice the model and export slices as SVG.";
+    def->cli = "export-svg";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("output", coString);
+    def->label = "Output File";
+    def->tooltip = "The file where the output will be written (if not specified, it will be based on the input file).";
+    def->cli = "output";
+    def->default_value = new ConfigOptionString("");
+    
+    def = this->add("rotate", coFloat);
+    def->label = "Rotate";
+    def->tooltip = "Rotation angle around the Z axis in degrees (0-360, default: 0).";
+    def->cli = "rotate";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("scale", coFloat);
+    def->label = "Scale";
+    def->tooltip = "Scaling factor (default: 1).";
+    def->cli = "scale";
+    def->default_value = new ConfigOptionFloat(1);
+}
+
+CLIConfigDef cli_config_def;
+
 }

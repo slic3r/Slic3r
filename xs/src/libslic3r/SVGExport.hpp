@@ -3,6 +3,7 @@
 
 #include "libslic3r.h"
 #include "ExPolygon.hpp"
+#include "PrintConfig.hpp"
 #include "SVG.hpp"
 #include "TriangleMesh.hpp"
 
@@ -11,13 +12,13 @@ namespace Slic3r {
 class SVGExport
 {
     public:
-    SVGExport(TriangleMesh &t, float layerheight, float firstlayerheight=0.0);
+    SVGExportConfig config;
+    
+    SVGExport(TriangleMesh &mesh) : mesh(&mesh) {};
     void writeSVG(const std::string &outputfile);
+    
     private:
-    TriangleMesh *t;
-    std::vector<ExPolygons> layers;
-    std::vector<float> heights;
-    bool sliced;
+    TriangleMesh* mesh;
 };
 
 }

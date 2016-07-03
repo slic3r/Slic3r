@@ -1,3 +1,4 @@
+#include "Config.hpp"
 #include "Model.hpp"
 #include "IO.hpp"
 #include "TriangleMesh.hpp"
@@ -7,71 +8,83 @@
 #include <string>
 #include <cstring>
 #include <iostream>
-#include "tclap/CmdLine.h"
 
 using namespace Slic3r;
 
 void confess_at(const char *file, int line, const char *func, const char *pat, ...){}
 
-void exportSVG(const Model &model, const std::string &outfile, float layerheight=0.2, float initialheight=0., float scale=1.0, float rotate=0.){
-    TriangleMesh mesh = model.mesh();
-    mesh.scale(scale);
-    mesh.rotate_z(rotate);
-    mesh.mirror_x();
-    mesh.align_to_origin();
-    SVGExport e(mesh, layerheight, initialheight);
-    e.writeSVG(outfile);
-    printf("writing: %s\n", outfile.c_str());
-}
-
-int main (int argc, char **argv){
+int
+main(const int argc, const char **argv)
+{
+    // parse all command line options into a DynamicConfig
+    ConfigDef config_def;
+    config_def.merge(cli_config_def);
+    config_def.merge(print_config_def);
+    DynamicConfig config(&config_def);
+    t_config_option_keys input_files;
+    config.read_cli(argc, argv, &input_files);
     
-    try {
-        TCLAP::CmdLine cmd("Rudimentary commandline slic3r, currently only supports STL to SVG slice export.", ' ', SLIC3R_VERSION);
-        TCLAP::ValueArg<std::string> outputArg("o","output","File to output results to",false,"","output file name");
-        cmd.add( outputArg );
-        TCLAP::ValueArg<float> scaleArg("","scale","Factor for scaling input object (default: 1)",false,1.0,"float");
-        cmd.add( scaleArg );
-        TCLAP::ValueArg<float> rotArg("","rotate","Rotation angle in degrees (0-360, default: 0)",false,0.0,"float");
-        cmd.add( rotArg );
-        TCLAP::ValueArg<float> flhArg("","first-layer-height","Layer height for first layer in mm (default: 0)",false,0.0,"float");
-        cmd.add( flhArg );
-        TCLAP::ValueArg<float> lhArg("","layer-height","Layer height in mm (default: 0.2)",false,0.2,"float");
-        cmd.add( lhArg );
-        TCLAP::SwitchArg expsvg("","export-svg","Export a SVG file containing slices", cmd, false);
-        TCLAP::SwitchArg expobj("","export-obj","Export the input file as OBJ", cmd, false);
-        
-        TCLAP::UnlabeledValueArg<std::string> input("inputfile","Input STL file name", true, "", "input file name");
-        cmd.add(input);
-        cmd.parse(argc,argv);
-        
-        // read input file if any (TODO: read multiple)
+    // apply command line options to a more specific DynamicPrintConfig which provides normalize()
+    DynamicPrintConfig print_config;
+    print_config.apply(config, true);
+    print_config.normalize();
+    
+    // apply command line options to a more handy CLIConfig
+    CLIConfig cli_config;
+    cli_config.apply(config, true);
+    
+    /*  TODO: loop through the config files supplied on the command line (now stored in 
+        cli_config), load each one, normalize it and apply it to print_config */
+    
+    // read input file(s) if any
+    std::vector<Model> models;
+    for (t_config_option_keys::const_iterator it = input_files.begin(); it != input_files.end(); ++it) {
         Model model;
-        if (!input.getValue().empty()) {
-            Slic3r::IO::STL::read(input.getValue(), &model);
-            model.add_default_instances();
+        // TODO: read other file formats with Model::read_from_file()
+        Slic3r::IO::STL::read(*it, &model);
+        
+        if (model.objects.empty()) {
+            printf("Error: file is empty: %s\n", it->c_str());
+            continue;
         }
         
-        if (expobj.getValue()) {
-            std::string outfile = outputArg.getValue();
-            if (outfile.empty()) outfile = input.getValue() + ".obj";
-            
-            TriangleMesh mesh = model.mesh();
-            printf("mesh has %zu facets\n", mesh.facets_count());
+        model.add_default_instances();
+        
+        // apply command line transform options
+        for (ModelObjectPtrs::iterator o = model.objects.begin(); o != model.objects.end(); ++o) {
+            (*o)->scale(cli_config.scale.value);
+            (*o)->rotate(cli_config.rotate.value, Z);
+        }
+        
+        // TODO: handle --merge
+        models.push_back(model);
+    }
+    
+    if (cli_config.export_obj) {
+        for (std::vector<Model>::iterator model = models.begin(); model != models.end(); ++model) {
+            std::string outfile = cli_config.output.value;
+            if (outfile.empty()) outfile = model->objects.front()->input_file + ".obj";
+        
+            TriangleMesh mesh = model->mesh();
             Slic3r::IO::OBJ::write(mesh, outfile);
             printf("File exported to %s\n", outfile.c_str());
-        } else if (expsvg.getValue()) {
-            std::string outfile = outputArg.getValue();
-            if (outfile.empty()) outfile = input.getValue() + ".svg";
-            
-            exportSVG(model, outfile, lhArg.getValue(), flhArg.getValue(), scaleArg.getValue(), rotArg.getValue());
-        } else {
-            std::cerr << "error: only --export-svg and --export-obj are currently supported"<< std::endl;
-            return 1;
         }
-        
-    } catch (TCLAP::ArgException &e) {
-        std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
+    } else if (cli_config.export_svg) {
+        for (std::vector<Model>::iterator model = models.begin(); model != models.end(); ++model) {
+            std::string outfile = cli_config.output.value;
+            if (outfile.empty()) outfile = model->objects.front()->input_file + ".svg";
+            
+            TriangleMesh mesh = model->mesh();
+            mesh.mirror_x();
+            mesh.align_to_origin();
+    
+            SVGExport svg_export(mesh);
+            svg_export.config.apply(print_config, true);
+            svg_export.writeSVG(outfile);
+            printf("SVG file exported to %s\n", outfile.c_str());
+        }
+    } else {
+        std::cerr << "error: only --export-svg and --export-obj are currently supported" << std::endl;
         return 1;
     }
     

@@ -479,7 +479,7 @@ ModelObject::mesh() const
     TriangleMesh raw_mesh = this->raw_mesh();
     
     for (ModelInstancePtrs::const_iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
-        TriangleMesh m = raw_mesh;
+        TriangleMesh m(raw_mesh);
         (*i)->transform_mesh(&m);
         mesh.merge(m);
     }
@@ -566,6 +566,12 @@ ModelObject::translate(coordf_t x, coordf_t y, coordf_t z)
         (*v)->mesh.translate(x, y, z);
     }
     if (this->_bounding_box_valid) this->_bounding_box.translate(x, y, z);
+}
+
+void
+ModelObject::scale(float factor)
+{
+    this->scale(Pointf3(factor, factor, factor));
 }
 
 void
@@ -713,6 +719,21 @@ ModelVolume::ModelVolume(ModelObject* object, const ModelVolume &other)
     this->material_id(other.material_id());
 }
 
+ModelVolume& ModelVolume::operator= (ModelVolume other)
+{
+    this->swap(other);
+    return *this;
+}
+
+void
+ModelVolume::swap(ModelVolume &other)
+{
+    std::swap(this->name,       other.name);
+    std::swap(this->mesh,       other.mesh);
+    std::swap(this->config,     other.config);
+    std::swap(this->modifier,   other.modifier);
+}
+
 t_model_material_id
 ModelVolume::material_id() const
 {
@@ -759,6 +780,20 @@ ModelInstance::ModelInstance(ModelObject *object)
 ModelInstance::ModelInstance(ModelObject *object, const ModelInstance &other)
 :   rotation(other.rotation), scaling_factor(other.scaling_factor), offset(other.offset), object(object)
 {}
+
+ModelInstance& ModelInstance::operator= (ModelInstance other)
+{
+    this->swap(other);
+    return *this;
+}
+
+void
+ModelInstance::swap(ModelInstance &other)
+{
+    std::swap(this->rotation,       other.rotation);
+    std::swap(this->scaling_factor, other.scaling_factor);
+    std::swap(this->offset,         other.offset);
+}
 
 void
 ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const

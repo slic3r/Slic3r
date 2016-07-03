@@ -124,6 +124,7 @@ class ModelObject
     void center_around_origin();
     void translate(const Vectorf3 &vector);
     void translate(coordf_t x, coordf_t y, coordf_t z);
+    void scale(float factor);
     void scale(const Pointf3 &versor);
     void rotate(float angle, const Axis &axis);
     void mirror(const Axis &axis);
@@ -167,6 +168,8 @@ class ModelVolume
     
     ModelVolume(ModelObject *object, const TriangleMesh &mesh);
     ModelVolume(ModelObject *object, const ModelVolume &other);
+    ModelVolume& operator= (ModelVolume other);
+    void swap(ModelVolume &other);
 };
 
 class ModelInstance
@@ -186,6 +189,8 @@ class ModelInstance
     
     ModelInstance(ModelObject *object);
     ModelInstance(ModelObject *object, const ModelInstance &other);
+    ModelInstance& operator= (ModelInstance other);
+    void swap(ModelInstance &other);
 };
 
 }

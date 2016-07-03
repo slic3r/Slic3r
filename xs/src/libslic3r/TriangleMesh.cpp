@@ -50,19 +50,15 @@ TriangleMesh::TriangleMesh(const TriangleMesh &other)
 
 TriangleMesh& TriangleMesh::operator= (TriangleMesh other)
 {
-    this->swap(other);
+    swap(*this, other);
     return *this;
 }
 
 void
-TriangleMesh::swap(TriangleMesh &other)
+TriangleMesh::swap(TriangleMesh &first, TriangleMesh &second)
 {
-    std::swap(this->stl,                 other.stl);
-    std::swap(this->repaired,            other.repaired);
-    std::swap(this->stl.facet_start,     other.stl.facet_start);
-    std::swap(this->stl.neighbors_start, other.stl.neighbors_start);
-    std::swap(this->stl.v_indices,       other.stl.v_indices);
-    std::swap(this->stl.v_shared,        other.stl.v_shared);
+    std::swap(first.repaired,            second.repaired);
+    std::swap(first.stl,                 second.stl);
 }
 
 TriangleMesh::~TriangleMesh() {
@@ -340,9 +336,8 @@ TriangleMesh::merge(const TriangleMesh &mesh)
     stl_reallocate(&this->stl);
     
     // copy facets
-    for (int i = 0; i < mesh.stl.stats.number_of_facets; i++) {
-        this->stl.facet_start[number_of_facets + i] = mesh.stl.facet_start[i];
-    }
+    std::copy(mesh.stl.facet_start, mesh.stl.facet_start + mesh.stl.stats.number_of_facets, this->stl.facet_start);
+    std::copy(mesh.stl.neighbors_start, mesh.stl.neighbors_start + mesh.stl.stats.number_of_facets, this->stl.neighbors_start);
     
     // update size
     stl_get_size(&this->stl);
