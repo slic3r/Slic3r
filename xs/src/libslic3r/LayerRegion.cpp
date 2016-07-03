@@ -32,7 +32,17 @@ LayerRegion::region()
 ExtrusionEntityCollection *LayerRegion::all_fills() const
 {
     ExtrusionEntityCollection *all_fills = this->fills.clone();
-    all_fills->append(this->thin_fills.entities);
+    const ExtrusionEntitiesPtr &thin_fill_entities = this->thin_fills.entities;
+
+    for (ExtrusionEntitiesPtr::const_iterator it = thin_fill_entities.begin();
+         it != thin_fill_entities.end();
+         ++it)
+    {
+	    ExtrusionEntityCollection *coll = new ExtrusionEntityCollection();
+	    coll->append(**it);
+
+	    all_fills->entities.push_back(coll);
+    }
 
     return all_fills;
 }
