@@ -1,5 +1,5 @@
 language: perl
-install: true
+install: export LDLOADLIBS=-lstdc++
 script: perl ./Build.PL
 perl:
   - "5.14"
