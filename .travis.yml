@@ -1,17 +1,25 @@
 language: perl
-install: true
-script: perl ./Build.PL
 perl:
   - "5.14"
   - "5.18"
   - "5.20"
+
+install:
+  # LDLOADLIBS hack to fix ExtUtils::CppGuess compilation (-lstdc++ needs to be
+  # placed after CppGuessTest.o)
+  - LDLOADLIBS=-lstdc++ cpanm --installdeps --force --notest --verbose .
+
+script: perl ./Build.PL
+
 branches:
   only:
     - master
     - stable
+
 sudo: false
 cache:
     - apt
+
 addons:
   apt:
     sources:
