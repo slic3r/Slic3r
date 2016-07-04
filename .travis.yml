@@ -7,7 +7,7 @@ perl:
 install:
   # LDLOADLIBS hack to fix ExtUtils::CppGuess compilation (-lstdc++ needs to be
   # placed after CppGuessTest.o)
-  - LDLOADLIBS=-lstdc++ cpanm --installdeps --verbose .
+  - LDLOADLIBS=-lstdc++ cpanm --installdeps --verbose . || true
 
 script: perl ./Build.PL
 
