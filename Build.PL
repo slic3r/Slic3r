@@ -12,6 +12,8 @@ my %prereqs = qw(
     Encode::Locale                  1.05
     ExtUtils::MakeMaker             6.80
     ExtUtils::ParseXS               3.22
+    ExtUtils::Typemaps              1.00
+    ExtUtils::Typemaps::Default     1.05
     File::Basename                  0
     File::Spec                      0
     Getopt::Long                    0
