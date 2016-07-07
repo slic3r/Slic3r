@@ -7,7 +7,7 @@ echo "Requires PAR."
 
 # Change this to where you have Strawberry Perl installed.
 #SET STRAWBERRY_PATH=C:\Strawberry
-New-Variable -Name "STRAWBERRY_PATH" -Visibility -Value "C:\Strawberry"
+New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
 # ([io.fileinfo](Get-Command "perl.exe").Path).basename
 
 cpanm "PAR::Packer"
