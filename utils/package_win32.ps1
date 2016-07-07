@@ -12,7 +12,7 @@ New-Variable -Name "STRAWBERRY_PATH" -Visibility -Value "C:\Strawberry"
 
 cpanm "PAR::Packer"
 
-pp -a $STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe -a $STRAWBERRY_PATH\perl\bin\freeglut.dll;freeglut.dll -a $STRAWBERRY_PATH\perl\bin\perl522.dll;perl522.dll -a $STRAWBERRY_PATH\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll -a $STRAWBERRY_PATH\perl\bin\libstdc++-6.dll;libstdc++-6.dll -a $STRAWBERRY_PATH\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_gcc_custom.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_adv_gcc_custom.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_core_gcc_custom.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_gl_gcc_custom.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_html_gcc_custom.dll -a ..\utils;script\utils -a var;script\var -a autorun.bat;slic3r.bat `
+pp "-a $STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe -a $STRAWBERRY_PATH\perl\bin\freeglut.dll;freeglut.dll -a $STRAWBERRY_PATH\perl\bin\perl522.dll;perl522.dll -a $STRAWBERRY_PATH\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll -a $STRAWBERRY_PATH\perl\bin\libstdc++-6.dll;libstdc++-6.dll -a $STRAWBERRY_PATH\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_gcc_custom.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_adv_gcc_custom.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_core_gcc_custom.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_gl_gcc_custom.dll -a $STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_html_gcc_custom.dll" -a ..\utils;script\utils -a var;script\var -a autorun.bat;slic3r.bat `
 -M AutoLoader `
 -M B `
 -M Carp `
@@ -221,4 +221,4 @@ pp -a $STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe -a $STRAWBERRY_PAT
 -M warnings::register `
 -e -p -x slic3r.pl -o ..\slic3r.par
 
-cp ..\slic3r.par ..\slic3r-$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD).zip
+copy ..\slic3r.par "..\slic3r-$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD).zip"
