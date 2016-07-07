@@ -5,10 +5,16 @@
 echo "Make this is run from the perl command window." 
 echo "Requires PAR."
 
+New-Variable -Name "current_branch" -Value ""
+
+git branch | foreach {
+   if ($_ -match "^\*(.*)"){
+         $current_branch += $matches[1] + "> "
+   }
+}
+
 # Change this to where you have Strawberry Perl installed.
-#SET STRAWBERRY_PATH=C:\Strawberry
 New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
-# ([io.fileinfo](Get-Command "perl.exe").Path).basename
 
 cpanm "PAR::Packer"
 
@@ -25,6 +31,7 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_html_gcc_custom.dll" ^
 -a "..\utils;script\utils" -a "..\var;script\var" -a "autorun.bat;slic3r.bat" `
 -a "../lib;lib" `
+-a "../slic3r.pl;slic3r.pl"
 -M AutoLoader `
 -M B `
 -M Carp `
@@ -209,4 +216,4 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M warnings::register `
 -e -p slic3r.pl -o ..\slic3r.par
 
-copy ..\slic3r.par "..\slic3r-$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD).zip"
+copy ..\slic3r.par "..\slic3r-${current_branch}-$(git rev-parse --short HEAD).zip"
