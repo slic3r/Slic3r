@@ -23,21 +23,19 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_core_gcc_custom.dll" ^
 -a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_gl_gcc_custom.dll" ^
 -a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_html_gcc_custom.dll" ^
--a ..\utils;script\utils -a var;script\var -a autorun.bat;slic3r.bat `
+-a "..\utils;script\utils" -a "..\var;script\var" -a "autorun.bat;slic3r.bat" `
+-a "../lib;lib" `
 -M AutoLoader `
 -M B `
 -M Carp `
--M Class `
 -M Class::Accessor `
 -M Class::XSAccessor `
 -M Class::XSAccessor::Heavy `
 -M Config `
--M Crypt `
 -M Crypt::CBC `
 -M Cwd `
 -M Data `
 -M Data::UUID `
--M Devel `
 -M Devel::GlobalDestruction `
 -M Digest `
 -M Digest::MD5 `
@@ -50,24 +48,19 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M Encode::Config `
 -M Encode::Encoding `
 -M Encode::Locale `
--M Encode::MIME `
 -M Encode::MIME::Name `
 -M Errno `
 -M Exporter `
 -M Exporter::Heavy `
 -M Fcntl `
--M File `
 -M File::Basename `
 -M File::Glob `
 -M File::Spec `
 -M File::Spec::Unix `
 -M File::Spec::Win32 `
 -M FindBin `
--M Getopt `
 -M Getopt::Long `
--M Growl `
 -M Growl::GNTP `
--M HTTP `
 -M HTTP::Config `
 -M HTTP::Date `
 -M HTTP::Headers `
@@ -91,13 +84,10 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M LWP::Protocol `
 -M LWP::Protocol::http `
 -M LWP::UserAgent `
--M List `
 -M List::Util `
--M Math `
 -M Math::Libm `
 -M Math::PlanePath `
 -M Math::PlanePath::ArchimedeanChords `
--M Math::PlanePath::Base `
 -M Math::PlanePath::Base::Digits `
 -M Math::PlanePath::Base::Generic `
 -M Math::PlanePath::Base::NSEW `
@@ -107,19 +97,15 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M Math::PlanePath::OctagramSpiral `
 -M Math::PlanePath::SacksSpiral `
 -M Math::Trig `
--M Method `
--M Method::Generate `
 -M Method::Generate::Accessor `
 -M Method::Generate::BuildAll `
 -M Method::Generate::Constructor `
--M Module `
 -M Module::Runtime `
 -M Moo `
 -M Moo::HandleMoose `
 -M Moo::Object `
 -M Moo::Role `
 -M Moo::sification `
--M Net `
 -M Net::Bonjour `
 -M Net::Bonjour::Entry `
 -M Net::DNS `
@@ -141,16 +127,13 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M Net::HTTP::Methods `
 -M OpenGL `
 -M POSIX `
--M Pod `
 -M Pod::Escapes `
 -M Pod::Text `
 -M Pod::Usage `
--M Role `
 -M Role::Tiny `
--M Scalar `
 -M Scalar::Util `
 -M SelectSaver `
--M Slic3r `
+-M Slic3r::* `
 -M Slic3r::XS `
 -M Socket `
 -M Socket6 `
@@ -163,14 +146,11 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M Sub::Quote `
 -M Sub::Util `
 -M Symbol `
--M Term `
 -M Term::Cap `
--M Text `
 -M Text::ParseWords `
 -M Thread `
 -M Thread::Queue `
 -M Thread::Semaphore `
--M Tie `
 -M Tie::Handle `
 -M Tie::Hash `
 -M Tie::StdHandle `
@@ -180,7 +160,6 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M URI `
 -M URI::Escape `
 -M URI::http `
--M Unicode `
 -M Unicode::Normalize `
 -M Win32 `
 -M Win32::API `
@@ -189,7 +168,6 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M Win32::IPHelper `
 -M Win32::TieRegistry `
 -M Win32::WinError `
--M Win32API `
 -M Win32API::Registry `
 -M Wx `
 -M Wx::App `
@@ -215,7 +193,6 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M enum `
 -M feature `
 -M integer `
--a ../lib;lib `
 -M locale `
 -M mro `
 -M overload `
@@ -230,6 +207,6 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M vars `
 -M warnings `
 -M warnings::register `
--e -p -x slic3r.pl -o ..\slic3r.par
+-e -p slic3r.pl -o ..\slic3r.par
 
 copy ..\slic3r.par "..\slic3r-$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD).zip"
