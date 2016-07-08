@@ -8,8 +8,8 @@ echo "Requires PAR."
 New-Variable -Name "current_branch" -Value ""
 
 git branch | foreach {
-   if ($_ -match "`\*(.*)"){
-         $current_branch += $matches[1] + "> "
+   if ($_ -match "`  (.*)"){
+         $current_branch += $matches[1]
    }
 }
 
@@ -46,7 +46,6 @@ pp `
 -M Config `
 -M Crypt::CBC `
 -M Cwd `
--M Data `
 -M Data::UUID `
 -M Devel::GlobalDestruction `
 -M Digest `
@@ -150,7 +149,6 @@ pp `
 -M Socket `
 -M Socket6 `
 -M Storable `
--M Sub `
 -M Sub::Defer `
 -M Sub::Exporter `
 -M Sub::Exporter::Progressive `
@@ -166,7 +164,6 @@ pp `
 -M Tie::Handle `
 -M Tie::Hash `
 -M Tie::StdHandle `
--M Time `
 -M Time::HiRes `
 -M Time::Local `
 -M URI `
