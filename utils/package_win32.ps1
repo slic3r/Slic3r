@@ -203,6 +203,7 @@ pp `
 -M feature `
 -M integer `
 -M locale `
+-M lib `
 -M mro `
 -M overload `
 -M overload::numbers `

@@ -1,1 +1,1 @@
-@perl5.22.1.exe slic3r.pl %*
+@perl5.22.2.exe slic3r.pl %*
