@@ -8,28 +8,34 @@ echo "Requires PAR."
 New-Variable -Name "current_branch" -Value ""
 
 git branch | foreach {
-   if ($_ -match "^\*(.*)"){
+   if ($_ -match "`\*(.*)"){
          $current_branch += $matches[1] + "> "
    }
 }
 
 # Change this to where you have Strawberry Perl installed.
-New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
+New-Variable -Name "STRAWBERRY_PATH" -Value "$STRAWBERRY_PATH"
 
 cpanm "PAR::Packer"
 
-pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
--a "$STRAWBERRY_PATH\perl\bin\freeglut.dll;freeglut.dll" ^
--a "$STRAWBERRY_PATH\perl\bin\perl522.dll;perl522.dll" ^
--a "$STRAWBERRY_PATH\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll" ^
--a "$STRAWBERRY_PATH\perl\bin\libstdc++-6.dll;libstdc++-6.dll" ^
--a "$STRAWBERRY_PATH\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_gcc_custom.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_adv_gcc_custom.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_core_gcc_custom.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_gl_gcc_custom.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_html_gcc_custom.dll" ^
--a "..\utils;script\utils" -a "..\var;script\var" -a "autorun.bat;slic3r.bat" `
+pp `
+-a "../utils;utils"  `
+-a "autorun.bat;slic3r.bat"  `
+-a "../var;var"  `
+-a "../slic3r.pl;slic3r.pl" `
+-a "$STRAWBERRY_PATH\perl\bin\perl5.22.2.exe;perl5.22.2.exe"  `
+-a "$STRAWBERRY_PATH\perl\bin\perl522.dll;perl522.dll"  `
+-a "$STRAWBERRY_PATH\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll"  `
+-a "$STRAWBERRY_PATH\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
+-a "$STRAWBERRY_PATH\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
+-a "$STRAWBERRY_PATH\perl\bin\freeglut.dll;freeglut.dll"  `
+-a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_gcc_custom.dll;wxbase30u_gcc_custom.dll"  `
+-a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_adv_gcc_custom.dll;wxmsw30u_adv_gcc_custom.dll"  `
+-a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_gl_gcc_custom.dll;wxmsw30u_gl_gcc_custom.dll"  `
+-a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_core_gcc_custom.dll;wxmsw30u_core_gcc_custom.dll"  `
+-a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_html_gcc_custom.dll;wxmsw30u_html_gcc_custom.dll"  `
+-a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_xml_gcc_custom.dll;wxbase30u_xml_gcc_custom.dll"  `
+-a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_net_gcc_custom.dll;wxbase30u_net_gcc_custom.dll"  `
 -a "../lib;lib" `
 -a "../slic3r.pl;slic3r.pl"
 -M AutoLoader `
