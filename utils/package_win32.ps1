@@ -37,7 +37,7 @@ pp `
 -a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_xml_gcc_custom.dll;wxbase30u_xml_gcc_custom.dll"  `
 -a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_net_gcc_custom.dll;wxbase30u_net_gcc_custom.dll"  `
 -a "../lib;lib" `
--a "../slic3r.pl;slic3r.pl"
+-a "../slic3r.pl;slic3r.pl" `
 -M AutoLoader `
 -M B `
 -M Carp `
