@@ -22,7 +22,6 @@ pp `
 -a "../utils;utils"  `
 -a "autorun.bat;slic3r.bat"  `
 -a "../var;var"  `
--a "../slic3r.pl;slic3r.pl" `
 -a "$STRAWBERRY_PATH\perl\bin\perl5.22.2.exe;perl5.22.2.exe"  `
 -a "$STRAWBERRY_PATH\perl\bin\perl522.dll;perl522.dll"  `
 -a "$STRAWBERRY_PATH\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll"  `
@@ -220,6 +219,6 @@ pp `
 -M vars `
 -M warnings `
 -M warnings::register `
--e -p slic3r.pl -o ..\slic3r.par
+-e -p ..\slic3r.pl -o ..\slic3r.par
 
 copy ..\slic3r.par "..\slic3r-${current_branch}-$(git rev-parse --short HEAD).zip"
