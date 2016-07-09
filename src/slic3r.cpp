@@ -70,6 +70,13 @@ main(const int argc, const char **argv)
             TriangleMesh mesh = model->mesh();
             Slic3r::IO::OBJ::write(mesh, outfile);
             printf("File exported to %s\n", outfile.c_str());
+        } else if (cli_config.export_pov) {
+            std::string outfile = cli_config.output.value;
+            if (outfile.empty()) outfile = model->objects.front()->input_file + ".pov";
+    
+            TriangleMesh mesh = model->mesh();
+            Slic3r::IO::POV::write(mesh, outfile);
+            printf("File exported to %s\n", outfile.c_str());
         } else if (cli_config.export_svg) {
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model->objects.front()->input_file + ".svg";

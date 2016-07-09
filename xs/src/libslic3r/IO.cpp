@@ -1,5 +1,7 @@
 #include "IO.hpp"
 #include <stdexcept>
+#include <fstream>
+#include <iostream>
 
 namespace Slic3r { namespace IO {
 
@@ -41,6 +43,24 @@ bool
 OBJ::write(TriangleMesh& mesh, std::string output_file)
 {
     mesh.WriteOBJFile(output_file);
+    return true;
+}
+
+bool
+POV::write(TriangleMesh& mesh, std::string output_file)
+{
+    using namespace std;
+    ofstream pov;
+    pov.open(output_file.c_str(), ios::out | ios::trunc);
+    for (int i = 0; i < mesh.stl.stats.number_of_facets; ++i) {
+        const stl_facet &f = mesh.stl.facet_start[i];
+        pov << "triangle { ";
+        pov << "<" << f.vertex[0].x << "," << f.vertex[0].y << "," << f.vertex[0].z << ">,";
+        pov << "<" << f.vertex[1].x << "," << f.vertex[1].y << "," << f.vertex[1].z << ">,";
+        pov << "<" << f.vertex[2].x << "," << f.vertex[2].y << "," << f.vertex[2].z << ">";
+        pov << " }" << endl;
+    }
+    pov.close();
     return true;
 }
 

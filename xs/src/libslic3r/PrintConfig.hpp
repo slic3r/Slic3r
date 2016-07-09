@@ -502,6 +502,7 @@ class CLIConfig
 {
     public:
     ConfigOptionBool                export_obj;
+    ConfigOptionBool                export_pov;
     ConfigOptionBool                export_svg;
     ConfigOptionBool                info;
     ConfigOptionString              output;
@@ -515,6 +516,7 @@ class CLIConfig
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(export_obj);
+        OPT_PTR(export_pov);
         OPT_PTR(export_svg);
         OPT_PTR(info);
         OPT_PTR(output);

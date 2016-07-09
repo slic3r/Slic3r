@@ -21,6 +21,12 @@ class OBJ
     static bool write(TriangleMesh& mesh, std::string output_file);
 };
 
+class POV
+{
+    public:
+    static bool write(TriangleMesh& mesh, std::string output_file);
+};
+
 } }
 
 #endif

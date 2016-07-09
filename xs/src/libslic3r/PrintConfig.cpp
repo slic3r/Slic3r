@@ -1359,8 +1359,14 @@ CLIConfigDef::CLIConfigDef()
     
     def = this->add("export_obj", coBool);
     def->label = "Export SVG";
-    def->tooltip = "Export the model to OBJ.";
+    def->tooltip = "Export the model as OBJ.";
     def->cli = "export-obj";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("export_pov", coBool);
+    def->label = "Export POV";
+    def->tooltip = "Export the model as POV-Ray definition.";
+    def->cli = "export-pov";
     def->default_value = new ConfigOptionBool(false);
     
     def = this->add("export_svg", coBool);
