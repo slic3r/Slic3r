@@ -1,5 +1,5 @@
 language: perl
-install: export LDLOADLIBS=-lstdc++ && export BOOST_DIR=/tmp/boost && wget https://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.tar.bz2 && tar -xf boost_1_58_0.tar.bz2 && mv boost_1_58_0 /tmp/boost && cd /tmp/boost && bash bootstrap.sh gcc && ./b2 
+install: export LDLOADLIBS=-lstdc++ && export BOOST_DIR=$(HOME)/boost && wget https://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.tar.bz2 && tar -xf boost_1_58_0.tar.bz2 && mv boost_1_58_0 $(HOME)/boost && cd $(HOME)/boost && ./bootstrap.sh gcc && ./b2 
 script: perl ./Build.PL
 perl:
   - "5.14"
@@ -12,4 +12,4 @@ branches:
 sudo: false
 cache:
     directories:
-    - /tmp/boost
+    - $(HOME)/boost
