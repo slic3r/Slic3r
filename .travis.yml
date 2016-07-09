@@ -1,6 +1,6 @@
 language: perl
 install: export LDLOADLIBS=-lstdc++
-script: perl ./Build.PL
+script: export BOOST_DIR=/usr/include/boost; perl ./Build.PL
 perl:
   - "5.14"
   - "5.18"
