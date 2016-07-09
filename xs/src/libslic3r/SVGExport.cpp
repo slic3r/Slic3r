@@ -68,8 +68,8 @@ SVGExport::writeSVG(const std::string &outputfile)
                 d << "z";
                 pd += d.str() + " ";
             }
-            fprintf(f,"\t\t<path d=\"%s\" style=\"fill: %s; stroke: %s; stroke-width: %s; fill-type: evenodd\" />\n",
-                pd.c_str(),"white","black","0"
+            fprintf(f,"\t\t<path d=\"%s\" style=\"fill: %s; stroke: %s; stroke-width: %s; fill-type: evenodd\" slic3r:area=\"%0.4f\" />\n",
+                pd.c_str(), "white", "black", "0", unscale(unscale(it->area()))
             );
         }
         fprintf(f,"\t</g>\n");
