@@ -14,11 +14,13 @@ class SVGExport
     public:
     SVGExportConfig config;
     
-    SVGExport(TriangleMesh &mesh) : mesh(&mesh) {};
+    SVGExport(const TriangleMesh &mesh) : mesh(mesh) {
+        this->mesh.mirror_x();
+    };
     void writeSVG(const std::string &outputfile);
     
     private:
-    TriangleMesh* mesh;
+    TriangleMesh mesh;
 };
 
 }

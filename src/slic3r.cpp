@@ -80,12 +80,8 @@ main(const int argc, const char **argv)
         } else if (cli_config.export_svg) {
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model->objects.front()->input_file + ".svg";
-        
-            TriangleMesh mesh = model->mesh();
-            mesh.mirror_x();
-            mesh.align_to_origin();
 
-            SVGExport svg_export(mesh);
+            SVGExport svg_export(model->mesh());
             svg_export.config.apply(print_config, true);
             svg_export.writeSVG(outfile);
             printf("SVG file exported to %s\n", outfile.c_str());
