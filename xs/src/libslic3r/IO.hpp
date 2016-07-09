@@ -11,14 +11,20 @@ namespace Slic3r { namespace IO {
 class STL
 {
     public:
-    bool read_file(std::string input_file, Model* model);
-    bool write(TriangleMesh& mesh, std::string output_file, bool binary = true);
+    static bool read(std::string input_file, Model* model);
+    static bool write(TriangleMesh& mesh, std::string output_file, bool binary = true);
 };
 
 class OBJ
 {
     public:
-    bool write(TriangleMesh& mesh, std::string output_file);
+    static bool write(TriangleMesh& mesh, std::string output_file);
+};
+
+class POV
+{
+    public:
+    static bool write(TriangleMesh& mesh, std::string output_file);
 };
 
 } }

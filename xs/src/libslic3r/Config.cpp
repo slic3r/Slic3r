@@ -1,6 +1,8 @@
 #include "Config.hpp"
 #include <stdlib.h>  // for setenv()
 #include <assert.h>
+#include <boost/algorithm/string/erase.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #if defined(_WIN32) && !defined(setenv) && defined(_putenv_s)
 #define setenv(k, v, o) _putenv_s(k, v)
@@ -20,12 +22,22 @@ operator!= (const ConfigOption &a, const ConfigOption &b)
     return !(a == b);
 }
 
-ConfigDef::~ConfigDef()
+ConfigOptionDef::ConfigOptionDef(const ConfigOptionDef &other)
+    : type(other.type), default_value(NULL),
+      gui_type(other.gui_type), gui_flags(other.gui_flags), label(other.label), 
+      full_label(other.full_label), category(other.category), tooltip(other.tooltip), 
+      sidetext(other.sidetext), cli(other.cli), ratio_over(other.ratio_over), 
+      multiline(other.multiline), full_width(other.full_width), readonly(other.readonly), 
+      height(other.height), width(other.width), min(other.min), max(other.max)
 {
-    for (t_optiondef_map::iterator it = this->options.begin(); it != this->options.end(); ++it) {
-        if (it->second.default_value != NULL)
-            delete it->second.default_value;
-    }
+    if (other.default_value != NULL)
+        this->default_value = other.default_value->clone();
+}
+
+ConfigOptionDef::~ConfigOptionDef()
+{
+    if (this->default_value != NULL)
+        delete this->default_value;
 }
 
 ConfigOptionDef*
@@ -41,6 +53,12 @@ ConfigDef::get(const t_config_option_key &opt_key) const
 {
     if (this->options.count(opt_key) == 0) return NULL;
     return &const_cast<ConfigDef*>(this)->options[opt_key];
+}
+
+void
+ConfigDef::merge(const ConfigDef &other)
+{
+    this->options.insert(other.options.begin(), other.options.end());
 }
 
 bool
@@ -200,7 +218,7 @@ DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
     if (this->options.count(opt_key) == 0) {
         if (create) {
             const ConfigOptionDef* optdef = this->def->get(opt_key);
-            assert(optdef != NULL);
+            if (optdef == NULL) return NULL;
             ConfigOption* opt;
             if (optdef->type == coFloat) {
                 opt = new ConfigOptionFloat ();
@@ -263,6 +281,58 @@ DynamicConfig::keys() const {
 void
 DynamicConfig::erase(const t_config_option_key &opt_key) {
     this->options.erase(opt_key);
+}
+
+void
+DynamicConfig::read_cli(const int argc, const char** argv, t_config_option_keys* extra)
+{
+    bool parse_options = true;
+    for (int i = 1; i < argc; ++i) {
+        std::string token = argv[i];
+        
+        if (token == "--") {
+            // stop parsing tokens as options
+            parse_options = false;
+        } else if (parse_options && boost::starts_with(token, "--")) {
+            boost::algorithm::erase_head(token, 2);
+            // TODO: handle --key=value
+            
+            // look for the option def
+            t_config_option_key opt_key;
+            const ConfigOptionDef* optdef;
+            for (t_optiondef_map::const_iterator oit = this->def->options.begin();
+                oit != this->def->options.end(); ++oit) {
+                optdef  = &oit->second;
+                
+                if (optdef->cli == token
+                    || optdef->cli == token + '!'
+                    || boost::starts_with(optdef->cli, token + "=")) {
+                    opt_key = oit->first;
+                    break;
+                }
+            }
+            
+            if (opt_key.empty()) {
+                printf("Warning: unknown option --%s\n", token.c_str());
+                continue;
+            }
+            
+            if (ConfigOptionBool* opt = this->opt<ConfigOptionBool>(opt_key, true)) {
+                opt->value = !boost::starts_with(token, "no-");
+            } else if (ConfigOptionBools* opt = this->opt<ConfigOptionBools>(opt_key, true)) {
+                opt->values.push_back(!boost::starts_with(token, "no-"));
+            } else {
+                // we expect one more token carrying the value
+                if (i == argc) {
+                    printf("No value supplied for --%s\n", token.c_str());
+                    exit(1);
+                }
+                this->option(opt_key, true)->deserialize(argv[++i]);
+            }
+        } else {
+            extra->push_back(token);
+        }
+    }
 }
 
 void

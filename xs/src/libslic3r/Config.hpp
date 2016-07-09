@@ -20,6 +20,7 @@ typedef std::vector<std::string> t_config_option_keys;
 class ConfigOption {
     public:
     virtual ~ConfigOption() {};
+    virtual ConfigOption* clone() const = 0;
     virtual std::string serialize() const = 0;
     virtual bool deserialize(std::string str) = 0;
     virtual void set(const ConfigOption &option) = 0;
@@ -54,8 +55,10 @@ template <class T>
 class ConfigOptionVector : public ConfigOptionVectorBase
 {
     public:
-    virtual ~ConfigOptionVector() {};
     std::vector<T> values;
+    ConfigOptionVector() {};
+    ConfigOptionVector(const std::vector<T> _values) : values(_values) {};
+    virtual ~ConfigOptionVector() {};
     
     void set(const ConfigOption &option) {
         const ConfigOptionVector<T>* other = dynamic_cast< const ConfigOptionVector<T>* >(&option);
@@ -76,6 +79,7 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
     public:
     ConfigOptionFloat() : ConfigOptionSingle<double>(0) {};
     ConfigOptionFloat(double _value) : ConfigOptionSingle<double>(_value) {};
+    ConfigOptionFloat* clone() const { return new ConfigOptionFloat(this->value); };
     
     double getFloat() const { return this->value; };
     
@@ -95,6 +99,9 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
 class ConfigOptionFloats : public ConfigOptionVector<double>
 {
     public:
+    ConfigOptionFloats() {};
+    ConfigOptionFloats(const std::vector<double> _values) : ConfigOptionVector<double>(_values) {};
+    ConfigOptionFloats* clone() const { return new ConfigOptionFloats(this->values); };
     
     std::string serialize() const {
         std::ostringstream ss;
@@ -134,6 +141,7 @@ class ConfigOptionInt : public ConfigOptionSingle<int>
     public:
     ConfigOptionInt() : ConfigOptionSingle<int>(0) {};
     ConfigOptionInt(double _value) : ConfigOptionSingle<int>(_value) {};
+    ConfigOptionInt* clone() const { return new ConfigOptionInt(this->value); };
     
     int getInt() const { return this->value; };
     void setInt(int val) { this->value = val; };
@@ -154,6 +162,9 @@ class ConfigOptionInt : public ConfigOptionSingle<int>
 class ConfigOptionInts : public ConfigOptionVector<int>
 {
     public:
+    ConfigOptionInts() {};
+    ConfigOptionInts(const std::vector<int> _values) : ConfigOptionVector<int>(_values) {};
+    ConfigOptionInts* clone() const { return new ConfigOptionInts(this->values); };
     
     std::string serialize() const {
         std::ostringstream ss;
@@ -193,6 +204,7 @@ class ConfigOptionString : public ConfigOptionSingle<std::string>
     public:
     ConfigOptionString() : ConfigOptionSingle<std::string>("") {};
     ConfigOptionString(std::string _value) : ConfigOptionSingle<std::string>(_value) {};
+    ConfigOptionString* clone() const { return new ConfigOptionString(this->value); };
     
     std::string serialize() const {
         std::string str = this->value;
@@ -224,6 +236,9 @@ class ConfigOptionString : public ConfigOptionSingle<std::string>
 class ConfigOptionStrings : public ConfigOptionVector<std::string>
 {
     public:
+    ConfigOptionStrings() {};
+    ConfigOptionStrings(const std::vector<std::string> _values) : ConfigOptionVector<std::string>(_values) {};
+    ConfigOptionStrings* clone() const { return new ConfigOptionStrings(this->values); };
     
     std::string serialize() const {
         std::ostringstream ss;
@@ -254,6 +269,7 @@ class ConfigOptionPercent : public ConfigOptionFloat
     public:
     ConfigOptionPercent() : ConfigOptionFloat(0) {};
     ConfigOptionPercent(double _value) : ConfigOptionFloat(_value) {};
+    ConfigOptionPercent* clone() const { return new ConfigOptionPercent(this->value); };
     
     double get_abs_value(double ratio_over) const {
         return ratio_over * this->value / 100;
@@ -282,6 +298,7 @@ class ConfigOptionFloatOrPercent : public ConfigOptionPercent
     ConfigOptionFloatOrPercent() : ConfigOptionPercent(0), percent(false) {};
     ConfigOptionFloatOrPercent(double _value, bool _percent)
         : ConfigOptionPercent(_value), percent(_percent) {};
+    ConfigOptionFloatOrPercent* clone() const { return new ConfigOptionFloatOrPercent(this->value, this->percent); };
     
     void set(const ConfigOption &option) {
         const ConfigOptionFloatOrPercent* other = dynamic_cast< const ConfigOptionFloatOrPercent* >(&option);
@@ -320,6 +337,7 @@ class ConfigOptionPoint : public ConfigOptionSingle<Pointf>
     public:
     ConfigOptionPoint() : ConfigOptionSingle<Pointf>(Pointf(0,0)) {};
     ConfigOptionPoint(Pointf _value) : ConfigOptionSingle<Pointf>(_value) {};
+    ConfigOptionPoint* clone() const { return new ConfigOptionPoint(this->value); };
     
     std::string serialize() const {
         std::ostringstream ss;
@@ -342,6 +360,9 @@ class ConfigOptionPoint : public ConfigOptionSingle<Pointf>
 class ConfigOptionPoints : public ConfigOptionVector<Pointf>
 {
     public:
+    ConfigOptionPoints() {};
+    ConfigOptionPoints(const std::vector<Pointf> _values) : ConfigOptionVector<Pointf>(_values) {};
+    ConfigOptionPoints* clone() const { return new ConfigOptionPoints(this->values); };
     
     std::string serialize() const {
         std::ostringstream ss;
@@ -389,6 +410,7 @@ class ConfigOptionBool : public ConfigOptionSingle<bool>
     public:
     ConfigOptionBool() : ConfigOptionSingle<bool>(false) {};
     ConfigOptionBool(bool _value) : ConfigOptionSingle<bool>(_value) {};
+    ConfigOptionBool* clone() const { return new ConfigOptionBool(this->value); };
     
     bool getBool() const { return this->value; };
     
@@ -405,6 +427,9 @@ class ConfigOptionBool : public ConfigOptionSingle<bool>
 class ConfigOptionBools : public ConfigOptionVector<bool>
 {
     public:
+    ConfigOptionBools() {};
+    ConfigOptionBools(const std::vector<bool> _values) : ConfigOptionVector<bool>(_values) {};
+    ConfigOptionBools* clone() const { return new ConfigOptionBools(this->values); };
     
     std::string serialize() const {
         std::ostringstream ss;
@@ -445,6 +470,7 @@ class ConfigOptionEnum : public ConfigOptionSingle<T>
     // by default, use the first value (0) of the T enum type
     ConfigOptionEnum() : ConfigOptionSingle<T>(static_cast<T>(0)) {};
     ConfigOptionEnum(T _value) : ConfigOptionSingle<T>(_value) {};
+    ConfigOptionEnum<T>* clone() const { return new ConfigOptionEnum<T>(this->value); };
     
     std::string serialize() const {
         t_config_enum_values enum_keys_map = ConfigOptionEnum<T>::get_enum_values();
@@ -532,6 +558,11 @@ class ConfigOptionDef
     ConfigOptionDef() : type(coNone), default_value(NULL),
                         multiline(false), full_width(false), readonly(false),
                         height(-1), width(-1), min(INT_MIN), max(INT_MAX) {};
+    ConfigOptionDef(const ConfigOptionDef &other);
+    ~ConfigOptionDef();
+    
+    private:
+    ConfigOptionDef& operator= (ConfigOptionDef other);
 };
 
 typedef std::map<t_config_option_key,ConfigOptionDef> t_optiondef_map;
@@ -540,9 +571,9 @@ class ConfigDef
 {
     public:
     t_optiondef_map options;
-    ~ConfigDef();
     ConfigOptionDef* add(const t_config_option_key &opt_key, ConfigOptionType type);
     const ConfigOptionDef* get(const t_config_option_key &opt_key) const;
+    void merge(const ConfigDef &other);
 };
 
 class ConfigBase
@@ -551,6 +582,7 @@ class ConfigBase
     const ConfigDef* def;
     
     ConfigBase() : def(NULL) {};
+    ConfigBase(const ConfigDef* def) : def(def) {};
     virtual ~ConfigBase() {};
     bool has(const t_config_option_key &opt_key);
     const ConfigOption* option(const t_config_option_key &opt_key) const;
@@ -571,6 +603,7 @@ class DynamicConfig : public virtual ConfigBase
 {
     public:
     DynamicConfig() {};
+    DynamicConfig(const ConfigDef* def) : ConfigBase(def) {};
     DynamicConfig(const DynamicConfig& other);
     DynamicConfig& operator= (DynamicConfig other);
     void swap(DynamicConfig &other);
@@ -579,6 +612,7 @@ class DynamicConfig : public virtual ConfigBase
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false);
     t_config_option_keys keys() const;
     void erase(const t_config_option_key &opt_key);
+    void read_cli(const int argc, const char **argv, t_config_option_keys* extra);
     
     private:
     typedef std::map<t_config_option_key,ConfigOption*> t_options_map;

@@ -22,7 +22,7 @@ class TriangleMesh
     TriangleMesh();
     TriangleMesh(const TriangleMesh &other);
     TriangleMesh& operator= (TriangleMesh other);
-    void swap(TriangleMesh &other);
+    void swap(TriangleMesh &first, TriangleMesh &second);
     ~TriangleMesh();
     void ReadSTLFile(const std::string &input_file);
     void write_ascii(const std::string &output_file);
@@ -41,6 +41,7 @@ class TriangleMesh
     void mirror_y();
     void mirror_z();
     void align_to_origin();
+    void center_around_origin();
     void rotate(double angle, Point* center);
     TriangleMeshPtrs split() const;
     void merge(const TriangleMesh &mesh);

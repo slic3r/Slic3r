@@ -756,6 +756,15 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
 
+    def = this->add("raft_offset", coFloat);
+    def->label = "Raft offset";
+    def->category = "Support material";
+    def->tooltip = "Horizontal margin between object base layer and raft contour.";
+    def->sidetext = "mm";
+    def->cli = "raft-offset=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(4);
+
     def = this->add("resolution", coFloat);
     def->label = "Resolution";
     def->tooltip = "Minimum detail resolution, used to simplify the input file for speeding up the slicing job and reducing memory usage. High-resolution models often carry more detail than printers can render. Set to zero to disable any simplification and use full resolution from input.";
@@ -1343,5 +1352,56 @@ PrintConfigBase::min_object_distance() const
         ? extruder_clearance_radius
         : duplicate_distance;
 }
+
+CLIConfigDef::CLIConfigDef()
+{
+    t_optiondef_map &Options = this->options;
+    
+    ConfigOptionDef* def;
+    
+    def = this->add("export_obj", coBool);
+    def->label = "Export SVG";
+    def->tooltip = "Export the model as OBJ.";
+    def->cli = "export-obj";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("export_pov", coBool);
+    def->label = "Export POV";
+    def->tooltip = "Export the model as POV-Ray definition.";
+    def->cli = "export-pov";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("export_svg", coBool);
+    def->label = "Export SVG";
+    def->tooltip = "Slice the model and export slices as SVG.";
+    def->cli = "export-svg";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("info", coBool);
+    def->label = "Output Model Info";
+    def->tooltip = "Write information about the model to the console.";
+    def->cli = "info";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("output", coString);
+    def->label = "Output File";
+    def->tooltip = "The file where the output will be written (if not specified, it will be based on the input file).";
+    def->cli = "output";
+    def->default_value = new ConfigOptionString("");
+    
+    def = this->add("rotate", coFloat);
+    def->label = "Rotate";
+    def->tooltip = "Rotation angle around the Z axis in degrees (0-360, default: 0).";
+    def->cli = "rotate";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("scale", coFloat);
+    def->label = "Scale";
+    def->tooltip = "Scaling factor (default: 1).";
+    def->cli = "scale";
+    def->default_value = new ConfigOptionFloat(1);
+}
+
+CLIConfigDef cli_config_def;
 
 }
