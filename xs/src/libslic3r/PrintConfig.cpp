@@ -754,6 +754,15 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
 
+    def = this->add("raft_offset", coFloat);
+    def->label = "Raft offset";
+    def->category = "Support material";
+    def->tooltip = "Horizontal margin between object base layer and raft contour.";
+    def->sidetext = "mm";
+    def->cli = "raft-offset=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(4);
+
     def = this->add("resolution", coFloat);
     def->label = "Resolution";
     def->tooltip = "Minimum detail resolution, used to simplify the input file for speeding up the slicing job and reducing memory usage. High-resolution models often carry more detail than printers can render. Set to zero to disable any simplification and use full resolution from input.";

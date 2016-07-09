@@ -472,6 +472,8 @@ class SVGExportConfig
     public:
     ConfigOptionFloatOrPercent      first_layer_height;
     ConfigOptionFloat               layer_height;
+    ConfigOptionInt                 raft_layers;
+    ConfigOptionFloat               raft_offset;
     
     SVGExportConfig() : StaticPrintConfig() {
         this->set_defaults();
@@ -480,6 +482,8 @@ class SVGExportConfig
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(first_layer_height);
         OPT_PTR(layer_height);
+        OPT_PTR(raft_layers);
+        OPT_PTR(raft_offset);
         
         return NULL;
     };
