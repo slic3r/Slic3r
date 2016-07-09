@@ -1,5 +1,7 @@
 #include "Model.hpp"
 #include "Geometry.hpp"
+#include <iostream>
+#include "boost/filesystem.hpp"
 
 namespace Slic3r {
 
@@ -309,6 +311,13 @@ Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
             instance->offset.y = (size.y + dist) * (y_copy-1);
         }
     }
+}
+
+void
+Model::print_info() const
+{
+    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o)
+        (*o)->print_info();
 }
 
 ModelMaterial::ModelMaterial(Model *model) : model(model) {}
@@ -705,6 +714,32 @@ ModelObject::split(ModelObjectPtrs* new_objects)
     }
     
     return;
+}
+
+void
+ModelObject::print_info() const
+{
+    using namespace std;
+    cout << "Info about " << boost::filesystem::basename(this->input_file) << ":" << endl;
+    
+    TriangleMesh mesh = this->raw_mesh();
+    mesh.repair();
+    Sizef3 size = mesh.bounding_box().size();
+    cout << "  size:              x=" << size.x << " y=" << size.y << " z=" << size.z << endl;
+    cout << "  number of facets:  " << mesh.stl.stats.number_of_facets  << endl;
+    cout << "  number of shells:  " << mesh.stl.stats.number_of_parts   << endl;
+    cout << "  volume:            " << mesh.stl.stats.volume            << endl;
+    if (this->needed_repair()) {
+        cout << "  needed repair:     yes" << endl;
+        cout << "  degenerate facets: " << mesh.stl.stats.degenerate_facets << endl;
+        cout << "  edges fixed:       " << mesh.stl.stats.edges_fixed       << endl;
+        cout << "  facets removed:    " << mesh.stl.stats.facets_removed    << endl;
+        cout << "  facets added:      " << mesh.stl.stats.facets_added      << endl;
+        cout << "  facets reversed:   " << mesh.stl.stats.facets_reversed   << endl;
+        cout << "  backwards edges:   " << mesh.stl.stats.backwards_edges   << endl;
+    } else {
+        cout << "  needed repair:     no" << endl;
+    }
 }
 
 

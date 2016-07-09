@@ -499,6 +499,7 @@ class CLIConfig
     public:
     ConfigOptionBool                export_obj;
     ConfigOptionBool                export_svg;
+    ConfigOptionBool                info;
     ConfigOptionString              output;
     ConfigOptionFloat               rotate;
     ConfigOptionFloat               scale;
@@ -511,6 +512,7 @@ class CLIConfig
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(export_obj);
         OPT_PTR(export_svg);
+        OPT_PTR(info);
         OPT_PTR(output);
         OPT_PTR(rotate);
         OPT_PTR(scale);

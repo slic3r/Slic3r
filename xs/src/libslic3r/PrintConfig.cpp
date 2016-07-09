@@ -1360,6 +1360,12 @@ CLIConfigDef::CLIConfigDef()
     def->cli = "export-svg";
     def->default_value = new ConfigOptionBool(false);
     
+    def = this->add("info", coBool);
+    def->label = "Output Model Info";
+    def->tooltip = "Write information about the model to the console.";
+    def->cli = "info";
+    def->default_value = new ConfigOptionBool(false);
+    
     def = this->add("output", coString);
     def->label = "Output File";
     def->tooltip = "The file where the output will be written (if not specified, it will be based on the input file).";

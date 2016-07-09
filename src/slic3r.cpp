@@ -60,32 +60,32 @@ main(const int argc, const char **argv)
         models.push_back(model);
     }
     
-    if (cli_config.export_obj) {
-        for (std::vector<Model>::iterator model = models.begin(); model != models.end(); ++model) {
+    for (std::vector<Model>::iterator model = models.begin(); model != models.end(); ++model) {
+        if (cli_config.info) {
+            model->print_info();
+        } else if (cli_config.export_obj) {
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model->objects.front()->input_file + ".obj";
-        
+    
             TriangleMesh mesh = model->mesh();
             Slic3r::IO::OBJ::write(mesh, outfile);
             printf("File exported to %s\n", outfile.c_str());
-        }
-    } else if (cli_config.export_svg) {
-        for (std::vector<Model>::iterator model = models.begin(); model != models.end(); ++model) {
+        } else if (cli_config.export_svg) {
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model->objects.front()->input_file + ".svg";
-            
+        
             TriangleMesh mesh = model->mesh();
             mesh.mirror_x();
             mesh.align_to_origin();
-    
+
             SVGExport svg_export(mesh);
             svg_export.config.apply(print_config, true);
             svg_export.writeSVG(outfile);
             printf("SVG file exported to %s\n", outfile.c_str());
+        } else {
+            std::cerr << "error: only --export-svg and --export-obj are currently supported" << std::endl;
+            return 1;
         }
-    } else {
-        std::cerr << "error: only --export-svg and --export-obj are currently supported" << std::endl;
-        return 1;
     }
     
     return 0;

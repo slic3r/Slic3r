@@ -22,7 +22,7 @@ ENDIF(CMAKE_HOST_APPLE)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-find_package(Boost COMPONENTS system thread)
+find_package(Boost COMPONENTS system thread filesystem)
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
 
@@ -94,7 +94,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 #find_package(wxWidgets)
 #disable wx for the time being - we're not building any of the gui yet
 IF(CMAKE_HOST_UNIX)
-    #set(Boost_LIBRARIES bsystem bthread)
+    #set(Boost_LIBRARIES bsystem bthread bfilesystem)
 ENDIF(CMAKE_HOST_UNIX)
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")

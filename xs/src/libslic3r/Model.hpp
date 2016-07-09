@@ -61,6 +61,7 @@ class Model
     void duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
     void duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
     void duplicate_objects_grid(size_t x, size_t y, coordf_t dist);
+    void print_info() const;
 };
 
 class ModelMaterial
@@ -134,6 +135,7 @@ class ModelObject
     void cut(coordf_t z, Model* model) const;
     void split(ModelObjectPtrs* new_objects);
     void update_bounding_box();   // this is a private method but we expose it until we need to expose it via XS
+    void print_info() const;
     
     private:
     Model* model;
