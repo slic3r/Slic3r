@@ -41,6 +41,7 @@ class TriangleMesh
     void mirror_y();
     void mirror_z();
     void align_to_origin();
+    void center_around_origin();
     void rotate(double angle, Point* center);
     TriangleMeshPtrs split() const;
     void merge(const TriangleMesh &mesh);

@@ -262,6 +262,16 @@ void TriangleMesh::align_to_origin()
     );
 }
 
+void TriangleMesh::center_around_origin()
+{
+    this->align_to_origin();
+    this->translate(
+        -(this->stl.stats.size.x/2),
+        -(this->stl.stats.size.y/2),
+        -(this->stl.stats.size.z/2)
+    );
+}
+
 void TriangleMesh::rotate(double angle, Point* center)
 {
     this->translate(-center->x, -center->y, 0);

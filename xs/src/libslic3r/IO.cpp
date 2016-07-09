@@ -50,6 +50,7 @@ bool
 POV::write(TriangleMesh& mesh, std::string output_file)
 {
     TriangleMesh mesh2 = mesh;
+    mesh2.center_around_origin();
     {
         Sizef3 size = mesh2.bounding_box().size();
         coordf_t maxdim = fmax(size.x, fmax(size.y, size.y));
