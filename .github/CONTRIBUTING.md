@@ -29,5 +29,6 @@ Do you want to help fix issues in or add features to Slic3r? That's also very, v
 * If you're starting on an issue, please say something in the related issues thread so that someone else doesn't start working on it too.
 * If there's nothing in the [Pull Request or Bust](https://github.com/alexrj/Slic3r/milestones/Pull%20Request%20or%20Bust) milestone that interests you, the next place to look is for issues that don't have a milestone. Lots of people commit ideas to Slic3r, and it's difficult to keep up and sort through them.
 * Before sending a pull request, please make sure that the changes you are submitting are contained in their own git branch, as PRs merge histories.
-     * A common workflow is to fork the master branch, create your new branch and do your work there. git-rebase is also helpful for separating out unrelated changes. 
+     * Pull requests that contain unrelated changes will be rejected.
+     * A common workflow is to fork the master branch, create your new branch and do your work there. git-rebase and git-cherry-pick are also helpful for separating out unrelated changes.
 * If you are pushing Slic3r code changes that touch the main application, it is very much appreciated if you write some tests that check the functionality of the code. It's much easier to vet and merge in code that includes tests and doing so will likely speed things up.
