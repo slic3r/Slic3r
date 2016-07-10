@@ -3,8 +3,7 @@ install:
   - export LDLOADLIBS=-lstdc++ 
   - export BUILD_DIR=$(pwd)
   - export BOOST_DIR=$HOME/boost_1_58_0
-  - if [ ! -d "$HOME/boost_1_58_0" ]; then wget https://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.tar.bz2; tar -xf boost_1_58_0.tar.bz2; mv boost_1_58_0 $HOME; cd $HOME/boost_1_58_0;$HOME/boost_1_58_0/bootstrap.sh gcc; $HOME/boost_1_58_0/b2; fi
-  - ln -sf $BOOST_DIR/boost $BOOST_DIR/include
+  - if [ ! -d "$HOME/boost_1_58_0" ]; then wget https://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.tar.bz2; tar -xf boost_1_58_0.tar.bz2; mv boost_1_58_0 $HOME; cd $HOME/boost_1_58_0;$HOME/boost_1_58_0/bootstrap.sh gcc; $HOME/boost_1_58_0/b2 toolset=gcc link=static runtime-link=static variant=release; fi
   - cd $BUILD_DIR
 script: perl ./Build.PL
 perl:
