@@ -38,7 +38,7 @@ if (defined $ENV{BOOST_DIR}) {
         qw(C:\Boost\lib /lib);
     
     if ($^O eq 'MSWin32') {
-        for my $path (glob('C:\dev\boost*'), glob ('C:\boost*')) {
+        for my $path (glob('C:\dev\boost*'), glob ('C:\boost*'), glob ('d:\src\boost*')) {
             push @boost_include, $path;
             push @boost_libs, $path . "/stage/lib";
         }
