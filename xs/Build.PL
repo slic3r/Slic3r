@@ -53,7 +53,7 @@ my @boost_libraries = qw(system thread filesystem);  # we need these
 $have_boost = 1
     if check_lib(
         lib     => [ map "boost_${_}", @boost_libraries ],
-    ) or defined( $ENV{FORCE_BOOST});
+    );
 
 if (!$ENV{SLIC3R_STATIC} && $have_boost) {
     push @LIBS, map "-lboost_${_}", @boost_libraries;
