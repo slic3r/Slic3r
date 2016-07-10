@@ -1,6 +1,16 @@
 language: perl
-install: export LDLOADLIBS=-lstdc++
-script: perl ./Build.PL
+install: 
+  - export LDLOADLIBS=-lstdc++ 
+  - export BUILD_DIR=$(pwd)
+  - export FORCE_BOOST=1
+  - cpanm local::lib
+  - eval "$(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)"
+  - export BOOST_DIR=$HOME/boost_1_58_0
+  - if [ ! -d "$BOOST_DIR" ]; then wget https://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.tar.bz2; tar -xf boost_1_58_0.tar.bz2; mv boost_1_58_0 $HOME; cd $HOME/boost_1_58_0;$HOME/boost_1_58_0/bootstrap.sh gcc; $HOME/boost_1_58_0/b2; fi
+  - cd $BUILD_DIR
+# Add our local boost version to the environment.
+  - export LD_LIBRARY_PATH=$HOME/boost_1_58_0/stage/lib:${LD_LIBRARY_PATH}
+script: LIBRARY_PATH=$HOME/boost_1_58_0/stage/lib CPLUS_INCLUDE_PATH=$HOME/boost_1_58_0 perl ./Build.PL
 perl:
   - "5.14"
   - "5.18"
@@ -11,11 +21,5 @@ branches:
     - stable
 sudo: false
 cache:
-    - apt
-addons:
-  apt:
-    sources:
-    - boost-latest
-    packages:
-    - libboost-thread1.55-dev
-    - libboost-system1.55-dev
+    directories:
+    - $HOME/boost_1_58_0
