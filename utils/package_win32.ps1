@@ -8,8 +8,8 @@ echo "Requires PAR."
 New-Variable -Name "current_branch" -Value ""
 
 git branch | foreach {
-   if ($_ -match "^\*(.*)"){
-         $current_branch += $matches[1] + "> "
+   if ($_ -match "`  (.*)"){
+         $current_branch += $matches[1]
    }
 }
 
@@ -18,20 +18,25 @@ New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
 
 cpanm "PAR::Packer"
 
-pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
--a "$STRAWBERRY_PATH\perl\bin\freeglut.dll;freeglut.dll" ^
--a "$STRAWBERRY_PATH\perl\bin\perl522.dll;perl522.dll" ^
--a "$STRAWBERRY_PATH\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll" ^
--a "$STRAWBERRY_PATH\perl\bin\libstdc++-6.dll;libstdc++-6.dll" ^
--a "$STRAWBERRY_PATH\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_gcc_custom.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_adv_gcc_custom.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_core_gcc_custom.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_gl_gcc_custom.dll" ^
--a "$STRAWBERRY_PATH\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_html_gcc_custom.dll" ^
--a "..\utils;script\utils" -a "..\var;script\var" -a "autorun.bat;slic3r.bat" `
+pp `
+-a "../utils;utils"  `
+-a "autorun.bat;slic3r.bat"  `
+-a "../var;var"  `
+-a "${STRAWBERRY_PATH}\perl\bin\perl5.22.2.exe;perl5.22.2.exe"  `
+-a "${STRAWBERRY_PATH}\perl\bin\perl522.dll;perl522.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\freeglut.dll;freeglut.dll"  `
+-a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_gcc_custom.dll;wxbase30u_gcc_custom.dll"  `
+-a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_adv_gcc_custom.dll;wxmsw30u_adv_gcc_custom.dll"  `
+-a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_gl_gcc_custom.dll;wxmsw30u_gl_gcc_custom.dll"  `
+-a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_core_gcc_custom.dll;wxmsw30u_core_gcc_custom.dll"  `
+-a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_html_gcc_custom.dll;wxmsw30u_html_gcc_custom.dll"  `
+-a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_xml_gcc_custom.dll;wxbase30u_xml_gcc_custom.dll"  `
+-a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_net_gcc_custom.dll;wxbase30u_net_gcc_custom.dll"  `
 -a "../lib;lib" `
--a "../slic3r.pl;slic3r.pl"
+-a "../slic3r.pl;slic3r.pl" `
 -M AutoLoader `
 -M B `
 -M Carp `
@@ -41,7 +46,6 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M Config `
 -M Crypt::CBC `
 -M Cwd `
--M Data `
 -M Data::UUID `
 -M Devel::GlobalDestruction `
 -M Digest `
@@ -145,7 +149,6 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M Socket `
 -M Socket6 `
 -M Storable `
--M Sub `
 -M Sub::Defer `
 -M Sub::Exporter `
 -M Sub::Exporter::Progressive `
@@ -161,7 +164,6 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M Tie::Handle `
 -M Tie::Hash `
 -M Tie::StdHandle `
--M Time `
 -M Time::HiRes `
 -M Time::Local `
 -M URI `
@@ -201,6 +203,7 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M feature `
 -M integer `
 -M locale `
+-M lib `
 -M mro `
 -M overload `
 -M overload::numbers `
@@ -214,6 +217,6 @@ pp -a "$STRAWBERRY_PATH\perl\bin\perl5.22.1.exe;perl5.22.1.exe" ^
 -M vars `
 -M warnings `
 -M warnings::register `
--e -p slic3r.pl -o ..\slic3r.par
+-e -p ..\slic3r.pl -o ..\slic3r.par
 
-copy ..\slic3r.par "..\slic3r-${current_branch}-$(git rev-parse --short HEAD).zip"
+copy ..\slic3r.par "..\slic3r-${current_branch}-${APPVEYOR_BUILD_NUMBER}-$(git rev-parse --short HEAD).zip"
