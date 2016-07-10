@@ -490,21 +490,18 @@ sub process_layer {
         
         # group extrusions by extruder and then by island
         my %by_extruder = ();  # extruder_id => [ { perimeters => \@perimeters, infill => \@infill } ]
-
-        my $n_slices = $#{$layer->slices};
-        my @layer_surface_bboxes = ();
-        for my $i (0 .. $n_slices) {
-            push @layer_surface_bboxes, $layer->slices->[$i]->contour->bounding_box;
-        }
+        
+        # cache bounding boxes of layer slices
+        my @layer_slices_bb = map $_->contour->bounding_box, @{$layer->slices};
         my $point_inside_surface = sub { 
             my ($i, $point) = @_;
-            my $bbox = $layer_surface_bboxes[$i];
-            return 
-                $point->x >= $bbox->x_min && $point->x < $bbox->x_max &&
-                $point->y >= $bbox->y_min && $point->y < $bbox->y_max &&
-                $layer->slices->[$i]->contour->contains_point($point);
+            
+            my $bbox = $layer_slices_bb[$i];
+            return $layer_slices_bb[$i]->contains_point($point)
+                && $layer->slices->[$i]->contour->contains_point($point);
         };
-
+        
+        my $n_slices = $layer->slices->count - 1;
         foreach my $region_id (0..($self->print->region_count-1)) {
             my $layerm = $layer->regions->[$region_id] or next;
             my $region = $self->print->get_region($region_id);

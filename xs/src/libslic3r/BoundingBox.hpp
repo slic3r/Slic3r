@@ -30,6 +30,7 @@ class BoundingBoxBase
     void translate(coordf_t x, coordf_t y);
     void offset(coordf_t delta);
     PointClass center() const;
+    bool contains(const PointClass &point) const;
 };
 
 template <class PointClass>
