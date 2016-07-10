@@ -5,13 +5,13 @@
 echo "Make this is run from the perl command window." 
 echo "Requires PAR."
 
-New-Variable -Name "current_branch" -Value "${APPVEYOR_REPO_BRANCH}"
+New-Variable -Name "current_branch" -Value ""
 
-#git branch | foreach {
-#   if ($_ -match "`  (.*)"){
-#         $current_branch += $matches[1]
-#   }
-#}
+git branch | foreach {
+   if ($_ -match "`  (.*)"){
+         $current_branch += $matches[1]
+   }
+}
 
 # Change this to where you have Strawberry Perl installed.
 New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
