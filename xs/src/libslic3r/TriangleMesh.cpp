@@ -346,8 +346,8 @@ TriangleMesh::merge(const TriangleMesh &mesh)
     stl_reallocate(&this->stl);
     
     // copy facets
-    std::copy(mesh.stl.facet_start, mesh.stl.facet_start + mesh.stl.stats.number_of_facets, this->stl.facet_start);
-    std::copy(mesh.stl.neighbors_start, mesh.stl.neighbors_start + mesh.stl.stats.number_of_facets, this->stl.neighbors_start);
+    std::copy(mesh.stl.facet_start, mesh.stl.facet_start + mesh.stl.stats.number_of_facets, this->stl.facet_start + number_of_facets);
+    std::copy(mesh.stl.neighbors_start, mesh.stl.neighbors_start + mesh.stl.stats.number_of_facets, this->stl.neighbors_start + number_of_facets);
     
     // update size
     stl_get_size(&this->stl);
