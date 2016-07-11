@@ -374,7 +374,7 @@ sub process_layer {
             $gcode .= $self->_gcodegen->writer->set_temperature($temperature, 0, $extruder->id)
                 if $temperature && $temperature != $self->config->get_at('first_layer_temperature', $extruder->id);
         }
-        $gcode .= $self->_gcodegen->writer->set_bed_temperature($self->print->config->bed_temperature, 1)
+        $gcode .= $self->_gcodegen->writer->set_bed_temperature($self->print->config->bed_temperature, $self->print->config->set_and_wait_temperatures)
             if $self->print->config->bed_temperature && $self->print->config->bed_temperature != $self->print->config->first_layer_bed_temperature;
         $self->_second_layer_things_done(1);
     }

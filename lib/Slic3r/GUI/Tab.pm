@@ -995,11 +995,11 @@ sub build {
         serial_port serial_speed
         octoprint_host octoprint_apikey
         use_firmware_retraction pressure_advance vibration_limit
-        use_volumetric_e
+        use_volumetric_e set_and_wait_temperatures
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode
         nozzle_diameter extruder_offset
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
-        retract_length_toolchange retract_restart_extra_toolchange
+        retract_length_toolchange retract_restart_extra_toolchange 
     ));
     $self->{config}->set('printer_settings_id', '');
     
@@ -1190,6 +1190,7 @@ sub build {
             $optgroup->append_single_option_line('use_volumetric_e');
             $optgroup->append_single_option_line('pressure_advance');
             $optgroup->append_single_option_line('vibration_limit');
+            $optgroup->append_single_option_line('set_and_wait_temperatures');
         }
     }
     {

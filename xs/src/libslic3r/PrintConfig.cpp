@@ -1271,6 +1271,12 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "use-volumetric-e!";
     def->default_value = new ConfigOptionBool(false);
 
+    def = this->add("set_and_wait_temperatures", coBool);
+    def->label = "Use Set and Wait for changing bed temperatures";
+    def->tooltip = "Check this to change gcode for temperature changes from not waiting (usually M140) to waiting (usually M190). Only necessary if you have a slow-to-heat bed and the first layer bed temp is lower than the other layers.";
+    def->cli = "set-and-wait-temperatures!";
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("vibration_limit", coFloat);
     def->label = "Vibration limit (deprecated)";
     def->tooltip = "This experimental option will slow down those moves hitting the configured frequency limit. The purpose of limiting vibrations is to avoid mechanical resonance. Set zero to disable.";
