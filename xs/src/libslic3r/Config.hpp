@@ -28,6 +28,7 @@ class ConfigOption {
     virtual double getFloat() const { return 0; };
     virtual bool getBool() const { return false; };
     virtual void setInt(int val) {};
+    virtual std::string getString() const { return ""; };
     friend bool operator== (const ConfigOption &a, const ConfigOption &b);
     friend bool operator!= (const ConfigOption &a, const ConfigOption &b);
 };
@@ -205,6 +206,8 @@ class ConfigOptionString : public ConfigOptionSingle<std::string>
     ConfigOptionString() : ConfigOptionSingle<std::string>("") {};
     ConfigOptionString(std::string _value) : ConfigOptionSingle<std::string>(_value) {};
     ConfigOptionString* clone() const { return new ConfigOptionString(this->value); };
+    
+    std::string getString() const { return this->value; };
     
     std::string serialize() const {
         std::string str = this->value;

@@ -28,6 +28,7 @@ class TriangleMesh
     void write_ascii(const std::string &output_file);
     void write_binary(const std::string &output_file);
     void repair();
+    void check_topology();
     void WriteOBJFile(const std::string &output_file);
     void scale(float factor);
     void scale(const Pointf3 &versor);

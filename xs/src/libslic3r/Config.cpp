@@ -220,7 +220,9 @@ DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
             const ConfigOptionDef* optdef = this->def->get(opt_key);
             if (optdef == NULL) return NULL;
             ConfigOption* opt;
-            if (optdef->type == coFloat) {
+            if (optdef->default_value != NULL) {
+                opt = optdef->default_value->clone();
+            } else if (optdef->type == coFloat) {
                 opt = new ConfigOptionFloat ();
             } else if (optdef->type == coFloats) {
                 opt = new ConfigOptionFloats ();
