@@ -87,7 +87,7 @@ main(const int argc, const char **argv)
         if (outfile.empty()) outfile = *it + "_extruded.stl";
         
         Slic3r::IO::STL::write(mesh2, outfile);
-        printf("Extuded mesh written to %s\n", outfile.c_str());
+        printf("Extruded mesh written to %s\n", outfile.c_str());
     }
     
     return 0;
