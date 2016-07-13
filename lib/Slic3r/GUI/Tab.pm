@@ -990,7 +990,7 @@ sub build {
     my (%params) = @_;
     
     $self->init_config_options(qw(
-        bed_shape z_offset
+        bed_shape z_offset has_heatbed
         gcode_flavor use_relative_e_distances
         serial_port serial_speed
         octoprint_host octoprint_apikey
@@ -1057,6 +1057,7 @@ sub build {
                 );
                 $optgroup->append_single_option_line($option);
             }
+            $optgroup->append_single_option_line('has_heatbed');
             $optgroup->on_change(sub {
                 my ($opt_id) = @_;
                 if ($opt_id eq 'extruders_count') {

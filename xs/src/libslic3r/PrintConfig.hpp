@@ -318,6 +318,7 @@ class PrintConfig : public GCodeConfig
     public:
     ConfigOptionBool                avoid_crossing_perimeters;
     ConfigOptionPoints              bed_shape;
+    ConfigOptionBool                has_heatbed;
     ConfigOptionInt                 bed_temperature;
     ConfigOptionFloat               bridge_acceleration;
     ConfigOptionInt                 bridge_fan_speed;
@@ -374,6 +375,7 @@ class PrintConfig : public GCodeConfig
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(avoid_crossing_perimeters);
         OPT_PTR(bed_shape);
+        OPT_PTR(has_heatbed);
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
