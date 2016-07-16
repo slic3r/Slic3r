@@ -463,6 +463,7 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "gcode-flavor=s";
     def->enum_keys_map = ConfigOptionEnum<GCodeFlavor>::get_enum_values();
     def->enum_values.push_back("reprap");
+    def->enum_values.push_back("repetier");
     def->enum_values.push_back("teacup");
     def->enum_values.push_back("makerware");
     def->enum_values.push_back("sailfish");
@@ -470,7 +471,8 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("machinekit");
     def->enum_values.push_back("smoothie");
     def->enum_values.push_back("no-extrusion");
-    def->enum_labels.push_back("RepRap (Marlin/Sprinter/Repetier)");
+    def->enum_labels.push_back("RepRap (Marlin/Sprinter)");
+    def->enum_labels.push_back("Repetier");
     def->enum_labels.push_back("Teacup");
     def->enum_labels.push_back("MakerWare (MakerBot)");
     def->enum_labels.push_back("Sailfish (MakerBot)");
