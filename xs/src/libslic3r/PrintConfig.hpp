@@ -506,8 +506,10 @@ class CLIConfig
     ConfigOptionBool                export_pov;
     ConfigOptionBool                export_svg;
     ConfigOptionBool                info;
+    ConfigOptionStrings             load;
     ConfigOptionString              output;
     ConfigOptionFloat               rotate;
+    ConfigOptionString              save;
     ConfigOptionFloat               scale;
     
     CLIConfig() : ConfigBase(), StaticConfig() {
@@ -520,8 +522,10 @@ class CLIConfig
         OPT_PTR(export_pov);
         OPT_PTR(export_svg);
         OPT_PTR(info);
+        OPT_PTR(load);
         OPT_PTR(output);
         OPT_PTR(rotate);
+        OPT_PTR(save);
         OPT_PTR(scale);
         
         return NULL;

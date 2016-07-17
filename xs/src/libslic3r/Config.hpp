@@ -22,7 +22,7 @@ class ConfigOption {
     virtual ~ConfigOption() {};
     virtual ConfigOption* clone() const = 0;
     virtual std::string serialize() const = 0;
-    virtual bool deserialize(std::string str) = 0;
+    virtual bool deserialize(std::string str, bool append = false) = 0;
     virtual void set(const ConfigOption &option) = 0;
     virtual int getInt() const { return 0; };
     virtual double getFloat() const { return 0; };
@@ -90,7 +90,7 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         std::istringstream iss(str);
         iss >> this->value;
         return !iss.fail();
@@ -123,8 +123,8 @@ class ConfigOptionFloats : public ConfigOptionVector<double>
         return vv;
     };
     
-    bool deserialize(std::string str) {
-        this->values.clear();
+    bool deserialize(std::string str, bool append = false) {
+        if (!append) this->values.clear();
         std::istringstream is(str);
         std::string item_str;
         while (std::getline(is, item_str, ',')) {
@@ -153,7 +153,7 @@ class ConfigOptionInt : public ConfigOptionSingle<int>
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         std::istringstream iss(str);
         iss >> this->value;
         return !iss.fail();
@@ -186,8 +186,8 @@ class ConfigOptionInts : public ConfigOptionVector<int>
         return vv;
     };
     
-    bool deserialize(std::string str) {
-        this->values.clear();
+    bool deserialize(std::string str, bool append = false) {
+        if (!append) this->values.clear();
         std::istringstream is(str);
         std::string item_str;
         while (std::getline(is, item_str, ',')) {
@@ -222,7 +222,7 @@ class ConfigOptionString : public ConfigOptionSingle<std::string>
         return str; 
     };
     
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         // s/\\n/\n/g
         size_t pos = 0;
         while ((pos = str.find("\\n", pos)) != std::string::npos) {
@@ -256,8 +256,8 @@ class ConfigOptionStrings : public ConfigOptionVector<std::string>
         return this->values;
     };
     
-    bool deserialize(std::string str) {
-        this->values.clear();
+    bool deserialize(std::string str, bool append = false) {
+        if (!append) this->values.clear();
         std::istringstream is(str);
         std::string item_str;
         while (std::getline(is, item_str, ';')) {
@@ -286,7 +286,7 @@ class ConfigOptionPercent : public ConfigOptionFloat
         return s;
     };
     
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         // don't try to parse the trailing % since it's optional
         std::istringstream iss(str);
         iss >> this->value;
@@ -327,7 +327,7 @@ class ConfigOptionFloatOrPercent : public ConfigOptionPercent
         return s;
     };
     
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         this->percent = str.find_first_of("%") != std::string::npos;
         std::istringstream iss(str);
         iss >> this->value;
@@ -350,7 +350,7 @@ class ConfigOptionPoint : public ConfigOptionSingle<Pointf>
         return ss.str();
     };
     
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         std::istringstream iss(str);
         iss >> this->value.x;
         iss.ignore(std::numeric_limits<std::streamsize>::max(), ',');
@@ -388,8 +388,8 @@ class ConfigOptionPoints : public ConfigOptionVector<Pointf>
         return vv;
     };
     
-    bool deserialize(std::string str) {
-        this->values.clear();
+    bool deserialize(std::string str, bool append = false) {
+        if (!append) this->values.clear();
         std::istringstream is(str);
         std::string point_str;
         while (std::getline(is, point_str, ',')) {
@@ -421,7 +421,7 @@ class ConfigOptionBool : public ConfigOptionSingle<bool>
         return std::string(this->value ? "1" : "0");
     };
     
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         this->value = (str.compare("1") == 0);
         return true;
     };
@@ -453,8 +453,8 @@ class ConfigOptionBools : public ConfigOptionVector<bool>
         return vv;
     };
     
-    bool deserialize(std::string str) {
-        this->values.clear();
+    bool deserialize(std::string str, bool append = false) {
+        if (!append) this->values.clear();
         std::istringstream is(str);
         std::string item_str;
         while (std::getline(is, item_str, ',')) {
@@ -483,7 +483,7 @@ class ConfigOptionEnum : public ConfigOptionSingle<T>
         return "";
     };
 
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         t_config_enum_values enum_keys_map = ConfigOptionEnum<T>::get_enum_values();
         if (enum_keys_map.count(str) == 0) return false;
         this->value = static_cast<T>(enum_keys_map[str]);
@@ -507,7 +507,7 @@ class ConfigOptionEnumGeneric : public ConfigOptionInt
         return "";
     };
 
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         if (this->keys_map->count(str) == 0) return false;
         this->value = (*const_cast<t_config_enum_values*>(this->keys_map))[str];
         return true;
@@ -596,10 +596,12 @@ class ConfigBase
     bool equals(ConfigBase &other);
     t_config_option_keys diff(ConfigBase &other);
     std::string serialize(const t_config_option_key &opt_key) const;
-    bool set_deserialize(const t_config_option_key &opt_key, std::string str);
+    bool set_deserialize(const t_config_option_key &opt_key, std::string str, bool append = false);
     double get_abs_value(const t_config_option_key &opt_key);
     double get_abs_value(const t_config_option_key &opt_key, double ratio_over);
     void setenv_();
+    void load(const std::string &file);
+    void save(const std::string &file) const;
 };
 
 class DynamicConfig : public virtual ConfigBase

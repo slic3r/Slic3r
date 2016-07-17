@@ -24,17 +24,28 @@ main(const int argc, const char **argv)
     t_config_option_keys input_files;
     config.read_cli(argc, argv, &input_files);
     
-    // apply command line options to a more specific DynamicPrintConfig which provides normalize()
-    DynamicPrintConfig print_config;
-    print_config.apply(config, true);
-    print_config.normalize();
-    
     // apply command line options to a more handy CLIConfig
     CLIConfig cli_config;
     cli_config.apply(config, true);
     
-    /*  TODO: loop through the config files supplied on the command line (now stored in 
-        cli_config), load each one, normalize it and apply it to print_config */
+    DynamicPrintConfig print_config;
+    
+    // load config files supplied via --load
+    for (std::vector<std::string>::const_iterator file = cli_config.load.values.begin();
+        file != cli_config.load.values.end(); ++file) {
+        DynamicPrintConfig c;
+        c.load(*file);
+        c.normalize();
+        print_config.apply(c);
+    }
+    
+    // apply command line options to a more specific DynamicPrintConfig which provides normalize()
+    // (command line options override --load files)
+    print_config.apply(config, true);
+    print_config.normalize();
+    
+    // write config if requested
+    if (!cli_config.save.value.empty()) print_config.save(cli_config.save.value);
     
     // read input file(s) if any
     std::vector<Model> models;

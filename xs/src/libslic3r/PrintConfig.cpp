@@ -1383,6 +1383,12 @@ CLIConfigDef::CLIConfigDef()
     def->cli = "info";
     def->default_value = new ConfigOptionBool(false);
     
+    def = this->add("load", coStrings);
+    def->label = "Load config file";
+    def->tooltip = "Load configuration from the specified file. It can be used more than once to load options from multiple files.";
+    def->cli = "load";
+    def->default_value = new ConfigOptionStrings();
+    
     def = this->add("output", coString);
     def->label = "Output File";
     def->tooltip = "The file where the output will be written (if not specified, it will be based on the input file).";
@@ -1394,6 +1400,12 @@ CLIConfigDef::CLIConfigDef()
     def->tooltip = "Rotation angle around the Z axis in degrees (0-360, default: 0).";
     def->cli = "rotate";
     def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("save", coString);
+    def->label = "Save config file";
+    def->tooltip = "Save configuration to the specified file.";
+    def->cli = "save";
+    def->default_value = new ConfigOptionString();
     
     def = this->add("scale", coFloat);
     def->label = "Scale";

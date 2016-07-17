@@ -87,8 +87,10 @@ sub load {
     my $class = shift;
     my ($file) = @_;
     
-    my $ini = __PACKAGE__->read_ini($file);
-    return $class->load_ini_hash($ini->{_});
+    # legacy syntax of load()
+    my $config = $class->new;
+    $config->_load($file);
+    return $config;
 }
 
 sub load_ini_hash {
@@ -184,13 +186,6 @@ sub as_ini {
         $ini->{_}{$opt_key} = $self->serialize($opt_key);
     }
     return $ini;
-}
-
-sub save {
-    my $self = shift;
-    my ($file) = @_;
-    
-    __PACKAGE__->write_ini($file, $self->as_ini);
 }
 
 # this method is idempotent by design and only applies to ::DynamicConfig or ::Full
