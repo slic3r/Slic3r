@@ -162,6 +162,13 @@ Model::bounding_box() const
 }
 
 void
+Model::repair()
+{
+    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o)
+        (*o)->repair();
+}
+
+void
 Model::center_instances_around_point(const Pointf &point)
 {
     BoundingBoxf3 bb = this->bounding_box();
@@ -480,6 +487,13 @@ ModelObject::update_bounding_box()
     this->_bounding_box_valid = true;
 }
 
+void
+ModelObject::repair()
+{
+    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v)
+        (*v)->mesh.repair();
+}
+
 // flattens all volumes and instances into a single mesh
 TriangleMesh
 ModelObject::mesh() const
@@ -720,26 +734,42 @@ void
 ModelObject::print_info() const
 {
     using namespace std;
-    cout << "Info about " << boost::filesystem::basename(this->input_file) << ":" << endl;
+    cout << "[" << boost::filesystem::path(this->input_file).filename().string() << "]" << endl;
     
     TriangleMesh mesh = this->raw_mesh();
-    mesh.repair();
-    Sizef3 size = mesh.bounding_box().size();
-    cout << "  size:              x=" << size.x << " y=" << size.y << " z=" << size.z << endl;
-    cout << "  number of facets:  " << mesh.stl.stats.number_of_facets  << endl;
-    cout << "  number of shells:  " << mesh.stl.stats.number_of_parts   << endl;
-    cout << "  volume:            " << mesh.stl.stats.volume            << endl;
-    if (this->needed_repair()) {
-        cout << "  needed repair:     yes" << endl;
-        cout << "  degenerate facets: " << mesh.stl.stats.degenerate_facets << endl;
-        cout << "  edges fixed:       " << mesh.stl.stats.edges_fixed       << endl;
-        cout << "  facets removed:    " << mesh.stl.stats.facets_removed    << endl;
-        cout << "  facets added:      " << mesh.stl.stats.facets_added      << endl;
-        cout << "  facets reversed:   " << mesh.stl.stats.facets_reversed   << endl;
-        cout << "  backwards edges:   " << mesh.stl.stats.backwards_edges   << endl;
-    } else {
-        cout << "  needed repair:     no" << endl;
+    mesh.check_topology();
+    BoundingBoxf3 bb = mesh.bounding_box();
+    Sizef3 size = bb.size();
+    cout << "size_x = " << size.x << endl;
+    cout << "size_y = " << size.y << endl;
+    cout << "size_z = " << size.z << endl;
+    cout << "min_x = " << bb.min.x << endl;
+    cout << "min_y = " << bb.min.y << endl;
+    cout << "min_z = " << bb.min.z << endl;
+    cout << "max_x = " << bb.max.x << endl;
+    cout << "max_y = " << bb.max.y << endl;
+    cout << "max_z = " << bb.max.z << endl;
+    cout << "number_of_facets = " << mesh.stl.stats.number_of_facets  << endl;
+    cout << "manifold = "   << (mesh.is_manifold() ? "yes" : "no") << endl;
+    
+    mesh.repair();  // this calculates number_of_parts
+    if (mesh.needed_repair()) {
+        mesh.repair();
+        if (mesh.stl.stats.degenerate_facets > 0)
+            cout << "degenerate_facets = "  << mesh.stl.stats.degenerate_facets << endl;
+        if (mesh.stl.stats.edges_fixed > 0)
+            cout << "edges_fixed = "        << mesh.stl.stats.edges_fixed       << endl;
+        if (mesh.stl.stats.facets_removed > 0)
+            cout << "facets_removed = "     << mesh.stl.stats.facets_removed    << endl;
+        if (mesh.stl.stats.facets_added > 0)
+            cout << "facets_added = "       << mesh.stl.stats.facets_added      << endl;
+        if (mesh.stl.stats.facets_reversed > 0)
+            cout << "facets_reversed = "    << mesh.stl.stats.facets_reversed   << endl;
+        if (mesh.stl.stats.backwards_edges > 0)
+            cout << "backwards_edges = "    << mesh.stl.stats.backwards_edges   << endl;
     }
+    cout << "number_of_parts =  " << mesh.stl.stats.number_of_parts << endl;
+    cout << "volume = "           << mesh.volume()                  << endl;
 }
 
 

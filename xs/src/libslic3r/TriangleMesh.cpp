@@ -109,12 +109,19 @@ TriangleMesh::repair() {
     stl_fix_normal_values(&stl);
     
     // always calculate the volume and reverse all normals if volume is negative
-    stl_calculate_volume(&stl);
+    (void)this->volume();
     
     // neighbors
     stl_verify_neighbors(&stl);
     
     this->repaired = true;
+}
+
+float
+TriangleMesh::volume()
+{
+    if (this->stl.stats.volume == -1) stl_calculate_volume(&this->stl);
+    return this->stl.stats.volume;
 }
 
 void
@@ -144,6 +151,12 @@ TriangleMesh::check_topology()
             }
         }
     }
+}
+
+bool
+TriangleMesh::is_manifold() const
+{
+    return this->stl.stats.connected_facets_3_edge == this->stl.stats.number_of_facets;
 }
 
 void

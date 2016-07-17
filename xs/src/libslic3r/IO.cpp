@@ -21,7 +21,6 @@ STL::read(std::string input_file, Model* model)
     
     TriangleMesh mesh;
     if (!STL::read(input_file, &mesh)) return false;
-    mesh.repair();
     
     if (mesh.facets_count() == 0)
         throw std::runtime_error("This STL file couldn't be read because it's empty.");

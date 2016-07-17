@@ -62,12 +62,14 @@ main(const int argc, const char **argv)
     
     for (std::vector<Model>::iterator model = models.begin(); model != models.end(); ++model) {
         if (cli_config.info) {
+            // --info works on unrepaired model
             model->print_info();
         } else if (cli_config.export_obj) {
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model->objects.front()->input_file + ".obj";
     
             TriangleMesh mesh = model->mesh();
+            mesh.repair();
             Slic3r::IO::OBJ::write(mesh, outfile);
             printf("File exported to %s\n", outfile.c_str());
         } else if (cli_config.export_pov) {
@@ -75,6 +77,7 @@ main(const int argc, const char **argv)
             if (outfile.empty()) outfile = model->objects.front()->input_file + ".pov";
     
             TriangleMesh mesh = model->mesh();
+            mesh.repair();
             Slic3r::IO::POV::write(mesh, outfile);
             printf("File exported to %s\n", outfile.c_str());
         } else if (cli_config.export_svg) {
@@ -82,6 +85,7 @@ main(const int argc, const char **argv)
             if (outfile.empty()) outfile = model->objects.front()->input_file + ".svg";
 
             SVGExport svg_export(model->mesh());
+            svg_export.mesh.repair();
             svg_export.config.apply(print_config, true);
             svg_export.writeSVG(outfile);
             printf("SVG file exported to %s\n", outfile.c_str());

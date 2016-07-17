@@ -51,6 +51,7 @@ class Model
     bool has_objects_with_no_instances() const;
     bool add_default_instances();
     BoundingBoxf3 bounding_box() const;
+    void repair();
     void center_instances_around_point(const Pointf &point);
     void align_instances_to_origin();
     void translate(coordf_t x, coordf_t y, coordf_t z);
@@ -118,6 +119,7 @@ class ModelObject
     BoundingBoxf3 bounding_box();
     void invalidate_bounding_box();
 
+    void repair();
     TriangleMesh mesh() const;
     TriangleMesh raw_mesh() const;
     BoundingBoxf3 raw_bounding_box() const;

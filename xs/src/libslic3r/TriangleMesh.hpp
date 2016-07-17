@@ -29,6 +29,8 @@ class TriangleMesh
     void write_binary(const std::string &output_file);
     void repair();
     void check_topology();
+    float volume();
+    bool is_manifold() const;
     void WriteOBJFile(const std::string &output_file);
     void scale(float factor);
     void scale(const Pointf3 &versor);
