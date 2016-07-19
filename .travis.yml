@@ -1,5 +1,5 @@
 language: perl
-install: true
+install: export LDLOADLIBS=-lstdc++
 script: perl ./Build.PL
 perl:
   - "5.14"
@@ -19,3 +19,4 @@ addons:
     packages:
     - libboost-thread1.55-dev
     - libboost-system1.55-dev
+    - libboost-filesystem1.55-dev

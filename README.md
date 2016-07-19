@@ -2,7 +2,7 @@ _Q: Oh cool, a new RepRap slicer?_
 
 A: Yes.
 
-Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.png?branch=master)](https://travis-ci.org/alexrj/Slic3r)
+Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.png?branch=master)](https://travis-ci.org/alexrj/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/8iqmeat6cj158vo6?svg=true)](https://ci.appveyor.com/project/lordofhyphens/slic3r)
 ======
 Prebuilt Win32 builds https://bintray.com/lordofhyphens/Slic3r/slic3r_dev/view
 

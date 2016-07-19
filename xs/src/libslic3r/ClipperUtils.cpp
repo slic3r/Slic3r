@@ -222,6 +222,18 @@ offset_ex(const Slic3r::Polygons &polygons, const float delta,
     return expp;
 }
 
+Slic3r::ExPolygons
+offset_ex(const Slic3r::ExPolygons &expolygons, const float delta,
+    double scale, ClipperLib::JoinType joinType, double miterLimit)
+{
+    Slic3r::Polygons pp;
+    for (Slic3r::ExPolygons::const_iterator ex = expolygons.begin(); ex != expolygons.end(); ++ex) {
+        Slic3r::Polygons pp2 = *ex;
+        pp.insert(pp.end(), pp2.begin(), pp2.end());
+    }
+    return offset_ex(pp, delta, scale, joinType, miterLimit);
+}
+
 void
 offset2(const Slic3r::Polygons &polygons, ClipperLib::Paths* retval, const float delta1,
     const float delta2, const double scale, const ClipperLib::JoinType joinType, const double miterLimit)

@@ -61,6 +61,9 @@ void offset(const Slic3r::Polygons &polygons, Slic3r::ExPolygons* retval, const 
 Slic3r::ExPolygons offset_ex(const Slic3r::Polygons &polygons, const float delta,
     double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
+Slic3r::ExPolygons offset_ex(const Slic3r::ExPolygons &expolygons, const float delta,
+    double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double miterLimit = 3);
 
 void offset2(const Slic3r::Polygons &polygons, ClipperLib::Paths* retval, const float delta1,
     const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 

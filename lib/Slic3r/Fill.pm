@@ -214,16 +214,6 @@ sub make_fill {
         
         # calculate flow spacing for infill pattern generation
         my $using_internal_flow = 0;
-        my $infill_combined_flow = $layerm->layer->object->config->layer_height * $layerm->region->config->infill_every_layers; # multiply the required layer height by infill_every_layers
-        if ($infill_combined_flow == 0) {
-          # just in case something happens we don't want to put in a 0mm layer.
-          $infill_combined_flow = $layerm->layer->object->config->layer_height;
-        }
-        if ($infill_combined_flow > $flow->nozzle_diameter) {
-          # can't put out layers bigger than the nozzle width, go as big as possible
-          $infill_combined_flow = (($flow->nozzle_diameter / $layerm->layer->object->config->layer_height) % 1) * $layerm->layer->object->config->layer_height
-        }
-
         if (!$is_solid && !$is_bridge) {
             # it's internal infill, so we can calculate a generic flow spacing 
             # for all layers, for avoiding the ugly effect of
@@ -231,8 +221,7 @@ sub make_fill {
             # layer height
             my $internal_flow = $layerm->region->flow(
                 FLOW_ROLE_INFILL,
-                $infill_combined_flow,
-
+                $layerm->layer->object->config->layer_height,  # TODO: handle infill_every_layers?
                 0,  # no bridge
                 0,  # no first layer
                 -1, # auto width

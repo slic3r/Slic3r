@@ -1,5 +1,7 @@
 #include "Model.hpp"
 #include "Geometry.hpp"
+#include <iostream>
+#include "boost/filesystem.hpp"
 
 namespace Slic3r {
 
@@ -160,6 +162,13 @@ Model::bounding_box() const
 }
 
 void
+Model::repair()
+{
+    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o)
+        (*o)->repair();
+}
+
+void
 Model::center_instances_around_point(const Pointf &point)
 {
     BoundingBoxf3 bb = this->bounding_box();
@@ -309,6 +318,13 @@ Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
             instance->offset.y = (size.y + dist) * (y_copy-1);
         }
     }
+}
+
+void
+Model::print_info() const
+{
+    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o)
+        (*o)->print_info();
 }
 
 ModelMaterial::ModelMaterial(Model *model) : model(model) {}
@@ -471,6 +487,13 @@ ModelObject::update_bounding_box()
     this->_bounding_box_valid = true;
 }
 
+void
+ModelObject::repair()
+{
+    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v)
+        (*v)->mesh.repair();
+}
+
 // flattens all volumes and instances into a single mesh
 TriangleMesh
 ModelObject::mesh() const
@@ -479,7 +502,7 @@ ModelObject::mesh() const
     TriangleMesh raw_mesh = this->raw_mesh();
     
     for (ModelInstancePtrs::const_iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
-        TriangleMesh m = raw_mesh;
+        TriangleMesh m(raw_mesh);
         (*i)->transform_mesh(&m);
         mesh.merge(m);
     }
@@ -566,6 +589,12 @@ ModelObject::translate(coordf_t x, coordf_t y, coordf_t z)
         (*v)->mesh.translate(x, y, z);
     }
     if (this->_bounding_box_valid) this->_bounding_box.translate(x, y, z);
+}
+
+void
+ModelObject::scale(float factor)
+{
+    this->scale(Pointf3(factor, factor, factor));
 }
 
 void
@@ -701,6 +730,48 @@ ModelObject::split(ModelObjectPtrs* new_objects)
     return;
 }
 
+void
+ModelObject::print_info() const
+{
+    using namespace std;
+    cout << "[" << boost::filesystem::path(this->input_file).filename().string() << "]" << endl;
+    
+    TriangleMesh mesh = this->raw_mesh();
+    mesh.check_topology();
+    BoundingBoxf3 bb = mesh.bounding_box();
+    Sizef3 size = bb.size();
+    cout << "size_x = " << size.x << endl;
+    cout << "size_y = " << size.y << endl;
+    cout << "size_z = " << size.z << endl;
+    cout << "min_x = " << bb.min.x << endl;
+    cout << "min_y = " << bb.min.y << endl;
+    cout << "min_z = " << bb.min.z << endl;
+    cout << "max_x = " << bb.max.x << endl;
+    cout << "max_y = " << bb.max.y << endl;
+    cout << "max_z = " << bb.max.z << endl;
+    cout << "number_of_facets = " << mesh.stl.stats.number_of_facets  << endl;
+    cout << "manifold = "   << (mesh.is_manifold() ? "yes" : "no") << endl;
+    
+    mesh.repair();  // this calculates number_of_parts
+    if (mesh.needed_repair()) {
+        mesh.repair();
+        if (mesh.stl.stats.degenerate_facets > 0)
+            cout << "degenerate_facets = "  << mesh.stl.stats.degenerate_facets << endl;
+        if (mesh.stl.stats.edges_fixed > 0)
+            cout << "edges_fixed = "        << mesh.stl.stats.edges_fixed       << endl;
+        if (mesh.stl.stats.facets_removed > 0)
+            cout << "facets_removed = "     << mesh.stl.stats.facets_removed    << endl;
+        if (mesh.stl.stats.facets_added > 0)
+            cout << "facets_added = "       << mesh.stl.stats.facets_added      << endl;
+        if (mesh.stl.stats.facets_reversed > 0)
+            cout << "facets_reversed = "    << mesh.stl.stats.facets_reversed   << endl;
+        if (mesh.stl.stats.backwards_edges > 0)
+            cout << "backwards_edges = "    << mesh.stl.stats.backwards_edges   << endl;
+    }
+    cout << "number_of_parts =  " << mesh.stl.stats.number_of_parts << endl;
+    cout << "volume = "           << mesh.volume()                  << endl;
+}
+
 
 ModelVolume::ModelVolume(ModelObject* object, const TriangleMesh &mesh)
 :   mesh(mesh), modifier(false), object(object)
@@ -711,6 +782,21 @@ ModelVolume::ModelVolume(ModelObject* object, const ModelVolume &other)
     modifier(other.modifier), object(object)
 {
     this->material_id(other.material_id());
+}
+
+ModelVolume& ModelVolume::operator= (ModelVolume other)
+{
+    this->swap(other);
+    return *this;
+}
+
+void
+ModelVolume::swap(ModelVolume &other)
+{
+    std::swap(this->name,       other.name);
+    std::swap(this->mesh,       other.mesh);
+    std::swap(this->config,     other.config);
+    std::swap(this->modifier,   other.modifier);
 }
 
 t_model_material_id
@@ -759,6 +845,20 @@ ModelInstance::ModelInstance(ModelObject *object)
 ModelInstance::ModelInstance(ModelObject *object, const ModelInstance &other)
 :   rotation(other.rotation), scaling_factor(other.scaling_factor), offset(other.offset), object(object)
 {}
+
+ModelInstance& ModelInstance::operator= (ModelInstance other)
+{
+    this->swap(other);
+    return *this;
+}
+
+void
+ModelInstance::swap(ModelInstance &other)
+{
+    std::swap(this->rotation,       other.rotation);
+    std::swap(this->scaling_factor, other.scaling_factor);
+    std::swap(this->offset,         other.offset);
+}
 
 void
 ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const

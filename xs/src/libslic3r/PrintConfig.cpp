@@ -756,6 +756,15 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
 
+    def = this->add("raft_offset", coFloat);
+    def->label = "Raft offset";
+    def->category = "Support material";
+    def->tooltip = "Horizontal margin between object base layer and raft contour.";
+    def->sidetext = "mm";
+    def->cli = "raft-offset=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(4);
+
     def = this->add("resolution", coFloat);
     def->label = "Resolution";
     def->tooltip = "Minimum detail resolution, used to simplify the input file for speeding up the slicing job and reducing memory usage. High-resolution models often carry more detail than printers can render. Set to zero to disable any simplification and use full resolution from input.";
@@ -1026,7 +1035,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("start_gcode", coString);
     def->label = "Start G-code";
-    def->tooltip = "This start procedure is inserted at the beginning, after bed has reached the target temperature and extruder just started heating, and before extruder has finished heating. If Slic3r detects M104 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions. Note that you can use placeholder variables for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want.";
+    def->tooltip = "This start procedure is inserted at the beginning, after bed has reached the target temperature and extruder just started heating, and before extruder has finished heating. If Slic3r detects M104, M109, M140 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions. Note that you can use placeholder variables for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want.";
     def->cli = "start-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -1343,5 +1352,68 @@ PrintConfigBase::min_object_distance() const
         ? extruder_clearance_radius
         : duplicate_distance;
 }
+
+CLIConfigDef::CLIConfigDef()
+{
+    t_optiondef_map &Options = this->options;
+    
+    ConfigOptionDef* def;
+    
+    def = this->add("export_obj", coBool);
+    def->label = "Export SVG";
+    def->tooltip = "Export the model as OBJ.";
+    def->cli = "export-obj";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("export_pov", coBool);
+    def->label = "Export POV";
+    def->tooltip = "Export the model as POV-Ray definition.";
+    def->cli = "export-pov";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("export_svg", coBool);
+    def->label = "Export SVG";
+    def->tooltip = "Slice the model and export slices as SVG.";
+    def->cli = "export-svg";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("info", coBool);
+    def->label = "Output Model Info";
+    def->tooltip = "Write information about the model to the console.";
+    def->cli = "info";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("load", coStrings);
+    def->label = "Load config file";
+    def->tooltip = "Load configuration from the specified file. It can be used more than once to load options from multiple files.";
+    def->cli = "load";
+    def->default_value = new ConfigOptionStrings();
+    
+    def = this->add("output", coString);
+    def->label = "Output File";
+    def->tooltip = "The file where the output will be written (if not specified, it will be based on the input file).";
+    def->cli = "output";
+    def->default_value = new ConfigOptionString("");
+    
+    def = this->add("rotate", coFloat);
+    def->label = "Rotate";
+    def->tooltip = "Rotation angle around the Z axis in degrees (0-360, default: 0).";
+    def->cli = "rotate";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("save", coString);
+    def->label = "Save config file";
+    def->tooltip = "Save configuration to the specified file.";
+    def->cli = "save";
+    def->default_value = new ConfigOptionString();
+    
+    def = this->add("scale", coFloat);
+    def->label = "Scale";
+    def->tooltip = "Scaling factor (default: 1).";
+    def->cli = "scale";
+    def->default_value = new ConfigOptionFloat(1);
+}
+
+CLIConfigDef cli_config_def;
 
 }

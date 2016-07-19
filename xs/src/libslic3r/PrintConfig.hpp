@@ -467,6 +467,71 @@ class FullPrintConfig
     };
 };
 
+class SVGExportConfig
+    : public virtual StaticPrintConfig
+{
+    public:
+    ConfigOptionFloatOrPercent      first_layer_height;
+    ConfigOptionFloat               layer_height;
+    ConfigOptionInt                 raft_layers;
+    ConfigOptionFloat               raft_offset;
+    
+    SVGExportConfig() : StaticPrintConfig() {
+        this->set_defaults();
+    };
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(first_layer_height);
+        OPT_PTR(layer_height);
+        OPT_PTR(raft_layers);
+        OPT_PTR(raft_offset);
+        
+        return NULL;
+    };
+};
+
+class CLIConfigDef : public ConfigDef
+{
+    public:
+    CLIConfigDef();
+};
+
+extern CLIConfigDef cli_config_def;
+
+class CLIConfig
+    : public virtual ConfigBase, public StaticConfig
+{
+    public:
+    ConfigOptionBool                export_obj;
+    ConfigOptionBool                export_pov;
+    ConfigOptionBool                export_svg;
+    ConfigOptionBool                info;
+    ConfigOptionStrings             load;
+    ConfigOptionString              output;
+    ConfigOptionFloat               rotate;
+    ConfigOptionString              save;
+    ConfigOptionFloat               scale;
+    
+    CLIConfig() : ConfigBase(), StaticConfig() {
+        this->def = &cli_config_def;
+        this->set_defaults();
+    };
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(export_obj);
+        OPT_PTR(export_pov);
+        OPT_PTR(export_svg);
+        OPT_PTR(info);
+        OPT_PTR(load);
+        OPT_PTR(output);
+        OPT_PTR(rotate);
+        OPT_PTR(save);
+        OPT_PTR(scale);
+        
+        return NULL;
+    };
+};
+
 }
 
 #endif

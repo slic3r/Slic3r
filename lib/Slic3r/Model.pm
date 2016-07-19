@@ -67,11 +67,6 @@ sub set_material {
     return $material;
 }
 
-sub print_info {
-    my $self = shift;
-    $_->print_info for @{$self->objects};
-}
-
 sub looks_like_multipart_object {
     my ($self) = @_;
     
@@ -179,38 +174,6 @@ sub add_instance {
             if defined $args{offset};
         
         return $new_instance;
-    }
-}
-
-sub mesh_stats {
-    my $self = shift;
-    
-    # TODO: sum values from all volumes
-    return $self->volumes->[0]->mesh->stats;
-}
-
-sub print_info {
-    my $self = shift;
-    
-    printf "Info about %s:\n", basename($self->input_file);
-    printf "  size:              x=%.3f y=%.3f z=%.3f\n", @{$self->raw_mesh->bounding_box->size};
-    if (my $stats = $self->mesh_stats) {
-        printf "  number of facets:  %d\n", $stats->{number_of_facets};
-        printf "  number of shells:  %d\n", $stats->{number_of_parts};
-        printf "  volume:            %.3f\n", $stats->{volume};
-        if ($self->needed_repair) {
-            printf "  needed repair:     yes\n";
-            printf "  degenerate facets: %d\n", $stats->{degenerate_facets};
-            printf "  edges fixed:       %d\n", $stats->{edges_fixed};
-            printf "  facets removed:    %d\n", $stats->{facets_removed};
-            printf "  facets added:      %d\n", $stats->{facets_added};
-            printf "  facets reversed:   %d\n", $stats->{facets_reversed};
-            printf "  backwards edges:   %d\n", $stats->{backwards_edges};
-        } else {
-            printf "  needed repair:     no\n";
-        }
-    } else {
-        printf "  number of facets:  %d\n", scalar(map @{$_->facets}, grep !$_->modifier, @{$self->volumes});
     }
 }
 
