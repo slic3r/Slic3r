@@ -13,7 +13,9 @@
     void ReadSTLFile(std::string input_file);
     void write_ascii(std::string output_file);
     void write_binary(std::string output_file);
+    void check_topology();
     void repair();
+    float volume();
     void WriteOBJFile(std::string output_file);
     void scale(float factor);
     void scale_xyz(Pointf3* versor)

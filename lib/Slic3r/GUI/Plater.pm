@@ -1640,8 +1640,10 @@ sub selection_changed {
             $self->{object_info_size}->SetLabel(sprintf("%.2f x %.2f x %.2f", @{$model_object->instance_bounding_box(0)->size}));
             $self->{object_info_materials}->SetLabel($model_object->materials_count);
             
-            if (my $stats = $model_object->raw_mesh->stats) {
-                $self->{object_info_volume}->SetLabel(sprintf('%.2f', $stats->{volume} * ($model_instance->scaling_factor**3)));
+            my $raw_mesh = $model_object->raw_mesh;
+            $raw_mesh->repair;  # this calculates number_of_parts
+            if (my $stats = $raw_mesh->stats) {
+                $self->{object_info_volume}->SetLabel(sprintf('%.2f', $raw_mesh->volume * ($model_instance->scaling_factor**3)));
                 $self->{object_info_facets}->SetLabel(sprintf('%d (%d shells)', $model_object->facets_count, $stats->{number_of_parts}));
                 if (my $errors = sum(@$stats{qw(degenerate_facets edges_fixed facets_removed facets_added facets_reversed backwards_edges)})) {
                     $self->{object_info_manifold}->SetLabel(sprintf("Auto-repaired (%d errors)", $errors));
