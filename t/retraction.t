@@ -228,7 +228,7 @@ use Slic3r::Test qw(_eq);
     ok !!@lifted_at, 'lift takes place when above/below == 0';
     
     $config->set('retract_lift_above', [5, 6]);
-    $config->set('retract_lift_below', [15, 16]);
+    $config->set('retract_lift_below', [15, 13]);
     $test->();
     ok !!@lifted_at, 'lift takes place when above/below != 0';
     ok !(any { $_ < $config->get_at('retract_lift_above', 0) } @lifted_at),
