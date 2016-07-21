@@ -69,9 +69,16 @@ $ ./slic3r.pl
 
 ### Can I help?
 
-Sure! Drop me a line at aar@cpan.org. You can also 
-find me in #reprap and in #slic3r on FreeNode with the nickname _Sound_.
-Before sending patches and pull requests contact me to discuss your proposed
+Sure! You can do the following to find things that are available to help with:
+* [Pull Request Milestone](https://github.com/alexrj/Slic3r/milestone/31)
+    * Please comment in the related github issue that you are working on it so that other people know. 
+* Items in the [TODO](https://github.com/alexrj/Slic3r/wiki/TODO) wiki page.
+    * Please comment in the related github issue that you are working on it so that other people know. 
+* Drop me a line at aar@cpan.org.
+* You can also find me (rarely) in #reprap and in #slic3r on [FreeNode](http://webchat.freenode.net) with the nickname _Sound_. Another contributor, _LoH_, is also in both channels. 
+* Add an [issue](https://github.com/alexrj/Slic3r/issues) to the github tracker if it isn't already present.
+
+Before sending patches and pull requests contact me (preferably through opening a github issue or commenting on an existing, related, issue) to discuss your proposed
 changes: this way we'll ensure nobody wastes their time and no conflicts arise
 in development.
 
