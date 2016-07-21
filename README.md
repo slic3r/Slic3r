@@ -53,19 +53,13 @@ Other major features are:
 
 ### How to install?
 
-You can just download a precompiled package from [slic3r.org](http://slic3r.org/);
+You can download a precompiled package from [slic3r.org](http://slic3r.org/);
 it will run without the need for any dependency.
 
-If you want to compile the source yourself just do the following (checkout
-[slic3r.org](http://slic3r.org/download) for more details):
-
-```
-$ git clone https://github.com/alexrj/Slic3r.git
-$ cd Slic3r
-$ perl Build.PL --sudo
-$ perl Build.PL --sudo --gui
-$ ./slic3r.pl
-```
+If you want to compile the source yourself follow the instructions on one of these wiki pages: 
+* [Linux](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
+* [Windows](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-Windows)
+* [Mac OSX](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-OS-X)
 
 ### Can I help?
 
