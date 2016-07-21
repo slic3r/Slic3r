@@ -67,6 +67,18 @@ $ perl Build.PL --sudo --gui
 $ ./slic3r.pl
 ```
 
+### Ubuntu installation instructions
+If you wish to compile the source from within Ubuntu, here are some instructions tested on Ubuntu 16.04:
+
+```
+$ sudo apt install build-essential libgtk2.0-dev libwxgtk2.8-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev
+$ git clone https://github.com/alexrj/Slic3r.git
+$ cd Slic3r
+$ perl Build.PL --sudo
+$ perl Build.PL --sudo --gui
+$ ./slic3r.pl
+```
+
 ### Can I help?
 
 Sure! Drop me a line at aar@cpan.org. You can also 
