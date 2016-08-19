@@ -460,7 +460,7 @@ sub build {
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
         seam_position external_perimeters_first
-        fill_density fill_pattern external_fill_pattern
+        fill_density min_bridge_density fill_pattern external_fill_pattern
         infill_every_layers infill_only_where_needed
         solid_infill_every_layers fill_angle solid_infill_below_area 
         only_retract_when_crossing_perimeters infill_first
@@ -545,6 +545,7 @@ sub build {
         }
         {
             my $optgroup = $page->new_optgroup('Advanced');
+            $optgroup->append_single_option_line('min_bridge_density');
             $optgroup->append_single_option_line('solid_infill_every_layers');
             $optgroup->append_single_option_line('fill_angle');
             $optgroup->append_single_option_line('solid_infill_below_area');

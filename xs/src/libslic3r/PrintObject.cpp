@@ -364,8 +364,8 @@ PrintObject::bridge_over_infill()
     FOREACH_REGION(this->_print, region) {
         size_t region_id = region - this->_print->regions.begin();
         
-        // skip bridging in case there are no voids
-        if ((*region)->config.fill_density.value == 100) continue;
+        // skip bridging in case there are no voids or is above some configurable value
+        if ((*region)->config.fill_density.value >= (*region)->config.min_bridge_density.value) continue;
         
         // get bridge flow
         Flow bridge_flow = (*region)->flow(
