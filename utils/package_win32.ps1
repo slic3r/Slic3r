@@ -28,6 +28,7 @@ pp `
 -a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\freeglut.dll;freeglut.dll"  `
+-a "${STRAWBERRY_PATH}\c\bin\libglut-0_.dll;libglut-0_.dll"  `
 -a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxbase30u_gcc_custom.dll;wxbase30u_gcc_custom.dll"  `
 -a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_adv_gcc_custom.dll;wxmsw30u_adv_gcc_custom.dll"  `
 -a "${STRAWBERRY_PATH}\perl\site\lib\Alien\wxWidgets\msw_3_0_2_uni_gcc_3_4\lib\wxmsw30u_gl_gcc_custom.dll;wxmsw30u_gl_gcc_custom.dll"  `
