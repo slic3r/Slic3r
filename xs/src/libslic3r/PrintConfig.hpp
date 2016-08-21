@@ -163,7 +163,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         if (initialize)
             this->set_defaults();
     }
-
+    
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(dont_support_bridges);
         OPT_PTR(extrusion_width);
@@ -234,7 +234,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         if (initialize)
             this->set_defaults();
     }
-
+    
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(bottom_solid_layers);
         OPT_PTR(bridge_flow_ratio);
@@ -409,7 +409,7 @@ class PrintConfig : public GCodeConfig
         if (initialize)
             this->set_defaults();
     }
-
+    
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(avoid_crossing_perimeters);
         OPT_PTR(bed_shape);
@@ -482,7 +482,7 @@ class HostConfig : public virtual StaticPrintConfig
         if (initialize)
             this->set_defaults();
     }
-
+    
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(octoprint_host);
         OPT_PTR(octoprint_apikey);
