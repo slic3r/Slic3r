@@ -127,9 +127,10 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 support_material_threshold;
     ConfigOptionFloat               xy_size_compensation;
     
-    PrintObjectConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
+    PrintObjectConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(dont_support_bridges);
@@ -196,9 +197,10 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 top_solid_layers;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
     
-    PrintRegionConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
+    PrintRegionConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(bottom_solid_layers);
@@ -267,9 +269,10 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_relative_e_distances;
     ConfigOptionBool                use_volumetric_e;
     
-    GCodeConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
+    GCodeConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(before_layer_gcode);
@@ -367,9 +370,10 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
     
-    PrintConfig() : GCodeConfig() {
-        this->set_defaults();
-    };
+    PrintConfig(bool initialize = true) : GCodeConfig(false) {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(avoid_crossing_perimeters);
@@ -439,9 +443,10 @@ class HostConfig : public virtual StaticPrintConfig
     ConfigOptionString              serial_port;
     ConfigOptionInt                 serial_speed;
     
-    HostConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
+    HostConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(octoprint_host);
@@ -457,6 +462,16 @@ class FullPrintConfig
     : public PrintObjectConfig, public PrintRegionConfig, public PrintConfig, public HostConfig
 {
     public:
+    FullPrintConfig(bool initialize = true) :
+        PrintObjectConfig(false),
+        PrintRegionConfig(false), 
+        PrintConfig(false), 
+        HostConfig(false)
+    {
+        if (initialize)
+            this->set_defaults();
+    }
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         ConfigOption* opt;
         if ((opt = PrintObjectConfig::optptr(opt_key, create)) != NULL) return opt;
