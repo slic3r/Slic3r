@@ -5,6 +5,7 @@
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -632,6 +633,8 @@ class StaticConfig : public virtual ConfigBase
     //virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) = 0;
     void set_defaults();
 };
+
+class UnknownOptionException : public std::exception {};
 
 }
 

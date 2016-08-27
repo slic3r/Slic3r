@@ -125,7 +125,7 @@ ConfigBase::serialize(const t_config_option_key &opt_key) const {
 bool
 ConfigBase::set_deserialize(const t_config_option_key &opt_key, std::string str, bool append) {
     const ConfigOptionDef* optdef = this->def->get(opt_key);
-    if (optdef == NULL) throw std::runtime_error("Calling set_deserialize() on unknown option");
+    if (optdef == NULL) throw UnknownOptionException();
     if (!optdef->shortcut.empty()) {
         for (std::vector<t_config_option_key>::const_iterator it = optdef->shortcut.begin(); it != optdef->shortcut.end(); ++it) {
             if (!this->set_deserialize(*it, str)) return false;
@@ -203,11 +203,10 @@ ConfigBase::load(const std::string &file)
     pt::ptree tree;
     pt::read_ini(file, tree);
     BOOST_FOREACH(const pt::ptree::value_type &v, tree) {
-        try { 
+        try {
             this->set_deserialize(v.first.c_str(), v.second.get_value<std::string>().c_str());
-        } catch (std::runtime_error& e) { 
-            // skip over errors in the config file but print a warning.
-            std::cerr << "Caught exception at option " << v.first.c_str() << ".\n"; 
+        } catch (UnknownOptionException &e) {
+            // ignore
         }
     }
 }
