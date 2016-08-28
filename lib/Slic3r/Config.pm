@@ -89,8 +89,15 @@ sub load {
     
     # legacy syntax of load()
     my $config = $class->new;
-    $config->_load($file);
+    $config->_load(Slic3r::encode_path($file));
     return $config;
+}
+
+sub save {
+    my $self = shift;
+    my ($file) = @_;
+    
+    return $self->_save(Slic3r::encode_path($file));
 }
 
 sub load_ini_hash {

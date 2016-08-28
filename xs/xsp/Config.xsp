@@ -39,7 +39,7 @@
     %name{setenv} void setenv_();
     double min_object_distance();
     %name{_load} void load(std::string file);
-    void save(std::string file);
+    %name{_save} void save(std::string file);
 };
 
 %name{Slic3r::Config::Static} class StaticPrintConfig {
@@ -87,7 +87,7 @@
     %name{setenv} void setenv_();
     double min_object_distance();
     %name{_load} void load(std::string file);
-    void save(std::string file);
+    %name{_save} void save(std::string file);
 };
 
 %package{Slic3r::Config};
