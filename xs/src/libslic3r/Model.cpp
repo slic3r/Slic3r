@@ -734,6 +734,7 @@ void
 ModelObject::print_info() const
 {
     using namespace std;
+    cout << fixed;
     cout << "[" << boost::filesystem::path(this->input_file).filename().string() << "]" << endl;
     
     TriangleMesh mesh = this->raw_mesh();
