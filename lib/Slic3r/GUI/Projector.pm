@@ -2,7 +2,7 @@ package Slic3r::GUI::Projector;
 use strict;
 use warnings;
 use Wx qw(:dialog :id :misc :sizer :systemsettings :bitmap :button :icon wxTheApp);
-use Wx::Event qw(EVT_BUTTON EVT_TEXT_ENTER EVT_SPINCTRL EVT_SLIDER);
+use Wx::Event qw(EVT_BUTTON EVT_CLOSE EVT_TEXT_ENTER EVT_SPINCTRL EVT_SLIDER);
 use base qw(Wx::Dialog Class::Accessor);
 use utf8;
 
@@ -375,12 +375,16 @@ sub new {
     }
     
     {
+        # should be wxCLOSE but it crashes on Linux, maybe it's a Wx bug
         my $buttons = $self->CreateStdDialogButtonSizer(wxOK);
-        EVT_BUTTON($self, wxID_CLOSE, sub {
+        EVT_BUTTON($self, wxID_OK, sub {
             $self->_close;
         });
         $sizer->Add($buttons, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     }
+    EVT_CLOSE($self, sub {
+        $self->_close;
+    });
     
     $self->SetSizer($sizer);
     $sizer->SetSizeHints($self);
