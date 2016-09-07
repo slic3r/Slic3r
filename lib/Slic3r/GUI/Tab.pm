@@ -769,13 +769,16 @@ sub _update {
             . "\nShall I switch to rectilinear fill pattern?",
             'Infill', wxICON_WARNING | wxYES | wxNO);
         
-        my $new_conf = Slic3r::Config->new;
         if ($dialog->ShowModal() == wxID_YES) {
-            $new_conf->set("fill_pattern", 1);
+            my $new_conf = Slic3r::Config->new;
+            $new_conf->set("fill_pattern", 'rectilinear');
+            $new_conf->set("fill_density", 100);
+            $self->load_config($new_conf);
         } else {
+            my $new_conf = Slic3r::Config->new;
             $new_conf->set("fill_density", 40);
+            $self->load_config($new_conf);
         }
-        $self->load_config($new_conf);
     }
     
     my $have_perimeters = $config->perimeters > 0;
