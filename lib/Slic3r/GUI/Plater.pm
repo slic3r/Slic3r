@@ -231,7 +231,7 @@ sub new {
         $self->export_gcode;
     });
     EVT_BUTTON($self, $self->{btn_reslice}, sub {
-        $self->start_background_process;
+        $self->reslice;
     });
     EVT_BUTTON($self, $self->{btn_print}, sub {
         $self->{print_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
@@ -634,6 +634,13 @@ sub bed_centerf {
     return Slic3r::Pointf->new(unscale($bed_center->x), unscale($bed_center->y)); #)
 }
 
+sub reslice {
+    # explicitly cancel a previous thread and start a new one.
+    my ($self) = @_;
+
+    $self->stop_background_process;
+    $self->start_background_process;
+}
 sub remove {
     my $self = shift;
     my ($obj_idx) = @_;
@@ -1610,12 +1617,13 @@ sub object_list_changed {
     my $have_objects = @{$self->{objects}} ? 1 : 0;
     my $method = $have_objects ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
-        for grep $self->{"btn_$_"}, qw(reset arrange export_gcode export_stl print send_gcode);
+        for grep $self->{"btn_$_"}, qw(reslice reset arrange export_gcode export_stl print send_gcode);
     
     if ($self->{export_gcode_output_file} || $self->{send_gcode_file}) {
         $self->{btn_export_gcode}->Disable;
         $self->{btn_print}->Disable;
         $self->{btn_send_gcode}->Disable;
+        $self->{btn_reslice}->Disable;
     }
     
     if ($self->{htoolbar}) {
