@@ -87,6 +87,13 @@ sub new {
     return $self;
 }
 
+sub reslice_now {
+    my ($self) = @_;
+
+    if ($self->{plater}) {
+        $self->{plater}->reslice;
+    }
+}
 sub _init_tabpanel {
     my ($self) = @_;
     
@@ -204,6 +211,9 @@ sub _init_menubar {
         $fileMenu->AppendSeparator();
         $self->_append_menu_item($fileMenu, "Slice to SV&G…\tCtrl+G", 'Slice file to SVG', sub {
             $self->quick_slice(save_as => 1, export_svg => 1);
+        }, undef, 'shape_handles.png');
+        $self->_append_menu_item($fileMenu, "(&Re)Slice Now\tCtrl+S", 'Start new slicing process', sub {
+            $self->reslice_now;
         }, undef, 'shape_handles.png');
         $fileMenu->AppendSeparator();
         $self->_append_menu_item($fileMenu, "Repair STL file…", 'Automatically repair an STL file', sub {
