@@ -191,6 +191,8 @@ sub new {
     
     # right pane buttons
     $self->{btn_export_gcode} = Wx::Button->new($self, -1, "Export G-code…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
+    $self->{btn_reslice} = Wx::Button->new($self, -1, "Slice now…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
+    $self->{btn_print} = Wx::Button->new($self, -1, "Print…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     $self->{btn_print} = Wx::Button->new($self, -1, "Print…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     $self->{btn_send_gcode} = Wx::Button->new($self, -1, "Send to printer", wxDefaultPosition, [-1, 30], wxBU_LEFT);
     $self->{btn_export_stl} = Wx::Button->new($self, -1, "Export STL…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
@@ -227,6 +229,9 @@ sub new {
     $self->object_list_changed;
     EVT_BUTTON($self, $self->{btn_export_gcode}, sub {
         $self->export_gcode;
+    });
+    EVT_BUTTON($self, $self->{btn_reslice}, sub {
+        $self->start_background_process;
     });
     EVT_BUTTON($self, $self->{btn_print}, sub {
         $self->{print_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
@@ -391,6 +396,7 @@ sub new {
         $buttons_sizer->Add($self->{btn_print}, 0, wxALIGN_RIGHT, 0);
         $buttons_sizer->Add($self->{btn_send_gcode}, 0, wxALIGN_RIGHT, 0);
         $buttons_sizer->Add($self->{btn_export_gcode}, 0, wxALIGN_RIGHT, 0);
+        $buttons_sizer->Add($self->{btn_reslice}, 0, wxALIGN_RIGHT, 0);
         
         my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
         $right_sizer->Add($presets, 0, wxEXPAND | wxTOP, 10) if defined $presets;
