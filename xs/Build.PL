@@ -28,7 +28,11 @@ if (defined $ENV{BOOST_DIR}) {
     } else {
         push @boost_include, $ENV{BOOST_DIR};
     }
-    push @boost_libs, $ENV{BOOST_DIR};
+    if (-d "$ENV{BOOST_DIR}".'\\stage\lib'){
+        push @boost_libs, $ENV{BOOST_DIR} . '\\stage\lib';
+    } else{
+        push @boost_libs, $ENV{BOOST_DIR};
+    }
 } else {
     push @boost_include, grep { -d $_ }
         qw(/opt/local/include /usr/local/include /opt/include),
