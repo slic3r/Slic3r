@@ -75,12 +75,6 @@ MultiPoint::length() const
     return len;
 }
 
-bool
-MultiPoint::is_valid() const
-{
-    return this->points.size() >= 2;
-}
-
 int
 MultiPoint::find_point(const Point &point) const
 {
