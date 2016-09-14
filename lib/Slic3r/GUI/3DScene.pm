@@ -1376,6 +1376,8 @@ sub _expolygons_to_verts {
     gluDeleteTess($tess);
 }
 
+# Fill in the $qverts and $tverts with quads and triangles
+# for the extrusion $entity.
 sub _extrusionentity_to_verts {
     my ($self, $entity, $top_z, $copy, $qverts, $tverts) = @_;
     
@@ -1407,8 +1409,18 @@ sub _extrusionentity_to_verts {
             push @$heights, map $path->height, 0..$#$path_lines;
         }
     }
+    
+    # Calling the C++ implementation Slic3r::_3DScene::_extrusionentity_to_verts_do()
+    # This adds new vertices to the $qverts and $tverts.
     Slic3r::GUI::_3DScene::_extrusionentity_to_verts_do($lines, $widths, $heights,
-        $closed, $top_z, $copy, $qverts, $tverts);
+        $closed, 
+        # Top height of the extrusion.
+        $top_z, 
+        # $copy is not used here.
+        $copy,
+        # GLVertexArray object: C++ class maintaining an std::vector<float> for coords and normals.
+        $qverts,
+        $tverts);
 }
 
 sub object_idx {
