@@ -217,8 +217,8 @@ sub validate {
         if $self->get_value('first_layer_height') <= 0;
     
     # --filament-diameter
-    die "Invalid value for --filament-diameter\n"
-        if grep $_ < 1, @{$self->filament_diameter};
+    # die "Invalid value for --filament-diameter\n"
+    #     if grep $_ < 0.1, @{$self->filament_diameter};
     
     # --nozzle-diameter
     die "Invalid value for --nozzle-diameter\n"
