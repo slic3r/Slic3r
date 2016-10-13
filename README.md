@@ -2,8 +2,9 @@ _Q: Oh cool, a new RepRap slicer?_
 
 A: Yes.
 
-Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.png?branch=master)](https://travis-ci.org/alexrj/Slic3r)
+Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.png?branch=master)](https://travis-ci.org/alexrj/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/8iqmeat6cj158vo6?svg=true)](https://ci.appveyor.com/project/lordofhyphens/slic3r)
 ======
+Prebuilt Win32 builds https://bintray.com/lordofhyphens/Slic3r/slic3r_dev/view
 
 Slic3r takes 3D models (STL, OBJ, AMF) and converts them into G-code instructions for 
 3D printers. It's compatible with any modern printer based on the RepRap toolchain,
@@ -52,25 +53,26 @@ Other major features are:
 
 ### How to install?
 
-You can just download a precompiled package from [slic3r.org](http://slic3r.org/);
+You can download a precompiled package from [slic3r.org](http://slic3r.org/);
 it will run without the need for any dependency.
 
-If you want to compile the source yourself just do the following (checkout
-[slic3r.org](http://slic3r.org/download) for more details):
-
-```
-$ git clone https://github.com/alexrj/Slic3r.git
-$ cd Slic3r
-$ perl Build.PL --sudo
-$ perl Build.PL --sudo --gui
-$ ./slic3r.pl
-```
+If you want to compile the source yourself follow the instructions on one of these wiki pages: 
+* [Linux](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
+* [Windows](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-Windows)
+* [Mac OSX](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-OS-X)
 
 ### Can I help?
 
-Sure! Drop me a line at aar@cpan.org. You can also 
-find me in #reprap and in #slic3r on FreeNode with the nickname _Sound_.
-Before sending patches and pull requests contact me to discuss your proposed
+Sure! You can do the following to find things that are available to help with:
+* [Pull Request Milestone](https://github.com/alexrj/Slic3r/milestone/31)
+    * Please comment in the related github issue that you are working on it so that other people know. 
+* Items in the [TODO](https://github.com/alexrj/Slic3r/wiki/TODO) wiki page.
+    * Please comment in the related github issue that you are working on it so that other people know. 
+* Drop me a line at aar@cpan.org.
+* You can also find me (rarely) in #reprap and in #slic3r on [FreeNode](http://webchat.freenode.net) with the nickname _Sound_. Another contributor, _LoH_, is also in both channels. 
+* Add an [issue](https://github.com/alexrj/Slic3r/issues) to the github tracker if it isn't already present.
+
+Before sending patches and pull requests contact me (preferably through opening a github issue or commenting on an existing, related, issue) to discuss your proposed
 changes: this way we'll ensure nobody wastes their time and no conflicts arise
 in development.
 
@@ -132,7 +134,7 @@ The author of the Silk icon set is Mark James.
                             (default: 100,100)
         --z-offset          Additional height in mm to add to vertical coordinates
                             (+/-, default: 0)
-        --gcode-flavor      The type of G-code to generate (reprap/teacup/makerware/sailfish/mach3/machinekit/no-extrusion,
+        --gcode-flavor      The type of G-code to generate (reprap/teacup/makerware/sailfish/mach3/machinekit/smoothie/no-extrusion,
                             default: reprap)
         --use-relative-e-distances Enable this to get relative E values (default: no)
         --use-firmware-retraction  Enable firmware-controlled retraction using G10/G11 (default: no)

@@ -469,6 +469,10 @@ sub make_perimeters {
         for my $i (0 .. ($self->layer_count - 2)) {
             my $layerm                  = $self->get_layer($i)->get_region($region_id);
             my $upper_layerm            = $self->get_layer($i+1)->get_region($region_id);
+            my $upper_layerm_polygons   = [ map $_->p, @{$upper_layerm->slices} ];
+            # Filter upper layer polygons in intersection_ppl by their bounding boxes?
+            # my $upper_layerm_poly_bboxes= [ map $_->bounding_box, @{$upper_layerm_polygons} ];
+            my $total_loop_length       = sum(map $_->length, @$upper_layerm_polygons) // 0;
             
             my $perimeter_spacing       = $layerm->flow(FLOW_ROLE_PERIMETER)->scaled_spacing;
             my $ext_perimeter_flow      = $layerm->flow(FLOW_ROLE_EXTERNAL_PERIMETER);
@@ -491,12 +495,11 @@ sub make_perimeters {
                     
                     # check whether a portion of the upper slices falls inside the critical area
                     my $intersection = intersection_ppl(
-                        [ map $_->p, @{$upper_layerm->slices} ],
+                        $upper_layerm_polygons,
                         $critical_area,
                     );
                     
                     # only add an additional loop if at least 30% of the slice loop would benefit from it
-                    my $total_loop_length = sum(map $_->length, map $_->p, @{$upper_layerm->slices}) // 0;
                     my $total_intersection_length = sum(map $_->length, @$intersection) // 0;
                     last unless $total_intersection_length > $total_loop_length*0.3;
                     
@@ -799,7 +802,9 @@ sub detect_surfaces_type {
 # fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
 sub clip_fill_surfaces {
     my $self = shift;
-    return unless $self->config->infill_only_where_needed;
+    # sanity check for incompatible options: 
+    #   spiral_vase and infill_only_where_needed
+    return unless $self->config->infill_only_where_needed and not $self->config->spiral_vase;
     
     # We only want infill under ceilings; this is almost like an
     # internal support material.

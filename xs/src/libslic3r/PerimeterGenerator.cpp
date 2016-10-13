@@ -492,16 +492,20 @@ PerimeterGenerator::_variable_width(const ThickPolylines &polylines, ExtrusionRo
             const double w = fmax(line.a_width, line.b_width);
             
             if (path.polyline.points.empty()) {
-                path.polyline.append(line.a);
-                path.polyline.append(line.b);
-                
                 flow.width = unscale(w);
                 #ifdef SLIC3R_DEBUG
                 printf("  filling %f gap\n", flow.width);
                 #endif
+                
+                // make sure we don't include too thin segments which
+                // may cause even slightly negative mm3_per_mm because of floating point math
                 path.mm3_per_mm  = flow.mm3_per_mm();
+                if (path.mm3_per_mm < EPSILON) continue;
+                
                 path.width       = flow.width;
                 path.height      = flow.height;
+                path.polyline.append(line.a);
+                path.polyline.append(line.b);
             } else {
                 thickness_delta = fabs(scale_(flow.width) - w);
                 if (thickness_delta <= tolerance) {

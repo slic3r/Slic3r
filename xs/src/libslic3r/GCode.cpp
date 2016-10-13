@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <math.h>
 
+#define FLAVOR_IS(val) this->config.gcode_flavor == val
+
 namespace Slic3r {
 
 AvoidCrossingPerimeters::AvoidCrossingPerimeters()
@@ -630,17 +632,12 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     
     // use G1 because we rely on paths being straight (G0 may make round paths)
     Lines lines = travel.lines();
-    double path_length = 0;
-    for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
-	    const double line_length = line->length() * SCALING_FACTOR;
-	    path_length += line_length;
-
-	    gcode += this->writer.travel_to_xy(this->point_to_gcode(line->b), comment);
-    }
-
+    for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line)
+        gcode += this->writer.travel_to_xy(this->point_to_gcode(line->b), comment);
+    
     if (this->config.cooling)
-        this->elapsed_time += path_length / this->config.get_abs_value("travel_speed");
-
+        this->elapsed_time += travel.length() / this->config.get_abs_value("travel_speed");
+    
     return gcode;
 }
 
@@ -700,8 +697,8 @@ GCode::retract(bool toolchange)
         methods even if we performed wipe, since this will ensure the entire retraction
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? this->writer.retract_for_toolchange() : this->writer.retract();
-    
-    gcode += this->writer.reset_e();
+    if (!(FLAVOR_IS(gcfSmoothie) && this->config.use_firmware_retraction))
+        gcode += this->writer.reset_e();
     if (this->writer.extruder()->retract_length() > 0 || this->config.use_firmware_retraction)
         gcode += this->writer.lift();
     

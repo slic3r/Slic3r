@@ -9,7 +9,7 @@
 namespace Slic3r {
 
 enum GCodeFlavor {
-    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion,
+    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion, gcfSmoothie,
 };
 
 enum InfillPattern {
@@ -34,6 +34,7 @@ template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_v
     keys_map["mach3"]           = gcfMach3;
     keys_map["machinekit"]      = gcfMachinekit;
     keys_map["no-extrusion"]    = gcfNoExtrusion;
+    keys_map["smoothie"]    = gcfSmoothie;
     return keys_map;
 }
 
@@ -129,9 +130,10 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 support_material_threshold;
     ConfigOptionFloat               xy_size_compensation;
     
-    PrintObjectConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
+    PrintObjectConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(adaptive_slicing);
@@ -201,9 +203,10 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 top_solid_layers;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
     
-    PrintRegionConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
+    PrintRegionConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(bottom_solid_layers);
@@ -272,9 +275,10 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_relative_e_distances;
     ConfigOptionBool                use_volumetric_e;
     
-    GCodeConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
+    GCodeConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(before_layer_gcode);
@@ -374,9 +378,10 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
     
-    PrintConfig() : GCodeConfig() {
-        this->set_defaults();
-    };
+    PrintConfig(bool initialize = true) : GCodeConfig(false) {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(avoid_crossing_perimeters);
@@ -448,9 +453,10 @@ class HostConfig : public virtual StaticPrintConfig
     ConfigOptionString              serial_port;
     ConfigOptionInt                 serial_speed;
     
-    HostConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
+    HostConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(octoprint_host);
@@ -466,12 +472,87 @@ class FullPrintConfig
     : public PrintObjectConfig, public PrintRegionConfig, public PrintConfig, public HostConfig
 {
     public:
+    FullPrintConfig(bool initialize = true) :
+        PrintObjectConfig(false),
+        PrintRegionConfig(false), 
+        PrintConfig(false), 
+        HostConfig(false)
+    {
+        if (initialize)
+            this->set_defaults();
+    }
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         ConfigOption* opt;
         if ((opt = PrintObjectConfig::optptr(opt_key, create)) != NULL) return opt;
         if ((opt = PrintRegionConfig::optptr(opt_key, create)) != NULL) return opt;
         if ((opt = PrintConfig::optptr(opt_key, create)) != NULL) return opt;
         if ((opt = HostConfig::optptr(opt_key, create)) != NULL) return opt;
+        return NULL;
+    };
+};
+
+class SVGExportConfig
+    : public virtual StaticPrintConfig
+{
+    public:
+    ConfigOptionFloatOrPercent      first_layer_height;
+    ConfigOptionFloat               layer_height;
+    ConfigOptionInt                 raft_layers;
+    ConfigOptionFloat               raft_offset;
+    
+    SVGExportConfig() : StaticPrintConfig() {
+        this->set_defaults();
+    };
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(first_layer_height);
+        OPT_PTR(layer_height);
+        OPT_PTR(raft_layers);
+        OPT_PTR(raft_offset);
+        
+        return NULL;
+    };
+};
+
+class CLIConfigDef : public ConfigDef
+{
+    public:
+    CLIConfigDef();
+};
+
+extern CLIConfigDef cli_config_def;
+
+class CLIConfig
+    : public virtual ConfigBase, public StaticConfig
+{
+    public:
+    ConfigOptionBool                export_obj;
+    ConfigOptionBool                export_pov;
+    ConfigOptionBool                export_svg;
+    ConfigOptionBool                info;
+    ConfigOptionStrings             load;
+    ConfigOptionString              output;
+    ConfigOptionFloat               rotate;
+    ConfigOptionString              save;
+    ConfigOptionFloat               scale;
+    
+    CLIConfig() : ConfigBase(), StaticConfig() {
+        this->def = &cli_config_def;
+        this->set_defaults();
+    };
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(export_obj);
+        OPT_PTR(export_pov);
+        OPT_PTR(export_svg);
+        OPT_PTR(info);
+        OPT_PTR(load);
+        OPT_PTR(output);
+        OPT_PTR(rotate);
+        OPT_PTR(save);
+        OPT_PTR(scale);
+        
         return NULL;
     };
 };

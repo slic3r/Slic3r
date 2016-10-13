@@ -1,0 +1,40 @@
+Install:
+mingw
+boost
+cmake
+git
+
+Assuming boost is in c:\program files\boost\boost_1_61_0 and mingw is in c:\mingw
+
+start cmd.exe
+> cd c:\program files\boost\boost_1_61_0
+> set PATH=c:\mingw\bin
+> bootstrap gcc
+> .\b2 --build-dir=c:\boost-mingw toolset=gcc link=static runtime-link=static variant=release --with-system --with-thread
+leave cmd window open
+
+start git bash
+> cd /c
+> git clone http://github.com/alexrj/slic3r
+> cd slic3r
+> git checkout cppsvg
+close git bash when done
+
+make sure c:\mingw\bin is part of the Path system variable, add it otherwise
+
+start cmake gui
+source code: c:\slic3r\src
+build directory: c:\slic3r\build
+click configure, select "mingw makefiles" from list, select "default native compilers", click finish
+click generate
+close cmake gui
+
+alternatively, do it from command line:
+cmake ..\src -G "MinGW Makefiles" -DBOOST_ROOT="c:\program files\boost\boost_1_61_0"
+(in case cmake can't find the libs, -DBoost_DEBUG=1 and -DBoost_COMPILER=-mgw46 are useful)
+
+go back to cmd window
+> cd c:\slic3r\build
+> mingw32-make.exe
+might be mingw64 on 64-bit setup, I'm not sure
+The resulting slic3r.exe is the target executable, it has no dependencies except windows system libraries (kernel32 and msvcrt)

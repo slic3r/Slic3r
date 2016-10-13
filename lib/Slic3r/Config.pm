@@ -87,8 +87,17 @@ sub load {
     my $class = shift;
     my ($file) = @_;
     
-    my $ini = __PACKAGE__->read_ini($file);
-    return $class->load_ini_hash($ini->{_});
+    # legacy syntax of load()
+    my $config = $class->new;
+    $config->_load(Slic3r::encode_path($file));
+    return $config;
+}
+
+sub save {
+    my $self = shift;
+    my ($file) = @_;
+    
+    return $self->_save(Slic3r::encode_path($file));
 }
 
 sub load_ini_hash {
@@ -186,13 +195,6 @@ sub as_ini {
     return $ini;
 }
 
-sub save {
-    my $self = shift;
-    my ($file) = @_;
-    
-    __PACKAGE__->write_ini($file, $self->as_ini);
-}
-
 # this method is idempotent by design and only applies to ::DynamicConfig or ::Full
 # objects because it performs cross checks
 sub validate {
@@ -235,8 +237,8 @@ sub validate {
     die "Invalid value for --gcode-flavor\n"
         if !first { $_ eq $self->gcode_flavor } @{$Options->{gcode_flavor}{values}};
     
-    die "--use-firmware-retraction is only supported by Marlin firmware\n"
-        if $self->use_firmware_retraction && $self->gcode_flavor ne 'reprap' && $self->gcode_flavor ne 'machinekit';
+    die "--use-firmware-retraction is only supported by Marlin and Machinekit firmware\n"
+        if $self->use_firmware_retraction && $self->gcode_flavor ne 'smoothie' && $self->gcode_flavor ne 'reprap' && $self->gcode_flavor ne 'machinekit';
     
     die "--use-firmware-retraction is not compatible with --wipe\n"
         if $self->use_firmware_retraction && first {$_} @{$self->wipe};

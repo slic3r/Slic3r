@@ -51,6 +51,7 @@ class Model
     bool has_objects_with_no_instances() const;
     bool add_default_instances();
     BoundingBoxf3 bounding_box() const;
+    void repair();
     void center_instances_around_point(const Pointf &point);
     void align_instances_to_origin();
     void translate(coordf_t x, coordf_t y, coordf_t z);
@@ -61,6 +62,7 @@ class Model
     void duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
     void duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
     void duplicate_objects_grid(size_t x, size_t y, coordf_t dist);
+    void print_info() const;
 };
 
 class ModelMaterial
@@ -117,6 +119,7 @@ class ModelObject
     BoundingBoxf3 bounding_box();
     void invalidate_bounding_box();
 
+    void repair();
     TriangleMesh mesh() const;
     TriangleMesh raw_mesh() const;
     BoundingBoxf3 raw_bounding_box() const;
@@ -124,6 +127,7 @@ class ModelObject
     void center_around_origin();
     void translate(const Vectorf3 &vector);
     void translate(coordf_t x, coordf_t y, coordf_t z);
+    void scale(float factor);
     void scale(const Pointf3 &versor);
     void rotate(float angle, const Axis &axis);
     void mirror(const Axis &axis);
@@ -133,6 +137,7 @@ class ModelObject
     void cut(coordf_t z, Model* model) const;
     void split(ModelObjectPtrs* new_objects);
     void update_bounding_box();   // this is a private method but we expose it until we need to expose it via XS
+    void print_info() const;
     
     private:
     Model* model;
@@ -167,6 +172,8 @@ class ModelVolume
     
     ModelVolume(ModelObject *object, const TriangleMesh &mesh);
     ModelVolume(ModelObject *object, const ModelVolume &other);
+    ModelVolume& operator= (ModelVolume other);
+    void swap(ModelVolume &other);
 };
 
 class ModelInstance
@@ -186,6 +193,8 @@ class ModelInstance
     
     ModelInstance(ModelObject *object);
     ModelInstance(ModelObject *object, const ModelInstance &other);
+    ModelInstance& operator= (ModelInstance other);
+    void swap(ModelInstance &other);
 };
 
 }

@@ -38,6 +38,8 @@ src/libslic3r/GCodeWriter.cpp
 src/libslic3r/GCodeWriter.hpp
 src/libslic3r/Geometry.cpp
 src/libslic3r/Geometry.hpp
+src/libslic3r/IO.cpp
+src/libslic3r/IO.hpp
 src/libslic3r/Layer.cpp
 src/libslic3r/Layer.hpp
 src/libslic3r/LayerRegion.cpp
