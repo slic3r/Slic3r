@@ -1412,6 +1412,12 @@ CLIConfigDef::CLIConfigDef()
     def->tooltip = "Scaling factor (default: 1).";
     def->cli = "scale";
     def->default_value = new ConfigOptionFloat(1);
+    
+    def = this->add("scale_to_fit", coPoint3);
+    def->label = "Scale to Fit";
+    def->tooltip = "Scale to fit the given volume.";
+    def->cli = "scale-to-fit";
+    def->default_value = new ConfigOptionPoint3(Pointf3(0,0,0));
 }
 
 CLIConfigDef cli_config_def;

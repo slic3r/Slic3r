@@ -2,6 +2,7 @@
 #define slic3r_Model_hpp_
 
 #include "libslic3r.h"
+#include "BoundingBox.hpp"
 #include "PrintConfig.hpp"
 #include "Layer.hpp"
 #include "Point.hpp"
@@ -129,6 +130,7 @@ class ModelObject
     void translate(coordf_t x, coordf_t y, coordf_t z);
     void scale(float factor);
     void scale(const Pointf3 &versor);
+    void scale_to_fit(const Sizef3 &size);
     void rotate(float angle, const Axis &axis);
     void mirror(const Axis &axis);
     size_t materials_count() const;

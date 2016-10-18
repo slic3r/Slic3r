@@ -526,6 +526,7 @@ class CLIConfig
     ConfigOptionFloat               rotate;
     ConfigOptionString              save;
     ConfigOptionFloat               scale;
+    ConfigOptionPoint3              scale_to_fit;
     
     CLIConfig() : ConfigBase(), StaticConfig() {
         this->def = &cli_config_def;
@@ -542,6 +543,7 @@ class CLIConfig
         OPT_PTR(rotate);
         OPT_PTR(save);
         OPT_PTR(scale);
+        OPT_PTR(scale_to_fit);
         
         return NULL;
     };

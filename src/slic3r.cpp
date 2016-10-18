@@ -63,6 +63,9 @@ main(const int argc, const char **argv)
         
         // apply command line transform options
         for (ModelObjectPtrs::iterator o = model.objects.begin(); o != model.objects.end(); ++o) {
+            if (cli_config.scale_to_fit.is_positive_volume())
+                (*o)->scale_to_fit(cli_config.scale_to_fit.value);
+            
             (*o)->scale(cli_config.scale.value);
             (*o)->rotate(cli_config.rotate.value, Z);
         }
