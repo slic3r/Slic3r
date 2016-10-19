@@ -490,6 +490,9 @@ class SVGExportConfig
     ConfigOptionFloat               layer_height;
     ConfigOptionInt                 raft_layers;
     ConfigOptionFloat               raft_offset;
+    ConfigOptionBool                support_material;
+    ConfigOptionFloatOrPercent      support_material_extrusion_width;
+    ConfigOptionFloat               support_material_spacing;
     
     SVGExportConfig() : StaticPrintConfig() {
         this->set_defaults();
@@ -500,6 +503,9 @@ class SVGExportConfig
         OPT_PTR(layer_height);
         OPT_PTR(raft_layers);
         OPT_PTR(raft_offset);
+        OPT_PTR(support_material);
+        OPT_PTR(support_material_extrusion_width);
+        OPT_PTR(support_material_spacing);
         
         return NULL;
     };

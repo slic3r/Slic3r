@@ -17,6 +17,7 @@ SVGExport::writeSVG(const std::string &outputfile)
         bb.max.y += this->config.raft_offset.value;
     }
     this->mesh.translate(-bb.min.x, -bb.min.y, -bb.min.z);  // align to origin
+    bb.translate(-bb.min.x, -bb.min.y, -bb.min.z);          // align to origin
     const Sizef3 size = bb.size();
     
     // if we are generating a raft, first_layer_height will not affect mesh slicing
@@ -53,17 +54,47 @@ SVGExport::writeSVG(const std::string &outputfile)
             layer_z[i] += first_lh + lh * (this->config.raft_layers-1);
     }
     
+    // generate support material
+    std::vector<Points> support_material(layers.size());
+    if (this->config.support_material) {
+        // generate a grid of points according to the configured spacing,
+        // covering the entire object bounding box
+        Points support_material_points;
+        for (coordf_t x = bb.min.x; x <= bb.max.x; x += this->config.support_material_spacing) {
+            for (coordf_t y = bb.min.y; y <= bb.max.y; y += this->config.support_material_spacing) {
+                support_material_points.push_back(Point(scale_(x), scale_(y)));
+            }
+        }
+        
+        // check overhangs, starting from the upper layer, and detect which points apply 
+        // to each layer
+        ExPolygons overhangs;
+        for (int i = layer_z.size()-1; i >= 0; --i) {
+            overhangs = diff_ex(union_(overhangs, layers[i+1]), layers[i]);
+            for (Points::const_iterator it = support_material_points.begin(); it != support_material_points.end(); ++it) {
+                for (ExPolygons::const_iterator e = overhangs.begin(); e != overhangs.end(); ++e) {
+                    if (e->contains(*it)) {
+                        support_material[i].push_back(*it);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    double support_material_radius = this->config.support_material_extrusion_width.get_abs_value(this->config.layer_height)/2;
+    
     FILE* f = fopen(outputfile.c_str(), "w");
     fprintf(f,
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.0//EN\" \"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n"
-        "<svg width=\"%f\" height=\"%f\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns:slic3r=\"http://slic3r.org/namespaces/slic3r\">\n"
+        "<svg width=\"%f\" height=\"%f\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns:slic3r=\"http://slic3r.org/namespaces/slic3r\" viewport-fill=\"black\">\n"
         "<!-- Generated using Slic3r %s http://slic3r.org/ -->\n"
         , size.x, size.y, SLIC3R_VERSION);
     
     for (size_t i = 0; i < layer_z.size(); ++i) {
         fprintf(f, "\t<g id=\"layer%zu\" slic3r:z=\"%0.4f\">\n", i, layer_z[i]);
-        for (ExPolygons::const_iterator it = layers[i].begin(); it != layers[i].end(); ++it){
+        for (ExPolygons::const_iterator it = layers[i].begin(); it != layers[i].end(); ++it) {
             std::string pd;
             Polygons pp = *it;
             for (Polygons::const_iterator mp = pp.begin(); mp != pp.end(); ++mp) {
@@ -78,6 +109,11 @@ SVGExport::writeSVG(const std::string &outputfile)
             }
             fprintf(f,"\t\t<path d=\"%s\" style=\"fill: %s; stroke: %s; stroke-width: %s; fill-type: evenodd\" slic3r:area=\"%0.4f\" />\n",
                 pd.c_str(), "white", "black", "0", unscale(unscale(it->area()))
+            );
+        }
+        for (Points::const_iterator it = support_material[i].begin(); it != support_material[i].end(); ++it) {
+            fprintf(f,"\t\t<circle cx=\"%f\" cy=\"%f\" r=\"%f\" stroke-width=\"0\" fill=\"white\" slic3r:type=\"support\" />\n",
+                unscale(it->x), unscale(it->y), support_material_radius
             );
         }
         fprintf(f,"\t</g>\n");
