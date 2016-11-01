@@ -19,6 +19,11 @@ namespace Slic3r {
 typedef std::string t_config_option_key;
 typedef std::vector<std::string> t_config_option_keys;
 
+extern std::string escape_string_cstyle(const std::string &str);
+extern std::string escape_strings_cstyle(const std::vector<std::string> &strs);
+extern bool unescape_string_cstyle(const std::string &str, std::string &out);
+extern bool unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out);
+
 // A generic value of a configuration option.
 class ConfigOption {
     public:
@@ -121,6 +126,7 @@ class ConfigOptionFloats : public ConfigOptionVector<double>
     
     std::vector<std::string> vserialize() const {
         std::vector<std::string> vv;
+        vv.reserve(this->values.size());
         for (std::vector<double>::const_iterator it = this->values.begin(); it != this->values.end(); ++it) {
             std::ostringstream ss;
             ss << *it;
@@ -184,6 +190,7 @@ class ConfigOptionInts : public ConfigOptionVector<int>
     
     std::vector<std::string> vserialize() const {
         std::vector<std::string> vv;
+        vv.reserve(this->values.size());
         for (std::vector<int>::const_iterator it = this->values.begin(); it != this->values.end(); ++it) {
             std::ostringstream ss;
             ss << *it;
@@ -215,29 +222,12 @@ class ConfigOptionString : public ConfigOptionSingle<std::string>
     
     std::string getString() const { return this->value; };
     
-    std::string serialize() const {
-        std::string str = this->value;
-        
-        // s/\R/\\n/g
-        size_t pos = 0;
-        while ((pos = str.find("\n", pos)) != std::string::npos || (pos = str.find("\r", pos)) != std::string::npos) {
-            str.replace(pos, 1, "\\n");
-            pos += 2; // length of "\\n"
-        }
-        
-        return str; 
-    };
-    
-    bool deserialize(std::string str, bool append = false) {
-        // s/\\n/\n/g
-        size_t pos = 0;
-        while ((pos = str.find("\\n", pos)) != std::string::npos) {
-            str.replace(pos, 2, "\n");
-            pos += 1; // length of "\n"
-        }
-        
-        this->value = str;
-        return true;
+    std::string serialize() const { 
+        return escape_string_cstyle(this->value);
+    }
+
+    bool deserialize(std::string str) {
+        return unescape_string_cstyle(str, this->value);
     };
 };
 
@@ -250,26 +240,15 @@ class ConfigOptionStrings : public ConfigOptionVector<std::string>
     ConfigOptionStrings* clone() const { return new ConfigOptionStrings(this->values); };
     
     std::string serialize() const {
-        std::ostringstream ss;
-        for (std::vector<std::string>::const_iterator it = this->values.begin(); it != this->values.end(); ++it) {
-            if (it - this->values.begin() != 0) ss << ";";
-            ss << *it;
-        }
-        return ss.str();
+        return escape_strings_cstyle(this->values);
     };
     
     std::vector<std::string> vserialize() const {
         return this->values;
     };
     
-    bool deserialize(std::string str, bool append = false) {
-        if (!append) this->values.clear();
-        std::istringstream is(str);
-        std::string item_str;
-        while (std::getline(is, item_str, ';')) {
-            this->values.push_back(item_str);
-        }
-        return true;
+    bool deserialize(std::string str) {
+        return unescape_strings_cstyle(str, this->values);
     };
 };
 
@@ -689,9 +668,9 @@ class ConfigBase
     bool equals(ConfigBase &other);
     t_config_option_keys diff(ConfigBase &other);
     std::string serialize(const t_config_option_key &opt_key) const;
-    bool set_deserialize(const t_config_option_key &opt_key, std::string str, bool append = false);
-    double get_abs_value(const t_config_option_key &opt_key);
-    double get_abs_value(const t_config_option_key &opt_key, double ratio_over);
+    bool set_deserialize(const t_config_option_key &opt_key, std::string str);
+    double get_abs_value(const t_config_option_key &opt_key) const;
+    double get_abs_value(const t_config_option_key &opt_key, double ratio_over) const;
     void setenv_();
     void load(const std::string &file);
     void save(const std::string &file) const;
