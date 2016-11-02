@@ -46,6 +46,7 @@ use constant GROUND_Z       => -0.02;
 use constant DEFAULT_COLOR  => [1,1,0];
 use constant SELECTED_COLOR => [0,1,0,1];
 use constant HOVER_COLOR    => [0.4,0.9,0,1];
+use constant PI             => 3.1415927;
 
 # make OpenGL::Array thread-safe
 {
@@ -833,9 +834,44 @@ sub Render {
         glDisable(GL_BLEND);
     }
     
+    if (defined $self->_drag_start_pos || defined $self->_drag_start_xy) {
+        $self->draw_center_of_rotation($self->_camera_target->x, $self->_camera_target->y, $self->_camera_target->z);
+    }
+
     glFlush();
  
     $self->SwapBuffers();
+}
+
+sub draw_axes {
+    my ($self, $x, $y, $z, $length, $width, $allways_visible) = @_;
+    if ($allways_visible) {
+        glDisable(GL_DEPTH_TEST);
+    } else {
+        glEnable(GL_DEPTH_TEST);
+    }
+    glLineWidth($width);
+    glBegin(GL_LINES);
+    # draw line for x axis
+    glColor3f(1, 0, 0);
+    glVertex3f($x, $y, $z);
+    glVertex3f($x + $length, $y, $z);
+    # draw line for y axis
+    glColor3f(0, 1, 0);
+    glVertex3f($x, $y, $z);
+    glVertex3f($x, $y + $length, $z);
+    # draw line for Z axis
+    glColor3f(0, 0, 1);
+    glVertex3f($x, $y, $z);
+    glVertex3f($x, $y, $z + $length);
+    glEnd();
+}
+
+sub draw_center_of_rotation {
+    my ($self, $x, $y, $z) = @_;
+    
+    $self->draw_axes($x, $y, $z, 10, 1, 1);
+    $self->draw_axes($x, $y, $z, 10, 4, 0);
 }
 
 sub draw_volumes {
