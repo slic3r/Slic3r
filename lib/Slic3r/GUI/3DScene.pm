@@ -148,7 +148,7 @@ sub mouse_event {
     } elsif ($e->LeftDClick) {
         $self->on_double_click->()
             if $self->on_double_click;
-    } elsif ($e->LeftDown || $e->RightDown) {
+    } elsif (($e->LeftDown || $e->RightDown) && not $e->ShiftDown) {
         # If user pressed left or right button we first check whether this happened
         # on a volume or not.
         my $volume_idx = $self->_hover_volume_idx // -1;
