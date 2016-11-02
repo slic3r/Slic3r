@@ -218,7 +218,16 @@ sub mouse_event {
         $self->_dragged(1);
         $self->Refresh;
     } elsif ($e->Dragging) {
-        if ($e->LeftIsDown) {
+        if ($e->AltDown) {
+            # Move the camera center on the Z axis based on mouse Y axis movement
+            if (defined $self->_drag_start_pos) {
+                my $orig = $self->_drag_start_pos;
+                $self->_camera_target->translate(0, 0, $pos->y - $orig->y);
+                $self->on_viewport_changed->() if $self->on_viewport_changed;
+                $self->Refresh;
+            }
+            $self->_drag_start_pos($pos);
+        } elsif ($e->LeftIsDown) {
             # if dragging over blank area with left button, rotate
             if (defined $self->_drag_start_pos) {
                 my $orig = $self->_drag_start_pos;
