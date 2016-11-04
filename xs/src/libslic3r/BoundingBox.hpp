@@ -21,7 +21,8 @@ class BoundingBoxBase
     bool defined;
     
     BoundingBoxBase() : defined(false) {};
-    BoundingBoxBase(const PointClass &pmin, const PointClass &pmax) : min(pmin), max(pmax) {}
+    BoundingBoxBase(const PointClass &pmin, const PointClass &pmax) : 
+        min(pmin), max(pmax), defined(pmin.x < pmax.x && pmin.y < pmax.y) {}
     BoundingBoxBase(const std::vector<PointClass> &points);
     void merge(const PointClass &point);
     void merge(const std::vector<PointClass> &points);
@@ -39,7 +40,9 @@ class BoundingBox3Base : public BoundingBoxBase<PointClass>
 {
     public:
     BoundingBox3Base() : BoundingBoxBase<PointClass>() {};
-    BoundingBox3Base(const PointClass &pmin, const PointClass &pmax) : BoundingBoxBase<PointClass>(pmin, pmax) {}
+    BoundingBox3Base(const PointClass &pmin, const PointClass &pmax) : 
+        BoundingBoxBase<PointClass>(pmin, pmax) 
+        { if (pmin.z >= pmax.z) defined = false; }
     BoundingBox3Base(const std::vector<PointClass> &points);
     void merge(const PointClass &point);
     void merge(const std::vector<PointClass> &points);
@@ -98,8 +101,6 @@ template<typename VT>
 inline bool operator!=(const BoundingBoxBase<VT> &bb1, const BoundingBoxBase<VT> &bb2)
 {
     return !(bb1 == bb2);
-}
-
 }
 
 #endif
