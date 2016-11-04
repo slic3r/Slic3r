@@ -87,22 +87,22 @@ public:
         return this->role == erPerimeter
             || this->role == erExternalPerimeter
             || this->role == erOverhangPerimeter;
-    }
+    };
     bool is_infill() const {
         return this->role == erBridgeInfill
             || this->role == erInternalInfill
             || this->role == erSolidInfill
             || this->role == erTopSolidInfill;
-    }
+    };
     bool is_solid_infill() const {
         return this->role == erBridgeInfill
             || this->role == erSolidInfill
             || this->role == erTopSolidInfill;
-    }
+    };
     bool is_bridge() const {
         return this->role == erBridgeInfill
             || this->role == erOverhangPerimeter;
-    }
+    };
     // Produce a list of 2D polygons covered by the extruded path.
     Polygons grow() const;
     // Minimum volumetric velocity of this extrusion entity. Used by the constant nozzle pressure algorithm.
@@ -148,13 +148,13 @@ class ExtrusionLoop : public ExtrusionEntity
         return this->paths.front().role == erPerimeter
             || this->paths.front().role == erExternalPerimeter
             || this->paths.front().role == erOverhangPerimeter;
-    }
+    };
     bool is_infill() const {
         return this->paths.front().role == erBridgeInfill
             || this->paths.front().role == erInternalInfill
             || this->paths.front().role == erSolidInfill
             || this->paths.front().role == erTopSolidInfill;
-    }
+    };
     bool is_solid_infill() const {
         return this->paths.front().role == erBridgeInfill
             || this->paths.front().role == erSolidInfill

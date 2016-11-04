@@ -329,9 +329,26 @@ linint(double value, double oldmin, double oldmax, double newmin, double newmax)
     return (value - oldmin) * (newmax - newmin) / (oldmax - oldmin) + newmin;
 }
 
-Pointfs
-arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb)
+class ArrangeItem {
+    public:
+    Pointf pos;
+    size_t index_x, index_y;
+    coordf_t dist;
+};
+class ArrangeItemIndex {
+    public:
+    coordf_t index;
+    ArrangeItem item;
+    ArrangeItemIndex(coordf_t _index, ArrangeItem _item) : index(_index), item(_item) {};
+};
+
+bool
+arrange(size_t total_parts, const Pointf &part_size, coordf_t dist, const BoundingBoxf* bb, Pointfs &positions)
 {
+    positions.clear();
+
+    Pointf part = part_size;
+
     // use actual part size (the largest) plus separation distance (half on each side) in spacing algorithm
     part.x += dist;
     part.y += dist;
@@ -349,7 +366,7 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb)
     size_t cellw = floor((area.x + dist) / part.x);
     size_t cellh = floor((area.y + dist) / part.y);
     if (total_parts > (cellw * cellh))
-        CONFESS("%zu parts won't fit in your print area!\n", total_parts);
+        return false;
     
     // total space used by cells
     Pointf cells(cellw * part.x, cellh * part.y);
@@ -404,7 +421,7 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb)
                 }
                 cellsorder.insert(cellsorder.begin() + low, ArrangeItemIndex(index, c));
             }
-            ENDSORT: true;
+            ENDSORT: ;
         }
     }
     
@@ -430,7 +447,6 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb)
         }
     }
     // now we actually place objects into cells, positioned such that the left and bottom borders are at 0
-    Pointfs positions;
     for (size_t i = 1; i <= total_parts; ++i) {
         ArrangeItemIndex c = cellsorder.front();
         cellsorder.erase(cellsorder.begin());
@@ -447,296 +463,8 @@ arrange(size_t total_parts, Pointf part, coordf_t dist, const BoundingBoxf* bb)
         }
     }
     
-    return positions;
+    return true;
 }
-
-#ifdef SLIC3R_DEBUG
-// The following code for the visualization of the boost Voronoi diagram is based on:
-//
-// Boost.Polygon library voronoi_visualizer.cpp file
-//          Copyright Andrii Sydorchuk 2010-2012.
-// Distributed under the Boost Software License, Version 1.0.
-//    (See accompanying file LICENSE_1_0.txt or copy at
-//          http://www.boost.org/LICENSE_1_0.txt)
-namespace Voronoi { namespace Internal {
-
-    typedef double coordinate_type;
-    typedef boost::polygon::point_data<coordinate_type> point_type;
-    typedef boost::polygon::segment_data<coordinate_type> segment_type;
-    typedef boost::polygon::rectangle_data<coordinate_type> rect_type;
-//    typedef voronoi_builder<int> VB;
-    typedef boost::polygon::voronoi_diagram<coordinate_type> VD;
-    typedef VD::cell_type cell_type;
-    typedef VD::cell_type::source_index_type source_index_type;
-    typedef VD::cell_type::source_category_type source_category_type;
-    typedef VD::edge_type edge_type;
-    typedef VD::cell_container_type cell_container_type;
-    typedef VD::cell_container_type vertex_container_type;
-    typedef VD::edge_container_type edge_container_type;
-    typedef VD::const_cell_iterator const_cell_iterator;
-    typedef VD::const_vertex_iterator const_vertex_iterator;
-    typedef VD::const_edge_iterator const_edge_iterator;
-
-    static const std::size_t EXTERNAL_COLOR = 1;
-
-    inline void color_exterior(const VD::edge_type* edge) 
-    {
-        if (edge->color() == EXTERNAL_COLOR)
-            return;
-        edge->color(EXTERNAL_COLOR);
-        edge->twin()->color(EXTERNAL_COLOR);
-        const VD::vertex_type* v = edge->vertex1();
-        if (v == NULL || !edge->is_primary())
-            return;
-        v->color(EXTERNAL_COLOR);
-        const VD::edge_type* e = v->incident_edge();
-        do {
-            color_exterior(e);
-            e = e->rot_next();
-        } while (e != v->incident_edge());
-    }
-
-    inline point_type retrieve_point(const std::vector<segment_type> &segments, const cell_type& cell) 
-    {
-        assert(cell.source_category() == SOURCE_CATEGORY_SEGMENT_START_POINT || cell.source_category() == SOURCE_CATEGORY_SEGMENT_END_POINT);
-        return (cell.source_category() == SOURCE_CATEGORY_SEGMENT_START_POINT) ? low(segments[cell.source_index()]) : high(segments[cell.source_index()]);
-    }
-
-    inline void clip_infinite_edge(const std::vector<segment_type> &segments, const edge_type& edge, coordinate_type bbox_max_size, std::vector<point_type>* clipped_edge) 
-    {
-        const cell_type& cell1 = *edge.cell();
-        const cell_type& cell2 = *edge.twin()->cell();
-        point_type origin, direction;
-        // Infinite edges could not be created by two segment sites.
-        if (cell1.contains_point() && cell2.contains_point()) {
-            point_type p1 = retrieve_point(segments, cell1);
-            point_type p2 = retrieve_point(segments, cell2);
-            origin.x((p1.x() + p2.x()) * 0.5);
-            origin.y((p1.y() + p2.y()) * 0.5);
-            direction.x(p1.y() - p2.y());
-            direction.y(p2.x() - p1.x());
-        } else {
-            origin = cell1.contains_segment() ? retrieve_point(segments, cell2) : retrieve_point(segments, cell1);
-            segment_type segment = cell1.contains_segment() ? segments[cell1.source_index()] : segments[cell2.source_index()];
-            coordinate_type dx = high(segment).x() - low(segment).x();
-            coordinate_type dy = high(segment).y() - low(segment).y();
-            if ((low(segment) == origin) ^ cell1.contains_point()) {
-                direction.x(dy);
-                direction.y(-dx);
-            } else {
-                direction.x(-dy);
-                direction.y(dx);
-            }
-        }
-        coordinate_type koef = bbox_max_size / (std::max)(fabs(direction.x()), fabs(direction.y()));
-        if (edge.vertex0() == NULL) {
-            clipped_edge->push_back(point_type(
-                origin.x() - direction.x() * koef,
-                origin.y() - direction.y() * koef));
-        } else {
-            clipped_edge->push_back(
-                point_type(edge.vertex0()->x(), edge.vertex0()->y()));
-        }
-        if (edge.vertex1() == NULL) {
-            clipped_edge->push_back(point_type(
-                origin.x() + direction.x() * koef,
-                origin.y() + direction.y() * koef));
-        } else {
-            clipped_edge->push_back(
-                point_type(edge.vertex1()->x(), edge.vertex1()->y()));
-        }
-    }
-
-    inline void sample_curved_edge(const std::vector<segment_type> &segments, const edge_type& edge, std::vector<point_type> &sampled_edge, coordinate_type max_dist) 
-    {
-        point_type point = edge.cell()->contains_point() ?
-            retrieve_point(segments, *edge.cell()) :
-            retrieve_point(segments, *edge.twin()->cell());
-        segment_type segment = edge.cell()->contains_point() ?
-            segments[edge.twin()->cell()->source_index()] :
-            segments[edge.cell()->source_index()];
-        ::boost::polygon::voronoi_visual_utils<coordinate_type>::discretize(point, segment, max_dist, &sampled_edge);
-    }
-
-} /* namespace Internal */ } // namespace Voronoi
-
-static inline void dump_voronoi_to_svg(const Lines &lines, /* const */ voronoi_diagram<double> &vd, const ThickPolylines *polylines, const char *path)
-{
-    const double        scale                       = 0.2;
-    const std::string   inputSegmentPointColor      = "lightseagreen";
-    const coord_t       inputSegmentPointRadius     = coord_t(0.09 * scale / SCALING_FACTOR); 
-    const std::string   inputSegmentColor           = "lightseagreen";
-    const coord_t       inputSegmentLineWidth       = coord_t(0.03 * scale / SCALING_FACTOR);
-
-    const std::string   voronoiPointColor           = "black";
-    const coord_t       voronoiPointRadius          = coord_t(0.06 * scale / SCALING_FACTOR);
-    const std::string   voronoiLineColorPrimary     = "black";
-    const std::string   voronoiLineColorSecondary   = "green";
-    const std::string   voronoiArcColor             = "red";
-    const coord_t       voronoiLineWidth            = coord_t(0.02 * scale / SCALING_FACTOR);
-
-    const bool          internalEdgesOnly           = false;
-    const bool          primaryEdgesOnly            = false;
-
-    BoundingBox bbox = BoundingBox(lines);
-    bbox.min.x -= coord_t(1. / SCALING_FACTOR);
-    bbox.min.y -= coord_t(1. / SCALING_FACTOR);
-    bbox.max.x += coord_t(1. / SCALING_FACTOR);
-    bbox.max.y += coord_t(1. / SCALING_FACTOR);
-
-    ::Slic3r::SVG svg(path, bbox);
-
-    if (polylines != NULL)
-        svg.draw(*polylines, "lime", "lime", voronoiLineWidth);
-
-//    bbox.scale(1.2);
-    // For clipping of half-lines to some reasonable value.
-    // The line will then be clipped by the SVG viewer anyway.
-    const double bbox_dim_max = double(bbox.max.x - bbox.min.x) + double(bbox.max.y - bbox.min.y);
-    // For the discretization of the Voronoi parabolic segments.
-    const double discretization_step = 0.0005 * bbox_dim_max;
-
-    // Make a copy of the input segments with the double type.
-    std::vector<Voronoi::Internal::segment_type> segments;
-    for (Lines::const_iterator it = lines.begin(); it != lines.end(); ++ it)
-        segments.push_back(Voronoi::Internal::segment_type(
-            Voronoi::Internal::point_type(double(it->a.x), double(it->a.y)), 
-            Voronoi::Internal::point_type(double(it->b.x), double(it->b.y))));
-    
-    // Color exterior edges.
-    for (voronoi_diagram<double>::const_edge_iterator it = vd.edges().begin(); it != vd.edges().end(); ++it)
-        if (!it->is_finite())
-            Voronoi::Internal::color_exterior(&(*it));
-
-    // Draw the end points of the input polygon.
-    for (Lines::const_iterator it = lines.begin(); it != lines.end(); ++it) {
-        svg.draw(it->a, inputSegmentPointColor, inputSegmentPointRadius);
-        svg.draw(it->b, inputSegmentPointColor, inputSegmentPointRadius);
-    }
-    // Draw the input polygon.
-    for (Lines::const_iterator it = lines.begin(); it != lines.end(); ++it)
-        svg.draw(Line(Point(coord_t(it->a.x), coord_t(it->a.y)), Point(coord_t(it->b.x), coord_t(it->b.y))), inputSegmentColor, inputSegmentLineWidth);
-
-#if 1
-    // Draw voronoi vertices.
-    for (voronoi_diagram<double>::const_vertex_iterator it = vd.vertices().begin(); it != vd.vertices().end(); ++it)
-        if (! internalEdgesOnly || it->color() != Voronoi::Internal::EXTERNAL_COLOR)
-            svg.draw(Point(coord_t(it->x()), coord_t(it->y())), voronoiPointColor, voronoiPointRadius);
-
-    for (voronoi_diagram<double>::const_edge_iterator it = vd.edges().begin(); it != vd.edges().end(); ++it) {
-        if (primaryEdgesOnly && !it->is_primary())
-            continue;
-        if (internalEdgesOnly && (it->color() == Voronoi::Internal::EXTERNAL_COLOR))
-            continue;
-        std::vector<Voronoi::Internal::point_type> samples;
-        std::string color = voronoiLineColorPrimary;
-        if (!it->is_finite()) {
-            Voronoi::Internal::clip_infinite_edge(segments, *it, bbox_dim_max, &samples);
-            if (! it->is_primary())
-                color = voronoiLineColorSecondary;
-        } else {
-            // Store both points of the segment into samples. sample_curved_edge will split the initial line
-            // until the discretization_step is reached.
-            samples.push_back(Voronoi::Internal::point_type(it->vertex0()->x(), it->vertex0()->y()));
-            samples.push_back(Voronoi::Internal::point_type(it->vertex1()->x(), it->vertex1()->y()));
-            if (it->is_curved()) {
-                Voronoi::Internal::sample_curved_edge(segments, *it, samples, discretization_step);
-                color = voronoiArcColor;
-            } else if (! it->is_primary())
-                color = voronoiLineColorSecondary;
-        }
-        for (std::size_t i = 0; i + 1 < samples.size(); ++i)
-            svg.draw(Line(Point(coord_t(samples[i].x()), coord_t(samples[i].y())), Point(coord_t(samples[i+1].x()), coord_t(samples[i+1].y()))), color, voronoiLineWidth);
-    }
-#endif
-
-    if (polylines != NULL)
-        svg.draw(*polylines, "blue", voronoiLineWidth);
-
-    svg.Close();
-}
-#endif /* SLIC3R_DEBUG */
-
-// Euclidian distance of two boost::polygon points.
-template<typename T>
-T dist(const boost::polygon::point_data<T> &p1,const boost::polygon::point_data<T> &p2)
-{
-	T dx = p2.x() - p1.x();
-	T dy = p2.y() - p1.y();
-	return sqrt(dx*dx+dy*dy);
-}
-
-// Find a foot point of "px" on a segment "seg".
-template<typename segment_type, typename point_type>
-inline point_type project_point_to_segment(segment_type &seg, point_type &px)
-{
-    typedef typename point_type::coordinate_type T;
-    const point_type &p0 = low(seg);
-    const point_type &p1 = high(seg);
-    const point_type  dir(p1.x()-p0.x(), p1.y()-p0.y());
-    const point_type  dproj(px.x()-p0.x(), px.y()-p0.y());
-    const T           t = (dir.x()*dproj.x() + dir.y()*dproj.y()) / (dir.x()*dir.x() + dir.y()*dir.y());
-    assert(t >= T(-1e-6) && t <= T(1. + 1e-6));
-    return point_type(p0.x() + t*dir.x(), p0.y() + t*dir.y());
-}
-
-template<typename VD, typename SEGMENTS>
-inline const typename VD::point_type retrieve_cell_point(const typename VD::cell_type& cell, const SEGMENTS &segments)
-{
-    assert(cell.source_category() == SOURCE_CATEGORY_SEGMENT_START_POINT || cell.source_category() == SOURCE_CATEGORY_SEGMENT_END_POINT);
-    return (cell.source_category() == SOURCE_CATEGORY_SEGMENT_START_POINT) ? low(segments[cell.source_index()]) : high(segments[cell.source_index()]);
-}
-
-template<typename VD, typename SEGMENTS>
-inline std::pair<typename VD::coord_type, typename VD::coord_type>
-measure_edge_thickness(const VD &vd, const typename VD::edge_type& edge, const SEGMENTS &segments)
-{
-	typedef typename VD::coord_type T;
-    const typename VD::point_type  pa(edge.vertex0()->x(), edge.vertex0()->y());
-    const typename VD::point_type  pb(edge.vertex1()->x(), edge.vertex1()->y());
-    const typename VD::cell_type  &cell1 = *edge.cell();
-    const typename VD::cell_type  &cell2 = *edge.twin()->cell();
-    if (cell1.contains_segment()) {
-        if (cell2.contains_segment()) {
-            // Both cells contain a linear segment, the left / right cells are symmetric.
-            // Project pa, pb to the left segment.
-            const typename VD::segment_type segment1 = segments[cell1.source_index()];
-            const typename VD::point_type p1a = project_point_to_segment(segment1, pa);
-            const typename VD::point_type p1b = project_point_to_segment(segment1, pb);
-            return std::pair<T, T>(T(2.)*dist(pa, p1a), T(2.)*dist(pb, p1b));
-        } else {
-            // 1st cell contains a linear segment, 2nd cell contains a point.
-            // The medial axis between the cells is a parabolic arc.
-            // Project pa, pb to the left segment.
-            const typename  VD::point_type p2 = retrieve_cell_point<VD>(cell2, segments);
-            return std::pair<T, T>(T(2.)*dist(pa, p2), T(2.)*dist(pb, p2));
-        }
-    } else if (cell2.contains_segment()) {
-        // 1st cell contains a point, 2nd cell contains a linear segment.
-        // The medial axis between the cells is a parabolic arc.
-        const typename VD::point_type p1 = retrieve_cell_point<VD>(cell1, segments);
-        return std::pair<T, T>(T(2.)*dist(pa, p1), T(2.)*dist(pb, p1));
-    } else {
-        // Both cells contain a point. The left / right regions are triangular and symmetric.
-        const typename VD::point_type p1 = retrieve_cell_point<VD>(cell1, segments);
-        return std::pair<T, T>(T(2.)*dist(pa, p1), T(2.)*dist(pb, p1));
-    }
-}
-
-// Converts the Line instances of Lines vector to VD::segment_type.
-template<typename VD>
-class Lines2VDSegments
-{
-public:
-    Lines2VDSegments(const Lines &alines) : lines(alines) {}
-    typename VD::segment_type operator[](size_t idx) const {
-        return typename VD::segment_type(
-            typename VD::point_type(typename VD::coord_type(lines[idx].a.x), typename VD::coord_type(lines[idx].a.y)),
-            typename VD::point_type(typename VD::coord_type(lines[idx].b.x), typename VD::coord_type(lines[idx].b.y)));
-    }
-private:
-    const Lines &lines;
-};
 
 void
 MedialAxis::build(ThickPolylines* polylines)
