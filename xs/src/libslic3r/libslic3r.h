@@ -8,6 +8,12 @@
 
 #define SLIC3R_VERSION "1.3.0-dev"
 
+// Name of this fork. This is upstream, so we get to be just plain "Slic3r"
+#define SLIC3R_FORK_NAME "Slic3r"
+
+// Directory to use for debugging output.
+#define SLIC3R_DEBUG_OUT_PATH_PREFIX "out/"
+
 #define EPSILON 1e-4
 #define SCALING_FACTOR 0.000001
 #define RESOLUTION 0.0125
