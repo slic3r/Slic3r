@@ -115,6 +115,9 @@ ConfigOption_to_SV(const ConfigOption &opt, const ConfigOptionDef &def) {
     } else if (def.type == coPoint) {
         const ConfigOptionPoint* optv = dynamic_cast<const ConfigOptionPoint*>(&opt);
         return perl_to_SV_clone_ref(optv->value);
+    } else if (def.type == coPoint3) {
+        const ConfigOptionPoint3* optv = dynamic_cast<const ConfigOptionPoint3*>(&opt);
+        return perl_to_SV_clone_ref(optv->value);
     } else if (def.type == coPoints) {
         const ConfigOptionPoints* optv = dynamic_cast<const ConfigOptionPoints*>(&opt);
         AV* av = newAV();

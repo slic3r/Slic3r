@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 #include "libslic3r.h"
 #include "Point.hpp"
 
@@ -352,12 +354,52 @@ class ConfigOptionPoint : public ConfigOptionSingle<Pointf>
     };
     
     bool deserialize(std::string str, bool append = false) {
-        std::istringstream iss(str);
-        iss >> this->value.x;
-        iss.ignore(std::numeric_limits<std::streamsize>::max(), ',');
-        iss.ignore(std::numeric_limits<std::streamsize>::max(), 'x');
-        iss >> this->value.y;
+        std::vector<std::string> tokens(2);
+        boost::split(tokens, str, boost::is_any_of(",x"));
+        try {
+            this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
+            this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
+        } catch (boost::bad_lexical_cast &e){
+            std::cout << "Exception caught : " << e.what() << std::endl;
+            return false;
+        }
         return true;
+    };
+};
+
+class ConfigOptionPoint3 : public ConfigOptionSingle<Pointf3>
+{
+    public:
+    ConfigOptionPoint3() : ConfigOptionSingle<Pointf3>(Pointf3(0,0,0)) {};
+    ConfigOptionPoint3(Pointf3 _value) : ConfigOptionSingle<Pointf3>(_value) {};
+    ConfigOptionPoint3* clone() const { return new ConfigOptionPoint3(this->value); };
+    
+    std::string serialize() const {
+        std::ostringstream ss;
+        ss << this->value.x;
+        ss << ",";
+        ss << this->value.y;
+        ss << ",";
+        ss << this->value.z;
+        return ss.str();
+    };
+    
+    bool deserialize(std::string str, bool append = false) {
+        std::vector<std::string> tokens(3);
+        boost::split(tokens, str, boost::is_any_of(",x"));
+        try {
+            this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
+            this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
+            this->value.z = boost::lexical_cast<coordf_t>(tokens[2]);
+        } catch (boost::bad_lexical_cast &e){
+            std::cout << "Exception caught : " << e.what() << std::endl;
+            return false;
+        }
+        return true;
+    };
+    
+    bool is_positive_volume () {
+        return this->value.x > 0 && this->value.y > 0 && this->value.z > 0;
     };
 };
 
@@ -526,6 +568,7 @@ enum ConfigOptionType {
     coPercent,
     coFloatOrPercent,
     coPoint,
+    coPoint3,
     coPoints,
     coBool,
     coBools,

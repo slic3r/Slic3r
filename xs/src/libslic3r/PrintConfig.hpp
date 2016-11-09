@@ -500,6 +500,9 @@ class SVGExportConfig
     ConfigOptionFloat               layer_height;
     ConfigOptionInt                 raft_layers;
     ConfigOptionFloat               raft_offset;
+    ConfigOptionBool                support_material;
+    ConfigOptionFloatOrPercent      support_material_extrusion_width;
+    ConfigOptionFloat               support_material_spacing;
     
     SVGExportConfig() : StaticPrintConfig() {
         this->set_defaults();
@@ -510,6 +513,9 @@ class SVGExportConfig
         OPT_PTR(layer_height);
         OPT_PTR(raft_layers);
         OPT_PTR(raft_offset);
+        OPT_PTR(support_material);
+        OPT_PTR(support_material_extrusion_width);
+        OPT_PTR(support_material_spacing);
         
         return NULL;
     };
@@ -536,6 +542,7 @@ class CLIConfig
     ConfigOptionFloat               rotate;
     ConfigOptionString              save;
     ConfigOptionFloat               scale;
+    ConfigOptionPoint3              scale_to_fit;
     
     CLIConfig() : ConfigBase(), StaticConfig() {
         this->def = &cli_config_def;
@@ -552,6 +559,7 @@ class CLIConfig
         OPT_PTR(rotate);
         OPT_PTR(save);
         OPT_PTR(scale);
+        OPT_PTR(scale_to_fit);
         
         return NULL;
     };
