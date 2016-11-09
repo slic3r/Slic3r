@@ -1,4 +1,4 @@
-use Test::More tests => 5;
+use Test::More tests => 8;
 use strict;
 use warnings;
 
@@ -83,5 +83,39 @@ ok  (_eq($adaptive_slicing->cusp_height(scale 2.798, 0.1, 0.1, 0.5), 0.1414), 'r
 
 # slopes cusp height must be smaller than the distance to the slope
 ok  (_eq($adaptive_slicing->cusp_height(scale 2.6289, 0.15, 0.1, 0.5), 0.3), 'reducing cusp_height to z-diff');
+
+subtest 'horizontal planes' => sub {
+    plan tests => 3;
+
+	print "facet_distance: " . $adaptive_slicing->horizontal_facet_distance(scale 1, 1.2) . "\n";
+	ok  (_eq($adaptive_slicing->horizontal_facet_distance(scale 1, 1.2), 1.2), 'max_height limit');
+	ok  (_eq($adaptive_slicing->horizontal_facet_distance(scale 8.5, 4), 1.5), 'normal horizontal facet');
+	ok  (_eq($adaptive_slicing->horizontal_facet_distance(scale 17, 5), 3.0), 'object maximum');
+};
+
+# shrink current layer to fit another layer under horizontal facet
+$config->set('start_gcode', '');  # to avoid dealing with the nozzle lift in start G-code
+$config->set('z_offset', 0);
+
+$config->set('adaptive_slicing', 1);
+$config->set('first_layer_height', 0.42893); # to catch lower slope edge
+$config->set('nozzle_diameter', [0.5]);
+$config->set('min_layer_height', [0.1]);
+$config->set('max_layer_height', [0.5]);
+$config->set('cusp_value', [0.19]);
+# slope height: 7,07107 (2.92893 to 10)
+
+subtest 'shrink to match horizontal facets' => sub {
+	plan tests => 3;
+	$test->();
+};
+	
+# widen current layer to match horizontal facet
+$config->set('cusp_value', [0.1]);
+
+subtest 'widen to match horizontal facets' => sub {
+	plan tests => 3;
+	$test->();
+};
 
 __END__
