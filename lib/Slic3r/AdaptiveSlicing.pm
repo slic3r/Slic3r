@@ -177,7 +177,7 @@ sub horizontal_facet_distance {
 		# min_z == max_z -> horizontal facet
 		if($self->ordered_facets->[$ordered_id]->[1] > $z) {
 			if($self->ordered_facets->[$ordered_id]->[1] == $self->ordered_facets->[$ordered_id]->[2]) {
-				return unscale $self->ordered_facets->[$ordered_id]->[1] - $z;
+				return unscale($self->ordered_facets->[$ordered_id]->[1] - $z);
 			}
 		}
 		
@@ -185,11 +185,11 @@ sub horizontal_facet_distance {
 	}
 	
 	# objects maximum?
-	if($z + $max_height > $self->size) {
-		return 	max(unscale $self->size - $z, 0);
+	if($z + $max_height > scale($self->size)) {
+		return 	max($self->size - unscale($z), 0);
 	}
+
 	return unscale $max_height;
 }
-
 
 1;
