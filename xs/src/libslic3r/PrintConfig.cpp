@@ -14,6 +14,14 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "adaptive-slicing!";
     def->default_value = new ConfigOptionBool(false);
     
+    def = this->add("adaptive_slicing_z_gradation", coFloat);
+	def->label = "Min layer height gradation";
+	def->tooltip = "Limit layer heights to a multiple of this value to avoid stepping inaccuracies at the Z-axis. Typical value for a Prusa i3, 1/16 micro-stepping is 0.004mm. Set zero do disable this option.";
+    def->sidetext = "mm";
+    def->cli = "adaptive-slicing-z-gradation=f";
+    def->min = 0;
+	def->default_value = new ConfigOptionFloat(0);
+
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = "Avoid crossing perimeters";
     def->tooltip = "Optimize travel moves in order to minimize the crossing of perimeters. This is mostly useful with Bowden extruders which suffer from oozing. This feature slows down both the print and the G-code generation.";

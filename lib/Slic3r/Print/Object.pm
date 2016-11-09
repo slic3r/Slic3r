@@ -163,6 +163,12 @@ sub slice {
 			       	$height = ($id == 0)
                 		? $self->config->get_value('first_layer_height')
                 		: min($cusp_height, $height);
+                		
+                	# apply z-gradation
+                	my $gradation = $self->config->get_value('adaptive_slicing_z_gradation');
+                	if($gradation > 0) {
+                		$height = $height - unscale((scale($height)) % (scale($gradation)));
+                	}
 		       	}
 
         	}else{
