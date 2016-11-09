@@ -610,6 +610,20 @@ ModelObject::scale(const Pointf3 &versor)
 }
 
 void
+ModelObject::scale_to_fit(const Sizef3 &size)
+{
+    Sizef3 orig_size = this->bounding_box().size();
+    float factor = fminf(
+        size.x / orig_size.x,
+        fminf(
+            size.y / orig_size.y,
+            size.z / orig_size.z
+        )
+    );
+    this->scale(factor);
+}
+
+void
 ModelObject::rotate(float angle, const Axis &axis)
 {
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {

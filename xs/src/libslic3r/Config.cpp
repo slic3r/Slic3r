@@ -283,6 +283,8 @@ DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
                 opt = new ConfigOptionFloatOrPercent ();
             } else if (optdef->type == coPoint) {
                 opt = new ConfigOptionPoint ();
+            } else if (optdef->type == coPoint3) {
+                opt = new ConfigOptionPoint3 ();
             } else if (optdef->type == coPoints) {
                 opt = new ConfigOptionPoints ();
             } else if (optdef->type == coBool) {
