@@ -1,4 +1,4 @@
-use Test::More tests => 8;
+use Test::More tests => 9;
 use strict;
 use warnings;
 
@@ -7,14 +7,16 @@ BEGIN {
     use lib "$FindBin::Bin/../lib";
 }
 
-use List::Util qw(first);
+use List::Util qw(first sum);
 use Slic3r;
 use Slic3r::Test qw(_eq);
 use Slic3r::Geometry qw(Z PI scale unscale);
 
+use Devel::Peek;
+
 my $config = Slic3r::Config->new_from_defaults;
 
-my $test = sub {
+my $generate_gcode = sub {
     my ($conf) = @_;
     $conf ||= $config;
     
@@ -31,6 +33,12 @@ my $test = sub {
         }
     });
     
+    return (@z);
+};
+
+my $horizontal_feature_test = sub {
+    my (@z) = $generate_gcode->();
+    
     ok  (_eq($z[0], $config->get_value('first_layer_height') + $config->z_offset), 'first layer height.');
     
     ok  (_eq($z[1], $config->get_value('first_layer_height') + $config->get('max_layer_height')->[0] + $config->z_offset), 'second layer height.');
@@ -40,6 +48,17 @@ my $test = sub {
     1;
 };
 
+my $height_gradation_test = sub {
+    my (@z) = $generate_gcode->();
+    
+    my $gradation = $config->get('adaptive_slicing_z_gradation');
+    # +1 is a "dirty fix" to avoid rounding issues with the modulo operator...
+    my @results = map {unscale((scale($_)+1) % scale($gradation))} @z;
+    
+    ok  (_eq(sum(@results), 0), 'layer z is multiple of gradation ' . $gradation );
+    
+    1;
+};
 
 
 
@@ -107,7 +126,7 @@ $config->set('cusp_value', [0.19]);
 
 subtest 'shrink to match horizontal facets' => sub {
 	plan tests => 3;
-	$test->();
+	$horizontal_feature_test->();
 };
 	
 # widen current layer to match horizontal facet
@@ -115,7 +134,15 @@ $config->set('cusp_value', [0.1]);
 
 subtest 'widen to match horizontal facets' => sub {
 	plan tests => 3;
-	$test->();
+	$horizontal_feature_test->();
+};
+
+subtest 'layer height gradation' => sub {
+	plan tests => 5;
+	foreach my $gradation (0.001, 0.01, 0.02, 0.05, 0.08) {
+		$config->set('adaptive_slicing_z_gradation', $gradation);
+		$height_gradation_test->();
+	}
 };
 
 __END__
