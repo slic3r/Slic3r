@@ -353,18 +353,7 @@ class ConfigOptionPoint : public ConfigOptionSingle<Pointf>
         return ss.str();
     };
     
-    bool deserialize(std::string str, bool append = false) {
-        std::vector<std::string> tokens(2);
-        boost::split(tokens, str, boost::is_any_of(",x"));
-        try {
-            this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
-            this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
-        } catch (boost::bad_lexical_cast &e){
-            std::cout << "Exception caught : " << e.what() << std::endl;
-            return false;
-        }
-        return true;
-    };
+    bool deserialize(std::string str, bool append = false);
 };
 
 class ConfigOptionPoint3 : public ConfigOptionSingle<Pointf3>
@@ -384,19 +373,7 @@ class ConfigOptionPoint3 : public ConfigOptionSingle<Pointf3>
         return ss.str();
     };
     
-    bool deserialize(std::string str, bool append = false) {
-        std::vector<std::string> tokens(3);
-        boost::split(tokens, str, boost::is_any_of(",x"));
-        try {
-            this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
-            this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
-            this->value.z = boost::lexical_cast<coordf_t>(tokens[2]);
-        } catch (boost::bad_lexical_cast &e){
-            std::cout << "Exception caught : " << e.what() << std::endl;
-            return false;
-        }
-        return true;
-    };
+    bool deserialize(std::string str, bool append = false);
     
     bool is_positive_volume () {
         return this->value.x > 0 && this->value.y > 0 && this->value.z > 0;

@@ -10,6 +10,8 @@
 #include <boost/foreach.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
 #if defined(_WIN32) && !defined(setenv) && defined(_putenv_s)
 #define setenv(k, v, o) _putenv_s(k, v)
@@ -405,5 +407,34 @@ StaticConfig::keys() const {
     }
     return keys;
 }
+
+bool
+ConfigOptionPoint::deserialize(std::string str, bool append) {
+    std::vector<std::string> tokens(2);
+    boost::split(tokens, str, boost::is_any_of(",x"));
+    try {
+        this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
+        this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
+    } catch (boost::bad_lexical_cast &e){
+        std::cout << "Exception caught : " << e.what() << std::endl;
+        return false;
+    }
+    return true;
+};
+
+bool
+ConfigOptionPoint3::deserialize(std::string str, bool append) {
+    std::vector<std::string> tokens(3);
+    boost::split(tokens, str, boost::is_any_of(",x"));
+    try {
+        this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
+        this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
+        this->value.z = boost::lexical_cast<coordf_t>(tokens[2]);
+    } catch (boost::bad_lexical_cast &e){
+        std::cout << "Exception caught : " << e.what() << std::endl;
+        return false;
+    }
+    return true;
+};
 
 }
