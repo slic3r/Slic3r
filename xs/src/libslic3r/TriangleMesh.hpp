@@ -22,7 +22,7 @@ class TriangleMesh
     TriangleMesh();
     TriangleMesh(const TriangleMesh &other);
     TriangleMesh& operator= (TriangleMesh other);
-    void swap(TriangleMesh &first, TriangleMesh &second);
+    void swap(TriangleMesh &other);
     ~TriangleMesh();
     void ReadSTLFile(const std::string &input_file);
     void write_ascii(const std::string &output_file);

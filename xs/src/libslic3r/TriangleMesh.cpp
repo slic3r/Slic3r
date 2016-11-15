@@ -55,10 +55,10 @@ TriangleMesh& TriangleMesh::operator= (TriangleMesh other)
 }
 
 void
-TriangleMesh::swap(TriangleMesh &first, TriangleMesh &second)
+TriangleMesh::swap(TriangleMesh &other)
 {
-    std::swap(first.repaired,            second.repaired);
-    std::swap(first.stl,                 second.stl);
+    std::swap(this->stl,      other.stl);
+    std::swap(this->repaired, other.repaired);
 }
 
 TriangleMesh::~TriangleMesh() {
