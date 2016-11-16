@@ -26,7 +26,7 @@
     long x_max() %code{% RETVAL = THIS->max.x; %};
     long y_min() %code{% RETVAL = THIS->min.y; %};
     long y_max() %code{% RETVAL = THIS->max.y; %};
-    
+
 %{
 
 BoundingBox*
