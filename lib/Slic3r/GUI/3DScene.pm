@@ -750,15 +750,26 @@ sub Render {
     # draw ground
     my $ground_z = GROUND_Z;
     if ($self->bed_triangles) {
+        my($VertexObjID,$NormalObjID,$ColorObjID);
+        my $colors = OpenGL::Array->new_list(GL_FLOAT,(0.8,0.6,0.5,0.4));
+        my $norms = OpenGL::Array->new_list(GL_FLOAT,(0,0,1));
+        ($VertexObjID,$NormalObjID,$ColorObjID) =
+            glGenBuffersARB_p(3);
+        $self->bed_triangles->bind($VertexObjID);
+        glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->bed_triangles, GL_STATIC_DRAW_ARB);
+        glVertexPointer_c(3, GL_FLOAT, 0, 0);
+        $norms->bind($NormalObjID);
+        glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $norms, GL_STATIC_DRAW_ARB);
+        glNormalPointer_c(GL_FLOAT, 0, 0);
+
         glDisable(GL_DEPTH_TEST);
-        
+
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         
         glEnableClientState(GL_VERTEX_ARRAY);
-        glColor4f(0.8, 0.6, 0.5, 0.4);
-        glNormal3d(0,0,1);
-        glVertexPointer_p(3, $self->bed_triangles);
+        #glNormal3d(0,0,1);
+        #glVertexPointer_p(3, $self->bed_triangles);
         glDrawArrays(GL_TRIANGLES, 0, $self->bed_triangles->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
         
@@ -766,11 +777,17 @@ sub Render {
         # the object from below
         glEnable(GL_DEPTH_TEST);
     
+        my($GridVertexObjID,$GridNormalObjID,$GridColorObjID);
+        ($GridVertexObjID,$GridNormalObjID,$GridColorObjID) =
+            glGenBuffersARB_p(3);
+        glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->bed_grid_lines, GL_STATIC_DRAW_ARB);
+        glVertexPointer_c(3, GL_FLOAT, 0, 0);
         # draw grid
         glLineWidth(3);
         glColor4f(0.2, 0.2, 0.2, 0.4);
         glEnableClientState(GL_VERTEX_ARRAY);
-        glVertexPointer_p(3, $self->bed_grid_lines);
+
+        #glVertexPointer_p(3, $self->bed_grid_lines);
         glDrawArrays(GL_LINES, 0, $self->bed_grid_lines->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
         
