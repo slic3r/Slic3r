@@ -46,6 +46,10 @@ use constant GROUND_Z       => -0.02;
 use constant DEFAULT_COLOR  => [1,1,0];
 use constant SELECTED_COLOR => [0,1,0,1];
 use constant HOVER_COLOR    => [0.4,0.9,0,1];
+
+# Constant to determine if Vertex Buffer objects are used to draw
+# bed grid and the cut plane for object separation.
+# Old Perl (5.10.x) should set to 0.
 use constant HAS_VBO        => 1;
 
 
@@ -755,8 +759,6 @@ sub Render {
     # draw ground
     my $ground_z = GROUND_Z;
     if ($self->bed_triangles) {
-        my $norms = OpenGL::Array->new_list(GL_FLOAT,(0.0, 0.0, 1.0)); # common normal for both
-
         glDisable(GL_DEPTH_TEST);
         
         glEnable(GL_BLEND);
@@ -947,10 +949,26 @@ sub draw_volumes {
     glDisable(GL_BLEND);
     
     if (defined $self->cutting_plane_z) {
+        if (HAS_VBO) {
+            # Use Vertex Buffer Object for cutting plane (previous method crashes on modern POGL). 
+            my ($cut_vertex) = glGenBuffersARB_p(1);
+            $self->cut_lines_vertices->bind($cut_vertex);
+            glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->cut_lines_vertices, GL_STATIC_DRAW_ARB);
+            glVertexPointer_c(3, GL_FLOAT, 0, 0);
+        } else {
+            # Use legacy method.
+            glVertexPointer_p(3, $self->cut_lines_vertices);
+        }
         glLineWidth(2);
         glColor3f(0, 0, 0);
-        glVertexPointer_p(3, $self->cut_lines_vertices);
         glDrawArrays(GL_LINES, 0, $self->cut_lines_vertices->elements / 3);
+
+        if (HAS_VBO) { 
+            # Turn off buffer objects to let the rest of the draw code work.
+            glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+            glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+        }
+
     }
     glDisableClientState(GL_VERTEX_ARRAY);
 }
