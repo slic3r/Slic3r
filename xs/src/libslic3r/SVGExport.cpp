@@ -41,19 +41,6 @@ SVGExport::writeSVG(const std::string &outputfile)
     std::vector<ExPolygons> layers;
     TriangleMeshSlicer(&this->mesh).slice(slice_z, &layers);
     
-    // generate a solid raft if requested
-    if (this->config.raft_layers > 0) {
-        ExPolygons raft = offset_ex(layers.front(), scale_(this->config.raft_offset));
-        for (int i = this->config.raft_layers; i >= 1; --i) {
-            layer_z.insert(layer_z.begin(), first_lh + lh * (i-1));
-            layers.insert(layers.begin(), raft);
-        }
-        
-        // prepend total raft height to all sliced layers
-        for (int i = this->config.raft_layers; i < layer_z.size(); ++i)
-            layer_z[i] += first_lh + lh * (this->config.raft_layers-1);
-    }
-    
     // generate support material
     std::vector<Points> support_material(layers.size());
     if (this->config.support_material) {
@@ -80,6 +67,21 @@ SVGExport::writeSVG(const std::string &outputfile)
                 }
             }
         }
+    }
+    
+    // generate a solid raft if requested
+    // (do this after support material because we take support material shape into account)
+    if (this->config.raft_layers > 0) {
+        ExPolygons raft = offset_ex(layers.front(), scale_(this->config.raft_offset));
+        for (int i = this->config.raft_layers; i >= 1; --i) {
+            layer_z.insert(layer_z.begin(), first_lh + lh * (i-1));
+            layers.insert(layers.begin(), raft);
+            support_material.insert(support_material.begin(), Points());  // no support on this layer, we have raft
+        }
+        
+        // prepend total raft height to all sliced layers
+        for (int i = this->config.raft_layers; i < layer_z.size(); ++i)
+            layer_z[i] += first_lh + lh * (this->config.raft_layers-1);
     }
     
     double support_material_radius = this->config.support_material_extrusion_width.get_abs_value(this->config.layer_height)/2;
