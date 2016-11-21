@@ -140,6 +140,8 @@ ConfigBase::set_deserialize(const t_config_option_key &opt_key, std::string str,
     return opt->deserialize(str, append);
 }
 
+// Return an absolute value of a possibly relative config variable.
+// For example, return absolute infill extrusion width, either from an absolute value, or relative to the layer height.
 double
 ConfigBase::get_abs_value(const t_config_option_key &opt_key) {
     ConfigOption* opt = this->option(opt_key, false);
@@ -157,6 +159,8 @@ ConfigBase::get_abs_value(const t_config_option_key &opt_key) {
     }
 }
 
+// Return an absolute value of a possibly relative config variable.
+// For example, return absolute infill extrusion width, either from an absolute value, or relative to a provided value.
 double
 ConfigBase::get_abs_value(const t_config_option_key &opt_key, double ratio_over) {
     // get stored option value
@@ -392,7 +396,6 @@ StaticConfig::set_defaults()
     t_config_option_keys keys = this->keys();
     for (t_config_option_keys::const_iterator it = keys.begin(); it != keys.end(); ++it) {
         const ConfigOptionDef* def = this->def->get(*it);
-        
         if (def->default_value != NULL)
             this->option(*it)->set(*def->default_value);
     }
