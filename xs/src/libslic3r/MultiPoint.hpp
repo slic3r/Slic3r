@@ -44,6 +44,6 @@ class MultiPoint
     static Points _douglas_peucker(const Points &points, const double tolerance);
 };
 
-}
+} // namespace Slic3r
 
 #endif
