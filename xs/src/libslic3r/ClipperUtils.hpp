@@ -35,38 +35,38 @@ void scaleClipperPolygons(ClipperLib::Paths &polygons, const double scale);
 
 // offset Polygons
 ClipperLib::Paths _offset(const Slic3r::Polygons &polygons, const float delta,
-    double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
 Slic3r::Polygons offset(const Slic3r::Polygons &polygons, const float delta,
-    double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
 
 // offset Polylines
 ClipperLib::Paths _offset(const Slic3r::Polylines &polylines, const float delta,
-    double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtSquare, 
+    double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtSquare, 
     double miterLimit = 3);
 Slic3r::Polygons offset(const Slic3r::Polylines &polylines, const float delta,
-    double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtSquare, 
+    double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtSquare, 
     double miterLimit = 3);
 Slic3r::Surfaces offset(const Slic3r::Surface &surface, const float delta,
-    double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtSquare, 
+    double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtSquare, 
     double miterLimit = 3);
 
 Slic3r::ExPolygons offset_ex(const Slic3r::Polygons &polygons, const float delta,
-    double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
 Slic3r::ExPolygons offset_ex(const Slic3r::ExPolygons &expolygons, const float delta,
-    double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
 
 ClipperLib::Paths _offset2(const Slic3r::Polygons &polygons, const float delta1,
-    const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    const float delta2, double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
 Slic3r::Polygons offset2(const Slic3r::Polygons &polygons, const float delta1,
-    const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    const float delta2, double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
 Slic3r::ExPolygons offset2_ex(const Slic3r::Polygons &polygons, const float delta1,
-    const float delta2, double scale = 100000, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
+    const float delta2, double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtMiter, 
     double miterLimit = 3);
 
 template <class T>
