@@ -46,6 +46,7 @@ use constant GROUND_Z       => -0.02;
 use constant DEFAULT_COLOR  => [1,1,0];
 use constant SELECTED_COLOR => [0,1,0,1];
 use constant HOVER_COLOR    => [0.4,0.9,0,1];
+use constant PI             => 3.1415927;
 
 # make OpenGL::Array thread-safe
 {
@@ -147,7 +148,15 @@ sub mouse_event {
     } elsif ($e->LeftDClick) {
         $self->on_double_click->()
             if $self->on_double_click;
-    } elsif ($e->LeftDown || $e->RightDown) {
+    } elsif ($e->MiddleDClick) {
+        if (@{$self->volumes}) {
+            $self->zoom_to_volumes;
+        } else {
+            $self->zoom_to_bed;
+        }
+        $self->_dirty(1);
+        $self->Refresh;
+    } elsif (($e->LeftDown || $e->RightDown) && not $e->ShiftDown) {
         # If user pressed left or right button we first check whether this happened
         # on a volume or not.
         my $volume_idx = $self->_hover_volume_idx // -1;
@@ -209,7 +218,16 @@ sub mouse_event {
         $self->_dragged(1);
         $self->Refresh;
     } elsif ($e->Dragging) {
-        if ($e->LeftIsDown) {
+        if ($e->AltDown) {
+            # Move the camera center on the Z axis based on mouse Y axis movement
+            if (defined $self->_drag_start_pos) {
+                my $orig = $self->_drag_start_pos;
+                $self->_camera_target->translate(0, 0, $pos->y - $orig->y);
+                $self->on_viewport_changed->() if $self->on_viewport_changed;
+                $self->Refresh;
+            }
+            $self->_drag_start_pos($pos);
+        } elsif ($e->LeftIsDown) {
             # if dragging over blank area with left button, rotate
             if (defined $self->_drag_start_pos) {
                 my $orig = $self->_drag_start_pos;
@@ -833,9 +851,44 @@ sub Render {
         glDisable(GL_BLEND);
     }
     
+    if (defined $self->_drag_start_pos || defined $self->_drag_start_xy) {
+        $self->draw_center_of_rotation($self->_camera_target->x, $self->_camera_target->y, $self->_camera_target->z);
+    }
+
     glFlush();
  
     $self->SwapBuffers();
+}
+
+sub draw_axes {
+    my ($self, $x, $y, $z, $length, $width, $allways_visible) = @_;
+    if ($allways_visible) {
+        glDisable(GL_DEPTH_TEST);
+    } else {
+        glEnable(GL_DEPTH_TEST);
+    }
+    glLineWidth($width);
+    glBegin(GL_LINES);
+    # draw line for x axis
+    glColor3f(1, 0, 0);
+    glVertex3f($x, $y, $z);
+    glVertex3f($x + $length, $y, $z);
+    # draw line for y axis
+    glColor3f(0, 1, 0);
+    glVertex3f($x, $y, $z);
+    glVertex3f($x, $y + $length, $z);
+    # draw line for Z axis
+    glColor3f(0, 0, 1);
+    glVertex3f($x, $y, $z);
+    glVertex3f($x, $y, $z + $length);
+    glEnd();
+}
+
+sub draw_center_of_rotation {
+    my ($self, $x, $y, $z) = @_;
+    
+    $self->draw_axes($x, $y, $z, 10, 1, 1);
+    $self->draw_axes($x, $y, $z, 10, 4, 0);
 }
 
 sub draw_volumes {
