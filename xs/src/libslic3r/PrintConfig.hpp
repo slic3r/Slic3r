@@ -1,3 +1,20 @@
+// Configuration store of Slic3r.
+//
+// The configuration store is either static or dynamic.
+// DynamicPrintConfig is used mainly at the user interface. while the StaticPrintConfig is used
+// during the slicing and the g-code generation.
+//
+// The classes derived from StaticPrintConfig form a following hierarchy.
+// Virtual inheritance is used for some of the parent objects.
+//
+// FullPrintConfig
+//    PrintObjectConfig
+//    PrintRegionConfig
+//    PrintConfig
+//        GCodeConfig
+//    HostConfig
+//
+
 #ifndef slic3r_PrintConfig_hpp_
 #define slic3r_PrintConfig_hpp_
 
@@ -69,14 +86,19 @@ template<> inline t_config_enum_values ConfigOptionEnum<SeamPosition>::get_enum_
     return keys_map;
 }
 
+// Defines each and every confiuration option of Slic3r, including the properties of the GUI dialogs.
+// Does not store the actual values, but defines default values.
 class PrintConfigDef : public ConfigDef
 {
     public:
     PrintConfigDef();
 };
 
+// The one and only global definition of SLic3r configuration options.
+// This definition is constant.
 extern PrintConfigDef print_config_def;
 
+// Slic3r configuration storage with print_config_def assigned.
 class PrintConfigBase : public virtual ConfigBase
 {
     public:
@@ -87,6 +109,12 @@ class PrintConfigBase : public virtual ConfigBase
     double min_object_distance() const;
 };
 
+// Slic3r dynamic configuration, used to override the configuration 
+// per object, per modification volume or per printing material.
+// The dynamic configuration is also used to store user modifications of the print global parameters,
+// so the modified configuration values may be diffed against the active configuration
+// to invalidate the proper slicing resp. g-code generation processing steps.
+// This object is mapped to Perl as Slic3r::Config.
 class DynamicPrintConfig : public PrintConfigBase, public DynamicConfig
 {
     public:
@@ -94,12 +122,14 @@ class DynamicPrintConfig : public PrintConfigBase, public DynamicConfig
     void normalize();
 };
 
+
 class StaticPrintConfig : public PrintConfigBase, public StaticConfig
 {
     public:
     StaticPrintConfig() : PrintConfigBase(), StaticConfig() {};
 };
 
+// This object is mapped to Perl as Slic3r::Config::PrintObject.
 class PrintObjectConfig : public virtual StaticPrintConfig
 {
     public:
@@ -131,7 +161,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         if (initialize)
             this->set_defaults();
     }
-    
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(dont_support_bridges);
         OPT_PTR(extrusion_width);
@@ -161,6 +191,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     };
 };
 
+// This object is mapped to Perl as Slic3r::Config::PrintRegion.
 class PrintRegionConfig : public virtual StaticPrintConfig
 {
     public:
@@ -201,7 +232,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         if (initialize)
             this->set_defaults();
     }
-    
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(bottom_solid_layers);
         OPT_PTR(bridge_flow_ratio);
@@ -240,6 +271,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     };
 };
 
+// This object is mapped to Perl as Slic3r::Config::GCode.
 class GCodeConfig : public virtual StaticPrintConfig
 {
     public:
@@ -316,6 +348,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     };
 };
 
+// This object is mapped to Perl as Slic3r::Config::Print.
 class PrintConfig : public GCodeConfig
 {
     public:
@@ -374,7 +407,7 @@ class PrintConfig : public GCodeConfig
         if (initialize)
             this->set_defaults();
     }
-    
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(avoid_crossing_perimeters);
         OPT_PTR(bed_shape);
@@ -447,7 +480,7 @@ class HostConfig : public virtual StaticPrintConfig
         if (initialize)
             this->set_defaults();
     }
-    
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(octoprint_host);
         OPT_PTR(octoprint_apikey);
@@ -458,6 +491,7 @@ class HostConfig : public virtual StaticPrintConfig
     };
 };
 
+// This object is mapped to Perl as Slic3r::Config::Full.
 class FullPrintConfig
     : public PrintObjectConfig, public PrintRegionConfig, public PrintConfig, public HostConfig
 {
