@@ -198,7 +198,8 @@
 %typemap{LayerPtrs*};
 %typemap{SupportLayerPtrs*};
 
-
+%typemap{ClipperLib::JoinType}{simple};
+%typemap{ClipperLib::PolyFillType}{simple};
 %typemap{Axis}{parsed}{
   %cpp_type{Axis};
   %precall_code{%

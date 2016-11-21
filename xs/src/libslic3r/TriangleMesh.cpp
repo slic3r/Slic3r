@@ -390,10 +390,7 @@ TriangleMesh::horizontal_projection() const
     }
     
     // the offset factor was tuned using groovemount.stl
-    offset(pp, &pp, 0.01 / SCALING_FACTOR);
-    ExPolygons retval;
-    union_(pp, &retval, true);
-    return retval;
+    return union_ex(offset(pp, 0.01 / SCALING_FACTOR), true);
 }
 
 Polygon
@@ -848,14 +845,13 @@ TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slices)
         if (area[*loop_idx] > +EPSILON) {
             p_slices.push_back(*loop);
         } else if (area[*loop_idx] < -EPSILON) {
-            diff(p_slices, *loop, &p_slices);
+            p_slices = diff(p_slices, *loop);
         }
     }
 
     // perform a safety offset to merge very close facets (TODO: find test case for this)
     double safety_offset = scale_(0.0499);
-    ExPolygons ex_slices;
-    offset2(p_slices, &ex_slices, +safety_offset, -safety_offset);
+    ExPolygons ex_slices = offset2_ex(p_slices, +safety_offset, -safety_offset);
     
     #ifdef SLIC3R_DEBUG
     size_t holes_count = 0;

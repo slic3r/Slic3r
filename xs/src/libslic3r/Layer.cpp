@@ -110,7 +110,7 @@ Layer::make_slices()
             Polygons region_slices_p = (*layerm)->slices;
             slices_p.insert(slices_p.end(), region_slices_p.begin(), region_slices_p.end());
         }
-        union_(slices_p, &slices);
+        slices = union_ex(slices_p);
     }
     
     this->slices.expolygons.clear();
@@ -229,8 +229,8 @@ Layer::make_perimeters()
             if (!fill_surfaces.surfaces.empty()) {
                 for (LayerRegionPtrs::iterator l = layerms.begin(); l != layerms.end(); ++l) {
                     ExPolygons expp = intersection_ex(
-                        fill_surfaces,
-                        (*l)->slices
+                        (Polygons) fill_surfaces,
+                        (Polygons) (*l)->slices
                     );
                     (*l)->fill_surfaces.surfaces.clear();
                     

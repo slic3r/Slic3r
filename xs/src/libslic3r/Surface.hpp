@@ -34,6 +34,8 @@ class Surface
 typedef std::vector<Surface> Surfaces;
 typedef std::vector<Surface*> SurfacesPtr;
 
+Polygons to_polygons(const Surfaces &surfaces);
+
 }
 
 #endif

@@ -429,7 +429,7 @@ PrintObject::bridge_over_infill()
             #endif
             
             // compute the remaning internal solid surfaces as difference
-            ExPolygons not_to_bridge = diff_ex(internal_solid, to_bridge, true);
+            ExPolygons not_to_bridge = diff_ex(internal_solid, to_polygons(to_bridge), true);
             
             // build the new collection of fill_surfaces
             {

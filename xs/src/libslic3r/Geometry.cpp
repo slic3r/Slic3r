@@ -149,20 +149,6 @@ deg2rad(double angle)
     return PI * angle / 180.0;
 }
 
-void
-simplify_polygons(const Polygons &polygons, double tolerance, Polygons* retval)
-{
-    Polygons pp;
-    for (Polygons::const_iterator it = polygons.begin(); it != polygons.end(); ++it) {
-        Polygon p = *it;
-        p.points.push_back(p.points.front());
-        p.points = MultiPoint::_douglas_peucker(p.points, tolerance);
-        p.points.pop_back();
-        pp.push_back(p);
-    }
-    Slic3r::simplify_polygons(pp, retval);
-}
-
 double
 linint(double value, double oldmin, double oldmax, double newmin, double newmax)
 {

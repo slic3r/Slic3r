@@ -86,17 +86,13 @@ Polygon::equally_spaced_points(double distance) const
 double
 Polygon::area() const
 {
-    ClipperLib::Path p;
-    Slic3rMultiPoint_to_ClipperPath(*this, &p);
-    return ClipperLib::Area(p);
+    return ClipperLib::Area(Slic3rMultiPoint_to_ClipperPath(*this));
 }
 
 bool
 Polygon::is_counter_clockwise() const
 {
-    ClipperLib::Path p;
-    Slic3rMultiPoint_to_ClipperPath(*this, &p);
-    return ClipperLib::Orientation(p);
+    return ClipperLib::Orientation(Slic3rMultiPoint_to_ClipperPath(*this));
 }
 
 bool
@@ -157,10 +153,7 @@ Polygon::simplify(double tolerance) const
     Polygon p(MultiPoint::_douglas_peucker(points, tolerance));
     p.points.pop_back();
     
-    Polygons pp;
-    pp.push_back(p);
-    simplify_polygons(pp, &pp);
-    return pp;
+    return simplify_polygons(p);
 }
 
 void

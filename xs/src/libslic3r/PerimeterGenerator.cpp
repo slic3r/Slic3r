@@ -343,8 +343,7 @@ PerimeterGenerator::_traverse_loops(const PerimeterGeneratorLoops &loops,
             && !(this->object_config->support_material && this->object_config->support_material_contact_distance.value == 0)) {
             // get non-overhang paths by intersecting this loop with the grown lower slices
             {
-                Polylines polylines;
-                intersection((Polygons)loop->polygon, this->_lower_slices_p, &polylines);
+                Polylines polylines = intersection_pl(loop->polygon, this->_lower_slices_p);
                 
                 for (Polylines::const_iterator polyline = polylines.begin(); polyline != polylines.end(); ++polyline) {
                     ExtrusionPath path(role);
@@ -360,8 +359,7 @@ PerimeterGenerator::_traverse_loops(const PerimeterGeneratorLoops &loops,
             // outside the grown lower slices (thus where the distance between
             // the loop centerline and original lower slices is >= half nozzle diameter
             {
-                Polylines polylines;
-                diff((Polygons)loop->polygon, this->_lower_slices_p, &polylines);
+                Polylines polylines = diff_pl(loop->polygon, this->_lower_slices_p);
                 
                 for (Polylines::const_iterator polyline = polylines.begin(); polyline != polylines.end(); ++polyline) {
                     ExtrusionPath path(erOverhangPerimeter);

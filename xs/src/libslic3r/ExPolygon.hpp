@@ -45,6 +45,8 @@ class ExPolygon
     std::string dump_perl() const;
 };
 
+Polygons to_polygons(const ExPolygons &expolygons);
+
 }
 
 // start Boost

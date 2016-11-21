@@ -36,8 +36,7 @@ void
 ExtrusionPath::intersect_expolygons(const ExPolygonCollection &collection, ExtrusionEntityCollection* retval) const
 {
     // perform clipping
-    Polylines clipped;
-    intersection<Polylines,Polylines>(this->polyline, collection, &clipped);
+    Polylines clipped = intersection_pl(this->polyline, collection);
     return this->_inflate_collection(clipped, retval);
 }
 
@@ -45,8 +44,7 @@ void
 ExtrusionPath::subtract_expolygons(const ExPolygonCollection &collection, ExtrusionEntityCollection* retval) const
 {
     // perform clipping
-    Polylines clipped;
-    diff<Polylines,Polylines>(this->polyline, collection, &clipped);
+    Polylines clipped = diff_pl(this->polyline, collection);
     return this->_inflate_collection(clipped, retval);
 }
 
@@ -113,9 +111,7 @@ ExtrusionPath::_inflate_collection(const Polylines &polylines, ExtrusionEntityCo
 Polygons
 ExtrusionPath::grow() const
 {
-    Polygons pp;
-    offset(this->polyline, &pp, +scale_(this->width/2));
-    return pp;
+    return offset(this->polyline, +scale_(this->width/2));
 }
 
 ExtrusionLoop*

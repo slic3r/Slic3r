@@ -45,9 +45,8 @@ LayerRegion::flow(FlowRole role, bool bridge, double width) const
 void
 LayerRegion::merge_slices()
 {
-    ExPolygons expp;
     // without safety offset, artifacts are generated (GH #2494)
-    union_(this->slices, &expp, true);
+    ExPolygons expp = union_ex((Polygons)this->slices, true);
     this->slices.surfaces.clear();
     this->slices.surfaces.reserve(expp.size());
     

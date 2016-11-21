@@ -283,11 +283,8 @@ GCode::change_layer(const Layer &layer)
     this->first_layer = (layer.id() == 0);
     
     // avoid computing islands and overhangs if they're not needed
-    if (this->config.avoid_crossing_perimeters) {
-        ExPolygons islands;
-        union_(layer.slices, &islands, true);
-        this->avoid_crossing_perimeters.init_layer_mp(islands);
-    }
+    if (this->config.avoid_crossing_perimeters)
+        this->avoid_crossing_perimeters.init_layer_mp(union_ex(layer.slices, true));
     
     std::string gcode;
     if (this->layer_count > 0) {
