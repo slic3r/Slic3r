@@ -632,8 +632,13 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line)
         gcode += this->writer.travel_to_xy(this->point_to_gcode(line->b), comment);
     
+    /*  While this makes the estimate more accurate, CoolingBuffer calculates the slowdown
+        factor on the whole elapsed time but only alters non-travel moves, thus the resulting
+        time is still shorter than the configured threshold. We could create a new 
+        elapsed_travel_time but we would still need to account for bridges, retractions, wipe etc.
     if (this->config.cooling)
-        this->elapsed_time += travel.length() / this->config.get_abs_value("travel_speed");
+        this->elapsed_time += unscale(travel.length()) / this->config.get_abs_value("travel_speed");
+    */
     
     return gcode;
 }
