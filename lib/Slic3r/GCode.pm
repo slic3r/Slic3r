@@ -533,7 +533,7 @@ sub pre_toolchange {
             ? $gcodegen->config->get_at('first_layer_temperature', $gcodegen->writer->extruder->id)
             : $gcodegen->config->get_at('temperature', $gcodegen->writer->extruder->id);
         # we assume that heating is always slower than cooling, so no need to block
-        $gcode .= $gcodegen->writer->set_temperature($temp + $gcodegen->config->standby_temperature_delta, 0);
+        $gcode .= $gcodegen->writer->set_temperature($temp + $gcodegen->config->standby_temperature_delta, 0, $gcodegen->writer->extruder->id);
     }
     
     return $gcode;
@@ -548,7 +548,7 @@ sub post_toolchange {
         my $temp = defined $gcodegen->layer && $gcodegen->layer->id == 0
             ? $gcodegen->config->get_at('first_layer_temperature', $gcodegen->writer->extruder->id)
             : $gcodegen->config->get_at('temperature', $gcodegen->writer->extruder->id);
-        $gcode .= $gcodegen->writer->set_temperature($temp, 1);
+        $gcode .= $gcodegen->writer->set_temperature($temp, 1, $gcodegen->writer->extruder->id);
     }
     
     return $gcode;
