@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use Config;
 use Devel::CheckLib;
 use ExtUtils::CppGuess;
 use Module::Build::WithXSpp;
@@ -101,7 +102,7 @@ if (!$ENV{SLIC3R_STATIC} && $have_boost) {
 } else {
     # Either static linking, or check_lib could not be used to find the boost libraries.
     my $lib_prefix = 'libboost_';
-    my $lib_ext = ${$cpp_guess}{config}{lib_ext};
+    my $lib_ext = $Config{lib_ext};
     PATH: foreach my $path (@boost_libs) {
         # Try to find the boost system library.
         my @files = glob "$path/${lib_prefix}system*$lib_ext";
