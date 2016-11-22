@@ -882,7 +882,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("retract_speed", coFloats);
     def->label = "Speed";
     def->full_label = "Retraction Speed";
-    def->tooltip = "The speed for retractions (it only applies to the extruder motor).";
+    def->tooltip = "The speed for retractions (it only applies to the extruder motor). If you use the Firmware Retraction option, please note this value still affects the auto-speed pressure regulator.";
     def->sidetext = "mm/s";
     def->cli = "retract-speed=f@";
     {

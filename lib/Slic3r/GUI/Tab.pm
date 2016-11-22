@@ -1385,7 +1385,12 @@ sub _update {
         
         # some options only apply when not using firmware retraction
         $self->get_field($_, $i)->toggle($retraction && !$config->use_firmware_retraction)
-            for qw(retract_speed retract_restart_extra wipe);
+            for qw(retract_restart_extra wipe);
+        
+        # retraction speed is also used by auto-speed pressure regulator, even when
+        # user enabled firmware retraction
+        $self->get_field('retract_speed', $i)->toggle($retraction);
+        
         if ($config->use_firmware_retraction && $config->get_at('wipe', $i)) {
             my $dialog = Wx::MessageDialog->new($self,
                 "The Wipe option is not available when using the Firmware Retraction mode.\n"
