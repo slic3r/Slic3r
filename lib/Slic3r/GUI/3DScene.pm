@@ -1,9 +1,9 @@
 package Slic3r::GUI::3DScene::Base;
 use strict;
 use warnings;
-
 use Wx::Event qw(EVT_PAINT EVT_SIZE EVT_ERASE_BACKGROUND EVT_IDLE EVT_MOUSEWHEEL EVT_MOUSE_EVENTS);
 # must load OpenGL *before* Wx::GLCanvas
+
 use OpenGL qw(:glconstants :glfunctions :glufunctions :gluconstants);
 use base qw(Wx::GLCanvas Class::Accessor);
 use Math::Trig qw(asin);
@@ -48,6 +48,12 @@ use constant SELECTED_COLOR => [0,1,0,1];
 use constant HOVER_COLOR    => [0.4,0.9,0,1];
 use constant PI             => 3.1415927;
 
+# Constant to determine if Vertex Buffer objects are used to draw
+# bed grid and the cut plane for object separation.
+# Old Perl (5.10.x) should set to 0.
+use constant HAS_VBO        => 1;
+
+
 # make OpenGL::Array thread-safe
 {
     no warnings 'redefine';
@@ -57,6 +63,7 @@ use constant PI             => 3.1415927;
 sub new {
     my ($class, $parent) = @_;
     
+
     # We can only enable multi sample anti aliasing wih wxWidgets 3.0.3 and with a hacked Wx::GLCanvas,
     # which exports some new WX_GL_XXX constants, namely WX_GL_SAMPLE_BUFFERS and WX_GL_SAMPLES.
     my $can_multisample =
@@ -75,6 +82,7 @@ sub new {
     # we request a depth buffer explicitely because it looks like it's not created by 
     # default on Linux, causing transparency issues
     my $self = $class->SUPER::new($parent, -1, Wx::wxDefaultPosition, Wx::wxDefaultSize, 0, "", $attrib);
+
     if (Wx::wxVERSION >= 3.000003) {
         # Wx 3.0.3 contains an ugly hack to support some advanced OpenGL attributes through the attribute list.
         # The attribute list is transferred between the wxGLCanvas and wxGLContext constructors using a single static array s_wglContextAttribs.
@@ -134,6 +142,7 @@ sub new {
         $self->Refresh;
     });
     EVT_MOUSE_EVENTS($self, \&mouse_event);
+
     
     return $self;
 }
@@ -774,9 +783,19 @@ sub Render {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         
         glEnableClientState(GL_VERTEX_ARRAY);
+        if (HAS_VBO) {
+            my ($triangle_vertex);
+            ($triangle_vertex) =
+                glGenBuffersARB_p(1);
+            $self->bed_triangles->bind($triangle_vertex);
+            glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->bed_triangles, GL_STATIC_DRAW_ARB);
+            glVertexPointer_c(3, GL_FLOAT, 0, 0);
+        } else {
+            # fall back on old behavior
+            glVertexPointer_p(3, $self->bed_triangles);
+        }
         glColor4f(0.8, 0.6, 0.5, 0.4);
         glNormal3d(0,0,1);
-        glVertexPointer_p(3, $self->bed_triangles);
         glDrawArrays(GL_TRIANGLES, 0, $self->bed_triangles->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
         
@@ -786,13 +805,29 @@ sub Render {
     
         # draw grid
         glLineWidth(3);
-        glColor4f(0.2, 0.2, 0.2, 0.4);
         glEnableClientState(GL_VERTEX_ARRAY);
-        glVertexPointer_p(3, $self->bed_grid_lines);
+        if (HAS_VBO) {
+            my ($grid_vertex);
+            ($grid_vertex) =
+                glGenBuffersARB_p(1);
+            $self->bed_grid_lines->bind($grid_vertex);
+            glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->bed_grid_lines, GL_STATIC_DRAW_ARB);
+            glVertexPointer_c(3, GL_FLOAT, 0, 0);
+        } else {
+            # fall back on old behavior
+            glVertexPointer_p(3, $self->bed_grid_lines);
+        }
+        glColor4f(0.2, 0.2, 0.2, 0.4);
+        glNormal3d(0,0,1);
         glDrawArrays(GL_LINES, 0, $self->bed_grid_lines->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
         
         glDisable(GL_BLEND);
+        if (HAS_VBO) { 
+            # Turn off buffer objects to let the rest of the draw code work.
+            glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+            glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+        }
     }
     
     my $volumes_bb = $self->volumes_bounding_box;
@@ -967,10 +1002,26 @@ sub draw_volumes {
     glDisable(GL_BLEND);
     
     if (defined $self->cutting_plane_z) {
+        if (HAS_VBO) {
+            # Use Vertex Buffer Object for cutting plane (previous method crashes on modern POGL). 
+            my ($cut_vertex) = glGenBuffersARB_p(1);
+            $self->cut_lines_vertices->bind($cut_vertex);
+            glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->cut_lines_vertices, GL_STATIC_DRAW_ARB);
+            glVertexPointer_c(3, GL_FLOAT, 0, 0);
+        } else {
+            # Use legacy method.
+            glVertexPointer_p(3, $self->cut_lines_vertices);
+        }
         glLineWidth(2);
         glColor3f(0, 0, 0);
-        glVertexPointer_p(3, $self->cut_lines_vertices);
         glDrawArrays(GL_LINES, 0, $self->cut_lines_vertices->elements / 3);
+
+        if (HAS_VBO) { 
+            # Turn off buffer objects to let the rest of the draw code work.
+            glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+            glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+        }
+
     }
     glDisableClientState(GL_VERTEX_ARRAY);
 }
