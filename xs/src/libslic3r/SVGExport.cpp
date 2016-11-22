@@ -42,41 +42,83 @@ SVGExport::writeSVG(const std::string &outputfile)
     TriangleMeshSlicer(&this->mesh).slice(slice_z, &layers);
     
     // generate support material
-    std::vector<Points> support_material(layers.size());
+    std::vector<SupportPillar> sm_pillars;
+    ExPolygons overhangs;
     if (this->config.support_material) {
-        // generate a grid of points according to the configured spacing,
-        // covering the entire object bounding box
-        Points support_material_points;
-        for (coordf_t x = bb.min.x; x <= bb.max.x; x += this->config.support_material_spacing) {
-            for (coordf_t y = bb.min.y; y <= bb.max.y; y += this->config.support_material_spacing) {
-                support_material_points.push_back(Point(scale_(x), scale_(y)));
+        // flatten and merge all the overhangs
+        {
+            Polygons pp;
+            for (std::vector<ExPolygons>::const_iterator it = layers.begin()+1; it != layers.end(); ++it) {
+                Polygons oh = diff(*it, *(it - 1));
+                pp.insert(pp.end(), oh.begin(), oh.end());
+            }
+            overhangs = union_ex(pp);
+        }
+        
+        // generate points following the shape of each island
+        Points pillars_pos;
+        const float spacing = scale_(this->config.support_material_spacing);
+        for (ExPolygons::const_iterator it = overhangs.begin(); it != overhangs.end(); ++it) {
+            for (float inset = -spacing/2; inset += spacing; ) {
+                // inset according to the configured spacing
+                Polygons curr = offset(*it, -inset);
+                if (curr.empty()) break;
+                
+                // generate points along the contours
+                for (Polygons::const_iterator pg = curr.begin(); pg != curr.end(); ++pg) {
+                    Points pp = pg->equally_spaced_points(spacing);
+                    for (Points::const_iterator p = pp.begin(); p != pp.end(); ++p)
+                        pillars_pos.push_back(*p);
+                }
             }
         }
         
-        // check overhangs, starting from the upper layer, and detect which points apply 
-        // to each layer
-        ExPolygons overhangs;
-        for (int i = layer_z.size()-1; i >= 0; --i) {
-            overhangs = diff_ex(union_(overhangs, layers[i+1]), layers[i]);
-            for (Points::const_iterator it = support_material_points.begin(); it != support_material_points.end(); ++it) {
-                for (ExPolygons::const_iterator e = overhangs.begin(); e != overhangs.end(); ++e) {
-                    if (e->contains(*it)) {
-                        support_material[i].push_back(*it);
+        // for each pillar, check which layers it applies to
+        for (Points::const_iterator p = pillars_pos.begin(); p != pillars_pos.end(); ++p) {
+            SupportPillar pillar(*p);
+            bool object_hit = false;
+            
+            // check layers top-down
+            for (int i = layer_z.size()-1; i >= 0; --i) {
+                // check whether point is void in this layer
+                bool is_void = true;
+                for (ExPolygons::const_iterator it = layers[i].begin(); it != layers[i].end(); ++it) {
+                    if (it->contains(*p)) {
+                        is_void = false;
                         break;
                     }
                 }
+                
+                if (is_void) {
+                    if (pillar.top_layer > 0) {
+                        // we have a pillar, so extend it
+                        pillar.bottom_layer = i + this->config.raft_layers;
+                    } else if (object_hit) {
+                        // we don't have a pillar and we're below the object, so create one
+                        pillar.top_layer = i + this->config.raft_layers;
+                    }
+                } else {
+                    if (pillar.top_layer > 0) {
+                        // we have a pillar which is not needed anymore, so store it and initialize a new potential pillar
+                        sm_pillars.push_back(pillar);
+                        pillar = SupportPillar(*p);
+                    }
+                    object_hit = true;
+                }
             }
+            if (pillar.top_layer > 0) sm_pillars.push_back(pillar);
         }
     }
     
     // generate a solid raft if requested
     // (do this after support material because we take support material shape into account)
     if (this->config.raft_layers > 0) {
-        ExPolygons raft = offset_ex(layers.front(), scale_(this->config.raft_offset));
+        ExPolygons raft = layers.front();
+        raft.insert(raft.end(), overhangs.begin(), overhangs.end()); // take support material into account
+        raft = offset_ex(raft, scale_(this->config.raft_offset));
         for (int i = this->config.raft_layers; i >= 1; --i) {
             layer_z.insert(layer_z.begin(), first_lh + lh * (i-1));
             layers.insert(layers.begin(), raft);
-            support_material.insert(support_material.begin(), Points());  // no support on this layer, we have raft
         }
         
         // prepend total raft height to all sliced layers
@@ -113,11 +155,25 @@ SVGExport::writeSVG(const std::string &outputfile)
                 pd.c_str(), "white", "black", "0", unscale(unscale(it->area()))
             );
         }
-        for (Points::const_iterator it = support_material[i].begin(); it != support_material[i].end(); ++it) {
-            fprintf(f,"\t\t<circle cx=\"%f\" cy=\"%f\" r=\"%f\" stroke-width=\"0\" fill=\"white\" slic3r:type=\"support\" />\n",
-                unscale(it->x), unscale(it->y), support_material_radius
-            );
+        
+        // don't print support material in raft layers
+        if (i >= this->config.raft_layers) {
+            // look for support material pillars belonging to this layer
+            for (std::vector<SupportPillar>::const_iterator it = sm_pillars.begin(); it != sm_pillars.end(); ++it) {
+                if (!(it->top_layer >= i && it->bottom_layer <= i)) continue;
+            
+                // generate a conic tip
+                float radius = fminf(
+                    support_material_radius,
+                    (it->top_layer - i + 1) * lh
+                );
+            
+                fprintf(f,"\t\t<circle cx=\"%f\" cy=\"%f\" r=\"%f\" stroke-width=\"0\" fill=\"white\" slic3r:type=\"support\" />\n",
+                    unscale(it->x), unscale(it->y), radius
+                );
+            }
         }
+        
         fprintf(f,"\t</g>\n");
     }
     fprintf(f,"</svg>\n");

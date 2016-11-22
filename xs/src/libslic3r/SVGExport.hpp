@@ -19,6 +19,13 @@ class SVGExport
         this->mesh.mirror_x();
     };
     void writeSVG(const std::string &outputfile);
+    
+    private:
+    class SupportPillar : public Point {
+        public:
+        size_t top_layer, bottom_layer;
+        SupportPillar(const Point &p) : Point(p), top_layer(0), bottom_layer(0) {};
+    };
 };
 
 }
