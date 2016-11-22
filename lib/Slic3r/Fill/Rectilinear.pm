@@ -165,4 +165,11 @@ extends 'Slic3r::Fill::Rectilinear';
 sub angles () { [0] }
 sub horizontal_lines { 1 }
 
+
+package Slic3r::Fill::AlignedRectilinear;
+use Moo;
+extends 'Slic3r::Fill::Rectilinear';
+
+sub angles () { [0, 0] }
+
 1;
