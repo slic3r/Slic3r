@@ -67,10 +67,10 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/PrintConfig.cpp
     ${LIBDIR}/libslic3r/PrintObject.cpp
     ${LIBDIR}/libslic3r/PrintRegion.cpp
+    ${LIBDIR}/libslic3r/SLAPrint.cpp
     ${LIBDIR}/libslic3r/Surface.cpp
     ${LIBDIR}/libslic3r/SurfaceCollection.cpp
     ${LIBDIR}/libslic3r/SVG.cpp
-    ${LIBDIR}/libslic3r/SVGExport.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
 )
 add_library(admesh STATIC

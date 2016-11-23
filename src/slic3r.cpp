@@ -2,7 +2,7 @@
 #include "Model.hpp"
 #include "IO.hpp"
 #include "TriangleMesh.hpp"
-#include "SVGExport.hpp"
+#include "SLAPrint.hpp"
 #include "libslic3r.h"
 #include <cstdio>
 #include <string>
@@ -97,11 +97,11 @@ main(const int argc, const char **argv)
         } else if (cli_config.export_svg) {
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model->objects.front()->input_file + ".svg";
-
-            SVGExport svg_export(model->mesh());
-            svg_export.mesh.repair();
-            svg_export.config.apply(print_config, true);
-            svg_export.writeSVG(outfile);
+            
+            SLAPrint print(&*model);
+            print.config.apply(print_config, true);
+            print.slice();
+            print.write_svg(outfile);
             printf("SVG file exported to %s\n", outfile.c_str());
         } else {
             std::cerr << "error: only --export-svg and --export-obj are currently supported" << std::endl;

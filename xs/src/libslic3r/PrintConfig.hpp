@@ -518,7 +518,7 @@ class FullPrintConfig
     };
 };
 
-class SVGExportConfig
+class SLAPrintConfig
     : public virtual StaticPrintConfig
 {
     public:
@@ -530,7 +530,7 @@ class SVGExportConfig
     ConfigOptionFloatOrPercent      support_material_extrusion_width;
     ConfigOptionFloat               support_material_spacing;
     
-    SVGExportConfig() : StaticPrintConfig() {
+    SLAPrintConfig() : StaticPrintConfig() {
         this->set_defaults();
     };
     
