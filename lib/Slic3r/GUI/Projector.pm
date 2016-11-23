@@ -468,8 +468,9 @@ sub show_print_time {
     
     
     my $duration = $self->controller->print_time;
-    $self->_set_status(sprintf "Estimated print time: %d minutes and %d seconds",
-        int($duration/60), ($duration - int($duration/60)*60));  # % truncates to integer
+    $self->_set_status(sprintf "Estimated print time: %d minutes and %d seconds - %.2f liters",
+        int($duration/60), ($duration - int($duration/60)*60),  # % truncates to integer
+        $self->controller->total_resin);
 }
 
 sub _close {
@@ -505,6 +506,7 @@ package Slic3r::GUI::Projector::Controller;
 use Moo;
 use Wx qw(wxTheApp :id :timer);
 use Wx::Event qw(EVT_TIMER);
+use Slic3r::Geometry qw(unscale);
 use Slic3r::Print::State ':steps';
 use Time::HiRes qw(gettimeofday tv_interval);
 
@@ -704,8 +706,21 @@ sub print_time {
     my ($self) = @_;
     
     return $self->config2->{bottom_layers} * $self->config2->{bottom_exposure_time}
-        + (@{$self->_heights} - $self->config2->{bottom_layers}) * $self->config2->{exposure_time}
-        + @{$self->_heights} * $self->config2->{settle_time};
+        + ($self->_print->layer_count - $self->config2->{bottom_layers}) * $self->config2->{exposure_time}
+        + $self->_print->layer_count * $self->config2->{settle_time};
+}
+
+sub total_resin {
+    my ($self) = @_;
+    
+    my $vol = 0;  # mm^3
+    
+    for my $i (0..($self->_print->layer_count-1)) {
+        my $lh = $self->_heights->[$i] - ($i == 0 ? 0 : $self->_heights->[$i-1]);
+        $vol += unscale(unscale($_->area)) * $lh for @{ $self->_print->slices($i) };
+    }
+    
+    return $vol/1000/1000;  # liters
 }
 
 sub DESTROY {
