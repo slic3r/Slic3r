@@ -55,7 +55,7 @@ sub export_svg {
     # plot infill
     $self->_svg_style->{'stroke'}   = '#444444';
     $self->_svg_style->{'fill'}     = '#454545';
-    $self->_plot_group(sub { map @{$_->fills}, @{$_[0]->regions} });
+    $self->_plot_group(sub { map @{$_->all_fills}, @{$_[0]->regions} });
     
     # plot support material
     $self->_svg_style->{'stroke'}   = '#12EF00';

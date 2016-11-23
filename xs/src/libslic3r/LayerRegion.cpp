@@ -29,6 +29,24 @@ LayerRegion::region()
     return this->_region;
 }
 
+ExtrusionEntityCollection *LayerRegion::all_fills() const
+{
+    ExtrusionEntityCollection *all_fills = this->fills.clone();
+    const ExtrusionEntitiesPtr &thin_fill_entities = this->thin_fills.entities;
+
+    for (ExtrusionEntitiesPtr::const_iterator it = thin_fill_entities.begin();
+         it != thin_fill_entities.end();
+         ++it)
+    {
+	    ExtrusionEntityCollection *coll = new ExtrusionEntityCollection();
+	    coll->append(**it);
+
+	    all_fills->entities.push_back(coll);
+    }
+
+    return all_fills;
+}
+
 Flow
 LayerRegion::flow(FlowRole role, bool bridge, double width) const
 {

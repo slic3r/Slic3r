@@ -25,6 +25,8 @@
         %code%{ RETVAL = &THIS->perimeters; %};
     Ref<ExtrusionEntityCollection> fills()
         %code%{ RETVAL = &THIS->fills; %};
+    Clone<ExtrusionEntityCollection> all_fills()
+        %code%{ RETVAL = THIS->all_fills(); %};
     
     Clone<Flow> flow(FlowRole role, bool bridge = false, double width = -1)
         %code%{ RETVAL = THIS->flow(role, bridge, width); %};

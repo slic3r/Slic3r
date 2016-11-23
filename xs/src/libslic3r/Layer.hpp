@@ -52,7 +52,10 @@ class LayerRegion
     // ordered collection of extrusion paths to fill surfaces
     // (this collection contains only ExtrusionEntityCollection objects)
     ExtrusionEntityCollection fills;
-    
+
+    // fills + thin_fills
+    ExtrusionEntityCollection *all_fills() const;
+
     Flow flow(FlowRole role, bool bridge = false, double width = -1) const;
     void merge_slices();
     void prepare_fill_surfaces();
