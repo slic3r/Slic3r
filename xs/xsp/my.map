@@ -56,6 +56,10 @@ TriangleMesh*              O_OBJECT_SLIC3R
 Ref<TriangleMesh>          O_OBJECT_SLIC3R_T
 Clone<TriangleMesh>        O_OBJECT_SLIC3R_T
 
+SLAPrint*                  O_OBJECT_SLIC3R
+Ref<SLAPrint>              O_OBJECT_SLIC3R_T
+Clone<SLAPrint>            O_OBJECT_SLIC3R_T
+
 Point*                     O_OBJECT_SLIC3R
 Ref<Point>                 O_OBJECT_SLIC3R_T
 Clone<Point>               O_OBJECT_SLIC3R_T

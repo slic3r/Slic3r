@@ -51,6 +51,7 @@ REGISTER_CLASS(PrintRegionConfig, "Config::PrintRegion");
 REGISTER_CLASS(GCodeConfig, "Config::GCode");
 REGISTER_CLASS(PrintConfig, "Config::Print");
 REGISTER_CLASS(FullPrintConfig, "Config::Full");
+REGISTER_CLASS(SLAPrint, "SLAPrint");
 REGISTER_CLASS(Surface, "Surface");
 REGISTER_CLASS(SurfaceCollection, "Surface::Collection");
 REGISTER_CLASS(TriangleMesh, "TriangleMesh");

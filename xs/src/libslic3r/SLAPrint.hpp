@@ -38,7 +38,9 @@ class SLAPrint
     
     private:
     Model* model;
-    Sizef3 size;
+    BoundingBoxf3 bb;
+    
+    coordf_t sm_pillars_radius() const;
 };
 
 }

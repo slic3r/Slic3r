@@ -10,19 +10,17 @@ SLAPrint::slice()
 {
     TriangleMesh mesh = this->model->mesh();
     mesh.repair();
-    mesh.mirror_x();
     
     // align to origin taking raft into account
-    BoundingBoxf3 bb = mesh.bounding_box();
+    this->bb = mesh.bounding_box();
     if (this->config.raft_layers > 0) {
-        bb.min.x -= this->config.raft_offset.value;
-        bb.min.y -= this->config.raft_offset.value;
-        bb.max.x += this->config.raft_offset.value;
-        bb.max.y += this->config.raft_offset.value;
+        this->bb.min.x -= this->config.raft_offset.value;
+        this->bb.min.y -= this->config.raft_offset.value;
+        this->bb.max.x += this->config.raft_offset.value;
+        this->bb.max.y += this->config.raft_offset.value;
     }
-    mesh.translate(-bb.min.x, -bb.min.y, -bb.min.z);  // align to origin
-    bb.translate(-bb.min.x, -bb.min.y, -bb.min.z);    // align to origin
-    this->size = bb.size();
+    mesh.translate(0, 0, -bb.min.z);
+    this->bb.translate(0, 0, -bb.min.z);
     
     // if we are generating a raft, first_layer_height will not affect mesh slicing
     const float lh       = this->config.layer_height.value;
@@ -68,9 +66,11 @@ SLAPrint::slice()
         
         // generate points following the shape of each island
         Points pillars_pos;
-        const float spacing = scale_(this->config.support_material_spacing);
+        const coordf_t spacing = scale_(this->config.support_material_spacing);
+        const coordf_t radius  = scale_(this->sm_pillars_radius());
         for (ExPolygons::const_iterator it = overhangs.begin(); it != overhangs.end(); ++it) {
-            for (float inset = -spacing/2; inset += spacing; ) {
+            // leave a radius/2 gap between pillars and contour to prevent lateral adhesion
+            for (float inset = radius * 1.5;; inset += spacing) {
                 // inset according to the configured spacing
                 Polygons curr = offset(*it, -inset);
                 if (curr.empty()) break;
@@ -134,7 +134,8 @@ SLAPrint::slice()
 void
 SLAPrint::write_svg(const std::string &outputfile) const
 {
-    double support_material_radius = this->config.support_material_extrusion_width.get_abs_value(this->config.layer_height)/2;
+    const Sizef3 size = this->bb.size();
+    const double support_material_radius = sm_pillars_radius();
     
     FILE* f = fopen(outputfile.c_str(), "w");
     fprintf(f,
@@ -142,7 +143,7 @@ SLAPrint::write_svg(const std::string &outputfile) const
         "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.0//EN\" \"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n"
         "<svg width=\"%f\" height=\"%f\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns:slic3r=\"http://slic3r.org/namespaces/slic3r\" viewport-fill=\"black\">\n"
         "<!-- Generated using Slic3r %s http://slic3r.org/ -->\n"
-        , this->size.x, this->size.y, SLIC3R_VERSION);
+        , size.x, size.y, SLIC3R_VERSION);
     
     for (size_t i = 0; i < this->layers.size(); ++i) {
         const Layer &layer = this->layers[i];
@@ -157,8 +158,8 @@ SLAPrint::write_svg(const std::string &outputfile) const
                 std::ostringstream d;
                 d << "M ";
                 for (Points::const_iterator p = mp->points.begin(); p != mp->points.end(); ++p) {
-                    d << unscale(p->x) << " ";
-                    d << unscale(p->y) << " ";
+                    d << unscale(p->x) - this->bb.min.x << " ";
+                    d << size.y - (unscale(p->y) - this->bb.min.y) << " ";  // mirror Y coordinates as SVG uses downwards Y
                 }
                 d << "z";
                 pd += d.str() + " ";
@@ -181,7 +182,9 @@ SLAPrint::write_svg(const std::string &outputfile) const
                 );
             
                 fprintf(f,"\t\t<circle cx=\"%f\" cy=\"%f\" r=\"%f\" stroke-width=\"0\" fill=\"white\" slic3r:type=\"support\" />\n",
-                    unscale(it->x), unscale(it->y), radius
+                    unscale(it->x) - this->bb.min.x,
+                    size.y - (unscale(it->y) - this->bb.min.y),
+                    radius
                 );
             }
         }
@@ -189,6 +192,14 @@ SLAPrint::write_svg(const std::string &outputfile) const
         fprintf(f,"\t</g>\n");
     }
     fprintf(f,"</svg>\n");
+}
+
+coordf_t
+SLAPrint::sm_pillars_radius() const
+{
+    coordf_t radius = this->config.support_material_extrusion_width.get_abs_value(this->config.support_material_spacing)/2;
+    if (radius == 0) radius = this->config.support_material_spacing / 3; // auto
+    return radius;
 }
 
 }

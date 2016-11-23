@@ -415,7 +415,7 @@ sub new {
             
             my $duration = $self->controller->remaining_print_time;
             $self->_set_status(sprintf "Printing layer %d/%d (z = %.2f); %d minutes and %d seconds left",
-                $layer_num, $self->controller->layer_count,
+                $layer_num, $self->controller->_print->layer_count,
                 $self->controller->current_layer_height,
                 int($duration/60), ($duration - int($duration/60)*60));  # % truncates to integer
         },
@@ -426,7 +426,7 @@ sub new {
         },
     ));
     {
-        my $max = $self->controller->layer_count-1;
+        my $max = $self->controller->_print->layer_count-1;
         $self->{layers_spinctrl}->SetRange(0, $max); 
         $self->{layers_slider}->SetRange(0, $max);
     }
@@ -527,7 +527,24 @@ sub BUILD {
     
     Slic3r::GUI::disable_screensaver();
     
-    $self->set_print(wxTheApp->{mainframe}->{plater}->{print});
+    # init print
+    {
+        my $print = Slic3r::SLAPrint->new(wxTheApp->{mainframe}->{plater}->{model});
+        $print->apply_config(wxTheApp->{mainframe}->config);
+        $self->_print($print);
+        $self->screen->print($print);
+    
+        # make sure layers were sliced
+        {
+            my $progress_dialog = Wx::ProgressDialog->new('Slicing…', "Processing layers…", 100, undef, 0);
+            $progress_dialog->Pulse;
+            $print->slice;
+            $progress_dialog->Destroy;
+        }
+    
+        $self->_layers([ map $print->slices($_), 0..($print->layer_count-1) ]);
+        $self->_heights($print->heights);
+    }
     
     # projection timer
     my $timer_id = &Wx::NewId();
@@ -544,40 +561,6 @@ sub delay {
     
     $self->_timer_cb($cb);
     $self->timer->Start($wait * 1000, wxTIMER_ONE_SHOT);
-}
-
-sub set_print {
-    my ($self, $print) = @_;
-    
-    # make sure layers were sliced
-    {
-        my $progress_dialog;
-        foreach my $object (@{$print->objects}) {
-            next if $object->step_done(STEP_SLICE);
-            $progress_dialog //= Wx::ProgressDialog->new('Slicing…', "Processing layers…", 100, undef, 0);
-            $progress_dialog->Pulse;
-            $object->slice;
-        }
-        $progress_dialog->Destroy if $progress_dialog;
-    }
-    
-    $self->_print($print);
-    
-    # sort layers by Z
-    my %layers = ();
-    foreach my $layer (map { @{$_->layers}, @{$_->support_layers} } @{$print->objects}) {
-        my $height = $layer->print_z;
-        $layers{$height} //= [];
-        push @{$layers{$height}}, $layer;
-    }
-    $self->_layers({ %layers });
-    $self->_heights([ sort { $a <=> $b } keys %layers ]);
-}
-
-sub layer_count {
-    my ($self) = @_;
-    
-    return scalar @{$self->_heights};
 }
 
 sub current_layer_height {
@@ -613,7 +596,7 @@ sub start_print {
         # start with black
         Slic3r::debugf "starting black projection\n";
         $self->_layer_num(-1);
-        $self->screen->project_layers(undef);
+        $self->screen->project_layer(undef);
         $self->delay($self->config2->{settle_time}, sub {
             $self->project_next_layer;
         });
@@ -630,7 +613,7 @@ sub stop_print {
     $self->is_printing(0);
     $self->timer->Stop;
     $self->_timer_cb(undef);
-    $self->screen->project_layers(undef);
+    $self->screen->project_layer(undef);
 }
 
 sub print_completed {
@@ -652,19 +635,18 @@ sub print_completed {
 sub is_projecting {
     my ($self) = @_;
     
-    return defined $self->screen->layers;
+    return defined $self->screen->layer;
 }
 
 sub project_layer {
     my ($self, $layer_num) = @_;
     
-    if (!defined $layer_num || $layer_num >= $self->layer_count) {
-        $self->screen->project_layers(undef);
+    if (!defined $layer_num || $layer_num >= $self->_print->layer_count) {
+        $self->screen->project_layer(undef);
         return;
     }
     
-    my @layers = @{ $self->_layers->{ $self->_heights->[$layer_num] } };
-    $self->screen->project_layers([ @layers ]);
+    $self->screen->project_layer($self->_layers->[$layer_num], $layer_num);
 }
 
 sub project_next_layer {
@@ -672,7 +654,7 @@ sub project_next_layer {
     
     $self->_layer_num($self->_layer_num + 1);
     Slic3r::debugf "projecting layer %d\n", $self->_layer_num;
-    if ($self->_layer_num >= $self->layer_count) {
+    if ($self->_layer_num >= $self->_print->layer_count) {
         $self->print_completed;
         return;
     }
@@ -699,7 +681,7 @@ sub project_next_layer {
         }
         
         $self->delay($time, sub {
-            $self->screen->project_layers(undef);
+            $self->screen->project_layer(undef);
             $self->project_next_layer;
         });
     });
@@ -743,7 +725,7 @@ use List::Util qw(min);
 use Slic3r::Geometry qw(X Y unscale scale);
 use Slic3r::Geometry::Clipper qw(intersection_pl);
 
-__PACKAGE__->mk_accessors(qw(config config2 scaling_factor bed_origin layers));
+__PACKAGE__->mk_accessors(qw(config config2 scaling_factor bed_origin layer print layer_num));
 
 sub new {
     my ($class, $parent, $config, $config2) = @_;
@@ -803,10 +785,11 @@ sub _resize {
     $self->Refresh;
 }
 
-sub project_layers {
-    my ($self, $layers) = @_;
+sub project_layer {
+    my ($self, $layer, $layer_num) = @_;
     
-    $self->layers($layers);
+    $self->layer($layer);
+    $self->layer_num($layer_num);
     $self->Refresh;
 }
 
@@ -865,31 +848,46 @@ sub _repaint {
             
             $dc->SetTextForeground(wxWHITE);
             $dc->SetFont(Wx::Font->new(20, wxDEFAULT, wxNORMAL, wxNORMAL));
-            $dc->DrawText("X", @{$self->unscaled_point_to_pixel([10, -2])});
-            $dc->DrawText("Y", @{$self->unscaled_point_to_pixel([-2, 10])});
+            
+            my $p = $self->unscaled_point_to_pixel([10, 0]);
+            $dc->DrawText("X", $p->[X], $p->[Y]);
+            $p = $self->unscaled_point_to_pixel([0, 10]);
+            $dc->DrawText("Y", $p->[X]-20, $p->[Y]-10);
         }
     }
     
-    return if !defined $self->layers;
+    return if !defined $self->layer;
     
     # get layers at this height
     # draw layers
     $dc->SetPen(Wx::Pen->new(wxWHITE, 1, wxSOLID));
-    foreach my $layer (@{$self->layers}) {
-        my @polygons = sort { $a->contains_point($b->first_point) ? -1 : 1 } map @$_, @{ $layer->slices };
-        foreach my $copy (@{$layer->object->_shifted_copies}) {
-            foreach my $polygon (@polygons) {
-                $polygon = $polygon->clone;
-                $polygon->translate(@$copy);
-                
-                if ($polygon->is_counter_clockwise) {
-                    $dc->SetBrush(Wx::Brush->new(wxWHITE, wxSOLID));
-                } else {
-                    $dc->SetBrush(Wx::Brush->new(wxBLACK, wxSOLID));
-                }
-                $dc->DrawPolygon($self->scaled_points_to_pixel($polygon->pp), 0, 0);
-            }
+    
+    my @polygons = sort { $a->contains_point($b->first_point) ? -1 : 1 } map @$_, @{$self->layer};
+    foreach my $polygon (@polygons) {
+        if ($polygon->is_counter_clockwise) {
+            $dc->SetBrush(Wx::Brush->new(wxWHITE, wxSOLID));
+        } else {
+            $dc->SetBrush(Wx::Brush->new(wxBLACK, wxSOLID));
         }
+        $dc->DrawPolygon($self->scaled_points_to_pixel($polygon->pp), 0, 0);
+    }
+    
+    # draw support material
+    my $sm_radius = $self->print->config->get_abs_value_over('support_material_extrusion_width', $self->print->config->layer_height)/2;
+    $dc->SetBrush(Wx::Brush->new(wxWHITE, wxSOLID));
+    foreach my $pillar (@{$self->print->sm_pillars}) {
+        next unless $pillar->{top_layer}    >= $self->layer_num
+                 && $pillar->{bottom_layer} <= $self->layer_num;
+        
+        my $radius = min(
+            $sm_radius,
+            ($pillar->{top_layer} - $self->layer_num + 1) * $self->print->config->layer_height,
+        );
+        
+        $dc->DrawCircle(
+            @{$self->scaled_points_to_pixel([$pillar->{point}])->[0]},
+            $radius * $self->scaling_factor,
+        );
     }
 }
 
