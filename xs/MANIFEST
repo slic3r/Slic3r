@@ -70,6 +70,8 @@ src/libslic3r/PrintConfig.cpp
 src/libslic3r/PrintConfig.hpp
 src/libslic3r/PrintObject.cpp
 src/libslic3r/PrintRegion.cpp
+src/libslic3r/SLAPrint.cpp
+src/libslic3r/SLAPrint.hpp
 src/libslic3r/SupportMaterial.hpp
 src/libslic3r/Surface.cpp
 src/libslic3r/Surface.hpp
@@ -122,6 +124,8 @@ t/19_model.t
 t/20_print.t
 t/21_gcode.t
 t/22_exception.t
+t/23_config.t
+t/inc/22_config_bad_config_options.ini
 xsp/BoundingBox.xsp
 xsp/BridgeDetector.xsp
 xsp/Clipper.xsp
@@ -152,6 +156,7 @@ xsp/Polygon.xsp
 xsp/Polyline.xsp
 xsp/PolylineCollection.xsp
 xsp/Print.xsp
+xsp/SLAPrint.xsp
 xsp/SupportMaterial.xsp
 xsp/Surface.xsp
 xsp/SurfaceCollection.xsp
