@@ -192,13 +192,17 @@
 %typemap{Ref<ModelInstancePtrs>}{simple};
 %typemap{Clone<ModelInstancePtrs>}{simple};
 %typemap{GLVertexArray*};
+%typemap{SLAPrint*};
+%typemap{Ref<SLAPrint>}{simple};
+%typemap{Clone<SLAPrint>}{simple};
 
 %typemap{PrintRegionPtrs*};
 %typemap{PrintObjectPtrs*};
 %typemap{LayerPtrs*};
 %typemap{SupportLayerPtrs*};
 
-
+%typemap{ClipperLib::JoinType}{simple};
+%typemap{ClipperLib::PolyFillType}{simple};
 %typemap{Axis}{parsed}{
   %cpp_type{Axis};
   %precall_code{%

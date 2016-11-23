@@ -22,13 +22,15 @@ class MultiPoint
     void scale(double factor);
     void translate(double x, double y);
     void translate(const Point &vector);
+    void rotate(double angle);
     void rotate(double angle, const Point &center);
     void reverse();
     Point first_point() const;
     virtual Point last_point() const = 0;
     virtual Lines lines() const = 0;
     double length() const;
-    bool is_valid() const;
+    bool is_valid() const { return this->points.size() >= 2; }
+
     int find_point(const Point &point) const;
     bool has_boundary_point(const Point &point) const;
     BoundingBox bounding_box() const;
@@ -42,6 +44,6 @@ class MultiPoint
     static Points _douglas_peucker(const Points &points, const double tolerance);
 };
 
-}
+} // namespace Slic3r
 
 #endif

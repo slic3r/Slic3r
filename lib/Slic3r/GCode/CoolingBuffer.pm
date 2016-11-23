@@ -53,7 +53,7 @@ sub flush {
                 * ($elapsed - $self->config->slowdown_below_layer_time)
                 / ($self->config->fan_below_layer_time - $self->config->slowdown_below_layer_time); #/
         }
-        Slic3r::debugf "  fan = %d%%, speed = %d%%\n", $fan_speed, $speed_factor * 100;
+        Slic3r::debugf "  fan = %d%%, speed = %f%%\n", $fan_speed, $speed_factor * 100;
         
         if ($speed_factor < 1) {
             $gcode =~ s/^(?=.*?;_EXTRUDE_SET_SPEED)(?!.*?;_WIPE)(?<!;_BRIDGE_FAN_START\n)(G1\sF)(\d+(?:\.\d+)?)/

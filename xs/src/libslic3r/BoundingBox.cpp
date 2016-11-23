@@ -219,4 +219,13 @@ BoundingBox3Base<PointClass>::center() const
 }
 template Pointf3 BoundingBox3Base<Pointf3>::center() const;
 
+template <class PointClass> bool
+BoundingBoxBase<PointClass>::contains(const PointClass &point) const
+{
+    return point.x >= this->min.x && point.x <= this->max.x
+        && point.y >= this->min.y && point.y <= this->max.y;
+}
+template bool BoundingBoxBase<Point>::contains(const Point &point) const;
+template bool BoundingBoxBase<Pointf>::contains(const Pointf &point) const;
+
 }

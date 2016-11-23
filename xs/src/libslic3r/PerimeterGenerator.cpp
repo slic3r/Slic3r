@@ -343,8 +343,7 @@ PerimeterGenerator::_traverse_loops(const PerimeterGeneratorLoops &loops,
             && !(this->object_config->support_material && this->object_config->support_material_contact_distance.value == 0)) {
             // get non-overhang paths by intersecting this loop with the grown lower slices
             {
-                Polylines polylines;
-                intersection((Polygons)loop->polygon, this->_lower_slices_p, &polylines);
+                Polylines polylines = intersection_pl(loop->polygon, this->_lower_slices_p);
                 
                 for (Polylines::const_iterator polyline = polylines.begin(); polyline != polylines.end(); ++polyline) {
                     ExtrusionPath path(role);
@@ -360,8 +359,7 @@ PerimeterGenerator::_traverse_loops(const PerimeterGeneratorLoops &loops,
             // outside the grown lower slices (thus where the distance between
             // the loop centerline and original lower slices is >= half nozzle diameter
             {
-                Polylines polylines;
-                diff((Polygons)loop->polygon, this->_lower_slices_p, &polylines);
+                Polylines polylines = diff_pl(loop->polygon, this->_lower_slices_p);
                 
                 for (Polylines::const_iterator polyline = polylines.begin(); polyline != polylines.end(); ++polyline) {
                     ExtrusionPath path(erOverhangPerimeter);
@@ -492,16 +490,20 @@ PerimeterGenerator::_variable_width(const ThickPolylines &polylines, ExtrusionRo
             const double w = fmax(line.a_width, line.b_width);
             
             if (path.polyline.points.empty()) {
-                path.polyline.append(line.a);
-                path.polyline.append(line.b);
-                
                 flow.width = unscale(w);
                 #ifdef SLIC3R_DEBUG
                 printf("  filling %f gap\n", flow.width);
                 #endif
+                
+                // make sure we don't include too thin segments which
+                // may cause even slightly negative mm3_per_mm because of floating point math
                 path.mm3_per_mm  = flow.mm3_per_mm();
+                if (path.mm3_per_mm < EPSILON) continue;
+                
                 path.width       = flow.width;
                 path.height      = flow.height;
+                path.polyline.append(line.a);
+                path.polyline.append(line.b);
             } else {
                 thickness_delta = fabs(scale_(flow.width) - w);
                 if (thickness_delta <= tolerance) {
@@ -531,12 +533,6 @@ PerimeterGenerator::_variable_width(const ThickPolylines &polylines, ExtrusionRo
     }
     
     return coll;
-}
-
-bool
-PerimeterGeneratorLoop::is_external() const
-{
-    return this->depth == 0;
 }
 
 bool

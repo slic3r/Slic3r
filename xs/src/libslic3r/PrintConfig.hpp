@@ -1,3 +1,20 @@
+// Configuration store of Slic3r.
+//
+// The configuration store is either static or dynamic.
+// DynamicPrintConfig is used mainly at the user interface. while the StaticPrintConfig is used
+// during the slicing and the g-code generation.
+//
+// The classes derived from StaticPrintConfig form a following hierarchy.
+// Virtual inheritance is used for some of the parent objects.
+//
+// FullPrintConfig
+//    PrintObjectConfig
+//    PrintRegionConfig
+//    PrintConfig
+//        GCodeConfig
+//    HostConfig
+//
+
 #ifndef slic3r_PrintConfig_hpp_
 #define slic3r_PrintConfig_hpp_
 
@@ -9,11 +26,11 @@
 namespace Slic3r {
 
 enum GCodeFlavor {
-    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion,
+    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion, gcfSmoothie, gcfRepetier,
 };
 
 enum InfillPattern {
-    ipRectilinear, ipGrid, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
+    ipRectilinear, ipAlignedRectilinear, ipGrid, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
 };
 
@@ -28,18 +45,21 @@ enum SeamPosition {
 template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_values() {
     t_config_enum_values keys_map;
     keys_map["reprap"]          = gcfRepRap;
+    keys_map["repetier"]        = gcfRepetier;
     keys_map["teacup"]          = gcfTeacup;
     keys_map["makerware"]       = gcfMakerWare;
     keys_map["sailfish"]        = gcfSailfish;
     keys_map["mach3"]           = gcfMach3;
     keys_map["machinekit"]      = gcfMachinekit;
     keys_map["no-extrusion"]    = gcfNoExtrusion;
+    keys_map["smoothie"]    = gcfSmoothie;
     return keys_map;
 }
 
 template<> inline t_config_enum_values ConfigOptionEnum<InfillPattern>::get_enum_values() {
     t_config_enum_values keys_map;
     keys_map["rectilinear"]         = ipRectilinear;
+    keys_map["alignedrectilinear"]  = ipAlignedRectilinear;
     keys_map["grid"]                = ipGrid;
     keys_map["line"]                = ipLine;
     keys_map["concentric"]          = ipConcentric;
@@ -68,14 +88,19 @@ template<> inline t_config_enum_values ConfigOptionEnum<SeamPosition>::get_enum_
     return keys_map;
 }
 
+// Defines each and every confiuration option of Slic3r, including the properties of the GUI dialogs.
+// Does not store the actual values, but defines default values.
 class PrintConfigDef : public ConfigDef
 {
     public:
     PrintConfigDef();
 };
 
+// The one and only global definition of SLic3r configuration options.
+// This definition is constant.
 extern PrintConfigDef print_config_def;
 
+// Slic3r configuration storage with print_config_def assigned.
 class PrintConfigBase : public virtual ConfigBase
 {
     public:
@@ -86,6 +111,12 @@ class PrintConfigBase : public virtual ConfigBase
     double min_object_distance() const;
 };
 
+// Slic3r dynamic configuration, used to override the configuration 
+// per object, per modification volume or per printing material.
+// The dynamic configuration is also used to store user modifications of the print global parameters,
+// so the modified configuration values may be diffed against the active configuration
+// to invalidate the proper slicing resp. g-code generation processing steps.
+// This object is mapped to Perl as Slic3r::Config.
 class DynamicPrintConfig : public PrintConfigBase, public DynamicConfig
 {
     public:
@@ -93,12 +124,14 @@ class DynamicPrintConfig : public PrintConfigBase, public DynamicConfig
     void normalize();
 };
 
+
 class StaticPrintConfig : public PrintConfigBase, public StaticConfig
 {
     public:
     StaticPrintConfig() : PrintConfigBase(), StaticConfig() {};
 };
 
+// This object is mapped to Perl as Slic3r::Config::PrintObject.
 class PrintObjectConfig : public virtual StaticPrintConfig
 {
     public:
@@ -126,10 +159,11 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 support_material_threshold;
     ConfigOptionFloat               xy_size_compensation;
     
-    PrintObjectConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
-    
+    PrintObjectConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(dont_support_bridges);
         OPT_PTR(extrusion_width);
@@ -159,6 +193,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     };
 };
 
+// This object is mapped to Perl as Slic3r::Config::PrintRegion.
 class PrintRegionConfig : public virtual StaticPrintConfig
 {
     public:
@@ -195,10 +230,11 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 top_solid_layers;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
     
-    PrintRegionConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
-    
+    PrintRegionConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(bottom_solid_layers);
         OPT_PTR(bridge_flow_ratio);
@@ -237,6 +273,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     };
 };
 
+// This object is mapped to Perl as Slic3r::Config::GCode.
 class GCodeConfig : public virtual StaticPrintConfig
 {
     public:
@@ -266,9 +303,10 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_relative_e_distances;
     ConfigOptionBool                use_volumetric_e;
     
-    GCodeConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
+    GCodeConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(before_layer_gcode);
@@ -312,6 +350,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     };
 };
 
+// This object is mapped to Perl as Slic3r::Config::Print.
 class PrintConfig : public GCodeConfig
 {
     public:
@@ -366,10 +405,11 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
     
-    PrintConfig() : GCodeConfig() {
-        this->set_defaults();
-    };
-    
+    PrintConfig(bool initialize = true) : GCodeConfig(false) {
+        if (initialize)
+            this->set_defaults();
+    }
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(avoid_crossing_perimeters);
         OPT_PTR(bed_shape);
@@ -438,10 +478,11 @@ class HostConfig : public virtual StaticPrintConfig
     ConfigOptionString              serial_port;
     ConfigOptionInt                 serial_speed;
     
-    HostConfig() : StaticPrintConfig() {
-        this->set_defaults();
-    };
-    
+    HostConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(octoprint_host);
         OPT_PTR(octoprint_apikey);
@@ -452,16 +493,100 @@ class HostConfig : public virtual StaticPrintConfig
     };
 };
 
+// This object is mapped to Perl as Slic3r::Config::Full.
 class FullPrintConfig
     : public PrintObjectConfig, public PrintRegionConfig, public PrintConfig, public HostConfig
 {
     public:
+    FullPrintConfig(bool initialize = true) :
+        PrintObjectConfig(false),
+        PrintRegionConfig(false), 
+        PrintConfig(false), 
+        HostConfig(false)
+    {
+        if (initialize)
+            this->set_defaults();
+    }
+
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         ConfigOption* opt;
         if ((opt = PrintObjectConfig::optptr(opt_key, create)) != NULL) return opt;
         if ((opt = PrintRegionConfig::optptr(opt_key, create)) != NULL) return opt;
         if ((opt = PrintConfig::optptr(opt_key, create)) != NULL) return opt;
         if ((opt = HostConfig::optptr(opt_key, create)) != NULL) return opt;
+        return NULL;
+    };
+};
+
+class SLAPrintConfig
+    : public virtual StaticPrintConfig
+{
+    public:
+    ConfigOptionFloatOrPercent      first_layer_height;
+    ConfigOptionFloat               layer_height;
+    ConfigOptionInt                 raft_layers;
+    ConfigOptionFloat               raft_offset;
+    ConfigOptionBool                support_material;
+    ConfigOptionFloatOrPercent      support_material_extrusion_width;
+    ConfigOptionFloat               support_material_spacing;
+    
+    SLAPrintConfig() : StaticPrintConfig() {
+        this->set_defaults();
+    };
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(first_layer_height);
+        OPT_PTR(layer_height);
+        OPT_PTR(raft_layers);
+        OPT_PTR(raft_offset);
+        OPT_PTR(support_material);
+        OPT_PTR(support_material_extrusion_width);
+        OPT_PTR(support_material_spacing);
+        
+        return NULL;
+    };
+};
+
+class CLIConfigDef : public ConfigDef
+{
+    public:
+    CLIConfigDef();
+};
+
+extern CLIConfigDef cli_config_def;
+
+class CLIConfig
+    : public virtual ConfigBase, public StaticConfig
+{
+    public:
+    ConfigOptionBool                export_obj;
+    ConfigOptionBool                export_pov;
+    ConfigOptionBool                export_svg;
+    ConfigOptionBool                info;
+    ConfigOptionStrings             load;
+    ConfigOptionString              output;
+    ConfigOptionFloat               rotate;
+    ConfigOptionString              save;
+    ConfigOptionFloat               scale;
+    ConfigOptionPoint3              scale_to_fit;
+    
+    CLIConfig() : ConfigBase(), StaticConfig() {
+        this->def = &cli_config_def;
+        this->set_defaults();
+    };
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(export_obj);
+        OPT_PTR(export_pov);
+        OPT_PTR(export_svg);
+        OPT_PTR(info);
+        OPT_PTR(load);
+        OPT_PTR(output);
+        OPT_PTR(rotate);
+        OPT_PTR(save);
+        OPT_PTR(scale);
+        OPT_PTR(scale_to_fit);
+        
         return NULL;
     };
 };

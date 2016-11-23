@@ -54,4 +54,15 @@ Surface::is_bridge() const
         || this->surface_type == stInternalBridge;
 }
 
+Polygons
+to_polygons(const Surfaces &surfaces)
+{
+    Slic3r::Polygons pp;
+    for (Surfaces::const_iterator s = surfaces.begin(); s != surfaces.end(); ++s) {
+        Slic3r::Polygons ppp = *s;
+        pp.insert(pp.end(), ppp.begin(), ppp.end());
+    }
+    return pp;
+}
+
 }

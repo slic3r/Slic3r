@@ -785,13 +785,14 @@ sub _update {
     
     my $config = $self->{config};
     
-    if ($config->spiral_vase && !($config->perimeters == 1 && $config->top_solid_layers == 0 && $config->fill_density == 0)) {
+    if ($config->spiral_vase && !($config->perimeters == 1 && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->infill_only_where_needed == 0 && $config->support_material == 0)) {
         my $dialog = Wx::MessageDialog->new($self,
             "The Spiral Vase mode requires:\n"
             . "- one perimeter\n"
             . "- no top solid layers\n"
             . "- 0% fill density\n"
             . "- no support material\n"
+            . "- no infill where necessary\n"
             . "\nShall I adjust those settings in order to enable Spiral Vase?",
             'Spiral Vase', wxICON_WARNING | wxYES | wxNO);
         if ($dialog->ShowModal() == wxID_YES) {
@@ -800,12 +801,42 @@ sub _update {
             $new_conf->set("top_solid_layers", 0);
             $new_conf->set("fill_density", 0);
             $new_conf->set("support_material", 0);
+            $new_conf->set("infill_only_where_needed", 0);
             $self->load_config($new_conf);
         } else {
             my $new_conf = Slic3r::Config->new;
             $new_conf->set("spiral_vase", 0);
             $self->load_config($new_conf);
         }
+    }
+
+    if ($config->support_material) {
+        # Ask only once.
+        if (! $self->{support_material_overhangs_queried}) {
+            $self->{support_material_overhangs_queried} = 1;
+            if ($config->overhangs != 1) {
+                my $dialog = Wx::MessageDialog->new($self,
+                    "Supports work better, if the following feature is enabled:\n"
+                    . "- Detect bridging perimeters\n"
+                    . "\nShall I adjust those settings for supports?",
+                    'Support Generator', wxICON_WARNING | wxYES | wxNO | wxCANCEL);
+                my $answer = $dialog->ShowModal();
+                my $new_conf = Slic3r::Config->new;
+                if ($answer == wxID_YES) {
+                    # Enable "detect bridging perimeters".
+                    $new_conf->set("overhangs", 1);
+                } elsif ($answer == wxID_NO) {
+                    # Do nothing, leave supports on and "detect bridging perimeters" off.
+                } elsif ($answer == wxID_CANCEL) {
+                    # Disable supports.
+                    $new_conf->set("support_material", 0);
+                    $self->{support_material_overhangs_queried} = 0;
+                }
+                $self->load_config($new_conf);
+            }
+        }
+    } else {
+        $self->{support_material_overhangs_queried} = 0;
     }
     
     if ($config->fill_density == 100
@@ -1431,7 +1462,12 @@ sub _update {
         
         # some options only apply when not using firmware retraction
         $self->get_field($_, $i)->toggle($retraction && !$config->use_firmware_retraction)
-            for qw(retract_speed retract_restart_extra wipe);
+            for qw(retract_restart_extra wipe);
+        
+        # retraction speed is also used by auto-speed pressure regulator, even when
+        # user enabled firmware retraction
+        $self->get_field('retract_speed', $i)->toggle($retraction);
+        
         if ($config->use_firmware_retraction && $config->get_at('wipe', $i)) {
             my $dialog = Wx::MessageDialog->new($self,
                 "The Wipe option is not available when using the Firmware Retraction mode.\n"

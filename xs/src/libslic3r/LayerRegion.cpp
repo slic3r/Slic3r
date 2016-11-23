@@ -45,9 +45,8 @@ LayerRegion::flow(FlowRole role, bool bridge, double width) const
 void
 LayerRegion::merge_slices()
 {
-    ExPolygons expp;
     // without safety offset, artifacts are generated (GH #2494)
-    union_(this->slices, &expp, true);
+    ExPolygons expp = union_ex((Polygons)this->slices, true);
     this->slices.surfaces.clear();
     this->slices.surfaces.reserve(expp.size());
     
@@ -77,6 +76,7 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
     );
     
     if (this->layer()->lower_layer != NULL)
+        // Cummulative sum of polygons over all the regions.
         g.lower_slices = &this->layer()->lower_layer->slices;
     
     g.layer_id              = this->layer()->id();

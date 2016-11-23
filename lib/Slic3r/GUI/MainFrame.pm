@@ -33,6 +33,10 @@ sub new {
     $self->_init_tabpanel;
     $self->_init_menubar;
     
+    # set default tooltip timer in msec
+    # SetAutoPop supposedly accepts long integers but some bug doesn't allow for larger values
+    Wx::ToolTip::SetAutoPop(32767);
+    
     # initialize status bar
     $self->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($self, -1);
     $self->{statusbar}->SetStatusText("Version $Slic3r::VERSION - Remember to check for updates at http://slic3r.org/");
@@ -98,9 +102,9 @@ sub _init_tabpanel {
     
     if (!$self->{no_plater}) {
         $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
-        if (!$self->{no_controller}) {
-            $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
-        }
+    }
+    if (!$self->{no_controller}) {
+        $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
     }
     $self->{options_tabs} = {};
     
@@ -254,14 +258,18 @@ sub _init_menubar {
             $self->_append_menu_item($windowMenu, "Select &Plater Tab\tCtrl+1", 'Show the plater', sub {
                 $self->select_tab(0);
             }, undef, 'application_view_tile.png');
-            if (!$self->{no_controller}) {
-                $self->_append_menu_item($windowMenu, "Select &Controller Tab\tCtrl+T", 'Show the printer controller', sub {
-                    $self->select_tab(1);
-                }, undef, 'printer_empty.png');
-            }
-            $windowMenu->AppendSeparator();
-            $tab_offset += 2;
+            $tab_offset += 1;
         }
+        if (!$self->{no_controller}) {
+            $self->_append_menu_item($windowMenu, "Select &Controller Tab\tCtrl+T", 'Show the printer controller', sub {
+                $self->select_tab(1);
+            }, undef, 'printer_empty.png');
+            $tab_offset += 1;
+        }
+        if ($tab_offset > 0) {
+            $windowMenu->AppendSeparator();
+        }
+        
         $self->_append_menu_item($windowMenu, "Select P&rint Settings Tab\tCtrl+2", 'Show the print settings', sub {
             $self->select_tab($tab_offset+0);
         }, undef, 'cog.png');

@@ -38,6 +38,8 @@ src/libslic3r/GCodeWriter.cpp
 src/libslic3r/GCodeWriter.hpp
 src/libslic3r/Geometry.cpp
 src/libslic3r/Geometry.hpp
+src/libslic3r/IO.cpp
+src/libslic3r/IO.hpp
 src/libslic3r/Layer.cpp
 src/libslic3r/Layer.hpp
 src/libslic3r/LayerRegion.cpp
@@ -119,6 +121,7 @@ t/18_motionplanner.t
 t/19_model.t
 t/20_print.t
 t/21_gcode.t
+t/22_exception.t
 xsp/BoundingBox.xsp
 xsp/BridgeDetector.xsp
 xsp/Clipper.xsp

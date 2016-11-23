@@ -110,7 +110,7 @@ Layer::make_slices()
             Polygons region_slices_p = (*layerm)->slices;
             slices_p.insert(slices_p.end(), region_slices_p.begin(), region_slices_p.end());
         }
-        union_(slices_p, &slices);
+        slices = union_ex(slices_p);
     }
     
     this->slices.expolygons.clear();
@@ -162,6 +162,10 @@ Layer::any_bottom_region_slice_contains(const T &item) const
 }
 template bool Layer::any_bottom_region_slice_contains<Polyline>(const Polyline &item) const;
 
+
+// Here the perimeters are created cummulatively for all layer regions sharing the same parameters influencing the perimeters.
+// The perimeter paths and the thin fills (ExtrusionEntityCollection) are assigned to the first compatible layer region.
+// The resulting fill surface is split back among the originating regions.
 void
 Layer::make_perimeters()
 {
@@ -229,8 +233,8 @@ Layer::make_perimeters()
             if (!fill_surfaces.surfaces.empty()) {
                 for (LayerRegionPtrs::iterator l = layerms.begin(); l != layerms.end(); ++l) {
                     ExPolygons expp = intersection_ex(
-                        fill_surfaces,
-                        (*l)->slices
+                        (Polygons) fill_surfaces,
+                        (Polygons) (*l)->slices
                     );
                     (*l)->fill_surfaces.surfaces.clear();
                     

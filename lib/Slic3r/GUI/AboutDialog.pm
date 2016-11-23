@@ -51,7 +51,7 @@ sub new {
         '<a href="http://slic3r.org/">Slic3r</a> is licensed under the ' .
         '<a href="http://www.gnu.org/licenses/agpl-3.0.html">GNU Affero General Public License, version 3</a>.' .
         '<br /><br /><br />' .
-        'Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake and numerous others. ' .
+        'Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik and numerous others. ' .
         'Manual by Gary Hodgson. Inspired by the RepRap community. <br />' .
         'Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James. ' .
         '</font>' .

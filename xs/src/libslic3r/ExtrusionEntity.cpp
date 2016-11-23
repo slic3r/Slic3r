@@ -36,8 +36,7 @@ void
 ExtrusionPath::intersect_expolygons(const ExPolygonCollection &collection, ExtrusionEntityCollection* retval) const
 {
     // perform clipping
-    Polylines clipped;
-    intersection<Polylines,Polylines>(this->polyline, collection, &clipped);
+    Polylines clipped = intersection_pl(this->polyline, collection);
     return this->_inflate_collection(clipped, retval);
 }
 
@@ -45,8 +44,7 @@ void
 ExtrusionPath::subtract_expolygons(const ExPolygonCollection &collection, ExtrusionEntityCollection* retval) const
 {
     // perform clipping
-    Polylines clipped;
-    diff<Polylines,Polylines>(this->polyline, collection, &clipped);
+    Polylines clipped = diff_pl(this->polyline, collection);
     return this->_inflate_collection(clipped, retval);
 }
 
@@ -113,9 +111,7 @@ ExtrusionPath::_inflate_collection(const Polylines &polylines, ExtrusionEntityCo
 Polygons
 ExtrusionPath::grow() const
 {
-    Polygons pp;
-    offset(this->polyline, &pp, +scale_(this->width/2));
-    return pp;
+    return offset(this->polyline, +scale_(this->width/2));
 }
 
 ExtrusionLoop*
@@ -193,6 +189,7 @@ ExtrusionLoop::split_at_vertex(const Point &point)
             } else {
                 // new paths list starts with the second half of current path
                 ExtrusionPaths new_paths;
+                new_paths.reserve(this->paths.size() + 1);
                 {
                     ExtrusionPath p = *path;
                     p.polyline.points.erase(p.polyline.points.begin(), p.polyline.points.begin() + idx);
@@ -212,7 +209,7 @@ ExtrusionLoop::split_at_vertex(const Point &point)
                     if (p.polyline.is_valid()) new_paths.push_back(p);
                 }
                 // we can now override the old path list with the new one and stop looping
-                this->paths = new_paths;
+                std::swap(this->paths, new_paths);
             }
             return true;
         }
@@ -240,14 +237,24 @@ ExtrusionLoop::split_at(const Point &point)
     }
     
     // now split path_idx in two parts
-    ExtrusionPath p1 = this->paths[path_idx];
-    ExtrusionPath p2 = p1;
+    ExtrusionPath p1(this->paths[path_idx].role), p2(this->paths[path_idx].role);
     this->paths[path_idx].polyline.split_at(p, &p1.polyline, &p2.polyline);
     
-    // install the two paths
-    this->paths.erase(this->paths.begin() + path_idx);
-    if (p2.polyline.is_valid()) this->paths.insert(this->paths.begin() + path_idx, p2);
-    if (p1.polyline.is_valid()) this->paths.insert(this->paths.begin() + path_idx, p1);
+    if (this->paths.size() == 1) {
+        if (! p1.polyline.is_valid())
+            std::swap(this->paths.front().polyline.points, p2.polyline.points);
+        else if (! p2.polyline.is_valid())
+            std::swap(this->paths.front().polyline.points, p1.polyline.points);
+        else {
+            p2.polyline.points.insert(p2.polyline.points.end(), p1.polyline.points.begin() + 1, p1.polyline.points.end());
+            std::swap(this->paths.front().polyline.points, p2.polyline.points);
+        }
+    } else {
+        // install the two paths
+        this->paths.erase(this->paths.begin() + path_idx);
+        if (p2.polyline.is_valid()) this->paths.insert(this->paths.begin() + path_idx, p2);
+        if (p1.polyline.is_valid()) this->paths.insert(this->paths.begin() + path_idx, p1);
+    }
     
     // split at the new vertex
     this->split_at_vertex(p);

@@ -607,20 +607,16 @@ Print::validate() const
                 object->model_object()->instances.front()->transform_polygon(&convex_hull);
                 
                 // grow convex hull with the clearance margin
-                {
-                    Polygons grown_hull;
-                    offset(convex_hull, &grown_hull, scale_(this->config.extruder_clearance_radius.value)/2, 1, jtRound, scale_(0.1));
-                    convex_hull = grown_hull.front();
-                }
+                convex_hull = offset(convex_hull, scale_(this->config.extruder_clearance_radius.value)/2, 1, jtRound, scale_(0.1)).front();
                 
                 // now we check that no instance of convex_hull intersects any of the previously checked object instances
                 for (Points::const_iterator copy = object->_shifted_copies.begin(); copy != object->_shifted_copies.end(); ++copy) {
                     Polygon p = convex_hull;
                     p.translate(*copy);
-                    if (intersects(a, p))
+                    if (!intersection(a, p).empty())
                         throw PrintValidationException("Some objects are too close; your extruder will collide with them.");
                     
-                    union_(a, p, &a);
+                    a = union_(a, p);
                 }
             }
         }
@@ -639,7 +635,7 @@ Print::validate() const
             if (!object_height.empty() && object_height.back() > scale_(this->config.extruder_clearance_height.value))
                 throw PrintValidationException("Some objects are too tall and cannot be printed without extruder collisions.");
         }
-    }
+    } // end if (this->config.complete_objects)
     
     if (this->config.spiral_vase) {
         size_t total_copies_count = 0;
@@ -837,6 +833,7 @@ Print::auto_assign_extruders(ModelObject* model_object) const
     size_t extruders = this->config.nozzle_diameter.values.size();
     for (ModelVolumePtrs::const_iterator v = model_object->volumes.begin(); v != model_object->volumes.end(); ++v) {
         if (!(*v)->material_id().empty()) {
+            //FIXME Vojtech: This assigns an extruder ID even to a modifier volume, if it has a material assigned.
             size_t extruder_id = (v - model_object->volumes.begin()) + 1;
             if (!(*v)->config.has("extruder"))
                 (*v)->config.opt<ConfigOptionInt>("extruder", true)->value = extruder_id;

@@ -170,7 +170,7 @@ stl_scale(stl_file *stl, float factor) {
   stl_scale_versor(stl, versor);
 }
 
-static void calculate_normals(stl_file *stl) {
+void calculate_normals(stl_file *stl) {
   long i;
   float normal[3];
 
