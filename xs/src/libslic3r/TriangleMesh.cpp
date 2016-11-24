@@ -50,7 +50,7 @@ TriangleMesh::TriangleMesh(const TriangleMesh &other)
 
 TriangleMesh& TriangleMesh::operator= (TriangleMesh other)
 {
-    swap(*this, other);
+    this->swap(other);
     return *this;
 }
 
