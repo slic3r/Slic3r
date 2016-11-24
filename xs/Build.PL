@@ -16,6 +16,10 @@ my $mswin = $^O eq 'MSWin32';
 # NOGDI            : prevents inclusion of wingdi.h which defines functions Polygon() and Polyline() in global namespace
 # BOOST_ASIO_DISABLE_KQUEUE : prevents a Boost ASIO bug on OS X: https://svn.boost.org/trac/boost/ticket/5339
 my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE);
+if ($cpp_guess->is_gcc) {
+    # Tell GCC to use C++11 if we have it.
+    push @cflags, '--std=c++11';
+}
 my @ldflags = ();
 if ($^O eq 'darwin') {
     push @ldflags, qw(-framework IOKit -framework CoreFoundation);
