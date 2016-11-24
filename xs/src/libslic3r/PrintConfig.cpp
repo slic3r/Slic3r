@@ -368,6 +368,11 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("grid");
     def->enum_values.push_back("line");
+    def->enum_values.push_back("rectilinear2");
+    def->enum_values.push_back("grid2");
+    def->enum_values.push_back("triangles");
+    def->enum_values.push_back("stars");
+    def->enum_values.push_back("cubic");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("honeycomb");
     def->enum_values.push_back("3dhoneycomb");
@@ -375,9 +380,14 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
     def->enum_labels.push_back("Rectilinear");
-    def->enum_labels.push_back("AlignedRectilinear");
+    def->enum_labels.push_back("Aligned Rectilinear");
     def->enum_labels.push_back("Grid");
     def->enum_labels.push_back("Line");
+    def->enum_labels.push_back("Rectilinear 2");
+    def->enum_labels.push_back("Grid 2");
+    def->enum_labels.push_back("Triangles");
+    def->enum_labels.push_back("Stars");
+    def->enum_labels.push_back("Cubic");
     def->enum_labels.push_back("Concentric");
     def->enum_labels.push_back("Honeycomb");
     def->enum_labels.push_back("3D Honeycomb");

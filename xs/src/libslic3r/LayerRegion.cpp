@@ -7,28 +7,6 @@
 
 namespace Slic3r {
 
-LayerRegion::LayerRegion(Layer *layer, PrintRegion *region)
-:   _layer(layer),
-    _region(region)
-{
-}
-
-LayerRegion::~LayerRegion()
-{
-}
-
-Layer*
-LayerRegion::layer()
-{
-    return this->_layer;
-}
-
-PrintRegion*
-LayerRegion::region()
-{
-    return this->_region;
-}
-
 Flow
 LayerRegion::flow(FlowRole role, bool bridge, double width) const
 {
@@ -167,18 +145,16 @@ LayerRegion::process_external_surfaces(const Layer* lower_layer)
     {
         // merge top and bottom in a single collection
         SurfaceCollection tb = top;
-        tb.surfaces.insert(tb.surfaces.end(), bottom.surfaces.begin(), bottom.surfaces.end());
+        tb.append(bottom);
         
         // group surfaces
-        std::vector<SurfacesPtr> groups;
+        std::vector<SurfacesConstPtr> groups;
         tb.group(&groups);
         
-        for (std::vector<SurfacesPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+        for (std::vector<SurfacesConstPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
             Polygons subject;
-            for (SurfacesPtr::const_iterator s = g->begin(); s != g->end(); ++s) {
-                Polygons pp = **s;
-                subject.insert(subject.end(), pp.begin(), pp.end());
-            }
+            for (SurfacesConstPtr::const_iterator s = g->begin(); s != g->end(); ++s)
+                append_to(subject, (Polygons)**s);
             
             ExPolygons expp = intersection_ex(
                 subject,
@@ -203,15 +179,13 @@ LayerRegion::process_external_surfaces(const Layer* lower_layer)
         }
         
         // group surfaces
-        std::vector<SurfacesPtr> groups;
+        std::vector<SurfacesConstPtr> groups;
         other.group(&groups);
         
-        for (std::vector<SurfacesPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+        for (std::vector<SurfacesConstPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
             Polygons subject;
-            for (SurfacesPtr::const_iterator s = g->begin(); s != g->end(); ++s) {
-                Polygons pp = **s;
-                subject.insert(subject.end(), pp.begin(), pp.end());
-            }
+            for (SurfacesConstPtr::const_iterator s = g->begin(); s != g->end(); ++s)
+                append_to(subject, (Polygons)**s);
             
             ExPolygons expp = diff_ex(
                 subject,

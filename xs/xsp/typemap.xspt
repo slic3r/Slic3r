@@ -1,5 +1,6 @@
 %typemap{bool}{simple};
 %typemap{size_t}{simple};
+%typemap{coord_t}{simple};
 %typemap{coordf_t}{simple};
 %typemap{std::string};
 %typemap{t_config_option_key};
@@ -60,6 +61,9 @@
 %typemap{Flow*};
 %typemap{Ref<Flow>}{simple};
 %typemap{Clone<Flow>}{simple};
+%typemap{Filler*};
+%typemap{Ref<Filler>}{simple};
+%typemap{Clone<Filler>}{simple};
 %typemap{Line*};
 %typemap{Ref<Line>}{simple};
 %typemap{Clone<Line>}{simple};

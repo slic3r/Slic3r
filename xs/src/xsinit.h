@@ -53,6 +53,7 @@ extern "C" {
 #include <ClipperUtils.hpp>
 #include <Config.hpp>
 #include <ExPolygon.hpp>
+#include <Fill/FillBase.hpp>
 #include <MultiPoint.hpp>
 #include <Point.hpp>
 #include <Polygon.hpp>
@@ -150,6 +151,20 @@ void from_SV_check(SV* surface_sv, Surface* THIS);
 SV* to_SV(TriangleMesh* THIS);
 SV* polynode_children_2_perl(const ClipperLib::PolyNode& node);
 SV* polynode2perl(const ClipperLib::PolyNode& node);
+
+class Filler
+{
+    public:
+    Filler() : fill(NULL) {};
+    ~Filler() { 
+        if (fill != NULL) {
+            delete fill; 
+            fill = NULL;
+        }
+    };
+    Fill        *fill;
+    FillParams   params;
+};
 
 }
 

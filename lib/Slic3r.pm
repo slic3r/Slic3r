@@ -39,7 +39,6 @@ use Slic3r::Config;
 use Slic3r::ExPolygon;
 use Slic3r::ExtrusionLoop;
 use Slic3r::ExtrusionPath;
-use Slic3r::Fill;
 use Slic3r::Flow;
 use Slic3r::Format::AMF;
 use Slic3r::Format::OBJ;
@@ -113,6 +112,12 @@ sub spawn_thread {
     return $thread;
 }
 
+# If the threading is enabled, spawn a set of threads.
+# Otherwise run the task on the current thread.
+# Used for 
+#   Slic3r::Print::Object->layers->make_perimeters
+#   Slic3r::Print::Object->layers->make_fill
+#   Slic3r::Print::SupportMaterial::generate_toolpaths
 sub parallelize {
     my %params = @_;
     
@@ -193,6 +198,7 @@ sub thread_cleanup {
     *Slic3r::ExtrusionLoop::DESTROY         = sub {};
     *Slic3r::ExtrusionPath::DESTROY         = sub {};
     *Slic3r::ExtrusionPath::Collection::DESTROY = sub {};
+    *Slic3r::Filler::DESTROY                = sub {};
     *Slic3r::Flow::DESTROY                  = sub {};
     *Slic3r::GCode::DESTROY                 = sub {};
     *Slic3r::GCode::AvoidCrossingPerimeters::DESTROY = sub {};

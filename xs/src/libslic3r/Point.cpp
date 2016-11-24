@@ -72,8 +72,10 @@ Point::rotate(double angle, const Point &center)
     double cur_y = (double)this->y;
     double s     = sin(angle);
     double c     = cos(angle);
-    this->x = (coord_t)round( (double)center.x + c * (cur_x - (double)center.x) - s * (cur_y - (double)center.y) );
-    this->y = (coord_t)round( (double)center.y + c * (cur_y - (double)center.y) + s * (cur_x - (double)center.x) );
+    double dx    = cur_x - (double)center.x;
+    double dy    = cur_y - (double)center.y;
+    this->x = (coord_t)round( (double)center.x + c * dx - s * dy );
+    this->y = (coord_t)round( (double)center.y + c * dy + s * dx );
 }
 
 bool
@@ -300,6 +302,27 @@ Vector
 Point::vector_to(const Point &point) const
 {
     return Vector(point.x - this->x, point.y - this->y);
+}
+
+// Align a coordinate to a grid. The coordinate may be negative,
+// the aligned value will never be bigger than the original one.
+static coord_t
+_align_to_grid(const coord_t coord, const coord_t spacing) {
+    // Current C++ standard defines the result of integer division to be rounded to zero,
+    // for both positive and negative numbers. Here we want to round down for negative
+    // numbers as well.
+    coord_t aligned = (coord < 0) ?
+            ((coord - spacing + 1) / spacing) * spacing :
+            (coord / spacing) * spacing;
+    assert(aligned <= coord);
+    return aligned;
+}
+
+void
+Point::align_to_grid(const Point &spacing, const Point &base)
+{
+    this->x = base.x + _align_to_grid(this->x - base.x, spacing.x);
+    this->y = base.y + _align_to_grid(this->y - base.y, spacing.y);
 }
 
 Point

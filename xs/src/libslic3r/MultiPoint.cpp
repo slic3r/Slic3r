@@ -33,22 +33,26 @@ MultiPoint::translate(const Point &vector)
 void
 MultiPoint::rotate(double angle)
 {
-    double s     = sin(angle);
-    double c     = cos(angle);
+    double s = sin(angle);
+    double c = cos(angle);
     for (Points::iterator it = points.begin(); it != points.end(); ++it) {
-        (*it).rotate(angle);
-	    double cur_x = (double)it->x;
-	    double cur_y = (double)it->y;
-	    it->x = (coord_t)round(c * cur_x - s * cur_y);
-	    it->y = (coord_t)round(c * cur_y + s * cur_x);
+        double cur_x = (double)it->x;
+        double cur_y = (double)it->y;
+        it->x = (coord_t)round(c * cur_x - s * cur_y);
+        it->y = (coord_t)round(c * cur_y + s * cur_x);
     }
 }
 
 void
 MultiPoint::rotate(double angle, const Point &center)
 {
+    double s = sin(angle);
+    double c = cos(angle);
     for (Points::iterator it = points.begin(); it != points.end(); ++it) {
-        (*it).rotate(angle, center);
+        double dx = double(it->x - center.x);
+        double dy = double(it->y - center.y);
+        it->x = (coord_t)round(double(center.x) + c * dx - s * dy);
+        it->y = (coord_t)round(double(center.y) + c * dy + s * dx);
     }
 }
 
@@ -97,15 +101,33 @@ MultiPoint::bounding_box() const
     return BoundingBox(this->points);
 }
 
-void
+bool 
+MultiPoint::has_duplicate_points() const
+{
+    for (size_t i = 1; i < points.size(); ++i)
+        if (points[i-1].coincides_with(points[i]))
+            return true;
+    return false;
+}
+
+bool
 MultiPoint::remove_duplicate_points()
 {
-    for (size_t i = 1; i < this->points.size(); ++i) {
-        if (this->points.at(i).coincides_with(this->points.at(i-1))) {
-            this->points.erase(this->points.begin() + i);
-            --i;
+    size_t j = 0;
+    for (size_t i = 1; i < points.size(); ++i) {
+        if (points[j].coincides_with(points[i])) {
+            // Just increase index i.
+        } else {
+            ++ j;
+            if (j < i)
+                points[j] = points[i];
         }
     }
+    if (++ j < points.size()) {
+        points.erase(points.begin() + j, points.end());
+        return true;
+    }
+    return false;
 }
 
 void

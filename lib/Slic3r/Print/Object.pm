@@ -522,12 +522,12 @@ sub infill {
         thread_cb => sub {
             my $q = shift;
             while (defined (my $i = $q->dequeue)) {
-                $self->get_layer($i)->make_fill;
+                $self->get_layer($i)->make_fills;
             }
         },
         no_threads_cb => sub {
             foreach my $layer (@{$self->layers}) {
-                $layer->make_fill;
+                $layer->make_fills;
             }
         },
     );

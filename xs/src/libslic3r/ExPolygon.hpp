@@ -20,6 +20,7 @@ class ExPolygon
     operator Polygons() const;
     void scale(double factor);
     void translate(double x, double y);
+    void rotate(double angle);
     void rotate(double angle, const Point &center);
     double area() const;
     bool is_valid() const;
@@ -45,7 +46,14 @@ class ExPolygon
     std::string dump_perl() const;
 };
 
-Polygons to_polygons(const ExPolygons &expolygons);
+inline Polygons
+to_polygons(const ExPolygons &expolygons)
+{
+    Polygons pp;
+    for (ExPolygons::const_iterator ex = expolygons.begin(); ex != expolygons.end(); ++ex)
+        append_to(pp, (Polygons)*ex);
+    return pp;
+}
 
 }
 

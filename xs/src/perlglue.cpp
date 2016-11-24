@@ -11,6 +11,7 @@ REGISTER_CLASS(ExtrusionLoop, "ExtrusionLoop");
 // there is no ExtrusionLoop::Collection or ExtrusionEntity::Collection
 REGISTER_CLASS(ExtrusionEntityCollection, "ExtrusionPath::Collection");
 REGISTER_CLASS(Flow, "Flow");
+REGISTER_CLASS(Filler, "Filler");
 REGISTER_CLASS(AvoidCrossingPerimeters, "GCode::AvoidCrossingPerimeters");
 REGISTER_CLASS(OozePrevention, "GCode::OozePrevention");
 REGISTER_CLASS(Wipe, "GCode::Wipe");

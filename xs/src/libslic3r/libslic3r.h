@@ -5,6 +5,7 @@
 #include <ostream>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 #define SLIC3R_VERSION "1.3.0-dev"
 
@@ -37,6 +38,12 @@ namespace Slic3r {
 
 enum Axis { X=0, Y, Z };
 
+template <class T>
+inline void append_to(std::vector<T> &dst, const std::vector<T> &src)
+{
+    dst.insert(dst.end(), src.begin(), src.end());
+}
+
 }
 using namespace Slic3r;
 
@@ -53,10 +60,13 @@ void confess_at(const char *file, int line, const char *func, const char *pat, .
 // For example, could optimized functions with move semantics be used?
 #if __cplusplus==201402L
 	#define SLIC3R_CPPVER 14
+	#define STDMOVE(WHAT) std::move(WHAT)
 #elif __cplusplus==201103L
 	#define SLIC3R_CPPVER 11
+	#define STDMOVE(WHAT) std::move(WHAT)
 #else
 	#define SLIC3R_CPPVER 0
+	#define STDMOVE(WHAT) (WHAT)
 #endif
 
 #endif

@@ -53,6 +53,15 @@ ExPolygon::translate(double x, double y)
 }
 
 void
+ExPolygon::rotate(double angle)
+{
+    contour.rotate(angle);
+    for (Polygons::iterator it = holes.begin(); it != holes.end(); ++it) {
+        (*it).rotate(angle);
+    }
+}
+
+void
 ExPolygon::rotate(double angle, const Point &center)
 {
     contour.rotate(angle, center);
@@ -495,17 +504,6 @@ ExPolygon::dump_perl() const
         ret << "," << h->dump_perl();
     ret << "]";
     return ret.str();
-}
-
-Polygons
-to_polygons(const ExPolygons &expolygons)
-{
-    Slic3r::Polygons pp;
-    for (ExPolygons::const_iterator ex = expolygons.begin(); ex != expolygons.end(); ++ex) {
-        Slic3r::Polygons ppp = *ex;
-        pp.insert(pp.end(), ppp.begin(), ppp.end());
-    }
-    return pp;
 }
 
 }

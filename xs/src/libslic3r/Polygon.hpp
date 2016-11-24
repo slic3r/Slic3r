@@ -6,11 +6,11 @@
 #include <string>
 #include "Line.hpp"
 #include "MultiPoint.hpp"
-#include "Polyline.hpp"
 
 namespace Slic3r {
 
 class Polygon;
+class Polyline;
 typedef std::vector<Polygon> Polygons;
 
 class Polygon : public MultiPoint {

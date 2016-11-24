@@ -55,6 +55,14 @@ class BoundingBox : public BoundingBoxBase<Point>
     public:
     void polygon(Polygon* polygon) const;
     Polygon polygon() const;
+    BoundingBox rotated(double angle) const;
+    BoundingBox rotated(double angle, const Point &center) const;
+    void rotate(double angle) {
+        *this = this->rotated(angle);
+    }
+    void rotate(double angle, const Point &center) {
+        *this = this->rotated(angle, center);
+    }
     
     BoundingBox() : BoundingBoxBase<Point>() {};
     BoundingBox(const Point &pmin, const Point &pmax) : BoundingBoxBase<Point>(pmin, pmax) {};
@@ -92,16 +100,6 @@ inline bool operator!=(const BoundingBoxBase<VT> &bb1, const BoundingBoxBase<VT>
     return !(bb1 == bb2);
 }
 
-template<typename VT>
-inline bool empty(const BoundingBoxBase<VT> &bb)
-{
-    return bb.min.x > bb.max.y || bb.min.y > bb.max.y;
-}
-
-template<typename VT>
-inline bool empty(const BoundingBox3Base<VT> &bb)
-{
-    return bb.min.x > bb.max.x || bb.min.y > bb.max.y || bb.min.z > bb.max.z;}
 }
 
 #endif

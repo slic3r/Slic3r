@@ -2,7 +2,7 @@
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include "Print.hpp"
-
+#include "Fill/Fill.hpp"
 
 namespace Slic3r {
 
@@ -45,18 +45,6 @@ void
 Layer::set_id(size_t id)
 {
     this->_id = id;
-}
-
-PrintObject*
-Layer::object()
-{
-    return this->_object;
-}
-
-const PrintObject*
-Layer::object() const
-{
-    return this->_object;
 }
 
 
@@ -249,16 +237,23 @@ Layer::make_perimeters()
     }
 }
 
-
-SupportLayer::SupportLayer(size_t id, PrintObject *object, coordf_t height,
-        coordf_t print_z, coordf_t slice_z)
-:   Layer(id, object, height, print_z, slice_z)
+void
+Layer::make_fills()
 {
+    #ifdef SLIC3R_DEBUG
+    printf("Making fills for layer %zu\n", this->id());
+    #endif
+    
+    FOREACH_LAYERREGION(this, it_layerm) {
+        LayerRegion &layerm = **it_layerm;
+        layerm.fills.clear();
+        make_fill(layerm, &layerm.fills);
+        
+        #ifndef NDEBUG
+        for (size_t i = 0; i < layerm.fills.entities.size(); ++i)
+            assert(dynamic_cast<ExtrusionEntityCollection*>(layerm.fills.entities[i]) != NULL);
+        #endif
+    }
 }
-
-SupportLayer::~SupportLayer()
-{
-}
-
 
 }
