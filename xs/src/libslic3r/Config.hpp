@@ -226,7 +226,7 @@ class ConfigOptionString : public ConfigOptionSingle<std::string>
         return escape_string_cstyle(this->value);
     }
 
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         return unescape_string_cstyle(str, this->value);
     };
 };
@@ -247,7 +247,7 @@ class ConfigOptionStrings : public ConfigOptionVector<std::string>
         return this->values;
     };
     
-    bool deserialize(std::string str) {
+    bool deserialize(std::string str, bool append = false) {
         return unescape_strings_cstyle(str, this->values);
     };
 };
@@ -668,7 +668,7 @@ class ConfigBase
     bool equals(ConfigBase &other);
     t_config_option_keys diff(ConfigBase &other);
     std::string serialize(const t_config_option_key &opt_key) const;
-    bool set_deserialize(const t_config_option_key &opt_key, std::string str);
+    bool set_deserialize(const t_config_option_key &opt_key, std::string str, bool append = false);
     double get_abs_value(const t_config_option_key &opt_key) const;
     double get_abs_value(const t_config_option_key &opt_key, double ratio_over) const;
     void setenv_();
