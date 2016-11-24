@@ -103,4 +103,6 @@ inline bool operator!=(const BoundingBoxBase<VT> &bb1, const BoundingBoxBase<VT>
     return !(bb1 == bb2);
 }
 
+}
+
 #endif

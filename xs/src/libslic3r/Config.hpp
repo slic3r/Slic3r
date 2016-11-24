@@ -224,7 +224,7 @@ class ConfigOptionString : public ConfigOptionSingle<std::string>
     
     std::string serialize() const { 
         return escape_string_cstyle(this->value);
-    }
+    };
 
     bool deserialize(std::string str, bool append = false) {
         return unescape_string_cstyle(str, this->value);
