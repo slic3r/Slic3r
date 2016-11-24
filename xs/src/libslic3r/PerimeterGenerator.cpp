@@ -272,6 +272,8 @@ PerimeterGenerator::process()
                     are not subtracted from fill surfaces (they might be too short gaps
                     that medial axis skips but infill might join with other infill regions
                     and use zigzag).  */
+                //FIXME Vojtech: This grows by a rounded extrusion width, not by line spacing,
+                // therefore it may cover the area, but no the volume.
                 last = diff(last, gap_fill.grow());
             }
         }
