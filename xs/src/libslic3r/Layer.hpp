@@ -97,7 +97,8 @@ class Layer {
 
 
     size_t region_count() const;
-    LayerRegion* get_region(int idx);
+    LayerRegion* get_region(size_t idx) { return this->regions.at(idx); };
+    const LayerRegion* get_region(size_t idx) const { return this->regions.at(idx); };
     LayerRegion* add_region(PrintRegion* print_region);
     
     void make_slices();

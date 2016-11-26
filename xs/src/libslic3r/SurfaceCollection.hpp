@@ -28,6 +28,8 @@ class SurfaceCollection
     void append(const ExPolygons &src, const Surface &templ);
     void append(const ExPolygons &src, SurfaceType surfaceType);
     size_t polygons_count() const;
+    bool empty() const { return this->surfaces.empty(); };
+    void clear() { this->surfaces.clear(); };
 };
 
 }

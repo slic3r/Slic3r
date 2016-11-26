@@ -133,6 +133,7 @@ class PrintObject
     bool invalidate_all_steps();
     
     bool has_support_material() const;
+    void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
     void _make_perimeters();
@@ -181,7 +182,8 @@ class Print
     bool reload_model_instances();
 
     // methods for handling regions
-    PrintRegion* get_region(size_t idx);
+    PrintRegion* get_region(size_t idx) { return this->regions.at(idx); };
+    const PrintRegion* get_region(size_t idx) const { return this->regions.at(idx); };
     PrintRegion* add_region();
     
     // methods for handling state
