@@ -2,7 +2,6 @@
 #define slic3r_Print_hpp_
 
 #include "libslic3r.h"
-#include <queue>
 #include <set>
 #include <string>
 #include <vector>
@@ -148,8 +147,6 @@ class PrintObject
         // parameter
     PrintObject(Print* print, ModelObject* model_object, const BoundingBoxf3 &modobj_bbox);
     ~PrintObject();
-    void _make_perimeters_do(std::queue<size_t>* queue, boost::mutex* queue_mutex);
-    void _infill_do(std::queue<size_t>* queue, boost::mutex* queue_mutex);
 };
 
 typedef std::vector<PrintObject*> PrintObjectPtrs;
