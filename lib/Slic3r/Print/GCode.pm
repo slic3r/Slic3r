@@ -169,6 +169,9 @@ sub export {
     # set extruder(s) temperature before and after start G-code
     $self->_print_first_layer_temperature(0);
     printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->start_gcode);
+    foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
+        printf $fh "%s\n", $gcodegen->placeholder_parser->process($start_gcode);
+    }
     $self->_print_first_layer_temperature(1);
     
     # set other general things
@@ -302,6 +305,9 @@ sub export {
     # write end commands to file
     print $fh $gcodegen->retract;   # TODO: process this retract through PressureRegulator in order to discharge fully
     print $fh $gcodegen->writer->set_fan(0);
+    foreach my $end_gcode (@{ $self->config->end_filament_gcode }) { # Process filament-specific gcode in extruder order.
+        printf $fh "%s\n", $gcodegen->placeholder_parser->process($end_gcode);
+    }
     printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->end_gcode);
     print $fh $gcodegen->writer->update_progress($gcodegen->layer_count, $gcodegen->layer_count, 1);  # 100%
     print $fh $gcodegen->writer->postamble;

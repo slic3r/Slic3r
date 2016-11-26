@@ -893,6 +893,7 @@ sub build {
         fan_always_on cooling
         min_fan_speed max_fan_speed bridge_fan_speed disable_fan_first_layers
         fan_below_layer_time slowdown_below_layer_time min_print_speed
+        start_filament_gcode end_filament_gcode
     ));
     $self->{config}->set('filament_settings_id', '');
     
@@ -905,6 +906,8 @@ sub build {
             $optgroup->append_single_option_line('extrusion_multiplier', 0);
         }
     
+
+
         {
             my $optgroup = $page->new_optgroup('Temperature (°C)');
         
@@ -987,6 +990,27 @@ sub build {
             my $option = $optgroup->get_option('filament_notes', 0);
             $option->full_width(1);
             $option->height(250);
+            $optgroup->append_single_option_line($option);
+        }
+    }
+    {
+        my $page = $self->add_options_page('Custom G-code', 'cog.png');
+        {
+            my $optgroup = $page->new_optgroup('Start G-code',
+                label_width => 0,
+            );
+            my $option = $optgroup->get_option('start_filament_gcode', 0);
+            $option->full_width(1);
+            $option->height(150);
+            $optgroup->append_single_option_line($option);
+        }
+        {
+            my $optgroup = $page->new_optgroup('End G-code',
+                label_width => 0,
+            );
+            my $option = $optgroup->get_option('end_filament_gcode', 0);
+            $option->full_width(1);
+            $option->height(150);
             $optgroup->append_single_option_line($option);
         }
     }
