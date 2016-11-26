@@ -2,9 +2,11 @@
 #define slic3r_Print_hpp_
 
 #include "libslic3r.h"
+#include <queue>
 #include <set>
-#include <vector>
 #include <string>
+#include <vector>
+#include <boost/thread.hpp>
 #include "BoundingBox.hpp"
 #include "Flow.hpp"
 #include "PrintConfig.hpp"
@@ -134,6 +136,8 @@ class PrintObject
     bool has_support_material() const;
     void process_external_surfaces();
     void bridge_over_infill();
+    void _make_perimeters();
+    void _infill();
     
     private:
     Print* _print;
@@ -144,6 +148,8 @@ class PrintObject
         // parameter
     PrintObject(Print* print, ModelObject* model_object, const BoundingBoxf3 &modobj_bbox);
     ~PrintObject();
+    void _make_perimeters_do(std::queue<size_t>* queue, boost::mutex* queue_mutex);
+    void _infill_do(std::queue<size_t>* queue, boost::mutex* queue_mutex);
 };
 
 typedef std::vector<PrintObject*> PrintObjectPtrs;
