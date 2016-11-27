@@ -137,7 +137,7 @@ class PolyNode
 { 
 public:
     PolyNode();
-    virtual ~PolyNode(){};
+    ~PolyNode(){};
     Path Contour;
     PolyNodes Childs;
     PolyNode* Parent;
@@ -219,17 +219,17 @@ class ClipperBase
 {
 public:
   ClipperBase();
-  virtual ~ClipperBase();
-  virtual bool AddPath(const Path &pg, PolyType PolyTyp, bool Closed);
+  ~ClipperBase();
+  bool AddPath(const Path &pg, PolyType PolyTyp, bool Closed);
   bool AddPaths(const Paths &ppg, PolyType PolyTyp, bool Closed);
-  virtual void Clear();
+  void Clear();
   IntRect GetBounds();
   bool PreserveCollinear() {return m_PreserveCollinear;};
   void PreserveCollinear(bool value) {m_PreserveCollinear = value;};
 protected:
   void DisposeLocalMinimaList();
   TEdge* AddBoundsToLML(TEdge *e, bool IsClosed);
-  virtual void Reset();
+  void Reset();
   TEdge* ProcessBound(TEdge* E, bool IsClockwise);
   void InsertScanbeam(const cInt Y);
   bool PopScanbeam(cInt &Y);
@@ -258,7 +258,7 @@ protected:
 };
 //------------------------------------------------------------------------------
 
-class Clipper : public virtual ClipperBase
+class Clipper : public ClipperBase
 {
 public:
   Clipper(int initOptions = 0);
@@ -285,7 +285,7 @@ public:
   void ZFillFunction(ZFillCallback zFillFunc);
 #endif
 protected:
-  virtual bool ExecuteInternal();
+  bool ExecuteInternal();
 private:
   JoinList         m_Joins;
   JoinList         m_GhostJoins;
@@ -390,8 +390,8 @@ class clipperException : public std::exception
 {
   public:
     clipperException(const char* description): m_descr(description) {}
-    virtual ~clipperException() throw() {}
-    virtual const char* what() const throw() {return m_descr.c_str();}
+    ~clipperException() throw() {}
+    const char* what() const throw() {return m_descr.c_str();}
   private:
     std::string m_descr;
 };
