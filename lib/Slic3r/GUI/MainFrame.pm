@@ -179,6 +179,13 @@ sub _init_menubar {
     # File menu
     my $fileMenu = Wx::Menu->new;
     {
+        $self->_append_menu_item($fileMenu, "Open STL/OBJ/AMF…\tCtrl+O", 'Open a model', sub {
+            $self->{plater}->add if $self->{plater};
+        }, undef, 'brick_add.png');
+        $self->_append_menu_item($fileMenu, "Open 2.5D TIN mesh…", 'Import a 2.5D TIN mesh', sub {
+            $self->{plater}->add_tin if $self->{plater};
+        }, undef, 'map_add.png');
+        $fileMenu->AppendSeparator();
         $self->_append_menu_item($fileMenu, "&Load Config…\tCtrl+L", 'Load exported configuration file', sub {
             $self->load_config_file;
         }, undef, 'plugin_add.png');

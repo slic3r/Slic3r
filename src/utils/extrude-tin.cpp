@@ -34,59 +34,12 @@ main(const int argc, const char **argv)
     for (t_config_option_keys::const_iterator it = input_files.begin(); it != input_files.end(); ++it) {
         TriangleMesh mesh;
         Slic3r::IO::STL::read(*it, &mesh);
-        calculate_normals(&mesh.stl);
-        
-        if (mesh.facets_count() == 0) {
-            printf("Error: file is empty: %s\n", it->c_str());
-            continue;
-        }
-        
-        float z = mesh.stl.stats.min.z - config.option("offset", true)->getFloat();
-        printf("min.z = %f, z = %f\n", mesh.stl.stats.min.z, z);
-        TriangleMesh mesh2 = mesh;
-        
-        for (int i = 0; i < mesh.stl.stats.number_of_facets; ++i) {
-            const stl_facet &facet = mesh.stl.facet_start[i];
-            
-            if (facet.normal.z < 0) {
-                printf("Invalid 2.5D mesh / TIN (one facet points downwards = %f)\n", facet.normal.z);
-                exit(1);
-            }
-            
-            for (int j = 0; j < 3; ++j) {
-                if (mesh.stl.neighbors_start[i].neighbor[j] == -1) {
-                    stl_facet new_facet;
-                    float normal[3];
-                    
-                    // first triangle
-                    new_facet.vertex[0] = new_facet.vertex[2] = facet.vertex[(j+1)%3];
-                    new_facet.vertex[1] = facet.vertex[j];
-                    new_facet.vertex[2].z = z;
-                    stl_calculate_normal(normal, &new_facet);
-                    stl_normalize_vector(normal);
-                    new_facet.normal.x = normal[0];
-                    new_facet.normal.y = normal[1];
-                    new_facet.normal.z = normal[2];
-                    stl_add_facet(&mesh2.stl, &new_facet);
-                    
-                    // second triangle
-                    new_facet.vertex[0] = new_facet.vertex[1] = facet.vertex[j];
-                    new_facet.vertex[2] = facet.vertex[(j+1)%3];
-                    new_facet.vertex[1].z = new_facet.vertex[2].z = z;
-                    new_facet.normal.x = normal[0];
-                    new_facet.normal.y = normal[1];
-                    new_facet.normal.z = normal[2];
-                    stl_add_facet(&mesh2.stl, &new_facet);
-                }
-            }
-        }
-        
-        mesh2.repair();
+        mesh.extrude_tin(config.option("offset", true)->getFloat());
         
         std::string outfile = config.option("output", true)->getString();
         if (outfile.empty()) outfile = *it + "_extruded.stl";
         
-        Slic3r::IO::STL::write(mesh2, outfile);
+        Slic3r::IO::STL::write(mesh, outfile);
         printf("Extruded mesh written to %s\n", outfile.c_str());
     }
     

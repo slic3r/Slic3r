@@ -55,6 +55,7 @@ class TriangleMesh
     void reset_repair_stats();
     bool needed_repair() const;
     size_t facets_count() const;
+    void extrude_tin(float offset);
     stl_file stl;
     bool repaired;
     

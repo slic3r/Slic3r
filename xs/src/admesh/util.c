@@ -251,8 +251,8 @@ static void
 stl_rotate(float *x, float *y, const double c, const double s) {
   double xold = *x;
   double yold = *y;
-  *x = float(c * xold - s * yold);
-  *y = float(s * xold + c * yold);
+  *x = c * xold - s * yold;
+  *y = s * xold + c * yold;
 }
 
 extern void

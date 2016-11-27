@@ -321,7 +321,8 @@ stl_read(stl_file *stl, int first_facet, int first) {
       // When using a memcmp on raw floats, those numbers report to be different.
       // Unify all +0 and -0 to +0 to make the floats equal under memcmp.
       uint32_t *f = (uint32_t*)&facet;
-      for (int j = 0; j < 12; ++ j, ++ f) // 3x vertex + normal: 4x3 = 12 floats
+      int j;
+      for (j = 0; j < 12; ++ j, ++ f) // 3x vertex + normal: 4x3 = 12 floats
         if (*f == 0x80000000)
           // Negative zero, switch to positive zero.
           *f = 0;

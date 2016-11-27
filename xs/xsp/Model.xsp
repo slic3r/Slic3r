@@ -71,6 +71,7 @@
     void duplicate_objects(unsigned int copies_num, double dist, BoundingBoxf* bb = NULL);
     void duplicate_objects_grid(unsigned int x, unsigned int y, double dist);
     void print_info();
+    void repair();
 };
 
 
@@ -142,6 +143,8 @@ ModelMaterial::attributes()
     void clear_volumes();
     int volumes_count()
         %code%{ RETVAL = THIS->volumes.size(); %};
+    Ref<ModelVolume> get_volume(int idx)
+        %code%{ RETVAL = THIS->volumes.at(idx); %};
 
     %name{_add_instance} Ref<ModelInstance> add_instance();
     Ref<ModelInstance> _add_instance_clone(ModelInstance* other)
@@ -198,6 +201,7 @@ ModelMaterial::attributes()
         %};
     
     void print_info();
+    void repair();
 };
 
 
@@ -225,6 +229,15 @@ ModelMaterial::attributes()
         %code%{ THIS->modifier = modifier; %};
     
     ModelMaterial* assign_unique_material();
+
+    void extrude_tin(float offset)
+        %code%{
+            try {
+                THIS->mesh.extrude_tin(offset);
+            } catch (std::exception& e) {
+                croak("%s", e.what());
+            }
+        %};
 };
 
 

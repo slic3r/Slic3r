@@ -510,6 +510,36 @@ sub add {
     $self->load_file($_) for @input_files;
 }
 
+sub add_tin {
+    my $self = shift;
+    
+    my @input_files = wxTheApp->open_model($self);
+    return if !@input_files;
+    
+    my $offset = Wx::GetNumberFromUser("", "Enter the minimum thickness in mm (i.e. the offset from the lowest point):", "2.5D TIN",
+        5, 0, 1000000, $self);
+    return if $offset < 0;
+    
+    foreach my $input_file (@input_files) {
+        my $model = eval { Slic3r::Model->read_from_file($input_file) };
+        Slic3r::GUI::show_error($self, $@) if $@;
+        next if !$model;
+
+        if ($model->looks_like_multipart_object) {
+            Slic3r::GUI::show_error($self, "Multi-part models cannot be opened as 2.5D TIN files. Please load a single continuous mesh.");
+            next;
+        }
+        
+        my $model_object = $model->get_object(0);
+        eval {
+            $model_object->get_volume(0)->extrude_tin($offset);
+        };
+        Slic3r::GUI::show_error($self, $@) if $@;
+        
+        $self->load_model_objects($model_object);
+    }
+}
+
 sub load_file {
     my $self = shift;
     my ($input_file) = @_;
@@ -555,6 +585,7 @@ sub load_model_objects {
     my @obj_idx = ();
     foreach my $model_object (@model_objects) {
         my $o = $self->{model}->add_object($model_object);
+        $o->repair;
         
         push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
             name => basename($model_object->input_file),

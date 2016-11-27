@@ -186,6 +186,7 @@ if (@ARGV) {  # slicing from command line
         } else {
             $model = Slic3r::Model->read_from_file($input_file);
         }
+        $model->repair;
         
         if ($opt{info}) {
             $model->print_info;

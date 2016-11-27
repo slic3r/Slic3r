@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <math.h>
 #include <assert.h>
+#include <stdexcept>
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -424,6 +425,55 @@ TriangleMesh::require_shared_vertices()
 {
     if (!this->repaired) this->repair();
     if (this->stl.v_shared == NULL) stl_generate_shared_vertices(&(this->stl));
+}
+
+void
+TriangleMesh::extrude_tin(float offset)
+{
+    calculate_normals(&this->stl);
+    
+    const int number_of_facets = this->stl.stats.number_of_facets;
+    if (number_of_facets == 0)
+        throw std::runtime_error("Error: file is empty");
+    
+    const float z = this->stl.stats.min.z - offset;
+    
+    for (int i = 0; i < number_of_facets; ++i) {
+        const stl_facet &facet = this->stl.facet_start[i];
+        
+        if (facet.normal.z < 0)
+            throw std::runtime_error("Invalid 2.5D mesh: at least one facet points downwards.");
+        
+        for (int j = 0; j < 3; ++j) {
+            if (this->stl.neighbors_start[i].neighbor[j] == -1) {
+                stl_facet new_facet;
+                float normal[3];
+                
+                // first triangle
+                new_facet.vertex[0] = new_facet.vertex[2] = facet.vertex[(j+1)%3];
+                new_facet.vertex[1] = facet.vertex[j];
+                new_facet.vertex[2].z = z;
+                stl_calculate_normal(normal, &new_facet);
+                stl_normalize_vector(normal);
+                new_facet.normal.x = normal[0];
+                new_facet.normal.y = normal[1];
+                new_facet.normal.z = normal[2];
+                stl_add_facet(&this->stl, &new_facet);
+                
+                // second triangle
+                new_facet.vertex[0] = new_facet.vertex[1] = facet.vertex[j];
+                new_facet.vertex[2] = facet.vertex[(j+1)%3];
+                new_facet.vertex[1].z = new_facet.vertex[2].z = z;
+                new_facet.normal.x = normal[0];
+                new_facet.normal.y = normal[1];
+                new_facet.normal.z = normal[2];
+                stl_add_facet(&this->stl, &new_facet);
+            }
+        }
+    }
+    stl_get_size(&this->stl);
+    
+    this->repair();
 }
 
 void
