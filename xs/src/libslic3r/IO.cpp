@@ -8,8 +8,12 @@ namespace Slic3r { namespace IO {
 bool
 STL::read(std::string input_file, TriangleMesh* mesh)
 {
-    mesh->ReadSTLFile(input_file);
-    mesh->check_topology();
+    try {
+        mesh->ReadSTLFile(input_file);
+        mesh->check_topology();
+    } catch (...) {
+        throw std::runtime_error("Error while reading STL file");
+    }
     return true;
 }
 

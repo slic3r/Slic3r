@@ -8,6 +8,7 @@
 #include <string>
 #include <cstring>
 #include <iostream>
+#include "boost/filesystem.hpp"
 
 using namespace Slic3r;
 
@@ -33,8 +34,18 @@ main(const int argc, const char **argv)
     // load config files supplied via --load
     for (std::vector<std::string>::const_iterator file = cli_config.load.values.begin();
         file != cli_config.load.values.end(); ++file) {
+        if (!boost::filesystem::exists(*file)) {
+            std::cout << "No such file: " << *file << std::endl;
+            exit(1);
+        }
+        
         DynamicPrintConfig c;
-        c.load(*file);
+        try {
+            c.load(*file);
+        } catch (std::exception &e) {
+            std::cout << "Error while reading config file: " << e.what() << std::endl;
+            exit(1);
+        }
         c.normalize();
         print_config.apply(c);
     }
@@ -50,9 +61,19 @@ main(const int argc, const char **argv)
     // read input file(s) if any
     std::vector<Model> models;
     for (t_config_option_keys::const_iterator it = input_files.begin(); it != input_files.end(); ++it) {
+        if (!boost::filesystem::exists(*it)) {
+            std::cout << "No such file: " << *it << std::endl;
+            exit(1);
+        }
+        
         Model model;
         // TODO: read other file formats with Model::read_from_file()
-        Slic3r::IO::STL::read(*it, &model);
+        try {
+            Slic3r::IO::STL::read(*it, &model);
+        } catch (std::exception &e) {
+            std::cout << *it << ": " << e.what() << std::endl;
+            exit(1);
+        }
         
         if (model.objects.empty()) {
             printf("Error: file is empty: %s\n", it->c_str());

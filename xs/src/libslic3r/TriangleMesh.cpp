@@ -69,6 +69,7 @@ TriangleMesh::~TriangleMesh() {
 void
 TriangleMesh::ReadSTLFile(const std::string &input_file) {
     stl_open(&stl, input_file.c_str());
+    if (this->stl.error != 0) throw std::runtime_error("Failed to read STL file");
 }
 
 void
