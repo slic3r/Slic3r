@@ -15,6 +15,7 @@ public:
     virtual ~FillHoneycomb() {}
 
 protected:
+    virtual Fill* clone() const { return new FillHoneycomb(*this); };
 	virtual void _fill_surface_single(
 	    unsigned int                     thickness_layers,
 	    const std::pair<float, Point>   &direction, 

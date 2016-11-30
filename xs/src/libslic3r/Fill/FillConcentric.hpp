@@ -11,6 +11,7 @@ public:
     virtual ~FillConcentric() {}
 
 protected:
+    virtual Fill* clone() const { return new FillConcentric(*this); };
 	virtual void _fill_surface_single(
 	    unsigned int                     thickness_layers,
 	    const std::pair<float, Point>   &direction, 

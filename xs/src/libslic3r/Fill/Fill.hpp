@@ -62,7 +62,8 @@ public:
     static Fill* new_from_type(const InfillPattern type);
     static Fill* new_from_type(const std::string &type);
     static coord_t adjust_solid_spacing(const coord_t width, const coord_t distance);
-
+    virtual Fill* clone() const = 0;
+    
     // Implementations can override the following virtual methods:
     // Use bridge flow for the fill?
     virtual bool use_bridge_flow() const { return false; }
@@ -86,6 +87,7 @@ protected:
         dont_adjust(false),
         complete(false)
         {};
+    virtual ~Fill();
     
     // The expolygon may be modified by the method to avoid a copy.
     virtual void _fill_surface_single(
