@@ -5,13 +5,14 @@
 #include <fstream>
 #include <iostream>
 #include <exception> // std::runtime_error
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
 #include <string.h>
 
 #if defined(_WIN32) && !defined(setenv) && defined(_putenv_s)
@@ -500,8 +501,8 @@ DynamicConfig::read_cli(const int argc, const char** argv, t_config_option_keys*
         if (token == "--") {
             // stop parsing tokens as options
             parse_options = false;
-        } else if (parse_options && boost::starts_with(token, "--")) {
-            boost::algorithm::erase_head(token, 2);
+        } else if (parse_options && boost::starts_with(token, "-")) {
+            boost::algorithm::trim_left_if(token, boost::algorithm::is_any_of("-"));
             // TODO: handle --key=value
             
             // look for the option def
@@ -513,7 +514,9 @@ DynamicConfig::read_cli(const int argc, const char** argv, t_config_option_keys*
                 
                 if (optdef->cli == token
                     || optdef->cli == token + '!'
-                    || boost::starts_with(optdef->cli, token + "=")) {
+                    || boost::starts_with(optdef->cli, token + "=")
+                    || boost::starts_with(optdef->cli, token + "|")
+                    || (token.length() == 1 && boost::contains(optdef->cli, "|" + token))) {
                     opt_key = oit->first;
                     break;
                 }
