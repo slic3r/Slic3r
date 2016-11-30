@@ -30,8 +30,6 @@ src/libslic3r/ExtrusionEntityCollection.cpp
 src/libslic3r/ExtrusionEntityCollection.hpp
 src/libslic3r/Fill/Fill.cpp
 src/libslic3r/Fill/Fill.hpp
-src/libslic3r/Fill/FillBase.cpp
-src/libslic3r/Fill/FillBase.hpp
 src/libslic3r/Fill/FillConcentric.cpp
 src/libslic3r/Fill/FillConcentric.hpp
 src/libslic3r/Fill/FillHoneycomb.cpp

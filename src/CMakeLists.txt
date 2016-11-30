@@ -47,7 +47,6 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/ExtrusionEntityCollection.cpp
     ${LIBDIR}/libslic3r/Fill/Fill.cpp
     ${LIBDIR}/libslic3r/Fill/Fill3DHoneycomb.cpp
-    ${LIBDIR}/libslic3r/Fill/FillBase.cpp
     ${LIBDIR}/libslic3r/Fill/FillConcentric.cpp
     ${LIBDIR}/libslic3r/Fill/FillHoneycomb.cpp
     ${LIBDIR}/libslic3r/Fill/FillPlanePath.cpp
@@ -61,6 +60,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/IO.cpp
     ${LIBDIR}/libslic3r/Layer.cpp
     ${LIBDIR}/libslic3r/LayerRegion.cpp
+    ${LIBDIR}/libslic3r/LayerRegionFill.cpp
     ${LIBDIR}/libslic3r/Line.cpp
     ${LIBDIR}/libslic3r/Model.cpp
     ${LIBDIR}/libslic3r/MotionPlanner.cpp

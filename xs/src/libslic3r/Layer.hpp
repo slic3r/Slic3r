@@ -59,6 +59,7 @@ class LayerRegion
     void merge_slices();
     void prepare_fill_surfaces();
     void make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces);
+    void make_fill();
     void process_external_surfaces(const Layer* lower_layer);
     double infill_area_threshold() const;
     

@@ -71,8 +71,5 @@ new_from_type(CLASS, type)
 
 %package{Slic3r::Filler};
 
-void make_fill(LayerRegion* layerm, ExtrusionEntityCollection* out)
-    %code{% make_fill(*layerm, out); %};
-
 coord_t adjust_solid_spacing(coord_t width, coord_t distance)
     %code{% RETVAL = Fill::adjust_solid_spacing(width, distance); %};

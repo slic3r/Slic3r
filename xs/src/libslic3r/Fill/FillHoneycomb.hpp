@@ -5,7 +5,7 @@
 
 #include "../libslic3r.h"
 
-#include "FillBase.hpp"
+#include "Fill.hpp"
 
 namespace Slic3r {
 

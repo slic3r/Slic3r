@@ -54,7 +54,7 @@ extern "C" {
 #include <ClipperUtils.hpp>
 #include <Config.hpp>
 #include <ExPolygon.hpp>
-#include <Fill/FillBase.hpp>
+#include <Fill/Fill.hpp>
 #include <MultiPoint.hpp>
 #include <Point.hpp>
 #include <Polygon.hpp>

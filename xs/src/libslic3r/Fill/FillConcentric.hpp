@@ -1,7 +1,7 @@
 #ifndef slic3r_FillConcentric_hpp_
 #define slic3r_FillConcentric_hpp_
 
-#include "FillBase.hpp"
+#include "Fill.hpp"
 
 namespace Slic3r {
 

@@ -2,7 +2,6 @@
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include "Print.hpp"
-#include "Fill/Fill.hpp"
 
 namespace Slic3r {
 
@@ -239,13 +238,11 @@ Layer::make_fills()
     #endif
     
     FOREACH_LAYERREGION(this, it_layerm) {
-        LayerRegion &layerm = **it_layerm;
-        layerm.fills.clear();
-        make_fill(layerm, &layerm.fills);
+        (*it_layerm)->make_fill();
         
         #ifndef NDEBUG
-        for (size_t i = 0; i < layerm.fills.entities.size(); ++i)
-            assert(dynamic_cast<ExtrusionEntityCollection*>(layerm.fills.entities[i]) != NULL);
+        for (size_t i = 0; i < (*it_layerm)->fills.entities.size(); ++i)
+            assert(dynamic_cast<ExtrusionEntityCollection*>((*it_layerm)->fills.entities[i]) != NULL);
         #endif
     }
 }
