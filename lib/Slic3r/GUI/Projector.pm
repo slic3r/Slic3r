@@ -521,7 +521,6 @@ has 'sender'                => (is => 'rw');
 has 'timer'                 => (is => 'rw');
 has 'is_printing'           => (is => 'rw', default => sub { 0 });
 has '_print'                => (is => 'rw');
-has '_layers'               => (is => 'rw');
 has '_heights'              => (is => 'rw');
 has '_layer_num'            => (is => 'rw');
 has '_timer_cb'             => (is => 'rw');
@@ -545,8 +544,7 @@ sub BUILD {
             $print->slice;
             $progress_dialog->Destroy;
         }
-    
-        $self->_layers([ map $print->slices($_), 0..($print->layer_count-1) ]);
+        
         $self->_heights($print->heights);
     }
     
@@ -639,7 +637,7 @@ sub print_completed {
 sub is_projecting {
     my ($self) = @_;
     
-    return defined $self->screen->layer;
+    return defined $self->screen->layer_num;
 }
 
 sub project_layer {
@@ -650,7 +648,7 @@ sub project_layer {
         return;
     }
     
-    $self->screen->project_layer($self->_layers->[$layer_num], $layer_num);
+    $self->screen->project_layer($layer_num);
 }
 
 sub project_next_layer {
@@ -719,7 +717,7 @@ sub total_resin {
     
     for my $i (0..($self->_print->layer_count-1)) {
         my $lh = $self->_heights->[$i] - ($i == 0 ? 0 : $self->_heights->[$i-1]);
-        $vol += unscale(unscale($_->area)) * $lh for @{ $self->_print->slices($i) };
+        $vol += unscale(unscale($_->area)) * $lh for @{ $self->_print->layer_slices($i) };
     }
     
     return $vol/1000/1000;  # liters
@@ -742,7 +740,7 @@ use List::Util qw(min);
 use Slic3r::Geometry qw(X Y unscale scale);
 use Slic3r::Geometry::Clipper qw(intersection_pl);
 
-__PACKAGE__->mk_accessors(qw(config config2 scaling_factor bed_origin layer print layer_num));
+__PACKAGE__->mk_accessors(qw(config config2 scaling_factor bed_origin print layer_num));
 
 sub new {
     my ($class, $parent, $config, $config2) = @_;
@@ -803,9 +801,8 @@ sub _resize {
 }
 
 sub project_layer {
-    my ($self, $layer, $layer_num) = @_;
+    my ($self, $layer_num) = @_;
     
-    $self->layer($layer);
     $self->layer_num($layer_num);
     $self->Refresh;
 }
@@ -873,20 +870,19 @@ sub _repaint {
         }
     }
     
-    return if !defined $self->layer;
-    
     # get layers at this height
     # draw layers
     $dc->SetPen(Wx::Pen->new(wxWHITE, 1, wxSOLID));
     
-    my @polygons = sort { $a->contains_point($b->first_point) ? -1 : 1 } map @$_, @{$self->layer};
-    foreach my $polygon (@polygons) {
-        if ($polygon->is_counter_clockwise) {
-            $dc->SetBrush(Wx::Brush->new(wxWHITE, wxSOLID));
-        } else {
-            $dc->SetBrush(Wx::Brush->new(wxBLACK, wxSOLID));
-        }
-        $dc->DrawPolygon($self->scaled_points_to_pixel($polygon->pp), 0, 0);
+    return if !$self->print || !defined $self->layer_num;
+    
+    if ($self->print->layer_solid($self->layer_num)) {
+        $self->_paint_expolygon($_, $dc) for @{$self->print->layer_slices($self->layer_num)};
+    } else {
+        $self->_paint_expolygon($_, $dc) for @{$self->print->layer_solid_infill($self->layer_num)};
+        $self->_paint_polygon($_, $dc) for map @{$_->grow},
+            @{$self->print->layer_perimeters($self->layer_num)},
+            @{$self->print->layer_infill($self->layer_num)};
     }
     
     # draw support material
@@ -906,6 +902,24 @@ sub _repaint {
             $radius * $self->scaling_factor,
         );
     }
+}
+
+sub _paint_expolygon {
+    my ($self, $expolygon, $dc) = @_;
+    
+    my @polygons = sort { $a->contains_point($b->first_point) ? -1 : 1 } @$expolygon;
+    $self->_paint_polygon($_, $dc) for @polygons;
+}
+
+sub _paint_polygon {
+    my ($self, $polygon, $dc) = @_;
+    
+    if ($polygon->is_counter_clockwise) {
+        $dc->SetBrush(Wx::Brush->new(wxWHITE, wxSOLID));
+    } else {
+        $dc->SetBrush(Wx::Brush->new(wxBLACK, wxSOLID));
+    }
+    $dc->DrawPolygon($self->scaled_points_to_pixel($polygon->pp), 0, 0);
 }
 
 # convert a model coordinate into a pixel coordinate

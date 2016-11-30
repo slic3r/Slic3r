@@ -1,5 +1,9 @@
 #include "SLAPrint.hpp"
 #include "ClipperUtils.hpp"
+#include "ExtrusionEntity.hpp"
+#include "Fill/FillBase.hpp"
+#include "Geometry.hpp"
+#include "Surface.hpp"
 #include <iostream>
 #include <cstdio>
 
@@ -47,7 +51,73 @@ SLAPrint::slice()
         TriangleMeshSlicer(&mesh).slice(slice_z, &slices);
         
         for (size_t i = 0; i < slices.size(); ++i)
-            this->layers[i].slices = ExPolygonCollection(slices[i]);
+            this->layers[i].slices.expolygons = slices[i];
+    }
+    
+    // generate infill
+    if (this->config.fill_density < 100) {
+        const float shell_thickness = this->config.get_abs_value("perimeter_extrusion_width", this->config.layer_height.value);
+        std::auto_ptr<Fill> fill = std::auto_ptr<Fill>(Fill::new_from_type(this->config.fill_pattern.value));
+        //fill->bounding_box  = this->bb;
+        fill->spacing       = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
+        fill->angle         = Geometry::deg2rad(this->config.fill_angle.value);
+        FillParams fill_params;
+        fill_params.density = this->config.fill_density.value/100;
+                
+        ExtrusionPath templ(erInternalInfill);
+        templ.width = fill->spacing;
+        
+        for (size_t i = 0; i < this->layers.size(); ++i) {
+            Layer &layer = this->layers[i];
+            
+            // In order to detect what regions of this layer need to be solid,
+            // perform an intersection with layers within the requested shell thickness.
+            Polygons internal = layer.slices;
+            for (size_t j = 0; j < this->layers.size(); ++j) {
+                const Layer &other = this->layers[j];
+                if (abs(other.print_z - layer.print_z) > shell_thickness) continue;
+            
+                if (j == 0 || j == this->layers.size()-1) {
+                    internal.clear();
+                    break;
+                } else if (i != j) {
+                    internal = intersection(internal, other.slices);
+                    if (internal.empty()) break;
+                }
+            }
+            
+            // If we have no internal infill, just print the whole layer as a solid slice.
+            if (internal.empty()) continue;
+            layer.solid = false;
+            
+            const Polygons infill = offset(layer.slices, -scale_(shell_thickness));
+            
+            // Generate solid infill.
+            layer.solid_infill.append(diff_ex(infill, internal, true));
+            
+            // Generate internal infill.
+            {
+                fill->layer_id = i;
+                fill->z        = layer.print_z;
+                
+                const ExPolygons internal_ex = intersection_ex(infill, internal);
+                for (ExPolygons::const_iterator it = internal_ex.begin(); it != internal_ex.end(); ++it) {
+                    Polylines polylines = fill->fill_surface(Surface(stInternal, *it), fill_params);
+                    layer.infill.append(polylines, templ);
+                }
+            }
+            
+            // Generate perimeter(s).
+            {
+                const Polygons perimeters = offset(layer.slices, -scale_(shell_thickness)/2);
+                for (Polygons::const_iterator it = perimeters.begin(); it != perimeters.end(); ++it) {
+                    ExtrusionPath ep(erPerimeter);
+                    ep.polyline = *it;
+                    ep.width    = shell_thickness;
+                    layer.perimeters.append(ExtrusionLoop(ep));
+                }
+            }
+        }
     }
     
     // generate support material
@@ -154,23 +224,31 @@ SLAPrint::write_svg(const std::string &outputfile) const
             layer.print_z - (i == 0 ? 0 : this->layers[i-1].print_z)
         );
         
-        const ExPolygons &slices = layer.slices.expolygons;
-        for (ExPolygons::const_iterator it = slices.begin(); it != slices.end(); ++it) {
-            std::string pd;
-            Polygons pp = *it;
-            for (Polygons::const_iterator mp = pp.begin(); mp != pp.end(); ++mp) {
-                std::ostringstream d;
-                d << "M ";
-                for (Points::const_iterator p = mp->points.begin(); p != mp->points.end(); ++p) {
-                    d << unscale(p->x) - this->bb.min.x << " ";
-                    d << size.y - (unscale(p->y) - this->bb.min.y) << " ";  // mirror Y coordinates as SVG uses downwards Y
-                }
-                d << "z";
-                pd += d.str() + " ";
+        if (layer.solid) {
+            const ExPolygons &slices = layer.slices.expolygons;
+            for (ExPolygons::const_iterator it = slices.begin(); it != slices.end(); ++it) {
+                std::string pd = this->_SVG_path_d(*it);
+                
+                fprintf(f,"\t\t<path d=\"%s\" style=\"fill: %s; stroke: %s; stroke-width: %s; fill-type: evenodd\" slic3r:area=\"%0.4f\" />\n",
+                    pd.c_str(), "white", "black", "0", unscale(unscale(it->area()))
+                );
             }
-            fprintf(f,"\t\t<path d=\"%s\" style=\"fill: %s; stroke: %s; stroke-width: %s; fill-type: evenodd\" slic3r:area=\"%0.4f\" />\n",
-                pd.c_str(), "white", "black", "0", unscale(unscale(it->area()))
-            );
+        } else {
+            // Solid infill.
+            const ExPolygons &solid_infill = layer.solid_infill.expolygons;
+            for (ExPolygons::const_iterator it = solid_infill.begin(); it != solid_infill.end(); ++it) {
+                std::string pd = this->_SVG_path_d(*it);
+                
+                fprintf(f,"\t\t<path d=\"%s\" style=\"fill: %s; stroke: %s; stroke-width: %s; fill-type: evenodd\" slic3r:type=\"infill\" />\n",
+                    pd.c_str(), "white", "black", "0"
+                );
+            }
+            
+            // Generate perimeters.
+            for (ExtrusionEntitiesPtr::const_iterator it = layer.perimeters.entities.begin();
+                it != layer.perimeters.entities.end(); ++it) {
+                //std::string pd = this->_SVG_path_d(it->polygon());
+            }
         }
         
         // don't print support material in raft layers
@@ -204,6 +282,30 @@ SLAPrint::sm_pillars_radius() const
     coordf_t radius = this->config.support_material_extrusion_width.get_abs_value(this->config.support_material_spacing)/2;
     if (radius == 0) radius = this->config.support_material_spacing / 3; // auto
     return radius;
+}
+
+std::string
+SLAPrint::_SVG_path_d(const Polygon &polygon) const
+{
+    const Sizef3 size = this->bb.size();
+    std::ostringstream d;
+    d << "M ";
+    for (Points::const_iterator p = polygon.points.begin(); p != polygon.points.end(); ++p) {
+        d << unscale(p->x) - this->bb.min.x << " ";
+        d << size.y - (unscale(p->y) - this->bb.min.y) << " ";  // mirror Y coordinates as SVG uses downwards Y
+    }
+    d << "z";
+    return d.str();
+}
+
+std::string
+SLAPrint::_SVG_path_d(const ExPolygon &expolygon) const
+{
+    std::string pd;
+    const Polygons pp = expolygon;
+    for (Polygons::const_iterator mp = pp.begin(); mp != pp.end(); ++mp) 
+        pd += this->_SVG_path_d(*mp) + " ";
+    return pd;
 }
 
 }

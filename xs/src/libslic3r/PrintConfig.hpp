@@ -533,8 +533,13 @@ class SLAPrintConfig
     : public virtual StaticPrintConfig
 {
     public:
+    ConfigOptionFloat               fill_angle;
+    ConfigOptionPercent             fill_density;
+    ConfigOptionEnum<InfillPattern> fill_pattern;
     ConfigOptionFloatOrPercent      first_layer_height;
+    ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionFloat               layer_height;
+    ConfigOptionFloatOrPercent      perimeter_extrusion_width;
     ConfigOptionInt                 raft_layers;
     ConfigOptionFloat               raft_offset;
     ConfigOptionBool                support_material;
@@ -546,8 +551,13 @@ class SLAPrintConfig
     };
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(fill_angle);
+        OPT_PTR(fill_density);
+        OPT_PTR(fill_pattern);
         OPT_PTR(first_layer_height);
+        OPT_PTR(infill_extrusion_width);
         OPT_PTR(layer_height);
+        OPT_PTR(perimeter_extrusion_width);
         OPT_PTR(raft_layers);
         OPT_PTR(raft_offset);
         OPT_PTR(support_material);

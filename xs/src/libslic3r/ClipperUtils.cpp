@@ -155,7 +155,7 @@ offset(const Polygons &polygons, const float delta,
     // perform offset
     ClipperLib::Paths output = _offset(polygons, delta, scale, joinType, miterLimit);
     
-    // convert into ExPolygons
+    // convert into Polygons
     return ClipperPaths_to_Slic3rMultiPoints<Polygons>(output);
 }
 
@@ -166,7 +166,7 @@ offset(const Polylines &polylines, const float delta,
     // perform offset
     ClipperLib::Paths output = _offset(polylines, delta, scale, joinType, miterLimit);
     
-    // convert into ExPolygons
+    // convert into Polygons
     return ClipperPaths_to_Slic3rMultiPoints<Polygons>(output);
 }
 

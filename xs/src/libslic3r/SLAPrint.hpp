@@ -19,9 +19,14 @@ class SLAPrint
     class Layer {
         public:
         ExPolygonCollection slices;
+        ExtrusionEntityCollection perimeters;
+        ExtrusionEntityCollection infill;
+        ExPolygonCollection solid_infill;
         float slice_z, print_z;
+        bool solid;
         
-        Layer(float _slice_z, float _print_z) : slice_z(_slice_z), print_z(_print_z) {};
+        Layer(float _slice_z, float _print_z)
+            : slice_z(_slice_z), print_z(_print_z), solid(true) {};
     };
     std::vector<Layer> layers;
     
@@ -41,6 +46,8 @@ class SLAPrint
     BoundingBoxf3 bb;
     
     coordf_t sm_pillars_radius() const;
+    std::string _SVG_path_d(const Polygon &polygon) const;
+    std::string _SVG_path_d(const ExPolygon &expolygon) const;
 };
 
 }

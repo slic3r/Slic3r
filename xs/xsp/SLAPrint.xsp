@@ -18,15 +18,18 @@
     DynamicPrintConfig* config()
         %code%{ RETVAL = new DynamicPrintConfig; RETVAL->apply(THIS->config); %};
     
+    ExPolygons layer_slices(size_t i)
+        %code%{ RETVAL = THIS->layers[i].slices; %};
+    ExPolygons layer_solid_infill(size_t i)
+        %code%{ RETVAL = THIS->layers[i].solid_infill.expolygons; %};
+    Ref<ExtrusionEntityCollection> layer_perimeters(size_t i)
+        %code%{ RETVAL = &THIS->layers[i].perimeters; %};
+    Ref<ExtrusionEntityCollection> layer_infill(size_t i)
+        %code%{ RETVAL = &THIS->layers[i].infill; %};
+    bool layer_solid(size_t i)
+        %code%{ RETVAL = THIS->layers[i].solid; %};
+    
 %{
-
-ExPolygons
-SLAPrint::slices(i)
-    size_t  i;
-    CODE:
-        RETVAL = THIS->layers[i].slices;
-    OUTPUT:
-        RETVAL
 
 std::vector<double>
 SLAPrint::heights()
