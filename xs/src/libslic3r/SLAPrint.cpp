@@ -58,7 +58,8 @@ SLAPrint::slice()
     if (this->config.fill_density < 100) {
         const float shell_thickness = this->config.get_abs_value("perimeter_extrusion_width", this->config.layer_height.value);
         std::auto_ptr<Fill> fill = std::auto_ptr<Fill>(Fill::new_from_type(this->config.fill_pattern.value));
-        //fill->bounding_box  = this->bb;
+        fill->bounding_box.merge(Point::new_scale(bb.min.x, bb.min.y));
+        fill->bounding_box.merge(Point::new_scale(bb.max.x, bb.max.y));
         fill->spacing       = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
         fill->angle         = Geometry::deg2rad(this->config.fill_angle.value);
         FillParams fill_params;
