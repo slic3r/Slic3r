@@ -4,6 +4,7 @@
 #include "libslic3r.h"
 #include "ExPolygon.hpp"
 #include "ExPolygonCollection.hpp"
+#include "Fill/Fill.hpp"
 #include "Model.hpp"
 #include "Point.hpp"
 #include "PrintConfig.hpp"
@@ -45,6 +46,7 @@ class SLAPrint
     Model* model;
     BoundingBoxf3 bb;
     
+    void _infill_layer(size_t i, const Fill* fill);
     coordf_t sm_pillars_radius() const;
     std::string _SVG_path_d(const Polygon &polygon) const;
     std::string _SVG_path_d(const ExPolygon &expolygon) const;

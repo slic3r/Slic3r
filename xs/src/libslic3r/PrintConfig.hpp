@@ -545,6 +545,7 @@ class SLAPrintConfig
     ConfigOptionBool                support_material;
     ConfigOptionFloatOrPercent      support_material_extrusion_width;
     ConfigOptionFloat               support_material_spacing;
+    ConfigOptionInt                 threads;
     
     SLAPrintConfig() : StaticPrintConfig() {
         this->set_defaults();
@@ -563,6 +564,7 @@ class SLAPrintConfig
         OPT_PTR(support_material);
         OPT_PTR(support_material_extrusion_width);
         OPT_PTR(support_material_spacing);
+        OPT_PTR(threads);
         
         return NULL;
     };
