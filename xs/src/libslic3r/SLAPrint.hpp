@@ -19,7 +19,7 @@ class SLAPrint
     class Layer {
         public:
         ExPolygonCollection slices;
-        ExtrusionEntityCollection perimeters;
+        ExPolygonCollection perimeters;
         ExtrusionEntityCollection infill;
         ExPolygonCollection solid_infill;
         float slice_z, print_z;

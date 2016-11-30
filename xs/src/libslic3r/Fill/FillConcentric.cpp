@@ -29,7 +29,7 @@ FillConcentric::_fill_surface_single(
     Polygons last  = loops;
     while (!last.empty()) {
         last = offset2(last, -(distance + min_spacing/2), +min_spacing/2);
-        loops.insert(loops.end(), last.begin(), last.end());
+        append_to(loops, last);
     }
 
     // generate paths from the outermost to the innermost, to avoid
@@ -37,7 +37,7 @@ FillConcentric::_fill_surface_single(
     loops = union_pt_chained(loops, false);
     
     // split paths using a nearest neighbor search
-    size_t iPathFirst = polylines_out->size();
+    const size_t iPathFirst = polylines_out->size();
     Point last_pos(0, 0);
     for (Polygons::const_iterator it_loop = loops.begin(); it_loop != loops.end(); ++ it_loop) {
         polylines_out->push_back(it_loop->split_at_index(last_pos.nearest_point_index(*it_loop)));
@@ -47,7 +47,7 @@ FillConcentric::_fill_surface_single(
     // clip the paths to prevent the extruder from getting exactly on the first point of the loop
     // Keep valid paths only.
     size_t j = iPathFirst;
-    for (size_t i = iPathFirst; i < polylines_out->size(); ++ i) {
+    for (size_t i = iPathFirst; i < polylines_out->size(); ++i) {
         (*polylines_out)[i].clip_end(this->loop_clipping);
         if ((*polylines_out)[i].is_valid()) {
             if (j < i)

@@ -79,6 +79,18 @@ Point operator+(const Point& point1, const Point& point2);
 Point operator-(const Point& point1, const Point& point2);
 Point operator*(double scalar, const Point& point2);
 
+inline Points&
+operator+=(Points &dst, const Points &src) {
+    append_to(dst, src);
+    return dst;
+};
+
+inline Points&
+operator+=(Points &dst, const Point &p) {
+    dst.push_back(p);
+    return dst;
+};
+
 class Point3 : public Point
 {
     public:

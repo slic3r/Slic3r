@@ -94,7 +94,7 @@ SLAPrint::slice()
             const Polygons infill = offset(layer.slices, -scale_(shell_thickness));
             
             // Generate solid infill.
-            layer.solid_infill.append(diff_ex(infill, internal, true));
+            layer.solid_infill << diff_ex(infill, internal, true);
             
             // Generate internal infill.
             {
@@ -109,15 +109,10 @@ SLAPrint::slice()
             }
             
             // Generate perimeter(s).
-            {
-                const Polygons perimeters = offset(layer.slices, -scale_(shell_thickness)/2);
-                for (Polygons::const_iterator it = perimeters.begin(); it != perimeters.end(); ++it) {
-                    ExtrusionPath ep(erPerimeter);
-                    ep.polyline = *it;
-                    ep.width    = shell_thickness;
-                    layer.perimeters.append(ExtrusionLoop(ep));
-                }
-            }
+            layer.perimeters << diff_ex(
+                layer.slices,
+                offset(layer.slices, -scale_(shell_thickness))
+            );
         }
     }
     
@@ -128,10 +123,8 @@ SLAPrint::slice()
         // flatten and merge all the overhangs
         {
             Polygons pp;
-            for (std::vector<Layer>::const_iterator it = this->layers.begin()+1; it != this->layers.end(); ++it) {
-                Polygons oh = diff(it->slices, (it - 1)->slices);
-                pp.insert(pp.end(), oh.begin(), oh.end());
-            }
+            for (std::vector<Layer>::const_iterator it = this->layers.begin()+1; it != this->layers.end(); ++it)
+                pp += diff(it->slices, (it - 1)->slices);
             overhangs = union_ex(pp);
         }
         
@@ -188,8 +181,7 @@ SLAPrint::slice()
     // generate a solid raft if requested
     // (do this after support material because we take support material shape into account)
     if (this->config.raft_layers > 0) {
-        ExPolygons raft = this->layers.front().slices;
-        raft.insert(raft.end(), overhangs.begin(), overhangs.end()); // take support material into account
+        ExPolygons raft = this->layers.front().slices + overhangs;  // take support material into account
         raft = offset_ex(raft, scale_(this->config.raft_offset));
         for (int i = this->config.raft_layers; i >= 1; --i) {
             this->layers.insert(this->layers.begin(), Layer(0, first_lh + lh * (i-1)));
@@ -235,9 +227,19 @@ SLAPrint::write_svg(const std::string &outputfile) const
                 );
             }
         } else {
+            // Perimeters.
+            for (ExPolygons::const_iterator it = layer.perimeters.expolygons.begin();
+                it != layer.perimeters.expolygons.end(); ++it) {
+                std::string pd = this->_SVG_path_d(*it);
+                
+                fprintf(f,"\t\t<path d=\"%s\" style=\"fill: %s; stroke: %s; stroke-width: %s; fill-type: evenodd\" slic3r:type=\"perimeter\" />\n",
+                    pd.c_str(), "white", "black", "0"
+                );
+            }
+            
             // Solid infill.
-            const ExPolygons &solid_infill = layer.solid_infill.expolygons;
-            for (ExPolygons::const_iterator it = solid_infill.begin(); it != solid_infill.end(); ++it) {
+            for (ExPolygons::const_iterator it = layer.solid_infill.expolygons.begin();
+                it != layer.solid_infill.expolygons.end(); ++it) {
                 std::string pd = this->_SVG_path_d(*it);
                 
                 fprintf(f,"\t\t<path d=\"%s\" style=\"fill: %s; stroke: %s; stroke-width: %s; fill-type: evenodd\" slic3r:type=\"infill\" />\n",
@@ -245,10 +247,18 @@ SLAPrint::write_svg(const std::string &outputfile) const
                 );
             }
             
-            // Generate perimeters.
-            for (ExtrusionEntitiesPtr::const_iterator it = layer.perimeters.entities.begin();
-                it != layer.perimeters.entities.end(); ++it) {
-                //std::string pd = this->_SVG_path_d(it->polygon());
+            // Internal infill.
+            for (ExtrusionEntitiesPtr::const_iterator it = layer.infill.entities.begin();
+                it != layer.infill.entities.end(); ++it) {
+                const ExPolygons infill = union_ex((*it)->grow());
+                
+                for (ExPolygons::const_iterator e = infill.begin(); e != infill.end(); ++e) {
+                    std::string pd = this->_SVG_path_d(*e);
+                
+                    fprintf(f,"\t\t<path d=\"%s\" style=\"fill: %s; stroke: %s; stroke-width: %s; fill-type: evenodd\" slic3r:type=\"infill\" />\n",
+                        pd.c_str(), "white", "black", "0"
+                    );
+                }
             }
         }
         

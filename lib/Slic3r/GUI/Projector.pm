@@ -738,7 +738,7 @@ use base qw(Wx::Dialog Class::Accessor);
 
 use List::Util qw(min);
 use Slic3r::Geometry qw(X Y unscale scale);
-use Slic3r::Geometry::Clipper qw(intersection_pl);
+use Slic3r::Geometry::Clipper qw(intersection_pl union_ex);
 
 __PACKAGE__->mk_accessors(qw(config config2 scaling_factor bed_origin print layer_num));
 
@@ -879,10 +879,12 @@ sub _repaint {
     if ($self->print->layer_solid($self->layer_num)) {
         $self->_paint_expolygon($_, $dc) for @{$self->print->layer_slices($self->layer_num)};
     } else {
-        $self->_paint_expolygon($_, $dc) for @{$self->print->layer_solid_infill($self->layer_num)};
-        $self->_paint_polygon($_, $dc) for map @{$_->grow},
-            @{$self->print->layer_perimeters($self->layer_num)},
-            @{$self->print->layer_infill($self->layer_num)};
+        $self->_paint_expolygon($_, $dc) for
+            @{$self->print->layer_solid_infill($self->layer_num)},
+            @{$self->print->layer_perimeters($self->layer_num)};
+        
+        $self->_paint_expolygon($_, $dc)
+            for @{union_ex($self->print->layer_infill($self->layer_num)->grow)};
     }
     
     # draw support material

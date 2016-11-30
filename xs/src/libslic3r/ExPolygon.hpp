@@ -55,6 +55,12 @@ to_polygons(const ExPolygons &expolygons)
     return pp;
 }
 
+inline ExPolygons
+operator+(ExPolygons src1, const ExPolygons &src2) {
+    append_to(src1, src2);
+    return src1;
+};
+
 }
 
 // start Boost

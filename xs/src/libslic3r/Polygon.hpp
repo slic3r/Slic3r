@@ -48,6 +48,18 @@ class Polygon : public MultiPoint {
     Points convex_points(double angle = PI) const;
 };
 
+inline Polygons
+operator+(Polygons src1, const Polygons &src2) {
+    append_to(src1, src2);
+    return src1;
+};
+
+inline Polygons&
+operator+=(Polygons &dst, const Polygons &src2) {
+    append_to(dst, src2);
+    return dst;
+};
+
 }
 
 // start Boost
