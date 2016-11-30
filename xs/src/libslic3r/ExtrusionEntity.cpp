@@ -4,40 +4,16 @@
 #include "ClipperUtils.hpp"
 #include "Extruder.hpp"
 #include <cmath>
+#include <limits>
 #include <sstream>
 
 namespace Slic3r {
-
-ExtrusionPath*
-ExtrusionPath::clone() const
-{
-    return new ExtrusionPath (*this);
-}
     
-void
-ExtrusionPath::reverse()
-{
-    this->polyline.reverse();
-}
-
-Point
-ExtrusionPath::first_point() const
-{
-    return this->polyline.points.front();
-}
-
-Point
-ExtrusionPath::last_point() const
-{
-    return this->polyline.points.back();
-}
-
 void
 ExtrusionPath::intersect_expolygons(const ExPolygonCollection &collection, ExtrusionEntityCollection* retval) const
 {
     // perform clipping
-    Polylines clipped;
-    intersection<Polylines,Polylines>(this->polyline, collection, &clipped);
+    Polylines clipped = intersection_pl(this->polyline, collection);
     return this->_inflate_collection(clipped, retval);
 }
 
@@ -45,8 +21,7 @@ void
 ExtrusionPath::subtract_expolygons(const ExPolygonCollection &collection, ExtrusionEntityCollection* retval) const
 {
     // perform clipping
-    Polylines clipped;
-    diff<Polylines,Polylines>(this->polyline, collection, &clipped);
+    Polylines clipped = diff_pl(this->polyline, collection);
     return this->_inflate_collection(clipped, retval);
 }
 
@@ -68,38 +43,6 @@ ExtrusionPath::length() const
     return this->polyline.length();
 }
 
-bool
-ExtrusionPath::is_perimeter() const
-{
-    return this->role == erPerimeter
-        || this->role == erExternalPerimeter
-        || this->role == erOverhangPerimeter;
-}
-
-bool
-ExtrusionPath::is_infill() const
-{
-    return this->role == erBridgeInfill
-        || this->role == erInternalInfill
-        || this->role == erSolidInfill
-        || this->role == erTopSolidInfill;
-}
-
-bool
-ExtrusionPath::is_solid_infill() const
-{
-    return this->role == erBridgeInfill
-        || this->role == erSolidInfill
-        || this->role == erTopSolidInfill;
-}
-
-bool
-ExtrusionPath::is_bridge() const
-{
-    return this->role == erBridgeInfill
-        || this->role == erOverhangPerimeter;
-}
-
 void
 ExtrusionPath::_inflate_collection(const Polylines &polylines, ExtrusionEntityCollection* collection) const
 {
@@ -113,15 +56,7 @@ ExtrusionPath::_inflate_collection(const Polylines &polylines, ExtrusionEntityCo
 Polygons
 ExtrusionPath::grow() const
 {
-    Polygons pp;
-    offset(this->polyline, &pp, +this->width/2);
-    return pp;
-}
-
-ExtrusionLoop*
-ExtrusionLoop::clone() const
-{
-    return new ExtrusionLoop (*this);
+    return offset(this->polyline, +scale_(this->width/2));
 }
 
 bool
@@ -146,18 +81,6 @@ ExtrusionLoop::reverse()
     for (ExtrusionPaths::iterator path = this->paths.begin(); path != this->paths.end(); ++path)
         path->reverse();
     std::reverse(this->paths.begin(), this->paths.end());
-}
-
-Point
-ExtrusionLoop::first_point() const
-{
-    return this->paths.front().polyline.points.front();
-}
-
-Point
-ExtrusionLoop::last_point() const
-{
-    return this->paths.back().polyline.points.back();  // which coincides with first_point(), by the way
 }
 
 Polygon
@@ -193,6 +116,7 @@ ExtrusionLoop::split_at_vertex(const Point &point)
             } else {
                 // new paths list starts with the second half of current path
                 ExtrusionPaths new_paths;
+                new_paths.reserve(this->paths.size() + 1);
                 {
                     ExtrusionPath p = *path;
                     p.polyline.points.erase(p.polyline.points.begin(), p.polyline.points.begin() + idx);
@@ -212,7 +136,7 @@ ExtrusionLoop::split_at_vertex(const Point &point)
                     if (p.polyline.is_valid()) new_paths.push_back(p);
                 }
                 // we can now override the old path list with the new one and stop looping
-                this->paths = new_paths;
+                std::swap(this->paths, new_paths);
             }
             return true;
         }
@@ -240,14 +164,24 @@ ExtrusionLoop::split_at(const Point &point)
     }
     
     // now split path_idx in two parts
-    ExtrusionPath p1 = this->paths[path_idx];
-    ExtrusionPath p2 = p1;
+    ExtrusionPath p1(this->paths[path_idx].role), p2(this->paths[path_idx].role);
     this->paths[path_idx].polyline.split_at(p, &p1.polyline, &p2.polyline);
     
-    // install the two paths
-    this->paths.erase(this->paths.begin() + path_idx);
-    if (p2.polyline.is_valid()) this->paths.insert(this->paths.begin() + path_idx, p2);
-    if (p1.polyline.is_valid()) this->paths.insert(this->paths.begin() + path_idx, p1);
+    if (this->paths.size() == 1) {
+        if (! p1.polyline.is_valid())
+            std::swap(this->paths.front().polyline.points, p2.polyline.points);
+        else if (! p2.polyline.is_valid())
+            std::swap(this->paths.front().polyline.points, p1.polyline.points);
+        else {
+            p2.polyline.points.insert(p2.polyline.points.end(), p1.polyline.points.begin() + 1, p1.polyline.points.end());
+            std::swap(this->paths.front().polyline.points, p2.polyline.points);
+        }
+    } else {
+        // install the two paths
+        this->paths.erase(this->paths.begin() + path_idx);
+        if (p2.polyline.is_valid()) this->paths.insert(this->paths.begin() + path_idx, p2);
+        if (p1.polyline.is_valid()) this->paths.insert(this->paths.begin() + path_idx, p1);
+    }
     
     // split at the new vertex
     this->split_at_vertex(p);
@@ -285,53 +219,21 @@ ExtrusionLoop::has_overhang_point(const Point &point) const
     return false;
 }
 
-bool
-ExtrusionLoop::is_perimeter() const
-{
-    return this->paths.front().role == erPerimeter
-        || this->paths.front().role == erExternalPerimeter
-        || this->paths.front().role == erOverhangPerimeter;
-}
-
-bool
-ExtrusionLoop::is_infill() const
-{
-    return this->paths.front().role == erBridgeInfill
-        || this->paths.front().role == erInternalInfill
-        || this->paths.front().role == erSolidInfill
-        || this->paths.front().role == erTopSolidInfill;
-}
-
-bool
-ExtrusionLoop::is_solid_infill() const
-{
-    return this->paths.front().role == erBridgeInfill
-        || this->paths.front().role == erSolidInfill
-        || this->paths.front().role == erTopSolidInfill;
-}
-
 Polygons
 ExtrusionLoop::grow() const
 {
     Polygons pp;
-    for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path) {
-        Polygons path_pp = path->grow();
-        pp.insert(pp.end(), path_pp.begin(), path_pp.end());
-    }
+    for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path)
+        append_to(pp, path->grow());
     return pp;
 }
 
 double
 ExtrusionLoop::min_mm3_per_mm() const
 {
-    double min_mm3_per_mm = 0;
-    for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path) {
-        if (min_mm3_per_mm == 0) {
-            min_mm3_per_mm = path->mm3_per_mm;
-        } else {
-            min_mm3_per_mm = fmin(min_mm3_per_mm, path->mm3_per_mm);
-        }
-    }
+    double min_mm3_per_mm = std::numeric_limits<double>::max();
+    for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path)
+        min_mm3_per_mm = std::min(min_mm3_per_mm, path->mm3_per_mm);
     return min_mm3_per_mm;
 }
 

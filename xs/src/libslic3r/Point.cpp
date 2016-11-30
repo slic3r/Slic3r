@@ -26,6 +26,14 @@ Point::wkt() const
     return ss.str();
 }
 
+std::string
+Point::dump_perl() const
+{
+    std::ostringstream ss;
+    ss << "[" << this->x << "," << this->y << "]";
+    return ss.str();
+}
+
 void
 Point::scale(double factor)
 {
@@ -47,18 +55,27 @@ Point::translate(const Vector &vector)
 }
 
 void
+Point::rotate(double angle)
+{
+    double cur_x = (double)this->x;
+    double cur_y = (double)this->y;
+    double s     = sin(angle);
+    double c     = cos(angle);
+    this->x = (coord_t)round(c * cur_x - s * cur_y);
+    this->y = (coord_t)round(c * cur_y + s * cur_x);
+}
+
+void
 Point::rotate(double angle, const Point &center)
 {
     double cur_x = (double)this->x;
     double cur_y = (double)this->y;
-    this->x = (coord_t)round( (double)center.x + cos(angle) * (cur_x - (double)center.x) - sin(angle) * (cur_y - (double)center.y) );
-    this->y = (coord_t)round( (double)center.y + cos(angle) * (cur_y - (double)center.y) + sin(angle) * (cur_x - (double)center.x) );
-}
-
-bool
-Point::coincides_with(const Point &point) const
-{
-    return this->x == point.x && this->y == point.y;
+    double s     = sin(angle);
+    double c     = cos(angle);
+    double dx    = cur_x - (double)center.x;
+    double dy    = cur_y - (double)center.y;
+    this->x = (coord_t)round( (double)center.x + c * dx - s * dy );
+    this->y = (coord_t)round( (double)center.y + c * dy + s * dx );
 }
 
 bool
@@ -287,10 +304,37 @@ Point::vector_to(const Point &point) const
     return Vector(point.x - this->x, point.y - this->y);
 }
 
+// Align a coordinate to a grid. The coordinate may be negative,
+// the aligned value will never be bigger than the original one.
+static coord_t
+_align_to_grid(const coord_t coord, const coord_t spacing) {
+    // Current C++ standard defines the result of integer division to be rounded to zero,
+    // for both positive and negative numbers. Here we want to round down for negative
+    // numbers as well.
+    coord_t aligned = (coord < 0) ?
+            ((coord - spacing + 1) / spacing) * spacing :
+            (coord / spacing) * spacing;
+    assert(aligned <= coord);
+    return aligned;
+}
+
+void
+Point::align_to_grid(const Point &spacing, const Point &base)
+{
+    this->x = base.x + _align_to_grid(this->x - base.x, spacing.x);
+    this->y = base.y + _align_to_grid(this->y - base.y, spacing.y);
+}
+
 Point
 operator+(const Point& point1, const Point& point2)
 {
     return Point(point1.x + point2.x, point1.y + point2.y);
+}
+
+Point
+operator-(const Point& point1, const Point& point2)
+{
+    return Point(point1.x - point2.x, point1.y - point2.y);
 }
 
 Point
@@ -310,6 +354,14 @@ Pointf::wkt() const
 {
     std::ostringstream ss;
     ss << "POINT(" << this->x << " " << this->y << ")";
+    return ss.str();
+}
+
+std::string
+Pointf::dump_perl() const
+{
+    std::ostringstream ss;
+    ss << "[" << this->x << "," << this->y << "]";
     return ss.str();
 }
 
@@ -334,12 +386,25 @@ Pointf::translate(const Vectorf &vector)
 }
 
 void
+Pointf::rotate(double angle)
+{
+    double cur_x = this->x;
+    double cur_y = this->y;
+    double s     = sin(angle);
+    double c     = cos(angle);
+    this->x = c * cur_x - s * cur_y;
+    this->y = c * cur_y + s * cur_x;
+}
+
+void
 Pointf::rotate(double angle, const Pointf &center)
 {
     double cur_x = this->x;
     double cur_y = this->y;
-    this->x = center.x + cos(angle) * (cur_x - center.x) - sin(angle) * (cur_y - center.y);
-    this->y = center.y + cos(angle) * (cur_y - center.y) + sin(angle) * (cur_x - center.x);
+    double s     = sin(angle);
+    double c     = cos(angle);
+    this->x = center.x + c * (cur_x - center.x) - s * (cur_y - center.y);
+    this->y = center.y + c * (cur_y - center.y) + s * (cur_x - center.x);
 }
 
 Pointf

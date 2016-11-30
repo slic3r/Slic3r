@@ -16,6 +16,7 @@
     void scale(double factor);
     void translate(double x, double y);
     void offset(double delta);
+    bool contains_point(Point* point) %code{% RETVAL = THIS->contains(*point); %};
     Clone<Polygon> polygon();
     Clone<Point> size();
     Clone<Point> center();
@@ -25,7 +26,8 @@
     long x_max() %code{% RETVAL = THIS->max.x; %};
     long y_min() %code{% RETVAL = THIS->min.y; %};
     long y_max() %code{% RETVAL = THIS->max.y; %};
-    
+    bool defined() %code{% RETVAL = THIS->defined; %};
+
 %{
 
 BoundingBox*
@@ -49,6 +51,7 @@ new_from_points(CLASS, points)
     void merge_point(Pointf* point) %code{% THIS->merge(*point); %};
     void scale(double factor);
     void translate(double x, double y);
+    bool contains_point(Pointf* point) %code{% RETVAL = THIS->contains(*point); %};
     Clone<Pointf> size();
     Clone<Pointf> center();
     Clone<Pointf> min_point() %code{% RETVAL = THIS->min; %};
@@ -61,6 +64,7 @@ new_from_points(CLASS, points)
     void set_x_max(double val) %code{% THIS->max.x = val; %};
     void set_y_min(double val) %code{% THIS->min.y = val; %};
     void set_y_max(double val) %code{% THIS->max.y = val; %};
+    bool defined() %code{% RETVAL = THIS->defined; %};
     
 %{
 
@@ -95,4 +99,5 @@ new_from_points(CLASS, points)
     double y_max() %code{% RETVAL = THIS->max.y; %};
     double z_min() %code{% RETVAL = THIS->min.z; %};
     double z_max() %code{% RETVAL = THIS->max.z; %};
+    bool defined() %code{% RETVAL = THIS->defined; %};
 };

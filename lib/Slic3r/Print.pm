@@ -1,3 +1,5 @@
+# The slicing work horse.
+# Extends C++ class Slic3r::Print
 package Slic3r::Print;
 use strict;
 use warnings;
@@ -39,8 +41,12 @@ sub size {
 sub process {
     my ($self) = @_;
     
+    $self->status_cb->(20, "Generating perimeters");
     $_->make_perimeters for @{$self->objects};
+    
+    $self->status_cb->(70, "Infilling layers");
     $_->infill for @{$self->objects};
+    
     $_->generate_support_material for @{$self->objects};
     $self->make_skirt;
     $self->make_brim;  # must come after make_skirt
@@ -89,6 +95,7 @@ sub export_gcode {
     }
 }
 
+# Export SVG slices for the offline SLA printing.
 sub export_svg {
     my $self = shift;
     my %params = @_;
@@ -445,6 +452,15 @@ sub expanded_output_filepath {
     # make sure we use an up-to-date timestamp
     $self->placeholder_parser->update_timestamp;
     return $self->placeholder_parser->process($path);
+}
+
+# Wrapper around the C++ Slic3r::Print::validate()
+# to produce a Perl exception without a hang-up on some Strawberry perls.
+sub validate
+{
+    my $self = shift;
+    my $err = $self->_validate;
+    die $err . "\n" if (defined($err) && $err ne '');
 }
 
 1;

@@ -54,7 +54,7 @@ GCodeWriter::preamble()
         gcode << "G21 ; set units to millimeters\n";
         gcode << "G90 ; use absolute coordinates\n";
     }
-    if (FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfTeacup)) {
+    if (FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfTeacup) || FLAVOR_IS(gcfRepetier) || FLAVOR_IS(gcfSmoothie)) {
         if (this->config.use_relative_e_distances) {
             gcode << "M83 ; use relative distances for extrusion\n";
         } else {
@@ -78,11 +78,9 @@ GCodeWriter::postamble() const
 std::string
 GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool) const
 {
-    if (wait && (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)))
-        return "";
     
     std::string code, comment;
-    if (wait && FLAVOR_IS_NOT(gcfTeacup)) {
+    if (wait && FLAVOR_IS_NOT(gcfTeacup) && FLAVOR_IS_NOT(gcfMakerWare) && FLAVOR_IS_NOT(gcfSailfish)) {
         code = "M109";
         comment = "set temperature and wait for it to be reached";
     } else {
@@ -105,6 +103,9 @@ GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool) cons
     
     if (FLAVOR_IS(gcfTeacup) && wait)
         gcode << "M116 ; wait for temperature to be reached\n";
+    
+    if (wait && tool !=-1 && (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)))
+        gcode << "M6 T" << tool << " ; wait for temperature to be reached\n";
     
     return gcode.str();
 }
@@ -185,7 +186,14 @@ GCodeWriter::set_acceleration(unsigned int acceleration)
     this->_last_acceleration = acceleration;
     
     std::ostringstream gcode;
-    gcode << "M204 S" << acceleration;
+    if (FLAVOR_IS(gcfRepetier)) {
+        gcode << "M201 X" << acceleration << " Y" << acceleration;
+        if (this->config.gcode_comments) gcode << " ; adjust acceleration";
+        gcode << "\n";
+        gcode << "M202 X" << acceleration << " Y" << acceleration;
+    } else {
+        gcode << "M204 S" << acceleration;
+    }
     if (this->config.gcode_comments) gcode << " ; adjust acceleration";
     gcode << "\n";
     
@@ -273,11 +281,13 @@ GCodeWriter::toolchange(unsigned int extruder_id)
 }
 
 std::string
-GCodeWriter::set_speed(double F, const std::string &comment) const
+GCodeWriter::set_speed(double F, const std::string &comment,
+                       const std::string &cooling_marker) const
 {
     std::ostringstream gcode;
     gcode << "G1 F" << F;
     COMMENT(comment);
+    gcode << cooling_marker;
     gcode << "\n";
     return gcode.str();
 }
@@ -439,7 +449,7 @@ GCodeWriter::_retract(double length, double restart_extra, const std::string &co
         length = length * area;
         restart_extra = restart_extra * area;
     }
-    
+
     double dE = this->_extruder->retract(length, restart_extra);
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
@@ -498,10 +508,10 @@ GCodeWriter::lift()
     // check whether the above/below conditions are met
     double target_lift = 0;
     {
-        double above = this->config.retract_lift_above.get_at(0);
-        double below = this->config.retract_lift_below.get_at(0);
+        double above = this->config.retract_lift_above.get_at(this->_extruder->id);
+        double below = this->config.retract_lift_below.get_at(this->_extruder->id);
         if (this->_pos.z >= above && (below == 0 || this->_pos.z <= below))
-            target_lift = this->config.retract_lift.get_at(0);
+            target_lift = this->config.retract_lift.get_at(this->_extruder->id);
     }
     if (this->_lifted == 0 && target_lift > 0) {
         this->_lifted = target_lift;

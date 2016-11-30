@@ -1,9 +1,12 @@
+# Notify about the end of slicing.
+# The notifications are sent out using the Growl protocol if installed, and using DBus XWindow protocol.
+
 package Slic3r::GUI::Notifier;
 use Moo;
 
 has 'growler' => (is => 'rw');
 
-my $icon = "$Slic3r::var/Slic3r.png";
+my $icon = $Slic3r::var->("Slic3r.png");
 
 sub BUILD {
     my ($self) = @_;

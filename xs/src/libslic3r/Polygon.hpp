@@ -6,11 +6,11 @@
 #include <string>
 #include "Line.hpp"
 #include "MultiPoint.hpp"
-#include "Polyline.hpp"
 
 namespace Slic3r {
 
 class Polygon;
+class Polyline;
 typedef std::vector<Polygon> Polygons;
 
 class Polygon : public MultiPoint {
@@ -23,9 +23,11 @@ class Polygon : public MultiPoint {
     Polygon() {};
     explicit Polygon(const Points &points): MultiPoint(points) {};
     Point last_point() const;
-    Lines lines() const;
+    virtual Lines lines() const;
     Polyline split_at_vertex(const Point &point) const;
+    // Split a closed polygon into an open polyline, with the split point duplicated at both ends.
     Polyline split_at_index(int index) const;
+    // Split a closed polygon into an open polyline, with the split point duplicated at both ends.
     Polyline split_at_first_point() const;
     Points equally_spaced_points(double distance) const;
     double area() const;
@@ -34,6 +36,8 @@ class Polygon : public MultiPoint {
     bool make_counter_clockwise();
     bool make_clockwise();
     bool is_valid() const;
+    // Does an unoriented polygon contain a point?
+    // Tested by counting intersections along a horizontal line.
     bool contains(const Point &point) const;
     Polygons simplify(double tolerance) const;
     void simplify(double tolerance, Polygons &polygons) const;
@@ -42,6 +46,18 @@ class Polygon : public MultiPoint {
     std::string wkt() const;
     Points concave_points(double angle = PI) const;
     Points convex_points(double angle = PI) const;
+};
+
+inline Polygons
+operator+(Polygons src1, const Polygons &src2) {
+    append_to(src1, src2);
+    return src1;
+};
+
+inline Polygons&
+operator+=(Polygons &dst, const Polygons &src2) {
+    append_to(dst, src2);
+    return dst;
 };
 
 }

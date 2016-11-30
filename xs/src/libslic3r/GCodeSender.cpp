@@ -70,6 +70,10 @@ GCodeSender::connect(std::string devname, unsigned int baud_rate)
     this->open = true;
     this->reset();
     
+    // a reset firmware expect line numbers to start again from 1
+    this->sent = 0;
+    this->last_sent.clear();
+    
     /* Initialize debugger */
 #ifdef DEBUG_SERIAL
     fs.open("serial.txt", std::fstream::out | std::fstream::trunc);
@@ -153,6 +157,7 @@ GCodeSender::disconnect()
     */
     
 #ifdef DEBUG_SERIAL
+    fs << "DISCONNECTED" << std::endl << std::flush;
     fs.close();
 #endif
 }

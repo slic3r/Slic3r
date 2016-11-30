@@ -1,3 +1,5 @@
+# The "Plater" tab. It contains the "3D", "2D", "Preview" and "Layers" subtabs.
+
 package Slic3r::GUI::Plater;
 use strict;
 use warnings;
@@ -51,6 +53,7 @@ sub new {
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
+    # List of Perl objects Slic3r::GUI::Plater::Object, representing a 2D preview of the platter.
     $self->{objects} = [];
     
     $self->{print}->set_status_cb(sub {
@@ -135,21 +138,21 @@ sub new {
     if (!&Wx::wxMSW) {
         Wx::ToolTip::Enable(1);
         $self->{htoolbar} = Wx::ToolBar->new($self, -1, wxDefaultPosition, wxDefaultSize, wxTB_HORIZONTAL | wxTB_TEXT | wxBORDER_SIMPLE | wxTAB_TRAVERSAL);
-        $self->{htoolbar}->AddTool(TB_ADD, "Add…", Wx::Bitmap->new("$Slic3r::var/brick_add.png", wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_REMOVE, "Delete", Wx::Bitmap->new("$Slic3r::var/brick_delete.png", wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_RESET, "Delete All", Wx::Bitmap->new("$Slic3r::var/cross.png", wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_ARRANGE, "Arrange", Wx::Bitmap->new("$Slic3r::var/bricks.png", wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_ADD, "Add…", Wx::Bitmap->new($Slic3r::var->("brick_add.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_REMOVE, "Delete", Wx::Bitmap->new($Slic3r::var->("brick_delete.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_RESET, "Delete All", Wx::Bitmap->new($Slic3r::var->("cross.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_ARRANGE, "Arrange", Wx::Bitmap->new($Slic3r::var->("bricks.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
-        $self->{htoolbar}->AddTool(TB_MORE, "More", Wx::Bitmap->new("$Slic3r::var/add.png", wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_FEWER, "Fewer", Wx::Bitmap->new("$Slic3r::var/delete.png", wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_MORE, "More", Wx::Bitmap->new($Slic3r::var->("add.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_FEWER, "Fewer", Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
-        $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new("$Slic3r::var/arrow_rotate_anticlockwise.png", wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new("$Slic3r::var/arrow_rotate_clockwise.png", wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_SCALE, "Scale…", Wx::Bitmap->new("$Slic3r::var/arrow_out.png", wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_SPLIT, "Split", Wx::Bitmap->new("$Slic3r::var/shape_ungroup.png", wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_CUT, "Cut…", Wx::Bitmap->new("$Slic3r::var/package.png", wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_anticlockwise.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_SCALE, "Scale…", Wx::Bitmap->new($Slic3r::var->("arrow_out.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_SPLIT, "Split", Wx::Bitmap->new($Slic3r::var->("shape_ungroup.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_CUT, "Cut…", Wx::Bitmap->new($Slic3r::var->("package.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
-        $self->{htoolbar}->AddTool(TB_SETTINGS, "Settings…", Wx::Bitmap->new("$Slic3r::var/cog.png", wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_SETTINGS, "Settings…", Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG), '');
     } else {
         my %tbar_buttons = (
             add             => "Add…",
@@ -220,7 +223,7 @@ sub new {
             settings        cog.png
         );
         for (grep $self->{"btn_$_"}, keys %icons) {
-            $self->{"btn_$_"}->SetBitmap(Wx::Bitmap->new("$Slic3r::var/$icons{$_}", wxBITMAP_TYPE_PNG));
+            $self->{"btn_$_"}->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icons{$_}), wxBITMAP_TYPE_PNG));
         }
     }
     $self->selection_changed(0);
@@ -372,7 +375,7 @@ sub new {
                 $self->{"object_info_$field"} = Wx::StaticText->new($self, -1, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
                 $self->{"object_info_$field"}->SetFont($Slic3r::GUI::small_font);
                 if ($field eq 'manifold') {
-                    $self->{object_info_manifold_warning_icon} = Wx::StaticBitmap->new($self, -1, Wx::Bitmap->new("$Slic3r::var/error.png", wxBITMAP_TYPE_PNG));
+                    $self->{object_info_manifold_warning_icon} = Wx::StaticBitmap->new($self, -1, Wx::Bitmap->new($Slic3r::var->("error.png"), wxBITMAP_TYPE_PNG));
                     $self->{object_info_manifold_warning_icon}->Hide;
                     
                     my $h_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
@@ -466,7 +469,7 @@ sub update_presets {
                 my $config = $preset->config(['filament_colour']);
                 my $rgb_hex = $config->filament_colour->[0];
                 if ($preset->default) {
-                    $bitmap = Wx::Bitmap->new("$Slic3r::var/spool.png", wxBITMAP_TYPE_PNG);
+                    $bitmap = Wx::Bitmap->new($Slic3r::var->("spool.png"), wxBITMAP_TYPE_PNG);
                 } else {
                     $rgb_hex =~ s/^#//;
                     my @rgb = unpack 'C*', pack 'H*', $rgb_hex;
@@ -475,9 +478,9 @@ sub update_presets {
                     $bitmap = Wx::Bitmap->new($image);
                 }
             } elsif ($group eq 'print') {
-                $bitmap = Wx::Bitmap->new("$Slic3r::var/cog.png", wxBITMAP_TYPE_PNG);
+                $bitmap = Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG);
             } elsif ($group eq 'printer') {
-                $bitmap = Wx::Bitmap->new("$Slic3r::var/printer_empty.png", wxBITMAP_TYPE_PNG);
+                $bitmap = Wx::Bitmap->new($Slic3r::var->("printer_empty.png"), wxBITMAP_TYPE_PNG);
             }
             $choice->AppendString($preset->name, $bitmap);
         }
@@ -507,6 +510,36 @@ sub add {
     $self->load_file($_) for @input_files;
 }
 
+sub add_tin {
+    my $self = shift;
+    
+    my @input_files = wxTheApp->open_model($self);
+    return if !@input_files;
+    
+    my $offset = Wx::GetNumberFromUser("", "Enter the minimum thickness in mm (i.e. the offset from the lowest point):", "2.5D TIN",
+        5, 0, 1000000, $self);
+    return if $offset < 0;
+    
+    foreach my $input_file (@input_files) {
+        my $model = eval { Slic3r::Model->read_from_file($input_file) };
+        Slic3r::GUI::show_error($self, $@) if $@;
+        next if !$model;
+
+        if ($model->looks_like_multipart_object) {
+            Slic3r::GUI::show_error($self, "Multi-part models cannot be opened as 2.5D TIN files. Please load a single continuous mesh.");
+            next;
+        }
+        
+        my $model_object = $model->get_object(0);
+        eval {
+            $model_object->get_volume(0)->extrude_tin($offset);
+        };
+        Slic3r::GUI::show_error($self, $@) if $@;
+        
+        $self->load_model_objects($model_object);
+    }
+}
+
 sub load_file {
     my $self = shift;
     my ($input_file) = @_;
@@ -523,6 +556,16 @@ sub load_file {
     Slic3r::GUI::show_error($self, $@) if $@;
     
     if (defined $model) {
+        if ($model->looks_like_multipart_object) {
+            my $dialog = Wx::MessageDialog->new($self,
+                "This file contains several objects positioned at multiple heights. "
+                . "Instead of considering them as multiple objects, should I consider\n"
+                . "this file as a single object having multiple parts?\n",
+                'Multi-part object detected', wxICON_WARNING | wxYES | wxNO);
+            if ($dialog->ShowModal() == wxID_YES) {
+                $model->convert_multipart_object;
+            }
+        }
         $self->load_model_objects(@{$model->objects});
         $self->statusbar->SetStatusText("Loaded " . basename($input_file));
     }
@@ -542,6 +585,7 @@ sub load_model_objects {
     my @obj_idx = ();
     foreach my $model_object (@model_objects) {
         my $o = $self->{model}->add_object($model_object);
+        $o->repair;
         
         push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
             name => basename($model_object->input_file),
@@ -905,9 +949,7 @@ sub arrange {
     $self->pause_background_process;
     
     my $bb = Slic3r::Geometry::BoundingBoxf->new_from_points($self->{config}->bed_shape);
-    eval {
-        $self->{model}->arrange_objects($self->GetFrame->config->min_object_distance, $bb);
-    };
+    my $success = $self->{model}->arrange_objects($self->GetFrame->config->min_object_distance, $bb);
     # ignore arrange failures on purpose: user has visual feedback and we don't need to warn him
     # when parts don't fit in print bed
     
@@ -966,6 +1008,8 @@ sub schedule_background_process {
     }
 }
 
+# Executed asynchronously by a timer every PROCESS_DELAY (0.5 second).
+# The timer is started by schedule_background_process(), 
 sub async_apply_config {
     my ($self) = @_;
     
@@ -1630,8 +1674,10 @@ sub selection_changed {
             $self->{object_info_size}->SetLabel(sprintf("%.2f x %.2f x %.2f", @{$model_object->instance_bounding_box(0)->size}));
             $self->{object_info_materials}->SetLabel($model_object->materials_count);
             
-            if (my $stats = $model_object->mesh_stats) {
-                $self->{object_info_volume}->SetLabel(sprintf('%.2f', $stats->{volume} * ($model_instance->scaling_factor**3)));
+            my $raw_mesh = $model_object->raw_mesh;
+            $raw_mesh->repair;  # this calculates number_of_parts
+            if (my $stats = $raw_mesh->stats) {
+                $self->{object_info_volume}->SetLabel(sprintf('%.2f', $raw_mesh->volume * ($model_instance->scaling_factor**3)));
                 $self->{object_info_facets}->SetLabel(sprintf('%d (%d shells)', $model_object->facets_count, $stats->{number_of_parts}));
                 if (my $errors = sum(@$stats{qw(degenerate_facets edges_fixed facets_removed facets_added facets_reversed backwards_edges)})) {
                     $self->{object_info_manifold}->SetLabel(sprintf("Auto-repaired (%d errors)", $errors));
@@ -1812,6 +1858,20 @@ sub object_menu {
     return $menu;
 }
 
+# Set a camera direction, zoom to all objects.
+sub select_view {
+    my ($self, $direction) = @_;
+    my $idx_page = $self->{preview_notebook}->GetSelection;
+    my $page = ($idx_page == &Wx::wxNOT_FOUND) ? '3D' : $self->{preview_notebook}->GetPageText($idx_page);
+    if ($page eq 'Preview') {
+        $self->{preview3D}->canvas->select_view($direction);
+        $self->{canvas3D}->set_viewport_from_scene($self->{preview3D}->canvas);
+    } else {
+        $self->{canvas3D}->select_view($direction);
+        $self->{preview3D}->canvas->set_viewport_from_scene($self->{canvas3D});
+    }
+}
+
 package Slic3r::GUI::Plater::DropTarget;
 use Wx::DND;
 use base 'Wx::FileDropTarget';
@@ -1838,6 +1898,7 @@ sub OnDropFiles {
     $self->{window}->load_file($_) for @$filenames;
 }
 
+# 2D preview of an object. Each object is previewed by its convex hull.
 package Slic3r::GUI::Plater::Object;
 use Moo;
 

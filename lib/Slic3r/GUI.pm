@@ -52,6 +52,8 @@ use constant FILE_WILDCARDS => {
 use constant MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(known stl obj amf)};
 
 our $datadir;
+# If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
+our $no_controller;
 our $no_plater;
 our $mode;
 our $autosave;
@@ -63,6 +65,9 @@ our $Settings = {
         version_check => 1,
         autocenter => 1,
         background_processing => 1,
+        # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
+        # By default, Prusa has the controller hidden.
+        no_controller => 1,
     },
 };
 
@@ -89,6 +94,9 @@ sub OnInit {
     $self->{notifier} = Slic3r::GUI::Notifier->new;
     
     # locate or create data directory
+    # Unix: ~/.Slic3r
+    # Windows: "C:\Users\username\AppData\Roaming\Slic3r" or "C:\Documents and Settings\username\Application Data\Slic3r"
+    # Mac: "~/Library/Application Support/Slic3r"
     $datadir ||= Slic3r::decode_path(Wx::StandardPaths::Get->GetUserDataDir);
     my $enc_datadir = Slic3r::encode_path($datadir);
     Slic3r::debugf "Data directory: %s\n", $datadir;
@@ -114,6 +122,8 @@ sub OnInit {
         $Settings->{_}{mode} ||= 'expert';
         $Settings->{_}{autocenter} //= 1;
         $Settings->{_}{background_processing} //= 1;
+        # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
+        $Settings->{_}{no_controller} //= 1;
     }
     $Settings->{_}{version} = $Slic3r::VERSION;
     $self->save_settings;
@@ -121,8 +131,10 @@ sub OnInit {
     # application frame
     Wx::Image::AddHandler(Wx::PNGHandler->new);
     $self->{mainframe} = my $frame = Slic3r::GUI::MainFrame->new(
-        mode        => $mode // $Settings->{_}{mode},
-        no_plater   => $no_plater,
+        mode            => $mode // $Settings->{_}{mode},
+        # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
+        no_controller   => $no_controller // $Settings->{_}{no_controller},
+        no_plater       => $no_plater,
     );
     $self->SetTopWindow($frame);
     

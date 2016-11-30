@@ -1,3 +1,6 @@
+# The "Simple" Print Settings tab.
+# The "Simple" mode is enabled by File->Preferences dialog.
+
 package Slic3r::GUI::SimpleTab;
 use strict;
 use warnings;
@@ -269,7 +272,7 @@ sub build {
             my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
             $btn->SetFont($Slic3r::GUI::small_font);
             if ($Slic3r::GUI::have_button_icons) {
-                $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/cog.png", wxBITMAP_TYPE_PNG));
+                $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG));
             }
         
             my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);

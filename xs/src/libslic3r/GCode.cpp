@@ -2,6 +2,9 @@
 #include "ExtrusionEntity.hpp"
 #include <algorithm>
 #include <cstdlib>
+#include <math.h>
+
+#define FLAVOR_IS(val) this->config.gcode_flavor == val
 
 namespace Slic3r {
 
@@ -95,7 +98,7 @@ OozePrevention::pre_toolchange(GCode &gcodegen)
     if (gcodegen.config.standby_temperature_delta.value != 0) {
         // we assume that heating is always slower than cooling, so no need to block
         gcode += gcodegen.writer.set_temperature
-            (this->_get_temp(gcodegen) + gcodegen.config.standby_temperature_delta.value, false);
+            (this->_get_temp(gcodegen) + gcodegen.config.standby_temperature_delta.value, false, gcodegen.writer.extruder()->id);
     }
     
     return gcode;
@@ -107,7 +110,7 @@ OozePrevention::post_toolchange(GCode &gcodegen)
     std::string gcode;
     
     if (gcodegen.config.standby_temperature_delta.value != 0) {
-        gcode += gcodegen.writer.set_temperature(this->_get_temp(gcodegen), true);
+        gcode += gcodegen.writer.set_temperature(this->_get_temp(gcodegen), true, gcodegen.writer.extruder()->id);
     }
     
     return gcode;
@@ -177,11 +180,11 @@ Wipe::wipe(GCode &gcodegen, bool toolchange)
             /*  Reduce retraction length a bit to avoid effective retraction speed to be greater than the configured one
                 due to rounding (TODO: test and/or better math for this)  */
             double dE = length * (segment_length / wipe_dist) * 0.95;
-            gcode += gcodegen.writer.set_speed(wipe_speed*60);
+            gcode += gcodegen.writer.set_speed(wipe_speed*60, "", gcodegen.enable_cooling_markers ? ";_WIPE" : "");
             gcode += gcodegen.writer.extrude_to_xy(
                 gcodegen.point_to_gcode(line->b),
                 -dE,
-                (std::string)"wipe and retract" + (gcodegen.enable_cooling_markers ? ";_WIPE" : "")
+                "wipe and retract"
             );
             retracted += dE;
         }
@@ -198,7 +201,7 @@ Wipe::wipe(GCode &gcodegen, bool toolchange)
 
 GCode::GCode()
     : placeholder_parser(NULL), enable_loop_clipping(true), enable_cooling_markers(false), layer_count(0),
-        layer_index(-1), layer(NULL), first_layer(false), elapsed_time(0), volumetric_speed(0),
+        layer_index(-1), layer(NULL), first_layer(false), elapsed_time(0.0), volumetric_speed(0),
         _last_pos_defined(false)
 {
 }
@@ -280,11 +283,8 @@ GCode::change_layer(const Layer &layer)
     this->first_layer = (layer.id() == 0);
     
     // avoid computing islands and overhangs if they're not needed
-    if (this->config.avoid_crossing_perimeters) {
-        ExPolygons islands;
-        union_(layer.slices, &islands, true);
-        this->avoid_crossing_perimeters.init_layer_mp(islands);
-    }
+    if (this->config.avoid_crossing_perimeters)
+        this->avoid_crossing_perimeters.init_layer_mp(union_ex(layer.slices, true));
     
     std::string gcode;
     if (this->layer_count > 0) {
@@ -390,7 +390,7 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
             Polygon polygon = loop.polygon();
             Point centroid = polygon.centroid();
             last_pos = Point(polygon.bounding_box().max.x, centroid.y);
-            last_pos.rotate(rand() % 2*PI, centroid);
+            last_pos.rotate(fmod((float)rand()/16.0, 2.0*PI), centroid);
         }
         loop.split_at(last_pos);
     }
@@ -557,12 +557,19 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
             this->config.max_volumetric_speed.value / path.mm3_per_mm
         );
     }
+    if (EXTRUDER_CONFIG(filament_max_volumetric_speed) > 0) {
+        // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
+        speed = std::min(
+            speed,
+            EXTRUDER_CONFIG(filament_max_volumetric_speed) / path.mm3_per_mm
+        );
+    }
     double F = speed * 60;  // convert mm/sec to mm/min
     
     // extrude arc or line
     if (path.is_bridge() && this->enable_cooling_markers)
         gcode += ";_BRIDGE_FAN_START\n";
-    gcode += this->writer.set_speed(F);
+    gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? ";_EXTRUDE_SET_SPEED" : "");
     double path_length = 0;
     {
         std::string comment = this->config.gcode_comments ? description : "";
@@ -632,6 +639,14 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line)
         gcode += this->writer.travel_to_xy(this->point_to_gcode(line->b), comment);
     
+    /*  While this makes the estimate more accurate, CoolingBuffer calculates the slowdown
+        factor on the whole elapsed time but only alters non-travel moves, thus the resulting
+        time is still shorter than the configured threshold. We could create a new 
+        elapsed_travel_time but we would still need to account for bridges, retractions, wipe etc.
+    if (this->config.cooling)
+        this->elapsed_time += unscale(travel.length()) / this->config.get_abs_value("travel_speed");
+    */
+    
     return gcode;
 }
 
@@ -691,8 +706,8 @@ GCode::retract(bool toolchange)
         methods even if we performed wipe, since this will ensure the entire retraction
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? this->writer.retract_for_toolchange() : this->writer.retract();
-    
-    gcode += this->writer.reset_e();
+    if (!(FLAVOR_IS(gcfSmoothie) && this->config.use_firmware_retraction))
+        gcode += this->writer.reset_e();
     if (this->writer.extruder()->retract_length() > 0 || this->config.use_firmware_retraction)
         gcode += this->writer.lift();
     

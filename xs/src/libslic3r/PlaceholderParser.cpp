@@ -3,9 +3,23 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
-#include <unistd.h>  // provides **environ
+#ifdef _MSC_VER
+    #include <stdlib.h>  // provides **_environ
+#else
+    #include <unistd.h>  // provides **environ
+#endif
 
-extern char **environ;
+#ifdef __APPLE__
+#include <crt_externs.h>
+#undef environ
+#define environ (*_NSGetEnviron())
+#else
+    #ifdef _MSC_VER
+       #define environ _environ
+    #else
+     	extern char **environ;
+    #endif
+#endif
 
 namespace Slic3r {
 

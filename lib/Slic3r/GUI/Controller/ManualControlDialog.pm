@@ -1,3 +1,5 @@
+# A printer "Controller" -> "ManualControlDialog" subtab, opened per 3D printer connected?
+
 package Slic3r::GUI::Controller::ManualControlDialog;
 use strict;
 use warnings;
@@ -34,7 +36,7 @@ sub new {
             wxBU_LEFT | wxBU_EXACTFIT);
         $btn->SetFont($bold ? $Slic3r::GUI::small_bold_font : $Slic3r::GUI::small_font);
         if ($Slic3r::GUI::have_button_icons) {
-            $btn->SetBitmap(Wx::Bitmap->new("$Slic3r::var/$icon.png", wxBITMAP_TYPE_PNG));
+            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("$icon.png"), wxBITMAP_TYPE_PNG));
             $btn->SetBitmapPosition($pos);
         }
         EVT_BUTTON($self, $btn, $handler);
@@ -87,7 +89,8 @@ sub new {
         $bed_sizer->Add($sizer, 1, wxEXPAND, 0);
     }
     
-    $bed_sizer->AddSpacer(0);
+    # XYZ home button
+    $move_button->($bed_sizer, 'XYZ', 'house', 1, wxTOP, sub { $self->home(undef) });
     
     # X buttons
     {
@@ -180,10 +183,11 @@ sub rel_move {
 sub home {
     my ($self, $axis) = @_;
     
+    $axis //= '';
     $self->sender->send(sprintf("G28 %s", $axis), 1);
     $self->{canvas}->set_pos(undef);
-    $self->x_homed if $axis eq 'X';
-    $self->y_homed if $axis eq 'Y';
+    $self->x_homed(1) if $axis eq 'X';
+    $self->y_homed(1) if $axis eq 'Y';
 }
 
 1;

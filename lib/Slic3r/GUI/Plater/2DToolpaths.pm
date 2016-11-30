@@ -1,3 +1,7 @@
+# 2D preview of the tool paths of a single layer, using a thin line.
+# OpenGL is used to render the paths.
+# Vojtech also added a 2D simulation of under/over extrusion in a single layer.
+
 package Slic3r::GUI::Plater::2DToolpaths;
 use strict;
 use warnings;
@@ -143,10 +147,16 @@ __PACKAGE__->mk_accessors(qw(
 sub new {
     my ($class, $parent, $print) = @_;
     
-    my $self = $class->SUPER::new($parent);
+    my $self = (Wx::wxVERSION >= 3.000003) ?
+        # The wxWidgets 3.0.3-beta have a bug, they crash with NULL attribute list.
+        $class->SUPER::new($parent, -1, Wx::wxDefaultPosition, Wx::wxDefaultSize, 0, "",
+            [WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 24, 0]) :
+        $class->SUPER::new($parent);
+    # Immediatelly force creation of the OpenGL context to consume the static variable s_wglContextAttribs.
+    $self->GetContext();
     $self->print($print);
     $self->_zoom(1);
-    
+
     # 2D point in model space
     $self->_camera_target(Slic3r::Pointf->new(0,0));
     

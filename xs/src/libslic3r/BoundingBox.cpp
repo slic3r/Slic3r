@@ -68,6 +68,26 @@ BoundingBox::polygon() const
     return p;
 }
 
+BoundingBox BoundingBox::rotated(double angle) const
+{
+    BoundingBox out;
+    out.merge(this->min.rotated(angle));
+    out.merge(this->max.rotated(angle));
+    out.merge(Point(this->min.x, this->max.y).rotated(angle));
+    out.merge(Point(this->max.x, this->min.y).rotated(angle));
+    return out;
+}
+
+BoundingBox BoundingBox::rotated(double angle, const Point &center) const
+{
+    BoundingBox out;
+    out.merge(this->min.rotated(angle, center));
+    out.merge(this->max.rotated(angle, center));
+    out.merge(Point(this->min.x, this->max.y).rotated(angle, center));
+    out.merge(Point(this->max.x, this->min.y).rotated(angle, center));
+    return out;
+}
+
 template <class PointClass> void
 BoundingBoxBase<PointClass>::scale(double factor)
 {
@@ -218,5 +238,14 @@ BoundingBox3Base<PointClass>::center() const
     );
 }
 template Pointf3 BoundingBox3Base<Pointf3>::center() const;
+
+template <class PointClass> bool
+BoundingBoxBase<PointClass>::contains(const PointClass &point) const
+{
+    return point.x >= this->min.x && point.x <= this->max.x
+        && point.y >= this->min.y && point.y <= this->max.y;
+}
+template bool BoundingBoxBase<Point>::contains(const Point &point) const;
+template bool BoundingBoxBase<Pointf>::contains(const Pointf &point) const;
 
 }

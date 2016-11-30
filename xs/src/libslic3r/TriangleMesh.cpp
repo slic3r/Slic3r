@@ -2,8 +2,8 @@
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include <cmath>
-#include <queue>
 #include <deque>
+#include <queue>
 #include <set>
 #include <vector>
 #include <map>
@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <math.h>
 #include <assert.h>
+#include <stdexcept>
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -57,12 +58,8 @@ TriangleMesh& TriangleMesh::operator= (TriangleMesh other)
 void
 TriangleMesh::swap(TriangleMesh &other)
 {
-    std::swap(this->stl,                 other.stl);
-    std::swap(this->repaired,            other.repaired);
-    std::swap(this->stl.facet_start,     other.stl.facet_start);
-    std::swap(this->stl.neighbors_start, other.stl.neighbors_start);
-    std::swap(this->stl.v_indices,       other.stl.v_indices);
-    std::swap(this->stl.v_shared,        other.stl.v_shared);
+    std::swap(this->stl,      other.stl);
+    std::swap(this->repaired, other.repaired);
 }
 
 TriangleMesh::~TriangleMesh() {
@@ -70,20 +67,21 @@ TriangleMesh::~TriangleMesh() {
 }
 
 void
-TriangleMesh::ReadSTLFile(char* input_file) {
-    stl_open(&stl, input_file);
+TriangleMesh::ReadSTLFile(const std::string &input_file) {
+    stl_open(&stl, input_file.c_str());
+    if (this->stl.error != 0) throw std::runtime_error("Failed to read STL file");
 }
 
 void
-TriangleMesh::write_ascii(char* output_file)
+TriangleMesh::write_ascii(const std::string &output_file)
 {
-    stl_write_ascii(&this->stl, output_file, "");
+    stl_write_ascii(&this->stl, output_file.c_str(), "");
 }
 
 void
-TriangleMesh::write_binary(char* output_file)
+TriangleMesh::write_binary(const std::string &output_file)
 {
-    stl_write_binary(&this->stl, output_file, "");
+    stl_write_binary(&this->stl, output_file.c_str(), "");
 }
 
 void
@@ -93,6 +91,44 @@ TriangleMesh::repair() {
     // admesh fails when repairing empty meshes
     if (this->stl.stats.number_of_facets == 0) return;
     
+    this->check_topology();
+    
+    // remove_unconnected
+    if (stl.stats.connected_facets_3_edge <  stl.stats.number_of_facets) {
+        stl_remove_unconnected_facets(&stl);
+    }
+    
+    // fill_holes
+    if (stl.stats.connected_facets_3_edge < stl.stats.number_of_facets) {
+        stl_fill_holes(&stl);
+        stl_clear_error(&stl);
+    }
+    
+    // normal_directions
+    stl_fix_normal_directions(&stl);
+    
+    // normal_values
+    stl_fix_normal_values(&stl);
+    
+    // always calculate the volume and reverse all normals if volume is negative
+    (void)this->volume();
+    
+    // neighbors
+    stl_verify_neighbors(&stl);
+    
+    this->repaired = true;
+}
+
+float
+TriangleMesh::volume()
+{
+    if (this->stl.stats.volume == -1) stl_calculate_volume(&this->stl);
+    return this->stl.stats.volume;
+}
+
+void
+TriangleMesh::check_topology()
+{
     // checking exact
     stl_check_facets_exact(&stl);
     stl.stats.facets_w_1_bad_edge = (stl.stats.connected_facets_2_edge - stl.stats.connected_facets_3_edge);
@@ -117,31 +153,12 @@ TriangleMesh::repair() {
             }
         }
     }
-    
-    // remove_unconnected
-    if (stl.stats.connected_facets_3_edge <  stl.stats.number_of_facets) {
-        stl_remove_unconnected_facets(&stl);
-    }
-    
-    // fill_holes
-    if (stl.stats.connected_facets_3_edge < stl.stats.number_of_facets) {
-        stl_fill_holes(&stl);
-        stl_clear_error(&stl);
-    }
-    
-    // normal_directions
-    stl_fix_normal_directions(&stl);
-    
-    // normal_values
-    stl_fix_normal_values(&stl);
-    
-    // always calculate the volume and reverse all normals if volume is negative
-    stl_calculate_volume(&stl);
-    
-    // neighbors
-    stl_verify_neighbors(&stl);
-    
-    this->repaired = true;
+}
+
+bool
+TriangleMesh::is_manifold() const
+{
+    return this->stl.stats.connected_facets_3_edge == this->stl.stats.number_of_facets;
 }
 
 void
@@ -173,9 +190,9 @@ TriangleMesh::facets_count() const
 }
 
 void
-TriangleMesh::WriteOBJFile(char* output_file) {
+TriangleMesh::WriteOBJFile(const std::string &output_file) {
     stl_generate_shared_vertices(&stl);
-    stl_write_obj(&stl, output_file);
+    stl_write_obj(&stl, output_file.c_str());
 }
 
 void TriangleMesh::scale(float factor)
@@ -266,6 +283,16 @@ void TriangleMesh::align_to_origin()
     );
 }
 
+void TriangleMesh::center_around_origin()
+{
+    this->align_to_origin();
+    this->translate(
+        -(this->stl.stats.size.x/2),
+        -(this->stl.stats.size.y/2),
+        -(this->stl.stats.size.z/2)
+    );
+}
+
 void TriangleMesh::rotate(double angle, Point* center)
 {
     this->translate(-center->x, -center->y, 0);
@@ -340,9 +367,8 @@ TriangleMesh::merge(const TriangleMesh &mesh)
     stl_reallocate(&this->stl);
     
     // copy facets
-    for (int i = 0; i < mesh.stl.stats.number_of_facets; i++) {
-        this->stl.facet_start[number_of_facets + i] = mesh.stl.facet_start[i];
-    }
+    std::copy(mesh.stl.facet_start, mesh.stl.facet_start + mesh.stl.stats.number_of_facets, this->stl.facet_start + number_of_facets);
+    std::copy(mesh.stl.neighbors_start, mesh.stl.neighbors_start + mesh.stl.stats.number_of_facets, this->stl.neighbors_start + number_of_facets);
     
     // update size
     stl_get_size(&this->stl);
@@ -366,10 +392,7 @@ TriangleMesh::horizontal_projection() const
     }
     
     // the offset factor was tuned using groovemount.stl
-    offset(pp, &pp, 0.01 / SCALING_FACTOR);
-    ExPolygons retval;
-    union_(pp, &retval, true);
-    return retval;
+    return union_ex(offset(pp, 0.01 / SCALING_FACTOR), true);
 }
 
 Polygon
@@ -406,7 +429,56 @@ TriangleMesh::require_shared_vertices()
 }
 
 void
-TriangleMeshSlicer::slice(const std::vector<float> &z, std::vector<Polygons>* layers)
+TriangleMesh::extrude_tin(float offset)
+{
+    calculate_normals(&this->stl);
+    
+    const int number_of_facets = this->stl.stats.number_of_facets;
+    if (number_of_facets == 0)
+        throw std::runtime_error("Error: file is empty");
+    
+    const float z = this->stl.stats.min.z - offset;
+    
+    for (int i = 0; i < number_of_facets; ++i) {
+        const stl_facet &facet = this->stl.facet_start[i];
+        
+        if (facet.normal.z < 0)
+            throw std::runtime_error("Invalid 2.5D mesh: at least one facet points downwards.");
+        
+        for (int j = 0; j < 3; ++j) {
+            if (this->stl.neighbors_start[i].neighbor[j] == -1) {
+                stl_facet new_facet;
+                float normal[3];
+                
+                // first triangle
+                new_facet.vertex[0] = new_facet.vertex[2] = facet.vertex[(j+1)%3];
+                new_facet.vertex[1] = facet.vertex[j];
+                new_facet.vertex[2].z = z;
+                stl_calculate_normal(normal, &new_facet);
+                stl_normalize_vector(normal);
+                new_facet.normal.x = normal[0];
+                new_facet.normal.y = normal[1];
+                new_facet.normal.z = normal[2];
+                stl_add_facet(&this->stl, &new_facet);
+                
+                // second triangle
+                new_facet.vertex[0] = new_facet.vertex[1] = facet.vertex[j];
+                new_facet.vertex[2] = facet.vertex[(j+1)%3];
+                new_facet.vertex[1].z = new_facet.vertex[2].z = z;
+                new_facet.normal.x = normal[0];
+                new_facet.normal.y = normal[1];
+                new_facet.normal.z = normal[2];
+                stl_add_facet(&this->stl, &new_facet);
+            }
+        }
+    }
+    stl_get_size(&this->stl);
+    
+    this->repair();
+}
+
+void
+TriangleMeshSlicer::slice(const std::vector<float> &z, std::vector<Polygons>* layers) const
 {
     /*
        This method gets called with a list of unscaled Z coordinates and outputs
@@ -430,58 +502,66 @@ TriangleMeshSlicer::slice(const std::vector<float> &z, std::vector<Polygons>* la
         
         At the end, we free the tables generated by analyze() as we don't 
         need them anymore.
-        FUTURE: parallelize slice_facet() and make_loops()
         
         NOTE: this method accepts a vector of floats because the mesh coordinate
         type is float.
     */
     
     std::vector<IntersectionLines> lines(z.size());
-    
-    for (int facet_idx = 0; facet_idx < this->mesh->stl.stats.number_of_facets; facet_idx++) {
-        stl_facet* facet = &this->mesh->stl.facet_start[facet_idx];
-        
-        // find facet extents
-        float min_z = fminf(facet->vertex[0].z, fminf(facet->vertex[1].z, facet->vertex[2].z));
-        float max_z = fmaxf(facet->vertex[0].z, fmaxf(facet->vertex[1].z, facet->vertex[2].z));
-        
-        #ifdef SLIC3R_DEBUG
-        printf("\n==> FACET %d (%f,%f,%f - %f,%f,%f - %f,%f,%f):\n", facet_idx,
-            facet->vertex[0].x, facet->vertex[0].y, facet->vertex[0].z,
-            facet->vertex[1].x, facet->vertex[1].y, facet->vertex[1].z,
-            facet->vertex[2].x, facet->vertex[2].y, facet->vertex[2].z);
-        printf("z: min = %.2f, max = %.2f\n", min_z, max_z);
-        #endif
-        
-        // find layer extents
-        std::vector<float>::const_iterator min_layer, max_layer;
-        min_layer = std::lower_bound(z.begin(), z.end(), min_z); // first layer whose slice_z is >= min_z
-        max_layer = std::upper_bound(z.begin() + (min_layer - z.begin()), z.end(), max_z) - 1; // last layer whose slice_z is <= max_z
-        #ifdef SLIC3R_DEBUG
-        printf("layers: min = %d, max = %d\n", (int)(min_layer - z.begin()), (int)(max_layer - z.begin()));
-        #endif
-        
-        for (std::vector<float>::const_iterator it = min_layer; it != max_layer + 1; ++it) {
-            std::vector<float>::size_type layer_idx = it - z.begin();
-            this->slice_facet(*it / SCALING_FACTOR, *facet, facet_idx, min_z, max_z, &lines[layer_idx]);
-        }
+    {
+        boost::mutex lines_mutex;
+        parallelize<int>(
+            0,
+            this->mesh->stl.stats.number_of_facets-1,
+            boost::bind(&TriangleMeshSlicer::_slice_do, this, _1, &lines, &lines_mutex, z)
+        );
     }
     
     // v_scaled_shared could be freed here
     
     // build loops
     layers->resize(z.size());
-    for (std::vector<IntersectionLines>::iterator it = lines.begin(); it != lines.end(); ++it) {
-        size_t layer_idx = it - lines.begin();
-        #ifdef SLIC3R_DEBUG
-        printf("Layer %zu:\n", layer_idx);
-        #endif
-        this->make_loops(*it, &(*layers)[layer_idx]);
+    parallelize<size_t>(
+        0,
+        lines.size()-1,
+        boost::bind(&TriangleMeshSlicer::_make_loops_do, this, _1, &lines, layers)
+    );
+}
+
+void
+TriangleMeshSlicer::_slice_do(size_t facet_idx, std::vector<IntersectionLines>* lines, boost::mutex* lines_mutex, 
+    const std::vector<float> &z) const
+{
+    const stl_facet &facet = this->mesh->stl.facet_start[facet_idx];
+    
+    // find facet extents
+    const float min_z = fminf(facet.vertex[0].z, fminf(facet.vertex[1].z, facet.vertex[2].z));
+    const float max_z = fmaxf(facet.vertex[0].z, fmaxf(facet.vertex[1].z, facet.vertex[2].z));
+    
+    #ifdef SLIC3R_DEBUG
+    printf("\n==> FACET %d (%f,%f,%f - %f,%f,%f - %f,%f,%f):\n", facet_idx,
+        facet.vertex[0].x, facet.vertex[0].y, facet.vertex[0].z,
+        facet.vertex[1].x, facet.vertex[1].y, facet.vertex[1].z,
+        facet.vertex[2].x, facet.vertex[2].y, facet.vertex[2].z);
+    printf("z: min = %.2f, max = %.2f\n", min_z, max_z);
+    #endif
+    
+    // find layer extents
+    std::vector<float>::const_iterator min_layer, max_layer;
+    min_layer = std::lower_bound(z.begin(), z.end(), min_z); // first layer whose slice_z is >= min_z
+    max_layer = std::upper_bound(z.begin() + (min_layer - z.begin()), z.end(), max_z) - 1; // last layer whose slice_z is <= max_z
+    #ifdef SLIC3R_DEBUG
+    printf("layers: min = %d, max = %d\n", (int)(min_layer - z.begin()), (int)(max_layer - z.begin()));
+    #endif
+    
+    for (std::vector<float>::const_iterator it = min_layer; it != max_layer + 1; ++it) {
+        std::vector<float>::size_type layer_idx = it - z.begin();
+        this->slice_facet(*it / SCALING_FACTOR, facet, facet_idx, min_z, max_z, &(*lines)[layer_idx], lines_mutex);
     }
 }
 
 void
-TriangleMeshSlicer::slice(const std::vector<float> &z, std::vector<ExPolygons>* layers)
+TriangleMeshSlicer::slice(const std::vector<float> &z, std::vector<ExPolygons>* layers) const
 {
     std::vector<Polygons> layers_p;
     this->slice(z, &layers_p);
@@ -498,7 +578,9 @@ TriangleMeshSlicer::slice(const std::vector<float> &z, std::vector<ExPolygons>* 
 }
 
 void
-TriangleMeshSlicer::slice_facet(float slice_z, const stl_facet &facet, const int &facet_idx, const float &min_z, const float &max_z, std::vector<IntersectionLine>* lines) const
+TriangleMeshSlicer::slice_facet(float slice_z, const stl_facet &facet, const int &facet_idx,
+    const float &min_z, const float &max_z, std::vector<IntersectionLine>* lines,
+    boost::mutex* lines_mutex) const
 {
     std::vector<IntersectionPoint> points;
     std::vector< std::vector<IntersectionPoint>::size_type > points_on_layer;
@@ -550,7 +632,12 @@ TriangleMeshSlicer::slice_facet(float slice_z, const stl_facet &facet, const int
             line.b.y    = b->y;
             line.a_id   = a_id;
             line.b_id   = b_id;
-            lines->push_back(line);
+            if (lines_mutex != NULL) {
+                boost::lock_guard<boost::mutex> l(*lines_mutex);
+                lines->push_back(line);
+            } else {
+                lines->push_back(line);
+            }
             
             found_horizontal_edge = true;
             
@@ -603,13 +690,24 @@ TriangleMeshSlicer::slice_facet(float slice_z, const stl_facet &facet, const int
         line.b_id       = points[0].point_id;
         line.edge_a_id  = points[1].edge_id;
         line.edge_b_id  = points[0].edge_id;
-        lines->push_back(line);
+        if (lines_mutex != NULL) {
+            boost::lock_guard<boost::mutex> l(*lines_mutex);
+            lines->push_back(line);
+        } else {
+            lines->push_back(line);
+        }
         return;
     }
 }
 
 void
-TriangleMeshSlicer::make_loops(std::vector<IntersectionLine> &lines, Polygons* loops)
+TriangleMeshSlicer::_make_loops_do(size_t i, std::vector<IntersectionLines>* lines, std::vector<Polygons>* layers) const
+{
+    this->make_loops((*lines)[i], &(*layers)[i]);
+}
+
+void
+TriangleMeshSlicer::make_loops(std::vector<IntersectionLine> &lines, Polygons* loops) const
 {
     /*
     SVG svg("lines.svg");
@@ -710,6 +808,7 @@ TriangleMeshSlicer::make_loops(std::vector<IntersectionLine> &lines, Polygons* l
                     for (IntersectionLinePtrs::const_iterator lineptr = loop.begin(); lineptr != loop.end(); ++lineptr) {
                         p.points.push_back((*lineptr)->a);
                     }
+                    
                     loops->push_back(p);
                     
                     #ifdef SLIC3R_DEBUG
@@ -749,7 +848,7 @@ class _area_comp {
 };
 
 void
-TriangleMeshSlicer::make_expolygons_simple(std::vector<IntersectionLine> &lines, ExPolygons* slices)
+TriangleMeshSlicer::make_expolygons_simple(std::vector<IntersectionLine> &lines, ExPolygons* slices) const
 {
     Polygons loops;
     this->make_loops(lines, &loops);
@@ -783,7 +882,7 @@ TriangleMeshSlicer::make_expolygons_simple(std::vector<IntersectionLine> &lines,
 }
 
 void
-TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slices)
+TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slices) const
 {
     /*
         Input loops are not suitable for evenodd nor nonzero fill types, as we might get
@@ -824,14 +923,13 @@ TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slices)
         if (area[*loop_idx] > +EPSILON) {
             p_slices.push_back(*loop);
         } else if (area[*loop_idx] < -EPSILON) {
-            diff(p_slices, *loop, &p_slices);
+            p_slices = diff(p_slices, *loop);
         }
     }
 
     // perform a safety offset to merge very close facets (TODO: find test case for this)
     double safety_offset = scale_(0.0499);
-    ExPolygons ex_slices;
-    offset2(p_slices, &ex_slices, +safety_offset, -safety_offset);
+    ExPolygons ex_slices = offset2_ex(p_slices, +safety_offset, -safety_offset);
     
     #ifdef SLIC3R_DEBUG
     size_t holes_count = 0;
@@ -847,7 +945,7 @@ TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slices)
 }
 
 void
-TriangleMeshSlicer::make_expolygons(std::vector<IntersectionLine> &lines, ExPolygons* slices)
+TriangleMeshSlicer::make_expolygons(std::vector<IntersectionLine> &lines, ExPolygons* slices) const
 {
     Polygons pp;
     this->make_loops(lines, &pp);
@@ -855,7 +953,7 @@ TriangleMeshSlicer::make_expolygons(std::vector<IntersectionLine> &lines, ExPoly
 }
 
 void
-TriangleMeshSlicer::cut(float z, TriangleMesh* upper, TriangleMesh* lower)
+TriangleMeshSlicer::cut(float z, TriangleMesh* upper, TriangleMesh* lower) const
 {
     IntersectionLines upper_lines, lower_lines;
     
@@ -1007,7 +1105,6 @@ TriangleMeshSlicer::cut(float z, TriangleMesh* upper, TriangleMesh* lower)
     
     stl_get_size(&(upper->stl));
     stl_get_size(&(lower->stl));
-    
 }
 
 TriangleMeshSlicer::TriangleMeshSlicer(TriangleMesh* _mesh) : mesh(_mesh), v_scaled_shared(NULL)

@@ -76,13 +76,20 @@ class GCode {
     Wipe wipe;
     AvoidCrossingPerimeters avoid_crossing_perimeters;
     bool enable_loop_clipping;
+    // If enabled, the G-code generator will put following comments at the ends
+    // of the G-code lines: _EXTRUDE_SET_SPEED, _WIPE, _BRIDGE_FAN_START, _BRIDGE_FAN_END
+    // Those comments are received and consumed (removed from the G-code) by the CoolingBuffer.pm Perl module.
     bool enable_cooling_markers;
     size_t layer_count;
     int layer_index; // just a counter
     const Layer* layer;
     std::map<const PrintObject*,Point> _seam_position;
     bool first_layer; // this flag triggers first layer speeds
-    unsigned int elapsed_time; // seconds
+    // Used by the CoolingBuffer.pm Perl module to calculate time spent per layer change.
+    // This value is not quite precise. First it only accouts for extrusion moves and travel moves,
+    // it does not account for wipe, retract / unretract moves.
+    // second it does not account for the velocity profiles of the printer.
+    float elapsed_time; // seconds
     double volumetric_speed;
     
     GCode();

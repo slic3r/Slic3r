@@ -32,6 +32,7 @@ my %cli_options = ();
         'load=s@'               => \$opt{load},
         'autosave=s'            => \$opt{autosave},
         'ignore-nonexistent-config' => \$opt{ignore_nonexistent_config},
+        'no-controller'         => \$opt{no_controller},
         'no-plater'             => \$opt{no_plater},
         'gui-mode=s'            => \$opt{gui_mode},
         'datadir=s'             => \$opt{datadir},
@@ -47,6 +48,7 @@ my %cli_options = ();
         'duplicate=i'           => \$opt{duplicate},
         'duplicate-grid=s'      => \$opt{duplicate_grid},
         'print-center=s'        => \$opt{print_center},
+        'dont-arrange'          => \$opt{dont_arrange},
     );
     foreach my $opt_key (keys %{$Slic3r::Config::Options}) {
         my $cli = $Slic3r::Config::Options->{$opt_key}->{cli} or next;
@@ -54,6 +56,7 @@ my %cli_options = ();
         $options{ "$opt_key|$cli" } = \$cli_options{$opt_key};
     }
     
+    @ARGV = grep !/^-psn_\d/, @ARGV if $^O eq 'darwin';
     GetOptions(%options) or usage(1);
 }
 
@@ -98,10 +101,11 @@ my $gui;
 if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
     {
         no warnings 'once';
-        $Slic3r::GUI::datadir   = Slic3r::decode_path($opt{datadir} // '');
-        $Slic3r::GUI::no_plater = $opt{no_plater};
-        $Slic3r::GUI::mode      = $opt{gui_mode};
-        $Slic3r::GUI::autosave  = $opt{autosave};
+        $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
+        $Slic3r::GUI::no_controller = $opt{no_controller};
+        $Slic3r::GUI::no_plater     = $opt{no_plater};
+        $Slic3r::GUI::mode          = $opt{gui_mode};
+        $Slic3r::GUI::autosave      = $opt{autosave};
     }
     $gui = Slic3r::GUI->new;
     setlocale(LC_NUMERIC, 'C');
@@ -182,6 +186,7 @@ if (@ARGV) {  # slicing from command line
         } else {
             $model = Slic3r::Model->read_from_file($input_file);
         }
+        $model->repair;
         
         if ($opt{info}) {
             $model->print_info;
@@ -201,6 +206,7 @@ if (@ARGV) {  # slicing from command line
             duplicate       => $opt{duplicate}      // 1,
             duplicate_grid  => $opt{duplicate_grid} // [1,1],
             print_center    => $opt{print_center}   // Slic3r::Pointf->new(100,100),
+            dont_arrange    => $opt{dont_arrange}   // 0,
             status_cb       => sub {
                 my ($percent, $message) = @_;
                 printf "=> %s\n", $message;
@@ -293,7 +299,7 @@ $j
                         (default: 100,100)
     --z-offset          Additional height in mm to add to vertical coordinates
                         (+/-, default: $config->{z_offset})
-    --gcode-flavor      The type of G-code to generate (reprap/teacup/makerware/sailfish/mach3/machinekit/no-extrusion,
+    --gcode-flavor      The type of G-code to generate (reprap/teacup/repetier/makerware/sailfish/mach3/machinekit/smoothie/no-extrusion,
                         default: $config->{gcode_flavor})
     --use-relative-e-distances Enable this to get relative E values (default: no)
     --use-firmware-retraction  Enable firmware-controlled retraction using G10/G11 (default: no)
@@ -482,6 +488,9 @@ $j
     --duplicate         Number of items with auto-arrange (1+, default: 1)
     --duplicate-grid    Number of items with grid arrangement (default: 1,1)
     --duplicate-distance Distance in mm between copies (default: $config->{duplicate_distance})
+    --dont-arrange      Don't arrange the objects on the build plate. The model coordinates
+                        define the absolute positions on the build plate. 
+                        The option --print-center will be ignored.
     --xy-size-compensation
                         Grow/shrink objects by the configured absolute distance (mm, default: $config->{xy_size_compensation})
    

@@ -3,6 +3,7 @@
 
 #include "libslic3r.h"
 #include "ExtrusionEntity.hpp"
+#include "Polyline.hpp"
 
 namespace Slic3r {
 
@@ -36,6 +37,9 @@ class ExtrusionEntityCollection : public ExtrusionEntity
     void append(const ExtrusionEntity &entity);
     void append(const ExtrusionEntitiesPtr &entities);
     void append(const ExtrusionPaths &paths);
+    void append(const Polylines &polylines, const ExtrusionPath &templ);
+    void replace(size_t i, const ExtrusionEntity &entity);
+    void remove(size_t i);
     ExtrusionEntityCollection chained_path(bool no_reverse = false, std::vector<size_t>* orig_indices = NULL) const;
     void chained_path(ExtrusionEntityCollection* retval, bool no_reverse = false, std::vector<size_t>* orig_indices = NULL) const;
     void chained_path_from(Point start_near, ExtrusionEntityCollection* retval, bool no_reverse = false, std::vector<size_t>* orig_indices = NULL) const;

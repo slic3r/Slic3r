@@ -32,6 +32,7 @@
 #include <ostream>
 #include <iostream>
 #include <sstream>
+#include <libslic3r.h>
 
 #ifdef SLIC3RXS
 extern "C" {
@@ -41,13 +42,20 @@ extern "C" {
 #include "ppport.h"
 #undef do_open
 #undef do_close
+#undef bind
+#undef seed
+#ifdef _MSC_VER
+    // Undef some of the macros set by Perl <xsinit.h>, which cause compilation errors on Win32
+    #undef send
+    #undef connect
+#endif /* _MSC_VER */
 }
 #endif
 
-#include <libslic3r.h>
 #include <ClipperUtils.hpp>
 #include <Config.hpp>
 #include <ExPolygon.hpp>
+#include <Fill/Fill.hpp>
 #include <MultiPoint.hpp>
 #include <Point.hpp>
 #include <Polygon.hpp>
@@ -145,6 +153,19 @@ void from_SV_check(SV* surface_sv, Surface* THIS);
 SV* to_SV(TriangleMesh* THIS);
 SV* polynode_children_2_perl(const ClipperLib::PolyNode& node);
 SV* polynode2perl(const ClipperLib::PolyNode& node);
+
+class Filler
+{
+    public:
+    Filler() : fill(NULL) {};
+    ~Filler() { 
+        if (fill != NULL) {
+            delete fill; 
+            fill = NULL;
+        }
+    };
+    Fill* fill;
+};
 
 }
 

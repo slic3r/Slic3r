@@ -12,7 +12,7 @@ sub read_file {
     
     my $mesh = Slic3r::TriangleMesh->new;
     $mesh->ReadSTLFile($path);
-    $mesh->repair;
+    $mesh->check_topology;
     
     die "This STL file couldn't be read because it's empty.\n"
         if $mesh->facets_count == 0;

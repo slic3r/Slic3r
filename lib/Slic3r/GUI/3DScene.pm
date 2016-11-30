@@ -1,9 +1,9 @@
 package Slic3r::GUI::3DScene::Base;
 use strict;
 use warnings;
-
 use Wx::Event qw(EVT_PAINT EVT_SIZE EVT_ERASE_BACKGROUND EVT_IDLE EVT_MOUSEWHEEL EVT_MOUSE_EVENTS);
 # must load OpenGL *before* Wx::GLCanvas
+
 use OpenGL qw(:glconstants :glfunctions :glufunctions :gluconstants);
 use base qw(Wx::GLCanvas Class::Accessor);
 use Math::Trig qw(asin);
@@ -11,7 +11,7 @@ use List::Util qw(reduce min max first);
 use Slic3r::Geometry qw(X Y Z MIN MAX triangle_normal normalize deg2rad tan scale unscale scaled_epsilon);
 use Slic3r::Geometry::Clipper qw(offset_ex intersection_pl);
 use Wx::GLCanvas qw(:all);
- 
+
 __PACKAGE__->mk_accessors( qw(_quat _dirty init
                               enable_picking
                               enable_moving
@@ -46,6 +46,24 @@ use constant GROUND_Z       => -0.02;
 use constant DEFAULT_COLOR  => [1,1,0];
 use constant SELECTED_COLOR => [0,1,0,1];
 use constant HOVER_COLOR    => [0.4,0.9,0,1];
+use constant PI             => 3.1415927;
+
+# Constant to determine if Vertex Buffer objects are used to draw
+# bed grid and the cut plane for object separation.
+# Old Perl (5.10.x) should set to 0.
+use constant HAS_VBO        => 1;
+
+
+# phi / theta angles to orient the camera.
+use constant VIEW_ISO        => [45.0,45.0];
+use constant VIEW_LEFT       => [90.0,90.0];
+use constant VIEW_RIGHT      => [-90.0,90.0];
+use constant VIEW_TOP        => [0.0,0.0];
+use constant VIEW_BOTTOM     => [0.0,180.0];
+use constant VIEW_FRONT      => [0.0,90.0];
+use constant VIEW_REAR       => [180.0,90.0];
+
+use constant GIMBAL_LOCK_THETA_MAX => 170;
 
 # make OpenGL::Array thread-safe
 {
@@ -56,11 +74,33 @@ use constant HOVER_COLOR    => [0.4,0.9,0,1];
 sub new {
     my ($class, $parent) = @_;
     
+
+    # We can only enable multi sample anti aliasing wih wxWidgets 3.0.3 and with a hacked Wx::GLCanvas,
+    # which exports some new WX_GL_XXX constants, namely WX_GL_SAMPLE_BUFFERS and WX_GL_SAMPLES.
+    my $can_multisample =
+        Wx::wxVERSION >= 3.000003 &&
+        defined Wx::GLCanvas->can('WX_GL_SAMPLE_BUFFERS') &&
+        defined Wx::GLCanvas->can('WX_GL_SAMPLES');
+    my $attrib = [WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 24];
+    if ($can_multisample) {
+        # Request a window with multi sampled anti aliasing. This is a new feature in Wx 3.0.3 (backported from 3.1.0).
+        # Use eval to avoid compilation, if the subs WX_GL_SAMPLE_BUFFERS and WX_GL_SAMPLES are missing.
+        eval 'push(@$attrib, (WX_GL_SAMPLE_BUFFERS, 1, WX_GL_SAMPLES, 4));';
+    }
+    # wxWidgets expect the attrib list to be ended by zero.
+    push(@$attrib, 0);
+
     # we request a depth buffer explicitely because it looks like it's not created by 
     # default on Linux, causing transparency issues
-    my $self = $class->SUPER::new($parent, -1, Wx::wxDefaultPosition, Wx::wxDefaultSize, 0, "",
-        [WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 16, 0]);
-   
+    my $self = $class->SUPER::new($parent, -1, Wx::wxDefaultPosition, Wx::wxDefaultSize, 0, "", $attrib);
+
+    if (Wx::wxVERSION >= 3.000003) {
+        # Wx 3.0.3 contains an ugly hack to support some advanced OpenGL attributes through the attribute list.
+        # The attribute list is transferred between the wxGLCanvas and wxGLContext constructors using a single static array s_wglContextAttribs.
+        # Immediatelly force creation of the OpenGL context to consume the static variable s_wglContextAttribs.
+        $self->GetContext();
+    }
+
     $self->background(1);
     $self->_quat((0, 0, 0, 1));
     $self->_stheta(45);
@@ -113,6 +153,7 @@ sub new {
         $self->Refresh;
     });
     EVT_MOUSE_EVENTS($self, \&mouse_event);
+
     
     return $self;
 }
@@ -127,7 +168,15 @@ sub mouse_event {
     } elsif ($e->LeftDClick) {
         $self->on_double_click->()
             if $self->on_double_click;
-    } elsif ($e->LeftDown || $e->RightDown) {
+    } elsif ($e->MiddleDClick) {
+        if (@{$self->volumes}) {
+            $self->zoom_to_volumes;
+        } else {
+            $self->zoom_to_bed;
+        }
+        $self->_dirty(1);
+        $self->Refresh;
+    } elsif (($e->LeftDown || $e->RightDown) && not $e->ShiftDown) {
         # If user pressed left or right button we first check whether this happened
         # on a volume or not.
         my $volume_idx = $self->_hover_volume_idx // -1;
@@ -189,14 +238,23 @@ sub mouse_event {
         $self->_dragged(1);
         $self->Refresh;
     } elsif ($e->Dragging) {
-        if ($e->LeftIsDown) {
+        if ($e->AltDown) {
+            # Move the camera center on the Z axis based on mouse Y axis movement
+            if (defined $self->_drag_start_pos) {
+                my $orig = $self->_drag_start_pos;
+                $self->_camera_target->translate(0, 0, $pos->y - $orig->y);
+                $self->on_viewport_changed->() if $self->on_viewport_changed;
+                $self->Refresh;
+            }
+            $self->_drag_start_pos($pos);
+        } elsif ($e->LeftIsDown) {
             # if dragging over blank area with left button, rotate
             if (defined $self->_drag_start_pos) {
                 my $orig = $self->_drag_start_pos;
                 if (TURNTABLE_MODE) {
                     $self->_sphi($self->_sphi + ($pos->x - $orig->x) * TRACKBALLSIZE);
                     $self->_stheta($self->_stheta - ($pos->y - $orig->y) * TRACKBALLSIZE);        #-
-                    $self->_stheta(150) if $self->_stheta > 150;
+                    $self->_stheta(GIMBAL_LOCK_THETA_MAX) if $self->_stheta > GIMBAL_LOCK_THETA_MAX;
                     $self->_stheta(0) if $self->_stheta < 0;
                 } else {
                     my $size = $self->GetClientSize;
@@ -270,12 +328,53 @@ sub set_viewport_from_scene {
     $self->_dirty(1);
 }
 
+# Set the camera to a default orientation,
+# zoom to volumes.
+sub select_view {
+    my ($self, $direction) = @_;
+    my $dirvec;
+    if (ref($direction)) {
+        $dirvec = $direction;
+    } else {
+        if ($direction eq 'iso') {
+            $dirvec = VIEW_ISO;
+        } elsif ($direction eq 'left') {
+            $dirvec = VIEW_LEFT;
+        } elsif ($direction eq 'right') {
+            $dirvec = VIEW_RIGHT;
+        } elsif ($direction eq 'top') {
+            $dirvec = VIEW_TOP;
+        } elsif ($direction eq 'bottom') {
+            $dirvec = VIEW_BOTTOM;
+        } elsif ($direction eq 'front') {
+            $dirvec = VIEW_FRONT;
+        } elsif ($direction eq 'rear') {
+            $dirvec = VIEW_REAR;
+        }
+    }
+    $self->_sphi($dirvec->[0]);
+    $self->_stheta($dirvec->[1]);
+    
+    # Avoid gimbal lock.
+    $self->_stheta(GIMBAL_LOCK_THETA_MAX) if $self->_stheta > GIMBAL_LOCK_THETA_MAX;
+    $self->_stheta(0) if $self->_stheta < 0;
+    
+    # View everything.
+    $self->volumes_bounding_box->defined
+        ? $self->zoom_to_volumes
+        : $self->zoom_to_bed;
+    
+    $self->on_viewport_changed->() if $self->on_viewport_changed;
+    $self->_dirty(1);
+    $self->Refresh;
+}
+
 sub zoom_to_bounding_box {
     my ($self, $bb) = @_;
     
     # calculate the zoom factor needed to adjust viewport to
     # bounding box
-    my $max_size = max(@{$bb->size}) * 2;
+    my $max_size = max(@{$bb->size}) * 1.05;
     my $min_viewport_size = min($self->GetSizeWH);
     $self->_zoom($min_viewport_size / $max_size);
     
@@ -736,9 +835,19 @@ sub Render {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         
         glEnableClientState(GL_VERTEX_ARRAY);
+        if (HAS_VBO) {
+            my ($triangle_vertex);
+            ($triangle_vertex) =
+                glGenBuffersARB_p(1);
+            $self->bed_triangles->bind($triangle_vertex);
+            glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->bed_triangles, GL_STATIC_DRAW_ARB);
+            glVertexPointer_c(3, GL_FLOAT, 0, 0);
+        } else {
+            # fall back on old behavior
+            glVertexPointer_p(3, $self->bed_triangles);
+        }
         glColor4f(0.8, 0.6, 0.5, 0.4);
         glNormal3d(0,0,1);
-        glVertexPointer_p(3, $self->bed_triangles);
         glDrawArrays(GL_TRIANGLES, 0, $self->bed_triangles->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
         
@@ -748,13 +857,29 @@ sub Render {
     
         # draw grid
         glLineWidth(3);
-        glColor4f(0.2, 0.2, 0.2, 0.4);
         glEnableClientState(GL_VERTEX_ARRAY);
-        glVertexPointer_p(3, $self->bed_grid_lines);
+        if (HAS_VBO) {
+            my ($grid_vertex);
+            ($grid_vertex) =
+                glGenBuffersARB_p(1);
+            $self->bed_grid_lines->bind($grid_vertex);
+            glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->bed_grid_lines, GL_STATIC_DRAW_ARB);
+            glVertexPointer_c(3, GL_FLOAT, 0, 0);
+        } else {
+            # fall back on old behavior
+            glVertexPointer_p(3, $self->bed_grid_lines);
+        }
+        glColor4f(0.2, 0.2, 0.2, 0.4);
+        glNormal3d(0,0,1);
         glDrawArrays(GL_LINES, 0, $self->bed_grid_lines->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
         
         glDisable(GL_BLEND);
+        if (HAS_VBO) { 
+            # Turn off buffer objects to let the rest of the draw code work.
+            glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+            glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+        }
     }
     
     my $volumes_bb = $self->volumes_bounding_box;
@@ -813,9 +938,44 @@ sub Render {
         glDisable(GL_BLEND);
     }
     
+    if (defined $self->_drag_start_pos || defined $self->_drag_start_xy) {
+        $self->draw_center_of_rotation($self->_camera_target->x, $self->_camera_target->y, $self->_camera_target->z);
+    }
+
     glFlush();
  
     $self->SwapBuffers();
+}
+
+sub draw_axes {
+    my ($self, $x, $y, $z, $length, $width, $allways_visible) = @_;
+    if ($allways_visible) {
+        glDisable(GL_DEPTH_TEST);
+    } else {
+        glEnable(GL_DEPTH_TEST);
+    }
+    glLineWidth($width);
+    glBegin(GL_LINES);
+    # draw line for x axis
+    glColor3f(1, 0, 0);
+    glVertex3f($x, $y, $z);
+    glVertex3f($x + $length, $y, $z);
+    # draw line for y axis
+    glColor3f(0, 1, 0);
+    glVertex3f($x, $y, $z);
+    glVertex3f($x, $y + $length, $z);
+    # draw line for Z axis
+    glColor3f(0, 0, 1);
+    glVertex3f($x, $y, $z);
+    glVertex3f($x, $y, $z + $length);
+    glEnd();
+}
+
+sub draw_center_of_rotation {
+    my ($self, $x, $y, $z) = @_;
+    
+    $self->draw_axes($x, $y, $z, 10, 1, 1);
+    $self->draw_axes($x, $y, $z, 10, 4, 0);
 }
 
 sub draw_volumes {
@@ -894,10 +1054,26 @@ sub draw_volumes {
     glDisable(GL_BLEND);
     
     if (defined $self->cutting_plane_z) {
+        if (HAS_VBO) {
+            # Use Vertex Buffer Object for cutting plane (previous method crashes on modern POGL). 
+            my ($cut_vertex) = glGenBuffersARB_p(1);
+            $self->cut_lines_vertices->bind($cut_vertex);
+            glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->cut_lines_vertices, GL_STATIC_DRAW_ARB);
+            glVertexPointer_c(3, GL_FLOAT, 0, 0);
+        } else {
+            # Use legacy method.
+            glVertexPointer_p(3, $self->cut_lines_vertices);
+        }
         glLineWidth(2);
         glColor3f(0, 0, 0);
-        glVertexPointer_p(3, $self->cut_lines_vertices);
         glDrawArrays(GL_LINES, 0, $self->cut_lines_vertices->elements / 3);
+
+        if (HAS_VBO) { 
+            # Turn off buffer objects to let the rest of the draw code work.
+            glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+            glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+        }
+
     }
     glDisableClientState(GL_VERTEX_ARRAY);
 }
@@ -1144,6 +1320,21 @@ sub load_print_object_toolpaths {
     my @layers = sort { $a->print_z <=> $b->print_z }
         @{$object->layers}, @{$object->support_layers};
     
+    # Bounding box of the object and its copies.
+    my $bb = Slic3r::Geometry::BoundingBoxf3->new;
+    {
+        my $obb = $object->bounding_box;
+        foreach my $copy (@{ $object->_shifted_copies }) {
+            my $cbb = $obb->clone;
+            $cbb->translate(@$copy);
+            $bb->merge_point(Slic3r::Pointf3->new_unscale(@{$cbb->min_point}, 0));
+            $bb->merge_point(Slic3r::Pointf3->new_unscale(@{$cbb->max_point}, $object->size->z));
+        }
+    }
+
+    # Maximum size of an allocation block: 32MB / sizeof(float)
+    my $alloc_size_max = 32 * 1048576 / 4;
+    
     foreach my $layer (@layers) {
         my $top_z = $layer->print_z;
         
@@ -1151,9 +1342,13 @@ sub load_print_object_toolpaths {
             $perim_offsets{$top_z} = [
                 $perim_qverts->size, $perim_tverts->size,
             ];
+        }
+        if (!exists $infill_offsets{$top_z}) {
             $infill_offsets{$top_z} = [
                 $infill_qverts->size, $infill_tverts->size,
             ];
+        }
+        if (!exists $support_offsets{$top_z}) {
             $support_offsets{$top_z} = [
                 $support_qverts->size, $support_tverts->size,
             ];
@@ -1180,40 +1375,79 @@ sub load_print_object_toolpaths {
                     $support_qverts, $support_tverts);
             }
         }
+
+        if ($perim_qverts->size() > $alloc_size_max || $perim_tverts->size() > $alloc_size_max) {
+            # Store the vertex arrays and restart their containers.
+            push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
+                bounding_box    => $bb,
+                color           => COLORS->[0],
+                qverts          => $perim_qverts,
+                tverts          => $perim_tverts,
+                offsets         => { %perim_offsets },
+            );
+            $perim_qverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
+            $perim_tverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
+            %perim_offsets  = ();
+        }
+
+        if ($infill_qverts->size() > $alloc_size_max || $infill_tverts->size() > $alloc_size_max) {
+            # Store the vertex arrays and restart their containers.
+            push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
+                bounding_box    => $bb,
+                color           => COLORS->[1],
+                qverts          => $infill_qverts,
+                tverts          => $infill_tverts,
+                offsets         => { %infill_offsets },
+            );
+            $infill_qverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
+            $infill_tverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
+            %infill_offsets  = ();
+        }
+
+        if ($support_qverts->size() > $alloc_size_max || $support_tverts->size() > $alloc_size_max) {
+            # Store the vertex arrays and restart their containers.
+            push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
+                bounding_box    => $bb,
+                color           => COLORS->[2],
+                qverts          => $support_qverts,
+                tverts          => $support_tverts,
+                offsets         => { %support_offsets },
+            );
+            $support_qverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
+            $support_tverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
+            %support_offsets  = ();
+        }
+    }
+
+    if ($perim_qverts->size() > 0 || $perim_tverts->size() > 0) {
+        push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
+            bounding_box    => $bb,
+            color           => COLORS->[0],
+            qverts          => $perim_qverts,
+            tverts          => $perim_tverts,
+            offsets         => { %perim_offsets },
+        );
     }
     
-    my $obb = $object->bounding_box;
-    my $bb = Slic3r::Geometry::BoundingBoxf3->new;
-    foreach my $copy (@{ $object->_shifted_copies }) {
-        my $cbb = $obb->clone;
-        $cbb->translate(@$copy);
-        $bb->merge_point(Slic3r::Pointf3->new_unscale(@{$cbb->min_point}, 0));
-        $bb->merge_point(Slic3r::Pointf3->new_unscale(@{$cbb->max_point}, $object->size->z));
+    if ($infill_qverts->size() > 0 || $infill_tverts->size() > 0) {
+        push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
+            bounding_box    => $bb,
+            color           => COLORS->[1],
+            qverts          => $infill_qverts,
+            tverts          => $infill_tverts,
+            offsets         => { %infill_offsets },
+        );
     }
     
-    push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-        bounding_box    => $bb,
-        color           => COLORS->[0],
-        qverts          => $perim_qverts,
-        tverts          => $perim_tverts,
-        offsets         => { %perim_offsets },
-    );
-    
-    push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-        bounding_box    => $bb,
-        color           => COLORS->[1],
-        qverts          => $infill_qverts,
-        tverts          => $infill_tverts,
-        offsets         => { %infill_offsets },
-    );
-    
-    push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-        bounding_box    => $bb,
-        color           => COLORS->[2],
-        qverts          => $support_qverts,
-        tverts          => $support_tverts,
-        offsets         => { %support_offsets },
-    );
+    if ($support_qverts->size() > 0 || $support_tverts->size() > 0) {
+        push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
+            bounding_box    => $bb,
+            color           => COLORS->[2],
+            qverts          => $support_qverts,
+            tverts          => $support_tverts,
+            offsets         => { %support_offsets },
+        );
+    }
 }
 
 sub set_toolpaths_range {
@@ -1252,6 +1486,8 @@ sub _expolygons_to_verts {
     gluDeleteTess($tess);
 }
 
+# Fill in the $qverts and $tverts with quads and triangles
+# for the extrusion $entity.
 sub _extrusionentity_to_verts {
     my ($self, $entity, $top_z, $copy, $qverts, $tverts) = @_;
     
@@ -1283,8 +1519,18 @@ sub _extrusionentity_to_verts {
             push @$heights, map $path->height, 0..$#$path_lines;
         }
     }
+    
+    # Calling the C++ implementation Slic3r::_3DScene::_extrusionentity_to_verts_do()
+    # This adds new vertices to the $qverts and $tverts.
     Slic3r::GUI::_3DScene::_extrusionentity_to_verts_do($lines, $widths, $heights,
-        $closed, $top_z, $copy, $qverts, $tverts);
+        $closed, 
+        # Top height of the extrusion.
+        $top_z, 
+        # $copy is not used here.
+        $copy,
+        # GLVertexArray object: C++ class maintaining an std::vector<float> for coords and normals.
+        $qverts,
+        $tverts);
 }
 
 sub object_idx {

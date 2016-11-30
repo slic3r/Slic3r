@@ -1,3 +1,6 @@
+# The bed shape dialog.
+# The dialog opens from Print Settins tab -> Bed Shape: Set...
+
 package Slic3r::GUI::BedShapeDialog;
 use strict;
 use warnings;
@@ -41,6 +44,7 @@ sub GetValue {
 package Slic3r::GUI::BedShapePanel;
 
 use List::Util qw(min max sum first);
+use Scalar::Util qw(looks_like_number);
 use Slic3r::Geometry qw(PI X Y scale unscale scaled_epsilon deg2rad);
 use Wx qw(:font :id :misc :sizer :choicebook :filedialog :pen :brush wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_CLOSE EVT_CHOICEBOOK_PAGE_CHANGED EVT_BUTTON);
@@ -132,10 +136,13 @@ sub on_change {
     $self->{on_change} = $cb // sub {};
 }
 
+# Called from the constructor.
+# Set the initial bed shape from a list of points.
+# Deduce the bed shape type (rect, circle, custom)
+# This routine shall be smart enough if the user messes up
+# with the list of points in the ini file directly.
 sub _set_shape {
     my ($self, $points) = @_;
-    
-    $self->{bed_shape} = $points;
     
     # is this a rectangle?
     if (@$points == 4) {
@@ -163,6 +170,7 @@ sub _set_shape {
     
     # is this a circle?
     {
+        # Analyze the array of points. Do they reside on a circle?
         my $polygon = Slic3r::Polygon->new_scale(@$points);
         my $center = $polygon->bounding_box->center;
         my @vertex_distances = map $center->distance_to($_), @$polygon;
@@ -177,10 +185,24 @@ sub _set_shape {
         }
     }
     
+    if (@$points < 3) {
+        # Invalid polygon. Revert to default bed dimensions.
+        $self->{shape_options_book}->SetSelection(SHAPE_RECTANGULAR);
+        my $optgroup = $self->{optgroups}[SHAPE_RECTANGULAR];
+        $optgroup->set_value('rect_size', [200, 200]);
+        $optgroup->set_value('rect_origin', [0, 0]);
+        $self->_update_shape;
+        return;
+    }
+
+    # This is a custom bed shape, use the polygon provided.
     $self->{shape_options_book}->SetSelection(SHAPE_CUSTOM);
+    # Copy the polygon to the canvas, make a copy of the array.
+    $self->{canvas}->bed_shape([@$points]);
     $self->_update_shape;
 }
 
+# Update the bed shape from the dialog fields.
 sub _update_shape {
     my ($self) = @_;
     
@@ -189,12 +211,12 @@ sub _update_shape {
         my $rect_size = $self->{optgroups}[SHAPE_RECTANGULAR]->get_value('rect_size');
         my $rect_origin = $self->{optgroups}[SHAPE_RECTANGULAR]->get_value('rect_origin');
         my ($x, $y) = @$rect_size;
-        return if !$x || !$y;  # empty strings
+        return if !looks_like_number($x) || !looks_like_number($y);  # empty strings or '-' or other things
         my ($x0, $y0) = (0,0);
         my ($x1, $y1) = ($x,$y);
         {
             my ($dx, $dy) = @$rect_origin;
-            return if $dx eq '' || $dy eq '';  # empty strings
+            return if !looks_like_number($dx) || !looks_like_number($dy);  # empty strings or '-' or other things
             $x0 -= $dx;
             $x1 -= $dx;
             $y0 -= $dy;
@@ -228,8 +250,11 @@ sub _update_shape {
 sub _update_preview {
     my ($self) = @_;
     $self->{canvas}->Refresh if $self->{canvas};
+    $self->Refresh;
 }
 
+# Called from the constructor.
+# Create a panel for a rectangular / circular / custom bed shape. 
 sub _init_shape_options_page {
     my ($self, $title) = @_;
     
@@ -251,6 +276,7 @@ sub _init_shape_options_page {
     return $optgroup;
 }
 
+# Loads an stl file, projects it to the XY plane and calculates a polygon.
 sub _load_stl {
     my ($self) = @_;
     
@@ -265,7 +291,7 @@ sub _load_stl {
     my $model = Slic3r::Model->read_from_file($input_file);
     my $mesh = $model->raw_mesh;
     my $expolygons = $mesh->horizontal_projection;
-    
+
     if (@$expolygons == 0) {
         Slic3r::GUI::show_error($self, "The selected file contains no geometry.");
         return;
@@ -276,9 +302,11 @@ sub _load_stl {
     }
     
     my $polygon = $expolygons->[0]->contour;
-    $self->{canvas}->bed_shape([ map [ unscale($_->x), unscale($_->y) ], @$polygon ]);  #))
+    $self->{canvas}->bed_shape([ map [ unscale($_->x), unscale($_->y) ], @$polygon ]);
+    $self->_update_preview();
 }
 
+# Returns the resulting bed shape polygon. This value will be stored to the ini file.
 sub GetValue {
     my ($self) = @_;
     return $self->{canvas}->bed_shape;

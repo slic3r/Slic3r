@@ -1,3 +1,6 @@
+# Extends C++ class Slic3r::DynamicPrintConfig
+# This perl class does not keep any perl class variables,
+# all the storage is handled by the underlying C++ code.
 package Slic3r::Config;
 use strict;
 use warnings;
@@ -11,6 +14,8 @@ our @Ignore = qw(duplicate_x duplicate_y multiply_x multiply_y support_material_
     rotate scale duplicate_grid start_perimeters_at_concave_points start_perimeters_at_non_overhang
     randomize_start seal_position bed_size print_center g0);
 
+# C++ Slic3r::PrintConfigDef exported as a Perl hash of hashes.
+# The C++ counterpart is a constant singleton.
 our $Options = print_config_def();
 
 # overwrite the hard-coded readonly value (this information is not available in XS)
@@ -24,6 +29,8 @@ $Options->{threads}{readonly} = !$Slic3r::have_threads;
     }
 }
 
+# Fill in the underlying C++ Slic3r::DynamicPrintConfig with the content of the defaults
+# provided by the C++ class Slic3r::FullPrintConfig.
 sub new_from_defaults {
     my $class = shift;
     my (@opt_keys) = @_;
@@ -39,12 +46,16 @@ sub new_from_defaults {
     return $self;
 }
 
+# From command line parameters
 sub new_from_cli {
     my $class = shift;
     my %args = @_;
     
+    # Delete hash keys with undefined value.
     delete $args{$_} for grep !defined $args{$_}, keys %args;
     
+    # Replace the start_gcode, end_gcode ... hash values
+    # with the content of the files they reference.
     for (qw(start end layer toolchange)) {
         my $opt_key = "${_}_gcode";
         if ($args{$opt_key}) {
@@ -57,7 +68,7 @@ sub new_from_cli {
             }
         }
     }
-    
+
     my $self = $class->new;
     foreach my $opt_key (keys %args) {
         my $opt_def = $Options->{$opt_key};
@@ -83,14 +94,27 @@ sub merge {
     return $config;
 }
 
+# Load a flat ini file without a category into the underlying C++ Slic3r::DynamicConfig class,
+# convert legacy configuration names.
 sub load {
     my $class = shift;
     my ($file) = @_;
     
-    my $ini = __PACKAGE__->read_ini($file);
-    return $class->load_ini_hash($ini->{_});
+    # legacy syntax of load()
+    my $config = $class->new;
+    $config->_load(Slic3r::encode_path($file));
+    return $config;
 }
 
+sub save {
+    my $self = shift;
+    my ($file) = @_;
+    
+    return $self->_save(Slic3r::encode_path($file));
+}
+
+# Deserialize a perl hash into the underlying C++ Slic3r::DynamicConfig class,
+# convert legacy configuration names.
 sub load_ini_hash {
     my $class = shift;
     my ($ini_hash) = @_;
@@ -175,6 +199,8 @@ sub _handle_legacy {
     return ($opt_key, $value);
 }
 
+# Create a hash of hashes from the underlying C++ Slic3r::DynamicPrintConfig.
+# The first hash key is '_' meaning no category.
 sub as_ini {
     my ($self) = @_;
     
@@ -184,13 +210,6 @@ sub as_ini {
         $ini->{_}{$opt_key} = $self->serialize($opt_key);
     }
     return $ini;
-}
-
-sub save {
-    my $self = shift;
-    my ($file) = @_;
-    
-    __PACKAGE__->write_ini($file, $self->as_ini);
 }
 
 # this method is idempotent by design and only applies to ::DynamicConfig or ::Full
@@ -235,8 +254,8 @@ sub validate {
     die "Invalid value for --gcode-flavor\n"
         if !first { $_ eq $self->gcode_flavor } @{$Options->{gcode_flavor}{values}};
     
-    die "--use-firmware-retraction is only supported by Marlin firmware\n"
-        if $self->use_firmware_retraction && $self->gcode_flavor ne 'reprap' && $self->gcode_flavor ne 'machinekit';
+    die "--use-firmware-retraction is only supported by Marlin and Machinekit firmware\n"
+        if $self->use_firmware_retraction && $self->gcode_flavor ne 'smoothie' && $self->gcode_flavor ne 'reprap' && $self->gcode_flavor ne 'machinekit';
     
     die "--use-firmware-retraction is not compatible with --wipe\n"
         if $self->use_firmware_retraction && first {$_} @{$self->wipe};
@@ -343,6 +362,7 @@ sub validate {
 
 # CLASS METHODS:
 
+# Write a "Windows" style ini file with categories enclosed in squre brackets.
 sub write_ini {
     my $class = shift;
     my ($file, $ini) = @_;
@@ -361,6 +381,10 @@ sub write_ini {
     close $fh;
 }
 
+# Parse a "Windows" style ini file with categories enclosed in squre brackets.
+# Returns a hash of hashes over strings.
+# {category}{name}=value
+# Non-categorized entries are stored under a category '_'.
 sub read_ini {
     my $class = shift;
     my ($file) = @_;

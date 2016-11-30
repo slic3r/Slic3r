@@ -1,3 +1,5 @@
+# The main frame, the parent of all.
+
 package Slic3r::GUI::MainFrame;
 use strict;
 use warnings;
@@ -19,17 +21,28 @@ sub new {
     my ($class, %params) = @_;
     
     my $self = $class->SUPER::new(undef, -1, 'Slic3r', wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE);
-    $self->SetIcon(Wx::Icon->new("$Slic3r::var/Slic3r_128px.png", wxBITMAP_TYPE_PNG) );
+    if ($^O eq 'MSWin32') {
+        $self->SetIcon(Wx::Icon->new($Slic3r::var->("Slic3r.ico"), wxBITMAP_TYPE_ICO));
+    } else {
+        $self->SetIcon(Wx::Icon->new($Slic3r::var->("Slic3r_128px.png"), wxBITMAP_TYPE_PNG));        
+    }
     
     # store input params
     $self->{mode} = $params{mode};
     $self->{mode} = 'expert' if $self->{mode} !~ /^(?:simple|expert)$/;
+    # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
+    $self->{no_controller} = $params{no_controller};
     $self->{no_plater} = $params{no_plater};
     $self->{loaded} = 0;
     
     # initialize tabpanel and menubar
     $self->_init_tabpanel;
     $self->_init_menubar;
+    
+    # set default tooltip timer in msec
+    # SetAutoPop supposedly accepts long integers but some bug doesn't allow for larger values
+    # (SetAutoPop is not available on GTK.)
+    eval { Wx::ToolTip::SetAutoPop(32767) };
     
     # initialize status bar
     $self->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($self, -1);
@@ -96,6 +109,8 @@ sub _init_tabpanel {
     
     if (!$self->{no_plater}) {
         $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
+    }
+    if (!$self->{no_controller}) {
         $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
     }
     $self->{options_tabs} = {};
@@ -109,7 +124,9 @@ sub _init_tabpanel {
     my $class_prefix = $self->{mode} eq 'simple' ? "Slic3r::GUI::SimpleTab::" : "Slic3r::GUI::Tab::";
     for my $tab_name (qw(print filament printer)) {
         my $tab;
-        $tab = $self->{options_tabs}{$tab_name} = ($class_prefix . ucfirst $tab_name)->new($panel);
+        $tab = $self->{options_tabs}{$tab_name} = ($class_prefix . ucfirst $tab_name)->new(
+            $panel, 
+            no_controller => $self->{no_controller});
         $tab->on_value_change(sub {
             my ($opt_key, $value) = @_;
             
@@ -136,7 +153,9 @@ sub _init_tabpanel {
             if ($self->{plater}) {
                 $self->{plater}->update_presets($tab_name, @_);
                 $self->{plater}->on_config_change($tab->config);
-                $self->{controller}->update_presets($tab_name, @_);
+                if ($self->{controller}) {
+                    $self->{controller}->update_presets($tab_name, @_);
+                }
             }
         });
         $tab->load_presets;
@@ -161,6 +180,13 @@ sub _init_menubar {
     # File menu
     my $fileMenu = Wx::Menu->new;
     {
+        $self->_append_menu_item($fileMenu, "Open STL/OBJ/AMF…\tCtrl+O", 'Open a model', sub {
+            $self->{plater}->add if $self->{plater};
+        }, undef, 'brick_add.png');
+        $self->_append_menu_item($fileMenu, "Open 2.5D TIN mesh…", 'Import a 2.5D TIN mesh', sub {
+            $self->{plater}->add_tin if $self->{plater};
+        }, undef, 'map_add.png');
+        $fileMenu->AppendSeparator();
         $self->_append_menu_item($fileMenu, "&Load Config…\tCtrl+L", 'Load exported configuration file', sub {
             $self->load_config_file;
         }, undef, 'plugin_add.png');
@@ -246,12 +272,18 @@ sub _init_menubar {
             $self->_append_menu_item($windowMenu, "Select &Plater Tab\tCtrl+1", 'Show the plater', sub {
                 $self->select_tab(0);
             }, undef, 'application_view_tile.png');
+            $tab_offset += 1;
+        }
+        if (!$self->{no_controller}) {
             $self->_append_menu_item($windowMenu, "Select &Controller Tab\tCtrl+T", 'Show the printer controller', sub {
                 $self->select_tab(1);
             }, undef, 'printer_empty.png');
-            $windowMenu->AppendSeparator();
-            $tab_offset += 2;
+            $tab_offset += 1;
         }
+        if ($tab_offset > 0) {
+            $windowMenu->AppendSeparator();
+        }
+        
         $self->_append_menu_item($windowMenu, "Select P&rint Settings Tab\tCtrl+2", 'Show the print settings', sub {
             $self->select_tab($tab_offset+0);
         }, undef, 'cog.png');
@@ -261,6 +293,18 @@ sub _init_menubar {
         $self->_append_menu_item($windowMenu, "Select Print&er Settings Tab\tCtrl+4", 'Show the printer settings', sub {
             $self->select_tab($tab_offset+2);
         }, undef, 'printer_empty.png');
+    }
+
+    # View menu
+    if (!$self->{no_plater}) {
+        $self->{viewMenu} = Wx::Menu->new;
+        $self->_append_menu_item($self->{viewMenu}, "Iso"    , 'Iso View'    , sub { $self->select_view('iso'    ); });
+        $self->_append_menu_item($self->{viewMenu}, "Top"    , 'Top View'    , sub { $self->select_view('top'    ); });
+        $self->_append_menu_item($self->{viewMenu}, "Bottom" , 'Bottom View' , sub { $self->select_view('bottom' ); });
+        $self->_append_menu_item($self->{viewMenu}, "Front"  , 'Front View'  , sub { $self->select_view('front'  ); });
+        $self->_append_menu_item($self->{viewMenu}, "Rear"   , 'Rear View'   , sub { $self->select_view('rear'   ); });
+        $self->_append_menu_item($self->{viewMenu}, "Left"   , 'Left View'   , sub { $self->select_view('left'   ); });
+        $self->_append_menu_item($self->{viewMenu}, "Right"  , 'Right View'  , sub { $self->select_view('right'  ); });
     }
     
     # Help menu
@@ -295,6 +339,7 @@ sub _init_menubar {
         $menubar->Append($self->{plater_menu}, "&Plater") if $self->{plater_menu};
         $menubar->Append($self->{object_menu}, "&Object") if $self->{object_menu};
         $menubar->Append($windowMenu, "&Window");
+        $menubar->Append($self->{viewMenu}, "&View") if $self->{viewMenu};
         $menubar->Append($helpMenu, "&Help");
         $self->SetMenuBar($menubar);
     }
@@ -763,6 +808,14 @@ sub select_tab {
     $self->{tabpanel}->SetSelection($tab);
 }
 
+# Set a camera direction, zoom to all objects.
+sub select_view {
+    my ($self, $direction) = @_;
+    if (! $self->{no_plater}) {
+        $self->{plater}->select_view($direction);
+    }
+}
+
 sub _append_menu_item {
     my ($self, $menu, $string, $description, $cb, $id, $icon) = @_;
     
@@ -779,7 +832,7 @@ sub _set_menu_item_icon {
     
     # SetBitmap was not available on OS X before Wx 0.9927
     if ($icon && $menuItem->can('SetBitmap')) {
-        $menuItem->SetBitmap(Wx::Bitmap->new("$Slic3r::var/$icon", wxBITMAP_TYPE_PNG));
+        $menuItem->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG));
     }
 }
 

@@ -21,7 +21,7 @@ sub read_file {
     
     my $mesh = Slic3r::TriangleMesh->new;
     $mesh->ReadFromPerl($vertices, $facets);
-    $mesh->repair;
+    $mesh->check_topology;
     
     my $model = Slic3r::Model->new;
     

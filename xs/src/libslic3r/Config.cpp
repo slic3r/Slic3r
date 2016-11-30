@@ -1,12 +1,178 @@
 #include "Config.hpp"
 #include <stdlib.h>  // for setenv()
 #include <assert.h>
+#include <ctime>
+#include <fstream>
+#include <iostream>
+#include <exception> // std::runtime_error
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/erase.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <string.h>
 
 #if defined(_WIN32) && !defined(setenv) && defined(_putenv_s)
 #define setenv(k, v, o) _putenv_s(k, v)
 #endif
 
 namespace Slic3r {
+
+std::string escape_string_cstyle(const std::string &str)
+{
+    // Allocate a buffer twice the input string length,
+    // so the output will fit even if all input characters get escaped.
+    std::vector<char> out(str.size() * 2, 0);
+    char *outptr = out.data();
+    for (size_t i = 0; i < str.size(); ++ i) {
+        char c = str[i];
+        if (c == '\n' || c == '\r') {
+            (*outptr ++) = '\\';
+            (*outptr ++) = 'n';
+        } else
+            (*outptr ++) = c;
+    }
+    return std::string(out.data(), outptr - out.data());
+}
+
+std::string escape_strings_cstyle(const std::vector<std::string> &strs)
+{
+    // 1) Estimate the output buffer size to avoid buffer reallocation.
+    size_t outbuflen = 0;
+    for (size_t i = 0; i < strs.size(); ++ i)
+        // Reserve space for every character escaped + quotes + semicolon.
+        outbuflen += strs[i].size() * 2 + 3;
+    // 2) Fill in the buffer.
+    std::vector<char> out(outbuflen, 0);
+    char *outptr = out.data();
+    for (size_t j = 0; j < strs.size(); ++ j) {
+        if (j > 0)
+            // Separate the strings.
+            (*outptr ++) = ';';
+        const std::string &str = strs[j];
+        // Is the string simple or complex? Complex string contains spaces, tabs, new lines and other
+        // escapable characters. Empty string shall be quoted as well, if it is the only string in strs.
+        bool should_quote = strs.size() == 1 && str.empty();
+        for (size_t i = 0; i < str.size(); ++ i) {
+            char c = str[i];
+            if (c == ' ' || c == '\t' || c == '\\' || c == '"' || c == '\r' || c == '\n') {
+                should_quote = true;
+                break;
+            }
+        }
+        if (should_quote) {
+            (*outptr ++) = '"';
+            for (size_t i = 0; i < str.size(); ++ i) {
+                char c = str[i];
+                if (c == '\\' || c == '"') {
+                    (*outptr ++) = '\\';
+                    (*outptr ++) = c;
+                } else if (c == '\n' || c == '\r') {
+                    (*outptr ++) = '\\';
+                    (*outptr ++) = 'n';
+                } else
+                    (*outptr ++) = c;
+            }
+            (*outptr ++) = '"';
+        } else {
+            memcpy(outptr, str.data(), str.size());
+            outptr += str.size();
+        }
+    }
+    return std::string(out.data(), outptr - out.data());
+}
+
+bool unescape_string_cstyle(const std::string &str, std::string &str_out)
+{
+    std::vector<char> out(str.size(), 0);
+    char *outptr = out.data();
+    for (size_t i = 0; i < str.size(); ++ i) {
+        char c = str[i];
+        if (c == '\\') {
+            if (++ i == str.size())
+                return false;
+            c = str[i];
+            if (c == 'n')
+                (*outptr ++) = '\n';
+        } else
+            (*outptr ++) = c;
+    }
+    str_out.assign(out.data(), outptr - out.data());
+    return true;
+}
+
+bool unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out)
+{
+    out.clear();
+    if (str.empty())
+        return true;
+
+    size_t i = 0;
+    for (;;) {
+        // Skip white spaces.
+        char c = str[i];
+        while (c == ' ' || c == '\t') {
+            if (++ i == str.size())
+                return true;
+            c = str[i];
+        }
+        // Start of a word.
+        std::vector<char> buf;
+        buf.reserve(16);
+        // Is it enclosed in quotes?
+        c = str[i];
+        if (c == '"') {
+            // Complex case, string is enclosed in quotes.
+            for (++ i; i < str.size(); ++ i) {
+                c = str[i];
+                if (c == '"') {
+                    // End of string.
+                    break;
+                }
+                if (c == '\\') {
+                    if (++ i == str.size())
+                        return false;
+                    c = str[i];
+                    if (c == 'n')
+                        c = '\n';
+                }
+                buf.push_back(c);
+            }
+            if (i == str.size())
+                return false;
+            ++ i;
+        } else {
+            for (; i < str.size(); ++ i) {
+                c = str[i];
+                if (c == ';')
+                    break;
+                buf.push_back(c);
+            }
+        }
+        // Store the string into the output vector.
+        out.push_back(std::string(buf.data(), buf.size()));
+        if (i == str.size())
+            return true;
+        // Skip white spaces.
+        c = str[i];
+        while (c == ' ' || c == '\t') {
+            if (++ i == str.size())
+                // End of string. This is correct.
+                return true;
+            c = str[i];
+        }
+        if (c != ';')
+            return false;
+        if (++ i == str.size()) {
+            // Emit one additional empty string.
+            out.push_back(std::string());
+            return true;
+        }
+    }
+}
 
 bool
 operator== (const ConfigOption &a, const ConfigOption &b)
@@ -20,12 +186,22 @@ operator!= (const ConfigOption &a, const ConfigOption &b)
     return !(a == b);
 }
 
-ConfigDef::~ConfigDef()
+ConfigOptionDef::ConfigOptionDef(const ConfigOptionDef &other)
+    : type(other.type), default_value(NULL),
+      gui_type(other.gui_type), gui_flags(other.gui_flags), label(other.label), 
+      full_label(other.full_label), category(other.category), tooltip(other.tooltip), 
+      sidetext(other.sidetext), cli(other.cli), ratio_over(other.ratio_over), 
+      multiline(other.multiline), full_width(other.full_width), readonly(other.readonly), 
+      height(other.height), width(other.width), min(other.min), max(other.max)
 {
-    for (t_optiondef_map::iterator it = this->options.begin(); it != this->options.end(); ++it) {
-        if (it->second.default_value != NULL)
-            delete it->second.default_value;
-    }
+    if (other.default_value != NULL)
+        this->default_value = other.default_value->clone();
+}
+
+ConfigOptionDef::~ConfigOptionDef()
+{
+    if (this->default_value != NULL)
+        delete this->default_value;
 }
 
 ConfigOptionDef*
@@ -41,6 +217,12 @@ ConfigDef::get(const t_config_option_key &opt_key) const
 {
     if (this->options.count(opt_key) == 0) return NULL;
     return &const_cast<ConfigDef*>(this)->options[opt_key];
+}
+
+void
+ConfigDef::merge(const ConfigDef &other)
+{
+    this->options.insert(other.options.begin(), other.options.end());
 }
 
 bool
@@ -98,9 +280,9 @@ ConfigBase::serialize(const t_config_option_key &opt_key) const {
 }
 
 bool
-ConfigBase::set_deserialize(const t_config_option_key &opt_key, std::string str) {
+ConfigBase::set_deserialize(const t_config_option_key &opt_key, std::string str, bool append) {
     const ConfigOptionDef* optdef = this->def->get(opt_key);
-    if (optdef == NULL) throw "Calling set_deserialize() on unknown option";
+    if (optdef == NULL) throw UnknownOptionException();
     if (!optdef->shortcut.empty()) {
         for (std::vector<t_config_option_key>::const_iterator it = optdef->shortcut.begin(); it != optdef->shortcut.end(); ++it) {
             if (!this->set_deserialize(*it, str)) return false;
@@ -110,30 +292,34 @@ ConfigBase::set_deserialize(const t_config_option_key &opt_key, std::string str)
     
     ConfigOption* opt = this->option(opt_key, true);
     assert(opt != NULL);
-    return opt->deserialize(str);
+    return opt->deserialize(str, append);
 }
 
+// Return an absolute value of a possibly relative config variable.
+// For example, return absolute infill extrusion width, either from an absolute value, or relative to the layer height.
 double
-ConfigBase::get_abs_value(const t_config_option_key &opt_key) {
-    ConfigOption* opt = this->option(opt_key, false);
-    if (ConfigOptionFloatOrPercent* optv = dynamic_cast<ConfigOptionFloatOrPercent*>(opt)) {
+ConfigBase::get_abs_value(const t_config_option_key &opt_key) const {
+    const ConfigOption* opt = this->option(opt_key);
+    if (const ConfigOptionFloatOrPercent* optv = dynamic_cast<const ConfigOptionFloatOrPercent*>(opt)) {
         // get option definition
         const ConfigOptionDef* def = this->def->get(opt_key);
         assert(def != NULL);
         
         // compute absolute value over the absolute value of the base option
         return optv->get_abs_value(this->get_abs_value(def->ratio_over));
-    } else if (ConfigOptionFloat* optv = dynamic_cast<ConfigOptionFloat*>(opt)) {
+    } else if (const ConfigOptionFloat* optv = dynamic_cast<const ConfigOptionFloat*>(opt)) {
         return optv->value;
     } else {
         throw "Not a valid option type for get_abs_value()";
     }
 }
 
+// Return an absolute value of a possibly relative config variable.
+// For example, return absolute infill extrusion width, either from an absolute value, or relative to a provided value.
 double
-ConfigBase::get_abs_value(const t_config_option_key &opt_key, double ratio_over) {
+ConfigBase::get_abs_value(const t_config_option_key &opt_key, double ratio_over) const {
     // get stored option value
-    ConfigOptionFloatOrPercent* opt = dynamic_cast<ConfigOptionFloatOrPercent*>(this->option(opt_key));
+    const ConfigOptionFloatOrPercent* opt = dynamic_cast<const ConfigOptionFloatOrPercent*>(this->option(opt_key));
     assert(opt != NULL);
     
     // compute absolute value
@@ -171,6 +357,42 @@ ConfigBase::option(const t_config_option_key &opt_key, bool create) {
     return this->optptr(opt_key, create);
 }
 
+void
+ConfigBase::load(const std::string &file)
+{
+    namespace pt = boost::property_tree;
+    pt::ptree tree;
+    pt::read_ini(file, tree);
+    BOOST_FOREACH(const pt::ptree::value_type &v, tree) {
+        try {
+            this->set_deserialize(v.first.c_str(), v.second.get_value<std::string>().c_str());
+        } catch (UnknownOptionException &e) {
+            // ignore
+        }
+    }
+}
+
+void
+ConfigBase::save(const std::string &file) const
+{
+    using namespace std;
+    ofstream c;
+    c.open(file.c_str(), ios::out | ios::trunc);
+
+    {
+        time_t now;
+        time(&now);
+        char buf[sizeof "0000-00-00 00:00:00"];
+        strftime(buf, sizeof buf, "%F %T", gmtime(&now));
+        c << "# generated by Slic3r " << SLIC3R_VERSION << " on " << buf << endl;
+    }
+
+    t_config_option_keys my_keys = this->keys();
+    for (t_config_option_keys::const_iterator opt_key = my_keys.begin(); opt_key != my_keys.end(); ++opt_key)
+        c << *opt_key << " = " << this->serialize(*opt_key) << endl;
+    c.close();
+}
+
 DynamicConfig& DynamicConfig::operator= (DynamicConfig other)
 {
     this->swap(other);
@@ -200,9 +422,11 @@ DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
     if (this->options.count(opt_key) == 0) {
         if (create) {
             const ConfigOptionDef* optdef = this->def->get(opt_key);
-            assert(optdef != NULL);
+            if (optdef == NULL) return NULL;
             ConfigOption* opt;
-            if (optdef->type == coFloat) {
+            if (optdef->default_value != NULL) {
+                opt = optdef->default_value->clone();
+            } else if (optdef->type == coFloat) {
                 opt = new ConfigOptionFloat ();
             } else if (optdef->type == coFloats) {
                 opt = new ConfigOptionFloats ();
@@ -220,6 +444,8 @@ DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
                 opt = new ConfigOptionFloatOrPercent ();
             } else if (optdef->type == coPoint) {
                 opt = new ConfigOptionPoint ();
+            } else if (optdef->type == coPoint3) {
+                opt = new ConfigOptionPoint3 ();
             } else if (optdef->type == coPoints) {
                 opt = new ConfigOptionPoints ();
             } else if (optdef->type == coBool) {
@@ -266,6 +492,60 @@ DynamicConfig::erase(const t_config_option_key &opt_key) {
 }
 
 void
+DynamicConfig::read_cli(const int argc, const char** argv, t_config_option_keys* extra)
+{
+    bool parse_options = true;
+    for (int i = 1; i < argc; ++i) {
+        std::string token = argv[i];
+        
+        if (token == "--") {
+            // stop parsing tokens as options
+            parse_options = false;
+        } else if (parse_options && boost::starts_with(token, "-")) {
+            boost::algorithm::trim_left_if(token, boost::algorithm::is_any_of("-"));
+            // TODO: handle --key=value
+            
+            // look for the option def
+            t_config_option_key opt_key;
+            const ConfigOptionDef* optdef;
+            for (t_optiondef_map::const_iterator oit = this->def->options.begin();
+                oit != this->def->options.end(); ++oit) {
+                optdef  = &oit->second;
+                
+                if (optdef->cli == token
+                    || optdef->cli == token + '!'
+                    || boost::starts_with(optdef->cli, token + "=")
+                    || boost::starts_with(optdef->cli, token + "|")
+                    || (token.length() == 1 && boost::contains(optdef->cli, "|" + token))) {
+                    opt_key = oit->first;
+                    break;
+                }
+            }
+            
+            if (opt_key.empty()) {
+                printf("Warning: unknown option --%s\n", token.c_str());
+                continue;
+            }
+            
+            if (ConfigOptionBool* opt = this->opt<ConfigOptionBool>(opt_key, true)) {
+                opt->value = !boost::starts_with(token, "no-");
+            } else if (ConfigOptionBools* opt = this->opt<ConfigOptionBools>(opt_key, true)) {
+                opt->values.push_back(!boost::starts_with(token, "no-"));
+            } else {
+                // we expect one more token carrying the value
+                if (i == (argc-1)) {
+                    printf("No value supplied for --%s\n", token.c_str());
+                    exit(1);
+                }
+                this->set_deserialize(opt_key, argv[++i], true);
+            }
+        } else {
+            extra->push_back(token);
+        }
+    }
+}
+
+void
 StaticConfig::set_defaults()
 {
     // use defaults from definition
@@ -273,7 +553,6 @@ StaticConfig::set_defaults()
     t_config_option_keys keys = this->keys();
     for (t_config_option_keys::const_iterator it = keys.begin(); it != keys.end(); ++it) {
         const ConfigOptionDef* def = this->def->get(*it);
-        
         if (def->default_value != NULL)
             this->option(*it)->set(*def->default_value);
     }
@@ -288,5 +567,34 @@ StaticConfig::keys() const {
     }
     return keys;
 }
+
+bool
+ConfigOptionPoint::deserialize(std::string str, bool append) {
+    std::vector<std::string> tokens(2);
+    boost::split(tokens, str, boost::is_any_of(",x"));
+    try {
+        this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
+        this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
+    } catch (boost::bad_lexical_cast &e){
+        std::cout << "Exception caught : " << e.what() << std::endl;
+        return false;
+    }
+    return true;
+};
+
+bool
+ConfigOptionPoint3::deserialize(std::string str, bool append) {
+    std::vector<std::string> tokens(3);
+    boost::split(tokens, str, boost::is_any_of(",x"));
+    try {
+        this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
+        this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
+        this->value.z = boost::lexical_cast<coordf_t>(tokens[2]);
+    } catch (boost::bad_lexical_cast &e){
+        std::cout << "Exception caught : " << e.what() << std::endl;
+        return false;
+    }
+    return true;
+};
 
 }

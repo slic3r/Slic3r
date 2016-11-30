@@ -10,7 +10,7 @@
 namespace Slic3r {
 
 class GCodeWriter {
-    public:
+public:
     GCodeConfig config;
     std::map<unsigned int,Extruder> extruders;
     bool multiple_extruders;
@@ -34,7 +34,7 @@ class GCodeWriter {
     bool need_toolchange(unsigned int extruder_id) const;
     std::string set_extruder(unsigned int extruder_id);
     std::string toolchange(unsigned int extruder_id);
-    std::string set_speed(double F, const std::string &comment = std::string()) const;
+    std::string set_speed(double F, const std::string &comment = std::string(), const std::string &cooling_marker = std::string()) const;
     std::string travel_to_xy(const Pointf &point, const std::string &comment = std::string());
     std::string travel_to_xyz(const Pointf3 &point, const std::string &comment = std::string());
     std::string travel_to_z(double z, const std::string &comment = std::string());
@@ -48,7 +48,7 @@ class GCodeWriter {
     std::string unlift();
     Pointf3 get_position() const;
     
-    private:
+private:
     std::string _extrusion_axis;
     Extruder* _extruder;
     unsigned int _last_acceleration;
@@ -60,6 +60,6 @@ class GCodeWriter {
     std::string _retract(double length, double restart_extra, const std::string &comment);
 };
 
-}
+} /* namespace Slic3r */
 
-#endif
+#endif /* slic3r_GCodeWriter_hpp_ */

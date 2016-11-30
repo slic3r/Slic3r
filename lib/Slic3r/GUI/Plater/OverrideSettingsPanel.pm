@@ -1,3 +1,6 @@
+# Included in ObjectSettingsDialog -> ObjectPartsPanel.
+# Maintains, displays, adds and removes overrides of slicing parameters for an object and its modifier mesh.
+
 package Slic3r::GUI::Plater::OverrideSettingsPanel;
 use strict;
 use warnings;
@@ -30,7 +33,7 @@ sub new {
     # option selector
     {
         # create the button
-        my $btn = $self->{btn_add} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new("$Slic3r::var/add.png", wxBITMAP_TYPE_PNG),
+        my $btn = $self->{btn_add} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("add.png"), wxBITMAP_TYPE_PNG),
             wxDefaultPosition, wxDefaultSize, Wx::wxBORDER_NONE);
         EVT_LEFT_DOWN($btn, sub {
             my $menu = Wx::Menu->new;
@@ -118,7 +121,7 @@ sub update_optgroup {
                 # disallow deleting fixed options
                 return undef if $self->{fixed_options}{$opt_key};
                 
-                my $btn = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new("$Slic3r::var/delete.png", wxBITMAP_TYPE_PNG),
+                my $btn = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG),
                     wxDefaultPosition, wxDefaultSize, Wx::wxBORDER_NONE);
                 EVT_BUTTON($self, $btn, sub {
                     $self->{config}->erase($opt_key);

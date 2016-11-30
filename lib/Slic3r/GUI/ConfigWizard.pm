@@ -1,3 +1,6 @@
+# The config wizard is executed when the Slic3r is first started.
+# The wizard helps the user to specify the 3D printer properties.
+
 package Slic3r::GUI::ConfigWizard;
 use strict;
 use warnings;
@@ -87,11 +90,11 @@ sub new {
     push @{$self->{titles}}, $title;
     $self->{own_index} = 0;
 
-    $self->{bullets}->{before} = Wx::Bitmap->new("$Slic3r::var/bullet_black.png", wxBITMAP_TYPE_PNG);
-    $self->{bullets}->{own}    = Wx::Bitmap->new("$Slic3r::var/bullet_blue.png",  wxBITMAP_TYPE_PNG);
-    $self->{bullets}->{after}  = Wx::Bitmap->new("$Slic3r::var/bullet_white.png", wxBITMAP_TYPE_PNG);
+    $self->{bullets}->{before} = Wx::Bitmap->new($Slic3r::var->("bullet_black.png"), wxBITMAP_TYPE_PNG);
+    $self->{bullets}->{own}    = Wx::Bitmap->new($Slic3r::var->("bullet_blue.png"),  wxBITMAP_TYPE_PNG);
+    $self->{bullets}->{after}  = Wx::Bitmap->new($Slic3r::var->("bullet_white.png"), wxBITMAP_TYPE_PNG);
 
-    $self->{background} = Wx::Bitmap->new("$Slic3r::var/Slic3r_192px_transparent.png", wxBITMAP_TYPE_PNG);
+    $self->{background} = Wx::Bitmap->new($Slic3r::var->("Slic3r_192px_transparent.png"), wxBITMAP_TYPE_PNG);
     $self->SetMinSize(Wx::Size->new($self->{background}->GetWidth, $self->{background}->GetHeight));
 
     EVT_PAINT($self, \&repaint);

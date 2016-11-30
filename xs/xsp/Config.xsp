@@ -38,6 +38,8 @@
     void normalize();
     %name{setenv} void setenv_();
     double min_object_distance();
+    %name{_load} void load(std::string file);
+    %name{_save} void save(std::string file);
 };
 
 %name{Slic3r::Config::Static} class StaticPrintConfig {
@@ -84,6 +86,8 @@
         %};
     %name{setenv} void setenv_();
     double min_object_distance();
+    %name{_load} void load(std::string file);
+    %name{_save} void save(std::string file);
 };
 
 %package{Slic3r::Config};
@@ -114,7 +118,7 @@ print_config_def()
                 opt_type = "s";
             } else if (optdef->type == coStrings) {
                 opt_type = "s@";
-            } else if (optdef->type == coPoint || optdef->type == coPoints) {
+            } else if (optdef->type == coPoint || optdef->type == coPoint3 || optdef->type == coPoints) {
                 opt_type = "point";
             } else if (optdef->type == coBool || optdef->type == coBools) {
                 opt_type = "bool";
