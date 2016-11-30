@@ -835,7 +835,7 @@ enum DirectionMask
     DIR_BACKWARD = 2
 };
 
-bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillParams &params, float angleBase, float pattern_shift, Polylines &polylines_out)
+bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angleBase, float pattern_shift, Polylines &polylines_out)
 {
     // At the end, only the new polylines will be rotated back.
     size_t n_polylines_out_initial = polylines_out.size();
@@ -849,8 +849,8 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     std::pair<float, Point> rotate_vector = this->_infill_direction(*surface);
     rotate_vector.first += angleBase;
 
-    myassert(params.density > 0.0001f && params.density <= 1.f);
-    coord_t line_spacing = coord_t(scale_(this->spacing) / params.density);
+    myassert(this->density > 0.0001f && this->density <= 1.f);
+    coord_t line_spacing = coord_t(scale_(this->spacing) / this->density);
 
     // On the polygons of poly_with_offset, the infill lines will be connected.
     ExPolygonWithOffset poly_with_offset(
@@ -867,8 +867,8 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     BoundingBox bounding_box(poly_with_offset.polygons_src);
 
     // define flow spacing according to requested density
-    bool full_infill = params.density > 0.9999f;
-    if (full_infill && !params.dont_adjust) {
+    bool full_infill = this->density > 0.9999f;
+    if (full_infill && !this->dont_adjust) {
         line_spacing = this->adjust_solid_spacing(bounding_box.size().x, line_spacing);
         this->spacing = unscale(line_spacing);
     } else {
@@ -1391,7 +1391,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
                     (distNext < distPrev) : 
                     intrsctn_type_next == INTERSECTION_TYPE_OTHER_VLINE_OK;
                 myassert(intrsctn->is_inner());
-                bool skip = params.dont_connect || (link_max_length > 0 && (take_next ? distNext : distPrev) > link_max_length);
+                bool skip = this->dont_connect || (link_max_length > 0 && (take_next ? distNext : distPrev) > link_max_length);
                 if (skip) {
                     // Just skip the connecting contour and start a new path.
                     goto dont_connect;
@@ -1453,7 +1453,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
                          distance_of_segmens(poly, intrsctn->iSegment, iSegNext, false)) :
                         (vert_seg_dir_valid_mask == DIR_FORWARD);
                     // Skip this perimeter line?
-                    bool skip = params.dont_connect;
+                    bool skip = this->dont_connect;
                     if (! skip && link_max_length > 0) {
                         coordf_t link_length = measure_perimeter_segment_on_vertical_line_length(
                             poly_with_offset, segs, i_vline, intrsctn->iContour, i_intersection, iNext, dir_forward);
@@ -1555,66 +1555,66 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     return true;
 }
 
-Polylines FillRectilinear2::fill_surface(const Surface &surface, const FillParams &params)
+Polylines FillRectilinear2::fill_surface(const Surface &surface)
 {
     Polylines polylines_out;
-    if (! fill_surface_by_lines(&surface, params, 0.f, 0.f, polylines_out)) {
+    if (! fill_surface_by_lines(&surface, 0.f, 0.f, polylines_out)) {
         printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
     }
     return polylines_out;
 }
 
-Polylines FillGrid2::fill_surface(const Surface &surface, const FillParams &params)
+Polylines FillGrid2::fill_surface(const Surface &surface)
 {
     // Each linear fill covers half of the target coverage.
-    FillParams params2 = params;
-    params2.density *= 0.5f;
+    FillGrid2 fill2 = *this;
+    fill2.density *= 0.5f;
     Polylines polylines_out;
-    if (! fill_surface_by_lines(&surface, params2, 0.f, 0.f, polylines_out) ||
-        ! fill_surface_by_lines(&surface, params2, float(M_PI / 2.), 0.f, polylines_out)) {
+    if (! fill2.fill_surface_by_lines(&surface, 0.f, 0.f, polylines_out) ||
+        ! fill2.fill_surface_by_lines(&surface, float(M_PI / 2.), 0.f, polylines_out)) {
         printf("FillGrid2::fill_surface() failed to fill a region.\n");
     }
     return polylines_out;
 }
 
-Polylines FillTriangles::fill_surface(const Surface &surface, const FillParams &params)
+Polylines FillTriangles::fill_surface(const Surface &surface)
 {
     // Each linear fill covers 1/3 of the target coverage.
-    FillParams params2 = params;
-    params2.density *= 0.333333333f;
+    FillTriangles fill2 = *this;
+    fill2.density *= 0.333333333f;
     Polylines polylines_out;
-    if (! fill_surface_by_lines(&surface, params2, 0.f, 0., polylines_out) ||
-        ! fill_surface_by_lines(&surface, params2, float(M_PI / 3.), 0., polylines_out) ||
-        ! fill_surface_by_lines(&surface, params2, float(2. * M_PI / 3.), 0.5 * this->spacing / params2.density, polylines_out)) {
+    if (! fill2.fill_surface_by_lines(&surface, 0.f, 0., polylines_out) ||
+        ! fill2.fill_surface_by_lines(&surface, float(M_PI / 3.), 0., polylines_out) ||
+        ! fill2.fill_surface_by_lines(&surface, float(2. * M_PI / 3.), 0.5 * this->spacing / fill2.density, polylines_out)) {
         printf("FillTriangles::fill_surface() failed to fill a region.\n");
     }
     return polylines_out;
 }
 
-Polylines FillStars::fill_surface(const Surface &surface, const FillParams &params)
+Polylines FillStars::fill_surface(const Surface &surface)
 {
     // Each linear fill covers 1/3 of the target coverage.
-    FillParams params2 = params;
-    params2.density *= 0.333333333f;
+    FillStars fill2 = *this;
+    fill2.density *= 0.333333333f;
     Polylines polylines_out;
-    if (! fill_surface_by_lines(&surface, params2, 0.f, 0., polylines_out) ||
-        ! fill_surface_by_lines(&surface, params2, float(M_PI / 3.), 0., polylines_out) ||
-        ! fill_surface_by_lines(&surface, params2, float(2. * M_PI / 3.), 0., polylines_out)) {
+    if (! fill2.fill_surface_by_lines(&surface, 0.f, 0., polylines_out) ||
+        ! fill2.fill_surface_by_lines(&surface, float(M_PI / 3.), 0., polylines_out) ||
+        ! fill2.fill_surface_by_lines(&surface, float(2. * M_PI / 3.), 0., polylines_out)) {
         printf("FillStars::fill_surface() failed to fill a region.\n");
     }
     return polylines_out;
 }
 
-Polylines FillCubic::fill_surface(const Surface &surface, const FillParams &params)
+Polylines FillCubic::fill_surface(const Surface &surface)
 {
     // Each linear fill covers 1/3 of the target coverage.
-    FillParams params2 = params;
-    params2.density *= 0.333333333f;
+    FillCubic fill2 = *this;
+    fill2.density *= 0.333333333f;
     Polylines polylines_out;
-    if (! fill_surface_by_lines(&surface, params2, 0.f, z, polylines_out) ||
-        ! fill_surface_by_lines(&surface, params2, float(M_PI / 3.), -z, polylines_out) ||
+    if (! fill2.fill_surface_by_lines(&surface, 0.f, z, polylines_out) ||
+        ! fill2.fill_surface_by_lines(&surface, float(M_PI / 3.), -z, polylines_out) ||
         // Rotated by PI*2/3 + PI to achieve reverse sloping wall.
-        ! fill_surface_by_lines(&surface, params2, float(M_PI * 2. / 3.), z, polylines_out)) {
+        ! fill2.fill_surface_by_lines(&surface, float(M_PI * 2. / 3.), z, polylines_out)) {
         printf("FillCubic::fill_surface() failed to fill a region.\n");
     } 
     return polylines_out; 

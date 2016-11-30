@@ -163,8 +163,7 @@ class Filler
             fill = NULL;
         }
     };
-    Fill        *fill;
-    FillParams   params;
+    Fill* fill;
 };
 
 }

@@ -12,7 +12,7 @@
     ~Filler();
 
     void set_bounding_box(BoundingBox *bbox)
-        %code{% THIS->fill->set_bounding_box(*bbox); %};
+        %code{% THIS->fill->bounding_box = *bbox; %};
     void set_spacing(coordf_t spacing)
         %code{% THIS->fill->spacing = spacing; %};
     coordf_t spacing()
@@ -34,20 +34,20 @@
         %code{% RETVAL = THIS->fill->no_sort(); %};
 
     void set_density(float density)
-        %code{% THIS->params.density = density; %};
+        %code{% THIS->fill->density = density; %};
     void set_dont_connect(bool dont_connect)
-        %code{% THIS->params.dont_connect = dont_connect; %};
+        %code{% THIS->fill->dont_connect = dont_connect; %};
     void set_dont_adjust(bool dont_adjust)
-        %code{% THIS->params.dont_adjust = dont_adjust; %};
+        %code{% THIS->fill->dont_adjust = dont_adjust; %};
     void set_complete(bool complete)
-        %code{% THIS->params.complete = complete; %};
+        %code{% THIS->fill->complete = complete; %};
 
     PolylineCollection* _fill_surface(Surface *surface)
         %code{% 
             PolylineCollection *pc = NULL;
             if (THIS->fill != NULL) {
                 pc = new PolylineCollection();
-                pc->polylines = THIS->fill->fill_surface(*surface, THIS->params);
+                pc->polylines = THIS->fill->fill_surface(*surface);
             }
             RETVAL =  pc;
         %};

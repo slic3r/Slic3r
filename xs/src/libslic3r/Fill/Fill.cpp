@@ -51,8 +51,10 @@ Fill::new_from_type(const std::string &type)
 }
 
 Polylines
-Fill::fill_surface(const Surface &surface, const FillParams &params)
+Fill::fill_surface(const Surface &surface)
 {
+    if (this->density == 0) return Polylines();
+    
     // Perform offset.
     ExPolygons expp = offset_ex(surface.expolygon, -scale_(this->spacing)/2);
     
@@ -60,7 +62,6 @@ Fill::fill_surface(const Surface &surface, const FillParams &params)
     Polylines polylines_out;
     for (size_t i = 0; i < expp.size(); ++i)
         this->_fill_surface_single(
-            params,
             surface.thickness_layers,
             this->_infill_direction(surface),
             expp[i],

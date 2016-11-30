@@ -13,17 +13,17 @@ class FillRectilinear2 : public Fill
 {
 public:
     virtual ~FillRectilinear2() {}
-    virtual Polylines fill_surface(const Surface &surface, const FillParams &params);
+    virtual Polylines fill_surface(const Surface &surface);
 
 protected:
-	bool fill_surface_by_lines(const Surface *surface, const FillParams &params, float angleBase, float pattern_shift, Polylines &polylines_out);
+	bool fill_surface_by_lines(const Surface *surface, float angleBase, float pattern_shift, Polylines &polylines_out);
 };
 
 class FillGrid2 : public FillRectilinear2
 {
 public:
     virtual ~FillGrid2() {}
-    virtual Polylines fill_surface(const Surface &surface, const FillParams &params);
+    virtual Polylines fill_surface(const Surface &surface);
 
 protected:
 	// The grid fill will keep the angle constant between the layers, see the implementation of Slic3r::Fill.
@@ -34,7 +34,7 @@ class FillTriangles : public FillRectilinear2
 {
 public:
     virtual ~FillTriangles() {}
-    virtual Polylines fill_surface(const Surface &surface, const FillParams &params);
+    virtual Polylines fill_surface(const Surface &surface);
 
 protected:
 	// The grid fill will keep the angle constant between the layers, see the implementation of Slic3r::Fill.
@@ -45,7 +45,7 @@ class FillStars : public FillRectilinear2
 {
 public:
     virtual ~FillStars() {}
-    virtual Polylines fill_surface(const Surface &surface, const FillParams &params);
+    virtual Polylines fill_surface(const Surface &surface);
 
 protected:
     // The grid fill will keep the angle constant between the layers, see the implementation of Slic3r::Fill.
@@ -56,7 +56,7 @@ class FillCubic : public FillRectilinear2
 {
 public:
     virtual ~FillCubic() {}
-    virtual Polylines fill_surface(const Surface &surface, const FillParams &params);
+    virtual Polylines fill_surface(const Surface &surface);
 
 protected:
 	// The grid fill will keep the angle constant between the layers, see the implementation of Slic3r::Fill.

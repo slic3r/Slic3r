@@ -182,7 +182,7 @@ LayerRegion::make_fill()
         #else
             std::auto_ptr<Fill> f = std::auto_ptr<Fill>(Fill::new_from_type(fill_pattern));
         #endif
-        f->set_bounding_box(this->layer()->object()->bounding_box());
+        f->bounding_box = this->layer()->object()->bounding_box();
         
         // calculate the actual flow we'll be using for this infill
         coordf_t h = (surface.thickness == -1) ? this->layer()->height : surface.thickness;
@@ -229,10 +229,9 @@ LayerRegion::make_fill()
         f->loop_clipping = scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER;
         
         // apply half spacing using this flow's own spacing and generate infill
-        FillParams params;
-        params.density = density/100;
-        params.dont_adjust = false;
-        Polylines polylines = f->fill_surface(surface, params);
+        f->density = density/100;
+        f->dont_adjust = false;
+        Polylines polylines = f->fill_surface(surface);
         if (polylines.empty())
             continue;
 

@@ -149,7 +149,6 @@ makeGrid(coord_t z, coord_t gridSize, size_t gridWidth, size_t gridHeight, size_
 
 void
 Fill3DHoneycomb::_fill_surface_single(
-    const FillParams                &params, 
     unsigned int                    thickness_layers,
     const std::pair<float, Point>   &direction, 
     ExPolygon                       &expolygon, 
@@ -157,7 +156,7 @@ Fill3DHoneycomb::_fill_surface_single(
 {
     // no rotation is supported for this infill pattern
     BoundingBox bb = expolygon.contour.bounding_box();
-    const coord_t distance = coord_t(scale_(this->spacing) / params.density);
+    const coord_t distance = coord_t(scale_(this->spacing) / this->density);
 
     // align bounding box to a multiple of our honeycomb grid module
     // (a module is 2*$distance since one $distance half-module is 
@@ -181,7 +180,7 @@ Fill3DHoneycomb::_fill_surface_single(
     polylines = intersection_pl(polylines, (Polygons)expolygon);
 
     // connect lines
-    if (!params.dont_connect && !polylines.empty()) { // prevent calling leftmost_point() on empty collections
+    if (!this->dont_connect && !polylines.empty()) { // prevent calling leftmost_point() on empty collections
         ExPolygon expolygon_off;
         {
             ExPolygons expolygons_off = offset_ex(expolygon, SCALED_EPSILON);

@@ -8,25 +8,26 @@
 namespace Slic3r {
 
 void FillRectilinear::_fill_surface_single(
-    const FillParams                &params,
     unsigned int                    thickness_layers,
     const std::pair<float, Point>   &direction,
     ExPolygon                       &expolygon,
     Polylines*                      polylines_out)
 {
-    assert(params.density > 0.0001f && params.density <= 1.f);
+    assert(this->density > 0.0001f && this->density <= 1.f);
     
     // rotate polygons so that we can work with vertical lines here
     expolygon.rotate(-direction.first);
     
     this->_min_spacing          = scale_(this->spacing);
-    this->_line_spacing         = coord_t(coordf_t(this->_min_spacing) / params.density);
+    this->_line_spacing         = coord_t(coordf_t(this->_min_spacing) / this->density);
     this->_diagonal_distance    = this->_line_spacing * 2;
     this->_line_oscillation     = this->_line_spacing - this->_min_spacing; // only for Line infill
+    
+    // We ignore this->bounding_box because it doesn't matter; we're doing align_to_grid below.
     BoundingBox bounding_box    = expolygon.contour.bounding_box();
     
     // define flow spacing according to requested density
-    if (params.density > 0.9999f && !params.dont_adjust) {
+    if (this->density > 0.9999f && !this->dont_adjust) {
         this->_line_spacing = this->adjust_solid_spacing(bounding_box.size().x, this->_line_spacing);
         this->spacing = unscale(this->_line_spacing);
     } else {
@@ -79,7 +80,7 @@ void FillRectilinear::_fill_surface_single(
     size_t n_polylines_out_old = polylines_out->size();
 
     // connect lines
-    if (!params.dont_connect && !polylines.empty()) { // prevent calling leftmost_point() on empty collections
+    if (!this->dont_connect && !polylines.empty()) { // prevent calling leftmost_point() on empty collections
         // offset the expolygon by max(min_spacing/2, extra)
         ExPolygon expolygon_off;
         {
