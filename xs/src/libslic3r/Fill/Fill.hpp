@@ -63,13 +63,14 @@ public:
     static Fill* new_from_type(const std::string &type);
     static coord_t adjust_solid_spacing(const coord_t width, const coord_t distance);
     virtual Fill* clone() const = 0;
+    virtual ~Fill() {};
     
     // Implementations can override the following virtual methods:
     // Use bridge flow for the fill?
-    virtual bool use_bridge_flow() const { return false; }
+    virtual bool use_bridge_flow() const { return false; };
 
     // Do not sort the fill lines to optimize the print head path?
-    virtual bool no_sort() const { return false; }
+    virtual bool no_sort() const { return false; };
 
     // Perform the fill.
     virtual Polylines fill_surface(const Surface &surface);
@@ -87,7 +88,6 @@ protected:
         dont_adjust(false),
         complete(false)
         {};
-    virtual ~Fill();
     
     // The expolygon may be modified by the method to avoid a copy.
     virtual void _fill_surface_single(
@@ -99,7 +99,7 @@ protected:
     // Implementations can override the following virtual method:
     virtual float _layer_angle(size_t idx) const {
         return (idx % 2) == 0 ? (M_PI/2.) : 0;
-    }
+    };
 
     std::pair<float, Point> _infill_direction(const Surface &surface) const;
 };
