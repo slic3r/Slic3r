@@ -68,7 +68,7 @@ Polylines PolylineCollection::_chained_path_from(
     while (! endpoints.empty()) {
         // find nearest point
         int endpoint_index = nearest_point_index<double>(endpoints, start_near, no_reverse);
-        assert(endpoint_index >= 0 && endpoint_index < endpoints.size() * 2);
+        assert(endpoint_index >= 0 && endpoint_index < (int)endpoints.size() * 2);
 #if SLIC3R_CPPVER > 11
         if (move_from_src) {
             retval.push_back(std::move(src[endpoints[endpoint_index/2].idx]));

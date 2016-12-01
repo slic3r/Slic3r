@@ -555,7 +555,7 @@ MedialAxis::build(ThickPolylines* polylines)
         char path[2048];
         static int iRun = 0;
         sprintf(path, "out/MedialAxis-%d.svg", iRun ++);
-        dump_voronoi_to_svg(this->lines, this->vd, polylines, path);
+        //dump_voronoi_to_svg(this->lines, this->vd, polylines, path);
 
 
         printf("Thick lines: ");

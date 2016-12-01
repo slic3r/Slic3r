@@ -346,7 +346,7 @@ ModelMaterial::apply(const t_model_material_attributes &attributes)
 
 
 ModelObject::ModelObject(Model *model)
-    : model(model), _bounding_box_valid(false)
+    : _bounding_box_valid(false), model(model)
 {}
 
 ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volumes)

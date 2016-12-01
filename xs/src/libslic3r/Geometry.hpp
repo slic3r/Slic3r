@@ -38,7 +38,7 @@ class MedialAxis {
     double max_width;
     double min_width;
     MedialAxis(double _max_width, double _min_width, const ExPolygon* _expolygon = NULL)
-        : max_width(_max_width), min_width(_min_width), expolygon(_expolygon) {};
+        : expolygon(_expolygon), max_width(_max_width), min_width(_min_width) {};
     void build(ThickPolylines* polylines);
     void build(Polylines* polylines);
     

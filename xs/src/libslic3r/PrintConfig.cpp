@@ -5,8 +5,6 @@ namespace Slic3r {
 
 PrintConfigDef::PrintConfigDef()
 {
-    t_optiondef_map &Options = this->options;
-    
     ConfigOptionDef* def;
     
     def = this->add("avoid_crossing_perimeters", coBool);
@@ -1399,8 +1397,6 @@ PrintConfigBase::min_object_distance() const
 
 CLIConfigDef::CLIConfigDef()
 {
-    t_optiondef_map &Options = this->options;
-    
     ConfigOptionDef* def;
     
     def = this->add("export_obj", coBool);

@@ -47,9 +47,9 @@ class MotionPlannerGraph
     public:
     Points nodes;
     //std::map<std::pair<size_t,size_t>, double> edges;
-    void add_edge(size_t from, size_t to, double weight);
+    void add_edge(node_t from, node_t to, double weight);
     size_t find_node(const Point &point) const;
-    Polyline shortest_path(size_t from, size_t to);
+    Polyline shortest_path(node_t from, node_t to);
 };
 
 class MotionPlanner

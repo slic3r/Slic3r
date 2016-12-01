@@ -93,7 +93,7 @@ static inline bool is_ccw(const Polygon &poly)
         return true;
 
     // 1) Find the lowest lexicographical point.
-    int     imin = 0;
+    size_t imin = 0;
     for (size_t i = 1; i < poly.points.size(); ++ i) {
         const Point &pmin = poly.points[imin];
         const Point &p    = poly.points[i];
@@ -369,7 +369,7 @@ public:
         myassert(aoffset1 < 0);
         myassert(aoffset2 < 0);
         myassert(aoffset2 < aoffset1);
-        bool sticks_removed = remove_sticks(polygons_src);
+//        bool sticks_removed = remove_sticks(polygons_src);
 //        if (sticks_removed) printf("Sticks removed!\n");
         polygons_outer = offset(polygons_src, aoffset1,
             CLIPPER_OFFSET_SCALE,
@@ -411,9 +411,9 @@ public:
 
 #ifdef SLIC3R_DEBUG
     void export_to_svg(Slic3r::SVG &svg) {
-        svg.draw_outline(polygons_src,   "black");
-        svg.draw_outline(polygons_outer, "green");
-        svg.draw_outline(polygons_inner, "brown");
+        //svg.draw_outline(polygons_src,   "black");
+        //svg.draw_outline(polygons_outer, "green");
+        //svg.draw_outline(polygons_inner, "brown");
     }
 #endif /* SLIC3R_DEBUG */
 
@@ -553,7 +553,7 @@ static inline IntersectionTypeOtherVLine intersection_type_on_prev_next_vertical
     const std::vector<SegmentedIntersectionLine>  &segs,
     size_t                                         iVerticalLine,
     size_t                                         iIntersection,
-    size_t                                         iIntersectionOther,
+    int                                            iIntersectionOther,
     bool                                           dir_is_next)
 {
     // This routine will propose a connecting line even if the connecting perimeter segment intersects 
@@ -567,7 +567,7 @@ static inline IntersectionTypeOtherVLine intersection_type_on_prev_next_vertical
     const SegmentIntersection       &itsct_other  = il_other.intersections[iIntersectionOther];
     myassert(itsct_other.is_inner());
     myassert(iIntersectionOther > 0);
-    myassert(iIntersectionOther + 1 < il_other.intersections.size());
+    myassert(iIntersectionOther + 1 < (int)il_other.intersections.size());
     // Is iIntersectionOther at the boundary of a vertical segment?
     const SegmentIntersection       &itsct_other2 = il_other.intersections[itsct_other.is_low() ? iIntersectionOther - 1 : iIntersectionOther + 1];
     if (itsct_other2.is_inner())
@@ -892,11 +892,11 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
 #ifdef SLIC3R_DEBUG
     static int iRun = 0;
     BoundingBox bbox_svg(to_points(poly_with_offset.polygons_outer));
-    ::Slic3r::SVG svg(debug_out_path("FillRectilinear2-%d.svg", iRun), bbox_svg); // , scale_(1.));
-    poly_with_offset.export_to_svg(svg);
+    //::Slic3r::SVG svg(debug_out_path("FillRectilinear2-%d.svg", iRun), bbox_svg); // , scale_(1.));
+    //poly_with_offset.export_to_svg(svg);
     {
-        ::Slic3r::SVG svg(debug_out_path("FillRectilinear2-initial-%d.svg", iRun), bbox_svg); // , scale_(1.));
-        poly_with_offset.export_to_svg(svg);
+        //::Slic3r::SVG svg(debug_out_path("FillRectilinear2-initial-%d.svg", iRun), bbox_svg); // , scale_(1.));
+        //poly_with_offset.export_to_svg(svg);
     }
     iRun ++;
 #endif /* SLIC3R_DEBUG */
@@ -934,8 +934,8 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
             if (il > ir)
                 // No vertical line intersects this segment.
                 continue;
-            myassert(il >= 0 && il < segs.size());
-            myassert(ir >= 0 && ir < segs.size());
+            myassert(il >= 0 && il < (int)segs.size());
+            myassert(ir >= 0 && ir < (int)segs.size());
             for (int i = il; i <= ir; ++ i) {
                 coord_t this_x = segs[i].pos;
 				assert(this_x == i * line_spacing + x0);
@@ -1160,16 +1160,16 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
             size_t j = i + 1;
             for (; j < sil.intersections.size() && sil.intersections[j].is_inner(); ++ j) ;
             if (i + 1 == j) {
-                svg.draw(Line(Point(sil.pos, sil.intersections[i].pos()), Point(sil.pos, sil.intersections[j].pos())), "blue");
+                //svg.draw(Line(Point(sil.pos, sil.intersections[i].pos()), Point(sil.pos, sil.intersections[j].pos())), "blue");
             } else {
-                svg.draw(Line(Point(sil.pos, sil.intersections[i].pos()), Point(sil.pos, sil.intersections[i+1].pos())), "green");
-                svg.draw(Line(Point(sil.pos, sil.intersections[i+1].pos()), Point(sil.pos, sil.intersections[j-1].pos())), (j - i + 1 > 4) ? "yellow" : "magenta");
-                svg.draw(Line(Point(sil.pos, sil.intersections[j-1].pos()), Point(sil.pos, sil.intersections[j].pos())), "green");
+                //svg.draw(Line(Point(sil.pos, sil.intersections[i].pos()), Point(sil.pos, sil.intersections[i+1].pos())), "green");
+                //svg.draw(Line(Point(sil.pos, sil.intersections[i+1].pos()), Point(sil.pos, sil.intersections[j-1].pos())), (j - i + 1 > 4) ? "yellow" : "magenta");
+                //svg.draw(Line(Point(sil.pos, sil.intersections[j-1].pos()), Point(sil.pos, sil.intersections[j].pos())), "green");
             }
             i = j + 1;
         }
     }
-    svg.Close();
+    //svg.Close();
 #endif /* SLIC3R_DEBUG */
 
     // For each outer only chords, measure their maximum distance to the bow of the outer contour.
@@ -1314,8 +1314,8 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
             int iSegAbove = -1;
             int iSegBelow = -1;
             {
-                SegmentIntersection::SegmentIntersectionType type_crossing = (intrsctn->type == SegmentIntersection::INNER_LOW) ?
-                    SegmentIntersection::INNER_HIGH : SegmentIntersection::INNER_LOW;
+//                SegmentIntersection::SegmentIntersectionType type_crossing = (intrsctn->type == SegmentIntersection::INNER_LOW) ?
+//                    SegmentIntersection::INNER_HIGH : SegmentIntersection::INNER_LOW;
                 // Does the perimeter intersect the current vertical line above intrsctn?
                 for (size_t i = i_intersection + 1; i + 1 < seg.intersections.size(); ++ i)
 //                    if (seg.intersections[i].iContour == intrsctn->iContour && seg.intersections[i].type == type_crossing) {
@@ -1522,15 +1522,15 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
 #ifdef SLIC3R_DEBUG
     {
         {
-            ::Slic3r::SVG svg(debug_out_path("FillRectilinear2-final-%03d.svg", iRun), bbox_svg); // , scale_(1.));
-            poly_with_offset.export_to_svg(svg);
-            for (size_t i = n_polylines_out_initial; i < polylines_out.size(); ++ i)
-                svg.draw(polylines_out[i].lines(), "black");
+            //::Slic3r::SVG svg(debug_out_path("FillRectilinear2-final-%03d.svg", iRun), bbox_svg); // , scale_(1.));
+            //poly_with_offset.export_to_svg(svg);
+            //for (size_t i = n_polylines_out_initial; i < polylines_out.size(); ++ i)
+                //svg.draw(polylines_out[i].lines(), "black");
         }
         // Paint a picture per polyline. This makes it easier to discover the order of the polylines and their overlap.
         for (size_t i_polyline = n_polylines_out_initial; i_polyline < polylines_out.size(); ++ i_polyline) {
-            ::Slic3r::SVG svg(debug_out_path("FillRectilinear2-final-%03d-%03d.svg", iRun, i_polyline), bbox_svg); // , scale_(1.));
-            svg.draw(polylines_out[i_polyline].lines(), "black");
+            //::Slic3r::SVG svg(debug_out_path("FillRectilinear2-final-%03d-%03d.svg", iRun, i_polyline), bbox_svg); // , scale_(1.));
+            //svg.draw(polylines_out[i_polyline].lines(), "black");
         }
     }
 #endif /* SLIC3R_DEBUG */

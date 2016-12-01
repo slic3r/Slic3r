@@ -20,6 +20,7 @@
  *           https://github.com/admesh/admesh/issues
  */
 
+#include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,6 +54,8 @@ stl_initialize(stl_file *stl) {
   stl->stats.number_of_parts = 0;
   stl->stats.original_num_facets = 0;
   stl->stats.number_of_facets = 0;
+  stl->stats.bounding_diameter = 0;
+  stl->stats.shortest_edge = FLT_MAX;
   stl->stats.facets_malloced = 0;
   stl->stats.volume = -1.0;
 

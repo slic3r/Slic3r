@@ -144,7 +144,7 @@ SLAPrint::slice()
         }
         
         // prepend total raft height to all sliced layers
-        for (int i = this->config.raft_layers; i < this->layers.size(); ++i)
+        for (size_t i = this->config.raft_layers; i < this->layers.size(); ++i)
             this->layers[i].print_z += first_lh + lh * (this->config.raft_layers-1);
     }
 }
@@ -272,7 +272,7 @@ SLAPrint::write_svg(const std::string &outputfile) const
         }
         
         // don't print support material in raft layers
-        if (i >= this->config.raft_layers) {
+        if (i >= (size_t)this->config.raft_layers) {
             // look for support material pillars belonging to this layer
             for (std::vector<SupportPillar>::const_iterator it = this->sm_pillars.begin(); it != this->sm_pillars.end(); ++it) {
                 if (!(it->top_layer >= i && it->bottom_layer <= i)) continue;

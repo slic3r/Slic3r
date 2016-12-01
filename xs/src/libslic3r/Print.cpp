@@ -826,7 +826,6 @@ Print::auto_assign_extruders(ModelObject* model_object) const
     // only assign extruders if object has more than one volume
     if (model_object->volumes.size() < 2) return;
     
-    size_t extruders = this->config.nozzle_diameter.values.size();
     for (ModelVolumePtrs::const_iterator v = model_object->volumes.begin(); v != model_object->volumes.end(); ++v) {
         if (!(*v)->material_id().empty()) {
             //FIXME Vojtech: This assigns an extruder ID even to a modifier volume, if it has a material assigned.
