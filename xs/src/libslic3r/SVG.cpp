@@ -20,7 +20,7 @@ SVG::SVG(const char* filename)
 }
 
 SVG::SVG(const char* filename, const BoundingBox &bbox)
-    : arrows(false), fill("grey"), stroke("black"), filename(filename), origin(bbox.min)
+    : arrows(false), fill("grey"), stroke("black"), origin(bbox.min), filename(filename)
 {
     this->f = fopen(filename, "w");
     float w = COORD(bbox.max.x - bbox.min.x);
