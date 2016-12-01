@@ -253,7 +253,9 @@ sub _init_menubar {
             $plater->export_amf;
         }, undef, 'brick_go.png');
         $self->_append_menu_item($self->{plater_menu}, "Open DLP Projector…\tCtrl+L", 'Open projector window for DLP printing', sub {
+            $plater->pause_background_process;
             Slic3r::GUI::SLAPrintOptions->new($self)->ShowModal;
+            $plater->resume_background_process;
         }, undef, 'film.png');
         
         $self->{object_menu} = $self->{plater}->object_menu;
