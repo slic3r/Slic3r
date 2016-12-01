@@ -239,6 +239,7 @@ sub thread_cleanup {
     *Slic3r::Print::DESTROY                 = sub {};
     *Slic3r::Print::Object::DESTROY         = sub {};
     *Slic3r::Print::Region::DESTROY         = sub {};
+    *Slic3r::SLAPrint::DESTROY              = sub {};
     *Slic3r::Surface::DESTROY               = sub {};
     *Slic3r::Surface::Collection::DESTROY   = sub {};
     *Slic3r::TriangleMesh::DESTROY          = sub {};
