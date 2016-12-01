@@ -31,6 +31,7 @@ use Slic3r::GUI::Projector;
 use Slic3r::GUI::OptionsGroup;
 use Slic3r::GUI::OptionsGroup::Field;
 use Slic3r::GUI::SimpleTab;
+use Slic3r::GUI::SLAPrintOptions;
 use Slic3r::GUI::Tab;
 
 our $have_OpenGL = eval "use Slic3r::GUI::3DScene; 1";

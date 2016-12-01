@@ -28,6 +28,7 @@
         %code%{ RETVAL = &THIS->layers[i].infill; %};
     bool layer_solid(size_t i)
         %code%{ RETVAL = THIS->layers[i].solid; %};
+    void write_svg(std::string file);
     
 %{
 

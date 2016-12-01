@@ -3,7 +3,8 @@
 package Slic3r::GUI::Projector;
 use strict;
 use warnings;
-use Wx qw(:dialog :id :misc :sizer :systemsettings :bitmap :button :icon wxTheApp);
+use File::Basename qw(basename dirname);
+use Wx qw(:dialog :id :misc :sizer :systemsettings :bitmap :button :icon :filedialog wxTheApp);
 use Wx::Event qw(EVT_BUTTON EVT_CLOSE EVT_TEXT_ENTER EVT_SPINCTRL EVT_SLIDER);
 use base qw(Wx::Dialog Class::Accessor);
 use utf8;
@@ -378,10 +379,23 @@ sub new {
     
     {
         # should be wxCLOSE but it crashes on Linux, maybe it's a Wx bug
-        my $buttons = $self->CreateStdDialogButtonSizer(wxOK);
-        EVT_BUTTON($self, wxID_OK, sub {
-            $self->_close;
-        });
+        my $buttons = Wx::BoxSizer->new(wxHORIZONTAL);
+        {
+            my $btn = Wx::Button->new($self, -1, "Export SVG…");
+            EVT_BUTTON($self, $btn, sub {
+                $self->_export_svg;
+            });
+            $buttons->Add($btn, 0);
+        }
+        $buttons->AddStretchSpacer(1);
+        {
+            my $btn = Wx::Button->new($self, -1, "Close");
+            $btn->SetDefault;
+            EVT_BUTTON($self, $btn, sub {
+                $self->_close;
+            });
+            $buttons->Add($btn, 0);
+        }
         $sizer->Add($buttons, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     }
     EVT_CLOSE($self, sub {
@@ -455,6 +469,27 @@ sub _update_buttons {
         $_->enable for @{$self->_optgroups};
     }
     $self->Layout;
+}
+
+sub _export_svg {
+    my ($self) = @_;
+    
+    my $output_file = 'print.svg';
+    my $dlg = Wx::FileDialog->new(
+        $self,
+        'Save SVG file as:',
+        wxTheApp->output_path(dirname($output_file)),
+        basename($output_file),
+        &Slic3r::GUI::FILE_WILDCARDS->{svg},
+        wxFD_SAVE | wxFD_OVERWRITE_PROMPT,
+    );
+    if ($dlg->ShowModal != wxID_OK) {
+        $dlg->Destroy;
+        return;
+    }
+    $output_file = Slic3r::decode_path($dlg->GetPath);
+    
+    $self->controller->_print->write_svg($output_file);
 }
 
 sub _set_status {

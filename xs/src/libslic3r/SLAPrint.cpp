@@ -55,11 +55,12 @@ SLAPrint::slice()
     }
     
     // generate infill
-    if (this->config.fill_density < 100) {
+    const float infill_spacing = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
+    if (this->config.fill_density < 100 && infill_spacing > 0) {
         std::auto_ptr<Fill> fill(Fill::new_from_type(this->config.fill_pattern.value));
         fill->bounding_box.merge(Point::new_scale(bb.min.x, bb.min.y));
         fill->bounding_box.merge(Point::new_scale(bb.max.x, bb.max.y));
-        fill->spacing       = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
+        fill->spacing       = infill_spacing;
         fill->angle         = Geometry::deg2rad(this->config.fill_angle.value);
         fill->density       = this->config.fill_density.value/100;
         
@@ -189,7 +190,6 @@ SLAPrint::_infill_layer(size_t i, const Fill* _fill)
         
         ExtrusionPath templ(erInternalInfill);
         templ.width = fill->spacing;
-        
         const ExPolygons internal_ex = intersection_ex(infill, internal);
         for (ExPolygons::const_iterator it = internal_ex.begin(); it != internal_ex.end(); ++it) {
             Polylines polylines = fill->fill_surface(Surface(stInternal, *it));

@@ -53,6 +53,8 @@
         %code{% RETVAL = new PrintRegionConfig (); %};
     static StaticPrintConfig* new_FullPrintConfig()
         %code{% RETVAL = new FullPrintConfig (); %};
+    static StaticPrintConfig* new_SLAPrintConfig()
+        %code{% RETVAL = new SLAPrintConfig (); %};
     ~StaticPrintConfig();
     bool has(t_config_option_key opt_key);
     SV* as_hash()
@@ -88,6 +90,8 @@
     double min_object_distance();
     %name{_load} void load(std::string file);
     %name{_save} void save(std::string file);
+    DynamicPrintConfig* dynamic()
+        %code{% RETVAL = new DynamicPrintConfig (); RETVAL->apply(*THIS, true); %};
 };
 
 %package{Slic3r::Config};
