@@ -914,9 +914,10 @@ sub _repaint {
     if ($self->print->layer_solid($self->layer_num)) {
         $self->_paint_expolygon($_, $dc) for @{$self->print->layer_slices($self->layer_num)};
     } else {
+        # perimeters first, because their "hole" is painted black
         $self->_paint_expolygon($_, $dc) for
-            @{$self->print->layer_solid_infill($self->layer_num)},
-            @{$self->print->layer_perimeters($self->layer_num)};
+            @{$self->print->layer_perimeters($self->layer_num)},
+            @{$self->print->layer_solid_infill($self->layer_num)};
         
         $self->_paint_expolygon($_, $dc)
             for @{union_ex($self->print->layer_infill($self->layer_num)->grow)};

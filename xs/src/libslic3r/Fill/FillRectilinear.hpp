@@ -42,6 +42,7 @@ protected:
 class FillLine : public FillRectilinear
 {
 public:
+    virtual Fill* clone() const { return new FillLine(*this); };
     virtual ~FillLine() {}
 
 protected:
@@ -62,6 +63,7 @@ protected:
 class FillGrid : public FillRectilinear
 {
 public:
+    virtual Fill* clone() const { return new FillGrid(*this); };
     virtual ~FillGrid() {}
 
 protected:
@@ -74,11 +76,12 @@ protected:
 class FillAlignedRectilinear : public FillRectilinear
 {
 public:
+    virtual Fill* clone() const { return new FillAlignedRectilinear(*this); };
     virtual ~FillAlignedRectilinear() {};
 
 protected:
 	// Keep the angle constant in all layers.
-    virtual float _layer_angle(size_t idx) const { printf("ALIGNED\n");  return 0.f; };
+    virtual float _layer_angle(size_t idx) const { return 0.f; };
 };
 
 }; // namespace Slic3r
