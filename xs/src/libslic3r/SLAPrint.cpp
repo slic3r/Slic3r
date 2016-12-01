@@ -55,12 +55,11 @@ SLAPrint::slice()
     }
     
     // generate infill
-    const float infill_spacing = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
-    if (this->config.fill_density < 100 && infill_spacing > 0) {
+    if (this->config.fill_density < 100) {
         std::auto_ptr<Fill> fill(Fill::new_from_type(this->config.fill_pattern.value));
         fill->bounding_box.merge(Point::new_scale(bb.min.x, bb.min.y));
         fill->bounding_box.merge(Point::new_scale(bb.max.x, bb.max.y));
-        fill->spacing       = infill_spacing;
+        fill->spacing       = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
         fill->angle         = Geometry::deg2rad(this->config.fill_angle.value);
         fill->density       = this->config.fill_density.value/100;
         
@@ -156,7 +155,7 @@ SLAPrint::_infill_layer(size_t i, const Fill* _fill)
     Layer &layer = this->layers[i];
     
     const float shell_thickness = this->config.get_abs_value("perimeter_extrusion_width", this->config.layer_height.value);
-            
+    
     // In order to detect what regions of this layer need to be solid,
     // perform an intersection with layers within the requested shell thickness.
     Polygons internal = layer.slices;
