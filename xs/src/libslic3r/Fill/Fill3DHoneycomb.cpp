@@ -150,7 +150,7 @@ makeGrid(coord_t z, coord_t gridSize, size_t gridWidth, size_t gridHeight, size_
 void
 Fill3DHoneycomb::_fill_surface_single(
     unsigned int                    thickness_layers,
-    const std::pair<float, Point>   &direction, 
+    const direction_t               &direction, 
     ExPolygon                       &expolygon, 
     Polylines*                      polylines_out)
 {

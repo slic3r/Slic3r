@@ -16,7 +16,7 @@
 // #define SLIC3R_DEBUG
 
 // Make assert active if SLIC3R_DEBUG
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
     #undef NDEBUG
     #include "SVG.hpp"
 #endif
@@ -116,7 +116,7 @@ static inline bool is_ccw(const Polygon &poly)
 // therefore the point p1 lies on poly.points[seg1-1], poly.points[seg1] etc.
 static inline coordf_t segment_length(const Polygon &poly, size_t seg1, const Point &p1, size_t seg2, const Point &p2)
 {
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
     // Verify that p1 lies on seg1. This is difficult to verify precisely,
     // but at least verify, that p1 lies in the bounding box of seg1.
     for (size_t i = 0; i < 2; ++ i) {
@@ -409,7 +409,7 @@ public:
 
     bool             is_contour_ccw(size_t idx) const { return polygons_ccw[idx]; }
 
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
     void export_to_svg(Slic3r::SVG &svg) {
         //svg.draw_outline(polygons_src,   "black");
         //svg.draw_outline(polygons_outer, "green");
@@ -846,7 +846,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
     myassert(INFILL_OVERLAP_OVER_SPACING > 0 && INFILL_OVERLAP_OVER_SPACING < 0.5f);
 
     // Rotate polygons so that we can work with vertical lines here
-    std::pair<float, Point> rotate_vector = this->_infill_direction(*surface);
+    direction_t rotate_vector = this->_infill_direction(*surface);
     rotate_vector.first += angleBase;
 
     myassert(this->density > 0.0001f && this->density <= 1.f);
@@ -889,7 +889,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
     size_t  n_vlines = (bounding_box.max.x - bounding_box.min.x + line_spacing - 1) / line_spacing;
     coord_t x0 = bounding_box.min.x + (line_spacing + SCALED_EPSILON) / 2;
 
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
     static int iRun = 0;
     BoundingBox bbox_svg(to_points(poly_with_offset.polygons_outer));
     //::Slic3r::SVG svg(debug_out_path("FillRectilinear2-%d.svg", iRun), bbox_svg); // , scale_(1.));
@@ -1002,7 +1002,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
                     // The same segment, it has to be vertical.
                     myassert(iPrev1 == iPrev2);
                     swap = contour1[iPrev1].y > contour1[iContour1].y;
-                    #ifdef SLIC3R_DEBUG
+                    #ifdef SLIC3R_DEBUG2
                     if (swap)
                         printf("Swapping when single vertical segment\n");
                     #endif
@@ -1018,7 +1018,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
                         const Point *b = &contour1[iSegment1];
                         const Point *c = &contour2[iPrev2];
                         const Point *d = &contour2[iSegment2];
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
                         const Point  x1(sil.pos, sil.intersections[i-1].pos);
                         const Point  x2(sil.pos, sil.intersections[i  ].pos);
                         bool successive = false;
@@ -1045,11 +1045,11 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
                             myassert(iSegment1 == iPrev2 || iPrev1 == iSegment2);
                             std::swap(c, d);
                             myassert(a != c && b != c);
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
                             successive = true;
 #endif /* SLIC3R_DEBUG */
                         }
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
                         else if (b == d) {
                             // The segments iSegment1 and iSegment2 are directly connected.
                             myassert(iContour1 == iContour2);
@@ -1061,7 +1061,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
                         Orientation o = orient(*a, *b, *c);
                         myassert(o != ORIENTATION_COLINEAR);
                         swap = upper_more_left != (o == ORIENTATION_CW);
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
                         if (swap)
                             printf(successive ? 
                                 "Swapping when iContour1 == iContour2 and successive segments\n" :
@@ -1106,7 +1106,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
                 if (sil.intersections[i].type == sil.intersections[j-1].type) {
                     // This has to be a corner point crossing the vertical line.
                     // Remove the second intersection point.
-    #ifdef SLIC3R_DEBUG
+    #ifdef SLIC3R_DEBUG2
                     size_t iSegment2 = sil.intersections[j-1].iSegment;
                     size_t iPrev2    = ((iSegment2 == 0) ? contour.size() : iSegment2) - 1;
                     myassert(iSegment == iPrev2 || iSegment2 == iPrev);
@@ -1152,7 +1152,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
     }
 #undef ASSERT_OR_RETURN
 
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
     // Paint the segments and finalize the SVG file.
     for (size_t i_seg = 0; i_seg < segs.size(); ++ i_seg) {
         SegmentedIntersectionLine &sil = segs[i_seg];
@@ -1519,7 +1519,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
         polyline_current = NULL;
     }
 
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
     {
         {
             //::Slic3r::SVG svg(debug_out_path("FillRectilinear2-final-%03d.svg", iRun), bbox_svg); // , scale_(1.));
@@ -1546,7 +1546,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, float angle
         it->remove_duplicate_points();
     }
 
-#ifdef SLIC3R_DEBUG
+#ifdef SLIC3R_DEBUG2
     // Verify, that there are no duplicate points in the sequence.
     for (Polylines::iterator it = polylines_out.begin(); it != polylines_out.end(); ++ it)
         myassert(! it->has_duplicate_points());
@@ -1577,10 +1577,10 @@ Polylines FillGrid2::fill_surface(const Surface &surface)
     return polylines_out;
 }
 
-Polylines FillTriangles::fill_surface(const Surface &surface)
+Polylines FillTriangles2::fill_surface(const Surface &surface)
 {
     // Each linear fill covers 1/3 of the target coverage.
-    FillTriangles fill2 = *this;
+    FillTriangles2 fill2 = *this;
     fill2.density *= 0.333333333f;
     Polylines polylines_out;
     if (! fill2.fill_surface_by_lines(&surface, 0.f, 0., polylines_out) ||
@@ -1591,10 +1591,10 @@ Polylines FillTriangles::fill_surface(const Surface &surface)
     return polylines_out;
 }
 
-Polylines FillStars::fill_surface(const Surface &surface)
+Polylines FillStars2::fill_surface(const Surface &surface)
 {
     // Each linear fill covers 1/3 of the target coverage.
-    FillStars fill2 = *this;
+    FillStars2 fill2 = *this;
     fill2.density *= 0.333333333f;
     Polylines polylines_out;
     if (! fill2.fill_surface_by_lines(&surface, 0.f, 0., polylines_out) ||
@@ -1605,10 +1605,10 @@ Polylines FillStars::fill_surface(const Surface &surface)
     return polylines_out;
 }
 
-Polylines FillCubic::fill_surface(const Surface &surface)
+Polylines FillCubic2::fill_surface(const Surface &surface)
 {
     // Each linear fill covers 1/3 of the target coverage.
-    FillCubic fill2 = *this;
+    FillCubic2 fill2 = *this;
     fill2.density *= 0.333333333f;
     Polylines polylines_out;
     if (! fill2.fill_surface_by_lines(&surface, 0.f, z, polylines_out) ||

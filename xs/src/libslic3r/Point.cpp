@@ -18,6 +18,12 @@ Point::operator==(const Point& rhs) const
     return this->coincides_with(rhs);
 }
 
+bool
+Point::operator<(const Point& rhs) const
+{
+    return this->x < rhs.x || this->y < rhs.y;
+}
+
 std::string
 Point::wkt() const
 {

@@ -29,6 +29,9 @@ public:
     // in unscaled coordinates
     coordf_t    spacing;
     
+    // overlap over spacing for extrusion endpoints
+    float       endpoints_overlap;
+    
     // in radians, ccw, 0 = East
     float       angle;
     
@@ -80,6 +83,7 @@ protected:
         layer_id(size_t(-1)),
         z(0.f),
         spacing(0.f),
+        endpoints_overlap(0.3f),
         angle(0),
         link_max_length(0),
         loop_clipping(0),
@@ -89,10 +93,12 @@ protected:
         complete(false)
         {};
     
+    typedef std::pair<float, Point> direction_t;
+    
     // The expolygon may be modified by the method to avoid a copy.
     virtual void _fill_surface_single(
         unsigned int                    thickness_layers,
-        const std::pair<float, Point>   &direction, 
+        const direction_t               &direction, 
         ExPolygon                       &expolygon, 
         Polylines*                      polylines_out) {};
     
@@ -101,7 +107,7 @@ protected:
         return (idx % 2) == 0 ? (M_PI/2.) : 0;
     };
 
-    std::pair<float, Point> _infill_direction(const Surface &surface) const;
+    direction_t _infill_direction(const Surface &surface) const;
 };
 
 } // namespace Slic3r

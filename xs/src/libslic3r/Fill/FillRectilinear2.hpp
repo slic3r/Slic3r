@@ -32,11 +32,11 @@ protected:
     virtual float _layer_angle(size_t idx) const { return 0.f; }
 };
 
-class FillTriangles : public FillRectilinear2
+class FillTriangles2 : public FillRectilinear2
 {
 public:
-    virtual Fill* clone() const { return new FillTriangles(*this); };
-    virtual ~FillTriangles() {}
+    virtual Fill* clone() const { return new FillTriangles2(*this); };
+    virtual ~FillTriangles2() {}
     virtual Polylines fill_surface(const Surface &surface);
 
 protected:
@@ -44,11 +44,11 @@ protected:
     virtual float _layer_angle(size_t idx) const { return 0.f; }
 };
 
-class FillStars : public FillRectilinear2
+class FillStars2 : public FillRectilinear2
 {
 public:
-    virtual Fill* clone() const { return new FillStars(*this); };
-    virtual ~FillStars() {}
+    virtual Fill* clone() const { return new FillStars2(*this); };
+    virtual ~FillStars2() {}
     virtual Polylines fill_surface(const Surface &surface);
 
 protected:
@@ -56,11 +56,11 @@ protected:
     virtual float _layer_angle(size_t idx) const { return 0.f; }
 };
 
-class FillCubic : public FillRectilinear2
+class FillCubic2 : public FillRectilinear2
 {
 public:
-    virtual Fill* clone() const { return new FillCubic(*this); };
-    virtual ~FillCubic() {}
+    virtual Fill* clone() const { return new FillCubic2(*this); };
+    virtual ~FillCubic2() {}
     virtual Polylines fill_surface(const Surface &surface);
 
 protected:

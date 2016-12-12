@@ -37,6 +37,7 @@ class Point
         return Point(scale_(x), scale_(y));
     };
     bool operator==(const Point& rhs) const;
+    bool operator<(const Point& rhs) const;
     std::string wkt() const;
     std::string dump_perl() const;
     void scale(double factor);

@@ -391,9 +391,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("grid");
-    def->enum_values.push_back("line");
-    def->enum_values.push_back("rectilinear2");
-    def->enum_values.push_back("grid2");
     def->enum_values.push_back("triangles");
     def->enum_values.push_back("stars");
     def->enum_values.push_back("cubic");
@@ -406,9 +403,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Rectilinear");
     def->enum_labels.push_back("Aligned Rectilinear");
     def->enum_labels.push_back("Grid");
-    def->enum_labels.push_back("Line");
-    def->enum_labels.push_back("Rectilinear 2");
-    def->enum_labels.push_back("Grid 2");
     def->enum_labels.push_back("Triangles");
     def->enum_labels.push_back("Stars");
     def->enum_labels.push_back("Cubic");
@@ -418,7 +412,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
     def->enum_labels.push_back("Octagram Spiral");
-    def->default_value = new ConfigOptionEnum<InfillPattern>(ipHoneycomb);
+    def->default_value = new ConfigOptionEnum<InfillPattern>(ipStars);
 
     def = this->add("first_layer_acceleration", coFloat);
     def->label = "First layer";
