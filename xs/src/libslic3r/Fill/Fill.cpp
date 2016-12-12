@@ -11,7 +11,6 @@
 #include "Fill3DHoneycomb.hpp"
 #include "FillPlanePath.hpp"
 #include "FillRectilinear.hpp"
-#include "FillRectilinear2.hpp"
 
 namespace Slic3r {
 
