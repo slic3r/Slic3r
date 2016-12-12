@@ -72,8 +72,6 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
             for (Points::const_iterator p = points.begin(); p != points.end(); ++p) {
                 const Point &prev  = p == points.begin()   ? *(points.end()-1) : *(p-1);
                 const Point &next  = p == points.end()-1   ? *points.begin()   : *(p+1);
-                const Point &next2 = p == (points.end()-2) ? *points.begin()
-                                   : p == (points.end()-1) ? *(points.begin()+1) : *(p+2);
                 
                 // Does the p-next line belong to an intersection line?
                 if (p->x == next.x && ((p->x - bounding_box.min.x) % line_spacing) == 0) {
@@ -139,12 +137,12 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
                 assert(max_x2 <= max_x);
                 
                 // We're now going past the first point, so save it.
-                if (p->x < min_x2)
+                const bool line_goes_right = next.x > p->x;
+                if (line_goes_right ? (p->x < min_x2) : (p->x > max_x2))
                     skipped_points.push_back(*p);
                 
                 // Now loop through those intersection points according the original direction
                 // of the line (because we need to store them in this order).
-                const bool line_goes_right = next.x > p->x;
                 for (coord_t x = line_goes_right ? min_x2 : max_x2;
                     x >= min_x && x <= max_x;
                     x += line_goes_right ? +line_spacing : -line_spacing) {
@@ -155,9 +153,13 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
                         skipped_points.push_back(*p);
                         continue;
                     }
-                    if (x == next.x && ((p->x > x && next2.x > x) || (p->x < x && next2.x < x))) {
-                        skipped_points.push_back(next);
-                        continue;
+                    if (x == next.x) {
+                        const Point &next2 = p == (points.end()-2) ? *points.begin()
+                                           : p == (points.end()-1) ? *(points.begin()+1) : *(p+2);
+                        if ((p->x > x && next2.x > x) || (p->x < x && next2.x < x)) {
+                            skipped_points.push_back(next);
+                            continue;
+                        }
                     }
                     
                     // Calculate the y coordinate of this intersection.
@@ -198,7 +200,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
                 }
                 
                 // We're now going past the final point, so save it.
-                if (next.x > max_x2)
+                if (line_goes_right ? (next.x > max_x2) : (next.x < min_x2))
                     skipped_points.push_back(next);
             }
             
@@ -348,6 +350,12 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
             // the connection is straight and horizontal, but doesn't work well when the
             // connection is articulated and also has vertical parts.
             {
+                // TODO: here's where we should check for overextrusion. We should only add
+                // connection points while they are not generating vertical lines within the
+                // extrusion thickness of the main vertical lines. We should also check whether
+                // a previous run of this method occupied this polygon portion (derived infill
+                // patterns doing multiple runs at different angles generate overlapping connections).
+                // In both cases, we should just stop the connection and break the polyline here.
                 const size_t n = polyline.points.size();
                 polyline.append(b.next);
                 for (Points::iterator pit = polyline.points.begin()+n; pit != polyline.points.end(); ++pit)
