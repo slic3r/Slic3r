@@ -86,7 +86,7 @@ LayerRegion::process_external_surfaces(const Layer* lower_layer)
             BridgeDetector bd(
                 surface->expolygon,
                 lower_layer->slices,
-                this->flow(frInfill, this->layer()->height, true).scaled_width()
+                this->flow(frInfill, true).scaled_width()
             );
             
             #ifdef SLIC3R_DEBUG

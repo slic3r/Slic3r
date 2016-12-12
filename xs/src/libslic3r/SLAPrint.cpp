@@ -5,6 +5,7 @@
 #include "Geometry.hpp"
 #include "Surface.hpp"
 #include <iostream>
+#include <complex>
 #include <cstdio>
 
 namespace Slic3r {
@@ -161,7 +162,7 @@ SLAPrint::_infill_layer(size_t i, const Fill* _fill)
     Polygons internal = layer.slices;
     for (size_t j = 0; j < this->layers.size(); ++j) {
         const Layer &other = this->layers[j];
-        if (abs(other.print_z - layer.print_z) > shell_thickness) continue;
+        if (std::abs(other.print_z - layer.print_z) > shell_thickness) continue;
     
         if (j == 0 || j == this->layers.size()-1) {
             internal.clear();
