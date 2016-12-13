@@ -662,7 +662,7 @@ PrintObject::_make_perimeters()
         this->typed_slices = false;
         this->state.invalidate(posPrepareInfill);
     }
-    
+    std::cerr << "Done merging slices" << std::endl;
     // compare each layer to the one below, and mark those slices needing
     // one additional inner perimeter, like the top of domed objects-
     
@@ -695,13 +695,12 @@ PrintObject::_make_perimeters()
             const Flow ext_perimeter_flow       = layerm.flow(frExternalPerimeter);
             const coord_t ext_perimeter_width   = ext_perimeter_flow.scaled_width();
             const coord_t ext_perimeter_spacing = ext_perimeter_flow.scaled_spacing();
-            
             for (Surfaces::iterator slice = layerm.slices.surfaces.begin();
                 slice != layerm.slices.surfaces.end(); ++slice) {
                 while (true) {
                     // compute the total thickness of perimeters
                     const coord_t perimeters_thickness = ext_perimeter_width/2 + ext_perimeter_spacing/2
-                        + (region.config.perimeters-1 + region.config.extra_perimeters) * perimeter_spacing;
+                        + (region.config.perimeters-1 + region.config.extra_perimeters + slice->extra_perimeters) * perimeter_spacing;
                     
                     // define a critical area where we don't want the upper slice to fall into
                     // (it should either lay over our perimeters or outside this area)
