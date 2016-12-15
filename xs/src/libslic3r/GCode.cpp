@@ -666,7 +666,9 @@ GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
         }
     }
     
-    if (this->config.only_retract_when_crossing_perimeters && this->layer != NULL) {
+    if (this->config.only_retract_when_crossing_perimeters
+        && this->layer != NULL
+        && this->layer->lower_layer != NULL) {
         if (this->config.fill_density.value > 0
             && this->layer->any_internal_region_slice_contains(travel)) {
             /*  skip retraction if travel is contained in an internal slice *and*
