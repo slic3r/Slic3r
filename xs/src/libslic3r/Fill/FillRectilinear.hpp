@@ -16,61 +16,33 @@ public:
 protected:
 	virtual void _fill_surface_single(
 	    unsigned int                     thickness_layers,
-	    const std::pair<float, Point>   &direction, 
+	    const direction_t               &direction, 
 	    ExPolygon                       &expolygon, 
 	    Polylines*                      polylines_out);
-
-	coord_t _min_spacing;
-	coord_t _line_spacing;
-	// distance threshold for allowing the horizontal infill lines to be connected into a continuous path
-	coord_t _diagonal_distance;
-	// only for line infill
-	coord_t _line_oscillation;
-
-	// Enabled for the grid infill, disabled for the rectilinear and line infill.
-	virtual bool _horizontal_lines() const { return false; };
-
-	virtual Line _line(int i, coord_t x, coord_t y_min, coord_t y_max) const 
-		{ return Line(Point(x, y_min), Point(x, y_max)); };
-	
-	virtual bool _can_connect(coord_t dist_X, coord_t dist_Y) {
-	    return dist_X <= this->_diagonal_distance
-	        && dist_Y <= this->_diagonal_distance;
+    
+	void _fill_single_direction(ExPolygon expolygon, const direction_t &direction,
+	    coord_t x_shift, Polylines* out);
+    
+    struct IntersectionPoint : Point {
+        enum ipType { ipTypeLower, ipTypeUpper, ipTypeMiddle };
+        ipType type;
+        
+        // skipped contains the polygon points accumulated between the previous intersection
+        // point and the current one, in the original polygon winding order (does not contain
+        // either points)
+        Points skipped;
+        
+        // next contains a polygon portion connecting this point to the first intersection
+        // point found following the polygon in any direction but having:
+        // x > this->x || (x == this->x && y > this->y)
+        // (it doesn't contain *this but it contains the target intersection point)
+        Points next;
+        
+        IntersectionPoint() : Point() {};
+        IntersectionPoint(coord_t x, coord_t y, ipType _type) : Point(x,y), type(_type) {};
     };
-};
-
-class FillLine : public FillRectilinear
-{
-public:
-    virtual Fill* clone() const { return new FillLine(*this); };
-    virtual ~FillLine() {}
-
-protected:
-	virtual Line _line(int i, coord_t x, coord_t y_min, coord_t y_max) const {
-		coord_t osc = (i & 1) ? this->_line_oscillation : 0;
-		return Line(Point(x - osc, y_min), Point(x + osc, y_max));
-	};
-
-	virtual bool _can_connect(coord_t dist_X, coord_t dist_Y)
-	{
-	    coord_t TOLERANCE = 10 * SCALED_EPSILON;
-    	return (dist_X >= (this->_line_spacing - this->_line_oscillation) - TOLERANCE)
-        	&& (dist_X <= (this->_line_spacing + this->_line_oscillation) + TOLERANCE)
-        	&& (dist_Y <= this->_diagonal_distance);
-    };
-};
-
-class FillGrid : public FillRectilinear
-{
-public:
-    virtual Fill* clone() const { return new FillGrid(*this); };
-    virtual ~FillGrid() {}
-
-protected:
-	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
-    virtual float _layer_angle(size_t idx) const { return 0.f; }
-	// Flag for Slic3r::Fill::Rectilinear to fill both directions.
-	virtual bool _horizontal_lines() const { return true; };
+    typedef std::map<coord_t,IntersectionPoint> vertical_t; // <y,point>
+    typedef std::map<coord_t,vertical_t>        grid_t;     // <x,<y,point>>
 };
 
 class FillAlignedRectilinear : public FillRectilinear
@@ -82,6 +54,74 @@ public:
 protected:
 	// Keep the angle constant in all layers.
     virtual float _layer_angle(size_t idx) const { return 0.f; };
+};
+
+class FillGrid : public FillRectilinear
+{
+public:
+    virtual Fill* clone() const { return new FillGrid(*this); };
+    virtual ~FillGrid() {}
+
+protected:
+	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
+    virtual float _layer_angle(size_t idx) const { return 0.f; }
+	
+	virtual void _fill_surface_single(
+	    unsigned int                     thickness_layers,
+	    const std::pair<float, Point>   &direction, 
+	    ExPolygon                       &expolygon, 
+	    Polylines*                      polylines_out);
+};
+
+class FillTriangles : public FillRectilinear
+{
+public:
+    virtual Fill* clone() const { return new FillTriangles(*this); };
+    virtual ~FillTriangles() {}
+
+protected:
+	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
+    virtual float _layer_angle(size_t idx) const { return 0.f; }
+	
+	virtual void _fill_surface_single(
+	    unsigned int                     thickness_layers,
+	    const std::pair<float, Point>   &direction, 
+	    ExPolygon                       &expolygon, 
+	    Polylines*                      polylines_out);
+};
+
+class FillStars : public FillRectilinear
+{
+public:
+    virtual Fill* clone() const { return new FillStars(*this); };
+    virtual ~FillStars() {}
+
+protected:
+	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
+    virtual float _layer_angle(size_t idx) const { return 0.f; }
+	
+	virtual void _fill_surface_single(
+	    unsigned int                     thickness_layers,
+	    const std::pair<float, Point>   &direction, 
+	    ExPolygon                       &expolygon, 
+	    Polylines*                      polylines_out);
+};
+
+class FillCubic : public FillRectilinear
+{
+public:
+    virtual Fill* clone() const { return new FillCubic(*this); };
+    virtual ~FillCubic() {}
+
+protected:
+	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
+    virtual float _layer_angle(size_t idx) const { return 0.f; }
+	
+	virtual void _fill_surface_single(
+	    unsigned int                     thickness_layers,
+	    const std::pair<float, Point>   &direction, 
+	    ExPolygon                       &expolygon, 
+	    Polylines*                      polylines_out);
 };
 
 }; // namespace Slic3r

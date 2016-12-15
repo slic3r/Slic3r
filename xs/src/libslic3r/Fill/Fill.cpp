@@ -11,7 +11,6 @@
 #include "Fill3DHoneycomb.hpp"
 #include "FillPlanePath.hpp"
 #include "FillRectilinear.hpp"
-#include "FillRectilinear2.hpp"
 
 namespace Slic3r {
 
@@ -24,12 +23,9 @@ Fill::new_from_type(const InfillPattern type)
         case ip3DHoneycomb:         return new Fill3DHoneycomb();
         
         case ipRectilinear:         return new FillRectilinear();
-        case ipLine:                return new FillLine();
-        case ipGrid:                return new FillGrid();
         case ipAlignedRectilinear:  return new FillAlignedRectilinear();
+        case ipGrid:                return new FillGrid();
         
-        case ipRectilinear2:        return new FillRectilinear2();
-        case ipGrid2:               return new FillGrid2();
         case ipTriangles:           return new FillTriangles();
         case ipStars:               return new FillStars();
         case ipCubic:               return new FillCubic();
@@ -80,11 +76,10 @@ Fill::adjust_solid_spacing(const coord_t width, const coord_t distance)
 {
     assert(width >= 0);
     assert(distance > 0);
-    // floor(width / distance)
-    coord_t number_of_intervals = floor(width / distance);
-    coord_t distance_new = (number_of_intervals == 0)
-        ? distance
-        : (width / number_of_intervals);
+    const int number_of_intervals = floor(width / distance);
+    if (number_of_intervals == 0) return distance;
+    
+    coord_t distance_new = (width / number_of_intervals);
     
     const coordf_t factor = coordf_t(distance_new) / coordf_t(distance);
     assert(factor > 1. - 1e-5);
@@ -94,12 +89,14 @@ Fill::adjust_solid_spacing(const coord_t width, const coord_t distance)
     if (factor > factor_max)
         distance_new = floor((double)distance * factor_max + 0.5);
     
+    assert((distance_new * number_of_intervals) <= width);
+    
     return distance_new;
 }
 
 // Returns orientation of the infill and the reference point of the infill pattern.
 // For a normal print, the reference point is the center of a bounding box of the STL.
-std::pair<float, Point>
+Fill::direction_t
 Fill::_infill_direction(const Surface &surface) const
 {
     // set infill angle
@@ -133,7 +130,7 @@ Fill::_infill_direction(const Surface &surface) const
     }
 
     out_angle += float(M_PI/2.);
-    return std::pair<float, Point>(out_angle, out_shift);
+    return direction_t(out_angle, out_shift);
 }
 
 } // namespace Slic3r

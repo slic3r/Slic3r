@@ -13,10 +13,17 @@
 
     void set_bounding_box(BoundingBox *bbox)
         %code{% THIS->fill->bounding_box = *bbox; %};
+    
     void set_spacing(coordf_t spacing)
         %code{% THIS->fill->spacing = spacing; %};
     coordf_t spacing()
         %code{% RETVAL = THIS->fill->spacing; %};
+    
+    void set_endpoints_overlap(float overlap)
+        %code{% THIS->fill->endpoints_overlap = overlap; %};
+    float endpoints_overlap()
+        %code{% RETVAL = THIS->fill->endpoints_overlap; %};
+    
     void set_layer_id(size_t layer_id)
         %code{% THIS->fill->layer_id = layer_id; %};
     void set_z(coordf_t z)

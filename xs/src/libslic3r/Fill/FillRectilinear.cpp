@@ -2,138 +2,479 @@
 #include "../ExPolygon.hpp"
 #include "../PolylineCollection.hpp"
 #include "../Surface.hpp"
+#include <algorithm>
+#include <cmath>
 
 #include "FillRectilinear.hpp"
 
+//#define DEBUG_RECTILINEAR
+#ifdef DEBUG_RECTILINEAR
+    #include "../SVG.hpp"
+#endif
+
 namespace Slic3r {
 
-void FillRectilinear::_fill_surface_single(
-    unsigned int                    thickness_layers,
-    const std::pair<float, Point>   &direction,
-    ExPolygon                       &expolygon,
-    Polylines*                      polylines_out)
+void
+FillRectilinear::_fill_single_direction(ExPolygon expolygon,
+    const direction_t &direction, coord_t x_shift, Polylines* out)
 {
-    assert(this->density > 0.0001f && this->density <= 1.f);
-    
     // rotate polygons so that we can work with vertical lines here
     expolygon.rotate(-direction.first);
     
-    this->_min_spacing          = scale_(this->spacing);
-    this->_line_spacing         = coord_t(coordf_t(this->_min_spacing) / this->density);
-    this->_diagonal_distance    = this->_line_spacing * 2;
-    this->_line_oscillation     = this->_line_spacing - this->_min_spacing; // only for Line infill
+    assert(this->density > 0.0001f && this->density <= 1.f);
+    const coord_t min_spacing   = scale_(this->spacing);
+    coord_t line_spacing        = (double) min_spacing / this->density;
     
     // We ignore this->bounding_box because it doesn't matter; we're doing align_to_grid below.
     BoundingBox bounding_box    = expolygon.contour.bounding_box();
     
+    // Due to integer rounding, rotated polygons might not preserve verticality
+    // (i.e. when rotating by PI/2 two points having the same x coordinate 
+    // they might get different y coordinates), thus the first line will be skipped.
+    bounding_box.offset(-1);
+    
     // define flow spacing according to requested density
     if (this->density > 0.9999f && !this->dont_adjust) {
-        this->_line_spacing = this->adjust_solid_spacing(bounding_box.size().x, this->_line_spacing);
-        this->spacing = unscale(this->_line_spacing);
+        line_spacing = this->adjust_solid_spacing(bounding_box.size().x, line_spacing);
+        this->spacing = unscale(line_spacing);
     } else {
         // extend bounding box so that our pattern will be aligned with other layers
         // Transform the reference point to the rotated coordinate system.
+        Point p = direction.second.rotated(-direction.first);
+        p.x -= x_shift > 0 ? x_shift : (x_shift + line_spacing);
         bounding_box.min.align_to_grid(
-            Point(this->_line_spacing, this->_line_spacing), 
-            direction.second.rotated(-direction.first)
+            Point(line_spacing, line_spacing), 
+            p
         );
     }
-
-    // generate the basic pattern
-    const coord_t x_max = bounding_box.max.x + SCALED_EPSILON;
-    Lines lines;
-    for (coord_t x = bounding_box.min.x; x <= x_max; x += this->_line_spacing)
-        lines.push_back(this->_line(lines.size(), x, bounding_box.min.y, bounding_box.max.y));
-    if (this->_horizontal_lines()) {
-        const coord_t y_max = bounding_box.max.y + SCALED_EPSILON;
-        for (coord_t y = bounding_box.min.y; y <= y_max; y += this->_line_spacing)
-            lines.push_back(Line(Point(bounding_box.min.x, y), Point(bounding_box.max.x, y)));
-    }
-
-    // clip paths against a slightly larger expolygon, so that the first and last paths
-    // are kept even if the expolygon has vertical sides
-    // the minimum offset for preventing edge lines from being clipped is SCALED_EPSILON;
-    // however we use a larger offset to support expolygons with slightly skewed sides and 
-    // not perfectly straight
     
-    Polylines polylines = intersection_pl(
-        to_polylines(lines),
-        offset(expolygon, scale_(0.02)),
-        false
-    );
-
-    // FIXME Vojtech: This is only performed for horizontal lines, not for the vertical lines!
-    const float INFILL_OVERLAP_OVER_SPACING = 0.3f;
+    // Find all the polygons points intersecting the rectilinear vertical lines and store
+    // them in an std::map<> (grid) which orders them automatically by x and y.
+    // For each intersection point we store its position (upper/lower): upper means it's
+    // the upper endpoint of an intersection line, and vice versa.
+    // Whenever between two intersection points we find vertices of the original polygon,
+    // store them in the 'skipped' member of the latter point.
     
-    // How much to extend an infill path from expolygon outside?
-    const coord_t extra = coord_t(floor(this->_min_spacing * INFILL_OVERLAP_OVER_SPACING + 0.5f));
-    for (Polylines::iterator it_polyline = polylines.begin();
-        it_polyline != polylines.end(); ++ it_polyline) {
-        Point *first_point = &it_polyline->points.front();
-        Point *last_point  = &it_polyline->points.back();
-        if (first_point->y > last_point->y)
-            std::swap(first_point, last_point);
-        first_point->y -= extra;
-        last_point->y  += extra;
-    }
-
-    size_t n_polylines_out_old = polylines_out->size();
-    
-    // connect lines
-    if (!this->dont_connect && !polylines.empty()) { // prevent calling leftmost_point() on empty collections
-        // offset the expolygon by max(min_spacing/2, extra)
-        ExPolygon expolygon_off;
-        {
-            ExPolygons expolygons_off = offset_ex(expolygon, this->_min_spacing/2);
-            if (!expolygons_off.empty()) {
-                // When expanding a polygon, the number of islands could only shrink.
-                // Therefore the offset_ex shall generate exactly one expanded island
-                // for one input island.
-                assert(expolygons_off.size() == 1);
-                std::swap(expolygon_off, expolygons_off.front());
-            }
-        }
-        Polylines chained = PolylineCollection::chained_path_from(
-            STDMOVE(polylines), 
-            PolylineCollection::leftmost_point(polylines),
-            false // reverse allowed
-        );
-        bool first = true;
-        for (Polylines::iterator it_polyline = chained.begin(); it_polyline != chained.end(); ++ it_polyline) {
-            if (!first) {
-                // Try to connect the lines.
-                Points &pts_end = polylines_out->back().points;
-                const Point &first_point = it_polyline->points.front();
-                const Point &last_point = pts_end.back();
-                // Distance in X, Y.
-                const Vector distance = first_point.vector_to(last_point);
-                // TODO: we should also check that both points are on a fill_boundary to avoid 
-                // connecting paths on the boundaries of internal regions
-                if (this->_can_connect(std::abs(distance.x), std::abs(distance.y))
-                    && expolygon_off.contains(Line(last_point, first_point))) {
-                    // Append the polyline.
-                    append_to(pts_end, it_polyline->points);
+    grid_t grid;
+    {
+        const Polygons polygons = expolygon;
+        for (Polygons::const_iterator polygon = polygons.begin(); polygon != polygons.end(); ++polygon) {
+            const Points &points = polygon->points;
+            
+            // This vector holds the original polygon vertices found after the last intersection
+            // point. We'll flush it as soon as we find the next intersection point.
+            Points skipped_points;
+            
+            // This vector holds the coordinates of the intersection points found while
+            // looping through the polygon.
+            Points ips;
+            
+            for (Points::const_iterator p = points.begin(); p != points.end(); ++p) {
+                const Point &prev  = p == points.begin()   ? *(points.end()-1) : *(p-1);
+                const Point &next  = p == points.end()-1   ? *points.begin()   : *(p+1);
+                
+                // Does the p-next line belong to an intersection line?
+                if (p->x == next.x && ((p->x - bounding_box.min.x) % line_spacing) == 0) {
+                    if (p->y == next.y) continue;  // skip coinciding points
+                    vertical_t &v = grid[p->x];
+                    
+                    // Detect line direction.
+                    IntersectionPoint::ipType p_type = IntersectionPoint::ipTypeLower;
+                    IntersectionPoint::ipType n_type = IntersectionPoint::ipTypeUpper;
+                    if (p->y > next.y) std::swap(p_type, n_type);  // line goes downwards
+                    
+                    // Do we already have 'p' in our grid?
+                    vertical_t::iterator pit = v.find(p->y);
+                    if (pit != v.end()) {
+                        // Yes, we have it. If its not of the same type, it means it's
+                        // an intermediate point of a longer line. We store this information
+                        // for now and we'll remove it later.
+                        if (pit->second.type != p_type)
+                            pit->second.type = IntersectionPoint::ipTypeMiddle;
+                    } else {
+                        // Store the point.
+                        IntersectionPoint ip(p->x, p->y, p_type);
+                        v[p->y] = ip;
+                        ips.push_back(ip);
+                    }
+                    
+                    // Do we already have 'next' in our grid?
+                    pit = v.find(next.y);
+                    if (pit != v.end()) {
+                        // Yes, we have it. If its not of the same type, it means it's
+                        // an intermediate point of a longer line. We store this information
+                        // for now and we'll remove it later.
+                        if (pit->second.type != n_type)
+                            pit->second.type = IntersectionPoint::ipTypeMiddle;
+                    } else {
+                        // Store the point.
+                        IntersectionPoint ip(next.x, next.y, n_type);
+                        v[next.y] = ip;
+                        ips.push_back(ip);
+                    }
                     continue;
                 }
+                
+                // We're going to look for intersection points within this line.
+                // First, let's sort its x coordinates regardless of the original line direction.
+                const coord_t min_x = std::min(p->x, next.x);
+                const coord_t max_x = std::max(p->x, next.x);
+                
+                // Now find the leftmost intersection point belonging to the line.
+                const coord_t min_x2 = bounding_box.min.x + ceil((double) (min_x - bounding_box.min.x) / (double)line_spacing) * (double)line_spacing;
+                assert(min_x2 >= min_x);
+                
+                // In case this coordinate does not belong to this line, we have no intersection points.
+                if (min_x2 > max_x) {
+                    // Store the two skipped points and move on.
+                    skipped_points.push_back(*p);
+                    skipped_points.push_back(next);
+                    continue;
+                }
+                
+                // Find the rightmost intersection point belonging to the line.
+                const coord_t max_x2 = bounding_box.min.x + floor((double) (max_x - bounding_box.min.x) / (double) line_spacing) * (double)line_spacing;
+                assert(max_x2 <= max_x);
+                
+                // We're now going past the first point, so save it.
+                const bool line_goes_right = next.x > p->x;
+                if (line_goes_right ? (p->x < min_x2) : (p->x > max_x2))
+                    skipped_points.push_back(*p);
+                
+                // Now loop through those intersection points according the original direction
+                // of the line (because we need to store them in this order).
+                for (coord_t x = line_goes_right ? min_x2 : max_x2;
+                    x >= min_x && x <= max_x;
+                    x += line_goes_right ? +line_spacing : -line_spacing) {
+                    
+                    // Is this intersection an endpoint of the original line *and* is the
+                    // intersection just a tangent point? If so, just skip it.
+                    if (x == p->x && ((prev.x > x && next.x > x) || (prev.x < x && next.x < x))) {
+                        skipped_points.push_back(*p);
+                        continue;
+                    }
+                    if (x == next.x) {
+                        const Point &next2 = p == (points.end()-2) ? *points.begin()
+                                           : p == (points.end()-1) ? *(points.begin()+1) : *(p+2);
+                        if ((p->x > x && next2.x > x) || (p->x < x && next2.x < x)) {
+                            skipped_points.push_back(next);
+                            continue;
+                        }
+                    }
+                    
+                    // Calculate the y coordinate of this intersection.
+                    IntersectionPoint ip(
+                        x,
+                        p->y + double(next.y - p->y) * double(x - p->x) / double(next.x - p->x),
+                        line_goes_right ? IntersectionPoint::ipTypeLower : IntersectionPoint::ipTypeUpper
+                    );
+                    vertical_t &v = grid[ip.x];
+                    
+                    // Did we already find this point?
+                    // (We might have found it as the endpoint of a vertical line.)
+                    {
+                        vertical_t::iterator pit = v.find(ip.y);
+                        if (pit != v.end()) {
+                            // Yes, we have it. If its not of the same type, it means it's
+                            // an intermediate point of a longer line. We store this information
+                            // for now and we'll remove it later.
+                            if (pit->second.type != ip.type)
+                                pit->second.type = IntersectionPoint::ipTypeMiddle;
+                            continue;
+                        }
+                    }
+                    
+                    // Store the skipped polygon vertices along with this point.
+                    ip.skipped = skipped_points;
+                    skipped_points.clear();
+                    
+                    #ifdef DEBUG_RECTILINEAR
+                    printf("NEW POINT at %f,%f\n", unscale(ip.x), unscale(ip.y));
+                    for (Points::const_iterator it = ip.skipped.begin(); it != ip.skipped.end(); ++it)
+                        printf("  skipped: %f,%f\n", unscale(it->x), unscale(it->y));
+                    #endif
+                    
+                    // Store the point.
+                    v[ip.y] = ip;
+                    ips.push_back(ip);
+                }
+                
+                // We're now going past the final point, so save it.
+                if (line_goes_right ? (next.x > max_x2) : (next.x < min_x2))
+                    skipped_points.push_back(next);
             }
-            // The lines cannot be connected.
-            #if SLIC3R_CPPVER >= 11
-                polylines_out->push_back(std::move(*it_polyline));
-            #else
-                polylines_out->push_back(Polyline());
-                std::swap(polylines_out->back(), *it_polyline);
-            #endif
-            first = false;
+            
+            if (!this->dont_connect) {
+                // We'll now build connections between the vertical intersection lines.
+                // Each intersection point will be connected to the first intersection point
+                // found along the original polygon having a greater x coordinate (or the same
+                // x coordinate: think about two vertical intersection lines having the same x
+                // separated by a hole polygon: we'll connect them with the hole portion).
+                // We will sweep only from left to right, so we only need to build connections
+                // in this direction.
+                for (Points::const_iterator it = ips.begin(); it != ips.end(); ++it) {
+                    IntersectionPoint &ip   = grid[it->x][it->y];
+                    IntersectionPoint &next = it == ips.end()-1 ? grid[ips.begin()->x][ips.begin()->y] : grid[(it+1)->x][(it+1)->y];
+                    
+                    #ifdef DEBUG_RECTILINEAR
+                    printf("CONNECTING %f,%f to %f,%f\n",
+                        unscale(ip.x), unscale(ip.y),
+                        unscale(next.x), unscale(next.y)
+                    );
+                    #endif
+                    
+                    // We didn't flush the skipped_points vector after completing the loop above:
+                    // it now contains the polygon vertices between the last and the first
+                    // intersection points.
+                    if (it == ips.begin())
+                        ip.skipped.insert(ip.skipped.begin(), skipped_points.begin(), skipped_points.end());
+                
+                    if (ip.x <= next.x) {
+                        // Link 'ip' to 'next' --->
+                        if (ip.next.empty()) {
+                            ip.next = next.skipped;
+                            ip.next.push_back(next);
+                        }
+                    } else if (next.x < ip.x) {
+                        // Link 'next' to 'ip' --->
+                        if (next.next.empty()) {
+                            next.next = next.skipped;
+                            std::reverse(next.next.begin(), next.next.end());
+                            next.next.push_back(ip);
+                        }
+                    }
+                }
+            }
+            
+            // Do some cleanup: remove the 'skipped' points we used for building 
+            // connections and also remove the middle intersection points.
+            for (Points::const_iterator it = ips.begin(); it != ips.end(); ++it) {
+                vertical_t &v = grid[it->x];
+                IntersectionPoint &ip = v[it->y];
+                ip.skipped.clear();
+                if (ip.type == IntersectionPoint::ipTypeMiddle)
+                    v.erase(it->y);
+            }
         }
     }
-
-    // paths must be rotated back
-    for (Polylines::iterator it = polylines_out->begin() + n_polylines_out_old;
-        it != polylines_out->end(); ++ it) {
-        // No need to translate, the absolute position is irrelevant.
-        // it->translate(- direction.second.x, - direction.second.y);
-        it->rotate(direction.first);
+    
+    #ifdef DEBUG_RECTILINEAR
+    SVG svg("grid.svg");
+    svg.draw(expolygon);
+    
+    printf("GRID:\n");
+    for (grid_t::const_iterator it = grid.begin(); it != grid.end(); ++it) {
+        printf("x = %f:\n", unscale(it->first));
+        for (vertical_t::const_iterator v = it->second.begin(); v != it->second.end(); ++v) {
+            const IntersectionPoint &ip = v->second;
+            printf("   y = %f (%s, next = %f,%f, extra = %zu)\n", unscale(v->first),
+                ip.type == IntersectionPoint::ipTypeLower ? "lower"
+                : ip.type == IntersectionPoint::ipTypeMiddle ? "middle" : "upper",
+                (ip.next.empty() ? -1 : unscale(ip.next.back().x)),
+                (ip.next.empty() ? -1 : unscale(ip.next.back().y)),
+                (ip.next.empty() ? 0  : ip.next.size()-1)
+                );
+            svg.draw(ip, ip.type == IntersectionPoint::ipTypeLower ? "blue"
+                : ip.type == IntersectionPoint::ipTypeMiddle ? "yellow" : "red");
+        }
     }
+    printf("\n");
+    
+    svg.Close();
+    #endif
+    
+    // Calculate the extension of the vertical endpoints according to the configured value.
+    const coord_t extra_y = floor((double)min_spacing * this->endpoints_overlap + 0.5f);
+    
+    // Store the number of polygons already existing in the output container.
+    const size_t n_polylines_out_old = out->size();
+    
+    // Loop until we have no more vertical lines available.
+    while (!grid.empty()) {
+        // Get the first x coordinate.
+        vertical_t &v = grid.begin()->second;
+        
+        // If this x coordinate does not have any y coordinate, remove it.
+        if (v.empty()) {
+            grid.erase(grid.begin());
+            continue;
+        }
+        
+        // We expect every x coordinate to contain an even number of y coordinates 
+        // because they are the endpoints of vertical intersection lines:
+        // lower/upper, lower/upper etc.
+        assert(v.size() % 2 == 0);
+        
+        // Get the first lower point.
+        vertical_t::iterator it = v.begin();  // minimum x,y
+        IntersectionPoint p = it->second;
+        assert(p.type == IntersectionPoint::ipTypeLower);
+        
+        // Start our polyline.
+        Polyline polyline;
+        polyline.append(p);
+        polyline.points.back().y -= extra_y;
+        
+        while (true) {
+            // Complete the vertical line by finding the corresponding upper or lower point.
+            if (p.type == IntersectionPoint::ipTypeUpper) {
+                // find first point along c.x with y < c.y
+                assert(it != grid[p.x].begin());
+                --it;
+            } else {
+                // find first point along c.x with y > c.y
+                ++it;
+                assert(it != grid[p.x].end());
+            }
+            
+            // Append the point to our polyline.
+            IntersectionPoint b = it->second;
+            assert(b.type != p.type);
+            polyline.append(b);
+            polyline.points.back().y += extra_y * (b.type == IntersectionPoint::ipTypeUpper ? 1 : -1);
+
+            // Remove the two endpoints of this vertical line from the grid.
+            {
+                vertical_t &v = grid[p.x];
+                v.erase(p.y);
+                v.erase(it);
+                if (v.empty()) grid.erase(p.x);
+            }
+            // Do we have a connection starting from here?
+            // If not, stop the polyline.
+            if (b.next.empty())
+                break;
+            
+            // If we have a connection, append it to the polyline.
+            // We apply the y extension to the whole connection line. This works well when
+            // the connection is straight and horizontal, but doesn't work well when the
+            // connection is articulated and also has vertical parts.
+            {
+                // TODO: here's where we should check for overextrusion. We should only add
+                // connection points while they are not generating vertical lines within the
+                // extrusion thickness of the main vertical lines. We should also check whether
+                // a previous run of this method occupied this polygon portion (derived infill
+                // patterns doing multiple runs at different angles generate overlapping connections).
+                // In both cases, we should just stop the connection and break the polyline here.
+                const size_t n = polyline.points.size();
+                polyline.append(b.next);
+                for (Points::iterator pit = polyline.points.begin()+n; pit != polyline.points.end(); ++pit)
+                    pit->y += extra_y * (b.type == IntersectionPoint::ipTypeUpper ? 1 : -1);
+            }
+            
+            // Is the final point still available?
+            if (grid.count(b.next.back().x) == 0
+                || grid[b.next.back().x].count(b.next.back().y) == 0)
+                // We already used this point or we might have removed this
+                // point while building the grid because it's collinear (middle); in either
+                // cases the connection line from the previous one is legit and worth having.
+                break;
+            
+            // Retrieve the intersection point. The next loop will find the correspondent
+            // endpoint of the vertical line.
+            it = grid[ b.next.back().x ].find(b.next.back().y);
+            p  = it->second;
+            
+            // If the connection brought us to another x coordinate, we expect the point 
+            // type to be the same.
+            assert((p.type == b.type && p.x > b.x)
+                || (p.type != b.type && p.x == b.x));
+        }
+        
+        // Yay, we have a polyline!
+        if (polyline.is_valid())
+            out->push_back(polyline);
+    }
+    
+    // paths must be rotated back
+    for (Polylines::iterator it = out->begin() + n_polylines_out_old;
+        it != out->end(); ++it)
+        it->rotate(direction.first);
+}
+
+void FillRectilinear::_fill_surface_single(
+    unsigned int                    thickness_layers,
+    const direction_t               &direction,
+    ExPolygon                       &expolygon,
+    Polylines*                      out)
+{
+    this->_fill_single_direction(expolygon, direction, 0, out);
+}
+
+void FillGrid::_fill_surface_single(
+    unsigned int                    thickness_layers,
+    const direction_t               &direction,
+    ExPolygon                       &expolygon,
+    Polylines*                      out)
+{
+    FillGrid fill2 = *this;
+    fill2.density /= 2.;
+    
+    direction_t direction2 = direction;
+    direction2.first += PI/2;
+    fill2._fill_single_direction(expolygon, direction,  0, out);
+    fill2._fill_single_direction(expolygon, direction2, 0, out);
+}
+
+void FillTriangles::_fill_surface_single(
+    unsigned int                    thickness_layers,
+    const direction_t               &direction,
+    ExPolygon                       &expolygon,
+    Polylines*                      out)
+{
+    FillTriangles fill2 = *this;
+    fill2.density /= 3.;
+    direction_t direction2 = direction;
+    
+    fill2._fill_single_direction(expolygon, direction2, 0, out);
+    
+    direction2.first += PI/3;
+    fill2._fill_single_direction(expolygon, direction2, 0, out);
+    
+    direction2.first += PI/3;
+    fill2._fill_single_direction(expolygon, direction2, 0, out);
+}
+
+void FillStars::_fill_surface_single(
+    unsigned int                    thickness_layers,
+    const direction_t               &direction,
+    ExPolygon                       &expolygon,
+    Polylines*                      out)
+{
+    FillStars fill2 = *this;
+    fill2.density /= 3.;
+    direction_t direction2 = direction;
+    
+    fill2._fill_single_direction(expolygon, direction2, 0, out);
+    
+    direction2.first += PI/3;
+    fill2._fill_single_direction(expolygon, direction2, 0, out);
+    
+    direction2.first += PI/3;
+    const coord_t x_shift = 0.5 * scale_(fill2.spacing) / fill2.density;
+    fill2._fill_single_direction(expolygon, direction2, x_shift, out);
+}
+
+void FillCubic::_fill_surface_single(
+    unsigned int                    thickness_layers,
+    const direction_t               &direction,
+    ExPolygon                       &expolygon,
+    Polylines*                      out)
+{
+    FillCubic fill2 = *this;
+    fill2.density /= 3.;
+    direction_t direction2 = direction;
+    
+    const coord_t range = scale_(this->spacing / this->density);
+    const coord_t x_shift = abs(( (coord_t)(scale_(this->z) + range) % (coord_t)(range * 2)) - range);
+    
+    fill2._fill_single_direction(expolygon, direction2, -x_shift, out);
+    
+    direction2.first += PI/3;
+    fill2._fill_single_direction(expolygon, direction2, +x_shift, out);
+    
+    direction2.first += PI/3;
+    fill2._fill_single_direction(expolygon, direction2, -x_shift, out);
 }
 
 } // namespace Slic3r
