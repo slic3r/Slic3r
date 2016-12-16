@@ -701,7 +701,7 @@ PrintObject::_make_perimeters()
                 while (true) {
                     // compute the total thickness of perimeters
                     const coord_t perimeters_thickness = ext_perimeter_width/2 + ext_perimeter_spacing/2
-                        + (region.config.perimeters-1 + region.config.extra_perimeters) * perimeter_spacing;
+                        + (region.config.perimeters-1 + slice->extra_perimeters) * perimeter_spacing;
                     
                     // define a critical area where we don't want the upper slice to fall into
                     // (it should either lay over our perimeters or outside this area)
