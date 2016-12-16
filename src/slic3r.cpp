@@ -88,7 +88,7 @@ main(const int argc, const char **argv)
                 (*o)->scale_to_fit(cli_config.scale_to_fit.value);
             
             (*o)->scale(cli_config.scale.value);
-            (*o)->rotate(cli_config.rotate.value, Z);
+            (*o)->rotate(deg2rad(cli_config.rotate.value), Z);
         }
         
         // TODO: handle --merge
