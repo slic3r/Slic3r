@@ -31,7 +31,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("bed_temperature", coInt);
     def->label = "Other layers";
-    def->tooltip = "Bed temperature for layers after the first one. Set this to zero to disable bed temperature control commands in the output.";
+    def->tooltip = "Bed temperature for layers after the first one.";
     def->cli = "bed-temperature=i";
     def->full_label = "Bed temperature";
     def->min = 0;
