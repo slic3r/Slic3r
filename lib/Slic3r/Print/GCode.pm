@@ -162,7 +162,7 @@ sub export {
         if $self->config->cooling && $self->config->disable_fan_first_layers;
     
     # set bed temperature
-    if ((my $temp = $self->config->first_layer_bed_temperature) && $self->config->start_gcode !~ /M(?:190|140)/i) {
+    if ($self->config->has_heatbed && (my $temp = $self->config->first_layer_bed_temperature) && $self->config->start_gcode !~ /M(?:190|140)/i) {
         printf $fh $gcodegen->writer->set_bed_temperature($temp, 1);
     }
     
@@ -264,7 +264,7 @@ sub export {
                     # is triggered, so machine has more time to reach such temperatures
                     if ($layer->id == 0 && $finished_objects > 0) {
                         printf $fh $gcodegen->writer->set_bed_temperature($self->config->first_layer_bed_temperature),
-                            if $self->config->first_layer_bed_temperature;
+                            if $self->config->first_layer_bed_temperature && $self->config->has_heatbed;
                         $self->_print_first_layer_temperature(0);
                     }
                     $self->process_layer($layer, [$copy]);
@@ -375,7 +375,7 @@ sub process_layer {
                 if $temperature && $temperature != $self->config->get_at('first_layer_temperature', $extruder->id);
         }
         $gcode .= $self->_gcodegen->writer->set_bed_temperature($self->print->config->bed_temperature)
-            if $self->print->config->bed_temperature && $self->print->config->bed_temperature != $self->print->config->first_layer_bed_temperature;
+            if $self->config->has_heatbed && $self->print->config->bed_temperature && $self->print->config->bed_temperature != $self->print->config->first_layer_bed_temperature;
         $self->_second_layer_things_done(1);
     }
     
