@@ -78,7 +78,30 @@ sub export_gcode {
     # output everything to a G-code file
     my $output_file = $self->expanded_output_filepath($params{output_file});
     $self->status_cb->(90, "Exporting G-code" . ($output_file ? " to $output_file" : ""));
-    $self->write_gcode($params{output_fh} || $output_file);
+    
+    {
+        # open output gcode file if we weren't supplied a file-handle
+        my ($fh, $tempfile);
+        if ($params{output_fh}) {
+            $fh = $params{output_fh};
+        } else {
+            $tempfile = "$output_file.tmp";
+            Slic3r::open(\$fh, ">", $tempfile)
+                or die "Failed to open $tempfile for writing\n";
+    
+            # enable UTF-8 output since user might have entered Unicode characters in fields like notes
+            binmode $fh, ':utf8';
+        }
+
+        Slic3r::Print::GCode->new(
+            print   => $self,
+            fh      => $fh,
+        )->export;
+
+        # close our gcode file
+        close $fh;
+        rename $tempfile, $output_file if $tempfile;
+    }
     
     # run post-processing scripts
     if (@{$self->config->post_process}) {
@@ -387,39 +410,6 @@ sub make_brim {
     ), reverse @{union_pt_chained(\@loops)});
     
     $self->set_step_done(STEP_BRIM);
-}
-
-sub write_gcode {
-    my $self = shift;
-    my ($file) = @_;
-    
-    my $tempfile;
-    
-    # open output gcode file if we weren't supplied a file-handle
-    my $fh;
-    if (ref $file eq 'IO::Scalar') {
-        $fh = $file;
-    } else {
-        $tempfile = "$file.tmp";
-        Slic3r::open(\$fh, ">", $tempfile)
-            or die "Failed to open $tempfile for writing\n";
-        
-        # enable UTF-8 output since user might have entered Unicode characters in fields like notes
-        binmode $fh, ':utf8';
-    }
-    
-    my $exporter = Slic3r::Print::GCode->new(
-        print   => $self,
-        fh      => $fh,
-    );
-    $exporter->export;
-    
-    # close our gcode file
-    close $fh;
-    
-    if ($tempfile) {
-        rename $tempfile, $file;
-    }
 }
 
 # this method will return the supplied input file path after expanding its
