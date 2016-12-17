@@ -240,6 +240,23 @@ sub new {
         $filename = Wx::GetTextFromUser("Save to printer with the following name:",
             "OctoPrint", $filename, $self);
         
+        my $process_dialog = Wx::ProgressDialog->new('Querying OctoPrint…', "Checking whether file already exists…", 100, $self, 0);
+        $process_dialog->Pulse;
+        
+        my $ua = LWP::UserAgent->new;
+        $ua->timeout(5);
+        my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
+        $process_dialog->Destroy;
+        if ($res->is_success) {
+            if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
+                my $dialog = Wx::MessageDialog->new($self,
+                    "It looks like a file with the same name already exists in the server. "
+                        . "Shall I overwrite it?",
+                    'OctoPrint', wxICON_WARNING | wxYES | wxNO);
+                return if $dialog->ShowModal() == wxID_NO;
+            }
+        }
+        
         my $dialog = Wx::MessageDialog->new($self,
             "Shall I start the print after uploading the file?",
             'OctoPrint', wxICON_QUESTION | wxYES | wxNO);
