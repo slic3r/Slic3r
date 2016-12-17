@@ -75,14 +75,14 @@ LayerRegion::process_external_surfaces(const Layer* lower_layer)
     for (Surfaces::const_iterator surface = surfaces.begin(); surface != surfaces.end(); ++surface) {
         if (!surface->is_bottom()) continue;
         
-        ExPolygons grown = offset_ex(surface->expolygon, +margin);
+        const ExPolygons grown = offset_ex(surface->expolygon, +margin);
         
         /*  detect bridge direction before merging grown surfaces otherwise adjacent bridges
             would get merged into a single one while they need different directions
             also, supply the original expolygon instead of the grown one, because in case
             of very thin (but still working) anchors, the grown expolygon would go beyond them */
         double angle = -1;
-        if (lower_layer != NULL) {
+        if (lower_layer != NULL && surface->is_bridge()) {
             BridgeDetector bd(
                 surface->expolygon,
                 lower_layer->slices,
@@ -97,8 +97,7 @@ LayerRegion::process_external_surfaces(const Layer* lower_layer)
                 angle = bd.angle;
             
                 if (this->layer()->object()->config.support_material) {
-                    Polygons coverage = bd.coverage();
-                    this->bridged.insert(this->bridged.end(), coverage.begin(), coverage.end());
+                    append_to(this->bridged, bd.coverage());
                     this->unsupported_bridge_edges.append(bd.unsupported_edges()); 
                 }
             }

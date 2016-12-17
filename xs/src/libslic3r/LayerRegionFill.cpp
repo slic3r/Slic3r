@@ -44,7 +44,7 @@ LayerRegion::make_fill()
         Polygons polygons_bridged;
         polygons_bridged.reserve(this->fill_surfaces.surfaces.size());
         for (Surfaces::const_iterator it = this->fill_surfaces.surfaces.begin(); it != this->fill_surfaces.surfaces.end(); ++it)
-            if (it->bridge_angle >= 0)
+            if (it->is_bridge() && it->bridge_angle >= 0)
                 append_to(polygons_bridged, (Polygons)*it);
         
         // group surfaces by distinct properties (equal surface_type, thickness, thickness_layers, bridge_angle)
@@ -53,20 +53,20 @@ LayerRegion::make_fill()
         std::vector<SurfacesConstPtr> groups;
         this->fill_surfaces.group(&groups);
         
-        // merge compatible groups (we can generate continuous infill for them)
+        // merge compatible solid groups (we can generate continuous infill for them)
         {
             // cache flow widths and patterns used for all solid groups
             // (we'll use them for comparing compatible groups)
             std::vector<SurfaceGroupAttrib> group_attrib(groups.size());
             for (size_t i = 0; i < groups.size(); ++i) {
-                // we can only merge solid non-bridge surfaces, so discard
-                // non-solid surfaces
                 const Surface &surface = *groups[i].front();
-                if (surface.is_solid() && (!surface.is_bridge() || this->layer()->id() == 0)) {
-                    group_attrib[i].is_solid = true;
-                    group_attrib[i].fw = (surface.surface_type == stTop) ? top_solid_infill_flow.width : solid_infill_flow.width;
-                    group_attrib[i].pattern = surface.is_external() ? this->region()->config.external_fill_pattern.value : ipRectilinear;
-                }
+                // we can only merge solid non-bridge surfaces, so discard
+                // non-solid or bridge surfaces
+                if (!surface.is_solid() || surface.is_bridge()) continue;
+                
+                group_attrib[i].is_solid = true;
+                group_attrib[i].fw = (surface.surface_type == stTop) ? top_solid_infill_flow.width : solid_infill_flow.width;
+                group_attrib[i].pattern = surface.is_external() ? this->region()->config.external_fill_pattern.value : ipRectilinear;
             }
             // Loop through solid groups, find compatible groups and append them to this one.
             for (size_t i = 0; i < groups.size(); ++i) {
@@ -85,19 +85,19 @@ LayerRegion::make_fill()
             }
         }
         
-        // Give priority to bridges. Process the bridges in the first round, the rest of the surfaces in the 2nd round.
+        // Give priority to oriented bridges. Process the bridges in the first round, the rest of the surfaces in the 2nd round.
         for (size_t round = 0; round < 2; ++ round) {
             for (std::vector<SurfacesConstPtr>::const_iterator it_group = groups.begin(); it_group != groups.end(); ++ it_group) {
                 const SurfacesConstPtr &group = *it_group;
-                bool is_bridge = group.front()->bridge_angle >= 0;
-                if (is_bridge != (round == 0))
+                const bool is_oriented_bridge = group.front()->is_bridge() && group.front()->bridge_angle >= 0;
+                if (is_oriented_bridge != (round == 0))
                     continue;
                 
                 // Make a union of polygons defining the infiill regions of a group, use a safety offset.
                 Polygons union_p = union_(to_polygons(group), true);
                 
                 // Subtract surfaces having a defined bridge_angle from any other, use a safety offset.
-                if (!polygons_bridged.empty() && !is_bridge)
+                if (!is_oriented_bridge && !polygons_bridged.empty())
                     union_p = diff(union_p, polygons_bridged, true);
                 
                 // subtract any other surface already processed
