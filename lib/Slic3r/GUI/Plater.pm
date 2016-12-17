@@ -582,6 +582,7 @@ sub load_file {
     my $model = eval { Slic3r::Model->read_from_file($input_file) };
     Slic3r::GUI::show_error($self, $@) if $@;
     
+    my @obj_idx = ();
     if (defined $model) {
         if ($model->looks_like_multipart_object) {
             my $dialog = Wx::MessageDialog->new($self,
@@ -593,11 +594,13 @@ sub load_file {
                 $model->convert_multipart_object;
             }
         }
-        $self->load_model_objects(@{$model->objects});
+        @obj_idx = $self->load_model_objects(@{$model->objects});
         $self->statusbar->SetStatusText("Loaded " . basename($input_file));
     }
     
     $process_dialog->Destroy;
+    
+    return @obj_idx;
 }
 
 sub load_model_objects {
@@ -679,6 +682,8 @@ sub load_model_objects {
     $self->object_list_changed;
     
     $self->schedule_background_process;
+    
+    return @obj_idx;
 }
 
 sub bed_centerf {
@@ -1391,6 +1396,34 @@ sub export_stl {
     $self->statusbar->SetStatusText("STL file exported to $output_file");
 }
 
+sub reload_from_disk {
+    my ($self) = @_;
+    
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    return if !$model_object->input_file
+        || !-e $model_object->input_file;
+    
+    my @obj_idx = $self->load_file($model_object->input_file);
+    return if !@obj_idx;
+    
+    foreach my $new_obj_idx (@obj_idx) {
+        my $o = $self->{model}->objects->[$new_obj_idx];
+        $o->clear_instances;
+        $o->add_instance($_) for @{$model_object->instances};
+        
+        if ($o->volumes_count == $model_object->volumes_count) {
+            for my $i (0..($o->volumes_count-1)) {
+                $o->get_volume($i)->config->apply($model_object->get_volume($i)->config);
+            }
+        }
+    }
+    
+    $self->remove($obj_idx);
+}
+
 sub export_object_stl {
     my $self = shift;
     
@@ -1879,6 +1912,9 @@ sub object_menu {
         $self->object_settings_dialog;
     }, undef, 'cog.png');
     $menu->AppendSeparator();
+    $frame->_append_menu_item($menu, "Reload from Disk", 'Reload the selected file from Disk', sub {
+        $self->reload_from_disk;
+    }, undef, 'arrow_refresh.png');
     $frame->_append_menu_item($menu, "Export object as STL…", 'Export this single object as STL file', sub {
         $self->export_object_stl;
     }, undef, 'brick_go.png');

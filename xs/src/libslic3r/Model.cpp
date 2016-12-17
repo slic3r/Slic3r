@@ -717,6 +717,8 @@ ModelObject::cut(Axis axis, coordf_t z, Model* model) const
     ModelObject* lower = model->add_object(*this);
     upper->clear_volumes();
     lower->clear_volumes();
+    upper->input_file = "";
+    lower->input_file = "";
     
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         ModelVolume* volume = *v;
@@ -772,6 +774,7 @@ ModelObject::split(ModelObjectPtrs* new_objects)
         (*mesh)->repair();
         
         ModelObject* new_object = this->model->add_object(*this, false);
+        new_object->input_file  = "";
         ModelVolume* new_volume = new_object->add_volume(**mesh);
         new_volume->name        = volume->name;
         new_volume->config      = volume->config;
