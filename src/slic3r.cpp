@@ -89,7 +89,10 @@ main(const int argc, const char **argv)
             if (cli_config.scale_to_fit.is_positive_volume())
                 (*o)->scale_to_fit(cli_config.scale_to_fit.value);
             
+            // TODO: honor option order?
             (*o)->scale(cli_config.scale.value);
+            (*o)->rotate(Geometry::deg2rad(cli_config.rotate_x.value), X);
+            (*o)->rotate(Geometry::deg2rad(cli_config.rotate_y.value), Y);
             (*o)->rotate(Geometry::deg2rad(cli_config.rotate.value), Z);
         }
         

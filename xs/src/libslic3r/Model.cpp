@@ -617,6 +617,7 @@ ModelObject::scale(float factor)
 void
 ModelObject::scale(const Pointf3 &versor)
 {
+    if (versor.x == 1 && versor.y == 1 && versor.z == 1) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->mesh.scale(versor);
     }
@@ -643,6 +644,7 @@ ModelObject::scale_to_fit(const Sizef3 &size)
 void
 ModelObject::rotate(float angle, const Axis &axis)
 {
+    if (angle == 0) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->mesh.rotate(angle, axis);
     }

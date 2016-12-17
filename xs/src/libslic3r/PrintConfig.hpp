@@ -600,6 +600,8 @@ class CLIConfig
     ConfigOptionStrings             load;
     ConfigOptionString              output;
     ConfigOptionFloat               rotate;
+    ConfigOptionFloat               rotate_x;
+    ConfigOptionFloat               rotate_y;
     ConfigOptionString              save;
     ConfigOptionFloat               scale;
     ConfigOptionPoint3              scale_to_fit;
@@ -621,6 +623,8 @@ class CLIConfig
         OPT_PTR(load);
         OPT_PTR(output);
         OPT_PTR(rotate);
+        OPT_PTR(rotate_x);
+        OPT_PTR(rotate_y);
         OPT_PTR(save);
         OPT_PTR(scale);
         OPT_PTR(scale_to_fit);

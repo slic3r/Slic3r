@@ -1464,6 +1464,18 @@ CLIConfigDef::CLIConfigDef()
     def->cli = "rotate";
     def->default_value = new ConfigOptionFloat(0);
     
+    def = this->add("rotate_x", coFloat);
+    def->label = "Rotate around X";
+    def->tooltip = "Rotation angle around the X axis in degrees (0-360, default: 0).";
+    def->cli = "rotate-x";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("rotate_y", coFloat);
+    def->label = "Rotate around Y";
+    def->tooltip = "Rotation angle around the Y axis in degrees (0-360, default: 0).";
+    def->cli = "rotate-y";
+    def->default_value = new ConfigOptionFloat(0);
+    
     def = this->add("save", coString);
     def->label = "Save config file";
     def->tooltip = "Save configuration to the specified file.";
