@@ -12,9 +12,9 @@ BEGIN {
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_auto_abbrev);
 use List::Util qw(first);
-use POSIX qw(setlocale LC_NUMERIC);
+use POSIX qw(setlocale LC_NUMERIC ceil);
 use Slic3r;
-use Slic3r::Geometry qw(deg2rad);
+use Slic3r::Geometry qw(epsilon X Y Z deg2rad);
 use Time::HiRes qw(gettimeofday tv_interval);
 $|++;
 binmode STDOUT, ':utf8';
@@ -42,6 +42,7 @@ my %cli_options = ();
         'merge|m'               => \$opt{merge},
         'repair'                => \$opt{repair},
         'cut=f'                 => \$opt{cut},
+        'cut-grid=s'            => \$opt{cut_grid},
         'split'                 => \$opt{split},
         'info'                  => \$opt{info},
         
@@ -150,13 +151,56 @@ if (@ARGV) {  # slicing from command line
             $mesh->translate(0, 0, -$mesh->bounding_box->z_min);
             my $upper = Slic3r::TriangleMesh->new;
             my $lower = Slic3r::TriangleMesh->new;
-            $mesh->cut($opt{cut}, $upper, $lower);
+            $mesh->cut(Z, $opt{cut}, $upper, $lower);
             $upper->repair;
             $lower->repair;
             $upper->write_ascii("${file}_upper.stl")
                 if $upper->facets_count > 0;
             $lower->write_ascii("${file}_lower.stl")
                 if $lower->facets_count > 0;
+        }
+        exit;
+    }
+    
+    if ($opt{cut_grid}) {
+        my ($grid_x, $grid_y) = split /[,x]/, $opt{cut_grid}, 2;
+        foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
+            my $model = Slic3r::Model->read_from_file($file);
+            $model->add_default_instances;
+            my $mesh = $model->mesh;
+            my $bb = $mesh->bounding_box;
+            $mesh->translate(0, 0, -$bb->z_min);
+            
+            my $x_parts = ceil(($bb->size->x - epsilon)/$grid_x);
+            my $y_parts = ceil(($bb->size->y - epsilon)/$grid_y); #--
+            
+            for my $i (1..$x_parts) {
+                my $this = Slic3r::TriangleMesh->new;
+                if ($i == $x_parts) {
+                    $this = $mesh;
+                } else {
+                    my $next = Slic3r::TriangleMesh->new;
+                    $mesh->cut(X, $bb->x_min + ($grid_x * $i), $next, $this);
+                    $this->repair;
+                    $next->repair;
+                    $mesh = $next;
+                }
+                
+                for my $j (1..$y_parts) {
+                    my $tile = Slic3r::TriangleMesh->new;
+                    if ($j == $y_parts) {
+                        $tile = $this;
+                    } else {
+                        my $next = Slic3r::TriangleMesh->new;
+                        $this->cut(Y, $bb->y_min + ($grid_y * $j), $next, $tile);
+                        $tile->repair;
+                        $next->repair;
+                        $this = $next;
+                    }
+                    $tile->write_ascii("${file}_${i}_${j}.stl");
+                }
+            }
         }
         exit;
     }

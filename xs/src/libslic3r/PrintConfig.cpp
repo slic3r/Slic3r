@@ -1404,6 +1404,12 @@ CLIConfigDef::CLIConfigDef()
     def->cli = "cut";
     def->default_value = new ConfigOptionFloat(0);
     
+    def = this->add("cut_grid", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model in the XY plane into tiles of the specified max size.";
+    def->cli = "cut-grid";
+    def->default_value = new ConfigOptionPoint();
+    
     def = this->add("cut_x", coFloat);
     def->label = "Cut";
     def->tooltip = "Cut model at the given X.";

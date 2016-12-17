@@ -221,13 +221,19 @@ TriangleMesh::slice_at(axis, z)
         RETVAL
 
 void
-TriangleMesh::cut(z, upper, lower)
+TriangleMesh::cut(axis, z, upper, lower)
+    Axis            axis
     float           z;
     TriangleMesh*   upper;
     TriangleMesh*   lower;
     CODE:
-        TriangleMeshSlicer<Z> mslicer(THIS);
-        mslicer.cut(z, upper, lower);
+        if (axis == X) {
+            TriangleMeshSlicer<X>(THIS).cut(z, upper, lower);
+        } else if (axis == Y) {
+            TriangleMeshSlicer<Y>(THIS).cut(z, upper, lower);
+        } else {
+            TriangleMeshSlicer<Z>(THIS).cut(z, upper, lower);
+        }
 
 std::vector<double>
 TriangleMesh::bb3()

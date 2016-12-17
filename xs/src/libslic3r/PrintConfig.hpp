@@ -590,6 +590,7 @@ class CLIConfig
 {
     public:
     ConfigOptionFloat               cut;
+    ConfigOptionPoint               cut_grid;
     ConfigOptionFloat               cut_x;
     ConfigOptionFloat               cut_y;
     ConfigOptionBool                export_obj;
@@ -610,6 +611,7 @@ class CLIConfig
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(cut);
+        OPT_PTR(cut_grid);
         OPT_PTR(cut_x);
         OPT_PTR(cut_y);
         OPT_PTR(export_obj);
