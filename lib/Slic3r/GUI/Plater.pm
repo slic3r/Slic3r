@@ -236,7 +236,16 @@ sub new {
         $self->{print_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
     });
     EVT_BUTTON($self, $self->{btn_send_gcode}, sub {
-        $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
+        my $filename = basename($self->{print}->expanded_output_filepath($main::opt{output}));
+        $filename = Wx::GetTextFromUser("Save to printer with the following name:",
+            "OctoPrint", $filename, $self);
+        
+        my $dialog = Wx::MessageDialog->new($self,
+            "Shall I start the print after uploading the file?",
+            'OctoPrint', wxICON_QUESTION | wxYES | wxNO);
+        $self->{send_gcode_file_print} = ($dialog->ShowModal() == wxID_YES);
+        
+        $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/$filename");
     });
     EVT_BUTTON($self, $self->{btn_export_stl}, \&export_stl);
     
@@ -1340,6 +1349,7 @@ sub send_gcode {
             # OctoPrint doesn't like Windows paths so we use basename()
             # Also, since we need to read from filesystem we process it through encode_path()
             file => [ $path, basename($path) ],
+            print => $self->{send_gcode_file} ? 1 : 0,
         ],
     );
     
