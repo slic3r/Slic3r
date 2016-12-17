@@ -61,15 +61,7 @@ typedef struct {
 static_assert(sizeof(stl_vertex) == 12, "size of stl_vertex incorrect");
 #endif
 
-typedef struct {
-  float x;
-  float y;
-  float z;
-} stl_normal;
-
-#ifdef static_assert
-static_assert(sizeof(stl_normal) == 12, "size of stl_normal incorrect");
-#endif
+typedef stl_vertex stl_normal;
 
 typedef char stl_extra[2];
 

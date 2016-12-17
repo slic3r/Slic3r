@@ -660,6 +660,24 @@ ModelObject::mirror(const Axis &axis)
     this->invalidate_bounding_box();
 }
 
+void
+ModelObject::transform_by_instance(const ModelInstance &instance, bool dont_translate)
+{
+    this->rotate(instance.rotation, Z);
+    this->scale(instance.scaling_factor);
+    if (!dont_translate)
+        this->translate(instance.offset.x, instance.offset.y, 0);
+    
+    for (ModelInstancePtrs::iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
+        (*i)->rotation -= instance.rotation;
+        (*i)->scaling_factor /= instance.scaling_factor;
+        if (!dont_translate)
+            (*i)->offset.translate(-instance.offset.x, -instance.offset.y);
+    }
+    this->origin_translation = Pointf3(0,0,0);
+    this->invalidate_bounding_box();
+}
+
 size_t
 ModelObject::materials_count() const
 {
@@ -692,7 +710,7 @@ ModelObject::needed_repair() const
 }
 
 void
-ModelObject::cut(coordf_t z, Model* model) const
+ModelObject::cut(Axis axis, coordf_t z, Model* model) const
 {
     // clone this one to duplicate instances, materials etc.
     ModelObject* upper = model->add_object(*this);
@@ -707,10 +725,16 @@ ModelObject::cut(coordf_t z, Model* model) const
             upper->add_volume(*volume);
             lower->add_volume(*volume);
         } else {
-            TriangleMeshSlicer tms(&volume->mesh);
             TriangleMesh upper_mesh, lower_mesh;
-            // TODO: shouldn't we use object bounding box instead of per-volume bb?
-            tms.cut(z + volume->mesh.bounding_box().min.z, &upper_mesh, &lower_mesh);
+            
+            if (axis == X) {
+                TriangleMeshSlicer<X>(&volume->mesh).cut(z, &upper_mesh, &lower_mesh);
+            } else if (axis == Y) {
+                TriangleMeshSlicer<Y>(&volume->mesh).cut(z, &upper_mesh, &lower_mesh);
+            } else if (axis == Z) {
+                TriangleMeshSlicer<Z>(&volume->mesh).cut(z, &upper_mesh, &lower_mesh);
+            }
+            
             upper_mesh.repair();
             lower_mesh.repair();
             upper_mesh.reset_repair_stats();

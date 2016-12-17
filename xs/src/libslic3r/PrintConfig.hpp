@@ -589,6 +589,9 @@ class CLIConfig
     : public virtual ConfigBase, public StaticConfig
 {
     public:
+    ConfigOptionFloat               cut;
+    ConfigOptionFloat               cut_x;
+    ConfigOptionFloat               cut_y;
     ConfigOptionBool                export_obj;
     ConfigOptionBool                export_pov;
     ConfigOptionBool                export_svg;
@@ -606,6 +609,9 @@ class CLIConfig
     };
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(cut);
+        OPT_PTR(cut_x);
+        OPT_PTR(cut_y);
         OPT_PTR(export_obj);
         OPT_PTR(export_pov);
         OPT_PTR(export_svg);

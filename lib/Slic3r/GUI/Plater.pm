@@ -812,15 +812,12 @@ sub rotate {
     
     if ($axis == Z) {
         my $new_angle = deg2rad($angle);
-        $_->set_rotation($new_angle) for @{ $model_object->instances };
+        $_->set_rotation($_->rotation + $new_angle) for @{ $model_object->instances };
         $object->transform_thumbnail($self->{model}, $obj_idx);
     } else {
         # rotation around X and Y needs to be performed on mesh
         # so we first apply any Z rotation
-        if ($model_instance->rotation != 0) {
-            $model_object->rotate($model_instance->rotation, Z);
-            $_->set_rotation(0) for @{ $model_object->instances };
-        }
+        $model_object->transform_by_instance($model_instance, 1);
         $model_object->rotate(deg2rad($angle), $axis);
         
         # realign object to Z = 0
@@ -847,10 +844,7 @@ sub mirror {
     my $model_instance = $model_object->instances->[0];
     
     # apply Z rotation before mirroring
-    if ($model_instance->rotation != 0) {
-        $model_object->rotate($model_instance->rotation, Z);
-        $_->set_rotation(0) for @{ $model_object->instances };
-    }
+    $model_object->transform_by_instance($model_instance, 1);
     
     $model_object->mirror($axis);
     $model_object->update_bounding_box;
@@ -904,10 +898,7 @@ sub changescale {
         }
         
         # apply Z rotation before scaling
-        if ($model_instance->rotation != 0) {
-            $model_object->rotate($model_instance->rotation, Z);
-            $_->set_rotation(0) for @{ $model_object->instances };
-        }
+        $model_object->transform_by_instance($model_instance, 1);
         
         my $versor = [1,1,1];
         $versor->[$axis] = $scale/100;

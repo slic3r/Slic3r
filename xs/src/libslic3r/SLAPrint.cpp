@@ -49,7 +49,7 @@ SLAPrint::slice()
             slice_z.push_back(this->layers[i].slice_z);
         
         std::vector<ExPolygons> slices;
-        TriangleMeshSlicer(&mesh).slice(slice_z, &slices);
+        TriangleMeshSlicer<Z>(&mesh).slice(slice_z, &slices);
         
         for (size_t i = 0; i < slices.size(); ++i)
             this->layers[i].slices.expolygons = slices[i];

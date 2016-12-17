@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use utf8;
 
-use Slic3r::Geometry qw(PI X);
+use Slic3r::Geometry qw(PI X Y Z);
 use Wx qw(wxTheApp :dialog :id :misc :sizer wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_CLOSE EVT_BUTTON);
 use base 'Wx::Dialog';
@@ -24,12 +24,16 @@ sub new {
     # Note whether the window was already closed, so a pending update is not executed.
     $self->{already_closed} = 0;
     
+    $self->{model_object}->transform_by_instance($self->{model_object}->get_instance(0), 1);
+    
     # cut options
+    my $size_z = $self->{model_object}->instance_bounding_box(0)->size->z;
     $self->{cut_options} = {
-        z               => 0,
-        keep_upper      => 1,
+        axis            => Z,
+        z               => $size_z/2,
+        keep_upper      => 0,
         keep_lower      => 1,
-        rotate_lower    => 1,
+        rotate_lower    => 0,
         preview         => 1,
     };
     
@@ -55,12 +59,20 @@ sub new {
         label_width  => 120,
     );
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'axis',
+        type        => 'select',
+        label       => 'Axis',
+        labels      => ['X','Y','Z'],
+        values      => [X,Y,Z],
+        default     => $self->{cut_options}{axis},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'z',
         type        => 'slider',
         label       => 'Z',
         default     => $self->{cut_options}{z},
         min         => 0,
-        max         => $self->{model_object}->bounding_box->size->z,
+        max         => $size_z,
         full_width  => 1,
     ));
     {
@@ -133,10 +145,10 @@ sub new {
 
         # Adjust position / orientation of the split object halves.
         if ($self->{new_model_objects}{lower}) {
-            if ($self->{cut_options}{rotate_lower}) {
+            if ($self->{cut_options}{rotate_lower} && $self->{cut_options}{axis} == Z) {
                 $self->{new_model_objects}{lower}->rotate(PI, X);
-                $self->{new_model_objects}{lower}->center_around_origin;  # align to Z = 0
             }
+            $self->{new_model_objects}{lower}->center_around_origin;  # align to Z = 0
         }
         if ($self->{new_model_objects}{upper}) {
             $self->{new_model_objects}{upper}->center_around_origin;  # align to Z = 0
@@ -165,7 +177,15 @@ sub new {
 sub _mesh_slice_z_pos
 {
     my ($self) = @_;
-    return $self->{cut_options}{z} / $self->{model_object}->instances->[0]->scaling_factor;
+    
+    my $bb = $self->{model_object}->instance_bounding_box(0);
+    my $z = $self->{cut_options}{axis} == X ? $bb->x_min
+          : $self->{cut_options}{axis} == Y ? $bb->y_min
+          : $bb->z_min;
+    
+    $z += $self->{cut_options}{z} / $self->{model_object}->instances->[0]->scaling_factor;
+    
+    return $z;
 }
 
 # Only perform live preview if just a single part of the object shall survive.
@@ -184,8 +204,8 @@ sub _perform_cut
     return if $self->{mesh_cut_valid};
 
     my $z = $self->_mesh_slice_z_pos();
-
-    my ($new_model) = $self->{model_object}->cut($z);
+    
+    my ($new_model) = $self->{model_object}->cut($self->{cut_options}{axis}, $z);
     my ($upper_object, $lower_object) = @{$new_model->objects};
     $self->{new_model} = $new_model;
     $self->{new_model_objects} = {};
@@ -210,12 +230,11 @@ sub _update {
     # Only recalculate the cut, if the live cut preview is active.
     my $life_preview_active = $self->_life_preview_active();
     $self->_perform_cut() if $life_preview_active;
-
+    
     {
         # scale Z down to original size since we're using the transformed mesh for 3D preview
         # and cut dialog but ModelObject::cut() needs Z without any instance transformation
         my $z = $self->_mesh_slice_z_pos();
-
         
         # update canvas
         if ($self->{canvas}) {
@@ -226,25 +245,38 @@ sub _update {
             } else {
                 push @objects, $self->{model_object};
             }
-        
+            
             # get section contour
             my @expolygons = ();
             foreach my $volume (@{$self->{model_object}->volumes}) {
                 next if !$volume->mesh;
                 next if $volume->modifier;
-                my $expp = $volume->mesh->slice([ $z + $volume->mesh->bounding_box->z_min ])->[0];
+                my $expp = $volume->mesh->slice_at($self->{cut_options}{axis}, $z);
                 push @expolygons, @$expp;
             }
+            
+            my $offset = $self->{model_object}->instances->[0]->offset;
             foreach my $expolygon (@expolygons) {
                 $self->{model_object}->instances->[0]->transform_polygon($_)
                     for @$expolygon;
-                $expolygon->translate(map Slic3r::Geometry::scale($_), @{ $self->{model_object}->instances->[0]->offset });
+                
+                if ($self->{cut_options}{axis} != X) {
+                    $expolygon->translate(0, Slic3r::Geometry::scale($offset->y));  #)
+                }
+                if ($self->{cut_options}{axis} != Y) {
+                    $expolygon->translate(Slic3r::Geometry::scale($offset->x), 0);
+                }
             }
             
             $self->{canvas}->reset_objects;
             $self->{canvas}->load_object($_, undef, [0]) for @objects;
+            
+            my $plane_z = $self->{cut_options}{z};
+            $plane_z += 0.02 if !$self->{cut_options}{keep_upper};
+            $plane_z -= 0.02 if !$self->{cut_options}{keep_lower};
             $self->{canvas}->SetCuttingPlane(
-                $self->{cut_options}{z},
+                $self->{cut_options}{axis},
+                $plane_z,
                 [@expolygons],
             );
             $self->{canvas}->Render;
@@ -255,9 +287,16 @@ sub _update {
     {
         my $z = $self->{cut_options}{z};
         my $optgroup = $self->{optgroup};
+        {
+            my $bb = $self->{model_object}->instance_bounding_box(0);
+            my $max = $self->{cut_options}{axis} == X ? $bb->size->x
+                    : $self->{cut_options}{axis} == Y ? $bb->size->y ###
+                    : $bb->size->z;
+            $optgroup->get_field('z')->set_range(0, $max);
+        }
         $optgroup->get_field('keep_upper')->toggle(my $have_upper = abs($z - $optgroup->get_option('z')->max) > 0.1);
         $optgroup->get_field('keep_lower')->toggle(my $have_lower = $z > 0.1);
-        $optgroup->get_field('rotate_lower')->toggle($z > 0 && $self->{cut_options}{keep_lower});
+        $optgroup->get_field('rotate_lower')->toggle($z > 0 && $self->{cut_options}{keep_lower} && $self->{cut_options}{axis} == Z);
         $optgroup->get_field('preview')->toggle($self->{cut_options}{keep_upper} != $self->{cut_options}{keep_lower});
     
         # update cut button

@@ -592,4 +592,10 @@ sub disable {
     $self->textctrl->SetEditable(0);
 }
 
+sub set_range {
+    my ($self, $min, $max) = @_;
+    
+    $self->slider->SetRange($min * $self->scale, $max * $self->scale);
+}
+
 1;

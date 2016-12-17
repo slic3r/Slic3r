@@ -14,7 +14,7 @@
 namespace Slic3r {
 
 class TriangleMesh;
-class TriangleMeshSlicer;
+template <Axis A> class TriangleMeshSlicer;
 typedef std::vector<TriangleMesh*> TriangleMeshPtrs;
 
 class TriangleMesh
@@ -61,7 +61,9 @@ class TriangleMesh
     
     private:
     void require_shared_vertices();
-    friend class TriangleMeshSlicer;
+    friend class TriangleMeshSlicer<X>;
+    friend class TriangleMeshSlicer<Y>;
+    friend class TriangleMeshSlicer<Z>;
 };
 
 enum FacetEdgeType { feNone, feTop, feBottom, feHorizontal };
@@ -88,6 +90,7 @@ class IntersectionLine : public Line
 typedef std::vector<IntersectionLine> IntersectionLines;
 typedef std::vector<IntersectionLine*> IntersectionLinePtrs;
 
+template <Axis A>
 class TriangleMeshSlicer
 {
     public:
@@ -96,10 +99,14 @@ class TriangleMeshSlicer
     ~TriangleMeshSlicer();
     void slice(const std::vector<float> &z, std::vector<Polygons>* layers) const;
     void slice(const std::vector<float> &z, std::vector<ExPolygons>* layers) const;
+    void slice(float z, ExPolygons* slices) const;
     void slice_facet(float slice_z, const stl_facet &facet, const int &facet_idx,
         const float &min_z, const float &max_z, std::vector<IntersectionLine>* lines,
         boost::mutex* lines_mutex = NULL) const;
+    
     void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const;
+    
+    static void cut(TriangleMesh* mesh, Axis axis, float z, TriangleMesh* upper, TriangleMesh* lower);
     
     private:
     typedef std::vector< std::vector<int> > t_facets_edges;
@@ -111,7 +118,35 @@ class TriangleMeshSlicer
     void make_expolygons(const Polygons &loops, ExPolygons* slices) const;
     void make_expolygons_simple(std::vector<IntersectionLine> &lines, ExPolygons* slices) const;
     void make_expolygons(std::vector<IntersectionLine> &lines, ExPolygons* slices) const;
+    
+    float& _x(stl_vertex &vertex) const;
+    float& _y(stl_vertex &vertex) const;
+    float& _z(stl_vertex &vertex) const;
+    const float& _x(stl_vertex const &vertex) const;
+    const float& _y(stl_vertex const &vertex) const;
+    const float& _z(stl_vertex const &vertex) const;
 };
+
+template<> inline float& TriangleMeshSlicer<X>::_x(stl_vertex &vertex) const { return vertex.y; }
+template<> inline float& TriangleMeshSlicer<X>::_y(stl_vertex &vertex) const { return vertex.z; }
+template<> inline float& TriangleMeshSlicer<X>::_z(stl_vertex &vertex) const { return vertex.x; }
+template<> inline float const& TriangleMeshSlicer<X>::_x(stl_vertex const &vertex) const { return vertex.y; }
+template<> inline float const& TriangleMeshSlicer<X>::_y(stl_vertex const &vertex) const { return vertex.z; }
+template<> inline float const& TriangleMeshSlicer<X>::_z(stl_vertex const &vertex) const { return vertex.x; }
+
+template<> inline float& TriangleMeshSlicer<Y>::_x(stl_vertex &vertex) const { return vertex.z; }
+template<> inline float& TriangleMeshSlicer<Y>::_y(stl_vertex &vertex) const { return vertex.x; }
+template<> inline float& TriangleMeshSlicer<Y>::_z(stl_vertex &vertex) const { return vertex.y; }
+template<> inline float const& TriangleMeshSlicer<Y>::_x(stl_vertex const &vertex) const { return vertex.z; }
+template<> inline float const& TriangleMeshSlicer<Y>::_y(stl_vertex const &vertex) const { return vertex.x; }
+template<> inline float const& TriangleMeshSlicer<Y>::_z(stl_vertex const &vertex) const { return vertex.y; }
+
+template<> inline float& TriangleMeshSlicer<Z>::_x(stl_vertex &vertex) const { return vertex.x; }
+template<> inline float& TriangleMeshSlicer<Z>::_y(stl_vertex &vertex) const { return vertex.y; }
+template<> inline float& TriangleMeshSlicer<Z>::_z(stl_vertex &vertex) const { return vertex.z; }
+template<> inline float const& TriangleMeshSlicer<Z>::_x(stl_vertex const &vertex) const { return vertex.x; }
+template<> inline float const& TriangleMeshSlicer<Z>::_y(stl_vertex const &vertex) const { return vertex.y; }
+template<> inline float const& TriangleMeshSlicer<Z>::_z(stl_vertex const &vertex) const { return vertex.z; }
 
 }
 

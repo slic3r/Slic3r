@@ -185,7 +185,7 @@ TriangleMesh::slice(z)
         std::vector<float> z_f(z.begin(), z.end());
         
         std::vector<ExPolygons> layers;
-        TriangleMeshSlicer mslicer(THIS);
+        TriangleMeshSlicer<Z> mslicer(THIS);
         mslicer.slice(z_f, &layers);
         
         AV* layers_av = newAV();
@@ -205,13 +205,28 @@ TriangleMesh::slice(z)
     OUTPUT:
         RETVAL
 
+ExPolygons
+TriangleMesh::slice_at(axis, z)
+    Axis axis
+    double z
+    CODE:
+        if (axis == X) {
+            TriangleMeshSlicer<X>(THIS).slice(z, &RETVAL);
+        } else if (axis == Y) {
+            TriangleMeshSlicer<Y>(THIS).slice(z, &RETVAL);
+        } else if (axis == Z) {
+            TriangleMeshSlicer<Z>(THIS).slice(z, &RETVAL);
+        }
+    OUTPUT:
+        RETVAL
+
 void
 TriangleMesh::cut(z, upper, lower)
     float           z;
     TriangleMesh*   upper;
     TriangleMesh*   lower;
     CODE:
-        TriangleMeshSlicer mslicer(THIS);
+        TriangleMeshSlicer<Z> mslicer(THIS);
         mslicer.cut(z, upper, lower);
 
 std::vector<double>

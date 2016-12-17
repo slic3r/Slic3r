@@ -1398,6 +1398,24 @@ CLIConfigDef::CLIConfigDef()
 {
     ConfigOptionDef* def;
     
+    def = this->add("cut", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model at the given Z.";
+    def->cli = "cut";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("cut_x", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model at the given X.";
+    def->cli = "cut-x";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("cut_y", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model at the given Y.";
+    def->cli = "cut-y";
+    def->default_value = new ConfigOptionFloat(0);
+    
     def = this->add("export_obj", coBool);
     def->label = "Export SVG";
     def->tooltip = "Export the model as OBJ.";

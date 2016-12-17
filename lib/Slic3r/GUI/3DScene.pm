@@ -23,6 +23,7 @@ __PACKAGE__->mk_accessors( qw(_quat _dirty init
                               on_move
                               volumes
                               _sphi _stheta
+                              cutting_plane_axis
                               cutting_plane_z
                               cut_lines_vertices
                               bed_shape
@@ -505,19 +506,35 @@ sub select_volume {
 }
 
 sub SetCuttingPlane {
-    my ($self, $z, $expolygons) = @_;
+    my ($self, $axis, $z, $expolygons) = @_;
     
+    $self->cutting_plane_axis($axis);
     $self->cutting_plane_z($z);
     
     # grow slices in order to display them better
     $expolygons = offset_ex([ map @$_, @$expolygons ], scale 0.1);
     
+    my $bb = $self->volumes_bounding_box;
+    
     my @verts = ();
     foreach my $line (map @{$_->lines}, map @$_, @$expolygons) {
-        push @verts, (
-            unscale($line->a->x), unscale($line->a->y), $z,  #))
-            unscale($line->b->x), unscale($line->b->y), $z,  #))
-        );
+        if ($axis == X) {
+            push @verts, (
+                $bb->x_min + $z, unscale($line->a->x), unscale($line->a->y),  #))
+                $bb->x_min + $z, unscale($line->b->x), unscale($line->b->y),  #))
+            );
+        } elsif ($axis == Y) {
+            push @verts, (
+                unscale($line->a->y), $bb->y_min + $z, unscale($line->a->x),  #))
+                unscale($line->b->y), $bb->y_min + $z, unscale($line->b->x),  #))
+            );
+        } else {
+            push @verts, (
+                unscale($line->a->x), unscale($line->a->y), $z,  #))
+                unscale($line->b->x), unscale($line->b->y), $z,  #))
+            );
+        }
+        
     }
     $self->cut_lines_vertices(OpenGL::Array->new_list(GL_FLOAT, @verts));
 }
@@ -932,10 +949,22 @@ sub Render {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glBegin(GL_QUADS);
         glColor4f(0.8, 0.8, 0.8, 0.5);
-        glVertex3f($bb->x_min-20, $bb->y_min-20, $plane_z);
-        glVertex3f($bb->x_max+20, $bb->y_min-20, $plane_z);
-        glVertex3f($bb->x_max+20, $bb->y_max+20, $plane_z);
-        glVertex3f($bb->x_min-20, $bb->y_max+20, $plane_z);
+        if ($self->cutting_plane_axis == X) {
+            glVertex3f($bb->x_min+$plane_z, $bb->y_min-20, $bb->z_min-20);
+            glVertex3f($bb->x_min+$plane_z, $bb->y_max+20, $bb->z_min-20);
+            glVertex3f($bb->x_min+$plane_z, $bb->y_max+20, $bb->z_max+20);
+            glVertex3f($bb->x_min+$plane_z, $bb->y_min-20, $bb->z_max+20);
+        } elsif ($self->cutting_plane_axis == Y) {
+            glVertex3f($bb->x_min-20, $bb->y_min+$plane_z, $bb->z_min-20);
+            glVertex3f($bb->x_max+20, $bb->y_min+$plane_z, $bb->z_min-20);
+            glVertex3f($bb->x_max+20, $bb->y_min+$plane_z, $bb->z_max+20);
+            glVertex3f($bb->x_min-20, $bb->y_min+$plane_z, $bb->z_max+20);
+        } elsif ($self->cutting_plane_axis == Z) {
+            glVertex3f($bb->x_min-20, $bb->y_min-20, $bb->z_min+$plane_z);
+            glVertex3f($bb->x_max+20, $bb->y_min-20, $bb->z_min+$plane_z);
+            glVertex3f($bb->x_max+20, $bb->y_max+20, $bb->z_min+$plane_z);
+            glVertex3f($bb->x_min-20, $bb->y_max+20, $bb->z_min+$plane_z);
+        }
         glEnd();
         glEnable(GL_CULL_FACE);
         glDisable(GL_BLEND);
