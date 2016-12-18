@@ -114,6 +114,7 @@ sub new {
     $self->{canvas}->on_instances_moved($on_instances_moved);
     
     # Initialize 3D toolpaths preview
+    $self->{preview3D_page_idx} = -1;
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{preview3D} = Slic3r::GUI::Plater::3DPreview->new($self->{preview_notebook}, $self->{print});
         $self->{preview3D}->canvas->on_viewport_changed(sub {
@@ -124,15 +125,29 @@ sub new {
     }
     
     # Initialize toolpaths preview
+    $self->{toolpaths2D_page_idx} = -1;
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{toolpaths2D} = Slic3r::GUI::Plater::2DToolpaths->new($self->{preview_notebook}, $self->{print});
         $self->{preview_notebook}->AddPage($self->{toolpaths2D}, 'Layers');
+        $self->{toolpaths2D_page_idx} = $self->{preview_notebook}->GetPageCount-1;
     }
     
     EVT_NOTEBOOK_PAGE_CHANGED($self, $self->{preview_notebook}, sub {
-        if ($self->{preview_notebook}->GetSelection == $self->{preview3D_page_idx}) {
-            $self->{preview3D}->load_print;
-        }
+        wxTheApp->CallAfter(sub {
+            my $sel = $self->{preview_notebook}->GetSelection;
+            if ($sel == $self->{preview3D_page_idx} || $sel == $self->{toolpaths2D_page_idx}) {
+                $self->{preview3D}->load_print;
+            
+                if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
+                    $self->statusbar->SetCancelCallback(sub {
+                        $self->stop_background_process;
+                        $self->statusbar->SetStatusText("Slicing cancelled");
+                        $self->{preview_notebook}->SetSelection(0);
+                    });
+                    $self->start_background_process;
+                }
+            }
+        });
     });
     
     # toolbar for object manipulation
@@ -1034,6 +1049,10 @@ sub split_object {
 
 sub schedule_background_process {
     my ($self) = @_;
+    
+    if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
+        $self->{preview_notebook}->SetSelection(0);
+    }
     
     if (defined $self->{apply_config_timer}) {
         $self->{apply_config_timer}->Start(PROCESS_DELAY, 1);  # 1 = one shot

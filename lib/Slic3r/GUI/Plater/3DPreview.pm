@@ -126,7 +126,6 @@ sub load_print {
             #my @volume_ids = $self->canvas->load_object($object->model_object);
             #$self->canvas->volumes->[$_]->color->[3] = 0.2 for @volume_ids;
         }
-        $self->canvas->zoom_to_volumes;
         $self->_loaded(1);
     }
     
