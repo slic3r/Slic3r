@@ -1051,7 +1051,10 @@ sub schedule_background_process {
     my ($self) = @_;
     
     if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
-        $self->{preview_notebook}->SetSelection(0);
+        my $sel = $self->{preview_notebook}->GetSelection;
+        if ($sel == $self->{preview3D_page_idx} || $sel == $self->{toolpaths2D_page_idx}) {
+            $self->{preview_notebook}->SetSelection(0);
+        }
     }
     
     if (defined $self->{apply_config_timer}) {
