@@ -7,7 +7,7 @@ use warnings;
 use utf8;
 
 use File::Basename qw(basename);
-use Wx qw(:misc :sizer :treectrl :button wxTAB_TRAVERSAL wxSUNKEN_BORDER wxBITMAP_TYPE_PNG
+use Wx qw(:misc :sizer :treectrl :button wxTAB_TRAVERSAL wxSUNKEN_BORDER wxBITMAP_TYPE_PNG wxID_CANCEL
     wxTheApp);
 use Wx::Event qw(EVT_BUTTON EVT_TREE_ITEM_COLLAPSING EVT_TREE_SEL_CHANGED);
 use base 'Wx::Panel';
@@ -22,6 +22,18 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     
     my $object = $self->{model_object} = $params{model_object};
+
+    # Save state for sliders.
+    $self->{move_options} = {
+        x               => 0,
+        y               => 0,
+        z               => 0,
+    };
+    $self->{last_coords} = {
+        x               => 0,
+        y               => 0,
+        z               => 0,
+    };
     
     # create TreeCtrl
     my $tree = $self->{tree} = Wx::TreeCtrl->new($self, -1, wxDefaultPosition, [300, 100], 
@@ -41,10 +53,12 @@ sub new {
     # buttons
     $self->{btn_load_part} = Wx::Button->new($self, -1, "Load part…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     $self->{btn_load_modifier} = Wx::Button->new($self, -1, "Load modifier…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+    $self->{btn_load_lambda_modifier} = Wx::Button->new($self, -1, "Load generic…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     $self->{btn_delete} = Wx::Button->new($self, -1, "Delete part", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     if ($Slic3r::GUI::have_button_icons) {
         $self->{btn_load_part}->SetBitmap(Wx::Bitmap->new($Slic3r::var->("brick_add.png"), wxBITMAP_TYPE_PNG));
         $self->{btn_load_modifier}->SetBitmap(Wx::Bitmap->new($Slic3r::var->("brick_add.png"), wxBITMAP_TYPE_PNG));
+        $self->{btn_load_lambda_modifier}->SetBitmap(Wx::Bitmap->new($Slic3r::var->("brick_add.png"), wxBITMAP_TYPE_PNG));
         $self->{btn_delete}->SetBitmap(Wx::Bitmap->new($Slic3r::var->("brick_delete.png"), wxBITMAP_TYPE_PNG));
     }
     
@@ -52,21 +66,71 @@ sub new {
     my $buttons_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
     $buttons_sizer->Add($self->{btn_load_part}, 0);
     $buttons_sizer->Add($self->{btn_load_modifier}, 0);
+    $buttons_sizer->Add($self->{btn_load_lambda_modifier}, 0);
     $buttons_sizer->Add($self->{btn_delete}, 0);
     $self->{btn_load_part}->SetFont($Slic3r::GUI::small_font);
     $self->{btn_load_modifier}->SetFont($Slic3r::GUI::small_font);
+    $self->{btn_load_lambda_modifier}->SetFont($Slic3r::GUI::small_font);
     $self->{btn_delete}->SetFont($Slic3r::GUI::small_font);
     
     # part settings panel
     $self->{settings_panel} = Slic3r::GUI::Plater::OverrideSettingsPanel->new($self, on_change => sub { $self->{part_settings_changed} = 1; });
     my $settings_sizer = Wx::StaticBoxSizer->new($self->{staticbox} = Wx::StaticBox->new($self, -1, "Part Settings"), wxVERTICAL);
     $settings_sizer->Add($self->{settings_panel}, 1, wxEXPAND | wxALL, 0);
-    
+
+    my $optgroup_movers;
+    $optgroup_movers = $self->{optgroup_movers} = Slic3r::GUI::OptionsGroup->new(
+        parent      => $self,
+        title       => 'Move',
+        on_change   => sub {
+            my ($opt_id) = @_;
+            # There seems to be an issue with wxWidgets 3.0.2/3.0.3, where the slider
+            # genates tens of events for a single value change.
+            # Only trigger the recalculation if the value changes
+            # or a live preview was activated and the mesh cut is not valid yet.
+            if ($self->{move_options}{$opt_id} != $optgroup_movers->get_value($opt_id)) {
+                $self->{move_options}{$opt_id} = $optgroup_movers->get_value($opt_id);
+                wxTheApp->CallAfter(sub {
+                    $self->_update;
+                });
+            }
+        },
+        label_width  => 20,
+    );
+    $optgroup_movers->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'x',
+        type        => 'slider',
+        label       => 'X',
+        default     => 0,
+        min         => -($self->{model_object}->bounding_box->size->x)*4,
+        max         => $self->{model_object}->bounding_box->size->x*4,
+        full_width  => 1,
+    ));
+    $optgroup_movers->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'y',
+        type        => 'slider',
+        label       => 'Y',
+        default     => 0,
+        min         => -($self->{model_object}->bounding_box->size->y)*4,
+        max         => $self->{model_object}->bounding_box->size->y*4,
+        full_width  => 1,
+    ));
+    $optgroup_movers->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'z',
+        type        => 'slider',
+        label       => 'Z',
+        default     => 0,
+        min         => -($self->{model_object}->bounding_box->size->z)*4,
+        max         => $self->{model_object}->bounding_box->size->z*4,
+        full_width  => 1,
+    ));
+ 
     # left pane with tree
     my $left_sizer = Wx::BoxSizer->new(wxVERTICAL);
     $left_sizer->Add($tree, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
     $left_sizer->Add($buttons_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
     $left_sizer->Add($settings_sizer, 1, wxEXPAND | wxALL, 0);
+    $left_sizer->Add($optgroup_movers->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     
     # right pane with preview canvas
     my $canvas;
@@ -84,7 +148,7 @@ sub new {
         
         $canvas->load_object($self->{model_object}, undef, [0]);
         $canvas->set_auto_bed_shape;
-        $canvas->SetSize([500,500]);
+        $canvas->SetSize([500,700]);
         $canvas->zoom_to_volumes;
     }
     
@@ -107,6 +171,7 @@ sub new {
     });
     EVT_BUTTON($self, $self->{btn_load_part}, sub { $self->on_btn_load(0) });
     EVT_BUTTON($self, $self->{btn_load_modifier}, sub { $self->on_btn_load(1) });
+    EVT_BUTTON($self, $self->{btn_load_lambda_modifier}, sub { $self->on_btn_lambda(1) });
     EVT_BUTTON($self, $self->{btn_delete}, \&on_btn_delete);
     
     $self->reload_tree;
@@ -179,6 +244,21 @@ sub selection_changed {
     $self->{btn_delete}->Disable;
     $self->{settings_panel}->disable;
     $self->{settings_panel}->set_config(undef);
+
+    # reset move sliders
+    $self->{optgroup_movers}->set_value("x", 0);
+    $self->{optgroup_movers}->set_value("y", 0);
+    $self->{optgroup_movers}->set_value("z", 0);
+    $self->{move_options} = {
+        x               => 0,
+        y               => 0,
+        z               => 0,
+    };
+    $self->{last_coords} = {
+        x               => 0,
+        y               => 0,
+        z               => 0,
+    };
     
     if (my $itemData = $self->get_selection) {
         my ($config, @opt_keys);
@@ -191,6 +271,12 @@ sub selection_changed {
             
             # attach volume config to settings panel
             my $volume = $self->{model_object}->volumes->[ $itemData->{volume_id} ];
+   
+            if ($volume->modifier) {
+                $self->{optgroup_movers}->enable;
+            } else {
+                $self->{optgroup_movers}->disable;
+            }
             $config = $volume->config;
             $self->{staticbox}->SetLabel('Part Settings');
             
@@ -200,6 +286,7 @@ sub selection_changed {
             # select nothing in 3D preview
             
             # attach object config to settings panel
+            $self->{optgroup_movers}->disable;
             $self->{staticbox}->SetLabel('Object Settings');
             @opt_keys = (map @{$_->get_keys}, Slic3r::Config::PrintObject->new, Slic3r::Config::PrintRegion->new);
             $config = $self->{model_object}->config;
@@ -252,19 +339,56 @@ sub on_btn_load {
     $self->_parts_changed;
 }
 
+sub on_btn_lambda {
+    my ($self, $is_modifier) = @_;
+    
+    my $dlg = Slic3r::GUI::Plater::LambdaObjectDialog->new($self);
+    if ($dlg->ShowModal() == wxID_CANCEL) {
+        return;
+    }
+    my $params = $dlg->ObjectParameter;
+    my $type = "".$params->{"type"};
+    my $name = "lambda-".$params->{"type"};
+    my $mesh;
+
+    if ($type eq "box") {
+        $mesh = Slic3r::TriangleMesh::make_cube($params->{"dim"}[0], $params->{"dim"}[1], $params->{"dim"}[2]);
+    } elsif ($type eq "cylinder") {
+        $mesh = Slic3r::TriangleMesh::make_cylinder($params->{"cyl_r"}, $params->{"cyl_h"});
+    } elsif ($type eq "sphere") {
+        $mesh = Slic3r::TriangleMesh::make_sphere($params->{"sph_rho"});
+    } elsif ($type eq "slab") {
+        $mesh = Slic3r::TriangleMesh::make_cube($self->{model_object}->bounding_box->size->x*1.5, $self->{model_object}->bounding_box->size->y*1.5, $params->{"slab_h"}); #**
+        # box sets the base coordinate at 0,0, move to center of plate and move it up to initial_z
+        $mesh->translate(-$self->{model_object}->bounding_box->size->x*1.5/2.0, -$self->{model_object}->bounding_box->size->y*1.5/2.0, $params->{"slab_z"});  #**
+    } else {
+        return;
+    }
+    $mesh->repair;
+    my $new_volume = $self->{model_object}->add_volume(mesh => $mesh);
+    $new_volume->set_modifier($is_modifier);
+    $new_volume->set_name($name);
+
+    # set a default extruder value, since user can't add it manually
+    $new_volume->config->set_ifndef('extruder', 0);
+
+    $self->{parts_changed} = 1;
+    $self->_parts_changed;
+}
+
 sub on_btn_delete {
     my ($self) = @_;
-    
+
     my $itemData = $self->get_selection;
     if ($itemData && $itemData->{type} eq 'volume') {
         my $volume = $self->{model_object}->volumes->[$itemData->{volume_id}];
-        
+
         # if user is deleting the last solid part, throw error
         if (!$volume->modifier && scalar(grep !$_->modifier, @{$self->{model_object}->volumes}) == 1) {
             Slic3r::GUI::show_error($self, "You can't delete the last solid part from this object.");
             return;
         }
-        
+
         $self->{model_object}->delete_volume($itemData->{volume_id});
         $self->{parts_changed} = 1;
     }
@@ -308,6 +432,29 @@ sub PartsChanged {
 sub PartSettingsChanged {
     my ($self) = @_;
     return $self->{part_settings_changed};
+}
+
+sub _update {
+    my ($self) = @_;
+    my ($m_x, $m_y, $m_z) = ($self->{move_options}{x}, $self->{move_options}{y}, $self->{move_options}{z});
+    my ($l_x, $l_y, $l_z) = ($self->{last_coords}{x}, $self->{last_coords}{y}, $self->{last_coords}{z});
+    
+    my $itemData = $self->get_selection;
+    if ($itemData && $itemData->{type} eq 'volume') {
+        my $d = Slic3r::Pointf3->new($m_x - $l_x, $m_y - $l_y, $m_z - $l_z);
+        my $volume = $self->{model_object}->volumes->[$itemData->{volume_id}];
+        $volume->mesh->translate(@{$d});
+        $self->{last_coords}{x} = $m_x;
+        $self->{last_coords}{y} = $m_y;
+        $self->{last_coords}{z} = $m_z;
+    }
+
+    $self->{parts_changed} = 1;
+    my @objects = ();
+    push @objects, $self->{model_object};
+    $self->{canvas}->reset_objects;
+    $self->{canvas}->load_object($_, undef, [0]) for @objects;
+    $self->{canvas}->Render;
 }
 
 1;

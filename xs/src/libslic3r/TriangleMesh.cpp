@@ -25,6 +25,48 @@ TriangleMesh::TriangleMesh()
     stl_initialize(&this->stl);
 }
 
+TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& facets )
+    : repaired(false)
+{
+    stl_initialize(&this->stl);
+    stl_file &stl = this->stl;
+    stl.error = 0;
+    stl.stats.type = inmemory;
+
+    // count facets and allocate memory
+    stl.stats.number_of_facets = facets.size();
+    stl.stats.original_num_facets = stl.stats.number_of_facets;
+    stl_allocate(&stl);
+
+    for (int i = 0; i < stl.stats.number_of_facets; i++) {
+        stl_facet facet;
+        facet.normal.x = 0;
+        facet.normal.y = 0;
+        facet.normal.z = 0;
+
+        const Pointf3& ref_f1 = points[facets[i].x];
+        facet.vertex[0].x = ref_f1.x;
+        facet.vertex[0].y = ref_f1.y;
+        facet.vertex[0].z = ref_f1.z;
+
+        const Pointf3& ref_f2 = points[facets[i].y];
+        facet.vertex[1].x = ref_f2.x;
+        facet.vertex[1].y = ref_f2.y;
+        facet.vertex[1].z = ref_f2.z;
+
+        const Pointf3& ref_f3 = points[facets[i].z];
+        facet.vertex[2].x = ref_f3.x;
+        facet.vertex[2].y = ref_f3.y;
+        facet.vertex[2].z = ref_f3.z;
+        
+        facet.extra[0] = 0;
+        facet.extra[1] = 0;
+
+        stl.facet_start[i] = facet;
+    }
+    stl_get_size(&stl);
+}
+
 TriangleMesh::TriangleMesh(const TriangleMesh &other)
     : stl(other.stl), repaired(other.repaired)
 {
@@ -475,6 +517,154 @@ TriangleMesh::extrude_tin(float offset)
     stl_get_size(&this->stl);
     
     this->repair();
+}
+
+// Generate the vertex list for a cube solid of arbitrary size in X/Y/Z.
+TriangleMesh
+TriangleMesh::make_cube(double x, double y, double z) {
+    Pointf3 pv[8] = { 
+        Pointf3(x, y, 0), Pointf3(x, 0, 0), Pointf3(0, 0, 0), 
+        Pointf3(0, y, 0), Pointf3(x, y, z), Pointf3(0, y, z), 
+        Pointf3(0, 0, z), Pointf3(x, 0, z) 
+    };
+    Point3 fv[12] = { 
+        Point3(0, 1, 2), Point3(0, 2, 3), Point3(4, 5, 6), 
+        Point3(4, 6, 7), Point3(0, 4, 7), Point3(0, 7, 1), 
+        Point3(1, 7, 6), Point3(1, 6, 2), Point3(2, 6, 5), 
+        Point3(2, 5, 3), Point3(4, 0, 3), Point3(4, 3, 5) 
+    };
+
+    std::vector<Point3> facets(&fv[0], &fv[0]+12);
+    Pointf3s vertices(&pv[0], &pv[0]+8);
+
+    TriangleMesh mesh(vertices ,facets);
+    return mesh;
+}
+
+// Generate the mesh for a cylinder and return it, using 
+// the generated angle to calculate the top mesh triangles.
+// Default is 360 sides, angle fa is in radians.
+TriangleMesh
+TriangleMesh::make_cylinder(double r, double h, double fa) {
+    Pointf3s vertices;
+    std::vector<Point3> facets;
+
+    // 2 special vertices, top and bottom center, rest are relative to this
+    vertices.push_back(Pointf3(0.0, 0.0, 0.0));
+    vertices.push_back(Pointf3(0.0, 0.0, h));
+
+    // adjust via rounding to get an even multiple for any provided angle.
+    double angle = (2*PI / floor(2*PI / fa));
+
+    // for each line along the polygon approximating the top/bottom of the
+    // circle, generate four points and four facets (2 for the wall, 2 for the
+    // top and bottom.
+    // Special case: Last line shares 2 vertices with the first line.
+    unsigned id = vertices.size() - 1;
+    vertices.push_back(Pointf3(sin(0) * r , cos(0) * r, 0));
+    vertices.push_back(Pointf3(sin(0) * r , cos(0) * r, h));
+    for (double i = 0; i < 2*PI; i+=angle) {
+        Pointf3 b(0, r, 0);
+        Pointf3 t(0, r, h);
+        b.rotate(i, Pointf3(0,0,0)); 
+        t.rotate(i, Pointf3(0,0,h));
+        vertices.push_back(b);
+        vertices.push_back(t);
+        id = vertices.size() - 1;
+        facets.push_back(Point3( 0, id - 1, id - 3)); // top
+        facets.push_back(Point3(id,      1, id - 2)); // bottom
+        facets.push_back(Point3(id, id - 2, id - 3)); // upper-right of side
+        facets.push_back(Point3(id, id - 3, id - 1)); // bottom-left of side
+    }
+    // Connect the last set of vertices with the first.
+    facets.push_back(Point3( 2, 0, id - 1));
+    facets.push_back(Point3( 1, 3,     id));
+    facets.push_back(Point3(id, 3,      2));
+    facets.push_back(Point3(id, 2, id - 1));
+    
+    TriangleMesh mesh(vertices, facets);
+    return mesh;
+}
+
+// Generates mesh for a sphere centered about the origin, using the generated angle
+// to determine the granularity. 
+// Default angle is 1 degree.
+TriangleMesh
+TriangleMesh::make_sphere(double rho, double fa) {
+    Pointf3s vertices;
+    std::vector<Point3> facets;
+
+    // Algorithm: 
+    // Add points one-by-one to the sphere grid and form facets using relative coordinates.
+    // Sphere is composed effectively of a mesh of stacked circles.
+
+    // adjust via rounding to get an even multiple for any provided angle.
+    double angle = (2*PI / floor(2*PI / fa));
+
+    // Ring to be scaled to generate the steps of the sphere
+    std::vector<double> ring;
+    for (double i = 0; i < 2*PI; i+=angle) {
+        ring.push_back(i);
+    }
+    const size_t steps = ring.size(); 
+    const double increment = (double)(1.0 / (double)steps);
+
+    // special case: first ring connects to 0,0,0
+    // insert and form facets.
+    vertices.push_back(Pointf3(0.0, 0.0, -rho));
+    size_t id = vertices.size();
+    for (size_t i = 0; i < ring.size(); i++) {
+        // Fixed scaling 
+        const double z = -rho + increment*rho*2.0;
+        // radius of the circle for this step.
+        const double r = sqrt(abs(rho*rho - z*z));
+        Pointf3 b(0, r, z);
+        b.rotate(ring[i], Pointf3(0,0,z)); 
+        vertices.push_back(b);
+        if (i == 0) {
+            facets.push_back(Point3(1, 0, ring.size()));
+        } else {
+            facets.push_back(Point3(id, 0, id - 1));
+        }
+        id++;
+    }
+
+    // General case: insert and form facets for each step, joining it to the ring below it.
+    for (size_t s = 2; s < steps - 1; s++) {
+        const double z = -rho + increment*(double)s*2.0*rho;
+        const double r = sqrt(abs(rho*rho - z*z));
+
+        for (size_t i = 0; i < ring.size(); i++) {
+            Pointf3 b(0, r, z);
+            b.rotate(ring[i], Pointf3(0,0,z)); 
+            vertices.push_back(b);
+            if (i == 0) {
+                // wrap around
+                facets.push_back(Point3(id + ring.size() - 1 , id, id - 1)); 
+                facets.push_back(Point3(id, id - ring.size(),  id - 1)); 
+            } else {
+                facets.push_back(Point3(id , id - ring.size(), (id - 1) - ring.size())); 
+                facets.push_back(Point3(id, id - 1 - ring.size() ,  id - 1)); 
+            }
+            id++;
+        } 
+    }
+
+
+    // special case: last ring connects to 0,0,rho*2.0
+    // only form facets.
+    vertices.push_back(Pointf3(0.0, 0.0, rho));
+    for (size_t i = 0; i < ring.size(); i++) {
+        if (i == 0) {
+            // third vertex is on the other side of the ring.
+            facets.push_back(Point3(id, id - ring.size(),  id - 1));
+        } else {
+            facets.push_back(Point3(id, id - ring.size() + i,  id - ring.size() + (i - 1)));
+        }
+    }
+    id++;
+    TriangleMesh mesh(vertices, facets);
+    return mesh;
 }
 
 template <Axis A>
