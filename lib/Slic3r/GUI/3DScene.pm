@@ -44,9 +44,8 @@ __PACKAGE__->mk_accessors( qw(_quat _dirty init
 use constant TRACKBALLSIZE  => 0.8;
 use constant TURNTABLE_MODE => 1;
 use constant GROUND_Z       => -0.02;
-use constant DEFAULT_COLOR  => [1,1,0];
-use constant SELECTED_COLOR => [0,1,0,1];
-use constant HOVER_COLOR    => [0.4,0.9,0,1];
+use constant SELECTED_COLOR => [0,1,0];
+use constant HOVER_COLOR    => [0.4,0.9,0];
 use constant PI             => 3.1415927;
 
 # Constant to determine if Vertex Buffer objects are used to draw
@@ -1030,9 +1029,9 @@ sub draw_volumes {
             my $b = ($volume_idx & 0x00FF0000) >> 16;
             glColor4f($r/255.0, $g/255.0, $b/255.0, 1);
         } elsif ($volume->selected) {
-            glColor4f(@{ &SELECTED_COLOR });
+            glColor4f(@{ &SELECTED_COLOR }, $volume->color->[3]);
         } elsif ($volume->hover) {
-            glColor4f(@{ &HOVER_COLOR });
+            glColor4f(@{ &HOVER_COLOR }, $volume->color->[3]);
         } else {
             glColor4f(@{ $volume->color });
         }
