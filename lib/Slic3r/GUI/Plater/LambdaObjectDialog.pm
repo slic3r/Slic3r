@@ -1,4 +1,4 @@
-# Generate an anonymous or "lambda" 3D object. This gets used with the Add Generic option in Settings.
+# Generate an anonymous or "lambda" 3D object. This gets used with the Create Modifier option in Settings.
 # 
 
 package Slic3r::GUI::Plater::LambdaObjectDialog;
@@ -15,39 +15,34 @@ use base 'Wx::Dialog';
 sub new {
     my $class = shift;
     my ($parent, %params) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Lambda Object", wxDefaultPosition, [500,500], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+    my $self = $class->SUPER::new($parent, -1, "Create Modifier", wxDefaultPosition, [500,500],
+        wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+    
     # Note whether the window was already closed, so a pending update is not executed.
     $self->{already_closed} = 0;
     $self->{object_parameters} = { 
-        type => "box", 
-        dim => [1, 1, 1],
-        cyl_r => 1,
-        cyl_h => 1,
+        type    => 'slab', 
+        dim     => [1, 1, 1],
+        cyl_r   => 1,
+        cyl_h   => 1,
         sph_rho => 1.0,
-        slab_h => 1.0,
-        slab_z => 0.0,
+        slab_h  => 1.0,
     };
 
-    $self->{sizer} = Wx::BoxSizer->new(wxVERTICAL);
-    my $button_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
-    my $button_ok = $self->CreateStdDialogButtonSizer(wxOK);
-    my $button_cancel = $self->CreateStdDialogButtonSizer(wxCANCEL);
-    $button_sizer->Add($button_ok);
-    $button_sizer->Add($button_cancel);
+    $self->{sizer}  = Wx::BoxSizer->new(wxVERTICAL);
+    my $buttons     = $self->CreateStdDialogButtonSizer(wxOK | wxCANCEL);
     EVT_BUTTON($self, wxID_OK, sub {
-        # validate user input
-        return if !$self->CanClose;
-        
         $self->EndModal(wxID_OK);
         $self->Destroy;
     });
     EVT_BUTTON($self, wxID_CANCEL, sub {
-        # validate user input
-        return if !$self->CanClose;
-        
         $self->EndModal(wxID_CANCEL);
         $self->Destroy;
     });
+    
+    $self->{type} = Wx::ComboBox->new($self, 1, $self->{object_parameters}{type},
+        wxDefaultPosition, wxDefaultSize,
+        [qw(slab box cylinder sphere)], wxCB_READONLY);
     
     my $optgroup_box;
     $optgroup_box = $self->{optgroup_box} = Slic3r::GUI::OptionsGroup->new(
@@ -65,26 +60,27 @@ sub new {
         },
         label_width => 100,
     );
-    my @options = ("box", "slab", "cylinder", "sphere");
-    $self->{type} = Wx::ComboBox->new($self, 1, "box", wxDefaultPosition, wxDefaultSize, \@options, wxCB_READONLY);
 
     $optgroup_box->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id  =>  0,
-        label   =>  'L',
+        label   =>  'L (x)',
         type    =>  'f',
-        default =>  '1',
+        default =>  $self->{object_parameters}{dim}[0],
+        sidetext => 'mm',
     ));
     $optgroup_box->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id  =>  1,
-        label   =>  'W',
+        label   =>  'W (x)',
         type    =>  'f',
-        default =>  '1',
+        default =>  $self->{object_parameters}{dim}[1],
+        sidetext => 'mm',
     ));
     $optgroup_box->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id  =>  2,
-        label   =>  'H',
+        label   =>  'H (z)',
         type    =>  'f',
-        default =>  '1',
+        default =>  $self->{object_parameters}{dim}[2],
+        sidetext => 'mm',
     ));
 
     my $optgroup_cylinder;
@@ -108,13 +104,15 @@ sub new {
         opt_id  =>  "cyl_r",
         label   =>  'Radius',
         type    =>  'f',
-        default =>  '1',
+        default =>  $self->{object_parameters}{cyl_r},
+        sidetext => 'mm',
     ));
     $optgroup_cylinder->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id  =>  "cyl_h",
         label   =>  'Height',
         type    =>  'f',
-        default =>  '1',
+        default =>  $self->{object_parameters}{cyl_h},
+        sidetext => 'mm',
     ));
 
     my $optgroup_sphere;
@@ -136,9 +134,10 @@ sub new {
 
     $optgroup_sphere->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id  =>  "sph_rho",
-        label   =>  'Rho',
+        label   =>  'Radius',
         type    =>  'f',
-        default =>  '1',
+        default =>  $self->{object_parameters}{sph_rho},
+        sidetext => 'mm',
     ));
 
     my $optgroup_slab;
@@ -148,7 +147,7 @@ sub new {
         on_change   => sub {
             # Do validation
             my ($opt_id) = @_;
-            if ($opt_id eq 'slab_z' || $opt_id eq 'slab_h') {
+            if ($opt_id eq 'slab_h') {
                 if (!looks_like_number($optgroup_slab->get_value($opt_id))) {
                     return 0;
                 }
@@ -159,15 +158,10 @@ sub new {
     );
     $optgroup_slab->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id  =>  "slab_h",
-        label   =>  'H',
+        label   =>  'Thickness',
         type    =>  'f',
-        default =>  '1',
-    ));
-    $optgroup_slab->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
-        opt_id  =>  "slab_z",
-        label   =>  'Initial Z',
-        type    =>  'f',
-        default =>  '0',
+        default =>  $self->{object_parameters}{slab_h},
+        sidetext => 'mm',
     ));
 
 
@@ -182,7 +176,7 @@ sub new {
     $self->{sizer}->Add($optgroup_cylinder->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     $self->{sizer}->Add($optgroup_sphere->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     $self->{sizer}->Add($optgroup_slab->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
-    $self->{sizer}->Add($button_sizer,0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+    $self->{sizer}->Add($buttons,0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     $self->_update_ui;
 
     $self->SetSizer($self->{sizer});
@@ -192,9 +186,7 @@ sub new {
     
     return $self;
 }
-sub CanClose {
-    return 1;
-}
+
 sub ObjectParameter {
     my ($self) = @_;
     return $self->{object_parameters};

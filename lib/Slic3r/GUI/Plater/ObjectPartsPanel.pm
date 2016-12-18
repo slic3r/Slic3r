@@ -22,18 +22,6 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     
     my $object = $self->{model_object} = $params{model_object};
-
-    # Save state for sliders.
-    $self->{move_options} = {
-        x               => 0,
-        y               => 0,
-        z               => 0,
-    };
-    $self->{last_coords} = {
-        x               => 0,
-        y               => 0,
-        z               => 0,
-    };
     
     # create TreeCtrl
     my $tree = $self->{tree} = Wx::TreeCtrl->new($self, -1, wxDefaultPosition, [300, 100], 
@@ -53,7 +41,7 @@ sub new {
     # buttons
     $self->{btn_load_part} = Wx::Button->new($self, -1, "Load part…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     $self->{btn_load_modifier} = Wx::Button->new($self, -1, "Load modifier…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
-    $self->{btn_load_lambda_modifier} = Wx::Button->new($self, -1, "Load generic…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+    $self->{btn_load_lambda_modifier} = Wx::Button->new($self, -1, "Create modifier…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     $self->{btn_delete} = Wx::Button->new($self, -1, "Delete part", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     if ($Slic3r::GUI::have_button_icons) {
         $self->{btn_load_part}->SetBitmap(Wx::Bitmap->new($Slic3r::var->("brick_add.png"), wxBITMAP_TYPE_PNG));
@@ -88,8 +76,9 @@ sub new {
             # genates tens of events for a single value change.
             # Only trigger the recalculation if the value changes
             # or a live preview was activated and the mesh cut is not valid yet.
-            if ($self->{move_options}{$opt_id} != $optgroup_movers->get_value($opt_id)) {
-                $self->{move_options}{$opt_id} = $optgroup_movers->get_value($opt_id);
+            my $new = Slic3r::Pointf3->new(map $optgroup_movers->get_value($_), qw(x y z));
+            if ($self->{move_target}->distance_to($new) > 0) {
+                $self->{move_target} = $new;
                 wxTheApp->CallAfter(sub {
                     $self->_update;
                 });
@@ -102,8 +91,6 @@ sub new {
         type        => 'slider',
         label       => 'X',
         default     => 0,
-        min         => -($self->{model_object}->bounding_box->size->x)*4,
-        max         => $self->{model_object}->bounding_box->size->x*4,
         full_width  => 1,
     ));
     $optgroup_movers->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
@@ -111,8 +98,6 @@ sub new {
         type        => 'slider',
         label       => 'Y',
         default     => 0,
-        min         => -($self->{model_object}->bounding_box->size->y)*4,
-        max         => $self->{model_object}->bounding_box->size->y*4,
         full_width  => 1,
     ));
     $optgroup_movers->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
@@ -120,13 +105,11 @@ sub new {
         type        => 'slider',
         label       => 'Z',
         default     => 0,
-        min         => -($self->{model_object}->bounding_box->size->z)*4,
-        max         => $self->{model_object}->bounding_box->size->z*4,
         full_width  => 1,
     ));
  
     # left pane with tree
-    my $left_sizer = Wx::BoxSizer->new(wxVERTICAL);
+    my $left_sizer = $self->{left_sizer} = Wx::BoxSizer->new(wxVERTICAL);
     $left_sizer->Add($tree, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
     $left_sizer->Add($buttons_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
     $left_sizer->Add($settings_sizer, 1, wxEXPAND | wxALL, 0);
@@ -249,16 +232,7 @@ sub selection_changed {
     $self->{optgroup_movers}->set_value("x", 0);
     $self->{optgroup_movers}->set_value("y", 0);
     $self->{optgroup_movers}->set_value("z", 0);
-    $self->{move_options} = {
-        x               => 0,
-        y               => 0,
-        z               => 0,
-    };
-    $self->{last_coords} = {
-        x               => 0,
-        y               => 0,
-        z               => 0,
-    };
+    $self->{move_target} = Slic3r::Pointf3->new;
     
     if (my $itemData = $self->get_selection) {
         my ($config, @opt_keys);
@@ -273,9 +247,21 @@ sub selection_changed {
             my $volume = $self->{model_object}->volumes->[ $itemData->{volume_id} ];
    
             if ($volume->modifier) {
-                $self->{optgroup_movers}->enable;
+                my $movers = $self->{optgroup_movers};
+                
+                my $obj_bb = $self->{model_object}->raw_bounding_box;
+                my $vol_bb = $volume->mesh->bounding_box;
+                my $vol_size = $vol_bb->size;
+                $movers->get_field('x')->set_range($obj_bb->x_min - $vol_size->x, $obj_bb->x_max);
+                $movers->get_field('y')->set_range($obj_bb->y_min - $vol_size->y, $obj_bb->y_max);  #,,
+                $movers->get_field('z')->set_range($obj_bb->z_min - $vol_size->z, $obj_bb->z_max);
+                $movers->get_field('x')->set_value($vol_bb->x_min);
+                $movers->get_field('y')->set_value($vol_bb->y_min);
+                $movers->get_field('z')->set_value($vol_bb->z_min);
+                
+                $self->{left_sizer}->Show($movers->sizer);
             } else {
-                $self->{optgroup_movers}->disable;
+                $self->{left_sizer}->Hide($self->{optgroup_movers}->sizer);
             }
             $config = $volume->config;
             $self->{staticbox}->SetLabel('Part Settings');
@@ -286,7 +272,7 @@ sub selection_changed {
             # select nothing in 3D preview
             
             # attach object config to settings panel
-            $self->{optgroup_movers}->disable;
+            $self->{left_sizer}->Hide($self->{optgroup_movers}->sizer);
             $self->{staticbox}->SetLabel('Object Settings');
             @opt_keys = (map @{$_->get_keys}, Slic3r::Config::PrintObject->new, Slic3r::Config::PrintRegion->new);
             $config = $self->{model_object}->config;
@@ -352,15 +338,24 @@ sub on_btn_lambda {
     my $mesh;
 
     if ($type eq "box") {
-        $mesh = Slic3r::TriangleMesh::make_cube($params->{"dim"}[0], $params->{"dim"}[1], $params->{"dim"}[2]);
+        $mesh = Slic3r::TriangleMesh::make_cube(@{$params->{"dim"}});
     } elsif ($type eq "cylinder") {
         $mesh = Slic3r::TriangleMesh::make_cylinder($params->{"cyl_r"}, $params->{"cyl_h"});
     } elsif ($type eq "sphere") {
         $mesh = Slic3r::TriangleMesh::make_sphere($params->{"sph_rho"});
     } elsif ($type eq "slab") {
-        $mesh = Slic3r::TriangleMesh::make_cube($self->{model_object}->bounding_box->size->x*1.5, $self->{model_object}->bounding_box->size->y*1.5, $params->{"slab_h"}); #**
-        # box sets the base coordinate at 0,0, move to center of plate and move it up to initial_z
-        $mesh->translate(-$self->{model_object}->bounding_box->size->x*1.5/2.0, -$self->{model_object}->bounding_box->size->y*1.5/2.0, $params->{"slab_z"});  #**
+        my $size = $self->{model_object}->bounding_box->size;
+        $mesh = Slic3r::TriangleMesh::make_cube(
+            $size->x*1.5,
+            $size->y*1.5, #**
+            $params->{"slab_h"},
+        );
+        # box sets the base coordinate at 0,0, move to center of plate
+        $mesh->translate(
+            -$size->x*1.5/2.0,
+            -$size->y*1.5/2.0,  #**
+            0,
+        );
     } else {
         return;
     }
@@ -373,7 +368,7 @@ sub on_btn_lambda {
     $new_volume->config->set_ifndef('extruder', 0);
 
     $self->{parts_changed} = 1;
-    $self->_parts_changed;
+    $self->_parts_changed($self->{model_object}->volumes_count-1);
 }
 
 sub on_btn_delete {
@@ -397,9 +392,9 @@ sub on_btn_delete {
 }
 
 sub _parts_changed {
-    my ($self) = @_;
+    my ($self, $selected_volume_idx) = @_;
     
-    $self->reload_tree;
+    $self->reload_tree($selected_volume_idx);
     if ($self->{canvas}) {
         $self->{canvas}->reset_objects;
         $self->{canvas}->load_object($self->{model_object});
@@ -436,17 +431,11 @@ sub PartSettingsChanged {
 
 sub _update {
     my ($self) = @_;
-    my ($m_x, $m_y, $m_z) = ($self->{move_options}{x}, $self->{move_options}{y}, $self->{move_options}{z});
-    my ($l_x, $l_y, $l_z) = ($self->{last_coords}{x}, $self->{last_coords}{y}, $self->{last_coords}{z});
-    
+
     my $itemData = $self->get_selection;
     if ($itemData && $itemData->{type} eq 'volume') {
-        my $d = Slic3r::Pointf3->new($m_x - $l_x, $m_y - $l_y, $m_z - $l_z);
         my $volume = $self->{model_object}->volumes->[$itemData->{volume_id}];
-        $volume->mesh->translate(@{$d});
-        $self->{last_coords}{x} = $m_x;
-        $self->{last_coords}{y} = $m_y;
-        $self->{last_coords}{z} = $m_z;
+        $volume->mesh->translate(@{ $volume->mesh->bounding_box->min_point->vector_to($self->{move_target}) });
     }
 
     $self->{parts_changed} = 1;
