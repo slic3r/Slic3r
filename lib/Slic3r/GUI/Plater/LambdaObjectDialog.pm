@@ -70,7 +70,7 @@ sub new {
     ));
     $optgroup_box->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id  =>  1,
-        label   =>  'W (x)',
+        label   =>  'W (y)',
         type    =>  'f',
         default =>  $self->{object_parameters}{dim}[1],
         sidetext => 'mm',
