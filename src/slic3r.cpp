@@ -160,41 +160,12 @@ main(const int argc, const char **argv)
             TriangleMesh mesh = model->mesh();
             mesh.repair();
             
-            const BoundingBoxf3 bb = mesh.bounding_box();
-            mesh.translate(0, 0, -bb.min.z);
-            
-            const Sizef3 size = bb.size();
-            const size_t x_parts = ceil((size.x - EPSILON)/cli_config.cut_grid.value.x);
-            const size_t y_parts = ceil((size.y - EPSILON)/cli_config.cut_grid.value.y);
-            
-            for (size_t i = 1; i <= x_parts; ++i) {
-                TriangleMesh curr;
-                if (i == x_parts) {
-                    curr = mesh;
-                } else {
-                    TriangleMesh next;
-                    TriangleMeshSlicer<X>(&mesh).cut(bb.min.x + (cli_config.cut_grid.value.x * i), &next, &curr);
-                    curr.repair();
-                    next.repair();
-                    mesh = next;
-                }
-                
-                for (size_t j = 1; j <= y_parts; ++j) {
-                    TriangleMesh tile;
-                    if (j == y_parts) {
-                        tile = curr;
-                    } else {
-                        TriangleMesh next;
-                        TriangleMeshSlicer<Y>(&curr).cut(bb.min.y + (cli_config.cut_grid.value.y * j), &next, &tile);
-                        tile.repair();
-                        next.repair();
-                        curr = next;
-                    }
-                    
-                    std::ostringstream ss;
-                    ss << model->objects.front()->input_file << "_" << i << "_" << j << ".stl";
-                    IO::STL::write(tile, ss.str());
-                }
+            TriangleMeshPtrs meshes = mesh.cut_by_grid(cli_config.cut_grid.value);
+            for (TriangleMeshPtrs::iterator m = meshes.begin(); m != meshes.end(); ++m) {
+                std::ostringstream ss;
+                ss << model->objects.front()->input_file << "_" << (m - meshes.begin()) << ".stl";
+                IO::STL::write(**m, ss.str());
+                delete *m;
             }
         } else {
             std::cerr << "error: command not supported" << std::endl;

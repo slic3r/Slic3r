@@ -6,6 +6,8 @@ use strict;
 use warnings;
 use utf8;
 
+use POSIX qw(ceil);
+use Scalar::Util qw(looks_like_number);
 use Slic3r::Geometry qw(PI X Y Z);
 use Wx qw(wxTheApp :dialog :id :misc :sizer wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_CLOSE EVT_BUTTON);
@@ -109,8 +111,14 @@ sub new {
     ));
     {
         my $cut_button_sizer = Wx::BoxSizer->new(wxVERTICAL);
+        
         $self->{btn_cut} = Wx::Button->new($self, -1, "Perform cut", wxDefaultPosition, wxDefaultSize);
+        $self->{btn_cut}->SetDefault;
         $cut_button_sizer->Add($self->{btn_cut}, 0, wxALIGN_RIGHT | wxALL, 10);
+        
+        $self->{btn_cut_grid} = Wx::Button->new($self, -1, "Cut by grid…", wxDefaultPosition, wxDefaultSize);
+        $cut_button_sizer->Add($self->{btn_cut_grid}, 0, wxALIGN_RIGHT | wxALL, 10);
+        
         $optgroup->append_line(Slic3r::GUI::OptionsGroup::Line->new(
             sizer => $cut_button_sizer,
         ));
@@ -144,15 +152,57 @@ sub new {
         $self->_perform_cut() unless $self->{mesh_cut_valid};
 
         # Adjust position / orientation of the split object halves.
-        if ($self->{new_model_objects}{lower}) {
+        if (my $lower = $self->{new_model_objects}[0]) {
             if ($self->{cut_options}{rotate_lower} && $self->{cut_options}{axis} == Z) {
-                $self->{new_model_objects}{lower}->rotate(PI, X);
+                $lower->rotate(PI, X);
             }
-            $self->{new_model_objects}{lower}->center_around_origin;  # align to Z = 0
+            $lower->center_around_origin;  # align to Z = 0
         }
-        if ($self->{new_model_objects}{upper}) {
-            $self->{new_model_objects}{upper}->center_around_origin;  # align to Z = 0
+        if (my $upper = $self->{new_model_objects}[1]) {
+            $upper->center_around_origin;  # align to Z = 0
         }
+        
+        # Note that the window was already closed, so a pending update will not be executed.
+        $self->{already_closed} = 1;
+        $self->EndModal(wxID_OK);
+        $self->Destroy();
+    });
+    
+    EVT_BUTTON($self, $self->{btn_cut_grid}, sub {
+        my $grid_x = Wx::GetTextFromUser("Enter the width of the desired tiles along the X axis:",
+            "Cut by Grid", 100, $self);
+        return if !looks_like_number($grid_x) || $grid_x <= 0;
+        
+        my $grid_y = Wx::GetTextFromUser("Enter the width of the desired tiles along the Y axis:",
+            "Cut by Grid", 100, $self);
+        return if !looks_like_number($grid_y) || $grid_y <= 0;
+        
+        my $process_dialog = Wx::ProgressDialog->new('Cutting…', "Cutting model by grid…", 100, $self, 0);
+        $process_dialog->Pulse;
+        
+        my $meshes = $self->{model_object}->mesh->cut_by_grid(Slic3r::Pointf->new($grid_x, $grid_y));
+        $self->{new_model_objects} = [];
+        
+        my $bb = $self->{model_object}->bounding_box;
+        $self->{new_model} = my $model = Slic3r::Model->new;
+        for my $i (0..$#$meshes) {
+            push @{$self->{new_model_objects}}, my $o = $model->add_object(
+                name => sprintf('%s (%d)', $self->{model_object}->name, $i+1),
+            );
+            my $v = $o->add_volume(
+                mesh    => $meshes->[$i],
+                name    => $o->name,
+            );
+            my $min = $v->mesh->bounding_box->min_point->clone;
+            $o->center_around_origin;
+            my $i = $o->add_instance(offset => Slic3r::Pointf->new(@{$min}[X,Y]));
+            $i->offset->translate(
+                5 * ceil(($i->offset->x - $bb->center->x) / $grid_x),
+                5 * ceil(($i->offset->y - $bb->center->y) / $grid_y),
+            );
+        }
+        
+        $process_dialog->Destroy;
         
         # Note that the window was already closed, so a pending update will not be executed.
         $self->{already_closed} = 1;
@@ -208,12 +258,12 @@ sub _perform_cut
     my ($new_model) = $self->{model_object}->cut($self->{cut_options}{axis}, $z);
     my ($upper_object, $lower_object) = @{$new_model->objects};
     $self->{new_model} = $new_model;
-    $self->{new_model_objects} = {};
+    $self->{new_model_objects} = [];
     if ($self->{cut_options}{keep_upper} && $upper_object->volumes_count > 0) {
-        $self->{new_model_objects}{upper} = $upper_object;
+        $self->{new_model_objects}[1] = $upper_object;
     }
     if ($self->{cut_options}{keep_lower} && $lower_object->volumes_count > 0) {
-        $self->{new_model_objects}{lower} = $lower_object;
+        $self->{new_model_objects}[0] = $lower_object;
     }
 
     $self->{mesh_cut_valid} = 1;
@@ -241,7 +291,7 @@ sub _update {
             # get volumes to render
             my @objects = ();
             if ($life_preview_active) {
-                push @objects, values %{$self->{new_model_objects}};
+                push @objects, grep defined, @{$self->{new_model_objects}};
             } else {
                 push @objects, $self->{model_object};
             }
@@ -311,7 +361,7 @@ sub _update {
 
 sub NewModelObjects {
     my ($self) = @_;
-    return values %{ $self->{new_model_objects} };
+    return grep defined, @{ $self->{new_model_objects} };
 }
 
 1;

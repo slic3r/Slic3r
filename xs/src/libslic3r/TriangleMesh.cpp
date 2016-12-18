@@ -395,6 +395,47 @@ TriangleMesh::split() const
     return meshes;
 }
 
+TriangleMeshPtrs
+TriangleMesh::cut_by_grid(const Pointf &grid) const
+{
+    TriangleMesh mesh = *this;
+    const BoundingBoxf3 bb = mesh.bounding_box();            
+    const Sizef3 size = bb.size();
+    const size_t x_parts = ceil((size.x - EPSILON)/grid.x);
+    const size_t y_parts = ceil((size.y - EPSILON)/grid.y);
+    
+    TriangleMeshPtrs meshes;
+    for (size_t i = 1; i <= x_parts; ++i) {
+        TriangleMesh curr;
+        if (i == x_parts) {
+            curr = mesh;
+        } else {
+            TriangleMesh next;
+            TriangleMeshSlicer<X>(&mesh).cut(bb.min.x + (grid.x * i), &next, &curr);
+            curr.repair();
+            next.repair();
+            mesh = next;
+        }
+        
+        for (size_t j = 1; j <= y_parts; ++j) {
+            TriangleMesh* tile;
+            if (j == y_parts) {
+                tile = new TriangleMesh(curr);
+            } else {
+                TriangleMesh next;
+                tile = new TriangleMesh;
+                TriangleMeshSlicer<Y>(&curr).cut(bb.min.y + (grid.y * j), &next, tile);
+                tile->repair();
+                next.repair();
+                curr = next;
+            }
+            
+            meshes.push_back(tile);
+        }
+    }
+    return meshes;
+}
+
 void
 TriangleMesh::merge(const TriangleMesh &mesh)
 {

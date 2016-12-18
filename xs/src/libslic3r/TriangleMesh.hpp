@@ -49,6 +49,7 @@ class TriangleMesh
     void center_around_origin();
     void rotate(double angle, Point* center);
     TriangleMeshPtrs split() const;
+    TriangleMeshPtrs cut_by_grid(const Pointf &grid) const;
     void merge(const TriangleMesh &mesh);
     ExPolygons horizontal_projection() const;
     Polygon convex_hull();
@@ -111,8 +112,6 @@ class TriangleMeshSlicer
         boost::mutex* lines_mutex = NULL) const;
     
     void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const;
-    
-    static void cut(TriangleMesh* mesh, Axis axis, float z, TriangleMesh* upper, TriangleMesh* lower);
     
     private:
     typedef std::vector< std::vector<int> > t_facets_edges;

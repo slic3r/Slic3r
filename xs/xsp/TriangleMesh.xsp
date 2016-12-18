@@ -30,6 +30,8 @@
     void align_to_origin();
     void rotate(double angle, Point* center);
     TriangleMeshPtrs split();
+    TriangleMeshPtrs cut_by_grid(Pointf* grid)
+        %code{% RETVAL = THIS->cut_by_grid(*grid); %};
     void merge(TriangleMesh* mesh)
         %code{% THIS->merge(*mesh); %};
     ExPolygons horizontal_projection();

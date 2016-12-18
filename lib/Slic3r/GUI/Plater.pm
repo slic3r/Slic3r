@@ -618,7 +618,7 @@ sub load_model_objects {
         $o->repair;
         
         push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
-            name => basename($model_object->input_file),
+            name => $model_object->name || basename($model_object->input_file),
         );
         push @obj_idx, $#{ $self->{objects} };
     
@@ -1649,9 +1649,14 @@ sub object_cut_dialog {
 	return unless $dlg->ShowModal == wxID_OK;
 	
 	if (my @new_objects = $dlg->NewModelObjects) {
+	    my $process_dialog = Wx::ProgressDialog->new('Loading…', "Loading new objects…", 100, $self, 0);
+        $process_dialog->Pulse;
+        
 	    $self->remove($obj_idx);
 	    $self->load_model_objects(grep defined($_), @new_objects);
-	    $self->arrange;
+	    $self->arrange if @new_objects <= 2; # don't arrange for grid cuts
+	    
+	    $process_dialog->Destroy;
 	}
 }
 
