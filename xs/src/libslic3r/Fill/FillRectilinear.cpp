@@ -413,6 +413,7 @@ void FillGrid::_fill_surface_single(
     direction_t direction2 = direction;
     direction2.first += PI/2;
     fill2._fill_single_direction(expolygon, direction,  0, out);
+    fill2.dont_connect = true;
     fill2._fill_single_direction(expolygon, direction2, 0, out);
 }
 
@@ -428,6 +429,7 @@ void FillTriangles::_fill_surface_single(
     
     fill2._fill_single_direction(expolygon, direction2, 0, out);
     
+    fill2.dont_connect = true;
     direction2.first += PI/3;
     fill2._fill_single_direction(expolygon, direction2, 0, out);
     
@@ -447,6 +449,7 @@ void FillStars::_fill_surface_single(
     
     fill2._fill_single_direction(expolygon, direction2, 0, out);
     
+    fill2.dont_connect = true;
     direction2.first += PI/3;
     fill2._fill_single_direction(expolygon, direction2, 0, out);
     
@@ -470,6 +473,7 @@ void FillCubic::_fill_surface_single(
     
     fill2._fill_single_direction(expolygon, direction2, -x_shift, out);
     
+    fill2.dont_connect = true;
     direction2.first += PI/3;
     fill2._fill_single_direction(expolygon, direction2, +x_shift, out);
     
