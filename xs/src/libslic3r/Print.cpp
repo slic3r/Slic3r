@@ -163,7 +163,8 @@ Print::invalidate_state_by_config_options(const std::vector<t_config_option_key>
             || *opt_key == "min_skirt_length"
             || *opt_key == "ooze_prevention") {
             steps.insert(psSkirt);
-        } else if (*opt_key == "brim_width") {
+        } else if (*opt_key == "brim_width"
+            || *opt_key == "brim_connections_width") {
             steps.insert(psBrim);
             steps.insert(psSkirt);
         } else if (*opt_key == "nozzle_diameter"
@@ -304,7 +305,7 @@ Print::object_extruders() const
     FOREACH_REGION(this, region) {
         // these checks reflect the same logic used in the GUI for enabling/disabling
         // extruder selection fields
-        if ((*region)->config.perimeters.value > 0 || this->config.brim_width.value > 0)
+        if ((*region)->config.perimeters.value > 0 || this->config.brim_width.value > 0 || this->config.brim_connections_width.value > 0)
             extruders.insert((*region)->config.perimeter_extruder - 1);
         
         if ((*region)->config.fill_density.value > 0)

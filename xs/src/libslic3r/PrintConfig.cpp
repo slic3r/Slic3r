@@ -91,6 +91,14 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(60);
 
+    def = this->add("brim_connections_width", coFloat);
+    def->label = "Brim connections width";
+    def->tooltip = "If set to a positive value, straight connections will be built on the first layer between adjacent objects.";
+    def->sidetext = "mm";
+    def->cli = "brim-connections-width=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
+
     def = this->add("brim_width", coFloat);
     def->label = "Brim width";
     def->tooltip = "Horizontal width of the brim that will be printed around each object on the first layer.";

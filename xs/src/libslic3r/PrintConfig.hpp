@@ -366,6 +366,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionInt                 bed_temperature;
     ConfigOptionFloat               bridge_acceleration;
     ConfigOptionInt                 bridge_fan_speed;
+    ConfigOptionFloat               brim_connections_width;
     ConfigOptionFloat               brim_width;
     ConfigOptionBool                complete_objects;
     ConfigOptionBool                cooling;
@@ -425,6 +426,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
+        OPT_PTR(brim_connections_width);
         OPT_PTR(brim_width);
         OPT_PTR(complete_objects);
         OPT_PTR(cooling);

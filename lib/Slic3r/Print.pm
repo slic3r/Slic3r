@@ -12,8 +12,9 @@ use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(X Y Z X1 Y1 X2 Y2 MIN MAX PI scale unscale convex_hull);
 use Slic3r::Geometry::Clipper qw(diff_ex union_ex intersection_ex intersection offset
-    offset2 union union_pt_chained JT_ROUND JT_SQUARE);
+    offset2 union union_pt_chained JT_ROUND JT_SQUARE diff_pl);
 use Slic3r::Print::State ':steps';
+use Slic3r::Surface qw(S_TYPE_BOTTOM);
 
 our $status_cb;
 
@@ -356,7 +357,7 @@ sub make_brim {
     # checking whether we need to generate them
     $self->brim->clear;
     
-    if ($self->config->brim_width == 0) {
+    if ($self->config->brim_width == 0 && $self->config->brim_connections_width == 0) {
         $self->set_step_done(STEP_BRIM);
         return;
     }
@@ -390,7 +391,7 @@ sub make_brim {
     }
     
     my @loops = ();
-    my $num_loops = sprintf "%.0f", $self->config->brim_width / $flow->width;
+    my $num_loops = int($self->config->brim_width / $flow->width + 0.5);
     for my $i (reverse 1 .. $num_loops) {
         # JT_SQUARE ensures no vertex is outside the given offset distance
         # -0.5 because islands are not represented by their centerlines
@@ -408,6 +409,65 @@ sub make_brim {
             height          => $first_layer_height,
         ),
     ), reverse @{union_pt_chained(\@loops)});
+    
+    if ($self->config->brim_connections_width > 0) {
+        # get islands to connects
+        @islands = map convex_hull(\@$_), @islands;
+        @islands = @{offset(\@islands, ($num_loops-0.2) * $flow->scaled_spacing, 10000, JT_SQUARE)};
+        
+        # compute centroid for each island
+        my @centroids = map $_->centroid, @islands;
+        
+        # in order to check visibility we need to account for the connections width,
+        # so let's use grown islands
+        my $scaled_width = scale($self->config->brim_connections_width);
+        my $grown = offset(\@islands, +$scaled_width/2);
+        
+        # find pairs of islands having direct visibility
+        my @lines = ();
+        for my $i (0..$#islands) {
+            for my $j (($i+1)..$#islands) {
+                # check visibility
+                my $line = Slic3r::Line->new(@centroids[$i,$j]);
+                next if @{diff_pl([$line->as_polyline], $grown)} != 1;
+                
+                push @lines, $line;
+            }
+        }
+        
+        my $filler = Slic3r::Filler->new_from_type('rectilinear');
+        $filler->set_spacing($flow->spacing);
+        $filler->set_dont_adjust(1);
+        
+        # subtract already generated connections in order to prevent crossings
+        # and overextrusion
+        my @other = ();
+        
+        foreach my $line (@lines) {
+            my $expolygons = diff_ex(
+                $line->grow($scaled_width/2),
+                [ @islands, @other ],
+            );
+            push @other, map $_->clone, map @$_, @$expolygons;
+            
+            $filler->set_angle($line->direction);
+            foreach my $expolygon (@$expolygons) {
+                my $paths = $filler->fill_surface(
+                    Slic3r::Surface->new(expolygon => $expolygon, surface_type => S_TYPE_BOTTOM),
+                    layer_height    => $first_layer_height,
+                    density         => 1,
+                );
+            
+                $self->brim->append(map Slic3r::ExtrusionPath->new(
+                    polyline        => $_,
+                    role            => EXTR_ROLE_SKIRT,
+                    mm3_per_mm      => $mm3_per_mm,
+                    width           => $flow->width,
+                    height          => $first_layer_height,
+                ), @$paths);
+            }
+        }
+    }
     
     $self->set_step_done(STEP_BRIM);
 }

@@ -1285,7 +1285,9 @@ sub load_print_toolpaths {
     
     return if !$print->step_done(STEP_SKIRT);
     return if !$print->step_done(STEP_BRIM);
-    return if !$print->has_skirt && $print->config->brim_width == 0;
+    return if !$print->has_skirt
+        && $print->config->brim_width == 0
+        && $print->config->brim_connections_width == 0;
     
     my $qverts  = Slic3r::GUI::_3DScene::GLVertexArray->new;
     my $tverts  = Slic3r::GUI::_3DScene::GLVertexArray->new;
