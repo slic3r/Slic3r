@@ -21,6 +21,7 @@ class TriangleMesh
 {
     public:
     TriangleMesh();
+    TriangleMesh(const Pointf3s &points, const std::vector<Point3> &facets);
     TriangleMesh(const TriangleMesh &other);
     TriangleMesh& operator= (TriangleMesh other);
     void swap(TriangleMesh &other);
@@ -56,6 +57,11 @@ class TriangleMesh
     bool needed_repair() const;
     size_t facets_count() const;
     void extrude_tin(float offset);
+    
+    static TriangleMesh make_cube(double x, double y, double z);
+    static TriangleMesh make_cylinder(double r, double h, double fa=(2*PI/360));
+    static TriangleMesh make_sphere(double rho, double fa=(2*PI/360));
+    
     stl_file stl;
     bool repaired;
     

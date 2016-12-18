@@ -39,6 +39,7 @@
         %code{% RETVAL = THIS->bounding_box().center(); %};
     int facets_count();
     void reset_repair_stats();
+
 %{
 
 void
@@ -251,6 +252,13 @@ TriangleMesh::bb3()
 };
 
 %package{Slic3r::TriangleMesh};
+
+Clone<TriangleMesh> make_cube(double x, double y, double z)
+    %code{% RETVAL = TriangleMesh::make_cube(x, y, z); %};
+Clone<TriangleMesh> make_cylinder(double r, double h)
+    %code{% RETVAL = TriangleMesh::make_cylinder(r, h); %};
+Clone<TriangleMesh> make_sphere(double rho)
+    %code{% RETVAL = TriangleMesh::make_sphere(rho); %};
 
 %{
 PROTOTYPES: DISABLE
