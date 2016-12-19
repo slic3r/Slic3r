@@ -3,6 +3,7 @@
 #include "ExPolygonCollection.hpp"
 #include "ClipperUtils.hpp"
 #include "Extruder.hpp"
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <sstream>
@@ -224,10 +225,30 @@ ExtrusionLoop::has_overhang_point(const Point &point) const
 Polygons
 ExtrusionLoop::grow() const
 {
-    Polygons pp;
+    if (this->paths.empty()) return Polygons();
+    
+    // collect all the path widths
+    std::vector<float> widths;
     for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path)
-        append_to(pp, path->grow());
-    return pp;
+        widths.push_back(path->width);
+    
+    // grow this polygon with the minimum common width
+    // (this ensures vertices are grown correctly, which doesn't happen if we just
+    // union the paths grown individually)
+    const float min_width = *std::min_element(widths.begin(), widths.end());
+    const Polygon p = this->polygon();
+    Polygons pp = diff(
+        offset(p, +scale_(min_width/2)),
+        offset(p, -scale_(min_width/2))
+    );
+    
+    // if we have thicker segments, grow them
+    if (min_width != *std::max_element(widths.begin(), widths.end())) {
+        for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path)
+            append_to(pp, path->grow());
+    }
+    
+    return union_(pp);
 }
 
 double
