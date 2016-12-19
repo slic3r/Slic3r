@@ -2,6 +2,7 @@
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
+#include <algorithm>
 
 namespace Slic3r {
 
@@ -542,7 +543,8 @@ PrintObject::bridge_over_infill()
         );
         
         // get the average extrusion volume per surface unit
-        const double mm3_per_mm2 = bridge_flow.mm3_per_mm() / bridge_flow.width;
+        const double mm3_per_mm  = bridge_flow.mm3_per_mm();
+        const double mm3_per_mm2 = mm3_per_mm / bridge_flow.width;
         
         FOREACH_LAYER(this, layer_it) {
             // skip first layer
@@ -554,6 +556,41 @@ PrintObject::bridge_over_infill()
             // extract the stInternalSolid surfaces that might be transformed into bridges
             Polygons internal_solid;
             layerm->fill_surfaces.filter_by_type(stInternalSolid, &internal_solid);
+            if (internal_solid.empty()) continue;
+            
+            // check whether we should bridge or not according to density
+            {
+                // get the normal solid infill flow we would use if not bridging
+                const Flow normal_flow = layerm->flow(frSolidInfill, false);
+                
+                // Bridging over sparse infill has two purposes:
+                // 1) cover better the gaps of internal sparse infill, especially when
+                //    printing at very low densities;
+                // 2) provide a greater flow when printing very thin layers where normal
+                //    solid flow would be very poor.
+                // So we calculate density threshold as interpolation according to normal flow.
+                // If normal flow would be equal or greater than the bridge flow, we can keep
+                // a low threshold like 25% in order to bridge only when printing at very low
+                // densities, when sparse infill has significant gaps.
+                // If normal flow would be equal or smaller than half the bridge flow, we
+                // use a higher threshold like 50% in order to bridge in more cases.
+                // We still never bridge whenever fill density is greater than 50% because
+                // we would overstuff.
+                const float min_threshold = 25.0;
+                const float max_threshold = 50.0;
+                const float density_threshold = std::max(
+                    std::min<float>(
+                        min_threshold
+                            + (max_threshold - min_threshold)
+                            * (normal_flow.mm3_per_mm() - mm3_per_mm)
+                            / (mm3_per_mm/2 - mm3_per_mm),
+                        max_threshold
+                    ),
+                    min_threshold
+                );
+                
+                if ((*region)->config.fill_density.value > density_threshold) continue;
+            }
             
             // check whether the lower area is deep enough for absorbing the extra flow
             // (for obvious physical reasons but also for preventing the bridge extrudates
