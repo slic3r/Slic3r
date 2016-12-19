@@ -909,8 +909,8 @@ sub Render {
         glDisable(GL_DEPTH_TEST);
         my $origin = $self->origin;
         my $axis_len = max(
-            0.3 * max(@{ $self->bed_bounding_box->size }),
-              2 * max(@{ $volumes_bb->size }),
+            max(@{ $self->bed_bounding_box->size }),
+            1.2 * max(@{ $volumes_bb->size }),
         );
         glLineWidth(2);
         glBegin(GL_LINES);
