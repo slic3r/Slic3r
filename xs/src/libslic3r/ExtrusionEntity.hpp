@@ -165,6 +165,9 @@ class ExtrusionLoop : public ExtrusionEntity
     // Minimum volumetric velocity of this extrusion entity. Used by the constant nozzle pressure algorithm.
     double min_mm3_per_mm() const;
     Polyline as_polyline() const { return this->polygon().split_at_first_point(); }
+    void append(const ExtrusionPath &path) {
+        this->paths.push_back(path);
+    };
 };
 
 }

@@ -34,8 +34,15 @@ ExtrusionEntityCollection::swap (ExtrusionEntityCollection &c)
 
 ExtrusionEntityCollection::~ExtrusionEntityCollection()
 {
+    this->clear();
+}
+
+void
+ExtrusionEntityCollection::clear()
+{
     for (ExtrusionEntitiesPtr::iterator it = this->entities.begin(); it != this->entities.end(); ++it)
         delete *it;
+    this->entities.clear();
 }
 
 ExtrusionEntityCollection::operator ExtrusionPaths() const

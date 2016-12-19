@@ -203,6 +203,7 @@ class Print
     double skirt_first_layer_height() const;
     Flow brim_flow() const;
     Flow skirt_flow() const;
+    void _make_brim();
     
     std::set<size_t> object_extruders() const;
     std::set<size_t> support_material_extruders() const;
