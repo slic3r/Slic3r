@@ -618,19 +618,27 @@ sub discover_horizontal_shells {
                     
                     # find intersection between neighbor and current layer's surfaces
                     # intersections have contours and holes
-                    # we update $solid so that we limit the next neighbor layer to the areas that were
-                    # found on this one - in other words, solid shells on one layer (for a given external surface)
-                    # are always a subset of the shells found on the previous shell layer
-                    # this approach allows for DWIM in hollow sloping vases, where we want bottom
-                    # shells to be generated in the base but not in the walls (where there are many
-                    # narrow bottom surfaces): reassigning $solid will consider the 'shadow' of the 
-                    # upper perimeter as an obstacle and shell will not be propagated to more upper layers
-                    my $new_internal_solid = $solid = intersection(
+                    my $new_internal_solid = intersection(
                         $solid,
                         [ map $_->p, grep { ($_->surface_type == S_TYPE_INTERNAL) || ($_->surface_type == S_TYPE_INTERNALSOLID) } @neighbor_fill_surfaces ],
                         1,
                     );
-                    next EXTERNAL if !@$new_internal_solid;
+                    if (!@$new_internal_solid) {
+                        # No internal solid needed on this layer. In order to decide whether to continue
+                        # searching on the next neighbor (thus enforcing the configured number of solid
+                        # layers, use different strategies according to configured infill density:
+                        if ($layerm->region->config->fill_density == 0) {
+                            # If user expects the object to be void (for example a hollow sloping vase),
+                            # don't continue the search. In this case, we only generate the external solid
+                            # shell if the object would otherwise show a hole (gap between perimeters of 
+                            # the two layers), and internal solid shells are a subset of the shells found 
+                            # on each previous layer.
+                            next EXTERNAL;
+                        } else {
+                            # If we have internal infill, we can generate internal solid shells freely.
+                            next NEIGHBOR;
+                        }
+                    }
                     
                     if ($layerm->region->config->fill_density == 0) {
                         # if we're printing a hollow object we discard any solid shell thinner
