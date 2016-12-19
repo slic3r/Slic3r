@@ -526,13 +526,13 @@ void
 PrintObject::bridge_over_infill()
 {
     FOREACH_REGION(this->_print, region) {
-        size_t region_id = region - this->_print->regions.begin();
+        const size_t region_id = region - this->_print->regions.begin();
         
         // skip bridging in case there are no voids
         if ((*region)->config.fill_density.value == 100) continue;
         
         // get bridge flow
-        Flow bridge_flow = (*region)->flow(
+        const Flow bridge_flow = (*region)->flow(
             frSolidInfill,
             -1,     // layer height, not relevant for bridge flow
             true,   // bridge
@@ -540,6 +540,9 @@ PrintObject::bridge_over_infill()
             -1,     // custom width, not relevant for bridge flow
             *this
         );
+        
+        // get the average extrusion volume per surface unit
+        const double mm3_per_mm2 = bridge_flow.mm3_per_mm() / bridge_flow.width;
         
         FOREACH_LAYER(this, layer_it) {
             // skip first layer
@@ -559,13 +562,23 @@ PrintObject::bridge_over_infill()
             {
                 Polygons to_bridge_pp = internal_solid;
                 
+                // Only bridge where internal infill exists below the solid shell matching
+                // these two conditions:
+                // 1) its depth is at least equal to our bridge extrusion diameter;
+                // 2) its free volume (thus considering infill density) is at least equal
+                //    to the volume needed by our bridge flow.
+                double excess_mm3_per_mm2 = mm3_per_mm2;
+                
                 // iterate through lower layers spanned by bridge_flow
-                double bottom_z = layer->print_z - bridge_flow.height;
+                const double bottom_z = layer->print_z - bridge_flow.height;
                 for (int i = (layer_it - this->layers.begin()) - 1; i >= 0; --i) {
                     const Layer* lower_layer = this->layers[i];
                     
-                    // stop iterating if layer is lower than bottom_z
-                    if (lower_layer->print_z < bottom_z) break;
+                    // subtract the void volume of this layer
+                    excess_mm3_per_mm2 -= lower_layer->height * (100 - (*region)->config.fill_density.value)/100;
+                    
+                    // stop iterating if both conditions are matched
+                    if (lower_layer->print_z < bottom_z && excess_mm3_per_mm2 <= 0) break;
                     
                     // iterate through regions and collect internal surfaces
                     Polygons lower_internal;
@@ -576,9 +589,12 @@ PrintObject::bridge_over_infill()
                     to_bridge_pp = intersection(to_bridge_pp, lower_internal);
                 }
                 
+                // don't bridge if the volume condition isn't matched
+                if (excess_mm3_per_mm2 > 0) continue;
+                
                 // there's no point in bridging too thin/short regions
                 {
-                    double min_width = bridge_flow.scaled_width() * 3;
+                    const double min_width = bridge_flow.scaled_width() * 3;
                     to_bridge_pp = offset2(to_bridge_pp, -min_width, +min_width);
                 }
                 
@@ -593,7 +609,7 @@ PrintObject::bridge_over_infill()
             #endif
             
             // compute the remaning internal solid surfaces as difference
-            ExPolygons not_to_bridge = diff_ex(internal_solid, to_polygons(to_bridge), true);
+            const ExPolygons not_to_bridge = diff_ex(internal_solid, to_polygons(to_bridge), true);
             
             // build the new collection of fill_surfaces
             {
