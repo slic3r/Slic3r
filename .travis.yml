@@ -1,6 +1,5 @@
 language: perl
 install: export LDLOADLIBS=-lstdc++
-script: perl ./Build.PL
 perl:
   - "5.14"
   - "5.18"
@@ -21,3 +20,10 @@ addons:
     - libboost-system1.55-dev
     - libboost-filesystem1.55-dev
     - liblocal-lib-perl
+before_script:
+  - cpanm --quiet --notest --skip-satisfied git://github.com/codecov/codecov-perl@master
+script:
+  - perl ./Build.PL
+  - cover -test
+after_success:
+  - cover -report codecov
