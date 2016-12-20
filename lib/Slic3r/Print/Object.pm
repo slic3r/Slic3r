@@ -335,39 +335,6 @@ sub slice {
     $self->set_step_done(STEP_SLICE);
 }
 
-# called from slice()
-sub _slice_region {
-    my ($self, $region_id, $z, $modifier) = @_;
-
-    return [] if !@{$self->get_region_volumes($region_id)};
-
-    # compose mesh
-    my $mesh;
-    foreach my $volume_id (@{ $self->get_region_volumes($region_id) }) {
-        my $volume = $self->model_object->volumes->[$volume_id];
-        next if $volume->modifier && !$modifier;
-        next if !$volume->modifier && $modifier;
-        
-        if (defined $mesh) {
-            $mesh->merge($volume->mesh);
-        } else {
-            $mesh = $volume->mesh->clone;
-        }
-    }
-    return if !defined $mesh;
-
-    # transform mesh
-    # we ignore the per-instance transformations currently and only 
-    # consider the first one
-    $self->model_object->instances->[0]->transform_mesh($mesh, 1);
-
-    # align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
-    $mesh->translate((map unscale(-$_), @{$self->_copies_shift}), -$self->model_object->bounding_box->z_min);
-    
-    # perform actual slicing
-    return $mesh->slice($z);
-}
-
 sub make_perimeters {
     my ($self) = @_;
     

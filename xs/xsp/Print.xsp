@@ -110,6 +110,25 @@ _constant()
     void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    SV* _slice_region(size_t region_id, std::vector<double> z, bool modifier)
+        %code%{
+            std::vector<float> z_f(z.begin(), z.end());
+            std::vector<ExPolygons> layers = THIS->_slice_region(region_id, z_f, modifier);
+            AV* layers_av = newAV();
+            size_t len = layers.size();
+            if (len > 0) av_extend(layers_av, len-1);
+            for (unsigned int i = 0; i < layers.size(); i++) {
+                AV* expolygons_av = newAV();
+                len = layers[i].size();
+                if (len > 0) av_extend(expolygons_av, len-1);
+                unsigned int j = 0;
+                for (ExPolygons::iterator it = layers[i].begin(); it != layers[i].end(); ++it) {
+                    av_store(expolygons_av, j++, perl_to_SV_clone_ref(*it));
+                }
+                av_store(layers_av, i, newRV_noinc((SV*)expolygons_av));
+            }
+            RETVAL = (SV*)newRV_noinc((SV*)layers_av);
+        %};
     void _make_perimeters();
     void _infill();
     

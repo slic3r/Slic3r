@@ -100,7 +100,7 @@ class PrintObject
     PrintState<PrintObjectStep> state;
     
     Print* print();
-    ModelObject* model_object();
+    ModelObject* model_object() { return this->_model_object; };
     
     Points copies() const;
     bool add_copy(const Pointf &point);
@@ -136,6 +136,7 @@ class PrintObject
     void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
     void _make_perimeters();
     void _infill();
     
