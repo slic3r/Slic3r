@@ -212,8 +212,8 @@ class Print
     double max_allowed_layer_height() const;
     bool has_support_material() const;
     void auto_assign_extruders(ModelObject* model_object) const;
-    std::string output_filename() const;
-    std::string output_filepath(const std::string &path) const;
+    std::string output_filename();
+    std::string output_filepath(const std::string &path);
     
     private:
     void clear_regions();

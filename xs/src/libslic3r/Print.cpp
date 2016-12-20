@@ -436,6 +436,29 @@ Print::add_model_object(ModelObject* model_object, int idx)
     // apply config to print object
     o->config.apply(this->default_object_config);
     o->config.apply(object_config, true);
+    
+    // update placeholders
+    {
+        // get the first input file name
+        std::string input_file;
+        std::vector<std::string> v_scale;
+        FOREACH_OBJECT(this, object) {
+            const ModelObject &mobj = *(*object)->model_object();
+            v_scale.push_back( boost::lexical_cast<std::string>(mobj.instances[0]->scaling_factor*100) + "%" );
+            if (input_file.empty())
+                input_file = mobj.input_file;
+        }
+        
+        PlaceholderParser &pp = this->placeholder_parser;
+        pp.set("scale", v_scale);
+        if (!input_file.empty()) {
+            // get basename with and without suffix
+            const std::string input_basename = boost::filesystem::path(input_file).filename().string();
+            pp.set("input_filename", input_basename);
+            const std::string input_basename_base = input_basename.substr(0, input_basename.find_last_of("."));
+            pp.set("input_filename_base", input_basename_base);
+        }
+    }
 }
 
 bool
@@ -976,37 +999,14 @@ Print::auto_assign_extruders(ModelObject* model_object) const
 }
 
 std::string
-Print::output_filename() const
+Print::output_filename()
 {
-    PlaceholderParser pp = this->placeholder_parser;
-    
-    // get input file name
-    std::string input_file;
-    FOREACH_OBJECT(this, object) {
-        input_file = (*object)->model_object()->input_file;
-        if (!input_file.empty()) break;
-    }
-    
-    // get basename with and without suffix and set placeholders
-    const std::string input_basename = boost::filesystem::path(input_file).filename().string();
-    pp.set("input_filename", input_basename);
-    const std::string input_basename_base = input_basename.substr(0, input_basename.find_last_of("."));
-    pp.set("input_filename_base", input_basename_base);
-    
-    // set other variables from model object
-    {
-        std::vector<std::string> v_scale;
-        FOREACH_OBJECT(this, object)
-            v_scale.push_back( boost::lexical_cast<std::string>((*object)->model_object()->instances[0]->scaling_factor*100) + "%" );
-        pp.set("scale", v_scale);
-    }
-    
-    pp.update_timestamp();
-    return pp.process(this->config.output_filename_format.value);
+    this->placeholder_parser.update_timestamp();
+    return this->placeholder_parser.process(this->config.output_filename_format.value);
 }
 
 std::string
-Print::output_filepath(const std::string &path) const
+Print::output_filepath(const std::string &path)
 {
     // if we were supplied no path, generate an automatic one based on our first object's input file
     if (path.empty()) {
