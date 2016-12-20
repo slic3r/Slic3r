@@ -1,10 +1,10 @@
 /*******************************************************************************
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
-* Version   :  6.4.0                                                           *
-* Date      :  2 July 2015                                                     *
+* Version   :  6.4.1                                                           *
+* Date      :  5 December 2016                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2015                                         *
+* Copyright :  Angus Johnson 2010-2016                                         *
 *                                                                              *
 * License:                                                                     *
 * Use, modification & distribution is subject to Boost Software License Ver 1. *
@@ -179,7 +179,7 @@ int PolyTree::Total() const
 // PolyNode methods ...
 //------------------------------------------------------------------------------
 
-PolyNode::PolyNode(): Childs(), Parent(0), Index(0), m_IsOpen(false)
+PolyNode::PolyNode(): Parent(0), Index(0), m_IsOpen(false)
 {
 }
 //------------------------------------------------------------------------------
@@ -3663,7 +3663,7 @@ void Clipper::FixupFirstLefts3(OutRec* OldOutRec, OutRec* NewOutRec)
   {
     OutRec* outRec = m_PolyOuts[i];
     OutRec* firstLeft = ParseFirstLeft(outRec->FirstLeft);
-    if (outRec->Pts && outRec->FirstLeft == OldOutRec)
+    if (outRec->Pts && firstLeft == OldOutRec)
       outRec->FirstLeft = NewOutRec;
   }
 }
