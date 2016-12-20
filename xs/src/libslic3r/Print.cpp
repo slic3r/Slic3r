@@ -6,6 +6,8 @@
 #include "Geometry.hpp"
 #include "SupportMaterial.hpp"
 #include <algorithm>
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace Slic3r {
 
@@ -971,6 +973,59 @@ Print::auto_assign_extruders(ModelObject* model_object) const
                 (*v)->config.opt<ConfigOptionInt>("extruder", true)->value = extruder_id;
         }
     }
+}
+
+std::string
+Print::output_filename() const
+{
+    PlaceholderParser pp = this->placeholder_parser;
+    
+    // get input file name
+    std::string input_file;
+    FOREACH_OBJECT(this, object) {
+        input_file = (*object)->model_object()->input_file;
+        if (!input_file.empty()) break;
+    }
+    
+    // get basename with and without suffix and set placeholders
+    const std::string input_basename = boost::filesystem::path(input_file).filename().string();
+    pp.set("input_filename", input_basename);
+    const std::string input_basename_base = input_basename.substr(0, input_basename.find_last_of("."));
+    pp.set("input_filename_base", input_basename_base);
+    
+    // set other variables from model object
+    {
+        std::vector<std::string> v_scale;
+        FOREACH_OBJECT(this, object)
+            v_scale.push_back( boost::lexical_cast<std::string>((*object)->model_object()->instances[0]->scaling_factor*100) + "%" );
+        pp.set("scale", v_scale);
+    }
+    
+    pp.update_timestamp();
+    return pp.process(this->config.output_filename_format.value);
+}
+
+std::string
+Print::output_filepath(const std::string &path) const
+{
+    // if we were supplied no path, generate an automatic one based on our first object's input file
+    if (path.empty()) {
+        // get the first input file name
+        std::string input_file;
+        FOREACH_OBJECT(this, object) {
+            input_file = (*object)->model_object()->input_file;
+            if (!input_file.empty()) break;
+        }
+        return (boost::filesystem::path(input_file).parent_path() / this->output_filename()).string();
+    }
+    
+    // if we were supplied a directory, use it and append our automatically generated filename
+    boost::filesystem::path p(path);
+    if (boost::filesystem::is_directory(p))
+        return (p / this->output_filename()).string();
+    
+    // if we were supplied a file which is not a directory, use it
+    return path;
 }
 
 }

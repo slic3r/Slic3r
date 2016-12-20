@@ -251,7 +251,7 @@ sub new {
         $self->{print_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
     });
     EVT_BUTTON($self, $self->{btn_send_gcode}, sub {
-        my $filename = basename($self->{print}->expanded_output_filepath($main::opt{output}));
+        my $filename = basename($self->{print}->output_filepath($main::opt{output}));
         $filename = Wx::GetTextFromUser("Save to printer with the following name:",
             "OctoPrint", $filename, $self);
         
@@ -1218,9 +1218,9 @@ sub export_gcode {
     
     # select output file
     if ($output_file) {
-        $self->{export_gcode_output_file} = $self->{print}->expanded_output_filepath($output_file);
+        $self->{export_gcode_output_file} = $self->{print}->output_filepath($output_file);
     } else {
-        my $default_output_file = $self->{print}->expanded_output_filepath($main::opt{output});
+        my $default_output_file = $self->{print}->output_filepath($main::opt{output});
         my $dlg = Wx::FileDialog->new($self, 'Save G-code file as:', wxTheApp->output_path(dirname($default_output_file)),
             basename($default_output_file), &Slic3r::GUI::FILE_WILDCARDS->{gcode}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
         if ($dlg->ShowModal != wxID_OK) {
@@ -1477,7 +1477,7 @@ sub _get_export_file {
     
     my $output_file = $main::opt{output};
     {
-        $output_file = $self->{print}->expanded_output_filepath($output_file);
+        $output_file = $self->{print}->output_filepath($output_file);
         $output_file =~ s/\.gcode$/$suffix/i;
         my $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
             basename($output_file), &Slic3r::GUI::MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
