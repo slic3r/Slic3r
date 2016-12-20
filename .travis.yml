@@ -21,7 +21,7 @@ addons:
     - libboost-filesystem1.55-dev
     - liblocal-lib-perl
 before_script:
-  - cpanm --quiet --notest --skip-satisfied git://github.com/codecov/codecov-perl@master
+  - cpanm --quiet --notest --skip-satisfied Devel::Cover Devel::Cover::Report::Codecov
 script:
   - perl ./Build.PL
   - cover -test
