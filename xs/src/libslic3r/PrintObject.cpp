@@ -688,8 +688,8 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
 
     // align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
     mesh.translate(
-        unscale(this->_copies_shift.x),
-        unscale(this->_copies_shift.y),
+        -unscale(this->_copies_shift.x),
+        -unscale(this->_copies_shift.y),
         -object.bounding_box().min.z
     );
     
