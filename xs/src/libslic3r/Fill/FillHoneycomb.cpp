@@ -14,12 +14,12 @@ FillHoneycomb::_fill_surface_single(
     Polylines*                      polylines_out)
 {
     // cache hexagons math
-    CacheID cache_id = std::make_pair(this->density, this->spacing);
+    CacheID cache_id = std::make_pair(this->density, this->min_spacing);
     Cache::iterator it_m = this->cache.find(cache_id);
     if (it_m == this->cache.end()) {
         it_m = this->cache.insert(it_m, std::pair<CacheID,CacheData>(cache_id, CacheData()));
         CacheData &m = it_m->second;
-        coord_t min_spacing = scale_(this->spacing);
+        coord_t min_spacing = scale_(this->min_spacing);
         m.distance          = min_spacing / this->density;
         m.hex_side          = m.distance / (sqrt(3)/2);
         m.hex_width         = m.distance * 2; // $m->{hex_width} == $m->{hex_side} * sqrt(3);

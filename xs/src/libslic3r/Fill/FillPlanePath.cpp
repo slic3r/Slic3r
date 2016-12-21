@@ -14,7 +14,7 @@ void FillPlanePath::_fill_surface_single(
 {
     expolygon.rotate(-direction.first);
 
-    const coord_t distance_between_lines = scale_(this->spacing) / this->density;
+    const coord_t distance_between_lines = scale_(this->min_spacing) / this->density;
     
     // align infill across layers using the object's bounding box (if available)
     BoundingBox bounding_box = this->bounding_box.defined

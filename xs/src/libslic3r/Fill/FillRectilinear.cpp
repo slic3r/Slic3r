@@ -22,7 +22,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     expolygon.rotate(-direction.first);
     
     assert(this->density > 0.0001f && this->density <= 1.f);
-    const coord_t min_spacing   = scale_(this->spacing);
+    const coord_t min_spacing   = scale_(this->min_spacing);
     coord_t line_spacing        = (double) min_spacing / this->density;
     
     // We ignore this->bounding_box because it doesn't matter; we're doing align_to_grid below.
@@ -36,7 +36,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     // define flow spacing according to requested density
     if (this->density > 0.9999f && !this->dont_adjust) {
         line_spacing = this->adjust_solid_spacing(bounding_box.size().x, line_spacing);
-        this->spacing = unscale(line_spacing);
+        this->_spacing = unscale(line_spacing);
     } else {
         // extend bounding box so that our pattern will be aligned with other layers
         // Transform the reference point to the rotated coordinate system.
@@ -451,7 +451,7 @@ void FillStars::_fill_surface_single(
     fill2._fill_single_direction(expolygon, direction2, 0, out);
     
     direction2.first += PI/3;
-    const coord_t x_shift = 0.5 * scale_(fill2.spacing) / fill2.density;
+    const coord_t x_shift = 0.5 * scale_(fill2.min_spacing) / fill2.density;
     fill2._fill_single_direction(expolygon, direction2, x_shift, out);
 }
 
@@ -465,7 +465,7 @@ void FillCubic::_fill_surface_single(
     fill2.density /= 3.;
     direction_t direction2 = direction;
     
-    const coord_t range = scale_(this->spacing / this->density);
+    const coord_t range = scale_(this->min_spacing / this->density);
     const coord_t x_shift = abs(( (coord_t)(scale_(this->z) + range) % (coord_t)(range * 2)) - range);
     
     fill2._fill_single_direction(expolygon, direction2, -x_shift, out);

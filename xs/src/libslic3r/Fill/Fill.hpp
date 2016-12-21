@@ -27,7 +27,7 @@ public:
     coordf_t    z;
     
     // in unscaled coordinates
-    coordf_t    spacing;
+    coordf_t    min_spacing;
     
     // overlap over spacing for extrusion endpoints
     float       endpoints_overlap;
@@ -78,11 +78,16 @@ public:
     // Perform the fill.
     virtual Polylines fill_surface(const Surface &surface);
     
+    coordf_t spacing() const { return this->_spacing; };
+    
 protected:
+    // the actual one in unscaled coordinates, we fill this while generating paths
+    coordf_t _spacing;
+    
     Fill() :
         layer_id(size_t(-1)),
         z(0.f),
-        spacing(0.f),
+        min_spacing(0.f),
         endpoints_overlap(0.3f),
         angle(0),
         link_max_length(0),
@@ -90,7 +95,8 @@ protected:
         density(0),
         dont_connect(false),
         dont_adjust(false),
-        complete(false)
+        complete(false),
+        _spacing(0.f)
         {};
     
     typedef std::pair<float, Point> direction_t;

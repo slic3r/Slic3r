@@ -52,7 +52,10 @@ Fill::fill_surface(const Surface &surface)
     if (this->density == 0) return Polylines();
     
     // Perform offset.
-    ExPolygons expp = offset_ex(surface.expolygon, -scale_(this->spacing)/2);
+    ExPolygons expp = offset_ex(surface.expolygon, -scale_(this->min_spacing)/2);
+    
+    // Implementations can change this if they adjust the flow.
+    this->_spacing = this->min_spacing;
     
     // Create the infills for each of the regions.
     Polylines polylines_out;
@@ -85,6 +88,8 @@ Fill::adjust_solid_spacing(const coord_t width, const coord_t distance)
     assert(factor > 1. - 1e-5);
     
     // How much could the extrusion width be increased? By 20%.
+    // Because of this limit, this method is not idempotent: each run
+    // will increment distance by 20%.
     const coordf_t factor_max = 1.2;
     if (factor > factor_max)
         distance_new = floor((double)distance * factor_max + 0.5);

@@ -681,7 +681,7 @@ sub generate_toolpaths {
         # interface and contact infill
         if (@$interface || @$contact_infill) {
             $fillers{interface}->set_angle($interface_angle);
-            $fillers{interface}->set_spacing($_interface_flow->spacing);
+            $fillers{interface}->set_min_spacing($_interface_flow->spacing);
             
             # find centerline of the external loop
             $interface = offset2($interface, +scaled_epsilon, -(scaled_epsilon + $_interface_flow->scaled_width/2));
@@ -734,7 +734,7 @@ sub generate_toolpaths {
             
             # We don't use $base_flow->spacing because we need a constant spacing
             # value that guarantees that all layers are correctly aligned.
-            $filler->set_spacing($flow->spacing);
+            $filler->set_min_spacing($flow->spacing);
             
             my $density     = $support_density;
             my $base_flow   = $_flow;
@@ -753,7 +753,7 @@ sub generate_toolpaths {
                 
                 # use the proper spacing for first layer as we don't need to align
                 # its pattern to the other layers
-                $filler->set_spacing($base_flow->spacing);
+                $filler->set_min_spacing($base_flow->spacing);
             } else {
                 # draw a perimeter all around support infill
                 # TODO: use brim ordering algorithm

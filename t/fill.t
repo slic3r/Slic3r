@@ -30,7 +30,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
 {
     my $filler = Slic3r::Filler->new_from_type('rectilinear');
     $filler->set_angle(-(PI)/2);
-    $filler->set_spacing(5);
+    $filler->set_min_spacing(5);
     $filler->set_dont_adjust(1);
     $filler->set_endpoints_overlap(0);
     
@@ -44,7 +44,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
     };
     
     # square
-    $filler->set_density($filler->spacing / 50);
+    $filler->set_density($filler->min_spacing / 50);
     for my $i (0..3) {
         # check that it works regardless of the points order
         my @points = ([0,0], [100,0], [100,100], [0,100]);
@@ -64,7 +64,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
     # square with hole
     for my $angle (-(PI/2), -(PI/4), -(PI), PI/2, PI) {
         for my $spacing (25, 5, 7.5, 8.5) {
-            $filler->set_density($filler->spacing / $spacing);
+            $filler->set_density($filler->min_spacing / $spacing);
             $filler->set_angle($angle);
             my $paths = $test->(my $e = Slic3r::ExPolygon->new(
                 [ scale_points [0,0], [100,0], [100,100], [0,100] ],
@@ -102,7 +102,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
         height          => 0.4,
         nozzle_diameter => 0.50,
     );
-    $filler->set_spacing($flow->spacing);
+    $filler->set_min_spacing($flow->spacing);
     $filler->set_density(1);
     foreach my $angle (0, 45) {
         $surface->expolygon->rotate(Slic3r::Geometry::deg2rad($angle), [0,0]);
@@ -128,7 +128,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
             height          => 0.4,
             nozzle_diameter => $flow_spacing,
         );
-        $filler->set_spacing($flow->spacing);
+        $filler->set_min_spacing($flow->spacing);
         my $paths = $filler->fill_surface(
             $surface,
             layer_height    => $flow->height,

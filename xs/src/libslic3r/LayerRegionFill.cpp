@@ -211,13 +211,14 @@ LayerRegion::make_fill()
                 -1,     // auto width
                 *this->layer()->object()
             );
-            f->spacing = internal_flow.spacing();
+            f->min_spacing = internal_flow.spacing();
             using_internal_flow = true;
         } else {
-            f->spacing = flow.spacing();
+            f->min_spacing = flow.spacing();
         }
+        
         f->endpoints_overlap = this->region()->config.get_abs_value("infill_overlap",
-            (perimeter_spacing + scale_(f->spacing))/2);
+            (perimeter_spacing + scale_(f->min_spacing))/2);
 
         f->layer_id = this->layer()->id();
         f->z        = this->layer()->print_z;
@@ -225,7 +226,7 @@ LayerRegion::make_fill()
         
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = (!is_bridge && density > 80)
-            ? scale_(3 * f->spacing)
+            ? scale_(3 * f->min_spacing)
             : 0;
         
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
@@ -243,9 +244,9 @@ LayerRegion::make_fill()
         if (using_internal_flow) {
             // if we used the internal flow we're not doing a solid infill
             // so we can safely ignore the slight variation that might have
-            // been applied to f->spacing
+            // been applied to f->spacing()
         } else {
-            flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
+            flow = Flow::new_from_spacing(f->spacing(), flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
         }
 
         // Save into layer.
