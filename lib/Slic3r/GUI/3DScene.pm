@@ -304,7 +304,7 @@ sub mouse_event {
         $self->_dragged(undef);
     } elsif ($e->Moving) {
         $self->_mouse_pos($pos);
-        $self->Refresh;
+        $self->Refresh if $self->enable_picking;
     } else {
         $e->Skip();
     }
@@ -976,6 +976,9 @@ sub Render {
     glFlush();
  
     $self->SwapBuffers();
+    
+    # Calling glFinish has a performance penalty, but it seems to fix some OpenGL driver hang-up with extremely large scenes.
+    glFinish();
 }
 
 sub draw_axes {

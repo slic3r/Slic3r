@@ -41,7 +41,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
         // extend bounding box so that our pattern will be aligned with other layers
         // Transform the reference point to the rotated coordinate system.
         Point p = direction.second.rotated(-direction.first);
-        p.x -= x_shift > 0 ? x_shift : (x_shift + line_spacing);
+        p.x -= x_shift >= 0 ? x_shift : (x_shift + line_spacing);
         bounding_box.min.align_to_grid(
             Point(line_spacing, line_spacing), 
             p
