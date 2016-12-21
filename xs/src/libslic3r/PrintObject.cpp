@@ -115,6 +115,28 @@ PrintObject::bounding_box() const
     return BoundingBox(pp);
 }
 
+// returns 0-based indices of used extruders
+std::set<size_t>
+PrintObject::extruders() const
+{
+    std::set<size_t> extruders = this->_print->extruders();
+    std::set<size_t> sm_extruders = this->support_material_extruders();
+    extruders.insert(sm_extruders.begin(), sm_extruders.end());
+    return extruders;
+}
+
+// returns 0-based indices of used extruders
+std::set<size_t>
+PrintObject::support_material_extruders() const
+{
+    std::set<size_t> extruders;
+    if (this->has_support_material()) {
+        extruders.insert(this->config.support_material_extruder - 1);
+        extruders.insert(this->config.support_material_interface_extruder - 1);
+    }
+    return extruders;
+}
+
 void
 PrintObject::add_region_volume(int region_id, int volume_id)
 {

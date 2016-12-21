@@ -109,6 +109,8 @@ class PrintObject
     bool set_copies(const Points &points);
     bool reload_model_instances();
     BoundingBox bounding_box() const;
+    std::set<size_t> extruders() const;
+    std::set<size_t> support_material_extruders() const;
     
     // adds region_id, too, if necessary
     void add_region_volume(int region_id, int volume_id);

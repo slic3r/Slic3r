@@ -667,42 +667,9 @@ Print::validate() const
             return "The Spiral Vase option can only be used when printing single material objects.";
     }
     
-    {
-        // find the smallest nozzle diameter
-        std::set<size_t> extruders = this->extruders();
-        if (extruders.empty())
-            return "The supplied settings will cause an empty print.";
-        
-        std::set<double> nozzle_diameters;
-        for (std::set<size_t>::iterator it = extruders.begin(); it != extruders.end(); ++it)
-            nozzle_diameters.insert(this->config.nozzle_diameter.get_at(*it));
-        double min_nozzle_diameter = *std::min_element(nozzle_diameters.begin(), nozzle_diameters.end());
-        
-        FOREACH_OBJECT(this, i_object) {
-            PrintObject* object = *i_object;
-            
-            // validate first_layer_height
-            double first_layer_height = object->config.get_abs_value("first_layer_height");
-            double first_layer_min_nozzle_diameter;
-            if (object->config.raft_layers > 0) {
-                // if we have raft layers, only support material extruder is used on first layer
-                size_t first_layer_extruder = object->config.raft_layers == 1
-                    ? object->config.support_material_interface_extruder-1
-                    : object->config.support_material_extruder-1;
-                first_layer_min_nozzle_diameter = this->config.nozzle_diameter.get_at(first_layer_extruder);
-            } else {
-                // if we don't have raft layers, any nozzle diameter is potentially used in first layer
-                first_layer_min_nozzle_diameter = min_nozzle_diameter;
-            }
-            if (first_layer_height > first_layer_min_nozzle_diameter)
-                return "First layer height can't be greater than nozzle diameter";
-            
-            // validate layer_height
-            if (object->config.layer_height.value > min_nozzle_diameter)
-                return "Layer height can't be greater than nozzle diameter";
-        }
-    }
-
+    if (this->extruders().empty())
+        return "The supplied settings will cause an empty print.";
+    
     return std::string();
 }
 
@@ -917,7 +884,7 @@ Print::_make_brim()
         }
         
         std::auto_ptr<Fill> filler(Fill::new_from_type(ipRectilinear));
-        filler->spacing      = flow.spacing();
+        filler->min_spacing  = flow.spacing();
         filler->dont_adjust  = true;
         filler->density      = 1;
         

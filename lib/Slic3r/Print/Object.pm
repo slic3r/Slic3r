@@ -49,6 +49,13 @@ sub slice {
     $self->set_step_started(STEP_SLICE);
     $self->print->status_cb->(10, "Processing triangulated mesh");
     
+    {
+        my @nozzle_diameters = map $self->print->config->get_at('nozzle_diameter', $_),
+            @{$self->print->object_extruders};
+    
+        $self->config->set('layer_height', min(@nozzle_diameters, $self->config->layer_height));
+    }
+    
     # init layers
     {
         $self->clear_layers;
@@ -73,8 +80,7 @@ sub slice {
             {
                 my @nozzle_diameters = (
                     map $self->print->config->get_at('nozzle_diameter', $_),
-                        $self->config->support_material_extruder-1,
-                        $self->config->support_material_interface_extruder-1,
+                        @{$self->support_material_extruders},
                 );
                 $support_material_layer_height = 0.75 * min(@nozzle_diameters);
             }
