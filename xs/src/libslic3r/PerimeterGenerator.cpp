@@ -298,10 +298,6 @@ PerimeterGenerator::process()
             inset += pspacing/2;
         }
         
-        // only apply infill overlap if we actually have one perimeter
-        if (inset > 0)
-            inset -= this->config->get_abs_value("infill_overlap", inset + ispacing/2);
-        
         {
             ExPolygons expp = union_ex(last);
             

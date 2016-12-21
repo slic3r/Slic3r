@@ -34,6 +34,7 @@ LayerRegion::make_fill()
     const Flow   infill_flow           = this->flow(frInfill);
     const Flow   solid_infill_flow     = this->flow(frSolidInfill);
     const Flow   top_solid_infill_flow = this->flow(frTopSolidInfill);
+    const coord_t perimeter_spacing    = this->flow(frPerimeter).scaled_spacing();
 
     SurfaceCollection surfaces;
     
@@ -215,6 +216,8 @@ LayerRegion::make_fill()
         } else {
             f->spacing = flow.spacing();
         }
+        f->endpoints_overlap = this->region()->config.get_abs_value("infill_overlap",
+            (perimeter_spacing + scale_(f->spacing))/2);
 
         f->layer_id = this->layer()->id();
         f->z        = this->layer()->print_z;

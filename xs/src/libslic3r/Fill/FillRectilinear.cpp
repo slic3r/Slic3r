@@ -283,9 +283,6 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     svg.Close();
     #endif
     
-    // Calculate the extension of the vertical endpoints according to the configured value.
-    const coord_t extra_y = floor((double)min_spacing * this->endpoints_overlap + 0.5f);
-    
     // Store the number of polygons already existing in the output container.
     const size_t n_polylines_out_old = out->size();
     
@@ -313,7 +310,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
         // Start our polyline.
         Polyline polyline;
         polyline.append(p);
-        polyline.points.back().y -= extra_y;
+        polyline.points.back().y -= this->endpoints_overlap;
         
         while (true) {
             // Complete the vertical line by finding the corresponding upper or lower point.
@@ -331,7 +328,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
             IntersectionPoint b = it->second;
             assert(b.type != p.type);
             polyline.append(b);
-            polyline.points.back().y += extra_y * (b.type == IntersectionPoint::ipTypeUpper ? 1 : -1);
+            polyline.points.back().y += this->endpoints_overlap * (b.type == IntersectionPoint::ipTypeUpper ? 1 : -1);
 
             // Remove the two endpoints of this vertical line from the grid.
             {
@@ -359,7 +356,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
                 const size_t n = polyline.points.size();
                 polyline.append(b.next);
                 for (Points::iterator pit = polyline.points.begin()+n; pit != polyline.points.end(); ++pit)
-                    pit->y += extra_y * (b.type == IntersectionPoint::ipTypeUpper ? 1 : -1);
+                    pit->y += this->endpoints_overlap * (b.type == IntersectionPoint::ipTypeUpper ? 1 : -1);
             }
             
             // Is the final point still available?
