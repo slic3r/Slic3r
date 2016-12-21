@@ -54,6 +54,7 @@ sub new {
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
+    $self->{processed} = 0;
     # List of Perl objects Slic3r::GUI::Plater::Object, representing a 2D preview of the platter.
     $self->{objects} = [];
     
@@ -136,15 +137,16 @@ sub new {
         wxTheApp->CallAfter(sub {
             my $sel = $self->{preview_notebook}->GetSelection;
             if ($sel == $self->{preview3D_page_idx} || $sel == $self->{toolpaths2D_page_idx}) {
-                $self->{preview3D}->load_print;
-            
-                if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
+                if (!$Slic3r::GUI::Settings->{_}{background_processing} && !$self->{processed}) {
                     $self->statusbar->SetCancelCallback(sub {
                         $self->stop_background_process;
                         $self->statusbar->SetStatusText("Slicing cancelled");
                         $self->{preview_notebook}->SetSelection(0);
                     });
                     $self->start_background_process;
+                } else {
+                    $self->{preview3D}->load_print
+                        if $sel == $self->{preview3D_page_idx};
                 }
             }
         });
@@ -1050,6 +1052,8 @@ sub split_object {
 sub schedule_background_process {
     my ($self) = @_;
     
+    $self->{processed} = 0;
+    
     if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
         my $sel = $self->{preview_notebook}->GetSelection;
         if ($sel == $self->{preview3D_page_idx} || $sel == $self->{toolpaths2D_page_idx}) {
@@ -1143,6 +1147,7 @@ sub stop_background_process {
     $self->statusbar->SetCancelCallback(undef);
     $self->statusbar->StopBusy;
     $self->statusbar->SetStatusText("");
+    
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
     
@@ -1276,6 +1281,7 @@ sub on_process_completed {
     Slic3r::debugf "Background processing completed.\n";
     $self->{process_thread}->detach if $self->{process_thread};
     $self->{process_thread} = undef;
+    $self->{processed} = 1;
     
     # if we're supposed to perform an explicit export let's display the error in a dialog
     if ($error && $self->{export_gcode_output_file}) {
