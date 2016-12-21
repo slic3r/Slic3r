@@ -60,7 +60,7 @@ SLAPrint::slice()
         std::auto_ptr<Fill> fill(Fill::new_from_type(this->config.fill_pattern.value));
         fill->bounding_box.merge(Point::new_scale(bb.min.x, bb.min.y));
         fill->bounding_box.merge(Point::new_scale(bb.max.x, bb.max.y));
-        fill->spacing       = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
+        fill->min_spacing   = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
         fill->angle         = Geometry::deg2rad(this->config.fill_angle.value);
         fill->density       = this->config.fill_density.value/100;
         
