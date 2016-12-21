@@ -474,14 +474,21 @@ MedialAxis::build(ThickPolylines* polylines)
     /*
     // DEBUG: dump all Voronoi edges
     {
+        SVG svg("voronoi.svg");
+        svg.draw(*this->expolygon);
         for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
             if (edge->is_infinite()) continue;
             
             ThickPolyline polyline;
             polyline.points.push_back(Point( edge->vertex0()->x(), edge->vertex0()->y() ));
             polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
+            polyline.width.push_back(this->max_width);
+            polyline.width.push_back(this->max_width);
             polylines->push_back(polyline);
+            
+            svg.draw(polyline);
         }
+        svg.Close();
         return;
     }
     */
