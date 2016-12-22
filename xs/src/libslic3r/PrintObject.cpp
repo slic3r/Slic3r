@@ -235,7 +235,6 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "overhangs"
             || *opt_key == "first_layer_extrusion_width"
             || *opt_key == "perimeter_extrusion_width"
-            || *opt_key == "infill_overlap"
             || *opt_key == "thin_walls"
             || *opt_key == "external_perimeters_first") {
             steps.insert(posPerimeters);
@@ -273,7 +272,8 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "fill_angle"
             || *opt_key == "fill_pattern"
             || *opt_key == "top_infill_extrusion_width"
-            || *opt_key == "first_layer_extrusion_width") {
+            || *opt_key == "first_layer_extrusion_width"
+            || *opt_key == "infill_overlap") {
             steps.insert(posInfill);
         } else if (*opt_key == "fill_density"
             || *opt_key == "solid_infill_extrusion_width") {
