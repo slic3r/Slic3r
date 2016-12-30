@@ -126,6 +126,10 @@ pp `
 -M vars `
 -M warnings `
 -M warnings::register `
+-M Win32::API `
+-M Win32::TieRegistry `
+-M Win32::WinError `
+-M Win32API::Registry `
 -e -p ..\slic3r.pl -o ..\slic3r.par
 
 copy ..\slic3r.par "..\slic3r-${current_branch}-${APPVEYOR_BUILD_NUMBER}-$(git rev-parse --short HEAD).zip"
