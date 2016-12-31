@@ -37,6 +37,9 @@ pp `
 -M Carp `
 -M Config `
 -M Crypt::CBC `
+-M Class::Accessor `
+-M Class::XSAccessor `
+-M Class::XSAccessor::Heavy `
 -M Cwd `
 -M Devel::GlobalDestruction `
 -M Digest `
