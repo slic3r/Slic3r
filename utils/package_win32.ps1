@@ -13,7 +13,7 @@ New-Variable -Name "current_date" -Value "$(Get-Date -UFormat '%Y.%m.%d')"
 New-Variable -Name "output_file" -Value ""
 
 git branch | foreach {
-   if (Test-Path variable:\APPVEYOR_BUILD_NUMBER) {
+   if ($APPVEYOR) {
 	   if ($_ -match "` (.*)"){
 		   $current_branch += $matches[1]
 	   }
@@ -135,7 +135,7 @@ pp `
 
 # switch renaming based on whether or not using packaged exe or zip 
 if ($exe) {
-	if (Test-Path variable:\APPVEYOR_BUILD_NUMBER) {
+	if ($APPVEYOR) {
 		copy ..\slic3r.exe "..\slic3r-${current_branch}-${APPVEYOR_BUILD_NUMBER}-$(git rev-parse --short HEAD).exe"
 		del ..\slic3r.exe
 	} else {
@@ -144,7 +144,7 @@ if ($exe) {
 	}
 } else {
 # make this more useful for not being on the appveyor server
-	if (Test-Path variable:\APPVEYOR_BUILD_NUMBER) {
+	if ($APPVEYOR) {
 		copy ..\slic3r.par "..\slic3r-${current_branch}-$(current_date).${APPVEYOR_BUILD_NUMBER}-$(git rev-parse --short HEAD).zip"
 	} else {
 		copy ..\slic3r.par "..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).zip"
