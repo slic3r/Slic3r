@@ -1,16 +1,26 @@
 # Written by Joseph Lenox
 # Licensed under the same license as the rest of Slic3r.
 # ------------------------
-# You need to have Strawberry Perl 5.22 installed for this to work, 
+# You need to have Strawberry Perl 5.24.0.1 installed for this to work, 
+param (
+	[switch]$exe = $false
+)
 echo "Make this is run from the perl command window." 
 echo "Requires PAR."
 
 New-Variable -Name "current_branch" -Value ""
+New-Variable -Name "current_date" -Value "$(Get-Date -UFormat '%Y.%m.%d')"
+New-Variable -Name "output_file" -Value ""
 
 git branch | foreach {
-   if ($_ -match "`  (.*)"){
+   if ($_ -match "\*` (.*)"){
          $current_branch += $matches[1]
    }
+}
+if ($exe) {
+	$output_file = "slic3r.exe"
+} else {
+	$output_file = "slic3r.par"
 }
 
 # Change this to where you have Strawberry Perl installed.
@@ -22,8 +32,8 @@ pp `
 -a "../utils;utils"  `
 -a "autorun.bat;slic3r.bat"  `
 -a "../var;var"  `
--a "${STRAWBERRY_PATH}\perl\bin\perl5.22.2.exe;perl5.22.2.exe"  `
--a "${STRAWBERRY_PATH}\perl\bin\perl522.dll;perl522.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\perl5.24.0.exe;perl5.24.0.exe"  `
+-a "${STRAWBERRY_PATH}\perl\bin\perl524.dll;perl524.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
@@ -35,11 +45,11 @@ pp `
 -M AutoLoader `
 -M B `
 -M Carp `
--M Config `
--M Crypt::CBC `
 -M Class::Accessor `
 -M Class::XSAccessor `
 -M Class::XSAccessor::Heavy `
+-M Config `
+-M Crypt::CBC `
 -M Cwd `
 -M Devel::GlobalDestruction `
 -M Digest `
@@ -108,31 +118,30 @@ pp `
 -M URI::Escape `
 -M URI::http `
 -M Unicode::Normalize `
--M XSLoader `
--M attributes `
--M base `
--M bytes `
--M constant `
--M enum `
--M feature `
--M integer `
--M locale `
--M lib `
--M mro `
--M overload `
--M overload::numbers `
--M overloading `
--M parent `
--M re `
--M strict `
--M utf8 `
--M vars `
--M warnings `
--M warnings::register `
 -M Win32::API `
 -M Win32::TieRegistry `
 -M Win32::WinError `
 -M Win32API::Registry `
--e -p ..\slic3r.pl -o ..\slic3r.par
+-M XSLoader `
+-B `
+-M lib `
+-p ..\slic3r.pl -o ..\${output_file}
 
-copy ..\slic3r.par "..\slic3r-${current_branch}-${APPVEYOR_BUILD_NUMBER}-$(git rev-parse --short HEAD).zip"
+# switch renaming based on whether or not using packaged exe or zip 
+if ($exe) {
+	if (Test-Path variable:\APPVEYOR_BUILD_NUMBER) {
+		copy ..\slic3r.exe "..\slic3r-${current_branch}-${APPVEYOR_BUILD_NUMBER}-$(git rev-parse --short HEAD).exe"
+		del ..\slic3r.exe
+	} else {
+		copy ..\slic3r.exe "..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).exe"
+		del ..\slic3r.exe
+	}
+} else {
+# make this more useful for not being on the appveyor server
+	if (Test-Path variable:\APPVEYOR_BUILD_NUMBER) {
+		copy ..\slic3r.par "..\slic3r-${current_branch}-${APPVEYOR_BUILD_NUMBER}-$(git rev-parse --short HEAD).zip"
+	} else {
+		copy ..\slic3r.par "..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).zip"
+			del ../slic3r.par
+	}
+}
