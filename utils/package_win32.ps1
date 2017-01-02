@@ -14,7 +14,7 @@ New-Variable -Name "output_file" -Value ""
 
 git branch | foreach {
    if ($env:APPVEYOR) {
-	   if ($_ -match "`  (.*)")
+	   if ($_ -match "`  (.*)") {
 		   $current_branch += $matches[1]
 	   }
    } else {
