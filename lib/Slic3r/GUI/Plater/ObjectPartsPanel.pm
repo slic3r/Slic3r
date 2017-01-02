@@ -67,6 +67,10 @@ sub new {
     $settings_sizer->Add($self->{settings_panel}, 1, wxEXPAND | wxALL, 0);
 
     my $optgroup_movers;
+	# initialize the movement target before it's used.
+	# on Windows this causes a segfault due to calling distance_to() 
+	# on the object.
+	$self->{move_target} =  Slic3r::Pointf3->new;
     $optgroup_movers = $self->{optgroup_movers} = Slic3r::GUI::OptionsGroup->new(
         parent      => $self,
         title       => 'Move',
