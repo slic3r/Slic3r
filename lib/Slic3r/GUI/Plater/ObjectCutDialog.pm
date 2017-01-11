@@ -193,9 +193,10 @@ sub new {
                 mesh    => $meshes->[$i],
                 name    => $o->name,
             );
-            my $min = $v->mesh->bounding_box->min_point->clone;
             $o->center_around_origin;
-            my $i = $o->add_instance(offset => Slic3r::Pointf->new(@{$min}[X,Y]));
+            my $i = $o->add_instance(
+                offset => Slic3r::Pointf->new(@{$o->origin_translation->negative}[X,Y]),
+            );
             $i->offset->translate(
                 5 * ceil(($i->offset->x - $bb->center->x) / $grid_x),
                 5 * ceil(($i->offset->y - $bb->center->y) / $grid_y),
