@@ -185,7 +185,7 @@ LayerRegion::make_fill()
         #endif
         
         // switch to rectilinear if this pattern doesn't support solid infill
-        if (density > 0.9999f && !f->can_solid())
+        if (density > 99 && !f->can_solid())
             #if SLIC3R_CPPVER >= 11
                 f = std::unique_ptr<Fill>(Fill::new_from_type(ipRectilinear));
             #else
