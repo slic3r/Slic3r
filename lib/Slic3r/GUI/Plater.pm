@@ -1399,7 +1399,7 @@ sub send_gcode {
             # OctoPrint doesn't like Windows paths so we use basename()
             # Also, since we need to read from filesystem we process it through encode_path()
             file => [ $path, basename($path) ],
-            print => $self->{send_gcode_file} ? 1 : 0,
+            print => $self->{send_gcode_file_print} ? 1 : 0,
         ],
     );
     
