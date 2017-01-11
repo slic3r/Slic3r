@@ -75,6 +75,9 @@ public:
     // Do not sort the fill lines to optimize the print head path?
     virtual bool no_sort() const { return false; };
 
+    // Can this pattern be used for solid infill?
+    virtual bool can_solid() const { return false; };
+
     // Perform the fill.
     virtual Polylines fill_surface(const Surface &surface);
     

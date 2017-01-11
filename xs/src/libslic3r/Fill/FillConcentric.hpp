@@ -19,6 +19,7 @@ protected:
 	    Polylines*                      polylines_out);
 
 	virtual bool no_sort() const { return true; }
+    virtual bool can_solid() const { return true; };
 };
 
 } // namespace Slic3r

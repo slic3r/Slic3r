@@ -183,6 +183,15 @@ LayerRegion::make_fill()
         #else
             std::auto_ptr<Fill> f = std::auto_ptr<Fill>(Fill::new_from_type(fill_pattern));
         #endif
+        
+        // switch to rectilinear if this pattern doesn't support solid infill
+        if (density > 0.9999f && !f->can_solid())
+            #if SLIC3R_CPPVER >= 11
+                f = std::unique_ptr<Fill>(Fill::new_from_type(ipRectilinear));
+            #else
+                f = std::auto_ptr<Fill>(Fill::new_from_type(ipRectilinear));
+            #endif
+        
         f->bounding_box = this->layer()->object()->bounding_box();
         
         // calculate the actual flow we'll be using for this infill

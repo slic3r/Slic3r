@@ -12,6 +12,7 @@ class FillRectilinear : public Fill
 public:
     virtual Fill* clone() const { return new FillRectilinear(*this); };
     virtual ~FillRectilinear() {}
+    virtual bool can_solid() const { return true; };
 
 protected:
 	virtual void _fill_surface_single(
@@ -50,6 +51,7 @@ class FillAlignedRectilinear : public FillRectilinear
 public:
     virtual Fill* clone() const { return new FillAlignedRectilinear(*this); };
     virtual ~FillAlignedRectilinear() {};
+    virtual bool can_solid() const { return false; };
 
 protected:
 	// Keep the angle constant in all layers.
@@ -61,6 +63,7 @@ class FillGrid : public FillRectilinear
 public:
     virtual Fill* clone() const { return new FillGrid(*this); };
     virtual ~FillGrid() {}
+    virtual bool can_solid() const { return false; };
 
 protected:
 	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
@@ -78,6 +81,7 @@ class FillTriangles : public FillRectilinear
 public:
     virtual Fill* clone() const { return new FillTriangles(*this); };
     virtual ~FillTriangles() {}
+    virtual bool can_solid() const { return false; };
 
 protected:
 	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
@@ -95,6 +99,7 @@ class FillStars : public FillRectilinear
 public:
     virtual Fill* clone() const { return new FillStars(*this); };
     virtual ~FillStars() {}
+    virtual bool can_solid() const { return false; };
 
 protected:
 	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
@@ -112,6 +117,7 @@ class FillCubic : public FillRectilinear
 public:
     virtual Fill* clone() const { return new FillCubic(*this); };
     virtual ~FillCubic() {}
+    virtual bool can_solid() const { return false; };
 
 protected:
 	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
