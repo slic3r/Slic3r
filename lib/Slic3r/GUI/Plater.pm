@@ -1488,7 +1488,7 @@ sub _get_export_file {
     
     my $suffix = $format eq 'STL' ? '.stl' : '.amf.xml';
     
-    my $output_file = $main::opt{output};
+    my $output_file = "";
     {
         $output_file = $self->{print}->output_filepath($output_file);
         $output_file =~ s/\.gcode$/$suffix/i;
