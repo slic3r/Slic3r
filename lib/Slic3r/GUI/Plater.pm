@@ -253,7 +253,7 @@ sub new {
         $self->{print_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
     });
     EVT_BUTTON($self, $self->{btn_send_gcode}, sub {
-        my $filename = basename($self->{print}->output_filepath($main::opt{output}));
+        my $filename = basename($self->{print}->output_filepath(""));
         $filename = Wx::GetTextFromUser("Save to printer with the following name:",
             "OctoPrint", $filename, $self);
         
@@ -1225,7 +1225,7 @@ sub export_gcode {
     if ($output_file) {
         $self->{export_gcode_output_file} = $self->{print}->output_filepath($output_file);
     } else {
-        my $default_output_file = $self->{print}->output_filepath($main::opt{output});
+        my $default_output_file = $self->{print}->output_filepath(""); 
         my $dlg = Wx::FileDialog->new($self, 'Save G-code file as:', wxTheApp->output_path(dirname($default_output_file)),
             basename($default_output_file), &Slic3r::GUI::FILE_WILDCARDS->{gcode}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
         if ($dlg->ShowModal != wxID_OK) {
@@ -1349,6 +1349,7 @@ sub on_export_completed {
         } else {
             $message = "G-code file exported to " . $self->{export_gcode_output_file};
         }
+        $message .= sprintf(" Cost: %.2f" , $self->{print}->total_cost);
     } else {
         $message = "Export failed";
     }
