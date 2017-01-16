@@ -417,6 +417,8 @@ sub generate_support_material {
     $self->_support_material->generate($self);
     
     $self->set_step_done(STEP_SUPPORTMATERIAL);
+    my $stats = "Weight: %.1fg, Cost: %.1f" , $self->print->total_weight, $self->print->total_cost;
+    $self->print->status_cb->(85, $stats);
 }
 
 sub _support_material {
