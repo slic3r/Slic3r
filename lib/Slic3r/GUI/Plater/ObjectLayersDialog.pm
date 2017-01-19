@@ -4,6 +4,7 @@ use warnings;
 use utf8;
 
 use Slic3r::Geometry qw(PI X scale unscale);
+use List::Util qw(min max sum first);
 use Wx qw(wxTheApp :dialog :id :misc :sizer wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_CLOSE EVT_BUTTON);
 use base 'Wx::Dialog';
@@ -49,7 +50,20 @@ sub new {
     my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
     
     #IMPORTANT TODO: set correct min / max layer height from config!!!!
-    $self->{splineControl}->set_size_parameters(0.1, 0.4, unscale($object->size->z));
+    
+    # determine min and max layer height from perimeter extruder capabilities.
+    my %extruders;
+    for my $region_id (0 .. ($object->region_count - 1)) {
+    	foreach (qw(perimeter_extruder infill_extruder solid_infill_extruder)) {
+    		my $extruder_id = $self->{plater}->{print}->get_region($region_id)->config->get($_)-1;
+    		$extruders{$extruder_id} = $extruder_id;
+    	}
+    }
+    
+    my $min_height = max(map {$self->{plater}->{print}->config->get_at('min_layer_height', $_)} (values %extruders));
+    my $max_height = min(map {$self->{plater}->{print}->config->get_at('max_layer_height', $_)} (values %extruders));
+    
+    $self->{splineControl}->set_size_parameters($min_height, $max_height, unscale($object->size->z));
         
     # get array of current Z coordinates for selected object
     my @layer_heights = map $_->print_z, @{$object->layers};
