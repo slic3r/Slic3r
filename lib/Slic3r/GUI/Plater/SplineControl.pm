@@ -82,12 +82,16 @@ sub repaint {
     my $scaling_y = $size[1]/$self->{object_height};
     my $scaling_x = $size[0]/($self->{max_layer_height} - $self->{min_layer_height});
     my $last_z = 0.0;
+    my @points = ();
     foreach my $z (@{$self->{interpolation_points}}) {
     	my $layer_h = $z - $last_z;
     	$dc->SetPen($self->{line_pen});
         $dc->DrawLine(0, $z*$scaling_y, ($layer_h-$self->{min_layer_height})*$scaling_x, $z*$scaling_y);
+        push (@points, Wx::Point->new(($layer_h-$self->{min_layer_height})*$scaling_x, $z*$scaling_y));
         $last_z = $z;
     }
+
+    $dc->DrawSpline(\@points);
     
     $event->Skip;
 }
@@ -213,9 +217,7 @@ sub set_interpolation_points {
 	my ($self, @interpolation_points) = @_;
 
 	$self->{interpolation_points} = [@interpolation_points];
-	print "set_interpolation_points\n";
 	$self->Refresh;
-	print "refresh\n";
 }
 
 # convert a model coordinate into a pixel coordinate
