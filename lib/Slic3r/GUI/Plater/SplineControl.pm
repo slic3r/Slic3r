@@ -52,10 +52,7 @@ sub repaint {
     
     my $dc = Wx::AutoBufferedPaintDC->new($self);
     my $size = $self->GetSize;
-    # Set axis orientation to leftRight, bottomUp and reset origin to the lower left corner
-    $dc->SetAxisOrientation(1, 1);
     my @size = ($size->GetWidth, $size->GetHeight);
-    $dc->SetDeviceOrigin(0, $size[1]);
 
     print "repaint\n";
     
@@ -75,19 +72,19 @@ sub repaint {
     # draw scale (min and max indicator at the bottom)
     $dc->SetTextForeground(Wx::Colour->new(0,0,0));
     $dc->SetFont(Wx::Font->new(10, wxDEFAULT, wxNORMAL, wxNORMAL));
-    $dc->DrawLabel(sprintf('%.4g', $self->{min_layer_height}), Wx::Rect->new(0, 15, $size[0], -15), wxALIGN_LEFT | wxALIGN_TOP);
-    $dc->DrawLabel(sprintf('%.4g', $self->{max_layer_height}), Wx::Rect->new(0, 15, $size[0], -15), wxALIGN_RIGHT | wxALIGN_TOP);
+    $dc->DrawLabel(sprintf('%.4g', $self->{min_layer_height}), Wx::Rect->new(0, $size[1]/2, $size[0], $size[1]/2), wxALIGN_LEFT | wxALIGN_BOTTOM);
+    $dc->DrawLabel(sprintf('%.4g', $self->{max_layer_height}), Wx::Rect->new(0, $size[1]/2, $size[0], $size[1]/2), wxALIGN_RIGHT | wxALIGN_BOTTOM);
     
     # draw current layers as lines
-    my $scaling_y = $size[1]/$self->{object_height};
-    my $scaling_x = $size[0]/($self->{max_layer_height} - $self->{min_layer_height});
     my $last_z = 0.0;
     my @points = ();
     foreach my $z (@{$self->{interpolation_points}}) {
     	my $layer_h = $z - $last_z;
     	$dc->SetPen($self->{line_pen});
-        $dc->DrawLine(0, $z*$scaling_y, ($layer_h-$self->{min_layer_height})*$scaling_x, $z*$scaling_y);
-        push (@points, Wx::Point->new(($layer_h-$self->{min_layer_height})*$scaling_x, $z*$scaling_y));
+        my $pl = $self->point_to_pixel(0, $z);
+        my $pr = $self->point_to_pixel($layer_h, $z);
+        $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
+        push (@points, $pr);
         $last_z = $z;
     }
 
@@ -99,9 +96,15 @@ sub repaint {
 sub mouse_event {
     my ($self, $event) = @_;
     
-#    my $pos = $event->GetPosition;
+    my $pos = $event->GetPosition;
+    my @obj_pos = $self->pixel_to_point($pos);
+    #$pos->y = $self->GetSize->GetHeight - $pos->y;
 #    my $point = $self->point_to_model_units([ $pos->x, $pos->y ]);  #]]
-#    if ($event->ButtonDown) {
+    if ($event->ButtonDown) {
+    	if ($event->LeftDown) {
+           # start dragging
+           $self->{drag_start_pos} = [$pos->x, $pos->y];
+        }
 #        $self->{on_select_object}->(undef);
 #        # traverse objects and instances in reverse order, so that if they're overlapping
 #        # we get the one that gets drawn last, thus on top (as user expects that to move)
@@ -138,7 +141,8 @@ sub mouse_event {
 #        $self->SetCursor(wxSTANDARD_CURSOR);
 #    } elsif ($event->LeftDClick) {
 #    	$self->{on_double_click}->();
-#    } elsif ($event->Dragging) {
+    } elsif ($event->Dragging) {
+    	print "dragging, pos: " . $pos->x . ":" . $pos->y . "\n";
 #        return if !$self->{drag_start_pos}; # concurrency problems
 #        my ($obj_idx, $instance_idx) = @{ $self->{drag_object} };
 #        my $model_object = $self->{model}->objects->[$obj_idx];
@@ -149,7 +153,7 @@ sub mouse_event {
 #            ));
 #        $model_object->update_bounding_box;
 #        $self->Refresh;
-#    } elsif ($event->Moving) {
+    }# elsif ($event->Moving) {
 #        my $cursor = wxSTANDARD_CURSOR;
 #        if (defined first { $_->contour->contains_point($point) } map @$_, map @{$_->instance_thumbnails}, @{ $self->{objects} }) {
 #            $cursor = Wx::Cursor->new(wxCURSOR_HAND);
@@ -213,6 +217,7 @@ sub set_size_parameters {
 	#$self->repaint;
 }
 
+# Set the current layer height values as basis for user manipulation
 sub set_interpolation_points {
 	my ($self, @interpolation_points) = @_;
 
@@ -220,37 +225,38 @@ sub set_interpolation_points {
 	$self->Refresh;
 }
 
-# convert a model coordinate into a pixel coordinate
-sub unscaled_point_to_pixel {
-    my ($self, $point) = @_;
+# Takes a 2-tupel [layer_height (x), height(y)] and converts it
+# into a Wx::Point in scaled canvas coordinates
+sub point_to_pixel {
+	my ($self, @point) = @_;
+	
+	my $size = $self->GetSize;
+    my @size = ($size->GetWidth, $size->GetHeight);
     
-    my $canvas_height = $self->GetSize->GetHeight;
-    my $zero = $self->{bed_origin};
-    return [
-        $point->[X] * $self->{scaling_factor} + $zero->[X],
-        $canvas_height - $point->[Y] * $self->{scaling_factor} + ($zero->[Y] - $canvas_height),
-    ];
+    my $scaling_y = $size[1]/$self->{object_height};
+    my $scaling_x = $size[0]/($self->{max_layer_height} - $self->{min_layer_height});
+    
+    my $x = ($point[0] - $self->{min_layer_height})*$scaling_x;
+    my $y = $size[1] - $point[1]*$scaling_y; # invert y-axis
+
+    return Wx::Point->new(min(max($x, 0), $size[0]), min(max($y, 0), $size[1])); # limit to canvas size  
 }
 
-sub scaled_points_to_pixel {
-    my ($self, $points, $unscale) = @_;
-    
-    my $result = [];
-    foreach my $point (@$points) {
-        $point = [ map unscale($_), @$point ] if $unscale;
-        push @$result, $self->unscaled_point_to_pixel($point);
-    }
-    return $result;
-}
-
-sub point_to_model_units {
+# Takes a Wx::Point in scaled canvas coordinates and converts it
+# into a 2-tupel [layer_height (x), height(y)]
+sub pixel_to_point {
     my ($self, $point) = @_;
     
-    my $zero = $self->{bed_origin};
-    return Slic3r::Point->new(
-        scale ($point->[X] - $zero->[X]) / $self->{scaling_factor},
-        scale ($zero->[Y] - $point->[Y]) / $self->{scaling_factor},
-    );
+    my $size = $self->GetSize;
+    my @size = ($size->GetWidth, $size->GetHeight);
+    
+    my $scaling_y = $size[1]/$self->{object_height};
+    my $scaling_x = $size[0]/($self->{max_layer_height} - $self->{min_layer_height});
+    
+    my $x = $point->x/$scaling_x + $self->{min_layer_height};
+    my $y = ($size[1] - $point->y)/$scaling_y; # invert y-axis
+    
+    return (min(max($x, $self->{min_layer_height}), $self->{max_layer_height}), min(max($y, 0), $self->{object_height})); # limit to object size and layer constraints 
 }
 
 1;
