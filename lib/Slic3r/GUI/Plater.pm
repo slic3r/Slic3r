@@ -11,7 +11,7 @@ use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :listctrl
     :panel :sizer :toolbar :window wxTheApp :notebook :combobox);
 use Wx::Event qw(EVT_BUTTON EVT_COMMAND EVT_KEY_DOWN EVT_LIST_ITEM_ACTIVATED 
     EVT_LIST_ITEM_DESELECTED EVT_LIST_ITEM_SELECTED EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL 
-    EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED);
+    EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED EVT_CLOSE);
 use base 'Wx::Panel';
 
 use constant TB_ADD             => &Wx::NewId;
@@ -988,6 +988,7 @@ sub async_apply_config {
     # reset preview canvases
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+    $self->{ObjectLayersDialog}->reload_preview if $self->{ObjectLayersDialog};
     
     # pause process thread before applying new config
     # since we don't want to touch data that is being used by the threads
@@ -1063,6 +1064,7 @@ sub stop_background_process {
     $self->statusbar->SetStatusText("");
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+    $self->{ObjectLayersDialog}->reload_preview if $self->{ObjectLayersDialog};
     
     if ($self->{process_thread}) {
         Slic3r::debugf "Killing background process.\n";
@@ -1204,6 +1206,7 @@ sub on_process_completed {
     return if $error;
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+    $self->{ObjectLayersDialog}->reload_preview if $self->{ObjectLayersDialog};
     
     # if we have an export filename, start a new thread for exporting G-code
     if ($self->{export_gcode_output_file}) {
@@ -1579,18 +1582,18 @@ sub object_layers_dialog {
         return;
     }
 
-    my $dlg = Slic3r::GUI::Plater::ObjectLayersDialog->new($self,
+    $self->{ObjectLayersDialog} = Slic3r::GUI::Plater::ObjectLayersDialog->new($self,
 		object              => $self->{objects}[$obj_idx],
 		model_object        => $self->{model}->objects->[$obj_idx],
 		obj_idx             => $obj_idx,
 	);
-	return unless $dlg->ShowModal == wxID_OK;
-
-	if (my @new_objects = $dlg->NewModelObjects) {
-	    $self->remove($obj_idx);
-	    $self->load_model_objects(grep defined($_), @new_objects);
-	    $self->arrange;
-	}
+	$self->{ObjectLayersDialog}->Show();
+	
+	EVT_CLOSE($self->{ObjectLayersDialog}, sub {
+        my ($dlg, $event) = @_;
+        $dlg->Destroy;
+        $self->{ObjectLayersDialog} = undef;
+    });
 }
 
 sub object_settings_dialog {
@@ -1735,7 +1738,6 @@ sub selected_object {
 
 sub refresh_canvases {
     my ($self) = @_;
-    
     $self->{canvas}->Refresh;
     $self->{canvas3D}->update if $self->{canvas3D};
     $self->{preview3D}->reload_print if $self->{preview3D};

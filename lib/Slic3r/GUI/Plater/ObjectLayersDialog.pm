@@ -70,4 +70,9 @@ sub new {
     return $self;
 }
 
+sub reload_preview {
+	my ($self) = @_;
+	$self->{preview3D}->reload_print;
+}
+
 1;
