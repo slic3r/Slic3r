@@ -49,8 +49,6 @@ sub new {
     # init spline control values    
     my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
     
-    #IMPORTANT TODO: set correct min / max layer height from config!!!!
-    
     # determine min and max layer height from perimeter extruder capabilities.
     my %extruders;
     for my $region_id (0 .. ($object->region_count - 1)) {
@@ -59,7 +57,6 @@ sub new {
     		$extruders{$extruder_id} = $extruder_id;
     	}
     }
-    
     my $min_height = max(map {$self->{plater}->{print}->config->get_at('min_layer_height', $_)} (values %extruders));
     my $max_height = min(map {$self->{plater}->{print}->config->get_at('max_layer_height', $_)} (values %extruders));
     
@@ -68,7 +65,7 @@ sub new {
     # get array of current Z coordinates for selected object
     my @layer_heights = map $_->print_z, @{$object->layers};
     
-    $self->{splineControl}->set_interpolation_points(@layer_heights);
+    $self->{splineControl}->set_layer_points(@layer_heights);
     
     return $self;
 }

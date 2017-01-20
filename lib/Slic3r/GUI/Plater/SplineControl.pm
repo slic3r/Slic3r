@@ -18,29 +18,24 @@ sub new {
     # This has only effect on MacOS. On Windows and Linux/GTK, the background is painted by $self->repaint().
     $self->SetBackgroundColour(Wx::wxWHITE);
 
-    
-    $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(210,210,210), wxSOLID);
-    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
-    $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(128,128,255), wxSOLID);
-    $self->{transparent_brush}  = Wx::Brush->new(Wx::Colour->new(0,0,0), wxTRANSPARENT);
     $self->{line_pen}           = Wx::Pen->new(Wx::Colour->new(50,50,50), 1, wxSOLID);
-    $self->{print_center_pen}   = Wx::Pen->new(Wx::Colour->new(200,200,200), 1, wxSOLID);
-    $self->{clearance_pen}      = Wx::Pen->new(Wx::Colour->new(0,0,200), 1, wxSOLID);
-    $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(150,150,150), 1, wxSOLID);
 
     $self->{user_drawn_background} = $^O ne 'darwin';
     
-    $self->{min_layer_height} = 0.12345678;
+    $self->{scaling_factor_x} = 1;
+    $self->{scaling_factor_y} = 1;
+    
+    $self->{min_layer_height} = 0.1;
     $self->{max_layer_height} = 0.4;
     $self->{object_height} = 1.0;
-    $self->{interpolation_points} = ();
+    $self->{layer_points} = ();
     
     
     EVT_PAINT($self, \&repaint);
     EVT_ERASE_BACKGROUND($self, sub {}) if $self->{user_drawn_background};
     EVT_MOUSE_EVENTS($self, \&mouse_event);
     EVT_SIZE($self, sub {
-        $self->update_bed_size;
+        $self->update_canvas_size;
         $self->Refresh;
     });
     
@@ -78,7 +73,7 @@ sub repaint {
     # draw current layers as lines
     my $last_z = 0.0;
     my @points = ();
-    foreach my $z (@{$self->{interpolation_points}}) {
+    foreach my $z (@{$self->{layer_points}}) {
     	my $layer_h = $z - $last_z;
     	$dc->SetPen($self->{line_pen});
         my $pl = $self->point_to_pixel(0, $z);
@@ -162,46 +157,19 @@ sub mouse_event {
 #    }
 }
 
-sub update_bed_size {
+sub update_canvas_size {
     my $self = shift;
     
-#    # when the canvas is not rendered yet, its GetSize() method returns 0,0
-#    my $canvas_size = $self->GetSize;
-#    my ($canvas_w, $canvas_h) = ($canvas_size->GetWidth, $canvas_size->GetHeight);
-#    return if $canvas_w == 0;
-#    
-#    # get bed shape polygon
-#    $self->{bed_polygon} = my $polygon = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape});
-#    my $bb = $polygon->bounding_box;
-#    my $size = $canvas_size;
-#    
-#    # calculate the scaling factor needed for constraining print bed area inside preview
-#    # scaling_factor is expressed in pixel / mm
-#    $self->{scaling_factor} = min($canvas_w / unscale($size->x), $canvas_h / unscale($size->y)); #)
-#    
-#    # calculate the displacement needed to center bed
-#    $self->{bed_origin} = [
-#        $canvas_w/2  - (unscale($bb->x_max + $bb->x_min)/2 * $self->{scaling_factor}),
-#        $canvas_h - ($canvas_h/2 - (unscale($bb->y_max + $bb->y_min)/2 * $self->{scaling_factor})),
-#    ];
-#    
-#    # calculate print center
-#    my $center = $bb->center;
-#    $self->{print_center} = [ unscale($center->x), unscale($center->y) ]; #))
-#    
-#    # cache bed contours and grid
-#    {
-#        my $step = scale 10;  # 1cm grid
-#        my @polylines = ();
-#        for (my $x = $bb->x_min - ($bb->x_min % $step) + $step; $x < $bb->x_max; $x += $step) {
-#            push @polylines, Slic3r::Polyline->new([$x, $bb->y_min], [$x, $bb->y_max]);
-#        }
-#        for (my $y = $bb->y_min - ($bb->y_min % $step) + $step; $y < $bb->y_max; $y += $step) {
-#            push @polylines, Slic3r::Polyline->new([$bb->x_min, $y], [$bb->x_max, $y]);
-#        }
-#        @polylines = @{intersection_pl(\@polylines, [$polygon])};
-#        $self->{grid} = [ map $self->scaled_points_to_pixel([ @$_[0,-1] ], 1), @polylines ];
-#    }
+    # when the canvas is not rendered yet, its GetSize() method returns 0,0
+    my $canvas_size = $self->GetSize;
+    my ($canvas_w, $canvas_h) = ($canvas_size->GetWidth, $canvas_size->GetHeight);
+    return if $canvas_w == 0;
+
+    my $size = $canvas_size;
+    my @size = ($size->GetWidth, $size->GetHeight);
+    
+    $self->{scaling_factor_x} = $size[0]/($self->{max_layer_height} - $self->{min_layer_height});
+    $self->{scaling_factor_y} = $size[1]/$self->{object_height};
 }
 
 # Set basic parameters for this control.
@@ -213,15 +181,16 @@ sub set_size_parameters {
 	$self->{min_layer_height} = $min_layer_height;
     $self->{max_layer_height} = $max_layer_height;
     $self->{object_height} = $object_height;
-	
-	#$self->repaint;
+    
+    $self->update_canvas_size;
+    $self->Refresh;
 }
 
 # Set the current layer height values as basis for user manipulation
-sub set_interpolation_points {
-	my ($self, @interpolation_points) = @_;
+sub set_layer_points {
+	my ($self, @layer_points) = @_;
 
-	$self->{interpolation_points} = [@interpolation_points];
+	$self->{layer_points} = [@layer_points];
 	$self->Refresh;
 }
 
@@ -233,11 +202,8 @@ sub point_to_pixel {
 	my $size = $self->GetSize;
     my @size = ($size->GetWidth, $size->GetHeight);
     
-    my $scaling_y = $size[1]/$self->{object_height};
-    my $scaling_x = $size[0]/($self->{max_layer_height} - $self->{min_layer_height});
-    
-    my $x = ($point[0] - $self->{min_layer_height})*$scaling_x;
-    my $y = $size[1] - $point[1]*$scaling_y; # invert y-axis
+    my $x = ($point[0] - $self->{min_layer_height})*$self->{scaling_factor_x};
+    my $y = $size[1] - $point[1]*$self->{scaling_factor_y}; # invert y-axis
 
     return Wx::Point->new(min(max($x, 0), $size[0]), min(max($y, 0), $size[1])); # limit to canvas size  
 }
@@ -250,11 +216,8 @@ sub pixel_to_point {
     my $size = $self->GetSize;
     my @size = ($size->GetWidth, $size->GetHeight);
     
-    my $scaling_y = $size[1]/$self->{object_height};
-    my $scaling_x = $size[0]/($self->{max_layer_height} - $self->{min_layer_height});
-    
-    my $x = $point->x/$scaling_x + $self->{min_layer_height};
-    my $y = ($size[1] - $point->y)/$scaling_y; # invert y-axis
+    my $x = $point->x/$self->{scaling_factor_x} + $self->{min_layer_height};
+    my $y = ($size[1] - $point->y)/$self->{scaling_factor_y}; # invert y-axis
     
     return (min(max($x, $self->{min_layer_height}), $self->{max_layer_height}), min(max($y, 0), $self->{object_height})); # limit to object size and layer constraints 
 }
