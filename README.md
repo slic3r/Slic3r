@@ -2,7 +2,7 @@ _Q: Oh cool, a new RepRap slicer?_
 
 A: Yes.
 
-Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.png?branch=master)](https://travis-ci.org/alexrj/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/8iqmeat6cj158vo6?svg=true)](https://ci.appveyor.com/project/lordofhyphens/slic3r)
+Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.svg?branch=master)](https://travis-ci.org/alexrj/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/8iqmeat6cj158vo6?svg=true)](https://ci.appveyor.com/project/lordofhyphens/slic3r)
 ======
 Prebuilt Win32 builds:
 * https://bintray.com/lordofhyphens/Slic3r/slic3r_dev/view (from build server)
@@ -20,7 +20,7 @@ See the [project homepage](http://slic3r.org/) at slic3r.org and the
 
 The core geometric algorithms and data structures are written in C++,
 and Perl is used for high-level flow abstraction, GUI and testing.
-If you're wondering why Perl, see http://xkcd.com/224/
+If you're wondering why Perl, see https://xkcd.com/224/
 
 The C++ API is public and its use in other projects is encouraged.
 The goal is to make Slic3r fully modular so that any part of its logic
@@ -71,7 +71,7 @@ Sure! You can do the following to find things that are available to help with:
 * Items in the [TODO](https://github.com/alexrj/Slic3r/wiki/TODO) wiki page.
     * Please comment in the related github issue that you are working on it so that other people know. 
 * Drop me a line at aar@cpan.org.
-* You can also find me (rarely) in #reprap and in #slic3r on [FreeNode](http://webchat.freenode.net) with the nickname _Sound_. Another contributor, _LoH_, is also in both channels. 
+* You can also find me (rarely) in #reprap and in #slic3r on [FreeNode](https://webchat.freenode.net) with the nickname _Sound_. Another contributor, _LoH_, is also in both channels.
 * Add an [issue](https://github.com/alexrj/Slic3r/issues) to the github tracker if it isn't already present.
 
 Before sending patches and pull requests contact me (preferably through opening a github issue or commenting on an existing, related, issue) to discuss your proposed
