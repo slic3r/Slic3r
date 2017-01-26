@@ -149,10 +149,14 @@ sub mouse_event {
     if ($event->ButtonDown) {
     	if ($event->LeftDown) {
            # start dragging
-           $self->{drag_start_pos} = $pos;
+           $self->{left_drag_start_pos} = $pos;
+        }
+        if ($event->RightDown) {
+           # start dragging
+           $self->{right_drag_start_pos} = $pos;
         }
     } elsif ($event->LeftUp) {
-    	if($self->{drag_start_pos}) {
+        if($self->{left_drag_start_pos}) {
     		if($self->{interactive_heights}) {
     			$self->{heights} = $self->{interactive_heights};
     			$self->{interactive_heights} = ();
@@ -164,23 +168,44 @@ sub mouse_event {
     		$self->{object}->layer_height_spline->suppressUpdate;
     		$self->{on_layer_update}->(@{$self->{interpolated_layers}});
     	}
-        $self->{drag_start_pos} = undef;
+        $self->{left_drag_start_pos} = undef;
+    } elsif ($event->RightUp) {
+        if($self->{right_drag_start_pos}) {
+            if($self->{interactive_heights}) {
+                $self->{heights} = $self->{interactive_heights};
+                $self->{interactive_heights} = ();
+                # update spline database
+                $self->{object}->layer_height_spline->updateLayerHeights($self->{heights});
+                $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
+            }
+            $self->Refresh;
+            $self->{object}->layer_height_spline->suppressUpdate;
+            $self->{on_layer_update}->(@{$self->{interpolated_layers}});
+        }
+        $self->{right_drag_start_pos} = undef;
     } elsif ($event->Dragging) {
-        return if !$self->{drag_start_pos}; # concurrency problems
+        if($self->{left_drag_start_pos}) {
         
-        my @start_pos = $self->pixel_to_point($self->{drag_start_pos});
-        my $range = abs($start_pos[1] - $obj_pos[1]);
-        
-        # compute updated interactive layer heights
-        $self->_interactive_curve($start_pos[1], $obj_pos[0], $range);
-        $self->Refresh;
+	        my @start_pos = $self->pixel_to_point($self->{left_drag_start_pos});
+	        my $range = abs($start_pos[1] - $obj_pos[1]);
 
+	        # compute updated interactive layer heights
+	        $self->_interactive_quadratic_curve($start_pos[1], $obj_pos[0], $range);
+	        $self->Refresh;
+        } elsif($self->{right_drag_start_pos}) {
+            my @start_pos = $self->pixel_to_point($self->{right_drag_start_pos});
+            my $range = $obj_pos[1] - $start_pos[1];
+
+            # compute updated interactive layer heights
+            $self->_interactive_linear_curve($start_pos[1], $obj_pos[0], $range);
+            $self->Refresh;
+        }
     } elsif ($event->Moving) {
         if($self->{on_z_indicator}) {
             $self->{on_z_indicator}->($obj_pos[1]);
         }
     } elsif ($event->Leaving) {
-        if($self->{on_z_indicator} && !$self->{drag_start_pos}) {
+        if($self->{on_z_indicator} && !$self->{left_drag_start_pos}) {
             $self->{on_z_indicator}->(undef);
         }
     }
@@ -247,7 +272,7 @@ sub _update_canvas_size {
     $self->{scaling_factor_y} = $size[1]/$self->{object_height};
 }
 
-sub _interactive_curve {
+sub _interactive_quadratic_curve {
 	my ($self, $mod_z, $target_layer_height, $range) = @_;
 	
 	$self->{interactive_heights} = (); # reset interactive curve
@@ -264,6 +289,30 @@ sub _interactive_curve {
 	}
 }
 
+sub _interactive_linear_curve {
+	my ($self, $mod_z, $target_layer_height, $range) = @_;
+
+    $self->{interactive_heights} = (); # reset interactive curve
+    my $from;
+    my $to;
+
+    if($range >= 0) {
+        $from = $mod_z;
+        $to = $mod_z + $range;
+    }else{
+        $from = $mod_z + $range;
+        $to = $mod_z;
+    }
+
+    # iterate over original points provided by spline
+    foreach my $i (0..@{$self->{heights}}-1  ) {
+        if(($self->{original_layers}[$i]) >= $from && ($self->{original_layers}[$i]< $to)) {
+            push (@{$self->{interactive_heights}}, $target_layer_height);
+        }else{
+           push (@{$self->{interactive_heights}}, $self->{heights}[$i]);
+        }
+    }
+}
 
 sub _quadratic_factor {
 	my ($self, $fixpoint, $range, $value) = @_;
