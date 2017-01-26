@@ -201,7 +201,7 @@ sub slice {
             }
             $self->layer_height_spline->setLayers(\@layers);
             if ($self->config->adaptive_slicing) { # smoothing after adaptive algorithm
-               $self->layer_height_spline->setLayers($self->layer_height_spline->getInterpolatedLayers);
+               @layers = @{$self->layer_height_spline->getInterpolatedLayers};
             }
         }
         
