@@ -6,8 +6,8 @@ use utf8;
 use Slic3r::Geometry qw(PI X scale unscale);
 use Slic3r::Print::State ':steps';
 use List::Util qw(min max sum first);
-use Wx qw(wxTheApp :dialog :id :misc :sizer wxTAB_TRAVERSAL);
-use Wx::Event qw(EVT_CLOSE EVT_BUTTON);
+use Wx qw(wxTheApp :dialog :id :misc :sizer :slider :statictext wxTAB_TRAVERSAL);
+use Wx::Event qw(EVT_CLOSE EVT_BUTTON EVT_SLIDER);
 use base 'Wx::Dialog';
 
 sub new {
@@ -23,9 +23,6 @@ sub new {
     # Initialize 3D toolpaths preview
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{preview3D} = Slic3r::GUI::Plater::3DPreview->new($self, $plater->{print});
-        #$self->{preview3D}->canvas->on_viewport_changed(sub {
-        #    $self->{canvas3D}->set_viewport_from_scene($self->{preview3D}->canvas);
-        #});
         $self->{preview3D}->canvas->set_auto_bed_shape;
         $self->{preview3D}->canvas->SetSize([500,500]);
         $self->{preview3D}->canvas->SetMinSize($self->{preview3D}->canvas->GetSize);
@@ -33,14 +30,32 @@ sub new {
         $self->{preview3D}->canvas->zoom_to_volumes;
     }
 
-	$self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(200, 200), $object);
+	$self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(150, 200), $object);
+
+#	my $cusp_slider = $self->{cusp_slider} = Wx::Slider->new(
+#        $self, -1,
+#        0,                              # default
+#        0,                              # min
+#        # we set max to a bogus non-zero value because the MSW implementation of wxSlider
+#        # will skip drawing the slider if max <= min:
+#        1,                              # max
+#        wxDefaultPosition,
+#        wxDefaultSize,
+#        wxHORIZONTAL,
+#    );
+
+    #my $cusp_label = $self->{cusp_label} = Wx::StaticText->new($self, -1, "", wxDefaultPosition,
+    #    [150,-1], wxALIGN_CENTRE_HORIZONTAL);
+    #$cusp_label->SetFont($Slic3r::GUI::small_font);
 	
 	my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
 	$right_sizer->Add($self->{splineControl}, 1, wxEXPAND | wxALL, 0);
+	#$right_sizer->Add($cusp_slider, 0, wxEXPAND | wxALL, 0);
+	#$right_sizer->Add($cusp_label, 0, wxEXPAND | wxALL, 0);
 	
 	$self->{sizer} = Wx::BoxSizer->new(wxHORIZONTAL);
-	$self->{sizer}->Add($self->{preview3D}, 1, wxEXPAND | wxTOP | wxBOTTOM, 0) if $self->{preview3D};
-	$self->{sizer}->Add($right_sizer, 0, wxEXPAND | wxTOP | wxBOTTOM, 10);
+	$self->{sizer}->Add($self->{preview3D}, 3, wxEXPAND | wxTOP | wxBOTTOM, 0) if $self->{preview3D};
+	$self->{sizer}->Add($right_sizer, 1, wxEXPAND | wxTOP | wxBOTTOM, 10);
 
     $self->SetSizerAndFit($self->{sizer});
     $self->SetSize([800, 600]);
@@ -63,15 +78,48 @@ sub new {
     
     $self->{splineControl}->on_layer_update(sub {
         # trigger re-slicing
+        $self->{plater}->stop_background_process;
         $self->{object}->invalidate_step(STEP_SLICE);
         $self->{plater}->start_background_process;
     });
     
+    $self->{splineControl}->on_z_indicator(sub {
+        my ($z) = @_;
+        #$self->{preview3D}->canvas->cutting_plane_z($z);
+        $self->{preview3D}->canvas->SetCuttingPlane($z, []);
+        $self->{preview3D}->canvas->Render;
+    });
+
+    # init cusp slider
+#    if($object->config->adaptive_slicing) {
+#        my $cusp_value = $object->config->get('cusp_value');
+#        $cusp_label->SetLabel(sprintf 'Cusp value: %.2f mm', $cusp_value);
+#        $cusp_slider->SetRange(0, $max_height*100);
+#        $cusp_slider->SetValue($cusp_value*100);
+#    }else{
+#        # disable slider
+#        $cusp_label->SetLabel("Cusp value: ");
+#        $cusp_label->Enable(0);
+#        $cusp_slider->Enable(0);
+#    }
+
+#    EVT_SLIDER($self, $cusp_slider, sub {
+#    	$self->{plater}->pause_background_process;
+#    	my $cusp_value = $cusp_slider->GetValue/100;
+#    	$cusp_label->SetLabel(sprintf 'Cusp value: %.2f mm', $cusp_value);
+#    	my $success = $object->config->set('cusp_value', $cusp_value);
+#        # trigger re-slicing
+#        $self->{plater}->stop_background_process;
+#        $self->{object}->invalidate_step(STEP_SLICE);
+#        $self->{plater}->schedule_background_process;
+#    });
+
     return $self;
 }
 
 sub reload_preview {
 	my ($self) = @_;
+	#$self->{splineControl}->update;
 	$self->{preview3D}->reload_print;
 }
 

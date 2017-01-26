@@ -35,18 +35,8 @@ sub new {
     $self->{max_layer_height} = 0.4;
     $self->{object_height} = 1.0;
     
-    $self->{original_layers} = $object->layer_height_spline->getOriginalLayers;
-    $self->{original_interpolated_layers} = $object->layer_height_spline->getInterpolatedLayers;
-    $self->{interpolated_layers} = $object->layer_height_spline->getInterpolatedLayers; # Initialize to current values
-    
-    # initialize height vector
-    $self->{heights} = ();
-    $self->{interactive_heights} = ();
-    my $last_z = 0;
-    foreach my $z (@{$self->{original_layers}}) {
-        push (@{$self->{heights}}, $z - $last_z);
-        $last_z = $z;
-    }
+    # initialize values
+    $self->update;
     
     EVT_PAINT($self, \&repaint);
     EVT_ERASE_BACKGROUND($self, sub {}) if $self->{user_drawn_background};
@@ -185,13 +175,15 @@ sub mouse_event {
         $self->_interactive_curve($start_pos[1], $obj_pos[0], $range);
         $self->Refresh;
 
-    }# elsif ($event->Moving) {
-#        my $cursor = wxSTANDARD_CURSOR;
-#        if (defined first { $_->contour->contains_point($point) } map @$_, map @{$_->instance_thumbnails}, @{ $self->{objects} }) {
-#            $cursor = Wx::Cursor->new(wxCURSOR_HAND);
-#        }
-#        $self->SetCursor($cursor);
-#    }
+    } elsif ($event->Moving) {
+        if($self->{on_z_indicator}) {
+            $self->{on_z_indicator}->($obj_pos[1]);
+        }
+    } elsif ($event->Leaving) {
+        if($self->{on_z_indicator} && !$self->{drag_start_pos}) {
+            $self->{on_z_indicator}->(undef);
+        }
+    }
 }
 
 # Set basic parameters for this control.
@@ -208,12 +200,36 @@ sub set_size_parameters {
     $self->Refresh;
 }
 
+# Layers have been modified externally, re-initialize this control with new values
+sub update {
+	my $self = shift;
+
+    $self->{original_layers} = $self->{object}->layer_height_spline->getOriginalLayers;
+    $self->{original_interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
+    $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers; # Initialize to current values
+
+    # initialize height vector
+    $self->{heights} = ();
+    $self->{interactive_heights} = ();
+    my $last_z = 0;
+    foreach my $z (@{$self->{original_layers}}) {
+        push (@{$self->{heights}}, $z - $last_z);
+        $last_z = $z;
+    }
+    $self->Refresh;
+}
+
 # Callback to notify parent element if layers have changed and reslicing should be triggered
 sub on_layer_update {
     my ($self, $cb) = @_;
     $self->{on_layer_update} = $cb;
 }
 
+# Callback to tell parent element at which z-position the mouse currently hovers to update indicator in 3D-view
+sub on_z_indicator {
+	my ($self, $cb) = @_;
+    $self->{on_z_indicator} = $cb;
+}
 
 # Internal function to cache scaling factors
 sub _update_canvas_size {
