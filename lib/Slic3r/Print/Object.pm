@@ -89,118 +89,144 @@ sub slice {
 		my $slice_z = 0;
         my $height  = 0;
 		my $cusp_height = 0;
+		my @layers = ();
 
-        # create stateful objects and variables for the adaptive slicing process
-        my @adaptive_slicing;
-        my $min_height = 0;
-		my $max_height = 0;
-        if ($self->config->adaptive_slicing) {
-	        for my $region_id (0 .. ($self->region_count - 1)) {
-	        	my $mesh;
-			    foreach my $volume_id (@{ $self->get_region_volumes($region_id) }) {
-			        my $volume = $self->model_object->volumes->[$volume_id];
-			        next if $volume->modifier;
-			        if (defined $mesh) {
-			            $mesh->merge($volume->mesh);
-			        } else {
-			            $mesh = $volume->mesh->clone;
-			        }
-			    }
-	        	
-	        	if (defined $mesh) {
-					$adaptive_slicing[$region_id] = Slic3r::AdaptiveSlicing->new(
-						mesh => $mesh,
-						size => $self->size->z
-					);
-	        	}
-			}
-			
-			# determine min and max layer height from perimeter extruder capabilities.
-			if($self->region_count > 1) { # multimaterial object
-				$min_height = max(map {$self->print->config->get_at('min_layer_height', $_)} (0..($self->region_count-1)));
-				$max_height = min(map {$self->print->config->get_at('max_layer_height', $_)} (0..($self->region_count-1)));
-			}else{ #single material object
-				my $perimeter_extruder = $self->print->get_region(0)->config->get('perimeter_extruder')-1;
-				$min_height = $self->print->config->get_at('min_layer_height', $perimeter_extruder);
-				$max_height = $self->print->config->get_at('max_layer_height', $perimeter_extruder);
-			}
-        }
-    
-        # loop until we have at least one layer and the max slice_z reaches the object height
-        my $max_z = unscale($self->size->z);
-        while (($slice_z - $height) <= $max_z) {
-        	
-        	if ($self->config->adaptive_slicing) {
-        		$height = 999;
-        		my $cusp_value = $self->config->get_value('cusp_value');
-        		
-        		Slic3r::debugf "\n Slice layer: %d\n", $id;
-       	
-       			# determine next layer height
-       			for my $region_id (0 .. ($self->region_count - 1)) {
-	       			# get cusp height
-	       			next if(!defined $adaptive_slicing[$region_id]);
-	       			my $cusp_height = $adaptive_slicing[$region_id]->cusp_height(scale $slice_z, $cusp_value, $min_height, $max_height);
-	       			
-	       			# check for horizontal features and object size
-	       			if($self->config->get_value('match_horizontal_surfaces')) {
-				       	my $horizontal_dist = $adaptive_slicing[$region_id]->horizontal_facet_distance(scale $slice_z+$cusp_height, $min_height);
-				       	if(($horizontal_dist < $min_height) && ($horizontal_dist > 0)) {
-				       		Slic3r::debugf "Horizontal feature ahead, distance: %f\n", $horizontal_dist;
-				       		# can we shrink the current layer a bit?
-				       		if($cusp_height-($min_height-$horizontal_dist) > $min_height) {
-				       			# yes we can
-				       			$cusp_height = $cusp_height-($min_height-$horizontal_dist);
-				       			Slic3r::debugf "Shrink layer height to %f\n", $cusp_height;
-				       		}else{
-				       			# no, current layer would become too thin
-				       			$cusp_height = $cusp_height+$horizontal_dist;
-				       			Slic3r::debugf "Widen layer height to %f\n", $cusp_height;
-				       		}
-				       	}
-	       			}
+		if(!$self->layer_height_spline->updateRequired) { # layer heights are already generated, just update layers from spline
+		    @layers = @{$self->layer_height_spline->getInterpolatedLayers};
+		}else{ # create new set of layers
+	        # create stateful objects and variables for the adaptive slicing process
+	        my @adaptive_slicing;
+	        my $min_height = 0;
+			my $max_height = 0;
+	        if ($self->config->adaptive_slicing) {
+		        for my $region_id (0 .. ($self->region_count - 1)) {
+		            my $mesh;
+				    foreach my $volume_id (@{ $self->get_region_volumes($region_id) }) {
+				        my $volume = $self->model_object->volumes->[$volume_id];
+				        next if $volume->modifier;
+				        if (defined $mesh) {
+				            $mesh->merge($volume->mesh);
+				        } else {
+				            $mesh = $volume->mesh->clone;
+				        }
+                    }
 
-			       	$height = ($id == 0)
-                		? $self->config->get_value('first_layer_height')
-                		: min($cusp_height, $height);
-		       	}
-
-        	}else{
-		        # assign the default height to the layer according to the general settings
-		        $height = ($id == 0)
-		            ? $self->config->get_value('first_layer_height')
-		            : $self->config->layer_height;
-			}
-        
-            # look for an applicable custom range
-            if (my $range = first { $_->[0] <= $slice_z && $_->[1] > $slice_z } @{$self->layer_height_ranges}) {
-                $height = $range->[2];
-        
-                # if user set custom height to zero we should just skip the range and resume slicing over it
-                if ($height == 0) {
-                    $slice_z += $range->[1] - $range->[0];
-                    next;
+                    if (defined $mesh) {
+                        $adaptive_slicing[$region_id] = Slic3r::AdaptiveSlicing->new(
+                            mesh => $mesh,
+                            size => $self->size->z
+                        );
+                    }
                 }
-            }
+
+				# determine min and max layer height from perimeter extruder capabilities.
+				if($self->region_count > 1) { # multimaterial object
+					$min_height = max(map {$self->print->config->get_at('min_layer_height', $_)} (0..($self->region_count-1)));
+					$max_height = min(map {$self->print->config->get_at('max_layer_height', $_)} (0..($self->region_count-1)));
+				}else{ #single material object
+					my $perimeter_extruder = $self->print->get_region(0)->config->get('perimeter_extruder')-1;
+					$min_height = $self->print->config->get_at('min_layer_height', $perimeter_extruder);
+					$max_height = $self->print->config->get_at('max_layer_height', $perimeter_extruder);
+				}
+	        }
+
+            # loop until we have at least one layer and the max slice_z reaches the object height
+            my $max_z = unscale($self->size->z);
+            while (($slice_z) < $max_z) {
+
+                if ($self->config->adaptive_slicing) {
+                    $height = 999;
+                    my $cusp_value = $self->config->get_value('cusp_value');
+
+                    Slic3r::debugf "\n Slice layer: %d\n", $id;
+
+                       # determine next layer height
+                       for my $region_id (0 .. ($self->region_count - 1)) {
+                           # get cusp height
+                           next if(!defined $adaptive_slicing[$region_id]);
+                           my $cusp_height = $adaptive_slicing[$region_id]->cusp_height(scale $slice_z, $cusp_value, $min_height, $max_height);
+
+                           # check for horizontal features and object size
+                           if($self->config->get_value('match_horizontal_surfaces')) {
+                               my $horizontal_dist = $adaptive_slicing[$region_id]->horizontal_facet_distance(scale $slice_z+$cusp_height, $min_height);
+                               if(($horizontal_dist < $min_height) && ($horizontal_dist > 0)) {
+                                   Slic3r::debugf "Horizontal feature ahead, distance: %f\n", $horizontal_dist;
+                                   # can we shrink the current layer a bit?
+                                   if($cusp_height-($min_height-$horizontal_dist) > $min_height) {
+                                       # yes we can
+                                       $cusp_height = $cusp_height-($min_height-$horizontal_dist);
+                                       Slic3r::debugf "Shrink layer height to %f\n", $cusp_height;
+                                   }else{
+                                       # no, current layer would become too thin
+                                       $cusp_height = $cusp_height+$horizontal_dist;
+                                       Slic3r::debugf "Widen layer height to %f\n", $cusp_height;
+                                   }
+                               }
+                           }
+
+                           $height = ($id == 0)
+                            ? $self->config->get_value('first_layer_height')
+                            : min($cusp_height, $height);
+                       }
+
+                }else{
+                    # assign the default height to the layer according to the general settings
+                    $height = ($id == 0)
+                        ? $self->config->get_value('first_layer_height')
+                        : $self->config->layer_height;
+                }
+
+                # look for an applicable custom range
+                if (my $range = first { $_->[0] <= $slice_z && $_->[1] > $slice_z } @{$self->layer_height_ranges}) {
+                    $height = $range->[2];
             
-            if ($first_object_layer_height != -1 && !@{$self->layers}) {
-                $height = $first_object_layer_height;
-                $print_z += ($first_object_layer_distance - $height);
+                    # if user set custom height to zero we should just skip the range and resume slicing over it
+                    if ($height == 0) {
+                        $slice_z += $range->[1] - $range->[0];
+                        next;
+                    }
+                }
+
+                # set first layer height if raft is active
+                if ($first_object_layer_height != -1 && !@layers) {
+                    $height = $first_object_layer_height;
+                    #$print_z += ($first_object_layer_distance - $height);
+                }
+
+                $slice_z += $height;
+                $id++;
+
+                # collect layers for spline smoothing
+                push (@layers, $slice_z);
             }
-            
+            $self->layer_height_spline->setLayers(\@layers);
+            if ($self->config->adaptive_slicing) { # smoothing after adaptive algorithm
+               $self->layer_height_spline->setLayers($self->layer_height_spline->getInterpolatedLayers);
+            }
+        }
+        
+        $id = 0;
+        if ($self->config->raft_layers > 0) {
+            $id = $self->config->raft_layers;
+        }
+        
+        # generate layer objects
+        $slice_z = 0;
+        foreach my $z (@layers) {
+            $height = $z - $slice_z;
             $print_z += $height;
             $slice_z += $height/2;
-        
-            ### Slic3r::debugf "Layer %d: height = %s; slice_z = %s; print_z = %s\n", $id, $height, $slice_z, $print_z;
-        
+
+            Slic3r::debugf "Layer %d: height = %s; slice_z = %s; print_z = %s\n", $id, $height, $slice_z, $print_z;
+
             $self->add_layer($id, $height, $print_z, $slice_z);
             if ($self->layer_count >= 2) {
                 my $lc = $self->layer_count;
                 $self->get_layer($lc - 2)->set_upper_layer($self->get_layer($lc - 1));
                 $self->get_layer($lc - 1)->set_lower_layer($self->get_layer($lc - 2));
             }
+
             $id++;
-        
             $slice_z += $height/2;   # add the other half layer
         }
     }

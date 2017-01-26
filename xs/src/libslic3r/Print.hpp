@@ -12,7 +12,7 @@
 #include "Layer.hpp"
 #include "Model.hpp"
 #include "PlaceholderParser.hpp"
-
+#include "LayerHeightSpline.hpp"
 
 namespace Slic3r {
 
@@ -83,6 +83,8 @@ class PrintObject
     PrintObjectConfig config;
     t_layer_height_ranges layer_height_ranges;
     
+    LayerHeightSpline layer_height_spline;
+
     // this is set to true when LayerRegion->slices is split in top/internal/bottom
     // so that next call to make_perimeters() performs a union() before computing loops
     bool typed_slices;

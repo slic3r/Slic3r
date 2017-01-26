@@ -4,6 +4,7 @@ use warnings;
 use utf8;
 
 use Slic3r::Geometry qw(PI X scale unscale);
+use Slic3r::Print::State ':steps';
 use List::Util qw(min max sum first);
 use Wx qw(wxTheApp :dialog :id :misc :sizer wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_CLOSE EVT_BUTTON);
@@ -14,12 +15,11 @@ sub new {
     my ($parent, %params) = @_;
     my $self = $class->SUPER::new($parent, -1, $params{object}->name, wxDefaultPosition, [500,500], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     $self->{model_object} = $params{model_object};
-   
-
   	my $model_object = $self->{model_object} = $params{model_object};
   	my $obj_idx = $self->{obj_idx} = $params{obj_idx};
     my $plater = $self->{plater} = $parent;
-    
+    my $object = $self->{object} = $self->{plater}->{print}->get_object($self->{obj_idx});
+
     # Initialize 3D toolpaths preview
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{preview3D} = Slic3r::GUI::Plater::3DPreview->new($self, $plater->{print});
@@ -32,8 +32,8 @@ sub new {
         $self->{preview3D}->load_print;
         $self->{preview3D}->canvas->zoom_to_volumes;
     }
-    
-	$self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(100, 200));
+
+	$self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(200, 200), $object);
 	
 	my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
 	$right_sizer->Add($self->{splineControl}, 1, wxEXPAND | wxALL, 0);
@@ -46,9 +46,7 @@ sub new {
     $self->SetSize([800, 600]);
     $self->SetMinSize($self->GetSize);
     
-    # init spline control values    
-    my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
-    
+    # init spline control values
     # determine min and max layer height from perimeter extruder capabilities.
     my %extruders;
     for my $region_id (0 .. ($object->region_count - 1)) {
@@ -62,10 +60,12 @@ sub new {
     
     $self->{splineControl}->set_size_parameters($min_height, $max_height, unscale($object->size->z));
         
-    # get array of current Z coordinates for selected object
-    my @layer_heights = map $_->print_z, @{$object->layers};
     
-    $self->{splineControl}->set_layer_points(@layer_heights);
+    $self->{splineControl}->on_layer_update(sub {
+        # trigger re-slicing
+        $self->{object}->invalidate_step(STEP_SLICE);
+        $self->{plater}->start_background_process;
+    });
     
     return $self;
 }

@@ -58,6 +58,8 @@ _constant()
     Points copies();
     t_layer_height_ranges layer_height_ranges()
         %code%{ RETVAL = THIS->layer_height_ranges; %};
+    Ref<LayerHeightSpline> layer_height_spline()
+        %code%{ RETVAL = &THIS->layer_height_spline; %};
     Ref<Point3> size()
         %code%{ RETVAL = &THIS->size; %};
     Clone<BoundingBox> bounding_box();
