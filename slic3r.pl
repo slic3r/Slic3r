@@ -6,13 +6,15 @@ use warnings;
 BEGIN {
     use FindBin;
     use lib "$FindBin::Bin/lib";
+    use local::lib "$FindBin::Bin/local-lib";
 }
 
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_auto_abbrev);
 use List::Util qw(first);
-use POSIX qw(setlocale LC_NUMERIC);
+use POSIX qw(setlocale LC_NUMERIC ceil);
 use Slic3r;
+use Slic3r::Geometry qw(epsilon X Y Z deg2rad);
 use Time::HiRes qw(gettimeofday tv_interval);
 $|++;
 binmode STDOUT, ':utf8';
@@ -40,14 +42,16 @@ my %cli_options = ();
         'merge|m'               => \$opt{merge},
         'repair'                => \$opt{repair},
         'cut=f'                 => \$opt{cut},
+        'cut-grid=s'            => \$opt{cut_grid},
         'split'                 => \$opt{split},
         'info'                  => \$opt{info},
         
         'scale=f'               => \$opt{scale},
-        'rotate=i'              => \$opt{rotate},
+        'rotate=f'              => \$opt{rotate},
         'duplicate=i'           => \$opt{duplicate},
         'duplicate-grid=s'      => \$opt{duplicate_grid},
         'print-center=s'        => \$opt{print_center},
+        'dont-arrange'          => \$opt{dont_arrange},
     );
     foreach my $opt_key (keys %{$Slic3r::Config::Options}) {
         my $cli = $Slic3r::Config::Options->{$opt_key}->{cli} or next;
@@ -147,13 +151,56 @@ if (@ARGV) {  # slicing from command line
             $mesh->translate(0, 0, -$mesh->bounding_box->z_min);
             my $upper = Slic3r::TriangleMesh->new;
             my $lower = Slic3r::TriangleMesh->new;
-            $mesh->cut($opt{cut}, $upper, $lower);
+            $mesh->cut(Z, $opt{cut}, $upper, $lower);
             $upper->repair;
             $lower->repair;
             $upper->write_ascii("${file}_upper.stl")
                 if $upper->facets_count > 0;
             $lower->write_ascii("${file}_lower.stl")
                 if $lower->facets_count > 0;
+        }
+        exit;
+    }
+    
+    if ($opt{cut_grid}) {
+        my ($grid_x, $grid_y) = split /[,x]/, $opt{cut_grid}, 2;
+        foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
+            my $model = Slic3r::Model->read_from_file($file);
+            $model->add_default_instances;
+            my $mesh = $model->mesh;
+            my $bb = $mesh->bounding_box;
+            $mesh->translate(0, 0, -$bb->z_min);
+            
+            my $x_parts = ceil(($bb->size->x - epsilon)/$grid_x);
+            my $y_parts = ceil(($bb->size->y - epsilon)/$grid_y); #--
+            
+            for my $i (1..$x_parts) {
+                my $this = Slic3r::TriangleMesh->new;
+                if ($i == $x_parts) {
+                    $this = $mesh;
+                } else {
+                    my $next = Slic3r::TriangleMesh->new;
+                    $mesh->cut(X, $bb->x_min + ($grid_x * $i), $next, $this);
+                    $this->repair;
+                    $next->repair;
+                    $mesh = $next;
+                }
+                
+                for my $j (1..$y_parts) {
+                    my $tile = Slic3r::TriangleMesh->new;
+                    if ($j == $y_parts) {
+                        $tile = $this;
+                    } else {
+                        my $next = Slic3r::TriangleMesh->new;
+                        $this->cut(Y, $bb->y_min + ($grid_y * $j), $next, $tile);
+                        $tile->repair;
+                        $next->repair;
+                        $this = $next;
+                    }
+                    $tile->write_ascii("${file}_${i}_${j}.stl");
+                }
+            }
         }
         exit;
     }
@@ -185,6 +232,7 @@ if (@ARGV) {  # slicing from command line
         } else {
             $model = Slic3r::Model->read_from_file($input_file);
         }
+        $model->repair;
         
         if ($opt{info}) {
             $model->print_info;
@@ -200,10 +248,11 @@ if (@ARGV) {  # slicing from command line
         
         my $sprint = Slic3r::Print::Simple->new(
             scale           => $opt{scale}          // 1,
-            rotate          => $opt{rotate}         // 0,
+            rotate          => deg2rad($opt{rotate} // 0),
             duplicate       => $opt{duplicate}      // 1,
             duplicate_grid  => $opt{duplicate_grid} // [1,1],
             print_center    => $opt{print_center}   // Slic3r::Pointf->new(100,100),
+            dont_arrange    => $opt{dont_arrange}   // 0,
             status_cb       => sub {
                 my ($percent, $message) = @_;
                 printf "=> %s\n", $message;
@@ -296,7 +345,7 @@ $j
                         (default: 100,100)
     --z-offset          Additional height in mm to add to vertical coordinates
                         (+/-, default: $config->{z_offset})
-    --gcode-flavor      The type of G-code to generate (reprap/teacup/makerware/sailfish/mach3/machinekit/smoothie/no-extrusion,
+    --gcode-flavor      The type of G-code to generate (reprap/teacup/repetier/makerware/sailfish/mach3/machinekit/smoothie/no-extrusion,
                         default: $config->{gcode_flavor})
     --use-relative-e-distances Enable this to get relative E values (default: no)
     --use-firmware-retraction  Enable firmware-controlled retraction using G10/G11 (default: no)
@@ -485,6 +534,9 @@ $j
     --duplicate         Number of items with auto-arrange (1+, default: 1)
     --duplicate-grid    Number of items with grid arrangement (default: 1,1)
     --duplicate-distance Distance in mm between copies (default: $config->{duplicate_distance})
+    --dont-arrange      Don't arrange the objects on the build plate. The model coordinates
+                        define the absolute positions on the build plate. 
+                        The option --print-center will be ignored.
     --xy-size-compensation
                         Grow/shrink objects by the configured absolute distance (mm, default: $config->{xy_size_compensation})
    

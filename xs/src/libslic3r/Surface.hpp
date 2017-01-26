@@ -33,6 +33,34 @@ class Surface
 
 typedef std::vector<Surface> Surfaces;
 typedef std::vector<Surface*> SurfacesPtr;
+typedef std::vector<const Surface*> SurfacesConstPtr;
+
+inline Polygons
+to_polygons(const Surfaces &surfaces)
+{
+    Slic3r::Polygons pp;
+    for (Surfaces::const_iterator s = surfaces.begin(); s != surfaces.end(); ++s)
+        append_to(pp, (Polygons)*s);
+    return pp;
+}
+
+inline Polygons
+to_polygons(const SurfacesPtr &surfaces)
+{
+    Slic3r::Polygons pp;
+    for (SurfacesPtr::const_iterator s = surfaces.begin(); s != surfaces.end(); ++s)
+        append_to(pp, (Polygons)**s);
+    return pp;
+}
+
+inline Polygons
+to_polygons(const SurfacesConstPtr &surfaces)
+{
+    Slic3r::Polygons pp;
+    for (SurfacesConstPtr::const_iterator s = surfaces.begin(); s != surfaces.end(); ++s)
+        append_to(pp, (Polygons)**s);
+    return pp;
+}
 
 }
 

@@ -30,6 +30,8 @@
     void align_to_origin();
     void rotate(double angle, Point* center);
     TriangleMeshPtrs split();
+    TriangleMeshPtrs cut_by_grid(Pointf* grid)
+        %code{% RETVAL = THIS->cut_by_grid(*grid); %};
     void merge(TriangleMesh* mesh)
         %code{% THIS->merge(*mesh); %};
     ExPolygons horizontal_projection();
@@ -39,6 +41,7 @@
         %code{% RETVAL = THIS->bounding_box().center(); %};
     int facets_count();
     void reset_repair_stats();
+
 %{
 
 void
@@ -185,7 +188,7 @@ TriangleMesh::slice(z)
         std::vector<float> z_f(z.begin(), z.end());
         
         std::vector<ExPolygons> layers;
-        TriangleMeshSlicer mslicer(THIS);
+        TriangleMeshSlicer<Z> mslicer(THIS);
         mslicer.slice(z_f, &layers);
         
         AV* layers_av = newAV();
@@ -205,14 +208,35 @@ TriangleMesh::slice(z)
     OUTPUT:
         RETVAL
 
+ExPolygons
+TriangleMesh::slice_at(axis, z)
+    Axis axis
+    double z
+    CODE:
+        if (axis == X) {
+            TriangleMeshSlicer<X>(THIS).slice(z, &RETVAL);
+        } else if (axis == Y) {
+            TriangleMeshSlicer<Y>(THIS).slice(z, &RETVAL);
+        } else if (axis == Z) {
+            TriangleMeshSlicer<Z>(THIS).slice(z, &RETVAL);
+        }
+    OUTPUT:
+        RETVAL
+
 void
-TriangleMesh::cut(z, upper, lower)
+TriangleMesh::cut(axis, z, upper, lower)
+    Axis            axis
     float           z;
     TriangleMesh*   upper;
     TriangleMesh*   lower;
     CODE:
-        TriangleMeshSlicer mslicer(THIS);
-        mslicer.cut(z, upper, lower);
+        if (axis == X) {
+            TriangleMeshSlicer<X>(THIS).cut(z, upper, lower);
+        } else if (axis == Y) {
+            TriangleMeshSlicer<Y>(THIS).cut(z, upper, lower);
+        } else {
+            TriangleMeshSlicer<Z>(THIS).cut(z, upper, lower);
+        }
 
 std::vector<double>
 TriangleMesh::bb3()
@@ -230,6 +254,13 @@ TriangleMesh::bb3()
 };
 
 %package{Slic3r::TriangleMesh};
+
+Clone<TriangleMesh> make_cube(double x, double y, double z)
+    %code{% RETVAL = TriangleMesh::make_cube(x, y, z); %};
+Clone<TriangleMesh> make_cylinder(double r, double h)
+    %code{% RETVAL = TriangleMesh::make_cylinder(r, h); %};
+Clone<TriangleMesh> make_sphere(double rho)
+    %code{% RETVAL = TriangleMesh::make_sphere(rho); %};
 
 %{
 PROTOTYPES: DISABLE

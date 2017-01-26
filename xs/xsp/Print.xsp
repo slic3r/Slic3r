@@ -65,6 +65,22 @@ _constant()
     Clone<BoundingBox> bounding_box();
     Ref<Point> _copies_shift()
         %code%{ RETVAL = &THIS->_copies_shift; %};
+    std::vector<int> support_material_extruders()
+        %code%{
+            std::set<size_t> extruders = THIS->support_material_extruders();
+            RETVAL.reserve(extruders.size());
+            for (std::set<size_t>::const_iterator e = extruders.begin(); e != extruders.end(); ++e) {
+                RETVAL.push_back(*e);
+            }
+        %};
+    std::vector<int> extruders()
+        %code%{
+            std::set<size_t> extruders = THIS->extruders();
+            RETVAL.reserve(extruders.size());
+            for (std::set<size_t>::const_iterator e = extruders.begin(); e != extruders.end(); ++e) {
+                RETVAL.push_back(*e);
+            }
+        %};
     
     bool typed_slices()
         %code%{ RETVAL = THIS->typed_slices; %};
@@ -109,8 +125,30 @@ _constant()
     void set_step_started(PrintObjectStep step)
         %code%{ THIS->state.set_started(step); %};
     
+    void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    SV* _slice_region(size_t region_id, std::vector<double> z, bool modifier)
+        %code%{
+            std::vector<float> z_f(z.begin(), z.end());
+            std::vector<ExPolygons> layers = THIS->_slice_region(region_id, z_f, modifier);
+            AV* layers_av = newAV();
+            size_t len = layers.size();
+            if (len > 0) av_extend(layers_av, len-1);
+            for (unsigned int i = 0; i < layers.size(); i++) {
+                AV* expolygons_av = newAV();
+                len = layers[i].size();
+                if (len > 0) av_extend(expolygons_av, len-1);
+                unsigned int j = 0;
+                for (ExPolygons::iterator it = layers[i].begin(); it != layers[i].end(); ++it) {
+                    av_store(expolygons_av, j++, perl_to_SV_clone_ref(*it));
+                }
+                av_store(layers_av, i, newRV_noinc((SV*)expolygons_av));
+            }
+            RETVAL = (SV*)newRV_noinc((SV*)layers_av);
+        %};
+    void _make_perimeters();
+    void _infill();
     
     int ptr()
         %code%{ RETVAL = (int)(intptr_t)THIS; %};
@@ -214,25 +252,22 @@ _constant()
     double max_allowed_layer_height() const;
     bool has_support_material() const;
     void auto_assign_extruders(ModelObject* model_object);
+    std::string output_filename();
+    std::string output_filepath(std::string path = "");
     
     void add_model_object(ModelObject* model_object, int idx = -1);
     bool apply_config(DynamicPrintConfig* config)
         %code%{ RETVAL = THIS->apply_config(*config); %};
     bool has_infinite_skirt();
     bool has_skirt();
-    void validate()
-        %code%{
-            try {
-                THIS->validate();
-            } catch (PrintValidationException &e) {
-                croak("%s\n", e.what());
-            }
-        %};
+    std::string _validate()
+        %code%{ RETVAL = THIS->validate(); %};
     Clone<BoundingBox> bounding_box();
     Clone<BoundingBox> total_bounding_box();
     double skirt_first_layer_height();
     Clone<Flow> brim_flow();
     Clone<Flow> skirt_flow();
+    void _make_brim();
 %{
 
 double

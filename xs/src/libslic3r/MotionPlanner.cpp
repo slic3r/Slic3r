@@ -155,12 +155,12 @@ MotionPlanner::shortest_path(const Point &from, const Point &to)
             if (!grown_env.contains(from)) {
                 // delete second point while the line connecting first to third crosses the
                 // boundaries as many times as the current first to second
-                while (polyline.points.size() > 2 && intersection((Lines)Line(from, polyline.points[2]), grown_env).size() == 1) {
+                while (polyline.points.size() > 2 && intersection_ln(Line(from, polyline.points[2]), grown_env).size() == 1) {
                     polyline.points.erase(polyline.points.begin() + 1);
                 }
             }
             if (!grown_env.contains(to)) {
-                while (polyline.points.size() > 2 && intersection((Lines)Line(*(polyline.points.end() - 3), to), grown_env).size() == 1) {
+                while (polyline.points.size() > 2 && intersection_ln(Line(*(polyline.points.end() - 3), to), grown_env).size() == 1) {
                     polyline.points.erase(polyline.points.end() - 2);
                 }
             }
@@ -294,7 +294,7 @@ MotionPlannerEnv::nearest_env_point(const Point &from, const Point &to) const
         size_t result = from.nearest_waypoint_index(pp, to);
         
         // as we assume 'from' is outside env, any node will require at least one crossing
-        if (intersection((Lines)Line(from, pp[result]), this->island).size() > 1) {
+        if (intersection_ln(Line(from, pp[result]), this->island).size() > 1) {
             // discard result
             pp.erase(pp.begin() + result);
         } else {
@@ -313,10 +313,10 @@ MotionPlannerEnv::nearest_env_point(const Point &from, const Point &to) const
 }
 
 void
-MotionPlannerGraph::add_edge(size_t from, size_t to, double weight)
+MotionPlannerGraph::add_edge(node_t from, node_t to, double weight)
 {
     // extend adjacency list until this start node
-    if (this->adjacency_list.size() < from+1)
+    if (this->adjacency_list.size() < (size_t)from+1)
         this->adjacency_list.resize(from+1);
     
     this->adjacency_list[from].push_back(neighbor(to, weight));
@@ -334,7 +334,7 @@ MotionPlannerGraph::find_node(const Point &point) const
 }
 
 Polyline
-MotionPlannerGraph::shortest_path(size_t from, size_t to)
+MotionPlannerGraph::shortest_path(node_t from, node_t to)
 {
     // this prevents a crash in case for some reason we got here with an empty adjacency list
     if (this->adjacency_list.empty()) return Polyline();
@@ -345,7 +345,7 @@ MotionPlannerGraph::shortest_path(size_t from, size_t to)
     std::vector<node_t> previous;
     {
         // number of nodes
-        size_t n = this->adjacency_list.size();
+        const int n = this->adjacency_list.size();
         
         // initialize dist and previous
         dist.clear();

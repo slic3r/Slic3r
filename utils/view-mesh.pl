@@ -7,10 +7,12 @@ use warnings;
 BEGIN {
     use FindBin;
     use lib "$FindBin::Bin/../lib";
+    use local::lib "$FindBin::Bin/../local-lib";
 }
 
 use Getopt::Long qw(:config no_auto_abbrev);
 use Slic3r;
+use Slic3r::Geometry qw(Z);
 use Slic3r::GUI;
 use Slic3r::GUI::3DScene;
 $|++;
@@ -39,7 +41,7 @@ my %opt = ();
     $app->{canvas}->load_object($model, 0);
     $app->{canvas}->set_auto_bed_shape;
     $app->{canvas}->zoom_to_volumes;
-    $app->{canvas}->SetCuttingPlane($opt{cut}) if defined $opt{cut};
+    $app->{canvas}->SetCuttingPlane(Z, $opt{cut}) if defined $opt{cut};
     $app->MainLoop;
 }
 

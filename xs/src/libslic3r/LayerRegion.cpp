@@ -7,28 +7,6 @@
 
 namespace Slic3r {
 
-LayerRegion::LayerRegion(Layer *layer, PrintRegion *region)
-:   _layer(layer),
-    _region(region)
-{
-}
-
-LayerRegion::~LayerRegion()
-{
-}
-
-Layer*
-LayerRegion::layer()
-{
-    return this->_layer;
-}
-
-PrintRegion*
-LayerRegion::region()
-{
-    return this->_region;
-}
-
 Flow
 LayerRegion::flow(FlowRole role, bool bridge, double width) const
 {
@@ -45,9 +23,8 @@ LayerRegion::flow(FlowRole role, bool bridge, double width) const
 void
 LayerRegion::merge_slices()
 {
-    ExPolygons expp;
     // without safety offset, artifacts are generated (GH #2494)
-    union_(this->slices, &expp, true);
+    ExPolygons expp = union_ex((Polygons)this->slices, true);
     this->slices.surfaces.clear();
     this->slices.surfaces.reserve(expp.size());
     
@@ -77,6 +54,7 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
     );
     
     if (this->layer()->lower_layer != NULL)
+        // Cummulative sum of polygons over all the regions.
         g.lower_slices = &this->layer()->lower_layer->slices;
     
     g.layer_id              = this->layer()->id();
@@ -97,30 +75,29 @@ LayerRegion::process_external_surfaces(const Layer* lower_layer)
     for (Surfaces::const_iterator surface = surfaces.begin(); surface != surfaces.end(); ++surface) {
         if (!surface->is_bottom()) continue;
         
-        ExPolygons grown = offset_ex(surface->expolygon, +margin);
+        const ExPolygons grown = offset_ex(surface->expolygon, +margin);
         
         /*  detect bridge direction before merging grown surfaces otherwise adjacent bridges
             would get merged into a single one while they need different directions
             also, supply the original expolygon instead of the grown one, because in case
             of very thin (but still working) anchors, the grown expolygon would go beyond them */
         double angle = -1;
-        if (lower_layer != NULL) {
+        if (lower_layer != NULL && surface->is_bridge()) {
             BridgeDetector bd(
                 surface->expolygon,
                 lower_layer->slices,
-                this->flow(frInfill, this->layer()->height, true).scaled_width()
+                this->flow(frInfill, true).scaled_width()
             );
             
             #ifdef SLIC3R_DEBUG
-            printf("Processing bridge at layer %zu:\n", this->layer()->id();
+            printf("Processing bridge at layer %zu:\n", this->layer()->id());
             #endif
             
             if (bd.detect_angle()) {
                 angle = bd.angle;
             
                 if (this->layer()->object()->config.support_material) {
-                    Polygons coverage = bd.coverage();
-                    this->bridged.insert(this->bridged.end(), coverage.begin(), coverage.end());
+                    append_to(this->bridged, bd.coverage());
                     this->unsupported_bridge_edges.append(bd.unsupported_edges()); 
                 }
             }
@@ -167,18 +144,16 @@ LayerRegion::process_external_surfaces(const Layer* lower_layer)
     {
         // merge top and bottom in a single collection
         SurfaceCollection tb = top;
-        tb.surfaces.insert(tb.surfaces.end(), bottom.surfaces.begin(), bottom.surfaces.end());
+        tb.append(bottom);
         
         // group surfaces
-        std::vector<SurfacesPtr> groups;
+        std::vector<SurfacesConstPtr> groups;
         tb.group(&groups);
         
-        for (std::vector<SurfacesPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+        for (std::vector<SurfacesConstPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
             Polygons subject;
-            for (SurfacesPtr::const_iterator s = g->begin(); s != g->end(); ++s) {
-                Polygons pp = **s;
-                subject.insert(subject.end(), pp.begin(), pp.end());
-            }
+            for (SurfacesConstPtr::const_iterator s = g->begin(); s != g->end(); ++s)
+                append_to(subject, (Polygons)**s);
             
             ExPolygons expp = intersection_ex(
                 subject,
@@ -203,15 +178,13 @@ LayerRegion::process_external_surfaces(const Layer* lower_layer)
         }
         
         // group surfaces
-        std::vector<SurfacesPtr> groups;
+        std::vector<SurfacesConstPtr> groups;
         other.group(&groups);
         
-        for (std::vector<SurfacesPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+        for (std::vector<SurfacesConstPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
             Polygons subject;
-            for (SurfacesPtr::const_iterator s = g->begin(); s != g->end(); ++s) {
-                Polygons pp = **s;
-                subject.insert(subject.end(), pp.begin(), pp.end());
-            }
+            for (SurfacesConstPtr::const_iterator s = g->begin(); s != g->end(); ++s)
+                append_to(subject, (Polygons)**s);
             
             ExPolygons expp = diff_ex(
                 subject,

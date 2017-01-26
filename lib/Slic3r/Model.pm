@@ -1,3 +1,4 @@
+# extends C++ class Slic3r::Model
 package Slic3r::Model;
 
 use List::Util qw(first max any);
@@ -94,6 +95,7 @@ sub convert_multipart_object {
     $self->delete_object($_) for reverse 0..($self->objects_count-2);
 }
 
+# Extends C++ class Slic3r::ModelMaterial
 package Slic3r::Model::Material;
 
 sub apply {
@@ -101,6 +103,7 @@ sub apply {
     $self->set_attribute($_, $attributes{$_}) for keys %$attributes;
 }
 
+# Extends C++ class Slic3r::ModelObject
 package Slic3r::Model::Object;
 
 use File::Basename qw(basename);

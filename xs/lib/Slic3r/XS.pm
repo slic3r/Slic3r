@@ -123,6 +123,17 @@ sub clone {
     );
 }
 
+package Slic3r::Filler;
+
+sub fill_surface {
+    my ($self, $surface, %args) = @_;
+    $self->set_density($args{density}) if defined($args{density});
+    $self->set_dont_connect($args{dont_connect}) if defined($args{dont_connect});
+    $self->set_dont_adjust($args{dont_adjust}) if defined($args{dont_adjust});
+    $self->set_complete($args{complete}) if defined($args{complete});
+    return $self->_fill_surface($surface);
+}
+
 package Slic3r::Flow;
 
 sub new {
@@ -215,6 +226,7 @@ for my $class (qw(
         Slic3r::ExtrusionLoop
         Slic3r::ExtrusionPath
         Slic3r::ExtrusionPath::Collection
+        Slic3r::Filler
         Slic3r::Flow
         Slic3r::GCode
         Slic3r::GCode::AvoidCrossingPerimeters

@@ -28,10 +28,24 @@ src/libslic3r/ExtrusionEntity.cpp
 src/libslic3r/ExtrusionEntity.hpp
 src/libslic3r/ExtrusionEntityCollection.cpp
 src/libslic3r/ExtrusionEntityCollection.hpp
+src/libslic3r/Fill/Fill.cpp
+src/libslic3r/Fill/Fill.hpp
+src/libslic3r/Fill/FillConcentric.cpp
+src/libslic3r/Fill/FillConcentric.hpp
+src/libslic3r/Fill/FillHoneycomb.cpp
+src/libslic3r/Fill/FillHoneycomb.hpp
+src/libslic3r/Fill/Fill3DHoneycomb.cpp
+src/libslic3r/Fill/Fill3DHoneycomb.hpp
+src/libslic3r/Fill/FillPlanePath.cpp
+src/libslic3r/Fill/FillPlanePath.hpp
+src/libslic3r/Fill/FillRectilinear.cpp
+src/libslic3r/Fill/FillRectilinear.hpp
 src/libslic3r/Flow.cpp
 src/libslic3r/Flow.hpp
 src/libslic3r/GCode.cpp
 src/libslic3r/GCode.hpp
+src/libslic3r/GCode/CoolingBuffer.cpp
+src/libslic3r/GCode/CoolingBuffer.hpp
 src/libslic3r/GCodeSender.cpp
 src/libslic3r/GCodeSender.hpp
 src/libslic3r/GCodeWriter.cpp
@@ -43,6 +57,7 @@ src/libslic3r/IO.hpp
 src/libslic3r/Layer.cpp
 src/libslic3r/Layer.hpp
 src/libslic3r/LayerRegion.cpp
+src/libslic3r/LayerRegionFill.cpp
 src/libslic3r/LayerHeightSpline.hpp
 src/libslic3r/LayerHeightSpline.cpp
 src/libslic3r/libslic3r.h
@@ -72,6 +87,8 @@ src/libslic3r/PrintConfig.cpp
 src/libslic3r/PrintConfig.hpp
 src/libslic3r/PrintObject.cpp
 src/libslic3r/PrintRegion.cpp
+src/libslic3r/SLAPrint.cpp
+src/libslic3r/SLAPrint.hpp
 src/libslic3r/SupportMaterial.hpp
 src/libslic3r/Surface.cpp
 src/libslic3r/Surface.hpp
@@ -123,6 +140,9 @@ t/18_motionplanner.t
 t/19_model.t
 t/20_print.t
 t/21_gcode.t
+t/22_exception.t
+t/23_config.t
+t/inc/22_config_bad_config_options.ini
 xsp/BoundingBox.xsp
 xsp/BridgeDetector.xsp
 xsp/Clipper.xsp
@@ -133,6 +153,7 @@ xsp/Extruder.xsp
 xsp/ExtrusionEntityCollection.xsp
 xsp/ExtrusionLoop.xsp
 xsp/ExtrusionPath.xsp
+xsp/Filler.xsp
 xsp/Flow.xsp
 xsp/GCode.xsp
 xsp/GCodeSender.xsp
@@ -154,6 +175,7 @@ xsp/Polygon.xsp
 xsp/Polyline.xsp
 xsp/PolylineCollection.xsp
 xsp/Print.xsp
+xsp/SLAPrint.xsp
 xsp/SupportMaterial.xsp
 xsp/Surface.xsp
 xsp/SurfaceCollection.xsp

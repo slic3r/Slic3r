@@ -53,6 +53,15 @@ ExPolygon::translate(double x, double y)
 }
 
 void
+ExPolygon::rotate(double angle)
+{
+    contour.rotate(angle);
+    for (Polygons::iterator it = holes.begin(); it != holes.end(); ++it) {
+        (*it).rotate(angle);
+    }
+}
+
+void
 ExPolygon::rotate(double angle, const Point &center)
 {
     contour.rotate(angle, center);
@@ -90,9 +99,7 @@ ExPolygon::contains(const Line &line) const
 bool
 ExPolygon::contains(const Polyline &polyline) const
 {
-    Polylines pl_out;
-    diff((Polylines)polyline, *this, &pl_out);
-    return pl_out.empty();
+    return diff_pl((Polylines)polyline, *this).empty();
 }
 
 bool
@@ -152,8 +159,7 @@ ExPolygon::simplify_p(double tolerance) const
         p.points.pop_back();
         pp.push_back(p);
     }
-    simplify_polygons(pp, &pp);
-    return pp;
+    return simplify_polygons(pp);
 }
 
 ExPolygons
@@ -346,8 +352,7 @@ ExPolygon::get_trapezoids2(Polygons* polygons) const
         poly[3].y = bb.max.y;
         
         // intersect with this expolygon
-        Polygons trapezoids;
-        intersection<Polygons,Polygons>(poly, *this, &trapezoids);
+        Polygons trapezoids = intersection(poly, *this);
         
         // append results to return value
         polygons->insert(polygons->end(), trapezoids.begin(), trapezoids.end());
@@ -384,10 +389,7 @@ ExPolygon::triangulate_pp(Polygons* polygons) const
     // convert polygons
     std::list<TPPLPoly> input;
     
-    Polygons pp = *this;
-    simplify_polygons(pp, &pp, true);
-    ExPolygons expp;
-    union_(pp, &expp);
+    ExPolygons expp = simplify_polygons_ex(*this, true);
     
     for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
         // contour
@@ -440,8 +442,7 @@ ExPolygon::triangulate_pp(Polygons* polygons) const
 void
 ExPolygon::triangulate_p2t(Polygons* polygons) const
 {
-    ExPolygons expp;
-    simplify_polygons(*this, &expp, true);
+    ExPolygons expp = simplify_polygons_ex(*this, true);
     
     for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
         // TODO: prevent duplicate points

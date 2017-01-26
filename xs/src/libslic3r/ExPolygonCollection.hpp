@@ -34,6 +34,12 @@ class ExPolygonCollection
     void append(const ExPolygons &expolygons);
 };
 
+inline ExPolygonCollection&
+operator <<(ExPolygonCollection &coll, const ExPolygons &expolygons) {
+    coll.append(expolygons);
+    return coll;
+};
+
 }
 
 #endif

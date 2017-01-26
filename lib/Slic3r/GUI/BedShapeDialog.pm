@@ -1,3 +1,6 @@
+# The bed shape dialog.
+# The dialog opens from Print Settins tab -> Bed Shape: Set...
+
 package Slic3r::GUI::BedShapeDialog;
 use strict;
 use warnings;
@@ -209,6 +212,7 @@ sub _update_shape {
         my $rect_origin = $self->{optgroups}[SHAPE_RECTANGULAR]->get_value('rect_origin');
         my ($x, $y) = @$rect_size;
         return if !looks_like_number($x) || !looks_like_number($y);  # empty strings or '-' or other things
+        return if !$x || !$y;
         my ($x0, $y0) = (0,0);
         my ($x1, $y1) = ($x,$y);
         {

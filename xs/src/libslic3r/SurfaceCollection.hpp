@@ -18,12 +18,18 @@ class SurfaceCollection
     operator Polygons() const;
     operator ExPolygons() const;
     void simplify(double tolerance);
-    void group(std::vector<SurfacesPtr> *retval);
+    void group(std::vector<SurfacesConstPtr> *retval) const;
     template <class T> bool any_internal_contains(const T &item) const;
     template <class T> bool any_bottom_contains(const T &item) const;
     SurfacesPtr filter_by_type(SurfaceType type);
     void filter_by_type(SurfaceType type, Polygons* polygons);
     void append(const SurfaceCollection &coll);
+    void append(const Surfaces &surfaces);
+    void append(const ExPolygons &src, const Surface &templ);
+    void append(const ExPolygons &src, SurfaceType surfaceType);
+    size_t polygons_count() const;
+    bool empty() const { return this->surfaces.empty(); };
+    void clear() { this->surfaces.clear(); };
 };
 
 }

@@ -5,19 +5,174 @@
 #include <fstream>
 #include <iostream>
 #include <exception> // std::runtime_error
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
+#include <string.h>
 
 #if defined(_WIN32) && !defined(setenv) && defined(_putenv_s)
 #define setenv(k, v, o) _putenv_s(k, v)
 #endif
 
 namespace Slic3r {
+
+std::string escape_string_cstyle(const std::string &str)
+{
+    // Allocate a buffer twice the input string length,
+    // so the output will fit even if all input characters get escaped.
+    std::vector<char> out(str.size() * 2, 0);
+    char *outptr = out.data();
+    for (size_t i = 0; i < str.size(); ++ i) {
+        char c = str[i];
+        if (c == '\n' || c == '\r') {
+            (*outptr ++) = '\\';
+            (*outptr ++) = 'n';
+        } else
+            (*outptr ++) = c;
+    }
+    return std::string(out.data(), outptr - out.data());
+}
+
+std::string escape_strings_cstyle(const std::vector<std::string> &strs)
+{
+    // 1) Estimate the output buffer size to avoid buffer reallocation.
+    size_t outbuflen = 0;
+    for (size_t i = 0; i < strs.size(); ++ i)
+        // Reserve space for every character escaped + quotes + semicolon.
+        outbuflen += strs[i].size() * 2 + 3;
+    // 2) Fill in the buffer.
+    std::vector<char> out(outbuflen, 0);
+    char *outptr = out.data();
+    for (size_t j = 0; j < strs.size(); ++ j) {
+        if (j > 0)
+            // Separate the strings.
+            (*outptr ++) = ';';
+        const std::string &str = strs[j];
+        // Is the string simple or complex? Complex string contains spaces, tabs, new lines and other
+        // escapable characters. Empty string shall be quoted as well, if it is the only string in strs.
+        bool should_quote = strs.size() == 1 && str.empty();
+        for (size_t i = 0; i < str.size(); ++ i) {
+            char c = str[i];
+            if (c == ' ' || c == '\t' || c == '\\' || c == '"' || c == '\r' || c == '\n') {
+                should_quote = true;
+                break;
+            }
+        }
+        if (should_quote) {
+            (*outptr ++) = '"';
+            for (size_t i = 0; i < str.size(); ++ i) {
+                char c = str[i];
+                if (c == '\\' || c == '"') {
+                    (*outptr ++) = '\\';
+                    (*outptr ++) = c;
+                } else if (c == '\n' || c == '\r') {
+                    (*outptr ++) = '\\';
+                    (*outptr ++) = 'n';
+                } else
+                    (*outptr ++) = c;
+            }
+            (*outptr ++) = '"';
+        } else {
+            memcpy(outptr, str.data(), str.size());
+            outptr += str.size();
+        }
+    }
+    return std::string(out.data(), outptr - out.data());
+}
+
+bool unescape_string_cstyle(const std::string &str, std::string &str_out)
+{
+    std::vector<char> out(str.size(), 0);
+    char *outptr = out.data();
+    for (size_t i = 0; i < str.size(); ++ i) {
+        char c = str[i];
+        if (c == '\\') {
+            if (++ i == str.size())
+                return false;
+            c = str[i];
+            if (c == 'n')
+                (*outptr ++) = '\n';
+        } else
+            (*outptr ++) = c;
+    }
+    str_out.assign(out.data(), outptr - out.data());
+    return true;
+}
+
+bool unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out)
+{
+    out.clear();
+    if (str.empty())
+        return true;
+
+    size_t i = 0;
+    for (;;) {
+        // Skip white spaces.
+        char c = str[i];
+        while (c == ' ' || c == '\t') {
+            if (++ i == str.size())
+                return true;
+            c = str[i];
+        }
+        // Start of a word.
+        std::vector<char> buf;
+        buf.reserve(16);
+        // Is it enclosed in quotes?
+        c = str[i];
+        if (c == '"') {
+            // Complex case, string is enclosed in quotes.
+            for (++ i; i < str.size(); ++ i) {
+                c = str[i];
+                if (c == '"') {
+                    // End of string.
+                    break;
+                }
+                if (c == '\\') {
+                    if (++ i == str.size())
+                        return false;
+                    c = str[i];
+                    if (c == 'n')
+                        c = '\n';
+                }
+                buf.push_back(c);
+            }
+            if (i == str.size())
+                return false;
+            ++ i;
+        } else {
+            for (; i < str.size(); ++ i) {
+                c = str[i];
+                if (c == ';')
+                    break;
+                buf.push_back(c);
+            }
+        }
+        // Store the string into the output vector.
+        out.push_back(std::string(buf.data(), buf.size()));
+        if (i == str.size())
+            return true;
+        // Skip white spaces.
+        c = str[i];
+        while (c == ' ' || c == '\t') {
+            if (++ i == str.size())
+                // End of string. This is correct.
+                return true;
+            c = str[i];
+        }
+        if (c != ';')
+            return false;
+        if (++ i == str.size()) {
+            // Emit one additional empty string.
+            out.push_back(std::string());
+            return true;
+        }
+    }
+}
 
 bool
 operator== (const ConfigOption &a, const ConfigOption &b)
@@ -140,27 +295,31 @@ ConfigBase::set_deserialize(const t_config_option_key &opt_key, std::string str,
     return opt->deserialize(str, append);
 }
 
+// Return an absolute value of a possibly relative config variable.
+// For example, return absolute infill extrusion width, either from an absolute value, or relative to the layer height.
 double
-ConfigBase::get_abs_value(const t_config_option_key &opt_key) {
-    ConfigOption* opt = this->option(opt_key, false);
-    if (ConfigOptionFloatOrPercent* optv = dynamic_cast<ConfigOptionFloatOrPercent*>(opt)) {
+ConfigBase::get_abs_value(const t_config_option_key &opt_key) const {
+    const ConfigOption* opt = this->option(opt_key);
+    if (const ConfigOptionFloatOrPercent* optv = dynamic_cast<const ConfigOptionFloatOrPercent*>(opt)) {
         // get option definition
         const ConfigOptionDef* def = this->def->get(opt_key);
         assert(def != NULL);
         
         // compute absolute value over the absolute value of the base option
         return optv->get_abs_value(this->get_abs_value(def->ratio_over));
-    } else if (ConfigOptionFloat* optv = dynamic_cast<ConfigOptionFloat*>(opt)) {
+    } else if (const ConfigOptionFloat* optv = dynamic_cast<const ConfigOptionFloat*>(opt)) {
         return optv->value;
     } else {
         throw "Not a valid option type for get_abs_value()";
     }
 }
 
+// Return an absolute value of a possibly relative config variable.
+// For example, return absolute infill extrusion width, either from an absolute value, or relative to a provided value.
 double
-ConfigBase::get_abs_value(const t_config_option_key &opt_key, double ratio_over) {
+ConfigBase::get_abs_value(const t_config_option_key &opt_key, double ratio_over) const {
     // get stored option value
-    ConfigOptionFloatOrPercent* opt = dynamic_cast<ConfigOptionFloatOrPercent*>(this->option(opt_key));
+    const ConfigOptionFloatOrPercent* opt = dynamic_cast<const ConfigOptionFloatOrPercent*>(this->option(opt_key));
     assert(opt != NULL);
     
     // compute absolute value
@@ -342,8 +501,8 @@ DynamicConfig::read_cli(const int argc, const char** argv, t_config_option_keys*
         if (token == "--") {
             // stop parsing tokens as options
             parse_options = false;
-        } else if (parse_options && boost::starts_with(token, "--")) {
-            boost::algorithm::erase_head(token, 2);
+        } else if (parse_options && boost::starts_with(token, "-")) {
+            boost::algorithm::trim_left_if(token, boost::algorithm::is_any_of("-"));
             // TODO: handle --key=value
             
             // look for the option def
@@ -355,7 +514,9 @@ DynamicConfig::read_cli(const int argc, const char** argv, t_config_option_keys*
                 
                 if (optdef->cli == token
                     || optdef->cli == token + '!'
-                    || boost::starts_with(optdef->cli, token + "=")) {
+                    || boost::starts_with(optdef->cli, token + "=")
+                    || boost::starts_with(optdef->cli, token + "|")
+                    || (token.length() == 1 && boost::contains(optdef->cli, "|" + token))) {
                     opt_key = oit->first;
                     break;
                 }
@@ -392,7 +553,6 @@ StaticConfig::set_defaults()
     t_config_option_keys keys = this->keys();
     for (t_config_option_keys::const_iterator it = keys.begin(); it != keys.end(); ++it) {
         const ConfigOptionDef* def = this->def->get(*it);
-        
         if (def->default_value != NULL)
             this->option(*it)->set(*def->default_value);
     }

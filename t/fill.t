@@ -2,17 +2,18 @@ use Test::More;
 use strict;
 use warnings;
 
-plan tests => 43;
+plan tests => 92;
 
 BEGIN {
     use FindBin;
     use lib "$FindBin::Bin/../lib";
+    use local::lib "$FindBin::Bin/../local-lib";
 }
 
 use List::Util qw(first sum);
 use Slic3r;
-use Slic3r::Geometry qw(X Y scale unscale convex_hull);
-use Slic3r::Geometry::Clipper qw(union diff diff_ex offset offset2_ex);
+use Slic3r::Geometry qw(PI X Y scaled_epsilon scale unscale convex_hull);
+use Slic3r::Geometry::Clipper qw(union diff diff_ex offset offset2_ex diff_pl);
 use Slic3r::Surface qw(:types);
 use Slic3r::Test;
 
@@ -20,25 +21,78 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
 
 {
     my $print = Slic3r::Print->new;
-    my $filler = Slic3r::Fill::Rectilinear->new(
-        print           => $print,
-        bounding_box    => Slic3r::Geometry::BoundingBox->new_from_points([ Slic3r::Point->new(0, 0), Slic3r::Point->new(10, 10) ]),
-    );
     my $surface_width = 250;
-    my $distance = $filler->adjust_solid_spacing(
-        width       => $surface_width,
-        distance    => 100,
-    );
-    is $distance, 125, 'adjusted solid distance';
+    my $distance = Slic3r::Filler::adjust_solid_spacing($surface_width, 47);
+    is $distance, 50, 'adjusted solid distance';
     is $surface_width % $distance, 0, 'adjusted solid distance';
 }
 
 {
+    my $filler = Slic3r::Filler->new_from_type('rectilinear');
+    $filler->set_angle(-(PI)/2);
+    $filler->set_min_spacing(5);
+    $filler->set_dont_adjust(1);
+    $filler->set_endpoints_overlap(0);
+    
+    my $test = sub {
+        my ($expolygon) = @_;
+        my $surface = Slic3r::Surface->new(
+            surface_type    => S_TYPE_TOP,
+            expolygon       => $expolygon,
+        );
+        return $filler->fill_surface($surface);
+    };
+    
+    # square
+    $filler->set_density($filler->min_spacing / 50);
+    for my $i (0..3) {
+        # check that it works regardless of the points order
+        my @points = ([0,0], [100,0], [100,100], [0,100]);
+        @points = (@points[$i..$#points], @points[0..($i-1)]);
+        my $paths = $test->(my $e = Slic3r::ExPolygon->new([ scale_points @points ]));
+        
+        is(scalar @$paths, 1, 'one continuous path') or done_testing, exit;
+        ok abs($paths->[0]->length - scale(3*100 + 2*50)) - scaled_epsilon, 'path has expected length';
+    }
+    
+    # diamond with endpoints on grid
+    {
+        my $paths = $test->(my $e = Slic3r::ExPolygon->new([ scale_points [0,0], [100,0], [150,50], [100,100], [0,100], [-50,50] ]));
+        is(scalar @$paths, 1, 'one continuous path') or done_testing, exit;
+    }
+    
+    # square with hole
+    for my $angle (-(PI/2), -(PI/4), -(PI), PI/2, PI) {
+        for my $spacing (25, 5, 7.5, 8.5) {
+            $filler->set_density($filler->min_spacing / $spacing);
+            $filler->set_angle($angle);
+            my $paths = $test->(my $e = Slic3r::ExPolygon->new(
+                [ scale_points [0,0], [100,0], [100,100], [0,100] ],
+                [ scale_points reverse [25,25], [75,25], [75,75], [25,75] ],
+            ));
+            
+            if (0) {
+                require "Slic3r/SVG.pm";
+                Slic3r::SVG::output(
+                    "fill.svg",
+                    no_arrows   => 1,
+                    expolygons  => [$e],
+                    polylines   => $paths,
+                );
+            }
+            
+            ok(@$paths >= 2 && @$paths <= 3, '2 or 3 continuous paths') or done_testing, exit;
+            ok(!@{diff_pl($paths->arrayref, offset(\@$e, +scaled_epsilon*10))},
+                'paths don\'t cross hole') or done_testing, exit;
+        }
+    }
+}
+
+{
     my $expolygon = Slic3r::ExPolygon->new([ scale_points [0,0], [50,0], [50,50], [0,50] ]);
-    my $filler = Slic3r::Fill::Rectilinear->new(
-        bounding_box => $expolygon->bounding_box,
-        angle        => 0,
-    );
+    my $filler = Slic3r::Filler->new_from_type('rectilinear');
+    $filler->set_bounding_box($expolygon->bounding_box);
+    $filler->set_angle(0);
     my $surface = Slic3r::Surface->new(
         surface_type    => S_TYPE_TOP,
         expolygon       => $expolygon,
@@ -48,11 +102,12 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
         height          => 0.4,
         nozzle_diameter => 0.50,
     );
-    $filler->spacing($flow->spacing);
+    $filler->set_min_spacing($flow->spacing);
+    $filler->set_density(1);
     foreach my $angle (0, 45) {
         $surface->expolygon->rotate(Slic3r::Geometry::deg2rad($angle), [0,0]);
-        my @paths = $filler->fill_surface($surface, layer_height => 0.4, density => 0.4);
-        is scalar @paths, 1, 'one continuous path';
+        my $paths = $filler->fill_surface($surface, layer_height => 0.4, density => 0.4);
+        is scalar @$paths, 1, 'one continuous path';
     }
 }
 
@@ -60,10 +115,10 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
     my $test = sub {
         my ($expolygon, $flow_spacing, $angle, $density) = @_;
         
-        my $filler = Slic3r::Fill::Rectilinear->new(
-            bounding_box    => $expolygon->bounding_box,
-            angle           => $angle // 0,
-        );
+        my $filler = Slic3r::Filler->new_from_type('rectilinear');
+        $filler->set_bounding_box($expolygon->bounding_box);
+        $filler->set_angle($angle // 0);
+        $filler->set_dont_adjust(0);
         my $surface = Slic3r::Surface->new(
             surface_type    => S_TYPE_BOTTOM,
             expolygon       => $expolygon,
@@ -73,15 +128,15 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
             height          => 0.4,
             nozzle_diameter => $flow_spacing,
         );
-        $filler->spacing($flow->spacing);
-        my @paths = $filler->fill_surface(
+        $filler->set_min_spacing($flow->spacing);
+        my $paths = $filler->fill_surface(
             $surface,
             layer_height    => $flow->height,
             density         => $density // 1,
         );
         
         # check whether any part was left uncovered
-        my @grown_paths = map @{Slic3r::Polyline->new(@$_)->grow(scale $filler->spacing/2)}, @paths;
+        my @grown_paths = map @{Slic3r::Polyline->new(@$_)->grow(scale $filler->spacing/2)}, @$paths;
         my $uncovered = diff_ex([ @$expolygon ], [ @grown_paths ], 1);
         
         # ignore very small dots
@@ -93,8 +148,9 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
             require "Slic3r/SVG.pm";
             Slic3r::SVG::output(
                 "uncovered.svg",
-                expolygons => [$expolygon],
-                red_expolygons => $uncovered,
+                expolygons      => [$expolygon],
+                red_expolygons  => $uncovered,
+                polylines       => $paths,
             );
             exit;
         }
@@ -116,7 +172,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
     $expolygon = Slic3r::ExPolygon->new(
         [[59515297,5422499],[59531249,5578697],[59695801,6123186],[59965713,6630228],[60328214,7070685],[60773285,7434379],[61274561,7702115],[61819378,7866770],[62390306,7924789],[62958700,7866744],[63503012,7702244],[64007365,7434357],[64449960,7070398],[64809327,6634999],[65082143,6123325],[65245005,5584454],[65266967,5422499],[66267307,5422499],[66269190,8310081],[66275379,17810072],[66277259,20697500],[65267237,20697500],[65245004,20533538],[65082082,19994444],[64811462,19488579],[64450624,19048208],[64012101,18686514],[63503122,18415781],[62959151,18251378],[62453416,18198442],[62390147,18197355],[62200087,18200576],[61813519,18252990],[61274433,18415918],[60768598,18686517],[60327567,19047892],[59963609,19493297],[59695865,19994587],[59531222,20539379],[59515153,20697500],[58502480,20697500],[58502480,5422499]]
     );
-    $test->($expolygon, 0.524341649025257);
+    $test->($expolygon, 0.524341649025257, PI/2);
     
     $expolygon = Slic3r::ExPolygon->new([ scale_points [0,0], [98,0], [98,10], [0,10] ]);
     $test->($expolygon, 0.5, 45, 0.99);  # non-solid infill

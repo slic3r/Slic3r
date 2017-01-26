@@ -26,7 +26,8 @@
     long x_max() %code{% RETVAL = THIS->max.x; %};
     long y_min() %code{% RETVAL = THIS->min.y; %};
     long y_max() %code{% RETVAL = THIS->max.y; %};
-    
+    bool defined() %code{% RETVAL = THIS->defined; %};
+
 %{
 
 BoundingBox*
@@ -63,6 +64,7 @@ new_from_points(CLASS, points)
     void set_x_max(double val) %code{% THIS->max.x = val; %};
     void set_y_min(double val) %code{% THIS->min.y = val; %};
     void set_y_max(double val) %code{% THIS->max.y = val; %};
+    bool defined() %code{% RETVAL = THIS->defined; %};
     
 %{
 
@@ -97,4 +99,5 @@ new_from_points(CLASS, points)
     double y_max() %code{% RETVAL = THIS->max.y; %};
     double z_min() %code{% RETVAL = THIS->min.z; %};
     double z_max() %code{% RETVAL = THIS->max.z; %};
+    bool defined() %code{% RETVAL = THIS->defined; %};
 };

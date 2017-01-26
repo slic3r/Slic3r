@@ -53,6 +53,8 @@
         %code{% RETVAL = new PrintRegionConfig (); %};
     static StaticPrintConfig* new_FullPrintConfig()
         %code{% RETVAL = new FullPrintConfig (); %};
+    static StaticPrintConfig* new_SLAPrintConfig()
+        %code{% RETVAL = new SLAPrintConfig (); %};
     ~StaticPrintConfig();
     bool has(t_config_option_key opt_key);
     SV* as_hash()
@@ -88,6 +90,8 @@
     double min_object_distance();
     %name{_load} void load(std::string file);
     %name{_save} void save(std::string file);
+    DynamicPrintConfig* dynamic()
+        %code{% RETVAL = new DynamicPrintConfig (); RETVAL->apply(*THIS, true); %};
 };
 
 %package{Slic3r::Config};
@@ -133,7 +137,7 @@ print_config_def()
             (void)hv_stores( hv, "label",       newSVpvn_utf8(optdef->label.c_str(), optdef->label.length(), true) );
             if (!optdef->full_label.empty())
                 (void)hv_stores( hv, "full_label",  newSVpvn_utf8(optdef->full_label.c_str(), optdef->full_label.length(), true) );
-            (void)hv_stores( hv, "category",    newSVpvn(optdef->category.c_str(), optdef->category.length()) );
+            (void)hv_stores( hv, "category",    newSVpvn_utf8(optdef->category.c_str(), optdef->category.length(), true) );
             (void)hv_stores( hv, "tooltip",     newSVpvn_utf8(optdef->tooltip.c_str(), optdef->tooltip.length(), true) );
             (void)hv_stores( hv, "sidetext",    newSVpvn_utf8(optdef->sidetext.c_str(), optdef->sidetext.length(), true) );
             (void)hv_stores( hv, "cli",         newSVpvn(optdef->cli.c_str(), optdef->cli.length()) );

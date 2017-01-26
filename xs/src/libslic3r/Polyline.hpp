@@ -4,6 +4,7 @@
 #include "libslic3r.h"
 #include "Line.hpp"
 #include "MultiPoint.hpp"
+#include "Polygon.hpp"
 #include <string>
 #include <vector>
 
@@ -41,6 +42,24 @@ class ThickPolyline : public Polyline {
     ThickLines thicklines() const;
     void reverse();
 };
+
+inline Polylines
+to_polylines(const Polygons &polygons)
+{
+    Polylines pp;
+    for (Polygons::const_iterator it = polygons.begin(); it != polygons.end(); ++it)
+        pp.push_back((Polyline)*it);
+    return pp;
+}
+
+inline Polylines
+to_polylines(const Lines &lines)
+{
+    Polylines pp;
+    for (Lines::const_iterator it = lines.begin(); it != lines.end(); ++it)
+        pp.push_back((Polyline)*it);
+    return pp;
+}
 
 }
 

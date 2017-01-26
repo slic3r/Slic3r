@@ -2,16 +2,15 @@ cmake_minimum_required (VERSION 2.8)
 project (slic3r)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSLIC3R_DEBUG")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -DSLIC3R_DEBUG")
 
-set(workaround "")
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.3)
-       set(workaround "-fno-inline-small-functions")
+       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-inline-small-functions")
     endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.3)
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
 
-set(CMAKE_CXX_FLAGS "-DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE ${workaround}")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 IF(CMAKE_HOST_APPLE)
@@ -45,14 +44,22 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Extruder.cpp
     ${LIBDIR}/libslic3r/ExtrusionEntity.cpp
     ${LIBDIR}/libslic3r/ExtrusionEntityCollection.cpp
+    ${LIBDIR}/libslic3r/Fill/Fill.cpp
+    ${LIBDIR}/libslic3r/Fill/Fill3DHoneycomb.cpp
+    ${LIBDIR}/libslic3r/Fill/FillConcentric.cpp
+    ${LIBDIR}/libslic3r/Fill/FillHoneycomb.cpp
+    ${LIBDIR}/libslic3r/Fill/FillPlanePath.cpp
+    ${LIBDIR}/libslic3r/Fill/FillRectilinear.cpp
     ${LIBDIR}/libslic3r/Flow.cpp
     ${LIBDIR}/libslic3r/GCode.cpp
+    ${LIBDIR}/libslic3r/GCode/CoolingBuffer.cpp
     ${LIBDIR}/libslic3r/GCodeSender.cpp
     ${LIBDIR}/libslic3r/GCodeWriter.cpp
     ${LIBDIR}/libslic3r/Geometry.cpp
     ${LIBDIR}/libslic3r/IO.cpp
     ${LIBDIR}/libslic3r/Layer.cpp
     ${LIBDIR}/libslic3r/LayerRegion.cpp
+    ${LIBDIR}/libslic3r/LayerRegionFill.cpp
     ${LIBDIR}/libslic3r/Line.cpp
     ${LIBDIR}/libslic3r/Model.cpp
     ${LIBDIR}/libslic3r/MotionPlanner.cpp
@@ -67,10 +74,10 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/PrintConfig.cpp
     ${LIBDIR}/libslic3r/PrintObject.cpp
     ${LIBDIR}/libslic3r/PrintRegion.cpp
+    ${LIBDIR}/libslic3r/SLAPrint.cpp
     ${LIBDIR}/libslic3r/Surface.cpp
     ${LIBDIR}/libslic3r/SurfaceCollection.cpp
     ${LIBDIR}/libslic3r/SVG.cpp
-    ${LIBDIR}/libslic3r/SVGExport.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
 )
 add_library(admesh STATIC

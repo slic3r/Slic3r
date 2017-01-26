@@ -1,0 +1,65 @@
+%module{Slic3r::XS};
+
+%{
+#include <xsinit.h>
+#include "libslic3r/SLAPrint.hpp"
+%}
+
+%name{Slic3r::SLAPrint} class SLAPrint {
+    SLAPrint(Model* model);
+    ~SLAPrint();
+    
+    void apply_config(DynamicPrintConfig* config)
+        %code%{ THIS->config.apply(*config, true); %};
+    void slice();
+    size_t layer_count()
+        %code{% RETVAL = THIS->layers.size(); %};
+    
+    DynamicPrintConfig* config()
+        %code%{ RETVAL = new DynamicPrintConfig; RETVAL->apply(THIS->config); %};
+    
+    ExPolygons layer_slices(size_t i)
+        %code%{ RETVAL = THIS->layers[i].slices; %};
+    ExPolygons layer_solid_infill(size_t i)
+        %code%{ RETVAL = THIS->layers[i].solid_infill; %};
+    ExPolygons layer_perimeters(size_t i)
+        %code%{ RETVAL = THIS->layers[i].perimeters; %};
+    Ref<ExtrusionEntityCollection> layer_infill(size_t i)
+        %code%{ RETVAL = &THIS->layers[i].infill; %};
+    bool layer_solid(size_t i)
+        %code%{ RETVAL = THIS->layers[i].solid; %};
+    void write_svg(std::string file);
+    
+%{
+
+std::vector<double>
+SLAPrint::heights()
+    CODE:
+        for (std::vector<SLAPrint::Layer>::const_iterator it = THIS->layers.begin();
+            it != THIS->layers.end();
+            ++it)
+            RETVAL.push_back(it->print_z);
+    OUTPUT:
+        RETVAL
+
+SV*
+SLAPrint::sm_pillars()
+    CODE:
+        AV* av = newAV();
+        for (std::vector<SLAPrint::SupportPillar>::const_iterator it = THIS->sm_pillars.begin();
+            it != THIS->sm_pillars.end();
+            ++it)
+        {
+            HV* hv = newHV();
+            (void)hv_stores( hv, "top_layer",       newSViv(it->top_layer) );
+            (void)hv_stores( hv, "bottom_layer",    newSViv(it->bottom_layer) );
+            (void)hv_stores( hv, "point",           perl_to_SV_clone_ref((Point)*it) );
+            av_push(av, newRV_noinc((SV*)hv));
+        }
+        RETVAL = newRV_noinc((SV*)av);
+    OUTPUT:
+        RETVAL
+
+%}
+
+};

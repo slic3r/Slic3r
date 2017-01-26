@@ -1,10 +1,13 @@
 #include "Print.hpp"
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
+#include "Fill/Fill.hpp"
 #include "Flow.hpp"
 #include "Geometry.hpp"
 #include "SupportMaterial.hpp"
 #include <algorithm>
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace Slic3r {
 
@@ -134,12 +137,6 @@ Print::clear_regions()
 }
 
 PrintRegion*
-Print::get_region(size_t idx)
-{
-    return regions.at(idx);
-}
-
-PrintRegion*
 Print::add_region()
 {
     PrintRegion *region = new PrintRegion(this);
@@ -169,7 +166,8 @@ Print::invalidate_state_by_config_options(const std::vector<t_config_option_key>
             || *opt_key == "min_skirt_length"
             || *opt_key == "ooze_prevention") {
             steps.insert(psSkirt);
-        } else if (*opt_key == "brim_width") {
+        } else if (*opt_key == "brim_width"
+            || *opt_key == "brim_connections_width") {
             steps.insert(psBrim);
             steps.insert(psSkirt);
         } else if (*opt_key == "nozzle_diameter"
@@ -310,7 +308,7 @@ Print::object_extruders() const
     FOREACH_REGION(this, region) {
         // these checks reflect the same logic used in the GUI for enabling/disabling
         // extruder selection fields
-        if ((*region)->config.perimeters.value > 0 || this->config.brim_width.value > 0)
+        if ((*region)->config.perimeters.value > 0 || this->config.brim_width.value > 0 || this->config.brim_connections_width.value > 0)
             extruders.insert((*region)->config.perimeter_extruder - 1);
         
         if ((*region)->config.fill_density.value > 0)
@@ -438,6 +436,29 @@ Print::add_model_object(ModelObject* model_object, int idx)
     // apply config to print object
     o->config.apply(this->default_object_config);
     o->config.apply(object_config, true);
+    
+    // update placeholders
+    {
+        // get the first input file name
+        std::string input_file;
+        std::vector<std::string> v_scale;
+        FOREACH_OBJECT(this, object) {
+            const ModelObject &mobj = *(*object)->model_object();
+            v_scale.push_back( boost::lexical_cast<std::string>(mobj.instances[0]->scaling_factor*100) + "%" );
+            if (input_file.empty())
+                input_file = mobj.input_file;
+        }
+        
+        PlaceholderParser &pp = this->placeholder_parser;
+        pp.set("scale", v_scale);
+        if (!input_file.empty()) {
+            // get basename with and without suffix
+            const std::string input_basename = boost::filesystem::path(input_file).filename().string();
+            pp.set("input_filename", input_basename);
+            const std::string input_basename_base = input_basename.substr(0, input_basename.find_last_of("."));
+            pp.set("input_filename_base", input_basename_base);
+        }
+    }
 }
 
 bool
@@ -576,7 +597,7 @@ bool Print::has_skirt() const
         || this->has_infinite_skirt();
 }
 
-void
+std::string
 Print::validate() const
 {
     if (this->config.complete_objects) {
@@ -607,20 +628,16 @@ Print::validate() const
                 object->model_object()->instances.front()->transform_polygon(&convex_hull);
                 
                 // grow convex hull with the clearance margin
-                {
-                    Polygons grown_hull;
-                    offset(convex_hull, &grown_hull, scale_(this->config.extruder_clearance_radius.value)/2, 1, jtRound, scale_(0.1));
-                    convex_hull = grown_hull.front();
-                }
+                convex_hull = offset(convex_hull, scale_(this->config.extruder_clearance_radius.value)/2, 1, jtRound, scale_(0.1)).front();
                 
                 // now we check that no instance of convex_hull intersects any of the previously checked object instances
                 for (Points::const_iterator copy = object->_shifted_copies.begin(); copy != object->_shifted_copies.end(); ++copy) {
                     Polygon p = convex_hull;
                     p.translate(*copy);
-                    if (intersects(a, p))
-                        throw PrintValidationException("Some objects are too close; your extruder will collide with them.");
+                    if (!intersection(a, p).empty())
+                        return "Some objects are too close; your extruder will collide with them.";
                     
-                    union_(a, p, &a);
+                    a = union_(a, p);
                 }
             }
         }
@@ -637,54 +654,23 @@ Print::validate() const
             // it will be printed as last one so its height doesn't matter
             object_height.pop_back();
             if (!object_height.empty() && object_height.back() > scale_(this->config.extruder_clearance_height.value))
-                throw PrintValidationException("Some objects are too tall and cannot be printed without extruder collisions.");
+                return "Some objects are too tall and cannot be printed without extruder collisions.";
         }
-    }
+    } // end if (this->config.complete_objects)
     
     if (this->config.spiral_vase) {
         size_t total_copies_count = 0;
         FOREACH_OBJECT(this, i_object) total_copies_count += (*i_object)->copies().size();
         if (total_copies_count > 1)
-            throw PrintValidationException("The Spiral Vase option can only be used when printing a single object.");
+            return "The Spiral Vase option can only be used when printing a single object.";
         if (this->regions.size() > 1)
-            throw PrintValidationException("The Spiral Vase option can only be used when printing single material objects.");
+            return "The Spiral Vase option can only be used when printing single material objects.";
     }
     
-    {
-        // find the smallest nozzle diameter
-        std::set<size_t> extruders = this->extruders();
-        if (extruders.empty())
-            throw PrintValidationException("The supplied settings will cause an empty print.");
-        
-        std::set<double> nozzle_diameters;
-        for (std::set<size_t>::iterator it = extruders.begin(); it != extruders.end(); ++it)
-            nozzle_diameters.insert(this->config.nozzle_diameter.get_at(*it));
-        double min_nozzle_diameter = *std::min_element(nozzle_diameters.begin(), nozzle_diameters.end());
-        
-        FOREACH_OBJECT(this, i_object) {
-            PrintObject* object = *i_object;
-            
-            // validate first_layer_height
-            double first_layer_height = object->config.get_abs_value("first_layer_height");
-            double first_layer_min_nozzle_diameter;
-            if (object->config.raft_layers > 0) {
-                // if we have raft layers, only support material extruder is used on first layer
-                size_t first_layer_extruder = object->config.raft_layers == 1
-                    ? object->config.support_material_interface_extruder-1
-                    : object->config.support_material_extruder-1;
-                first_layer_min_nozzle_diameter = this->config.nozzle_diameter.get_at(first_layer_extruder);
-            } else {
-                // if we don't have raft layers, any nozzle diameter is potentially used in first layer
-                first_layer_min_nozzle_diameter = min_nozzle_diameter;
-            }
-            if (first_layer_height > first_layer_min_nozzle_diameter)
-                throw PrintValidationException("First layer height can't be greater than nozzle diameter");
-            
-            // validate layer_height
-            if (object->config.layer_height.value > min_nozzle_diameter)
-                throw PrintValidationException("Layer height can't be greater than nozzle diameter");
-        }
-    }
+    if (this->extruders().empty())
+        return "The supplied settings will cause an empty print.";
+    
+    return std::string();
 }
 
 // the bounding box of objects placed in copies position
@@ -794,6 +780,141 @@ Print::skirt_flow() const
     );
 }
 
+void
+Print::_make_brim()
+{
+    if (this->state.is_done(psBrim)) return;
+    this->state.set_started(psBrim);
+    
+    // since this method must be idempotent, we clear brim paths *before*
+    // checking whether we need to generate them
+    this->brim.clear();
+    
+    if (this->config.brim_width == 0 && this->config.brim_connections_width == 0) {
+        this->state.set_done(psBrim);
+        return;
+    }
+    
+    // brim is only printed on first layer and uses perimeter extruder
+    const double first_layer_height = this->skirt_first_layer_height();
+    const Flow flow  = this->brim_flow();
+    const double mm3_per_mm = flow.mm3_per_mm();
+    
+    const coord_t grow_distance = flow.scaled_width()/2;
+    Polygons islands;
+    
+    FOREACH_OBJECT(this, object) {
+        const Layer &layer0 = *(*object)->get_layer(0);
+        
+        Polygons object_islands = layer0.slices.contours();
+        
+        if (!(*object)->support_layers.empty()) {
+            const SupportLayer &support_layer0 = *(*object)->get_support_layer(0);
+            
+            for (ExtrusionEntitiesPtr::const_iterator it = support_layer0.support_fills.entities.begin();
+                it != support_layer0.support_fills.entities.end(); ++it)
+                append_to(object_islands, offset((*it)->as_polyline(), grow_distance));
+            
+            for (ExtrusionEntitiesPtr::const_iterator it = support_layer0.support_interface_fills.entities.begin();
+                it != support_layer0.support_interface_fills.entities.end(); ++it)
+                append_to(object_islands, offset((*it)->as_polyline(), grow_distance));
+        }
+        for (Points::const_iterator copy = (*object)->_shifted_copies.begin(); copy != (*object)->_shifted_copies.end();
+            ++copy) {
+            for (Polygons::const_iterator p = object_islands.begin(); p != object_islands.end(); ++p) {
+                Polygon p2 = *p;
+                p2.translate(*copy);
+                islands.push_back(p2);
+            }
+        }
+    }
+    
+    Polygons loops;
+    const int num_loops = floor(this->config.brim_width / flow.width + 0.5);
+    for (int i = num_loops; i >= 1; --i) {
+        // JT_SQUARE ensures no vertex is outside the given offset distance
+        // -0.5 because islands are not represented by their centerlines
+        // (first offset more, then step back - reverse order than the one used for 
+        // perimeters because here we're offsetting outwards)
+        append_to(loops, offset2(
+            islands,
+            flow.scaled_spacing() * (i + 0.5),
+            flow.scaled_spacing() * -1.0,
+            100000,
+            ClipperLib::jtSquare
+        ));
+    }
+    
+    {
+        Polygons chained = union_pt_chained(loops);
+        for (Polygons::const_reverse_iterator p = chained.rbegin(); p != chained.rend(); ++p) {
+            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, first_layer_height);
+            path.polyline = p->split_at_first_point();
+            this->brim.append(ExtrusionLoop(path));
+        }
+    }
+    
+    if (this->config.brim_connections_width > 0) {
+        // get islands to connects
+        for (Polygons::iterator p = islands.begin(); p != islands.end(); ++p)
+            *p = Geometry::convex_hull(p->points);
+        
+        islands = offset(islands, flow.scaled_spacing() * (num_loops-0.2), 10000, jtSquare);
+        
+        // compute centroid for each island
+        Points centroids;
+        centroids.reserve(islands.size());
+        for (Polygons::const_iterator p = islands.begin(); p != islands.end(); ++p)
+            centroids.push_back(p->centroid());
+        
+        // in order to check visibility we need to account for the connections width,
+        // so let's use grown islands
+        const double scaled_width = scale_(this->config.brim_connections_width);
+        const Polygons grown = offset(islands, +scaled_width/2);
+        
+        // find pairs of islands having direct visibility
+        Lines lines;
+        for (size_t i = 0; i < islands.size(); ++i) {
+            for (size_t j = (i+1); j < islands.size(); ++j) {
+                // check visibility
+                Line line(centroids[i], centroids[j]);
+                if (diff_pl((Polyline)line, grown).size() != 1) continue;
+                lines.push_back(line);
+            }
+        }
+        
+        std::auto_ptr<Fill> filler(Fill::new_from_type(ipRectilinear));
+        filler->min_spacing  = flow.spacing();
+        filler->dont_adjust  = true;
+        filler->density      = 1;
+        
+        // subtract already generated connections in order to prevent crossings
+        // and overextrusion
+        Polygons other;
+        
+        for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
+            ExPolygons expp = diff_ex(
+                offset((Polyline)*line, scaled_width/2),
+                islands + other
+            );
+            
+            filler->angle = line->direction();
+            for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
+                append_to(other, (Polygons)*ex);
+                
+                const Polylines paths = filler->fill_surface(Surface(stBottom, *ex));
+                for (Polylines::const_iterator pl = paths.begin(); pl != paths.end(); ++pl) {
+                    ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, first_layer_height);
+                    path.polyline = *pl;
+                    this->brim.append(path);
+                }
+            }
+        }
+    }
+    
+    this->state.set_done(psBrim);
+}
+
 
 PrintRegionConfig
 Print::_region_config_from_model_volume(const ModelVolume &volume)
@@ -834,14 +955,44 @@ Print::auto_assign_extruders(ModelObject* model_object) const
     // only assign extruders if object has more than one volume
     if (model_object->volumes.size() < 2) return;
     
-    size_t extruders = this->config.nozzle_diameter.values.size();
     for (ModelVolumePtrs::const_iterator v = model_object->volumes.begin(); v != model_object->volumes.end(); ++v) {
         if (!(*v)->material_id().empty()) {
+            //FIXME Vojtech: This assigns an extruder ID even to a modifier volume, if it has a material assigned.
             size_t extruder_id = (v - model_object->volumes.begin()) + 1;
             if (!(*v)->config.has("extruder"))
                 (*v)->config.opt<ConfigOptionInt>("extruder", true)->value = extruder_id;
         }
     }
+}
+
+std::string
+Print::output_filename()
+{
+    this->placeholder_parser.update_timestamp();
+    return this->placeholder_parser.process(this->config.output_filename_format.value);
+}
+
+std::string
+Print::output_filepath(const std::string &path)
+{
+    // if we were supplied no path, generate an automatic one based on our first object's input file
+    if (path.empty()) {
+        // get the first input file name
+        std::string input_file;
+        FOREACH_OBJECT(this, object) {
+            input_file = (*object)->model_object()->input_file;
+            if (!input_file.empty()) break;
+        }
+        return (boost::filesystem::path(input_file).parent_path() / this->output_filename()).string();
+    }
+    
+    // if we were supplied a directory, use it and append our automatically generated filename
+    boost::filesystem::path p(path);
+    if (boost::filesystem::is_directory(p))
+        return (p / this->output_filename()).string();
+    
+    // if we were supplied a file which is not a directory, use it
+    return path;
 }
 
 }

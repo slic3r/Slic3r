@@ -8,6 +8,8 @@ _3DScene::_extrusionentity_to_verts_do(const Lines &lines, const std::vector<dou
         const std::vector<double> &heights, bool closed, double top_z, const Point &copy,
         GLVertexArray* qverts, GLVertexArray* tverts)
 {
+    if (lines.empty()) return;
+    
     /* It looks like it's faster without reserving capacity...
     // each segment has 4 quads, thus 16 vertices; + 2 caps
     qverts->reserve_more(3 * 4 * (4 * lines.size() + 2));

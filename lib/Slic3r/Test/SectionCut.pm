@@ -1,7 +1,10 @@
+# 2D cut in the XZ plane through the toolpaths.
+# For debugging purposes.
+
 package Slic3r::Test::SectionCut;
 use Moo;
 
-use List::Util qw(first min max);
+use List::Util qw(any min max);
 use Slic3r::Geometry qw(unscale);
 use Slic3r::Geometry::Clipper qw(intersection_pl);
 use SVG;
@@ -10,20 +13,27 @@ use Slic3r::SVG;
 has 'print'         => (is => 'ro', required => 1);
 has 'scale'         => (is => 'ro', default => sub { 30 });
 has 'y_percent'     => (is => 'ro', default => sub { 0.5 });  # Y coord of section line expressed as factor
-has 'line'          => (is => 'rw');
+has '_line'         => (is => 'lazy');
 has '_height'       => (is => 'rw');
 has '_svg'          => (is => 'rw');
 has '_svg_style'    => (is => 'rw', default => sub { {} });
+has '_bb'           => (is => 'lazy');
 
-sub BUILD {
+sub _build__line {
     my $self = shift;
     
     # calculate the Y coordinate of the section line
-    my $bb = $self->print->bounding_box;
+    my $bb = $self->_bb;
     my $y = ($bb->y_min + $bb->y_max) * $self->y_percent;
     
     # store our section line
-    $self->line(Slic3r::Line->new([ $bb->x_min, $y ], [ $bb->x_max, $y ]));
+    return Slic3r::Line->new([ $bb->x_min, $y ], [ $bb->x_max, $y ]);
+}
+
+sub _build__bb {
+    my ($self) = @_;
+    
+    return $self->print->bounding_box;
 }
 
 sub export_svg {
@@ -32,8 +42,7 @@ sub export_svg {
     
     # get bounding box of print and its height
     # (Print should return a BoundingBox3 object instead)
-    my $bb = $self->print->bounding_box;
-    my $print_size = $bb->size;
+    my $print_size = $self->_bb->size;
     $self->_height(max(map $_->print_z, map @{$_->layers}, @{$self->print->objects}));
     
     # initialize the SVG canvas
@@ -72,94 +81,114 @@ sub _plot_group {
     my $self = shift;
     my ($filter) = @_;
     
-    my $bb = $self->print->bounding_box;
-    my $g = $self->_svg->group(style => { %{$self->_svg_style} });
-    
     foreach my $object (@{$self->print->objects}) {
-        foreach my $copy (@{$object->_shifted_copies}) {
-            foreach my $layer (@{$object->layers}, @{$object->support_layers}) {
-                # get all ExtrusionPath objects
-                my @paths = map $_->clone,
-                    map { ($_->isa('Slic3r::ExtrusionLoop') || $_->isa('Slic3r::ExtrusionPath::Collection')) ? @$_ : $_ }
-                    grep defined $_,
-                    $filter->($layer);
-                
-                # move paths to location of copy
-                $_->polyline->translate(@$copy) for @paths;
-                
+        foreach my $layer (@{$object->layers}, @{$object->support_layers}) {
+            my @paths = map $_->clone, map @{$_->flatten}, grep defined $_, $filter->($layer);
+            
+            my $name = sprintf "%s %d (z = %f)",
+                ($layer->isa('Slic3r::Layer::Support') ? 'Support Layer' : 'Layer'),
+                $layer->id,
+                $layer->print_z;
+            
+            my $g = $self->_svg->getElementByID($name)
+                || $self->_svg->group(id => $name, style => { %{$self->_svg_style} });
+            
+            foreach my $copy (@{$object->_shifted_copies}) {
                 if (0) {
                     # export plan with section line and exit
+                    my @grown = map @{$_->grow}, @paths;
+                    $_->translate(@$copy) for @paths;
+                    
                     require "Slic3r/SVG.pm";
                     Slic3r::SVG::output(
                         "line.svg",
                         no_arrows       => 1,
-                        lines           => [ $self->line ],
-                        red_polylines   => [ map $_->polyline, @paths ],
+                        polygons        => \@grown,
+                        red_lines       => [ $self->_line ],
                     );
                     exit;
                 }
                 
-                foreach my $path (@paths) {
-                    foreach my $line (@{$path->lines}) {
-                        my @intersections = @{intersection_pl(
-                            [ $self->line->as_polyline ],
-                            $line->grow(Slic3r::Geometry::scale $path->width/2),
-                        )};
-                        
-                        die "Intersection has more than two points!\n"
-                            if defined first { @$_ > 2 } @intersections;
-                        
-                        # turn intersections to lines
-                        my @lines = map Slic3r::Line->new(@$_), @intersections;
-                        
-                        # align intersections to canvas
-                        $_->translate(-$bb->x_min, 0) for @lines;
-                        
-                        # we want lines oriented from left to right in order to draw
-                        # rectangles correctly
-                        foreach my $line (@lines) {
-                            $line->reverse if $line->a->x > $line->b->x;
-                        }
-                        
-                        if ($path->is_bridge) {
-                            foreach my $line (@lines) {
-                                my $radius = $path->width / 2;
-                                my $width = unscale abs($line->b->x - $line->a->x);
-                                if ((10 * $radius) < $width) {
-                                    # we're cutting the path in the longitudinal direction, so we've got a rectangle
-                                    $g->rectangle(
-                                        'x'         => $self->scale * unscale($line->a->x),
-                                        'y'         => $self->scale * $self->_y($layer->print_z),
-                                        'width'     => $self->scale * $width,
-                                        'height'    => $self->scale * $radius * 2,
-                                        'rx'        => $self->scale * $radius * 0.35,
-                                        'ry'        => $self->scale * $radius * 0.35,
-                                    );
-                                } else {
-                                    $g->circle(
-                                        'cx'        => $self->scale * (unscale($line->a->x) + $radius),
-                                        'cy'        => $self->scale * $self->_y($layer->print_z - $radius),
-                                        'r'         => $self->scale * $radius,
-                                    );
-                                }
-                            }
-                        } else {
-                            foreach my $line (@lines) {
-                                my $height = $path->height;
-                                $height = $layer->height if $height == -1;
-                                $g->rectangle(
-                                    'x'         => $self->scale * unscale($line->a->x),
-                                    'y'         => $self->scale * $self->_y($layer->print_z),
-                                    'width'     => $self->scale * unscale($line->b->x - $line->a->x),
-                                    'height'    => $self->scale * $height,
-                                    'rx'        => $self->scale * $height * 0.5,
-                                    'ry'        => $self->scale * $height * 0.5,
-                                );
-                            }
-                        }
-                    }
-                }
+                $self->_plot_path($_, $g, $copy, $layer) for @paths;
             }
+        }
+    }
+}
+
+sub _plot_path {
+    my ($self, $path, $g, $copy, $layer) = @_;
+    
+    my $grown = $path->grow;
+    $_->translate(@$copy) for @$grown;
+    my $intersections = intersection_pl(
+        [ $self->_line->as_polyline ],
+        $grown,
+    );
+    
+    if (0 && @$intersections) {
+        # export plan with section line and exit
+        require "Slic3r/SVG.pm";
+        Slic3r::SVG::output(
+            "intersections.svg",
+            no_arrows       => 1,
+            polygons        => $grown,
+            red_lines       => [ $self->_line ],
+        );
+        exit;
+    }
+    
+    # turn intersections to lines
+    die "Intersection has more than two points!\n"
+        if any { @$_ > 2 } @$intersections;
+    my @lines = map Slic3r::Line->new(@$_), @$intersections;
+    
+    my $is_bridge = $path->isa('Slic3r::ExtrusionPath')
+        ? $path->is_bridge
+        : any { $_->is_bridge } @$path;
+    
+    foreach my $line (@lines) {
+        my $this_path = $path;
+        if ($path->isa('Slic3r::ExtrusionLoop')) {
+            # FIXME: find the actual ExtrusionPath of this intersection
+            $this_path = $path->[0];
+        }
+        
+        # align to canvas
+        $line->translate(-$self->_bb->x_min, 0);
+    
+        # we want lines oriented from left to right in order to draw rectangles correctly
+        $line->reverse if $line->a->x > $line->b->x;
+        
+        if ($is_bridge) {
+            my $radius = $this_path->width / 2;
+            my $width = unscale abs($line->b->x - $line->a->x);
+            if ((10 * $radius) < $width) {
+                # we're cutting the path in the longitudinal direction, so we've got a rectangle
+                $g->rectangle(
+                    'x'         => $self->scale * unscale($line->a->x),
+                    'y'         => $self->scale * $self->_y($layer->print_z),
+                    'width'     => $self->scale * $width,
+                    'height'    => $self->scale * $radius * 2,
+                    'rx'        => $self->scale * $radius * 0.35,
+                    'ry'        => $self->scale * $radius * 0.35,
+                );
+            } else {
+                $g->circle(
+                    'cx'        => $self->scale * (unscale($line->a->x) + $radius),
+                    'cy'        => $self->scale * $self->_y($layer->print_z - $radius),
+                    'r'         => $self->scale * $radius,
+                );
+            }
+        } else {
+            my $height = $this_path->height != -1 ? $this_path->height : $layer->height;
+            $g->rectangle(
+                'x'         => $self->scale * unscale($line->a->x),
+                'y'         => $self->scale * $self->_y($layer->print_z),
+                'width'     => $self->scale * unscale($line->b->x - $line->a->x),
+                'height'    => $self->scale * $height,
+                'rx'        => $self->scale * $height * 0.5,
+                'ry'        => $self->scale * $height * 0.5,
+            );
         }
     }
 }
