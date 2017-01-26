@@ -228,6 +228,7 @@ for my $class (qw(
         Slic3r::Layer
         Slic3r::Layer::Region
         Slic3r::Layer::Support
+        Slic3r::LayerHeightSpline
         Slic3r::Line
         Slic3r::Linef3
         Slic3r::Model

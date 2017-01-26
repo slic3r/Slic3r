@@ -129,6 +129,9 @@
 %typemap{Layer*};
 %typemap{Ref<Layer>}{simple};
 
+%typemap{LayerHeightSpline*};
+%typemap{Ref<LayerHeightSpline>}{simple};
+
 %typemap{SupportLayer*};
 %typemap{Ref<SupportLayer>}{simple};
 

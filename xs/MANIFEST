@@ -43,6 +43,8 @@ src/libslic3r/IO.hpp
 src/libslic3r/Layer.cpp
 src/libslic3r/Layer.hpp
 src/libslic3r/LayerRegion.cpp
+src/libslic3r/LayerHeightSpline.hpp
+src/libslic3r/LayerHeightSpline.cpp
 src/libslic3r/libslic3r.h
 src/libslic3r/Line.cpp
 src/libslic3r/Line.hpp
@@ -139,6 +141,7 @@ xsp/Geometry.xsp
 xsp/GUI.xsp
 xsp/GUI_3DScene.xsp
 xsp/Layer.xsp
+xsp/LayerHeightSpline.xsp
 xsp/Line.xsp
 xsp/Model.xsp
 xsp/MotionPlanner.xsp

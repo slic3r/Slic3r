@@ -1,0 +1,23 @@
+%module{Slic3r::XS};
+
+%{
+#include <xsinit.h>
+#include "libslic3r/LayerHeightSpline.hpp"
+%}
+
+%name{Slic3r::LayerHeightSpline} class LayerHeightSpline {
+    // owned by PrintObject, no constructor/destructor
+    
+    bool hasData();
+    bool updateRequired();
+    void suppressUpdate();
+    bool setLayers(std::vector<double> layers)
+        %code%{ RETVAL = THIS->setLayers(layers); %};
+    bool updateLayerHeights(std::vector<double> heights)
+        %code%{ RETVAL = THIS->updateLayerHeights(heights); %};
+    void clear();
+    std::vector<double> getOriginalLayers();
+    std::vector<double> getInterpolatedLayers();
+    coordf_t getLayerHeightAt(coordf_t height);
+        //%code%{ RETVAL = THIS->upper_layer; %};
+};

@@ -20,6 +20,7 @@ REGISTER_CLASS(GCodeWriter, "GCode::Writer");
 REGISTER_CLASS(Layer, "Layer");
 REGISTER_CLASS(SupportLayer, "Layer::Support");
 REGISTER_CLASS(LayerRegion, "Layer::Region");
+REGISTER_CLASS(LayerHeightSpline, "LayerHeightSpline");
 REGISTER_CLASS(Line, "Line");
 REGISTER_CLASS(Linef3, "Linef3");
 REGISTER_CLASS(PerimeterGenerator, "Layer::PerimeterGenerator");
