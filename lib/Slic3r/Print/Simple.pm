@@ -1,3 +1,10 @@
+# A simple wrapper to quickly print a single model without a GUI.
+# Used by the command line slic3r.pl, by command line utilities pdf-slic3s.pl and view-toolpaths.pl,
+# and by the quick slice menu of the Slic3r GUI.
+#
+# It creates and owns an instance of Slic3r::Print  to perform the slicing
+# and it accepts an instance of Slic3r::Model from the outside.
+
 package Slic3r::Print::Simple;
 use Moo;
 
@@ -6,7 +13,7 @@ use Slic3r::Geometry qw(X Y);
 has '_print' => (
     is      => 'ro',
     default => sub { Slic3r::Print->new },
-    handles => [qw(apply_config extruders expanded_output_filepath
+    handles => [qw(apply_config extruders output_filepath
                     total_used_filament total_extruded_volume
                     placeholder_parser process)],
 );
@@ -41,18 +48,24 @@ has 'print_center' => (
     default => sub { Slic3r::Pointf->new(100,100) },
 );
 
+has 'dont_arrange' => (
+    is      => 'rw',
+    default => sub { 0 },
+);
+
 has 'output_file' => (
     is      => 'rw',
 );
 
 sub set_model {
+    # $model is of type Slic3r::Model
     my ($self, $model) = @_;
     
     # make method idempotent so that the object is reusable
     $self->_print->clear_objects;
     
     # make sure all objects have at least one defined instance
-    my $need_arrange = $model->add_default_instances;
+    my $need_arrange = $model->add_default_instances && ! $self->dont_arrange;
     
     # apply scaling and rotation supplied from command line if any
     foreach my $instance (map @{$_->instances}, @{$model->objects}) {
@@ -61,7 +74,7 @@ sub set_model {
     }
     
     if ($self->duplicate_grid->[X] > 1 || $self->duplicate_grid->[Y] > 1) {
-        $model->duplicate_objects_grid($self->duplicate_grid, $self->_print->config->duplicate_distance);
+        $model->duplicate_objects_grid($self->duplicate_grid->[X], $self->duplicate_grid->[Y], $self->_print->config->duplicate_distance);
     } elsif ($need_arrange) {
         $model->duplicate_objects($self->duplicate, $self->_print->config->min_object_distance);
     } elsif ($self->duplicate > 1) {
@@ -69,7 +82,7 @@ sub set_model {
         $model->duplicate($self->duplicate, $self->_print->config->min_object_distance);
     }
     $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects};
-    $model->center_instances_around_point($self->print_center);
+    $model->center_instances_around_point($self->print_center) if (! $self->dont_arrange);
     
     foreach my $model_object (@{$model->objects}) {
         $self->_print->auto_assign_extruders($model_object);

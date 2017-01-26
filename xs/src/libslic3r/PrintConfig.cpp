@@ -1,11 +1,10 @@
 #include "PrintConfig.hpp"
+#include <boost/thread.hpp>
 
 namespace Slic3r {
 
 PrintConfigDef::PrintConfigDef()
 {
-    t_optiondef_map &Options = this->options;
-    
     ConfigOptionDef* def;
 
     def = this->add("adaptive_slicing", coBool);
@@ -30,10 +29,15 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(Pointf(0,200));
         def->default_value = opt;
     }
+    def = this->add("has_heatbed", coBool);
+    def->label = "Has heated bed";
+    def->tooltip = "Unselecting this will suppress automatic generation of bed heating gcode.";
+    def->cli = "has_heatbed!";
+    def->default_value = new ConfigOptionBool(true);
     
     def = this->add("bed_temperature", coInt);
     def->label = "Other layers";
-    def->tooltip = "Bed temperature for layers after the first one. Set this to zero to disable bed temperature control commands in the output.";
+    def->tooltip = "Bed temperature for layers after the first one.";
     def->cli = "bed-temperature=i";
     def->full_label = "Bed temperature";
     def->min = 0;
@@ -92,6 +96,14 @@ PrintConfigDef::PrintConfigDef()
     def->aliases.push_back("bridge_feed_rate");
     def->min = 0;
     def->default_value = new ConfigOptionFloat(60);
+
+    def = this->add("brim_connections_width", coFloat);
+    def->label = "Brim connections width";
+    def->tooltip = "If set to a positive value, straight connections will be built on the first layer between adjacent objects.";
+    def->sidetext = "mm";
+    def->cli = "brim-connections-width=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("brim_width", coFloat);
     def->label = "Brim width";
@@ -171,11 +183,13 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "external-fill-pattern|solid-fill-pattern=s";
     def->enum_keys_map = ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
+    def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
     def->enum_labels.push_back("Rectilinear");
+    def->enum_labels.push_back("Aligned Rectilinear");
     def->enum_labels.push_back("Concentric");
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
@@ -306,6 +320,31 @@ PrintConfigDef::PrintConfigDef()
         def->default_value = opt;
     }
 
+    def = this->add("filament_notes", coStrings);
+    def->label = "Filament notes";
+    def->tooltip = "You can put your notes regarding the filament here.";
+    def->cli = "filament-notes=s@";
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 130;
+    {
+        ConfigOptionStrings* opt = new ConfigOptionStrings();
+        opt->values.push_back("");
+        def->default_value = opt;
+    }
+
+    def = this->add("filament_max_volumetric_speed", coFloats);
+    def->label = "Max volumetric speed";
+    def->tooltip = "Maximum volumetric speed allowed for this filament. Limits the maximum volumetric speed of a print to the minimum of print and filament volumetric speed. Set to zero for no limit.";
+    def->sidetext = "mm³/s";
+    def->cli = "filament-max-volumetric-speed=f@";
+    def->min = 0;
+    {
+        ConfigOptionFloats* opt = new ConfigOptionFloats();
+        opt->values.push_back(0.f);
+        def->default_value = opt;
+    }
+
     def = this->add("filament_diameter", coFloats);
     def->label = "Diameter";
     def->tooltip = "Enter your filament diameter here. Good precision is required, so use a caliper and do multiple measurements along the filament, then compute the average.";
@@ -378,8 +417,11 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "fill-pattern=s";
     def->enum_keys_map = ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
+    def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("grid");
-    def->enum_values.push_back("line");
+    def->enum_values.push_back("triangles");
+    def->enum_values.push_back("stars");
+    def->enum_values.push_back("cubic");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("honeycomb");
     def->enum_values.push_back("3dhoneycomb");
@@ -387,15 +429,18 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
     def->enum_labels.push_back("Rectilinear");
+    def->enum_labels.push_back("Aligned Rectilinear");
     def->enum_labels.push_back("Grid");
-    def->enum_labels.push_back("Line");
+    def->enum_labels.push_back("Triangles");
+    def->enum_labels.push_back("Stars");
+    def->enum_labels.push_back("Cubic");
     def->enum_labels.push_back("Concentric");
     def->enum_labels.push_back("Honeycomb");
     def->enum_labels.push_back("3D Honeycomb");
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
     def->enum_labels.push_back("Octagram Spiral");
-    def->default_value = new ConfigOptionEnum<InfillPattern>(ipHoneycomb);
+    def->default_value = new ConfigOptionEnum<InfillPattern>(ipStars);
 
     def = this->add("first_layer_acceleration", coFloat);
     def->label = "First layer";
@@ -478,6 +523,7 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "gcode-flavor=s";
     def->enum_keys_map = ConfigOptionEnum<GCodeFlavor>::get_enum_values();
     def->enum_values.push_back("reprap");
+    def->enum_values.push_back("repetier");
     def->enum_values.push_back("teacup");
     def->enum_values.push_back("makerware");
     def->enum_values.push_back("sailfish");
@@ -485,7 +531,8 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("machinekit");
     def->enum_values.push_back("smoothie");
     def->enum_values.push_back("no-extrusion");
-    def->enum_labels.push_back("RepRap (Marlin/Sprinter/Repetier)");
+    def->enum_labels.push_back("RepRap (Marlin/Sprinter)");
+    def->enum_labels.push_back("Repetier");
     def->enum_labels.push_back("Teacup");
     def->enum_labels.push_back("MakerWare (MakerBot)");
     def->enum_labels.push_back("Sailfish (MakerBot)");
@@ -549,7 +596,7 @@ PrintConfigDef::PrintConfigDef()
     def->sidetext = "mm or %";
     def->cli = "infill-overlap=s";
     def->ratio_over = "perimeter_extrusion_width";
-    def->default_value = new ConfigOptionFloatOrPercent(15, true);
+    def->default_value = new ConfigOptionFloatOrPercent(55, true);
 
     def = this->add("infill_speed", coFloat);
     def->label = "Infill";
@@ -923,7 +970,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("retract_speed", coFloats);
     def->label = "Speed";
     def->full_label = "Retraction Speed";
-    def->tooltip = "The speed for retractions (it only applies to the extruder motor).";
+    def->tooltip = "The speed for retractions (it only applies to the extruder motor). If you use the Firmware Retraction option, please note this value still affects the auto-speed pressure regulator.";
     def->sidetext = "mm/s";
     def->cli = "retract-speed=f@";
     {
@@ -1250,9 +1297,11 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "threads|j=i";
     def->readonly = true;
     def->min = 1;
-    def->max = 16;
-    def->default_value = new ConfigOptionInt(2);
-
+    {
+        unsigned int threads = boost::thread::hardware_concurrency();
+        def->default_value = new ConfigOptionInt(threads > 0 ? threads : 2);
+    }
+    
     def = this->add("toolchange_gcode", coString);
     def->label = "Tool change G-code";
     def->tooltip = "This custom code is inserted right before every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder] and [next_extruder].";
@@ -1400,9 +1449,31 @@ PrintConfigBase::min_object_distance() const
 
 CLIConfigDef::CLIConfigDef()
 {
-    t_optiondef_map &Options = this->options;
-    
     ConfigOptionDef* def;
+    
+    def = this->add("cut", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model at the given Z.";
+    def->cli = "cut";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("cut_grid", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model in the XY plane into tiles of the specified max size.";
+    def->cli = "cut-grid";
+    def->default_value = new ConfigOptionPoint();
+    
+    def = this->add("cut_x", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model at the given X.";
+    def->cli = "cut-x";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("cut_y", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model at the given Y.";
+    def->cli = "cut-y";
+    def->default_value = new ConfigOptionFloat(0);
     
     def = this->add("export_obj", coBool);
     def->label = "Export SVG";
@@ -1444,6 +1515,18 @@ CLIConfigDef::CLIConfigDef()
     def->label = "Rotate";
     def->tooltip = "Rotation angle around the Z axis in degrees (0-360, default: 0).";
     def->cli = "rotate";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("rotate_x", coFloat);
+    def->label = "Rotate around X";
+    def->tooltip = "Rotation angle around the X axis in degrees (0-360, default: 0).";
+    def->cli = "rotate-x";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("rotate_y", coFloat);
+    def->label = "Rotate around Y";
+    def->tooltip = "Rotation angle around the Y axis in degrees (0-360, default: 0).";
+    def->cli = "rotate-y";
     def->default_value = new ConfigOptionFloat(0);
     
     def = this->add("save", coString);

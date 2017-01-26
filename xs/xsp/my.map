@@ -1,3 +1,4 @@
+coord_t  T_IV
 coordf_t T_NV
 
 std::string                     T_STD_STRING
@@ -56,6 +57,10 @@ TriangleMesh*              O_OBJECT_SLIC3R
 Ref<TriangleMesh>          O_OBJECT_SLIC3R_T
 Clone<TriangleMesh>        O_OBJECT_SLIC3R_T
 
+SLAPrint*                  O_OBJECT_SLIC3R
+Ref<SLAPrint>              O_OBJECT_SLIC3R_T
+Clone<SLAPrint>            O_OBJECT_SLIC3R_T
+
 Point*                     O_OBJECT_SLIC3R
 Ref<Point>                 O_OBJECT_SLIC3R_T
 Clone<Point>               O_OBJECT_SLIC3R_T
@@ -111,6 +116,10 @@ Clone<ExtrusionPath>       O_OBJECT_SLIC3R_T
 ExtrusionLoop*             O_OBJECT_SLIC3R
 Ref<ExtrusionLoop>         O_OBJECT_SLIC3R_T
 Clone<ExtrusionLoop>       O_OBJECT_SLIC3R_T
+
+Filler*                    O_OBJECT_SLIC3R
+Ref<Filler>                O_OBJECT_SLIC3R_T
+Clone<Filler>              O_OBJECT_SLIC3R_T
 
 Flow*                      O_OBJECT_SLIC3R
 Ref<Flow>                  O_OBJECT_SLIC3R_T
@@ -184,6 +193,10 @@ Clone<Wipe>   O_OBJECT_SLIC3R_T
 OozePrevention*             O_OBJECT_SLIC3R
 Ref<OozePrevention>         O_OBJECT_SLIC3R_T
 Clone<OozePrevention>       O_OBJECT_SLIC3R_T
+
+CoolingBuffer*             O_OBJECT_SLIC3R
+Ref<CoolingBuffer>         O_OBJECT_SLIC3R_T
+Clone<CoolingBuffer>       O_OBJECT_SLIC3R_T
 
 GCode*                      O_OBJECT_SLIC3R
 Ref<GCode>                  O_OBJECT_SLIC3R_T

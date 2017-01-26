@@ -5,6 +5,7 @@ use warnings;
 BEGIN {
     use FindBin;
     use lib "$FindBin::Bin/../lib";
+    use local::lib "$FindBin::Bin/../local-lib";
 }
 
 use List::Util qw(first);
@@ -59,7 +60,7 @@ use Slic3r::Test;
     $config->set('start_gcode', "TRAVEL:[travel_speed] HEIGHT:[layer_height]\n");
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     
-    my $output_file = $print->print->expanded_output_filepath;
+    my $output_file = $print->print->output_filepath;
     my ($t, $h) = map $config->$_, qw(travel_speed layer_height);
     ok $output_file =~ /ts_${t}_/, 'print config options are replaced in output filename';
     ok $output_file =~ /lh_$h\./, 'region config options are replaced in output filename';

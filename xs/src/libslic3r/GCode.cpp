@@ -98,7 +98,7 @@ OozePrevention::pre_toolchange(GCode &gcodegen)
     if (gcodegen.config.standby_temperature_delta.value != 0) {
         // we assume that heating is always slower than cooling, so no need to block
         gcode += gcodegen.writer.set_temperature
-            (this->_get_temp(gcodegen) + gcodegen.config.standby_temperature_delta.value, false);
+            (this->_get_temp(gcodegen) + gcodegen.config.standby_temperature_delta.value, false, gcodegen.writer.extruder()->id);
     }
     
     return gcode;
@@ -110,7 +110,7 @@ OozePrevention::post_toolchange(GCode &gcodegen)
     std::string gcode;
     
     if (gcodegen.config.standby_temperature_delta.value != 0) {
-        gcode += gcodegen.writer.set_temperature(this->_get_temp(gcodegen), true);
+        gcode += gcodegen.writer.set_temperature(this->_get_temp(gcodegen), true, gcodegen.writer.extruder()->id);
     }
     
     return gcode;
@@ -283,11 +283,8 @@ GCode::change_layer(const Layer &layer)
     this->first_layer = (layer.id() == 0);
     
     // avoid computing islands and overhangs if they're not needed
-    if (this->config.avoid_crossing_perimeters) {
-        ExPolygons islands;
-        union_(layer.slices, &islands, true);
-        this->avoid_crossing_perimeters.init_layer_mp(islands);
-    }
+    if (this->config.avoid_crossing_perimeters)
+        this->avoid_crossing_perimeters.init_layer_mp(union_ex(layer.slices, true));
     
     std::string gcode;
     if (this->layer_count > 0) {
@@ -560,6 +557,13 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
             this->config.max_volumetric_speed.value / path.mm3_per_mm
         );
     }
+    if (EXTRUDER_CONFIG(filament_max_volumetric_speed) > 0) {
+        // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
+        speed = std::min(
+            speed,
+            EXTRUDER_CONFIG(filament_max_volumetric_speed) / path.mm3_per_mm
+        );
+    }
     double F = speed * 60;  // convert mm/sec to mm/min
     
     // extrude arc or line
@@ -635,8 +639,13 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line)
         gcode += this->writer.travel_to_xy(this->point_to_gcode(line->b), comment);
     
+    /*  While this makes the estimate more accurate, CoolingBuffer calculates the slowdown
+        factor on the whole elapsed time but only alters non-travel moves, thus the resulting
+        time is still shorter than the configured threshold. We could create a new 
+        elapsed_travel_time but we would still need to account for bridges, retractions, wipe etc.
     if (this->config.cooling)
-        this->elapsed_time += travel.length() / this->config.get_abs_value("travel_speed");
+        this->elapsed_time += unscale(travel.length()) / this->config.get_abs_value("travel_speed");
+    */
     
     return gcode;
 }
@@ -662,15 +671,6 @@ GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
             && this->layer->any_internal_region_slice_contains(travel)) {
             /*  skip retraction if travel is contained in an internal slice *and*
                 internal infill is enabled (so that stringing is entirely not visible)  */
-            return false;
-        } else if (this->layer->any_bottom_region_slice_contains(travel)
-            && this->layer->upper_layer != NULL
-            && this->layer->upper_layer->slices.contains(travel)
-            && (this->config.bottom_solid_layers.value >= 2 || this->config.fill_density.value > 0)) {
-            /*  skip retraction if travel is contained in an *infilled* bottom slice
-                but only if it's also covered by an *infilled* upper layer's slice
-                so that it's not visible from above (a bottom surface might not have an
-                upper slice in case of a thin membrane)  */
             return false;
         }
     }

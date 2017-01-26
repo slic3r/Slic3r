@@ -11,7 +11,9 @@ REGISTER_CLASS(ExtrusionLoop, "ExtrusionLoop");
 // there is no ExtrusionLoop::Collection or ExtrusionEntity::Collection
 REGISTER_CLASS(ExtrusionEntityCollection, "ExtrusionPath::Collection");
 REGISTER_CLASS(Flow, "Flow");
+REGISTER_CLASS(Filler, "Filler");
 REGISTER_CLASS(AvoidCrossingPerimeters, "GCode::AvoidCrossingPerimeters");
+REGISTER_CLASS(CoolingBuffer, "GCode::CoolingBuffer");
 REGISTER_CLASS(OozePrevention, "GCode::OozePrevention");
 REGISTER_CLASS(Wipe, "GCode::Wipe");
 REGISTER_CLASS(GCode, "GCode");
@@ -51,6 +53,7 @@ REGISTER_CLASS(PrintRegionConfig, "Config::PrintRegion");
 REGISTER_CLASS(GCodeConfig, "Config::GCode");
 REGISTER_CLASS(PrintConfig, "Config::Print");
 REGISTER_CLASS(FullPrintConfig, "Config::Full");
+REGISTER_CLASS(SLAPrint, "SLAPrint");
 REGISTER_CLASS(Surface, "Surface");
 REGISTER_CLASS(SurfaceCollection, "Surface::Collection");
 REGISTER_CLASS(TriangleMesh, "TriangleMesh");
@@ -531,8 +534,7 @@ SV*
 polynode2perl(const ClipperLib::PolyNode& node)
 {
     HV* hv = newHV();
-    Slic3r::Polygon p;
-    ClipperPath_to_Slic3rMultiPoint(node.Contour, &p);
+    Polygon p = ClipperPath_to_Slic3rMultiPoint<Polygon>(node.Contour);
     if (node.IsHole()) {
         (void)hv_stores( hv, "hole", Slic3r::perl_to_SV_clone_ref(p) );
     } else {

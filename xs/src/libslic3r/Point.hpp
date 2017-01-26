@@ -2,10 +2,10 @@
 #define slic3r_Point_hpp_
 
 #include "libslic3r.h"
-#include <vector>
 #include <math.h>
-#include <string>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace Slic3r {
 
@@ -42,8 +42,19 @@ class Point
     void scale(double factor);
     void translate(double x, double y);
     void translate(const Vector &vector);
+    void rotate(double angle);
     void rotate(double angle, const Point &center);
-    bool coincides_with(const Point &point) const;
+    Point rotated(double angle) const {
+        Point p(*this);
+        p.rotate(angle);
+        return p;
+    }
+    Point rotated(double angle, const Point &center) const {
+        Point p(*this);
+        p.rotate(angle, center);
+        return p;
+    }
+    bool coincides_with(const Point &point) const { return this->x == point.x && this->y == point.y; }
     bool coincides_with_epsilon(const Point &point) const;
     int nearest_point_index(const Points &points) const;
     int nearest_point_index(const PointConstPtrs &points) const;
@@ -61,10 +72,24 @@ class Point
     Point projection_onto(const Line &line) const;
     Point negative() const;
     Vector vector_to(const Point &point) const;
+    void align_to_grid(const Point &spacing, const Point &base = Point(0,0));
 };
 
 Point operator+(const Point& point1, const Point& point2);
+Point operator-(const Point& point1, const Point& point2);
 Point operator*(double scalar, const Point& point2);
+
+inline Points&
+operator+=(Points &dst, const Points &src) {
+    append_to(dst, src);
+    return dst;
+};
+
+inline Points&
+operator+=(Points &dst, const Point &p) {
+    dst.push_back(p);
+    return dst;
+};
 
 class Point3 : public Point
 {
@@ -92,6 +117,7 @@ class Pointf
     void scale(double factor);
     void translate(double x, double y);
     void translate(const Vectorf &vector);
+    void rotate(double angle);
     void rotate(double angle, const Pointf &center);
     Pointf negative() const;
     Vectorf vector_to(const Pointf &point) const;
@@ -112,6 +138,16 @@ class Pointf3 : public Pointf
     Pointf3 negative() const;
     Vectorf3 vector_to(const Pointf3 &point) const;
 };
+
+template <class T>
+inline Points
+to_points(const std::vector<T> &items)
+{
+    Points pp;
+    for (typename std::vector<T>::const_iterator it = items.begin(); it != items.end(); ++it)
+        append_to(pp, (Points)*it);
+    return pp;
+}
 
 }
 

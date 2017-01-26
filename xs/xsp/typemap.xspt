@@ -1,5 +1,6 @@
 %typemap{bool}{simple};
 %typemap{size_t}{simple};
+%typemap{coord_t}{simple};
 %typemap{coordf_t}{simple};
 %typemap{std::string};
 %typemap{t_config_option_key};
@@ -60,6 +61,9 @@
 %typemap{Flow*};
 %typemap{Ref<Flow>}{simple};
 %typemap{Clone<Flow>}{simple};
+%typemap{Filler*};
+%typemap{Ref<Filler>}{simple};
+%typemap{Clone<Filler>}{simple};
 %typemap{Line*};
 %typemap{Ref<Line>}{simple};
 %typemap{Clone<Line>}{simple};
@@ -148,6 +152,10 @@
 %typemap{Ref<OozePrevention>}{simple};
 %typemap{Clone<OozePrevention>}{simple};
 
+%typemap{CoolingBuffer*};
+%typemap{Ref<CoolingBuffer>}{simple};
+%typemap{Clone<CoolingBuffer>}{simple};
+
 %typemap{GCode*};
 %typemap{Ref<GCode>}{simple};
 %typemap{Clone<GCode>}{simple};
@@ -192,13 +200,17 @@
 %typemap{Ref<ModelInstancePtrs>}{simple};
 %typemap{Clone<ModelInstancePtrs>}{simple};
 %typemap{GLVertexArray*};
+%typemap{SLAPrint*};
+%typemap{Ref<SLAPrint>}{simple};
+%typemap{Clone<SLAPrint>}{simple};
 
 %typemap{PrintRegionPtrs*};
 %typemap{PrintObjectPtrs*};
 %typemap{LayerPtrs*};
 %typemap{SupportLayerPtrs*};
 
-
+%typemap{ClipperLib::JoinType}{simple};
+%typemap{ClipperLib::PolyFillType}{simple};
 %typemap{Axis}{parsed}{
   %cpp_type{Axis};
   %precall_code{%

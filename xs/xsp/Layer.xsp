@@ -86,6 +86,7 @@
     bool any_bottom_region_slice_contains_polyline(Polyline* polyline)
         %code%{ RETVAL = THIS->any_bottom_region_slice_contains(*polyline); %};
     void make_perimeters();
+    void make_fills();
 };
 
 %name{Slic3r::Layer::Support} class SupportLayer {

@@ -66,12 +66,12 @@
     ModelObjectPtrs* objects()
         %code%{ RETVAL = &THIS->objects; %};
     
-    Pointfs _arrange(Pointfs sizes, double dist, BoundingBoxf* bb = NULL);
-    void arrange_objects(double dist, BoundingBoxf* bb = NULL);
+    bool arrange_objects(double dist, BoundingBoxf* bb = NULL);
     void duplicate(unsigned int copies_num, double dist, BoundingBoxf* bb = NULL);
     void duplicate_objects(unsigned int copies_num, double dist, BoundingBoxf* bb = NULL);
     void duplicate_objects_grid(unsigned int x, unsigned int y, double dist);
     void print_info();
+    void repair();
 };
 
 
@@ -143,6 +143,8 @@ ModelMaterial::attributes()
     void clear_volumes();
     int volumes_count()
         %code%{ RETVAL = THIS->volumes.size(); %};
+    Ref<ModelVolume> get_volume(int idx)
+        %code%{ RETVAL = THIS->volumes.at(idx); %};
 
     %name{_add_instance} Ref<ModelInstance> add_instance();
     Ref<ModelInstance> _add_instance_clone(ModelInstance* other)
@@ -151,6 +153,8 @@ ModelMaterial::attributes()
     void clear_instances();
     int instances_count()
         %code%{ RETVAL = THIS->instances.size(); %};
+    Ref<ModelInstance> get_instance(int idx)
+        %code%{ RETVAL = THIS->instances.at(idx); %};
 
     std::string name()
         %code%{ RETVAL = THIS->name; %};
@@ -185,11 +189,13 @@ ModelMaterial::attributes()
         %code{% THIS->scale(*versor); %};
     void rotate(float angle, Axis axis);
     void mirror(Axis axis);
+    void transform_by_instance(ModelInstance* instance, bool dont_translate = false)
+        %code{% THIS->transform_by_instance(*instance, dont_translate); %};
     
-    Model* cut(double z)
+    Model* cut(Axis axis, double z)
         %code%{
             RETVAL = new Model();
-            THIS->cut(z, RETVAL);
+            THIS->cut(axis, z, RETVAL);
         %};
 
     ModelObjectPtrs* split_object()
@@ -199,6 +205,7 @@ ModelMaterial::attributes()
         %};
     
     void print_info();
+    void repair();
 };
 
 
@@ -226,6 +233,15 @@ ModelMaterial::attributes()
         %code%{ THIS->modifier = modifier; %};
     
     ModelMaterial* assign_unique_material();
+
+    void extrude_tin(float offset)
+        %code%{
+            try {
+                THIS->mesh.extrude_tin(offset);
+            } catch (std::exception& e) {
+                croak("%s", e.what());
+            }
+        %};
 };
 
 

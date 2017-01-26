@@ -28,10 +28,18 @@ typedef std::vector<ModelObject*> ModelObjectPtrs;
 typedef std::vector<ModelVolume*> ModelVolumePtrs;
 typedef std::vector<ModelInstance*> ModelInstancePtrs;
 
+// The print bed content.
+// Description of a triangular model with multiple materials, multiple instances with various affine transformations
+// and with multiple modifier meshes.
+// A model groups multiple objects, each object having possibly multiple instances,
+// all objects may share mutliple materials.
 class Model
 {
     public:
+    // Materials are owned by a model and referenced by objects through t_model_material_id.
+    // Single material may be shared by multiple models.
     ModelMaterialMap materials;
+    // Objects are owned by a model. Each model may have multiple instances, each instance having its own transformation (shift, scale, rotation).
     ModelObjectPtrs objects;
     
     Model();
@@ -58,42 +66,57 @@ class Model
     void translate(coordf_t x, coordf_t y, coordf_t z);
     TriangleMesh mesh() const;
     TriangleMesh raw_mesh() const;
-    Pointfs _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb = NULL) const;
-    void arrange_objects(coordf_t dist, const BoundingBoxf* bb = NULL);
+    bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb, Pointfs &out) const;
+    bool arrange_objects(coordf_t dist, const BoundingBoxf* bb = NULL);
+    // Croaks if the duplicated objects do not fit the print bed.
     void duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
     void duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
     void duplicate_objects_grid(size_t x, size_t y, coordf_t dist);
     void print_info() const;
 };
 
+// Material, which may be shared across multiple ModelObjects of a single Model.
 class ModelMaterial
 {
     friend class Model;
     public:
+    // Attributes are defined by the AMF file format, but they don't seem to be used by Slic3r for any purpose.
     t_model_material_attributes attributes;
+    // Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
     DynamicPrintConfig config;
 
     Model* get_model() const { return this->model; };
     void apply(const t_model_material_attributes &attributes);
     
     private:
+    // Parent, owning this material.
     Model* model;
     
     ModelMaterial(Model *model);
     ModelMaterial(Model *model, const ModelMaterial &other);
 };
 
+// A printable object, possibly having multiple print volumes (each with its own set of parameters and materials),
+// and possibly having multiple modifier volumes, each modifier volume with its set of parameters and materials.
+// Each ModelObject may be instantiated mutliple times, each instance having different placement on the print bed,
+// different rotation and different uniform scaling.
 class ModelObject
 {
     friend class Model;
     public:
     std::string name;
     std::string input_file;
+    // Instances of this ModelObject. Each instance defines a shift on the print bed, rotation around the Z axis and a uniform scaling.
+    // Instances are owned by this ModelObject.
     ModelInstancePtrs instances;
+    // Printable and modifier volumes, each with its material ID and a set of override parameters.
+    // ModelVolumes are owned by this ModelObject.
     ModelVolumePtrs volumes;
+    // Configuration parameters specific to a single ModelObject, overriding the global Slic3r settings.
     DynamicPrintConfig config;
+    // Variation of a layer thickness for spans of Z coordinates.
     t_layer_height_ranges layer_height_ranges;
-    
+
     /* This vector accumulates the total translation applied to the object by the
         center_around_origin() method. Callers might want to apply the same translation
         to new volumes before adding them to this object in order to preserve alignment
@@ -133,15 +156,17 @@ class ModelObject
     void scale_to_fit(const Sizef3 &size);
     void rotate(float angle, const Axis &axis);
     void mirror(const Axis &axis);
+    void transform_by_instance(const ModelInstance &instance, bool dont_translate = false);
     size_t materials_count() const;
     size_t facets_count() const;
     bool needed_repair() const;
-    void cut(coordf_t z, Model* model) const;
+    void cut(Axis axis, coordf_t z, Model* model) const;
     void split(ModelObjectPtrs* new_objects);
     void update_bounding_box();   // this is a private method but we expose it until we need to expose it via XS
     void print_info() const;
     
     private:
+    // Parent object, owning this ModelObject.
     Model* model;
     
     ModelObject(Model *model);
@@ -151,15 +176,22 @@ class ModelObject
     ~ModelObject();
 };
 
+// An object STL, or a modifier volume, over which a different set of parameters shall be applied.
+// ModelVolume instances are owned by a ModelObject.
 class ModelVolume
 {
     friend class ModelObject;
     public:
     std::string name;
+    // The triangular model.
     TriangleMesh mesh;
+    // Configuration parameters specific to an object model geometry or a modifier volume, 
+    // overriding the global Slic3r settings and the ModelObject settings.
     DynamicPrintConfig config;
+    // Is it an object to be printed, or a modifier volume?
     bool modifier;
     
+    // A parent object owning this modifier volume.
     ModelObject* get_object() const { return this->object; };
     t_model_material_id material_id() const;
     void material_id(t_model_material_id material_id);
@@ -169,6 +201,7 @@ class ModelVolume
     ModelMaterial* assign_unique_material();
     
     private:
+    // Parent object owning this ModelVolume.
     ModelObject* object;
     t_model_material_id _material_id;
     
@@ -178,19 +211,29 @@ class ModelVolume
     void swap(ModelVolume &other);
 };
 
+// A single instance of a ModelObject.
+// Knows the affine transformation of an object.
 class ModelInstance
 {
     friend class ModelObject;
     public:
-    double rotation;            // in radians around mesh center point
+    double rotation;            // Rotation around the Z axis, in radians around mesh center point
     double scaling_factor;
     Pointf offset;              // in unscaled coordinates
     
     ModelObject* get_object() const { return this->object; };
+
+    // To be called on an external mesh
     void transform_mesh(TriangleMesh* mesh, bool dont_translate = false) const;
+    // Calculate a bounding box of a transformed mesh. To be called on an external mesh.
+    BoundingBoxf3 transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate = false) const;
+    // Transform an external bounding box.
+    BoundingBoxf3 transform_bounding_box(const BoundingBoxf3 &bbox, bool dont_translate = false) const;
+    // To be called on an external polygon. It does not translate the polygon, only rotates and scales.
     void transform_polygon(Polygon* polygon) const;
     
     private:
+    // Parent object, owning this instance.
     ModelObject* object;
     
     ModelInstance(ModelObject *object);

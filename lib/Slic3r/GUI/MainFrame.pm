@@ -1,3 +1,5 @@
+# The main frame, the parent of all.
+
 package Slic3r::GUI::MainFrame;
 use strict;
 use warnings;
@@ -19,7 +21,11 @@ sub new {
     my ($class, %params) = @_;
     
     my $self = $class->SUPER::new(undef, -1, 'Slic3r', wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE);
-    $self->SetIcon(Wx::Icon->new($Slic3r::var->("Slic3r_128px.png"), wxBITMAP_TYPE_PNG) );
+    if ($^O eq 'MSWin32') {
+        $self->SetIcon(Wx::Icon->new($Slic3r::var->("Slic3r.ico"), wxBITMAP_TYPE_ICO));
+    } else {
+        $self->SetIcon(Wx::Icon->new($Slic3r::var->("Slic3r_128px.png"), wxBITMAP_TYPE_PNG));        
+    }
     
     # store input params
     $self->{mode} = $params{mode};
@@ -32,6 +38,11 @@ sub new {
     # initialize tabpanel and menubar
     $self->_init_tabpanel;
     $self->_init_menubar;
+    
+    # set default tooltip timer in msec
+    # SetAutoPop supposedly accepts long integers but some bug doesn't allow for larger values
+    # (SetAutoPop is not available on GTK.)
+    eval { Wx::ToolTip::SetAutoPop(32767) };
     
     # initialize status bar
     $self->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($self, -1);
@@ -98,9 +109,9 @@ sub _init_tabpanel {
     
     if (!$self->{no_plater}) {
         $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
-        if (!$self->{no_controller}) {
-            $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
-        }
+    }
+    if (!$self->{no_controller}) {
+        $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
     }
     $self->{options_tabs} = {};
     
@@ -169,6 +180,13 @@ sub _init_menubar {
     # File menu
     my $fileMenu = Wx::Menu->new;
     {
+        $self->_append_menu_item($fileMenu, "Open STL/OBJ/AMF…\tCtrl+O", 'Open a model', sub {
+            $self->{plater}->add if $self->{plater};
+        }, undef, 'brick_add.png');
+        $self->_append_menu_item($fileMenu, "Open 2.5D TIN mesh…", 'Import a 2.5D TIN mesh', sub {
+            $self->{plater}->add_tin if $self->{plater};
+        }, undef, 'map_add.png');
+        $fileMenu->AppendSeparator();
         $self->_append_menu_item($fileMenu, "&Load Config…\tCtrl+L", 'Load exported configuration file', sub {
             $self->load_config_file;
         }, undef, 'plugin_add.png');
@@ -235,11 +253,9 @@ sub _init_menubar {
             $plater->export_amf;
         }, undef, 'brick_go.png');
         $self->_append_menu_item($self->{plater_menu}, "Open DLP Projector…\tCtrl+L", 'Open projector window for DLP printing', sub {
-            my $projector = Slic3r::GUI::Projector->new($self);
-            
-            # this double invocation is needed for properly hiding the MainFrame
-            $projector->Show;
-            $projector->ShowModal;
+            $plater->pause_background_process;
+            Slic3r::GUI::SLAPrintOptions->new($self)->ShowModal;
+            $plater->resume_background_process;
         }, undef, 'film.png');
         
         $self->{object_menu} = $self->{plater}->object_menu;
@@ -254,14 +270,18 @@ sub _init_menubar {
             $self->_append_menu_item($windowMenu, "Select &Plater Tab\tCtrl+1", 'Show the plater', sub {
                 $self->select_tab(0);
             }, undef, 'application_view_tile.png');
-            if (!$self->{no_controller}) {
-                $self->_append_menu_item($windowMenu, "Select &Controller Tab\tCtrl+T", 'Show the printer controller', sub {
-                    $self->select_tab(1);
-                }, undef, 'printer_empty.png');
-            }
-            $windowMenu->AppendSeparator();
-            $tab_offset += 2;
+            $tab_offset += 1;
         }
+        if (!$self->{no_controller}) {
+            $self->_append_menu_item($windowMenu, "Select &Controller Tab\tCtrl+T", 'Show the printer controller', sub {
+                $self->select_tab(1);
+            }, undef, 'printer_empty.png');
+            $tab_offset += 1;
+        }
+        if ($tab_offset > 0) {
+            $windowMenu->AppendSeparator();
+        }
+        
         $self->_append_menu_item($windowMenu, "Select P&rint Settings Tab\tCtrl+2", 'Show the print settings', sub {
             $self->select_tab($tab_offset+0);
         }, undef, 'cog.png');
@@ -271,6 +291,18 @@ sub _init_menubar {
         $self->_append_menu_item($windowMenu, "Select Print&er Settings Tab\tCtrl+4", 'Show the printer settings', sub {
             $self->select_tab($tab_offset+2);
         }, undef, 'printer_empty.png');
+    }
+
+    # View menu
+    if (!$self->{no_plater}) {
+        $self->{viewMenu} = Wx::Menu->new;
+        $self->_append_menu_item($self->{viewMenu}, "Iso"    , 'Iso View'    , sub { $self->select_view('iso'    ); });
+        $self->_append_menu_item($self->{viewMenu}, "Top"    , 'Top View'    , sub { $self->select_view('top'    ); });
+        $self->_append_menu_item($self->{viewMenu}, "Bottom" , 'Bottom View' , sub { $self->select_view('bottom' ); });
+        $self->_append_menu_item($self->{viewMenu}, "Front"  , 'Front View'  , sub { $self->select_view('front'  ); });
+        $self->_append_menu_item($self->{viewMenu}, "Rear"   , 'Rear View'   , sub { $self->select_view('rear'   ); });
+        $self->_append_menu_item($self->{viewMenu}, "Left"   , 'Left View'   , sub { $self->select_view('left'   ); });
+        $self->_append_menu_item($self->{viewMenu}, "Right"  , 'Right View'  , sub { $self->select_view('right'  ); });
     }
     
     # Help menu
@@ -305,6 +337,7 @@ sub _init_menubar {
         $menubar->Append($self->{plater_menu}, "&Plater") if $self->{plater_menu};
         $menubar->Append($self->{object_menu}, "&Object") if $self->{object_menu};
         $menubar->Append($windowMenu, "&Window");
+        $menubar->Append($self->{viewMenu}, "&View") if $self->{viewMenu};
         $menubar->Append($helpMenu, "&Help");
         $self->SetMenuBar($menubar);
     }
@@ -393,7 +426,7 @@ sub quick_slice {
         if ($params{reslice}) {
             $output_file = $qs_last_output_file if defined $qs_last_output_file;
         } elsif ($params{save_as}) {
-            $output_file = $sprint->expanded_output_filepath;
+            $output_file = $sprint->output_filepath;
             $output_file =~ s/\.gcode$/.svg/i if $params{export_svg};
             my $dlg = Wx::FileDialog->new($self, 'Save ' . ($params{export_svg} ? 'SVG' : 'G-code') . ' file as:',
                 wxTheApp->output_path(dirname($output_file)),
@@ -771,6 +804,14 @@ sub check_unsaved_changes {
 sub select_tab {
     my ($self, $tab) = @_;
     $self->{tabpanel}->SetSelection($tab);
+}
+
+# Set a camera direction, zoom to all objects.
+sub select_view {
+    my ($self, $direction) = @_;
+    if (! $self->{no_plater}) {
+        $self->{plater}->select_view($direction);
+    }
 }
 
 sub _append_menu_item {

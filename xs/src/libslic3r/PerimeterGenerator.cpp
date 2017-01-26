@@ -54,8 +54,7 @@ PerimeterGenerator::process()
     for (Surfaces::const_iterator surface = this->slices->surfaces.begin();
         surface != this->slices->surfaces.end(); ++surface) {
         // detect how many perimeters must be generated for this island
-        signed short loop_number = this->config->perimeters + surface->extra_perimeters;
-        loop_number--;  // 0-indexed loops
+        const int loop_number = this->config->perimeters + surface->extra_perimeters -1;  // 0-indexed loops
         
         Polygons gaps;
         
@@ -67,7 +66,7 @@ PerimeterGenerator::process()
             ThickPolylines thin_walls;
             
             // we loop one time more than needed in order to find gaps after the last perimeter was applied
-            for (signed short i = 0; i <= loop_number+1; ++i) {  // outer loop is 0
+            for (int i = 0; i <= loop_number+1; ++i) {  // outer loop is 0
                 Polygons offsets;
                 if (i == 0) {
                     // the minimum thickness of a single loop is:
@@ -116,15 +115,25 @@ PerimeterGenerator::process()
                         */
                     }
                 } else {
+                    //FIXME Is this offset correct if the line width of the inner perimeters differs
+                    // from the line width of the infill?
                     coord_t distance = (i == 1) ? ext_pspacing2 : pspacing;
                     
                     if (this->config->thin_walls) {
+                        // This path will ensure, that the perimeters do not overfill, as in 
+                        // prusa3d/Slic3r GH #32, but with the cost of rounding the perimeters
+                        // excessively, creating gaps, which then need to be filled in by the not very 
+                        // reliable gap fill algorithm.
+                        // Also the offset2(perimeter, -x, x) may sometimes lead to a perimeter, which is larger than
+                        // the original.
                         offsets = offset2(
                             last,
                             -(distance + min_spacing/2 - 1),
                             +(min_spacing/2 - 1)
                         );
                     } else {
+                        // If "detect thin walls" is not enabled, this paths will be entered, which 
+                        // leads to overflows, as in prusa3d/Slic3r GH #32
                         offsets = offset(
                             last,
                             -distance
@@ -160,16 +169,16 @@ PerimeterGenerator::process()
             }
             
             // nest loops: holes first
-            for (signed short d = 0; d <= loop_number; ++d) {
+            for (int d = 0; d <= loop_number; ++d) {
                 PerimeterGeneratorLoops &holes_d = holes[d];
                 
                 // loop through all holes having depth == d
-                for (signed short i = 0; i < holes_d.size(); ++i) {
+                for (int i = 0; i < (int)holes_d.size(); ++i) {
                     const PerimeterGeneratorLoop &loop = holes_d[i];
                     
                     // find the hole loop that contains this one, if any
-                    for (signed short t = d+1; t <= loop_number; ++t) {
-                        for (signed short j = 0; j < holes[t].size(); ++j) {
+                    for (int t = d+1; t <= loop_number; ++t) {
+                        for (int j = 0; j < (int)holes[t].size(); ++j) {
                             PerimeterGeneratorLoop &candidate_parent = holes[t][j];
                             if (candidate_parent.polygon.contains(loop.polygon.first_point())) {
                                 candidate_parent.children.push_back(loop);
@@ -181,8 +190,8 @@ PerimeterGenerator::process()
                     }
                     
                     // if no hole contains this hole, find the contour loop that contains it
-                    for (signed short t = loop_number; t >= 0; --t) {
-                        for (signed short j = 0; j < contours[t].size(); ++j) {
+                    for (int t = loop_number; t >= 0; --t) {
+                        for (int j = 0; j < (int)contours[t].size(); ++j) {
                             PerimeterGeneratorLoop &candidate_parent = contours[t][j];
                             if (candidate_parent.polygon.contains(loop.polygon.first_point())) {
                                 candidate_parent.children.push_back(loop);
@@ -197,16 +206,16 @@ PerimeterGenerator::process()
             }
         
             // nest contour loops
-            for (signed short d = loop_number; d >= 1; --d) {
+            for (int d = loop_number; d >= 1; --d) {
                 PerimeterGeneratorLoops &contours_d = contours[d];
                 
                 // loop through all contours having depth == d
-                for (signed short i = 0; i < contours_d.size(); ++i) {
+                for (int i = 0; i < (int)contours_d.size(); ++i) {
                     const PerimeterGeneratorLoop &loop = contours_d[i];
                 
                     // find the contour loop that contains it
-                    for (signed short t = d-1; t >= 0; --t) {
-                        for (signed short j = 0; j < contours[t].size(); ++j) {
+                    for (int t = d-1; t >= 0; --t) {
+                        for (int j = 0; j < contours[t].size(); ++j) {
                             PerimeterGeneratorLoop &candidate_parent = contours[t][j];
                             if (candidate_parent.polygon.contains(loop.polygon.first_point())) {
                                 candidate_parent.children.push_back(loop);
@@ -270,6 +279,8 @@ PerimeterGenerator::process()
                     are not subtracted from fill surfaces (they might be too short gaps
                     that medial axis skips but infill might join with other infill regions
                     and use zigzag).  */
+                //FIXME Vojtech: This grows by a rounded extrusion width, not by line spacing,
+                // therefore it may cover the area, but no the volume.
                 last = diff(last, gap_fill.grow());
             }
         }
@@ -286,10 +297,6 @@ PerimeterGenerator::process()
             // two or more loops
             inset += pspacing/2;
         }
-        
-        // only apply infill overlap if we actually have one perimeter
-        if (inset > 0)
-            inset -= this->config->get_abs_value("infill_overlap", inset + ispacing/2);
         
         {
             ExPolygons expp = union_ex(last);
@@ -343,8 +350,7 @@ PerimeterGenerator::_traverse_loops(const PerimeterGeneratorLoops &loops,
             && !(this->object_config->support_material && this->object_config->support_material_contact_distance.value == 0)) {
             // get non-overhang paths by intersecting this loop with the grown lower slices
             {
-                Polylines polylines;
-                intersection((Polygons)loop->polygon, this->_lower_slices_p, &polylines);
+                Polylines polylines = intersection_pl(loop->polygon, this->_lower_slices_p);
                 
                 for (Polylines::const_iterator polyline = polylines.begin(); polyline != polylines.end(); ++polyline) {
                     ExtrusionPath path(role);
@@ -360,8 +366,7 @@ PerimeterGenerator::_traverse_loops(const PerimeterGeneratorLoops &loops,
             // outside the grown lower slices (thus where the distance between
             // the loop centerline and original lower slices is >= half nozzle diameter
             {
-                Polylines polylines;
-                diff((Polygons)loop->polygon, this->_lower_slices_p, &polylines);
+                Polylines polylines = diff_pl(loop->polygon, this->_lower_slices_p);
                 
                 for (Polylines::const_iterator polyline = polylines.begin(); polyline != polylines.end(); ++polyline) {
                     ExtrusionPath path(erOverhangPerimeter);
@@ -447,7 +452,7 @@ PerimeterGenerator::_variable_width(const ThickPolylines &polylines, ExtrusionRo
         ExtrusionPath path(role);
         ThickLines lines = p->thicklines();
         
-        for (size_t i = 0; i < lines.size(); ++i) {
+        for (int i = 0; i < (int)lines.size(); ++i) {
             const ThickLine& line = lines[i];
             
             const coordf_t line_len = line.length();
@@ -455,7 +460,7 @@ PerimeterGenerator::_variable_width(const ThickPolylines &polylines, ExtrusionRo
             
             double thickness_delta = fabs(line.a_width - line.b_width);
             if (thickness_delta > tolerance) {
-                const unsigned short segments = ceil(thickness_delta / tolerance);
+                const size_t segments = ceil(thickness_delta / tolerance);
                 const coordf_t seg_len = line_len / segments;
                 Points pp;
                 std::vector<coordf_t> width;
@@ -535,12 +540,6 @@ PerimeterGenerator::_variable_width(const ThickPolylines &polylines, ExtrusionRo
     }
     
     return coll;
-}
-
-bool
-PerimeterGeneratorLoop::is_external() const
-{
-    return this->depth == 0;
 }
 
 bool

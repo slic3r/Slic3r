@@ -98,10 +98,7 @@ sub BUILD {
         }
     }
     
-    $self->_cooling_buffer(Slic3r::GCode::CoolingBuffer->new(
-        config      => $self->config,
-        gcodegen    => $self->_gcodegen,
-    ));
+    $self->_cooling_buffer(Slic3r::GCode::CoolingBuffer->new($self->_gcodegen));
     
     $self->_spiral_vase(Slic3r::GCode::SpiralVase->new(config => $self->config))
         if $self->config->spiral_vase;
@@ -162,7 +159,7 @@ sub export {
         if $self->config->cooling && $self->config->disable_fan_first_layers;
     
     # set bed temperature
-    if ((my $temp = $self->config->first_layer_bed_temperature) && $self->config->start_gcode !~ /M(?:190|140)/i) {
+    if ($self->config->has_heatbed && (my $temp = $self->config->first_layer_bed_temperature) && $self->config->start_gcode !~ /M(?:190|140)/i) {
         printf $fh $gcodegen->writer->set_bed_temperature($temp, 1);
     }
     
@@ -264,7 +261,7 @@ sub export {
                     # is triggered, so machine has more time to reach such temperatures
                     if ($layer->id == 0 && $finished_objects > 0) {
                         printf $fh $gcodegen->writer->set_bed_temperature($self->config->first_layer_bed_temperature),
-                            if $self->config->first_layer_bed_temperature;
+                            if $self->config->first_layer_bed_temperature && $self->config->has_heatbed;
                         $self->_print_first_layer_temperature(0);
                     }
                     $self->process_layer($layer, [$copy]);
@@ -357,7 +354,7 @@ sub process_layer {
     # check whether we're going to apply spiralvase logic
     if (defined $self->_spiral_vase) {
         $self->_spiral_vase->enable(
-            ($layer->id > 0 || $self->print->config->brim_width == 0)
+            ($layer->id > 0 || $self->print->config->brim_width == 0 || $self->print->config->brim_connections_width == 0)
                 && ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt)
                 && !defined(first { $_->region->config->bottom_solid_layers > $layer->id } @{$layer->regions})
                 && !defined(first { $_->perimeters->items_count > 1 } @{$layer->regions})
@@ -375,7 +372,7 @@ sub process_layer {
                 if $temperature && $temperature != $self->config->get_at('first_layer_temperature', $extruder->id);
         }
         $gcode .= $self->_gcodegen->writer->set_bed_temperature($self->print->config->bed_temperature)
-            if $self->print->config->bed_temperature && $self->print->config->bed_temperature != $self->print->config->first_layer_bed_temperature;
+            if $self->config->has_heatbed && $self->print->config->first_layer_bed_temperature && $self->print->config->bed_temperature != $self->print->config->first_layer_bed_temperature;
         $self->_second_layer_things_done(1);
     }
     
@@ -447,7 +444,7 @@ sub process_layer {
         $gcode .= $self->_gcodegen->set_extruder($self->print->regions->[0]->config->perimeter_extruder-1);
         $self->_gcodegen->set_origin(Slic3r::Pointf->new(0,0));
         $self->_gcodegen->avoid_crossing_perimeters->set_use_external_mp(1);
-        $gcode .= $self->_gcodegen->extrude_loop($_, 'brim', $object->config->support_material_speed)
+        $gcode .= $self->_gcodegen->extrude($_, 'brim', $object->config->support_material_speed)
             for @{$self->print->brim};
         $self->_brim_done(1);
         $self->_gcodegen->avoid_crossing_perimeters->set_use_external_mp(0);

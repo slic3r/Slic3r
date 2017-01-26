@@ -24,6 +24,13 @@
 #define __admesh_stl__
 
 #include <stdio.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <boost/detail/endian.hpp>
+
+#ifndef BOOST_LITTLE_ENDIAN
+#error "admesh works correctly on little endian machines only!"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,11 +40,15 @@ extern "C" {
 #define STL_MIN(A,B) ((A)<(B)? (A):(B))
 #define ABS(X)  ((X) < 0 ? -(X) : (X))
 
+// Size of the binary STL header, free form.
 #define LABEL_SIZE             80
+// Binary STL, length of the "number of faces" counter.
 #define NUM_FACET_SIZE         4
+// Binary STL, sizeof header + number of faces.
 #define HEADER_SIZE            84
 #define STL_MIN_FILE_SIZE      284
 #define ASCII_LINES_PER_FACET  7
+// Comparing an edge by memcmp, 2x3x4 bytes = 24
 #define SIZEOF_EDGE_SORT       24
 
 typedef struct {
@@ -46,11 +57,11 @@ typedef struct {
   float z;
 } stl_vertex;
 
-typedef struct {
-  float x;
-  float y;
-  float z;
-} stl_normal;
+#ifdef static_assert
+static_assert(sizeof(stl_vertex) == 12, "size of stl_vertex incorrect");
+#endif
+
+typedef stl_vertex stl_normal;
 
 typedef char stl_extra[2];
 
@@ -61,6 +72,13 @@ typedef struct {
 } stl_facet;
 #define SIZEOF_STL_FACET       50
 
+#ifdef static_assert
+static_assert(offsetof(stl_facet, normal) == 0, "stl_facet.normal has correct offset");
+static_assert(offsetof(stl_facet, vertex) == 12, "stl_facet.vertex has correct offset");
+static_assert(offsetof(stl_facet, extra ) == 48, "stl_facet.extra has correct offset");
+static_assert(sizeof(stl_facet) >= SIZEOF_STL_FACET, "size of stl_facet incorrect");
+#endif
+
 typedef enum {binary, ascii, inmemory} stl_type;
 
 typedef struct {
@@ -70,14 +88,24 @@ typedef struct {
 } stl_edge;
 
 typedef struct stl_hash_edge {
-  unsigned       key[6];
+  // Key of a hash edge: 2x binary copy of a floating point vertex.
+  uint32_t       key[6];
+  // Index of a facet owning this edge.
   int            facet_number;
+  // Index of this edge inside the facet with an index of facet_number.
+  // If this edge is stored backwards, which_edge is increased by 3.
   int            which_edge;
   struct stl_hash_edge  *next;
 } stl_hash_edge;
 
+#ifdef static_assert
+static_assert(offsetof(stl_hash_edge, facet_number) == SIZEOF_EDGE_SORT, "size of stl_hash_edge.key incorrect");
+#endif
+
 typedef struct {
+  // Index of a neighbor facet.
   int   neighbor[3];
+  // Index of an opposite vertex at the neighbor face.
   char  which_vertex_not[3];
 } stl_neighbors;
 
