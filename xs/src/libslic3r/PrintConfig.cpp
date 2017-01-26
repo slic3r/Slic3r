@@ -591,7 +591,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = "Match horizontal surfaces";
     def->tooltip = "Try to match horizontal surfaces during the slicing process. Matching is not guaranteed, very small surfaces and multiple surfaces with low vertical distance might cause bad results.";
     def->cli = "match-horizontal-surfaces!";
-    def->default_value = new ConfigOptionBool(true);
+    def->default_value = new ConfigOptionBool(false);
 
     def = this->add("max_fan_speed", coInt);
     def->label = "Max";
