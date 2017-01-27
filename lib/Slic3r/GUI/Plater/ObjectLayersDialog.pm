@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use utf8;
 
-use Slic3r::Geometry qw(PI X scale unscale);
+use Slic3r::Geometry qw(PI X Y Z scale unscale);
 use Slic3r::Print::State ':steps';
 use List::Util qw(min max sum first);
 use Wx qw(wxTheApp :dialog :id :misc :sizer :slider :statictext wxTAB_TRAVERSAL);
@@ -86,7 +86,7 @@ sub new {
     $self->{splineControl}->on_z_indicator(sub {
         my ($z) = @_;
         #$self->{preview3D}->canvas->cutting_plane_z($z);
-        $self->{preview3D}->canvas->SetCuttingPlane($z, []);
+        $self->{preview3D}->canvas->SetCuttingPlane(Z, $z, []);
         $self->{preview3D}->canvas->Render;
     });
 
