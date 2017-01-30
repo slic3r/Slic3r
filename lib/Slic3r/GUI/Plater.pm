@@ -172,7 +172,7 @@ sub new {
         $self->{htoolbar}->AddTool(TB_CUT, "Cut…", Wx::Bitmap->new($Slic3r::var->("package.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
         $self->{htoolbar}->AddTool(TB_SETTINGS, "Settings…", Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_LAYERS, "Layers…", Wx::Bitmap->new($Slic3r::var->("layers.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_LAYERS, "Layer heights…", Wx::Bitmap->new($Slic3r::var->("layers.png"), wxBITMAP_TYPE_PNG), '');
     } else {
         my %tbar_buttons = (
             add             => "Add…",
@@ -186,7 +186,7 @@ sub new {
             changescale     => "Scale…",
             split           => "Split",
             cut             => "Cut…",
-            layers          => "Layers…",
+            layers          => "Layer heights…",
             settings        => "Settings…",
         );
         $self->{btoolbar} = Wx::BoxSizer->new(wxHORIZONTAL);
@@ -1981,7 +1981,7 @@ sub object_menu {
     $frame->_append_menu_item($menu, "Cut…", 'Open the 3D cutting tool', sub {
         $self->object_cut_dialog;
     }, undef, 'package.png');
-    $frame->_append_menu_item($menu, "Layers…", 'Open the dynamic layer height control', sub {
+    $frame->_append_menu_item($menu, "Layer heights…", 'Open the dynamic layer height control', sub {
         $self->object_layers_dialog;
     }, undef, 'cog.png');
     $menu->AppendSeparator();
