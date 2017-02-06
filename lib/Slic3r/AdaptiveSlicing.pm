@@ -16,7 +16,8 @@ has 'current_facet' 	=> (is => 'rw');
 sub BUILD {
     my $self = shift;
     
-    my $facet_id = 0; 
+    my $facet_id = 0;
+    $self->mesh->repair;
     my $facets = $self->mesh->facets;
     my $vertices = $self->mesh->vertices;
     my $normals = $self->mesh->normals;
