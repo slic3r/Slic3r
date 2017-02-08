@@ -8,6 +8,8 @@ Prebuilt Win32 builds:
 * https://bintray.com/lordofhyphens/Slic3r/slic3r_dev/view (from build server)
 * https://bintray.com/lordofhyphens/Slic3r/slic3r_dev/1.3.0-dev (manually packaged)
 
+<img width=256 src=https://cloud.githubusercontent.com/assets/31754/22719818/09998c92-ed6d-11e6-9fa0-09de638f3a36.png />
+
 Slic3r takes 3D models (STL, OBJ, AMF) and converts them into G-code instructions for 
 3D printers. It's compatible with any modern printer based on the RepRap toolchain,
 including all those based on the Marlin, Sprinter and Repetier firmware. It also works
