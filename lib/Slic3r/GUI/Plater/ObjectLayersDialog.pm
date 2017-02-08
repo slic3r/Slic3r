@@ -19,6 +19,8 @@ sub new {
   	my $obj_idx = $self->{obj_idx} = $params{obj_idx};
     my $plater = $self->{plater} = $parent;
     my $object = $self->{object} = $self->{plater}->{print}->get_object($self->{obj_idx});
+    
+    $self->{update_spline_control} = 0;
 
     # Initialize 3D toolpaths preview
     if ($Slic3r::GUI::have_OpenGL) {
@@ -32,26 +34,26 @@ sub new {
 
 	$self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(150, 200), $object);
 
-#	my $cusp_slider = $self->{cusp_slider} = Wx::Slider->new(
-#        $self, -1,
-#        0,                              # default
-#        0,                              # min
-#        # we set max to a bogus non-zero value because the MSW implementation of wxSlider
-#        # will skip drawing the slider if max <= min:
-#        1,                              # max
-#        wxDefaultPosition,
-#        wxDefaultSize,
-#        wxHORIZONTAL,
-#    );
+	my $cusp_slider = $self->{cusp_slider} = Wx::Slider->new(
+        $self, -1,
+        0,                              # default
+        0,                              # min
+        # we set max to a bogus non-zero value because the MSW implementation of wxSlider
+        # will skip drawing the slider if max <= min:
+        1,                              # max
+        wxDefaultPosition,
+        wxDefaultSize,
+        wxHORIZONTAL,
+    );
 
-    #my $cusp_label = $self->{cusp_label} = Wx::StaticText->new($self, -1, "", wxDefaultPosition,
-    #    [150,-1], wxALIGN_CENTRE_HORIZONTAL);
-    #$cusp_label->SetFont($Slic3r::GUI::small_font);
+    my $cusp_label = $self->{cusp_label} = Wx::StaticText->new($self, -1, "", wxDefaultPosition,
+        [150,-1], wxALIGN_CENTRE_HORIZONTAL);
+    $cusp_label->SetFont($Slic3r::GUI::small_font);
 	
 	my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
 	$right_sizer->Add($self->{splineControl}, 1, wxEXPAND | wxALL, 0);
-	#$right_sizer->Add($cusp_slider, 0, wxEXPAND | wxALL, 0);
-	#$right_sizer->Add($cusp_label, 0, wxEXPAND | wxALL, 0);
+	$right_sizer->Add($cusp_slider, 0, wxEXPAND | wxALL, 0);
+	$right_sizer->Add($cusp_label, 0, wxEXPAND | wxALL, 0);
 	
 	$self->{sizer} = Wx::BoxSizer->new(wxHORIZONTAL);
 	$self->{sizer}->Add($self->{preview3D}, 3, wxEXPAND | wxTOP | wxBOTTOM, 0) if $self->{preview3D};
@@ -91,36 +93,41 @@ sub new {
     });
 
     # init cusp slider
-#    if($object->config->adaptive_slicing) {
-#        my $cusp_value = $object->config->get('cusp_value');
-#        $cusp_label->SetLabel(sprintf 'Cusp value: %.2f mm', $cusp_value);
-#        $cusp_slider->SetRange(0, $max_height*100);
-#        $cusp_slider->SetValue($cusp_value*100);
-#    }else{
-#        # disable slider
-#        $cusp_label->SetLabel("Cusp value: ");
-#        $cusp_label->Enable(0);
-#        $cusp_slider->Enable(0);
-#    }
+    if($object->config->adaptive_slicing) {
+        my $cusp_value = $object->config->get('cusp_value');
+        $cusp_label->SetLabel(sprintf 'Cusp value: %.2f mm', $cusp_value);
+        $cusp_slider->SetRange(0, 100);
+        $cusp_slider->SetValue($cusp_value*100);
+    }else{
+        # disable slider
+        $cusp_label->SetLabel("Cusp value: ");
+        $cusp_label->Enable(0);
+        $cusp_slider->Enable(0);
+    }
 
-#    EVT_SLIDER($self, $cusp_slider, sub {
-#    	$self->{plater}->pause_background_process;
-#    	my $cusp_value = $cusp_slider->GetValue/100;
-#    	$cusp_label->SetLabel(sprintf 'Cusp value: %.2f mm', $cusp_value);
-#    	my $success = $object->config->set('cusp_value', $cusp_value);
-#        # trigger re-slicing
-#        $self->{plater}->stop_background_process;
-#        $self->{object}->invalidate_step(STEP_SLICE);
-#        $self->{plater}->schedule_background_process;
-#    });
+    EVT_SLIDER($self, $cusp_slider, sub {
+    	$self->{plater}->pause_background_process;
+    	my $cusp_value = $cusp_slider->GetValue/100;
+    	$cusp_label->SetLabel(sprintf 'Cusp value: %.2f mm', $cusp_value);
+    	my $success = $object->config->set('cusp_value', $cusp_value);
+    	$object->layer_height_spline->setCuspValue($cusp_value);
+        # trigger re-slicing
+        $self->{plater}->stop_background_process;
+        $self->{object}->invalidate_step(STEP_SLICE);
+        $self->{plater}->schedule_background_process;
+    });
 
     return $self;
 }
 
 sub reload_preview {
 	my ($self) = @_;
-	#$self->{splineControl}->update;
+    $self->{splineControl}->update;
 	$self->{preview3D}->reload_print;
+	if($self->{object}->layer_count-1 > 0) {
+		my $top_layer = $self->{object}->get_layer($self->{object}->layer_count-1);
+		$self->{preview3D}->set_z($top_layer->print_z);
+	}
 }
 
 1;

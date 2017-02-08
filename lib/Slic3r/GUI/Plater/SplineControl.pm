@@ -161,7 +161,9 @@ sub mouse_event {
     			$self->{heights} = $self->{interactive_heights};
     			$self->{interactive_heights} = ();
     			# update spline database
-    			$self->{object}->layer_height_spline->updateLayerHeights($self->{heights});
+    			unless($self->{object}->layer_height_spline->updateLayerHeights($self->{heights})) {
+    			    die "Unable to update interpolated layers!\n";
+                }
     			$self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
     		}
     		$self->Refresh;
@@ -175,7 +177,9 @@ sub mouse_event {
                 $self->{heights} = $self->{interactive_heights};
                 $self->{interactive_heights} = ();
                 # update spline database
-                $self->{object}->layer_height_spline->updateLayerHeights($self->{heights});
+                unless($self->{object}->layer_height_spline->updateLayerHeights($self->{heights})) {
+                    die "Unable to update interpolated layers!\n";
+                }
                 $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
             }
             $self->Refresh;
@@ -229,17 +233,19 @@ sub set_size_parameters {
 sub update {
 	my $self = shift;
 
-    $self->{original_layers} = $self->{object}->layer_height_spline->getOriginalLayers;
-    $self->{original_interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
-    $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers; # Initialize to current values
-
-    # initialize height vector
-    $self->{heights} = ();
-    $self->{interactive_heights} = ();
-    my $last_z = 0;
-    foreach my $z (@{$self->{original_layers}}) {
-        push (@{$self->{heights}}, $z - $last_z);
-        $last_z = $z;
+    if($self->{object}->layer_height_spline->layersUpdated) {
+	    $self->{original_layers} = $self->{object}->layer_height_spline->getOriginalLayers;
+	    $self->{original_interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
+	    $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers; # Initialize to current values
+	
+	    # initialize height vector
+	    $self->{heights} = ();
+	    $self->{interactive_heights} = ();
+	    my $last_z = 0;
+	    foreach my $z (@{$self->{original_layers}}) {
+	        push (@{$self->{heights}}, $z - $last_z);
+	        $last_z = $z;
+	    }
     }
     $self->Refresh;
 }

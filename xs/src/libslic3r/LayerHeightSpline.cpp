@@ -16,6 +16,9 @@ LayerHeightSpline::LayerHeightSpline(coordf_t object_height)
 {
 	this->_is_valid = false;
 	this->_update_required = true;
+	this->_layers_updated = false;
+	this->_layer_heights_updated = false;
+	this->_cusp_value = -1;
 }
 
 LayerHeightSpline::~LayerHeightSpline()
@@ -81,6 +84,9 @@ bool LayerHeightSpline::setLayers(std::vector<coordf_t> layers)
 	this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), 0);
 	this->_internal_layer_heights.push_back(0);
 
+	this->_layers_updated = true;
+	this->_layer_heights_updated = false;
+
 	return this->_updateBSpline();
 }
 
@@ -104,6 +110,9 @@ bool LayerHeightSpline::updateLayerHeights(std::vector<coordf_t> heights)
 		result = this->_updateBSpline();
 	}
 
+	this->_layers_updated = false;
+	this->_layer_heights_updated = true;
+
 	return result;
 }
 
@@ -118,6 +127,8 @@ void LayerHeightSpline::clear()
 	delete this->_layer_height_spline;
 	this->_layer_height_spline = NULL;
 	this->_is_valid = false;
+	this->_layers_updated = false;
+	this->_layer_heights_updated = false;
 }
 
 

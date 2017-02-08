@@ -152,6 +152,10 @@ sub slice {
                 if ($self->config->adaptive_slicing) {
                     $height = 999;
                     my $cusp_value = $self->config->get_value('cusp_value');
+                    if($self->layer_height_spline->getCuspValue >= 0) {
+                    	$self->config->set('cusp_value', $self->layer_height_spline->getCuspValue);
+                    	$cusp_value = $self->layer_height_spline->getCuspValue;
+                    }
 
                     Slic3r::debugf "\n Slice layer: %d\n", $id;
 
@@ -159,7 +163,7 @@ sub slice {
                        for my $region_id (0 .. ($self->region_count - 1)) {
                            # get cusp height
                            next if(!defined $adaptive_slicing[$region_id]);
-                           my $cusp_height = $adaptive_slicing[$region_id]->cusp_height(scale $slice_z, $cusp_value, $min_height, $max_height);
+                           my $cusp_height = $adaptive_slicing[$region_id]->next_layer_height_area(scale $slice_z, $cusp_value, $min_height, $max_height);
 
                            # check for horizontal features and object size
                            if($self->config->get_value('match_horizontal_surfaces')) {
