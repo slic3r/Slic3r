@@ -381,8 +381,9 @@ sub Render {
             && ($self->print->has_infinite_skirt() || $self->print->config->skirt_height > $layer->id)
             && !$skirt_drawn) {
             $self->color([0, 0, 0]);
-            $self->_draw(undef, $print_z, $_) for @{$self->print->skirt};
-            $skirt_drawn = 1;
+            $self->_draw(undef, $print_z, $_)
+                for @{ ($layer->id == 0 && $self->print->has_brim_skirt) ? $self->print->brim_skirt : $self->print->skirt };
+             $skirt_drawn = 1;
         }
         
         foreach my $layerm (@{$layer->regions}) {

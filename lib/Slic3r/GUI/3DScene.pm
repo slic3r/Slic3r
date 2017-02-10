@@ -1323,7 +1323,8 @@ sub load_print_toolpaths {
             $self->_extrusionentity_to_verts($print->brim, $top_z, Slic3r::Point->new(0,0), $qverts, $tverts);
         }
         
-        $self->_extrusionentity_to_verts($print->skirt, $top_z, Slic3r::Point->new(0,0), $qverts, $tverts);
+        $self->_extrusionentity_to_verts($i == 0 && $print->has_brim_skirt ? $print->brim_skirt : $print->skirt,
+                                         $top_z, Slic3r::Point->new(0,0), $qverts, $tverts);
     }
     
     my $bb = Slic3r::Geometry::BoundingBoxf3->new;
