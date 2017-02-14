@@ -101,7 +101,7 @@ sub export_gcode {
 
         # close our gcode file
         close $fh;
-        rename $tempfile, $output_file if $tempfile;
+        rename Slic3r::encode_path($tempfile), Slic3r::encode_path($output_file) if $tempfile;
     }
     
     # run post-processing scripts
