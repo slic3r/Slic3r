@@ -42,6 +42,10 @@ our $PROCESS_COMPLETED_EVENT : shared = Wx::NewEventType;
 use constant FILAMENT_CHOOSERS_SPACING => 0;
 use constant PROCESS_DELAY => 0.5 * 1000; # milliseconds
 
+use Net::SSL;
+$ENV{HTTPS_VERSION} = 3;
+$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
+
 my $PreventListEvents = 0;
 
 sub new {
@@ -262,7 +266,16 @@ sub new {
         
         my $ua = LWP::UserAgent->new;
         $ua->timeout(5);
-        my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
+
+        my $host;
+        if ($self->{config}->octoprint_host !~ /^http/) {
+            $host = "http://" . $self->{config}->octoprint_host;
+        }
+        else {
+            $host = $self->{config}->octoprint_host;
+        }
+
+        my $res = $ua->get($host . "/api/files/local");
         $process_dialog->Destroy;
         if ($res->is_success) {
             if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
@@ -1387,12 +1400,25 @@ sub send_gcode {
     
     $self->statusbar->StartBusy;
     
+    use Net::SSL;
+    $ENV{HTTPS_VERSION} = 3;
+    $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
+
     my $ua = LWP::UserAgent->new;
     $ua->timeout(180);
     
     my $path = Slic3r::encode_path($self->{send_gcode_file});
+
+    my $host;
+    if ($self->{config}->octoprint_host !~ /^http/) {
+        $host = "http://" . $self->{config}->octoprint_host;
+    }
+    else {
+        $host = $self->{config}->octoprint_host;
+    }
+
     my $res = $ua->post(
-        "http://" . $self->{config}->octoprint_host . "/api/files/local",
+        $host . "/api/files/local",
         Content_Type => 'form-data',
         'X-Api-Key' => $self->{config}->octoprint_apikey,
         Content => [

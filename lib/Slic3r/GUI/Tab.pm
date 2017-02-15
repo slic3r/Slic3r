@@ -13,6 +13,10 @@ use Wx qw(:bookctrl :dialog :keycode :icon :id :misc :panel :sizer :treectrl :wi
 use Wx::Event qw(EVT_BUTTON EVT_CHOICE EVT_KEY_DOWN EVT_TREE_SEL_CHANGED);
 use base qw(Wx::Panel Class::Accessor);
 
+use Net::SSL;
+$ENV{HTTPS_VERSION} = 3;
+$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
+
 __PACKAGE__->mk_accessors(qw(current_preset));
 
 sub new {
@@ -1226,11 +1230,20 @@ sub build {
                 EVT_BUTTON($self, $btn, sub {
                     my $ua = LWP::UserAgent->new;
                     $ua->timeout(10);
+
+                    my $host;
+                    if ($self->{config}->octoprint_host !~ /^http/) {
+                        $host = "http://" . $self->{config}->octoprint_host;
+                    }
+                    else {
+                        $host = $self->{config}->octoprint_host;
+                    }
     
                     my $res = $ua->get(
-                        "http://" . $self->{config}->octoprint_host . "/api/version",
+                        $host . "/api/version",
                         'X-Api-Key' => $self->{config}->octoprint_apikey,
                     );
+
                     if ($res->is_success) {
                         Slic3r::GUI::show_info($self, "Connection to OctoPrint works correctly.", "Success!");
                     } else {
