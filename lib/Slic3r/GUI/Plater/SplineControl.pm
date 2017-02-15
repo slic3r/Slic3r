@@ -24,7 +24,7 @@ sub new {
     $self->{line_pen}           = Wx::Pen->new(Wx::Colour->new(50,50,50), 1, wxSOLID);
     $self->{original_pen}       = Wx::Pen->new(Wx::Colour->new(200,200,200), 1, wxSOLID);
     $self->{interactive_pen}    = Wx::Pen->new(Wx::Colour->new(255,0,0), 1, wxSOLID);
-    $self->{resulting_pen}      = Wx::Pen->new(Wx::Colour->new(50,255,50), 1, wxSOLID);
+    $self->{resulting_pen}      = Wx::Pen->new(Wx::Colour->new(5,120,160), 1, wxSOLID);
 
     $self->{user_drawn_background} = $^O ne 'darwin';
 
@@ -84,7 +84,7 @@ sub repaint {
         $dc->SetPen($self->{original_pen});
         my $pl = $self->point_to_pixel(0, $z);
         my $pr = $self->point_to_pixel($layer_h, $z);
-        $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
+        #$dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
         push (@points, $pr);
         $last_z = $z;
     }
@@ -112,14 +112,16 @@ sub repaint {
     # draw resulting layers as lines
     $last_z = 0.0;
     @points = ();
-    foreach my $z (@{$self->{interpolated_layers}}) {
-        my $layer_h = $z - $last_z;
-        $dc->SetPen($self->{resulting_pen});
-        my $pl = $self->point_to_pixel(0, $z);
-        my $pr = $self->point_to_pixel($layer_h, $z);
-        $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
-        push (@points, $pr);
-        $last_z = $z;
+    unless($self->{interactive_heights}) {
+        foreach my $z (@{$self->{interpolated_layers}}) {
+	        my $layer_h = $z - $last_z;
+	        $dc->SetPen($self->{resulting_pen});
+	        my $pl = $self->point_to_pixel(0, $z);
+	        my $pr = $self->point_to_pixel($layer_h, $z);
+	        $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
+	        push (@points, $pr);
+	        $last_z = $z;
+	    }
     }
 
 #    $dc->DrawSpline(\@points);

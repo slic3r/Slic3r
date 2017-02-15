@@ -46,14 +46,26 @@ sub new {
         wxHORIZONTAL,
     );
 
-    my $cusp_label = $self->{cusp_label} = Wx::StaticText->new($self, -1, "", wxDefaultPosition,
-        [150,-1], wxALIGN_CENTRE_HORIZONTAL);
+    my $cusp_label = $self->{cusp_label} = Wx::StaticText->new($self, -1, "    <-Quality", wxDefaultPosition,
+        [-1,-1], wxALIGN_LEFT);
+    my $value_label = $self->{value_label} = Wx::StaticText->new($self, -1, "", wxDefaultPosition,
+        [50,-1], wxALIGN_CENTRE_HORIZONTAL | wxST_NO_AUTORESIZE);
+    my $speed_label = $self->{speed_label} = Wx::StaticText->new($self, -1, "Speed->", wxDefaultPosition,
+        [-1,-1], wxST_NO_AUTORESIZE | wxALIGN_RIGHT);
     $cusp_label->SetFont($Slic3r::GUI::small_font);
+    $value_label->SetFont($Slic3r::GUI::small_font);
+    $speed_label->SetFont($Slic3r::GUI::small_font);
+	
+	my $quality_label_sizer = Wx::BoxSizer->new(wxHORIZONTAL);	
+	$quality_label_sizer->Add($cusp_label, 1, wxEXPAND | wxALL, 0);
+    $quality_label_sizer->Add($value_label, 1, wxEXPAND | wxALL, 0);
+    $quality_label_sizer->Add($speed_label, 1, wxEXPAND | wxALL, 0);
 	
 	my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
 	$right_sizer->Add($self->{splineControl}, 1, wxEXPAND | wxALL, 0);
 	$right_sizer->Add($cusp_slider, 0, wxEXPAND | wxALL, 0);
-	$right_sizer->Add($cusp_label, 0, wxEXPAND | wxALL, 0);
+	$right_sizer->Add($quality_label_sizer, 0, wxEXPAND | wxALL, 0);
+	
 	
 	$self->{sizer} = Wx::BoxSizer->new(wxHORIZONTAL);
 	$self->{sizer}->Add($self->{preview3D}, 3, wxEXPAND | wxTOP | wxBOTTOM, 0) if $self->{preview3D};
@@ -95,12 +107,12 @@ sub new {
     # init cusp slider
     if($object->config->adaptive_slicing) {
         my $cusp_value = $object->config->get('cusp_value');
-        $cusp_label->SetLabel(sprintf 'Cusp value: %.2f mm', $cusp_value);
+        $value_label->SetLabel(sprintf '%.2f mm', $cusp_value);
         $cusp_slider->SetRange(0, 100);
         $cusp_slider->SetValue($cusp_value*100);
     }else{
         # disable slider
-        $cusp_label->SetLabel("Cusp value: ");
+        $value_label->SetLabel("");
         $cusp_label->Enable(0);
         $cusp_slider->Enable(0);
     }
@@ -108,7 +120,7 @@ sub new {
     EVT_SLIDER($self, $cusp_slider, sub {
     	$self->{plater}->pause_background_process;
     	my $cusp_value = $cusp_slider->GetValue/100;
-    	$cusp_label->SetLabel(sprintf 'Cusp value: %.2f mm', $cusp_value);
+    	$value_label->SetLabel(sprintf '%.2f mm', $cusp_value);
     	my $success = $object->config->set('cusp_value', $cusp_value);
     	$object->layer_height_spline->setCuspValue($cusp_value);
         # trigger re-slicing
