@@ -1260,6 +1260,12 @@ sub export_gcode {
             $self->object_list_changed;
         });
         
+        # Supress re-initialization of spline based layer heights
+        #foreach my $object @{$self->{print}->objects} {
+       # 	$object->layer_height_spline->suppressUpdate;
+       # }
+        $_->layer_height_spline->suppressUpdate for @{$self->{print}->objects};
+        
         # start background process, whose completion event handler
         # will detect $self->{export_gcode_output_file} and proceed with export
         $self->start_background_process;
