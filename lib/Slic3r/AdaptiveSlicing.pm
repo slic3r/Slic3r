@@ -33,7 +33,9 @@ sub BUILD {
 		if($normal_length > 0) {
 			$self->normal_z->[$facet_id] = $normal->[Z]/$normal_length;
 		}else{  # facet with area = 0
-			$self->normal_z->[$facet_id] = [0 ,0 ,0];
+			$self->normal_z->[$facet_id] = 0.01;#[0 ,0 ,0];
+			print "facet with normal 0. p1: " . $vertices->[$facets->[$facet_id]->[0]]->[Z] . " p2: " . $vertices->[$facets->[$facet_id]->[1]]->[Z] . " p3: " . $vertices->[$facets->[$facet_id]->[2]]->[Z] . "\n";
+			print "normal: " . $normal->[0] . ", " . $normal->[1] . ", " . $normal->[2] . "\n";
 		}
     }
     
