@@ -105,14 +105,23 @@ sub slice {
         my $height  = 0;
 		my $cusp_height = 0;
 		my @layers = ();
+		
+		# determine min and max layer height from extruder capabilities.
+	    my %extruders;
+	    for my $region_id (0 .. ($self->region_count - 1)) {
+	        foreach (qw(perimeter_extruder infill_extruder solid_infill_extruder)) {
+	            my $extruder_id = $self->print->get_region($region_id)->config->get($_)-1;
+	            $extruders{$extruder_id} = $extruder_id;
+	        }
+	    }
+	    my $min_height = max(map {$self->print->config->get_at('min_layer_height', $_)} (values %extruders));
+	    my $max_height = min(map {$self->print->config->get_at('max_layer_height', $_)} (values %extruders));
 
 		if(!$self->layer_height_spline->updateRequired) { # layer heights are already generated, just update layers from spline
 		    @layers = @{$self->layer_height_spline->getInterpolatedLayers};
 		}else{ # create new set of layers
 	        # create stateful objects and variables for the adaptive slicing process
 	        my @adaptive_slicing;
-	        my $min_height = 0;
-			my $max_height = 0;
 	        if ($self->config->adaptive_slicing) {
 		        for my $region_id (0 .. ($self->region_count - 1)) {
 		            my $mesh;
@@ -133,16 +142,6 @@ sub slice {
                         );
                     }
                 }
-
-				# determine min and max layer height from perimeter extruder capabilities.
-				if($self->region_count > 1) { # multimaterial object
-					$min_height = max(map {$self->print->config->get_at('min_layer_height', $_)} (0..($self->region_count-1)));
-					$max_height = min(map {$self->print->config->get_at('max_layer_height', $_)} (0..($self->region_count-1)));
-				}else{ #single material object
-					my $perimeter_extruder = $self->print->get_region(0)->config->get('perimeter_extruder')-1;
-					$min_height = $self->print->config->get_at('min_layer_height', $perimeter_extruder);
-					$max_height = $self->print->config->get_at('max_layer_height', $perimeter_extruder);
-				}
 	        }
 
             # loop until we have at least one layer and the max slice_z reaches the object height
@@ -235,10 +234,16 @@ sub slice {
         foreach my $z (@layers) {
             $height = $z - $slice_z;
 
-	   # apply z-gradation
-	   if($gradation > 0) {
-	       $height = $height - unscale((scale($height)) % (scale($gradation)));
-           }
+	        # apply z-gradation
+	        if($gradation > 0) {
+	        	my $gradation_effect = unscale((scale($height)) % (scale($gradation)));
+	        	if($gradation_effect > $gradation/2 && ($height + ($gradation-$gradation_effect)) <= $max_height) { # round up
+	        		$height = $height + ($gradation-$gradation_effect);
+	        	}else{ # round down 
+	        		$height = $height - $gradation_effect;
+	        	}
+	            #$height = $height - unscale((scale($height)) % (scale($gradation)));
+	        }
 
             $print_z += $height;
             $slice_z += $height/2;
