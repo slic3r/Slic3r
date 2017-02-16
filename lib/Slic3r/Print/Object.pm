@@ -231,8 +231,15 @@ sub slice {
         
         # generate layer objects
         $slice_z = 0;
+        my $gradation = $self->config->get_value('adaptive_slicing_z_gradation');
         foreach my $z (@layers) {
             $height = $z - $slice_z;
+
+	   # apply z-gradation
+	   if($gradation > 0) {
+	       $height = $height - unscale((scale($height)) % (scale($gradation)));
+           }
+
             $print_z += $height;
             $slice_z += $height/2;
 
@@ -245,7 +252,7 @@ sub slice {
                 $self->get_layer($lc - 1)->set_lower_layer($self->get_layer($lc - 2));
             }
 
-            $id++;
+            $id++;       
             $slice_z += $height/2;   # add the other half layer
         }
     }
