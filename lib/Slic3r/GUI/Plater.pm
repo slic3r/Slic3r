@@ -142,6 +142,7 @@ sub new {
                         $self->stop_background_process;
                         $self->statusbar->SetStatusText("Slicing cancelled");
                         $self->{preview_notebook}->SetSelection(0);
+
                     });
                     $self->start_background_process;
                 } else {
@@ -457,6 +458,7 @@ sub new {
                 $self->{"print_info_$field"}->SetFont($Slic3r::GUI::small_font);
                 $grid_sizer->Add($self->{"print_info_$field"}, 0);
             }
+            $self->{"sliced_info_box"} = $print_info_sizer;
             
         }
         
@@ -473,6 +475,8 @@ sub new {
         $right_sizer->Add($self->{list}, 1, wxEXPAND, 5);
         $right_sizer->Add($object_info_sizer, 0, wxEXPAND, 0);
         $right_sizer->Add($print_info_sizer, 0, wxEXPAND, 0);
+        $right_sizer->Hide($print_info_sizer);
+        $self->{"right_sizer"} = $right_sizer;
         
         my $hsizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $hsizer->Add($self->{preview_notebook}, 1, wxEXPAND | wxTOP, 1);
@@ -1292,6 +1296,7 @@ sub export_gcode {
     
     # this updates buttons status
     $self->object_list_changed;
+    $self->{"right_sizer"}->Show($self->{"sliced_info_box"});
     
     return $self->{export_gcode_output_file};
 }
@@ -1585,7 +1590,9 @@ sub update {
     } else {
         $self->resume_background_process;
     }
-    
+    if ($self->{"right_sizer"}) { 
+        $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+    }
     $self->refresh_canvases;
 }
 
