@@ -7,6 +7,7 @@ plan tests => 43;
 BEGIN {
     use FindBin;
     use lib "$FindBin::Bin/../lib";
+    use local::lib "$FindBin::Bin/../local-lib";
 }
 
 use List::Util qw(first sum);
