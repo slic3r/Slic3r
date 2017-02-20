@@ -1400,10 +1400,6 @@ sub send_gcode {
     
     $self->statusbar->StartBusy;
     
-    use Net::SSL;
-    $ENV{HTTPS_VERSION} = 3;
-    $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
-
     my $ua = LWP::UserAgent->new;
     $ua->timeout(180);
     
