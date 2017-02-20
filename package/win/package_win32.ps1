@@ -37,6 +37,7 @@ cpanm "PAR::Packer"
 pp `
 -a "../../utils;utils"  `
 -a "autorun.bat;slic3r.bat"  `
+-a "slic3r.exe;slic3r.exe"  `
 -a "../../var;var"  `
 -a "${STRAWBERRY_PATH}\perl\bin\perl5.24.0.exe;perl5.24.0.exe"  `
 -a "${STRAWBERRY_PATH}\perl\bin\perl524.dll;perl524.dll"  `
