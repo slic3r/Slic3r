@@ -583,6 +583,15 @@ PrintConfigDef::PrintConfigDef()
     def->ratio_over = "perimeter_extrusion_width";
     def->default_value = new ConfigOptionFloatOrPercent(55, true);
 
+    def = this->add("bridge_infill_overlap", coFloatOrPercent);
+    def->label = "Infill/bridge perimeters overlap";
+    def->category = "Advanced";
+    def->tooltip = "This setting applies an additional overlap between bridging infill and perimeters for better bonding. This can be very useful for unsupported bridges to ensure they are bonded to the perimeters. If expressed as percentage (example: 15%) it is calculated over perimeter extrusion width.";
+    def->sidetext = "mm or %";
+    def->cli = "bridge-infill-overlap=s";
+    def->ratio_over = "perimeter_extrusion_width";
+    def->default_value = new ConfigOptionFloatOrPercent(55, true);
+
     def = this->add("infill_speed", coFloat);
     def->label = "Infill";
     def->category = "Speed";

@@ -273,7 +273,8 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "fill_pattern"
             || *opt_key == "top_infill_extrusion_width"
             || *opt_key == "first_layer_extrusion_width"
-            || *opt_key == "infill_overlap") {
+            || *opt_key == "infill_overlap"
+            || *opt_key == "bridge_infill_overlap") {
             steps.insert(posInfill);
         } else if (*opt_key == "fill_density"
             || *opt_key == "solid_infill_extrusion_width") {

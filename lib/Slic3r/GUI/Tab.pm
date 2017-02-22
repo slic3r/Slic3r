@@ -496,7 +496,7 @@ sub build {
         extrusion_width first_layer_extrusion_width perimeter_extrusion_width 
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
-        infill_overlap bridge_flow_ratio
+        infill_overlap bridge_infill_overlap bridge_flow_ratio
         xy_size_compensation threads resolution
     ));
     $self->{config}->set('print_settings_id', '');
@@ -676,6 +676,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Overlap');
             $optgroup->append_single_option_line('infill_overlap');
+            $optgroup->append_single_option_line('bridge_infill_overlap');
         }
         {
             my $optgroup = $page->new_optgroup('Flow');
