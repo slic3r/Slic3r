@@ -12,6 +12,14 @@ New-Variable -Name "current_branch" -Value ""
 New-Variable -Name "current_date" -Value "$(Get-Date -UFormat '%Y.%m.%d')"
 New-Variable -Name "output_file" -Value ""
 
+if ($args[0]) {
+	$perlversion = $args[0]
+} else {
+	$perlversion = "524"
+}
+
+$perldll = "perl$perlversion"
+
 git branch | foreach {
    if ($env:APPVEYOR) {
 	   if ($_ -match "`  (.*)") {
@@ -35,19 +43,17 @@ New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
 cpanm "PAR::Packer"
 
 pp `
--a "../../utils;utils"  `
--a "autorun.bat;slic3r.bat"  `
--a "../../var;var"  `
--a "${STRAWBERRY_PATH}\perl\bin\perl5.24.0.exe;perl5.24.0.exe"  `
--a "${STRAWBERRY_PATH}\perl\bin\perl524.dll;perl524.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\freeglut.dll;freeglut.dll"  `
--a "${STRAWBERRY_PATH}\c\bin\libglut-0_.dll;libglut-0_.dll"  `
+-a "slic3r.exe;slic3r.exe"  `
 -a "../../lib;lib" `
 -a "../../local-lib;local-lib" `
 -a "../../slic3r.pl;slic3r.pl" `
+-a "../../utils;utils"  `
+-a "../../var;var"  `
+-a "../../FreeGLUT/freeglut.dll;freeglut.dll" `
+-a "${STRAWBERRY_PATH}\perl\bin\perl${perlversion}.dll;perl${perlversion}.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\freeglut.dll;freeglut.dll"  `
 -M AutoLoader `
 -M B `
 -M Carp `
