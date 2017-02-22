@@ -58,8 +58,6 @@ pp `
 -M B `
 -M Carp `
 -M Class::Accessor `
--M Class::XSAccessor `
--M Class::XSAccessor::Heavy `
 -M Config `
 -M Crypt::CBC `
 -M Cwd `
