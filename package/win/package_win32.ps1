@@ -52,8 +52,7 @@ pp `
 -a "../../FreeGLUT/freeglut.dll;freeglut.dll" `
 -a "${STRAWBERRY_PATH}\perl\bin\perl${perlversion}.dll;perl${perlversion}.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\freeglut.dll;freeglut.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\pthreadGC2-w64.dll;pthreadGC2-w64.dll"  `
 -M AutoLoader `
 -M B `
 -M Carp `
