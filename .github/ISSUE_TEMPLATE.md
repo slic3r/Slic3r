@@ -17,6 +17,8 @@ _What OS are you using, and state any version #s_
   * _Screenshots from __*Slic3r*__ preview are preferred_
 
 _Is this a new feature request?_
+Related guides for writing feature requests: http://meta.stackexchange.com/a/259196 http://nickohrn.com/2013/09/write-great-feature-request-bug-report/
+
 
 #### STL/Config (.ZIP) where problem occurs
 _Upload a zipped copy of an STL and your config (`File -> Export Config`)_
