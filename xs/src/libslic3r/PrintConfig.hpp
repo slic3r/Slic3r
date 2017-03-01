@@ -41,7 +41,7 @@ enum SupportMaterialPattern {
 };
 
 enum SeamPosition {
-    spRandom, spNearest, spAligned
+    spRandom, spNearest, spAligned, spRear
 };
 
 template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_values() {
@@ -89,6 +89,7 @@ template<> inline t_config_enum_values ConfigOptionEnum<SeamPosition>::get_enum_
     keys_map["random"]              = spRandom;
     keys_map["nearest"]             = spNearest;
     keys_map["aligned"]             = spAligned;
+    keys_map["rear"]                = spRear;
     return keys_map;
 }
 

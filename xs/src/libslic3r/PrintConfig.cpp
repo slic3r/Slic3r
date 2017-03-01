@@ -943,9 +943,11 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("random");
     def->enum_values.push_back("nearest");
     def->enum_values.push_back("aligned");
+    def->enum_values.push_back("rear");
     def->enum_labels.push_back("Random");
     def->enum_labels.push_back("Nearest");
     def->enum_labels.push_back("Aligned");
+    def->enum_labels.push_back("Rear");
     def->default_value = new ConfigOptionEnum<SeamPosition>(spAligned);
 
     def = this->add("serial_port", coString);
