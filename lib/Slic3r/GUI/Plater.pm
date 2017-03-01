@@ -1477,7 +1477,7 @@ sub export_amf {
     return if !@{$self->{objects}};
         
     my $output_file = $self->_get_export_file('AMF') or return;
-    Slic3r::Format::AMF->write_file($output_file, $self->{model});
+    $self->{model}->write_amf($output_file);
     $self->statusbar->SetStatusText("AMF file exported to $output_file");
 }
 

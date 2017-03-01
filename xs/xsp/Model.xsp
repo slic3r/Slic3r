@@ -18,6 +18,10 @@
         %code%{ RETVAL = Slic3r::IO::STL::read(input_file, THIS); %};
     bool read_obj(std::string input_file)
         %code%{ RETVAL = Slic3r::IO::OBJ::read(input_file, THIS); %};
+    bool read_amf(std::string input_file)
+        %code%{ RETVAL = Slic3r::IO::AMF::read(input_file, THIS); %};
+    bool write_amf(std::string output_file)
+        %code%{ RETVAL = Slic3r::IO::AMF::write(*THIS, output_file); %};
     
     %name{_add_object} Ref<ModelObject> add_object();
     Ref<ModelObject> _add_object_clone(ModelObject* other, bool copy_volumes = true)

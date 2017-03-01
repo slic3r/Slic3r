@@ -24,6 +24,13 @@ class OBJ
     static bool write(TriangleMesh& mesh, std::string output_file);
 };
 
+class AMF
+{
+    public:
+    static bool read(std::string input_file, Model* model);
+    static bool write(Model& model, std::string output_file);
+};
+
 class POV
 {
     public:

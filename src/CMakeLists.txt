@@ -30,6 +30,7 @@ include_directories(${LIBDIR}/libslic3r)
 include_directories(${LIBDIR}/Slic3r/GUI/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/standalone/)
 include_directories(${LIBDIR}/admesh/)
+include_directories(${LIBDIR}/expat/)
 include_directories(${LIBDIR}/poly2tri/)
 include_directories(${LIBDIR}/poly2tri/sweep)
 include_directories(${LIBDIR}/poly2tri/common)
@@ -57,6 +58,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/GCodeWriter.cpp
     ${LIBDIR}/libslic3r/Geometry.cpp
     ${LIBDIR}/libslic3r/IO.cpp
+    ${LIBDIR}/libslic3r/IO/AMF.cpp
     ${LIBDIR}/libslic3r/Layer.cpp
     ${LIBDIR}/libslic3r/LayerRegion.cpp
     ${LIBDIR}/libslic3r/LayerRegionFill.cpp
@@ -89,6 +91,11 @@ add_library(admesh STATIC
     ${LIBDIR}/admesh/util.c
 )
 add_library(clipper STATIC ${LIBDIR}/clipper.cpp)
+add_library(expat STATIC
+    ${LIBDIR}/expat/xmlparse.c
+    ${LIBDIR}/expat/xmlrole.c
+    ${LIBDIR}/expat/xmltok.c
+)
 add_library(polypartition STATIC ${LIBDIR}/polypartition.cpp)
 add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/common/shapes.cc
@@ -130,12 +137,12 @@ IF(wxWidgets_FOUND)
     INCLUDE("${wxWidgets_USE_FILE}")
     add_library(slic3r_gui STATIC ${LIBDIR}/slic3r/GUI/3DScene.cpp ${LIBDIR}/slic3r/GUI/GUI.cpp)
     #only build GUI lib if building with wx
-    target_link_libraries (slic3r slic3r_gui libslic3r admesh clipper polypartition poly2tri ${Boost_LIBRARIES} ${wxWidgets_LIBRARIES})
+    target_link_libraries (slic3r slic3r_gui libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES} ${wxWidgets_LIBRARIES})
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
     MESSAGE("wx not found!")
-    target_link_libraries (slic3r libslic3r admesh clipper polypartition poly2tri ${Boost_LIBRARIES})
+    target_link_libraries (slic3r libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
     #skip gui when no wx included
 ENDIF(wxWidgets_FOUND)
 
-target_link_libraries (extrude-tin libslic3r admesh clipper polypartition poly2tri ${Boost_LIBRARIES})
+target_link_libraries (extrude-tin libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
