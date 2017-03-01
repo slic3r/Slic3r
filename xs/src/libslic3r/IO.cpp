@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <fstream>
 #include <iostream>
+#include <boost/filesystem.hpp>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
@@ -33,13 +34,20 @@ STL::read(std::string input_file, Model* model)
         throw std::runtime_error("This STL file couldn't be read because it's empty.");
     
     ModelObject* object = model->add_object();
-    object->name        = input_file;  // TODO: use basename()
+    object->name        = boost::filesystem::path(input_file).filename().string();
     object->input_file  = input_file;
     
     ModelVolume* volume = object->add_volume(mesh);
-    volume->name        = input_file;   // TODO: use basename()
+    volume->name        = object->name;
     
     return true;
+}
+
+bool
+STL::write(Model& model, std::string output_file, bool binary)
+{
+    TriangleMesh mesh = model.mesh();
+    return STL::write(mesh, output_file, binary);
 }
 
 bool
@@ -83,7 +91,7 @@ OBJ::read(std::string input_file, Model* model)
         throw std::runtime_error("Error while reading OBJ file");
     
     ModelObject* object = model->add_object();
-    object->name        = input_file;  // TODO: use basename()
+    object->name        = boost::filesystem::path(input_file).filename().string();
     object->input_file  = input_file;
     
     // Loop over shapes and add a volume for each one.
@@ -118,10 +126,17 @@ OBJ::read(std::string input_file, Model* model)
         TriangleMesh mesh(points, facets);
         mesh.check_topology();
         ModelVolume* volume = object->add_volume(mesh);
-        volume->name        = input_file;   // TODO: use basename()
+        volume->name        = object->name;
     }
     
     return true;
+}
+
+bool
+OBJ::write(Model& model, std::string output_file)
+{
+    TriangleMesh mesh = model.mesh();
+    return OBJ::write(mesh, output_file);
 }
 
 bool

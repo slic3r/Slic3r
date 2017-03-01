@@ -1420,7 +1420,7 @@ sub export_stl {
     return if !@{$self->{objects}};
         
     my $output_file = $self->_get_export_file('STL') or return;
-    Slic3r::Format::STL->write_file($output_file, $self->{model}, binary => 1);
+    $self->{model}->write_stl($output_file, 1);
     $self->statusbar->SetStatusText("STL file exported to $output_file");
 }
 
@@ -1467,7 +1467,7 @@ sub export_object_stl {
     my $model_object = $self->{model}->objects->[$obj_idx];
         
     my $output_file = $self->_get_export_file('STL') or return;
-    Slic3r::Format::STL->write_file($output_file, $model_object->mesh, binary => 1);
+    $model_object->mesh->write_binary($output_file);
     $self->statusbar->SetStatusText("STL file exported to $output_file");
 }
 

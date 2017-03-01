@@ -10,6 +10,15 @@
 %name{Slic3r::Model} class Model {
     Model();
     ~Model();
+    
+    %name{read_from_file} Model(std::string input_file)
+        %code%{
+            try {
+                RETVAL = new Model(Model::read_from_file(input_file));
+            } catch (std::exception& e) {
+                croak("Error while opening %s: %s\n", input_file.c_str(), e.what());
+            }
+        %};
 
     Clone<Model> clone()
         %code%{ RETVAL = THIS; %};
@@ -20,6 +29,11 @@
         %code%{ RETVAL = Slic3r::IO::OBJ::read(input_file, THIS); %};
     bool read_amf(std::string input_file)
         %code%{ RETVAL = Slic3r::IO::AMF::read(input_file, THIS); %};
+    
+    bool write_stl(std::string output_file, bool binary = false)
+        %code%{ RETVAL = Slic3r::IO::STL::write(*THIS, output_file, binary); %};
+    bool write_obj(std::string output_file)
+        %code%{ RETVAL = Slic3r::IO::OBJ::write(*THIS, output_file); %};
     bool write_amf(std::string output_file)
         %code%{ RETVAL = Slic3r::IO::AMF::write(*THIS, output_file); %};
     

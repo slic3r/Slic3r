@@ -26,7 +26,7 @@ my %opt = ();
 }
 
 {
-    my @models = map Slic3r::Format::STL->read_file($_), @ARGV;
+    my @models = map Slic3r::Model->read_from_file($_), @ARGV;
     my $output_file = $ARGV[0];
     $output_file =~ s/\.stl$/.amf.xml/i;
     
@@ -54,7 +54,7 @@ my %opt = ();
     }
     
     printf "Writing to %s\n", basename($output_file);
-    Slic3r::Format::AMF->write_file($output_file, $new_model);
+    $new_model->write_amf($output_file);
 }
 
 

@@ -69,9 +69,8 @@ main(const int argc, const char **argv)
         }
         
         Model model;
-        // TODO: read other file formats with Model::read_from_file()
         try {
-            IO::STL::read(*it, &model);
+            model = Model::read_from_file(*it);
         } catch (std::exception &e) {
             std::cout << *it << ": " << e.what() << std::endl;
             exit(1);
