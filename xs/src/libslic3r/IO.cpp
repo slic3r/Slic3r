@@ -3,11 +3,17 @@
 #include <fstream>
 #include <iostream>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
 namespace Slic3r { namespace IO {
 
 bool
 STL::read(std::string input_file, TriangleMesh* mesh)
 {
+    // TODO: encode file name
+    // TODO: check that file exists
+    
     try {
         mesh->ReadSTLFile(input_file);
         mesh->check_topology();
@@ -20,9 +26,6 @@ STL::read(std::string input_file, TriangleMesh* mesh)
 bool
 STL::read(std::string input_file, Model* model)
 {
-    // TODO: encode file name
-    // TODO: check that file exists
-    
     TriangleMesh mesh;
     if (!STL::read(input_file, &mesh)) return false;
     
@@ -47,6 +50,77 @@ STL::write(TriangleMesh& mesh, std::string output_file, bool binary)
     } else {
         mesh.write_ascii(output_file);
     }
+    return true;
+}
+
+bool
+OBJ::read(std::string input_file, TriangleMesh* mesh)
+{
+    Model model;
+    OBJ::read(input_file, &model);
+    *mesh = model.mesh();
+    
+    return true;
+}
+
+bool
+OBJ::read(std::string input_file, Model* model)
+{
+    // TODO: encode file name
+    // TODO: check that file exists
+    
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string err;
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, input_file.c_str());
+    
+    if (!err.empty()) { // `err` may contain warning message.
+        std::cerr << err << std::endl;
+    }
+    
+    if (!ret)
+        throw std::runtime_error("Error while reading OBJ file");
+    
+    ModelObject* object = model->add_object();
+    object->name        = input_file;  // TODO: use basename()
+    object->input_file  = input_file;
+    
+    // Loop over shapes and add a volume for each one.
+    for (std::vector<tinyobj::shape_t>::const_iterator shape = shapes.begin();
+        shape != shapes.end(); ++shape) {
+        
+        Pointf3s points;
+        std::vector<Point3> facets;
+        
+        // Read vertices.
+        assert((shape->mesh.vertices.size() % 3) == 0);
+        for (size_t v = 0; v < attrib.vertices.size(); ++v) {
+            points.push_back(Pointf3(
+                attrib.vertices[v],
+                attrib.vertices[++v],
+                attrib.vertices[++v]
+            ));
+        }
+        
+        // Loop over facets of the current shape.
+        for (size_t f = 0; f < shape->mesh.num_face_vertices.size(); ++f) {
+            // tiny_obj_loader should triangulate any facet with more than 3 vertices
+            assert((shape->mesh.num_face_vertices[f] % 3) == 0);
+            
+            facets.push_back(Point3(
+                shape->mesh.indices[f*3+0].vertex_index,
+                shape->mesh.indices[f*3+1].vertex_index,
+                shape->mesh.indices[f*3+2].vertex_index
+            ));
+        }
+        
+        TriangleMesh mesh(points, facets);
+        mesh.check_topology();
+        ModelVolume* volume = object->add_volume(mesh);
+        volume->name        = input_file;   // TODO: use basename()
+    }
+    
     return true;
 }
 

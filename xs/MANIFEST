@@ -117,6 +117,7 @@ src/slic3r/GUI/3DScene.cpp
 src/slic3r/GUI/3DScene.hpp
 src/slic3r/GUI/GUI.cpp
 src/slic3r/GUI/GUI.hpp
+src/tiny_obj_loader.h
 src/xsinit.h
 t/01_trianglemesh.t
 t/03_point.t

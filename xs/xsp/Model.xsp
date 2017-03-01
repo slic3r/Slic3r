@@ -2,6 +2,7 @@
 
 %{
 #include <xsinit.h>
+#include "libslic3r/IO.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/PrintConfig.hpp"
 %}
@@ -12,6 +13,9 @@
 
     Clone<Model> clone()
         %code%{ RETVAL = THIS; %};
+    
+    bool read_obj(std::string input_file)
+        %code%{ RETVAL = Slic3r::IO::OBJ::read(input_file, THIS); %};
     
     %name{_add_object} Ref<ModelObject> add_object();
     Ref<ModelObject> _add_object_clone(ModelObject* other, bool copy_volumes = true)
