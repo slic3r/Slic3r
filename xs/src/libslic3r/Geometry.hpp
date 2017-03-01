@@ -38,18 +38,12 @@ class MedialAxis {
     double max_width;
     double min_width;
     MedialAxis(double _max_width, double _min_width, const ExPolygon* _expolygon = NULL)
-        : max_width(_max_width), min_width(_min_width), expolygon(_expolygon) {};
+        : expolygon(_expolygon), max_width(_max_width), min_width(_min_width) {};
     void build(ThickPolylines* polylines);
     void build(Polylines* polylines);
     
     private:
-    class VD : public voronoi_diagram<double> {
-    public:
-        typedef double                                          coord_type;
-        typedef boost::polygon::point_data<coordinate_type>     point_type;
-        typedef boost::polygon::segment_data<coordinate_type>   segment_type;
-        typedef boost::polygon::rectangle_data<coordinate_type> rect_type;
-    };
+    typedef voronoi_diagram<double> VD;
     VD vd;
     std::set<const VD::edge_type*> edges, valid_edges;
     std::map<const VD::edge_type*, std::pair<coordf_t,coordf_t> > thickness;

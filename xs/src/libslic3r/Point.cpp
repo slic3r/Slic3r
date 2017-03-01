@@ -311,6 +311,7 @@ _align_to_grid(const coord_t coord, const coord_t spacing) {
     // Current C++ standard defines the result of integer division to be rounded to zero,
     // for both positive and negative numbers. Here we want to round down for negative
     // numbers as well.
+    assert(spacing > 0);
     coord_t aligned = (coord < 0) ?
             ((coord - spacing + 1) / spacing) * spacing :
             (coord / spacing) * spacing;

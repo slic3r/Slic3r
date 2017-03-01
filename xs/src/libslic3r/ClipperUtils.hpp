@@ -212,7 +212,7 @@ union_ex(const Slic3r::Surfaces &subject, bool safety_offset_ = false)
 
 ClipperLib::PolyTree union_pt(const Slic3r::Polygons &subject, bool safety_offset_ = false);
 Slic3r::Polygons union_pt_chained(const Slic3r::Polygons &subject, bool safety_offset_ = false);
-static void traverse_pt(ClipperLib::PolyNodes &nodes, Slic3r::Polygons* retval);
+void traverse_pt(ClipperLib::PolyNodes &nodes, Slic3r::Polygons* retval);
 
 /* OTHER */
 Slic3r::Polygons simplify_polygons(const Slic3r::Polygons &subject, bool preserve_collinear = false);

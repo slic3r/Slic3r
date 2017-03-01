@@ -97,8 +97,8 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Static::new_FullPrintCo
     $config->set_deserialize('gcode_flavor', 'machinekit');
     is $config->get('gcode_flavor'), 'machinekit', 'deserialize enum (gcode_flavor)';
     
-    $config->set_deserialize('fill_pattern', 'line');
-    is $config->get('fill_pattern'), 'line', 'deserialize enum (fill_pattern)';
+    $config->set_deserialize('fill_pattern', 'stars');
+    is $config->get('fill_pattern'), 'stars', 'deserialize enum (fill_pattern)';
     
     $config->set_deserialize('support_material_pattern', 'pillars');
     is $config->get('support_material_pattern'), 'pillars', 'deserialize enum (support_material_pattern)';
@@ -199,12 +199,12 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Static::new_FullPrintCo
 
 {
     my $config = Slic3r::Config->new;
-    $config->set('fill_pattern', 'line');
+    $config->set('fill_pattern', 'stars');
 
     my $config2 = Slic3r::Config->new;
     $config2->set('fill_pattern', 'hilbertcurve');
     
-    is $config->get('fill_pattern'), 'line', 'no interferences between DynamicConfig objects';
+    is $config->get('fill_pattern'), 'stars', 'no interferences between DynamicConfig objects';
 }
 
 {

@@ -8,13 +8,13 @@ namespace Slic3r {
 
 void FillPlanePath::_fill_surface_single(
     unsigned int                     thickness_layers,
-    const std::pair<float, Point>   &direction, 
+    const direction_t               &direction, 
     ExPolygon                       &expolygon, 
     Polylines*                      polylines_out)
 {
     expolygon.rotate(-direction.first);
 
-    const coord_t distance_between_lines = scale_(this->spacing) / this->density;
+    const coord_t distance_between_lines = scale_(this->min_spacing) / this->density;
     
     // align infill across layers using the object's bounding box (if available)
     BoundingBox bounding_box = this->bounding_box.defined

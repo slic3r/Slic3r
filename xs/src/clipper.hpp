@@ -1,10 +1,10 @@
 /*******************************************************************************
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
-* Version   :  6.4.0                                                           *
-* Date      :  2 July 2015                                                     *
+* Version   :  6.4.2                                                           *
+* Date      :  27 February 2017                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2015                                         *
+* Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
 * License:                                                                     *
 * Use, modification & distribution is subject to Boost Software License Ver 1. *
@@ -34,7 +34,7 @@
 #ifndef clipper_hpp
 #define clipper_hpp
 
-#define CLIPPER_VERSION "6.2.6"
+#define CLIPPER_VERSION "6.4.2"
 
 //use_int32: When enabled 32bit ints are used instead of 64bit ints. This
 //improve performance but coordinate values are limited to the range +/- 46340
@@ -137,7 +137,7 @@ class PolyNode
 { 
 public:
     PolyNode();
-    ~PolyNode(){};
+    virtual ~PolyNode(){};
     Path Contour;
     PolyNodes Childs;
     PolyNode* Parent;
@@ -146,6 +146,7 @@ public:
     bool IsOpen() const;
     int ChildCount() const;
 private:
+    //PolyNode& operator =(PolyNode& other); 
     unsigned Index; //node index in Parent.Childs
     bool m_IsOpen;
     JoinType m_jointype;
@@ -159,12 +160,13 @@ private:
 class PolyTree: public PolyNode
 { 
 public:
-    ~PolyTree(){Clear();};
+    ~PolyTree(){ Clear(); };
     PolyNode* GetFirst() const;
     void Clear();
     int Total() const;
 private:
-    PolyNodes AllNodes;
+  //PolyTree& operator =(PolyTree& other);
+  PolyNodes AllNodes;
     friend class Clipper; //to access AllNodes
 };
 
@@ -219,17 +221,17 @@ class ClipperBase
 {
 public:
   ClipperBase();
-  ~ClipperBase();
-  bool AddPath(const Path &pg, PolyType PolyTyp, bool Closed);
+  virtual ~ClipperBase();
+  virtual bool AddPath(const Path &pg, PolyType PolyTyp, bool Closed);
   bool AddPaths(const Paths &ppg, PolyType PolyTyp, bool Closed);
-  void Clear();
+  virtual void Clear();
   IntRect GetBounds();
   bool PreserveCollinear() {return m_PreserveCollinear;};
   void PreserveCollinear(bool value) {m_PreserveCollinear = value;};
 protected:
   void DisposeLocalMinimaList();
   TEdge* AddBoundsToLML(TEdge *e, bool IsClosed);
-  void Reset();
+  virtual void Reset();
   TEdge* ProcessBound(TEdge* E, bool IsClockwise);
   void InsertScanbeam(const cInt Y);
   bool PopScanbeam(cInt &Y);
@@ -258,7 +260,7 @@ protected:
 };
 //------------------------------------------------------------------------------
 
-class Clipper : public ClipperBase
+class Clipper : public virtual ClipperBase
 {
 public:
   Clipper(int initOptions = 0);
@@ -285,7 +287,7 @@ public:
   void ZFillFunction(ZFillCallback zFillFunc);
 #endif
 protected:
-  bool ExecuteInternal();
+  virtual bool ExecuteInternal();
 private:
   JoinList         m_Joins;
   JoinList         m_GhostJoins;
@@ -390,8 +392,8 @@ class clipperException : public std::exception
 {
   public:
     clipperException(const char* description): m_descr(description) {}
-    ~clipperException() throw() {}
-    const char* what() const throw() {return m_descr.c_str();}
+    virtual ~clipperException() throw() {}
+    virtual const char* what() const throw() {return m_descr.c_str();}
   private:
     std::string m_descr;
 };

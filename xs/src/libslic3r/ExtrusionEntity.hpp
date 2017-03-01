@@ -139,7 +139,7 @@ class ExtrusionLoop : public ExtrusionEntity
     Polygon polygon() const;
     virtual double length() const;
     bool split_at_vertex(const Point &point);
-    void split_at(const Point &point);
+    void split_at(const Point &point, bool prefer_non_overhang = false);
     void clip_end(double distance, ExtrusionPaths* paths) const;
     // Test, whether the point is extruded by a bridging flow.
     // This used to be used to avoid placing seams on overhangs, but now the EdgeGrid is used instead.
@@ -165,6 +165,9 @@ class ExtrusionLoop : public ExtrusionEntity
     // Minimum volumetric velocity of this extrusion entity. Used by the constant nozzle pressure algorithm.
     double min_mm3_per_mm() const;
     Polyline as_polyline() const { return this->polygon().split_at_first_point(); }
+    void append(const ExtrusionPath &path) {
+        this->paths.push_back(path);
+    };
 };
 
 }

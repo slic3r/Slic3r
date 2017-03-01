@@ -1,13 +1,15 @@
 #include "Config.hpp"
-#include "Model.hpp"
+#include "Geometry.hpp"
 #include "IO.hpp"
-#include "TriangleMesh.hpp"
+#include "Model.hpp"
 #include "SLAPrint.hpp"
+#include "TriangleMesh.hpp"
 #include "libslic3r.h"
 #include <cstdio>
 #include <string>
 #include <cstring>
 #include <iostream>
+#include <math.h>
 #include "boost/filesystem.hpp"
 
 using namespace Slic3r;
@@ -67,9 +69,8 @@ main(const int argc, const char **argv)
         }
         
         Model model;
-        // TODO: read other file formats with Model::read_from_file()
         try {
-            Slic3r::IO::STL::read(*it, &model);
+            model = Model::read_from_file(*it);
         } catch (std::exception &e) {
             std::cout << *it << ": " << e.what() << std::endl;
             exit(1);
@@ -87,8 +88,11 @@ main(const int argc, const char **argv)
             if (cli_config.scale_to_fit.is_positive_volume())
                 (*o)->scale_to_fit(cli_config.scale_to_fit.value);
             
+            // TODO: honor option order?
             (*o)->scale(cli_config.scale.value);
-            (*o)->rotate(cli_config.rotate.value, Z);
+            (*o)->rotate(Geometry::deg2rad(cli_config.rotate_x.value), X);
+            (*o)->rotate(Geometry::deg2rad(cli_config.rotate_y.value), Y);
+            (*o)->rotate(Geometry::deg2rad(cli_config.rotate.value), Z);
         }
         
         // TODO: handle --merge
@@ -105,7 +109,7 @@ main(const int argc, const char **argv)
     
             TriangleMesh mesh = model->mesh();
             mesh.repair();
-            Slic3r::IO::OBJ::write(mesh, outfile);
+            IO::OBJ::write(mesh, outfile);
             printf("File exported to %s\n", outfile.c_str());
         } else if (cli_config.export_pov) {
             std::string outfile = cli_config.output.value;
@@ -113,7 +117,7 @@ main(const int argc, const char **argv)
     
             TriangleMesh mesh = model->mesh();
             mesh.repair();
-            Slic3r::IO::POV::write(mesh, outfile);
+            IO::POV::write(mesh, outfile);
             printf("File exported to %s\n", outfile.c_str());
         } else if (cli_config.export_svg) {
             std::string outfile = cli_config.output.value;
@@ -124,8 +128,46 @@ main(const int argc, const char **argv)
             print.slice();
             print.write_svg(outfile);
             printf("SVG file exported to %s\n", outfile.c_str());
+        } else if (cli_config.cut_x > 0 || cli_config.cut_y > 0 || cli_config.cut > 0) {
+            model->repair();
+            model->translate(0, 0, -model->bounding_box().min.z);
+            
+            if (!model->objects.empty()) {
+                // FIXME: cut all objects
+                Model out;
+                if (cli_config.cut_x > 0) {
+                    model->objects.front()->cut(X, cli_config.cut_x, &out);
+                } else if (cli_config.cut_y > 0) {
+                    model->objects.front()->cut(Y, cli_config.cut_y, &out);
+                } else {
+                    model->objects.front()->cut(Z, cli_config.cut, &out);
+                }
+                
+                ModelObject &upper = *out.objects[0];
+                ModelObject &lower = *out.objects[1];
+            
+                if (upper.facets_count() > 0) {
+                    TriangleMesh m = upper.mesh();
+                    IO::STL::write(m, upper.input_file + "_upper.stl");
+                }
+                if (lower.facets_count() > 0) {
+                    TriangleMesh m = lower.mesh();
+                    IO::STL::write(m, lower.input_file + "_lower.stl");
+                }
+            }
+        } else if (cli_config.cut_grid.value.x > 0 && cli_config.cut_grid.value.y > 0) {
+            TriangleMesh mesh = model->mesh();
+            mesh.repair();
+            
+            TriangleMeshPtrs meshes = mesh.cut_by_grid(cli_config.cut_grid.value);
+            for (TriangleMeshPtrs::iterator m = meshes.begin(); m != meshes.end(); ++m) {
+                std::ostringstream ss;
+                ss << model->objects.front()->input_file << "_" << (m - meshes.begin()) << ".stl";
+                IO::STL::write(**m, ss.str());
+                delete *m;
+            }
         } else {
-            std::cerr << "error: only --export-svg and --export-obj are currently supported" << std::endl;
+            std::cerr << "error: command not supported" << std::endl;
             return 1;
         }
     }

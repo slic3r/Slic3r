@@ -7,26 +7,24 @@ plan tests => 12;
 BEGIN {
     use FindBin;
     use lib "$FindBin::Bin/../lib";
+    use local::lib "$FindBin::Bin/../local-lib";
 }
 
 use List::Util qw(first);
 use Slic3r;
 use Slic3r::Test;
 
+my $gcodegen;
 sub buffer {
     my $config = shift || Slic3r::Config->new;
     
     my $print_config = Slic3r::Config::Print->new;
     $print_config->apply_dynamic($config);
     
-    my $gcodegen = Slic3r::GCode->new;
+    $gcodegen = Slic3r::GCode->new;
     $gcodegen->apply_print_config($print_config);
     $gcodegen->set_layer_count(10);
-    my $buffer = Slic3r::GCode::CoolingBuffer->new(
-        config      => $print_config,
-        gcodegen    => $gcodegen,
-    );
-    return $buffer;
+    return Slic3r::GCode::CoolingBuffer->new($gcodegen);
 }
 
 my $config = Slic3r::Config->new_from_defaults;
@@ -34,14 +32,14 @@ $config->set('disable_fan_first_layers', 0);
 
 {
     my $buffer = buffer($config);
-    $buffer->gcodegen->set_elapsed_time($buffer->config->slowdown_below_layer_time + 1);
+    $buffer->gcodegen->set_elapsed_time($buffer->gcodegen->config->slowdown_below_layer_time + 1);
     my $gcode = $buffer->append('G1 F3000;_EXTRUDE_SET_SPEED\nG1 X100 E1', 0, 0, 0.4) . $buffer->flush;
     like $gcode, qr/F3000/, 'speed is not altered when elapsed time is greater than slowdown threshold';
 }
 
 {
     my $buffer = buffer($config);
-    $buffer->gcodegen->set_elapsed_time($buffer->config->slowdown_below_layer_time - 1);
+    $buffer->gcodegen->set_elapsed_time($buffer->gcodegen->config->slowdown_below_layer_time - 1);
     my $gcode = $buffer->append(
         "G1 X50 F2500\n" .
         "G1 F3000;_EXTRUDE_SET_SPEED\n" .
@@ -56,7 +54,7 @@ $config->set('disable_fan_first_layers', 0);
 
 {
     my $buffer = buffer($config);
-    $buffer->gcodegen->set_elapsed_time($buffer->config->fan_below_layer_time + 1);
+    $buffer->gcodegen->set_elapsed_time($buffer->gcodegen->config->fan_below_layer_time + 1);
     my $gcode = $buffer->append('G1 X100 E1 F3000', 0, 0, 0.4) . $buffer->flush;
     unlike $gcode, qr/M106/, 'fan is not activated when elapsed time is greater than fan threshold';
 }
@@ -66,7 +64,7 @@ $config->set('disable_fan_first_layers', 0);
     my $gcode = "";
     for my $obj_id (0 .. 1) {
         # use an elapsed time which is < the slowdown threshold but greater than it when summed twice
-        $buffer->gcodegen->set_elapsed_time($buffer->config->slowdown_below_layer_time - 1);
+        $buffer->gcodegen->set_elapsed_time($buffer->gcodegen->config->slowdown_below_layer_time - 1);
         $gcode .= $buffer->append("G1 X100 E1 F3000\n", $obj_id, 0, 0.4);
     }
     $gcode .= $buffer->flush;
@@ -79,7 +77,7 @@ $config->set('disable_fan_first_layers', 0);
     for my $layer_id (0 .. 1) {
         for my $obj_id (0 .. 1) {
             # use an elapsed time which is < the threshold but greater than it when summed twice
-            $buffer->gcodegen->set_elapsed_time($buffer->config->fan_below_layer_time - 1);
+            $buffer->gcodegen->set_elapsed_time($buffer->gcodegen->config->fan_below_layer_time - 1);
             $gcode .= $buffer->append("G1 X100 E1 F3000\n", $obj_id, $layer_id, 0.4 + 0.4*$layer_id + 0.1*$obj_id); # print same layer at distinct heights
         }
     }
@@ -93,7 +91,7 @@ $config->set('disable_fan_first_layers', 0);
     for my $layer_id (0 .. 1) {
         for my $obj_id (0 .. 1) {
             # use an elapsed time which is < the threshold even when summed twice
-            $buffer->gcodegen->set_elapsed_time($buffer->config->fan_below_layer_time/2 - 1);
+            $buffer->gcodegen->set_elapsed_time($buffer->gcodegen->config->fan_below_layer_time/2 - 1);
             $gcode .= $buffer->append("G1 X100 E1 F3000\n", $obj_id, $layer_id, 0.4 + 0.4*$layer_id + 0.1*$obj_id); # print same layer at distinct heights
         }
     }
@@ -146,7 +144,7 @@ $config->set('disable_fan_first_layers', 0);
     
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     my @layer_times = (0);  # in seconds
-    Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+    Slic3r::GCode::Reader->new->parse(my $gcode = Slic3r::Test::gcode($print), sub {
         my ($self, $cmd, $args, $info) = @_;
         
         if ($cmd eq 'G1') {

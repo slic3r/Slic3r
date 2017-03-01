@@ -313,10 +313,10 @@ MotionPlannerEnv::nearest_env_point(const Point &from, const Point &to) const
 }
 
 void
-MotionPlannerGraph::add_edge(size_t from, size_t to, double weight)
+MotionPlannerGraph::add_edge(node_t from, node_t to, double weight)
 {
     // extend adjacency list until this start node
-    if (this->adjacency_list.size() < from+1)
+    if (this->adjacency_list.size() < (size_t)from+1)
         this->adjacency_list.resize(from+1);
     
     this->adjacency_list[from].push_back(neighbor(to, weight));
@@ -334,7 +334,7 @@ MotionPlannerGraph::find_node(const Point &point) const
 }
 
 Polyline
-MotionPlannerGraph::shortest_path(size_t from, size_t to)
+MotionPlannerGraph::shortest_path(node_t from, node_t to)
 {
     // this prevents a crash in case for some reason we got here with an empty adjacency list
     if (this->adjacency_list.empty()) return Polyline();
@@ -345,7 +345,7 @@ MotionPlannerGraph::shortest_path(size_t from, size_t to)
     std::vector<node_t> previous;
     {
         // number of nodes
-        size_t n = this->adjacency_list.size();
+        const int n = this->adjacency_list.size();
         
         // initialize dist and previous
         dist.clear();

@@ -2,6 +2,7 @@
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
+#include <algorithm>
 
 namespace Slic3r {
 
@@ -38,12 +39,6 @@ Print*
 PrintObject::print()
 {
     return this->_print;
-}
-
-ModelObject*
-PrintObject::model_object()
-{
-    return this->_model_object;
 }
 
 Points
@@ -118,6 +113,28 @@ PrintObject::bounding_box() const
     pp.push_back(Point(0,0));
     pp.push_back(this->size);
     return BoundingBox(pp);
+}
+
+// returns 0-based indices of used extruders
+std::set<size_t>
+PrintObject::extruders() const
+{
+    std::set<size_t> extruders = this->_print->extruders();
+    std::set<size_t> sm_extruders = this->support_material_extruders();
+    extruders.insert(sm_extruders.begin(), sm_extruders.end());
+    return extruders;
+}
+
+// returns 0-based indices of used extruders
+std::set<size_t>
+PrintObject::support_material_extruders() const
+{
+    std::set<size_t> extruders;
+    if (this->has_support_material()) {
+        extruders.insert(this->config.support_material_extruder - 1);
+        extruders.insert(this->config.support_material_interface_extruder - 1);
+    }
+    return extruders;
 }
 
 void
@@ -218,7 +235,6 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "overhangs"
             || *opt_key == "first_layer_extrusion_width"
             || *opt_key == "perimeter_extrusion_width"
-            || *opt_key == "infill_overlap"
             || *opt_key == "thin_walls"
             || *opt_key == "external_perimeters_first") {
             steps.insert(posPerimeters);
@@ -256,7 +272,8 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "fill_angle"
             || *opt_key == "fill_pattern"
             || *opt_key == "top_infill_extrusion_width"
-            || *opt_key == "first_layer_extrusion_width") {
+            || *opt_key == "first_layer_extrusion_width"
+            || *opt_key == "infill_overlap") {
             steps.insert(posInfill);
         } else if (*opt_key == "fill_density"
             || *opt_key == "solid_infill_extrusion_width") {
@@ -526,13 +543,13 @@ void
 PrintObject::bridge_over_infill()
 {
     FOREACH_REGION(this->_print, region) {
-        size_t region_id = region - this->_print->regions.begin();
+        const size_t region_id = region - this->_print->regions.begin();
         
         // skip bridging in case there are no voids
         if ((*region)->config.fill_density.value == 100) continue;
         
         // get bridge flow
-        Flow bridge_flow = (*region)->flow(
+        const Flow bridge_flow = (*region)->flow(
             frSolidInfill,
             -1,     // layer height, not relevant for bridge flow
             true,   // bridge
@@ -540,6 +557,10 @@ PrintObject::bridge_over_infill()
             -1,     // custom width, not relevant for bridge flow
             *this
         );
+        
+        // get the average extrusion volume per surface unit
+        const double mm3_per_mm  = bridge_flow.mm3_per_mm();
+        const double mm3_per_mm2 = mm3_per_mm / bridge_flow.width;
         
         FOREACH_LAYER(this, layer_it) {
             // skip first layer
@@ -551,6 +572,41 @@ PrintObject::bridge_over_infill()
             // extract the stInternalSolid surfaces that might be transformed into bridges
             Polygons internal_solid;
             layerm->fill_surfaces.filter_by_type(stInternalSolid, &internal_solid);
+            if (internal_solid.empty()) continue;
+            
+            // check whether we should bridge or not according to density
+            {
+                // get the normal solid infill flow we would use if not bridging
+                const Flow normal_flow = layerm->flow(frSolidInfill, false);
+                
+                // Bridging over sparse infill has two purposes:
+                // 1) cover better the gaps of internal sparse infill, especially when
+                //    printing at very low densities;
+                // 2) provide a greater flow when printing very thin layers where normal
+                //    solid flow would be very poor.
+                // So we calculate density threshold as interpolation according to normal flow.
+                // If normal flow would be equal or greater than the bridge flow, we can keep
+                // a low threshold like 25% in order to bridge only when printing at very low
+                // densities, when sparse infill has significant gaps.
+                // If normal flow would be equal or smaller than half the bridge flow, we
+                // use a higher threshold like 50% in order to bridge in more cases.
+                // We still never bridge whenever fill density is greater than 50% because
+                // we would overstuff.
+                const float min_threshold = 25.0;
+                const float max_threshold = 50.0;
+                const float density_threshold = std::max(
+                    std::min<float>(
+                        min_threshold
+                            + (max_threshold - min_threshold)
+                            * (normal_flow.mm3_per_mm() - mm3_per_mm)
+                            / (mm3_per_mm/2 - mm3_per_mm),
+                        max_threshold
+                    ),
+                    min_threshold
+                );
+                
+                if ((*region)->config.fill_density.value > density_threshold) continue;
+            }
             
             // check whether the lower area is deep enough for absorbing the extra flow
             // (for obvious physical reasons but also for preventing the bridge extrudates
@@ -559,13 +615,23 @@ PrintObject::bridge_over_infill()
             {
                 Polygons to_bridge_pp = internal_solid;
                 
+                // Only bridge where internal infill exists below the solid shell matching
+                // these two conditions:
+                // 1) its depth is at least equal to our bridge extrusion diameter;
+                // 2) its free volume (thus considering infill density) is at least equal
+                //    to the volume needed by our bridge flow.
+                double excess_mm3_per_mm2 = mm3_per_mm2;
+                
                 // iterate through lower layers spanned by bridge_flow
-                double bottom_z = layer->print_z - bridge_flow.height;
+                const double bottom_z = layer->print_z - bridge_flow.height;
                 for (int i = (layer_it - this->layers.begin()) - 1; i >= 0; --i) {
                     const Layer* lower_layer = this->layers[i];
                     
-                    // stop iterating if layer is lower than bottom_z
-                    if (lower_layer->print_z < bottom_z) break;
+                    // subtract the void volume of this layer
+                    excess_mm3_per_mm2 -= lower_layer->height * (100 - (*region)->config.fill_density.value)/100;
+                    
+                    // stop iterating if both conditions are matched
+                    if (lower_layer->print_z < bottom_z && excess_mm3_per_mm2 <= 0) break;
                     
                     // iterate through regions and collect internal surfaces
                     Polygons lower_internal;
@@ -576,9 +642,12 @@ PrintObject::bridge_over_infill()
                     to_bridge_pp = intersection(to_bridge_pp, lower_internal);
                 }
                 
+                // don't bridge if the volume condition isn't matched
+                if (excess_mm3_per_mm2 > 0) continue;
+                
                 // there's no point in bridging too thin/short regions
                 {
-                    double min_width = bridge_flow.scaled_width() * 3;
+                    const double min_width = bridge_flow.scaled_width() * 3;
                     to_bridge_pp = offset2(to_bridge_pp, -min_width, +min_width);
                 }
                 
@@ -593,7 +662,7 @@ PrintObject::bridge_over_infill()
             #endif
             
             // compute the remaning internal solid surfaces as difference
-            ExPolygons not_to_bridge = diff_ex(internal_solid, to_polygons(to_bridge), true);
+            const ExPolygons not_to_bridge = diff_ex(internal_solid, to_polygons(to_bridge), true);
             
             // build the new collection of fill_surfaces
             {
@@ -649,6 +718,45 @@ PrintObject::bridge_over_infill()
     }
 }
 
+// called from slice()
+std::vector<ExPolygons>
+PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier)
+{
+    std::vector<ExPolygons> layers;
+    std::vector<int> &region_volumes = this->region_volumes[region_id];
+    if (region_volumes.empty()) return layers;
+    
+    ModelObject &object = *this->model_object();
+    
+    // compose mesh
+    TriangleMesh mesh;
+    for (std::vector<int>::const_iterator it = region_volumes.begin();
+        it != region_volumes.end(); ++it) {
+        
+        const ModelVolume &volume = *object.volumes[*it];
+        if (volume.modifier != modifier) continue;
+        
+        mesh.merge(volume.mesh);
+    }
+    if (mesh.facets_count() == 0) return layers;
+
+    // transform mesh
+    // we ignore the per-instance transformations currently and only 
+    // consider the first one
+    object.instances[0]->transform_mesh(&mesh, true);
+
+    // align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
+    mesh.translate(
+        -unscale(this->_copies_shift.x),
+        -unscale(this->_copies_shift.y),
+        -object.bounding_box().min.z
+    );
+    
+    // perform actual slicing
+    TriangleMeshSlicer<Z>(&mesh).slice(z, &layers);
+    return layers;
+}
+
 void
 PrintObject::_make_perimeters()
 {
@@ -701,7 +809,7 @@ PrintObject::_make_perimeters()
                 while (true) {
                     // compute the total thickness of perimeters
                     const coord_t perimeters_thickness = ext_perimeter_width/2 + ext_perimeter_spacing/2
-                        + (region.config.perimeters-1 + region.config.extra_perimeters) * perimeter_spacing;
+                        + (region.config.perimeters-1 + slice->extra_perimeters) * perimeter_spacing;
                     
                     // define a critical area where we don't want the upper slice to fall into
                     // (it should either lay over our perimeters or outside this area)

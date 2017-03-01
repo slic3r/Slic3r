@@ -7,7 +7,8 @@ use utf8;
 
 use File::Basename qw(basename dirname);
 use List::Util qw(sum first max);
-use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad);
+use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad rad2deg);
+use LWP::UserAgent;
 use threads::shared qw(shared_clone);
 use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :listctrl :misc 
     :panel :sizer :toolbar :window wxTheApp :notebook :combobox);
@@ -53,6 +54,7 @@ sub new {
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
+    $self->{processed} = 0;
     # List of Perl objects Slic3r::GUI::Plater::Object, representing a 2D preview of the platter.
     $self->{objects} = [];
     
@@ -113,6 +115,7 @@ sub new {
     $self->{canvas}->on_instances_moved($on_instances_moved);
     
     # Initialize 3D toolpaths preview
+    $self->{preview3D_page_idx} = -1;
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{preview3D} = Slic3r::GUI::Plater::3DPreview->new($self->{preview_notebook}, $self->{print});
         $self->{preview3D}->canvas->on_viewport_changed(sub {
@@ -123,15 +126,30 @@ sub new {
     }
     
     # Initialize toolpaths preview
+    $self->{toolpaths2D_page_idx} = -1;
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{toolpaths2D} = Slic3r::GUI::Plater::2DToolpaths->new($self->{preview_notebook}, $self->{print});
         $self->{preview_notebook}->AddPage($self->{toolpaths2D}, 'Layers');
+        $self->{toolpaths2D_page_idx} = $self->{preview_notebook}->GetPageCount-1;
     }
     
     EVT_NOTEBOOK_PAGE_CHANGED($self, $self->{preview_notebook}, sub {
-        if ($self->{preview_notebook}->GetSelection == $self->{preview3D_page_idx}) {
-            $self->{preview3D}->load_print;
-        }
+        wxTheApp->CallAfter(sub {
+            my $sel = $self->{preview_notebook}->GetSelection;
+            if ($sel == $self->{preview3D_page_idx} || $sel == $self->{toolpaths2D_page_idx}) {
+                if (!$Slic3r::GUI::Settings->{_}{background_processing} && !$self->{processed}) {
+                    $self->statusbar->SetCancelCallback(sub {
+                        $self->stop_background_process;
+                        $self->statusbar->SetStatusText("Slicing cancelled");
+                        $self->{preview_notebook}->SetSelection(0);
+                    });
+                    $self->start_background_process;
+                } else {
+                    $self->{preview3D}->load_print
+                        if $sel == $self->{preview3D_page_idx};
+                }
+            }
+        });
     });
     
     # toolbar for object manipulation
@@ -235,7 +253,33 @@ sub new {
         $self->{print_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
     });
     EVT_BUTTON($self, $self->{btn_send_gcode}, sub {
-        $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
+        my $filename = basename($self->{print}->output_filepath($main::opt{output}));
+        $filename = Wx::GetTextFromUser("Save to printer with the following name:",
+            "OctoPrint", $filename, $self);
+        
+        my $process_dialog = Wx::ProgressDialog->new('Querying OctoPrint…', "Checking whether file already exists…", 100, $self, 0);
+        $process_dialog->Pulse;
+        
+        my $ua = LWP::UserAgent->new;
+        $ua->timeout(5);
+        my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
+        $process_dialog->Destroy;
+        if ($res->is_success) {
+            if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
+                my $dialog = Wx::MessageDialog->new($self,
+                    "It looks like a file with the same name already exists in the server. "
+                        . "Shall I overwrite it?",
+                    'OctoPrint', wxICON_WARNING | wxYES | wxNO);
+                return if $dialog->ShowModal() == wxID_NO;
+            }
+        }
+        
+        my $dialog = Wx::MessageDialog->new($self,
+            "Shall I start the print after uploading the file?",
+            'OctoPrint', wxICON_QUESTION | wxYES | wxNO);
+        $self->{send_gcode_file_print} = ($dialog->ShowModal() == wxID_YES);
+        
+        $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/$filename");
     });
     EVT_BUTTON($self, $self->{btn_export_stl}, \&export_stl);
     
@@ -555,6 +599,7 @@ sub load_file {
     my $model = eval { Slic3r::Model->read_from_file($input_file) };
     Slic3r::GUI::show_error($self, $@) if $@;
     
+    my @obj_idx = ();
     if (defined $model) {
         if ($model->looks_like_multipart_object) {
             my $dialog = Wx::MessageDialog->new($self,
@@ -566,11 +611,13 @@ sub load_file {
                 $model->convert_multipart_object;
             }
         }
-        $self->load_model_objects(@{$model->objects});
+        @obj_idx = $self->load_model_objects(@{$model->objects});
         $self->statusbar->SetStatusText("Loaded " . basename($input_file));
     }
     
     $process_dialog->Destroy;
+    
+    return @obj_idx;
 }
 
 sub load_model_objects {
@@ -588,7 +635,7 @@ sub load_model_objects {
         $o->repair;
         
         push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
-            name => basename($model_object->input_file),
+            name => $model_object->name || basename($model_object->input_file),
         );
         push @obj_idx, $#{ $self->{objects} };
     
@@ -652,6 +699,8 @@ sub load_model_objects {
     $self->object_list_changed;
     
     $self->schedule_background_process;
+    
+    return @obj_idx;
 }
 
 sub bed_centerf {
@@ -800,24 +849,23 @@ sub rotate {
     
     if (!defined $angle) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
-        $angle = Wx::GetNumberFromUser("", "Enter the rotation angle:", "Rotate around $axis_name axis", $model_instance->rotation, -364, 364, $self);
-        return if !$angle || $angle == -1;
-        $angle = 0 - $angle;  # rotate clockwise (be consistent with button icon)
+        my $default = $axis == Z ? rad2deg($model_instance->rotation) : 0;
+        # Wx::GetNumberFromUser() does not support decimal numbers
+        $angle = Wx::GetTextFromUser("Enter the rotation angle:", "Rotate around $axis_name axis",
+            $default, $self);
+        return if !$angle || $angle !~ /^-?\d*(?:\.\d*)?$/ || $angle == -1;
     }
     
     $self->stop_background_process;
     
     if ($axis == Z) {
-        my $new_angle = $model_instance->rotation + deg2rad($angle);
-        $_->set_rotation($new_angle) for @{ $model_object->instances };
+        my $new_angle = deg2rad($angle);
+        $_->set_rotation($_->rotation + $new_angle) for @{ $model_object->instances };
         $object->transform_thumbnail($self->{model}, $obj_idx);
     } else {
         # rotation around X and Y needs to be performed on mesh
         # so we first apply any Z rotation
-        if ($model_instance->rotation != 0) {
-            $model_object->rotate($model_instance->rotation, Z);
-            $_->set_rotation(0) for @{ $model_object->instances };
-        }
+        $model_object->transform_by_instance($model_instance, 1);
         $model_object->rotate(deg2rad($angle), $axis);
         
         # realign object to Z = 0
@@ -844,10 +892,7 @@ sub mirror {
     my $model_instance = $model_object->instances->[0];
     
     # apply Z rotation before mirroring
-    if ($model_instance->rotation != 0) {
-        $model_object->rotate($model_instance->rotation, Z);
-        $_->set_rotation(0) for @{ $model_object->instances };
-    }
+    $model_object->transform_by_instance($model_instance, 1);
     
     $model_object->mirror($axis);
     $model_object->update_bounding_box;
@@ -885,21 +930,23 @@ sub changescale {
         my $scale;
         if ($tosize) {
             my $cursize = $object_size->[$axis];
-            my $newsize = Wx::GetNumberFromUser("", "Enter the new size for the selected object:", "Scale along $axis_name",
-                $cursize, 0, $bed_size->[$axis], $self);
-            return if !$newsize || $newsize < 0;
+            # Wx::GetNumberFromUser() does not support decimal numbers
+            my $newsize = Wx::GetTextFromUser(
+                sprintf("Enter the new size for the selected object (print bed: %smm):", $bed_size->[$axis]),
+                "Scale along $axis_name",
+                $cursize, $self);
+            return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
             $scale = $newsize / $cursize * 100;
         } else {
-            $scale = Wx::GetNumberFromUser("", "Enter the scale % for the selected object:", "Scale along $axis_name",
-                100, 0, 100000, $self);
+            # Wx::GetNumberFromUser() does not support decimal numbers
+            $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:",
+                "Scale along $axis_name", 100, $self);
+            $scale =~ s/%$//;
+            return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
         }
-        return if !$scale || $scale < 0;
         
         # apply Z rotation before scaling
-        if ($model_instance->rotation != 0) {
-            $model_object->rotate($model_instance->rotation, Z);
-            $_->set_rotation(0) for @{ $model_object->instances };
-        }
+        $model_object->transform_by_instance($model_instance, 1);
         
         my $versor = [1,1,1];
         $versor->[$axis] = $scale/100;
@@ -910,16 +957,18 @@ sub changescale {
         my $scale;
         if ($tosize) {
             my $cursize = max(@$object_size);
-            my $newsize = Wx::GetNumberFromUser("", "Enter the new max size for the selected object:", "Scale",
-                $cursize, 0, max(@$bed_size), $self);
-            return if !$newsize || $newsize < 0;
+            # Wx::GetNumberFromUser() does not support decimal numbers
+            my $newsize = Wx::GetTextFromUser("Enter the new max size for the selected object:",
+                "Scale", $cursize, $self);
+            return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
             $scale = $newsize / $cursize * 100;
         } else {
             # max scale factor should be above 2540 to allow importing files exported in inches
-            $scale = Wx::GetNumberFromUser("", "Enter the scale % for the selected object:", 'Scale',
-                $model_instance->scaling_factor*100, 0, 100000, $self);
+            # Wx::GetNumberFromUser() does not support decimal numbers
+            $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:", 'Scale',
+                $model_instance->scaling_factor*100, $self);
+            return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
         }
-        return if !$scale || $scale < 0;
     
         $self->{list}->SetItem($obj_idx, 2, "$scale%");
         $scale /= 100;  # turn percent into factor
@@ -1002,6 +1051,15 @@ sub split_object {
 
 sub schedule_background_process {
     my ($self) = @_;
+    
+    $self->{processed} = 0;
+    
+    if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
+        my $sel = $self->{preview_notebook}->GetSelection;
+        if ($sel == $self->{preview3D_page_idx} || $sel == $self->{toolpaths2D_page_idx}) {
+            $self->{preview_notebook}->SetSelection(0);
+        }
+    }
     
     if (defined $self->{apply_config_timer}) {
         $self->{apply_config_timer}->Start(PROCESS_DELAY, 1);  # 1 = one shot
@@ -1089,6 +1147,7 @@ sub stop_background_process {
     $self->statusbar->SetCancelCallback(undef);
     $self->statusbar->StopBusy;
     $self->statusbar->SetStatusText("");
+    
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
     
@@ -1164,9 +1223,9 @@ sub export_gcode {
     
     # select output file
     if ($output_file) {
-        $self->{export_gcode_output_file} = $self->{print}->expanded_output_filepath($output_file);
+        $self->{export_gcode_output_file} = $self->{print}->output_filepath($output_file);
     } else {
-        my $default_output_file = $self->{print}->expanded_output_filepath($main::opt{output});
+        my $default_output_file = $self->{print}->output_filepath($main::opt{output});
         my $dlg = Wx::FileDialog->new($self, 'Save G-code file as:', wxTheApp->output_path(dirname($default_output_file)),
             basename($default_output_file), &Slic3r::GUI::FILE_WILDCARDS->{gcode}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
         if ($dlg->ShowModal != wxID_OK) {
@@ -1222,6 +1281,7 @@ sub on_process_completed {
     Slic3r::debugf "Background processing completed.\n";
     $self->{process_thread}->detach if $self->{process_thread};
     $self->{process_thread} = undef;
+    $self->{processed} = 1;
     
     # if we're supposed to perform an explicit export let's display the error in a dialog
     if ($error && $self->{export_gcode_output_file}) {
@@ -1339,6 +1399,7 @@ sub send_gcode {
             # OctoPrint doesn't like Windows paths so we use basename()
             # Also, since we need to read from filesystem we process it through encode_path()
             file => [ $path, basename($path) ],
+            print => $self->{send_gcode_file_print} ? 1 : 0,
         ],
     );
     
@@ -1359,8 +1420,42 @@ sub export_stl {
     return if !@{$self->{objects}};
         
     my $output_file = $self->_get_export_file('STL') or return;
-    Slic3r::Format::STL->write_file($output_file, $self->{model}, binary => 1);
+    $self->{model}->write_stl($output_file, 1);
     $self->statusbar->SetStatusText("STL file exported to $output_file");
+}
+
+sub reload_from_disk {
+    my ($self) = @_;
+    
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    return if !$model_object->input_file
+        || !-e $model_object->input_file;
+    
+    my @new_obj_idx = $self->load_file($model_object->input_file);
+    return if !@new_obj_idx;
+    
+    foreach my $new_obj_idx (@new_obj_idx) {
+        my $o = $self->{model}->objects->[$new_obj_idx];
+        $o->clear_instances;
+        $o->add_instance($_) for @{$model_object->instances};
+        
+        if ($o->volumes_count == $model_object->volumes_count) {
+            for my $i (0..($o->volumes_count-1)) {
+                $o->get_volume($i)->config->apply($model_object->get_volume($i)->config);
+            }
+        }
+    }
+    
+    $self->remove($obj_idx);
+    
+    # Trigger thumbnail generation again, because the remove() method altered
+    # object indexes before background thumbnail generation called its completion
+    # event, so the on_thumbnail_made callback is called with the wrong $obj_idx.
+    # When porting to C++ we'll probably have cleaner ways to do this.
+    $self->make_thumbnail($_-1) for @new_obj_idx;
 }
 
 sub export_object_stl {
@@ -1372,7 +1467,7 @@ sub export_object_stl {
     my $model_object = $self->{model}->objects->[$obj_idx];
         
     my $output_file = $self->_get_export_file('STL') or return;
-    Slic3r::Format::STL->write_file($output_file, $model_object->mesh, binary => 1);
+    $model_object->mesh->write_binary($output_file);
     $self->statusbar->SetStatusText("STL file exported to $output_file");
 }
 
@@ -1382,7 +1477,7 @@ sub export_amf {
     return if !@{$self->{objects}};
         
     my $output_file = $self->_get_export_file('AMF') or return;
-    Slic3r::Format::AMF->write_file($output_file, $self->{model});
+    $self->{model}->write_amf($output_file);
     $self->statusbar->SetStatusText("AMF file exported to $output_file");
 }
 
@@ -1394,7 +1489,7 @@ sub _get_export_file {
     
     my $output_file = $main::opt{output};
     {
-        $output_file = $self->{print}->expanded_output_filepath($output_file);
+        $output_file = $self->{print}->output_filepath($output_file);
         $output_file =~ s/\.gcode$/$suffix/i;
         my $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
             basename($output_file), &Slic3r::GUI::MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
@@ -1588,9 +1683,14 @@ sub object_cut_dialog {
 	return unless $dlg->ShowModal == wxID_OK;
 	
 	if (my @new_objects = $dlg->NewModelObjects) {
+	    my $process_dialog = Wx::ProgressDialog->new('Loading…', "Loading new objects…", 100, $self, 0);
+        $process_dialog->Pulse;
+        
 	    $self->remove($obj_idx);
 	    $self->load_model_objects(grep defined($_), @new_objects);
-	    $self->arrange;
+	    $self->arrange if @new_objects <= 2; # don't arrange for grid cuts
+	    
+	    $process_dialog->Destroy;
 	}
 }
 
@@ -1851,6 +1951,9 @@ sub object_menu {
         $self->object_settings_dialog;
     }, undef, 'cog.png');
     $menu->AppendSeparator();
+    $frame->_append_menu_item($menu, "Reload from Disk", 'Reload the selected file from Disk', sub {
+        $self->reload_from_disk;
+    }, undef, 'arrow_refresh.png');
     $frame->_append_menu_item($menu, "Export object as STL…", 'Export this single object as STL file', sub {
         $self->export_object_stl;
     }, undef, 'brick_go.png');

@@ -5,6 +5,7 @@
 #include "Geometry.hpp"
 #include "Surface.hpp"
 #include <iostream>
+#include <complex>
 #include <cstdio>
 
 namespace Slic3r {
@@ -48,7 +49,7 @@ SLAPrint::slice()
             slice_z.push_back(this->layers[i].slice_z);
         
         std::vector<ExPolygons> slices;
-        TriangleMeshSlicer(&mesh).slice(slice_z, &slices);
+        TriangleMeshSlicer<Z>(&mesh).slice(slice_z, &slices);
         
         for (size_t i = 0; i < slices.size(); ++i)
             this->layers[i].slices.expolygons = slices[i];
@@ -59,7 +60,7 @@ SLAPrint::slice()
         std::auto_ptr<Fill> fill(Fill::new_from_type(this->config.fill_pattern.value));
         fill->bounding_box.merge(Point::new_scale(bb.min.x, bb.min.y));
         fill->bounding_box.merge(Point::new_scale(bb.max.x, bb.max.y));
-        fill->spacing       = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
+        fill->min_spacing   = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
         fill->angle         = Geometry::deg2rad(this->config.fill_angle.value);
         fill->density       = this->config.fill_density.value/100;
         
@@ -144,7 +145,7 @@ SLAPrint::slice()
         }
         
         // prepend total raft height to all sliced layers
-        for (int i = this->config.raft_layers; i < this->layers.size(); ++i)
+        for (size_t i = this->config.raft_layers; i < this->layers.size(); ++i)
             this->layers[i].print_z += first_lh + lh * (this->config.raft_layers-1);
     }
 }
@@ -155,13 +156,13 @@ SLAPrint::_infill_layer(size_t i, const Fill* _fill)
     Layer &layer = this->layers[i];
     
     const float shell_thickness = this->config.get_abs_value("perimeter_extrusion_width", this->config.layer_height.value);
-            
+    
     // In order to detect what regions of this layer need to be solid,
     // perform an intersection with layers within the requested shell thickness.
     Polygons internal = layer.slices;
     for (size_t j = 0; j < this->layers.size(); ++j) {
         const Layer &other = this->layers[j];
-        if (abs(other.print_z - layer.print_z) > shell_thickness) continue;
+        if (std::abs(other.print_z - layer.print_z) > shell_thickness) continue;
     
         if (j == 0 || j == this->layers.size()-1) {
             internal.clear();
@@ -188,8 +189,7 @@ SLAPrint::_infill_layer(size_t i, const Fill* _fill)
         fill->z        = layer.print_z;
         
         ExtrusionPath templ(erInternalInfill);
-        templ.width = fill->spacing;
-        
+        templ.width = fill->spacing();
         const ExPolygons internal_ex = intersection_ex(infill, internal);
         for (ExPolygons::const_iterator it = internal_ex.begin(); it != internal_ex.end(); ++it) {
             Polylines polylines = fill->fill_surface(Surface(stInternal, *it));
@@ -221,10 +221,11 @@ SLAPrint::write_svg(const std::string &outputfile) const
     for (size_t i = 0; i < this->layers.size(); ++i) {
         const Layer &layer = this->layers[i];
         fprintf(f,
-            "\t<g id=\"layer%zu\" slic3r:z=\"%0.4f\" slic3r:slice-z=\"%0.4f\" slic3r:layer-height=\"%0.4f\">\n", i,
+            "\t<g id=\"layer%zu\" slic3r:z=\"%0.4f\" slic3r:slice-z=\"%0.4f\" slic3r:layer-height=\"%0.4f\">\n",
+            i,
             layer.print_z,
             layer.slice_z,
-            layer.print_z - (i == 0 ? 0 : this->layers[i-1].print_z)
+            layer.print_z - ((i == 0) ? 0. : this->layers[i-1].print_z)
         );
         
         if (layer.solid) {
@@ -273,7 +274,7 @@ SLAPrint::write_svg(const std::string &outputfile) const
         }
         
         // don't print support material in raft layers
-        if (i >= this->config.raft_layers) {
+        if (i >= (size_t)this->config.raft_layers) {
             // look for support material pillars belonging to this layer
             for (std::vector<SupportPillar>::const_iterator it = this->sm_pillars.begin(); it != this->sm_pillars.end(); ++it) {
                 if (!(it->top_layer >= i && it->bottom_layer <= i)) continue;

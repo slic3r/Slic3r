@@ -100,7 +100,7 @@ class PrintObject
     PrintState<PrintObjectStep> state;
     
     Print* print();
-    ModelObject* model_object();
+    ModelObject* model_object() { return this->_model_object; };
     
     Points copies() const;
     bool add_copy(const Pointf &point);
@@ -109,6 +109,8 @@ class PrintObject
     bool set_copies(const Points &points);
     bool reload_model_instances();
     BoundingBox bounding_box() const;
+    std::set<size_t> extruders() const;
+    std::set<size_t> support_material_extruders() const;
     
     // adds region_id, too, if necessary
     void add_region_volume(int region_id, int volume_id);
@@ -136,6 +138,7 @@ class PrintObject
     void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
     void _make_perimeters();
     void _infill();
     
@@ -203,6 +206,7 @@ class Print
     double skirt_first_layer_height() const;
     Flow brim_flow() const;
     Flow skirt_flow() const;
+    void _make_brim();
     
     std::set<size_t> object_extruders() const;
     std::set<size_t> support_material_extruders() const;
@@ -211,6 +215,8 @@ class Print
     double max_allowed_layer_height() const;
     bool has_support_material() const;
     void auto_assign_extruders(ModelObject* model_object) const;
+    std::string output_filename();
+    std::string output_filepath(const std::string &path);
     
     private:
     void clear_regions();

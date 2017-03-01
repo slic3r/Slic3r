@@ -479,7 +479,7 @@ sub build {
         perimeter_acceleration infill_acceleration bridge_acceleration 
         first_layer_acceleration default_acceleration
         skirts skirt_distance skirt_height min_skirt_length
-        brim_width
+        brim_connections_width brim_width
         support_material support_material_threshold support_material_enforce_layers
         raft_layers
         support_material_pattern support_material_spacing support_material_angle
@@ -571,6 +571,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Brim');
             $optgroup->append_single_option_line('brim_width');
+            $optgroup->append_single_option_line('brim_connections_width');
         }
     }
     
@@ -806,7 +807,7 @@ sub _update {
         
         my $new_conf = Slic3r::Config->new;
         if ($dialog->ShowModal() == wxID_YES) {
-            $new_conf->set("fill_pattern", 1);
+            $new_conf->set("fill_pattern", 'rectilinear');
         } else {
             $new_conf->set("fill_density", 40);
         }
@@ -848,7 +849,7 @@ sub _update {
     $self->get_field($_)->toggle($have_skirt)
         for qw(skirt_distance skirt_height);
     
-    my $have_brim = $config->brim_width > 0;
+    my $have_brim = $config->brim_width > 0 || $config->brim_connections_width;
     # perimeter_extruder uses the same logic as in Print::extruders()
     $self->get_field('perimeter_extruder')->toggle($have_perimeters || $have_brim);
     
@@ -1046,7 +1047,7 @@ sub build {
     my (%params) = @_;
     
     $self->init_config_options(qw(
-        bed_shape z_offset
+        bed_shape z_offset has_heatbed
         gcode_flavor use_relative_e_distances
         serial_port serial_speed
         octoprint_host octoprint_apikey
@@ -1113,6 +1114,7 @@ sub build {
                 );
                 $optgroup->append_single_option_line($option);
             }
+            $optgroup->append_single_option_line('has_heatbed');
             $optgroup->on_change(sub {
                 my ($opt_id) = @_;
                 if ($opt_id eq 'extruders_count') {

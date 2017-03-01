@@ -30,8 +30,8 @@ enum GCodeFlavor {
 };
 
 enum InfillPattern {
-    ipRectilinear, ipGrid, ipLine, ipAlignedRectilinear,
-    ipRectilinear2, ipGrid2, ipTriangles, ipStars, ipCubic, 
+    ipRectilinear, ipGrid, ipAlignedRectilinear,
+    ipTriangles, ipStars, ipCubic, 
     ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
 };
@@ -41,7 +41,7 @@ enum SupportMaterialPattern {
 };
 
 enum SeamPosition {
-    spRandom, spNearest, spAligned
+    spRandom, spNearest, spAligned, spRear
 };
 
 template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_values() {
@@ -63,9 +63,6 @@ template<> inline t_config_enum_values ConfigOptionEnum<InfillPattern>::get_enum
     keys_map["rectilinear"]         = ipRectilinear;
     keys_map["alignedrectilinear"]  = ipAlignedRectilinear;
     keys_map["grid"]                = ipGrid;
-    keys_map["line"]                = ipLine;
-    keys_map["rectilinear2"]        = ipRectilinear2;
-    keys_map["grid2"]               = ipGrid2;
     keys_map["triangles"]           = ipTriangles;
     keys_map["stars"]               = ipStars;
     keys_map["cubic"]               = ipCubic;
@@ -92,6 +89,7 @@ template<> inline t_config_enum_values ConfigOptionEnum<SeamPosition>::get_enum_
     keys_map["random"]              = spRandom;
     keys_map["nearest"]             = spNearest;
     keys_map["aligned"]             = spAligned;
+    keys_map["rear"]                = spRear;
     return keys_map;
 }
 
@@ -365,9 +363,11 @@ class PrintConfig : public GCodeConfig
     public:
     ConfigOptionBool                avoid_crossing_perimeters;
     ConfigOptionPoints              bed_shape;
+    ConfigOptionBool                has_heatbed;
     ConfigOptionInt                 bed_temperature;
     ConfigOptionFloat               bridge_acceleration;
     ConfigOptionInt                 bridge_fan_speed;
+    ConfigOptionFloat               brim_connections_width;
     ConfigOptionFloat               brim_width;
     ConfigOptionBool                complete_objects;
     ConfigOptionBool                cooling;
@@ -423,9 +423,11 @@ class PrintConfig : public GCodeConfig
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(avoid_crossing_perimeters);
         OPT_PTR(bed_shape);
+        OPT_PTR(has_heatbed);
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
+        OPT_PTR(brim_connections_width);
         OPT_PTR(brim_width);
         OPT_PTR(complete_objects);
         OPT_PTR(cooling);
@@ -549,6 +551,14 @@ class SLAPrintConfig
     
     SLAPrintConfig() : StaticPrintConfig() {
         this->set_defaults();
+        
+        // override some defaults
+        this->fill_density.value                = 100;
+        this->fill_pattern.value                = ipGrid;
+        this->infill_extrusion_width.value      = 0.5;
+        this->infill_extrusion_width.percent    = false;
+        this->perimeter_extrusion_width.value   = 1;
+        this->perimeter_extrusion_width.percent = false;
     };
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
@@ -582,6 +592,10 @@ class CLIConfig
     : public virtual ConfigBase, public StaticConfig
 {
     public:
+    ConfigOptionFloat               cut;
+    ConfigOptionPoint               cut_grid;
+    ConfigOptionFloat               cut_x;
+    ConfigOptionFloat               cut_y;
     ConfigOptionBool                export_obj;
     ConfigOptionBool                export_pov;
     ConfigOptionBool                export_svg;
@@ -589,6 +603,8 @@ class CLIConfig
     ConfigOptionStrings             load;
     ConfigOptionString              output;
     ConfigOptionFloat               rotate;
+    ConfigOptionFloat               rotate_x;
+    ConfigOptionFloat               rotate_y;
     ConfigOptionString              save;
     ConfigOptionFloat               scale;
     ConfigOptionPoint3              scale_to_fit;
@@ -599,6 +615,10 @@ class CLIConfig
     };
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(cut);
+        OPT_PTR(cut_grid);
+        OPT_PTR(cut_x);
+        OPT_PTR(cut_y);
         OPT_PTR(export_obj);
         OPT_PTR(export_pov);
         OPT_PTR(export_svg);
@@ -606,6 +626,8 @@ class CLIConfig
         OPT_PTR(load);
         OPT_PTR(output);
         OPT_PTR(rotate);
+        OPT_PTR(rotate_x);
+        OPT_PTR(rotate_y);
         OPT_PTR(save);
         OPT_PTR(scale);
         OPT_PTR(scale_to_fit);

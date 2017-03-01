@@ -9,19 +9,19 @@ namespace Slic3r {
 void
 FillConcentric::_fill_surface_single(
     unsigned int                     thickness_layers,
-    const std::pair<float, Point>   &direction, 
+    const direction_t               &direction, 
     ExPolygon                       &expolygon, 
     Polylines*                      polylines_out)
 {
     // no rotation is supported for this infill pattern
     
-    const coord_t min_spacing = scale_(this->spacing);
+    const coord_t min_spacing = scale_(this->min_spacing);
     coord_t distance = coord_t(min_spacing / this->density);
     
     if (this->density > 0.9999f && !this->dont_adjust) {
         BoundingBox bounding_box = expolygon.contour.bounding_box();
         distance = this->adjust_solid_spacing(bounding_box.size().x, distance);
-        this->spacing = unscale(distance);
+        this->_spacing = unscale(distance);
     }
 
     Polygons loops = (Polygons)expolygon;

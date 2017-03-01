@@ -253,11 +253,9 @@ sub _init_menubar {
             $plater->export_amf;
         }, undef, 'brick_go.png');
         $self->_append_menu_item($self->{plater_menu}, "Open DLP Projector…\tCtrl+L", 'Open projector window for DLP printing', sub {
-            my $projector = Slic3r::GUI::Projector->new($self);
-            
-            # this double invocation is needed for properly hiding the MainFrame
-            $projector->Show;
-            $projector->ShowModal;
+            $plater->pause_background_process;
+            Slic3r::GUI::SLAPrintOptions->new($self)->ShowModal;
+            $plater->resume_background_process;
         }, undef, 'film.png');
         
         $self->{object_menu} = $self->{plater}->object_menu;
@@ -428,7 +426,7 @@ sub quick_slice {
         if ($params{reslice}) {
             $output_file = $qs_last_output_file if defined $qs_last_output_file;
         } elsif ($params{save_as}) {
-            $output_file = $sprint->expanded_output_filepath;
+            $output_file = $sprint->output_filepath;
             $output_file =~ s/\.gcode$/.svg/i if $params{export_svg};
             my $dlg = Wx::FileDialog->new($self, 'Save ' . ($params{export_svg} ? 'SVG' : 'G-code') . ' file as:',
                 wxTheApp->output_path(dirname($output_file)),

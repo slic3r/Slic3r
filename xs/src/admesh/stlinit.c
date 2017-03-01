@@ -20,6 +20,7 @@
  *           https://github.com/admesh/admesh/issues
  */
 
+#include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,6 +54,8 @@ stl_initialize(stl_file *stl) {
   stl->stats.number_of_parts = 0;
   stl->stats.original_num_facets = 0;
   stl->stats.number_of_facets = 0;
+  stl->stats.bounding_diameter = 0;
+  stl->stats.shortest_edge = FLT_MAX;
   stl->stats.facets_malloced = 0;
   stl->stats.volume = -1.0;
 
@@ -315,29 +318,6 @@ stl_read(stl_file *stl, int first_facet, int first) {
       }
 #endif
 
-#if 1
-    {
-      // Positive and negative zeros are possible in the floats, which are considered equal by the FP unit.
-      // When using a memcmp on raw floats, those numbers report to be different.
-      // Unify all +0 and -0 to +0 to make the floats equal under memcmp.
-      uint32_t *f = (uint32_t*)&facet;
-      int j;
-      for (j = 0; j < 12; ++ j, ++ f) // 3x vertex + normal: 4x3 = 12 floats
-        if (*f == 0x80000000)
-          // Negative zero, switch to positive zero.
-          *f = 0;
-    }
-#else
-    {
-      // Due to the nature of the floating point numbers, close to zero values may be represented with singificantly higher precision 
-      // than the rest of the vertices. Round them to zero.
-      float *f = (float*)&facet;
-      for (int j = 0; j < 12; ++ j, ++ f) // 3x vertex + normal: 4x3 = 12 floats
-        if (*f > -1e-12f && *f < 1e-12f)
-          // Negative zero, switch to positive zero.
-          *f = 0;
-    }
-#endif
     /* Write the facet into memory. */
     memcpy(stl->facet_start+i, &facet, SIZEOF_STL_FACET);
     stl_facet_stats(stl, facet, first);

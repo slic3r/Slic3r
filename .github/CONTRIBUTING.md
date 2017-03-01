@@ -2,7 +2,9 @@ Did you encounter an issue with using Slic3r? Fear not! This guide will help you
 
 There is a good chance that the issue, you have encountered, is already reported. Please check the [list of reported issues](https://github.com/alexrj/Slic3r/issues) before creating a new issue report. If you find an existing issue report, feel free to add further information to that report.
 
-If possible, please include the following information when [reporting an issue](https://github.com/alexrj/Slic3r/issues/new):
+If you are reporting an issue relating to a release version of Slic3r, it would help a lot if you could also confirm that the behavior is still present in the newest build [(windows)](https://bintray.com/lordofhyphens/Slic3r/slic3r_dev/). Otherwise your issue will be closed as soon as someone else isn't able to reproduce it on current master.
+
+When possible, please include the following information when [reporting an issue](https://github.com/alexrj/Slic3r/issues/new):
 * Slic3r version (See the about dialog for the version number. If running from git, please include the git commit ID from `git rev-parse HEAD` also.)
 * Operating system type + version
 * Steps to reproduce the issue, including:

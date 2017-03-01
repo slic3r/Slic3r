@@ -2,17 +2,18 @@ use Test::More;
 use strict;
 use warnings;
 
-plan tests => 43;
+plan tests => 92;
 
 BEGIN {
     use FindBin;
     use lib "$FindBin::Bin/../lib";
+    use local::lib "$FindBin::Bin/../local-lib";
 }
 
 use List::Util qw(first sum);
 use Slic3r;
-use Slic3r::Geometry qw(PI X Y scale unscale convex_hull);
-use Slic3r::Geometry::Clipper qw(union diff diff_ex offset offset2_ex);
+use Slic3r::Geometry qw(PI X Y scaled_epsilon scale unscale convex_hull);
+use Slic3r::Geometry::Clipper qw(union diff diff_ex offset offset2_ex diff_pl);
 use Slic3r::Surface qw(:types);
 use Slic3r::Test;
 
@@ -24,6 +25,67 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
     my $distance = Slic3r::Filler::adjust_solid_spacing($surface_width, 47);
     is $distance, 50, 'adjusted solid distance';
     is $surface_width % $distance, 0, 'adjusted solid distance';
+}
+
+{
+    my $filler = Slic3r::Filler->new_from_type('rectilinear');
+    $filler->set_angle(-(PI)/2);
+    $filler->set_min_spacing(5);
+    $filler->set_dont_adjust(1);
+    $filler->set_endpoints_overlap(0);
+    
+    my $test = sub {
+        my ($expolygon) = @_;
+        my $surface = Slic3r::Surface->new(
+            surface_type    => S_TYPE_TOP,
+            expolygon       => $expolygon,
+        );
+        return $filler->fill_surface($surface);
+    };
+    
+    # square
+    $filler->set_density($filler->min_spacing / 50);
+    for my $i (0..3) {
+        # check that it works regardless of the points order
+        my @points = ([0,0], [100,0], [100,100], [0,100]);
+        @points = (@points[$i..$#points], @points[0..($i-1)]);
+        my $paths = $test->(my $e = Slic3r::ExPolygon->new([ scale_points @points ]));
+        
+        is(scalar @$paths, 1, 'one continuous path') or done_testing, exit;
+        ok abs($paths->[0]->length - scale(3*100 + 2*50)) - scaled_epsilon, 'path has expected length';
+    }
+    
+    # diamond with endpoints on grid
+    {
+        my $paths = $test->(my $e = Slic3r::ExPolygon->new([ scale_points [0,0], [100,0], [150,50], [100,100], [0,100], [-50,50] ]));
+        is(scalar @$paths, 1, 'one continuous path') or done_testing, exit;
+    }
+    
+    # square with hole
+    for my $angle (-(PI/2), -(PI/4), -(PI), PI/2, PI) {
+        for my $spacing (25, 5, 7.5, 8.5) {
+            $filler->set_density($filler->min_spacing / $spacing);
+            $filler->set_angle($angle);
+            my $paths = $test->(my $e = Slic3r::ExPolygon->new(
+                [ scale_points [0,0], [100,0], [100,100], [0,100] ],
+                [ scale_points reverse [25,25], [75,25], [75,75], [25,75] ],
+            ));
+            
+            if (0) {
+                require "Slic3r/SVG.pm";
+                Slic3r::SVG::output(
+                    "fill.svg",
+                    no_arrows   => 1,
+                    expolygons  => [$e],
+                    polylines   => $paths,
+                );
+            }
+            
+            ok(@$paths >= 2 && @$paths <= 3, '2 or 3 continuous paths') or done_testing, exit;
+            ok(!@{diff_pl($paths->arrayref, offset(\@$e, +scaled_epsilon*10))},
+                'paths don\'t cross hole') or done_testing, exit;
+        }
+    }
 }
 
 {
@@ -40,7 +102,8 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
         height          => 0.4,
         nozzle_diameter => 0.50,
     );
-    $filler->set_spacing($flow->spacing);
+    $filler->set_min_spacing($flow->spacing);
+    $filler->set_density(1);
     foreach my $angle (0, 45) {
         $surface->expolygon->rotate(Slic3r::Geometry::deg2rad($angle), [0,0]);
         my $paths = $filler->fill_surface($surface, layer_height => 0.4, density => 0.4);
@@ -55,6 +118,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
         my $filler = Slic3r::Filler->new_from_type('rectilinear');
         $filler->set_bounding_box($expolygon->bounding_box);
         $filler->set_angle($angle // 0);
+        $filler->set_dont_adjust(0);
         my $surface = Slic3r::Surface->new(
             surface_type    => S_TYPE_BOTTOM,
             expolygon       => $expolygon,
@@ -64,7 +128,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
             height          => 0.4,
             nozzle_diameter => $flow_spacing,
         );
-        $filler->set_spacing($flow->spacing);
+        $filler->set_min_spacing($flow->spacing);
         my $paths = $filler->fill_surface(
             $surface,
             layer_height    => $flow->height,

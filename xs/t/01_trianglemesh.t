@@ -6,6 +6,8 @@ use warnings;
 use Slic3r::XS;
 use Test::More tests => 49;
 
+use constant Z => 2;
+
 is Slic3r::TriangleMesh::hello_world(), 'Hello world!',
     'hello world';
 
@@ -117,7 +119,7 @@ my $cube = {
     {
         my $upper = Slic3r::TriangleMesh->new;
         my $lower = Slic3r::TriangleMesh->new;
-        $m->cut(0, $upper, $lower);
+        $m->cut(Z, 0, $upper, $lower);
         $upper->repair; $lower->repair;
         is $upper->facets_count, 12, 'upper mesh has all facets except those belonging to the slicing plane';
         is $lower->facets_count,  0, 'lower mesh has no facets';
@@ -125,7 +127,7 @@ my $cube = {
     {
         my $upper = Slic3r::TriangleMesh->new;
         my $lower = Slic3r::TriangleMesh->new;
-        $m->cut(10, $upper, $lower);
+        $m->cut(Z, 10, $upper, $lower);
         #$upper->repair; $lower->repair;
         # we expect:
         # 2 facets on external horizontal surfaces

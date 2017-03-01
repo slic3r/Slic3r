@@ -23,6 +23,7 @@ use Slic3r::GUI::Plater::3DPreview;
 use Slic3r::GUI::Plater::ObjectPartsPanel;
 use Slic3r::GUI::Plater::ObjectCutDialog;
 use Slic3r::GUI::Plater::ObjectSettingsDialog;
+use Slic3r::GUI::Plater::LambdaObjectDialog;
 use Slic3r::GUI::Plater::OverrideSettingsPanel;
 use Slic3r::GUI::Preferences;
 use Slic3r::GUI::ProgressStatusBar;
@@ -30,6 +31,7 @@ use Slic3r::GUI::Projector;
 use Slic3r::GUI::OptionsGroup;
 use Slic3r::GUI::OptionsGroup::Field;
 use Slic3r::GUI::SimpleTab;
+use Slic3r::GUI::SLAPrintOptions;
 use Slic3r::GUI::Tab;
 
 our $have_OpenGL = eval "use Slic3r::GUI::3DScene; 1";
@@ -64,7 +66,7 @@ our $Settings = {
         mode => 'simple',
         version_check => 1,
         autocenter => 1,
-        background_processing => 1,
+        background_processing => 0,
         # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
         # By default, Prusa has the controller hidden.
         no_controller => 1,

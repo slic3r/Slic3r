@@ -49,6 +49,13 @@ sub slice {
     $self->set_step_started(STEP_SLICE);
     $self->print->status_cb->(10, "Processing triangulated mesh");
     
+    {
+        my @nozzle_diameters = map $self->print->config->get_at('nozzle_diameter', $_),
+            @{$self->print->object_extruders};
+    
+        $self->config->set('layer_height', min(@nozzle_diameters, $self->config->layer_height));
+    }
+    
     # init layers
     {
         $self->clear_layers;
@@ -73,8 +80,7 @@ sub slice {
             {
                 my @nozzle_diameters = (
                     map $self->print->config->get_at('nozzle_diameter', $_),
-                        $self->config->support_material_extruder-1,
-                        $self->config->support_material_interface_extruder-1,
+                        @{$self->support_material_extruders},
                 );
                 $support_material_layer_height = 0.75 * min(@nozzle_diameters);
             }
@@ -335,39 +341,6 @@ sub slice {
     $self->set_step_done(STEP_SLICE);
 }
 
-# called from slice()
-sub _slice_region {
-    my ($self, $region_id, $z, $modifier) = @_;
-
-    return [] if !@{$self->get_region_volumes($region_id)};
-
-    # compose mesh
-    my $mesh;
-    foreach my $volume_id (@{ $self->get_region_volumes($region_id) }) {
-        my $volume = $self->model_object->volumes->[$volume_id];
-        next if $volume->modifier && !$modifier;
-        next if !$volume->modifier && $modifier;
-        
-        if (defined $mesh) {
-            $mesh->merge($volume->mesh);
-        } else {
-            $mesh = $volume->mesh->clone;
-        }
-    }
-    return if !defined $mesh;
-
-    # transform mesh
-    # we ignore the per-instance transformations currently and only 
-    # consider the first one
-    $self->model_object->instances->[0]->transform_mesh($mesh, 1);
-
-    # align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
-    $mesh->translate((map unscale(-$_), @{$self->_copies_shift}), -$self->model_object->bounding_box->z_min);
-    
-    # perform actual slicing
-    return $mesh->slice($z);
-}
-
 sub make_perimeters {
     my ($self) = @_;
     
@@ -618,19 +591,27 @@ sub discover_horizontal_shells {
                     
                     # find intersection between neighbor and current layer's surfaces
                     # intersections have contours and holes
-                    # we update $solid so that we limit the next neighbor layer to the areas that were
-                    # found on this one - in other words, solid shells on one layer (for a given external surface)
-                    # are always a subset of the shells found on the previous shell layer
-                    # this approach allows for DWIM in hollow sloping vases, where we want bottom
-                    # shells to be generated in the base but not in the walls (where there are many
-                    # narrow bottom surfaces): reassigning $solid will consider the 'shadow' of the 
-                    # upper perimeter as an obstacle and shell will not be propagated to more upper layers
-                    my $new_internal_solid = $solid = intersection(
+                    my $new_internal_solid = intersection(
                         $solid,
                         [ map $_->p, grep { ($_->surface_type == S_TYPE_INTERNAL) || ($_->surface_type == S_TYPE_INTERNALSOLID) } @neighbor_fill_surfaces ],
                         1,
                     );
-                    next EXTERNAL if !@$new_internal_solid;
+                    if (!@$new_internal_solid) {
+                        # No internal solid needed on this layer. In order to decide whether to continue
+                        # searching on the next neighbor (thus enforcing the configured number of solid
+                        # layers, use different strategies according to configured infill density:
+                        if ($layerm->region->config->fill_density == 0) {
+                            # If user expects the object to be void (for example a hollow sloping vase),
+                            # don't continue the search. In this case, we only generate the external solid
+                            # shell if the object would otherwise show a hole (gap between perimeters of 
+                            # the two layers), and internal solid shells are a subset of the shells found 
+                            # on each previous layer.
+                            next EXTERNAL;
+                        } else {
+                            # If we have internal infill, we can generate internal solid shells freely.
+                            next NEIGHBOR;
+                        }
+                    }
                     
                     if ($layerm->region->config->fill_density == 0) {
                         # if we're printing a hollow object we discard any solid shell thinner

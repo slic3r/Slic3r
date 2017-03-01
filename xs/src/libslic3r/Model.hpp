@@ -47,6 +47,7 @@ class Model
     Model& operator= (Model other);
     void swap(Model &other);
     ~Model();
+    static Model read_from_file(std::string input_file);
     ModelObject* add_object();
     ModelObject* add_object(const ModelObject &other, bool copy_volumes = true);
     void delete_object(size_t idx);
@@ -156,10 +157,11 @@ class ModelObject
     void scale_to_fit(const Sizef3 &size);
     void rotate(float angle, const Axis &axis);
     void mirror(const Axis &axis);
+    void transform_by_instance(const ModelInstance &instance, bool dont_translate = false);
     size_t materials_count() const;
     size_t facets_count() const;
     bool needed_repair() const;
-    void cut(coordf_t z, Model* model) const;
+    void cut(Axis axis, coordf_t z, Model* model) const;
     void split(ModelObjectPtrs* new_objects);
     void update_bounding_box();   // this is a private method but we expose it until we need to expose it via XS
     void print_info() const;

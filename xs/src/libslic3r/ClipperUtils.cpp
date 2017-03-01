@@ -441,7 +441,8 @@ union_pt_chained(const Polygons &subject, bool safety_offset_)
     return retval;
 }
 
-static void traverse_pt(ClipperLib::PolyNodes &nodes, Polygons* retval)
+void
+traverse_pt(ClipperLib::PolyNodes &nodes, Polygons* retval)
 {
     /* use a nearest neighbor search to order these children
        TODO: supply start_near to chained_path() too? */

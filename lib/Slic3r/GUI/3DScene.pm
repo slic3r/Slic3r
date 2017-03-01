@@ -23,6 +23,7 @@ __PACKAGE__->mk_accessors( qw(_quat _dirty init
                               on_move
                               volumes
                               _sphi _stheta
+                              cutting_plane_axis
                               cutting_plane_z
                               cut_lines_vertices
                               bed_shape
@@ -43,14 +44,12 @@ __PACKAGE__->mk_accessors( qw(_quat _dirty init
 use constant TRACKBALLSIZE  => 0.8;
 use constant TURNTABLE_MODE => 1;
 use constant GROUND_Z       => -0.02;
-use constant DEFAULT_COLOR  => [1,1,0];
-use constant SELECTED_COLOR => [0,1,0,1];
-use constant HOVER_COLOR    => [0.4,0.9,0,1];
+use constant SELECTED_COLOR => [0,1,0];
+use constant HOVER_COLOR    => [0.4,0.9,0];
 use constant PI             => 3.1415927;
 
 # Constant to determine if Vertex Buffer objects are used to draw
 # bed grid and the cut plane for object separation.
-# Old Perl (5.10.x) should set to 0.
 use constant HAS_VBO        => 1;
 
 
@@ -304,7 +303,7 @@ sub mouse_event {
         $self->_dragged(undef);
     } elsif ($e->Moving) {
         $self->_mouse_pos($pos);
-        $self->Refresh;
+        $self->Refresh if $self->enable_picking;
     } else {
         $e->Skip();
     }
@@ -376,12 +375,15 @@ sub zoom_to_bounding_box {
     # bounding box
     my $max_size = max(@{$bb->size}) * 1.05;
     my $min_viewport_size = min($self->GetSizeWH);
-    $self->_zoom($min_viewport_size / $max_size);
+    if ($max_size != 0) {
+        # only re-zoom if we have a valid bounding box, avoid a divide by 0 error.
+        $self->_zoom($min_viewport_size / $max_size);
     
-    # center view around bounding box center
-    $self->_camera_target($bb->center);
+        # center view around bounding box center
+        $self->_camera_target($bb->center);
     
-    $self->on_viewport_changed->() if $self->on_viewport_changed;
+        $self->on_viewport_changed->() if $self->on_viewport_changed;
+    }
 }
 
 sub zoom_to_bed {
@@ -502,19 +504,35 @@ sub select_volume {
 }
 
 sub SetCuttingPlane {
-    my ($self, $z, $expolygons) = @_;
+    my ($self, $axis, $z, $expolygons) = @_;
     
+    $self->cutting_plane_axis($axis);
     $self->cutting_plane_z($z);
     
     # grow slices in order to display them better
     $expolygons = offset_ex([ map @$_, @$expolygons ], scale 0.1);
     
+    my $bb = $self->volumes_bounding_box;
+    
     my @verts = ();
     foreach my $line (map @{$_->lines}, map @$_, @$expolygons) {
-        push @verts, (
-            unscale($line->a->x), unscale($line->a->y), $z,  #))
-            unscale($line->b->x), unscale($line->b->y), $z,  #))
-        );
+        if ($axis == X) {
+            push @verts, (
+                $bb->x_min + $z, unscale($line->a->x), unscale($line->a->y),  #))
+                $bb->x_min + $z, unscale($line->b->x), unscale($line->b->y),  #))
+            );
+        } elsif ($axis == Y) {
+            push @verts, (
+                unscale($line->a->y), $bb->y_min + $z, unscale($line->a->x),  #))
+                unscale($line->b->y), $bb->y_min + $z, unscale($line->b->x),  #))
+            );
+        } else {
+            push @verts, (
+                unscale($line->a->x), unscale($line->a->y), $z,  #))
+                unscale($line->b->x), unscale($line->b->y), $z,  #))
+            );
+        }
+        
     }
     $self->cut_lines_vertices(OpenGL::Array->new_list(GL_FLOAT, @verts));
 }
@@ -835,8 +853,8 @@ sub Render {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         
         glEnableClientState(GL_VERTEX_ARRAY);
+        my $triangle_vertex;
         if (HAS_VBO) {
-            my ($triangle_vertex);
             ($triangle_vertex) =
                 glGenBuffersARB_p(1);
             $self->bed_triangles->bind($triangle_vertex);
@@ -844,7 +862,7 @@ sub Render {
             glVertexPointer_c(3, GL_FLOAT, 0, 0);
         } else {
             # fall back on old behavior
-            glVertexPointer_p(3, $self->bed_triangles);
+            glVertexPointer_c(3, GL_FLOAT, 0, $self->bed_triangles->ptr());
         }
         glColor4f(0.8, 0.6, 0.5, 0.4);
         glNormal3d(0,0,1);
@@ -858,8 +876,8 @@ sub Render {
         # draw grid
         glLineWidth(3);
         glEnableClientState(GL_VERTEX_ARRAY);
+        my $grid_vertex;
         if (HAS_VBO) {
-            my ($grid_vertex);
             ($grid_vertex) =
                 glGenBuffersARB_p(1);
             $self->bed_grid_lines->bind($grid_vertex);
@@ -867,7 +885,7 @@ sub Render {
             glVertexPointer_c(3, GL_FLOAT, 0, 0);
         } else {
             # fall back on old behavior
-            glVertexPointer_p(3, $self->bed_grid_lines);
+            glVertexPointer_c(3, GL_FLOAT, 0, $self->bed_grid_lines->ptr());
         }
         glColor4f(0.2, 0.2, 0.2, 0.4);
         glNormal3d(0,0,1);
@@ -879,6 +897,8 @@ sub Render {
             # Turn off buffer objects to let the rest of the draw code work.
             glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
             glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+            glDeleteBuffersARB_p($grid_vertex);
+            glDeleteBuffersARB_p($triangle_vertex);
         }
     }
     
@@ -890,8 +910,8 @@ sub Render {
         glDisable(GL_DEPTH_TEST);
         my $origin = $self->origin;
         my $axis_len = max(
-            0.3 * max(@{ $self->bed_bounding_box->size }),
-              2 * max(@{ $volumes_bb->size }),
+            max(@{ $self->bed_bounding_box->size }),
+            1.2 * max(@{ $volumes_bb->size }),
         );
         glLineWidth(2);
         glBegin(GL_LINES);
@@ -929,10 +949,22 @@ sub Render {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glBegin(GL_QUADS);
         glColor4f(0.8, 0.8, 0.8, 0.5);
-        glVertex3f($bb->x_min-20, $bb->y_min-20, $plane_z);
-        glVertex3f($bb->x_max+20, $bb->y_min-20, $plane_z);
-        glVertex3f($bb->x_max+20, $bb->y_max+20, $plane_z);
-        glVertex3f($bb->x_min-20, $bb->y_max+20, $plane_z);
+        if ($self->cutting_plane_axis == X) {
+            glVertex3f($bb->x_min+$plane_z, $bb->y_min-20, $bb->z_min-20);
+            glVertex3f($bb->x_min+$plane_z, $bb->y_max+20, $bb->z_min-20);
+            glVertex3f($bb->x_min+$plane_z, $bb->y_max+20, $bb->z_max+20);
+            glVertex3f($bb->x_min+$plane_z, $bb->y_min-20, $bb->z_max+20);
+        } elsif ($self->cutting_plane_axis == Y) {
+            glVertex3f($bb->x_min-20, $bb->y_min+$plane_z, $bb->z_min-20);
+            glVertex3f($bb->x_max+20, $bb->y_min+$plane_z, $bb->z_min-20);
+            glVertex3f($bb->x_max+20, $bb->y_min+$plane_z, $bb->z_max+20);
+            glVertex3f($bb->x_min-20, $bb->y_min+$plane_z, $bb->z_max+20);
+        } elsif ($self->cutting_plane_axis == Z) {
+            glVertex3f($bb->x_min-20, $bb->y_min-20, $bb->z_min+$plane_z);
+            glVertex3f($bb->x_max+20, $bb->y_min-20, $bb->z_min+$plane_z);
+            glVertex3f($bb->x_max+20, $bb->y_max+20, $bb->z_min+$plane_z);
+            glVertex3f($bb->x_min-20, $bb->y_max+20, $bb->z_min+$plane_z);
+        }
         glEnd();
         glEnable(GL_CULL_FACE);
         glDisable(GL_BLEND);
@@ -945,6 +977,9 @@ sub Render {
     glFlush();
  
     $self->SwapBuffers();
+    
+    # Calling glFinish has a performance penalty, but it seems to fix some OpenGL driver hang-up with extremely large scenes.
+    glFinish();
 }
 
 sub draw_axes {
@@ -998,9 +1033,9 @@ sub draw_volumes {
             my $b = ($volume_idx & 0x00FF0000) >> 16;
             glColor4f($r/255.0, $g/255.0, $b/255.0, 1);
         } elsif ($volume->selected) {
-            glColor4f(@{ &SELECTED_COLOR });
+            glColor4f(@{ &SELECTED_COLOR }, $volume->color->[3]);
         } elsif ($volume->hover) {
-            glColor4f(@{ &HOVER_COLOR });
+            glColor4f(@{ &HOVER_COLOR }, $volume->color->[3]);
         } else {
             glColor4f(@{ $volume->color });
         }
@@ -1052,17 +1087,18 @@ sub draw_volumes {
     }
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisable(GL_BLEND);
-    
+
+    my $cut_vertex;
     if (defined $self->cutting_plane_z) {
         if (HAS_VBO) {
             # Use Vertex Buffer Object for cutting plane (previous method crashes on modern POGL). 
-            my ($cut_vertex) = glGenBuffersARB_p(1);
+            ($cut_vertex) = glGenBuffersARB_p(1);
             $self->cut_lines_vertices->bind($cut_vertex);
             glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->cut_lines_vertices, GL_STATIC_DRAW_ARB);
             glVertexPointer_c(3, GL_FLOAT, 0, 0);
         } else {
             # Use legacy method.
-            glVertexPointer_p(3, $self->cut_lines_vertices);
+            glVertexPointer_c(3, GL_FLOAT, 0, $self->cut_lines_vertices->ptr());
         }
         glLineWidth(2);
         glColor3f(0, 0, 0);
@@ -1072,6 +1108,7 @@ sub draw_volumes {
             # Turn off buffer objects to let the rest of the draw code work.
             glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
             glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+            glDeleteBuffersARB_p($cut_vertex);
         }
 
     }
@@ -1254,7 +1291,9 @@ sub load_print_toolpaths {
     
     return if !$print->step_done(STEP_SKIRT);
     return if !$print->step_done(STEP_BRIM);
-    return if !$print->has_skirt && $print->config->brim_width == 0;
+    return if !$print->has_skirt
+        && $print->config->brim_width == 0
+        && $print->config->brim_connections_width == 0;
     
     my $qverts  = Slic3r::GUI::_3DScene::GLVertexArray->new;
     my $tverts  = Slic3r::GUI::_3DScene::GLVertexArray->new;

@@ -324,7 +324,7 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
     Point last_pos = this->last_pos();
     if (this->config.spiral_vase) {
         loop.split_at(last_pos);
-    } else if (seam_position == spNearest || seam_position == spAligned) {
+    } else if (seam_position == spNearest || seam_position == spAligned || seam_position == spRear) {
         const Polygon polygon = loop.polygon();
         
         // simplify polygon in order to skip false positives in concave/convex detection
@@ -354,8 +354,13 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
         }
         
         // retrieve the last start position for this object
-        if (this->layer != NULL && this->_seam_position.count(this->layer->object()) > 0) {
-            last_pos = this->_seam_position[this->layer->object()];
+        if (this->layer != NULL) {
+            if (seam_position == spRear) {
+                last_pos = this->layer->object()->bounding_box().center();
+                last_pos.y += coord_t(3. * this->layer->object()->bounding_box().radius());
+            } else if (this->_seam_position.count(this->layer->object()) > 0) {
+                last_pos = this->_seam_position[this->layer->object()];
+            }
         }
         
         Point point;
@@ -392,7 +397,8 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
             last_pos = Point(polygon.bounding_box().max.x, centroid.y);
             last_pos.rotate(fmod((float)rand()/16.0, 2.0*PI), centroid);
         }
-        loop.split_at(last_pos);
+        // Find the closest point, avoid overhangs.
+        loop.split_at(last_pos, true);
     }
     
     // clip the path to avoid the extruder to get exactly on the first point of the loop;
@@ -671,15 +677,6 @@ GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
             && this->layer->any_internal_region_slice_contains(travel)) {
             /*  skip retraction if travel is contained in an internal slice *and*
                 internal infill is enabled (so that stringing is entirely not visible)  */
-            return false;
-        } else if (this->layer->any_bottom_region_slice_contains(travel)
-            && this->layer->upper_layer != NULL
-            && this->layer->upper_layer->slices.contains(travel)
-            && (this->config.bottom_solid_layers.value >= 2 || this->config.fill_density.value > 0)) {
-            /*  skip retraction if travel is contained in an *infilled* bottom slice
-                but only if it's also covered by an *infilled* upper layer's slice
-                so that it's not visible from above (a bottom surface might not have an
-                upper slice in case of a thin membrane)  */
             return false;
         }
     }

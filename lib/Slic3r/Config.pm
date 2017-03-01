@@ -325,7 +325,7 @@ sub validate {
         my $max_nozzle_diameter = max(@{ $self->nozzle_diameter });
         die "Invalid extrusion width (too large)\n"
             if defined first { $_ > 10 * $max_nozzle_diameter }
-                map $self->get_abs_value_over("${_}_extrusion_width", $self->layer_height),
+                map $self->get_abs_value_over("${_}_extrusion_width", $max_nozzle_diameter),
                 qw(perimeter infill solid_infill top_infill support_material first_layer);
     }
     
@@ -421,5 +421,6 @@ sub Slic3r::Config::Print::new { Slic3r::Config::Static::new_PrintConfig }
 sub Slic3r::Config::PrintObject::new { Slic3r::Config::Static::new_PrintObjectConfig }
 sub Slic3r::Config::PrintRegion::new { Slic3r::Config::Static::new_PrintRegionConfig }
 sub Slic3r::Config::Full::new { Slic3r::Config::Static::new_FullPrintConfig }
+sub Slic3r::Config::SLAPrint::new { Slic3r::Config::Static::new_SLAPrintConfig }
 
 1;

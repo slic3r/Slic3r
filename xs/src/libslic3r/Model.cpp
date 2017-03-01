@@ -1,7 +1,9 @@
 #include "Model.hpp"
 #include "Geometry.hpp"
+#include "IO.hpp"
 #include <iostream>
-#include "boost/filesystem.hpp"
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
 
 namespace Slic3r {
 
@@ -36,6 +38,31 @@ Model::~Model()
 {
     this->clear_objects();
     this->clear_materials();
+}
+
+Model
+Model::read_from_file(std::string input_file)
+{
+    Model model;
+    
+    if (boost::algorithm::iends_with(input_file, ".stl")) {
+        IO::STL::read(input_file, &model);
+    } else if (boost::algorithm::iends_with(input_file, ".obj")) {
+        IO::OBJ::read(input_file, &model);
+    } else if (boost::algorithm::iends_with(input_file, ".amf")
+            || boost::algorithm::iends_with(input_file, ".amf.xml")) {
+        IO::AMF::read(input_file, &model);
+    } else {
+        throw std::runtime_error("Unknown file format");
+    }
+    
+    if (model.objects.empty())
+        throw std::runtime_error("The supplied file couldn't be read because it's empty");
+    
+    for (ModelObjectPtrs::const_iterator o = model.objects.begin(); o != model.objects.end(); ++o)
+        (*o)->input_file = input_file;
+    
+    return model;
 }
 
 ModelObject*
@@ -346,7 +373,7 @@ ModelMaterial::apply(const t_model_material_attributes &attributes)
 
 
 ModelObject::ModelObject(Model *model)
-    : model(model), _bounding_box_valid(false)
+    : _bounding_box_valid(false), model(model)
 {}
 
 ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volumes)
@@ -617,6 +644,7 @@ ModelObject::scale(float factor)
 void
 ModelObject::scale(const Pointf3 &versor)
 {
+    if (versor.x == 1 && versor.y == 1 && versor.z == 1) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->mesh.scale(versor);
     }
@@ -643,6 +671,7 @@ ModelObject::scale_to_fit(const Sizef3 &size)
 void
 ModelObject::rotate(float angle, const Axis &axis)
 {
+    if (angle == 0) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->mesh.rotate(angle, axis);
     }
@@ -655,6 +684,24 @@ ModelObject::mirror(const Axis &axis)
 {
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->mesh.mirror(axis);
+    }
+    this->origin_translation = Pointf3(0,0,0);
+    this->invalidate_bounding_box();
+}
+
+void
+ModelObject::transform_by_instance(const ModelInstance &instance, bool dont_translate)
+{
+    this->rotate(instance.rotation, Z);
+    this->scale(instance.scaling_factor);
+    if (!dont_translate)
+        this->translate(instance.offset.x, instance.offset.y, 0);
+    
+    for (ModelInstancePtrs::iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
+        (*i)->rotation -= instance.rotation;
+        (*i)->scaling_factor /= instance.scaling_factor;
+        if (!dont_translate)
+            (*i)->offset.translate(-instance.offset.x, -instance.offset.y);
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
@@ -692,13 +739,15 @@ ModelObject::needed_repair() const
 }
 
 void
-ModelObject::cut(coordf_t z, Model* model) const
+ModelObject::cut(Axis axis, coordf_t z, Model* model) const
 {
     // clone this one to duplicate instances, materials etc.
     ModelObject* upper = model->add_object(*this);
     ModelObject* lower = model->add_object(*this);
     upper->clear_volumes();
     lower->clear_volumes();
+    upper->input_file = "";
+    lower->input_file = "";
     
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         ModelVolume* volume = *v;
@@ -707,10 +756,16 @@ ModelObject::cut(coordf_t z, Model* model) const
             upper->add_volume(*volume);
             lower->add_volume(*volume);
         } else {
-            TriangleMeshSlicer tms(&volume->mesh);
             TriangleMesh upper_mesh, lower_mesh;
-            // TODO: shouldn't we use object bounding box instead of per-volume bb?
-            tms.cut(z + volume->mesh.bounding_box().min.z, &upper_mesh, &lower_mesh);
+            
+            if (axis == X) {
+                TriangleMeshSlicer<X>(&volume->mesh).cut(z, &upper_mesh, &lower_mesh);
+            } else if (axis == Y) {
+                TriangleMeshSlicer<Y>(&volume->mesh).cut(z, &upper_mesh, &lower_mesh);
+            } else if (axis == Z) {
+                TriangleMeshSlicer<Z>(&volume->mesh).cut(z, &upper_mesh, &lower_mesh);
+            }
+            
             upper_mesh.repair();
             lower_mesh.repair();
             upper_mesh.reset_repair_stats();
@@ -748,6 +803,7 @@ ModelObject::split(ModelObjectPtrs* new_objects)
         (*mesh)->repair();
         
         ModelObject* new_object = this->model->add_object(*this, false);
+        new_object->input_file  = "";
         ModelVolume* new_volume = new_object->add_volume(**mesh);
         new_volume->name        = volume->name;
         new_volume->config      = volume->config;

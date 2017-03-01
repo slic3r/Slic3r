@@ -5,8 +5,6 @@ namespace Slic3r {
 
 PrintConfigDef::PrintConfigDef()
 {
-    t_optiondef_map &Options = this->options;
-    
     ConfigOptionDef* def;
     
     def = this->add("avoid_crossing_perimeters", coBool);
@@ -25,10 +23,15 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(Pointf(0,200));
         def->default_value = opt;
     }
+    def = this->add("has_heatbed", coBool);
+    def->label = "Has heated bed";
+    def->tooltip = "Unselecting this will suppress automatic generation of bed heating gcode.";
+    def->cli = "has_heatbed!";
+    def->default_value = new ConfigOptionBool(true);
     
     def = this->add("bed_temperature", coInt);
     def->label = "Other layers";
-    def->tooltip = "Bed temperature for layers after the first one. Set this to zero to disable bed temperature control commands in the output.";
+    def->tooltip = "Bed temperature for layers after the first one.";
     def->cli = "bed-temperature=i";
     def->full_label = "Bed temperature";
     def->min = 0;
@@ -87,6 +90,14 @@ PrintConfigDef::PrintConfigDef()
     def->aliases.push_back("bridge_feed_rate");
     def->min = 0;
     def->default_value = new ConfigOptionFloat(60);
+
+    def = this->add("brim_connections_width", coFloat);
+    def->label = "Brim connections width";
+    def->tooltip = "If set to a positive value, straight connections will be built on the first layer between adjacent objects.";
+    def->sidetext = "mm";
+    def->cli = "brim-connections-width=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("brim_width", coFloat);
     def->label = "Brim width";
@@ -393,9 +404,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("grid");
-    def->enum_values.push_back("line");
-    def->enum_values.push_back("rectilinear2");
-    def->enum_values.push_back("grid2");
     def->enum_values.push_back("triangles");
     def->enum_values.push_back("stars");
     def->enum_values.push_back("cubic");
@@ -408,9 +416,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Rectilinear");
     def->enum_labels.push_back("Aligned Rectilinear");
     def->enum_labels.push_back("Grid");
-    def->enum_labels.push_back("Line");
-    def->enum_labels.push_back("Rectilinear 2");
-    def->enum_labels.push_back("Grid 2");
     def->enum_labels.push_back("Triangles");
     def->enum_labels.push_back("Stars");
     def->enum_labels.push_back("Cubic");
@@ -420,7 +425,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
     def->enum_labels.push_back("Octagram Spiral");
-    def->default_value = new ConfigOptionEnum<InfillPattern>(ipHoneycomb);
+    def->default_value = new ConfigOptionEnum<InfillPattern>(ipStars);
 
     def = this->add("first_layer_acceleration", coFloat);
     def->label = "First layer";
@@ -576,7 +581,7 @@ PrintConfigDef::PrintConfigDef()
     def->sidetext = "mm or %";
     def->cli = "infill-overlap=s";
     def->ratio_over = "perimeter_extrusion_width";
-    def->default_value = new ConfigOptionFloatOrPercent(15, true);
+    def->default_value = new ConfigOptionFloatOrPercent(55, true);
 
     def = this->add("infill_speed", coFloat);
     def->label = "Infill";
@@ -938,9 +943,11 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("random");
     def->enum_values.push_back("nearest");
     def->enum_values.push_back("aligned");
+    def->enum_values.push_back("rear");
     def->enum_labels.push_back("Random");
     def->enum_labels.push_back("Nearest");
     def->enum_labels.push_back("Aligned");
+    def->enum_labels.push_back("Rear");
     def->default_value = new ConfigOptionEnum<SeamPosition>(spAligned);
 
     def = this->add("serial_port", coString);
@@ -1399,9 +1406,31 @@ PrintConfigBase::min_object_distance() const
 
 CLIConfigDef::CLIConfigDef()
 {
-    t_optiondef_map &Options = this->options;
-    
     ConfigOptionDef* def;
+    
+    def = this->add("cut", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model at the given Z.";
+    def->cli = "cut";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("cut_grid", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model in the XY plane into tiles of the specified max size.";
+    def->cli = "cut-grid";
+    def->default_value = new ConfigOptionPoint();
+    
+    def = this->add("cut_x", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model at the given X.";
+    def->cli = "cut-x";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("cut_y", coFloat);
+    def->label = "Cut";
+    def->tooltip = "Cut model at the given Y.";
+    def->cli = "cut-y";
+    def->default_value = new ConfigOptionFloat(0);
     
     def = this->add("export_obj", coBool);
     def->label = "Export SVG";
@@ -1443,6 +1472,18 @@ CLIConfigDef::CLIConfigDef()
     def->label = "Rotate";
     def->tooltip = "Rotation angle around the Z axis in degrees (0-360, default: 0).";
     def->cli = "rotate";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("rotate_x", coFloat);
+    def->label = "Rotate around X";
+    def->tooltip = "Rotation angle around the X axis in degrees (0-360, default: 0).";
+    def->cli = "rotate-x";
+    def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("rotate_y", coFloat);
+    def->label = "Rotate around Y";
+    def->tooltip = "Rotation angle around the Y axis in degrees (0-360, default: 0).";
+    def->cli = "rotate-y";
     def->default_value = new ConfigOptionFloat(0);
     
     def = this->add("save", coString);
