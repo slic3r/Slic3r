@@ -319,7 +319,7 @@ sub process_layer {
         my @mm3_per_mm = ();
         foreach my $region_id (0..$#{$self->print->regions}) {
             my $region = $self->print->get_region($region_id);
-            my $layerm = $layer->get_region($region_id);
+            my $layerm = $layer->region($region_id);
             if ($region->config->get_abs_value('perimeter_speed') == 0
                 || $region->config->get_abs_value('small_perimeter_speed') == 0
                 || $region->config->get_abs_value('external_perimeter_speed') == 0
