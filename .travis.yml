@@ -11,8 +11,7 @@ cache:
 matrix:
   include:
     - compiler: gcc
-      perl:
-        - "5.14"
+      perl: "5.14"
       addons:
       apt:
         sources:
@@ -26,8 +25,7 @@ matrix:
           - liblocal-lib-perl
       env: CC=g++-4.9
     - compiler: gcc
-      perl:
-        - "5.18"
+      perl: "5.18"
       addons:
       apt:
         sources:
@@ -41,8 +39,7 @@ matrix:
           - liblocal-lib-perl
       env: CC=g++-4.9
     - compiler: gcc
-      perl:
-        - "5.20"
+      perl: "5.20"
       addons:
       apt:
         sources:
@@ -56,8 +53,7 @@ matrix:
           - liblocal-lib-perl
       env: CC=g++-4.9
     - compiler: clang
-      perl:
-        - "5.14"
+      perl: "5.14"
       addons:
         apt:
           sources:
@@ -72,8 +68,7 @@ matrix:
             - liblocal-lib-perl
       env: CC=clang++-3.6
     - compiler: clang
-      perl:
-        - "5.18"
+      perl: "5.18"
       addons:
         apt:
           sources:
@@ -88,8 +83,7 @@ matrix:
             - liblocal-lib-perl
       env: CC=clang++-3.6
     - compiler: clang
-      perl:
-        - "5.20"
+      perl: "5.20"
       addons:
         apt:
           sources:
