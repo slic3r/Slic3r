@@ -18,8 +18,8 @@ matrix:
       addons:
         apt:
           sources:
+            - boost-latest
             - ubuntu-toolchain-r-test
-			- boost-latest
           packages:
             - g++-4.9
 			- libboost-thread1.55-dev
