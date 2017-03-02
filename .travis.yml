@@ -13,7 +13,35 @@ matrix:
     - compiler: gcc
       perl:
         - "5.14"
+      addons:
+      apt:
+        sources:
+          - boost-latest
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-4.9
+          - libboost-thread1.55-dev
+          - libboost-system1.55-dev
+          - libboost-filesystem1.55-dev
+          - liblocal-lib-perl
+      env: CC=g++-4.9
+    - compiler: gcc
+      perl:
         - "5.18"
+      addons:
+      apt:
+        sources:
+          - boost-latest
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-4.9
+          - libboost-thread1.55-dev
+          - libboost-system1.55-dev
+          - libboost-filesystem1.55-dev
+          - liblocal-lib-perl
+      env: CC=g++-4.9
+    - compiler: gcc
+      perl:
         - "5.20"
       addons:
       apt:
@@ -30,7 +58,37 @@ matrix:
     - compiler: clang
       perl:
         - "5.14"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.6
+            - boost-latest
+          packages:
+            - clang-3.6
+            - libboost-thread1.55-dev
+            - libboost-system1.55-dev
+            - libboost-filesystem1.55-dev
+            - liblocal-lib-perl
+      env: CC=clang++-3.6
+    - compiler: clang
+      perl:
         - "5.18"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.6
+            - boost-latest
+          packages:
+            - clang-3.6
+            - libboost-thread1.55-dev
+            - libboost-system1.55-dev
+            - libboost-filesystem1.55-dev
+            - liblocal-lib-perl
+      env: CC=clang++-3.6
+    - compiler: clang
+      perl:
         - "5.20"
       addons:
         apt:
