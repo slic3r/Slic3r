@@ -12,12 +12,35 @@ branches:
 sudo: false
 cache:
     - apt
+matrix:
+  include:
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+      env: COMPILER=g++-4.9
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.6
+          packages:
+            - clang-3.6
+      env: COMPILER=clang++-3.6
+
 addons:
   apt:
     sources:
     - boost-latest
+	- ubuntu-toolchain-r-test
     packages:
     - libboost-thread1.55-dev
     - libboost-system1.55-dev
     - libboost-filesystem1.55-dev
     - liblocal-lib-perl
+	- clang-3.4
+	- g++-4.9
