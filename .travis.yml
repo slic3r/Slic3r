@@ -8,13 +8,14 @@ branches:
 sudo: false
 cache:
     - apt
-sources:    
-  - boost-latest
-packages:    
-  - libboost-thread1.55-dev
-  - libboost-system1.55-dev
-  - libboost-filesystem1.55-dev
-  - liblocal-lib-perl
+apt:
+  sources:    
+    - boost-latest
+  packages:    
+    - libboost-thread1.55-dev
+    - libboost-system1.55-dev
+    - libboost-filesystem1.55-dev
+    - liblocal-lib-perl
 
 matrix:
   include:
