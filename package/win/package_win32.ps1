@@ -127,6 +127,7 @@ pp `
 -M URI::Escape `
 -M URI::http `
 -M Unicode::Normalize `
+-M Win32 `
 -M Win32::API `
 -M Win32::TieRegistry `
 -M Win32::WinError `
