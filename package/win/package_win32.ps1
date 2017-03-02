@@ -54,6 +54,7 @@ pp `
 -a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll"  `
 -a "${STRAWBERRY_PATH}\c\bin\pthreadGC2-w64.dll;pthreadGC2-w64.dll"  `
+-a "${STRAWBERRY_PATH}\c\bin\libglut-0__.dll;libglut-0__.dll"  `
 -M AutoLoader `
 -M B `
 -M Carp `
