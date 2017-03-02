@@ -113,7 +113,6 @@ pp `
 -M Sub::Exporter `
 -M Sub::Exporter::Progressive `
 -M Sub::Name `
--M Sub::Util `
 -M Symbol `
 -M Term::Cap `
 -M Text::ParseWords `
