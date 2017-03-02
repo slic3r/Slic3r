@@ -1,10 +1,6 @@
 language: perl
 install: export LDLOADLIBS=-lstdc++
 script: perl ./Build.PL
-perl:
-  - "5.14"
-  - "5.18"
-  - "5.20"
 branches:
   only:
     - master
@@ -15,6 +11,10 @@ cache:
 matrix:
   include:
     - compiler: gcc
+      perl:
+        - "5.14"
+        - "5.18"
+        - "5.20"
       addons:
       apt:
         sources:
@@ -26,8 +26,12 @@ matrix:
           - libboost-system1.55-dev
           - libboost-filesystem1.55-dev
           - liblocal-lib-perl
-      env: COMPILER=g++-4.9
+      env: CC=g++-4.9
     - compiler: clang
+      perl:
+        - "5.14"
+        - "5.18"
+        - "5.20"
       addons:
         apt:
           sources:
