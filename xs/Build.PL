@@ -23,8 +23,17 @@ if ($cpp_guess->is_gcc)	{
 	push @cflags, qw(-U__STRICT_ANSI__);
 }
 my @ldflags = ();
-if ($^O eq 'darwin') {
-    push @ldflags, qw(-framework IOKit -framework CoreFoundation);
+if ($^O eq 'darwin' && `sw_vers -productVersion` =~ /\b10\.8\./) {
+    push @cflags, qw(-stdlib=libc++);
+    push @ldflags, qw(-framework IOKit -framework CoreFoundation -lc++);
+    
+    # Due to a bug/misconfiguration/stupidity, boost 1.52 and libc++ don't like each
+    # other much: a compilation error "Constexpr function never produces a constant
+    # expression" pops up when trying to compile anything that uses
+    # boost/chrono/duration.hpp (namely boost/thread for us). This is a workaround
+    # that prevents this from happening, not needed with newer Boost versions.
+    # See here for more details: https://svn.boost.org/trac/boost/ticket/7671
+    push @cflags, qw(-DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE);
 }
 if ($mswin) {
     # In case windows.h is included, we don't want the min / max macros to be active.
