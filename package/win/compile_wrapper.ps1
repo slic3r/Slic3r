@@ -8,7 +8,8 @@ if ($args[0])
 }
 
 $perllib = "-lperl$perlver"
-Write-Host $perllib
 
-g++ -v -I'C:\strawberry\perl\lib\CORE\' -static-libgcc -static-libstdc++ -L'C:\strawberry\c\lib' -L'C:\strawberry\perl\bin' -L'C:\strawberry\perl\lib\CORE\' $perllib .\shell.cpp -o slic3r.exe | Write-Host
+windres slic3r.rc -O coff -o slic3r.res
+g++ -c -I'C:\strawberry\perl\lib\CORE\' shell.cpp -o slic3r.o
+g++ -v -static-libgcc -static-libstdc++ -L'C:\strawberry\c\lib' -L'C:\strawberry\perl\bin' -L'C:\strawberry\perl\lib\CORE\' $perllib slic3r.o slic3r.res -o slic3r.exe | Write-Host
 
