@@ -12,8 +12,6 @@ branches:
 sudo: false
 cache:
     - apt
-    directories:
-      - local-lib
 addons:
   apt:
     sources:
