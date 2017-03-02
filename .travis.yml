@@ -23,4 +23,4 @@ addons:
     - libboost-filesystem1.55-dev
     - liblocal-lib-perl
     - g++-4.9
-env: CC=gcc-4.9 CXX=g++-4.9
+env: CC=g++-4.9

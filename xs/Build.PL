@@ -15,7 +15,7 @@ my $mswin = $^O eq 'MSWin32';
 # HAS_BOOL         : stops Perl/lib/CORE/handy.h from doing "#  define bool char" for MSVC
 # NOGDI            : prevents inclusion of wingdi.h which defines functions Polygon() and Polyline() in global namespace
 # BOOST_ASIO_DISABLE_KQUEUE : prevents a Boost ASIO bug on OS X: https://svn.boost.org/trac/boost/ticket/5339
-# std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.5, clang 3.3, MSVC 14.0
+# std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
 my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE
     -std=c++11);
 if ($cpp_guess->is_gcc)	{
