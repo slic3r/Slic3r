@@ -1,6 +1,10 @@
 language: perl
 install: export LDLOADLIBS=-lstdc++
 script: perl ./Build.PL
+perl:
+  - "5.14"
+  - "5.18"
+  - "5.20"
 branches:
   only:
     - master
@@ -8,71 +12,15 @@ branches:
 sudo: false
 cache:
     - apt
-apt:
-  sources:    
+addons:
+  apt:
+    sources:
     - boost-latest
-  packages:    
+    - ubuntu-toolchain-r-test
+    packages:
     - libboost-thread1.55-dev
     - libboost-system1.55-dev
     - libboost-filesystem1.55-dev
     - liblocal-lib-perl
-
-matrix:
-  include:
-    - compiler: gcc
-      perl: "5.14"
-      addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - g++-4.9
-      env: CC=g++-4.9
-    - compiler: gcc
-      perl: "5.18"
-      addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - g++-4.9
-      env: CC=g++-4.9
-    - compiler: gcc
-      perl: "5.20"
-      addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - g++-4.9
-      env: CC=g++-4.9
-    - compiler: clang
-      perl: "5.14"
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.6
-          packages:
-            - clang-3.6
-      env: CC=clang++-3.6
-    - compiler: clang
-      perl: "5.18"
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.6
-          packages:
-            - clang-3.6
-      env: CC=clang++-3.6
-    - compiler: clang
-      perl: "5.20"
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.6
-          packages:
-            - clang-3.6
-      env: CC=clang++-3.6
+    - g++-4.9
+env: CC=gcc-4.9 CXX=g++-4.9
