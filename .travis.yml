@@ -40,4 +40,4 @@ matrix:
 			- libboost-system1.55-dev
 			- libboost-filesystem1.55-dev
 			- liblocal-lib-perl
-      env: COMPILER=clang++-3.6
+      env: CC=clang++-3.6
