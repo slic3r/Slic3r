@@ -8,6 +8,14 @@ branches:
 sudo: false
 cache:
     - apt
+sources:    
+  - boost-latest
+packages:    
+  - libboost-thread1.55-dev
+  - libboost-system1.55-dev
+  - libboost-filesystem1.55-dev
+  - liblocal-lib-perl
+
 matrix:
   include:
     - compiler: gcc
@@ -15,14 +23,9 @@ matrix:
       addons:
       apt:
         sources:
-          - boost-latest
           - ubuntu-toolchain-r-test
         packages:
           - g++-4.9
-          - libboost-thread1.55-dev
-          - libboost-system1.55-dev
-          - libboost-filesystem1.55-dev
-          - liblocal-lib-perl
       env: CC=g++-4.9
     - compiler: gcc
       perl: "5.18"
