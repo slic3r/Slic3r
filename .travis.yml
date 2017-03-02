@@ -31,7 +31,6 @@ matrix:
           packages:
             - clang-3.6
       env: COMPILER=clang++-3.6
-
 addons:
   apt:
     sources:
