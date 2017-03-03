@@ -78,7 +78,8 @@ Extruder::unretract()
 double
 Extruder::e_per_mm(double mm3_per_mm) const
 {
-    return mm3_per_mm * this->e_per_mm3;
+	// return 0 if constant rate extruder in use
+    return (this->is_constant_rate() ? 0.0 : mm3_per_mm * this->e_per_mm3);
 }
 
 double
@@ -151,6 +152,22 @@ double
 Extruder::retract_restart_extra_toolchange() const
 {
     return this->config->retract_restart_extra_toolchange.get_at(this->id);
+}
+std::string
+Extruder::start_extrusion_gcode() const
+{
+	return this->config->start_e_gcode.get_at(this->id);
+}
+std::string
+Extruder::stop_extrusion_gcode() const
+{
+	return this->config->stop_e_gcode.get_at(this->id);
+}
+
+bool
+Extruder::is_constant_rate() const
+{
+	return this->config->constant_extruder.get_at(this->id);
 }
 
 }

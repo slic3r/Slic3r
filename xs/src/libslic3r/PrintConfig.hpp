@@ -26,7 +26,7 @@
 namespace Slic3r {
 
 enum GCodeFlavor {
-    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion, gcfSmoothie, gcfRepetier,
+    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfCustomExtrusion, gcfNoExtrusion, gcfSmoothie, gcfRepetier,
 };
 
 enum InfillPattern {
@@ -53,6 +53,7 @@ template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_v
     keys_map["sailfish"]        = gcfSailfish;
     keys_map["mach3"]           = gcfMach3;
     keys_map["machinekit"]      = gcfMachinekit;
+    keys_map["custom-extrusion"]    = gcfCustomExtrusion;
     keys_map["no-extrusion"]    = gcfNoExtrusion;
     keys_map["smoothie"]    = gcfSmoothie;
     return keys_map;
@@ -284,6 +285,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
 class GCodeConfig : public virtual StaticPrintConfig
 {
     public:
+    ConfigOptionBools               constant_extruder;
     ConfigOptionString              before_layer_gcode;
     ConfigOptionString              end_gcode;
     ConfigOptionString              extrusion_axis;
@@ -305,6 +307,8 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionFloats              retract_restart_extra_toolchange;
     ConfigOptionFloats              retract_speed;
     ConfigOptionString              start_gcode;
+    ConfigOptionStrings             start_e_gcode;
+    ConfigOptionStrings             stop_e_gcode;
     ConfigOptionString              toolchange_gcode;
     ConfigOptionFloat               travel_speed;
     ConfigOptionBool                use_firmware_retraction;
@@ -317,6 +321,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(constant_extruder);
         OPT_PTR(before_layer_gcode);
         OPT_PTR(end_gcode);
         OPT_PTR(extrusion_axis);
@@ -338,6 +343,8 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(retract_restart_extra_toolchange);
         OPT_PTR(retract_speed);
         OPT_PTR(start_gcode);
+		OPT_PTR(start_e_gcode);
+		OPT_PTR(stop_e_gcode);
         OPT_PTR(toolchange_gcode);
         OPT_PTR(travel_speed);
         OPT_PTR(use_firmware_retraction);

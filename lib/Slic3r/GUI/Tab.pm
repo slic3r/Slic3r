@@ -769,7 +769,6 @@ sub _update {
             $self->load_config($new_conf);
         }
     }
-
     if ($config->support_material) {
         # Ask only once.
         if (! $self->{support_material_overhangs_queried}) {
@@ -1065,6 +1064,7 @@ sub build {
         nozzle_diameter extruder_offset
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
         retract_length_toolchange retract_restart_extra_toolchange
+		start_e_gcode stop_e_gcode constant_extruder
     ));
     $self->{config}->set('printer_settings_id', '');
     
@@ -1339,7 +1339,7 @@ sub _extruders_count_changed {
 }
 
 sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
-    retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
+    retract_layer_change retract_length_toolchange retract_restart_extra_toolchange constant_extruder start_e_gcode stop_e_gcode) }
 
 sub _build_extruder_pages {
     my $self = shift;
@@ -1392,6 +1392,12 @@ sub _build_extruder_pages {
             my $optgroup = $page->new_optgroup('Retraction when tool is disabled (advanced settings for multi-extruder setups)');
             $optgroup->append_single_option_line($_, $extruder_idx)
                 for qw(retract_length_toolchange retract_restart_extra_toolchange);
+        }
+        {
+            my $optgroup = $page->new_optgroup('Custom Extruder');
+            $optgroup->append_single_option_line('constant_extruder', $extruder_idx);
+            $optgroup->append_single_option_line('start_e_gcode', $extruder_idx);
+            $optgroup->append_single_option_line('stop_e_gcode', $extruder_idx);
         }
     }
     
@@ -1463,6 +1469,10 @@ sub _update {
         # some options only apply when not using firmware retraction
         $self->get_field($_, $i)->toggle($retraction && !$config->use_firmware_retraction)
             for qw(retract_restart_extra wipe);
+		
+		# start/stop extrusion gcode only applies if using a constant extruder
+        $self->get_field($_, $i)->toggle($config->get_at('constant_extruder', $i))
+            for qw(start_e_gcode stop_e_gcode);
         
         # retraction speed is also used by auto-speed pressure regulator, even when
         # user enabled firmware retraction

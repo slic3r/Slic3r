@@ -508,9 +508,12 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     }
     
     // compensate retraction
-    gcode += this->unretract();
+	if (!this->writer.extruder()->is_constant_rate())
+		gcode += this->unretract();
     
     // adjust acceleration
+	// Don't adjust if using a constant extruder
+	if (!this->writer.extruder()->is_constant_rate())
     {
         double acceleration;
         if (this->config.first_layer_acceleration.value > 0 && this->first_layer) {
