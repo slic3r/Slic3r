@@ -89,7 +89,7 @@ class GCode {
     // This value is not quite precise. First it only accouts for extrusion moves and travel moves,
     // it does not account for wipe, retract / unretract moves.
     // second it does not account for the velocity profiles of the printer.
-    float elapsed_time; // seconds
+    float elapsed_time, elapsed_time_bridges, elapsed_time_external; // seconds
     double volumetric_speed;
     
     GCode();

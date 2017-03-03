@@ -201,7 +201,8 @@ Wipe::wipe(GCode &gcodegen, bool toolchange)
 
 GCode::GCode()
     : placeholder_parser(NULL), enable_loop_clipping(true), enable_cooling_markers(false), layer_count(0),
-        layer_index(-1), layer(NULL), first_layer(false), elapsed_time(0.0), volumetric_speed(0),
+        layer_index(-1), layer(NULL), first_layer(false), elapsed_time(0.0),
+        elapsed_time_bridges(0.0), elapsed_time_external(0.0), volumetric_speed(0),
         _last_pos_defined(false)
 {
 }
@@ -575,7 +576,9 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     // extrude arc or line
     if (path.is_bridge() && this->enable_cooling_markers)
         gcode += ";_BRIDGE_FAN_START\n";
-    gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? ";_EXTRUDE_SET_SPEED" : "");
+    std::string comment = ";_EXTRUDE_SET_SPEED";
+    if (path.role == erExternalPerimeter) comment += ";_EXTERNAL_PERIMETER";
+    gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? comment : "");
     double path_length = 0;
     {
         std::string comment = this->config.gcode_comments ? description : "";
@@ -600,8 +603,12 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     
     this->set_last_pos(path.last_point());
     
-    if (this->config.cooling)
-        this->elapsed_time += path_length / F * 60;
+    if (this->config.cooling) {
+        float t = path_length / F * 60;
+        this->elapsed_time += t;
+        if (path.is_bridge()) this->elapsed_time_bridges += t;
+        if (path.role == erExternalPerimeter) this->elapsed_time_external += t;
+    }
     
     return gcode;
 }
