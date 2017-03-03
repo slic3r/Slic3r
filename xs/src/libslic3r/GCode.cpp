@@ -586,15 +586,19 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     {
         std::string comment = this->config.gcode_comments ? description : "";
         Lines lines = path.polyline.lines();
+		
         for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
             const double line_length = line->length() * SCALING_FACTOR;
             path_length += line_length;
-            
+			if (this->writer.extruder()->is_constant_rate())
+				gcode += this->writer.extruder()->start_extrusion_gcode() + ";\n";
             gcode += this->writer.extrude_to_xy(
                 this->point_to_gcode(line->b),
                 e_per_mm * line_length,
                 comment
             );
+			if (this->writer.extruder()->is_constant_rate())
+				gcode += this->writer.extruder()->stop_extrusion_gcode() + ";\n";
         }
     }
     if (this->wipe.enable) {

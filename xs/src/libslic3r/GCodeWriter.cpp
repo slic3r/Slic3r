@@ -374,18 +374,12 @@ GCodeWriter::extrude_to_xy(const Pointf &point, double dE, const std::string &co
     this->_extruder->extrude(dE);
     
     std::ostringstream gcode;
-	if (this->_extruder->is_constant_rate())
-		gcode << this->_extruder->start_extrusion_gcode() << ";\n";
     gcode << "G1 X" << XYZF_NUM(point.x)
-          <<   " Y" << XYZF_NUM(point.y);
-	if (!this->_extruder->is_constant_rate()) {
-		gcode <<    " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
-	}
+          <<   " Y" << XYZF_NUM(point.y)
+		  <<    " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
 		  
     COMMENT(comment);
     gcode << "\n";
-	if (this->_extruder->is_constant_rate())
-		gcode << this->_extruder->stop_extrusion_gcode() << ";\n";
     return gcode.str();
 }
 
@@ -397,17 +391,13 @@ GCodeWriter::extrude_to_xyz(const Pointf3 &point, double dE, const std::string &
     this->_extruder->extrude(dE);
     
     std::ostringstream gcode;
-	if (this->_extruder->is_constant_rate())
-		gcode << this->_extruder->start_extrusion_gcode() << ";\n";
     gcode << "G1 X" << XYZF_NUM(point.x)
           <<   " Y" << XYZF_NUM(point.y)
-          <<   " Z" << XYZF_NUM(point.z);
-	if (!this->_extruder->is_constant_rate()) 
-		gcode <<    " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
+          <<   " Z" << XYZF_NUM(point.z)
+		  <<    " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
+
     COMMENT(comment);
     gcode << "\n";
-	if (this->_extruder->is_constant_rate())
-		gcode << this->_extruder->stop_extrusion_gcode() << ";\n";
 
     return gcode.str();
 }
