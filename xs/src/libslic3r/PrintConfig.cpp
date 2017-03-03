@@ -116,6 +116,16 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "complete-objects!";
     def->default_value = new ConfigOptionBool(false);
 
+	def = this->add("constant_extruder", coBools);
+    def->label = "Custom Constant rate extruder";
+    def->tooltip = "This flag indicates that this extruder is constant rate (pump or solenoid based, not stepper motor).";
+    def->cli = "constant-extruder!";
+    {
+        ConfigOptionBools* opt = new ConfigOptionBools();
+        opt->values.push_back(false);
+        def->default_value = opt;
+    }
+
     def = this->add("cooling", coBool);
     def->label = "Enable auto cooling";
     def->tooltip = "This flag enables the automatic cooling logic that adjusts print speed and fan speed according to layer printing time.";
@@ -532,8 +542,8 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("gcode_flavor", coEnum);
     def->label = "G-code flavor";
-    def->tooltip = "Some G/M-code commands, including temperature control and others, are not universal. Set this option to your printer's firmware to get a compatible output. The \"No extrusion\" flavor prevents Slic3r from exporting any extrusion value at all.";
-    def->cli = "gcode-flavor=s";
+    def->tooltip = "Some G/M-code commands, including temperature control and others, are not universal. Set this option to your printer's firmware to get a compatible output. The \"No extrusion\" flavor prevents Slic3r from exporting any extrusion value at all. Acceleration is not used for \"Custom (Constant) Extrusion\", it is used for pump-based extrusion.";
+    def->cli = "gcode-flavor=s"; 
     def->enum_keys_map = ConfigOptionEnum<GCodeFlavor>::get_enum_values();
     def->enum_values.push_back("reprap");
     def->enum_values.push_back("repetier");
@@ -543,6 +553,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("mach3");
     def->enum_values.push_back("machinekit");
     def->enum_values.push_back("smoothie");
+    def->enum_values.push_back("constant-extrusion");
     def->enum_values.push_back("no-extrusion");
     def->enum_labels.push_back("RepRap (Marlin/Sprinter)");
     def->enum_labels.push_back("Repetier");
@@ -552,6 +563,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Mach3/LinuxCNC");
     def->enum_labels.push_back("Machinekit");
     def->enum_labels.push_back("Smoothieware");
+    def->enum_labels.push_back("Custom (Constant) Extrusion");
     def->enum_labels.push_back("No extrusion");
     def->default_value = new ConfigOptionEnum<GCodeFlavor>(gcfRepRap);
 
@@ -1141,6 +1153,32 @@ PrintConfigDef::PrintConfigDef()
     def->full_width = true;
     def->height = 120;
     def->default_value = new ConfigOptionString("G28 ; home all axes\nG1 Z5 F5000 ; lift nozzle\n");
+
+    def = this->add("start_e_gcode", coStrings);
+    def->label = "Extrusion Start G-code";
+    def->tooltip = "This gcode snippet is used at the start of printing moves. User is expected to use the appropriate rate (if applicable) for print speed used.";
+    def->cli = "start-e-gcode=s@";
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 30;
+    {
+        ConfigOptionStrings* opt = new ConfigOptionStrings();
+        opt->values.push_back("M126");
+        def->default_value = opt;
+	}
+
+    def = this->add("stop_e_gcode", coStrings);
+    def->label = "Extrusion Stop G-code";
+    def->tooltip = "This gcode snippet is used at the stop of printing moves. User is expected to use the appropriate rate (if applicable) for print speed used.";
+    def->cli = "stop-e-gcode=s@";
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 30;
+    {
+        ConfigOptionStrings* opt = new ConfigOptionStrings();
+        opt->values.push_back("M127");
+        def->default_value = opt;
+	}
 
     def = this->add("support_material", coBool);
     def->label = "Generate support material";

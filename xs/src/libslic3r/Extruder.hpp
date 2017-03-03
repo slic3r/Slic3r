@@ -36,6 +36,9 @@ class Extruder
     double retract_restart_extra() const;
     double retract_length_toolchange() const;
     double retract_restart_extra_toolchange() const;
+	std::string start_extrusion_gcode() const;
+	std::string stop_extrusion_gcode() const;
+	bool is_constant_rate() const;
     
     private:
     GCodeConfig *config;
