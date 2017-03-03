@@ -26,7 +26,7 @@
 namespace Slic3r {
 
 enum GCodeFlavor {
-    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfCustomExtrusion, gcfNoExtrusion, gcfSmoothie, gcfRepetier,
+    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion, gcfSmoothie, gcfRepetier,
 };
 
 enum InfillPattern {
@@ -53,7 +53,6 @@ template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_v
     keys_map["sailfish"]        = gcfSailfish;
     keys_map["mach3"]           = gcfMach3;
     keys_map["machinekit"]      = gcfMachinekit;
-    keys_map["custom-extrusion"]    = gcfCustomExtrusion;
     keys_map["no-extrusion"]    = gcfNoExtrusion;
     keys_map["smoothie"]    = gcfSmoothie;
     return keys_map;

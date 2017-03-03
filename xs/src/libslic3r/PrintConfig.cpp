@@ -118,8 +118,8 @@ PrintConfigDef::PrintConfigDef()
 
 	def = this->add("constant_extruder", coBools);
     def->label = "Custom Constant rate extruder";
-    def->tooltip = "This flag indicates that this extruder is constant rate (pump or solenoid based, not stepper motor).";
-    def->cli = "constant-extruder!";
+    def->tooltip = "This flag indicates that this extruder is constant rate (pump or solenoid based, not stepper motor). Acceleration control is disabled for print moves with this extruder.";
+    def->cli = "constant-extruder!@";
     {
         ConfigOptionBools* opt = new ConfigOptionBools();
         opt->values.push_back(false);
@@ -542,7 +542,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("gcode_flavor", coEnum);
     def->label = "G-code flavor";
-    def->tooltip = "Some G/M-code commands, including temperature control and others, are not universal. Set this option to your printer's firmware to get a compatible output. The \"No extrusion\" flavor prevents Slic3r from exporting any extrusion value at all. Acceleration is not used for \"Custom (Constant) Extrusion\", it is used for pump-based extrusion.";
+    def->tooltip = "Some G/M-code commands, including temperature control and others, are not universal. Set this option to your printer's firmware to get a compatible output. The \"No extrusion\" flavor prevents Slic3r from exporting any extrusion value at all.";
     def->cli = "gcode-flavor=s"; 
     def->enum_keys_map = ConfigOptionEnum<GCodeFlavor>::get_enum_values();
     def->enum_values.push_back("reprap");
@@ -553,7 +553,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("mach3");
     def->enum_values.push_back("machinekit");
     def->enum_values.push_back("smoothie");
-    def->enum_values.push_back("constant-extrusion");
     def->enum_values.push_back("no-extrusion");
     def->enum_labels.push_back("RepRap (Marlin/Sprinter)");
     def->enum_labels.push_back("Repetier");
@@ -563,7 +562,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Mach3/LinuxCNC");
     def->enum_labels.push_back("Machinekit");
     def->enum_labels.push_back("Smoothieware");
-    def->enum_labels.push_back("Custom (Constant) Extrusion");
     def->enum_labels.push_back("No extrusion");
     def->default_value = new ConfigOptionEnum<GCodeFlavor>(gcfRepRap);
 
