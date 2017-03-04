@@ -551,11 +551,11 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
             CONFESS("Invalid speed");
         }
     }
-    if (this->first_layer) {
-        speed = this->config.get_abs_value("first_layer_speed", speed);
-    }
     if (this->volumetric_speed != 0 && speed == 0) {
         speed = this->volumetric_speed / path.mm3_per_mm;
+    }
+    if (this->first_layer) {
+        speed = this->config.get_abs_value("first_layer_speed", speed);
     }
     if (this->config.max_volumetric_speed.value > 0) {
         // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
