@@ -1,9 +1,16 @@
 #!/bin/bash
 
 # Assembles an installation bundle from a built copy of Slic3r.
-# Required environment variables:
+# Requires PAR::Packer to be installed for the version of
+# perl copied.
 # Adapted from script written by bubnikv for Prusa3D.
+# Required environment variables:
 # SLIC3R_VERSION - x.x.x format
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $(basename $0) dmg_name"
+    exit 1;
+fi
 
 WD=$(dirname $0)
 # Determine if this is a tagged (release) commit.
