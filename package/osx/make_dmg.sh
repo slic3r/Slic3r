@@ -24,6 +24,9 @@ else
     appname=Slic3r-$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
     dmgfile=${1}-$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!').dmg
 fi
+rm -rf $WD/_tmp
+mkdir -p $WD/_tmp
+
 
 # OSX Application folder shenanigans.
 appfolder="$WD/${appname}.app"
@@ -35,6 +38,7 @@ source $WD/plist.sh
 
 # Our slic3r dir and location of perl
 PERL_BIN=$(which perl)
+PP_BIN=$(which pp)
 SLIC3R_DIR="${WD}/../../"
 
 if [[ -d "${appfolder}" ]]; then
@@ -66,7 +70,15 @@ cp $WD/startup_script.sh $macosfolder/$appname
 chmod +x $macosfolder/$appname
 
 echo "Copying perl from $PERL_BIN"
-cp $PERL_BIN $macosfolder
+cp $PERL_BIN $macosfolder/perl-local
+${PP_BIN} -M POSIX -M FindBin \
+          -M lib -M overload \
+          -M warnings -M local::lib \
+          -M strict -M utf8 -M parent \
+          -B -p -e "print 123" -o $WD/_tmp/test.par
+unzip $WD/_tmp/test.par -d $WD/_tmp/
+cp -r $WD/_tmp/lib/* $macosfolder/local-lib/lib/perl5/
+rm -rf $WD/_tmp
 
 make_plist
 
