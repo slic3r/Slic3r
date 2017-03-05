@@ -610,10 +610,10 @@ sub build {
             $optgroup->append_single_option_line('infill_speed');
             $optgroup->append_single_option_line('solid_infill_speed');
             $optgroup->append_single_option_line('top_solid_infill_speed');
+            $optgroup->append_single_option_line('gap_fill_speed');
             $optgroup->append_single_option_line('support_material_speed');
             $optgroup->append_single_option_line('support_material_interface_speed');
             $optgroup->append_single_option_line('bridge_speed');
-            $optgroup->append_single_option_line('gap_fill_speed');
         }
         {
             my $optgroup = $page->new_optgroup('Speed for non-print moves');

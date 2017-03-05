@@ -490,9 +490,10 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("gap_fill_speed", coFloat);
     def->label = "Gap fill";
     def->category = "Speed";
-    def->tooltip = "Speed for filling gaps. Since these are usually single lines you might want to use a low speed for better sticking. Set zero for auto.";
-    def->sidetext = "mm/s";
-    def->cli = "gap-fill-speed=f";
+    def->tooltip = "Speed for filling gaps. Since these are usually single lines you might want to use a low speed for better sticking. If expressed as percentage (for example: 80%) it will be calculated on the infill speed setting above. Set zero for auto.";
+    def->sidetext = "mm/s or %";
+    def->cli = "gap-fill-speed=s";
+    def->ratio_over = "infill_speed";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(20);
 
