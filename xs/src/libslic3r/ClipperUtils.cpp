@@ -39,6 +39,7 @@ ClipperPath_to_Slic3rMultiPoint(const ClipperLib::Path &input)
         retval.points.push_back(Point( (*pit).X, (*pit).Y ));
     return retval;
 }
+template Polygon ClipperPath_to_Slic3rMultiPoint<Polygon>(const ClipperLib::Path &input);
 
 template <class T>
 T

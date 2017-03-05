@@ -23,7 +23,7 @@ if ($cpp_guess->is_gcc)	{
 	push @cflags, qw(-U__STRICT_ANSI__);
 }
 my @ldflags = ();
-if ($^O eq 'darwin' && `sw_vers -productVersion` =~ /\b10\.8\./) {
+if ($^O eq 'darwin') {
     push @cflags, qw(-stdlib=libc++);
     push @ldflags, qw(-framework IOKit -framework CoreFoundation -lc++);
     
