@@ -816,9 +816,8 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("post_process", coStrings);
     def->label = "Post-processing scripts";
-    def->tooltip = "If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts with a semicolon. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Slic3r config settings by reading environment variables.";
+    def->tooltip = "If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts on individual lines. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Slic3r config settings by reading environment variables.";
     def->cli = "post-process=s@";
-    def->gui_flags = "serialized";
     def->multiline = true;
     def->full_width = true;
     def->height = 60;
