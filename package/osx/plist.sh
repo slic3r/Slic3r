@@ -20,7 +20,7 @@ else
     echo "  <string>Slic3r $SLIC3R_BUILD_ID-$(git rev-parse --short head)</string>" >>$plistfile
 fi
 echo '  <key>CFBundleIdentifier</key>' >>$plistfile
-echo '  <string></string>' >>$plistfile
+echo '  <string>org.slic3r.Slic3r</string>' >>$plistfile
 echo '  <key>CFBundleInfoDictionaryVersion</key>' >>$plistfile
 echo '  <string>6.0</string>' >>$plistfile
 echo '  <key>CFBundlePackageType</key>' >>$plistfile
@@ -29,8 +29,6 @@ echo '  <key>CFBundleSignature</key>' >>$plistfile
 echo '  <string>????</string>' >>$plistfile
 echo '  <key>CFBundleVersion</key>' >>$plistfile
 echo "  <string>${SLIC3R_BUILD_ID}</string>" >>$plistfile
-echo '  <key>CFBundleIdentifier</key>' >>$plistfile
-echo '  <string></string>' >>$plistfile
 echo '  <key>CGDisableCoalescedUpdates</key>' >>$plistfile
 echo '  <false/>' >>$plistfile
 echo '</dict>' >>$plistfile
