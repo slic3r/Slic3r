@@ -329,7 +329,8 @@ sub process_layer {
             if ($region->config->get_abs_value('infill_speed') == 0
                 || $region->config->get_abs_value('solid_infill_speed') == 0
                 || $region->config->get_abs_value('top_solid_infill_speed') == 0
-                || $region->config->get_abs_value('bridge_speed') == 0) {
+                || $region->config->get_abs_value('bridge_speed') == 0
+                || $region->config->get_abs_value('gap_fill_speed') == 0) {
                 push @mm3_per_mm, $layerm->fills->min_mm3_per_mm;
             }
         }

@@ -395,6 +395,12 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("100%");
     def->default_value = new ConfigOptionPercent(20);
 
+    def = this->add("fill_gaps", coBool);
+    def->label = "Fill gaps";
+    def->tooltip = "If this is enabled, gaps will be filled with single passes. Enable this for better quality, disable it for shorter printing times.";
+    def->cli = "fill-gaps!";
+    def->default_value = new ConfigOptionBool(true);
+
     def = this->add("fill_pattern", coEnum);
     def->label = "Fill pattern";
     def->category = "Infill";
@@ -484,7 +490,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("gap_fill_speed", coFloat);
     def->label = "Gap fill";
     def->category = "Speed";
-    def->tooltip = "Speed for filling small gaps using short zigzag moves. Keep this reasonably low to avoid too much shaking and resonance issues. Set zero to disable gaps filling.";
+    def->tooltip = "Speed for filling gaps. Since these are usually single lines you might want to use a low speed for better sticking. Set zero for auto.";
     def->sidetext = "mm/s";
     def->cli = "gap-fill-speed=f";
     def->min = 0;

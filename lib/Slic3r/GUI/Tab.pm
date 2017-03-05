@@ -466,7 +466,7 @@ sub build {
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
         seam_position external_perimeters_first
-        fill_density fill_pattern external_fill_pattern
+        fill_density fill_pattern external_fill_pattern fill_gaps
         infill_every_layers infill_only_where_needed
         solid_infill_every_layers fill_angle solid_infill_below_area 
         only_retract_when_crossing_perimeters infill_first
@@ -551,6 +551,7 @@ sub build {
         }
         {
             my $optgroup = $page->new_optgroup('Advanced');
+            $optgroup->append_single_option_line('fill_gaps');
             $optgroup->append_single_option_line('solid_infill_every_layers');
             $optgroup->append_single_option_line('fill_angle');
             $optgroup->append_single_option_line('solid_infill_below_area');
@@ -835,7 +836,8 @@ sub _update {
     $self->get_field($_)->toggle($have_infill || $have_solid_infill)
         for qw(fill_angle infill_extrusion_width infill_speed bridge_speed);
     
-    $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill);
+    $self->get_field('fill_gaps')->toggle($have_perimeters && $have_infill);
+    $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill && $config->fill_gaps);
     
     my $have_top_solid_infill = $config->top_solid_layers > 0;
     $self->get_field($_)->toggle($have_top_solid_infill)

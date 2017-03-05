@@ -428,6 +428,7 @@ $j
     --fill-density      Infill density (range: 0%-100%, default: $config->{fill_density}%)
     --fill-angle        Infill angle in degrees (range: 0-90, default: $config->{fill_angle})
     --fill-pattern      Pattern to use to fill non-solid layers (default: $config->{fill_pattern})
+    --fill-gaps         Fill gaps with single passes (default: yes)
     --external-fill-pattern Pattern to use to fill solid layers (default: $config->{external_fill_pattern})
     --start-gcode       Load initial G-code from the supplied file. This will overwrite
                         the default command (home all axes [G28]).
