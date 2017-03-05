@@ -98,11 +98,9 @@ if (defined $ENV{BOOST_LIBRARYDIR}) {
             qw(/opt/local/lib /usr/local/lib /opt/lib /usr/lib /lib);
     }
 }
-
 # In order to generate the -l switches we need to know how Boost libraries are named
 my $have_boost = 0;
 my @boost_libraries = qw(system thread filesystem);  # we need these
-
 # check without explicit lib path (works on Linux)
 if (! $mswin) {
     $have_boost = 1
@@ -122,8 +120,8 @@ if (!$ENV{SLIC3R_STATIC} && $have_boost) {
         # Try to find the boost system library.
         my @files = glob "$path/${lib_prefix}system*$lib_ext";
         next if !@files;
-    
-        if ($files[0] =~ /${lib_prefix}system([^.]+)$lib_ext$/) {
+  
+        if ($files[0] =~ /${lib_prefix}system([^.]*)$lib_ext$/) {
             # Suffix contains the version number, the build type etc.
             my $suffix = $1;
             # Verify existence of all required boost libraries at $path.
