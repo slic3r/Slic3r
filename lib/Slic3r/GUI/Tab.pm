@@ -451,7 +451,7 @@ sub set_value {
 package Slic3r::GUI::Tab::Print;
 use base 'Slic3r::GUI::Tab';
 
-use List::Util qw(first);
+use List::Util qw(first any);
 use Wx qw(:icon :dialog :id);
 
 sub name { 'print' }
@@ -842,6 +842,12 @@ sub _update {
     my $have_top_solid_infill = $config->top_solid_layers > 0;
     $self->get_field($_)->toggle($have_top_solid_infill)
         for qw(top_infill_extrusion_width top_solid_infill_speed);
+    
+    my $have_autospeed = any { $config->get("${_}_speed") eq '0' }
+        qw(perimeter external_perimeter small_perimeter
+        infill solid_infill top_solid_infill gap_fill support_material
+        support_material_interface);
+    $self->get_field('max_print_speed')->toggle($have_autospeed);
     
     my $have_default_acceleration = $config->default_acceleration > 0;
     $self->get_field($_)->toggle($have_default_acceleration)
