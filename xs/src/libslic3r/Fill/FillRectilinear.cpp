@@ -1,3 +1,4 @@
+#undef NDEBUG
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
 #include "../PolylineCollection.hpp"
@@ -27,6 +28,9 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     
     // We ignore this->bounding_box because it doesn't matter; we're doing align_to_grid below.
     BoundingBox bounding_box    = expolygon.contour.bounding_box();
+    
+    // Ignore too small expolygons.
+    if (bounding_box.size().x < min_spacing) return;
     
     // Due to integer rounding, rotated polygons might not preserve verticality
     // (i.e. when rotating by PI/2 two points having the same x coordinate 
