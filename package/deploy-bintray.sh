@@ -20,6 +20,7 @@ if [ "$current_branch" == "" ]; then
         current_branch=$APPVEYOR_REPO_BRANCH
     else
         current_branch=unknown
+    fi
 fi
 if [ "$current_branch" == "master" ] && [ "$APPVEYOR_PULL_REQUEST_NUMBER" == "" ]; then
     # If building master, goes in slic3r_dev or slic3r, depending on whether or not this is a tagged build
