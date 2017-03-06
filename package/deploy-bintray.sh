@@ -9,7 +9,7 @@
 if [ $(git describe &>/dev/null) ]; then
     SLIC3R_BUILD_ID=$(git describe)
 else
-    SLIC3R_BUILD_ID=${SLIC3R_VERSION}d-$(git rev-parse --short head)
+    SLIC3R_BUILD_ID=${SLIC3R_VERSION}dev-$(git rev-parse --short head)
 fi
 
 if [ "$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')" == "master" ]; then
