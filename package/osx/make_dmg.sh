@@ -20,7 +20,7 @@ if [ $(git describe &>/dev/null) ]; then
     SLIC3R_BUILD_ID=$(git describe)
 else
     TAGGED=false
-    SLIC3R_BUILD_ID=${SLIC3R_VERSION}d
+    SLIC3R_BUILD_ID=${SLIC3R_VERSION}dev
 fi
 
 # If we're on a branch, add the branch name to the app name.
@@ -76,7 +76,7 @@ find $macosfolder/local-lib -name .packlist -delete
 rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include
 
 echo "Relocating dylib paths..."
-for bundle in $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/auto/Wx/Wx.bundle $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets -name '*.dylib' -type f); do
+for bundle in $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/auto/Wx -name '*.bundle') $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets -name '*.dylib' -type f); do
     chmod +w $bundle
     find $SLIC3R_DIR/local-lib -name '*.dylib' -exec bash -c 'install_name_tool -change "{}" "@executable_path/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/lib/$(basename {})" '$bundle \;
 done
@@ -89,6 +89,7 @@ echo "Copying perl from $PERL_BIN"
 cp $PERL_BIN $macosfolder/perl-local
 ${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
           -M FindBin -M Unicode::Normalize -M Tie::Handle \
+          -M Time::Local -M Math::Trig \
           -M lib -M overload \
           -M warnings -M local::lib \
           -M strict -M utf8 -M parent \
