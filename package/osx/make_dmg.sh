@@ -46,7 +46,7 @@ source $WD/plist.sh
 # Our slic3r dir and location of perl
 PERL_BIN=$(which perl)
 PP_BIN=$(which pp)
-SLIC3R_DIR="${WD}/../../"
+SLIC3R_DIR=$(perl -MCwd=realpath -e "print realpath '${WD}/../../'")
 
 if [[ -d "${appfolder}" ]]; then
     echo "Deleting old working folder."
@@ -71,6 +71,13 @@ echo "Copying Slic3r..."
 cp $SLIC3R_DIR/slic3r.pl $macosfolder/slic3r.pl
 cp -RP $SLIC3R_DIR/local-lib $macosfolder/local-lib
 cp -RP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
+find $macosfolder/local-lib -name man -type d -delete
+
+echo "Relocating dylib paths..."
+for bundle in $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/auto/Wx/Wx.bundle $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets -name '*.dylib' -type f); do
+    chmod +w $bundle
+    find $SLIC3R_DIR/local-lib -name '*.dylib' -exec bash -c 'install_name_tool -change "{}" "@executable_path/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/lib/$(basename {})" '$bundle \;
+done
 
 echo "Copying startup script..."
 cp $WD/startup_script.sh $macosfolder/$appname
@@ -78,7 +85,8 @@ chmod +x $macosfolder/$appname
 
 echo "Copying perl from $PERL_BIN"
 cp $PERL_BIN $macosfolder/perl-local
-${PP_BIN} -M POSIX -M FindBin \
+${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
+          -M FindBin -M Unicode::Normalize -M Tie::Handle \
           -M lib -M overload \
           -M warnings -M local::lib \
           -M strict -M utf8 -M parent \
