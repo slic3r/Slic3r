@@ -473,6 +473,7 @@ sub build {
         max_print_speed max_volumetric_speed
         perimeter_speed small_perimeter_speed external_perimeter_speed infill_speed 
         solid_infill_speed top_solid_infill_speed support_material_speed 
+        support_material_xy_spacing
         support_material_interface_speed bridge_speed gap_fill_speed
         travel_speed
         first_layer_speed
@@ -596,6 +597,7 @@ sub build {
             $optgroup->append_single_option_line('support_material_angle');
             $optgroup->append_single_option_line('support_material_interface_layers');
             $optgroup->append_single_option_line('support_material_interface_spacing');
+            $optgroup->append_single_option_line('support_material_xy_spacing');
             $optgroup->append_single_option_line('dont_support_bridges');
         }
     }
@@ -867,7 +869,7 @@ sub _update {
         for qw(support_material_threshold support_material_pattern
             support_material_spacing support_material_angle
             support_material_interface_layers dont_support_bridges
-            support_material_extrusion_width support_material_contact_distance);
+            support_material_extrusion_width support_material_contact_distance support_material_xy_spacing);
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
             support_material_interface_speed);
