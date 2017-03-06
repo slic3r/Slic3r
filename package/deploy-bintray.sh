@@ -8,18 +8,31 @@
 
 if [ $(git describe &>/dev/null) ]; then
     SLIC3R_BUILD_ID=$(git describe)
+    TAGGED=true
 else
     SLIC3R_BUILD_ID=${SLIC3R_VERSION}dev-$(git rev-parse --short head)
 fi
-
-if [ "$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')" == "master" ]; then
-    # If building master, goes in slic3r_dev
-    SLIC3R_PKG=slic3r_dev
+current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
+if [ "$current_branch" == "" ]; then
+    if [ "$BRANCH_NAME" == "" ]; then
+        current_branch=$BRANCH_NAME
+    elif [ "$APPVEYOR_REPO_BRANCH" == "" ]; then
+        current_branch=$APPVEYOR_REPO_BRANCH
+    else
+        current_branch=unknown
+fi
+if [ "$current_branch" == "master" ] && [ "$APPVEYOR_PULL_REQUEST_NUMBER" == "" ]; then
+    # If building master, goes in slic3r_dev or slic3r, depending on whether or not this is a tagged build
+    if [ -z ${TAGGED+x} ]; then
+        SLIC3R_PKG=slic3r_dev
+    else
+        SLIC3R_PKG=slic3r
+    fi
     version=$SLIC3R_BUILD_ID
 else
     # If building a branch, put the package somewhere else.
     SLIC3R_PKG=Slic3r_Branches
-    version=$SLIC3R_BUILD_ID-$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
+    version=$SLIC3R_BUILD_ID-$current_branch
 fi
 
 file=$1
