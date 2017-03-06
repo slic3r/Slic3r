@@ -29,6 +29,16 @@ echo '  <key>CFBundleSignature</key>' >>$plistfile
 echo '  <string>????</string>' >>$plistfile
 echo '  <key>CFBundleVersion</key>' >>$plistfile
 echo "  <string>${SLIC3R_BUILD_ID}</string>" >>$plistfile
+echo '  <key>CFBundleTypeRole</key>' >>$plistfile
+echo '  <string>Viewer</string>' >>$plistfile
+# Associate with a few file types (amf, stl, obj)
+echo '  <key>CFBundleTypeExtensions</key>' >>$plistfile
+echo '  <array> ' >> $plistfile
+echo '         <string>stl</string> ' >> $plistfile
+echo '         <string>amf</string> ' >> $plistfile
+echo '         <string>obj</string> ' >> $plistfile
+echo '  </array> ' >> $plistfile
+echo '  <key>LISsAppleDefaultForType</key>   <true/>' >> $plistfile
 echo '  <key>CGDisableCoalescedUpdates</key>' >>$plistfile
 echo '  <false/>' >>$plistfile
 echo '</dict>' >>$plistfile
