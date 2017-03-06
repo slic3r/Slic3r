@@ -69,8 +69,8 @@ mv $macosfolder/var/Slic3r.icns $resourcefolder
 
 echo "Copying Slic3r..."
 cp $SLIC3R_DIR/slic3r.pl $macosfolder/slic3r.pl
-cp -r $SLIC3R_DIR/local-lib $macosfolder/local-lib
-cp -r $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
+cp -RP $SLIC3R_DIR/local-lib $macosfolder/local-lib
+cp -RP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
 
 echo "Copying startup script..."
 cp $WD/startup_script.sh $macosfolder/$appname
