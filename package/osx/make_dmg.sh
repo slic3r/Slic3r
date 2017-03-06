@@ -53,7 +53,7 @@ if [[ -d "${appfolder}" ]]; then
     rm -rf ${appfolder}
 fi
 
-if [[ -d "${dmgfile}" ]]; then
+if [[ -e "${dmgfile}" ]]; then
     echo "Deleting old dmg ${dmgfile}."
     rm -rf ${dmgfile}
 fi
