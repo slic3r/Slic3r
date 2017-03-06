@@ -26,10 +26,10 @@ fi
 # If we're on a branch, add the branch name to the app name.
 if [ "$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')" == "master" ]; then
     appname=Slic3r
-    dmgfile=${1}.dmg
+    dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}.dmg
 else
     appname=Slic3r-$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
-    dmgfile=${1}-$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!').dmg
+    dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}-$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!').dmg
 fi
 rm -rf $WD/_tmp
 mkdir -p $WD/_tmp

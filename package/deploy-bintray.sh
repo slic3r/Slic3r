@@ -18,9 +18,10 @@ else
 fi
 
 file=$1
+echo "Deploying $file to $version on Bintray..."
 API=${BINTRAY_API_KEY}
 
-curl -v -X POST -d "{ \"name\": \"$version\", \"released\": \"ISO8601 $(date +%Y-%m-%d'T'%H:%M:%S)\",  \"desc\": \"This version...\", \"github_release_notes_file\": \"RELEASE.txt\",  \"github_use_tag_release_notes\": true,  \"vcs_tag\": \"$version\"  }" -ulordofhyphens:${API} https://api.bintray.com/content/lordofhyphens/Slic3r/slic3r_dev/versions
+curl -X POST -d "{ \"name\": \"$version\", \"released\": \"ISO8601 $(date +%Y-%m-%d'T'%H:%M:%S)\",  \"desc\": \"This version...\", \"github_release_notes_file\": \"RELEASE.txt\",  \"github_use_tag_release_notes\": true,  \"vcs_tag\": \"$version\"  }" -ulordofhyphens:${API} https://api.bintray.com/content/lordofhyphens/Slic3r/slic3r_dev/versions
 
 curl -H "X-Bintray-Package: $SLIC3R_PKG" -H "X-Bintray-Version: $version" -H 'X-Bintray-Publish: 1' -H 'X-Bintray-Override: 1'  -T $file -ulordofhyphens:${API} https://api.bintray.com/content/lordofhyphens/Slic3r/$(basename $1)
 
