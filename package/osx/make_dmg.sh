@@ -4,8 +4,8 @@
 # Requires PAR::Packer to be installed for the version of
 # perl copied.
 # Adapted from script written by bubnikv for Prusa3D.
-# Required environment variables:
-# SLIC3R_VERSION - x.x.x format
+# Run from slic3r repo root directory.
+SLIC3R_VERSION=$(grep "VERSION" xs/src/libslic3r/libslic3r.h | awk -F\" '{print $2}')
 
 if [ "$#" -ne 1 ]; then
     echo "Usage: $(basename $0) dmg_name"
@@ -20,11 +20,25 @@ if [ $(git describe &>/dev/null) ]; then
     SLIC3R_BUILD_ID=$(git describe)
 else
     TAGGED=false
-    SLIC3R_BUILD_ID=${SLIC3R_VERSION}dev
+    SLIC3R_BUILD_ID=${SLIC3R_VERSION}
+fi
+if [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
+    current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
+else
+    if [ -z ${GIT_BRANCH+x} ]; then
+        echo "Setting to APPVEYOR_REPO_BRANCH"
+        current_branch=$APPVEYOR_REPO_BRANCH
+    else
+        echo "Setting to GIT_BRANCH"
+        current_branch=$(echo $GIT_BRANCH | cut -d / -f 2)
+    fi
 fi
 
+if [ -z ${current_branch+x} ]; then
+    current_branch="unknown"
+fi
 # If we're on a branch, add the branch name to the app name.
-if [ "$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')" == "master" ]; then
+if [ "$current_branch" == "master" ]; then
     appname=Slic3r
     dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}.dmg
 else
