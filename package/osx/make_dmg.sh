@@ -28,15 +28,14 @@ else
     if [ -z ${GIT_BRANCH+x} ]; then
         echo "Setting to APPVEYOR_REPO_BRANCH"
         current_branch=$APPVEYOR_REPO_BRANCH
+    elif [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
+        current_branch="unknown"
     else
         echo "Setting to GIT_BRANCH"
         current_branch=$(echo $GIT_BRANCH | cut -d / -f 2)
     fi
 fi
 
-if [ -z ${current_branch+x} ]; then
-    current_branch="unknown"
-fi
 # If we're on a branch, add the branch name to the app name.
 if [ "$current_branch" == "master" ]; then
     appname=Slic3r
