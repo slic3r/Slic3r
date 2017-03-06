@@ -24,9 +24,7 @@ if ($cpp_guess->is_gcc)	{
 }
 my @ldflags = ();
 if ($^O eq 'darwin') {
-    if (!$cpp_guess->is_gcc) {
-        push @cflags, qw(-stdlib=libc++);
-    }
+    push @cflags, qw(-stdlib=libc++);
     push @ldflags, qw(-framework IOKit -framework CoreFoundation -lc++);
     
     # Due to a bug/misconfiguration/stupidity, boost 1.52 and libc++ don't like each

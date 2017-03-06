@@ -72,6 +72,8 @@ cp $SLIC3R_DIR/slic3r.pl $macosfolder/slic3r.pl
 cp -RP $SLIC3R_DIR/local-lib $macosfolder/local-lib
 cp -RP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
 find $macosfolder/local-lib -name man -type d -delete
+find $macosfolder/local-lib -name .packlist -delete
+rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include
 
 echo "Relocating dylib paths..."
 for bundle in $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/auto/Wx/Wx.bundle $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets -name '*.dylib' -type f); do
