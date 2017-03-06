@@ -3,25 +3,31 @@
 # Environment variables:
 #   BINTRAY_API_KEY - Working API key
 #   BINTRAY_API_USER - Bintray username.
-#   SLIC3R_VERSION - Development version # for Slic3r
+# Run this from the repository root (required to get slic3r version)
 
-
+SLIC3R_VERSION=$(grep "VERSION" xs/src/libslic3r/libslic3r.h | awk -F\" '{print $2}')
 if [ $(git describe &>/dev/null) ]; then
     SLIC3R_BUILD_ID=$(git describe)
     TAGGED=true
 else
-    SLIC3R_BUILD_ID=${SLIC3R_VERSION}dev-$(git rev-parse --short head)
+    SLIC3R_BUILD_ID=${SLIC3R_VERSION}-$(git rev-parse --short HEAD)
 fi
-current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
-if [ "$current_branch" == "" ]; then
-    if [ "$BRANCH_NAME" == "" ]; then
-        current_branch=$BRANCH_NAME
-    elif [ "$APPVEYOR_REPO_BRANCH" == "" ]; then
-        current_branch=$APPVEYOR_REPO_BRANCH
+if [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
+    current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
+else
+    if [ -z ${GIT_BRANCH+x} ]; then
+        echo "Setting to GIT_BRANCH"
+        current_branch=$(echo $GIT_BRANCH | cut -d / -f 2)
     else
-        current_branch=unknown
+        echo "Setting to APPVEYOR_REPO_BRANCH"
+        current_branch=$APPVEYOR_REPO_BRANCH
     fi
 fi
+
+if [ -z ${current_branch+x} ]; then
+    current_branch="unknown"
+fi
+
 if [ "$current_branch" == "master" ] && [ "$APPVEYOR_PULL_REQUEST_NUMBER" == "" ]; then
     # If building master, goes in slic3r_dev or slic3r, depending on whether or not this is a tagged build
     if [ -z ${TAGGED+x} ]; then
@@ -37,7 +43,7 @@ else
 fi
 
 file=$1
-echo "Deploying $file to $version on Bintray..."
+echo "Deploying $file to $version on Bintray repo $SLIC3R_PKG..."
 API=${BINTRAY_API_KEY}
 USER=${BINTRAY_API_USER}
 
