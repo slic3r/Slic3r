@@ -180,6 +180,7 @@ Ref<SupportLayer>          O_OBJECT_SLIC3R_T
 
 LayerHeightSpline*         O_OBJECT_SLIC3R
 Ref<LayerHeightSpline>     O_OBJECT_SLIC3R_T
+Clone<LayerHeightSpline>   O_OBJECT_SLIC3R_T
 
 PlaceholderParser*         O_OBJECT_SLIC3R
 Ref<PlaceholderParser>     O_OBJECT_SLIC3R_T

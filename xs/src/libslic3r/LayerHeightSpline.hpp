@@ -12,6 +12,7 @@ class LayerHeightSpline
 {
     public:
     LayerHeightSpline(coordf_t object_height);
+    LayerHeightSpline(const LayerHeightSpline &other);
     ~LayerHeightSpline();
     bool hasData(); // indicate that we have valid data
     bool updateRequired(); // indicate whether we want to generate a new spline from the layers

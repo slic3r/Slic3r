@@ -6,7 +6,10 @@
 %}
 
 %name{Slic3r::LayerHeightSpline} class LayerHeightSpline {
-    // owned by PrintObject, no constructor/destructor
+    LayerHeightSpline(double object_height);
+    ~LayerHeightSpline();
+    Clone<LayerHeightSpline> clone()
+        %code%{ RETVAL = THIS; %};
     
     bool hasData();
     bool updateRequired();
@@ -21,7 +24,6 @@
     std::vector<double> getOriginalLayers();
     std::vector<double> getInterpolatedLayers();
     coordf_t getLayerHeightAt(coordf_t height);
-        //%code%{ RETVAL = THIS->upper_layer; %};
         
     void setCuspValue(coordf_t cusp_value);
     coordf_t getCuspValue();

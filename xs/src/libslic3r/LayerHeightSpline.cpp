@@ -21,6 +21,23 @@ LayerHeightSpline::LayerHeightSpline(coordf_t object_height)
 	this->_cusp_value = -1;
 }
 
+LayerHeightSpline::LayerHeightSpline(const LayerHeightSpline &other)
+:   _object_height(other._object_height), _layer_height_spline(NULL)
+{
+
+    this->_original_layers = other._original_layers;
+    this->_internal_layers = other._internal_layers;
+    this->_internal_layer_heights = other._internal_layer_heights;
+	this->_is_valid = other._is_valid;
+	this->_update_required = other._update_required;
+	this->_layers_updated = other._layers_updated;
+	this->_layer_heights_updated = other._layer_heights_updated;
+	this->_cusp_value = other._cusp_value;
+	if(this->_is_valid) {
+		this->_updateBSpline();
+	}
+}
+
 LayerHeightSpline::~LayerHeightSpline()
 {
     if (this->_layer_height_spline) {
@@ -80,9 +97,9 @@ bool LayerHeightSpline::setLayers(std::vector<coordf_t> layers)
 	// add 0-values at both ends to achieve correct boundary conditions
 	this->_internal_layers = this->_original_layers;
 	this->_internal_layers.insert(this->_internal_layers.begin(), 0); // add z = 0 to the front
-	this->_internal_layers.push_back(this->_internal_layers.back()+1); // and object_height + 1 to the end
-	this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), 0);
-	this->_internal_layer_heights.push_back(0);
+	//this->_internal_layers.push_back(this->_internal_layers.back()+1); // and object_height + 1 to the end
+	this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), this->_internal_layer_heights[0]);
+	//this->_internal_layer_heights.push_back(0);
 
 	this->_layers_updated = true;
 	this->_layer_heights_updated = false;
@@ -102,12 +119,14 @@ bool LayerHeightSpline::updateLayerHeights(std::vector<coordf_t> heights)
 	bool result = false;
 
 	// do we receive the correct number of values?
-	if(heights.size() == this->_internal_layers.size()-2) {
+	if(heights.size() == this->_internal_layers.size()-1) {
 		this->_internal_layer_heights = heights;
-		// add leading an trailing 0-value
-		this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), 0);
-		this->_internal_layer_heights.push_back(0);
+		// add leading and trailing 0-value
+		this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), this->_internal_layer_heights[0]);
+		//this->_internal_layer_heights.push_back(0);
 		result = this->_updateBSpline();
+	}else{
+		std::cerr << "Unable to update layer heights. You provided " << heights.size() << " layers, but " << this->_internal_layers.size()-1 << " expected" << std::endl;
 	}
 
 	this->_layers_updated = false;
@@ -186,7 +205,7 @@ bool LayerHeightSpline::_updateBSpline()
 			this->_internal_layers.size(),
             &this->_internal_layer_heights[0],
             0,
-            0,
+            1,
             0);
 
 	if (this->_layer_height_spline->ok()) {
