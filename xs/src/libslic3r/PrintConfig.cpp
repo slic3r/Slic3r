@@ -119,7 +119,7 @@ PrintConfigDef::PrintConfigDef()
 	def = this->add("constant_extruder", coBools);
     def->label = "Custom Constant rate extruder";
     def->tooltip = "This flag indicates that this extruder is constant rate (pump or solenoid based, not stepper motor). Acceleration control is disabled for print moves with this extruder.";
-    def->cli = "constant-extruder!@";
+    def->cli = "constant-extruder!";
     {
         ConfigOptionBools* opt = new ConfigOptionBools();
         opt->values.push_back(false);
