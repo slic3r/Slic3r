@@ -141,7 +141,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     public:
 	ConfigOptionBool                adaptive_slicing;
 	ConfigOptionFloat               adaptive_slicing_z_gradation;
-	ConfigOptionFloat               cusp_value;
+	ConfigOptionFloat               adaptive_slicing_quality;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloatOrPercent      extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_height;
@@ -175,7 +175,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(adaptive_slicing);
         OPT_PTR(adaptive_slicing_z_gradation);
-        OPT_PTR(cusp_value);
+        OPT_PTR(adaptive_slicing_quality);
         OPT_PTR(dont_support_bridges);
         OPT_PTR(extrusion_width);
         OPT_PTR(first_layer_height);

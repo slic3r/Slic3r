@@ -34,7 +34,7 @@ sub new {
 
 	$self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(150, 200), $object);
 
-	my $cusp_slider = $self->{cusp_slider} = Wx::Slider->new(
+	my $quality_slider = $self->{quality_slider} = Wx::Slider->new(
         $self, -1,
         0,                              # default
         0,                              # min
@@ -46,24 +46,24 @@ sub new {
         wxHORIZONTAL,
     );
 
-    my $cusp_label = $self->{cusp_label} = Wx::StaticText->new($self, -1, "    <-Quality", wxDefaultPosition,
+    my $quality_label = $self->{quality_label} = Wx::StaticText->new($self, -1, "    <-Quality", wxDefaultPosition,
         [-1,-1], wxALIGN_LEFT);
     my $value_label = $self->{value_label} = Wx::StaticText->new($self, -1, "", wxDefaultPosition,
         [50,-1], wxALIGN_CENTRE_HORIZONTAL | wxST_NO_AUTORESIZE);
     my $speed_label = $self->{speed_label} = Wx::StaticText->new($self, -1, "Speed->", wxDefaultPosition,
         [-1,-1], wxST_NO_AUTORESIZE | wxALIGN_RIGHT);
-    $cusp_label->SetFont($Slic3r::GUI::small_font);
+    $quality_label->SetFont($Slic3r::GUI::small_font);
     $value_label->SetFont($Slic3r::GUI::small_font);
     $speed_label->SetFont($Slic3r::GUI::small_font);
 	
 	my $quality_label_sizer = Wx::BoxSizer->new(wxHORIZONTAL);	
-	$quality_label_sizer->Add($cusp_label, 1, wxEXPAND | wxALL, 0);
+	$quality_label_sizer->Add($quality_label, 1, wxEXPAND | wxALL, 0);
     $quality_label_sizer->Add($value_label, 1, wxEXPAND | wxALL, 0);
     $quality_label_sizer->Add($speed_label, 1, wxEXPAND | wxALL, 0);
 	
 	my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
 	$right_sizer->Add($self->{splineControl}, 1, wxEXPAND | wxALL, 0);
-	$right_sizer->Add($cusp_slider, 0, wxEXPAND | wxALL, 0);
+	$right_sizer->Add($quality_slider, 0, wxEXPAND | wxALL, 0);
 	$right_sizer->Add($quality_label_sizer, 0, wxEXPAND | wxALL, 0);
 	
 	
@@ -104,25 +104,25 @@ sub new {
         $self->{preview3D}->canvas->Render;
     });
 
-    # init cusp slider
+    # init quality slider
     if($object->config->adaptive_slicing) {
-        my $cusp_value = $object->config->get('cusp_value');
-        $value_label->SetLabel(sprintf '%.2f mm', $cusp_value);
-        $cusp_slider->SetRange(0, 100);
-        $cusp_slider->SetValue($cusp_value*100);
+        my $quality_value = $object->config->get('adaptive_slicing_quality');
+        $value_label->SetLabel(sprintf '%.2f', $quality_value);
+        $quality_slider->SetRange(0, 100);
+        $quality_slider->SetValue($quality_value*100);
     }else{
         # disable slider
         $value_label->SetLabel("");
-        $cusp_label->Enable(0);
-        $cusp_slider->Enable(0);
+        $quality_label->Enable(0);
+        $quality_slider->Enable(0);
     }
 
-    EVT_SLIDER($self, $cusp_slider, sub {
+    EVT_SLIDER($self, $quality_slider, sub {
     	$self->{plater}->pause_background_process;
-    	my $cusp_value = $cusp_slider->GetValue/100;
-    	$value_label->SetLabel(sprintf '%.2f mm', $cusp_value);
-    	my $success = $object->config->set('cusp_value', $cusp_value);
-    	$object->layer_height_spline->setCuspValue($cusp_value);
+        my $quality_value = $quality_slider->GetValue/100;
+        $value_label->SetLabel(sprintf '%.2f', $quality_value);
+        my $success = $object->config->set('adaptive_slicing_quality', $quality_value);
+        $object->layer_height_spline->setCuspValue($quality_value);
         # trigger re-slicing
         $self->{plater}->stop_background_process;
         $self->{object}->invalidate_step(STEP_SLICE);

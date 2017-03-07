@@ -103,7 +103,7 @@ sub slice {
 
 		my $slice_z = 0;
         my $height  = 0;
-		my $cusp_height = 0;
+		my $adaptive_height = 0;
 		my @layers = ();
 		
 		# determine min and max layer height from extruder capabilities.
@@ -150,10 +150,10 @@ sub slice {
 
                 if ($self->config->adaptive_slicing) {
                     $height = 999;
-                    my $cusp_value = $self->config->get_value('cusp_value');
+                    my $adaptive_quality = $self->config->get_value('adaptive_slicing_quality');
                     if($self->layer_height_spline->getCuspValue >= 0) {
-                    	$self->config->set('cusp_value', $self->layer_height_spline->getCuspValue);
-                    	$cusp_value = $self->layer_height_spline->getCuspValue;
+                        $self->config->set('adaptive_slicing_quality', $self->layer_height_spline->getCuspValue);
+                        $adaptive_quality = $self->layer_height_spline->getCuspValue;
                     }
 
                     Slic3r::debugf "\n Slice layer: %d\n", $id;
@@ -162,29 +162,29 @@ sub slice {
                        for my $region_id (0 .. ($self->region_count - 1)) {
                            # get cusp height
                            next if(!defined $adaptive_slicing[$region_id]);
-                           my $cusp_height = $adaptive_slicing[$region_id]->next_layer_height_area(scale $slice_z, $cusp_value, $min_height, $max_height);
+                           my $adaptive_height = $adaptive_slicing[$region_id]->next_layer_height(scale $slice_z, $adaptive_quality, $min_height, $max_height);
 
                            # check for horizontal features and object size
                            if($self->config->get_value('match_horizontal_surfaces')) {
-                               my $horizontal_dist = $adaptive_slicing[$region_id]->horizontal_facet_distance(scale $slice_z+$cusp_height, $min_height);
+                               my $horizontal_dist = $adaptive_slicing[$region_id]->horizontal_facet_distance(scale $slice_z+$adaptive_height, $min_height);
                                if(($horizontal_dist < $min_height) && ($horizontal_dist > 0)) {
                                    Slic3r::debugf "Horizontal feature ahead, distance: %f\n", $horizontal_dist;
                                    # can we shrink the current layer a bit?
-                                   if($cusp_height-($min_height-$horizontal_dist) > $min_height) {
+                                   if($adaptive_height-($min_height-$horizontal_dist) > $min_height) {
                                        # yes we can
-                                       $cusp_height = $cusp_height-($min_height-$horizontal_dist);
-                                       Slic3r::debugf "Shrink layer height to %f\n", $cusp_height;
+                                       $adaptive_height = $adaptive_height-($min_height-$horizontal_dist);
+                                       Slic3r::debugf "Shrink layer height to %f\n", $adaptive_height;
                                    }else{
                                        # no, current layer would become too thin
-                                       $cusp_height = $cusp_height+$horizontal_dist;
-                                       Slic3r::debugf "Widen layer height to %f\n", $cusp_height;
+                                       $adaptive_height = $adaptive_height+$horizontal_dist;
+                                       Slic3r::debugf "Widen layer height to %f\n", $adaptive_height;
                                    }
                                }
                            }
 
                            $height = ($id == 0)
                             ? $self->config->get_value('first_layer_height')
-                            : min($cusp_height, $height);
+                            : min($adaptive_height, $height);
                        }
 
                 }else{

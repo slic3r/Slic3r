@@ -13,6 +13,15 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "adaptive-slicing!";
     def->default_value = new ConfigOptionBool(false);
     
+    def = this->add("adaptive_slicing_quality", coFloat);
+    def->label = "Adaptive quality";
+    def->tooltip = "Controls the quality / printing time tradeoff for adaptive layer generation. 1 -> fastest printing with max layer height, 0 -> highest quality, min layer height";
+    def->sidetext = "";
+    def->cli = "adaptive_slicing_quality=f";
+    def->min = 0;
+    def->max = 1;
+    def->default_value = new ConfigOptionFloat(0.15);
+
     def = this->add("adaptive_slicing_z_gradation", coFloat);
 	def->label = "Min layer height gradation";
 	def->tooltip = "Limit layer heights to a multiple of this value to avoid stepping inaccuracies at the Z-axis. Typical value for a Prusa i3, 1/16 micro-stepping is 0.004mm. Set zero do disable this option.";
@@ -132,15 +141,6 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "This flag enables the automatic cooling logic that adjusts print speed and fan speed according to layer printing time.";
     def->cli = "cooling!";
     def->default_value = new ConfigOptionBool(true);
-
-    def = this->add("cusp_value", coFloat);
-    def->label = "Cusp value";
-    def->tooltip = "This value determines the maximum deviaton from the objects original surface caused by the stair-stepping effect (approximation of the surface by discrete layers). Use a value between 0 (highest possible resolution) and [max_layer_height] (lowest possible resolution). Typical values are 0.1 - 0.2.";
-    def->sidetext = "mm";
-    def->cli = "cusp_value=f";
-    def->min = 0;
-    def->max = 1;
-    def->default_value = new ConfigOptionFloat(0.15);
 
     def = this->add("default_acceleration", coFloat);
     def->label = "Default";
