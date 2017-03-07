@@ -141,7 +141,7 @@ PerimeterGenerator::process()
                     }
                     
                     // look for gaps
-                    if (this->config->gap_fill_speed.value > 0 && this->config->fill_density.value > 0) {
+                    if (this->config->fill_gaps && this->config->fill_density.value > 0) {
                         // not using safety offset here would "detect" very narrow gaps
                         // (but still long enough to escape the area threshold) that gap fill
                         // won't be able to fill but we'd still remove from infill area

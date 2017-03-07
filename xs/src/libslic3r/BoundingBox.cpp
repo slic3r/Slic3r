@@ -183,6 +183,26 @@ BoundingBox3Base<PointClass>::size() const
 }
 template Pointf3 BoundingBox3Base<Pointf3>::size() const;
 
+template <class PointClass> double
+BoundingBoxBase<PointClass>::radius() const
+{
+    double x = this->max.x - this->min.x;
+    double y = this->max.y - this->min.y;
+    return 0.5 * sqrt(x*x+y*y);
+}
+template double BoundingBoxBase<Point>::radius() const;
+template double BoundingBoxBase<Pointf>::radius() const;
+
+template <class PointClass> double
+BoundingBox3Base<PointClass>::radius() const
+{
+    double x = this->max.x - this->min.x;
+    double y = this->max.y - this->min.y;
+    double z = this->max.z - this->min.z;
+    return 0.5 * sqrt(x*x+y*y+z*z);
+}
+template double BoundingBox3Base<Pointf3>::radius() const;
+
 template <class PointClass> void
 BoundingBoxBase<PointClass>::translate(coordf_t x, coordf_t y)
 {

@@ -201,7 +201,8 @@ Wipe::wipe(GCode &gcodegen, bool toolchange)
 
 GCode::GCode()
     : placeholder_parser(NULL), enable_loop_clipping(true), enable_cooling_markers(false), layer_count(0),
-        layer_index(-1), layer(NULL), first_layer(false), elapsed_time(0.0), volumetric_speed(0),
+        layer_index(-1), layer(NULL), first_layer(false), elapsed_time(0.0),
+        elapsed_time_bridges(0.0), elapsed_time_external(0.0), volumetric_speed(0),
         _last_pos_defined(false)
 {
 }
@@ -324,7 +325,7 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
     Point last_pos = this->last_pos();
     if (this->config.spiral_vase) {
         loop.split_at(last_pos);
-    } else if (seam_position == spNearest || seam_position == spAligned) {
+    } else if (seam_position == spNearest || seam_position == spAligned || seam_position == spRear) {
         const Polygon polygon = loop.polygon();
         
         // simplify polygon in order to skip false positives in concave/convex detection
@@ -354,8 +355,13 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
         }
         
         // retrieve the last start position for this object
-        if (this->layer != NULL && this->_seam_position.count(this->layer->object()) > 0) {
-            last_pos = this->_seam_position[this->layer->object()];
+        if (this->layer != NULL) {
+            if (seam_position == spRear) {
+                last_pos = this->layer->object()->bounding_box().center();
+                last_pos.y += coord_t(3. * this->layer->object()->bounding_box().radius());
+            } else if (this->_seam_position.count(this->layer->object()) > 0) {
+                last_pos = this->_seam_position[this->layer->object()];
+            }
         }
         
         Point point;
@@ -392,7 +398,8 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
             last_pos = Point(polygon.bounding_box().max.x, centroid.y);
             last_pos.rotate(fmod((float)rand()/16.0, 2.0*PI), centroid);
         }
-        loop.split_at(last_pos);
+        // Find the closest point, avoid overhangs.
+        loop.split_at(last_pos, true);
     }
     
     // clip the path to avoid the extruder to get exactly on the first point of the loop;
@@ -544,11 +551,11 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
             CONFESS("Invalid speed");
         }
     }
-    if (this->first_layer) {
-        speed = this->config.get_abs_value("first_layer_speed", speed);
-    }
     if (this->volumetric_speed != 0 && speed == 0) {
         speed = this->volumetric_speed / path.mm3_per_mm;
+    }
+    if (this->first_layer) {
+        speed = this->config.get_abs_value("first_layer_speed", speed);
     }
     if (this->config.max_volumetric_speed.value > 0) {
         // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
@@ -569,7 +576,9 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     // extrude arc or line
     if (path.is_bridge() && this->enable_cooling_markers)
         gcode += ";_BRIDGE_FAN_START\n";
-    gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? ";_EXTRUDE_SET_SPEED" : "");
+    std::string comment = ";_EXTRUDE_SET_SPEED";
+    if (path.role == erExternalPerimeter) comment += ";_EXTERNAL_PERIMETER";
+    gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? comment : "");
     double path_length = 0;
     {
         std::string comment = this->config.gcode_comments ? description : "";
@@ -594,8 +603,12 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     
     this->set_last_pos(path.last_point());
     
-    if (this->config.cooling)
-        this->elapsed_time += path_length / F * 60;
+    if (this->config.cooling) {
+        float t = path_length / F * 60;
+        this->elapsed_time += t;
+        if (path.is_bridge()) this->elapsed_time_bridges += t;
+        if (path.role == erExternalPerimeter) this->elapsed_time_external += t;
+    }
     
     return gcode;
 }

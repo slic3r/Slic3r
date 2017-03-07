@@ -112,12 +112,14 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
     }
     $gui = Slic3r::GUI->new;
     setlocale(LC_NUMERIC, 'C');
-    $gui->{mainframe}->load_config_file($_) for @{$opt{load}};
-    $gui->{mainframe}->load_config($cli_config);
-    foreach my $input_file (@ARGV) {
-        $input_file = Slic3r::decode_path($input_file);
-        $gui->{mainframe}{plater}->load_file($input_file) unless $opt{no_plater};
-    }
+    $gui->CallAfter(sub {
+        $gui->{mainframe}->load_config_file($_) for @{$opt{load}};
+        $gui->{mainframe}->load_config($cli_config);
+        foreach my $input_file (@ARGV) {
+            $input_file = Slic3r::decode_path($input_file);
+            $gui->{mainframe}{plater}->load_file($input_file) unless $opt{no_plater};
+        }
+    });
     $gui->MainLoop;
     exit;
 }
@@ -217,7 +219,7 @@ if (@ARGV) {  # slicing from command line
             foreach my $new_mesh (@{$mesh->split}) {
                 my $output_file = sprintf '%s_%02d.stl', $file, ++$part_count;
                 printf "Writing to %s\n", basename($output_file);
-                Slic3r::Format::STL->write_file($output_file, $new_mesh, binary => 1);
+                $new_mesh->write_binary($output_file);
             }
         }
         exit;
@@ -428,6 +430,7 @@ $j
     --fill-density      Infill density (range: 0%-100%, default: $config->{fill_density}%)
     --fill-angle        Infill angle in degrees (range: 0-90, default: $config->{fill_angle})
     --fill-pattern      Pattern to use to fill non-solid layers (default: $config->{fill_pattern})
+    --fill-gaps         Fill gaps with single passes (default: yes)
     --external-fill-pattern Pattern to use to fill solid layers (default: $config->{external_fill_pattern})
     --start-gcode       Load initial G-code from the supplied file. This will overwrite
                         the default command (home all axes [G28]).

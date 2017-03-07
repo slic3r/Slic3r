@@ -50,7 +50,6 @@ use constant PI             => 3.1415927;
 
 # Constant to determine if Vertex Buffer objects are used to draw
 # bed grid and the cut plane for object separation.
-# Old Perl (5.10.x) should set to 0.
 use constant HAS_VBO        => 1;
 
 
@@ -854,8 +853,8 @@ sub Render {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         
         glEnableClientState(GL_VERTEX_ARRAY);
+        my $triangle_vertex;
         if (HAS_VBO) {
-            my ($triangle_vertex);
             ($triangle_vertex) =
                 glGenBuffersARB_p(1);
             $self->bed_triangles->bind($triangle_vertex);
@@ -863,7 +862,7 @@ sub Render {
             glVertexPointer_c(3, GL_FLOAT, 0, 0);
         } else {
             # fall back on old behavior
-            glVertexPointer_p(3, $self->bed_triangles);
+            glVertexPointer_c(3, GL_FLOAT, 0, $self->bed_triangles->ptr());
         }
         glColor4f(0.8, 0.6, 0.5, 0.4);
         glNormal3d(0,0,1);
@@ -877,8 +876,8 @@ sub Render {
         # draw grid
         glLineWidth(3);
         glEnableClientState(GL_VERTEX_ARRAY);
+        my $grid_vertex;
         if (HAS_VBO) {
-            my ($grid_vertex);
             ($grid_vertex) =
                 glGenBuffersARB_p(1);
             $self->bed_grid_lines->bind($grid_vertex);
@@ -886,7 +885,7 @@ sub Render {
             glVertexPointer_c(3, GL_FLOAT, 0, 0);
         } else {
             # fall back on old behavior
-            glVertexPointer_p(3, $self->bed_grid_lines);
+            glVertexPointer_c(3, GL_FLOAT, 0, $self->bed_grid_lines->ptr());
         }
         glColor4f(0.2, 0.2, 0.2, 0.4);
         glNormal3d(0,0,1);
@@ -898,6 +897,8 @@ sub Render {
             # Turn off buffer objects to let the rest of the draw code work.
             glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
             glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+            glDeleteBuffersARB_p($grid_vertex);
+            glDeleteBuffersARB_p($triangle_vertex);
         }
     }
     
@@ -1086,17 +1087,18 @@ sub draw_volumes {
     }
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisable(GL_BLEND);
-    
+
+    my $cut_vertex;
     if (defined $self->cutting_plane_z) {
         if (HAS_VBO) {
             # Use Vertex Buffer Object for cutting plane (previous method crashes on modern POGL). 
-            my ($cut_vertex) = glGenBuffersARB_p(1);
+            ($cut_vertex) = glGenBuffersARB_p(1);
             $self->cut_lines_vertices->bind($cut_vertex);
             glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->cut_lines_vertices, GL_STATIC_DRAW_ARB);
             glVertexPointer_c(3, GL_FLOAT, 0, 0);
         } else {
             # Use legacy method.
-            glVertexPointer_p(3, $self->cut_lines_vertices);
+            glVertexPointer_c(3, GL_FLOAT, 0, $self->cut_lines_vertices->ptr());
         }
         glLineWidth(2);
         glColor3f(0, 0, 0);
@@ -1106,6 +1108,7 @@ sub draw_volumes {
             # Turn off buffer objects to let the rest of the draw code work.
             glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
             glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+            glDeleteBuffersARB_p($cut_vertex);
         }
 
     }

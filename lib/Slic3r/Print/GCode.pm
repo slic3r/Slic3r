@@ -14,6 +14,7 @@ has '_skirt_done'                    => (is => 'rw', default => sub { {} });  # 
 has '_brim_done'                     => (is => 'rw');
 has '_second_layer_things_done'      => (is => 'rw');
 has '_last_obj_copy'                 => (is => 'rw');
+has '_autospeed'                     => (is => 'rw', default => sub { 0 });   # boolean
 
 use List::Util qw(first sum min max);
 use Slic3r::ExtrusionPath ':roles';
@@ -43,59 +44,6 @@ sub BUILD {
         $gcodegen->set_enable_cooling_markers(1);
         $gcodegen->apply_print_config($self->config);
         $gcodegen->set_extruders($self->print->extruders);
-        
-        # initialize autospeed
-        {
-            # get the minimum cross-section used in the print
-            my @mm3_per_mm = ();
-            foreach my $object (@{$self->print->objects}) {
-                foreach my $region_id (0..$#{$self->print->regions}) {
-                    my $region = $self->print->get_region($region_id);
-                    foreach my $layer (@{$object->layers}) {
-                        my $layerm = $layer->get_region($region_id);
-                        if ($region->config->get_abs_value('perimeter_speed') == 0
-                            || $region->config->get_abs_value('small_perimeter_speed') == 0
-                            || $region->config->get_abs_value('external_perimeter_speed') == 0
-                            || $region->config->get_abs_value('bridge_speed') == 0) {
-                            push @mm3_per_mm, $layerm->perimeters->min_mm3_per_mm;
-                        }
-                        if ($region->config->get_abs_value('infill_speed') == 0
-                            || $region->config->get_abs_value('solid_infill_speed') == 0
-                            || $region->config->get_abs_value('top_solid_infill_speed') == 0
-                            || $region->config->get_abs_value('bridge_speed') == 0) {
-                            push @mm3_per_mm, $layerm->fills->min_mm3_per_mm;
-                        }
-                    }
-                }
-                if ($object->config->get_abs_value('support_material_speed') == 0
-                    || $object->config->get_abs_value('support_material_interface_speed') == 0) {
-                    foreach my $layer (@{$object->support_layers}) {
-                        push @mm3_per_mm, $layer->support_fills->min_mm3_per_mm;
-                        push @mm3_per_mm, $layer->support_interface_fills->min_mm3_per_mm;
-                    }
-                }
-            }
-            # filter out 0-width segments
-            @mm3_per_mm = grep $_ > 0.000001, @mm3_per_mm;
-            if (@mm3_per_mm) {
-                my $min_mm3_per_mm = min(@mm3_per_mm);
-                # In order to honor max_print_speed we need to find a target volumetric
-                # speed that we can use throughout the print. So we define this target 
-                # volumetric speed as the volumetric speed produced by printing the 
-                # smallest cross-section at the maximum speed: any larger cross-section
-                # will need slower feedrates.
-                my $volumetric_speed = $min_mm3_per_mm * $self->config->max_print_speed;
-                
-                # limit such volumetric speed with max_volumetric_speed if set
-                if ($self->config->max_volumetric_speed > 0) {
-                    $volumetric_speed = min(
-                        $volumetric_speed,
-                        $self->config->max_volumetric_speed,
-                    );
-                }
-                $gcodegen->set_volumetric_speed($volumetric_speed);
-            }
-        }
     }
     
     $self->_cooling_buffer(Slic3r::GCode::CoolingBuffer->new($self->_gcodegen));
@@ -364,6 +312,56 @@ sub process_layer {
     
     # if we're going to apply spiralvase to this layer, disable loop clipping
     $self->_gcodegen->set_enable_loop_clipping(!defined $self->_spiral_vase || !$self->_spiral_vase->enable);
+    
+    # initialize autospeed
+    {
+        # get the minimum cross-section used in the layer
+        my @mm3_per_mm = ();
+        foreach my $region_id (0..$#{$self->print->regions}) {
+            my $region = $self->print->get_region($region_id);
+            my $layerm = $layer->region($region_id);
+            if ($region->config->get_abs_value('perimeter_speed') == 0
+                || $region->config->get_abs_value('small_perimeter_speed') == 0
+                || $region->config->get_abs_value('external_perimeter_speed') == 0
+                || $region->config->get_abs_value('bridge_speed') == 0) {
+                push @mm3_per_mm, $layerm->perimeters->min_mm3_per_mm;
+            }
+            if ($region->config->get_abs_value('infill_speed') == 0
+                || $region->config->get_abs_value('solid_infill_speed') == 0
+                || $region->config->get_abs_value('top_solid_infill_speed') == 0
+                || $region->config->get_abs_value('bridge_speed') == 0
+                || $region->config->get_abs_value('gap_fill_speed') == 0) {
+                push @mm3_per_mm, $layerm->fills->min_mm3_per_mm;
+            }
+        }
+        if ($layer->isa('Slic3r::Layer::Support')) {
+            if ($object->config->get_abs_value('support_material_speed') == 0
+                || $object->config->get_abs_value('support_material_interface_speed') == 0) {
+                push @mm3_per_mm, $layer->support_fills->min_mm3_per_mm;
+                push @mm3_per_mm, $layer->support_interface_fills->min_mm3_per_mm;
+            }
+        }
+        # filter out 0-width segments
+        @mm3_per_mm = grep $_ > 0.000001, @mm3_per_mm;
+        if (@mm3_per_mm) {
+            my $min_mm3_per_mm = min(@mm3_per_mm);
+            # In order to honor max_print_speed we need to find a target volumetric
+            # speed that we can use throughout the print. So we define this target 
+            # volumetric speed as the volumetric speed produced by printing the 
+            # smallest cross-section at the maximum speed: any larger cross-section
+            # will need slower feedrates.
+            my $volumetric_speed = $min_mm3_per_mm * $self->config->max_print_speed;
+            
+            # limit such volumetric speed with max_volumetric_speed if set
+            if ($self->config->max_volumetric_speed > 0) {
+                $volumetric_speed = min(
+                    $volumetric_speed,
+                    $self->config->max_volumetric_speed,
+                );
+            }
+            $self->_gcodegen->set_volumetric_speed($volumetric_speed);
+        }
+    }
     
     if (!$self->_second_layer_things_done && $layer->id == 1) {
         for my $extruder (@{$self->_gcodegen->writer->extruders}) {

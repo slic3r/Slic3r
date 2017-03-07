@@ -350,7 +350,7 @@ sub get_option {
     $self->_opt_map->{$opt_id} = [ $opt_key, $opt_index ];
     
     my $optdef = $Slic3r::Config::Options->{$opt_key};    # we should access this from $self->config
-    my $default_value = $self->_get_config_value($opt_key, $opt_index, $optdef->{gui_flags} =~ /\bserialized\b/);
+    my $default_value = $self->_get_config_value($opt_key, $opt_index, $optdef->{type} eq 's@');
     
     return Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => $opt_id,
@@ -395,7 +395,7 @@ sub reload_config {
     foreach my $opt_id (keys %{ $self->_opt_map }) {
         my ($opt_key, $opt_index) = @{ $self->_opt_map->{$opt_id} };
         my $option = $self->_options->{$opt_id};
-        $self->set_value($opt_id, $self->_get_config_value($opt_key, $opt_index, $option->gui_flags =~ /\bserialized\b/));
+        $self->set_value($opt_id, $self->_get_config_value($opt_key, $opt_index, $option->type eq 's@'));
     }
 }
 
@@ -409,15 +409,16 @@ sub get_fieldc {
 }
 
 sub _get_config_value {
-    my ($self, $opt_key, $opt_index, $deserialize) = @_;
+    my ($self, $opt_key, $opt_index, $as_string) = @_;
     
-    if ($deserialize) {
-        die "Can't deserialize option indexed value" if $opt_index != -1;
-        return $self->config->serialize($opt_key);
+    if ($opt_index == -1) {
+        my $value = $self->config->get($opt_key);
+        if ($as_string && ref($value) eq 'ARRAY') {
+            return join "\n", @$value;
+        }
+        return $value;
     } else {
-        return $opt_index == -1
-            ? $self->config->get($opt_key)
-            : $self->config->get_at($opt_key, $opt_index);
+        return $self->config->get_at($opt_key, $opt_index);
     }
 }
 
@@ -430,17 +431,15 @@ sub _on_change {
         
         # get value
         my $field_value = $self->get_value($opt_id);
-        if ($option->gui_flags =~ /\bserialized\b/) {
-            die "Can't set serialized option indexed value" if $opt_index != -1;
-            $self->config->set_deserialize($opt_key, $field_value);
-        } else {
-            if ($opt_index == -1) {
-                $self->config->set($opt_key, $field_value);
-            } else {
-                my $value = $self->config->get($opt_key);
-                $value->[$opt_index] = $field_value;
-                $self->config->set($opt_key, $value);
+        if ($opt_index == -1) {
+            if ($option->type eq 's@' && ref($field_value) ne 'ARRAY') {
+                $field_value = [ split /(?<!\\)[;\n]/, $field_value ];
             }
+            $self->config->set($opt_key, $field_value);
+        } else {
+            my $value = $self->config->get($opt_key);
+            $value->[$opt_index] = $field_value;
+            $self->config->set($opt_key, $value);
         }
     }
     

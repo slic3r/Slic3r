@@ -12,6 +12,14 @@ New-Variable -Name "current_branch" -Value ""
 New-Variable -Name "current_date" -Value "$(Get-Date -UFormat '%Y.%m.%d')"
 New-Variable -Name "output_file" -Value ""
 
+if ($args[0]) {
+	$perlversion = $args[0]
+} else {
+	$perlversion = "524"
+}
+
+$perldll = "perl$perlversion"
+
 git branch | foreach {
    if ($env:APPVEYOR) {
 	   if ($_ -match "`  (.*)") {
@@ -35,25 +43,22 @@ New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
 cpanm "PAR::Packer"
 
 pp `
--a "../utils;utils"  `
--a "autorun.bat;slic3r.bat"  `
--a "../var;var"  `
--a "${STRAWBERRY_PATH}\perl\bin\perl5.24.0.exe;perl5.24.0.exe"  `
--a "${STRAWBERRY_PATH}\perl\bin\perl524.dll;perl524.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll"  `
+-a "slic3r.exe;slic3r.exe"  `
+-a "../../lib;lib" `
+-a "../../local-lib;local-lib" `
+-a "../../slic3r.pl;slic3r.pl" `
+-a "../../utils;utils"  `
+-a "../../var;var"  `
+-a "../../FreeGLUT/freeglut.dll;freeglut.dll" `
+-a "${STRAWBERRY_PATH}\perl\bin\perl${perlversion}.dll;perl${perlversion}.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\freeglut.dll;freeglut.dll"  `
--a "${STRAWBERRY_PATH}\c\bin\libglut-0_.dll;libglut-0_.dll"  `
--a "../lib;lib" `
--a "../local-lib;local-lib" `
--a "../slic3r.pl;slic3r.pl" `
+-a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll"  `
+-a "${STRAWBERRY_PATH}\c\bin\pthreadGC2-w64.dll;pthreadGC2-w64.dll"  `
+-a "${STRAWBERRY_PATH}\c\bin\libglut-0__.dll;libglut-0__.dll"  `
 -M AutoLoader `
 -M B `
 -M Carp `
 -M Class::Accessor `
--M Class::XSAccessor `
--M Class::XSAccessor::Heavy `
 -M Config `
 -M Crypt::CBC `
 -M Cwd `
@@ -109,7 +114,6 @@ pp `
 -M Sub::Exporter `
 -M Sub::Exporter::Progressive `
 -M Sub::Name `
--M Sub::Util `
 -M Symbol `
 -M Term::Cap `
 -M Text::ParseWords `
@@ -124,6 +128,7 @@ pp `
 -M URI::Escape `
 -M URI::http `
 -M Unicode::Normalize `
+-M Win32 `
 -M Win32::API `
 -M Win32::TieRegistry `
 -M Win32::WinError `
@@ -131,23 +136,23 @@ pp `
 -M XSLoader `
 -B `
 -M lib `
--p ..\slic3r.pl -o ..\${output_file}
+-p ..\..\slic3r.pl -o ..\..\${output_file}
 
 # switch renaming based on whether or not using packaged exe or zip 
 if ($exe) {
 	if ($env:APPVEYOR) {
-		copy ..\slic3r.exe "..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).exe"
+		copy ..\..\slic3r.exe "..\..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).exe"
 		del ..\slic3r.exe
 	} else {
-		copy ..\slic3r.exe "..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).exe"
-		del ..\slic3r.exe
+		copy ..\..\slic3r.exe "..\..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).exe"
+		del ..\..\slic3r.exe
 	}
 } else {
 # make this more useful for not being on the appveyor server
 	if ($env:APPVEYOR) {
-		copy ..\slic3r.par "..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).zip"
+		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).zip"
 	} else {
-		copy ..\slic3r.par "..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).zip"
-			del ../slic3r.par
+		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).zip"
+			del ..\..\slic3r.par
 	}
 }

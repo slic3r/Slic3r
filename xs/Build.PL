@@ -15,10 +15,25 @@ my $mswin = $^O eq 'MSWin32';
 # HAS_BOOL         : stops Perl/lib/CORE/handy.h from doing "#  define bool char" for MSVC
 # NOGDI            : prevents inclusion of wingdi.h which defines functions Polygon() and Polyline() in global namespace
 # BOOST_ASIO_DISABLE_KQUEUE : prevents a Boost ASIO bug on OS X: https://svn.boost.org/trac/boost/ticket/5339
-my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE);
+# std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
+my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE
+    -std=c++11);
+if ($cpp_guess->is_gcc)	{
+	# GCC is pedantic with c++11 std, so undefine strict ansi to get M_PI back
+	push @cflags, qw(-U__STRICT_ANSI__);
+}
 my @ldflags = ();
 if ($^O eq 'darwin') {
-    push @ldflags, qw(-framework IOKit -framework CoreFoundation);
+    push @cflags, qw(-stdlib=libc++);
+    push @ldflags, qw(-framework IOKit -framework CoreFoundation -lc++);
+    
+    # Due to a bug/misconfiguration/stupidity, boost 1.52 and libc++ don't like each
+    # other much: a compilation error "Constexpr function never produces a constant
+    # expression" pops up when trying to compile anything that uses
+    # boost/chrono/duration.hpp (namely boost/thread for us). This is a workaround
+    # that prevents this from happening, not needed with newer Boost versions.
+    # See here for more details: https://svn.boost.org/trac/boost/ticket/7671
+    push @cflags, qw(-DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE);
 }
 if ($mswin) {
     # In case windows.h is included, we don't want the min / max macros to be active.
@@ -83,11 +98,9 @@ if (defined $ENV{BOOST_LIBRARYDIR}) {
             qw(/opt/local/lib /usr/local/lib /opt/lib /usr/lib /lib);
     }
 }
-
 # In order to generate the -l switches we need to know how Boost libraries are named
 my $have_boost = 0;
 my @boost_libraries = qw(system thread filesystem);  # we need these
-
 # check without explicit lib path (works on Linux)
 if (! $mswin) {
     $have_boost = 1
@@ -107,8 +120,8 @@ if (!$ENV{SLIC3R_STATIC} && $have_boost) {
         # Try to find the boost system library.
         my @files = glob "$path/${lib_prefix}system*$lib_ext";
         next if !@files;
-    
-        if ($files[0] =~ /${lib_prefix}system([^.]+)$lib_ext$/) {
+  
+        if ($files[0] =~ /${lib_prefix}system([^.]*)$lib_ext$/) {
             # Suffix contains the version number, the build type etc.
             my $suffix = $1;
             # Verify existence of all required boost libraries at $path.

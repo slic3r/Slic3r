@@ -565,10 +565,9 @@ class ConfigOptionDef
     // Special values - "i_enum_open", "f_enum_open" to provide combo box for int or float selection,
     // "select_open" - to open a selection dialog (currently only a serial port selection).
     std::string gui_type;
-    // Usually empty. Otherwise "serialized" or "show_value"
     // The flags may be combined.
-    // "serialized" - vector valued option is entered in a single edit field. Values are separated by a semicolon.
     // "show_value" - even if enum_values / enum_labels are set, still display the value, not the enum label.
+    // "align_label_right" - align label to right
     std::string gui_flags;
     // Label of the GUI input field.
     // In case the GUI input fields are grouped in some views, the label defines a short label of a grouped value,

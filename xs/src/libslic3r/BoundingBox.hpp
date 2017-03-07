@@ -29,6 +29,7 @@ class BoundingBoxBase
     void merge(const BoundingBoxBase<PointClass> &bb);
     void scale(double factor);
     PointClass size() const;
+    double radius() const;
     void translate(coordf_t x, coordf_t y);
     void offset(coordf_t delta);
     PointClass center() const;
@@ -48,6 +49,7 @@ class BoundingBox3Base : public BoundingBoxBase<PointClass>
     void merge(const std::vector<PointClass> &points);
     void merge(const BoundingBox3Base<PointClass> &bb);
     PointClass size() const;
+    double radius() const;
     void translate(coordf_t x, coordf_t y, coordf_t z);
     void offset(coordf_t delta);
     PointClass center() const;

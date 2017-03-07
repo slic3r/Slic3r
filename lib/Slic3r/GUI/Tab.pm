@@ -451,7 +451,7 @@ sub set_value {
 package Slic3r::GUI::Tab::Print;
 use base 'Slic3r::GUI::Tab';
 
-use List::Util qw(first);
+use List::Util qw(first any);
 use Wx qw(:icon :dialog :id);
 
 sub name { 'print' }
@@ -467,7 +467,7 @@ sub build {
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
         seam_position external_perimeters_first
-        fill_density fill_pattern external_fill_pattern
+        fill_density fill_pattern external_fill_pattern fill_gaps
         infill_every_layers infill_only_where_needed
         solid_infill_every_layers fill_angle solid_infill_below_area 
         only_retract_when_crossing_perimeters infill_first
@@ -556,6 +556,7 @@ sub build {
         }
         {
             my $optgroup = $page->new_optgroup('Advanced');
+            $optgroup->append_single_option_line('fill_gaps');
             $optgroup->append_single_option_line('solid_infill_every_layers');
             $optgroup->append_single_option_line('fill_angle');
             $optgroup->append_single_option_line('solid_infill_below_area');
@@ -614,10 +615,10 @@ sub build {
             $optgroup->append_single_option_line('infill_speed');
             $optgroup->append_single_option_line('solid_infill_speed');
             $optgroup->append_single_option_line('top_solid_infill_speed');
+            $optgroup->append_single_option_line('gap_fill_speed');
             $optgroup->append_single_option_line('support_material_speed');
             $optgroup->append_single_option_line('support_material_interface_speed');
             $optgroup->append_single_option_line('bridge_speed');
-            $optgroup->append_single_option_line('gap_fill_speed');
         }
         {
             my $optgroup = $page->new_optgroup('Speed for non-print moves');
@@ -846,11 +847,18 @@ sub _update {
     $self->get_field($_)->toggle($have_infill || $have_solid_infill)
         for qw(fill_angle infill_extrusion_width infill_speed bridge_speed);
     
-    $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill);
+    $self->get_field('fill_gaps')->toggle($have_perimeters && $have_infill);
+    $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill && $config->fill_gaps);
     
     my $have_top_solid_infill = $config->top_solid_layers > 0;
     $self->get_field($_)->toggle($have_top_solid_infill)
         for qw(top_infill_extrusion_width top_solid_infill_speed);
+    
+    my $have_autospeed = any { $config->get("${_}_speed") eq '0' }
+        qw(perimeter external_perimeter small_perimeter
+        infill solid_infill top_solid_infill gap_fill support_material
+        support_material_interface);
+    $self->get_field('max_print_speed')->toggle($have_autospeed);
     
     my $have_default_acceleration = $config->default_acceleration > 0;
     $self->get_field($_)->toggle($have_default_acceleration)

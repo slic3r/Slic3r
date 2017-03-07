@@ -1,7 +1,9 @@
 #include "Model.hpp"
 #include "Geometry.hpp"
+#include "IO.hpp"
 #include <iostream>
-#include "boost/filesystem.hpp"
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
 
 namespace Slic3r {
 
@@ -36,6 +38,31 @@ Model::~Model()
 {
     this->clear_objects();
     this->clear_materials();
+}
+
+Model
+Model::read_from_file(std::string input_file)
+{
+    Model model;
+    
+    if (boost::algorithm::iends_with(input_file, ".stl")) {
+        IO::STL::read(input_file, &model);
+    } else if (boost::algorithm::iends_with(input_file, ".obj")) {
+        IO::OBJ::read(input_file, &model);
+    } else if (boost::algorithm::iends_with(input_file, ".amf")
+            || boost::algorithm::iends_with(input_file, ".amf.xml")) {
+        IO::AMF::read(input_file, &model);
+    } else {
+        throw std::runtime_error("Unknown file format");
+    }
+    
+    if (model.objects.empty())
+        throw std::runtime_error("The supplied file couldn't be read because it's empty");
+    
+    for (ModelObjectPtrs::const_iterator o = model.objects.begin(); o != model.objects.end(); ++o)
+        (*o)->input_file = input_file;
+    
+    return model;
 }
 
 ModelObject*

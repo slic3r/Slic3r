@@ -47,6 +47,7 @@ class Model
     Model& operator= (Model other);
     void swap(Model &other);
     ~Model();
+    static Model read_from_file(std::string input_file);
     ModelObject* add_object();
     ModelObject* add_object(const ModelObject &other, bool copy_volumes = true);
     void delete_object(size_t idx);
