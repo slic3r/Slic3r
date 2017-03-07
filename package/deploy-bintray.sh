@@ -30,7 +30,15 @@ if [ -z ${current_branch+x} ]; then
     current_branch="unknown"
 fi
 
-if [ "$current_branch" == "master" ] && [ "$APPVEYOR_PULL_REQUEST_NUMBER" == "" ]; then
+if [ ! -z ${GITHUB_PR_NUMBER+x} ]; then
+    PR_ID=$GITHUB_PR_NUMBER
+fi
+if [ ! -z ${APPVEYOR_PULL_REQUEST_NUMBER+x} ]; then
+    PR_ID=$APPVEYOR_PULL_REQUEST_NUMBER
+fi
+
+
+if [ "$current_branch" == "master" ] && [ -z ${PR_ID} ]; then
     # If building master, goes in slic3r_dev or slic3r, depending on whether or not this is a tagged build
     if [ -z ${TAGGED+x} ]; then
         SLIC3R_PKG=slic3r_dev
@@ -40,8 +48,9 @@ if [ "$current_branch" == "master" ] && [ "$APPVEYOR_PULL_REQUEST_NUMBER" == "" 
     version=$SLIC3R_BUILD_ID
 else
     # If building a branch, put the package somewhere else.
+    echo "Delploying pull request $PR_ID"
     SLIC3R_PKG=Slic3r_Branches
-    version=$SLIC3R_BUILD_ID-$current_branch
+    version=${SLIC3R_BUILD_ID}-PR${PR_ID}
 fi
 
 file=$1
@@ -56,5 +65,5 @@ echo "Publishing ${file} to ${version}..."
 curl -H "X-Bintray-Package: $SLIC3R_PKG" -H "X-Bintray-Version: $version" -H 'X-Bintray-Publish: 1' -H 'X-Bintray-Override: 1'  -T $file -u${USER}:${API} https://api.bintray.com/content/lordofhyphens/Slic3r/$(basename $1)
 #curl -X POST -u${USER}:${API} https://api.bintray.com/content/lordofhyphens/Slic3r/${SLIC3R_PKG}/$version/publish
 # Wait 5s for the server to catch up
-sleep 5 
-curl -H 'Content-Type: application/json' -X PUT -d "{ \"list_in_downloads\":true }" -u${USER}:${API} https://api.bintray.com/file_metadata/lordofhyphens/Slic3r/$(basename $1)
+#sleep 5 
+#curl -H 'Content-Type: application/json' -X PUT -d "{ \"list_in_downloads\":true }" -u${USER}:${API} https://api.bintray.com/file_metadata/lordofhyphens/Slic3r/$(basename $1)
