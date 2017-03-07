@@ -1,4 +1,3 @@
-#undef NDEBUG
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
 #include "../PolylineCollection.hpp"
