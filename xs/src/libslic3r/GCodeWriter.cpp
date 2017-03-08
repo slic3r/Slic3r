@@ -375,8 +375,9 @@ GCodeWriter::extrude_to_xy(const Pointf &point, double dE, const std::string &co
     
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x)
-          <<   " Y" << XYZF_NUM(point.y)
-		  <<    " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
+          <<   " Y" << XYZF_NUM(point.y);
+	if (!this->extruder()->is_constant_rate()) // leave off E if constant
+        gcode <<    " " << this->_extrusion_axis << E_NUM(this->_extruder->E);
 		  
     COMMENT(comment);
     gcode << "\n";
