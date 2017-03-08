@@ -29,6 +29,7 @@ class SurfaceCollection
     void append(const ExPolygons &src, SurfaceType surfaceType);
     size_t polygons_count() const;
     bool empty() const { return this->surfaces.empty(); };
+    size_t size() const { return this->surfaces.size(); };
     void clear() { this->surfaces.clear(); };
 };
 

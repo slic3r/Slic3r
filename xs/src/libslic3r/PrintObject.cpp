@@ -384,7 +384,7 @@ PrintObject::detect_surfaces_type()
             const Layer* lower_layer = layer_idx > 0 ? this->get_layer(layer_idx-1) : NULL;
             
             // collapse very narrow parts (using the safety offset in the diff is not enough)
-            const float offset = layerm.flow(frExternalPerimeter).scaled_width() / 10.f;
+            const float offs = layerm.flow(frExternalPerimeter).scaled_width() / 10.f;
 
             const Polygons layerm_slices_surfaces = layerm.slices;
 
@@ -392,14 +392,14 @@ PrintObject::detect_surfaces_type()
             // of current layer and upper one)
             SurfaceCollection top;
             if (upper_layer != NULL) {
-                const Polygons upper_slices = this->config.interface_shells.value
+                Polygons upper_slices = this->config.interface_shells.value
                     ? (Polygons)upper_layer->get_region(region_id)->slices
                     : (Polygons)upper_layer->slices;
                 
                 top.append(
                     offset2_ex(
                         diff(layerm_slices_surfaces, upper_slices, true),
-                        -offset, offset
+                        -offs, offs
                     ),
                     stTop
                 );
@@ -426,7 +426,7 @@ PrintObject::detect_surfaces_type()
                 bottom.append(
                     offset2_ex(
                         diff(layerm_slices_surfaces, lower_layer->slices, true), 
-                        -offset, offset
+                        -offs, offs
                     ),
                     surface_type_bottom
                 );
@@ -443,7 +443,7 @@ PrintObject::detect_surfaces_type()
                                 lower_layer->get_region(region_id)->slices, 
                                 true
                             ), 
-                            -offset, offset
+                            -offs, offs
                         ),
                         stBottom
                     );
@@ -470,7 +470,7 @@ PrintObject::detect_surfaces_type()
                 const Polygons top_polygons = to_polygons(STDMOVE(top));
                 top.clear();
                 top.append(
-                    offset2_ex(diff(top_polygons, bottom, true), -offset, offset),
+                    offset2_ex(diff(top_polygons, bottom, true), -offs, offs),
                     stTop
                 );
             }
@@ -487,17 +487,18 @@ PrintObject::detect_surfaces_type()
                 layerm.slices.append(
                     offset2_ex(
                         diff(layerm_slices_surfaces, topbottom, true),
-                        -offset, offset
+                        -offs, offs
                     ),
                     stInternal
                 );
             }
             
-            /*
-            Slic3r::debugf "  layer %d has %d bottom, %d top and %d internal surfaces\n",
-                $layerm->layer->id, scalar(@bottom), scalar(@top), scalar(@internal) if $Slic3r::debug;
-            */
-
+            #ifdef SLIC3R_DEBUG
+            printf("  layer %zu has %zu bottom, %zu top and %zu internal surfaces\n",
+                layerm.layer()->id(), bottom.size(), top.size(),
+                layerm.slices.size()-bottom.size()-top.size());
+            #endif
+            
         } // for each layer of a region
         
         /*  Fill in layerm->fill_surfaces by trimming the layerm->slices by the cummulative layerm->fill_surfaces.
@@ -782,7 +783,6 @@ PrintObject::_make_perimeters()
         size_t region_id = region_it - this->_print->regions.begin();
         const PrintRegion &region = **region_it;
         
-        
         if (!region.config.extra_perimeters
             || region.config.perimeters == 0
             || region.config.fill_density == 0
@@ -791,7 +791,13 @@ PrintObject::_make_perimeters()
         for (size_t i = 0; i <= (this->layer_count()-2); ++i) {
             LayerRegion &layerm                     = *this->get_layer(i)->get_region(region_id);
             const LayerRegion &upper_layerm         = *this->get_layer(i+1)->get_region(region_id);
-            const Polygons upper_layerm_polygons    = upper_layerm.slices;
+            
+            // In order to avoid diagonal gaps (GH #3732) we ignore the external half of the upper
+            // perimeter, since it's not truly covering this layer.
+            const Polygons upper_layerm_polygons = offset(
+                upper_layerm.slices,
+                -upper_layerm.flow(frExternalPerimeter).scaled_width()/2
+            );
             
             // Filter upper layer polygons in intersection_ppl by their bounding boxes?
             // my $upper_layerm_poly_bboxes= [ map $_->bounding_box, @{$upper_layerm_polygons} ];
