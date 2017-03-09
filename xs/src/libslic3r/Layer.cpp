@@ -419,4 +419,11 @@ Layer::detect_surfaces_type()
     }
 }
 
+void
+Layer::process_external_surfaces()
+{
+    for (LayerRegion* &layerm : this->regions)
+        layerm->process_external_surfaces();
+}
+
 }

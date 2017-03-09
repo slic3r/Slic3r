@@ -61,7 +61,7 @@ class LayerRegion
     void prepare_fill_surfaces();
     void make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces);
     void make_fill();
-    void process_external_surfaces(const Layer* lower_layer);
+    void process_external_surfaces();
     double infill_area_threshold() const;
     
     private:
@@ -111,6 +111,7 @@ class Layer {
     void make_perimeters();
     void make_fills();
     void detect_surfaces_type();
+    void process_external_surfaces();
     
     protected:
     size_t _id;     // sequential number of layer, 0-based

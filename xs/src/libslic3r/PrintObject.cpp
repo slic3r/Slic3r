@@ -371,17 +371,11 @@ PrintObject::detect_surfaces_type()
 void
 PrintObject::process_external_surfaces()
 {
-    FOREACH_REGION(this->_print, region) {
-        size_t region_id = region - this->_print->regions.begin();
-        
-        FOREACH_LAYER(this, layer_it) {
-            const Layer* lower_layer = (layer_it == this->layers.begin())
-                ? NULL
-                : *(layer_it-1);
-            
-            (*layer_it)->get_region(region_id)->process_external_surfaces(lower_layer);
-        }
-    }
+    parallelize<Layer*>(
+        std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
+        boost::bind(&Slic3r::Layer::process_external_surfaces, _1),
+        this->_print->config.threads.value
+    );
 }
 
 /* This method applies bridge flow to the first internal solid layer above
