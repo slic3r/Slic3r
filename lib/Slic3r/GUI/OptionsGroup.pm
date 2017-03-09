@@ -297,7 +297,7 @@ sub append_widget {
 }
 
 sub append_button {
-    my ($self, $text, $icon, $cb, $ref) = @_;
+    my ($self, $text, $icon, $cb, $ref, $disable) = @_;
     
     $self->append_widget(sub {
         my ($parent) = @_;
@@ -308,6 +308,7 @@ sub append_button {
         if ($Slic3r::GUI::have_button_icons) {
             $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG));
         }
+        $btn->Disable if $disable;
         $$ref = $btn if $ref;
         
         EVT_BUTTON($parent, $btn, $cb);

@@ -1068,32 +1068,6 @@ sub build {
     ));
     $self->{config}->set('printer_settings_id', '');
     
-    my $bed_shape_widget = sub {
-        my ($parent) = @_;
-        
-        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
-            wxBU_LEFT | wxBU_EXACTFIT);
-        $btn->SetFont($Slic3r::GUI::small_font);
-        if ($Slic3r::GUI::have_button_icons) {
-            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG));
-        }
-        
-        my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
-        $sizer->Add($btn);
-        
-        EVT_BUTTON($self, $btn, sub {
-            my $dlg = Slic3r::GUI::BedShapeDialog->new($self, $self->{config}->bed_shape);
-            if ($dlg->ShowModal == wxID_OK) {
-                my $value = $dlg->GetValue;
-                $self->{config}->set('bed_shape', $value);
-                $self->update_dirty;
-                $self->_on_value_change('bed_shape', $value);
-            }
-        });
-        
-        return $sizer;
-    };
-    
     $self->{extruders_count} = 1;
     
     {
@@ -1102,9 +1076,17 @@ sub build {
             my $optgroup = $page->new_optgroup('Size and coordinates');
             
             my $line = Slic3r::GUI::OptionsGroup::Line->new(
-                label       => 'Bed shape',
-                widget      => $bed_shape_widget,
+                label => 'Bed shape',
             );
+            $line->append_button("Set…", "cog.png", sub {
+                my $dlg = Slic3r::GUI::BedShapeDialog->new($self, $self->{config}->bed_shape);
+                if ($dlg->ShowModal == wxID_OK) {
+                    my $value = $dlg->GetValue;
+                    $self->{config}->set('bed_shape', $value);
+                    $self->update_dirty;
+                    $self->_on_value_change('bed_shape', $value);
+                }
+            });
             $optgroup->append_line($line);
             
             $optgroup->append_single_option_line('z_offset');
@@ -1151,108 +1133,63 @@ sub build {
                 
                 return $btn;
             });
-            my $serial_test = sub {
-                my ($parent) = @_;
-                
-                my $btn = $self->{serial_test_btn} = Wx::Button->new($parent, -1,
-                    "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
-                $btn->SetFont($Slic3r::GUI::small_font);
-                if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("wrench.png"), wxBITMAP_TYPE_PNG));
-                }
-                
-                EVT_BUTTON($self, $btn, sub {
-                    my $sender = Slic3r::GCode::Sender->new;
-                    my $res = $sender->connect(
-                        $self->{config}->serial_port,
-                        $self->{config}->serial_speed,
-                    );
-                    if ($res && $sender->wait_connected) {
-                        Slic3r::GUI::show_info($self, "Connection to printer works correctly.", "Success!");
-                    } else {
-                        Slic3r::GUI::show_error($self, "Connection failed.");
-                    }
-                });
-                return $btn;
-            };
             $line->append_option($serial_port);
             $line->append_option($optgroup->get_option('serial_speed'));
-            $line->append_widget($serial_test);
+            $line->append_button("Test", "wrench.png", sub {
+                my $sender = Slic3r::GCode::Sender->new;
+                my $res = $sender->connect(
+                    $self->{config}->serial_port,
+                    $self->{config}->serial_speed,
+                );
+                if ($res && $sender->wait_connected) {
+                    Slic3r::GUI::show_info($self, "Connection to printer works correctly.", "Success!");
+                } else {
+                    Slic3r::GUI::show_error($self, "Connection failed.");
+                }
+            }, \$self->{serial_test_btn});
             $optgroup->append_line($line);
         }
         {
             my $optgroup = $page->new_optgroup('OctoPrint upload');
             
-            # append two buttons to the Host line
-            my $octoprint_host_browse = sub {
-                my ($parent) = @_;
-                
-                my $btn = Wx::Button->new($parent, -1, "Browse…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
-                $btn->SetFont($Slic3r::GUI::small_font);
-                if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("zoom.png"), wxBITMAP_TYPE_PNG));
-                }
-                
-                if (!eval "use Net::Bonjour; 1") {
-                    $btn->Disable;
-                }
-                
-                EVT_BUTTON($self, $btn, sub {
-                    # look for devices
-                    my $entries;
-                    {
-                        my $res = Net::Bonjour->new('http');
-                        $res->discover;
-                        $entries = [ $res->entries ];
-                    }
-                    if (@{$entries}) {
-                        my $dlg = Slic3r::GUI::BonjourBrowser->new($self, $entries);
-                        if ($dlg->ShowModal == wxID_OK) {
-                            my $value = $dlg->GetValue . ":" . $dlg->GetPort;
-                            $self->{config}->set('octoprint_host', $value);
-                            $self->update_dirty;
-                            $self->_on_value_change('octoprint_host', $value);
-                            $self->reload_config;
-                        }
-                    } else {
-                        Wx::MessageDialog->new($self, 'No Bonjour device found', 'Device Browser', wxOK | wxICON_INFORMATION)->ShowModal;
-                    }
-                });
-                
-                return $btn;
-            };
-            my $octoprint_host_test = sub {
-                my ($parent) = @_;
-                
-                my $btn = $self->{octoprint_host_test_btn} = Wx::Button->new($parent, -1,
-                    "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
-                $btn->SetFont($Slic3r::GUI::small_font);
-                if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("wrench.png"), wxBITMAP_TYPE_PNG));
-                }
-                
-                EVT_BUTTON($self, $btn, sub {
-                    my $ua = LWP::UserAgent->new;
-                    $ua->timeout(10);
-    
-                    my $res = $ua->get(
-                        "http://" . $self->{config}->octoprint_host . "/api/version",
-                        'X-Api-Key' => $self->{config}->octoprint_apikey,
-                    );
-                    if ($res->is_success) {
-                        Slic3r::GUI::show_info($self, "Connection to OctoPrint works correctly.", "Success!");
-                    } else {
-                        Slic3r::GUI::show_error($self,
-                            "I wasn't able to connect to OctoPrint (" . $res->status_line . "). "
-                            . "Check hostname and OctoPrint version (at least 1.1.0 is required).");
-                    }
-                });
-                return $btn;
-            };
-            
             my $host_line = $optgroup->create_single_option_line('octoprint_host');
-            $host_line->append_widget($octoprint_host_browse);
-            $host_line->append_widget($octoprint_host_test);
+            $host_line->append_button("Browse…", "zoom.png", sub {
+                # look for devices
+                my $entries;
+                {
+                    my $res = Net::Bonjour->new('http');
+                    $res->discover;
+                    $entries = [ $res->entries ];
+                }
+                if (@{$entries}) {
+                    my $dlg = Slic3r::GUI::BonjourBrowser->new($self, $entries);
+                    if ($dlg->ShowModal == wxID_OK) {
+                        my $value = $dlg->GetValue . ":" . $dlg->GetPort;
+                        $self->{config}->set('octoprint_host', $value);
+                        $self->update_dirty;
+                        $self->_on_value_change('octoprint_host', $value);
+                        $self->reload_config;
+                    }
+                } else {
+                    Wx::MessageDialog->new($self, 'No Bonjour device found', 'Device Browser', wxOK | wxICON_INFORMATION)->ShowModal;
+                }
+            }, undef, !eval "use Net::Bonjour; 1");
+            $host_line->append_button("Test", "wrench.png", sub {
+                my $ua = LWP::UserAgent->new;
+                $ua->timeout(10);
+
+                my $res = $ua->get(
+                    "http://" . $self->{config}->octoprint_host . "/api/version",
+                    'X-Api-Key' => $self->{config}->octoprint_apikey,
+                );
+                if ($res->is_success) {
+                    Slic3r::GUI::show_info($self, "Connection to OctoPrint works correctly.", "Success!");
+                } else {
+                    Slic3r::GUI::show_error($self,
+                        "I wasn't able to connect to OctoPrint (" . $res->status_line . "). "
+                        . "Check hostname and OctoPrint version (at least 1.1.0 is required).");
+                }
+            }, \$self->{octoprint_host_test_btn});
             $optgroup->append_line($host_line);
             $optgroup->append_single_option_line('octoprint_apikey');
         }
