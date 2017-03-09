@@ -5,24 +5,29 @@ use strict;
 use warnings;
 use utf8;
 
+use Scalar::Util qw(looks_like_number);
 use Slic3r::Geometry qw(PI X Y unscale);
 use Wx qw(:dialog :id :misc :sizer :choicebook :button :bitmap
     wxBORDER_NONE wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_CLOSE EVT_BUTTON);
 use base qw(Wx::Dialog Class::Accessor);
 
-__PACKAGE__->mk_accessors(qw(sender config2 x_homed y_homed));
+__PACKAGE__->mk_accessors(qw(sender writer config2 x_homed y_homed));
 
 sub new {
     my ($class, $parent, $config, $sender) = @_;
     
     my $self = $class->SUPER::new($parent, -1, "Manual Control", wxDefaultPosition,
-        [500,380], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+        [500,400], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     $self->sender($sender);
+    $self->writer(Slic3r::GCode::Writer->new);
+    $self->writer->config->apply_dynamic($config);
     
     $self->config2({
         xy_travel_speed     => 130,
         z_travel_speed      => 10,
+        temperature         => '',
+        bed_temperature     => '',
     });
     
     my $bed_sizer = Wx::FlexGridSizer->new(2, 3, 1, 1);
@@ -133,7 +138,44 @@ sub new {
         ));
         $optgroup->append_line($line);
     }
-    
+    {
+        my $line = $optgroup->create_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+            opt_id      => 'temperature',
+            type        => 's',
+            label       => 'Temperature',
+            default     => '',
+            sidetext    => '°C',
+            default     => $self->config2->{temperature},
+        ));
+        $line->append_button("Set", "tick.png", sub {
+            if (!looks_like_number($self->config2->{temperature})) {
+                Slic3r::GUI::show_error($self, "Invalid temperature.");
+                return;
+            }
+            my $cmd = $self->writer->set_temperature($self->config2->{temperature});
+            $self->sender->send($cmd, 1);
+        });
+        $optgroup->append_line($line);
+    }
+    {
+        my $line = $optgroup->create_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+            opt_id      => 'bed_temperature',
+            type        => 's',
+            label       => 'Bed Temperature',
+            default     => '',
+            sidetext    => '°C',
+            default     => $self->config2->{bed_temperature},
+        ));
+        $line->append_button("Set", "tick.png", sub {
+            if (!looks_like_number($self->config2->{bed_temperature})) {
+                Slic3r::GUI::show_error($self, "Invalid bed temperature.");
+                return;
+            }
+            my $cmd = $self->writer->set_bed_temperature($self->config2->{bed_temperature});
+            $self->sender->send($cmd, 1);
+        });
+        $optgroup->append_line($line);
+    }
     my $main_sizer = Wx::BoxSizer->new(wxVERTICAL);
     $main_sizer->Add($bed_sizer, 1, wxEXPAND | wxALL, 10);
     $main_sizer->Add($optgroup->sizer, 0, wxEXPAND | wxALL, 10);

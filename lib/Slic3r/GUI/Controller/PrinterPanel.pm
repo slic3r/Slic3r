@@ -279,7 +279,7 @@ sub _update_connection_controls {
     $self->{btn_manual_control}->Hide;
     $self->{btn_manual_control}->Disable;
     
-    if ($self->is_connected) {
+    if ($self->is_connected || 1) {
         $self->{btn_connect}->Hide;
         $self->{btn_manual_control}->Show;
         if (!$self->printing || $self->printing->paused) {

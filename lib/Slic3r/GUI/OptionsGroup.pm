@@ -282,6 +282,9 @@ has 'widget'        => (is => 'rw');
 has '_options'      => (is => 'ro', default => sub { [] });
 has '_extra_widgets' => (is => 'ro', default => sub { [] });
 
+use Wx qw(:button :misc :bitmap);
+use Wx::Event qw(EVT_BUTTON);
+
 # this method accepts a Slic3r::GUI::OptionsGroup::Option object
 sub append_option {
     my ($self, $option) = @_;
@@ -291,6 +294,25 @@ sub append_option {
 sub append_widget {
     my ($self, $widget) = @_;
     push @{$self->_extra_widgets}, $widget;
+}
+
+sub append_button {
+    my ($self, $text, $icon, $cb, $ref) = @_;
+    
+    $self->append_widget(sub {
+        my ($parent) = @_;
+        
+        my $btn = Wx::Button->new($parent, -1,
+            $text, wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
+        $btn->SetFont($Slic3r::GUI::small_font);
+        if ($Slic3r::GUI::have_button_icons) {
+            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG));
+        }
+        $$ref = $btn if $ref;
+        
+        EVT_BUTTON($parent, $btn, $cb);
+        return $btn;
+    });
 }
 
 sub get_options {
