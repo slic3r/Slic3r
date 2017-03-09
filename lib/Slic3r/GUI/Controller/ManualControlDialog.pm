@@ -15,7 +15,7 @@ use base qw(Wx::Dialog Class::Accessor);
 __PACKAGE__->mk_accessors(qw(sender writer config2 x_homed y_homed));
 
 sub new {
-    my ($class, $parent, $config, $sender) = @_;
+    my ($class, $parent, $config, $sender, $manual_control_config) = @_;
     
     my $self = $class->SUPER::new($parent, -1, "Manual Control", wxDefaultPosition,
         [500,400], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
@@ -23,12 +23,7 @@ sub new {
     $self->writer(Slic3r::GCode::Writer->new);
     $self->writer->config->apply_dynamic($config);
     
-    $self->config2({
-        xy_travel_speed     => 130,
-        z_travel_speed      => 10,
-        temperature         => '',
-        bed_temperature     => '',
-    });
+    $self->config2($manual_control_config);
     
     my $bed_sizer = Wx::FlexGridSizer->new(2, 3, 1, 1);
     $bed_sizer->AddGrowableCol(1, 1);
