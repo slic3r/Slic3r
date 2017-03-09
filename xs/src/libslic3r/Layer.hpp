@@ -7,6 +7,7 @@
 #include "ExtrusionEntityCollection.hpp"
 #include "ExPolygonCollection.hpp"
 #include "PolylineCollection.hpp"
+#include <boost/thread.hpp>
 
 
 namespace Slic3r {
@@ -66,6 +67,7 @@ class LayerRegion
     private:
     Layer *_layer;
     PrintRegion *_region;
+    mutable boost::mutex _slices_mutex;
 
     LayerRegion(Layer *layer, PrintRegion *region)
         : _layer(layer), _region(region) {};
@@ -108,11 +110,11 @@ class Layer {
     template <class T> bool any_bottom_region_slice_contains(const T &item) const;
     void make_perimeters();
     void make_fills();
+    void detect_surfaces_type();
     
     protected:
     size_t _id;     // sequential number of layer, 0-based
     PrintObject* _object;
-
 
     Layer(size_t id, PrintObject *object, coordf_t height, coordf_t print_z,
         coordf_t slice_z);
