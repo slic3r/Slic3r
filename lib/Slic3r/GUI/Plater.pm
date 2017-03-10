@@ -142,6 +142,7 @@ sub new {
                         $self->stop_background_process;
                         $self->statusbar->SetStatusText("Slicing cancelled");
                         $self->{preview_notebook}->SetSelection(0);
+
                     });
                     $self->start_background_process;
                 } else {
@@ -431,6 +432,46 @@ sub new {
                 }
             }
         }
+
+        my $print_info_sizer;
+        {
+            my $box = Wx::StaticBox->new($self, -1, "Sliced Info");
+            $print_info_sizer = Wx::StaticBoxSizer->new($box, wxVERTICAL);
+            $print_info_sizer->SetMinSize([350,-1]);
+            my $grid_sizer = Wx::FlexGridSizer->new(2, 2, 5, 5);
+            $grid_sizer->SetFlexibleDirection(wxHORIZONTAL);
+            $grid_sizer->AddGrowableCol(1, 1);
+            $grid_sizer->AddGrowableCol(3, 1);
+            $print_info_sizer->Add($grid_sizer, 0, wxEXPAND);
+            my @info = (
+                fil_cm  => "Used Filament (cm)",
+                fil_cm3 => "Used Filament (cm^3)",
+                fil_g   => "Used Filament (g)",
+                cost    => "Cost",
+                time    => "Time (dd:hh:mm:ss)",
+            );
+            my @tooltip = (
+                fil_cm => "Linear length of filament used (cm).",
+                fil_cm3 => "Volume of filament.",
+                fil_g   => "Total weight of filament (in grams). This requires filament density to be set.",
+                cost    => "Total cost in whatever currency you have set.",
+                time    => "Optimistic time estimate for print completion. Only considers travel moves and printing moves.",
+            );
+            while (my $field = shift @info) {
+                my $label = shift @info;
+                my $tip = shift @tooltip;
+                my $text = Wx::StaticText->new($self, -1, "$label:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+                $text->SetFont($Slic3r::GUI::small_font);
+                $grid_sizer->Add($text, 0);
+                
+                $self->{"print_info_$field"} = Wx::StaticText->new($self, -1, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+                $self->{"print_info_$field"}->SetToolTip($tip);
+                $self->{"print_info_$field"}->SetFont($Slic3r::GUI::small_font);
+                $grid_sizer->Add($self->{"print_info_$field"}, 0);
+            }
+            $self->{"sliced_info_box"} = $print_info_sizer;
+            
+        }
         
         my $buttons_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $buttons_sizer->AddStretchSpacer(1);
@@ -444,6 +485,9 @@ sub new {
         $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
         $right_sizer->Add($self->{list}, 1, wxEXPAND, 5);
         $right_sizer->Add($object_info_sizer, 0, wxEXPAND, 0);
+        $right_sizer->Add($print_info_sizer, 0, wxEXPAND, 0);
+        $right_sizer->Hide($print_info_sizer);
+        $self->{"right_sizer"} = $right_sizer;
         
         my $hsizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $hsizer->Add($self->{preview_notebook}, 1, wxEXPAND | wxTOP, 1);
@@ -1090,6 +1134,11 @@ sub async_apply_config {
     if ($invalidated) {
         # kill current thread if any
         $self->stop_background_process;
+        # remove the sliced statistics box because something changed.
+        if ($self->{"right_sizer"}) { 
+            $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+            $self->{"right_sizer"}->Layout;
+        }
     } else {
         $self->resume_background_process;
     }
@@ -1263,6 +1312,8 @@ sub export_gcode {
     
     # this updates buttons status
     $self->object_list_changed;
+    $self->{"right_sizer"}->Show($self->{"sliced_info_box"});
+    $self->{"right_sizer"}->Layout;
     
     return $self->{export_gcode_output_file};
 }
@@ -1357,6 +1408,12 @@ sub on_export_completed {
     $self->send_gcode if $send_gcode;
     $self->{print_file} = undef;
     $self->{send_gcode_file} = undef;
+    $self->{"print_info_cost"}->SetLabel(sprintf("%.2f" , $self->{print}->total_cost));
+    $self->{"print_info_fil_g"}->SetLabel(sprintf("%.2f" , $self->{print}->total_weight));
+    $self->{"print_info_fil_cm3"}->SetLabel(sprintf("%.2f" , $self->{print}->total_extruded_volume) / 1000);
+    $self->{"print_info_fil_cm"}->SetLabel(sprintf("%.2f" , $self->{print}->total_used_filament) / 10);
+    $self->{"print_info_time"}->SetLabel(sprintf "%02d:%02d:%02d:%02d", (gmtime($self->{print}->total_time))[7,2,1,0]);
+
     
     # this updates buttons status
     $self->object_list_changed;
@@ -1553,7 +1610,10 @@ sub update {
     } else {
         $self->resume_background_process;
     }
-    
+    if ($self->{"right_sizer"}) { 
+        $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+        $self->{"right_sizer"}->Layout;
+    }
     $self->refresh_canvases;
 }
 
@@ -1626,6 +1686,10 @@ sub on_config_change {
             }
             $self->Layout;
         }
+    }
+    if ($self->{"right_sizer"}) { 
+        $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+        $self->{"right_sizer"}->Layout;
     }
     
     return if !$self->GetFrame->is_loaded;

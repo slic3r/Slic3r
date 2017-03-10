@@ -17,6 +17,7 @@ class Extruder
     double restart_extra;
     double e_per_mm3;
     double retract_speed_mm_min;
+    double time_used;
     
     Extruder(unsigned int id, GCodeConfig *config);
     virtual ~Extruder() {}
@@ -29,6 +30,8 @@ class Extruder
     double used_filament() const;
     
     double filament_diameter() const;
+    double filament_density() const;
+    double filament_cost() const;
     double extrusion_multiplier() const;
     double retract_length() const;
     double retract_lift() const;
@@ -36,6 +39,8 @@ class Extruder
     double retract_restart_extra() const;
     double retract_length_toolchange() const;
     double retract_restart_extra_toolchange() const;
+    void add_extrusion_time(double length, double v, double acceleration);
+    double extrusion_time() const;
     
     private:
     GCodeConfig *config;

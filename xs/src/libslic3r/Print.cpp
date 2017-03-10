@@ -54,7 +54,8 @@ template class PrintState<PrintObjectStep>;
 
 Print::Print()
 :   total_used_filament(0),
-    total_extruded_volume(0)
+    total_extruded_volume(0),
+    total_time(0)
 {
 }
 

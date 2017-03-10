@@ -167,7 +167,7 @@ class Print
     PrintRegionPtrs regions;
     PlaceholderParser placeholder_parser;
     // TODO: status_cb
-    double total_used_filament, total_extruded_volume;
+    double total_used_filament, total_extruded_volume, total_cost, total_weight, total_time;
     std::map<size_t,float> filament_stats;
     PrintState<PrintStep> state;
 
