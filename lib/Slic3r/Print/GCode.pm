@@ -257,11 +257,13 @@ sub export {
     $self->print->total_extruded_volume(0);
     $self->print->total_weight(0);
     $self->print->total_cost(0);
+    $self->print->total_time(0);
     foreach my $extruder (@{$gcodegen->writer->extruders}) {
         my $used_filament = $extruder->used_filament;
         my $extruded_volume = $extruder->extruded_volume;
         my $filament_weight = $extruded_volume * $extruder->filament_density / 1000;
         my $filament_cost = $filament_weight * ($extruder->filament_cost / 1000);
+        my $extrusion_time = $extruder->extrusion_time;
         $self->print->set_filament_stats($extruder->id, $used_filament);
         
         printf $fh "; filament used = %.1fmm (%.1fcm3)\n",
@@ -276,8 +278,11 @@ sub export {
                        $filament_cost;
             }
         }
+        printf $fh "; estimated print time (optimistic) = %02d:%02d:%02d:%02d (days:h:m:s)\n", 
+            (gmtime($extrusion_time))[7,2,1,0];
         
         $self->print->total_used_filament($self->print->total_used_filament + $used_filament);
+        $self->print->total_time($self->print->total_time + $extrusion_time);
         $self->print->total_extruded_volume($self->print->total_extruded_volume + $extruded_volume);
     }
     printf $fh "; total filament cost = %.1f\n",

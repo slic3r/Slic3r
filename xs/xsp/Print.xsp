@@ -309,5 +309,14 @@ Print::total_cost(...)
     OUTPUT:
         RETVAL
 
+double
+Print::total_time(...)
+    CODE:
+        if (items > 1) {
+            THIS->total_time = (double)SvNV(ST(1));
+        }
+        RETVAL = THIS->total_time;
+    OUTPUT:
+        RETVAL
 %}
 };

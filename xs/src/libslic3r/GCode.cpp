@@ -186,6 +186,7 @@ Wipe::wipe(GCode &gcodegen, bool toolchange)
                 -dE,
                 "wipe and retract"
             );
+            gcodegen.writer.extruder()->add_extrusion_time(dE, wipe_speed, 9000.0);
             retracted += dE;
         }
         gcodegen.writer.extruder()->retracted += retracted;
@@ -510,9 +511,9 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     // compensate retraction
     gcode += this->unretract();
     
+    double acceleration = 1.0;
     // adjust acceleration
     {
-        double acceleration;
         if (this->config.first_layer_acceleration.value > 0 && this->first_layer) {
             acceleration = this->config.first_layer_acceleration.value;
         } else if (this->config.perimeter_acceleration.value > 0 && path.is_perimeter()) {
@@ -592,6 +593,7 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
                 e_per_mm * line_length,
                 comment
             );
+            this->writer.extruder()->add_extrusion_time(line_length, speed, acceleration);
         }
     }
     if (this->wipe.enable) {
@@ -649,8 +651,11 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     
     // use G1 because we rely on paths being straight (G0 may make round paths)
     Lines lines = travel.lines();
-    for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line)
+    for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
+        // wildly optimistic, assume travel accel is very fast.
+        this->writer.extruder()->add_extrusion_time(line->length() * SCALING_FACTOR, this->config.travel_speed, 9000.0);
         gcode += this->writer.travel_to_xy(this->point_to_gcode(line->b), comment);
+    }
     
     /*  While this makes the estimate more accurate, CoolingBuffer calculates the slowdown
         factor on the whole elapsed time but only alters non-travel moves, thus the resulting

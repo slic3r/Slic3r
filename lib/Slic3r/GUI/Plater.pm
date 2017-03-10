@@ -448,14 +448,24 @@ sub new {
                 fil_mm3 => "Used Filament (mm^3)",
                 fil_g   => "Used Filament (g)",
                 cost    => "Cost",
+                time    => "Time (dd:hh:mm:ss)",
+            );
+            my @tooltip = (
+                fil_mm => "Linear mm of filament.",
+                fil_mm3 => "Volume of filament.",
+                fil_g   => "Total weight of filament (in grams). This requires filament density to be set.",
+                cost    => "Total cost in whatever currency you have set.",
+                time    => "Optimistic time estimate for print completion. Only considers travel moves and printing moves.",
             );
             while (my $field = shift @info) {
                 my $label = shift @info;
+                my $tip = shift @tooltip;
                 my $text = Wx::StaticText->new($self, -1, "$label:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
                 $text->SetFont($Slic3r::GUI::small_font);
                 $grid_sizer->Add($text, 0);
                 
                 $self->{"print_info_$field"} = Wx::StaticText->new($self, -1, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+                $self->{"print_info_$field"}->SetToolTip($tip);
                 $self->{"print_info_$field"}->SetFont($Slic3r::GUI::small_font);
                 $grid_sizer->Add($self->{"print_info_$field"}, 0);
             }
@@ -1400,6 +1410,8 @@ sub on_export_completed {
     $self->{"print_info_fil_g"}->SetLabel(sprintf("%.2f" , $self->{print}->total_weight));
     $self->{"print_info_fil_mm3"}->SetLabel(sprintf("%.2f" , $self->{print}->total_extruded_volume));
     $self->{"print_info_fil_mm"}->SetLabel(sprintf("%.2f" , $self->{print}->total_used_filament));
+    $self->{"print_info_time"}->SetLabel(sprintf "%02d:%02d:%02d:%02d", (gmtime($self->{print}->total_time))[7,2,1,0]);
+
     
     # this updates buttons status
     $self->object_list_changed;

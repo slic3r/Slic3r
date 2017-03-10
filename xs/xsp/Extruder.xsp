@@ -51,4 +51,5 @@
     double retract_restart_extra();
     double retract_length_toolchange();
     double retract_restart_extra_toolchange();
+    double extrusion_time();
 };
