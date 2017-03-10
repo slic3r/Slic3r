@@ -44,6 +44,8 @@ sub new {
                 }
             }
             $self->{log_textctrl}->AppendText("$_\n") for @{$self->sender->purge_log};
+            $self->{manual_control_dialog}->update_log($self->{log_textctrl}->GetValue)
+                if $self->{manual_control_dialog};
             {
                 my $temp = $self->sender->getT;
                 if ($temp eq '') {
@@ -176,9 +178,10 @@ sub new {
         $btn->Hide;
         $left_sizer->Add($btn, 0, wxTOP, 15);
         EVT_BUTTON($self, $btn, sub {
-            my $dlg = Slic3r::GUI::Controller::ManualControlDialog->new
+            $self->{manual_control_dialog} = my $dlg = Slic3r::GUI::Controller::ManualControlDialog->new
                 ($self, $self->config, $self->sender, $self->manual_control_config);
             $dlg->ShowModal;
+            undef $self->{manual_control_dialog};
         });
     }
     
@@ -285,7 +288,7 @@ sub _update_connection_controls {
     $self->{btn_manual_control}->Hide;
     $self->{btn_manual_control}->Disable;
     
-    if ($self->is_connected || 1) {
+    if ($self->is_connected) {
         $self->{btn_connect}->Hide;
         $self->{btn_manual_control}->Show;
         if (!$self->printing || $self->printing->paused) {
