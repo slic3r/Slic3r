@@ -444,15 +444,15 @@ sub new {
             $grid_sizer->AddGrowableCol(3, 1);
             $print_info_sizer->Add($grid_sizer, 0, wxEXPAND);
             my @info = (
-                fil_mm => "Used Filament (mm)",
-                fil_mm3 => "Used Filament (mm^3)",
+                fil_cm  => "Used Filament (cm)",
+                fil_cm3 => "Used Filament (cm^3)",
                 fil_g   => "Used Filament (g)",
                 cost    => "Cost",
                 time    => "Time (dd:hh:mm:ss)",
             );
             my @tooltip = (
-                fil_mm => "Linear mm of filament.",
-                fil_mm3 => "Volume of filament.",
+                fil_cm => "Linear length of filament used (cm).",
+                fil_cm3 => "Volume of filament.",
                 fil_g   => "Total weight of filament (in grams). This requires filament density to be set.",
                 cost    => "Total cost in whatever currency you have set.",
                 time    => "Optimistic time estimate for print completion. Only considers travel moves and printing moves.",
@@ -1137,6 +1137,7 @@ sub async_apply_config {
         # remove the sliced statistics box because something changed.
         if ($self->{"right_sizer"}) { 
             $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+            $self->{"right_sizer"}->Layout;
         }
     } else {
         $self->resume_background_process;
@@ -1312,6 +1313,7 @@ sub export_gcode {
     # this updates buttons status
     $self->object_list_changed;
     $self->{"right_sizer"}->Show($self->{"sliced_info_box"});
+    $self->{"right_sizer"}->Layout;
     
     return $self->{export_gcode_output_file};
 }
@@ -1408,8 +1410,8 @@ sub on_export_completed {
     $self->{send_gcode_file} = undef;
     $self->{"print_info_cost"}->SetLabel(sprintf("%.2f" , $self->{print}->total_cost));
     $self->{"print_info_fil_g"}->SetLabel(sprintf("%.2f" , $self->{print}->total_weight));
-    $self->{"print_info_fil_mm3"}->SetLabel(sprintf("%.2f" , $self->{print}->total_extruded_volume));
-    $self->{"print_info_fil_mm"}->SetLabel(sprintf("%.2f" , $self->{print}->total_used_filament));
+    $self->{"print_info_fil_cm3"}->SetLabel(sprintf("%.2f" , $self->{print}->total_extruded_volume) / 1000);
+    $self->{"print_info_fil_cm"}->SetLabel(sprintf("%.2f" , $self->{print}->total_used_filament) / 10);
     $self->{"print_info_time"}->SetLabel(sprintf "%02d:%02d:%02d:%02d", (gmtime($self->{print}->total_time))[7,2,1,0]);
 
     
@@ -1610,6 +1612,7 @@ sub update {
     }
     if ($self->{"right_sizer"}) { 
         $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+        $self->{"right_sizer"}->Layout;
     }
     $self->refresh_canvases;
 }
@@ -1686,6 +1689,7 @@ sub on_config_change {
     }
     if ($self->{"right_sizer"}) { 
         $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+        $self->{"right_sizer"}->Layout;
     }
     
     return if !$self->GetFrame->is_loaded;
