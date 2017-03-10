@@ -444,6 +444,7 @@ sub new {
             $grid_sizer->AddGrowableCol(3, 1);
             $print_info_sizer->Add($grid_sizer, 0, wxEXPAND);
             my @info = (
+                fil_mm => "Used Filament (mm)",
                 fil_mm3 => "Used Filament (mm^3)",
                 fil_g   => "Used Filament (g)",
                 cost    => "Cost",
@@ -1123,6 +1124,10 @@ sub async_apply_config {
     if ($invalidated) {
         # kill current thread if any
         $self->stop_background_process;
+        # remove the sliced statistics box because something changed.
+        if ($self->{"right_sizer"}) { 
+            $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+        }
     } else {
         $self->resume_background_process;
     }
@@ -1394,6 +1399,7 @@ sub on_export_completed {
     $self->{"print_info_cost"}->SetLabel(sprintf("%.2f" , $self->{print}->total_cost));
     $self->{"print_info_fil_g"}->SetLabel(sprintf("%.2f" , $self->{print}->total_weight));
     $self->{"print_info_fil_mm3"}->SetLabel(sprintf("%.2f" , $self->{print}->total_extruded_volume));
+    $self->{"print_info_fil_mm"}->SetLabel(sprintf("%.2f" , $self->{print}->total_used_filament));
     
     # this updates buttons status
     $self->object_list_changed;
@@ -1665,6 +1671,9 @@ sub on_config_change {
             }
             $self->Layout;
         }
+    }
+    if ($self->{"right_sizer"}) { 
+        $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
     }
     
     return if !$self->GetFrame->is_loaded;
