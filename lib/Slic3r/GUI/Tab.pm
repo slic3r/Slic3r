@@ -482,7 +482,7 @@ sub build {
         brim_connections_width brim_width
         support_material support_material_threshold support_material_enforce_layers
         raft_layers
-        support_material_pattern support_material_spacing support_material_angle
+        support_material_pattern support_material_spacing support_material_angle support_material_auto_overhang_threshold
         support_material_interface_layers support_material_interface_spacing
         support_material_contact_distance dont_support_bridges
         notes
@@ -582,6 +582,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Support material');
             $optgroup->append_single_option_line('support_material');
             $optgroup->append_single_option_line('support_material_threshold');
+            $optgroup->append_single_option_line('support_material_auto_overhang_threshold');
             $optgroup->append_single_option_line('support_material_enforce_layers');
         }
         {
@@ -863,11 +864,16 @@ sub _update {
     
     my $have_support_material = $config->support_material || $config->raft_layers > 0;
     my $have_support_interface = $config->support_material_interface_layers > 0;
+    my $have_automatic_support =  $have_support_material && $config->support_material_threshold == 0;
     $self->get_field($_)->toggle($have_support_material)
-        for qw(support_material_threshold support_material_pattern
+        for qw(support_material_threshold support_material_pattern 
             support_material_spacing support_material_angle
             support_material_interface_layers dont_support_bridges
             support_material_extrusion_width support_material_contact_distance);
+
+    $self->get_field($_)->toggle($have_automatic_support)
+        for qw(support_material_auto_overhang_threshold);
+
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
             support_material_interface_speed);

@@ -1183,6 +1183,46 @@ PrintConfigDef::PrintConfigDef()
     def->max = 359;
     def->default_value = new ConfigOptionInt(0);
 
+    def = this->add("support_material_auto_overhang_threshold", coPercent);
+    def->label = "Perimeter Width % Considered unsupported";
+    def->category = "Support material";
+    def->tooltip = "The percentage of the perimeter width to consider as unsupported with regards to automatic overhang detection.";
+    def->sidetext = "%";
+    def->cli = "support-material-auto_overhang_threshold=f";
+    def->min = 0;
+    def->max = 200;
+    def->enum_values.push_back("0");
+    def->enum_values.push_back("5");
+    def->enum_values.push_back("10");
+    def->enum_values.push_back("15");
+    def->enum_values.push_back("20");
+    def->enum_values.push_back("25");
+    def->enum_values.push_back("30");
+    def->enum_values.push_back("40");
+    def->enum_values.push_back("50");
+    def->enum_values.push_back("60");
+    def->enum_values.push_back("70");
+    def->enum_values.push_back("80");
+    def->enum_values.push_back("90");
+    def->enum_values.push_back("100");
+    def->enum_values.push_back("200");
+    def->enum_labels.push_back("0%");
+    def->enum_labels.push_back("5%");
+    def->enum_labels.push_back("10%");
+    def->enum_labels.push_back("15%");
+    def->enum_labels.push_back("20%");
+    def->enum_labels.push_back("25%");
+    def->enum_labels.push_back("30%");
+    def->enum_labels.push_back("40%");
+    def->enum_labels.push_back("50%");
+    def->enum_labels.push_back("60%");
+    def->enum_labels.push_back("70%");
+    def->enum_labels.push_back("80%");
+    def->enum_labels.push_back("90%");
+    def->enum_labels.push_back("100%");
+    def->enum_labels.push_back("200%");
+    def->default_value = new ConfigOptionPercent(200);
+
     def = this->add("support_material_contact_distance", coFloat);
     def->gui_type = "f_enum_open";
     def->label = "Contact Z distance";
@@ -1290,6 +1330,9 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "support-material-spacing=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(2.5);
+
+
+
 
     def = this->add("support_material_speed", coFloat);
     def->label = "Support material";
