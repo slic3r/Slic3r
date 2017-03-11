@@ -318,7 +318,8 @@ sub process_layer {
     # check whether we're going to apply spiralvase logic
     if (defined $self->_spiral_vase) {
         $self->_spiral_vase->enable(
-            ($layer->id > 0 || $self->print->config->brim_width == 0 || $self->print->config->brim_connections_width == 0)
+            ($layer->id > 0 || $self->print->config->brim_width == 0
+                || $self->print->config->interior_brim_width == 0 || $self->print->config->brim_connections_width == 0)
                 && ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt)
                 && !defined(first { $_->region->config->bottom_solid_layers > $layer->id } @{$layer->regions})
                 && !defined(first { $_->perimeters->items_count > 1 } @{$layer->regions})

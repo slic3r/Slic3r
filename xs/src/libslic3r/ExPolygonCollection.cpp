@@ -116,10 +116,18 @@ Polygons
 ExPolygonCollection::contours() const
 {
     Polygons contours;
-    for (ExPolygons::const_iterator it = this->expolygons.begin(); it != this->expolygons.end(); ++it) {
-        contours.push_back(it->contour);
-    }
+    for (const ExPolygon &ex : this->expolygons)
+        contours.push_back(ex.contour);
     return contours;
+}
+
+Polygons
+ExPolygonCollection::holes() const
+{
+    Polygons holes;
+    for (const ExPolygon &ex : this->expolygons)
+        append_to(holes, ex.holes);
+    return holes;
 }
 
 void

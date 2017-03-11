@@ -530,6 +530,8 @@ $j
                         of filament on the first layer, for each extruder (mm, 0+, default: $config->{min_skirt_length})
     --brim-width        Width of the brim that will get added to each object to help adhesion
                         (mm, default: $config->{brim_width})
+    --interior-brim-width  Width of the brim that will get printed inside object holes to help adhesion
+                        (mm, default: $config->{interior_brim_width})
    
    Transform options:
     --scale             Factor for scaling input object (default: 1)

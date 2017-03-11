@@ -103,7 +103,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("brim_width", coFloat);
-    def->label = "Brim width";
+    def->label = "Exterior brim width";
     def->tooltip = "Horizontal width of the brim that will be printed around each object on the first layer.";
     def->sidetext = "mm";
     def->cli = "brim-width=f";
@@ -652,6 +652,14 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("0");
     def->enum_labels.push_back("auto");
     def->default_value = new ConfigOptionFloat(80);
+
+    def = this->add("interior_brim_width", coFloat);
+    def->label = "Interior brim width";
+    def->tooltip = "Horizontal width of the brim that will be printed inside object holes on the first layer.";
+    def->sidetext = "mm";
+    def->cli = "interior-brim-width=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("interface_shells", coBool);
     def->label = "Interface shells";

@@ -395,6 +395,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBool                gcode_arcs;
     ConfigOptionFloat               infill_acceleration;
     ConfigOptionBool                infill_first;
+    ConfigOptionFloat               interior_brim_width;
     ConfigOptionInt                 max_fan_speed;
     ConfigOptionInt                 min_fan_speed;
     ConfigOptionFloat               min_print_speed;
@@ -455,6 +456,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(gcode_arcs);
         OPT_PTR(infill_acceleration);
         OPT_PTR(infill_first);
+        OPT_PTR(interior_brim_width);
         OPT_PTR(max_fan_speed);
         OPT_PTR(min_fan_speed);
         OPT_PTR(min_print_speed);

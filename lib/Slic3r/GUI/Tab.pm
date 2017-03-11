@@ -479,7 +479,7 @@ sub build {
         perimeter_acceleration infill_acceleration bridge_acceleration 
         first_layer_acceleration default_acceleration
         skirts skirt_distance skirt_height min_skirt_length
-        brim_connections_width brim_width
+        brim_connections_width brim_width interior_brim_width
         support_material support_material_threshold support_material_enforce_layers
         raft_layers
         support_material_pattern support_material_spacing support_material_angle 
@@ -572,6 +572,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Brim');
             $optgroup->append_single_option_line('brim_width');
+            $optgroup->append_single_option_line('interior_brim_width');
             $optgroup->append_single_option_line('brim_connections_width');
         }
     }
@@ -857,7 +858,8 @@ sub _update {
     $self->get_field($_)->toggle($have_skirt)
         for qw(skirt_distance skirt_height);
     
-    my $have_brim = $config->brim_width > 0 || $config->brim_connections_width;
+    my $have_brim = $config->brim_width > 0 || $config->interior_brim_width
+        || $config->brim_connections_width;
     # perimeter_extruder uses the same logic as in Print::extruders()
     $self->get_field('perimeter_extruder')->toggle($have_perimeters || $have_brim);
     
