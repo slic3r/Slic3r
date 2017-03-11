@@ -161,7 +161,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionEnum<SupportMaterialPattern> support_material_pattern;
     ConfigOptionFloat               support_material_spacing;
     ConfigOptionFloat               support_material_speed;
-    ConfigOptionInt                 support_material_threshold;
+    ConfigOptionFloatOrPercent      support_material_threshold;
     ConfigOptionFloat               xy_size_compensation;
     
     PrintObjectConfig(bool initialize = true) : StaticPrintConfig() {

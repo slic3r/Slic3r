@@ -1291,6 +1291,9 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(2.5);
 
+
+
+
     def = this->add("support_material_speed", coFloat);
     def->label = "Support material";
     def->gui_type = "f_enum_open";
@@ -1303,15 +1306,15 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("auto");
     def->default_value = new ConfigOptionFloat(60);
 
-    def = this->add("support_material_threshold", coInt);
+    def = this->add("support_material_threshold", coFloatOrPercent);
     def->label = "Overhang threshold";
     def->category = "Support material";
-    def->tooltip = "Support material will not be generated for overhangs whose slope angle (90° = vertical) is above the given threshold. In other words, this value represent the most horizontal slope (measured from the horizontal plane) that you can print without support material. Set to zero for automatic detection (recommended).";
-    def->sidetext = "°";
-    def->cli = "support-material-threshold=i";
+    def->tooltip = "Support material will not be generated for overhangs whose slope angle (90° = vertical) is above the given threshold. In other words, this value represent the most horizontal slope (measured from the horizontal plane) that you can print without support material. Set to a percentage to automatically detect based on some % of overhanging perimeter width instead (recommended).";
+    def->sidetext = "° (or %)";
+    def->cli = "support-material-threshold=s";
     def->min = 0;
-    def->max = 90;
-    def->default_value = new ConfigOptionInt(0);
+    def->max = 300;
+    def->default_value = new ConfigOptionFloatOrPercent(60, true);
 
     def = this->add("temperature", coInts);
     def->label = "Other layers";
