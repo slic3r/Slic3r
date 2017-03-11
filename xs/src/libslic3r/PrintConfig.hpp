@@ -150,7 +150,6 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionEnum<SeamPosition>  seam_position;
     ConfigOptionBool                support_material;
     ConfigOptionInt                 support_material_angle;
-    ConfigOptionPercent             support_material_auto_overhang_threshold;
     ConfigOptionFloat               support_material_contact_distance;
     ConfigOptionInt                 support_material_enforce_layers;
     ConfigOptionInt                 support_material_extruder;
@@ -162,7 +161,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionEnum<SupportMaterialPattern> support_material_pattern;
     ConfigOptionFloat               support_material_spacing;
     ConfigOptionFloat               support_material_speed;
-    ConfigOptionInt                 support_material_threshold;
+    ConfigOptionFloatOrPercent      support_material_threshold;
     ConfigOptionFloat               xy_size_compensation;
     
     PrintObjectConfig(bool initialize = true) : StaticPrintConfig() {
@@ -181,7 +180,6 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         OPT_PTR(seam_position);
         OPT_PTR(support_material);
         OPT_PTR(support_material_angle);
-        OPT_PTR(support_material_auto_overhang_threshold);
         OPT_PTR(support_material_contact_distance);
         OPT_PTR(support_material_enforce_layers);
         OPT_PTR(support_material_extruder);

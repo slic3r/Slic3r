@@ -1183,34 +1183,6 @@ PrintConfigDef::PrintConfigDef()
     def->max = 359;
     def->default_value = new ConfigOptionInt(0);
 
-    def = this->add("support_material_auto_overhang_threshold", coPercent);
-    def->label = "Perimeter Width % Considered unsupported";
-    def->category = "Support material";
-    def->tooltip = "The percentage of the perimeter width to consider as unsupported with regards to automatic overhang detection.";
-    def->sidetext = "%";
-    def->cli = "support-material-auto_overhang_threshold=f";
-    def->min = 0;
-    def->max = 200;
-    def->enum_values.push_back("30");
-    def->enum_values.push_back("40");
-    def->enum_values.push_back("50");
-    def->enum_values.push_back("60");
-    def->enum_values.push_back("70");
-    def->enum_values.push_back("80");
-    def->enum_values.push_back("90");
-    def->enum_values.push_back("100");
-    def->enum_values.push_back("200");
-    def->enum_labels.push_back("30%");
-    def->enum_labels.push_back("40%");
-    def->enum_labels.push_back("50%");
-    def->enum_labels.push_back("60%");
-    def->enum_labels.push_back("70%");
-    def->enum_labels.push_back("80%");
-    def->enum_labels.push_back("90%");
-    def->enum_labels.push_back("100%");
-    def->enum_labels.push_back("200%");
-    def->default_value = new ConfigOptionPercent(60);
-
     def = this->add("support_material_contact_distance", coFloat);
     def->gui_type = "f_enum_open";
     def->label = "Contact Z distance";
@@ -1334,15 +1306,15 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("auto");
     def->default_value = new ConfigOptionFloat(60);
 
-    def = this->add("support_material_threshold", coInt);
+    def = this->add("support_material_threshold", coFloatOrPercent);
     def->label = "Overhang threshold";
     def->category = "Support material";
-    def->tooltip = "Support material will not be generated for overhangs whose slope angle (90° = vertical) is above the given threshold. In other words, this value represent the most horizontal slope (measured from the horizontal plane) that you can print without support material. Set to zero for automatic detection (recommended).";
-    def->sidetext = "°";
-    def->cli = "support-material-threshold=i";
+    def->tooltip = "Support material will not be generated for overhangs whose slope angle (90° = vertical) is above the given threshold. In other words, this value represent the most horizontal slope (measured from the horizontal plane) that you can print without support material. Set to a percentage to automatically detect based on some % of overhanging perimeter width instead (recommended).";
+    def->sidetext = "° (or %)";
+    def->cli = "support-material-threshold=s";
     def->min = 0;
-    def->max = 90;
-    def->default_value = new ConfigOptionInt(0);
+    def->max = 300;
+    def->default_value = new ConfigOptionFloatOrPercent(60, true);
 
     def = this->add("temperature", coInts);
     def->label = "Other layers";
