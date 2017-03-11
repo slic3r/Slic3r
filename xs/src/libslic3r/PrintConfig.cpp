@@ -1191,12 +1191,6 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "support-material-auto_overhang_threshold=f";
     def->min = 0;
     def->max = 200;
-    def->enum_values.push_back("0");
-    def->enum_values.push_back("5");
-    def->enum_values.push_back("10");
-    def->enum_values.push_back("15");
-    def->enum_values.push_back("20");
-    def->enum_values.push_back("25");
     def->enum_values.push_back("30");
     def->enum_values.push_back("40");
     def->enum_values.push_back("50");
@@ -1206,12 +1200,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("90");
     def->enum_values.push_back("100");
     def->enum_values.push_back("200");
-    def->enum_labels.push_back("0%");
-    def->enum_labels.push_back("5%");
-    def->enum_labels.push_back("10%");
-    def->enum_labels.push_back("15%");
-    def->enum_labels.push_back("20%");
-    def->enum_labels.push_back("25%");
     def->enum_labels.push_back("30%");
     def->enum_labels.push_back("40%");
     def->enum_labels.push_back("50%");
@@ -1221,7 +1209,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("90%");
     def->enum_labels.push_back("100%");
     def->enum_labels.push_back("200%");
-    def->default_value = new ConfigOptionPercent(200);
+    def->default_value = new ConfigOptionPercent(60);
 
     def = this->add("support_material_contact_distance", coFloat);
     def->gui_type = "f_enum_open";
