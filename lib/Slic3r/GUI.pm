@@ -67,6 +67,7 @@ our $Settings = {
         mode => 'simple',
         version_check => 1,
         autocenter => 1,
+        invert_zoom => 0,
         background_processing => 0,
         # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
         # By default, Prusa has the controller hidden.
@@ -124,6 +125,7 @@ sub OnInit {
         $last_version = $Settings->{_}{version};
         $Settings->{_}{mode} ||= 'expert';
         $Settings->{_}{autocenter} //= 1;
+        $Settings->{_}{invert_zoom} //= 0;
         $Settings->{_}{background_processing} //= 1;
         # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
         $Settings->{_}{no_controller} //= 1;

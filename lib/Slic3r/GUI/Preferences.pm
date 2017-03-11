@@ -53,6 +53,13 @@ sub new {
         default     => $Slic3r::GUI::Settings->{_}{autocenter},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'invert_zoom',
+        type        => 'bool',
+        label       => 'Invert zoom in previews',
+        tooltip     => 'If this is enabled, Slic3r will invert the direction of mouse-wheel zoom in preview panes.',
+        default     => $Slic3r::GUI::Settings->{_}{invert_zoom},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'background_processing',
         type        => 'bool',
         label       => 'Background processing',
