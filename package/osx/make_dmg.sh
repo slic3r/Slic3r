@@ -92,7 +92,7 @@ echo "Relocating dylib paths..."
 for bundle in $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/auto/Wx -name '*.bundle') $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets -name '*.dylib' -type f); do
     chmod +w $bundle
     for dylib in $(otool -l $bundle | grep .dylib | grep local-lib | awk '{print $2}'); do
-        echo install_name_tool -change "$dylib" "@executable_path/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/lib/$(basename $dylib)" $bundle
+        install_name_tool -change "$dylib" "@executable_path/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/lib/$(basename $dylib)" $bundle
     done
 done
 
