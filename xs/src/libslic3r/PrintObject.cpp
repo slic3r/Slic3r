@@ -167,12 +167,6 @@ PrintObject::clear_layers()
 }
 
 Layer*
-PrintObject::get_layer(int idx)
-{
-    return this->layers.at(idx);
-}
-
-Layer*
 PrintObject::add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z)
 {
     Layer* layer = new Layer(id, this, height, print_z, slice_z);
@@ -199,12 +193,6 @@ PrintObject::clear_support_layers()
 {
     for (int i = this->support_layers.size()-1; i >= 0; --i)
         this->delete_support_layer(i);
-}
-
-SupportLayer*
-PrintObject::get_support_layer(int idx)
-{
-    return this->support_layers.at(idx);
 }
 
 SupportLayer*

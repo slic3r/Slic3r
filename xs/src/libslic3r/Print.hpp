@@ -118,14 +118,16 @@ class PrintObject
     size_t total_layer_count() const;
     size_t layer_count() const;
     void clear_layers();
-    Layer* get_layer(int idx);
+    Layer* get_layer(int idx) { return this->layers.at(idx); };
+    const Layer* get_layer(int idx) const { return this->layers.at(idx); };
     // print_z: top of the layer; slice_z: center of the layer.
     Layer* add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z);
     void delete_layer(int idx);
 
     size_t support_layer_count() const;
     void clear_support_layers();
-    SupportLayer* get_support_layer(int idx);
+    SupportLayer* get_support_layer(int idx) { return this->support_layers.at(idx); };
+    const SupportLayer* get_support_layer(int idx) const { return this->support_layers.at(idx); };
     SupportLayer* add_support_layer(int id, coordf_t height, coordf_t print_z);
     void delete_support_layer(int idx);
     
@@ -179,7 +181,8 @@ class Print
     
     // methods for handling objects
     void clear_objects();
-    PrintObject* get_object(size_t idx);
+    PrintObject* get_object(size_t idx) { return this->objects.at(idx); };
+    const PrintObject* get_object(size_t idx) const { return this->objects.at(idx); };
     void delete_object(size_t idx);
     void reload_object(size_t idx);
     bool reload_model_instances();

@@ -73,12 +73,6 @@ Print::clear_objects()
     this->clear_regions();
 }
 
-PrintObject*
-Print::get_object(size_t idx)
-{
-    return objects.at(idx);
-}
-
 void
 Print::delete_object(size_t idx)
 {
@@ -919,10 +913,18 @@ Print::_make_brim()
     if (this->config.interior_brim_width > 0) {
         // collect all island holes to fill
         Polygons holes;
-        for (PrintObject* object : this->objects) {
+        for (const PrintObject* object : this->objects) {
             const Layer &layer0 = *object->get_layer(0);
             
-            const Polygons o_holes = layer0.slices.holes();
+            Polygons o_holes = layer0.slices.holes();
+            
+            // When we have no infill on this layer, consider the internal part
+            // of the model as a hole.
+            for (const LayerRegion* layerm : layer0.regions) {
+                if (layerm->fills.empty())
+                    append_to(o_holes, (Polygons)layerm->fill_surfaces);
+            }
+            
             for (const Point &copy : object->_shifted_copies) {
                 for (Polygon p : o_holes) {
                     p.translate(copy);
@@ -937,9 +939,7 @@ Print::_make_brim()
             append_to(loops, offset2(
                 holes,
                 -flow.scaled_spacing() * (i + 0.5),
-                flow.scaled_spacing(),
-                100000,
-                ClipperLib::jtSquare
+                flow.scaled_spacing()
             ));
         }
         
