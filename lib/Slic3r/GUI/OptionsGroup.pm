@@ -361,7 +361,7 @@ has 'full_labels'   => (is => 'ro', default => sub { 0 });
 has '_opt_map'      => (is => 'ro', default => sub { {} });
 
 sub get_option {
-    my ($self, $opt_key, $opt_index) = @_;
+    my ($self, $opt_key, $opt_index, %params) = @_;
     
     $opt_index //= -1;
     
@@ -392,24 +392,25 @@ sub get_option {
         labels      => $optdef->{labels},
         values      => $optdef->{values},
         readonly    => $optdef->{readonly},
+        %params,
     );
 }
 
 sub create_single_option_line {
-    my ($self, $opt_key, $opt_index) = @_;
+    my ($self, $opt_key, $opt_index, %params) = @_;
     
     my $option;
     if (ref($opt_key)) {
         $option = $opt_key;
     } else {
-        $option = $self->get_option($opt_key, $opt_index);
+        $option = $self->get_option($opt_key, $opt_index, %params);
     }
     return $self->SUPER::create_single_option_line($option);
 }
 
 sub append_single_option_line {
-    my ($self, $option, $opt_index) = @_;
-    return $self->append_line($self->create_single_option_line($option, $opt_index));
+    my ($self, $option, $opt_index, %params) = @_;
+    return $self->append_line($self->create_single_option_line($option, $opt_index, %params));
 }
 
 sub reload_config {

@@ -605,16 +605,12 @@ sub build {
         my $page = $self->add_options_page('Speed', 'time.png');
         {
             my $optgroup = $page->new_optgroup('Speed for print moves');
-            $optgroup->append_single_option_line('perimeter_speed');
-            $optgroup->append_single_option_line('small_perimeter_speed');
-            $optgroup->append_single_option_line('external_perimeter_speed');
-            $optgroup->append_single_option_line('infill_speed');
-            $optgroup->append_single_option_line('solid_infill_speed');
-            $optgroup->append_single_option_line('top_solid_infill_speed');
-            $optgroup->append_single_option_line('gap_fill_speed');
-            $optgroup->append_single_option_line('support_material_speed');
-            $optgroup->append_single_option_line('support_material_interface_speed');
-            $optgroup->append_single_option_line('bridge_speed');
+            $optgroup->append_single_option_line($_, undef, width => 100)
+                for qw(perimeter_speed small_perimeter_speed external_perimeter_speed
+                    infill_speed solid_infill_speed top_solid_infill_speed
+                    gap_fill_speed bridge_speed
+                    support_material_speed support_material_interface_speed
+                );
         }
         {
             my $optgroup = $page->new_optgroup('Speed for non-print moves');
@@ -666,14 +662,11 @@ sub build {
             my $optgroup = $page->new_optgroup('Extrusion width',
                 label_width => 180,
             );
-            $optgroup->append_single_option_line('extrusion_width');
-            $optgroup->append_single_option_line('first_layer_extrusion_width');
-            $optgroup->append_single_option_line('perimeter_extrusion_width');
-            $optgroup->append_single_option_line('external_perimeter_extrusion_width');
-            $optgroup->append_single_option_line('infill_extrusion_width');
-            $optgroup->append_single_option_line('solid_infill_extrusion_width');
-            $optgroup->append_single_option_line('top_infill_extrusion_width');
-            $optgroup->append_single_option_line('support_material_extrusion_width');
+            $optgroup->append_single_option_line($_, undef, width => 100)
+                for qw(extrusion_width first_layer_extrusion_width
+                    perimeter_extrusion_width external_perimeter_extrusion_width
+                    infill_extrusion_width solid_infill_extrusion_width
+                    top_infill_extrusion_width support_material_extrusion_width);
         }
         {
             my $optgroup = $page->new_optgroup('Overlap');
