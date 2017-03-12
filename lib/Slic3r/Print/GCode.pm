@@ -144,12 +144,12 @@ sub export {
     }
     
     # calculate wiping points if needed
-    if ($self->config->ooze_prevention) {
+    if ($self->config->ooze_prevention && (my @extruders = @{$self->print->extruders}) > 1) {
         my @skirt_points = map @$_, map @$_, @{$self->print->skirt};
         if (@skirt_points) {
             my $outer_skirt = convex_hull(\@skirt_points);
             my @skirts = ();
-            foreach my $extruder_id (@{$self->print->extruders}) {
+            foreach my $extruder_id (@extruders) {
                 my $extruder_offset = $self->config->get_at('extruder_offset', $extruder_id);
                 push @skirts, my $s = $outer_skirt->clone;
                 $s->translate(-scale($extruder_offset->x), -scale($extruder_offset->y));  #)
