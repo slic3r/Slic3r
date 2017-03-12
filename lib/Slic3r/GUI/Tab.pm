@@ -466,7 +466,7 @@ sub build {
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
         seam_position external_perimeters_first
-        fill_density fill_pattern external_fill_pattern fill_gaps
+        fill_density fill_pattern top_infill_pattern bottom_infill_pattern fill_gaps
         infill_every_layers infill_only_where_needed
         solid_infill_every_layers fill_angle solid_infill_below_area 
         only_retract_when_crossing_perimeters infill_first
@@ -542,7 +542,14 @@ sub build {
             my $optgroup = $page->new_optgroup('Infill');
             $optgroup->append_single_option_line('fill_density');
             $optgroup->append_single_option_line('fill_pattern');
-            $optgroup->append_single_option_line('external_fill_pattern');
+            {
+                my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                    label => 'External infill pattern',
+                );
+                $line->append_option($optgroup->get_option('top_infill_pattern'));
+                $line->append_option($optgroup->get_option('bottom_infill_pattern'));
+                $optgroup->append_line($line);
+            }
         }
         {
             my $optgroup = $page->new_optgroup('Reducing printing time');
@@ -794,7 +801,7 @@ sub _update {
     }
     
     if ($config->fill_density == 100
-        && !first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{external_fill_pattern}{values}}) {
+        && !first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{top_infill_pattern}{values}}) {
         my $dialog = Wx::MessageDialog->new($self,
             "The " . $config->fill_pattern . " infill pattern is not supposed to work at 100% density.\n"
             . "\nShall I switch to rectilinear fill pattern?",
@@ -824,8 +831,8 @@ sub _update {
     my $have_solid_infill = ($config->top_solid_layers > 0) || ($config->bottom_solid_layers > 0);
     # solid_infill_extruder uses the same logic as in Print::extruders()
     $self->get_field($_)->toggle($have_solid_infill)
-        for qw(external_fill_pattern infill_first solid_infill_extruder solid_infill_extrusion_width
-            solid_infill_speed);
+        for qw(top_infill_pattern bottom_infill_pattern infill_first solid_infill_extruder
+            solid_infill_extrusion_width solid_infill_speed);
     
     $self->get_field($_)->toggle($have_infill || $have_solid_infill)
         for qw(fill_angle infill_extrusion_width infill_speed bridge_speed);

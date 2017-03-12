@@ -192,7 +192,9 @@ ConfigOptionDef::ConfigOptionDef(const ConfigOptionDef &other)
       full_label(other.full_label), category(other.category), tooltip(other.tooltip), 
       sidetext(other.sidetext), cli(other.cli), ratio_over(other.ratio_over), 
       multiline(other.multiline), full_width(other.full_width), readonly(other.readonly), 
-      height(other.height), width(other.width), min(other.min), max(other.max)
+      height(other.height), width(other.width), min(other.min), max(other.max),
+      aliases(other.aliases), shortcut(other.shortcut), enum_values(other.enum_values),
+      enum_labels(other.enum_labels), enum_keys_map(other.enum_keys_map)
 {
     if (other.default_value != NULL)
         this->default_value = other.default_value->clone();
@@ -210,6 +212,13 @@ ConfigDef::add(const t_config_option_key &opt_key, ConfigOptionType type)
     ConfigOptionDef* opt = &this->options[opt_key];
     opt->type = type;
     return opt;
+}
+
+ConfigOptionDef*
+ConfigDef::add(const t_config_option_key &opt_key, const ConfigOptionDef &def)
+{
+    this->options.emplace(opt_key, def);
+    return &this->options[opt_key];
 }
 
 const ConfigOptionDef*

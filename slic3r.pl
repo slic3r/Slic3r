@@ -431,7 +431,10 @@ $j
     --fill-angle        Infill angle in degrees (range: 0-90, default: $config->{fill_angle})
     --fill-pattern      Pattern to use to fill non-solid layers (default: $config->{fill_pattern})
     --fill-gaps         Fill gaps with single passes (default: yes)
-    --external-fill-pattern Pattern to use to fill solid layers (default: $config->{external_fill_pattern})
+    --external-infill-pattern Pattern to use to fill solid layers.
+                        (Shortcut for --top-infill-pattern and --bottom-infill-pattern)
+    --top-infill-pattern Pattern to use to fill top solid layers (default: $config->{top_infill_pattern})
+    --bottom-infill-pattern Pattern to use to fill bottom solid layers (default: $config->{bottom_infill_pattern})
     --start-gcode       Load initial G-code from the supplied file. This will overwrite
                         the default command (home all axes [G28]).
     --end-gcode         Load final G-code from the supplied file. This will overwrite 

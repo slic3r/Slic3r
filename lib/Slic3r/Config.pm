@@ -265,8 +265,10 @@ sub validate {
         if !first { $_ eq $self->fill_pattern } @{$Options->{fill_pattern}{values}};
     
     # --external-fill-pattern
-    die "Invalid value for --external-fill-pattern\n"
-        if !first { $_ eq $self->external_fill_pattern } @{$Options->{external_fill_pattern}{values}};
+    die "Invalid value for --top-infill-pattern\n"
+        if !first { $_ eq $self->top_infill_pattern } @{$Options->{top_infill_pattern}{values}};
+    die "Invalid value for --bottom-infill-pattern\n"
+        if !first { $_ eq $self->bottom_infill_pattern } @{$Options->{bottom_infill_pattern}{values}};
     
     # --fill-density
     die "The selected fill pattern is not supposed to work at 100% density\n"

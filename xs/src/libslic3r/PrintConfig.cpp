@@ -5,6 +5,20 @@ namespace Slic3r {
 
 PrintConfigDef::PrintConfigDef()
 {
+    ConfigOptionDef external_fill_pattern;
+    external_fill_pattern.type = coEnum;
+    external_fill_pattern.enum_keys_map = ConfigOptionEnum<InfillPattern>::get_enum_values();
+    external_fill_pattern.enum_values.push_back("rectilinear");
+    external_fill_pattern.enum_values.push_back("concentric");
+    external_fill_pattern.enum_values.push_back("hilbertcurve");
+    external_fill_pattern.enum_values.push_back("archimedeanchords");
+    external_fill_pattern.enum_values.push_back("octagramspiral");
+    external_fill_pattern.enum_labels.push_back("Rectilinear");
+    external_fill_pattern.enum_labels.push_back("Concentric");
+    external_fill_pattern.enum_labels.push_back("Hilbert Curve");
+    external_fill_pattern.enum_labels.push_back("Archimedean Chords");
+    external_fill_pattern.enum_labels.push_back("Octagram Spiral");
+    
     ConfigOptionDef* def;
     
     def = this->add("avoid_crossing_perimeters", coBool);
@@ -46,6 +60,14 @@ PrintConfigDef::PrintConfigDef()
     def->full_width = true;
     def->height = 50;
     def->default_value = new ConfigOptionString("");
+
+    def = this->add("bottom_infill_pattern", external_fill_pattern);
+    def->label = "Bottom";
+    def->full_label = "Bottom infill pattern";
+    def->category = "Infill";
+    def->tooltip = "Infill pattern for bottom layers. This only affects the external visible layer, and not its adjacent solid shells.";
+    def->cli = "bottom-infill-pattern=s";
+    def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("bottom_solid_layers", coInt);
     def->label = "Bottom";
@@ -177,27 +199,15 @@ PrintConfigDef::PrintConfigDef()
         def->default_value = opt;
     }
 
-    def = this->add("external_fill_pattern", coEnum);
+    def = this->add("external_fill_pattern", external_fill_pattern);
     def->label = "Top/bottom fill pattern";
     def->category = "Infill";
     def->tooltip = "Fill pattern for top/bottom infill. This only affects the external visible layer, and not its adjacent solid shells.";
-    def->cli = "external-fill-pattern|solid-fill-pattern=s";
-    def->enum_keys_map = ConfigOptionEnum<InfillPattern>::get_enum_values();
-    def->enum_values.push_back("rectilinear");
-    def->enum_values.push_back("alignedrectilinear");
-    def->enum_values.push_back("concentric");
-    def->enum_values.push_back("hilbertcurve");
-    def->enum_values.push_back("archimedeanchords");
-    def->enum_values.push_back("octagramspiral");
-    def->enum_labels.push_back("Rectilinear");
-    def->enum_labels.push_back("Aligned Rectilinear");
-    def->enum_labels.push_back("Concentric");
-    def->enum_labels.push_back("Hilbert Curve");
-    def->enum_labels.push_back("Archimedean Chords");
-    def->enum_labels.push_back("Octagram Spiral");
+    def->cli = "external-fill-pattern|external-infill-pattern|solid-fill-pattern=s";
     def->aliases.push_back("solid_fill_pattern");
-    def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
-
+    def->shortcut.push_back("top_infill_pattern");
+    def->shortcut.push_back("bottom_infill_pattern");
+    
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = "↳ external";
     def->gui_type = "f_enum_open";
@@ -1402,6 +1412,14 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("default");
     def->default_value = new ConfigOptionFloatOrPercent(0, false);
 
+    def = this->add("top_infill_pattern", external_fill_pattern);
+    def->label = "Top";
+    def->full_label = "Top infill pattern";
+    def->category = "Infill";
+    def->tooltip = "Infill pattern for top layers. This only affects the external visible layer, and not its adjacent solid shells.";
+    def->cli = "top-infill-pattern=s";
+    def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
+
     def = this->add("top_solid_infill_speed", coFloatOrPercent);
     def->label = "↳ top solid";
     def->gui_type = "f_enum_open";
@@ -1503,6 +1521,17 @@ DynamicPrintConfig::normalize() {
                 this->option("support_material_interface_extruder", true)->setInt(extruder);
         }
     }
+    
+    /*
+    if (this->has("external_fill_pattern")) {
+        InfillPattern p = this->opt<ConfigOptionEnum<InfillPattern> >("external_fill_pattern");
+        this->erase("external_fill_pattern");
+        if (!this->has("bottom_infill_pattern"))
+            this->opt<ConfigOptionEnum<InfillPattern> >("bottom_infill_pattern", true)->value = p;
+        if (!this->has("top_infill_pattern"))
+            this->opt<ConfigOptionEnum<InfillPattern> >("top_infill_pattern", true)->value = p;
+    }
+    */
     
     if (!this->has("solid_infill_extruder") && this->has("infill_extruder"))
         this->option("solid_infill_extruder", true)->setInt(this->option("infill_extruder")->getInt());
