@@ -506,17 +506,6 @@ sub repair_stl {
     Slic3r::GUI::show_info($self, "Your file was repaired.", "Repair");
 }
 
-sub extra_variables {
-    my $self = shift;
-    
-    my %extra_variables = ();
-    if ($self->{mode} eq 'expert') {
-        $extra_variables{"${_}_preset"} = $self->{options_tabs}{$_}->get_current_preset->name
-            for qw(print filament printer);
-    }
-    return { %extra_variables };
-}
-
 sub export_config {
     my $self = shift;
     

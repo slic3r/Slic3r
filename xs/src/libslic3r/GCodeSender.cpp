@@ -46,29 +46,29 @@ bool
 GCodeSender::connect(std::string devname, unsigned int baud_rate)
 {
     this->disconnect();
-    
     this->set_error_status(false);
     try {
         this->serial.open(devname);
+        
+        this->serial.set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::odd));
+        this->serial.set_option(asio::serial_port_base::character_size(asio::serial_port_base::character_size(8)));
+        this->serial.set_option(asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::none));
+        this->serial.set_option(asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::one));
+        this->set_baud_rate(baud_rate);
+    
+        this->serial.close();
+        this->serial.open(devname);
+        this->serial.set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::none));
+    
+        // set baud rate again because set_option overwrote it
+        this->set_baud_rate(baud_rate);
+        this->open = true;
+        this->reset();
     } catch (boost::system::system_error &e) {
+        printf("Caught error\n");
         this->set_error_status(true);
         return false;
     }
-    
-    this->serial.set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::odd));
-    this->serial.set_option(asio::serial_port_base::character_size(asio::serial_port_base::character_size(8)));
-    this->serial.set_option(asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::none));
-    this->serial.set_option(asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::one));
-    this->set_baud_rate(baud_rate);
-    
-    this->serial.close();
-    this->serial.open(devname);
-    this->serial.set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::none));
-    
-    // set baud rate again because set_option overwrote it
-    this->set_baud_rate(baud_rate);
-    this->open = true;
-    this->reset();
     
     // a reset firmware expect line numbers to start again from 1
     this->sent = 0;

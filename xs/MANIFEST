@@ -164,7 +164,6 @@ t/19_model.t
 t/20_print.t
 t/21_gcode.t
 t/22_exception.t
-t/23_config.t
 t/inc/22_config_bad_config_options.ini
 xsp/AboutDialog.xsp
 xsp/BoundingBox.xsp

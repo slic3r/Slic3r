@@ -74,33 +74,20 @@ sub new {
             
                 return $btn;
             });
-            my $serial_test = sub {
-                my ($parent) = @_;
-            
-                my $btn = $self->{serial_test_btn} = Wx::Button->new($parent, -1,
-                    "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
-                $btn->SetFont($Slic3r::GUI::small_font);
-                if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("wrench.png"), wxBITMAP_TYPE_PNG));
-                }
-            
-                EVT_BUTTON($self, $btn, sub {
-                    my $sender = Slic3r::GCode::Sender->new;
-                    my $res = $sender->connect(
-                        $self->{config}->serial_port,
-                        $self->{config}->serial_speed,
-                    );
-                    if ($res && $sender->wait_connected) {
-                        Slic3r::GUI::show_info($self, "Connection to printer works correctly.", "Success!");
-                    } else {
-                        Slic3r::GUI::show_error($self, "Connection failed.");
-                    }
-                });
-                return $btn;
-            };
             $line->append_option($serial_port);
             $line->append_option($optgroup->get_option('serial_speed'));
-            $line->append_widget($serial_test);
+            $line->append_button("Test", "wrench.png", sub {
+                my $sender = Slic3r::GCode::Sender->new;
+                my $res = $sender->connect(
+                    $self->{config}->serial_port,
+                    $self->{config}->serial_speed,
+                );
+                if ($res && $sender->wait_connected) {
+                    Slic3r::GUI::show_info($self, "Connection to printer works correctly.", "Success!");
+                } else {
+                    Slic3r::GUI::show_error($self, "Connection failed.");
+                }
+            }, \$self->{serial_test_btn});
             $optgroup->append_line($line);
         }
     }

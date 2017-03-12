@@ -179,7 +179,10 @@ sub new {
         my $old_zoom = $self->_zoom;
         
         # Calculate the zoom delta and apply it to the current zoom factor
-        my $zoom = $e->GetWheelRotation() / $e->GetWheelDelta();
+        my $zoom = -$e->GetWheelRotation() / $e->GetWheelDelta();
+        if ($Slic3r::GUI::Settings->{_}{invert_zoom}) {
+            $zoom *= -1;
+        }
         $zoom = max(min($zoom, 4), -4);
         $zoom /= 10;
         $self->_zoom($self->_zoom / (1-$zoom));

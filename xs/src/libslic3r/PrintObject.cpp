@@ -3,6 +3,7 @@
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include <algorithm>
+#include <vector>
 
 namespace Slic3r {
 
@@ -166,12 +167,6 @@ PrintObject::clear_layers()
 }
 
 Layer*
-PrintObject::get_layer(int idx)
-{
-    return this->layers.at(idx);
-}
-
-Layer*
 PrintObject::add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z)
 {
     Layer* layer = new Layer(id, this, height, print_z, slice_z);
@@ -198,12 +193,6 @@ PrintObject::clear_support_layers()
 {
     for (int i = this->support_layers.size()-1; i >= 0; --i)
         this->delete_support_layer(i);
-}
-
-SupportLayer*
-PrintObject::get_support_layer(int idx)
-{
-    return this->support_layers.at(idx);
 }
 
 SupportLayer*
@@ -268,7 +257,8 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "solid_infill_extruder"
             || *opt_key == "infill_extrusion_width") {
             steps.insert(posPrepareInfill);
-        } else if (*opt_key == "external_fill_pattern"
+        } else if (*opt_key == "top_infill_pattern"
+            || *opt_key == "bottom_infill_pattern"
             || *opt_key == "fill_angle"
             || *opt_key == "fill_pattern"
             || *opt_key == "top_infill_extrusion_width"
@@ -357,184 +347,24 @@ PrintObject::has_support_material() const
         || this->config.support_material_enforce_layers > 0;
 }
 
-// This function analyzes slices of a region (SurfaceCollection slices).
-// Each region slice (instance of Surface) is analyzed, whether it is supported or whether it is the top surface.
-// Initially all slices are of type S_TYPE_INTERNAL.
-// Slices are compared against the top / bottom slices and regions and classified to the following groups:
-// S_TYPE_TOP - Part of a region, which is not covered by any upper layer. This surface will be filled with a top solid infill.
-// S_TYPE_BOTTOMBRIDGE - Part of a region, which is not fully supported, but it hangs in the air, or it hangs losely on a support or a raft.
-// S_TYPE_BOTTOM - Part of a region, which is not supported by the same region, but it is supported either by another region, or by a soluble interface layer.
-// S_TYPE_INTERNAL - Part of a region, which is supported by the same region type.
-// If a part of a region is of S_TYPE_BOTTOM and S_TYPE_TOP, the S_TYPE_BOTTOM wins.
 void
 PrintObject::detect_surfaces_type()
 {
-    //Slic3r::debugf "Detecting solid surfaces...\n";
-    FOREACH_REGION(this->_print, region) {
-        size_t region_id = region - this->_print->regions.begin();
-        
-        FOREACH_LAYER(this, layer_it) {
-            size_t layer_idx    = layer_it - this->layers.begin();
-            Layer &layer        = **layer_it;
-            LayerRegion &layerm = *layer.get_region(region_id);
-            // comparison happens against the *full* slices (considering all regions)
-            // unless internal shells are requested
-            
-            const Layer* upper_layer = layer_idx < (this->layer_count()-1) ? this->get_layer(layer_idx+1) : NULL;
-            const Layer* lower_layer = layer_idx > 0 ? this->get_layer(layer_idx-1) : NULL;
-            
-            // collapse very narrow parts (using the safety offset in the diff is not enough)
-            const float offset = layerm.flow(frExternalPerimeter).scaled_width() / 10.f;
-
-            const Polygons layerm_slices_surfaces = layerm.slices;
-
-            // find top surfaces (difference between current surfaces
-            // of current layer and upper one)
-            SurfaceCollection top;
-            if (upper_layer != NULL) {
-                const Polygons upper_slices = this->config.interface_shells.value
-                    ? (Polygons)upper_layer->get_region(region_id)->slices
-                    : (Polygons)upper_layer->slices;
-                
-                top.append(
-                    offset2_ex(
-                        diff(layerm_slices_surfaces, upper_slices, true),
-                        -offset, offset
-                    ),
-                    stTop
-                );
-            } else {
-                // if no upper layer, all surfaces of this one are solid
-                // we clone surfaces because we're going to clear the slices collection
-                top = layerm.slices;
-                for (Surfaces::iterator it = top.surfaces.begin(); it != top.surfaces.end(); ++ it)
-                    it->surface_type = stTop;
-            }
-            
-            // find bottom surfaces (difference between current surfaces
-            // of current layer and lower one)
-            SurfaceCollection bottom;
-            if (lower_layer != NULL) {
-                // If we have soluble support material, don't bridge. The overhang will be squished against a soluble layer separating
-                // the support from the print.
-                const SurfaceType surface_type_bottom = 
-                    (this->config.support_material.value && this->config.support_material_contact_distance.value == 0)
-                    ? stBottom
-                    : stBottomBridge;
-                
-                // Any surface lying on the void is a true bottom bridge (an overhang)
-                bottom.append(
-                    offset2_ex(
-                        diff(layerm_slices_surfaces, lower_layer->slices, true), 
-                        -offset, offset
-                    ),
-                    surface_type_bottom
-                );
-                
-                // if user requested internal shells, we need to identify surfaces
-                // lying on other slices not belonging to this region
-                if (this->config.interface_shells) {
-                    // non-bridging bottom surfaces: any part of this layer lying 
-                    // on something else, excluding those lying on our own region
-                    bottom.append(
-                        offset2_ex(
-                            diff(
-                                intersection(layerm_slices_surfaces, lower_layer->slices), // supported
-                                lower_layer->get_region(region_id)->slices, 
-                                true
-                            ), 
-                            -offset, offset
-                        ),
-                        stBottom
-                    );
-                }
-            } else {
-                // if no lower layer, all surfaces of this one are solid
-                // we clone surfaces because we're going to clear the slices collection
-                bottom = layerm.slices;
-                
-                // if we have raft layers, consider bottom layer as a bridge
-                // just like any other bottom surface lying on the void
-                const SurfaceType surface_type_bottom = 
-                    (this->config.raft_layers.value > 0 && this->config.support_material_contact_distance.value > 0)
-                    ? stBottomBridge
-                    : stBottom;
-                for (Surfaces::iterator it = bottom.surfaces.begin(); it != bottom.surfaces.end(); ++ it)
-                    it->surface_type = surface_type_bottom;
-            }
-            
-            // now, if the object contained a thin membrane, we could have overlapping bottom
-            // and top surfaces; let's do an intersection to discover them and consider them
-            // as bottom surfaces (to allow for bridge detection)
-            if (!top.empty() && !bottom.empty()) {
-                const Polygons top_polygons = to_polygons(STDMOVE(top));
-                top.clear();
-                top.append(
-                    offset2_ex(diff(top_polygons, bottom, true), -offset, offset),
-                    stTop
-                );
-            }
-            
-            // save surfaces to layer
-            layerm.slices.clear();
-            layerm.slices.append(STDMOVE(top));
-            layerm.slices.append(STDMOVE(bottom));
-
-            // find internal surfaces (difference between top/bottom surfaces and others)
-            {
-                Polygons topbottom = top; append_to(topbottom, (Polygons)bottom);
-                
-                layerm.slices.append(
-                    offset2_ex(
-                        diff(layerm_slices_surfaces, topbottom, true),
-                        -offset, offset
-                    ),
-                    stInternal
-                );
-            }
-            
-            /*
-            Slic3r::debugf "  layer %d has %d bottom, %d top and %d internal surfaces\n",
-                $layerm->layer->id, scalar(@bottom), scalar(@top), scalar(@internal) if $Slic3r::debug;
-            */
-
-        } // for each layer of a region
-        
-        /*  Fill in layerm->fill_surfaces by trimming the layerm->slices by the cummulative layerm->fill_surfaces.
-            Note: this method should be idempotent, but fill_surfaces gets modified 
-            in place. However we're now only using its boundaries (which are invariant)
-            so we're safe. This guarantees idempotence of prepare_infill() also in case
-            that combine_infill() turns some fill_surface into VOID surfaces.  */
-        FOREACH_LAYER(this, layer_it) {
-            LayerRegion &layerm = *(*layer_it)->get_region(region_id);
-            
-            const Polygons fill_boundaries = layerm.fill_surfaces;
-            layerm.fill_surfaces.clear();
-            for (Surfaces::const_iterator surface = layerm.slices.surfaces.begin();
-                surface != layerm.slices.surfaces.end(); ++ surface) {
-                layerm.fill_surfaces.append(
-                    intersection_ex(*surface, fill_boundaries),
-                    surface->surface_type
-                );
-            }
-        }
-    }
+    parallelize<Layer*>(
+        std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
+        boost::bind(&Slic3r::Layer::detect_surfaces_type, _1),
+        this->_print->config.threads.value
+    );
 }
 
 void
 PrintObject::process_external_surfaces()
 {
-    FOREACH_REGION(this->_print, region) {
-        size_t region_id = region - this->_print->regions.begin();
-        
-        FOREACH_LAYER(this, layer_it) {
-            const Layer* lower_layer = (layer_it == this->layers.begin())
-                ? NULL
-                : *(layer_it-1);
-            
-            (*layer_it)->get_region(region_id)->process_external_surfaces(lower_layer);
-        }
-    }
+    parallelize<Layer*>(
+        std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
+        boost::bind(&Slic3r::Layer::process_external_surfaces, _1),
+        this->_print->config.threads.value
+    );
 }
 
 /* This method applies bridge flow to the first internal solid layer above
@@ -782,7 +612,6 @@ PrintObject::_make_perimeters()
         size_t region_id = region_it - this->_print->regions.begin();
         const PrintRegion &region = **region_it;
         
-        
         if (!region.config.extra_perimeters
             || region.config.perimeters == 0
             || region.config.fill_density == 0
@@ -791,7 +620,13 @@ PrintObject::_make_perimeters()
         for (size_t i = 0; i <= (this->layer_count()-2); ++i) {
             LayerRegion &layerm                     = *this->get_layer(i)->get_region(region_id);
             const LayerRegion &upper_layerm         = *this->get_layer(i+1)->get_region(region_id);
-            const Polygons upper_layerm_polygons    = upper_layerm.slices;
+            
+            // In order to avoid diagonal gaps (GH #3732) we ignore the external half of the upper
+            // perimeter, since it's not truly covering this layer.
+            const Polygons upper_layerm_polygons = offset(
+                upper_layerm.slices,
+                -upper_layerm.flow(frExternalPerimeter).scaled_width()/2
+            );
             
             // Filter upper layer polygons in intersection_ppl by their bounding boxes?
             // my $upper_layerm_poly_bboxes= [ map $_->bounding_box, @{$upper_layerm_polygons} ];

@@ -142,6 +142,7 @@ sub new {
                         $self->stop_background_process;
                         $self->statusbar->SetStatusText("Slicing cancelled");
                         $self->{preview_notebook}->SetSelection(0);
+
                     });
                     $self->start_background_process;
                 } else {
@@ -253,7 +254,7 @@ sub new {
         $self->{print_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
     });
     EVT_BUTTON($self, $self->{btn_send_gcode}, sub {
-        my $filename = basename($self->{print}->output_filepath($main::opt{output}));
+        my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
         $filename = Wx::GetTextFromUser("Save to printer with the following name:",
             "OctoPrint", $filename, $self);
         
@@ -431,6 +432,36 @@ sub new {
                 }
             }
         }
+
+        my $print_info_sizer;
+        {
+            my $box = Wx::StaticBox->new($self, -1, "Sliced Info");
+            $print_info_sizer = Wx::StaticBoxSizer->new($box, wxVERTICAL);
+            $print_info_sizer->SetMinSize([350,-1]);
+            my $grid_sizer = Wx::FlexGridSizer->new(2, 2, 5, 5);
+            $grid_sizer->SetFlexibleDirection(wxHORIZONTAL);
+            $grid_sizer->AddGrowableCol(1, 1);
+            $grid_sizer->AddGrowableCol(3, 1);
+            $print_info_sizer->Add($grid_sizer, 0, wxEXPAND);
+            my @info = (
+                fil_cm  => "Used Filament (cm)",
+                fil_cm3 => "Used Filament (cm^3)",
+                fil_g   => "Used Filament (g)",
+                cost    => "Cost",
+            );
+            while (my $field = shift @info) {
+                my $label = shift @info;
+                my $text = Wx::StaticText->new($self, -1, "$label:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+                $text->SetFont($Slic3r::GUI::small_font);
+                $grid_sizer->Add($text, 0);
+                
+                $self->{"print_info_$field"} = Wx::StaticText->new($self, -1, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+                $self->{"print_info_$field"}->SetFont($Slic3r::GUI::small_font);
+                $grid_sizer->Add($self->{"print_info_$field"}, 0);
+            }
+            $self->{"sliced_info_box"} = $print_info_sizer;
+            
+        }
         
         my $buttons_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $buttons_sizer->AddStretchSpacer(1);
@@ -444,6 +475,9 @@ sub new {
         $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
         $right_sizer->Add($self->{list}, 1, wxEXPAND, 5);
         $right_sizer->Add($object_info_sizer, 0, wxEXPAND, 0);
+        $right_sizer->Add($print_info_sizer, 0, wxEXPAND, 0);
+        $right_sizer->Hide($print_info_sizer);
+        $self->{"right_sizer"} = $right_sizer;
         
         my $hsizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $hsizer->Add($self->{preview_notebook}, 1, wxEXPAND | wxTOP, 1);
@@ -530,12 +564,15 @@ sub update_presets {
         }
         
         if ($selected <= $#$presets) {
+            my $preset_name = $choice->GetString($selected);
             if ($is_dirty) {
-                $choice->SetString($selected, $choice->GetString($selected) . " (modified)");
+                $choice->SetString($selected, "$preset_name (modified)");
             }
             # call SetSelection() only after SetString() otherwise the new string
             # won't be picked up as the visible string
             $choice->SetSelection($selected);
+	
+            $self->{print}->placeholder_parser->set("${group}_preset", $preset_name);
         }
     }
 }
@@ -1087,6 +1124,11 @@ sub async_apply_config {
     if ($invalidated) {
         # kill current thread if any
         $self->stop_background_process;
+        # remove the sliced statistics box because something changed.
+        if ($self->{"right_sizer"}) { 
+            $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+            $self->{"right_sizer"}->Layout;
+        }
     } else {
         $self->resume_background_process;
     }
@@ -1115,12 +1157,6 @@ sub start_background_process {
     if ($@) {
         $self->statusbar->SetStatusText($@);
         return;
-    }
-    
-    # apply extra variables
-    {
-        my $extra = $self->GetFrame->extra_variables;
-        $self->{print}->placeholder_parser->set($_, $extra->{$_}) for keys %$extra;
     }
     
     # start thread
@@ -1225,7 +1261,7 @@ sub export_gcode {
     if ($output_file) {
         $self->{export_gcode_output_file} = $self->{print}->output_filepath($output_file);
     } else {
-        my $default_output_file = $self->{print}->output_filepath($main::opt{output});
+        my $default_output_file = $self->{print}->output_filepath($main::opt{output} // '');
         my $dlg = Wx::FileDialog->new($self, 'Save G-code file as:', wxTheApp->output_path(dirname($default_output_file)),
             basename($default_output_file), &Slic3r::GUI::FILE_WILDCARDS->{gcode}, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
         if ($dlg->ShowModal != wxID_OK) {
@@ -1266,6 +1302,8 @@ sub export_gcode {
     
     # this updates buttons status
     $self->object_list_changed;
+    $self->{"right_sizer"}->Show($self->{"sliced_info_box"});
+    $self->{"right_sizer"}->Layout;
     
     return $self->{export_gcode_output_file};
 }
@@ -1360,6 +1398,10 @@ sub on_export_completed {
     $self->send_gcode if $send_gcode;
     $self->{print_file} = undef;
     $self->{send_gcode_file} = undef;
+    $self->{"print_info_cost"}->SetLabel(sprintf("%.2f" , $self->{print}->total_cost));
+    $self->{"print_info_fil_g"}->SetLabel(sprintf("%.2f" , $self->{print}->total_weight));
+    $self->{"print_info_fil_cm3"}->SetLabel(sprintf("%.2f" , $self->{print}->total_extruded_volume) / 1000);
+    $self->{"print_info_fil_cm"}->SetLabel(sprintf("%.2f" , $self->{print}->total_used_filament) / 10);
     
     # this updates buttons status
     $self->object_list_changed;
@@ -1489,7 +1531,7 @@ sub _get_export_file {
     
     my $output_file = $main::opt{output};
     {
-        $output_file = $self->{print}->output_filepath($output_file);
+        $output_file = $self->{print}->output_filepath($output_file // '');
         $output_file =~ s/\.gcode$/$suffix/i;
         my $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
             basename($output_file), &Slic3r::GUI::MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
@@ -1556,7 +1598,10 @@ sub update {
     } else {
         $self->resume_background_process;
     }
-    
+    if ($self->{"right_sizer"}) { 
+        $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+        $self->{"right_sizer"}->Layout;
+    }
     $self->refresh_canvases;
 }
 
@@ -1629,6 +1674,10 @@ sub on_config_change {
             }
             $self->Layout;
         }
+    }
+    if ($self->{"right_sizer"}) { 
+        $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+        $self->{"right_sizer"}->Layout;
     }
     
     return if !$self->GetFrame->is_loaded;

@@ -141,7 +141,7 @@ PerimeterGenerator::process()
                     }
                     
                     // look for gaps
-                    if (this->config->gap_fill_speed.value > 0 && this->config->fill_density.value > 0) {
+                    if (this->config->fill_gaps && this->config->fill_density.value > 0) {
                         // not using safety offset here would "detect" very narrow gaps
                         // (but still long enough to escape the area threshold) that gap fill
                         // won't be able to fill but we'd still remove from infill area
@@ -315,8 +315,7 @@ PerimeterGenerator::process()
             );
             
             // append infill areas to fill_surfaces
-            for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex)
-                this->fill_surfaces->surfaces.push_back(Surface(stInternal, *ex));  // use a bogus surface type
+            this->fill_surfaces->append(expp, stInternal);  // use a bogus surface type
         }
     }
 }

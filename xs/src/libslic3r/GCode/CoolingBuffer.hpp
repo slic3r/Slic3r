@@ -17,7 +17,8 @@ and the print is modified to stretch over a minimum layer time.
 class CoolingBuffer {
     public:
     CoolingBuffer(GCode &gcodegen)
-        : _gcodegen(&gcodegen), _elapsed_time(0.), _layer_id(0)
+        : _gcodegen(&gcodegen), _elapsed_time(0.), _elapsed_time_bridges(0.),
+          _elapsed_time_external(0.), _layer_id(0)
     {
         this->_min_print_speed = this->_gcodegen->config.min_print_speed * 60;
     };
@@ -29,6 +30,8 @@ class CoolingBuffer {
     GCode*                      _gcodegen;
     std::string                 _gcode;
     float                       _elapsed_time;
+    float                       _elapsed_time_bridges;
+    float                       _elapsed_time_external;
     size_t                      _layer_id;
     std::map<std::string,float> _last_z;
     float                       _min_print_speed;

@@ -127,6 +127,9 @@ sub new {
         
         # Calculate the zoom delta and apply it to the current zoom factor
         my $zoom = $e->GetWheelRotation() / $e->GetWheelDelta();
+        if ($Slic3r::GUI::Settings->{_}{invert_zoom}) {
+            $zoom *= -1;
+        }
         $zoom = max(min($zoom, 4), -4);
         $zoom /= 10;
         $self->_zoom($self->_zoom / (1-$zoom));
@@ -1293,6 +1296,7 @@ sub load_print_toolpaths {
     return if !$print->step_done(STEP_BRIM);
     return if !$print->has_skirt
         && $print->config->brim_width == 0
+        && $print->config->interior_brim_width == 0
         && $print->config->brim_connections_width == 0;
     
     my $qverts  = Slic3r::GUI::_3DScene::GLVertexArray->new;
@@ -1305,7 +1309,7 @@ sub load_print_toolpaths {
     } else {
         $skirt_height = min($print->config->skirt_height, $print->total_layer_count);
     }
-    $skirt_height ||= 1 if $print->config->brim_width > 0;
+    $skirt_height ||= 1 if $print->config->brim_width > 0 || $print->config->interior_brim_width;
     
     # get first $skirt_height layers (maybe this should be moved to a PrintObject method?)
     my $object0 = $print->get_object(0);

@@ -112,12 +112,14 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
     }
     $gui = Slic3r::GUI->new;
     setlocale(LC_NUMERIC, 'C');
-    $gui->{mainframe}->load_config_file($_) for @{$opt{load}};
-    $gui->{mainframe}->load_config($cli_config);
-    foreach my $input_file (@ARGV) {
-        $input_file = Slic3r::decode_path($input_file);
-        $gui->{mainframe}{plater}->load_file($input_file) unless $opt{no_plater};
-    }
+    $gui->CallAfter(sub {
+        $gui->{mainframe}->load_config_file($_) for @{$opt{load}};
+        $gui->{mainframe}->load_config($cli_config);
+        foreach my $input_file (@ARGV) {
+            $input_file = Slic3r::decode_path($input_file);
+            $gui->{mainframe}{plater}->load_file($input_file) unless $opt{no_plater};
+        }
+    });
     $gui->MainLoop;
     exit;
 }
@@ -428,7 +430,11 @@ $j
     --fill-density      Infill density (range: 0%-100%, default: $config->{fill_density}%)
     --fill-angle        Infill angle in degrees (range: 0-90, default: $config->{fill_angle})
     --fill-pattern      Pattern to use to fill non-solid layers (default: $config->{fill_pattern})
-    --external-fill-pattern Pattern to use to fill solid layers (default: $config->{external_fill_pattern})
+    --fill-gaps         Fill gaps with single passes (default: yes)
+    --external-infill-pattern Pattern to use to fill solid layers.
+                        (Shortcut for --top-infill-pattern and --bottom-infill-pattern)
+    --top-infill-pattern Pattern to use to fill top solid layers (default: $config->{top_infill_pattern})
+    --bottom-infill-pattern Pattern to use to fill bottom solid layers (default: $config->{bottom_infill_pattern})
     --start-gcode       Load initial G-code from the supplied file. This will overwrite
                         the default command (home all axes [G28]).
     --end-gcode         Load final G-code from the supplied file. This will overwrite 
@@ -527,6 +533,8 @@ $j
                         of filament on the first layer, for each extruder (mm, 0+, default: $config->{min_skirt_length})
     --brim-width        Width of the brim that will get added to each object to help adhesion
                         (mm, default: $config->{brim_width})
+    --interior-brim-width  Width of the brim that will get printed inside object holes to help adhesion
+                        (mm, default: $config->{interior_brim_width})
    
    Transform options:
     --scale             Factor for scaling input object (default: 1)

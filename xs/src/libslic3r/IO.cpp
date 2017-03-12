@@ -102,12 +102,12 @@ OBJ::read(std::string input_file, Model* model)
         std::vector<Point3> facets;
         
         // Read vertices.
-        assert((shape->mesh.vertices.size() % 3) == 0);
-        for (size_t v = 0; v < attrib.vertices.size(); ++v) {
+        assert((attrib.vertices.size() % 3) == 0);
+        for (size_t v = 0; v < attrib.vertices.size(); v += 3) {
             points.push_back(Pointf3(
                 attrib.vertices[v],
-                attrib.vertices[++v],
-                attrib.vertices[++v]
+                attrib.vertices[v+1],
+                attrib.vertices[v+2]
             ));
         }
         

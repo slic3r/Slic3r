@@ -9,7 +9,7 @@ use Wx::Event qw(EVT_BUTTON EVT_MOUSEWHEEL EVT_TIMER EVT_SCROLLWIN);
 use base qw(Wx::Panel Class::Accessor);
 
 __PACKAGE__->mk_accessors(qw(printer_name config sender jobs 
-    printing status_timer temp_timer));
+    printing status_timer temp_timer manual_control_config));
 
 use constant CONNECTION_TIMEOUT => 3;               # seconds
 use constant STATUS_TIMER_INTERVAL => 1000;         # milliseconds
@@ -21,6 +21,12 @@ sub new {
     
     $self->printer_name($printer_name || 'Printer');
     $self->config($config);
+    $self->manual_control_config({
+        xy_travel_speed     => 130,
+        z_travel_speed      => 10,
+        temperature         => '',
+        bed_temperature     => '',
+    });
     $self->jobs([]);
     
     # set up the timer that polls for updates
@@ -38,6 +44,8 @@ sub new {
                 }
             }
             $self->{log_textctrl}->AppendText("$_\n") for @{$self->sender->purge_log};
+            $self->{manual_control_dialog}->update_log($self->{log_textctrl}->GetValue)
+                if $self->{manual_control_dialog};
             {
                 my $temp = $self->sender->getT;
                 if ($temp eq '') {
@@ -170,9 +178,10 @@ sub new {
         $btn->Hide;
         $left_sizer->Add($btn, 0, wxTOP, 15);
         EVT_BUTTON($self, $btn, sub {
-            my $dlg = Slic3r::GUI::Controller::ManualControlDialog->new
-                ($self, $self->config, $self->sender);
+            $self->{manual_control_dialog} = my $dlg = Slic3r::GUI::Controller::ManualControlDialog->new
+                ($self, $self->config, $self->sender, $self->manual_control_config);
             $dlg->ShowModal;
+            undef $self->{manual_control_dialog};
         });
     }
     

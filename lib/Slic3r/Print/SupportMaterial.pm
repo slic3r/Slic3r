@@ -92,7 +92,7 @@ sub contact_area {
     
     # if user specified a custom angle threshold, convert it to radians
     my $threshold_rad;
-    if ($self->object_config->support_material_threshold) {
+    if (!$self->object_config->support_material_threshold =~ /%$/) {
         $threshold_rad = deg2rad($self->object_config->support_material_threshold + 1);  # +1 makes the threshold inclusive
         Slic3r::debugf "Threshold angle = %d°\n", rad2deg($threshold_rad);
     }
@@ -152,7 +152,7 @@ sub contact_area {
                 } else {
                     $diff = diff(
                         [ map $_->p, @{$layerm->slices} ],
-                        offset([ map @$_, @{$lower_layer->slices} ], +$fw*2),
+                        offset([ map @$_, @{$lower_layer->slices} ], +$self->object_config->get_abs_value_over('support_material_threshold', $fw)),
                     );
                 
                     # collapse very tiny spots

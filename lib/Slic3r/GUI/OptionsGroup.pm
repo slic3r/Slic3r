@@ -282,6 +282,9 @@ has 'widget'        => (is => 'rw');
 has '_options'      => (is => 'ro', default => sub { [] });
 has '_extra_widgets' => (is => 'ro', default => sub { [] });
 
+use Wx qw(:button :misc :bitmap);
+use Wx::Event qw(EVT_BUTTON);
+
 # this method accepts a Slic3r::GUI::OptionsGroup::Option object
 sub append_option {
     my ($self, $option) = @_;
@@ -291,6 +294,26 @@ sub append_option {
 sub append_widget {
     my ($self, $widget) = @_;
     push @{$self->_extra_widgets}, $widget;
+}
+
+sub append_button {
+    my ($self, $text, $icon, $cb, $ref, $disable) = @_;
+    
+    $self->append_widget(sub {
+        my ($parent) = @_;
+        
+        my $btn = Wx::Button->new($parent, -1,
+            $text, wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
+        $btn->SetFont($Slic3r::GUI::small_font);
+        if ($Slic3r::GUI::have_button_icons) {
+            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG));
+        }
+        $btn->Disable if $disable;
+        $$ref = $btn if $ref;
+        
+        EVT_BUTTON($parent, $btn, $cb);
+        return $btn;
+    });
 }
 
 sub get_options {
@@ -338,7 +361,7 @@ has 'full_labels'   => (is => 'ro', default => sub { 0 });
 has '_opt_map'      => (is => 'ro', default => sub { {} });
 
 sub get_option {
-    my ($self, $opt_key, $opt_index) = @_;
+    my ($self, $opt_key, $opt_index, %params) = @_;
     
     $opt_index //= -1;
     
@@ -350,7 +373,7 @@ sub get_option {
     $self->_opt_map->{$opt_id} = [ $opt_key, $opt_index ];
     
     my $optdef = $Slic3r::Config::Options->{$opt_key};    # we should access this from $self->config
-    my $default_value = $self->_get_config_value($opt_key, $opt_index, $optdef->{gui_flags} =~ /\bserialized\b/);
+    my $default_value = $self->_get_config_value($opt_key, $opt_index, $optdef->{type} eq 's@');
     
     return Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => $opt_id,
@@ -369,24 +392,25 @@ sub get_option {
         labels      => $optdef->{labels},
         values      => $optdef->{values},
         readonly    => $optdef->{readonly},
+        %params,
     );
 }
 
 sub create_single_option_line {
-    my ($self, $opt_key, $opt_index) = @_;
+    my ($self, $opt_key, $opt_index, %params) = @_;
     
     my $option;
     if (ref($opt_key)) {
         $option = $opt_key;
     } else {
-        $option = $self->get_option($opt_key, $opt_index);
+        $option = $self->get_option($opt_key, $opt_index, %params);
     }
     return $self->SUPER::create_single_option_line($option);
 }
 
 sub append_single_option_line {
-    my ($self, $option, $opt_index) = @_;
-    return $self->append_line($self->create_single_option_line($option, $opt_index));
+    my ($self, $option, $opt_index, %params) = @_;
+    return $self->append_line($self->create_single_option_line($option, $opt_index, %params));
 }
 
 sub reload_config {
@@ -395,7 +419,7 @@ sub reload_config {
     foreach my $opt_id (keys %{ $self->_opt_map }) {
         my ($opt_key, $opt_index) = @{ $self->_opt_map->{$opt_id} };
         my $option = $self->_options->{$opt_id};
-        $self->set_value($opt_id, $self->_get_config_value($opt_key, $opt_index, $option->gui_flags =~ /\bserialized\b/));
+        $self->set_value($opt_id, $self->_get_config_value($opt_key, $opt_index, $option->type eq 's@'));
     }
 }
 
@@ -409,15 +433,16 @@ sub get_fieldc {
 }
 
 sub _get_config_value {
-    my ($self, $opt_key, $opt_index, $deserialize) = @_;
+    my ($self, $opt_key, $opt_index, $as_string) = @_;
     
-    if ($deserialize) {
-        die "Can't deserialize option indexed value" if $opt_index != -1;
-        return $self->config->serialize($opt_key);
+    if ($opt_index == -1) {
+        my $value = $self->config->get($opt_key);
+        if ($as_string && ref($value) eq 'ARRAY') {
+            return join "\n", @$value;
+        }
+        return $value;
     } else {
-        return $opt_index == -1
-            ? $self->config->get($opt_key)
-            : $self->config->get_at($opt_key, $opt_index);
+        return $self->config->get_at($opt_key, $opt_index);
     }
 }
 
@@ -430,17 +455,15 @@ sub _on_change {
         
         # get value
         my $field_value = $self->get_value($opt_id);
-        if ($option->gui_flags =~ /\bserialized\b/) {
-            die "Can't set serialized option indexed value" if $opt_index != -1;
-            $self->config->set_deserialize($opt_key, $field_value);
-        } else {
-            if ($opt_index == -1) {
-                $self->config->set($opt_key, $field_value);
-            } else {
-                my $value = $self->config->get($opt_key);
-                $value->[$opt_index] = $field_value;
-                $self->config->set($opt_key, $value);
+        if ($opt_index == -1) {
+            if ($option->type eq 's@' && ref($field_value) ne 'ARRAY') {
+                $field_value = [ split /(?<!\\)[;\n]/, $field_value ];
             }
+            $self->config->set($opt_key, $field_value);
+        } else {
+            my $value = $self->config->get($opt_key);
+            $value->[$opt_index] = $field_value;
+            $self->config->set($opt_key, $value);
         }
     }
     

@@ -451,7 +451,7 @@ sub set_value {
 package Slic3r::GUI::Tab::Print;
 use base 'Slic3r::GUI::Tab';
 
-use List::Util qw(first);
+use List::Util qw(first any);
 use Wx qw(:icon :dialog :id);
 
 sub name { 'print' }
@@ -466,7 +466,7 @@ sub build {
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
         seam_position external_perimeters_first
-        fill_density fill_pattern external_fill_pattern
+        fill_density fill_pattern top_infill_pattern bottom_infill_pattern fill_gaps
         infill_every_layers infill_only_where_needed
         solid_infill_every_layers fill_angle solid_infill_below_area 
         only_retract_when_crossing_perimeters infill_first
@@ -479,10 +479,10 @@ sub build {
         perimeter_acceleration infill_acceleration bridge_acceleration 
         first_layer_acceleration default_acceleration
         skirts skirt_distance skirt_height min_skirt_length
-        brim_connections_width brim_width
+        brim_connections_width brim_width interior_brim_width
         support_material support_material_threshold support_material_enforce_layers
         raft_layers
-        support_material_pattern support_material_spacing support_material_angle
+        support_material_pattern support_material_spacing support_material_angle 
         support_material_interface_layers support_material_interface_spacing
         support_material_contact_distance dont_support_bridges
         notes
@@ -542,7 +542,14 @@ sub build {
             my $optgroup = $page->new_optgroup('Infill');
             $optgroup->append_single_option_line('fill_density');
             $optgroup->append_single_option_line('fill_pattern');
-            $optgroup->append_single_option_line('external_fill_pattern');
+            {
+                my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                    label => 'External infill pattern',
+                );
+                $line->append_option($optgroup->get_option('top_infill_pattern'));
+                $line->append_option($optgroup->get_option('bottom_infill_pattern'));
+                $optgroup->append_line($line);
+            }
         }
         {
             my $optgroup = $page->new_optgroup('Reducing printing time');
@@ -551,6 +558,7 @@ sub build {
         }
         {
             my $optgroup = $page->new_optgroup('Advanced');
+            $optgroup->append_single_option_line('fill_gaps');
             $optgroup->append_single_option_line('solid_infill_every_layers');
             $optgroup->append_single_option_line('fill_angle');
             $optgroup->append_single_option_line('solid_infill_below_area');
@@ -571,6 +579,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Brim');
             $optgroup->append_single_option_line('brim_width');
+            $optgroup->append_single_option_line('interior_brim_width');
             $optgroup->append_single_option_line('brim_connections_width');
         }
     }
@@ -603,16 +612,12 @@ sub build {
         my $page = $self->add_options_page('Speed', 'time.png');
         {
             my $optgroup = $page->new_optgroup('Speed for print moves');
-            $optgroup->append_single_option_line('perimeter_speed');
-            $optgroup->append_single_option_line('small_perimeter_speed');
-            $optgroup->append_single_option_line('external_perimeter_speed');
-            $optgroup->append_single_option_line('infill_speed');
-            $optgroup->append_single_option_line('solid_infill_speed');
-            $optgroup->append_single_option_line('top_solid_infill_speed');
-            $optgroup->append_single_option_line('support_material_speed');
-            $optgroup->append_single_option_line('support_material_interface_speed');
-            $optgroup->append_single_option_line('bridge_speed');
-            $optgroup->append_single_option_line('gap_fill_speed');
+            $optgroup->append_single_option_line($_, undef, width => 100)
+                for qw(perimeter_speed small_perimeter_speed external_perimeter_speed
+                    infill_speed solid_infill_speed top_solid_infill_speed
+                    gap_fill_speed bridge_speed
+                    support_material_speed support_material_interface_speed
+                );
         }
         {
             my $optgroup = $page->new_optgroup('Speed for non-print moves');
@@ -664,14 +669,11 @@ sub build {
             my $optgroup = $page->new_optgroup('Extrusion width',
                 label_width => 180,
             );
-            $optgroup->append_single_option_line('extrusion_width');
-            $optgroup->append_single_option_line('first_layer_extrusion_width');
-            $optgroup->append_single_option_line('perimeter_extrusion_width');
-            $optgroup->append_single_option_line('external_perimeter_extrusion_width');
-            $optgroup->append_single_option_line('infill_extrusion_width');
-            $optgroup->append_single_option_line('solid_infill_extrusion_width');
-            $optgroup->append_single_option_line('top_infill_extrusion_width');
-            $optgroup->append_single_option_line('support_material_extrusion_width');
+            $optgroup->append_single_option_line($_, undef, width => 100)
+                for qw(extrusion_width first_layer_extrusion_width
+                    perimeter_extrusion_width external_perimeter_extrusion_width
+                    infill_extrusion_width solid_infill_extrusion_width
+                    top_infill_extrusion_width support_material_extrusion_width);
         }
         {
             my $optgroup = $page->new_optgroup('Overlap');
@@ -799,7 +801,7 @@ sub _update {
     }
     
     if ($config->fill_density == 100
-        && !first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{external_fill_pattern}{values}}) {
+        && !first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{top_infill_pattern}{values}}) {
         my $dialog = Wx::MessageDialog->new($self,
             "The " . $config->fill_pattern . " infill pattern is not supposed to work at 100% density.\n"
             . "\nShall I switch to rectilinear fill pattern?",
@@ -829,17 +831,24 @@ sub _update {
     my $have_solid_infill = ($config->top_solid_layers > 0) || ($config->bottom_solid_layers > 0);
     # solid_infill_extruder uses the same logic as in Print::extruders()
     $self->get_field($_)->toggle($have_solid_infill)
-        for qw(external_fill_pattern infill_first solid_infill_extruder solid_infill_extrusion_width
-            solid_infill_speed);
+        for qw(top_infill_pattern bottom_infill_pattern infill_first solid_infill_extruder
+            solid_infill_extrusion_width solid_infill_speed);
     
     $self->get_field($_)->toggle($have_infill || $have_solid_infill)
         for qw(fill_angle infill_extrusion_width infill_speed bridge_speed);
     
-    $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill);
+    $self->get_field('fill_gaps')->toggle($have_perimeters && $have_infill);
+    $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill && $config->fill_gaps);
     
     my $have_top_solid_infill = $config->top_solid_layers > 0;
     $self->get_field($_)->toggle($have_top_solid_infill)
         for qw(top_infill_extrusion_width top_solid_infill_speed);
+    
+    my $have_autospeed = any { $config->get("${_}_speed") eq '0' }
+        qw(perimeter external_perimeter small_perimeter
+        infill solid_infill top_solid_infill gap_fill support_material
+        support_material_interface);
+    $self->get_field('max_print_speed')->toggle($have_autospeed);
     
     my $have_default_acceleration = $config->default_acceleration > 0;
     $self->get_field($_)->toggle($have_default_acceleration)
@@ -849,17 +858,19 @@ sub _update {
     $self->get_field($_)->toggle($have_skirt)
         for qw(skirt_distance skirt_height);
     
-    my $have_brim = $config->brim_width > 0 || $config->brim_connections_width;
+    my $have_brim = $config->brim_width > 0 || $config->interior_brim_width
+        || $config->brim_connections_width;
     # perimeter_extruder uses the same logic as in Print::extruders()
     $self->get_field('perimeter_extruder')->toggle($have_perimeters || $have_brim);
     
     my $have_support_material = $config->support_material || $config->raft_layers > 0;
     my $have_support_interface = $config->support_material_interface_layers > 0;
     $self->get_field($_)->toggle($have_support_material)
-        for qw(support_material_threshold support_material_pattern
+        for qw(support_material_threshold support_material_pattern 
             support_material_spacing support_material_angle
             support_material_interface_layers dont_support_bridges
             support_material_extrusion_width support_material_contact_distance);
+
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
             support_material_interface_speed);
@@ -889,11 +900,12 @@ sub build {
     my $self = shift;
     
     $self->init_config_options(qw(
-        filament_colour filament_diameter filament_notes filament_max_volumetric_speed extrusion_multiplier
+        filament_colour filament_diameter filament_notes filament_max_volumetric_speed extrusion_multiplier filament_density filament_cost
         temperature first_layer_temperature bed_temperature first_layer_bed_temperature
         fan_always_on cooling
         min_fan_speed max_fan_speed bridge_fan_speed disable_fan_first_layers
         fan_below_layer_time slowdown_below_layer_time min_print_speed
+        start_filament_gcode end_filament_gcode
     ));
     $self->{config}->set('filament_settings_id', '');
     
@@ -904,8 +916,12 @@ sub build {
             $optgroup->append_single_option_line('filament_colour', 0);
             $optgroup->append_single_option_line('filament_diameter', 0);
             $optgroup->append_single_option_line('extrusion_multiplier', 0);
+            $optgroup->append_single_option_line('filament_density', 0);
+            $optgroup->append_single_option_line('filament_cost', 0);
         }
     
+
+
         {
             my $optgroup = $page->new_optgroup('Temperature (°C)');
         
@@ -991,6 +1007,27 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
+    {
+        my $page = $self->add_options_page('Custom G-code', 'cog.png');
+        {
+            my $optgroup = $page->new_optgroup('Start G-code',
+                label_width => 0,
+            );
+            my $option = $optgroup->get_option('start_filament_gcode', 0);
+            $option->full_width(1);
+            $option->height(150);
+            $optgroup->append_single_option_line($option);
+        }
+        {
+            my $optgroup = $page->new_optgroup('End G-code',
+                label_width => 0,
+            );
+            my $option = $optgroup->get_option('end_filament_gcode', 0);
+            $option->full_width(1);
+            $option->height(150);
+            $optgroup->append_single_option_line($option);
+        }
+    }
 }
 
 sub _update {
@@ -1060,32 +1097,6 @@ sub build {
     ));
     $self->{config}->set('printer_settings_id', '');
     
-    my $bed_shape_widget = sub {
-        my ($parent) = @_;
-        
-        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
-            wxBU_LEFT | wxBU_EXACTFIT);
-        $btn->SetFont($Slic3r::GUI::small_font);
-        if ($Slic3r::GUI::have_button_icons) {
-            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG));
-        }
-        
-        my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
-        $sizer->Add($btn);
-        
-        EVT_BUTTON($self, $btn, sub {
-            my $dlg = Slic3r::GUI::BedShapeDialog->new($self, $self->{config}->bed_shape);
-            if ($dlg->ShowModal == wxID_OK) {
-                my $value = $dlg->GetValue;
-                $self->{config}->set('bed_shape', $value);
-                $self->update_dirty;
-                $self->_on_value_change('bed_shape', $value);
-            }
-        });
-        
-        return $sizer;
-    };
-    
     $self->{extruders_count} = 1;
     
     {
@@ -1094,9 +1105,17 @@ sub build {
             my $optgroup = $page->new_optgroup('Size and coordinates');
             
             my $line = Slic3r::GUI::OptionsGroup::Line->new(
-                label       => 'Bed shape',
-                widget      => $bed_shape_widget,
+                label => 'Bed shape',
             );
+            $line->append_button("Set…", "cog.png", sub {
+                my $dlg = Slic3r::GUI::BedShapeDialog->new($self, $self->{config}->bed_shape);
+                if ($dlg->ShowModal == wxID_OK) {
+                    my $value = $dlg->GetValue;
+                    $self->{config}->set('bed_shape', $value);
+                    $self->update_dirty;
+                    $self->_on_value_change('bed_shape', $value);
+                }
+            });
             $optgroup->append_line($line);
             
             $optgroup->append_single_option_line('z_offset');
@@ -1143,108 +1162,63 @@ sub build {
                 
                 return $btn;
             });
-            my $serial_test = sub {
-                my ($parent) = @_;
-                
-                my $btn = $self->{serial_test_btn} = Wx::Button->new($parent, -1,
-                    "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
-                $btn->SetFont($Slic3r::GUI::small_font);
-                if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("wrench.png"), wxBITMAP_TYPE_PNG));
-                }
-                
-                EVT_BUTTON($self, $btn, sub {
-                    my $sender = Slic3r::GCode::Sender->new;
-                    my $res = $sender->connect(
-                        $self->{config}->serial_port,
-                        $self->{config}->serial_speed,
-                    );
-                    if ($res && $sender->wait_connected) {
-                        Slic3r::GUI::show_info($self, "Connection to printer works correctly.", "Success!");
-                    } else {
-                        Slic3r::GUI::show_error($self, "Connection failed.");
-                    }
-                });
-                return $btn;
-            };
             $line->append_option($serial_port);
             $line->append_option($optgroup->get_option('serial_speed'));
-            $line->append_widget($serial_test);
+            $line->append_button("Test", "wrench.png", sub {
+                my $sender = Slic3r::GCode::Sender->new;
+                my $res = $sender->connect(
+                    $self->{config}->serial_port,
+                    $self->{config}->serial_speed,
+                );
+                if ($res && $sender->wait_connected) {
+                    Slic3r::GUI::show_info($self, "Connection to printer works correctly.", "Success!");
+                } else {
+                    Slic3r::GUI::show_error($self, "Connection failed.");
+                }
+            }, \$self->{serial_test_btn});
             $optgroup->append_line($line);
         }
         {
             my $optgroup = $page->new_optgroup('OctoPrint upload');
             
-            # append two buttons to the Host line
-            my $octoprint_host_browse = sub {
-                my ($parent) = @_;
-                
-                my $btn = Wx::Button->new($parent, -1, "Browse…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
-                $btn->SetFont($Slic3r::GUI::small_font);
-                if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("zoom.png"), wxBITMAP_TYPE_PNG));
-                }
-                
-                if (!eval "use Net::Bonjour; 1") {
-                    $btn->Disable;
-                }
-                
-                EVT_BUTTON($self, $btn, sub {
-                    # look for devices
-                    my $entries;
-                    {
-                        my $res = Net::Bonjour->new('http');
-                        $res->discover;
-                        $entries = [ $res->entries ];
-                    }
-                    if (@{$entries}) {
-                        my $dlg = Slic3r::GUI::BonjourBrowser->new($self, $entries);
-                        if ($dlg->ShowModal == wxID_OK) {
-                            my $value = $dlg->GetValue . ":" . $dlg->GetPort;
-                            $self->{config}->set('octoprint_host', $value);
-                            $self->update_dirty;
-                            $self->_on_value_change('octoprint_host', $value);
-                            $self->reload_config;
-                        }
-                    } else {
-                        Wx::MessageDialog->new($self, 'No Bonjour device found', 'Device Browser', wxOK | wxICON_INFORMATION)->ShowModal;
-                    }
-                });
-                
-                return $btn;
-            };
-            my $octoprint_host_test = sub {
-                my ($parent) = @_;
-                
-                my $btn = $self->{octoprint_host_test_btn} = Wx::Button->new($parent, -1,
-                    "Test", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
-                $btn->SetFont($Slic3r::GUI::small_font);
-                if ($Slic3r::GUI::have_button_icons) {
-                    $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("wrench.png"), wxBITMAP_TYPE_PNG));
-                }
-                
-                EVT_BUTTON($self, $btn, sub {
-                    my $ua = LWP::UserAgent->new;
-                    $ua->timeout(10);
-    
-                    my $res = $ua->get(
-                        "http://" . $self->{config}->octoprint_host . "/api/version",
-                        'X-Api-Key' => $self->{config}->octoprint_apikey,
-                    );
-                    if ($res->is_success) {
-                        Slic3r::GUI::show_info($self, "Connection to OctoPrint works correctly.", "Success!");
-                    } else {
-                        Slic3r::GUI::show_error($self,
-                            "I wasn't able to connect to OctoPrint (" . $res->status_line . "). "
-                            . "Check hostname and OctoPrint version (at least 1.1.0 is required).");
-                    }
-                });
-                return $btn;
-            };
-            
             my $host_line = $optgroup->create_single_option_line('octoprint_host');
-            $host_line->append_widget($octoprint_host_browse);
-            $host_line->append_widget($octoprint_host_test);
+            $host_line->append_button("Browse…", "zoom.png", sub {
+                # look for devices
+                my $entries;
+                {
+                    my $res = Net::Bonjour->new('http');
+                    $res->discover;
+                    $entries = [ $res->entries ];
+                }
+                if (@{$entries}) {
+                    my $dlg = Slic3r::GUI::BonjourBrowser->new($self, $entries);
+                    if ($dlg->ShowModal == wxID_OK) {
+                        my $value = $dlg->GetValue . ":" . $dlg->GetPort;
+                        $self->{config}->set('octoprint_host', $value);
+                        $self->update_dirty;
+                        $self->_on_value_change('octoprint_host', $value);
+                        $self->reload_config;
+                    }
+                } else {
+                    Wx::MessageDialog->new($self, 'No Bonjour device found', 'Device Browser', wxOK | wxICON_INFORMATION)->ShowModal;
+                }
+            }, undef, !eval "use Net::Bonjour; 1");
+            $host_line->append_button("Test", "wrench.png", sub {
+                my $ua = LWP::UserAgent->new;
+                $ua->timeout(10);
+
+                my $res = $ua->get(
+                    "http://" . $self->{config}->octoprint_host . "/api/version",
+                    'X-Api-Key' => $self->{config}->octoprint_apikey,
+                );
+                if ($res->is_success) {
+                    Slic3r::GUI::show_info($self, "Connection to OctoPrint works correctly.", "Success!");
+                } else {
+                    Slic3r::GUI::show_error($self,
+                        "I wasn't able to connect to OctoPrint (" . $res->status_line . "). "
+                        . "Check hostname and OctoPrint version (at least 1.1.0 is required).");
+                }
+            }, \$self->{octoprint_host_test_btn});
             $optgroup->append_line($host_line);
             $optgroup->append_single_option_line('octoprint_apikey');
         }

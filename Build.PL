@@ -30,6 +30,8 @@ my %prereqs = qw(
 my %recommends = qw(
     Class::XSAccessor               0
     Test::Harness                   0
+    Thread::Queue                   0
+    threads::shared                 0
 );
 
 my $sudo    = grep { $_ eq '--sudo' } @ARGV;
