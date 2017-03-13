@@ -34,11 +34,11 @@ my %recommends = qw(
     threads::shared                 0
 );
 
-my $sudo    = grep { $_ eq '--sudo' } @ARGV;
-my $gui     = grep { $_ eq '--gui' } @ARGV;
-my $no_gui  = grep { $_ eq '--no-gui' }  @ARGV;
-my $xs_only = grep { $_ eq '--xs' }  @ARGV;
-if ($gui) {
+my $sudo    = grep { $_ eq '--sudo' }   @ARGV;
+my $no_gui  = grep { $_ eq '--no-gui' } @ARGV;
+my $xs_only = grep { $_ eq '--xs' }     @ARGV;
+my $no_xs   = grep { $_ eq '--no-xs' }  @ARGV;
+if (!$no_gui) {
     %prereqs = qw(
     Alien::wxWidgets                0
     Class::Accessor                 0
@@ -144,7 +144,7 @@ EOF
         }
     }
     
-    if (!$gui) {
+    if (!$no_xs) {
         # clean xs directory before reinstalling, to make sure Build is called
         # with current perl binary
         if (-e './xs/Build') {
@@ -165,12 +165,10 @@ EOF
 if (@missing_prereqs) {
     printf "The following prerequisites failed to install: %s\n", join(', ', @missing_prereqs);
     exit 1;
-} elsif (!$gui) {
+} elsif (!$no_xs) {
     eval "use App::Prove; 1" or die "Failed to load App::Prove";
     my $res = App::Prove->new->run ? 0 : 1;
-    if ($res == 0) {
-        print "If you also want to use the GUI you can now run `perl Build.PL --gui` to install the required modules.\n";
-    } else {
+    if ($res != 0) {
         print "Some tests failed. Please report the failure to the author!\n";
     }
     exit $res;
