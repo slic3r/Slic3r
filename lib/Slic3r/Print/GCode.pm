@@ -462,7 +462,11 @@ sub process_layer {
     
     # extrude brim
     if (!$self->_brim_done) {
-        $gcode .= $self->_gcodegen->set_extruder($self->print->regions->[0]->config->perimeter_extruder-1);
+        my $extr = $self->print->regions->[0]->config->perimeter_extruder-1;
+        if (my $o = first { $_->config->raft_layers > 0 } @{$self->objects}) {
+            $extr = $o->config->support_material_extruder-1;
+        }
+        $gcode .= $self->_gcodegen->set_extruder($extr);
         $self->_gcodegen->set_origin(Slic3r::Pointf->new(0,0));
         $self->_gcodegen->avoid_crossing_perimeters->set_use_external_mp(1);
         $gcode .= $self->_gcodegen->extrude($_, 'brim', $object->config->support_material_speed)
