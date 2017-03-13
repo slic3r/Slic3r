@@ -9,6 +9,7 @@ package Slic3r::Print::Simple;
 use Moo;
 
 use Slic3r::Geometry qw(X Y);
+use Slic3r::Geometry::Clipper qw(diff);
 
 has '_print' => (
     is      => 'ro',
@@ -56,6 +57,13 @@ has 'output_file' => (
     is      => 'rw',
 );
 
+sub _bed_polygon {
+    my ($self) = @_;
+    
+    my $bed_shape = $self->_print->config->bed_shape;
+    return Slic3r::Polygon->new_scale(@$bed_shape);
+}
+
 sub set_model {
     # $model is of type Slic3r::Model
     my ($self, $model) = @_;
@@ -86,11 +94,8 @@ sub set_model {
     $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects};
     
     if (!$self->dont_arrange) {
-        my $print_center = $self->print_center;
-        if (!defined $print_center) {
-            my $polygon = Slic3r::Polygon->new_scale(@$bed_shape);
-            $print_center = Slic3r::Pointf->new_unscale(@{ $polygon->centroid });
-        }
+        my $print_center = $self->print_center
+            // Slic3r::Pointf->new_unscale(@{ $self->_bed_polygon->centroid });
         $model->center_instances_around_point($print_center);
     }
     
@@ -109,6 +114,13 @@ sub _before_export {
 
 sub _after_export {
     my ($self) = @_;
+        
+    # check that all parts fit in bed shape, and warn if they don't
+    # TODO: use actual toolpaths instead of total bounding box
+    if (@{diff([$self->_print->bounding_box->polygon], [$self->_bed_polygon])}) {
+        warn "Warning: the supplied parts might not fit in the configured bed shape. "
+            . "You might want to review the result before printing.\n";
+    }
     
     $self->_print->set_status_cb(undef);
 }
