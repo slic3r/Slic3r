@@ -596,6 +596,8 @@ pp \
        -M threads::shared \
        -M utf8 \
        -M warnings \
+       -M Slic3r::XS \
+       -a "lib;lib" \
        -B ${SLIC3R_DIR}/slic3r.pl -o ${WD}/${parfile}
 
 tar -czvf ${WD}/${parfile}.tar.gz ${WD}/${parfile}
