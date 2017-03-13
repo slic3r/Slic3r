@@ -253,7 +253,7 @@ if (@ARGV) {  # slicing from command line
             rotate          => deg2rad($opt{rotate} // 0),
             duplicate       => $opt{duplicate}      // 1,
             duplicate_grid  => $opt{duplicate_grid} // [1,1],
-            print_center    => $opt{print_center}   // Slic3r::Pointf->new(100,100),
+            print_center    => $opt{print_center},
             dont_arrange    => $opt{dont_arrange}   // 0,
             status_cb       => sub {
                 my ($percent, $message) = @_;

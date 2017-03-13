@@ -45,7 +45,6 @@ has 'status_cb' => (
 
 has 'print_center' => (
     is      => 'rw',
-    default => sub { Slic3r::Pointf->new(100,100) },
 );
 
 has 'dont_arrange' => (
@@ -82,7 +81,15 @@ sub set_model {
         $model->duplicate($self->duplicate, $self->_print->config->min_object_distance);
     }
     $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects};
-    $model->center_instances_around_point($self->print_center) if (! $self->dont_arrange);
+    
+    if (!$self->dont_arrange) {
+        my $print_center = $self->print_center;
+        if (!defined $print_center) {
+            my $polygon = Slic3r::Polygon->new_scale(@{$self->_print->config->bed_shape});
+            $print_center = Slic3r::Pointf->new_unscale(@{ $polygon->centroid });
+        }
+        $model->center_instances_around_point($print_center);
+    }
     
     foreach my $model_object (@{$model->objects}) {
         $self->_print->auto_assign_extruders($model_object);
