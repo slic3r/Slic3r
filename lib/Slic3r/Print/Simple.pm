@@ -72,20 +72,23 @@ sub set_model {
         $instance->set_rotation($instance->rotation + $self->rotate);
     }
     
+    my $bed_shape = $self->_print->config->bed_shape;
+    my $bb = Slic3r::Geometry::BoundingBoxf->new_from_points($bed_shape);
+    
     if ($self->duplicate_grid->[X] > 1 || $self->duplicate_grid->[Y] > 1) {
         $model->duplicate_objects_grid($self->duplicate_grid->[X], $self->duplicate_grid->[Y], $self->_print->config->duplicate_distance);
     } elsif ($need_arrange) {
-        $model->duplicate_objects($self->duplicate, $self->_print->config->min_object_distance);
+        $model->duplicate_objects($self->duplicate, $self->_print->config->min_object_distance, $bb);
     } elsif ($self->duplicate > 1) {
         # if all input objects have defined position(s) apply duplication to the whole model
-        $model->duplicate($self->duplicate, $self->_print->config->min_object_distance);
+        $model->duplicate($self->duplicate, $self->_print->config->min_object_distance, $bb);
     }
     $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects};
     
     if (!$self->dont_arrange) {
         my $print_center = $self->print_center;
         if (!defined $print_center) {
-            my $polygon = Slic3r::Polygon->new_scale(@{$self->_print->config->bed_shape});
+            my $polygon = Slic3r::Polygon->new_scale(@$bed_shape);
             $print_center = Slic3r::Pointf->new_unscale(@{ $polygon->centroid });
         }
         $model->center_instances_around_point($print_center);
