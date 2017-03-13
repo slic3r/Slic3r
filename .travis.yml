@@ -1,6 +1,6 @@
 language: perl
 install: export LDLOADLIBS=-lstdc++
-script: perl ./Build.PL
+script: perl ./Build.PL; ./package/linux/make_par ${TRAVIS_PERL_VERSION}-$(git rev-parse --short HEAD)
 perl:
   - "5.14"
   - "5.18"
@@ -24,5 +24,6 @@ addons:
     - libboost-system1.55-dev
     - libboost-filesystem1.55-dev
     - liblocal-lib-perl
+    - libpar-packer-perl
     - g++-4.9
 env: CC=g++-4.9
