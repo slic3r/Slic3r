@@ -836,7 +836,7 @@ Print::_make_brim()
         // perimeters because here we're offsetting outwards)
         append_to(loops, offset2(
             islands,
-            flow.scaled_spacing() * (i + 0.5),
+            flow.scaled_width() + flow.scaled_spacing() * (i - 1.0 + 0.5),
             flow.scaled_spacing() * -1.0,
             100000,
             ClipperLib::jtSquare

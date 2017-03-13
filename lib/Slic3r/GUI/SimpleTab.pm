@@ -122,7 +122,7 @@ sub build {
     
     $self->init_config_options(qw(
         layer_height perimeters top_solid_layers bottom_solid_layers 
-        fill_density fill_pattern external_fill_pattern
+        fill_density fill_pattern top_infill_pattern bottom_infill_pattern
         support_material support_material_spacing raft_layers
         support_material_contact_distance dont_support_bridges
         perimeter_speed infill_speed travel_speed
@@ -147,7 +147,8 @@ sub build {
         my $optgroup = $self->new_optgroup('Infill');
         $optgroup->append_single_option_line('fill_density');
         $optgroup->append_single_option_line('fill_pattern');
-        $optgroup->append_single_option_line('external_fill_pattern');
+        $optgroup->append_single_option_line('top_infill_pattern');
+        $optgroup->append_single_option_line('bottom_infill_pattern');
     }
     
     {
@@ -191,7 +192,7 @@ sub _update {
     $self->get_field($_)->toggle($have_infill)
         for qw(fill_pattern);
     $self->get_field($_)->toggle($have_solid_infill)
-        for qw(external_fill_pattern);
+        for qw(top_infill_pattern bottom_infill_pattern);
     $self->get_field($_)->toggle($have_infill || $have_solid_infill)
         for qw(infill_speed);
     
