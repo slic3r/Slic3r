@@ -26,4 +26,6 @@ addons:
     - liblocal-lib-perl
     - libpar-packer-perl
     - g++-4.9
-env: CC=g++-4.9
+env: 
+    - CC=g++-4.9
+    - SLIC3R_STATIC=1
