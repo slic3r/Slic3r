@@ -1,6 +1,6 @@
 language: perl
 install: export LDLOADLIBS=-lstdc++
-script: perl ./Build.PL; ./package/linux/make_par ${TRAVIS_PERL_VERSION}-$(git rev-parse --short HEAD)
+script: perl ./Build.PL; perl ./Build.PL --gui; ./package/linux/make_par ${TRAVIS_PERL_VERSION}-$(git rev-parse --short HEAD)
 perl:
   - "5.14"
   - "5.18"
