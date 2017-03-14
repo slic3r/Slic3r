@@ -46,7 +46,8 @@ fi
 SLIC3R_DIR=$(perl -MCwd=realpath -e "print realpath '${WD}/../../'")
 
 # use local-lib unless otherwise indicated
-if [ -z $SLIC3R_USE_SYSTEM_LIB ]; then
+if [ -z "$SLIC3R_USE_SYSTEM_LIB" ]; then
+    echo "Using ${SLIC3R_DIR}/local-lib"
     eval $(perl -Mlocal::lib=${SLIC3R_DIR}/local-lib)
 fi
 
@@ -598,6 +599,9 @@ pp \
        -M warnings \
        -M Slic3r::XS \
        -a "lib;lib" \
+       -a "var;var" \
+       -vv \
+       --reusable \
        -B ${SLIC3R_DIR}/slic3r.pl -o ${WD}/${parfile}
 
 tar -czvf ${WD}/${parfile}.tar.gz ${WD}/${parfile}
