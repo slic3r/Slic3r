@@ -56,6 +56,10 @@
         %code%{ RETVAL = THIS->print_z; %};
     coordf_t height()
         %code%{ RETVAL = THIS->height; %};
+    void set_print_z(coordf_t z)
+        %code%{ THIS->print_z = z; %};
+    void set_height(coordf_t h)
+        %code%{ THIS->height = h; %};
 
     void set_upper_layer(Layer *layer)
         %code%{ THIS->upper_layer = layer; %};

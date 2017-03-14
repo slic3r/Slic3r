@@ -60,11 +60,13 @@ sub slice {
     $self->set_step_started(STEP_SLICE);
     $self->print->status_cb->(10, "Processing triangulated mesh");
     
+    my $min_nozzle_diameter;
     {
         my @nozzle_diameters = map $self->print->config->get_at('nozzle_diameter', $_),
             @{$self->print->object_extruders};
         
-        my $lh =  min(@nozzle_diameters, $self->config->layer_height);
+        $min_nozzle_diameter = min(@nozzle_diameters);
+        my $lh =  min($min_nozzle_diameter, $self->config->layer_height);
         
         $self->config->set('layer_height', $self->_adjust_layer_height($lh));
     }
@@ -142,7 +144,8 @@ sub slice {
             
             $print_z += $height;
             $slice_z += $height/2;
-        
+            last if $slice_z > $max_z;
+            
             ### Slic3r::debugf "Layer %d: height = %s; slice_z = %s; print_z = %s\n", $id, $height, $slice_z, $print_z;
         
             $self->add_layer($id, $height, $print_z, $slice_z);
@@ -154,6 +157,32 @@ sub slice {
             $id++;
         
             $slice_z += $height/2;   # add the other half layer
+        }
+    }
+    
+    # Reduce or thicken the top layer in order to match the original object size.
+    # This is not actually related to z_steps_per_mm but we only enable it in case
+    # user provided that value, as it means they really care about the layer height
+    # accuracy and we don't provide unexpected result for people noticing the last 
+    # layer has a different layer height.
+    if ($self->print->config->z_steps_per_mm > 0) {
+        my $first_object_layer = $self->get_layer(0);
+        my $last_object_layer  = $self->get_layer($self->layer_count-1);
+        my $print_height = $last_object_layer->print_z - $first_object_layer->print_z + $first_object_layer->height;
+        my $diff = $print_height - unscale($self->size->z);
+        if ($diff < 0) {
+            # we need to thicken last layer
+            $diff = min(abs($diff), $min_nozzle_diameter - $last_object_layer->height);
+            $last_object_layer->set_height($last_object_layer->height + $diff);
+            $last_object_layer->set_print_z($last_object_layer->print_z + $diff);
+        } else {
+            # we need to reduce last layer
+            # prevent generation of a too small layer
+            my $new_height = $last_object_layer->height - $diff;
+            if ($new_height < $min_nozzle_diameter/2) {
+                $last_object_layer->set_height($new_height);
+                $last_object_layer->set_print_z($last_object_layer->print_z - $diff);
+            }
         }
     }
     
