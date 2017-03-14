@@ -582,7 +582,7 @@ sub process_layer {
         }
         
         # tweak extruder ordering to save toolchanges
-        my @extruders = sort keys %by_extruder;
+        my @extruders = sort { $a <=> $b } keys %by_extruder;
         if (@extruders > 1) {
             my $last_extruder_id = $self->_gcodegen->writer->extruder->id;
             if (exists $by_extruder{$last_extruder_id}) {
