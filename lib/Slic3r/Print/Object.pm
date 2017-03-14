@@ -33,6 +33,17 @@ sub support_layers {
     return [ map $self->get_support_layer($_), 0..($self->support_layer_count - 1) ];
 }
 
+sub _adjust_layer_height {
+    my ($self, $lh) = @_;
+    
+    if ($self->print->config->z_steps_per_mm > 0) {
+        my $min_dz = 1/$self->print->config->z_steps_per_mm * 4;
+        $lh = int($lh / $min_dz + 0.5) * $min_dz;
+    }
+    
+    return $lh;
+}
+
 # 1) Decides Z positions of the layers,
 # 2) Initializes layers and their regions
 # 3) Slices the object meshes
@@ -52,8 +63,10 @@ sub slice {
     {
         my @nozzle_diameters = map $self->print->config->get_at('nozzle_diameter', $_),
             @{$self->print->object_extruders};
-    
-        $self->config->set('layer_height', min(@nozzle_diameters, $self->config->layer_height));
+        
+        my $lh =  min(@nozzle_diameters, $self->config->layer_height);
+        
+        $self->config->set('layer_height', $self->_adjust_layer_height($lh));
     }
     
     # init layers
@@ -113,7 +126,7 @@ sub slice {
         
             # look for an applicable custom range
             if (my $range = first { $_->[0] <= $slice_z && $_->[1] > $slice_z } @{$self->layer_height_ranges}) {
-                $height = $range->[2];
+                $height = $self->_adjust_layer_height($range->[2]);
         
                 # if user set custom height to zero we should just skip the range and resume slicing over it
                 if ($height == 0) {

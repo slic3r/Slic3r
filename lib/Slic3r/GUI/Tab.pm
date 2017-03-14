@@ -1084,7 +1084,7 @@ sub build {
     my (%params) = @_;
     
     $self->init_config_options(qw(
-        bed_shape z_offset has_heatbed
+        bed_shape z_offset z_steps_per_mm has_heatbed
         gcode_flavor use_relative_e_distances
         serial_port serial_speed
         octoprint_host octoprint_apikey
@@ -1233,6 +1233,7 @@ sub build {
             $optgroup->append_single_option_line('use_volumetric_e');
             $optgroup->append_single_option_line('pressure_advance');
             $optgroup->append_single_option_line('vibration_limit');
+            $optgroup->append_single_option_line('z_steps_per_mm');
         }
     }
     {

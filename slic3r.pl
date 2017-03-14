@@ -347,6 +347,8 @@ $j
                         (default: 100,100)
     --z-offset          Additional height in mm to add to vertical coordinates
                         (+/-, default: $config->{z_offset})
+    --z-steps-per-mm    Number of full steps per mm of the Z axis. Experimental feature for
+                        preventing rounding issues.
     --gcode-flavor      The type of G-code to generate (reprap/teacup/repetier/makerware/sailfish/mach3/machinekit/smoothie/no-extrusion,
                         default: $config->{gcode_flavor})
     --use-relative-e-distances Enable this to get relative E values (default: no)

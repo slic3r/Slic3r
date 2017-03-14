@@ -427,6 +427,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionFloat               vibration_limit;
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
+    ConfigOptionFloat               z_steps_per_mm;
     
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
@@ -488,6 +489,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(vibration_limit);
         OPT_PTR(wipe);
         OPT_PTR(z_offset);
+        OPT_PTR(z_steps_per_mm);
         
         // look in parent class
         ConfigOption* opt;
