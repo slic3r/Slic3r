@@ -217,7 +217,7 @@ ConfigDef::add(const t_config_option_key &opt_key, ConfigOptionType type)
 ConfigOptionDef*
 ConfigDef::add(const t_config_option_key &opt_key, const ConfigOptionDef &def)
 {
-    this->options.emplace(opt_key, def);
+    this->options.insert(std::make_pair(opt_key, def));
     return &this->options[opt_key];
 }
 
