@@ -205,6 +205,7 @@ pp \
        -M ExtUtils::XSpp::Typemap::wrapper \
        -M ExtUtils::testlib \
        -M File::Listing \
+       -M File::Basename \
        -M FindBin \
        -M Getopt::Long \
        -M Growl::GNTP \
