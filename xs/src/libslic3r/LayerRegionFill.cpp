@@ -228,8 +228,13 @@ LayerRegion::make_fill()
             f->min_spacing = flow.spacing();
         }
         
-        f->endpoints_overlap = this->region()->config.get_abs_value("infill_overlap",
-            (perimeter_spacing + scale_(f->min_spacing))/2);
+        if (is_bridge) {
+            f->endpoints_overlap = this->region()->config.get_abs_value("bridge_infill_overlap",
+                (perimeter_spacing + scale_(f->min_spacing))/2);
+        } else {
+            f->endpoints_overlap = this->region()->config.get_abs_value("infill_overlap",
+                (perimeter_spacing + scale_(f->min_spacing))/2);
+        }
 
         f->layer_id = this->layer()->id();
         f->z        = this->layer()->print_z;

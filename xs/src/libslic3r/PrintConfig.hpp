@@ -219,6 +219,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
+    ConfigOptionFloatOrPercent      bridge_infill_overlap;
     ConfigOptionFloat               infill_speed;
     ConfigOptionBool                overhangs;
     ConfigOptionInt                 perimeter_extruder;
@@ -260,6 +261,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         OPT_PTR(infill_extrusion_width);
         OPT_PTR(infill_every_layers);
         OPT_PTR(infill_overlap);
+        OPT_PTR(bridge_infill_overlap);
         OPT_PTR(infill_speed);
         OPT_PTR(overhangs);
         OPT_PTR(perimeter_extruder);

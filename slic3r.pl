@@ -580,6 +580,8 @@ $j
     --support-material-extrusion-width
                         Set a different extrusion width for support material
     --infill-overlap    Overlap between infill and perimeters (default: $config->{infill_overlap})
+    --bridge-infill-overlap
+                        Overlap between bridge infill and perimeters (default: $config->{bridge_infill_overlap})
     --bridge-flow-ratio Multiplier for extrusion when bridging (> 0, default: $config->{bridge_flow_ratio})
   
    Multiple extruder options:
