@@ -33,7 +33,7 @@ sub config {
                 for grep $external_config->has($_), @$keys;
             
             # For extra_keys we don't populate defaults.
-            if ($extra_keys) {
+            if ($extra_keys && !$self->external) {
                 $config->set($_, $external_config->get($_))
                     for grep $external_config->has($_), @$extra_keys;
             }

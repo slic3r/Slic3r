@@ -656,7 +656,7 @@ sub load_presets {
             }
             
             my $selected = shift @sel;
-            if ($selected <= $#presets) {
+            if (defined $selected && $selected <= $#presets) {
                 # call SetSelection() only after SetString() otherwise the new string
                 # won't be picked up as the visible string
                 $choice->SetSelection($selected);
