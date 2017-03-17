@@ -415,11 +415,7 @@ sub quick_slice {
         
         $sprint->apply_config($config);
         $sprint->set_model($model);
-        
-        {
-            my $extra = $self->extra_variables;
-            $sprint->placeholder_parser->set($_, $extra->{$_}) for keys %$extra;
-        }
+        # FIXME: populate placeholders (preset names etc.)
         
         # select output file
         my $output_file;
