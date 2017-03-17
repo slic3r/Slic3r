@@ -14,7 +14,7 @@ use Slic3r::Geometry::Clipper qw(diff);
 has '_print' => (
     is      => 'ro',
     default => sub { Slic3r::Print->new },
-    handles => [qw(apply_config extruders output_filepath
+    handles => [qw(apply_config config extruders output_filepath
                     total_used_filament total_extruded_volume
                     placeholder_parser process)],
 );

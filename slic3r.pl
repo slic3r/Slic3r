@@ -29,6 +29,7 @@ my %cli_options = ();
         'debug'                 => \$Slic3r::debug,
         'gui'                   => \$opt{gui},
         'o|output=s'            => \$opt{output},
+        'j|threads=i'           => \$opt{threads},
         
         'save=s'                => \$opt{save},
         'load=s@'               => \$opt{load},
@@ -109,6 +110,7 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
         $Slic3r::GUI::no_plater     = $opt{no_plater};
         $Slic3r::GUI::mode          = $opt{gui_mode};
         $Slic3r::GUI::autosave      = $opt{autosave};
+        $Slic3r::GUI::threads       = $opt{threads};
     }
     $gui = Slic3r::GUI->new;
     setlocale(LC_NUMERIC, 'C');
@@ -263,6 +265,7 @@ if (@ARGV) {  # slicing from command line
         );
         
         $sprint->apply_config($config);
+        $sprint->config->set('threads', $opt{threads}) if $opt{threads};
         $sprint->set_model($model);
         
         if ($opt{export_svg}) {
@@ -293,7 +296,7 @@ sub usage {
     my $j = '';
     if ($Slic3r::have_threads) {
         $j = <<"EOF";
-    -j, --threads <num> Number of threads to use (1+, default: $config->{threads})
+    -j, --threads <num> Number of threads to use
 EOF
     }
     

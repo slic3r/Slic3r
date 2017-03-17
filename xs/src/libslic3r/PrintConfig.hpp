@@ -624,6 +624,7 @@ class CLIConfig
     ConfigOptionString              save;
     ConfigOptionFloat               scale;
     ConfigOptionPoint3              scale_to_fit;
+    ConfigOptionBool                threads;
     
     CLIConfig() : ConfigBase(), StaticConfig() {
         this->def = &cli_config_def;
@@ -647,6 +648,7 @@ class CLIConfig
         OPT_PTR(save);
         OPT_PTR(scale);
         OPT_PTR(scale_to_fit);
+        OPT_PTR(threads);
         
         return NULL;
     };

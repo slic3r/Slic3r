@@ -1383,7 +1383,6 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("threads", coInt);
     def->label = "Threads";
     def->tooltip = "Threads are used to parallelize long-running tasks. Optimal threads number is slightly above the number of available cores/processors.";
-    def->cli = "threads|j=i";
     def->readonly = true;
     def->min = 1;
     {

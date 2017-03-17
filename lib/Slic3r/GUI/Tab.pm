@@ -497,7 +497,7 @@ sub build {
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
         infill_overlap bridge_flow_ratio
-        xy_size_compensation threads resolution
+        xy_size_compensation resolution
     ));
     $self->{config}->set('print_settings_id', '');
     
@@ -686,7 +686,6 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Other');
             $optgroup->append_single_option_line('xy_size_compensation');
-            $optgroup->append_single_option_line('threads') if $Slic3r::have_threads;
             $optgroup->append_single_option_line('resolution');
         }
     }

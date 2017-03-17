@@ -60,6 +60,7 @@ our $no_controller;
 our $no_plater;
 our $mode;
 our $autosave;
+our $threads;
 our @cb;
 
 our $Settings = {
@@ -70,8 +71,8 @@ our $Settings = {
         invert_zoom => 0,
         background_processing => 0,
         # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
-        # By default, Prusa has the controller hidden.
-        no_controller => 1,
+        no_controller => 0,
+        threads => $Slic3r::Config::Options->{threads}{default},
     },
 };
 
@@ -121,16 +122,15 @@ sub OnInit {
     my $last_version;
     if (-f "$enc_datadir/slic3r.ini") {
         my $ini = eval { Slic3r::Config->read_ini("$datadir/slic3r.ini") };
-        $Settings = $ini if $ini;
-        $last_version = $Settings->{_}{version};
-        $Settings->{_}{mode} ||= 'expert';
-        $Settings->{_}{autocenter} //= 1;
-        $Settings->{_}{invert_zoom} //= 0;
-        $Settings->{_}{background_processing} //= 1;
-        # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
-        $Settings->{_}{no_controller} //= 1;
+        if ($ini) {
+            $last_version = $ini->{_}{version};
+            $ini->{_}{$_} = $Settings->{_}{$_}
+                for grep !exists $ini->{_}{$_}, keys %{$Settings->{_}};
+            $Settings = $ini;
+        }
     }
     $Settings->{_}{version} = $Slic3r::VERSION;
+    $Settings->{_}{threads} = $threads if $threads;
     $self->save_settings;
     
     # application frame

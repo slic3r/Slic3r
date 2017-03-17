@@ -1157,6 +1157,10 @@ sub start_background_process {
         return;
     }
     
+    if ($Slic3r::GUI::Settings->{_}{threads}) {
+        $self->{print}->config->set('threads', $Slic3r::GUI::Settings->{_}{threads});
+    }
+    
     # start thread
     @_ = ();
     $self->{process_thread} = Slic3r::spawn_thread(sub {
