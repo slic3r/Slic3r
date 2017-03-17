@@ -9,6 +9,8 @@ use Slic3r::Geometry qw(unscale);
 
 sub BUILD {
     my ($self) = @_;
+    
+    $self->reader->Z($self->config->z_offset);
     $self->reader->apply_print_config($self->config);
 }
 
