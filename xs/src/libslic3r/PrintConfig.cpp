@@ -818,7 +818,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = "Detect bridging perimeters";
     def->category = "Layers and Perimeters";
     def->tooltip = "Experimental option to adjust flow for overhangs (bridge flow will be used), to apply bridge speed to them and enable fan.";
-    def->cli = "overhangs!";
+    def->cli = "overhangs|detect-bridging-perimeters!";
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("perimeter_acceleration", coFloat);

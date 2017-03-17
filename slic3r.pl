@@ -466,7 +466,7 @@ $j
     --extra-perimeters  Add more perimeters when needed (default: yes)
     --avoid-crossing-perimeters Optimize travel moves so that no perimeters are crossed (default: no)
     --thin-walls        Detect single-width walls (default: yes)
-    --overhangs         Experimental option to use bridge flow, speed and fan for overhangs
+    --detect-bridging-perimeters  Detect bridging perimeters and apply bridge flow, speed and fan
                         (default: yes)
   
    Support material options:
