@@ -12,6 +12,9 @@
 #include <vector>
 #include "libslic3r.h"
 #include "Point.hpp"
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace Slic3r {
 
@@ -248,6 +251,7 @@ class ConfigOptionStrings : public ConfigOptionVector<std::string>
     };
     
     bool deserialize(std::string str, bool append = false) {
+        if (!append) this->values.clear();
         return unescape_strings_cstyle(str, this->values);
     };
 };
@@ -392,20 +396,23 @@ class ConfigOptionPoints : public ConfigOptionVector<Pointf>
     
     bool deserialize(std::string str, bool append = false) {
         if (!append) this->values.clear();
-        std::istringstream is(str);
-        std::string point_str;
-        while (std::getline(is, point_str, ',')) {
-            Pointf point;
-            std::istringstream iss(point_str);
-            std::string coord_str;
-            if (std::getline(iss, coord_str, 'x')) {
-                std::istringstream(coord_str) >> point.x;
-                if (std::getline(iss, coord_str, 'x')) {
-                    std::istringstream(coord_str) >> point.y;
-                }
+        
+        std::vector<std::string> tokens;
+        boost::split(tokens, str, boost::is_any_of("x,"));
+        if (tokens.size() % 2) return false;
+        
+        try {
+            for (size_t i = 0; i < tokens.size(); ++i) {
+                Pointf point;
+                point.x = boost::lexical_cast<coordf_t>(tokens[i]);
+                point.y = boost::lexical_cast<coordf_t>(tokens[++i]);
+                this->values.push_back(point);
             }
-            this->values.push_back(point);
+        } catch (boost::bad_lexical_cast &e) {
+            printf("%s\n", e.what());
+            return false;
         }
+        
         return true;
     };
 };
@@ -691,6 +698,7 @@ class DynamicConfig : public virtual ConfigBase
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false);
     t_config_option_keys keys() const;
     void erase(const t_config_option_key &opt_key);
+    void read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra);
     void read_cli(const int argc, const char **argv, t_config_option_keys* extra);
     
     private:

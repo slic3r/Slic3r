@@ -106,7 +106,6 @@ bool unescape_string_cstyle(const std::string &str, std::string &str_out)
 
 bool unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out)
 {
-    out.clear();
     if (str.empty())
         return true;
 
@@ -501,55 +500,108 @@ DynamicConfig::erase(const t_config_option_key &opt_key) {
 }
 
 void
+DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra)
+{
+    std::vector<const char*> _argv;
+    
+    // push a bogus executable name (argv[0])
+    _argv.push_back("");
+
+    for (size_t i = 0; i < tokens.size(); ++i)
+        _argv.push_back(const_cast<const char*>(tokens[i].c_str()));
+    
+    this->read_cli(_argv.size(), &_argv[0], extra);
+}
+
+void
 DynamicConfig::read_cli(const int argc, const char** argv, t_config_option_keys* extra)
 {
+    // cache the CLI option => opt_key mapping
+    std::map<std::string,std::string> opts;
+    for (const auto &oit : this->def->options) {
+        std::string cli = oit.second.cli;
+        cli = cli.substr(0, cli.find("="));
+        boost::trim_right_if(cli, boost::is_any_of("!"));
+        std::vector<std::string> tokens;
+        boost::split(tokens, cli, boost::is_any_of("|"));
+        for (const std::string &t : tokens)
+            opts[t] = oit.first;
+    }
+    
     bool parse_options = true;
     for (int i = 1; i < argc; ++i) {
         std::string token = argv[i];
         
+        // Store non-option arguments in the provided vector.
+        if (!parse_options || !boost::starts_with(token, "-")) {
+            extra->push_back(token);
+            continue;
+        }
+        
+        
+        // Stop parsing tokens as options when -- is supplied.
         if (token == "--") {
-            // stop parsing tokens as options
             parse_options = false;
-        } else if (parse_options && boost::starts_with(token, "-")) {
-            boost::algorithm::trim_left_if(token, boost::algorithm::is_any_of("-"));
-            // TODO: handle --key=value
-            
-            // look for the option def
-            t_config_option_key opt_key;
-            const ConfigOptionDef* optdef;
-            for (t_optiondef_map::const_iterator oit = this->def->options.begin();
-                oit != this->def->options.end(); ++oit) {
-                optdef  = &oit->second;
-                
-                if (optdef->cli == token
-                    || optdef->cli == token + '!'
-                    || boost::starts_with(optdef->cli, token + "=")
-                    || boost::starts_with(optdef->cli, token + "|")
-                    || (token.length() == 1 && boost::contains(optdef->cli, "|" + token))) {
-                    opt_key = oit->first;
-                    break;
-                }
+            continue;
+        }
+        
+        // Remove leading dashes
+        boost::trim_left_if(token, boost::is_any_of("-"));
+        
+        // Remove the "no-" prefix used to negate boolean options.
+        bool no = false;
+        if (boost::starts_with(token, "no-")) {
+            no = true;
+            boost::replace_first(token, "no-", "");
+        }
+        
+        // Read value when supplied in the --key=value form.
+        std::string value;
+        {
+            size_t equals_pos = token.find("=");
+            if (equals_pos != std::string::npos) {
+                value = token.substr(equals_pos+1);
+                token.erase(equals_pos);
             }
-            
-            if (opt_key.empty()) {
-                printf("Warning: unknown option --%s\n", token.c_str());
+        }
+        
+        // Look for the cli -> option mapping.
+        const auto it = opts.find(token);
+        if (it == opts.end()) {
+            printf("Warning: unknown option --%s\n", token.c_str());
+            continue;
+        }
+        const t_config_option_key opt_key = it->second;
+        const ConfigOptionDef &optdef = this->def->options.at(opt_key);
+        
+        // If the option type expects a value and it was not already provided,
+        // look for it in the next token.
+        if (optdef.type != coBool && optdef.type != coBools && value.empty()) {
+            if (i == (argc-1)) {
+                printf("No value supplied for --%s\n", token.c_str());
                 continue;
             }
-            
-            if (ConfigOptionBool* opt = this->opt<ConfigOptionBool>(opt_key, true)) {
-                opt->value = !boost::starts_with(token, "no-");
-            } else if (ConfigOptionBools* opt = this->opt<ConfigOptionBools>(opt_key, true)) {
-                opt->values.push_back(!boost::starts_with(token, "no-"));
-            } else {
-                // we expect one more token carrying the value
-                if (i == (argc-1)) {
-                    printf("No value supplied for --%s\n", token.c_str());
-                    exit(1);
-                }
-                this->set_deserialize(opt_key, argv[++i], true);
-            }
+            value = argv[++i];
+        }
+        
+        // Store the option value.
+        const bool existing = this->has(opt_key);
+        if (ConfigOptionBool* opt = this->opt<ConfigOptionBool>(opt_key, true)) {
+            opt->value = !no;
+        } else if (ConfigOptionBools* opt = this->opt<ConfigOptionBools>(opt_key, true)) {
+            if (!existing) opt->values.clear(); // remove the default values
+            opt->values.push_back(!no);
+        } else if (ConfigOptionStrings* opt = this->opt<ConfigOptionStrings>(opt_key, true)) {
+            if (!existing) opt->values.clear(); // remove the default values
+            opt->deserialize(value, true);
+        } else if (ConfigOptionFloats* opt = this->opt<ConfigOptionFloats>(opt_key, true)) {
+            if (!existing) opt->values.clear(); // remove the default values
+            opt->deserialize(value, true);
+        } else if (ConfigOptionPoints* opt = this->opt<ConfigOptionPoints>(opt_key, true)) {
+            if (!existing) opt->values.clear(); // remove the default values
+            opt->deserialize(value, true);
         } else {
-            extra->push_back(token);
+            this->set_deserialize(opt_key, value, true);
         }
     }
 }
