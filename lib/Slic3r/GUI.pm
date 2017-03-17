@@ -297,7 +297,7 @@ sub have_version_check {
     my ($self) = @_;
     
     # return an explicit 0
-    return ($Slic3r::have_threads && $Slic3r::build && $have_LWP) || 0;
+    return ($Slic3r::have_threads && $Slic3r::VERSION !~ /-dev$/ && $have_LWP) || 0;
 }
 
 sub check_version {
