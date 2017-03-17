@@ -11,7 +11,7 @@ use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad rad2deg);
 use LWP::UserAgent;
 use threads::shared qw(shared_clone);
 use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :listctrl :misc 
-    :panel :sizer :toolbar :window wxTheApp :notebook :combobox);
+    :panel :sizer :toolbar :window wxTheApp :notebook :combobox :checkbox);
 use Wx::Event qw(EVT_BUTTON EVT_COMMAND EVT_KEY_DOWN EVT_LIST_ITEM_ACTIVATED 
     EVT_LIST_ITEM_DESELECTED EVT_LIST_ITEM_SELECTED EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL 
     EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED);
@@ -220,6 +220,12 @@ sub new {
     #$self->{btn_export_stl}->SetFont($Slic3r::GUI::small_font);
     $self->{btn_print}->Hide;
     $self->{btn_send_gcode}->Hide;
+    $self->{chk_print_after_upload} = Wx::CheckBox->new($self, -1, "Print after upload", wxDefaultPosition, [-1,30], wxCHK_2STATE);
+    $self->{chk_rename_on_upload} = Wx::CheckBox->new($self, -1, "Rename on upload", wxDefaultPosition, [-1,30], wxCHK_2STATE);
+    $self->{chk_override_file} = Wx::CheckBox->new($self, -1, "Override existing file", wxDefaultPosition, [-1,30], wxCHK_2STATE);
+    $self->{chk_print_after_upload}->Hide;
+    $self->{chk_rename_on_upload}->Hide;
+    $self->{chk_override_file}->Hide;    
     
     if ($Slic3r::GUI::have_button_icons) {
         my %icons = qw(
@@ -255,30 +261,34 @@ sub new {
     });
     EVT_BUTTON($self, $self->{btn_send_gcode}, sub {
         my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
-        $filename = Wx::GetTextFromUser("Save to printer with the following name:",
-            "OctoPrint", $filename, $self);
+        if ($self->{chk_rename_on_upload}->IsChecked()) {
+            $filename = Wx::GetTextFromUser("Save to printer with the following name:",
+                "OctoPrint", $filename, $self);
+        }
         
-        my $process_dialog = Wx::ProgressDialog->new('Querying OctoPrint…', "Checking whether file already exists…", 100, $self, 0);
-        $process_dialog->Pulse;
-        
-        my $ua = LWP::UserAgent->new;
-        $ua->timeout(5);
-        my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
-        $process_dialog->Destroy;
-        if ($res->is_success) {
-            if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
-                my $dialog = Wx::MessageDialog->new($self,
-                    "It looks like a file with the same name already exists in the server. "
-                        . "Shall I overwrite it?",
-                    'OctoPrint', wxICON_WARNING | wxYES | wxNO);
-                return if $dialog->ShowModal() == wxID_NO;
+        if (!$self->{chk_override_file}->IsChecked()) {
+            my $process_dialog = Wx::ProgressDialog->new('Querying OctoPrint…', "Checking whether file already exists…", 100, $self, 0);
+            $process_dialog->Pulse;
+            
+            my $ua = LWP::UserAgent->new;
+            $ua->timeout(5);
+            my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
+            $process_dialog->Destroy;
+            if ($res->is_success) {
+                if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
+                    my $dialog = Wx::MessageDialog->new($self,
+                        "It looks like a file with the same name already exists in the server. "
+                            . "Shall I overwrite it?",
+                        'OctoPrint', wxICON_WARNING | wxYES | wxNO);
+                    return if $dialog->ShowModal() == wxID_NO;
+                }
             }
         }
         
         my $dialog = Wx::MessageDialog->new($self,
             "Shall I start the print after uploading the file?",
             'OctoPrint', wxICON_QUESTION | wxYES | wxNO);
-        $self->{send_gcode_file_print} = ($dialog->ShowModal() == wxID_YES);
+        $self->{send_gcode_file_print} = $self->{chk_print_after_upload}->IsChecked();
         
         $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/$filename");
     });
@@ -467,12 +477,25 @@ sub new {
         $buttons_sizer->AddStretchSpacer(1);
         $buttons_sizer->Add($self->{btn_export_stl}, 0, wxALIGN_RIGHT, 0);
         $buttons_sizer->Add($self->{btn_print}, 0, wxALIGN_RIGHT, 0);
-        $buttons_sizer->Add($self->{btn_send_gcode}, 0, wxALIGN_RIGHT, 0);
         $buttons_sizer->Add($self->{btn_export_gcode}, 0, wxALIGN_RIGHT, 0);
+
+        my $octoprint_panel = Wx::Panel->new($self, -1);
+        my $octoprint_sizer;
+        {
+            my $octobox = Wx::StaticBox->new($octoprint_panel, -1, "Octoprint");
+            $octoprint_sizer = Wx::StaticBoxSizer->new($octobox, wxHORIZONTAL);
+            $octoprint_sizer->Add($self->{btn_send_gcode}, 0, wxALIGN_RIGHT, 0);
+            $octoprint_sizer->Add($self->{chk_rename_on_upload}, 0, wxALIGN_RIGHT, 0);
+            $octoprint_sizer->Add($self->{chk_override_file}, 0, wxALIGN_RIGHT, 0);
+            $octoprint_sizer->Add($self->{chk_print_after_upload}, 0, wxALIGN_RIGHT, 0);
+        }
+
+        $octoprint_panel->Hide;
         
         my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
         $right_sizer->Add($presets, 0, wxEXPAND | wxTOP, 10) if defined $presets;
         $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
+        $right_sizer->Add($octoprint_sizer, 0, wxEXPAND | wxBOTTOM, 5);
         $right_sizer->Add($self->{list}, 1, wxEXPAND, 5);
         $right_sizer->Add($object_info_sizer, 0, wxEXPAND, 0);
         $right_sizer->Add($print_info_sizer, 0, wxEXPAND, 0);
@@ -1669,8 +1692,14 @@ sub on_config_change {
         } elsif ($opt_key eq 'octoprint_host') {
             if ($config->get('octoprint_host')) {
                 $self->{btn_send_gcode}->Show;
+                $self->{chk_print_after_upload}->Show;
+                $self->{chk_rename_on_upload}->Show;
+                $self->{chk_override_file}->Show;
             } else {
                 $self->{btn_send_gcode}->Hide;
+                $self->{chk_print_after_upload}->Hide;
+                $self->{chk_rename_on_upload}->Hide;
+                $self->{chk_override_file}->Hide;
             }
             $self->Layout;
         }
