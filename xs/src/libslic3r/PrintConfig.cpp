@@ -210,6 +210,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = "↳ external";
+    def->full_label = "External perimeters extrusion width";
     def->gui_type = "f_enum_open";
     def->category = "Extrusion Width";
     def->tooltip = "Set this to a non-zero value to set a manual extrusion width for external perimeters. If auto is chosen, a value will be used that maximizes accuracy of the external visible surfaces. If expressed as percentage (for example 200%) it will be computed over layer height.";
@@ -222,6 +223,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("external_perimeter_speed", coFloatOrPercent);
     def->label = "↳ external";
+    def->full_label = "External perimeters speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "This separate setting will affect the speed of external perimeters (the visible ones). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above.";
@@ -458,6 +460,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("fill_gaps", coBool);
     def->label = "Fill gaps";
+    def->category = "Infill";
     def->tooltip = "If this is enabled, gaps will be filled with single passes. Enable this for better quality, disable it for shorter printing times.";
     def->cli = "fill-gaps!";
     def->default_value = new ConfigOptionBool(true);
@@ -554,6 +557,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("gap_fill_speed", coFloat);
     def->label = "↳ gaps";
+    def->full_label = "Gap fill speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "Speed for filling gaps. Since these are usually single lines you might want to use a low speed for better sticking. If expressed as percentage (for example: 80%) it will be calculated on the infill speed setting above.";
@@ -1102,6 +1106,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("small_perimeter_speed", coFloatOrPercent);
     def->label = "↳ small";
+    def->full_label = "Small perimeters speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "This separate setting will affect the speed of perimeters having radius <= 6.5mm (usually holes). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above.";
@@ -1141,6 +1146,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("solid_infill_extrusion_width", coFloatOrPercent);
     def->label = "↳ solid";
+    def->full_label = "Solid infill extrusion width";
     def->gui_type = "f_enum_open";
     def->category = "Extrusion Width";
     def->tooltip = "Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. If expressed as percentage (for example 90%) it will be computed over layer height.";
@@ -1153,6 +1159,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("solid_infill_speed", coFloatOrPercent);
     def->label = "↳ solid";
+    def->full_label = "Solid infill speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "Speed for printing solid regions (top/bottom/internal horizontal shells). This can be expressed as a percentage (for example: 80%) over the default infill speed above.";
@@ -1299,6 +1306,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
     def->label = "↳ interface";
+    def->category = "Support material interface speed";
     def->gui_type = "f_enum_open";
     def->category = "Support material";
     def->tooltip = "Speed for printing support material interface layers. If expressed as percentage (for example 50%) it will be calculated over support material speed.";
@@ -1401,6 +1409,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("top_infill_extrusion_width", coFloatOrPercent);
     def->label = "↳ top solid";
+    def->full_label = "Top solid infill extrusion width";
     def->gui_type = "f_enum_open";
     def->category = "Extrusion Width";
     def->tooltip = "Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. If expressed as percentage (for example 90%) it will be computed over layer height.";
@@ -1421,6 +1430,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("top_solid_infill_speed", coFloatOrPercent);
     def->label = "↳ top solid";
+    def->full_label = "Top solid infill speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "Speed for printing top solid layers (it only applies to the uppermost external layers and not to their internal solid layers). You may want to slow down this to get a nicer surface finish. This can be expressed as a percentage (for example: 80%) over the solid infill speed above.";
