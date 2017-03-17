@@ -50,7 +50,7 @@ use constant PI             => 3.1415927;
 
 # Constant to determine if Vertex Buffer objects are used to draw
 # bed grid and the cut plane for object separation.
-use constant HAS_VBO        => 1;
+use constant HAS_VBO        => eval { glGenBuffersARB_p(0); 1 };
 
 
 # phi / theta angles to orient the camera.
