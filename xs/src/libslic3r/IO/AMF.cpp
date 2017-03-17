@@ -528,18 +528,23 @@ AMF::write(Model& model, std::string output_file)
         std::vector<int> vertices_offsets;
         int              num_vertices = 0;
         for (ModelVolume *volume : object->volumes) {
+            volume->mesh.check_topology();
             vertices_offsets.push_back(num_vertices);
-            if (! volume->mesh.repaired) 
-                CONFESS("store_amf() requires repair()");
             auto &stl = volume->mesh.stl;
             if (stl.v_shared == NULL)
                 stl_generate_shared_vertices(&stl);
             for (size_t i = 0; i < stl.stats.shared_vertices; ++ i) {
+                // Subtract origin_translation in order to restore the coordinates of the parts
+                // before they were imported. Otherwise, when this AMF file is reimported parts
+                // will be placed in the plater correctly, but we will have lost origin_translation
+                // thus any additional part added will not align with the others.
+                // In order to do this we compensate for this translation in the instance placement
+                // below.
                 fprintf(file, "         <vertex>\n");
                 fprintf(file, "           <coordinates>\n");
-                fprintf(file, "             <x>%f</x>\n", stl.v_shared[i].x);
-                fprintf(file, "             <y>%f</y>\n", stl.v_shared[i].y);
-                fprintf(file, "             <z>%f</z>\n", stl.v_shared[i].z);
+                fprintf(file, "             <x>%f</x>\n", stl.v_shared[i].x - object->origin_translation.x);
+                fprintf(file, "             <y>%f</y>\n", stl.v_shared[i].y - object->origin_translation.y);
+                fprintf(file, "             <z>%f</z>\n", stl.v_shared[i].z - object->origin_translation.z);
                 fprintf(file, "           </coordinates>\n");
                 fprintf(file, "         </vertex>\n");
             }
@@ -569,24 +574,21 @@ AMF::write(Model& model, std::string output_file)
         }
         fprintf(file, "    </mesh>\n");
         fprintf(file, "  </object>\n");
-        if (! object->instances.empty()) {
-            for (ModelInstance *instance : object->instances) {
-                char buf[512];
-                sprintf(buf,
-                    "    <instance objectid=\"%zu\">\n"
-                    "      <deltax>%lf</deltax>\n"
-                    "      <deltay>%lf</deltay>\n"
-                    "      <rz>%lf</rz>\n"
-                    "      <scale>%lf</scale>\n"
-                    "    </instance>\n",
-                    object_id,
-                    instance->offset.x,
-                    instance->offset.y,
-                    instance->rotation,
-                    instance->scaling_factor);
-                //FIXME missing instance->scaling_factor
-                instances.append(buf);
-            }
+        for (const ModelInstance* instance : object->instances) {
+            char buf[512];
+            sprintf(buf,
+                "    <instance objectid=\"%zu\">\n"
+                "      <deltax>%lf</deltax>\n"
+                "      <deltay>%lf</deltay>\n"
+                "      <rz>%lf</rz>\n"
+                "      <scale>%lf</scale>\n"
+                "    </instance>\n",
+                object_id,
+                instance->offset.x + object->origin_translation.x,
+                instance->offset.y + object->origin_translation.y,
+                instance->rotation,
+                instance->scaling_factor);
+            instances.append(buf);
         }
     }
     if (! instances.empty()) {
