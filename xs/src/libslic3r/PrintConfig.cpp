@@ -382,7 +382,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("filament_density", coFloats);
     def->label = "Density";
     def->tooltip = "Enter your filament density here. This is only for statistical information. A decent way is to weigh a known length of filament and compute the ratio of the length to volume. Better is to calculate the volume directly through displacement.";
-    def->sidetext = "g/cm^3";
+    def->sidetext = "g/cm³";
     def->cli = "filament-density=f@";
     def->min = 0;
     {
@@ -909,7 +909,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(4);
 
     def = this->add("resolution", coFloat);
-    def->label = "Resolution";
+    def->label = "Resolution (deprecated)";
     def->tooltip = "Minimum detail resolution, used to simplify the input file for speeding up the slicing job and reducing memory usage. High-resolution models often carry more detail than printers can render. Set to zero to disable any simplification and use full resolution from input.";
     def->sidetext = "mm";
     def->cli = "resolution=f";

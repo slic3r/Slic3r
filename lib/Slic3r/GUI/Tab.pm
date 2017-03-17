@@ -916,12 +916,7 @@ sub build {
             $optgroup->append_single_option_line('filament_colour', 0);
             $optgroup->append_single_option_line('filament_diameter', 0);
             $optgroup->append_single_option_line('extrusion_multiplier', 0);
-            $optgroup->append_single_option_line('filament_density', 0);
-            $optgroup->append_single_option_line('filament_cost', 0);
         }
-    
-
-
         {
             my $optgroup = $page->new_optgroup('Temperature (°C)');
         
@@ -942,6 +937,11 @@ sub build {
                 $line->append_option($optgroup->get_option('bed_temperature'));
                 $optgroup->append_line($line);
             }
+        }
+        {
+            my $optgroup = $page->new_optgroup('Optional information');
+            $optgroup->append_single_option_line('filament_density', 0);
+            $optgroup->append_single_option_line('filament_cost', 0);
         }
     }
     
@@ -1008,7 +1008,7 @@ sub build {
         }
     }
     {
-        my $page = $self->add_options_page('Custom G-code', 'cog.png');
+        my $page = $self->add_options_page('Custom G-code', 'script.png');
         {
             my $optgroup = $page->new_optgroup('Start G-code',
                 label_width => 0,
@@ -1237,7 +1237,7 @@ sub build {
         }
     }
     {
-        my $page = $self->add_options_page('Custom G-code', 'cog.png');
+        my $page = $self->add_options_page('Custom G-code', 'script.png');
         {
             my $optgroup = $page->new_optgroup('Start G-code',
                 label_width => 0,
