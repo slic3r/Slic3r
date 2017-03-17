@@ -1,5 +1,4 @@
-# Included in ObjectSettingsDialog -> ObjectPartsPanel.
-# Maintains, displays, adds and removes overrides of slicing parameters for an object and its modifier mesh.
+# Maintains, displays, adds and removes overrides of slicing parameters.
 
 package Slic3r::GUI::Plater::OverrideSettingsPanel;
 use strict;
@@ -19,10 +18,11 @@ use constant ICON_MODIFIERMESH  => 2;
 sub new {
     my $class = shift;
     my ($parent, %params) = @_;
-    my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, $params{size} // wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{default_config} = Slic3r::Config->new;
     $self->{config} = Slic3r::Config->new;
     $self->{on_change} = $params{on_change};
+    $self->{editable} = 1;
     $self->{fixed_options} = {};
     
     $self->{sizer} = Wx::BoxSizer->new(wxVERTICAL);
@@ -64,17 +64,20 @@ sub new {
     return $self;
 }
 
+# Sets the config used to get the default values for user-added options.
 sub set_default_config {
     my ($self, $config) = @_;
     $self->{default_config} = $config;
 }
 
+# Sets the target config, whose options will be displayed in the OptionsGroup.
 sub set_config {
     my ($self, $config) = @_;
     $self->{config} = $config;
     $self->update_optgroup;
 }
 
+# Sets the options listed in the Add button.
 sub set_opt_keys {
     my ($self, $opt_keys) = @_;
     
@@ -85,6 +88,7 @@ sub set_opt_keys {
     $self->{options} = [ sort { $self->{option_labels}{$a} cmp $self->{option_labels}{$b} } @$opt_keys ];
 }
 
+# Sets the options that user can't remove.
 sub set_fixed_options {
     my ($self, $opt_keys) = @_;
     $self->{fixed_options} = { map {$_ => 1} @$opt_keys };
@@ -97,6 +101,8 @@ sub update_optgroup {
     $self->{options_sizer}->Clear(1);
     return if !defined $self->{config};
     
+    $self->{btn_add}->Show($self->{editable});
+    
     my %categories = ();
     foreach my $opt_key (@{$self->{config}->get_keys}) {
         my $category = $Slic3r::Config::Options->{$opt_key}{category};
@@ -104,7 +110,8 @@ sub update_optgroup {
         push @{$categories{$category}}, $opt_key;
     }
     foreach my $category (sort keys %categories) {
-        my $optgroup = Slic3r::GUI::ConfigOptionsGroup->new(
+        my $optgroup;
+        $optgroup = Slic3r::GUI::ConfigOptionsGroup->new(
             parent          => $self,
             title           => $category,
             config          => $self->{config},
@@ -116,10 +123,11 @@ sub update_optgroup {
             extra_column    => sub {
                 my ($line) = @_;
                 
-                my $opt_key = $line->get_options->[0]->opt_id;  # we assume that we have one option per line
+                my $opt_id = $line->get_options->[0]->opt_id;  # we assume that we have one option per line
+                my ($opt_key, $opt_index) = @{ $optgroup->_opt_map->{$opt_id} };
                 
                 # disallow deleting fixed options
-                return undef if $self->{fixed_options}{$opt_key};
+                return undef if $self->{fixed_options}{$opt_key} || !$self->{editable};
                 
                 my $btn = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG),
                     wxDefaultPosition, wxDefaultSize, Wx::wxBORDER_NONE);
@@ -132,7 +140,9 @@ sub update_optgroup {
             },
         );
         foreach my $opt_key (sort @{$categories{$category}}) {
-            $optgroup->append_single_option_line($opt_key);
+            # For array options we override the first value.
+            my $opt_index = (ref($self->{config}->get($opt_key)) eq 'ARRAY') ? 0 : -1;
+            $optgroup->append_single_option_line($opt_key, $opt_index);
         }
         $self->{options_sizer}->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM, 0);
     }
@@ -152,6 +162,13 @@ sub disable {
     
     $self->{btn_add}->Disable;
     $self->Disable;
+}
+
+# Shows or hides the Add button.
+sub set_editable {
+    my ($self, $editable) = @_;
+    
+    $self->{editable} = $editable;
 }
 
 1;

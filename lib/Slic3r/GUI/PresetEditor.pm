@@ -1,7 +1,4 @@
-# The "Expert" tab at the right of the main tabbed window.
-# The "Expert" is enabled by File->Preferences dialog.
-
-package Slic3r::GUI::Tab;
+package Slic3r::GUI::PresetEditor;
 use strict;
 use warnings;
 use utf8;
@@ -22,7 +19,7 @@ sub new {
     
     # horizontal sizer
     $self->{sizer} = Wx::BoxSizer->new(wxHORIZONTAL);
-    $self->{sizer}->SetSizeHints($self);
+    #$self->{sizer}->SetSizeHints($self);
     $self->SetSizer($self->{sizer});
     
     # left vertical sizer
@@ -89,7 +86,6 @@ sub new {
     
     EVT_CHOICE($parent, $self->{presets_choice}, sub {
         $self->on_select_preset;
-        $self->_on_presets_changed;
     });
     
     EVT_BUTTON($self, $self->{btn_save_preset}, sub { $self->save_preset });
@@ -106,12 +102,15 @@ sub new {
         $self->{presets_choice}->Delete($i);
         $self->current_preset(undef);
         $self->select_preset(0);
-        $self->_on_presets_changed;
     });
     
     # C++ instance DynamicPrintConfig
     $self->{config} = Slic3r::Config->new;
     # Initialize the DynamicPrintConfig by default keys/values.
+    $self->{config}->apply(Slic3r::Config->new_from_defaults($self->options));
+    
+    
+    
     # Possible %params keys: no_controller
     $self->build(%params);
     $self->update_tree;
@@ -126,6 +125,12 @@ sub new {
 sub get_current_preset {
     my $self = shift;
     return $self->get_preset($self->current_preset);
+}
+
+sub get_current_preset_config {
+    my ($self) = @_;
+    
+    return $self->get_preset_config($self->get_current_preset);
 }
 
 sub get_preset {
@@ -151,24 +156,20 @@ sub save_preset {
             default => $default_name,
             values  => [ map $_->name, grep !$_->default && !$_->external, @{$self->{presets}} ],
         );
-        return unless $dlg->ShowModal == wxID_OK;
+        return 0 unless $dlg->ShowModal == wxID_OK;
         $name = $dlg->get_name;
     }
     
     $self->config->save(sprintf "$Slic3r::GUI::datadir/%s/%s.ini", $self->name, $name);
     $self->load_presets;
     $self->select_preset_by_name($name);
-    $self->_on_presets_changed;
+    
+    return 1;
 }
 
 sub on_value_change {
     my ($self, $cb) = @_;
     $self->{on_value_change} = $cb;
-}
-
-sub on_presets_changed {
-    my ($self, $cb) = @_;
-    $self->{on_presets_changed} = $cb;
 }
 
 # This method is supposed to be called whenever new values are loaded
@@ -183,40 +184,27 @@ sub _on_value_change {
 
 sub _update {}
 
-sub _on_presets_changed {
-    my $self = shift;
-    
-    $self->{on_presets_changed}->(
-        $self->{presets},
-        scalar($self->{presets_choice}->GetSelection),
-        $self->is_dirty,
-    ) if $self->{on_presets_changed};
-}
-
 sub on_preset_loaded {}
 sub hidden_options {}
 sub config { $_[0]->{config}->clone }
 
-sub select_default_preset {
-    my $self = shift;
-    $self->select_preset(0);
-}
-
 sub select_preset {
-    my $self = shift;
-    $self->{presets_choice}->SetSelection($_[0]);
-    $self->on_select_preset;
+    my ($self, $i, $force) = @_;
+    
+    $self->{presets_choice}->SetSelection($i);
+    $self->on_select_preset($force);
 }
 
 sub select_preset_by_name {
-    my ($self, $name) = @_;
+    my ($self, $name, $force) = @_;
     
-    $name = Unicode::Normalize::NFC($name);
-    $self->select_preset(first { $self->{presets}[$_]->name eq $name } 0 .. $#{$self->{presets}});
+    my $i = first { $self->{presets}[$_]->name eq $name } 0 .. $#{$self->{presets}};
+    return if !defined $i;
+    $self->select_preset($i, $force);
 }
 
-sub on_select_preset {
-    my $self = shift;
+sub prompt_unsaved_changes {
+    my ($self) = @_;
     
     if ($self->is_dirty) {
         my $old_preset = $self->get_current_preset;
@@ -233,27 +221,39 @@ sub on_select_preset {
         }
         
         my $changes = join "\n", map "- $_", @option_names;
-        my $confirm = Wx::MessageDialog->new($self, "$name has unsaved changes:\n$changes\n\nDiscard changes and continue anyway?",
-                                             'Unsaved Changes', wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION);
-        if ($confirm->ShowModal == wxID_NO) {
-            $self->{presets_choice}->SetSelection($self->current_preset);
-            
-            # trigger the on_presets_changed event so that we also restore the previous value
-            # in the plater selector
-            $self->_on_presets_changed;
-            return;
+        my $confirm = Wx::MessageDialog->new($self, "$name has unsaved changes:\n$changes\n\nDo you want to save them?",
+            'Unsaved Changes', wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxICON_QUESTION);
+        $confirm->SetYesNoCancelLabels('Save', 'Discard', 'Cancel');
+        my $res = $confirm->ShowModal;
+        
+        if ($res == wxID_CANCEL) {
+            return 0;
+        } elsif ($res == wxID_YES) {
+            return $self->save_preset($old_preset->default ? undef : $old_preset->name);
         }
     }
     
-    $self->current_preset($self->{presets_choice}->GetSelection);
+    return 1;
+}
+
+sub on_select_preset {
+    my ($self, $force) = @_;
+    
+    my $i = $self->{presets_choice}->GetSelection;
+    return if defined $self->current_preset && $i == $self->current_preset;
+    
+    if (!$force && defined $self->current_preset && !$self->prompt_unsaved_changes) {
+        $self->{presets_choice}->SetSelection($self->current_preset);
+        return;
+    }
+    
+    $self->current_preset($i);
     my $preset = $self->get_current_preset;
     my $preset_config = $self->get_preset_config($preset);
     eval {
         local $SIG{__WARN__} = Slic3r::GUI::warning_catcher($self);
-        foreach my $opt_key (@{$self->{config}->get_keys}) {
-            $self->{config}->set($opt_key, $preset_config->get($opt_key))
-                if $preset_config->has($opt_key);
-        }
+        $self->{config}->clear;
+        $self->{config}->apply($preset_config);
         ($preset->default || $preset->external)
             ? $self->{btn_delete_preset}->Disable
             : $self->{btn_delete_preset}->Enable;
@@ -261,12 +261,10 @@ sub on_select_preset {
         $self->_update;
         $self->on_preset_loaded;
         $self->reload_config;
-        $Slic3r::GUI::Settings->{presets}{$self->name} = $preset->file ? basename($preset->file) : '';
     };
     if ($@) {
         $@ = "I was unable to load the selected config file: $@";
         Slic3r::GUI::catch_error($self);
-        $self->select_default_preset;
     }
         
     # use CallAfter because some field triggers schedule on_change calls using CallAfter,
@@ -274,16 +272,8 @@ sub on_select_preset {
     # preset dirty again
     # (not sure this is true anymore now that update_dirty is idempotent)
     wxTheApp->CallAfter(sub {
-        $self->_on_presets_changed;
         $self->update_dirty;
     });
-    
-    wxTheApp->save_settings;
-}
-
-sub init_config_options {
-    my ($self, @opt_keys) = @_;
-    $self->{config}->apply(Slic3r::Config->new_from_defaults(@opt_keys));
 }
 
 sub add_options_page {
@@ -296,7 +286,7 @@ sub add_options_page {
         $self->{iconcount}++;
     }
     
-    my $page = Slic3r::GUI::Tab::Page->new($self, $title, $self->{iconcount});
+    my $page = Slic3r::GUI::PresetEditor::Page->new($self, $title, $self->{iconcount});
     $page->Hide;
     $self->{sizer}->Add($page, 1, wxEXPAND | wxLEFT, 5);
     push @{$self->{pages}}, $page;
@@ -345,7 +335,6 @@ sub update_dirty {
         }
     }
     $self->{presets_choice}->SetSelection($self->current_preset);  # http://trac.wxwidgets.org/ticket/13769
-    $self->_on_presets_changed;
 }
 
 sub is_dirty {
@@ -357,36 +346,23 @@ sub dirty_options {
     my $self = shift;
     
     return [] if !defined $self->current_preset;  # happens during initialization
-    return $self->get_preset_config($self->get_current_preset)->diff($self->{config});
+    
+    my $preset_config = $self->get_current_preset_config;
+    return [
+        (grep !$preset_config->has($_), @{$self->{config}->get_keys}),
+        (grep !$self->{config}->has($_), @{$preset_config->get_keys}),
+        @{ $self->{config}->diff($self->get_current_preset_config) },
+    ];
 }
 
 sub load_presets {
     my $self = shift;
     
-    $self->{presets} = [
-        Slic3r::GUI::Tab::Preset->new(
-            default => 1,
-            name    => '- default -',
-        ),
-    ];
-    
-    my %presets = wxTheApp->presets($self->name);
-    foreach my $preset_name (sort keys %presets) {
-        push @{$self->{presets}}, Slic3r::GUI::Tab::Preset->new(
-            name => $preset_name,
-            file => $presets{$preset_name},
-        );
-    }
-    
+    $self->{presets} = [ wxTheApp->presets($self->name, 1) ];
     $self->current_preset(undef);
     $self->{presets_choice}->Clear;
     $self->{presets_choice}->Append($_->name) for @{$self->{presets}};
-    {
-        # load last used preset
-        my $i = first { basename($self->{presets}[$_]->file) eq ($Slic3r::GUI::Settings->{presets}{$self->name} || '') } 1 .. $#{$self->{presets}};
-        $self->select_preset($i || 0);
-    }
-    $self->_on_presets_changed;
+    $self->select_preset(0);
 }
 
 sub load_config_file {
@@ -397,7 +373,7 @@ sub load_config_file {
     my $i = first { $self->{presets}[$_]{file} eq $file && $self->{presets}[$_]{external} } 1..$#{$self->{presets}};
     if (!$i) {
         my $preset_name = basename($file);  # keep the .ini suffix
-        push @{$self->{presets}}, Slic3r::GUI::Tab::Preset->new(
+        push @{$self->{presets}}, Slic3r::GUI::Preset->new(
             file        => $file,
             name        => $preset_name,
             external    => 1,
@@ -407,7 +383,6 @@ sub load_config_file {
     }
     $self->{presets_choice}->SetSelection($i);
     $self->on_select_preset;
-    $self->_on_presets_changed;
 }
 
 sub load_config {
@@ -424,7 +399,11 @@ sub load_config {
 
 sub get_preset_config {
     my ($self, $preset) = @_;
-    return $preset->config($self->{config}->get_keys);
+    
+    return $preset->config(
+        [ $self->options ],
+        [ $self->overriding_options ],
+    );
 }
 
 sub get_field {
@@ -448,19 +427,64 @@ sub set_value {
     return $changed;
 }
 
-package Slic3r::GUI::Tab::Print;
-use base 'Slic3r::GUI::Tab';
+sub _compatible_printers_widget {
+    my ($self) = @_;
+    
+    return sub {
+        my ($parent) = @_;
+        
+        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
+            wxBU_LEFT | wxBU_EXACTFIT);
+        $btn->SetFont($Slic3r::GUI::small_font);
+        if ($Slic3r::GUI::have_button_icons) {
+            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("printer_empty.png"), wxBITMAP_TYPE_PNG));
+        }
+        
+        my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+        $sizer->Add($btn);
+        
+        EVT_BUTTON($self, $btn, sub {
+            my @presets = map $_->name, grep !$_->default && !$_->external,
+                wxTheApp->presets('printer');
+            
+            my $dlg = Wx::MultiChoiceDialog->new($self,
+                "Select the printers this profile is compatible with.\nIf none are selected, it will be considered compatible with all of them.",
+                "Compatible printers", \@presets);
+            
+            my @selections = ();
+            foreach my $preset_name (@{ $self->{config}->get('compatible_printers') }) {
+                push @selections, first { $presets[$_] eq $preset_name } 0..$#presets;
+            }
+            $dlg->SetSelections(@selections);
+            
+            if ($dlg->ShowModal == wxID_OK) {
+                my $value = [ @presets[$dlg->GetSelections] ];
+                $self->{config}->set('compatible_printers', $value);
+                $self->update_dirty;
+                $self->_on_value_change('compatible_printers', $value);
+            }
+        });
+        
+        return $sizer;
+    };
+}
+
+sub options { die "Unimplemented options()"; }
+sub overridable_options { () }
+sub overriding_options  { () }
+
+package Slic3r::GUI::PresetEditor::Print;
+use base 'Slic3r::GUI::PresetEditor';
 
 use List::Util qw(first any);
-use Wx qw(:icon :dialog :id);
+use Wx qw(:icon :dialog :id :misc :button :sizer);
+use Wx::Event qw(EVT_BUTTON);
 
 sub name { 'print' }
 sub title { 'Print Settings' }
 
-sub build {
-    my $self = shift;
-    
-    $self->init_config_options(qw(
+sub options {
+    return qw(
         layer_height first_layer_height
         perimeters spiral_vase
         top_solid_layers bottom_solid_layers
@@ -497,9 +521,54 @@ sub build {
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
         infill_overlap bridge_flow_ratio
-        xy_size_compensation threads resolution
-    ));
-    $self->{config}->set('print_settings_id', '');
+        xy_size_compensation threads resolution overridable compatible_printers
+        print_settings_id
+    )
+}
+
+sub build {
+    my $self = shift;
+    
+    my $overridable_widget = sub {
+        my ($parent) = @_;
+        
+        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
+            wxBU_LEFT | wxBU_EXACTFIT);
+        $btn->SetFont($Slic3r::GUI::small_font);
+        if ($Slic3r::GUI::have_button_icons) {
+            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG));
+        }
+        
+        my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+        $sizer->Add($btn);
+        
+        EVT_BUTTON($self, $btn, sub {
+            my %options = (
+                map { $_ => sprintf('%s > %s', $Slic3r::Config::Options->{$_}{category}, $Slic3r::Config::Options->{$_}{full_label} // $Slic3r::Config::Options->{$_}{label}) }
+                    map @{$_->get_keys}, Slic3r::Config::PrintObject->new, Slic3r::Config::PrintRegion->new
+            );
+            my @opt_keys = sort { $options{$a} cmp $options{$b} } keys %options;
+            
+            my $dlg = Wx::MultiChoiceDialog->new($self, "Selected options will be displayed in the plater screen for quick changes.",
+                "Overridable options",
+                [ map $options{$_}, @opt_keys ]);
+            
+            my @selections = ();
+            foreach my $opt_key (@{ $self->{config}->get('overridable') }) {
+                push @selections, first { $opt_keys[$_] eq $opt_key } 0..$#opt_keys;
+            }
+            $dlg->SetSelections(@selections);
+            
+            if ($dlg->ShowModal == wxID_OK) {
+                my $value = [ @opt_keys[$dlg->GetSelections] ];
+                $self->{config}->set('overridable', $value);
+                $self->update_dirty;
+                $self->_on_value_change('overridable', $value);
+            }
+        });
+        
+        return $sizer;
+    };
     
     {
         my $page = $self->add_options_page('Layers and perimeters', 'layers.png');
@@ -643,7 +712,7 @@ sub build {
     }
     
     {
-        my $page = $self->add_options_page('Multiple Extruders', 'funnel.png');
+        my $page = $self->add_options_page('Multiple extruders', 'funnel.png');
         {
             my $optgroup = $page->new_optgroup('Extruders');
             $optgroup->append_single_option_line('perimeter_extruder');
@@ -728,7 +797,7 @@ sub build {
     }
     
     {
-        my $page = $self->add_options_page('Notes', 'note.png');
+        my $page = $self->add_options_page('Notes and preferences', 'note.png');
         {
             my $optgroup = $page->new_optgroup('Notes',
                 label_width => 0,
@@ -737,6 +806,23 @@ sub build {
             $option->full_width(1);
             $option->height(250);
             $optgroup->append_single_option_line($option);
+        }
+        {
+            my $optgroup = $page->new_optgroup('Profile preferences');
+            {
+                my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                    label       => 'Overridable settings',
+                    widget      => $overridable_widget,
+                );
+                $optgroup->append_line($line);
+            }
+            {
+                my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                    label       => 'Compatible printers',
+                    widget      => $self->_compatible_printers_widget,
+                );
+                $optgroup->append_line($line);
+            }
         }
     }
 }
@@ -890,24 +976,34 @@ sub _update {
 
 sub hidden_options { !$Slic3r::have_threads ? qw(threads) : () }
 
-package Slic3r::GUI::Tab::Filament;
-use base 'Slic3r::GUI::Tab';
+package Slic3r::GUI::PresetEditor::Filament;
+use base 'Slic3r::GUI::PresetEditor';
+
+use Wx qw(wxTheApp);
 
 sub name { 'filament' }
 sub title { 'Filament Settings' }
 
-sub build {
-    my $self = shift;
-    
-    $self->init_config_options(qw(
+sub options {
+    return qw(
         filament_colour filament_diameter filament_notes filament_max_volumetric_speed extrusion_multiplier filament_density filament_cost
         temperature first_layer_temperature bed_temperature first_layer_bed_temperature
-        fan_always_on cooling
+        fan_always_on cooling compatible_printers
         min_fan_speed max_fan_speed bridge_fan_speed disable_fan_first_layers
         fan_below_layer_time slowdown_below_layer_time min_print_speed
         start_filament_gcode end_filament_gcode
-    ));
-    $self->{config}->set('filament_settings_id', '');
+        filament_settings_id
+    );
+}
+
+sub overriding_options {
+    return (
+        Slic3r::GUI::PresetEditor::Printer->overridable_options,
+    );
+}
+
+sub build {
+    my $self = shift;
     
     {
         my $page = $self->add_options_page('Filament', 'spool.png');
@@ -988,26 +1084,6 @@ sub build {
     }
 
     {
-        my $page = $self->add_options_page('Advanced', 'wrench.png');
-        {
-            my $optgroup = $page->new_optgroup('Print speed override');
-            $optgroup->append_single_option_line('filament_max_volumetric_speed', 0);
-        }
-    }
-
-    {
-        my $page = $self->add_options_page('Notes', 'note.png');
-        {
-            my $optgroup = $page->new_optgroup('Notes',
-                label_width => 0,
-            );
-            my $option = $optgroup->get_option('filament_notes', 0);
-            $option->full_width(1);
-            $option->height(250);
-            $optgroup->append_single_option_line($option);
-        }
-    }
-    {
         my $page = $self->add_options_page('Custom G-code', 'cog.png');
         {
             my $optgroup = $page->new_optgroup('Start G-code',
@@ -1028,6 +1104,81 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
+    
+    {
+        my $page = $self->add_options_page('Overrides', 'wrench.png');
+        {
+            my $optgroup = $page->new_optgroup('Profile preferences');
+            my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                label       => 'Compatible printers',
+                widget      => $self->_compatible_printers_widget,
+            );
+            $optgroup->append_line($line);
+        }
+        {
+            my $optgroup = $page->new_optgroup('Overrides');
+            $optgroup->append_single_option_line('filament_max_volumetric_speed', 0);
+            
+            # Populate the overrides config.
+            my @overridable = $self->overriding_options;
+            $self->{overrides_config} = Slic3r::Config->new;
+            
+            # Populate the defaults with the current preset.
+            $self->{overrides_default_config} = Slic3r::Config->new;
+            $self->{overrides_default_config}->apply_only
+                (wxTheApp->{mainframe}->{plater}->config, \@overridable);
+            
+            my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                label       => '',
+                full_width  => 1,
+                widget      => sub {
+                    my ($parent) = @_;
+                    
+                    $self->{overrides_panel} = my $panel = Slic3r::GUI::Plater::OverrideSettingsPanel->new($parent,
+                        size => [-1, 300],
+                        on_change => sub {
+                            $self->{config}->erase($_) for @overridable;
+                            $self->{config}->apply($self->{overrides_config});
+                            $self->update_dirty;
+                        });
+                    $panel->set_editable(1);
+                    $panel->set_default_config($self->{overrides_default_config});
+                    $panel->set_config($self->{overrides_config});
+                    $panel->set_opt_keys([@overridable]);
+                    
+                    return $panel;
+                },
+            );
+            $optgroup->append_line($line);
+        }
+    }
+    
+    {
+        my $page = $self->add_options_page('Notes', 'note.png');
+        {
+            my $optgroup = $page->new_optgroup('Notes',
+                label_width => 0,
+            );
+            my $option = $optgroup->get_option('filament_notes', 0);
+            $option->full_width(1);
+            $option->height(250);
+            $optgroup->append_single_option_line($option);
+        }
+    }
+}
+
+sub reload_config {
+    my ($self) = @_;
+    
+    $self->{overrides_config}->clear;
+    foreach my $opt_key (@{$self->{overrides_default_config}->get_keys}) {
+        if ($self->{config}->has($opt_key)) {
+            $self->{overrides_config}->set($opt_key, $self->{config}->get($opt_key));
+        }
+    }
+    $self->{overrides_panel}->update_optgroup;
+    
+    $self->SUPER::reload_config;
 }
 
 sub _update {
@@ -1071,19 +1222,16 @@ sub _update_description {
     $self->{description_line}->SetText($msg);
 }
 
-package Slic3r::GUI::Tab::Printer;
-use base 'Slic3r::GUI::Tab';
+package Slic3r::GUI::PresetEditor::Printer;
+use base 'Slic3r::GUI::PresetEditor';
 use Wx qw(wxTheApp :sizer :button :bitmap :misc :id :icon :dialog);
 use Wx::Event qw(EVT_BUTTON);
 
 sub name { 'printer' }
 sub title { 'Printer Settings' }
 
-sub build {
-    my $self = shift;
-    my (%params) = @_;
-    
-    $self->init_config_options(qw(
+sub options {
+    return qw(
         bed_shape z_offset z_steps_per_mm has_heatbed
         gcode_flavor use_relative_e_distances
         serial_port serial_speed
@@ -1093,9 +1241,22 @@ sub build {
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode
         nozzle_diameter extruder_offset
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
-        retract_length_toolchange retract_restart_extra_toolchange
-    ));
-    $self->{config}->set('printer_settings_id', '');
+        retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
+        printer_settings_id
+    );
+}
+
+sub overridable_options {
+    return qw(
+        pressure_advance
+        retract_length retract_lift retract_speed retract_restart_extra
+        retract_before_travel retract_layer_change wipe
+    );
+}
+
+sub build {
+    my $self = shift;
+    my (%params) = @_;
     
     $self->{extruders_count} = 1;
     
@@ -1484,7 +1645,7 @@ sub load_config_file {
         if @{ $self->{config}->nozzle_diameter } > 1;
 }
 
-package Slic3r::GUI::Tab::Page;
+package Slic3r::GUI::PresetEditor::Page;
 use Wx qw(wxTheApp :misc :panel :sizer);
 use base 'Wx::ScrolledWindow';
 
@@ -1601,35 +1762,6 @@ sub accept {
 sub get_name {
     my $self = shift;
     return $self->{chosen_name};
-}
-
-package Slic3r::GUI::Tab::Preset;
-use Moo;
-
-has 'default'   => (is => 'ro', default => sub { 0 });
-has 'external'  => (is => 'ro', default => sub { 0 });
-has 'name'      => (is => 'rw', required => 1);
-has 'file'      => (is => 'rw');
-
-sub config {
-    my ($self, $keys) = @_;
-    
-    if ($self->default) {
-        return Slic3r::Config->new_from_defaults(@$keys);
-    } else {
-        if (!-e Slic3r::encode_path($self->file)) {
-            Slic3r::GUI::show_error(undef, "The selected preset does not exist anymore (" . $self->file . ").");
-            return undef;
-        }
-        
-        # apply preset values on top of defaults
-        my $config = Slic3r::Config->new_from_defaults(@$keys);
-        my $external_config = Slic3r::Config->load($self->file);
-        $config->set($_, $external_config->get($_))
-            for grep $external_config->has($_), @$keys;
-        
-        return $config;
-    }
 }
 
 1;

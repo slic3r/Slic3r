@@ -131,6 +131,10 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "brim-width=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
+    
+    def = this->add("compatible_printers", coStrings);
+    def->label = "Compatible printers";
+    def->default_value = new ConfigOptionStrings();
 
     def = this->add("complete_objects", coBool);
     def->label = "Complete individual objects";
@@ -784,7 +788,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the API Key required for authentication.";
     def->cli = "octoprint-apikey=s";
     def->default_value = new ConfigOptionString("");
-    
+
     def = this->add("octoprint_host", coString);
     def->label = "Host or IP";
     def->tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the hostname or IP address of the OctoPrint instance.";
@@ -816,6 +820,14 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Experimental option to adjust flow for overhangs (bridge flow will be used), to apply bridge speed to them and enable fan.";
     def->cli = "overhangs!";
     def->default_value = new ConfigOptionBool(true);
+    
+    def = this->add("overridable", coStrings);
+    def->label = "Overridable options";
+    {
+        ConfigOptionStrings* opt = new ConfigOptionStrings();
+        opt->values.push_back("support_material");
+        def->default_value = opt;
+    }
 
     def = this->add("perimeter_acceleration", coFloat);
     def->label = "Perimeters";
@@ -876,6 +888,7 @@ PrintConfigDef::PrintConfigDef()
     def->multiline = true;
     def->full_width = true;
     def->height = 60;
+    def->default_value = new ConfigOptionStrings();
 
     def = this->add("print_settings_id", coString);
     def->default_value = new ConfigOptionString("");
@@ -885,6 +898,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("pressure_advance", coFloat);
     def->label = "Pressure advance";
+    def->category = "Extruder";
     def->tooltip = "When set to a non-zero value, this experimental option enables pressure regulation. It's the K constant for the advance algorithm that pushes more or less filament upon speed changes. It's useful for Bowden-tube extruders. Reasonable values are in range 0-10.";
     def->cli = "pressure-advance=f";
     def->min = 0;
@@ -918,6 +932,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("retract_before_travel", coFloats);
     def->label = "Minimum travel after retraction";
+    def->category = "Retraction";
     def->tooltip = "Retraction is not triggered when travel moves are shorter than this length.";
     def->sidetext = "mm";
     def->cli = "retract-before-travel=f@";
@@ -929,6 +944,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("retract_layer_change", coBools);
     def->label = "Retract on layer change";
+    def->category = "Retraction";
     def->tooltip = "This flag enforces a retraction whenever a Z move is done.";
     def->cli = "retract-layer-change!";
     {
@@ -939,6 +955,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("retract_length", coFloats);
     def->label = "Length";
+    def->category = "Retraction";
     def->full_label = "Retraction Length";
     def->tooltip = "When retraction is triggered, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder).";
     def->sidetext = "mm (zero to disable)";
@@ -963,6 +980,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("retract_lift", coFloats);
     def->label = "Lift Z";
+    def->category = "Retraction";
     def->tooltip = "If you set this to a positive value, Z is quickly raised every time a retraction is triggered. When using multiple extruders, only the setting for the first extruder will be considered.";
     def->sidetext = "mm";
     def->cli = "retract-lift=f@";
@@ -975,6 +993,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("retract_lift_above", coFloats);
     def->label = "Above Z";
     def->full_label = "Only lift Z above";
+    def->category = "Retraction";
     def->tooltip = "If you set this to a positive value, Z lift will only take place above the specified absolute Z. You can tune this setting for skipping lift on the first layers.";
     def->sidetext = "mm";
     def->cli = "retract-lift-above=f@";
@@ -987,6 +1006,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("retract_lift_below", coFloats);
     def->label = "Below Z";
     def->full_label = "Only lift Z below";
+    def->category = "Retraction";
     def->tooltip = "If you set this to a positive value, Z lift will only take place below the specified absolute Z. You can tune this setting for limiting lift to the first layers.";
     def->sidetext = "mm";
     def->cli = "retract-lift-below=f@";
@@ -998,6 +1018,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("retract_restart_extra", coFloats);
     def->label = "Extra length on restart";
+    def->category = "Retraction";
     def->tooltip = "When the retraction is compensated after the travel move, the extruder will push this additional amount of filament. This setting is rarely needed.";
     def->sidetext = "mm";
     def->cli = "retract-restart-extra=f@";
@@ -1020,7 +1041,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("retract_speed", coFloats);
     def->label = "Speed";
-    def->full_label = "Retraction Speed";
+    def->category = "Retraction";
     def->tooltip = "The speed for retractions (it only applies to the extruder motor). If you use the Firmware Retraction option, please note this value still affects the auto-speed pressure regulator.";
     def->sidetext = "mm/s";
     def->cli = "retract-speed=f@";
@@ -1479,6 +1500,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("wipe", coBools);
     def->label = "Wipe while retracting";
+    def->category = "Retraction";
     def->tooltip = "This flag will move the nozzle while retracting to minimize the possible blob on leaky extruders.";
     def->cli = "wipe!";
     {

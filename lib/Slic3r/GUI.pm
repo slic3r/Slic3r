@@ -31,9 +31,10 @@ use Slic3r::GUI::ProgressStatusBar;
 use Slic3r::GUI::Projector;
 use Slic3r::GUI::OptionsGroup;
 use Slic3r::GUI::OptionsGroup::Field;
-use Slic3r::GUI::SimpleTab;
+use Slic3r::GUI::Preset;
+use Slic3r::GUI::PresetEditor;
+use Slic3r::GUI::PresetEditorDialog;
 use Slic3r::GUI::SLAPrintOptions;
-use Slic3r::GUI::Tab;
 
 our $have_OpenGL = eval "use Slic3r::GUI::3DScene; 1";
 our $have_LWP    = eval "use LWP::UserAgent; 1";
@@ -57,21 +58,17 @@ use constant MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(known stl obj amf
 our $datadir;
 # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
 our $no_controller;
-our $no_plater;
-our $mode;
 our $autosave;
 our @cb;
 
 our $Settings = {
     _ => {
-        mode => 'simple',
         version_check => 1,
         autocenter => 1,
         invert_zoom => 0,
         background_processing => 0,
         # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
-        # By default, Prusa has the controller hidden.
-        no_controller => 1,
+        no_controller => 0,
     },
 };
 
@@ -96,6 +93,7 @@ sub OnInit {
     Slic3r::debugf "wxWidgets version %s, Wx version %s\n", &Wx::wxVERSION_STRING, $Wx::VERSION;
     
     $self->{notifier} = Slic3r::GUI::Notifier->new;
+    $self->{external_presets} = [];
     
     # locate or create data directory
     # Unix: ~/.Slic3r
@@ -123,7 +121,7 @@ sub OnInit {
         my $ini = eval { Slic3r::Config->read_ini("$datadir/slic3r.ini") };
         $Settings = $ini if $ini;
         $last_version = $Settings->{_}{version};
-        $Settings->{_}{mode} ||= 'expert';
+        delete $Settings->{_}{mode};  # handle legacy
         $Settings->{_}{autocenter} //= 1;
         $Settings->{_}{invert_zoom} //= 0;
         $Settings->{_}{background_processing} //= 1;
@@ -133,13 +131,17 @@ sub OnInit {
     $Settings->{_}{version} = $Slic3r::VERSION;
     $self->save_settings;
     
+    if (-f "$enc_datadir/simple.ini") {
+        # The Simple Mode settings were already automatically duplicated to presets
+        # named "Simple Mode" in each group, so we already support retrocompatibility.
+        unlink "$enc_datadir/simple.ini";
+    }
+    
     # application frame
     Wx::Image::AddHandler(Wx::PNGHandler->new);
     $self->{mainframe} = my $frame = Slic3r::GUI::MainFrame->new(
-        mode            => $mode // $Settings->{_}{mode},
         # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
         no_controller   => $no_controller // $Settings->{_}{no_controller},
-        no_plater       => $no_plater,
     );
     $self->SetTopWindow($frame);
     
@@ -277,20 +279,46 @@ sub save_settings {
 }
 
 sub presets {
-    my ($self, $section) = @_;
+    my ($self, $section, $force_default) = @_;
     
-    my %presets = ();
+    my @presets = ();
+    
     opendir my $dh, Slic3r::encode_path("$Slic3r::GUI::datadir/$section")
         or die "Failed to read directory $Slic3r::GUI::datadir/$section (errno: $!)\n";
     foreach my $file (grep /\.ini$/i, readdir $dh) {
         $file = Slic3r::decode_path($file);
         my $name = basename($file);
-        $name =~ s/\.ini$//;
-        $presets{$name} = "$Slic3r::GUI::datadir/$section/$file";
+        $name =~ s/\.ini$//i;
+        push @presets, Slic3r::GUI::Preset->new(
+            name => $name,
+            file => "$Slic3r::GUI::datadir/$section/$file",
+        );
     }
     closedir $dh;
     
-    return %presets;
+    @presets = sort { $a->name cmp $b->name }
+        @presets,
+        (grep -e $_->file, @{$self->{external_presets}});
+    
+    if ($force_default || !@presets) {
+        unshift @presets, Slic3r::GUI::Preset->new(
+            default => 1,
+            name    => '- default -',
+        );
+    }
+    
+    return @presets;
+}
+
+sub add_external_preset {
+    my ($self, $file) = @_;
+    
+    push @{$self->{external_presets}}, my $preset = Slic3r::GUI::Preset->new(
+        name     => basename($file),  # keep .ini suffix
+        file     => $file,
+        external => 1,
+    );
+    return $preset;
 }
 
 sub have_version_check {

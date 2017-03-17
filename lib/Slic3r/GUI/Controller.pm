@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use utf8;
 
+use List::Util qw(any);
 use Wx qw(wxTheApp :frame :id :misc :sizer :bitmap :button :icon :dialog);
 use Wx::Event qw(EVT_CLOSE EVT_LEFT_DOWN EVT_MENU);
 use base qw(Wx::ScrolledWindow Class::Accessor);
@@ -39,14 +40,14 @@ sub new {
         
         EVT_LEFT_DOWN($btn, sub {
             my $menu = Wx::Menu->new;
-            my %presets = wxTheApp->presets('printer');
+            my %presets = map { $_->name => $_ } wxTheApp->presets('printer');
             
             # remove printers that already exist
             my @panels = $self->print_panels;
             delete $presets{$_} for map $_->printer_name, @panels;
             
             foreach my $preset_name (sort keys %presets) {
-                my $config = Slic3r::Config->load($presets{$preset_name});
+                my $config = $presets{$preset_name}->load_config;
                 next if !$config->serial_port;
                 
                 my $id = &Wx::NewId();
@@ -100,8 +101,8 @@ sub OnActivate {
     # get all available presets
     my %presets = ();
     {
-        my %all = wxTheApp->presets('printer');
-        my %configs = map { my $name = $_; $name => Slic3r::Config->load($all{$name}) } keys %all;
+        my %all = map { $_->name => $_ } wxTheApp->presets('printer');
+        my %configs = map { my $name = $_; $name => $all{$name}->load_config } keys %all;
         %presets = map { $_ => $configs{$_} } grep $configs{$_}->serial_port, keys %all;
     }
     
@@ -175,6 +176,12 @@ sub print_panels {
     my ($self) = @_;
     return grep $_->isa('Slic3r::GUI::Controller::PrinterPanel'),
         map $_->GetWindow, $self->{sizer}->GetChildren;
+}
+
+sub printing {
+    my ($self) = @_;
+    
+    return any { $_->printing } $self->print_panels;
 }
 
 sub update_presets {
