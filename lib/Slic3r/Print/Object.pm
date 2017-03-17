@@ -548,7 +548,7 @@ sub clip_fill_surfaces {
         
         # apply new internal infill to regions
         foreach my $layerm (@{$lower_layer->regions}) {
-            next if $layerm->config->fill_density == 0;
+            next if $layerm->region->config->fill_density == 0;
             
             my (@internal, @other) = ();
             foreach my $surface (map $_->clone, @{$layerm->fill_surfaces}) {
