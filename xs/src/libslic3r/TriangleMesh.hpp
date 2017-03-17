@@ -58,6 +58,7 @@ class TriangleMesh
     bool needed_repair() const;
     size_t facets_count() const;
     void extrude_tin(float offset);
+    void require_shared_vertices();
     
     static TriangleMesh make_cube(double x, double y, double z);
     static TriangleMesh make_cylinder(double r, double h, double fa=(2*PI/360));
@@ -67,7 +68,6 @@ class TriangleMesh
     bool repaired;
     
     private:
-    void require_shared_vertices();
     friend class TriangleMeshSlicer<X>;
     friend class TriangleMeshSlicer<Y>;
     friend class TriangleMeshSlicer<Z>;
