@@ -14,7 +14,7 @@ use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :listctrl
     :panel :sizer :toolbar :window wxTheApp :notebook :combobox);
 use Wx::Event qw(EVT_BUTTON EVT_COMMAND EVT_KEY_DOWN EVT_LIST_ITEM_ACTIVATED 
     EVT_LIST_ITEM_DESELECTED EVT_LIST_ITEM_SELECTED EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL 
-    EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED);
+    EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED EVT_LEFT_UP);
 use base 'Wx::Panel';
 
 use constant TB_ADD             => &Wx::NewId;
@@ -253,34 +253,46 @@ sub new {
     EVT_BUTTON($self, $self->{btn_print}, sub {
         $self->{print_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir());
     });
-    EVT_BUTTON($self, $self->{btn_send_gcode}, sub {
+    EVT_LEFT_UP($self->{btn_send_gcode}, sub {
+        my (undef, $e) = @_;
+        
         my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
-        $filename = Wx::GetTextFromUser("Save to printer with the following name:",
-            "OctoPrint", $filename, $self);
         
-        my $process_dialog = Wx::ProgressDialog->new('Querying OctoPrint…', "Checking whether file already exists…", 100, $self, 0);
-        $process_dialog->Pulse;
+        if (!$e->AltDown) {
+            # When the alt key is pressed, bypass the dialog.
+            my $dlg = Slic3r::GUI::Plater::OctoPrintSpoolDialog->new($self, $filename);
+            return unless $dlg->ShowModal == wxID_OK;
+            $filename = $dlg->{filename};
+        }
         
-        my $ua = LWP::UserAgent->new;
-        $ua->timeout(5);
-        my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
-        $process_dialog->Destroy;
-        if ($res->is_success) {
-            if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
-                my $dialog = Wx::MessageDialog->new($self,
-                    "It looks like a file with the same name already exists in the server. "
-                        . "Shall I overwrite it?",
-                    'OctoPrint', wxICON_WARNING | wxYES | wxNO);
-                return if $dialog->ShowModal() == wxID_NO;
+        if (!$Slic3r::GUI::Settings->{octoprint}{overwrite}) {
+            my $progress = Wx::ProgressDialog->new('Querying OctoPrint…',
+                "Checking whether file already exists…", 100, $self, 0);
+            $progress->Pulse;
+        
+            my $ua = LWP::UserAgent->new;
+            $ua->timeout(5);
+            my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
+            $progress->Destroy;
+            if ($res->is_success) {
+                if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
+                    my $dialog = Wx::MessageDialog->new($self,
+                        "It looks like a file with the same name already exists in the server. "
+                            . "Shall I overwrite it?",
+                        'OctoPrint', wxICON_WARNING | wxYES | wxNO);
+                    if ($dialog->ShowModal() == wxID_NO) {
+                        return;
+                    }
+                }
+            } else {
+                my $message = "Error while connecting to the OctoPrint server: " . $res->status_line;
+                Slic3r::GUI::show_error($self, $message);
+                return;
             }
         }
         
-        my $dialog = Wx::MessageDialog->new($self,
-            "Shall I start the print after uploading the file?",
-            'OctoPrint', wxICON_QUESTION | wxYES | wxNO);
-        $self->{send_gcode_file_print} = ($dialog->ShowModal() == wxID_YES);
-        
-        $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/$filename");
+        $self->{send_gcode_file_print} = $Slic3r::GUI::Settings->{octoprint}{start};
+        $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/" . $filename);
     });
     EVT_BUTTON($self, $self->{btn_export_stl}, \&export_stl);
     
@@ -2115,6 +2127,75 @@ sub transform_thumbnail {
     $t->scale($model_instance->scaling_factor);
     
     $self->transformed_thumbnail($t);
+}
+
+package Slic3r::GUI::Plater::OctoPrintSpoolDialog;
+use Wx qw(:dialog :id :misc :sizer :icon wxTheApp);
+use Wx::Event qw(EVT_BUTTON EVT_TEXT_ENTER);
+use base 'Wx::Dialog';
+
+sub new {
+    my $class = shift;
+    my ($parent, $filename) = @_;
+    my $self = $class->SUPER::new($parent, -1, "Send to OctoPrint", wxDefaultPosition,
+        [400, -1]);
+    
+    $self->{filename} = $filename;
+    $Slic3r::GUI::Settings->{octoprint} //= {};
+    
+    my $optgroup;
+    $optgroup = Slic3r::GUI::OptionsGroup->new(
+        parent  => $self,
+        title   => 'Send to OctoPrint',
+        on_change => sub {
+            my ($opt_id) = @_;
+            
+            if ($opt_id eq 'filename') {
+                $self->{filename} = $optgroup->get_value($opt_id);
+            } else {
+                $Slic3r::GUI::Settings->{octoprint}{$opt_id} = $optgroup->get_value($opt_id);
+            }
+        },
+        label_width => 200,
+    );
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'filename',
+        type        => 's',
+        label       => 'File name',
+        width       => 200,
+        tooltip     => 'The name used for labelling the print job.',
+        default     => $filename,
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'overwrite',
+        type        => 'bool',
+        label       => 'Overwrite existing file',
+        tooltip     => 'If selected, any existing file with the same name will be overwritten without confirmation.',
+        default     => $Slic3r::GUI::Settings->{octoprint}{overwrite} // 0,
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'start',
+        type        => 'bool',
+        label       => 'Start print',
+        tooltip     => 'If selected, print will start after the upload.',
+        default     => $Slic3r::GUI::Settings->{octoprint}{start} // 0,
+    ));
+    
+    my $sizer = Wx::BoxSizer->new(wxVERTICAL);
+    $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxTOP | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+    
+    my $buttons = $self->CreateStdDialogButtonSizer(wxOK | wxCANCEL);
+    $sizer->Add($buttons, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+    EVT_BUTTON($self, wxID_OK, sub {
+        wxTheApp->save_settings;
+        $self->EndModal(wxID_OK);
+        $self->Close;  # needed on Linux
+    });
+    
+    $self->SetSizer($sizer);
+    $sizer->SetSizeHints($self);
+    
+    return $self;
 }
 
 1;
