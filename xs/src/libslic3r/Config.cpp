@@ -9,6 +9,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -220,6 +221,12 @@ ConfigDef::add(const t_config_option_key &opt_key, const ConfigOptionDef &def)
     return &this->options[opt_key];
 }
 
+bool
+ConfigDef::has(const t_config_option_key &opt_key) const
+{
+    return this->options.count(opt_key) > 0;
+}
+
 const ConfigOptionDef*
 ConfigDef::get(const t_config_option_key &opt_key) const
 {
@@ -288,12 +295,27 @@ ConfigBase::serialize(const t_config_option_key &opt_key) const {
 }
 
 bool
-ConfigBase::set_deserialize(const t_config_option_key &opt_key, std::string str, bool append) {
+ConfigBase::set_deserialize(t_config_option_key opt_key, std::string str, bool append) {
     const ConfigOptionDef* optdef = this->def->get(opt_key);
-    if (optdef == NULL) throw UnknownOptionException();
+    if (optdef == NULL) {
+        // If we didn't find an option, look for any other option having this as an alias.
+        for (const auto &opt : this->def->options) {
+            for (const t_config_option_key &opt_key2 : opt.second.aliases) {
+                if (opt_key2 == opt_key) {
+                    opt_key = opt_key2;
+                    optdef = &opt.second;
+                    break;
+                }
+            }
+            if (optdef != NULL) break;
+        }
+        if (optdef == NULL)
+            throw UnknownOptionException();
+    }
+    
     if (!optdef->shortcut.empty()) {
-        for (std::vector<t_config_option_key>::const_iterator it = optdef->shortcut.begin(); it != optdef->shortcut.end(); ++it) {
-            if (!this->set_deserialize(*it, str)) return false;
+        for (const t_config_option_key &shortcut : optdef->shortcut) {
+            if (!this->set_deserialize(shortcut, str)) return false;
         }
         return true;
     }
@@ -373,7 +395,9 @@ ConfigBase::load(const std::string &file)
     pt::read_ini(file, tree);
     BOOST_FOREACH(const pt::ptree::value_type &v, tree) {
         try {
-            this->set_deserialize(v.first.c_str(), v.second.get_value<std::string>().c_str());
+            t_config_option_key opt_key = v.first;
+            std::string value = v.second.get_value<std::string>();
+            this->set_deserialize(opt_key, value);
         } catch (UnknownOptionException &e) {
             // ignore
         }

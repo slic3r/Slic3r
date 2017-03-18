@@ -112,8 +112,11 @@ class PrintConfigBase : public virtual ConfigBase
     PrintConfigBase() {
         this->def = &print_config_def;
     };
-    
+    bool set_deserialize(t_config_option_key opt_key, std::string str, bool append = false);
     double min_object_distance() const;
+    
+    protected:
+    void _handle_legacy(t_config_option_key &opt_key, std::string &value) const;
 };
 
 // Slic3r dynamic configuration, used to override the configuration 

@@ -649,6 +649,7 @@ class ConfigDef
     t_optiondef_map options;
     ConfigOptionDef* add(const t_config_option_key &opt_key, ConfigOptionType type);
     ConfigOptionDef* add(const t_config_option_key &opt_key, const ConfigOptionDef &def);
+    bool has(const t_config_option_key &opt_key) const;
     const ConfigOptionDef* get(const t_config_option_key &opt_key) const;
     void merge(const ConfigDef &other);
 };
@@ -675,7 +676,7 @@ class ConfigBase
     bool equals(ConfigBase &other);
     t_config_option_keys diff(ConfigBase &other);
     std::string serialize(const t_config_option_key &opt_key) const;
-    bool set_deserialize(const t_config_option_key &opt_key, std::string str, bool append = false);
+    virtual bool set_deserialize(t_config_option_key opt_key, std::string str, bool append = false);
     double get_abs_value(const t_config_option_key &opt_key) const;
     double get_abs_value(const t_config_option_key &opt_key, double ratio_over) const;
     void setenv_();
