@@ -1,3 +1,9 @@
+//#define DEBUG_RECTILINEAR
+#ifdef DEBUG_RECTILINEAR
+    #undef NDEBUG
+    #include "../SVG.hpp"
+#endif
+
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
 #include "../PolylineCollection.hpp"
@@ -7,17 +13,16 @@
 
 #include "FillRectilinear.hpp"
 
-//#define DEBUG_RECTILINEAR
-#ifdef DEBUG_RECTILINEAR
-    #include "../SVG.hpp"
-#endif
-
 namespace Slic3r {
 
 void
 FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     const direction_t &direction, coord_t x_shift, Polylines* out)
 {
+    // Remove almost collinear points (vertical ones might break this algorithm
+    // because of rounding).
+    expolygon.remove_vertical_collinear_points(1);
+    
     // rotate polygons so that we can work with vertical lines here
     expolygon.rotate(-direction.first);
     

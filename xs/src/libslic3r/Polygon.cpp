@@ -148,6 +148,32 @@ Polygon::contains(const Point &point) const
     return result;
 }
 
+void
+Polygon::douglas_peucker(double tolerance)
+{
+    this->points.push_back(this->points.front());
+    this->points = MultiPoint::_douglas_peucker(this->points, tolerance);
+    this->points.pop_back();
+}
+
+void
+Polygon::remove_vertical_collinear_points(coord_t tolerance)
+{
+    Points &pp = this->points;
+    pp.push_back(pp.front());
+    for (size_t i = 0; i < pp.size()-1; ++i) {
+        while (i < pp.size()-1) {
+            Point &next = pp[i+1];
+            if (std::abs(next.x - pp[i].x) <= tolerance) {
+                pp.erase(pp.begin() + i+1);
+            } else {
+                break;
+            }
+        }
+    }
+    pp.pop_back();
+}
+
 // this only works on CCW polygons as CW will be ripped out by Clipper's simplify_polygons()
 Polygons
 Polygon::simplify(double tolerance) const

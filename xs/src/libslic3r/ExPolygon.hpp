@@ -29,6 +29,7 @@ class ExPolygon
     bool contains(const Point &point) const;
     bool contains_b(const Point &point) const;
     bool has_boundary_point(const Point &point) const;
+    void remove_vertical_collinear_points(coord_t tolerance);
     void simplify_p(double tolerance, Polygons* polygons) const;
     Polygons simplify_p(double tolerance) const;
     ExPolygons simplify(double tolerance) const;
