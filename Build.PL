@@ -129,7 +129,7 @@ EOF
         
         # temporary workaround for upstream bug in test
         push @cmd, '--notest'
-            if $module =~ /^(?:OpenGL|Math::PlanePath|Test::Harness)$/;
+            if $module =~ /^(?:OpenGL|Math::PlanePath|Test::Harness|IO::Scalar)$/;
         
         push @cmd, "$module~$version";
         my $res = system @cmd;
