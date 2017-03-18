@@ -1008,7 +1008,7 @@ sub changescale {
             my $newsize = Wx::GetTextFromUser("Enter the new max size for the selected object:",
                 "Scale", $cursize, $self);
             return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
-            $scale = $newsize / $cursize * 100;
+            $scale = $model_instance->scaling_factor * $newsize / $cursize * 100;
         } else {
             # max scale factor should be above 2540 to allow importing files exported in inches
             # Wx::GetNumberFromUser() does not support decimal numbers
