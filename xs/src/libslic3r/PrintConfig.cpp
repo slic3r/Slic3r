@@ -1,5 +1,6 @@
 #include "PrintConfig.hpp"
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
 namespace Slic3r {

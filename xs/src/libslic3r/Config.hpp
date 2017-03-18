@@ -12,9 +12,6 @@
 #include <vector>
 #include "libslic3r.h"
 #include "Point.hpp"
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/lexical_cast.hpp>
 
 namespace Slic3r {
 
@@ -394,27 +391,7 @@ class ConfigOptionPoints : public ConfigOptionVector<Pointf>
         return vv;
     };
     
-    bool deserialize(std::string str, bool append = false) {
-        if (!append) this->values.clear();
-        
-        std::vector<std::string> tokens;
-        boost::split(tokens, str, boost::is_any_of("x,"));
-        if (tokens.size() % 2) return false;
-        
-        try {
-            for (size_t i = 0; i < tokens.size(); ++i) {
-                Pointf point;
-                point.x = boost::lexical_cast<coordf_t>(tokens[i]);
-                point.y = boost::lexical_cast<coordf_t>(tokens[++i]);
-                this->values.push_back(point);
-            }
-        } catch (boost::bad_lexical_cast &e) {
-            printf("%s\n", e.what());
-            return false;
-        }
-        
-        return true;
-    };
+    bool deserialize(std::string str, bool append = false);
 };
 
 class ConfigOptionBool : public ConfigOptionSingle<bool>
