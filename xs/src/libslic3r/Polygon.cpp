@@ -163,9 +163,10 @@ Polygon::remove_vertical_collinear_points(coord_t tolerance)
     pp.push_back(pp.front());
     for (size_t i = 0; i < pp.size()-1; ++i) {
         while (i < pp.size()-1) {
-            Point &next = pp[i+1];
-            if (std::abs(next.x - pp[i].x) <= tolerance) {
-                pp.erase(pp.begin() + i+1);
+            const Point &p = pp[i];
+            const Point &next = pp[i+1];
+            if (next.x == p.x && std::abs(next.y - p.y) <= tolerance) {
+                pp.erase(pp.begin() + i);
             } else {
                 break;
             }
