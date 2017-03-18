@@ -796,6 +796,24 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "octoprint-host=s";
     def->default_value = new ConfigOptionString("");
 
+    def = this->add("octoprint_ask_rename", coBool);
+    def->label = "Rename file before upload";
+    def->tooltip = "If checked, Slic3r will show a popup to allow renaming the file just before upload on the OctoPrint instance.";
+    // def->cli = "";
+    def->default_value = new ConfigOptionBool(true);
+
+    def = this->add("octoprint_ask_override", coBool);
+    def->label = "Override existing file";
+    def->tooltip = "If checked, Slic3r will ask if you want to override a file with the same name on the OctoPrint instance.";
+    // def->cli = "";
+    def->default_value = new ConfigOptionBool(true);
+
+    def = this->add("octoprint_ask_print", coBool);
+    def->label = "Print after upload";
+    def->tooltip = "If checked, Slic3r will ask if you want to launch the print after the upload is finished.";
+    // def->cli = "";
+    def->default_value = new ConfigOptionBool(true);
+
     def = this->add("only_retract_when_crossing_perimeters", coBool);
     def->label = "Only retract when crossing perimeters";
     def->tooltip = "Disables retraction when the travel path does not exceed the upper layer's perimeters (and thus any ooze will be probably invisible).";

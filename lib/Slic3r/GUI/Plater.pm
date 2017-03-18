@@ -50,7 +50,7 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{config} = Slic3r::Config->new_from_defaults(qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width
-        serial_port serial_speed octoprint_host octoprint_apikey
+        serial_port serial_speed octoprint_host octoprint_apikey octoprint_ask_rename octoprint_ask_override octoprint_ask_print
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
@@ -255,30 +255,36 @@ sub new {
     });
     EVT_BUTTON($self, $self->{btn_send_gcode}, sub {
         my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
-        $filename = Wx::GetTextFromUser("Save to printer with the following name:",
-            "OctoPrint", $filename, $self);
+        if ($self->{config}->octoprint_ask_rename) {
+            $filename = Wx::GetTextFromUser("Save to printer with the following name:",
+                "OctoPrint", $filename, $self);
+        }
         
-        my $process_dialog = Wx::ProgressDialog->new('Querying OctoPrint…', "Checking whether file already exists…", 100, $self, 0);
-        $process_dialog->Pulse;
-        
-        my $ua = LWP::UserAgent->new;
-        $ua->timeout(5);
-        my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
-        $process_dialog->Destroy;
-        if ($res->is_success) {
-            if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
-                my $dialog = Wx::MessageDialog->new($self,
-                    "It looks like a file with the same name already exists in the server. "
-                        . "Shall I overwrite it?",
-                    'OctoPrint', wxICON_WARNING | wxYES | wxNO);
-                return if $dialog->ShowModal() == wxID_NO;
+        if ($self->{config}->octoprint_ask_override) {
+            my $process_dialog = Wx::ProgressDialog->new('Querying OctoPrint…', "Checking whether file already exists…", 100, $self, 0);
+            $process_dialog->Pulse;
+            
+            my $ua = LWP::UserAgent->new;
+            $ua->timeout(5);
+            my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
+            $process_dialog->Destroy;
+            if ($res->is_success) {
+                if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
+                    my $dialog = Wx::MessageDialog->new($self,
+                        "It looks like a file with the same name already exists in the server. "
+                            . "Shall I overwrite it?",
+                        'OctoPrint', wxICON_WARNING | wxYES | wxNO);
+                    return if $dialog->ShowModal() == wxID_NO;
+                }
             }
         }
         
-        my $dialog = Wx::MessageDialog->new($self,
-            "Shall I start the print after uploading the file?",
-            'OctoPrint', wxICON_QUESTION | wxYES | wxNO);
-        $self->{send_gcode_file_print} = ($dialog->ShowModal() == wxID_YES);
+        if ($self->{config}->octoprint_ask_print) {
+            my $dialog = Wx::MessageDialog->new($self,
+                "Shall I start the print after uploading the file?",
+                'OctoPrint', wxICON_QUESTION | wxYES | wxNO);
+            $self->{send_gcode_file_print} = ($dialog->ShowModal() == wxID_YES);
+        }
         
         $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/$filename");
     });

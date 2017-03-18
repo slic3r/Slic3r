@@ -509,6 +509,9 @@ class HostConfig : public virtual StaticPrintConfig
     ConfigOptionString              octoprint_apikey;
     ConfigOptionString              serial_port;
     ConfigOptionInt                 serial_speed;
+    ConfigOptionBool                octoprint_ask_rename;
+    ConfigOptionBool                octoprint_ask_override;
+    ConfigOptionBool                octoprint_ask_print;
     
     HostConfig(bool initialize = true) : StaticPrintConfig() {
         if (initialize)
@@ -521,6 +524,9 @@ class HostConfig : public virtual StaticPrintConfig
         OPT_PTR(serial_port);
         OPT_PTR(serial_speed);
         
+        OPT_PTR(octoprint_ask_rename);
+        OPT_PTR(octoprint_ask_override);
+        OPT_PTR(octoprint_ask_print);
         return NULL;
     };
 };
