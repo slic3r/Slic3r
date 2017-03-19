@@ -48,7 +48,7 @@ sub BUILD {
     
     $self->_cooling_buffer(Slic3r::GCode::CoolingBuffer->new($self->_gcodegen));
     
-    $self->_spiral_vase(Slic3r::GCode::SpiralVase->new(config => $self->config))
+    $self->_spiral_vase(Slic3r::GCode::SpiralVase->new($self->config))
         if $self->config->spiral_vase;
     
     $self->_vibration_limit(Slic3r::GCode::VibrationLimit->new(config => $self->config))
@@ -323,7 +323,7 @@ sub process_layer {
     
     # check whether we're going to apply spiralvase logic
     if (defined $self->_spiral_vase) {
-        $self->_spiral_vase->enable(
+        $self->_spiral_vase->set_enable(
             $layer->id > 0
                 && ($self->print->config->skirts == 0
                     || ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt))
