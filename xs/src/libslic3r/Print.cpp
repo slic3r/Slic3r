@@ -883,7 +883,7 @@ Print::_make_brim()
             }
         }
         
-        std::auto_ptr<Fill> filler(Fill::new_from_type(ipRectilinear));
+        std::unique_ptr<Fill> filler(Fill::new_from_type(ipRectilinear));
         filler->min_spacing  = flow.spacing();
         filler->dont_adjust  = true;
         filler->density      = 1;
