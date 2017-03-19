@@ -1539,6 +1539,23 @@ sub export_object_stl {
     $self->statusbar->SetStatusText("STL file exported to $output_file");
 }
 
+# Export function for a single AMF output
+sub export_object_amf {
+    my $self = shift;
+    
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    my $local_model = Slic3r::Model->new;
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    # copy model_object -> local_model
+    $local_model->add_object($model_object);
+        
+    my $output_file = $self->_get_export_file('AMF') or return;
+    $local_model->write_amf($output_file);
+    $self->statusbar->SetStatusText("AMF file exported to $output_file");
+}
+
 sub export_amf {
     my $self = shift;
     
@@ -2031,6 +2048,9 @@ sub object_menu {
     }, undef, 'arrow_refresh.png');
     $frame->_append_menu_item($menu, "Export object as STL…", 'Export this single object as STL file', sub {
         $self->export_object_stl;
+    }, undef, 'brick_go.png');
+    $frame->_append_menu_item($menu, "Export object and modifiers as AMF…", 'Export this single object and all associated modifiers as AMF file', sub {
+        $self->export_object_amf;
     }, undef, 'brick_go.png');
     
     return $menu;

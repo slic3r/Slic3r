@@ -249,7 +249,7 @@ sub _init_menubar {
         $self->_append_menu_item($self->{plater_menu}, "Export plate as STL...", 'Export current plate as STL', sub {
             $plater->export_stl;
         }, undef, 'brick_go.png');
-        $self->_append_menu_item($self->{plater_menu}, "Export plate as AMF...", 'Export current plate as AMF', sub {
+        $self->_append_menu_item($self->{plater_menu}, "Export plate with modifiers as AMF...", 'Export current plate as AMF, including all modifier meshes', sub {
             $plater->export_amf;
         }, undef, 'brick_go.png');
         $self->_append_menu_item($self->{plater_menu}, "Open DLP Projector…\tCtrl+L", 'Open projector window for DLP printing', sub {
