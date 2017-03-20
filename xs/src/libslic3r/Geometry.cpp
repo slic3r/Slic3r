@@ -7,14 +7,13 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <limits>
 #include <list>
 #include <map>
 #include <set>
 #include <utility>
 #include <stack>
 #include <vector>
-#define SLIC3R_DEBUG
+
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
 #endif
