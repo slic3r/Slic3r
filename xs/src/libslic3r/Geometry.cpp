@@ -7,13 +7,14 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <limits>
 #include <list>
 #include <map>
 #include <set>
 #include <utility>
 #include <stack>
 #include <vector>
-
+#define SLIC3R_DEBUG
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
 #endif
@@ -609,6 +610,13 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
 bool
 MedialAxis::validate_edge(const VD::edge_type* edge)
 {
+    // prevent overflows and detect almost-infinite edges
+    if (std::abs(edge->vertex0()->x()) > (double)MAX_COORD
+     || std::abs(edge->vertex0()->y()) > (double)MAX_COORD
+     || std::abs(edge->vertex1()->x()) > (double)MAX_COORD
+     || std::abs(edge->vertex1()->y()) > (double)MAX_COORD)
+        return false;
+    
     // construct the line representing this edge of the Voronoi diagram
     const Line line(
         Point( edge->vertex0()->x(), edge->vertex0()->y() ),
