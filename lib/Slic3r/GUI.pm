@@ -75,6 +75,7 @@ our $Settings = {
         # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
         no_controller => 0,
         threads => $Slic3r::Config::Options->{threads}{default},
+        color_toolpaths_by => 'role',
     },
 };
 

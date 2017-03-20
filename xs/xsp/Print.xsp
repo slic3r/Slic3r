@@ -224,6 +224,7 @@ _constant()
                 RETVAL.push_back(*e);
             }
         %};
+    int brim_extruder();
     void clear_filament_stats()
         %code%{
             THIS->filament_stats.clear();

@@ -50,7 +50,7 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{config} = Slic3r::Config->new_from_defaults(qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width
-        serial_port serial_speed octoprint_host octoprint_apikey
+        serial_port serial_speed octoprint_host octoprint_apikey filament_colour
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
@@ -90,7 +90,7 @@ sub new {
         $menu->Destroy;
     };
     my $on_instances_moved = sub {
-        $self->update;
+        $self->on_model_change;
     };
     
     # Initialize 3D plater
@@ -374,7 +374,7 @@ sub new {
     if ($self->{preview3D}) {
         $self->{preview3D}->set_bed_shape($self->{config}->bed_shape);
     }
-    $self->update;
+    $self->on_model_change;
     
     {
         my $presets;
@@ -522,12 +522,11 @@ sub _on_select_preset {
 		$Slic3r::GUI::Settings->{presets}{"filament_${_}"} = $choice->GetString($filament_presets[$_])
 			for 1 .. $#filament_presets;
 		wxTheApp->save_settings;
-		return;
+	} else {
+        # call GetSelection() in scalar context as it's context-aware
+        $self->{on_select_preset}->($group, scalar $choice->GetSelection)
+            if $self->{on_select_preset};
 	}
-	
-	# call GetSelection() in scalar context as it's context-aware
-	$self->{on_select_preset}->($group, scalar $choice->GetSelection)
-	    if $self->{on_select_preset};
 	
 	# get new config and generate on_config_change() event for updating plater and other things
 	$self->on_config_change($self->GetFrame->config);
@@ -735,7 +734,7 @@ sub load_model_objects {
         $self->make_thumbnail($obj_idx);
     }
     $self->arrange if $need_arrange;
-    $self->update;
+    $self->on_model_change;
     
     # zoom to objects
     $self->{canvas3D}->zoom_to_volumes
@@ -744,8 +743,6 @@ sub load_model_objects {
     $self->{list}->Update;
     $self->{list}->Select($obj_idx[-1], 1);
     $self->object_list_changed;
-    
-    $self->schedule_background_process;
     
     return @obj_idx;
 }
@@ -780,8 +777,7 @@ sub remove {
     $self->object_list_changed;
     
     $self->select_object(undef);
-    $self->update;
-    $self->schedule_background_process;
+    $self->on_model_change;
 }
 
 sub reset {
@@ -800,7 +796,7 @@ sub reset {
     $self->object_list_changed;
     
     $self->select_object(undef);
-    $self->update;
+    $self->on_model_change;
 }
 
 sub increase {
@@ -825,9 +821,8 @@ sub increase {
     if ($Slic3r::GUI::Settings->{_}{autocenter}) {
         $self->arrange;
     } else {
-        $self->update;
+        $self->on_model_change;
     }
-    $self->schedule_background_process;
 }
 
 sub decrease {
@@ -852,8 +847,7 @@ sub decrease {
         $self->{list}->Select($obj_idx, 0);
         $self->{list}->Select($obj_idx, 1);
     }
-    $self->update;
-    $self->schedule_background_process;
+    $self->on_model_change;
 }
 
 sub set_number_of_copies {
@@ -925,8 +919,7 @@ sub rotate {
     $self->{print}->add_model_object($model_object, $obj_idx);
     
     $self->selection_changed;  # refresh info (size etc.)
-    $self->update;
-    $self->schedule_background_process;
+    $self->on_model_change;
 }
 
 sub mirror {
@@ -953,8 +946,7 @@ sub mirror {
     $self->{print}->add_model_object($model_object, $obj_idx);
     
     $self->selection_changed;  # refresh info (size etc.)
-    $self->update;
-    $self->schedule_background_process;
+    $self->on_model_change;
 }
 
 sub changescale {
@@ -1035,8 +1027,7 @@ sub changescale {
     $self->{print}->add_model_object($model_object, $obj_idx);
     
     $self->selection_changed(1);  # refresh info (size, volume etc.)
-    $self->update;
-    $self->schedule_background_process;
+    $self->on_model_change;
 }
 
 sub arrange {
@@ -1049,7 +1040,7 @@ sub arrange {
     # ignore arrange failures on purpose: user has visual feedback and we don't need to warn him
     # when parts don't fit in print bed
     
-    $self->update(1);
+    $self->on_model_change(1);
 }
 
 sub split_object {
@@ -1099,14 +1090,10 @@ sub split_object {
 sub schedule_background_process {
     my ($self) = @_;
     
-    $self->{processed} = 0;
+    warn 'schedule_background_process() is not supposed to be called when background processing is disabled'
+        if !$Slic3r::GUI::Settings->{_}{background_processing};
     
-    if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
-        my $sel = $self->{preview_notebook}->GetSelection;
-        if ($sel == $self->{preview3D_page_idx} || $sel == $self->{toolpaths2D_page_idx}) {
-            $self->{preview_notebook}->SetSelection(0);
-        }
-    }
+    $self->{processed} = 0;
     
     if (defined $self->{apply_config_timer}) {
         $self->{apply_config_timer}->Start(PROCESS_DELAY, 1);  # 1 = one shot
@@ -1118,10 +1105,6 @@ sub schedule_background_process {
 sub async_apply_config {
     my ($self) = @_;
     
-    # reset preview canvases
-    $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
-    $self->{preview3D}->reload_print if $self->{preview3D};
-    
     # pause process thread before applying new config
     # since we don't want to touch data that is being used by the threads
     $self->pause_background_process;
@@ -1129,9 +1112,16 @@ sub async_apply_config {
     # apply new config
     my $invalidated = $self->{print}->apply_config($self->GetFrame->config);
     
-    return if !$Slic3r::GUI::Settings->{_}{background_processing};
+    # reset preview canvases (invalidated contents will be hidden)
+    $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
+    $self->{preview3D}->reload_print if $self->{preview3D};
     
     if ($invalidated) {
+        if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
+            $self->hide_preview;
+            return;
+        }
+        
         # kill current thread if any
         $self->stop_background_process;
         # remove the sliced statistics box because something changed.
@@ -1629,30 +1619,45 @@ sub on_thumbnail_made {
 
 # this method gets called whenever print center is changed or the objects' bounding box changes
 # (i.e. when an object is added/removed/moved/rotated/scaled)
-sub update {
+sub on_model_change {
     my ($self, $force_autocenter) = @_;
+    
+    my $running = $self->pause_background_process;
     
     if ($Slic3r::GUI::Settings->{_}{autocenter} || $force_autocenter) {
         $self->{model}->center_instances_around_point($self->bed_centerf);
     }
+    $self->refresh_canvases;
     
-    my $running = $self->pause_background_process;
     my $invalidated = $self->{print}->reload_model_instances();
     
-    # The mere fact that no steps were invalidated when reloading model instances 
-    # doesn't mean that all steps were done: for example, validation might have 
-    # failed upon previous instance move, so we have no running thread and no steps
-    # are invalidated on this move, thus we need to schedule a new run.
-    if ($invalidated || !$running) {
-        $self->schedule_background_process;
+    if ($Slic3r::GUI::Settings->{_}{background_processing}) {
+        if ($invalidated || !$running) {
+            # The mere fact that no steps were invalidated when reloading model instances 
+            # doesn't mean that all steps were done: for example, validation might have 
+            # failed upon previous instance move, so we have no running thread and no steps
+            # are invalidated on this move, thus we need to schedule a new run.
+            $self->schedule_background_process;
+            if ($self->{"right_sizer"}) { 
+                $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
+                $self->{"right_sizer"}->Layout;
+            }
+        } else {
+            $self->resume_background_process;
+        }
     } else {
-        $self->resume_background_process;
+        $self->hide_preview;
     }
-    if ($self->{"right_sizer"}) { 
-        $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
-        $self->{"right_sizer"}->Layout;
+}
+
+sub hide_preview {
+    my ($self) = @_;
+    
+    my $sel = $self->{preview_notebook}->GetSelection;
+    if ($sel == $self->{preview3D_page_idx} || $sel == $self->{toolpaths2D_page_idx}) {
+        $self->{preview_notebook}->SetSelection(0);
     }
-    $self->refresh_canvases;
+    $self->{processed} = 0;
 }
 
 sub on_extruders_change {
@@ -1701,6 +1706,7 @@ sub on_config_change {
     my $self = shift;
     my ($config) = @_;
     
+    # Apply changes to the plater-specific config options.
     foreach my $opt_key (@{$self->{config}->diff($config)}) {
         $self->{config}->set($opt_key, $config->get($opt_key));
         if ($opt_key eq 'bed_shape') {
@@ -1708,7 +1714,7 @@ sub on_config_change {
             $self->{canvas3D}->update_bed_size if $self->{canvas3D};
             $self->{preview3D}->set_bed_shape($self->{config}->bed_shape)
                 if $self->{preview3D};
-            $self->update;
+            $self->on_model_change;
         } elsif ($opt_key eq 'serial_port') {
             if ($config->get('serial_port')) {
                 $self->{btn_print}->Show;
@@ -1723,8 +1729,12 @@ sub on_config_change {
                 $self->{btn_send_gcode}->Hide;
             }
             $self->Layout;
+        } elsif (0 && $opt_key eq 'filament_colour') {
+            $self->{print}->config->set('filament_colour', $config->filament_colour);
+            $self->{preview3D}->reload_print if $self->{preview3D};
         }
     }
+    
     if ($self->{"right_sizer"}) { 
         $self->{"right_sizer"}->Hide($self->{"sliced_info_box"});
         $self->{"right_sizer"}->Layout;
@@ -1732,8 +1742,12 @@ sub on_config_change {
     
     return if !$self->GetFrame->is_loaded;
     
-    # (re)start timer
-    $self->schedule_background_process;
+    if ($Slic3r::GUI::Settings->{_}{background_processing}) {
+        # (re)start timer
+        $self->schedule_background_process;
+    } else {
+        $self->async_apply_config;
+    }
 }
 
 sub list_item_deselected {
