@@ -170,6 +170,8 @@ _constant()
         %code%{ RETVAL = &THIS->skirt; %};
     Ref<ExtrusionEntityCollection> brim()
         %code%{ RETVAL = &THIS->brim; %};
+    Ref<ExtrusionEntityCollection> brim_skirt()
+        %code%{ RETVAL = &THIS->brim_skirt; %};
 
     PrintObjectPtrs* objects()
         %code%{ RETVAL = &THIS->objects; %};
@@ -258,6 +260,7 @@ _constant()
         %code%{ RETVAL = THIS->apply_config(*config); %};
     bool has_infinite_skirt();
     bool has_skirt();
+    bool has_brim_skirt();
     std::string _validate()
         %code%{ RETVAL = THIS->validate(); %};
     Clone<BoundingBox> bounding_box();

@@ -596,6 +596,11 @@ bool Print::has_skirt() const
         || this->has_infinite_skirt();
 }
 
+bool Print::has_brim_skirt() const
+{
+    return this->config.skirt_distance < this->config.brim_width;
+}
+
 std::string
 Print::validate() const
 {

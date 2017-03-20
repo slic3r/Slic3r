@@ -236,6 +236,7 @@ sub make_skirt {
     # since this method must be idempotent, we clear skirt paths *before*
     # checking whether we need to generate them
     $self->skirt->clear;
+    $self->brim_skirt->clear;
     
     if (!$self->has_skirt) {
         $self->set_step_done(STEP_SKIRT);
@@ -310,42 +311,59 @@ sub make_skirt {
     
     # draw outlines from outside to inside
     # loop while we have less skirts than required or any extruder hasn't reached the min length if any
-    my $distance = scale max($self->config->skirt_distance, $self->config->brim_width);
-    for (my $i = $skirts; $i > 0; $i--) {
-        $distance += scale $spacing;
-        my $loop = offset([$convex_hull], $distance, 1, JT_ROUND, scale(0.1))->[0];
-        my $eloop = Slic3r::ExtrusionLoop->new_from_paths(
-            Slic3r::ExtrusionPath->new(
-                polyline        => Slic3r::Polygon->new(@$loop)->split_at_first_point,
-                role            => EXTR_ROLE_SKIRT,
-                mm3_per_mm      => $mm3_per_mm,         # this will be overridden at G-code export time
-                width           => $flow->width,
-                height          => $first_layer_height, # this will be overridden at G-code export time
-            ),
-        );
-        $eloop->role(EXTRL_ROLE_SKIRT);
-        $self->skirt->append($eloop);
+    my @distances = ( scale $self->config->skirt_distance );
+    my @skirt_colls = ( $self->skirt );
+
+    if ($self->has_brim_skirt) {
+        unshift @distances, scale $self->config->brim_width;
+        unshift @skirt_colls, $self->brim_skirt;
+    }
+
+    for (my $j = 0; $j < scalar(@skirt_colls); ++$j) {
+
+        @extruded_length = ();
+        $extruder_idx = 0;
+
+        my $distance = $distances[$j];
+
+        for (my $i = $skirts; $i > 0; $i--) {
+            $distance += scale $spacing;
+            my $loop = offset([$convex_hull], $distance, 1, JT_ROUND, scale(0.1))->[0];
+            my $eloop = Slic3r::ExtrusionLoop->new_from_paths(
+                Slic3r::ExtrusionPath->new(
+                    polyline        => Slic3r::Polygon->new(@$loop)->split_at_first_point,
+                    role            => EXTR_ROLE_SKIRT,
+                    mm3_per_mm      => $mm3_per_mm,         # this will be overridden at G-code export time
+                    width           => $flow->width,
+                    height          => $first_layer_height, # this will be overridden at G-code export time
+                ),
+            );
+            $eloop->role(EXTRL_ROLE_SKIRT);
+
+            $skirt_colls[$j]->append($eloop);
         
-        if ($self->config->min_skirt_length > 0) {
-            $extruded_length[$extruder_idx] ||= 0;
-            if (!$extruders_e_per_mm[$extruder_idx]) {
-                my $config = Slic3r::Config::GCode->new;
-                $config->apply_static($self->config);
-                my $extruder = Slic3r::Extruder->new($extruder_idx, $config);
-                $extruders_e_per_mm[$extruder_idx] = $extruder->e_per_mm($mm3_per_mm);
-            }
-            $extruded_length[$extruder_idx] += unscale $loop->length * $extruders_e_per_mm[$extruder_idx];
-            $i++ if defined first { ($extruded_length[$_] // 0) < $self->config->min_skirt_length } 0 .. $#{$self->extruders};
-            if ($extruded_length[$extruder_idx] >= $self->config->min_skirt_length) {
-                if ($extruder_idx < $#{$self->extruders}) {
-                    $extruder_idx++;
-                    next;
+            if ($self->config->min_skirt_length > 0) {
+                $extruded_length[$extruder_idx] ||= 0;
+                if (!$extruders_e_per_mm[$extruder_idx]) {
+                    my $config = Slic3r::Config::GCode->new;
+                    $config->apply_static($self->config);
+                    my $extruder = Slic3r::Extruder->new($extruder_idx, $config);
+                    $extruders_e_per_mm[$extruder_idx] = $extruder->e_per_mm($mm3_per_mm);
+                }
+                $extruded_length[$extruder_idx] += unscale $loop->length * $extruders_e_per_mm[$extruder_idx];
+                $i++ if defined first { ($extruded_length[$_] // 0) < $self->config->min_skirt_length } 0 .. $#{$self->extruders};
+                if ($extruded_length[$extruder_idx] >= $self->config->min_skirt_length) {
+                    if ($extruder_idx < $#{$self->extruders}) {
+                        $extruder_idx++;
+                        next;
+                    }
                 }
             }
         }
     }
     
     $self->skirt->reverse;
+    $self->brim_skirt->reverse;
     
     $self->set_step_done(STEP_SKIRT);
 }

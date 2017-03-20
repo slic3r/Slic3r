@@ -174,7 +174,7 @@ class Print
     PrintState<PrintStep> state;
 
     // ordered collections of extrusion paths to build skirt loops and brim
-    ExtrusionEntityCollection skirt, brim;
+    ExtrusionEntityCollection skirt, brim, brim_skirt;
 
     Print();
     ~Print();
@@ -202,6 +202,7 @@ class Print
     bool apply_config(DynamicPrintConfig config);
     bool has_infinite_skirt() const;
     bool has_skirt() const;
+    bool has_brim_skirt() const;
     // Returns an empty string if valid, otherwise returns an error message.
     std::string validate() const;
     BoundingBox bounding_box() const;

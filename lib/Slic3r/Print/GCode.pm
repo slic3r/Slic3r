@@ -421,12 +421,14 @@ sub process_layer {
         $self->_gcodegen->avoid_crossing_perimeters->set_use_external_mp(1);
         my @extruder_ids = map { $_->id } @{$self->_gcodegen->writer->extruders};
         $gcode .= $self->_gcodegen->set_extruder($extruder_ids[0]);
-        # skip skirt if we have a large brim
+
         if ($layer->id < $self->print->config->skirt_height || $self->print->has_infinite_skirt) {
             my $skirt_flow = $self->print->skirt_flow;
             
             # distribute skirt loops across all extruders
-            my @skirt_loops = @{$self->print->skirt};
+            my @skirt_loops = ($layer->id == 0 && $self->print->has_brim_skirt)
+                              ? @{$self->print->brim_skirt} : @{$self->print->skirt};
+
             for my $i (0 .. $#skirt_loops) {
                 # when printing layers > 0 ignore 'min_skirt_length' and 
                 # just use the 'skirts' setting; also just use the current extruder
