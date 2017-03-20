@@ -528,8 +528,8 @@ sub _on_select_preset {
             if $self->{on_select_preset};
 	}
 	
-	# get new config and generate on_config_change() event for updating plater and other things
-	$self->on_config_change($self->GetFrame->config);
+	# generate on_config_change() event for updating plater and other things
+	$self->on_config_change();
 }
 
 sub GetFrame {
@@ -1704,7 +1704,12 @@ sub on_extruders_change {
 
 sub on_config_change {
     my $self = shift;
-    my ($config) = @_;
+    
+    my $config = $self->GetFrame->config;
+    
+    if ($Slic3r::GUI::autosave) {
+        $config->save($Slic3r::GUI::autosave);
+    }
     
     # Apply changes to the plater-specific config options.
     foreach my $opt_key (@{$self->{config}->diff($config)}) {
@@ -1729,9 +1734,6 @@ sub on_config_change {
                 $self->{btn_send_gcode}->Hide;
             }
             $self->Layout;
-        } elsif (0 && $opt_key eq 'filament_colour') {
-            $self->{print}->config->set('filament_colour', $config->filament_colour);
-            $self->{preview3D}->reload_print if $self->{preview3D};
         }
     }
     
@@ -1839,7 +1841,7 @@ sub object_settings_dialog {
 	if ($dlg->PartsChanged || $dlg->PartSettingsChanged) {
 	    $self->stop_background_process;
         $self->{print}->reload_object($obj_idx);
-        $self->schedule_background_process;
+        $self->on_model_change;
     } else {
         $self->resume_background_process;
     }
