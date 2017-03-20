@@ -573,7 +573,8 @@ sub get_value {
 
 sub _update_textctrl {
     my ($self) = @_;
-    $self->textctrl->SetLabel($self->get_value);
+    $self->textctrl->ChangeValue($self->get_value);
+    $self->textctrl->SetInsertionPointEnd;
 }
 
 sub enable {
