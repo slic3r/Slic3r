@@ -193,18 +193,18 @@ sub new {
         my $sbsizer = Wx::StaticBoxSizer->new($box, wxVERTICAL);
         $right_sizer->Add($sbsizer, 1, wxEXPAND, 0);
     
-        my $log = $self->{log_textctrl} = Wx::TextCtrl->new($box, -1, "", wxDefaultPosition, wxDefaultSize,
+        my $log = $self->{log_textctrl} = Wx::TextCtrl->new($self, -1, "", wxDefaultPosition, wxDefaultSize,
             wxTE_MULTILINE | wxBORDER_NONE);
-        $log->SetBackgroundColour($box->GetBackgroundColour);
+        $log->SetBackgroundColour($self->GetBackgroundColour);
         $log->SetFont($Slic3r::GUI::small_font);
         $log->SetEditable(0);
         $sbsizer->Add($self->{log_textctrl}, 1, wxEXPAND, 0);
         
         my $cmd_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
-        my $cmd_textctrl = Wx::TextCtrl->new($box, -1, '');
+        my $cmd_textctrl = Wx::TextCtrl->new($self, -1, '');
         $cmd_sizer->Add($cmd_textctrl, 1, wxEXPAND, 0);
         
-        my $btn = Wx::Button->new($box, -1,
+        my $btn = Wx::Button->new($self, -1,
             "Send", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
         $btn->SetFont($Slic3r::GUI::small_font);
         if ($Slic3r::GUI::have_button_icons) {
@@ -212,7 +212,7 @@ sub new {
         }
         $cmd_sizer->Add($btn, 0, wxEXPAND | wxLEFT, 5);
         
-        EVT_BUTTON($box, $btn, sub {
+        EVT_BUTTON($self, $btn, sub {
             return if $cmd_textctrl->GetValue eq '';
             $self->sender->send($cmd_textctrl->GetValue, 1);
             $cmd_textctrl->SetValue('');

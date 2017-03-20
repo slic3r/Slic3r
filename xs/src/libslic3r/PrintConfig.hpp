@@ -112,8 +112,11 @@ class PrintConfigBase : public virtual ConfigBase
     PrintConfigBase() {
         this->def = &print_config_def;
     };
-    
+    bool set_deserialize(t_config_option_key opt_key, std::string str, bool append = false);
     double min_object_distance() const;
+    
+    protected:
+    void _handle_legacy(t_config_option_key &opt_key, std::string &value) const;
 };
 
 // Slic3r dynamic configuration, used to override the configuration 
@@ -624,6 +627,7 @@ class CLIConfig
     ConfigOptionString              save;
     ConfigOptionFloat               scale;
     ConfigOptionPoint3              scale_to_fit;
+    ConfigOptionBool                threads;
     
     CLIConfig() : ConfigBase(), StaticConfig() {
         this->def = &cli_config_def;
@@ -647,6 +651,7 @@ class CLIConfig
         OPT_PTR(save);
         OPT_PTR(scale);
         OPT_PTR(scale_to_fit);
+        OPT_PTR(threads);
         
         return NULL;
     };

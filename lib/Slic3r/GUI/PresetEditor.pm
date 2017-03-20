@@ -521,7 +521,7 @@ sub options {
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
         infill_overlap bridge_flow_ratio
-        xy_size_compensation threads resolution overridable compatible_printers
+        xy_size_compensation resolution overridable compatible_printers
         print_settings_id
     )
 }
@@ -755,7 +755,6 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Other');
             $optgroup->append_single_option_line('xy_size_compensation');
-            $optgroup->append_single_option_line('threads') if $Slic3r::have_threads;
             $optgroup->append_single_option_line('resolution');
         }
     }
@@ -832,14 +831,13 @@ sub _update {
     
     my $config = $self->{config};
     
-    if ($config->spiral_vase && !($config->perimeters == 1 && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->infill_only_where_needed == 0 && $config->support_material == 0)) {
+    if ($config->spiral_vase && !($config->perimeters == 1 && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->support_material == 0)) {
         my $dialog = Wx::MessageDialog->new($self,
             "The Spiral Vase mode requires:\n"
             . "- one perimeter\n"
             . "- no top solid layers\n"
             . "- 0% fill density\n"
             . "- no support material\n"
-            . "- no infill where necessary\n"
             . "\nShall I adjust those settings in order to enable Spiral Vase?",
             'Spiral Vase', wxICON_WARNING | wxYES | wxNO);
         if ($dialog->ShowModal() == wxID_YES) {
@@ -848,7 +846,6 @@ sub _update {
             $new_conf->set("top_solid_layers", 0);
             $new_conf->set("fill_density", 0);
             $new_conf->set("support_material", 0);
-            $new_conf->set("infill_only_where_needed", 0);
             $self->load_config($new_conf);
         } else {
             my $new_conf = Slic3r::Config->new;
@@ -1012,12 +1009,7 @@ sub build {
             $optgroup->append_single_option_line('filament_colour', 0);
             $optgroup->append_single_option_line('filament_diameter', 0);
             $optgroup->append_single_option_line('extrusion_multiplier', 0);
-            $optgroup->append_single_option_line('filament_density', 0);
-            $optgroup->append_single_option_line('filament_cost', 0);
         }
-    
-
-
         {
             my $optgroup = $page->new_optgroup('Temperature (°C)');
         
@@ -1038,6 +1030,11 @@ sub build {
                 $line->append_option($optgroup->get_option('bed_temperature'));
                 $optgroup->append_line($line);
             }
+        }
+        {
+            my $optgroup = $page->new_optgroup('Optional information');
+            $optgroup->append_single_option_line('filament_density', 0);
+            $optgroup->append_single_option_line('filament_cost', 0);
         }
     }
     
@@ -1082,9 +1079,8 @@ sub build {
             $optgroup->append_single_option_line('min_print_speed');
         }
     }
-
     {
-        my $page = $self->add_options_page('Custom G-code', 'cog.png');
+        my $page = $self->add_options_page('Custom G-code', 'script.png');
         {
             my $optgroup = $page->new_optgroup('Start G-code',
                 label_width => 0,
@@ -1101,6 +1097,19 @@ sub build {
             my $option = $optgroup->get_option('end_filament_gcode', 0);
             $option->full_width(1);
             $option->height(150);
+            $optgroup->append_single_option_line($option);
+        }
+    }
+
+    {
+        my $page = $self->add_options_page('Notes', 'note.png');
+        {
+            my $optgroup = $page->new_optgroup('Notes',
+                label_width => 0,
+            );
+            my $option = $optgroup->get_option('filament_notes', 0);
+            $option->full_width(1);
+            $option->height(250);
             $optgroup->append_single_option_line($option);
         }
     }
@@ -1398,7 +1407,7 @@ sub build {
         }
     }
     {
-        my $page = $self->add_options_page('Custom G-code', 'cog.png');
+        my $page = $self->add_options_page('Custom G-code', 'script.png');
         {
             my $optgroup = $page->new_optgroup('Start G-code',
                 label_width => 0,

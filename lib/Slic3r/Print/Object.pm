@@ -3,7 +3,7 @@ package Slic3r::Print::Object;
 use strict;
 use warnings;
 
-use List::Util qw(min max sum first);
+use List::Util qw(min max sum first any);
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(X Y Z PI scale unscale chained_path epsilon);
 use Slic3r::Geometry::Clipper qw(diff diff_ex intersection intersection_ex union union_ex 
@@ -459,7 +459,7 @@ sub generate_support_material {
     $self->_support_material->generate($self);
     
     $self->set_step_done(STEP_SUPPORTMATERIAL);
-    my $stats = "Weight: %.1fg, Cost: %.1f" , $self->print->total_weight, $self->print->total_cost;
+    my $stats = sprintf "Weight: %.1fg, Cost: %.1f" , $self->print->total_weight, $self->print->total_cost;
     $self->print->status_cb->(85, $stats);
 }
 
@@ -488,9 +488,9 @@ sub _support_material {
 # fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
 sub clip_fill_surfaces {
     my $self = shift;
-    # sanity check for incompatible options: 
-    #   spiral_vase and infill_only_where_needed
-    return unless $self->config->infill_only_where_needed and not $self->config->spiral_vase;
+    
+    return unless $self->config->infill_only_where_needed
+        && any { $_->config->fill_density > 0 } @{$self->print->regions};
     
     # We only want infill under ceilings; this is almost like an
     # internal support material.
@@ -548,6 +548,8 @@ sub clip_fill_surfaces {
         
         # apply new internal infill to regions
         foreach my $layerm (@{$lower_layer->regions}) {
+            next if $layerm->region->config->fill_density == 0;
+            
             my (@internal, @other) = ();
             foreach my $surface (map $_->clone, @{$layerm->fill_surfaces}) {
                 if ($surface->surface_type == S_TYPE_INTERNAL || $surface->surface_type == S_TYPE_INTERNALVOID) {

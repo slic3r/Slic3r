@@ -29,6 +29,7 @@ my %cli_options = ();
         'debug'                 => \$Slic3r::debug,
         'gui'                   => \$opt{gui},
         'o|output=s'            => \$opt{output},
+        'j|threads=i'           => \$opt{threads},
         
         'save=s'                => \$opt{save},
         'load=s@'               => \$opt{load},
@@ -103,6 +104,7 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
         $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
         $Slic3r::GUI::no_controller = $opt{no_controller};
         $Slic3r::GUI::autosave      = Slic3r::decode_path($opt{autosave} // '');
+        $Slic3r::GUI::threads       = $opt{threads};
     }
     $gui = Slic3r::GUI->new;
     setlocale(LC_NUMERIC, 'C');
@@ -260,6 +262,7 @@ if (@ARGV) {  # slicing from command line
         );
         
         $sprint->apply_config($config);
+        $sprint->config->set('threads', $opt{threads}) if $opt{threads};
         $sprint->set_model($model);
         
         if ($opt{export_svg}) {
@@ -290,7 +293,7 @@ sub usage {
     my $j = '';
     if ($Slic3r::have_threads) {
         $j = <<"EOF";
-    -j, --threads <num> Number of threads to use (1+, default: $config->{threads})
+    -j, --threads <num> Number of threads to use
 EOF
     }
     
@@ -459,7 +462,7 @@ $j
     --extra-perimeters  Add more perimeters when needed (default: yes)
     --avoid-crossing-perimeters Optimize travel moves so that no perimeters are crossed (default: no)
     --thin-walls        Detect single-width walls (default: yes)
-    --overhangs         Experimental option to use bridge flow, speed and fan for overhangs
+    --detect-bridging-perimeters  Detect bridging perimeters and apply bridge flow, speed and fan
                         (default: yes)
   
    Support material options:

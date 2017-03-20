@@ -54,11 +54,14 @@ use constant FILE_WILDCARDS => {
     svg     => 'SVG files *.svg|*.svg;*.SVG',
 };
 use constant MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(known stl obj amf)};
+use constant STL_MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(stl)};
+use constant AMF_MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(amf)};
 
 our $datadir;
 # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
 our $no_controller;
 our $autosave;
+our $threads;
 our @cb;
 
 our $Settings = {
@@ -69,6 +72,8 @@ our $Settings = {
         background_processing => 0,
         # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
         no_controller => 0,
+        threads => $Slic3r::Config::Options->{threads}{default},
+        color_toolpaths_by => 'role',
     },
 };
 
@@ -119,16 +124,16 @@ sub OnInit {
     my $last_version;
     if (-f "$enc_datadir/slic3r.ini") {
         my $ini = eval { Slic3r::Config->read_ini("$datadir/slic3r.ini") };
-        $Settings = $ini if $ini;
-        $last_version = $Settings->{_}{version};
+        if ($ini) {
+            $last_version = $ini->{_}{version};
+            $ini->{_}{$_} = $Settings->{_}{$_}
+                for grep !exists $ini->{_}{$_}, keys %{$Settings->{_}};
+            $Settings = $ini;
+        }
         delete $Settings->{_}{mode};  # handle legacy
-        $Settings->{_}{autocenter} //= 1;
-        $Settings->{_}{invert_zoom} //= 0;
-        $Settings->{_}{background_processing} //= 1;
-        # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
-        $Settings->{_}{no_controller} //= 1;
     }
     $Settings->{_}{version} = $Slic3r::VERSION;
+    $Settings->{_}{threads} = $threads if $threads;
     $self->save_settings;
     
     if (-f "$enc_datadir/simple.ini") {
@@ -325,7 +330,7 @@ sub have_version_check {
     my ($self) = @_;
     
     # return an explicit 0
-    return ($Slic3r::have_threads && $Slic3r::build && $have_LWP) || 0;
+    return ($Slic3r::have_threads && $Slic3r::VERSION !~ /-dev$/ && $have_LWP) || 0;
 }
 
 sub check_version {

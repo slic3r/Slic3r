@@ -39,6 +39,8 @@ class Polygon : public MultiPoint {
     // Does an unoriented polygon contain a point?
     // Tested by counting intersections along a horizontal line.
     bool contains(const Point &point) const;
+    void douglas_peucker(double tolerance);
+    void remove_vertical_collinear_points(coord_t tolerance);
     Polygons simplify(double tolerance) const;
     void simplify(double tolerance, Polygons &polygons) const;
     void triangulate_convex(Polygons* polygons) const;

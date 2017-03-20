@@ -57,7 +57,7 @@ SLAPrint::slice()
     
     // generate infill
     if (this->config.fill_density < 100) {
-        std::auto_ptr<Fill> fill(Fill::new_from_type(this->config.fill_pattern.value));
+        std::unique_ptr<Fill> fill(Fill::new_from_type(this->config.fill_pattern.value));
         fill->bounding_box.merge(Point::new_scale(bb.min.x, bb.min.y));
         fill->bounding_box.merge(Point::new_scale(bb.max.x, bb.max.y));
         fill->min_spacing   = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
@@ -184,7 +184,7 @@ SLAPrint::_infill_layer(size_t i, const Fill* _fill)
     
     // Generate internal infill
     {
-        std::auto_ptr<Fill> fill(_fill->clone());
+        std::unique_ptr<Fill> fill(_fill->clone());
         fill->layer_id = i;
         fill->z        = layer.print_z;
         

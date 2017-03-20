@@ -66,6 +66,8 @@ src/libslic3r/GCode.cpp
 src/libslic3r/GCode.hpp
 src/libslic3r/GCode/CoolingBuffer.cpp
 src/libslic3r/GCode/CoolingBuffer.hpp
+src/libslic3r/GCode/SpiralVase.cpp
+src/libslic3r/GCode/SpiralVase.hpp
 src/libslic3r/GCodeSender.cpp
 src/libslic3r/GCodeSender.hpp
 src/libslic3r/GCodeWriter.cpp

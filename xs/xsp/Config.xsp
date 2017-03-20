@@ -45,6 +45,8 @@
     double min_object_distance();
     %name{_load} void load(std::string file);
     %name{_save} void save(std::string file);
+    std::vector<std::string> read_cli(std::vector<std::string> _argv)
+        %code{% THIS->read_cli(_argv, &RETVAL); %};
 };
 
 %name{Slic3r::Config::Static} class StaticPrintConfig {

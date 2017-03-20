@@ -193,7 +193,7 @@ sub _init_menubar {
         $self->_append_menu_item($self->{plater_menu}, "Export plate as STL...", 'Export current plate as STL', sub {
             $plater->export_stl;
         }, undef, 'brick_go.png');
-        $self->_append_menu_item($self->{plater_menu}, "Export plate as AMF...", 'Export current plate as AMF', sub {
+        $self->_append_menu_item($self->{plater_menu}, "Export plate with modifiers as AMF...", 'Export current plate as AMF, including all modifier meshes', sub {
             $plater->export_amf;
         }, undef, 'brick_go.png');
         
@@ -225,6 +225,32 @@ sub _init_menubar {
         $self->_append_menu_item($self->{viewMenu}, "Rear"   , 'Rear View'   , sub { $self->select_view('rear'   ); });
         $self->_append_menu_item($self->{viewMenu}, "Left"   , 'Left View'   , sub { $self->select_view('left'   ); });
         $self->_append_menu_item($self->{viewMenu}, "Right"  , 'Right View'  , sub { $self->select_view('right'  ); });
+        $self->{viewMenu}->AppendSeparator();
+        $self->{color_toolpaths_by_role} = $self->_append_menu_item($self->{viewMenu},
+            "Color Toolpaths by Role",
+            'Color toolpaths according to perimeter/infill/support material',
+            sub {
+                $Slic3r::GUI::Settings->{_}{color_toolpaths_by} = 'role';
+                wxTheApp->save_settings;
+                $self->{plater}{preview3D}->reload_print;
+            },
+            undef, undef, wxITEM_RADIO
+        );
+        $self->{color_toolpaths_by_extruder} = $self->_append_menu_item($self->{viewMenu},
+            "Color Toolpaths by Filament",
+            'Color toolpaths using the configured extruder/filament color',
+            sub {
+                $Slic3r::GUI::Settings->{_}{color_toolpaths_by} = 'extruder';
+                wxTheApp->save_settings;
+                $self->{plater}{preview3D}->reload_print;
+            },
+            undef, undef, wxITEM_RADIO
+        );
+        if ($Slic3r::GUI::Settings->{_}{color_toolpaths_by} eq 'role') {
+            $self->{color_toolpaths_by_role}->Check(1);
+        } else {
+            $self->{color_toolpaths_by_extruder}->Check(1);
+        }
     }
     
     # Window menu
@@ -354,11 +380,7 @@ sub quick_slice {
         
         $sprint->apply_config($config);
         $sprint->set_model($model);
-        
-        {
-            my $extra = $self->extra_variables;
-            $sprint->placeholder_parser->set($_, $extra->{$_}) for keys %$extra;
-        }
+        # FIXME: populate placeholders (preset names etc.)
         
         # select output file
         my $output_file;
@@ -612,10 +634,10 @@ sub select_view {
 }
 
 sub _append_menu_item {
-    my ($self, $menu, $string, $description, $cb, $id, $icon) = @_;
+    my ($self, $menu, $string, $description, $cb, $id, $icon, $kind) = @_;
     
     $id //= &Wx::NewId();
-    my $item = $menu->Append($id, $string, $description);
+    my $item = $menu->Append($id, $string, $description, $kind);
     $self->_set_menu_item_icon($item, $icon);
     
     EVT_MENU($self, $id, $cb);

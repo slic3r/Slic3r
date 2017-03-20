@@ -214,6 +214,7 @@ class Print
     std::set<size_t> object_extruders() const;
     std::set<size_t> support_material_extruders() const;
     std::set<size_t> extruders() const;
+    size_t brim_extruder() const;
     void _simplify_slices(double distance);
     double max_allowed_layer_height() const;
     bool has_support_material() const;

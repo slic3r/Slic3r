@@ -58,6 +58,13 @@ sub new {
         readonly    => !$Slic3r::have_threads,
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'threads',
+        type        => 'i',
+        label       => 'Threads',
+        tooltip     => $Slic3r::Config::Options->{threads}{tooltip},
+        default     => $Slic3r::GUI::Settings->{_}{threads},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'no_controller',
         type        => 'bool',
         label       => 'Disable USB/serial connection',

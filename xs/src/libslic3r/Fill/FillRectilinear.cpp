@@ -1,3 +1,9 @@
+//#define DEBUG_RECTILINEAR
+#ifdef DEBUG_RECTILINEAR
+    #undef NDEBUG
+    #include "../SVG.hpp"
+#endif
+
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
 #include "../PolylineCollection.hpp"
@@ -7,17 +13,16 @@
 
 #include "FillRectilinear.hpp"
 
-//#define DEBUG_RECTILINEAR
-#ifdef DEBUG_RECTILINEAR
-    #include "../SVG.hpp"
-#endif
-
 namespace Slic3r {
 
 void
 FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     const direction_t &direction, coord_t x_shift, Polylines* out)
 {
+    // Remove almost collinear points (vertical ones might break this algorithm
+    // because of rounding).
+    expolygon.remove_vertical_collinear_points(1);
+    
     // rotate polygons so that we can work with vertical lines here
     expolygon.rotate(-direction.first);
     
@@ -57,6 +62,27 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     // the upper endpoint of an intersection line, and vice versa.
     // Whenever between two intersection points we find vertices of the original polygon,
     // store them in the 'skipped' member of the latter point.
+    
+    struct IntersectionPoint : Point {
+        enum ipType { ipTypeLower, ipTypeUpper, ipTypeMiddle };
+        ipType type;
+        
+        // skipped contains the polygon points accumulated between the previous intersection
+        // point and the current one, in the original polygon winding order (does not contain
+        // either points)
+        Points skipped;
+        
+        // next contains a polygon portion connecting this point to the first intersection
+        // point found following the polygon in any direction but having:
+        // x > this->x || (x == this->x && y > this->y)
+        // (it doesn't contain *this but it contains the target intersection point)
+        Points next;
+        
+        IntersectionPoint() : Point() {};
+        IntersectionPoint(coord_t x, coord_t y, ipType _type) : Point(x,y), type(_type) {};
+    };
+    typedef std::map<coord_t,IntersectionPoint> vertical_t; // <y,point>
+    typedef std::map<coord_t,vertical_t>        grid_t;     // <x,<y,point>>
     
     grid_t grid;
     {

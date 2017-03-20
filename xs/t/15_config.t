@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Slic3r::XS;
-use Test::More tests => 147;
+use Test::More tests => 159;
 use Data::Dumper;
 
 foreach my $config (Slic3r::Config->new, Slic3r::Config::Static::new_FullPrintConfig) {
@@ -249,6 +249,47 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Static::new_FullPrintCo
     my $path = abs_path($0);
     my $config = $class->_load(dirname($path)."/inc/22_config_bad_config_options.ini");
     ok 1, 'did not crash on reading invalid items in config';
+}
+
+{
+    my $parse = sub {
+        my @argv = @_;
+        my $config = Slic3r::Config->new;
+        $config->read_cli(\@argv);
+        return $config;
+    };
+    {
+        my $config = $parse->(qw(--extra-perimeters --perimeters 1 --layer-height 0.45 
+            --fill-density 70% --detect-bridging-perimeters --notes=foobar));
+        is $config->get('extra_perimeters'), 1, 'read_cli(): bool';
+        is $config->get('perimeters'), 1, 'read_cli(): int';
+        is $config->get('layer_height'), 0.45, 'read_cli(): float';
+        is $config->serialize('fill_density'), '70%', 'read_cli(): percent';
+        is $config->get('overhangs'), 1, 'read_cli(): alternative';
+        is $config->get('notes'), 'foobar', 'read_cli(): key=val';
+    }
+    {
+        my $config = $parse->(qw(--extra-perimeters --no-extra-perimeters));
+        ok $config->has('extra_perimeters'), 'read_cli(): negated bool';
+        is_deeply $config->get('extra_perimeters'), 0, 'read_cli(): negated bool';
+    }
+    {
+        my $config = $parse->(qw(--wipe --no-wipe --wipe));
+        is_deeply $config->get('wipe'), [1,0,1], 'read_cli(): bools array';
+    }
+    {
+        my $config = $parse->(qw(--post-process foo --post-process bar));
+        is_deeply $config->get('post_process'), ['foo', 'bar'], 'read_cli(): strings array';
+    }
+    {
+        my $config = $parse->(qw(--retract-speed 0.4 --retract-speed 0.5));
+        is_deeply $config->get('retract_speed'), [0.4, 0.5], 'read_cli(): floats array';
+    }
+    {
+        my $config = $parse->(qw(--extruder-offset 0,0 --extruder-offset 10x5));
+        is_deeply [ map $_->pp, @{$config->get('extruder_offset')} ],
+            [[0,0], [10,5]], 'read_cli(): points array';
+    }
 }
 
 __END__

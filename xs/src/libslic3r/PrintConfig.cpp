@@ -1,4 +1,6 @@
 #include "PrintConfig.hpp"
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
 namespace Slic3r {
@@ -214,6 +216,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = "↳ external";
+    def->full_label = "External perimeters extrusion width";
     def->gui_type = "f_enum_open";
     def->category = "Extrusion Width";
     def->tooltip = "Set this to a non-zero value to set a manual extrusion width for external perimeters. If auto is chosen, a value will be used that maximizes accuracy of the external visible surfaces. If expressed as percentage (for example 200%) it will be computed over layer height.";
@@ -226,6 +229,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("external_perimeter_speed", coFloatOrPercent);
     def->label = "↳ external";
+    def->full_label = "External perimeters speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "This separate setting will affect the speed of external perimeters (the visible ones). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above.";
@@ -386,7 +390,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("filament_density", coFloats);
     def->label = "Density";
     def->tooltip = "Enter your filament density here. This is only for statistical information. A decent way is to weigh a known length of filament and compute the ratio of the length to volume. Better is to calculate the volume directly through displacement.";
-    def->sidetext = "g/cm^3";
+    def->sidetext = "g/cm³";
     def->cli = "filament-density=f@";
     def->min = 0;
     {
@@ -462,6 +466,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("fill_gaps", coBool);
     def->label = "Fill gaps";
+    def->category = "Infill";
     def->tooltip = "If this is enabled, gaps will be filled with single passes. Enable this for better quality, disable it for shorter printing times.";
     def->cli = "fill-gaps!";
     def->default_value = new ConfigOptionBool(true);
@@ -558,6 +563,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("gap_fill_speed", coFloat);
     def->label = "↳ gaps";
+    def->full_label = "Gap fill speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "Speed for filling gaps. Since these are usually single lines you might want to use a low speed for better sticking. If expressed as percentage (for example: 80%) it will be calculated on the infill speed setting above.";
@@ -818,7 +824,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = "Detect bridging perimeters";
     def->category = "Layers and Perimeters";
     def->tooltip = "Experimental option to adjust flow for overhangs (bridge flow will be used), to apply bridge speed to them and enable fan.";
-    def->cli = "overhangs!";
+    def->cli = "overhangs|detect-bridging-perimeters!";
     def->default_value = new ConfigOptionBool(true);
     
     def = this->add("overridable", coStrings);
@@ -923,7 +929,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(4);
 
     def = this->add("resolution", coFloat);
-    def->label = "Resolution";
+    def->label = "Resolution (deprecated)";
     def->tooltip = "Minimum detail resolution, used to simplify the input file for speeding up the slicing job and reducing memory usage. High-resolution models often carry more detail than printers can render. Set to zero to disable any simplification and use full resolution from input.";
     def->sidetext = "mm";
     def->cli = "resolution=f";
@@ -1123,6 +1129,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("small_perimeter_speed", coFloatOrPercent);
     def->label = "↳ small";
+    def->full_label = "Small perimeters speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "This separate setting will affect the speed of perimeters having radius <= 6.5mm (usually holes). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above.";
@@ -1162,6 +1169,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("solid_infill_extrusion_width", coFloatOrPercent);
     def->label = "↳ solid";
+    def->full_label = "Solid infill extrusion width";
     def->gui_type = "f_enum_open";
     def->category = "Extrusion Width";
     def->tooltip = "Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. If expressed as percentage (for example 90%) it will be computed over layer height.";
@@ -1174,6 +1182,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("solid_infill_speed", coFloatOrPercent);
     def->label = "↳ solid";
+    def->full_label = "Solid infill speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "Speed for printing solid regions (top/bottom/internal horizontal shells). This can be expressed as a percentage (for example: 80%) over the default infill speed above.";
@@ -1320,6 +1329,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
     def->label = "↳ interface";
+    def->category = "Support material interface speed";
     def->gui_type = "f_enum_open";
     def->category = "Support material";
     def->tooltip = "Speed for printing support material interface layers. If expressed as percentage (for example 50%) it will be calculated over support material speed.";
@@ -1404,7 +1414,6 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("threads", coInt);
     def->label = "Threads";
     def->tooltip = "Threads are used to parallelize long-running tasks. Optimal threads number is slightly above the number of available cores/processors.";
-    def->cli = "threads|j=i";
     def->readonly = true;
     def->min = 1;
     {
@@ -1423,6 +1432,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("top_infill_extrusion_width", coFloatOrPercent);
     def->label = "↳ top solid";
+    def->full_label = "Top solid infill extrusion width";
     def->gui_type = "f_enum_open";
     def->category = "Extrusion Width";
     def->tooltip = "Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. If expressed as percentage (for example 90%) it will be computed over layer height.";
@@ -1443,6 +1453,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("top_solid_infill_speed", coFloatOrPercent);
     def->label = "↳ top solid";
+    def->full_label = "Top solid infill speed";
     def->gui_type = "f_enum_open";
     def->category = "Speed";
     def->tooltip = "Speed for printing top solid layers (it only applies to the uppermost external layers and not to their internal solid layers). You may want to slow down this to get a nicer surface finish. This can be expressed as a percentage (for example: 80%) over the solid infill speed above.";
@@ -1588,6 +1599,79 @@ PrintConfigBase::min_object_distance() const
     return (this->option("complete_objects")->getBool() && extruder_clearance_radius > duplicate_distance)
         ? extruder_clearance_radius
         : duplicate_distance;
+}
+
+bool
+PrintConfigBase::set_deserialize(t_config_option_key opt_key, std::string str, bool append)
+{
+    this->_handle_legacy(opt_key, str);
+    if (opt_key.empty()) return true; // ignore option
+    return ConfigBase::set_deserialize(opt_key, str, append);
+}
+
+void
+PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value) const
+{
+    // handle legacy options
+    if (opt_key == "extrusion_width_ratio" || opt_key == "bottom_layer_speed_ratio"
+        || opt_key == "first_layer_height_ratio") {
+        boost::replace_first(opt_key, "_ratio", "");
+        if (opt_key == "bottom_layer_speed") opt_key = "first_layer_speed";
+        try {
+            float v = boost::lexical_cast<float>(value);
+            if (v != 0) 
+                value = boost::lexical_cast<std::string>(v*100) + "%";
+        } catch (boost::bad_lexical_cast &) {
+            value = "0";
+        }
+    } else if (opt_key == "gcode_flavor" && value == "makerbot") {
+        value = "makerware";
+    } else if (opt_key == "fill_density" && value.find("%") == std::string::npos) {
+        try {
+            // fill_density was turned into a percent value
+            float v = boost::lexical_cast<float>(value);
+            value = boost::lexical_cast<std::string>(v*100) + "%";
+        } catch (boost::bad_lexical_cast &) {}
+    } else if (opt_key == "randomize_start" && value == "1") {
+        opt_key = "seam_position";
+        value = "random";
+    } else if (opt_key == "bed_size" && !value.empty()) {
+        opt_key = "bed_shape";
+        ConfigOptionPoint p;
+        p.deserialize(value);
+        std::ostringstream oss;
+        oss << "0x0," << p.value.x << "x0," << p.value.x << "x" << p.value.y << ",0x" << p.value.y;
+        value = oss.str();
+    } else if ((opt_key == "perimeter_acceleration" && value == "25")
+        || (opt_key == "infill_acceleration" && value == "50")) {
+        /*  For historical reasons, the world's full of configs having these very low values;
+            to avoid unexpected behavior we need to ignore them. Banning these two hard-coded
+            values is a dirty hack and will need to be removed sometime in the future, but it
+            will avoid lots of complaints for now. */
+        value = "0";
+    }
+    
+    // cemetery of old config settings
+    if (opt_key == "duplicate_x" || opt_key == "duplicate_y" || opt_key == "multiply_x" 
+        || opt_key == "multiply_y" || opt_key == "support_material_tool" 
+        || opt_key == "acceleration" || opt_key == "adjust_overhang_flow" 
+        || opt_key == "standby_temperature" || opt_key == "scale" || opt_key == "rotate" 
+        || opt_key == "duplicate" || opt_key == "duplicate_grid" || opt_key == "rotate" 
+        || opt_key == "scale"  || opt_key == "duplicate_grid" 
+        || opt_key == "start_perimeters_at_concave_points" 
+        || opt_key == "start_perimeters_at_non_overhang" || opt_key == "randomize_start" 
+        || opt_key == "seal_position" || opt_key == "bed_size" 
+        || opt_key == "print_center" || opt_key == "g0" || opt_key == "threads")
+    {
+        opt_key = "";
+        return;
+    }
+    
+    if (!this->def->has(opt_key)) {
+        //printf("Unknown option %s\n", opt_key.c_str());
+        opt_key = "";
+        return;
+    }
 }
 
 CLIConfigDef::CLIConfigDef()

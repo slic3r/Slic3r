@@ -187,6 +187,7 @@ Print::invalidate_state_by_config_options(const std::vector<t_config_option_key>
             || *opt_key == "extrusion_multiplier"
             || *opt_key == "fan_always_on"
             || *opt_key == "fan_below_layer_time"
+            || *opt_key == "filament_colour"
             || *opt_key == "filament_diameter"
             || *opt_key == "first_layer_acceleration"
             || *opt_key == "first_layer_bed_temperature"
@@ -346,6 +347,17 @@ Print::extruders() const
     extruders.insert(s_extruders.begin(), s_extruders.end());
     
     return extruders;
+}
+
+size_t
+Print::brim_extruder() const
+{
+    size_t e = this->get_region(0)->config.perimeter_extruder;
+    for (const PrintObject* object : this->objects) {
+        if (object->config.raft_layers > 0)
+            e = object->config.support_material_extruder;
+    }
+    return e;
 }
 
 void
@@ -660,7 +672,7 @@ Print::validate() const
     if (this->config.spiral_vase) {
         size_t total_copies_count = 0;
         FOREACH_OBJECT(this, i_object) total_copies_count += (*i_object)->copies().size();
-        if (total_copies_count > 1)
+        if (total_copies_count > 1 && !this->config.complete_objects)
             return "The Spiral Vase option can only be used when printing a single object.";
         if (this->regions.size() > 1)
             return "The Spiral Vase option can only be used when printing single material objects.";
@@ -882,7 +894,7 @@ Print::_make_brim()
             }
         }
         
-        std::auto_ptr<Fill> filler(Fill::new_from_type(ipRectilinear));
+        std::unique_ptr<Fill> filler(Fill::new_from_type(ipRectilinear));
         filler->min_spacing  = flow.spacing();
         filler->dont_adjust  = true;
         filler->density      = 1;
