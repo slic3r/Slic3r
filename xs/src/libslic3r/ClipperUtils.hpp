@@ -19,7 +19,8 @@ namespace Slic3r {
 // How about 2^17=131072?
 // By the way, is the scalling needed at all? Cura runs all the computation with a fixed point precision of 1um, while Slic3r scales to 1nm,
 // further scaling by 10e5 brings us to 
-#define CLIPPER_OFFSET_SCALE 100000.0
+constexpr float CLIPPER_OFFSET_SCALE = 100000.0;
+constexpr auto MAX_COORD = ClipperLib::hiRange / CLIPPER_OFFSET_SCALE;
 
 //-----------------------------------------------------------
 // legacy code from Clipper documentation

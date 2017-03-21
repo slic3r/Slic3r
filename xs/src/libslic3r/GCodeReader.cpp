@@ -56,6 +56,9 @@ GCodeReader::parse(const std::string &gcode, callback_t callback)
             }
         }
         
+        if (gline.has('E') && this->_config.use_relative_e_distances)
+            this->E = 0;
+        
         if (callback) callback(*this, gline);
         
         // update coordinates

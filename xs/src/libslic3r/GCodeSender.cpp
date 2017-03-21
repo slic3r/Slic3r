@@ -26,9 +26,9 @@
 std::fstream fs;
 #endif
 
-#define KEEP_SENT 20
-
 namespace Slic3r {
+
+constexpr auto KEEP_SENT = 20;
 
 namespace asio = boost::asio;
 

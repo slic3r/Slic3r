@@ -4,7 +4,7 @@
 namespace Slic3r {
 
 // how much we extend support around the actual contact area
-#define SUPPORT_MATERIAL_MARGIN 1.5
+constexpr coordf_t SUPPORT_MATERIAL_MARGIN = 1.5;
 
 }
 

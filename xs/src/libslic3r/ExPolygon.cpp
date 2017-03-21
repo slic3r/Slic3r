@@ -514,4 +514,12 @@ ExPolygon::dump_perl() const
     return ret.str();
 }
 
+std::ostream&
+operator <<(std::ostream &s, const ExPolygons &expolygons)
+{
+    for (const ExPolygon &e : expolygons)
+        s << e.dump_perl() << std::endl;
+    return s;
+}
+
 }
