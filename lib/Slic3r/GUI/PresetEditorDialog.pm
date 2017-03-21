@@ -10,7 +10,7 @@ __PACKAGE__->mk_accessors(qw(preset_editor));
 
 sub new {
     my ($class, $parent) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Settings", wxDefaultPosition, [800,500],
+    my $self = $class->SUPER::new($parent, -1, "Settings", wxDefaultPosition, [900,500],
         wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER | wxDIALOG_EX_METAL);
     
     $self->preset_editor($self->preset_editor_class->new($self));
