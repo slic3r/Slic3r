@@ -15,6 +15,18 @@ use constant ICON_MATERIAL      => 0;
 use constant ICON_SOLIDMESH     => 1;
 use constant ICON_MODIFIERMESH  => 2;
 
+my %icons = (
+    'Advanced'              => 'wand.png',
+    'Extruders'             => 'funnel.png',
+    'Extrusion Width'       => 'funnel.png',
+    'Infill'                => 'infill.png',
+    'Layers and Perimeters' => 'layers.png',
+    'Skirt and brim'        => 'box.png',
+    'Speed'                 => 'time.png',
+    'Speed > Acceleration'  => 'time.png',
+    'Support material'      => 'building.png',
+);
+
 sub new {
     my $class = shift;
     my ($parent, %params) = @_;
@@ -39,9 +51,23 @@ sub new {
             if $btn->can('SetToolTipString');
         EVT_LEFT_DOWN($btn, sub {
             my $menu = Wx::Menu->new;
+            my $last_cat = '';
             foreach my $opt_key (@{$self->{options}}) {
                 my $id = &Wx::NewId();
-                $menu->Append($id, $self->{option_labels}{$opt_key});
+                
+                # add icon, if we have one for this category
+                my $icon;
+                if (my $cat = $Slic3r::Config::Options->{$opt_key}{category}) {
+                    if ($last_cat && $cat ne $last_cat) {
+                        $menu->AppendSeparator;
+                    }
+                    $last_cat = $cat;
+                    $icon = $icons{$cat};
+                }
+                
+                my $menuItem = $menu->Append($id, $self->{option_labels}{$opt_key});
+                wxTheApp->set_menu_item_icon($menuItem, $icon) if $icon;
+                
                 EVT_MENU($menu, $id, sub {
                     $self->{config}->set($opt_key, $self->{default_config}->get($opt_key));
                     $self->update_optgroup;
@@ -84,10 +110,18 @@ sub set_opt_keys {
     my ($self, $opt_keys) = @_;
     
     # sort options by category+label
-    $self->{option_labels} = {
-        map { $_ => sprintf('%s > %s', $Slic3r::Config::Options->{$_}{category}, $Slic3r::Config::Options->{$_}{full_label} // $Slic3r::Config::Options->{$_}{label}) } @$opt_keys
+    $self->{option_labels} = {};
+    foreach my $opt_key (@$opt_keys) {
+        my $def = $Slic3r::Config::Options->{$opt_key} or next;
+        if (!$def->{category}) {
+            #printf "Skipping %s\n", $opt_key;
+            next;
+        }
+        $self->{option_labels}{$opt_key} = sprintf '%s > %s',
+            $def->{category},
+            $def->{full_label} // $def->{label};
     };
-    $self->{options} = [ sort { $self->{option_labels}{$a} cmp $self->{option_labels}{$b} } @$opt_keys ];
+    $self->{options} = [ sort { $self->{option_labels}{$a} cmp $self->{option_labels}{$b} } keys %{$self->{option_labels}} ];
 }
 
 # Sets the options that user can't remove.

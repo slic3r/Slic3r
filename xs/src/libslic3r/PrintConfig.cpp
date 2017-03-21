@@ -25,6 +25,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = "Avoid crossing perimeters";
+    def->category = "Layers and Perimeters";
     def->tooltip = "Optimize travel moves in order to minimize the crossing of perimeters. This is mostly useful with Bowden extruders which suffer from oozing. This feature slows down both the print and the G-code generation.";
     def->cli = "avoid-crossing-perimeters!";
     def->default_value = new ConfigOptionBool(false);
@@ -82,6 +83,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("bridge_acceleration", coFloat);
     def->label = "Bridge";
+    def->category = "Speed > Acceleration";
     def->tooltip = "This is the acceleration your printer will use for bridges. Set zero to disable acceleration control for bridges.";
     def->sidetext = "mm/s²";
     def->cli = "bridge-acceleration=f";
@@ -120,6 +122,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("brim_connections_width", coFloat);
     def->label = "Brim connections width";
+    def->category = "Skirt and brim";
     def->tooltip = "If set to a positive value, straight connections will be built on the first layer between adjacent objects.";
     def->sidetext = "mm";
     def->cli = "brim-connections-width=f";
@@ -128,6 +131,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("brim_width", coFloat);
     def->label = "Exterior brim width";
+    def->category = "Skirt and brim";
     def->tooltip = "Horizontal width of the brim that will be printed around each object on the first layer.";
     def->sidetext = "mm";
     def->cli = "brim-width=f";
@@ -152,6 +156,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("default_acceleration", coFloat);
     def->label = "Default";
+    def->category = "Speed > Acceleration";
     def->tooltip = "This is the acceleration your printer will be reset to after the role-specific acceleration values are used (perimeter/infill). Set zero to prevent resetting acceleration at all.";
     def->sidetext = "mm/s²";
     def->cli = "default-acceleration=f";
@@ -505,6 +510,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("first_layer_acceleration", coFloat);
     def->label = "First layer";
+    def->category = "Speed > Acceleration";
     def->tooltip = "This is the acceleration your printer will use for first layer. Set zero to disable acceleration control for first layer.";
     def->sidetext = "mm/s²";
     def->cli = "first-layer-acceleration=f";
@@ -543,6 +549,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("first_layer_speed", coFloatOrPercent);
     def->label = "First layer speed";
+    def->category = "Speed";
     def->tooltip = "If expressed as absolute value in mm/s, this speed will be applied to all the print moves of the first layer, regardless of their type. If expressed as a percentage (for example: 40%) it will scale the default speeds.";
     def->sidetext = "mm/s or %";
     def->cli = "first-layer-speed=s";
@@ -614,6 +621,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("infill_acceleration", coFloat);
     def->label = "Infill";
+    def->category = "Speed > Acceleration";
     def->tooltip = "This is the acceleration your printer will use for infill. Set zero to disable acceleration control for infill.";
     def->sidetext = "mm/s²";
     def->cli = "infill-acceleration=f";
@@ -652,6 +660,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("infill_first", coBool);
     def->label = "Infill before perimeters";
+    def->category = "Infill";
     def->tooltip = "This option will switch the print order of perimeters and infill, making the latter first.";
     def->cli = "infill-first!";
     def->default_value = new ConfigOptionBool(false);
@@ -688,6 +697,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("interior_brim_width", coFloat);
     def->label = "Interior brim width";
+    def->category = "Skirt and brim";
     def->tooltip = "Horizontal width of the brim that will be printed inside object holes on the first layer.";
     def->sidetext = "mm";
     def->cli = "interior-brim-width=f";
@@ -730,6 +740,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("max_print_speed", coFloat);
     def->label = "Max print speed";
+    def->category = "Speed";
     def->tooltip = "When setting other speed settings to 0 Slic3r will autocalculate the optimal speed in order to keep constant extruder pressure. This experimental setting is used to set the highest print speed you want to allow.";
     def->sidetext = "mm/s";
     def->cli = "max-print-speed=f";
@@ -738,6 +749,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("max_volumetric_speed", coFloat);
     def->label = "Max volumetric speed";
+    def->category = "Speed";
     def->tooltip = "This experimental setting is used to set the maximum volumetric speed your extruder supports.";
     def->sidetext = "mm³/s";
     def->cli = "max-volumetric-speed=f";
@@ -763,6 +775,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("min_skirt_length", coFloat);
     def->label = "Minimum extrusion length";
+    def->category = "Skirt and brim";
     def->tooltip = "Generate no less than the number of skirt loops required to consume the specified amount of filament on the bottom layer. For multi-extruder machines, this minimum applies to each extruder.";
     def->sidetext = "mm";
     def->cli = "min-skirt-length=f";
@@ -803,12 +816,14 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("only_retract_when_crossing_perimeters", coBool);
     def->label = "Only retract when crossing perimeters";
+    def->category = "Layers and Perimeters";
     def->tooltip = "Disables retraction when the travel path does not exceed the upper layer's perimeters (and thus any ooze will be probably invisible).";
     def->cli = "only-retract-when-crossing-perimeters!";
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("ooze_prevention", coBool);
     def->label = "Enable";
+    def->category = "Extruders";
     def->tooltip = "During multi-extruder prints, this option will drop the temperature of the inactive extruders to prevent oozing. It will enable a tall skirt automatically and move extruders outside such skirt when changing temperatures.";
     def->cli = "ooze-prevention!";
     def->default_value = new ConfigOptionBool(false);
@@ -837,6 +852,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("perimeter_acceleration", coFloat);
     def->label = "Perimeters";
+    def->category = "Speed > Acceleration";
     def->tooltip = "This is the acceleration your printer will use for perimeters. A high value like 9000 usually gives good results if your hardware is up to the job. Set zero to disable acceleration control for perimeters.";
     def->sidetext = "mm/s²";
     def->cli = "perimeter-acceleration=f";
@@ -1059,7 +1075,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("seam_position", coEnum);
     def->label = "Seam position";
-    def->category = "Layers and perimeters";
+    def->category = "Layers and Perimeters";
     def->tooltip = "Position of perimeters starting points.";
     def->cli = "seam-position=s";
     def->enum_keys_map = ConfigOptionEnum<SeamPosition>::get_enum_values();
@@ -1096,6 +1112,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("skirt_distance", coFloat);
     def->label = "Distance from object";
+    def->category = "Skirt and brim";
     def->tooltip = "Distance between skirt and object(s). Set this to zero to attach the skirt to the object(s) and get a brim for better adhesion.";
     def->sidetext = "mm";
     def->cli = "skirt-distance=f";
@@ -1104,6 +1121,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("skirt_height", coInt);
     def->label = "Skirt height";
+    def->category = "Skirt and brim";
     def->tooltip = "Height of skirt expressed in layers. Set this to a tall value to use skirt as a shield against drafts.";
     def->sidetext = "layers";
     def->cli = "skirt-height=i";
@@ -1111,6 +1129,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("skirts", coInt);
     def->label = "Loops (minimum)";
+    def->category = "Skirt and brim";
     def->full_label = "Skirt Loops";
     def->tooltip = "Number of loops for the skirt. If the Minimum Extrusion Length option is set, the number of loops might be greater than the one configured here. Set this to zero to disable skirt completely.";
     def->cli = "skirts=i";
@@ -1205,12 +1224,14 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("spiral_vase", coBool);
     def->label = "Spiral vase";
+    def->category = "Layers and Perimeters";
     def->tooltip = "This feature will raise Z gradually while printing a single-walled object in order to remove any visible seam. This option requires a single perimeter, no infill, no top solid layers and no support material. You can still set any number of bottom solid layers as well as skirt/brim loops. It won't work when printing more than an object.";
     def->cli = "spiral-vase!";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("standby_temperature_delta", coInt);
     def->label = "Temperature variation";
+    def->category = "Extruders";
     def->tooltip = "Temperature difference to be applied when an extruder is not active.  Enables a full-height \"sacrificial\" skirt on which the nozzles are periodically wiped.";
     def->sidetext = "∆°C";
     def->cli = "standby-temperature-delta=i";
@@ -1329,6 +1350,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
     def->label = "↳ interface";
+    def->label = "Interface Speed";
     def->category = "Support material interface speed";
     def->gui_type = "f_enum_open";
     def->category = "Support material";
@@ -1476,6 +1498,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("travel_speed", coFloat);
     def->label = "Travel";
+    def->category = "Speed";
     def->tooltip = "Speed for travel moves (jumps between distant extrusion points).";
     def->sidetext = "mm/s";
     def->cli = "travel-speed=f";

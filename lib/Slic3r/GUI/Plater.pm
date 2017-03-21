@@ -2146,7 +2146,7 @@ sub object_menu {
     
     my $rotateMenu = Wx::Menu->new;
     my $rotateMenuItem = $menu->AppendSubMenu($rotateMenu, "Rotate", 'Rotate the selected object by an arbitrary angle');
-    $frame->_set_menu_item_icon($rotateMenuItem, 'textfield.png');
+    wxTheApp->set_menu_item_icon($rotateMenuItem, 'textfield.png');
     $frame->_append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
         $self->rotate(undef, X);
     }, undef, 'bullet_red.png');
@@ -2159,7 +2159,7 @@ sub object_menu {
     
     my $mirrorMenu = Wx::Menu->new;
     my $mirrorMenuItem = $menu->AppendSubMenu($mirrorMenu, "Mirror", 'Mirror the selected object');
-    $frame->_set_menu_item_icon($mirrorMenuItem, 'shape_flip_horizontal.png');
+    wxTheApp->set_menu_item_icon($mirrorMenuItem, 'shape_flip_horizontal.png');
     $frame->_append_menu_item($mirrorMenu, "Along X axis…", 'Mirror the selected object along the X axis', sub {
         $self->mirror(X);
     }, undef, 'bullet_red.png');
@@ -2172,7 +2172,7 @@ sub object_menu {
     
     my $scaleMenu = Wx::Menu->new;
     my $scaleMenuItem = $menu->AppendSubMenu($scaleMenu, "Scale", 'Scale the selected object along a single axis');
-    $frame->_set_menu_item_icon($scaleMenuItem, 'arrow_out.png');
+    wxTheApp->set_menu_item_icon($scaleMenuItem, 'arrow_out.png');
     $frame->_append_menu_item($scaleMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
         $self->changescale(undef);
     });
@@ -2188,7 +2188,7 @@ sub object_menu {
     
     my $scaleToSizeMenu = Wx::Menu->new;
     my $scaleToSizeMenuItem = $menu->AppendSubMenu($scaleToSizeMenu, "Scale to size", 'Scale the selected object along a single axis');
-    $frame->_set_menu_item_icon($scaleToSizeMenuItem, 'arrow_out.png');
+    wxTheApp->set_menu_item_icon($scaleToSizeMenuItem, 'arrow_out.png');
     $frame->_append_menu_item($scaleToSizeMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
         $self->changescale(undef, 1);
     });

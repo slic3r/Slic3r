@@ -638,19 +638,10 @@ sub _append_menu_item {
     
     $id //= &Wx::NewId();
     my $item = $menu->Append($id, $string, $description, $kind);
-    $self->_set_menu_item_icon($item, $icon);
+    wxTheApp->set_menu_item_icon($item, $icon);
     
     EVT_MENU($self, $id, $cb);
     return $item;
-}
-
-sub _set_menu_item_icon {
-    my ($self, $menuItem, $icon) = @_;
-    
-    # SetBitmap was not available on OS X before Wx 0.9927
-    if ($icon && $menuItem->can('SetBitmap')) {
-        $menuItem->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG));
-    }
 }
 
 1;
