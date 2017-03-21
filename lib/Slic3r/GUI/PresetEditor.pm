@@ -733,7 +733,7 @@ sub build {
     }
     
     {
-        my $page = $self->add_options_page('Advanced', 'wrench.png');
+        my $page = $self->add_options_page('Advanced', 'wand.png');
         {
             my $optgroup = $page->new_optgroup('Extrusion width',
                 label_width => 180,
@@ -796,7 +796,7 @@ sub build {
     }
     
     {
-        my $page = $self->add_options_page('Notes and preferences', 'note.png');
+        my $page = $self->add_options_page('Notes', 'note.png');
         {
             my $optgroup = $page->new_optgroup('Notes',
                 label_width => 0,
@@ -806,6 +806,10 @@ sub build {
             $option->height(250);
             $optgroup->append_single_option_line($option);
         }
+    }
+    
+    {
+        my $page = $self->add_options_page('Overrides', 'wrench.png');
         {
             my $optgroup = $page->new_optgroup('Profile preferences');
             {
