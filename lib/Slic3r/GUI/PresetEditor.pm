@@ -1165,19 +1165,6 @@ sub build {
             $optgroup->append_line($line);
         }
     }
-    
-    {
-        my $page = $self->add_options_page('Notes', 'note.png');
-        {
-            my $optgroup = $page->new_optgroup('Notes',
-                label_width => 0,
-            );
-            my $option = $optgroup->get_option('filament_notes', 0);
-            $option->full_width(1);
-            $option->height(250);
-            $optgroup->append_single_option_line($option);
-        }
-    }
 }
 
 sub reload_config {
