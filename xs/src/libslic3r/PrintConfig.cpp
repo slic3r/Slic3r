@@ -823,6 +823,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("ooze_prevention", coBool);
     def->label = "Enable";
+    def->full_label = "Ooze Prevention";
     def->category = "Extruders";
     def->tooltip = "During multi-extruder prints, this option will drop the temperature of the inactive extruders to prevent oozing. It will enable a tall skirt automatically and move extruders outside such skirt when changing temperatures.";
     def->cli = "ooze-prevention!";
@@ -1231,6 +1232,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("standby_temperature_delta", coInt);
     def->label = "Temperature variation";
+    def->full_label = "Standby temperature delta";
     def->category = "Extruders";
     def->tooltip = "Temperature difference to be applied when an extruder is not active.  Enables a full-height \"sacrificial\" skirt on which the nozzles are periodically wiped.";
     def->sidetext = "∆°C";
