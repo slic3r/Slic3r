@@ -632,7 +632,7 @@ sub add_tin {
 
 sub load_file {
     my $self = shift;
-    my ($input_file) = @_;
+    my ($input_file, $obj_idx) = @_;
     
     $Slic3r::GUI::Settings->{recent}{skein_directory} = dirname($input_file);
     wxTheApp->save_settings;
@@ -657,7 +657,19 @@ sub load_file {
                 $model->convert_multipart_object;
             }
         }
-        @obj_idx = $self->load_model_objects(@{$model->objects});
+        
+        if (defined $obj_idx) {
+            return () if $obj_idx >= $model->objects_count;
+            @obj_idx = $self->load_model_objects($model->get_object($obj_idx));
+        } else {
+            @obj_idx = $self->load_model_objects(@{$model->objects});
+        }
+        
+        my $i = 0;
+        foreach my $obj_idx (@obj_idx) {
+            $self->{objects}[$obj_idx]->input_file($input_file);
+            $self->{objects}[$obj_idx]->input_file_obj_idx($i++);
+        }
         $self->statusbar->SetStatusText("Loaded " . basename($input_file));
     }
     
@@ -1488,13 +1500,14 @@ sub reload_from_disk {
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
     
-    my $model_object = $self->{model}->objects->[$obj_idx];
-    return if !$model_object->input_file
-        || !-e $model_object->input_file;
+    return if !$object->input_file
+        || !-e $object->input_file;
     
-    my @new_obj_idx = $self->load_file($model_object->input_file);
+    # Only reload the selected object and not all objects from the input file.
+    my @new_obj_idx = $self->load_file($object->input_file, $object->input_file_obj_idx);
     return if !@new_obj_idx;
     
+    my $model_object = $self->{model}->objects->[$obj_idx];
     foreach my $new_obj_idx (@new_obj_idx) {
         my $o = $self->{model}->objects->[$new_obj_idx];
         $o->clear_instances;
@@ -1508,6 +1521,8 @@ sub reload_from_disk {
     }
     
     $self->remove($obj_idx);
+    
+    # TODO: refresh object list which contains wrong count and scale
     
     # Trigger thumbnail generation again, because the remove() method altered
     # object indexes before background thumbnail generation called its completion
@@ -2127,6 +2142,8 @@ use List::Util qw(first);
 use Slic3r::Geometry qw(X Y Z MIN MAX deg2rad);
 
 has 'name'                  => (is => 'rw', required => 1);
+has 'input_file'            => (is => 'rw');
+has 'input_file_obj_idx'    => (is => 'rw');
 has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms
 has 'transformed_thumbnail' => (is => 'rw');
 has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units

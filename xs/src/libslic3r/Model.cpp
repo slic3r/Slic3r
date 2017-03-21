@@ -92,9 +92,8 @@ Model::delete_object(size_t idx)
 void
 Model::clear_objects()
 {
-    // int instead of size_t because it can be -1 when vector is empty
-    for (int i = this->objects.size()-1; i >= 0; --i)
-        this->delete_object(i);
+    while (!this->objects.empty())
+        this->delete_object(0);
 }
 
 void
@@ -467,9 +466,8 @@ ModelObject::delete_volume(size_t idx)
 void
 ModelObject::clear_volumes()
 {
-    // int instead of size_t because it can be -1 when vector is empty
-    for (int i = this->volumes.size()-1; i >= 0; --i)
-        this->delete_volume(i);
+    while (!this->volumes.empty())
+        this->delete_volume(0);
 }
 
 ModelInstance*
@@ -508,8 +506,8 @@ ModelObject::delete_last_instance()
 void
 ModelObject::clear_instances()
 {
-    for (size_t i = 0; i < this->instances.size(); ++i)
-        this->delete_instance(i);
+    while (!this->instances.empty())
+        this->delete_last_instance();
 }
 
 // this returns the bounding box of the *transformed* instances
