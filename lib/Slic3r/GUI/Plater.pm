@@ -397,14 +397,15 @@ sub new {
         }
         
         {
-            $self->{settings_override_panel} = Slic3r::GUI::Plater::OverrideSettingsPanel->new($self,
+            my $o = $self->{settings_override_panel} = Slic3r::GUI::Plater::OverrideSettingsPanel->new($self,
                 on_change => sub {
                     $self->config_changed;
                 });
-            $self->{settings_override_panel}->set_editable(0);
+            $o->set_editable(1);
+            $o->set_opt_keys([ Slic3r::GUI::PresetEditor::Print->options ]);
             $self->{settings_override_config} = Slic3r::Config->new;
-            $self->{settings_override_panel}->set_default_config($self->{settings_override_config});
-            $self->{settings_override_panel}->set_config($self->{settings_override_config});
+            $o->set_default_config($self->{settings_override_config});
+            $o->set_config($self->{settings_override_config});
         }
         
         my $object_info_sizer;
@@ -531,6 +532,8 @@ sub _on_select_preset {
         $self->{settings_override_config}->clear;
         my $overridable = $config->get('overridable');
         if ($overridable) {
+            $self->{settings_override_panel}->set_default_config($config);
+            $self->{settings_override_panel}->set_fixed_options(\@$overridable);
             $self->{settings_override_config}->set($_, $config->get($_))
                 for @$overridable;
         }

@@ -35,6 +35,8 @@ sub new {
         # create the button
         my $btn = $self->{btn_add} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("add.png"), wxBITMAP_TYPE_PNG),
             wxDefaultPosition, wxDefaultSize, Wx::wxBORDER_NONE);
+        $btn->SetToolTipString("Override one more option")
+            if $btn->can('SetToolTipString');
         EVT_LEFT_DOWN($btn, sub {
             my $menu = Wx::Menu->new;
             foreach my $opt_key (@{$self->{options}}) {
