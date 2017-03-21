@@ -548,11 +548,16 @@ sub BUILD {
     EVT_TEXT($self->parent, $textctrl, sub {
         my $value = $textctrl->GetValue;
         if ($value =~ /^-?\d+(\.\d*)?$/) {
-            $self->set_value($value);
+            # Update the slider without re-updating the text field being modified.
+            $self->disable_change_event(1);
+            $self->slider->SetValue($value*$self->scale);
+            $self->disable_change_event(0);
+            
             $self->_on_change($self->option->opt_id);
         }
     });
     EVT_KILL_FOCUS($textctrl, sub {
+        $self->_update_textctrl;
         $self->_on_kill_focus($self->option->opt_id, @_);
     });
 }
@@ -573,6 +578,7 @@ sub get_value {
 
 sub _update_textctrl {
     my ($self) = @_;
+    
     $self->textctrl->ChangeValue($self->get_value);
     $self->textctrl->SetInsertionPointEnd;
 }
