@@ -1343,8 +1343,12 @@ sub start_background_process {
     my ($self) = @_;
     
     return if !$Slic3r::have_threads;
-    return if !@{$self->{objects}};
     return if $self->{process_thread};
+    
+    if (!@{$self->{objects}}) {
+        $self->on_process_completed;
+        return;
+    }
     
     # It looks like declaring a local $SIG{__WARN__} prevents the ugly
     # "Attempt to free unreferenced scalar" warning...
