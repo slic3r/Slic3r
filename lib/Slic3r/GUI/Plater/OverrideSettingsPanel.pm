@@ -71,7 +71,7 @@ sub new {
                 EVT_MENU($menu, $id, sub {
                     $self->{config}->set($opt_key, $self->{default_config}->get($opt_key));
                     $self->update_optgroup;
-                    $self->{on_change}->() if $self->{on_change};
+                    $self->{on_change}->($opt_key) if $self->{on_change};
                 });
             }
             $self->PopupMenu($menu, $btn->GetPosition);
@@ -155,7 +155,10 @@ sub update_optgroup {
             label_font      => $Slic3r::GUI::small_font,
             sidetext_font   => $Slic3r::GUI::small_font,
             label_width     => 120,
-            on_change       => sub { $self->{on_change}->() if $self->{on_change} },
+            on_change       => sub {
+                my ($opt_key) = @_;
+                $self->{on_change}->($opt_key) if $self->{on_change};
+            },
             extra_column    => sub {
                 my ($line) = @_;
                 
@@ -169,7 +172,7 @@ sub update_optgroup {
                     wxDefaultPosition, wxDefaultSize, Wx::wxBORDER_NONE);
                 EVT_BUTTON($self, $btn, sub {
                     $self->{config}->erase($opt_key);
-                    $self->{on_change}->() if $self->{on_change};
+                    $self->{on_change}->($opt_key) if $self->{on_change};
                     wxTheApp->CallAfter(sub { $self->update_optgroup });
                 });
                 return $btn;

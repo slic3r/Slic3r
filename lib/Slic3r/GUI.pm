@@ -5,7 +5,9 @@ use utf8;
 
 use File::Basename qw(basename);
 use FindBin;
-use List::Util qw(first);
+use List::Util qw(first any);
+use Slic3r::Geometry qw(X Y);
+
 use Slic3r::GUI::2DBed;
 use Slic3r::GUI::AboutDialog;
 use Slic3r::GUI::BedShapeDialog;
@@ -98,7 +100,7 @@ sub OnInit {
     Slic3r::debugf "wxWidgets version %s, Wx version %s\n", &Wx::wxVERSION_STRING, $Wx::VERSION;
     
     $self->{notifier} = Slic3r::GUI::Notifier->new;
-    $self->{external_presets} = [];
+    $self->{presets} = { print => [], filament => [], printer => [] };
     
     # locate or create data directory
     # Unix: ~/.Slic3r
@@ -141,6 +143,8 @@ sub OnInit {
         # named "Simple Mode" in each group, so we already support retrocompatibility.
         unlink "$enc_datadir/simple.ini";
     }
+    
+    $self->load_presets;
     
     # application frame
     Wx::Image::AddHandler(Wx::PNGHandler->new);
@@ -283,47 +287,64 @@ sub save_settings {
     Slic3r::Config->write_ini("$datadir/slic3r.ini", $Settings);
 }
 
-sub presets {
-    my ($self, $section, $force_default) = @_;
+sub presets { return $_[0]->{presets}; }
+
+sub load_presets {
+    my ($self) = @_;
     
-    my @presets = ();
+    for my $group (qw(printer filament print)) {
+        my $presets = $self->{presets}{$group};
+        
+        # keep external or dirty presets
+        @$presets = grep { ($_->external && $_->file_exists) || $_->dirty } @$presets;
+        
+        my $dir = "$Slic3r::GUI::datadir/$group";
+        opendir my $dh, Slic3r::encode_path($dir)
+            or die "Failed to read directory $dir (errno: $!)\n";
+        foreach my $file (grep /\.ini$/i, readdir $dh) {
+            $file = Slic3r::decode_path($file);
+            my $name = basename($file);
+            $name =~ s/\.ini$//i;
+            
+            # skip if we already have it
+            next if any { $_->name eq $name } @$presets;
+            
+            push @$presets, Slic3r::GUI::Preset->new(
+                group   => $group,
+                name    => $name,
+                file    => "$dir/$file",
+            );
+        }
+        closedir $dh;
     
-    opendir my $dh, Slic3r::encode_path("$Slic3r::GUI::datadir/$section")
-        or die "Failed to read directory $Slic3r::GUI::datadir/$section (errno: $!)\n";
-    foreach my $file (grep /\.ini$/i, readdir $dh) {
-        $file = Slic3r::decode_path($file);
-        my $name = basename($file);
-        $name =~ s/\.ini$//i;
-        push @presets, Slic3r::GUI::Preset->new(
-            name => $name,
-            file => "$Slic3r::GUI::datadir/$section/$file",
-        );
-    }
-    closedir $dh;
+        @$presets = sort { $a->name cmp $b->name } @$presets;
     
-    @presets = sort { $a->name cmp $b->name }
-        @presets,
-        (grep -e $_->file, @{$self->{external_presets}});
-    
-    if ($force_default || !@presets) {
-        unshift @presets, Slic3r::GUI::Preset->new(
+        unshift @$presets, Slic3r::GUI::Preset->new(
+            group   => $group,
             default => 1,
             name    => '- default -',
         );
     }
-    
-    return @presets;
 }
 
 sub add_external_preset {
     my ($self, $file) = @_;
     
-    push @{$self->{external_presets}}, my $preset = Slic3r::GUI::Preset->new(
-        name     => basename($file),  # keep .ini suffix
-        file     => $file,
-        external => 1,
-    );
-    return $preset;
+    my $name = basename($file);  # keep .ini suffix
+    for my $group (qw(printer filament print)) {
+        my $presets = $self->{presets}{$group};
+        
+        # remove any existing preset with the same name
+        @$presets = grep { $_->name ne $name } @$presets;
+        
+        push @$presets, Slic3r::GUI::Preset->new(
+            group    => $group,
+            name     => $name,
+            file     => $file,
+            external => 1,
+        );
+    }
+    return $name;
 }
 
 sub have_version_check {
@@ -413,6 +434,31 @@ sub set_menu_item_icon {
     # SetBitmap was not available on OS X before Wx 0.9927
     if ($icon && $menuItem->can('SetBitmap')) {
         $menuItem->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG));
+    }
+}
+
+sub save_window_pos {
+    my ($self, $window, $name) = @_;
+    
+    $Settings->{_}{"${name}_pos"}  = join ',', $window->GetScreenPositionXY;
+    $Settings->{_}{"${name}_size"} = join ',', $window->GetSizeWH;
+    $Settings->{_}{"${name}_maximized"}      = $window->IsMaximized;
+    $self->save_settings;
+}
+
+sub restore_window_pos {
+    my ($self, $window, $name) = @_;
+    
+    if (defined $Settings->{_}{"${name}_pos"}) {
+        my $size = [ split ',', $Settings->{_}{"${name}_size"}, 2 ];
+        $window->SetSize($size);
+        
+        my $display = Wx::Display->new->GetClientArea();
+        my $pos = [ split ',', $Settings->{_}{"${name}_pos"}, 2 ];
+        if (($pos->[X] + $size->[X]/2) < $display->GetRight && ($pos->[Y] + $size->[Y]/2) < $display->GetBottom) {
+            $window->Move($pos);
+        }
+        $window->Maximize(1) if $Settings->{_}{"${name}_maximized"};
     }
 }
 

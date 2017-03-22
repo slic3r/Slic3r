@@ -56,19 +56,8 @@ sub new {
         $self->SetSizer($sizer);
         $self->Fit;
         $self->SetMinSize([760, 490]);
-        if (defined $Slic3r::GUI::Settings->{_}{main_frame_size}) {
-            my $size = [ split ',', $Slic3r::GUI::Settings->{_}{main_frame_size}, 2 ];
-            $self->SetSize($size);
-            
-            my $display = Wx::Display->new->GetClientArea();
-            my $pos = [ split ',', $Slic3r::GUI::Settings->{_}{main_frame_pos}, 2 ];
-            if (($pos->[X] + $size->[X]/2) < $display->GetRight && ($pos->[Y] + $size->[Y]/2) < $display->GetBottom) {
-                $self->Move($pos);
-            }
-            $self->Maximize(1) if $Slic3r::GUI::Settings->{_}{main_frame_maximized};
-        } else {
-            $self->SetSize($self->GetMinSize);
-        }
+        $self->SetSize($self->GetMinSize);
+        wxTheApp->restore_window_pos($self, "main_frame");
         $self->Show;
         $self->Layout;
     }
@@ -78,23 +67,23 @@ sub new {
         my (undef, $event) = @_;
         
         if ($event->CanVeto) {
-            my $veto = 0;
+            if (!$self->{plater}->prompt_unsaved_changes) {
+                $event->Veto;
+                return;
+            }
+            
             if ($self->{controller} && $self->{controller}->printing) {
                 my $confirm = Wx::MessageDialog->new($self, "You are currently printing. Do you want to stop printing and continue anyway?",
                     'Unfinished Print', wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT);
-                $veto = 1 if $confirm->ShowModal == wxID_YES;
-            }
-            if ($veto) {
-                $event->Veto;
-                return;
+                if ($confirm->ShowModal == wxID_NO) {
+                    $event->Veto;
+                    return;
+                }
             }
         }
         
         # save window size
-        $Slic3r::GUI::Settings->{_}{main_frame_pos}  = join ',', $self->GetScreenPositionXY;
-        $Slic3r::GUI::Settings->{_}{main_frame_size} = join ',', $self->GetSizeWH;
-        $Slic3r::GUI::Settings->{_}{main_frame_maximized} = $self->IsMaximized;
-        wxTheApp->save_settings;
+        wxTheApp->save_window_pos($self, "main_frame");
         
         # propagate event
         $event->Skip;
@@ -507,9 +496,9 @@ sub load_config_file {
     wxTheApp->save_settings;
     $last_config = $file;
     
-    my $preset = wxTheApp->add_external_preset($file);
+    my $name = wxTheApp->add_external_preset($file);
     $self->{plater}->load_presets;
-    $self->{plater}->select_preset_by_name($preset->name, $_) for qw(print filament printer);
+    $self->{plater}->select_preset_by_name($name, $_) for qw(print filament printer);
 }
 
 sub export_configbundle {
@@ -536,8 +525,9 @@ sub export_configbundle {
         $ini->{presets} = $Slic3r::GUI::Settings->{presets};
         
         foreach my $section (qw(print filament printer)) {
-            my @presets = wxTheApp->presets($section);
+            my @presets = @{wxTheApp->presets->{$section}};
             foreach my $preset (@presets) {
+                next if $preset->default || $preset->external;
                 $ini->{"$section:" . $preset->name} = $preset->load_config->as_ini->{_};
             }
         }
@@ -581,10 +571,10 @@ sub load_configbundle {
         next if $skip_no_id && !$config->get($section . "_settings_id");
         
         {
-            my @current_presets = Slic3r::GUI->presets($section);
+            my @current_presets = @{wxTheApp->presets->{$section}};
             my %current_ids = map { $_ => 1 }
                 grep $_,
-                map $_->load_config->get($section . "_settings_id"),
+                map $_->dirty_config->get($section . "_settings_id"),
                 @current_presets;
             next INI_BLOCK if exists $current_ids{$config->get($section . "_settings_id")};
         }

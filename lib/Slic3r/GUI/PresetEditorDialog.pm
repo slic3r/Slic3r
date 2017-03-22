@@ -1,8 +1,8 @@
 package Slic3r::GUI::PresetEditorDialog;
 use strict;
 use warnings;
-use Wx qw(:dialog :id :misc :sizer :button :icon wxTheApp);
-use Wx::Event qw(EVT_CLOSE);
+use Wx qw(:dialog :id :misc :sizer :button :icon wxTheApp WXK_ESCAPE);
+use Wx::Event qw(EVT_CLOSE EVT_CHAR_HOOK);
 use base qw(Wx::Dialog Class::Accessor);
 use utf8;
 
@@ -15,7 +15,6 @@ sub new {
     
     $self->preset_editor($self->preset_editor_class->new($self));
     $self->SetTitle($self->preset_editor->title);
-    $self->preset_editor->load_presets;
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($self->preset_editor, 1, wxEXPAND);
@@ -24,21 +23,30 @@ sub new {
     #$sizer->SetSizeHints($self);
     
     if (0) {
-        # This does not call the EVT_CLOSE below
         my $buttons = $self->CreateStdDialogButtonSizer(wxCLOSE);
         $sizer->Add($buttons, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     }
     
+    wxTheApp->restore_window_pos($self, "preset_editor");
+    
     EVT_CLOSE($self, sub {
         my (undef, $event) = @_;
         
-        if ($event->CanVeto && !$self->preset_editor->prompt_unsaved_changes) {
-            $event->Veto;
-            return;
-        }
+        # save window size
+        wxTheApp->save_window_pos($self, "preset_editor");
         
         # propagate event
         $event->Skip;
+    });
+    
+    EVT_CHAR_HOOK($self, sub {
+        my (undef, $event) = @_;
+        
+        if ($event->GetKeyCode == WXK_ESCAPE) {
+            $self->Close;
+        } else {
+            $event->Skip;
+        }
     });
     
     return $self;

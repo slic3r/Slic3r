@@ -368,6 +368,7 @@ sub new {
             printer     => 'Printer',
         );
         $self->{preset_choosers} = {};
+        $self->{preset_choosers_names} = {};  # wxChoice* => []
         for my $group (qw(print filament printer)) {
             # label
             my $text = Wx::StaticText->new($self, -1, "$group_labels{$group}:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
@@ -380,7 +381,7 @@ sub new {
             EVT_COMBOBOX($choice, $choice, sub {
                 my ($choice) = @_;
                 wxTheApp->CallAfter(sub {
-                    $self->_on_select_preset($group);
+                    $self->_on_change_combobox($group, $choice);
                 });
             });
             
@@ -512,11 +513,52 @@ sub new {
     return $self;
 }
 
+sub prompt_unsaved_changes {
+    my ($self) = @_;
+    
+    foreach my $group (qw(printer filament print)) {
+        foreach my $choice (@{$self->{preset_choosers}{$group}}) {
+            my $pp = $self->{preset_choosers_names}{$choice};
+            for my $i (0..$#$pp) {
+                my $preset = first { $_->name eq $pp->[$i] } @{wxTheApp->presets->{$group}};
+                if (!$preset->prompt_unsaved_changes($self)) {
+                    # Restore the previous one
+                    $choice->SetSelection($i);
+                    return 0;
+                }
+            }
+        }
+    }
+    return 1;
+}
+
+sub _on_change_combobox {
+    my ($self, $group, $choice) = @_;
+    
+    if (0) {
+        # This code is disabled because wxPerl doesn't provide GetCurrentSelection
+        my $current_name = $self->{preset_choosers_names}{$choice}[$choice->GetCurrentSelection];
+        my $current = first { $_->name eq $current_name } @{wxTheApp->presets->{$group}};
+        if (!$current->prompt_unsaved_changes($self)) {
+            # Restore the previous one
+            $choice->SetSelection($choice->GetCurrentSelection);
+            return;
+        }
+    } else {
+        return 0 if !$self->prompt_unsaved_changes;
+    }
+    wxTheApp->CallAfter(sub {
+        $self->_on_select_preset($group);
+        
+        # This will remove the "(modified)" mark from any dirty preset handled here.
+        $self->load_presets;
+    });
+}
+
 sub _on_select_preset {
 	my ($self, $group) = @_;
 	
-    my @presets = map $self->presets->{$group}[scalar $_->GetSelection], 
-        @{$self->{preset_choosers}{$group}};
+	my @presets = $self->selected_presets($group);
     
     $Slic3r::GUI::Settings->{presets}{$group} = $presets[0]->name;
     $Slic3r::GUI::Settings->{presets}{"${group}_${_}"} = $presets[$_]->name
@@ -565,17 +607,16 @@ sub GetFrame {
 sub load_presets {
     my ($self) = @_;
     
-    $self->presets({});
-    
     my $selected_printer_name;
     foreach my $group (qw(printer filament print)) {
-        my @presets = wxTheApp->presets($group);
+        my @presets = @{wxTheApp->presets->{$group}};
+        
+        # Skip presets not compatible with the selected printer, if they
+        # have other compatible printers configured (and at least one of them exists).
         if ($group eq 'filament' || $group eq 'print') {
-            my %printer_names = map { $_->name => 1 } @{ $self->presets->{printer} };
-            # Skip presets not compatible with the selected printer, if they
-            # have other compatible printers configured (and at least one of them exists).
+            my %printer_names = map { $_->name => 1 } @{ wxTheApp->presets->{printer} };
             for (my $i = 0; $i <= $#presets; ++$i) {
-                my $config = $presets[$i]->config;
+                my $config = $presets[$i]->dirty_config;
                 next if !$config->has('compatible_printers');
                 my @compat = @{$config->compatible_printers};
                 if (@compat
@@ -586,14 +627,11 @@ sub load_presets {
                 }
             }
         }
-        if (!@presets) {
-            unshift @presets, Slic3r::GUI::Preset->new(
-                default => 1,
-                name    => '- default -',
-            );
-        }
         
-        $self->presets->{$group} = [@presets];
+        # Only show the default presets if we have no other presets.
+        if (@presets > 1) {
+            @presets = grep { !$_->default } @presets;
+        }
         
         # get the wxChoice objects for this group
         my @choosers = @{ $self->{preset_choosers}{$group} };
@@ -613,11 +651,12 @@ sub load_presets {
         # populate the wxChoice objects
         foreach my $choice (@choosers) {
             $choice->Clear;
+            $self->{preset_choosers_names}{$choice} = [];
             foreach my $preset (@presets) {
                 # load/generate the proper icon
                 my $bitmap;
                 if ($group eq 'filament') {
-                    my $config = $preset->config;
+                    my $config = $preset->dirty_config;
                     if ($preset->default || !$config->has('filament_colour')) {
                         $bitmap = Wx::Bitmap->new($Slic3r::var->("spool.png"), wxBITMAP_TYPE_PNG);
                     } else {
@@ -634,7 +673,8 @@ sub load_presets {
                 } elsif ($group eq 'printer') {
                     $bitmap = Wx::Bitmap->new($Slic3r::var->("printer_empty.png"), wxBITMAP_TYPE_PNG);
                 }
-                $choice->AppendString($preset->name, $bitmap);
+                $choice->AppendString($preset->dropdown_name, $bitmap);
+                push @{$self->{preset_choosers_names}{$choice}}, $preset->name;
             }
             
             my $selected = shift @sel;
@@ -643,14 +683,13 @@ sub load_presets {
                 # won't be picked up as the visible string
                 $choice->SetSelection($selected);
                 
-                my $preset_name = $choice->GetString($selected);
+                my $preset_name = $self->{preset_choosers_names}{$choice}[$selected];
                 $self->{print}->placeholder_parser->set("${group}_preset", $preset_name);
+                # TODO: populate other filament preset placeholders
                 $selected_printer_name = $preset_name if $group eq 'printer';
             }
         }
     }
-    
-    #$self->_on_select_preset($_) for qw(printer filament print);
 }
 
 sub select_preset_by_name {
@@ -658,11 +697,12 @@ sub select_preset_by_name {
     
     # $n is optional
     
-    my $presets = $self->presets->{$group};
-    my $i = first { $presets->[$_]->name eq $name } 0..$#$presets;
+    my $presets = wxTheApp->presets->{$group};
+    my $choosers = $self->{preset_choosers}{$group};
+    my $names = $self->{preset_choosers_names}{$choosers->[0]};
+    my $i = first { $names->[$_] eq $name } 0..$#$names;
     return if !defined $i;
     
-    my $choosers = $self->{preset_choosers}{$group};
     if (defined $n && $n <= $#$choosers) {
         $choosers->[$n]->SetSelection($i);
     } else {
@@ -674,10 +714,16 @@ sub select_preset_by_name {
 sub selected_presets {
     my ($self, $group) = @_;
     
-    my %presets;
+    my %presets = ();
     foreach my $group (qw(printer filament print)) {
-        my @i = map scalar($_->GetSelection), @{ $self->{preset_choosers}{$group} };
-        $presets{$group} = [ @{$self->presets->{$group}}[@i] ];
+        $presets{$group} = [];
+        foreach my $choice (@{$self->{preset_choosers}{$group}}) {
+            my $sel = $choice->GetSelection;
+            $sel = 0 if $sel == -1;
+            push @{ $presets{$group} },
+                grep { $_->name eq $self->{preset_choosers_names}{$choice}[$sel] }
+                @{wxTheApp->presets->{$group}};
+        }
     }
     return $group ? @{$presets{$group}} : %presets;
 }
@@ -697,7 +743,7 @@ sub show_preset_editor {
     
     # Select the preset that was last selected in the editor.
     $self->select_preset_by_name
-        ($dlg->preset_editor->get_current_preset->name, $group, $i, 1);
+        ($dlg->preset_editor->current_preset->name, $group, $i, 1);
 }
 
 # Returns the current config by merging the selected presets and the overrides.
@@ -715,16 +761,13 @@ sub config {
         qw(print filament printer);
     
     my %presets = $self->selected_presets;
-    $config->apply($_->config([ $classes{printer}->options ]))
-        for @{ $presets{printer} };
+    $config->apply($_->dirty_config) for @{ $presets{printer} };
     if (@{ $presets{filament} }) {
-        my @opt_keys = ($classes{filament}->options, $classes{filament}->overriding_options);
-        my $filament_config = shift(@{ $presets{filament} })
-            ->config(\@opt_keys);
+        my $filament_config = $presets{filament}[0]->dirty_config;
         
-        my $i = 1;
-        for my $preset (@{ $presets{filament} }) {
-            my $config = $preset->config(\@opt_keys);
+        for my $i (1..$#{ $presets{filament} }) {
+            my $preset = $presets{filament}[$i];
+            my $config = $preset->dirty_config;
             foreach my $opt_key (@{$config->get_keys}) {
                 if ($filament_config->has($opt_key)) {
                     my $value = $filament_config->get($opt_key);
@@ -733,14 +776,11 @@ sub config {
                     $filament_config->set($opt_key, $value);
                 }
             }
-            ++$i;
         }
         
         $config->apply($filament_config);
     }
-    $config->apply($_->config([ $classes{print}->options ]))
-        for @{ $presets{print} };
-    
+    $config->apply($_->dirty_config) for @{ $presets{print} };
     $config->apply($self->{settings_override_config});
     
     return $config;
@@ -1896,7 +1936,7 @@ sub on_extruders_change {
         EVT_COMBOBOX($choice, $choice, sub {
             my ($choice) = @_;
             wxTheApp->CallAfter(sub {
-                $self->_on_select_preset('filament');
+                $self->_on_change_combobox('filament', $choice);
             });
         });
         

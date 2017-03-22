@@ -47,7 +47,7 @@ sub new {
             delete $presets{$_} for map $_->printer_name, @panels;
             
             foreach my $preset_name (sort keys %presets) {
-                my $config = $presets{$preset_name}->load_config;
+                my $config = $presets{$preset_name}->dirty_config;
                 next if !$config->serial_port;
                 
                 my $id = &Wx::NewId();
@@ -101,7 +101,7 @@ sub OnActivate {
     # get all available presets
     my %presets = ();
     {
-        my %all = map { $_->name => $_ } wxTheApp->presets('printer');
+        my %all = map { $_->name => $_ } @{wxTheApp->presets->{printer}};
         my %configs = map { my $name = $_; $name => $all{$name}->load_config } keys %all;
         %presets = map { $_ => $configs{$_} } grep $configs{$_}->serial_port, keys %all;
     }

@@ -678,6 +678,7 @@ class DynamicConfig : public virtual ConfigBase
     t_config_option_keys keys() const;
     void erase(const t_config_option_key &opt_key);
     void clear();
+    bool empty() const;
     void read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra);
     void read_cli(const int argc, const char **argv, t_config_option_keys* extra);
     

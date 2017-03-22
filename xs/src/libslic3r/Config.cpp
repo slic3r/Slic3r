@@ -532,6 +532,11 @@ DynamicConfig::clear() {
     this->options.clear();
 }
 
+bool
+DynamicConfig::empty() const {
+    return this->options.empty();
+}
+
 void
 DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra)
 {
