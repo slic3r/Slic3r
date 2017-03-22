@@ -7,7 +7,7 @@ use File::Basename qw(basename);
 use List::Util qw(first);
 use Wx qw(:bookctrl :dialog :keycode :icon :id :misc :panel :sizer :treectrl :window
     :button wxTheApp);
-use Wx::Event qw(EVT_BUTTON EVT_CHOICE EVT_KEY_DOWN EVT_TREE_SEL_CHANGED);
+use Wx::Event qw(EVT_BUTTON EVT_CHOICE EVT_KEY_DOWN EVT_TREE_SEL_CHANGED EVT_CHECKBOX);
 use base qw(Wx::Panel Class::Accessor);
 
 __PACKAGE__->mk_accessors(qw(current_preset config));
@@ -242,6 +242,7 @@ sub add_options_page {
 
 sub reload_config {
     my $self = shift;
+    
     $_->reload_config for @{$self->{pages}};
 }
 
@@ -326,7 +327,9 @@ sub _compatible_printers_widget {
     return sub {
         my ($parent) = @_;
         
-        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
+        my $checkbox = $self->{compatible_printers_checkbox} = Wx::CheckBox->new($parent, -1, "All");
+        
+        my $btn = $self->{compatible_printers_btn} = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
             wxBU_LEFT | wxBU_EXACTFIT);
         $btn->SetFont($Slic3r::GUI::small_font);
         if ($Slic3r::GUI::have_button_icons) {
@@ -334,14 +337,23 @@ sub _compatible_printers_widget {
         }
         
         my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
-        $sizer->Add($btn);
+        $sizer->Add($checkbox, 0, wxALIGN_CENTER_VERTICAL);
+        $sizer->Add($btn, 0, wxALIGN_CENTER_VERTICAL);
+        
+        EVT_CHECKBOX($self, $checkbox, sub {
+            if ($checkbox->GetValue) {
+                $btn->Disable;
+            } else {
+                $btn->Enable;
+            }
+        });
         
         EVT_BUTTON($self, $btn, sub {
             my @presets = map $_->name, grep !$_->default && !$_->external,
                 @{wxTheApp->presets->{printer}};
             
             my $dlg = Wx::MultiChoiceDialog->new($self,
-                "Select the printers this profile is compatible with.\nIf none are selected, it will be considered compatible with all of them.",
+                "Select the printers this profile is compatible with.",
                 "Compatible printers", \@presets);
             
             my @selections = ();
@@ -352,6 +364,10 @@ sub _compatible_printers_widget {
             
             if ($dlg->ShowModal == wxID_OK) {
                 my $value = [ @presets[$dlg->GetSelections] ];
+                if (!@$value) {
+                    $checkbox->SetValue(1);
+                    $btn->Disable;
+                }
                 $self->config->set('compatible_printers', $value);
                 $self->_on_value_change('compatible_printers');
             }
@@ -359,6 +375,18 @@ sub _compatible_printers_widget {
         
         return $sizer;
     };
+}
+
+sub _reload_compatible_printers_widget {
+    my ($self) = @_;
+    
+    if (@{ $self->config->get('compatible_printers') }) {
+        $self->{compatible_printers_checkbox}->SetValue(0);
+        $self->{compatible_printers_btn}->Enable;
+    } else {
+        $self->{compatible_printers_checkbox}->SetValue(1);
+        $self->{compatible_printers_btn}->Disable;
+    }
 }
 
 sub options { die "Unimplemented options()"; }
@@ -712,6 +740,8 @@ sub build {
 sub reload_config {
     my ($self) = @_;
     
+    $self->_reload_compatible_printers_widget;
+    
     {
         my %overridable = map { $_ => 1 } @{ $self->config->get('overridable') };
         for my $i (0..$#{$self->{overridable_opt_keys}}) {
@@ -1062,13 +1092,17 @@ sub build {
 sub reload_config {
     my ($self) = @_;
     
-    $self->{overrides_config}->clear;
-    foreach my $opt_key (@{$self->{overrides_default_config}->get_keys}) {
-        if ($self->config->has($opt_key)) {
-            $self->{overrides_config}->set($opt_key, $self->config->get($opt_key));
+    $self->_reload_compatible_printers_widget;
+    
+    {
+        $self->{overrides_config}->clear;
+        foreach my $opt_key (@{$self->{overrides_default_config}->get_keys}) {
+            if ($self->config->has($opt_key)) {
+                $self->{overrides_config}->set($opt_key, $self->config->get($opt_key));
+            }
         }
+        $self->{overrides_panel}->update_optgroup;
     }
-    $self->{overrides_panel}->update_optgroup;
     
     $self->SUPER::reload_config;
 }
