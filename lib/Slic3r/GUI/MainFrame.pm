@@ -176,6 +176,12 @@ sub _init_menubar {
         my $plater = $self->{plater};
         
         $self->{plater_menu} = Wx::Menu->new;
+        {
+            my $selectMenu = $self->{plater_select_menu} = Wx::Menu->new;
+            my $selectMenuItem = $self->{plater_menu}->AppendSubMenu($selectMenu, "Select", 'Select an object in the plater');
+            wxTheApp->set_menu_item_icon($selectMenuItem, 'brick.png');
+        }
+        $self->{plater_menu}->AppendSeparator();
         $self->_append_menu_item($self->{plater_menu}, "Export G-code...", 'Export current plate as G-code', sub {
             $plater->export_gcode;
         }, undef, 'cog_go.png');

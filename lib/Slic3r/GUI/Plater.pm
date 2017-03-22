@@ -1873,6 +1873,23 @@ sub on_thumbnail_made {
 sub on_model_change {
     my ($self, $force_autocenter) = @_;
     
+    # reload the select submenu (if already initialized)
+    if (my $menu = $self->GetFrame->{plater_select_menu}) {
+        $menu->DeleteItem($_) for $menu->GetMenuItems;
+        for my $i (0..$#{$self->{objects}}) {
+            my $name = $self->{objects}->[$i]->name;
+            my $count = $self->{model}->get_object($i)->instances_count;
+            if ($count > 1) {
+                $name .= " (${count}x)";
+            }
+            my $item = $self->GetFrame->_append_menu_item($menu, $name, 'Select object', sub {
+                $self->select_object($i);
+                $self->refresh_canvases;
+            }, undef, undef, wxITEM_CHECK);
+            $item->Check(1) if $self->{objects}->[$i]->selected;
+        }
+    }
+    
     my $running = $self->pause_background_process;
     
     if ($Slic3r::GUI::Settings->{_}{autocenter} || $force_autocenter) {
@@ -2060,6 +2077,13 @@ sub selection_changed {
     
     my ($obj_idx, $object) = $self->selected_object;
     my $have_sel = defined $obj_idx;
+    
+    if (my $menu = $self->GetFrame->{plater_select_menu}) {
+        $_->Check(0) for $menu->GetMenuItems;
+        if ($have_sel) {
+            $menu->FindItemByPosition($obj_idx)->Check(1);
+        }
+    }
     
     my $method = $have_sel ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
