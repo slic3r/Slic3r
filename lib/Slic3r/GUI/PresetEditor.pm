@@ -338,7 +338,7 @@ sub _compatible_printers_widget {
         
         EVT_BUTTON($self, $btn, sub {
             my @presets = map $_->name, grep !$_->default && !$_->external,
-                wxTheApp->presets('printer');
+                @{wxTheApp->presets->{printer}};
             
             my $dlg = Wx::MultiChoiceDialog->new($self,
                 "Select the printers this profile is compatible with.\nIf none are selected, it will be considered compatible with all of them.",
@@ -370,7 +370,7 @@ use base 'Slic3r::GUI::PresetEditor';
 
 use List::Util qw(first any);
 use Wx qw(:icon :dialog :id :misc :button :sizer);
-use Wx::Event qw(EVT_BUTTON);
+use Wx::Event qw(EVT_BUTTON EVT_CHECKLISTBOX);
 
 sub name { 'print' }
 sub title { 'Print Settings' }
@@ -424,39 +424,24 @@ sub build {
     my $overridable_widget = sub {
         my ($parent) = @_;
         
-        my $btn = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
-            wxBU_LEFT | wxBU_EXACTFIT);
-        $btn->SetFont($Slic3r::GUI::small_font);
-        if ($Slic3r::GUI::have_button_icons) {
-            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG));
-        }
+        my %options = (
+            map { $_ => sprintf('%s > %s', $Slic3r::Config::Options->{$_}{category}, $Slic3r::Config::Options->{$_}{full_label} // $Slic3r::Config::Options->{$_}{label}) }
+                map @{$_->get_keys}, Slic3r::Config::PrintObject->new, Slic3r::Config::PrintRegion->new
+        );
+        my @opt_keys = sort { $options{$a} cmp $options{$b} } keys %options;
+        $self->{overridable_opt_keys} = [ @opt_keys ];
         
-        my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
-        $sizer->Add($btn);
+        my $listbox = $self->{overridable_list} = Wx::CheckListBox->new($parent, -1,
+            wxDefaultPosition, [-1, 320], [ map $options{$_}, @opt_keys ]);
         
-        EVT_BUTTON($self, $btn, sub {
-            my %options = (
-                map { $_ => sprintf('%s > %s', $Slic3r::Config::Options->{$_}{category}, $Slic3r::Config::Options->{$_}{full_label} // $Slic3r::Config::Options->{$_}{label}) }
-                    map @{$_->get_keys}, Slic3r::Config::PrintObject->new, Slic3r::Config::PrintRegion->new
-            );
-            my @opt_keys = sort { $options{$a} cmp $options{$b} } keys %options;
-            
-            my $dlg = Wx::MultiChoiceDialog->new($self, "Selected options will be displayed in the plater screen for quick changes.",
-                "Overridable options",
-                [ map $options{$_}, @opt_keys ]);
-            
-            my @selections = ();
-            foreach my $opt_key (@{ $self->config->get('overridable') }) {
-                push @selections, first { $opt_keys[$_] eq $opt_key } 0..$#opt_keys;
-            }
-            $dlg->SetSelections(@selections);
-            
-            if ($dlg->ShowModal == wxID_OK) {
-                my $value = [ @opt_keys[$dlg->GetSelections] ];
-                $self->config->set('overridable', $value);
-                $self->_on_value_change('overridable');
-            }
+        EVT_CHECKLISTBOX($self, $listbox, sub {
+            my $value = [ map $opt_keys[$_], grep $listbox->IsChecked($_), 0..$#opt_keys ];
+            $self->config->set('overridable', $value);
+            $self->_on_value_change('overridable');
         });
+        
+        my $sizer = Wx::BoxSizer->new(wxVERTICAL);
+        $sizer->Add($listbox, 0, wxEXPAND);
         
         return $sizer;
     };
@@ -705,20 +690,36 @@ sub build {
             my $optgroup = $page->new_optgroup('Profile preferences');
             {
                 my $line = Slic3r::GUI::OptionsGroup::Line->new(
-                    label       => 'Overridable settings',
-                    widget      => $overridable_widget,
-                );
-                $optgroup->append_line($line);
-            }
-            {
-                my $line = Slic3r::GUI::OptionsGroup::Line->new(
                     label       => 'Compatible printers',
                     widget      => $self->_compatible_printers_widget,
                 );
                 $optgroup->append_line($line);
             }
         }
+        {
+            my $optgroup = $page->new_optgroup('Overridable settings (they will be displayed in the plater for quick changes)');
+            {
+                my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                    widget      => $overridable_widget,
+                    full_width  => 1,
+                );
+                $optgroup->append_line($line);
+            }
+        }
     }
+}
+
+sub reload_config {
+    my ($self) = @_;
+    
+    {
+        my %overridable = map { $_ => 1 } @{ $self->config->get('overridable') };
+        for my $i (0..$#{$self->{overridable_opt_keys}}) {
+            $self->{overridable_list}->Check($i, $overridable{ $self->{overridable_opt_keys}[$i] });
+        }
+    }
+    
+    $self->SUPER::reload_config;
 }
 
 sub _update {
