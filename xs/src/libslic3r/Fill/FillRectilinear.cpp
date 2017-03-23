@@ -37,9 +37,14 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     if (bounding_box.size().x < min_spacing) return;
     
     // Due to integer rounding, rotated polygons might not preserve verticality
-    // (i.e. when rotating by PI/2 two points having the same x coordinate 
-    // they might get different y coordinates), thus the first line will be skipped.
-    bounding_box.offset(-1);
+    // (i.e. when rotating by PI/2 two points having the same y coordinate 
+    // they might get different x coordinates), thus the first line will be skipped.
+    // Reducing by 1 is not enough, as we observed normal squares being off by about 30
+    // units along x between points supposed to be vertically aligned (coming from an 
+    // axis-aligned polygon edge). We need to be very tolerant here, especially when
+    // making solid infill where lack of lines is visible.
+    bounding_box.min.x += SCALED_EPSILON;
+    bounding_box.max.x -= SCALED_EPSILON;
     
     // define flow spacing according to requested density
     if (this->density > 0.9999f && !this->dont_adjust) {
