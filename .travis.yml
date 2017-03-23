@@ -8,7 +8,6 @@ perl:
 branches:
   only:
     - master
-    - stable
 sudo: false
 cache:
   apt: true
@@ -26,3 +25,10 @@ addons:
     - liblocal-lib-perl
     - g++-4.9
 env: CC=g++-4.9
+notifications:
+  irc:
+    channels:
+      - "chat.freenode.net#slic3r"
+    on_success: change
+    on_failure: always
+    use_notice: true
