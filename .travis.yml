@@ -1,4 +1,7 @@
 language: perl
+os: 
+  - osx
+  - linux
 install: export LDLOADLIBS=-lstdc++
 script: perl ./Build.PL
 perl:
