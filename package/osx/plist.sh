@@ -91,6 +91,8 @@ cat << EOF >> $plistfile
 	</array>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.7</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
 </dict>
 </plist>
 EOF
