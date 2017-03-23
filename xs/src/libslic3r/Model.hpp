@@ -74,6 +74,8 @@ class Model
     void duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
     void duplicate_objects_grid(size_t x, size_t y, coordf_t dist);
     void print_info() const;
+    bool looks_like_multipart_object() const;
+    void convert_multipart_object();
 };
 
 // Material, which may be shared across multiple ModelObjects of a single Model.

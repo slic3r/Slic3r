@@ -95,6 +95,8 @@
     void duplicate_objects(unsigned int copies_num, double dist, BoundingBoxf* bb = NULL);
     void duplicate_objects_grid(unsigned int x, unsigned int y, double dist);
     void print_info();
+    bool looks_like_multipart_object();
+    void convert_multipart_object();
     void repair();
 };
 
