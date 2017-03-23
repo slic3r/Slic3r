@@ -598,6 +598,20 @@ ModelObject::instance_bounding_box(size_t instance_idx) const
 }
 
 void
+ModelObject::align_to_ground()
+{
+    // calculate the displacements needed to 
+    // center this object around the origin
+	BoundingBoxf3 bb;
+	for (const ModelVolume* v : this->volumes)
+		if (!v->modifier)
+			bb.merge(v->mesh.bounding_box());
+    
+    this->translate(0, 0, -bb.min.z);
+    this->origin_translation.translate(0, 0, -bb.min.z);
+}
+
+void
 ModelObject::center_around_origin()
 {
     // calculate the displacements needed to 

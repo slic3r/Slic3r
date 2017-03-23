@@ -671,6 +671,9 @@ sub load_model_objects {
             # add a default instance and center object around origin
             $o->center_around_origin;  # also aligns object to Z = 0
             $o->add_instance(offset => $bed_centerf);
+        } else {
+            # if object has defined positions we still need to ensure it's aligned to Z = 0
+            $o->align_to_ground;
         }
         
         {

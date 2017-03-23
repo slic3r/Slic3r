@@ -149,6 +149,7 @@ class ModelObject
     TriangleMesh raw_mesh() const;
     BoundingBoxf3 raw_bounding_box() const;
     BoundingBoxf3 instance_bounding_box(size_t instance_idx) const;
+    void align_to_ground();
     void center_around_origin();
     void translate(const Vectorf3 &vector);
     void translate(coordf_t x, coordf_t y, coordf_t z);
