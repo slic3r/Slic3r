@@ -42,7 +42,13 @@ warn "Running Slic3r under Perl 5.16 is neither supported nor recommended\n"
 
 use FindBin;
 # Path to the images.
-our $var = sub { decode_path($FindBin::Bin) . "/var/" . $_[0] };
+if (defined $ENV{PAR_0}) {
+    use File::Basename;
+    our $var = sub { decode_path(dirname($ENV{PAR_0})) . "/inc/var/" . $_[0] };
+} else {
+    our $var = sub { decode_path($FindBin::Bin) . "/var/" . $_[0] };
+}
+
 
 use Moo 1.003001;
 

@@ -118,6 +118,10 @@ EOF
     }
     
     push @cpanm_args, ('--local-lib', 'local-lib');
+    if ($gui) {
+        # Force installation of gui libs
+        push @cpanm_args, ('-f', '');
+    }
     
     # make sure our cpanm is updated (old ones don't support the ~ syntax)
     system $cpanm, @cpanm_args, 'App::cpanminus';
