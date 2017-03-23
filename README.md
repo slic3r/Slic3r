@@ -7,7 +7,7 @@ The MacOS X build server is kindly sponsored by: <img width=150 src=https://clou
 
 ### So, what's this Slic3r?
 
-Slic3r is mainly a **toolpath generator** for 3D printers: it reads 3D models (STL, OBJ, AMF) and it converts them into **G-code** instructions for 3D printers. But it does much more than that, see the [features list](#feature) below.
+Slic3r is mainly a **toolpath generator** for 3D printers: it reads 3D models (STL, OBJ, AMF) and it converts them into **G-code** instructions for 3D printers. But it does much more than that, see the [features list](#features) below.
 
 Slic3r was born in **2011** within the RepRap community and thanks to its high configurability became the swiss-army knife for 3D printing. It served as a platform for experimenting several **new ideas that later became technology standards**, such as multiple extruders, brim, variable-height layers, per-object settings, modifiers, post-processing scripts, G-code macros and more. Despite being based on volunteer efforts, Slic3r is still pushing the boundaries of 3D printing.
 
