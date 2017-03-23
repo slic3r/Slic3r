@@ -74,7 +74,7 @@ sub convert_multipart_object {
         my $volume = $object->add_volume($v);
         $volume->set_name($v->object->name);
     }
-    $object->add_instance($_) for map @{$_->instances}, @objects;
+    $object->add_instance($_) for @{$objects[0]->instances};
     
     $self->delete_object($_) for reverse 0..($self->objects_count-2);
 }
