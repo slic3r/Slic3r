@@ -256,43 +256,10 @@ sub new {
     EVT_LEFT_UP($self->{btn_send_gcode}, sub {
         my (undef, $e) = @_;
         
-        my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
-        
-        if (!$e->AltDown) {
-            # When the alt key is pressed, bypass the dialog.
-            my $dlg = Slic3r::GUI::Plater::OctoPrintSpoolDialog->new($self, $filename);
-            return unless $dlg->ShowModal == wxID_OK;
-            $filename = $dlg->{filename};
-        }
-        
-        if (!$Slic3r::GUI::Settings->{octoprint}{overwrite}) {
-            my $progress = Wx::ProgressDialog->new('Querying OctoPrint…',
-                "Checking whether file already exists…", 100, $self, 0);
-            $progress->Pulse;
-        
-            my $ua = LWP::UserAgent->new;
-            $ua->timeout(5);
-            my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
-            $progress->Destroy;
-            if ($res->is_success) {
-                if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
-                    my $dialog = Wx::MessageDialog->new($self,
-                        "It looks like a file with the same name already exists in the server. "
-                            . "Shall I overwrite it?",
-                        'OctoPrint', wxICON_WARNING | wxYES | wxNO);
-                    if ($dialog->ShowModal() == wxID_NO) {
-                        return;
-                    }
-                }
-            } else {
-                my $message = "Error while connecting to the OctoPrint server: " . $res->status_line;
-                Slic3r::GUI::show_error($self, $message);
-                return;
-            }
-        }
-        
-        $self->{send_gcode_file_print} = $Slic3r::GUI::Settings->{octoprint}{start};
-        $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/" . $filename);
+        my $alt = $e->AltDown;
+        wxTheApp->CallAfter(sub {
+            $self->prepare_send($alt);
+        });
     });
     EVT_BUTTON($self, $self->{btn_export_stl}, \&export_stl);
     
@@ -632,7 +599,7 @@ sub add_tin {
 
 sub load_file {
     my $self = shift;
-    my ($input_file) = @_;
+    my ($input_file, $obj_idx) = @_;
     
     $Slic3r::GUI::Settings->{recent}{skein_directory} = dirname($input_file);
     wxTheApp->save_settings;
@@ -657,7 +624,19 @@ sub load_file {
                 $model->convert_multipart_object;
             }
         }
-        @obj_idx = $self->load_model_objects(@{$model->objects});
+        
+        if (defined $obj_idx) {
+            return () if $obj_idx >= $model->objects_count;
+            @obj_idx = $self->load_model_objects($model->get_object($obj_idx));
+        } else {
+            @obj_idx = $self->load_model_objects(@{$model->objects});
+        }
+        
+        my $i = 0;
+        foreach my $obj_idx (@obj_idx) {
+            $self->{objects}[$obj_idx]->input_file($input_file);
+            $self->{objects}[$obj_idx]->input_file_obj_idx($i++);
+        }
         $self->statusbar->SetStatusText("Loaded " . basename($input_file));
     }
     
@@ -692,6 +671,9 @@ sub load_model_objects {
             # add a default instance and center object around origin
             $o->center_around_origin;  # also aligns object to Z = 0
             $o->add_instance(offset => $bed_centerf);
+        } else {
+            # if object has defined positions we still need to ensure it's aligned to Z = 0
+            $o->align_to_ground;
         }
         
         {
@@ -861,6 +843,7 @@ sub set_number_of_copies {
     
     # prompt user
     my $copies = Wx::GetNumberFromUser("", "Enter the number of copies of the selected object:", "Copies", $model_object->instances_count, 0, 1000, $self);
+    return if $copies == -1;
     my $diff = $copies - $model_object->instances_count;
     if ($diff == 0) {
         # no variation
@@ -1440,6 +1423,52 @@ sub do_print {
     $self->GetFrame->select_tab(1);
 }
 
+sub prepare_send {
+    my ($self, $skip_dialog) = @_;
+    
+    return if !$self->{btn_send_gcode}->IsEnabled;
+    my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
+
+    if (!$skip_dialog) {
+        # When the alt key is pressed, bypass the dialog.
+        my $dlg = Slic3r::GUI::Plater::OctoPrintSpoolDialog->new($self, $filename);
+        return unless $dlg->ShowModal == wxID_OK;
+        $filename = $dlg->{filename};
+    }
+
+    if (!$Slic3r::GUI::Settings->{octoprint}{overwrite}) {
+        my $progress = Wx::ProgressDialog->new('Querying OctoPrint…',
+            "Checking whether file already exists…", 100, $self, 0);
+        $progress->Pulse;
+
+        my $ua = LWP::UserAgent->new;
+        $ua->timeout(5);
+        my $res = $ua->get(
+            "http://" . $self->{config}->octoprint_host . "/api/files/local",
+            'X-Api-Key' => $self->{config}->octoprint_apikey,
+        );
+        $progress->Destroy;
+        if ($res->is_success) {
+            if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
+                my $dialog = Wx::MessageDialog->new($self,
+                    "It looks like a file with the same name already exists in the server. "
+                        . "Shall I overwrite it?",
+                    'OctoPrint', wxICON_WARNING | wxYES | wxNO);
+                if ($dialog->ShowModal() == wxID_NO) {
+                    return;
+                }
+            }
+        } else {
+            my $message = "Error while connecting to the OctoPrint server: " . $res->status_line;
+            Slic3r::GUI::show_error($self, $message);
+            return;
+        }
+    }
+
+    $self->{send_gcode_file_print} = $Slic3r::GUI::Settings->{octoprint}{start};
+    $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/" . $filename);
+}
+
 sub send_gcode {
     my ($self) = @_;
     
@@ -1488,13 +1517,14 @@ sub reload_from_disk {
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
     
-    my $model_object = $self->{model}->objects->[$obj_idx];
-    return if !$model_object->input_file
-        || !-e $model_object->input_file;
+    return if !$object->input_file
+        || !-e $object->input_file;
     
-    my @new_obj_idx = $self->load_file($model_object->input_file);
+    # Only reload the selected object and not all objects from the input file.
+    my @new_obj_idx = $self->load_file($object->input_file, $object->input_file_obj_idx);
     return if !@new_obj_idx;
     
+    my $model_object = $self->{model}->objects->[$obj_idx];
     foreach my $new_obj_idx (@new_obj_idx) {
         my $o = $self->{model}->objects->[$new_obj_idx];
         $o->clear_instances;
@@ -1508,6 +1538,8 @@ sub reload_from_disk {
     }
     
     $self->remove($obj_idx);
+    
+    # TODO: refresh object list which contains wrong count and scale
     
     # Trigger thumbnail generation again, because the remove() method altered
     # object indexes before background thumbnail generation called its completion
@@ -2127,6 +2159,8 @@ use List::Util qw(first);
 use Slic3r::Geometry qw(X Y Z MIN MAX deg2rad);
 
 has 'name'                  => (is => 'rw', required => 1);
+has 'input_file'            => (is => 'rw');
+has 'input_file_obj_idx'    => (is => 'rw');
 has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms
 has 'transformed_thumbnail' => (is => 'rw');
 has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units

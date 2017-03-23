@@ -4,6 +4,7 @@
 #include "libslic3r.h"
 #include "Polygon.hpp"
 #include "Polyline.hpp"
+#include <ostream>
 #include <vector>
 
 namespace Slic3r {
@@ -61,6 +62,8 @@ operator+(ExPolygons src1, const ExPolygons &src2) {
     append_to(src1, src2);
     return src1;
 };
+
+std::ostream& operator <<(std::ostream &s, const ExPolygons &expolygons);
 
 }
 

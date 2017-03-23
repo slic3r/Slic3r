@@ -39,6 +39,19 @@ if ($^O eq 'darwin') {
     # that prevents this from happening, not needed with newer Boost versions.
     # See here for more details: https://svn.boost.org/trac/boost/ticket/7671
     push @cflags, qw(-DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE);
+    
+    # ExtUtils::CppGuess has a hard-coded -lstdc++, so we filter it out
+    {
+        no strict 'refs';
+        no warnings 'redefine';
+        my $func = "ExtUtils::CppGuess::_get_lflags";
+        my $orig = *$func{CODE};
+        *{$func} = sub {
+            my $lflags = $orig->(@_);
+            $lflags =~ s/\s*-lstdc\+\+//;
+            return $lflags;
+        };
+    }
 }
 if ($mswin) {
     # In case windows.h is included, we don't want the min / max macros to be active.
