@@ -8,16 +8,36 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
 
-#if defined(__APPLE__) || defined(__linux) || defined(__OpenBSD__)
+#if defined(__APPLE__) || defined(__OpenBSD__)
 #include <termios.h>
 #endif
-#if __APPLE__
+#ifdef __APPLE__
 #include <sys/ioctl.h>
 #include <IOKit/serial/ioss.h>
 #endif
-#ifdef __linux
+#ifdef __linux__
 #include <sys/ioctl.h>
-#include <linux/serial.h>
+#include <fcntl.h>
+#include "/usr/include/asm-generic/ioctls.h"
+
+/* The following definitions are kindly borrowed from:
+   /usr/include/asm-generic/termbits.h
+   Unfortunately we cannot just include that one because
+   it would redefine the "struct termios" already defined
+   the <termios.h> already included by Boost.ASIO. */
+#define K_NCCS 19
+struct termios2 {
+	tcflag_t c_iflag;
+	tcflag_t c_oflag;
+	tcflag_t c_cflag;
+	tcflag_t c_lflag;
+	cc_t c_line;
+	cc_t c_cc[K_NCCS];
+	speed_t c_ispeed;
+	speed_t c_ospeed;
+};
+#define BOTHER CBAUDEX
+
 #endif
 
 //#define DEBUG_SERIAL
@@ -65,7 +85,6 @@ GCodeSender::connect(std::string devname, unsigned int baud_rate)
         this->open = true;
         this->reset();
     } catch (boost::system::system_error &e) {
-        printf("Caught error\n");
         this->set_error_status(true);
         return false;
     }
@@ -107,27 +126,15 @@ GCodeSender::set_baud_rate(unsigned int baud_rate)
         ioctl(handle, IOSSIOSPEED, &newSpeed);
         ::tcsetattr(handle, TCSANOW, &ios);
 #elif __linux
-        termios ios;
-        ::tcgetattr(handle, &ios);
-        ::cfsetispeed(&ios, B38400);
-        ::cfsetospeed(&ios, B38400);
-        ::tcflush(handle, TCIFLUSH);
-        ::tcsetattr(handle, TCSANOW, &ios);
-
-        struct serial_struct ss;
-        ioctl(handle, TIOCGSERIAL, &ss);
-        ss.flags = (ss.flags & ~ASYNC_SPD_MASK) | ASYNC_SPD_CUST;
-        ss.custom_divisor = (ss.baud_base + (baud_rate / 2)) / baud_rate;
-        //cout << "bbase " << ss.baud_base << " div " << ss.custom_divisor;
-        long closestSpeed = ss.baud_base / ss.custom_divisor;
-        //cout << " Closest speed " << closestSpeed << endl;
-        ss.reserved_char[0] = 0;
-        if (closestSpeed < baud_rate * 98 / 100 || closestSpeed > baud_rate * 102 / 100) {
-            printf("Failed to set baud rate\n");
-        }
-
-        ioctl(handle, TIOCSSERIAL, &ss);
-		printf("< set_baud_rate: %u\n", baud_rate);
+        termios2 ios;
+        if (ioctl(handle, TCGETS2, &ios))
+            printf("Error in TCGETS2: %s\n", strerror(errno));
+        ios.c_ispeed = ios.c_ospeed = baud_rate;
+        ios.c_cflag &= ~CBAUD;
+        ios.c_cflag |= BOTHER;
+        if (ioctl(handle, TCSETS2, &ios))
+            printf("Error in TCSETS2: %s\n", strerror(errno));
+		
 #elif __OpenBSD__
 		struct termios ios;
 		::tcgetattr(handle, &ios);
@@ -296,17 +303,27 @@ GCodeSender::on_read(const boost::system::error_code& error,
 {
     this->set_error_status(false);
     if (error) {
-        if (error.value() == 45) {
+        #ifdef __linux__
+        if (error.value() == 2) {
+            this->do_read();
+            return;
+        }
+        #endif
+        
+        #ifdef __APPLE__
+        if (error.value() == 45 || ) {
             // OS X bug: http://osdir.com/ml/lib.boost.asio.user/2008-08/msg00004.html
             this->do_read();
-        } else {
-            // printf("ERROR: [%d] %s\n", error.value(), error.message().c_str());
-            // error can be true even because the serial port was closed.
-            // In this case it is not a real error, so ignore.
-            if (this->open) {
-                this->do_close();
-                this->set_error_status(true);
-            }
+            return;
+        }
+        #endif
+    
+        // printf("ERROR: [%d] %s\n", error.value(), error.message().c_str());
+        // error can be true even because the serial port was closed.
+        // In this case it is not a real error, so ignore.
+        if (this->open) {
+            this->do_close();
+            this->set_error_status(true);
         }
         return;
     }
