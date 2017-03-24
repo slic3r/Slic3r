@@ -25,6 +25,10 @@ use constant TB_EXPORT_GCODE    => &Wx::NewId;
 use constant TB_EXPORT_STL      => &Wx::NewId;
 use constant TB_MORE    => &Wx::NewId;
 use constant TB_FEWER   => &Wx::NewId;
+use constant TB_X90CW   => &Wx::NewId;
+use constant TB_X90CCW  => &Wx::NewId;
+use constant TB_Y90CW   => &Wx::NewId;
+use constant TB_Y90CCW  => &Wx::NewId;
 use constant TB_45CW    => &Wx::NewId;
 use constant TB_45CCW   => &Wx::NewId;
 use constant TB_SCALE   => &Wx::NewId;
@@ -165,6 +169,10 @@ sub new {
         $self->{htoolbar}->AddTool(TB_MORE, "More", Wx::Bitmap->new($Slic3r::var->("add.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_FEWER, "Fewer", Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
+		$self->{htoolbar}->AddTool(TB_X90CCW, "90° X ccw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_x_anticlockwise.png"), wxBITMAP_TYPE_PNG), '');
+		$self->{htoolbar}->AddTool(TB_X90CW, "90° X cw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_x_clockwise.png"), wxBITMAP_TYPE_PNG), '');
+		$self->{htoolbar}->AddTool(TB_Y90CCW, "90° X ccw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_y_anticlockwise.png"), wxBITMAP_TYPE_PNG), '');
+		$self->{htoolbar}->AddTool(TB_Y90CW, "90° X cw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_y_clockwise.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_anticlockwise.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_SCALE, "Scale…", Wx::Bitmap->new($Slic3r::var->("arrow_out.png"), wxBITMAP_TYPE_PNG), '');
@@ -180,6 +188,10 @@ sub new {
             arrange         => "Arrange",
             increase        => "",
             decrease        => "",
+            rotateX90ccw    => "",
+            rotateX90cw     => "",
+            rotateY90ccw    => "",
+            rotateY90cw     => "",
             rotate45ccw     => "",
             rotate45cw      => "",
             changescale     => "Scale…",
@@ -188,7 +200,7 @@ sub new {
             settings        => "Settings…",
         );
         $self->{btoolbar} = Wx::BoxSizer->new(wxHORIZONTAL);
-        for (qw(add remove reset arrange increase decrease rotate45ccw rotate45cw changescale split cut settings)) {
+        for (qw(add remove reset arrange increase decrease rotateX90ccw rotateX90cw rotateY90ccw rotateY90cw rotate45ccw rotate45cw changescale split cut settings)) {
             $self->{"btn_$_"} = Wx::Button->new($self, -1, $tbar_buttons{$_}, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
             $self->{btoolbar}->Add($self->{"btn_$_"});
         }
@@ -234,6 +246,11 @@ sub new {
             
             increase        add.png
             decrease        delete.png
+
+            rotateX90cw     arrow_rotate_x_clockwise.png
+            rotateX90ccw    arrow_rotate_x_anticlockwise.png
+            rotateY90cw     arrow_rotate_y_clockwise.png
+            rotateY90ccw    arrow_rotate_y_anticlockwise.png
             rotate45cw      arrow_rotate_clockwise.png
             rotate45ccw     arrow_rotate_anticlockwise.png
             changescale     arrow_out.png
@@ -270,6 +287,10 @@ sub new {
         EVT_TOOL($self, TB_ARRANGE, sub { $self->arrange; });
         EVT_TOOL($self, TB_MORE, sub { $self->increase; });
         EVT_TOOL($self, TB_FEWER, sub { $self->decrease; });
+        EVT_TOOL($self, TB_X90CW, sub { $_[0]->rotate(-90, X) });
+        EVT_TOOL($self, TB_X90CCW, sub { $_[0]->rotate(90, X) });
+        EVT_TOOL($self, TB_Y90CW, sub { $_[0]->rotate(-90, Y) });
+        EVT_TOOL($self, TB_Y90CCW, sub { $_[0]->rotate(90, Y) });
         EVT_TOOL($self, TB_45CW, sub { $_[0]->rotate(-45) });
         EVT_TOOL($self, TB_45CCW, sub { $_[0]->rotate(45) });
         EVT_TOOL($self, TB_SCALE, sub { $self->changescale(undef); });
@@ -283,6 +304,10 @@ sub new {
         EVT_BUTTON($self, $self->{btn_arrange}, sub { $self->arrange; });
         EVT_BUTTON($self, $self->{btn_increase}, sub { $self->increase; });
         EVT_BUTTON($self, $self->{btn_decrease}, sub { $self->decrease; });
+        EVT_BUTTON($self, $self->{btn_rotateX90cw}, sub { $_[0]->rotate(-90, X) });
+        EVT_BUTTON($self, $self->{btn_rotateX90ccw}, sub { $_[0]->rotate(90, X) });
+        EVT_BUTTON($self, $self->{btn_rotateY90cw}, sub { $_[0]->rotate(-90, Y) });
+        EVT_BUTTON($self, $self->{btn_rotateY90ccw}, sub { $_[0]->rotate(90, Y) });
         EVT_BUTTON($self, $self->{btn_rotate45cw}, sub { $_[0]->rotate(-45) });
         EVT_BUTTON($self, $self->{btn_rotate45ccw}, sub { $_[0]->rotate(45) });
         EVT_BUTTON($self, $self->{btn_changescale}, sub { $self->changescale(undef); });
@@ -1907,11 +1932,11 @@ sub selection_changed {
     
     my $method = $have_sel ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
-        for grep $self->{"btn_$_"}, qw(remove increase decrease rotate45cw rotate45ccw changescale split cut settings);
+        for grep $self->{"btn_$_"}, qw(remove increase decrease rotateX90cw rotateX90ccw rotateY90cw rotateY90ccw rotate45cw rotate45ccw changescale split cut settings);
     
     if ($self->{htoolbar}) {
         $self->{htoolbar}->EnableTool($_, $have_sel)
-            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_SCALE, TB_SPLIT, TB_CUT, TB_SETTINGS);
+            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_X90CW, TB_X90CCW, TB_Y90CW, TB_Y90CCW, TB_45CW, TB_45CCW, TB_SCALE, TB_SPLIT, TB_CUT, TB_SETTINGS);
     }
     
     if ($self->{object_info_size}) { # have we already loaded the info pane?
@@ -2022,11 +2047,34 @@ sub object_menu {
         $self->set_number_of_copies;
     }, undef, 'textfield.png');
     $menu->AppendSeparator();
-    $frame->_append_menu_item($menu, "Rotate 45° clockwise", 'Rotate the selected object by 45° clockwise', sub {
-        $self->rotate(-45);
+	
+	$frame->_append_menu_item($menu, "Rotate 90° clockwise (X)", 'Rotate the selected object by 90° clockwise', sub {
+		$self->rotate(-90, X);
+	}, undef, 'arrow_rotate_x_clockwise.png');
+	$frame->_append_menu_item($menu, "Rotate 90° counter-clockwise (X)", 'Rotate the selected object by 90° counter-clockwise', sub {
+		$self->rotate(90, X);
+	}, undef, 'arrow_rotate_x_anticlockwise.png');
+	$frame->_append_menu_item($menu, "Rotate 180° (X)", 'Rotate the selected object by 180°', sub {
+		$self->rotate(180, X);
+	}, undef, 'arrow_rotate_x_anticlockwise.png');
+	$menu->AppendSeparator();
+	
+	$frame->_append_menu_item($menu, "Rotate 90° clockwise (Y)", 'Rotate the selected object by 90° clockwise', sub {
+		$self->rotate(-90, Y);
+	}, undef, 'arrow_rotate_clockwise.png');
+	$frame->_append_menu_item($menu, "Rotate 90° counter-clockwise (Y)", 'Rotate the selected object by 90° counter-clockwise', sub {
+		$self->rotate(90, Y);
+	}, undef, 'arrow_rotate_anticlockwise.png');
+	$frame->_append_menu_item($menu, "Rotate 180° (Y)", 'Rotate the selected object by 180°', sub {
+		$self->rotate(180, Y);
+	}, undef, 'arrow_rotate_anticlockwise.png');
+	$menu->AppendSeparator();
+    
+	$frame->_append_menu_item($menu, "Rotate 45° clockwise (Z)", 'Rotate the selected object by 45° clockwise', sub {
+        $self->rotate(-45, Z);
     }, undef, 'arrow_rotate_clockwise.png');
-    $frame->_append_menu_item($menu, "Rotate 45° counter-clockwise", 'Rotate the selected object by 45° counter-clockwise', sub {
-        $self->rotate(+45);
+    $frame->_append_menu_item($menu, "Rotate 45° counter-clockwise (Z)", 'Rotate the selected object by 45° counter-clockwise', sub {
+        $self->rotate(+45, Z);
     }, undef, 'arrow_rotate_anticlockwise.png');
     
     my $rotateMenu = Wx::Menu->new;
