@@ -39,7 +39,7 @@ SpiralVase::process_layer(const std::string &gcode)
     {
         GCodeReader r = this->_reader;  // clone
         r.parse(gcode, [&total_layer_length, &layer_height, &z, &set_z]
-            (GCodeReader &, GCodeReader::GCodeLine &line) {
+            (GCodeReader &, const GCodeReader::GCodeLine &line) {
             if (line.cmd == "G1") {
                 if (line.extruding()) {
                     total_layer_length += line.dist_XY();

@@ -25,6 +25,7 @@ class GCodeReader {
         GCodeLine(GCodeReader* _reader) : reader(_reader) {};
         
         bool has(char arg) const { return this->args.count(arg) > 0; };
+        float get_float(char arg) const { return atof(this->args.at(arg).c_str()); };
         float new_X() const { return this->has('X') ? atof(this->args.at('X').c_str()) : this->reader->X; };
         float new_Y() const { return this->has('Y') ? atof(this->args.at('Y').c_str()) : this->reader->Y; };
         float new_Z() const { return this->has('Z') ? atof(this->args.at('Z').c_str()) : this->reader->Z; };
@@ -44,7 +45,7 @@ class GCodeReader {
         bool travel() const { return this->cmd == "G1" && !this->has('E'); };
         void set(char arg, std::string value);
     };
-    typedef std::function<void(GCodeReader&, GCodeLine&)> callback_t;
+    typedef std::function<void(GCodeReader&, const GCodeLine&)> callback_t;
     
     float X, Y, Z, E, F;
     bool verbose;
@@ -53,6 +54,8 @@ class GCodeReader {
     GCodeReader() : X(0), Y(0), Z(0), E(0), F(0), verbose(false), _extrusion_axis('E') {};
     void apply_config(const PrintConfigBase &config);
     void parse(const std::string &gcode, callback_t callback);
+    void parse_line(std::string line, callback_t callback);
+    void parse_file(const std::string &file, callback_t callback);
     
     private:
     GCodeConfig _config;
