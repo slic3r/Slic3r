@@ -23,7 +23,12 @@ int main(int argc, char **argv, char **env)
 
 	char    exe_path[MAX_PATH] = {0};
 	char    script_path[MAX_PATH];
+	char    gui_flag[6] = {" --gui"};
+#ifdef FORCE_GUI
+	char**  command_line = (char**)malloc(sizeof(char*) * ((++ argc) + 1+6));
+#else
 	char**  command_line = (char**)malloc(sizeof(char*) * ((++ argc) + 1));
+#endif
 	{
 		// Unicode path. This will not be used directly, but to test, whether
 		// there are any non-ISO characters, in which case the path is converted to a
@@ -67,8 +72,14 @@ int main(int argc, char **argv, char **env)
 		_makepath(script_path, drive, dir, "slic3r", "pl");
 		command_line[0] = exe_path;
 		command_line[1] = script_path;
+#ifdef FORCE_GUI
+		command_line[2] = gui_flag;
+		memcpy(command_line + 3, argv + 1, sizeof(char*) * (argc - 2));
+		command_line[argc+6] = NULL;
+#else
 		memcpy(command_line + 2, argv + 1, sizeof(char*) * (argc - 2));
 		command_line[argc] = NULL;
+#endif
 		// Unset the PERL5LIB and PERLLIB environment variables.
 		SetEnvironmentVariable("PERL5LIB", NULL);
 		SetEnvironmentVariable("PERLLIB", NULL);
