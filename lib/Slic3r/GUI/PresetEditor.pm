@@ -452,9 +452,10 @@ sub build {
     my $overridable_widget = sub {
         my ($parent) = @_;
         
+        my $Options = $Slic3r::Config::Options;
         my %options = (
-            map { $_ => sprintf('%s > %s', $Slic3r::Config::Options->{$_}{category}, $Slic3r::Config::Options->{$_}{full_label} // $Slic3r::Config::Options->{$_}{label}) }
-                map @{$_->get_keys}, Slic3r::Config::PrintObject->new, Slic3r::Config::PrintRegion->new
+            map { $_ => sprintf('%s > %s', $Options->{$_}{category}, $Options->{$_}{full_label} // $Options->{$_}{label}) }
+                grep { exists $Options->{$_} && $Options->{$_}{category} } $self->options
         );
         my @opt_keys = sort { $options{$a} cmp $options{$b} } keys %options;
         $self->{overridable_opt_keys} = [ @opt_keys ];

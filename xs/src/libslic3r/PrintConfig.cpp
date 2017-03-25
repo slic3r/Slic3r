@@ -144,6 +144,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("complete_objects", coBool);
     def->label = "Complete individual objects";
+    def->category = "Advanced";
     def->tooltip = "When printing multiple objects or copies, this feature will complete each object before moving onto next one (and starting it from its bottom layer). This feature is useful to avoid the risk of ruined prints. Slic3r should warn and prevent you from extruder collisions, but beware.";
     def->cli = "complete-objects!";
     def->default_value = new ConfigOptionBool(false);
