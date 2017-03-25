@@ -131,6 +131,12 @@ sub set_fixed_options {
     $self->update_optgroup;
 }
 
+sub fixed_options {
+    my ($self) = @_;
+    
+    return keys %{$self->{fixed_options}};
+}
+
 sub update_optgroup {
     my $self = shift;
     

@@ -526,10 +526,11 @@ sub _on_select_preset {
 	my ($self, $group) = @_;
 	
 	my @presets = $self->selected_presets($group);
-    
-    $Slic3r::GUI::Settings->{presets}{$group} = $presets[0]->name;
-    $Slic3r::GUI::Settings->{presets}{"${group}_${_}"} = $presets[$_]->name
-        for 1..$#presets;
+	
+	my $s_presets = $Slic3r::GUI::Settings->{presets};
+	my $changed = !$s_presets->{$group} || $s_presets->{$group} ne $presets[0]->name;
+    $s_presets->{$group} = $presets[0]->name;
+    $s_presets->{"${group}_${_}"} = $presets[$_]->name for 1..$#presets;
 	
 	wxTheApp->save_settings;
 	
@@ -538,15 +539,34 @@ sub _on_select_preset {
 	$self->on_extruders_change(scalar @{$config->get('nozzle_diameter')});
     
     if ($group eq 'print') {
-        $self->{settings_override_config}->clear;
-        my $overridable = $config->get('overridable');
-        if ($overridable) {
-            $self->{settings_override_panel}->set_default_config($config);
-            $self->{settings_override_panel}->set_fixed_options(\@$overridable);
-            $self->{settings_override_config}->set($_, $config->get($_))
-                for @$overridable;
+        my $o_config = $self->{settings_override_config};
+        my $o_panel  = $self->{settings_override_panel};
+        
+        if ($changed) {
+            # Preserve current options if re-selecting the same preset
+            $o_config->clear;
         }
-        $self->{settings_override_panel}->update_optgroup;
+        
+        my $overridable = $config->get('overridable');
+        
+        # Add/remove options (we do it this way for preserving current options)
+        foreach my $opt_key (@$overridable) {
+            if (!$o_config->has($opt_key)) {
+                # Populate option with the default value taken from configuration
+                $o_config->set($opt_key, $config->get($opt_key));
+            }
+        }
+        foreach my $opt_key (@{$o_config->get_keys}) {
+            # Keep options listed among overridable and options added on the fly
+            if ((none { $_ eq $opt_key } @$overridable)
+                && (any { $_ eq $opt_key } $o_panel->fixed_options)) {
+                $o_config->erase($opt_key);
+            }
+        }
+        
+        $o_panel->set_default_config($config);
+        $o_panel->set_fixed_options(\@$overridable);
+        $o_panel->update_optgroup;
     } elsif ($group eq 'printer') {
         # reload print and filament settings to honor their compatible_printer options
         $self->load_presets;
