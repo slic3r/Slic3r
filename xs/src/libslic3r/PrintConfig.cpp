@@ -1069,6 +1069,7 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "serial-speed=i";
     def->min = 1;
     def->max = 300000;
+    def->enum_values.push_back("57600");
     def->enum_values.push_back("115200");
     def->enum_values.push_back("250000");
     def->default_value = new ConfigOptionInt(250000);

@@ -126,7 +126,7 @@ sub new {
         my $serial_speed_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         {
             $self->{serial_speed_combobox} = Wx::ComboBox->new($self, -1, $config->serial_speed, wxDefaultPosition, wxDefaultSize,
-                ["115200", "250000"]);
+                ["57600", "115200", "250000"]);
             $self->{serial_speed_combobox}->SetFont($Slic3r::GUI::small_font);
             $serial_speed_sizer->Add($self->{serial_speed_combobox}, 0, wxALIGN_CENTER_VERTICAL, 0);
         }
