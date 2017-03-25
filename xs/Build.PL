@@ -70,6 +70,9 @@ if (defined $ENV{BOOST_INCLUDEDIR}) {
     my $subdir = $ENV{BOOST_DIR} . (($mswin == 1) ? '\include' : '/include');
     if (-d $subdir) {
         push @boost_include, $subdir;
+    } elsif (-d "../$subdir") {
+        # User might have provided a path relative to the Build.PL in the main directory
+        push @boost_include, "../$subdir";
     } else {
         push @boost_include, $ENV{BOOST_DIR};
     }
@@ -99,6 +102,9 @@ if (defined $ENV{BOOST_LIBRARYPATH}) {
     my $subdir = $ENV{BOOST_DIR} . ($mswin ? '\stage\lib' : '/stage/lib');
     if (-d $subdir) {
         push @boost_libs, $subdir;
+    } elsif (-d "../$subdir") {
+        # User might have provided a path relative to the Build.PL in the main directory
+        push @boost_libs, "../$subdir";
     } else {
         push @boost_libs, $ENV{BOOST_DIR};
     }
