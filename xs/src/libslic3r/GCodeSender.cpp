@@ -306,7 +306,7 @@ GCodeSender::on_read(const boost::system::error_code& error,
     this->set_error_status(false);
     if (error) {
         #ifdef __APPLE__
-        if (error.value() == 45 || ) {
+        if (error.value() == 45) {
             // OS X bug: http://osdir.com/ml/lib.boost.asio.user/2008-08/msg00004.html
             this->do_read();
             return;
