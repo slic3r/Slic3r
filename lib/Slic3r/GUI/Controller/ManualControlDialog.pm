@@ -206,8 +206,8 @@ sub new {
         $cmd_sizer->Add($btn, 0, wxEXPAND | wxLEFT, 5);
         
         my $do_send = sub {
-            my $cmd = $cmd_textctro->GetValue;
-            return if cmd eq '';
+            my $cmd = $cmd_textctrl->GetValue;
+            return if $cmd eq '';
             $self->GetParent->append_to_log(">> $cmd\n");
             $self->sender->send($cmd, 1);
             $cmd_textctrl->SetValue('');
