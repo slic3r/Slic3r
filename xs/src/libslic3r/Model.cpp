@@ -2,6 +2,7 @@
 #include "Geometry.hpp"
 #include "IO.hpp"
 #include <iostream>
+#include <set>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 
@@ -372,6 +373,43 @@ Model::print_info() const
         (*o)->print_info();
 }
 
+bool
+Model::looks_like_multipart_object() const
+{
+    if (this->objects.size() == 1) return false;
+    for (const ModelObject* o : this->objects) {
+        if (o->volumes.size() > 1) return false;
+        if (o->config.keys().size() > 1) return false;
+    }
+    
+    std::set<coordf_t> heights;
+    for (const ModelObject* o : this->objects)
+        for (const ModelVolume* v : o->volumes)
+            heights.insert(v->mesh.bounding_box().min.z);
+    return heights.size() > 1;
+}
+
+void
+Model::convert_multipart_object()
+{
+    if (this->objects.empty()) return;
+    
+    ModelObject* object = this->add_object();
+    object->input_file = this->objects.front()->input_file;
+    
+    for (const ModelObject* o : this->objects) {
+        for (const ModelVolume* v : o->volumes) {
+            ModelVolume* v2 = object->add_volume(*v);
+            v2->name = o->name;
+        }
+    }
+    for (const ModelInstance* i : this->objects.front()->instances)
+        object->add_instance(*i);
+    
+    while (this->objects.size() > 1)
+        this->delete_object(0);
+}
+
 ModelMaterial::ModelMaterial(Model *model) : model(model) {}
 ModelMaterial::ModelMaterial(Model *model, const ModelMaterial &other)
     : attributes(other.attributes), config(other.config), model(model)
@@ -595,6 +633,20 @@ ModelObject::instance_bounding_box(size_t instance_idx) const
         bb.merge(this->instances[instance_idx]->transform_mesh_bounding_box(&(*v)->mesh, true));
     }
     return bb;
+}
+
+void
+ModelObject::align_to_ground()
+{
+    // calculate the displacements needed to 
+    // center this object around the origin
+	BoundingBoxf3 bb;
+	for (const ModelVolume* v : this->volumes)
+		if (!v->modifier)
+			bb.merge(v->mesh.bounding_box());
+    
+    this->translate(0, 0, -bb.min.z);
+    this->origin_translation.translate(0, 0, -bb.min.z);
 }
 
 void

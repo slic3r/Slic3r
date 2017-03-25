@@ -238,43 +238,10 @@ sub new {
     EVT_LEFT_UP($self->{btn_send_gcode}, sub {
         my (undef, $e) = @_;
         
-        my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
-        
-        if (!$e->AltDown) {
-            # When the alt key is pressed, bypass the dialog.
-            my $dlg = Slic3r::GUI::Plater::OctoPrintSpoolDialog->new($self, $filename);
-            return unless $dlg->ShowModal == wxID_OK;
-            $filename = $dlg->{filename};
-        }
-        
-        if (!$Slic3r::GUI::Settings->{octoprint}{overwrite}) {
-            my $progress = Wx::ProgressDialog->new('Querying OctoPrint…',
-                "Checking whether file already exists…", 100, $self, 0);
-            $progress->Pulse;
-        
-            my $ua = LWP::UserAgent->new;
-            $ua->timeout(5);
-            my $res = $ua->get("http://" . $self->{config}->octoprint_host . "/api/files/local");
-            $progress->Destroy;
-            if ($res->is_success) {
-                if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
-                    my $dialog = Wx::MessageDialog->new($self,
-                        "It looks like a file with the same name already exists in the server. "
-                            . "Shall I overwrite it?",
-                        'OctoPrint', wxICON_WARNING | wxYES | wxNO);
-                    if ($dialog->ShowModal() == wxID_NO) {
-                        return;
-                    }
-                }
-            } else {
-                my $message = "Error while connecting to the OctoPrint server: " . $res->status_line;
-                Slic3r::GUI::show_error($self, $message);
-                return;
-            }
-        }
-        
-        $self->{send_gcode_file_print} = $Slic3r::GUI::Settings->{octoprint}{start};
-        $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/" . $filename);
+        my $alt = $e->AltDown;
+        wxTheApp->CallAfter(sub {
+            $self->prepare_send($alt);
+        });
     });
     EVT_BUTTON($self, $self->{btn_export_stl}, \&export_stl);
     
@@ -897,6 +864,9 @@ sub load_model_objects {
             # add a default instance and center object around origin
             $o->center_around_origin;  # also aligns object to Z = 0
             $o->add_instance(offset => $bed_centerf);
+        } else {
+            # if object has defined positions we still need to ensure it's aligned to Z = 0
+            $o->align_to_ground;
         }
         
         {
@@ -1045,6 +1015,7 @@ sub set_number_of_copies {
     
     # prompt user
     my $copies = Wx::GetNumberFromUser("", "Enter the number of copies of the selected object:", "Copies", $model_object->instances_count, 0, 1000, $self);
+    return if $copies == -1;
     my $diff = $copies - $model_object->instances_count;
     if ($diff == 0) {
         # no variation
@@ -1686,6 +1657,52 @@ sub do_print {
     $printer_panel->load_print_job($self->{print_file}, $filament_stats);
     
     $self->GetFrame->select_tab(1);
+}
+
+sub prepare_send {
+    my ($self, $skip_dialog) = @_;
+    
+    return if !$self->{btn_send_gcode}->IsEnabled;
+    my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
+
+    if (!$skip_dialog) {
+        # When the alt key is pressed, bypass the dialog.
+        my $dlg = Slic3r::GUI::Plater::OctoPrintSpoolDialog->new($self, $filename);
+        return unless $dlg->ShowModal == wxID_OK;
+        $filename = $dlg->{filename};
+    }
+
+    if (!$Slic3r::GUI::Settings->{octoprint}{overwrite}) {
+        my $progress = Wx::ProgressDialog->new('Querying OctoPrint…',
+            "Checking whether file already exists…", 100, $self, 0);
+        $progress->Pulse;
+
+        my $ua = LWP::UserAgent->new;
+        $ua->timeout(5);
+        my $res = $ua->get(
+            "http://" . $self->{config}->octoprint_host . "/api/files/local",
+            'X-Api-Key' => $self->{config}->octoprint_apikey,
+        );
+        $progress->Destroy;
+        if ($res->is_success) {
+            if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
+                my $dialog = Wx::MessageDialog->new($self,
+                    "It looks like a file with the same name already exists in the server. "
+                        . "Shall I overwrite it?",
+                    'OctoPrint', wxICON_WARNING | wxYES | wxNO);
+                if ($dialog->ShowModal() == wxID_NO) {
+                    return;
+                }
+            }
+        } else {
+            my $message = "Error while connecting to the OctoPrint server: " . $res->status_line;
+            Slic3r::GUI::show_error($self, $message);
+            return;
+        }
+    }
+
+    $self->{send_gcode_file_print} = $Slic3r::GUI::Settings->{octoprint}{start};
+    $self->{send_gcode_file} = $self->export_gcode(Wx::StandardPaths::Get->GetTempDir() . "/" . $filename);
 }
 
 sub send_gcode {

@@ -286,6 +286,7 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Static::new_FullPrintCo
         is_deeply $config->get('retract_speed'), [0.4, 0.5], 'read_cli(): floats array';
     }
     {
+        no warnings 'qw';
         my $config = $parse->(qw(--extruder-offset 0,0 --extruder-offset 10x5));
         is_deeply [ map $_->pp, @{$config->get('extruder_offset')} ],
             [[0,0], [10,5]], 'read_cli(): points array';
