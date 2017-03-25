@@ -131,7 +131,9 @@ GCodeSender::set_baud_rate(unsigned int baud_rate)
             printf("Error in TCGETS2: %s\n", strerror(errno));
         ios.c_ispeed = ios.c_ospeed = baud_rate;
         ios.c_cflag &= ~CBAUD;
-        ios.c_cflag |= BOTHER;
+        ios.c_cflag |= BOTHER | CLOCAL | CREAD;
+	ios.c_cc[VMIN] = 1; // Minimum of characters to read, prevents eof errors when 0 bytes are read
+	ios.c_cc[VTIME] = 1;
         if (ioctl(handle, TCSETS2, &ios))
             printf("Error in TCSETS2: %s\n", strerror(errno));
 		
@@ -303,13 +305,6 @@ GCodeSender::on_read(const boost::system::error_code& error,
 {
     this->set_error_status(false);
     if (error) {
-        #ifdef __linux__
-        if (error.value() == 2) {
-            this->do_read();
-            return;
-        }
-        #endif
-        
         #ifdef __APPLE__
         if (error.value() == 45 || ) {
             // OS X bug: http://osdir.com/ml/lib.boost.asio.user/2008-08/msg00004.html
