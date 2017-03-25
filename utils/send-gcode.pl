@@ -14,7 +14,8 @@ use Slic3r;
 die "Usage: send-gcode.pl SERIALPORT BAUDRATE GCODE_FILE\n"
     if @ARGV != 3;
 
-my $serial = Slic3r::GCode::Sender->new($ARGV[0], $ARGV[1]);
+my $serial = Slic3r::GCode::Sender->new;
+$serial->connect($ARGV[0], $ARGV[1]);
 1 until $serial->is_connected;
 print "Connected to printer\n";
 
