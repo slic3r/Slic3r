@@ -106,6 +106,9 @@ GCodeSender::connect(std::string devname, unsigned int baud_rate)
     boost::thread t(boost::bind(&asio::io_service::run, &this->io));
     this->background_thread.swap(t);
     
+    // always send a M105 to check for connection because firmware might be silent on connect 
+    this->send("M105", true);
+    
     return true;
 }
 
