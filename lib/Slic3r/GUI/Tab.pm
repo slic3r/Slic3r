@@ -653,11 +653,6 @@ sub build {
             $optgroup->append_single_option_line('support_material_interface_extruder');
         }
         {
-            my $optgroup = $page->new_optgroup('Ooze prevention');
-            $optgroup->append_single_option_line('ooze_prevention');
-            $optgroup->append_single_option_line('standby_temperature_delta');
-        }
-        {
             my $optgroup = $page->new_optgroup('Advanced');
             $optgroup->append_single_option_line('interface_shells');
         }
@@ -880,9 +875,6 @@ sub _update {
     $self->get_field($_)->toggle($have_sequential_printing)
         for qw(extruder_clearance_radius extruder_clearance_height);
     
-    my $have_ooze_prevention = $config->ooze_prevention;
-    $self->get_field($_)->toggle($have_ooze_prevention)
-        for qw(standby_temperature_delta);
 }
 
 sub hidden_options { !$Slic3r::have_threads ? qw(threads) : () }
@@ -1090,6 +1082,7 @@ sub build {
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode
         nozzle_diameter extruder_offset
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
+        ooze_prevention standby_temperature_delta
         retract_length_toolchange retract_restart_extra_toolchange
     ));
     $self->{config}->set('printer_settings_id', '');
@@ -1131,6 +1124,11 @@ sub build {
                 $optgroup->append_single_option_line($option);
             }
             $optgroup->append_single_option_line('has_heatbed');
+            {
+                my $optgroup = $page->new_optgroup('Ooze prevention');
+                $optgroup->append_single_option_line('ooze_prevention');
+                $optgroup->append_single_option_line('standby_temperature_delta');
+            }
             $optgroup->on_change(sub {
                 my ($opt_id) = @_;
                 if ($opt_id eq 'extruders_count') {
@@ -1455,6 +1453,10 @@ sub _update {
         $self->get_field('retract_restart_extra_toolchange', $i)->toggle
             ($have_multiple_extruders && $toolchange_retraction);
     }
+
+    my $have_ooze_prevention = $config->ooze_prevention;
+    $self->get_field($_)->toggle($have_ooze_prevention)
+        for qw(standby_temperature_delta);
 }
 
 # this gets executed after preset is loaded and before GUI fields are updated
