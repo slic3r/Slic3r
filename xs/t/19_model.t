@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Slic3r::XS;
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 {
     my $model = Slic3r::Model->new;
@@ -17,6 +17,10 @@ use Test::More tests => 4;
     my $lhr = [ [ 5, 10, 0.1 ] ];
     $object->set_layer_height_ranges($lhr);
     is_deeply $object->layer_height_ranges, $lhr, 'layer_height_ranges roundtrip';
+
+	my $testmodel = Slic3r::Model->new;
+	my $a = $testmodel->read_from_file("a.stl");
+	is $a, "Error while reading STL file";
 }
 
 __END__
