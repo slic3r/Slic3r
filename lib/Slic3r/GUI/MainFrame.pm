@@ -213,13 +213,13 @@ sub _init_menubar {
     # View menu
     {
         $self->{viewMenu} = Wx::Menu->new;
-        $self->_append_menu_item($self->{viewMenu}, "Iso"    , 'Iso View'    , sub { $self->select_view('iso'    ); });
-        $self->_append_menu_item($self->{viewMenu}, "Top"    , 'Top View'    , sub { $self->select_view('top'    ); });
-        $self->_append_menu_item($self->{viewMenu}, "Bottom" , 'Bottom View' , sub { $self->select_view('bottom' ); });
-        $self->_append_menu_item($self->{viewMenu}, "Front"  , 'Front View'  , sub { $self->select_view('front'  ); });
-        $self->_append_menu_item($self->{viewMenu}, "Rear"   , 'Rear View'   , sub { $self->select_view('rear'   ); });
-        $self->_append_menu_item($self->{viewMenu}, "Left"   , 'Left View'   , sub { $self->select_view('left'   ); });
-        $self->_append_menu_item($self->{viewMenu}, "Right"  , 'Right View'  , sub { $self->select_view('right'  ); });
+        $self->_append_menu_item($self->{viewMenu}, "Top\tCtrl+4"     , 'Top View'     , sub { $self->select_view('top'     ); });
+        $self->_append_menu_item($self->{viewMenu}, "Bottom\tCtrl+5"  , 'Bottom View'  , sub { $self->select_view('bottom'  ); });
+        $self->_append_menu_item($self->{viewMenu}, "Left\tCtrl+6"    , 'Left View'    , sub { $self->select_view('left'    ); });
+        $self->_append_menu_item($self->{viewMenu}, "Right\tCtrl+7"   , 'Right View'   , sub { $self->select_view('right'   ); });
+        $self->_append_menu_item($self->{viewMenu}, "Front\tCtrl+8"   , 'Front View'   , sub { $self->select_view('front'   ); });
+        $self->_append_menu_item($self->{viewMenu}, "Back\tCtrl+9"    , 'Back View'    , sub { $self->select_view('back'    ); });
+        $self->_append_menu_item($self->{viewMenu}, "Diagonal\tCtrl+0", 'Diagonal View', sub { $self->select_view('diagonal'); });
         $self->{viewMenu}->AppendSeparator();
         $self->{color_toolpaths_by_role} = $self->_append_menu_item($self->{viewMenu},
             "Color Toolpaths by Role",
