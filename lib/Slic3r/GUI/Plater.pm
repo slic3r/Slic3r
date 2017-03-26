@@ -656,6 +656,7 @@ sub load_presets {
         @sel = (0) if !@sel;
         
         # populate the wxChoice objects
+        my @preset_names = ();
         foreach my $choice (@choosers) {
             $choice->Clear;
             $self->{preset_choosers_names}{$choice} = [];
@@ -691,11 +692,13 @@ sub load_presets {
                 $choice->SetSelection($selected);
                 
                 my $preset_name = $self->{preset_choosers_names}{$choice}[$selected];
-                $self->{print}->placeholder_parser->set("${group}_preset", $preset_name);
+                push @preset_names, $preset_name;
                 # TODO: populate other filament preset placeholders
                 $selected_printer_name = $preset_name if $group eq 'printer';
             }
         }
+        
+        $self->{print}->placeholder_parser->set("${group}_preset", [ @preset_names ]);
     }
 }
 
