@@ -23,7 +23,7 @@ int main(int argc, char **argv, char **env)
 
 	char    exe_path[MAX_PATH] = {0};
 	char    script_path[MAX_PATH];
-	char    gui_flag[6] = {" --gui"};
+	char    gui_flag[7] = {" --gui"};
 #ifdef FORCE_GUI
 	char**  command_line = (char**)malloc(sizeof(char*) * ((++ argc) + 1+6));
 #else
