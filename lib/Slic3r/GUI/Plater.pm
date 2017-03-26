@@ -381,6 +381,27 @@ sub new {
             my $box = Wx::StaticBox->new($self, -1, "Info");
             $object_info_sizer = Wx::StaticBoxSizer->new($box, wxVERTICAL);
             $object_info_sizer->SetMinSize([350,-1]);
+            
+            {
+                my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+                $object_info_sizer->Add($sizer, 0, wxEXPAND | wxBOTTOM, 5);
+                my $text = Wx::StaticText->new($self, -1, "Object:", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+                $text->SetFont($Slic3r::GUI::small_font);
+                $sizer->Add($text, 0, wxALIGN_CENTER_VERTICAL);
+                
+                # We supply a bogus width to wxChoice (sizer will override it and stretch 
+                # the control anyway), because if we leave the default (-1) it will stretch
+                # too much according to the contents, and this is bad with long file names.
+                $self->{object_info_choice} = Wx::Choice->new($self, -1, wxDefaultPosition, [100,-1], []);
+                $self->{object_info_choice}->SetFont($Slic3r::GUI::small_font);
+                $sizer->Add($self->{object_info_choice}, 1, wxALIGN_CENTER_VERTICAL);
+                
+                EVT_CHOICE($self, $self->{object_info_choice}, sub {
+                    $self->select_object($self->{object_info_choice}->GetSelection);
+                    $self->refresh_canvases;
+                });
+            }
+            
             my $grid_sizer = Wx::FlexGridSizer->new(3, 4, 5, 5);
             $grid_sizer->SetFlexibleDirection(wxHORIZONTAL);
             $grid_sizer->AddGrowableCol(1, 1);
@@ -388,7 +409,6 @@ sub new {
             $object_info_sizer->Add($grid_sizer, 0, wxEXPAND);
             
             my @info = (
-                name        => "Name",
                 copies      => "Copies",
                 size        => "Size",
                 volume      => "Volume",
@@ -1927,6 +1947,21 @@ sub on_model_change {
         }
     }
     
+    # reload the objects info choice
+    if (my $choice = $self->{object_info_choice}) {
+        $choice->Clear;
+        for my $i (0..$#{$self->{objects}}) {
+            my $name = $self->{objects}->[$i]->name;
+            my $count = $self->{model}->get_object($i)->instances_count;
+            if ($count > 1) {
+                $name .= " (${count}x)";
+            }
+            $choice->Append($name);
+        }
+        my ($obj_idx, $object) = $self->selected_object;
+        $choice->SetSelection($obj_idx // -1);
+    }
+    
     my $running = $self->pause_background_process;
     
     if ($Slic3r::GUI::Settings->{_}{autocenter} || $force_autocenter) {
@@ -2132,9 +2167,10 @@ sub selection_changed {
     }
     
     if ($self->{object_info_size}) { # have we already loaded the info pane?
+        
         if ($have_sel) {
-            $self->{object_info_name}->SetLabel($object->name);
             my $model_object = $self->{model}->objects->[$obj_idx];
+            $self->{object_info_choice}->SetSelection($obj_idx);
             $self->{object_info_copies}->SetLabel($model_object->instances_count);
             my $model_instance = $model_object->instances->[0];
             {
@@ -2168,7 +2204,8 @@ sub selection_changed {
                 $self->{object_info_facets}->SetLabel($object->facets);
             }
         } else {
-            $self->{"object_info_$_"}->SetLabel("") for qw(name copies size volume facets materials manifold);
+            $self->{object_info_choice}->SetSelection(-1);
+            $self->{"object_info_$_"}->SetLabel("") for qw(copies size volume facets materials manifold);
             $self->{object_info_manifold_warning_icon}->Hide;
             $self->{object_info_manifold}->SetToolTipString("");
         }
