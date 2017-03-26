@@ -763,7 +763,7 @@ sub generate_toolpaths {
                     mm3_per_mm  => $mm3_per_mm,
                     width       => $_interface_flow->width,
                     height      => $layer->height,
-                ), @p;
+                ), @$p;
             }                
             
             $layer->support_interface_fills->append(@paths);
