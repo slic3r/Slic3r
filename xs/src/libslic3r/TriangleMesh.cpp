@@ -111,7 +111,7 @@ TriangleMesh::~TriangleMesh() {
 void
 TriangleMesh::ReadSTLFile(const std::string &input_file) {
     stl_open(&stl, input_file.c_str());
-    if (this->stl.error != 0) throw std::runtime_error("Failed to read STL file");
+    if (this->stl.error != 0) throw Slic3r::runtime_error("Failed to read STL file");
 }
 
 void
@@ -518,7 +518,7 @@ TriangleMesh::extrude_tin(float offset)
     
     const int number_of_facets = this->stl.stats.number_of_facets;
     if (number_of_facets == 0)
-        throw std::runtime_error("Error: file is empty");
+        throw Slic3r::runtime_error("Error: file is empty");
     
     const float z = this->stl.stats.min.z - offset;
     
@@ -526,7 +526,7 @@ TriangleMesh::extrude_tin(float offset)
         const stl_facet &facet = this->stl.facet_start[i];
         
         if (facet.normal.z < 0)
-            throw std::runtime_error("Invalid 2.5D mesh: at least one facet points downwards.");
+            throw Slic3r::runtime_error("Invalid 2.5D mesh: at least one facet points downwards.");
         
         for (int j = 0; j < 3; ++j) {
             if (this->stl.neighbors_start[i].neighbor[j] == -1) {

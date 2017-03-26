@@ -700,7 +700,10 @@ class StaticConfig : public virtual ConfigBase
     // virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) = 0;
 };
 
-class UnknownOptionException : public std::exception {};
+class UnknownOptionException : public runtime_error {
+    public:
+    UnknownOptionException() : runtime_error("Option not found") {};
+};
 
 }
 

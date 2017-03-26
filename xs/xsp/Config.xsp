@@ -26,13 +26,13 @@
     %name{get_abs_value_over}
         double get_abs_value(t_config_option_key opt_key, double ratio_over);
     void apply(DynamicPrintConfig* other)
-        %code{% THIS->apply(*other, true); %};
+        %code{% catch_string_error(THIS->apply(*other, true);) %};
     std::vector<std::string> diff(DynamicPrintConfig* other)
         %code{% RETVAL = THIS->diff(*other); %};
     bool equals(DynamicPrintConfig* other)
         %code{% RETVAL = THIS->equals(*other); %};
     void apply_static(StaticPrintConfig* other)
-        %code{% THIS->apply(*other, true); %};
+        %code{% catch_string_error(THIS->apply(*other, true);) %};
     %name{get_keys} std::vector<std::string> keys();
     void erase(t_config_option_key opt_key);
     void normalize();
@@ -76,9 +76,9 @@
     %name{get_abs_value_over}
         double get_abs_value(t_config_option_key opt_key, double ratio_over);
     void apply_static(StaticPrintConfig* other)
-        %code{% THIS->apply(*other, true); %};
+        %code{% catch_string_error(THIS->apply(*other, true);) %};
     void apply_dynamic(DynamicPrintConfig* other)
-        %code{% THIS->apply(*other, true); %};
+        %code{% catch_string_error(THIS->apply(*other, true);) %};
     %name{get_keys} std::vector<std::string> keys();
     std::string get_extrusion_axis()
         %code{%
@@ -93,7 +93,7 @@
     %name{_load} void load(std::string file);
     %name{_save} void save(std::string file);
     DynamicPrintConfig* dynamic()
-        %code{% RETVAL = new DynamicPrintConfig (); RETVAL->apply(*THIS, true); %};
+        %code{% RETVAL = new DynamicPrintConfig (); catch_string_error(RETVAL->apply(*THIS, true);) %};
 };
 
 %package{Slic3r::Config};
