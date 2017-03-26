@@ -207,6 +207,88 @@ sub new {
     return $self;
 }
 
+package Slic3r::Model;
+
+sub read_from_file {
+    my $ret = _read_from_file(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+sub read_stl {
+    my $ret = _read_stl(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+sub read_obj {
+    my $ret = _read_obj(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+sub read_amf {
+    my $ret = _read_amf(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+sub duplicate_objects_grid {
+    my $ret = _duplicate_objects_grid(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+package Slic3r::Model::Volume;
+
+sub extrude_tin {
+    my $ret = _extrude_tin(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+package Slic3r::TriangleMesh;
+
+sub ReadSTLFile {
+    my $ret = _ReadSTLFile(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+package Slic3r::Config;
+
+sub apply {
+    my $ret = _apply(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+sub apply_static {
+    my $ret = _apply_static(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+package Slic3r::Config::Static;
+
+sub apply_static {
+    my $ret = _apply_static(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+sub apply_dynamic {
+    my $ret = _apply_dynamic(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
+sub dynamic {
+    my $ret = _dynamic(@_);
+    die $ret if !ref $ret && defined($ret) && $ret =~ /[a-z]/i;
+    return $ret;
+}
+
 package Slic3r::GUI::_3DScene::GLVertexArray;
 sub CLONE_SKIP { 1 }
 

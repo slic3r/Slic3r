@@ -54,7 +54,7 @@ Model::read_from_file(std::string input_file)
             || boost::algorithm::iends_with(input_file, ".amf.xml")) {
         IO::AMF::read(input_file, &model);
     } else {
-        throw std::runtime_error("Unknown file format");
+        throw Slic3r::runtime_error("Unknown file format");
     }
     
     if (model.objects.empty())
@@ -349,8 +349,8 @@ Model::duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* b
 void
 Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
 {
-    if (this->objects.size() > 1) throw "Grid duplication is not supported with multiple objects";
-    if (this->objects.empty()) throw "No objects!";
+    if (this->objects.size() > 1) throw Slic3r::runtime_error("Grid duplication is not supported with multiple objects");
+    if (this->objects.empty()) throw Slic3r::runtime_error("No objects!");
 
     ModelObject* object = this->objects.front();
     object->clear_instances();

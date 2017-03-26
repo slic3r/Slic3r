@@ -110,6 +110,11 @@ parallelize(T start, T end, boost::function<void(T)> func,
     parallelize(queue, func, threads_count);
 }
 
+class runtime_error : public std::runtime_error {
+    public:
+    runtime_error(const std::string &err) : std::runtime_error(err) {};
+};
+
 } // namespace Slic3r
 
 using namespace Slic3r;

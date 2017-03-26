@@ -19,7 +19,7 @@ STL::read(std::string input_file, TriangleMesh* mesh)
         mesh->ReadSTLFile(input_file);
         mesh->check_topology();
     } catch (...) {
-        throw std::runtime_error("Error while reading STL file");
+        throw Slic3r::runtime_error("Error while reading STL file");
     }
     return true;
 }
@@ -31,7 +31,7 @@ STL::read(std::string input_file, Model* model)
     if (!STL::read(input_file, &mesh)) return false;
     
     if (mesh.facets_count() == 0)
-        throw std::runtime_error("This STL file couldn't be read because it's empty.");
+        throw Slic3r::runtime_error("This STL file couldn't be read because it's empty.");
     
     ModelObject* object = model->add_object();
     object->name        = boost::filesystem::path(input_file).filename().string();
@@ -88,7 +88,7 @@ OBJ::read(std::string input_file, Model* model)
     }
     
     if (!ret)
-        throw std::runtime_error("Error while reading OBJ file");
+        throw Slic3r::runtime_error("Error while reading OBJ file");
     
     ModelObject* object = model->add_object();
     object->name        = boost::filesystem::path(input_file).filename().string();

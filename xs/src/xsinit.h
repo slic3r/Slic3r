@@ -153,6 +153,27 @@ SV* to_SV(TriangleMesh* THIS);
 SV* polynode_children_2_perl(const ClipperLib::PolyNode& node);
 SV* polynode2perl(const ClipperLib::PolyNode& node);
 
+#define return_string_error(err) { \
+        SV* RETVALSV = newSVpvn_utf8( err.c_str(), err.length(), true ); \
+        RETVALSV = sv_2mortal(RETVALSV); \
+        ST(0) = RETVALSV; \
+        XSRETURN(1); \
+    }
+
+#define catch_string_error(code) \
+    bool failed = false; \
+    std::string err; \
+    try { \
+        code \
+    } catch (runtime_error &e) { \
+        failed = true; \
+        err = e.what(); \
+    } \
+    if (failed) return_string_error(err);
+
+#undef croak
+#define croak(...) printf(__VA_ARGS__); exit(1);
+
 class Filler
 {
     public:
