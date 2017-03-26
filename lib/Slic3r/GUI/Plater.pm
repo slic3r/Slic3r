@@ -238,7 +238,7 @@ sub new {
     EVT_LEFT_UP($self->{btn_send_gcode}, sub {
         my (undef, $e) = @_;
         
-        my $alt = $e->AltDown;
+        my $alt = $e->ShiftDown;
         wxTheApp->CallAfter(sub {
             $self->prepare_send($alt);
         });
