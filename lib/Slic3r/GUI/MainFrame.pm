@@ -181,6 +181,12 @@ sub _init_menubar {
             my $selectMenuItem = $self->{plater_menu}->AppendSubMenu($selectMenu, "Select", 'Select an object in the plater');
             wxTheApp->set_menu_item_icon($selectMenuItem, 'brick.png');
         }
+        $self->_append_menu_item($self->{plater_menu}, "Select Next Object\tCtrl+Right", 'Select Next Object in the plater', sub {
+            $plater->select_next;
+        }, undef, 'arrow_right.png');
+        $self->_append_menu_item($self->{plater_menu}, "Select Prev Object\tCtrl+Left", 'Select Previous Object in the plater', sub {
+            $plater->select_prev;
+        }, undef, 'arrow_left.png');
         $self->{plater_menu}->AppendSeparator();
         $self->_append_menu_item($self->{plater_menu}, "Export G-code...", 'Export current plate as G-code', sub {
             $plater->export_gcode;

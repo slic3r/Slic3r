@@ -2226,6 +2226,34 @@ sub select_object {
     $self->selection_changed(1);
 }
 
+sub select_next {
+    my ($self) = @_;
+    
+    return if !@{$self->{objects}};
+    my ($obj_idx, $object) = $self->selected_object;
+    if (!defined $obj_idx || $obj_idx == $#{$self->{objects}}) {
+        $obj_idx = 0;
+    } else {
+        $obj_idx++;
+    }
+    $self->select_object($obj_idx);
+    $self->refresh_canvases;
+}
+
+sub select_prev {
+    my ($self) = @_;
+    
+    return if !@{$self->{objects}};
+    my ($obj_idx, $object) = $self->selected_object;
+    if (!defined $obj_idx || $obj_idx == 0) {
+        $obj_idx = $#{$self->{objects}};
+    } else {
+        $obj_idx--;
+    }
+    $self->select_object($obj_idx);
+    $self->refresh_canvases;
+}
+
 sub selected_object {
     my $self = shift;
     
