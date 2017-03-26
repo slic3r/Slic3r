@@ -11,7 +11,7 @@
     Model();
     ~Model();
     
-    %name{read_from_file} Model(std::string input_file)
+    %name{_read_from_file} Model(std::string input_file)
         %code%{
             catch_string_error(RETVAL = new Model(Model::read_from_file(input_file));)
         %};
@@ -19,11 +19,11 @@
     Clone<Model> clone()
         %code%{ RETVAL = THIS; %};
     
-    bool read_stl(std::string input_file)
+    bool _read_stl(std::string input_file)
         %code%{ catch_string_error(RETVAL = Slic3r::IO::STL::read(input_file, THIS);) %};
-    bool read_obj(std::string input_file)
+    bool _read_obj(std::string input_file)
         %code%{ catch_string_error(RETVAL = Slic3r::IO::OBJ::read(input_file, THIS);) %};
-    bool read_amf(std::string input_file)
+    bool _read_amf(std::string input_file)
         %code%{ catch_string_error(RETVAL = Slic3r::IO::AMF::read(input_file, THIS);) %};
     
     bool write_stl(std::string output_file, bool binary = false)
@@ -89,7 +89,7 @@
     bool arrange_objects(double dist, BoundingBoxf* bb = NULL);
     void duplicate(unsigned int copies_num, double dist, BoundingBoxf* bb = NULL);
     void duplicate_objects(unsigned int copies_num, double dist, BoundingBoxf* bb = NULL);
-    void duplicate_objects_grid(unsigned int x, unsigned int y, double dist)
+    void _duplicate_objects_grid(unsigned int x, unsigned int y, double dist)
         %code%{ catch_string_error(THIS->duplicate_objects_grid(x, y, dist);) %};
     void print_info();
     bool looks_like_multipart_object();
@@ -258,7 +258,7 @@ ModelMaterial::attributes()
     
     ModelMaterial* assign_unique_material();
 
-    void extrude_tin(float offset)
+    void _extrude_tin(float offset)
         %code%{ catch_string_error(THIS->mesh.extrude_tin(offset);) %};
 };
 

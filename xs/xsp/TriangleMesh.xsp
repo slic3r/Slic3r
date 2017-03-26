@@ -10,7 +10,7 @@
     ~TriangleMesh();
     Clone<TriangleMesh> clone()
         %code{% RETVAL = THIS; %};
-    void ReadSTLFile(std::string input_file)
+    void _ReadSTLFile(std::string input_file)
         %code{% catch_string_error(THIS->ReadSTLFile(input_file);) %};
     void write_ascii(std::string output_file);
     void write_binary(std::string output_file);

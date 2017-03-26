@@ -17,10 +17,11 @@ use Test::More tests => 5;
     my $lhr = [ [ 5, 10, 0.1 ] ];
     $object->set_layer_height_ranges($lhr);
     is_deeply $object->layer_height_ranges, $lhr, 'layer_height_ranges roundtrip';
+}
 
-	my $testmodel = Slic3r::Model->new;
-	my $a = $testmodel->read_from_file("a.stl");
-	is $a, "Error while reading STL file";
+{
+	my $model = eval { Slic3r::Model->read_from_file("a.xyz") };
+	ok !$model && $@, "Error while reading STL file";
 }
 
 __END__
