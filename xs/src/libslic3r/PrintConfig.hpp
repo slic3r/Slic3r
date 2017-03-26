@@ -301,6 +301,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                gcode_comments;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionString              layer_gcode;
+    ConfigOptionString              after_object_gcode;
     ConfigOptionFloat               max_print_speed;
     ConfigOptionFloat               max_volumetric_speed;
     ConfigOptionFloat               pressure_advance;
@@ -352,6 +353,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(start_gcode);
         OPT_PTR(start_filament_gcode);
         OPT_PTR(toolchange_gcode);
+        OPT_PTR(after_object_gcode);
         OPT_PTR(travel_speed);
         OPT_PTR(use_firmware_retraction);
         OPT_PTR(use_relative_e_distances);

@@ -220,6 +220,9 @@ sub export {
                 $self->flush_filters;
                 $finished_objects++;
                 $self->_second_layer_things_done(0);
+                # print after-object gcode
+                print $fh "; Object End\n" if $self->config->gcode_comments;
+                printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->after_object_gcode);
             }
         }
     } else {
