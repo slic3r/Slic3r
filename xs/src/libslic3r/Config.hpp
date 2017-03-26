@@ -650,6 +650,7 @@ class ConfigBase
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) = 0;
     virtual t_config_option_keys keys() const = 0;
     void apply(const ConfigBase &other, bool ignore_nonexistent = false);
+    void apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent = false);
     bool equals(ConfigBase &other);
     t_config_option_keys diff(ConfigBase &other);
     std::string serialize(const t_config_option_key &opt_key) const;
@@ -676,6 +677,8 @@ class DynamicConfig : public virtual ConfigBase
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false);
     t_config_option_keys keys() const;
     void erase(const t_config_option_key &opt_key);
+    void clear();
+    bool empty() const;
     void read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra);
     void read_cli(const int argc, const char **argv, t_config_option_keys* extra);
     

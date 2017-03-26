@@ -248,21 +248,24 @@ ConfigBase::has(const t_config_option_key &opt_key) {
 
 void
 ConfigBase::apply(const ConfigBase &other, bool ignore_nonexistent) {
-    // get list of option keys to apply
-    t_config_option_keys opt_keys = other.keys();
-    
+    // apply all options
+    this->apply_only(other, other.keys(), ignore_nonexistent);
+}
+
+void
+ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent) {
     // loop through options and apply them
-    for (t_config_option_keys::const_iterator it = opt_keys.begin(); it != opt_keys.end(); ++it) {
-        ConfigOption* my_opt = this->option(*it, true);
+    for (const t_config_option_key &opt_key : opt_keys) {
+        ConfigOption* my_opt = this->option(opt_key, true);
         if (my_opt == NULL) {
             if (ignore_nonexistent == false) throw "Attempt to apply non-existent option";
             continue;
         }
         
         // not the most efficient way, but easier than casting pointers to subclasses
-        bool res = my_opt->deserialize( other.option(*it)->serialize() );
+        bool res = my_opt->deserialize( other.option(opt_key)->serialize() );
         if (!res) {
-            std::string error = "Unexpected failure when deserializing serialized value for " + *it;
+            std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
             CONFESS(error.c_str());
         }
     }
@@ -522,6 +525,16 @@ DynamicConfig::keys() const {
 void
 DynamicConfig::erase(const t_config_option_key &opt_key) {
     this->options.erase(opt_key);
+}
+
+void
+DynamicConfig::clear() {
+    this->options.clear();
+}
+
+bool
+DynamicConfig::empty() const {
+    return this->options.empty();
 }
 
 void

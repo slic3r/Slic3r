@@ -5,7 +5,9 @@ use utf8;
 
 use File::Basename qw(basename);
 use FindBin;
-use List::Util qw(first);
+use List::Util qw(first any);
+use Slic3r::Geometry qw(X Y);
+
 use Slic3r::GUI::2DBed;
 use Slic3r::GUI::AboutDialog;
 use Slic3r::GUI::BedShapeDialog;
@@ -31,9 +33,10 @@ use Slic3r::GUI::ProgressStatusBar;
 use Slic3r::GUI::Projector;
 use Slic3r::GUI::OptionsGroup;
 use Slic3r::GUI::OptionsGroup::Field;
-use Slic3r::GUI::SimpleTab;
+use Slic3r::GUI::Preset;
+use Slic3r::GUI::PresetEditor;
+use Slic3r::GUI::PresetEditorDialog;
 use Slic3r::GUI::SLAPrintOptions;
-use Slic3r::GUI::Tab;
 
 our $have_OpenGL = eval "use Slic3r::GUI::3DScene; 1";
 our $have_LWP    = eval "use LWP::UserAgent; 1";
@@ -59,15 +62,12 @@ use constant AMF_MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(amf)};
 our $datadir;
 # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
 our $no_controller;
-our $no_plater;
-our $mode;
 our $autosave;
 our $threads;
 our @cb;
 
 our $Settings = {
     _ => {
-        mode => 'simple',
         version_check => 1,
         autocenter => 1,
         invert_zoom => 0,
@@ -100,6 +100,7 @@ sub OnInit {
     Slic3r::debugf "wxWidgets version %s, Wx version %s\n", &Wx::wxVERSION_STRING, $Wx::VERSION;
     
     $self->{notifier} = Slic3r::GUI::Notifier->new;
+    $self->{presets} = { print => [], filament => [], printer => [] };
     
     # locate or create data directory
     # Unix: ~/.Slic3r
@@ -131,18 +132,25 @@ sub OnInit {
                 for grep !exists $ini->{_}{$_}, keys %{$Settings->{_}};
             $Settings = $ini;
         }
+        delete $Settings->{_}{mode};  # handle legacy
     }
     $Settings->{_}{version} = $Slic3r::VERSION;
     $Settings->{_}{threads} = $threads if $threads;
     $self->save_settings;
     
+    if (-f "$enc_datadir/simple.ini") {
+        # The Simple Mode settings were already automatically duplicated to presets
+        # named "Simple Mode" in each group, so we already support retrocompatibility.
+        unlink "$enc_datadir/simple.ini";
+    }
+    
+    $self->load_presets;
+    
     # application frame
     Wx::Image::AddHandler(Wx::PNGHandler->new);
     $self->{mainframe} = my $frame = Slic3r::GUI::MainFrame->new(
-        mode            => $mode // $Settings->{_}{mode},
         # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
         no_controller   => $no_controller // $Settings->{_}{no_controller},
-        no_plater       => $no_plater,
     );
     $self->SetTopWindow($frame);
     
@@ -279,21 +287,64 @@ sub save_settings {
     Slic3r::Config->write_ini("$datadir/slic3r.ini", $Settings);
 }
 
-sub presets {
-    my ($self, $section) = @_;
+sub presets { return $_[0]->{presets}; }
+
+sub load_presets {
+    my ($self) = @_;
     
-    my %presets = ();
-    opendir my $dh, Slic3r::encode_path("$Slic3r::GUI::datadir/$section")
-        or die "Failed to read directory $Slic3r::GUI::datadir/$section (errno: $!)\n";
-    foreach my $file (grep /\.ini$/i, readdir $dh) {
-        $file = Slic3r::decode_path($file);
-        my $name = basename($file);
-        $name =~ s/\.ini$//;
-        $presets{$name} = "$Slic3r::GUI::datadir/$section/$file";
+    for my $group (qw(printer filament print)) {
+        my $presets = $self->{presets}{$group};
+        
+        # keep external or dirty presets
+        @$presets = grep { ($_->external && $_->file_exists) || $_->dirty } @$presets;
+        
+        my $dir = "$Slic3r::GUI::datadir/$group";
+        opendir my $dh, Slic3r::encode_path($dir)
+            or die "Failed to read directory $dir (errno: $!)\n";
+        foreach my $file (grep /\.ini$/i, readdir $dh) {
+            $file = Slic3r::decode_path($file);
+            my $name = basename($file);
+            $name =~ s/\.ini$//i;
+            
+            # skip if we already have it
+            next if any { $_->name eq $name } @$presets;
+            
+            push @$presets, Slic3r::GUI::Preset->new(
+                group   => $group,
+                name    => $name,
+                file    => "$dir/$file",
+            );
+        }
+        closedir $dh;
+    
+        @$presets = sort { $a->name cmp $b->name } @$presets;
+    
+        unshift @$presets, Slic3r::GUI::Preset->new(
+            group   => $group,
+            default => 1,
+            name    => '- default -',
+        );
     }
-    closedir $dh;
+}
+
+sub add_external_preset {
+    my ($self, $file) = @_;
     
-    return %presets;
+    my $name = basename($file);  # keep .ini suffix
+    for my $group (qw(printer filament print)) {
+        my $presets = $self->{presets}{$group};
+        
+        # remove any existing preset with the same name
+        @$presets = grep { $_->name ne $name } @$presets;
+        
+        push @$presets, Slic3r::GUI::Preset->new(
+            group    => $group,
+            name     => $name,
+            file     => $file,
+            external => 1,
+        );
+    }
+    return $name;
 }
 
 sub have_version_check {
@@ -375,6 +426,40 @@ sub scan_serial_ports {
     }
     
     return grep !/Bluetooth|FireFly/, @ports;
+}
+
+sub set_menu_item_icon {
+    my ($self, $menuItem, $icon) = @_;
+    
+    # SetBitmap was not available on OS X before Wx 0.9927
+    if ($icon && $menuItem->can('SetBitmap')) {
+        $menuItem->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG));
+    }
+}
+
+sub save_window_pos {
+    my ($self, $window, $name) = @_;
+    
+    $Settings->{_}{"${name}_pos"}  = join ',', $window->GetScreenPositionXY;
+    $Settings->{_}{"${name}_size"} = join ',', $window->GetSizeWH;
+    $Settings->{_}{"${name}_maximized"}      = $window->IsMaximized;
+    $self->save_settings;
+}
+
+sub restore_window_pos {
+    my ($self, $window, $name) = @_;
+    
+    if (defined $Settings->{_}{"${name}_pos"}) {
+        my $size = [ split ',', $Settings->{_}{"${name}_size"}, 2 ];
+        $window->SetSize($size);
+        
+        my $display = Wx::Display->new->GetClientArea();
+        my $pos = [ split ',', $Settings->{_}{"${name}_pos"}, 2 ];
+        if (($pos->[X] + $size->[X]/2) < $display->GetRight && ($pos->[Y] + $size->[Y]/2) < $display->GetBottom) {
+            $window->Move($pos);
+        }
+        $window->Maximize(1) if $Settings->{_}{"${name}_maximized"};
+    }
 }
 
 1;

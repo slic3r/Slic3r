@@ -36,8 +36,6 @@ my %cli_options = ();
         'autosave=s'            => \$opt{autosave},
         'ignore-nonexistent-config' => \$opt{ignore_nonexistent_config},
         'no-controller'         => \$opt{no_controller},
-        'no-plater'             => \$opt{no_plater},
-        'gui-mode=s'            => \$opt{gui_mode},
         'datadir=s'             => \$opt{datadir},
         'export-svg'            => \$opt{export_svg},
         'merge|m'               => \$opt{merge},
@@ -78,27 +76,25 @@ if ($opt{load}) {
             $opt{ignore_nonexistent_config} or die "Cannot find specified configuration file ($configfile).\n";
         }
     }
+    
+    # expand shortcuts before applying, otherwise destination values would be already filled with defaults
+    $_->normalize for @external_configs;
 }
 
 # process command line options
-my $cli_config = Slic3r::Config->new;
-foreach my $c (@external_configs, Slic3r::Config->new_from_cli(%cli_options)) {
-    $c->normalize;  # expand shortcuts before applying, otherwise destination values would be already filled with defaults
-    $cli_config->apply($c);
-}
+my $cli_config = Slic3r::Config->new_from_cli(%cli_options);
+$cli_config->normalize;  # expand shortcuts
 
 # save configuration
 if ($opt{save}) {
-    if (@{$cli_config->get_keys} > 0) {
-        $cli_config->save($opt{save});
+    my $config = $cli_config->clone;
+    $config->apply($_) for @external_configs;
+    if (@{$config->get_keys} > 0) {
+        $config->save($opt{save});
     } else {
         Slic3r::Config->new_from_defaults->save($opt{save});
     }
 }
-
-# apply command line config on top of default config
-my $config = Slic3r::Config->new_from_defaults;
-$config->apply($cli_config);
 
 # launch GUI
 my $gui;
@@ -107,9 +103,7 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
         no warnings 'once';
         $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
         $Slic3r::GUI::no_controller = $opt{no_controller};
-        $Slic3r::GUI::no_plater     = $opt{no_plater};
-        $Slic3r::GUI::mode          = $opt{gui_mode};
-        $Slic3r::GUI::autosave      = $opt{autosave};
+        $Slic3r::GUI::autosave      = Slic3r::decode_path($opt{autosave} // '');
         $Slic3r::GUI::threads       = $opt{threads};
     }
     $gui = Slic3r::GUI->new;
@@ -119,7 +113,7 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
         $gui->{mainframe}->load_config($cli_config);
         foreach my $input_file (@ARGV) {
             $input_file = Slic3r::decode_path($input_file);
-            $gui->{mainframe}{plater}->load_file($input_file) unless $opt{no_plater};
+            $gui->{mainframe}{plater}->load_file($input_file);
         }
     });
     $gui->MainLoop;
@@ -128,6 +122,9 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
 die $@ if $@ && $opt{gui};
 
 if (@ARGV) {  # slicing from command line
+    # apply command line config on top of default config
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->apply($cli_config);
     $config->validate;
     
     if ($opt{repair}) {
@@ -330,7 +327,6 @@ $j
     --gui               Forces the GUI launch instead of command line slicing (if you
                         supply a model file, it will be loaded into the plater)
     --no-plater         Disable the plater tab
-    --gui-mode          Overrides the configured mode (simple/expert)
     --autosave <file>   Automatically export current configuration to the specified file
 
   Output options:

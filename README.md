@@ -116,7 +116,6 @@ Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Le
         --gui               Forces the GUI launch instead of command line slicing (if you
                             supply a model file, it will be loaded into the plater)
         --no-plater         Disable the plater tab
-        --gui-mode          Overrides the configured mode (simple/expert)
         --autosave <file>   Automatically export current configuration to the specified file
     
       Output options:

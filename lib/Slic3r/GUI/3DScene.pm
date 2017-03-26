@@ -54,13 +54,13 @@ use constant HAS_VBO        => eval { glGenBuffersARB_p(0); 1 };
 
 
 # phi / theta angles to orient the camera.
-use constant VIEW_ISO        => [45.0,45.0];
-use constant VIEW_LEFT       => [90.0,90.0];
-use constant VIEW_RIGHT      => [-90.0,90.0];
 use constant VIEW_TOP        => [0.0,0.0];
 use constant VIEW_BOTTOM     => [0.0,180.0];
+use constant VIEW_LEFT       => [90.0,90.0];
+use constant VIEW_RIGHT      => [-90.0,90.0];
 use constant VIEW_FRONT      => [0.0,90.0];
-use constant VIEW_REAR       => [180.0,90.0];
+use constant VIEW_BACK       => [180.0,90.0];
+use constant VIEW_DIAGONAL   => [45.0,45.0];
 
 use constant GIMBAL_LOCK_THETA_MAX => 170;
 
@@ -338,20 +338,20 @@ sub select_view {
     if (ref($direction)) {
         $dirvec = $direction;
     } else {
-        if ($direction eq 'iso') {
-            $dirvec = VIEW_ISO;
+        if ($direction eq 'top') {
+            $dirvec = VIEW_TOP;
+        } elsif ($direction eq 'bottom') {
+            $dirvec = VIEW_BOTTOM;
         } elsif ($direction eq 'left') {
             $dirvec = VIEW_LEFT;
         } elsif ($direction eq 'right') {
             $dirvec = VIEW_RIGHT;
-        } elsif ($direction eq 'top') {
-            $dirvec = VIEW_TOP;
-        } elsif ($direction eq 'bottom') {
-            $dirvec = VIEW_BOTTOM;
         } elsif ($direction eq 'front') {
             $dirvec = VIEW_FRONT;
-        } elsif ($direction eq 'rear') {
-            $dirvec = VIEW_REAR;
+        } elsif ($direction eq 'back') {
+            $dirvec = VIEW_BACK;
+        } elsif ($direction eq 'diagonal') {
+            $dirvec = VIEW_DIAGONAL;
         }
     }
     $self->_sphi($dirvec->[0]);

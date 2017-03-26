@@ -257,6 +257,12 @@ _constant()
     void add_model_object(ModelObject* model_object, int idx = -1);
     bool apply_config(DynamicPrintConfig* config)
         %code%{ RETVAL = THIS->apply_config(*config); %};
+    bool apply_static_config(StaticPrintConfig* config)
+        %code%{
+            DynamicPrintConfig dpc;
+            dpc.apply(*config);
+            RETVAL = THIS->apply_config(dpc);
+        %};
     bool has_infinite_skirt();
     bool has_skirt();
     std::string _validate()
