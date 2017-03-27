@@ -326,7 +326,6 @@ $j
   GUI options:
     --gui               Forces the GUI launch instead of command line slicing (if you
                         supply a model file, it will be loaded into the plater)
-    --no-plater         Disable the plater tab
     --autosave <file>   Automatically export current configuration to the specified file
 
   Output options:
