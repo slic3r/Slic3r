@@ -644,15 +644,21 @@ class ConfigBase
     ConfigBase() : def(NULL) {};
     ConfigBase(const ConfigDef* def) : def(def) {};
     virtual ~ConfigBase() {};
-    bool has(const t_config_option_key &opt_key);
+    bool has(const t_config_option_key &opt_key) const;
     const ConfigOption* option(const t_config_option_key &opt_key) const;
     ConfigOption* option(const t_config_option_key &opt_key, bool create = false);
+    template<class T> T* opt(const t_config_option_key &opt_key, bool create = false) {
+        return dynamic_cast<T*>(this->option(opt_key, create));
+    };
+    template<class T> const T* opt(const t_config_option_key &opt_key) const {
+        return dynamic_cast<const T*>(this->option(opt_key));
+    };
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) = 0;
     virtual t_config_option_keys keys() const = 0;
     void apply(const ConfigBase &other, bool ignore_nonexistent = false);
     void apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent = false);
-    bool equals(ConfigBase &other);
-    t_config_option_keys diff(ConfigBase &other);
+    bool equals(const ConfigBase &other) const;
+    t_config_option_keys diff(const ConfigBase &other) const;
     std::string serialize(const t_config_option_key &opt_key) const;
     virtual bool set_deserialize(t_config_option_key opt_key, std::string str, bool append = false);
     double get_abs_value(const t_config_option_key &opt_key) const;
@@ -673,7 +679,6 @@ class DynamicConfig : public virtual ConfigBase
     DynamicConfig& operator= (DynamicConfig other);
     void swap(DynamicConfig &other);
     virtual ~DynamicConfig();
-    template<class T> T* opt(const t_config_option_key &opt_key, bool create = false);
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false);
     t_config_option_keys keys() const;
     void erase(const t_config_option_key &opt_key);

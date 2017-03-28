@@ -212,90 +212,63 @@ PrintObject::delete_support_layer(int idx)
 }
 
 bool
-PrintObject::invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys)
+PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
 {
+    const t_config_option_keys diff = this->config.diff(config);
+    
     std::set<PrintObjectStep> steps;
+    bool all = false;
     
     // this method only accepts PrintObjectConfig and PrintRegionConfig option keys
-    for (std::vector<t_config_option_key>::const_iterator opt_key = opt_keys.begin(); opt_key != opt_keys.end(); ++opt_key) {
-        if (*opt_key == "perimeters"
-            || *opt_key == "extra_perimeters"
-            || *opt_key == "gap_fill_speed"
-            || *opt_key == "overhangs"
-            || *opt_key == "first_layer_extrusion_width"
-            || *opt_key == "perimeter_extrusion_width"
-            || *opt_key == "thin_walls"
-            || *opt_key == "external_perimeters_first") {
-            steps.insert(posPerimeters);
-        } else if (*opt_key == "layer_height"
-            || *opt_key == "first_layer_height"
-            || *opt_key == "xy_size_compensation"
-            || *opt_key == "raft_layers") {
+    for (const t_config_option_key &opt_key : diff) {
+        if (opt_key == "layer_height"
+            || opt_key == "first_layer_height"
+            || opt_key == "xy_size_compensation"
+            || opt_key == "raft_layers") {
             steps.insert(posSlice);
-        } else if (*opt_key == "support_material"
-            || *opt_key == "support_material_angle"
-            || *opt_key == "support_material_extruder"
-            || *opt_key == "support_material_extrusion_width"
-            || *opt_key == "support_material_interface_layers"
-            || *opt_key == "support_material_interface_extruder"
-            || *opt_key == "support_material_interface_spacing"
-            || *opt_key == "support_material_interface_speed"
-            || *opt_key == "support_material_buildplate_only"
-            || *opt_key == "support_material_pattern"
-            || *opt_key == "support_material_spacing"
-            || *opt_key == "support_material_threshold"
-            || *opt_key == "dont_support_bridges"
-            || *opt_key == "first_layer_extrusion_width") {
-            steps.insert(posSupportMaterial);
-        } else if (*opt_key == "interface_shells"
-            || *opt_key == "infill_only_where_needed"
-            || *opt_key == "infill_every_layers"
-            || *opt_key == "solid_infill_every_layers"
-            || *opt_key == "bottom_solid_layers"
-            || *opt_key == "top_solid_layers"
-            || *opt_key == "solid_infill_below_area"
-            || *opt_key == "infill_extruder"
-            || *opt_key == "solid_infill_extruder"
-            || *opt_key == "infill_extrusion_width") {
-            steps.insert(posPrepareInfill);
-        } else if (*opt_key == "top_infill_pattern"
-            || *opt_key == "bottom_infill_pattern"
-            || *opt_key == "fill_angle"
-            || *opt_key == "fill_pattern"
-            || *opt_key == "top_infill_extrusion_width"
-            || *opt_key == "first_layer_extrusion_width"
-            || *opt_key == "infill_overlap") {
-            steps.insert(posInfill);
-        } else if (*opt_key == "fill_density"
-            || *opt_key == "solid_infill_extrusion_width") {
-            steps.insert(posPerimeters);
-            steps.insert(posPrepareInfill);
-        } else if (*opt_key == "external_perimeter_extrusion_width"
-            || *opt_key == "perimeter_extruder") {
+        } else if (opt_key == "support_material_contact_distance") {
+            steps.insert(posSlice);
             steps.insert(posPerimeters);
             steps.insert(posSupportMaterial);
-        } else if (*opt_key == "bridge_flow_ratio") {
+        } else if (opt_key == "support_material") {
             steps.insert(posPerimeters);
-            steps.insert(posInfill);
-        } else if (*opt_key == "seam_position"
-            || *opt_key == "support_material_speed"
-            || *opt_key == "bridge_speed"
-            || *opt_key == "external_perimeter_speed"
-            || *opt_key == "infill_speed"
-            || *opt_key == "perimeter_speed"
-            || *opt_key == "small_perimeter_speed"
-            || *opt_key == "solid_infill_speed"
-            || *opt_key == "top_solid_infill_speed") {
+            steps.insert(posSupportMaterial);
+        } else if (opt_key == "support_material_angle"
+            || opt_key == "support_material_extruder"
+            || opt_key == "support_material_extrusion_width"
+            || opt_key == "support_material_interface_layers"
+            || opt_key == "support_material_interface_extruder"
+            || opt_key == "support_material_interface_spacing"
+            || opt_key == "support_material_interface_speed"
+            || opt_key == "support_material_buildplate_only"
+            || opt_key == "support_material_pattern"
+            || opt_key == "support_material_spacing"
+            || opt_key == "support_material_threshold"
+            || opt_key == "dont_support_bridges") {
+            steps.insert(posSupportMaterial);
+        } else if (opt_key == "interface_shells"
+            || opt_key == "infill_only_where_needed") {
+            steps.insert(posPrepareInfill);
+        } else if (opt_key == "seam_position"
+            || opt_key == "support_material_speed") {
             // these options only affect G-code export, so nothing to invalidate
         } else {
             // for legacy, if we can't handle this option let's invalidate all steps
-            return this->invalidate_all_steps();
+            all = true;
+            break;
         }
     }
     
+    if (!diff.empty())
+        this->config.apply(config, true);
+    
     bool invalidated = false;
-    for (std::set<PrintObjectStep>::const_iterator step = steps.begin(); step != steps.end(); ++step) {
-        if (this->invalidate_step(*step)) invalidated = true;
+    if (all) {
+        invalidated = this->invalidate_all_steps();
+    } else {
+        for (const PrintObjectStep &step : steps)
+            if (this->invalidate_step(step))
+                invalidated = true;
     }
     
     return invalidated;

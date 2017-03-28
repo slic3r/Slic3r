@@ -55,6 +55,7 @@ class PrintRegion
 
     Print* print();
     Flow flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, const PrintObject &object) const;
+    bool invalidate_state_by_config(const PrintConfigBase &config);
 
     private:
     Print* _print;
@@ -132,7 +133,7 @@ class PrintObject
     void delete_support_layer(int idx);
     
     // methods for handling state
-    bool invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
+    bool invalidate_state_by_config(const PrintConfigBase &config);
     bool invalidate_step(PrintObjectStep step);
     bool invalidate_all_steps();
     
@@ -196,7 +197,7 @@ class Print
     PrintRegion* add_region();
     
     // methods for handling state
-    bool invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
+    bool invalidate_state_by_config(const PrintConfigBase &config);
     bool invalidate_step(PrintStep step);
     bool invalidate_all_steps();
     bool step_done(PrintObjectStep step) const;

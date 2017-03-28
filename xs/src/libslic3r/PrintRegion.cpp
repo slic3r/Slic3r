@@ -65,4 +65,91 @@ PrintRegion::flow(FlowRole role, double layer_height, bool bridge, bool first_la
     return Flow::new_from_config_width(role, config_width, nozzle_diameter, layer_height, bridge ? (float)this->config.bridge_flow_ratio : 0.0);
 }
 
+bool
+PrintRegion::invalidate_state_by_config(const PrintConfigBase &config)
+{
+    const t_config_option_keys diff = this->config.diff(config);
+    
+    std::set<PrintObjectStep> steps;
+    bool all = false;
+    
+    for (const t_config_option_key &opt_key : diff) {
+        if (opt_key == "perimeters"
+            || opt_key == "extra_perimeters"
+            || opt_key == "gap_fill_speed"
+            || opt_key == "overhangs"
+            || opt_key == "first_layer_extrusion_width"
+            || opt_key == "perimeter_extrusion_width"
+            || opt_key == "thin_walls"
+            || opt_key == "external_perimeters_first") {
+            steps.insert(posPerimeters);
+        } else if (opt_key == "first_layer_extrusion_width") {
+            steps.insert(posSupportMaterial);
+        } else if (opt_key == "infill_every_layers"
+            || opt_key == "solid_infill_every_layers"
+            || opt_key == "bottom_solid_layers"
+            || opt_key == "top_solid_layers"
+            || opt_key == "solid_infill_below_area"
+            || opt_key == "infill_extruder"
+            || opt_key == "solid_infill_extruder"
+            || opt_key == "infill_extrusion_width") {
+            steps.insert(posPrepareInfill);
+        } else if (opt_key == "top_infill_pattern"
+            || opt_key == "bottom_infill_pattern"
+            || opt_key == "fill_angle"
+            || opt_key == "fill_pattern"
+            || opt_key == "top_infill_extrusion_width"
+            || opt_key == "first_layer_extrusion_width"
+            || opt_key == "infill_overlap") {
+            steps.insert(posInfill);
+        } else if (opt_key == "solid_infill_extrusion_width") {
+            steps.insert(posPerimeters);
+            steps.insert(posPrepareInfill);
+        } else if (opt_key == "fill_density") {
+            const float &cur_value = config.opt<ConfigOptionFloat>("fill_density")->value;
+            const float &new_value = this->config.fill_density.value;
+            if ((cur_value == 0) != (new_value == 0))
+                steps.insert(posPerimeters);
+            
+            steps.insert(posPrepareInfill);
+        } else if (opt_key == "external_perimeter_extrusion_width"
+            || opt_key == "perimeter_extruder") {
+            steps.insert(posPerimeters);
+            steps.insert(posSupportMaterial);
+        } else if (opt_key == "bridge_flow_ratio") {
+            steps.insert(posPerimeters);
+            steps.insert(posInfill);
+        } else if (opt_key == "bridge_speed"
+            || opt_key == "external_perimeter_speed"
+            || opt_key == "infill_speed"
+            || opt_key == "perimeter_speed"
+            || opt_key == "small_perimeter_speed"
+            || opt_key == "solid_infill_speed"
+            || opt_key == "top_solid_infill_speed") {
+            // these options only affect G-code export, so nothing to invalidate
+        } else {
+            // for legacy, if we can't handle this option let's invalidate all steps
+            all = true;
+            break;
+        }
+    }
+    
+    if (!diff.empty())
+        this->config.apply(config, true);
+    
+    bool invalidated = false;
+    if (all) {
+        for (PrintObject* object : this->print()->objects)
+            if (object->invalidate_all_steps())
+                invalidated = true;
+    } else {
+        for (const PrintObjectStep &step : steps)
+            for (PrintObject* object : this->print()->objects)
+                if (object->invalidate_step(step))
+                    invalidated = true;
+    }
+    
+    return invalidated;
+}
+
 }

@@ -242,8 +242,8 @@ ConfigDef::merge(const ConfigDef &other)
 }
 
 bool
-ConfigBase::has(const t_config_option_key &opt_key) {
-    return (this->option(opt_key, false) != NULL);
+ConfigBase::has(const t_config_option_key &opt_key) const {
+    return this->option(opt_key) != NULL;
 }
 
 void
@@ -272,21 +272,18 @@ ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_
 }
 
 bool
-ConfigBase::equals(ConfigBase &other) {
+ConfigBase::equals(const ConfigBase &other) const {
     return this->diff(other).empty();
 }
 
 // this will *ignore* options not present in both configs
 t_config_option_keys
-ConfigBase::diff(ConfigBase &other) {
+ConfigBase::diff(const ConfigBase &other) const {
     t_config_option_keys diff;
     
-    t_config_option_keys my_keys = this->keys();
-    for (t_config_option_keys::const_iterator opt_key = my_keys.begin(); opt_key != my_keys.end(); ++opt_key) {
-        if (other.has(*opt_key) && other.serialize(*opt_key) != this->serialize(*opt_key)) {
-            diff.push_back(*opt_key);
-        }
-    }
+    for (const t_config_option_key &opt_key : this->keys())
+        if (other.has(opt_key) && other.serialize(opt_key) != this->serialize(opt_key))
+            diff.push_back(opt_key);
     
     return diff;
 }
@@ -390,6 +387,25 @@ ConfigOption*
 ConfigBase::option(const t_config_option_key &opt_key, bool create) {
     return this->optptr(opt_key, create);
 }
+
+/*
+template<class T>
+T*
+ConfigBase::opt(const t_config_option_key &opt_key, bool create) {
+    return dynamic_cast<T*>(this->option(opt_key, create));
+}
+template ConfigOptionInt* ConfigBase::opt<ConfigOptionInt>(const t_config_option_key &opt_key, bool create);
+template ConfigOptionBool* ConfigBase::opt<ConfigOptionBool>(const t_config_option_key &opt_key, bool create);
+template ConfigOptionBools* ConfigBase::opt<ConfigOptionBools>(const t_config_option_key &opt_key, bool create);
+template ConfigOptionPercent* ConfigBase::opt<ConfigOptionPercent>(const t_config_option_key &opt_key, bool create);
+
+
+template<class T>
+const T*
+ConfigBase::opt(const t_config_option_key &opt_key) const {
+    return dynamic_cast<const T*>(this->option(opt_key));
+}
+*/
 
 void
 ConfigBase::load(const std::string &file)
@@ -503,16 +519,6 @@ DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
     }
     return this->options[opt_key];
 }
-
-template<class T>
-T*
-DynamicConfig::opt(const t_config_option_key &opt_key, bool create) {
-    return dynamic_cast<T*>(this->option(opt_key, create));
-}
-template ConfigOptionInt* DynamicConfig::opt<ConfigOptionInt>(const t_config_option_key &opt_key, bool create);
-template ConfigOptionBool* DynamicConfig::opt<ConfigOptionBool>(const t_config_option_key &opt_key, bool create);
-template ConfigOptionBools* DynamicConfig::opt<ConfigOptionBools>(const t_config_option_key &opt_key, bool create);
-template ConfigOptionPercent* DynamicConfig::opt<ConfigOptionPercent>(const t_config_option_key &opt_key, bool create);
 
 t_config_option_keys
 DynamicConfig::keys() const {
