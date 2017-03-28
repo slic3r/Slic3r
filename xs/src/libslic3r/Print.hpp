@@ -140,6 +140,9 @@ class PrintObject
     void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    coordf_t adjust_layer_height(coordf_t layer_height) const;
+    std::vector<coordf_t> generate_object_layers(coordf_t first_layer_height);
+    void _slice();
     std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
     void _make_perimeters();
     void _infill();
