@@ -178,6 +178,10 @@ Ref<Layer>                 O_OBJECT_SLIC3R_T
 SupportLayer*              O_OBJECT_SLIC3R
 Ref<SupportLayer>          O_OBJECT_SLIC3R_T
 
+SlicingAdaptive*           O_OBJECT_SLIC3R
+Ref<SlicingAdaptive>       O_OBJECT_SLIC3R_T
+Clone<SlicingAdaptive>     O_OBJECT_SLIC3R_T
+
 LayerHeightSpline*         O_OBJECT_SLIC3R
 Ref<LayerHeightSpline>     O_OBJECT_SLIC3R_T
 Clone<LayerHeightSpline>   O_OBJECT_SLIC3R_T
@@ -201,6 +205,10 @@ Clone<OozePrevention>       O_OBJECT_SLIC3R_T
 CoolingBuffer*             O_OBJECT_SLIC3R
 Ref<CoolingBuffer>         O_OBJECT_SLIC3R_T
 Clone<CoolingBuffer>       O_OBJECT_SLIC3R_T
+
+SpiralVase*                 O_OBJECT_SLIC3R
+Ref<SpiralVase>             O_OBJECT_SLIC3R_T
+Clone<SpiralVase>           O_OBJECT_SLIC3R_T
 
 GCode*                      O_OBJECT_SLIC3R
 Ref<GCode>                  O_OBJECT_SLIC3R_T

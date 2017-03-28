@@ -9,7 +9,7 @@ use Wx::Event qw(EVT_BUTTON EVT_MOUSEWHEEL EVT_TIMER EVT_SCROLLWIN);
 use base qw(Wx::Panel Class::Accessor);
 
 __PACKAGE__->mk_accessors(qw(printer_name config sender jobs 
-    printing status_timer temp_timer));
+    printing status_timer temp_timer manual_control_config));
 
 use constant CONNECTION_TIMEOUT => 3;               # seconds
 use constant STATUS_TIMER_INTERVAL => 1000;         # milliseconds
@@ -21,6 +21,12 @@ sub new {
     
     $self->printer_name($printer_name || 'Printer');
     $self->config($config);
+    $self->manual_control_config({
+        xy_travel_speed     => 130,
+        z_travel_speed      => 10,
+        temperature         => '',
+        bed_temperature     => '',
+    });
     $self->jobs([]);
     
     # set up the timer that polls for updates
@@ -38,6 +44,8 @@ sub new {
                 }
             }
             $self->{log_textctrl}->AppendText("$_\n") for @{$self->sender->purge_log};
+            $self->{manual_control_dialog}->update_log($self->{log_textctrl}->GetValue)
+                if $self->{manual_control_dialog};
             {
                 my $temp = $self->sender->getT;
                 if ($temp eq '') {
@@ -77,7 +85,7 @@ sub new {
     
     # printer name
     {
-        my $text = Wx::StaticText->new($box, -1, $self->printer_name, wxDefaultPosition, [220,-1]);
+        my $text = Wx::StaticText->new($self, -1, $self->printer_name, wxDefaultPosition, [220,-1]);
         my $font = $text->GetFont;
         $font->SetPointSize(20);
         $text->SetFont($font);
@@ -91,19 +99,19 @@ sub new {
         $conn_sizer->AddGrowableCol(1, 1);
         $left_sizer->Add($conn_sizer, 0, wxEXPAND | wxTOP, 5);
         {
-            my $text = Wx::StaticText->new($box, -1, "Port:", wxDefaultPosition, wxDefaultSize);
+            my $text = Wx::StaticText->new($self, -1, "Port:", wxDefaultPosition, wxDefaultSize);
             $text->SetFont($Slic3r::GUI::small_font);
             $conn_sizer->Add($text, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
         }
         my $serial_port_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         {
-            $self->{serial_port_combobox} = Wx::ComboBox->new($box, -1, $config->serial_port, wxDefaultPosition, wxDefaultSize, []);
+            $self->{serial_port_combobox} = Wx::ComboBox->new($self, -1, $config->serial_port, wxDefaultPosition, wxDefaultSize, []);
             $self->{serial_port_combobox}->SetFont($Slic3r::GUI::small_font);
             $self->update_serial_ports;
             $serial_port_sizer->Add($self->{serial_port_combobox}, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 1);
         }
         {
-            $self->{btn_rescan_serial} = my $btn = Wx::BitmapButton->new($box, -1, Wx::Bitmap->new($Slic3r::var->("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG),
+            $self->{btn_rescan_serial} = my $btn = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG),
                 wxDefaultPosition, wxDefaultSize, &Wx::wxBORDER_NONE);
             $btn->SetToolTipString("Rescan serial ports")
                 if $btn->can('SetToolTipString');
@@ -113,19 +121,19 @@ sub new {
         $conn_sizer->Add($serial_port_sizer, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
         
         {
-            my $text = Wx::StaticText->new($box, -1, "Speed:", wxDefaultPosition, wxDefaultSize);
+            my $text = Wx::StaticText->new($self, -1, "Speed:", wxDefaultPosition, wxDefaultSize);
             $text->SetFont($Slic3r::GUI::small_font);
             $conn_sizer->Add($text, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
         }
         my $serial_speed_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         {
-            $self->{serial_speed_combobox} = Wx::ComboBox->new($box, -1, $config->serial_speed, wxDefaultPosition, wxDefaultSize,
+            $self->{serial_speed_combobox} = Wx::ComboBox->new($self, -1, $config->serial_speed, wxDefaultPosition, wxDefaultSize,
                 ["115200", "250000"]);
             $self->{serial_speed_combobox}->SetFont($Slic3r::GUI::small_font);
             $serial_speed_sizer->Add($self->{serial_speed_combobox}, 0, wxALIGN_CENTER_VERTICAL, 0);
         }
         {
-            $self->{btn_disconnect} = my $btn = Wx::Button->new($box, -1, "Disconnect", wxDefaultPosition, wxDefaultSize);
+            $self->{btn_disconnect} = my $btn = Wx::Button->new($self, -1, "Disconnect", wxDefaultPosition, wxDefaultSize);
             $btn->SetFont($Slic3r::GUI::small_font);
             if ($Slic3r::GUI::have_button_icons) {
                 $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG));
@@ -138,7 +146,7 @@ sub new {
     
     # buttons
     {
-        $self->{btn_connect} = my $btn = Wx::Button->new($box, -1, "Connect to printer", wxDefaultPosition, [-1, 40]);
+        $self->{btn_connect} = my $btn = Wx::Button->new($self, -1, "Connect to printer", wxDefaultPosition, [-1, 40]);
         my $font = $btn->GetFont;
         $font->SetPointSize($font->GetPointSize + 2);
         $btn->SetFont($font);
@@ -157,12 +165,12 @@ sub new {
     }
     
     # status
-    $self->{status_text} = Wx::StaticText->new($box, -1, "", wxDefaultPosition, [200,-1]);
+    $self->{status_text} = Wx::StaticText->new($self, -1, "", wxDefaultPosition, [200,-1]);
     $left_sizer->Add($self->{status_text}, 1, wxEXPAND | wxTOP, 15);
     
     # manual control
     {
-        $self->{btn_manual_control} = my $btn = Wx::Button->new($box, -1, "Manual control", wxDefaultPosition, wxDefaultSize);
+        $self->{btn_manual_control} = my $btn = Wx::Button->new($self, -1, "Manual control", wxDefaultPosition, wxDefaultSize);
         $btn->SetFont($Slic3r::GUI::small_font);
         if ($Slic3r::GUI::have_button_icons) {
             $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG));
@@ -170,15 +178,16 @@ sub new {
         $btn->Hide;
         $left_sizer->Add($btn, 0, wxTOP, 15);
         EVT_BUTTON($self, $btn, sub {
-            my $dlg = Slic3r::GUI::Controller::ManualControlDialog->new
-                ($self, $self->config, $self->sender);
+            $self->{manual_control_dialog} = my $dlg = Slic3r::GUI::Controller::ManualControlDialog->new
+                ($self, $self->config, $self->sender, $self->manual_control_config);
             $dlg->ShowModal;
+            undef $self->{manual_control_dialog};
         });
     }
     
     # temperature
     {
-        my $temp_panel = $self->{temp_panel} = Wx::Panel->new($box, -1);
+        my $temp_panel = $self->{temp_panel} = Wx::Panel->new($self, -1);
         my $temp_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         
         my $temp_font = Wx::Font->new($Slic3r::GUI::small_font);
@@ -211,11 +220,11 @@ sub new {
     # print jobs panel
     $self->{print_jobs_sizer} = my $print_jobs_sizer = Wx::BoxSizer->new(wxVERTICAL);
     {
-        my $text = Wx::StaticText->new($box, -1, "Queue:", wxDefaultPosition, wxDefaultSize);
+        my $text = Wx::StaticText->new($self, -1, "Queue:", wxDefaultPosition, wxDefaultSize);
         $text->SetFont($Slic3r::GUI::small_font);
         $print_jobs_sizer->Add($text, 0, wxEXPAND, 0);
         
-        $self->{jobs_panel} = Wx::ScrolledWindow->new($box, -1, wxDefaultPosition, wxDefaultSize,
+        $self->{jobs_panel} = Wx::ScrolledWindow->new($self, -1, wxDefaultPosition, wxDefaultSize,
             wxVSCROLL | wxBORDER_NONE);
         $self->{jobs_panel}->SetScrollbars(0, 1, 0, 1);
         $self->{jobs_panel_sizer} = Wx::BoxSizer->new(wxVERTICAL);
@@ -239,13 +248,13 @@ sub new {
     
     my $log_sizer = Wx::BoxSizer->new(wxVERTICAL);
     {
-        my $text = Wx::StaticText->new($box, -1, "Log:", wxDefaultPosition, wxDefaultSize);
+        my $text = Wx::StaticText->new($self, -1, "Log:", wxDefaultPosition, wxDefaultSize);
         $text->SetFont($Slic3r::GUI::small_font);
         $log_sizer->Add($text, 0, wxEXPAND, 0);
         
-        my $log = $self->{log_textctrl} = Wx::TextCtrl->new($box, -1, "", wxDefaultPosition, wxDefaultSize,
+        my $log = $self->{log_textctrl} = Wx::TextCtrl->new($self, -1, "", wxDefaultPosition, wxDefaultSize,
             wxTE_MULTILINE | wxBORDER_NONE);
-        $log->SetBackgroundColour($box->GetBackgroundColour);
+        $log->SetBackgroundColour($self->GetBackgroundColour);
         $log->SetFont($Slic3r::GUI::small_font);
         $log->SetEditable(0);
         $log_sizer->Add($self->{log_textctrl}, 1, wxEXPAND, 0);

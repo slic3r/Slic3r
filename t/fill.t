@@ -2,7 +2,7 @@ use Test::More;
 use strict;
 use warnings;
 
-plan tests => 92;
+plan tests => 93;
 
 BEGIN {
     use FindBin;
@@ -10,10 +10,10 @@ BEGIN {
     use local::lib "$FindBin::Bin/../local-lib";
 }
 
-use List::Util qw(first sum);
+use List::Util qw(first sum max);
 use Slic3r;
 use Slic3r::Geometry qw(PI X Y scaled_epsilon scale unscale convex_hull);
-use Slic3r::Geometry::Clipper qw(union diff diff_ex offset offset2_ex diff_pl);
+use Slic3r::Geometry::Clipper qw(union diff diff_ex offset offset2_ex diff_pl union_ex);
 use Slic3r::Surface qw(:types);
 use Slic3r::Test;
 
@@ -371,6 +371,48 @@ for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
     $diff = offset2_ex($diff, -$grow_d, +$grow_d);
     $diff = [ grep { $_->area > 2*(($grow_d*2)**2) } @$diff ];
     is scalar(@$diff), 0, 'no missing parts in solid shell when fill_density is 0';
+}
+
+{
+    # GH: #2697
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('perimeter_extrusion_width', 0.72);
+    $config->set('top_infill_extrusion_width', 0.1);
+    $config->set('infill_extruder', 2);         # in order to distinguish infill
+    $config->set('solid_infill_extruder', 2);   # in order to distinguish infill
+    
+    my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
+    my %infill = ();  # Z => [ Line, Line ... ]
+    my %other  = ();  # Z => [ Line, Line ... ]
+    my $tool = undef;
+    Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+        my ($self, $cmd, $args, $info) = @_;
+        
+        if ($cmd =~ /^T(\d+)/) {
+            $tool = $1;
+        } elsif ($cmd eq 'G1' && $info->{extruding} && $info->{dist_XY} > 0) {
+            my $z = 1 * $self->Z;
+            my $line = Slic3r::Line->new_scale(
+                [ $self->X, $self->Y ],
+                [ $info->{new_X}, $info->{new_Y} ],
+            );
+            if ($tool == $config->infill_extruder-1) {
+                $infill{$z} //= [];
+                push @{$infill{$z}}, $line;
+            } else {
+                $other{$z} //= [];
+                push @{$other{$z}}, $line;
+            }
+        }
+    });
+    my $top_z = max(keys %infill);
+    my $top_infill_grow_d = scale($config->top_infill_extrusion_width)/2;
+    my $top_infill = union([ map @{$_->grow($top_infill_grow_d)}, @{ $infill{$top_z} } ]);
+    my $perimeters_grow_d = scale($config->perimeter_extrusion_width)/2;
+    my $perimeters = union([ map @{$_->grow($perimeters_grow_d)}, @{ $other{$top_z} } ]);
+    my $covered = union_ex([ @$top_infill, @$perimeters ]);
+    my @holes = map @{$_->holes}, @$covered;
+    ok sum(map unscale unscale $_->area*-1, @holes) < 1, 'no gaps between top solid infill and perimeters';
 }
 
 __END__

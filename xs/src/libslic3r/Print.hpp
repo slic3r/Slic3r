@@ -13,6 +13,7 @@
 #include "Layer.hpp"
 #include "Model.hpp"
 #include "PlaceholderParser.hpp"
+#include "SlicingAdaptive.hpp"
 #include "LayerHeightSpline.hpp"
 
 namespace Slic3r {
@@ -120,14 +121,16 @@ class PrintObject
     size_t total_layer_count() const;
     size_t layer_count() const;
     void clear_layers();
-    Layer* get_layer(int idx);
+    Layer* get_layer(int idx) { return this->layers.at(idx); };
+    const Layer* get_layer(int idx) const { return this->layers.at(idx); };
     // print_z: top of the layer; slice_z: center of the layer.
     Layer* add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z);
     void delete_layer(int idx);
 
     size_t support_layer_count() const;
     void clear_support_layers();
-    SupportLayer* get_support_layer(int idx);
+    SupportLayer* get_support_layer(int idx) { return this->support_layers.at(idx); };
+    const SupportLayer* get_support_layer(int idx) const { return this->support_layers.at(idx); };
     SupportLayer* add_support_layer(int id, coordf_t height, coordf_t print_z);
     void delete_support_layer(int idx);
     
@@ -140,6 +143,9 @@ class PrintObject
     void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    coordf_t adjust_layer_height(coordf_t layer_height) const;
+    std::vector<coordf_t> generate_object_layers(coordf_t first_layer_height);
+    void _slice();
     std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
     void _make_perimeters();
     void _infill();
@@ -169,7 +175,7 @@ class Print
     PrintRegionPtrs regions;
     PlaceholderParser placeholder_parser;
     // TODO: status_cb
-    double total_used_filament, total_extruded_volume;
+    double total_used_filament, total_extruded_volume, total_cost, total_weight;
     std::map<size_t,float> filament_stats;
     PrintState<PrintStep> state;
 
@@ -181,7 +187,8 @@ class Print
     
     // methods for handling objects
     void clear_objects();
-    PrintObject* get_object(size_t idx);
+    PrintObject* get_object(size_t idx) { return this->objects.at(idx); };
+    const PrintObject* get_object(size_t idx) const { return this->objects.at(idx); };
     void delete_object(size_t idx);
     void reload_object(size_t idx);
     bool reload_model_instances();
@@ -213,6 +220,7 @@ class Print
     std::set<size_t> object_extruders() const;
     std::set<size_t> support_material_extruders() const;
     std::set<size_t> extruders() const;
+    size_t brim_extruder() const;
     void _simplify_slices(double distance);
     double max_allowed_layer_height() const;
     bool has_support_material() const;

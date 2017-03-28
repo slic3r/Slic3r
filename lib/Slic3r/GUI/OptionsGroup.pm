@@ -282,6 +282,9 @@ has 'widget'        => (is => 'rw');
 has '_options'      => (is => 'ro', default => sub { [] });
 has '_extra_widgets' => (is => 'ro', default => sub { [] });
 
+use Wx qw(:button :misc :bitmap);
+use Wx::Event qw(EVT_BUTTON);
+
 # this method accepts a Slic3r::GUI::OptionsGroup::Option object
 sub append_option {
     my ($self, $option) = @_;
@@ -291,6 +294,26 @@ sub append_option {
 sub append_widget {
     my ($self, $widget) = @_;
     push @{$self->_extra_widgets}, $widget;
+}
+
+sub append_button {
+    my ($self, $text, $icon, $cb, $ref, $disable) = @_;
+    
+    $self->append_widget(sub {
+        my ($parent) = @_;
+        
+        my $btn = Wx::Button->new($parent, -1,
+            $text, wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
+        $btn->SetFont($Slic3r::GUI::small_font);
+        if ($Slic3r::GUI::have_button_icons) {
+            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG));
+        }
+        $btn->Disable if $disable;
+        $$ref = $btn if $ref;
+        
+        EVT_BUTTON($parent, $btn, $cb);
+        return $btn;
+    });
 }
 
 sub get_options {
@@ -338,7 +361,7 @@ has 'full_labels'   => (is => 'ro', default => sub { 0 });
 has '_opt_map'      => (is => 'ro', default => sub { {} });
 
 sub get_option {
-    my ($self, $opt_key, $opt_index) = @_;
+    my ($self, $opt_key, $opt_index, %params) = @_;
     
     $opt_index //= -1;
     
@@ -369,24 +392,25 @@ sub get_option {
         labels      => $optdef->{labels},
         values      => $optdef->{values},
         readonly    => $optdef->{readonly},
+        %params,
     );
 }
 
 sub create_single_option_line {
-    my ($self, $opt_key, $opt_index) = @_;
+    my ($self, $opt_key, $opt_index, %params) = @_;
     
     my $option;
     if (ref($opt_key)) {
         $option = $opt_key;
     } else {
-        $option = $self->get_option($opt_key, $opt_index);
+        $option = $self->get_option($opt_key, $opt_index, %params);
     }
     return $self->SUPER::create_single_option_line($option);
 }
 
 sub append_single_option_line {
-    my ($self, $option, $opt_index) = @_;
-    return $self->append_line($self->create_single_option_line($option, $opt_index));
+    my ($self, $option, $opt_index, %params) = @_;
+    return $self->append_line($self->create_single_option_line($option, $opt_index, %params));
 }
 
 sub reload_config {

@@ -128,6 +128,7 @@ _constant()
     void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    void _slice();
     SV* _slice_region(size_t region_id, std::vector<double> z, bool modifier)
         %code%{
             std::vector<float> z_f(z.begin(), z.end());
@@ -226,6 +227,7 @@ _constant()
                 RETVAL.push_back(*e);
             }
         %};
+    int brim_extruder();
     void clear_filament_stats()
         %code%{
             THIS->filament_stats.clear();
@@ -287,6 +289,27 @@ Print::total_extruded_volume(...)
             THIS->total_extruded_volume = (double)SvNV(ST(1));
         }
         RETVAL = THIS->total_extruded_volume;
+    OUTPUT:
+        RETVAL
+
+
+double
+Print::total_weight(...)
+    CODE:
+        if (items > 1) {
+            THIS->total_weight = (double)SvNV(ST(1));
+        }
+        RETVAL = THIS->total_weight;
+    OUTPUT:
+        RETVAL
+
+double
+Print::total_cost(...)
+    CODE:
+        if (items > 1) {
+            THIS->total_cost = (double)SvNV(ST(1));
+        }
+        RETVAL = THIS->total_cost;
     OUTPUT:
         RETVAL
 

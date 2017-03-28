@@ -57,7 +57,6 @@ use Slic3r::GCode::ArcFitting;
 use Slic3r::GCode::MotionPlanner;
 use Slic3r::GCode::PressureRegulator;
 use Slic3r::GCode::Reader;
-use Slic3r::GCode::SpiralVase;
 use Slic3r::GCode::VibrationLimit;
 use Slic3r::Geometry qw(PI);
 use Slic3r::Geometry::Clipper;

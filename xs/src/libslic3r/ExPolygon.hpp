@@ -4,6 +4,7 @@
 #include "libslic3r.h"
 #include "Polygon.hpp"
 #include "Polyline.hpp"
+#include <ostream>
 #include <vector>
 
 namespace Slic3r {
@@ -29,6 +30,7 @@ class ExPolygon
     bool contains(const Point &point) const;
     bool contains_b(const Point &point) const;
     bool has_boundary_point(const Point &point) const;
+    void remove_vertical_collinear_points(coord_t tolerance);
     void simplify_p(double tolerance, Polygons* polygons) const;
     Polygons simplify_p(double tolerance) const;
     ExPolygons simplify(double tolerance) const;
@@ -60,6 +62,8 @@ operator+(ExPolygons src1, const ExPolygons &src2) {
     append_to(src1, src2);
     return src1;
 };
+
+std::ostream& operator <<(std::ostream &s, const ExPolygons &expolygons);
 
 }
 

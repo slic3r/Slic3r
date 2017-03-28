@@ -23,27 +23,6 @@ protected:
     
 	void _fill_single_direction(ExPolygon expolygon, const direction_t &direction,
 	    coord_t x_shift, Polylines* out);
-    
-    struct IntersectionPoint : Point {
-        enum ipType { ipTypeLower, ipTypeUpper, ipTypeMiddle };
-        ipType type;
-        
-        // skipped contains the polygon points accumulated between the previous intersection
-        // point and the current one, in the original polygon winding order (does not contain
-        // either points)
-        Points skipped;
-        
-        // next contains a polygon portion connecting this point to the first intersection
-        // point found following the polygon in any direction but having:
-        // x > this->x || (x == this->x && y > this->y)
-        // (it doesn't contain *this but it contains the target intersection point)
-        Points next;
-        
-        IntersectionPoint() : Point() {};
-        IntersectionPoint(coord_t x, coord_t y, ipType _type) : Point(x,y), type(_type) {};
-    };
-    typedef std::map<coord_t,IntersectionPoint> vertical_t; // <y,point>
-    typedef std::map<coord_t,vertical_t>        grid_t;     // <x,<y,point>>
 };
 
 class FillAlignedRectilinear : public FillRectilinear

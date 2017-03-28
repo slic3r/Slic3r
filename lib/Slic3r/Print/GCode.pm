@@ -48,7 +48,7 @@ sub BUILD {
     
     $self->_cooling_buffer(Slic3r::GCode::CoolingBuffer->new($self->_gcodegen));
     
-    $self->_spiral_vase(Slic3r::GCode::SpiralVase->new(config => $self->config))
+    $self->_spiral_vase(Slic3r::GCode::SpiralVase->new($self->config))
         if $self->config->spiral_vase;
     
     $self->_vibration_limit(Slic3r::GCode::VibrationLimit->new(config => $self->config))
@@ -114,6 +114,9 @@ sub export {
     # set extruder(s) temperature before and after start G-code
     $self->_print_first_layer_temperature(0);
     printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->start_gcode);
+    foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
+        printf $fh "%s\n", $gcodegen->placeholder_parser->process($start_gcode);
+    }
     $self->_print_first_layer_temperature(1);
     
     # set other general things
@@ -141,12 +144,12 @@ sub export {
     }
     
     # calculate wiping points if needed
-    if ($self->config->ooze_prevention) {
+    if ($self->config->ooze_prevention && (my @extruders = @{$self->print->extruders}) > 1) {
         my @skirt_points = map @$_, map @$_, @{$self->print->skirt};
         if (@skirt_points) {
             my $outer_skirt = convex_hull(\@skirt_points);
             my @skirts = ();
-            foreach my $extruder_id (@{$self->print->extruders}) {
+            foreach my $extruder_id (@extruders) {
                 my $extruder_offset = $self->config->get_at('extruder_offset', $extruder_id);
                 push @skirts, my $s = $outer_skirt->clone;
                 $s->translate(-scale($extruder_offset->x), -scale($extruder_offset->y));  #)
@@ -247,6 +250,9 @@ sub export {
     # write end commands to file
     print $fh $gcodegen->retract;   # TODO: process this retract through PressureRegulator in order to discharge fully
     print $fh $gcodegen->writer->set_fan(0);
+    foreach my $end_gcode (@{ $self->config->end_filament_gcode }) { # Process filament-specific gcode in extruder order.
+        printf $fh "%s\n", $gcodegen->placeholder_parser->process($end_gcode);
+    }
     printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->end_gcode);
     print $fh $gcodegen->writer->update_progress($gcodegen->layer_count, $gcodegen->layer_count, 1);  # 100%
     print $fh $gcodegen->writer->postamble;
@@ -255,17 +261,33 @@ sub export {
     $self->print->clear_filament_stats;
     $self->print->total_used_filament(0);
     $self->print->total_extruded_volume(0);
+    $self->print->total_weight(0);
+    $self->print->total_cost(0);
     foreach my $extruder (@{$gcodegen->writer->extruders}) {
         my $used_filament = $extruder->used_filament;
         my $extruded_volume = $extruder->extruded_volume;
+        my $filament_weight = $extruded_volume * $extruder->filament_density / 1000;
+        my $filament_cost = $filament_weight * ($extruder->filament_cost / 1000);
         $self->print->set_filament_stats($extruder->id, $used_filament);
         
         printf $fh "; filament used = %.1fmm (%.1fcm3)\n",
             $used_filament, $extruded_volume/1000;
+        if ($filament_weight > 0) {
+            $self->print->total_weight($self->print->total_weight + $filament_weight);
+            printf $fh "; filament used = %.1fg\n",
+                   $filament_weight;
+            if ($filament_cost > 0) {
+                $self->print->total_cost($self->print->total_cost + $filament_cost);
+                printf $fh "; filament cost = %.1f\n",
+                       $filament_cost;
+            }
+        }
         
         $self->print->total_used_filament($self->print->total_used_filament + $used_filament);
         $self->print->total_extruded_volume($self->print->total_extruded_volume + $extruded_volume);
     }
+    printf $fh "; total filament cost = %.1f\n",
+           $self->print->total_cost;
     
     # append full config
     print $fh "\n";
@@ -301,9 +323,10 @@ sub process_layer {
     
     # check whether we're going to apply spiralvase logic
     if (defined $self->_spiral_vase) {
-        $self->_spiral_vase->enable(
-            ($layer->id > 0 || $self->print->config->brim_width == 0 || $self->print->config->brim_connections_width == 0)
-                && ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt)
+        $self->_spiral_vase->set_enable(
+            $layer->id > 0
+                && ($self->print->config->skirts == 0
+                    || ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt))
                 && !defined(first { $_->region->config->bottom_solid_layers > $layer->id } @{$layer->regions})
                 && !defined(first { $_->perimeters->items_count > 1 } @{$layer->regions})
                 && !defined(first { $_->fills->items_count > 0 } @{$layer->regions})
@@ -439,7 +462,7 @@ sub process_layer {
     
     # extrude brim
     if (!$self->_brim_done) {
-        $gcode .= $self->_gcodegen->set_extruder($self->print->regions->[0]->config->perimeter_extruder-1);
+        $gcode .= $self->_gcodegen->set_extruder($self->print->brim_extruder-1);
         $self->_gcodegen->set_origin(Slic3r::Pointf->new(0,0));
         $self->_gcodegen->avoid_crossing_perimeters->set_use_external_mp(1);
         $gcode .= $self->_gcodegen->extrude($_, 'brim', $object->config->support_material_speed)
@@ -555,7 +578,7 @@ sub process_layer {
         }
         
         # tweak extruder ordering to save toolchanges
-        my @extruders = sort keys %by_extruder;
+        my @extruders = sort { $a <=> $b } keys %by_extruder;
         if (@extruders > 1) {
             my $last_extruder_id = $self->_gcodegen->writer->extruder->id;
             if (exists $by_extruder{$last_extruder_id}) {

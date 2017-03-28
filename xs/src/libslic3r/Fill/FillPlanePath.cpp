@@ -49,7 +49,13 @@ void FillPlanePath::_fill_surface_single(
         }
 //      polylines = intersection_pl(polylines_src, offset((Polygons)expolygon, scale_(0.02)));
         polylines = intersection_pl(polylines, (Polygons)expolygon);
-
+        
+        // Extend paths in order to ensure overlap with perimeters
+        for (Polyline &p : polylines) {
+            p.extend_start(this->endpoints_overlap);
+            p.extend_end(this->endpoints_overlap);
+        }
+        
 /*        
         if (1) {
             require "Slic3r/SVG.pm";

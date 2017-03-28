@@ -77,7 +77,7 @@ sub new {
     
     {
         my $label = Wx::StaticText->new($self, -1, "You can use this section to override the default layer height for parts of this object. Set layer height to zero to skip portions of the input file.",
-            wxDefaultPosition, [-1, 40]);
+            wxDefaultPosition, wxDefaultSize);
         $label->SetFont(Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
         $sizer->Add($label, 0, wxEXPAND | wxALL, 10);
     }
@@ -90,7 +90,7 @@ sub new {
     $grid->SetColLabelValue(0, "Min Z (mm)");
     $grid->SetColLabelValue(1, "Max Z (mm)");
     $grid->SetColLabelValue(2, "Layer height (mm)");
-    $grid->SetColSize($_, 135) for 0..2;
+    $grid->SetColSize($_, -1) for 0..2;
     $grid->SetDefaultCellAlignment(wxALIGN_CENTRE, wxALIGN_CENTRE);
     
     # load data

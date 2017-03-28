@@ -53,12 +53,26 @@ sub new {
         default     => $Slic3r::GUI::Settings->{_}{autocenter},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'invert_zoom',
+        type        => 'bool',
+        label       => 'Invert zoom in previews',
+        tooltip     => 'If this is enabled, Slic3r will invert the direction of mouse-wheel zoom in preview panes.',
+        default     => $Slic3r::GUI::Settings->{_}{invert_zoom},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'background_processing',
         type        => 'bool',
         label       => 'Background processing',
         tooltip     => 'If this is enabled, Slic3r will pre-process objects as soon as they\'re loaded in order to save time when exporting G-code.',
         default     => $Slic3r::GUI::Settings->{_}{background_processing},
         readonly    => !$Slic3r::have_threads,
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'threads',
+        type        => 'i',
+        label       => 'Threads',
+        tooltip     => $Slic3r::Config::Options->{threads}{tooltip},
+        default     => $Slic3r::GUI::Settings->{_}{threads},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'no_controller',

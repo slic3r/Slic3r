@@ -130,6 +130,14 @@ ExPolygon::has_boundary_point(const Point &point) const
 }
 
 void
+ExPolygon::remove_vertical_collinear_points(coord_t tolerance)
+{
+    this->contour.remove_vertical_collinear_points(tolerance);
+    for (Polygon &p : this->holes)
+        p.remove_vertical_collinear_points(tolerance);
+}
+
+void
 ExPolygon::simplify_p(double tolerance, Polygons* polygons) const
 {
     Polygons pp = this->simplify_p(tolerance);
@@ -504,6 +512,14 @@ ExPolygon::dump_perl() const
         ret << "," << h->dump_perl();
     ret << "]";
     return ret.str();
+}
+
+std::ostream&
+operator <<(std::ostream &s, const ExPolygons &expolygons)
+{
+    for (const ExPolygon &e : expolygons)
+        s << e.dump_perl() << std::endl;
+    return s;
 }
 
 }

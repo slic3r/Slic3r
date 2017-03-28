@@ -35,6 +35,7 @@ class FillArchimedeanChords : public FillPlanePath
 public:
     virtual Fill* clone() const { return new FillArchimedeanChords(*this); };
     virtual ~FillArchimedeanChords() {}
+    virtual bool can_solid() const { return true; };
 
 protected:
     virtual bool  _centered() const { return true; }
@@ -46,6 +47,7 @@ class FillHilbertCurve : public FillPlanePath
 public:
     virtual Fill* clone() const { return new FillHilbertCurve(*this); };
     virtual ~FillHilbertCurve() {}
+    virtual bool can_solid() const { return true; };
 
 protected:
     virtual bool  _centered() const { return false; }
@@ -57,6 +59,7 @@ class FillOctagramSpiral : public FillPlanePath
 public:
     virtual Fill* clone() const { return new FillOctagramSpiral(*this); };
     virtual ~FillOctagramSpiral() {}
+    virtual bool can_solid() const { return true; };
 
 protected:
     virtual bool  _centered() const { return true; }

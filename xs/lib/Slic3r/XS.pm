@@ -259,6 +259,7 @@ for my $class (qw(
         Slic3r::Print::Object
         Slic3r::Print::Region
         Slic3r::Print::State
+        Slic3r::SlicingAdaptive
         Slic3r::Surface
         Slic3r::Surface::Collection
         Slic3r::TriangleMesh

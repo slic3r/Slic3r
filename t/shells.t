@@ -1,4 +1,4 @@
-use Test::More tests => 21;
+use Test::More tests => 24;
 use strict;
 use warnings;
 
@@ -11,6 +11,7 @@ BEGIN {
 use List::Util qw(first sum);
 use Slic3r;
 use Slic3r::Geometry qw(epsilon);
+use Slic3r::Surface qw(S_TYPE_TOP);
 use Slic3r::Test;
 
 {
@@ -185,7 +186,7 @@ use Slic3r::Test;
         my $first_layer_temperature_set = 0;
         my $temperature_set = 0;
         my @z_steps = ();
-        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+        Slic3r::GCode::Reader->new(Z => $config->z_offset)->parse(Slic3r::Test::gcode($print), sub {
             my ($self, $cmd, $args, $info) = @_;
             
             if ($cmd eq 'G1') {
@@ -316,6 +317,25 @@ use Slic3r::Test;
         }
     });
     is $diagonal_moves, 0, 'no spiral moves on two-island object';
+}
+
+{
+    # GH: #3732
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('perimeters', 2);
+    $config->set('extrusion_width', 0.55);
+    $config->set('first_layer_height', 0.25);
+    $config->set('infill_overlap', '50%');
+    $config->set('layer_height', 0.25);
+    $config->set('perimeters', 2);
+    $config->set('extra_perimeters', 1);
+    
+    my $tprint = Slic3r::Test::init_print('step', config => $config);
+    $tprint->print->process;
+    my $layerm19 = $tprint->print->get_object(0)->get_layer(19)->get_region(0);
+    is scalar(@{$layerm19->slices->filter_by_type(S_TYPE_TOP)}), 1, 'top slice detected';
+    is scalar(@{$layerm19->fill_surfaces->filter_by_type(S_TYPE_TOP)}), 0, 'no top fill_surface detected';
+    is $layerm19->perimeters->items_count, 3, 'extra perimeter detected';
 }
 
 __END__

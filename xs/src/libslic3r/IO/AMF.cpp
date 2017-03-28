@@ -1,4 +1,6 @@
 #include "../IO.hpp"
+#include <iostream>
+#include <fstream>
 #include <string.h>
 #include <map>
 #include <string>
@@ -87,11 +89,12 @@ struct AMFParserContext
         NODE_TYPE_DELTAX,               // amf/constellation/instance/deltax
         NODE_TYPE_DELTAY,               // amf/constellation/instance/deltay
         NODE_TYPE_RZ,                   // amf/constellation/instance/rz
+        NODE_TYPE_SCALE,                // amf/constellation/instance/scale
         NODE_TYPE_METADATA,             // anywhere under amf/*/metadata
     };
 
     struct Instance {
-        Instance() : deltax_set(false), deltay_set(false), rz_set(false) {}
+        Instance() : deltax_set(false), deltay_set(false), rz_set(false), scale_set(false) {}
         // Shift in the X axis.
         float deltax;
         bool  deltax_set;
@@ -101,6 +104,9 @@ struct AMFParserContext
         // Rotation around the Z axis.
         float rz;
         bool  rz_set;
+        // Scaling factor
+        float scale;
+        bool  scale_set;
     };
 
     struct Object {
@@ -210,6 +216,8 @@ void AMFParserContext::startElement(const char *name, const char **atts)
                 node_type_new = NODE_TYPE_DELTAY;
             else if (strcmp(name, "rz") == 0)
                 node_type_new = NODE_TYPE_RZ;
+            else if (strcmp(name, "scale") == 0)
+                node_type_new = NODE_TYPE_SCALE;
         }
         break;
     case 4:
@@ -266,7 +274,7 @@ void AMFParserContext::characters(const XML_Char *s, int len)
     {
         switch (m_path.size()) {
         case 4:
-            if (m_path.back() == NODE_TYPE_DELTAX || m_path.back() == NODE_TYPE_DELTAY || m_path.back() == NODE_TYPE_RZ)
+            if (m_path.back() == NODE_TYPE_DELTAX || m_path.back() == NODE_TYPE_DELTAY || m_path.back() == NODE_TYPE_RZ || m_path.back() == NODE_TYPE_SCALE)
                 m_value[0].append(s, len);
             break;
         case 6:
@@ -310,6 +318,12 @@ void AMFParserContext::endElement(const char *name)
         assert(m_instance);
         m_instance->rz = float(atof(m_value[0].c_str()));
         m_instance->rz_set = true;
+        m_value[0].clear();
+        break;
+    case NODE_TYPE_SCALE:
+        assert(m_instance);
+        m_instance->scale = float(atof(m_value[0].c_str()));
+        m_instance->scale_set = true;
         m_value[0].clear();
         break;
 
@@ -426,6 +440,7 @@ void AMFParserContext::endDocument()
                 mi->offset.x = instance.deltax;
                 mi->offset.y = instance.deltay;
                 mi->rotation = instance.rz_set ? instance.rz : 0.f;
+                mi->scaling_factor = instance.scale_set ? instance.scale : 1.f;
             }
     }
 }
@@ -482,105 +497,121 @@ AMF::read(std::string input_file, Model* model)
 bool
 AMF::write(Model& model, std::string output_file)
 {
-    FILE *file = ::fopen(output_file.c_str(), "wb");
-    if (file == NULL)
-        return false;
-
-    fprintf(file, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    fprintf(file, "<amf unit=\"millimeter\">\n");
-    fprintf(file, "<metadata type=\"cad\">Slic3r %s</metadata>\n", SLIC3R_VERSION);
+    using namespace std;
+    
+    ofstream file;
+    file.open(output_file, ios::out | ios::trunc);
+    
+    file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << endl
+         << "<amf unit=\"millimeter\">" << endl
+         << "<metadata type=\"cad\">Slic3r " << SLIC3R_VERSION << "</metadata>" << endl;
+    
     for (const auto &material : model.materials) {
         if (material.first.empty())
             continue;
         // note that material-id must never be 0 since it's reserved by the AMF spec
-        fprintf(file, "  <material id=\"%s\">\n", material.first.c_str());
+        file << "  <material id=\"" << material.first << "\">" << endl;
         for (const auto &attr : material.second->attributes)
-             fprintf(file, "    <metadata type=\"%s\">%s</metadata>\n", attr.first.c_str(), attr.second.c_str());
+             file << "    <metadata type=\"" << attr.first << "\">" << attr.second << "</metadata>" << endl;
         for (const std::string &key : material.second->config.keys())
-             fprintf(file, "    <metadata type=\"slic3r.%s\">%s</metadata>\n", key.c_str(), material.second->config.serialize(key).c_str());
-        fprintf(file, "  </material>\n");
+             file << "    <metadata type=\"slic3r." << key << "\">"
+                  << material.second->config.serialize(key) << "</metadata>" << endl;
+        file << "  </material>" << endl;
     }
-    std::string instances;
-    for (size_t object_id = 0; object_id < model.objects.size(); ++ object_id) {
+    
+    ostringstream instances;
+    for (size_t object_id = 0; object_id < model.objects.size(); ++object_id) {
         ModelObject *object = model.objects[object_id];
-        fprintf(file, "  <object id=\"%zu\">\n", object_id);
+        file << "  <object id=\"" << object_id << "\">" << endl;
+        
         for (const std::string &key : object->config.keys())
-             fprintf(file, "    <metadata type=\"slic3r.%s\">%s</metadata>\n", key.c_str(), object->config.serialize(key).c_str());
-        if (! object->name.empty())
-            fprintf(file, "    <metadata type=\"name\">%s</metadata>\n", object->name.c_str());
+            file << "    <metadata type=\"slic3r." << key << "\">"
+                 << object->config.serialize(key) << "</metadata>" << endl;
+        
+        if (!object->name.empty())
+            file << "    <metadata type=\"name\">" << object->name << "</metadata>" << endl;
 
-        //FIXME Store the layer height ranges (ModelObject::layer_height_ranges)
-        fprintf(file, "    <mesh>\n");
-        fprintf(file, "      <vertices>\n");
-        std::vector<int> vertices_offsets;
-        int              num_vertices = 0;
+        //FIXME: Store the layer height ranges (ModelObject::layer_height_ranges)
+        file << "    <mesh>" << endl;
+        file << "      <vertices>" << endl;
+        
+        std::vector<size_t> vertices_offsets;
+        size_t num_vertices = 0;
+        
         for (ModelVolume *volume : object->volumes) {
+            volume->mesh.require_shared_vertices();
             vertices_offsets.push_back(num_vertices);
-            if (! volume->mesh.repaired) 
-                CONFESS("store_amf() requires repair()");
-            auto &stl = volume->mesh.stl;
-            if (stl.v_shared == NULL)
-                stl_generate_shared_vertices(&stl);
-            for (size_t i = 0; i < stl.stats.shared_vertices; ++ i) {
-                fprintf(file, "         <vertex>\n");
-                fprintf(file, "           <coordinates>\n");
-                fprintf(file, "             <x>%f</x>\n", stl.v_shared[i].x);
-                fprintf(file, "             <y>%f</y>\n", stl.v_shared[i].y);
-                fprintf(file, "             <z>%f</z>\n", stl.v_shared[i].z);
-                fprintf(file, "           </coordinates>\n");
-                fprintf(file, "         </vertex>\n");
-            }
+            const auto &stl = volume->mesh.stl;
+            for (size_t i = 0; i < stl.stats.shared_vertices; ++i)
+                // Subtract origin_translation in order to restore the coordinates of the parts
+                // before they were imported. Otherwise, when this AMF file is reimported parts
+                // will be placed in the plater correctly, but we will have lost origin_translation
+                // thus any additional part added will not align with the others.
+                // In order to do this we compensate for this translation in the instance placement
+                // below.
+                file << "         <vertex>" << endl
+                     << "           <coordinates>" << endl
+                     << "             <x>" << (stl.v_shared[i].x - object->origin_translation.x) << "</x>" << endl
+                     << "             <y>" << (stl.v_shared[i].y - object->origin_translation.y) << "</y>" << endl
+                     << "             <z>" << (stl.v_shared[i].z - object->origin_translation.z) << "</z>" << endl
+                     << "           </coordinates>" << endl
+                     << "         </vertex>" << endl;
+            
             num_vertices += stl.stats.shared_vertices;
         }
-        fprintf(file, "      </vertices>\n");
-        for (size_t i_volume = 0; i_volume < object->volumes.size(); ++ i_volume) {
+        file << "      </vertices>" << endl;
+        
+        for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
             ModelVolume *volume = object->volumes[i_volume];
             int vertices_offset = vertices_offsets[i_volume];
+            
             if (volume->material_id().empty())
-                fprintf(file, "      <volume>\n");
+                file << "      <volume>" << endl;
             else
-                fprintf(file, "      <volume materialid=\"%s\">\n", volume->material_id().c_str());
+                file << "      <volume materialid=\"" << volume->material_id() << "\">" << endl;
+            
             for (const std::string &key : volume->config.keys())
-                fprintf(file, "        <metadata type=\"slic3r.%s\">%s</metadata>\n", key.c_str(), volume->config.serialize(key).c_str());
-            if (! volume->name.empty())
-                fprintf(file, "        <metadata type=\"name\">%s</metadata>\n", volume->name.c_str());
+                file << "        <metadata type=\"slic3r." << key << "\">"
+                     << volume->config.serialize(key) << "</metadata>" << endl;
+            
+            if (!volume->name.empty())
+                file << "        <metadata type=\"name\">" << volume->name << "</metadata>" << endl;
+            
             if (volume->modifier)
-                fprintf(file, "        <metadata type=\"slic3r.modifier\">1</metadata>\n");
-            for (int i = 0; i < volume->mesh.stl.stats.number_of_facets; ++ i) {
-                fprintf(file, "        <triangle>\n");
+                file << "        <metadata type=\"slic3r.modifier\">1</metadata>" << endl;
+            
+            for (int i = 0; i < volume->mesh.stl.stats.number_of_facets; ++i) {
+                file << "        <triangle>" << endl;
                 for (int j = 0; j < 3; ++ j)
-                    fprintf(file, "          <v%d>%d</v%d>\n", j+1, volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset, j+1);
-                fprintf(file, "        </triangle>\n");
+                    file << "          <v" << (j+1) << ">"
+                         << (volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset)
+                         << "</v" << (j+1) << ">" << endl;
+                file << "        </triangle>" << endl;
             }
-            fprintf(file, "      </volume>\n");
+            file << "      </volume>" << endl;
         }
-        fprintf(file, "    </mesh>\n");
-        fprintf(file, "  </object>\n");
-        if (! object->instances.empty()) {
-            for (ModelInstance *instance : object->instances) {
-                char buf[512];
-                sprintf(buf,
-                    "    <instance objectid=\"%zu\">\n"
-                    "      <deltax>%lf</deltax>\n"
-                    "      <deltay>%lf</deltay>\n"
-                    "      <rz>%lf</rz>\n"
-                    "    </instance>\n",
-                    object_id,
-                    instance->offset.x,
-                    instance->offset.y,
-                    instance->rotation);
-                //FIXME missing instance->scaling_factor
-                instances.append(buf);
-            }
-        }
+        file << "    </mesh>" << endl;
+        file << "  </object>" << endl;
+        
+        for (const ModelInstance* instance : object->instances)
+            instances
+                << "    <instance objectid=\"" << object_id << "\">" << endl
+                << "      <deltax>" << instance->offset.x + object->origin_translation.x << "</deltax>" << endl
+                << "      <deltay>" << instance->offset.y + object->origin_translation.y << "</deltay>" << endl
+                << "      <rz>%" << instance->rotation << "</rz>" << endl
+                << "      <scale>" << instance->scaling_factor << "</scale>" << endl
+                << "    </instance>" << endl;
     }
-    if (! instances.empty()) {
-        fprintf(file, "  <constellation id=\"1\">\n");
-        fwrite(instances.data(), instances.size(), 1, file);
-        fprintf(file, "  </constellation>\n");
-    }
-    fprintf(file, "</amf>\n");
-    fclose(file);
+    
+    std::string instances_str = instances.str();
+    if (!instances_str.empty())
+        file << "  <constellation id=\"1\">" << endl
+             << instances_str
+             << "  </constellation>" << endl;
+    
+    file << "</amf>" << endl;
+    
+    file.close();
     return true;
 }
 

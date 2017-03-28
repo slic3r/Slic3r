@@ -51,66 +51,62 @@ my $horizontal_feature_test = sub {
 
 my $height_gradation_test = sub {
     my (@z) = $generate_gcode->();
-    
-    my $gradation = $config->get('adaptive_slicing_z_gradation');
+
+    my $gradation = 1 / $config->get('z_steps_per_mm');
     # +1 is a "dirty fix" to avoid rounding issues with the modulo operator...
     my @results = map {unscale((scale($_)+1) % scale($gradation))} @z;
-    
+
     ok  (_eq(sum(@results), 0), 'layer z is multiple of gradation ' . $gradation );
     
     1;
 };
 
 
-
-my $print = Slic3r::Test::init_print('slopy_cube', config => $config);
-$print->models->[0]->mesh->repair();
-my $adaptive_slicing = Slic3r::AdaptiveSlicing->new(
-	mesh => Slic3r::Test::mesh('slopy_cube'),
-	size => 20
-);
+my $adaptive_slicing = Slic3r::SlicingAdaptive->new();
+my $mesh = Slic3r::Test::mesh('slopy_cube');
+$adaptive_slicing->add_mesh($mesh);
+$adaptive_slicing->prepare(20);
 
 
 subtest 'max layer_height limited by extruder capabilities' => sub {
     plan tests => 3;
 
-	is  ($adaptive_slicing->next_layer_height(scale 1, 0.2, 0.1, 0.15), 0.15, 'low');
-	is  ($adaptive_slicing->next_layer_height(scale 1, 0.2, 0.1, 0.4), 0.4, 'higher');
-	is  ($adaptive_slicing->next_layer_height(scale 1, 0.2, 0.1, 0.65), 0.65, 'highest');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 0.5, 0.1, 0.15), 0.15), 'low');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 0.2, 0.1, 0.4), 0.4), 'higher');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 0.2, 0.1, 0.65), 0.65), 'highest');
 };
   
 subtest 'min layer_height limited by extruder capabilities' => sub {
     plan tests => 3;
 
-	is  ($adaptive_slicing->next_layer_height(scale 4, 0.01, 0.1, 0.15), 0.1, 'low');
-	is  ($adaptive_slicing->next_layer_height(scale 4, 0.02, 0.2, 0.4), 0.2, 'higher');
-	is  ($adaptive_slicing->next_layer_height(scale 4, 0.01, 0.3, 0.65), 0.3, 'highest');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.01, 0.1, 0.15), 0.1), 'low');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.02, 0.2, 0.4), 0.2), 'higher');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.01, 0.3, 0.65), 0.3), 'highest');
 };
 
 subtest 'correct layer_height depending on the facet normals' => sub {
     plan tests => 3;
 
-	ok  (_eq($adaptive_slicing->next_layer_height(scale 1, 0.1, 0.1, 0.5), 0.5), 'limit');
-	ok  (_eq($adaptive_slicing->next_layer_height(scale 4, 0.2, 0.1, 0.5), 0.1546), '45deg facet, quality_value: 0.2');
-	ok  (_eq($adaptive_slicing->next_layer_height(scale 4, 0.5, 0.1, 0.5), 0.3352), '45deg facet, quality_value: 0.5');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 0.1, 0.1, 0.5), 0.5), 'limit');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.2, 0.1, 0.5), 0.1546), '45deg facet, quality_value: 0.2');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.5, 0.1, 0.5), 0.3352), '45deg facet, quality_value: 0.5');
 };
 
 
 # 2.92893 ist lower slope edge
 # distance to slope must be higher than min extruder cap.
 # slopes layer height must be greater than the distance to the slope
-ok  (_eq($adaptive_slicing->next_layer_height(scale 2.798, 0.2, 0.1, 0.5), 0.1546), 'reducing layer_height due to higher slopy facet');
+ok  (_eq($adaptive_slicing->next_layer_height(2.798, 0.2, 0.1, 0.5), 0.1546), 'reducing layer_height due to higher slopy facet');
 
 # slopes layer height must be smaller than the distance to the slope
-ok  (_eq($adaptive_slicing->next_layer_height(scale 2.6289, 0.15, 0.1, 0.5), 0.3), 'reducing layer_height to z-diff');
+ok  (_eq($adaptive_slicing->next_layer_height(2.6289, 0.15, 0.1, 0.5), 0.3), 'reducing layer_height to z-diff');
 
 subtest 'horizontal planes' => sub {
     plan tests => 3;
 
-	print "facet_distance: " . $adaptive_slicing->horizontal_facet_distance(scale 1, 1.2) . "\n";
-	ok  (_eq($adaptive_slicing->horizontal_facet_distance(scale 1, 1.2), 1.2), 'max_height limit');
-	ok  (_eq($adaptive_slicing->horizontal_facet_distance(scale 8.5, 4), 1.5), 'normal horizontal facet');
-	ok  (_eq($adaptive_slicing->horizontal_facet_distance(scale 17, 5), 3.0), 'object maximum');
+    ok  (_eq($adaptive_slicing->horizontal_facet_distance(1, 1.2), 1.2), 'max_height limit');
+    ok  (_eq($adaptive_slicing->horizontal_facet_distance(8.5, 4), 1.5), 'normal horizontal facet');
+    ok  (_eq($adaptive_slicing->horizontal_facet_distance(17, 5), 3.0), 'object maximum');
 };
 
 # shrink current layer to fit another layer under horizontal facet
@@ -127,25 +123,25 @@ $config->set('adaptive_slicing_quality', [0.19]);
 
 subtest 'shrink to match horizontal facets' => sub {
     plan skip_all => 'spline smoothing currently prevents exact horizontal facet matching';
-	plan tests => 3;
-	$horizontal_feature_test->();
+    plan tests => 3;
+    $horizontal_feature_test->();
 };
-	
+    
 # widen current layer to match horizontal facet
 $config->set('adaptive_slicing_quality', [0.1]);
 
 subtest 'widen to match horizontal facets' => sub {
     plan skip_all => 'spline smoothing currently prevents exact horizontal facet matching';
-	plan tests => 3;
-	$horizontal_feature_test->();
+    plan tests => 3;
+    $horizontal_feature_test->();
 };
 
 subtest 'layer height gradation' => sub {
-	plan tests => 5;
-	foreach my $gradation (0.001, 0.01, 0.02, 0.05, 0.08) {
-		$config->set('adaptive_slicing_z_gradation', $gradation);
-		$height_gradation_test->();
-	}
+    plan tests => 5;
+    foreach my $gradation (1/0.001*4, 1/0.01*4, 1/0.02*4, 1/0.05*4, 1/0.08*4) {
+        $config->set('z_steps_per_mm', $gradation);
+        $height_gradation_test->();
+    }
 };
 
 __END__

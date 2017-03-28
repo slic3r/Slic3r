@@ -3,6 +3,7 @@
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include <algorithm>
+#include <vector>
 
 namespace Slic3r {
 
@@ -167,12 +168,6 @@ PrintObject::clear_layers()
 }
 
 Layer*
-PrintObject::get_layer(int idx)
-{
-    return this->layers.at(idx);
-}
-
-Layer*
 PrintObject::add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z)
 {
     Layer* layer = new Layer(id, this, height, print_z, slice_z);
@@ -199,12 +194,6 @@ PrintObject::clear_support_layers()
 {
     for (int i = this->support_layers.size()-1; i >= 0; --i)
         this->delete_support_layer(i);
-}
-
-SupportLayer*
-PrintObject::get_support_layer(int idx)
-{
-    return this->support_layers.at(idx);
 }
 
 SupportLayer*
@@ -240,15 +229,15 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "external_perimeters_first") {
             steps.insert(posPerimeters);
         } else if (*opt_key == "layer_height"
-			|| *opt_key == "min_layer_height"
+            || *opt_key == "min_layer_height"
             || *opt_key == "max_layer_height"
             || *opt_key == "first_layer_height"
             || *opt_key == "xy_size_compensation"
             || *opt_key == "adaptive_slicing"
             || *opt_key == "adaptive_slicing_z_gradation"
             || *opt_key == "adaptive_slicing_quality"
-        	|| *opt_key == "match_horizontal_surfaces"
-        	|| *opt_key == "raft_layers") {
+            || *opt_key == "match_horizontal_surfaces"
+            || *opt_key == "raft_layers") {
             steps.insert(posSlice);
         } else if (*opt_key == "support_material"
             || *opt_key == "support_material_angle"
@@ -275,7 +264,8 @@ PrintObject::invalidate_state_by_config_options(const std::vector<t_config_optio
             || *opt_key == "solid_infill_extruder"
             || *opt_key == "infill_extrusion_width") {
             steps.insert(posPrepareInfill);
-        } else if (*opt_key == "external_fill_pattern"
+        } else if (*opt_key == "top_infill_pattern"
+            || *opt_key == "bottom_infill_pattern"
             || *opt_key == "fill_angle"
             || *opt_key == "fill_pattern"
             || *opt_key == "top_infill_extrusion_width"
@@ -364,184 +354,24 @@ PrintObject::has_support_material() const
         || this->config.support_material_enforce_layers > 0;
 }
 
-// This function analyzes slices of a region (SurfaceCollection slices).
-// Each region slice (instance of Surface) is analyzed, whether it is supported or whether it is the top surface.
-// Initially all slices are of type S_TYPE_INTERNAL.
-// Slices are compared against the top / bottom slices and regions and classified to the following groups:
-// S_TYPE_TOP - Part of a region, which is not covered by any upper layer. This surface will be filled with a top solid infill.
-// S_TYPE_BOTTOMBRIDGE - Part of a region, which is not fully supported, but it hangs in the air, or it hangs losely on a support or a raft.
-// S_TYPE_BOTTOM - Part of a region, which is not supported by the same region, but it is supported either by another region, or by a soluble interface layer.
-// S_TYPE_INTERNAL - Part of a region, which is supported by the same region type.
-// If a part of a region is of S_TYPE_BOTTOM and S_TYPE_TOP, the S_TYPE_BOTTOM wins.
 void
 PrintObject::detect_surfaces_type()
 {
-    //Slic3r::debugf "Detecting solid surfaces...\n";
-    FOREACH_REGION(this->_print, region) {
-        size_t region_id = region - this->_print->regions.begin();
-        
-        FOREACH_LAYER(this, layer_it) {
-            size_t layer_idx    = layer_it - this->layers.begin();
-            Layer &layer        = **layer_it;
-            LayerRegion &layerm = *layer.get_region(region_id);
-            // comparison happens against the *full* slices (considering all regions)
-            // unless internal shells are requested
-            
-            const Layer* upper_layer = layer_idx < (this->layer_count()-1) ? this->get_layer(layer_idx+1) : NULL;
-            const Layer* lower_layer = layer_idx > 0 ? this->get_layer(layer_idx-1) : NULL;
-            
-            // collapse very narrow parts (using the safety offset in the diff is not enough)
-            const float offset = layerm.flow(frExternalPerimeter).scaled_width() / 10.f;
-
-            const Polygons layerm_slices_surfaces = layerm.slices;
-
-            // find top surfaces (difference between current surfaces
-            // of current layer and upper one)
-            SurfaceCollection top;
-            if (upper_layer != NULL) {
-                const Polygons upper_slices = this->config.interface_shells.value
-                    ? (Polygons)upper_layer->get_region(region_id)->slices
-                    : (Polygons)upper_layer->slices;
-                
-                top.append(
-                    offset2_ex(
-                        diff(layerm_slices_surfaces, upper_slices, true),
-                        -offset, offset
-                    ),
-                    stTop
-                );
-            } else {
-                // if no upper layer, all surfaces of this one are solid
-                // we clone surfaces because we're going to clear the slices collection
-                top = layerm.slices;
-                for (Surfaces::iterator it = top.surfaces.begin(); it != top.surfaces.end(); ++ it)
-                    it->surface_type = stTop;
-            }
-            
-            // find bottom surfaces (difference between current surfaces
-            // of current layer and lower one)
-            SurfaceCollection bottom;
-            if (lower_layer != NULL) {
-                // If we have soluble support material, don't bridge. The overhang will be squished against a soluble layer separating
-                // the support from the print.
-                const SurfaceType surface_type_bottom = 
-                    (this->config.support_material.value && this->config.support_material_contact_distance.value == 0)
-                    ? stBottom
-                    : stBottomBridge;
-                
-                // Any surface lying on the void is a true bottom bridge (an overhang)
-                bottom.append(
-                    offset2_ex(
-                        diff(layerm_slices_surfaces, lower_layer->slices, true), 
-                        -offset, offset
-                    ),
-                    surface_type_bottom
-                );
-                
-                // if user requested internal shells, we need to identify surfaces
-                // lying on other slices not belonging to this region
-                if (this->config.interface_shells) {
-                    // non-bridging bottom surfaces: any part of this layer lying 
-                    // on something else, excluding those lying on our own region
-                    bottom.append(
-                        offset2_ex(
-                            diff(
-                                intersection(layerm_slices_surfaces, lower_layer->slices), // supported
-                                lower_layer->get_region(region_id)->slices, 
-                                true
-                            ), 
-                            -offset, offset
-                        ),
-                        stBottom
-                    );
-                }
-            } else {
-                // if no lower layer, all surfaces of this one are solid
-                // we clone surfaces because we're going to clear the slices collection
-                bottom = layerm.slices;
-                
-                // if we have raft layers, consider bottom layer as a bridge
-                // just like any other bottom surface lying on the void
-                const SurfaceType surface_type_bottom = 
-                    (this->config.raft_layers.value > 0 && this->config.support_material_contact_distance.value > 0)
-                    ? stBottomBridge
-                    : stBottom;
-                for (Surfaces::iterator it = bottom.surfaces.begin(); it != bottom.surfaces.end(); ++ it)
-                    it->surface_type = surface_type_bottom;
-            }
-            
-            // now, if the object contained a thin membrane, we could have overlapping bottom
-            // and top surfaces; let's do an intersection to discover them and consider them
-            // as bottom surfaces (to allow for bridge detection)
-            if (!top.empty() && !bottom.empty()) {
-                const Polygons top_polygons = to_polygons(STDMOVE(top));
-                top.clear();
-                top.append(
-                    offset2_ex(diff(top_polygons, bottom, true), -offset, offset),
-                    stTop
-                );
-            }
-            
-            // save surfaces to layer
-            layerm.slices.clear();
-            layerm.slices.append(STDMOVE(top));
-            layerm.slices.append(STDMOVE(bottom));
-
-            // find internal surfaces (difference between top/bottom surfaces and others)
-            {
-                Polygons topbottom = top; append_to(topbottom, (Polygons)bottom);
-                
-                layerm.slices.append(
-                    offset2_ex(
-                        diff(layerm_slices_surfaces, topbottom, true),
-                        -offset, offset
-                    ),
-                    stInternal
-                );
-            }
-            
-            /*
-            Slic3r::debugf "  layer %d has %d bottom, %d top and %d internal surfaces\n",
-                $layerm->layer->id, scalar(@bottom), scalar(@top), scalar(@internal) if $Slic3r::debug;
-            */
-
-        } // for each layer of a region
-        
-        /*  Fill in layerm->fill_surfaces by trimming the layerm->slices by the cummulative layerm->fill_surfaces.
-            Note: this method should be idempotent, but fill_surfaces gets modified 
-            in place. However we're now only using its boundaries (which are invariant)
-            so we're safe. This guarantees idempotence of prepare_infill() also in case
-            that combine_infill() turns some fill_surface into VOID surfaces.  */
-        FOREACH_LAYER(this, layer_it) {
-            LayerRegion &layerm = *(*layer_it)->get_region(region_id);
-            
-            const Polygons fill_boundaries = layerm.fill_surfaces;
-            layerm.fill_surfaces.clear();
-            for (Surfaces::const_iterator surface = layerm.slices.surfaces.begin();
-                surface != layerm.slices.surfaces.end(); ++ surface) {
-                layerm.fill_surfaces.append(
-                    intersection_ex(*surface, fill_boundaries),
-                    surface->surface_type
-                );
-            }
-        }
-    }
+    parallelize<Layer*>(
+        std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
+        boost::bind(&Slic3r::Layer::detect_surfaces_type, _1),
+        this->_print->config.threads.value
+    );
 }
 
 void
 PrintObject::process_external_surfaces()
 {
-    FOREACH_REGION(this->_print, region) {
-        size_t region_id = region - this->_print->regions.begin();
-        
-        FOREACH_LAYER(this, layer_it) {
-            const Layer* lower_layer = (layer_it == this->layers.begin())
-                ? NULL
-                : *(layer_it-1);
-            
-            (*layer_it)->get_region(region_id)->process_external_surfaces(lower_layer);
-        }
-    }
+    parallelize<Layer*>(
+        std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
+        boost::bind(&Slic3r::Layer::process_external_surfaces, _1),
+        this->_print->config.threads.value
+    );
 }
 
 /* This method applies bridge flow to the first internal solid layer above
@@ -725,6 +555,330 @@ PrintObject::bridge_over_infill()
     }
 }
 
+// adjust the layer height to the next multiple of the z full-step resolution
+coordf_t PrintObject::adjust_layer_height(coordf_t layer_height) const
+{
+    coordf_t result = layer_height;
+    if(this->_print->config.z_steps_per_mm > 0) {
+        coordf_t min_dz = 1 / this->_print->config.z_steps_per_mm * 4;
+        result = int(layer_height / min_dz + 0.5) * min_dz;
+    }
+
+    return result > 0 ? result : layer_height;
+}
+
+// generate a vector of print_z coordinates in object coordinate system (starting with 0) but including
+// the first_layer_height if provided.
+std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_height) {
+
+    std::vector<coordf_t> result;
+
+    // collect values from config
+    coordf_t min_nozzle_diameter = 1.0;
+    coordf_t min_layer_height = 0.0;
+    coordf_t max_layer_height = 10.0;
+    std::set<size_t> object_extruders = this->_print->object_extruders();
+    for (std::set<size_t>::const_iterator it_extruder = object_extruders.begin(); it_extruder != object_extruders.end(); ++ it_extruder) {
+        min_nozzle_diameter = std::min(min_nozzle_diameter, this->_print->config.nozzle_diameter.get_at(*it_extruder));
+        min_layer_height = std::max(min_layer_height, this->_print->config.min_layer_height.get_at(*it_extruder));
+        max_layer_height = std::min(max_layer_height, this->_print->config.max_layer_height.get_at(*it_extruder));
+
+    }
+    coordf_t layer_height = std::min(min_nozzle_diameter, this->config.layer_height.getFloat());
+    layer_height = this->adjust_layer_height(layer_height);
+    this->config.layer_height.value = layer_height;
+
+    // respect first layer height
+    if(first_layer_height) {
+        result.push_back(first_layer_height);
+    }
+
+    coordf_t print_z = first_layer_height;
+    coordf_t height = first_layer_height;
+
+    if(!this->layer_height_spline.updateRequired()) { // layer heights are already generated, just update layers from spline
+        // we don't need to respect first layer here, it's correctly provided by the spline object
+        result = this->layer_height_spline.getInterpolatedLayers();
+    }else{ // create new set of layers
+
+        // create stateful objects and variables for the adaptive slicing process
+        SlicingAdaptive as;
+        coordf_t adaptive_quality = this->config.adaptive_slicing_quality.value;
+        if(this->config.adaptive_slicing.value) {
+            const ModelVolumePtrs volumes = this->model_object()->volumes;
+            for (ModelVolumePtrs::const_iterator it = volumes.begin(); it != volumes.end(); ++ it)
+                if (! (*it)->modifier)
+                    as.add_mesh(&(*it)->mesh);
+            as.prepare(unscale(this->size.z));
+        }
+
+        // loop until we have at least one layer and the max slice_z reaches the object height
+        while (print_z < unscale(this->size.z)) {
+
+            if (this->config.adaptive_slicing.value) {
+                height = 999;
+                // FIXME: this should de done directly via config at the dialog...
+                if(this->layer_height_spline.getCuspValue() >= 0) {
+                    adaptive_quality = this->layer_height_spline.getCuspValue(); //FIXME: rename variable (cusp)
+                    this->config.adaptive_slicing_quality.value = adaptive_quality;
+                }
+
+                // determine next layer height
+                height = as.next_layer_height(print_z, adaptive_quality, min_layer_height, max_layer_height);
+
+                // check for horizontal features and object size
+                if(this->config.match_horizontal_surfaces.value) {
+                    coordf_t horizontal_dist = as.horizontal_facet_distance(print_z + height, min_layer_height);
+                    if((horizontal_dist < min_layer_height) && (horizontal_dist > 0)) {
+                        // std::cout << "Horizontal feature ahead, distance: " << horizontal_dist << std::endl;
+                        // can we shrink the current layer a bit?
+                        if(height-(min_layer_height - horizontal_dist) > min_layer_height) {
+                            // yes we can
+                            height -= (min_layer_height - horizontal_dist);
+                            // std::cout << "Shrink layer height to " << height << std::endl;
+                        }else{
+                            // no, current layer would become too thin
+                            height += horizontal_dist;
+                            // std::cout << "Widen layer height to " << height << std::endl;
+                        }
+                    }
+                }
+            }else{
+                height = layer_height;
+            }
+
+            // look for an applicable custom range
+            for (t_layer_height_ranges::const_iterator it_range = this->layer_height_ranges.begin(); it_range != this->layer_height_ranges.end(); ++ it_range) {
+                if(print_z >= it_range->first.first && print_z <= it_range->first.second) {
+                    if(it_range->second > 0) {
+                        height = it_range->second;
+                    }
+                }
+            }
+
+            print_z += height;
+
+            result.push_back(print_z);
+        }
+
+        // Reduce or thicken the top layer in order to match the original object size.
+        // This is not actually related to z_steps_per_mm but we only enable it in case
+        // user provided that value, as it means they really care about the layer height
+        // accuracy and we don't provide unexpected result for people noticing the last
+        // layer has a different layer height.
+        if (this->_print->config.z_steps_per_mm > 0 && result.size() > 1 && !this->config.adaptive_slicing.value) {
+            coordf_t diff = result.back() - unscale(this->size.z);
+            int last_layer = result.size()-1;
+
+            if (diff < 0) {
+                // we need to thicken last layer
+                coordf_t new_h = result[last_layer] - result[last_layer-1];
+                new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negativ) diff value
+                std::cout << new_h << std::endl;
+                result[last_layer] = result[last_layer-1] + new_h;
+            } else {
+                // we need to reduce last layer
+                coordf_t new_h = result[last_layer] - result[last_layer-1];
+                if(min_nozzle_diameter/2 < new_h) { //prevent generation of a too small layer
+                    new_h = std::max(min_nozzle_diameter/2, new_h - diff); // subtract (positive) diff value
+                    std::cout << new_h << std::endl;
+                    result[last_layer] = result[last_layer-1] + new_h;
+                }
+            }
+        }
+
+        // Store layer vector for interactive manipulation
+        this->layer_height_spline.setLayers(result);
+        if (this->config.adaptive_slicing.value) { // smoothing after adaptive algorithm
+            result = this->layer_height_spline.getInterpolatedLayers();
+        }
+    }
+
+    // apply z-gradation (this is redundant for static layer height...)
+    coordf_t gradation = 1 / this->_print->config.z_steps_per_mm * 4;
+    if(this->_print->config.z_steps_per_mm > 0) {
+        coordf_t last_z = 0;
+        coordf_t height;
+        for(std::vector<coordf_t>::iterator l = result.begin(); l != result.end(); ++l) {
+            height = *l - last_z;
+
+            coordf_t gradation_effect = unscale((scale_(height)) % (scale_(gradation)));
+            if(gradation_effect > gradation/2 && (height + (gradation-gradation_effect)) <= max_layer_height) { // round up
+                height = height + (gradation-gradation_effect);
+            }else{ // round down
+                height = height - gradation_effect;
+            }
+            height = std::min(std::max(height, min_layer_height), max_layer_height);
+            *l = last_z + height;
+            last_z = *l;
+        }
+    }
+
+    return result;
+}
+
+// 1) Decides Z positions of the layers,
+// 2) Initializes layers and their regions
+// 3) Slices the object meshes
+// 4) Slices the modifier meshes and reclassifies the slices of the object meshes by the slices of the modifier meshes
+// 5) Applies size compensation (offsets the slices in XY plane)
+// 6) Replaces bad slices by the slices reconstructed from the upper/lower layer
+// Resulting expolygons of layer regions are marked as Internal.
+//
+// this should be idempotent
+void PrintObject::_slice()
+{
+
+    coordf_t raft_height = 0;
+    coordf_t print_z = 0;
+    coordf_t height  = 0;
+    coordf_t first_layer_height = this->config.first_layer_height.get_abs_value(this->config.layer_height.value);
+
+
+    // take raft layers into account
+    int id = 0;
+
+    if (this->config.raft_layers > 0) {
+        id = this->config.raft_layers;
+
+        coordf_t min_support_nozzle_diameter = 1.0;
+        std::set<size_t> support_material_extruders = this->_print->support_material_extruders();
+        for (std::set<size_t>::const_iterator it_extruder = support_material_extruders.begin(); it_extruder != support_material_extruders.end(); ++ it_extruder) {
+            min_support_nozzle_diameter = std::min(min_support_nozzle_diameter, this->_print->config.nozzle_diameter.get_at(*it_extruder));
+        }
+        coordf_t support_material_layer_height = 0.75 * min_support_nozzle_diameter;
+
+        // raise first object layer Z by the thickness of the raft itself
+        // plus the extra distance required by the support material logic
+        raft_height += first_layer_height;
+        raft_height += support_material_layer_height * (this->config.raft_layers - 1);
+
+        // reset for later layer generation
+        first_layer_height = 0;
+
+        // detachable support
+        if(this->config.support_material_contact_distance > 0) {
+            first_layer_height = min_support_nozzle_diameter;
+            raft_height += this->config.support_material_contact_distance;
+
+        }
+    }
+
+    // Initialize layers and their slice heights.
+    std::vector<float> slice_zs;
+    {
+        this->clear_layers();
+        // All print_z values for this object, without the raft.
+        std::vector<coordf_t> object_layers = this->generate_object_layers(first_layer_height);
+        // Reserve object layers for the raft. Last layer of the raft is the contact layer.
+        slice_zs.reserve(object_layers.size());
+        Layer *prev = nullptr;
+        coordf_t lo = raft_height;
+        coordf_t hi = lo;
+        for (size_t i_layer = 0; i_layer < object_layers.size(); i_layer++) {
+            lo = hi;  // store old value
+            hi = object_layers[i_layer] + raft_height;
+            coordf_t slice_z = 0.5 * (lo + hi) - raft_height;
+            Layer *layer = this->add_layer(id++, hi - lo, hi, slice_z);
+            slice_zs.push_back(float(slice_z));
+            if (prev != nullptr) {
+                prev->upper_layer = layer;
+                layer->lower_layer = prev;
+            }
+            // Make sure all layers contain layer region objects for all regions.
+            for (size_t region_id = 0; region_id < this->_print->regions.size(); ++ region_id)
+                layer->add_region(this->print()->regions[region_id]);
+            prev = layer;
+        }
+    }
+
+    if (this->print()->regions.size() == 1) {
+        // Optimized for a single region. Slice the single non-modifier mesh.
+        std::vector<ExPolygons> expolygons_by_layer = this->_slice_region(0, slice_zs, false);
+        for (size_t layer_id = 0; layer_id < expolygons_by_layer.size(); ++ layer_id)
+            this->layers[layer_id]->regions.front()->slices.append(std::move(expolygons_by_layer[layer_id]), stInternal);
+    } else {
+        // Slice all non-modifier volumes.
+        for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id) {
+            std::vector<ExPolygons> expolygons_by_layer = this->_slice_region(region_id, slice_zs, false);
+            for (size_t layer_id = 0; layer_id < expolygons_by_layer.size(); ++ layer_id)
+                this->layers[layer_id]->regions[region_id]->slices.append(std::move(expolygons_by_layer[layer_id]), stInternal);
+        }
+        // Slice all modifier volumes.
+        for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id) {
+            std::vector<ExPolygons> expolygons_by_layer = this->_slice_region(region_id, slice_zs, true);
+            // loop through the other regions and 'steal' the slices belonging to this one
+            for (size_t other_region_id = 0; other_region_id < this->print()->regions.size(); ++ other_region_id) {
+                if (region_id == other_region_id)
+                    continue;
+                for (size_t layer_id = 0; layer_id < expolygons_by_layer.size(); ++ layer_id) {
+                    Layer       *layer = layers[layer_id];
+                    LayerRegion *layerm = layer->regions[region_id];
+                    LayerRegion *other_layerm = layer->regions[other_region_id];
+                    if (layerm == nullptr || other_layerm == nullptr)
+                        continue;
+                    Polygons other_slices = to_polygons(other_layerm->slices);
+                    ExPolygons my_parts = intersection_ex(other_slices, to_polygons(expolygons_by_layer[layer_id]));
+                    if (my_parts.empty())
+                        continue;
+                    // Remove such parts from original region.
+                    other_layerm->slices.set(diff_ex(other_slices, to_polygons(my_parts)), stInternal);
+                    // Append new parts to our region.
+                    layerm->slices.append(std::move(my_parts), stInternal);
+                }
+            }
+        }
+    }
+
+    // remove last layer(s) if empty
+    bool done = false;
+    while (! this->layers.empty()) {
+        const Layer *layer = this->layers.back();
+        for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id)
+            if (layer->regions[region_id] != nullptr && ! layer->regions[region_id]->slices.empty()) {
+                done = true;
+                break;
+            }
+        if(done) {
+            break;
+        }
+        this->delete_layer(int(this->layers.size()) - 1);
+    }
+
+    for (size_t layer_id = 0; layer_id < layers.size(); ++ layer_id) {
+        Layer *layer = this->layers[layer_id];
+        // Apply size compensation and perform clipping of multi-part objects.
+        float delta = float(scale_(this->config.xy_size_compensation.value));
+        bool  scale = delta != 0.f;
+        if (layer->regions.size() == 1) {
+            if (scale) {
+                // Single region, growing or shrinking.
+                LayerRegion *layerm = layer->regions.front();
+                layerm->slices.set(offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), delta), stInternal);
+            }
+        } else if (scale) {
+            // Multiple regions, growing, shrinking or just clipping one region by the other.
+            // When clipping the regions, priority is given to the first regions.
+            Polygons processed;
+            for (size_t region_id = 0; region_id < layer->regions.size(); ++ region_id) {
+                LayerRegion *layerm = layer->regions[region_id];
+                ExPolygons slices = to_expolygons(std::move(layerm->slices.surfaces));
+                if (scale)
+                    slices = offset_ex(slices, delta);
+                if (region_id > 0)
+                    // Trim by the slices of already processed regions.
+                    slices = diff_ex(to_polygons(std::move(slices)), processed);
+                if (region_id + 1 < layer->regions.size())
+                    // Collect the already processed regions to trim the to be processed regions.
+                    processed += to_polygons(slices);
+                layerm->slices.set(std::move(slices), stInternal);
+            }
+        }
+        // Merge all regions' slices to get islands, chain them by a shortest path.
+        layer->make_slices();
+    }
+}
+
 // called from slice()
 std::vector<ExPolygons>
 PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier)
@@ -789,7 +943,6 @@ PrintObject::_make_perimeters()
         size_t region_id = region_it - this->_print->regions.begin();
         const PrintRegion &region = **region_it;
         
-        
         if (!region.config.extra_perimeters
             || region.config.perimeters == 0
             || region.config.fill_density == 0
@@ -798,7 +951,13 @@ PrintObject::_make_perimeters()
         for (size_t i = 0; i <= (this->layer_count()-2); ++i) {
             LayerRegion &layerm                     = *this->get_layer(i)->get_region(region_id);
             const LayerRegion &upper_layerm         = *this->get_layer(i+1)->get_region(region_id);
-            const Polygons upper_layerm_polygons    = upper_layerm.slices;
+            
+            // In order to avoid diagonal gaps (GH #3732) we ignore the external half of the upper
+            // perimeter, since it's not truly covering this layer.
+            const Polygons upper_layerm_polygons = offset(
+                upper_layerm.slices,
+                -upper_layerm.flow(frExternalPerimeter).scaled_width()/2
+            );
             
             // Filter upper layer polygons in intersection_ppl by their bounding boxes?
             // my $upper_layerm_poly_bboxes= [ map $_->bounding_box, @{$upper_layerm_polygons} ];

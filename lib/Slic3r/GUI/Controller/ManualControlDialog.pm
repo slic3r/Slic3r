@@ -5,25 +5,25 @@ use strict;
 use warnings;
 use utf8;
 
+use Scalar::Util qw(looks_like_number);
 use Slic3r::Geometry qw(PI X Y unscale);
-use Wx qw(:dialog :id :misc :sizer :choicebook :button :bitmap
+use Wx qw(:dialog :id :misc :sizer :choicebook :button :bitmap :textctrl
     wxBORDER_NONE wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_CLOSE EVT_BUTTON);
 use base qw(Wx::Dialog Class::Accessor);
 
-__PACKAGE__->mk_accessors(qw(sender config2 x_homed y_homed));
+__PACKAGE__->mk_accessors(qw(sender writer config2 x_homed y_homed));
 
 sub new {
-    my ($class, $parent, $config, $sender) = @_;
+    my ($class, $parent, $config, $sender, $manual_control_config) = @_;
     
     my $self = $class->SUPER::new($parent, -1, "Manual Control", wxDefaultPosition,
-        [500,380], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+        [500,400], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     $self->sender($sender);
+    $self->writer(Slic3r::GCode::Writer->new);
+    $self->writer->config->apply_dynamic($config);
     
-    $self->config2({
-        xy_travel_speed     => 130,
-        z_travel_speed      => 10,
-    });
+    $self->config2($manual_control_config);
     
     my $bed_sizer = Wx::FlexGridSizer->new(2, 3, 1, 1);
     $bed_sizer->AddGrowableCol(1, 1);
@@ -107,7 +107,7 @@ sub new {
     
     my $optgroup = Slic3r::GUI::OptionsGroup->new(
         parent      => $self,
-        title       => 'Settings',
+        title       => 'Manual motion settings',
         on_change   => sub {
             my ($opt_id, $value) = @_;
             $self->config2->{$opt_id} = $value;
@@ -133,16 +133,101 @@ sub new {
         ));
         $optgroup->append_line($line);
     }
+    my $left_sizer = Wx::BoxSizer->new(wxVERTICAL);
+    $left_sizer->Add($bed_sizer, 1, wxEXPAND | wxALL, 10);
+    $left_sizer->Add($optgroup->sizer, 0, wxEXPAND | wxALL, 10);
     
-    my $main_sizer = Wx::BoxSizer->new(wxVERTICAL);
-    $main_sizer->Add($bed_sizer, 1, wxEXPAND | wxALL, 10);
-    $main_sizer->Add($optgroup->sizer, 0, wxEXPAND | wxALL, 10);
-    #$main_sizer->Add($self->CreateButtonSizer(wxCLOSE), 0, wxEXPAND);
-    #EVT_BUTTON($self, wxID_CLOSE, sub { $self->Close });
+    my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
+    {
+        my $optgroup = Slic3r::GUI::OptionsGroup->new(
+            parent      => $self,
+            title       => 'Temperature',
+            on_change   => sub {
+                my ($opt_id, $value) = @_;
+                $self->config2->{$opt_id} = $value;
+            },
+        );
+        $right_sizer->Add($optgroup->sizer, 0, wxEXPAND | wxALL, 10);
+        {
+            my $line = $optgroup->create_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+                opt_id      => 'temperature',
+                type        => 's',
+                label       => 'Extruder',
+                default     => '',
+                sidetext    => '°C',
+                default     => $self->config2->{temperature},
+            ));
+            $line->append_button("Set", "tick.png", sub {
+                if (!looks_like_number($self->config2->{temperature})) {
+                    Slic3r::GUI::show_error($self, "Invalid temperature.");
+                    return;
+                }
+                my $cmd = $self->writer->set_temperature($self->config2->{temperature});
+                $self->sender->send($cmd, 1);
+            });
+            $optgroup->append_line($line);
+        }
+        {
+            my $line = $optgroup->create_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+                opt_id      => 'bed_temperature',
+                type        => 's',
+                label       => 'Bed',
+                default     => '',
+                sidetext    => '°C',
+                default     => $self->config2->{bed_temperature},
+            ));
+            $line->append_button("Set", "tick.png", sub {
+                if (!looks_like_number($self->config2->{bed_temperature})) {
+                    Slic3r::GUI::show_error($self, "Invalid bed temperature.");
+                    return;
+                }
+                my $cmd = $self->writer->set_bed_temperature($self->config2->{bed_temperature});
+                $self->sender->send($cmd, 1);
+            });
+            $optgroup->append_line($line);
+        }
+    }
+    
+    {
+        my $box = Wx::StaticBox->new($self, -1, "Console");
+        my $sbsizer = Wx::StaticBoxSizer->new($box, wxVERTICAL);
+        $right_sizer->Add($sbsizer, 1, wxEXPAND, 0);
+    
+        my $log = $self->{log_textctrl} = Wx::TextCtrl->new($self, -1, "", wxDefaultPosition, wxDefaultSize,
+            wxTE_MULTILINE | wxBORDER_NONE);
+        $log->SetBackgroundColour($self->GetBackgroundColour);
+        $log->SetFont($Slic3r::GUI::small_font);
+        $log->SetEditable(0);
+        $sbsizer->Add($self->{log_textctrl}, 1, wxEXPAND, 0);
+        
+        my $cmd_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+        my $cmd_textctrl = Wx::TextCtrl->new($self, -1, '');
+        $cmd_sizer->Add($cmd_textctrl, 1, wxEXPAND, 0);
+        
+        my $btn = Wx::Button->new($self, -1,
+            "Send", wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
+        $btn->SetFont($Slic3r::GUI::small_font);
+        if ($Slic3r::GUI::have_button_icons) {
+            $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("cog_go.png"), wxBITMAP_TYPE_PNG));
+        }
+        $cmd_sizer->Add($btn, 0, wxEXPAND | wxLEFT, 5);
+        
+        EVT_BUTTON($self, $btn, sub {
+            return if $cmd_textctrl->GetValue eq '';
+            $self->sender->send($cmd_textctrl->GetValue, 1);
+            $cmd_textctrl->SetValue('');
+        });
+        
+        $sbsizer->Add($cmd_sizer, 0, wxEXPAND | wxTOP, 2);
+    }
+    
+    my $main_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+    $main_sizer->Add($left_sizer, 1, wxEXPAND | wxRIGHT, 10);
+    $main_sizer->Add($right_sizer, 0, wxEXPAND, 0);
     
     $self->SetSizer($main_sizer);
     $self->SetMinSize($self->GetSize);
-    #$main_sizer->SetSizeHints($self);
+    $main_sizer->SetSizeHints($self);
     $self->Layout;
     
     # needed to actually free memory
@@ -152,6 +237,12 @@ sub new {
     });
     
     return $self;
+}
+
+sub update_log {
+    my ($self, $log) = @_;
+    
+    $self->{log_textctrl}->SetValue($log);
 }
 
 sub abs_xy_move {

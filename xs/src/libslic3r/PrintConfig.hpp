@@ -112,8 +112,11 @@ class PrintConfigBase : public virtual ConfigBase
     PrintConfigBase() {
         this->def = &print_config_def;
     };
-    
+    bool set_deserialize(t_config_option_key opt_key, std::string str, bool append = false);
     double min_object_distance() const;
+    
+    protected:
+    void _handle_legacy(t_config_option_key &opt_key, std::string &value) const;
 };
 
 // Slic3r dynamic configuration, used to override the configuration 
@@ -141,7 +144,6 @@ class PrintObjectConfig : public virtual StaticPrintConfig
 {
     public:
 	ConfigOptionBool                adaptive_slicing;
-	ConfigOptionFloat               adaptive_slicing_z_gradation;
 	ConfigOptionFloat               adaptive_slicing_quality;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloatOrPercent      extrusion_width;
@@ -165,7 +167,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionEnum<SupportMaterialPattern> support_material_pattern;
     ConfigOptionFloat               support_material_spacing;
     ConfigOptionFloat               support_material_speed;
-    ConfigOptionInt                 support_material_threshold;
+    ConfigOptionFloatOrPercent      support_material_threshold;
     ConfigOptionFloat               xy_size_compensation;
     
     PrintObjectConfig(bool initialize = true) : StaticPrintConfig() {
@@ -175,7 +177,6 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(adaptive_slicing);
-        OPT_PTR(adaptive_slicing_z_gradation);
         OPT_PTR(adaptive_slicing_quality);
         OPT_PTR(dont_support_bridges);
         OPT_PTR(extrusion_width);
@@ -210,10 +211,10 @@ class PrintObjectConfig : public virtual StaticPrintConfig
 class PrintRegionConfig : public virtual StaticPrintConfig
 {
     public:
+    ConfigOptionEnum<InfillPattern> bottom_infill_pattern;
     ConfigOptionInt                 bottom_solid_layers;
     ConfigOptionFloat               bridge_flow_ratio;
     ConfigOptionFloat               bridge_speed;
-    ConfigOptionEnum<InfillPattern> external_fill_pattern;
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
@@ -241,6 +242,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionFloatOrPercent      solid_infill_speed;
     ConfigOptionBool                thin_walls;
     ConfigOptionFloatOrPercent      top_infill_extrusion_width;
+    ConfigOptionEnum<InfillPattern> top_infill_pattern;
     ConfigOptionInt                 top_solid_layers;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
     
@@ -250,10 +252,10 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(bottom_infill_pattern);
         OPT_PTR(bottom_solid_layers);
         OPT_PTR(bridge_flow_ratio);
         OPT_PTR(bridge_speed);
-        OPT_PTR(external_fill_pattern);
         OPT_PTR(external_perimeter_extrusion_width);
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
@@ -281,6 +283,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         OPT_PTR(solid_infill_speed);
         OPT_PTR(thin_walls);
         OPT_PTR(top_infill_extrusion_width);
+        OPT_PTR(top_infill_pattern);
         OPT_PTR(top_solid_infill_speed);
         OPT_PTR(top_solid_layers);
         
@@ -294,9 +297,12 @@ class GCodeConfig : public virtual StaticPrintConfig
     public:
     ConfigOptionString              before_layer_gcode;
     ConfigOptionString              end_gcode;
+    ConfigOptionStrings             end_filament_gcode;
     ConfigOptionString              extrusion_axis;
     ConfigOptionFloats              extrusion_multiplier;
     ConfigOptionFloats              filament_diameter;
+    ConfigOptionFloats              filament_density;
+    ConfigOptionFloats              filament_cost;
     ConfigOptionFloats              filament_max_volumetric_speed;
     ConfigOptionBool                gcode_comments;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
@@ -313,6 +319,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionFloats              retract_restart_extra_toolchange;
     ConfigOptionFloats              retract_speed;
     ConfigOptionString              start_gcode;
+    ConfigOptionStrings             start_filament_gcode;
     ConfigOptionString              toolchange_gcode;
     ConfigOptionFloat               travel_speed;
     ConfigOptionBool                use_firmware_retraction;
@@ -327,9 +334,12 @@ class GCodeConfig : public virtual StaticPrintConfig
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(before_layer_gcode);
         OPT_PTR(end_gcode);
+        OPT_PTR(end_filament_gcode);
         OPT_PTR(extrusion_axis);
         OPT_PTR(extrusion_multiplier);
         OPT_PTR(filament_diameter);
+        OPT_PTR(filament_density);
+        OPT_PTR(filament_cost);
         OPT_PTR(filament_max_volumetric_speed);
         OPT_PTR(gcode_comments);
         OPT_PTR(gcode_flavor);
@@ -346,6 +356,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(retract_restart_extra_toolchange);
         OPT_PTR(retract_speed);
         OPT_PTR(start_gcode);
+        OPT_PTR(start_filament_gcode);
         OPT_PTR(toolchange_gcode);
         OPT_PTR(travel_speed);
         OPT_PTR(use_firmware_retraction);
@@ -399,6 +410,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBool                gcode_arcs;
     ConfigOptionFloat               infill_acceleration;
     ConfigOptionBool                infill_first;
+    ConfigOptionFloat               interior_brim_width;
     ConfigOptionInt                 max_fan_speed;
     ConfigOptionFloats              max_layer_height;
     ConfigOptionInt                 min_fan_speed;
@@ -426,6 +438,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionFloat               vibration_limit;
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
+    ConfigOptionFloat               z_steps_per_mm;
     
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
@@ -461,6 +474,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(gcode_arcs);
         OPT_PTR(infill_acceleration);
         OPT_PTR(infill_first);
+        OPT_PTR(interior_brim_width);
         OPT_PTR(max_fan_speed);
         OPT_PTR(max_layer_height);
         OPT_PTR(min_fan_speed);
@@ -488,6 +502,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(vibration_limit);
         OPT_PTR(wipe);
         OPT_PTR(z_offset);
+        OPT_PTR(z_steps_per_mm);
         
         // look in parent class
         ConfigOption* opt;
@@ -622,6 +637,7 @@ class CLIConfig
     ConfigOptionString              save;
     ConfigOptionFloat               scale;
     ConfigOptionPoint3              scale_to_fit;
+    ConfigOptionBool                threads;
     
     CLIConfig() : ConfigBase(), StaticConfig() {
         this->def = &cli_config_def;
@@ -645,6 +661,7 @@ class CLIConfig
         OPT_PTR(save);
         OPT_PTR(scale);
         OPT_PTR(scale_to_fit);
+        OPT_PTR(threads);
         
         return NULL;
     };

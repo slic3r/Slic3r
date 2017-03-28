@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8)
 project (slic3r)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -DSLIC3R_DEBUG")
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
@@ -14,7 +14,8 @@ endif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 IF(CMAKE_HOST_APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE")
+    set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation -lc++")
 ELSE(CMAKE_HOST_APPLE)
     set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
 ENDIF(CMAKE_HOST_APPLE)
@@ -54,6 +55,8 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Flow.cpp
     ${LIBDIR}/libslic3r/GCode.cpp
     ${LIBDIR}/libslic3r/GCode/CoolingBuffer.cpp
+    ${LIBDIR}/libslic3r/GCode/SpiralVase.cpp
+    ${LIBDIR}/libslic3r/GCodeReader.cpp
     ${LIBDIR}/libslic3r/GCodeSender.cpp
     ${LIBDIR}/libslic3r/GCodeWriter.cpp
     ${LIBDIR}/libslic3r/Geometry.cpp
@@ -82,6 +85,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/SVG.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
 )
+
 add_library(admesh STATIC
     ${LIBDIR}/admesh/connect.c
     ${LIBDIR}/admesh/normals.c
@@ -90,6 +94,8 @@ add_library(admesh STATIC
     ${LIBDIR}/admesh/stlinit.c
     ${LIBDIR}/admesh/util.c
 )
+set_property(TARGET admesh PROPERTY C_STANDARD 99)
+
 add_library(clipper STATIC ${LIBDIR}/clipper.cpp)
 add_library(expat STATIC
     ${LIBDIR}/expat/xmlparse.c

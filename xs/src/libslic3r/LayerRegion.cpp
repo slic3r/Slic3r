@@ -65,8 +65,10 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
     g.process();
 }
 
+// This function reads lower_layer->slices and writes this->bridged and this->fill_surfaces,
+// so it's thread-safe.
 void
-LayerRegion::process_external_surfaces(const Layer* lower_layer)
+LayerRegion::process_external_surfaces()
 {
     const Surfaces &surfaces = this->fill_surfaces.surfaces;
     const double margin = scale_(EXTERNAL_INFILL_MARGIN);
@@ -82,10 +84,10 @@ LayerRegion::process_external_surfaces(const Layer* lower_layer)
             also, supply the original expolygon instead of the grown one, because in case
             of very thin (but still working) anchors, the grown expolygon would go beyond them */
         double angle = -1;
-        if (lower_layer != NULL && surface->is_bridge()) {
+        if (this->layer()->lower_layer != NULL && surface->is_bridge()) {
             BridgeDetector bd(
                 surface->expolygon,
-                lower_layer->slices,
+                this->layer()->lower_layer->slices,
                 this->flow(frInfill, true).scaled_width()
             );
             
@@ -229,12 +231,13 @@ LayerRegion::prepare_fill_surfaces()
     }
         
     // turn too small internal regions into solid regions according to the user setting
-    if (this->region()->config.fill_density.value > 0) {
+    const float &fill_density = this->region()->config.fill_density;
+    if (fill_density > 0 && fill_density < 100) {
         // scaling an area requires two calls!
-        double min_area = scale_(scale_(this->region()->config.solid_infill_below_area.value));
-        for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->surface_type == stInternal && surface->area() <= min_area)
-                surface->surface_type = stInternalSolid;
+        const double min_area = scale_(scale_(this->region()->config.solid_infill_below_area.value));
+        for (Surface &surface : this->fill_surfaces.surfaces) {
+            if (surface.surface_type == stInternal && surface.area() <= min_area)
+                surface.surface_type = stInternalSolid;
         }
     }
 }

@@ -8,12 +8,6 @@ use utf8;
 
 use List::Util qw(first max);
 
-# cemetery of old config settings
-our @Ignore = qw(duplicate_x duplicate_y multiply_x multiply_y support_material_tool acceleration
-    adjust_overhang_flow standby_temperature scale rotate duplicate duplicate_grid
-    rotate scale duplicate_grid start_perimeters_at_concave_points start_perimeters_at_non_overhang
-    randomize_start seal_position bed_size print_center g0);
-
 # C++ Slic3r::PrintConfigDef exported as a Perl hash of hashes.
 # The C++ counterpart is a constant singleton.
 our $Options = print_config_def();
@@ -120,11 +114,7 @@ sub load_ini_hash {
     my ($ini_hash) = @_;
     
     my $config = $class->new;
-    foreach my $opt_key (keys %$ini_hash) {
-        ($opt_key, my $value) = _handle_legacy($opt_key, $ini_hash->{$opt_key});
-        next if !defined $opt_key;
-        $config->set_deserialize($opt_key, $value);
-    }
+    $config->set_deserialize($_, $ini_hash->{$_}) for keys %$ini_hash;
     return $config;
 }
 
@@ -143,60 +133,6 @@ sub get_value {
     return $Options->{$opt_key}{ratio_over}
         ? $self->get_abs_value($opt_key)
         : $self->get($opt_key);
-}
-
-sub _handle_legacy {
-    my ($opt_key, $value) = @_;
-    
-    # handle legacy options
-    if ($opt_key =~ /^(extrusion_width|bottom_layer_speed|first_layer_height)_ratio$/) {
-        $opt_key = $1;
-        $opt_key =~ s/^bottom_layer_speed$/first_layer_speed/;
-        $value = $value =~ /^\d+(?:\.\d+)?$/ && $value != 0 ? ($value*100) . "%" : 0;
-    }
-    if ($opt_key eq 'threads' && !$Slic3r::have_threads) {
-        $value = 1;
-    }
-    if ($opt_key eq 'gcode_flavor' && $value eq 'makerbot') {
-        $value = 'makerware';
-    }
-    if ($opt_key eq 'fill_density' && defined($value) && $value !~ /%/ && $value <= 1) {
-        # fill_density was turned into a percent value
-        $value *= 100;
-        $value = "$value";  # force update of the PV value, workaround for bug https://rt.cpan.org/Ticket/Display.html?id=94110
-    }
-    if ($opt_key eq 'randomize_start' && $value) {
-        $opt_key = 'seam_position';
-        $value = 'random';
-    }
-    if ($opt_key eq 'bed_size' && $value) {
-        $opt_key = 'bed_shape';
-        my ($x, $y) = split /,/, $value;
-        $value = "0x0,${x}x0,${x}x${y},0x${y}";
-    }
-    return () if first { $_ eq $opt_key } @Ignore;
-    
-    # For historical reasons, the world's full of configs having these very low values;
-    # to avoid unexpected behavior we need to ignore them.  Banning these two hard-coded
-    # values is a dirty hack and will need to be removed sometime in the future, but it
-    # will avoid lots of complaints for now.
-    if ($opt_key eq 'perimeter_acceleration' && $value == '25') {
-        $value = 0;
-    }
-    if ($opt_key eq 'infill_acceleration' && $value == '50') {
-        $value = 0;
-    }
-    
-    if (!exists $Options->{$opt_key}) {
-        my @keys = grep { $Options->{$_}{aliases} && grep $_ eq $opt_key, @{$Options->{$_}{aliases}} } keys %$Options;
-        if (!@keys) {
-            warn "Unknown option $opt_key\n";
-            return ();
-        }
-        $opt_key = $keys[0];
-    }
-    
-    return ($opt_key, $value);
 }
 
 # Create a hash of hashes from the underlying C++ Slic3r::DynamicPrintConfig.
@@ -265,8 +201,10 @@ sub validate {
         if !first { $_ eq $self->fill_pattern } @{$Options->{fill_pattern}{values}};
     
     # --external-fill-pattern
-    die "Invalid value for --external-fill-pattern\n"
-        if !first { $_ eq $self->external_fill_pattern } @{$Options->{external_fill_pattern}{values}};
+    die "Invalid value for --top-infill-pattern\n"
+        if !first { $_ eq $self->top_infill_pattern } @{$Options->{top_infill_pattern}{values}};
+    die "Invalid value for --bottom-infill-pattern\n"
+        if !first { $_ eq $self->bottom_infill_pattern } @{$Options->{bottom_infill_pattern}{values}};
     
     # --fill-density
     die "The selected fill pattern is not supposed to work at 100% density\n"

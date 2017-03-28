@@ -117,6 +117,16 @@ sub load_print {
     }
     
     if ($self->IsShown) {
+        # set colors
+        $self->canvas->color_toolpaths_by($Slic3r::GUI::Settings->{_}{color_toolpaths_by});
+        if ($self->canvas->color_toolpaths_by eq 'extruder') {
+            my @filament_colors = map { s/^#//; [ map $_/255, (unpack 'C*', pack 'H*', $_), 255 ] }
+                @{$self->print->config->filament_colour};
+            $self->canvas->colors->[$_] = $filament_colors[$_] for 0..$#filament_colors;
+        } else {
+            $self->canvas->colors([ $self->canvas->default_colors ]);
+        }
+        
         # load skirt and brim
         $self->canvas->load_print_toolpaths($self->print);
         
