@@ -47,7 +47,6 @@ our $var = sub { decode_path($FindBin::Bin) . "/var/" . $_[0] };
 use Moo 1.003001;
 
 use Slic3r::XS;   # import all symbols (constants etc.) before they get parsed
-use Slic3r::AdaptiveSlicing;
 use Slic3r::Config;
 use Slic3r::ExPolygon;
 use Slic3r::ExtrusionLoop;
