@@ -388,25 +388,6 @@ ConfigBase::option(const t_config_option_key &opt_key, bool create) {
     return this->optptr(opt_key, create);
 }
 
-/*
-template<class T>
-T*
-ConfigBase::opt(const t_config_option_key &opt_key, bool create) {
-    return dynamic_cast<T*>(this->option(opt_key, create));
-}
-template ConfigOptionInt* ConfigBase::opt<ConfigOptionInt>(const t_config_option_key &opt_key, bool create);
-template ConfigOptionBool* ConfigBase::opt<ConfigOptionBool>(const t_config_option_key &opt_key, bool create);
-template ConfigOptionBools* ConfigBase::opt<ConfigOptionBools>(const t_config_option_key &opt_key, bool create);
-template ConfigOptionPercent* ConfigBase::opt<ConfigOptionPercent>(const t_config_option_key &opt_key, bool create);
-
-
-template<class T>
-const T*
-ConfigBase::opt(const t_config_option_key &opt_key) const {
-    return dynamic_cast<const T*>(this->option(opt_key));
-}
-*/
-
 void
 ConfigBase::load(const std::string &file)
 {
