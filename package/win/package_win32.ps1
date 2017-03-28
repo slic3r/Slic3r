@@ -44,6 +44,7 @@ cpanm "PAR::Packer"
 
 pp `
 -a "slic3r.exe;slic3r.exe"  `
+-a "slic3r.exe;slic3r-console.exe"  `
 -a "../../lib;lib" `
 -a "../../local-lib;local-lib" `
 -a "../../slic3r.pl;slic3r.pl" `
@@ -52,7 +53,8 @@ pp `
 -a "../../FreeGLUT/freeglut.dll;freeglut.dll" `
 -a "${STRAWBERRY_PATH}\perl\bin\perl${perlversion}.dll;perl${perlversion}.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_sjlj-1.dll;libgcc_s_sjlj-1.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_seh-1.dll;libgcc_s_seh-1.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
 -a "${STRAWBERRY_PATH}\c\bin\pthreadGC2-w64.dll;pthreadGC2-w64.dll"  `
 -a "${STRAWBERRY_PATH}\c\bin\libglut-0__.dll;libglut-0__.dll"  `
 -M AutoLoader `
@@ -110,10 +112,8 @@ pp `
 -M Socket `
 -M Socket6 `
 -M Storable `
--M Sub::Defer `
 -M Sub::Exporter `
 -M Sub::Exporter::Progressive `
--M Sub::Name `
 -M Symbol `
 -M Term::Cap `
 -M Text::ParseWords `

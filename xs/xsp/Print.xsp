@@ -14,6 +14,7 @@ _constant()
   ALIAS:
     STEP_SLICE              = posSlice
     STEP_PERIMETERS         = posPerimeters
+    STEP_DETECT_SURFACES    = posDetectSurfaces
     STEP_PREPARE_INFILL     = posPrepareInfill
     STEP_INFILL             = posInfill
     STEP_SUPPORTMATERIAL    = posSupportMaterial
@@ -113,7 +114,6 @@ _constant()
     Ref<SupportLayer> add_support_layer(int id, coordf_t height, coordf_t print_z);
     void delete_support_layer(int idx);
     
-    bool invalidate_state_by_config_options(std::vector<std::string> opt_keys);
     bool invalidate_step(PrintObjectStep step);
     bool invalidate_all_steps();
     bool step_done(PrintObjectStep step)
@@ -123,9 +123,10 @@ _constant()
     void set_step_started(PrintObjectStep step)
         %code%{ THIS->state.set_started(step); %};
     
-    void detect_surfaces_type();
+    %name{_detect_surfaces_type} void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    void _slice();
     SV* _slice_region(size_t region_id, std::vector<double> z, bool modifier)
         %code%{
             std::vector<float> z_f(z.begin(), z.end());
@@ -188,7 +189,6 @@ _constant()
     size_t region_count()
         %code%{ RETVAL = THIS->regions.size(); %};
     
-    bool invalidate_state_by_config_options(std::vector<std::string> opt_keys);
     bool invalidate_step(PrintStep step);
     bool invalidate_all_steps();
     bool step_done(PrintStep step)
@@ -224,6 +224,7 @@ _constant()
                 RETVAL.push_back(*e);
             }
         %};
+    int brim_extruder();
     void clear_filament_stats()
         %code%{
             THIS->filament_stats.clear();
@@ -256,6 +257,12 @@ _constant()
     void add_model_object(ModelObject* model_object, int idx = -1);
     bool apply_config(DynamicPrintConfig* config)
         %code%{ RETVAL = THIS->apply_config(*config); %};
+    bool apply_static_config(StaticPrintConfig* config)
+        %code%{
+            DynamicPrintConfig dpc;
+            dpc.apply(*config);
+            RETVAL = THIS->apply_config(dpc);
+        %};
     bool has_infinite_skirt();
     bool has_skirt();
     std::string _validate()

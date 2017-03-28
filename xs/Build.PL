@@ -15,12 +15,17 @@ my $mswin = $^O eq 'MSWin32';
 # HAS_BOOL         : stops Perl/lib/CORE/handy.h from doing "#  define bool char" for MSVC
 # NOGDI            : prevents inclusion of wingdi.h which defines functions Polygon() and Polyline() in global namespace
 # BOOST_ASIO_DISABLE_KQUEUE : prevents a Boost ASIO bug on OS X: https://svn.boost.org/trac/boost/ticket/5339
-# std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
-my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE
-    -std=c++11);
+my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE);
 if ($cpp_guess->is_gcc)	{
 	# GCC is pedantic with c++11 std, so undefine strict ansi to get M_PI back
 	push @cflags, qw(-U__STRICT_ANSI__);
+}
+if (`$Config{cc} -v` =~ /gcc version 4\.6\./) {
+    # Compatibility with GCC 4.6 is not a requirement, but as long as code compiles on it we try to support it.
+    push @cflags, qw(-std=c++0x);
+} else {
+    # std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
+    push @cflags, qw(-std=c++11);
 }
 my @ldflags = ();
 
@@ -35,6 +40,19 @@ if ($^O eq 'darwin') {
     # that prevents this from happening, not needed with newer Boost versions.
     # See here for more details: https://svn.boost.org/trac/boost/ticket/7671
     push @cflags, qw(-DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE);
+    
+    # ExtUtils::CppGuess has a hard-coded -lstdc++, so we filter it out
+    {
+        no strict 'refs';
+        no warnings 'redefine';
+        my $func = "ExtUtils::CppGuess::_get_lflags";
+        my $orig = *$func{CODE};
+        *{$func} = sub {
+            my $lflags = $orig->(@_);
+            $lflags =~ s/\s*-lstdc\+\+//;
+            return $lflags;
+        };
+    }
 }
 
 my @early_includes = ();
@@ -66,6 +84,9 @@ if (defined $ENV{BOOST_INCLUDEDIR}) {
     my $subdir = $ENV{BOOST_DIR} . (($mswin == 1) ? '\include' : '/include');
     if (-d $subdir) {
         push @boost_include, $subdir;
+    } elsif (-d "../$subdir") {
+        # User might have provided a path relative to the Build.PL in the main directory
+        push @boost_include, "../$subdir";
     } else {
         push @boost_include, $ENV{BOOST_DIR};
     }
@@ -89,12 +110,15 @@ if (defined $ENV{BOOST_INCLUDEDIR}) {
 }
 
 my @boost_libs = ();
-if (defined $ENV{BOOST_LIBRARYDIR}) {
-    push @boost_libs, $ENV{BOOST_LIBRARYDIR}
+if (defined $ENV{BOOST_LIBRARYPATH}) {
+    push @boost_libs, $ENV{BOOST_LIBRARYPATH}
 } elsif (defined $ENV{BOOST_DIR}) {
     my $subdir = $ENV{BOOST_DIR} . ($mswin ? '\stage\lib' : '/stage/lib');
     if (-d $subdir) {
         push @boost_libs, $subdir;
+    } elsif (-d "../$subdir") {
+        # User might have provided a path relative to the Build.PL in the main directory
+        push @boost_libs, "../$subdir";
     } else {
         push @boost_libs, $ENV{BOOST_DIR};
     }
@@ -168,12 +192,12 @@ Slic3r requires the Boost libraries. Please make sure they are installed.
 
 If they are installed, this script should be able to locate them in several
 standard locations. If this is not the case, you might want to supply their 
-path through the BOOST_DIR environment variable:
+path through the BOOST_INCLUDEPATH and BOOST_LIBRARYPATH environment variables:
 
-    BOOST_DIR=/path/to/boost perl Build.PL
+    BOOST_INCLUDEPATH=/usr/local/include BOOST_LIBRARYPATH=/usr/lib perl Build.PL
 
-Or you may specify BOOST_INCLUDEPATH and BOOST_LIBRARYPATH separatly, which
-is handy, if you have built Boost libraries with mutliple settings.
+If you just compiled Boost in its source directory without installing it in the
+system you can just provide the BOOST_DIR variable pointing to that directory.
 
 EOF
 

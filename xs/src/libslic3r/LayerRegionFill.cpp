@@ -246,6 +246,12 @@ LayerRegion::make_fill()
         // apply half spacing using this flow's own spacing and generate infill
         f->density = density/100;
         f->dont_adjust = false;
+        /*
+        std::cout << surface.expolygon.dump_perl() << std::endl
+            << " layer_id: " << f->layer_id << " z: " << f->z
+            << " angle: " << f->angle << " min-spacing: " << f->min_spacing
+            << " endpoints_overlap: " << f->endpoints_overlap << std::endl << std::endl;
+        */
         Polylines polylines = f->fill_surface(surface);
         if (polylines.empty())
             continue;

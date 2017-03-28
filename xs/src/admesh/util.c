@@ -192,11 +192,11 @@ void stl_transform(stl_file *stl, float *trafo3x4) {
   for (i_face = 0; i_face < stl->stats.number_of_facets; ++ i_face) {
     stl_vertex *vertices = stl->facet_start[i_face].vertex;
     for (i_vertex = 0; i_vertex < 3; ++ i_vertex) {
-      stl_vertex &v_dst = vertices[i_vertex];
-      stl_vertex  v_src = v_dst;
-      v_dst.x = trafo3x4[0] * v_src.x + trafo3x4[1] * v_src.y + trafo3x4[2]  * v_src.z + trafo3x4[3];
-      v_dst.y = trafo3x4[4] * v_src.x + trafo3x4[5] * v_src.y + trafo3x4[6]  * v_src.z + trafo3x4[7];
-      v_dst.z = trafo3x4[8] * v_src.x + trafo3x4[9] * v_src.y + trafo3x4[10] * v_src.z + trafo3x4[11];
+      stl_vertex* v_dst = &vertices[i_vertex];
+      stl_vertex  v_src = *v_dst;
+      v_dst->x = trafo3x4[0] * v_src.x + trafo3x4[1] * v_src.y + trafo3x4[2]  * v_src.z + trafo3x4[3];
+      v_dst->y = trafo3x4[4] * v_src.x + trafo3x4[5] * v_src.y + trafo3x4[6]  * v_src.z + trafo3x4[7];
+      v_dst->z = trafo3x4[8] * v_src.x + trafo3x4[9] * v_src.y + trafo3x4[10] * v_src.z + trafo3x4[11];
     }
   }
   stl_get_size(stl);

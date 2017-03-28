@@ -7,8 +7,8 @@
 
 namespace Slic3r {
 
-#define BRIDGE_EXTRA_SPACING 0.05
-#define OVERLAP_FACTOR 1.0
+constexpr auto BRIDGE_EXTRA_SPACING = 0.05;
+constexpr auto OVERLAP_FACTOR = 1.0;
 
 enum FlowRole {
     frExternalPerimeter,

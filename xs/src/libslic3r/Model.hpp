@@ -74,6 +74,8 @@ class Model
     void duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
     void duplicate_objects_grid(size_t x, size_t y, coordf_t dist);
     void print_info() const;
+    bool looks_like_multipart_object() const;
+    void convert_multipart_object();
 };
 
 // Material, which may be shared across multiple ModelObjects of a single Model.
@@ -149,6 +151,7 @@ class ModelObject
     TriangleMesh raw_mesh() const;
     BoundingBoxf3 raw_bounding_box() const;
     BoundingBoxf3 instance_bounding_box(size_t instance_idx) const;
+    void align_to_ground();
     void center_around_origin();
     void translate(const Vectorf3 &vector);
     void translate(coordf_t x, coordf_t y, coordf_t z);

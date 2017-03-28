@@ -2,7 +2,7 @@ use Test::More;
 use strict;
 use warnings;
 
-plan tests => 93;
+plan tests => 95;
 
 BEGIN {
     use FindBin;
@@ -85,6 +85,23 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
             ok(!@{diff_pl($paths->arrayref, offset(\@$e, +scaled_epsilon*10))},
                 'paths don\'t cross hole') or done_testing, exit;
         }
+    }
+    
+    # rotated square
+    $filler->set_angle(PI/4);
+    $filler->set_dont_adjust(0);
+    $filler->set_min_spacing(0.654498);
+    $filler->set_endpoints_overlap(unscale(359974));
+    $filler->set_density(1);
+    $filler->set_layer_id(66);
+    $filler->set_z(20.15);
+    {
+        my $e = Slic3r::ExPolygon->new(
+            Slic3r::Polygon->new([25771516,14142125],[14142138,25771515],[2512749,14142131],[14142125,2512749]),
+        );
+        my $paths = $test->($e);
+        is(scalar @$paths, 1, 'one continuous path') or done_testing, exit;
+        ok abs($paths->[0]->length - scale(3*100 + 2*50)) - scaled_epsilon, 'path has expected length';
     }
 }
 

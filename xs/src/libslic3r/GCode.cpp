@@ -453,8 +453,8 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
             paths.front().polyline.points[0],
             paths.front().polyline.points[1]
         );
-        double distance = std::min(
-            scale_(EXTRUDER_CONFIG(nozzle_diameter)),
+        const double distance = std::min(
+            (double)scale_(EXTRUDER_CONFIG(nozzle_diameter)),
             first_segment.length()
         );
         Point point = first_segment.point_at(distance);

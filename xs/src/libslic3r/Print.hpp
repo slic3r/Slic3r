@@ -26,8 +26,8 @@ enum PrintStep {
     psSkirt, psBrim,
 };
 enum PrintObjectStep {
-    posSlice, posPerimeters, posPrepareInfill,
-    posInfill, posSupportMaterial,
+    posSlice, posPerimeters, posDetectSurfaces,
+    posPrepareInfill, posInfill, posSupportMaterial,
 };
 
 // To be instantiated over PrintStep or PrintObjectStep enums.
@@ -55,6 +55,7 @@ class PrintRegion
 
     Print* print();
     Flow flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, const PrintObject &object) const;
+    bool invalidate_state_by_config(const PrintConfigBase &config);
 
     private:
     Print* _print;
@@ -132,7 +133,7 @@ class PrintObject
     void delete_support_layer(int idx);
     
     // methods for handling state
-    bool invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
+    bool invalidate_state_by_config(const PrintConfigBase &config);
     bool invalidate_step(PrintObjectStep step);
     bool invalidate_all_steps();
     
@@ -140,6 +141,9 @@ class PrintObject
     void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    coordf_t adjust_layer_height(coordf_t layer_height) const;
+    std::vector<coordf_t> generate_object_layers(coordf_t first_layer_height);
+    void _slice();
     std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
     void _make_perimeters();
     void _infill();
@@ -193,7 +197,7 @@ class Print
     PrintRegion* add_region();
     
     // methods for handling state
-    bool invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
+    bool invalidate_state_by_config(const PrintConfigBase &config);
     bool invalidate_step(PrintStep step);
     bool invalidate_all_steps();
     bool step_done(PrintObjectStep step) const;
@@ -214,6 +218,7 @@ class Print
     std::set<size_t> object_extruders() const;
     std::set<size_t> support_material_extruders() const;
     std::set<size_t> extruders() const;
+    size_t brim_extruder() const;
     void _simplify_slices(double distance);
     double max_allowed_layer_height() const;
     bool has_support_material() const;

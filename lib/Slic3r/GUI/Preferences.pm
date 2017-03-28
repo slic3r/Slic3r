@@ -21,16 +21,6 @@ sub new {
         label_width => 200,
     );
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
-        opt_id      => 'mode',
-        type        => 'select',
-        label       => 'Mode',
-        tooltip     => 'Choose between a simpler, basic mode and an expert mode with more options and more complicated interface.',
-        labels      => ['Simple','Expert'],
-        values      => ['simple','expert'],
-        default     => $Slic3r::GUI::Settings->{_}{mode},
-        width       => 100,
-    ));
-    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'version_check',
         type        => 'bool',
         label       => 'Check for updates',
@@ -66,6 +56,13 @@ sub new {
         tooltip     => 'If this is enabled, Slic3r will pre-process objects as soon as they\'re loaded in order to save time when exporting G-code.',
         default     => $Slic3r::GUI::Settings->{_}{background_processing},
         readonly    => !$Slic3r::have_threads,
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'threads',
+        type        => 'i',
+        label       => 'Threads',
+        tooltip     => $Slic3r::Config::Options->{threads}{tooltip},
+        default     => $Slic3r::GUI::Settings->{_}{threads},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'no_controller',

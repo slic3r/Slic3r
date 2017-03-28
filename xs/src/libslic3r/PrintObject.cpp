@@ -212,89 +212,63 @@ PrintObject::delete_support_layer(int idx)
 }
 
 bool
-PrintObject::invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys)
+PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
 {
+    const t_config_option_keys diff = this->config.diff(config);
+    
     std::set<PrintObjectStep> steps;
+    bool all = false;
     
     // this method only accepts PrintObjectConfig and PrintRegionConfig option keys
-    for (std::vector<t_config_option_key>::const_iterator opt_key = opt_keys.begin(); opt_key != opt_keys.end(); ++opt_key) {
-        if (*opt_key == "perimeters"
-            || *opt_key == "extra_perimeters"
-            || *opt_key == "gap_fill_speed"
-            || *opt_key == "overhangs"
-            || *opt_key == "first_layer_extrusion_width"
-            || *opt_key == "perimeter_extrusion_width"
-            || *opt_key == "thin_walls"
-            || *opt_key == "external_perimeters_first") {
-            steps.insert(posPerimeters);
-        } else if (*opt_key == "layer_height"
-            || *opt_key == "first_layer_height"
-            || *opt_key == "xy_size_compensation"
-            || *opt_key == "raft_layers") {
+    for (const t_config_option_key &opt_key : diff) {
+        if (opt_key == "layer_height"
+            || opt_key == "first_layer_height"
+            || opt_key == "xy_size_compensation"
+            || opt_key == "raft_layers") {
             steps.insert(posSlice);
-        } else if (*opt_key == "support_material"
-            || *opt_key == "support_material_angle"
-            || *opt_key == "support_material_extruder"
-            || *opt_key == "support_material_extrusion_width"
-            || *opt_key == "support_material_interface_layers"
-            || *opt_key == "support_material_interface_extruder"
-            || *opt_key == "support_material_interface_spacing"
-            || *opt_key == "support_material_interface_speed"
-            || *opt_key == "support_material_pattern"
-            || *opt_key == "support_material_spacing"
-            || *opt_key == "support_material_threshold"
-            || *opt_key == "dont_support_bridges"
-            || *opt_key == "first_layer_extrusion_width") {
-            steps.insert(posSupportMaterial);
-        } else if (*opt_key == "interface_shells"
-            || *opt_key == "infill_only_where_needed"
-            || *opt_key == "infill_every_layers"
-            || *opt_key == "solid_infill_every_layers"
-            || *opt_key == "bottom_solid_layers"
-            || *opt_key == "top_solid_layers"
-            || *opt_key == "solid_infill_below_area"
-            || *opt_key == "infill_extruder"
-            || *opt_key == "solid_infill_extruder"
-            || *opt_key == "infill_extrusion_width") {
-            steps.insert(posPrepareInfill);
-        } else if (*opt_key == "top_infill_pattern"
-            || *opt_key == "bottom_infill_pattern"
-            || *opt_key == "fill_angle"
-            || *opt_key == "fill_pattern"
-            || *opt_key == "top_infill_extrusion_width"
-            || *opt_key == "first_layer_extrusion_width"
-            || *opt_key == "infill_overlap") {
-            steps.insert(posInfill);
-        } else if (*opt_key == "fill_density"
-            || *opt_key == "solid_infill_extrusion_width") {
-            steps.insert(posPerimeters);
-            steps.insert(posPrepareInfill);
-        } else if (*opt_key == "external_perimeter_extrusion_width"
-            || *opt_key == "perimeter_extruder") {
+        } else if (opt_key == "support_material_contact_distance") {
+            steps.insert(posSlice);
             steps.insert(posPerimeters);
             steps.insert(posSupportMaterial);
-        } else if (*opt_key == "bridge_flow_ratio") {
+        } else if (opt_key == "support_material") {
             steps.insert(posPerimeters);
-            steps.insert(posInfill);
-        } else if (*opt_key == "seam_position"
-            || *opt_key == "support_material_speed"
-            || *opt_key == "bridge_speed"
-            || *opt_key == "external_perimeter_speed"
-            || *opt_key == "infill_speed"
-            || *opt_key == "perimeter_speed"
-            || *opt_key == "small_perimeter_speed"
-            || *opt_key == "solid_infill_speed"
-            || *opt_key == "top_solid_infill_speed") {
+            steps.insert(posSupportMaterial);
+        } else if (opt_key == "support_material_angle"
+            || opt_key == "support_material_extruder"
+            || opt_key == "support_material_extrusion_width"
+            || opt_key == "support_material_interface_layers"
+            || opt_key == "support_material_interface_extruder"
+            || opt_key == "support_material_interface_spacing"
+            || opt_key == "support_material_interface_speed"
+            || opt_key == "support_material_buildplate_only"
+            || opt_key == "support_material_pattern"
+            || opt_key == "support_material_spacing"
+            || opt_key == "support_material_threshold"
+            || opt_key == "dont_support_bridges") {
+            steps.insert(posSupportMaterial);
+        } else if (opt_key == "interface_shells"
+            || opt_key == "infill_only_where_needed") {
+            steps.insert(posPrepareInfill);
+        } else if (opt_key == "seam_position"
+            || opt_key == "support_material_speed") {
             // these options only affect G-code export, so nothing to invalidate
         } else {
             // for legacy, if we can't handle this option let's invalidate all steps
-            return this->invalidate_all_steps();
+            all = true;
+            break;
         }
     }
     
+    if (!diff.empty())
+        this->config.apply(config, true);
+    
     bool invalidated = false;
-    for (std::set<PrintObjectStep>::const_iterator step = steps.begin(); step != steps.end(); ++step) {
-        if (this->invalidate_step(*step)) invalidated = true;
+    if (all) {
+        invalidated = this->invalidate_all_steps();
+    } else {
+        for (const PrintObjectStep &step : steps)
+            if (this->invalidate_step(step))
+                invalidated = true;
     }
     
     return invalidated;
@@ -310,6 +284,8 @@ PrintObject::invalidate_step(PrintObjectStep step)
         this->invalidate_step(posPrepareInfill);
         this->_print->invalidate_step(psSkirt);
         this->_print->invalidate_step(psBrim);
+    } else if (step == posDetectSurfaces) {
+        this->invalidate_step(posPrepareInfill);
     } else if (step == posPrepareInfill) {
         this->invalidate_step(posInfill);
     } else if (step == posInfill) {
@@ -317,6 +293,7 @@ PrintObject::invalidate_step(PrintObjectStep step)
         this->_print->invalidate_step(psBrim);
     } else if (step == posSlice) {
         this->invalidate_step(posPerimeters);
+        this->invalidate_step(posDetectSurfaces);
         this->invalidate_step(posSupportMaterial);
     } else if (step == posSupportMaterial) {
         this->_print->invalidate_step(psSkirt);
@@ -350,11 +327,20 @@ PrintObject::has_support_material() const
 void
 PrintObject::detect_surfaces_type()
 {
+    // prerequisites
+    // this->slice();
+    
+    if (this->state.is_done(posDetectSurfaces)) return;
+    this->state.set_started(posDetectSurfaces);
+    
     parallelize<Layer*>(
         std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
         boost::bind(&Slic3r::Layer::detect_surfaces_type, _1),
         this->_print->config.threads.value
     );
+    
+    this->typed_slices = true;
+    this->state.set_done(posDetectSurfaces);
 }
 
 void
@@ -548,6 +534,246 @@ PrintObject::bridge_over_infill()
     }
 }
 
+// adjust the layer height to the next multiple of the z full-step resolution
+coordf_t PrintObject::adjust_layer_height(coordf_t layer_height) const
+{
+	coordf_t result = layer_height;
+	if(this->_print->config.z_steps_per_mm > 0) {
+		coordf_t min_dz = 1 / this->_print->config.z_steps_per_mm * 4;
+		result = int(layer_height / min_dz + 0.5) * min_dz;
+	}
+
+    return result > 0 ? result : layer_height;
+}
+
+// generate a vector of print_z coordinates in object coordinate system (starting with 0) but including
+// the first_layer_height if provided.
+std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_height) {
+
+    std::vector<coordf_t> result;
+
+	coordf_t min_nozzle_diameter = 1.0;
+    std::set<size_t> object_extruders = this->_print->object_extruders();
+	for (std::set<size_t>::const_iterator it_extruder = object_extruders.begin(); it_extruder != object_extruders.end(); ++ it_extruder) {
+		min_nozzle_diameter = std::min(min_nozzle_diameter, this->_print->config.nozzle_diameter.get_at(*it_extruder));
+	}
+	coordf_t layer_height = std::min(min_nozzle_diameter, this->config.layer_height.getFloat());
+	layer_height = this->adjust_layer_height(layer_height);
+    this->config.layer_height.value = layer_height;
+    if(first_layer_height) {
+        result.push_back(first_layer_height);
+    }
+
+    coordf_t print_z = first_layer_height;
+    coordf_t height = first_layer_height;
+    // loop until we have at least one layer and the max slice_z reaches the object height
+    while (print_z < unscale(this->size.z)) {
+        height = layer_height;
+
+        // look for an applicable custom range
+        for (t_layer_height_ranges::const_iterator it_range = this->layer_height_ranges.begin(); it_range != this->layer_height_ranges.end(); ++ it_range) {
+            if(print_z >= it_range->first.first && print_z <= it_range->first.second) {
+                if(it_range->second > 0) {
+                    height = it_range->second;
+                }
+            }
+        }
+
+        print_z += height;
+
+        result.push_back(print_z);
+    }
+
+    // Reduce or thicken the top layer in order to match the original object size.
+    // This is not actually related to z_steps_per_mm but we only enable it in case
+    // user provided that value, as it means they really care about the layer height
+    // accuracy and we don't provide unexpected result for people noticing the last
+    // layer has a different layer height.
+    if (this->_print->config.z_steps_per_mm > 0 && result.size() > 1) {
+        coordf_t diff = result.back() - unscale(this->size.z);
+        int last_layer = result.size()-1;
+
+        if (diff < 0) {
+            // we need to thicken last layer
+            coordf_t new_h = result[last_layer] - result[last_layer-1];
+            new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negativ) diff value
+            std::cout << new_h << std::endl;
+            result[last_layer] = result[last_layer-1] + new_h;
+        } else {
+            // we need to reduce last layer
+            coordf_t new_h = result[last_layer] - result[last_layer-1];
+            if(min_nozzle_diameter/2 < new_h) { //prevent generation of a too small layer
+                new_h = std::max(min_nozzle_diameter/2, new_h - diff); // subtract (positive) diff value
+                std::cout << new_h << std::endl;
+                result[last_layer] = result[last_layer-1] + new_h;
+            }
+        }
+    }
+	return result;
+}
+
+// 1) Decides Z positions of the layers,
+// 2) Initializes layers and their regions
+// 3) Slices the object meshes
+// 4) Slices the modifier meshes and reclassifies the slices of the object meshes by the slices of the modifier meshes
+// 5) Applies size compensation (offsets the slices in XY plane)
+// 6) Replaces bad slices by the slices reconstructed from the upper/lower layer
+// Resulting expolygons of layer regions are marked as Internal.
+//
+// this should be idempotent
+void PrintObject::_slice()
+{
+
+	coordf_t raft_height = 0;
+	coordf_t print_z = 0;
+	coordf_t height  = 0;
+	coordf_t first_layer_height = this->config.first_layer_height.get_abs_value(this->config.layer_height.value);
+
+
+    // take raft layers into account
+    int id = 0;
+
+    if (this->config.raft_layers > 0) {
+        id = this->config.raft_layers;
+
+        coordf_t min_support_nozzle_diameter = 1.0;
+        std::set<size_t> support_material_extruders = this->_print->support_material_extruders();
+        for (std::set<size_t>::const_iterator it_extruder = support_material_extruders.begin(); it_extruder != support_material_extruders.end(); ++ it_extruder) {
+            min_support_nozzle_diameter = std::min(min_support_nozzle_diameter, this->_print->config.nozzle_diameter.get_at(*it_extruder));
+        }
+        coordf_t support_material_layer_height = 0.75 * min_support_nozzle_diameter;
+
+        // raise first object layer Z by the thickness of the raft itself
+        // plus the extra distance required by the support material logic
+        raft_height += first_layer_height;
+        raft_height += support_material_layer_height * (this->config.raft_layers - 1);
+
+        // reset for later layer generation
+        first_layer_height = 0;
+
+        // detachable support
+        if(this->config.support_material_contact_distance > 0) {
+            first_layer_height = min_support_nozzle_diameter;
+            raft_height += this->config.support_material_contact_distance;
+
+        }
+    }
+
+    // Initialize layers and their slice heights.
+    std::vector<float> slice_zs;
+    {
+        this->clear_layers();
+        // All print_z values for this object, without the raft.
+        std::vector<coordf_t> object_layers = this->generate_object_layers(first_layer_height);
+        // Reserve object layers for the raft. Last layer of the raft is the contact layer.
+        slice_zs.reserve(object_layers.size());
+        Layer *prev = nullptr;
+        coordf_t lo = raft_height;
+        coordf_t hi = lo;
+        for (size_t i_layer = 0; i_layer < object_layers.size(); i_layer++) {
+            lo = hi;  // store old value
+            hi = object_layers[i_layer] + raft_height;
+            coordf_t slice_z = 0.5 * (lo + hi) - raft_height;
+            Layer *layer = this->add_layer(id++, hi - lo, hi, slice_z);
+            slice_zs.push_back(float(slice_z));
+            if (prev != nullptr) {
+                prev->upper_layer = layer;
+                layer->lower_layer = prev;
+            }
+            // Make sure all layers contain layer region objects for all regions.
+            for (size_t region_id = 0; region_id < this->_print->regions.size(); ++ region_id)
+                layer->add_region(this->print()->regions[region_id]);
+            prev = layer;
+        }
+    }
+
+    if (this->print()->regions.size() == 1) {
+        // Optimized for a single region. Slice the single non-modifier mesh.
+        std::vector<ExPolygons> expolygons_by_layer = this->_slice_region(0, slice_zs, false);
+        for (size_t layer_id = 0; layer_id < expolygons_by_layer.size(); ++ layer_id)
+            this->layers[layer_id]->regions.front()->slices.append(std::move(expolygons_by_layer[layer_id]), stInternal);
+    } else {
+        // Slice all non-modifier volumes.
+        for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id) {
+            std::vector<ExPolygons> expolygons_by_layer = this->_slice_region(region_id, slice_zs, false);
+            for (size_t layer_id = 0; layer_id < expolygons_by_layer.size(); ++ layer_id)
+                this->layers[layer_id]->regions[region_id]->slices.append(std::move(expolygons_by_layer[layer_id]), stInternal);
+        }
+        // Slice all modifier volumes.
+        for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id) {
+            std::vector<ExPolygons> expolygons_by_layer = this->_slice_region(region_id, slice_zs, true);
+            // loop through the other regions and 'steal' the slices belonging to this one
+            for (size_t other_region_id = 0; other_region_id < this->print()->regions.size(); ++ other_region_id) {
+                if (region_id == other_region_id)
+                    continue;
+                for (size_t layer_id = 0; layer_id < expolygons_by_layer.size(); ++ layer_id) {
+                    Layer       *layer = layers[layer_id];
+                    LayerRegion *layerm = layer->regions[region_id];
+                    LayerRegion *other_layerm = layer->regions[other_region_id];
+                    if (layerm == nullptr || other_layerm == nullptr)
+                        continue;
+                    Polygons other_slices = to_polygons(other_layerm->slices);
+                    ExPolygons my_parts = intersection_ex(other_slices, to_polygons(expolygons_by_layer[layer_id]));
+                    if (my_parts.empty())
+                        continue;
+                    // Remove such parts from original region.
+                    other_layerm->slices.set(diff_ex(other_slices, to_polygons(my_parts)), stInternal);
+                    // Append new parts to our region.
+                    layerm->slices.append(std::move(my_parts), stInternal);
+                }
+            }
+        }
+    }
+
+    // remove last layer(s) if empty
+    bool done = false;
+    while (! this->layers.empty()) {
+        const Layer *layer = this->layers.back();
+        for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id)
+            if (layer->regions[region_id] != nullptr && ! layer->regions[region_id]->slices.empty()) {
+                done = true;
+                break;
+            }
+        if(done) {
+            break;
+        }
+        this->delete_layer(int(this->layers.size()) - 1);
+    }
+
+    for (size_t layer_id = 0; layer_id < layers.size(); ++ layer_id) {
+        Layer *layer = this->layers[layer_id];
+        // Apply size compensation and perform clipping of multi-part objects.
+        float delta = float(scale_(this->config.xy_size_compensation.value));
+        bool  scale = delta != 0.f;
+        if (layer->regions.size() == 1) {
+            if (scale) {
+                // Single region, growing or shrinking.
+                LayerRegion *layerm = layer->regions.front();
+                layerm->slices.set(offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), delta), stInternal);
+            }
+        } else if (scale) {
+            // Multiple regions, growing, shrinking or just clipping one region by the other.
+            // When clipping the regions, priority is given to the first regions.
+            Polygons processed;
+			for (size_t region_id = 0; region_id < layer->regions.size(); ++ region_id) {
+                LayerRegion *layerm = layer->regions[region_id];
+				ExPolygons slices = to_expolygons(std::move(layerm->slices.surfaces));
+				if (scale)
+					slices = offset_ex(slices, delta);
+                if (region_id > 0)
+                    // Trim by the slices of already processed regions.
+                    slices = diff_ex(to_polygons(std::move(slices)), processed);
+                if (region_id + 1 < layer->regions.size())
+                    // Collect the already processed regions to trim the to be processed regions.
+                    processed += to_polygons(slices);
+                layerm->slices.set(std::move(slices), stInternal);
+            }
+        }
+        // Merge all regions' slices to get islands, chain them by a shortest path.
+        layer->make_slices();
+    }
+}
+
 // called from slice()
 std::vector<ExPolygons>
 PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier)
@@ -594,11 +820,15 @@ PrintObject::_make_perimeters()
     this->state.set_started(posPerimeters);
     
     // merge slices if they were split into types
+    // This is not currently taking place because since merge_slices + detect_surfaces_type
+    // are not truly idempotent we are invalidating posSlice here (see the Perl part of 
+    // this method).
     if (this->typed_slices) {
+        // merge_slices() undoes detect_surfaces_type()
         FOREACH_LAYER(this, layer_it)
             (*layer_it)->merge_slices();
         this->typed_slices = false;
-        this->state.invalidate(posPrepareInfill);
+        this->state.invalidate(posDetectSurfaces);
     }
     
     // compare each layer to the one below, and mark those slices needing

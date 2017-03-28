@@ -2,6 +2,8 @@ id ICON "../../var/Slic3r.ico"
 1 VERSIONINFO
 FILEVERSION     1,3,0,0
 PRODUCTVERSION  1,3,0,0
+FILEOS 0x4
+FILETYPE 0x1
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
@@ -10,7 +12,7 @@ BEGIN
       VALUE "CompanyName", "Slic3r.org"
       VALUE "FileDescription", "3D Printer Slicer application"
       VALUE "FileVersion", "1.3.0"
-      VALUE "InternalName", "slic3r"
+      VALUE "InternalName", "slic3r.exe"
       VALUE "LegalCopyright", "Alessandro Ranellucci"
       VALUE "OriginalFilename", "slic3r.exe"
       VALUE "ProductName", "Slic3r"
@@ -22,4 +24,4 @@ BEGIN
     VALUE "Translation", 0x409, 1252
   END
 END
-
+1 24 "slic3r.exe.manifest"

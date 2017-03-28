@@ -9,10 +9,10 @@
 #include <utility>
 #include <vector>
 
-#define MP_INNER_MARGIN scale_(1.0)
-#define MP_OUTER_MARGIN scale_(2.0)
-
 namespace Slic3r {
+
+constexpr coord_t MP_INNER_MARGIN = scale_(1.0);
+constexpr coord_t MP_OUTER_MARGIN = scale_(2.0);
 
 class MotionPlanner;
 

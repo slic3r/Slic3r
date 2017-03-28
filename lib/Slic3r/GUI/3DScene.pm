@@ -50,17 +50,17 @@ use constant PI             => 3.1415927;
 
 # Constant to determine if Vertex Buffer objects are used to draw
 # bed grid and the cut plane for object separation.
-use constant HAS_VBO        => 1;
+use constant HAS_VBO        => eval { glGenBuffersARB_p(0); 1 };
 
 
 # phi / theta angles to orient the camera.
-use constant VIEW_ISO        => [45.0,45.0];
-use constant VIEW_LEFT       => [90.0,90.0];
-use constant VIEW_RIGHT      => [-90.0,90.0];
 use constant VIEW_TOP        => [0.0,0.0];
 use constant VIEW_BOTTOM     => [0.0,180.0];
+use constant VIEW_LEFT       => [90.0,90.0];
+use constant VIEW_RIGHT      => [-90.0,90.0];
 use constant VIEW_FRONT      => [0.0,90.0];
-use constant VIEW_REAR       => [180.0,90.0];
+use constant VIEW_BACK       => [180.0,90.0];
+use constant VIEW_DIAGONAL   => [45.0,45.0];
 
 use constant GIMBAL_LOCK_THETA_MAX => 170;
 
@@ -338,20 +338,20 @@ sub select_view {
     if (ref($direction)) {
         $dirvec = $direction;
     } else {
-        if ($direction eq 'iso') {
-            $dirvec = VIEW_ISO;
+        if ($direction eq 'top') {
+            $dirvec = VIEW_TOP;
+        } elsif ($direction eq 'bottom') {
+            $dirvec = VIEW_BOTTOM;
         } elsif ($direction eq 'left') {
             $dirvec = VIEW_LEFT;
         } elsif ($direction eq 'right') {
             $dirvec = VIEW_RIGHT;
-        } elsif ($direction eq 'top') {
-            $dirvec = VIEW_TOP;
-        } elsif ($direction eq 'bottom') {
-            $dirvec = VIEW_BOTTOM;
         } elsif ($direction eq 'front') {
             $dirvec = VIEW_FRONT;
-        } elsif ($direction eq 'rear') {
-            $dirvec = VIEW_REAR;
+        } elsif ($direction eq 'back') {
+            $dirvec = VIEW_BACK;
+        } elsif ($direction eq 'diagonal') {
+            $dirvec = VIEW_DIAGONAL;
         }
     }
     $self->_sphi($dirvec->[0]);
@@ -748,10 +748,10 @@ sub InitGL {
     # Enables Smooth Color Shading; try GL_FLAT for (lack of) fun.
     glShadeModel(GL_SMOOTH);
     
-    glMaterialfv_p(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, 0.5, 0.3, 0.3, 1);
+    glMaterialfv_p(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, 0.3, 0.3, 0.3, 1);
     glMaterialfv_p(GL_FRONT_AND_BACK, GL_SPECULAR, 1, 1, 1, 1);
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 50);
-    glMaterialfv_p(GL_FRONT_AND_BACK, GL_EMISSION, 0.1, 0, 0, 0.9);
+    glMaterialfv_p(GL_FRONT_AND_BACK, GL_EMISSION, 0.1, 0.1, 0.1, 0.9);
     
     # A handy trick -- have surface material mirror the color.
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
@@ -1152,21 +1152,25 @@ use List::Util qw(first min max);
 use Slic3r::Geometry qw(scale unscale epsilon);
 use Slic3r::Print::State ':steps';
 
-use constant COLORS => [ [1,1,0,1], [1,0.5,0.5,1], [0.5,1,0.5,1], [0.5,0.5,1,1] ];
-
 __PACKAGE__->mk_accessors(qw(
+    colors
     color_by
+    color_toolpaths_by
     select_by
     drag_by
     volumes_by_object
     _objects_by_volumes
 ));
 
+sub default_colors { [1,0.95,0.2,1], [1,0.45,0.45,1], [0.5,1,0.5,1], [0.5,0.5,1,1] }
+
 sub new {
     my $class = shift;
     
     my $self = $class->SUPER::new(@_);
+    $self->colors([ $self->default_colors ]);
     $self->color_by('volume');      # object | volume
+    $self->color_toolpaths_by('role'); # role | extruder
     $self->select_by('object');     # object | volume | instance
     $self->drag_by('instance');     # object | instance
     $self->volumes_by_object({});   # obj_idx => [ volume_idx, volume_idx ... ]
@@ -1204,7 +1208,7 @@ sub load_object {
                 $color_idx = $obj_idx;
             }
         
-            my $color = [ @{COLORS->[ $color_idx % scalar(@{&COLORS}) ]} ];
+            my $color = [ @{$self->colors->[ $color_idx % scalar(@{$self->colors}) ]} ];
             $color->[3] = $volume->modifier ? 0.5 : 1;
             push @{$self->volumes}, my $v = Slic3r::GUI::3DScene::Volume->new(
                 bounding_box    => $mesh->bounding_box,
@@ -1281,7 +1285,7 @@ sub load_print_object_slices {
     
     push @{$self->volumes}, my $v = Slic3r::GUI::3DScene::Volume->new(
         bounding_box    => $bb,
-        color           => COLORS->[0],
+        color           => $self->colors->[0],
         verts           => OpenGL::Array->new_list(GL_FLOAT, @verts),
         norms           => OpenGL::Array->new_list(GL_FLOAT, @norms),
         quad_verts      => OpenGL::Array->new_list(GL_FLOAT, @quad_verts),
@@ -1299,65 +1303,74 @@ sub load_print_toolpaths {
         && $print->config->interior_brim_width == 0
         && $print->config->brim_connections_width == 0;
     
-    my $qverts  = Slic3r::GUI::_3DScene::GLVertexArray->new;
-    my $tverts  = Slic3r::GUI::_3DScene::GLVertexArray->new;
-    my %offsets = ();  # print_z => [ qverts, tverts ]
-    
-    my $skirt_height = 0;  # number of layers
-    if ($print->has_infinite_skirt) {
-        $skirt_height = $print->total_layer_count;
-    } else {
-        $skirt_height = min($print->config->skirt_height, $print->total_layer_count);
-    }
-    $skirt_height ||= 1 if $print->config->brim_width > 0 || $print->config->interior_brim_width;
-    
-    # get first $skirt_height layers (maybe this should be moved to a PrintObject method?)
-    my $object0 = $print->get_object(0);
-    my @layers = ();
-    push @layers, map $object0->get_layer($_-1), 1..min($skirt_height, $object0->layer_count);
-    push @layers, map $object0->get_support_layer($_-1), 1..min($skirt_height, $object0->support_layer_count);
-    @layers = sort { $a->print_z <=> $b->print_z } @layers;
-    @layers = @layers[0..($skirt_height-1)];
-    
-    foreach my $i (0..($skirt_height-1)) {
-        my $top_z = $layers[$i]->print_z;
-        $offsets{$top_z} = [$qverts->size, $tverts->size];
-        
-        if ($i == 0) {
-            $self->_extrusionentity_to_verts($print->brim, $top_z, Slic3r::Point->new(0,0), $qverts, $tverts);
-        }
-        
-        $self->_extrusionentity_to_verts($print->skirt, $top_z, Slic3r::Point->new(0,0), $qverts, $tverts);
-    }
-    
     my $bb = Slic3r::Geometry::BoundingBoxf3->new;
     {
         my $pbb = $print->bounding_box;
         $bb->merge_point(Slic3r::Pointf3->new_unscale(@{$pbb->min_point}));
         $bb->merge_point(Slic3r::Pointf3->new_unscale(@{$pbb->max_point}));
     }
-    push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-        bounding_box    => $bb,
-        color           => COLORS->[2],
-        qverts          => $qverts,
-        tverts          => $tverts,
-        offsets         => { %offsets },
-    );
+    
+    my $color_by_extruder = $self->color_toolpaths_by eq 'extruder';
+    
+    if (!$print->brim->empty) {
+        my $color = $color_by_extruder
+            ? $self->colors->[ ($print->brim_extruder-1) % @{$self->colors} ]
+            : $self->colors->[2];
+        
+        push @{$self->volumes}, my $volume = Slic3r::GUI::3DScene::Volume->new(
+            bounding_box    => $bb,
+            color           => $color,
+            qverts          => Slic3r::GUI::_3DScene::GLVertexArray->new,
+            tverts          => Slic3r::GUI::_3DScene::GLVertexArray->new,
+            offsets         => {},  # print_z => [ qverts, tverts ]
+        );
+        
+        my $top_z = $print->get_object(0)->get_layer(0)->print_z;
+        $volume->offsets->{$top_z} = [0, 0];
+        $self->_extrusionentity_to_verts($print->brim, $top_z, Slic3r::Point->new(0,0),
+            $volume->qverts, $volume->tverts);
+    }
+    
+    if (!$print->skirt->empty) {
+        # TODO: it's a bit difficult to predict skirt extruders with the current skirt logic.
+        # We need to rewrite it anyway.
+        my $color = +($self->default_colors)[0];
+        push @{$self->volumes}, my $volume = Slic3r::GUI::3DScene::Volume->new(
+            bounding_box    => $bb,
+            color           => $color,
+            qverts          => Slic3r::GUI::_3DScene::GLVertexArray->new,
+            tverts          => Slic3r::GUI::_3DScene::GLVertexArray->new,
+            offsets         => {},  # print_z => [ qverts, tverts ]
+        );
+    
+        my $skirt_height = 0;  # number of layers
+        if ($print->has_infinite_skirt) {
+            $skirt_height = $print->total_layer_count;
+        } else {
+            $skirt_height = min($print->config->skirt_height, $print->total_layer_count);
+        }
+        $skirt_height ||= 1 if $print->config->brim_width > 0 || $print->config->interior_brim_width;
+    
+        # get first $skirt_height layers (maybe this should be moved to a PrintObject method?)
+        my $object0 = $print->get_object(0);
+        my @layers = ();
+        push @layers, map $object0->get_layer($_-1), 1..min($skirt_height, $object0->layer_count);
+        push @layers, map $object0->get_support_layer($_-1), 1..min($skirt_height, $object0->support_layer_count);
+        @layers = sort { $a->print_z <=> $b->print_z } @layers;
+        @layers = @layers[0..($skirt_height-1)];
+    
+        foreach my $i (0..($skirt_height-1)) {
+            my $top_z = $layers[$i]->print_z;
+            $volume->offsets->{$top_z} = [$volume->qverts->size, $volume->tverts->size];
+        
+            $self->_extrusionentity_to_verts($print->skirt, $top_z, Slic3r::Point->new(0,0),
+                $volume->qverts, $volume->tverts);
+        }
+    }
 }
 
 sub load_print_object_toolpaths {
     my ($self, $object) = @_;
-    
-    my $perim_qverts    = Slic3r::GUI::_3DScene::GLVertexArray->new;
-    my $perim_tverts    = Slic3r::GUI::_3DScene::GLVertexArray->new;
-    my $infill_qverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
-    my $infill_tverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
-    my $support_qverts  = Slic3r::GUI::_3DScene::GLVertexArray->new;
-    my $support_tverts  = Slic3r::GUI::_3DScene::GLVertexArray->new;
-    
-    my %perim_offsets   = ();  # print_z => [ qverts, tverts ]
-    my %infill_offsets  = ();
-    my %support_offsets = ();
     
     # order layers by print_z
     my @layers = sort { $a->print_z <=> $b->print_z }
@@ -1374,122 +1387,91 @@ sub load_print_object_toolpaths {
             $bb->merge_point(Slic3r::Pointf3->new_unscale(@{$cbb->max_point}, $object->size->z));
         }
     }
-
+    
+    my %volumes = ();  # color => Volume
+    
     # Maximum size of an allocation block: 32MB / sizeof(float)
     my $alloc_size_max = 32 * 1048576 / 4;
     
+    my $add = sub {
+        my ($coll, $top_z, $copy, $color) = @_;
+        
+        my $volume = $volumes{$color};
+        if (!$volume) {
+            push @{$self->volumes}, $volumes{$color} = $volume = Slic3r::GUI::3DScene::Volume->new(
+                bounding_box    => $bb,
+                color           => $color,
+                qverts          => Slic3r::GUI::_3DScene::GLVertexArray->new,
+                tverts          => Slic3r::GUI::_3DScene::GLVertexArray->new,
+                offsets         => {},  # print_z => [ qverts, tverts ]
+            );
+        }
+        
+        $volume->offsets->{$top_z} //= [ $volume->qverts->size, $volume->tverts->size ];
+        $self->_extrusionentity_to_verts($coll, $top_z, $copy, $volume->qverts, $volume->tverts);
+    };
+    
+    my $color_by_extruder = $self->color_toolpaths_by eq 'extruder';
+    
     foreach my $layer (@layers) {
         my $top_z = $layer->print_z;
-        
-        if (!exists $perim_offsets{$top_z}) {
-            $perim_offsets{$top_z} = [
-                $perim_qverts->size, $perim_tverts->size,
-            ];
-        }
-        if (!exists $infill_offsets{$top_z}) {
-            $infill_offsets{$top_z} = [
-                $infill_qverts->size, $infill_tverts->size,
-            ];
-        }
-        if (!exists $support_offsets{$top_z}) {
-            $support_offsets{$top_z} = [
-                $support_qverts->size, $support_tverts->size,
-            ];
-        }
-        
         foreach my $copy (@{ $object->_shifted_copies }) {
             foreach my $layerm (@{$layer->regions}) {
                 if ($object->step_done(STEP_PERIMETERS)) {
-                    $self->_extrusionentity_to_verts($layerm->perimeters, $top_z, $copy,
-                        $perim_qverts, $perim_tverts);
+                    my $color = $color_by_extruder
+                        ? $self->colors->[ ($layerm->region->config->perimeter_extruder-1) % @{$self->colors} ]
+                        : $self->colors->[0];
+                    $add->($layerm->perimeters, $top_z, $copy, $color);
                 }
                 
                 if ($object->step_done(STEP_INFILL)) {
-                    $self->_extrusionentity_to_verts($layerm->fills, $top_z, $copy,
-                        $infill_qverts, $infill_tverts);
+                    my $color = $color_by_extruder
+                        ? $self->colors->[ ($layerm->region->config->infill_extruder-1) % @{$self->colors} ]
+                        : $self->colors->[1];
+                    
+                    if ($color_by_extruder && $layerm->region->config->infill_extruder != $layerm->region->config->solid_infill_extruder) {
+                        # divide solid and non-solid infill
+                        my $solid = Slic3r::ExtrusionPath::Collection->new;
+                        my $non_solid = Slic3r::ExtrusionPath::Collection->new;
+                        foreach my $fill (@{$layerm->fills}) {
+                            if ($fill->[0]->is_solid_infill) {
+                                $solid->append($fill);
+                            } else {
+                                $non_solid->append($fill);
+                            }
+                        }
+                        $add->($non_solid, $top_z, $copy, $color);
+                        $color = $self->colors->[ ($layerm->region->config->solid_infill_extruder-1) % @{&COLORS} ];
+                        $add->($solid, $top_z, $copy, $color);
+                    } else {
+                        $add->($layerm->fills, $top_z, $copy, $color);
+                    }
                 }
             }
             
             if ($layer->isa('Slic3r::Layer::Support') && $object->step_done(STEP_SUPPORTMATERIAL)) {
-                $self->_extrusionentity_to_verts($layer->support_fills, $top_z, $copy,
-                    $support_qverts, $support_tverts);
-                
-                $self->_extrusionentity_to_verts($layer->support_interface_fills, $top_z, $copy,
-                    $support_qverts, $support_tverts);
+                {
+                    my $color = $color_by_extruder
+                        ? $self->colors->[ ($layer->object->config->support_material_extruder-1) % @{$self->colors} ]
+                        : $self->colors->[2];
+                    $add->($layer->support_fills, $top_z, $copy, $color);
+                }
+                {
+                    my $color = ($color_by_extruder)
+                        ? $self->colors->[ ($layer->object->config->support_material_interface_extruder-1) % @{$self->colors} ]
+                        : $self->colors->[2];
+                    $add->($layer->support_interface_fills, $top_z, $copy, $color);
+                }
             }
         }
-
-        if ($perim_qverts->size() > $alloc_size_max || $perim_tverts->size() > $alloc_size_max) {
-            # Store the vertex arrays and restart their containers.
-            push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-                bounding_box    => $bb,
-                color           => COLORS->[0],
-                qverts          => $perim_qverts,
-                tverts          => $perim_tverts,
-                offsets         => { %perim_offsets },
-            );
-            $perim_qverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
-            $perim_tverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
-            %perim_offsets  = ();
+        
+        foreach my $color (keys %volumes) {
+            my $volume = $volumes{$color};
+            if ($volume->qverts->size() > $alloc_size_max || $volume->tverts->size() > $alloc_size_max) {
+                # stop appending to this volume; create a new one next time
+                delete $volumes{$color};
+            }
         }
-
-        if ($infill_qverts->size() > $alloc_size_max || $infill_tverts->size() > $alloc_size_max) {
-            # Store the vertex arrays and restart their containers.
-            push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-                bounding_box    => $bb,
-                color           => COLORS->[1],
-                qverts          => $infill_qverts,
-                tverts          => $infill_tverts,
-                offsets         => { %infill_offsets },
-            );
-            $infill_qverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
-            $infill_tverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
-            %infill_offsets  = ();
-        }
-
-        if ($support_qverts->size() > $alloc_size_max || $support_tverts->size() > $alloc_size_max) {
-            # Store the vertex arrays and restart their containers.
-            push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-                bounding_box    => $bb,
-                color           => COLORS->[2],
-                qverts          => $support_qverts,
-                tverts          => $support_tverts,
-                offsets         => { %support_offsets },
-            );
-            $support_qverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
-            $support_tverts   = Slic3r::GUI::_3DScene::GLVertexArray->new;
-            %support_offsets  = ();
-        }
-    }
-
-    if ($perim_qverts->size() > 0 || $perim_tverts->size() > 0) {
-        push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-            bounding_box    => $bb,
-            color           => COLORS->[0],
-            qverts          => $perim_qverts,
-            tverts          => $perim_tverts,
-            offsets         => { %perim_offsets },
-        );
-    }
-    
-    if ($infill_qverts->size() > 0 || $infill_tverts->size() > 0) {
-        push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-            bounding_box    => $bb,
-            color           => COLORS->[1],
-            qverts          => $infill_qverts,
-            tverts          => $infill_tverts,
-            offsets         => { %infill_offsets },
-        );
-    }
-    
-    if ($support_qverts->size() > 0 || $support_tverts->size() > 0) {
-        push @{$self->volumes}, Slic3r::GUI::3DScene::Volume->new(
-            bounding_box    => $bb,
-            color           => COLORS->[2],
-            qverts          => $support_qverts,
-            tverts          => $support_tverts,
-            offsets         => { %support_offsets },
-        );
     }
 }
 

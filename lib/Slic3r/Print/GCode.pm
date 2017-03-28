@@ -48,7 +48,7 @@ sub BUILD {
     
     $self->_cooling_buffer(Slic3r::GCode::CoolingBuffer->new($self->_gcodegen));
     
-    $self->_spiral_vase(Slic3r::GCode::SpiralVase->new(config => $self->config))
+    $self->_spiral_vase(Slic3r::GCode::SpiralVase->new($self->config))
         if $self->config->spiral_vase;
     
     $self->_vibration_limit(Slic3r::GCode::VibrationLimit->new(config => $self->config))
@@ -323,10 +323,10 @@ sub process_layer {
     
     # check whether we're going to apply spiralvase logic
     if (defined $self->_spiral_vase) {
-        $self->_spiral_vase->enable(
-            ($layer->id > 0 || $self->print->config->brim_width == 0
-                || $self->print->config->interior_brim_width == 0 || $self->print->config->brim_connections_width == 0)
-                && ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt)
+        $self->_spiral_vase->set_enable(
+            $layer->id > 0
+                && ($self->print->config->skirts == 0
+                    || ($layer->id >= $self->print->config->skirt_height && !$self->print->has_infinite_skirt))
                 && !defined(first { $_->region->config->bottom_solid_layers > $layer->id } @{$layer->regions})
                 && !defined(first { $_->perimeters->items_count > 1 } @{$layer->regions})
                 && !defined(first { $_->fills->items_count > 0 } @{$layer->regions})
@@ -462,7 +462,7 @@ sub process_layer {
     
     # extrude brim
     if (!$self->_brim_done) {
-        $gcode .= $self->_gcodegen->set_extruder($self->print->regions->[0]->config->perimeter_extruder-1);
+        $gcode .= $self->_gcodegen->set_extruder($self->print->brim_extruder-1);
         $self->_gcodegen->set_origin(Slic3r::Pointf->new(0,0));
         $self->_gcodegen->avoid_crossing_perimeters->set_use_external_mp(1);
         $gcode .= $self->_gcodegen->extrude($_, 'brim', $object->config->support_material_speed)
@@ -578,7 +578,7 @@ sub process_layer {
         }
         
         # tweak extruder ordering to save toolchanges
-        my @extruders = sort keys %by_extruder;
+        my @extruders = sort { $a <=> $b } keys %by_extruder;
         if (@extruders > 1) {
             my $last_extruder_id = $self->_gcodegen->writer->extruder->id;
             if (exists $by_extruder{$last_extruder_id}) {

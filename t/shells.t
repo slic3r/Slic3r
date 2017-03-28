@@ -186,7 +186,7 @@ use Slic3r::Test;
         my $first_layer_temperature_set = 0;
         my $temperature_set = 0;
         my @z_steps = ();
-        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+        Slic3r::GCode::Reader->new(Z => $config->z_offset)->parse(Slic3r::Test::gcode($print), sub {
             my ($self, $cmd, $args, $info) = @_;
             
             if ($cmd eq 'G1') {

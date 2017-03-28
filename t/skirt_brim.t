@@ -1,4 +1,4 @@
-use Test::More tests => 6;
+use Test::More tests => 8;
 use strict;
 use warnings;
 
@@ -87,6 +87,39 @@ use Slic3r::Test;
     
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     ok Slic3r::Test::gcode($print), 'successful G-code generation when skirt_height = 0 and skirts > 0';
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('skirts', 0);
+    $config->set('brim_width', 5);
+    $config->set('perimeter_extruder', 2);
+    $config->set('support_material_extruder', 3);
+    
+    my $test = sub {
+        my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
+        my $tool = undef;
+        my $brim_tool = undef;
+        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+            my ($self, $cmd, $args, $info) = @_;
+        
+            if ($cmd =~ /^T(\d+)/) {
+                $tool = $1;
+            } elsif ($cmd eq 'G1' && $info->{extruding} && $info->{dist_XY} > 0) {
+                if (!defined $brim_tool) {
+                    # first extrusion is brim
+                    $brim_tool = $tool;
+                }
+            }
+        });
+        return $brim_tool;
+    };
+    is $test->(), $config->perimeter_extruder-1,
+        'brim is printed with the extruder used for the perimeters of first object';
+    
+    $config->set('raft_layers', 1);
+    is $test->(), $config->support_material_extruder-1,
+        'if raft is enabled, brim is printed with the extruder used for it';
 }
 
 {
