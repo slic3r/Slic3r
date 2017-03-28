@@ -26,8 +26,8 @@ enum PrintStep {
     psSkirt, psBrim,
 };
 enum PrintObjectStep {
-    posSlice, posPerimeters, posPrepareInfill,
-    posInfill, posSupportMaterial,
+    posSlice, posPerimeters, posDetectSurfaces,
+    posPrepareInfill, posInfill, posSupportMaterial,
 };
 
 // To be instantiated over PrintStep or PrintObjectStep enums.

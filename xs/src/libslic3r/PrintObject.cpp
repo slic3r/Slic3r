@@ -311,6 +311,8 @@ PrintObject::invalidate_step(PrintObjectStep step)
         this->invalidate_step(posPrepareInfill);
         this->_print->invalidate_step(psSkirt);
         this->_print->invalidate_step(psBrim);
+    } else if (step == posDetectSurfaces) {
+        this->invalidate_step(posPrepareInfill);
     } else if (step == posPrepareInfill) {
         this->invalidate_step(posInfill);
     } else if (step == posInfill) {
@@ -318,6 +320,7 @@ PrintObject::invalidate_step(PrintObjectStep step)
         this->_print->invalidate_step(psBrim);
     } else if (step == posSlice) {
         this->invalidate_step(posPerimeters);
+        this->invalidate_step(posDetectSurfaces);
         this->invalidate_step(posSupportMaterial);
     } else if (step == posSupportMaterial) {
         this->_print->invalidate_step(psSkirt);
@@ -351,11 +354,20 @@ PrintObject::has_support_material() const
 void
 PrintObject::detect_surfaces_type()
 {
+    // prerequisites
+    // this->slice();
+    
+    if (this->state.is_done(posDetectSurfaces)) return;
+    this->state.set_started(posDetectSurfaces);
+    
     parallelize<Layer*>(
         std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
         boost::bind(&Slic3r::Layer::detect_surfaces_type, _1),
         this->_print->config.threads.value
     );
+    
+    this->typed_slices = true;
+    this->state.set_done(posDetectSurfaces);
 }
 
 void
@@ -835,11 +847,15 @@ PrintObject::_make_perimeters()
     this->state.set_started(posPerimeters);
     
     // merge slices if they were split into types
+    // This is not currently taking place because since merge_slices + detect_surfaces_type
+    // are not truly idempotent we are invalidating posSlice here (see the Perl part of 
+    // this method).
     if (this->typed_slices) {
+        // merge_slices() undoes detect_surfaces_type()
         FOREACH_LAYER(this, layer_it)
             (*layer_it)->merge_slices();
         this->typed_slices = false;
-        this->state.invalidate(posPrepareInfill);
+        this->state.invalidate(posDetectSurfaces);
     }
     
     // compare each layer to the one below, and mark those slices needing
