@@ -116,7 +116,7 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "complete-objects!";
     def->default_value = new ConfigOptionBool(false);
 
-	def = this->add("constant_extruder", coBools);
+    def = this->add("constant_extruder", coBools);
     def->label = "Custom Constant rate extruder";
     def->tooltip = "This flag indicates that this extruder is constant rate (pump or solenoid based, not stepper motor). Acceleration control is disabled for print moves with this extruder.";
     def->cli = "constant-extruder!";
@@ -1163,7 +1163,7 @@ PrintConfigDef::PrintConfigDef()
         ConfigOptionStrings* opt = new ConfigOptionStrings();
         opt->values.push_back("M126");
         def->default_value = opt;
-	}
+    }
 
     def = this->add("stop_e_gcode", coStrings);
     def->label = "Extrusion Stop G-code";
@@ -1176,7 +1176,7 @@ PrintConfigDef::PrintConfigDef()
         ConfigOptionStrings* opt = new ConfigOptionStrings();
         opt->values.push_back("M127");
         def->default_value = opt;
-	}
+    }
 
     def = this->add("support_material", coBool);
     def->label = "Generate support material";

@@ -127,13 +127,13 @@ GCodeSender::set_baud_rate(unsigned int baud_rate)
         }
 
         ioctl(handle, TIOCSSERIAL, &ss);
-		printf("< set_baud_rate: %u\n", baud_rate);
+        printf("< set_baud_rate: %u\n", baud_rate);
 #elif __OpenBSD__
-		struct termios ios;
-		::tcgetattr(handle, &ios);
-		::cfsetspeed(&ios, baud_rate);
-		if (::tcsetattr(handle, TCSAFLUSH, &ios) != 0)
-			printf("Failed to set baud rate: %s\n", strerror(errno));
+        struct termios ios;
+        ::tcgetattr(handle, &ios);
+        ::cfsetspeed(&ios, baud_rate);
+        if (::tcsetattr(handle, TCSAFLUSH, &ios) != 0)
+            printf("Failed to set baud rate: %s\n", strerror(errno));
 #else
         //throw invalid_argument ("OS does not currently support custom bauds");
 #endif

@@ -508,12 +508,12 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     }
     
     // compensate retraction
-	if (!this->writer.extruder()->is_constant_rate())
-		gcode += this->unretract();
+    if (!this->writer.extruder()->is_constant_rate())
+        gcode += this->unretract();
     
     // adjust acceleration
-	// Don't adjust if using a constant extruder
-	if (!this->writer.extruder()->is_constant_rate())
+    // Don't adjust if using a constant extruder
+    if (!this->writer.extruder()->is_constant_rate())
     {
         double acceleration;
         if (this->config.first_layer_acceleration.value > 0 && this->first_layer) {
@@ -586,7 +586,7 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     {
         std::string comment = this->config.gcode_comments ? description : "";
         Lines lines = path.polyline.lines();
-		
+        
         if (this->writer.extruder()->is_constant_rate())
             gcode += this->writer.extruder()->start_extrusion_gcode() + ";\n";
         for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {

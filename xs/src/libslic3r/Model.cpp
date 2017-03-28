@@ -591,10 +591,10 @@ ModelObject::center_around_origin()
 {
     // calculate the displacements needed to 
     // center this object around the origin
-	BoundingBoxf3 bb;
-	for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v)
-		if (! (*v)->modifier)
-			bb.merge((*v)->mesh.bounding_box());
+    BoundingBoxf3 bb;
+    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v)
+        if (! (*v)->modifier)
+            bb.merge((*v)->mesh.bounding_box());
     
     // first align to origin on XYZ
     Vectorf3 vector(-bb.min.x, -bb.min.y, -bb.min.z);

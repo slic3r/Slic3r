@@ -13,10 +13,10 @@ SVG::SVG(const char* filename)
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.0//EN\" \"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n"
         "<svg height=\"2000\" width=\"2000\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n"
-	    "   <marker id=\"endArrow\" markerHeight=\"8\" markerUnits=\"strokeWidth\" markerWidth=\"10\" orient=\"auto\" refX=\"1\" refY=\"5\" viewBox=\"0 0 10 10\">\n"
-		"      <polyline fill=\"darkblue\" points=\"0,0 10,5 0,10 1,5\" />\n"
-	    "   </marker>\n"
-	    );
+        "   <marker id=\"endArrow\" markerHeight=\"8\" markerUnits=\"strokeWidth\" markerWidth=\"10\" orient=\"auto\" refX=\"1\" refY=\"5\" viewBox=\"0 0 10 10\">\n"
+        "      <polyline fill=\"darkblue\" points=\"0,0 10,5 0,10 1,5\" />\n"
+        "   </marker>\n"
+        );
 }
 
 SVG::SVG(const char* filename, const BoundingBox &bbox)

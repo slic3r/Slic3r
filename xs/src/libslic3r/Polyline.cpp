@@ -169,9 +169,9 @@ Polyline::split_at(const Point &point, Polyline* p1, Polyline* p2) const
     for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
         Point p_tmp = point.projection_onto(*line);
         if (point.distance_to(p_tmp) < min) {
-	        p = p_tmp;
-	        min = point.distance_to(p);
-	        line_idx = line - lines.begin();
+            p = p_tmp;
+            min = point.distance_to(p);
+            line_idx = line - lines.begin();
         }
     }
     

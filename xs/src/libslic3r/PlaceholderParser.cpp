@@ -15,9 +15,9 @@
 #define environ (*_NSGetEnviron())
 #else
     #ifdef _MSC_VER
-       #define environ _environ
+        #define environ _environ
     #else
-     	extern char **environ;
+        extern char **environ;
     #endif
 #endif
 

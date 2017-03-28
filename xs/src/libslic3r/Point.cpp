@@ -257,8 +257,8 @@ Point::projection_onto(const MultiPoint &poly) const
     for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
         Point point_temp = this->projection_onto(*line);
         if (this->distance_to(point_temp) < running_min) {
-	        running_projection = point_temp;
-	        running_min = this->distance_to(running_projection);
+            running_projection = point_temp;
+            running_min = this->distance_to(running_projection);
         }
     }
     return running_projection;

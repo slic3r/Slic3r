@@ -343,8 +343,8 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(retract_restart_extra_toolchange);
         OPT_PTR(retract_speed);
         OPT_PTR(start_gcode);
-		OPT_PTR(start_e_gcode);
-		OPT_PTR(stop_e_gcode);
+        OPT_PTR(start_e_gcode);
+        OPT_PTR(stop_e_gcode);
         OPT_PTR(toolchange_gcode);
         OPT_PTR(travel_speed);
         OPT_PTR(use_firmware_retraction);
