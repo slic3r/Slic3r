@@ -1676,7 +1676,6 @@ sub on_model_change {
     }
     $self->refresh_canvases;
     
-    my $running = $self->pause_background_process;
     my $invalidated = $self->{print}->reload_model_instances();
     
     if ($Slic3r::GUI::Settings->{_}{background_processing}) {
