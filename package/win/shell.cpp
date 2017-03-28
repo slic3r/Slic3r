@@ -23,9 +23,9 @@ int main(int argc, char **argv, char **env)
 
 	char    exe_path[MAX_PATH] = {0};
 	char    script_path[MAX_PATH];
-	char    gui_flag[7] = {" --gui"};
+	char    gui_flag[6] = {"--gui"};
 #ifdef FORCE_GUI
-	char**  command_line = (char**)malloc(sizeof(char*) * ((++ argc) + 1+6));
+	char**  command_line = (char**)malloc(sizeof(char*) * ((++ argc) + 2));
 #else
 	char**  command_line = (char**)malloc(sizeof(char*) * ((++ argc) + 1));
 #endif
@@ -72,12 +72,11 @@ int main(int argc, char **argv, char **env)
 		_makepath(script_path, drive, dir, "slic3r", "pl");
 		command_line[0] = exe_path;
 		command_line[1] = script_path;
-#ifdef FORCE_GUI
-		command_line[2] = gui_flag;
-		memcpy(command_line + 3, argv + 1, sizeof(char*) * (argc - 2));
-		command_line[argc+6] = NULL;
-#else
 		memcpy(command_line + 2, argv + 1, sizeof(char*) * (argc - 2));
+#ifdef FORCE_GUI
+		command_line[argc] = gui_flag;
+		command_line[argc+1] = NULL;
+#else
 		command_line[argc] = NULL;
 #endif
 		// Unset the PERL5LIB and PERLLIB environment variables.
@@ -89,7 +88,11 @@ int main(int argc, char **argv, char **env)
 			printf(" %d: %s\r\n", i, command_line[i]);
 #endif
 	}
+#ifdef FORCE_GUI
+	RunPerl(argc+1, command_line, NULL);
+#else
 	RunPerl(argc, command_line, NULL);
+#endif
 	free(command_line);
 }
 
