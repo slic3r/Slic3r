@@ -117,5 +117,13 @@ make_plist
 
 echo $PkgInfoContents >$appfolder/Contents/PkgInfo
 
+if [[ -e "${KEYCHAIN_FILE}" ]]; then
+    echo "Signing app..."
+    security list-keychains -s "${KEYCHAIN_FILE}"
+    security default-keychain -s "${KEYCHAIN_FILE}"
+    security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+    codesign --sign "${KEYCHAIN_IDENTITY}" "$appfolder"
+fi
+
 echo "Creating dmg file...."
 hdiutil create -fs HFS+ -srcfolder "$appfolder" -volname "$appname" "$dmgfile"
