@@ -554,7 +554,8 @@ sub _on_select_preset {
 	
 	wxTheApp->save_settings;
 	
-	my $config = $self->config;
+	# Ignore overrides in the plater, we only care about the preset configs.
+	my $config = $self->config(1);
 	
 	$self->on_extruders_change(scalar @{$config->get('nozzle_diameter')});
     
@@ -571,10 +572,11 @@ sub _on_select_preset {
         
         # Add/remove options (we do it this way for preserving current options)
         foreach my $opt_key (@$overridable) {
-            if (!$o_config->has($opt_key)) {
-                # Populate option with the default value taken from configuration
-                $o_config->set($opt_key, $config->get($opt_key));
-            }
+            # Populate option with the default value taken from configuration
+            # (re-set the override always, because if we here it means user
+            # switched to this preset or opened/closed the editor, so he expects
+            # the new values set in the editor to be used).
+            $o_config->set($opt_key, $config->get($opt_key));
         }
         foreach my $opt_key (@{$o_config->get_keys}) {
             # Keep options listed among overridable and options added on the fly
@@ -758,7 +760,7 @@ sub show_preset_editor {
 
 # Returns the current config by merging the selected presets and the overrides.
 sub config {
-    my ($self) = @_;
+    my ($self, $ignore_overrides) = @_;
     
     # use a DynamicConfig because FullPrintConfig is not enough
     my $config = Slic3r::Config->new_from_defaults;
@@ -791,7 +793,8 @@ sub config {
         $config->apply($filament_config);
     }
     $config->apply($_->dirty_config) for @{ $presets{print} };
-    $config->apply($self->{settings_override_config});
+    $config->apply($self->{settings_override_config})
+        unless $ignore_overrides;
     
     return $config;
 }
