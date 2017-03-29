@@ -111,7 +111,8 @@ cp -rf $WD/_tmp/lib/* $macosfolder/local-lib/lib/perl5/
 rm -rf $WD/_tmp
 
 echo "Cleaning bundle"
-find $macosfolder/local-lib -name man -type d -delete
+rm -rf $macosfolder/local-lib/bin
+rm -rf $macosfolder/local-lib/man
 find $macosfolder/local-lib -name .packlist -delete
 find $macosfolder/local-lib -name .meta -exec rm -rf "{}" \;
 find $macosfolder/local-lib -name '*.h' -delete
