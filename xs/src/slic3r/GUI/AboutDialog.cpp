@@ -28,7 +28,7 @@ AboutDialogLogo::onRepaint(wxEvent &event)
 }
 
 AboutDialog::AboutDialog()
-    : wxDialog(NULL, wxID_ANY, "About Slic3r", wxDefaultPosition, wxSize(600, 340), wxCAPTION)
+    : wxDialog(NULL, wxID_ANY, __("About Slic3r"), wxDefaultPosition, wxSize(600, 340), wxCAPTION)
 {
     this->SetBackgroundColour(*wxWHITE);
     
@@ -55,7 +55,9 @@ AboutDialog::AboutDialog()
     
     // version
     {
-        wxStaticText* version = new wxStaticText(this, wxID_ANY, "Version " SLIC3R_VERSION, wxDefaultPosition, wxDefaultSize);
+        std::string version_name = "Version ";
+        std::string version_string = version_name + std::string(SLIC3R_VERSION);
+        wxStaticText* version = new wxStaticText(this, wxID_ANY, version_string.c_str(), wxDefaultPosition, wxDefaultSize);
         wxFont version_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
         #ifdef __WXMSW__
             version_font.SetPointSize(9);
