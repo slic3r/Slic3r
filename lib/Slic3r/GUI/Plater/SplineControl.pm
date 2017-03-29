@@ -4,8 +4,7 @@ use warnings;
 use utf8;
 
 use List::Util qw(min max first);
-use Slic3r::Geometry qw(X Y scale unscale convex_hull);
-use Slic3r::Geometry::Clipper qw(offset JT_ROUND intersection_pl);
+use Slic3r::Geometry qw(X Y scale unscale);
 use Wx qw(:misc :pen :brush :sizer :font :cursor wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_MOUSE_EVENTS EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
 use base 'Wx::Panel';
@@ -28,9 +27,9 @@ sub new {
 
     $self->{user_drawn_background} = $^O ne 'darwin';
 
+    # scale plot data to actual canvas, documentation in set_size_parameters
     $self->{scaling_factor_x} = 1;
     $self->{scaling_factor_y} = 1;
-    
     $self->{min_layer_height} = 0.1;
     $self->{max_layer_height} = 0.4;
     $self->{object_height} = 1.0;
@@ -76,112 +75,78 @@ sub repaint {
     $dc->DrawLabel(sprintf('%.4g', $self->{max_layer_height}), Wx::Rect->new(0, $size[1]/2, $size[0], $size[1]/2), wxALIGN_RIGHT | wxALIGN_BOTTOM);
 
 
-    # draw original layers as lines
-    my $last_z = 0.0;
-    my @points = ();
-#    foreach my $z (@{$self->{original_interpolated_layers}}) {
-#        my $layer_h = $z - $last_z;
-#        $dc->SetPen($self->{original_pen});
-#        my $pl = $self->point_to_pixel(0, $z);
-#        my $pr = $self->point_to_pixel($layer_h, $z);
-#        #$dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
-#        push (@points, $pr);
-#        $last_z = $z;
-#    }
-#
-#    $dc->DrawSpline(\@points);
+    # draw original spline as reference
     if($self->{original_height_spline}) {
-        $last_z = 0.0;
-        @points = ();
         #draw spline
-        $dc->SetPen($self->{original_pen});
-        @points = ();
-        foreach my $pixel (0..$size[1]) {
-            my @z = $self->pixel_to_point(Wx::Point->new(0, $pixel));
-            my $h = $self->{original_height_spline}->getLayerHeightAt($z[1]);
-            my $p = $self->point_to_pixel($h, $z[1]);
-            push (@points, $p);
-        }
-        $dc->DrawLines(\@points);
+        $self->_draw_layer_height_spline($dc, $self->{original_height_spline}, $self->{original_pen});
     }
     
-           
-    
-#    # draw interactive (user modified) layers as lines
-#    $last_z = 0.0;
-#    @points = ();
-#    if($self->{interactive_heights}) {
-#    	foreach my $i (0..@{$self->{interactive_heights}}-1) {
-#	        my $z = $self->{original_layers}[$i];
-#	        my $layer_h = $self->{interactive_heights}[$i];
-#	        $dc->SetPen($self->{interactive_pen});
-#	        my $pl = $self->point_to_pixel(0, $z);
-#	        my $pr = $self->point_to_pixel($layer_h, $z);
-#	        $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
-#	        push (@points, $pr);
-#	    }
-#	
-#	    $dc->DrawSpline(\@points);
-#    }
-    
+    # draw interactive (currently modified by the user) layers as lines and spline
     if($self->{interactive_height_spline}) {
-    	$last_z = 0.0;
-        @points = ();
         # draw layer lines
-        foreach my $z (@{$self->{interactive_height_spline}->getInterpolatedLayers}) {
-            my $layer_h = $z - $last_z;
-            $dc->SetPen($self->{interactive_pen});
-            my $pl = $self->point_to_pixel(0, $z);
-            my $pr = $self->point_to_pixel($layer_h, $z);
-            $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
-            $last_z = $z;
-        }
-    	
-    	#draw spline
-    	$dc->SetPen($self->{interactive_pen});
-	    @points = ();
-	    foreach my $pixel (0..$size[1]) {
-	        my @z = $self->pixel_to_point(Wx::Point->new(0, $pixel));
-	        my $h = $self->{interactive_height_spline}->getLayerHeightAt($z[1]);
-	        my $p = $self->point_to_pixel($h, $z[1]);
-	        push (@points, $p);
-	    }
-	    $dc->DrawLines(\@points);
+        my @interpolated_layers = @{$self->{interactive_height_spline}->getInterpolatedLayers};
+        $self->_draw_layers_as_lines($dc, $self->{interactive_pen}, \@interpolated_layers);
+        
+        #draw spline
+        $self->_draw_layer_height_spline($dc, $self->{interactive_height_spline}, $self->{interactive_pen});
     }
 
- 
     # draw resulting layers as lines
-    $last_z = 0.0;
-    @points = ();
     unless($self->{interactive_heights}) {
-        foreach my $z (@{$self->{interpolated_layers}}) {
-	        my $layer_h = $z - $last_z;
-	        $dc->SetPen($self->{resulting_pen});
-	        my $pl = $self->point_to_pixel(0, $z);
-	        my $pr = $self->point_to_pixel($layer_h, $z);
-	        $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
-	        push (@points, $pr);
-	        $last_z = $z;
-	    }
+        $self->_draw_layers_as_lines($dc, $self->{resulting_pen}, $self->{interpolated_layers});
     }
 
-#    $dc->DrawSpline(\@points);
-
-    # Draw current BSpline
-    $dc->SetPen($self->{line_pen});
-    @points = ();
-    foreach my $pixel (0..$size[1]) {
-    	my @z = $self->pixel_to_point(Wx::Point->new(0, $pixel));
-    	#print "z: " . $z . "\n";
-    	my $h = $self->{object}->layer_height_spline->getLayerHeightAt($z[1]);
-    	my $p = $self->point_to_pixel($h, $z[1]);
-    	push (@points, $p);
-    	#print "pixel: " . $pixel . "\n";
-    }
-    $dc->DrawLines(\@points);
+    # Always draw current BSpline, gives a reference during a modification
+    $self->_draw_layer_height_spline($dc, $self->{object}->layer_height_spline, $self->{line_pen});
     
     $event->Skip;
 }
+
+# Set basic parameters for this control.
+# min/max_layer_height are required to define the x-range, object_height is used to scale the y-range.
+# Must be called if object selection changes.
+sub set_size_parameters {
+    my ($self, $min_layer_height, $max_layer_height, $object_height) = @_;
+    
+    $self->{min_layer_height} = $min_layer_height;
+    $self->{max_layer_height} = $max_layer_height;
+    $self->{object_height} = $object_height;
+    
+    $self->_update_canvas_size;
+    $self->Refresh;
+}
+
+# Layers have been modified externally, re-initialize this control with new values
+sub update {
+    my $self = shift;
+
+    if($self->{object}->layer_height_spline->layersUpdated || !$self->{heights}) {
+        $self->{original_height_spline} = $self->{object}->layer_height_spline->clone; # make a copy to display the unmodified original spline
+        $self->{original_layers} = $self->{object}->layer_height_spline->getOriginalLayers;
+        $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers; # Initialize to current values
+    
+        # initialize height vector
+        $self->{heights} = ();
+        $self->{interactive_heights} = ();
+        foreach my $z (@{$self->{original_layers}}) {
+            push (@{$self->{heights}}, $self->{object}->layer_height_spline->getLayerHeightAt($z));
+        }
+    }
+    $self->Refresh;
+}
+
+# Callback to notify parent element if layers have changed and reslicing should be triggered
+sub on_layer_update {
+    my ($self, $cb) = @_;
+    $self->{on_layer_update} = $cb;
+}
+
+# Callback to tell parent element at which z-position the mouse currently hovers to update indicator in 3D-view
+sub on_z_indicator {
+    my ($self, $cb) = @_;
+    $self->{on_z_indicator} = $cb;
+}
+
 
 sub mouse_event {
     my ($self, $event) = @_;
@@ -190,7 +155,7 @@ sub mouse_event {
     my @obj_pos = $self->pixel_to_point($pos);
     
     if ($event->ButtonDown) {
-    	if ($event->LeftDown) {
+        if ($event->LeftDown) {
            # start dragging
            $self->{left_drag_start_pos} = $pos;
            $self->{interactive_height_spline} = $self->{object}->layer_height_spline->clone;
@@ -202,51 +167,27 @@ sub mouse_event {
         }
     } elsif ($event->LeftUp) {
         if($self->{left_drag_start_pos}) {
-    		if($self->{interactive_heights}) {
-    			$self->{heights} = $self->{interactive_heights};
-    			$self->{interactive_heights} = ();
-    			# update spline database
-    			unless($self->{object}->layer_height_spline->updateLayerHeights($self->{heights})) {
-    			    die "Unable to update interpolated layers!\n";
-                }
-    			$self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
-    		}
-    		$self->Refresh;
-    		$self->{object}->layer_height_spline->suppressUpdate;
-    		$self->{on_layer_update}->(@{$self->{interpolated_layers}});
-    		$self->{interactive_height_spline} = undef;
-    	}
+            $self->_modification_done;
+        }
         $self->{left_drag_start_pos} = undef;
     } elsif ($event->RightUp) {
         if($self->{right_drag_start_pos}) {
-            if($self->{interactive_heights}) {
-                $self->{heights} = $self->{interactive_heights};
-                $self->{interactive_heights} = ();
-                # update spline database
-                unless($self->{object}->layer_height_spline->updateLayerHeights($self->{heights})) {
-                    die "Unable to update interpolated layers!\n";
-                }
-                $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
-            }
-            $self->Refresh;
-            $self->{object}->layer_height_spline->suppressUpdate;
-            $self->{on_layer_update}->(@{$self->{interpolated_layers}});
-            $self->{interactive_height_spline} = undef;
+            $self->_modification_done;
         }
         $self->{right_drag_start_pos} = undef;
     } elsif ($event->Dragging) {
         if($self->{left_drag_start_pos}) {
         
-	        my @start_pos = $self->pixel_to_point($self->{left_drag_start_pos});
-	        my $range = abs($start_pos[1] - $obj_pos[1]);
+            my @start_pos = $self->pixel_to_point($self->{left_drag_start_pos});
+            my $range = abs($start_pos[1] - $obj_pos[1]);
 
-	        # compute updated interactive layer heights
-	        $self->_interactive_quadratic_curve($start_pos[1], $obj_pos[0], $range);
+            # compute updated interactive layer heights
+            $self->_interactive_quadratic_curve($start_pos[1], $obj_pos[0], $range);
 
-	        unless($self->{interactive_height_spline}->updateLayerHeights($self->{interactive_heights})) {
-	        	die "Unable to update interactive interpolated layers!\n";
-	        }
-	        $self->Refresh;
+            unless($self->{interactive_height_spline}->updateLayerHeights($self->{interactive_heights})) {
+                die "Unable to update interactive interpolated layers!\n";
+            }
+            $self->Refresh;
         } elsif($self->{right_drag_start_pos}) {
             my @start_pos = $self->pixel_to_point($self->{right_drag_start_pos});
             my $range = $obj_pos[1] - $start_pos[1];
@@ -269,52 +210,23 @@ sub mouse_event {
     }
 }
 
-# Set basic parameters for this control.
-# min/max_layer_height are required to define the x-range, object_height is used to scale the y-range.
-# Must be called if object selection changes.
-sub set_size_parameters {
-	my ($self, $min_layer_height, $max_layer_height, $object_height) = @_;
-	
-	$self->{min_layer_height} = $min_layer_height;
-    $self->{max_layer_height} = $max_layer_height;
-    $self->{object_height} = $object_height;
+# Push modified heights to the spline object and update after user modification
+sub _modification_done {
+    my $self = shift;
     
-    $self->_update_canvas_size;
-    $self->Refresh;
-}
-
-# Layers have been modified externally, re-initialize this control with new values
-sub update {
-	my $self = shift;
-
-    if($self->{object}->layer_height_spline->layersUpdated) {
-    	$self->{original_height_spline} = $self->{object}->layer_height_spline->clone;
-	    $self->{original_layers} = $self->{object}->layer_height_spline->getOriginalLayers;
-	    $self->{original_interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
-	    $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers; # Initialize to current values
-	
-	    # initialize height vector
-	    $self->{heights} = ();
-	    $self->{interactive_heights} = ();
-	    my $last_z = 0;
-	    foreach my $z (@{$self->{original_layers}}) {
-	        push (@{$self->{heights}}, $z - $last_z);
-	        $last_z = $z;
-	    }
+    if($self->{interactive_heights}) {
+        $self->{heights} = $self->{interactive_heights};
+        $self->{interactive_heights} = ();
+        # update spline database
+        unless($self->{object}->layer_height_spline->updateLayerHeights($self->{heights})) {
+            die "Unable to update interpolated layers!\n";
+        }
+        $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
     }
     $self->Refresh;
-}
-
-# Callback to notify parent element if layers have changed and reslicing should be triggered
-sub on_layer_update {
-    my ($self, $cb) = @_;
-    $self->{on_layer_update} = $cb;
-}
-
-# Callback to tell parent element at which z-position the mouse currently hovers to update indicator in 3D-view
-sub on_z_indicator {
-	my ($self, $cb) = @_;
-    $self->{on_z_indicator} = $cb;
+    $self->{object}->layer_height_spline->suppressUpdate;
+    $self->{on_layer_update}->(@{$self->{interpolated_layers}});
+    $self->{interactive_height_spline} = undef;
 }
 
 # Internal function to cache scaling factors
@@ -333,25 +245,27 @@ sub _update_canvas_size {
     $self->{scaling_factor_y} = $size[1]/$self->{object_height};
 }
 
+# calculate new set of layers with quadaratic modifier for interactive display
 sub _interactive_quadratic_curve {
-	my ($self, $mod_z, $target_layer_height, $range) = @_;
-	
-	$self->{interactive_heights} = (); # reset interactive curve
-	
-	# iterate over original points provided by spline
-	my $last_z = 0;
-	foreach my $i (0..@{$self->{heights}}-1  ) {
-		my $z = $self->{original_layers}[$i];
-		my $layer_h = $self->{heights}[$i];
-		my $quadratic_factor = $self->_quadratic_factor($mod_z, $range, $z);
-		my $diff = $target_layer_height - $layer_h;
-		$layer_h  += $diff * $quadratic_factor;
-		push (@{$self->{interactive_heights}}, $layer_h);
-	}
+    my ($self, $mod_z, $target_layer_height, $range) = @_;
+    
+    $self->{interactive_heights} = (); # reset interactive curve
+    
+    # iterate over original points provided by spline
+    my $last_z = 0;
+    foreach my $i (0..@{$self->{heights}}-1  ) {
+        my $z = $self->{original_layers}[$i];
+        my $layer_h = $self->{heights}[$i];
+        my $quadratic_factor = $self->_quadratic_factor($mod_z, $range, $z);
+        my $diff = $target_layer_height - $layer_h;
+        $layer_h  += $diff * $quadratic_factor;
+        push (@{$self->{interactive_heights}}, $layer_h);
+    }
 }
 
+# calculate new set of layers with linear modifier for interactive display
 sub _interactive_linear_curve {
-	my ($self, $mod_z, $target_layer_height, $range) = @_;
+    my ($self, $mod_z, $target_layer_height, $range) = @_;
 
     $self->{interactive_heights} = (); # reset interactive curve
     my $from;
@@ -376,24 +290,57 @@ sub _interactive_linear_curve {
 }
 
 sub _quadratic_factor {
-	my ($self, $fixpoint, $range, $value) = @_;
-	
-	# avoid division by zero
-	$range = 0.00001 if $range <= 0;
-	
-	my $dist = abs($fixpoint - $value);
-	my $x = $dist/$range; # normalize
-	my $result = 1-($x*$x);
-	
-	return max(0, $result);
+    my ($self, $fixpoint, $range, $value) = @_;
+    
+    # avoid division by zero
+    $range = 0.00001 if $range <= 0;
+    
+    my $dist = abs($fixpoint - $value);
+    my $x = $dist/$range; # normalize
+    my $result = 1-($x*$x);
+    
+    return max(0, $result);
+}
+
+# Draw a set of layers as lines
+sub _draw_layers_as_lines {
+    my ($self, $dc, $pen, $layers) = @_;
+    
+    $dc->SetPen($pen);
+    my $last_z = 0.0;    
+    foreach my $z (@$layers) {
+        my $layer_h = $z - $last_z;
+        my $pl = $self->point_to_pixel(0, $z);
+        my $pr = $self->point_to_pixel($layer_h, $z);
+        $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
+        $last_z = $z;
+    }
+}
+
+# Draw the resulting spline from a LayerHeightSpline object over the full canvas height
+sub _draw_layer_height_spline {
+    my ($self, $dc, $layer_height_spline, $pen) = @_;
+    
+    my $size = $self->GetSize;
+    my @size = ($size->GetWidth, $size->GetHeight);
+    
+    $dc->SetPen($pen);
+    my @points = ();
+    foreach my $pixel (0..$size[1]) {
+        my @z = $self->pixel_to_point(Wx::Point->new(0, $pixel));
+        my $h = $layer_height_spline->getLayerHeightAt($z[1]);
+        my $p = $self->point_to_pixel($h, $z[1]);
+        push (@points, $p);
+    }
+    $dc->DrawLines(\@points);
 }
 
 # Takes a 2-tupel [layer_height (x), height(y)] and converts it
 # into a Wx::Point in scaled canvas coordinates
 sub point_to_pixel {
-	my ($self, @point) = @_;
-	
-	my $size = $self->GetSize;
+    my ($self, @point) = @_;
+    
+    my $size = $self->GetSize;
     my @size = ($size->GetWidth, $size->GetHeight);
     
     my $x = ($point[0] - $self->{min_layer_height})*$self->{scaling_factor_x};
