@@ -219,6 +219,35 @@ if ($cpp_guess->is_gcc) {
     }
 }
 
+if ($mswin) {
+    # like boost, Windows lives to make things difficult for us.
+    # Use an environment option for the necesary location and pray.
+    push @cflags, qw(-I$ENV{WXWIN}\\include);
+    push @cflags, qw(-D__WXMSW__ -D_UNICODE);
+    # add libraries
+    if ($cpp_guess->is_msvc) {
+        push @ldflags, qw(-L$ENV{WXWIN}\\lib -L$ENV{WXWIN}\\lib\\msvc_lib);
+    } else {
+        push @ldflags, qw(-L$ENV{WXWIN}\\lib -L$ENV{WXWIN}\\lib\\gcc_lib);
+    }
+    push @ldflags, qw(-pthread -lwx_gtk2u_xrc-3.0 -lwx_gtk2u_html-3.0 -lwx_gtk2u_qa-3.0 -lwx_gtk2u_adv-3.0 -lwx_gtk2u_core-3.0 -lwx_baseu_xml-3.0 -lwx_baseu_net-3.0 -lwx_baseu-3.0);
+} else {
+    # on linux/osx, wx-config is hopefully in the path and can be used.
+    # if wxdir is defined (which is the prefix that wxwidgets was installed to
+    # use that instead.
+    my $wx_config_libs;
+    my $wx_config_flags;
+    if (defined($ENV{WXDIR})) {
+        chomp($wx_config_libs     = `sh $ENV{WXDIR}/bin/wx-config --libs`);
+        chomp($wx_config_flags     = `sh $ENV{WXDIR}/bin/wx-config --cxxflags`);
+    } else {
+        chomp($wx_config_libs     = `wx-config --libs`);
+        chomp($wx_config_flags     = `wx-config --cxxflags`);
+    }
+    push @cflags, $wx_config_flags;
+    push @ldflags, $wx_config_libs;
+}
+
 my $build = Module::Build::WithXSpp->new(
     module_name     => 'Slic3r::XS',
     dist_abstract   => 'XS code for Slic3r',
