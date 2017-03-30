@@ -18,7 +18,7 @@ our $qs_last_output_file;
 our $last_config;
 
 sub new {
-    my ($class, %params) = @_;
+    my ($class) = @_;
     
     my $self = $class->SUPER::new(undef, -1, 'Slic3r', wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE);
     if ($^O eq 'MSWin32') {
@@ -27,9 +27,6 @@ sub new {
         $self->SetIcon(Wx::Icon->new($Slic3r::var->("Slic3r_128px.png"), wxBITMAP_TYPE_PNG));        
     }
     
-    # store input params
-    # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
-    $self->{no_controller} = $params{no_controller};
     $self->{loaded} = 0;
     
     # initialize tabpanel and menubar

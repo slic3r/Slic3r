@@ -1184,7 +1184,6 @@ sub overridable_options {
 
 sub build {
     my $self = shift;
-    my (%params) = @_;
     
     $self->{extruders_count} = 1;
     
@@ -1231,8 +1230,7 @@ sub build {
                 }
             });
         }
-        if (!$params{no_controller})
-        {
+        unless ($Slic3r::GUI::Settings->{_}{no_controller}) {
             my $optgroup = $page->new_optgroup('USB/Serial connection');
             my $line = Slic3r::GUI::OptionsGroup::Line->new(
                 label => 'Serial port',
