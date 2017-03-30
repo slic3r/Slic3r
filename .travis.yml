@@ -1,10 +1,10 @@
 language: perl
 install: export LDLOADLIBS=-lstdc++
 script: 
-    - curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0-x64-gcc-4.9.2-linux-x64.tar.bz2" -O ../boost.tar.bz2 
+    - curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0-x64-gcc-4.9.2-linux-x64.tar.bz2" -o ../boost.tar.bz2 
     - tar -xjf ../boost.tar.bz2 -C../ 
-    - curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=slic3r-perl-dependencies-5.24.0-debian.tar.bz2" -O slic3r-deps.tar.bz2 
-    - tar -xjf slic3r-deps.tar.bz2 BOOST_DIR=`pwd`/../boost_1_63_0
+    - curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=slic3r-perl-dependencies-5.24.0-debian.tar.bz2" -o ../slic3r-deps.tar.bz2 
+    - tar -xjf ../slic3r-deps.tar.bz2 BOOST_DIR=`pwd`/../boost_1_63_0
     - perl ./Build.PL tar -cjf ../slic3r-${TRAVIS_BRANCH}`git rev-parse --short HEAD`.tar.bz2 * 
     - mv  ../slic3r-${}`git rev-parse --short HEAD`.tar.bz2 . 
     - package/deploy-bintray.sh slic3r-${TRAVIS_BRANCH}`git rev-parse --short HEAD`.tar.bz2
