@@ -8,6 +8,7 @@ perl:
 branches:
   only:
     - master
+    - xsgui
 sudo: false
 cache:
   apt: true
