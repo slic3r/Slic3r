@@ -617,11 +617,6 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
 
             if (this->config.adaptive_slicing.value) {
                 height = 999;
-                // FIXME: this should de done directly via config at the dialog...
-                if(this->layer_height_spline.getCuspValue() >= 0) {
-                    adaptive_quality = this->layer_height_spline.getCuspValue(); //FIXME: rename variable (cusp)
-                    this->config.adaptive_slicing_quality.value = adaptive_quality;
-                }
 
                 // determine next layer height
                 height = as.next_layer_height(print_z, adaptive_quality, min_layer_height, max_layer_height);

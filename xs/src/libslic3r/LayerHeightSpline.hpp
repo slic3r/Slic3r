@@ -26,14 +26,8 @@ class LayerHeightSpline
     std::vector<coordf_t> getInterpolatedLayers() const;
     const coordf_t getLayerHeightAt(coordf_t height);
 
-    void setCuspValue(coordf_t cusp_value) {this->_cusp_value = cusp_value;};
-    coordf_t getCuspValue() {return this->_cusp_value;};
-
     private:
     bool _updateBSpline();
-
-
-    coordf_t _cusp_value;
 
     coordf_t _object_height;
     bool _is_valid;

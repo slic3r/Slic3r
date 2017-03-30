@@ -99,7 +99,6 @@ sub new {
     
     $self->{splineControl}->on_z_indicator(sub {
         my ($z) = @_;
-        #$self->{preview3D}->canvas->cutting_plane_z($z);
         $self->{preview3D}->canvas->SetCuttingPlane(Z, $z, []);
         $self->{preview3D}->canvas->Render;
     });
@@ -121,8 +120,8 @@ sub new {
     	$self->{plater}->pause_background_process;
         my $quality_value = $quality_slider->GetValue/100;
         $value_label->SetLabel(sprintf '%.2f', $quality_value);
-        my $success = $object->config->set('adaptive_slicing_quality', $quality_value);
-        $object->layer_height_spline->setCuspValue($quality_value);
+        $self->{model_object}->config->set('adaptive_slicing_quality', $quality_value);
+
         # trigger re-slicing
         $self->{plater}->stop_background_process;
         $self->{object}->invalidate_step(STEP_SLICE);

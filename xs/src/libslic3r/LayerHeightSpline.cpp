@@ -18,7 +18,6 @@ LayerHeightSpline::LayerHeightSpline(coordf_t object_height)
 	this->_update_required = true;
 	this->_layers_updated = false;
 	this->_layer_heights_updated = false;
-	this->_cusp_value = -1;
 }
 
 LayerHeightSpline::LayerHeightSpline(const LayerHeightSpline &other)
@@ -32,7 +31,6 @@ LayerHeightSpline::LayerHeightSpline(const LayerHeightSpline &other)
 	this->_update_required = other._update_required;
 	this->_layers_updated = other._layers_updated;
 	this->_layer_heights_updated = other._layer_heights_updated;
-	this->_cusp_value = other._cusp_value;
 	if(this->_is_valid) {
 		this->_updateBSpline();
 	}

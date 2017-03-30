@@ -24,7 +24,4 @@
     std::vector<double> getOriginalLayers();
     std::vector<double> getInterpolatedLayers();
     coordf_t getLayerHeightAt(coordf_t height);
-        
-    void setCuspValue(coordf_t cusp_value);
-    coordf_t getCuspValue();
 };
