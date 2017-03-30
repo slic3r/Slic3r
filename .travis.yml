@@ -1,34 +1,47 @@
 language: perl
-install: export LDLOADLIBS=-lstdc++
-script: perl ./Build.PL
+install: 
+    - export LDLOADLIBS=-lstdc++
+    - export SLIC3R_STATIC=1
+    - export CC="g++-4.9 -static-libgcc -static-libstdc++"
+    - perlbrew install perl-5.24.0 -Dcc="gcc-4.9" --thread -n -j4 --as threadedperl --switch
+script: 
+    - curl -L "http://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0-gcc-4.9.2-linux-x64.tar.bz2" -o ../boost.tar.bz2 
+    - tar -C../ -xjf ../boost.tar.bz2
+    - curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=slic3r-perl-dependencies-5.24.0-debian.tar.bz2" -o ../slic3r-deps.tar.bz2 
+    - tar -xjf ../slic3r-deps.tar.bz2 
+    - BOOST_DIR=`pwd`/../boost_1_63_0 perl ./Build.PL 
+    - tar -cjf ../slic3r-$TRAVIS_BRANCH`git rev-parse --short HEAD`.tar.bz2 * 
+    - mv  ../slic3r-${}`git rev-parse --short HEAD`.tar.bz2 . 
+    - package/deploy-bintray.sh slic3r-$TRAVIS_BRANCH`git rev-parse --short HEAD`.tar.bz2
 perl:
-  - "5.14"
-  - "5.18"
-  - "5.20"
+- '5.24'
 branches:
   only:
-    - master
+  - master
 sudo: false
 cache:
   apt: true
   directories:
-    - local-lib
+  - local-lib
+  - ../boost_1_63_0
 addons:
   apt:
     sources:
-    - boost-latest
     - ubuntu-toolchain-r-test
     packages:
-    - libboost-thread1.55-dev
-    - libboost-system1.55-dev
-    - libboost-filesystem1.55-dev
     - liblocal-lib-perl
     - g++-4.9
-env: CC=g++-4.9
+    - wget
+env:
+    secure: hKOubg2TaAGSuU1EcT2/1mfyZ4syJcfphSmvdSDPL+0ElIvqJHArGUN+O51Z3HeZ7xeTOecaFb1vRHnuYPoP59A5XY21S5JqNYP5ioMb0UqNgrru4eB/sbIfbDsmrKjTyzOE7K0wECM6UzcJAvuT4C9p7CPbo/D+xXOKH5XWXG0=
+    secure: ayGnFJXVM9BvNxdgMee49Cn+N3hEpY3Tbqj4oyPwpvtvD+qCYEYtlEHH9cls/IPbjjKFhCSK7dm180FpeWmDjyM8xTr60ovc47eqHkdvUvYoMgoFBzONTh5yWEA1DMrndsIxPCLfmndsfXDWg3M9FLoj19TIXXXVE5rQaf24fYU=
+    secure: Hs+ujQoaToe/KbiuotPoVS6y+VvyVdJ4DeDlI63Ts1ZN1BzBjd6sB/E8V8DOG+pvPVBJEKXlkt9ejW0Iz+SaTZeO0NXvA8h+j2RifR01ShNuWOV7ykAGm7EmkK/iPkJoDYI0InnOzai1oQx64P7kzckySz3RVAZ2cyHu0+xIZ+LA4y4c5pjnMJmhTwefU8MEsBi8PHSNWfSPgDJ/r4xmDlVYDu7qc9aJ3vTFtnMo2v5VBiT88d3hMkCa7delzONY4dWIKFIguLeipgwfsL8sQwP1ZepZ4Wmaf+3xcHpQVgRlwLYERbsRLsFTJSx5tOo+8pCM7lZkmc3FER6xNPEsHB54bg1/gNrjjmB4tMir6Lwl/j4/0tDGSmV9iusu5V0MZm4gVhlLk80p0Ozb2ROo9lvFHhpqXEuJfYwmOfrVR37B7cKb4i9fdoo/fIHIpf5+RpYa7a9IO1ZLGCc0OsT+ArWhQELgZ407JKZDnT5l60ybNEMoVjoteH182M+Wb3mulOLh6dtGZ0/NAGtfOfNxLie5hSldPjlhQ/Q2zRulKPOBYnyQPCAt7HytHC3fB/Pzkgz2XxxKNCGqmDHrkVOdDLHDTS5N3F9g7nuOeJej23s2kna1tBsOuCu9V4BphgY6ktG7bH4Hsjozp1gXydMtxOtIkT81D0BHkmW7t0eUGIc=
+    secure: IG43KqjBE7hJDosvKoBKOOMhYCuiw7PgLDHpBrLt98yg87dxuUWQjzlte76y4RPGyOfrtrBFqoNx0VZ5jk4dxn6tQ4Oo8DrIv7zIgxrpVTsm2dfhNB8FV12rR0B6ELHALVjD2IiU88d7Ixzq/zrPtz0Be7eU1JAoi/9Mrkf7erYlvX5nEoAhjLO5M5h10W8TYGKmt7QV/VhQ90Wk7gKQAqz7Byv5Jt9+B0q/Bu8FdjnrExKBwtaazoJxoFhURSU2OTnEFajUHZSD807gz0YyWHcD0hTLzq8Kjc3cos6uXKVAJ84tA5bXrsZxL3axGePR1lMUKlXlwfPAXE+mfHE/UZC4NVcR7JsDKixDW+uchSTMH6KPUBBvf76Gq2JVlJ4KfdLC7zqZXFHm755Pnui2Lq50GnBRkgNRdkl9KeHgHlRVtKiXYBRQiQFJW/c+HjusAMsn1Qye7TWJHnY6ytUSZu8DMIN3Od8SzcjL1xS+pvyRBlleYPJ3Z06ci8l86tU5bBA6y3sfRWfxEWGsa2oKhHLQLCaeSKnT6aK3jq3t/WLiC2RxUyQ090uGYpjZVxwRpJFighyZ9cy7ZGTRge3xWUp9BecKbZdM03RRUVsxrtX3UeDyeHbwAs2/CWY5IAmbCtjAOCDQHAKUHDRgk2w22sy+kVYbVqe+75a/0PNp66I=
+
 notifications:
   irc:
     channels:
-      - "chat.freenode.net#slic3r"
+    - chat.freenode.net#slic3r
     on_success: change
     on_failure: always
     use_notice: true

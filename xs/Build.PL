@@ -67,6 +67,7 @@ my @boost_include = ();
 if (defined $ENV{BOOST_INCLUDEDIR}) {
     push @boost_include, $ENV{BOOST_INCLUDEDIR}
 } elsif (defined $ENV{BOOST_DIR}) {
+    print "Using boost dir at $ENV{BOOST_DIR}\n";
     my $subdir = $ENV{BOOST_DIR} . (($mswin == 1) ? '\include' : '/include');
     if (-d $subdir) {
         push @boost_include, $subdir;
