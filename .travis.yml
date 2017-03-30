@@ -1,8 +1,8 @@
 language: perl
 install: export LDLOADLIBS=-lstdc++
 script: 
-    - curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0-x64-gcc-4.9.2-linux-x64.tar.bz2" -o ../boost.tar.bz2 
-    - tar -C../ -xjf ../boost.tar.bz2
+    - curl -L "http://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0-gcc-4.9.2-linux-x64.tar.bz2" -o ../boost.tar.bz2 
+    - tar -C../ -xvjf ../boost.tar.bz2
     - curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=slic3r-perl-dependencies-5.24.0-debian.tar.bz2" -o ../slic3r-deps.tar.bz2 
     - tar -xjf ../slic3r-deps.tar.bz2 
     - BOOST_DIR=`pwd`/../boost_1_63_0 perl ./Build.PL 
