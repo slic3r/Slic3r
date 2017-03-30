@@ -24,6 +24,15 @@ addons:
     - libboost-filesystem1.55-dev
     - liblocal-lib-perl
     - g++-4.9
+    - freeglut3-dev
+    - libglapi-mesa
+    - libgl1-mesa-dev
+    - libgl1-mesa-glx
+    - libgl1-mesa-swx11-dev
+    - libglu1-mesa-dev
+    - libglw1-mesa
+    - libglw1-mesa-dev
+    - libglw1-mesa
 env: CC=g++-4.9
 notifications:
   irc:
