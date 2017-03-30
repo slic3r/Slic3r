@@ -228,7 +228,7 @@ MultiPoint::_douglas_peucker(const Points &points, const double tolerance)
 */
 
 struct vis_node{
-    vis_node(const size_t& idx, const size_t& prev_idx, const size_t& next_idx, const double& _area)
+    vis_node(const size_t& idx, const size_t& _prev_idx, const size_t& _next_idx, const double& _area) : pt_idx(idx), prev_idx(_prev_idx), next_idx(_next_idx), area(_area) {}
     // Indices into a Points container, from which this object was constructed
     size_t pt_idx, prev_idx, next_idx;
     // Effective area of this "node"
@@ -237,9 +237,9 @@ struct vis_node{
     // Greater area = "more important" node. So, this node is less than the 
     // other node if it's area is less than the other node's area
     bool operator<(const vis_node& other){
-        return this->area < other.area);
+        return (this->area < other.area);
     }
-}
+};
 
 Points
 MultiPoint::visivalingam(const Points& pts, const double& tolerance)
@@ -262,7 +262,7 @@ MultiPoint::visivalingam(const Points& pts, const double& tolerance)
         // Take cross product of these two vector distances
         const coordf_t cross_product = static_cast<coordf_t>(curr_to_next.x * prev_to_next.y) - static_cast<coordf_t>(curr_to_next.y * prev_to_next.x);
         return 0.50 * abs(cross_product);
-    }
+    };
 
     // We store the effective areas for each node
     std::vector<coordf_t> areas;
