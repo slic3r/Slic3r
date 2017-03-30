@@ -4,7 +4,7 @@ script:
     - curl -L "http://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0-gcc-4.9.2-linux-x64.tar.bz2" -o ../boost.tar.bz2 
     - tar -C../ -xjf ../boost.tar.bz2
     - cd ../boost_1_63_0
-    - ./bootstrap gcc
+    - ./bootstrap.sh gcc
     - ./b2 toolset=gcc link=static variant=release warnings=off clean
     - ./b2 toolset=gcc link=static variant=release warnings=off
     - cd $TRAVIS_BUILD_DIR
