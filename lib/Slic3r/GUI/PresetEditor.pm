@@ -1370,7 +1370,7 @@ sub build {
     
     $self->{extruder_pages} = [];
     $self->_build_extruder_pages;
-    $self->_update_serial_ports if (!$params{no_controller});
+    $self->_update_serial_ports unless $Slic3r::GUI::Settings->{_}{no_controller};
 }
 
 sub _update_serial_ports {
