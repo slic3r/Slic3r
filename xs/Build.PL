@@ -8,9 +8,6 @@ use Devel::CheckLib;
 use ExtUtils::CppGuess;
 use Module::Build::WithXSpp;
 
-if (defined($ENV{CC})) {
-    $Config{cc} = $ENV{CC};
-}
 my $cpp_guess = ExtUtils::CppGuess->new;
 my $mswin = $^O eq 'MSWin32';
 
