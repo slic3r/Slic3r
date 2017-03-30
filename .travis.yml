@@ -25,6 +25,7 @@ addons:
     packages:
     - liblocal-lib-perl
     - g++-4.9
+    - wget
 env:
   matrix:
   - CC=g++-4.9
