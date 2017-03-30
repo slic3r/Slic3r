@@ -48,6 +48,8 @@ class MultiPoint
     std::string dump_perl() const;
     
     static Points _douglas_peucker(const Points &points, const double tolerance);
+
+    static Points visivalingam(const Points &points, const double& tolerance);
 };
 
 } // namespace Slic3r
