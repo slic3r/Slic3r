@@ -99,7 +99,8 @@ sub _init_tabpanel {
     });
     
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
-    $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller") unless ($Slic3r::GUI::Settings->{_}{no_controller});
+    $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller")
+        unless ($Slic3r::GUI::Settings->{_}{no_controller});
 }
 
 sub _init_menubar {
