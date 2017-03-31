@@ -44,7 +44,8 @@ cpanm "PAR::Packer"
 
 pp `
 -a "slic3r.exe;slic3r.exe"  `
--a "slic3r.exe;slic3r-console.exe"  `
+-a "slic3r-console.exe;slic3r-console.exe"  `
+-a "slic3r-debug-console.exe;slic3r-debug-console.exe"  `
 -a "../../lib;lib" `
 -a "../../local-lib;local-lib" `
 -a "../../slic3r.pl;slic3r.pl" `
