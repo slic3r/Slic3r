@@ -329,8 +329,9 @@ MultiPoint::visivalingam(const Points& pts, const double& tolerance)
 
     }
 
-    // Clear node list, we're done with it
+    // Clear node list and shrink_to_fit() (to free actual memory). Not necessary. Could be removed.
     node_list.clear();
+    node_list.shrink_to_fit();
 
     // This lambda is how we test whether or not to keep a point.
     auto use_point = [areas, pt, tolerance](const size_t& idx)->bool{
@@ -339,6 +340,7 @@ MultiPoint::visivalingam(const Points& pts, const double& tolerance)
         if(idx == 0 || idx == areas.size() - 1){
             return true;
         }
+        // Return true if area at idx is greater than minimum area to consider "valid"
         else{
             return areas[idx] > tolerance;
         }

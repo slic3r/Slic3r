@@ -433,6 +433,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
     ConfigOptionFloat               z_steps_per_mm;
+    ConfigOptionBool                use_visivalingam;
     
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
@@ -495,6 +496,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(wipe);
         OPT_PTR(z_offset);
         OPT_PTR(z_steps_per_mm);
+        OPT_PTR(use_visivalingam);
         
         // look in parent class
         ConfigOption* opt;
