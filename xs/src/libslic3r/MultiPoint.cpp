@@ -334,7 +334,7 @@ MultiPoint::visivalingam(const Points& pts, const double& tolerance)
     node_list.shrink_to_fit();
 
     // This lambda is how we test whether or not to keep a point.
-    auto use_point = [areas, pt, tolerance](const size_t& idx)->bool{
+    auto use_point = [areas, tolerance](const size_t& idx)->bool{
         assert(idx < areas.size());
         // Return true at front/back of path/areas
         if(idx == 0 || idx == areas.size() - 1){
