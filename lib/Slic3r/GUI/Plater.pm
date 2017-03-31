@@ -1073,6 +1073,23 @@ sub set_number_of_copies {
     }
 }
 
+sub center_selected_object_on_bed {
+    my ($self) = @_;
+    
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    my $bb = $model_object->bounding_box;
+    my $size = $bb->size;
+    my $vector = Slic3r::Pointf->new(
+        -$bb->x_min - $size->x/2,
+        -$bb->y_min - $size->y/2,    #//
+    );
+    $_->offset->translate(@$vector) for @{$model_object->instances};
+    $self->refresh_canvases;
+}
+
 sub rotate {
     my $self = shift;
     my ($angle, $axis) = @_;
@@ -2309,6 +2326,9 @@ sub object_menu {
         $self->set_number_of_copies;
     }, undef, 'textfield.png');
     $menu->AppendSeparator();
+    $frame->_append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
+        $self->center_selected_object_on_bed;
+    }, undef, 'arrow_in.png');
     $frame->_append_menu_item($menu, "Rotate 45° clockwise", 'Rotate the selected object by 45° clockwise', sub {
         $self->rotate(-45);
     }, undef, 'arrow_rotate_clockwise.png');
