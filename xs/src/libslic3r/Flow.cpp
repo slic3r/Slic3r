@@ -50,6 +50,11 @@ Flow::spacing() const {
     return this->width - OVERLAP_FACTOR * (this->width - min_flow_spacing);
 }
 
+void
+Flow::set_spacing(float spacing) {
+    this->width = Flow::_width_from_spacing(spacing, this->nozzle_diameter, this->height, this->bridge);
+}
+
 /* This method returns the centerline spacing between an extrusion using this
    flow and another one using another flow.
    this->spacing(other) shall return the same value as other.spacing(*this) */

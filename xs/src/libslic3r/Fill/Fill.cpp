@@ -1,3 +1,6 @@
+#define DEBUG
+#undef NDEBUG
+#include <cassert>
 #include <math.h>
 #include <stdio.h>
 

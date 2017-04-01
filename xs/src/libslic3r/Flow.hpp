@@ -30,6 +30,7 @@ class Flow
         : width(_w), height(_h), nozzle_diameter(_nd), bridge(_bridge) {};
     float spacing() const;
     float spacing(const Flow &other) const;
+    void set_spacing(float spacing);
     double mm3_per_mm() const;
     coord_t scaled_width() const {
         return scale_(this->width);
@@ -48,7 +49,6 @@ class Flow
     static float _bridge_width(float nozzle_diameter, float bridge_flow_ratio);
     static float _auto_width(FlowRole role, float nozzle_diameter, float height);
     static float _width_from_spacing(float spacing, float nozzle_diameter, float height, bool bridge);
-    static float _spacing(float width, float nozzle_diameter, float height, float bridge_flow_ratio);
 };
 
 }

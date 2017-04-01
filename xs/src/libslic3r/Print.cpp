@@ -163,6 +163,10 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
             || opt_key == "min_skirt_length"
             || opt_key == "ooze_prevention") {
             steps.insert(psSkirt);
+        } else if (opt_key == "brim_width") {
+            steps.insert(psBrim);
+            steps.insert(psSkirt);
+            osteps.insert(posSupportMaterial);
         } else if (opt_key == "brim_width"
             || opt_key == "interior_brim_width"
             || opt_key == "brim_connections_width") {
@@ -759,13 +763,17 @@ Print::brim_flow() const
        extruders and take the one with, say, the smallest index.
        The same logic should be applied to the code that selects the extruder during G-code
        generation as well. */
-    return Flow::new_from_config_width(
+    Flow flow = Flow::new_from_config_width(
         frPerimeter,
         width, 
         this->config.nozzle_diameter.get_at(this->regions.front()->config.perimeter_extruder-1),
         this->skirt_first_layer_height(),
         0
     );
+    
+    flow.set_spacing(unscale(Fill::adjust_solid_spacing(scale_(this->config.brim_width.value), scale_(flow.spacing()))));
+    
+    return flow;
 }
 
 Flow
@@ -844,8 +852,8 @@ Print::_make_brim()
         // perimeters because here we're offsetting outwards)
         append_to(loops, offset2(
             islands,
-            flow.scaled_width() + flow.scaled_spacing() * (i - 1.0 + 0.5),
-            flow.scaled_spacing() * -1.0,
+            flow.scaled_width() + flow.scaled_spacing() * (i - 1.5 + 0.5),
+            flow.scaled_spacing() * -0.5,
             100000,
             ClipperLib::jtSquare
         ));
