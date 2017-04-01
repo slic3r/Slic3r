@@ -821,13 +821,13 @@ Print::_make_brim()
         if (!object->support_layers.empty()) {
             const SupportLayer* support_layer0 = object->get_support_layer(0);
             
-            for (const ExtrusionEntity* e : support_layer0.support_fills.entities)
+            for (const ExtrusionEntity* e : support_layer0->support_fills.entities)
                 append_to(object_islands, offset(e->as_polyline(), grow_distance));
             
-            for (const ExtrusionEntity* e : support_layer0.support_interface_fills.entities)
+            for (const ExtrusionEntity* e : support_layer0->support_interface_fills.entities)
                 append_to(object_islands, offset(e->as_polyline(), grow_distance));
         }
-        for (const Point &copy : (*object)->_shifted_copies) {
+        for (const Point &copy : object->_shifted_copies) {
             for (Polygon p : object_islands) {
                 p.translate(copy);
                 islands.push_back(p);
