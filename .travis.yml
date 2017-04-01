@@ -1,31 +1,41 @@
 language: perl
-install: export LDLOADLIBS=-lstdc++
+before_install:
+    - if [ -f $HOME/slic3r-perlbrew-5.24.tar.bz2 ]; then; else curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=slic3r-perl.524.travis.tar.bz2" -o $HOME/slic3r-perlbrew-5.24.tar.bz2; fi
+    - tar -C$HOME/perl5/perls -xjf $HOME/slic3r-perlbrew-5.24.tar.bz2
+    - if [ -f $HOME/boost-compiled.tar.bz2 ]; then; else curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0.built.gcc-4.9.4-buildserver.tar.bz2" -o $HOME/boost-compiled.tar.bz2; fi
+    - tar -C$HOME -xjf $HOME/boost-compiled.tar.bz2
+before_script: 
+    - if [ -f $HOME/local-lib.tar.bz2 ]; then; else curl -L "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=slic3r-dependencies.travis.tar.bz2" -o $HOME/local-lib.tar.bz2; fi
+    - tar -C$TRAVIS_BUILD_DIR -xjf $HOME/local-lib.tar.bz2
+    - perlbrew switch slic3r-perl
+install:
+    - export LDLOADLIBS=-lstdc++
+    - export BOOST_DIR=$HOME/boost_1_63_0
+    - export SLIC3R_STATIC=1
+    - export CXX=g++-4.9
+    - export CC=g++-4.9
 script: perl ./Build.PL
-perl:
-  - "5.14"
-  - "5.18"
-  - "5.20"
+after_success:
+    - deploy
 branches:
   only:
     - master
     - xsgui
-sudo: false
 cache:
   apt: true
   directories:
     - local-lib
+    - $HOME/local-lib.tar.bz2
+    - $HOME/boost-compiled.tar.bz2
+    - $HOME/slic3r-perlbrew-5.24.tar.bz2
 addons:
   apt:
     sources:
-    - boost-latest
     - ubuntu-toolchain-r-test
     packages:
-    - libboost-thread1.55-dev
-    - libboost-system1.55-dev
-    - libboost-filesystem1.55-dev
-    - liblocal-lib-perl
     - g++-4.9
-env: CC=g++-4.9
+    - gcc-4.9
+
 notifications:
   irc:
     channels:
@@ -33,3 +43,6 @@ notifications:
     on_success: change
     on_failure: always
     use_notice: true
+
+sudo: true
+dist: trusty
