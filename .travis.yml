@@ -13,7 +13,7 @@ script:
 - perl ./Build.PL
 after_success:
 - package/linux/make_par.sh $(git rev-parse HEAD --short)
-- package/deploy-bintray *-$(git rev-parse HEAD --short)*
+- package/deploy-bintray.sh *-$(git rev-parse HEAD --short)*
 branches:
   only:
   - master
