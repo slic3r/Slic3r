@@ -11,7 +11,7 @@ script:
 - perlbrew switch slic3r-perl
 - perl ./Build.PL
 after_success:
-- package/linux/make_par.sh $(git rev-parse --short HEAD)
+- package/linux/make_par.sh $(git rev-parse --short $TRAVIS_COMMIT)
 - package/deploy-bintray.sh *.bz2
 branches:
   only:

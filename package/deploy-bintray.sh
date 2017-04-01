@@ -12,7 +12,7 @@ if [ $(git describe &>/dev/null) ]; then
 else
     SLIC3R_BUILD_ID=${SLIC3R_VERSION}-$(git rev-parse --short HEAD)
 fi
-if [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
+if [ -z ${TRAVIS_BRANCH+x} ] && [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
     current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
 else
     current_branch="unknown"
@@ -23,6 +23,10 @@ else
     if [ ! -z ${APPVEYOR_REPO_BRANCH+x} ]; then
         echo "Setting to APPVEYOR_REPO_BRANCH"
         current_branch=$APPVEYOR_REPO_BRANCH
+    fi
+    if [ ! -z ${TRAVIS_BRANCH+x} ]; then
+        echo "Setting to TRAVIS_BRANCH"
+        current_branch=$TRAVIS_BRANCH
     fi
 fi
 
@@ -36,7 +40,9 @@ fi
 if [ ! -z ${APPVEYOR_PULL_REQUEST_NUMBER+x} ]; then
     PR_ID=$APPVEYOR_PULL_REQUEST_NUMBER
 fi
-
+if [ ! -z ${TRAVIS_PULL_REQUEST_BRANCH+x} ]; then
+    PR_ID=$TRAVIS_PULL_REQUEST
+fi
 
 if [ "$current_branch" == "master" ] && [ -z ${PR_ID} ]; then
     # If building master, goes in slic3r_dev or slic3r, depending on whether or not this is a tagged build
