@@ -62,3 +62,8 @@ function set_pr_id ()
         PR_ID=$TRAVIS_PULL_REQUEST
     fi
 }
+
+function install_par ()
+{
+    cpanm PAR::Packer
+}

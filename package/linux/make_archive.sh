@@ -21,6 +21,7 @@ get_commit
 set_build_id
 set_branch
 set_pr_id
+install_par
 
 # If we're on a branch, add the branch name to the app name.
 if [ "$current_branch" == "master" ]; then
