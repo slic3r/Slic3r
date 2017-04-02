@@ -10,7 +10,7 @@ if [ "$#" -ne 1 ]; then
     echo "Usage: $(basename $0) arch_name"
     exit 1;
 fi
-
+libdirs=$(find ./local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
 WD=./$(dirname $0)
 source $(dirname $0)/../common/util.sh
 # Determine if this is a tagged (release) commit.
@@ -71,10 +71,8 @@ cp -fRP $SLIC3R_DIR/lib/* $archivefolder/local-lib/lib/perl5/
 mkdir $archivefolder/bin
 echo "Symlinking libraries to $archivefolder/bin ..."
 for bundle in $(find $archivefolder/local-lib/lib/perl5 -name '*.so' | grep "Wx") $(find $archivefolder/local-lib/lib/perl5 -name '*.so' -type f | grep "wxWidgets"); do
-    echo "Parent $bundle"
-    ldd $bundle
-    echo "$(ldd $bundle | grep .so | grep local-lib | awk '{print $3}')"
-    for dylib in $(ldd $bundle | grep .so | grep local-lib | awk '{print $3}'); do
+    echo "$(LD_LIBRARY_PATH=$libdirs ldd $bundle | grep .so | grep local-lib | awk '{print $3}')"
+    for dylib in $(LD_LIBRARY_PATH=$libdirs ldd $bundle | grep .so | grep local-lib | awk '{print $3}'); do
         install -v $dylib $archivefolder/bin
     done
 done
@@ -115,4 +113,4 @@ find $(pwd)/$archivefolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
 rm -rf $archivefolder/local-lib/lib/perl5/*/Alien/wxWidgets/*/include
 find $archivefolder/local-lib -depth -type d -empty -exec rmdir "{}" \;
 
-tar -C$(pwd)/$(dirname $appfolder) -cvjf $(pwd)/$dmgfile "$appname"
+tar -C$(pwd)/$(dirname $appfolder) -cjf $(pwd)/$dmgfile "$appname"
