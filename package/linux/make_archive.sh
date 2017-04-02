@@ -10,7 +10,11 @@ if [ "$#" -ne 1 ]; then
     echo "Usage: $(basename $0) arch_name"
     exit 1;
 fi
-libdirs=$(find ./local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
+if [ -z ${WXDIR+x} ]; then
+    libdirs=$(find ./local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
+else
+    libdirs=$(find {$WXDIR,./local-lib} -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
+fi
 WD=./$(dirname $0)
 source $(dirname $0)/../common/util.sh
 # Determine if this is a tagged (release) commit.
