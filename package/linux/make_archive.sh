@@ -72,6 +72,7 @@ mkdir $archivefolder/bin
 echo "Symlinking libraries to $archivefolder/bin ..."
 for bundle in $(find $archivefolder/local-lib/lib/perl5 -name '*.so' | grep "Wx") $(find $archivefolder/local-lib/lib/perl5 -name '*.so' -type f | grep "wxWidgets"); do
     echo "Parent $bundle"
+    ldd $bundle
     echo "$(ldd $bundle | grep .so | grep local-lib | awk '{print $3}')"
     for dylib in $(ldd $bundle | grep .so | grep local-lib | awk '{print $3}'); do
         install -v $dylib $archivefolder/bin
