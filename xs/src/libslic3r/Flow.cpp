@@ -120,4 +120,37 @@ Flow::_width_from_spacing(float spacing, float nozzle_diameter, float height, bo
     return spacing + OVERLAP_FACTOR * height * (1 - PI/4.0);
 }
 
+// Calculate a new spacing to fill width with possibly integer number of lines,
+// the first and last line being centered at the interval ends.
+// This function possibly increases the spacing, never decreases, 
+// and for a narrow width the increase in spacing may become severe,
+// therefore the adjustment is limited to 20% increase.
+template <class T>
+T
+Flow::solid_spacing(const T total_width, const T spacing)
+{
+    assert(total_width >= 0);
+    assert(spacing > 0);
+    const int number_of_intervals = floor(total_width / spacing);
+    if (number_of_intervals == 0) return spacing;
+    
+    T spacing_new = (total_width / number_of_intervals);
+    
+    const double factor = (double)spacing_new / (double)spacing;
+    assert(factor > 1. - 1e-5);
+    
+    // How much could the extrusion width be increased? By 20%.
+    // Because of this limit, this method is not idempotent: each run
+    // will increment spacing by 20%.
+    const double factor_max = 1.2;
+    if (factor > factor_max)
+        spacing_new = floor((double)spacing * factor_max + 0.5);
+    
+    assert((spacing_new * number_of_intervals) <= total_width);
+    
+    return spacing_new;
+}
+template coord_t Flow::solid_spacing<coord_t>(const coord_t total_width, const coord_t spacing);
+template coordf_t Flow::solid_spacing<coordf_t>(const coordf_t total_width, const coordf_t spacing);
+
 }

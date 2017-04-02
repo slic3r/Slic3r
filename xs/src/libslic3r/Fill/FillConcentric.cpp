@@ -1,5 +1,6 @@
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
+#include "../Flow.hpp"
 #include "../Surface.hpp"
 
 #include "FillConcentric.hpp"
@@ -20,7 +21,7 @@ FillConcentric::_fill_surface_single(
     
     if (this->density > 0.9999f && !this->dont_adjust) {
         BoundingBox bounding_box = expolygon.contour.bounding_box();
-        distance = this->adjust_solid_spacing(bounding_box.size().x, distance);
+        distance = Flow::solid_spacing(bounding_box.size().x, distance);
         this->_spacing = unscale(distance);
     }
 

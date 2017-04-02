@@ -31,6 +31,12 @@ class Flow
     float spacing() const;
     float spacing(const Flow &other) const;
     void set_spacing(float spacing);
+    void set_solid_spacing(const coord_t total_width) {
+        this->set_spacing(Flow::solid_spacing(total_width, this->scaled_spacing()));
+    };
+    void set_solid_spacing(const coordf_t total_width) {
+        this->set_spacing(Flow::solid_spacing(total_width, (coordf_t)this->spacing()));
+    };
     double mm3_per_mm() const;
     coord_t scaled_width() const {
         return scale_(this->width);
@@ -44,6 +50,7 @@ class Flow
     
     static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &width, float nozzle_diameter, float height, float bridge_flow_ratio);
     static Flow new_from_spacing(float spacing, float nozzle_diameter, float height, bool bridge);
+    template <class T> static T solid_spacing(const T total_width, const T spacing);
     
     private:
     static float _bridge_width(float nozzle_diameter, float bridge_flow_ratio);

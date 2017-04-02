@@ -771,7 +771,8 @@ Print::brim_flow() const
         0
     );
     
-    flow.set_spacing(unscale(Fill::adjust_solid_spacing(scale_(this->config.brim_width.value), scale_(flow.spacing()))));
+    // Adjust extrusion width in order to fill the total brim width with an integer number of lines.
+    flow.set_solid_spacing(this->config.brim_width.value);
     
     return flow;
 }

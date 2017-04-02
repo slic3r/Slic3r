@@ -804,6 +804,8 @@ sub generate_toolpaths {
                         $to_infill,
                         offset($object->get_layer(0)->slices->polygons, $d),
                     );
+                } else {
+                    $to_infill = union_ex($to_infill);
                 }
             } else {
                 # draw a perimeter all around support infill
