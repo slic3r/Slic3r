@@ -10,11 +10,7 @@ if [ "$#" -ne 1 ]; then
     echo "Usage: $(basename $0) arch_name"
     exit 1;
 fi
-if [ -z ${WXDIR+x} ]; then
-    libdirs=$(find ./local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
-else
-    libdirs=$(find {$WXDIR,./local-lib} -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
-fi
+libdirs=$(find ./local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
 WD=./$(dirname $0)
 source $(dirname $0)/../common/util.sh
 # Determine if this is a tagged (release) commit.
@@ -73,13 +69,20 @@ cp -fRP $SLIC3R_DIR/local-lib $archivefolder/local-lib
 cp -fRP $SLIC3R_DIR/lib/* $archivefolder/local-lib/lib/perl5/
 
 mkdir $archivefolder/bin
-echo "Symlinking libraries to $archivefolder/bin ..."
-for bundle in $(find $archivefolder/local-lib/lib/perl5 -name '*.so' | grep "Wx") $(find $archivefolder/local-lib/lib/perl5 -name '*.so' -type f | grep "wxWidgets"); do
-    echo "$(LD_LIBRARY_PATH=$libdirs ldd $bundle | grep .so | grep local-lib | awk '{print $3}')"
-    for dylib in $(LD_LIBRARY_PATH=$libdirs ldd $bundle | grep .so | grep local-lib | awk '{print $3}'); do
+echo "Installing libraries to $archivefolder/bin ..."
+if [ -z ${WXDIR+x} ]; then
+    for bundle in $(find $archivefolder/local-lib/lib/perl5 -name '*.so' | grep "Wx") $(find $archivefolder/local-lib/lib/perl5 -name '*.so' -type f | grep "wxWidgets"); do
+        echo "$(LD_LIBRARY_PATH=$libdirs ldd $bundle | grep .so | grep local-lib | awk '{print $3}')"
+        for dylib in $(LD_LIBRARY_PATH=$libdirs ldd $bundle | grep .so | grep local-lib | awk '{print $3}'); do
+            install -v $dylib $archivefolder/bin
+        done
+    done
+else
+    echo "Copying libraries from $WXDIR/lib to $archivefolder/bin"
+    for dylib in $(find $WXDIR/lib -type f | grep "so"); do
         install -v $dylib $archivefolder/bin
     done
-done
+fi
 
 echo "Copying startup script..."
 cp -f $WD/startup_script.sh $archivefolder/$appname
