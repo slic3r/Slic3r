@@ -1,16 +1,19 @@
 #include <EXTERN.h> // from the Perl distribution
 #include <perl.h> // from the Perl distribution
 
+
+#ifdef WIN32
 // Perl win32 specific includes, found in perl\\lib\\CORE\\win32.h
 // Defines the windows specific convenience RunPerl() function,
 // which is not available on other operating systems.
 #include <win32.h>
-// the standard Windows. include
-//#include <Windows.h>
+#include <wchar.h>
+#endif
+
 #include <cstdio>
 #include <cstdlib>
-#include <wchar.h>
 
+#ifdef WIN32
 int main(int argc, char **argv, char **env)
 {
 	
@@ -95,4 +98,25 @@ int main(int argc, char **argv, char **env)
 #endif
 	free(command_line);
 }
+#else
 
+int main(int argc, char **argv, char **env)
+{
+    PerlInterpreter *my_perl = perl_alloc();
+    if (my_perl == NULL) {
+        fprintf(stderr, "Cannot start perl interpreter. Exiting.\n");
+        return -1;
+    }
+    perl_construct(my_perl);
+
+#ifdef FORCE_GUI
+    char* command_line[] = { "slic3r", "slic3r.pl", "--gui" };
+#else
+    char* command_line[] = { "slic3r", "slic3r.pl" };
+#endif
+    perl_parse(my_perl, NULL, 3, command_line, (char **)NULL);
+    perl_run(my_perl);
+    perl_destruct(my_perl);
+    perl_free(my_perl);
+}
+#endif

@@ -22,7 +22,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
 {
     my $print = Slic3r::Print->new;
     my $surface_width = 250;
-    my $distance = Slic3r::Filler::adjust_solid_spacing($surface_width, 47);
+    my $distance = Slic3r::Flow::solid_spacing($surface_width, 47);
     is $distance, 50, 'adjusted solid distance';
     is $surface_width % $distance, 0, 'adjusted solid distance';
 }

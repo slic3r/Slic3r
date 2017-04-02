@@ -75,12 +75,17 @@ function set_pr_id ()
     if [ ! -z ${APPVEYOR_PULL_REQUEST_NUMBER+x} ]; then
         PR_ID=$APPVEYOR_PULL_REQUEST_NUMBER
     fi
-    if [ ! -z ${TRAVIS_PULL_REQUEST_BRANCH+x} ] && [ "${TRAVIS_PULL_REQUEST_BRANCH}" != "false" ] ; then
+    if [ ! -z ${TRAVIS_PULL_REQUEST_BRANCH+x} ] && [ "${TRAVIS_PULL_REQUEST}" != "false" ] ; then
         PR_ID=$TRAVIS_PULL_REQUEST
+    fi
+    if [ ! -z ${PR_ID+x} ]; then
+        echo "Setting PR_ID to $PR_ID."
+    else 
+        echo "PR_ID remains unset."
     fi
 }
 
 function install_par ()
 {
-    cpanm PAR::Packer
+    cpanm -q PAR::Packer
 }
