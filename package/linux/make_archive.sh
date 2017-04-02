@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Assembles an installation bundle from a built copy of Slic3r.
+# Assembles an installation archive from a built copy of Slic3r.
 # Requires PAR::Packer to be installed for the version of
 # perl copied.
 # Adapted from script written by bubnikv for Prusa3D.
@@ -13,37 +13,24 @@ if [ "$#" -ne 1 ]; then
 fi
 
 WD=$(dirname $0)
+source $(dirname $0)/../common/util.sh
 # Determine if this is a tagged (release) commit.
 # Change the build id accordingly.
-if [ $(git describe &>/dev/null) ]; then
-    TAGGED=true
-    SLIC3R_BUILD_ID=$(git describe)
-else
-    TAGGED=false
-    SLIC3R_BUILD_ID=${SLIC3R_VERSION}
-fi
-if [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
-    current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
-else
-    current_branch="unknown"
-    if [ ! -z ${GIT_BRANCH+x} ]; then
-        echo "Setting to GIT_BRANCH"
-        current_branch=$(echo $GIT_BRANCH | cut -d / -f 2)
-    fi
-    if [ ! -z ${APPVEYOR_REPO_BRANCH+x} ]; then
-        echo "Setting to APPVEYOR_REPO_BRANCH"
-        current_branch=$APPVEYOR_REPO_BRANCH
-    fi
-fi
+
+get_commit
+set_build_id
+set_branch
+set_pr_id
 
 # If we're on a branch, add the branch name to the app name.
 if [ "$current_branch" == "master" ]; then
     appname=Slic3r
     dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}.tar.bz2
 else
-    appname=Slic3r-$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
-    dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}-$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!').tar.bz2
+    appname=Slic3r-${current_branch}
+    dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}-${current_branch}.tar.bz2
 fi
+
 rm -rf $WD/_tmp
 mkdir -p $WD/_tmp
 
@@ -51,7 +38,6 @@ mkdir -p $WD/_tmp
 appfolder="$WD/${appname}"
 archivefolder=$appfolder
 resourcefolder=$appfolder
-
 
 # Our slic3r dir and location of perl
 PERL_BIN=$(which perl)
