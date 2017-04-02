@@ -13,6 +13,7 @@ fi
 if [ -z ${WXDIR+x} ]; then
     libdirs=$(find ./local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
 else
+    echo "WXDIR => $WXDIR"
     libdirs=$(find {$WXDIR,./local-lib} -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
 fi
 WD=./$(dirname $0)
