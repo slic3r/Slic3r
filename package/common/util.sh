@@ -43,8 +43,10 @@ function set_branch ()
             current_branch=$APPVEYOR_REPO_BRANCH
         fi
         if [ ! -z ${TRAVIS_BRANCH} ]; then
-            echo "Setting to TRAVIS_BRANCH"
-            current_branch=$TRAVIS_BRANCH
+            if [ "${TRAVIS_BRANCH}" != "false" ]; then
+                echo "Setting to TRAVIS_BRANCH"
+                current_branch=$TRAVIS_BRANCH
+            fi
         fi
     fi
 
