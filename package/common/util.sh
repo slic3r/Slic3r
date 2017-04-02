@@ -48,6 +48,16 @@ function set_branch ()
     fi
 }
 
+function set_app_name ()
+{
+    set_branch 
+    if [ "$current_branch" == "master" ]; then
+        appname=Slic3r
+    else
+        appname=Slic3r-${current_branch}
+    fi
+}
+
 
 function set_pr_id ()
 {

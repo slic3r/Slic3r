@@ -20,22 +20,21 @@ source $(dirname $0)/../common/util.sh
 get_commit
 set_build_id
 set_branch
+set_app_name
 set_pr_id
 install_par
 
 # If we're on a branch, add the branch name to the app name.
 if [ "$current_branch" == "master" ]; then
-    appname=Slic3r
     dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}.tar.bz2
 else
-    appname=Slic3r-${current_branch}
     dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}-${current_branch}.tar.bz2
 fi
 
 rm -rf $WD/_tmp
 mkdir -p $WD/_tmp
 
-# OSX Application folder shenanigans.
+# Set  the application folder infomation.
 appfolder="$WD/${appname}"
 archivefolder=$appfolder
 resourcefolder=$appfolder
