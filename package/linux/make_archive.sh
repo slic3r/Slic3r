@@ -79,8 +79,8 @@ if [ -z ${WXDIR+x} ]; then
     done
 else
     echo "Copying libraries from $WXDIR/lib to $archivefolder/bin"
-    for dylib in $(find $WXDIR/lib -type f | grep "so"); do
-        install -v $dylib $archivefolder/bin
+    for dylib in $(find $WXDIR/lib | grep "so"); do
+        cp -P -v $dylib $archivefolder/bin
     done
 fi
 
