@@ -5,7 +5,6 @@
 # perl copied.
 # Adapted from script written by bubnikv for Prusa3D.
 # Run from slic3r repo root directory.
-SLIC3R_VERSION=$(grep "VERSION" xs/src/libslic3r/libslic3r.h | awk -F\" '{print $2}')
 
 if [ "$#" -ne 1 ]; then
     echo "Usage: $(basename $0) arch_name"
@@ -17,6 +16,7 @@ source $(dirname $0)/../common/util.sh
 # Determine if this is a tagged (release) commit.
 # Change the build id accordingly.
 
+set_version
 get_commit
 set_build_id
 set_branch
