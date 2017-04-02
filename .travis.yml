@@ -21,6 +21,7 @@ cache:
   apt: true
   directories:
   - "$HOME/cache"
+  - "$HOME/perl5/perlbrew"
 addons:
   apt:
     sources:

@@ -11,7 +11,7 @@ if [ "$#" -ne 1 ]; then
     exit 1;
 fi
 
-WD=$(dirname $0)
+WD=./$(dirname $0)
 source $(dirname $0)/../common/util.sh
 # Determine if this is a tagged (release) commit.
 # Change the build id accordingly.
