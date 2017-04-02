@@ -25,7 +25,7 @@ fi
 function set_branch () 
 {
     echo "Setting current_branch"
-    if [ -z ${TRAVIS_BRANCH+x} ] && [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
+    if [ -z ${TRAVIS_BRANCH} ] && [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
     current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
     else
         current_branch="unknown"
@@ -37,7 +37,7 @@ function set_branch ()
             echo "Setting to APPVEYOR_REPO_BRANCH"
             current_branch=$APPVEYOR_REPO_BRANCH
         fi
-        if [ ! -z ${TRAVIS_BRANCH+x} ]; then
+        if [ ! -z ${TRAVIS_BRANCH} ]; then
             echo "Setting to TRAVIS_BRANCH"
             current_branch=$TRAVIS_BRANCH
         fi

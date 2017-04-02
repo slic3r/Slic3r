@@ -35,7 +35,7 @@ notifications:
     on_success: change
     on_failure: always
     use_notice: true
-sudo: true
+sudo: false
 dist: trusty
 env:
   matrix:

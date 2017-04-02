@@ -40,6 +40,8 @@ appfolder="$WD/${appname}"
 archivefolder=$appfolder
 resourcefolder=$appfolder
 
+echo "Appfolder: $appfolder, archivefolder: $archivefolder"
+
 # Our slic3r dir and location of perl
 PERL_BIN=$(which perl)
 PP_BIN=$(which pp)
