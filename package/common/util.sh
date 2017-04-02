@@ -75,7 +75,7 @@ function set_pr_id ()
     if [ ! -z ${APPVEYOR_PULL_REQUEST_NUMBER+x} ]; then
         PR_ID=$APPVEYOR_PULL_REQUEST_NUMBER
     fi
-    if [ ! -z ${TRAVIS_PULL_REQUEST_BRANCH+x} ]; then
+    if [ ! -z ${TRAVIS_PULL_REQUEST_BRANCH+x} ] && [ "${TRAVIS_PULL_REQUEST_BRANCH}" != "false" ] ; then
         PR_ID=$TRAVIS_PULL_REQUEST
     fi
 }
