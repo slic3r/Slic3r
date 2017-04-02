@@ -29,6 +29,8 @@ addons:
     packages:
     - g++-4.9
     - gcc-4.9
+    - libwxgtk3.0-dev
+    - libwxgtk3.0-0
 notifications:
   irc:
     channels:
