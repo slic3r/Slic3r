@@ -87,5 +87,5 @@ function set_pr_id ()
 
 function install_par ()
 {
-    cpanm PAR::Packer
+    cpanm -q PAR::Packer
 }
