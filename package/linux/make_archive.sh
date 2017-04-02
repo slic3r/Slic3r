@@ -91,7 +91,7 @@ ${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
           -M warnings -M local::lib \
           -M strict -M utf8 -M parent \
           -B -p -e "print 123" -o $WD/_tmp/test.par
-unzip -o $WD/_tmp/test.par -d $WD/_tmp/
+unzip -qq -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
 rm -rf $WD/_tmp
 
