@@ -10,7 +10,11 @@ if [ $(git describe &>/dev/null) ]; then
     SLIC3R_BUILD_ID=$(git describe)
     TAGGED=true
 else
-    SLIC3R_BUILD_ID=${SLIC3R_VERSION}-$(git rev-parse --short HEAD)
+    if [ -z ${TRAVIS_COMMIT} ]; then
+        SLIC3R_BUILD_ID=${SLIC3R_VERSION}-${TRAVIS_COMMIT}
+    else 
+        SLIC3R_BUILD_ID=${SLIC3R_VERSION}-$(git rev-parse --short HEAD)
+    fi
 fi
 if [ -z ${TRAVIS_BRANCH+x} ] && [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
     current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
