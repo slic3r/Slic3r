@@ -8,7 +8,7 @@ use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(epsilon scale scaled_epsilon PI rad2deg deg2rad convex_hull);
 use Slic3r::Geometry::Clipper qw(offset diff union union_ex intersection offset_ex offset2
-    intersection_pl offset2_ex diff_pl);
+    intersection_pl offset2_ex diff_pl diff_ex);
 use Slic3r::Surface ':types';
 
 has 'print_config'      => (is => 'rw', required => 1);
@@ -782,7 +782,7 @@ sub generate_toolpaths {
             my $base_flow   = $_flow;
             
             # find centerline of the external loop/extrusions
-            my $to_infill = offset2_ex($base, +scaled_epsilon, -(scaled_epsilon + $_flow->scaled_width/2));
+            my $to_infill = offset2($base, +scaled_epsilon, -(scaled_epsilon + $_flow->scaled_width/2));
             
             my @paths = ();
             
@@ -796,6 +796,17 @@ sub generate_toolpaths {
                 # use the proper spacing for first layer as we don't need to align
                 # its pattern to the other layers
                 $filler->set_min_spacing($base_flow->spacing);
+                
+                # subtract brim so that it goes around the object fully (and support gets its own brim)
+                if ($self->print_config->brim_width > 0) {
+                    my $d = +scale $self->print_config->brim_width*2;
+                    $to_infill = diff_ex(
+                        $to_infill,
+                        offset($object->get_layer(0)->slices->polygons, $d),
+                    );
+                } else {
+                    $to_infill = union_ex($to_infill);
+                }
             } else {
                 # draw a perimeter all around support infill
                 # TODO: use brim ordering algorithm
@@ -806,10 +817,10 @@ sub generate_toolpaths {
                     mm3_per_mm  => $mm3_per_mm,
                     width       => $_flow->width,
                     height      => $layer->height,
-                ), map @$_, @$to_infill;
+                ), @$to_infill;
                 
                 # TODO: use offset2_ex()
-                $to_infill = offset_ex([ map @$_, @$to_infill ], -$_flow->scaled_spacing);
+                $to_infill = offset_ex($to_infill, -$_flow->scaled_spacing);
             }
             
             my $mm3_per_mm = $base_flow->mm3_per_mm;

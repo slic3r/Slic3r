@@ -1,3 +1,6 @@
+#define DEBUG
+#undef NDEBUG
+#include <cassert>
 #include <math.h>
 #include <stdio.h>
 
@@ -67,36 +70,6 @@ Fill::fill_surface(const Surface &surface)
             &polylines_out
         );
     return polylines_out;
-}
-
-// Calculate a new spacing to fill width with possibly integer number of lines,
-// the first and last line being centered at the interval ends.
-// This function possibly increases the spacing, never decreases, 
-// and for a narrow width the increase in spacing may become severe,
-// therefore the adjustment is limited to 20% increase.
-coord_t
-Fill::adjust_solid_spacing(const coord_t width, const coord_t distance)
-{
-    assert(width >= 0);
-    assert(distance > 0);
-    const int number_of_intervals = floor(width / distance);
-    if (number_of_intervals == 0) return distance;
-    
-    coord_t distance_new = (width / number_of_intervals);
-    
-    const coordf_t factor = coordf_t(distance_new) / coordf_t(distance);
-    assert(factor > 1. - 1e-5);
-    
-    // How much could the extrusion width be increased? By 20%.
-    // Because of this limit, this method is not idempotent: each run
-    // will increment distance by 20%.
-    const coordf_t factor_max = 1.2;
-    if (factor > factor_max)
-        distance_new = floor((double)distance * factor_max + 0.5);
-    
-    assert((distance_new * number_of_intervals) <= width);
-    
-    return distance_new;
 }
 
 // Returns orientation of the infill and the reference point of the infill pattern.

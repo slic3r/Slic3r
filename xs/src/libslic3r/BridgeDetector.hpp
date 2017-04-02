@@ -31,6 +31,19 @@ private:
     Polylines _edges;
     // Closed polygons representing the supporting areas.
     ExPolygons _anchors;
+    
+    class BridgeDirection {
+        public:
+        BridgeDirection(double a = -1.) : angle(a), coverage(0.), max_length(0.) {}
+        // the best direction is the one causing most lines to be bridged (thus most coverage)
+        bool operator<(const BridgeDirection &other) const {
+            // Initial sort by coverage only - comparator must obey strict weak ordering
+            return this->coverage > other.coverage;
+        };
+        double angle;
+        double coverage;
+        double max_length;
+    };
 };
 
 }

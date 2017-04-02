@@ -6,6 +6,7 @@
 
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
+#include "../Flow.hpp"
 #include "../PolylineCollection.hpp"
 #include "../Surface.hpp"
 #include <algorithm>
@@ -48,7 +49,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     
     // define flow spacing according to requested density
     if (this->density > 0.9999f && !this->dont_adjust) {
-        line_spacing = this->adjust_solid_spacing(bounding_box.size().x, line_spacing);
+        line_spacing = Flow::solid_spacing(bounding_box.size().x, line_spacing);
         this->_spacing = unscale(line_spacing);
     } else {
         // extend bounding box so that our pattern will be aligned with other layers
