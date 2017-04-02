@@ -80,22 +80,56 @@ sub export {
     my $layer_height = $first_object->config->layer_height;
     for my $region_id (0..$#{$self->print->regions}) {
         my $region = $self->print->regions->[$region_id];
-        printf $fh "; external perimeters extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_EXTERNAL_PERIMETER, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; perimeters extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; infill extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_INFILL, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; solid infill extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; top infill extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_TOP_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; support material extrusion width = %.2fmm\n",
-            $self->objects->[0]->support_material_flow->width
-            if $self->print->has_support_material;
-        printf $fh "; first layer extrusion width = %.2fmm\n",
+        
+        {
+            my $flow = $region->flow(FLOW_ROLE_EXTERNAL_PERIMETER, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('external_perimeter_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; external perimeters extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        {
+            my $flow = $region->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('perimeter_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; perimeters extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        {
+            my $flow = $region->flow(FLOW_ROLE_INFILL, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('infill_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; infill extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        {
+            my $flow = $region->flow(FLOW_ROLE_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('solid_infill_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; solid infill extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        {
+            my $flow = $region->flow(FLOW_ROLE_TOP_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('top_solid_infill_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; top infill extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        
+        if ($self->print->has_support_material) {
+            my $object0 = $self->objects->[0];
+            my $flow = $object0->support_material_flow;
+            my $vol_speed = $flow->mm3_per_mm / $object0->config->get_abs_value('support_material_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; support material extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        
+        printf $fh "; first layer extrusion width = %.2fmm (%.2fmm^3/s)\n",
             $region->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 1, -1, $self->objects->[0])->width
             if $region->config->first_layer_extrusion_width;
+        
         print  $fh "\n";
     }
     

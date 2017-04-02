@@ -22,9 +22,7 @@ sub get_value {
 
 sub set_tooltip {
     my ($self, $tooltip) = @_;
-    
-    $self->SetToolTipString($tooltip)
-        if $tooltip && $self->can('SetToolTipString');
+    die "Method not implemented";
 }
 
 sub toggle {
@@ -67,8 +65,14 @@ sub _default_size {
 sub _trigger_wxWindow {
     my ($self) = @_;
     
-    $self->wxWindow->SetToolTipString($self->option->tooltip)
-        if $self->option->tooltip && $self->wxWindow->can('SetToolTipString');
+    $self->set_tooltip($self->option->tooltip);
+}
+
+sub set_tooltip {
+    my ($self, $tooltip) = @_;
+    
+    $self->wxWindow->SetToolTipString($tooltip)
+        if $self->wxWindow->can('SetToolTipString');
 }
 
 sub set_value {

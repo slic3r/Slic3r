@@ -813,23 +813,21 @@ Print::_make_brim()
     const coord_t grow_distance = flow.scaled_width()/2;
     Polygons islands;
     
-    FOREACH_OBJECT(this, object) {
-        const Layer &layer0 = *(*object)->get_layer(0);
+    for (PrintObject* object : this->objects) {
+        const Layer* layer0 = object->get_layer(0);
         
-        Polygons object_islands = layer0.slices.contours();
+        Polygons object_islands = layer0->slices.contours();
         
-        if (!(*object)->support_layers.empty()) {
-            const SupportLayer &support_layer0 = *(*object)->get_support_layer(0);
+        if (!object->support_layers.empty()) {
+            const SupportLayer* support_layer0 = object->get_support_layer(0);
             
-            for (ExtrusionEntitiesPtr::const_iterator it = support_layer0.support_fills.entities.begin();
-                it != support_layer0.support_fills.entities.end(); ++it)
-                append_to(object_islands, offset((*it)->as_polyline(), grow_distance));
+            for (const ExtrusionEntity* e : support_layer0->support_fills.entities)
+                append_to(object_islands, offset(e->as_polyline(), grow_distance));
             
-            for (ExtrusionEntitiesPtr::const_iterator it = support_layer0.support_interface_fills.entities.begin();
-                it != support_layer0.support_interface_fills.entities.end(); ++it)
-                append_to(object_islands, offset((*it)->as_polyline(), grow_distance));
+            for (const ExtrusionEntity* e : support_layer0->support_interface_fills.entities)
+                append_to(object_islands, offset(e->as_polyline(), grow_distance));
         }
-        for (const Point &copy : (*object)->_shifted_copies) {
+        for (const Point &copy : object->_shifted_copies) {
             for (Polygon p : object_islands) {
                 p.translate(copy);
                 islands.push_back(p);

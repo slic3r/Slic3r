@@ -18,7 +18,7 @@ our $qs_last_output_file;
 our $last_config;
 
 sub new {
-    my ($class, %params) = @_;
+    my ($class) = @_;
     
     my $self = $class->SUPER::new(undef, -1, 'Slic3r', wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE);
     if ($^O eq 'MSWin32') {
@@ -27,9 +27,6 @@ sub new {
         $self->SetIcon(Wx::Icon->new($Slic3r::var->("Slic3r_128px.png"), wxBITMAP_TYPE_PNG));        
     }
     
-    # store input params
-    # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
-    $self->{no_controller} = $params{no_controller};
     $self->{loaded} = 0;
     
     # initialize tabpanel and menubar
@@ -102,9 +99,8 @@ sub _init_tabpanel {
     });
     
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
-    if (!$self->{no_controller}) {
-        $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
-    }
+    $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller")
+        unless ($Slic3r::GUI::Settings->{_}{no_controller});
 }
 
 sub _init_menubar {
@@ -262,7 +258,7 @@ sub _init_menubar {
         }, undef, 'application_view_tile.png');
         $self->_append_menu_item($windowMenu, "&Controller\tCtrl+Y", 'Show the printer controller', sub {
             $self->select_tab(1);
-        }, undef, 'printer_empty.png') if !$self->{no_controller};
+        }, undef, 'printer_empty.png') unless ($Slic3r::GUI::Settings->{_}{no_controller});
         $self->_append_menu_item($windowMenu, "DLP Projector…\tCtrl+P", 'Open projector window for DLP printing', sub {
             $self->{plater}->pause_background_process;
             Slic3r::GUI::SLAPrintOptions->new($self)->ShowModal;

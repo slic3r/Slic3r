@@ -62,31 +62,28 @@ PP_BIN=$(which pp)
 SLIC3R_DIR=$(perl -MCwd=realpath -e "print realpath '${WD}/../../'")
 
 if [[ -d "${appfolder}" ]]; then
-    echo "Deleting old working folder."
+    echo "Deleting old working folder: ${appfolder}"
     rm -rf ${appfolder}
 fi
 
 if [[ -e "${dmgfile}" ]]; then
-    echo "Deleting old dmg ${dmgfile}."
+    echo "Deleting old dmg: ${dmgfile}"
     rm -rf ${dmgfile}
 fi
 
-echo "Creating new app folder at $appfolder."
+echo "Creating new app folder: $appfolder"
 mkdir -p $appfolder 
 mkdir -p $macosfolder
 mkdir -p $resourcefolder
 
 echo "Copying resources..." 
-cp -r $SLIC3R_DIR/var $macosfolder/
-mv $macosfolder/var/Slic3r.icns $resourcefolder
+cp -rf $SLIC3R_DIR/var $resourcefolder/
+mv $resourcefolder/var/Slic3r.icns $resourcefolder
 
 echo "Copying Slic3r..."
 cp $SLIC3R_DIR/slic3r.pl $macosfolder/slic3r.pl
-cp -RP $SLIC3R_DIR/local-lib $macosfolder/local-lib
-cp -RP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
-find $macosfolder/local-lib -name man -type d -delete
-find $macosfolder/local-lib -name .packlist -delete
-rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include
+cp -fRP $SLIC3R_DIR/local-lib $macosfolder/local-lib
+cp -fRP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
 
 echo "Relocating dylib paths..."
 for bundle in $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/auto/Wx -name '*.bundle') $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets -name '*.dylib' -type f); do
@@ -97,11 +94,11 @@ for bundle in $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level
 done
 
 echo "Copying startup script..."
-cp $WD/startup_script.sh $macosfolder/$appname
+cp -f $WD/startup_script.sh $macosfolder/$appname
 chmod +x $macosfolder/$appname
 
 echo "Copying perl from $PERL_BIN"
-cp $PERL_BIN $macosfolder/perl-local
+cp -f $PERL_BIN $macosfolder/perl-local
 ${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
           -M FindBin -M Unicode::Normalize -M Tie::Handle \
           -M Time::Local -M Math::Trig \
@@ -109,13 +106,50 @@ ${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
           -M warnings -M local::lib \
           -M strict -M utf8 -M parent \
           -B -p -e "print 123" -o $WD/_tmp/test.par
-unzip $WD/_tmp/test.par -d $WD/_tmp/
-cp -r $WD/_tmp/lib/* $macosfolder/local-lib/lib/perl5/
+unzip -o $WD/_tmp/test.par -d $WD/_tmp/
+cp -rf $WD/_tmp/lib/* $macosfolder/local-lib/lib/perl5/
 rm -rf $WD/_tmp
+
+echo "Cleaning bundle"
+rm -rf $macosfolder/local-lib/bin
+rm -rf $macosfolder/local-lib/man
+rm -f $macosfolder/local-lib/lib/perl5/Algorithm/*.pl
+rm -rf $macosfolder/local-lib/lib/perl5/unicore
+rm -rf $macosfolder/local-lib/lib/perl5/App
+rm -rf $macosfolder/local-lib/lib/perl5/Devel/CheckLib.pm
+rm -rf $macosfolder/local-lib/lib/perl5/ExtUtils
+rm -rf $macosfolder/local-lib/lib/perl5/Module/Build*
+rm -rf $macosfolder/local-lib/lib/perl5/TAP
+rm -rf $macosfolder/local-lib/lib/perl5/Test*
+find -d $macosfolder/local-lib -name '*.pod' -delete
+find -d $macosfolder/local-lib -name .packlist -delete
+find -d $macosfolder/local-lib -name .meta -exec rm -rf "{}" \;
+find -d $macosfolder/local-lib -name '*.h' -delete
+find -d $macosfolder/local-lib -name wxPerl.app -exec rm -rf "{}" \;
+find -d $macosfolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
+    -or -name DocView -or -name STC -or -name IPC \
+    -or -name AUI -or -name Calendar -or -name DataView \
+    -or -name DateTime -or -name Media -or -name PerlTest \
+    -or -name Ribbon \) -exec rm -rf "{}" \;
+find -d $macosfolder/local-lib -name libwx_osx_cocoau_ribbon-3.0.0.2.0.dylib -delete
+find -d $macosfolder/local-lib -name libwx_osx_cocoau_aui-3.0.0.2.0.dylib -delete
+find -d $macosfolder/local-lib -name libwx_osx_cocoau_stc-3.0.0.2.0.dylib -delete
+find -d $macosfolder/local-lib -name libwx_osx_cocoau_webview-3.0.0.2.0.dylib -delete
+rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include
+find -d $macosfolder/local-lib -type d -empty -delete
 
 make_plist
 
 echo $PkgInfoContents >$appfolder/Contents/PkgInfo
+
+if [[ -e "${KEYCHAIN_FILE}" ]]; then
+    echo "Signing app..."
+    chmod -R +w $macosfolder/*
+    security list-keychains -s "${KEYCHAIN_FILE}"
+    security default-keychain -s "${KEYCHAIN_FILE}"
+    security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+    codesign --sign "${KEYCHAIN_IDENTITY}" --deep "$appfolder"
+fi
 
 echo "Creating dmg file...."
 hdiutil create -fs HFS+ -srcfolder "$appfolder" -volname "$appname" "$dmgfile"

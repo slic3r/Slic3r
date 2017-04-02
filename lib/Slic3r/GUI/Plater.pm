@@ -554,7 +554,8 @@ sub _on_select_preset {
 	
 	wxTheApp->save_settings;
 	
-	my $config = $self->config;
+	# Ignore overrides in the plater, we only care about the preset configs.
+	my $config = $self->config(1);
 	
 	$self->on_extruders_change(scalar @{$config->get('nozzle_diameter')});
     
@@ -571,10 +572,11 @@ sub _on_select_preset {
         
         # Add/remove options (we do it this way for preserving current options)
         foreach my $opt_key (@$overridable) {
-            if (!$o_config->has($opt_key)) {
-                # Populate option with the default value taken from configuration
-                $o_config->set($opt_key, $config->get($opt_key));
-            }
+            # Populate option with the default value taken from configuration
+            # (re-set the override always, because if we here it means user
+            # switched to this preset or opened/closed the editor, so he expects
+            # the new values set in the editor to be used).
+            $o_config->set($opt_key, $config->get($opt_key));
         }
         foreach my $opt_key (@{$o_config->get_keys}) {
             # Keep options listed among overridable and options added on the fly
@@ -758,7 +760,7 @@ sub show_preset_editor {
 
 # Returns the current config by merging the selected presets and the overrides.
 sub config {
-    my ($self) = @_;
+    my ($self, $ignore_overrides) = @_;
     
     # use a DynamicConfig because FullPrintConfig is not enough
     my $config = Slic3r::Config->new_from_defaults;
@@ -791,7 +793,8 @@ sub config {
         $config->apply($filament_config);
     }
     $config->apply($_->dirty_config) for @{ $presets{print} };
-    $config->apply($self->{settings_override_config});
+    $config->apply($self->{settings_override_config})
+        unless $ignore_overrides;
     
     return $config;
 }
@@ -1068,6 +1071,23 @@ sub set_number_of_copies {
     } elsif ($diff < 0) {
         $self->decrease(-$diff);
     }
+}
+
+sub center_selected_object_on_bed {
+    my ($self) = @_;
+    
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    my $bb = $model_object->bounding_box;
+    my $size = $bb->size;
+    my $vector = Slic3r::Pointf->new(
+        -$bb->x_min - $size->x/2,
+        -$bb->y_min - $size->y/2,    #//
+    );
+    $_->offset->translate(@$vector) for @{$model_object->instances};
+    $self->refresh_canvases;
 }
 
 sub rotate {
@@ -2306,6 +2326,9 @@ sub object_menu {
         $self->set_number_of_copies;
     }, undef, 'textfield.png');
     $menu->AppendSeparator();
+    $frame->_append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
+        $self->center_selected_object_on_bed;
+    }, undef, 'arrow_in.png');
     $frame->_append_menu_item($menu, "Rotate 45° clockwise", 'Rotate the selected object by 45° clockwise', sub {
         $self->rotate(-45);
     }, undef, 'arrow_rotate_clockwise.png');

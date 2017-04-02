@@ -147,10 +147,7 @@ sub OnInit {
     
     # application frame
     Wx::Image::AddHandler(Wx::PNGHandler->new);
-    $self->{mainframe} = my $frame = Slic3r::GUI::MainFrame->new(
-        # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
-        no_controller   => $no_controller // $Settings->{_}{no_controller},
-    );
+    $self->{mainframe} = my $frame = Slic3r::GUI::MainFrame->new;
     $self->SetTopWindow($frame);
     
     # load init bundle
