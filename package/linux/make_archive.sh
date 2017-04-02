@@ -68,8 +68,8 @@ cp -fRP $SLIC3R_DIR/local-lib $archivefolder/local-lib
 cp -fRP $SLIC3R_DIR/lib/* $archivefolder/local-lib/lib/perl5/
 
 mkdir $archivefolder/bin
-echo "Symlinking libraries to $archivefolder/bin..."
-for bundle in $(find $archivefolder/local-lib/lib/perl5/*/auto/Wx -name '*.so') $(find $archivefolder/local-lib/lib/perl5/*/Alien/wxWidgets -name '*.so' -type f); do
+echo "Symlinking libraries to $archivefolder/bin ..."
+for bundle in $(find $archivefolder/local-lib/lib/perl5 -name '*.so' | grep "Wx") $(find $archivefolder/local-lib/lib/perl5 -name '*.so' -type f | grep "wxWidgets"); do
     chmod +w $bundle
     for dylib in $(ldd $bundle | grep .so | grep local-lib | awk '{print $3}'); do
 	install -v $dylib $archivefolder/bin
