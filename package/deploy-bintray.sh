@@ -10,7 +10,7 @@ if [ $(git describe &>/dev/null) ]; then
     SLIC3R_BUILD_ID=$(git describe)
     TAGGED=true
 else
-    if [ -z ${TRAVIS_COMMIT} ]; then
+    if [ ! -z ${TRAVIS_COMMIT+x} ]; then
         SLIC3R_BUILD_ID=${SLIC3R_VERSION}-${TRAVIS_COMMIT}
     else 
         SLIC3R_BUILD_ID=${SLIC3R_VERSION}-$(git rev-parse --short HEAD)
