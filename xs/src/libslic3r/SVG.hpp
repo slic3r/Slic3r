@@ -5,6 +5,7 @@
 #include "ExPolygon.hpp"
 #include "ExPolygonCollection.hpp"
 #include "Line.hpp"
+#include "SurfaceCollection.hpp"
 #include "TriangleMesh.hpp"
 
 namespace Slic3r {
@@ -26,6 +27,7 @@ class SVG
     void draw(const ExPolygon &expolygon, std::string fill = "grey");
     void draw(const ExPolygons &expolygons, std::string fill = "grey");
     void draw(const ExPolygonCollection &coll, std::string fill = "grey");
+    void draw(const SurfaceCollection &coll, std::string fill = "grey");
     void draw(const Polygon &polygon, std::string fill = "grey");
     void draw(const Polygons &polygons, std::string fill = "grey");
     void draw(const Polyline &polyline, std::string stroke = "black", coord_t stroke_width = 0);

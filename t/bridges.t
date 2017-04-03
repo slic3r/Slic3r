@@ -1,4 +1,4 @@
-use Test::More tests => 16;
+use Test::More tests => 18;
 use strict;
 use warnings;
 
@@ -82,13 +82,11 @@ use Slic3r::Test;
     ok check_angle($lower, $bridge, 45, undef, $bridge->area/2), 'correct bridge angle for square overhang with L-shaped anchors';
 }
 
-if (0) {
-    # GH #2477:
-    # This rectangle-shaped bridge is actually unsupported (i.e. the potential anchors are
-    # a bit far away from the contour of the bridge area) because perimeters are reducing
-    # its area.
+{
+    # GH #2477: This test case failed when we computed coverage by summing length of centerlines
+    # instead of summing their covered area.
     my $bridge = Slic3r::ExPolygon->new(
-        Slic3r::Polygon->new([30023195,14023195],[1776805,14023195],[1776805,1776805],[30023195,1776805]),
+        Slic3r::Polygon->new([30299990,14299990],[1500010,14299990],[1500010,1500010],[30299990,1500010]),
     );
     my $lower = [
         Slic3r::ExPolygon->new(

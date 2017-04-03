@@ -1,9 +1,15 @@
 #include "Layer.hpp"
 #include "BridgeDetector.hpp"
 #include "ClipperUtils.hpp"
+#include "Geometry.hpp"
 #include "PerimeterGenerator.hpp"
 #include "Print.hpp"
 #include "Surface.hpp"
+
+#include "SVG.hpp"
+
+
+
 
 namespace Slic3r {
 
@@ -65,18 +71,49 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
     g.process();
 }
 
-// This function reads lower_layer->slices and writes this->bridged and this->fill_surfaces,
-// so it's thread-safe.
+// This function reads layer->slices andlower_layer->slices
+// and writes this->bridged and this->fill_surfaces, so it's thread-safe.
 void
 LayerRegion::process_external_surfaces()
 {
-    const Surfaces &surfaces = this->fill_surfaces.surfaces;
+    Surfaces &surfaces = this->fill_surfaces.surfaces;
+    
+    for (size_t j = 0; j < surfaces.size(); ++j) {
+        Surface &surface = surfaces[j];
+        
+        if (this->layer()->lower_layer != NULL && surface.is_bridge()) {
+            // If this bridge has one or more holes that are internal surfaces
+            // (thus not visible from the outside), like a slab sustained by 
+            // pillars, include them in the bridge in order to have better and
+            // more continuous bridging.
+            Polygons &holes = surface.expolygon.holes;
+            for (int i = 0; i < holes.size(); ++i) {
+                // reverse the hole and consider it a polygon
+                Polygon h = holes[i];
+                h.reverse();
+            
+                // Is this hole fully contained in the layer slices?
+                if (diff(h, this->layer()->slices).empty()) {
+                    // remove any other surface contained in this hole
+                    for (int k = 0; k < surfaces.size(); ++k) {
+                        if (k == j) continue;
+                        if (h.contains(surfaces[k].expolygon.contour.first_point())) {
+                            surfaces.erase(surfaces.begin() + k);
+                            --k;
+                        }
+                    }
+                    
+                    holes.erase(holes.begin() + i);
+                    --i;
+                }
+            }
+        }
+    }
     
     SurfaceCollection bottom;
+    Polygons removed_holes;
     for (const Surface &surface : surfaces) {
         if (!surface.is_bottom()) continue;
-        
-        const ExPolygons grown = offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
         
         /*  detect bridge direction before merging grown surfaces otherwise adjacent bridges
             would get merged into a single one while they need different directions
@@ -104,6 +141,7 @@ LayerRegion::process_external_surfaces()
             }
         }
         
+        const ExPolygons grown = offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
         Surface templ = surface;
         templ.bridge_angle = angle;
         bottom.append(grown, templ);

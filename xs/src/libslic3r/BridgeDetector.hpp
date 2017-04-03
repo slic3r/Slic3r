@@ -15,7 +15,7 @@ public:
     // Lower slices, all regions.
     ExPolygonCollection lower_slices;
     // Scaled extrusion width of the infill.
-    double extrusion_width;
+    coord_t extrusion_width;
     // Angle resolution for the brute force search of the best bridging angle.
     double resolution;
     // The final optimal angle.

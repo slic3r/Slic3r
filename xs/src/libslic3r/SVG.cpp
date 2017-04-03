@@ -92,10 +92,9 @@ SVG::draw(const ExPolygon &expolygon, std::string fill)
     this->fill = fill;
     
     std::string d;
-    Polygons pp = expolygon;
-    for (Polygons::const_iterator p = pp.begin(); p != pp.end(); ++p) {
-        d += this->get_path_d(*p, true) + " ";
-    }
+    for (const Polygon &p : (Polygons)expolygon)
+        d += this->get_path_d(p, true) + " ";
+    
     this->path(d, true);
 }
 
@@ -106,10 +105,17 @@ SVG::draw(const ExPolygonCollection &coll, std::string fill)
 }
 
 void
+SVG::draw(const SurfaceCollection &coll, std::string fill)
+{
+    for (const Surface &s : coll.surfaces)
+        this->draw(s.expolygon, fill);
+}
+
+void
 SVG::draw(const ExPolygons &expolygons, std::string fill)
 {
-    for (ExPolygons::const_iterator it = expolygons.begin(); it != expolygons.end(); ++it)
-        this->draw(*it, fill);
+    for (const ExPolygon &e : expolygons)
+        this->draw(e, fill);
 }
 
 void
