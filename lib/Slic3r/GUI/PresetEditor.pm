@@ -442,6 +442,7 @@ sub options {
         top_infill_extrusion_width support_material_extrusion_width
         infill_overlap bridge_flow_ratio
         xy_size_compensation resolution overridable compatible_printers
+        use_visivalingam
         print_settings_id
     )
 }
@@ -507,6 +508,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Advanced');
             $optgroup->append_single_option_line('seam_position');
             $optgroup->append_single_option_line('external_perimeters_first');
+            $optgroup->append_single_option_line('use_visivalingam');
         }
     }
     
