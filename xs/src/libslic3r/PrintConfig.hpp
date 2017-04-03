@@ -492,11 +492,11 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(standby_temperature_delta);
         OPT_PTR(temperature);
         OPT_PTR(threads);
+        OPT_PTR(use_visivalingam);
         OPT_PTR(vibration_limit);
         OPT_PTR(wipe);
         OPT_PTR(z_offset);
         OPT_PTR(z_steps_per_mm);
-        OPT_PTR(use_visivalingam);
         
         // look in parent class
         ConfigOption* opt;
