@@ -253,9 +253,9 @@ MultiPoint::visivalingam(const Points& pts, const double& tolerance)
     // Lambda to calculate effective area spanned by a point and its immediate 
     // successor + predecessor.
     auto effective_area = [pts](const size_t& curr_pt_idx, const size_t& prev_pt_idx, const size_t& next_pt_idx)->coordf_t{
-        const Point& curr = line[curr_pt_idx];
-        const Point& prev = line[prev_pt_idx];
-        const Point& next = line[next_pt_idx];
+        const Point& curr = pts[curr_pt_idx];
+        const Point& prev = pts[prev_pt_idx];
+        const Point& next = pts[next_pt_idx];
         // Use point objects as vector-distances
         const Point curr_to_next = next - curr;
         const Point prev_to_next = prev - curr;
