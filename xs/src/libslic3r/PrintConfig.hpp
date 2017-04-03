@@ -429,11 +429,12 @@ class PrintConfig : public GCodeConfig
     ConfigOptionInt                 standby_temperature_delta;
     ConfigOptionInts                temperature;
     ConfigOptionInt                 threads;
+    ConfigOptionBool                use_visivalingam;
     ConfigOptionFloat               vibration_limit;
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
     ConfigOptionFloat               z_steps_per_mm;
-    ConfigOptionBool                use_visivalingam;
+    
     
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
