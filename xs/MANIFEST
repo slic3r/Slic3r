@@ -72,6 +72,8 @@ src/libslic3r/GCodeReader.cpp
 src/libslic3r/GCodeReader.hpp
 src/libslic3r/GCodeSender.cpp
 src/libslic3r/GCodeSender.hpp
+src/libslic3r/GCodeTimeEstimator.cpp
+src/libslic3r/GCodeTimeEstimator.hpp
 src/libslic3r/GCodeWriter.cpp
 src/libslic3r/GCodeWriter.hpp
 src/libslic3r/Geometry.cpp
@@ -182,6 +184,7 @@ xsp/Filler.xsp
 xsp/Flow.xsp
 xsp/GCode.xsp
 xsp/GCodeSender.xsp
+xsp/GCodeTimeEstimator.xsp
 xsp/GCodeWriter.xsp
 xsp/Geometry.xsp
 xsp/GUI.xsp

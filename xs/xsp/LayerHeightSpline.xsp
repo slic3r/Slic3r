@@ -6,11 +6,11 @@
 %}
 
 %name{Slic3r::LayerHeightSpline} class LayerHeightSpline {
-    LayerHeightSpline(double object_height);
-    ~LayerHeightSpline();
+    LayerHeightSpline();
     Clone<LayerHeightSpline> clone()
         %code%{ RETVAL = THIS; %};
     
+    void setObjectHeight(coordf_t object_height);
     bool hasData();
     bool updateRequired();
     void suppressUpdate();

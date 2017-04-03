@@ -433,6 +433,7 @@ ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volum
     volumes(),
     config(other.config),
     layer_height_ranges(other.layer_height_ranges),
+    layer_height_spline(other.layer_height_spline),
     origin_translation(other.origin_translation),
     _bounding_box(other._bounding_box),
     _bounding_box_valid(other._bounding_box_valid),
@@ -463,6 +464,7 @@ ModelObject::swap(ModelObject &other)
     std::swap(this->volumes,                other.volumes);
     std::swap(this->config,                 other.config);
     std::swap(this->layer_height_ranges,    other.layer_height_ranges);
+    std::swap(this->layer_height_spline,    other.layer_height_spline);
     std::swap(this->origin_translation,     other.origin_translation);
     std::swap(this->_bounding_box,          other._bounding_box);
     std::swap(this->_bounding_box_valid,    other._bounding_box_valid);
@@ -514,6 +516,7 @@ ModelObject::add_instance()
     ModelInstance* i = new ModelInstance(this);
     this->instances.push_back(i);
     this->invalidate_bounding_box();
+    this->layer_height_spline.setObjectHeight(this->raw_bounding_box().size().z);
     return i;
 }
 
@@ -523,6 +526,7 @@ ModelObject::add_instance(const ModelInstance &other)
     ModelInstance* i = new ModelInstance(this, other);
     this->instances.push_back(i);
     this->invalidate_bounding_box();
+    this->layer_height_spline.setObjectHeight(this->raw_bounding_box().size().z);
     return i;
 }
 
@@ -532,6 +536,9 @@ ModelObject::delete_instance(size_t idx)
     ModelInstancePtrs::iterator i = this->instances.begin() + idx;
     delete *i;
     this->instances.erase(i);
+    if(!this->instances.empty()) {
+		this->layer_height_spline.setObjectHeight(this->raw_bounding_box().size().z);
+	}
     this->invalidate_bounding_box();
 }
 
@@ -546,6 +553,7 @@ ModelObject::clear_instances()
 {
     while (!this->instances.empty())
         this->delete_last_instance();
+
 }
 
 // this returns the bounding box of the *transformed* instances

@@ -222,6 +222,10 @@ GCodeSender*               O_OBJECT_SLIC3R
 Ref<GCodeSender>           O_OBJECT_SLIC3R_T
 Clone<GCodeSender>         O_OBJECT_SLIC3R_T
 
+GCodeTimeEstimator*               O_OBJECT_SLIC3R
+Ref<GCodeTimeEstimator>           O_OBJECT_SLIC3R_T
+Clone<GCodeTimeEstimator>         O_OBJECT_SLIC3R_T
+
 GCodeWriter*               O_OBJECT_SLIC3R
 Ref<GCodeWriter>           O_OBJECT_SLIC3R_T
 Clone<GCodeWriter>         O_OBJECT_SLIC3R_T

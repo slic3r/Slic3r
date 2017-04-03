@@ -32,6 +32,8 @@ void confess_at(const char *file, int line, const char *func, const char *pat, .
 	#define STDMOVE(WHAT) (WHAT)
 #endif
 
+// dummy macro to mark strings for translation for gettext/poedit
+#define __TRANS(s) s
 namespace Slic3r {
 
 constexpr auto SLIC3R_VERSION = "1.3.0-dev";

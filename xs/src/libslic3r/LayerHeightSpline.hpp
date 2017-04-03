@@ -4,16 +4,16 @@
 #include "libslic3r.h"
 #include "BSpline/BSpline.h" // Warning: original BSplineBase.h/cpp merged into BSpline.h/cpp to avoid dependency issues caused by Build::WithXSpp which tries to compile all .cpp files in /src
 
-
 namespace Slic3r {
 
 
 class LayerHeightSpline
 {
     public:
-    LayerHeightSpline(coordf_t object_height);
+    LayerHeightSpline();
     LayerHeightSpline(const LayerHeightSpline &other);
-    ~LayerHeightSpline();
+    LayerHeightSpline& operator=(const LayerHeightSpline &other);
+    void setObjectHeight(coordf_t object_height) { this->_object_height = object_height; };
     bool hasData(); // indicate that we have valid data
     bool updateRequired(); // indicate whether we want to generate a new spline from the layers
     void suppressUpdate();
@@ -37,7 +37,7 @@ class LayerHeightSpline
     std::vector<coordf_t> _original_layers;
     std::vector<coordf_t> _internal_layers;
     std::vector<coordf_t> _internal_layer_heights;
-    BSpline<double> *_layer_height_spline;
+    std::unique_ptr<BSpline<double>> _layer_height_spline;
 };
 
 }

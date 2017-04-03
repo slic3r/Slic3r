@@ -11,7 +11,7 @@ PrintObject::PrintObject(Print* print, ModelObject* model_object, const Bounding
 :   typed_slices(false),
     _print(print),
     _model_object(model_object),
-    layer_height_spline(modobj_bbox.size().z)
+    layer_height_spline(model_object->layer_height_spline)
 {
     // Compute the translation to be applied to our meshes so that we work with smaller coordinates
     {
@@ -213,95 +213,66 @@ PrintObject::delete_support_layer(int idx)
 }
 
 bool
-PrintObject::invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys)
+PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
 {
+    const t_config_option_keys diff = this->config.diff(config);
+    
     std::set<PrintObjectStep> steps;
+    bool all = false;
     
     // this method only accepts PrintObjectConfig and PrintRegionConfig option keys
-    for (std::vector<t_config_option_key>::const_iterator opt_key = opt_keys.begin(); opt_key != opt_keys.end(); ++opt_key) {
-        if (*opt_key == "perimeters"
-            || *opt_key == "extra_perimeters"
-            || *opt_key == "gap_fill_speed"
-            || *opt_key == "overhangs"
-            || *opt_key == "first_layer_extrusion_width"
-            || *opt_key == "perimeter_extrusion_width"
-            || *opt_key == "thin_walls"
-            || *opt_key == "external_perimeters_first") {
-            steps.insert(posPerimeters);
-        } else if (*opt_key == "layer_height"
-            || *opt_key == "min_layer_height"
-            || *opt_key == "max_layer_height"
-            || *opt_key == "first_layer_height"
-            || *opt_key == "xy_size_compensation"
-            || *opt_key == "adaptive_slicing"
-            || *opt_key == "adaptive_slicing_z_gradation"
-            || *opt_key == "adaptive_slicing_quality"
-            || *opt_key == "match_horizontal_surfaces"
-            || *opt_key == "raft_layers") {
+    for (const t_config_option_key &opt_key : diff) {
+        if (opt_key == "layer_height"
+            || opt_key == "first_layer_height"
+            || opt_key == "xy_size_compensation"
+            || opt_key == "raft_layers"
+            || opt_key == "adaptive_slicing"
+            || opt_key == "adaptive_slicing_quality"
+            || opt_key == "match_horizontal_surfaces") {
             steps.insert(posSlice);
-        } else if (*opt_key == "support_material"
-            || *opt_key == "support_material_angle"
-            || *opt_key == "support_material_extruder"
-            || *opt_key == "support_material_extrusion_width"
-            || *opt_key == "support_material_interface_layers"
-            || *opt_key == "support_material_interface_extruder"
-            || *opt_key == "support_material_interface_spacing"
-            || *opt_key == "support_material_interface_speed"
-            || *opt_key == "support_material_pattern"
-            || *opt_key == "support_material_spacing"
-            || *opt_key == "support_material_threshold"
-            || *opt_key == "dont_support_bridges"
-            || *opt_key == "first_layer_extrusion_width") {
-            steps.insert(posSupportMaterial);
-        } else if (*opt_key == "interface_shells"
-            || *opt_key == "infill_only_where_needed"
-            || *opt_key == "infill_every_layers"
-            || *opt_key == "solid_infill_every_layers"
-            || *opt_key == "bottom_solid_layers"
-            || *opt_key == "top_solid_layers"
-            || *opt_key == "solid_infill_below_area"
-            || *opt_key == "infill_extruder"
-            || *opt_key == "solid_infill_extruder"
-            || *opt_key == "infill_extrusion_width") {
-            steps.insert(posPrepareInfill);
-        } else if (*opt_key == "top_infill_pattern"
-            || *opt_key == "bottom_infill_pattern"
-            || *opt_key == "fill_angle"
-            || *opt_key == "fill_pattern"
-            || *opt_key == "top_infill_extrusion_width"
-            || *opt_key == "first_layer_extrusion_width"
-            || *opt_key == "infill_overlap") {
-            steps.insert(posInfill);
-        } else if (*opt_key == "fill_density"
-            || *opt_key == "solid_infill_extrusion_width") {
-            steps.insert(posPerimeters);
-            steps.insert(posPrepareInfill);
-        } else if (*opt_key == "external_perimeter_extrusion_width"
-            || *opt_key == "perimeter_extruder") {
+        } else if (opt_key == "support_material_contact_distance") {
+            steps.insert(posSlice);
             steps.insert(posPerimeters);
             steps.insert(posSupportMaterial);
-        } else if (*opt_key == "bridge_flow_ratio") {
+        } else if (opt_key == "support_material") {
             steps.insert(posPerimeters);
-            steps.insert(posInfill);
-        } else if (*opt_key == "seam_position"
-            || *opt_key == "support_material_speed"
-            || *opt_key == "bridge_speed"
-            || *opt_key == "external_perimeter_speed"
-            || *opt_key == "infill_speed"
-            || *opt_key == "perimeter_speed"
-            || *opt_key == "small_perimeter_speed"
-            || *opt_key == "solid_infill_speed"
-            || *opt_key == "top_solid_infill_speed") {
+            steps.insert(posSupportMaterial);
+        } else if (opt_key == "support_material_angle"
+            || opt_key == "support_material_extruder"
+            || opt_key == "support_material_extrusion_width"
+            || opt_key == "support_material_interface_layers"
+            || opt_key == "support_material_interface_extruder"
+            || opt_key == "support_material_interface_spacing"
+            || opt_key == "support_material_interface_speed"
+            || opt_key == "support_material_buildplate_only"
+            || opt_key == "support_material_pattern"
+            || opt_key == "support_material_spacing"
+            || opt_key == "support_material_threshold"
+            || opt_key == "dont_support_bridges") {
+            steps.insert(posSupportMaterial);
+        } else if (opt_key == "interface_shells"
+            || opt_key == "infill_only_where_needed") {
+            steps.insert(posPrepareInfill);
+        } else if (opt_key == "seam_position"
+            || opt_key == "support_material_speed") {
             // these options only affect G-code export, so nothing to invalidate
         } else {
             // for legacy, if we can't handle this option let's invalidate all steps
-            return this->invalidate_all_steps();
+            all = true;
+            break;
         }
     }
     
+    if (!diff.empty())
+        this->config.apply(config, true);
+    
     bool invalidated = false;
-    for (std::set<PrintObjectStep>::const_iterator step = steps.begin(); step != steps.end(); ++step) {
-        if (this->invalidate_step(*step)) invalidated = true;
+    if (all) {
+        invalidated = this->invalidate_all_steps();
+    } else {
+        for (const PrintObjectStep &step : steps)
+            if (this->invalidate_step(step))
+                invalidated = true;
     }
     
     return invalidated;
@@ -317,6 +288,8 @@ PrintObject::invalidate_step(PrintObjectStep step)
         this->invalidate_step(posPrepareInfill);
         this->_print->invalidate_step(psSkirt);
         this->_print->invalidate_step(psBrim);
+    } else if (step == posDetectSurfaces) {
+        this->invalidate_step(posPrepareInfill);
     } else if (step == posPrepareInfill) {
         this->invalidate_step(posInfill);
     } else if (step == posInfill) {
@@ -324,6 +297,7 @@ PrintObject::invalidate_step(PrintObjectStep step)
         this->_print->invalidate_step(psBrim);
     } else if (step == posSlice) {
         this->invalidate_step(posPerimeters);
+        this->invalidate_step(posDetectSurfaces);
         this->invalidate_step(posSupportMaterial);
     } else if (step == posSupportMaterial) {
         this->_print->invalidate_step(psSkirt);
@@ -357,11 +331,20 @@ PrintObject::has_support_material() const
 void
 PrintObject::detect_surfaces_type()
 {
+    // prerequisites
+    // this->slice();
+    
+    if (this->state.is_done(posDetectSurfaces)) return;
+    this->state.set_started(posDetectSurfaces);
+    
     parallelize<Layer*>(
         std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
         boost::bind(&Slic3r::Layer::detect_surfaces_type, _1),
         this->_print->config.threads.value
     );
+    
+    this->typed_slices = true;
+    this->state.set_done(posDetectSurfaces);
 }
 
 void
@@ -625,16 +608,22 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
                 if(this->config.match_horizontal_surfaces.value) {
                     coordf_t horizontal_dist = as.horizontal_facet_distance(print_z + height, min_layer_height);
                     if((horizontal_dist < min_layer_height) && (horizontal_dist > 0)) {
-                        // std::cout << "Horizontal feature ahead, distance: " << horizontal_dist << std::endl;
+                        #ifdef SLIC3R_DEBUG
+                        std::cout << "Horizontal feature ahead, distance: " << horizontal_dist << std::endl;
+                        #endif
                         // can we shrink the current layer a bit?
                         if(height-(min_layer_height - horizontal_dist) > min_layer_height) {
                             // yes we can
                             height -= (min_layer_height - horizontal_dist);
-                            // std::cout << "Shrink layer height to " << height << std::endl;
+                            #ifdef SLIC3R_DEBUG
+                            std::cout << "Shrink layer height to " << height << std::endl;
+                            #endif
                         }else{
                             // no, current layer would become too thin
                             height += horizontal_dist;
-                            // std::cout << "Widen layer height to " << height << std::endl;
+                            #ifdef SLIC3R_DEBUG
+                            std::cout << "Widen layer height to " << height << std::endl;
+                            #endif
                         }
                     }
                 }
@@ -682,8 +671,9 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
             }
         }
 
-        // Store layer vector for interactive manipulation
+        // Store layer vector for interactive manipulation and push back to model
         this->layer_height_spline.setLayers(result);
+        this->_model_object->layer_height_spline = this->layer_height_spline;
         if (this->config.adaptive_slicing.value) { // smoothing after adaptive algorithm
             result = this->layer_height_spline.getInterpolatedLayers();
         }
@@ -920,11 +910,15 @@ PrintObject::_make_perimeters()
     this->state.set_started(posPerimeters);
     
     // merge slices if they were split into types
+    // This is not currently taking place because since merge_slices + detect_surfaces_type
+    // are not truly idempotent we are invalidating posSlice here (see the Perl part of 
+    // this method).
     if (this->typed_slices) {
+        // merge_slices() undoes detect_surfaces_type()
         FOREACH_LAYER(this, layer_it)
             (*layer_it)->merge_slices();
         this->typed_slices = false;
-        this->state.invalidate(posPrepareInfill);
+        this->state.invalidate(posDetectSurfaces);
     }
     
     // compare each layer to the one below, and mark those slices needing

@@ -43,9 +43,7 @@ sub new {
                     $self->print_completed;
                 }
             }
-            $self->{log_textctrl}->AppendText("$_\n") for @{$self->sender->purge_log};
-            $self->{manual_control_dialog}->update_log($self->{log_textctrl}->GetValue)
-                if $self->{manual_control_dialog};
+            $self->append_to_log("$_\n") for @{$self->sender->purge_log};
             {
                 my $temp = $self->sender->getT;
                 if ($temp eq '') {
@@ -128,7 +126,7 @@ sub new {
         my $serial_speed_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         {
             $self->{serial_speed_combobox} = Wx::ComboBox->new($self, -1, $config->serial_speed, wxDefaultPosition, wxDefaultSize,
-                ["115200", "250000"]);
+                ["57600", "115200", "250000"]);
             $self->{serial_speed_combobox}->SetFont($Slic3r::GUI::small_font);
             $serial_speed_sizer->Add($self->{serial_speed_combobox}, 0, wxALIGN_CENTER_VERTICAL, 0);
         }
@@ -272,6 +270,12 @@ sub new {
     return $self;
 }
 
+sub append_to_log {
+    my ($self, $text) = @_;
+    
+    $self->{log_textctrl}->AppendText($text);
+}
+
 sub is_connected {
     my ($self) = @_;
     return $self->sender && $self->sender->is_connected;
@@ -409,9 +413,9 @@ sub print_job {
     $self->Layout;
     
     $self->set_status('Printing...');
-    $self->{log_textctrl}->AppendText(sprintf "=====\n");
-    $self->{log_textctrl}->AppendText(sprintf "Printing %s\n", $job->name);
-    $self->{log_textctrl}->AppendText(sprintf "Print started at %s\n", $self->_timestamp);
+    $self->append_to_log(sprintf "=====\n");
+    $self->append_to_log(sprintf "Printing %s\n", $job->name);
+    $self->append_to_log(sprintf "Print started at %s\n", $self->_timestamp);
 }
 
 sub print_completed {
@@ -426,7 +430,7 @@ sub print_completed {
     $self->Layout;
     
     $self->set_status('Print completed.');
-    $self->{log_textctrl}->AppendText(sprintf "Print completed at %s\n", $self->_timestamp);
+    $self->append_to_log(sprintf "Print completed at %s\n", $self->_timestamp);
     
     $self->reload_jobs;
 }
@@ -479,7 +483,7 @@ sub reload_jobs {
             $self->{gauge}->Disable;
             $self->{gauge}->Hide;
             $self->set_status('Print was aborted.');
-            $self->{log_textctrl}->AppendText(sprintf "Print aborted at %s\n", $self->_timestamp);
+            $self->append_to_log(sprintf "Print aborted at %s\n", $self->_timestamp);
         });
         $panel->on_resume_print(sub {
             my ($job) = @_;

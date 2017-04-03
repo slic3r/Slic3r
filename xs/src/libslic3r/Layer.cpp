@@ -197,11 +197,11 @@ Layer::make_perimeters()
             
             // merge the surfaces assigned to each group
             SurfaceCollection new_slices;
-            for (std::map<unsigned short,Surfaces>::const_iterator it = slices.begin(); it != slices.end(); ++it) {
-                ExPolygons expp = union_ex(it->second, true);
-                for (ExPolygons::iterator ex = expp.begin(); ex != expp.end(); ++ex) {
-                    Surface s = it->second.front();  // clone type and extra_perimeters
-                    s.expolygon = *ex;
+            for (const auto &it : slices) {
+                ExPolygons expp = union_ex(it.second, true);
+                for (ExPolygon &ex : expp) {
+                    Surface s = it.second.front();  // clone type and extra_perimeters
+                    s.expolygon = ex;
                     new_slices.surfaces.push_back(s);
                 }
             }
@@ -274,6 +274,8 @@ Layer::detect_surfaces_type()
         Layer* const &lower_layer = this->lower_layer;
     
         // collapse very narrow parts (using the safety offset in the diff is not enough)
+        // TODO: this offset2 makes this method not idempotent (see #3764), so we should
+        // move it to where we generate fill_surfaces instead and leave slices unaltered
         const float offs = layerm.flow(frExternalPerimeter).scaled_width() / 10.f;
 
         const Polygons layerm_slices_surfaces = layerm.slices;

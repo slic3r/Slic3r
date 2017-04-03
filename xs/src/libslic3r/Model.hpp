@@ -7,6 +7,7 @@
 #include "Layer.hpp"
 #include "Point.hpp"
 #include "TriangleMesh.hpp"
+#include "LayerHeightSpline.hpp"
 #include <map>
 #include <string>
 #include <utility>
@@ -119,6 +120,8 @@ class ModelObject
     DynamicPrintConfig config;
     // Variation of a layer thickness for spans of Z coordinates.
     t_layer_height_ranges layer_height_ranges;
+    // Spline based variations of layer thickness for interactive user manipulation
+    LayerHeightSpline layer_height_spline;
 
     /* This vector accumulates the total translation applied to the object by the
         center_around_origin() method. Callers might want to apply the same translation

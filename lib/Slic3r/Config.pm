@@ -30,12 +30,11 @@ sub new_from_defaults {
     my (@opt_keys) = @_;
     
     my $self = $class->new;
-    my $defaults = Slic3r::Config::Full->new;
     if (@opt_keys) {
-        $self->set($_, $defaults->get($_))
-            for grep $defaults->has($_), @opt_keys;
+        $self->set($_, $Options->{$_}{default})
+            for grep exists $Options->{$_}{default}, @opt_keys;
     } else {
-        $self->apply_static($defaults);
+        $self->apply_static(Slic3r::Config::Full->new);
     }
     return $self;
 }
@@ -190,8 +189,11 @@ sub validate {
     die "Invalid value for --gcode-flavor\n"
         if !first { $_ eq $self->gcode_flavor } @{$Options->{gcode_flavor}{values}};
     
-    die "--use-firmware-retraction is only supported by Marlin and Machinekit firmware\n"
-        if $self->use_firmware_retraction && $self->gcode_flavor ne 'smoothie' && $self->gcode_flavor ne 'reprap' && $self->gcode_flavor ne 'machinekit';
+    die "--use-firmware-retraction is only supported by Marlin, Smoothie, Repetier and Machinekit firmware\n"
+        if $self->use_firmware_retraction && $self->gcode_flavor ne 'smoothie' 
+        && $self->gcode_flavor ne 'reprap' 
+        && $self->gcode_flavor ne 'machinekit' 
+        && $self->gcode_flavor ne 'repetier';
     
     die "--use-firmware-retraction is not compatible with --wipe\n"
         if $self->use_firmware_retraction && first {$_} @{$self->wipe};

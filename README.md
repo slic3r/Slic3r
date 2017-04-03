@@ -1,63 +1,50 @@
-_Q: Oh cool, a new RepRap slicer?_
-
-A: Yes.
-
-Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.svg?branch=master)](https://travis-ci.org/alexrj/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/8iqmeat6cj158vo6?svg=true)](https://ci.appveyor.com/project/lordofhyphens/slic3r) [![Build Status](http://osx-build.slic3r.org:8080/buildStatus/icon?job=Slic3r)](http://osx-build.slic3r.org:8080/job/Slic3r)
+![](var/Slic3r_128px.png) Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.svg?branch=master)](https://travis-ci.org/alexrj/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/8iqmeat6cj158vo6?svg=true)](https://ci.appveyor.com/project/lordofhyphens/slic3r) [![Build Status](http://osx-build.slic3r.org:8080/buildStatus/icon?job=Slic3r)](http://osx-build.slic3r.org:8080/job/Slic3r)
 ======
-Prebuilt Windows (64-bit) and OSX (>10.7) builds:
-* http://dl.slic3r.org/dev/
 
-<img width=256 src=https://cloud.githubusercontent.com/assets/31754/22719818/09998c92-ed6d-11e6-9fa0-09de638f3a36.png />
+We have automated builds for Windows (64-bit) and OSX (>= 10.7). [Get a fresh build now](http://dl.slic3r.org/dev/) and stay up-to-date with the development!
 
-Slic3r takes 3D models (STL, OBJ, AMF) and converts them into G-code instructions for 
-3D printers. It's compatible with any modern printer based on the RepRap toolchain,
-including all those based on the Marlin, Sprinter and Repetier firmware. It also works
-with Mach3, LinuxCNC and Machinekit controllers.
+The MacOS X build server is kindly sponsored by: <img width=150 src=https://cloud.githubusercontent.com/assets/31754/22719818/09998c92-ed6d-11e6-9fa0-09de638f3a36.png />
 
-See the [project homepage](http://slic3r.org/) at slic3r.org and the
-[manual](http://manual.slic3r.org/) for more information.
+### So, what's this Slic3r?
+
+Slic3r is mainly a **toolpath generator** for 3D printers: it reads 3D models (STL, OBJ, AMF) and it converts them into **G-code** instructions for 3D printers. But it does much more than that, see the [features list](#features) below.
+
+Slic3r was born in **2011** within the RepRap community and thanks to its high configurability became the swiss-army knife for 3D printing. It served as a platform for experimenting several **new ideas that later became technology standards**, such as multiple extruders, brim, variable-height layers, per-object settings, modifiers, post-processing scripts, G-code macros and more. Despite being based on volunteer efforts, Slic3r is still pushing the boundaries of 3D printing.
+
+Slic3r is:
+
+* **Open:** it is totally **open source** and it's **independent from any commercial company** or printer manufacturer. We want to keep 3D printing open and free.
+* **Compatible:** it supports all the known G-code dialects (Marlin, Repetier, Mach3, LinuxCNC, Machinekit, Smoothie, Makerware, Sailfish).
+* **Advanced:** many configuration options allow for fine-tuning and full control. While novice users often need just few options, Slic3r is mostly used by advanced users.
+* **Community-driven:** new features or issues are discussed in the [GitHub repository](https://github.com/alexrj/Slic3r/issues). Join our collaborative effort and help improve it!
+* **Robust:** the codebase includes more than 1,000 unit and regression tests, collected in 6 years of development.
+* **Modular:** the core of Slic3r is libslic3r, a C++ library that provides a granular API and reusable components.
+* **Embeddable:** a complete and powerful command line interface allows to use Slic3r from the shell or to integrate it in server-side applications.
+* **Powerful:** see the list below!
+
+See the [project homepage](http://slic3r.org/) at slic3r.org for more information.
+
+### <a name="features"></a>Features
+
+(Most of these are also available in the command line interface.)
+
+* **G-code generation** for FFF/FDM printers;
+* **conversion** between STL, OBJ, AMF and POV formats;
+* **auto-repair** of non-manifold meshes (and ability to re-export them);
+* **SVG export** of slices;
+* built-in **USB/serial** host controller, supporting **multiple simultaneous printers** each one with a spool queue;
+* **OctoPrint integration** (send to printer);
+* built-in **projector and host for DLP printers**;
+* tool for **cutting meshes** in multiple solid parts with visual preview (also in batch using a grid);
+* tool for **extruding 2.5D TIN meshes**.
 
 ### What language is it written in?
 
-The core geometric algorithms and data structures are written in C++,
-and Perl is used for high-level flow abstraction, GUI and testing.
-If you're wondering why Perl, see https://xkcd.com/224/
-
-The C++ API is public and its use in other projects is encouraged.
-The goal is to make Slic3r fully modular so that any part of its logic
-can be used separately.
-
-### What are Slic3r's main features?
-
-Key features are:
-
-* **multi-platform** (Linux/Mac/Win) and packaged as standalone-app with no dependencies required
-* complete **command-line interface** to use it with no GUI
-* multi-material **(multiple extruders)** object printing
-* multiple G-code flavors supported (RepRap, Makerbot, Mach3, Machinekit etc.)
-* ability to plate **multiple objects having distinct print settings**
-* **multithread** processing
-* **STL auto-repair** (tolerance for broken models)
-* wide automated unit testing
-
-Other major features are:
-
-* combine infill every 'n' perimeters layer to speed up printing
-* **3D preview** (including multi-material files)
-* **multiple layer heights** in a single print
-* **spiral vase** mode for bumpless vases
-* fine-grained configuration of speed, acceleration, extrusion width
-* several infill patterns including honeycomb, spirals, Hilbert curves
-* support material, raft, brim, skirt
-* **standby temperature** and automatic wiping for multi-extruder printing
-* customizable **G-code macros** and output filename with variable placeholders
-* support for **post-processing scripts**
-* **cooling logic** controlling fan speed and dynamic print speed
+The core parts of Slic3r are written in C++11, with multithreading. The graphical interface is still mostly written in Perl, but we're gradually porting it to C++ (want to help?). The goal is to port everything to C++.
 
 ### How to install?
 
-You can download a precompiled package from [slic3r.org](http://slic3r.org/);
-it will run without the need for any dependency.
+You can download a precompiled package from [slic3r.org](http://slic3r.org/) (releases) or from [dl.slicr3r.org](http://dl.slic3r.org/dev/) (automated builds).
 
 If you want to compile the source yourself follow the instructions on one of these wiki pages: 
 * [Linux](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
@@ -67,28 +54,40 @@ If you want to compile the source yourself follow the instructions on one of the
 ### Can I help?
 
 Sure! You can do the following to find things that are available to help with:
-* [Pull Request Milestone](https://github.com/alexrj/Slic3r/milestone/31)
-    * Please comment in the related github issue that you are working on it so that other people know. 
-* Items in the [TODO](https://github.com/alexrj/Slic3r/wiki/TODO) wiki page.
-    * Please comment in the related github issue that you are working on it so that other people know. 
-* Drop me a line at aar@cpan.org.
-* You can also find me (rarely) in #reprap and in #slic3r on [FreeNode](https://webchat.freenode.net) with the nickname _Sound_. Another contributor, _LoH_, is also in both channels.
-* Add an [issue](https://github.com/alexrj/Slic3r/issues) to the github tracker if it isn't already present.
 
-Before sending patches and pull requests contact me (preferably through opening a github issue or commenting on an existing, related, issue) to discuss your proposed
-changes: this way we'll ensure nobody wastes their time and no conflicts arise
-in development.
+* Development
+	* [Low Effort tasks](https://github.com/alexrj/Slic3r/labels/Low%20Effort): pick one of them!
+	* [More available tasks](https://github.com/alexrj/Slic3r/milestone/31): let's discuss together before you start working on them
+	* Please comment in the related github issue that you are working on it so that other people know. 
+    * Please comment in the related GitHub issue that you are working on it so that other people know. 
+* Contribute to the [Manual](http://manual.slic3r.org/)! (see its [GitHub repository](https://github.com/alexrj/Slic3r-Manual))
+* You can also find us in #slic3r on [FreeNode](https://webchat.freenode.net): talk to _Sound_, _LoH_ or the other members of the Slic3r community.
+* Add an [issue](https://github.com/alexrj/Slic3r/issues) to the GitHub tracker if it isn't already present.
+* Drop Alessandro a line at aar@cpan.org.
 
-### What's Slic3r license?
+### Directory structure
 
-Slic3r is licensed under the _GNU Affero General Public License, version 3_.
-The author is Alessandro Ranellucci.
+* `Build.PL`: this script installs dependencies into `local-lib/`, compiles the C++ part and runs tests
+* `lib/`: the Perl code
+* `package/`: the scripts used for packaging the executables
+* `slic3r.pl`: the main executable script, launching the GUI and providing the CLI
+* `src/`: the C++ source of the `slic3r` executable the and CMake definition file for compiling it (note that this C++ `slic3r` executable can do many things but can't generate G-code yet because the porting isn't finished yet - the main executable is `slic3r.pl`)
+* `t/`: the test suite
+* `utils/`: various useful scripts
+* `xs/src/libslic3r/`: C++ sources for libslic3r
+* `xs/src/slic3r/`: C++ sources for the Slic3r GUI application
+* `xs/t/`: test suite for libslic3r
+* `xs/xsp/`: bindings for calling libslic3r from Perl (XS)
 
-The [Silk icon set](http://www.famfamfam.com/lab/icons/silk/) used in Slic3r is
-licensed under the _Creative Commons Attribution 3.0 License_.
-The author of the Silk icon set is Mark James.
+### Acknowledgements
 
-### How can I invoke slic3r.pl using the command line?
+The main author of Slic3r is Alessandro Ranellucci (@alexrj, *Sound* in IRC, [@alranel](http://twitter.com/alranel) on Twitter), who started the project in 2011 and still leads development.
+
+Joseph Lenox (@lordofhyphens, *Loh* in IRC) is the current co-maintainer.
+
+Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake, Vojtech Bubnik and numerous others. Original manual by Gary Hodgson. Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James.
+
+### How can I invoke Slic3r using the command line?
 
     Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
     
@@ -116,8 +115,6 @@ The author of the Silk icon set is Mark James.
       GUI options:
         --gui               Forces the GUI launch instead of command line slicing (if you
                             supply a model file, it will be loaded into the plater)
-        --no-plater         Disable the plater tab
-        --gui-mode          Overrides the configured mode (simple/expert)
         --autosave <file>   Automatically export current configuration to the specified file
     
       Output options:
@@ -384,11 +381,4 @@ The author of the Silk icon set is Mark James.
                             Temperature difference to be applied when an extruder is not active and
                             --ooze-prevention is enabled (default: -5)
 
-
-If you want to change a preset file, just do
-
-    slic3r.pl --load config.ini --layer-height 0.25 --save config.ini
-
-If you want to slice a file overriding an option contained in your preset file:
-
-    slic3r.pl --load config.ini --layer-height 0.25 file.stl
+For more information about command line usage see the relevant [manual page](http://manual.slic3r.org/advanced/command-line).

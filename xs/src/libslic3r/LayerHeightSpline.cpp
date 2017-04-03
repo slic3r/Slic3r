@@ -11,36 +11,34 @@
 
 namespace Slic3r {
 
-LayerHeightSpline::LayerHeightSpline(coordf_t object_height)
-:   _object_height(object_height), _layer_height_spline(NULL)
+LayerHeightSpline::LayerHeightSpline()
+:   _object_height(0)
 {
-	this->_is_valid = false;
-	this->_update_required = true;
-	this->_layers_updated = false;
-	this->_layer_heights_updated = false;
+    this->_is_valid = false;
+    this->_update_required = true;
+    this->_layers_updated = false;
+    this->_layer_heights_updated = false;
 }
 
 LayerHeightSpline::LayerHeightSpline(const LayerHeightSpline &other)
-:   _object_height(other._object_height), _layer_height_spline(NULL)
 {
+    *this = other;
+}
 
+LayerHeightSpline& LayerHeightSpline::operator=(const LayerHeightSpline &other)
+{
+    this->_object_height = other._object_height;
     this->_original_layers = other._original_layers;
     this->_internal_layers = other._internal_layers;
     this->_internal_layer_heights = other._internal_layer_heights;
-	this->_is_valid = other._is_valid;
-	this->_update_required = other._update_required;
-	this->_layers_updated = other._layers_updated;
-	this->_layer_heights_updated = other._layer_heights_updated;
-	if(this->_is_valid) {
-		this->_updateBSpline();
-	}
-}
-
-LayerHeightSpline::~LayerHeightSpline()
-{
-    if (this->_layer_height_spline) {
-    	delete this->_layer_height_spline;
+    this->_is_valid = other._is_valid;
+    this->_update_required = other._update_required;
+    this->_layers_updated = other._layers_updated;
+    this->_layer_heights_updated = other._layer_heights_updated;
+    if(this->_is_valid) {
+        this->_updateBSpline();
     }
+    return *this;
 }
 
 /*
@@ -48,7 +46,7 @@ LayerHeightSpline::~LayerHeightSpline()
  */
 bool LayerHeightSpline::hasData()
 {
-	return this->_is_valid;
+    return this->_is_valid;
 }
 
 /*
@@ -59,21 +57,21 @@ bool LayerHeightSpline::hasData()
  */
 bool LayerHeightSpline::updateRequired()
 {
-	bool result = true; // update spline by default
-	if(!this->_update_required && this->_is_valid) {
-		result = false;
-	}
-	this->_update_required = true; // reset to default after request
-	return result;
+    bool result = true; // update spline by default
+    if(!this->_update_required && this->_is_valid) {
+        result = false;
+    }
+    this->_update_required = true; // reset to default after request
+    return result;
 }
 
 /*
  * Don't require an update for exactly one iteration.
  */
 void LayerHeightSpline::suppressUpdate() {
-	if (this->_is_valid) {
-		this->_update_required = false;
-	}
+    if (this->_is_valid) {
+        this->_update_required = false;
+    }
 }
 
 /*
@@ -82,27 +80,27 @@ void LayerHeightSpline::suppressUpdate() {
  */
 bool LayerHeightSpline::setLayers(std::vector<coordf_t> layers)
 {
-	this->_original_layers = layers;
+    this->_original_layers = layers;
 
-	// generate updated layer height list from layers
-	this->_internal_layer_heights.clear();
-	coordf_t last_z = 0;
-	for (std::vector<coordf_t>::const_iterator l = this->_original_layers.begin(); l != this->_original_layers.end(); ++l) {
-		this->_internal_layer_heights.push_back(*l-last_z);
-		last_z = *l;
-	}
+    // generate updated layer height list from layers
+    this->_internal_layer_heights.clear();
+    coordf_t last_z = 0;
+    for (std::vector<coordf_t>::const_iterator l = this->_original_layers.begin(); l != this->_original_layers.end(); ++l) {
+        this->_internal_layer_heights.push_back(*l-last_z);
+        last_z = *l;
+    }
 
-	// add 0-values at both ends to achieve correct boundary conditions
-	this->_internal_layers = this->_original_layers;
-	this->_internal_layers.insert(this->_internal_layers.begin(), 0); // add z = 0 to the front
-	//this->_internal_layers.push_back(this->_internal_layers.back()+1); // and object_height + 1 to the end
-	this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), this->_internal_layer_heights[0]);
-	//this->_internal_layer_heights.push_back(0);
+    // add 0-values at both ends to achieve correct boundary conditions
+    this->_internal_layers = this->_original_layers;
+    this->_internal_layers.insert(this->_internal_layers.begin(), 0); // add z = 0 to the front
+    //this->_internal_layers.push_back(this->_internal_layers.back()+1); // and object_height + 1 to the end
+    this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), this->_internal_layer_heights[0]);
+    //this->_internal_layer_heights.push_back(0);
 
-	this->_layers_updated = true;
-	this->_layer_heights_updated = false;
+    this->_layers_updated = true;
+    this->_layer_heights_updated = false;
 
-	return this->_updateBSpline();
+    return this->_updateBSpline();
 }
 
 
@@ -114,23 +112,23 @@ bool LayerHeightSpline::setLayers(std::vector<coordf_t> layers)
  */
 bool LayerHeightSpline::updateLayerHeights(std::vector<coordf_t> heights)
 {
-	bool result = false;
+    bool result = false;
 
-	// do we receive the correct number of values?
-	if(heights.size() == this->_internal_layers.size()-1) {
-		this->_internal_layer_heights = heights;
-		// add leading and trailing 0-value
-		this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), this->_internal_layer_heights[0]);
-		//this->_internal_layer_heights.push_back(0);
-		result = this->_updateBSpline();
-	}else{
-		std::cerr << "Unable to update layer heights. You provided " << heights.size() << " layers, but " << this->_internal_layers.size()-1 << " expected" << std::endl;
-	}
+    // do we receive the correct number of values?
+    if(heights.size() == this->_internal_layers.size()-1) {
+        this->_internal_layer_heights = heights;
+        // add leading and trailing 0-value
+        this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), this->_internal_layer_heights[0]);
+        //this->_internal_layer_heights.push_back(0);
+        result = this->_updateBSpline();
+    }else{
+        std::cerr << "Unable to update layer heights. You provided " << heights.size() << " layers, but " << this->_internal_layers.size()-1 << " expected" << std::endl;
+    }
 
-	this->_layers_updated = false;
-	this->_layer_heights_updated = true;
+    this->_layers_updated = false;
+    this->_layer_heights_updated = true;
 
-	return result;
+    return result;
 }
 
 /*
@@ -138,14 +136,13 @@ bool LayerHeightSpline::updateLayerHeights(std::vector<coordf_t> heights)
  */
 void LayerHeightSpline::clear()
 {
-	this->_original_layers.clear();
-	this->_internal_layers.clear();
-	this->_internal_layer_heights.clear();
-	delete this->_layer_height_spline;
-	this->_layer_height_spline = NULL;
-	this->_is_valid = false;
-	this->_layers_updated = false;
-	this->_layer_heights_updated = false;
+    this->_original_layers.clear();
+    this->_internal_layers.clear();
+    this->_internal_layer_heights.clear();
+    this->_layer_height_spline.reset();
+    this->_is_valid = false;
+    this->_layers_updated = false;
+    this->_layer_heights_updated = false;
 }
 
 
@@ -154,28 +151,28 @@ void LayerHeightSpline::clear()
  */
 std::vector<coordf_t> LayerHeightSpline::getInterpolatedLayers() const
 {
-	std::vector<coordf_t> layers;
-	if(this->_is_valid) {
-		// preserve first layer for bed contact
-		layers.push_back(this->_original_layers[0]);
-		coordf_t z = this->_original_layers[0];
-		coordf_t h;
-		coordf_t h_diff = 0;
-		coordf_t eps = 0.0001;
-		while(z <= this->_object_height) {
-			h = 0;
-			// find intersection between layer height and spline
-			do {
-				h += h_diff/2;
-				h = this->_layer_height_spline->evaluate(z+h);
-				h_diff = this->_layer_height_spline->evaluate(z+h) - h;
-			} while(std::abs(h_diff) > eps);
-			z += h;
-			layers.push_back(z);
-		}
-		// how to make sure, the last layer is not higher than object while maintaining between min/max layer height?
-	}
-	return layers;
+    std::vector<coordf_t> layers;
+    if(this->_is_valid) {
+        // preserve first layer for bed contact
+        layers.push_back(this->_original_layers[0]);
+        coordf_t z = this->_original_layers[0];
+        coordf_t h;
+        coordf_t h_diff = 0;
+        coordf_t eps = 0.0001;
+        while(z <= this->_object_height) {
+            h = 0;
+            // find intersection between layer height and spline
+            do {
+                h += h_diff/2;
+                h = this->_layer_height_spline->evaluate(z+h);
+                h_diff = this->_layer_height_spline->evaluate(z+h) - h;
+            } while(std::abs(h_diff) > eps);
+            z += h;
+            layers.push_back(z);
+        }
+        // how to make sure, the last layer is not higher than object while maintaining between min/max layer height?
+    }
+    return layers;
 }
 
 /*
@@ -183,11 +180,11 @@ std::vector<coordf_t> LayerHeightSpline::getInterpolatedLayers() const
  */
 const coordf_t LayerHeightSpline::getLayerHeightAt(coordf_t height)
 {
-	coordf_t result = 0;
-	if (this->_is_valid) {
-		result = this->_layer_height_spline->evaluate(height);
-	}
-	return result;
+    coordf_t result = 0;
+    if (this->_is_valid) {
+        result = this->_layer_height_spline->evaluate(height);
+    }
+    return result;
 }
 
 /*
@@ -195,27 +192,27 @@ const coordf_t LayerHeightSpline::getLayerHeightAt(coordf_t height)
  */
 bool LayerHeightSpline::_updateBSpline()
 {
-	bool result = false;
-	//TODO: exception if not enough points?
+    bool result = false;
+    //TODO: exception if not enough points?
 
-	delete this->_layer_height_spline;
-	this->_layer_height_spline = new BSpline<double>(&this->_internal_layers[0],
-			this->_internal_layers.size(),
+    this->_layer_height_spline.reset(new BSpline<double>(&this->_internal_layers[0],
+            this->_internal_layers.size(),
             &this->_internal_layer_heights[0],
             0,
             1,
-            0);
+            0)
+    );
 
-	if (this->_layer_height_spline->ok()) {
-		result = true;
-	} else {
-		result = false;
-		std::cerr << "Spline setup failed." << std::endl;
-	}
+    if (this->_layer_height_spline->ok()) {
+        result = true;
+    } else {
+        result = false;
+        std::cerr << "Spline setup failed." << std::endl;
+    }
 
-	this->_is_valid = result;
+    this->_is_valid = result;
 
-	return result;
+    return result;
 }
 
 

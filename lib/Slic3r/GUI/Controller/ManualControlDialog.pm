@@ -1,5 +1,3 @@
-# A printer "Controller" -> "ManualControlDialog" subtab, opened per 3D printer connected?
-
 package Slic3r::GUI::Controller::ManualControlDialog;
 use strict;
 use warnings;
@@ -9,7 +7,7 @@ use Scalar::Util qw(looks_like_number);
 use Slic3r::Geometry qw(PI X Y unscale);
 use Wx qw(:dialog :id :misc :sizer :choicebook :button :bitmap :textctrl
     wxBORDER_NONE wxTAB_TRAVERSAL);
-use Wx::Event qw(EVT_CLOSE EVT_BUTTON);
+use Wx::Event qw(EVT_CLOSE EVT_BUTTON EVT_TEXT_ENTER);
 use base qw(Wx::Dialog Class::Accessor);
 
 __PACKAGE__->mk_accessors(qw(sender writer config2 x_homed y_homed));
@@ -163,6 +161,7 @@ sub new {
                     return;
                 }
                 my $cmd = $self->writer->set_temperature($self->config2->{temperature});
+                $self->GetParent->append_to_log(">> $cmd\n");
                 $self->sender->send($cmd, 1);
             });
             $optgroup->append_line($line);
@@ -182,6 +181,7 @@ sub new {
                     return;
                 }
                 my $cmd = $self->writer->set_bed_temperature($self->config2->{bed_temperature});
+                $self->GetParent->append_to_log(">> $cmd\n");
                 $self->sender->send($cmd, 1);
             });
             $optgroup->append_line($line);
@@ -189,19 +189,12 @@ sub new {
     }
     
     {
-        my $box = Wx::StaticBox->new($self, -1, "Console");
+        my $box = Wx::StaticBox->new($self, -1, "Send manual command");
         my $sbsizer = Wx::StaticBoxSizer->new($box, wxVERTICAL);
-        $right_sizer->Add($sbsizer, 1, wxEXPAND, 0);
-    
-        my $log = $self->{log_textctrl} = Wx::TextCtrl->new($self, -1, "", wxDefaultPosition, wxDefaultSize,
-            wxTE_MULTILINE | wxBORDER_NONE);
-        $log->SetBackgroundColour($self->GetBackgroundColour);
-        $log->SetFont($Slic3r::GUI::small_font);
-        $log->SetEditable(0);
-        $sbsizer->Add($self->{log_textctrl}, 1, wxEXPAND, 0);
+        $right_sizer->Add($sbsizer, 1, wxEXPAND | wxALL, 10);
         
         my $cmd_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
-        my $cmd_textctrl = Wx::TextCtrl->new($self, -1, '');
+        my $cmd_textctrl = Wx::TextCtrl->new($self, -1, '', wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
         $cmd_sizer->Add($cmd_textctrl, 1, wxEXPAND, 0);
         
         my $btn = Wx::Button->new($self, -1,
@@ -212,13 +205,17 @@ sub new {
         }
         $cmd_sizer->Add($btn, 0, wxEXPAND | wxLEFT, 5);
         
-        EVT_BUTTON($self, $btn, sub {
-            return if $cmd_textctrl->GetValue eq '';
-            $self->sender->send($cmd_textctrl->GetValue, 1);
+        my $do_send = sub {
+            my $cmd = $cmd_textctrl->GetValue;
+            return if $cmd eq '';
+            $self->GetParent->append_to_log(">> $cmd\n");
+            $self->sender->send($cmd, 1);
             $cmd_textctrl->SetValue('');
-        });
+        };
+        EVT_BUTTON($self, $btn, $do_send);
+        EVT_TEXT_ENTER($self, $cmd_textctrl, $do_send);
         
-        $sbsizer->Add($cmd_sizer, 0, wxEXPAND | wxTOP, 2);
+        $sbsizer->Add($cmd_sizer, 0, wxEXPAND | wxTOP, 5);
     }
     
     my $main_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
@@ -237,12 +234,6 @@ sub new {
     });
     
     return $self;
-}
-
-sub update_log {
-    my ($self, $log) = @_;
-    
-    $self->{log_textctrl}->SetValue($log);
 }
 
 sub abs_xy_move {

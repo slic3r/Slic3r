@@ -19,6 +19,7 @@ REGISTER_CLASS(SpiralVase, "GCode::SpiralVase");
 REGISTER_CLASS(Wipe, "GCode::Wipe");
 REGISTER_CLASS(GCode, "GCode");
 REGISTER_CLASS(GCodeSender, "GCode::Sender");
+REGISTER_CLASS(GCodeTimeEstimator, "GCode::TimeEstimator");
 REGISTER_CLASS(GCodeWriter, "GCode::Writer");
 REGISTER_CLASS(Layer, "Layer");
 REGISTER_CLASS(SupportLayer, "Layer::Support");
