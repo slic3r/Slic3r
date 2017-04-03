@@ -71,13 +71,12 @@ void
 LayerRegion::process_external_surfaces()
 {
     const Surfaces &surfaces = this->fill_surfaces.surfaces;
-    const double margin = scale_(EXTERNAL_INFILL_MARGIN);
     
     SurfaceCollection bottom;
     for (Surfaces::const_iterator surface = surfaces.begin(); surface != surfaces.end(); ++surface) {
         if (!surface->is_bottom()) continue;
         
-        const ExPolygons grown = offset_ex(surface->expolygon, +margin);
+        const ExPolygons grown = offset_ex(surface->expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
         
         /*  detect bridge direction before merging grown surfaces otherwise adjacent bridges
             would get merged into a single one while they need different directions
@@ -92,7 +91,7 @@ LayerRegion::process_external_surfaces()
             );
             
             #ifdef SLIC3R_DEBUG
-            printf("Processing bridge at layer %zu:\n", this->layer()->id());
+            printf("Processing bridge at layer %zu (z = %f):\n", this->layer()->id(), this->layer()->print_z);
             #endif
             
             if (bd.detect_angle()) {
@@ -119,7 +118,7 @@ LayerRegion::process_external_surfaces()
         
         // give priority to bottom surfaces
         ExPolygons grown = diff_ex(
-            offset(surface->expolygon, +margin),
+            offset(surface->expolygon, +SCALED_EXTERNAL_INFILL_MARGIN),
             (Polygons)bottom
         );
         for (ExPolygons::const_iterator it = grown.begin(); it != grown.end(); ++it) {

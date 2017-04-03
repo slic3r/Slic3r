@@ -82,8 +82,27 @@ use Slic3r::Test;
     ok check_angle($lower, $bridge, 45, undef, $bridge->area/2), 'correct bridge angle for square overhang with L-shaped anchors';
 }
 
+if (0) {
+    # GH #2477:
+    # This rectangle-shaped bridge is actually unsupported (i.e. the potential anchors are
+    # a bit far away from the contour of the bridge area) because perimeters are reducing
+    # its area.
+    my $bridge = Slic3r::ExPolygon->new(
+        Slic3r::Polygon->new([30023195,14023195],[1776805,14023195],[1776805,1776805],[30023195,1776805]),
+    );
+    my $lower = [
+        Slic3r::ExPolygon->new(
+            Slic3r::Polygon->new([31800000,15800000],[0,15800000],[0,0],[31800000,0]),
+            Slic3r::Polygon->new([1499999,1500000],[1499999,14300000],[30300000,14300000],[30300000,1500000]),
+        ),
+    ];
+    
+    ok check_angle($lower, $bridge, 90, undef, $bridge->area, 500000),
+        'correct bridge angle for rectangle';
+}
+
 sub check_angle {
-    my ($lower, $bridge, $expected, $tolerance, $expected_coverage) = @_;
+    my ($lower, $bridge, $expected, $tolerance, $expected_coverage, $extrusion_width) = @_;
     
     if (ref($lower) eq 'ARRAY') {
         $lower = Slic3r::ExPolygon::Collection->new(@$lower);
@@ -91,8 +110,9 @@ sub check_angle {
     
     $expected_coverage //= -1;
     $expected_coverage = $bridge->area if $expected_coverage == -1;
+    $extrusion_width //= scale 0.5;
     
-    my $bd = Slic3r::BridgeDetector->new($bridge, $lower, scale 0.5);
+    my $bd = Slic3r::BridgeDetector->new($bridge, $lower, $extrusion_width);
     
     $tolerance //= rad2deg($bd->resolution) + epsilon;
     $bd->detect_angle;

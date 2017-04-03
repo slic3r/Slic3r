@@ -26,16 +26,16 @@ BridgeDetector::BridgeDetector(const ExPolygon &_expolygon, const ExPolygonColle
     // safety offset required to avoid Clipper from detecting empty intersection while Boost actually found some edges
     this->_anchors = intersection_ex(grown, this->lower_slices, true);
     
-    /*
-    if (0) {
-        require "Slic3r/SVG.pm";
-        Slic3r::SVG::output("bridge.svg",
-            expolygons      => [ $self->expolygon ],
-            red_expolygons  => $self->lower_slices,
-            polylines       => $self->_edges,
-        );
+    #if 0
+    {
+        SVG svg("bridge.svg");
+        svg.draw(this->expolygon);
+        svg.draw(this->lower_slices, "red");
+        svg.draw(this->_anchors, "yellow");
+        //svg.draw(this->_edges, "black", scale_(0.2));
+        svg.Close();
     }
-    */
+    #endif
 }
 
 bool
@@ -48,7 +48,7 @@ BridgeDetector::detect_angle()
     /*  Outset the bridge expolygon by half the amount we used for detecting anchors;
         we'll use this one to clip our test lines and be sure that their endpoints
         are inside the anchors and not on their contours leading to false negatives. */
-    Polygons clip_area = offset(this->expolygon, +this->extrusion_width/2);
+    const Polygons clip_area = offset(this->expolygon, +this->extrusion_width/2);
     
     /*  we'll now try several directions using a rudimentary visibility check:
         bridge in several directions and then sum the length of lines having both
@@ -74,13 +74,13 @@ BridgeDetector::detect_angle()
     
         /*  we also test angles of each open supporting edge
             (this finds the optimal angle for C-shaped supports) */
-        for (Polylines::const_iterator edge = this->_edges.begin(); edge != this->_edges.end(); ++edge) {
-            if (edge->first_point().coincides_with(edge->last_point())) continue;
-            angles.push_back(Line(edge->first_point(), edge->last_point()).direction());
+        for (const Polyline &edge : this->_edges) {
+            if (edge.first_point().coincides_with(edge.last_point())) continue;
+            angles.push_back(Line(edge.first_point(), edge.last_point()).direction());
         }
     
         // remove duplicates
-        double min_resolution = PI/180.0;  // 1 degree
+        constexpr double min_resolution = PI/180.0;  // 1 degree
         std::sort(angles.begin(), angles.end());
         for (size_t i = 1; i < angles.size(); ++i) {
             if (Slic3r::Geometry::directions_parallel(angles[i], angles[i-1], min_resolution)) {
@@ -97,7 +97,7 @@ BridgeDetector::detect_angle()
             candidates.push_back(BridgeDirection(angle));
     }
     
-    double line_increment = this->extrusion_width;
+    const double line_increment = this->extrusion_width;
     bool have_coverage = false;
     for (BridgeDirection &candidate : candidates) {
         Polygons my_clip_area = clip_area;
@@ -112,27 +112,22 @@ BridgeDetector::detect_angle()
         // generate lines in this direction
         BoundingBox bb;
         for (const ExPolygon &e : my_anchors)
-            bb.merge((Points)e);
+            bb.merge(e.bounding_box());
         
         Lines lines;
         for (coord_t y = bb.min.y; y <= bb.max.y; y += line_increment)
             lines.push_back(Line(Point(bb.min.x, y), Point(bb.max.x, y)));
         
-        Lines clipped_lines = intersection_ln(lines, my_clip_area);
-        
-        // remove any line not having both endpoints within anchors
-        for (size_t i = 0; i < clipped_lines.size(); ++i) {
-            Line &line = clipped_lines[i];
-            if (!Slic3r::Geometry::contains(my_anchors, line.a)
-                || !Slic3r::Geometry::contains(my_anchors, line.b)) {
-                clipped_lines.erase(clipped_lines.begin() + i);
-                --i;
-            }
-        }
+        const Lines clipped_lines = intersection_ln(lines, my_clip_area);
         
         std::vector<double> lengths;
         double total_length = 0;
         for (const Line &line : clipped_lines) {
+            // skip any line not having both endpoints within anchors
+            if (!Slic3r::Geometry::contains(my_anchors, line.a)
+                || !Slic3r::Geometry::contains(my_anchors, line.b))
+                continue;
+            
             const double len = line.length();
             lengths.push_back(len);
             total_length += len;
@@ -220,13 +215,13 @@ BridgeDetector::coverage(double angle) const
     }
     
     // merge trapezoids and rotate them back
-    Polygons _coverage = union_(covered);
-    for (Polygons::iterator p = _coverage.begin(); p != _coverage.end(); ++p)
-        p->rotate(-(PI/2.0 - angle), Point(0,0));
+    covered = union_(covered);
+    for (Polygon &p : covered)
+        p.rotate(-(PI/2.0 - angle), Point(0,0));
     
     // intersect trapezoids with actual bridge area to remove extra margins
     // and append it to result
-    return intersection(_coverage, this->expolygon);
+    return intersection(covered, this->expolygon);
     
     /*
     if (0) {

@@ -35,6 +35,11 @@ SVG::SVG(const char* filename, const BoundingBox &bbox)
         h, w);
 }
 
+SVG::~SVG()
+{
+    this->Close();
+}
+
 void
 SVG::draw(const Line &line, std::string stroke, coord_t stroke_width)
 {
@@ -68,10 +73,10 @@ void SVG::draw(const ThickLine &line, const std::string &fill, const std::string
 }
 
 void
-SVG::draw(const Lines &lines, std::string stroke)
+SVG::draw(const Lines &lines, std::string stroke, coord_t stroke_width)
 {
     for (Lines::const_iterator it = lines.begin(); it != lines.end(); ++it)
-        this->draw(*it, stroke);
+        this->draw(*it, stroke, stroke_width);
 }
 
 void
@@ -92,6 +97,12 @@ SVG::draw(const ExPolygon &expolygon, std::string fill)
         d += this->get_path_d(*p, true) + " ";
     }
     this->path(d, true);
+}
+
+void
+SVG::draw(const ExPolygonCollection &coll, std::string fill)
+{
+    this->draw(coll.expolygons, fill);
 }
 
 void
@@ -126,7 +137,7 @@ void
 SVG::draw(const Polylines &polylines, std::string stroke, coord_t stroke_width)
 {
     for (Polylines::const_iterator it = polylines.begin(); it != polylines.end(); ++it)
-        this->draw(*it, fill, stroke_width);
+        this->draw(*it, stroke, stroke_width);
 }
 
 void SVG::draw(const ThickLines &thicklines, const std::string &fill, const std::string &stroke, coord_t stroke_width)
@@ -202,9 +213,12 @@ SVG::get_path_d(const MultiPoint &mp, bool closed) const
 void
 SVG::Close()
 {
-    fprintf(this->f, "</svg>\n");
-    fclose(this->f);
-    printf("SVG written to %s\n", this->filename.c_str());
+    if (this->f != NULL) {
+        fprintf(this->f, "</svg>\n");
+        fclose(this->f);
+        this->f = NULL;
+        printf("SVG written to %s\n", this->filename.c_str());
+    }
 }
 
 }

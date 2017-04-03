@@ -64,6 +64,7 @@ constexpr auto LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER = 0.15;
 constexpr coord_t SMALL_PERIMETER_LENGTH = scale_(6.5) * 2 * PI;
 constexpr coordf_t INSET_OVERLAP_TOLERANCE = 0.4;
 constexpr coordf_t EXTERNAL_INFILL_MARGIN = 3;
+constexpr coord_t SCALED_EXTERNAL_INFILL_MARGIN = scale_(EXTERNAL_INFILL_MARGIN);
 
 enum Axis { X=0, Y, Z };
 
