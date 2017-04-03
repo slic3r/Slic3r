@@ -6,11 +6,6 @@
 #include "Print.hpp"
 #include "Surface.hpp"
 
-#include "SVG.hpp"
-
-
-
-
 namespace Slic3r {
 
 Flow

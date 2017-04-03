@@ -3,8 +3,6 @@
 #include "Geometry.hpp"
 #include <algorithm>
 
-#include "SVG.hpp"
-
 namespace Slic3r {
 
 BridgeDetector::BridgeDetector(const ExPolygon &_expolygon, const ExPolygonCollection &_lower_slices,
