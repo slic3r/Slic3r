@@ -73,19 +73,19 @@ LayerRegion::process_external_surfaces()
     const Surfaces &surfaces = this->fill_surfaces.surfaces;
     
     SurfaceCollection bottom;
-    for (Surfaces::const_iterator surface = surfaces.begin(); surface != surfaces.end(); ++surface) {
-        if (!surface->is_bottom()) continue;
+    for (const Surface &surface : surfaces) {
+        if (!surface.is_bottom()) continue;
         
-        const ExPolygons grown = offset_ex(surface->expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
+        const ExPolygons grown = offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
         
         /*  detect bridge direction before merging grown surfaces otherwise adjacent bridges
             would get merged into a single one while they need different directions
             also, supply the original expolygon instead of the grown one, because in case
             of very thin (but still working) anchors, the grown expolygon would go beyond them */
         double angle = -1;
-        if (this->layer()->lower_layer != NULL && surface->is_bridge()) {
+        if (this->layer()->lower_layer != NULL && surface.is_bridge()) {
             BridgeDetector bd(
-                surface->expolygon,
+                surface.expolygon,
                 this->layer()->lower_layer->slices,
                 this->flow(frInfill, true).scaled_width()
             );
@@ -104,28 +104,21 @@ LayerRegion::process_external_surfaces()
             }
         }
         
-        for (ExPolygons::const_iterator it = grown.begin(); it != grown.end(); ++it) {
-            Surface s       = *surface;
-            s.expolygon     = *it;
-            s.bridge_angle  = angle;
-            bottom.surfaces.push_back(s);
-        }
+        Surface templ = surface;
+        templ.bridge_angle = angle;
+        bottom.append(grown, templ);
     }
     
     SurfaceCollection top;
-    for (Surfaces::const_iterator surface = surfaces.begin(); surface != surfaces.end(); ++surface) {
-        if (surface->surface_type != stTop) continue;
+    for (const Surface &surface : surfaces) {
+        if (surface.surface_type != stTop) continue;
         
         // give priority to bottom surfaces
         ExPolygons grown = diff_ex(
-            offset(surface->expolygon, +SCALED_EXTERNAL_INFILL_MARGIN),
+            offset(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN),
             (Polygons)bottom
         );
-        for (ExPolygons::const_iterator it = grown.begin(); it != grown.end(); ++it) {
-            Surface s   = *surface;
-            s.expolygon = *it;
-            top.surfaces.push_back(s);
-        }
+        top.append(grown, surface);
     }
     
     /*  if we're slicing with no infill, we can't extend external surfaces
@@ -134,10 +127,9 @@ LayerRegion::process_external_surfaces()
     if (this->region()->config.fill_density.value > 0) {
         fill_boundaries = SurfaceCollection(surfaces);
     } else {
-        for (Surfaces::const_iterator it = surfaces.begin(); it != surfaces.end(); ++it) {
-            if (it->surface_type != stInternal)
-                fill_boundaries.surfaces.push_back(*it);
-        }
+        for (const Surface &s : surfaces)
+            if (s.surface_type != stInternal)
+                fill_boundaries.surfaces.push_back(s);
     }
     
     // intersect the grown surfaces with the actual fill boundaries
@@ -151,10 +143,10 @@ LayerRegion::process_external_surfaces()
         std::vector<SurfacesConstPtr> groups;
         tb.group(&groups);
         
-        for (std::vector<SurfacesConstPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+        for (const SurfacesConstPtr &g : groups) {
             Polygons subject;
-            for (SurfacesConstPtr::const_iterator s = g->begin(); s != g->end(); ++s)
-                append_to(subject, (Polygons)**s);
+            for (const Surface* s : g)
+                append_to(subject, (Polygons)*s);
             
             ExPolygons expp = intersection_ex(
                 subject,
@@ -162,45 +154,36 @@ LayerRegion::process_external_surfaces()
                 true // to ensure adjacent expolygons are unified
             );
             
-            for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
-                Surface s = *g->front();
-                s.expolygon = *ex;
-                new_surfaces.surfaces.push_back(s);
-            }
+            new_surfaces.append(expp, *g.front());
         }
     }
     
     /* subtract the new top surfaces from the other non-top surfaces and re-add them */
     {
         SurfaceCollection other;
-        for (Surfaces::const_iterator s = surfaces.begin(); s != surfaces.end(); ++s) {
-            if (s->surface_type != stTop && !s->is_bottom())
-                other.surfaces.push_back(*s);
-        }
+        for (const Surface &s : surfaces)
+            if (s.surface_type != stTop && !s.is_bottom())
+                other.surfaces.push_back(s);
         
         // group surfaces
         std::vector<SurfacesConstPtr> groups;
         other.group(&groups);
         
-        for (std::vector<SurfacesConstPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+        for (const SurfacesConstPtr &g : groups) {
             Polygons subject;
-            for (SurfacesConstPtr::const_iterator s = g->begin(); s != g->end(); ++s)
-                append_to(subject, (Polygons)**s);
+            for (const Surface* s : g)
+                append_to(subject, (Polygons)*s);
             
             ExPolygons expp = diff_ex(
                 subject,
                 (Polygons)new_surfaces
             );
             
-            for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
-                Surface s = *g->front();
-                s.expolygon = *ex;
-                new_surfaces.surfaces.push_back(s);
-            }
+            new_surfaces.append(expp, *g.front());
         }
     }
     
-    this->fill_surfaces = new_surfaces;
+    this->fill_surfaces = std::move(new_surfaces);
 }
 
 void
