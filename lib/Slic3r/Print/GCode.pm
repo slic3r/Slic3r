@@ -120,7 +120,7 @@ sub export {
         if ($self->print->has_support_material) {
             my $object0 = $self->objects->[0];
             my $flow = $object0->support_material_flow;
-            my $vol_speed = $flow->mm3_per_mm / $object0->config->get_abs_value('support_material_speed');
+            my $vol_speed = $flow->mm3_per_mm * $object0->config->get_abs_value('support_material_speed');
             $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
             printf $fh "; support material extrusion width = %.2fmm (%.2fmm^3/s)\n",
                 $flow->width, $vol_speed;
