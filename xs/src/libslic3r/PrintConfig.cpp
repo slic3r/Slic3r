@@ -1577,10 +1577,10 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("use_visivalingam", coBool);		
     def->label = "Use the Visivalingam simplification algorithm, instead of Douglas-Puecker";		
-    def->tooltip = "Whether or not to use the experimental Visivalingam simplification algorithm. This algorithm is more performant than Douglas-Puecker, but also should do a better job of intelligently preserving detail."		
+    def->tooltip = "Whether or not to use the experimental Visivalingam simplification algorithm. This algorithm is more performant than Douglas-Puecker, but also should do a better job of intelligently preserving detail.";	
     def->cli = "use-visivalingam=b";		
     def->default_value = new ConfigOptionBool(false);
-    
+
 }
 
 PrintConfigDef print_config_def;
