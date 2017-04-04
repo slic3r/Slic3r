@@ -66,7 +66,7 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
     g.process();
 }
 
-// This function reads layer->slices andlower_layer->slices
+// This function reads layer->slices and lower_layer->slices
 // and writes this->bridged and this->fill_surfaces, so it's thread-safe.
 void
 LayerRegion::process_external_surfaces()
@@ -106,7 +106,6 @@ LayerRegion::process_external_surfaces()
     }
     
     SurfaceCollection bottom;
-    Polygons removed_holes;
     for (const Surface &surface : surfaces) {
         if (!surface.is_bottom()) continue;
         
