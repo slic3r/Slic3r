@@ -1398,12 +1398,12 @@ sub async_apply_config {
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
     
+    if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
+        $self->hide_preview if $invalidated;
+        return;
+    }
+    
     if ($invalidated) {
-        if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
-            $self->hide_preview;
-            return;
-        }
-        
         # kill current thread if any
         $self->stop_background_process;
         # remove the sliced statistics box because something changed.
