@@ -18,7 +18,7 @@ sub new {
       my $model_object = $self->{model_object} = $params{model_object};
       my $obj_idx = $self->{obj_idx} = $params{obj_idx};
     my $plater = $self->{plater} = $parent;
-    my $object = $self->{object} = $self->{plater}->{print}->get_object($self->{obj_idx});
+    my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
     
     $self->{update_spline_control} = 0;
 
@@ -93,9 +93,6 @@ sub new {
     $self->{splineControl}->on_layer_update(sub {
         # trigger re-slicing
         $self->_trigger_slicing;
-        #$self->{plater}->stop_background_process;
-        #$self->{object}->invalidate_step(STEP_SLICE);
-        #$self->{plater}->start_background_process;
     });
     
     $self->{splineControl}->on_z_indicator(sub {
@@ -105,7 +102,7 @@ sub new {
     });
 
     # init quality slider
-    if($object->config->adaptive_slicing) {
+    if($object->config->get('adaptive_slicing')) {
         my $quality_value = $object->config->get('adaptive_slicing_quality');
         $value_label->SetLabel(sprintf '%.2f', $quality_value);
         $quality_slider->SetRange(0, 100);
@@ -131,8 +128,9 @@ sub new {
 
 sub _trigger_slicing {
     my ($self) = @_;
+    my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
+    $self->{plater}->pause_background_process;
     $self->{plater}->stop_background_process;
-    $self->{object}->invalidate_step(STEP_SLICE);
     if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
         $self->{plater}->statusbar->SetCancelCallback(sub {
             $self->{plater}->stop_background_process;
@@ -143,6 +141,8 @@ sub _trigger_slicing {
         $self->{plater}->on_model_change;
         $self->{plater}->start_background_process;
     }else{
+    	$self->{plater}->{print}->reload_object($self->{obj_idx});
+        $self->{plater}->on_model_change;
         $self->{plater}->schedule_background_process;
     }
 }
@@ -151,10 +151,11 @@ sub reload_preview {
     my ($self) = @_;
     $self->{splineControl}->update;
     $self->{preview3D}->reload_print;
-    if($self->{object}->layer_count-1 > 0) {
+    my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
+    if($object->layer_count-1 > 0) {
         # causes segfault...
-        #my $top_layer = $self->{object}->get_layer($self->{object}->layer_count-1);
-        #$self->{preview3D}->set_z($top_layer->print_z);
+        my $top_layer = $object->get_layer($object->layer_count-1);
+        $self->{preview3D}->set_z($top_layer->print_z);
     }
 }
 

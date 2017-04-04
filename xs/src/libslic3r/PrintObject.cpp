@@ -317,6 +317,7 @@ PrintObject::invalidate_all_steps()
     for (std::set<PrintObjectStep>::const_iterator step = steps.begin(); step != steps.end(); ++step) {
         if (this->invalidate_step(*step)) invalidated = true;
     }
+
     return invalidated;
 }
 
@@ -671,13 +672,15 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
             }
         }
 
-        // Store layer vector for interactive manipulation and push back to model
+        // Store layer vector for interactive manipulation
         this->layer_height_spline.setLayers(result);
-        this->_model_object->layer_height_spline = this->layer_height_spline;
         if (this->config.adaptive_slicing.value) { // smoothing after adaptive algorithm
             result = this->layer_height_spline.getInterpolatedLayers();
         }
     }
+
+    // push modified spline object back to model
+    this->_model_object->layer_height_spline = this->layer_height_spline;
 
     // apply z-gradation (this is redundant for static layer height...)
     coordf_t gradation = 1 / this->_print->config.z_steps_per_mm * 4;
