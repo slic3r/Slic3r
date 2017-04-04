@@ -43,7 +43,7 @@ echo "Appfolder: $appfolder, archivefolder: $archivefolder"
 
 # Our slic3r dir and location of perl
 PERL_BIN=$(which perl)
-PP_BIN=$(which pp)
+PP_BIN=$(which wxpar)
 SLIC3R_DIR="./"
 
 if [[ -d "${appfolder}" ]]; then
@@ -61,7 +61,6 @@ mkdir -p $appfolder
 
 echo "Copying resources..." 
 cp -rf $SLIC3R_DIR/var $resourcefolder/
-mv $resourcefolder/var/Slic3r.icns $resourcefolder
 
 echo "Copying Slic3r..."
 cp $SLIC3R_DIR/slic3r.pl $archivefolder/slic3r.pl
@@ -90,7 +89,8 @@ chmod +x $archivefolder/$appname
 
 echo "Copying perl from $PERL_BIN"
 cp -f $PERL_BIN $archivefolder/perl-local
-${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
+${PP_BIN} wxextension .0 \
+	  -M attributes -M base -M bytes -M B -M POSIX \
           -M FindBin -M Unicode::Normalize -M Tie::Handle \
           -M Time::Local -M Math::Trig \
           -M lib -M overload \
@@ -99,6 +99,8 @@ ${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
           -B -p -e "print 123" -o $WD/_tmp/test.par
 unzip -qq -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
+cp -rf $WD/_tmp/shlib $archivefolder/
+
 rm -rf $WD/_tmp
 
 echo "Cleaning local-lib"

@@ -88,4 +88,5 @@ function set_pr_id ()
 function install_par ()
 {
     cpanm -q PAR::Packer
+    cpanm -q Wx::Perl::Packager
 }
