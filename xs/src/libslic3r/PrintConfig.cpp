@@ -1598,7 +1598,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(0);
 }
 
-PrintConfigDef print_config_def;
+const PrintConfigDef print_config_def;
 
 void
 DynamicPrintConfig::normalize() {
@@ -1831,6 +1831,6 @@ CLIConfigDef::CLIConfigDef()
     def->default_value = new ConfigOptionPoint3(Pointf3(0,0,0));
 }
 
-CLIConfigDef cli_config_def;
+const CLIConfigDef cli_config_def;
 
 }

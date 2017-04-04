@@ -103,7 +103,7 @@ class PrintConfigDef : public ConfigDef
 
 // The one and only global definition of SLic3r configuration options.
 // This definition is constant.
-extern PrintConfigDef print_config_def;
+extern const PrintConfigDef print_config_def;
 
 // Slic3r configuration storage with print_config_def assigned.
 class PrintConfigBase : public virtual ConfigBase
@@ -611,7 +611,7 @@ class CLIConfigDef : public ConfigDef
     CLIConfigDef();
 };
 
-extern CLIConfigDef cli_config_def;
+extern const CLIConfigDef cli_config_def;
 
 class CLIConfig
     : public virtual ConfigBase, public StaticConfig

@@ -110,92 +110,90 @@ PROTOTYPES: DISABLE
 SV*
 print_config_def()
     CODE:
-        t_optiondef_map &def = Slic3r::print_config_def.options;
-        
         HV* options_hv = newHV();
-        for (t_optiondef_map::iterator oit = def.begin(); oit != def.end(); ++oit) {
+        for (const auto &oit : Slic3r::print_config_def.options) {
             HV* hv = newHV();
             
-            t_config_option_key opt_key = oit->first;
-            ConfigOptionDef* optdef     = &oit->second;
+            const t_config_option_key &opt_key = oit.first;
+            const ConfigOptionDef &optdef      = oit.second;
             
             const char* opt_type;
-            if (optdef->type == coFloat || optdef->type == coFloats || optdef->type == coFloatOrPercent) {
+            if (optdef.type == coFloat || optdef.type == coFloats || optdef.type == coFloatOrPercent) {
                 opt_type = "f";
-            } else if (optdef->type == coPercent) {
+            } else if (optdef.type == coPercent) {
                 opt_type = "percent";
-            } else if (optdef->type == coInt || optdef->type == coInts) {
+            } else if (optdef.type == coInt || optdef.type == coInts) {
                 opt_type = "i";
-            } else if (optdef->type == coString) {
+            } else if (optdef.type == coString) {
                 opt_type = "s";
-            } else if (optdef->type == coStrings) {
+            } else if (optdef.type == coStrings) {
                 opt_type = "s@";
-            } else if (optdef->type == coPoint || optdef->type == coPoint3 || optdef->type == coPoints) {
+            } else if (optdef.type == coPoint || optdef.type == coPoint3 || optdef.type == coPoints) {
                 opt_type = "point";
-            } else if (optdef->type == coBool || optdef->type == coBools) {
+            } else if (optdef.type == coBool || optdef.type == coBools) {
                 opt_type = "bool";
-            } else if (optdef->type == coEnum) {
+            } else if (optdef.type == coEnum) {
                 opt_type = "select";
             } else {
                 throw "Unknown option type";
             }
             (void)hv_stores( hv, "type",        newSVpv(opt_type, 0) );
-            (void)hv_stores( hv, "gui_type",    newSVpvn(optdef->gui_type.c_str(), optdef->gui_type.length()) );
-            (void)hv_stores( hv, "gui_flags",   newSVpvn(optdef->gui_flags.c_str(), optdef->gui_flags.length()) );
-            (void)hv_stores( hv, "label",       newSVpvn_utf8(optdef->label.c_str(), optdef->label.length(), true) );
-            if (!optdef->full_label.empty())
-                (void)hv_stores( hv, "full_label",  newSVpvn_utf8(optdef->full_label.c_str(), optdef->full_label.length(), true) );
-            (void)hv_stores( hv, "category",    newSVpvn_utf8(optdef->category.c_str(), optdef->category.length(), true) );
-            (void)hv_stores( hv, "tooltip",     newSVpvn_utf8(optdef->tooltip.c_str(), optdef->tooltip.length(), true) );
-            (void)hv_stores( hv, "sidetext",    newSVpvn_utf8(optdef->sidetext.c_str(), optdef->sidetext.length(), true) );
-            (void)hv_stores( hv, "cli",         newSVpvn(optdef->cli.c_str(), optdef->cli.length()) );
-            (void)hv_stores( hv, "ratio_over",  newSVpvn(optdef->ratio_over.c_str(), optdef->ratio_over.length()) );
-            (void)hv_stores( hv, "multiline",   newSViv(optdef->multiline ? 1 : 0) );
-            (void)hv_stores( hv, "full_width",  newSViv(optdef->full_width ? 1 : 0) );
-            (void)hv_stores( hv, "readonly",    newSViv(optdef->readonly ? 1 : 0) );
-            (void)hv_stores( hv, "height",      newSViv(optdef->height) );
-            (void)hv_stores( hv, "width",       newSViv(optdef->width) );
-            (void)hv_stores( hv, "min",         newSViv(optdef->min) );
-            (void)hv_stores( hv, "max",         newSViv(optdef->max) );
+            (void)hv_stores( hv, "gui_type",    newSVpvn(optdef.gui_type.c_str(), optdef.gui_type.length()) );
+            (void)hv_stores( hv, "gui_flags",   newSVpvn(optdef.gui_flags.c_str(), optdef.gui_flags.length()) );
+            (void)hv_stores( hv, "label",       newSVpvn_utf8(optdef.label.c_str(), optdef.label.length(), true) );
+            if (!optdef.full_label.empty())
+                (void)hv_stores( hv, "full_label",  newSVpvn_utf8(optdef.full_label.c_str(), optdef.full_label.length(), true) );
+            (void)hv_stores( hv, "category",    newSVpvn_utf8(optdef.category.c_str(), optdef.category.length(), true) );
+            (void)hv_stores( hv, "tooltip",     newSVpvn_utf8(optdef.tooltip.c_str(), optdef.tooltip.length(), true) );
+            (void)hv_stores( hv, "sidetext",    newSVpvn_utf8(optdef.sidetext.c_str(), optdef.sidetext.length(), true) );
+            (void)hv_stores( hv, "cli",         newSVpvn(optdef.cli.c_str(), optdef.cli.length()) );
+            (void)hv_stores( hv, "ratio_over",  newSVpvn(optdef.ratio_over.c_str(), optdef.ratio_over.length()) );
+            (void)hv_stores( hv, "multiline",   newSViv(optdef.multiline ? 1 : 0) );
+            (void)hv_stores( hv, "full_width",  newSViv(optdef.full_width ? 1 : 0) );
+            (void)hv_stores( hv, "readonly",    newSViv(optdef.readonly ? 1 : 0) );
+            (void)hv_stores( hv, "height",      newSViv(optdef.height) );
+            (void)hv_stores( hv, "width",       newSViv(optdef.width) );
+            (void)hv_stores( hv, "min",         newSViv(optdef.min) );
+            (void)hv_stores( hv, "max",         newSViv(optdef.max) );
             
             // aliases
-            if (!optdef->aliases.empty()) {
+            if (!optdef.aliases.empty()) {
                 AV* av = newAV();
-                av_fill(av, optdef->aliases.size()-1);
-                for (std::vector<t_config_option_key>::iterator it = optdef->aliases.begin(); it != optdef->aliases.end(); ++it)
-                    av_store(av, it - optdef->aliases.begin(), newSVpvn(it->c_str(), it->length()));
+                av_fill(av, optdef.aliases.size()-1);
+                for (std::vector<t_config_option_key>::const_iterator it = optdef.aliases.begin(); it != optdef.aliases.end(); ++it)
+                    av_store(av, it - optdef.aliases.begin(), newSVpvn(it->c_str(), it->length()));
                 (void)hv_stores( hv, "aliases", newRV_noinc((SV*)av) );
             }
             
             // shortcut
-            if (!optdef->shortcut.empty()) {
+            if (!optdef.shortcut.empty()) {
                 AV* av = newAV();
-                av_fill(av, optdef->shortcut.size()-1);
-                for (std::vector<t_config_option_key>::iterator it = optdef->shortcut.begin(); it != optdef->shortcut.end(); ++it)
-                    av_store(av, it - optdef->shortcut.begin(), newSVpvn(it->c_str(), it->length()));
+                av_fill(av, optdef.shortcut.size()-1);
+                for (std::vector<t_config_option_key>::const_iterator it = optdef.shortcut.begin(); it != optdef.shortcut.end(); ++it)
+                    av_store(av, it - optdef.shortcut.begin(), newSVpvn(it->c_str(), it->length()));
                 (void)hv_stores( hv, "shortcut", newRV_noinc((SV*)av) );
             }
             
             // enum_values
-            if (!optdef->enum_values.empty()) {
+            if (!optdef.enum_values.empty()) {
                 AV* av = newAV();
-                av_fill(av, optdef->enum_values.size()-1);
-                for (std::vector<std::string>::iterator it = optdef->enum_values.begin(); it != optdef->enum_values.end(); ++it)
-                    av_store(av, it - optdef->enum_values.begin(), newSVpvn(it->c_str(), it->length()));
+                av_fill(av, optdef.enum_values.size()-1);
+                for (std::vector<std::string>::const_iterator it = optdef.enum_values.begin(); it != optdef.enum_values.end(); ++it)
+                    av_store(av, it - optdef.enum_values.begin(), newSVpvn(it->c_str(), it->length()));
                 (void)hv_stores( hv, "values", newRV_noinc((SV*)av) );
             }
             
             // enum_labels
-            if (!optdef->enum_labels.empty()) {
+            if (!optdef.enum_labels.empty()) {
                 AV* av = newAV();
-                av_fill(av, optdef->enum_labels.size()-1);
-                for (std::vector<std::string>::iterator it = optdef->enum_labels.begin(); it != optdef->enum_labels.end(); ++it)
-                    av_store(av, it - optdef->enum_labels.begin(), newSVpvn_utf8(it->c_str(), it->length(), true));
+                av_fill(av, optdef.enum_labels.size()-1);
+                for (std::vector<std::string>::const_iterator it = optdef.enum_labels.begin(); it != optdef.enum_labels.end(); ++it)
+                    av_store(av, it - optdef.enum_labels.begin(), newSVpvn_utf8(it->c_str(), it->length(), true));
                 (void)hv_stores( hv, "labels", newRV_noinc((SV*)av) );
             }
             
-            if (optdef->default_value != NULL)
-                (void)hv_stores( hv, "default", ConfigOption_to_SV(*optdef->default_value, *optdef) );
+            if (optdef.default_value != NULL)
+                (void)hv_stores( hv, "default", ConfigOption_to_SV(*optdef.default_value, optdef) );
             (void)hv_store( options_hv, opt_key.c_str(), opt_key.length(), newRV_noinc((SV*)hv), 0 );
         }
         
