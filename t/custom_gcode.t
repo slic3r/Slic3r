@@ -1,4 +1,4 @@
-use Test::More tests => 15;
+use Test::More tests => 16;
 use strict;
 use warnings;
 
@@ -130,6 +130,15 @@ use Slic3r::Test;
     is_deeply \@before, \@change, 'layer_num is consistent before and after layer changes';
     ok !defined(first { $change[$_] != $change[$_-1]+1 } 1..$#change),
         'layer_num grows continously';  # i.e. no duplicates or regressions
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('complete_objects', 1);
+    $config->set('between_objects_gcode', '_MY_CUSTOM_GCODE_');
+    my $print = Slic3r::Test::init_print('20mm_cube', config => $config, duplicate => 3);
+    my $gcode = Slic3r::Test::gcode($print);
+    is scalar(() = $gcode =~ /^_MY_CUSTOM_GCODE_/gm), 2, 'between_objects_gcode is applied correctly';
 }
 
 __END__

@@ -292,6 +292,7 @@ class GCodeConfig : public virtual StaticPrintConfig
 {
     public:
     ConfigOptionString              before_layer_gcode;
+    ConfigOptionString              between_objects_gcode;
     ConfigOptionString              end_gcode;
     ConfigOptionStrings             end_filament_gcode;
     ConfigOptionString              extrusion_axis;
@@ -329,6 +330,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(before_layer_gcode);
+        OPT_PTR(between_objects_gcode);
         OPT_PTR(end_gcode);
         OPT_PTR(end_filament_gcode);
         OPT_PTR(extrusion_axis);

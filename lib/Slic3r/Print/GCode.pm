@@ -146,12 +146,14 @@ sub export {
     }
     
     # set extruder(s) temperature before and after start G-code
-    $self->_print_first_layer_temperature(0);
+    $self->_print_first_layer_temperature(0)
+        if $self->config->start_gcode !~ /M(?:109|104)/i;
     printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->start_gcode);
     foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
         printf $fh "%s\n", $gcodegen->placeholder_parser->process($start_gcode);
     }
-    $self->_print_first_layer_temperature(1);
+    $self->_print_first_layer_temperature(1)
+        if $self->config->start_gcode !~ /M(?:109|104)/i;
     
     # set other general things
     print $fh $gcodegen->preamble;
@@ -246,8 +248,12 @@ sub export {
                     # is triggered, so machine has more time to reach such temperatures
                     if ($layer->id == 0 && $finished_objects > 0) {
                         printf $fh $gcodegen->writer->set_bed_temperature($self->config->first_layer_bed_temperature),
-                            if $self->config->first_layer_bed_temperature && $self->config->has_heatbed;
-                        $self->_print_first_layer_temperature(0);
+                            if $self->config->first_layer_bed_temperature
+                            && $self->config->has_heatbed
+                            && $self->config->between_objects_gcode !~ /M(?:190|140)/i;
+                        $self->_print_first_layer_temperature(0)
+                            if $self->config->between_objects_gcode !~ /M(?:109|104)/i;
+                        printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->between_objects_gcode);
                     }
                     $self->process_layer($layer, [$copy]);
                 }
@@ -336,7 +342,6 @@ sub export {
 sub _print_first_layer_temperature {
     my ($self, $wait) = @_;
     
-    return if $self->config->start_gcode =~ /M(?:109|104)/i;
     for my $t (@{$self->print->extruders}) {
         my $temp = $self->config->get_at('first_layer_temperature', $t);
         $temp += $self->config->standby_temperature_delta if $self->config->ooze_prevention;
