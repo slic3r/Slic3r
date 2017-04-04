@@ -271,8 +271,8 @@ sub validate {
     
     # support material
     if ($self->support_material) {
-        die "Angle value of 0 is illegal. Use some % value instead (e.g. 150%)\n"
-            if $self->support_material_threshold == 0 || $self->support_material_threshold eq '0';
+        die "Value of 0 is illegal. Use some % value instead (e.g. 150%) for auto.\n"
+            if $self->support_material_threshold =~ /^0+/;
     }
     
     
