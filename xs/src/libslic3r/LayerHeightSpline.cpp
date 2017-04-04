@@ -158,15 +158,18 @@ std::vector<coordf_t> LayerHeightSpline::getInterpolatedLayers() const
         coordf_t z = this->_original_layers[0];
         coordf_t h;
         coordf_t h_diff = 0;
+        coordf_t last_h_diff = 0;
         coordf_t eps = 0.0001;
         while(z <= this->_object_height) {
             h = 0;
+            h_diff = 0;
             // find intersection between layer height and spline
             do {
+                last_h_diff = h_diff;
                 h += h_diff/2;
                 h = this->_layer_height_spline->evaluate(z+h);
                 h_diff = this->_layer_height_spline->evaluate(z+h) - h;
-            } while(std::abs(h_diff) > eps);
+            } while(std::abs(h_diff) > eps && std::abs(h_diff - last_h_diff) > eps);
             z += h;
             layers.push_back(z);
         }
