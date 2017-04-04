@@ -249,7 +249,8 @@ LayerRegion::prepare_fill_surfaces()
     const float &fill_density = this->region()->config.fill_density;
     if (fill_density > 0 && fill_density < 100) {
         // scaling an area requires two calls!
-        const double min_area = scale_(scale_(this->region()->config.solid_infill_below_area.value));
+        // (we don't use scale_() because it would overflow the coord_t range
+        const double min_area = this->region()->config.solid_infill_below_area.value / SCALING_FACTOR / SCALING_FACTOR;
         for (Surface &surface : this->fill_surfaces.surfaces) {
             if (surface.surface_type == stInternal && surface.area() <= min_area)
                 surface.surface_type = stInternalSolid;
