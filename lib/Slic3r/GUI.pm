@@ -3,6 +3,19 @@ use strict;
 use warnings;
 use utf8;
 
+use Wx 0.9901 qw(:bitmap :dialog :icon :id :misc :systemsettings :toplevelwindow
+    :filedialog :font);
+
+BEGIN {
+    # Wrap the Wx::_load_plugin() function which doesn't work with non-ASCII paths
+    no warnings 'redefine';
+    my $orig = *Wx::_load_plugin{CODE};
+    *Wx::_load_plugin = sub {
+       $_[0] = Slic3r::decode_path($_[0]);
+       $orig->(@_);
+    };
+}
+
 use File::Basename qw(basename);
 use FindBin;
 use List::Util qw(first any);
@@ -41,8 +54,6 @@ use Slic3r::GUI::SLAPrintOptions;
 our $have_OpenGL = eval "use Slic3r::GUI::3DScene; 1";
 our $have_LWP    = eval "use LWP::UserAgent; 1";
 
-use Wx 0.9901 qw(:bitmap :dialog :icon :id :misc :systemsettings :toplevelwindow
-    :filedialog :font);
 use Wx::Event qw(EVT_IDLE EVT_COMMAND);
 use base 'Wx::App';
 
