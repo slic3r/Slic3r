@@ -12,6 +12,5 @@ FILES=$*
 
 for i in $FILES; do 
      filepath=$(readlink -f "$i")
-     echo "echo put $filepath | sftp -i$KEY \"${UPLOAD_USER}@dl.slic3r.org:$DIR/\""
-     #echo put $filepath | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+     echo put $filepath | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
 done
