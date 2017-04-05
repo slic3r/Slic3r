@@ -1,0 +1,72 @@
+version: 1.3.0-{branch}-{build}
+image: WMF 5
+init:
+- ps: 
+environment:
+  LDLOADLIBS: -lstdc++
+  SLIC3R_STATIC: 1
+  SLIC3R_VERSION: 1.3.0
+  BOOST_DIR: C:\dev\boost_1_63_0
+  WXSHARED: SHARED=0
+  FORCE_WX_BUILD: 0
+  FORCE_BOOST_REINSTALL: 0
+  ENC_SECRET:
+    secure: QfeTOSKXz1uFCEACqFKLNw==
+  UPLOAD_USER:
+    secure: fYPwnI3p6HNR+eMRJR3JfmyNolFn+Uc0MUn2bBXp9uU=
+
+install:
+  - nuget install secure-file -ExcludeVersion
+  - secure-file\tools\secure-file -decrypt package/deploy/slic3r-upload.rsa.appveyor.enc -secret %ENC_SECRET%
+- ps: "mkdir C:\\projects\\slic3r\\FreeGLUT\nif (!(Test-Path \"C:\\users\\appveyor\\freeglut.7z\")) \n{\nwget \"http://www.siusgs.com/slic3r/buildserver/win/freeglut-mingw-3.0.0.win64.7z\" -o C:\\users\\appveyor\\freeglut.7z\n}\ncmd /c \"7z x C:\\Users\\appveyor\\freeglut.7z -oC:\\projects\\slic3r\\FreeGLUT\"\n\nif (!(Test-Path \"C:\\users\\appveyor\\strawberry.msi\"))  {\nwget \"https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=slic3r-perl-5.24.1.4-64bit.msi\" -o \"C:\\users\\appveyor\\strawberry.msi\" | Write-Output\n}\nif (!(Test-Path \"C:\\users\\appveyor\\extra_perl.7z\"))  {\nwget \"https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=Strawberry-6.3.0-seg-archive.7z\" -o \"C:\\users\\appveyor\\extra_perl.7z\" | Write-Output\n}\nmsiexec.exe /i \"C:\\users\\appveyor\\strawberry.msi\" /quiet\ncmd /c \"7z x -aoa C:\\Users\\appveyor\\extra_perl.7z -oC:\\\"\n\nif (!(Test-Path \"C:\\users\\appveyor\\winscp.zip\")) {\nwget \"https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=WinSCP-5.9.4-Portable.zip\" -o \"C:\\users\\appveyor\\winscp.zip\" | Write-Output\n}\ncmd /c \"7z x C:\\Users\\appveyor\\winscp.zip -oC:\\Strawberry\\c\\bin\"\n\nrm -r C:\\min* -Force\nrm -r C:\\msys64\\mingw* -Force\nrm -r C:\\cygwin* -Force\nrm -r C:\\Perl -Force\n$PERLDIR = 'C:\\Strawberry'\n$env:Path = \"C:\\Strawberry\\c\\bin;C:\\Strawberry\\perl\\bin;C:\\Strawberry\\perl\\vendor\\bin;\" + $env:Path\nif(Test-Path -Path 'C:\\Strawberry' ) {\ncopy C:\\Strawberry\\c\\bin\\gcc.exe C:\\Strawberry\\c\\bin\\cc.exe\ncmd /c mklink /D C:\\Perl C:\\Strawberry\\perl\nmkdir C:\\dev\nif (!(Test-Path \"C:\\users\\appveyor\\boost.1.63.0.7z\") -Or $env:FORCE_BOOST_REINSTALL -eq 1) {\nwget \"https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0-x64-gcc-6.3.0-seh.7z\" -O \"C:\\users\\appveyor\\boost.1.63.0.7z\" | Write-Output\n}\nAdd-AppveyorCompilationMessage -Message \"Extracting cached archive.\"\ncmd /c \"7z x C:\\Users\\appveyor\\boost.1.63.0.7z -oC:\\dev\"\n\nmkdir C:\\dev\\CitrusPerl\ncmd /C mklink /D C:\\dev\\CitrusPerl\\mingw32 C:\\Strawberry\\c\ncd C:\\projects\\slic3r\ncpanm ExtUtils::Typemaps::Basic\ncpanm ExtUtils::Typemaps::Default\ncpanm local::lib\nAdd-AppveyorCompilationMessage -Message \"Finished install script.\"\nrm -r 'C:\\Program Files\\Git\\usr\\bin' -Force\n} else {\nAdd-AppveyorCompilationMessage -Message \"No strawberry perl!\"\n}\n\n\nAdd-AppveyorCompilationMessage -Message \"Installing wxWidgets (xsgui dependency))\"\nif ($env:FORCE_WX_BUILD -eq 1) {\nrm \"C:\\Users\\appveyor\\wxwidgets.7z\" -Force\n}\nif (!(Test-Path \"C:\\Users\\appveyor\\wxwidgets.7z\")) {\n    Add-AppveyorCompilationMessage -Message \"Compiling wxWidgets\"\n    git clone https://github.com/wxWidgets/wxWidgets -b \"v3.1.0\" -q C:\\dev\\wxWidgets\n    cd C:\\dev\\wxwidgets\n    cp .\\include\\wx\\msw\\setup0.h include/wx/msw/setup.h\n    cd build\\msw\n    mingw32-make -f makefile.gcc CXXFLAGS=\"-std=gnu++11\" BUILD=release VENDOR=Slic3r \n    cd C:\\dev\n    7z a C:\\Users\\appveyor\\wxwidgets.7z wxwidgets\n    cd C:\\projects\\slic3r\n} else {\n    Add-AppveyorCompilationMessage -Message \"Extracting prebuilt wxWidgets.\"\n    7z x \"C:\\Users\\appveyor\\wxwidgets.7z\" -oC:\\dev\n}"
+cache:
+- C:\Users\appveyor\boost.1.63.0.7z
+- C:\Users\appveyor\local-lib.7z
+- C:\Strawberry\perl\site
+- C:\Users\appveyor\freeglut.7z
+- C:\users\appveyor\strawberry.msi
+- C:\Users\appveyor\winscp.zip
+- C:\Users\appveyor\extra_perl.7z
+- C:\Users\appveyor\wxwidgets.7z
+build_script:
+- ps: >-
+    if (!(Test-Path "C:\users\appveyor\local-lib.7z")) {
+
+    wget "http://www.siusgs.com/slic3r/buildserver/win/slic3r-perl-dependencies-5.24.0-win-seh-gcc6.3.0-x64.7z" -o "C:\users\appveyor\local-lib.7z" | Write-Output
+
+    }
+
+    if (Test-Path "C:\users\appveyor\local-lib.7z") {
+
+    cmd /c "7z x C:\Users\appveyor\local-lib.7z -oC:\projects\slic3r" -y | Write-Output
+
+    rm -r 'C:\projects\slic3r\local-lib\Slic3r*'
+
+    }
+
+
+    $env:Path = "C:\Strawberry\c\bin;C:\Strawberry\perl\bin;" +     $env:Path
+      cd C:\projects\slic3r
+      rm -r 'C:\Program Files (x86)\Microsoft Vis*\bin' -Force
+      Add-AppveyorCompilationMessage -Message "Building Slic3r XS"
+      perl Build.pl
+      if (-NOT ($LASTEXITCODE -eq 0)) {
+         Add-AppveyorCompilationMessage -Message "XS Failed to Build" -Category Error
+      }
+      Add-AppveyorCompilationMessage -Message "Making ZIP package"
+      cd package/win
+      ./compile_wrapper.ps1 524| Write-Output
+      ./package_win32.ps1 524| Write-Output
+test_script:
+- ps: "mkdir C:\\Andrés\nwget \"http://www.thingiverse.com/download:73351\" -o\"C:\\Andrés\\5mm.stl\"\necho \"bed_temperature=60\" > C:\\Andrés\\test.ini\n\ncd C:\\projects\\slic3r\nperl slic3r.pl --load \"C:\\Andrés\\test.ini\" \"C:\\Andrés\\5mm.stl\"\n\nif (!(Test-Path  \"C:\\Andrés\\5mm.gcode\")) {\necho \"IS IT HERE\"\n}"
+artifacts:
+- path: .\slic3r*zip
+  name: slic3r-dev
+deploy_script:
+- ps: "Add-AppveyorCompilationMessage -Message \"Making ZIP package\"\ncd package/win\n./compile_wrapper.ps1 524 | Write-Output\n./package_win32.ps1 524| Write-Output\ncd ../../\n$myPath = $(pwd) -replace \"\\\\\", \"/\"\n$myPath = $myPath -replace \"C:\", \"/c\" \n& 'C:\\msys64\\usr\\bin\\bash.exe' -c \"PATH=/c/msys64/usr/bin:$PATH  BUILD_DIR=$env:APPVEYOR_BUILD_FOLDER    UPLOAD_USER=$env:UPLOAD_USER $mypath/package/deploy/sftp.sh win $BUILD_FOLDER/slic3r-upload.rsa.appveyor *.zip\"\n\nif (!(Test-Path C:\\project\\slic3r\\slic3r.par)) {\n  Add-AppveyorCompilationMessage -Message \"Failed to package!\" -Category Error\nreturn 1\n}"
+on_success:
+- ps: 
+on_failure:
+- ps: 
+on_finish:
+- ps: 
