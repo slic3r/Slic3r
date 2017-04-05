@@ -1,9 +1,6 @@
 language: perl
 before_install:
-- openssl aes-256-cbc -K $encrypted_daaf322d08bf_key -iv $encrypted_daaf322d08bf_iv
-  -in $TRAVIS_BUILD_DIR/package/deploy/slic3r-upload.rsa.enc -out ~/slic3r-upload.rsa
-  -d
-- chmod 600 ~/slic3r-upload.rsa
+- sh package/linux/travis-decrypt-key
 install:
 - export LDLOADLIBS=-lstdc++
 - export BOOST_DIR=$HOME/boost_1_63_0
