@@ -290,11 +290,11 @@ msgstr "Désactiver le ventilateur pour le(s) premier(s)"
 
 #: xs/src/libslic3r/PrintConfig.cpp:169
 msgid ""
-"This disables the fan completely for the first # of layers "
+"This disables the fan completely for the first N layers "
 "to aid in the adhesion of media to the bed. (default 3)"
 msgstr ""
-"Cela désactive complètement le ventilateur pour le premier nombre de couches "
-"pour faciliter l'adhérence des supports au lit. (Par défaut 3)"
+"Cela désactive complètement le ventilateur pour les premières N couches "
+"Pour aider à l'adhésion des médias au lit. (par défaut 3)"
 
 #: xs/src/libslic3r/PrintConfig.cpp:170
 msgid "layers"
