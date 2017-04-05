@@ -166,7 +166,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("disable_fan_first_layers", coInt);
     def->label = __TRANS("Disable fan for the first");
-    def->tooltip = __TRANS("You can set this to a positive value to disable fan at all during the first layers, so that it does not make adhesion worse.");
+    def->tooltip = __TRANS("This disables the fan completely for the first # of layers to aid in the adhesion of media to the bed. (default 3)");
     def->sidetext = __TRANS("layers");
     def->cli = "disable-fan-first-layers=i";
     def->min = 0;
