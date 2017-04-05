@@ -9,4 +9,5 @@ Param(
     [string]$FILE
 )
 Set-Variable -Name "UUSER" -Value "$env:UPLOAD_USER"
-winscp.exe /command sftp://$UUSER@dl.slic3r.org:$DIR/ /hostkey=* /privatekey=$KEY /upload "put $FILE"
+Set-Variable -Name "UPLOAD" -Value "$($FILE | Resolve-Path)"
+winscp.com /privatekey=$KEY /command "open sftp://$UUSER@dl.slic3r.org/$DIR -hostkey=*" "put $UPLOAD ./$FILE" "exit"
