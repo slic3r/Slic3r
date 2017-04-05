@@ -71,35 +71,35 @@ $adaptive_slicing->prepare(20);
 subtest 'max layer_height limited by extruder capabilities' => sub {
     plan tests => 3;
 
-    ok  (_eq($adaptive_slicing->next_layer_height(1, 0.5, 0.1, 0.15), 0.15), 'low');
-    ok  (_eq($adaptive_slicing->next_layer_height(1, 0.2, 0.1, 0.4), 0.4), 'higher');
-    ok  (_eq($adaptive_slicing->next_layer_height(1, 0.2, 0.1, 0.65), 0.65), 'highest');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 50, 0.1, 0.15), 0.15), 'low');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 80, 0.1, 0.4), 0.4), 'higher');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 80, 0.1, 0.65), 0.65), 'highest');
 };
   
 subtest 'min layer_height limited by extruder capabilities' => sub {
     plan tests => 3;
 
-    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.01, 0.1, 0.15), 0.1), 'low');
-    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.02, 0.2, 0.4), 0.2), 'higher');
-    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.01, 0.3, 0.65), 0.3), 'highest');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 99, 0.1, 0.15), 0.1), 'low');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 98, 0.2, 0.4), 0.2), 'higher');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 99, 0.3, 0.65), 0.3), 'highest');
 };
 
 subtest 'correct layer_height depending on the facet normals' => sub {
     plan tests => 3;
 
-    ok  (_eq($adaptive_slicing->next_layer_height(1, 0.1, 0.1, 0.5), 0.5), 'limit');
-    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.2, 0.1, 0.5), 0.1546), '45deg facet, quality_value: 0.2');
-    ok  (_eq($adaptive_slicing->next_layer_height(4, 0.5, 0.1, 0.5), 0.3352), '45deg facet, quality_value: 0.5');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 90, 0.1, 0.5), 0.5), 'limit');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 80, 0.1, 0.5), 0.1546), '45deg facet, quality_value: 0.2');
+    ok  (_eq($adaptive_slicing->next_layer_height(4, 50, 0.1, 0.5), 0.3352), '45deg facet, quality_value: 0.5');
 };
 
 
 # 2.92893 ist lower slope edge
 # distance to slope must be higher than min extruder cap.
 # slopes layer height must be greater than the distance to the slope
-ok  (_eq($adaptive_slicing->next_layer_height(2.798, 0.2, 0.1, 0.5), 0.1546), 'reducing layer_height due to higher slopy facet');
+ok  (_eq($adaptive_slicing->next_layer_height(2.798, 80, 0.1, 0.5), 0.1546), 'reducing layer_height due to higher slopy facet');
 
 # slopes layer height must be smaller than the distance to the slope
-ok  (_eq($adaptive_slicing->next_layer_height(2.6289, 0.15, 0.1, 0.5), 0.3), 'reducing layer_height to z-diff');
+ok  (_eq($adaptive_slicing->next_layer_height(2.6289, 85, 0.1, 0.5), 0.3), 'reducing layer_height to z-diff');
 
 subtest 'horizontal planes' => sub {
     plan tests => 3;
@@ -118,7 +118,7 @@ $config->set('first_layer_height', 0.42893); # to catch lower slope edge
 $config->set('nozzle_diameter', [0.5]);
 $config->set('min_layer_height', [0.1]);
 $config->set('max_layer_height', [0.5]);
-$config->set('adaptive_slicing_quality', [0.19]);
+$config->set('adaptive_slicing_quality', [81]);
 # slope height: 7,07107 (2.92893 to 10)
 
 subtest 'shrink to match horizontal facets' => sub {

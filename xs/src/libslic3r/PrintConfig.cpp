@@ -28,15 +28,17 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Automatically determine layer heights by the objects topology instead of using the static value.";
     def->cli = "adaptive-slicing!";
     def->default_value = new ConfigOptionBool(false);
-    
-    def = this->add("adaptive_slicing_quality", coFloat);
+
+    def = this->add("adaptive_slicing_quality", coPercent);
     def->label = "Adaptive quality";
-    def->tooltip = "Controls the quality / printing time tradeoff for adaptive layer generation. 1 -> fastest printing with max layer height, 0 -> highest quality, min layer height";
-    def->sidetext = "";
+    def->tooltip = "Controls the quality / printing time tradeoff for adaptive layer generation. 0 -> fastest printing with max layer height, 100 -> highest quality, min layer height";
+    def->sidetext = "%";
     def->cli = "adaptive_slicing_quality=f";
     def->min = 0;
-    def->max = 1;
-    def->default_value = new ConfigOptionFloat(0.15);
+    def->max = 100;
+    def->gui_type = "slider";
+    def->width = 200;
+    def->default_value = new ConfigOptionPercent(75);
 
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = "Avoid crossing perimeters";

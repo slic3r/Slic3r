@@ -69,9 +69,9 @@ float SlicingAdaptive::next_layer_height(coordf_t z, coordf_t quality_factor, co
     float height = max_layer_height;
     // factor must be between 0-1, 0 is highest quality, 1 highest print speed.
 
-    // currently disabled but planned for the future
+    // factor must be between 0-1, 0 is highest quality, 1 highest print speed.
     // Invert the slider scale (100% should represent a very high quality for the user)
-    //float quality_factor = std::max(0.f, std::min(1.f, 1 - m_slicing_params.adaptive_slicing_quality/100.f));
+    quality_factor = std::max(0.f, std::min<float>(1.f, 1 - quality_factor/100.f));
 
     float delta_min = SURFACE_CONST * min_layer_height;
     float delta_max = SURFACE_CONST * max_layer_height + 0.5 * max_layer_height;

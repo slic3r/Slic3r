@@ -484,6 +484,7 @@ sub build {
             $optgroup->append_single_option_line('first_layer_height');
             $optgroup->append_single_option_line('adaptive_slicing');
             $optgroup->append_single_option_line('adaptive_slicing_quality');
+            $optgroup->get_field('adaptive_slicing_quality')->set_scale(1);
             $optgroup->append_single_option_line('match_horizontal_surfaces');
         }
         {

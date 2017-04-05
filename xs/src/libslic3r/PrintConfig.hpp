@@ -144,7 +144,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
 {
     public:
 	ConfigOptionBool                adaptive_slicing;
-	ConfigOptionFloat               adaptive_slicing_quality;
+	ConfigOptionPercent             adaptive_slicing_quality;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloatOrPercent      extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_height;

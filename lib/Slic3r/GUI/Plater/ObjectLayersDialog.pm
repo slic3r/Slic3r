@@ -34,37 +34,47 @@ sub new {
 
     $self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(150, 200), $model_object);
 
-    my $quality_slider = $self->{quality_slider} = Wx::Slider->new(
-        $self, -1,
-        0,                              # default
-        0,                              # min
-        # we set max to a bogus non-zero value because the MSW implementation of wxSlider
-        # will skip drawing the slider if max <= min:
-        1,                              # max
-        wxDefaultPosition,
-        wxDefaultSize,
-        wxHORIZONTAL,
+    my $optgroup;
+    $optgroup = $self->{optgroup} = Slic3r::GUI::OptionsGroup->new(
+        parent      => $self,
+        title       => 'Adaptive quality %',
+        on_change   => sub {
+            my ($opt_id) = @_;
+            # There seems to be an issue with wxWidgets 3.0.2/3.0.3, where the slider
+            # genates tens of events for a single value change.
+            # Only trigger the recalculation if the value changes
+            # or a live preview was activated and the mesh cut is not valid yet.
+            if ($self->{adaptive_quality} != $optgroup->get_value($opt_id)) {
+                $self->{adaptive_quality} = $optgroup->get_value($opt_id);
+                $self->{model_object}->config->set('adaptive_slicing_quality', $optgroup->get_value($opt_id));
+                # trigger re-slicing
+                $self->_trigger_slicing;
+            }
+        },
+        label_width  => 0,
     );
 
-    my $quality_label = $self->{quality_label} = Wx::StaticText->new($self, -1, "    <-Quality", wxDefaultPosition,
-        [-1,-1], wxALIGN_LEFT);
-    my $value_label = $self->{value_label} = Wx::StaticText->new($self, -1, "", wxDefaultPosition,
-        [50,-1], wxALIGN_CENTRE_HORIZONTAL | wxST_NO_AUTORESIZE);
-    my $speed_label = $self->{speed_label} = Wx::StaticText->new($self, -1, "Speed->", wxDefaultPosition,
-        [-1,-1], wxST_NO_AUTORESIZE | wxALIGN_RIGHT);
-    $quality_label->SetFont($Slic3r::GUI::small_font);
-    $value_label->SetFont($Slic3r::GUI::small_font);
-    $speed_label->SetFont($Slic3r::GUI::small_font);
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'adaptive_slicing_quality',
+        type        => 'slider',
+        label       => '',
+        default     => $object->config->get('adaptive_slicing_quality'),
+        min         => 0,
+        max         => 100,
+        full_width  => 1,
+    ));
+    $optgroup->get_field('adaptive_slicing_quality')->set_scale(1);
+    $self->{adaptive_quality} = $object->config->get('adaptive_slicing_quality');
+    # init quality slider
+    if(!$object->config->get('adaptive_slicing')) {
+        # disable slider
+        $optgroup->get_field('adaptive_slicing_quality')->disable;
+    }
 
-    my $quality_label_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
-    $quality_label_sizer->Add($quality_label, 1, wxEXPAND | wxALL, 0);
-    $quality_label_sizer->Add($value_label, 1, wxEXPAND | wxALL, 0);
-    $quality_label_sizer->Add($speed_label, 1, wxEXPAND | wxALL, 0);
 
     my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
     $right_sizer->Add($self->{splineControl}, 1, wxEXPAND | wxALL, 0);
-    $right_sizer->Add($quality_slider, 0, wxEXPAND | wxALL, 0);
-    $right_sizer->Add($quality_label_sizer, 0, wxEXPAND | wxALL, 0);
+    $right_sizer->Add($optgroup->sizer, 0, wxEXPAND | wxALL, 0);
 
 
     $self->{sizer} = Wx::BoxSizer->new(wxHORIZONTAL);
@@ -101,28 +111,6 @@ sub new {
         $self->{preview3D}->canvas->Render;
     });
 
-    # init quality slider
-    if($object->config->get('adaptive_slicing')) {
-        my $quality_value = $object->config->get('adaptive_slicing_quality');
-        $value_label->SetLabel(sprintf '%.2f', $quality_value);
-        $quality_slider->SetRange(0, 100);
-        $quality_slider->SetValue($quality_value*100);
-    }else{
-        # disable slider
-        $value_label->SetLabel("");
-        $quality_label->Enable(0);
-        $quality_slider->Enable(0);
-    }
-
-    EVT_SLIDER($self, $quality_slider, sub {
-        my $quality_value = $quality_slider->GetValue/100;
-        $value_label->SetLabel(sprintf '%.2f', $quality_value);
-        $self->{model_object}->config->set('adaptive_slicing_quality', $quality_value);
-
-        # trigger re-slicing
-        $self->_trigger_slicing;
-    });
-
     return $self;
 }
 
@@ -141,7 +129,7 @@ sub _trigger_slicing {
         $self->{plater}->on_model_change;
         $self->{plater}->start_background_process;
     }else{
-    	$self->{plater}->{print}->reload_object($self->{obj_idx});
+        $self->{plater}->{print}->reload_object($self->{obj_idx});
         $self->{plater}->on_model_change;
         $self->{plater}->schedule_background_process;
     }
