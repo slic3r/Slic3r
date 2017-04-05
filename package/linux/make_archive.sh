@@ -86,6 +86,8 @@ cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
 cp -rf $WD/_tmp/shlib $archivefolder/
 
 rm -rf $WD/_tmp
+echo "Adding .desktop file"
+sed -e "s|SLIC3R_VERSION|$SLIC3R_VERSION|" -e "s|APPLICATION_NAME|Slic3r|" $WD/slic3r.desktop.in > $archivefolder/Slic3r.desktop
 
 echo "Cleaning local-lib"
 rm -rf $archivefolder/local-lib/bin
