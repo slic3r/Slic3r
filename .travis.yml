@@ -18,7 +18,7 @@ script:
 - perl ./Build.PL
 after_success:
 - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
-- package/linux/make_archive.sh linux-x64
+- LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
 - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2
 branches:
   only:
