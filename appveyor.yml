@@ -17,7 +17,7 @@ environment:
 
 install:
   - nuget install secure-file -ExcludeVersion
-  - secure-file\tools\secure-file -decrypt package/deploy/slic3r-upload.rsa.appveyor.enc -secret %ENC_SECRET%
+  - secure-file\tools\secure-file -decrypt package/deploy/slic3r-upload.ppk.appveyor.enc -secret %ENC_SECRET%
   - ps: "& package/win/appveyor_preinstall.ps1"
 cache:
 - C:\Users\appveyor\boost.1.63.0.7z
