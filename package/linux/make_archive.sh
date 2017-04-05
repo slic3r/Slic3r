@@ -67,22 +67,6 @@ cp $SLIC3R_DIR/slic3r.pl $archivefolder/slic3r.pl
 cp -fRP $SLIC3R_DIR/local-lib $archivefolder/local-lib
 cp -fRP $SLIC3R_DIR/lib/* $archivefolder/local-lib/lib/perl5/
 
-mkdir $archivefolder/bin
-echo "Installing libraries to $archivefolder/bin ..."
-if [ -z ${WXDIR+x} ]; then
-    for bundle in $(find $archivefolder/local-lib/lib/perl5 -name '*.so' | grep "Wx") $(find $archivefolder/local-lib/lib/perl5 -name '*.so' -type f | grep "wxWidgets"); do
-        echo "$(LD_LIBRARY_PATH=$libdirs ldd $bundle | grep .so | grep local-lib | awk '{print $3}')"
-        for dylib in $(LD_LIBRARY_PATH=$libdirs ldd $bundle | grep .so | grep local-lib | awk '{print $3}'); do
-            install -v $dylib $archivefolder/bin
-        done
-    done
-else
-    echo "Copying libraries from $WXDIR/lib to $archivefolder/bin"
-    for dylib in $(find $WXDIR/lib | grep "so"); do
-        cp -P -v $dylib $archivefolder/bin
-    done
-fi
-
 echo "Copying startup script..."
 cp -f $WD/startup_script.sh $archivefolder/$appname
 chmod +x $archivefolder/$appname
