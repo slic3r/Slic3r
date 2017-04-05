@@ -10,7 +10,11 @@ KEY=$1
 shift
 FILES=$*
 
-for i in $FILES; do 
-     filepath=$(readlink -f "$i")
-     echo put $filepath | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
-done
+if [ -s $KEY ]; then
+    for i in $FILES; do 
+         filepath=$(readlink -f "$i")
+         echo put $filepath | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+    done
+else
+    echo "$KEY is not available, not deploying." 
+fi
