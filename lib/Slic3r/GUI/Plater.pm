@@ -172,7 +172,7 @@ sub new {
         $self->{htoolbar}->AddTool(TB_CUT, "Cut…", Wx::Bitmap->new($Slic3r::var->("package.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
         $self->{htoolbar}->AddTool(TB_SETTINGS, "Settings…", Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_LAYERS, "Layer heights…", Wx::Bitmap->new($Slic3r::var->("layers.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_LAYERS, "Layer heights…", Wx::Bitmap->new($Slic3r::var->("variable_layer_height.png"), wxBITMAP_TYPE_PNG), '');
     } else {
         my %tbar_buttons = (
             add             => "Add…",
@@ -1386,7 +1386,7 @@ sub async_apply_config {
     # reset preview canvases (invalidated contents will be hidden)
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
-    $self->{ObjectLayersDialog}->reload_preview if $self->{ObjectLayersDialog};
+    $self->{AdaptiveLayersDialog}->reload_preview if $self->{AdaptiveLayersDialog};
     
     if ($invalidated) {
         if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
@@ -1463,7 +1463,7 @@ sub stop_background_process {
     
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
-    $self->{ObjectLayersDialog}->reload_preview if $self->{ObjectLayersDialog};
+    $self->{AdaptiveLayersDialog}->reload_preview if $self->{AdaptiveLayersDialog};
     
     if ($self->{process_thread}) {
         Slic3r::debugf "Killing background process.\n";
@@ -1610,7 +1610,7 @@ sub on_process_completed {
     return if $error;
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
-    $self->{ObjectLayersDialog}->reload_preview if $self->{ObjectLayersDialog};
+    $self->{AdaptiveLayersDialog}->reload_preview if $self->{AdaptiveLayersDialog};
     
     # if we have an export filename, start a new thread for exporting G-code
     if ($self->{export_gcode_output_file}) {
@@ -2108,32 +2108,12 @@ sub object_layers_dialog {
     my $self = shift;
     my ($obj_idx) = @_;
 
-    if (!defined $obj_idx) {
-        ($obj_idx, undef) = $self->selected_object;
-    }
-
-    if (!$Slic3r::GUI::have_OpenGL) {
-        Slic3r::GUI::show_error($self, "Please install the OpenGL modules to use this feature (see build instructions).");
-        return;
-    }
-
-    $self->{ObjectLayersDialog} = Slic3r::GUI::Plater::ObjectLayersDialog->new($self,
-		object              => $self->{objects}[$obj_idx],
-		model_object        => $self->{model}->objects->[$obj_idx],
-		obj_idx             => $obj_idx,
-	);
-	$self->{ObjectLayersDialog}->Show();
-	
-	EVT_CLOSE($self->{ObjectLayersDialog}, sub {
-        my ($dlg, $event) = @_;
-        $dlg->Destroy;
-        $self->{ObjectLayersDialog} = undef;
-    });
+    $self->object_settings_dialog($obj_idx, adaptive_layers => 1);
 }
 
 sub object_settings_dialog {
     my $self = shift;
-    my ($obj_idx) = @_;
+    my ($obj_idx, %params) = @_;
     
     if (!defined $obj_idx) {
         ($obj_idx, undef) = $self->selected_object;
@@ -2148,9 +2128,15 @@ sub object_settings_dialog {
     my $dlg = Slic3r::GUI::Plater::ObjectSettingsDialog->new($self,
 		object          => $self->{objects}[$obj_idx],
 		model_object    => $model_object,
+		obj_idx         => $obj_idx,
 	);
+	# store pointer to the adaptive layer tab to push preview updates
+	$self->{AdaptiveLayersDialog} = $dlg->{adaptive_layers};
+	# and jump directly to the tab if called by "promo-button"
+	$dlg->{tabpanel}->SetSelection(1) if $params{adaptive_layers};
 	$self->pause_background_process;
 	$dlg->ShowModal;
+	$self->{AdaptiveLayersDialog} = undef;
 	
     # update thumbnail since parts may have changed
     if ($dlg->PartsChanged) {

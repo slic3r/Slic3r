@@ -16,6 +16,7 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, $size, wxTAB_TRAVERSAL);
     
     $self->{object} = $object;
+    $self->{is_valid} = 0;
     
     # This has only effect on MacOS. On Windows and Linux/GTK, the background is painted by $self->repaint().
     $self->SetBackgroundColour(Wx::wxWHITE);
@@ -74,31 +75,33 @@ sub repaint {
     $dc->DrawLabel(sprintf('%.4g', $self->{min_layer_height}), Wx::Rect->new(0, $size[1]/2, $size[0], $size[1]/2), wxALIGN_LEFT | wxALIGN_BOTTOM);
     $dc->DrawLabel(sprintf('%.4g', $self->{max_layer_height}), Wx::Rect->new(0, $size[1]/2, $size[0], $size[1]/2), wxALIGN_RIGHT | wxALIGN_BOTTOM);
 
+    if($self->{is_valid}) {
 
-    # draw original spline as reference
-    if($self->{original_height_spline}) {
-        #draw spline
-        $self->_draw_layer_height_spline($dc, $self->{original_height_spline}, $self->{original_pen});
-    }
-    
-    # draw interactive (currently modified by the user) layers as lines and spline
-    if($self->{interactive_height_spline}) {
-        # draw layer lines
-        my @interpolated_layers = @{$self->{interactive_height_spline}->getInterpolatedLayers};
-        $self->_draw_layers_as_lines($dc, $self->{interactive_pen}, \@interpolated_layers);
-        
-        #draw spline
-        $self->_draw_layer_height_spline($dc, $self->{interactive_height_spline}, $self->{interactive_pen});
+        # draw original spline as reference
+        if($self->{original_height_spline}) {
+            #draw spline
+            $self->_draw_layer_height_spline($dc, $self->{original_height_spline}, $self->{original_pen});
+        }
+
+        # draw interactive (currently modified by the user) layers as lines and spline
+        if($self->{interactive_height_spline}) {
+            # draw layer lines
+            my @interpolated_layers = @{$self->{interactive_height_spline}->getInterpolatedLayers};
+            $self->_draw_layers_as_lines($dc, $self->{interactive_pen}, \@interpolated_layers);
+
+            #draw spline
+            $self->_draw_layer_height_spline($dc, $self->{interactive_height_spline}, $self->{interactive_pen});
+        }
+
+        # draw resulting layers as lines
+        unless($self->{interactive_heights}) {
+            $self->_draw_layers_as_lines($dc, $self->{resulting_pen}, $self->{interpolated_layers});
+        }
+
+        # Always draw current BSpline, gives a reference during a modification
+        $self->_draw_layer_height_spline($dc, $self->{object}->layer_height_spline, $self->{line_pen});
     }
 
-    # draw resulting layers as lines
-    unless($self->{interactive_heights}) {
-        $self->_draw_layers_as_lines($dc, $self->{resulting_pen}, $self->{interpolated_layers});
-    }
-
-    # Always draw current BSpline, gives a reference during a modification
-    $self->_draw_layer_height_spline($dc, $self->{object}->layer_height_spline, $self->{line_pen});
-    
     $event->Skip;
 }
 
@@ -120,7 +123,7 @@ sub set_size_parameters {
 sub update {
     my $self = shift;
 
-    if($self->{object}->layer_height_spline->layersUpdated || !$self->{heights}) {
+    if(($self->{object}->layer_height_spline->layersUpdated || !$self->{heights}) && $self->{object}->layer_height_spline->hasData) {
         $self->{original_height_spline} = $self->{object}->layer_height_spline->clone; # make a copy to display the unmodified original spline
         $self->{original_layers} = $self->{object}->layer_height_spline->getOriginalLayers;
         $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers; # Initialize to current values
@@ -131,6 +134,7 @@ sub update {
         foreach my $z (@{$self->{original_layers}}) {
             push (@{$self->{heights}}, $self->{object}->layer_height_spline->getLayerHeightAt($z));
         }
+        $self->{is_valid} = 1;
     }
     $self->Refresh;
 }
