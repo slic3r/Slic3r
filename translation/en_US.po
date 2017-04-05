@@ -285,10 +285,10 @@ msgstr "Disable fan for the first"
 
 #: xs/src/libslic3r/PrintConfig.cpp:169
 msgid ""
-"This disables the fan completely for the first # of layers "
+"This disables the fan completely for the first N layers "
 "to aid in the adhesion of media to the bed. (default 3)"
 msgstr ""
-"This disables the fan completely for the first # of layers "
+"This disables the fan completely for the first N layers "
 "to aid in the adhesion of media to the bed. (default 3)"
 
 #: xs/src/libslic3r/PrintConfig.cpp:170
