@@ -1,7 +1,8 @@
 language: perl
 before_install:
 - openssl aes-256-cbc -K $encrypted_daaf322d08bf_key -iv $encrypted_daaf322d08bf_iv
-  -in $TRAVIS_BUILD_DIR/package/deploy/slic3r-upload.rsa.enc -out ~/slic3r-upload.rsa -d
+  -in $TRAVIS_BUILD_DIR/package/deploy/slic3r-upload.rsa.enc -out ~/slic3r-upload.rsa
+  -d
 - chmod 600 ~/slic3r-upload.rsa
 install:
 - export LDLOADLIBS=-lstdc++
@@ -47,4 +48,4 @@ env:
   matrix: 
   global:
   - secure: eEVRZNMv7FM6jrOU9iAFkDhWxFQ1WtHBEaObImcvtFUxy6vWSt3ehFFeTRouj3uHQAnbvUzziDyvPPm8/95alv5g/du8ML6YzzqKBKfazM0xQ7SF6R2DQL8lfFIp+RSV7T02byEP1f1g7Zva7xH9szIlDcSfU0pXW4KWbkBFMd8=
-  - secure: hNd9SL178twKGKlx4xZsTuVzwKoMwhxIwqHuVFC3A4sdQXQysm14FbLootz6hri81tHuhjrx6owOjFQ24o8RIWfM9Rj3MnBZKfQK3HkB7gBoAkjIaJBgiYTjJBNbXGhQxG+Cvx6HqQVFkU/sLPkrvOiK0Z2/5wlNIjuMJ1gYAJI=
+  - secure: gj338h+qHGccTD/VQFmEJkqdg2McIe2pO0iZ4Ae9BvY5vxkIML4BpoYZQXQTqiAOETnUjlcknY9lx0hI/PfkDD9MSJc5BC/3fMYRCu3SgAclEwklWf9vvtodUeT69mtnZuw1zze1nTbExuOw2mepbqFjxKKMl+9l5oCz4O54fXU=
