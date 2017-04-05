@@ -8,5 +8,5 @@ Param(
     [string]$KEY,
     [string]$FILE
 )
-UUSER=$env:UPLOAD_USER
-winscp.exe scp://$UUSER@dl.slic3r.org:$DIR/ /hostkey=* /privatekey=$KEY /upload $FILES
+Set-Variable -Name "UUSER" -Value "$env:UPLOAD_USER"
+winscp.exe /command sftp://$UUSER@dl.slic3r.org:$DIR/ /hostkey=* /privatekey=$KEY /upload "put $FILE"
