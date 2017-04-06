@@ -9,7 +9,7 @@ shift
 KEY=$1
 shift
 FILES=$*
-source ../common/util.sh
+source $(dirname $0)/../common/util.sh
 set_pr_id
 if [ ! -z ${PR_ID+x} ]; then
     DIR=${DIR}/branches
