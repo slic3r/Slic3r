@@ -93,7 +93,7 @@ sub new {
             if (!$plater->{processed}) {
                 $self->_trigger_slicing;
             }else{
-                $self->{preview3D}->load_print;
+                $self->{preview3D}->reload_print($obj_idx);
                 $self->{preview3D}->canvas->zoom_to_volumes;
                 $self->{preview_zoomed} = 1;
             }
@@ -182,7 +182,7 @@ sub new {
 sub reload_preview {
     my ($self) = @_;
     $self->{splineControl}->update;
-    $self->{preview3D}->reload_print;
+    $self->{preview3D}->reload_print($self->{obj_idx});
     my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
     if($object->layer_count-1 > 0) {
         my $top_layer = $object->get_layer($object->layer_count-1);
