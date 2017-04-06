@@ -330,6 +330,20 @@ sub set_viewport_from_scene {
     $self->_dirty(1);
 }
 
+sub zoom{
+    my ($self, $direction) = @_;
+    print ($direction);
+    if( $direction eq 'in'){
+        $self->_zoom($self->_zoom / (1-0.3));
+    }
+    elsif($direction eq 'out'){
+        $self->_zoom($self->_zoom / (1+0.3));
+    }
+    $self->on_viewport_changed->() if $self->on_viewport_changed;
+    $self->_dirty(1);
+    $self->Refresh;
+}
+
 # Set the camera to a default orientation,
 # zoom to volumes.
 sub select_view {

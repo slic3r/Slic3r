@@ -193,7 +193,8 @@ sub _init_menubar {
         $self->_append_menu_item($self->{plater_menu}, "Export plate with modifiers as AMF...", 'Export current plate as AMF, including all modifier meshes', sub {
             $plater->export_amf;
         }, undef, 'brick_go.png');
-        
+        $self->_append_menu_item($self->{plater_menu}, "Zoom In\tCtrl+up"     , 'Zoom In'     , sub { $self->zoom('in'     ); });
+        $self->_append_menu_item($self->{plater_menu}, "Zoom Out\tCtrl+down"     , 'Zoom Out'     , sub { $self->zoom('out'     ); });
         $self->{object_menu} = $self->{plater}->object_menu;
         $self->on_plater_selection_changed(0);
     }
@@ -629,6 +630,11 @@ sub select_view {
     my ($self, $direction) = @_;
     
     $self->{plater}->select_view($direction);
+}
+
+sub zoom{
+    my($self, $direction) = @_;
+    $self->{plater}->zoom($direction);
 }
 
 sub _append_menu_item {

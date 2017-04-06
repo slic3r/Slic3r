@@ -2432,6 +2432,11 @@ sub select_view {
     }
 }
 
+sub zoom{
+    my ($self, $direction) = @_;
+    $self->{canvas3D}->zoom($direction);
+}
+
 package Slic3r::GUI::Plater::DropTarget;
 use Wx::DND;
 use base 'Wx::FileDropTarget';
