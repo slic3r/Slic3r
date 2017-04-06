@@ -11,5 +11,9 @@ Param(
 Set-Variable -Name "UUSER" -Value "$env:UPLOAD_USER"
 Set-Variable -Name "UPLOAD" -Value "$($FILE | Resolve-Path)"
 if (Test-Path $KEY) {
-    winscp.com /privatekey=$KEY /command "open sftp://$UUSER@dl.slic3r.org/$DIR -hostkey=*" "put $UPLOAD ./$FILE" "exit"
+    if (Test-Path variable:env:APPVEYOR_PULL_REQUEST_NUMBER) {
+        winscp.com /privatekey=$KEY /command "open sftp://$UUSER@dl.slic3r.org/$DIR/branches -hostkey=*" "put $UPLOAD ./$FILE" "exit"
+    } else {
+        winscp.com /privatekey=$KEY /command "open sftp://$UUSER@dl.slic3r.org/$DIR -hostkey=*" "put $UPLOAD ./$FILE" "exit"
+    }
 }

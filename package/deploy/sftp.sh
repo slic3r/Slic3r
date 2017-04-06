@@ -9,6 +9,11 @@ shift
 KEY=$1
 shift
 FILES=$*
+source ../common/util.sh
+set_pr_id
+if [ ! -z ${PR_ID+x} ]; then
+    DIR=${DIR}/branches
+fi
 
 if [ -s $KEY ]; then
     for i in $FILES; do 
