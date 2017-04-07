@@ -26,7 +26,11 @@ install_par
 
 # If we're on a branch, add the branch name to the app name.
 if [ "$current_branch" == "master" ]; then
-    dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}.tar.bz2
+    if [ ! -z ${PR_ID+x} ]; then
+        dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}-PR${PR_ID}.tar.bz2
+    else
+        dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}.tar.bz2
+    fi
 else
     dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}-${current_branch}.tar.bz2
 fi

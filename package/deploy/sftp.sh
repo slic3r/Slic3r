@@ -9,6 +9,12 @@ shift
 KEY=$1
 shift
 FILES=$*
+source $(dirname $0)/../common/util.sh
+set_pr_id
+set_branch
+if [ ! -z ${PR_ID+x} ] || [ $current_branch != "master" ]; then
+    DIR=${DIR}/branches
+fi
 
 if [ -s $KEY ]; then
     for i in $FILES; do 
