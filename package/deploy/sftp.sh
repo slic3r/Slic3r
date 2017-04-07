@@ -11,7 +11,8 @@ shift
 FILES=$*
 source $(dirname $0)/../common/util.sh
 set_pr_id
-if [ ! -z ${PR_ID+x} ]; then
+set_branch
+if [ ! -z ${PR_ID+x} ] || [ $current_branch != "master" ]; then
     DIR=${DIR}/branches
 fi
 
