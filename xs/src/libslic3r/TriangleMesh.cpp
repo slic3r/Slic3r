@@ -512,6 +512,13 @@ TriangleMesh::require_shared_vertices()
 }
 
 void
+TriangleMesh::reverse_normals()
+{
+    stl_reverse_all_facets(&this->stl);
+    if (this->stl.stats.volume != -1) this->stl.stats.volume *= -1.0;
+}
+
+void
 TriangleMesh::extrude_tin(float offset)
 {
     calculate_normals(&this->stl);
