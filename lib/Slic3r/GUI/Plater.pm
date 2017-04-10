@@ -1083,8 +1083,8 @@ sub center_selected_object_on_bed {
     my $bb = $model_object->bounding_box;
     my $size = $bb->size;
     my $vector = Slic3r::Pointf->new(
-        -$bb->x_min - $size->x/2,
-        -$bb->y_min - $size->y/2,    #//
+        $self->bed_centerf->x - $bb->x_min - $size->x/2,
+        $self->bed_centerf->y - $bb->y_min - $size->y/2,    #//
     );
     $_->offset->translate(@$vector) for @{$model_object->instances};
     $self->refresh_canvases;
