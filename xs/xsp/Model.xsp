@@ -203,6 +203,8 @@ ModelMaterial::attributes()
 
     Ref<LayerHeightSpline> layer_height_spline()
         %code%{ RETVAL = &THIS->layer_height_spline; %};
+    void set_layer_height_spline(LayerHeightSpline* spline)
+        %code%{ THIS->layer_height_spline = *spline; %};
 
     Ref<Pointf3> origin_translation()
         %code%{ RETVAL = &THIS->origin_translation; %};

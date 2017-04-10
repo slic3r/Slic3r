@@ -69,6 +69,7 @@ sub model_object {
 
 package Slic3r::GUI::Plater::ObjectDialog::AdaptiveLayersTab;
 use Slic3r::Geometry qw(X Y Z scale unscale);
+use Slic3r::Print::State ':steps';
 use List::Util qw(min max sum first);
 use Wx qw(wxTheApp :dialog :id :misc :sizer :systemsettings :statictext wxTAB_TRAVERSAL);
 use base 'Slic3r::GUI::Plater::ObjectDialog::BaseTab';
@@ -80,7 +81,7 @@ sub new {
     my $model_object = $self->{model_object} = $params{model_object};
     my $obj_idx = $self->{obj_idx} = $params{obj_idx};
     my $plater = $self->{plater} = $params{plater};
-    my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
+    my $object = $self->{object} = $self->{plater}->{print}->get_object($self->{obj_idx});
 
     # Initialize 3D toolpaths preview
     if ($Slic3r::GUI::have_OpenGL) {
@@ -91,6 +92,7 @@ sub new {
         # object already processed?
         wxTheApp->CallAfter(sub {
             if (!$plater->{processed}) {
+                $object->layer_height_spline->suppressUpdate();
                 $self->_trigger_slicing;
             }else{
                 $self->{preview3D}->reload_print($obj_idx);
@@ -100,7 +102,7 @@ sub new {
         });
     }
 
-    $self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(150, 200), $model_object);
+    $self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(150, 200), $object);
 
     my $optgroup;
     $optgroup = $self->{optgroup} = Slic3r::GUI::OptionsGroup->new(
@@ -115,6 +117,7 @@ sub new {
             if ($self->{adaptive_quality} != $optgroup->get_value($opt_id)) {
                 $self->{adaptive_quality} = $optgroup->get_value($opt_id);
                 $self->{model_object}->config->set('adaptive_slicing_quality', $optgroup->get_value($opt_id));
+                $self->{object}->config->set('adaptive_slicing_quality', $optgroup->get_value($opt_id));
                 # trigger re-slicing
                 $self->_trigger_slicing;
             }
@@ -199,7 +202,9 @@ sub reload_preview {
 sub _trigger_slicing {
     my ($self) = @_;
     my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
-    $self->{plater}->pause_background_process;
+    $self->{model_object}->set_layer_height_spline($self->{object}->layer_height_spline); # push modified spline object to model_object
+    $self->{model_object}->layer_height_spline->updateRequired; # make sure the model_object spline requires update
+    #$self->{plater}->pause_background_process;
     $self->{plater}->stop_background_process;
     if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
         $self->{plater}->statusbar->SetCancelCallback(sub {
@@ -207,12 +212,10 @@ sub _trigger_slicing {
             $self->{plater}->statusbar->SetStatusText("Slicing cancelled");
             $self->{plater}->preview_notebook->SetSelection(0);
         });
-        $self->{plater}->{print}->reload_object($self->{obj_idx});
-        $self->{plater}->on_model_change;
+        $object->invalidate_step(STEP_SLICE);
         $self->{plater}->start_background_process;
     }else{
-        $self->{plater}->{print}->reload_object($self->{obj_idx});
-        $self->{plater}->on_model_change;
+        $object->invalidate_step(STEP_SLICE);
         $self->{plater}->schedule_background_process;
     }
 }
