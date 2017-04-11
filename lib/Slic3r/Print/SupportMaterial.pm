@@ -96,7 +96,7 @@ sub contact_area {
     
     # if user specified a custom angle threshold, convert it to radians
     my $threshold_rad;
-    if (!$self->object_config->support_material_threshold =~ /%$/) {
+    if (!($self->object_config->support_material_threshold =~ /%$/)) {
         $threshold_rad = deg2rad($self->object_config->support_material_threshold + 1);  # +1 makes the threshold inclusive
         Slic3r::debugf "Threshold angle = %d°\n", rad2deg($threshold_rad);
     }
