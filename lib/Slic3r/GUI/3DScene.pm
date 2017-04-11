@@ -704,10 +704,19 @@ sub Resize {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     my $depth = 10 * max(@{ $self->max_bounding_box->size });
-    glOrtho(
-        -$x/2, $x/2, -$y/2, $y/2,
-        -$depth, 2*$depth,
-    );
+    if ($Slic3r::GUI::Settings->{_}{view_mode} eq "ortho") {
+        glOrtho(
+            -$x/2, $x/2, -$y/2, $y/2,
+            -$depth, 2*$depth,
+        );
+    } else {
+        my $scaled_zoom = min(120, $self->_zoom);
+        printf ("Zoom: %f, Depth: %f %f\n", $scaled_zoom, $depth, $depth /10);
+        gluPerspective(
+            $scaled_zoom, $x/$y,
+            100, 20*$depth,
+        );
+    }
     
     glMatrixMode(GL_MODELVIEW);
 }
@@ -783,6 +792,7 @@ sub Render {
         my @rotmat = quat_to_rotmatrix($self->quat);
         glMultMatrixd_p(@rotmat[0..15]);
     }
+
     glTranslatef(@{ $self->_camera_target->negative });
     
     # light from above

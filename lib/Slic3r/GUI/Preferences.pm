@@ -71,6 +71,16 @@ sub new {
         tooltip     => 'Disable communication with the printer over a serial / USB cable. This simplifies the user interface in case the printer is never attached to the computer.',
         default     => $Slic3r::GUI::Settings->{_}{no_controller},
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'view_mode',
+        type        => 'select',
+        label       => '3D View Mode',
+        tooltip     => 'Choose between orthographic view in 3D (default) and a less accurate perspective view (artsy).',
+        labels      => ['Orthographic','Perspective'],
+        values      => ['ortho','perspective'],
+        default     => $Slic3r::GUI::Settings->{_}{view_mode},
+        width       => 130,
+    ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
