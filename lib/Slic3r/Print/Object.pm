@@ -211,7 +211,11 @@ sub generate_support_material {
     
     $self->clear_support_layers;
     
-    if ((!$self->config->support_material && $self->config->raft_layers == 0) || scalar(@{$self->layers}) < 2) {
+    if ((!$self->config->support_material
+		    && $self->config->raft_layers == 0
+		    && $self->config->support_material_enforce_layers == 0)
+		  || scalar(@{$self->layers}) < 2
+		  ) {
         $self->set_step_done(STEP_SUPPORTMATERIAL);
         return;
     }
