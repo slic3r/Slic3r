@@ -1166,21 +1166,39 @@ sub mirror {
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
 }
-
 sub changescale {
     my ($self, $axis, $tosize) = @_;
-    
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
-    
     my $model_object = $self->{model}->objects->[$obj_idx];
+
+    # update print and start background processing
+    if ($self->_changescale($axis, $tosize, $obj_idx, $object, $model_object)) {
+        $self->stop_background_process;
+        $self->{print}->add_model_object($model_object, $obj_idx);
+
+        $self->selection_changed(1);  # refresh info (size, volume etc.)
+        $self->on_model_change;
+    }
+}
+
+# Perform the scaling
+sub _changescale {
+    my ($self, $axis, $tosize, $obj_idx, $object, $model_object) = @_;
+    
     my $model_instance = $model_object->instances->[0];
     
     # we need thumbnail to be computed before allowing scaling
-    return if !$object->thumbnail;
-    
+    if ($object) {
+        return 0 if !$object->thumbnail;
+    }
     my $object_size = $model_object->bounding_box->size;
-    my $bed_size = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape})->bounding_box->size;
+
+    my $resize_text = "Enter the new size for the selected object.";
+    if (defined ($self->{config})) { # add the text if we can find the bed size
+        my $bed_size = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape})->bounding_box->size;
+        $resize_text = sprintf("Enter the new size for the selected object (print bed: %smm):", $bed_size->[$axis]);
+    }
     
     if (defined $axis) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
@@ -1189,7 +1207,7 @@ sub changescale {
             my $cursize = $object_size->[$axis];
             # Wx::GetNumberFromUser() does not support decimal numbers
             my $newsize = Wx::GetTextFromUser(
-                sprintf("Enter the new size for the selected object (print bed: %smm):", $bed_size->[$axis]),
+                $resize_text,
                 "Scale along $axis_name",
                 $cursize, $self);
             return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
@@ -1199,7 +1217,7 @@ sub changescale {
             $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:",
                 "Scale along $axis_name", 100, $self);
             $scale =~ s/%$//;
-            return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+            return 0 if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
         }
         
         # apply Z rotation before scaling
@@ -1209,7 +1227,8 @@ sub changescale {
         $versor->[$axis] = $scale/100;
         $model_object->scale_xyz(Slic3r::Pointf3->new(@$versor));
         # object was already aligned to Z = 0, so no need to realign it
-        $self->make_thumbnail($obj_idx);
+        $self->make_thumbnail($obj_idx)
+            if !$object;
     } else {
         my $scale;
         if ($tosize) {
@@ -1236,16 +1255,11 @@ sub changescale {
             $range->[1] *= $variation;
         }
         $_->set_scaling_factor($scale) for @{ $model_object->instances };
-        $object->transform_thumbnail($self->{model}, $obj_idx);
+        $object->transform_thumbnail($self->{model}, $obj_idx)
+            if (!$object);
     }
     $model_object->update_bounding_box;
-    
-    # update print and start background processing
-    $self->stop_background_process;
-    $self->{print}->add_model_object($model_object, $obj_idx);
-    
-    $self->selection_changed(1);  # refresh info (size, volume etc.)
-    $self->on_model_change;
+    return 1;
 }
 
 sub arrange {
