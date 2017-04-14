@@ -407,7 +407,7 @@ sub options {
     return qw(
         layer_height first_layer_height
         perimeters spiral_vase
-        top_solid_layers bottom_solid_layers
+        top_solid_layers min_shell_thickness bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
         seam_position external_perimeters_first
         fill_density fill_pattern top_infill_pattern bottom_infill_pattern fill_gaps
@@ -485,6 +485,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Vertical shells');
             $optgroup->append_single_option_line('perimeters');
+            $optgroup->append_single_option_line('min_shell_thickness');
             $optgroup->append_single_option_line('spiral_vase');
         }
         {
@@ -759,10 +760,11 @@ sub _update {
     
     my $config = $self->{config};
     
-    if ($config->spiral_vase && !($config->perimeters == 1 && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->support_material == 0)) {
+    if ($config->spiral_vase && !($config->perimeters == 1 && $config->min_shell_thickness <= $config->external_perimeter_extrusion_width && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->support_material == 0)) {
         my $dialog = Wx::MessageDialog->new($self,
             "The Spiral Vase mode requires:\n"
             . "- one perimeter\n"
+            . "- a shell thickness no larger than the extrusion width\n"
             . "- no top solid layers\n"
             . "- 0% fill density\n"
             . "- no support material\n"
@@ -771,6 +773,7 @@ sub _update {
         if ($dialog->ShowModal() == wxID_YES) {
             my $new_conf = Slic3r::Config->new;
             $new_conf->set("perimeters", 1);
+            $new_conf->set("min_shell_thickness", 0);
             $new_conf->set("top_solid_layers", 0);
             $new_conf->set("fill_density", 0);
             $new_conf->set("support_material", 0);

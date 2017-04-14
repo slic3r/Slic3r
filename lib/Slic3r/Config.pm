@@ -172,6 +172,9 @@ sub validate {
     die "Invalid value for --filament-diameter\n"
         if grep $_ < 1, @{$self->filament_diameter};
     
+    die "Invalid value for --min-shell-thickness\n"
+        if $self->min_shell_thickness < 0;
+
     # --nozzle-diameter
     die "Invalid value for --nozzle-diameter\n"
         if grep $_ < 0, @{$self->nozzle_diameter};
@@ -249,7 +252,13 @@ sub validate {
         
         die "Can't make less than one perimeter when spiral vase mode is enabled\n"
             if $self->perimeters < 1;
-        
+
+        #my $max_nozzle_diameter = max(@{ $self->nozzle_diameter });
+        #die "Can't have a shell thicker than 1 perimiter when spiral vase mode is enabled\n"
+        #    if defined first { $self->min_shell_thickness > $max_nozzle_diameter }
+        #        map $self->get_abs_value_over("${_}_extrusion_width", $max_nozzle_diameter),
+        #        qw(perimeter external_perimeter);
+
         die "Spiral vase mode can only print hollow objects, so you need to set Fill density to 0\n"
             if $self->fill_density > 0;
         

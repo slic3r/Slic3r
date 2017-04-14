@@ -775,6 +775,15 @@ PrintConfigDef::PrintConfigDef()
     def->max = 100;
     def->default_value = new ConfigOptionInt(35);
 
+    def = this->add("min_shell_thickness", coFloat);
+    def->label = "Minimum shell thickness";
+    def->category = "Layers and Perimeters";
+    def->sidetext = "mm";
+    def->tooltip = "Minimum shell thickness in mm";
+    def->cli = "min-shell-thickness=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
+
     def = this->add("min_print_speed", coFloat);
     def->label = "Min print speed";
     def->tooltip = "Slic3r will not scale speed down below this speed.";
