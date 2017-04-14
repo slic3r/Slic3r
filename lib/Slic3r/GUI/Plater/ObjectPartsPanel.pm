@@ -179,6 +179,18 @@ sub new {
         $frame->_append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
                 $self->changescale(Z, 1);
                 }, undef, 'bullet_blue.png');
+        my $rotateMenu = Wx::Menu->new;
+        my $rotateMenuItem = $menu->AppendSubMenu($rotateMenu, "Rotate", 'Rotate the selected object by an arbitrary angle');
+        wxTheApp->set_menu_item_icon($rotateMenuItem, 'textfield.png');
+        $frame->_append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
+                $self->rotate(undef, X);
+                }, undef, 'bullet_red.png');
+        $frame->_append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
+                $self->rotate(undef, Y);
+                }, undef, 'bullet_green.png');
+        $frame->_append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
+                $self->rotate(undef, Z);
+                }, undef, 'bullet_blue.png');
 
         $frame->PopupMenu($menu, $event->GetPoint);
     });
@@ -186,7 +198,7 @@ sub new {
     EVT_BUTTON($self, $self->{btn_load_modifier}, sub { $self->on_btn_load(1) });
     EVT_BUTTON($self, $self->{btn_load_lambda_modifier}, sub { $self->on_btn_lambda(1) });
     EVT_BUTTON($self, $self->{btn_delete}, \&on_btn_delete);
-    
+
     $self->reload_tree;
     
     return $self;
@@ -523,6 +535,30 @@ sub changescale {
             return if !$scale || $scale < 0;
             $volume->mesh->scale($scale);
         }
+        $self->_parts_changed;
+    }
+}
+
+sub rotate {
+    my $self = shift;
+    my ($angle, $axis) = @_;
+    # angle is in degrees
+    my $itemData = $self->get_selection;
+    if ($itemData && $itemData->{type} eq 'volume') {
+        my $volume = $self->{model_object}->volumes->[$itemData->{volume_id}];
+        if (!defined $angle) {
+            my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
+            my $default = $axis == Z ? 0 : 0;
+            # Wx::GetNumberFromUser() does not support decimal numbers
+            $angle = Wx::GetTextFromUser("Enter the rotation angle:", "Rotate around $axis_name axis",
+                    $default, $self);
+            return if !$angle || $angle !~ /^-?\d*(?:\.\d*)?$/ || $angle == -1;
+        }
+        if ($axis == X) { $volume->mesh->rotate_x(deg2rad($angle)); }
+
+        if ($axis == Y) { $volume->mesh->rotate_y(deg2rad($angle)); } 
+        if ($axis == Z) { $volume->mesh->rotate_z(deg2rad($angle)); }
+            
         $self->_parts_changed;
     }
 }
