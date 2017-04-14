@@ -41,9 +41,9 @@ sub new {
     }
     
     # buttons
-    $self->{btn_load_part} = Wx::Button->new($self, -1, "Load part…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
-    $self->{btn_load_modifier} = Wx::Button->new($self, -1, "Load modifier…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
-    $self->{btn_load_lambda_modifier} = Wx::Button->new($self, -1, "Create modifier…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+    $self->{btn_load_part} = Wx::Button->new($self, -1, "Load part窶ｦ", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+    $self->{btn_load_modifier} = Wx::Button->new($self, -1, "Load modifier窶ｦ", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+    $self->{btn_load_lambda_modifier} = Wx::Button->new($self, -1, "Create modifier窶ｦ", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     $self->{btn_delete} = Wx::Button->new($self, -1, "Delete part", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     if ($Slic3r::GUI::have_button_icons) {
         $self->{btn_load_part}->SetBitmap(Wx::Bitmap->new($Slic3r::var->("brick_add.png"), wxBITMAP_TYPE_PNG));
@@ -167,16 +167,16 @@ sub new {
         my $scaleToSizeMenu = Wx::Menu->new;
         my $scaleToSizeMenuItem = $menu->AppendSubMenu($scaleToSizeMenu, "Scale to size", 'Scale the selected object along a single axis');
         wxTheApp->set_menu_item_icon($scaleToSizeMenuItem, 'arrow_out.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Uniformly�c", 'Scale the selected object along the XYZ axes', sub {
+        $frame->_append_menu_item($scaleToSizeMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes', sub {
                 $self->changescale(undef, 1);
                 });
-        $frame->_append_menu_item($scaleToSizeMenu, "Along X axis�c", 'Scale the selected object along the X axis', sub {
+        $frame->_append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
                 $self->changescale(X, 1);
                 }, undef, 'bullet_red.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Along Y axis�c", 'Scale the selected object along the Y axis', sub {
+        $frame->_append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
                 $self->changescale(Y, 1);
                 }, undef, 'bullet_green.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Along Z axis�c", 'Scale the selected object along the Z axis', sub {
+        $frame->_append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
                 $self->changescale(Z, 1);
                 }, undef, 'bullet_blue.png');
 
@@ -487,7 +487,6 @@ sub changescale {
             my $scale;
             if (defined $tosize) {
                 my $cursize = $object_size->[$axis];
-                print "cursize: ", $cursize, "\n";
                 # Wx::GetNumberFromUser() does not support decimal numbers
                 my $newsize = Wx::GetTextFromUser(
                         sprintf("Enter the new size for the selected mesh:"),
@@ -502,12 +501,9 @@ sub changescale {
                 $scale =~ s/%$//;
                 return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
             }
-            print "Scale:" , $scale, "\n";
             my $versor = [1,1,1];
-            printf("Versor: %f, %f, %f\n", $versor->[X], $versor->[Y], $versor->[Z]);
             $versor->[$axis] = $scale/100;
-            printf("Versor: %f, %f, %f\n", $versor->[X], $versor->[Y], $versor->[Z]);
-            $volume->mesh->scale_xyz(Slic3r::Pointf3::new($versor->[X], $versor->[Y], $versor->[Z]));
+            $volume->mesh->scale_xyz(Slic3r::Pointf3->new(@$versor));
         } else {
             my $scale;
             if ($tosize) {
@@ -527,7 +523,7 @@ sub changescale {
             return if !$scale || $scale < 0;
             $volume->mesh->scale($scale);
         }
-        $self->{model_object}->update_bounding_box;
+        $self->_parts_changed;
     }
 }
 sub GetFrame {
