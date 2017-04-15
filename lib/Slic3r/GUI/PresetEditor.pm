@@ -760,11 +760,11 @@ sub _update {
     
     my $config = $self->{config};
     
-    if ($config->spiral_vase && !($config->perimeters == 1 && $config->min_shell_thickness <= $config->external_perimeter_extrusion_width && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->support_material == 0)) {
+    if ($config->spiral_vase && !($config->perimeters == 1 && $config->min_shell_thickness == 0  && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->support_material == 0)) {
         my $dialog = Wx::MessageDialog->new($self,
             "The Spiral Vase mode requires:\n"
             . "- one perimeter\n"
-            . "- a shell thickness no larger than the extrusion width\n"
+            . "- shell thickness to be 0\n"
             . "- no top solid layers\n"
             . "- 0% fill density\n"
             . "- no support material\n"
