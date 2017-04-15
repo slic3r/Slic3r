@@ -156,13 +156,15 @@ sub prepare_infill {
     my ($self) = @_;
     
     return if $self->step_done(STEP_PREPARE_INFILL);
-    $self->set_step_started(STEP_PREPARE_INFILL);
     
     # This prepare_infill() is not really idempotent.
     # TODO: It should clear and regenerate fill_surfaces at every run 
     # instead of modifying it in place.
     $self->invalidate_step(STEP_PERIMETERS);
     $self->make_perimeters;
+    
+    # Do this after invalidating STEP_PERIMETERS because that would re-invalidate STEP_PREPARE_INFILL
+    $self->set_step_started(STEP_PREPARE_INFILL);
     
     # prerequisites
     $self->detect_surfaces_type;
