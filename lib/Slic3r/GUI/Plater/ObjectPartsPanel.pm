@@ -41,9 +41,9 @@ sub new {
     }
     
     # buttons
-    $self->{btn_load_part} = Wx::Button->new($self, -1, "Load part窶ｦ", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
-    $self->{btn_load_modifier} = Wx::Button->new($self, -1, "Load modifier窶ｦ", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
-    $self->{btn_load_lambda_modifier} = Wx::Button->new($self, -1, "Create modifier窶ｦ", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+    $self->{btn_load_part} = Wx::Button->new($self, -1, "Load part…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+    $self->{btn_load_modifier} = Wx::Button->new($self, -1, "Load modifier…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+    $self->{btn_load_lambda_modifier} = Wx::Button->new($self, -1, "Create modifier…", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     $self->{btn_delete} = Wx::Button->new($self, -1, "Delete part", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
     if ($Slic3r::GUI::have_button_icons) {
         $self->{btn_load_part}->SetBitmap(Wx::Bitmap->new($Slic3r::var->("brick_add.png"), wxBITMAP_TYPE_PNG));
