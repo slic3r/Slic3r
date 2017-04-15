@@ -722,7 +722,7 @@ sub generate_toolpaths {
         
         # interface and contact infill
         if (@$interface || @$contact_infill) {
-            $fillers{interface}->set_angle($interface_angle);
+            $fillers{interface}->set_angle(deg2rad($interface_angle));
             $fillers{interface}->set_min_spacing($_interface_flow->spacing);
             
             # find centerline of the external loop
@@ -772,7 +772,7 @@ sub generate_toolpaths {
         # support or flange
         if (@$base) {
             my $filler = $fillers{support};
-            $filler->set_angle($angles[ ($layer_id) % @angles ]);
+            $filler->set_angle(deg2rad($angles[ ($layer_id) % @angles ]));
             
             # We don't use $base_flow->spacing because we need a constant spacing
             # value that guarantees that all layers are correctly aligned.
@@ -789,7 +789,7 @@ sub generate_toolpaths {
             # base flange
             if ($layer_id == 0) {
                 $filler = $fillers{interface};
-                $filler->set_angle($self->object_config->support_material_angle + 90);
+                $filler->set_angle(deg2rad($self->object_config->support_material_angle + 90));
                 $density        = 0.5;
                 $base_flow      = $self->first_layer_flow;
                 
