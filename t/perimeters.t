@@ -1,4 +1,4 @@
-use Test::More tests => 60;
+use Test::More tests => 62;
 use strict;
 use warnings;
 
@@ -331,20 +331,34 @@ use Slic3r::Test;
     $config->set('small_perimeter_speed', 99);
     $config->set('thin_walls', 0);
     
-    my $print = Slic3r::Test::init_print('ipadstand', config => $config);
-    my %perimeters = ();  # z => number of loops
-    my $in_loop = 0;
-    Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
-        my ($self, $cmd, $args, $info) = @_;
-        
-        if ($info->{extruding} && $info->{dist_XY} > 0 && ($args->{F} // $self->F) == $config->perimeter_speed*60) {
-            $perimeters{$self->Z}++ if !$in_loop;
-            $in_loop = 1;
-        } else {
-            $in_loop = 0;
-        }
-    });
-    ok !(grep { $_ % $config->min_shell_thickness/$config->perimeter_extrusion_width } values %perimeters), 'should be 6 perimeters';
+    my $test = sub {
+        my $print = Slic3r::Test::init_print('ipadstand', config => $config);
+        my %perimeters = ();  # z => number of loops
+        my $in_loop = 0;
+        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+            my ($self, $cmd, $args, $info) = @_;
+            
+            if ($info->{extruding} && $info->{dist_XY} > 0 && ($args->{F} // $self->F) == $config->perimeter_speed*60) {
+                $perimeters{$self->Z}++ if !$in_loop;
+                $in_loop = 1;
+            } else {
+                $in_loop = 0;
+            }
+        });
+        ok !(grep { $_ % $config->min_shell_thickness/$config->perimeter_extrusion_width } values %perimeters), 'should be 6 perimeters';
+    };
+
+    $test->();
+
+    $config->set('first_layer_extrusion_width', 0.54);
+    $config->set('perimeter_extrusion_width', 0.54);
+    $config->set('external_perimeter_extrusion_width', 0.54);
+    $test->();
+
+    $config->set('first_layer_extrusion_width', 0.59);
+    $config->set('perimeter_extrusion_width', 0.51);
+    $config->set('external_perimeter_extrusion_width', 0.51);
+    $test->();
 }
 
 {

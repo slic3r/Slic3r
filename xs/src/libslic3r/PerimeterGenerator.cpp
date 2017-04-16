@@ -7,12 +7,12 @@
 namespace Slic3r {
 
 int
-PerimeterGenerator::num_loops(int perimeters, int extra_perimeters) {
+PerimeterGenerator::num_loops(int perimeters, int extra_perimeters)
+{
     int generated_perimeters = perimeters + extra_perimeters - 1;
-    long int min_shell_thickness, shell_thickness = 0;
+    long min_shell_thickness = scale_(this->config->min_shell_thickness);
+    auto shell_thickness = this->ext_perimeter_flow.scaled_width();
 
-    min_shell_thickness = this->config->min_shell_thickness * 1000000;
-    shell_thickness += this->ext_perimeter_flow.scaled_width();
     shell_thickness += ((perimeters+extra_perimeters)-1) * this->perimeter_flow.scaled_width();
     
     if (shell_thickness < min_shell_thickness) {
