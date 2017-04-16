@@ -88,6 +88,7 @@ public:
         ThickPolylines &thin_walls) const;
     ExtrusionEntityCollection _variable_width
         (const ThickPolylines &polylines, ExtrusionRole role, Flow flow) const;
+    int num_loops(int perimeters, int extra_perimeters);
 };
 
 }
