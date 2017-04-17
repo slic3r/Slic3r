@@ -441,7 +441,7 @@ sub options {
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
         infill_overlap bridge_flow_ratio
-        xy_size_compensation resolution overridable compatible_printers
+        xy_size_compensation resolution shortcuts compatible_printers
         print_settings_id
     )
 }
@@ -449,7 +449,7 @@ sub options {
 sub build {
     my $self = shift;
     
-    my $overridable_widget = sub {
+    my $shortcuts_widget = sub {
         my ($parent) = @_;
         
         my $Options = $Slic3r::Config::Options;
@@ -458,15 +458,15 @@ sub build {
                 grep { exists $Options->{$_} && $Options->{$_}{category} } $self->options
         );
         my @opt_keys = sort { $options{$a} cmp $options{$b} } keys %options;
-        $self->{overridable_opt_keys} = [ @opt_keys ];
+        $self->{shortcuts_opt_keys} = [ @opt_keys ];
         
-        my $listbox = $self->{overridable_list} = Wx::CheckListBox->new($parent, -1,
+        my $listbox = $self->{shortcuts_list} = Wx::CheckListBox->new($parent, -1,
             wxDefaultPosition, [-1, 320], [ map $options{$_}, @opt_keys ]);
         
         EVT_CHECKLISTBOX($self, $listbox, sub {
             my $value = [ map $opt_keys[$_], grep $listbox->IsChecked($_), 0..$#opt_keys ];
-            $self->config->set('overridable', $value);
-            $self->_on_value_change('overridable');
+            $self->config->set('shortcuts', $value);
+            $self->_on_value_change('shortcuts');
         });
         
         my $sizer = Wx::BoxSizer->new(wxVERTICAL);
@@ -715,7 +715,7 @@ sub build {
     }
     
     {
-        my $page = $self->add_options_page('Overrides', 'wrench.png');
+        my $page = $self->add_options_page('Shortcuts', 'wrench.png');
         {
             my $optgroup = $page->new_optgroup('Profile preferences');
             {
@@ -727,10 +727,10 @@ sub build {
             }
         }
         {
-            my $optgroup = $page->new_optgroup('Overridable settings (they will be displayed in the plater for quick changes)');
+            my $optgroup = $page->new_optgroup('Show shortcuts for the following settings');
             {
                 my $line = Slic3r::GUI::OptionsGroup::Line->new(
-                    widget      => $overridable_widget,
+                    widget      => $shortcuts_widget,
                     full_width  => 1,
                 );
                 $optgroup->append_line($line);
@@ -745,9 +745,9 @@ sub reload_config {
     $self->_reload_compatible_printers_widget;
     
     {
-        my %overridable = map { $_ => 1 } @{ $self->config->get('overridable') };
-        for my $i (0..$#{$self->{overridable_opt_keys}}) {
-            $self->{overridable_list}->Check($i, $overridable{ $self->{overridable_opt_keys}[$i] });
+        my %shortcuts = map { $_ => 1 } @{ $self->config->get('shortcuts') };
+        for my $i (0..$#{$self->{shortcuts_opt_keys}}) {
+            $self->{shortcuts_list}->Check($i, $shortcuts{ $self->{shortcuts_opt_keys}[$i] });
         }
     }
     

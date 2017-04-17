@@ -853,8 +853,9 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "overhangs|detect-bridging-perimeters!";
     def->default_value = new ConfigOptionBool(true);
     
-    def = this->add("overridable", coStrings);
-    def->label = "Overridable options";
+    def = this->add("shortcuts", coStrings);
+    def->label = "Shortcuts";
+    def->aliases.push_back("overridable");
     {
         ConfigOptionStrings* opt = new ConfigOptionStrings();
         opt->values.push_back("support_material");

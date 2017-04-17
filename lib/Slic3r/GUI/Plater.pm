@@ -49,7 +49,7 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{config} = Slic3r::Config->new_from_defaults(qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width
-        serial_port serial_speed octoprint_host octoprint_apikey overridable filament_colour
+        serial_port serial_speed octoprint_host octoprint_apikey shortcuts filament_colour
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
@@ -367,6 +367,13 @@ sub new {
         {
             my $o = $self->{settings_override_panel} = Slic3r::GUI::Plater::OverrideSettingsPanel->new($self,
                 on_change => sub {
+                    my ($preset) = $self->selected_presets('print');
+                    
+                    # Apply the overrides to the current Print preset, potentially making it dirty
+                    $preset->load_config;
+                    $preset->_dirty_config->apply($self->{settings_override_config});
+                    
+                    $self->load_presets;
                     $self->config_changed;
                 });
             $o->set_editable(1);
@@ -568,10 +575,10 @@ sub _on_select_preset {
             $o_config->clear;
         }
         
-        my $overridable = $config->get('overridable');
+        my $shortcuts = $config->get('shortcuts');
         
         # Add/remove options (we do it this way for preserving current options)
-        foreach my $opt_key (@$overridable) {
+        foreach my $opt_key (@$shortcuts) {
             # Populate option with the default value taken from configuration
             # (re-set the override always, because if we here it means user
             # switched to this preset or opened/closed the editor, so he expects
@@ -579,15 +586,15 @@ sub _on_select_preset {
             $o_config->set($opt_key, $config->get($opt_key));
         }
         foreach my $opt_key (@{$o_config->get_keys}) {
-            # Keep options listed among overridable and options added on the fly
-            if ((none { $_ eq $opt_key } @$overridable)
+            # Keep options listed among shortcuts and options added on the fly
+            if ((none { $_ eq $opt_key } @$shortcuts)
                 && (any { $_ eq $opt_key } $o_panel->fixed_options)) {
                 $o_config->erase($opt_key);
             }
         }
         
         $o_panel->set_default_config($config);
-        $o_panel->set_fixed_options(\@$overridable);
+        $o_panel->set_fixed_options(\@$shortcuts);
         $o_panel->update_optgroup;
     } elsif ($group eq 'printer') {
         # reload print and filament settings to honor their compatible_printer options
@@ -766,7 +773,7 @@ sub config {
     my $config = Slic3r::Config->new_from_defaults;
     
     # get defaults also for the values tracked by the Plater's config
-    # (for example 'overridable')
+    # (for example 'shortcuts')
     $config->apply(Slic3r::Config->new_from_defaults(@{$self->{config}->get_keys}));
     
     my %classes = map { $_ => "Slic3r::GUI::PresetEditor::".ucfirst($_) }
