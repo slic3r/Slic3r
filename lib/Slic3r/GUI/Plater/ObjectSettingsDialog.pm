@@ -92,8 +92,7 @@ sub new {
         # object already processed?
         wxTheApp->CallAfter(sub {
             if (!$plater->{processed}) {
-                $object->layer_height_spline->suppressUpdate();
-                $self->_trigger_slicing;
+                $self->_trigger_slicing(0); # trigger processing without invalidating STEP_SLICE to keep current height distribution
             }else{
                 $self->{preview3D}->reload_print($obj_idx);
                 $self->{preview3D}->canvas->zoom_to_volumes;
@@ -200,7 +199,8 @@ sub reload_preview {
 
 # Trigger background slicing at the plater
 sub _trigger_slicing {
-    my ($self) = @_;
+    my ($self, $invalidate) = @_;
+    $invalidate //= 1;
     my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
     $self->{model_object}->set_layer_height_spline($self->{object}->layer_height_spline); # push modified spline object to model_object
     $self->{model_object}->layer_height_spline->updateRequired; # make sure the model_object spline requires update
@@ -212,10 +212,10 @@ sub _trigger_slicing {
             $self->{plater}->statusbar->SetStatusText("Slicing cancelled");
             $self->{plater}->preview_notebook->SetSelection(0);
         });
-        $object->invalidate_step(STEP_SLICE);
+        $object->invalidate_step(STEP_SLICE) if($invalidate);
         $self->{plater}->start_background_process;
     }else{
-        $object->invalidate_step(STEP_SLICE);
+        $object->invalidate_step(STEP_SLICE) if($invalidate);
         $self->{plater}->schedule_background_process;
     }
 }

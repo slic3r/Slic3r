@@ -580,6 +580,8 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
     coordf_t print_z = first_layer_height;
     coordf_t height = first_layer_height;
 
+    // Update object size at the spline object to define upper border
+    this->layer_height_spline.setObjectHeight(unscale(this->size.z));
     if(!this->layer_height_spline.updateRequired()) { // layer heights are already generated, just update layers from spline
         // we don't need to respect first layer here, it's correctly provided by the spline object
         result = this->layer_height_spline.getInterpolatedLayers();

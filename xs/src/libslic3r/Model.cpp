@@ -515,8 +515,6 @@ ModelObject::add_instance()
 {
     ModelInstance* i = new ModelInstance(this);
     this->instances.push_back(i);
-    this->invalidate_bounding_box();
-    this->layer_height_spline.setObjectHeight(this->raw_bounding_box().size().z);
     return i;
 }
 
@@ -525,8 +523,6 @@ ModelObject::add_instance(const ModelInstance &other)
 {
     ModelInstance* i = new ModelInstance(this, other);
     this->instances.push_back(i);
-    this->invalidate_bounding_box();
-    this->layer_height_spline.setObjectHeight(this->raw_bounding_box().size().z);
     return i;
 }
 
@@ -536,10 +532,6 @@ ModelObject::delete_instance(size_t idx)
     ModelInstancePtrs::iterator i = this->instances.begin() + idx;
     delete *i;
     this->instances.erase(i);
-    if(!this->instances.empty()) {
-		this->layer_height_spline.setObjectHeight(this->raw_bounding_box().size().z);
-	}
-    this->invalidate_bounding_box();
 }
 
 void
