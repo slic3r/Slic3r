@@ -228,7 +228,6 @@ sub _modification_done {
         $self->{interpolated_layers} = $self->{object}->layer_height_spline->getInterpolatedLayers;
     }
     $self->Refresh;
-    $self->{object}->layer_height_spline->suppressUpdate;
     $self->{on_layer_update}->(@{$self->{interpolated_layers}});
     $self->{interactive_height_spline} = undef;
 }

@@ -15,7 +15,6 @@ LayerHeightSpline::LayerHeightSpline()
 :   _object_height(0)
 {
     this->_is_valid = false;
-    this->_update_required = true;
     this->_layers_updated = false;
     this->_layer_heights_updated = false;
 }
@@ -32,7 +31,6 @@ LayerHeightSpline& LayerHeightSpline::operator=(const LayerHeightSpline &other)
     this->_internal_layers = other._internal_layers;
     this->_internal_layer_heights = other._internal_layer_heights;
     this->_is_valid = other._is_valid;
-    this->_update_required = other._update_required;
     this->_layers_updated = other._layers_updated;
     this->_layer_heights_updated = other._layer_heights_updated;
     if(this->_is_valid) {
@@ -47,31 +45,6 @@ LayerHeightSpline& LayerHeightSpline::operator=(const LayerHeightSpline &other)
 bool LayerHeightSpline::hasData()
 {
     return this->_is_valid;
-}
-
-/*
- * Does this object expect new layer heights during the slice step or should
- * we use the layer heights values provided by the spline?
- * An update is required if a config option is changed which affects the layer height.
- * An update is not required if the spline was modified by a user interaction.
- */
-bool LayerHeightSpline::updateRequired()
-{
-    bool result = true; // update spline by default
-    if(!this->_update_required && this->_is_valid) {
-        result = false;
-    }
-    this->_update_required = true; // reset to default after request
-    return result;
-}
-
-/*
- * Don't require an update for exactly one iteration.
- */
-void LayerHeightSpline::suppressUpdate() {
-    if (this->_is_valid) {
-        this->_update_required = false;
-    }
 }
 
 /*

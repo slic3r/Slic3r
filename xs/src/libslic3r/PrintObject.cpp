@@ -224,11 +224,12 @@ PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
     for (const t_config_option_key &opt_key : diff) {
         if (opt_key == "layer_height"
             || opt_key == "first_layer_height"
-            || opt_key == "xy_size_compensation"
-            || opt_key == "raft_layers"
             || opt_key == "adaptive_slicing"
             || opt_key == "adaptive_slicing_quality"
             || opt_key == "match_horizontal_surfaces") {
+            steps.insert(posLayers);
+        } else if (opt_key == "xy_size_compensation"
+            || opt_key == "raft_layers") {
             steps.insert(posSlice);
         } else if (opt_key == "support_material_contact_distance") {
             steps.insert(posSlice);
@@ -299,6 +300,8 @@ PrintObject::invalidate_step(PrintObjectStep step)
         this->invalidate_step(posPerimeters);
         this->invalidate_step(posDetectSurfaces);
         this->invalidate_step(posSupportMaterial);
+    }else if (step == posLayers) {
+        this->invalidate_step(posSlice);
     } else if (step == posSupportMaterial) {
         this->_print->invalidate_step(psSkirt);
         this->_print->invalidate_step(psBrim);
@@ -582,11 +585,11 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
 
     // Update object size at the spline object to define upper border
     this->layer_height_spline.setObjectHeight(unscale(this->size.z));
-    if(!this->layer_height_spline.updateRequired()) { // layer heights are already generated, just update layers from spline
+    if (this->state.is_done(posLayers)) {
+        // layer heights are already generated, just update layers from spline
         // we don't need to respect first layer here, it's correctly provided by the spline object
         result = this->layer_height_spline.getInterpolatedLayers();
     }else{ // create new set of layers
-
         // create stateful objects and variables for the adaptive slicing process
         SlicingAdaptive as;
         coordf_t adaptive_quality = this->config.adaptive_slicing_quality.value;
@@ -679,6 +682,8 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
         if (this->config.adaptive_slicing.value) { // smoothing after adaptive algorithm
             result = this->layer_height_spline.getInterpolatedLayers();
         }
+
+        this->state.set_done(posLayers);
     }
 
     // push modified spline object back to model

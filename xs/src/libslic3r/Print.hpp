@@ -27,7 +27,7 @@ enum PrintStep {
     psSkirt, psBrim,
 };
 enum PrintObjectStep {
-    posSlice, posPerimeters, posDetectSurfaces,
+    posLayers, posSlice, posPerimeters, posDetectSurfaces,
     posPrepareInfill, posInfill, posSupportMaterial,
 };
 

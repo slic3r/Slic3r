@@ -117,6 +117,7 @@ sub new {
                 $self->{adaptive_quality} = $optgroup->get_value($opt_id);
                 $self->{model_object}->config->set('adaptive_slicing_quality', $optgroup->get_value($opt_id));
                 $self->{object}->config->set('adaptive_slicing_quality', $optgroup->get_value($opt_id));
+                $self->{object}->invalidate_step(STEP_LAYERS);
                 # trigger re-slicing
                 $self->_trigger_slicing;
             }
@@ -203,7 +204,6 @@ sub _trigger_slicing {
     $invalidate //= 1;
     my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
     $self->{model_object}->set_layer_height_spline($self->{object}->layer_height_spline); # push modified spline object to model_object
-    $self->{model_object}->layer_height_spline->updateRequired; # make sure the model_object spline requires update
     #$self->{plater}->pause_background_process;
     $self->{plater}->stop_background_process;
     if (!$Slic3r::GUI::Settings->{_}{background_processing}) {

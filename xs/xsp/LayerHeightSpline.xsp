@@ -12,8 +12,6 @@
     
     void setObjectHeight(coordf_t object_height);
     bool hasData();
-    bool updateRequired();
-    void suppressUpdate();
     bool setLayers(std::vector<double> layers)
         %code%{ RETVAL = THIS->setLayers(layers); %};
     bool updateLayerHeights(std::vector<double> heights)
