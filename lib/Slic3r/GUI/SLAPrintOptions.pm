@@ -12,6 +12,10 @@ sub new {
     $self->config(Slic3r::Config::SLAPrint->new);
     $self->config->apply_dynamic(wxTheApp->{mainframe}->{plater}->config);
     
+    # Set some defaults
+    $self->config->set('infill_extrusion_width', 0.5)  if $self->config->infill_extrusion_width == 0;
+    $self->config->set('perimeter_extrusion_width', 1) if $self->config->perimeter_extrusion_width == 0;
+    
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     my $new_optgroup = sub {
         my ($title) = @_;

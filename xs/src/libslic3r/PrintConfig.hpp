@@ -574,18 +574,6 @@ class SLAPrintConfig
     ConfigOptionFloat               support_material_spacing;
     ConfigOptionInt                 threads;
     
-    SLAPrintConfig() : StaticPrintConfig() {
-        this->set_defaults();
-        
-        // override some defaults
-        this->fill_density.value                = 100;
-        this->fill_pattern.value                = ipGrid;
-        this->infill_extrusion_width.value      = 0.5;
-        this->infill_extrusion_width.percent    = false;
-        this->perimeter_extrusion_width.value   = 1;
-        this->perimeter_extrusion_width.percent = false;
-    };
-    
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
         OPT_PTR(fill_angle);
         OPT_PTR(fill_density);
