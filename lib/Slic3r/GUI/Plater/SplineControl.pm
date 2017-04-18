@@ -242,8 +242,10 @@ sub _update_canvas_size {
     my ($canvas_w, $canvas_h) = ($canvas_size->GetWidth, $canvas_size->GetHeight);
     return if $canvas_w == 0;
 
-    my $size = $canvas_size;
-    my @size = ($size->GetWidth, $size->GetHeight);
+    my $padding = $self->{canvas_padding} = 10; # border size in pixels
+
+    my @size = ($canvas_w - 2*$padding, $canvas_h - 2*$padding);
+    $self->{canvas_size} = [@size];
     
     $self->{scaling_factor_x} = $size[0]/($self->{max_layer_height} - $self->{min_layer_height});
     $self->{scaling_factor_y} = $size[1]/$self->{object_height};
@@ -325,8 +327,7 @@ sub _draw_layers_as_lines {
 sub _draw_layer_height_spline {
     my ($self, $dc, $layer_height_spline, $pen) = @_;
     
-    my $size = $self->GetSize;
-    my @size = ($size->GetWidth, $size->GetHeight);
+    my @size = @{$self->{canvas_size}};
     
     $dc->SetPen($pen);
     my @points = ();
@@ -344,13 +345,12 @@ sub _draw_layer_height_spline {
 sub point_to_pixel {
     my ($self, @point) = @_;
     
-    my $size = $self->GetSize;
-    my @size = ($size->GetWidth, $size->GetHeight);
+    my @size = @{$self->{canvas_size}};
     
-    my $x = ($point[0] - $self->{min_layer_height})*$self->{scaling_factor_x};
-    my $y = $size[1] - $point[1]*$self->{scaling_factor_y}; # invert y-axis
+    my $x = ($point[0] - $self->{min_layer_height})*$self->{scaling_factor_x} + $self->{canvas_padding};
+    my $y = $size[1] - $point[1]*$self->{scaling_factor_y} + $self->{canvas_padding}; # invert y-axis
 
-    return Wx::Point->new(min(max($x, 0), $size[0]), min(max($y, 0), $size[1])); # limit to canvas size  
+    return Wx::Point->new(min(max($x, $self->{canvas_padding}), $size[0]+$self->{canvas_padding}), min(max($y, $self->{canvas_padding}), $size[1]+$self->{canvas_padding})); # limit to canvas size
 }
 
 # Takes a Wx::Point in scaled canvas coordinates and converts it
@@ -358,10 +358,9 @@ sub point_to_pixel {
 sub pixel_to_point {
     my ($self, $point) = @_;
     
-    my $size = $self->GetSize;
-    my @size = ($size->GetWidth, $size->GetHeight);
+    my @size = @{$self->{canvas_size}};
     
-    my $x = $point->x/$self->{scaling_factor_x} + $self->{min_layer_height};
+    my $x = ($point->x-$self->{canvas_padding})/$self->{scaling_factor_x} + $self->{min_layer_height};
     my $y = ($size[1] - $point->y)/$self->{scaling_factor_y}; # invert y-axis
     
     return (min(max($x, $self->{min_layer_height}), $self->{max_layer_height}), min(max($y, 0), $self->{object_height})); # limit to object size and layer constraints 
