@@ -332,7 +332,6 @@ sub set_viewport_from_scene {
 
 sub zoom{
     my ($self, $direction) = @_;
-    print ($direction);
     if( $direction eq 'in'){
         $self->_zoom($self->_zoom / (1-0.3));
     }
