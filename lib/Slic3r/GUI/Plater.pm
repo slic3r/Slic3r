@@ -2439,16 +2439,12 @@ sub zoom{
     if($currentSelection == 0){
         $self->{canvas3D}->zoom($direction) if($self->{canvas3D});
     }
-#    elsif($currentSelection == 1) { #2D platter should zomobe applied here or not ?
-#    }
     elsif($currentSelection == 2){ #3d Preview tab
         $self->{preview3D}->canvas->zoom($direction) if($self->{preview3D});
     }
     elsif($currentSelection == 3) { #2D toolpaths tab
         $self->{toolpaths2D}->{canvas}->zoom($direction) if($self->{toolpaths2D});
     }
-    else {#Do Nothing
-         }
 }
 
 package Slic3r::GUI::Plater::DropTarget;
