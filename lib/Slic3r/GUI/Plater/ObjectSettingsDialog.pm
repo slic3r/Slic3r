@@ -185,6 +185,12 @@ sub new {
 
     $self->{splineControl}->on_z_indicator(sub {
         my ($z) = @_;
+
+        if($z) { # compensate raft height
+	        my $top_layer = $self->{object}->get_layer($self->{object}->layer_count-1);
+	        my $raft_height = max(0, $top_layer->print_z - unscale($self->{object}->size->z));
+	        $z += $raft_height;
+        }
         $self->{preview3D}->canvas->SetCuttingPlane(Z, $z, []);
         $self->{preview3D}->canvas->Render;
     });
