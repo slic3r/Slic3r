@@ -47,7 +47,7 @@ echo "Appfolder: $appfolder, archivefolder: $archivefolder"
 
 # Our slic3r dir and location of perl
 PERL_BIN=$(which perl)
-PP_BIN=$(which wxpar)
+PP_BIN=$(which pp)
 SLIC3R_DIR="./"
 
 if [[ -d "${appfolder}" ]]; then
@@ -104,8 +104,10 @@ ${PP_BIN} wxextension .0 \
 unzip -qq -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
 cp -rf $WD/_tmp/shlib $archivefolder/
-
 rm -rf $WD/_tmp
+for i in $(cat $WD/libpaths.txt); do 
+	install -v $i $archivefolder/bin
+done
 
 echo "Cleaning local-lib"
 rm -rf $archivefolder/local-lib/bin
