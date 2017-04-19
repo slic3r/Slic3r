@@ -81,6 +81,15 @@ PrintConfigDef::PrintConfigDef()
     def->height = 50;
     def->default_value = new ConfigOptionString("");
 
+    def = this->add("between_objects_gcode", coString);
+    def->label = "Between objects G-code";
+    def->tooltip = "This code is inserted between objects when using sequential printing. By default extruder and bed temperature are reset using non-wait command; however if M104, M109, M140 or M190 are detected in this custom code, Slic3r will not add temperature commands. Note that you can use placeholder variables for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want.";
+    def->cli = "between-objects-gcode=s";
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 120;
+    def->default_value = new ConfigOptionString("");
+
     def = this->add("bottom_infill_pattern", external_fill_pattern);
     def->label = "Bottom";
     def->full_label = "Bottom infill pattern";
@@ -786,7 +795,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("max_volumetric_speed", coFloat);
     def->label = "Max volumetric speed";
     def->category = "Speed";
-    def->tooltip = "This experimental setting is used to set the maximum volumetric speed your extruder supports.";
+    def->tooltip = "If set to a non-zero value, extrusion will be limited to this volumetric speed. You may want to set it to your extruder maximum. As a hint, you can read calculated volumetric speeds in the comments of any G-code file you export from Slic3r.";
     def->sidetext = "mm³/s";
     def->cli = "max-volumetric-speed=f";
     def->min = 0;
@@ -960,6 +969,19 @@ PrintConfigDef::PrintConfigDef()
     def->full_width = true;
     def->height = 60;
     def->default_value = new ConfigOptionStrings();
+
+    def = this->add("printer_notes", coStrings);
+    def->label = "Printer notes";
+    def->tooltip = "You can put your notes regarding the printer here.";
+    def->cli = "printer-notes=s@";
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 130;
+    {
+        ConfigOptionStrings* opt = new ConfigOptionStrings();
+        opt->values.push_back("");
+        def->default_value = opt;
+    }
 
     def = this->add("print_settings_id", coString);
     def->default_value = new ConfigOptionString("");
@@ -1623,7 +1645,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(0);
 }
 
-PrintConfigDef print_config_def;
+const PrintConfigDef print_config_def;
 
 void
 DynamicPrintConfig::normalize() {
@@ -1856,6 +1878,6 @@ CLIConfigDef::CLIConfigDef()
     def->default_value = new ConfigOptionPoint3(Pointf3(0,0,0));
 }
 
-CLIConfigDef cli_config_def;
+const CLIConfigDef cli_config_def;
 
 }

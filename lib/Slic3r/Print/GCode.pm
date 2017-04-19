@@ -80,22 +80,56 @@ sub export {
     my $layer_height = $first_object->config->layer_height;
     for my $region_id (0..$#{$self->print->regions}) {
         my $region = $self->print->regions->[$region_id];
-        printf $fh "; external perimeters extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_EXTERNAL_PERIMETER, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; perimeters extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; infill extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_INFILL, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; solid infill extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; top infill extrusion width = %.2fmm\n",
-            $region->flow(FLOW_ROLE_TOP_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object)->width;
-        printf $fh "; support material extrusion width = %.2fmm\n",
-            $self->objects->[0]->support_material_flow->width
-            if $self->print->has_support_material;
-        printf $fh "; first layer extrusion width = %.2fmm\n",
+        
+        {
+            my $flow = $region->flow(FLOW_ROLE_EXTERNAL_PERIMETER, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('external_perimeter_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; external perimeters extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        {
+            my $flow = $region->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('perimeter_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; perimeters extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        {
+            my $flow = $region->flow(FLOW_ROLE_INFILL, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('infill_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; infill extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        {
+            my $flow = $region->flow(FLOW_ROLE_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('solid_infill_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; solid infill extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        {
+            my $flow = $region->flow(FLOW_ROLE_TOP_SOLID_INFILL, $layer_height, 0, 0, -1, $first_object);
+            my $vol_speed = $flow->mm3_per_mm * $region->config->get_abs_value('top_solid_infill_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; top infill extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        
+        if ($self->print->has_support_material) {
+            my $object0 = $self->objects->[0];
+            my $flow = $object0->support_material_flow;
+            my $vol_speed = $flow->mm3_per_mm * $object0->config->get_abs_value('support_material_speed');
+            $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
+            printf $fh "; support material extrusion width = %.2fmm (%.2fmm^3/s)\n",
+                $flow->width, $vol_speed;
+        }
+        
+        printf $fh "; first layer extrusion width = %.2fmm (%.2fmm^3/s)\n",
             $region->flow(FLOW_ROLE_PERIMETER, $layer_height, 0, 1, -1, $self->objects->[0])->width
             if $region->config->first_layer_extrusion_width;
+        
         print  $fh "\n";
     }
     
@@ -112,12 +146,14 @@ sub export {
     }
     
     # set extruder(s) temperature before and after start G-code
-    $self->_print_first_layer_temperature(0);
+    $self->_print_first_layer_temperature(0)
+        if $self->config->start_gcode !~ /M(?:109|104)/i;
     printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->start_gcode);
     foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
         printf $fh "%s\n", $gcodegen->placeholder_parser->process($start_gcode);
     }
-    $self->_print_first_layer_temperature(1);
+    $self->_print_first_layer_temperature(1)
+        if $self->config->start_gcode !~ /M(?:109|104)/i;
     
     # set other general things
     print $fh $gcodegen->preamble;
@@ -212,8 +248,12 @@ sub export {
                     # is triggered, so machine has more time to reach such temperatures
                     if ($layer->id == 0 && $finished_objects > 0) {
                         printf $fh $gcodegen->writer->set_bed_temperature($self->config->first_layer_bed_temperature),
-                            if $self->config->first_layer_bed_temperature && $self->config->has_heatbed;
-                        $self->_print_first_layer_temperature(0);
+                            if $self->config->first_layer_bed_temperature
+                            && $self->config->has_heatbed
+                            && $self->config->between_objects_gcode !~ /M(?:190|140)/i;
+                        $self->_print_first_layer_temperature(0)
+                            if $self->config->between_objects_gcode !~ /M(?:109|104)/i;
+                        printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->between_objects_gcode);
                     }
                     $self->process_layer($layer, [$copy]);
                 }
@@ -302,7 +342,6 @@ sub export {
 sub _print_first_layer_temperature {
     my ($self, $wait) = @_;
     
-    return if $self->config->start_gcode =~ /M(?:109|104)/i;
     for my $t (@{$self->print->extruders}) {
         my $temp = $self->config->get_at('first_layer_temperature', $t);
         $temp += $self->config->standby_temperature_delta if $self->config->ooze_prevention;

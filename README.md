@@ -85,7 +85,7 @@ The main author of Slic3r is Alessandro Ranellucci (@alexrj, *Sound* in IRC, [@a
 
 Joseph Lenox (@lordofhyphens, *Loh* in IRC) is the current co-maintainer.
 
-Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake, Vojtech Bubnik and numerous others. Original manual by Gary Hodgson. Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James.
+Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake, Kliment Yanev and numerous others. Original manual by Gary Hodgson. Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James.
 
 ### How can I invoke Slic3r using the command line?
 

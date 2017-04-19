@@ -37,7 +37,7 @@ SV*
 ExtrusionLoop::arrayref()
     CODE:
         AV* av = newAV();
-        av_fill(av, THIS->paths.size()-1);
+        if (!THIS->paths.empty()) av_extend(av, THIS->paths.size()-1);
         for (ExtrusionPaths::iterator it = THIS->paths.begin(); it != THIS->paths.end(); ++it) {
             av_store(av, it - THIS->paths.begin(), perl_to_SV_ref(*it));
         }

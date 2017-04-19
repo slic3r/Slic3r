@@ -41,6 +41,7 @@ class SurfaceCollection
     bool empty() const { return this->surfaces.empty(); };
     size_t size() const { return this->surfaces.size(); };
     void clear() { this->surfaces.clear(); };
+    void erase(size_t i) { this->surfaces.erase(this->surfaces.begin() + i); };
 };
 
 }

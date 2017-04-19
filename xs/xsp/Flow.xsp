@@ -81,3 +81,6 @@ _constant()
 
 %}
 
+coord_t solid_spacing(coord_t width, coord_t distance)
+    %code{% RETVAL = Flow::solid_spacing(width, distance); %};
+

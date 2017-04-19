@@ -1,0 +1,7 @@
+#!/bin/bash
+# Script to only decrypt if it is available
+
+if [ ! -z ${encrypted_daaf322d08bf_key+x} ]; then
+    openssl aes-256-cbc -K $encrypted_daaf322d08bf_key -iv $encrypted_daaf322d08bf_iv -in $TRAVIS_BUILD_DIR/package/deploy/slic3r-upload.rsa.enc -out ~/slic3r-upload.rsa -d
+    chmod 600 ~/slic3r-upload.rsa
+fi

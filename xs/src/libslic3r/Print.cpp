@@ -163,6 +163,10 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
             || opt_key == "min_skirt_length"
             || opt_key == "ooze_prevention") {
             steps.insert(psSkirt);
+        } else if (opt_key == "brim_width") {
+            steps.insert(psBrim);
+            steps.insert(psSkirt);
+            osteps.insert(posSupportMaterial);
         } else if (opt_key == "brim_width"
             || opt_key == "interior_brim_width"
             || opt_key == "brim_connections_width") {
@@ -176,6 +180,7 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
         } else if (opt_key == "avoid_crossing_perimeters"
             || opt_key == "bed_shape"
             || opt_key == "bed_temperature"
+            || opt_key == "between_objects_gcode"
             || opt_key == "bridge_acceleration"
             || opt_key == "bridge_fan_speed"
             || opt_key == "complete_objects"
@@ -760,13 +765,18 @@ Print::brim_flow() const
        extruders and take the one with, say, the smallest index.
        The same logic should be applied to the code that selects the extruder during G-code
        generation as well. */
-    return Flow::new_from_config_width(
+    Flow flow = Flow::new_from_config_width(
         frPerimeter,
         width, 
         this->config.nozzle_diameter.get_at(this->regions.front()->config.perimeter_extruder-1),
         this->skirt_first_layer_height(),
         0
     );
+    
+    // Adjust extrusion width in order to fill the total brim width with an integer number of lines.
+    flow.set_solid_spacing(this->config.brim_width.value);
+    
+    return flow;
 }
 
 Flow
@@ -814,23 +824,21 @@ Print::_make_brim()
     const coord_t grow_distance = flow.scaled_width()/2;
     Polygons islands;
     
-    FOREACH_OBJECT(this, object) {
-        const Layer &layer0 = *(*object)->get_layer(0);
+    for (PrintObject* object : this->objects) {
+        const Layer* layer0 = object->get_layer(0);
         
-        Polygons object_islands = layer0.slices.contours();
+        Polygons object_islands = layer0->slices.contours();
         
-        if (!(*object)->support_layers.empty()) {
-            const SupportLayer &support_layer0 = *(*object)->get_support_layer(0);
+        if (!object->support_layers.empty()) {
+            const SupportLayer* support_layer0 = object->get_support_layer(0);
             
-            for (ExtrusionEntitiesPtr::const_iterator it = support_layer0.support_fills.entities.begin();
-                it != support_layer0.support_fills.entities.end(); ++it)
-                append_to(object_islands, offset((*it)->as_polyline(), grow_distance));
+            for (const ExtrusionEntity* e : support_layer0->support_fills.entities)
+                append_to(object_islands, offset(e->as_polyline(), grow_distance));
             
-            for (ExtrusionEntitiesPtr::const_iterator it = support_layer0.support_interface_fills.entities.begin();
-                it != support_layer0.support_interface_fills.entities.end(); ++it)
-                append_to(object_islands, offset((*it)->as_polyline(), grow_distance));
+            for (const ExtrusionEntity* e : support_layer0->support_interface_fills.entities)
+                append_to(object_islands, offset(e->as_polyline(), grow_distance));
         }
-        for (const Point &copy : (*object)->_shifted_copies) {
+        for (const Point &copy : object->_shifted_copies) {
             for (Polygon p : object_islands) {
                 p.translate(copy);
                 islands.push_back(p);
@@ -847,8 +855,8 @@ Print::_make_brim()
         // perimeters because here we're offsetting outwards)
         append_to(loops, offset2(
             islands,
-            flow.scaled_width() + flow.scaled_spacing() * (i - 1.0 + 0.5),
-            flow.scaled_spacing() * -1.0,
+            flow.scaled_width() + flow.scaled_spacing() * (i - 1.5 + 0.5),
+            flow.scaled_spacing() * -0.5,
             100000,
             ClipperLib::jtSquare
         ));

@@ -269,6 +269,13 @@ sub validate {
                 qw(perimeter infill solid_infill top_infill support_material first_layer);
     }
     
+    # support material
+    if ($self->support_material) {
+        die "Value of 0 is illegal. Use some % value instead (e.g. 150%) for auto.\n"
+            if $self->support_material_threshold =~ /^0+/;
+    }
+    
+    
     # general validation, quick and dirty
     foreach my $opt_key (@{$self->get_keys}) {
         my $opt = $Options->{$opt_key};

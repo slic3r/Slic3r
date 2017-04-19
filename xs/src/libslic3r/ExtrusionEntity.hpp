@@ -142,7 +142,6 @@ class ExtrusionLoop : public ExtrusionEntity
     void split_at(const Point &point, bool prefer_non_overhang = false);
     void clip_end(double distance, ExtrusionPaths* paths) const;
     // Test, whether the point is extruded by a bridging flow.
-    // This used to be used to avoid placing seams on overhangs, but now the EdgeGrid is used instead.
     bool has_overhang_point(const Point &point) const;
     bool is_perimeter() const {
         return this->paths.front().role == erPerimeter

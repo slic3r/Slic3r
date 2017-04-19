@@ -1079,6 +1079,23 @@ sub set_number_of_copies {
     }
 }
 
+sub center_selected_object_on_bed {
+    my ($self) = @_;
+    
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    my $bb = $model_object->bounding_box;
+    my $size = $bb->size;
+    my $vector = Slic3r::Pointf->new(
+        $self->bed_centerf->x - $bb->x_min - $size->x/2,
+        $self->bed_centerf->y - $bb->y_min - $size->y/2,    #//
+    );
+    $_->offset->translate(@$vector) for @{$model_object->instances};
+    $self->refresh_canvases;
+}
+
 sub rotate {
     my $self = shift;
     my ($angle, $axis) = @_;
@@ -1388,12 +1405,12 @@ sub async_apply_config {
     $self->{preview3D}->reload_print if $self->{preview3D};
     $self->{AdaptiveLayersDialog}->reload_preview if $self->{AdaptiveLayersDialog};
     
+    if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
+        $self->hide_preview if $invalidated;
+        return;
+    }
+    
     if ($invalidated) {
-        if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
-            $self->hide_preview;
-            return;
-        }
-        
         # kill current thread if any
         $self->stop_background_process;
         # remove the sliced statistics box because something changed.
@@ -2331,6 +2348,9 @@ sub object_menu {
         $self->set_number_of_copies;
     }, undef, 'textfield.png');
     $menu->AppendSeparator();
+    $frame->_append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
+        $self->center_selected_object_on_bed;
+    }, undef, 'arrow_in.png');
     $frame->_append_menu_item($menu, "Rotate 45° clockwise", 'Rotate the selected object by 45° clockwise', sub {
         $self->rotate(-45);
     }, undef, 'arrow_rotate_clockwise.png');
@@ -2578,7 +2598,7 @@ sub new {
     EVT_BUTTON($self, wxID_OK, sub {
         wxTheApp->save_settings;
         $self->EndModal(wxID_OK);
-        $self->Close;  # needed on Linux
+        $self->Destroy;
     });
     
     $self->SetSizer($sizer);

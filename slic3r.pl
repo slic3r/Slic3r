@@ -51,6 +51,10 @@ my %cli_options = ();
         'duplicate-grid=s'      => \$opt{duplicate_grid},
         'print-center=s'        => \$opt{print_center},
         'dont-arrange'          => \$opt{dont_arrange},
+        
+        # legacy options, ignored
+        'no-plater'             => \$opt{no_plater},
+        'gui-mode=s'            => \$opt{gui_mode},
     );
     foreach my $opt_key (keys %{$Slic3r::Config::Options}) {
         my $cli = $Slic3r::Config::Options->{$opt_key}->{cli} or next;
@@ -60,6 +64,9 @@ my %cli_options = ();
     
     @ARGV = grep !/^-psn_\d/, @ARGV if $^O eq 'darwin';
     GetOptions(%options) or usage(1);
+    
+    warn "--no-plater option is deprecated; ignoring\n" if $opt{no_plater};
+    warn "--gui-mode option is deprecated (Slic3r now has only Expert Mode); ignoring\n"  if $opt{gui_mode};
 }
 
 # load configuration files

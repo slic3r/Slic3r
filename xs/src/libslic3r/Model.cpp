@@ -753,18 +753,20 @@ ModelObject::mirror(const Axis &axis)
 }
 
 void
-ModelObject::transform_by_instance(const ModelInstance &instance, bool dont_translate)
+ModelObject::transform_by_instance(ModelInstance instance, bool dont_translate)
 {
+    // We get instance by copy because we would alter it in the loop below,
+    // causing inconsistent values in subsequent instances.
     this->rotate(instance.rotation, Z);
     this->scale(instance.scaling_factor);
     if (!dont_translate)
         this->translate(instance.offset.x, instance.offset.y, 0);
     
-    for (ModelInstancePtrs::iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
-        (*i)->rotation -= instance.rotation;
-        (*i)->scaling_factor /= instance.scaling_factor;
+    for (ModelInstance* i : this->instances) {
+        i->rotation -= instance.rotation;
+        i->scaling_factor /= instance.scaling_factor;
         if (!dont_translate)
-            (*i)->offset.translate(-instance.offset.x, -instance.offset.y);
+            i->offset.translate(-instance.offset.x, -instance.offset.y);
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();

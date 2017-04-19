@@ -15,7 +15,7 @@ public:
     // Lower slices, all regions.
     ExPolygonCollection lower_slices;
     // Scaled extrusion width of the infill.
-    double extrusion_width;
+    coord_t extrusion_width;
     // Angle resolution for the brute force search of the best bridging angle.
     double resolution;
     // The final optimal angle.
@@ -31,6 +31,19 @@ private:
     Polylines _edges;
     // Closed polygons representing the supporting areas.
     ExPolygons _anchors;
+    
+    class BridgeDirection {
+        public:
+        BridgeDirection(double a = -1.) : angle(a), coverage(0.), max_length(0.) {}
+        // the best direction is the one causing most lines to be bridged (thus most coverage)
+        bool operator<(const BridgeDirection &other) const {
+            // Initial sort by coverage only - comparator must obey strict weak ordering
+            return this->coverage > other.coverage;
+        };
+        double angle;
+        double coverage;
+        double max_length;
+    };
 };
 
 }

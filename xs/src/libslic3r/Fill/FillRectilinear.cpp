@@ -6,6 +6,7 @@
 
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
+#include "../Flow.hpp"
 #include "../PolylineCollection.hpp"
 #include "../Surface.hpp"
 #include <algorithm>
@@ -48,7 +49,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     
     // define flow spacing according to requested density
     if (this->density > 0.9999f && !this->dont_adjust) {
-        line_spacing = this->adjust_solid_spacing(bounding_box.size().x, line_spacing);
+        line_spacing = Flow::solid_spacing(bounding_box.size().x, line_spacing);
         this->_spacing = unscale(line_spacing);
     } else {
         // extend bounding box so that our pattern will be aligned with other layers
@@ -339,7 +340,12 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
         // Get the first lower point.
         vertical_t::iterator it = v.begin();  // minimum x,y
         IntersectionPoint p = it->second;
-        assert(p.type == IntersectionPoint::ipTypeLower);
+        if (p.type != IntersectionPoint::ipTypeLower) {
+            // Degenerate polygon, this shouldn't happen.
+            // We used to have an assert here, but let's be tolerant.
+            grid.erase(p.x);
+            continue;
+        }
         
         // Start our polyline.
         Polyline polyline;
@@ -350,17 +356,32 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
             // Complete the vertical line by finding the corresponding upper or lower point.
             if (p.type == IntersectionPoint::ipTypeUpper) {
                 // find first point along c.x with y < c.y
-                assert(it != grid[p.x].begin());
+                if (it == grid[p.x].begin()) {
+                    // Degenerate polygon, this shouldn't happen.
+                    // We used to have an assert here, but let's be tolerant.
+                    grid.erase(p.x);
+                    break;
+                }
                 --it;
             } else {
                 // find first point along c.x with y > c.y
                 ++it;
-                assert(it != grid[p.x].end());
+                if (it == grid[p.x].end()) {
+                    // Degenerate polygon, this shouldn't happen.
+                    // We used to have an assert here, but let's be tolerant.
+                    grid.erase(p.x);
+                    break;
+                }
             }
             
             // Append the point to our polyline.
             IntersectionPoint b = it->second;
-            assert(b.type != p.type);
+            if (b.type == p.type) {
+                // Degenerate polygon, this shouldn't happen.
+                // We used to have an assert here, but let's be tolerant.
+                grid.erase(p.x);
+                break;
+            }
             polyline.append(b);
             polyline.points.back().y += this->endpoints_overlap * (b.type == IntersectionPoint::ipTypeUpper ? 1 : -1);
 
@@ -408,8 +429,12 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
             
             // If the connection brought us to another x coordinate, we expect the point 
             // type to be the same.
-            assert((p.type == b.type && p.x > b.x)
-                || (p.type != b.type && p.x == b.x));
+            if (!(p.type == b.type && p.x > b.x) && !(p.type != b.type && p.x == b.x)) {
+                // Degenerate polygon, this shouldn't happen.
+                // We used to have an assert here, but let's be tolerant.
+                grid.erase(p.x);
+                break;
+            }
         }
         
         // Yay, we have a polyline!

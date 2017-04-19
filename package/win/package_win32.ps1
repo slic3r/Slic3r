@@ -1,7 +1,7 @@
-# Written by Joseph Lenox
+# Written by Joseph Lenox 
 # Licensed under the same license as the rest of Slic3r.
 # ------------------------
-# You need to have Strawberry Perl 5.24.0.1 installed for this to work, 
+# You need to have Strawberry Perl 5.24.0.1 (or slic3r-perl) installed for this to work, 
 param (
 	[switch]$exe = $false
 )
@@ -44,7 +44,8 @@ cpanm "PAR::Packer"
 
 pp `
 -a "slic3r.exe;slic3r.exe"  `
--a "slic3r.exe;slic3r-console.exe"  `
+-a "slic3r-console.exe;slic3r-console.exe"  `
+-a "slic3r-debug-console.exe;slic3r-debug-console.exe"  `
 -a "../../lib;lib" `
 -a "../../local-lib;local-lib" `
 -a "../../slic3r.pl;slic3r.pl" `

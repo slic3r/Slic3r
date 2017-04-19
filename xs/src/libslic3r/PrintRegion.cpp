@@ -85,11 +85,19 @@ PrintRegion::invalidate_state_by_config(const PrintConfigBase &config)
             steps.insert(posPerimeters);
         } else if (opt_key == "first_layer_extrusion_width") {
             steps.insert(posSupportMaterial);
+        } else if (opt_key == "solid_infill_below_area") {
+            const float &cur_value = config.opt<ConfigOptionFloat>(opt_key)->value;
+            const float &new_value = this->config.solid_infill_below_area.value;
+            if (new_value >= cur_value) {
+                steps.insert(posPrepareInfill);
+            } else {
+                // prepare_infill is not idempotent when solid_infill_below_area is reduced
+                steps.insert(posPerimeters);
+            }
         } else if (opt_key == "infill_every_layers"
             || opt_key == "solid_infill_every_layers"
             || opt_key == "bottom_solid_layers"
             || opt_key == "top_solid_layers"
-            || opt_key == "solid_infill_below_area"
             || opt_key == "infill_extruder"
             || opt_key == "solid_infill_extruder"
             || opt_key == "infill_extrusion_width") {
@@ -108,10 +116,10 @@ PrintRegion::invalidate_state_by_config(const PrintConfigBase &config)
         } else if (opt_key == "fill_density") {
             const float &cur_value = config.opt<ConfigOptionFloat>("fill_density")->value;
             const float &new_value = this->config.fill_density.value;
-            if ((cur_value == 0) != (new_value == 0))
+            if ((cur_value == 0) != (new_value == 0) || (cur_value == 100) != (new_value == 100))
                 steps.insert(posPerimeters);
             
-            steps.insert(posPrepareInfill);
+            steps.insert(posInfill);
         } else if (opt_key == "external_perimeter_extrusion_width"
             || opt_key == "perimeter_extruder") {
             steps.insert(posPerimeters);

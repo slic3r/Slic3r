@@ -133,7 +133,6 @@ find -d $macosfolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
     -or -name Ribbon \) -exec rm -rf "{}" \;
 find -d $macosfolder/local-lib -name libwx_osx_cocoau_ribbon-3.0.0.2.0.dylib -delete
 find -d $macosfolder/local-lib -name libwx_osx_cocoau_aui-3.0.0.2.0.dylib -delete
-find -d $macosfolder/local-lib -name libwx_osx_cocoau_media-3.0.0.2.0.dylib -delete
 find -d $macosfolder/local-lib -name libwx_osx_cocoau_stc-3.0.0.2.0.dylib -delete
 find -d $macosfolder/local-lib -name libwx_osx_cocoau_webview-3.0.0.2.0.dylib -delete
 rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include

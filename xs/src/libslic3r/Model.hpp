@@ -163,7 +163,7 @@ class ModelObject
     void scale_to_fit(const Sizef3 &size);
     void rotate(float angle, const Axis &axis);
     void mirror(const Axis &axis);
-    void transform_by_instance(const ModelInstance &instance, bool dont_translate = false);
+    void transform_by_instance(ModelInstance instance, bool dont_translate = false);
     size_t materials_count() const;
     size_t facets_count() const;
     bool needed_repair() const;

@@ -59,6 +59,7 @@ class TriangleMesh
     size_t facets_count() const;
     void extrude_tin(float offset);
     void require_shared_vertices();
+    void reverse_normals();
     
     static TriangleMesh make_cube(double x, double y, double z);
     static TriangleMesh make_cylinder(double r, double h, double fa=(2*PI/360));
