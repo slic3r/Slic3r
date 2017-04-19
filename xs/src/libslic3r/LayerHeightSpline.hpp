@@ -20,7 +20,7 @@ class LayerHeightSpline
     bool layersUpdated() const { return this->_layers_updated; }; // true if the basis set of layers was updated (by the slicing algorithm)
     bool layerHeightsUpdated() const { return this->_layer_heights_updated; }; // true if the heights where updated (by the spline control user interface)
     void clear();
-    std::vector<coordf_t> getOriginalLayers() const { return this->_original_layers; };
+    std::vector<coordf_t> getOriginalLayers() const { return this->_layers; };
     std::vector<coordf_t> getInterpolatedLayers() const;
     const coordf_t getLayerHeightAt(coordf_t height);
 
@@ -31,9 +31,8 @@ class LayerHeightSpline
     bool _is_valid;
     bool _layers_updated;
     bool _layer_heights_updated;
-    std::vector<coordf_t> _original_layers;
-    std::vector<coordf_t> _internal_layers;
-    std::vector<coordf_t> _internal_layer_heights;
+    std::vector<coordf_t> _layers;
+    std::vector<coordf_t> _layer_heights;
     std::unique_ptr<BSpline<double>> _layer_height_spline;
 };
 

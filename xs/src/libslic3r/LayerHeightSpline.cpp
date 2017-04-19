@@ -27,9 +27,8 @@ LayerHeightSpline::LayerHeightSpline(const LayerHeightSpline &other)
 LayerHeightSpline& LayerHeightSpline::operator=(const LayerHeightSpline &other)
 {
     this->_object_height = other._object_height;
-    this->_original_layers = other._original_layers;
-    this->_internal_layers = other._internal_layers;
-    this->_internal_layer_heights = other._internal_layer_heights;
+    this->_layers = other._layers;
+    this->_layer_heights = other._layer_heights;
     this->_is_valid = other._is_valid;
     this->_layers_updated = other._layers_updated;
     this->_layer_heights_updated = other._layer_heights_updated;
@@ -53,22 +52,15 @@ bool LayerHeightSpline::hasData()
  */
 bool LayerHeightSpline::setLayers(std::vector<coordf_t> layers)
 {
-    this->_original_layers = layers;
+    this->_layers = layers;
 
     // generate updated layer height list from layers
-    this->_internal_layer_heights.clear();
+    this->_layer_heights.clear();
     coordf_t last_z = 0;
-    for (std::vector<coordf_t>::const_iterator l = this->_original_layers.begin(); l != this->_original_layers.end(); ++l) {
-        this->_internal_layer_heights.push_back(*l-last_z);
+    for (std::vector<coordf_t>::const_iterator l = this->_layers.begin(); l != this->_layers.end(); ++l) {
+        this->_layer_heights.push_back(*l-last_z);
         last_z = *l;
     }
-
-    // add 0-values at both ends to achieve correct boundary conditions
-    this->_internal_layers = this->_original_layers;
-    this->_internal_layers.insert(this->_internal_layers.begin(), 0); // add z = 0 to the front
-    //this->_internal_layers.push_back(this->_internal_layers.back()+1); // and object_height + 1 to the end
-    this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), this->_internal_layer_heights[0]);
-    //this->_internal_layer_heights.push_back(0);
 
     this->_layers_updated = true;
     this->_layer_heights_updated = false;
@@ -88,14 +80,11 @@ bool LayerHeightSpline::updateLayerHeights(std::vector<coordf_t> heights)
     bool result = false;
 
     // do we receive the correct number of values?
-    if(heights.size() == this->_internal_layers.size()-1) {
-        this->_internal_layer_heights = heights;
-        // add leading and trailing 0-value
-        this->_internal_layer_heights.insert(this->_internal_layer_heights.begin(), this->_internal_layer_heights[0]);
-        //this->_internal_layer_heights.push_back(0);
+    if(heights.size() == this->_layers.size()) {
+        this->_layer_heights = heights;
         result = this->_updateBSpline();
     }else{
-        std::cerr << "Unable to update layer heights. You provided " << heights.size() << " layers, but " << this->_internal_layers.size()-1 << " expected" << std::endl;
+        std::cerr << "Unable to update layer heights. You provided " << heights.size() << " layers, but " << this->_layers.size()-1 << " expected" << std::endl;
     }
 
     this->_layers_updated = false;
@@ -109,9 +98,8 @@ bool LayerHeightSpline::updateLayerHeights(std::vector<coordf_t> heights)
  */
 void LayerHeightSpline::clear()
 {
-    this->_original_layers.clear();
-    this->_internal_layers.clear();
-    this->_internal_layer_heights.clear();
+    this->_layers.clear();
+    this->_layer_heights.clear();
     this->_layer_height_spline.reset();
     this->_is_valid = false;
     this->_layers_updated = false;
@@ -127,8 +115,8 @@ std::vector<coordf_t> LayerHeightSpline::getInterpolatedLayers() const
     std::vector<coordf_t> layers;
     if(this->_is_valid) {
         // preserve first layer for bed contact
-        layers.push_back(this->_original_layers[0]);
-        coordf_t z = this->_original_layers[0];
+        layers.push_back(this->_layers[0]);
+        coordf_t z = this->_layers[0];
         coordf_t h;
         coordf_t h_diff = 0;
         coordf_t last_h_diff = 0;
@@ -143,7 +131,12 @@ std::vector<coordf_t> LayerHeightSpline::getInterpolatedLayers() const
                 h = this->_layer_height_spline->evaluate(z+h);
                 h_diff = this->_layer_height_spline->evaluate(z+h) - h;
             } while(std::abs(h_diff) > eps && std::abs(h_diff - last_h_diff) > eps);
-            z += h;
+
+            if(z+h > this->_object_height) {
+                z += this->_layer_height_spline->evaluate(layers.back()); // re-use last layer height if outside of defined range
+            }else{
+                z += h;
+            }
             layers.push_back(z);
         }
         // how to make sure, the last layer is not higher than object while maintaining between min/max layer height?
@@ -158,7 +151,13 @@ const coordf_t LayerHeightSpline::getLayerHeightAt(coordf_t height)
 {
     coordf_t result = 0;
     if (this->_is_valid) {
-        result = this->_layer_height_spline->evaluate(height);
+        if(height <= this->_layers[0]) {
+            result = this->_layers[0]; // return first_layer height
+        }else if (height > this->_layers.back()){
+            result = this->_layer_height_spline->evaluate(this->_layers.back()); // repeat last value for height > last layer
+        }else{
+            result = this->_layer_height_spline->evaluate(height); // return interpolated layer height
+        }
     }
     return result;
 }
@@ -171,9 +170,9 @@ bool LayerHeightSpline::_updateBSpline()
     bool result = false;
     //TODO: exception if not enough points?
 
-    this->_layer_height_spline.reset(new BSpline<double>(&this->_internal_layers[0],
-            this->_internal_layers.size(),
-            &this->_internal_layer_heights[0],
+    this->_layer_height_spline.reset(new BSpline<double>(&this->_layers[1],
+            this->_layers.size()-1,
+            &this->_layer_heights[1],
             0,
             1,
             0)
