@@ -1,7 +1,7 @@
-# Written by Joseph Lenox
+# Written by Joseph Lenox 
 # Licensed under the same license as the rest of Slic3r.
 # ------------------------
-# You need to have Strawberry Perl 5.24.0.1 installed for this to work, 
+# You need to have Strawberry Perl 5.24.0.1 (or slic3r-perl) installed for this to work, 
 param (
 	[switch]$exe = $false
 )
