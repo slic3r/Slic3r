@@ -171,7 +171,7 @@ sub contact_area {
                     my $layer_threshold_rad = $threshold_rad;
                     if ($layer_id <= $conf->support_material_enforce_layers) {
                         # Use ~45 deg number for enforced supports if we are in auto
-                        $layer_threshold_rad = deg2rad(75);
+                        $layer_threshold_rad = deg2rad(89);
                     }
                     if (defined $layer_threshold_rad) {
                         $d = scale $lower_layer->height
