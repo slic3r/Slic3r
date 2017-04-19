@@ -25,12 +25,14 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("adaptive_slicing", coBool);
     def->label = "Use adaptive slicing";
+    def->category = "Layers and Perimeters";
     def->tooltip = "Automatically determine layer heights by the objects topology instead of using the static value.";
     def->cli = "adaptive-slicing!";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("adaptive_slicing_quality", coPercent);
     def->label = "Adaptive quality";
+    def->category = "Layers and Perimeters";
     def->tooltip = "Controls the quality / printing time tradeoff for adaptive layer generation. 0 -> fastest printing with max layer height, 100 -> highest quality, min layer height";
     def->sidetext = "%";
     def->cli = "adaptive_slicing_quality=f";
