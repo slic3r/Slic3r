@@ -6,23 +6,6 @@
 
 namespace Slic3r {
 
-int
-PerimeterGenerator::num_loops(int perimeters, int extra_perimeters)
-{
-    int generated_perimeters = perimeters + extra_perimeters - 1;
-    long min_shell_thickness = scale_(this->config->min_shell_thickness);
-    auto shell_thickness = this->ext_perimeter_flow.scaled_width();
-
-    shell_thickness += ((perimeters+extra_perimeters)-1) * this->perimeter_flow.scaled_width();
-    
-    if (shell_thickness < min_shell_thickness) {
-        shell_thickness = min_shell_thickness - this->ext_perimeter_flow.scaled_width();
-        generated_perimeters = ceil((float)shell_thickness/this->ext_perimeter_flow.scaled_width());
-    }
-
-    return generated_perimeters;
-}
-
 void
 PerimeterGenerator::process()
 {
@@ -55,6 +38,9 @@ PerimeterGenerator::process()
     // internal flow which is unrelated.
     coord_t min_spacing         = pspacing      * (1 - INSET_OVERLAP_TOLERANCE);
     coord_t ext_min_spacing     = ext_pspacing  * (1 - INSET_OVERLAP_TOLERANCE);
+
+
+    coord_t min_shell_thickness = scale_(this->config->min_shell_thickness);
     
     // prepare grown lower layer slices for overhang detection
     if (this->lower_slices != NULL && this->config->overhangs) {
@@ -71,8 +57,21 @@ PerimeterGenerator::process()
     for (Surfaces::const_iterator surface = this->slices->surfaces.begin();
         surface != this->slices->surfaces.end(); ++surface) {
         // detect how many perimeters must be generated for this island
-        const int loop_number = num_loops(this->config->perimeters, surface->extra_perimeters);//this->config->perimeters + surface->extra_perimeters-1;  // 0-indexed loops
+        int loops = this->config->perimeters + surface->extra_perimeters;
+
+        //If the user has defined a minimum shell thickness compute the number of loops needed to satisfy
+        if (min_shell_thickness > 0) {
+            int min_loops = 1;
+
+            min_loops += ceil(((float)min_shell_thickness-ext_pwidth)/pwidth);
+
+            if (loops < min_loops)
+                loops = min_loops;
+        }
+
+        const int loop_number = loops-1;  // 0-indexed loops
         
+
         Polygons gaps;
         
         Polygons last = surface->expolygon.simplify_p(SCALED_RESOLUTION);
