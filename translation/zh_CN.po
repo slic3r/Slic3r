@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3r\n"
 "POT-Creation-Date: 2017-03-29 00:02-0600\n"
-"PO-Revision-Date: 2017-04-20 13:10+0800\n"
+"PO-Revision-Date: 2017-04-24 09:52+0800\n"
 "Language-Team: Joseph Lenox <lenox.joseph@gmail.com>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -413,9 +413,7 @@ msgstr "使用的挤出头（除非指明了更多详细的挤出头参数）。
 msgid "Height"
 msgstr "高度"
 
-# Not clear about what it means...
 #: xs/src/libslic3r/PrintConfig.cpp:279
-#, fuzzy
 msgid ""
 "Set this to the vertical distance between your nozzle tip and (usually) the "
 "X carriage rods. In other words, this is the height of the clearance "
@@ -430,14 +428,13 @@ msgid "Radius"
 msgstr "半径"
 
 #: xs/src/libslic3r/PrintConfig.cpp:287
-#, fuzzy
 msgid ""
 "Set this to the clearance radius around your extruder. If the extruder is "
 "not centered, choose the largest value for safety. This setting is used to "
 "check for collisions and to display the graphical preview in the plater."
 msgstr ""
-"设置为挤出头周伟的空隙半径。如果挤出头未置中，安全起见请选择最大值。该参数用"
-"于检查碰撞，并在plater中显示图形预览。"
+"设置为挤出头周围的空隙半径。如果挤出头未置中，安全起见请选择最大值。该参数用"
+"于检查碰撞，并在界面中显示图形预览。"
 
 #: xs/src/libslic3r/PrintConfig.cpp:294
 msgid "Extruder offset"
@@ -642,7 +639,6 @@ msgid ""
 msgstr "此项为打印机对首层使用的加速度。设为0则对首层禁用加速控制。"
 
 #: xs/src/libslic3r/PrintConfig.cpp:523
-#, fuzzy
 msgid ""
 "Heated build plate temperature for the first layer. Set this to zero to "
 "disable bed temperature control commands in the output."
@@ -837,9 +833,7 @@ msgstr "第一层打印于物件孔洞内部的裙边宽度。"
 msgid "Interface shells"
 msgstr "表面外壳"
 
-# volumes？
 #: xs/src/libslic3r/PrintConfig.cpp:710
-#, fuzzy
 msgid ""
 "Force the generation of solid shells between adjacent materials/volumes. "
 "Useful for multi-extruder prints with translucent materials or manual "
@@ -1093,7 +1087,7 @@ msgstr ""
 
 #: xs/src/libslic3r/PrintConfig.cpp:924
 msgid "Pressure advance"
-msgstr ""
+msgstr "压力高级设置"
 
 #: xs/src/libslic3r/PrintConfig.cpp:926
 msgid ""
@@ -1212,7 +1206,7 @@ msgstr ""
 
 #: xs/src/libslic3r/PrintConfig.cpp:1031
 msgid "Below Z"
-msgstr ""
+msgstr "Z下方"
 
 #: xs/src/libslic3r/PrintConfig.cpp:1034
 msgid ""
@@ -1418,10 +1412,7 @@ msgstr ""
 msgid "Start G-code"
 msgstr "起始G代码"
 
-# “before extruder has finished heating. If Slic3r detects M104, M109, M140 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions. ”
-# What does this mean?
 #: xs/src/libslic3r/PrintConfig.cpp:1248
-#, fuzzy
 msgid ""
 "This start procedure is inserted at the beginning, after bed has reached the "
 "target temperature and extruder just started heating, and before extruder "
@@ -1432,14 +1423,12 @@ msgid ""
 "can put a \"M109 S[first_layer_temperature]\" command wherever you want."
 msgstr ""
 "该段代码放在G代码开头，在热床达到目标温度、挤出头开始加热后，挤出头完成加热前"
-"插入。如果Slic3r在其中检测到M104, M109, M140 或 M190，这种命令将不会自动被预"
-"先考虑到，所以你可以自由定义加热命令和其他自定义动作的顺序。注意可以使用占位"
-"符变量替代所有Slic3r参数，所以你可以把一个“M109 "
-"S[ first_layer_temperature ]”命令放在任意处。"
+"插入。如果其中不包含有M104, M109, M140 或 M190，这段指令就会在Slic3r自动放置"
+"的M指令之后；否则Slic3r将不会自动生成M指令，这样你可以自由定义加热命令和其他"
+"自定义动作的顺序。注意可以使用占位符变量替代所有Slic3r参数，所以你可以把一"
+"个“M109 S[ first_layer_temperature ]”命令放在任意处。"
 
-# same as the previous one.
 #: xs/src/libslic3r/PrintConfig.cpp:1257
-#, fuzzy
 msgid ""
 "This start procedure is inserted at the beginning, after any printer start "
 "gcode. This is used to override settings for a specific filament. If Slic3r "
@@ -1451,10 +1440,12 @@ msgid ""
 "extruders, the gcode is processed in extruder order."
 msgstr ""
 "该段代码放在G代码开头，在所有打印机起始G代码后插入。用于覆盖指定材料的参数。"
-"如果Slic3r在其中检测到M104, M109, M140 或 M190，这种命令将不会自动被预先考虑"
-"到，所以你可以自由定义加热命令和其他自定义动作的顺序。注意可以使用占位符变量"
-"替代所有Slic3r参数，所以你可以把一个“M109 S[ first_layer_temperature ]”命令放"
-"在任意处。如果你有多个挤出头，G代码将按挤出头顺序处理。"
+"该段代码放在G代码开头，在热床达到目标温度、挤出头开始加热后，挤出头完成加热前"
+"插入。如果其中不包含有M104, M109, M140 或 M190，这段指令就会在Slic3r自动放置"
+"的M指令之后；否则Slic3r将不会自动生成M指令，这样你可以自由定义加热命令和其他"
+"自定义动作的顺序。注意可以使用占位符变量替代所有Slic3r参数，所以你可以把一"
+"个“M109 S[ first_layer_temperature ]”命令放在任意处。如果你有多个挤出头，G代"
+"码将按挤出头顺序处理。"
 
 #: xs/src/libslic3r/PrintConfig.cpp:1269
 msgid "Generate support material"
@@ -1489,8 +1480,7 @@ msgstr "仅在热床上生成支撑，不在打印出来的物体上生成。"
 msgid "Contact Z distance"
 msgstr "接触Z距离"
 
-# What does this setting mean?
-# And how come " Setting this to 0 will also prevent speed for the first object layer"?
+# How come " Setting this to 0 will also prevent *speed* for the first object layer"?
 #: xs/src/libslic3r/PrintConfig.cpp:1296
 #, fuzzy
 msgid ""
@@ -1798,12 +1788,8 @@ msgstr ""
 
 #: xs/src/libslic3r/PrintConfig.cpp:1573
 msgid "Z full steps/mm"
-msgstr "Z全部步骤数/毫米"
+msgstr "Z全部步数/毫米"
 
-# "you can calculate this by dividing the number of microsteps configured in your firmware by the microstepping amount (8, 16, 32). "
-# Lost me there.
-# What is "the number of microsteps" and "microstepping amount"?
-# What are the difference between them?
 #: xs/src/libslic3r/PrintConfig.cpp:1574
 msgid ""
 "Set this to the number of *full* steps (not microsteps) needed for moving "
@@ -1815,8 +1801,10 @@ msgid ""
 "heights with metric leadscrews. Set to zero to disable this experimental "
 "feature."
 msgstr ""
-"将该值设为移动Z轴1毫米所需的*全部*步骤（而不是小步骤）的个数；可以这样计算："
-"把固件中已配置的小步骤个数除以小步骤量（8，16，32）。"
+"将该值设为移动Z轴1毫米所需的*全部*步数（而不是细分）；可以这样计算：把固件中"
+"已配置的细分数除以倍增系数（8，16，32）。Sli3r会把你设置的层高四舍五入到该值"
+"的最近倍数以确保精度。此项设置对于使用英制丝杠、皮带传动Z轴的机器，或者机器使"
+"用公制丝杠且层高值特别时比较适用。设为0以禁用该功能。"
 
 #: xs/src/libslic3r/PrintConfig.cpp:1716 xs/src/libslic3r/PrintConfig.cpp:1722
 #: xs/src/libslic3r/PrintConfig.cpp:1728 xs/src/libslic3r/PrintConfig.cpp:1734
