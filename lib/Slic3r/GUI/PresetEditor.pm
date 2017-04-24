@@ -830,7 +830,7 @@ sub _update {
         $self->_load_config($new_conf);
     }
     
-    my $have_perimeters = $config->perimeters > 0;
+    my $have_perimeters = ($config->perimeters > 0) || ($config->min_shell_thickness > 0);
     $self->get_field($_)->toggle($have_perimeters)
         for qw(extra_perimeters thin_walls overhangs seam_position external_perimeters_first
             external_perimeter_extrusion_width
@@ -842,7 +842,7 @@ sub _update {
         for qw(fill_pattern infill_every_layers infill_only_where_needed solid_infill_every_layers
             solid_infill_below_area infill_extruder);
     
-    my $have_solid_infill = ($config->top_solid_layers > 0) || ($config->bottom_solid_layers > 0);
+    my $have_solid_infill = ($config->top_solid_layers > 0) || ($config->bottom_solid_layers > 0) || ($config->min_shell_thickness > 0);
     # solid_infill_extruder uses the same logic as in Print::extruders()
     $self->get_field($_)->toggle($have_solid_infill)
         for qw(top_infill_pattern bottom_infill_pattern infill_first solid_infill_extruder
@@ -854,7 +854,7 @@ sub _update {
     $self->get_field('fill_gaps')->toggle($have_perimeters && $have_infill);
     $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill && $config->fill_gaps);
     
-    my $have_top_solid_infill = $config->top_solid_layers > 0;
+    my $have_top_solid_infill = ($config->top_solid_layers > 0) || ($config->min_shell_thickness > 0);
     $self->get_field($_)->toggle($have_top_solid_infill)
         for qw(top_infill_extrusion_width top_solid_infill_speed);
     

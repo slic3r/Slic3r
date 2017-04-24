@@ -779,7 +779,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = "Minimum shell thickness";
     def->category = "Layers and Perimeters";
     def->sidetext = "mm";
-    def->tooltip = "Minimum shell thickness in mm";
+    def->tooltip = "Alternative method of configuring perimeters and top/bottom layers. If this is above 0 extra perimeters and solid layers will be generated when necessary";
     def->cli = "min-shell-thickness=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);

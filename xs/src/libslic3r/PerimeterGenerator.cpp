@@ -39,7 +39,7 @@ PerimeterGenerator::process()
     coord_t min_spacing         = pspacing      * (1 - INSET_OVERLAP_TOLERANCE);
     coord_t ext_min_spacing     = ext_pspacing  * (1 - INSET_OVERLAP_TOLERANCE);
 
-
+    // minimum shell thickness
     coord_t min_shell_thickness = scale_(this->config->min_shell_thickness);
     
     // prepare grown lower layer slices for overhang detection
@@ -59,7 +59,7 @@ PerimeterGenerator::process()
         // detect how many perimeters must be generated for this island
         int loops = this->config->perimeters + surface->extra_perimeters;
 
-        //If the user has defined a minimum shell thickness compute the number of loops needed to satisfy
+        // If the user has defined a minimum shell thickness compute the number of loops needed to satisfy
         if (min_shell_thickness > 0) {
             int min_loops = 1;
 
