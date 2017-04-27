@@ -163,35 +163,30 @@ sub new {
         my $item = $event->GetItem;
         my $frame = $self->GetFrame;
         my $menu = Wx::Menu->new;
-
-        my $scaleToSizeMenu = Wx::Menu->new;
-        my $scaleToSizeMenuItem = $menu->AppendSubMenu($scaleToSizeMenu, "Scale to size", 'Scale the selected object along a single axis');
-        wxTheApp->set_menu_item_icon($scaleToSizeMenuItem, 'arrow_out.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes', sub {
-                $self->changescale(undef, 1);
-                });
-        $frame->_append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
-                $self->changescale(X, 1);
-                }, undef, 'bullet_red.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
-                $self->changescale(Y, 1);
-                }, undef, 'bullet_green.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
-                $self->changescale(Z, 1);
-                }, undef, 'bullet_blue.png');
-        my $rotateMenu = Wx::Menu->new;
-        my $rotateMenuItem = $menu->AppendSubMenu($rotateMenu, "Rotate", 'Rotate the selected object by an arbitrary angle');
-        wxTheApp->set_menu_item_icon($rotateMenuItem, 'textfield.png');
-        $frame->_append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
-                $self->rotate(undef, X);
-                }, undef, 'bullet_red.png');
-        $frame->_append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
-                $self->rotate(undef, Y);
-                }, undef, 'bullet_green.png');
-        $frame->_append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
-                $self->rotate(undef, Z);
-                }, undef, 'bullet_blue.png');
-
+        
+        {
+            my $scaleToSizeMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes',
+                sub { $self->changescale(undef, 1) });
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis',
+                sub { $self->changescale(X, 1) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis',
+                sub { $self->changescale(Y, 1) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis',
+                sub { $self->changescale(Z, 1) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Scale to size", 'Scale the selected object along a single axis',
+                $scaleToSizeMenu, undef, 'arrow_out.png');
+        }
+        {
+            my $rotateMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis',
+                sub { $self->rotate(undef, X) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis',
+                sub { $self->rotate(undef, Y) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis',
+                sub { $self->rotate(undef, Z) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Rotate", 'Rotate the selected object by an arbitrary angle', $rotateMenu, undef, 'textfield.png');
+        }
         $frame->PopupMenu($menu, $event->GetPoint);
     });
     EVT_BUTTON($self, $self->{btn_load_part}, sub { $self->on_btn_load(0) });

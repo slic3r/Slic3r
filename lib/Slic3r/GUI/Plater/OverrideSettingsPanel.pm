@@ -53,8 +53,6 @@ sub new {
             my $menu = Wx::Menu->new;
             my $last_cat = '';
             foreach my $opt_key (@{$self->{options}}) {
-                my $id = &Wx::NewId();
-                
                 # add icon, if we have one for this category
                 my $icon;
                 if (my $cat = $Slic3r::Config::Options->{$opt_key}{category}) {
@@ -65,14 +63,14 @@ sub new {
                     $icon = $icons{$cat};
                 }
                 
-                my $menuItem = $menu->Append($id, $self->{option_labels}{$opt_key});
-                wxTheApp->set_menu_item_icon($menuItem, $icon) if $icon;
-                
-                EVT_MENU($menu, $id, sub {
+                my $cb = sub {
                     $self->{config}->set($opt_key, $self->{default_config}->get($opt_key));
                     $self->update_optgroup;
                     $self->{on_change}->($opt_key) if $self->{on_change};
-                });
+                };
+                
+                wxTheApp->append_menu_item($menu, $self->{option_labels}{$opt_key},
+                    $Slic3r::Config::Options->{$opt_key}{tooltip}, $cb, undef, $icon);
             }
             $self->PopupMenu($menu, $btn->GetPosition);
             $menu->Destroy;
