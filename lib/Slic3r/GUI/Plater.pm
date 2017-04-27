@@ -323,7 +323,6 @@ sub new {
     if ($self->{preview3D}) {
         $self->{preview3D}->set_bed_shape($self->{config}->bed_shape);
     }
-    $self->on_model_change;
     
     {
         my $presets = $self->{presets_sizer} = Wx::FlexGridSizer->new(3, 3, 1, 2);
@@ -886,6 +885,11 @@ sub load_file {
 
 sub load_model_objects {
     my ($self, @model_objects) = @_;
+    
+    # Always restart background process when adding new objects.
+    # This prevents lack of processing in some circumstances when background process is
+    # running but adding a new object does not invalidate anything.
+    $self->stop_background_process;
     
     my $bed_centerf = $self->bed_centerf;
     my $bed_shape = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape});
