@@ -366,16 +366,25 @@ sub new {
         {
             my $o = $self->{settings_override_panel} = Slic3r::GUI::Plater::OverrideSettingsPanel->new($self,
                 on_change => sub {
-                    my ($preset) = $self->selected_presets('print');
+                    my ($opt_key) = @_;
                     
-                    # Apply the overrides to the current Print preset, potentially making it dirty
+                    my ($preset) = $self->selected_presets('print');
                     $preset->load_config;
-                    $preset->_dirty_config->apply($self->{settings_override_config});
+                    
+                    # If this option is not in the override panel it means it was manually deleted,
+                    # so let's restore the profile value.
+                    if (!$self->{settings_override_config}->has($opt_key)) {
+                        $preset->_dirty_config->set($opt_key, $preset->_config->get($opt_key));
+                    } else {
+                        # Apply the overrides to the current Print preset, potentially making it dirty
+                        $preset->_dirty_config->apply($self->{settings_override_config});
+                    }
                     
                     $self->load_presets;
                     $self->config_changed;
                 });
-            $o->set_editable(1);
+            $o->can_add(0);
+            $o->can_delete(1);
             $o->set_opt_keys([ Slic3r::GUI::PresetEditor::Print->options ]);
             $self->{settings_override_config} = Slic3r::Config->new;
             $o->set_default_config($self->{settings_override_config});
@@ -569,29 +578,13 @@ sub _on_select_preset {
         my $o_config = $self->{settings_override_config};
         my $o_panel  = $self->{settings_override_panel};
         
-        if ($changed) {
-            # Preserve current options if re-selecting the same preset
-            $o_config->clear;
-        }
-        
         my $shortcuts = $config->get('shortcuts');
         
-        # Add/remove options (we do it this way for preserving current options)
-        foreach my $opt_key (@{$o_config->get_keys}, @$shortcuts) {
-            # Populate option with the default value taken from configuration
-            # (re-set the override always, because if we here it means user
-            # switched to this preset or opened/closed the editor, so he expects
-            # the new values set in the editor to be used).
-            # Do this for both the current options and the configured shortcuts
-            # to make sure everything gets updated.
+        # Re-populate the override panel with the configured shortcuts
+        # and the dirty options.
+        $o_config->clear;
+        foreach my $opt_key (@$shortcuts, $presets[0]->dirty_options) {
             $o_config->set($opt_key, $config->get($opt_key));
-        }
-        foreach my $opt_key (@{$o_config->get_keys}) {
-            # Keep options listed among shortcuts and options added on the fly
-            if ((none { $_ eq $opt_key } @$shortcuts)
-                && (any { $_ eq $opt_key } $o_panel->fixed_options)) {
-                $o_config->erase($opt_key);
-            }
         }
         
         $o_panel->set_default_config($config);

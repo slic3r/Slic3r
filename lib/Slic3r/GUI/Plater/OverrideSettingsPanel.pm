@@ -34,7 +34,8 @@ sub new {
     $self->{default_config} = Slic3r::Config->new;
     $self->{config} = Slic3r::Config->new;
     $self->{on_change} = $params{on_change};
-    $self->{editable} = 1;
+    $self->{can_add} = 1;
+    $self->{can_delete} = 1;
     $self->{fixed_options} = {};
     
     $self->{sizer} = Wx::BoxSizer->new(wxVERTICAL);
@@ -141,7 +142,7 @@ sub update_optgroup {
     $self->{options_sizer}->Clear(1);
     return if !defined $self->{config};
     
-    $self->{btn_add}->Show($self->{editable});
+    $self->{btn_add}->Show($self->{can_add});
     
     my %categories = ();
     foreach my $opt_key (@{$self->{config}->get_keys}) {
@@ -170,7 +171,7 @@ sub update_optgroup {
                 my ($opt_key, $opt_index) = @{ $optgroup->_opt_map->{$opt_id} };
                 
                 # disallow deleting fixed options
-                return undef if $self->{fixed_options}{$opt_key} || !$self->{editable};
+                return undef if $self->{fixed_options}{$opt_key} || !$self->{can_delete};
                 
                 my $btn = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG),
                     wxDefaultPosition, wxDefaultSize, Wx::wxBORDER_NONE);
@@ -207,11 +208,27 @@ sub disable {
     $self->Disable;
 }
 
-# Shows or hides the Add button.
+# Shows or hides the Add/Delete buttons.
 sub set_editable {
     my ($self, $editable) = @_;
     
-    $self->{editable} = $editable;
+    $self->{can_add} = $self->{can_delete} = $editable;
+}
+
+# Shows or hides the Add button.
+sub can_add {
+    my ($self, $can) = @_;
+    
+    $self->{can_add} = $can if defined $can;
+    return $can;
+}
+
+# Shows or hides the Delete button.
+sub can_delete {
+    my ($self, $can) = @_;
+    
+    $self->{can_delete} = $can if defined $can;
+    return $can;
 }
 
 1;
