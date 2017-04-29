@@ -52,16 +52,23 @@ sub new {
         EVT_LEFT_DOWN($btn, sub {
             my $menu = Wx::Menu->new;
             my $last_cat = '';
+            
+            # create category submenus
+            my %categories = ();  # category => submenu
             foreach my $opt_key (@{$self->{options}}) {
-                # add icon, if we have one for this category
-                my $icon;
                 if (my $cat = $Slic3r::Config::Options->{$opt_key}{category}) {
-                    if ($last_cat && $cat ne $last_cat) {
-                        $menu->AppendSeparator;
-                    }
-                    $last_cat = $cat;
-                    $icon = $icons{$cat};
+                    $categories{$cat} //= Wx::Menu->new;
                 }
+            }
+            
+            # append submenus to main menu
+            foreach my $cat (sort keys %categories) {
+                wxTheApp->append_submenu($menu, $cat, "", $categories{$cat}, undef, $icons{$cat});
+            }
+            
+            # append options to submenus
+            foreach my $opt_key (@{$self->{options}}) {
+                my $cat = $Slic3r::Config::Options->{$opt_key}{category} or next;
                 
                 my $cb = sub {
                     $self->{config}->set($opt_key, $self->{default_config}->get($opt_key));
@@ -69,8 +76,8 @@ sub new {
                     $self->{on_change}->($opt_key) if $self->{on_change};
                 };
                 
-                wxTheApp->append_menu_item($menu, $self->{option_labels}{$opt_key},
-                    $Slic3r::Config::Options->{$opt_key}{tooltip}, $cb, undef, $icon);
+                wxTheApp->append_menu_item($categories{$cat}, $self->{option_labels}{$opt_key},
+                    $Slic3r::Config::Options->{$opt_key}{tooltip}, $cb);
             }
             $self->PopupMenu($menu, $btn->GetPosition);
             $menu->Destroy;
@@ -107,17 +114,11 @@ sub set_config {
 sub set_opt_keys {
     my ($self, $opt_keys) = @_;
     
-    # sort options by category+label
+    # sort options by label
     $self->{option_labels} = {};
     foreach my $opt_key (@$opt_keys) {
         my $def = $Slic3r::Config::Options->{$opt_key} or next;
-        if (!$def->{category}) {
-            #printf "Skipping %s\n", $opt_key;
-            next;
-        }
-        $self->{option_labels}{$opt_key} = sprintf '%s > %s',
-            $def->{category},
-            $def->{full_label} // $def->{label};
+        $self->{option_labels}{$opt_key} = $def->{full_label} // $def->{label};
     };
     $self->{options} = [ sort { $self->{option_labels}{$a} cmp $self->{option_labels}{$b} } keys %{$self->{option_labels}} ];
 }
