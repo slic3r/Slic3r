@@ -7,8 +7,8 @@ use strict;
 use warnings;
 use utf8;
 
-use Wx qw(:dialog :id :misc :sizer :systemsettings :notebook wxTAB_TRAVERSAL);
-use Wx::Event qw(EVT_BUTTON);
+use Wx qw(:dialog :id :misc :sizer :systemsettings :notebook wxTAB_TRAVERSAL wxTheApp);
+use Wx::Event qw(EVT_BUTTON EVT_MENU);
 use base 'Wx::Dialog';
 
 sub new {
@@ -53,6 +53,7 @@ sub PartSettingsChanged {
     my ($self) = @_;
     return $self->{parts}->PartSettingsChanged || $self->{layers}->LayersChanged;
 }
+
 
 package Slic3r::GUI::Plater::ObjectDialog::BaseTab;
 use base 'Wx::Panel';

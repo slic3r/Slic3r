@@ -5,6 +5,7 @@ use utf8;
 
 use Wx 0.9901 qw(:bitmap :dialog :icon :id :misc :systemsettings :toplevelwindow
     :filedialog :font);
+use Wx::Event qw(EVT_MENU);
 
 BEGIN {
     # Wrap the Wx::_load_plugin() function which doesn't work with non-ASCII paths
@@ -434,6 +435,30 @@ sub scan_serial_ports {
     }
     
     return grep !/Bluetooth|FireFly/, @ports;
+}
+
+sub append_menu_item {
+    my ($self, $menu, $string, $description, $cb, $id, $icon, $kind) = @_;
+    
+    $id //= &Wx::NewId();
+    my $item = Wx::MenuItem->new($menu, $id, $string, $description // '', $kind // 0);
+    $self->set_menu_item_icon($item, $icon);
+    $menu->Append($item);
+    
+    EVT_MENU($self, $id, $cb);
+    return $item;
+}
+
+sub append_submenu {
+    my ($self, $menu, $string, $description, $submenu, $id, $icon) = @_;
+    
+    $id //= &Wx::NewId();
+    my $item = Wx::MenuItem->new($menu, $id, $string, $description // '');
+    $self->set_menu_item_icon($item, $icon);
+    $item->SetSubMenu($submenu);
+    $menu->Append($item);
+    
+    return $item;
 }
 
 sub set_menu_item_icon {

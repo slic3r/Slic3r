@@ -316,6 +316,9 @@ Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
     --save <file>       Save configuration to the specified file
     --load <file>       Load configuration from the specified file. It can be used 
                         more than once to load options from multiple files.
+    --datadir <path>    Load and store settings at the given directory.
+                        This is useful for maintaining different profiles or including
+                        configurations from a network storage.
     -o, --output <file> File to output gcode to (by default, the file will be saved
                         into the same directory as the input file using the
                         --output-filename-format to generate the filename.) If a

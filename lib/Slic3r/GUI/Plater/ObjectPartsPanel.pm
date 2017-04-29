@@ -9,7 +9,9 @@ use utf8;
 use File::Basename qw(basename);
 use Wx qw(:misc :sizer :treectrl :button wxTAB_TRAVERSAL wxSUNKEN_BORDER wxBITMAP_TYPE_PNG wxID_CANCEL
     wxTheApp);
-use Wx::Event qw(EVT_BUTTON EVT_TREE_ITEM_COLLAPSING EVT_TREE_SEL_CHANGED);
+use List::Util qw(max);
+use Wx::Event qw(EVT_BUTTON EVT_TREE_ITEM_COLLAPSING EVT_TREE_SEL_CHANGED EVT_TREE_ITEM_RIGHT_CLICK);
+use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad rad2deg);
 use base 'Wx::Panel';
 
 use constant ICON_OBJECT        => 0;
@@ -156,11 +158,56 @@ sub new {
         return if $self->{disable_tree_sel_changed_event};
         $self->selection_changed;
     });
+    EVT_TREE_ITEM_RIGHT_CLICK($self, $tree, sub { 
+        my ($self, $event) = @_;
+        my $item = $event->GetItem;
+        my $frame = $self->GetFrame;
+        my $menu = Wx::Menu->new;
+        
+        {
+            my $scaleMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($scaleMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes',
+                sub { $self->changescale(undef, 0) });
+            wxTheApp->append_menu_item($scaleMenu, "Along X axis…", 'Scale the selected object along the X axis',
+                sub { $self->changescale(X, 0) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($scaleMenu, "Along Y axis…", 'Scale the selected object along the Y axis',
+                sub { $self->changescale(Y, 0) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($scaleMenu, "Along Z axis…", 'Scale the selected object along the Z axis',
+                sub { $self->changescale(Z, 0) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Scale", 'Scale the selected object by a given factor',
+                $scaleMenu, undef, 'arrow_out.png');
+        }
+        {
+            my $scaleToSizeMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes',
+                sub { $self->changescale(undef, 1) });
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis',
+                sub { $self->changescale(X, 1) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis',
+                sub { $self->changescale(Y, 1) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis',
+                sub { $self->changescale(Z, 1) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Scale to size", 'Scale the selected object to match a given size',
+                $scaleToSizeMenu, undef, 'arrow_out.png');
+        }
+        {
+            my $rotateMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis',
+                sub { $self->rotate(undef, X) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis',
+                sub { $self->rotate(undef, Y) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis',
+                sub { $self->rotate(undef, Z) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Rotate", 'Rotate the selected object by an arbitrary angle',
+                $rotateMenu, undef, 'arrow_rotate_anticlockwise.png');
+        }
+        $frame->PopupMenu($menu, $event->GetPoint);
+    });
     EVT_BUTTON($self, $self->{btn_load_part}, sub { $self->on_btn_load(0) });
     EVT_BUTTON($self, $self->{btn_load_modifier}, sub { $self->on_btn_load(1) });
     EVT_BUTTON($self, $self->{btn_load_lambda_modifier}, sub { $self->on_btn_lambda(1) });
     EVT_BUTTON($self, $self->{btn_delete}, \&on_btn_delete);
-    
+
     $self->reload_tree;
     
     return $self;
@@ -371,7 +418,6 @@ sub on_btn_lambda {
     # set a default extruder value, since user can't add it manually
     $new_volume->config->set_ifndef('extruder', 0);
 
-    $self->{parts_changed} = 1;
     $self->_parts_changed($self->{model_object}->volumes_count-1);
 }
 
@@ -398,6 +444,7 @@ sub on_btn_delete {
 sub _parts_changed {
     my ($self, $selected_volume_idx) = @_;
     
+    $self->{parts_changed} = 1;
     $self->reload_tree($selected_volume_idx);
     if ($self->{canvas}) {
         $self->{canvas}->reset_objects;
@@ -450,4 +497,82 @@ sub _update {
     $self->{canvas}->Render;
 }
 
+sub changescale {
+    my ($self, $axis, $tosize) = @_;
+    my $itemData = $self->get_selection;
+    if ($itemData && $itemData->{type} eq 'volume') {
+        my $volume = $self->{model_object}->volumes->[$itemData->{volume_id}];
+        my $object_size = $volume->bounding_box->size;
+        if (defined $axis) {
+            my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
+            my $scale;
+            if (defined $tosize) {
+                my $cursize = $object_size->[$axis];
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                my $newsize = Wx::GetTextFromUser(
+                        sprintf("Enter the new size for the selected mesh:"),
+                        "Scale along $axis_name",
+                        $cursize, $self);
+                return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
+                $scale = $newsize / $cursize * 100;
+            } else {
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:",
+                        "Scale along $axis_name", 100, $self);
+                $scale =~ s/%$//;
+                return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+            }
+            my $versor = [1,1,1];
+            $versor->[$axis] = $scale/100;
+            $volume->mesh->scale_xyz(Slic3r::Pointf3->new(@$versor));
+        } else {
+            my $scale;
+            if ($tosize) {
+                my $cursize = max(@$object_size);
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                my $newsize = Wx::GetTextFromUser("Enter the new max size for the selected object:",
+                        "Scale", $cursize, $self);
+                return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
+                $scale = $newsize / $cursize;
+            } else {
+                # max scale factor should be above 2540 to allow importing files exported in inches
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:", 'Scale',
+                        100, $self);
+                return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+            }
+            return if !$scale || $scale < 0;
+            $volume->mesh->scale($scale);
+        }
+        $self->_parts_changed;
+    }
+}
+
+sub rotate {
+    my $self = shift;
+    my ($angle, $axis) = @_;
+    # angle is in degrees
+    my $itemData = $self->get_selection;
+    if ($itemData && $itemData->{type} eq 'volume') {
+        my $volume = $self->{model_object}->volumes->[$itemData->{volume_id}];
+        if (!defined $angle) {
+            my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
+            my $default = $axis == Z ? 0 : 0;
+            # Wx::GetNumberFromUser() does not support decimal numbers
+            $angle = Wx::GetTextFromUser("Enter the rotation angle:", "Rotate around $axis_name axis",
+                    $default, $self);
+            return if !$angle || $angle !~ /^-?\d*(?:\.\d*)?$/ || $angle == -1;
+        }
+        if ($axis == X) { $volume->mesh->rotate_x(deg2rad($angle)); }
+
+        if ($axis == Y) { $volume->mesh->rotate_y(deg2rad($angle)); } 
+        if ($axis == Z) { $volume->mesh->rotate_z(deg2rad($angle)); }
+            
+        $self->_parts_changed;
+    }
+}
+sub GetFrame {
+    my ($self) = @_;
+    return &Wx::GetTopLevelParent($self);
+}
 1;
