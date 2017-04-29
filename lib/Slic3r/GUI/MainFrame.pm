@@ -182,8 +182,10 @@ sub _init_menubar {
         wxTheApp->append_menu_item($self->{plater_menu}, "Select Prev Object\tCtrl+Left", 'Select Previous Object in the plater', sub {
             $plater->select_prev;
         }, undef, 'arrow_left.png');
-        $self->_append_menu_item($self->{plater_menu}, "Zoom In\tCtrl+up"     , 'Zoom In'     , sub { $self->{plater}->zoom('in'     ); });
-        $self->_append_menu_item($self->{plater_menu}, "Zoom Out\tCtrl+down"     , 'Zoom Out'     , sub { $self->{plater}->zoom('out'     ); });
+        wxTheApp->append_menu_item($self->{plater_menu}, "Zoom In\tCtrl+up", 'Zoom In',
+            sub { $self->{plater}->zoom('in') }, undef, 'zoom_in.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Zoom Out\tCtrl+down", 'Zoom Out',
+            sub { $self->{plater}->zoom('out') }, undef, 'zoom_out.png');
         $self->{plater_menu}->AppendSeparator();
         wxTheApp->append_menu_item($self->{plater_menu}, "Export G-code...", 'Export current plate as G-code', sub {
             $plater->export_gcode;
