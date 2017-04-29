@@ -93,6 +93,7 @@ pp `
 -M IO `
 -M IO::Handle `
 -M IO::Select `
+-M IO::Socket `
 -M LWP `
 -M LWP::MediaTypes `
 -M LWP::MemberMixin `
