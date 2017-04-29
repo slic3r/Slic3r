@@ -577,11 +577,13 @@ sub _on_select_preset {
         my $shortcuts = $config->get('shortcuts');
         
         # Add/remove options (we do it this way for preserving current options)
-        foreach my $opt_key (@$shortcuts) {
+        foreach my $opt_key (@{$o_config->get_keys}, @$shortcuts) {
             # Populate option with the default value taken from configuration
             # (re-set the override always, because if we here it means user
             # switched to this preset or opened/closed the editor, so he expects
             # the new values set in the editor to be used).
+            # Do this for both the current options and the configured shortcuts
+            # to make sure everything gets updated.
             $o_config->set($opt_key, $config->get($opt_key));
         }
         foreach my $opt_key (@{$o_config->get_keys}) {
