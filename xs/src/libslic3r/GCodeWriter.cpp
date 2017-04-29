@@ -330,7 +330,7 @@ GCodeWriter::travel_to_z(double z, const std::string &comment)
         reducing the lift amount that will be used for unlift. */
     if (!this->will_move_z(z)) {
         double nominal_z = this->_pos.z - this->_lifted;
-        this->_lifted = this->_lifted - (z - nominal_z);
+        this->_lifted -= (z - nominal_z);
         return "";
     }
     
@@ -500,10 +500,15 @@ GCodeWriter::lift()
         if (this->_pos.z >= above && (below == 0 || this->_pos.z <= below))
             target_lift = this->config.retract_lift.get_at(this->_extruder->id);
     }
-    if (this->_lifted == 0 && target_lift > 0) {
+    
+    // compare against epsilon because travel_to_z() does math on it
+    // and subtracting layer_height from retract_lift might not give
+    // exactly zero
+    if (std::abs(this->_lifted) < EPSILON && target_lift > 0) {
         this->_lifted = target_lift;
         return this->_travel_to_z(this->_pos.z + target_lift, "lift Z");
     }
+    
     return "";
 }
 
