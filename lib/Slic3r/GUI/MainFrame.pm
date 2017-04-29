@@ -194,6 +194,7 @@ sub _init_menubar {
         }, undef, 'brick_go.png');
         
         $self->{object_menu} = $self->{plater}->object_menu;
+        $self->on_plater_object_list_changed(0);
         $self->on_plater_selection_changed(0);
     }
     
@@ -307,6 +308,14 @@ sub _init_menubar {
 sub is_loaded {
     my ($self) = @_;
     return $self->{loaded};
+}
+
+sub on_plater_object_list_changed {
+    my ($self, $have_objects) = @_;
+    
+    return if !defined $self->{plater_menu};
+    $self->{plater_menu}->Enable($_->GetId, $have_objects)
+        for $self->{plater_menu}->GetMenuItems;
 }
 
 sub on_plater_selection_changed {
