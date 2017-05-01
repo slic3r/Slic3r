@@ -198,12 +198,12 @@ Polyline::is_straight() const
     /*  Check that each segment's direction is equal to the line connecting
         first point and last point. (Checking each line against the previous
         one would cause the error to accumulate.) */
-    double dir = Line(this->first_point(), this->last_point()).direction();
+    const double dir = Line(this->first_point(), this->last_point()).direction();
     
-    Lines lines = this->lines();
-    for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
-        if (!line->parallel_to(dir)) return false;
-    }
+    for (const Line &line : this->lines())
+        if (!line.parallel_to(dir))
+            return false;
+    
     return true;
 }
 
