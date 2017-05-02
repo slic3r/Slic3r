@@ -1502,7 +1502,7 @@ sub pause_background_process {
         return 1;
     } elsif (defined $self->{apply_config_timer} && $self->{apply_config_timer}->IsRunning) {
         $self->{apply_config_timer}->Stop;
-        return 1;
+        return 0;  # we didn't actually pause any running thread; need to reschedule
     }
     
     return 0;
