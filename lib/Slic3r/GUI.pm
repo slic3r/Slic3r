@@ -101,6 +101,10 @@ our $medium_font = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 $medium_font->SetPointSize(12);
 our $grey = Wx::Colour->new(200,200,200);
 
+# to use in ScrolledWindow::SetScrollRate(xstep, ystep)
+# step related to system font point size
+our $scroll_step = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT)->GetPointSize;
+
 our $VERSION_CHECK_EVENT : shared = Wx::NewEventType;
 
 our $DLP_projection_screen;
