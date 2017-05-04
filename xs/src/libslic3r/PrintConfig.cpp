@@ -1383,7 +1383,6 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
     def->label = "↳ interface";
-    def->label = "Interface Speed";
     def->category = "Support material interface speed";
     def->gui_type = "f_enum_open";
     def->category = "Support material";
