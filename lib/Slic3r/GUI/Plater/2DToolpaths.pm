@@ -60,6 +60,8 @@ sub new {
         } elsif ($key == 68 || $key == 317) {
             $slider->SetValue($slider->GetValue - 1);
             $self->set_z($self->{layers_z}[$slider->GetValue]);
+        } else {
+            $event->Skip;
         }
     });
     
