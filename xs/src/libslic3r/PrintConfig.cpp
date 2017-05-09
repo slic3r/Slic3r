@@ -578,7 +578,7 @@ PrintConfigDef::PrintConfigDef()
         def->default_value = opt;
     }
     
-    def = this->add("gap_fill_speed", coFloat);
+    def = this->add("gap_fill_speed", coFloatOrPercent);
     def->label = "↳ gaps";
     def->full_label = "Gap fill speed";
     def->gui_type = "f_enum_open";
@@ -590,7 +590,7 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->enum_values.push_back("0");
     def->enum_labels.push_back("auto");
-    def->default_value = new ConfigOptionFloat(20);
+    def->default_value = new ConfigOptionFloatOrPercent(20);
 
     def = this->add("gcode_arcs", coBool);
     def->label = "Use native G-code arcs";

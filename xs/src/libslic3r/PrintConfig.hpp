@@ -219,7 +219,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionPercent             fill_density;
     ConfigOptionBool                fill_gaps;
     ConfigOptionEnum<InfillPattern> fill_pattern;
-    ConfigOptionFloat               gap_fill_speed;
+    ConfigOptionFloatOrPercent      gap_fill_speed;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionInt                 infill_every_layers;
