@@ -590,7 +590,7 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->enum_values.push_back("0");
     def->enum_labels.push_back("auto");
-    def->default_value = new ConfigOptionFloatOrPercent(20);
+    def->default_value = new ConfigOptionFloatOrPercent(20, false);
 
     def = this->add("gcode_arcs", coBool);
     def->label = "Use native G-code arcs";
