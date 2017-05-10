@@ -89,7 +89,9 @@ sub new {
     }
     
     $self->SetSizer($self->{sizer});
-    $self->SetScrollbars(0, 1, 0, 1);
+    
+    # http://docs.wxwidgets.org/3.0/classwx_scrolled.html#details
+    $self->SetScrollRate(0, $Slic3r::GUI::scroll_step);
     
     $self->set_opt_keys($params{opt_keys}) if $params{opt_keys};
     $self->update_optgroup;
