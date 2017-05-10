@@ -30,6 +30,9 @@ sub new {
         # notify tabs
         $self->{layers}->Closing;
         
+        # save window size
+        wxTheApp->save_window_pos($self, "object_settings");
+        
         $self->EndModal(wxID_OK);
         $self->Destroy;
     });
@@ -40,6 +43,8 @@ sub new {
     
     $self->SetSizer($sizer);
     $self->SetMinSize($self->GetSize);
+    
+    wxTheApp->restore_window_pos($self, "object_settings");
     
     return $self;
 }
