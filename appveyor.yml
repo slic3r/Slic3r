@@ -23,9 +23,8 @@ install:
   - IF DEFINED ENC_SECRET secure-file\tools\secure-file -decrypt package/deploy/slic3r-upload.ppk.enc -secret %ENC_SECRET%
   - ps: "& package/win/appveyor_preinstall.ps1"
 cache:
-- C:\Users\appveyor\boost.1.63.0.7z
-- C:\Users\appveyor\local-lib.64bit.7z
-- C:\Users\appveyor\local-lib.32bit.7z
+- C:\Users\appveyor\local-lib-64bit.7z
+- C:\Users\appveyor\local-lib-32bit.7z
 - C:\Users\appveyor\freeglut.64bit.7z
 - C:\Users\appveyor\freeglut.32bit.7z
 - C:\users\appveyor\strawberry.64bit.msi
