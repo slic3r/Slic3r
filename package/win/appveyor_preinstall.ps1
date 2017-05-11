@@ -2,6 +2,10 @@ mkdir C:\projects\slic3r\FreeGLUT
 if (!(Test-Path "C:\users\appveyor\freeglut.$env:ARCH.7z")) 
 {
     wget "http://www.siusgs.com/slic3r/buildserver/win/freeglut-mingw-3.0.0.$env:ARCH.7z" -o C:\users\appveyor\freeglut.$env:ARCH.7z
+	if ($LastExitCode -ne 0) { 
+		Add-AppveyorCompilationMessage -Message "Failed to download freeglut" -Category Error
+		$host.SetShouldExit(1)  
+	}
 }
 cmd /c "7z x C:\Users\appveyor\freeglut.7z -oC:\projects\slic3r\FreeGLUT"
 

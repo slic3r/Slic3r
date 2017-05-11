@@ -1,5 +1,9 @@
 if (!(Test-Path "C:\users\appveyor\local-lib-$env:ARCH.7z")) {
     wget "http://www.siusgs.com/slic3r/buildserver/win/local-lib-$env:ARCH.7z" -o "C:\users\appveyor\local-lib-$env:ARCH.7z" | Write-Output
+	if ($LastExitCode -ne 0) { 
+		Add-AppveyorCompilationMessage -Message "Failed to download Slic3r dependency archive local-lib-$env:ARCH.7z" -Category Error
+		$host.SetShouldExit(1)  
+	}
 }
 
 if (Test-Path "C:\users\appveyor\local-lib-$env:ARCH.7z") {
