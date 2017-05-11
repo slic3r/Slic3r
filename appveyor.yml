@@ -15,8 +15,8 @@ environment:
   UPLOAD_USER:
     secure: fYPwnI3p6HNR+eMRJR3JfmyNolFn+Uc0MUn2bBXp9uU=
   matrix:
-    - ARCH: 32bit
     - ARCH: 64bit
+    - ARCH: 32bit
 
 install:
   - IF DEFINED ENC_SECRET nuget install secure-file -ExcludeVersion
