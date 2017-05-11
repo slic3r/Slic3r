@@ -47,6 +47,10 @@ if(Test-Path -Path 'C:\Strawberry' ) {
         mkdir C:\dev
         if (!(Test-Path "C:\users\appveyor\boost.1.63.0.7z") -Or $env:FORCE_BOOST_REINSTALL -eq 1) {
             wget "http://www.siusgs.com/slic3r/buildserver/win/boost_1_63_0.7z" -O "C:\users\appveyor\boost.1.63.0.7z" | Write-Output
+			if ($LastExitCode -ne 0) { 
+				Add-AppveyorCompilationMessage -Message "Failed to download boost archive" -Category Error
+				$host.SetShouldExit(1)  
+			}
         }
     Add-AppveyorCompilationMessage -Message "Extracting cached archive."
         cmd /c "7z x C:\Users\appveyor\boost.1.63.0.7z -oC:\dev"
