@@ -13,7 +13,7 @@ if (!(Test-Path "C:\users\appveyor\strawberry.$env:ARCH.msi"))  {
 	}
 }
 
-if (!(Test-Path variable:env:ARCH -eq "32bit")) {
+if (!($env:ARCH -eq "32bit")) {
 	if (!(Test-Path "C:\users\appveyor\extra_perl.7z"))  {
 		wget "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=Strawberry-6.3.0-seg-archive.7z" -o "C:\users\appveyor\extra_perl.7z" | Write-Output
 	}
