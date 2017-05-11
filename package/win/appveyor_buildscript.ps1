@@ -1,9 +1,9 @@
-if (!(Test-Path "C:\users\appveyor\local-lib.7z")) {
-    wget "http://www.siusgs.com/slic3r/buildserver/win/slic3r-perl-dependencies-5.24.0-win-seh-gcc6.3.0-x64.7z" -o "C:\users\appveyor\local-lib.7z" | Write-Output
+if (!(Test-Path "C:\users\appveyor\local-lib-$env:ARCH.7z")) {
+    wget "http://www.siusgs.com/slic3r/buildserver/win/local-lib-$env:ARCH.7z" -o "C:\users\appveyor\local-lib-$env:ARCH.7z" | Write-Output
 }
 
-if (Test-Path "C:\users\appveyor\local-lib.7z") {
-    cmd /c "7z x C:\Users\appveyor\local-lib.7z -oC:\projects\slic3r" -y | Write-Output
+if (Test-Path "C:\users\appveyor\local-lib-$env:ARCH.7z") {
+    cmd /c "7z x C:\Users\appveyor\local-lib-$env:ARCH.7z -oC:\projects\slic3r" -y | Write-Output
     rm -r 'C:\projects\slic3r\local-lib\Slic3r*'
 }
 
