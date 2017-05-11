@@ -152,7 +152,7 @@ if ($exe) {
 } else {
 # make this more useful for not being on the appveyor server
 	if ($env:APPVEYOR) {
-		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).zip"
+		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).$env:ARCH.zip"
 	} else {
 		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).zip"
 			del ..\..\slic3r.par

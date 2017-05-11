@@ -14,6 +14,9 @@ environment:
     secure: QfeTOSKXz1uFCEACqFKLNw==
   UPLOAD_USER:
     secure: fYPwnI3p6HNR+eMRJR3JfmyNolFn+Uc0MUn2bBXp9uU=
+  matrix:
+    - ARCH: 32bit
+	- ARCH: 64bit
 
 install:
   - IF DEFINED ENC_SECRET nuget install secure-file -ExcludeVersion
@@ -21,13 +24,16 @@ install:
   - ps: "& package/win/appveyor_preinstall.ps1"
 cache:
 - C:\Users\appveyor\boost.1.63.0.7z
-- C:\Users\appveyor\local-lib.7z
-- C:\Strawberry\perl\site
-- C:\Users\appveyor\freeglut.7z
-- C:\users\appveyor\strawberry.msi
+- C:\Users\appveyor\local-lib.64bit.7z
+- C:\Users\appveyor\local-lib.32bit.7z
+- C:\Users\appveyor\freeglut.64bit.7z
+- C:\Users\appveyor\freeglut.32bit.7z
+- C:\users\appveyor\strawberry.64bit.msi
+- C:\users\appveyor\strawberry.32bit.msi
 - C:\Users\appveyor\winscp.zip
 - C:\Users\appveyor\extra_perl.7z
-- C:\Users\appveyor\wxwidgets.7z
+- C:\Users\appveyor\wxwidgets-64bit.7z
+- C:\Users\appveyor\wxwidgets-32bit.7z
 build_script:
 - ps: "& package/win/appveyor_buildscript.ps1"
 test_script:
