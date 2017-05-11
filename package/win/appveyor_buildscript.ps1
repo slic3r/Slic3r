@@ -12,8 +12,9 @@ cd C:\projects\slic3r
 rm -r 'C:\Program Files (x86)\Microsoft Vis*\bin' -Force
 Add-AppveyorCompilationMessage -Message "Building Slic3r XS"
 perl Build.pl
-if (-NOT ($LASTEXITCODE -eq 0)) {
+if ($LastExitCode -ne 0) { 
     Add-AppveyorCompilationMessage -Message "XS Failed to Build" -Category Error
+		$host.SetShouldExit($LastExitCode)  
 }
 Add-AppveyorCompilationMessage -Message "Making ZIP package"
 cd package/win
