@@ -33,14 +33,20 @@ typedef std::vector<ModelInstance*> ModelInstancePtrs;
 // and with multiple modifier meshes.
 // A model groups multiple objects, each object having possibly multiple instances,
 // all objects may share mutliple materials.
+/// Model Class representing the print bed content
+/// \brief Description of a triangular model with multiple materials, multiple instances with various affine transformations
+/// and with multiple modifier meshes.
+/// A model groups multiple objects, each object having possibly multiple instances,
+/// all objects may share multiple materials.
 class Model
 {
     public:
     // Materials are owned by a model and referenced by objects through t_model_material_id.
     // Single material may be shared by multiple models.
-    ModelMaterialMap materials; ///<
+    ModelMaterialMap materials; ///< \brief Materials are owned by a model and referenced by objects through t_model_material_id.
+    ///< Single material may be shared by multiple models.
     // Objects are owned by a model. Each model may have multiple instances, each instance having its own transformation (shift, scale, rotation).
-    ModelObjectPtrs objects; ///<
+    ModelObjectPtrs objects; ///< \brief Objects are owned by a model. Each model may have multiple instances, each instance having its own transformation (shift, scale, rotation).
 
     /// Model constructor
     Model();
@@ -206,23 +212,37 @@ class Model
 };
 
 // Material, which may be shared across multiple ModelObjects of a single Model.
+/// Model Material class
+/// <\brief Material, which may be shared across multiple ModelObjects of a single Model.
 class ModelMaterial
 {
     friend class Model;
     public:
     // Attributes are defined by the AMF file format, but they don't seem to be used by Slic3r for any purpose.
-    t_model_material_attributes attributes;
+    t_model_material_attributes attributes; ///< Attributes are defined by the AMF file format, but they don't seem to be used by Slic3r for any purpose.
     // Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
-    DynamicPrintConfig config;
+    // Todo: @Samir Ask
+    DynamicPrintConfig config; ///< Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
 
+    /// Get the parent model woeing this material
+    /// \return
     Model* get_model() const { return this->model; };
+
+    /// Apply attributes defined by the AMF file format
+    /// \param attributes the attributes map
     void apply(const t_model_material_attributes &attributes);
     
     private:
     // Parent, owning this material.
-    Model* model;
-    
+    Model* model; ///<Parent, owning this material.
+
+    /// Constructor
+    /// \param model the parent model owning this material.
     ModelMaterial(Model *model);
+
+    /// Constructor
+    /// \param model the parent model owning this material.
+    /// \param other the other model material to be copied
     ModelMaterial(Model *model, const ModelMaterial &other);
 };
 
