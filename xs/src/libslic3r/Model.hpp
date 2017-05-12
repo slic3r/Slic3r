@@ -262,10 +262,11 @@ class ModelObject
     t_layer_height_ranges layer_height_ranges; ///< Variation of a layer thickness for spans of Z coordinates.
 
     //Todo @Samir ASK
-    Pointf3 origin_translation; ///< This vector accumulates the total translation applied to the object by the
+    ///< This vector accumulates the total translation applied to the object by the
     /// center_around_origin() method. Callers might want to apply the same translation
     /// to new volumes before adding them to this object in order to preserve alignment
     /// when user expects that.
+    Pointf3 origin_translation;
 
 
     // these should be private but we need to expose them via XS until all methods are ported
@@ -431,38 +432,70 @@ class ModelObject
     ~ModelObject();
 };
 
-// An object STL, or a modifier volume, over which a different set of parameters shall be applied.
-// ModelVolume instances are owned by a ModelObject.
+/// An object STL, or a modifier volume, over which a different set of parameters shall be applied.
+/// ModelVolume instances are owned by a ModelObject.
 class ModelVolume
 {
     friend class ModelObject;
     public:
+    ///< Name of this ModelVolume object
     std::string name;
-    // The triangular model.
+    ///< The triangular model.
     TriangleMesh mesh;
-    // Configuration parameters specific to an object model geometry or a modifier volume, 
-    // overriding the global Slic3r settings and the ModelObject settings.
+    ///< Configuration parameters specific to an object model geometry or a modifier volume,
+    ///< overriding the global Slic3r settings and the ModelObject settings.
     DynamicPrintConfig config;
-    // Is it an object to be printed, or a modifier volume?
-    bool modifier;
-    
-    // A parent object owning this modifier volume.
+    ///< Is it an object to be printed, or a modifier volume?
+    bool modifier; //ToDo @Samir Ask?
+
+    /// Get the parent object owning this modifier volume.
+    /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
+
+    /// Get the material id of this ModelVolume object
+    /// \return t_model_material_id the material id string
     t_model_material_id material_id() const;
+
+    /// Set the material id to this ModelVolume object
+    /// \param material_id t_model_material_id the id of the material
     void material_id(t_model_material_id material_id);
+
+    /// Get the current ModelMaterial in this ModelVolume object
+    /// \return ModelMaterial* a pointer to the ModelMaterial
     ModelMaterial* material() const;
+
+    /// Add a new ModelMaterial to this ModelVolume
+    /// \param material_id t_model_material_id the id of the material to be added
+    /// \param material ModelMaterial the material to be coppied
     void set_material(t_model_material_id material_id, const ModelMaterial &material);
     
+    /// Add a unique ModelMaterial to the current ModelVolume
+    /// \return ModelMaterial* pointer to the new ModelMaterial
     ModelMaterial* assign_unique_material();
     
     private:
-    // Parent object owning this ModelVolume.
+    ///< Parent object owning this ModelVolume.
     ModelObject* object;
+    ///< The id of the this ModelVolume
     t_model_material_id _material_id;
-    
+
+    /// Constructor
+    /// \param object
+    /// \param mesh
     ModelVolume(ModelObject *object, const TriangleMesh &mesh);
+
+    /// Contructor
+    /// \param object ModelObject* pointer to the owner ModelObject
+    /// \param other ModelVolume the ModelVolume object to be copied
     ModelVolume(ModelObject *object, const ModelVolume &other);
+
+    /// = Operator overloading
+    /// \param other ModelVolume a volume to be copied in the current ModelVolume object
+    /// \return ModelVolume& the current ModelVolume to enable operator cascading
     ModelVolume& operator= (ModelVolume other);
+
+    /// Swap attributes between another ModelVolume object
+    /// \param other ModelVolume the other volume object
     void swap(ModelVolume &other);
 };
 
@@ -470,14 +503,14 @@ class ModelVolume
 /// Knows the affine transformation of an object.
 class ModelInstance
 {
-    friend class ModelObject;   ///< Rotation around the Z axis, in radians around mesh center point
+    friend class ModelObject;
     public:
     double rotation;            ///< Rotation around the Z axis, in radians around mesh center point
     double scaling_factor;      ///< scaling factor
     Pointf offset;              ///< offset in unscaled coordinates
 
     /// Get the owning ModelObject
-    /// \return ModelObject* pointer to the owing ModelObject
+    /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
 
     /// Transform an external TriangleMesh object
@@ -515,7 +548,7 @@ class ModelInstance
     ModelInstance(ModelObject *object, const ModelInstance &other);
 
     /// = Operator overloading
-    /// \param other ModelInstance an instance to be copied in the cuurent ModelInstance object
+    /// \param other ModelInstance an instance to be copied in the current ModelInstance object
     /// \return ModelInstance& the current ModelInstance to enable operator cascading
     ModelInstance& operator= (ModelInstance other);
 
