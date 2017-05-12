@@ -215,14 +215,14 @@ class ModelMaterial
     // Todo: @Samir Ask
     DynamicPrintConfig config; ///< Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
 
-    /// Get the parent model woeing this material
+    /// Get the parent model owing this material
     /// \return
     Model* get_model() const { return this->model; };
 
     /// Apply attributes defined by the AMF file format
     /// \param attributes the attributes map
     void apply(const t_model_material_attributes &attributes);
-    
+
     private:
     Model* model; ///<Parent, owning this material.
 
@@ -239,196 +239,203 @@ class ModelMaterial
 /// Model Object class
 /// A printable object, possibly having multiple print volumes (each with its own set of parameters and materials),
 /// and possibly having multiple modifier volumes, each modifier volume with its set of parameters and materials.
-/// Each ModelObject may be instantiated mutliple times, each instance having different placement on the print bed,
+/// Each ModelObject may be instantiated multiple times, each instance having different placement on the print bed,
 /// different rotation and different uniform scaling.
 class ModelObject
 {
     friend class Model;
     public:
-    std::string name; ///< model object name
-    std::string input_file; ///< Input file path
+    std::string name; ///< This ModelObject name.
+    std::string input_file; ///< Input file path.
 
-    ModelInstancePtrs instances; ///< Instances of this ModelObject. Each instance defines a shift on the print bed, rotation around the Z axis and a uniform scaling.
+    ModelInstancePtrs instances;
+    ///< Instances of this ModelObject. Each instance defines a shift on the print bed, rotation around the Z axis and a uniform scaling.
     ///< Instances are owned by this ModelObject.
 
-    //Todo @Samir ASK what are modifiers?
-    ModelVolumePtrs volumes; ///< Printable and modifier volumes, each with its material ID and a set of override parameters.
-    ///< \brief ModelVolumes are owned by this ModelObject.
+    // Todo @Samir ASK what are modifiers?
+    ModelVolumePtrs volumes;
+    ///< Printable and modifier volumes, each with its material ID and a set of override parameters.
+    ///< ModelVolumes are owned by this ModelObject.
 
-    //Todo @Samir ASK
+    // Todo @Samir ASK
     DynamicPrintConfig config; ///< Configuration parameters specific to a single ModelObject, overriding the global Slic3r settings.
 
-    //Todo @Samir ASK
+    // Todo @Samir ASK
     t_layer_height_ranges layer_height_ranges; ///< Variation of a layer thickness for spans of Z coordinates.
 
-    //Todo @Samir ASK
-    ///< This vector accumulates the total translation applied to the object by the
-    /// center_around_origin() method. Callers might want to apply the same translation
-    /// to new volumes before adding them to this object in order to preserve alignment
-    /// when user expects that.
+    // Todo @Samir ASK
     Pointf3 origin_translation;
-
+    ///< This vector accumulates the total translation applied to the object by the
+    ///< center_around_origin() method. Callers might want to apply the same translation
+    ///< to new volumes before adding them to this object in order to preserve alignment
+    ///< when user expects that.
 
     // these should be private but we need to expose them via XS until all methods are ported
     BoundingBoxf3 _bounding_box;
     bool _bounding_box_valid;  //Todo @Samir ASK
 
-    ///  Get the owning parent Model
-    /// \return parent Model
+    ///  Get the owning parent Model.
+    /// \return parent Model* pointer to the owner Model
     Model* get_model() const { return this->model; };
 
-    /// Add a new ModelVolume to the current ModelObject
+    /// Add a new ModelVolume to the current ModelObject.
     /// \param mesh TriangularMesh
     /// \return ModelVolume* pointer to the new volume
     ModelVolume* add_volume(const TriangleMesh &mesh);
 
-    /// Add a new ModelVolume to the current ModelObject
+    /// Add a new ModelVolume to the current ModelObject.
     /// \param volume the ModelVolume object to be copied
     /// \return ModelVolume* pointer to the new volume
     ModelVolume* add_volume(const ModelVolume &volume);
 
-    /// Delete a ModelVolume object
+    /// Delete a ModelVolume object.
     /// \param idx size_t the index of the ModelVolume to be deleted
     void delete_volume(size_t idx);
 
     /// Delete all ModelVolumes in the
     void clear_volumes();
 
-    /// Add a new ModelInstance to the current ModelObject
+    /// Add a new ModelInstance to the current ModelObject.
     /// \return ModelInstance* a pointer to the new instance
     ModelInstance* add_instance();
 
-    /// Add a new ModelInstance to the current ModelObject
+    /// Add a new ModelInstance to the current ModelObject.
     /// \param instance the ModelInstance to be copied
     /// \return ModelInstance* a pointer to the new instance
     ModelInstance* add_instance(const ModelInstance &instance);
 
-    /// Delete a ModelInstance
+    /// Delete a ModelInstance.
     /// \param idx size_t the index of the ModelInstance to be deleted
     void delete_instance(size_t idx);
 
     //Todo @Samir ASK
-    /// Delete the last created ModelInstance object
+    /// Delete the last created ModelInstance object.
     void delete_last_instance();
 
-    /// Delete all ModelInstance objects found in the current ModelObject
+    /// Delete all ModelInstance objects found in the current ModelObject.
     void clear_instances();
 
-    /// Return the bounding box of the *transformed* instances
+    /// Get the bounding box of the *transformed* instances.
     BoundingBoxf3 bounding_box();
 
-    /// Invalidate the bounding box in the current ModelObject
+    /// Invalidate the bounding box in the current ModelObject.
     void invalidate_bounding_box();
 
-    /// Repair all TriangleMesh objects found in each ModelVolume
+    /// Repair all TriangleMesh objects found in each ModelVolume.
     void repair();
 
-    /// Flatten all volumes and instances into a single mesh and applying all the
-    //Todo @Samir ASK
+    /// Flatten all volumes and instances into a single mesh and applying all the ModelInstances transformations.
     TriangleMesh mesh() const;
 
-    /// Flatten all volumes and instances into a single mesh
+    /// Flatten all volumes and instances into a single mesh.
     TriangleMesh raw_mesh() const;
 
-    ///
+    //Todo @Samir Ask What is the raw_bounding_box?
     BoundingBoxf3 raw_bounding_box() const;
 
-    ///
+    /// Get the bounding box of the *transformed* given instance.
+    /// \param instance_idx size_t the index of the ModelInstance in the ModelInstance vector
+    /// \return BoundingBoxf3 the bounding box at the given index
     BoundingBoxf3 instance_bounding_box(size_t instance_idx) const;
 
-    ///
+    /// Align the current ModelObject to ground by translating in the z axis the needed units.
     void align_to_ground();
 
-    ///
+    /// Center the current ModelObject to origin.
     void center_around_origin();
 
-    ///
-    /// \param vector
+    /// Translate the current ModelObject with (x,y,z) units.
+    /// \param vector Vectorf3 the translation vector
     void translate(const Vectorf3 &vector);
 
-    ///
-    /// \param x
-    /// \param y
-    /// \param z
+    /// Translate each TriangleMesh in every ModelVolume in this ModelObject.
+    /// \param x coordf_t the x units
+    /// \param y coordf_t the y units
+    /// \param z coordf_t the z units
     void translate(coordf_t x, coordf_t y, coordf_t z);
 
-    ///
-    /// \param factor
+    /// Scale the current ModelObject
+    /// \param factor float the scaling factor
     void scale(float factor);
 
-    ///
-    /// \param versor
+    /// Scale each TriangleMesh in every ModelVolume in this ModelObject.
+    /// \param versor Pointf3 the scaling factor in a 3d vector.
     void scale(const Pointf3 &versor);
 
-    ///
-    /// \param size
+    //ToDo : ask about which size is it ? is it of the viewport or the 3c canvas or what?
+    /// Scale the current ModelObject to fit.
+    /// \param size Sizef3 the size vector
     void scale_to_fit(const Sizef3 &size);
 
-    ///
-    /// \param angle
-    /// \param axis
+    /// Rotate the current ModelObject.
+    /// \param angle float the angle in radians
+    /// \param axis Axis the axis to be rotated around
     void rotate(float angle, const Axis &axis);
 
-    ///
-    /// \param axis
+    /// Mirror the current Model around a certain axis.
+    /// \param axis Axis enum member
     void mirror(const Axis &axis);
 
-    ///
-    /// \param instance
-    /// \param dont_translate
+    /// Transform the current ModelObject by a certain ModelInstance attributes.
+    /// \param instance ModelInstance the instance used to transform the current ModelObject
+    /// \param dont_translate bool whether to translate the current ModelObject or not
     void transform_by_instance(ModelInstance instance, bool dont_translate = false);
 
-    ///
-    /// \return
+    /// Get the number of the unique ModelMaterial objects in this ModelObject.
+    /// \return size_t the materials count
     size_t materials_count() const;
 
-    ///
-    /// \return
+    /// Get the number of the facets found in all ModelVolume objects in this ModelObject which are not modifier volumes.
+    /// \return size_t the facets count
     size_t facets_count() const;
 
-    ///
+    /// Know whether there exists a TriangleMesh object that needs repair or not.
+    /// \return bool
     bool needed_repair() const;
 
-    ///
-    /// \param axis
-    /// \param z
-    /// \param model
+    // Todo @Samir study this function later
+    /// Cut (Slice) the current ModelObject at a certain axis at a certain magnitude.
+    /// \param axis Axis the axis to slice at (X = 0 or Y or Z)
+    /// \param z coordf_t the point at the certain axis to cut(slice) the Model at
+    /// \param model the owner Model
     void cut(Axis axis, coordf_t z, Model* model) const;
 
-    ///
-    /// \param new_objects
+    //Todo @Samir Ask
+    /// Split the meshes of the ModelVolume in this ModelObject if there exists only one ModelVolume in this ModelObject.
+    /// \param new_objects ModelObjectPtrs the generated ModelObjects after the single ModelVolume split
     void split(ModelObjectPtrs* new_objects);
 
-    ///
+    //Todo @Samir Ask
+    /// Update the bounding box in this ModelObject
     void update_bounding_box();   // this is a private method but we expose it until we need to expose it via XS
 
-    ///
+    //Todo @Samir Ask about the repair and needed repair
+    /// Print the current info of this ModelObject
     void print_info() const;
-    
-    private:
-    // Parent object, owning this ModelObject.
-    Model* model; ///<
 
-    ///
-    /// \param model
+    private:
+    Model* model; ///< Parent object, owning this ModelObject.
+
+    /// Constructor
+    /// \param model Model the owner Model.
     ModelObject(Model *model);
 
-    ///
-    /// \param model
-    /// \param other
-    /// \param copy_volumes
+    /// Constructor
+    /// \param model Model the owner Model.
+    /// \param other ModelObject the other ModelObject to be copied
+    /// \param copy_volumes bool whether to also copy its volumes or not, by default = true
     ModelObject(Model *model, const ModelObject &other, bool copy_volumes = true);
 
-    ///
-    /// \param other
-    /// \return
+    /// = Operator overloading
+    /// \param other ModelObject the other ModelObject to be copied
+    /// \return ModelObject& the current ModelObject to enable operator cascading
     ModelObject& operator= (ModelObject other);
 
-    ///
-    /// \param other
+    /// Swap the attributes between another ModelObject
+    /// \param other ModelObject the other ModelObject to be swapped with.
     void swap(ModelObject &other);
 
-    ///
+    /// Destructor
     ~ModelObject();
 };
 
@@ -438,15 +445,14 @@ class ModelVolume
 {
     friend class ModelObject;
     public:
-    ///< Name of this ModelVolume object
-    std::string name;
-    ///< The triangular model.
-    TriangleMesh mesh;
+
+    std::string name;   ///< Name of this ModelVolume object
+    TriangleMesh mesh;  ///< The triangular model.
+    DynamicPrintConfig config;
     ///< Configuration parameters specific to an object model geometry or a modifier volume,
     ///< overriding the global Slic3r settings and the ModelObject settings.
-    DynamicPrintConfig config;
-    ///< Is it an object to be printed, or a modifier volume?
-    bool modifier; //ToDo @Samir Ask?
+    //ToDo @Samir Ask?
+    bool modifier;  ///< Is it an object to be printed, or a modifier volume?
 
     /// Get the parent object owning this modifier volume.
     /// \return ModelObject* pointer to the owner ModelObject
@@ -468,11 +474,11 @@ class ModelVolume
     /// \param material_id t_model_material_id the id of the material to be added
     /// \param material ModelMaterial the material to be coppied
     void set_material(t_model_material_id material_id, const ModelMaterial &material);
-    
+
     /// Add a unique ModelMaterial to the current ModelVolume
     /// \return ModelMaterial* pointer to the new ModelMaterial
     ModelMaterial* assign_unique_material();
-    
+
     private:
     ///< Parent object owning this ModelVolume.
     ModelObject* object;
@@ -480,11 +486,11 @@ class ModelVolume
     t_model_material_id _material_id;
 
     /// Constructor
-    /// \param object
-    /// \param mesh
+    /// \param object ModelObject* pointer to the owner ModelObject
+    /// \param mesh TriangleMesh the mesh of the new ModelVolume object
     ModelVolume(ModelObject *object, const TriangleMesh &mesh);
 
-    /// Contructor
+    /// Constructor
     /// \param object ModelObject* pointer to the owner ModelObject
     /// \param other ModelVolume the ModelVolume object to be copied
     ModelVolume(ModelObject *object, const ModelVolume &other);
@@ -534,7 +540,7 @@ class ModelInstance
     /// Rotate or scale an external polygon. It does not translate the polygon.
     /// \param polygon Polygon* a pointer to the Polygon
     void transform_polygon(Polygon* polygon) const;
-    
+
     private:
     ModelObject* object; ///< Parent object, owning this instance.
 
