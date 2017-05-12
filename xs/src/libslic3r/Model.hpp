@@ -38,43 +38,170 @@ class Model
     public:
     // Materials are owned by a model and referenced by objects through t_model_material_id.
     // Single material may be shared by multiple models.
-    ModelMaterialMap materials;
+    ModelMaterialMap materials; ///<
     // Objects are owned by a model. Each model may have multiple instances, each instance having its own transformation (shift, scale, rotation).
-    ModelObjectPtrs objects;
-    
+    ModelObjectPtrs objects; ///<
+
+    /// Model constructor
     Model();
+
+    /// Model constructor
+    /// \param other model object
     Model(const Model &other);
+
+    /// '=' Operator overloading
+    /// \param other model object
+    /// \return
     Model& operator= (Model other);
+
+    /// Swap objects and materials with another model object
+    /// \param other model object
     void swap(Model &other);
+
+    /// Destructor
     ~Model();
+
+    /// Read a model from file
+    /// \brief This function supports the following formats (STL, OBJ, AMF)
+    /// \param input_file
+    /// \return a model object
     static Model read_from_file(std::string input_file);
+
+    /// Create a new object and add it to the model
+    /// \return a pointer to the new model object
     ModelObject* add_object();
+
+    /// Create a new object and add it to the model
+    /// \brief This function copies another model object
+    /// \param other model object to be copied
+    /// \param copy_volumes if you also want to copy volumes of the other object. By default = true
+    /// \return a pointer to the new model object
     ModelObject* add_object(const ModelObject &other, bool copy_volumes = true);
+
+    /// Delete a model object from the model
+    /// \param idx the index of the desired object
     void delete_object(size_t idx);
+
+    /// Delete all objects found in the current model
     void clear_objects();
-    
+
+    /// Add a new material to the model
+    /// \param material_id the id of the new model material to be added
+    /// \return a pointer to the new model material
     ModelMaterial* add_material(t_model_material_id material_id);
+
+    /// Add a new material to the current model
+    /// \brief This function copies another model material, It also delete the current material carrying the same
+    /// material id in the map
+    /// \param material_id the id of the new model material to be added
+    /// \param other model material to be copied
+    /// \return a pointer to the new model material
     ModelMaterial* add_material(t_model_material_id material_id, const ModelMaterial &other);
+
+    /// Get the model material having a certain material id
+    /// \brief Returns null if the model material is not found
+    /// \param material_id the id of the needed model material
+    /// \return a pointer to the model material or null if not found
     ModelMaterial* get_material(t_model_material_id material_id);
+
+    /// Delete a model material carrying a certain material id if found
+    /// \param material_id the id of the model material to be deleted
     void delete_material(t_model_material_id material_id);
+
+    /// Delete all the model materials found in the current model
     void clear_materials();
+
+    /// Check if any model object has no model instances
+    /// \return boolean value where true means there exists at least one model object with no instances
     bool has_objects_with_no_instances() const;
+
+    /// Add a new instance to the model objects having no model instances
+    /// \return true
     bool add_default_instances();
+
+    // Todo: @Samir Ask what are the transformed instances?
+    /// Get the bounding box of the transformed instances
+    /// \return a bounding box object
     BoundingBoxf3 bounding_box() const;
+
+    /// Repair the model objects of the current model
+    /// \brief This function calls repair function on each mesh of each model object volume
     void repair();
+
+    // Todo: @Samir Check if this is correct
+    /// Center each model object instance around a point
+    /// \param point pointf object to center the model instances of model objects around
     void center_instances_around_point(const Pointf &point);
+
+    // Todo: @Samir Check if this is correct
+    /// Center each model object instance around the origin point
     void align_instances_to_origin();
+
+    /// Translate each model object with x, y, z units
+    /// \param x units in the x direction
+    /// \param y units in the y direction
+    /// \param z units in the z direction
     void translate(coordf_t x, coordf_t y, coordf_t z);
+
+    // Todo: @Samir Ask about the difference
+    /// Flatten all model objects of the current model to a single mesh
+    /// \return a single triangle mesh object
     TriangleMesh mesh() const;
+
+    /// Flatten all model objects of the current model to a single mesh
+    /// \return a single triangle mesh object
     TriangleMesh raw_mesh() const;
+
+    // Todo: @Samir Ask or try to figure out
+    ///
+    /// \param sizes
+    /// \param dist
+    /// \param bb
+    /// \param out
+    /// \return
     bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb, Pointfs &out) const;
+
+    // Todo: @Samir Ask or try to figure out
+    /// Arrange model objects preserving their instance count but altering their instance positions
+    /// \param dist
+    /// \param bb
+    /// \return
     bool arrange_objects(coordf_t dist, const BoundingBoxf* bb = NULL);
     // Croaks if the duplicated objects do not fit the print bed.
+
+    // Todo: @Samir Ask or try to figure out
+    /// Duplicate the entire model object preserving model instance relative positions
+    /// \param copies_num number of copies
+    /// \param dist distance between cells
+    /// \param bb bounding box object
     void duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
+
+    // Todo: @Samir Ask or try to figure out
+    /// Duplicate the entire model object preserving model instance relative positions
+    /// \brief This function will append more instances to each object
+    /// and then automatically rearrange everything
+    /// \param copies_num number of copies
+    /// \param dist dist distance between cells
+    /// \param bb bounding box object
     void duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
+
+    // Todo: @Samir Ask or try to figure out
+    ///
+    /// \param x
+    /// \param y
+    /// \param dist
     void duplicate_objects_grid(size_t x, size_t y, coordf_t dist);
+
+    /// Print info about each model object in the model
     void print_info() const;
+
+    // Todo: @Samir Ask or try to figure out
+    ///
+    /// \return
     bool looks_like_multipart_object() const;
+
+    // Todo: @Samir Ask or try to figure out
+    ///
     void convert_multipart_object();
 };
 
