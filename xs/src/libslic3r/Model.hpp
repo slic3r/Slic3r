@@ -30,130 +30,133 @@ typedef std::vector<ModelInstance*> ModelInstancePtrs;
 
 
 /// Model Class representing the print bed content
-/// \brief Description of a triangular model with multiple materials, multiple instances with various affine transformations
+/// Description of a triangular model with multiple materials, multiple instances with various affine transformations
 /// and with multiple modifier meshes.
 /// A model groups multiple objects, each object having possibly multiple instances,
 /// all objects may share multiple materials.
 class Model
 {
     public:
-    ModelMaterialMap materials; ///< \brief Materials are owned by a model and referenced by objects through t_model_material_id.
+    ModelMaterialMap materials;
+    ///< Materials are owned by a model and referenced by objects through t_model_material_id.
     ///< Single material may be shared by multiple models.
 
-    ModelObjectPtrs objects; ///< \brief Objects are owned by a model. Each model may have multiple instances, each instance having its own transformation (shift, scale, rotation).
+    ModelObjectPtrs objects;
+    ///< Objects are owned by a model. Each model may have multiple instances
+    ///< , each instance having its own transformation (shift, scale, rotation).
 
-    /// Model constructor
+    /// Model constructor.
     Model();
 
-    /// Model constructor
-    /// \param other model
+    /// Model constructor.
+    /// \param other Model the model to be copied
     Model(const Model &other);
 
-    /// '=' Operator overloading
-    /// \param other model
-    /// \return
+    /// = Operator overloading.
+    /// \param other Model the model to be copied
+    /// \return Model& the current Model to enable operator cascading
     Model& operator= (Model other);
 
-    /// Swap objects and materials with another model
-    /// \param other model
+    /// Swap objects and materials with another model.
+    /// \param other Model the model to be swapped with
     void swap(Model &other);
 
     /// Model destructor
     ~Model();
 
-    /// \brief Read a model from file
-    /// \brief This function supports the following formats (STL, OBJ, AMF)
-    /// \param input_file
-    /// \return a model
+    /// Read a model from file.
+    /// This function supports the following formats (STL, OBJ, AMF).
+    /// \param  input_file std::string the file path
+    /// \return Model the read Model
     static Model read_from_file(std::string input_file);
 
-    /// Create a new object and add it to the model
-    /// \return a pointer to the new model object
+    /// Create a new object and add it to the current Model.
+    /// \return ModelObject* a pointer to the new Model
     ModelObject* add_object();
 
-    /// Create a new object and add it to the model
-    /// \brief This function copies another model object
-    /// \param other model object to be copied
+    /// Create a new object and add it to the current Model.
+    /// This function copies another model object
+    /// \param other ModelObject the ModelObject to be copied
     /// \param copy_volumes if you also want to copy volumes of the other object. By default = true
-    /// \return a pointer to the new model object
+    /// \return ModelObject* a pointer to the new ModelObject
     ModelObject* add_object(const ModelObject &other, bool copy_volumes = true);
 
-    /// Delete a model object from the model
-    /// \param idx the index of the desired object
+    /// Delete a ModelObject from the current Model.
+    /// \param idx size_t the index of the desired ModelObject
     void delete_object(size_t idx);
 
-    /// Delete all model objects found in the current model
+    /// Delete all ModelObjects found in the current Model.
     void clear_objects();
 
-    /// Add a new material to the model
-    /// \param material_id the id of the new model material to be added
-    /// \return a pointer to the new model material
+    /// Add a new ModelMaterial to the model.
+    /// \param material_id t_model_material_id the id of the new ModelMaterial to be added
+    /// \return ModelMaterial* a pointer to the new ModelMaterial
     ModelMaterial* add_material(t_model_material_id material_id);
 
-    /// Add a new material to the current model
-    /// \brief This function copies another model material, It also delete the current material carrying the same
-    /// material id in the map
-    /// \param material_id the id of the new model material to be added
-    /// \param other model material to be copied
-    /// \return a pointer to the new model material
+    /// Add a new ModelMaterial to the current Model.
+    /// This function copies another ModelMaterial, It also delete the current ModelMaterial carrying the same
+    /// material id in the map.
+    /// \param material_id t_model_material_id the id of the new ModelMaterial to be added
+    /// \param other ModelMaterial the model material to be copied
+    /// \return ModelMaterial* a pointer to the new ModelMaterial
     ModelMaterial* add_material(t_model_material_id material_id, const ModelMaterial &other);
 
-    /// Get the model material having a certain material id
-    /// \brief Returns null if the model material is not found
-    /// \param material_id the id of the needed model material
-    /// \return a pointer to the model material or null if not found
+    /// Get theModelMaterial having a certain material id.
+    /// Returns null if theModelMaterial is not found.
+    /// \param material_id t_model_material_id the id of the needed ModelMaterial
+    /// \return ModelMaterial* a pointer to the ModelMaterial or null if not found
     ModelMaterial* get_material(t_model_material_id material_id);
 
-    /// Delete a model material carrying a certain material id if found
-    /// \param material_id the id of the model material to be deleted
+    /// Delete a ModelMaterial carrying a certain material id if found.
+    /// \param material_id t_model_material_id the id of the ModelMaterial to be deleted
     void delete_material(t_model_material_id material_id);
 
-    /// Delete all the model materials found in the current model
+    /// Delete all the ModelMaterial objects found in the current Model.
     void clear_materials();
 
-    /// Check if any model object has no model instances
-    /// \return boolean value where true means there exists at least one model object with no instances
+    /// Check if any ModelObject has no ModelInstances.
+    /// \return bool true means there exists at least one ModelObject with no ModelInstance objects
     bool has_objects_with_no_instances() const;
 
-    /// Add a new instance to the model objects having no model instances
-    /// \return true
+    /// Add a new ModelInstance to each ModelObject having no ModelInstance objects
+    /// \return bool
     bool add_default_instances();
 
     // Todo: @Samir Ask what are the transformed instances?
-    /// Get the bounding box of the transformed instances
-    /// \return a bounding box object
+    /// Get the bounding box of the transformed instances.
+    /// \return BoundingBoxf3 a bounding box object.
     BoundingBoxf3 bounding_box() const;
 
-    /// Repair the model objects of the current model
-    /// \brief This function calls repair function on each mesh of each model object volume
+    /// Repair the ModelObjects of the current Model.
+    /// \brief This function calls repair function on each TriangleMesh of each model object volume
     void repair();
 
     // Todo: @Samir Check if this is correct
-    /// Center each model object instance around a point
+    /// Center each model object instance around a point.
     /// \param point pointf object to center the model instances of model objects around
     void center_instances_around_point(const Pointf &point);
 
     // Todo: @Samir Check if this is correct
-    /// Center each model object instance around the origin point
+    /// Center each model object instance around the origin point.
     void align_instances_to_origin();
 
-    /// Translate each model object with x, y, z units
-    /// \param x units in the x direction
-    /// \param y units in the y direction
-    /// \param z units in the z direction
+    /// Translate each ModelObject with x, y, z units.
+    /// \param x coordf_t units in the x direction
+    /// \param y coordf_t units in the y direction
+    /// \param z coordf_t units in the z direction
     void translate(coordf_t x, coordf_t y, coordf_t z);
 
     // Todo: @Samir Ask about the difference
-    /// Flatten all model objects of the current model to a single mesh
-    /// \return a single triangle mesh object
+    /// Flatten all ModelObjects of the current model to a single mesh.
+    /// \return TriangleMesh a single TriangleMesh object
     TriangleMesh mesh() const;
 
-    /// Flatten all model objects of the current model to a single mesh
-    /// \return a single triangle mesh object
+    /// Flatten all ModelObjects of the current model to a single mesh.
+    /// \return TriangleMesh a single TriangleMesh object
     TriangleMesh raw_mesh() const;
 
     // Todo: @Samir Ask or try to figure out
-    ///
+    /// Check if
     /// \param sizes
     /// \param dist
     /// \param bb
@@ -162,13 +165,13 @@ class Model
     bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb, Pointfs &out) const;
 
     // Todo: @Samir Ask or try to figure out
-    /// Arrange model objects preserving their instance count but altering their instance positions
+    /// Arrange model objects preserving their instance count but altering their instance positions.
     /// \param dist
     /// \param bb
     /// \return
     bool arrange_objects(coordf_t dist, const BoundingBoxf* bb = NULL);
-    // Croaks if the duplicated objects do not fit the print bed.
 
+    // Croaks if the duplicated objects do not fit the print bed.
     // Todo: @Samir Ask or try to figure out
     /// Duplicate the entire model object preserving model instance relative positions
     /// \param copies_num number of copies
@@ -192,7 +195,7 @@ class Model
     /// \param dist
     void duplicate_objects_grid(size_t x, size_t y, coordf_t dist);
 
-    /// Print info about each model object in the model
+    /// Print info about each ModelObject in the model
     void print_info() const;
 
     // Todo: @Samir Ask or try to figure out
@@ -206,17 +209,20 @@ class Model
 };
 
 /// Model Material class
-/// <\brief Material, which may be shared across multiple ModelObjects of a single Model.
+/// Material, which may be shared across multiple ModelObjects of a single Model.
 class ModelMaterial
 {
     friend class Model;
     public:
-    t_model_material_attributes attributes; ///< Attributes are defined by the AMF file format, but they don't seem to be used by Slic3r for any purpose.
+    t_model_material_attributes attributes;
+    ///< Attributes are defined by the AMF file format, but they don't seem to be used by Slic3r for any purpose.
+
     // Todo: @Samir Ask
-    DynamicPrintConfig config; ///< Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
+    DynamicPrintConfig config;
+    ///< Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
 
     /// Get the parent model owing this material
-    /// \return
+    /// \return Model* the onwer Model
     Model* get_model() const { return this->model; };
 
     /// Apply attributes defined by the AMF file format
@@ -245,8 +251,11 @@ class ModelObject
 {
     friend class Model;
     public:
-    std::string name; ///< This ModelObject name.
-    std::string input_file; ///< Input file path.
+    std::string name;
+    ///< This ModelObject name.
+
+    std::string input_file;
+    ///< Input file path.
 
     ModelInstancePtrs instances;
     ///< Instances of this ModelObject. Each instance defines a shift on the print bed, rotation around the Z axis and a uniform scaling.
