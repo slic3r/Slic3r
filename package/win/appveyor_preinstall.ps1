@@ -71,7 +71,7 @@ if (!(Test-Path "C:\Users\appveyor\wxwidgets-$env:ARCH.7z")) {
 	7z x C:\users\appveyor\wxwidgets-$env:ARCH.7z -oC:\dev
 } else {
     Add-AppveyorCompilationMessage -Message "Extracting prebuilt wxWidgets."
-        7z x "C:\Users\appveyor\wxwidgets.7z" -oC:\dev
+        7z x "C:\Users\appveyor\wxwidgets-$env:ARCH.7z" -oC:\dev
 }
 
 cpan App::cpanminus
