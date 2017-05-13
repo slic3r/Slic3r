@@ -1,7 +1,7 @@
 mkdir C:\projects\slic3r\FreeGLUT
 if (!(Test-Path "C:\users\appveyor\freeglut.$env:ARCH.7z")) 
 {
-    wget "http://www.siusgs.com/slic3r/buildserver/win/freeglut-mingw-3.0.0.$env:ARCH.7z" -o C:\users\appveyor\freeglut.$env:ARCH.7z
+    wget "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=freeglut-mingw-3.0.0.$env:ARCH.7z" -o C:\users\appveyor\freeglut.$env:ARCH.7z
 	if ($LastExitCode -ne 0) { 
 		Add-AppveyorCompilationMessage -Message "Failed to download freeglut" -Category Error
 		$host.SetShouldExit(1)  
@@ -46,7 +46,7 @@ if(Test-Path -Path 'C:\Strawberry' ) {
         cmd /c mklink /D C:\Perl C:\Strawberry\perl
         mkdir C:\dev
         if (!(Test-Path "C:\users\appveyor\boost.1.63.0.7z") -Or $env:FORCE_BOOST_REINSTALL -eq 1) {
-            wget "http://www.siusgs.com/slic3r/buildserver/win/boost_1_63_0.7z" -O "C:\users\appveyor\boost.1.63.0.7z" | Write-Output
+            wget "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0.7z" -O "C:\users\appveyor\boost.1.63.0.7z" | Write-Output
 			if ($LastExitCode -ne 0) { 
 				Add-AppveyorCompilationMessage -Message "Failed to download boost archive" -Category Error
 				$host.SetShouldExit(1)  
@@ -75,7 +75,7 @@ if ($env:FORCE_WX_BUILD -eq 1) {
 
 if (!(Test-Path "C:\Users\appveyor\wxwidgets-$env:ARCH.7z")) {
 	Add-AppveyorCompilationMessage -Message "Extracting wxWidgets for $env:ARCH"
-	wget "http://www.siusgs.com/slic3r/buildserver/win/wxwidgets-$env:ARCH.7z" -o C:\users\appveyor\wxwidgets-$env:ARCH.7z
+	wget "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=wxwidgets-$env:ARCH.7z" -o C:\users\appveyor\wxwidgets-$env:ARCH.7z
 	7z x C:\users\appveyor\wxwidgets-$env:ARCH.7z -o$env:WXDIR
 } else {
     Add-AppveyorCompilationMessage -Message "Extracting prebuilt wxWidgets."
