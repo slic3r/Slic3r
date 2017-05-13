@@ -73,3 +73,6 @@ if (!(Test-Path "C:\Users\appveyor\wxwidgets-$env:ARCH.7z")) {
     Add-AppveyorCompilationMessage -Message "Extracting prebuilt wxWidgets."
         7z x "C:\Users\appveyor\wxwidgets.7z" -oC:\dev
 }
+
+cpan App::cpanminus
+cpan PAR::Packer
