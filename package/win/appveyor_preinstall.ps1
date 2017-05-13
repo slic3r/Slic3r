@@ -2,10 +2,6 @@ mkdir C:\projects\slic3r\FreeGLUT
 if (!(Test-Path "C:\users\appveyor\freeglut.$env:ARCH.7z")) 
 {
     wget "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=freeglut-mingw-3.0.0.$env:ARCH.7z" -o C:\users\appveyor\freeglut.$env:ARCH.7z
-	if ($LastExitCode -ne 0) { 
-		Add-AppveyorCompilationMessage -Message "Failed to download freeglut" -Category Error
-		$host.SetShouldExit(1)  
-	}
 }
 cmd /c "7z x C:\Users\appveyor\freeglut.$env:ARCH.7z -oC:\projects\slic3r\FreeGLUT"
 
@@ -47,10 +43,6 @@ if(Test-Path -Path 'C:\Strawberry' ) {
         mkdir C:\dev
         if (!(Test-Path "C:\users\appveyor\boost.1.63.0.7z") -Or $env:FORCE_BOOST_REINSTALL -eq 1) {
             wget "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=boost_1_63_0.7z" -O "C:\users\appveyor\boost.1.63.0.7z" | Write-Output
-			if ($LastExitCode -ne 0) { 
-				Add-AppveyorCompilationMessage -Message "Failed to download boost archive" -Category Error
-				$host.SetShouldExit(1)  
-			}
         }
     Add-AppveyorCompilationMessage -Message "Extracting cached archive."
         cmd /c "7z x C:\Users\appveyor\boost.1.63.0.7z -oC:\dev"
