@@ -13,7 +13,7 @@ cd C:\projects\slic3r
 rm -r 'C:\Program Files (x86)\Microsoft Vis*\bin' -Force
 
 Add-AppveyorCompilationMessage -Message "Building Slic3r XS"
-perl Build.pl
+C:\Strawberry\perl\bin\perl.exe Build.pl
 
 if ($LastExitCode -ne 0) { 
     Add-AppveyorCompilationMessage -Message "XS Failed to Build" -Category Error
