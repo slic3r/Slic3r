@@ -9,8 +9,8 @@ environment:
   BOOST_DIR: C:\dev\boost_1_63_0
   WXDIR: C:\dev\wxwidgets
   WXSHARED: SHARED=0
-  FORCE_WX_BUILD: 0
-  FORCE_BOOST_REINSTALL: 0
+  FORCE_WX_BUILD: 1
+  FORCE_BOOST_REINSTALL: 1
   ENC_SECRET:
     secure: QfeTOSKXz1uFCEACqFKLNw==
   UPLOAD_USER:
