@@ -76,7 +76,7 @@ if ($env:FORCE_WX_BUILD -eq 1) {
 if (!(Test-Path "C:\Users\appveyor\wxwidgets-$env:ARCH.7z")) {
 	Add-AppveyorCompilationMessage -Message "Extracting wxWidgets for $env:ARCH"
 	wget "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=wxwidgets-$env:ARCH.7z" -o C:\users\appveyor\wxwidgets-$env:ARCH.7z
-	7z x C:\users\appveyor\wxwidgets-$env:ARCH.7z -o$env:WXDIR
+	7z x C:\users\appveyor\wxwidgets-$env:ARCH.7z -oC:\dev
 } else {
     Add-AppveyorCompilationMessage -Message "Extracting prebuilt wxWidgets."
         7z x "C:\Users\appveyor\wxwidgets.7z" -oC:\dev
