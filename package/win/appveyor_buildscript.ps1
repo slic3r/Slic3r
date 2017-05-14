@@ -17,8 +17,6 @@ C:\Strawberry\perl\bin\perl.exe Build.pl
 
 if ($LastExitCode -ne 0) { 
     Add-AppveyorCompilationMessage -Message "XS Failed to Build" -Category Error
-		$host.SetShouldExit($LastExitCode)  
-		exit
 }
 
 Add-AppveyorCompilationMessage -Message "Making ZIP package"
