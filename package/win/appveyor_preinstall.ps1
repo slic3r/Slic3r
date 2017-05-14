@@ -5,13 +5,11 @@ if (!(Test-Path "C:\users\appveyor\freeglut.$env:ARCH.7z"))
 }
 cmd /c "7z x C:\Users\appveyor\freeglut.$env:ARCH.7z -oC:\projects\slic3r\FreeGLUT"
 
-if (!(Test-Path "C:\users\appveyor\strawberry.$env:ARCH.msi"))  {
-	if ($env:ARCH -eq "32bit") {
+	if ($env:ARCH -eq "64bit") {
 		wget "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=slic3r-perl-5.24.1.4-64bit.msi" -o "C:\users\appveyor\strawberry.$env:ARCH.msi" | Write-Output
 	} else {
 		wget "http://strawberryperl.com/download/5.24.1.1/strawberry-perl-5.24.1.1-32bit.msi" -o "C:\users\appveyor\strawberry.$env:ARCH.msi" | Write-Output
 	}
-}
 
 if (!($env:ARCH -eq "32bit")) {
 	if (!(Test-Path "C:\users\appveyor\extra_perl.7z"))  {
