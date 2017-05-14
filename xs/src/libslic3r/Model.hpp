@@ -122,7 +122,6 @@ class Model
     /// \return bool
     bool add_default_instances();
 
-    // Todo: @Samir Ask what are the transformed instances?
     /// Get the bounding box of the transformed instances.
     /// \return BoundingBoxf3 a bounding box object.
     BoundingBoxf3 bounding_box() const;
@@ -131,13 +130,11 @@ class Model
     /// \brief This function calls repair function on each TriangleMesh of each model object volume
     void repair();
 
-    // Todo: @Samir Check if this is correct
     /// Center each model object instance around a point.
     /// \param point pointf object to center the model instances of model objects around
     void center_instances_around_point(const Pointf &point);
 
-    // Todo: @Samir Check if this is correct
-    /// Center each model object instance around the origin point.
+    /// Center each ModelObject instance around the origin point.
     void align_instances_to_origin();
 
     /// Translate each ModelObject with x, y, z units.
@@ -146,7 +143,7 @@ class Model
     /// \param z coordf_t units in the z direction
     void translate(coordf_t x, coordf_t y, coordf_t z);
 
-    // Todo: @Samir Ask about the difference
+    // Todo: @Samir Ask about the difference (Question is asked in the issue)
     /// Flatten all ModelObjects of the current model to a single mesh.
     /// \return TriangleMesh a single TriangleMesh object
     TriangleMesh mesh() const;
@@ -155,7 +152,7 @@ class Model
     /// \return TriangleMesh a single TriangleMesh object
     TriangleMesh raw_mesh() const;
 
-    // Todo: @Samir Ask or try to figure out
+    // Todo: @Samir Ask or try to figure out (Asked in the issue)
     /// Check if
     /// \param sizes
     /// \param dist
@@ -164,7 +161,7 @@ class Model
     /// \return
     bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb, Pointfs &out) const;
 
-    // Todo: @Samir Ask or try to figure out
+    // Todo: @Samir Ask or try to figure out (Asked in the issue)
     /// Arrange model objects preserving their instance count but altering their instance positions.
     /// \param dist
     /// \param bb
@@ -172,23 +169,21 @@ class Model
     bool arrange_objects(coordf_t dist, const BoundingBoxf* bb = NULL);
 
     // Croaks if the duplicated objects do not fit the print bed.
-    // Todo: @Samir Ask or try to figure out
-    /// Duplicate the entire model object preserving model instance relative positions
+    /// Duplicate each entire ModelObject preserving ModelInstance relative positions
     /// \param copies_num number of copies
     /// \param dist distance between cells
     /// \param bb bounding box object
     void duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
 
-    // Todo: @Samir Ask or try to figure out
-    /// Duplicate the entire model object preserving model instance relative positions
-    /// \brief This function will append more instances to each object
+    /// Duplicate each entire ModelObject preserving ModelInstance relative positions
+    /// This function will append more instances to each object
     /// and then automatically rearrange everything
     /// \param copies_num number of copies
     /// \param dist dist distance between cells
     /// \param bb bounding box object
     void duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
 
-    // Todo: @Samir Ask or try to figure out
+    // Todo: @Samir Ask or try to figure out (Asked in the issue)
     ///
     /// \param x
     /// \param y
@@ -198,12 +193,12 @@ class Model
     /// Print info about each ModelObject in the model
     void print_info() const;
 
-    // Todo: @Samir Ask or try to figure out
+    // Todo: @Samir Ask or try to figure out  (Asked in the issue)
     ///
     /// \return
     bool looks_like_multipart_object() const;
 
-    // Todo: @Samir Ask or try to figure out
+    // Todo: @Samir Ask or try to figure out  (Asked in the issue)
     ///
     void convert_multipart_object();
 };
@@ -217,7 +212,6 @@ class ModelMaterial
     t_model_material_attributes attributes;
     ///< Attributes are defined by the AMF file format, but they don't seem to be used by Slic3r for any purpose.
 
-    // Todo: @Samir Ask
     DynamicPrintConfig config;
     ///< Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
 
@@ -261,18 +255,15 @@ class ModelObject
     ///< Instances of this ModelObject. Each instance defines a shift on the print bed, rotation around the Z axis and a uniform scaling.
     ///< Instances are owned by this ModelObject.
 
-    // Todo @Samir ASK what are modifiers?
     ModelVolumePtrs volumes;
     ///< Printable and modifier volumes, each with its material ID and a set of override parameters.
     ///< ModelVolumes are owned by this ModelObject.
 
-    // Todo @Samir ASK
     DynamicPrintConfig config; ///< Configuration parameters specific to a single ModelObject, overriding the global Slic3r settings.
 
-    // Todo @Samir ASK
+
     t_layer_height_ranges layer_height_ranges; ///< Variation of a layer thickness for spans of Z coordinates.
 
-    // Todo @Samir ASK
     Pointf3 origin_translation;
     ///< This vector accumulates the total translation applied to the object by the
     ///< center_around_origin() method. Callers might want to apply the same translation
@@ -281,7 +272,7 @@ class ModelObject
 
     // these should be private but we need to expose them via XS until all methods are ported
     BoundingBoxf3 _bounding_box;
-    bool _bounding_box_valid;  //Todo @Samir ASK
+    bool _bounding_box_valid;
 
     ///  Get the owning parent Model.
     /// \return parent Model* pointer to the owner Model
@@ -317,7 +308,6 @@ class ModelObject
     /// \param idx size_t the index of the ModelInstance to be deleted
     void delete_instance(size_t idx);
 
-    //Todo @Samir ASK
     /// Delete the last created ModelInstance object.
     void delete_last_instance();
 
@@ -339,7 +329,8 @@ class ModelObject
     /// Flatten all volumes and instances into a single mesh.
     TriangleMesh raw_mesh() const;
 
-    //Todo @Samir Ask What is the raw_bounding_box?
+    /// Get the raw bounding box
+    /// \return BoundingBoxf3
     BoundingBoxf3 raw_bounding_box() const;
 
     /// Get the bounding box of the *transformed* given instance.
@@ -371,7 +362,6 @@ class ModelObject
     /// \param versor Pointf3 the scaling factor in a 3d vector.
     void scale(const Pointf3 &versor);
 
-    //ToDo : ask about which size is it ? is it of the viewport or the 3c canvas or what?
     /// Scale the current ModelObject to fit.
     /// \param size Sizef3 the size vector
     void scale_to_fit(const Sizef3 &size);
@@ -402,23 +392,19 @@ class ModelObject
     /// \return bool
     bool needed_repair() const;
 
-    // Todo @Samir study this function later
     /// Cut (Slice) the current ModelObject at a certain axis at a certain magnitude.
     /// \param axis Axis the axis to slice at (X = 0 or Y or Z)
     /// \param z coordf_t the point at the certain axis to cut(slice) the Model at
     /// \param model the owner Model
     void cut(Axis axis, coordf_t z, Model* model) const;
 
-    //Todo @Samir Ask
     /// Split the meshes of the ModelVolume in this ModelObject if there exists only one ModelVolume in this ModelObject.
     /// \param new_objects ModelObjectPtrs the generated ModelObjects after the single ModelVolume split
     void split(ModelObjectPtrs* new_objects);
 
-    //Todo @Samir Ask
     /// Update the bounding box in this ModelObject
     void update_bounding_box();   // this is a private method but we expose it until we need to expose it via XS
 
-    //Todo @Samir Ask about the repair and needed repair
     /// Print the current info of this ModelObject
     void print_info() const;
 
@@ -460,7 +446,7 @@ class ModelVolume
     DynamicPrintConfig config;
     ///< Configuration parameters specific to an object model geometry or a modifier volume,
     ///< overriding the global Slic3r settings and the ModelObject settings.
-    //ToDo @Samir Ask?
+
     bool modifier;  ///< Is it an object to be printed, or a modifier volume?
 
     /// Get the parent object owning this modifier volume.
@@ -533,7 +519,6 @@ class ModelInstance
     /// \param dont_translate bool whether to translate the mesh or not
     void transform_mesh(TriangleMesh* mesh, bool dont_translate = false) const;
 
-    // Todo @samir Ask
     /// Calculate a bounding box of a transformed mesh. To be called on an external mesh.
     /// \param mesh TriangleMesh* pointer to the the mesh
     /// \param dont_translate bool whether to translate the bounding box or not
