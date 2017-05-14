@@ -42,7 +42,7 @@ artifacts:
 - path: .\slic3r*zip
   name: slic3r-dev
 deploy_script:
-- ps:  "& package/win/appveyor_deploy.ps1"
+- ps:  "& C:/projects/slic3r/package\win/appveyor_deploy.ps1"
 on_success:
 - ps: 
 on_failure:
