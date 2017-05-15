@@ -43,8 +43,12 @@ New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
 cpanm "PAR::Packer"
 if ($env:ARCH -eq "32bit") { 
 	$perlarch = "sjlj"
+	$glut = "libglut-0_.dll"
+	$pthread= "pthreadGC2-w32.dll"
 } else {
 	$perlarch = "seh"
+	$glut = "libglut-0__.dll"
+	$pthread= "pthreadGC2-w64.dll"
 }
 
 
@@ -62,9 +66,8 @@ pp `
 -a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_${perlarch}-1.dll;libgcc_s_${perlarch}-1.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
--a "${STRAWBERRY_PATH}\c\bin\pthreadGC2-w64.dll;pthreadGC2-w64.dll"  `
--a "${STRAWBERRY_PATH}\c\bin\pthreadGC2-w32.dll;pthreadGC2-w32.dll"  `
--a "${STRAWBERRY_PATH}\c\bin\libglut-0__.dll;libglut-0__.dll"  `
+-a "${STRAWBERRY_PATH}\c\bin\${pthread};${pthread}"  `
+-a "${STRAWBERRY_PATH}\c\bin\${glut};${glut}"  `
 -M AutoLoader `
 -M B `
 -M Carp `
