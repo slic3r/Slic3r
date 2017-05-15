@@ -74,9 +74,9 @@ my @external_configs = ();
 if ($opt{load}) {
     foreach my $configfile (@{$opt{load}}) {
         $configfile = Slic3r::decode_path($configfile);
-        if (-e $configfile) {
+        if (-e Slic3r::encode_path($configfile)) {
             push @external_configs, Slic3r::Config->load($configfile);
-        } elsif (-e "$FindBin::Bin/$configfile") {
+        } elsif (-e Slic3r::encode_path("$FindBin::Bin/$configfile")) {
             printf STDERR "Loading $FindBin::Bin/$configfile\n";
             push @external_configs, Slic3r::Config->load("$FindBin::Bin/$configfile");
         } else {
@@ -99,7 +99,7 @@ if ($opt{save}) {
     if (@{$config->get_keys} > 0) {
         $config->save($opt{save});
     } else {
-        Slic3r::Config->new_from_defaults->save($opt{save});
+        Slic3r::Config->new_from_defaults->save(Slic3r::decode_path($opt{save}));
     }
 }
 
@@ -154,7 +154,7 @@ if (@ARGV) {  # slicing from command line
     if ($opt{cut}) {
         foreach my $file (@ARGV) {
             $file = Slic3r::decode_path($file);
-            my $model = Slic3r::Model->read_from_file($file);
+            my $model = Slic3r::Model->read_from_file(Slic3r::encode_path($file));
             $model->add_default_instances;
             my $mesh = $model->mesh;
             $mesh->translate(0, 0, -$mesh->bounding_box->z_min);
@@ -175,7 +175,7 @@ if (@ARGV) {  # slicing from command line
         my ($grid_x, $grid_y) = split /[,x]/, $opt{cut_grid}, 2;
         foreach my $file (@ARGV) {
             $file = Slic3r::decode_path($file);
-            my $model = Slic3r::Model->read_from_file($file);
+            my $model = Slic3r::Model->read_from_file(Slic3r::encode_path($file));
             $model->add_default_instances;
             my $mesh = $model->mesh;
             my $bb = $mesh->bounding_box;
@@ -217,7 +217,7 @@ if (@ARGV) {  # slicing from command line
     if ($opt{split}) {
         foreach my $file (@ARGV) {
             $file = Slic3r::decode_path($file);
-            my $model = Slic3r::Model->read_from_file($file);
+            my $model = Slic3r::Model->read_from_file(Slic3r::encode_path($file));
             $model->add_default_instances;
             my $mesh = $model->mesh;
             $mesh->repair;
@@ -236,10 +236,10 @@ if (@ARGV) {  # slicing from command line
         $input_file = Slic3r::decode_path($input_file);
         my $model;
         if ($opt{merge}) {
-            my @models = map Slic3r::Model->read_from_file($_), $input_file, (splice @ARGV, 0);
+            my @models = map Slic3r::Model->read_from_file($_), Slic3r::encode_path($input_file), (splice @ARGV, 0);
             $model = Slic3r::Model->merge(@models);
         } else {
-            $model = Slic3r::Model->read_from_file($input_file);
+            $model = Slic3r::Model->read_from_file(Slic3r::encode_path($input_file));
         }
         $model->repair;
         
@@ -266,7 +266,7 @@ if (@ARGV) {  # slicing from command line
                 my ($percent, $message) = @_;
                 printf "=> %s\n", $message;
             },
-            output_file     => $opt{output},
+            output_file     => Slic3r::decode_path($opt{output}),
         );
         
         $sprint->apply_config($config);

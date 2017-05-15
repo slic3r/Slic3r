@@ -384,7 +384,7 @@ sub quick_slice {
         );
         
         # keep model around
-        my $model = Slic3r::Model->read_from_file($input_file);
+        my $model = Slic3r::Model->read_from_file(Slic3r::encode_path($input_file));
         
         $sprint->apply_config($config);
         $sprint->set_model($model);

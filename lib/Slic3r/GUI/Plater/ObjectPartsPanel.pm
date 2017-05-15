@@ -350,7 +350,7 @@ sub on_btn_load {
     
     my @input_files = wxTheApp->open_model($self);
     foreach my $input_file (@input_files) {
-        my $model = eval { Slic3r::Model->read_from_file($input_file) };
+        my $model = eval { Slic3r::Model->read_from_file(Slic3r::encode_path($input_file)) };
         if ($@) {
             Slic3r::GUI::show_error($self, $@);
             next;
