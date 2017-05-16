@@ -415,9 +415,11 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
     if (paths.empty()) return "";
     
     // apply the small perimeter speed
-    if (paths.front().is_perimeter() && loop.length() <= SMALL_PERIMETER_LENGTH) {
-        if (speed == -1) speed = this->config.get_abs_value("small_perimeter_speed");
-    }
+    if (paths.front().is_perimeter()
+        && !loop.has(erOverhangPerimeter)
+        && loop.length() <= SMALL_PERIMETER_LENGTH
+        && speed == -1)
+        speed = this->config.get_abs_value("small_perimeter_speed");
     
     // extrude along the path
     std::string gcode;
