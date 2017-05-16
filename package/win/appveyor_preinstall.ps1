@@ -41,7 +41,7 @@ if(Test-Path -Path 'C:\Strawberry' ) {
     copy C:\Strawberry\c\bin\gcc.exe C:\Strawberry\c\bin\cc.exe
         cmd /c mklink /D C:\Perl C:\Strawberry\perl
         mkdir C:\dev
-        if (!(Test-Path "C:\users\appveyor\boost.1.63.0.7z") -Or $env:FORCE_BOOST_REINSTALL -eq 1) {
+        if (!(Test-Path "C:\users\appveyor\boost.1.63.0.$env:ARCH.7z") -Or $env:FORCE_BOOST_REINSTALL -eq 1) {
 			if ($env:ARCH -eq "64bit") {
 				wget "http://www.siusgs.com/slic3r/buildserver/win/boost_1_63_0-x64-gcc-6.3.0-seh.7z" -O "C:\users\appveyor\boost.1.63.0.$env:ARCH.7z" | Write-Output
 			} else {
@@ -77,6 +77,3 @@ if (!(Test-Path "C:\Users\appveyor\wxwidgets-$env:ARCH.7z")) {
     Add-AppveyorCompilationMessage -Message "Extracting prebuilt wxWidgets."
         7z x "C:\Users\appveyor\wxwidgets-$env:ARCH.7z" -oC:\dev
 }
-
-cpan App::cpanminus
-cpan PAR::Packer
