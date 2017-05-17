@@ -24,7 +24,8 @@ extern std::string escape_strings_cstyle(const std::vector<std::string> &strs);
 extern bool unescape_string_cstyle(const std::string &str, std::string &out);
 extern bool unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out);
 
-// A generic value of a configuration option.
+///	ConfigOption
+/// A generic value of a configuration option.
 class ConfigOption {
     public:
     virtual ~ConfigOption() {};
@@ -41,7 +42,7 @@ class ConfigOption {
     friend bool operator!= (const ConfigOption &a, const ConfigOption &b);
 };
 
-// Value of a single valued option (bool, int, float, string, point, enum)
+/// Value of a single valued option (bool, int, float, string, point, enum)
 template <class T>
 class ConfigOptionSingle : public ConfigOption {
     public:
@@ -55,7 +56,7 @@ class ConfigOptionSingle : public ConfigOption {
     };
 };
 
-// Value of a vector valued option (bools, ints, floats, strings, points)
+/// Virtual base class, represents value of a vector valued option (bools, ints, floats, strings, points)
 class ConfigOptionVectorBase : public ConfigOption {
     public:
     virtual ~ConfigOptionVectorBase() {};
@@ -86,6 +87,8 @@ class ConfigOptionVector : public ConfigOptionVectorBase
     };
 };
 
+/// Template specialization for a single ConfigOption
+/// Internally resolves to a double.
 class ConfigOptionFloat : public ConfigOptionSingle<double>
 {
     public:
@@ -108,6 +111,7 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
     };
 };
 
+/// Vector form of template specialization for floating point numbers.
 class ConfigOptionFloats : public ConfigOptionVector<double>
 {
     public:
@@ -231,7 +235,7 @@ class ConfigOptionString : public ConfigOptionSingle<std::string>
     };
 };
 
-// semicolon-separated strings
+/// semicolon-separated strings
 class ConfigOptionStrings : public ConfigOptionVector<std::string>
 {
     public:
@@ -482,9 +486,9 @@ class ConfigOptionEnum : public ConfigOptionSingle<T>
     static t_config_enum_values get_enum_values();
 };
 
-// Generic enum configuration value.
-// We use this one in DynamicConfig objects when creating a config value object for ConfigOptionType == coEnum.
-// In the StaticConfig, it is better to use the specialized ConfigOptionEnum<T> containers.
+/// Generic enum configuration value.
+/// We use this one in DynamicConfig objects when creating a config value object for ConfigOptionType == coEnum.
+/// In the StaticConfig, it is better to use the specialized ConfigOptionEnum<T> containers.
 class ConfigOptionEnumGeneric : public ConfigOptionInt
 {
     public:
@@ -504,35 +508,35 @@ class ConfigOptionEnumGeneric : public ConfigOptionInt
     };
 };
 
-// Type of a configuration value.
+/// Type of a configuration value.
 enum ConfigOptionType {
     coNone,
-    // single float
+    /// single float
     coFloat,
-    // vector of floats
+    /// vector of floats
     coFloats,
-    // single int
+    /// single int
     coInt,
-    // vector of ints
+    /// vector of ints
     coInts,
-    // single string
+    /// single string
     coString,
-    // vector of strings
+    /// vector of strings
     coStrings,
-    // percent value. Currently only used for infill.
+    /// percent value. Currently only used for infill.
     coPercent,
-    // a fraction or an absolute value
+    /// a fraction or an absolute value
     coFloatOrPercent,
-    // single 2d point. Currently not used.
+    /// single 2d point. Currently not used.
     coPoint,
-    // vector of 2d points. Currently used for the definition of the print bed and for the extruder offsets.
+    /// vector of 2d points. Currently used for the definition of the print bed and for the extruder offsets.
     coPoints,
     coPoint3,
-    // single boolean value
+    /// single boolean value
     coBool,
     // vector of boolean values
     coBools,
-    // a generic enum
+    /// a generic enum
     coEnum,
 };
 
@@ -545,61 +549,61 @@ class ConfigOptionDef
     // Default value of this option. The default value object is owned by ConfigDef, it is released in its destructor.
     ConfigOption* default_value;
 
-    // Usually empty. 
-    // Special values - "i_enum_open", "f_enum_open" to provide combo box for int or float selection,
-    // "select_open" - to open a selection dialog (currently only a serial port selection).
+    /// Usually empty. 
+    /// Special values - "i_enum_open", "f_enum_open" to provide combo box for int or float selection,
+    /// "select_open" - to open a selection dialog (currently only a serial port selection).
     std::string gui_type;
-    // The flags may be combined.
-    // "show_value" - even if enum_values / enum_labels are set, still display the value, not the enum label.
-    // "align_label_right" - align label to right
+    /// The flags may be combined.
+    /// "show_value" - even if enum_values / enum_labels are set, still display the value, not the enum label.
+    /// "align_label_right" - align label to right
     std::string gui_flags;
-    // Label of the GUI input field.
-    // In case the GUI input fields are grouped in some views, the label defines a short label of a grouped value,
-    // while full_label contains a label of a stand-alone field.
-    // The full label is shown, when adding an override parameter for an object or a modified object.
+    /// Label of the GUI input field.
+    /// In case the GUI input fields are grouped in some views, the label defines a short label of a grouped value,
+    /// while full_label contains a label of a stand-alone field.
+    /// The full label is shown, when adding an override parameter for an object or a modified object.
     std::string label;
     std::string full_label;
-    // Category of a configuration field, from the GUI perspective.
-    // One of: "Layers and Perimeters", "Infill", "Support material", "Speed", "Extruders", "Advanced", "Extrusion Width"
+    /// Category of a configuration field, from the GUI perspective.
+    /// One of: "Layers and Perimeters", "Infill", "Support material", "Speed", "Extruders", "Advanced", "Extrusion Width"
     std::string category;
-    // A tooltip text shown in the GUI.
+    /// A tooltip text shown in the GUI.
     std::string tooltip;
-    // Text right from the input field, usually a unit of measurement.
+    /// Text right from the input field, usually a unit of measurement.
     std::string sidetext;
-    // Format of this parameter on a command line.
+    /// Format of this parameter on a command line.
     std::string cli;
-    // Set for type == coFloatOrPercent.
-    // It provides a link to a configuration value, of which this option provides a ratio.
-    // For example, 
-    // For example external_perimeter_speed may be defined as a fraction of perimeter_speed.
+    /// Set for type == coFloatOrPercent.
+    /// It provides a link to a configuration value, of which this option provides a ratio.
+    /// For example, 
+    /// For example external_perimeter_speed may be defined as a fraction of perimeter_speed.
     t_config_option_key ratio_over;
-    // True for multiline strings.
+    /// True for multiline strings.
     bool multiline;
-    // For text input: If true, the GUI text box spans the complete page width.
+    /// For text input: If true, the GUI text box spans the complete page width.
     bool full_width;
-    // Not editable. Currently only used for the display of the number of threads.
+    /// Not editable. Currently only used for the display of the number of threads.
     bool readonly;
-    // Height of a multiline GUI text box.
+    /// Height of a multiline GUI text box.
     int height;
-    // Optional width of an input field.
+    /// Optional width of an input field.
     int width;
-    // <min, max> limit of a numeric input.
-    // If not set, the <min, max> is set to <INT_MIN, INT_MAX>
-    // By setting min=0, only nonnegative input is allowed.
+    /// <min, max> limit of a numeric input.
+    /// If not set, the <min, max> is set to <INT_MIN, INT_MAX>
+    /// By setting min=0, only nonnegative input is allowed.
     int min;
     int max;
-    // Legacy names for this configuration option.
-    // Used when parsing legacy configuration file.
+    /// Legacy names for this configuration option.
+    /// Used when parsing legacy configuration file.
     std::vector<t_config_option_key> aliases;
-    // Sometimes a single value may well define multiple values in a "beginner" mode.
-    // Currently used for aliasing "solid_layers" to "top_solid_layers", "bottom_solid_layers".
+    /// Sometimes a single value may well define multiple values in a "beginner" mode.
+    /// Currently used for aliasing "solid_layers" to "top_solid_layers", "bottom_solid_layers".
     std::vector<t_config_option_key> shortcut;
-    // Definition of values / labels for a combo box.
-    // Mostly used for enums (when type == coEnum), but may be used for ints resp. floats, if gui_type is set to "i_enum_open" resp. "f_enum_open".
+    /// Definition of values / labels for a combo box.
+    /// Mostly used for enums (when type == coEnum), but may be used for ints resp. floats, if gui_type is set to "i_enum_open" resp. "f_enum_open".
     std::vector<std::string> enum_values;
     std::vector<std::string> enum_labels;
-    // For enums (when type == coEnum). Maps enum_values to enums.
-    // Initialized by ConfigOptionEnum<xxx>::get_enum_values()
+    /// For enums (when type == coEnum). Maps enum_values to enums.
+    /// Initialized by ConfigOptionEnum<xxx>::get_enum_values()
     t_config_enum_values enum_keys_map;
 
     ConfigOptionDef() : type(coNone), default_value(NULL),
