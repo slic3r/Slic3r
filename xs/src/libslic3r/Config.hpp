@@ -24,8 +24,11 @@ extern std::string escape_strings_cstyle(const std::vector<std::string> &strs);
 extern bool unescape_string_cstyle(const std::string &str, std::string &out);
 extern bool unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out);
 
-///	ConfigOption
-/// A generic value of a configuration option.
+/// \brief Public interface for configuration options. 
+///
+/// Defines get/set for all supported data types.
+/// Default value for output values is 0 for numeric/boolean types and "" for string types.
+/// Subclasses override the appropriate functions in the interface and return real data.
 class ConfigOption {
     public:
     virtual ~ConfigOption() {};
@@ -257,6 +260,8 @@ class ConfigOptionStrings : public ConfigOptionVector<std::string>
     };
 };
 
+/// \brief Specialized floating point class to represent some percentage value of 
+/// another numeric configuration option.
 class ConfigOptionPercent : public ConfigOptionFloat
 {
     public:
@@ -264,6 +269,8 @@ class ConfigOptionPercent : public ConfigOptionFloat
     ConfigOptionPercent(double _value) : ConfigOptionFloat(_value) {};
     ConfigOptionPercent* clone() const { return new ConfigOptionPercent(this->value); };
     
+    /// Calculate the value of this option as it relates to some 
+    /// other numerical value.
     double get_abs_value(double ratio_over) const {
         return ratio_over * this->value / 100;
     };
@@ -284,6 +291,9 @@ class ConfigOptionPercent : public ConfigOptionFloat
     };
 };
 
+
+/// Combination class that can store a raw float or a percentage
+/// value. Includes a flag to indicate how it should be interpreted.
 class ConfigOptionFloatOrPercent : public ConfigOptionPercent
 {
     public:
@@ -325,6 +335,7 @@ class ConfigOptionFloatOrPercent : public ConfigOptionPercent
     };
 };
 
+/// \brief Configuration option to store a 2D (x,y) tuple. 
 class ConfigOptionPoint : public ConfigOptionSingle<Pointf>
 {
     public:
@@ -343,6 +354,7 @@ class ConfigOptionPoint : public ConfigOptionSingle<Pointf>
     bool deserialize(std::string str, bool append = false);
 };
 
+/// \brief Configuration option to store a 3D (x,y,z) tuple. 
 class ConfigOptionPoint3 : public ConfigOptionSingle<Pointf3>
 {
     public:
@@ -398,6 +410,8 @@ class ConfigOptionPoints : public ConfigOptionVector<Pointf>
     bool deserialize(std::string str, bool append = false);
 };
 
+
+/// \brief Represents a boolean flag 
 class ConfigOptionBool : public ConfigOptionSingle<bool>
 {
     public:
@@ -457,6 +471,7 @@ class ConfigOptionBools : public ConfigOptionVector<bool>
 /// Map from an enum name to an enum integer value.
 typedef std::map<std::string,int> t_config_enum_values;
 
+/// \brief Templated enumeration representation. 
 template <class T>
 class ConfigOptionEnum : public ConfigOptionSingle<T>
 {
@@ -486,7 +501,8 @@ class ConfigOptionEnum : public ConfigOptionSingle<T>
     static t_config_enum_values get_enum_values();
 };
 
-/// Generic enum configuration value.
+/// \brief Generic enum configuration value.
+///
 /// We use this one in DynamicConfig objects when creating a config value object for ConfigOptionType == coEnum.
 /// In the StaticConfig, it is better to use the specialized ConfigOptionEnum<T> containers.
 class ConfigOptionEnumGeneric : public ConfigOptionInt
@@ -544,11 +560,26 @@ enum ConfigOptionType {
 class ConfigOptionDef
 {
     public:
-    // What type? bool, int, string etc.
+    /// \brief Type of option referenced.
+    ///
+    /// The following (and any vector version) are supported:
+    /// \sa ConfigOptionFloat
+    /// \sa ConfigOptionInt
+    /// \sa ConfigOptionString
+    /// \sa ConfigOptionPercent
+    /// \sa ConfigOptionFloatOrPercent
+    /// \sa ConfigOptionPoint
+    /// \sa ConfigOptionBool
+    /// \sa ConfigOptionPoint3
+    /// \sa ConfigOptionBool
     ConfigOptionType type;
-    // Default value of this option. The default value object is owned by ConfigDef, it is released in its destructor.
+    /// \brief Default value of this option. 
+    ///
+    /// The default value object is owned by ConfigDef, it is released in its destructor.
     ConfigOption* default_value;
 
+    /// \brief Specialization to indicate to the GUI what kind of control is more appropriate.
+    ///
     /// Usually empty. 
     /// Special values - "i_enum_open", "f_enum_open" to provide combo box for int or float selection,
     /// "select_open" - to open a selection dialog (currently only a serial port selection).
@@ -581,7 +612,9 @@ class ConfigOptionDef
     bool multiline;
     /// For text input: If true, the GUI text box spans the complete page width.
     bool full_width;
-    /// Not editable. Currently only used for the display of the number of threads.
+
+    /// This configuration item is not editable. 
+    /// Currently only used for the display of the number of threads.
     bool readonly;
     /// Height of a multiline GUI text box.
     int height;
@@ -592,6 +625,7 @@ class ConfigOptionDef
     /// By setting min=0, only nonnegative input is allowed.
     int min;
     int max;
+
     /// Legacy names for this configuration option.
     /// Used when parsing legacy configuration file.
     std::vector<t_config_option_key> aliases;
@@ -712,6 +746,7 @@ class StaticConfig : public virtual ConfigBase
     /// virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) = 0;
 };
 
+/// Specialization of std::exception to indicate that an unknown config option has been encountered.
 class UnknownOptionException : public std::exception {};
 
 }
