@@ -95,7 +95,7 @@ sub load {
     
     # legacy syntax of load()
     my $config = $class->new;
-    $config->_load(Slic3r::encode_path($file));
+    $config->_load($file);
     return $config;
 }
 
@@ -103,7 +103,7 @@ sub save {
     my $self = shift;
     my ($file) = @_;
     
-    return $self->_save(Slic3r::encode_path($file));
+    return $self->_save($file);
 }
 
 # Deserialize a perl hash into the underlying C++ Slic3r::DynamicConfig class,

@@ -384,7 +384,7 @@ sub quick_slice {
         );
         
         # keep model around
-        my $model = Slic3r::Model->read_from_file(Slic3r::encode_path($input_file));
+        my $model = Slic3r::Model->read_from_file($input_file);
         
         $sprint->apply_config($config);
         $sprint->set_model($model);
@@ -469,9 +469,9 @@ sub repair_stl {
     }
     
     my $tmesh = Slic3r::TriangleMesh->new;
-    $tmesh->ReadSTLFile(Slic3r::encode_path($input_file));
+    $tmesh->ReadSTLFile($input_file);
     $tmesh->repair;
-    $tmesh->WriteOBJFile(Slic3r::encode_path($output_file));
+    $tmesh->WriteOBJFile($output_file);
     Slic3r::GUI::show_info($self, "Your file was repaired.", "Repair");
 }
 
