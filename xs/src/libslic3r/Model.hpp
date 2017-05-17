@@ -127,7 +127,7 @@ class Model
     BoundingBoxf3 bounding_box() const;
 
     /// Repair the ModelObjects of the current Model.
-    /// \brief This function calls repair function on each TriangleMesh of each model object volume
+    /// This function calls repair function on each TriangleMesh of each model object volume
     void repair();
 
     /// Center each model object instance around a point.
@@ -143,29 +143,27 @@ class Model
     /// \param z coordf_t units in the z direction
     void translate(coordf_t x, coordf_t y, coordf_t z);
 
-    // Todo: @Samir Ask about the difference (Question is asked in the issue)
-    /// Flatten all ModelObjects of the current model to a single mesh.
+    /// Flatten all ModelObjects of the current model to a single mesh
+    /// after performing extra transformations (if the model was rotated or translated).
     /// \return TriangleMesh a single TriangleMesh object
     TriangleMesh mesh() const;
 
-    /// Flatten all ModelObjects of the current model to a single mesh.
+    /// Flatten all ModelObjects of the current model to a single mesh without any extra processing.
     /// \return TriangleMesh a single TriangleMesh object
     TriangleMesh raw_mesh() const;
 
-    // Todo: @Samir Ask or try to figure out (Asked in the issue)
-    /// Check if
-    /// \param sizes
-    /// \param dist
-    /// \param bb
-    /// \param out
-    /// \return
+    /// Arrange ModelObjects preserving their ModelInstance count without altering their ModelInstance positions.
+    /// \param sizes Pointfs& number of parts
+    /// \param dist coordf_t distance between cells
+    /// \param bb BoundingBoxf* pointer to the bounding box of the area to fill
+    /// \param out Pointfs&
+    /// \return bool whether the function finished arranging objects or it is impossible to arrange
     bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb, Pointfs &out) const;
 
-    // Todo: @Samir Ask or try to figure out (Asked in the issue)
-    /// Arrange model objects preserving their instance count but altering their instance positions.
-    /// \param dist
-    /// \param bb
-    /// \return
+    /// Arrange ModelObjects preserving their ModelInstance count but altering their ModelInstance positions.
+    /// \param dist coordf_t distance between cells
+    /// \param bb BoundingBoxf* pointer to the bounding box of the area to fill
+    /// \return bool whether the function finished arranging objects or it is impossible to arrange
     bool arrange_objects(coordf_t dist, const BoundingBoxf* bb = NULL);
 
     // Croaks if the duplicated objects do not fit the print bed.
@@ -183,23 +181,22 @@ class Model
     /// \param bb bounding box object
     void duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
 
-    // Todo: @Samir Ask or try to figure out (Asked in the issue)
-    ///
-    /// \param x
-    /// \param y
-    /// \param dist
+    /// Replicate a single ModelObject and arranges them on a grid. It's used only in CLI mode.
+    /// Grid duplication is not supported with multiple objects
+    /// \param x size_t number of duplicates in x direction
+    /// \param y size_t offset  number of duplicates in y direction
+    /// \param dist coordf_t distance supposed to be between the duplicated ModelObjects
     void duplicate_objects_grid(size_t x, size_t y, coordf_t dist);
 
     /// Print info about each ModelObject in the model
     void print_info() const;
 
-    // Todo: @Samir Ask or try to figure out  (Asked in the issue)
-    ///
-    /// \return
+    /// Check to see if the current Model has characteristics of having multiple parts (usually multiple volumes, etc).
+    /// \return bool
     bool looks_like_multipart_object() const;
 
-    // Todo: @Samir Ask or try to figure out  (Asked in the issue)
-    ///
+
+    /// Take all of the ModelObjects in the current Model and combines them into a single ModelObject
     void convert_multipart_object();
 };
 
