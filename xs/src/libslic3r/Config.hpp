@@ -15,7 +15,7 @@
 
 namespace Slic3r {
 
-// Name of the configuration option.
+/// Name of the configuration option.
 typedef std::string t_config_option_key;
 typedef std::vector<std::string> t_config_option_keys;
 
@@ -63,7 +63,7 @@ class ConfigOptionVectorBase : public ConfigOption {
     virtual std::vector<std::string> vserialize() const = 0;
 };
 
-// Value of a vector valued option (bools, ints, floats, strings, points), template
+/// Value of a vector valued option (bools, ints, floats, strings, points), template
 template <class T>
 class ConfigOptionVector : public ConfigOptionVectorBase
 {
@@ -454,7 +454,7 @@ class ConfigOptionBools : public ConfigOptionVector<bool>
     };
 };
 
-// Map from an enum name to an enum integer value.
+/// Map from an enum name to an enum integer value.
 typedef std::map<std::string,int> t_config_enum_values;
 
 template <class T>
@@ -481,7 +481,7 @@ class ConfigOptionEnum : public ConfigOptionSingle<T>
         return true;
     };
 
-    // Map from an enum name to an enum integer value.
+    /// Map from an enum name to an enum integer value.
     //FIXME The map is called often, it shall be initialized statically.
     static t_config_enum_values get_enum_values();
 };
@@ -534,13 +534,13 @@ enum ConfigOptionType {
     coPoint3,
     /// single boolean value
     coBool,
-    // vector of boolean values
+    /// vector of boolean values
     coBools,
     /// a generic enum
     coEnum,
 };
 
-// Definition of a configuration value for the purpose of GUI presentation, editing, value mapping and config file handling.
+/// Definition of a configuration value for the purpose of GUI presentation, editing, value mapping and config file handling.
 class ConfigOptionDef
 {
     public:
@@ -616,14 +616,14 @@ class ConfigOptionDef
     ConfigOptionDef& operator= (ConfigOptionDef other);
 };
 
-// Map from a config option name to its definition.
-// The definition does not carry an actual value of the config option, only its constant default value.
-// t_config_option_key is std::string
+/// Map from a config option name to its definition.
+//i The definition does not carry an actual value of the config option, only its constant default value.
+//i t_config_option_key is std::string
 typedef std::map<t_config_option_key,ConfigOptionDef> t_optiondef_map;
 
-// Definition of configuration values for the purpose of GUI presentation, editing, value mapping and config file handling.
-// The configuration definition is static: It does not carry the actual configuration values,
-// but it carries the defaults of the configuration values.
+/// Definition of configuration values for the purpose of GUI presentation, editing, value mapping and config file handling.
+/// The configuration definition is static: It does not carry the actual configuration values,
+/// but it carries the defaults of the configuration values.
 class ConfigDef
 {
     public:
@@ -635,14 +635,14 @@ class ConfigDef
     void merge(const ConfigDef &other);
 };
 
-// An abstract configuration store.
+/// An abstract configuration store.
 class ConfigBase
 {
     public:
-    // Definition of configuration values for the purpose of GUI presentation, editing, value mapping and config file handling.
-    // The configuration definition is static: It does not carry the actual configuration values,
-    // but it carries the defaults of the configuration values.
-    // ConfigBase does not own ConfigDef, it only references it.
+    /// Definition of configuration values for the purpose of GUI presentation, editing, value mapping and config file handling.
+    /// The configuration definition is static: It does not carry the actual configuration values,
+    /// but it carries the defaults of the configuration values.
+    /// ConfigBase does not own ConfigDef, it only references it.
     const ConfigDef* def;
     
     ConfigBase() : def(NULL) {};
@@ -672,8 +672,8 @@ class ConfigBase
     void save(const std::string &file) const;
 };
 
-// Configuration store with dynamic number of configuration values.
-// In Slic3r, the dynamic config is mostly used at the user interface layer.
+/// Configuration store with dynamic number of configuration values.
+/// In Slic3r, the dynamic config is mostly used at the user interface layer.
 class DynamicConfig : public virtual ConfigBase
 {
     public:
@@ -696,20 +696,20 @@ class DynamicConfig : public virtual ConfigBase
     t_options_map options;
 };
 
-// Configuration store with a static definition of configuration values.
-// In Slic3r, the static configuration stores are during the slicing / g-code generation for efficiency reasons,
-// because the configuration values could be accessed directly.
+/// Configuration store with a static definition of configuration values.
+/// In Slic3r, the static configuration stores are during the slicing / g-code generation for efficiency reasons,
+/// because the configuration values could be accessed directly.
 class StaticConfig : public virtual ConfigBase
 {
     public:
     StaticConfig() : ConfigBase() {};
-    // Gets list of config option names for each config option of this->def, which has a static counter-part defined by the derived object
-    // and which could be resolved by this->optptr(key) call.
+    /// Gets list of config option names for each config option of this->def, which has a static counter-part defined by the derived object
+    /// and which could be resolved by this->optptr(key) call.
     t_config_option_keys keys() const;
-    // Set all statically defined config options to their defaults defined by this->def.
+    /// Set all statically defined config options to their defaults defined by this->def.
     void set_defaults();
-    // The derived class has to implement optptr to resolve a static configuration value.
-    // virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) = 0;
+    /// The derived class has to implement optptr to resolve a static configuration value.
+    /// virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) = 0;
 };
 
 class UnknownOptionException : public std::exception {};
