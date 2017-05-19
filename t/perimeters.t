@@ -403,15 +403,13 @@ use Slic3r::Test;
     my $test2 = sub {
         my ($print) = @_;
         my $num_bridges = 0;
-        Slic3r::GCode::Reader->new->parse(my $gcode = Slic3r::Test::gcode($print), sub {
+        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
             my ($self, $cmd, $args, $info) = @_;
         
             if ($info->{extruding} && $info->{dist_XY} > 0) {
                 $num_bridges++ if ($args->{F} // $self->F) == $config->bridge_speed*60;
             }
         });
-        open my $fh, ">", "bridges.gcode";
-        print $fh $gcode;
         return $num_bridges;
     };
     is $test2->(Slic3r::Test::init_print('overhang', config => $config)), $config->perimeters*3,
