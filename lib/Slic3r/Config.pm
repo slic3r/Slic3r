@@ -95,6 +95,7 @@ sub load {
     
     # legacy syntax of load()
     my $config = $class->new;
+	
     $config->_load($file);
     return $config;
 }

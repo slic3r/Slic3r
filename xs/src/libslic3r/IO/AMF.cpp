@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <boost/move/move.hpp>
+#include <boost/nowide/fstream.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <expat/expat.h>
 
@@ -455,7 +456,7 @@ AMF::read(std::string input_file, Model* model)
         return false;
     }
     
-    std::fstream fin(input_file.c_str(), std::ios::in);
+    boost::nowide::ifstream fin(input_file, std::ios::in);
     if (!fin.is_open()) {
         boost::nowide::cerr << "Cannot open file: " << input_file << std::endl;
         return false;
@@ -468,8 +469,9 @@ AMF::read(std::string input_file, Model* model)
 
     char buff[8192];
     bool result = false;
-    while (fin.read(buff, sizeof(buff))) {
-        if (fin.fail()) {
+    while (!fin.eof()) {
+		fin.read(buff, sizeof(buff));
+        if (fin.bad()) {
             printf("AMF parser: Read error\n");
             break;
         }
@@ -498,12 +500,12 @@ AMF::write(Model& model, std::string output_file)
 {
     using namespace std;
     
-    ofstream file;
+    boost::nowide::ofstream file;
     file.open(output_file, ios::out | ios::trunc);
     
     file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << endl
          << "<amf unit=\"millimeter\">" << endl
-         << "<metadata type=\"cad\">Slic3r " << SLIC3R_VERSION << "</metadata>" << endl;
+         << "  <metadata type=\"cad\">Slic3r " << SLIC3R_VERSION << "</metadata>" << endl;
     
     for (const auto &material : model.materials) {
         if (material.first.empty())
@@ -597,7 +599,7 @@ AMF::write(Model& model, std::string output_file)
                 << "    <instance objectid=\"" << object_id << "\">" << endl
                 << "      <deltax>" << instance->offset.x + object->origin_translation.x << "</deltax>" << endl
                 << "      <deltay>" << instance->offset.y + object->origin_translation.y << "</deltay>" << endl
-                << "      <rz>%" << instance->rotation << "</rz>" << endl
+                << "      <rz>" << instance->rotation << "</rz>" << endl
                 << "      <scale>" << instance->scaling_factor << "</scale>" << endl
                 << "    </instance>" << endl;
     }

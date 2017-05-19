@@ -10,9 +10,11 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/config.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/nowide/cenv.hpp>
+#include <boost/nowide/fstream.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <string.h>
@@ -387,7 +389,8 @@ ConfigBase::load(const std::string &file)
 {
     namespace pt = boost::property_tree;
     pt::ptree tree;
-    pt::read_ini(file, tree);
+	boost::nowide::ifstream ifs(file);
+	pt::read_ini(ifs, tree);
     BOOST_FOREACH(const pt::ptree::value_type &v, tree) {
         try {
             t_config_option_key opt_key = v.first;
@@ -403,8 +406,8 @@ void
 ConfigBase::save(const std::string &file) const
 {
     using namespace std;
-    ofstream c;
-    c.open(file.c_str(), ios::out | ios::trunc);
+    boost::nowide::ofstream c;
+    c.open(file, ios::out | ios::trunc);
 
     {
         time_t now;
