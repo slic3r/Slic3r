@@ -14,6 +14,7 @@
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/iostream.hpp>
 
+
 using namespace Slic3r;
 
 void confess_at(const char *file, int line, const char *func, const char *pat, ...){}
