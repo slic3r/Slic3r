@@ -816,7 +816,7 @@ sub add_tin {
     return if $offset < 0;
     
     foreach my $input_file (@input_files) {
-        my $model = eval { Slic3r::Model->read_from_file(Slic3r::encode_path($input_file)) };
+        my $model = eval { Slic3r::Model->read_from_file($input_file) };
         Slic3r::GUI::show_error($self, $@) if $@;
         next if !$model;
 
@@ -847,7 +847,7 @@ sub load_file {
     
     local $SIG{__WARN__} = Slic3r::GUI::warning_catcher($self);
     
-    my $model = eval { Slic3r::Model->read_from_file(Slic3r::encode_path($input_file)) };
+    my $model = eval { Slic3r::Model->read_from_file($input_file) };
     Slic3r::GUI::show_error($self, $@) if $@;
     
     my @obj_idx = ();

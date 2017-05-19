@@ -723,7 +723,7 @@ class DynamicConfig : public virtual ConfigBase
     void clear();
     bool empty() const;
     void read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra);
-    void read_cli(const int argc, const char **argv, t_config_option_keys* extra);
+    void read_cli(int argc, char** argv, t_config_option_keys* extra);
     
     private:
     typedef std::map<t_config_option_key,ConfigOption*> t_options_map;

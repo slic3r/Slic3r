@@ -11,14 +11,21 @@
 #include <iostream>
 #include <math.h>
 #include <boost/filesystem.hpp>
+#include <boost/nowide/args.hpp>
+#include <boost/nowide/iostream.hpp>
+
 
 using namespace Slic3r;
 
 void confess_at(const char *file, int line, const char *func, const char *pat, ...){}
 
 int
-main(const int argc, const char **argv)
+main(int argc, char **argv)
 {
+    // Convert arguments to UTF-8 (needed on Windows).
+    // argv then points to memory owned by a.
+    boost::nowide::args a(argc, argv);
+    
     // parse all command line options into a DynamicConfig
     ConfigDef config_def;
     config_def.merge(cli_config_def);
@@ -36,7 +43,7 @@ main(const int argc, const char **argv)
     // load config files supplied via --load
     for (const std::string &file : cli_config.load.values) {
         if (!boost::filesystem::exists(file)) {
-            std::cout << "No such file: " << file << std::endl;
+            boost::nowide::cout << "No such file: " << file << std::endl;
             exit(1);
         }
         
@@ -44,7 +51,7 @@ main(const int argc, const char **argv)
         try {
             c.load(file);
         } catch (std::exception &e) {
-            std::cout << "Error while reading config file: " << e.what() << std::endl;
+            boost::nowide::cout << "Error while reading config file: " << e.what() << std::endl;
             exit(1);
         }
         c.normalize();
@@ -63,7 +70,7 @@ main(const int argc, const char **argv)
     std::vector<Model> models;
     for (const t_config_option_key &file : input_files) {
         if (!boost::filesystem::exists(file)) {
-            std::cerr << "No such file: " << file << std::endl;
+            boost::nowide::cerr << "No such file: " << file << std::endl;
             exit(1);
         }
         
@@ -71,12 +78,12 @@ main(const int argc, const char **argv)
         try {
             model = Model::read_from_file(file);
         } catch (std::exception &e) {
-            std::cerr << file << ": " << e.what() << std::endl;
+            boost::nowide::cerr << file << ": " << e.what() << std::endl;
             exit(1);
         }
         
         if (model.objects.empty()) {
-            std::cerr << "Error: file is empty: " << file << std::endl;
+            boost::nowide::cerr << "Error: file is empty: " << file << std::endl;
             continue;
         }
         
@@ -109,7 +116,7 @@ main(const int argc, const char **argv)
             TriangleMesh mesh = model.mesh();
             mesh.repair();
             IO::OBJ::write(mesh, outfile);
-            std::cout << "File exported to " << outfile << std::endl;
+            boost::nowide::cout << "File exported to " << outfile << std::endl;
         } else if (cli_config.export_pov) {
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model.objects.front()->input_file + ".pov";
@@ -117,7 +124,7 @@ main(const int argc, const char **argv)
             TriangleMesh mesh = model.mesh();
             mesh.repair();
             IO::POV::write(mesh, outfile);
-            std::cout << "File exported to " << outfile << std::endl;
+            boost::nowide::cout << "File exported to " << outfile << std::endl;
         } else if (cli_config.export_svg) {
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model.objects.front()->input_file + ".svg";
@@ -126,7 +133,7 @@ main(const int argc, const char **argv)
             print.config.apply(print_config, true);
             print.slice();
             print.write_svg(outfile);
-            std::cout << "SVG file exported to " << outfile << std::endl;
+            boost::nowide::cout << "SVG file exported to " << outfile << std::endl;
         } else if (cli_config.cut_x > 0 || cli_config.cut_y > 0 || cli_config.cut > 0) {
             model.repair();
             model.translate(0, 0, -model.bounding_box().min.z);
@@ -167,7 +174,7 @@ main(const int argc, const char **argv)
                 delete m;
             }
         } else {
-            std::cerr << "error: command not supported" << std::endl;
+            boost::nowide::cerr << "error: command not supported" << std::endl;
             return 1;
         }
     }
