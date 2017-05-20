@@ -47,13 +47,13 @@ sub new {
             delete $presets{$_} for map $_->printer_name, @panels;
             
             foreach my $preset_name (sort keys %presets) {
-                my $config = $presets{$preset_name}->dirty_config;
-                next if !$config->serial_port;
+                my $preset = $presets{$preset_name};
+                next if !$preset->dirty_config->serial_port;
                 
                 my $id = &Wx::NewId();
                 $menu->Append($id, $preset_name);
                 EVT_MENU($menu, $id, sub {
-                    $self->add_printer($preset_name, $config);
+                    $self->add_printer($preset);
                 });
             }
             $self->PopupMenu($menu, $btn->GetPosition);
@@ -100,10 +100,10 @@ sub OnActivate {
     
     # get all available presets
     my %presets = ();
-    {
-        my %all = map { $_->name => $_ } @{wxTheApp->presets->{printer}};
-        my %configs = map { my $name = $_; $name => $all{$name}->load_config } keys %all;
-        %presets = map { $_ => $configs{$_} } grep $configs{$_}->serial_port, keys %all;
+    foreach my $preset (@{wxTheApp->presets->{printer}}) {
+        $preset->load_config;
+        next if !$preset->dirty_config->serial_port;
+        $presets{$preset->name} = $preset;
     }
     
     # decide which ones we want to keep
@@ -124,7 +124,7 @@ sub OnActivate {
             # enable printers whose port is available
             my %ports = map { $_ => 1 } wxTheApp->scan_serial_ports;
             $active{$_} = 1
-                for grep exists $ports{$presets{$_}->serial_port}, keys %presets;
+                for grep exists $ports{$presets{$_}->dirty_config->serial_port}, keys %presets;
         }
         if (!%active && $self->_selected_printer_preset) {
             # enable currently selected printer if it is configured
@@ -140,7 +140,7 @@ sub OnActivate {
         $self->{sizer}->DetachWindow($panel);
         $panel->Destroy;
     }
-    $self->add_printer($_, $presets{$_}) for sort keys %active;
+    $self->add_printer($presets{$_}) for sort keys %active;
     
     # show/hide the warning about no printers
     $self->{text_no_printers}->Show(!%presets);
@@ -156,16 +156,16 @@ sub OnActivate {
 }
 
 sub add_printer {
-    my ($self, $printer_name, $config) = @_;
+    my ($self, $preset) = @_;
     
     # check that printer doesn't exist already
     foreach my $panel ($self->print_panels) {
-        if ($panel->printer_name eq $printer_name) {
+        if ($panel->printer_name eq $preset->name) {
             return $panel;
         }
     }
     
-    my $printer_panel = Slic3r::GUI::Controller::PrinterPanel->new($self, $printer_name, $config);
+    my $printer_panel = Slic3r::GUI::Controller::PrinterPanel->new($self, $preset->name, $preset);
     $self->{sizer}->Prepend($printer_panel, 0, wxEXPAND | wxTOP | wxLEFT | wxRIGHT, 10);
     $self->Layout;
     

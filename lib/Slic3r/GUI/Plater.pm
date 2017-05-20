@@ -584,6 +584,8 @@ sub _on_select_preset {
         # and the dirty options.
         $o_config->clear;
         foreach my $opt_key (@$shortcuts, $presets[0]->dirty_options) {
+            # Don't add shortcut for shortcuts!
+            next if $opt_key eq 'shortcuts';
             $o_config->set($opt_key, $config->get($opt_key));
         }
         
