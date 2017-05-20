@@ -208,20 +208,29 @@ sub contact_area {
                 
                 if ($conf->dont_support_bridges) {
                     # compute the area of bridging perimeters
-                    # Note: this is duplicate code from GCode.pm, we need to refactor
-                    
                     my $bridged_perimeters;  # Polygons
                     {
                         my $bridge_flow = $layerm->flow(FLOW_ROLE_PERIMETER, 1);
                         
-                        my $nozzle_diameter = $self->print_config->get_at('nozzle_diameter', $layerm->region->config->perimeter_extruder-1);
-                        my $lower_grown_slices = offset([ map @$_, @{$lower_layer->slices} ], +scale($nozzle_diameter/2));
+                        # Get the lower layer's slices and grow them by half the nozzle diameter
+                        # because we will consider the upper perimeters supported even if half nozzle
+                        # falls outside the lower slices.
+                        my $lower_grown_slices;
+                        {
+                            my $nozzle_diameter = $self->print_config->get_at('nozzle_diameter', $layerm->region->config->perimeter_extruder-1);
+                            $lower_grown_slices = offset(
+                                [ map @$_, @{$lower_layer->slices} ],
+                                +scale($nozzle_diameter/2),
+                            );
+                        }
                         
-                        # TODO: split_at_first_point() could split a bridge mid-way
-                        my @overhang_perimeters =
-                            map { $_->isa('Slic3r::ExtrusionLoop') ? $_->polygon->split_at_first_point : $_->polyline->clone }
-                            map @$_, @{$layerm->perimeters};
+                        # Get all perimeters as polylines.
+                        # TODO: split_at_first_point() (called by as_polyline() for ExtrusionLoops)
+                        # could split a bridge mid-way
+                        my @overhang_perimeters = map $_->as_polyline, @{$layerm->perimeters->flatten};
                         
+                        # Only consider the overhang parts of such perimeters,
+                        # overhangs being those parts not supported by 
                         # workaround for Clipper bug, see Slic3r::Polygon::clip_as_polyline()
                         $_->[0]->translate(1,0) for @overhang_perimeters;
                         @overhang_perimeters = @{diff_pl(
@@ -243,11 +252,16 @@ sub contact_area {
                         
                         # convert bridging polylines into polygons by inflating them with their thickness
                         {
-                            # since we're dealing with bridges, we can't assume width is larger than spacing,
-                            # so we take the largest value and also apply safety offset to be ensure no gaps
-                            # are left in between
-                            my $w = max($bridge_flow->scaled_width, $bridge_flow->scaled_spacing);
+                            # For bridges we can't assume width is larger than spacing because they
+                            # are positioned according to non-bridging perimeters spacing.
+                            my $w = max(
+                                $bridge_flow->scaled_width,
+                                $bridge_flow->scaled_spacing,
+                                $fw,  # width of external perimeters
+                                $layerm->flow(FLOW_ROLE_PERIMETER)->scaled_width,
+                            );
                             $bridged_perimeters = union([
+                                # Also apply safety offset to ensure no gaps are left in between.
                                 map @{$_->grow($w/2 + 10)}, @overhang_perimeters
                             ]);
                         }
@@ -258,7 +272,7 @@ sub contact_area {
                         my @bridges = map $_->expolygon,
                             grep $_->bridge_angle != -1,
                             @{$layerm->fill_surfaces->filter_by_type(S_TYPE_BOTTOMBRIDGE)};
-                            
+                        
                         $diff = diff(
                             $diff,
                             [

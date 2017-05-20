@@ -15,7 +15,7 @@
 
 namespace Slic3r {
 
-// Name of the configuration option.
+/// Name of the configuration option.
 typedef std::string t_config_option_key;
 typedef std::vector<std::string> t_config_option_keys;
 
@@ -24,7 +24,11 @@ extern std::string escape_strings_cstyle(const std::vector<std::string> &strs);
 extern bool unescape_string_cstyle(const std::string &str, std::string &out);
 extern bool unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out);
 
-// A generic value of a configuration option.
+/// \brief Public interface for configuration options. 
+///
+/// Defines get/set for all supported data types.
+/// Default value for output values is 0 for numeric/boolean types and "" for string types.
+/// Subclasses override the appropriate functions in the interface and return real data.
 class ConfigOption {
     public:
     virtual ~ConfigOption() {};
@@ -41,7 +45,7 @@ class ConfigOption {
     friend bool operator!= (const ConfigOption &a, const ConfigOption &b);
 };
 
-// Value of a single valued option (bool, int, float, string, point, enum)
+/// Value of a single valued option (bool, int, float, string, point, enum)
 template <class T>
 class ConfigOptionSingle : public ConfigOption {
     public:
@@ -55,14 +59,14 @@ class ConfigOptionSingle : public ConfigOption {
     };
 };
 
-// Value of a vector valued option (bools, ints, floats, strings, points)
+/// Virtual base class, represents value of a vector valued option (bools, ints, floats, strings, points)
 class ConfigOptionVectorBase : public ConfigOption {
     public:
     virtual ~ConfigOptionVectorBase() {};
     virtual std::vector<std::string> vserialize() const = 0;
 };
 
-// Value of a vector valued option (bools, ints, floats, strings, points), template
+/// Value of a vector valued option (bools, ints, floats, strings, points), template
 template <class T>
 class ConfigOptionVector : public ConfigOptionVectorBase
 {
@@ -86,6 +90,8 @@ class ConfigOptionVector : public ConfigOptionVectorBase
     };
 };
 
+/// Template specialization for a single ConfigOption
+/// Internally resolves to a double.
 class ConfigOptionFloat : public ConfigOptionSingle<double>
 {
     public:
@@ -108,6 +114,7 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
     };
 };
 
+/// Vector form of template specialization for floating point numbers.
 class ConfigOptionFloats : public ConfigOptionVector<double>
 {
     public:
@@ -231,7 +238,7 @@ class ConfigOptionString : public ConfigOptionSingle<std::string>
     };
 };
 
-// semicolon-separated strings
+/// semicolon-separated strings
 class ConfigOptionStrings : public ConfigOptionVector<std::string>
 {
     public:
@@ -253,6 +260,8 @@ class ConfigOptionStrings : public ConfigOptionVector<std::string>
     };
 };
 
+/// \brief Specialized floating point class to represent some percentage value of 
+/// another numeric configuration option.
 class ConfigOptionPercent : public ConfigOptionFloat
 {
     public:
@@ -260,6 +269,8 @@ class ConfigOptionPercent : public ConfigOptionFloat
     ConfigOptionPercent(double _value) : ConfigOptionFloat(_value) {};
     ConfigOptionPercent* clone() const { return new ConfigOptionPercent(this->value); };
     
+    /// Calculate the value of this option as it relates to some 
+    /// other numerical value.
     double get_abs_value(double ratio_over) const {
         return ratio_over * this->value / 100;
     };
@@ -280,6 +291,9 @@ class ConfigOptionPercent : public ConfigOptionFloat
     };
 };
 
+
+/// Combination class that can store a raw float or a percentage
+/// value. Includes a flag to indicate how it should be interpreted.
 class ConfigOptionFloatOrPercent : public ConfigOptionPercent
 {
     public:
@@ -321,6 +335,7 @@ class ConfigOptionFloatOrPercent : public ConfigOptionPercent
     };
 };
 
+/// \brief Configuration option to store a 2D (x,y) tuple. 
 class ConfigOptionPoint : public ConfigOptionSingle<Pointf>
 {
     public:
@@ -339,6 +354,7 @@ class ConfigOptionPoint : public ConfigOptionSingle<Pointf>
     bool deserialize(std::string str, bool append = false);
 };
 
+/// \brief Configuration option to store a 3D (x,y,z) tuple. 
 class ConfigOptionPoint3 : public ConfigOptionSingle<Pointf3>
 {
     public:
@@ -394,6 +410,8 @@ class ConfigOptionPoints : public ConfigOptionVector<Pointf>
     bool deserialize(std::string str, bool append = false);
 };
 
+
+/// \brief Represents a boolean flag 
 class ConfigOptionBool : public ConfigOptionSingle<bool>
 {
     public:
@@ -450,9 +468,10 @@ class ConfigOptionBools : public ConfigOptionVector<bool>
     };
 };
 
-// Map from an enum name to an enum integer value.
+/// Map from an enum name to an enum integer value.
 typedef std::map<std::string,int> t_config_enum_values;
 
+/// \brief Templated enumeration representation. 
 template <class T>
 class ConfigOptionEnum : public ConfigOptionSingle<T>
 {
@@ -477,14 +496,15 @@ class ConfigOptionEnum : public ConfigOptionSingle<T>
         return true;
     };
 
-    // Map from an enum name to an enum integer value.
+    /// Map from an enum name to an enum integer value.
     //FIXME The map is called often, it shall be initialized statically.
     static t_config_enum_values get_enum_values();
 };
 
-// Generic enum configuration value.
-// We use this one in DynamicConfig objects when creating a config value object for ConfigOptionType == coEnum.
-// In the StaticConfig, it is better to use the specialized ConfigOptionEnum<T> containers.
+/// \brief Generic enum configuration value.
+///
+/// We use this one in DynamicConfig objects when creating a config value object for ConfigOptionType == coEnum.
+/// In the StaticConfig, it is better to use the specialized ConfigOptionEnum<T> containers.
 class ConfigOptionEnumGeneric : public ConfigOptionInt
 {
     public:
@@ -504,102 +524,120 @@ class ConfigOptionEnumGeneric : public ConfigOptionInt
     };
 };
 
-// Type of a configuration value.
+/// Type of a configuration value.
 enum ConfigOptionType {
     coNone,
-    // single float
+    /// single float
     coFloat,
-    // vector of floats
+    /// vector of floats
     coFloats,
-    // single int
+    /// single int
     coInt,
-    // vector of ints
+    /// vector of ints
     coInts,
-    // single string
+    /// single string
     coString,
-    // vector of strings
+    /// vector of strings
     coStrings,
-    // percent value. Currently only used for infill.
+    /// percent value. Currently only used for infill.
     coPercent,
-    // a fraction or an absolute value
+    /// a fraction or an absolute value
     coFloatOrPercent,
-    // single 2d point. Currently not used.
+    /// single 2d point. Currently not used.
     coPoint,
-    // vector of 2d points. Currently used for the definition of the print bed and for the extruder offsets.
+    /// vector of 2d points. Currently used for the definition of the print bed and for the extruder offsets.
     coPoints,
     coPoint3,
-    // single boolean value
+    /// single boolean value
     coBool,
-    // vector of boolean values
+    /// vector of boolean values
     coBools,
-    // a generic enum
+    /// a generic enum
     coEnum,
 };
 
-// Definition of a configuration value for the purpose of GUI presentation, editing, value mapping and config file handling.
+/// Definition of a configuration value for the purpose of GUI presentation, editing, value mapping and config file handling.
 class ConfigOptionDef
 {
     public:
-    // What type? bool, int, string etc.
+    /// \brief Type of option referenced.
+    ///
+    /// The following (and any vector version) are supported:
+    /// \sa ConfigOptionFloat
+    /// \sa ConfigOptionInt
+    /// \sa ConfigOptionString
+    /// \sa ConfigOptionPercent
+    /// \sa ConfigOptionFloatOrPercent
+    /// \sa ConfigOptionPoint
+    /// \sa ConfigOptionBool
+    /// \sa ConfigOptionPoint3
+    /// \sa ConfigOptionBool
     ConfigOptionType type;
-    // Default value of this option. The default value object is owned by ConfigDef, it is released in its destructor.
+    /// \brief Default value of this option. 
+    ///
+    /// The default value object is owned by ConfigDef, it is released in its destructor.
     ConfigOption* default_value;
 
-    // Usually empty. 
-    // Special values - "i_enum_open", "f_enum_open" to provide combo box for int or float selection,
-    // "select_open" - to open a selection dialog (currently only a serial port selection).
+    /// \brief Specialization to indicate to the GUI what kind of control is more appropriate.
+    ///
+    /// Usually empty. 
+    /// Special values - "i_enum_open", "f_enum_open" to provide combo box for int or float selection,
+    /// "select_open" - to open a selection dialog (currently only a serial port selection).
     std::string gui_type;
-    // The flags may be combined.
-    // "show_value" - even if enum_values / enum_labels are set, still display the value, not the enum label.
-    // "align_label_right" - align label to right
+    /// The flags may be combined.
+    /// "show_value" - even if enum_values / enum_labels are set, still display the value, not the enum label.
+    /// "align_label_right" - align label to right
     std::string gui_flags;
-    // Label of the GUI input field.
-    // In case the GUI input fields are grouped in some views, the label defines a short label of a grouped value,
-    // while full_label contains a label of a stand-alone field.
-    // The full label is shown, when adding an override parameter for an object or a modified object.
+    /// Label of the GUI input field.
+    /// In case the GUI input fields are grouped in some views, the label defines a short label of a grouped value,
+    /// while full_label contains a label of a stand-alone field.
+    /// The full label is shown, when adding an override parameter for an object or a modified object.
     std::string label;
     std::string full_label;
-    // Category of a configuration field, from the GUI perspective.
-    // One of: "Layers and Perimeters", "Infill", "Support material", "Speed", "Extruders", "Advanced", "Extrusion Width"
+    /// Category of a configuration field, from the GUI perspective.
+    /// One of: "Layers and Perimeters", "Infill", "Support material", "Speed", "Extruders", "Advanced", "Extrusion Width"
     std::string category;
-    // A tooltip text shown in the GUI.
+    /// A tooltip text shown in the GUI.
     std::string tooltip;
-    // Text right from the input field, usually a unit of measurement.
+    /// Text right from the input field, usually a unit of measurement.
     std::string sidetext;
-    // Format of this parameter on a command line.
+    /// Format of this parameter on a command line.
     std::string cli;
-    // Set for type == coFloatOrPercent.
-    // It provides a link to a configuration value, of which this option provides a ratio.
-    // For example, 
-    // For example external_perimeter_speed may be defined as a fraction of perimeter_speed.
+    /// Set for type == coFloatOrPercent.
+    /// It provides a link to a configuration value, of which this option provides a ratio.
+    /// For example, 
+    /// For example external_perimeter_speed may be defined as a fraction of perimeter_speed.
     t_config_option_key ratio_over;
-    // True for multiline strings.
+    /// True for multiline strings.
     bool multiline;
-    // For text input: If true, the GUI text box spans the complete page width.
+    /// For text input: If true, the GUI text box spans the complete page width.
     bool full_width;
-    // Not editable. Currently only used for the display of the number of threads.
+
+    /// This configuration item is not editable. 
+    /// Currently only used for the display of the number of threads.
     bool readonly;
-    // Height of a multiline GUI text box.
+    /// Height of a multiline GUI text box.
     int height;
-    // Optional width of an input field.
+    /// Optional width of an input field.
     int width;
-    // <min, max> limit of a numeric input.
-    // If not set, the <min, max> is set to <INT_MIN, INT_MAX>
-    // By setting min=0, only nonnegative input is allowed.
+    /// <min, max> limit of a numeric input.
+    /// If not set, the <min, max> is set to <INT_MIN, INT_MAX>
+    /// By setting min=0, only nonnegative input is allowed.
     int min;
     int max;
-    // Legacy names for this configuration option.
-    // Used when parsing legacy configuration file.
+
+    /// Legacy names for this configuration option.
+    /// Used when parsing legacy configuration file.
     std::vector<t_config_option_key> aliases;
-    // Sometimes a single value may well define multiple values in a "beginner" mode.
-    // Currently used for aliasing "solid_layers" to "top_solid_layers", "bottom_solid_layers".
+    /// Sometimes a single value may well define multiple values in a "beginner" mode.
+    /// Currently used for aliasing "solid_layers" to "top_solid_layers", "bottom_solid_layers".
     std::vector<t_config_option_key> shortcut;
-    // Definition of values / labels for a combo box.
-    // Mostly used for enums (when type == coEnum), but may be used for ints resp. floats, if gui_type is set to "i_enum_open" resp. "f_enum_open".
+    /// Definition of values / labels for a combo box.
+    /// Mostly used for enums (when type == coEnum), but may be used for ints resp. floats, if gui_type is set to "i_enum_open" resp. "f_enum_open".
     std::vector<std::string> enum_values;
     std::vector<std::string> enum_labels;
-    // For enums (when type == coEnum). Maps enum_values to enums.
-    // Initialized by ConfigOptionEnum<xxx>::get_enum_values()
+    /// For enums (when type == coEnum). Maps enum_values to enums.
+    /// Initialized by ConfigOptionEnum<xxx>::get_enum_values()
     t_config_enum_values enum_keys_map;
 
     ConfigOptionDef() : type(coNone), default_value(NULL),
@@ -612,14 +650,14 @@ class ConfigOptionDef
     ConfigOptionDef& operator= (ConfigOptionDef other);
 };
 
-// Map from a config option name to its definition.
-// The definition does not carry an actual value of the config option, only its constant default value.
-// t_config_option_key is std::string
+/// Map from a config option name to its definition.
+//i The definition does not carry an actual value of the config option, only its constant default value.
+//i t_config_option_key is std::string
 typedef std::map<t_config_option_key,ConfigOptionDef> t_optiondef_map;
 
-// Definition of configuration values for the purpose of GUI presentation, editing, value mapping and config file handling.
-// The configuration definition is static: It does not carry the actual configuration values,
-// but it carries the defaults of the configuration values.
+/// Definition of configuration values for the purpose of GUI presentation, editing, value mapping and config file handling.
+/// The configuration definition is static: It does not carry the actual configuration values,
+/// but it carries the defaults of the configuration values.
 class ConfigDef
 {
     public:
@@ -631,14 +669,14 @@ class ConfigDef
     void merge(const ConfigDef &other);
 };
 
-// An abstract configuration store.
+/// An abstract configuration store.
 class ConfigBase
 {
     public:
-    // Definition of configuration values for the purpose of GUI presentation, editing, value mapping and config file handling.
-    // The configuration definition is static: It does not carry the actual configuration values,
-    // but it carries the defaults of the configuration values.
-    // ConfigBase does not own ConfigDef, it only references it.
+    /// Definition of configuration values for the purpose of GUI presentation, editing, value mapping and config file handling.
+    /// The configuration definition is static: It does not carry the actual configuration values,
+    /// but it carries the defaults of the configuration values.
+    /// ConfigBase does not own ConfigDef, it only references it.
     const ConfigDef* def;
     
     ConfigBase() : def(NULL) {};
@@ -668,8 +706,8 @@ class ConfigBase
     void save(const std::string &file) const;
 };
 
-// Configuration store with dynamic number of configuration values.
-// In Slic3r, the dynamic config is mostly used at the user interface layer.
+/// Configuration store with dynamic number of configuration values.
+/// In Slic3r, the dynamic config is mostly used at the user interface layer.
 class DynamicConfig : public virtual ConfigBase
 {
     public:
@@ -685,29 +723,30 @@ class DynamicConfig : public virtual ConfigBase
     void clear();
     bool empty() const;
     void read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra);
-    void read_cli(const int argc, const char **argv, t_config_option_keys* extra);
+    void read_cli(int argc, char** argv, t_config_option_keys* extra);
     
     private:
     typedef std::map<t_config_option_key,ConfigOption*> t_options_map;
     t_options_map options;
 };
 
-// Configuration store with a static definition of configuration values.
-// In Slic3r, the static configuration stores are during the slicing / g-code generation for efficiency reasons,
-// because the configuration values could be accessed directly.
+/// Configuration store with a static definition of configuration values.
+/// In Slic3r, the static configuration stores are during the slicing / g-code generation for efficiency reasons,
+/// because the configuration values could be accessed directly.
 class StaticConfig : public virtual ConfigBase
 {
     public:
     StaticConfig() : ConfigBase() {};
-    // Gets list of config option names for each config option of this->def, which has a static counter-part defined by the derived object
-    // and which could be resolved by this->optptr(key) call.
+    /// Gets list of config option names for each config option of this->def, which has a static counter-part defined by the derived object
+    /// and which could be resolved by this->optptr(key) call.
     t_config_option_keys keys() const;
-    // Set all statically defined config options to their defaults defined by this->def.
+    /// Set all statically defined config options to their defaults defined by this->def.
     void set_defaults();
-    // The derived class has to implement optptr to resolve a static configuration value.
-    // virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) = 0;
+    /// The derived class has to implement optptr to resolve a static configuration value.
+    /// virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) = 0;
 };
 
+/// Specialization of std::exception to indicate that an unknown config option has been encountered.
 class UnknownOptionException : public std::exception {};
 
 }

@@ -334,25 +334,19 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
         
         // restore original winding order so that concave and convex detection always happens
         // on the right/outer side of the polygon
-        if (was_clockwise) {
-            for (Polygons::iterator p = simplified.begin(); p != simplified.end(); ++p)
-                p->reverse();
-        }
+        if (was_clockwise)
+            for (Polygon &p : simplified)
+                p.reverse();
         
         // concave vertices have priority
         Points candidates;
-        for (Polygons::const_iterator p = simplified.begin(); p != simplified.end(); ++p) {
-            Points concave = p->concave_points(PI*4/3);
-            candidates.insert(candidates.end(), concave.begin(), concave.end());
-        }
+        for (const Polygon &p : simplified)
+            append_to(candidates, p.concave_points(PI*4/3));
         
         // if no concave points were found, look for convex vertices
-        if (candidates.empty()) {
-            for (Polygons::const_iterator p = simplified.begin(); p != simplified.end(); ++p) {
-                Points convex = p->convex_points(PI*2/3);
-                candidates.insert(candidates.end(), convex.begin(), convex.end());
-            }
-        }
+        if (candidates.empty())
+            for (const Polygon &p : simplified)
+                append_to(candidates, p.convex_points(PI*2/3));
         
         // retrieve the last start position for this object
         if (this->layer != NULL) {
@@ -375,10 +369,9 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
             if (!loop.split_at_vertex(point)) loop.split_at(point);
         } else if (!candidates.empty()) {
             Points non_overhang;
-            for (Points::const_iterator p = candidates.begin(); p != candidates.end(); ++p) {
-                if (!loop.has_overhang_point(*p))
-                    non_overhang.push_back(*p);
-            }
+            for (const Point &p : candidates)
+                if (!loop.has_overhang_point(p))
+                    non_overhang.push_back(p);
             
             if (!non_overhang.empty())
                 candidates = non_overhang;
@@ -389,8 +382,15 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
             point = last_pos.projection_onto(polygon);
             loop.split_at(point);
         }
-        if (this->layer != NULL)
+        if (this->layer != NULL) {
+            /* Keeping a single starting point for each object works best with objects
+               having a single island. In the other cases, this works when layers are 
+               similar, so the algorithm picks the same chain of points. But when an 
+               island disappears, the others might suffer from a starting point change
+               even if their shape didn't change. We should probably keep multiple
+               starting points for each layer and test all of them. */
             this->_seam_position[this->layer->object()] = point;
+        }
     } else if (seam_position == spRandom) {
         if (loop.role == elrContourInternalPerimeter) {
             Polygon polygon = loop.polygon();
@@ -415,9 +415,11 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
     if (paths.empty()) return "";
     
     // apply the small perimeter speed
-    if (paths.front().is_perimeter() && loop.length() <= SMALL_PERIMETER_LENGTH) {
-        if (speed == -1) speed = this->config.get_abs_value("small_perimeter_speed");
-    }
+    if (paths.front().is_perimeter()
+        && !loop.has(erOverhangPerimeter)
+        && loop.length() <= SMALL_PERIMETER_LENGTH
+        && speed == -1)
+        speed = this->config.get_abs_value("small_perimeter_speed");
     
     // extrude along the path
     std::string gcode;

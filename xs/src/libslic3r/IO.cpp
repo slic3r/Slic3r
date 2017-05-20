@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <boost/filesystem.hpp>
+#include <boost/nowide/fstream.hpp>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
@@ -12,7 +13,6 @@ namespace Slic3r { namespace IO {
 bool
 STL::read(std::string input_file, TriangleMesh* mesh)
 {
-    // TODO: encode file name
     // TODO: check that file exists
     
     try {
@@ -81,7 +81,8 @@ OBJ::read(std::string input_file, Model* model)
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string err;
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, input_file.c_str());
+	boost::nowide::ifstream ifs(input_file);
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, &ifs);
     
     if (!err.empty()) { // `err` may contain warning message.
         std::cerr << err << std::endl;
@@ -153,7 +154,7 @@ POV::write(TriangleMesh& mesh, std::string output_file)
     mesh2.center_around_origin();
     
     using namespace std;
-    ofstream pov;
+    boost::nowide::ofstream pov;
     pov.open(output_file.c_str(), ios::out | ios::trunc);
     for (int i = 0; i < mesh2.stl.stats.number_of_facets; ++i) {
         const stl_facet &f = mesh2.stl.facet_start[i];

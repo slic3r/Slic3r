@@ -1602,10 +1602,11 @@ sub new {
     $self->{title}      = $title;
     $self->{iconID}     = $iconID;
     
-    $self->SetScrollbars(1, 1, 1, 1);
-    
     $self->{vsizer} = Wx::BoxSizer->new(wxVERTICAL);
     $self->SetSizer($self->{vsizer});
+    
+    # http://docs.wxwidgets.org/3.0/classwx_scrolled.html#details
+    $self->SetScrollRate($Slic3r::GUI::scroll_step, $Slic3r::GUI::scroll_step);
     
     return $self;
 }

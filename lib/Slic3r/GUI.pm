@@ -93,13 +93,17 @@ our $Settings = {
 
 our $have_button_icons = &Wx::wxVERSION_STRING =~ / (?:2\.9\.[1-9]|3\.)/;
 our $small_font = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-$small_font->SetPointSize(11) if !&Wx::wxMSW;
+$small_font->SetPointSize(11) if &Wx::wxMAC;
 our $small_bold_font = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-$small_bold_font->SetPointSize(11) if !&Wx::wxMSW;
+$small_bold_font->SetPointSize(11) if &Wx::wxMAC;
 $small_bold_font->SetWeight(wxFONTWEIGHT_BOLD);
 our $medium_font = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 $medium_font->SetPointSize(12);
 our $grey = Wx::Colour->new(200,200,200);
+
+# to use in ScrolledWindow::SetScrollRate(xstep, ystep)
+# step related to system font point size
+our $scroll_step = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT)->GetPointSize;
 
 our $VERSION_CHECK_EVENT : shared = Wx::NewEventType;
 

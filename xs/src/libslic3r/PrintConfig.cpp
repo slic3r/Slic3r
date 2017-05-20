@@ -578,7 +578,7 @@ PrintConfigDef::PrintConfigDef()
         def->default_value = opt;
     }
     
-    def = this->add("gap_fill_speed", coFloat);
+    def = this->add("gap_fill_speed", coFloatOrPercent);
     def->label = "↳ gaps";
     def->full_label = "Gap fill speed";
     def->gui_type = "f_enum_open";
@@ -590,7 +590,7 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->enum_values.push_back("0");
     def->enum_labels.push_back("auto");
-    def->default_value = new ConfigOptionFloat(20);
+    def->default_value = new ConfigOptionFloatOrPercent(20, false);
 
     def = this->add("gcode_arcs", coBool);
     def->label = "Use native G-code arcs";
@@ -1384,7 +1384,6 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
     def->label = "↳ interface";
-    def->label = "Interface Speed";
     def->category = "Support material interface speed";
     def->gui_type = "f_enum_open";
     def->category = "Support material";
@@ -1706,6 +1705,10 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
             values is a dirty hack and will need to be removed sometime in the future, but it
             will avoid lots of complaints for now. */
         value = "0";
+    } else if (opt_key == "support_material_threshold" && value == "0") {
+        // 0 used to be automatic threshold, but we introduced percent values so let's
+        // transform it into the default value
+        value = "60%";
     }
     
     // cemetery of old config settings

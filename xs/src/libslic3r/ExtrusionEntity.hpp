@@ -167,6 +167,11 @@ class ExtrusionLoop : public ExtrusionEntity
     void append(const ExtrusionPath &path) {
         this->paths.push_back(path);
     };
+    bool has(ExtrusionRole role) const {
+        for (const auto &path : this->paths)
+            if (path.role == role) return true;
+        return false;
+    };
 };
 
 }

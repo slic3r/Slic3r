@@ -74,17 +74,17 @@ LayerRegion::process_external_surfaces()
     Surfaces &surfaces = this->fill_surfaces.surfaces;
     
     for (size_t j = 0; j < surfaces.size(); ++j) {
-        Surface &surface = surfaces[j];
+        // we don't get any reference to surface because it would be invalidated
+        // by the erase() call below
         
-        if (this->layer()->lower_layer != NULL && surface.is_bridge()) {
+        if (this->layer()->lower_layer != NULL && surfaces[j].is_bridge()) {
             // If this bridge has one or more holes that are internal surfaces
             // (thus not visible from the outside), like a slab sustained by 
             // pillars, include them in the bridge in order to have better and
             // more continuous bridging.
-            Polygons &holes = surface.expolygon.holes;
-            for (int i = 0; i < holes.size(); ++i) {
+            for (int i = 0; i < surfaces[j].expolygon.holes.size(); ++i) {
                 // reverse the hole and consider it a polygon
-                Polygon h = holes[i];
+                Polygon h = surfaces[j].expolygon.holes[i];
                 h.reverse();
             
                 // Is this hole fully contained in the layer slices?
@@ -94,10 +94,12 @@ LayerRegion::process_external_surfaces()
                         if (k == j) continue;
                         if (h.contains(surfaces[k].expolygon.contour.first_point())) {
                             surfaces.erase(surfaces.begin() + k);
+                            if (j > k) --j;
                             --k;
                         }
                     }
                     
+                    Polygons &holes = surfaces[j].expolygon.holes;
                     holes.erase(holes.begin() + i);
                     --i;
                 }

@@ -182,6 +182,10 @@ sub _init_menubar {
         wxTheApp->append_menu_item($self->{plater_menu}, "Select Prev Object\tCtrl+Left", 'Select Previous Object in the plater', sub {
             $plater->select_prev;
         }, undef, 'arrow_left.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Zoom In\tCtrl+up", 'Zoom In',
+            sub { $self->{plater}->zoom('in') }, undef, 'zoom_in.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Zoom Out\tCtrl+down", 'Zoom Out',
+            sub { $self->{plater}->zoom('out') }, undef, 'zoom_out.png');
         $self->{plater_menu}->AppendSeparator();
         wxTheApp->append_menu_item($self->{plater_menu}, "Export G-code...", 'Export current plate as G-code', sub {
             $plater->export_gcode;
@@ -192,8 +196,8 @@ sub _init_menubar {
         wxTheApp->append_menu_item($self->{plater_menu}, "Export plate with modifiers as AMF...", 'Export current plate as AMF, including all modifier meshes', sub {
             $plater->export_amf;
         }, undef, 'brick_go.png');
-        
         $self->{object_menu} = $self->{plater}->object_menu;
+        $self->on_plater_object_list_changed(0);
         $self->on_plater_selection_changed(0);
     }
     
@@ -307,6 +311,14 @@ sub _init_menubar {
 sub is_loaded {
     my ($self) = @_;
     return $self->{loaded};
+}
+
+sub on_plater_object_list_changed {
+    my ($self, $have_objects) = @_;
+    
+    return if !defined $self->{plater_menu};
+    $self->{plater_menu}->Enable($_->GetId, $have_objects)
+        for $self->{plater_menu}->GetMenuItems;
 }
 
 sub on_plater_selection_changed {
@@ -457,9 +469,9 @@ sub repair_stl {
     }
     
     my $tmesh = Slic3r::TriangleMesh->new;
-    $tmesh->ReadSTLFile(Slic3r::encode_path($input_file));
+    $tmesh->ReadSTLFile($input_file);
     $tmesh->repair;
-    $tmesh->WriteOBJFile(Slic3r::encode_path($output_file));
+    $tmesh->WriteOBJFile($output_file);
     Slic3r::GUI::show_info($self, "Your file was repaired.", "Repair");
 }
 
@@ -626,7 +638,7 @@ sub select_tab {
 # Set a camera direction, zoom to all objects.
 sub select_view {
     my ($self, $direction) = @_;
-    
+
     $self->{plater}->select_view($direction);
 }
 

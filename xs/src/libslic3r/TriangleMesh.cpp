@@ -12,6 +12,8 @@
 #include <math.h>
 #include <assert.h>
 #include <stdexcept>
+#include <boost/config.hpp>
+#include <boost/nowide/convert.hpp>
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -110,20 +112,32 @@ TriangleMesh::~TriangleMesh() {
 
 void
 TriangleMesh::ReadSTLFile(const std::string &input_file) {
+    #ifdef BOOST_WINDOWS
+    stl_open(&stl, boost::nowide::widen(input_file).c_str());
+    #else
     stl_open(&stl, input_file.c_str());
+    #endif
     if (this->stl.error != 0) throw std::runtime_error("Failed to read STL file");
 }
 
 void
 TriangleMesh::write_ascii(const std::string &output_file)
 {
+    #ifdef BOOST_WINDOWS
+    stl_write_ascii(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    #else
     stl_write_ascii(&this->stl, output_file.c_str(), "");
+    #endif
 }
 
 void
 TriangleMesh::write_binary(const std::string &output_file)
 {
+    #ifdef BOOST_WINDOWS
+    stl_write_binary(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    #else
     stl_write_binary(&this->stl, output_file.c_str(), "");
+    #endif
 }
 
 void
@@ -234,7 +248,12 @@ TriangleMesh::facets_count() const
 void
 TriangleMesh::WriteOBJFile(const std::string &output_file) {
     stl_generate_shared_vertices(&stl);
+    
+    #ifdef BOOST_WINDOWS
+    stl_write_obj(&stl, boost::nowide::widen(output_file).c_str());
+    #else
     stl_write_obj(&stl, output_file.c_str());
+    #endif
 }
 
 void TriangleMesh::scale(float factor)
