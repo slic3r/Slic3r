@@ -123,7 +123,7 @@ sub save_preset {
     $self->{treectrl}->SetFocus;
     
     my $preset = $self->current_preset;
-    $preset->save(undef, $self);
+    $preset->save_prompt($self);
     $self->load_presets;
     $self->select_preset_by_name($preset->name);
     

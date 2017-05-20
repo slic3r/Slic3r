@@ -378,6 +378,12 @@ sub new {
                     } else {
                         # Apply the overrides to the current Print preset, potentially making it dirty
                         $preset->_dirty_config->apply($self->{settings_override_config});
+                        
+                        # If this is a configured shortcut (and not just a dirty option),
+                        # save it now.
+                        if (any { $_ eq $opt_key } @{$preset->dirty_config->shortcuts}) {
+                            $preset->save([$opt_key]);
+                        }
                     }
                     
                     $self->load_presets;
