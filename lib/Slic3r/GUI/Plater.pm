@@ -751,6 +751,9 @@ sub show_preset_editor {
     
     my @presets = $self->selected_presets($group);
     $dlg->preset_editor->select_preset_by_name($presets[$i // 0]->name);
+    $dlg->preset_editor->on_value_change(sub {
+        $self->config_changed;
+    });
     $dlg->ShowModal;
     
     # Re-load the presets as they might have changed.
