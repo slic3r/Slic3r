@@ -229,15 +229,42 @@ if ($cpp_guess->is_gcc) {
 if ($mswin) {
     # like boost, Windows lives to make things difficult for us.
     # Use an environment option for the necesary location and pray.
-    push @cflags, qw(-I$ENV{WXWIN}\\include);
+	# this assumes that WXWIN is the base source directory for a built
+	# wxWidgets. 
+	# Needs the libraries in \lib\gcc_dll 
+	# Needs most of the include files in \include\wx (copy from the wxwidgets archive is sufficient)
+	# Also needs wx/setup.h to be present either in a subdir of gcc_dll (lib\gcc_dll\mswu) or in include.
+	my @wx_libraries=qw(net xml);
+	my @wx_msw_libraries=qw(core gl html stc adv aui xrc stc richtext media);
+
+	# These libs are needed because they are used by wx
+	my @wx_extra_libraries=qw(zlib scintilla png regexu tiff);
+
+    push @INC, "-I\"$ENV{WXWIN}\\include\"";
     push @cflags, qw(-D__WXMSW__ -D_UNICODE);
     # add libraries
+	push @LIBS, "-L\"$ENV{WXWIN}\\lib\"";
     if ($cpp_guess->is_msvc) {
-        push @ldflags, qw(-L$ENV{WXWIN}\\lib -L$ENV{WXWIN}\\lib\\msvc_lib);
+		push @LIBS, "-L\"$ENV{WXWIN}\\lib\\msvc_lib\"";
+		push @INC, "-I\"$ENV{WXWIN}\\lib\\msvc_lib\\mswu\"";
     } else {
-        push @ldflags, qw(-L$ENV{WXWIN}\\lib -L$ENV{WXWIN}\\lib\\gcc_lib);
+		push @LIBS, "-L\"$ENV{WXWIN}\\lib\\gcc_lib\"";
+		push @LIBS, "-L\"$ENV{WXWIN}\\lib\\gcc_dll\"";
+		push @INC, "-I\"$ENV{WXWIN}\\lib\\gcc_lib\\mswu\"";
+		push @INC, "-I\"$ENV{WXWIN}\\lib\\gcc_dll\\mswu\"";
     }
-    push @ldflags, qw(-pthread -lwx_gtk2u_xrc-3.0 -lwx_gtk2u_html-3.0 -lwx_gtk2u_qa-3.0 -lwx_gtk2u_adv-3.0 -lwx_gtk2u_core-3.0 -lwx_baseu_xml-3.0 -lwx_baseu_net-3.0 -lwx_baseu-3.0);
+    push @ldflags, qw(-pthread); 
+	if (0) {
+		push @LIBS, qw(-lwxbase31u);
+		push @LIBS, map "-lwxbase31u_${_}", @wx_libraries;
+		push @LIBS, map "-lwxmsw31u_${_}", @wx_msw_libraries;
+		push @LIBS, map "-lwx${_}", @wx_extra_libraries;
+	} else {
+		push @LIBS, qw(-lwxbase310u_gcc_custom);
+		push @LIBS, map "-lwxbase310u_${_}_gcc_custom", @wx_libraries;
+		push @LIBS, map "-lwxmsw310u_${_}_gcc_custom", @wx_msw_libraries;
+		#push @LIBS, map "-lwx${_}", @wx_extra_libraries;
+	}
 } else {
     # on linux/osx, wx-config is hopefully in the path and can be used.
     # if wxdir is defined (which is the prefix that wxwidgets was installed to
