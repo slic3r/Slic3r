@@ -119,7 +119,7 @@ OozePrevention::post_toolchange(GCode &gcodegen)
 int
 OozePrevention::_get_temp(GCode &gcodegen)
 {
-    return (gcodegen.layer != NULL && gcodegen.layer->id() == 0)
+    return gcodegen.first_layer
         ? gcodegen.config.first_layer_temperature.get_at(gcodegen.writer.extruder()->id)
         : gcodegen.config.temperature.get_at(gcodegen.writer.extruder()->id);
 }
