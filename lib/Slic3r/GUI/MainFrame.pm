@@ -109,6 +109,9 @@ sub _init_tabpanel {
         if ($panel->isa('Slic3r::GUI::PresetEditor')) {
             delete $self->{preset_editor_tabs}{$panel->name};
         }
+        wxTheApp->CallAfter(sub {
+            $self->{tabpanel}->SetSelection(0);
+        });
     });
     
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
