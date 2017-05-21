@@ -60,12 +60,23 @@ class TriangleMesh
     void extrude_tin(float offset);
     void require_shared_vertices();
     void reverse_normals();
-    
+	
+	/// Generate a mesh representing a cube with dimensions (x, y, z), with one corner at (0,0,0).
     static TriangleMesh make_cube(double x, double y, double z);
+	
+	/// Generate a mesh representing a cylinder of radius r and height h, with the base at (0,0,0). 
+	/// param[in] r Radius 
+	/// param[in] h Height 
+	/// param[in] fa Facet angle. A smaller angle produces more facets. Default value is 2pi / 360.  
     static TriangleMesh make_cylinder(double r, double h, double fa=(2*PI/360));
+	
+	/// Generate a mesh representing a sphere of radius rho, centered about (0,0,0). 
+	/// param[in] rho Distance from center to the shell of the sphere. 
+	/// param[in] fa Facet angle. A smaller angle produces more facets. Default value is 2pi / 360.  
     static TriangleMesh make_sphere(double rho, double fa=(2*PI/360));
     
     stl_file stl;
+	/// Whether or not this mesh has been repaired.
     bool repaired;
     
     private:
@@ -98,6 +109,8 @@ class IntersectionLine : public Line
 typedef std::vector<IntersectionLine> IntersectionLines;
 typedef std::vector<IntersectionLine*> IntersectionLinePtrs;
 
+
+/// \brief Class for processing TriangleMesh objects. 
 template <Axis A>
 class TriangleMeshSlicer
 {
@@ -112,7 +125,11 @@ class TriangleMeshSlicer
         const float &min_z, const float &max_z, std::vector<IntersectionLine>* lines,
         boost::mutex* lines_mutex = NULL) const;
     
-    void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const;
+	/// \brief Splits the current mesh into two parts.
+	/// \param[in] z Coordinate plane to cut along.
+	/// \param[out] upper TriangleMesh object to add the mesh > z. NULL suppresses saving this.
+	/// \param[out] lower TriangleMesh object to save the mesh < z. NULL suppresses saving this.
+    void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const
     
     private:
     typedef std::vector< std::vector<int> > t_facets_edges;
