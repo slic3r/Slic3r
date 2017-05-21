@@ -120,11 +120,11 @@ Flow::_width_from_spacing(float spacing, float nozzle_diameter, float height, bo
     return spacing + OVERLAP_FACTOR * height * (1 - PI/4.0);
 }
 
-// Calculate a new spacing to fill width with possibly integer number of lines,
-// the first and last line being centered at the interval ends.
-// This function possibly increases the spacing, never decreases, 
-// and for a narrow width the increase in spacing may become severe,
-// therefore the adjustment is limited to 20% increase.
+/// Calculate a new spacing to fill width with possibly integer number of lines,
+/// the first and last line being centered at the interval ends.
+/// This function possibly increases the spacing, never decreases, 
+/// and for a narrow width the increase in spacing may become severe,
+/// therefore the adjustment is limited to 20% increase.
 template <class T>
 T
 Flow::solid_spacing(const T total_width, const T spacing)
