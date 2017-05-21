@@ -88,6 +88,7 @@ our $Settings = {
         no_controller => 0,
         threads => $Slic3r::Config::Options->{threads}{default},
         color_toolpaths_by => 'role',
+        tabbed_preset_editors => 1,
     },
 };
 

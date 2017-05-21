@@ -87,7 +87,7 @@ sub new {
     });
     
     EVT_CHOICE($parent, $self->{presets_choice}, sub {
-        $self->on_select_preset;
+        $self->_on_select_preset;
     });
     
     EVT_BUTTON($self, $self->{btn_save_preset}, sub { $self->save_preset });
@@ -155,7 +155,7 @@ sub select_preset {
     my ($self, $i, $force) = @_;
     
     $self->{presets_choice}->SetSelection($i);
-    $self->on_select_preset($force);
+    $self->_on_select_preset($force);
 }
 
 sub select_preset_by_name {
@@ -164,7 +164,7 @@ sub select_preset_by_name {
     my $presets = wxTheApp->presets->{$self->name};
     my $i = first { $presets->[$_]->name eq $name } 0..$#$presets;
     $self->{presets_choice}->SetSelection($i);
-    $self->on_select_preset($force);
+    $self->_on_select_preset($force);
 }
 
 sub prompt_unsaved_changes {
@@ -175,6 +175,11 @@ sub prompt_unsaved_changes {
 }
 
 sub on_select_preset {
+    my ($self, $cb) = @_;
+    $self->{on_select_preset} = $cb;
+}
+
+sub _on_select_preset {
     my ($self, $force) = @_;
     
     # This method is called:
@@ -221,6 +226,8 @@ sub on_select_preset {
         $@ = "I was unable to load the selected config file: $@";
         Slic3r::GUI::catch_error($self);
     }
+    
+    $self->{on_select_preset}->($self->name, $preset) if $self->{on_select_preset};
 }
 
 sub add_options_page {

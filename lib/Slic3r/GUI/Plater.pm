@@ -556,6 +556,14 @@ sub _on_change_combobox {
         return 0 if !$self->prompt_unsaved_changes;
     }
     wxTheApp->CallAfter(sub {
+        # Close the preset editor tab if any
+        if (exists $self->GetFrame->{preset_editor_tabs}{$group}) {
+            my $tabpanel = $self->GetFrame->{tabpanel};
+            $tabpanel->DeletePage($tabpanel->GetPageIndex($self->GetFrame->{preset_editor_tabs}{$group}));
+            delete $self->GetFrame->{preset_editor_tabs}{$group};
+            $tabpanel->SetSelection(0); # without this, a newly created tab will not be selected by wx
+        }
+        
         $self->_on_select_preset($group);
         
         # This will remove the "(modified)" mark from any dirty preset handled here.
@@ -752,22 +760,43 @@ sub selected_presets {
 sub show_preset_editor {
     my ($self, $group, $i) = @_;
     
-    my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
-    my $dlg = $class->new($self);
-    
     my @presets = $self->selected_presets($group);
-    $dlg->preset_editor->select_preset_by_name($presets[$i // 0]->name);
-    $dlg->preset_editor->on_value_change(sub {
+    
+    my $preset_editor;
+    my $dlg;
+    my $mainframe = $self->GetFrame;
+    my $tabpanel = $mainframe->{tabpanel};
+    if (exists $mainframe->{preset_editor_tabs}{$group}) {
+        # we already have an open editor
+        $tabpanel->SetSelection($tabpanel->GetPageIndex($mainframe->{preset_editor_tabs}{$group}));
+        return;
+    } elsif ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
+        my $class = "Slic3r::GUI::PresetEditor::" . ucfirst($group);
+        $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($self->GetFrame);
+        $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings", 1);
+    } else {
+        my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
+        $dlg = $class->new($self);
+        $preset_editor = $dlg->preset_editor;
+    }
+    
+    $preset_editor->select_preset_by_name($presets[$i // 0]->name);
+    $preset_editor->on_value_change(sub {
         $self->config_changed;
     });
-    $dlg->ShowModal;
+    $preset_editor->on_select_preset(sub {
+        my ($group, $preset) = @_;
+        
+        # Re-load the presets as they might have changed.
+        $self->load_presets;
+        
+        # Select the preset in plater too
+        $self->select_preset_by_name($preset->name, $group, $i, 1);
+    });
     
-    # Re-load the presets as they might have changed.
-    $self->load_presets;
-    
-    # Select the preset that was last selected in the editor.
-    $self->select_preset_by_name
-        ($dlg->preset_editor->current_preset->name, $group, $i, 1);
+    if ($dlg) {
+        $dlg->ShowModal;
+    }
 }
 
 # Returns the current config by merging the selected presets and the overrides.
