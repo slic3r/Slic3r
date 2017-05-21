@@ -15,6 +15,7 @@
 #ifdef WIN32
 int main(int argc, char **argv, char **env)
 {
+	SetCurrentDirectory("libexec");
 	
 	// If the Slic3r is installed in a localized directory (containing non-iso
 	// characters), spaces or semicolons, use short file names.
