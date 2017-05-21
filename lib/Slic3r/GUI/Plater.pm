@@ -717,7 +717,7 @@ sub load_presets {
             }
         }
         
-        $self->{print}->placeholder_parser->set("${group}_preset", [ @preset_names ]);
+        $self->{print}->placeholder_parser->set_multiple("${group}_preset", [ @preset_names ]);
     }
 }
 
