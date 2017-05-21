@@ -11,7 +11,7 @@ constexpr auto BRIDGE_EXTRA_SPACING = 0.05;
 constexpr auto OVERLAP_FACTOR = 1.0;
 
 /// Enumeration for different flow roles
-enum FlowRole 
+enum FlowRole {
     frExternalPerimeter,
     frPerimeter,
     frInfill,
