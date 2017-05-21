@@ -836,10 +836,6 @@ FILE_PATTERNS          = *.c \
                          *.h++ \
                          *.cs \
                          *.d \
-                         *.php \
-                         *.php4 \
-                         *.php5 \
-                         *.phtml \
                          *.inc \
                          *.m \
                          *.markdown \
@@ -855,8 +851,6 @@ FILE_PATTERNS          = *.c \
                          *.f \
                          *.for \
                          *.tcl \
-                         *.vhd \
-                         *.vhdl \
                          *.ucf \
                          *.qsf
 
@@ -864,7 +858,7 @@ FILE_PATTERNS          = *.c \
 # be searched for input files as well.
 # The default value is: NO.
 
-RECURSIVE              = NO
+RECURSIVE              = YES
 
 # The EXCLUDE tag can be used to specify files and/or directories that should be
 # excluded from the INPUT source files. This way you can easily exclude a
