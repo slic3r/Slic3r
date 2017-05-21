@@ -64,6 +64,15 @@ PrintConfigDef::PrintConfigDef()
     def->height = 50;
     def->default_value = new ConfigOptionString("");
 
+    def = this->add("between_objects_gcode", coString);
+    def->label = "Between objects G-code";
+    def->tooltip = "This code is inserted between objects when using sequential printing. By default extruder and bed temperature are reset using non-wait command; however if M104, M109, M140 or M190 are detected in this custom code, Slic3r will not add temperature commands. Note that you can use placeholder variables for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want.";
+    def->cli = "between-objects-gcode=s";
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 120;
+    def->default_value = new ConfigOptionString("");
+
     def = this->add("bottom_infill_pattern", external_fill_pattern);
     def->label = "Bottom";
     def->full_label = "Bottom infill pattern";
@@ -569,7 +578,7 @@ PrintConfigDef::PrintConfigDef()
         def->default_value = opt;
     }
     
-    def = this->add("gap_fill_speed", coFloat);
+    def = this->add("gap_fill_speed", coFloatOrPercent);
     def->label = "↳ gaps";
     def->full_label = "Gap fill speed";
     def->gui_type = "f_enum_open";
@@ -581,7 +590,7 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->enum_values.push_back("0");
     def->enum_labels.push_back("auto");
-    def->default_value = new ConfigOptionFloat(20);
+    def->default_value = new ConfigOptionFloatOrPercent(20, false);
 
     def = this->add("gcode_arcs", coBool);
     def->label = "Use native G-code arcs";
@@ -913,6 +922,19 @@ PrintConfigDef::PrintConfigDef()
     def->full_width = true;
     def->height = 60;
     def->default_value = new ConfigOptionStrings();
+
+    def = this->add("printer_notes", coStrings);
+    def->label = "Printer notes";
+    def->tooltip = "You can put your notes regarding the printer here.";
+    def->cli = "printer-notes=s@";
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 130;
+    {
+        ConfigOptionStrings* opt = new ConfigOptionStrings();
+        opt->values.push_back("");
+        def->default_value = opt;
+    }
 
     def = this->add("print_settings_id", coString);
     def->default_value = new ConfigOptionString("");
@@ -1361,7 +1383,6 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
     def->label = "↳ interface";
-    def->label = "Interface Speed";
     def->category = "Support material interface speed";
     def->gui_type = "f_enum_open";
     def->category = "Support material";
@@ -1576,7 +1597,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(0);
 }
 
-PrintConfigDef print_config_def;
+const PrintConfigDef print_config_def;
 
 void
 DynamicPrintConfig::normalize() {
@@ -1683,6 +1704,10 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
             values is a dirty hack and will need to be removed sometime in the future, but it
             will avoid lots of complaints for now. */
         value = "0";
+    } else if (opt_key == "support_material_threshold" && value == "0") {
+        // 0 used to be automatic threshold, but we introduced percent values so let's
+        // transform it into the default value
+        value = "60%";
     }
     
     // cemetery of old config settings
@@ -1809,6 +1834,6 @@ CLIConfigDef::CLIConfigDef()
     def->default_value = new ConfigOptionPoint3(Pointf3(0,0,0));
 }
 
-CLIConfigDef cli_config_def;
+const CLIConfigDef cli_config_def;
 
 }

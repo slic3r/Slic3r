@@ -1166,11 +1166,13 @@ sub options {
         octoprint_host octoprint_apikey
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
-        start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode
+        start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode between_objects_gcode
+        notes
         nozzle_diameter extruder_offset
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
         retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
         printer_settings_id
+        printer_notes
     );
 }
 
@@ -1366,10 +1368,31 @@ sub build {
             $option->height(150);
             $optgroup->append_single_option_line($option);
         }
+        {
+            my $optgroup = $page->new_optgroup('Between objects G-code (for sequential printing)',
+                label_width => 0,
+            );
+            my $option = $optgroup->get_option('between_objects_gcode');
+            $option->full_width(1);
+            $option->height(150);
+            $optgroup->append_single_option_line($option);
+        }
     }
-    
+
     $self->{extruder_pages} = [];
     $self->_build_extruder_pages;
+    {
+        my $page = $self->add_options_page('Notes', 'note.png');
+        {
+            my $optgroup = $page->new_optgroup('Notes',
+                label_width => 0,
+            );
+            my $option = $optgroup->get_option('notes');
+            $option->full_width(1);
+            $option->height(250);
+            $optgroup->append_single_option_line($option);
+        }
+    }
     $self->_update_serial_ports unless $Slic3r::GUI::Settings->{_}{no_controller};
 }
 
@@ -1579,10 +1602,11 @@ sub new {
     $self->{title}      = $title;
     $self->{iconID}     = $iconID;
     
-    $self->SetScrollbars(1, 1, 1, 1);
-    
     $self->{vsizer} = Wx::BoxSizer->new(wxVERTICAL);
     $self->SetSizer($self->{vsizer});
+    
+    # http://docs.wxwidgets.org/3.0/classwx_scrolled.html#details
+    $self->SetScrollRate($Slic3r::GUI::scroll_step, $Slic3r::GUI::scroll_step);
     
     return $self;
 }

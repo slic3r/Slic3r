@@ -13,17 +13,17 @@ MotionPlanner::MotionPlanner(const ExPolygons &islands)
     : initialized(false)
 {
     ExPolygons expp;
-    for (ExPolygons::const_iterator island = islands.begin(); island != islands.end(); ++island)
-        island->simplify(SCALED_EPSILON, &expp);
+    for (const ExPolygon &island : islands)
+        island.simplify(MP_INNER_MARGIN/10, &expp);
     
-    for (ExPolygons::const_iterator island = expp.begin(); island != expp.end(); ++island)
-        this->islands.push_back(MotionPlannerEnv(*island));
+    for (const ExPolygon &island : expp)
+        this->islands.push_back(MotionPlannerEnv(island));
 }
 
 MotionPlanner::~MotionPlanner()
 {
-    for (std::vector<MotionPlannerGraph*>::iterator graph = this->graphs.begin(); graph != this->graphs.end(); ++graph)
-        delete *graph;
+    for (MotionPlannerGraph* graph : this->graphs)
+        delete graph;
 }
 
 size_t
@@ -40,20 +40,20 @@ MotionPlanner::initialize()
     
     // loop through islands in order to create inner expolygons and collect their contours
     Polygons outer_holes;
-    for (std::vector<MotionPlannerEnv>::iterator island = this->islands.begin(); island != this->islands.end(); ++island) {
+    for (MotionPlannerEnv &island : this->islands) {
         // generate the internal env boundaries by shrinking the island
         // we'll use these inner rings for motion planning (endpoints of the Voronoi-based
         // graph, visibility check) in order to avoid moving too close to the boundaries
-        island->env = offset_ex(island->island, -MP_INNER_MARGIN);
+        island.env = offset_ex(island.island, -MP_INNER_MARGIN);
         
         // island contours are holes of our external environment
-        outer_holes.push_back(island->island.contour);
+        outer_holes.push_back(island.island.contour);
     }
     
     // generate outer contour as bounding box of everything
     BoundingBox bb;
-    for (Polygons::const_iterator contour = outer_holes.begin(); contour != outer_holes.end(); ++contour)
-        bb.merge(contour->bounding_box());
+    for (const Polygon contour : outer_holes)
+        bb.merge(contour.bounding_box());
     
     // grow outer contour
     Polygons contour = offset(bb.polygon(), +MP_OUTER_MARGIN*2);
@@ -166,12 +166,16 @@ MotionPlanner::shortest_path(const Point &from, const Point &to)
             }
         }
         
+        // Perform some quick simplification (simplify_by_visibility() would make this
+        // unnecessary, but this is much faster)
+        polyline.simplify(MP_INNER_MARGIN/10);
+        
         // remove unnecessary vertices
         // Note: this is computationally intensive and does not look very necessary
         // now that we prune the endpoints with the logic above,
         // so we comment it for now until a good test case arises
         //polyline.simplify_by_visibility(grown_env);
-    
+        
         /*
         SVG svg("shortest_path.svg");
         svg.draw(grown_env.expolygons);

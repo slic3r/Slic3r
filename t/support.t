@@ -1,4 +1,4 @@
-use Test::More tests => 27;
+use Test::More tests => 28;
 use strict;
 use warnings;
 
@@ -258,5 +258,32 @@ use Slic3r::Test;
         @{ $layer_heights_by_tool{$config->support_material_extruder-1} }),
         'no support material layer is as thin as object layers';
 }
-
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('support_material_enforce_layers', 100);
+    $config->set('support_material', 0);
+    my @contact_z = my @top_z = ();
+    
+    my $test = sub {
+        my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
+        my $flow = $print->print->objects->[0]->support_material_flow;
+        my $support = Slic3r::Print::SupportMaterial->new(
+            object_config       => $print->print->objects->[0]->config,
+            print_config        => $print->print->config,
+            flow                => $flow,
+            interface_flow      => $flow,
+            first_layer_flow    => $flow,
+        );
+        my $support_z = $support->support_layers_z(\@contact_z, \@top_z, $config->layer_height);
+        
+        is scalar(grep { $support_z->[$_]-$support_z->[$_-1] <= 0 } 1..$#$support_z), 0,
+            'forced support is generated';
+        
+    };
+    $config->set('layer_height', 0.2);
+    $config->set('first_layer_height', 0.3);
+    @contact_z = (1.9);
+    @top_z = (1.1);
+    $test->();
+}
 __END__

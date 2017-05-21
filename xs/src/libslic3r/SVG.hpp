@@ -3,7 +3,9 @@
 
 #include "libslic3r.h"
 #include "ExPolygon.hpp"
+#include "ExPolygonCollection.hpp"
 #include "Line.hpp"
+#include "SurfaceCollection.hpp"
 #include "TriangleMesh.hpp"
 
 namespace Slic3r {
@@ -17,12 +19,15 @@ class SVG
 
     SVG(const char* filename);
     SVG(const char* filename, const BoundingBox &bbox);
+    ~SVG();
     void draw(const Line &line, std::string stroke = "black", coord_t stroke_width = 0);
     void draw(const ThickLine &line, const std::string &fill, const std::string &stroke, coord_t stroke_width = 0);
-    void draw(const Lines &lines, std::string stroke = "black");
+    void draw(const Lines &lines, std::string stroke = "black", coord_t stroke_width = 0);
     void draw(const IntersectionLines &lines, std::string stroke = "black");
     void draw(const ExPolygon &expolygon, std::string fill = "grey");
     void draw(const ExPolygons &expolygons, std::string fill = "grey");
+    void draw(const ExPolygonCollection &coll, std::string fill = "grey");
+    void draw(const SurfaceCollection &coll, std::string fill = "grey");
     void draw(const Polygon &polygon, std::string fill = "grey");
     void draw(const Polygons &polygons, std::string fill = "grey");
     void draw(const Polyline &polyline, std::string stroke = "black", coord_t stroke_width = 0);

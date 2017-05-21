@@ -98,19 +98,21 @@ Layer::make_slices()
     this->slices.expolygons.reserve(slices.size());
     
     // prepare ordering points
+    // While it's more computationally expensive, we use centroid()
+    // instead of first_point() because it's [much more] deterministic
+    // and preserves ordering across similar layers.
     Points ordering_points;
     ordering_points.reserve(slices.size());
-    for (ExPolygons::const_iterator ex = slices.begin(); ex != slices.end(); ++ex)
-        ordering_points.push_back(ex->contour.first_point());
+    for (const ExPolygon &ex : slices)
+        ordering_points.push_back(ex.contour.centroid());
     
     // sort slices
     std::vector<Points::size_type> order;
     Slic3r::Geometry::chained_path(ordering_points, order);
     
     // populate slices vector
-    for (std::vector<Points::size_type>::const_iterator it = order.begin(); it != order.end(); ++it) {
-        this->slices.expolygons.push_back(slices[*it]);
-    }
+    for (const Points::size_type &o : order)
+        this->slices.expolygons.push_back(slices[o]);
 }
 
 void

@@ -33,7 +33,7 @@
 #endif
 
 void
-stl_open(stl_file *stl, const char *file) {
+stl_open(stl_file *stl, const ADMESH_CHAR *file) {
   stl_initialize(stl);
   stl_count_facets(stl, file);
   stl_allocate(stl);
@@ -66,7 +66,7 @@ stl_initialize(stl_file *stl) {
 }
 
 void
-stl_count_facets(stl_file *stl, const char *file) {
+stl_count_facets(stl_file *stl, const ADMESH_CHAR *file) {
   long           file_size;
   int            header_num_facets;
   int            num_facets;
@@ -79,14 +79,9 @@ stl_count_facets(stl_file *stl, const char *file) {
   if (stl->error) return;
 
   /* Open the file in binary mode first */
-  stl->fp = fopen(file, "rb");
+  stl->fp = stl_fopen(file, "rb");
   if(stl->fp == NULL) {
-    error_msg = (char*)
-                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
-    sprintf(error_msg, "stl_initialize: Couldn't open %s for reading",
-            file);
-    perror(error_msg);
-    free(error_msg);
+    perror("stl_initialize: Couldn't open file for reading");
     stl->error = 1;
     return;
   }
@@ -144,16 +139,12 @@ stl_count_facets(stl_file *stl, const char *file) {
     /* Reopen the file in text mode (for getting correct newlines on Windows) */
     // fix to silence a warning about unused return value.
     // obviously if it fails we have problems....
-    stl->fp = freopen(file, "r", stl->fp);
+    fclose(stl->fp);
+    stl->fp = stl_fopen(file, "r");
 
     // do another null check to be safe
     if(stl->fp == NULL) {
-      error_msg = (char*)
-        malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
-      sprintf(error_msg, "stl_initialize: Couldn't open %s for reading",
-          file);
-      perror(error_msg);
-      free(error_msg);
+      perror("stl_initialize: Couldn't open file for reading");
       stl->error = 1;
       return;
     }
@@ -201,7 +192,7 @@ stl_allocate(stl_file *stl) {
 }
 
 void
-stl_open_merge(stl_file *stl, char *file_to_merge) {
+stl_open_merge(stl_file *stl, ADMESH_CHAR *file_to_merge) {
   int num_facets_so_far;
   stl_type origStlType;
   FILE *origFp;

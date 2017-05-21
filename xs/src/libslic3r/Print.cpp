@@ -179,6 +179,7 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
         } else if (opt_key == "avoid_crossing_perimeters"
             || opt_key == "bed_shape"
             || opt_key == "bed_temperature"
+            || opt_key == "between_objects_gcode"
             || opt_key == "bridge_acceleration"
             || opt_key == "bridge_fan_speed"
             || opt_key == "complete_objects"

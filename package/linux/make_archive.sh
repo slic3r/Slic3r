@@ -26,7 +26,11 @@ install_par
 
 # If we're on a branch, add the branch name to the app name.
 if [ "$current_branch" == "master" ]; then
-    dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}.tar.bz2
+    if [ ! -z ${PR_ID+x} ]; then
+        dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}-PR${PR_ID}.tar.bz2
+    else
+        dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}.tar.bz2
+    fi
 else
     dmgfile=slic3r-${SLIC3R_BUILD_ID}-${1}-${current_branch}.tar.bz2
 fi
@@ -61,7 +65,6 @@ mkdir -p $appfolder
 
 echo "Copying resources..." 
 cp -rf $SLIC3R_DIR/var $resourcefolder/
-mv $resourcefolder/var/Slic3r.icns $resourcefolder
 
 echo "Copying Slic3r..."
 cp $SLIC3R_DIR/slic3r.pl $archivefolder/slic3r.pl
@@ -90,16 +93,21 @@ chmod +x $archivefolder/$appname
 
 echo "Copying perl from $PERL_BIN"
 cp -f $PERL_BIN $archivefolder/perl-local
-${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
+${PP_BIN} wxextension .0 \
+	  -M attributes -M base -M bytes -M B -M POSIX \
           -M FindBin -M Unicode::Normalize -M Tie::Handle \
-          -M Time::Local -M Math::Trig \
+          -M Time::Local -M Math::Trig -M IO::Socket -M Errno \
           -M lib -M overload \
           -M warnings -M local::lib \
           -M strict -M utf8 -M parent \
           -B -p -e "print 123" -o $WD/_tmp/test.par
 unzip -qq -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
+cp -rf $WD/_tmp/shlib $archivefolder/
 rm -rf $WD/_tmp
+for i in $(cat $WD/libpaths.txt); do 
+	install -v $i $archivefolder/bin
+done
 
 echo "Cleaning local-lib"
 rm -rf $archivefolder/local-lib/bin

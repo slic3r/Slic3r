@@ -3,6 +3,20 @@ use strict;
 use warnings;
 use utf8;
 
+use Wx 0.9901 qw(:bitmap :dialog :icon :id :misc :systemsettings :toplevelwindow
+    :filedialog :font);
+use Wx::Event qw(EVT_MENU);
+
+BEGIN {
+    # Wrap the Wx::_load_plugin() function which doesn't work with non-ASCII paths
+    no warnings 'redefine';
+    my $orig = *Wx::_load_plugin{CODE};
+    *Wx::_load_plugin = sub {
+       $_[0] = Slic3r::decode_path($_[0]);
+       $orig->(@_);
+    };
+}
+
 use File::Basename qw(basename);
 use FindBin;
 use List::Util qw(first any);
@@ -40,8 +54,6 @@ use Slic3r::GUI::SLAPrintOptions;
 our $have_OpenGL = eval "use Slic3r::GUI::3DScene; 1";
 our $have_LWP    = eval "use LWP::UserAgent; 1";
 
-use Wx 0.9901 qw(:bitmap :dialog :icon :id :misc :systemsettings :toplevelwindow
-    :filedialog :font);
 use Wx::Event qw(EVT_IDLE EVT_COMMAND);
 use base 'Wx::App';
 
@@ -80,13 +92,17 @@ our $Settings = {
 
 our $have_button_icons = &Wx::wxVERSION_STRING =~ / (?:2\.9\.[1-9]|3\.)/;
 our $small_font = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-$small_font->SetPointSize(11) if !&Wx::wxMSW;
+$small_font->SetPointSize(11) if &Wx::wxMAC;
 our $small_bold_font = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-$small_bold_font->SetPointSize(11) if !&Wx::wxMSW;
+$small_bold_font->SetPointSize(11) if &Wx::wxMAC;
 $small_bold_font->SetWeight(wxFONTWEIGHT_BOLD);
 our $medium_font = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 $medium_font->SetPointSize(12);
 our $grey = Wx::Colour->new(200,200,200);
+
+# to use in ScrolledWindow::SetScrollRate(xstep, ystep)
+# step related to system font point size
+our $scroll_step = Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT)->GetPointSize;
 
 our $VERSION_CHECK_EVENT : shared = Wx::NewEventType;
 
@@ -414,6 +430,30 @@ sub scan_serial_ports {
     }
     
     return grep !/Bluetooth|FireFly/, @ports;
+}
+
+sub append_menu_item {
+    my ($self, $menu, $string, $description, $cb, $id, $icon, $kind) = @_;
+    
+    $id //= &Wx::NewId();
+    my $item = Wx::MenuItem->new($menu, $id, $string, $description // '', $kind // 0);
+    $self->set_menu_item_icon($item, $icon);
+    $menu->Append($item);
+    
+    EVT_MENU($self, $id, $cb);
+    return $item;
+}
+
+sub append_submenu {
+    my ($self, $menu, $string, $description, $submenu, $id, $icon) = @_;
+    
+    $id //= &Wx::NewId();
+    my $item = Wx::MenuItem->new($menu, $id, $string, $description // '');
+    $self->set_menu_item_icon($item, $icon);
+    $item->SetSubMenu($submenu);
+    $menu->Append($item);
+    
+    return $item;
 }
 
 sub set_menu_item_icon {

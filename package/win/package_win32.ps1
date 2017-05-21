@@ -1,7 +1,7 @@
-# Written by Joseph Lenox
+# Written by Joseph Lenox 
 # Licensed under the same license as the rest of Slic3r.
 # ------------------------
-# You need to have Strawberry Perl 5.24.0.1 installed for this to work, 
+# You need to have Strawberry Perl 5.24.0.1 (or slic3r-perl) installed for this to work, 
 param (
 	[switch]$exe = $false
 )
@@ -41,6 +41,16 @@ if ($exe) {
 New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
 
 cpanm "PAR::Packer"
+if ($env:ARCH -eq "32bit") { 
+	$perlarch = "sjlj"
+	$glut = "libglut-0_.dll"
+	$pthread= "pthreadGC2-w32.dll"
+} else {
+	$perlarch = "seh"
+	$glut = "libglut-0__.dll"
+	$pthread= "pthreadGC2-w64.dll"
+}
+
 
 pp `
 -a "slic3r.exe;slic3r.exe"  `
@@ -54,10 +64,10 @@ pp `
 -a "../../FreeGLUT/freeglut.dll;freeglut.dll" `
 -a "${STRAWBERRY_PATH}\perl\bin\perl${perlversion}.dll;perl${perlversion}.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libstdc++-6.dll;libstdc++-6.dll"  `
--a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_seh-1.dll;libgcc_s_seh-1.dll"  `
+-a "${STRAWBERRY_PATH}\perl\bin\libgcc_s_${perlarch}-1.dll;libgcc_s_${perlarch}-1.dll"  `
 -a "${STRAWBERRY_PATH}\perl\bin\libwinpthread-1.dll;libwinpthread-1.dll"  `
--a "${STRAWBERRY_PATH}\c\bin\pthreadGC2-w64.dll;pthreadGC2-w64.dll"  `
--a "${STRAWBERRY_PATH}\c\bin\libglut-0__.dll;libglut-0__.dll"  `
+-a "${STRAWBERRY_PATH}\c\bin\${pthread};${pthread}"  `
+-a "${STRAWBERRY_PATH}\c\bin\${glut};${glut}"  `
 -M AutoLoader `
 -M B `
 -M Carp `
@@ -93,6 +103,7 @@ pp `
 -M IO `
 -M IO::Handle `
 -M IO::Select `
+-M IO::Socket `
 -M LWP `
 -M LWP::MediaTypes `
 -M LWP::MemberMixin `
@@ -151,7 +162,7 @@ if ($exe) {
 } else {
 # make this more useful for not being on the appveyor server
 	if ($env:APPVEYOR) {
-		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).zip"
+		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).$env:ARCH.zip"
 	} else {
 		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).zip"
 			del ..\..\slic3r.par

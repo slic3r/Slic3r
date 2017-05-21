@@ -12,6 +12,8 @@
 #include <math.h>
 #include <assert.h>
 #include <stdexcept>
+#include <boost/config.hpp>
+#include <boost/nowide/convert.hpp>
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -110,20 +112,32 @@ TriangleMesh::~TriangleMesh() {
 
 void
 TriangleMesh::ReadSTLFile(const std::string &input_file) {
+    #ifdef BOOST_WINDOWS
+    stl_open(&stl, boost::nowide::widen(input_file).c_str());
+    #else
     stl_open(&stl, input_file.c_str());
+    #endif
     if (this->stl.error != 0) throw std::runtime_error("Failed to read STL file");
 }
 
 void
 TriangleMesh::write_ascii(const std::string &output_file)
 {
+    #ifdef BOOST_WINDOWS
+    stl_write_ascii(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    #else
     stl_write_ascii(&this->stl, output_file.c_str(), "");
+    #endif
 }
 
 void
 TriangleMesh::write_binary(const std::string &output_file)
 {
+    #ifdef BOOST_WINDOWS
+    stl_write_binary(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    #else
     stl_write_binary(&this->stl, output_file.c_str(), "");
+    #endif
 }
 
 void
@@ -234,7 +248,12 @@ TriangleMesh::facets_count() const
 void
 TriangleMesh::WriteOBJFile(const std::string &output_file) {
     stl_generate_shared_vertices(&stl);
+    
+    #ifdef BOOST_WINDOWS
+    stl_write_obj(&stl, boost::nowide::widen(output_file).c_str());
+    #else
     stl_write_obj(&stl, output_file.c_str());
+    #endif
 }
 
 void TriangleMesh::scale(float factor)
@@ -512,6 +531,13 @@ TriangleMesh::require_shared_vertices()
 }
 
 void
+TriangleMesh::reverse_normals()
+{
+    stl_reverse_all_facets(&this->stl);
+    if (this->stl.stats.volume != -1) this->stl.stats.volume *= -1.0;
+}
+
+void
 TriangleMesh::extrude_tin(float offset)
 {
     calculate_normals(&this->stl);
@@ -712,7 +738,7 @@ template <Axis A>
 void
 TriangleMeshSlicer<A>::slice(const std::vector<float> &z, std::vector<Polygons>* layers) const
 {
-    /*
+    /**
        This method gets called with a list of unscaled Z coordinates and outputs
        a vector pointer having the same number of items as the original list.
        Each item is a vector of polygons created by slicing our mesh at the 
@@ -1134,14 +1160,14 @@ template <Axis A>
 void
 TriangleMeshSlicer<A>::make_expolygons(const Polygons &loops, ExPolygons* slices) const
 {
-    /*
+    /**
         Input loops are not suitable for evenodd nor nonzero fill types, as we might get
         two consecutive concentric loops having the same winding order - and we have to 
         respect such order. In that case, evenodd would create wrong inversions, and nonzero
         would ignore holes inside two concentric contours.
         So we're ordering loops and collapse consecutive concentric loops having the same 
         winding order.
-        TODO: find a faster algorithm for this, maybe with some sort of binary search.
+        \todo find a faster algorithm for this, maybe with some sort of binary search.
         If we computed a "nesting tree" we could also just remove the consecutive loops
         having the same winding order, and remove the extra one(s) so that we could just
         supply everything to offset() instead of performing several union/diff calls.

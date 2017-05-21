@@ -296,12 +296,26 @@ template<class T>
 bool
 contains(const std::vector<T> &vector, const Point &point)
 {
-    for (typename std::vector<T>::const_iterator it = vector.begin(); it != vector.end(); ++it) {
-        if (it->contains(point)) return true;
-    }
+    for (const T &it : vector)
+        if (it.contains(point))
+            return true;
+    
     return false;
 }
+template bool contains(const Polygons &vector, const Point &point);
 template bool contains(const ExPolygons &vector, const Point &point);
+
+template<class T>
+double
+area(const std::vector<T> &vector)
+{
+    double area = 0;
+    for (const T &it : vector)
+        area += it.area();
+    
+    return area;
+}
+template double area(const Polygons &vector);
 
 double
 rad2deg(double angle)

@@ -120,7 +120,7 @@ sub export {
         if ($self->print->has_support_material) {
             my $object0 = $self->objects->[0];
             my $flow = $object0->support_material_flow;
-            my $vol_speed = $flow->mm3_per_mm / $object0->config->get_abs_value('support_material_speed');
+            my $vol_speed = $flow->mm3_per_mm * $object0->config->get_abs_value('support_material_speed');
             $vol_speed = min($vol_speed, $self->config->max_volumetric_speed) if $self->config->max_volumetric_speed > 0;
             printf $fh "; support material extrusion width = %.2fmm (%.2fmm^3/s)\n",
                 $flow->width, $vol_speed;
@@ -136,6 +136,10 @@ sub export {
     # prepare the helper object for replacing placeholders in custom G-code and output filename
     $self->placeholder_parser->update_timestamp;
     
+    # GCode sets this automatically whenever we call change_layer(),
+    # but we need it for skirt/brim too
+    $gcodegen->set_first_layer(1);
+    
     # disable fan
     print $fh $gcodegen->writer->set_fan(0, 1)
         if $self->config->cooling && $self->config->disable_fan_first_layers;
@@ -146,12 +150,14 @@ sub export {
     }
     
     # set extruder(s) temperature before and after start G-code
-    $self->_print_first_layer_temperature(0);
+    $self->_print_first_layer_temperature(0)
+        if $self->config->start_gcode !~ /M(?:109|104)/i;
     printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->start_gcode);
     foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
         printf $fh "%s\n", $gcodegen->placeholder_parser->process($start_gcode);
     }
-    $self->_print_first_layer_temperature(1);
+    $self->_print_first_layer_temperature(1)
+        if $self->config->start_gcode !~ /M(?:109|104)/i;
     
     # set other general things
     print $fh $gcodegen->preamble;
@@ -246,8 +252,12 @@ sub export {
                     # is triggered, so machine has more time to reach such temperatures
                     if ($layer->id == 0 && $finished_objects > 0) {
                         printf $fh $gcodegen->writer->set_bed_temperature($self->config->first_layer_bed_temperature),
-                            if $self->config->first_layer_bed_temperature && $self->config->has_heatbed;
-                        $self->_print_first_layer_temperature(0);
+                            if $self->config->first_layer_bed_temperature
+                            && $self->config->has_heatbed
+                            && $self->config->between_objects_gcode !~ /M(?:190|140)/i;
+                        $self->_print_first_layer_temperature(0)
+                            if $self->config->between_objects_gcode !~ /M(?:109|104)/i;
+                        printf $fh "%s\n", $gcodegen->placeholder_parser->process($self->config->between_objects_gcode);
                     }
                     $self->process_layer($layer, [$copy]);
                 }
@@ -336,7 +346,6 @@ sub export {
 sub _print_first_layer_temperature {
     my ($self, $wait) = @_;
     
-    return if $self->config->start_gcode =~ /M(?:109|104)/i;
     for my $t (@{$self->print->extruders}) {
         my $temp = $self->config->get_at('first_layer_temperature', $t);
         $temp += $self->config->standby_temperature_delta if $self->config->ooze_prevention;
@@ -398,8 +407,8 @@ sub process_layer {
                 push @mm3_per_mm, $layer->support_interface_fills->min_mm3_per_mm;
             }
         }
-        # filter out 0-width segments
-        @mm3_per_mm = grep $_ > 0.000001, @mm3_per_mm;
+        # ignore too thin segments
+        @mm3_per_mm = grep $_ > 0.01, @mm3_per_mm;
         if (@mm3_per_mm) {
             my $min_mm3_per_mm = min(@mm3_per_mm);
             # In order to honor max_print_speed we need to find a target volumetric

@@ -155,12 +155,20 @@ sub detect_surfaces_type {
 sub prepare_infill {
     my ($self) = @_;
     
+    return if $self->step_done(STEP_PREPARE_INFILL);
+    
+    # This prepare_infill() is not really idempotent.
+    # TODO: It should clear and regenerate fill_surfaces at every run 
+    # instead of modifying it in place.
+    $self->invalidate_step(STEP_PERIMETERS);
+    $self->make_perimeters;
+    
+    # Do this after invalidating STEP_PERIMETERS because that would re-invalidate STEP_PREPARE_INFILL
+    $self->set_step_started(STEP_PREPARE_INFILL);
+    
     # prerequisites
-    $self->make_perimeters;  # do we need them? TODO: check
     $self->detect_surfaces_type;
     
-    return if $self->step_done(STEP_PREPARE_INFILL);
-    $self->set_step_started(STEP_PREPARE_INFILL);
     $self->print->status_cb->(30, "Preparing infill");
     
     # decide what surfaces are to be filled
@@ -205,7 +213,11 @@ sub generate_support_material {
     
     $self->clear_support_layers;
     
-    if ((!$self->config->support_material && $self->config->raft_layers == 0) || scalar(@{$self->layers}) < 2) {
+    if ((!$self->config->support_material
+		    && $self->config->raft_layers == 0
+		    && $self->config->support_material_enforce_layers == 0)
+		  || scalar(@{$self->layers}) < 2
+		  ) {
         $self->set_step_done(STEP_SUPPORTMATERIAL);
         return;
     }

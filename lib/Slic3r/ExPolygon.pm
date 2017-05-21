@@ -30,13 +30,6 @@ sub offset_ex {
     return Slic3r::Geometry::Clipper::offset_ex(\@$self, @_);
 }
 
-sub noncollapsing_offset_ex {
-    my $self = shift;
-    my ($distance, @params) = @_;
-    
-    return $self->offset_ex($distance + 1, @params);
-}
-
 sub bounding_box {
     my $self = shift;
     return $self->contour->bounding_box;

@@ -40,7 +40,7 @@ sub new {
         
         EVT_LEFT_DOWN($btn, sub {
             my $menu = Wx::Menu->new;
-            my %presets = map { $_->name => $_ } wxTheApp->presets('printer');
+            my %presets = map { $_->name => $_ } @{wxTheApp->presets->{printer}};
             
             # remove printers that already exist
             my @panels = $self->print_panels;

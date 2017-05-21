@@ -81,15 +81,13 @@ my @boost_include = ();
 if (defined $ENV{BOOST_INCLUDEDIR}) {
     push @boost_include, $ENV{BOOST_INCLUDEDIR}
 } elsif (defined $ENV{BOOST_DIR}) {
-    my $subdir = $ENV{BOOST_DIR} . (($mswin == 1) ? '\include' : '/include');
-    if (-d $subdir) {
-        push @boost_include, $subdir;
-    } elsif (-d "../$subdir") {
-        # User might have provided a path relative to the Build.PL in the main directory
-        push @boost_include, "../$subdir";
-    } else {
-        push @boost_include, $ENV{BOOST_DIR};
+    # User might have provided a path relative to the Build.PL in the main directory
+    foreach my $subdir ($ENV{BOOST_DIR}, "../$ENV{BOOST_DIR}", "$ENV{BOOST_DIR}/include", "../$ENV{BOOST_DIR}/include") {
+        if (-d $subdir) {
+            push @boost_include, $subdir;
+        }
     }
+    die "Invalid BOOST_DIR: no such directory\n" if !@boost_include;
 } else {
     # Boost library was not defined by the environment.
     # Try to guess at some default paths.
@@ -113,15 +111,13 @@ my @boost_libs = ();
 if (defined $ENV{BOOST_LIBRARYPATH}) {
     push @boost_libs, $ENV{BOOST_LIBRARYPATH}
 } elsif (defined $ENV{BOOST_DIR}) {
-    my $subdir = $ENV{BOOST_DIR} . ($mswin ? '\stage\lib' : '/stage/lib');
-    if (-d $subdir) {
-        push @boost_libs, $subdir;
-    } elsif (-d "../$subdir") {
-        # User might have provided a path relative to the Build.PL in the main directory
-        push @boost_libs, "../$subdir";
-    } else {
-        push @boost_libs, $ENV{BOOST_DIR};
+    # User might have provided a path relative to the Build.PL in the main directory
+    foreach my $subdir ("$ENV{BOOST_DIR}/stage/lib", "../$ENV{BOOST_DIR}/stage/lib") {
+        if (-d $subdir) {
+            push @boost_libs, $subdir;
+        }
     }
+    die "Invalid BOOST_DIR: no such directory\n" if !@boost_libs;
 } else {
     # Boost library was not defined by the environment.
     # Try to guess at some default paths.

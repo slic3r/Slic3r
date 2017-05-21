@@ -1,6 +1,7 @@
 #include "Layer.hpp"
 #include "BridgeDetector.hpp"
 #include "ClipperUtils.hpp"
+#include "Geometry.hpp"
 #include "PerimeterGenerator.hpp"
 #include "Print.hpp"
 #include "Surface.hpp"
@@ -65,34 +66,65 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
     g.process();
 }
 
-// This function reads lower_layer->slices and writes this->bridged and this->fill_surfaces,
-// so it's thread-safe.
+// This function reads layer->slices and lower_layer->slices
+// and writes this->bridged and this->fill_surfaces, so it's thread-safe.
 void
 LayerRegion::process_external_surfaces()
 {
-    const Surfaces &surfaces = this->fill_surfaces.surfaces;
-    const double margin = scale_(EXTERNAL_INFILL_MARGIN);
+    Surfaces &surfaces = this->fill_surfaces.surfaces;
+    
+    for (size_t j = 0; j < surfaces.size(); ++j) {
+        // we don't get any reference to surface because it would be invalidated
+        // by the erase() call below
+        
+        if (this->layer()->lower_layer != NULL && surfaces[j].is_bridge()) {
+            // If this bridge has one or more holes that are internal surfaces
+            // (thus not visible from the outside), like a slab sustained by 
+            // pillars, include them in the bridge in order to have better and
+            // more continuous bridging.
+            for (int i = 0; i < surfaces[j].expolygon.holes.size(); ++i) {
+                // reverse the hole and consider it a polygon
+                Polygon h = surfaces[j].expolygon.holes[i];
+                h.reverse();
+            
+                // Is this hole fully contained in the layer slices?
+                if (diff(h, this->layer()->slices).empty()) {
+                    // remove any other surface contained in this hole
+                    for (int k = 0; k < surfaces.size(); ++k) {
+                        if (k == j) continue;
+                        if (h.contains(surfaces[k].expolygon.contour.first_point())) {
+                            surfaces.erase(surfaces.begin() + k);
+                            if (j > k) --j;
+                            --k;
+                        }
+                    }
+                    
+                    Polygons &holes = surfaces[j].expolygon.holes;
+                    holes.erase(holes.begin() + i);
+                    --i;
+                }
+            }
+        }
+    }
     
     SurfaceCollection bottom;
-    for (Surfaces::const_iterator surface = surfaces.begin(); surface != surfaces.end(); ++surface) {
-        if (!surface->is_bottom()) continue;
-        
-        const ExPolygons grown = offset_ex(surface->expolygon, +margin);
+    for (const Surface &surface : surfaces) {
+        if (!surface.is_bottom()) continue;
         
         /*  detect bridge direction before merging grown surfaces otherwise adjacent bridges
             would get merged into a single one while they need different directions
             also, supply the original expolygon instead of the grown one, because in case
             of very thin (but still working) anchors, the grown expolygon would go beyond them */
         double angle = -1;
-        if (this->layer()->lower_layer != NULL && surface->is_bridge()) {
+        if (this->layer()->lower_layer != NULL && surface.is_bridge()) {
             BridgeDetector bd(
-                surface->expolygon,
+                surface.expolygon,
                 this->layer()->lower_layer->slices,
                 this->flow(frInfill, true).scaled_width()
             );
             
             #ifdef SLIC3R_DEBUG
-            printf("Processing bridge at layer %zu:\n", this->layer()->id());
+            printf("Processing bridge at layer %zu (z = %f):\n", this->layer()->id(), this->layer()->print_z);
             #endif
             
             if (bd.detect_angle()) {
@@ -105,28 +137,22 @@ LayerRegion::process_external_surfaces()
             }
         }
         
-        for (ExPolygons::const_iterator it = grown.begin(); it != grown.end(); ++it) {
-            Surface s       = *surface;
-            s.expolygon     = *it;
-            s.bridge_angle  = angle;
-            bottom.surfaces.push_back(s);
-        }
+        const ExPolygons grown = offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
+        Surface templ = surface;
+        templ.bridge_angle = angle;
+        bottom.append(grown, templ);
     }
     
     SurfaceCollection top;
-    for (Surfaces::const_iterator surface = surfaces.begin(); surface != surfaces.end(); ++surface) {
-        if (surface->surface_type != stTop) continue;
+    for (const Surface &surface : surfaces) {
+        if (surface.surface_type != stTop) continue;
         
         // give priority to bottom surfaces
         ExPolygons grown = diff_ex(
-            offset(surface->expolygon, +margin),
+            offset(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN),
             (Polygons)bottom
         );
-        for (ExPolygons::const_iterator it = grown.begin(); it != grown.end(); ++it) {
-            Surface s   = *surface;
-            s.expolygon = *it;
-            top.surfaces.push_back(s);
-        }
+        top.append(grown, surface);
     }
     
     /*  if we're slicing with no infill, we can't extend external surfaces
@@ -135,10 +161,9 @@ LayerRegion::process_external_surfaces()
     if (this->region()->config.fill_density.value > 0) {
         fill_boundaries = SurfaceCollection(surfaces);
     } else {
-        for (Surfaces::const_iterator it = surfaces.begin(); it != surfaces.end(); ++it) {
-            if (it->surface_type != stInternal)
-                fill_boundaries.surfaces.push_back(*it);
-        }
+        for (const Surface &s : surfaces)
+            if (s.surface_type != stInternal)
+                fill_boundaries.surfaces.push_back(s);
     }
     
     // intersect the grown surfaces with the actual fill boundaries
@@ -152,10 +177,10 @@ LayerRegion::process_external_surfaces()
         std::vector<SurfacesConstPtr> groups;
         tb.group(&groups);
         
-        for (std::vector<SurfacesConstPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+        for (const SurfacesConstPtr &g : groups) {
             Polygons subject;
-            for (SurfacesConstPtr::const_iterator s = g->begin(); s != g->end(); ++s)
-                append_to(subject, (Polygons)**s);
+            for (const Surface* s : g)
+                append_to(subject, (Polygons)*s);
             
             ExPolygons expp = intersection_ex(
                 subject,
@@ -163,45 +188,36 @@ LayerRegion::process_external_surfaces()
                 true // to ensure adjacent expolygons are unified
             );
             
-            for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
-                Surface s = *g->front();
-                s.expolygon = *ex;
-                new_surfaces.surfaces.push_back(s);
-            }
+            new_surfaces.append(expp, *g.front());
         }
     }
     
     /* subtract the new top surfaces from the other non-top surfaces and re-add them */
     {
         SurfaceCollection other;
-        for (Surfaces::const_iterator s = surfaces.begin(); s != surfaces.end(); ++s) {
-            if (s->surface_type != stTop && !s->is_bottom())
-                other.surfaces.push_back(*s);
-        }
+        for (const Surface &s : surfaces)
+            if (s.surface_type != stTop && !s.is_bottom())
+                other.surfaces.push_back(s);
         
         // group surfaces
         std::vector<SurfacesConstPtr> groups;
         other.group(&groups);
         
-        for (std::vector<SurfacesConstPtr>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+        for (const SurfacesConstPtr &g : groups) {
             Polygons subject;
-            for (SurfacesConstPtr::const_iterator s = g->begin(); s != g->end(); ++s)
-                append_to(subject, (Polygons)**s);
+            for (const Surface* s : g)
+                append_to(subject, (Polygons)*s);
             
             ExPolygons expp = diff_ex(
                 subject,
                 (Polygons)new_surfaces
             );
             
-            for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
-                Surface s = *g->front();
-                s.expolygon = *ex;
-                new_surfaces.surfaces.push_back(s);
-            }
+            new_surfaces.append(expp, *g.front());
         }
     }
     
-    this->fill_surfaces = new_surfaces;
+    this->fill_surfaces = std::move(new_surfaces);
 }
 
 void
@@ -234,7 +250,8 @@ LayerRegion::prepare_fill_surfaces()
     const float &fill_density = this->region()->config.fill_density;
     if (fill_density > 0 && fill_density < 100) {
         // scaling an area requires two calls!
-        const double min_area = scale_(scale_(this->region()->config.solid_infill_below_area.value));
+        // (we don't use scale_() because it would overflow the coord_t range
+        const double min_area = this->region()->config.solid_infill_below_area.value / SCALING_FACTOR / SCALING_FACTOR;
         for (Surface &surface : this->fill_surfaces.surfaces) {
             if (surface.surface_type == stInternal && surface.area() <= min_area)
                 surface.surface_type = stInternalSolid;
