@@ -2,10 +2,8 @@
 /home/travis/builds/alexrj/Slic3r/local-lib/lib/perl5/x86_64-linux-thread-multi/Alien/wxWidgets/gtk_3_0_2_uni/lib/libwx_gtk2u_adv-3.0.so.0
 /home/travis/builds/alexrj/Slic3r/local-lib/lib/perl5/x86_64-linux-thread-multi/Alien/wxWidgets/gtk_3_0_2_uni/lib/libwx_gtk2u_core-3.0.so.0
 /lib/x86_64-linux-gnu/liblzma.so.5
-/lib/x86_64-linux-gnu/libm.so.6
 /lib/x86_64-linux-gnu/libpcre.so.3
 /lib/x86_64-linux-gnu/libpng12.so.0
-/lib/x86_64-linux-gnu/libresolv.so.2
 /lib/x86_64-linux-gnu/libuuid.so.1
 /usr/lib/x86_64-linux-gnu/libSM.so.6
 /usr/lib/x86_64-linux-gnu/libatk-1.0.so.0
