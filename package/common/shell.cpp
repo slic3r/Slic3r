@@ -61,6 +61,7 @@ int main(int argc, char **argv, char **env)
 				exe_path[i] = (char)exe_path_short[i];
 		}
 		_splitpath(exe_path, drive, dir, fname, ext);
+		strcat(dir, "libexec\\");
 		_makepath(script_path, drive, dir, NULL, NULL);
 		if (needs_short_paths)
 			printf("Slic3r installed in a loclized path. Using an 8.3 path: \"%s\"\n",
