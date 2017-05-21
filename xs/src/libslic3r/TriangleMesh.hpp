@@ -129,7 +129,7 @@ class TriangleMeshSlicer
 	/// \param[in] z Coordinate plane to cut along.
 	/// \param[out] upper TriangleMesh object to add the mesh > z. NULL suppresses saving this.
 	/// \param[out] lower TriangleMesh object to save the mesh < z. NULL suppresses saving this.
-    void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const
+    void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const;
     
     private:
     typedef std::vector< std::vector<int> > t_facets_edges;
