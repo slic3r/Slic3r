@@ -16,6 +16,14 @@ my $mswin = $^O eq 'MSWin32';
 # NOGDI            : prevents inclusion of wingdi.h which defines functions Polygon() and Polyline() in global namespace
 # BOOST_ASIO_DISABLE_KQUEUE : prevents a Boost ASIO bug on OS X: https://svn.boost.org/trac/boost/ticket/5339
 my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE);
+if (defined($ENV{'CFLAGS'})) {
+    # push environment cflags
+    push @cflags, split / /, $ENV{'CFLAGS'};
+}
+if (defined($ENV{'CXXFLAGS'})) {
+    # push environment cxxflags
+    push @cflags, split / /, $ENV{'CXXFLAGS'};
+}
 if ($cpp_guess->is_gcc)	{
 	# GCC is pedantic with c++11 std, so undefine strict ansi to get M_PI back
 	push @cflags, qw(-U__STRICT_ANSI__);
@@ -28,6 +36,9 @@ if (`$Config{cc} -v` =~ /gcc version 4\.6\./) {
     push @cflags, qw(-std=c++11);
 }
 my @ldflags = ();
+if (defined($ENV{'LDFLAGS'})) {
+    push @ldflags, split / /, $ENV{'LDFLAGS'};
+}
 
 if ($^O eq 'darwin') {
     push @cflags, qw(-stdlib=libc++);
