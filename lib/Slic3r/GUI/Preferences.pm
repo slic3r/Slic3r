@@ -71,6 +71,13 @@ sub new {
         tooltip     => 'Disable communication with the printer over a serial / USB cable. This simplifies the user interface in case the printer is never attached to the computer.',
         default     => $Slic3r::GUI::Settings->{_}{no_controller},
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'tabbed_preset_editors',
+        type        => 'bool',
+        label       => 'Display profile editors as tabs',
+        tooltip     => 'When opening a profile editor, it will be shown in a dialog or in a tab according to this option.',
+        default     => $Slic3r::GUI::Settings->{_}{tabbed_preset_editors},
+    ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
