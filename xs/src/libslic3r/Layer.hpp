@@ -58,20 +58,29 @@ class LayerRegion
     
     /// Flow object which provides methods to predict material spacing.
     Flow flow(FlowRole role, bool bridge = false, double width = -1) const;
+    /// Merges this->slices
     void merge_slices();
+    /// Preprocesses fill surfaces
     void prepare_fill_surfaces();
+    /// Generates and stores the perimeters and thin fills
     void make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces);
+    /// TODO
     void make_fill();
+    /// Processes external surfaces for bridges and top/bottom surfaces
     void process_external_surfaces();
+    /// Gets the smallest fillable area
     double infill_area_threshold() const;
     
     private:
     Layer *_layer;
     PrintRegion *_region;
+    /// Mutex object for slices.
     mutable boost::mutex _slices_mutex;
 
+    ///Constructor
     LayerRegion(Layer *layer, PrintRegion *region)
         : _layer(layer), _region(region) {};
+    ///Destructor
     ~LayerRegion() {};
 };
 
@@ -102,7 +111,7 @@ class Layer {
 
 
     size_t region_count() const;
-    /// Gets a region at a specific is
+    /// Gets a region at a specific id
     LayerRegion* get_region(size_t idx) { return this->regions.at(idx); };
     const LayerRegion* get_region(size_t idx) const { return this->regions.at(idx); };
     
