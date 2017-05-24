@@ -42,7 +42,7 @@ class Model
     ///< Single material may be shared by multiple models.
 
     ModelObjectPtrs objects;
-    ///< Objects are owned by a model. Each model may have multiple instances
+    ///< Objects are owned by a model. Each object may have multiple instances
     ///< , each instance having its own transformation (shift, scale, rotation).
 
     /// Model constructor.
@@ -65,8 +65,8 @@ class Model
     ~Model();
 
     /// Read a model from file.
-    /// This function supports the following formats (STL, OBJ, AMF).
-    /// \param  input_file std::string the file path
+    /// This function supports the following formats (STL, OBJ, AMF), It auto-detects the file format from the file name suffix.
+    /// \param  input_file std::string the file path expressed in UTF-8
     /// \return Model the read Model
     static Model read_from_file(std::string input_file);
 
@@ -130,12 +130,10 @@ class Model
     /// This function calls repair function on each TriangleMesh of each model object volume
     void repair();
 
-    /// Center each model object instance around a point.
+    /// Center the total bounding box of the instances around a point.
+    /// This transformation works in the XY plane only and no transformation in Z is performed.
     /// \param point pointf object to center the model instances of model objects around
     void center_instances_around_point(const Pointf &point);
-
-    /// Center each ModelObject instance around the origin point.
-    void align_instances_to_origin();
 
     /// Translate each ModelObject with x, y, z units.
     /// \param x coordf_t units in the x direction
@@ -143,52 +141,55 @@ class Model
     /// \param z coordf_t units in the z direction
     void translate(coordf_t x, coordf_t y, coordf_t z);
 
-    /// Flatten all ModelObjects of the current model to a single mesh
-    /// after performing extra transformations (if the model was rotated or translated).
+    /// Flatten all ModelInstances to a single mesh
+    /// after performing instance transformations (if the object was rotated or translated).
     /// \return TriangleMesh a single TriangleMesh object
     TriangleMesh mesh() const;
 
-    /// Flatten all ModelObjects of the current model to a single mesh without any extra processing.
+    /// Flatten all ModelVolumes to a single mesh without any extra processing (i.e. without applying any instance duplication and/or transformation).
     /// \return TriangleMesh a single TriangleMesh object
     TriangleMesh raw_mesh() const;
 
-    /// Arrange ModelObjects preserving their ModelInstance count without altering their ModelInstance positions.
+    /// Arrange ModelInstances. ModelInstances of the same ModelObject do not preserve their relative positions.
+    /// It uses the given BoundingBoxf as a hint, but falls back to free arrangement if it's not possible to fit all the parts in it.
     /// \param sizes Pointfs& number of parts
     /// \param dist coordf_t distance between cells
-    /// \param bb BoundingBoxf* pointer to the bounding box of the area to fill
-    /// \param out Pointfs&
+    /// \param bb BoundingBoxf* (optional) pointer to the bounding box of the area to fill
+    /// \param out Pointfs& vector of the output positions
     /// \return bool whether the function finished arranging objects or it is impossible to arrange
     bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb, Pointfs &out) const;
 
     /// Arrange ModelObjects preserving their ModelInstance count but altering their ModelInstance positions.
     /// \param dist coordf_t distance between cells
-    /// \param bb BoundingBoxf* pointer to the bounding box of the area to fill
+    /// \param bb BoundingBoxf* (optional) pointer to the bounding box of the area to fill
     /// \return bool whether the function finished arranging objects or it is impossible to arrange
     bool arrange_objects(coordf_t dist, const BoundingBoxf* bb = NULL);
 
-    // Croaks if the duplicated objects do not fit the print bed.
-    /// Duplicate each entire ModelObject preserving ModelInstance relative positions
-    /// \param copies_num number of copies
-    /// \param dist distance between cells
-    /// \param bb bounding box object
+    /// Duplicate the ModelInstances of each ModelObject as a whole preserving their relative positions.
+    /// This function croaks if the duplicated objects do not fit the print bed.
+    /// \param copies_num size_t number of copies
+    /// \param dist coordf_t distance between cells
+    /// \param bb BoundingBoxf* (optional) pointer to the bounding box of the area to fill
     void duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
 
-    /// Duplicate each entire ModelObject preserving ModelInstance relative positions
+    /// Duplicate each entire ModelInstances of the each ModelObject as a whole.
     /// This function will append more instances to each object
-    /// and then automatically rearrange everything
-    /// \param copies_num number of copies
-    /// \param dist dist distance between cells
-    /// \param bb bounding box object
+    /// and then calls arrange_objects() function to automatically rearrange everything.
+    /// \param copies_num size_t number of copies
+    /// \param dist coordf_t distance between cells
+    /// \param bb BoundingBoxf* (optional) pointer to the bounding box of the area to fill
     void duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
 
-    /// Replicate a single ModelObject and arranges them on a grid. It's used only in CLI mode.
-    /// Grid duplication is not supported with multiple objects
+
+    /// Duplicate a single ModelObject and arranges them on a grid.
+    /// Grid duplication is not supported with multiple objects. It throws an exception if there is more than one ModelObject.
+    /// It also throws an exception if there are no ModelObjects in the current Model.
     /// \param x size_t number of duplicates in x direction
     /// \param y size_t offset  number of duplicates in y direction
     /// \param dist coordf_t distance supposed to be between the duplicated ModelObjects
     void duplicate_objects_grid(size_t x, size_t y, coordf_t dist);
 
-    /// Print info about each ModelObject in the model
+    /// This function calls the print_info() function of each ModelObject.
     void print_info() const;
 
     /// Check to see if the current Model has characteristics of having multiple parts (usually multiple volumes, etc).
@@ -217,7 +218,7 @@ class ModelMaterial
     Model* get_model() const { return this->model; };
 
     /// Apply attributes defined by the AMF file format
-    /// \param attributes the attributes map
+    /// \param attributes t_model_material_attributes the attributes map
     void apply(const t_model_material_attributes &attributes);
 
     private:
@@ -228,8 +229,8 @@ class ModelMaterial
     ModelMaterial(Model *model);
 
     /// Constructor
-    /// \param model the parent model owning this material.
-    /// \param other the other model material to be copied
+    /// \param model Model* the parent model owning this material.
+    /// \param other ModelMaterial& the other model material to be copied
     ModelMaterial(Model *model, const ModelMaterial &other);
 };
 
@@ -275,7 +276,7 @@ class ModelObject
     /// \return parent Model* pointer to the owner Model
     Model* get_model() const { return this->model; };
 
-    /// Add a new ModelVolume to the current ModelObject.
+    /// Add a new ModelVolume to the current ModelObject. The mesh is copied into the newly created ModelVolume.
     /// \param mesh TriangularMesh
     /// \return ModelVolume* pointer to the new volume
     ModelVolume* add_volume(const TriangleMesh &mesh);
@@ -323,10 +324,11 @@ class ModelObject
     /// Flatten all volumes and instances into a single mesh and applying all the ModelInstances transformations.
     TriangleMesh mesh() const;
 
-    /// Flatten all volumes and instances into a single mesh.
+    /// Flatten all volumes into a single mesh.
     TriangleMesh raw_mesh() const;
 
-    /// Get the raw bounding box
+    /// Get the raw bounding box.
+    /// This function croaks when there are no ModelInstances for this ModelObject
     /// \return BoundingBoxf3
     BoundingBoxf3 raw_bounding_box() const;
 
@@ -335,35 +337,39 @@ class ModelObject
     /// \return BoundingBoxf3 the bounding box at the given index
     BoundingBoxf3 instance_bounding_box(size_t instance_idx) const;
 
-    /// Align the current ModelObject to ground by translating in the z axis the needed units.
+    /// Align the current ModelObject to ground by translating the ModelVolumes in the z axis the needed units.
     void align_to_ground();
 
-    /// Center the current ModelObject to origin.
+    /// Center the current ModelObject to origin by translating the ModelVolumes
+    //TODO @Samir Ask? Why do we inverse tranlsate the ModelInstances
     void center_around_origin();
 
-    /// Translate the current ModelObject with (x,y,z) units.
+    /// Translate the current ModelObject by translating ModelVolumes with (x,y,z) units.
+    /// This function calls translate(coordf_t x, coordf_t y, coordf_t z) to translate every TriangleMesh in each ModelVolume.
     /// \param vector Vectorf3 the translation vector
     void translate(const Vectorf3 &vector);
 
-    /// Translate each TriangleMesh in every ModelVolume in this ModelObject.
+    /// Translate the current ModelObject by translating ModelVolumes with (x,y,z) units.
     /// \param x coordf_t the x units
     /// \param y coordf_t the y units
     /// \param z coordf_t the z units
     void translate(coordf_t x, coordf_t y, coordf_t z);
 
-    /// Scale the current ModelObject
+    /// Scale the current ModelObject by scaling its ModelVolumes.
+    /// This function calls scale(const Pointf3 &versor) to scale every TriangleMesh in each ModelVolume.
     /// \param factor float the scaling factor
     void scale(float factor);
 
-    /// Scale each TriangleMesh in every ModelVolume in this ModelObject.
+    /// Scale the current ModelObject by scaling its ModelVolumes.
     /// \param versor Pointf3 the scaling factor in a 3d vector.
     void scale(const Pointf3 &versor);
 
-    /// Scale the current ModelObject to fit.
+    /// Scale the current ModelObject to fit by altering the scaling factor of ModelInstances.
+    /// It operates on the total size by duplicating the object according to all the instances.
     /// \param size Sizef3 the size vector
     void scale_to_fit(const Sizef3 &size);
 
-    /// Rotate the current ModelObject.
+    /// Rotate the current ModelObject by rotating ModelVolumes.
     /// \param angle float the angle in radians
     /// \param axis Axis the axis to be rotated around
     void rotate(float angle, const Axis &axis);
@@ -373,6 +379,7 @@ class ModelObject
     void mirror(const Axis &axis);
 
     /// Transform the current ModelObject by a certain ModelInstance attributes.
+    /// Inverse transformation is applied to all the ModelInstances, so that the final size/position/rotation of the transformed objects doesn't change.
     /// \param instance ModelInstance the instance used to transform the current ModelObject
     /// \param dont_translate bool whether to translate the current ModelObject or not
     void transform_by_instance(ModelInstance instance, bool dont_translate = false);
@@ -385,14 +392,14 @@ class ModelObject
     /// \return size_t the facets count
     size_t facets_count() const;
 
-    /// Know whether there exists a TriangleMesh object that needs repair or not.
+    /// Know whether there exists a TriangleMesh object that needed repair or not.
     /// \return bool
     bool needed_repair() const;
 
-    /// Cut (Slice) the current ModelObject at a certain axis at a certain magnitude.
+    /// Cut (Slice) the current ModelObject along a certain axis at a certain coordinate.
     /// \param axis Axis the axis to slice at (X = 0 or Y or Z)
     /// \param z coordf_t the point at the certain axis to cut(slice) the Model at
-    /// \param model the owner Model
+    /// \param model Model* pointer to the Model which will get the resulting objects added
     void cut(Axis axis, coordf_t z, Model* model) const;
 
     /// Split the meshes of the ModelVolume in this ModelObject if there exists only one ModelVolume in this ModelObject.

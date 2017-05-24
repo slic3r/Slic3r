@@ -82,7 +82,6 @@
     Clone<BoundingBoxf3> bounding_box();
     void center_instances_around_point(Pointf* point)
         %code%{ THIS->center_instances_around_point(*point); %};
-    void align_instances_to_origin();
     void translate(double x, double y, double z);
     Clone<TriangleMesh> mesh();
     Clone<TriangleMesh> raw_mesh();

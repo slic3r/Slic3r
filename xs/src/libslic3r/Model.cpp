@@ -212,16 +212,6 @@ Model::center_instances_around_point(const Pointf &point)
 }
 
 void
-Model::align_instances_to_origin()
-{
-    BoundingBoxf3 bb = this->bounding_box();
-    
-    Pointf new_center = (Pointf)bb.size();
-    new_center.translate(-new_center.x/2, -new_center.y/2);
-    this->center_instances_around_point(new_center);
-}
-
-void
 Model::translate(coordf_t x, coordf_t y, coordf_t z)
 {
     for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
