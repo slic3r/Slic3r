@@ -341,7 +341,6 @@ class ModelObject
     void align_to_ground();
 
     /// Center the current ModelObject to origin by translating the ModelVolumes
-    //TODO @Samir Ask? Why do we inverse tranlsate the ModelInstances
     void center_around_origin();
 
     /// Translate the current ModelObject by translating ModelVolumes with (x,y,z) units.
