@@ -684,7 +684,7 @@ TriangleMesh::make_sphere(double rho, double fa) {
         // Fixed scaling 
         const double z = -rho + increment*rho*2.0;
         // radius of the circle for this step.
-        const double r = sqrt(abs(rho*rho - z*z));
+        const double r = sqrt(std::abs(rho*rho - z*z));
         Pointf3 b(0, r, z);
         b.rotate(ring[i], Pointf3(0,0,z)); 
         vertices.push_back(b);
@@ -699,7 +699,7 @@ TriangleMesh::make_sphere(double rho, double fa) {
     // General case: insert and form facets for each step, joining it to the ring below it.
     for (size_t s = 2; s < steps - 1; s++) {
         const double z = -rho + increment*(double)s*2.0*rho;
-        const double r = sqrt(abs(rho*rho - z*z));
+        const double r = sqrt(std::abs(rho*rho - z*z));
 
         for (size_t i = 0; i < ring.size(); i++) {
             Pointf3 b(0, r, z);

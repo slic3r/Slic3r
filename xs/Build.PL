@@ -11,6 +11,9 @@ use Module::Build::WithXSpp;
 my $cpp_guess = ExtUtils::CppGuess->new;
 my $mswin = $^O eq 'MSWin32';
 
+# prevent an annoying concatenation warning by Devel::CheckLib
+$ENV{LD_RUN_PATH} //= "";
+
 # _GLIBCXX_USE_C99 : to get the long long type for g++
 # HAS_BOOL         : stops Perl/lib/CORE/handy.h from doing "#  define bool char" for MSVC
 # NOGDI            : prevents inclusion of wingdi.h which defines functions Polygon() and Polyline() in global namespace
@@ -199,6 +202,9 @@ if ($cpp_guess->is_gcc) {
         # https://svn.boost.org/trac/boost/ticket/8695
         push @cflags, qw(-fno-inline-small-functions);
     }
+    
+    # our templated XS bindings cause undefined-var-template warnings
+    push @cflags, qw(-Wno-undefined-var-template);
 }
 
 my $build = Module::Build::WithXSpp->new(
