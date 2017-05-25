@@ -611,8 +611,12 @@ sub start_print {
         }
         Slic3r::debugf "connected to " . $self->config->serial_port . "\n";
         
+        # TODO: this wait should be handled by GCodeSender
+        sleep 4;
+        
         # send custom start G-code
         $self->sender->send($_, 1) for grep !/^;/, split /\n/, $self->config->start_gcode;
+        $self->sender->("G90", 1); # set absolute positioning
     }
     
     $self->is_printing(1);
