@@ -15,6 +15,7 @@
 #ifdef WIN32
 int main(int argc, char **argv, char **env)
 {
+	SetCurrentDirectory("libexec");
 	
 	// If the Slic3r is installed in a localized directory (containing non-iso
 	// characters), spaces or semicolons, use short file names.
@@ -66,6 +67,7 @@ int main(int argc, char **argv, char **env)
 			printf("Slic3r installed in a loclized path. Using an 8.3 path: \"%s\"\n",
 					script_path);
 		SetDllDirectoryA(script_path);
+		strcat(dir, "libexec\\");
 		_makepath(script_path, drive, dir, "slic3r", "pl");
 		command_line[0] = exe_path;
 		command_line[1] = script_path;

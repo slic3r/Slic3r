@@ -2,9 +2,6 @@
 # Licensed under the same license as the rest of Slic3r.
 # ------------------------
 # You need to have Strawberry Perl 5.24.0.1 (or slic3r-perl) installed for this to work, 
-param (
-	[switch]$exe = $false
-)
 echo "Make this is run from the perl command window." 
 echo "Requires PAR."
 
@@ -31,11 +28,18 @@ git branch | foreach {
 	   }
    }
 }
-if ($exe) {
-	$output_file = "slic3r.exe"
+
+# Use absolute paths because apparently the zip calls below do
+if ($env:APPVEYOR) {
+    $output_dir = "${pwd}\..\..\Slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD)"
 } else {
-	$output_file = "slic3r.par"
+    $output_dir = "${pwd}\..\..\Slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD)"
 }
+mkdir $output_dir
+
+copy slic3r.exe $output_dir\Slic3r.exe
+copy slic3r-console.exe $output_dir\Slic3r-console.exe
+copy slic3r-debug-console.exe $output_dir\Slic3r-debug-console.exe
 
 # Change this to where you have Strawberry Perl installed.
 New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
@@ -51,15 +55,10 @@ if ($env:ARCH -eq "32bit") {
 	$pthread= "pthreadGC2-w64.dll"
 }
 
-
 pp `
--a "slic3r.exe;slic3r.exe"  `
--a "slic3r-console.exe;slic3r-console.exe"  `
--a "slic3r-debug-console.exe;slic3r-debug-console.exe"  `
 -a "../../lib;lib" `
 -a "../../local-lib;local-lib" `
 -a "../../slic3r.pl;slic3r.pl" `
--a "../../utils;utils"  `
 -a "../../var;var"  `
 -a "../../FreeGLUT/freeglut.dll;freeglut.dll" `
 -a "${STRAWBERRY_PATH}\perl\bin\perl${perlversion}.dll;perl${perlversion}.dll"  `
@@ -148,23 +147,10 @@ pp `
 -M XSLoader `
 -B `
 -M lib `
--p ..\..\slic3r.pl -o ..\..\${output_file}
+-p ..\..\slic3r.pl -o "${output_dir}\libexec.par"
 
-# switch renaming based on whether or not using packaged exe or zip 
-if ($exe) {
-	if ($env:APPVEYOR) {
-		copy ..\..\slic3r.exe "..\..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).exe"
-		del ..\slic3r.exe
-	} else {
-		copy ..\..\slic3r.exe "..\..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).exe"
-		del ..\..\slic3r.exe
-	}
-} else {
-# make this more useful for not being on the appveyor server
-	if ($env:APPVEYOR) {
-		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).$env:ARCH.zip"
-	} else {
-		copy ..\..\slic3r.par "..\..\slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).zip"
-			del ..\..\slic3r.par
-	}
-}
+Add-Type -Assembly "System.IO.Compression.FileSystem"
+[System.IO.Compression.ZipFile]::ExtractToDirectory("${output_dir}\libexec.par", "${output_dir}\libexec")
+del "${output_dir}\libexec.par"
+
+[System.IO.Compression.ZipFile]::CreateFromDirectory(${output_dir}, "${output_dir}.zip")
