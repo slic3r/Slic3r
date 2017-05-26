@@ -388,6 +388,12 @@ sub new {
                     
                     $self->load_presets;
                     $self->config_changed;
+                    
+                    # Reload the open tab if any
+                    if (my $print_tab = $self->GetFrame->{preset_editor_tabs}{print}) {
+                        $print_tab->load_presets;
+                        $print_tab->reload_preset;
+                    }
                 });
             $o->can_add(0);
             $o->can_delete(1);
@@ -782,6 +788,13 @@ sub show_preset_editor {
     
     $preset_editor->select_preset_by_name($presets[$i // 0]->name);
     $preset_editor->on_value_change(sub {
+        # Re-load the presets in order to toggle the (modified) suffix
+        $self->load_presets;
+        
+        # Update shortcuts
+        $self->_on_select_preset($group);
+        
+        # Use the new config wherever we actually use its contents
         $self->config_changed;
     });
     $preset_editor->on_select_preset(sub {

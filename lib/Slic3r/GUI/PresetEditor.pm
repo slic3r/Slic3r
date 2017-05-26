@@ -208,9 +208,7 @@ sub _on_select_preset {
     # prompted and chose to discard changes.
     $self->load_presets;
     
-    $preset->load_config if !$preset->_loaded;
-    $self->config->clear;
-    $self->config->apply($preset->dirty_config);
+    $self->reload_preset;
     
     eval {
         local $SIG{__WARN__} = Slic3r::GUI::warning_catcher($self);
@@ -220,7 +218,6 @@ sub _on_select_preset {
         
         $self->_update;
         $self->on_preset_loaded;
-        $self->reload_config;
     };
     if ($@) {
         $@ = "I was unable to load the selected config file: $@";
@@ -245,6 +242,15 @@ sub add_options_page {
     $self->{sizer}->Add($page, 1, wxEXPAND | wxLEFT, 5);
     push @{$self->{pages}}, $page;
     return $page;
+}
+
+sub reload_preset {
+    my ($self) = @_;
+    
+    $self->current_preset->load_config if !$self->current_preset->_loaded;
+    $self->config->clear;
+    $self->config->apply($self->current_preset->dirty_config);
+    $self->reload_config;
 }
 
 sub reload_config {
