@@ -1128,31 +1128,39 @@ TriangleMeshSlicer<A>::make_expolygons_simple(std::vector<IntersectionLine> &lin
     Polygons loops;
     this->make_loops(lines, &loops);
     
+    // cache slice contour area
+    std::vector<double> area;
+    area.resize(slices->size(), -1);
+    
     Polygons cw;
-    for (Polygons::const_iterator loop = loops.begin(); loop != loops.end(); ++loop) {
-        if (loop->area() >= 0) {
-            ExPolygon ex;
-            ex.contour = *loop;
-            slices->push_back(ex);
+    for (const Polygon &loop : loops) {
+        const double a = loop.area();
+        if (a >= 0) {
+            slices->push_back(ExPolygon(loop));
+            area.push_back(a);
         } else {
-            cw.push_back(*loop);
+            cw.push_back(loop);
         }
     }
     
     // assign holes to contours
-    for (Polygons::const_iterator loop = cw.begin(); loop != cw.end(); ++loop) {
+    for (const Polygon &loop : cw) {
         int slice_idx = -1;
         double current_contour_area = -1;
-        for (ExPolygons::iterator slice = slices->begin(); slice != slices->end(); ++slice) {
-            if (slice->contour.contains(loop->points.front())) {
-                double area = slice->contour.area();
-                if (area < current_contour_area || current_contour_area == -1) {
-                    slice_idx = slice - slices->begin();
-                    current_contour_area = area;
+        for (size_t i = 0; i < slices->size(); ++i) {
+            if ((*slices)[i].contour.contains(loop.points.front())) {
+                if (area[i] == -1) area[i] = (*slices)[i].contour.area();
+                if (area[i] < current_contour_area || current_contour_area == -1) {
+                    slice_idx = i;
+                    current_contour_area = area[i];
                 }
             }
         }
-        (*slices)[slice_idx].holes.push_back(*loop);
+        
+        // discard holes which couldn't fit inside a contour as they are probably
+        // invalid polygons (self-intersecting)
+        if (slice_idx > -1)
+            (*slices)[slice_idx].holes.push_back(loop);
     }
 }
 
