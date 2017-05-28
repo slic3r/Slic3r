@@ -51,6 +51,18 @@ If you want to compile the source yourself follow the instructions on one of the
 * [Windows](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-Windows)
 * [Mac OSX](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-OS-X)
 
+### Ubuntu installation instructions
+If you wish to compile the source from within Ubuntu, here are some instructions tested on Ubuntu 16.04:
+
+```
+$ sudo apt install build-essential libgtk2.0-dev libwxgtk2.8-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev
+$ git clone https://github.com/alexrj/Slic3r.git
+$ cd Slic3r
+$ perl Build.PL --sudo
+$ perl Build.PL --sudo --gui
+$ ./slic3r.pl
+```
+
 ### Can I help?
 
 Sure! You can do the following to find things that are available to help with:
