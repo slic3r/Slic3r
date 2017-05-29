@@ -550,10 +550,10 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize);
     
     $self->job($job);
-    $self->SetBackgroundColour(wxWHITE);
+    $self->SetBackgroundColour(Wx::SystemSettings::GetColour(Wx::wxSYS_COLOUR_LISTBOX));
     
     {
-        my $white_brush = Wx::Brush->new(wxWHITE, wxSOLID);
+        my $white_brush = Wx::Brush->new($self->GetBackgroundColour, wxSOLID);
         my $pen = Wx::Pen->new(Wx::Colour->new(200,200,200), 1, wxSOLID);
         EVT_ERASE_BACKGROUND($self, sub {
             my ($self, $event) = @_;
