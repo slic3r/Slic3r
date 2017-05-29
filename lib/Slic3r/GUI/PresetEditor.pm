@@ -127,7 +127,14 @@ sub save_preset {
     $self->load_presets;
     $self->select_preset_by_name($preset->name);
     
+    $self->{on_save_preset}->($self->name, $preset) if $self->{on_save_preset};
+    
     return 1;
+}
+
+sub on_save_preset {
+    my ($self, $cb) = @_;
+    $self->{on_save_preset} = $cb;
 }
 
 sub on_value_change {
@@ -141,10 +148,12 @@ sub on_value_change {
 sub _on_value_change {
     my ($self, $opt_key) = @_;
     
-    $self->current_preset->_dirty_config->apply($self->config);
-    $self->{on_value_change}->($opt_key) if $self->{on_value_change};
-    $self->load_presets;
-    $self->_update;
+    wxTheApp->CallAfter(sub {
+        $self->current_preset->_dirty_config->apply($self->config);
+        $self->{on_value_change}->($opt_key) if $self->{on_value_change};
+        $self->load_presets;
+        $self->_update;
+    });
 }
 
 sub _update {}
@@ -163,6 +172,10 @@ sub select_preset_by_name {
     
     my $presets = wxTheApp->presets->{$self->name};
     my $i = first { $presets->[$_]->name eq $name } 0..$#$presets;
+    if (!defined $i) {
+        warn "No preset named $name";
+        return 0;
+    }
     $self->{presets_choice}->SetSelection($i);
     $self->_on_select_preset($force);
 }
@@ -190,9 +203,6 @@ sub _on_select_preset {
     # Get the selected name.
     my $preset = wxTheApp->presets->{$self->name}->[$self->{presets_choice}->GetSelection];
     
-    # If selection didn't change, do nothing.
-    return if defined $self->current_preset && $preset->name eq $self->current_preset->name;
-    
     # If we have unsaved changes, prompt user.
     if (!$force && !$self->prompt_unsaved_changes) {
         # User decided not to save the current changes, so we restore the previous selection.
@@ -203,6 +213,11 @@ sub _on_select_preset {
     }
     
     $self->current_preset($preset);
+    
+    # If selection didn't change, do nothing.
+    # Only after resetting current_preset because it might contain an older object of the
+    # current preset.
+    return if defined $self->current_preset && $preset->name eq $self->current_preset->name;
     
     # We reload presets in order to remove the "(modified)" suffix in case user was 
     # prompted and chose to discard changes.

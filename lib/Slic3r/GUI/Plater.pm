@@ -766,50 +766,54 @@ sub selected_presets {
 sub show_preset_editor {
     my ($self, $group, $i) = @_;
     
-    my @presets = $self->selected_presets($group);
+    wxTheApp->CallAfter(sub {
+        my @presets = $self->selected_presets($group);
     
-    my $preset_editor;
-    my $dlg;
-    my $mainframe = $self->GetFrame;
-    my $tabpanel = $mainframe->{tabpanel};
-    if (exists $mainframe->{preset_editor_tabs}{$group}) {
-        # we already have an open editor
-        $tabpanel->SetSelection($tabpanel->GetPageIndex($mainframe->{preset_editor_tabs}{$group}));
-        return;
-    } elsif ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
-        my $class = "Slic3r::GUI::PresetEditor::" . ucfirst($group);
-        $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($self->GetFrame);
-        $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings", 1);
-    } else {
-        my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
-        $dlg = $class->new($self);
-        $preset_editor = $dlg->preset_editor;
-    }
+        my $preset_editor;
+        my $dlg;
+        my $mainframe = $self->GetFrame;
+        my $tabpanel = $mainframe->{tabpanel};
+        if (exists $mainframe->{preset_editor_tabs}{$group}) {
+            # we already have an open editor
+            $tabpanel->SetSelection($tabpanel->GetPageIndex($mainframe->{preset_editor_tabs}{$group}));
+            return;
+        } elsif ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
+            my $class = "Slic3r::GUI::PresetEditor::" . ucfirst($group);
+            $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($self->GetFrame);
+            $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings", 1);
+        } else {
+            my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
+            $dlg = $class->new($self);
+            $preset_editor = $dlg->preset_editor;
+        }
     
-    $preset_editor->select_preset_by_name($presets[$i // 0]->name);
-    $preset_editor->on_value_change(sub {
-        # Re-load the presets in order to toggle the (modified) suffix
-        $self->load_presets;
+        $preset_editor->select_preset_by_name($presets[$i // 0]->name);
+        $preset_editor->on_value_change(sub {
+            # Re-load the presets in order to toggle the (modified) suffix
+            $self->load_presets;
         
-        # Update shortcuts
-        $self->_on_select_preset($group);
+            # Update shortcuts
+            $self->_on_select_preset($group);
         
-        # Use the new config wherever we actually use its contents
-        $self->config_changed;
+            # Use the new config wherever we actually use its contents
+            $self->config_changed;
+        });
+        my $cb = sub {
+            my ($group, $preset) = @_;
+        
+            # Re-load the presets as they might have changed.
+            $self->load_presets;
+        
+            # Select the preset in plater too
+            $self->select_preset_by_name($preset->name, $group, $i, 1);
+        };
+        $preset_editor->on_select_preset($cb);
+        $preset_editor->on_save_preset($cb);
+    
+        if ($dlg) {
+            $dlg->ShowModal;
+        }
     });
-    $preset_editor->on_select_preset(sub {
-        my ($group, $preset) = @_;
-        
-        # Re-load the presets as they might have changed.
-        $self->load_presets;
-        
-        # Select the preset in plater too
-        $self->select_preset_by_name($preset->name, $group, $i, 1);
-    });
-    
-    if ($dlg) {
-        $dlg->ShowModal;
-    }
 }
 
 # Returns the current config by merging the selected presets and the overrides.

@@ -140,6 +140,9 @@ sub save_as {
         $self->_config->clear;
         $self->_config->apply($self->_dirty_config);
     }
+    
+    # unlink the file first to avoid problems on case-insensitive file systems
+    unlink Slic3r::encode_path($self->file);
     $self->_config->save($self->file);
     wxTheApp->load_presets;
     
