@@ -16,11 +16,11 @@ use constant STATUS_TIMER_INTERVAL => 1000;         # milliseconds
 use constant TEMP_TIMER_INTERVAL   => 5000;         # milliseconds
 
 sub new {
-    my ($class, $parent, $printer_name, $config) = @_;
+    my ($class, $parent, $printer_name, $preset) = @_;
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, [500, 250]);
     
     $self->printer_name($printer_name || 'Printer');
-    $self->config($config);
+    $self->config($preset->dirty_config);
     $self->manual_control_config({
         xy_travel_speed     => 130,
         z_travel_speed      => 10,
@@ -103,7 +103,7 @@ sub new {
         }
         my $serial_port_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         {
-            $self->{serial_port_combobox} = Wx::ComboBox->new($self, -1, $config->serial_port, wxDefaultPosition, wxDefaultSize, []);
+            $self->{serial_port_combobox} = Wx::ComboBox->new($self, -1, $self->config->serial_port, wxDefaultPosition, wxDefaultSize, []);
             $self->{serial_port_combobox}->SetFont($Slic3r::GUI::small_font);
             $self->update_serial_ports;
             $serial_port_sizer->Add($self->{serial_port_combobox}, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 1);
@@ -125,7 +125,7 @@ sub new {
         }
         my $serial_speed_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         {
-            $self->{serial_speed_combobox} = Wx::ComboBox->new($self, -1, $config->serial_speed, wxDefaultPosition, wxDefaultSize,
+            $self->{serial_speed_combobox} = Wx::ComboBox->new($self, -1, $self->config->serial_speed, wxDefaultPosition, wxDefaultSize,
                 ["57600", "115200", "250000"]);
             $self->{serial_speed_combobox}->SetFont($Slic3r::GUI::small_font);
             $serial_speed_sizer->Add($self->{serial_speed_combobox}, 0, wxALIGN_CENTER_VERTICAL, 0);

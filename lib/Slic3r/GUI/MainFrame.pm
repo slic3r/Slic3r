@@ -8,9 +8,10 @@ use utf8;
 use File::Basename qw(basename dirname);
 use List::Util qw(min);
 use Slic3r::Geometry qw(X Y Z);
-use Wx qw(:frame :bitmap :id :misc :notebook :panel :sizer :menu :dialog :filedialog
-    :font :icon wxTheApp);
-use Wx::Event qw(EVT_CLOSE EVT_NOTEBOOK_PAGE_CHANGED);
+use Wx qw(:frame :bitmap :id :misc :panel :sizer :menu :dialog :filedialog
+    :font :icon :aui wxTheApp);
+use Wx::AUI;
+use Wx::Event qw(EVT_CLOSE EVT_AUINOTEBOOK_PAGE_CHANGED EVT_AUINOTEBOOK_PAGE_CLOSE);
 use base 'Wx::Frame';
 
 our $qs_last_input_file;
@@ -28,6 +29,7 @@ sub new {
     }
     
     $self->{loaded} = 0;
+    $self->{preset_editor_tabs} = {};  # group => panel
     
     # initialize tabpanel and menubar
     $self->_init_tabpanel;
@@ -92,10 +94,24 @@ sub new {
 sub _init_tabpanel {
     my ($self) = @_;
     
-    $self->{tabpanel} = my $panel = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
-    EVT_NOTEBOOK_PAGE_CHANGED($self, $self->{tabpanel}, sub {
-        my $panel = $self->{tabpanel}->GetCurrentPage;
+    $self->{tabpanel} = my $panel = Wx::AuiNotebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxAUI_NB_TOP);
+    EVT_AUINOTEBOOK_PAGE_CHANGED($self, $self->{tabpanel}, sub {
+        my $panel = $self->{tabpanel}->GetPage($self->{tabpanel}->GetSelection);
         $panel->OnActivate if $panel->can('OnActivate');
+        if ($self->{tabpanel}->GetSelection > 1) {
+            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+        } else {
+            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag & ~wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+        }
+    });
+    EVT_AUINOTEBOOK_PAGE_CLOSE($self, $self->{tabpanel}, sub {
+        my $panel = $self->{tabpanel}->GetPage($self->{tabpanel}->GetSelection);
+        if ($panel->isa('Slic3r::GUI::PresetEditor')) {
+            delete $self->{preset_editor_tabs}{$panel->name};
+        }
+        wxTheApp->CallAfter(sub {
+            $self->{tabpanel}->SetSelection(0);
+        });
     });
     
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");

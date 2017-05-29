@@ -49,7 +49,7 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{config} = Slic3r::Config->new_from_defaults(qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width
-        serial_port serial_speed octoprint_host octoprint_apikey overridable filament_colour
+        serial_port serial_speed octoprint_host octoprint_apikey shortcuts filament_colour
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
@@ -366,9 +366,37 @@ sub new {
         {
             my $o = $self->{settings_override_panel} = Slic3r::GUI::Plater::OverrideSettingsPanel->new($self,
                 on_change => sub {
+                    my ($opt_key) = @_;
+                    
+                    my ($preset) = $self->selected_presets('print');
+                    $preset->load_config;
+                    
+                    # If this option is not in the override panel it means it was manually deleted,
+                    # so let's restore the profile value.
+                    if (!$self->{settings_override_config}->has($opt_key)) {
+                        $preset->_dirty_config->set($opt_key, $preset->_config->get($opt_key));
+                    } else {
+                        # Apply the overrides to the current Print preset, potentially making it dirty
+                        $preset->_dirty_config->apply($self->{settings_override_config});
+                        
+                        # If this is a configured shortcut (and not just a dirty option),
+                        # save it now.
+                        if (any { $_ eq $opt_key } @{$preset->dirty_config->shortcuts}) {
+                            $preset->save([$opt_key]);
+                        }
+                    }
+                    
+                    $self->load_presets;
                     $self->config_changed;
+                    
+                    # Reload the open tab if any
+                    if (my $print_tab = $self->GetFrame->{preset_editor_tabs}{print}) {
+                        $print_tab->load_presets;
+                        $print_tab->reload_preset;
+                    }
                 });
-            $o->set_editable(1);
+            $o->can_add(0);
+            $o->can_delete(1);
             $o->set_opt_keys([ Slic3r::GUI::PresetEditor::Print->options ]);
             $self->{settings_override_config} = Slic3r::Config->new;
             $o->set_default_config($self->{settings_override_config});
@@ -534,6 +562,14 @@ sub _on_change_combobox {
         return 0 if !$self->prompt_unsaved_changes;
     }
     wxTheApp->CallAfter(sub {
+        # Close the preset editor tab if any
+        if (exists $self->GetFrame->{preset_editor_tabs}{$group}) {
+            my $tabpanel = $self->GetFrame->{tabpanel};
+            $tabpanel->DeletePage($tabpanel->GetPageIndex($self->GetFrame->{preset_editor_tabs}{$group}));
+            delete $self->GetFrame->{preset_editor_tabs}{$group};
+            $tabpanel->SetSelection(0); # without this, a newly created tab will not be selected by wx
+        }
+        
         $self->_on_select_preset($group);
         
         # This will remove the "(modified)" mark from any dirty preset handled here.
@@ -562,31 +598,19 @@ sub _on_select_preset {
         my $o_config = $self->{settings_override_config};
         my $o_panel  = $self->{settings_override_panel};
         
-        if ($changed) {
-            # Preserve current options if re-selecting the same preset
-            $o_config->clear;
-        }
+        my $shortcuts = $config->get('shortcuts');
         
-        my $overridable = $config->get('overridable');
-        
-        # Add/remove options (we do it this way for preserving current options)
-        foreach my $opt_key (@$overridable) {
-            # Populate option with the default value taken from configuration
-            # (re-set the override always, because if we here it means user
-            # switched to this preset or opened/closed the editor, so he expects
-            # the new values set in the editor to be used).
+        # Re-populate the override panel with the configured shortcuts
+        # and the dirty options.
+        $o_config->clear;
+        foreach my $opt_key (@$shortcuts, $presets[0]->dirty_options) {
+            # Don't add shortcut for shortcuts!
+            next if $opt_key eq 'shortcuts';
             $o_config->set($opt_key, $config->get($opt_key));
-        }
-        foreach my $opt_key (@{$o_config->get_keys}) {
-            # Keep options listed among overridable and options added on the fly
-            if ((none { $_ eq $opt_key } @$overridable)
-                && (any { $_ eq $opt_key } $o_panel->fixed_options)) {
-                $o_config->erase($opt_key);
-            }
         }
         
         $o_panel->set_default_config($config);
-        $o_panel->set_fixed_options(\@$overridable);
+        $o_panel->set_fixed_options(\@$shortcuts);
         $o_panel->update_optgroup;
     } elsif ($group eq 'printer') {
         # reload print and filament settings to honor their compatible_printer options
@@ -699,7 +723,7 @@ sub load_presets {
             }
         }
         
-        $self->{print}->placeholder_parser->set("${group}_preset", [ @preset_names ]);
+        $self->{print}->placeholder_parser->set_multiple("${group}_preset", [ @preset_names ]);
     }
 }
 
@@ -742,19 +766,54 @@ sub selected_presets {
 sub show_preset_editor {
     my ($self, $group, $i) = @_;
     
-    my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
-    my $dlg = $class->new($self);
+    wxTheApp->CallAfter(sub {
+        my @presets = $self->selected_presets($group);
     
-    my @presets = $self->selected_presets($group);
-    $dlg->preset_editor->select_preset_by_name($presets[$i // 0]->name);
-    $dlg->ShowModal;
+        my $preset_editor;
+        my $dlg;
+        my $mainframe = $self->GetFrame;
+        my $tabpanel = $mainframe->{tabpanel};
+        if (exists $mainframe->{preset_editor_tabs}{$group}) {
+            # we already have an open editor
+            $tabpanel->SetSelection($tabpanel->GetPageIndex($mainframe->{preset_editor_tabs}{$group}));
+            return;
+        } elsif ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
+            my $class = "Slic3r::GUI::PresetEditor::" . ucfirst($group);
+            $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($self->GetFrame);
+            $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings", 1);
+        } else {
+            my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
+            $dlg = $class->new($self);
+            $preset_editor = $dlg->preset_editor;
+        }
     
-    # Re-load the presets as they might have changed.
-    $self->load_presets;
+        $preset_editor->select_preset_by_name($presets[$i // 0]->name);
+        $preset_editor->on_value_change(sub {
+            # Re-load the presets in order to toggle the (modified) suffix
+            $self->load_presets;
+        
+            # Update shortcuts
+            $self->_on_select_preset($group);
+        
+            # Use the new config wherever we actually use its contents
+            $self->config_changed;
+        });
+        my $cb = sub {
+            my ($group, $preset) = @_;
+        
+            # Re-load the presets as they might have changed.
+            $self->load_presets;
+        
+            # Select the preset in plater too
+            $self->select_preset_by_name($preset->name, $group, $i, 1);
+        };
+        $preset_editor->on_select_preset($cb);
+        $preset_editor->on_save_preset($cb);
     
-    # Select the preset that was last selected in the editor.
-    $self->select_preset_by_name
-        ($dlg->preset_editor->current_preset->name, $group, $i, 1);
+        if ($dlg) {
+            $dlg->ShowModal;
+        }
+    });
 }
 
 # Returns the current config by merging the selected presets and the overrides.
@@ -765,7 +824,7 @@ sub config {
     my $config = Slic3r::Config->new_from_defaults;
     
     # get defaults also for the values tracked by the Plater's config
-    # (for example 'overridable')
+    # (for example 'shortcuts')
     $config->apply(Slic3r::Config->new_from_defaults(@{$self->{config}->get_keys}));
     
     my %classes = map { $_ => "Slic3r::GUI::PresetEditor::".ucfirst($_) }
