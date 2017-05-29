@@ -1775,8 +1775,7 @@ sub do_print {
     
     my %current_presets = $self->selected_presets;
     
-    my $printer_name = $current_presets{printer}->[0]->name;
-    my $printer_panel = $controller->add_printer($printer_name, $self->config);
+    my $printer_panel = $controller->add_printer($current_presets{printer}->[0], $self->config);
     
     my $filament_stats = $self->{print}->filament_stats;
     $filament_stats = { map { $current_presets{filament}[$_]->name => $filament_stats->{$_} } keys %$filament_stats };

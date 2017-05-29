@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use utf8;
 
+use List::Util qw(first);
 use Wx qw(wxTheApp :panel :id :misc :sizer :button :bitmap :window :gauge :timer
     :textctrl :font :systemsettings);
 use Wx::Event qw(EVT_BUTTON EVT_MOUSEWHEEL EVT_TIMER EVT_SCROLLWIN);
@@ -16,10 +17,10 @@ use constant STATUS_TIMER_INTERVAL => 1000;         # milliseconds
 use constant TEMP_TIMER_INTERVAL   => 5000;         # milliseconds
 
 sub new {
-    my ($class, $parent, $printer_name, $preset) = @_;
+    my ($class, $parent, $preset) = @_;
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, [500, 250]);
     
-    $self->printer_name($printer_name || 'Printer');
+    $self->printer_name($preset->name);
     $self->config($preset->dirty_config);
     $self->manual_control_config({
         xy_travel_speed     => 130,
@@ -336,6 +337,17 @@ sub connect {
         
             # request temperature now, without waiting for the timer
             $self->sender->send("M105", 1);
+            
+            # Update the printer preset with the new connection info
+            {
+                my $preset = first { $_->name eq $self->printer_name } @{wxTheApp->presets->{printer}};
+                if ($preset) {
+                    $preset->load_config;
+                    $preset->_dirty_config->set('serial_port', $self->{serial_port_combobox}->GetValue);
+                    $preset->_dirty_config->set('serial_speed', $self->{serial_speed_combobox}->GetValue);
+                    $preset->save([ 'serial_port', 'serial_speed' ]);
+                }
+            }
         } else {
             $self->set_status("Connection failed. Check serial port and speed.");
         }
@@ -543,13 +555,22 @@ use Wx::Event qw(EVT_BUTTON EVT_TIMER EVT_ERASE_BACKGROUND);
 use base qw(Wx::Panel Class::Accessor);
 
 __PACKAGE__->mk_accessors(qw(job on_delete_job on_print_job on_pause_print on_resume_print
-    on_abort_print blink_timer));
+    on_abort_print blink_timer duration queued));
 
 sub new {
     my ($class, $parent, $job) = @_;
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize);
     
+    # Estimate print duration
+    {
+        my $estimator = Slic3r::GCode::TimeEstimator->new;
+        $estimator->parse_file($job->gcode_file);
+        $self->duration($estimator->time);
+    }
+    
     $self->job($job);
+    $self->queued(scalar localtime);
+    
     $self->SetBackgroundColour(Wx::SystemSettings::GetColour(Wx::wxSYS_COLOUR_LISTBOX));
     
     {
@@ -574,13 +595,18 @@ sub new {
         if ($job->printed) {
             $text->SetForegroundColour($Slic3r::GUI::grey);
         }
+        $text->SetToolTipString("Queued on " . $self->queued)
+            if $text->can('SetToolTipString');
         $left_sizer->Add($text, 0, wxEXPAND, 0);
     }
     {
-        my $filament_stats = join "\n",
+        my $stats = join "\n",
             map "$_ (" . sprintf("%.2f", $job->filament_stats->{$_}/1000) . "m)",
             sort keys %{$job->filament_stats};
-        my $text = Wx::StaticText->new($self, -1, $filament_stats, wxDefaultPosition, wxDefaultSize);
+        $stats .= sprintf "\nEstimated time: %d hours and %d minutes",
+            int($self->duration/3600), int($self->duration/60) % 60;
+        
+        my $text = Wx::StaticText->new($self, -1, $stats, wxDefaultPosition, wxDefaultSize);
         $text->SetFont($Slic3r::GUI::small_font);
         if ($job->printed && !$job->printing) {
             $text->SetForegroundColour($Slic3r::GUI::grey);

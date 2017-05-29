@@ -203,6 +203,14 @@ sub _on_select_preset {
     # Get the selected name.
     my $preset = wxTheApp->presets->{$self->name}->[$self->{presets_choice}->GetSelection];
     
+    # If selection didn't change, do nothing.
+    # (But still reset current_preset because it might contain an older object of the
+    # current preset)
+    if (defined $self->current_preset && $preset->name eq $self->current_preset->name) {
+        $self->current_preset($preset);
+        return;
+    }
+    
     # If we have unsaved changes, prompt user.
     if (!$force && !$self->prompt_unsaved_changes) {
         # User decided not to save the current changes, so we restore the previous selection.
@@ -213,11 +221,6 @@ sub _on_select_preset {
     }
     
     $self->current_preset($preset);
-    
-    # If selection didn't change, do nothing.
-    # Only after resetting current_preset because it might contain an older object of the
-    # current preset.
-    return if defined $self->current_preset && $preset->name eq $self->current_preset->name;
     
     # We reload presets in order to remove the "(modified)" suffix in case user was 
     # prompted and chose to discard changes.

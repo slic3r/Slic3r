@@ -165,7 +165,7 @@ sub add_printer {
         }
     }
     
-    my $printer_panel = Slic3r::GUI::Controller::PrinterPanel->new($self, $preset->name, $preset);
+    my $printer_panel = Slic3r::GUI::Controller::PrinterPanel->new($self, $preset);
     $self->{sizer}->Prepend($printer_panel, 0, wxEXPAND | wxTOP | wxLEFT | wxRIGHT, 10);
     $self->Layout;
     
