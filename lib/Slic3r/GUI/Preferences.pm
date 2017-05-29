@@ -65,13 +65,6 @@ sub new {
         default     => $Slic3r::GUI::Settings->{_}{threads},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
-        opt_id      => 'no_controller',
-        type        => 'bool',
-        label       => 'Disable USB/serial connection',
-        tooltip     => 'Disable communication with the printer over a serial / USB cable. This simplifies the user interface in case the printer is never attached to the computer.',
-        default     => $Slic3r::GUI::Settings->{_}{no_controller},
-    ));
-    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'tabbed_preset_editors',
         type        => 'bool',
         label       => 'Display profile editors as tabs',
@@ -95,7 +88,7 @@ sub new {
 sub _accept {
     my $self = shift;
     
-    if ($self->{values}{mode} || defined($self->{values}{no_controller})) {
+    if ($self->{values}{mode}) {
         Slic3r::GUI::warning_catcher($self)->("You need to restart Slic3r to make the changes effective.");
     }
     

@@ -1260,7 +1260,7 @@ sub build {
                 }
             });
         }
-        unless ($Slic3r::GUI::Settings->{_}{no_controller}) {
+        {
             my $optgroup = $page->new_optgroup('USB/Serial connection');
             my $line = Slic3r::GUI::OptionsGroup::Line->new(
                 label => 'Serial port',
@@ -1421,7 +1421,7 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
-    $self->_update_serial_ports unless $Slic3r::GUI::Settings->{_}{no_controller};
+    $self->_update_serial_ports;
 }
 
 sub _update_serial_ports {

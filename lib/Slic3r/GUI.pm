@@ -73,7 +73,6 @@ use constant AMF_MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(amf)};
 
 our $datadir;
 # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
-our $no_controller;
 our $autosave;
 our $threads;
 our @cb;
@@ -84,8 +83,6 @@ our $Settings = {
         autocenter => 1,
         invert_zoom => 0,
         background_processing => 0,
-        # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
-        no_controller => 0,
         threads => $Slic3r::Config::Options->{threads}{default},
         color_toolpaths_by => 'role',
         tabbed_preset_editors => 1,

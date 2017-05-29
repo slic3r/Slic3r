@@ -36,7 +36,6 @@ my %cli_options = ();
         'load=s@'               => \$opt{load},
         'autosave=s'            => \$opt{autosave},
         'ignore-nonexistent-config' => \$opt{ignore_nonexistent_config},
-        'no-controller'         => \$opt{no_controller},
         'datadir=s'             => \$opt{datadir},
         'export-svg'            => \$opt{export_svg},
         'merge|m'               => \$opt{merge},
@@ -110,7 +109,6 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
     {
         no warnings 'once';
         $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
-        $Slic3r::GUI::no_controller = $opt{no_controller};
         $Slic3r::GUI::autosave      = Slic3r::decode_path($opt{autosave} // '');
         $Slic3r::GUI::threads       = $opt{threads};
     }
