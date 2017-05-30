@@ -34,7 +34,6 @@ if ($env:APPVEYOR) {
 } else {
     $output_dir = "${pwd}\..\..\Slic3r-${current_branch}.${current_date}.$(git rev-parse --short HEAD).zip"
 }
-mkdir $output_dir
 
 # Change this to where you have Strawberry Perl installed.
 New-Variable -Name "STRAWBERRY_PATH" -Value "C:\Strawberry"
