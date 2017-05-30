@@ -88,6 +88,18 @@ if (!( (Test-Path -Path "${scriptDir}\slic3r.exe") -And (Test-Path -Path "${scri
     & ${scriptDir}\compile_wrapper.ps1 -perlVersion=$perlVersion -STRAWBERRY_PATH=$STRAWBERRY_PATH
 }
 
+# remove all static libraries, they just take up space.
+if ${env:APPVEYOR} {
+    gci ${scriptDir}\..\..\ -recurse | ? {$_.Name -match ".*\.a$"} | ri
+    gci -recurse ${scriptDir}\..\..\local-lib | ? {$_.PSIsContainer -And $_.Name -match "DocView|IPC|DataView|Media|Ribbon|Calendar|STC|PerlTest|WebView"} | ri
+    gci -recurse ${scriptDir}\..\..\local-lib| ? {$_.Name -match ".*(webview|ribbon|stc).*\.dll"} | ri
+    gci -recurse ${scriptDir}\..\..\local-lib| ? {$_.Name -match ".*(webview|ribbon|stc).*\.dll"} | ri
+    gci -recurse ${scriptDir}\..\..\local-lib| ? {$_.Name -match "^ExtUtils$"} | ri
+    gci -recurse ${scriptDir}\..\..\local-lib\lib\perl5\Module ? {$_.Name -match "^Build"} | ri
+    gci -recurse ${scriptDir}\..\..\local-lib ? {$_.Name -match "\.pod$"} | ri
+    gci -recurse ${scriptDir}\..\..\local-lib ? {$_.Name -match "\.h$"} | ri
+}
+
 pp `
 -a "${scriptDir}/slic3r.exe;Slic3r.exe"  `
 -a "${scriptDir}/slic3r-console.exe;Slic3r-console.exe"  `
