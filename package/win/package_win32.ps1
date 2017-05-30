@@ -29,7 +29,6 @@ git branch | foreach {
    }
 }
 
-# Use absolute paths because apparently the zip calls below do
 if ($env:APPVEYOR) {
     $output_dir = "${pwd}\..\..\Slic3r-${current_branch}.${current_date}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).${env:ARCH}"
 } else {
