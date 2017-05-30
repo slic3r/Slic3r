@@ -122,7 +122,7 @@ rm -rf $(pwd)$archivefolder/local-lib/lib/perl5/TAP
 rm -rf $(pwd)/$archivefolder/local-lib/lib/perl5/Test*
 find $(pwd)/$archivefolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
     -or -name DocView -or -name STC -or -name IPC \
-    -or -name AUI -or -name Calendar -or -name DataView \
+    -or -name Calendar -or -name DataView \
     -or -name DateTime -or -name Media -or -name PerlTest \
     -or -name Ribbon \) -exec rm -rf "{}" \;
 rm -rf $archivefolder/local-lib/lib/perl5/*/Alien/wxWidgets/*/include
