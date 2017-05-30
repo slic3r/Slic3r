@@ -128,11 +128,10 @@ find -d $macosfolder/local-lib -name '*.h' -delete
 find -d $macosfolder/local-lib -name wxPerl.app -exec rm -rf "{}" \;
 find -d $macosfolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
     -or -name DocView -or -name STC -or -name IPC \
-    -or -name AUI -or -name Calendar -or -name DataView \
+    -or -name Calendar -or -name DataView \
     -or -name DateTime -or -name Media -or -name PerlTest \
     -or -name Ribbon \) -exec rm -rf "{}" \;
 find -d $macosfolder/local-lib -name libwx_osx_cocoau_ribbon-3.0.0.2.0.dylib -delete
-find -d $macosfolder/local-lib -name libwx_osx_cocoau_aui-3.0.0.2.0.dylib -delete
 find -d $macosfolder/local-lib -name libwx_osx_cocoau_stc-3.0.0.2.0.dylib -delete
 find -d $macosfolder/local-lib -name libwx_osx_cocoau_webview-3.0.0.2.0.dylib -delete
 rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include
