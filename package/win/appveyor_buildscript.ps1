@@ -20,8 +20,3 @@ if ($LastExitCode -ne 0) {
 		$host.SetShouldExit($LastExitCode)  
 		exit
 }
-
-Add-AppveyorCompilationMessage -Message "Making ZIP package"
-cd package/win
-./compile_wrapper.ps1 524| Write-Output
-./package_win32.ps1 524| Write-Output
