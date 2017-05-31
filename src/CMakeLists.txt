@@ -63,6 +63,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Geometry.cpp
     ${LIBDIR}/libslic3r/IO.cpp
     ${LIBDIR}/libslic3r/IO/AMF.cpp
+    ${LIBDIR}/libslic3r/IO/3MF.cpp
     ${LIBDIR}/libslic3r/Layer.cpp
     ${LIBDIR}/libslic3r/LayerRegion.cpp
     ${LIBDIR}/libslic3r/LayerRegionFill.cpp

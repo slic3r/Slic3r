@@ -612,6 +612,7 @@ class CLIConfig
     ConfigOptionBool                export_obj;
     ConfigOptionBool                export_pov;
     ConfigOptionBool                export_svg;
+    ConfigOptionBool                export_3mf;
     ConfigOptionBool                info;
     ConfigOptionStrings             load;
     ConfigOptionString              output;
