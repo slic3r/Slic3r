@@ -6,4 +6,5 @@
 /lib/x86_64-linux-gnu/liblzma.so.5
 /lib/x86_64-linux-gnu/libpng12.so.0
 /usr/lib/x86_64-linux-gnu/libjpeg.so.8
+/usr/lib/x86_64-linux-gnu/libjbig.so.0
 /usr/lib/x86_64-linux-gnu/libtiff.so.5
