@@ -16,6 +16,8 @@ use Slic3r::Test;
 
 {
     my $config = Slic3r::Config->new_from_defaults;
+    $config->set('layer_height', 0.3);
+    $config->set('first_layer_height', 0.35);
     $config->set('raft_layers', 2);
     $config->set('infill_extruder', 2);
     $config->set('solid_infill_extruder', 3);
@@ -24,7 +26,9 @@ use Slic3r::Test;
     $config->set('extruder_offset', [ [0,0], [20,0], [0,20], [20,20] ]);
     $config->set('temperature', [200, 180, 170, 160]);
     $config->set('first_layer_temperature', [206, 186, 166, 156]);
+    $config->set('standby_temperature_delta', -5);
     $config->set('toolchange_gcode', ';toolchange');  # test that it doesn't crash when this is supplied
+    $config->set('skirts', 2);  # test correct temperatures are applied to skirt as well
     
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     
@@ -57,6 +61,18 @@ use Slic3r::Test;
         } elsif ($cmd eq 'G1' && $info->{extruding} && $info->{dist_XY} > 0) {
             push @extrusion_points, my $point = Slic3r::Point->new_scale($args->{X}, $args->{Y});
             $point->translate(map +scale($_), @{ $config->extruder_offset->[$tool] });
+            
+            # check temperature (we don't do it at M104/M109 because that may be
+            # issued before layer change)
+            if ($self->Z == $config->first_layer_height) {
+                fail 'unexpected temperature in first layer'
+                    unless $tool_temp[$tool] == ($config->first_layer_temperature->[$tool] + $config->standby_temperature_delta)
+                        || $tool_temp[$tool] == $config->first_layer_temperature->[$tool];
+            } else {
+                fail 'unexpected temperature'
+                    unless $tool_temp[$tool] == ($config->temperature->[$tool] + $config->standby_temperature_delta)
+                        || $tool_temp[$tool] == $config->temperature->[$tool];
+            }
         }
     });
     my $convex_hull = convex_hull(\@extrusion_points);

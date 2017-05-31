@@ -18,6 +18,7 @@ use Slic3r::Geometry qw(epsilon X Y Z deg2rad);
 use Time::HiRes qw(gettimeofday tv_interval);
 $|++;
 binmode STDOUT, ':utf8';
+binmode STDERR, ':utf8';
 
 our %opt = ();
 my %cli_options = ();
@@ -35,7 +36,6 @@ my %cli_options = ();
         'load=s@'               => \$opt{load},
         'autosave=s'            => \$opt{autosave},
         'ignore-nonexistent-config' => \$opt{ignore_nonexistent_config},
-        'no-controller'         => \$opt{no_controller},
         'datadir=s'             => \$opt{datadir},
         'export-svg'            => \$opt{export_svg},
         'merge|m'               => \$opt{merge},
@@ -74,9 +74,9 @@ my @external_configs = ();
 if ($opt{load}) {
     foreach my $configfile (@{$opt{load}}) {
         $configfile = Slic3r::decode_path($configfile);
-        if (-e $configfile) {
+        if (-e Slic3r::encode_path($configfile)) {
             push @external_configs, Slic3r::Config->load($configfile);
-        } elsif (-e "$FindBin::Bin/$configfile") {
+        } elsif (-e Slic3r::encode_path("$FindBin::Bin/$configfile")) {
             printf STDERR "Loading $FindBin::Bin/$configfile\n";
             push @external_configs, Slic3r::Config->load("$FindBin::Bin/$configfile");
         } else {
@@ -99,7 +99,7 @@ if ($opt{save}) {
     if (@{$config->get_keys} > 0) {
         $config->save($opt{save});
     } else {
-        Slic3r::Config->new_from_defaults->save($opt{save});
+        Slic3r::Config->new_from_defaults->save(Slic3r::decode_path($opt{save}));
     }
 }
 
@@ -109,7 +109,6 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
     {
         no warnings 'once';
         $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
-        $Slic3r::GUI::no_controller = $opt{no_controller};
         $Slic3r::GUI::autosave      = Slic3r::decode_path($opt{autosave} // '');
         $Slic3r::GUI::threads       = $opt{threads};
     }
@@ -266,7 +265,7 @@ if (@ARGV) {  # slicing from command line
                 my ($percent, $message) = @_;
                 printf "=> %s\n", $message;
             },
-            output_file     => $opt{output},
+            output_file     => Slic3r::decode_path($opt{output}),
         );
         
         $sprint->apply_config($config);

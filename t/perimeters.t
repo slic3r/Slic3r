@@ -1,4 +1,4 @@
-use Test::More tests => 59;
+use Test::More tests => 63;
 use strict;
 use warnings;
 
@@ -393,10 +393,37 @@ use Slic3r::Test;
         });
         return scalar keys %z_with_bridges;
     };
-    ok $test->(Slic3r::Test::init_print('V', config => $config)) == 1,
+    is $test->(Slic3r::Test::init_print('V', config => $config)), 1,
         'no overhangs printed with bridge speed';  # except for the first internal solid layers above void
     ok $test->(Slic3r::Test::init_print('V', config => $config, scale_xyz => [3,1,1])) > 1,
         'overhangs printed with bridge speed';
+    
+    $config->set('bottom_solid_layers', 0);
+    $config->set('top_solid_layers', 0);
+    my $test2 = sub {
+        my ($print) = @_;
+        my $num_bridges = 0;
+        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+            my ($self, $cmd, $args, $info) = @_;
+        
+            if ($info->{extruding} && $info->{dist_XY} > 0) {
+                $num_bridges++ if ($args->{F} // $self->F) == $config->bridge_speed*60;
+            }
+        });
+        return $num_bridges;
+    };
+    is $test2->(Slic3r::Test::init_print('overhang', config => $config)), $config->perimeters*3,
+        'expected number of segments use bridge speed (overhang)';
+    is $test2->(Slic3r::Test::init_print('bridge', config => $config)), $config->perimeters*2,
+        'expected number of segments use bridge speed (bridge)';
+    is $test2->(Slic3r::Test::init_print('bridge_with_hole', config => $config)), $config->perimeters*4,
+        'expected number of segments use bridge speed (bridge with hole)';
+    
+    # scale the test model so that the hole perimeter length is smaller than small perimeter
+    # threshold (~40mm). check that we still use overhang settings regardless of it being small
+    is $test2->(Slic3r::Test::init_print('bridge_with_hole', config => $config, scale_xyz => [0.3,0.5,1])),
+        $config->perimeters*4,
+        'expected number of segments use bridge speed (bridge with small hole)';
 }
 
 {

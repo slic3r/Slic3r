@@ -5,6 +5,8 @@
 
 namespace Slic3r {
 
+/// Initialises upper_layer, lower_layer to NULL
+/// Initialises slicing_errors to false
 Layer::Layer(size_t id, PrintObject *object, coordf_t height, coordf_t print_z,
         coordf_t slice_z)
 :   upper_layer(NULL),
@@ -20,6 +22,7 @@ Layer::Layer(size_t id, PrintObject *object, coordf_t height, coordf_t print_z,
 {
 }
 
+/// Removes references to self and clears regions
 Layer::~Layer()
 {
     // remove references to self
@@ -34,25 +37,28 @@ Layer::~Layer()
     this->clear_regions();
 }
 
+/// Getter for this->_id
 size_t
 Layer::id() const
 {
     return this->_id;
 }
 
+/// Setter for this->_id
 void
 Layer::set_id(size_t id)
 {
     this->_id = id;
 }
 
-
+/// Getter for this->regions.size()
 size_t
 Layer::region_count() const
 {
     return this->regions.size();
 }
 
+/// Deletes all regions using this->delete_region()
 void
 Layer::clear_regions()
 {
@@ -60,6 +66,7 @@ Layer::clear_regions()
         this->delete_region(i);
 }
 
+/// Creates a LayerRegion from a PrintRegion and adds it to this->regions
 LayerRegion*
 Layer::add_region(PrintRegion* print_region)
 {
@@ -68,6 +75,7 @@ Layer::add_region(PrintRegion* print_region)
     return region;
 }
 
+/// Deletes an individual region
 void
 Layer::delete_region(int idx)
 {
@@ -77,7 +85,8 @@ Layer::delete_region(int idx)
     delete item;
 }
 
-// merge all regions' slices to get islands
+/// Merge all regions' slices to get islands
+//TODO: is this right?
 void
 Layer::make_slices()
 {
@@ -115,6 +124,7 @@ Layer::make_slices()
         this->slices.expolygons.push_back(slices[o]);
 }
 
+/// Iterates over all of the LayerRegion and invokes LayerRegion->merge_slices()
 void
 Layer::merge_slices()
 {
@@ -123,6 +133,7 @@ Layer::merge_slices()
     }
 }
 
+/// Uses LayerRegion->slices.any_internal_contains(item)
 template <class T>
 bool
 Layer::any_internal_region_slice_contains(const T &item) const
@@ -134,6 +145,7 @@ Layer::any_internal_region_slice_contains(const T &item) const
 }
 template bool Layer::any_internal_region_slice_contains<Polyline>(const Polyline &item) const;
 
+/// Uses LayerRegion->slices.any_bottom_contains(item)
 template <class T>
 bool
 Layer::any_bottom_region_slice_contains(const T &item) const
@@ -145,10 +157,8 @@ Layer::any_bottom_region_slice_contains(const T &item) const
 }
 template bool Layer::any_bottom_region_slice_contains<Polyline>(const Polyline &item) const;
 
-
-// Here the perimeters are created cummulatively for all layer regions sharing the same parameters influencing the perimeters.
-// The perimeter paths and the thin fills (ExtrusionEntityCollection) are assigned to the first compatible layer region.
-// The resulting fill surface is split back among the originating regions.
+/// The perimeter paths and the thin fills (ExtrusionEntityCollection) are assigned to the first compatible layer region.
+/// The resulting fill surface is split back among the originating regions.
 void
 Layer::make_perimeters()
 {
@@ -232,6 +242,8 @@ Layer::make_perimeters()
     }
 }
 
+/// Iterates over all of the LayerRegion and invokes LayerRegion->make_fill()
+/// Asserts that the fills created are not NULL
 void
 Layer::make_fills()
 {
@@ -249,15 +261,15 @@ Layer::make_fills()
     }
 }
 
-// This function analyzes slices of a region (SurfaceCollection slices).
-// Each region slice (instance of Surface) is analyzed, whether it is supported or whether it is the top surface.
-// Initially all slices are of type S_TYPE_INTERNAL.
-// Slices are compared against the top / bottom slices and regions and classified to the following groups:
-// S_TYPE_TOP - Part of a region, which is not covered by any upper layer. This surface will be filled with a top solid infill.
-// S_TYPE_BOTTOMBRIDGE - Part of a region, which is not fully supported, but it hangs in the air, or it hangs losely on a support or a raft.
-// S_TYPE_BOTTOM - Part of a region, which is not supported by the same region, but it is supported either by another region, or by a soluble interface layer.
-// S_TYPE_INTERNAL - Part of a region, which is supported by the same region type.
-// If a part of a region is of S_TYPE_BOTTOM and S_TYPE_TOP, the S_TYPE_BOTTOM wins.
+/// Analyzes slices of a region (SurfaceCollection slices).
+/// Each region slice (instance of Surface) is analyzed, whether it is supported or whether it is the top surface.
+/// Initially all slices are of type S_TYPE_INTERNAL.
+/// Slices are compared against the top / bottom slices and regions and classified to the following groups:
+/// S_TYPE_TOP - Part of a region, which is not covered by any upper layer. This surface will be filled with a top solid infill.
+/// S_TYPE_BOTTOMBRIDGE - Part of a region, which is not fully supported, but it hangs in the air, or it hangs losely on a support or a raft.
+/// S_TYPE_BOTTOM - Part of a region, which is not supported by the same region, but it is supported either by another region, or by a soluble interface layer.
+/// S_TYPE_INTERNAL - Part of a region, which is supported by the same region type.
+/// If a part of a region is of S_TYPE_BOTTOM and S_TYPE_TOP, the S_TYPE_BOTTOM wins.
 void
 Layer::detect_surfaces_type()
 {
@@ -270,7 +282,7 @@ Layer::detect_surfaces_type()
         // unless internal shells are requested
     
         // We call layer->slices or layerm->slices on these neighbor layers
-        // and we convert them into Polygons so we only care about their total 
+        // and we convert them into Polygons so we only care about their total
         // coverage. We only write to layerm->slices so we can read layer->slices safely.
         Layer* const &upper_layer = this->upper_layer;
         Layer* const &lower_layer = this->lower_layer;
@@ -315,7 +327,7 @@ Layer::detect_surfaces_type()
         if (lower_layer != NULL) {
             // If we have soluble support material, don't bridge. The overhang will be squished against a soluble layer separating
             // the support from the print.
-            const SurfaceType surface_type_bottom = 
+            const SurfaceType surface_type_bottom =
                 (object.config.support_material.value && object.config.support_material_contact_distance.value == 0)
                 ? stBottom
                 : stBottomBridge;
@@ -323,7 +335,7 @@ Layer::detect_surfaces_type()
             // Any surface lying on the void is a true bottom bridge (an overhang)
             bottom.append(
                 offset2_ex(
-                    diff(layerm_slices_surfaces, lower_layer->slices, true), 
+                    diff(layerm_slices_surfaces, lower_layer->slices, true),
                     -offs, offs
                 ),
                 surface_type_bottom
@@ -332,7 +344,7 @@ Layer::detect_surfaces_type()
             // if user requested internal shells, we need to identify surfaces
             // lying on other slices not belonging to this region
             if (object.config.interface_shells) {
-                // non-bridging bottom surfaces: any part of this layer lying 
+                // non-bridging bottom surfaces: any part of this layer lying
                 // on something else, excluding those lying on our own region
                 const LayerRegion* lower_layerm = lower_layer->get_region(region_id);
                 boost::lock_guard<boost::mutex> l(lower_layerm->_slices_mutex);
@@ -340,9 +352,9 @@ Layer::detect_surfaces_type()
                     offset2_ex(
                         diff(
                             intersection(layerm_slices_surfaces, lower_layer->slices), // supported
-                            lower_layerm->slices, 
+                            lower_layerm->slices,
                             true
-                        ), 
+                        ),
                         -offs, offs
                     ),
                     stBottom
@@ -355,7 +367,7 @@ Layer::detect_surfaces_type()
         
             // if we have raft layers, consider bottom layer as a bridge
             // just like any other bottom surface lying on the void
-            const SurfaceType surface_type_bottom = 
+            const SurfaceType surface_type_bottom =
                 (object.config.raft_layers.value > 0 && object.config.support_material_contact_distance.value > 0)
                 ? stBottomBridge
                 : stBottom;
@@ -405,7 +417,7 @@ Layer::detect_surfaces_type()
     
         {
             /*  Fill in layerm->fill_surfaces by trimming the layerm->slices by the cummulative layerm->fill_surfaces.
-                Note: this method should be idempotent, but fill_surfaces gets modified 
+                Note: this method should be idempotent, but fill_surfaces gets modified
                 in place. However we're now only using its boundaries (which are invariant)
                 so we're safe. This guarantees idempotence of prepare_infill() also in case
                 that combine_infill() turns some fill_surface into VOID surfaces.  */
@@ -423,6 +435,7 @@ Layer::detect_surfaces_type()
     }
 }
 
+///Iterates over all LayerRegions and invokes LayerRegion->process_external_surfaces
 void
 Layer::process_external_surfaces()
 {

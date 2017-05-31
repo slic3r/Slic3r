@@ -625,8 +625,6 @@ void PrintObject::_slice()
 {
 
 	coordf_t raft_height = 0;
-	coordf_t print_z = 0;
-	coordf_t height  = 0;
 	coordf_t first_layer_height = this->config.first_layer_height.get_abs_value(this->config.layer_height.value);
 
 

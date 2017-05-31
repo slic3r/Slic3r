@@ -40,7 +40,7 @@ MotionPlanner::initialize()
     
     // loop through islands in order to create inner expolygons and collect their contours
     Polygons outer_holes;
-    for (MotionPlannerEnv island : this->islands) {
+    for (MotionPlannerEnv &island : this->islands) {
         // generate the internal env boundaries by shrinking the island
         // we'll use these inner rings for motion planning (endpoints of the Voronoi-based
         // graph, visibility check) in order to avoid moving too close to the boundaries

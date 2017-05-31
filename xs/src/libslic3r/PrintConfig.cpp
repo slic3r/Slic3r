@@ -853,8 +853,9 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "overhangs|detect-bridging-perimeters!";
     def->default_value = new ConfigOptionBool(true);
     
-    def = this->add("overridable", coStrings);
-    def->label = "Overridable options";
+    def = this->add("shortcuts", coStrings);
+    def->label = "Shortcuts";
+    def->aliases.push_back("overridable");
     {
         ConfigOptionStrings* opt = new ConfigOptionStrings();
         opt->values.push_back("support_material");
@@ -1383,7 +1384,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
     def->label = "↳ interface";
-    def->category = "Support material interface speed";
+    def->full_label = "Support material interface speed";
     def->gui_type = "f_enum_open";
     def->category = "Support material";
     def->tooltip = "Speed for printing support material interface layers. If expressed as percentage (for example 50%) it will be calculated over support material speed.";

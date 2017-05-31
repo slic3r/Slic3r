@@ -32,6 +32,15 @@
 #error "admesh works correctly on little endian machines only!"
 #endif
 
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    #include "windows.h"
+    #define ADMESH_CHAR wchar_t
+    #define stl_fopen(file, mode) _wfopen(file, L##mode)
+#else
+    #define ADMESH_CHAR char
+    #define stl_fopen(file, mode) fopen(file, mode)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -163,15 +172,15 @@ typedef struct {
 } stl_file;
 
 
-extern void stl_open(stl_file *stl, const char *file);
+extern void stl_open(stl_file *stl, const ADMESH_CHAR *file);
 extern void stl_close(stl_file *stl);
 extern void stl_stats_out(stl_file *stl, FILE *file, char *input_file);
 extern void stl_print_edges(stl_file *stl, FILE *file);
-extern void stl_print_neighbors(stl_file *stl, char *file);
+extern void stl_print_neighbors(stl_file *stl, ADMESH_CHAR *file);
 extern void stl_put_little_int(FILE *fp, int value_in);
 extern void stl_put_little_float(FILE *fp, float value_in);
-extern void stl_write_ascii(stl_file *stl, const char *file, const char *label);
-extern void stl_write_binary(stl_file *stl, const char *file, const char *label);
+extern void stl_write_ascii(stl_file *stl, const ADMESH_CHAR *file, const char *label);
+extern void stl_write_binary(stl_file *stl, const ADMESH_CHAR *file, const char *label);
 extern void stl_write_binary_block(stl_file *stl, FILE *fp);
 extern void stl_check_facets_exact(stl_file *stl);
 extern void stl_check_facets_nearby(stl_file *stl, float tolerance);
@@ -180,7 +189,7 @@ extern void stl_write_vertex(stl_file *stl, int facet, int vertex);
 extern void stl_write_facet(stl_file *stl, char *label, int facet);
 extern void stl_write_edge(stl_file *stl, char *label, stl_hash_edge edge);
 extern void stl_write_neighbor(stl_file *stl, int facet);
-extern void stl_write_quad_object(stl_file *stl, char *file);
+extern void stl_write_quad_object(stl_file *stl, ADMESH_CHAR *file);
 extern void stl_verify_neighbors(stl_file *stl);
 extern void stl_fill_holes(stl_file *stl);
 extern void stl_fix_normal_directions(stl_file *stl);
@@ -198,13 +207,13 @@ extern void stl_mirror_xy(stl_file *stl);
 extern void stl_mirror_yz(stl_file *stl);
 extern void stl_mirror_xz(stl_file *stl);
 extern void stl_transform(stl_file *stl, float *trafo3x4);
-extern void stl_open_merge(stl_file *stl, char *file);
+extern void stl_open_merge(stl_file *stl, ADMESH_CHAR *file);
 extern void stl_invalidate_shared_vertices(stl_file *stl);
 extern void stl_generate_shared_vertices(stl_file *stl);
-extern void stl_write_obj(stl_file *stl, const char *file);
-extern void stl_write_off(stl_file *stl, char *file);
-extern void stl_write_dxf(stl_file *stl, char *file, char *label);
-extern void stl_write_vrml(stl_file *stl, char *file);
+extern void stl_write_obj(stl_file *stl, const ADMESH_CHAR *file);
+extern void stl_write_off(stl_file *stl, ADMESH_CHAR *file);
+extern void stl_write_dxf(stl_file *stl, ADMESH_CHAR *file, char *label);
+extern void stl_write_vrml(stl_file *stl, ADMESH_CHAR *file);
 extern void stl_calculate_normal(float normal[], stl_facet *facet);
 extern void stl_normalize_vector(float v[]);
 extern void stl_calculate_volume(stl_file *stl);
@@ -212,7 +221,7 @@ extern void stl_calculate_volume(stl_file *stl);
 extern void stl_repair(stl_file *stl, int fixall_flag, int exact_flag, int tolerance_flag, float tolerance, int increment_flag, float increment, int nearby_flag, int iterations, int remove_unconnected_flag, int fill_holes_flag, int normal_directions_flag, int normal_values_flag, int reverse_all_flag, int verbose_flag);
 
 extern void stl_initialize(stl_file *stl);
-extern void stl_count_facets(stl_file *stl, const char *file);
+extern void stl_count_facets(stl_file *stl, const ADMESH_CHAR *file);
 extern void stl_allocate(stl_file *stl);
 extern void stl_read(stl_file *stl, int first_facet, int first);
 extern void stl_facet_stats(stl_file *stl, stl_facet facet, int first);

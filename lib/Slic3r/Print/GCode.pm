@@ -136,6 +136,10 @@ sub export {
     # prepare the helper object for replacing placeholders in custom G-code and output filename
     $self->placeholder_parser->update_timestamp;
     
+    # GCode sets this automatically whenever we call change_layer(),
+    # but we need it for skirt/brim too
+    $gcodegen->set_first_layer(1);
+    
     # disable fan
     print $fh $gcodegen->writer->set_fan(0, 1)
         if $self->config->cooling && $self->config->disable_fan_first_layers;

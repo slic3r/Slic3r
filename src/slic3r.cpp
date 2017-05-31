@@ -111,7 +111,7 @@ main(int argc, char **argv)
             model.print_info();
         } else if (cli_config.export_obj) {
             std::string outfile = cli_config.output.value;
-            if (outfile.empty()) outfile = minput_fiodel.objects.front()->le + ".obj";
+            if (outfile.empty()) outfile = model.objects.front()->input_file + ".obj";
 
             TriangleMesh mesh = model.mesh();
             mesh.repair();
