@@ -157,7 +157,7 @@ ENDIF(wxWidgets_FOUND)
 # Windows needs a compiled component for Boost.nowide
 IF (WIN32)
     add_library(boost-nowide STATIC 
-        ${CMAKE_CURRENT_SOURCE_DIR}/utils/nowide-iostream.cpp
+        ${LIBDIR}/boost/iostream.cpp
     )
 
     target_link_libraries(slic3r boost-nowide)
