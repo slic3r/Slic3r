@@ -65,7 +65,6 @@ main(int argc, char **argv)
 
     // write config if requested
     if (!cli_config.save.value.empty()) print_config.save(cli_config.save.value);
-
     // read input file(s) if any
     std::vector<Model> models;
     for (const t_config_option_key &file : input_files) {
@@ -134,6 +133,8 @@ main(int argc, char **argv)
             print.slice();
             print.write_svg(outfile);
             boost::nowide::cout << "SVG file exported to " << outfile << std::endl;
+        } else if (cli_config.export_3mf) {
+            // To Call the IO::TMF::read
         } else if (cli_config.cut_x > 0 || cli_config.cut_y > 0 || cli_config.cut > 0) {
             model.repair();
             model.translate(0, 0, -model.bounding_box().min.z);
