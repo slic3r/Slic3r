@@ -112,9 +112,6 @@ add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/sweep/sweep_context.cc
     ${LIBDIR}/poly2tri/sweep/sweep.cc
 )
-add_library(miniz STATIC
-    ${LIBDIR}/miniz/miniz.c
-)
 
 add_executable(slic3r slic3r.cpp)
 set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)

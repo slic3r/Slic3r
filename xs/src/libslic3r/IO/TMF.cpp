@@ -1,4 +1,5 @@
 #include "../IO.hpp"
+#define MINIZ_HEADER_FILE_ONLY
 #include <miniz/miniz.c>
 
 namespace Slic3r { namespace IO {
