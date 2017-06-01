@@ -753,6 +753,7 @@ Print::skirt_first_layer_height() const
     return this->objects.front()->config.get_abs_value("first_layer_height");
 }
 
+// This will throw an exception when called without PrintObjects
 Flow
 Print::brim_flow() const
 {
@@ -778,6 +779,7 @@ Print::brim_flow() const
     return flow;
 }
 
+// This will throw an exception when called without PrintObjects
 Flow
 Print::skirt_flow() const
 {
@@ -808,15 +810,15 @@ Print::_make_brim()
     // checking whether we need to generate them
     this->brim.clear();
     
-    if (this->config.brim_width == 0
-        && this->config.interior_brim_width == 0
-        && this->config.brim_connections_width == 0) {
+    if (this->objects.empty()
+        || (this->config.brim_width == 0
+            && this->config.interior_brim_width == 0
+            && this->config.brim_connections_width == 0)) {
         this->state.set_done(psBrim);
         return;
     }
     
     // brim is only printed on first layer and uses perimeter extruder
-    const double first_layer_height = this->skirt_first_layer_height();
     const Flow flow  = this->brim_flow();
     const double mm3_per_mm = flow.mm3_per_mm();
     
@@ -864,7 +866,7 @@ Print::_make_brim()
     {
         Polygons chained = union_pt_chained(loops);
         for (Polygons::const_reverse_iterator p = chained.rbegin(); p != chained.rend(); ++p) {
-            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, first_layer_height);
+            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, flow.height);
             path.polyline = p->split_at_first_point();
             this->brim.append(ExtrusionLoop(path));
         }
@@ -920,7 +922,7 @@ Print::_make_brim()
                 
                 const Polylines paths = filler->fill_surface(Surface(stBottom, *ex));
                 for (Polylines::const_iterator pl = paths.begin(); pl != paths.end(); ++pl) {
-                    ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, first_layer_height);
+                    ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, flow.height);
                     path.polyline = *pl;
                     this->brim.append(path);
                 }
@@ -963,7 +965,7 @@ Print::_make_brim()
         
         loops = union_pt_chained(loops);
         for (const Polygon &p : loops) {
-            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, first_layer_height);
+            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, flow.height);
             path.polyline = p.split_at_first_point();
             this->brim.append(ExtrusionLoop(path));
         }
