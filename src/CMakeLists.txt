@@ -140,7 +140,7 @@ IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
 ENDIF(CMAKE_HOST_UNIX)
 
-target_link_libraries (slic3r libslic3r admesh clipper expat polypartition poly2tri boost-nowide ${Boost_LIBRARIES})
+target_link_libraries (slic3r libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
 
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
