@@ -2,7 +2,8 @@
 #include <string>
 #include <cstring>
 #include <map>
-#include <miniz/miniz.c>
+// Include miniz.h , if you want to include it in other file use #define MINIZ_HEADER_FILE_ONLY before including it.
+#include <miniz/miniz.h>
 
 namespace Slic3r { namespace IO {
 
@@ -34,7 +35,9 @@ TMF::write(Model& model, std::string output_file){
     // Close the model element.
     buff += "</model>\n";
 
-    std::cout << buff ;
+    // Debugging code
+    //std::cout << buff ;
+
     // Create a 3dmodel.model entry in /3D/ containing the buffer.
     mz_zip_writer_add_mem(&(zip_archive), "3D/3dmodel.model", buff.c_str(), buff.size(), MZ_BEST_COMPRESSION );
 

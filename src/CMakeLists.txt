@@ -106,10 +106,6 @@ add_library(expat STATIC
     ${LIBDIR}/expat/xmltok.c
 )
 
-add_library(miniz STATIC
-    ${LIBDIR}/miniz/miniz.c
-)
-
 add_library(polypartition STATIC ${LIBDIR}/polypartition.cpp)
 add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/common/shapes.cc
