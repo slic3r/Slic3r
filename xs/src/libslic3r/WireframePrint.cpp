@@ -1,4 +1,4 @@
-#include "WireframePrint.h"
+#include "WireframePrint.hpp"
 
 namespace Slic3r {
 	

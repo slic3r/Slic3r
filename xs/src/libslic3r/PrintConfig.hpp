@@ -508,6 +508,126 @@ class PrintConfig : public GCodeConfig
     };
 };
 
+class WireframePrintConfig : public GCodeConfig
+{
+    public:
+    ConfigOptionPoints              bed_shape;
+    ConfigOptionBool                has_heatbed;
+    ConfigOptionInt                 bed_temperature;
+    ConfigOptionFloat               bridge_acceleration;
+    ConfigOptionInt                 bridge_fan_speed;
+    ConfigOptionFloat               brim_connections_width;
+    ConfigOptionFloat               brim_width;
+    ConfigOptionBool                complete_objects;
+    ConfigOptionBool                cooling;
+    ConfigOptionFloat               default_acceleration;
+    ConfigOptionFloat               duplicate_distance;
+    //ConfigOptionFloat               extruder_clearance_angle;
+    ConfigOptionFloat               extruder_clearance_height;
+    ConfigOptionFloat               extruder_clearance_radius;
+    ConfigOptionPoints              extruder_offset;
+    ConfigOptionBool                fan_always_on;
+    ConfigOptionInt                 fan_below_layer_time;
+    ConfigOptionStrings             filament_colour;
+    ConfigOptionStrings             filament_notes;
+    ConfigOptionFloat               first_layer_acceleration;
+    ConfigOptionInt                 first_layer_bed_temperature;
+    ConfigOptionFloatOrPercent      first_layer_extrusion_width;
+    ConfigOptionFloatOrPercent      first_layer_speed;
+    ConfigOptionInts                first_layer_temperature;
+    ConfigOptionBool                gcode_arcs;
+    ConfigOptionFloat               interior_brim_width;
+    ConfigOptionInt                 max_fan_speed;
+    ConfigOptionInt                 min_fan_speed;
+    ConfigOptionFloat               min_print_speed;
+    ConfigOptionFloat               min_skirt_length;
+    ConfigOptionString              notes;
+    ConfigOptionFloats              nozzle_diameter;
+    ConfigOptionBool                ooze_prevention;
+    ConfigOptionString              output_filename_format;
+    ConfigOptionFloat               perimeter_acceleration;
+    ConfigOptionStrings             post_process;
+    ConfigOptionStrings             printer_notes;
+    ConfigOptionFloat               resolution;
+    ConfigOptionFloats              retract_before_travel;
+    ConfigOptionBools               retract_layer_change;
+    ConfigOptionFloat               skirt_distance;
+    ConfigOptionInt                 skirt_height;
+    ConfigOptionInt                 skirts;
+    ConfigOptionInt                 slowdown_below_layer_time;
+    ConfigOptionInt                 standby_temperature_delta;
+    ConfigOptionInts                temperature;
+    ConfigOptionInt                 threads;
+    ConfigOptionFloat               vibration_limit;
+    ConfigOptionBools               wipe;
+    ConfigOptionFloat               z_offset;
+    ConfigOptionFloat               z_steps_per_mm;
+    
+    WireframePrintConfig(bool initialize = true) : GCodeConfig(false) {
+        if (initialize)
+            this->set_defaults();
+    }
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(bed_shape);
+        OPT_PTR(has_heatbed);
+        OPT_PTR(bed_temperature);
+        OPT_PTR(bridge_acceleration);
+        OPT_PTR(bridge_fan_speed);
+        OPT_PTR(brim_connections_width);
+        OPT_PTR(brim_width);
+        OPT_PTR(complete_objects);
+        OPT_PTR(cooling);
+        OPT_PTR(default_acceleration);
+        OPT_PTR(duplicate_distance);
+        OPT_PTR(extruder_clearance_height);
+        OPT_PTR(extruder_clearance_radius);
+        OPT_PTR(extruder_offset);
+        OPT_PTR(fan_always_on);
+        OPT_PTR(fan_below_layer_time);
+        OPT_PTR(filament_colour);
+        OPT_PTR(filament_notes);
+        OPT_PTR(first_layer_acceleration);
+        OPT_PTR(first_layer_bed_temperature);
+        OPT_PTR(first_layer_extrusion_width);
+        OPT_PTR(first_layer_speed);
+        OPT_PTR(first_layer_temperature);
+        OPT_PTR(gcode_arcs);
+        OPT_PTR(interior_brim_width);
+        OPT_PTR(max_fan_speed);
+        OPT_PTR(min_fan_speed);
+        OPT_PTR(min_print_speed);
+        OPT_PTR(min_skirt_length);
+        OPT_PTR(notes);
+        OPT_PTR(nozzle_diameter);
+        OPT_PTR(ooze_prevention);
+        OPT_PTR(output_filename_format);
+        OPT_PTR(perimeter_acceleration);
+        OPT_PTR(post_process);
+        OPT_PTR(printer_notes);
+        OPT_PTR(resolution);
+        OPT_PTR(retract_before_travel);
+        OPT_PTR(retract_layer_change);
+        OPT_PTR(skirt_distance);
+        OPT_PTR(skirt_height);
+        OPT_PTR(skirts);
+        OPT_PTR(slowdown_below_layer_time);
+        OPT_PTR(standby_temperature_delta);
+        OPT_PTR(temperature);
+        OPT_PTR(threads);
+        OPT_PTR(vibration_limit);
+        OPT_PTR(wipe);
+        OPT_PTR(z_offset);
+        OPT_PTR(z_steps_per_mm);
+        
+        // look in parent class
+        ConfigOption* opt;
+        if ((opt = GCodeConfig::optptr(opt_key, create)) != NULL) return opt;
+        
+        return NULL;
+    };
+};
+
 class HostConfig : public virtual StaticPrintConfig
 {
     public:
