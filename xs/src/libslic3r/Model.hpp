@@ -41,6 +41,8 @@ class Model
     ModelMaterialMap materials;
     // Objects are owned by a model. Each model may have multiple instances, each instance having its own transformation (shift, scale, rotation).
     ModelObjectPtrs objects;
+    std::map<std::string, std::string> metadata;
+    ///< Model Metadata <name, value>, this is needed for 3MF format read/write.
     
     Model();
     Model(const Model &other);
