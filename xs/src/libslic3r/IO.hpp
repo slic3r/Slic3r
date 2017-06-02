@@ -42,8 +42,8 @@ class POV
 class TMF
 {
     public:
-    static bool write(Model& model, std::string output_file);
     static bool read(std::string input_file, Model* model);
+    static bool write(Model& model, std::string output_file);
 };
 
 } }

@@ -32,6 +32,7 @@ include_directories(${LIBDIR}/Slic3r/GUI/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/standalone/)
 include_directories(${LIBDIR}/admesh/)
 include_directories(${LIBDIR}/expat/)
+include_directories(${LIBDIR}/miniz/)
 include_directories(${LIBDIR}/poly2tri/)
 include_directories(${LIBDIR}/poly2tri/sweep)
 include_directories(${LIBDIR}/poly2tri/common)
@@ -104,6 +105,11 @@ add_library(expat STATIC
     ${LIBDIR}/expat/xmlrole.c
     ${LIBDIR}/expat/xmltok.c
 )
+
+add_library(miniz STATIC
+    ${LIBDIR}/miniz/miniz.c
+)
+
 add_library(polypartition STATIC ${LIBDIR}/polypartition.cpp)
 add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/common/shapes.cc

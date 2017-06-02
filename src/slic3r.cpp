@@ -137,9 +137,9 @@ main(int argc, char **argv)
             // TODO @Samir55 Ask for it before removing .svg / .obj/ .amf from outfile.
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model.objects.front()->input_file + ".3mf";
-            // Call the IO::TMF::write(model, outfile)
+
             IO::TMF::write(model, outfile);
-            boost::nowide::cout << "3mf file exported to " << outfile << std::endl;
+            boost::nowide::cout << "File file exported to " << outfile << std::endl;
         } else if (cli_config.cut_x > 0 || cli_config.cut_y > 0 || cli_config.cut > 0) {
             model.repair();
             model.translate(0, 0, -model.bounding_box().min.z);
