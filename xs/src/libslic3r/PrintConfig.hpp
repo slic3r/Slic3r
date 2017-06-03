@@ -560,6 +560,7 @@ class WireframePrintConfig : public GCodeConfig
     ConfigOptionInt                 threads;
     ConfigOptionFloat               vibration_limit;
     ConfigOptionBools               wipe;
+    ConfigOptionBool                wireframe;
     ConfigOptionFloat               z_offset;
     ConfigOptionFloat               z_steps_per_mm;
     
@@ -617,6 +618,7 @@ class WireframePrintConfig : public GCodeConfig
         OPT_PTR(threads);
         OPT_PTR(vibration_limit);
         OPT_PTR(wipe);
+        OPT_PTR(wireframe);
         OPT_PTR(z_offset);
         OPT_PTR(z_steps_per_mm);
         

@@ -1576,6 +1576,13 @@ PrintConfigDef::PrintConfigDef()
         def->default_value = opt;
     }
 
+    def = this->add("wireframe", coBools);
+    def->label = "Enable wireframe printing";
+    def->category = "Advanced";
+    def->tooltip = "This enables the wireframe printing algorithm. Use the wireframe settings to tweak performance.";
+    def->cli = "wireframe!";
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("xy_size_compensation", coFloat);
     def->label = "XY Size Compensation";
     def->category = "Advanced";
