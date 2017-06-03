@@ -811,7 +811,7 @@ sub show_preset_editor {
         $preset_editor->on_save_preset($cb);
     
         if ($dlg) {
-            $dlg->ShowModal;
+            $dlg->Show;
         }
     });
 }
