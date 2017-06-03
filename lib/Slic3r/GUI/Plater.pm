@@ -862,6 +862,7 @@ sub add {
     
     my @input_files = wxTheApp->open_model($self);
     $self->load_file($_) for @input_files;
+	$self->on_model_change;
 }
 
 sub add_tin {
