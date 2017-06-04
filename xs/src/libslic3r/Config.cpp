@@ -256,7 +256,7 @@ ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_
     for (const t_config_option_key &opt_key : opt_keys) {
         ConfigOption* my_opt = this->option(opt_key, true);
         if (my_opt == NULL) {
-            if (ignore_nonexistent == false) throw "Attempt to apply non-existent option";
+            if (ignore_nonexistent == false) throw UnknownOptionException();
             continue;
         }
         
@@ -339,7 +339,7 @@ ConfigBase::get_abs_value(const t_config_option_key &opt_key) const {
     } else if (const ConfigOptionFloat* optv = dynamic_cast<const ConfigOptionFloat*>(opt)) {
         return optv->value;
     } else {
-        throw "Not a valid option type for get_abs_value()";
+        throw std::runtime_error("Not a valid option type for get_abs_value()");
     }
 }
 
@@ -487,7 +487,7 @@ DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
                 optv->keys_map = &optdef->enum_keys_map;
                 opt = static_cast<ConfigOption*>(optv);
             } else {
-                throw "Unknown option type";
+                throw std::runtime_error("Unknown option type");
             }
             this->options[opt_key] = opt;
             return opt;

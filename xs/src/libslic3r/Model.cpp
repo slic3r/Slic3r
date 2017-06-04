@@ -349,8 +349,8 @@ Model::duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* b
 void
 Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
 {
-    if (this->objects.size() > 1) throw "Grid duplication is not supported with multiple objects";
-    if (this->objects.empty()) throw "No objects!";
+    if (this->objects.size() > 1) throw std::runtime_error("Grid duplication is not supported with multiple objects");
+    if (this->objects.empty()) throw std::runtime_error("No objects!");
 
     ModelObject* object = this->objects.front();
     object->clear_instances();
