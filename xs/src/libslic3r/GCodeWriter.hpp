@@ -23,6 +23,7 @@ public:
     std::string extrusion_axis() const { return this->_extrusion_axis; }
     void apply_print_config(const PrintConfig &print_config);
     void set_extruders(const std::vector<unsigned int> &extruder_ids);
+    std::string notes();
     std::string preamble();
     std::string postamble() const;
     std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1) const;

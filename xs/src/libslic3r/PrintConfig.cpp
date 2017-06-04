@@ -924,18 +924,14 @@ PrintConfigDef::PrintConfigDef()
     def->height = 60;
     def->default_value = new ConfigOptionStrings();
 
-    def = this->add("printer_notes", coStrings);
+    def = this->add("printer_notes", coString);
     def->label = "Printer notes";
     def->tooltip = "You can put your notes regarding the printer here.";
     def->cli = "printer-notes=s@";
     def->multiline = true;
     def->full_width = true;
     def->height = 130;
-    {
-        ConfigOptionStrings* opt = new ConfigOptionStrings();
-        opt->values.push_back("");
-        def->default_value = opt;
-    }
+    def->default_value = new ConfigOptionString("");
 
     def = this->add("print_settings_id", coString);
     def->default_value = new ConfigOptionString("");
