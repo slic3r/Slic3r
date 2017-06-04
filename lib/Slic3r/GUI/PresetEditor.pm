@@ -1198,7 +1198,7 @@ sub options {
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode between_objects_gcode
-        notes
+        printer_notes
         nozzle_diameter extruder_offset
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
         retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
@@ -1418,7 +1418,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Notes',
                 label_width => 0,
             );
-            my $option = $optgroup->get_option('notes');
+            my $option = $optgroup->get_option('printer_notes');
             $option->full_width(1);
             $option->height(250);
             $optgroup->append_single_option_line($option);
