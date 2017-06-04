@@ -926,8 +926,8 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("printer_notes", coString);
     def->label = "Printer notes";
-    def->tooltip = "You can put your notes regarding the printer here.";
-    def->cli = "printer-notes=s@";
+    def->tooltip = "You can put your notes regarding the printer here. This text will be added to the G-code header comments.";
+    def->cli = "printer-notes=s";
     def->multiline = true;
     def->full_width = true;
     def->height = 130;
