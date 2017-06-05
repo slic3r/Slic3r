@@ -32,7 +32,7 @@ include_directories(${LIBDIR}/Slic3r/GUI/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/standalone/)
 include_directories(${LIBDIR}/admesh/)
 include_directories(${LIBDIR}/expat/)
-include_directories(${LIBDIR}/miniz/)
+include_directories(${LIBDIR}/zip/)
 include_directories(${LIBDIR}/poly2tri/)
 include_directories(${LIBDIR}/poly2tri/sweep)
 include_directories(${LIBDIR}/poly2tri/common)
@@ -113,6 +113,10 @@ add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/sweep/cdt.cc
     ${LIBDIR}/poly2tri/sweep/sweep_context.cc
     ${LIBDIR}/poly2tri/sweep/sweep.cc
+)
+
+add_library(zip STATIC
+    ${LIBDIR}/zip/zip.c
 )
 
 add_executable(slic3r slic3r.cpp)

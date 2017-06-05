@@ -3,21 +3,25 @@
 #include <cstring>
 #include <map>
 // Include miniz.h , if you want to include it in other file use #define MINIZ_HEADER_FILE_ONLY before including it.
-#include <miniz/miniz.h>
+#include <zip/zip.h>
+//#include "../../zip/zip.h"
 
 namespace Slic3r { namespace IO {
 
 bool
 TMF::write(Model& model, std::string output_file){
-    // Create a new miniz archive object.
-    mz_zip_archive zip_archive;
-    memset(&zip_archive, 0, sizeof(zip_archive));
+    // Create a new zip archive object.
+    struct zip_t* zip_archive = zip_open(output_file.c_str(),ZIP_DEFAULT_COMPRESSION_LEVEL, 'w');
 
-    // Create a new Zip file names with output_file.
-    if(!mz_zip_writer_init_file(&zip_archive, output_file.c_str(), 0))
+    // Check whether it's created or not
+    if(!zip_archive) return false;
+
+    // Create a 3dmodel.model entry in /3D/ containing the buffer.
+    if(!zip_entry_open(zip_archive, "3D/3dmodel.model"))
         return false;
 
     // Create a buffer to carry data to pass to the zip entry.
+    // When the buffer reaches a certain length write to the file then make it empty.
     std::string buff = "";
 
     // add the XML document header.
@@ -38,14 +42,20 @@ TMF::write(Model& model, std::string output_file){
     // Debugging code
     //std::cout << buff ;
 
-    // Create a 3dmodel.model entry in /3D/ containing the buffer.
-    mz_zip_writer_add_mem(&(zip_archive), "3D/3dmodel.model", buff.c_str(), buff.size(), MZ_BEST_COMPRESSION );
+    // Write the model material
+
+
+    // append the current opened entry with the current buffer.
+    zip_entry_write(zip_archive, buff.c_str(), buff.size());
+
+    // Close the 3dmodel.model file in /3D/ directory
+    if(!zip_entry_close(zip_archive))
+        return false;
 
     // Finalize the archive and end writing.
-    mz_zip_writer_finalize_archive(&zip_archive);
-    mz_zip_writer_end(&zip_archive);
+    zip_close(zip_archive);
 
-    return false;
+    return true;
 }
 
 // To be populated later
