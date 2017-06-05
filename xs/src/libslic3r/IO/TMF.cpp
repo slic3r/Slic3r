@@ -16,7 +16,7 @@ struct TMFEditor
     zip_t* zip_archive; ///< The zip archive object for reading/writing zip files.
     std::string zip_name; ///< The zip archive file name.
     Model* model; ///< The model to be read or written.
-    string buff; ///< The buffer currently used in write functions.
+    std::string buff; ///< The buffer currently used in write functions.
     ///< When it reaches a max capacity it's written to the current entry in the zip file.
 
     /// Constructor
@@ -29,7 +29,7 @@ struct TMFEditor
     /// Write the metadata of the model. This function is called by writeModel() function.
     bool writeMetadata(){
         // Write the model metadata.
-        for(std::map<std::string, std::string>::iterator it = model.metadata.begin(); it != model.metadata.end(); ++it){
+        for(std::map<std::string, std::string>::iterator it = model->metadata.begin(); it != model->metadata.end(); ++it){
             appendBuffer("<metadata name=\"" + it->first + "\">" + it->second + "</metadata>\n" );
         }
         return true;
@@ -44,6 +44,8 @@ struct TMFEditor
 
     /// Write the build element.
     bool writeBuild(){
+        appendBuffer("<build> \n");
+        appendBuffer("</build> \n");
         return true;
     }
 
@@ -78,11 +80,17 @@ struct TMFEditor
         for(int object_index = 0; object_index < model->objects.size(); object_index++)
             writeObject(object_index);
 
+        // Close resources
+        appendBuffer("</resources> \n");
+
         // Write build element.
         writeBuild();
 
         // Close the model element.
         appendBuffer("</model>\n");
+
+        // Write what is found in the buffer.
+        writeBuffer();
 
         // Close the 3dmodel.model file in /3D/ directory
         if(zip_entry_close(zip_archive))
@@ -99,7 +107,6 @@ struct TMFEditor
     /// Write TMF function called by TMF::write() function
     bool produceTMF(){
         // ToDo @Samir55 Throw c++ exceptions instead of returning false (Ask about this).
-
         // Create a new zip archive object.
         zip_archive = zip_open(zip_name.c_str(), ZIP_DEFAULT_COMPRESSION_LEVEL, 'w');
 
@@ -111,8 +118,7 @@ struct TMFEditor
             return false;
 
         // Write the model.
-        if(!writeModel())
-            return false;
+        if(!writeModel()) return false;
 
         // Finalize the archive and end writing.
         zip_close(zip_archive);
@@ -128,8 +134,8 @@ struct TMFEditor
     /// Append the buffer with a string to be written. This function calls writeBuffer() if the buffer reached its capacity.
     void appendBuffer(std::string s){
         buff += s;
-        if(buff.size() + s.size > WRITE_BUFFER_MAX_CAPACITY)
-            writeBuffer(buff);
+        if(buff.size() + s.size() > WRITE_BUFFER_MAX_CAPACITY)
+            writeBuffer();
     }
 
     /// This function writes the buffer to the current opened zip entry file if it exceeds a certain capacity.
@@ -143,7 +149,7 @@ struct TMFEditor
 
 bool
 TMF::write(Model& model, std::string output_file){
-    TMFEditor TMF_writer(output_file, model);
+    TMFEditor TMF_writer(output_file, &model);
     return TMF_writer.produceTMF();
 }
 
