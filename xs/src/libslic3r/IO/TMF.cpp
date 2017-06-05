@@ -17,7 +17,7 @@ TMF::write(Model& model, std::string output_file){
     if(!zip_archive) return false;
 
     // Create a 3dmodel.model entry in /3D/ containing the buffer.
-    if(!zip_entry_open(zip_archive, "3D/3dmodel.model"))
+    if(zip_entry_open(zip_archive, "3D/3dmodel.model"))
         return false;
 
     // Create a buffer to carry data to pass to the zip entry.
@@ -49,7 +49,7 @@ TMF::write(Model& model, std::string output_file){
     zip_entry_write(zip_archive, buff.c_str(), buff.size());
 
     // Close the 3dmodel.model file in /3D/ directory
-    if(!zip_entry_close(zip_archive))
+    if(zip_entry_close(zip_archive))
         return false;
 
     // Finalize the archive and end writing.

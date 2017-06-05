@@ -118,6 +118,7 @@ add_library(poly2tri STATIC
 add_library(zip STATIC
     ${LIBDIR}/zip/zip.c
 )
+set_property(TARGET zip PROPERTY C_STANDARD 99)
 
 add_executable(slic3r slic3r.cpp)
 set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
@@ -151,12 +152,12 @@ IF(wxWidgets_FOUND)
     INCLUDE("${wxWidgets_USE_FILE}")
     add_library(slic3r_gui STATIC ${LIBDIR}/slic3r/GUI/3DScene.cpp ${LIBDIR}/slic3r/GUI/GUI.cpp)
     #only build GUI lib if building with wx
-    target_link_libraries (slic3r slic3r_gui libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES} ${wxWidgets_LIBRARIES})
+    target_link_libraries (slic3r slic3r_gui libslic3r zip admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES} ${wxWidgets_LIBRARIES})
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
     MESSAGE("wx not found!")
-    target_link_libraries (slic3r libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+    target_link_libraries (slic3r libslic3r zip admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
     #skip gui when no wx included
 ENDIF(wxWidgets_FOUND)
 
-target_link_libraries (extrude-tin libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+target_link_libraries (extrude-tin libslic3r zip admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
