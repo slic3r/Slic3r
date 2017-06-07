@@ -10,6 +10,7 @@ use Module::Build::WithXSpp;
 
 my $cpp_guess = ExtUtils::CppGuess->new;
 my $mswin = $^O eq 'MSWin32';
+my $linux = $^O eq 'linux';
 
 # prevent an annoying concatenation warning by Devel::CheckLib
 $ENV{LD_RUN_PATH} //= "";
@@ -18,11 +19,12 @@ $ENV{LD_RUN_PATH} //= "";
 # HAS_BOOL         : stops Perl/lib/CORE/handy.h from doing "#  define bool char" for MSVC
 # NOGDI            : prevents inclusion of wingdi.h which defines functions Polygon() and Polyline() in global namespace
 # BOOST_ASIO_DISABLE_KQUEUE : prevents a Boost ASIO bug on OS X: https://svn.boost.org/trac/boost/ticket/5339
-my @cflags = qw(-static-libstdc++ -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE);
+my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE);
 if ($cpp_guess->is_gcc)	{
 	# GCC is pedantic with c++11 std, so undefine strict ansi to get M_PI back
 	push @cflags, qw(-U__STRICT_ANSI__);
 }
+
 if (`$Config{cc} -v` =~ /gcc version 4\.6\./) {
     # Compatibility with GCC 4.6 is not a requirement, but as long as code compiles on it we try to support it.
     push @cflags, qw(-std=c++0x);
@@ -31,6 +33,9 @@ if (`$Config{cc} -v` =~ /gcc version 4\.6\./) {
     push @cflags, qw(-std=c++11);
 }
 my @ldflags = ();
+if ($linux) {
+    push @ldflags, qw(-static-libgcc -static-libstdc++);
+}
 if ($^O eq 'darwin') {
     push @cflags, qw(-stdlib=libc++);
     push @ldflags, qw(-framework IOKit -framework CoreFoundation -lc++);
