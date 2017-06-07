@@ -33,9 +33,11 @@ if (`$Config{cc} -v` =~ /gcc version 4\.6\./) {
     push @cflags, qw(-std=c++11);
 }
 my @ldflags = ();
-if ($linux) {
+
+if ($linux && (defined $ENV{SLIC3R_STATIC} && $ENV{SLIC3R_STATIC})) {
     push @ldflags, qw(-static-libgcc -static-libstdc++);
 }
+
 if ($^O eq 'darwin') {
     push @cflags, qw(-stdlib=libc++);
     push @ldflags, qw(-framework IOKit -framework CoreFoundation -lc++);
