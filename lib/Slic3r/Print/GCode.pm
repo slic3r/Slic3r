@@ -645,13 +645,7 @@ sub process_layer {
         }
     }
     
-    # apply spiral vase post-processing if this layer contains suitable geometry
-    # (we must feed all the G-code into the post-processor, including the first 
-    # bottom non-spiral layers otherwise it will mess with positions)
-    # we apply spiral vase at this stage because it requires a full layer
-    $gcode = $self->_spiral_vase->process_layer($gcode)
-        if defined $self->_spiral_vase;
-    
+
     # apply cooling logic; this may alter speeds
     $gcode = $self->_cooling_buffer->append(
         $gcode,
@@ -659,7 +653,14 @@ sub process_layer {
         $layer->id,
         $layer->print_z,
     ) if defined $self->_cooling_buffer;
-    
+
+    # apply spiral vase post-processing if this layer contains suitable geometry
+    # (we must feed all the G-code into the post-processor, including the first 
+    # bottom non-spiral layers otherwise it will mess with positions)
+    # we apply spiral vase at this stage because it requires a full layer
+    $gcode = $self->_spiral_vase->process_layer($gcode)
+        if defined $self->_spiral_vase;
+
     print {$self->fh} $self->filter($gcode);
 }
 
