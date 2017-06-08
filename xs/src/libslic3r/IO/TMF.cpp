@@ -37,7 +37,7 @@ struct TMFEditor
 
     /// Write object of the current model. This function is called by writeModel() function.
     /// \param index int the index of the object to be read
-    /// \return bool 0: write operation is successful , otherwise not.
+    /// \return bool 1: write operation is successful , otherwise not.
     bool writeObject(int index){
         return true;
     }
@@ -50,7 +50,34 @@ struct TMFEditor
     }
 
     /// Write Materials
+    // The 3MF core specs support base materials, Each has by default color and name attributes.
     bool writeMaterials(){
+        if(model->materials.size() == 0)
+            return true;
+
+        bool baseMaterialsWritten = false;
+
+        // Write the base materials.
+        for(const auto &material : model->materials){
+            // If id is empty or if "name" attribute is not found in this material attributes ignore.
+            if(material.first.empty() || material.second->attributes.count("name") == 0)
+                continue;
+            // Add the base materials element if not added.
+            if(!baseMaterialsWritten){
+                appendBuffer("<basematerials id=\"1\">\n");
+                baseMaterialsWritten = true;
+            }
+            // We add it with black color by default.
+            appendBuffer("<base name=\"" + material.second->attributes["name"] + "\" ");
+
+            // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
+            appendBuffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000FF") + "\"/>\n");
+            // ToDo @Samir55 to be covered in AMF write.
+        }
+
+        // Close base materials if it's written.
+        if(baseMaterialsWritten)
+            appendBuffer("</basematerials>\n");
         return true;
     }
 
@@ -73,11 +100,11 @@ struct TMFEditor
         // Write resources.
         appendBuffer("<resources> \n");
 
-        // Write Model Material
+        // Write Model Material.
         writeMaterials();
 
         // Write Object
-        for(int object_index = 0; object_index < model->objects.size(); object_index++)
+        for(size_t object_index = 0; object_index < model->objects.size(); object_index++)
             writeObject(object_index);
 
         // Close resources
@@ -100,7 +127,8 @@ struct TMFEditor
     }
 
     /// Write the necessary relationships in the 3MF package. This function is called by produceTMF() function.
-    bool writeTMFRelations(){
+    bool writeTMFTypes(){
+
         return true;
     }
 
@@ -114,7 +142,7 @@ struct TMFEditor
         if(!zip_archive) return false;
 
         // Prepare the 3MF Zip archive by writing the relationships.
-        if(!writeTMFRelations())
+        if(!writeTMFTypes())
             return false;
 
         // Write the model.
@@ -149,14 +177,14 @@ struct TMFEditor
 
 bool
 TMF::write(Model& model, std::string output_file){
-    TMFEditor TMF_writer(output_file, &model);
-    return TMF_writer.produceTMF();
+    TMFEditor tmf_writer(output_file, &model);
+    return tmf_writer.produceTMF();
 }
 
 bool
 TMF::read(std::string input_file, Model* model){
-    TMFEditor TMF_reader(input_file, model);
-    return TMF_reader.consumeTMF();
+    TMFEditor tmf_reader(input_file, model);
+    return tmf_reader.consumeTMF();
 }
 
 } }
