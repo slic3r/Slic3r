@@ -35,7 +35,12 @@ if (`$Config{cc} -v` =~ /gcc version 4\.6\./) {
 my @ldflags = ();
 
 if ($linux && (defined $ENV{SLIC3R_STATIC} && $ENV{SLIC3R_STATIC})) {
-    push @ldflags, qw(-static-libgcc -static-libstdc++);
+    if ($ENV{TRAVIS}) {
+        # On the build server, link to the actual static libraries.
+    	push @ldflags, qw(/usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libgcc.a);
+    } else {
+        push @ldflags, qw(-static-libgcc -static-libstdc++);
+    }
 }
 
 if ($^O eq 'darwin') {
