@@ -25,21 +25,16 @@ if ($cpp_guess->is_gcc)	{
 	push @cflags, qw(-U__STRICT_ANSI__);
 }
 
-if (`$Config{cc} -v` =~ /gcc version 4\.6\./) {
-    # Compatibility with GCC 4.6 is not a requirement, but as long as code compiles on it we try to support it.
-    push @cflags, qw(-std=c++0x);
-} else {
-    # std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
-    push @cflags, qw(-std=c++11);
-}
+# std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
+push @cflags, qw(-std=c++11);
+
 my @ldflags = ();
 
 if ($linux && (defined $ENV{SLIC3R_STATIC} && $ENV{SLIC3R_STATIC})) {
+    push @ldflags, qw(-static-libgcc -static-libstdc++);
     if ($ENV{TRAVIS}) {
-        # On the build server, link to the actual static libraries.
+        # On the build server, link to the actual static libraries to make sure we get them in the list.
     	push @ldflags, qw(/usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libgcc.a);
-    } else {
-        push @ldflags, qw(-static-libgcc -static-libstdc++);
     }
 }
 
