@@ -202,14 +202,6 @@ if ($ENV{SLIC3R_DEBUG}) {
     push @cflags, '-DNDEBUG';
 }
 if ($cpp_guess->is_gcc) {
-    # check whether we're dealing with a buggy GCC version
-    # see https://github.com/alexrj/Slic3r/issues/1965
-    if (`cc --version` =~ / 4\.7\.[012]/) {
-        # Workaround suggested by Boost devs:
-        # https://svn.boost.org/trac/boost/ticket/8695
-        push @cflags, qw(-fno-inline-small-functions);
-    }
-    
     # our templated XS bindings cause undefined-var-template warnings
     push @cflags, qw(-Wno-undefined-var-template);
 }
