@@ -36,6 +36,18 @@ if ($linux && (defined $ENV{SLIC3R_STATIC} && $ENV{SLIC3R_STATIC})) {
         # On the build server, link to the actual static libraries to make sure we get them in the list.
     	push @ldflags, qw(/usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libgcc.a);
     }
+    # ExtUtils::CppGuess has a hard-coded -lstdc++, so we filter it out
+    {
+        no strict 'refs';
+        no warnings 'redefine';
+        my $func = "ExtUtils::CppGuess::_get_lflags";
+        my $orig = *$func{CODE};
+        *{$func} = sub {
+            my $lflags = $orig->(@_);
+            $lflags =~ s/\s*-lstdc\+\+//;
+            return $lflags;
+        };
+    }
 }
 
 if ($^O eq 'darwin') {
