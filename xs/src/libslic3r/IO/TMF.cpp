@@ -128,7 +128,25 @@ struct TMFEditor
 
     /// Write the necessary relationships in the 3MF package. This function is called by produceTMF() function.
     bool writeTMFTypes(){
+        // Create a new zip entry "[Content_Types].xml" at zip directory /.
+        if(zip_entry_open(zip_archive, "[Content_Types].xml"))
+            return false;
 
+        // Write 3MF Types "3MF OPC relationships".
+        appendBuffer("<Types>\n");
+        appendBuffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
+        appendBuffer("<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n");
+        appendBuffer("</Types>\n");
+        writeBuffer();
+
+        // Close [Content_Types].xml zip entry.
+        zip_entry_close(zip_archive);
+
+        // Create "_rels" folder in the zip archive (to create a folder instead of file simply put / at the end of the name.
+        if(zip_entry_open(zip_archive, "_rels/"))
+            return false;
+
+        zip_entry_close(zip_archive);
         return true;
     }
 
