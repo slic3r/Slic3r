@@ -19,8 +19,16 @@ fi
 if [ -s $KEY ]; then
     for i in $FILES; do 
          filepath=$(readlink -f "$i")
-         echo put $filepath | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+         tmpfile=$(mktemp)
+         echo put $filepath > $tmpfile 
+         sftp -b $tmpfile -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+         result=$?
+         if [ $? -eq 1 ]; then 
+             echo "Error with SFTP"
+             exit $result; 
+         fi
     done
 else
     echo "$KEY is not available, not deploying." 
 fi
+exit $result
