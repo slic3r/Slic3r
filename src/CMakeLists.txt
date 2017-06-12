@@ -121,6 +121,10 @@ add_executable(extrude-tin utils/extrude-tin.cpp)
 set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_START_STATIC 1)
 set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_END_STATIC 1)
 
+add_executable(wireframe utils/wireframe.cpp)
+set_target_properties(wireframe PROPERTIES LINK_SEARCH_START_STATIC 1)
+set_target_properties(wireframe PROPERTIES LINK_SEARCH_END_STATIC 1)
+
 set(wxWidgets_USE_STATIC)
 SET(wxWidgets_USE_LIBS)
 
@@ -163,6 +167,8 @@ IF (WIN32)
 
     target_link_libraries(slic3r boost-nowide)
     target_link_libraries(extrude-tin boost-nowide)
+    target_link_libraries(wireframe boost-nowide)
 ENDIF(WIN32)
 
 target_link_libraries (extrude-tin libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+target_link_libraries (wireframe libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
