@@ -6,7 +6,7 @@
 #include <zip/zip.h>
 #include "../../zip/zip.h"
 
-#define WRITE_BUFFER_MAX_CAPACITY 10000
+#define WRITE_BUFFER_MAX_CAPACITY 50000
 
 namespace Slic3r { namespace IO {
 
@@ -39,6 +39,56 @@ struct TMFEditor
     /// \param index int the index of the object to be read
     /// \return bool 1: write operation is successful , otherwise not.
     bool writeObject(int index){
+        ModelObject* object = model->objects[index];
+
+        // Create the new object element.
+        appendBuffer("<object id=\"" + toString(index + 1) + "\" type=\"model\">");
+        // Create mesh element which contains the vertices and the volumes.
+        appendBuffer("<mesh>\n");
+
+        // Create vertices element.
+        appendBuffer("<vertices>\n");
+
+        // Save the start index of each volume in the object.
+        std::vector<size_t> vertices_offsets;
+        size_t num_vertices = 0;
+
+        for(ModelVolume* volume : object->volumes){
+            // Require mesh vertices.
+            volume->mesh.require_shared_vertices();
+
+            const auto &stl = volume->mesh.stl;
+            for (int i = 0; i < stl.stats.shared_vertices; ++i)
+            {
+                // Subtract origin_translation in order to restore the coordinates of the parts
+                // before they were imported. Otherwise, when this AMF file is reimported parts
+                // will be placed in the platter correctly, but we will have lost origin_translation
+                // thus any additional part added will not align with the others.
+                // In order to do this we compensate for this translation in the instance placement
+                // below.
+                appendBuffer("<vertex");
+                appendBuffer(" x=\"" + toString(stl.v_shared[i].x - object->origin_translation.x) + "\"");
+                appendBuffer(" y=\"" + toString(stl.v_shared[i].y - object->origin_translation.y) + "\"");
+                appendBuffer(" z=\"" + toString(stl.v_shared[i].z - object->origin_translation.z) + "\"/>\n");
+            }
+            num_vertices += stl.stats.shared_vertices;
+        }
+
+        // Close the vertices element.
+        appendBuffer("</vertices>\n");
+
+        // Append volumes in triangles element.
+        appendBuffer("<triangles>\n");
+
+        // Close the triangles element
+        appendBuffer("</triangles>\n");
+
+        // Close the mesh element.
+        appendBuffer("</mesh>\n");
+
+        // Close the object element.
+        appendBuffer("</object>\n");
+
         return true;
     }
 
@@ -190,6 +240,13 @@ struct TMFEditor
         zip_entry_write(zip_archive, buff.c_str(), buff.size());
         // Clear the buffer.
         buff = "";
+    }
+
+    template <class T>
+    std::string toString(T number){
+        std::ostringstream s;
+        s << number;
+        return s.str();
     }
 };
 
