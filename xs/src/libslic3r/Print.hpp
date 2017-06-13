@@ -197,10 +197,10 @@ class Print
     PrintRegion* add_region();
     
     // methods for handling state
-    bool invalidate_state_by_config(const PrintConfigBase &config);
-    bool invalidate_step(PrintStep step);
-    bool invalidate_all_steps();
-    bool step_done(PrintObjectStep step) const;
+    virtual bool invalidate_state_by_config(const PrintConfigBase &config);
+    virtual bool invalidate_step(PrintStep step);
+    virtual bool invalidate_all_steps();
+    virtual bool step_done(PrintObjectStep step) const;
     
     void add_model_object(ModelObject* model_object, int idx = -1);
     bool apply_config(DynamicPrintConfig config);
