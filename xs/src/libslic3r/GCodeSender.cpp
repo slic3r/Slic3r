@@ -135,8 +135,8 @@ GCodeSender::set_baud_rate(unsigned int baud_rate)
         ios.c_ispeed = ios.c_ospeed = baud_rate;
         ios.c_cflag &= ~CBAUD;
         ios.c_cflag |= BOTHER | CLOCAL | CREAD;
-	ios.c_cc[VMIN] = 1; // Minimum of characters to read, prevents eof errors when 0 bytes are read
-	ios.c_cc[VTIME] = 1;
+        ios.c_cc[VMIN] = 1; // Minimum of characters to read, prevents eof errors when 0 bytes are read
+        ios.c_cc[VTIME] = 1;
         if (ioctl(handle, TCSETS2, &ios))
             printf("Error in TCSETS2: %s\n", strerror(errno));
 		
