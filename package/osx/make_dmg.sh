@@ -102,7 +102,7 @@ cp -f $PERL_BIN $macosfolder/perl-local
 ${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
           -M FindBin -M Unicode::Normalize -M Tie::Handle \
           -M Time::Local -M Math::Trig -M IO::Socket -M Errno \
-          -M lib -M overload \
+          -M Storable -M lib -M overload \
           -M warnings -M local::lib \
           -M strict -M utf8 -M parent \
           -B -p -e "print 123" -o $WD/_tmp/test.par
