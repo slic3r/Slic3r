@@ -6,7 +6,7 @@
 #include <zip/zip.h>
 #include "../../zip/zip.h"
 
-#define WRITE_BUFFER_MAX_CAPACITY 50000
+#define WRITE_BUFFER_MAX_CAPACITY 10000
 
 namespace Slic3r { namespace IO {
 
@@ -49,7 +49,7 @@ struct TMFEditor
         // Create vertices element.
         appendBuffer("<vertices>\n");
 
-        // Save the start index of each volume in the object.
+        // Save the start offset of each volume vertices in the object.
         std::vector<size_t> vertices_offsets;
         size_t num_vertices = 0;
 
@@ -57,11 +57,12 @@ struct TMFEditor
             // Require mesh vertices.
             volume->mesh.require_shared_vertices();
 
+            vertices_offsets.push_back(num_vertices);
             const auto &stl = volume->mesh.stl;
             for (int i = 0; i < stl.stats.shared_vertices; ++i)
             {
                 // Subtract origin_translation in order to restore the coordinates of the parts
-                // before they were imported. Otherwise, when this AMF file is reimported parts
+                // before they were imported. Otherwise, when this 3MF file is reimported parts
                 // will be placed in the platter correctly, but we will have lost origin_translation
                 // thus any additional part added will not align with the others.
                 // In order to do this we compensate for this translation in the instance placement
@@ -79,6 +80,22 @@ struct TMFEditor
 
         // Append volumes in triangles element.
         appendBuffer("<triangles>\n");
+
+        for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
+            ModelVolume *volume = object->volumes[i_volume];
+            int vertices_offset = vertices_offsets[i_volume];
+
+            // Add the volume triangles to the triangles list.
+            for (int i = 0; i < volume->mesh.stl.stats.number_of_facets; ++i){
+                appendBuffer("<triangle");
+                for(int j = 0; j < 3; j++){
+                    appendBuffer(" v" + toString(j+1) + "=\"" + toString(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) + "\"");
+                }
+                if(!volume->material_id().empty())
+                appendBuffer(" pid=\"1\" p1=\"" + toString(volume->material_id()) + "\""); // Base Materials id = 1 and p1 is assigned to the whole triangle.
+                appendBuffer("/>");
+            }
+        }
 
         // Close the triangles element
         appendBuffer("</triangles>\n");
@@ -99,7 +116,7 @@ struct TMFEditor
         return true;
     }
 
-    /// Write Materials
+    /// Write Materials. The current supported materials are only of the core specifications.
     // The 3MF core specs support base materials, Each has by default color and name attributes.
     bool writeMaterials(){
         if(model->materials.size() == 0)
