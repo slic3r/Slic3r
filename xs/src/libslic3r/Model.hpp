@@ -121,6 +121,7 @@ class ModelObject
     DynamicPrintConfig config;
     // Variation of a layer thickness for spans of Z coordinates.
     t_layer_height_ranges layer_height_ranges;
+    int part_number; ///< It's used for the 3MF items part numbers in the build element.
 
     /* This vector accumulates the total translation applied to the object by the
         center_around_origin() method. Callers might want to apply the same translation

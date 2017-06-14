@@ -27,10 +27,10 @@ struct TMFEditor
     }
 
     /// Write the metadata of the model. This function is called by writeModel() function.
-    bool writeMetadata(){
+    bool write_metadata(){
         // Write the model metadata.
         for(std::map<std::string, std::string>::iterator it = model->metadata.begin(); it != model->metadata.end(); ++it){
-            appendBuffer("<metadata name=\"" + it->first + "\">" + it->second + "</metadata>\n" );
+            append_buffer("<metadata name=\"" + it->first + "\">" + it->second + "</metadata>\n" );
         }
         return true;
     }
@@ -38,16 +38,23 @@ struct TMFEditor
     /// Write object of the current model. This function is called by writeModel() function.
     /// \param index int the index of the object to be read
     /// \return bool 1: write operation is successful , otherwise not.
-    bool writeObject(int index){
+    bool write_object(int index){
         ModelObject* object = model->objects[index];
 
         // Create the new object element.
-        appendBuffer("<object id=\"" + toString(index + 1) + "\" type=\"model\">");
+        append_buffer("<object id=\"" + to_string(index + 1) + "\" type=\"model\"");
+
+        // Add part number if found.
+        if(object->part_number != -1)
+            append_buffer(" partnumber=\"" + to_string(object->part_number) + "\"");
+
+        append_buffer(">");
+
         // Create mesh element which contains the vertices and the volumes.
-        appendBuffer("<mesh>\n");
+        append_buffer("<mesh>\n");
 
         // Create vertices element.
-        appendBuffer("<vertices>\n");
+        append_buffer("<vertices>\n");
 
         // Save the start offset of each volume vertices in the object.
         std::vector<size_t> vertices_offsets;
@@ -67,19 +74,19 @@ struct TMFEditor
                 // thus any additional part added will not align with the others.
                 // In order to do this we compensate for this translation in the instance placement
                 // below.
-                appendBuffer("<vertex");
-                appendBuffer(" x=\"" + toString(stl.v_shared[i].x - object->origin_translation.x) + "\"");
-                appendBuffer(" y=\"" + toString(stl.v_shared[i].y - object->origin_translation.y) + "\"");
-                appendBuffer(" z=\"" + toString(stl.v_shared[i].z - object->origin_translation.z) + "\"/>\n");
+                append_buffer("<vertex");
+                append_buffer(" x=\"" + to_string(stl.v_shared[i].x - object->origin_translation.x) + "\"");
+                append_buffer(" y=\"" + to_string(stl.v_shared[i].y - object->origin_translation.y) + "\"");
+                append_buffer(" z=\"" + to_string(stl.v_shared[i].z - object->origin_translation.z) + "\"/>\n");
             }
             num_vertices += stl.stats.shared_vertices;
         }
 
         // Close the vertices element.
-        appendBuffer("</vertices>\n");
+        append_buffer("</vertices>\n");
 
         // Append volumes in triangles element.
-        appendBuffer("<triangles>\n");
+        append_buffer("<triangles>\n");
 
         for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
             ModelVolume *volume = object->volumes[i_volume];
@@ -87,38 +94,58 @@ struct TMFEditor
 
             // Add the volume triangles to the triangles list.
             for (int i = 0; i < volume->mesh.stl.stats.number_of_facets; ++i){
-                appendBuffer("<triangle");
+                append_buffer("<triangle");
                 for(int j = 0; j < 3; j++){
-                    appendBuffer(" v" + toString(j+1) + "=\"" + toString(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) + "\"");
+                    append_buffer(" v" + to_string(j+1) + "=\"" + to_string(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) + "\"");
                 }
                 if(!volume->material_id().empty())
-                appendBuffer(" pid=\"1\" p1=\"" + toString(volume->material_id()) + "\""); // Base Materials id = 1 and p1 is assigned to the whole triangle.
-                appendBuffer("/>");
+                    append_buffer(" pid=\"1\" p1=\"" + to_string(volume->material_id()) + "\""); // Base Materials id = 1 and p1 is assigned to the whole triangle.
+                append_buffer("/>");
             }
         }
 
         // Close the triangles element
-        appendBuffer("</triangles>\n");
+        append_buffer("</triangles>\n");
 
         // Close the mesh element.
-        appendBuffer("</mesh>\n");
+        append_buffer("</mesh>\n");
 
         // Close the object element.
-        appendBuffer("</object>\n");
+        append_buffer("</object>\n");
 
         return true;
     }
 
     /// Write the build element.
-    bool writeBuild(){
-        appendBuffer("<build> \n");
-        appendBuffer("</build> \n");
+    bool write_build(){
+        // Create build element.
+        append_buffer("<build> \n");
+//
+//        // Write ModelInstances for each ModelObject.
+        for(size_t object_id; object_id < model->objects.size(); ++object_id){
+            ModelObject* object = model->objects[object_id];
+
+            for (const ModelInstance* instance : object->instances){
+//                append_buffer("<item" + "objectid=\"" + to_string(object_id + 1) + "\"");
+//                // Add the transform
+//                //<item objectid="4" transform="5.96045e-008 0.999997 0 -0.999997 -9.40395e-007 0 0 0 1 126.999 -126.998 0.00197"/>
+            }
+//                instances
+//                    << "    <instance objectid=\"" << object_id << "\">" << endl
+//                    << "      <deltax>" << instance->offset.x + object->origin_translation.x << "</deltax>" << endl
+//                    << "      <deltay>" << instance->offset.y + object->origin_translation.y << "</deltay>" << endl
+//                    << "      <rz>" << instance->rotation << "</rz>" << endl
+//                    << "      <scale>" << instance->scaling_factor << "</scale>" << endl
+//                    << "    </instance>" << endl;
+        }
+//
+        append_buffer("</build> \n");
         return true;
     }
 
     /// Write Materials. The current supported materials are only of the core specifications.
     // The 3MF core specs support base materials, Each has by default color and name attributes.
-    bool writeMaterials(){
+    bool write_materials(){
         if(model->materials.size() == 0)
             return true;
 
@@ -131,60 +158,60 @@ struct TMFEditor
                 continue;
             // Add the base materials element if not added.
             if(!baseMaterialsWritten){
-                appendBuffer("<basematerials id=\"1\">\n");
+                append_buffer("<basematerials id=\"1\">\n");
                 baseMaterialsWritten = true;
             }
             // We add it with black color by default.
-            appendBuffer("<base name=\"" + material.second->attributes["name"] + "\" ");
+            append_buffer("<base name=\"" + material.second->attributes["name"] + "\" ");
 
             // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
-            appendBuffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000FF") + "\"/>\n");
+            append_buffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000FF") + "\"/>\n");
             // ToDo @Samir55 to be covered in AMF write.
         }
 
         // Close base materials if it's written.
         if(baseMaterialsWritten)
-            appendBuffer("</basematerials>\n");
+            append_buffer("</basematerials>\n");
         return true;
     }
 
     /// Write the Model in a zip file. This function is called by produceTMF() function.
-    bool writeModel(){
+    bool write_model(){
         // Create a 3dmodel.model entry in /3D/ containing the buffer.
         if(zip_entry_open(zip_archive, "3D/3dmodel.model"))
             return false;
 
         // add the XML document header.
-        appendBuffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
 
         // Write the model element.
-        appendBuffer("<model unit=\"millimeter\" xml:lang=\"en-US\"");
-        appendBuffer(" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"> \n");
+        append_buffer("<model unit=\"millimeter\" xml:lang=\"en-US\"");
+        append_buffer(" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"> \n");
 
         // Write metadata.
-        writeMetadata();
+        write_metadata();
 
         // Write resources.
-        appendBuffer("<resources> \n");
+        append_buffer("<resources> \n");
 
         // Write Model Material.
-        writeMaterials();
+        write_materials();
 
         // Write Object
         for(size_t object_index = 0; object_index < model->objects.size(); object_index++)
-            writeObject(object_index);
+            write_object(object_index);
 
         // Close resources
-        appendBuffer("</resources> \n");
+        append_buffer("</resources> \n");
 
         // Write build element.
-        writeBuild();
+        write_build();
 
         // Close the model element.
-        appendBuffer("</model>\n");
+        append_buffer("</model>\n");
 
         // Write what is found in the buffer.
-        writeBuffer();
+        write_buffer();
 
         // Close the 3dmodel.model file in /3D/ directory
         if(zip_entry_close(zip_archive))
@@ -194,17 +221,17 @@ struct TMFEditor
     }
 
     /// Write the necessary relationships in the 3MF package. This function is called by produceTMF() function.
-    bool writeTMFTypes(){
+    bool write_TMF_types(){
         // Create a new zip entry "[Content_Types].xml" at zip directory /.
         if(zip_entry_open(zip_archive, "[Content_Types].xml"))
             return false;
 
         // Write 3MF Types "3MF OPC relationships".
-        appendBuffer("<Types>\n");
-        appendBuffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
-        appendBuffer("<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n");
-        appendBuffer("</Types>\n");
-        writeBuffer();
+        append_buffer("<Types>\n");
+        append_buffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
+        append_buffer("<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n");
+        append_buffer("</Types>\n");
+        write_buffer();
 
         // Close [Content_Types].xml zip entry.
         zip_entry_close(zip_archive);
@@ -218,7 +245,7 @@ struct TMFEditor
     }
 
     /// Write TMF function called by TMF::write() function
-    bool produceTMF(){
+    bool produce_TMF(){
         // ToDo @Samir55 Throw c++ exceptions instead of returning false (Ask about this).
         // Create a new zip archive object.
         zip_archive = zip_open(zip_name.c_str(), ZIP_DEFAULT_COMPRESSION_LEVEL, 'w');
@@ -227,11 +254,11 @@ struct TMFEditor
         if(!zip_archive) return false;
 
         // Prepare the 3MF Zip archive by writing the relationships.
-        if(!writeTMFTypes())
+        if(!write_TMF_types())
             return false;
 
         // Write the model.
-        if(!writeModel()) return false;
+        if(!write_model()) return false;
 
         // Finalize the archive and end writing.
         zip_close(zip_archive);
@@ -239,20 +266,20 @@ struct TMFEditor
     }
 
     /// Read TMF function called by TMF::read() function
-    bool consumeTMF(){
+    bool consume_TMF(){
         return true;
     }
 
     // Helper Functions.
-    /// Append the buffer with a string to be written. This function calls writeBuffer() if the buffer reached its capacity.
-    void appendBuffer(std::string s){
+    /// Append the buffer with a string to be written. This function calls write_buffer() if the buffer reached its capacity.
+    void append_buffer(std::string s){
         buff += s;
         if(buff.size() + s.size() > WRITE_BUFFER_MAX_CAPACITY)
-            writeBuffer();
+            write_buffer();
     }
 
     /// This function writes the buffer to the current opened zip entry file if it exceeds a certain capacity.
-    void writeBuffer(){
+    void write_buffer(){
         // Append the current opened entry with the current buffer.
         zip_entry_write(zip_archive, buff.c_str(), buff.size());
         // Clear the buffer.
@@ -260,23 +287,25 @@ struct TMFEditor
     }
 
     template <class T>
-    std::string toString(T number){
+    std::string to_string(T number){
         std::ostringstream s;
         s << number;
         return s.str();
     }
+
+//    string apply
 };
 
 bool
 TMF::write(Model& model, std::string output_file){
     TMFEditor tmf_writer(output_file, &model);
-    return tmf_writer.produceTMF();
+    return tmf_writer.produce_TMF();
 }
 
 bool
 TMF::read(std::string input_file, Model* model){
     TMFEditor tmf_reader(input_file, model);
-    return tmf_reader.consumeTMF();
+    return tmf_reader.consume_TMF();
 }
 
 } }
