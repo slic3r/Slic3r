@@ -1194,7 +1194,7 @@ sub options {
         bed_shape z_offset z_steps_per_mm has_heatbed
         gcode_flavor use_relative_e_distances
         serial_port serial_speed
-        octoprint_host octoprint_apikey
+        host_type octoprint_host octoprint_apikey
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode between_objects_gcode
@@ -1296,7 +1296,9 @@ sub build {
             $optgroup->append_line($line);
         }
         {
-            my $optgroup = $page->new_optgroup('OctoPrint upload');
+            my $optgroup = $page->new_optgroup('Print server upload');
+
+            $optgroup->append_single_option_line('host_type'); 
             
             my $host_line = $optgroup->create_single_option_line('octoprint_host');
             $host_line->append_button("Browse…", "zoom.png", sub {
@@ -1317,7 +1319,7 @@ sub build {
                 } else {
                     Wx::MessageDialog->new($self, 'No Bonjour device found', 'Device Browser', wxOK | wxICON_INFORMATION)->ShowModal;
                 }
-            }, undef, !eval "use Net::Bonjour; 1");
+            }, \$self->{octoprint_host_browse_btn}, !eval "use Net::Bonjour; 1");
             $host_line->append_button("Test", "wrench.png", sub {
                 my $ua = LWP::UserAgent->new;
                 $ua->timeout(10);
@@ -1534,9 +1536,14 @@ sub _update {
             $self->{serial_test_btn}->Disable;
         }
     }
-    if ($config->get('octoprint_host') && eval "use LWP::UserAgent; 1") {
+    if (($config->get('host_type') eq 'octoprint')) {
+        $self->{octoprint_host_browse_btn}->Enable;
+    }else{
+        $self->{octoprint_host_browse_btn}->Disable;
+    }
+    if (($config->get('host_type') eq 'octoprint') && eval "use LWP::UserAgent; 1") {
         $self->{octoprint_host_test_btn}->Enable;
-    } else {
+    } else {    
         $self->{octoprint_host_test_btn}->Disable;
     }
     $self->get_field('octoprint_apikey')->toggle($config->get('octoprint_host'));

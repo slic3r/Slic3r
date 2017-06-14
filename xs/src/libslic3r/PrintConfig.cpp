@@ -629,6 +629,17 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("No extrusion");
     def->default_value = new ConfigOptionEnum<GCodeFlavor>(gcfRepRap);
 
+    def = this->add("host_type", coEnum);
+    def->label = "Host type";
+    def->tooltip = "Select Octoprint or Duet to connect to your machine via LAN";
+    def->cli = "host-type=s";
+    def->enum_keys_map = ConfigOptionEnum<HostType>::get_enum_values();
+    def->enum_values.push_back("octoprint");
+    def->enum_values.push_back("duet");
+    def->enum_labels.push_back("Octoprint");
+    def->enum_labels.push_back("Duet");
+    def->default_value = new ConfigOptionEnum<HostType>(htOctoprint);
+    
     def = this->add("infill_acceleration", coFloat);
     def->label = "Infill";
     def->category = "Speed > Acceleration";
@@ -820,7 +831,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("octoprint_host", coString);
     def->label = "Host or IP";
-    def->tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the hostname or IP address of the OctoPrint instance.";
+    def->tooltip = "Slic3r can upload G-code files to an Octoprint/Duet server. This field should contain the hostname or IP address of the server instance.";
     def->cli = "octoprint-host=s";
     def->default_value = new ConfigOptionString("");
 
