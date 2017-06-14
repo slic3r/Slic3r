@@ -120,25 +120,23 @@ struct TMFEditor
     bool write_build(){
         // Create build element.
         append_buffer("<build> \n");
-//
-//        // Write ModelInstances for each ModelObject.
-        for(size_t object_id; object_id < model->objects.size(); ++object_id){
-            ModelObject* object = model->objects[object_id];
 
+        // Write ModelInstances for each ModelObject.
+        for(size_t object_id = 0; object_id < model->objects.size(); ++object_id){
+            ModelObject* object = model->objects[object_id];
             for (const ModelInstance* instance : object->instances){
-//                append_buffer("<item" + "objectid=\"" + to_string(object_id + 1) + "\"");
-//                // Add the transform
-//                //<item objectid="4" transform="5.96045e-008 0.999997 0 -0.999997 -9.40395e-007 0 0 0 1 126.999 -126.998 0.00197"/>
+                append_buffer("<item objectid=\"" + to_string(object_id + 1) + "\"/>");
+                // Add the transform
+                //<item objectid="4" transform="5.96045e-008 0.999997 0 -0.999997 -9.40395e-007 0 0 0 1 126.999 -126.998 0.00197"/>
+//                << "    <instance objectid=\"" << object_id << "\">" << endl
+//                                               << "      <deltax>" << instance->offset.x + object->origin_translation.x << "</deltax>" << endl
+//                                               << "      <deltay>" << instance->offset.y + object->origin_translation.y << "</deltay>" << endl
+//                                               << "      <rz>" << instance->rotation << "</rz>" << endl
+//                                               << "      <scale>" << instance->scaling_factor << "</scale>" << endl
+//                                               << "    </instance>" << endl;
             }
-//                instances
-//                    << "    <instance objectid=\"" << object_id << "\">" << endl
-//                    << "      <deltax>" << instance->offset.x + object->origin_translation.x << "</deltax>" << endl
-//                    << "      <deltay>" << instance->offset.y + object->origin_translation.y << "</deltay>" << endl
-//                    << "      <rz>" << instance->rotation << "</rz>" << endl
-//                    << "      <scale>" << instance->scaling_factor << "</scale>" << endl
-//                    << "    </instance>" << endl;
         }
-//
+
         append_buffer("</build> \n");
         return true;
     }
@@ -220,8 +218,8 @@ struct TMFEditor
         return true;
     }
 
-    /// Write the necessary relationships in the 3MF package. This function is called by produceTMF() function.
-    bool write_TMF_types(){
+    /// Write the necessary types in the 3MF package. This function is called by produceTMF() function.
+    bool write_types(){
         // Create a new zip entry "[Content_Types].xml" at zip directory /.
         if(zip_entry_open(zip_archive, "[Content_Types].xml"))
             return false;
@@ -236,10 +234,20 @@ struct TMFEditor
         // Close [Content_Types].xml zip entry.
         zip_entry_close(zip_archive);
 
-        // Create "_rels" folder in the zip archive (to create a folder instead of file simply put / at the end of the name.
-        if(zip_entry_open(zip_archive, "_rels/"))
+        return true;
+    }
+
+    /// Write the necessary relationships in the 3MF package. This function is called by produceTMF() function.
+    bool write_relationships(){
+        // Create .rels in "_rels" folder in the zip archive.
+        if(zip_entry_open(zip_archive, "_rels/.rels"))
             return false;
 
+        // Write the primary 3dmodel relationship.
+        append_buffer("<Relationships><Relationship Target=\"/3D/3dmodel.model\" Id=\"rel3012\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\"/>");
+        write_buffer();
+
+        // Close _rels.rels
         zip_entry_close(zip_archive);
         return true;
     }
@@ -254,7 +262,11 @@ struct TMFEditor
         if(!zip_archive) return false;
 
         // Prepare the 3MF Zip archive by writing the relationships.
-        if(!write_TMF_types())
+        if(!write_relationships())
+            return false;
+
+        // Prepare the 3MF Zip archive by writing the types.
+        if(!write_types())
             return false;
 
         // Write the model.
