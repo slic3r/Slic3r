@@ -7,6 +7,7 @@
 #include "../../zip/zip.h"
 
 #define WRITE_BUFFER_MAX_CAPACITY 10000
+#define ZIP_DEFLATE_COMPRESSION 8
 
 namespace Slic3r { namespace IO {
 
@@ -225,7 +226,8 @@ struct TMFEditor
             return false;
 
         // Write 3MF Types "3MF OPC relationships".
-        append_buffer("<Types>\n");
+        append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n");
+        append_buffer("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n");
         append_buffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
         append_buffer("<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n");
         append_buffer("</Types>\n");
@@ -244,7 +246,8 @@ struct TMFEditor
             return false;
 
         // Write the primary 3dmodel relationship.
-        append_buffer("<Relationships><Relationship Target=\"/3D/3dmodel.model\" Id=\"rel3012\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\"/>");
+        append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
+                          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>");
         write_buffer();
 
         // Close _rels.rels
@@ -256,7 +259,7 @@ struct TMFEditor
     bool produce_TMF(){
         // ToDo @Samir55 Throw c++ exceptions instead of returning false (Ask about this).
         // Create a new zip archive object.
-        zip_archive = zip_open(zip_name.c_str(), ZIP_DEFAULT_COMPRESSION_LEVEL, 'w');
+        zip_archive = zip_open(zip_name.c_str(), ZIP_DEFLATE_COMPRESSION, 'w');
 
         // Check whether it's created or not.
         if(!zip_archive) return false;
