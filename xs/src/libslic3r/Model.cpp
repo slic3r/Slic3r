@@ -424,7 +424,7 @@ ModelMaterial::apply(const t_model_material_attributes &attributes)
 
 
 ModelObject::ModelObject(Model *model)
-    : _bounding_box_valid(false), model(model)
+    : _bounding_box_valid(false), part_number(-1), model(model)
 {}
 
 ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volumes)
@@ -437,6 +437,7 @@ ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volum
     origin_translation(other.origin_translation),
     _bounding_box(other._bounding_box),
     _bounding_box_valid(other._bounding_box_valid),
+    part_number(other.part_number),
     model(model)
 {
     if (copy_volumes) {
