@@ -1194,7 +1194,7 @@ sub options {
         bed_shape z_offset z_steps_per_mm has_heatbed
         gcode_flavor use_relative_e_distances
         serial_port serial_speed
-        host_type octoprint_host octoprint_apikey
+        host_type print_host octoprint_apikey
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode between_objects_gcode
@@ -1300,7 +1300,7 @@ sub build {
 
             $optgroup->append_single_option_line('host_type'); 
             
-            my $host_line = $optgroup->create_single_option_line('octoprint_host');
+            my $host_line = $optgroup->create_single_option_line('print_host');
             $host_line->append_button("Browse…", "zoom.png", sub {
                 # look for devices
                 my $entries;
@@ -1313,19 +1313,19 @@ sub build {
                     my $dlg = Slic3r::GUI::BonjourBrowser->new($self, $entries);
                     if ($dlg->ShowModal == wxID_OK) {
                         my $value = $dlg->GetValue . ":" . $dlg->GetPort;
-                        $self->config->set('octoprint_host', $value);
-                        $self->_on_value_change('octoprint_host');
+                        $self->config->set('print_host', $value);
+                        $self->_on_value_change('print_host');
                     }
                 } else {
                     Wx::MessageDialog->new($self, 'No Bonjour device found', 'Device Browser', wxOK | wxICON_INFORMATION)->ShowModal;
                 }
-            }, \$self->{octoprint_host_browse_btn}, !eval "use Net::Bonjour; 1");
+            }, \$self->{print_host_browse_btn}, !eval "use Net::Bonjour; 1");
             $host_line->append_button("Test", "wrench.png", sub {
                 my $ua = LWP::UserAgent->new;
                 $ua->timeout(10);
 
                 my $res = $ua->get(
-                    "http://" . $self->config->octoprint_host . "/api/version",
+                    "http://" . $self->config->print_host . "/api/version",
                     'X-Api-Key' => $self->config->octoprint_apikey,
                 );
                 if ($res->is_success) {
@@ -1335,7 +1335,7 @@ sub build {
                         "I wasn't able to connect to OctoPrint (" . $res->status_line . "). "
                         . "Check hostname and OctoPrint version (at least 1.1.0 is required).");
                 }
-            }, \$self->{octoprint_host_test_btn});
+            }, \$self->{print_host_test_btn});
             $optgroup->append_line($host_line);
             $optgroup->append_single_option_line('octoprint_apikey');
         }
@@ -1537,16 +1537,16 @@ sub _update {
         }
     }
     if (($config->get('host_type') eq 'octoprint')) {
-        $self->{octoprint_host_browse_btn}->Enable;
+        $self->{print_host_browse_btn}->Enable;
     }else{
-        $self->{octoprint_host_browse_btn}->Disable;
+        $self->{print_host_browse_btn}->Disable;
     }
     if (($config->get('host_type') eq 'octoprint') && eval "use LWP::UserAgent; 1") {
-        $self->{octoprint_host_test_btn}->Enable;
+        $self->{print_host_test_btn}->Enable;
     } else {    
-        $self->{octoprint_host_test_btn}->Disable;
+        $self->{print_host_test_btn}->Disable;
     }
-    $self->get_field('octoprint_apikey')->toggle($config->get('octoprint_host'));
+    $self->get_field('octoprint_apikey')->toggle($config->get('print_host'));
     
     my $have_multiple_extruders = $self->{extruders_count} > 1;
     $self->get_field('toolchange_gcode')->toggle($have_multiple_extruders);

@@ -49,7 +49,7 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{config} = Slic3r::Config->new_from_defaults(qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width
-        serial_port serial_speed host_type octoprint_host octoprint_apikey shortcuts filament_colour
+        serial_port serial_speed host_type print_host octoprint_apikey shortcuts filament_colour
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
@@ -1410,8 +1410,8 @@ sub config_changed {
                 $self->{btn_print}->Hide;
             }
             $self->Layout;
-        } elsif ($opt_key eq 'octoprint_host') {
-            if ($config->get('octoprint_host')) {
+        } elsif ($opt_key eq 'print_host') {
+            if ($config->get('print_host')) {
                 $self->{btn_send_gcode}->Show;
             } else {
                 $self->{btn_send_gcode}->Hide;
@@ -1805,16 +1805,15 @@ sub prepare_send {
         my $ua = LWP::UserAgent->new;
         $ua->timeout(5);
         my $res;
-        if ($self->{config}->octoprint_host) {
-            print 'Host type: ' . $self->{config}->host_type . '\n';
+        if ($self->{config}->print_host) {
             if($self->{config}->host_type eq 'octoprint'){
                 $res = $ua->get(
-                    "http://" . $self->{config}->octoprint_host . "/api/files/local",
+                    "http://" . $self->{config}->print_host . "/api/files/local",
                     'X-Api-Key' => $self->{config}->octoprint_apikey,
                 );
             }else {
                 $res = $ua->get(
-                    "http://" . $self->{config}->octoprint_host . "/rr_files",
+                    "http://" . $self->{config}->print_host . "/rr_files",
                 );            
             }
         }
@@ -1852,10 +1851,10 @@ sub send_gcode {
     my $path = Slic3r::encode_path($self->{send_gcode_file});
     my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
     my $res;
-    if($self->{config}->octoprint_host){
+    if($self->{config}->print_host){
         if($self->{config}->host_type eq 'Octoprint'){
             $res = $ua->post(
-                "http://" . $self->{config}->octoprint_host . "/api/files/local",
+                "http://" . $self->{config}->print_host . "/api/files/local",
                 Content_Type => 'form-data',
                 'X-Api-Key' => $self->{config}->octoprint_apikey,
                 Content => [
@@ -1867,7 +1866,7 @@ sub send_gcode {
             );
         }else{
             $res = $ua->post(
-                "http://" . $self->{config}->octoprint_host . "/rr_upload?name=0:/gcodes/" . basename($path) . "&time=1234567890123",
+                "http://" . $self->{config}->print_host . "/rr_upload?name=0:/gcodes/" . basename($path) . "&time=1234567890123",
                 Content_Type => 'form-data',
                 Content => [
                     # OctoPrint doesn't like Windows paths so we use basename()
@@ -1877,7 +1876,7 @@ sub send_gcode {
             );        
             if ($self->{send_gcode_file_print}) {
                 $res = $ua->get(
-                    "http://" . $self->{config}->octoprint_host . "/rr_gcode?gcode=M32%20" . basename($path),
+                    "http://" . $self->{config}->print_host . "/rr_gcode?gcode=M32%20" . basename($path),
                 );
             }
         }

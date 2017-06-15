@@ -829,7 +829,7 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "octoprint-apikey=s";
     def->default_value = new ConfigOptionString("");
 
-    def = this->add("octoprint_host", coString);
+    def = this->add("print_host", coString);
     def->label = "Host or IP";
     def->tooltip = "Slic3r can upload G-code files to an Octoprint/Duet server. This field should contain the hostname or IP address of the server instance.";
     def->cli = "octoprint-host=s";
@@ -1705,6 +1705,8 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
         std::ostringstream oss;
         oss << "0x0," << p.value.x << "x0," << p.value.x << "x" << p.value.y << ",0x" << p.value.y;
         value = oss.str();
+    } else if (opt_key == "octoprint_host" && !value.empty()) {
+        opt_key = "print_host";
     } else if ((opt_key == "perimeter_acceleration" && value == "25")
         || (opt_key == "infill_acceleration" && value == "50")) {
         /*  For historical reasons, the world's full of configs having these very low values;
@@ -1727,7 +1729,7 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
         || opt_key == "scale"  || opt_key == "duplicate_grid" 
         || opt_key == "start_perimeters_at_concave_points" 
         || opt_key == "start_perimeters_at_non_overhang" || opt_key == "randomize_start" 
-        || opt_key == "seal_position" || opt_key == "bed_size" 
+        || opt_key == "seal_position" || opt_key == "bed_size" || opt_key == "octoprint_host" 
         || opt_key == "print_center" || opt_key == "g0" || opt_key == "threads")
     {
         opt_key = "";
