@@ -6,8 +6,25 @@
 
 namespace Slic3r {
 
+class WireframePrintRegion
+{
+public:
+	WireframePrintRegion();
+	~WireframePrintRegion();
+	
+};
+
+class WireframePrintObject
+{
+public:
+	WireframePrintObject();
+	~WireframePrintObject();
+	
+};
+
 class WireframePrint
 {
+public:
 	WireframePrint();
 	~WireframePrint();
 };
