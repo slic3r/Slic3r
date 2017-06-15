@@ -6,16 +6,10 @@
 
 namespace Slic3r {
 
-class WireframePrint : public Print
+class WireframePrint
 {
 	WireframePrint();
 	~WireframePrint();
-    
-    // methods for handling state
-    bool invalidate_state_by_config(const PrintConfigBase &config);
-    bool invalidate_step(PrintStep step);
-    bool invalidate_all_steps();
-    bool step_done(PrintObjectStep step) const;
 };
 
 }
