@@ -101,10 +101,10 @@ class Model
     /// \return ModelMaterial* a pointer to the new ModelMaterial
     ModelMaterial* add_material(t_model_material_id material_id, const ModelMaterial &other);
 
-    /// Get theModelMaterial having a certain material id.
-    /// Returns null if theModelMaterial is not found.
-    /// \param material_id t_model_material_id the id of the needed ModelMaterial
-    /// \return ModelMaterial* a pointer to the ModelMaterial or null if not found
+    /// Get the ModelMaterial object instance having a certain material id.
+    /// Returns null if the ModelMaterial object instance is not found.
+    /// \param material_id t_model_material_id the id of the needed ModelMaterial object instance
+    /// \return ModelMaterial* a pointer to the ModelMaterial object instance or null if not found
     ModelMaterial* get_material(t_model_material_id material_id);
 
     /// Delete a ModelMaterial carrying a certain material id if found.
