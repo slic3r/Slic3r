@@ -208,6 +208,7 @@ ModelMaterial::attributes()
     bool needed_repair() const;
     int materials_count() const;
     int facets_count();
+    void align_instances_to_origin();
     void align_to_ground();
     void center_around_origin();
     void translate(double x, double y, double z);
