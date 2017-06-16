@@ -29,6 +29,10 @@ enum GCodeFlavor {
     gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion, gcfSmoothie, gcfRepetier,
 };
 
+enum HostType {
+    htOctoprint, htDuet,
+};
+
 enum InfillPattern {
     ipRectilinear, ipGrid, ipAlignedRectilinear,
     ipTriangles, ipStars, ipCubic, 
@@ -55,6 +59,13 @@ template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_v
     keys_map["machinekit"]      = gcfMachinekit;
     keys_map["no-extrusion"]    = gcfNoExtrusion;
     keys_map["smoothie"]    = gcfSmoothie;
+    return keys_map;
+}
+
+template<> inline t_config_enum_values ConfigOptionEnum<HostType>::get_enum_values() {
+    t_config_enum_values keys_map;
+    keys_map["octoprint"]           = htOctoprint;
+    keys_map["duet"]                = htDuet;
     return keys_map;
 }
 
@@ -511,7 +522,8 @@ class PrintConfig : public GCodeConfig
 class HostConfig : public virtual StaticPrintConfig
 {
     public:
-    ConfigOptionString              octoprint_host;
+    ConfigOptionEnum<HostType>      host_type;
+    ConfigOptionString              print_host;
     ConfigOptionString              octoprint_apikey;
     ConfigOptionString              serial_port;
     ConfigOptionInt                 serial_speed;
@@ -522,7 +534,8 @@ class HostConfig : public virtual StaticPrintConfig
     }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
-        OPT_PTR(octoprint_host);
+        OPT_PTR(host_type);
+        OPT_PTR(print_host);
         OPT_PTR(octoprint_apikey);
         OPT_PTR(serial_port);
         OPT_PTR(serial_speed);
