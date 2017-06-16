@@ -446,10 +446,12 @@ class PrintConfig : public GCodeConfig
     ConfigOptionInt                 standby_temperature_delta;
     ConfigOptionInts                temperature;
     ConfigOptionInt                 threads;
+    ConfigOptionBool                use_visivalingam;
     ConfigOptionFloat               vibration_limit;
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
     ConfigOptionFloat               z_steps_per_mm;
+    
     
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
@@ -506,6 +508,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(standby_temperature_delta);
         OPT_PTR(temperature);
         OPT_PTR(threads);
+        OPT_PTR(use_visivalingam);
         OPT_PTR(vibration_limit);
         OPT_PTR(wipe);
         OPT_PTR(z_offset);
