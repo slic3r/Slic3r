@@ -10,27 +10,41 @@ namespace Slic3r {
 
 class BridgeDetector {
 public:
-    // The non-grown hole.
+    /// The non-grown hole.
     ExPolygon expolygon;
-    // Lower slices, all regions.
+    /// Lower slices, all regions.
     ExPolygonCollection lower_slices;
-    // Scaled extrusion width of the infill.
-    double extrusion_width;
-    // Angle resolution for the brute force search of the best bridging angle.
+    /// Scaled extrusion width of the infill.
+    coord_t extrusion_width;
+    /// Angle resolution for the brute force search of the best bridging angle.
     double resolution;
-    // The final optimal angle.
+    /// The final optimal angle.
     double angle;
     
     BridgeDetector(const ExPolygon &_expolygon, const ExPolygonCollection &_lower_slices, coord_t _extrusion_width);
     bool detect_angle();
-    Polygons coverage(double angle = -1) const;
+    Polygons coverage() const;
+    Polygons coverage(double angle) const;
     Polylines unsupported_edges(double angle = -1) const;
     
 private:
-    // Open lines representing the supporting edges.
+    /// Open lines representing the supporting edges.
     Polylines _edges;
-    // Closed polygons representing the supporting areas.
+    /// Closed polygons representing the supporting areas.
     ExPolygons _anchors;
+    
+    class BridgeDirection {
+        public:
+        BridgeDirection(double a = -1.) : angle(a), coverage(0.), max_length(0.) {}
+        /// the best direction is the one causing most lines to be bridged (thus most coverage)
+        bool operator<(const BridgeDirection &other) const {
+            // Initial sort by coverage only - comparator must obey strict weak ordering
+            return this->coverage > other.coverage;
+        };
+        double angle;
+        double coverage;
+        double max_length;
+    };
 };
 
 }

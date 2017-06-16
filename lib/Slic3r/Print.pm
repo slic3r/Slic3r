@@ -42,8 +42,10 @@ sub size {
 sub process {
     my ($self) = @_;
     
-    $self->status_cb->(20, "Generating perimeters");
-    $_->make_perimeters for @{$self->objects};
+    ### No need to call this as we call it as part of prepare_infill()
+    ### until we fix the idempotency issue.
+    ###$self->status_cb->(20, "Generating perimeters");
+    ###$_->make_perimeters for @{$self->objects};
     
     $self->status_cb->(70, "Infilling layers");
     $_->infill for @{$self->objects};

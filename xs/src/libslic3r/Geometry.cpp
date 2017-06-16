@@ -296,12 +296,26 @@ template<class T>
 bool
 contains(const std::vector<T> &vector, const Point &point)
 {
-    for (typename std::vector<T>::const_iterator it = vector.begin(); it != vector.end(); ++it) {
-        if (it->contains(point)) return true;
-    }
+    for (const T &it : vector)
+        if (it.contains(point))
+            return true;
+    
     return false;
 }
+template bool contains(const Polygons &vector, const Point &point);
 template bool contains(const ExPolygons &vector, const Point &point);
+
+template<class T>
+double
+area(const std::vector<T> &vector)
+{
+    double area = 0;
+    for (const T &it : vector)
+        area += it.area();
+    
+    return area;
+}
+template double area(const Polygons &vector);
 
 double
 rad2deg(double angle)
@@ -493,9 +507,6 @@ MedialAxis::build(ThickPolylines* polylines)
     }
     */
     
-    typedef const VD::vertex_type vert_t;
-    typedef const VD::edge_type   edge_t;
-    
     // collect valid edges (i.e. prune those not belonging to MAT)
     // note: this keeps twins, so it inserts twice the number of the valid edges
     this->valid_edges.clear();
@@ -520,7 +531,7 @@ MedialAxis::build(ThickPolylines* polylines)
     
     // iterate through the valid edges to build polylines
     while (!this->edges.empty()) {
-        const edge_t* edge = *this->edges.begin();
+        const VD::edge_type* edge = *this->edges.begin();
         
         // start a polyline
         ThickPolyline polyline;

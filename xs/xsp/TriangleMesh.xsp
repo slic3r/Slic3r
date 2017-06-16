@@ -41,6 +41,7 @@
         %code{% RETVAL = THIS->bounding_box().center(); %};
     int facets_count();
     void reset_repair_stats();
+    void reverse_normals();
 
 %{
 

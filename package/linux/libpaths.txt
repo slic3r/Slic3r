@@ -1,0 +1,10 @@
+/home/travis/builds/alexrj/Slic3r/local-lib/lib/perl5/x86_64-linux-thread-multi/Alien/wxWidgets/gtk_3_0_2_uni/lib/libwx_baseu-3.0.so.0
+/home/travis/builds/alexrj/Slic3r/local-lib/lib/perl5/x86_64-linux-thread-multi/Alien/wxWidgets/gtk_3_0_2_uni/lib/libwx_gtk2u_adv-3.0.so.0
+/home/travis/builds/alexrj/Slic3r/local-lib/lib/perl5/x86_64-linux-thread-multi/Alien/wxWidgets/gtk_3_0_2_uni/lib/libwx_gtk2u_core-3.0.so.0
+/home/travis/builds/alexrj/Slic3r/local-lib/lib/perl5/x86_64-linux-thread-multi/Alien/wxWidgets/gtk_3_0_2_uni/lib/libwx_gtk2u_gl-3.0.so.0
+/home/travis/builds/alexrj/Slic3r/local-lib/lib/perl5/x86_64-linux-thread-multi/Alien/wxWidgets/gtk_3_0_2_uni/lib/libwx_gtk2u_html-3.0.so.0
+/lib/x86_64-linux-gnu/liblzma.so.5
+/lib/x86_64-linux-gnu/libpng12.so.0
+/usr/lib/x86_64-linux-gnu/libjpeg.so.8
+/usr/lib/x86_64-linux-gnu/libjbig.so.0
+/usr/lib/x86_64-linux-gnu/libtiff.so.5

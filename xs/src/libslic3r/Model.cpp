@@ -349,8 +349,8 @@ Model::duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* b
 void
 Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
 {
-    if (this->objects.size() > 1) throw "Grid duplication is not supported with multiple objects";
-    if (this->objects.empty()) throw "No objects!";
+    if (this->objects.size() > 1) throw std::runtime_error("Grid duplication is not supported with multiple objects");
+    if (this->objects.empty()) throw std::runtime_error("No objects!");
 
     ModelObject* object = this->objects.front();
     object->clear_instances();
@@ -753,18 +753,20 @@ ModelObject::mirror(const Axis &axis)
 }
 
 void
-ModelObject::transform_by_instance(const ModelInstance &instance, bool dont_translate)
+ModelObject::transform_by_instance(ModelInstance instance, bool dont_translate)
 {
+    // We get instance by copy because we would alter it in the loop below,
+    // causing inconsistent values in subsequent instances.
     this->rotate(instance.rotation, Z);
     this->scale(instance.scaling_factor);
     if (!dont_translate)
         this->translate(instance.offset.x, instance.offset.y, 0);
     
-    for (ModelInstancePtrs::iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
-        (*i)->rotation -= instance.rotation;
-        (*i)->scaling_factor /= instance.scaling_factor;
+    for (ModelInstance* i : this->instances) {
+        i->rotation -= instance.rotation;
+        i->scaling_factor /= instance.scaling_factor;
         if (!dont_translate)
-            (*i)->offset.translate(-instance.offset.x, -instance.offset.y);
+            i->offset.translate(-instance.offset.x, -instance.offset.y);
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();

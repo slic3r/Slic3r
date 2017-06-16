@@ -12,6 +12,8 @@
 #include <math.h>
 #include <assert.h>
 #include <stdexcept>
+#include <boost/config.hpp>
+#include <boost/nowide/convert.hpp>
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -110,20 +112,32 @@ TriangleMesh::~TriangleMesh() {
 
 void
 TriangleMesh::ReadSTLFile(const std::string &input_file) {
+    #ifdef BOOST_WINDOWS
+    stl_open(&stl, boost::nowide::widen(input_file).c_str());
+    #else
     stl_open(&stl, input_file.c_str());
+    #endif
     if (this->stl.error != 0) throw std::runtime_error("Failed to read STL file");
 }
 
 void
 TriangleMesh::write_ascii(const std::string &output_file)
 {
+    #ifdef BOOST_WINDOWS
+    stl_write_ascii(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    #else
     stl_write_ascii(&this->stl, output_file.c_str(), "");
+    #endif
 }
 
 void
 TriangleMesh::write_binary(const std::string &output_file)
 {
+    #ifdef BOOST_WINDOWS
+    stl_write_binary(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    #else
     stl_write_binary(&this->stl, output_file.c_str(), "");
+    #endif
 }
 
 void
@@ -234,7 +248,12 @@ TriangleMesh::facets_count() const
 void
 TriangleMesh::WriteOBJFile(const std::string &output_file) {
     stl_generate_shared_vertices(&stl);
+    
+    #ifdef BOOST_WINDOWS
+    stl_write_obj(&stl, boost::nowide::widen(output_file).c_str());
+    #else
     stl_write_obj(&stl, output_file.c_str());
+    #endif
 }
 
 void TriangleMesh::scale(float factor)
@@ -512,6 +531,13 @@ TriangleMesh::require_shared_vertices()
 }
 
 void
+TriangleMesh::reverse_normals()
+{
+    stl_reverse_all_facets(&this->stl);
+    if (this->stl.stats.volume != -1) this->stl.stats.volume *= -1.0;
+}
+
+void
 TriangleMesh::extrude_tin(float offset)
 {
     calculate_normals(&this->stl);
@@ -658,7 +684,7 @@ TriangleMesh::make_sphere(double rho, double fa) {
         // Fixed scaling 
         const double z = -rho + increment*rho*2.0;
         // radius of the circle for this step.
-        const double r = sqrt(abs(rho*rho - z*z));
+        const double r = sqrt(std::abs(rho*rho - z*z));
         Pointf3 b(0, r, z);
         b.rotate(ring[i], Pointf3(0,0,z)); 
         vertices.push_back(b);
@@ -673,7 +699,7 @@ TriangleMesh::make_sphere(double rho, double fa) {
     // General case: insert and form facets for each step, joining it to the ring below it.
     for (size_t s = 2; s < steps - 1; s++) {
         const double z = -rho + increment*(double)s*2.0*rho;
-        const double r = sqrt(abs(rho*rho - z*z));
+        const double r = sqrt(std::abs(rho*rho - z*z));
 
         for (size_t i = 0; i < ring.size(); i++) {
             Pointf3 b(0, r, z);
@@ -712,7 +738,7 @@ template <Axis A>
 void
 TriangleMeshSlicer<A>::slice(const std::vector<float> &z, std::vector<Polygons>* layers) const
 {
-    /*
+    /**
        This method gets called with a list of unscaled Z coordinates and outputs
        a vector pointer having the same number of items as the original list.
        Each item is a vector of polygons created by slicing our mesh at the 
@@ -1102,31 +1128,39 @@ TriangleMeshSlicer<A>::make_expolygons_simple(std::vector<IntersectionLine> &lin
     Polygons loops;
     this->make_loops(lines, &loops);
     
+    // cache slice contour area
+    std::vector<double> area;
+    area.resize(slices->size(), -1);
+    
     Polygons cw;
-    for (Polygons::const_iterator loop = loops.begin(); loop != loops.end(); ++loop) {
-        if (loop->area() >= 0) {
-            ExPolygon ex;
-            ex.contour = *loop;
-            slices->push_back(ex);
+    for (const Polygon &loop : loops) {
+        const double a = loop.area();
+        if (a >= 0) {
+            slices->push_back(ExPolygon(loop));
+            area.push_back(a);
         } else {
-            cw.push_back(*loop);
+            cw.push_back(loop);
         }
     }
     
     // assign holes to contours
-    for (Polygons::const_iterator loop = cw.begin(); loop != cw.end(); ++loop) {
+    for (const Polygon &loop : cw) {
         int slice_idx = -1;
         double current_contour_area = -1;
-        for (ExPolygons::iterator slice = slices->begin(); slice != slices->end(); ++slice) {
-            if (slice->contour.contains(loop->points.front())) {
-                double area = slice->contour.area();
-                if (area < current_contour_area || current_contour_area == -1) {
-                    slice_idx = slice - slices->begin();
-                    current_contour_area = area;
+        for (size_t i = 0; i < slices->size(); ++i) {
+            if ((*slices)[i].contour.contains(loop.points.front())) {
+                if (area[i] == -1) area[i] = (*slices)[i].contour.area();
+                if (area[i] < current_contour_area || current_contour_area == -1) {
+                    slice_idx = i;
+                    current_contour_area = area[i];
                 }
             }
         }
-        (*slices)[slice_idx].holes.push_back(*loop);
+        
+        // discard holes which couldn't fit inside a contour as they are probably
+        // invalid polygons (self-intersecting)
+        if (slice_idx > -1)
+            (*slices)[slice_idx].holes.push_back(loop);
     }
 }
 
@@ -1134,14 +1168,14 @@ template <Axis A>
 void
 TriangleMeshSlicer<A>::make_expolygons(const Polygons &loops, ExPolygons* slices) const
 {
-    /*
+    /**
         Input loops are not suitable for evenodd nor nonzero fill types, as we might get
         two consecutive concentric loops having the same winding order - and we have to 
         respect such order. In that case, evenodd would create wrong inversions, and nonzero
         would ignore holes inside two concentric contours.
         So we're ordering loops and collapse consecutive concentric loops having the same 
         winding order.
-        TODO: find a faster algorithm for this, maybe with some sort of binary search.
+        \todo find a faster algorithm for this, maybe with some sort of binary search.
         If we computed a "nesting tree" we could also just remove the consecutive loops
         having the same winding order, and remove the extra one(s) so that we could just
         supply everything to offset() instead of performing several union/diff calls.

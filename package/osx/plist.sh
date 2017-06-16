@@ -93,6 +93,8 @@ cat << EOF >> $plistfile
 	<string>10.7</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
 </dict>
 </plist>
 EOF

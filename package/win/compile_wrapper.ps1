@@ -1,17 +1,38 @@
 # Short Powershell script to build a wrapper exec
-if ($args[0])
+Param
+(
+    [string]$perlVersion = "524",
+    [string]$STRAWBERRY_PATH = "C:\Strawberry",
+    # Path to C++ compiler, or just name if it is in path
+    [string]$cxx = "g++"
+)
+
+function Get-ScriptDirectory
 {
-	$perlver = $args[0]
-} else 
-{
-	$perlver = 518
+  $Invocation = (Get-Variable MyInvocation -Scope 1).Value
+  Split-Path $Invocation.MyCommand.Path
 }
+$scriptDir = Get-ScriptDirectory
 
-$perllib = "-lperl$perlver"
+$perllib = "-lperl$perlVersion"
+$shell_loc = "${scriptDir}\..\common\shell.cpp"
 
-windres slic3r.rc -O coff -o slic3r.res
-g++ -c -I'C:\strawberry\perl\lib\CORE\' shell.cpp -o slic3r.o
-g++ -c -I'C:\strawberry\perl\lib\CORE\' -DFORCE_GUI shell.cpp -o slic3r-gui.o
-g++ -static-libgcc -static-libstdc++ -L'C:\strawberry\c\lib' -L'C:\strawberry\perl\bin' -L'C:\strawberry\perl\lib\CORE\' $perllib slic3r.o slic3r.res -o slic3r-console.exe | Write-Host
-g++ -static-libgcc -static-libstdc++ -L'C:\strawberry\c\lib' -L'C:\strawberry\perl\bin' -L'C:\strawberry\perl\lib\CORE\' $perllib slic3r-gui.o slic3r.res -o slic3r.exe | Write-Host
+# Build the resource file (used to load icon, etc)
+windres ${scriptDir}\slic3r.rc -O coff -o ${scriptDir}\slic3r.res
+
+# Compile an object file that does not have gui forced.
+Invoke-Expression "$cxx -c -I'${STRAWBERRY_PATH}\perl\lib\CORE\' $shell_loc -o ${scriptDir}/slic3r.o"
+
+
+# Compile an object file with --gui automatically passed as an argument
+Invoke-Expression "$cxx -c -I'${STRAWBERRY_PATH}\perl\lib\CORE\' -DFORCE_GUI $shell_loc -o ${scriptDir}/slic3r-gui.o"
+
+# Build the EXE for the unforced version as slic3r-console
+Invoke-Expression "$cxx -static-libgcc -static-libstdc++ -L'${STRAWBERRY_PATH}\c\lib' -L'${STRAWBERRY_PATH}\perl\bin' -L'${STRAWBERRY_PATH}\perl\lib\CORE\' $perllib ${scriptDir}/slic3r.o ${scriptDir}/slic3r.res -o ${scriptDir}/slic3r-console.exe | Write-Host"
+
+# Build the EXE for the forced GUI
+Invoke-Expression "$cxx -static-libgcc -static-libstdc++ -L'${STRAWBERRY_PATH}\c\lib' -mwindows -L'${STRAWBERRY_PATH}\perl\bin' -L'${STRAWBERRY_PATH}\perl\lib\CORE\' $perllib ${scriptDir}/slic3r-gui.o ${scriptDir}/slic3r.res -o ${scriptDir}/slic3r.exe | Write-Host"
+
+# Build an extra copy of the GUI version that creates a console window
+Invoke-Expression "$cxx -static-libgcc -static-libstdc++ -L'${STRAWBERRY_PATH}\c\lib' -L'${STRAWBERRY_PATH}\perl\bin' -L'${STRAWBERRY_PATH}\perl\lib\CORE\' $perllib ${scriptDir}/slic3r-gui.o ${scriptDir}/slic3r.res -o ${scriptDir}/slic3r-debug-console.exe | Write-Host"
 

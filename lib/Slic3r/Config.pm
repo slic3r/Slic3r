@@ -95,7 +95,8 @@ sub load {
     
     # legacy syntax of load()
     my $config = $class->new;
-    $config->_load(Slic3r::encode_path($file));
+	
+    $config->_load($file);
     return $config;
 }
 
@@ -103,7 +104,7 @@ sub save {
     my $self = shift;
     my ($file) = @_;
     
-    return $self->_save(Slic3r::encode_path($file));
+    return $self->_save($file);
 }
 
 # Deserialize a perl hash into the underlying C++ Slic3r::DynamicConfig class,
@@ -268,6 +269,7 @@ sub validate {
                 map $self->get_abs_value_over("${_}_extrusion_width", $max_nozzle_diameter),
                 qw(perimeter infill solid_infill top_infill support_material first_layer);
     }
+    
     
     # general validation, quick and dirty
     foreach my $opt_key (@{$self->get_keys}) {

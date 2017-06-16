@@ -5,32 +5,24 @@
 
 namespace Slic3r {
 
-class BridgeDirectionComparator {
-    public:
-    std::map<double,double> dir_coverage;  // angle => score
-    
-    BridgeDirectionComparator(double _extrusion_width)
-        : extrusion_width(_extrusion_width)
-    {};
-    
-    // the best direction is the one causing most lines to be bridged (thus most coverage)
-    bool operator() (double a, double b) {
-        // Initial sort by coverage only - comparator must obey strict weak ordering
-        return (this->dir_coverage[a] > this->dir_coverage[b]);
-    };
-    
-    private:
-    double extrusion_width;
-};
-
 BridgeDetector::BridgeDetector(const ExPolygon &_expolygon, const ExPolygonCollection &_lower_slices,
     coord_t _extrusion_width)
-    : expolygon(_expolygon), lower_slices(_lower_slices), extrusion_width(_extrusion_width),
+    : expolygon(_expolygon), extrusion_width(_extrusion_width),
         resolution(PI/36.0), angle(-1)
 {
     /*  outset our bridge by an arbitrary amout; we'll use this outer margin
         for detecting anchors */
     Polygons grown = offset(this->expolygon, this->extrusion_width);
+    
+    // remove narrow gaps from lower slices
+    // (this is only needed as long as we use clipped test lines for angle detection
+    // and we check their endpoints: when endpoint fall in the gap we'd get false
+    // negatives)
+    this->lower_slices.expolygons = offset2_ex(
+        _lower_slices,
+        +this->extrusion_width/2,
+        -this->extrusion_width/2
+    );
     
     // detect what edges lie on lower slices by turning bridge contour and holes
     // into polylines and then clipping them with each lower slice's contour
@@ -44,143 +36,140 @@ BridgeDetector::BridgeDetector(const ExPolygon &_expolygon, const ExPolygonColle
     // safety offset required to avoid Clipper from detecting empty intersection while Boost actually found some edges
     this->_anchors = intersection_ex(grown, this->lower_slices, true);
     
-    /*
-    if (0) {
-        require "Slic3r/SVG.pm";
-        Slic3r::SVG::output("bridge.svg",
-            expolygons      => [ $self->expolygon ],
-            red_expolygons  => $self->lower_slices,
-            polylines       => $self->_edges,
-        );
+    #if 0
+    {
+        SVG svg("bridge.svg");
+        svg.draw(this->expolygon);
+        svg.draw(this->lower_slices, "red");
+        svg.draw(this->_anchors, "yellow");
+        svg.draw(this->_edges, "black", scale_(0.2));
+        svg.Close();
+        
+        std::cout << "expolygon: " << this->expolygon.dump_perl() << std::endl;
+        for (const ExPolygon &e : this->lower_slices.expolygons)
+            std::cout << "lower: " << e.dump_perl() << std::endl;
     }
-    */
+    #endif
 }
 
 bool
 BridgeDetector::detect_angle()
 {
+    // Do nothing if the bridging region is completely in the air
+    // and there are no anchors available at the layer below.
     if (this->_edges.empty() || this->_anchors.empty()) return false;
     
     /*  Outset the bridge expolygon by half the amount we used for detecting anchors;
         we'll use this one to clip our test lines and be sure that their endpoints
         are inside the anchors and not on their contours leading to false negatives. */
-    Polygons clip_area = offset(this->expolygon, +this->extrusion_width/2);
+    const Polygons clip_area = offset(this->expolygon, +this->extrusion_width/2);
     
     /*  we'll now try several directions using a rudimentary visibility check:
         bridge in several directions and then sum the length of lines having both
         endpoints within anchors */
     
-    // we test angles according to configured resolution
-    std::vector<double> angles;
-    for (int i = 0; i <= PI/this->resolution; ++i)
-        angles.push_back(i * this->resolution);
-    
-    // we also test angles of each bridge contour
+    // generate the list of candidate angles
+    std::vector<BridgeDirection> candidates;
     {
-        Polygons pp = this->expolygon;
-        for (Polygons::const_iterator p = pp.begin(); p != pp.end(); ++p) {
-            Lines lines = p->lines();
-            for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line)
-                angles.push_back(line->direction());
+        // we test angles according to configured resolution
+        std::vector<double> angles;
+        for (int i = 0; i <= PI/this->resolution; ++i)
+            angles.push_back(i * this->resolution);
+    
+        // we also test angles of each bridge contour
+        for (const Polygon &p : (Polygons)this->expolygon)
+            for (const Line &line : p.lines())
+                angles.push_back(line.direction());
+    
+        /*  we also test angles of each open supporting edge
+            (this finds the optimal angle for C-shaped supports) */
+        for (const Polyline &edge : this->_edges) {
+            if (edge.first_point().coincides_with(edge.last_point())) continue;
+            angles.push_back(Line(edge.first_point(), edge.last_point()).direction());
         }
-    }
     
-    /*  we also test angles of each open supporting edge
-        (this finds the optimal angle for C-shaped supports) */
-    for (Polylines::const_iterator edge = this->_edges.begin(); edge != this->_edges.end(); ++edge) {
-        if (edge->first_point().coincides_with(edge->last_point())) continue;
-        angles.push_back(Line(edge->first_point(), edge->last_point()).direction());
-    }
-    
-    // remove duplicates
-    double min_resolution = PI/180.0;  // 1 degree
-    std::sort(angles.begin(), angles.end());
-    for (size_t i = 1; i < angles.size(); ++i) {
-        if (Slic3r::Geometry::directions_parallel(angles[i], angles[i-1], min_resolution)) {
-            angles.erase(angles.begin() + i);
-            --i;
+        // remove duplicates
+        constexpr double min_resolution = PI/180.0;  // 1 degree
+        std::sort(angles.begin(), angles.end());
+        for (size_t i = 1; i < angles.size(); ++i) {
+            if (Slic3r::Geometry::directions_parallel(angles[i], angles[i-1], min_resolution)) {
+                angles.erase(angles.begin() + i);
+                --i;
+            }
         }
+        /*  compare first value with last one and remove the greatest one (PI) 
+            in case they are parallel (PI, 0) */
+        if (Slic3r::Geometry::directions_parallel(angles.front(), angles.back(), min_resolution))
+            angles.pop_back();
+        
+        for (auto angle : angles)
+            candidates.push_back(BridgeDirection(angle));
     }
-    /*  compare first value with last one and remove the greatest one (PI) 
-        in case they are parallel (PI, 0) */
-    if (Slic3r::Geometry::directions_parallel(angles.front(), angles.back(), min_resolution))
-        angles.pop_back();
     
-    BridgeDirectionComparator bdcomp(this->extrusion_width);
-    std::map<double,double> dir_avg_length;
-    double line_increment = this->extrusion_width;
+    const coord_t line_increment = this->extrusion_width;
     bool have_coverage = false;
-    for (std::vector<double>::const_iterator angle = angles.begin(); angle != angles.end(); ++angle) {
+    for (BridgeDirection &candidate : candidates) {
         Polygons my_clip_area = clip_area;
         ExPolygons my_anchors = this->_anchors;
         
         // rotate everything - the center point doesn't matter
-        for (Polygons::iterator it = my_clip_area.begin(); it != my_clip_area.end(); ++it)
-            it->rotate(-*angle, Point(0,0));
-        for (ExPolygons::iterator it = my_anchors.begin(); it != my_anchors.end(); ++it)
-            it->rotate(-*angle, Point(0,0));
+        for (Polygon &p : my_clip_area)
+            p.rotate(-candidate.angle, Point(0,0));
+        for (ExPolygon &e : my_anchors)
+            e.rotate(-candidate.angle, Point(0,0));
     
         // generate lines in this direction
         BoundingBox bb;
-        for (ExPolygons::const_iterator it = my_anchors.begin(); it != my_anchors.end(); ++it)
-            bb.merge((Points)*it);
+        for (const ExPolygon &e : my_anchors)
+            bb.merge(e.bounding_box());
         
         Lines lines;
         for (coord_t y = bb.min.y; y <= bb.max.y; y += line_increment)
             lines.push_back(Line(Point(bb.min.x, y), Point(bb.max.x, y)));
         
-        Lines clipped_lines = intersection_ln(lines, my_clip_area);
+        const Lines clipped_lines = intersection_ln(lines, my_clip_area);
         
-        // remove any line not having both endpoints within anchors
-        for (size_t i = 0; i < clipped_lines.size(); ++i) {
-            Line &line = clipped_lines[i];
+        for (const Line &line : clipped_lines) {
+            // skip any line not having both endpoints within anchors
             if (!Slic3r::Geometry::contains(my_anchors, line.a)
-                || !Slic3r::Geometry::contains(my_anchors, line.b)) {
-                clipped_lines.erase(clipped_lines.begin() + i);
-                --i;
-            }
+                || !Slic3r::Geometry::contains(my_anchors, line.b))
+                continue;
+            
+            candidate.max_length = std::max(candidate.max_length, line.length());
+            // Calculate coverage as actual covered area, because length of centerlines
+            // is not accurate enough when such lines are slightly skewed and not parallel
+            // to the sides; calculating area will compute them as triangles.
+            // TODO: use a faster algorithm for computing covered area by using a sweep line
+            // instead of intersecting many lines.
+            candidate.coverage += Slic3r::Geometry::area(intersection(
+                my_clip_area,
+                offset((Polyline)line, +this->extrusion_width/2)
+            ));
         }
+        if (candidate.coverage > 0) have_coverage = true;
         
-        std::vector<double> lengths;
-        double total_length = 0;
-        for (Lines::const_iterator line = clipped_lines.begin(); line != clipped_lines.end(); ++line) {
-            double len = line->length();
-            lengths.push_back(len);
-            total_length += len;
-        }
-        if (total_length) have_coverage = true;
-        
-        // sum length of bridged lines
-        bdcomp.dir_coverage[*angle] = total_length;
-        
-        /*  The following produces more correct results in some cases and more broken in others.
-            TODO: investigate, as it looks more reliable than line clipping. */
-        // $directions_coverage{$angle} = sum(map $_->area, @{$self->coverage($angle)}) // 0;
-        
-        // max length of bridged lines
-        dir_avg_length[*angle] = !lengths.empty()
-            ? *std::max_element(lengths.begin(), lengths.end())
-            : 0;
+        #if 0
+        std::cout << "angle = "  << Slic3r::Geometry::rad2deg(candidate.angle)
+            << "; coverage = "   << candidate.coverage
+            << "; max_length = " << candidate.max_length
+            << std::endl;
+        #endif
     }
     
     // if no direction produced coverage, then there's no bridge direction
     if (!have_coverage) return false;
     
     // sort directions by coverage - most coverage first
-    std::sort(angles.begin(), angles.end(), bdcomp);
-    this->angle = angles.front();
+    std::sort(candidates.begin(), candidates.end());
     
     // if any other direction is within extrusion width of coverage, prefer it if shorter
     // TODO: There are two options here - within width of the angle with most coverage, or within width of the currently perferred?
-    double most_coverage_angle = this->angle;
-    for (std::vector<double>::const_iterator angle = angles.begin() + 1;
-        angle != angles.end() && bdcomp.dir_coverage[most_coverage_angle] - bdcomp.dir_coverage[*angle] < this->extrusion_width;
-        ++angle
-    ) {
-        if (dir_avg_length[*angle] < dir_avg_length[this->angle]) {
-            this->angle = *angle;
-        }
-    }
+    size_t i_best = 0;
+    for (size_t i = 1; i < candidates.size() && candidates[i_best].coverage - candidates[i].coverage < this->extrusion_width; ++ i)
+        if (candidates[i].max_length < candidates[i_best].max_length)
+            i_best = i;
+    
+    this->angle = candidates[i_best].angle;
     
     if (this->angle >= PI) this->angle -= PI;
     
@@ -192,11 +181,15 @@ BridgeDetector::detect_angle()
 }
 
 Polygons
+BridgeDetector::coverage() const
+{
+    if (this->angle == -1) return Polygons();
+    return this->coverage(this->angle);
+}
+
+Polygons
 BridgeDetector::coverage(double angle) const
 {
-    if (angle == -1) angle = this->angle;
-    if (angle == -1) return Polygons();
-    
     // Clone our expolygon and rotate it so that we work with vertical lines.
     ExPolygon expolygon = this->expolygon;
     expolygon.rotate(PI/2.0 - angle, Point(0,0));
@@ -208,21 +201,21 @@ BridgeDetector::coverage(double angle) const
     
     // Compute trapezoids according to a vertical orientation
     Polygons trapezoids;
-    for (ExPolygons::const_iterator it = grown.begin(); it != grown.end(); ++it)
-        it->get_trapezoids2(&trapezoids, PI/2.0);
+    for (const ExPolygon &e : grown)
+        e.get_trapezoids2(&trapezoids, PI/2.0);
     
     // get anchors, convert them to Polygons and rotate them too
     Polygons anchors;
-    for (ExPolygons::const_iterator anchor = this->_anchors.begin(); anchor != this->_anchors.end(); ++anchor) {
-        Polygons pp = *anchor;
-        for (Polygons::iterator p = pp.begin(); p != pp.end(); ++p)
-            p->rotate(PI/2.0 - angle, Point(0,0));
-        anchors.insert(anchors.end(), pp.begin(), pp.end());
+    for (const ExPolygon &anchor : this->_anchors) {
+        Polygons pp = anchor;
+        for (Polygon &p : pp)
+            p.rotate(PI/2.0 - angle, Point(0,0));
+        append_to(anchors, pp);
     }
     
     Polygons covered;
-    for (Polygons::const_iterator trapezoid = trapezoids.begin(); trapezoid != trapezoids.end(); ++trapezoid) {
-        Lines supported = intersection_ln(trapezoid->lines(), anchors);
+    for (const Polygon &trapezoid : trapezoids) {
+        Lines supported = intersection_ln(trapezoid.lines(), anchors);
         
         // not nice, we need a more robust non-numeric check
         for (size_t i = 0; i < supported.size(); ++i) {
@@ -232,17 +225,17 @@ BridgeDetector::coverage(double angle) const
             }
         }
 
-        if (supported.size() >= 2) covered.push_back(*trapezoid);        
+        if (supported.size() >= 2) covered.push_back(trapezoid);        
     }
     
     // merge trapezoids and rotate them back
-    Polygons _coverage = union_(covered);
-    for (Polygons::iterator p = _coverage.begin(); p != _coverage.end(); ++p)
-        p->rotate(-(PI/2.0 - angle), Point(0,0));
+    covered = union_(covered);
+    for (Polygon &p : covered)
+        p.rotate(-(PI/2.0 - angle), Point(0,0));
     
     // intersect trapezoids with actual bridge area to remove extra margins
     // and append it to result
-    return intersection(_coverage, this->expolygon);
+    return intersection(covered, this->expolygon);
     
     /*
     if (0) {
@@ -272,10 +265,8 @@ BridgeDetector::unsupported_edges(double angle) const
     
     // get bridge edges (both contour and holes)
     Polylines bridge_edges;
-    {
-        Polygons pp = this->expolygon;
-        bridge_edges.insert(bridge_edges.end(), pp.begin(), pp.end());  // this uses split_at_first_point()
-    }
+    for (const Polygon &p : (Polygons)this->expolygon)
+        bridge_edges.push_back(p.split_at_first_point());
     
     // get unsupported edges
     Polylines _unsupported = diff_pl(
@@ -290,13 +281,10 @@ BridgeDetector::unsupported_edges(double angle) const
         direction might still benefit from anchors if long enough)
         double angle_tolerance = PI / 180.0 * 5.0; */
     Polylines unsupported;
-    for (Polylines::const_iterator polyline = _unsupported.begin(); polyline != _unsupported.end(); ++polyline) {
-        Lines lines = polyline->lines();
-        for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
-            if (!Slic3r::Geometry::directions_parallel(line->direction(), angle))
-                unsupported.push_back(*line);
-        }
-    }
+    for (const Polyline &polyline : _unsupported)
+        for (const Line &line : polyline.lines())
+            if (!Slic3r::Geometry::directions_parallel(line.direction(), angle))
+                unsupported.push_back(line);
     return unsupported;
     
     /*

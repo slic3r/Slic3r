@@ -17,8 +17,6 @@ class MultiPoint
     Points points;
     
     operator Points() const;
-    MultiPoint() {};
-    explicit MultiPoint(const Points &_points): points(_points) {};
     void scale(double factor);
     void translate(double x, double y);
     void translate(const Point &vector);
@@ -48,8 +46,12 @@ class MultiPoint
     std::string dump_perl() const;
     
     static Points _douglas_peucker(const Points &points, const double tolerance);
-
     static Points visivalingam(const Points &points, const double& tolerance);
+    
+    protected:
+    MultiPoint() {};
+    explicit MultiPoint(const Points &_points): points(_points) {};
+    ~MultiPoint() = default;
 };
 
 } // namespace Slic3r

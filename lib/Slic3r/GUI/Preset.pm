@@ -94,7 +94,7 @@ sub prompt_unsaved_changes {
         if ($res == wxID_CANCEL) {
             return 0;
         } elsif ($res == wxID_YES) {
-            return $self->save($self->default ? undef : $self->name);
+            return $self->default ? $self->save_prompt($parent) : $self->save;
         } elsif ($res == wxID_NO) {
             $self->dismiss_changes;
             return 1;
@@ -104,20 +104,29 @@ sub prompt_unsaved_changes {
     return 1;
 }
 
+sub save_prompt {
+    my ($self, $parent) = @_;
+    
+    my $default_name = $self->default ? 'Untitled' : $self->name;
+    $default_name =~ s/\.ini$//i;
+
+    my $dlg = Slic3r::GUI::SavePresetWindow->new($parent,
+        default => $default_name,
+        values  => [ map $_->name, grep !$_->default && !$_->external, @{wxTheApp->presets->{$self->name}} ],
+    );
+    return 0 unless $dlg->ShowModal == wxID_OK;
+    
+    $self->save_as($dlg->get_name);
+}
+
 sub save {
-    my ($self, $name, $parent) = @_;
+    my ($self, $opt_keys) = @_;
     
-    if (!$name) {
-        my $default_name = $self->default ? 'Untitled' : $self->name;
-        $default_name =~ s/\.ini$//i;
-    
-        my $dlg = Slic3r::GUI::SavePresetWindow->new($parent,
-            default => $default_name,
-            values  => [ map $_->name, grep !$_->default && !$_->external, @{wxTheApp->presets->{$self->name}} ],
-        );
-        return 0 unless $dlg->ShowModal == wxID_OK;
-        $name = $dlg->get_name;
-    }
+    return $self->save_as($self->name, $opt_keys);
+}
+
+sub save_as {
+    my ($self, $name, $opt_keys) = @_;
     
     $self->rename($name);
     
@@ -125,8 +134,15 @@ sub save {
         die "Calling save() without setting filename";
     }
     
-    $self->_config->clear;
-    $self->_config->apply($self->_dirty_config);
+    if ($opt_keys) {
+        $self->_config->apply_only($self->_dirty_config, $opt_keys);
+    } else {
+        $self->_config->clear;
+        $self->_config->apply($self->_dirty_config);
+    }
+    
+    # unlink the file first to avoid problems on case-insensitive file systems
+    unlink Slic3r::encode_path($self->file);
     $self->_config->save($self->file);
     wxTheApp->load_presets;
     
@@ -166,6 +182,8 @@ sub dirty_config {
 
 sub load_config {
     my ($self) = @_;
+    
+    return $self->_config if $self->_loaded;
     
     my @keys = $self->_group_class->options;
     my @extra_keys = $self->_group_class->overriding_options;

@@ -3,14 +3,20 @@
 #include "IO.hpp"
 #include "TriangleMesh.hpp"
 #include "libslic3r.h"
+#include <boost/nowide/args.hpp>
+#include <boost/nowide/iostream.hpp>
 
 using namespace Slic3r;
 
 void confess_at(const char *file, int line, const char *func, const char *pat, ...){}
 
 int
-main(const int argc, const char **argv)
+main(int argc, char **argv)
 {
+    // Convert arguments to UTF-8 (needed on Windows).
+    // argv then points to memory owned by a.
+    boost::nowide::args a(argc, argv);
+    
     // read config
     ConfigDef config_def;
     {
@@ -40,7 +46,7 @@ main(const int argc, const char **argv)
         if (outfile.empty()) outfile = *it + "_extruded.stl";
         
         Slic3r::IO::STL::write(mesh, outfile);
-        printf("Extruded mesh written to %s\n", outfile.c_str());
+        boost::nowide::cout << "Extruded mesh written to " << outfile << std::endl;
     }
     
     return 0;

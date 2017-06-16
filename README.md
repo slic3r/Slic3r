@@ -58,8 +58,7 @@ Sure! You can do the following to find things that are available to help with:
 * Development
 	* [Low Effort tasks](https://github.com/alexrj/Slic3r/labels/Low%20Effort): pick one of them!
 	* [More available tasks](https://github.com/alexrj/Slic3r/milestone/31): let's discuss together before you start working on them
-	* Please comment in the related github issue that you are working on it so that other people know. 
-    * Please comment in the related GitHub issue that you are working on it so that other people know. 
+	* Please comment in the related GitHub issue that you are working on it so that other people know. 
 * Contribute to the [Manual](http://manual.slic3r.org/)! (see its [GitHub repository](https://github.com/alexrj/Slic3r-Manual))
 * You can also find us in #slic3r on [FreeNode](https://webchat.freenode.net): talk to _Sound_, _LoH_ or the other members of the Slic3r community.
 * Add an [issue](https://github.com/alexrj/Slic3r/issues) to the GitHub tracker if it isn't already present.
@@ -85,7 +84,7 @@ The main author of Slic3r is Alessandro Ranellucci (@alexrj, *Sound* in IRC, [@a
 
 Joseph Lenox (@lordofhyphens, *Loh* in IRC) is the current co-maintainer.
 
-Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake, Vojtech Bubnik and numerous others. Original manual by Gary Hodgson. Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James.
+Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake, Kliment Yanev and numerous others. Original manual by Gary Hodgson. Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James.
 
 ### How can I invoke Slic3r using the command line?
 

@@ -14,3 +14,5 @@ xs/assertlib*
 local-lib
 package/osx/Slic3r*.app
 *.dmg
+*.swp
+*.swo

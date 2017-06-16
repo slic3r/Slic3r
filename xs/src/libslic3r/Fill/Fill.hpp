@@ -64,7 +64,6 @@ public:
 public:
     static Fill* new_from_type(const InfillPattern type);
     static Fill* new_from_type(const std::string &type);
-    static coord_t adjust_solid_spacing(const coord_t width, const coord_t distance);
     virtual Fill* clone() const = 0;
     virtual ~Fill() {};
     

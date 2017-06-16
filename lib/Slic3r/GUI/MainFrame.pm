@@ -8,9 +8,10 @@ use utf8;
 use File::Basename qw(basename dirname);
 use List::Util qw(min);
 use Slic3r::Geometry qw(X Y Z);
-use Wx qw(:frame :bitmap :id :misc :notebook :panel :sizer :menu :dialog :filedialog
-    :font :icon wxTheApp);
-use Wx::Event qw(EVT_CLOSE EVT_MENU EVT_NOTEBOOK_PAGE_CHANGED);
+use Wx qw(:frame :bitmap :id :misc :panel :sizer :menu :dialog :filedialog
+    :font :icon :aui wxTheApp);
+use Wx::AUI;
+use Wx::Event qw(EVT_CLOSE EVT_AUINOTEBOOK_PAGE_CHANGED EVT_AUINOTEBOOK_PAGE_CLOSE);
 use base 'Wx::Frame';
 
 our $qs_last_input_file;
@@ -28,6 +29,7 @@ sub new {
     }
     
     $self->{loaded} = 0;
+    $self->{preset_editor_tabs} = {};  # group => panel
     
     # initialize tabpanel and menubar
     $self->_init_tabpanel;
@@ -92,16 +94,28 @@ sub new {
 sub _init_tabpanel {
     my ($self) = @_;
     
-    $self->{tabpanel} = my $panel = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
-    EVT_NOTEBOOK_PAGE_CHANGED($self, $self->{tabpanel}, sub {
-        my $panel = $self->{tabpanel}->GetCurrentPage;
+    $self->{tabpanel} = my $panel = Wx::AuiNotebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxAUI_NB_TOP);
+    EVT_AUINOTEBOOK_PAGE_CHANGED($self, $self->{tabpanel}, sub {
+        my $panel = $self->{tabpanel}->GetPage($self->{tabpanel}->GetSelection);
         $panel->OnActivate if $panel->can('OnActivate');
+        if ($self->{tabpanel}->GetSelection > 1) {
+            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+        } else {
+            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag & ~wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+        }
+    });
+    EVT_AUINOTEBOOK_PAGE_CLOSE($self, $self->{tabpanel}, sub {
+        my $panel = $self->{tabpanel}->GetPage($self->{tabpanel}->GetSelection);
+        if ($panel->isa('Slic3r::GUI::PresetEditor')) {
+            delete $self->{preset_editor_tabs}{$panel->name};
+        }
+        wxTheApp->CallAfter(sub {
+            $self->{tabpanel}->SetSelection(0);
+        });
     });
     
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
-    if (!$self->{no_controller}) {
-        $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
-    }
+    $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
 }
 
 sub _init_menubar {
@@ -110,60 +124,60 @@ sub _init_menubar {
     # File menu
     my $fileMenu = Wx::Menu->new;
     {
-        $self->_append_menu_item($fileMenu, "Open STL/OBJ/AMF…\tCtrl+O", 'Open a model', sub {
+        wxTheApp->append_menu_item($fileMenu, "Open STL/OBJ/AMF…\tCtrl+O", 'Open a model', sub {
             $self->{plater}->add if $self->{plater};
         }, undef, 'brick_add.png');
-        $self->_append_menu_item($fileMenu, "Open 2.5D TIN mesh…", 'Import a 2.5D TIN mesh', sub {
+        wxTheApp->append_menu_item($fileMenu, "Open 2.5D TIN mesh…", 'Import a 2.5D TIN mesh', sub {
             $self->{plater}->add_tin if $self->{plater};
         }, undef, 'map_add.png');
         $fileMenu->AppendSeparator();
-        $self->_append_menu_item($fileMenu, "&Load Config…\tCtrl+L", 'Load exported configuration file', sub {
+        wxTheApp->append_menu_item($fileMenu, "&Load Config…\tCtrl+L", 'Load exported configuration file', sub {
             $self->load_config_file;
         }, undef, 'plugin_add.png');
-        $self->_append_menu_item($fileMenu, "&Export Config…\tCtrl+E", 'Export current configuration to file', sub {
+        wxTheApp->append_menu_item($fileMenu, "&Export Config…\tCtrl+E", 'Export current configuration to file', sub {
             $self->export_config;
         }, undef, 'plugin_go.png');
-        $self->_append_menu_item($fileMenu, "&Load Config Bundle…", 'Load presets from a bundle', sub {
+        wxTheApp->append_menu_item($fileMenu, "&Load Config Bundle…", 'Load presets from a bundle', sub {
             $self->load_configbundle;
         }, undef, 'lorry_add.png');
-        $self->_append_menu_item($fileMenu, "&Export Config Bundle…", 'Export all presets to file', sub {
+        wxTheApp->append_menu_item($fileMenu, "&Export Config Bundle…", 'Export all presets to file', sub {
             $self->export_configbundle;
         }, undef, 'lorry_go.png');
         $fileMenu->AppendSeparator();
         my $repeat;
-        $self->_append_menu_item($fileMenu, "Q&uick Slice…\tCtrl+U", 'Slice file', sub {
+        wxTheApp->append_menu_item($fileMenu, "Q&uick Slice…\tCtrl+U", 'Slice file', sub {
             wxTheApp->CallAfter(sub {
                 $self->quick_slice;
                 $repeat->Enable(defined $Slic3r::GUI::MainFrame::last_input_file);
             });
         }, undef, 'cog_go.png');
-        $self->_append_menu_item($fileMenu, "Quick Slice and Save &As…\tCtrl+Alt+U", 'Slice file and save as', sub {
+        wxTheApp->append_menu_item($fileMenu, "Quick Slice and Save &As…\tCtrl+Alt+U", 'Slice file and save as', sub {
             wxTheApp->CallAfter(sub {
                 $self->quick_slice(save_as => 1);
                 $repeat->Enable(defined $Slic3r::GUI::MainFrame::last_input_file);
             });
         }, undef, 'cog_go.png');
-        $repeat = $self->_append_menu_item($fileMenu, "&Repeat Last Quick Slice\tCtrl+Shift+U", 'Repeat last quick slice', sub {
+        $repeat = wxTheApp->append_menu_item($fileMenu, "&Repeat Last Quick Slice\tCtrl+Shift+U", 'Repeat last quick slice', sub {
             wxTheApp->CallAfter(sub {
                 $self->quick_slice(reslice => 1);
             });
         }, undef, 'cog_go.png');
         $repeat->Enable(0);
         $fileMenu->AppendSeparator();
-        $self->_append_menu_item($fileMenu, "Slice to SV&G…\tCtrl+G", 'Slice file to SVG', sub {
+        wxTheApp->append_menu_item($fileMenu, "Slice to SV&G…\tCtrl+G", 'Slice file to SVG', sub {
             $self->quick_slice(save_as => 1, export_svg => 1);
         }, undef, 'shape_handles.png');
         $fileMenu->AppendSeparator();
-        $self->_append_menu_item($fileMenu, "Repair STL file…", 'Automatically repair an STL file', sub {
+        wxTheApp->append_menu_item($fileMenu, "Repair STL file…", 'Automatically repair an STL file', sub {
             $self->repair_stl;
         }, undef, 'wrench.png');
         $fileMenu->AppendSeparator();
         # Cmd+, is standard on OS X - what about other operating systems?
-        $self->_append_menu_item($fileMenu, "Preferences…\tCtrl+,", 'Application preferences', sub {
+        wxTheApp->append_menu_item($fileMenu, "Preferences…\tCtrl+,", 'Application preferences', sub {
             Slic3r::GUI::Preferences->new($self)->ShowModal;
         }, wxID_PREFERENCES);
         $fileMenu->AppendSeparator();
-        $self->_append_menu_item($fileMenu, "&Quit", 'Quit Slic3r', sub {
+        wxTheApp->append_menu_item($fileMenu, "&Quit", 'Quit Slic3r', sub {
             $self->Close(0);
         }, wxID_EXIT);
     }
@@ -175,40 +189,43 @@ sub _init_menubar {
         $self->{plater_menu} = Wx::Menu->new;
         {
             my $selectMenu = $self->{plater_select_menu} = Wx::Menu->new;
-            my $selectMenuItem = $self->{plater_menu}->AppendSubMenu($selectMenu, "Select", 'Select an object in the plater');
-            wxTheApp->set_menu_item_icon($selectMenuItem, 'brick.png');
+            wxTheApp->append_submenu($self->{plater_menu}, "Select", 'Select an object in the plater', $selectMenu, undef, 'brick.png');
         }
-        $self->_append_menu_item($self->{plater_menu}, "Select Next Object\tCtrl+Right", 'Select Next Object in the plater', sub {
+        wxTheApp->append_menu_item($self->{plater_menu}, "Select Next Object\tCtrl+Right", 'Select Next Object in the plater', sub {
             $plater->select_next;
         }, undef, 'arrow_right.png');
-        $self->_append_menu_item($self->{plater_menu}, "Select Prev Object\tCtrl+Left", 'Select Previous Object in the plater', sub {
+        wxTheApp->append_menu_item($self->{plater_menu}, "Select Prev Object\tCtrl+Left", 'Select Previous Object in the plater', sub {
             $plater->select_prev;
         }, undef, 'arrow_left.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Zoom In\tCtrl+up", 'Zoom In',
+            sub { $self->{plater}->zoom('in') }, undef, 'zoom_in.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Zoom Out\tCtrl+down", 'Zoom Out',
+            sub { $self->{plater}->zoom('out') }, undef, 'zoom_out.png');
         $self->{plater_menu}->AppendSeparator();
-        $self->_append_menu_item($self->{plater_menu}, "Export G-code...", 'Export current plate as G-code', sub {
+        wxTheApp->append_menu_item($self->{plater_menu}, "Export G-code...", 'Export current plate as G-code', sub {
             $plater->export_gcode;
         }, undef, 'cog_go.png');
-        $self->_append_menu_item($self->{plater_menu}, "Export plate as STL...", 'Export current plate as STL', sub {
+        wxTheApp->append_menu_item($self->{plater_menu}, "Export plate as STL...", 'Export current plate as STL', sub {
             $plater->export_stl;
         }, undef, 'brick_go.png');
-        $self->_append_menu_item($self->{plater_menu}, "Export plate with modifiers as AMF...", 'Export current plate as AMF, including all modifier meshes', sub {
+        wxTheApp->append_menu_item($self->{plater_menu}, "Export plate with modifiers as AMF...", 'Export current plate as AMF, including all modifier meshes', sub {
             $plater->export_amf;
         }, undef, 'brick_go.png');
-        
         $self->{object_menu} = $self->{plater}->object_menu;
+        $self->on_plater_object_list_changed(0);
         $self->on_plater_selection_changed(0);
     }
     
     # Settings menu
     my $settingsMenu = Wx::Menu->new;
     {
-        $self->_append_menu_item($settingsMenu, "P&rint Settings…\tCtrl+1", 'Show the print settings editor', sub {
+        wxTheApp->append_menu_item($settingsMenu, "P&rint Settings…\tCtrl+1", 'Show the print settings editor', sub {
             $self->{plater}->show_preset_editor('print');
         }, undef, 'cog.png');
-        $self->_append_menu_item($settingsMenu, "&Filament Settings…\tCtrl+2", 'Show the filament settings editor', sub {
+        wxTheApp->append_menu_item($settingsMenu, "&Filament Settings…\tCtrl+2", 'Show the filament settings editor', sub {
             $self->{plater}->show_preset_editor('filament');
         }, undef, 'spool.png');
-        $self->_append_menu_item($settingsMenu, "Print&er Settings…\tCtrl+3", 'Show the printer settings editor', sub {
+        wxTheApp->append_menu_item($settingsMenu, "Print&er Settings…\tCtrl+3", 'Show the printer settings editor', sub {
             $self->{plater}->show_preset_editor('printer');
         }, undef, 'printer_empty.png');
     }
@@ -216,15 +233,15 @@ sub _init_menubar {
     # View menu
     {
         $self->{viewMenu} = Wx::Menu->new;
-        $self->_append_menu_item($self->{viewMenu}, "Top\tCtrl+4"     , 'Top View'     , sub { $self->select_view('top'     ); });
-        $self->_append_menu_item($self->{viewMenu}, "Bottom\tCtrl+5"  , 'Bottom View'  , sub { $self->select_view('bottom'  ); });
-        $self->_append_menu_item($self->{viewMenu}, "Left\tCtrl+6"    , 'Left View'    , sub { $self->select_view('left'    ); });
-        $self->_append_menu_item($self->{viewMenu}, "Right\tCtrl+7"   , 'Right View'   , sub { $self->select_view('right'   ); });
-        $self->_append_menu_item($self->{viewMenu}, "Front\tCtrl+8"   , 'Front View'   , sub { $self->select_view('front'   ); });
-        $self->_append_menu_item($self->{viewMenu}, "Back\tCtrl+9"    , 'Back View'    , sub { $self->select_view('back'    ); });
-        $self->_append_menu_item($self->{viewMenu}, "Diagonal\tCtrl+0", 'Diagonal View', sub { $self->select_view('diagonal'); });
+        wxTheApp->append_menu_item($self->{viewMenu}, "Top\tCtrl+4"     , 'Top View'     , sub { $self->select_view('top'     ); });
+        wxTheApp->append_menu_item($self->{viewMenu}, "Bottom\tCtrl+5"  , 'Bottom View'  , sub { $self->select_view('bottom'  ); });
+        wxTheApp->append_menu_item($self->{viewMenu}, "Left\tCtrl+6"    , 'Left View'    , sub { $self->select_view('left'    ); });
+        wxTheApp->append_menu_item($self->{viewMenu}, "Right\tCtrl+7"   , 'Right View'   , sub { $self->select_view('right'   ); });
+        wxTheApp->append_menu_item($self->{viewMenu}, "Front\tCtrl+8"   , 'Front View'   , sub { $self->select_view('front'   ); });
+        wxTheApp->append_menu_item($self->{viewMenu}, "Back\tCtrl+9"    , 'Back View'    , sub { $self->select_view('back'    ); });
+        wxTheApp->append_menu_item($self->{viewMenu}, "Diagonal\tCtrl+0", 'Diagonal View', sub { $self->select_view('diagonal'); });
         $self->{viewMenu}->AppendSeparator();
-        $self->{color_toolpaths_by_role} = $self->_append_menu_item($self->{viewMenu},
+        $self->{color_toolpaths_by_role} = wxTheApp->append_menu_item($self->{viewMenu},
             "Color Toolpaths by Role",
             'Color toolpaths according to perimeter/infill/support material',
             sub {
@@ -234,7 +251,7 @@ sub _init_menubar {
             },
             undef, undef, wxITEM_RADIO
         );
-        $self->{color_toolpaths_by_extruder} = $self->_append_menu_item($self->{viewMenu},
+        $self->{color_toolpaths_by_extruder} = wxTheApp->append_menu_item($self->{viewMenu},
             "Color Toolpaths by Filament",
             'Color toolpaths using the configured extruder/filament color',
             sub {
@@ -254,13 +271,13 @@ sub _init_menubar {
     # Window menu
     my $windowMenu = Wx::Menu->new;
     {
-        $self->_append_menu_item($windowMenu, "&Plater\tCtrl+T", 'Show the plater', sub {
+        wxTheApp->append_menu_item($windowMenu, "&Plater\tCtrl+T", 'Show the plater', sub {
             $self->select_tab(0);
         }, undef, 'application_view_tile.png');
-        $self->_append_menu_item($windowMenu, "&Controller\tCtrl+Y", 'Show the printer controller', sub {
+        wxTheApp->append_menu_item($windowMenu, "&Controller\tCtrl+Y", 'Show the printer controller', sub {
             $self->select_tab(1);
-        }, undef, 'printer_empty.png') if !$self->{no_controller};
-        $self->_append_menu_item($windowMenu, "DLP Projector…\tCtrl+P", 'Open projector window for DLP printing', sub {
+        }, undef, 'printer_empty.png');
+        wxTheApp->append_menu_item($windowMenu, "DLP Projector…\tCtrl+P", 'Open projector window for DLP printing', sub {
             $self->{plater}->pause_background_process;
             Slic3r::GUI::SLAPrintOptions->new($self)->ShowModal;
             $self->{plater}->resume_background_process;
@@ -270,22 +287,22 @@ sub _init_menubar {
     # Help menu
     my $helpMenu = Wx::Menu->new;
     {
-        $self->_append_menu_item($helpMenu, "&Configuration $Slic3r::GUI::ConfigWizard::wizard…", "Run Configuration $Slic3r::GUI::ConfigWizard::wizard", sub {
+        wxTheApp->append_menu_item($helpMenu, "&Configuration $Slic3r::GUI::ConfigWizard::wizard…", "Run Configuration $Slic3r::GUI::ConfigWizard::wizard", sub {
             $self->config_wizard;
         });
         $helpMenu->AppendSeparator();
-        $self->_append_menu_item($helpMenu, "Slic3r &Website", 'Open the Slic3r website in your browser', sub {
+        wxTheApp->append_menu_item($helpMenu, "Slic3r &Website", 'Open the Slic3r website in your browser', sub {
             Wx::LaunchDefaultBrowser('http://slic3r.org/');
         });
-        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", 'Check for new Slic3r versions', sub {
+        my $versioncheck = wxTheApp->append_menu_item($helpMenu, "Check for &Updates...", 'Check for new Slic3r versions', sub {
             wxTheApp->check_version(1);
         });
         $versioncheck->Enable(wxTheApp->have_version_check);
-        $self->_append_menu_item($helpMenu, "Slic3r &Manual", 'Open the Slic3r manual in your browser', sub {
+        wxTheApp->append_menu_item($helpMenu, "Slic3r &Manual", 'Open the Slic3r manual in your browser', sub {
             Wx::LaunchDefaultBrowser('http://manual.slic3r.org/');
         });
         $helpMenu->AppendSeparator();
-        $self->_append_menu_item($helpMenu, "&About Slic3r", 'Show about dialog', sub {
+        wxTheApp->append_menu_item($helpMenu, "&About Slic3r", 'Show about dialog', sub {
             wxTheApp->about;
         });
     }
@@ -309,6 +326,14 @@ sub _init_menubar {
 sub is_loaded {
     my ($self) = @_;
     return $self->{loaded};
+}
+
+sub on_plater_object_list_changed {
+    my ($self, $have_objects) = @_;
+    
+    return if !defined $self->{plater_menu};
+    $self->{plater_menu}->Enable($_->GetId, $have_objects)
+        for $self->{plater_menu}->GetMenuItems;
 }
 
 sub on_plater_selection_changed {
@@ -459,9 +484,9 @@ sub repair_stl {
     }
     
     my $tmesh = Slic3r::TriangleMesh->new;
-    $tmesh->ReadSTLFile(Slic3r::encode_path($input_file));
+    $tmesh->ReadSTLFile($input_file);
     $tmesh->repair;
-    $tmesh->WriteOBJFile(Slic3r::encode_path($output_file));
+    $tmesh->WriteOBJFile($output_file);
     Slic3r::GUI::show_info($self, "Your file was repaired.", "Repair");
 }
 
@@ -628,19 +653,8 @@ sub select_tab {
 # Set a camera direction, zoom to all objects.
 sub select_view {
     my ($self, $direction) = @_;
-    
-    $self->{plater}->select_view($direction);
-}
 
-sub _append_menu_item {
-    my ($self, $menu, $string, $description, $cb, $id, $icon, $kind) = @_;
-    
-    $id //= &Wx::NewId();
-    my $item = $menu->Append($id, $string, $description, $kind);
-    wxTheApp->set_menu_item_icon($item, $icon);
-    
-    EVT_MENU($self, $id, $cb);
-    return $item;
+    $self->{plater}->select_view($direction);
 }
 
 1;

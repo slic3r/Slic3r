@@ -36,24 +36,44 @@ PlaceholderParser::update_timestamp()
     time_t rawtime;
     time(&rawtime);
     struct tm* timeinfo = localtime(&rawtime);
-    
+
+    this->set("year",   1900 + timeinfo->tm_year);
+    {
+        std::ostringstream ss;
+        ss << std::setw(2) << std::setfill('0') << (1 + timeinfo->tm_mon);
+        this->set("month",  ss.str());
+    }
+    {
+        std::ostringstream ss;
+        ss << std::setw(2) << std::setfill('0') << timeinfo->tm_mday;
+        this->set("day",    ss.str());
+    }
+    {
+        std::ostringstream ss;
+        ss << std::setw(2) << std::setfill('0') << timeinfo->tm_hour;
+        this->set("hour",   ss.str());
+    }
+    {
+        std::ostringstream ss;
+        ss << std::setw(2) << std::setfill('0') << timeinfo->tm_min;
+        this->set("minute", ss.str());
+    }
+    {
+        std::ostringstream ss;
+        ss << std::setw(2) << std::setfill('0') << timeinfo->tm_sec;
+        this->set("second", ss.str());
+    }
     {
         std::ostringstream ss;
         ss << (1900 + timeinfo->tm_year);
-        ss << std::setw(2) << std::setfill('0') << (1 + timeinfo->tm_mon);
-        ss << std::setw(2) << std::setfill('0') << timeinfo->tm_mday;
+        ss << this->_single["month"]; 
+        ss << this->_single["day"];
         ss << "-";
-        ss << std::setw(2) << std::setfill('0') << timeinfo->tm_hour;
-        ss << std::setw(2) << std::setfill('0') << timeinfo->tm_min;
-        ss << std::setw(2) << std::setfill('0') << timeinfo->tm_sec;
+        ss << this->_single["hour"];
+        ss << this->_single["minute"];
+        ss << this->_single["second"];
         this->set("timestamp", ss.str());
     }
-    this->set("year",   1900 + timeinfo->tm_year);
-    this->set("month",  1 + timeinfo->tm_mon);
-    this->set("day",    timeinfo->tm_mday);
-    this->set("hour",   timeinfo->tm_hour);
-    this->set("minute", timeinfo->tm_min);
-    this->set("second", timeinfo->tm_sec);
 }
 
 void PlaceholderParser::apply_config(const DynamicPrintConfig &config)

@@ -5,6 +5,8 @@
 #include <map>
 #include <string>
 #include <boost/move/move.hpp>
+#include <boost/nowide/fstream.hpp>
+#include <boost/nowide/iostream.hpp>
 #include <expat/expat.h>
 
 namespace Slic3r { namespace IO {
@@ -453,10 +455,10 @@ AMF::read(std::string input_file, Model* model)
         printf("Couldn't allocate memory for parser\n");
         return false;
     }
-
-    FILE *pFile = ::fopen(input_file.c_str(), "rt");
-    if (pFile == NULL) {
-        printf("Cannot open file %s\n", input_file.c_str());
+    
+    boost::nowide::ifstream fin(input_file, std::ios::in);
+    if (!fin.is_open()) {
+        boost::nowide::cerr << "Cannot open file: " << input_file << std::endl;
         return false;
     }
 
@@ -467,27 +469,26 @@ AMF::read(std::string input_file, Model* model)
 
     char buff[8192];
     bool result = false;
-    for (;;) {
-        int len = (int)fread(buff, 1, 8192, pFile);
-        if (ferror(pFile)) {
+    while (!fin.eof()) {
+		fin.read(buff, sizeof(buff));
+        if (fin.bad()) {
             printf("AMF parser: Read error\n");
             break;
         }
-        int done = feof(pFile);
-        if (XML_Parse(parser, buff, len, done) == XML_STATUS_ERROR) {
+        if (XML_Parse(parser, buff, fin.gcount(), fin.eof()) == XML_STATUS_ERROR) {
             printf("AMF parser: Parse error at line %lu:\n%s\n",
                   XML_GetCurrentLineNumber(parser),
                   XML_ErrorString(XML_GetErrorCode(parser)));
             break;
         }
-        if (done) {
+        if (fin.eof()) {
             result = true;
             break;
         }
     }
 
     XML_ParserFree(parser);
-    ::fclose(pFile);
+    fin.close();
 
     if (result)
         ctx.endDocument();
@@ -499,12 +500,12 @@ AMF::write(Model& model, std::string output_file)
 {
     using namespace std;
     
-    ofstream file;
+    boost::nowide::ofstream file;
     file.open(output_file, ios::out | ios::trunc);
     
     file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << endl
          << "<amf unit=\"millimeter\">" << endl
-         << "<metadata type=\"cad\">Slic3r " << SLIC3R_VERSION << "</metadata>" << endl;
+         << "  <metadata type=\"cad\">Slic3r " << SLIC3R_VERSION << "</metadata>" << endl;
     
     for (const auto &material : model.materials) {
         if (material.first.empty())
@@ -598,7 +599,7 @@ AMF::write(Model& model, std::string output_file)
                 << "    <instance objectid=\"" << object_id << "\">" << endl
                 << "      <deltax>" << instance->offset.x + object->origin_translation.x << "</deltax>" << endl
                 << "      <deltay>" << instance->offset.y + object->origin_translation.y << "</deltay>" << endl
-                << "      <rz>%" << instance->rotation << "</rz>" << endl
+                << "      <rz>" << instance->rotation << "</rz>" << endl
                 << "      <scale>" << instance->scaling_factor << "</scale>" << endl
                 << "    </instance>" << endl;
     }
