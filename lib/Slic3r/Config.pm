@@ -95,7 +95,8 @@ sub load {
     
     # legacy syntax of load()
     my $config = $class->new;
-    $config->_load(Slic3r::encode_path($file));
+	
+    $config->_load($file);
     return $config;
 }
 
@@ -103,7 +104,7 @@ sub save {
     my $self = shift;
     my ($file) = @_;
     
-    return $self->_save(Slic3r::encode_path($file));
+    return $self->_save($file);
 }
 
 # Deserialize a perl hash into the underlying C++ Slic3r::DynamicConfig class,
@@ -273,12 +274,6 @@ sub validate {
             if defined first { $_ > 10 * $max_nozzle_diameter }
                 map $self->get_abs_value_over("${_}_extrusion_width", $max_nozzle_diameter),
                 qw(perimeter infill solid_infill top_infill support_material first_layer);
-    }
-    
-    # support material
-    if ($self->support_material) {
-        die "Value of 0 is illegal. Use some % value instead (e.g. 150%) for auto.\n"
-            if $self->support_material_threshold =~ /^0+/;
     }
     
     

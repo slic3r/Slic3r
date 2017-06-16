@@ -330,6 +330,19 @@ sub set_viewport_from_scene {
     $self->_dirty(1);
 }
 
+sub zoom{
+    my ($self, $direction) = @_;
+    if( $direction eq 'in'){
+        $self->_zoom($self->_zoom / (1-0.3));
+    }
+    elsif($direction eq 'out'){
+        $self->_zoom($self->_zoom / (1+0.3));
+    }
+    $self->on_viewport_changed->() if $self->on_viewport_changed;
+    $self->_dirty(1);
+    $self->Refresh;
+}
+
 # Set the camera to a default orientation,
 # zoom to volumes.
 sub select_view {
@@ -1441,7 +1454,7 @@ sub load_print_object_toolpaths {
                             }
                         }
                         $add->($non_solid, $top_z, $copy, $color);
-                        $color = $self->colors->[ ($layerm->region->config->solid_infill_extruder-1) % @{&COLORS} ];
+                        $color = $self->colors->[ ($layerm->region->config->solid_infill_extruder-1) % @{$self->colors} ];
                         $add->($solid, $top_z, $copy, $color);
                     } else {
                         $add->($layerm->fills, $top_z, $copy, $color);

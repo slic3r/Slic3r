@@ -139,17 +139,29 @@ include_directories(${Boost_INCLUDE_DIRS})
 IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
 ENDIF(CMAKE_HOST_UNIX)
+
+target_link_libraries (slic3r libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
     INCLUDE("${wxWidgets_USE_FILE}")
     add_library(slic3r_gui STATIC ${LIBDIR}/slic3r/GUI/3DScene.cpp ${LIBDIR}/slic3r/GUI/GUI.cpp)
     #only build GUI lib if building with wx
-    target_link_libraries (slic3r slic3r_gui libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES} ${wxWidgets_LIBRARIES})
+    target_link_libraries (slic3r slic3r-gui ${wxWidgets_LIBRARIES})
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
     MESSAGE("wx not found!")
-    target_link_libraries (slic3r libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
     #skip gui when no wx included
 ENDIF(wxWidgets_FOUND)
+
+# Windows needs a compiled component for Boost.nowide
+IF (WIN32)
+    add_library(boost-nowide STATIC 
+        ${LIBDIR}/boost/nowide/iostream.cpp
+    )
+
+    target_link_libraries(slic3r boost-nowide)
+    target_link_libraries(extrude-tin boost-nowide)
+ENDIF(WIN32)
 
 target_link_libraries (extrude-tin libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})

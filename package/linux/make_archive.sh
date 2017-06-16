@@ -47,7 +47,7 @@ echo "Appfolder: $appfolder, archivefolder: $archivefolder"
 
 # Our slic3r dir and location of perl
 PERL_BIN=$(which perl)
-PP_BIN=$(which wxpar)
+PP_BIN=$(which pp)
 SLIC3R_DIR="./"
 
 if [[ -d "${appfolder}" ]]; then
@@ -96,7 +96,7 @@ cp -f $PERL_BIN $archivefolder/perl-local
 ${PP_BIN} wxextension .0 \
 	  -M attributes -M base -M bytes -M B -M POSIX \
           -M FindBin -M Unicode::Normalize -M Tie::Handle \
-          -M Time::Local -M Math::Trig \
+          -M Time::Local -M Math::Trig -M IO::Socket -M Errno \
           -M lib -M overload \
           -M warnings -M local::lib \
           -M strict -M utf8 -M parent \
@@ -104,8 +104,10 @@ ${PP_BIN} wxextension .0 \
 unzip -qq -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
 cp -rf $WD/_tmp/shlib $archivefolder/
-
 rm -rf $WD/_tmp
+for i in $(cat $WD/libpaths.txt); do 
+	install -v $i $archivefolder/bin
+done
 
 echo "Cleaning local-lib"
 rm -rf $archivefolder/local-lib/bin
@@ -120,7 +122,7 @@ rm -rf $(pwd)$archivefolder/local-lib/lib/perl5/TAP
 rm -rf $(pwd)/$archivefolder/local-lib/lib/perl5/Test*
 find $(pwd)/$archivefolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
     -or -name DocView -or -name STC -or -name IPC \
-    -or -name AUI -or -name Calendar -or -name DataView \
+    -or -name Calendar -or -name DataView \
     -or -name DateTime -or -name Media -or -name PerlTest \
     -or -name Ribbon \) -exec rm -rf "{}" \;
 rm -rf $archivefolder/local-lib/lib/perl5/*/Alien/wxWidgets/*/include

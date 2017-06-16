@@ -18,6 +18,7 @@
     void apply_print_config(PrintConfig* print_config)
         %code{% THIS->apply_print_config(*print_config); %};
     void set_extruders(std::vector<unsigned int> extruder_ids);
+    std::string notes();
     std::string preamble();
     std::string postamble();
     std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1);

@@ -1,7 +1,6 @@
 #include <EXTERN.h> // from the Perl distribution
 #include <perl.h> // from the Perl distribution
 
-
 #ifdef WIN32
 // Perl win32 specific includes, found in perl\\lib\\CORE\\win32.h
 // Defines the windows specific convenience RunPerl() function,
@@ -17,13 +16,8 @@
 int main(int argc, char **argv, char **env)
 {
 	
-	// replaces following Windows batch file: @"%~dp0\perl5.24.0.exe"
-	// "%~dp0\slic3r.pl" --DataDir "C:\Users\Public\Documents\Prusa3D\Slic3r
-	// settings MK2"%*
-
 	// If the Slic3r is installed in a localized directory (containing non-iso
 	// characters), spaces or semicolons, use short file names.
-
 	char    exe_path[MAX_PATH] = {0};
 	char    script_path[MAX_PATH];
 	char    gui_flag[6] = {"--gui"};
