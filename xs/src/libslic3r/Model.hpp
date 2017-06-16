@@ -342,6 +342,7 @@ class ModelObject
 
     /// Center the current ModelObject to origin by translating the ModelVolumes
     void center_around_origin();
+    void align_instances_to_origin();
 
     /// Translate the current ModelObject by translating ModelVolumes with (x,y,z) units.
     /// This function calls translate(coordf_t x, coordf_t y, coordf_t z) to translate every TriangleMesh in each ModelVolume.
