@@ -624,6 +624,16 @@ ModelObject::instance_bounding_box(size_t instance_idx) const
     }
     return bb;
 }
+	
+void
+Model::align_instances_to_origin()
+{
+    BoundingBoxf3 bb = this->bounding_box();
+    
+    Pointf new_center = (Pointf)bb.size();
+    new_center.translate(-new_center.x/2, -new_center.y/2);
+    this->center_instances_around_point(new_center);
+}
 
 void
 ModelObject::align_to_ground()
