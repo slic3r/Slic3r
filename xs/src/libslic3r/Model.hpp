@@ -134,6 +134,8 @@ class Model
     /// This transformation works in the XY plane only and no transformation in Z is performed.
     /// \param point pointf object to center the model instances of model objects around
     void center_instances_around_point(const Pointf &point);
+    
+    void align_instances_to_origin();
 
     /// Translate each ModelObject with x, y, z units.
     /// \param x coordf_t units in the x direction
@@ -342,7 +344,6 @@ class ModelObject
 
     /// Center the current ModelObject to origin by translating the ModelVolumes
     void center_around_origin();
-    void align_instances_to_origin();
 
     /// Translate the current ModelObject by translating ModelVolumes with (x,y,z) units.
     /// This function calls translate(coordf_t x, coordf_t y, coordf_t z) to translate every TriangleMesh in each ModelVolume.
