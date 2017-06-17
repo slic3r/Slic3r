@@ -1865,22 +1865,30 @@ sub send_gcode {
                 ],
             );
         }else{
-            $res = $ua->post(
-                "http://" . $self->{config}->print_host . "/rr_upload?name=0:/gcodes/" . basename($path) . "&time=1234567890123",
-                Content_Type => 'form-data',
-                Content => [
-                    # OctoPrint doesn't like Windows paths so we use basename()
-                    # Also, since we need to read from filesystem we process it through encode_path()
-                    file => [ $path, basename($path) ],
-                ],
-            );        
-            if ($self->{send_gcode_file_print}) {
-                $res = $ua->get(
-                    "http://" . $self->{config}->print_host . "/rr_gcode?gcode=M32%20" . basename($path),
-                );
+            # slurp the file we would send into a string - should be someplace to reference this but could not find it?
+            local $/=undef;
+            open my $gch,$path;
+            my $gcode=<$gch>;
+            close($gch);
+
+            # get the time string            
+            my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+            my $t = sprintf("%4d-%02d-%02dT%02d:%02d:%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec);
+
+            my $req = HTTP::Request->new(POST => "http://" . $self->{config}->print_host . "/rr_upload?name=0:/gcodes/" . basename($path) . "&time=$t",);
+            $req->content( $gcode );
+            $res = $ua->request($req);
+ 
+            if ($res->is_success) {
+                if ($self->{send_gcode_file_print}) {
+                    $res = $ua->get(
+                        "http://" . $self->{config}->print_host . "/rr_gcode?gcode=M32%20" . basename($path),
+                    );
+                }
             }
         }
     }
+
     $self->statusbar->StopBusy;
     
     if ($res->is_success) {
