@@ -1852,7 +1852,7 @@ sub send_gcode {
     my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
     my $res;
     if($self->{config}->print_host){
-        if($self->{config}->host_type eq 'Octoprint'){
+        if($self->{config}->host_type eq 'octoprint'){
             $res = $ua->post(
                 "http://" . $self->{config}->print_host . "/api/files/local",
                 Content_Type => 'form-data',
