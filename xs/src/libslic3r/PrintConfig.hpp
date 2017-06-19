@@ -161,6 +161,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionBool                interface_shells;
     ConfigOptionFloat               layer_height;
     ConfigOptionInt                 raft_layers;
+    ConfigOptionFloat               regions_overlap;
     ConfigOptionEnum<SeamPosition>  seam_position;
     ConfigOptionBool                support_material;
     ConfigOptionInt                 support_material_angle;
@@ -192,6 +193,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
         OPT_PTR(raft_layers);
+        OPT_PTR(regions_overlap);
         OPT_PTR(seam_position);
         OPT_PTR(support_material);
         OPT_PTR(support_material_angle);

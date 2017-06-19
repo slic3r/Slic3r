@@ -967,6 +967,14 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
 
+    def = this->add("regions_overlap", coFloat);
+    def->label = "Regions/extruders overlap";
+    def->category = "Extruders";
+    def->tooltip = "This setting applies an additional overlap between regions printed with distinct extruders or distinct settings. This shouldn't be needed under normal circumstances.";
+    def->sidetext = "mm";
+    def->cli = "regions-overlap=s";
+    def->default_value = new ConfigOptionFloat(0);
+
     def = this->add("raft_offset", coFloat);
     def->label = "Raft offset";
     def->category = "Support material";

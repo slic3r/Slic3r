@@ -467,7 +467,7 @@ sub options {
         perimeter_extruder infill_extruder solid_infill_extruder
         support_material_extruder support_material_interface_extruder
         ooze_prevention standby_temperature_delta
-        interface_shells
+        interface_shells regions_overlap
         extrusion_width first_layer_extrusion_width perimeter_extrusion_width 
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
@@ -665,6 +665,7 @@ sub build {
         }
         {
             my $optgroup = $page->new_optgroup('Advanced');
+            $optgroup->append_single_option_line('regions_overlap');
             $optgroup->append_single_option_line('interface_shells');
         }
     }
