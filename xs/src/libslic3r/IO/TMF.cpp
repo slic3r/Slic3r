@@ -33,6 +33,10 @@ struct TMFEditor
         for(std::map<std::string, std::string>::iterator it = model->metadata.begin(); it != model->metadata.end(); ++it){
             append_buffer("<metadata name=\"" + it->first + "\">" + it->second + "</metadata>\n" );
         }
+
+        // Write Slic3r metadata carrying the version number.
+        append_buffer("<slic3r:metadata name=\"version\">" + to_string(SLIC3R_VERSION) + "</slic3r:metadata>\n");
+
         return true;
     }
 
@@ -145,18 +149,18 @@ struct TMFEditor
     /// Write Materials. The current supported materials are only of the core specifications.
     // The 3MF core specs support base materials, Each has by default color and name attributes.
     bool write_materials(){
-        if(model->materials.size() == 0)
+        if (model->materials.size() == 0)
             return true;
 
         bool baseMaterialsWritten = false;
 
         // Write the base materials.
-        for(const auto &material : model->materials){
+        for (const auto &material : model->materials){
             // If id is empty or if "name" attribute is not found in this material attributes ignore.
-            if(material.first.empty() || material.second->attributes.count("name") == 0)
+            if (material.first.empty() || material.second->attributes.count("name") == 0)
                 continue;
             // Add the base materials element if not added.
-            if(!baseMaterialsWritten){
+            if (!baseMaterialsWritten){
                 append_buffer("<basematerials id=\"1\">\n");
                 baseMaterialsWritten = true;
             }
@@ -169,8 +173,38 @@ struct TMFEditor
         }
 
         // Close base materials if it's written.
-        if(baseMaterialsWritten)
+        if (baseMaterialsWritten)
             append_buffer("</basematerials>\n");
+
+        // Write Slic3r custom config data group.
+        // It has the following structure:
+        // 1. All Slic3r metadata configs are stored in <Slic3r:materials> element which contains
+        // <Slic3r:material> element having the following attributes:
+        // material id it points to, type and then the serialized key.
+
+        // Write Sil3r materials custom configs if base materials are written above
+        if (baseMaterialsWritten) {
+            // Add Slic3r material config group.
+            append_buffer("<slic3r:materials>\n");
+
+            // Keep an index to keep track of which material it points to.
+            int material_index = 0;
+
+            for (const auto &material : model->materials) {
+                // If id is empty or if "name" attribute is not found in this material attributes ignore.
+                if (material.first.empty() || material.second->attributes.count("name") == 0)
+                    continue;
+                for (const std::string &key : material.second->config.keys()) {
+                    append_buffer("<slic3r:material mid=\"" + to_string(material_index)
+                                  + "\" type=\"slic3r." + key + "\">"
+                                  + material.second->config.serialize(key) + "</slic3r:material>\n"
+                    );
+                }
+            }
+
+            // close Slic3r material config group.
+            append_buffer("</slic3r:materials>\n");
+        }
         return true;
     }
 
@@ -185,7 +219,8 @@ struct TMFEditor
 
         // Write the model element.
         append_buffer("<model unit=\"millimeter\" xml:lang=\"en-US\"");
-        append_buffer(" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"> \n");
+        append_buffer(" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"");
+        append_buffer(" xmlns:slic3r=\"http://linktoSlic3rschema.com/2017/06\"> \n");
 
         // Write metadata.
         write_metadata();
