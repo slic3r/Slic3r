@@ -94,6 +94,9 @@ sub new {
     my $plater = $self->{plater} = $params{plater};
     my $object = $self->{object} = $self->{plater}->{print}->get_object($self->{obj_idx});
 
+    # store last raft height to correctly draw z-indicator plane during a running background job where the printObject is not valid
+    $self->{last_raft_height} = 0;
+
     # Initialize 3D toolpaths preview
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{preview3D} = Slic3r::GUI::Plater::3DPreview->new($self, $plater->{print});
@@ -187,9 +190,11 @@ sub new {
         my ($z) = @_;
 
         if($z) { # compensate raft height
-	        my $top_layer = $self->{object}->get_layer($self->{object}->layer_count-1);
-	        my $raft_height = max(0, $top_layer->print_z - unscale($self->{object}->size->z));
-	        $z += $raft_height;
+            if($self->{object}->layer_count > 0) { # printobject is not valid during toolpath generation but preview still shows last result
+	           my $top_layer = $self->{object}->get_layer($self->{object}->layer_count-1);
+	           $self->{last_raft_height} = max(0, $top_layer->print_z - unscale($self->{object}->size->z));
+            }
+	        $z += $self->{last_raft_height};
         }
         $self->{preview3D}->canvas->SetCuttingPlane(Z, $z, []);
         $self->{preview3D}->canvas->Render;
