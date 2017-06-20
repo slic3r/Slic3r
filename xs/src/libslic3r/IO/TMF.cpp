@@ -55,6 +55,12 @@ struct TMFEditor
 
         append_buffer(">");
 
+        // Write Slic3r custom configs.
+        for (const std::string &key : object->config.keys()){
+            append_buffer("<slic3r:object type=\"" + key + "\">"
+                          + object->config.serialize(key) + "</slic3r:object>\n");
+        }
+
         // Create mesh element which contains the vertices and the volumes.
         append_buffer("<mesh>\n");
 
@@ -180,9 +186,9 @@ struct TMFEditor
         // It has the following structure:
         // 1. All Slic3r metadata configs are stored in <Slic3r:materials> element which contains
         // <Slic3r:material> element having the following attributes:
-        // material id it points to, type and then the serialized key.
+        // material id "mid" it points to, type and then the serialized key.
 
-        // Write Sil3r materials custom configs if base materials are written above
+        // Write Sil3r materials custom configs if base materials are written above.
         if (baseMaterialsWritten) {
             // Add Slic3r material config group.
             append_buffer("<slic3r:materials>\n");
@@ -196,7 +202,7 @@ struct TMFEditor
                     continue;
                 for (const std::string &key : material.second->config.keys()) {
                     append_buffer("<slic3r:material mid=\"" + to_string(material_index)
-                                  + "\" type=\"slic3r." + key + "\">"
+                                  + "\" type=\"" + key + "\">"
                                   + material.second->config.serialize(key) + "</slic3r:material>\n"
                     );
                 }
