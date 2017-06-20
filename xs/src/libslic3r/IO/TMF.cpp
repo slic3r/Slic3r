@@ -35,7 +35,7 @@ struct TMFEditor
         }
 
         // Write Slic3r metadata carrying the version number.
-        append_buffer("<slic3r:metadata name=\"version\">" + to_string(SLIC3R_VERSION) + "</slic3r:metadata>\n");
+        append_buffer("<slic3r:metadata type=\"version\">" + to_string(SLIC3R_VERSION) + "</slic3r:metadata>\n");
 
         return true;
     }
@@ -50,14 +50,14 @@ struct TMFEditor
         append_buffer("<object id=\"" + to_string(index + 1) + "\" type=\"model\"");
 
         // Add part number if found.
-        if(object->part_number != -1)
+        if (object->part_number != -1)
             append_buffer(" partnumber=\"" + to_string(object->part_number) + "\"");
 
         append_buffer(">");
 
         // Write Slic3r custom configs.
         for (const std::string &key : object->config.keys()){
-            append_buffer("<slic3r:object type=\"" + key + "\">"
+            append_buffer("<slic3r:object type=\"slic3r." + key + "\">"
                           + object->config.serialize(key) + "</slic3r:object>\n");
         }
 
@@ -71,7 +71,7 @@ struct TMFEditor
         std::vector<size_t> vertices_offsets;
         size_t num_vertices = 0;
 
-        for(ModelVolume* volume : object->volumes){
+        for (ModelVolume* volume : object->volumes){
             // Require mesh vertices.
             volume->mesh.require_shared_vertices();
 
@@ -99,24 +99,58 @@ struct TMFEditor
         // Append volumes in triangles element.
         append_buffer("<triangles>\n");
 
+        // Save the start offset (triangle offset) of each volume (To be saved for writing Slic3r custom configs).
+        std::vector<size_t> triangles_offsets;
+        size_t num_triangles = 0;
+
         for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
             ModelVolume *volume = object->volumes[i_volume];
             int vertices_offset = vertices_offsets[i_volume];
+            triangles_offsets.push_back(num_triangles);
 
             // Add the volume triangles to the triangles list.
             for (int i = 0; i < volume->mesh.stl.stats.number_of_facets; ++i){
                 append_buffer("<triangle");
-                for(int j = 0; j < 3; j++){
+                for (int j = 0; j < 3; j++){
                     append_buffer(" v" + to_string(j+1) + "=\"" + to_string(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) + "\"");
                 }
-                if(!volume->material_id().empty())
+                if (!volume->material_id().empty())
                     append_buffer(" pid=\"1\" p1=\"" + to_string(volume->material_id()) + "\""); // Base Materials id = 1 and p1 is assigned to the whole triangle.
                 append_buffer("/>");
+                num_triangles++;
             }
         }
 
         // Close the triangles element
         append_buffer("</triangles>\n");
+
+        // Add Slic3r volumes group.
+        append_buffer("<slic3r:volumes>\n");
+
+        // Add each volume as <slic3r:volume> element containing Slic3r custom configs.
+        // Each volume has the following attributes:
+        // ts : "start triangle index", te : "end triangle index".
+
+        for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
+            ModelVolume *volume = object->volumes[i_volume];
+
+            append_buffer("<slic3r:volume ts=\"" + to_string(triangles_offsets[i_volume]) + "\""
+                          + " te=\"" + ((i_volume < object->volumes.size() - 1) ? to_string(triangles_offsets[i_volume+1] - 1) : to_string(num_triangles-1)) + "\""
+                          + (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
+                          + ">\n");
+
+            for (const std::string &key : volume->config.keys()){
+                append_buffer("<slic3r:metadata type=\"slic3r." +  key
+                              + "\">" + volume->config.serialize(key)
+                              + "</slic3r:metadata>\n");
+            }
+
+            // Close Slic3r volume
+            append_buffer("</slic3r:volume>\n");
+        }
+
+        // Close Slic3r volumes group.
+        append_buffer("</slic3r:volumes>\n");
 
         // Close the mesh element.
         append_buffer("</mesh>\n");
