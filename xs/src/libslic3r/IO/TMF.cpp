@@ -3,6 +3,7 @@
 #include <cstring>
 #include <map>
 #include <vector>
+#include <math.h>
 #include <zip/zip.h>
 #include "../../zip/zip.h"
 
@@ -27,6 +28,88 @@ struct TMFEditor
         buff = "";
     }
 
+    /// Write the necessary types in the 3MF package. This function is called by produceTMF() function.
+    bool write_types(){
+        // Create a new zip entry "[Content_Types].xml" at zip directory /.
+        if(zip_entry_open(zip_archive, "[Content_Types].xml"))
+            return false;
+
+        // Write 3MF Types "3MF OPC relationships".
+        append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n");
+        append_buffer("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n");
+        append_buffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
+        append_buffer("<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n");
+        append_buffer("</Types>\n");
+        write_buffer();
+
+        // Close [Content_Types].xml zip entry.
+        zip_entry_close(zip_archive);
+
+        return true;
+    }
+
+    /// Write the necessary relationships in the 3MF package. This function is called by produceTMF() function.
+    bool write_relationships(){
+        // Create .rels in "_rels" folder in the zip archive.
+        if(zip_entry_open(zip_archive, "_rels/.rels"))
+            return false;
+
+        // Write the primary 3dmodel relationship.
+        append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
+                          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>");
+        write_buffer();
+
+        // Close _rels.rels
+        zip_entry_close(zip_archive);
+        return true;
+    }
+
+    /// Write the Model in a zip file. This function is called by produceTMF() function.
+    bool write_model(){
+        // Create a 3dmodel.model entry in /3D/ containing the buffer.
+        if(zip_entry_open(zip_archive, "3D/3dmodel.model"))
+            return false;
+
+        // add the XML document header.
+        append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+
+        // Write the model element.
+        append_buffer("<model unit=\"millimeter\" xml:lang=\"en-US\"");
+        append_buffer(" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"");
+        append_buffer(" xmlns:slic3r=\"http://linktoSlic3rschema.com/2017/06\"> \n");
+
+        // Write metadata.
+        write_metadata();
+
+        // Write resources.
+        append_buffer("<resources> \n");
+
+        // Write Model Material.
+        write_materials();
+
+        // Write Object
+        for(size_t object_index = 0; object_index < model->objects.size(); object_index++)
+            write_object(object_index);
+
+        // Close resources
+        append_buffer("</resources> \n");
+
+        // Write build element.
+        write_build();
+
+        // Close the model element.
+        append_buffer("</model>\n");
+
+        // Write what is found in the buffer.
+        write_buffer();
+
+        // Close the 3dmodel.model file in /3D/ directory
+        if(zip_entry_close(zip_archive))
+            return false;
+
+        return true;
+    }
+
     /// Write the metadata of the model. This function is called by writeModel() function.
     bool write_metadata(){
         // Write the model metadata.
@@ -37,6 +120,68 @@ struct TMFEditor
         // Write Slic3r metadata carrying the version number.
         append_buffer("<slic3r:metadata type=\"version\">" + to_string(SLIC3R_VERSION) + "</slic3r:metadata>\n");
 
+        return true;
+    }
+
+    /// Write Materials. The current supported materials are only of the core specifications.
+    // The 3MF core specs support base materials, Each has by default color and name attributes.
+    bool write_materials(){
+        if (model->materials.size() == 0)
+            return true;
+
+        bool baseMaterialsWritten = false;
+
+        // Write the base materials.
+        for (const auto &material : model->materials){
+            // If id is empty or if "name" attribute is not found in this material attributes ignore.
+            if (material.first.empty() || material.second->attributes.count("name") == 0)
+                continue;
+            // Add the base materials element if not added.
+            if (!baseMaterialsWritten){
+                append_buffer("<basematerials id=\"1\">\n");
+                baseMaterialsWritten = true;
+            }
+            // We add it with black color by default.
+            append_buffer("<base name=\"" + material.second->attributes["name"] + "\" ");
+
+            // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
+            append_buffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000FF") + "\"/>\n");
+            // ToDo @Samir55 to be covered in AMF write.
+        }
+
+        // Close base materials if it's written.
+        if (baseMaterialsWritten)
+            append_buffer("</basematerials>\n");
+
+        // Write Slic3r custom config data group.
+        // It has the following structure:
+        // 1. All Slic3r metadata configs are stored in <Slic3r:materials> element which contains
+        // <Slic3r:material> element having the following attributes:
+        // material id "mid" it points to, type and then the serialized key.
+
+        // Write Sil3r materials custom configs if base materials are written above.
+        if (baseMaterialsWritten) {
+            // Add Slic3r material config group.
+            append_buffer("<slic3r:materials>\n");
+
+            // Keep an index to keep track of which material it points to.
+            int material_index = 0;
+
+            for (const auto &material : model->materials) {
+                // If id is empty or if "name" attribute is not found in this material attributes ignore.
+                if (material.first.empty() || material.second->attributes.count("name") == 0)
+                    continue;
+                for (const std::string &key : material.second->config.keys()) {
+                    append_buffer("<slic3r:material mid=\"" + to_string(material_index)
+                                  + "\" type=\"" + key + "\">"
+                                  + material.second->config.serialize(key) + "</slic3r:material>\n"
+                    );
+                }
+            }
+
+            // close Slic3r material config group.
+            append_buffer("</slic3r:materials>\n");
+        }
         return true;
     }
 
@@ -170,163 +315,23 @@ struct TMFEditor
         for(size_t object_id = 0; object_id < model->objects.size(); ++object_id){
             ModelObject* object = model->objects[object_id];
             for (const ModelInstance* instance : object->instances){
-                append_buffer("<item objectid=\"" + to_string(object_id + 1) + "\"/>");
+                append_buffer("<item objectid=\"" + to_string(object_id + 1) + "\"");
+
+                // Get the rotation about z and the scale factor.
+                double sc = instance->scaling_factor, cosine_rz = cos(instance->rotation) , sine_rz = sin(instance->rotation);
+                double tx = instance->offset.x + object->origin_translation.x , ty = instance->offset.y + object->origin_translation.y;
+
+                std::string transform = to_string(cosine_rz * sc) + " " + to_string(-1*sine_rz*sc) + " 0 "
+                                        + to_string(sine_rz * sc) + " " + to_string(cosine_rz*sc) + " 0 "
+                                        + "0 " + "0 " + to_string(sc) + " "
+                                        + to_string(tx) + " " + to_string(ty) + " " + "0";
                 // Add the transform
-                //<item objectid="4" transform="5.96045e-008 0.999997 0 -0.999997 -9.40395e-007 0 0 0 1 126.999 -126.998 0.00197"/>
-//                << "    <instance objectid=\"" << object_id << "\">" << endl
-//                                               << "      <deltax>" << instance->offset.x + object->origin_translation.x << "</deltax>" << endl
-//                                               << "      <deltay>" << instance->offset.y + object->origin_translation.y << "</deltay>" << endl
-//                                               << "      <rz>" << instance->rotation << "</rz>" << endl
-//                                               << "      <scale>" << instance->scaling_factor << "</scale>" << endl
-//                                               << "    </instance>" << endl;
+                append_buffer(" transform=\"" + transform + "\"/>");
+
+                // ToDo @Samir55 Ask about the translation (how to add the translation).
             }
         }
-
         append_buffer("</build> \n");
-        return true;
-    }
-
-    /// Write Materials. The current supported materials are only of the core specifications.
-    // The 3MF core specs support base materials, Each has by default color and name attributes.
-    bool write_materials(){
-        if (model->materials.size() == 0)
-            return true;
-
-        bool baseMaterialsWritten = false;
-
-        // Write the base materials.
-        for (const auto &material : model->materials){
-            // If id is empty or if "name" attribute is not found in this material attributes ignore.
-            if (material.first.empty() || material.second->attributes.count("name") == 0)
-                continue;
-            // Add the base materials element if not added.
-            if (!baseMaterialsWritten){
-                append_buffer("<basematerials id=\"1\">\n");
-                baseMaterialsWritten = true;
-            }
-            // We add it with black color by default.
-            append_buffer("<base name=\"" + material.second->attributes["name"] + "\" ");
-
-            // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
-            append_buffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000FF") + "\"/>\n");
-            // ToDo @Samir55 to be covered in AMF write.
-        }
-
-        // Close base materials if it's written.
-        if (baseMaterialsWritten)
-            append_buffer("</basematerials>\n");
-
-        // Write Slic3r custom config data group.
-        // It has the following structure:
-        // 1. All Slic3r metadata configs are stored in <Slic3r:materials> element which contains
-        // <Slic3r:material> element having the following attributes:
-        // material id "mid" it points to, type and then the serialized key.
-
-        // Write Sil3r materials custom configs if base materials are written above.
-        if (baseMaterialsWritten) {
-            // Add Slic3r material config group.
-            append_buffer("<slic3r:materials>\n");
-
-            // Keep an index to keep track of which material it points to.
-            int material_index = 0;
-
-            for (const auto &material : model->materials) {
-                // If id is empty or if "name" attribute is not found in this material attributes ignore.
-                if (material.first.empty() || material.second->attributes.count("name") == 0)
-                    continue;
-                for (const std::string &key : material.second->config.keys()) {
-                    append_buffer("<slic3r:material mid=\"" + to_string(material_index)
-                                  + "\" type=\"" + key + "\">"
-                                  + material.second->config.serialize(key) + "</slic3r:material>\n"
-                    );
-                }
-            }
-
-            // close Slic3r material config group.
-            append_buffer("</slic3r:materials>\n");
-        }
-        return true;
-    }
-
-    /// Write the Model in a zip file. This function is called by produceTMF() function.
-    bool write_model(){
-        // Create a 3dmodel.model entry in /3D/ containing the buffer.
-        if(zip_entry_open(zip_archive, "3D/3dmodel.model"))
-            return false;
-
-        // add the XML document header.
-        append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-
-        // Write the model element.
-        append_buffer("<model unit=\"millimeter\" xml:lang=\"en-US\"");
-        append_buffer(" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"");
-        append_buffer(" xmlns:slic3r=\"http://linktoSlic3rschema.com/2017/06\"> \n");
-
-        // Write metadata.
-        write_metadata();
-
-        // Write resources.
-        append_buffer("<resources> \n");
-
-        // Write Model Material.
-        write_materials();
-
-        // Write Object
-        for(size_t object_index = 0; object_index < model->objects.size(); object_index++)
-            write_object(object_index);
-
-        // Close resources
-        append_buffer("</resources> \n");
-
-        // Write build element.
-        write_build();
-
-        // Close the model element.
-        append_buffer("</model>\n");
-
-        // Write what is found in the buffer.
-        write_buffer();
-
-        // Close the 3dmodel.model file in /3D/ directory
-        if(zip_entry_close(zip_archive))
-            return false;
-
-        return true;
-    }
-
-    /// Write the necessary types in the 3MF package. This function is called by produceTMF() function.
-    bool write_types(){
-        // Create a new zip entry "[Content_Types].xml" at zip directory /.
-        if(zip_entry_open(zip_archive, "[Content_Types].xml"))
-            return false;
-
-        // Write 3MF Types "3MF OPC relationships".
-        append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n");
-        append_buffer("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n");
-        append_buffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
-        append_buffer("<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n");
-        append_buffer("</Types>\n");
-        write_buffer();
-
-        // Close [Content_Types].xml zip entry.
-        zip_entry_close(zip_archive);
-
-        return true;
-    }
-
-    /// Write the necessary relationships in the 3MF package. This function is called by produceTMF() function.
-    bool write_relationships(){
-        // Create .rels in "_rels" folder in the zip archive.
-        if(zip_entry_open(zip_archive, "_rels/.rels"))
-            return false;
-
-        // Write the primary 3dmodel relationship.
-        append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
-                          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>");
-        write_buffer();
-
-        // Close _rels.rels
-        zip_entry_close(zip_archive);
         return true;
     }
 
@@ -376,6 +381,7 @@ struct TMFEditor
         buff = "";
     }
 
+    /// Convert to string.
     template <class T>
     std::string to_string(T number){
         std::ostringstream s;
@@ -383,7 +389,6 @@ struct TMFEditor
         return s.str();
     }
 
-//    string apply
 };
 
 bool
