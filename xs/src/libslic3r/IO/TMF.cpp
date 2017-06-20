@@ -321,14 +321,14 @@ struct TMFEditor
                 double sc = instance->scaling_factor, cosine_rz = cos(instance->rotation) , sine_rz = sin(instance->rotation);
                 double tx = instance->offset.x + object->origin_translation.x , ty = instance->offset.y + object->origin_translation.y;
 
-                std::string transform = to_string(cosine_rz * sc) + " " + to_string(-1*sine_rz*sc) + " 0 "
-                                        + to_string(sine_rz * sc) + " " + to_string(cosine_rz*sc) + " 0 "
+                std::string transform = to_string(cosine_rz * sc) + " " + to_string(sine_rz * sc) + " 0 "
+                                        + to_string(-1 * sine_rz * sc) + " " + to_string(cosine_rz*sc) + " 0 "
                                         + "0 " + "0 " + to_string(sc) + " "
                                         + to_string(tx) + " " + to_string(ty) + " " + "0";
+
                 // Add the transform
                 append_buffer(" transform=\"" + transform + "\"/>");
 
-                // ToDo @Samir55 Ask about the translation (how to add the translation).
             }
         }
         append_buffer("</build> \n");
