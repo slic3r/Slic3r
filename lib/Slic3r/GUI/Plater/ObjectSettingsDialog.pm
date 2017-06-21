@@ -190,10 +190,6 @@ sub new {
         my ($z) = @_;
 
         if($z) { # compensate raft height
-            if($self->{object}->layer_count > 0) { # printobject is not valid during toolpath generation but preview still shows last result
-	           my $top_layer = $self->{object}->get_layer($self->{object}->layer_count-1);
-	           $self->{last_raft_height} = max(0, $top_layer->print_z - unscale($self->{object}->size->z));
-            }
 	        $z += $self->{last_raft_height};
         }
         $self->{preview3D}->canvas->SetCuttingPlane(Z, $z, []);
@@ -210,8 +206,9 @@ sub reload_preview {
     $self->{preview3D}->reload_print($self->{obj_idx});
     my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
     if($object->layer_count-1 > 0) {
-        my $top_layer = $object->get_layer($object->layer_count-1);
-        $self->{preview3D}->set_z($top_layer->print_z);
+        my $first_layer = $self->{object}->get_layer(0);
+        $self->{last_raft_height} = max(0, $first_layer->print_z - $first_layer->height);
+        $self->{preview3D}->set_z(unscale($self->{object}->size->z));
         if(!$self->{preview_zoomed}) {
             $self->{preview3D}->canvas->set_auto_bed_shape;
             $self->{preview3D}->canvas->zoom_to_volumes;
