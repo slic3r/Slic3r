@@ -283,7 +283,7 @@ INPUT
 T_STD_STRING
     {
       size_t len;
-      const char * c = SvPV($arg, len);
+      const char * c = SvPVutf8($arg, len);
       $var = std::string(c, len);
     }
 
@@ -298,7 +298,7 @@ T_STD_VECTOR_STD_STRING
 	  for (unsigned int i = 0; i < alen; i++) {
 	    elem = av_fetch(av, i, 0);
 	    if (elem != NULL) {
-	    tmp = SvPV(*elem, len);
+	    tmp = SvPVutf8(*elem, len);
 	      ${var}[i] = std::string(tmp, len);
 	    }
 	    else

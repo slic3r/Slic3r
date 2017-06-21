@@ -301,6 +301,8 @@ sub resume_all_threads {
 sub encode_path {
     my ($path) = @_;
     
+    return undef if !defined $path;
+    
     $path = Unicode::Normalize::NFC($path);
     $path = Encode::encode(locale_fs => $path);
     
@@ -310,6 +312,8 @@ sub encode_path {
 # Convert a path coded by a file system locale to Unicode.
 sub decode_path {
     my ($path) = @_;
+    
+    return undef if !defined $path;
     
     $path = Encode::decode(locale_fs => $path)
         unless utf8::is_utf8($path);

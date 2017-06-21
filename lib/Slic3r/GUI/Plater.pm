@@ -50,7 +50,7 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{config} = Slic3r::Config->new_from_defaults(qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width
-        serial_port serial_speed octoprint_host octoprint_apikey overridable filament_colour
+        serial_port serial_speed host_type print_host octoprint_apikey shortcuts filament_colour
     ));
     $self->{model} = Slic3r::Model->new;
     $self->{print} = Slic3r::Print->new;
@@ -92,7 +92,7 @@ sub new {
     my $on_instances_moved = sub {
         $self->on_model_change;
     };
-    
+
     # Initialize 3D plater
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{canvas3D} = Slic3r::GUI::Plater::3D->new($self->{preview_notebook}, $self->{objects}, $self->{model}, $self->{config});
@@ -329,7 +329,6 @@ sub new {
     if ($self->{preview3D}) {
         $self->{preview3D}->set_bed_shape($self->{config}->bed_shape);
     }
-    $self->on_model_change;
     
     {
         my $presets = $self->{presets_sizer} = Wx::FlexGridSizer->new(3, 3, 1, 2);
@@ -373,9 +372,37 @@ sub new {
         {
             my $o = $self->{settings_override_panel} = Slic3r::GUI::Plater::OverrideSettingsPanel->new($self,
                 on_change => sub {
+                    my ($opt_key) = @_;
+                    
+                    my ($preset) = $self->selected_presets('print');
+                    $preset->load_config;
+                    
+                    # If this option is not in the override panel it means it was manually deleted,
+                    # so let's restore the profile value.
+                    if (!$self->{settings_override_config}->has($opt_key)) {
+                        $preset->_dirty_config->set($opt_key, $preset->_config->get($opt_key));
+                    } else {
+                        # Apply the overrides to the current Print preset, potentially making it dirty
+                        $preset->_dirty_config->apply($self->{settings_override_config});
+                        
+                        # If this is a configured shortcut (and not just a dirty option),
+                        # save it now.
+                        if (any { $_ eq $opt_key } @{$preset->dirty_config->shortcuts}) {
+                            $preset->save([$opt_key]);
+                        }
+                    }
+                    
+                    $self->load_presets;
                     $self->config_changed;
+                    
+                    # Reload the open tab if any
+                    if (my $print_tab = $self->GetFrame->{preset_editor_tabs}{print}) {
+                        $print_tab->load_presets;
+                        $print_tab->reload_preset;
+                    }
                 });
-            $o->set_editable(1);
+            $o->can_add(0);
+            $o->can_delete(1);
             $o->set_opt_keys([ Slic3r::GUI::PresetEditor::Print->options ]);
             $self->{settings_override_config} = Slic3r::Config->new;
             $o->set_default_config($self->{settings_override_config});
@@ -541,6 +568,14 @@ sub _on_change_combobox {
         return 0 if !$self->prompt_unsaved_changes;
     }
     wxTheApp->CallAfter(sub {
+        # Close the preset editor tab if any
+        if (exists $self->GetFrame->{preset_editor_tabs}{$group}) {
+            my $tabpanel = $self->GetFrame->{tabpanel};
+            $tabpanel->DeletePage($tabpanel->GetPageIndex($self->GetFrame->{preset_editor_tabs}{$group}));
+            delete $self->GetFrame->{preset_editor_tabs}{$group};
+            $tabpanel->SetSelection(0); # without this, a newly created tab will not be selected by wx
+        }
+        
         $self->_on_select_preset($group);
         
         # This will remove the "(modified)" mark from any dirty preset handled here.
@@ -569,31 +604,19 @@ sub _on_select_preset {
         my $o_config = $self->{settings_override_config};
         my $o_panel  = $self->{settings_override_panel};
         
-        if ($changed) {
-            # Preserve current options if re-selecting the same preset
-            $o_config->clear;
-        }
+        my $shortcuts = $config->get('shortcuts');
         
-        my $overridable = $config->get('overridable');
-        
-        # Add/remove options (we do it this way for preserving current options)
-        foreach my $opt_key (@$overridable) {
-            # Populate option with the default value taken from configuration
-            # (re-set the override always, because if we here it means user
-            # switched to this preset or opened/closed the editor, so he expects
-            # the new values set in the editor to be used).
+        # Re-populate the override panel with the configured shortcuts
+        # and the dirty options.
+        $o_config->clear;
+        foreach my $opt_key (@$shortcuts, $presets[0]->dirty_options) {
+            # Don't add shortcut for shortcuts!
+            next if $opt_key eq 'shortcuts';
             $o_config->set($opt_key, $config->get($opt_key));
-        }
-        foreach my $opt_key (@{$o_config->get_keys}) {
-            # Keep options listed among overridable and options added on the fly
-            if ((none { $_ eq $opt_key } @$overridable)
-                && (any { $_ eq $opt_key } $o_panel->fixed_options)) {
-                $o_config->erase($opt_key);
-            }
         }
         
         $o_panel->set_default_config($config);
-        $o_panel->set_fixed_options(\@$overridable);
+        $o_panel->set_fixed_options(\@$shortcuts);
         $o_panel->update_optgroup;
     } elsif ($group eq 'printer') {
         # reload print and filament settings to honor their compatible_printer options
@@ -706,7 +729,7 @@ sub load_presets {
             }
         }
         
-        $self->{print}->placeholder_parser->set("${group}_preset", [ @preset_names ]);
+        $self->{print}->placeholder_parser->set_multiple("${group}_preset", [ @preset_names ]);
     }
 }
 
@@ -749,19 +772,54 @@ sub selected_presets {
 sub show_preset_editor {
     my ($self, $group, $i) = @_;
     
-    my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
-    my $dlg = $class->new($self);
+    wxTheApp->CallAfter(sub {
+        my @presets = $self->selected_presets($group);
     
-    my @presets = $self->selected_presets($group);
-    $dlg->preset_editor->select_preset_by_name($presets[$i // 0]->name);
-    $dlg->ShowModal;
+        my $preset_editor;
+        my $dlg;
+        my $mainframe = $self->GetFrame;
+        my $tabpanel = $mainframe->{tabpanel};
+        if (exists $mainframe->{preset_editor_tabs}{$group}) {
+            # we already have an open editor
+            $tabpanel->SetSelection($tabpanel->GetPageIndex($mainframe->{preset_editor_tabs}{$group}));
+            return;
+        } elsif ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
+            my $class = "Slic3r::GUI::PresetEditor::" . ucfirst($group);
+            $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($self->GetFrame);
+            $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings", 1);
+        } else {
+            my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
+            $dlg = $class->new($self);
+            $preset_editor = $dlg->preset_editor;
+        }
     
-    # Re-load the presets as they might have changed.
-    $self->load_presets;
+        $preset_editor->select_preset_by_name($presets[$i // 0]->name);
+        $preset_editor->on_value_change(sub {
+            # Re-load the presets in order to toggle the (modified) suffix
+            $self->load_presets;
+        
+            # Update shortcuts
+            $self->_on_select_preset($group);
+        
+            # Use the new config wherever we actually use its contents
+            $self->config_changed;
+        });
+        my $cb = sub {
+            my ($group, $preset) = @_;
+        
+            # Re-load the presets as they might have changed.
+            $self->load_presets;
+        
+            # Select the preset in plater too
+            $self->select_preset_by_name($preset->name, $group, $i, 1);
+        };
+        $preset_editor->on_select_preset($cb);
+        $preset_editor->on_save_preset($cb);
     
-    # Select the preset that was last selected in the editor.
-    $self->select_preset_by_name
-        ($dlg->preset_editor->current_preset->name, $group, $i, 1);
+        if ($dlg) {
+            $dlg->Show;
+        }
+    });
 }
 
 # Returns the current config by merging the selected presets and the overrides.
@@ -772,7 +830,7 @@ sub config {
     my $config = Slic3r::Config->new_from_defaults;
     
     # get defaults also for the values tracked by the Plater's config
-    # (for example 'overridable')
+    # (for example 'shortcuts')
     $config->apply(Slic3r::Config->new_from_defaults(@{$self->{config}->get_keys}));
     
     my %classes = map { $_ => "Slic3r::GUI::PresetEditor::".ucfirst($_) }
@@ -892,6 +950,11 @@ sub load_file {
 
 sub load_model_objects {
     my ($self, @model_objects) = @_;
+    
+    # Always restart background process when adding new objects.
+    # This prevents lack of processing in some circumstances when background process is
+    # running but adding a new object does not invalidate anything.
+    $self->stop_background_process;
     
     my $bed_centerf = $self->bed_centerf;
     my $bed_shape = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape});
@@ -1353,8 +1416,8 @@ sub config_changed {
                 $self->{btn_print}->Hide;
             }
             $self->Layout;
-        } elsif ($opt_key eq 'octoprint_host') {
-            if ($config->get('octoprint_host')) {
+        } elsif ($opt_key eq 'print_host') {
+            if ($config->get('print_host')) {
                 $self->{btn_send_gcode}->Show;
             } else {
                 $self->{btn_send_gcode}->Hide;
@@ -1506,7 +1569,7 @@ sub pause_background_process {
         return 1;
     } elsif (defined $self->{apply_config_timer} && $self->{apply_config_timer}->IsRunning) {
         $self->{apply_config_timer}->Stop;
-        return 1;
+        return 0;  # we didn't actually pause any running thread; need to reschedule
     }
     
     return 0;
@@ -1677,7 +1740,7 @@ sub on_export_completed {
             $message = "File added to print queue";
             $do_print = 1;
         } elsif ($self->{send_gcode_file}) {
-            $message = "Sending G-code file to the OctoPrint server...";
+            $message = "Sending G-code file to the " . $self->{config}->host_type . " server...";
             $send_gcode = 1;
         } else {
             $message = "G-code file exported to " . $self->{export_gcode_output_file};
@@ -1721,8 +1784,7 @@ sub do_print {
     
     my %current_presets = $self->selected_presets;
     
-    my $printer_name = $current_presets{printer}->[0]->name;
-    my $printer_panel = $controller->add_printer($printer_name, $self->config);
+    my $printer_panel = $controller->add_printer($current_presets{printer}->[0], $self->config);
     
     my $filament_stats = $self->{print}->filament_stats;
     $filament_stats = { map { $current_presets{filament}[$_]->name => $filament_stats->{$_} } keys %$filament_stats };
@@ -1751,23 +1813,33 @@ sub prepare_send {
 
         my $ua = LWP::UserAgent->new;
         $ua->timeout(5);
-        my $res = $ua->get(
-            "http://" . $self->{config}->octoprint_host . "/api/files/local",
-            'X-Api-Key' => $self->{config}->octoprint_apikey,
-        );
+        my $res;
+        if ($self->{config}->print_host) {
+            if($self->{config}->host_type eq 'octoprint'){
+                $res = $ua->get(
+                    "http://" . $self->{config}->print_host . "/api/files/local",
+                    'X-Api-Key' => $self->{config}->octoprint_apikey,
+                );
+            }else {
+                $res = $ua->get(
+                    "http://" . $self->{config}->print_host . "/rr_files",
+                );            
+            }
+        }
         $progress->Destroy;
         if ($res->is_success) {
-            if ($res->decoded_content =~ /"name":\s*"\Q$filename\E"/) {
+            my $searchterm = ($self->{config}->host_type eq 'octoprint') ? '/"name":\s*"\Q$filename\E"/' : '"'.$filename.'"';            
+            if ($res->decoded_content =~ $searchterm) {
                 my $dialog = Wx::MessageDialog->new($self,
                     "It looks like a file with the same name already exists in the server. "
                         . "Shall I overwrite it?",
-                    'OctoPrint', wxICON_WARNING | wxYES | wxNO);
+                    $self->{config}->host_type, wxICON_WARNING | wxYES | wxNO);
                 if ($dialog->ShowModal() == wxID_NO) {
                     return;
                 }
             }
         } else {
-            my $message = "Error while connecting to the OctoPrint server: " . $res->status_line;
+            my $message = "Error while connecting to the " . $self->{config}->host_type . " server: " . $res->status_line;
             Slic3r::GUI::show_error($self, $message);
             return;
         }
@@ -1786,24 +1858,52 @@ sub send_gcode {
     $ua->timeout(180);
     
     my $path = Slic3r::encode_path($self->{send_gcode_file});
-    my $res = $ua->post(
-        "http://" . $self->{config}->octoprint_host . "/api/files/local",
-        Content_Type => 'form-data',
-        'X-Api-Key' => $self->{config}->octoprint_apikey,
-        Content => [
-            # OctoPrint doesn't like Windows paths so we use basename()
-            # Also, since we need to read from filesystem we process it through encode_path()
-            file => [ $path, basename($path) ],
-            print => $self->{send_gcode_file_print} ? 1 : 0,
-        ],
-    );
-    
+    my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
+    my $res;
+    if($self->{config}->print_host){
+        if($self->{config}->host_type eq 'octoprint'){
+            $res = $ua->post(
+                "http://" . $self->{config}->print_host . "/api/files/local",
+                Content_Type => 'form-data',
+                'X-Api-Key' => $self->{config}->octoprint_apikey,
+                Content => [
+                    # OctoPrint doesn't like Windows paths so we use basename()
+                    # Also, since we need to read from filesystem we process it through encode_path()
+                    file => [ $path, basename($path) ],
+                    print => $self->{send_gcode_file_print} ? 1 : 0,
+                ],
+            );
+        }else{
+            # slurp the file we would send into a string - should be someplace to reference this but could not find it?
+            local $/=undef;
+            open my $gch,$path;
+            my $gcode=<$gch>;
+            close($gch);
+
+            # get the time string            
+            my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+            my $t = sprintf("%4d-%02d-%02dT%02d:%02d:%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec);
+
+            my $req = HTTP::Request->new(POST => "http://" . $self->{config}->print_host . "/rr_upload?name=0:/gcodes/" . basename($path) . "&time=$t",);
+            $req->content( $gcode );
+            $res = $ua->request($req);
+ 
+            if ($res->is_success) {
+                if ($self->{send_gcode_file_print}) {
+                    $res = $ua->get(
+                        "http://" . $self->{config}->print_host . "/rr_gcode?gcode=M32%20" . basename($path),
+                    );
+                }
+            }
+        }
+    }
+
     $self->statusbar->StopBusy;
     
     if ($res->is_success) {
-        $self->statusbar->SetStatusText("G-code file successfully uploaded to the OctoPrint server");
+        $self->statusbar->SetStatusText("G-code file successfully uploaded to the " . $self->{config}->host_type . " server");
     } else {
-        my $message = "Error while uploading to the OctoPrint server: " . $res->status_line;
+        my $message = "Error while uploading to the " . $self->{config}->host_type . " server: " . $res->status_line;
         Slic3r::GUI::show_error($self, $message);
         $self->statusbar->SetStatusText($message);
     }
@@ -1971,7 +2071,7 @@ sub on_model_change {
             if ($count > 1) {
                 $name .= " (${count}x)";
             }
-            my $item = $self->GetFrame->_append_menu_item($menu, $name, 'Select object', sub {
+            my $item = wxTheApp->append_menu_item($menu, $name, 'Select object', sub {
                 $self->select_object($i);
                 $self->refresh_canvases;
             }, undef, undef, wxITEM_CHECK);
@@ -2187,6 +2287,9 @@ sub object_list_changed {
         $self->{htoolbar}->EnableTool($_, $have_objects)
             for (TB_RESET, TB_ARRANGE);
     }
+    
+    # prepagate the event to the frame (a custom Wx event would be cleaner)
+    $self->GetFrame->on_plater_object_list_changed($have_objects);
 }
 
 sub selection_changed {
@@ -2335,108 +2438,112 @@ sub object_menu {
     
     my $frame = $self->GetFrame;
     my $menu = Wx::Menu->new;
-    $frame->_append_menu_item($menu, "Delete\tCtrl+Del", 'Remove the selected object', sub {
+    wxTheApp->append_menu_item($menu, "Delete\tCtrl+Del", 'Remove the selected object', sub {
         $self->remove;
     }, undef, 'brick_delete.png');
-    $frame->_append_menu_item($menu, "Increase copies\tCtrl++", 'Place one more copy of the selected object', sub {
+    wxTheApp->append_menu_item($menu, "Increase copies\tCtrl++", 'Place one more copy of the selected object', sub {
         $self->increase;
     }, undef, 'add.png');
-    $frame->_append_menu_item($menu, "Decrease copies\tCtrl+-", 'Remove one copy of the selected object', sub {
+    wxTheApp->append_menu_item($menu, "Decrease copies\tCtrl+-", 'Remove one copy of the selected object', sub {
         $self->decrease;
     }, undef, 'delete.png');
-    $frame->_append_menu_item($menu, "Set number of copies…", 'Change the number of copies of the selected object', sub {
+    wxTheApp->append_menu_item($menu, "Set number of copies…", 'Change the number of copies of the selected object', sub {
         $self->set_number_of_copies;
     }, undef, 'textfield.png');
     $menu->AppendSeparator();
-    $frame->_append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
+    wxTheApp->append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
         $self->center_selected_object_on_bed;
     }, undef, 'arrow_in.png');
-    $frame->_append_menu_item($menu, "Rotate 45° clockwise", 'Rotate the selected object by 45° clockwise', sub {
+    wxTheApp->append_menu_item($menu, "Rotate 45° clockwise", 'Rotate the selected object by 45° clockwise', sub {
         $self->rotate(-45);
     }, undef, 'arrow_rotate_clockwise.png');
-    $frame->_append_menu_item($menu, "Rotate 45° counter-clockwise", 'Rotate the selected object by 45° counter-clockwise', sub {
+    wxTheApp->append_menu_item($menu, "Rotate 45° counter-clockwise", 'Rotate the selected object by 45° counter-clockwise', sub {
         $self->rotate(+45);
     }, undef, 'arrow_rotate_anticlockwise.png');
     
-    my $rotateMenu = Wx::Menu->new;
-    my $rotateMenuItem = $menu->AppendSubMenu($rotateMenu, "Rotate", 'Rotate the selected object by an arbitrary angle');
-    wxTheApp->set_menu_item_icon($rotateMenuItem, 'textfield.png');
-    $frame->_append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
-        $self->rotate(undef, X);
-    }, undef, 'bullet_red.png');
-    $frame->_append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
-        $self->rotate(undef, Y);
-    }, undef, 'bullet_green.png');
-    $frame->_append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
-        $self->rotate(undef, Z);
-    }, undef, 'bullet_blue.png');
+    {
+        my $rotateMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
+            $self->rotate(undef, X);
+        }, undef, 'bullet_red.png');
+        wxTheApp->append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
+            $self->rotate(undef, Y);
+        }, undef, 'bullet_green.png');
+        wxTheApp->append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
+            $self->rotate(undef, Z);
+        }, undef, 'bullet_blue.png');
+        wxTheApp->append_submenu($menu, "Rotate", 'Rotate the selected object by an arbitrary angle', $rotateMenu, undef, 'textfield.png');
+    }
     
-    my $mirrorMenu = Wx::Menu->new;
-    my $mirrorMenuItem = $menu->AppendSubMenu($mirrorMenu, "Mirror", 'Mirror the selected object');
-    wxTheApp->set_menu_item_icon($mirrorMenuItem, 'shape_flip_horizontal.png');
-    $frame->_append_menu_item($mirrorMenu, "Along X axis…", 'Mirror the selected object along the X axis', sub {
-        $self->mirror(X);
-    }, undef, 'bullet_red.png');
-    $frame->_append_menu_item($mirrorMenu, "Along Y axis…", 'Mirror the selected object along the Y axis', sub {
-        $self->mirror(Y);
-    }, undef, 'bullet_green.png');
-    $frame->_append_menu_item($mirrorMenu, "Along Z axis…", 'Mirror the selected object along the Z axis', sub {
-        $self->mirror(Z);
-    }, undef, 'bullet_blue.png');
+    {
+        my $mirrorMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($mirrorMenu, "Along X axis…", 'Mirror the selected object along the X axis', sub {
+            $self->mirror(X);
+        }, undef, 'bullet_red.png');
+        wxTheApp->append_menu_item($mirrorMenu, "Along Y axis…", 'Mirror the selected object along the Y axis', sub {
+            $self->mirror(Y);
+        }, undef, 'bullet_green.png');
+        wxTheApp->append_menu_item($mirrorMenu, "Along Z axis…", 'Mirror the selected object along the Z axis', sub {
+            $self->mirror(Z);
+        }, undef, 'bullet_blue.png');
+        wxTheApp->append_submenu($menu, "Mirror", 'Mirror the selected object', $mirrorMenu, undef, 'shape_flip_horizontal.png');
+    }
     
-    my $scaleMenu = Wx::Menu->new;
-    my $scaleMenuItem = $menu->AppendSubMenu($scaleMenu, "Scale", 'Scale the selected object along a single axis');
-    wxTheApp->set_menu_item_icon($scaleMenuItem, 'arrow_out.png');
-    $frame->_append_menu_item($scaleMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
-        $self->changescale(undef);
-    });
-    $frame->_append_menu_item($scaleMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
-        $self->changescale(X);
-    }, undef, 'bullet_red.png');
-    $frame->_append_menu_item($scaleMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
-        $self->changescale(Y);
-    }, undef, 'bullet_green.png');
-    $frame->_append_menu_item($scaleMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
-        $self->changescale(Z);
-    }, undef, 'bullet_blue.png');
+    {
+        my $scaleMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($scaleMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
+            $self->changescale(undef);
+        });
+        wxTheApp->append_menu_item($scaleMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
+            $self->changescale(X);
+        }, undef, 'bullet_red.png');
+        wxTheApp->append_menu_item($scaleMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
+            $self->changescale(Y);
+        }, undef, 'bullet_green.png');
+        wxTheApp->append_menu_item($scaleMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
+            $self->changescale(Z);
+        }, undef, 'bullet_blue.png');
+        wxTheApp->append_submenu($menu, "Scale", 'Scale the selected object by a given factor', $scaleMenu, undef, 'arrow_out.png');
+    }
     
-    my $scaleToSizeMenu = Wx::Menu->new;
-    my $scaleToSizeMenuItem = $menu->AppendSubMenu($scaleToSizeMenu, "Scale to size", 'Scale the selected object along a single axis');
-    wxTheApp->set_menu_item_icon($scaleToSizeMenuItem, 'arrow_out.png');
-    $frame->_append_menu_item($scaleToSizeMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
-        $self->changescale(undef, 1);
-    });
-    $frame->_append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
-        $self->changescale(X, 1);
-    }, undef, 'bullet_red.png');
-    $frame->_append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
-        $self->changescale(Y, 1);
-    }, undef, 'bullet_green.png');
-    $frame->_append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
-        $self->changescale(Z, 1);
-    }, undef, 'bullet_blue.png');
+    {
+        my $scaleToSizeMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($scaleToSizeMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
+            $self->changescale(undef, 1);
+        });
+        wxTheApp->append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
+            $self->changescale(X, 1);
+        }, undef, 'bullet_red.png');
+        wxTheApp->append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
+            $self->changescale(Y, 1);
+        }, undef, 'bullet_green.png');
+        wxTheApp->append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
+            $self->changescale(Z, 1);
+        }, undef, 'bullet_blue.png');
+        wxTheApp->append_submenu($menu, "Scale to size", 'Scale the selected object to match a given size', $scaleToSizeMenu, undef, 'arrow_out.png');
+    }
     
-    $frame->_append_menu_item($menu, "Split", 'Split the selected object into individual parts', sub {
+    wxTheApp->append_menu_item($menu, "Split", 'Split the selected object into individual parts', sub {
         $self->split_object;
     }, undef, 'shape_ungroup.png');
-    $frame->_append_menu_item($menu, "Cut…", 'Open the 3D cutting tool', sub {
+    wxTheApp->append_menu_item($menu, "Cut…", 'Open the 3D cutting tool', sub {
         $self->object_cut_dialog;
     }, undef, 'package.png');
     $frame->_append_menu_item($menu, "Layer heights…", 'Open the dynamic layer height control', sub {
         $self->object_layers_dialog;
     }, undef, 'cog.png');
     $menu->AppendSeparator();
-    $frame->_append_menu_item($menu, "Settings…", 'Open the object editor dialog', sub {
+    wxTheApp->append_menu_item($menu, "Settings…", 'Open the object editor dialog', sub {
         $self->object_settings_dialog;
     }, undef, 'cog.png');
     $menu->AppendSeparator();
-    $frame->_append_menu_item($menu, "Reload from Disk", 'Reload the selected file from Disk', sub {
+    wxTheApp->append_menu_item($menu, "Reload from Disk", 'Reload the selected file from Disk', sub {
         $self->reload_from_disk;
     }, undef, 'arrow_refresh.png');
-    $frame->_append_menu_item($menu, "Export object as STL…", 'Export this single object as STL file', sub {
+    wxTheApp->append_menu_item($menu, "Export object as STL…", 'Export this single object as STL file', sub {
         $self->export_object_stl;
     }, undef, 'brick_go.png');
-    $frame->_append_menu_item($menu, "Export object and modifiers as AMF…", 'Export this single object and all associated modifiers as AMF file', sub {
+    wxTheApp->append_menu_item($menu, "Export object and modifiers as AMF…", 'Export this single object and all associated modifiers as AMF file', sub {
         $self->export_object_amf;
     }, undef, 'brick_go.png');
     
@@ -2454,6 +2561,21 @@ sub select_view {
     } else {
         $self->{canvas3D}->select_view($direction);
         $self->{preview3D}->canvas->set_viewport_from_scene($self->{canvas3D});
+    }
+}
+
+sub zoom{
+    my ($self, $direction) = @_;
+    #Apply Zoom to the current active tab
+    my ($currentSelection) = $self->{preview_notebook}->GetSelection;
+    if($currentSelection == 0){
+        $self->{canvas3D}->zoom($direction) if($self->{canvas3D});
+    }
+    elsif($currentSelection == 2){ #3d Preview tab
+        $self->{preview3D}->canvas->zoom($direction) if($self->{preview3D});
+    }
+    elsif($currentSelection == 3) { #2D toolpaths tab
+        $self->{toolpaths2D}->{canvas}->zoom($direction) if($self->{toolpaths2D});
     }
 }
 
@@ -2546,7 +2668,7 @@ use base 'Wx::Dialog';
 sub new {
     my $class = shift;
     my ($parent, $filename) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Send to OctoPrint", wxDefaultPosition,
+    my $self = $class->SUPER::new($parent, -1, "Send to Server", wxDefaultPosition,
         [400, -1]);
     
     $self->{filename} = $filename;
@@ -2555,7 +2677,7 @@ sub new {
     my $optgroup;
     $optgroup = Slic3r::GUI::OptionsGroup->new(
         parent  => $self,
-        title   => 'Send to OctoPrint',
+        title   => 'Send to Server',
         on_change => sub {
             my ($opt_id) = @_;
             

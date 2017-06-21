@@ -35,6 +35,9 @@ sub new {
         # notify tabs
         $self->{layers}->Closing;
         
+        # save window size
+        wxTheApp->save_window_pos($self, "object_settings");
+        
         $self->EndModal(wxID_OK);
         $self->Destroy;
     });
@@ -45,6 +48,8 @@ sub new {
     
     $self->SetSizer($sizer);
     $self->SetMinSize($self->GetSize);
+    
+    wxTheApp->restore_window_pos($self, "object_settings");
     
     return $self;
 }
@@ -57,16 +62,6 @@ sub PartsChanged {
 sub PartSettingsChanged {
     my ($self) = @_;
     return $self->{parts}->PartSettingsChanged || $self->{layers}->LayersChanged;
-}
-sub _append_menu_item {
-    my ($self, $menu, $string, $description, $cb, $id, $icon, $kind) = @_;
-    
-    $id //= &Wx::NewId();
-    my $item = $menu->Append($id, $string, $description, $kind);
-    wxTheApp->set_menu_item_icon($item, $icon);
-    
-    EVT_MENU($self, $id, $cb);
-    return $item;
 }
 
 

@@ -163,35 +163,44 @@ sub new {
         my $item = $event->GetItem;
         my $frame = $self->GetFrame;
         my $menu = Wx::Menu->new;
-
-        my $scaleToSizeMenu = Wx::Menu->new;
-        my $scaleToSizeMenuItem = $menu->AppendSubMenu($scaleToSizeMenu, "Scale to size", 'Scale the selected object along a single axis');
-        wxTheApp->set_menu_item_icon($scaleToSizeMenuItem, 'arrow_out.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes', sub {
-                $self->changescale(undef, 1);
-                });
-        $frame->_append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
-                $self->changescale(X, 1);
-                }, undef, 'bullet_red.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
-                $self->changescale(Y, 1);
-                }, undef, 'bullet_green.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
-                $self->changescale(Z, 1);
-                }, undef, 'bullet_blue.png');
-        my $rotateMenu = Wx::Menu->new;
-        my $rotateMenuItem = $menu->AppendSubMenu($rotateMenu, "Rotate", 'Rotate the selected object by an arbitrary angle');
-        wxTheApp->set_menu_item_icon($rotateMenuItem, 'textfield.png');
-        $frame->_append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
-                $self->rotate(undef, X);
-                }, undef, 'bullet_red.png');
-        $frame->_append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
-                $self->rotate(undef, Y);
-                }, undef, 'bullet_green.png');
-        $frame->_append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
-                $self->rotate(undef, Z);
-                }, undef, 'bullet_blue.png');
-
+        
+        {
+            my $scaleMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($scaleMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes',
+                sub { $self->changescale(undef, 0) });
+            wxTheApp->append_menu_item($scaleMenu, "Along X axis…", 'Scale the selected object along the X axis',
+                sub { $self->changescale(X, 0) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($scaleMenu, "Along Y axis…", 'Scale the selected object along the Y axis',
+                sub { $self->changescale(Y, 0) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($scaleMenu, "Along Z axis…", 'Scale the selected object along the Z axis',
+                sub { $self->changescale(Z, 0) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Scale", 'Scale the selected object by a given factor',
+                $scaleMenu, undef, 'arrow_out.png');
+        }
+        {
+            my $scaleToSizeMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes',
+                sub { $self->changescale(undef, 1) });
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis',
+                sub { $self->changescale(X, 1) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis',
+                sub { $self->changescale(Y, 1) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis',
+                sub { $self->changescale(Z, 1) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Scale to size", 'Scale the selected object to match a given size',
+                $scaleToSizeMenu, undef, 'arrow_out.png');
+        }
+        {
+            my $rotateMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis',
+                sub { $self->rotate(undef, X) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis',
+                sub { $self->rotate(undef, Y) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis',
+                sub { $self->rotate(undef, Z) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Rotate", 'Rotate the selected object by an arbitrary angle',
+                $rotateMenu, undef, 'arrow_rotate_anticlockwise.png');
+        }
         $frame->PopupMenu($menu, $event->GetPoint);
     });
     EVT_BUTTON($self, $self->{btn_load_part}, sub { $self->on_btn_load(0) });
@@ -409,7 +418,6 @@ sub on_btn_lambda {
     # set a default extruder value, since user can't add it manually
     $new_volume->config->set_ifndef('extruder', 0);
 
-    $self->{parts_changed} = 1;
     $self->_parts_changed($self->{model_object}->volumes_count-1);
 }
 
@@ -436,6 +444,7 @@ sub on_btn_delete {
 sub _parts_changed {
     my ($self, $selected_volume_idx) = @_;
     
+    $self->{parts_changed} = 1;
     $self->reload_tree($selected_volume_idx);
     if ($self->{canvas}) {
         $self->{canvas}->reset_objects;

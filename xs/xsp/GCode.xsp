@@ -181,6 +181,7 @@
     void set_origin(Pointf* pointf)
         %code{% THIS->set_origin(*pointf); %};
     std::string preamble();
+    std::string notes();
     std::string change_layer(Layer* layer)
         %code{% RETVAL = THIS->change_layer(*layer); %};
     %name{extrude_loop} std::string extrude(ExtrusionLoop* loop, std::string description = "", double speed = -1)

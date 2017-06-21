@@ -212,16 +212,6 @@ Model::center_instances_around_point(const Pointf &point)
 }
 
 void
-Model::align_instances_to_origin()
-{
-    BoundingBoxf3 bb = this->bounding_box();
-    
-    Pointf new_center = (Pointf)bb.size();
-    new_center.translate(-new_center.x/2, -new_center.y/2);
-    this->center_instances_around_point(new_center);
-}
-
-void
 Model::translate(coordf_t x, coordf_t y, coordf_t z)
 {
     for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
@@ -349,8 +339,8 @@ Model::duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* b
 void
 Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
 {
-    if (this->objects.size() > 1) throw "Grid duplication is not supported with multiple objects";
-    if (this->objects.empty()) throw "No objects!";
+    if (this->objects.size() > 1) throw std::runtime_error("Grid duplication is not supported with multiple objects");
+    if (this->objects.empty()) throw std::runtime_error("No objects!");
 
     ModelObject* object = this->objects.front();
     object->clear_instances();
@@ -633,6 +623,16 @@ ModelObject::instance_bounding_box(size_t instance_idx) const
         bb.merge(this->instances[instance_idx]->transform_mesh_bounding_box(&(*v)->mesh, true));
     }
     return bb;
+}
+	
+void
+Model::align_instances_to_origin()
+{
+    BoundingBoxf3 bb = this->bounding_box();
+    
+    Pointf new_center = (Pointf)bb.size();
+    new_center.translate(-new_center.x/2, -new_center.y/2);
+    this->center_instances_around_point(new_center);
 }
 
 void

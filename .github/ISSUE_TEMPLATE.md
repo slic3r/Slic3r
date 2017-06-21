@@ -1,7 +1,9 @@
 ### Version
 _Version of Slic3r used goes here_
 
-_Use `About->About Slic3r` for release versions_
+_Use `About->About Slic3r` for release versions._
+
+_Do not report Prusa3D Slic3r bugs here without confirming it is a problem on a development release of Slic3r, or your issue will be closed. *Only* use normal Slic3r version IDs._
 
 _For -dev versions, use `git describe --tag` or get the hash value for the version you downloaded or `git rev-parse HEAD`_
 

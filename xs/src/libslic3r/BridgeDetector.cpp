@@ -7,12 +7,22 @@ namespace Slic3r {
 
 BridgeDetector::BridgeDetector(const ExPolygon &_expolygon, const ExPolygonCollection &_lower_slices,
     coord_t _extrusion_width)
-    : expolygon(_expolygon), lower_slices(_lower_slices), extrusion_width(_extrusion_width),
+    : expolygon(_expolygon), extrusion_width(_extrusion_width),
         resolution(PI/36.0), angle(-1)
 {
     /*  outset our bridge by an arbitrary amout; we'll use this outer margin
         for detecting anchors */
     Polygons grown = offset(this->expolygon, this->extrusion_width);
+    
+    // remove narrow gaps from lower slices
+    // (this is only needed as long as we use clipped test lines for angle detection
+    // and we check their endpoints: when endpoint fall in the gap we'd get false
+    // negatives)
+    this->lower_slices.expolygons = offset2_ex(
+        _lower_slices,
+        +this->extrusion_width/2,
+        -this->extrusion_width/2
+    );
     
     // detect what edges lie on lower slices by turning bridge contour and holes
     // into polylines and then clipping them with each lower slice's contour
@@ -34,6 +44,10 @@ BridgeDetector::BridgeDetector(const ExPolygon &_expolygon, const ExPolygonColle
         svg.draw(this->_anchors, "yellow");
         svg.draw(this->_edges, "black", scale_(0.2));
         svg.Close();
+        
+        std::cout << "expolygon: " << this->expolygon.dump_perl() << std::endl;
+        for (const ExPolygon &e : this->lower_slices.expolygons)
+            std::cout << "lower: " << e.dump_perl() << std::endl;
     }
     #endif
 }
@@ -133,6 +147,13 @@ BridgeDetector::detect_angle()
             ));
         }
         if (candidate.coverage > 0) have_coverage = true;
+        
+        #if 0
+        std::cout << "angle = "  << Slic3r::Geometry::rad2deg(candidate.angle)
+            << "; coverage = "   << candidate.coverage
+            << "; max_length = " << candidate.max_length
+            << std::endl;
+        #endif
     }
     
     // if no direction produced coverage, then there's no bridge direction
@@ -160,11 +181,15 @@ BridgeDetector::detect_angle()
 }
 
 Polygons
+BridgeDetector::coverage() const
+{
+    if (this->angle == -1) return Polygons();
+    return this->coverage(this->angle);
+}
+
+Polygons
 BridgeDetector::coverage(double angle) const
 {
-    if (angle == -1) angle = this->angle;
-    if (angle == -1) return Polygons();
-    
     // Clone our expolygon and rotate it so that we work with vertical lines.
     ExPolygon expolygon = this->expolygon;
     expolygon.rotate(PI/2.0 - angle, Point(0,0));

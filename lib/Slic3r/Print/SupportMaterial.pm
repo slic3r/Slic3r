@@ -93,18 +93,21 @@ sub generate {
 sub contact_area {
     # $object is Slic3r::Print::Object
     my ($self, $object) = @_;
+    my $conf = $self->object_config;
     
     # if user specified a custom angle threshold, convert it to radians
     my $threshold_rad;
-    if (!($self->object_config->support_material_threshold =~ /%$/)) {
-        $threshold_rad = deg2rad($self->object_config->support_material_threshold + 1);  # +1 makes the threshold inclusive
+    if (!($conf->support_material_threshold =~ /%$/)) {
+        $threshold_rad = deg2rad($conf->support_material_threshold + 1);  # +1 makes the threshold inclusive
         Slic3r::debugf "Threshold angle = %d°\n", rad2deg($threshold_rad);
     }
     
     # Build support on a build plate only? If so, then collect top surfaces into $buildplate_only_top_surfaces
     # and subtract $buildplate_only_top_surfaces from the contact surfaces, so
     # there is no contact surface supported by a top surface.
-    my $buildplate_only = $self->object_config->support_material && $self->object_config->support_material_buildplate_only;
+    my $buildplate_only =
+        ( $conf->support_material || $conf->support_material_enforce_layers)
+        && $conf->support_material_buildplate_only;
     my $buildplate_only_top_surfaces = [];
 
     # determine contact areas
@@ -115,12 +118,19 @@ sub contact_area {
         # so $layer_id == 0 means first object layer
         # and $layer->id == 0 means first print layer (including raft)
         
-        if ($self->object_config->raft_layers == 0) {
-            next if $layer_id == 0;
-        } elsif (!$self->object_config->support_material) {
+        # if no raft, and we're at layer 0, skip to layer 1
+        if ( $conf->raft_layers == 0 && $layer_id == 0 ) {
+            next;
+        }
+        # with or without raft, if we're above layer 1, we need to quit
+        # support generation if supports are disabled, or if we're at a high
+        # enough layer that enforce-supports no longer applies
+        if ( $layer_id > 0
+              && !$conf->support_material
+              && ($layer_id >= $conf->support_material_enforce_layers) ) {
             # if we are only going to generate raft just check 
             # the 'overhangs' of the first object layer
-            last if $layer_id > 0;
+            last;
         }
         my $layer = $object->get_layer($layer_id);
 
@@ -154,12 +164,19 @@ sub contact_area {
                 my $diff;
             
                 # If a threshold angle was specified, use a different logic for detecting overhangs.
-                if (defined $threshold_rad
-                    || $layer_id < $self->object_config->support_material_enforce_layers
-                    || ($self->object_config->raft_layers > 0 && $layer_id == 0)) {
-                    my $d = defined $threshold_rad
-                        ? scale $lower_layer->height * ((cos $threshold_rad) / (sin $threshold_rad))
-                        : 0;
+                if (($conf->support_material && defined $threshold_rad)
+                      || $layer_id <= $conf->support_material_enforce_layers
+                      || ($conf->raft_layers > 0 && $layer_id == 0)) {
+                    my $d = 0;
+                    my $layer_threshold_rad = $threshold_rad;
+                    if ($layer_id <= $conf->support_material_enforce_layers) {
+                        # Use ~45 deg number for enforced supports if we are in auto
+                        $layer_threshold_rad = deg2rad(89);
+                    }
+                    if (defined $layer_threshold_rad) {
+                        $d = scale $lower_layer->height
+                            * ((cos $layer_threshold_rad) / (sin $layer_threshold_rad));
+                    }
                 
                     $diff = diff(
                         offset([ map $_->p, @{$layerm->slices} ], -$d),
@@ -177,7 +194,7 @@ sub contact_area {
                 } else {
                     $diff = diff(
                         [ map $_->p, @{$layerm->slices} ],
-                        offset([ map @$_, @{$lower_layer->slices} ], +$self->object_config->get_abs_value_over('support_material_threshold', $fw)),
+                        offset([ map @$_, @{$lower_layer->slices} ], +$conf->get_abs_value_over('support_material_threshold', $fw)),
                     );
                 
                     # collapse very tiny spots
@@ -189,22 +206,31 @@ sub contact_area {
                     # outside the lower slice boundary, thus no overhang
                 }
                 
-                if ($self->object_config->dont_support_bridges) {
+                if ($conf->dont_support_bridges) {
                     # compute the area of bridging perimeters
-                    # Note: this is duplicate code from GCode.pm, we need to refactor
-                    
                     my $bridged_perimeters;  # Polygons
                     {
                         my $bridge_flow = $layerm->flow(FLOW_ROLE_PERIMETER, 1);
                         
-                        my $nozzle_diameter = $self->print_config->get_at('nozzle_diameter', $layerm->region->config->perimeter_extruder-1);
-                        my $lower_grown_slices = offset([ map @$_, @{$lower_layer->slices} ], +scale($nozzle_diameter/2));
+                        # Get the lower layer's slices and grow them by half the nozzle diameter
+                        # because we will consider the upper perimeters supported even if half nozzle
+                        # falls outside the lower slices.
+                        my $lower_grown_slices;
+                        {
+                            my $nozzle_diameter = $self->print_config->get_at('nozzle_diameter', $layerm->region->config->perimeter_extruder-1);
+                            $lower_grown_slices = offset(
+                                [ map @$_, @{$lower_layer->slices} ],
+                                +scale($nozzle_diameter/2),
+                            );
+                        }
                         
-                        # TODO: split_at_first_point() could split a bridge mid-way
-                        my @overhang_perimeters =
-                            map { $_->isa('Slic3r::ExtrusionLoop') ? $_->polygon->split_at_first_point : $_->polyline->clone }
-                            map @$_, @{$layerm->perimeters};
+                        # Get all perimeters as polylines.
+                        # TODO: split_at_first_point() (called by as_polyline() for ExtrusionLoops)
+                        # could split a bridge mid-way
+                        my @overhang_perimeters = map $_->as_polyline, @{$layerm->perimeters->flatten};
                         
+                        # Only consider the overhang parts of such perimeters,
+                        # overhangs being those parts not supported by 
                         # workaround for Clipper bug, see Slic3r::Polygon::clip_as_polyline()
                         $_->[0]->translate(1,0) for @overhang_perimeters;
                         @overhang_perimeters = @{diff_pl(
@@ -226,11 +252,16 @@ sub contact_area {
                         
                         # convert bridging polylines into polygons by inflating them with their thickness
                         {
-                            # since we're dealing with bridges, we can't assume width is larger than spacing,
-                            # so we take the largest value and also apply safety offset to be ensure no gaps
-                            # are left in between
-                            my $w = max($bridge_flow->scaled_width, $bridge_flow->scaled_spacing);
+                            # For bridges we can't assume width is larger than spacing because they
+                            # are positioned according to non-bridging perimeters spacing.
+                            my $w = max(
+                                $bridge_flow->scaled_width,
+                                $bridge_flow->scaled_spacing,
+                                $fw,  # width of external perimeters
+                                $layerm->flow(FLOW_ROLE_PERIMETER)->scaled_width,
+                            );
                             $bridged_perimeters = union([
+                                # Also apply safety offset to ensure no gaps are left in between.
                                 map @{$_->grow($w/2 + 10)}, @overhang_perimeters
                             ]);
                         }
@@ -241,7 +272,7 @@ sub contact_area {
                         my @bridges = map $_->expolygon,
                             grep $_->bridge_angle != -1,
                             @{$layerm->fill_surfaces->filter_by_type(S_TYPE_BOTTOMBRIDGE)};
-                            
+                        
                         $diff = diff(
                             $diff,
                             [
@@ -264,7 +295,7 @@ sub contact_area {
                             1,
                         );
                     }
-                } # if ($self->object_config->dont_support_bridges)
+                } # if ($conf->dont_support_bridges)
 
                 if ($buildplate_only) {
                     # Don't support overhangs above the top surfaces.
@@ -309,7 +340,7 @@ sub contact_area {
             my $contact_z = $layer->print_z - $self->contact_distance($layer->height, $nozzle_diameter);
             
             # ignore this contact area if it's too low
-            next if $contact_z < $self->object_config->get_value('first_layer_height') - epsilon;
+            next if $contact_z < $conf->get_value('first_layer_height') - epsilon;
             
             $contact{$contact_z}  = [ @contact ];
             $overhang{$contact_z} = [ @overhang ];

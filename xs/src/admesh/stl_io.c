@@ -124,7 +124,7 @@ Normals fixed         : %5d\n", stl->stats.normals_fixed);
 }
 
 void
-stl_write_ascii(stl_file *stl, const char *file, const char *label) {
+stl_write_ascii(stl_file *stl, const ADMESH_CHAR *file, const char *label) {
   int       i;
   FILE      *fp;
   char      *error_msg;
@@ -132,14 +132,9 @@ stl_write_ascii(stl_file *stl, const char *file, const char *label) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = fopen(file, "w");
+  fp = stl_fopen(file, "w");
   if(fp == NULL) {
-    error_msg = (char*)
-                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
-    sprintf(error_msg, "stl_write_ascii: Couldn't open %s for writing",
-            file);
-    perror(error_msg);
-    free(error_msg);
+    perror("stl_write_ascii: Couldn't open file for writing");
     stl->error = 1;
     return;
   }
@@ -170,7 +165,7 @@ stl_write_ascii(stl_file *stl, const char *file, const char *label) {
 }
 
 void
-stl_print_neighbors(stl_file *stl, char *file) {
+stl_print_neighbors(stl_file *stl, ADMESH_CHAR *file) {
   int i;
   FILE *fp;
   char *error_msg;
@@ -178,14 +173,9 @@ stl_print_neighbors(stl_file *stl, char *file) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = fopen(file, "w");
+  fp = stl_fopen(file, "w");
   if(fp == NULL) {
-    error_msg = (char*)
-                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
-    sprintf(error_msg, "stl_print_neighbors: Couldn't open %s for writing",
-            file);
-    perror(error_msg);
-    free(error_msg);
+    perror("stl_print_neighbors: Couldn't open file for writing");
     stl->error = 1;
     return;
   }
@@ -204,7 +194,7 @@ stl_print_neighbors(stl_file *stl, char *file) {
 }
 
 void
-stl_write_binary(stl_file *stl, const char *file, const char *label) {
+stl_write_binary(stl_file *stl, const ADMESH_CHAR *file, const char *label) {
   FILE      *fp;
   int       i;
   char      *error_msg;
@@ -212,14 +202,9 @@ stl_write_binary(stl_file *stl, const char *file, const char *label) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = fopen(file, "wb");
+  fp = stl_fopen(file, "wb");
   if(fp == NULL) {
-    error_msg = (char*)
-                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
-    sprintf(error_msg, "stl_write_binary: Couldn't open %s for writing",
-            file);
-    perror(error_msg);
-    free(error_msg);
+    perror("stl_write_binary: Couldn't open file for writing");
     stl->error = 1;
     return;
   }
@@ -278,7 +263,7 @@ stl_write_neighbor(stl_file *stl, int facet) {
 }
 
 void
-stl_write_quad_object(stl_file *stl, char *file) {
+stl_write_quad_object(stl_file *stl, ADMESH_CHAR *file) {
   FILE      *fp;
   int       i;
   int       j;
@@ -292,14 +277,9 @@ stl_write_quad_object(stl_file *stl, char *file) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = fopen(file, "w");
+  fp = stl_fopen(file, "w");
   if(fp == NULL) {
-    error_msg = (char*)
-                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
-    sprintf(error_msg, "stl_write_quad_object: Couldn't open %s for writing",
-            file);
-    perror(error_msg);
-    free(error_msg);
+    perror("stl_write_quad_object: Couldn't open file for writing");
     stl->error = 1;
     return;
   }
@@ -352,7 +332,7 @@ stl_write_quad_object(stl_file *stl, char *file) {
 }
 
 void
-stl_write_dxf(stl_file *stl, char *file, char *label) {
+stl_write_dxf(stl_file *stl, ADMESH_CHAR *file, char *label) {
   int       i;
   FILE      *fp;
   char      *error_msg;
@@ -360,14 +340,9 @@ stl_write_dxf(stl_file *stl, char *file, char *label) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = fopen(file, "w");
+  fp = stl_fopen(file, "w");
   if(fp == NULL) {
-    error_msg = (char*)
-                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
-    sprintf(error_msg, "stl_write_ascii: Couldn't open %s for writing",
-            file);
-    perror(error_msg);
-    free(error_msg);
+    perror("stl_write_ascii: Couldn't open file for writing");
     stl->error = 1;
     return;
   }
