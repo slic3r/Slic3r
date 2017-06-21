@@ -33,6 +33,8 @@ class LayerHeightSpline
     bool _layer_heights_updated;
     std::vector<coordf_t> _layers;
     std::vector<coordf_t> _layer_heights;
+    std::vector<coordf_t> _spline_layers;
+    std::vector<coordf_t> _spline_layer_heights;
     std::unique_ptr<BSpline<double>> _layer_height_spline;
 };
 

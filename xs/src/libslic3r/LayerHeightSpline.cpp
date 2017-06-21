@@ -170,9 +170,18 @@ bool LayerHeightSpline::_updateBSpline()
     bool result = false;
     //TODO: exception if not enough points?
 
-    this->_layer_height_spline.reset(new BSpline<double>(&this->_layers[1],
-            this->_layers.size()-1,
-            &this->_layer_heights[1],
+    // copy layer vectors and duplicate a datapoint at the front / end to achieve correct boundary conditions
+    this->_spline_layers = this->_layers;
+    this->_spline_layers[0] = 0;
+    this->_spline_layers.push_back(this->_spline_layers.back()+1);
+
+    this->_spline_layer_heights = this->_layer_heights;
+    this->_spline_layer_heights[0] = this->_spline_layer_heights[1]; // override fixed first layer height with first "real" layer
+    this->_spline_layer_heights.push_back(this->_spline_layer_heights.back());
+
+    this->_layer_height_spline.reset(new BSpline<double>(&this->_spline_layers[0],
+            this->_spline_layers.size(),
+            &this->_spline_layer_heights[0],
             0,
             1,
             0)
