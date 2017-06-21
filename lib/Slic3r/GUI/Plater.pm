@@ -2529,7 +2529,7 @@ sub object_menu {
     wxTheApp->append_menu_item($menu, "Cut…", 'Open the 3D cutting tool', sub {
         $self->object_cut_dialog;
     }, undef, 'package.png');
-    $frame->_append_menu_item($menu, "Layer heights…", 'Open the dynamic layer height control', sub {
+    wxTheApp->append_menu_item($menu, "Layer heights…", 'Open the dynamic layer height control', sub {
         $self->object_layers_dialog;
     }, undef, 'cog.png');
     $menu->AppendSeparator();
