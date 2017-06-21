@@ -176,7 +176,7 @@ float SlicingAdaptive::_layer_height_from_facet(int ordered_id, float scaled_qua
 {
     float normal_z = std::abs(m_face_normal_z[ordered_id]);
     float height = scaled_quality_factor/(SURFACE_CONST + normal_z/2);
-    return (normal_z == 0.f) ? 9999.f : height;
+    return height;
 }
 
 }; // namespace Slic3r

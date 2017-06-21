@@ -71,9 +71,9 @@ $adaptive_slicing->prepare(20);
 subtest 'max layer_height limited by extruder capabilities' => sub {
     plan tests => 3;
 
-    ok  (_eq($adaptive_slicing->next_layer_height(1, 50, 0.1, 0.15), 0.15), 'low');
-    ok  (_eq($adaptive_slicing->next_layer_height(1, 80, 0.1, 0.4), 0.4), 'higher');
-    ok  (_eq($adaptive_slicing->next_layer_height(1, 80, 0.1, 0.65), 0.65), 'highest');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 20, 0.1, 0.15), 0.15), 'low');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 20, 0.1, 0.4), 0.4), 'higher');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 20, 0.1, 0.65), 0.65), 'highest');
 };
   
 subtest 'min layer_height limited by extruder capabilities' => sub {
@@ -87,7 +87,7 @@ subtest 'min layer_height limited by extruder capabilities' => sub {
 subtest 'correct layer_height depending on the facet normals' => sub {
     plan tests => 3;
 
-    ok  (_eq($adaptive_slicing->next_layer_height(1, 90, 0.1, 0.5), 0.5), 'limit');
+    ok  (_eq($adaptive_slicing->next_layer_height(1, 10, 0.1, 0.5), 0.5), 'limit');
     ok  (_eq($adaptive_slicing->next_layer_height(4, 80, 0.1, 0.5), 0.1546), '45deg facet, quality_value: 0.2');
     ok  (_eq($adaptive_slicing->next_layer_height(4, 50, 0.1, 0.5), 0.3352), '45deg facet, quality_value: 0.5');
 };
