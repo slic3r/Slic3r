@@ -664,14 +664,12 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
                 // we need to thicken last layer
                 coordf_t new_h = result[last_layer] - result[last_layer-1];
                 new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negativ) diff value
-                std::cout << new_h << std::endl;
                 result[last_layer] = result[last_layer-1] + new_h;
             } else {
                 // we need to reduce last layer
                 coordf_t new_h = result[last_layer] - result[last_layer-1];
                 if(min_nozzle_diameter/2 < new_h) { //prevent generation of a too small layer
                     new_h = std::max(min_nozzle_diameter/2, new_h - diff); // subtract (positive) diff value
-                    std::cout << new_h << std::endl;
                     result[last_layer] = result[last_layer-1] + new_h;
                 }
             }
