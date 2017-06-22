@@ -16,6 +16,7 @@ set_branch
 set_app_name
 set_pr_id
 
+WD=./$(dirname $0)
 srcfolder="$WD/${appname}"
 export ARCH=$(arch)
 
@@ -58,9 +59,9 @@ EOF
 
 chmod +x AppRun
 
-cp $APP.AppDir/usr/bin/var/Slic3r_192px_transparent.png $APP.AppDir/$APP.png
+cp $APP.AppDir/usr/bin/var/Slic3r_192px_transparent.png $WD/$APP.AppDir/$APP.png
 
-cat > $APP.AppDir/$APP.desktop <<EOF
+cat > $WD/$APP.AppDir/$APP.desktop <<EOF
 [Desktop Entry]
 Type=Application
 Name=$APP
