@@ -39,7 +39,7 @@ done
 mkdir -p ${WD}/${APP}.AppDir/usr/lib
 # copy Slic3r local-lib here
 for i in $(ls $srcfolder/bin); do  
-    install -v $i ${WD}/${APP}.AppDir/usr/lib
+    install -v $srcfolder/bin/$i ${WD}/${APP}.AppDir/usr/lib
 done
 cp -R $srcfolder/local-lib ${WD}/${APP}.AppDir/usr/lib/local-lib
 
@@ -59,7 +59,7 @@ EOF
 
 chmod +x AppRun
 
-cp ${APP}.AppDir/usr/bin/var/Slic3r_192px_transparent.png $WD/${APP}.AppDir/${APP}.png
+cp ${WD}/${APP}.AppDir/usr/bin/var/Slic3r_192px_transparent.png $WD/${APP}.AppDir/${APP}.png
 
 cat > $WD/${APP}.AppDir/${APP}.desktop <<EOF
 [Desktop Entry]
