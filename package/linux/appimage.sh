@@ -24,26 +24,26 @@ APP=Slic3r
 LOWERAPP=${APP,,}
 
 
-mkdir -p $APP.AppDir/usr/
+mkdir -p $WD/${APP}.AppDir/usr/
 wget -q https://github.com/probonopd/AppImages/raw/master/functions.sh -O ./functions.sh
 . ./functions.sh
 
-cd $APP.AppDir
+cd $WD/${APP}.AppDir
 
-mkdir -p usr/bin
+mkdir -p $WD/${APP}.AppDir/usr/bin
 # Copy primary Slic3r script here and perl-local, as well as var
 for i in {var,slic3r.pl,perl-local}; do
-    cp -R $srcfolder/$i $APP.AppDir/usr/bin/
+    cp -R $srcfolder/$i $WD/${APP}.AppDir/usr/bin/
 done
 
-mkdir -p usr/lib
+mkdir -p ${WD}/${APP}.AppDir/usr/lib
 # copy Slic3r local-lib here
 for i in $(ls $srcfolder/bin); do  
-    install -v $i $APP.AppDir/usr/lib
+    install -v $i ${WD}/${APP}.AppDir/usr/lib
 done
-cp -R $srcfolder/local-lib $APP.AppDir/usr/lib/local-lib
+cp -R $srcfolder/local-lib ${WD}/${APP}.AppDir/usr/lib/local-lib
 
-cat > AppRun << 'EOF'
+cat > $WD/${APP}.AppDir/AppRun << 'EOF'
 #!/usr/bin/env bash
 # some magic to find out the real location of this script dealing with symlinks
 DIR=`readlink "$0"` || DIR="$0";
@@ -59,9 +59,9 @@ EOF
 
 chmod +x AppRun
 
-cp $APP.AppDir/usr/bin/var/Slic3r_192px_transparent.png $WD/$APP.AppDir/$APP.png
+cp ${APP}.AppDir/usr/bin/var/Slic3r_192px_transparent.png $WD/${APP}.AppDir/${APP}.png
 
-cat > $WD/$APP.AppDir/$APP.desktop <<EOF
+cat > $WD/${APP}.AppDir/${APP}.desktop <<EOF
 [Desktop Entry]
 Type=Application
 Name=$APP
