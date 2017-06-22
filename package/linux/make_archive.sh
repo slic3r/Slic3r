@@ -97,6 +97,7 @@ ${PP_BIN} wxextension .0 \
 	  -M attributes -M base -M bytes -M B -M POSIX \
           -M FindBin -M Unicode::Normalize -M Tie::Handle \
           -M Time::Local -M Math::Trig -M IO::Socket -M Errno \
+          -M Storable \
           -M lib -M overload \
           -M warnings -M local::lib \
           -M strict -M utf8 -M parent \
