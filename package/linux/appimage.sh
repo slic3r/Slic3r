@@ -16,7 +16,7 @@ set_branch
 set_app_name
 set_pr_id
 
-WD=./$(dirname $0)
+WD=${PWD}/$(dirname $0)
 srcfolder="$WD/${appname}"
 export ARCH=$(arch)
 
