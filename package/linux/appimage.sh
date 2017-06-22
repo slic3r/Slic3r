@@ -84,7 +84,7 @@ if [ "$current_branch" == "master" ]; then
     if [ ! -z ${PR_ID+x} ]; then
         outfile=Slic3r-${SLIC3R_BUILD_ID}-PR${PR_ID}-${1}.AppImage
     else
-        outfile=Slic3r-${SLIC3R_BUILD_ID}-${1}-x86_64.AppImage
+        outfile=Slic3r-${SLIC3R_BUILD_ID}-${1}.AppImage
     fi
 else
     outfile=Slic3r-${SLIC3R_BUILD_ID}-${current_branch}-${1}.AppImage

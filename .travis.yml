@@ -15,8 +15,7 @@ after_success:
 - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
 - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
 - package/linux/appimage.sh x86_64
-- package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 *.App*
-- package/deploy/sftp.sh linux ~/slic3r-upload.rsa Slic3r*.AppImage
+- package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
 branches:
   only:
   - master
