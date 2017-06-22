@@ -17,6 +17,7 @@ after_success:
 - package/linux/appimage.sh
 - cp package/linux/*App* .
 - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 *.App*
+- package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.App*
 branches:
   only:
   - master
