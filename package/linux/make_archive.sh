@@ -101,7 +101,7 @@ unzip -qq -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
 cp -rf $WD/_tmp/shlib $archivefolder/
 rm -rf $WD/_tmp
-for i in $(cat $WD/libpaths.txt); do 
+for i in $(cat $WD/libpaths.txt | grep -v "^#" | awk -F# '{print $1}'); do 
 	install -v $i $archivefolder/bin
 done
 
