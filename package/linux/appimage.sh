@@ -54,7 +54,7 @@ cd - > /dev/null
 # disable parameter expansion to forward all arguments unprocessed to the VM
 set -f
 # run the VM and pass along all arguments as is
-LD_LIBRARY_PATH="$DIR/usr/lib" "${DIR}/usr/bin/perl-local" -I"$DIR/usr/lib/local-lib/lib/perl5" "$DIR/usr/bin/slic3r.pl" "$@"
+LD_LIBRARY_PATH="$DIR/usr/lib" "${DIR}/usr/bin/perl-local" -I"${DIR}/usr/lib/local-lib/lib/perl5" "${DIR}/usr/bin/slic3r.pl" "$@"
 EOF
 
 chmod +x AppRun
@@ -78,3 +78,16 @@ wget "https://github.com/probonopd/AppImageKit/releases/download/continuous/appi
 chmod a+x appimagetool-x86_64.AppImage
 
 ./appimagetool-x86_64.AppImage Slic3r.AppDir
+
+# If we're on a branch, add the branch name to the app name.
+if [ "$current_branch" == "master" ]; then
+    if [ ! -z ${PR_ID+x} ]; then
+        outfile=slic3r-${SLIC3R_BUILD_ID}-${1}-PR${PR_ID}-x86_64.AppImage
+    else
+        outfile=slic3r-${SLIC3R_BUILD_ID}-${1}-x86_64.AppImage
+    fi
+else
+    outfile=slic3r-${SLIC3R_BUILD_ID}-${1}-${current_branch}-x86_64.AppImage
+fi
+mv Slic3r-x86_64.AppImage ${WD}/../../${outfile}
+
