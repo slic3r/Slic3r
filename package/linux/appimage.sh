@@ -32,7 +32,7 @@ cd $APP.AppDir
 mkdir -p usr/bin
 # Copy primary Slic3r script here and perl-local, as well as var
 for i in {var,slic3r.pl,perl-local}; do
-    cp -R $srcfolder/i $APP.AppDir/usr/bin/
+    cp -R $srcfolder/$i $APP.AppDir/usr/bin/
 done
 
 mkdir -p usr/lib
