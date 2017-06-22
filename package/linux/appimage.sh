@@ -58,9 +58,9 @@ EOF
 
 chmod +x AppRun
 
-cp $APP.AppDir/usr/bin/var/Slic3r_192px_transparent.png $APP
+cp $APP.AppDir/usr/bin/var/Slic3r_192px_transparent.png $APP.AppDir/$APP.png
 
-cat > $APP.desktop <<EOF
+cat > $APP.AppDir/$APP.desktop <<EOF
 [Desktop Entry]
 Type=Application
 Name=$APP
