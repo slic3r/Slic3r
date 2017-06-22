@@ -82,12 +82,12 @@ chmod a+x appimagetool-x86_64.AppImage
 # If we're on a branch, add the branch name to the app name.
 if [ "$current_branch" == "master" ]; then
     if [ ! -z ${PR_ID+x} ]; then
-        outfile=slic3r-${SLIC3R_BUILD_ID}-${1}-PR${PR_ID}-x86_64.AppImage
+        outfile=Slic3r-${SLIC3R_BUILD_ID}-PR${PR_ID}-${1}.AppImage
     else
-        outfile=slic3r-${SLIC3R_BUILD_ID}-${1}-x86_64.AppImage
+        outfile=Slic3r-${SLIC3R_BUILD_ID}-${1}-x86_64.AppImage
     fi
 else
-    outfile=slic3r-${SLIC3R_BUILD_ID}-${1}-${current_branch}-x86_64.AppImage
+    outfile=Slic3r-${SLIC3R_BUILD_ID}-${current_branch}-${1}.AppImage
 fi
 mv Slic3r-x86_64.AppImage ${WD}/../../${outfile}
 
