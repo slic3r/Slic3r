@@ -20,7 +20,7 @@ struct TMFEditor
     Model* model; ///< The model to be read or written.
     std::string buff; ///< The buffer currently used in write functions.
     ///< When it reaches a max capacity it's written to the current entry in the zip file.
-    const map<std::string, std::string> namespaces = {
+    const std::map<std::string, std::string> namespaces = {
         {"3mf", "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"}, // Default XML namespace.
         {"slic3r", "http://link_to_Slic3r_schema.com/2017/06"}, // Slic3r namespace.
         {"m", "http://schemas.microsoft.com/3dmanufacturing/material/2015/02"}, // Material Extension namespace.
@@ -44,7 +44,7 @@ struct TMFEditor
 
         // Write 3MF Types "3MF OPC relationships".
         append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n");
-        append_buffer("<Types xmlns=\"" + namespaces["content_types"] + "\">\n");
+        append_buffer("<Types xmlns=\"" + namespaces.at("content_types") + "\">\n");
         append_buffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
         append_buffer("<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n");
         append_buffer("</Types>\n");
@@ -64,7 +64,7 @@ struct TMFEditor
 
         // Write the primary 3dmodel relationship.
         append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
-                          "<Relationships xmlns=\"" + namespaces["relationships"] +
+                          "<Relationships xmlns=\"" + namespaces.at("relationships") +
                           "\">\n<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>");
         write_buffer();
 
@@ -84,9 +84,9 @@ struct TMFEditor
 
         // Write the model element. Append any necessary namespaces.
         append_buffer("<model unit=\"millimeter\" xml:lang=\"en-US\"");
-        append_buffer(" xmlns=\"" + namespaces["3mf"] + "\"");
-        append_buffer(" xmlns:m=\"" + namespaces["m"] + "\"");
-        append_buffer(" xmlns:slic3r=\"" + namespaces["slic3r"] + "\"> \n");
+        append_buffer(" xmlns=\"" + namespaces.at("3mf") + "\"");
+        append_buffer(" xmlns:m=\"" + namespaces.at("m") + "\"");
+        append_buffer(" xmlns:slic3r=\"" + namespaces.at("slic3r") + "\"> \n");
 
         // Write metadata.
         write_metadata();
