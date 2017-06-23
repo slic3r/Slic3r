@@ -25,7 +25,7 @@ struct TMFEditor
         {"slic3r", "http://link_to_Slic3r_schema.com/2017/06"}, // Slic3r namespace.
         {"m", "http://schemas.microsoft.com/3dmanufacturing/material/2015/02"}, // Material Extension namespace.
         {"content_types", "http://schemas.openxmlformats.org/package/2006/content-types"}, // Content_Types namespace.
-        {"relationships", "http://schemas.openxmlformats.org/package/2006/relationships"} // Relationships namepspace.
+        {"relationships", "http://schemas.openxmlformats.org/package/2006/relationships"} // Relationships namespace.
     };
     ///< Namespaces in the 3MF document.
 
@@ -139,7 +139,7 @@ struct TMFEditor
         if (model->materials.size() == 0)
             return true;
 
-        bool baseMaterialsWritten = false;
+        bool base_materials_written = false, color_group_written = false;
 
         // Write the base materials.
         for (const auto &material : model->materials){
@@ -147,20 +147,20 @@ struct TMFEditor
             if (material.first.empty() || material.second->attributes.count("name") == 0)
                 continue;
             // Add the base materials element if not added.
-            if (!baseMaterialsWritten){
+            if (!base_materials_written){
                 append_buffer("<basematerials id=\"1\">\n");
-                baseMaterialsWritten = true;
+                base_materials_written = true;
             }
             // We add it with black color by default.
             append_buffer("<base name=\"" + material.second->attributes["name"] + "\" ");
 
             // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
             append_buffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000FF") + "\"/>\n");
-            // ToDo @Samir55 to be covered in AMF write.
+            // ToDo @Samir55 to be covered in AMF write and ask about default color.
         }
 
         // Close base materials if it's written.
-        if (baseMaterialsWritten)
+        if (base_materials_written)
             append_buffer("</basematerials>\n");
 
         // Write Slic3r custom config data group.
@@ -170,7 +170,7 @@ struct TMFEditor
         // material id "mid" it points to, type and then the serialized key.
 
         // Write Sil3r materials custom configs if base materials are written above.
-        if (baseMaterialsWritten) {
+        if (base_materials_written) {
             // Add Slic3r material config group.
             append_buffer("<slic3r:materials>\n");
 
@@ -192,6 +192,19 @@ struct TMFEditor
             // close Slic3r material config group.
             append_buffer("</slic3r:materials>\n");
         }
+
+        // Write material extension color group.
+        for (const auto &material : model->color_group) {
+            if(!color_group_written){
+                append_buffer("<m:colorgroup id=\"2\">\n");
+                color_group_written = true;
+            }
+            append_buffer("<m:color color=\"" + material.second->attributes["color"] + "\" />\n");
+        }
+
+        // Close the material color group if it's open.
+        if(color_group_written)
+            append_buffer("</m:colorgroup>\n");
         return true;
     }
 

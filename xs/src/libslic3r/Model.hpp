@@ -41,6 +41,8 @@ class Model
     ModelMaterialMap materials;
     // Objects are owned by a model. Each model may have multiple instances, each instance having its own transformation (shift, scale, rotation).
     ModelObjectPtrs objects;
+    ModelMaterialMap color_group;
+    ///< Colors ModelMaterials specific to 3MF format read/write. This is a material group in the 3MF material extension.
     std::map<std::string, std::string> metadata;
     ///< Model Metadata <name, value>, this is needed for 3MF format read/write.
     
@@ -89,6 +91,8 @@ class ModelMaterial
     t_model_material_attributes attributes;
     // Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
     DynamicPrintConfig config;
+    int material_group;
+    ///< The material belong to which group. Specific to 3MF file format. By default = 0 which means it's a base material or AMF material.
 
     Model* get_model() const { return this->model; };
     void apply(const t_model_material_attributes &attributes);
