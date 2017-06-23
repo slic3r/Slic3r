@@ -98,13 +98,10 @@ cp -f $WD/startup_script.sh $macosfolder/$appname
 chmod +x $macosfolder/$appname
 
 echo "Copying perl from $PERL_BIN"
+# Edit package/common/coreperl to add/remove core Perl modules added to this package, one per line.
 cp -f $PERL_BIN $macosfolder/perl-local
-${PP_BIN} -M attributes -M base -M bytes -M B -M POSIX \
-          -M FindBin -M Unicode::Normalize -M Tie::Handle \
-          -M Time::Local -M Math::Trig -M IO::Socket -M Errno \
-          -M lib -M overload \
-          -M warnings -M local::lib \
-          -M strict -M utf8 -M parent \
+${PP_BIN} \
+          -M $(grep -v "^#" ${WD}/../common/coreperl | xargs | awk 'BEGIN { OFS=" -M "}; {$1=$1; print $0}') \
           -B -p -e "print 123" -o $WD/_tmp/test.par
 unzip -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $macosfolder/local-lib/lib/perl5/

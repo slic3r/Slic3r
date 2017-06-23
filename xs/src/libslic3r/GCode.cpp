@@ -263,6 +263,12 @@ GCode::set_origin(const Pointf &pointf)
 }
 
 std::string
+GCode::notes()
+{
+    return this->writer.notes();
+}
+
+std::string
 GCode::preamble()
 {
     std::string gcode = this->writer.preamble();

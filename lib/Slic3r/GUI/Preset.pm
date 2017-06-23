@@ -183,7 +183,7 @@ sub dirty_config {
 sub load_config {
     my ($self) = @_;
     
-    return if $self->_loaded;
+    return $self->_config if $self->_loaded;
     
     my @keys = $self->_group_class->options;
     my @extra_keys = $self->_group_class->overriding_options;

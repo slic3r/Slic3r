@@ -10,6 +10,7 @@ use Module::Build::WithXSpp;
 
 my $cpp_guess = ExtUtils::CppGuess->new;
 my $mswin = $^O eq 'MSWin32';
+my $linux = $^O eq 'linux';
 
 # prevent an annoying concatenation warning by Devel::CheckLib
 $ENV{LD_RUN_PATH} //= "";
@@ -23,14 +24,32 @@ if ($cpp_guess->is_gcc)	{
 	# GCC is pedantic with c++11 std, so undefine strict ansi to get M_PI back
 	push @cflags, qw(-U__STRICT_ANSI__);
 }
-if (`$Config{cc} -v` =~ /gcc version 4\.6\./) {
-    # Compatibility with GCC 4.6 is not a requirement, but as long as code compiles on it we try to support it.
-    push @cflags, qw(-std=c++0x);
-} else {
-    # std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
-    push @cflags, qw(-std=c++11);
-}
+
+# std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
+push @cflags, qw(-std=c++11);
+
 my @ldflags = ();
+
+if ($linux && (defined $ENV{SLIC3R_STATIC} && $ENV{SLIC3R_STATIC})) {
+    push @ldflags, qw(-static-libgcc -static-libstdc++);
+    if ($ENV{TRAVIS}) {
+        # On the build server, link to the actual static libraries to make sure we get them in the list.
+    	push @ldflags, qw(/usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libgcc.a);
+    }
+    # ExtUtils::CppGuess has a hard-coded -lstdc++, so we filter it out
+    {
+        no strict 'refs';
+        no warnings 'redefine';
+        my $func = "ExtUtils::CppGuess::_get_lflags";
+        my $orig = *$func{CODE};
+        *{$func} = sub {
+            my $lflags = $orig->(@_);
+            $lflags =~ s/\s*-lstdc\+\+//;
+            return $lflags;
+        };
+    }
+}
+
 if ($^O eq 'darwin') {
     push @cflags, qw(-stdlib=libc++);
     push @ldflags, qw(-framework IOKit -framework CoreFoundation -lc++);
@@ -195,14 +214,6 @@ if ($ENV{SLIC3R_DEBUG}) {
     push @cflags, '-DNDEBUG';
 }
 if ($cpp_guess->is_gcc) {
-    # check whether we're dealing with a buggy GCC version
-    # see https://github.com/alexrj/Slic3r/issues/1965
-    if (`cc --version` =~ / 4\.7\.[012]/) {
-        # Workaround suggested by Boost devs:
-        # https://svn.boost.org/trac/boost/ticket/8695
-        push @cflags, qw(-fno-inline-small-functions);
-    }
-    
     # our templated XS bindings cause undefined-var-template warnings
     push @cflags, qw(-Wno-undefined-var-template);
 }

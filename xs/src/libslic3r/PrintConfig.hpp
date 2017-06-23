@@ -29,6 +29,10 @@ enum GCodeFlavor {
     gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion, gcfSmoothie, gcfRepetier,
 };
 
+enum HostType {
+    htOctoprint, htDuet,
+};
+
 enum InfillPattern {
     ipRectilinear, ipGrid, ipAlignedRectilinear,
     ipTriangles, ipStars, ipCubic, 
@@ -55,6 +59,13 @@ template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_v
     keys_map["machinekit"]      = gcfMachinekit;
     keys_map["no-extrusion"]    = gcfNoExtrusion;
     keys_map["smoothie"]    = gcfSmoothie;
+    return keys_map;
+}
+
+template<> inline t_config_enum_values ConfigOptionEnum<HostType>::get_enum_values() {
+    t_config_enum_values keys_map;
+    keys_map["octoprint"]           = htOctoprint;
+    keys_map["duet"]                = htDuet;
     return keys_map;
 }
 
@@ -150,6 +161,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionBool                interface_shells;
     ConfigOptionFloat               layer_height;
     ConfigOptionInt                 raft_layers;
+    ConfigOptionFloat               regions_overlap;
     ConfigOptionEnum<SeamPosition>  seam_position;
     ConfigOptionBool                support_material;
     ConfigOptionInt                 support_material_angle;
@@ -181,6 +193,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
         OPT_PTR(raft_layers);
+        OPT_PTR(regions_overlap);
         OPT_PTR(seam_position);
         OPT_PTR(support_material);
         OPT_PTR(support_material_angle);
@@ -301,12 +314,15 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionFloats              filament_density;
     ConfigOptionFloats              filament_cost;
     ConfigOptionFloats              filament_max_volumetric_speed;
+    ConfigOptionStrings             filament_notes;
     ConfigOptionBool                gcode_comments;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionString              layer_gcode;
     ConfigOptionFloat               max_print_speed;
     ConfigOptionFloat               max_volumetric_speed;
+    ConfigOptionString              notes;
     ConfigOptionFloat               pressure_advance;
+    ConfigOptionString              printer_notes;
     ConfigOptionFloats              retract_length;
     ConfigOptionFloats              retract_length_toolchange;
     ConfigOptionFloats              retract_lift;
@@ -339,12 +355,15 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(filament_density);
         OPT_PTR(filament_cost);
         OPT_PTR(filament_max_volumetric_speed);
+        OPT_PTR(filament_notes);
         OPT_PTR(gcode_comments);
         OPT_PTR(gcode_flavor);
         OPT_PTR(layer_gcode);
         OPT_PTR(max_print_speed);
         OPT_PTR(max_volumetric_speed);
+        OPT_PTR(notes);
         OPT_PTR(pressure_advance);
+        OPT_PTR(printer_notes);
         OPT_PTR(retract_length);
         OPT_PTR(retract_length_toolchange);
         OPT_PTR(retract_lift);
@@ -399,7 +418,6 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBool                fan_always_on;
     ConfigOptionInt                 fan_below_layer_time;
     ConfigOptionStrings             filament_colour;
-    ConfigOptionStrings             filament_notes;
     ConfigOptionFloat               first_layer_acceleration;
     ConfigOptionInt                 first_layer_bed_temperature;
     ConfigOptionFloatOrPercent      first_layer_extrusion_width;
@@ -413,14 +431,12 @@ class PrintConfig : public GCodeConfig
     ConfigOptionInt                 min_fan_speed;
     ConfigOptionFloat               min_print_speed;
     ConfigOptionFloat               min_skirt_length;
-    ConfigOptionString              notes;
     ConfigOptionFloats              nozzle_diameter;
     ConfigOptionBool                only_retract_when_crossing_perimeters;
     ConfigOptionBool                ooze_prevention;
     ConfigOptionString              output_filename_format;
     ConfigOptionFloat               perimeter_acceleration;
     ConfigOptionStrings             post_process;
-    ConfigOptionStrings             printer_notes;
     ConfigOptionFloat               resolution;
     ConfigOptionFloats              retract_before_travel;
     ConfigOptionBools               retract_layer_change;
@@ -462,7 +478,6 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(fan_always_on);
         OPT_PTR(fan_below_layer_time);
         OPT_PTR(filament_colour);
-        OPT_PTR(filament_notes);
         OPT_PTR(first_layer_acceleration);
         OPT_PTR(first_layer_bed_temperature);
         OPT_PTR(first_layer_extrusion_width);
@@ -476,14 +491,12 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(min_fan_speed);
         OPT_PTR(min_print_speed);
         OPT_PTR(min_skirt_length);
-        OPT_PTR(notes);
         OPT_PTR(nozzle_diameter);
         OPT_PTR(only_retract_when_crossing_perimeters);
         OPT_PTR(ooze_prevention);
         OPT_PTR(output_filename_format);
         OPT_PTR(perimeter_acceleration);
         OPT_PTR(post_process);
-        OPT_PTR(printer_notes);
         OPT_PTR(resolution);
         OPT_PTR(retract_before_travel);
         OPT_PTR(retract_layer_change);
@@ -511,7 +524,8 @@ class PrintConfig : public GCodeConfig
 class HostConfig : public virtual StaticPrintConfig
 {
     public:
-    ConfigOptionString              octoprint_host;
+    ConfigOptionEnum<HostType>      host_type;
+    ConfigOptionString              print_host;
     ConfigOptionString              octoprint_apikey;
     ConfigOptionString              serial_port;
     ConfigOptionInt                 serial_speed;
@@ -522,7 +536,8 @@ class HostConfig : public virtual StaticPrintConfig
     }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
-        OPT_PTR(octoprint_host);
+        OPT_PTR(host_type);
+        OPT_PTR(print_host);
         OPT_PTR(octoprint_apikey);
         OPT_PTR(serial_port);
         OPT_PTR(serial_speed);

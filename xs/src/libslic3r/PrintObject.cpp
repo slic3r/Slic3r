@@ -224,7 +224,8 @@ PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
         if (opt_key == "layer_height"
             || opt_key == "first_layer_height"
             || opt_key == "xy_size_compensation"
-            || opt_key == "raft_layers") {
+            || opt_key == "raft_layers"
+            || opt_key == "regions_overlap") {
             steps.insert(posSlice);
         } else if (opt_key == "support_material_contact_distance") {
             steps.insert(posSlice);
@@ -737,38 +738,57 @@ void PrintObject::_slice()
         }
         this->delete_layer(int(this->layers.size()) - 1);
     }
-
-    for (size_t layer_id = 0; layer_id < layers.size(); ++ layer_id) {
-        Layer *layer = this->layers[layer_id];
-        // Apply size compensation and perform clipping of multi-part objects.
-        float delta = float(scale_(this->config.xy_size_compensation.value));
-        bool  scale = delta != 0.f;
-        if (layer->regions.size() == 1) {
-            if (scale) {
+    
+    // Apply size compensation and perform clipping of multi-part objects.
+    const coord_t xy_size_compensation = scale_(this->config.xy_size_compensation.value);
+    for (Layer* layer : this->layers) {
+        if (xy_size_compensation > 0) {
+            if (layer->regions.size() == 1) {
                 // Single region, growing or shrinking.
-                LayerRegion *layerm = layer->regions.front();
-                layerm->slices.set(offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), delta), stInternal);
-            }
-        } else if (scale) {
-            // Multiple regions, growing, shrinking or just clipping one region by the other.
-            // When clipping the regions, priority is given to the first regions.
-            Polygons processed;
-			for (size_t region_id = 0; region_id < layer->regions.size(); ++ region_id) {
-                LayerRegion *layerm = layer->regions[region_id];
-				ExPolygons slices = to_expolygons(std::move(layerm->slices.surfaces));
-				if (scale)
-					slices = offset_ex(slices, delta);
-                if (region_id > 0)
-                    // Trim by the slices of already processed regions.
-                    slices = diff_ex(to_polygons(std::move(slices)), processed);
-                if (region_id + 1 < layer->regions.size())
-                    // Collect the already processed regions to trim the to be processed regions.
-                    processed += to_polygons(slices);
-                layerm->slices.set(std::move(slices), stInternal);
+                LayerRegion* layerm = layer->regions.front();
+                layerm->slices.set(
+                    offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), xy_size_compensation),
+                    stInternal
+                );
+            } else {
+                // Multiple regions, growing, shrinking or just clipping one region by the other.
+                // When clipping the regions, priority is given to the first regions.
+                Polygons processed;
+                for (size_t region_id = 0; region_id < layer->regions.size(); ++region_id) {
+                    LayerRegion* layerm = layer->regions[region_id];
+                    Polygons slices = layerm->slices;
+                    
+                    if (xy_size_compensation > 0)
+                        slices = offset(slices, xy_size_compensation);
+                    
+                    if (region_id > 0)
+                        // Trim by the slices of already processed regions.
+                        slices = diff(std::move(slices), processed);
+                    
+                    if (region_id + 1 < layer->regions.size())
+                        // Collect the already processed regions to trim the to be processed regions.
+                        append_to(processed, slices);
+                    
+                    layerm->slices.set(union_ex(slices), stInternal);
+                }
             }
         }
+        
         // Merge all regions' slices to get islands, chain them by a shortest path.
         layer->make_slices();
+        
+        // Apply regions overlap
+        if (this->config.regions_overlap.value > 0) {
+            const coord_t delta = scale_(this->config.regions_overlap.value)/2;
+            for (LayerRegion* layerm : layer->regions)
+                layerm->slices.set(
+                    intersection_ex(
+                        offset(layerm->slices, +delta),
+                        layer->slices
+                    ),
+                    stInternal
+                );
+        }
     }
 }
 
