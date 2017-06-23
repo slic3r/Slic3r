@@ -20,6 +20,14 @@ struct TMFEditor
     Model* model; ///< The model to be read or written.
     std::string buff; ///< The buffer currently used in write functions.
     ///< When it reaches a max capacity it's written to the current entry in the zip file.
+    const map<std::string, std::string> namespaces = {
+        {"3mf", "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"}, // Default XML namespace.
+        {"slic3r", "http://link_to_Slic3r_schema.com/2017/06"}, // Slic3r namespace.
+        {"m", "http://schemas.microsoft.com/3dmanufacturing/material/2015/02"}, // Material Extension namespace.
+        {"content_types", "http://schemas.openxmlformats.org/package/2006/content-types"}, // Content_Types namespace.
+        {"relationships", "http://schemas.openxmlformats.org/package/2006/relationships"} // Relationships namepspace.
+    };
+    ///< Namespaces in the 3MF document.
 
     /// Constructor
     TMFEditor(std::string input_file, Model* model){
@@ -36,7 +44,7 @@ struct TMFEditor
 
         // Write 3MF Types "3MF OPC relationships".
         append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n");
-        append_buffer("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n");
+        append_buffer("<Types xmlns=\"" + namespaces["content_types"] + "\">\n");
         append_buffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
         append_buffer("<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n");
         append_buffer("</Types>\n");
@@ -56,7 +64,8 @@ struct TMFEditor
 
         // Write the primary 3dmodel relationship.
         append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
-                          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>");
+                          "<Relationships xmlns=\"" + namespaces["relationships"] +
+                          "\">\n<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>");
         write_buffer();
 
         // Close _rels.rels
@@ -73,10 +82,11 @@ struct TMFEditor
         // add the XML document header.
         append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
 
-        // Write the model element.
+        // Write the model element. Append any necessary namespaces.
         append_buffer("<model unit=\"millimeter\" xml:lang=\"en-US\"");
-        append_buffer(" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"");
-        append_buffer(" xmlns:slic3r=\"http://linktoSlic3rschema.com/2017/06\"> \n");
+        append_buffer(" xmlns=\"" + namespaces["3mf"] + "\"");
+        append_buffer(" xmlns:m=\"" + namespaces["m"] + "\"");
+        append_buffer(" xmlns:slic3r=\"" + namespaces["slic3r"] + "\"> \n");
 
         // Write metadata.
         write_metadata();
@@ -337,7 +347,6 @@ struct TMFEditor
 
     /// Write TMF function called by TMF::write() function
     bool produce_TMF(){
-        // ToDo @Samir55 Throw c++ exceptions instead of returning false (Ask about this).
         // Create a new zip archive object.
         zip_archive = zip_open(zip_name.c_str(), ZIP_DEFLATE_COMPRESSION, 'w');
 
