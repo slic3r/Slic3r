@@ -205,7 +205,21 @@ struct TMFEditor
         // Close the material color group if it's open.
         if(color_group_written)
             append_buffer("</m:colorgroup>\n");
+
+        // Write material extension composite materials.
+//        for (const auto &material : model->composite_materials) {
+//            if(!composite_materials_written){
+//                append_buffer("<m:colorgroup id=\"2\">\n");
+//                color_group_written = true;
+//            }
+//            append_buffer("<m:color color=\"" + material.second->attributes["color"] + "\" />\n");
+//        }
+//
+//        // Close the material color group if it's open.
+//        if(color_group_written)
+//            append_buffer("</m:colorgroup>\n");
         return true;
+
     }
 
     /// Write object of the current model. This function is called by writeModel() function.
