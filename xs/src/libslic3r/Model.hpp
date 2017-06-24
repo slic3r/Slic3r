@@ -47,6 +47,7 @@ class Model
 
     ModelMaterialMap color_group;
     ///< Colors ModelMaterials specific to 3MF format read/write. This is a material group in the 3MF material extension.
+
     std::map<std::string, std::string> metadata;
     ///< Model Metadata <name, value>, this is needed for 3MF format read/write.
 
