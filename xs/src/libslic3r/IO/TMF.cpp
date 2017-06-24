@@ -122,7 +122,7 @@ TMFEditor::write_materials()
     if (model->materials.size() == 0)
         return true;
 
-    bool base_materials_written = false, color_group_written = false;
+    bool base_materials_written = false;
 
     // Write the base materials.
     for (const auto &material : model->materials){
@@ -176,31 +176,29 @@ TMFEditor::write_materials()
         append_buffer("</slic3r:materials>\n");
     }
 
-    // Write material extension color group.
-    for (const auto &material : model->color_group) {
-        if(!color_group_written){
-            append_buffer("<m:colorgroup id=\"2\">\n");
-            color_group_written = true;
+    // Write 3MF material groups found in 3MF extension.
+    for(const auto &material_group : model->material_groups){
+
+        // Get the current material type from using the material group id.
+        int type = model->material_groups_types[material_group.first];
+
+        // Write this material group according to its type.
+        switch (type){
+            case COLOR:
+                append_buffer("<m:colorgroup id=\"" + to_string(material_group.first) + "\">\n");
+                for (const auto &color_material : material_group.second) {
+                    append_buffer("<m:color color=\"" + color_material.second->attributes["color"] + "\" />\n");
+                }
+                append_buffer("</m:colorgroup>\n");
+                break;
+            case COMPOSITE_MATERIAL:
+                break;
+            default:
+                break;
         }
-        append_buffer("<m:color color=\"" + material.second->attributes["color"] + "\" />\n");
+
     }
 
-    // Close the material color group if it's open.
-    if(color_group_written)
-        append_buffer("</m:colorgroup>\n");
-
-    // Write material extension composite materials.
-//        for (const auto &material : model->composite_materials) {
-//            if(!composite_materials_written){
-//                append_buffer("<m:colorgroup id=\"2\">\n");
-//                color_group_written = true;
-//            }
-//            append_buffer("<m:color color=\"" + material.second->attributes["color"] + "\" />\n");
-//        }
-//
-//        // Close the material color group if it's open.
-//        if(color_group_written)
-//            append_buffer("</m:colorgroup>\n");
     return true;
 
 }

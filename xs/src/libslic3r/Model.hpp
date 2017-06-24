@@ -45,13 +45,10 @@ class Model
     ///< Objects are owned by a model. Each object may have multiple instances
     ///< , each instance having its own transformation (shift, scale, rotation).
 
-    ModelMaterialMap color_group;
-    ///< Colors materials specific to 3MF format read/write. This is a material group in the 3MF material extension.
-
     std::map<int, ModelMaterialMap> material_groups;
     ///< Material groups specific to 3MF format read/write. Material groups are found in the 3MF material extension.
 
-    std::map<int, std::string> material_groups_types;
+    std::map<int, int> material_groups_types;
     ///< Type of each material group according to 3MF material extension.
 
     std::map<std::string, std::string> metadata;

@@ -35,6 +35,13 @@ public:
             {"relationships", "http://schemas.openxmlformats.org/package/2006/relationships"} // Relationships namespace.
     };
     ///< Namespaces in the 3MF document.
+    enum material_groups_types{
+        COLOR,
+        TEXTURE,
+        COMPOSITE_MATERIAL,
+        MULTI_PROPERTIES
+    };
+    ///< 3MF material groups in the core and the materials extension.
 
     TMFEditor(std::string input_file, Model* model);
 
