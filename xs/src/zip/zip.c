@@ -48,7 +48,7 @@
         }                      \
     } while (0)
 
-static char *basename(const char *name) {
+char *basename(char *name) {
     char const *p;
     char const *base = name += FILESYSTEM_PREFIX_LEN(name);
     int all_slashes = 1;

@@ -22,11 +22,6 @@ namespace Slic3r { namespace IO {
 class TMFEditor
 {
 public:
-    zip_t* zip_archive; ///< The zip archive object for reading/writing zip files.
-    std::string zip_name; ///< The zip archive file name.
-    Model* model; ///< The model to be read or written.
-    std::string buff; ///< The buffer currently used in write functions.
-    ///< When it reaches a max capacity it's written to the current entry in the zip file.
     const std::map<std::string, std::string> namespaces = {
             {"3mf", "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"}, // Default XML namespace.
             {"slic3r", "http://link_to_Slic3r_schema.com/2017/06"}, // Slic3r namespace.
@@ -41,9 +36,26 @@ public:
         COMPOSITE_MATERIAL,
         MULTI_PROPERTIES
     };
-    ///< 3MF material groups in the core and the materials extension.
+    ///< 3MF material groups in the materials extension.
 
     TMFEditor(std::string input_file, Model* model);
+
+    /// Write TMF function called by TMF::write() function.
+    bool produce_TMF();
+
+    /// Read TMF function called by TMF::read() function.
+    bool consume_TMF(){
+        return true;
+    }
+
+    ~TMFEditor();
+
+private:
+    std::string zip_name; ///< The zip archive file name.
+    Model* model; ///< The model to be read or written.
+    zip_t* zip_archive; ///< The zip archive object for reading/writing zip files.
+    std::string buff; ///< The buffer currently used in write functions.
+    ///< When it reaches a max capacity it's written to the current entry in the zip file.
 
     /// Write the necessary types in the 3MF package. This function is called by produceTMF() function.
     bool write_types();
@@ -68,16 +80,6 @@ public:
 
     /// Write the build element.
     bool write_build();
-
-    /// Write TMF function called by TMF::write() function
-    bool produce_TMF();
-
-    /// Read TMF function called by TMF::read() function
-    bool consume_TMF(){
-        return true;
-    }
-
-    ~TMFEditor();
 
     // Helper Functions.
     /// Append the buffer with a string to be written. This function calls write_buffer() if the buffer reached its capacity.
