@@ -1,7 +1,3 @@
-//
-// Created by ASamir on 6/24/17.
-//
-
 #ifndef SLIC3R_TMF_H
 #define SLIC3R_TMF_H
 

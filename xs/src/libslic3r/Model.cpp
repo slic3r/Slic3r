@@ -20,7 +20,6 @@ Model::Model(const Model &other)
     this->objects.reserve(other.objects.size());
     for (ModelObjectPtrs::const_iterator i = other.objects.begin(); i != other.objects.end(); ++i)
         this->add_object(**i, true);
-    metadata["name"] = "test meta data element";
 }
 
 Model& Model::operator= (Model other)

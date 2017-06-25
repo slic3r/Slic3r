@@ -67,7 +67,7 @@ TMFEditor::write_model()
     write_metadata();
 
     // Write resources.
-    append_buffer("<resources> \n");
+    append_buffer("    <resources> \n");
 
     // Write Model Material.
     write_materials();
@@ -77,7 +77,7 @@ TMFEditor::write_model()
         write_object(object_index);
 
     // Close resources
-    append_buffer("</resources> \n");
+    append_buffer("    </resources> \n");
 
     // Write build element.
     write_build();
@@ -100,11 +100,11 @@ TMFEditor::write_metadata()
 {
     // Write the model metadata.
     for(std::map<std::string, std::string>::iterator it = model->metadata.begin(); it != model->metadata.end(); ++it){
-        append_buffer("<metadata name=\"" + it->first + "\">" + it->second + "</metadata>\n" );
+        append_buffer("    <metadata name=\"" + it->first + "\">" + it->second + "</metadata>\n" );
     }
 
     // Write Slic3r metadata carrying the version number.
-    append_buffer("<slic3r:metadata type=\"version\">" + to_string(SLIC3R_VERSION) + "</slic3r:metadata>\n");
+    append_buffer("    <slic3r:metadata type=\"version\">" + to_string(SLIC3R_VERSION) + "</slic3r:metadata>\n");
 
     return true;
 }
@@ -131,11 +131,11 @@ TMFEditor::write_materials()
             continue;
         // Add the base materials element if not added.
         if (!base_materials_written){
-            append_buffer("<basematerials id=\"1\">\n");
+            append_buffer("    <basematerials id=\"1\">\n");
             base_materials_written = true;
         }
         // We add it with black color by default.
-        append_buffer("<base name=\"" + material.second->attributes["name"] + "\" ");
+        append_buffer("        <base name=\"" + material.second->attributes["name"] + "\" ");
 
         // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
         append_buffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000FF") + "\"/>\n");
@@ -144,7 +144,7 @@ TMFEditor::write_materials()
 
     // Close base materials if it's written.
     if (base_materials_written)
-        append_buffer("</basematerials>\n");
+        append_buffer("    </basematerials>\n");
 
     // Write Slic3r custom config data group.
     // It has the following structure:
@@ -155,7 +155,7 @@ TMFEditor::write_materials()
     // Write Sil3r materials custom configs if base materials are written above.
     if (base_materials_written) {
         // Add Slic3r material config group.
-        append_buffer("<slic3r:materials>\n");
+        append_buffer("    <slic3r:materials>\n");
 
         // Keep an index to keep track of which material it points to.
         int material_index = 0;
@@ -165,7 +165,7 @@ TMFEditor::write_materials()
             if (material.first.empty() || material.second->attributes.count("name") == 0)
                 continue;
             for (const std::string &key : material.second->config.keys()) {
-                append_buffer("<slic3r:material mid=\"" + to_string(material_index)
+                append_buffer("        <slic3r:material mid=\"" + to_string(material_index)
                               + "\" type=\"" + key + "\">"
                               + material.second->config.serialize(key) + "</slic3r:material>\n"
                 );
@@ -173,7 +173,7 @@ TMFEditor::write_materials()
         }
 
         // close Slic3r material config group.
-        append_buffer("</slic3r:materials>\n");
+        append_buffer("    </slic3r:materials>\n");
     }
 
     // Write 3MF material groups found in 3MF extension.
@@ -185,11 +185,11 @@ TMFEditor::write_materials()
         // Write this material group according to its type.
         switch (type){
             case COLOR:
-                append_buffer("<m:colorgroup id=\"" + to_string(material_group.first) + "\">\n");
+                append_buffer("    <m:colorgroup id=\"" + to_string(material_group.first) + "\">\n");
                 for (const auto &color_material : material_group.second) {
-                    append_buffer("<m:color color=\"" + color_material.second->attributes["color"] + "\" />\n");
+                    append_buffer("        <m:color color=\"" + color_material.second->attributes["color"] + "\" />\n");
                 }
-                append_buffer("</m:colorgroup>\n");
+                append_buffer("    </m:colorgroup>\n");
                 break;
             case COMPOSITE_MATERIAL:
                 break;
@@ -209,25 +209,25 @@ TMFEditor::write_object(int index)
     ModelObject* object = model->objects[index];
 
     // Create the new object element.
-    append_buffer("<object id=\"" + to_string(index + 1) + "\" type=\"model\"");
+    append_buffer("        <object id=\"" + to_string(index + 1) + "\" type=\"model\"");
 
     // Add part number if found.
     if (object->part_number != -1)
         append_buffer(" partnumber=\"" + to_string(object->part_number) + "\"");
 
-    append_buffer(">");
+    append_buffer(">\n");
 
     // Write Slic3r custom configs.
     for (const std::string &key : object->config.keys()){
-        append_buffer("<slic3r:object type=\"slic3r." + key + "\">"
+        append_buffer("        <slic3r:object type=\"slic3r." + key + "\">"
                       + object->config.serialize(key) + "</slic3r:object>\n");
     }
 
     // Create mesh element which contains the vertices and the volumes.
-    append_buffer("<mesh>\n");
+    append_buffer("            <mesh>\n");
 
     // Create vertices element.
-    append_buffer("<vertices>\n");
+    append_buffer("                <vertices>\n");
 
     // Save the start offset of each volume vertices in the object.
     std::vector<size_t> vertices_offsets;
@@ -247,7 +247,7 @@ TMFEditor::write_object(int index)
             // thus any additional part added will not align with the others.
             // In order to do this we compensate for this translation in the instance placement
             // below.
-            append_buffer("<vertex");
+            append_buffer("                    <vertex");
             append_buffer(" x=\"" + to_string(stl.v_shared[i].x - object->origin_translation.x) + "\"");
             append_buffer(" y=\"" + to_string(stl.v_shared[i].y - object->origin_translation.y) + "\"");
             append_buffer(" z=\"" + to_string(stl.v_shared[i].z - object->origin_translation.z) + "\"/>\n");
@@ -256,10 +256,10 @@ TMFEditor::write_object(int index)
     }
 
     // Close the vertices element.
-    append_buffer("</vertices>\n");
+    append_buffer("                </vertices>\n");
 
     // Append volumes in triangles element.
-    append_buffer("<triangles>\n");
+    append_buffer("                <triangles>\n");
 
     // Save the start offset (triangle offset) of each volume (To be saved for writing Slic3r custom configs).
     std::vector<size_t> triangles_offsets;
@@ -272,22 +272,22 @@ TMFEditor::write_object(int index)
 
         // Add the volume triangles to the triangles list.
         for (int i = 0; i < volume->mesh.stl.stats.number_of_facets; ++i){
-            append_buffer("<triangle");
+            append_buffer("                    <triangle");
             for (int j = 0; j < 3; j++){
                 append_buffer(" v" + to_string(j+1) + "=\"" + to_string(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) + "\"");
             }
             if (!volume->material_id().empty())
                 append_buffer(" pid=\"1\" p1=\"" + to_string(volume->material_id()) + "\""); // Base Materials id = 1 and p1 is assigned to the whole triangle.
-            append_buffer("/>");
+            append_buffer("/>\n");
             num_triangles++;
         }
     }
 
     // Close the triangles element
-    append_buffer("</triangles>\n");
+    append_buffer("                </triangles>\n");
 
     // Add Slic3r volumes group.
-    append_buffer("<slic3r:volumes>\n");
+    append_buffer("                <slic3r:volumes>\n");
 
     // Add each volume as <slic3r:volume> element containing Slic3r custom configs.
     // Each volume has the following attributes:
@@ -296,29 +296,29 @@ TMFEditor::write_object(int index)
     for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
         ModelVolume *volume = object->volumes[i_volume];
 
-        append_buffer("<slic3r:volume ts=\"" + to_string(triangles_offsets[i_volume]) + "\""
+        append_buffer("                    <slic3r:volume ts=\"" + to_string(triangles_offsets[i_volume]) + "\""
                       + " te=\"" + ((i_volume < object->volumes.size() - 1) ? to_string(triangles_offsets[i_volume+1] - 1) : to_string(num_triangles-1)) + "\""
                       + (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
                       + ">\n");
 
         for (const std::string &key : volume->config.keys()){
-            append_buffer("<slic3r:metadata type=\"slic3r." +  key
+            append_buffer("                        <slic3r:metadata type=\"slic3r." +  key
                           + "\">" + volume->config.serialize(key)
                           + "</slic3r:metadata>\n");
         }
 
         // Close Slic3r volume
-        append_buffer("</slic3r:volume>\n");
+        append_buffer("                    </slic3r:volume>\n");
     }
 
     // Close Slic3r volumes group.
-    append_buffer("</slic3r:volumes>\n");
+    append_buffer("                </slic3r:volumes>\n");
 
     // Close the mesh element.
-    append_buffer("</mesh>\n");
+    append_buffer("            </mesh>\n");
 
     // Close the object element.
-    append_buffer("</object>\n");
+    append_buffer("        </object>\n");
 
     return true;
 }
