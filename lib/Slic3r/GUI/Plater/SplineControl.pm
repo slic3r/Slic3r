@@ -33,6 +33,7 @@ sub new {
     $self->{scaling_factor_y} = 1;
     $self->{min_layer_height} = 0.1;
     $self->{max_layer_height} = 0.4;
+    $self->{mousover_layer_height} = undef; # display layer height at mousover position
     $self->{object_height} = 1.0;
     
     # initialize values
@@ -73,7 +74,10 @@ sub repaint {
     $dc->SetTextForeground(Wx::Colour->new(0,0,0));
     $dc->SetFont(Wx::Font->new(10, wxDEFAULT, wxNORMAL, wxNORMAL));
     $dc->DrawLabel(sprintf('%.4g', $self->{min_layer_height}), Wx::Rect->new(0, $size[1]/2, $size[0], $size[1]/2), wxALIGN_LEFT | wxALIGN_BOTTOM);
-    $dc->DrawLabel(sprintf('%.4g', $self->{max_layer_height}), Wx::Rect->new(0, $size[1]/2, $size[0], $size[1]/2), wxALIGN_RIGHT | wxALIGN_BOTTOM);
+    $dc->DrawLabel(sprintf('%.2g', $self->{max_layer_height}), Wx::Rect->new(0, $size[1]/2, $size[0], $size[1]/2), wxALIGN_RIGHT | wxALIGN_BOTTOM);
+    if($self->{mousover_layer_height}){
+        $dc->DrawLabel(sprintf('%4.2fmm', $self->{mousover_layer_height}), Wx::Rect->new(0, 0, $size[0], $size[1]), wxALIGN_RIGHT | wxALIGN_TOP);
+    }
 
     if($self->{is_valid}) {
 
@@ -206,11 +210,17 @@ sub mouse_event {
     } elsif ($event->Moving) {
         if($self->{on_z_indicator}) {
             $self->{on_z_indicator}->($obj_pos[1]);
+            $self->{mousover_layer_height} = $self->{object}->layer_height_spline->getLayerHeightAt($obj_pos[1]);
+            $self->Refresh;
+            $self->Update;
         }
     } elsif ($event->Leaving) {
         if($self->{on_z_indicator} && !$self->{left_drag_start_pos}) {
             $self->{on_z_indicator}->(undef);
         }
+        $self->{mousover_layer_height} = undef;
+        $self->Refresh;
+        $self->Update;
     }
 }
 
