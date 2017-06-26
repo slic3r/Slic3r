@@ -82,51 +82,45 @@ zip(const std::vector<coordf_t> &x, const std::vector<coordf_t> &y)
 }
 
 // Generate a set of curves (array of array of 2d points) that describe a
-// horizontal slice of a truncated regular octahedron with edge length `gridSize`.
+// horizontal slice of a truncated regular octahedron with edge length 1.
 // curveType specifies which lines to print, 1 for vertical lines
 // (columns), 2 for horizontal lines (rows), and 3 for both.
 static std::vector<Pointfs>
-makeNormalisedGrid(coordf_t z, coord_t gridSize, size_t gridWidth, size_t gridHeight){
-  coordf_t ch = coordf_t(4*gridSize / std::sqrt(2)); // z-height of a single octahedron cycle
-  coordf_t pl = coordf_t(gridSize * 4); // planar length of the printed curve unit
-  // sawtooth wave function
-  coordf_t dl = coordf_t((std::abs(std::fmod(z * 4, 4*ch) - (2*ch)) - ch) / 2); // diagonal length
-  // work out whether to display horizontal (0) or vertical (1) pattern
-  size_t dc = int(std::fmod(z*2, 2*ch) / ch); // diagonal cycle
-  
-  coordf_t dox = coordf_t(dl / sqrt(2)); // diagonal x offset
-  coordf_t doy = coordf_t(std::abs(dox)); // diagonal y offset
-  coordf_t ol = coordf_t((pl - 2*doy)/2); // orthogonal length
-  
-  std::vector<Pointfs> points;
-  if(dc == 0){
-    points.push_back(Pointfs());
-    Pointfs &newPoints = points.back();
-    for (coordf_t xofs = 0; xofs <= gridWidth; xofs+= gridSize) {
-      for(coordf_t yofs = 0; yofs <= gridHeight; yofs += pl){
-	newPoints.push_back(Pointf(coordf_t(dox/2+xofs), coordf_t(0+yofs)));
-	newPoints.push_back(Pointf(coordf_t(dox/2+xofs), coordf_t(ol/2+yofs)));
-	newPoints.push_back(Pointf(coordf_t(-dox/2+xofs), coordf_t(ol/2+doy+yofs)));
-	newPoints.push_back(Pointf(coordf_t(-dox/2+xofs), coordf_t(ol*1.5+doy+yofs)));
-	newPoints.push_back(Pointf(coordf_t(dox/2+xofs), coordf_t(ol*1.5+doy*2+yofs)));
-      }
+makeNormalisedGrid(coordf_t z, size_t gridWidth, size_t gridHeight, size_t curveType)
+{
+    // sawtooth wave function
+    coordf_t a = std::sqrt(coordf_t(2.));  // period
+    coordf_t offset = fabs(fmod(z, a) - a/2.)/a*2. - 0.5;
+    bool printHoriz = (fabs(fmod(z, a)) / a*2. < 1);
+
+    std::vector<Pointfs> points;
+    if (printHoriz) {
+        for (size_t x = 0; x <= gridWidth; ++x) {
+            points.push_back(Pointfs());
+            Pointfs &newPoints = points.back();
+            newPoints = zip(
+                perpendPoints(offset, x, gridHeight),
+                colinearPoints(offset, 0, gridHeight));
+            // trim points to grid edges
+            trim(newPoints, coordf_t(0.), coordf_t(0.), coordf_t(gridWidth), coordf_t(gridHeight));
+            if (x & 1)
+                std::reverse(newPoints.begin(), newPoints.end());
+        }
+    } else {
+        for (size_t y = 0; y <= gridHeight; ++y) {
+            points.push_back(Pointfs());
+            Pointfs &newPoints = points.back();
+            newPoints = zip(
+                colinearPoints(offset, 0, gridWidth),
+                perpendPoints(offset, y, gridWidth)
+            );
+            // trim points to grid edges
+            trim(newPoints, coordf_t(0.), coordf_t(0.), coordf_t(gridWidth), coordf_t(gridHeight));
+            if (y & 1)
+                std::reverse(newPoints.begin(), newPoints.end());
+        }
     }
-    trim(newPoints, coordf_t(0.), coordf_t(0.), coordf_t(gridWidth), coordf_t(gridHeight));
-  } else {
-    points.push_back(Pointfs());
-    Pointfs &newPoints = points.back();
-    for(coordf_t yofs = 0; yofs <= gridWidth; yofs+= gridSize){
-      for(coordf_t xofs = 0; xofs <= gridHeight; xofs += pl){
-	newPoints.push_back(Pointf(coordf_t(0+xofs), coordf_t(dox/2+yofs)));
-	newPoints.push_back(Pointf(coordf_t(ol/2+xofs), coordf_t(dox/2+yofs)));
-	newPoints.push_back(Pointf(coordf_t(ol/2+doy+xofs), coordf_t(-dox/2+yofs)));
-	newPoints.push_back(Pointf(coordf_t(ol*1.5+doy+xofs), coordf_t(-dox/2+yofs)));
-	newPoints.push_back(Pointf(coordf_t(ol*1.5+doy*2+xofs), coordf_t(dox/2+yofs)));
-      }
-    }
-    trim(newPoints, coordf_t(0.), coordf_t(0.), coordf_t(gridWidth), coordf_t(gridHeight));
-  }
-  return points;
+    return points;
 }
 
 // Generate a set of curves (array of array of 2d points) that describe a
@@ -135,14 +129,16 @@ makeNormalisedGrid(coordf_t z, coord_t gridSize, size_t gridWidth, size_t gridHe
 static Polylines
 makeGrid(coord_t z, coord_t gridSize, size_t gridWidth, size_t gridHeight, size_t curveType)
 {
-    std::vector<Pointfs> polylines = makeNormalisedGrid(z, gridSize, gridWidth, gridHeight);
+    coord_t  scaleFactor = gridSize;
+    coordf_t normalisedZ = coordf_t(z) / coordf_t(scaleFactor);
+    std::vector<Pointfs> polylines = makeNormalisedGrid(normalisedZ, gridWidth, gridHeight, curveType);
     Polylines result;
     result.reserve(polylines.size());
     for (std::vector<Pointfs>::const_iterator it_polylines = polylines.begin(); it_polylines != polylines.end(); ++ it_polylines) {
         result.push_back(Polyline());
         Polyline &polyline = result.back();
         for (Pointfs::const_iterator it = it_polylines->begin(); it != it_polylines->end(); ++ it)
-            polyline.points.push_back(Point(coord_t(it->x), coord_t(it->y)));
+            polyline.points.push_back(Point(coord_t(it->x * scaleFactor), coord_t(it->y * scaleFactor)));
     }
     return result;
 }
@@ -150,8 +146,8 @@ makeGrid(coord_t z, coord_t gridSize, size_t gridWidth, size_t gridHeight, size_
 void
 Fill3DHoneycomb::_fill_surface_single(
     unsigned int                    thickness_layers,
-    const direction_t               &direction, 
-    ExPolygon                       &expolygon, 
+    const direction_t               &direction,
+    ExPolygon                       &expolygon,
     Polylines*                      polylines_out)
 {
     // no rotation is supported for this infill pattern
@@ -159,10 +155,10 @@ Fill3DHoneycomb::_fill_surface_single(
     const coord_t distance = coord_t(scale_(this->min_spacing) / this->density);
 
     // align bounding box to a multiple of our honeycomb grid module
-    // (a module is 2*$distance since one $distance half-module is 
+    // (a module is 2*$distance since one $distance half-module is
     // growing while the other $distance half-module is shrinking)
     bb.min.align_to_grid(Point(2*distance, 2*distance));
-    
+
     // generate pattern
     Polylines polylines = makeGrid(
         scale_(this->z),
@@ -171,7 +167,7 @@ Fill3DHoneycomb::_fill_surface_single(
         ceil(bb.size().y / distance) + 1,
         ((this->layer_id/thickness_layers) % 2) + 1
     );
-    
+
     // move pattern in place
     for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it)
         it->translate(bb.min.x, bb.min.y);
