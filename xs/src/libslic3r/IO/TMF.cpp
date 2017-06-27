@@ -327,13 +327,13 @@ bool
 TMFEditor::write_build()
 {
     // Create build element.
-    append_buffer("<build> \n");
+    append_buffer("    <build> \n");
 
     // Write ModelInstances for each ModelObject.
     for(size_t object_id = 0; object_id < model->objects.size(); ++object_id){
         ModelObject* object = model->objects[object_id];
         for (const ModelInstance* instance : object->instances){
-            append_buffer("<item objectid=\"" + to_string(object_id + 1) + "\"");
+            append_buffer("        <item objectid=\"" + to_string(object_id + 1) + "\"");
 
             // Get the rotation about z and the scale factor.
             double sc = instance->scaling_factor, cosine_rz = cos(instance->rotation) , sine_rz = sin(instance->rotation);
@@ -345,11 +345,11 @@ TMFEditor::write_build()
                                     + to_string(tx) + " " + to_string(ty) + " " + "0";
 
             // Add the transform
-            append_buffer(" transform=\"" + transform + "\"/>");
+            append_buffer(" transform=\"" + transform + "\"/>\n");
 
         }
     }
-    append_buffer("</build> \n");
+    append_buffer("    </build> \n");
     return true;
 }
 

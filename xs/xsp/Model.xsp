@@ -36,7 +36,10 @@
         %code%{ RETVAL = Slic3r::IO::OBJ::write(*THIS, output_file); %};
     bool write_amf(std::string output_file)
         %code%{ RETVAL = Slic3r::IO::AMF::write(*THIS, output_file); %};
-    
+
+    bool write_tmf(std::string output_file)
+    %code%{ RETVAL = Slic3r::IO::TMF::write(*THIS, output_file); %};
+
     %name{_add_object} Ref<ModelObject> add_object();
     Ref<ModelObject> _add_object_clone(ModelObject* other, bool copy_volumes = true)
         %code%{ RETVAL = THIS->add_object(*other, copy_volumes); %};
