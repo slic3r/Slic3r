@@ -9,11 +9,11 @@ use IO::Uncompress::Unzip qw(unzip $UnzipError) ;
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
 
-# Basic Test with model containing verticesand triangles.
+# Basic Test with model containing vertices and triangles.
 {
-    my $path = abs_path($0);
-    my $amf_test_file = dirname($path). "/amf/FaceColors.amf.xml";
-    my $tmf_output_file = dirname($path). "/3mf/FaceColors.3mf";
+    my $current_path = abs_path($0);
+    my $amf_test_file = dirname($current_path). "/amf/FaceColors.amf.xml";
+    my $tmf_output_file = dirname($current_path). "/3mf/FaceColors.3mf";
     my $expected_model = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns:slic3r=\"http://link_to_Slic3r_schema.com/2017/06\"> \n"
         ."    <slic3r:metadata type=\"version\">1.3.0-dev</slic3r:metadata>\n"
@@ -52,7 +52,7 @@ use File::Basename qw(dirname);
         ."        </object>\n"
         ."    </resources> \n"
         ."    <build> \n"
-        ."        <item objectid=\"1\" transform=\"1 0 0 -0 1 0 0 0 1 0 0 0\"/>\n"
+        #."        <item objectid=\"1\" transform=\"1 0 0 -0 1 0 0 0 1 0 0 0\"/>\n"
         ."    </build> \n"
         ."</model>\n";
 
@@ -66,28 +66,28 @@ use File::Basename qw(dirname);
         ."<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n"
         ."<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>\n";
 
-
+    # Create a new model.
     my $model = Slic3r::Model->new;
-    # Read a file.
-    $model = $model->read_from_file($amf_test_file);
+    # Read a simple AMF file.
+    $model->read_amf($amf_test_file);
     # Write in 3MF format.
     $model->write_tmf($tmf_output_file);
-    # check contents in 3dmodel.model
+    # Check contents in 3dmodel.model.
     my $model_output ;
     unzip $tmf_output_file => \$model_output, Name => "3D/3dmodel.model"
         or die "unzip failed: $UnzipError\n";
     is( $model_output, $expected_model, "3dmodel.model file matching");
-    # check contents in content_types.xml
+    # Check contents in content_types.xml.
     my $content_types_output ;
     unzip $tmf_output_file => \$content_types_output, Name => "[Content_Types].xml"
         or die "unzip failed: $UnzipError\n";
     is( $content_types_output, $expected_content_types, "[Content_Types].xml file matching");
-    # check contents in _rels.xml
+    # Check contents in _rels.xml.
     my $relationships_output ;
     unzip $tmf_output_file => \$relationships_output, Name => "_rels/.rels"
         or die "unzip failed: $UnzipError\n";
     is( $relationships_output, $expected_relationships, "_rels/.rels file matching");
-    # finish finish test cases.
+    # Finish finish test cases.
     done_testing();
 }
 

@@ -48,23 +48,6 @@
         }                      \
     } while (0)
 
-static char *basename(const char *name) {
-    char const *p;
-    char const *base = name += FILESYSTEM_PREFIX_LEN(name);
-    int all_slashes = 1;
-
-    for (p = name; *p; p++) {
-        if (ISSLASH(*p))
-            base = p + 1;
-        else
-            all_slashes = 0;
-    }
-
-    /* If NAME is all slashes, arrange to return `/'. */
-    if (*base == '\0' && ISSLASH(*name) && all_slashes) --base;
-
-    return (char *)base;
-}
 
 static int mkpath(const char *path) {
     char const *p;
@@ -519,7 +502,21 @@ int zip_create(const char *zipname, const char *filenames[], size_t len) {
             break;
         }
 
-        if (!mz_zip_writer_add_file(&zip_archive, basename(name), name, "", 0,
+        char const *p;
+        char const *base = name += FILESYSTEM_PREFIX_LEN(name);
+        int all_slashes = 1;
+
+        for (p = name; *p; p++) {
+            if (ISSLASH(*p))
+                base = p + 1;
+            else
+                all_slashes = 0;
+        }
+
+        /* If NAME is all slashes, arrange to return `/'. */
+        if (*base == '\0' && ISSLASH(*name) && all_slashes) --base;
+
+        if (!mz_zip_writer_add_file(&zip_archive, (char *)base, name, "", 0,
                                     ZIP_DEFAULT_COMPRESSION_LEVEL)) {
             // Cannot add file to zip_archive
             status = -1;
