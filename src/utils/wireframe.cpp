@@ -27,7 +27,7 @@ main(int argc, char **argv)
 
     //Read config files
 
-    //Check if wireframe is enableds
+    //Check if wireframe is enabled
 
 	return 0;
 }
