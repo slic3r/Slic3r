@@ -283,6 +283,15 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("3");
     def->enum_labels.push_back("4");
 
+    def = this->add("extruder_clearance_angle", coFloat);
+    def->label = "Angle";
+    def->tooltip = "Set this to the maximum angle your extruder can accomplish without intersecting the print (used for wireframe)";
+    def->sidetext = "degrees";
+    def->cli = "extruder-clearance-angle=f";
+    def->min = 0;
+    def->max = 90;
+    def->default_value = new ConfigOptionFloat(40);
+
     def = this->add("extruder_clearance_height", coFloat);
     def->label = "Height";
     def->tooltip = "Set this to the vertical distance between your nozzle tip and (usually) the X carriage rods. In other words, this is the height of the clearance cylinder around your extruder, and it represents the maximum depth the extruder can peek before colliding with other printed objects.";
@@ -757,6 +766,15 @@ PrintConfigDef::PrintConfigDef()
     def->min = 1;
     def->default_value = new ConfigOptionFloat(80);
 
+    def = this->add("max_step_height", coFloat);
+    def->label = "Max step height";
+    //def->category = "Speed";
+    def->tooltip = "This is the maximum height a step in wireframe will be";
+    def->sidetext = "mm";
+    def->cli = "max-step-height=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(5);
+
     def = this->add("max_volumetric_speed", coFloat);
     def->label = "Max volumetric speed";
     def->category = "Speed";
@@ -791,6 +809,15 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "min-skirt-length=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
+
+    def = this->add("min_step_height", coFloat);
+    def->label = "Min step height";
+    //def->category = "Speed";
+    def->tooltip = "This is the minimum height a step in wireframe will be";
+    def->sidetext = "mm";
+    def->cli = "min-step-height=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(1);
 
     def = this->add("notes", coString);
     def->label = "Configuration notes";

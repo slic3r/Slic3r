@@ -508,6 +508,45 @@ class PrintConfig : public GCodeConfig
     };
 };
 
+/*
+Printer Geometry
+
+    Hotend width (mm)
+    Hotend slope (degrees)
+    Nozzle diameter (mm)
+    Heated bed (bool)
+    Gcode flavor (enum)
+    Relative E (bool)
+    Firmware retraction (bool)
+    Retraction settings (mixed)
+    Z lift (mm)
+    Custom Gcode
+
+Material Settings?
+
+    Cooling settings
+    -Fan speeds (%)
+    -Pillar pause length (seconds)
+    Print temp (celsius)
+    Bed temp (celsius)
+    Filament Diameter
+    Extrusion Multiplier
+
+Print Settings
+
+    Minimum step height (mm)
+    Maximum step height (mm)
+    Mesh style
+    Extrusion width (mm)
+    Print speed (mm/s)
+    Volumetric speed? (mm^3/s)
+    Vertical speed? (mm/s)
+    Travel speed
+    Skirt settings
+    Raft option (bool)
+
+*/
+
 class WireframePrintConfig : public GCodeConfig
 {
     public:
@@ -518,11 +557,9 @@ class WireframePrintConfig : public GCodeConfig
     ConfigOptionInt                 bridge_fan_speed;
     ConfigOptionFloat               brim_connections_width;
     ConfigOptionFloat               brim_width;
-    ConfigOptionBool                complete_objects;
     ConfigOptionBool                cooling;
     ConfigOptionFloat               default_acceleration;
-    ConfigOptionFloat               duplicate_distance;
-    //ConfigOptionFloat               extruder_clearance_angle;
+    ConfigOptionFloat               extruder_clearance_angle;
     ConfigOptionFloat               extruder_clearance_height;
     ConfigOptionFloat               extruder_clearance_radius;
     ConfigOptionPoints              extruder_offset;
@@ -535,15 +572,17 @@ class WireframePrintConfig : public GCodeConfig
     ConfigOptionFloatOrPercent      first_layer_extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionInts                first_layer_temperature;
-    ConfigOptionBool                gcode_arcs;
+    //ConfigOptionBool                gcode_arcs;
     ConfigOptionFloat               interior_brim_width;
     ConfigOptionInt                 max_fan_speed;
+    ConfigOptionFloat               max_step_height;
     ConfigOptionInt                 min_fan_speed;
     ConfigOptionFloat               min_print_speed;
     ConfigOptionFloat               min_skirt_length;
+    ConfigOptionFloat               min_step_height;
     ConfigOptionString              notes;
     ConfigOptionFloats              nozzle_diameter;
-    ConfigOptionBool                ooze_prevention;
+    //ConfigOptionBool                ooze_prevention;
     ConfigOptionString              output_filename_format;
     ConfigOptionFloat               perimeter_acceleration;
     ConfigOptionStrings             post_process;
@@ -552,7 +591,7 @@ class WireframePrintConfig : public GCodeConfig
     ConfigOptionFloats              retract_before_travel;
     ConfigOptionBools               retract_layer_change;
     ConfigOptionFloat               skirt_distance;
-    ConfigOptionInt                 skirt_height;
+    //ConfigOptionInt                 skirt_height;
     ConfigOptionInt                 skirts;
     ConfigOptionInt                 slowdown_below_layer_time;
     ConfigOptionInt                 standby_temperature_delta;
@@ -577,10 +616,9 @@ class WireframePrintConfig : public GCodeConfig
         OPT_PTR(bridge_fan_speed);
         OPT_PTR(brim_connections_width);
         OPT_PTR(brim_width);
-        OPT_PTR(complete_objects);
         OPT_PTR(cooling);
         OPT_PTR(default_acceleration);
-        OPT_PTR(duplicate_distance);
+        OPT_PTR(extruder_clearance_angle);
         OPT_PTR(extruder_clearance_height);
         OPT_PTR(extruder_clearance_radius);
         OPT_PTR(extruder_offset);
@@ -593,15 +631,17 @@ class WireframePrintConfig : public GCodeConfig
         OPT_PTR(first_layer_extrusion_width);
         OPT_PTR(first_layer_speed);
         OPT_PTR(first_layer_temperature);
-        OPT_PTR(gcode_arcs);
+        //OPT_PTR(gcode_arcs);
         OPT_PTR(interior_brim_width);
         OPT_PTR(max_fan_speed);
+        OPT_PTR(max_step_height);
         OPT_PTR(min_fan_speed);
         OPT_PTR(min_print_speed);
         OPT_PTR(min_skirt_length);
+        OPT_PTR(min_step_height);
         OPT_PTR(notes);
         OPT_PTR(nozzle_diameter);
-        OPT_PTR(ooze_prevention);
+        //OPT_PTR(ooze_prevention);
         OPT_PTR(output_filename_format);
         OPT_PTR(perimeter_acceleration);
         OPT_PTR(post_process);
@@ -610,7 +650,7 @@ class WireframePrintConfig : public GCodeConfig
         OPT_PTR(retract_before_travel);
         OPT_PTR(retract_layer_change);
         OPT_PTR(skirt_distance);
-        OPT_PTR(skirt_height);
+        //OPT_PTR(skirt_height);
         OPT_PTR(skirts);
         OPT_PTR(slowdown_below_layer_time);
         OPT_PTR(standby_temperature_delta);
