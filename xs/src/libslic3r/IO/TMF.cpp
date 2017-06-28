@@ -39,7 +39,7 @@ TMFEditor::write_relationships()
     // Write the primary 3dmodel relationship.
     append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
                           "<Relationships xmlns=\"" + namespaces.at("relationships") +
-                  "\">\n<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>");
+                  "\">\n<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>\n");
     write_buffer();
 
     // Close _rels.rels
