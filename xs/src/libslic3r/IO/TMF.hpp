@@ -93,6 +93,9 @@ private:
 
 };
 
+/// 3MF XML Document parser.
+
+
 } }
 
 #endif //SLIC3R_TMF_H
