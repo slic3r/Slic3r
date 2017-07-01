@@ -8,6 +8,11 @@
 #include <vector>
 #include <math.h>
 #include <zip/zip.h>
+#include <boost/move/move.hpp>
+#include <boost/nowide/fstream.hpp>
+#include <boost/nowide/iostream.hpp>
+#include <expat/expat.h>
+#include "../../expat/expat.h" // included only For IDE code suggestions.
 
 #define WRITE_BUFFER_MAX_CAPACITY 10000
 #define ZIP_DEFLATE_COMPRESSION 8
@@ -22,6 +27,7 @@ public:
             {"3mf", "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"}, // Default XML namespace.
             {"slic3r", "http://link_to_Slic3r_schema.com/2017/06"}, // Slic3r namespace.
             {"m", "http://schemas.microsoft.com/3dmanufacturing/material/2015/02"}, // Material Extension namespace.
+            {"s", "http://schemas.microsoft.com/3dmanufacturing/slice/2015/07"}, // Slice Extension.
             {"content_types", "http://schemas.openxmlformats.org/package/2006/content-types"}, // Content_Types namespace.
             {"relationships", "http://schemas.openxmlformats.org/package/2006/relationships"} // Relationships namespace.
     };
@@ -94,7 +100,73 @@ private:
 };
 
 /// 3MF XML Document parser.
+struct TMFParserContext{
 
+    // Nodes found 3MF model document.
+    enum TMFNodeType {
+        NODE_TYPE_INVALID = 0,
+        NODE_TYPE_UNKNOWN,
+        NODE_TYPE_MODEL,                    // 3mf model node.
+        NODE_TYPE_METADATA,
+        NODE_TYPE_RESOURCES,
+        NODE_TYPE_BASE_MATERIALS,
+        NODE_TYPE_BASE,
+        NODE_TYPE_COLOR_GROUP,              // model/m:colorgroup
+        NODE_TYPE_COLOR,
+        NODE_TYPE_COMPOSITE_MATERIALS,
+        NODE_TYPE_MULTI_PROPERTIES,
+        NODE_TYPE_OBJECT,
+        NODE_TYPE_MESH,
+        NODE_TYPE_VERTICES,
+        NODE_TYPE_VERTEX,
+        NODE_TYPE_TRIANGLES,
+        NODE_TYPE_TRIANGLE,
+        NODE_TYPE_BUILD,
+        NODE_TYPE_ITEM,
+    };
+
+    // Instance foung in model/build/.
+    struct Instance {
+        // Shift in the X axis.
+        float delta_x;
+        // Shift in the Y axis.
+        float delta_y;
+        // Rotation around the Z axis.
+        float rz;
+        // Scaling factor
+        float scale;
+    };
+
+    struct Object {
+        Object() : idx(-1) {}
+        int                     idx;
+        std::vector<Instance>   instances;
+    };
+
+    // Current Expat XML parser instance.
+    XML_Parser               m_parser;
+    // Model to receive objects extracted from an 3MF file.
+    Model                   &m_model;
+    // Current parsing path in the XML file.
+    std::vector<TMFNodeType> m_path;
+    // Current object allocated for an model/object XML subtree.
+    ModelObject             *m_object;
+    // Map from object name to object idx & instances.
+    std::map<std::string, Object> m_object_instances_map;
+    // Vertices parsed for the current m_object.
+    std::vector<float>       m_object_vertices;
+    // Volume allocated for an model/object/mesh.
+    // ToDo Ask: Is this correct to add it all the triangles into a single Mesh.
+    ModelVolume             *m_volume;
+    // Faces collected for the current m_volume.
+    std::vector<int>         m_volume_facets;
+    // Current base material allocated for the current model.
+    ModelMaterial           *m_material;
+    // Current instance allocated for an model/build/item.
+    Instance                *m_instance;
+    // Generic string buffer for vertices, face indices, metadata etc.
+    std::string              m_value[3];
+};
 
 } }
 
