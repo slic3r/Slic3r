@@ -375,6 +375,7 @@ TMFEditor::produce_TMF()
 bool
 TMFEditor::consume_TMF()
 {
+    //
     return true;
 }
 

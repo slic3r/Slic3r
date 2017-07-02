@@ -53,6 +53,8 @@ Model::read_from_file(std::string input_file)
     } else if (boost::algorithm::iends_with(input_file, ".amf")
             || boost::algorithm::iends_with(input_file, ".amf.xml")) {
         IO::AMF::read(input_file, &model);
+    } else if (boost::algorithm::iends_with(input_file, ".3mf")) {
+        IO::TMF::read(input_file, &model);
     } else {
         throw std::runtime_error("Unknown file format");
     }

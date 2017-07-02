@@ -100,16 +100,15 @@ private:
 /// 3MF XML Document parser.
 struct TMFParserContext{
 
-    // Nodes found 3MF model document.
     enum TMFNodeType {
         NODE_TYPE_INVALID = 0,
         NODE_TYPE_UNKNOWN,
-        NODE_TYPE_MODEL,                    // 3mf model node.
+        NODE_TYPE_MODEL,
         NODE_TYPE_METADATA,
         NODE_TYPE_RESOURCES,
         NODE_TYPE_BASE_MATERIALS,
         NODE_TYPE_BASE,
-        NODE_TYPE_COLOR_GROUP,              // model/m:colorgroup
+        NODE_TYPE_COLOR_GROUP,
         NODE_TYPE_COLOR,
         NODE_TYPE_COMPOSITE_MATERIALS,
         NODE_TYPE_MULTI_PROPERTIES,
@@ -122,8 +121,8 @@ struct TMFParserContext{
         NODE_TYPE_BUILD,
         NODE_TYPE_ITEM,
     };
+    ///< Nodes found in 3MF XML document.
 
-    // Instance found in model/build/.
     struct Instance {
         // Shift in the X axis.
         float delta_x;
@@ -134,6 +133,7 @@ struct TMFParserContext{
         // Scaling factor
         float scale;
     };
+    ///< Instance found in model/build/.
 
     struct Object {
         Object() : idx(-1) {}
@@ -141,29 +141,29 @@ struct TMFParserContext{
         std::vector<Instance>   instances;
     };
 
-    // Current Expat XML parser instance.
     XML_Parser               m_parser;
-    // Model to receive objects extracted from an 3MF file.
+    ///< Current Expat XML parser instance.
     Model                   &m_model;
-    // Current parsing path in the XML file.
+    ///< Model to receive objects extracted from an 3MF file.
     std::vector<TMFNodeType> m_path;
-    // Current object allocated for an model/object XML subtree.
+    ///< Current parsing path in the XML file.
     ModelObject             *m_object;
-    // Map from object name to object idx & instances.
+    ///< Current object allocated for an model/object XML subtree.
     std::map<std::string, Object> m_object_instances_map;
-    // Vertices parsed for the current m_object.
+    ///< Map from object name to object idx & instances.
     std::vector<float>       m_object_vertices;
-    // Volume allocated for an model/object/mesh.
+    ///< Vertices parsed for the current m_object.
     // ToDo Ask: Is this correct to add it all the triangles into a single Mesh.
     ModelVolume             *m_volume;
-    // Faces collected for the current m_volume.
+    ///< Volume allocated for an model/object/mesh.
     std::vector<int>         m_volume_facets;
-    // Current base material allocated for the current model.
+    ///< Faces collected for the current m_volume.
     ModelMaterial           *m_material;
-    // Current instance allocated for an model/build/item.
+    ///< Current base material allocated for the current model.
     Instance                *m_instance;
-    // Generic string buffer for vertices, face indices, metadata etc.
+    ///< Current instance allocated for an model/build/item.
     std::string              m_value[3];
+    ///< Generic string buffer for vertices, face indices, metadata etc.
 
     TMFParserContext(XML_Parser parser, Model *model);
 
