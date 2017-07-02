@@ -2,7 +2,8 @@
 
 namespace Slic3r { namespace IO {
 
-TMFEditor::TMFEditor(std::string input_file, Model *model) {
+TMFEditor::TMFEditor(std::string input_file, Model *model)
+{
     zip_name = input_file;
     this->model = model;
     buff = "";
@@ -15,7 +16,7 @@ TMFEditor::write_types()
     if(zip_entry_open(zip_archive, "[Content_Types].xml"))
         return false;
 
-    // Write 3MF Types "3MF OPC relationships".
+    // Write 3MF Types.
     append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n");
     append_buffer("<Types xmlns=\"" + namespaces.at("content_types") + "\">\n");
     append_buffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
@@ -107,13 +108,6 @@ TMFEditor::write_metadata()
     append_buffer("    <slic3r:metadata type=\"version\">" + to_string(SLIC3R_VERSION) + "</slic3r:metadata>\n");
 
     return true;
-}
-
-bool
-TMF::write(Model& model, std::string output_file)
-{
-    TMFEditor tmf_writer(output_file, &model);
-    return tmf_writer.produce_TMF();
 }
 
 bool
@@ -378,17 +372,18 @@ TMFEditor::produce_TMF()
     return true;
 }
 
+bool
+TMFEditor::consume_TMF()
+{
+    return true;
+}
+
 void
 TMFEditor::append_buffer(std::string s)
 {
     buff += s;
     if(buff.size() + s.size() > WRITE_BUFFER_MAX_CAPACITY)
         write_buffer();
-}
-
-TMFEditor::~TMFEditor()
-{
-
 }
 
 void
@@ -400,11 +395,34 @@ TMFEditor::write_buffer()
     buff = "";
 }
 
+TMFEditor::~TMFEditor()
+{
+
+}
+
+bool
+TMF::write(Model& model, std::string output_file)
+{
+    TMFEditor tmf_writer(output_file, &model);
+    return tmf_writer.produce_TMF();
+}
+
 bool
 TMF::read(std::string input_file, Model* model)
 {
     TMFEditor tmf_reader(input_file, model);
     return tmf_reader.consume_TMF();
+}
+
+TMFParserContext::TMFParserContext(XML_Parser parser, Model *model):
+        m_parser(parser),
+        m_model(*model),
+        m_object(NULL),
+        m_volume(NULL),
+        m_material(NULL),
+        m_instance(NULL)
+{
+    m_path.reserve(12);
 }
 
 void XMLCALL
@@ -428,22 +446,32 @@ TMFParserContext::characters(void *userData, const XML_Char *s, int len)
 }
 
 void
-TMFParserContext::startElement(const char *name, const char **atts) {
+TMFParserContext::startElement(const char *name, const char **atts)
+{
 
 }
 
 void
-TMFParserContext::endElement(const char *name) {
+TMFParserContext::endElement(const char *name)
+{
 
 }
 
 void
-TMFParserContext::characters(const XML_Char *s, int len) {
+TMFParserContext::characters(const XML_Char *s, int len)
+{
 
 }
 
 void
-TMFParserContext::endDocument() {
+TMFParserContext::endDocument()
+{
+
+}
+
+void
+TMFParserContext::stop()
+{
 
 }
 
