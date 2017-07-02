@@ -125,7 +125,7 @@ struct TMFParserContext{
         NODE_TYPE_ITEM,
     };
 
-    // Instance foung in model/build/.
+    // Instance found in model/build/.
     struct Instance {
         // Shift in the X axis.
         float delta_x;
@@ -166,6 +166,18 @@ struct TMFParserContext{
     Instance                *m_instance;
     // Generic string buffer for vertices, face indices, metadata etc.
     std::string              m_value[3];
+
+    void startElement(const char *name, const char **atts);
+    void endElement(const char *name);
+    void endDocument();
+    void characters(const XML_Char *s, int len);
+
+    static void XMLCALL startElement(void *userData, const char *name, const char **atts);
+    static void XMLCALL endElement(void *userData, const char *name);
+    /* s is not 0 terminated. */
+    static void XMLCALL characters(void *userData, const XML_Char *s, int len);
+
+
 };
 
 } }

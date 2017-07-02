@@ -407,4 +407,44 @@ TMF::read(std::string input_file, Model* model)
     return tmf_reader.consume_TMF();
 }
 
+void XMLCALL
+TMFParserContext::startElement(void *userData, const char *name, const char **atts){
+    TMFParserContext *ctx = (TMFParserContext*) userData;
+    ctx->startElement(name, atts);
+}
+
+void XMLCALL
+TMFParserContext::endElement(void *userData, const char *name)
+{
+    TMFParserContext *ctx = (TMFParserContext*)userData;
+    ctx->endElement(name);
+}
+
+void XMLCALL
+TMFParserContext::characters(void *userData, const XML_Char *s, int len)
+{
+    TMFParserContext *ctx = (TMFParserContext*)userData;
+    ctx->characters(s, len);
+}
+
+void
+TMFParserContext::startElement(const char *name, const char **atts) {
+
+}
+
+void
+TMFParserContext::endElement(const char *name) {
+
+}
+
+void
+TMFParserContext::characters(const XML_Char *s, int len) {
+
+}
+
+void
+TMFParserContext::endDocument() {
+
+}
+
 } }
