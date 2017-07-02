@@ -2,6 +2,7 @@
 #define SLIC3R_TMF_H
 
 #include "../IO.hpp"
+#include <stdio.h>
 #include <string>
 #include <cstring>
 #include <map>
@@ -13,6 +14,7 @@
 #include <boost/nowide/iostream.hpp>
 #include <expat/expat.h>
 #include "../../expat/expat.h" // included only For IDE code suggestions.
+#include "../../zip/zip.h" // included only For IDE code suggestions.
 
 #define WRITE_BUFFER_MAX_CAPACITY 10000
 #define ZIP_DEFLATE_COMPRESSION 8
@@ -171,11 +173,13 @@ struct TMFParserContext{
     static void XMLCALL endElement(void *userData, const char *name);
     /* s is not 0 terminated. */
     static void XMLCALL characters(void *userData, const XML_Char *s, int len);
+    static const char* get_attribute(const char **atts, const char *id);
 
     void startElement(const char *name, const char **atts);
     void endElement(const char *name);
     void endDocument();
     void characters(const XML_Char *s, int len);
+
     void stop();
 
 };

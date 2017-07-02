@@ -375,8 +375,69 @@ TMFEditor::produce_TMF()
 bool
 TMFEditor::consume_TMF()
 {
-    //
-    return true;
+    // Open the 3MF package.
+    zip_archive = zip_open(zip_name.c_str(), 0, 'r');
+
+    // Extract the 3dmodel.model file found in 3D/ according to the conventions.
+    // ToDo @Samir55 ask about reading .rels file in order to get the default payload.
+    zip_entry_open(zip_archive, "3D/3dmodel.model");
+    zip_entry_fread(zip_archive, "3dmodel.model");
+
+    // Close model entry/
+    zip_entry_close(zip_archive);
+
+    // Read the model XML file.
+    XML_Parser parser = XML_ParserCreate(NULL); // encoding
+    if (! parser) {
+        printf("Couldn't allocate memory for parser\n");
+        return false;
+    }
+
+    boost::nowide::ifstream fin("3dmodel.model", std::ios::in);
+    if (!fin.is_open()) {
+        boost::nowide::cerr << "Cannot open file: " << "3dmodel.model" << std::endl;
+        return false;
+    }
+
+    TMFParserContext ctx(parser, model);
+    XML_SetUserData(parser, (void*)&ctx);
+    XML_SetElementHandler(parser, TMFParserContext::startElement, TMFParserContext::endElement);
+    XML_SetCharacterDataHandler(parser, TMFParserContext::characters);
+
+    char buff[8192];
+    bool result = false;
+    while (!fin.eof()) {
+        fin.read(buff, sizeof(buff));
+        if (fin.bad()) {
+            printf("3MF model parser: Read error\n");
+            break;
+        }
+        if (XML_Parse(parser, buff, fin.gcount(), fin.eof()) == XML_STATUS_ERROR) {
+            printf("3MF model parser: Parse error at line %lu:\n%s\n",
+                   XML_GetCurrentLineNumber(parser),
+                   XML_ErrorString(XML_GetErrorCode(parser)));
+            break;
+        }
+        if (fin.eof()) {
+            result = true;
+            break;
+        }
+    }
+
+    XML_ParserFree(parser);
+    fin.close();
+
+    if (result)
+        ctx.endDocument();
+
+    // Close zip archive.
+    zip_close(zip_archive);
+
+    // Delete the model file.
+    if (remove("3dmodel.model") != 0)
+        return false;
+
+    return result;
 }
 
 void
@@ -423,7 +484,7 @@ TMFParserContext::TMFParserContext(XML_Parser parser, Model *model):
         m_material(NULL),
         m_instance(NULL)
 {
-    m_path.reserve(12);
+    m_path.reserve(12); // ToDo @Samir55 to be changed later.
 }
 
 void XMLCALL
@@ -446,22 +507,75 @@ TMFParserContext::characters(void *userData, const XML_Char *s, int len)
     ctx->characters(s, len);
 }
 
+const char*
+TMFParserContext::get_attribute(const char **atts, const char *id) {
+    if (atts == NULL)
+        return NULL;
+    while (*atts != NULL) {
+        if (strcmp(*(atts ++), id) == 0)
+            return *atts;
+        ++ atts;
+    }
+    return NULL;
+}
+
 void
 TMFParserContext::startElement(const char *name, const char **atts)
 {
+    TMFNodeType node_type_new = NODE_TYPE_UNKNOWN;
+    switch (m_path.size()){
+        case 0:
+            // Must be <model> tag for 3dmodel.model entry.
+            node_type_new = NODE_TYPE_MODEL;
+            if (strcmp(name, "model") != 0)
+                this->stop();
+            break;
+        case 1:
+            if (strcmp(name, "metadata") == 0){
+                // Get the name of the metadata tag.
+                const char* name = this->get_attribute(atts, "name");
+                if (name != NULL) {
+                    m_value[0] = name;
+                    node_type_new = NODE_TYPE_METADATA;
+                }
+            } else if (strcmp(name, "resources") == 0){
 
+            } else if (strcmp(name, "build") == 0){
+
+            }
+            break;
+        case 2:
+            break;
+        default:
+            break;
+    }
+
+    m_path.push_back(node_type_new);
 }
 
 void
 TMFParserContext::endElement(const char *name)
 {
-
+    switch (m_path.back()){
+        case NODE_TYPE_METADATA:
+            // m_value[0] carries the metadata name and m_value[1] carries the metadata value.
+            m_model.metadata[m_value[0]] = m_value[1];
+            break;
+        default:
+            break;
+    }
 }
 
 void
 TMFParserContext::characters(const XML_Char *s, int len)
 {
-
+    switch (m_path.back()){
+        case NODE_TYPE_METADATA:
+            m_value[1].append(s, len);
+            break;
+        default:
+            break;
+    }
 }
 
 void
