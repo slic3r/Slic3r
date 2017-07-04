@@ -83,6 +83,9 @@ private:
     /// Write the build element.
     bool write_build();
 
+    /// Read the Model.
+    bool read_model();
+
     // Helper Functions.
     /// Append the buffer with a string to be written. This function calls write_buffer() if the buffer reached its capacity.
     void append_buffer(std::string s);

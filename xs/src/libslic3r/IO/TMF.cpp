@@ -348,46 +348,16 @@ TMFEditor::write_build()
 }
 
 bool
-TMFEditor::produce_TMF()
+TMFEditor::read_model()
 {
-    // Create a new zip archive object.
-    zip_archive = zip_open(zip_name.c_str(), ZIP_DEFLATE_COMPRESSION, 'w');
-
-    // Check whether it's created or not.
-    if(!zip_archive) return false;
-
-    // Prepare the 3MF Zip archive by writing the relationships.
-    if(!write_relationships())
-        return false;
-
-    // Prepare the 3MF Zip archive by writing the types.
-    if(!write_types())
-        return false;
-
-    // Write the model.
-    if(!write_model()) return false;
-
-    // Finalize the archive and end writing.
-    zip_close(zip_archive);
-    return true;
-}
-
-bool
-TMFEditor::consume_TMF()
-{
-    // Open the 3MF package.
-    zip_archive = zip_open(zip_name.c_str(), 0, 'r');
-
-    // Extract the 3dmodel.model file found in 3D/ according to the conventions.
     // ToDo @Samir55 ask about reading .rels file in order to get the default payload.
+    // Extract 3dmodel.model entry.
     zip_entry_open(zip_archive, "3D/3dmodel.model");
     zip_entry_fread(zip_archive, "3dmodel.model");
-
-    // Close model entry/
     zip_entry_close(zip_archive);
 
     // Read the model XML file.
-    XML_Parser parser = XML_ParserCreate(NULL); // encoding
+    XML_Parser parser = XML_ParserCreate(NULL);
     if (! parser) {
         printf("Couldn't allocate memory for parser\n");
         return false;
@@ -427,17 +397,56 @@ TMFEditor::consume_TMF()
     XML_ParserFree(parser);
     fin.close();
 
-    if (result)
-        ctx.endDocument();
-
-    // Close zip archive.
-    zip_close(zip_archive);
-
-    // Delete the model file.
+    // Remove the extracted 3dmodel.model file.
     if (remove("3dmodel.model") != 0)
         return false;
 
+    if (result)
+        ctx.endDocument();
     return result;
+}
+
+bool
+TMFEditor::produce_TMF()
+{
+    // Create a new zip archive object.
+    zip_archive = zip_open(zip_name.c_str(), ZIP_DEFLATE_COMPRESSION, 'w');
+
+    // Check whether it's created or not.
+    if(!zip_archive) return false;
+
+    // Prepare the 3MF Zip archive by writing the relationships.
+    if(!write_relationships())
+        return false;
+
+    // Prepare the 3MF Zip archive by writing the types.
+    if(!write_types())
+        return false;
+
+    // Write the model.
+    if(!write_model()) return false;
+
+    // Finalize the archive and end writing.
+    zip_close(zip_archive);
+    return true;
+}
+
+bool
+TMFEditor::consume_TMF()
+{
+    // Open the 3MF package.
+    zip_archive = zip_open(zip_name.c_str(), 0, 'r');
+
+    // Check whether it's opened or not.
+    if(!zip_archive) return false;
+
+    // Read model.
+    if(!read_model())
+        return false;
+
+    // Close zip archive.
+    zip_close(zip_archive);
+    return true;
 }
 
 void
@@ -539,12 +548,27 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     node_type_new = NODE_TYPE_METADATA;
                 }
             } else if (strcmp(name, "resources") == 0){
-
+                node_type_new = NODE_TYPE_RESOURCES;
             } else if (strcmp(name, "build") == 0){
 
             }
             break;
         case 2:
+            if (strcmp(name, "basematerials") == 0){
+                node_type_new = NODE_TYPE_BASE_MATERIALS;
+            }
+            break;
+        case 3:
+            if (strcmp(name, "base") == 0){
+                node_type_new = NODE_TYPE_BASE;
+                // Create a new model material.
+                m_material =  m_model.add_material(std::to_string(m_model.materials.size()));
+                // Add the model material attributes.
+                while(*atts != NULL){
+                    m_material->attributes[*(atts)] = *(atts + 1);
+                    atts += 2;
+                }
+            }
             break;
         default:
             break;
@@ -560,10 +584,15 @@ TMFParserContext::endElement(const char *name)
         case NODE_TYPE_METADATA:
             // m_value[0] carries the metadata name and m_value[1] carries the metadata value.
             m_model.metadata[m_value[0]] = m_value[1];
+            m_value[1].clear();
+            break;
+        case NODE_TYPE_BASE:
             break;
         default:
             break;
     }
+
+    m_path.pop_back();
 }
 
 void
