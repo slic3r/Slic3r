@@ -171,27 +171,27 @@ TMFEditor::write_materials()
     }
 
     // Write 3MF material groups found in 3MF extension.
-    for(const auto &material_group : model->material_groups){
-
-        // Get the current material type from using the material group id.
-        int type = model->material_groups_types[material_group.first];
-
-        // Write this material group according to its type.
-        switch (type){
-            case COLOR:
-                append_buffer("    <m:colorgroup id=\"" + to_string(material_group.first) + "\">\n");
-                for (const auto &color_material : material_group.second) {
-                    append_buffer("        <m:color color=\"" + color_material.second->attributes["color"] + "\" />\n");
-                }
-                append_buffer("    </m:colorgroup>\n");
-                break;
-            case COMPOSITE_MATERIAL:
-                break;
-            default:
-                break;
-        }
-
-    }
+//    for(const auto &material_group : model->material_groups){
+//
+//        // Get the current material type from using the material group id.
+//        int type = model->material_groups_types[material_group.first];
+//
+//        // Write this material group according to its type.
+//        switch (type){
+//            case COLOR:
+//                append_buffer("    <m:colorgroup id=\"" + to_string(material_group.first) + "\">\n");
+//                for (const auto &color_material : material_group.second) {
+//                    append_buffer("        <m:color color=\"" + color_material.second->attributes["color"] + "\" />\n");
+//                }
+//                append_buffer("    </m:colorgroup>\n");
+//                break;
+//            case COMPOSITE_MATERIAL:
+//                break;
+//            default:
+//                break;
+//        }
+//
+//    }
 
     return true;
 
@@ -556,13 +556,23 @@ TMFParserContext::startElement(const char *name, const char **atts)
         case 2:
             if (strcmp(name, "basematerials") == 0){
                 node_type_new = NODE_TYPE_BASE_MATERIALS;
+                // Read the current property group id.
+                std::string property_group_id = this->get_attribute(atts,"id");
+                if(property_group_id == "")
+                    this->stop();
+                // Add a new material_group to the model.
+                m_model.add_material_group(TMFEditor::BASE_MATERIAL);
+                // Add the index of the current material group in the document and its index in the model.
+                material_groups_indices[property_group_id] = m_model.material_groups.size() - 1;
+            } else if (strcmp(name, "object") == 0){
+
             }
             break;
         case 3:
             if (strcmp(name, "base") == 0){
                 node_type_new = NODE_TYPE_BASE;
-                // Create a new model material.
-                m_material =  m_model.add_material(std::to_string(m_model.materials.size()));
+                // Create a new model material and add it to the current material group.
+                m_material = m_model.add_material(m_model.material_groups.size() - 1);
                 // Add the model material attributes.
                 while(*atts != NULL){
                     m_material->attributes[*(atts)] = *(atts + 1);

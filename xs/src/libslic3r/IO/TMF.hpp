@@ -35,12 +35,13 @@ public:
     };
     ///< Namespaces in the 3MF document.
     enum material_groups_types{
+        BASE_MATERIAL,
         COLOR,
         TEXTURE,
         COMPOSITE_MATERIAL,
         MULTI_PROPERTIES
     };
-    ///< 3MF material groups in the materials extension.
+    ///< 3MF material groups in 3MF core and in 3MF materials extension.
 
     TMFEditor(std::string input_file, Model* model);
 
@@ -169,6 +170,9 @@ struct TMFParserContext{
     ///< Current instance allocated for an model/build/item.
     std::string              m_value[3];
     ///< Generic string buffer for vertices, face indices, metadata etc.
+    std::map<std::string, int> material_groups_indices;
+    ///< A map carries the index of each read material in the document and in material_groups vector in the current model.
+    // ToDo @Samir55 rephrase material_groups_indices explanation.
 
     TMFParserContext(XML_Parser parser, Model *model);
 
