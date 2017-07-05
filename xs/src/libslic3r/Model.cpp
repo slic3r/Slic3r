@@ -158,7 +158,6 @@ Model::add_material_group(int group_type){
         std::pair<int, ModelMaterialMap> new_material_group;
         // Add the type of the read material group to the new pair.
         new_material_group.first = group_type;
-        std::cout << new_material_group.first << " " << std::endl;
         this->material_groups.push_back(new_material_group);
 }
 
@@ -168,7 +167,7 @@ Model::add_material(int group_index){
         if (group_index >= material_groups.size())
             return NULL;
         t_model_material_id material_id = std::to_string(material_groups[group_index].second.size());
-        material_groups[group_index].second[material_id] = new ModelMaterial(this);
+        material = material_groups[group_index].second[material_id] = new ModelMaterial(this);
         return material;
 }
 

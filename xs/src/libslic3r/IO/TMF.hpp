@@ -155,6 +155,12 @@ struct TMFParserContext{
     ///< Current parsing path in the XML file.
     ModelObject             *m_object;
     ///< Current object allocated for an model/object XML subtree.
+    std::map<std::string, int> m_objects_indices;
+    ///< Mapping the object id in the document to the index in the model objects vector.
+    std::string m_object_material_group_id;
+    ///< object material group it belongs to.
+    std::string m_object_material_id;
+    ///< object material id.
     std::map<std::string, Object> m_object_instances_map;
     ///< Map from object name to object idx & instances.
     std::vector<float>       m_object_vertices;

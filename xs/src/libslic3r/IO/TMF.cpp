@@ -532,6 +532,10 @@ void
 TMFParserContext::startElement(const char *name, const char **atts)
 {
     TMFNodeType node_type_new = NODE_TYPE_UNKNOWN;
+
+    //Debugging statament.
+//    std::cout << name << std::endl;
+
     switch (m_path.size()){
         case 0:
             // Must be <model> tag for 3dmodel.model entry.
@@ -557,15 +561,34 @@ TMFParserContext::startElement(const char *name, const char **atts)
             if (strcmp(name, "basematerials") == 0){
                 node_type_new = NODE_TYPE_BASE_MATERIALS;
                 // Read the current property group id.
-                std::string property_group_id = this->get_attribute(atts,"id");
-                if(property_group_id == "")
+                const char* property_group_id = this->get_attribute(atts,"id");
+                if (!property_group_id)
                     this->stop();
                 // Add a new material_group to the model.
                 m_model.add_material_group(TMFEditor::BASE_MATERIAL);
                 // Add the index of the current material group in the document and its index in the model.
                 material_groups_indices[property_group_id] = m_model.material_groups.size() - 1;
             } else if (strcmp(name, "object") == 0){
+                const char* object_id = get_attribute(atts, "id");
+                if (!object_id)
+                    this->stop();
 
+                // ToDo @Samir55 Ask about why this assert occurs ?
+                // Create a new object in the model. This object should be included in another object if
+                // it's a component in another object.
+                assert(m_object_vertices.empty());
+                m_object = m_model.add_object();
+                m_objects_indices[object_id] = m_model.objects.size() - 1;
+
+                // Add part number.
+                const char* part_number = get_attribute(atts, "partnumber");
+                m_object->part_number = (!part_number) ? -1 : atoi(part_number);
+
+                // Add object name.
+                const char*  name = get_attribute(atts, "name");
+                m_object->name = (!name) ? "" : name;
+
+                node_type_new = NODE_TYPE_OBJECT;
             }
             break;
         case 3:
@@ -573,11 +596,41 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 node_type_new = NODE_TYPE_BASE;
                 // Create a new model material and add it to the current material group.
                 m_material = m_model.add_material(m_model.material_groups.size() - 1);
+                if(!m_material)
+                    this->stop();
                 // Add the model material attributes.
                 while(*atts != NULL){
                     m_material->attributes[*(atts)] = *(atts + 1);
+
+                    // Debuging statement.
+//                    std::cout << *(atts) << " " << *(atts+1) << std::endl;
+
                     atts += 2;
                 }
+            } else if (strcmp(name, "mesh") == 0){
+                node_type_new = NODE_TYPE_MESH;
+            }
+            break;
+        case 4:
+            if (strcmp(name, "vertices") == 0){
+                node_type_new = NODE_TYPE_VERTICES;
+
+            } else if (strcmp(name, "triangles") == 0){
+                node_type_new = NODE_TYPE_TRIANGLES;
+            }
+            break;
+        case 5:
+            if (strcmp(name, "vertex") == 0){
+                const char* x = get_attribute(atts, "x");
+                const char* y = get_attribute(atts, "y");
+                const char* z = get_attribute(atts, "z");
+                if ( !x || !y || !z)
+                    this->stop();
+                m_object_vertices.push_back(atof(x));
+                m_object_vertices.push_back(atof(y));
+                m_object_vertices.push_back(atof(z));
+            } else if (strcmp(name, "triangle") == 0){
+
             }
             break;
         default:
@@ -597,6 +650,9 @@ TMFParserContext::endElement(const char *name)
             m_value[1].clear();
             break;
         case NODE_TYPE_BASE:
+            break;
+        case NODE_TYPE_MESH:
+            m_object_vertices.clear();
             break;
         default:
             break;
