@@ -350,13 +350,12 @@ TMFEditor::write_build()
 bool
 TMFEditor::read_model()
 {
-    // ToDo @Samir55 ask about reading .rels file in order to get the default payload.
     // Extract 3dmodel.model entry.
     zip_entry_open(zip_archive, "3D/3dmodel.model");
     zip_entry_fread(zip_archive, "3dmodel.model");
     zip_entry_close(zip_archive);
 
-    // Read the model XML file.
+    // Read 3D/3dmodel.model file.
     XML_Parser parser = XML_ParserCreate(NULL);
     if (! parser) {
         printf("Couldn't allocate memory for parser\n");
@@ -572,22 +571,25 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 const char* object_id = get_attribute(atts, "id");
                 if (!object_id)
                     this->stop();
-
                 // ToDo @Samir55 Ask about why this assert occurs ?
                 // Create a new object in the model. This object should be included in another object if
                 // it's a component in another object.
                 assert(m_object_vertices.empty());
                 m_object = m_model.add_object();
                 m_objects_indices[object_id] = m_model.objects.size() - 1;
-
                 // Add part number.
                 const char* part_number = get_attribute(atts, "partnumber");
                 m_object->part_number = (!part_number) ? -1 : atoi(part_number);
-
                 // Add object name.
                 const char*  name = get_attribute(atts, "name");
                 m_object->name = (!name) ? "" : name;
-
+                // Add the object material.
+                const char* property_group_id = get_attribute(atts, "pid");
+                const char* property_index = get_attribute(atts, "pindex");
+                if (property_group_id && property_index) {
+                    m_object_material_group_id = property_group_id;
+                    m_object_material_id = property_index;
+                }
                 node_type_new = NODE_TYPE_OBJECT;
             }
             break;
@@ -616,6 +618,11 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 node_type_new = NODE_TYPE_VERTICES;
 
             } else if (strcmp(name, "triangles") == 0){
+                // Create a new model volume.
+                assert (!m_volume);
+                m_volume = m_object->add_volume(TriangleMesh());
+
+                // ToDo @Samir55 Add the material of the volume (read at the object level).
                 node_type_new = NODE_TYPE_TRIANGLES;
             }
             break;
@@ -629,8 +636,20 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 m_object_vertices.push_back(atof(x));
                 m_object_vertices.push_back(atof(y));
                 m_object_vertices.push_back(atof(z));
+                node_type_new = NODE_TYPE_VERTEX;
             } else if (strcmp(name, "triangle") == 0){
-
+                assert(m_object && m_volume);
+                // Read triangle vertices.
+                const char* v1 = get_attribute(atts, "v1");
+                const char* v2 = get_attribute(atts, "v2");
+                const char* v3 = get_attribute(atts, "v3");
+                if (!v1 || !v2 || !v3)
+                    this->stop();
+                // Add it to the volume facets.
+                m_volume_facets.push_back(atoi(v1));
+                m_volume_facets.push_back(atoi(v2));
+                m_volume_facets.push_back(atoi(v3));
+                node_type_new = NODE_TYPE_TRIANGLE;
             }
             break;
         default:
@@ -653,6 +672,30 @@ TMFParserContext::endElement(const char *name)
             break;
         case NODE_TYPE_MESH:
             m_object_vertices.clear();
+            break;
+        case NODE_TYPE_TRIANGLES:
+        {
+            assert(m_object && m_volume);
+            stl_file &stl = m_volume->mesh.stl;
+            stl.stats.type = inmemory;
+            stl.stats.number_of_facets = int(m_volume_facets.size() / 3);
+            stl.stats.original_num_facets = stl.stats.number_of_facets;
+            stl_allocate(&stl);
+            for (size_t i = 0; i < m_volume_facets.size();) {
+                stl_facet &facet = stl.facet_start[i / 3];
+                for (unsigned int v = 0; v < 3; ++v)
+                    memcpy(&facet.vertex[v].x, &m_object_vertices[m_volume_facets[i++] * 3], 3 * sizeof(float));
+            }
+            stl_get_size(&stl);
+            m_volume->mesh.repair();
+            m_volume_facets.clear();
+            m_volume = NULL;
+            break;
+        }
+        case NODE_TYPE_OBJECT:
+            assert(m_object);
+            m_object_vertices.clear();
+            m_object = NULL;
             break;
         default:
             break;
@@ -682,7 +725,7 @@ TMFParserContext::endDocument()
 void
 TMFParserContext::stop()
 {
-
+    XML_StopParser(m_parser, 0);
 }
 
 } }
