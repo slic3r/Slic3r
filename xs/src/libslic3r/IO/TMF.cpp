@@ -532,58 +532,63 @@ TMFParserContext::startElement(const char *name, const char **atts)
 {
     TMFNodeType node_type_new = NODE_TYPE_UNKNOWN;
 
-    //Debugging statament.
-//    std::cout << name << std::endl;
-
     switch (m_path.size()){
         case 0:
-            // Must be <model> tag for 3dmodel.model entry.
-            node_type_new = NODE_TYPE_MODEL;
+            // Must be <model> tag.
             if (strcmp(name, "model") != 0)
                 this->stop();
+            node_type_new = NODE_TYPE_MODEL;
             break;
         case 1:
             if (strcmp(name, "metadata") == 0){
-                // Get the name of the metadata tag.
                 const char* name = this->get_attribute(atts, "name");
-                if (name != NULL) {
-                    m_value[0] = name;
-                    node_type_new = NODE_TYPE_METADATA;
-                }
+                if (!name) // Name is required if it's not found stop parsing.
+                    this->stop();
+                m_value[0] = name;
+                node_type_new = NODE_TYPE_METADATA;
             } else if (strcmp(name, "resources") == 0){
                 node_type_new = NODE_TYPE_RESOURCES;
             } else if (strcmp(name, "build") == 0){
-
+                node_type_new = NODE_TYPE_BUILD;
             }
             break;
         case 2:
             if (strcmp(name, "basematerials") == 0){
-                node_type_new = NODE_TYPE_BASE_MATERIALS;
                 // Read the current property group id.
                 const char* property_group_id = this->get_attribute(atts,"id");
+
+                // Property id is a required field.
                 if (!property_group_id)
                     this->stop();
+
                 // Add a new material_group to the model.
                 m_model.add_material_group(TMFEditor::BASE_MATERIAL);
+
                 // Add the index of the current material group in the document and its index in the model.
                 material_groups_indices[property_group_id] = m_model.material_groups.size() - 1;
+                node_type_new = NODE_TYPE_BASE_MATERIALS;
             } else if (strcmp(name, "object") == 0){
                 const char* object_id = get_attribute(atts, "id");
                 if (!object_id)
                     this->stop();
-                // ToDo @Samir55 Ask about why this assert occurs ?
+
+                // ToDo @Samir55 Ask about why this assertion occurs ?
+                assert(m_object_vertices.empty());
+
                 // Create a new object in the model. This object should be included in another object if
                 // it's a component in another object.
-                assert(m_object_vertices.empty());
                 m_object = m_model.add_object();
                 m_objects_indices[object_id] = m_model.objects.size() - 1;
+
                 // Add part number.
                 const char* part_number = get_attribute(atts, "partnumber");
                 m_object->part_number = (!part_number) ? -1 : atoi(part_number);
+
                 // Add object name.
                 const char*  name = get_attribute(atts, "name");
                 m_object->name = (!name) ? "" : name;
-                // Add the object material.
+
+                // Add the object material if applicable.
                 const char* property_group_id = get_attribute(atts, "pid");
                 const char* property_index = get_attribute(atts, "pindex");
                 if (property_group_id && property_index) {
@@ -595,34 +600,29 @@ TMFParserContext::startElement(const char *name, const char **atts)
             break;
         case 3:
             if (strcmp(name, "base") == 0){
-                node_type_new = NODE_TYPE_BASE;
                 // Create a new model material and add it to the current material group.
                 m_material = m_model.add_material(m_model.material_groups.size() - 1);
                 if(!m_material)
                     this->stop();
+
                 // Add the model material attributes.
                 while(*atts != NULL){
                     m_material->attributes[*(atts)] = *(atts + 1);
-
-                    // Debuging statement.
-//                    std::cout << *(atts) << " " << *(atts+1) << std::endl;
-
                     atts += 2;
                 }
+                node_type_new = NODE_TYPE_BASE;
             } else if (strcmp(name, "mesh") == 0){
+                // Create a new model volume.
+                assert (!m_volume);
+                m_volume = m_object->add_volume(TriangleMesh());
                 node_type_new = NODE_TYPE_MESH;
             }
             break;
         case 4:
             if (strcmp(name, "vertices") == 0){
                 node_type_new = NODE_TYPE_VERTICES;
-
             } else if (strcmp(name, "triangles") == 0){
-                // Create a new model volume.
-                assert (!m_volume);
-                m_volume = m_object->add_volume(TriangleMesh());
-
-                // ToDo @Samir55 Add the material of the volume (read at the object level).
+                // ToDo @Samir55 Add the material of the volume (which is read at the object level).
                 node_type_new = NODE_TYPE_TRIANGLES;
             }
             break;
@@ -638,8 +638,6 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 m_object_vertices.push_back(atof(z));
                 node_type_new = NODE_TYPE_VERTEX;
             } else if (strcmp(name, "triangle") == 0){
-                assert(m_object && m_volume);
-                // Read triangle vertices.
                 const char* v1 = get_attribute(atts, "v1");
                 const char* v2 = get_attribute(atts, "v2");
                 const char* v3 = get_attribute(atts, "v3");
@@ -664,14 +662,11 @@ TMFParserContext::endElement(const char *name)
 {
     switch (m_path.back()){
         case NODE_TYPE_METADATA:
-            // m_value[0] carries the metadata name and m_value[1] carries the metadata value.
             m_model.metadata[m_value[0]] = m_value[1];
             m_value[1].clear();
             break;
-        case NODE_TYPE_BASE:
-            break;
         case NODE_TYPE_MESH:
-            m_object_vertices.clear();
+            m_volume = NULL;
             break;
         case NODE_TYPE_TRIANGLES:
         {
@@ -689,7 +684,6 @@ TMFParserContext::endElement(const char *name)
             stl_get_size(&stl);
             m_volume->mesh.repair();
             m_volume_facets.clear();
-            m_volume = NULL;
             break;
         }
         case NODE_TYPE_OBJECT:

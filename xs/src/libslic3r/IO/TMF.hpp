@@ -34,6 +34,7 @@ public:
             {"relationships", "http://schemas.openxmlformats.org/package/2006/relationships"} // Relationships namespace.
     };
     ///< Namespaces in the 3MF document.
+
     enum material_groups_types{
         BASE_MATERIAL,
         COLOR,
@@ -107,7 +108,6 @@ private:
 struct TMFParserContext{
 
     enum TMFNodeType {
-        NODE_TYPE_INVALID = 0,
         NODE_TYPE_UNKNOWN,
         NODE_TYPE_MODEL,
         NODE_TYPE_METADATA,
@@ -138,61 +138,67 @@ struct TMFParserContext{
         float rz;
         // Scaling factor
         float scale;
+
+        bool get_transformations(std::string matrix){ //TODO @Samir55 implement.
+            return true;
+        }
     };
     ///< Instance found in model/build/.
 
-    struct Object {
-        Object() : idx(-1) {}
-        int                     idx;
-        std::vector<Instance>   instances;
-    };
-
-    XML_Parser               m_parser;
+    XML_Parser m_parser;
     ///< Current Expat XML parser instance.
-    Model                   &m_model;
-    ///< Model to receive objects extracted from an 3MF file.
+
     std::vector<TMFNodeType> m_path;
     ///< Current parsing path in the XML file.
-    ModelObject             *m_object;
-    ///< Current object allocated for an model/object XML subtree.
-    std::map<std::string, int> m_objects_indices;
-    ///< Mapping the object id in the document to the index in the model objects vector.
-    std::string m_object_material_group_id;
-    ///< object material group it belongs to.
-    std::string m_object_material_id;
-    ///< object material id.
-    std::map<std::string, Object> m_object_instances_map;
-    ///< Map from object name to object idx & instances.
-    std::vector<float>       m_object_vertices;
-    ///< Vertices parsed for the current m_object.
-    // ToDo Ask: Is this correct to add it all the triangles into a single Mesh.
-    ModelVolume             *m_volume;
-    ///< Volume allocated for an model/object/mesh.
-    std::vector<int>         m_volume_facets;
-    ///< Faces collected for the current m_volume.
-    ModelMaterial           *m_material;
-    ///< Current base material allocated for the current model.
-    Instance                *m_instance;
-    ///< Current instance allocated for an model/build/item.
-    std::string              m_value[3];
-    ///< Generic string buffer for vertices, face indices, metadata etc.
+
+    Model &m_model;
+    ///< Model to receive objects extracted from an 3MF file.
+
     std::map<std::string, int> material_groups_indices;
     ///< A map carries the index of each read material in the document and in material_groups vector in the current model.
-    // ToDo @Samir55 rephrase material_groups_indices explanation.
+    // ToDo @Samir55 rephrase material_groups_indices explanation / FIX.
 
-    TMFParserContext(XML_Parser parser, Model *model);
+    ModelObject *m_object;
+    ///< Current object allocated for an model/object XML subtree.
+
+    std::map<std::string, int> m_objects_indices;
+    ///< Mapping the object id in the document to the index in the model objects vector.
+
+    std::string m_object_material_group_id;
+    ///< object material group it belongs to.
+
+    std::string m_object_material_id;
+    ///< object material id.
+
+    std::vector<float> m_object_vertices;
+    ///< Vertices parsed for the current m_object.
+    // ToDo Ask: Is this correct to add it all the triangles into a single volume.
+
+    ModelVolume *m_volume;
+    ///< Volume allocated for an model/object/mesh.
+
+    std::vector<int> m_volume_facets;
+    ///< Faces collected for the current m_volume.
+
+    ModelMaterial *m_material;
+    ///< Current base material allocated for the current model.
+
+    Instance *m_instance;
+    ///< Current instance allocated for an model/build/item.
+
+    std::string m_value[3];
+    ///< Generic string buffer for vertices, face indices, metadata etc.
 
     static void XMLCALL startElement(void *userData, const char *name, const char **atts);
     static void XMLCALL endElement(void *userData, const char *name);
-    /* s is not 0 terminated. */
-    static void XMLCALL characters(void *userData, const XML_Char *s, int len);
+    static void XMLCALL characters(void *userData, const XML_Char *s, int len); /* s is not 0 terminated. */
     static const char* get_attribute(const char **atts, const char *id);
 
+    TMFParserContext(XML_Parser parser, Model *model);
     void startElement(const char *name, const char **atts);
     void endElement(const char *name);
     void endDocument();
     void characters(const XML_Char *s, int len);
-
     void stop();
 
 };
