@@ -151,7 +151,7 @@ struct TMFParserContext{
     ///< Mapping the object id in the document to the index in the model objects vector.
 
     std::vector<bool> m_output_objects;
-    ///< a vector determines whether each read object should be ignored (false) or not (true).
+    ///< a vector determines whether each read object should be ignored (1) or not (0).
     ///< Ignored objects are the ones not referenced in build items.
 
     std::string m_object_material_group_id;

@@ -577,7 +577,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // it's a component in another object.
                 m_object = m_model.add_object();
                 m_objects_indices[object_id] = m_model.objects.size() - 1;
-                m_output_objects.push_back(true); // default value true means: it's must be an output.
+                m_output_objects.push_back(1); // default value 1 means: it's must not be an output.
 
                 // Add part number.
                 const char* part_number = get_attribute(atts, "partnumber");
@@ -595,6 +595,25 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     m_object_material_id = property_index;
                 }
                 node_type_new = NODE_TYPE_OBJECT;
+            } else if (strcmp(name, "item") == 0){
+                // Get object id.
+                const char* object_id = get_attribute(atts, "objectid");
+                if(!object_id)
+                    this->stop();
+
+                // Mark object as output.
+                m_output_objects[m_objects_indices[object_id]] = 0;
+
+                // Add instance.
+                m_model.objects[m_objects_indices[object_id]]->add_instance();
+
+                // Apply transformation if supplied.
+                const char* transformation_matrix = get_attribute(atts, "transform");
+                if(transformation_matrix){
+
+                }
+
+                node_type_new = NODE_TYPE_ITEM;
             }
             break;
         case 3:
@@ -719,10 +738,10 @@ TMFParserContext::endElement(const char *name)
             break;
         case NODE_TYPE_MODEL:
             // According to 3MF spec. we must output objects found in item.
-//            for (size_t i = 0; i < m_main_objects.size(); i++){
-//                if(!m_main_objects)
-//                    m_model.delete_object(i);
-//            }
+            for (size_t i = 0; i < m_output_objects.size(); i++){
+                if(m_output_objects[i])
+                    m_model.delete_object(i);
+            }
             break;
         default:
             break;
