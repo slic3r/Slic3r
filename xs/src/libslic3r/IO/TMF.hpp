@@ -124,26 +124,12 @@ struct TMFParserContext{
         NODE_TYPE_VERTEX,
         NODE_TYPE_TRIANGLES,
         NODE_TYPE_TRIANGLE,
+        NODE_TYPE_COMPONENTS,
+        NODE_TYPE_COMPONENT,
         NODE_TYPE_BUILD,
         NODE_TYPE_ITEM,
     };
     ///< Nodes found in 3MF XML document.
-
-    struct Instance {
-        // Shift in the X axis.
-        float delta_x;
-        // Shift in the Y axis.
-        float delta_y;
-        // Rotation around the Z axis.
-        float rz;
-        // Scaling factor
-        float scale;
-
-        bool get_transformations(std::string matrix){ //TODO @Samir55 implement.
-            return true;
-        }
-    };
-    ///< Instance found in model/build/.
 
     XML_Parser m_parser;
     ///< Current Expat XML parser instance.
@@ -164,6 +150,10 @@ struct TMFParserContext{
     std::map<std::string, int> m_objects_indices;
     ///< Mapping the object id in the document to the index in the model objects vector.
 
+    std::vector<bool> m_output_objects;
+    ///< a vector determines whether each read object should be ignored (false) or not (true).
+    ///< Ignored objects are the ones not referenced in build items.
+
     std::string m_object_material_group_id;
     ///< object material group it belongs to.
 
@@ -183,9 +173,6 @@ struct TMFParserContext{
     ModelMaterial *m_material;
     ///< Current base material allocated for the current model.
 
-    Instance *m_instance;
-    ///< Current instance allocated for an model/build/item.
-
     std::string m_value[3];
     ///< Generic string buffer for vertices, face indices, metadata etc.
 
@@ -200,6 +187,9 @@ struct TMFParserContext{
     void endDocument();
     void characters(const XML_Char *s, int len);
     void stop();
+    bool get_transformations(std::string matrix){ //TODO @Samir55 implement.
+        return true;
+    }
 
 };
 

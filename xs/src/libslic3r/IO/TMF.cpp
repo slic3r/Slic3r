@@ -489,8 +489,7 @@ TMFParserContext::TMFParserContext(XML_Parser parser, Model *model):
         m_model(*model),
         m_object(NULL),
         m_volume(NULL),
-        m_material(NULL),
-        m_instance(NULL)
+        m_material(NULL)
 {
     m_path.reserve(12); // ToDo @Samir55 to be changed later.
 }
@@ -572,13 +571,13 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 if (!object_id)
                     this->stop();
 
-                // ToDo @Samir55 Ask about why this assertion occurs ?
                 assert(m_object_vertices.empty());
 
                 // Create a new object in the model. This object should be included in another object if
                 // it's a component in another object.
                 m_object = m_model.add_object();
                 m_objects_indices[object_id] = m_model.objects.size() - 1;
+                m_output_objects.push_back(true); // default value true means: it's must be an output.
 
                 // Add part number.
                 const char* part_number = get_attribute(atts, "partnumber");
@@ -616,6 +615,8 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 assert (!m_volume);
                 m_volume = m_object->add_volume(TriangleMesh());
                 node_type_new = NODE_TYPE_MESH;
+            } else if (strcmp(name, "components") == 0){
+                node_type_new = NODE_TYPE_COMPONENTS;
             }
             break;
         case 4:
@@ -624,6 +625,31 @@ TMFParserContext::startElement(const char *name, const char **atts)
             } else if (strcmp(name, "triangles") == 0){
                 // ToDo @Samir55 Add the material of the volume (which is read at the object level).
                 node_type_new = NODE_TYPE_TRIANGLES;
+            } else if (strcmp(name, "component") == 0){
+                // Read the object id.
+                const char* object_id = get_attribute(atts, "objectid");
+                if(!object_id)
+                    this->stop();
+                ModelObject* component_object = m_model.objects[m_objects_indices[object_id]];
+
+                // Append it to the parent (current m_object) as a mesh since Slic3r doesn't support an object inside another.
+                // after applying 3d matrix transformation if found.
+                TriangleMesh component_mesh;
+                const char* transformation_matrix = get_attribute(atts, "transform");
+                if(transformation_matrix){ //ToDo @Samir55
+                    // Decompose the affine matrix.
+                    // Create an instance.
+                    component_object->add_instance();
+                    // Apply scale.
+                    // Apply z rotation.
+                    // Apply translation.
+                    component_mesh = component_object->mesh();
+                    // Delete instance.
+                    component_object->delete_last_instance();
+                } else {
+                    component_mesh = component_object->raw_mesh();
+                }
+                m_object->add_volume(component_mesh);
             }
             break;
         case 5:
@@ -690,6 +716,13 @@ TMFParserContext::endElement(const char *name)
             assert(m_object);
             m_object_vertices.clear();
             m_object = NULL;
+            break;
+        case NODE_TYPE_MODEL:
+            // According to 3MF spec. we must output objects found in item.
+//            for (size_t i = 0; i < m_main_objects.size(); i++){
+//                if(!m_main_objects)
+//                    m_model.delete_object(i);
+//            }
             break;
         default:
             break;
