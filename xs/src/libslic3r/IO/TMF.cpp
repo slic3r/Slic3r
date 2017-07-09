@@ -368,6 +368,7 @@ TMFEditor::read_model()
         return false;
     }
 
+    // Create model parser.
     TMFParserContext ctx(parser, model);
     XML_SetUserData(parser, (void*)&ctx);
     XML_SetElementHandler(parser, TMFParserContext::startElement, TMFParserContext::endElement);
@@ -393,6 +394,7 @@ TMFEditor::read_model()
         }
     }
 
+    // Free the parser and close the file.
     XML_ParserFree(parser);
     fin.close();
 
@@ -541,7 +543,9 @@ TMFParserContext::startElement(const char *name, const char **atts)
         case 1:
             if (strcmp(name, "metadata") == 0){
                 const char* name = this->get_attribute(atts, "name");
-                if (!name) // Name is required if it's not found stop parsing.
+
+                // Name is required if it's not found stop parsing.
+                if (!name)
                     this->stop();
                 m_value[0] = name;
                 node_type_new = NODE_TYPE_METADATA;
@@ -657,14 +661,29 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 const char* transformation_matrix = get_attribute(atts, "transform");
                 if(transformation_matrix){ //ToDo @Samir55
                     // Decompose the affine matrix.
+                    std::vector<double> transformations = get_transformations(transformation_matrix);
+
                     // Create an instance.
                     component_object->add_instance();
-                    // Apply scale.
-                    // Apply z rotation.
+
                     // Apply translation.
+                    component_object->translate(transformations[0], transformations[1], transformations[2]);
+
+                    // Apply scale.
+                    Pointf3 vec(transformations[3], transformations[4], transformations[5]);
+                    component_object->scale(vec);
+
+                    // Apply x, y & z rotation.
+                    component_object->rotate(transformations[6], X);
+                    component_object->rotate(transformations[7], Y);
+                    component_object->rotate(transformations[8], Z);
+
+                    // Get the mesh of this instance object.
                     component_mesh = component_object->mesh();
+
                     // Delete instance.
                     component_object->delete_last_instance();
+
                 } else {
                     component_mesh = component_object->raw_mesh();
                 }
@@ -772,6 +791,38 @@ void
 TMFParserContext::stop()
 {
     XML_StopParser(m_parser, 0);
+}
+
+std::vector<double>
+TMFParserContext::get_transformations(std::string matrix)
+{
+    std::vector<double> transformations;
+    // Get the values.
+    double m[9];
+    int  k = 0;
+    std::string tmp = "";
+    for (size_t i= 0; i < matrix.size(); i++)
+        if ((matrix[i] == ' ' && !tmp.empty()) || (i == matrix.size() - 1 && !tmp.empty())) {
+            m[k++] = std::stof(tmp);
+            tmp = "";
+        }
+    assert(k == 9);
+    // Get the translation (x,y,z) value. Remember the matrix in 3mf is a row major not a column major.
+    transformations.push_back(m[6]);
+    transformations.push_back(m[7]);
+    transformations.push_back(m[8]);
+
+    // Get the scale values.
+    transformations.push_back(sqrt( m[0] * m[0] + m[3] * m[3] + m[6] * m[6]));
+    transformations.push_back(sqrt( m[1] * m[1] + m[4] * m[4] + m[7] * m[7]));
+    transformations.push_back(sqrt( m[2] * m[2] + m[5] * m[5] + m[8] * m[8]));
+
+    // Get the rotation values. // ToDo @Samir55
+    transformations.push_back(0);
+    transformations.push_back(0);
+    transformations.push_back(0);
+
+    return transformations;
 }
 
 } }

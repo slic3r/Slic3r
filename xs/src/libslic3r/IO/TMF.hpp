@@ -187,9 +187,11 @@ struct TMFParserContext{
     void endDocument();
     void characters(const XML_Char *s, int len);
     void stop();
-    bool get_transformations(std::string matrix){ //TODO @Samir55 implement.
-        return true;
-    }
+
+    /// Get scale, rotation and scale transformation from affine matrix.
+    /// \param matrix string the 3D matrix where elements are separated by space.
+    /// \return vector<double> a vector contains [translation, scale factor, xRotation, yRotation, xRotation].
+    std::vector<double> get_transformations(std::string matrix);
 
 };
 
