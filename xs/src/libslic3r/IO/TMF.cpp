@@ -604,6 +604,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 const char* object_id = get_attribute(atts, "objectid");
                 if(!object_id)
                     this->stop();
+                ModelObject* object = m_model.objects[m_objects_indices[object_id]];
 
                 // Mark object as output.
                 m_output_objects[m_objects_indices[object_id]] = 0;
@@ -614,7 +615,20 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Apply transformation if supplied.
                 const char* transformation_matrix = get_attribute(atts, "transform");
                 if(transformation_matrix){
+                    // Decompose the affine matrix.
+                    std::vector<double> transformations = get_transformations(transformation_matrix);
 
+                    // Apply translation.
+                    object->translate(transformations[0], transformations[1], transformations[2]);
+
+                    // Apply scale.
+                    Pointf3 vec(transformations[3], transformations[4], transformations[5]);
+                    object->scale(vec);
+
+                    // Apply x, y & z rotation.
+                    object->rotate(transformations[6], X);
+                    object->rotate(transformations[7], Y);
+                    object->rotate(transformations[8], Z);
                 }
 
                 node_type_new = NODE_TYPE_ITEM;
@@ -659,7 +673,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // after applying 3d matrix transformation if found.
                 TriangleMesh component_mesh;
                 const char* transformation_matrix = get_attribute(atts, "transform");
-                if(transformation_matrix){ //ToDo @Samir55
+                if(transformation_matrix){
                     // Decompose the affine matrix.
                     std::vector<double> transformations = get_transformations(transformation_matrix);
 
@@ -797,8 +811,9 @@ std::vector<double>
 TMFParserContext::get_transformations(std::string matrix)
 {
     std::vector<double> transformations;
+
     // Get the values.
-    double m[9];
+    double m[12];
     int  k = 0;
     std::string tmp = "";
     for (size_t i= 0; i < matrix.size(); i++)
@@ -806,21 +821,82 @@ TMFParserContext::get_transformations(std::string matrix)
             m[k++] = std::stof(tmp);
             tmp = "";
         }
-    assert(k == 9);
+    assert(k == 12);
+
     // Get the translation (x,y,z) value. Remember the matrix in 3mf is a row major not a column major.
-    transformations.push_back(m[6]);
-    transformations.push_back(m[7]);
-    transformations.push_back(m[8]);
+    transformations.push_back(m[9]);
+    transformations.push_back(m[10]);
+    transformations.push_back(m[11]);
 
     // Get the scale values.
-    transformations.push_back(sqrt( m[0] * m[0] + m[3] * m[3] + m[6] * m[6]));
-    transformations.push_back(sqrt( m[1] * m[1] + m[4] * m[4] + m[7] * m[7]));
-    transformations.push_back(sqrt( m[2] * m[2] + m[5] * m[5] + m[8] * m[8]));
+    double sx = sqrt( m[0] * m[0] + m[1] * m[1] + m[2] * m[2]),
+        sy = sqrt( m[3] * m[3] + m[4] * m[4] + m[5] * m[5]),
+        sz = sqrt( m[6] * m[6] + m[7] * m[7] + m[8] * m[8]);
+    transformations.push_back(sx);
+    transformations.push_back(sy);
+    transformations.push_back(sz);
 
     // Get the rotation values. // ToDo @Samir55
-    transformations.push_back(0);
-    transformations.push_back(0);
-    transformations.push_back(0);
+
+    // Normalize scale from the rotation matrix.
+    m[0] /= sx;
+    m[1] /= sx;
+    m[2] /= sx;
+
+    m[3] /= sy;
+    m[4] /= sy;
+    m[5] /= sy;
+
+    m[6] /= sz;
+    m[7] /= sz;
+    m[8] /= sz;
+
+    // Get quaternion values
+    double q_w = sqrt(std::max(0.0, 1.0 + m[0] + m[4] + m[8])) / 2,
+        q_x = sqrt(std::max(0.0, 1.0 + m[0] - m[4] - m[8])) / 2,
+        q_y = sqrt(std::max(0.0, 1.0 - m[0] + m[4] - m[8])) / 2,
+        q_z = sqrt(std::max(0.0, 1.0 - m[0] - m[4] + m[8])) / 2;
+
+    q_x *= ((q_x * (m[5] - m[7])) <= 0) ? -1 : 1;
+    q_y *= ((q_y * (m[6] - m[2])) <= 0) ? -1 : 1;
+    q_z *= ((q_z * (m[1] - m[3])) <= 0) ? -1 : 1;
+
+    // Normalize quaternion values.
+    double q_magnitude = sqrt(q_w * q_w + q_x * q_x + q_y * q_y + q_z * q_z);
+    q_w /= q_magnitude;
+    q_x /= q_magnitude;
+    q_y /= q_magnitude;
+    q_z /= q_magnitude;
+
+    double test = q_x * q_y + q_z * q_w;
+    double result_x, result_y, result_z;
+    // singularity at north pole
+    if (test > 0.499)
+    {
+        result_x = 0;
+        result_y = 2 * atan2(q_x, q_w);
+        result_z = PI / 2;
+    }
+        // singularity at south pole
+    else if (test < -0.499)
+    {
+        result_x = 0;
+        result_y = -2 * atan2(q_x, q_w);
+        result_z = -PI / 2;
+    }
+    else
+    {
+        result_x = atan2(2 * q_x * q_w - 2 * q_y * q_z, 1 - 2 * q_x * q_x - 2 * q_z * q_z);
+        result_y = atan2(2 * q_y * q_w - 2 * q_x * q_z, 1 - 2 * q_y * q_y - 2 * q_z * q_z);
+        result_z = asin(2 * q_x * q_y + 2 * q_z * q_w);
+
+        if (result_x < 0) result_x += 2 * PI;
+        if (result_y < 0) result_y += 2 * PI;
+        if (result_z < 0) result_z += 2 * PI;
+    }
+    transformations.push_back(result_x);
+    transformations.push_back(result_y);
+    transformations.push_back(result_z);
 
     return transformations;
 }

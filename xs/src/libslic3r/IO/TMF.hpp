@@ -7,6 +7,7 @@
 #include <cstring>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include <math.h>
 #include <zip/zip.h>
 #include <boost/move/move.hpp>
@@ -18,6 +19,7 @@
 
 #define WRITE_BUFFER_MAX_CAPACITY 10000
 #define ZIP_DEFLATE_COMPRESSION 8
+#define PI 3.141592653589793238
 
 namespace Slic3r { namespace IO {
 
