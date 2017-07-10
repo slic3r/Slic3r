@@ -820,7 +820,8 @@ TMFParserContext::get_transformations(std::string matrix)
         if ((matrix[i] == ' ' && !tmp.empty()) || (i == matrix.size() - 1 && !tmp.empty())) {
             m[k++] = std::stof(tmp);
             tmp = "";
-        }
+        }else
+            tmp += matrix[i];
     assert(k == 12);
 
     // Get the translation (x,y,z) value. Remember the matrix in 3mf is a row major not a column major.
