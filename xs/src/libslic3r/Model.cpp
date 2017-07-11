@@ -20,6 +20,9 @@ Model::Model(const Model &other)
     this->objects.reserve(other.objects.size());
     for (ModelObjectPtrs::const_iterator i = other.objects.begin(); i != other.objects.end(); ++i)
         this->add_object(**i, true);
+
+    // copy metadata
+    this->metadata = other.metadata;
 }
 
 Model& Model::operator= (Model other)
@@ -33,6 +36,7 @@ Model::swap(Model &other)
 {
     std::swap(this->materials,  other.materials);
     std::swap(this->objects,    other.objects);
+    std::swap(this->metadata,   other.metadata);
 }
 
 Model::~Model()

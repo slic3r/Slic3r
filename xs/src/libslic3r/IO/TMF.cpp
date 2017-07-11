@@ -837,7 +837,7 @@ TMFParserContext::get_transformations(std::string matrix)
     transformations.push_back(sy);
     transformations.push_back(sz);
 
-    // Get the rotation values. // ToDo @Samir55
+    // Get the rotation values.
 
     // Normalize scale from the rotation matrix.
     m[0] /= sx;
