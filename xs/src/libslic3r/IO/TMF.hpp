@@ -130,6 +130,9 @@ struct TMFParserContext{
         NODE_TYPE_COMPONENT,
         NODE_TYPE_BUILD,
         NODE_TYPE_ITEM,
+        NODE_TYPE_SLIC3R_METADATA,
+        NODE_TYPE_SLIC3R_VOLUMES,
+        NODE_TYPE_SLIC3R_VOLUME,
         NODE_TYPE_SLIC3R_OBJECT_CONFIG,
         NODE_TYPE_SLIC3R_VOLUME_CONFIG,
     };
@@ -172,7 +175,7 @@ struct TMFParserContext{
     ///< Volume allocated for an model/object/mesh.
 
     std::vector<int> m_volume_facets;
-    ///< Faces collected for the current m_volume.
+    ///< Faces collected for all volumes of the current object.
 
     ModelMaterial *m_material;
     ///< Current base material allocated for the current model.
@@ -196,6 +199,13 @@ struct TMFParserContext{
     /// \param matrix string the 3D matrix where elements are separated by space.
     /// \return vector<double> a vector contains [translation, scale factor, xRotation, yRotation, xRotation].
     std::vector<double> get_transformations(std::string matrix);
+
+    /// Add a new volume to the current object.
+    /// \param start_offset size_t the start index in the m_volume_facets vector.
+    /// \param end_offset size_t the end index in the m_volume_facets vector.
+    /// \param modifier bool whether the volume is modifier or not.
+    /// \return ModelVolume* a pointer to the newly added volume.
+    ModelVolume* add_volume(size_t start_offset, size_t end_offset, bool modifier);
 
 };
 

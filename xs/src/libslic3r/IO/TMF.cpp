@@ -296,9 +296,8 @@ TMFEditor::write_object(int index)
                       + ">\n");
 
         for (const std::string &key : volume->config.keys()){
-            append_buffer("                        <slic3r:metadata type=\"slic3r." +  key
-                          + "\">" + volume->config.serialize(key)
-                          + "</slic3r:metadata>\n");
+            append_buffer("                        <slic3r:metadata type=\"" +  key
+                          + "\" config=\"" + volume->config.serialize(key) + "/>\n");
         }
 
         // Close Slic3r volume
@@ -541,7 +540,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
             node_type_new = NODE_TYPE_MODEL;
             break;
         case 1:
-            if (strcmp(name, "metadata") == 0){
+            if (strcmp(name, "metadata") == 0) {
                 const char* name = this->get_attribute(atts, "name");
 
                 // Name is required if it's not found stop parsing.
@@ -549,14 +548,14 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     this->stop();
                 m_value[0] = name;
                 node_type_new = NODE_TYPE_METADATA;
-            } else if (strcmp(name, "resources") == 0){
+            } else if (strcmp(name, "resources") == 0) {
                 node_type_new = NODE_TYPE_RESOURCES;
-            } else if (strcmp(name, "build") == 0){
+            } else if (strcmp(name, "build") == 0) {
                 node_type_new = NODE_TYPE_BUILD;
             }
             break;
         case 2:
-            if (strcmp(name, "basematerials") == 0){
+            if (strcmp(name, "basematerials") == 0) {
                 // Read the current property group id.
                 const char* property_group_id = this->get_attribute(atts,"id");
 
@@ -650,7 +649,6 @@ TMFParserContext::startElement(const char *name, const char **atts)
             } else if (strcmp(name, "mesh") == 0){
                 // Create a new model volume.
                 assert (!m_volume);
-                m_volume = m_object->add_volume(TriangleMesh());
                 node_type_new = NODE_TYPE_MESH;
             } else if (strcmp(name, "components") == 0){
                 node_type_new = NODE_TYPE_COMPONENTS;
@@ -665,7 +663,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Get the config key type.
                 const char *key = get_attribute(atts, "type");
 
-                if (config && print_config_def.options.find(key) != print_config_def.options.end() ){
+                if (config && print_config_def.options.find(key) != print_config_def.options.end() ) {
                     // Get the key config string.
                     const char *config_value = get_attribute(atts, "config");
 
@@ -674,12 +672,11 @@ TMFParserContext::startElement(const char *name, const char **atts)
             }
             break;
         case 4:
-            if (strcmp(name, "vertices") == 0){
+            if (strcmp(name, "vertices") == 0) {
                 node_type_new = NODE_TYPE_VERTICES;
-            } else if (strcmp(name, "triangles") == 0){
-                // ToDo @Samir55 Add the material of the volume (which is read at the object level).
+            } else if (strcmp(name, "triangles") == 0) {
                 node_type_new = NODE_TYPE_TRIANGLES;
-            } else if (strcmp(name, "component") == 0){
+            } else if (strcmp(name, "component") == 0) {
                 // Read the object id.
                 const char* object_id = get_attribute(atts, "objectid");
                 if(!object_id)
@@ -719,10 +716,12 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     component_mesh = component_object->raw_mesh();
                 }
                 m_object->add_volume(component_mesh);
+            } else if (strcmp(name, "slic3r:volumes") == 0) {
+                node_type_new = NODE_TYPE_SLIC3R_VOLUMES;
             }
             break;
         case 5:
-            if (strcmp(name, "vertex") == 0){
+            if (strcmp(name, "vertex") == 0) {
                 const char* x = get_attribute(atts, "x");
                 const char* y = get_attribute(atts, "y");
                 const char* z = get_attribute(atts, "z");
@@ -732,7 +731,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 m_object_vertices.push_back(atof(y));
                 m_object_vertices.push_back(atof(z));
                 node_type_new = NODE_TYPE_VERTEX;
-            } else if (strcmp(name, "triangle") == 0){
+            } else if (strcmp(name, "triangle") == 0) {
                 const char* v1 = get_attribute(atts, "v1");
                 const char* v2 = get_attribute(atts, "v2");
                 const char* v3 = get_attribute(atts, "v3");
@@ -743,8 +742,34 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 m_volume_facets.push_back(atoi(v2));
                 m_volume_facets.push_back(atoi(v3));
                 node_type_new = NODE_TYPE_TRIANGLE;
+            } else if (strcmp(name, "slic3r:volume") == 0) {
+                node_type_new = NODE_TYPE_SLIC3R_VOLUME;
+                // Read start offset of the triangles.
+                m_value[0] = get_attribute(atts, "ts");
+                m_value[1] = get_attribute(atts, "te");
+                m_value[2] = get_attribute(atts, "modifier");
+                if( m_value[0].empty() || m_value[1].empty() || m_value[2].empty())
+                    this->stop();
+                // Add a new volume to the current object.
+                m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2]));
+                if(!m_volume)
+                    this->stop();
             }
             break;
+        case 6:
+            if( strcmp(name, "slic3r:metadata") == 0){
+                node_type_new = NODE_TYPE_SLIC3R_METADATA;
+                // Create a config option.
+                DynamicPrintConfig *config = NULL;
+                if(!m_volume)
+                    this->stop();
+                config = &m_volume->config;
+                const char *key = get_attribute(atts, "type");
+                if( config && print_config_def.options.find(key) != print_config_def.options.end()){
+                    const char *config_value = get_attribute(atts, "config");
+                    config->set_deserialize(key, config_value);
+                }
+            }
         default:
             break;
     }
@@ -757,30 +782,20 @@ TMFParserContext::endElement(const char *name)
 {
     switch (m_path.back()){
         case NODE_TYPE_METADATA:
-            m_model.metadata[m_value[0]] = m_value[1];
-            m_value[1].clear();
+            if( m_path.size() == 2) {
+                m_model.metadata[m_value[0]] = m_value[1];
+                m_value[1].clear();
+            }
             break;
         case NODE_TYPE_MESH:
-            m_volume = NULL;
-            break;
-        case NODE_TYPE_TRIANGLES:
-        {
-            assert(m_object && m_volume);
-            stl_file &stl = m_volume->mesh.stl;
-            stl.stats.type = inmemory;
-            stl.stats.number_of_facets = int(m_volume_facets.size() / 3);
-            stl.stats.original_num_facets = stl.stats.number_of_facets;
-            stl_allocate(&stl);
-            for (size_t i = 0; i < m_volume_facets.size();) {
-                stl_facet &facet = stl.facet_start[i / 3];
-                for (unsigned int v = 0; v < 3; ++v)
-                    memcpy(&facet.vertex[v].x, &m_object_vertices[m_volume_facets[i++] * 3], 3 * sizeof(float));
+            // Add the object volume if no there are no added volumes in slic3r:volumes.
+            if(m_object->volumes.size() == 0) {
+                m_volume = add_volume(0, m_volume_facets.size(), 0);
+                if (!m_volume)
+                    this->stop();
+                m_volume = NULL;
             }
-            stl_get_size(&stl);
-            m_volume->mesh.repair();
-            m_volume_facets.clear();
             break;
-        }
         case NODE_TYPE_OBJECT:
             assert(m_object);
             m_object_vertices.clear();
@@ -788,10 +803,16 @@ TMFParserContext::endElement(const char *name)
             break;
         case NODE_TYPE_MODEL:
             // According to 3MF spec. we must output objects found in item.
-            for (size_t i = 0; i < m_output_objects.size(); i++){
+            for (size_t i = 0; i < m_output_objects.size(); i++) {
                 if(m_output_objects[i])
                     m_model.delete_object(i);
             }
+            break;
+        case NODE_TYPE_SLIC3R_VOLUME:
+            m_volume = NULL;
+            m_value[0].clear();
+            m_value[1].clear();
+            m_value[2].clear();
             break;
         default:
             break;
@@ -803,8 +824,9 @@ TMFParserContext::endElement(const char *name)
 void
 TMFParserContext::characters(const XML_Char *s, int len)
 {
-    switch (m_path.back()){
+    switch (m_path.back()) {
         case NODE_TYPE_METADATA:
+            if(m_path.size() == 2)
             m_value[1].append(s, len);
             break;
         default:
@@ -839,6 +861,8 @@ TMFParserContext::get_transformations(std::string matrix)
             tmp = "";
         }else
             tmp += matrix[i];
+    if(tmp != "")
+        m[k++] = std::stof(tmp);
     assert(k == 12);
 
     // Get the translation (x,y,z) value. Remember the matrix in 3mf is a row major not a column major.
@@ -917,6 +941,37 @@ TMFParserContext::get_transformations(std::string matrix)
     transformations.push_back(result_z);
 
     return transformations;
+}
+
+ModelVolume*
+TMFParserContext::add_volume(size_t start_offset, size_t end_offset, bool modifier)
+{
+    assert(m_object);
+    ModelVolume* m_volume = NULL;
+
+    // Add a new volume.
+    m_volume = m_object->add_volume(TriangleMesh());
+    if(!m_volume || (end_offset < start_offset)) return NULL;
+
+    // Add the triangles.
+    stl_file &stl = m_volume->mesh.stl;
+    stl.stats.type = inmemory;
+    stl.stats.number_of_facets = int((1 + end_offset - start_offset) / 3);
+    stl.stats.original_num_facets = stl.stats.number_of_facets;
+    stl_allocate(&stl);
+    for (size_t i = start_offset; i <= end_offset ;) {
+        stl_facet &facet = stl.facet_start[i / 3];
+        for (unsigned int v = 0; v < 3; ++v)
+            memcpy(&facet.vertex[v].x, &m_object_vertices[m_volume_facets[i++] * 3], 3 * sizeof(float));
+    }
+    stl_get_size(&stl);
+    m_volume->mesh.repair();
+    m_volume_facets.clear();
+
+    m_volume->modifier = modifier;
+
+    // ToDo @Samir55 Add the material of the volume (which is read at the object level).
+    return m_volume;
 }
 
 } }
