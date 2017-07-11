@@ -213,8 +213,8 @@ TMFEditor::write_object(int index)
 
     // Write Slic3r custom configs.
     for (const std::string &key : object->config.keys()){
-        append_buffer("        <slic3r:object type=\"slic3r." + key + "\">"
-                      + object->config.serialize(key) + "</slic3r:object>\n");
+        append_buffer("        <slic3r:object type=\"" + key
+                      + "\" config=\"" + object->config.serialize(key) + "\"" + "/>\n");
     }
 
     // Create mesh element which contains the vertices and the volumes.
@@ -654,6 +654,23 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 node_type_new = NODE_TYPE_MESH;
             } else if (strcmp(name, "components") == 0){
                 node_type_new = NODE_TYPE_COMPONENTS;
+            } else if (strcmp(name, "slic3r::object")){
+                node_type_new = NODE_TYPE_SLIC3R_OBJECT_CONFIG;
+
+                // Create a config option.
+                DynamicPrintConfig *config = NULL;
+                if(m_path.back() == NODE_TYPE_OBJECT && m_object)
+                    config = &m_object->config;
+
+                // Get the config key type.
+                const char *key = get_attribute(atts, "type");
+
+                if (config && print_config_def.options.find(key) != print_config_def.options.end() ){
+                    // Get the key config string.
+                    const char *config_value = get_attribute(atts, "config");
+
+                    config->set_deserialize(key, config_value);
+                }
             }
             break;
         case 4:

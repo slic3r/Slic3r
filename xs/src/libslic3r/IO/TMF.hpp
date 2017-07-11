@@ -130,6 +130,8 @@ struct TMFParserContext{
         NODE_TYPE_COMPONENT,
         NODE_TYPE_BUILD,
         NODE_TYPE_ITEM,
+        NODE_TYPE_SLIC3R_OBJECT_CONFIG,
+        NODE_TYPE_SLIC3R_VOLUME_CONFIG,
     };
     ///< Nodes found in 3MF XML document.
 
