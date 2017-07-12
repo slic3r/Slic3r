@@ -617,17 +617,11 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     // Decompose the affine matrix.
                     std::vector<double> transformations = get_transformations(transformation_matrix);
 
-                    // Apply translation.
-                    object->translate(transformations[0], transformations[1], transformations[2]);
+                    if(transformations.size() != 9)
+                        this->stop();
 
-                    // Apply scale.
-                    Pointf3 vec(transformations[3], transformations[4], transformations[5]);
-                    object->scale(vec);
+                    apply_transformation(object, transformations);
 
-                    // Apply x, y & z rotation.
-                    object->rotate(transformations[6], X);
-                    object->rotate(transformations[7], Y);
-                    object->rotate(transformations[8], Z);
                 }
 
                 node_type_new = NODE_TYPE_ITEM;
@@ -691,20 +685,13 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     // Decompose the affine matrix.
                     std::vector<double> transformations = get_transformations(transformation_matrix);
 
+                    if( transformations.size() != 9)
+                        this->stop();
+
                     // Create an instance.
                     component_object->add_instance();
 
-                    // Apply translation.
-                    component_object->translate(transformations[0], transformations[1], transformations[2]);
-
-                    // Apply scale.
-                    Pointf3 vec(transformations[3], transformations[4], transformations[5]);
-                    component_object->scale(vec);
-
-                    // Apply x, y & z rotation.
-                    component_object->rotate(transformations[6], X);
-                    component_object->rotate(transformations[7], Y);
-                    component_object->rotate(transformations[8], Z);
+                    apply_transformation(component_object, transformations);
 
                     // Get the mesh of this instance object.
                     component_mesh = component_object->mesh();
@@ -863,7 +850,8 @@ TMFParserContext::get_transformations(std::string matrix)
             tmp += matrix[i];
     if(tmp != "")
         m[k++] = std::stof(tmp);
-    assert(k == 12);
+
+    assert( k == 12) ;
 
     // Get the translation (x,y,z) value. Remember the matrix in 3mf is a row major not a column major.
     transformations.push_back(m[9]);
@@ -878,19 +866,19 @@ TMFParserContext::get_transformations(std::string matrix)
     transformations.push_back(sy);
     transformations.push_back(sz);
 
-    // Get the rotation values. // ToDo @Samir55
+    // Get the rotation values.
 
     // Normalize scale from the rotation matrix.
     m[0] /= sx;
-    m[1] /= sx;
-    m[2] /= sx;
+    m[1] /= sy;
+    m[2] /= sz;
 
-    m[3] /= sy;
+    m[3] /= sx;
     m[4] /= sy;
-    m[5] /= sy;
+    m[5] /= sz;
 
-    m[6] /= sz;
-    m[7] /= sz;
+    m[6] /= sx;
+    m[7] /= sy;
     m[8] /= sz;
 
     // Get quaternion values
@@ -899,9 +887,9 @@ TMFParserContext::get_transformations(std::string matrix)
         q_y = sqrt(std::max(0.0, 1.0 - m[0] + m[4] - m[8])) / 2,
         q_z = sqrt(std::max(0.0, 1.0 - m[0] - m[4] + m[8])) / 2;
 
-    q_x *= ((q_x * (m[5] - m[7])) <= 0) ? -1 : 1;
-    q_y *= ((q_y * (m[6] - m[2])) <= 0) ? -1 : 1;
-    q_z *= ((q_z * (m[1] - m[3])) <= 0) ? -1 : 1;
+    q_x *= ((q_x * (m[5] - m[7])) <= 0 ? -1 : 1);
+    q_y *= ((q_y * (m[6] - m[2])) <= 0 ? -1 : 1);
+    q_z *= ((q_z * (m[1] - m[3])) <= 0 ? -1 : 1);
 
     // Normalize quaternion values.
     double q_magnitude = sqrt(q_w * q_w + q_x * q_x + q_y * q_y + q_z * q_z);
@@ -941,6 +929,23 @@ TMFParserContext::get_transformations(std::string matrix)
     transformations.push_back(result_z);
 
     return transformations;
+}
+
+void
+TMFParserContext::apply_transformation(ModelObject *object, std::vector<double> &transformations)
+{
+    // Apply scale.
+    Pointf3 vec(transformations[3], transformations[4], transformations[5]);
+    object->scale(vec);
+
+    // Apply x, y & z rotation.
+//    object->rotate(transformations[6], X);
+//    object->rotate(transformations[7], Y);
+//    object->rotate(transformations[8], Z);
+
+    // Apply translation.
+    //object->translate(transformations[0], transformations[1], transformations[2]);
+    return;
 }
 
 ModelVolume*

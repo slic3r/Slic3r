@@ -181,7 +181,7 @@ struct TMFParserContext{
     ///< Current base material allocated for the current model.
 
     std::string m_value[3];
-    ///< Generic string buffer for vertices, face indices, metadata etc.
+    ///< Generic string buffer for metadata, etc.
 
     static void XMLCALL startElement(void *userData, const char *name, const char **atts);
     static void XMLCALL endElement(void *userData, const char *name);
@@ -206,6 +206,12 @@ struct TMFParserContext{
     /// \param modifier bool whether the volume is modifier or not.
     /// \return ModelVolume* a pointer to the newly added volume.
     ModelVolume* add_volume(size_t start_offset, size_t end_offset, bool modifier);
+
+
+    /// Apply scale, rotate & translate to the given object.
+    /// \param object ModelObject*
+    /// \param transfornmations vector<int>
+    void apply_transformation(ModelObject* object, std::vector<double>& transformations);
 
 };
 
