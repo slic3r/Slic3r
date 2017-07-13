@@ -789,11 +789,16 @@ TMFParserContext::endElement(const char *name)
             m_object = NULL;
             break;
         case NODE_TYPE_MODEL:
+        {
+            size_t deleted_objects_count = 0;
             // According to 3MF spec. we must output objects found in item.
             for (size_t i = 0; i < m_output_objects.size(); i++) {
-                if(m_output_objects[i])
-                    m_model.delete_object(i);
+                if (m_output_objects[i]) {
+                    m_model.delete_object(i - deleted_objects_count);
+                    deleted_objects_count++;
+                }
             }
+        }
             break;
         case NODE_TYPE_SLIC3R_VOLUME:
             m_volume = NULL;
