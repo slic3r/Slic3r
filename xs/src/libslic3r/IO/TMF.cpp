@@ -100,7 +100,7 @@ bool
 TMFEditor::write_metadata()
 {
     // Write the model metadata.
-    for(std::map<std::string, std::string>::iterator it = model->metadata.begin(); it != model->metadata.end(); ++it){
+    for(std::map<std::string, std::string>::reverse_iterator  it = model->metadata.rbegin(); it != model->metadata.rend(); ++it){
         append_buffer("    <metadata name=\"" + it->first + "\">" + it->second + "</metadata>\n" );
     }
 
