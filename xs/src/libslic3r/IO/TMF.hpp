@@ -213,6 +213,10 @@ struct TMFParserContext{
     /// \param transfornmations vector<int>
     void apply_transformation(ModelObject* object, std::vector<double>& transformations);
 
+    /// Apply scale, rotate & translate to the given instance.
+    /// \param instance ModelInstance*
+    /// \param transfornmations vector<int>
+    void apply_transformation(ModelInstance* instance, std::vector<double>& transformations);
 };
 
 } }

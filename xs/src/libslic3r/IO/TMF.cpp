@@ -688,16 +688,16 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     if( transformations.size() != 9)
                         this->stop();
 
-                    // Create an instance.
-                    component_object->add_instance();
+                    // Create a copy of the current object.
+                    ModelObject* object_copy = m_model.add_object(*component_object, true);
 
-                    apply_transformation(component_object, transformations);
+                    apply_transformation(object_copy, transformations);
 
                     // Get the mesh of this instance object.
-                    component_mesh = component_object->mesh();
+                    component_mesh = object_copy->mesh();
 
-                    // Delete instance.
-                    component_object->delete_last_instance();
+                    // Delete the copy of the object.
+                    m_model.delete_object(m_model.objects.size() - 1);
 
                 } else {
                     component_mesh = component_object->raw_mesh();
@@ -944,12 +944,28 @@ TMFParserContext::apply_transformation(ModelObject *object, std::vector<double> 
     object->scale(vec);
 
     // Apply x, y & z rotation.
-//    object->rotate(transformations[6], X);
-//    object->rotate(transformations[7], Y);
-//    object->rotate(transformations[8], Z);
+    object->rotate(transformations[6], X);
+    object->rotate(transformations[7], Y);
+    object->rotate(transformations[8], Z);
 
     // Apply translation.
-    //object->translate(transformations[0], transformations[1], transformations[2]);
+    object->translate(transformations[0], transformations[1], transformations[2]);
+    return;
+}
+
+void
+TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<double> &transformations)
+{
+    // ToDo @Samir55 Ask about adding the other transformations not found in the current model instance (scale vector not a single value, rotation in x & y, and translation in z).
+    // Apply scale.
+
+    // Apply x, y & z rotation.
+    instance->rotation = transformations[8];
+
+    // Apply translation.
+    instance->offset.x = transformations[0];
+    instance->offset.y = transformations[1];
+
     return;
 }
 
