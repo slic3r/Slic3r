@@ -574,7 +574,8 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 if (!object_id)
                     this->stop();
 
-                assert(m_object_vertices.empty());
+                if(!m_object_vertices.empty())
+                    this->stop();
 
                 // Create a new object in the model. This object should be included in another object if
                 // it's a component in another object.
@@ -615,7 +616,9 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 const char* transformation_matrix = get_attribute(atts, "transform");
                 if(transformation_matrix){
                     // Decompose the affine matrix.
-                    std::vector<double> transformations = get_transformations(transformation_matrix);
+                    std::vector<double> transformations;
+                    if(!get_transformations(transformation_matrix, transformations))
+                        this->stop();
 
                     if(transformations.size() != 9)
                         this->stop();
@@ -642,7 +645,8 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 node_type_new = NODE_TYPE_BASE;
             } else if (strcmp(name, "mesh") == 0){
                 // Create a new model volume.
-                assert (!m_volume);
+                if(m_volume)
+                    this->stop();
                 node_type_new = NODE_TYPE_MESH;
             } else if (strcmp(name, "components") == 0){
                 node_type_new = NODE_TYPE_COMPONENTS;
@@ -683,7 +687,9 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 const char* transformation_matrix = get_attribute(atts, "transform");
                 if(transformation_matrix){
                     // Decompose the affine matrix.
-                    std::vector<double> transformations = get_transformations(transformation_matrix);
+                    std::vector<double> transformations;
+                    if(!get_transformations(transformation_matrix, transformations))
+                        this->stop();
 
                     if( transformations.size() != 9)
                         this->stop();
@@ -738,6 +744,8 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 if( m_value[0].empty() || m_value[1].empty() || m_value[2].empty())
                     this->stop();
                 // Add a new volume to the current object.
+                if(!m_object)
+                    this->stop();
                 m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2]));
                 if(!m_volume)
                     this->stop();
@@ -777,6 +785,8 @@ TMFParserContext::endElement(const char *name)
         case NODE_TYPE_MESH:
             // Add the object volume if no there are no added volumes in slic3r:volumes.
             if(m_object->volumes.size() == 0) {
+                if(!m_object)
+                    this->stop();
                 m_volume = add_volume(0, m_volume_facets.size(), 0);
                 if (!m_volume)
                     this->stop();
@@ -784,7 +794,8 @@ TMFParserContext::endElement(const char *name)
             }
             break;
         case NODE_TYPE_OBJECT:
-            assert(m_object);
+            if(!m_object)
+                this->stop();
             m_object_vertices.clear();
             m_object = NULL;
             break;
@@ -838,11 +849,9 @@ TMFParserContext::stop()
     XML_StopParser(m_parser, 0);
 }
 
-std::vector<double>
-TMFParserContext::get_transformations(std::string matrix)
+bool
+TMFParserContext::get_transformations(std::string matrix, std::vector<double> &transformations)
 {
-    std::vector<double> transformations;
-
     // Get the values.
     double m[12];
     int  k = 0;
@@ -856,7 +865,8 @@ TMFParserContext::get_transformations(std::string matrix)
     if(tmp != "")
         m[k++] = std::stof(tmp);
 
-    assert( k == 12) ;
+    if(k != 12)
+        return false;
 
     // Get the translation (x,y,z) value. Remember the matrix in 3mf is a row major not a column major.
     transformations.push_back(m[9]);
@@ -933,7 +943,7 @@ TMFParserContext::get_transformations(std::string matrix)
     transformations.push_back(result_y);
     transformations.push_back(result_z);
 
-    return transformations;
+    return true;
 }
 
 void
@@ -972,7 +982,6 @@ TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<doub
 ModelVolume*
 TMFParserContext::add_volume(size_t start_offset, size_t end_offset, bool modifier)
 {
-    assert(m_object);
     ModelVolume* m_volume = NULL;
 
     // Add a new volume.
