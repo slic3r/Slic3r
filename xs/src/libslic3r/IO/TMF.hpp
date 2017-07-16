@@ -38,6 +38,7 @@ public:
     ///< Namespaces in the 3MF document.
 
     enum material_groups_types{
+        UNKNOWEN,
         BASE_MATERIAL,
         COLOR,
         TEXTURE,
@@ -147,9 +148,17 @@ struct TMFParserContext{
     Model &m_model;
     ///< Model to receive objects extracted from an 3MF file.
 
-    std::map<std::string, int> material_groups_indices;
-    ///< A map carries the index of each read material in the document and in material_groups vector in the current model.
-    // ToDo @Samir55 rephrase material_groups_indices explanation / FIX.
+    int material_group_id;
+    ///< Current read material group id.
+
+    int material_group_type;
+    ///< Current read group type.
+
+    std::vector<int> material_groups_offset;
+    ///< The material group start offset in model materials map;
+
+    std::vector<bool> used_material_groups;
+    ///< Keep track of what material groups are used in Slic3r. 0: means not used.
 
     ModelObject *m_object;
     ///< Current object allocated for an model/object XML subtree.
@@ -162,10 +171,10 @@ struct TMFParserContext{
     ///< Ignored objects are the ones not referenced in build items.
 
     std::string m_object_material_group_id;
-    ///< object material group it belongs to.
+    ///< The object's material group it belongs to.
 
     std::string m_object_material_id;
-    ///< object material id.
+    ///< The object's material id in the material group it belongs to.
 
     std::vector<float> m_object_vertices;
     ///< Vertices parsed for the current m_object.

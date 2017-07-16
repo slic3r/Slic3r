@@ -45,11 +45,6 @@ class Model
     ///< Objects are owned by a model. Each object may have multiple instances
     ///< , each instance having its own transformation (shift, scale, rotation).
 
-    std::vector<std::pair<int, ModelMaterialMap>> material_groups;
-    ///< Material groups specific to 3MF format read/write.
-    ///< It's a vector carrying pairs each has the material type and the materials in this group.
-    ///< Material groups are found in 3MF core specification and 3MF material extension.
-
     std::map<std::string, std::string> metadata;
     ///< Model metadata <name, value>, this is needed for 3MF format read/write.
 
@@ -108,15 +103,6 @@ class Model
     /// \param other ModelMaterial the model material to be copied
     /// \return ModelMaterial* a pointer to the new ModelMaterial
     ModelMaterial* add_material(t_model_material_id material_id, const ModelMaterial &other);
-
-    /// Add a new material group to the model. This is specific to 3MF format.
-    /// \param group_type int The type of the material group.
-    void add_material_group(int group_type);
-
-    /// Add a new ModelMaterial to a specific material group.
-    /// \param group_index int the index of the material group in the vector.
-    /// \return ModelMaterial* a pointer to the new ModelMaterial
-    ModelMaterial* add_material(int group_index);
 
     /// Get the ModelMaterial object instance having a certain material id.
     /// Returns null if the ModelMaterial object instance is not found.
@@ -232,8 +218,11 @@ class ModelMaterial
     DynamicPrintConfig config;
     ///< Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
 
-    int material_group;
-    ///< The material belong to which group. Specific to 3MF file format. By default = 0 which means it's a base material or AMF material.
+    int material_group_id;
+    ///< The material belong to which group. Specific to 3MF file format. By default = 0 which means it's an AMF material.
+
+    int material_group_type;
+    ///< The type of the material material group which this material belongs to. Specific to 3MF file format. By default = 0 which means it's an AMF material.
 
     /// Get the parent model owing this material
     /// \return Model* the onwer Model

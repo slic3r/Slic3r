@@ -563,11 +563,11 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 if (!property_group_id)
                     this->stop();
 
-                // Add a new material_group to the model.
-                m_model.add_material_group(TMFEditor::BASE_MATERIAL);
+                material_group_id = std::stoi(property_group_id);
+                material_group_type = TMFEditor::BASE_MATERIAL;
+                material_groups_offset.push_back(material_groups_offset.size());
+                used_material_groups.push_back(0);
 
-                // Add the index of the current material group in the document and its index in the model.
-                material_groups_indices[property_group_id] = m_model.material_groups.size() - 1;
                 node_type_new = NODE_TYPE_BASE_MATERIALS;
             } else if (strcmp(name, "object") == 0){
                 const char* object_id = get_attribute(atts, "id");
@@ -632,10 +632,15 @@ TMFParserContext::startElement(const char *name, const char **atts)
             break;
         case 3:
             if (strcmp(name, "base") == 0){
-                // Create a new model material and add it to the current material group.
-                m_material = m_model.add_material(m_model.material_groups.size() - 1);
+                // Create a new model material.
+                m_material = m_model.add_material(std::to_string(m_model.materials.size()));
+
                 if(!m_material)
                     this->stop();
+
+                // Add the material group number and group type.
+                m_material->material_group_id = material_group_id;
+                m_material->material_group_type = material_group_type;
 
                 // Add the model material attributes.
                 while(*atts != NULL){
@@ -816,6 +821,11 @@ TMFParserContext::endElement(const char *name)
             m_value[0].clear();
             m_value[1].clear();
             m_value[2].clear();
+            break;
+        case NODE_TYPE_BASE_MATERIALS:
+            // Check if no materials were added for this group.
+            if((unsigned int)material_groups_offset.back() == m_model.materials.size())
+                material_groups_offset[material_groups_offset.size() - 1]  = -1;
             break;
         default:
             break;

@@ -156,25 +156,6 @@ Model::get_material(t_model_material_id material_id)
     }
 }
 
-void
-Model::add_material_group(int group_type){
-        // Add the new material_group pair to the model materials_group.
-        std::pair<int, ModelMaterialMap> new_material_group;
-        // Add the type of the read material group to the new pair.
-        new_material_group.first = group_type;
-        this->material_groups.push_back(new_material_group);
-}
-
-ModelMaterial*
-Model::add_material(int group_index){
-        ModelMaterial* material = NULL;
-        if (group_index >= material_groups.size())
-            return NULL;
-        t_model_material_id material_id = std::to_string(material_groups[group_index].second.size());
-        material = material_groups[group_index].second[material_id] = new ModelMaterial(this);
-        return material;
-}
-
 bool
 Model::has_objects_with_no_instances() const
 {
@@ -427,7 +408,7 @@ Model::convert_multipart_object()
 
 ModelMaterial::ModelMaterial(Model *model) : model(model) {}
 ModelMaterial::ModelMaterial(Model *model, const ModelMaterial &other)
-    : attributes(other.attributes), config(other.config), model(model)
+    : attributes(other.attributes), config(other.config), model(model), material_group_type(0), material_group_id(0)
 {}
 
 void
