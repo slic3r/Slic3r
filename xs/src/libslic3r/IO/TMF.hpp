@@ -204,6 +204,16 @@ struct TMFParserContext{
     void characters(const XML_Char *s, int len);
     void stop();
 
+    ///
+    /// \param group_type
+    /// \return
+    bool read_material_group(const char** atts, TMFEditor::material_groups_types group_type);
+
+    ///
+    /// \param atts
+    /// \return
+    bool read_material(const char** atts);
+
     /// Get scale, rotation and scale transformation from affine matrix.
     /// \param matrix string the 3D matrix where elements are separated by space.
     /// \return vector<double> a vector contains [translation, scale factor, xRotation, yRotation, xRotation].
@@ -214,7 +224,7 @@ struct TMFParserContext{
     /// \param end_offset size_t the end index in the m_volume_facets vector.
     /// \param modifier bool whether the volume is modifier or not.
     /// \return ModelVolume* a pointer to the newly added volume.
-    ModelVolume* add_volume(size_t start_offset, size_t end_offset, bool modifier);
+    ModelVolume* add_volume(size_t start_offset, size_t end_offset, bool modifier, t_model_material_id material_id = "");
 
 
     /// Apply scale, rotate & translate to the given object.

@@ -556,19 +556,16 @@ TMFParserContext::startElement(const char *name, const char **atts)
             break;
         case 2:
             if (strcmp(name, "basematerials") == 0) {
-                // Read the current property group id.
-                const char* property_group_id = this->get_attribute(atts,"id");
-
-                // Property id is a required field.
-                if (!property_group_id)
+                if (!this->read_material_group(atts, TMFEditor::BASE_MATERIAL))
                     this->stop();
 
-                material_group_id = std::stoi(property_group_id);
-                material_group_type = TMFEditor::BASE_MATERIAL;
-                material_groups_offset.push_back(material_groups_offset.size());
-                used_material_groups.push_back(0);
-
                 node_type_new = NODE_TYPE_BASE_MATERIALS;
+            } else if (strcmp(name, "m:colorgroup") == 0){
+                if (!this->read_material_group(atts, TMFEditor::COLOR))
+                    this->stop();
+
+                node_type_new = NODE_TYPE_COLOR_GROUP;
+
             } else if (strcmp(name, "object") == 0){
                 const char* object_id = get_attribute(atts, "id");
                 if (!object_id)
@@ -632,22 +629,15 @@ TMFParserContext::startElement(const char *name, const char **atts)
             break;
         case 3:
             if (strcmp(name, "base") == 0){
-                // Create a new model material.
-                m_material = m_model.add_material(std::to_string(m_model.materials.size()));
-
-                if(!m_material)
+                if(!this->read_material(atts))
                     this->stop();
 
-                // Add the material group number and group type.
-                m_material->material_group_id = material_group_id;
-                m_material->material_group_type = material_group_type;
-
-                // Add the model material attributes.
-                while(*atts != NULL){
-                    m_material->attributes[*(atts)] = *(atts + 1);
-                    atts += 2;
-                }
                 node_type_new = NODE_TYPE_BASE;
+            } else if (strcmp(name, "m:color") == 0){
+                if(!this->read_material(atts))
+                    this->stop();
+
+                node_type_new = NODE_TYPE_COLOR;
             } else if (strcmp(name, "mesh") == 0){
                 // Create a new model volume.
                 if(m_volume)
@@ -990,7 +980,7 @@ TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<doub
 }
 
 ModelVolume*
-TMFParserContext::add_volume(size_t start_offset, size_t end_offset, bool modifier)
+TMFParserContext::add_volume(size_t start_offset, size_t end_offset, bool modifier, t_model_material_id material_id = "")
 {
     ModelVolume* m_volume = NULL;
 
@@ -1015,8 +1005,49 @@ TMFParserContext::add_volume(size_t start_offset, size_t end_offset, bool modifi
 
     m_volume->modifier = modifier;
 
-    // ToDo @Samir55 Add the material of the volume (which is read at the object level).
+    if(!material_id.empty())
+        m_volume->set_material(material_id, *m_model.materials[material_id]);
     return m_volume;
+}
+
+bool
+TMFParserContext::read_material_group(const char** atts, TMFEditor::material_groups_types group_type) {
+
+    // Read the current property group id.
+    const char* property_group_id = this->get_attribute(atts,"id");
+
+    // Property id is a required field.
+    if (!property_group_id)
+        return false;
+
+    this->material_group_id = std::stoi(property_group_id);
+    this->material_group_type = group_type;
+    this->material_groups_offset.push_back(this->material_groups_offset.size());
+    this->used_material_groups.push_back(0);
+
+    return true;
+}
+
+bool
+TMFParserContext::read_material(const char **atts) {
+
+    // Create a new model material.
+    this->m_material = m_model.add_material(std::to_string(m_model.materials.size()));
+
+    if(!(this->m_material))
+        return false;
+
+    // Add the material group number and group type.
+    this->m_material->material_group_id = material_group_id;
+    this->m_material->material_group_type = material_group_type;
+
+    // Add the model material attributes.
+    while(*atts != NULL){
+        this->m_material->attributes[*(atts)] = *(atts + 1);
+        atts += 2;
+    }
+
+    return true;
 }
 
 } }
