@@ -792,7 +792,7 @@ TMFParserContext::endElement(const char *name)
             if(m_object->volumes.size() == 0) {
                 if(!m_object)
                     this->stop();
-                m_volume = add_volume(0, m_volume_facets.size(), 0);
+                m_volume = add_volume(0, m_volume_facets.size() - 1, 0);
                 if (!m_volume)
                     this->stop();
                 m_volume = NULL;
