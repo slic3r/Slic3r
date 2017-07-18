@@ -224,7 +224,7 @@ struct TMFParserContext{
     /// \param end_offset size_t the end index in the m_volume_facets vector.
     /// \param modifier bool whether the volume is modifier or not.
     /// \return ModelVolume* a pointer to the newly added volume.
-    ModelVolume* add_volume(size_t start_offset, size_t end_offset, bool modifier, t_model_material_id material_id = "");
+    ModelVolume* add_volume(int start_offset, int end_offset, bool modifier, t_model_material_id material_id = "");
 
 
     /// Apply scale, rotate & translate to the given object.

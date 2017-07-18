@@ -132,7 +132,7 @@ TMFEditor::write_materials()
         append_buffer("        <base name=\"" + material.second->attributes["name"] + "\" ");
 
         // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
-        append_buffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000FF") + "\"/>\n");
+        append_buffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000") + "\"/>\n");
         // ToDo @Samir55 to be covered in AMF write and ask about default color.
     }
 
@@ -169,29 +169,6 @@ TMFEditor::write_materials()
         // close Slic3r material config group.
         append_buffer("    </slic3r:materials>\n");
     }
-
-    // Write 3MF material groups found in 3MF extension.
-//    for(const auto &material_group : model->material_groups){
-//
-//        // Get the current material type from using the material group id.
-//        int type = model->material_groups_types[material_group.first];
-//
-//        // Write this material group according to its type.
-//        switch (type){
-//            case COLOR:
-//                append_buffer("    <m:colorgroup id=\"" + to_string(material_group.first) + "\">\n");
-//                for (const auto &color_material : material_group.second) {
-//                    append_buffer("        <m:color color=\"" + color_material.second->attributes["color"] + "\" />\n");
-//                }
-//                append_buffer("    </m:colorgroup>\n");
-//                break;
-//            case COMPOSITE_MATERIAL:
-//                break;
-//            default:
-//                break;
-//        }
-//
-//    }
 
     return true;
 
@@ -541,12 +518,11 @@ TMFParserContext::startElement(const char *name, const char **atts)
             break;
         case 1:
             if (strcmp(name, "metadata") == 0) {
-                const char* name = this->get_attribute(atts, "name");
-
+                const char* metadata_name = this->get_attribute(atts, "name");
                 // Name is required if it's not found stop parsing.
-                if (!name)
+                if (!metadata_name)
                     this->stop();
-                m_value[0] = name;
+                m_value[0] = metadata_name;
                 node_type_new = NODE_TYPE_METADATA;
             } else if (strcmp(name, "resources") == 0) {
                 node_type_new = NODE_TYPE_RESOURCES;
@@ -585,8 +561,8 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 m_object->part_number = (!part_number) ? -1 : atoi(part_number);
 
                 // Add object name.
-                const char*  name = get_attribute(atts, "name");
-                m_object->name = (!name) ? "" : name;
+                const char*  object_name = get_attribute(atts, "name");
+                m_object->name = (!object_name) ? "" : object_name;
 
                 // Add the object material if applicable.
                 const char* property_group_id = get_attribute(atts, "pid");
@@ -884,17 +860,9 @@ TMFParserContext::get_transformations(std::string matrix, std::vector<double> &t
     // Get the rotation values.
 
     // Normalize scale from the rotation matrix.
-    m[0] /= sx;
-    m[1] /= sy;
-    m[2] /= sz;
-
-    m[3] /= sx;
-    m[4] /= sy;
-    m[5] /= sz;
-
-    m[6] /= sx;
-    m[7] /= sy;
-    m[8] /= sz;
+    m[0] /= sx; m[1] /= sy; m[2] /= sz;
+    m[3] /= sx; m[4] /= sy; m[5] /= sz;
+    m[6] /= sx; m[7] /= sy; m[8] /= sz;
 
     // Get quaternion values
     double q_w = sqrt(std::max(0.0, 1.0 + m[0] + m[4] + m[8])) / 2,
@@ -980,7 +948,7 @@ TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<doub
 }
 
 ModelVolume*
-TMFParserContext::add_volume(size_t start_offset, size_t end_offset, bool modifier, t_model_material_id material_id = "")
+TMFParserContext::add_volume(int start_offset, int end_offset, bool modifier, t_model_material_id material_id)
 {
     ModelVolume* m_volume = NULL;
 
@@ -1022,7 +990,7 @@ TMFParserContext::read_material_group(const char** atts, TMFEditor::material_gro
 
     this->material_group_id = std::stoi(property_group_id);
     this->material_group_type = group_type;
-    this->material_groups_offset.push_back(this->material_groups_offset.size());
+    this->material_groups_offset.push_back(int(this->material_groups_offset.size()));
     this->used_material_groups.push_back(0);
 
     return true;
