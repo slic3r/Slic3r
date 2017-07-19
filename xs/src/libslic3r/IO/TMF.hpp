@@ -216,7 +216,7 @@ struct TMFParserContext{
 
     /// Get scale, rotation and scale transformation from affine matrix.
     /// \param matrix string the 3D matrix where elements are separated by space.
-    /// \return vector<double> a vector contains [translation, scale factor, xRotation, yRotation, xRotation].
+    /// \return vector<double> a vector contains [translation, scale factor, xRotation, yRotation, zRotation].
     bool get_transformations(std::string matrix, std::vector<double>& transformations);
 
     /// Add a new volume to the current object.

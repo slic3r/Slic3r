@@ -2,6 +2,8 @@ Build.PL
 lib/Slic3r/XS.pm
 libslic3r.doxygen
 MANIFEST			This list of files
+src/libslic3r/IO/TMF.hpp
+src/libslic3r/IO/TMF.cpp
 src/admesh/connect.c
 src/admesh/normals.c
 src/admesh/shared.c

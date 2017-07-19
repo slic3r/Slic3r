@@ -1,4 +1,5 @@
 #include "TMF.hpp"
+//#include "../../admesh/stl.h" // ToDo @Samir55 remove, It's for debugging purposes.
 
 namespace Slic3r { namespace IO {
 
@@ -205,6 +206,7 @@ TMFEditor::write_object(int index)
     size_t num_vertices = 0;
 
     for (ModelVolume* volume : object->volumes){
+        std::cout << "Big Object of id " << to_string(index + 1) << " has number of facets " << volume->mesh.stl.stats.number_of_facets << std::endl;
         // Require mesh vertices.
         volume->mesh.require_shared_vertices();
 
@@ -212,6 +214,7 @@ TMFEditor::write_object(int index)
         const auto &stl = volume->mesh.stl;
         for (int i = 0; i < stl.stats.shared_vertices; ++i)
         {
+
             // Subtract origin_translation in order to restore the coordinates of the parts
             // before they were imported. Otherwise, when this 3MF file is reimported parts
             // will be placed in the platter correctly, but we will have lost origin_translation
@@ -267,6 +270,7 @@ TMFEditor::write_object(int index)
     for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
         ModelVolume *volume = object->volumes[i_volume];
 
+        // ToDo @Samir55 fix that.
         append_buffer("                    <slic3r:volume ts=\"" + to_string(triangles_offsets[i_volume]) + "\""
                       + " te=\"" + ((i_volume < object->volumes.size() - 1) ? to_string(triangles_offsets[i_volume+1] - 1) : to_string(num_triangles-1)) + "\""
                       + (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
@@ -508,7 +512,6 @@ void
 TMFParserContext::startElement(const char *name, const char **atts)
 {
     TMFNodeType node_type_new = NODE_TYPE_UNKNOWN;
-
     switch (m_path.size()){
         case 0:
             // Must be <model> tag.
@@ -583,7 +586,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 m_output_objects[m_objects_indices[object_id]] = 0;
 
                 // Add instance.
-                m_model.objects[m_objects_indices[object_id]]->add_instance();
+                ModelInstance* instance = m_model.objects[m_objects_indices[object_id]]->add_instance();
 
                 // Apply transformation if supplied.
                 const char* transformation_matrix = get_attribute(atts, "transform");
@@ -596,7 +599,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     if(transformations.size() != 9)
                         this->stop();
 
-                    apply_transformation(object, transformations);
+                    apply_transformation(instance, transformations);
 
                 }
 
@@ -621,7 +624,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 node_type_new = NODE_TYPE_MESH;
             } else if (strcmp(name, "components") == 0){
                 node_type_new = NODE_TYPE_COMPONENTS;
-            } else if (strcmp(name, "slic3r::object")){
+            } else if (strcmp(name, "slic3r:object")){
                 node_type_new = NODE_TYPE_SLIC3R_OBJECT_CONFIG;
 
                 // Create a config option.
@@ -646,12 +649,17 @@ TMFParserContext::startElement(const char *name, const char **atts)
             } else if (strcmp(name, "triangles") == 0) {
                 node_type_new = NODE_TYPE_TRIANGLES;
             } else if (strcmp(name, "component") == 0) {
+                std::cout << "Entered components area" << std::endl;
+                std::cout << "Number of volumes in the current parent object is " << m_object->volumes.size() << std::endl;
                 // Read the object id.
                 const char* object_id = get_attribute(atts, "objectid");
+                std::cout << "Components Object ID " << object_id << std::endl;
                 if(!object_id)
                     this->stop();
                 ModelObject* component_object = m_model.objects[m_objects_indices[object_id]];
-
+                std::cout << "Components Object address " << component_object << std::endl;
+                std::cout << "Components Object number of volumes is " << component_object->volumes.size() << std::endl;
+                std::cout << "Components Object number of instances is " << component_object->instances.size() << std::endl;
                 // Append it to the parent (current m_object) as a mesh since Slic3r doesn't support an object inside another.
                 // after applying 3d matrix transformation if found.
                 TriangleMesh component_mesh;
@@ -671,7 +679,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     apply_transformation(object_copy, transformations);
 
                     // Get the mesh of this instance object.
-                    component_mesh = object_copy->mesh();
+                    component_mesh = object_copy->raw_mesh();
 
                     // Delete the copy of the object.
                     m_model.delete_object(m_model.objects.size() - 1);
@@ -679,7 +687,12 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 } else {
                     component_mesh = component_object->raw_mesh();
                 }
-                m_object->add_volume(component_mesh);
+                std::cout << "Number of facets of the volume will be added to the parent object is " << component_mesh.stl.stats.number_of_facets << std::endl;
+                ModelVolume* volume = m_object->add_volume(component_mesh);
+                if(!volume)
+                    this->stop();
+                std::cout << "Number of volumes after addition in the current parent object is " << m_object->volumes.size() << std::endl << std::endl;
+                std::cout << "Number of facets of the added volume in the current parent object is " << m_object->volumes.back()->mesh.stl.stats.number_of_facets << std::endl << std::endl;
             } else if (strcmp(name, "slic3r:volumes") == 0) {
                 node_type_new = NODE_TYPE_SLIC3R_VOLUMES;
             }
@@ -763,16 +776,19 @@ TMFParserContext::endElement(const char *name)
                     this->stop();
                 m_volume = NULL;
             }
+        std::cout << "Big Object of id " << m_model.objects.size()-1 << " has number of facets " << m_object->volumes[0]->mesh.stl.stats.number_of_facets << std::endl;
             break;
         case NODE_TYPE_OBJECT:
             if(!m_object)
                 this->stop();
             m_object_vertices.clear();
+            m_volume_facets.clear();
             m_object = NULL;
             break;
         case NODE_TYPE_MODEL:
         {
             size_t deleted_objects_count = 0;
+            std::cout << "Number of objects in the read model" << m_output_objects.size() << std::endl;
             // According to 3MF spec. we must output objects found in item.
             for (size_t i = 0; i < m_output_objects.size(); i++) {
                 if (m_output_objects[i]) {
@@ -780,6 +796,8 @@ TMFParserContext::endElement(const char *name)
                     deleted_objects_count++;
                 }
             }
+            std::cout << "Number of objects in the final model" << m_model.objects.size() << std::endl;
+            std::cout << "Number of volumes in the final model" << m_model.objects[0]->volumes.size() << std::endl;
         }
             break;
         case NODE_TYPE_SLIC3R_VOLUME:
@@ -822,6 +840,7 @@ TMFParserContext::endDocument()
 void
 TMFParserContext::stop()
 {
+    std::cout <<"Stopped.\n";
     XML_StopParser(m_parser, 0);
 }
 
@@ -936,13 +955,17 @@ TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<doub
 {
     // ToDo @Samir55 Ask about adding the other transformations not found in the current model instance (scale vector not a single value, rotation in x & y, and translation in z).
     // Apply scale.
+    Pointf3 vec(transformations[3], transformations[4], transformations[5]);
+    instance->scaling_vector = vec;
 
     // Apply x, y & z rotation.
     instance->rotation = transformations[8];
+    instance->x_rotation = transformations[6];
+    instance->y_rotation = transformations[7];
 
     // Apply translation.
-    instance->offset.x = transformations[0];
-    instance->offset.y = transformations[1];
+    instance->offset.x = transformations[0] < 0 ? 0: transformations[0];
+    instance->offset.y = transformations[1] < 0 ? 0: transformations[1];
 
     return;
 }
@@ -969,8 +992,6 @@ TMFParserContext::add_volume(int start_offset, int end_offset, bool modifier, t_
     }
     stl_get_size(&stl);
     m_volume->mesh.repair();
-    m_volume_facets.clear();
-
     m_volume->modifier = modifier;
 
     if(!material_id.empty())

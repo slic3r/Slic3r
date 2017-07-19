@@ -59,10 +59,11 @@ use Wx::Event qw(EVT_IDLE EVT_COMMAND);
 use base 'Wx::App';
 
 use constant FILE_WILDCARDS => {
-    known   => 'Known files (*.stl, *.obj, *.amf, *.xml)|*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML',
+    known   => 'Known files (*.stl, *.obj, *.amf, *.xml, *.3mf)|*.3mf;*.3MF*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML',
     stl     => 'STL files (*.stl)|*.stl;*.STL',
     obj     => 'OBJ files (*.obj)|*.obj;*.OBJ',
     amf     => 'AMF files (*.amf)|*.amf;*.AMF;*.xml;*.XML',
+    tmf     => '3MF files (*.3mf)|*.3mf;*.3MF',
     ini     => 'INI files *.ini|*.ini;*.INI',
     gcode   => 'G-code files (*.gcode, *.gco, *.g, *.ngc)|*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC',
     svg     => 'SVG files *.svg|*.svg;*.SVG',

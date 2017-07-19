@@ -1024,7 +1024,14 @@ void
 ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
 {
     mesh->rotate_z(this->rotation);                 // rotate around mesh origin
-    mesh->scale(this->scaling_factor);              // scale around mesh origin
+    if(this->x_rotation)
+        mesh->rotate_x((this->x_rotation));
+    if(this->y_rotation)
+        mesh->rotate_y(this->y_rotation);
+    if(this->scaling_factor)
+        mesh->scale(this->scaling_factor);              // scale around mesh origin
+    else
+        mesh->scale(this->scaling_vector);
     if (!dont_translate)
         mesh->translate(this->offset.x, this->offset.y, 0);
 }
