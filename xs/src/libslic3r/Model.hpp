@@ -521,12 +521,12 @@ class ModelInstance
 {
     friend class ModelObject;
     public:
-    double rotation;            ///< Rotation around the Z axis, in radians around mesh center point
-    double x_rotation;          ///< Rotation around the X axis, in radians around mesh center point
-    double y_rotation;          ///< Rotation around the Y axis, in radians around mesh center point
-    double scaling_factor;      ///< uniform scaling factor
+    double rotation;            ///< Rotation around the Z axis, in radians around mesh center point.
+    double x_rotation;          ///< Rotation around the X axis, in radians around mesh center point.
+    double y_rotation;          ///< Rotation around the Y axis, in radians around mesh center point.
+    double scaling_factor;      ///< uniform scaling factor.
     Pointf3 scaling_vector;     ///< scaling vector.
-    Pointf offset;              ///< offset in unscaled coordinates
+    Pointf offset;              ///< offset in unscaled coordinates.
 
     /// Get the owning ModelObject
     /// \return ModelObject* pointer to the owner ModelObject

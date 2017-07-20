@@ -206,7 +206,6 @@ TMFEditor::write_object(int index)
     size_t num_vertices = 0;
 
     for (ModelVolume* volume : object->volumes){
-        std::cout << "Big Object of id " << to_string(index + 1) << " has number of facets " << volume->mesh.stl.stats.number_of_facets << std::endl;
         // Require mesh vertices.
         volume->mesh.require_shared_vertices();
 
@@ -270,7 +269,7 @@ TMFEditor::write_object(int index)
     for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
         ModelVolume *volume = object->volumes[i_volume];
 
-        // ToDo @Samir55 fix that.
+//        // ToDo @Samir55 fix that.
         append_buffer("                    <slic3r:volume ts=\"" + to_string(triangles_offsets[i_volume]) + "\""
                       + " te=\"" + ((i_volume < object->volumes.size() - 1) ? to_string(triangles_offsets[i_volume+1] - 1) : to_string(num_triangles-1)) + "\""
                       + (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
@@ -591,6 +590,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Apply transformation if supplied.
                 const char* transformation_matrix = get_attribute(atts, "transform");
                 if(transformation_matrix){
+                    std::cout <<"Transformation Matrix: " << transformation_matrix << std::endl;
                     // Decompose the affine matrix.
                     std::vector<double> transformations;
                     if(!get_transformations(transformation_matrix, transformations))
@@ -649,17 +649,11 @@ TMFParserContext::startElement(const char *name, const char **atts)
             } else if (strcmp(name, "triangles") == 0) {
                 node_type_new = NODE_TYPE_TRIANGLES;
             } else if (strcmp(name, "component") == 0) {
-                std::cout << "Entered components area" << std::endl;
-                std::cout << "Number of volumes in the current parent object is " << m_object->volumes.size() << std::endl;
                 // Read the object id.
                 const char* object_id = get_attribute(atts, "objectid");
-                std::cout << "Components Object ID " << object_id << std::endl;
                 if(!object_id)
                     this->stop();
                 ModelObject* component_object = m_model.objects[m_objects_indices[object_id]];
-                std::cout << "Components Object address " << component_object << std::endl;
-                std::cout << "Components Object number of volumes is " << component_object->volumes.size() << std::endl;
-                std::cout << "Components Object number of instances is " << component_object->instances.size() << std::endl;
                 // Append it to the parent (current m_object) as a mesh since Slic3r doesn't support an object inside another.
                 // after applying 3d matrix transformation if found.
                 TriangleMesh component_mesh;
@@ -687,12 +681,9 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 } else {
                     component_mesh = component_object->raw_mesh();
                 }
-                std::cout << "Number of facets of the volume will be added to the parent object is " << component_mesh.stl.stats.number_of_facets << std::endl;
                 ModelVolume* volume = m_object->add_volume(component_mesh);
                 if(!volume)
                     this->stop();
-                std::cout << "Number of volumes after addition in the current parent object is " << m_object->volumes.size() << std::endl << std::endl;
-                std::cout << "Number of facets of the added volume in the current parent object is " << m_object->volumes.back()->mesh.stl.stats.number_of_facets << std::endl << std::endl;
             } else if (strcmp(name, "slic3r:volumes") == 0) {
                 node_type_new = NODE_TYPE_SLIC3R_VOLUMES;
             }
@@ -722,17 +713,17 @@ TMFParserContext::startElement(const char *name, const char **atts)
             } else if (strcmp(name, "slic3r:volume") == 0) {
                 node_type_new = NODE_TYPE_SLIC3R_VOLUME;
                 // Read start offset of the triangles.
-                m_value[0] = get_attribute(atts, "ts");
-                m_value[1] = get_attribute(atts, "te");
-                m_value[2] = get_attribute(atts, "modifier");
-                if( m_value[0].empty() || m_value[1].empty() || m_value[2].empty())
-                    this->stop();
-                // Add a new volume to the current object.
-                if(!m_object)
-                    this->stop();
-                m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2]));
-                if(!m_volume)
-                    this->stop();
+//                m_value[0] = get_attribute(atts, "ts");
+//                m_value[1] = get_attribute(atts, "te");
+//                m_value[2] = get_attribute(atts, "modifier");
+//                if( m_value[0].empty() || m_value[1].empty() || m_value[2].empty())
+//                    this->stop();
+//                // Add a new volume to the current object.
+//                if(!m_object)
+//                    this->stop();
+//                m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2]));
+//                if(!m_volume)
+//                    this->stop();
             }
             break;
         case 6:
@@ -776,7 +767,6 @@ TMFParserContext::endElement(const char *name)
                     this->stop();
                 m_volume = NULL;
             }
-        std::cout << "Big Object of id " << m_model.objects.size()-1 << " has number of facets " << m_object->volumes[0]->mesh.stl.stats.number_of_facets << std::endl;
             break;
         case NODE_TYPE_OBJECT:
             if(!m_object)
@@ -788,7 +778,6 @@ TMFParserContext::endElement(const char *name)
         case NODE_TYPE_MODEL:
         {
             size_t deleted_objects_count = 0;
-            std::cout << "Number of objects in the read model" << m_output_objects.size() << std::endl;
             // According to 3MF spec. we must output objects found in item.
             for (size_t i = 0; i < m_output_objects.size(); i++) {
                 if (m_output_objects[i]) {
@@ -796,8 +785,6 @@ TMFParserContext::endElement(const char *name)
                     deleted_objects_count++;
                 }
             }
-            std::cout << "Number of objects in the final model" << m_model.objects.size() << std::endl;
-            std::cout << "Number of volumes in the final model" << m_model.objects[0]->volumes.size() << std::endl;
         }
             break;
         case NODE_TYPE_SLIC3R_VOLUME:
@@ -840,7 +827,6 @@ TMFParserContext::endDocument()
 void
 TMFParserContext::stop()
 {
-    std::cout <<"Stopped.\n";
     XML_StopParser(m_parser, 0);
 }
 
@@ -954,9 +940,12 @@ void
 TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<double> &transformations)
 {
     // ToDo @Samir55 Ask about adding the other transformations not found in the current model instance (scale vector not a single value, rotation in x & y, and translation in z).
+    std::cout <<"Scale vector is " << transformations[3]<< " " << transformations[4]<< " " << transformations[5] << std::endl;
+    std::cout <<"Rotation vector is " << transformations[6]<< " " << transformations[7]<< " " <<transformations[8] << std::endl;
+    std::cout <<"Translation vector is " << transformations[2]<< " " << transformations[1]<< " " << transformations[2] << std::endl;
     // Apply scale.
-    Pointf3 vec(transformations[3], transformations[4], transformations[5]);
-    instance->scaling_vector = vec;
+    instance->scaling_vector = Pointf3(transformations[3], transformations[4], transformations[5]);;
+    std::cout <<"Saved Scale vector is " << instance->scaling_vector.x<< " " <<instance->scaling_vector.y<< " " << instance->scaling_vector.z << std::endl;
 
     // Apply x, y & z rotation.
     instance->rotation = transformations[8];

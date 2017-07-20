@@ -138,7 +138,7 @@ main(int argc, char **argv)
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model.objects.front()->input_file;
             // Remove the previous extension and add .3mf extention.
-            outfile = outfile.substr(0, outfile.find_first_of('.')) + ".3mf";
+            outfile = outfile.substr(0, outfile.find_first_of('.')) + "2.3mf";
             IO::TMF::write(model, outfile);
             boost::nowide::cout << "File file exported to " << outfile << std::endl;
         } else if (cli_config.cut_x > 0 || cli_config.cut_y > 0 || cli_config.cut > 0) {
