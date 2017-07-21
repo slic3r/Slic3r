@@ -522,11 +522,12 @@ class ModelInstance
     friend class ModelObject;
     public:
     double rotation;            ///< Rotation around the Z axis, in radians around mesh center point.
-    double x_rotation;          ///< Rotation around the X axis, in radians around mesh center point.
-    double y_rotation;          ///< Rotation around the Y axis, in radians around mesh center point.
+    double x_rotation;          ///< Rotation around the X axis, in radians around mesh center point. Specific to 3MF format.
+    double y_rotation;          ///< Rotation around the Y axis, in radians around mesh center point. Specific to 3MF format.
     double scaling_factor;      ///< uniform scaling factor.
-    Pointf3 scaling_vector;     ///< scaling vector.
+    Pointf3 scaling_vector;     ///< scaling vector. Specific to 3MF format.
     Pointf offset;              ///< offset in unscaled coordinates.
+    double z_translation;       ///< translation in z axis. Specific to 3MF format.
 
     /// Get the owning ModelObject
     /// \return ModelObject* pointer to the owner ModelObject

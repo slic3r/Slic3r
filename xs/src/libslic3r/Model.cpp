@@ -999,11 +999,11 @@ ModelVolume::assign_unique_material()
 
 
 ModelInstance::ModelInstance(ModelObject *object)
-:   rotation(0), x_rotation(0), y_rotation(0), scaling_factor(1),scaling_vector(Pointf3(1,1,1)), object(object)
+:   rotation(0), x_rotation(0), y_rotation(0), scaling_factor(1),scaling_vector(Pointf3(1,1,1)), z_translation(0), object(object)
 {}
 
 ModelInstance::ModelInstance(ModelObject *object, const ModelInstance &other)
-:   rotation(other.rotation), scaling_factor(other.scaling_factor), scaling_vector(other.scaling_vector), offset(other.offset), object(object)
+:   rotation(other.rotation), x_rotation(other.x_rotation), y_rotation(other.y_rotation), scaling_factor(other.scaling_factor), scaling_vector(other.scaling_vector), offset(other.offset), z_translation(other.z_translation), object(object)
 {}
 
 ModelInstance& ModelInstance::operator= (ModelInstance other)
@@ -1018,27 +1018,35 @@ ModelInstance::swap(ModelInstance &other)
     std::swap(this->rotation,       other.rotation);
     std::swap(this->scaling_factor, other.scaling_factor);
     std::swap(this->scaling_vector, other.scaling_vector);
+    std::swap(this->x_rotation, other.x_rotation);
+    std::swap(this->y_rotation, other.y_rotation);
+    std::swap(this->z_translation, other.z_translation);
     std::swap(this->offset,         other.offset);
 }
 
 void
 ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
 {
-    mesh->rotate_z(this->rotation);                 // rotate around mesh origin
-    mesh->rotate_y(this->y_rotation);
+    std::cout << "It's called transform_mesh \n" << dont_translate << "\n";
+    std::cout << this->x_rotation << "  " << this->y_rotation << std::endl;
     mesh->rotate_x(this->x_rotation);
+    mesh->rotate_y(this->y_rotation);
+    mesh->rotate_z(this->rotation);                 // rotate around mesh origin
+
     Pointf3 scale_versor = this->scaling_vector;
     scale_versor.scale(this->scaling_factor);
     std::cout << this->scaling_factor << std::endl;
-    std::cout <<"Scale vector is " << this->scaling_vector.x<< " " << this->scaling_vector.y<< " " << this->scaling_vector.z << std::endl;
-    std::cout <<"Scale versor is " << scale_versor.x<< " " << scale_versor.y<< " " << scale_versor.z << std::endl;
+//    std::cout <<"Scale vector is " << this->scaling_vector.x<< " " << this->scaling_vector.y<< " " << this->scaling_vector.z << std::endl;
+//    std::cout <<"Scale versor is " << scale_versor.x<< " " << scale_versor.y<< " " << scale_versor.z << std::endl;
     mesh->scale(scale_versor);              // scale around mesh origin
+    mesh->translate(0,0,this->z_translation);
     if (!dont_translate)
         mesh->translate(this->offset.x, this->offset.y, 0);
 }
 
 BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate) const
 {
+    std::cout << "It's called transform_mesh_bounding_box \n";
     // rotate around mesh origin
     double c = cos(this->rotation);
     double s = sin(this->rotation);
@@ -1072,6 +1080,7 @@ BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mes
                 v.x += this->offset.x;
                 v.y += this->offset.y;
             }
+            v.z += this->z_translation;
             bbox.merge(Pointf3(v.x, v.y, v.z));
         }
     }
@@ -1080,6 +1089,7 @@ BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mes
 
 BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, bool dont_translate) const
 {
+    std::cout << "It's called transform_bounding_box \n";
     // rotate around mesh origin
     double c = cos(this->rotation);
     double s = sin(this->rotation);
@@ -1117,6 +1127,7 @@ BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, b
             v.x += this->offset.x;
             v.y += this->offset.y;
         }
+        v.z += this->z_translation;
         out.merge(v);
     }
     return out;

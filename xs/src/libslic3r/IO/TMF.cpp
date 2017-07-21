@@ -271,7 +271,7 @@ TMFEditor::write_object(int index)
 
 //        // ToDo @Samir55 fix that.
         append_buffer("                    <slic3r:volume ts=\"" + to_string(triangles_offsets[i_volume]) + "\""
-                      + " te=\"" + ((i_volume < object->volumes.size() - 1) ? to_string(triangles_offsets[i_volume+1] - 1) : to_string(num_triangles-1)) + "\""
+                      + " te=\"" + ((i_volume + 1 == object->volumes.size()) ? to_string(int(num_triangles)-1) : to_string(triangles_offsets[i_volume+1] - 1)) + "\""
                       + (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
                       + ">\n");
 
@@ -955,6 +955,7 @@ TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<doub
     // Apply translation.
     instance->offset.x = transformations[0] < 0 ? 0: transformations[0];
     instance->offset.y = transformations[1] < 0 ? 0: transformations[1];
+    instance->z_translation = transformations[2] < 0 ? 0: transformations[2];
 
     return;
 }
