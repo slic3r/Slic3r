@@ -1027,17 +1027,12 @@ ModelInstance::swap(ModelInstance &other)
 void
 ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
 {
-    std::cout << "It's called transform_mesh \n" << dont_translate << "\n";
-    std::cout << this->x_rotation << "  " << this->y_rotation << std::endl;
     mesh->rotate_x(this->x_rotation);
     mesh->rotate_y(this->y_rotation);
     mesh->rotate_z(this->rotation);                 // rotate around mesh origin
 
     Pointf3 scale_versor = this->scaling_vector;
     scale_versor.scale(this->scaling_factor);
-    std::cout << this->scaling_factor << std::endl;
-//    std::cout <<"Scale vector is " << this->scaling_vector.x<< " " << this->scaling_vector.y<< " " << this->scaling_vector.z << std::endl;
-//    std::cout <<"Scale versor is " << scale_versor.x<< " " << scale_versor.y<< " " << scale_versor.z << std::endl;
     mesh->scale(scale_versor);              // scale around mesh origin
     mesh->translate(0,0,this->z_translation);
     if (!dont_translate)
@@ -1046,7 +1041,6 @@ ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
 
 BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate) const
 {
-    std::cout << "It's called transform_mesh_bounding_box \n";
     // rotate around mesh origin
     double c = cos(this->rotation);
     double s = sin(this->rotation);
@@ -1089,7 +1083,6 @@ BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mes
 
 BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, bool dont_translate) const
 {
-    std::cout << "It's called transform_bounding_box \n";
     // rotate around mesh origin
     double c = cos(this->rotation);
     double s = sin(this->rotation);

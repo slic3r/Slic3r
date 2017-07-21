@@ -269,7 +269,6 @@ TMFEditor::write_object(int index)
     for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
         ModelVolume *volume = object->volumes[i_volume];
 
-//        // ToDo @Samir55 fix that.
         append_buffer("                    <slic3r:volume ts=\"" + to_string(triangles_offsets[i_volume]) + "\""
                       + " te=\"" + ((i_volume + 1 == object->volumes.size()) ? to_string(int(num_triangles)-1) : to_string(triangles_offsets[i_volume+1] - 1)) + "\""
                       + (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
@@ -590,7 +589,6 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Apply transformation if supplied.
                 const char* transformation_matrix = get_attribute(atts, "transform");
                 if(transformation_matrix){
-                    std::cout <<"Transformation Matrix: " << transformation_matrix << std::endl;
                     // Decompose the affine matrix.
                     std::vector<double> transformations;
                     if(!get_transformations(transformation_matrix, transformations))
@@ -713,17 +711,17 @@ TMFParserContext::startElement(const char *name, const char **atts)
             } else if (strcmp(name, "slic3r:volume") == 0) {
                 node_type_new = NODE_TYPE_SLIC3R_VOLUME;
                 // Read start offset of the triangles.
-//                m_value[0] = get_attribute(atts, "ts");
-//                m_value[1] = get_attribute(atts, "te");
-//                m_value[2] = get_attribute(atts, "modifier");
-//                if( m_value[0].empty() || m_value[1].empty() || m_value[2].empty())
-//                    this->stop();
-//                // Add a new volume to the current object.
-//                if(!m_object)
-//                    this->stop();
-//                m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2]));
-//                if(!m_volume)
-//                    this->stop();
+                m_value[0] = get_attribute(atts, "ts");
+                m_value[1] = get_attribute(atts, "te");
+                m_value[2] = get_attribute(atts, "modifier");
+                if( m_value[0].empty() || m_value[1].empty() || m_value[2].empty())
+                    this->stop();
+                // Add a new volume to the current object.
+                if(!m_object)
+                    this->stop();
+                m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2]));
+                if(!m_volume)
+                    this->stop();
             }
             break;
         case 6:
@@ -939,13 +937,8 @@ TMFParserContext::apply_transformation(ModelObject *object, std::vector<double> 
 void
 TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<double> &transformations)
 {
-    // ToDo @Samir55 Ask about adding the other transformations not found in the current model instance (scale vector not a single value, rotation in x & y, and translation in z).
-    std::cout <<"Scale vector is " << transformations[3]<< " " << transformations[4]<< " " << transformations[5] << std::endl;
-    std::cout <<"Rotation vector is " << transformations[6]<< " " << transformations[7]<< " " <<transformations[8] << std::endl;
-    std::cout <<"Translation vector is " << transformations[2]<< " " << transformations[1]<< " " << transformations[2] << std::endl;
     // Apply scale.
     instance->scaling_vector = Pointf3(transformations[3], transformations[4], transformations[5]);;
-    std::cout <<"Saved Scale vector is " << instance->scaling_vector.x<< " " <<instance->scaling_vector.y<< " " << instance->scaling_vector.z << std::endl;
 
     // Apply x, y & z rotation.
     instance->rotation = transformations[8];
@@ -956,7 +949,6 @@ TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<doub
     instance->offset.x = transformations[0] < 0 ? 0: transformations[0];
     instance->offset.y = transformations[1] < 0 ? 0: transformations[1];
     instance->z_translation = transformations[2] < 0 ? 0: transformations[2];
-
     return;
 }
 
