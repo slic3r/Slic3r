@@ -1,5 +1,4 @@
 #include "TMF.hpp"
-//#include "../../admesh/stl.h" // ToDo @Samir55 remove, It's for debugging purposes.
 
 namespace Slic3r { namespace IO {
 
@@ -471,7 +470,7 @@ TMFParserContext::TMFParserContext(XML_Parser parser, Model *model):
         m_volume(NULL),
         m_material(NULL)
 {
-    m_path.reserve(12); // ToDo @Samir55 to be changed later.
+    m_path.reserve(9);
 }
 
 void XMLCALL
