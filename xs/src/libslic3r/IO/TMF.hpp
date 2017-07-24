@@ -157,9 +157,6 @@ struct TMFParserContext{
     int material_group_type;
     ///< Current read group type.
 
-    std::vector<int> material_groups_offset;
-    ///< The material group start offset in model materials map;
-
     std::vector<bool> used_material_groups;
     ///< Keep track of what material groups are used in Slic3r. 0: means not used.
 

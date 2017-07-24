@@ -117,17 +117,16 @@ TMFEditor::write_materials()
 {
     if (model->materials.size() == 0)
         return true;
-
-    bool base_materials_written = false;
-
     // Add materials into groups.
     std::map<int, std::vector<t_model_material_id>> material_groups;
     for (const auto &material : model->materials){
+        if (material.first.empty())
+            continue;
         int group_saved_id = material.second->material_group_id;
         // Check for existance of the material group in material groups map.
-        if( material_groups.count(group_saved_id) > 0)
+        if( material_groups.count(group_saved_id) <= 0) {
             material_groups_ids[group_saved_id] = material_group_id++;
-
+        }
         material_groups[group_saved_id].push_back(material.first);
     }
 
@@ -135,16 +134,17 @@ TMFEditor::write_materials()
     for(const auto material_group : material_groups){
         int group_type = model->materials[material_group.second.front()]->material_group_type;
         switch (group_type){
-            case BASE_MATERIAL:
+            case BASE_MATERIAL: {
                 int material_index = 0;
                 std::map<t_model_material_id, int> material_group_index;
                 // Write the base materials group.
-                append_buffer("    <basematerials id=\"" + to_string(material_groups_ids[material_group.first]) + "\">\n");
-                for(const auto material_id : material_group.second){
+                append_buffer(
+                        "    <basematerials id=\"" + to_string(material_groups_ids[material_group.first]) + "\">\n");
+                for (const auto material_id : material_group.second) {
                     // If id is empty ignore.
                     if (material_id.empty())
                         continue;
-                    ModelMaterial* material = model->materials[material_id];
+                    ModelMaterial *material = model->materials[material_id];
                     // Change the material index in its group.
                     material_group_index[material_id] = material_index++;
 
@@ -152,7 +152,9 @@ TMFEditor::write_materials()
                     append_buffer("        <base name=\"" + material->attributes["name"] + "\" ");
 
                     // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
-                    append_buffer("displaycolor=\"" + (material->attributes.count("displaycolor") > 0 ? material->attributes["displaycolor"] : "#FFFFFFFF") + "\"/>\n");
+                    append_buffer("displaycolor=\"" +
+                                  (material->attributes.count("displaycolor") > 0 ? material->attributes["displaycolor"]
+                                                                                  : "#FFFFFFFF") + "\"/>\n");
                     // ToDo @Samir55 to be covered in AMF write .
                 }
                 append_buffer("    </basematerials>\n");
@@ -163,15 +165,14 @@ TMFEditor::write_materials()
                 // <Slic3r:material> element having the following attributes:
                 // material id "mid" it points to, type and then the serialized key.
 
-                // Write Sil3r materials custom configs if base materials are written above.
                 // Add Slic3r material config group.
                 append_buffer("    <slic3r:materials>\n");
 
-                for(const auto material_id : material_group.second){
+                for (const auto material_id : material_group.second) {
                     // If id is empty ignore.
                     if (material_id.empty())
                         continue;
-                    ModelMaterial* material = model->materials[material_id];
+                    ModelMaterial *material = model->materials[material_id];
                     for (const std::string &key : material->config.keys()) {
                         append_buffer("        <slic3r:material mid=\"" + to_string(material_group_index[material_id])
                                       + "\" type=\"" + key + "\">"
@@ -181,6 +182,7 @@ TMFEditor::write_materials()
                 }
                 // close Slic3r material config group.
                 append_buffer("    </slic3r:materials>\n");
+            }
                 break;
             case COLOR:
                 break;
@@ -189,7 +191,7 @@ TMFEditor::write_materials()
         }
     }
 
-
+    object_id += material_group_id - 1;
     return true;
 
 }
@@ -200,7 +202,7 @@ TMFEditor::write_object(int index)
     ModelObject* object = model->objects[index];
 
     // Create the new object element.
-    append_buffer("        <object id=\"" + to_string(index + 1) + "\" type=\"model\"");
+    append_buffer("        <object id=\"" + to_string(index + object_id++) + "\" type=\"model\"");
 
     // Add part number if found.
     if (object->part_number != -1)
@@ -810,11 +812,6 @@ TMFParserContext::endElement(const char *name)
             m_value[1].clear();
             m_value[2].clear();
             break;
-        case NODE_TYPE_BASE_MATERIALS:
-            // Check if no materials were added for this group.
-            if((unsigned int)material_groups_offset.back() == m_model.materials.size())
-                material_groups_offset[material_groups_offset.size() - 1]  = -1;
-            break;
         default:
             break;
     }
@@ -1012,7 +1009,6 @@ TMFParserContext::read_material_group(const char** atts, TMFEditor::material_gro
 
     this->material_group_id = std::stoi(property_group_id);
     this->material_group_type = group_type;
-    this->material_groups_offset.push_back(int(this->material_groups_offset.size()));
     this->used_material_groups.push_back(0);
 
     return true;
@@ -1020,7 +1016,6 @@ TMFParserContext::read_material_group(const char** atts, TMFEditor::material_gro
 
 bool
 TMFParserContext::read_material(const char **atts) {
-
     // Create a new model material.
     this->m_material = m_model.add_material(std::to_string(m_model.materials.size()));
 

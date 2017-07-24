@@ -408,7 +408,7 @@ Model::convert_multipart_object()
 
 ModelMaterial::ModelMaterial(Model *model) : model(model) {}
 ModelMaterial::ModelMaterial(Model *model, const ModelMaterial &other)
-    : attributes(other.attributes), config(other.config), model(model), material_group_type(0), material_group_id(0)
+    : attributes(other.attributes), config(other.config), model(model), material_group_type(other.material_group_type), material_group_id(other.material_group_id)
 {}
 
 void
