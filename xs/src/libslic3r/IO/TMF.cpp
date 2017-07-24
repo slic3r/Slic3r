@@ -134,6 +134,7 @@ TMFEditor::write_materials()
     for(const auto material_group : material_groups){
         int group_type = model->materials[material_group.second.front()]->material_group_type;
         switch (group_type){
+            case UNKNOWEN:
             case BASE_MATERIAL: {
                 int material_index = 0;
                 std::map<t_model_material_id, int> material_group_index;
