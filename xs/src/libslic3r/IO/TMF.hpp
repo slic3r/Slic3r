@@ -63,6 +63,9 @@ private:
     zip_t* zip_archive; ///< The zip archive object for reading/writing zip files.
     std::string buff; ///< The buffer currently used in write functions.
     ///< When it reaches a max capacity it's written to the current entry in the zip file.
+    int material_group_id; ///< The id available for the next material property group to be written.
+    int object_id; ///< The id available for the next object to be written.
+    std::map<int, int> material_groups_ids; ///<
 
     /// Write the necessary types in the 3MF package. This function is called by produceTMF() function.
     bool write_types();
@@ -178,7 +181,6 @@ struct TMFParserContext{
 
     std::vector<float> m_object_vertices;
     ///< Vertices parsed for the current m_object.
-    // ToDo Ask: Is this correct to add it all the triangles into a single volume.
 
     ModelVolume *m_volume;
     ///< Volume allocated for an model/object/mesh.
@@ -225,7 +227,6 @@ struct TMFParserContext{
     /// \param modifier bool whether the volume is modifier or not.
     /// \return ModelVolume* a pointer to the newly added volume.
     ModelVolume* add_volume(int start_offset, int end_offset, bool modifier, t_model_material_id material_id = "");
-
 
     /// Apply scale, rotate & translate to the given object.
     /// \param object ModelObject*

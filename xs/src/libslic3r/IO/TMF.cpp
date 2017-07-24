@@ -7,6 +7,8 @@ TMFEditor::TMFEditor(std::string input_file, Model *model)
     zip_name = input_file;
     this->model = model;
     buff = "";
+    material_group_id = 1;
+    object_id = 1;
 }
 
 bool
@@ -118,57 +120,75 @@ TMFEditor::write_materials()
 
     bool base_materials_written = false;
 
-    // Write the base materials.
+    // Add materials into groups.
+    std::map<int, std::vector<t_model_material_id>> material_groups;
     for (const auto &material : model->materials){
-        // If id is empty or if "name" attribute is not found in this material attributes ignore.
-        if (material.first.empty() || material.second->attributes.count("name") == 0)
-            continue;
-        // Add the base materials element if not added.
-        if (!base_materials_written){
-            append_buffer("    <basematerials id=\"1\">\n");
-            base_materials_written = true;
-        }
-        // We add it with black color by default.
-        append_buffer("        <base name=\"" + material.second->attributes["name"] + "\" ");
+        int group_saved_id = material.second->material_group_id;
+        // Check for existance of the material group in material groups map.
+        if( material_groups.count(group_saved_id) > 0)
+            material_groups_ids[group_saved_id] = material_group_id++;
 
-        // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
-        append_buffer("displaycolor=\"" + (material.second->attributes.count("displaycolor") > 0 ? material.second->attributes["displaycolor"] : "#000000") + "\"/>\n");
-        // ToDo @Samir55 to be covered in AMF write and ask about default color.
+        material_groups[group_saved_id].push_back(material.first);
     }
 
-    // Close base materials if it's written.
-    if (base_materials_written)
-        append_buffer("    </basematerials>\n");
+    // Write material groups.
+    for(const auto material_group : material_groups){
+        int group_type = model->materials[material_group.second.front()]->material_group_type;
+        switch (group_type){
+            case BASE_MATERIAL:
+                int material_index = 0;
+                std::map<t_model_material_id, int> material_group_index;
+                // Write the base materials group.
+                append_buffer("    <basematerials id=\"" + to_string(material_groups_ids[material_group.first]) + "\">\n");
+                for(const auto material_id : material_group.second){
+                    // If id is empty ignore.
+                    if (material_id.empty())
+                        continue;
+                    ModelMaterial* material = model->materials[material_id];
+                    // Change the material index in its group.
+                    material_group_index[material_id] = material_index++;
 
-    // Write Slic3r custom config data group.
-    // It has the following structure:
-    // 1. All Slic3r metadata configs are stored in <Slic3r:materials> element which contains
-    // <Slic3r:material> element having the following attributes:
-    // material id "mid" it points to, type and then the serialized key.
+                    // We add it with black color by default.
+                    append_buffer("        <base name=\"" + material->attributes["name"] + "\" ");
 
-    // Write Sil3r materials custom configs if base materials are written above.
-    if (base_materials_written) {
-        // Add Slic3r material config group.
-        append_buffer("    <slic3r:materials>\n");
+                    // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
+                    append_buffer("displaycolor=\"" + (material->attributes.count("displaycolor") > 0 ? material->attributes["displaycolor"] : "#FFFFFFFF") + "\"/>\n");
+                    // ToDo @Samir55 to be covered in AMF write .
+                }
+                append_buffer("    </basematerials>\n");
 
-        // Keep an index to keep track of which material it points to.
-        int material_index = 0;
+                // Write Slic3r custom config data group.
+                // It has the following structure:
+                // 1. All Slic3r metadata configs are stored in <Slic3r:materials> element which contains
+                // <Slic3r:material> element having the following attributes:
+                // material id "mid" it points to, type and then the serialized key.
 
-        for (const auto &material : model->materials) {
-            // If id is empty or if "name" attribute is not found in this material attributes ignore.
-            if (material.first.empty() || material.second->attributes.count("name") == 0)
-                continue;
-            for (const std::string &key : material.second->config.keys()) {
-                append_buffer("        <slic3r:material mid=\"" + to_string(material_index)
-                              + "\" type=\"" + key + "\">"
-                              + material.second->config.serialize(key) + "</slic3r:material>\n"
-                );
-            }
+                // Write Sil3r materials custom configs if base materials are written above.
+                // Add Slic3r material config group.
+                append_buffer("    <slic3r:materials>\n");
+
+                for(const auto material_id : material_group.second){
+                    // If id is empty ignore.
+                    if (material_id.empty())
+                        continue;
+                    ModelMaterial* material = model->materials[material_id];
+                    for (const std::string &key : material->config.keys()) {
+                        append_buffer("        <slic3r:material mid=\"" + to_string(material_group_index[material_id])
+                                      + "\" type=\"" + key + "\">"
+                                      + material->config.serialize(key) + "</slic3r:material>\n"
+                        );
+                    }
+                }
+                // close Slic3r material config group.
+                append_buffer("    </slic3r:materials>\n");
+                break;
+            case COLOR:
+                break;
+            default:
+                break;
         }
-
-        // close Slic3r material config group.
-        append_buffer("    </slic3r:materials>\n");
     }
+
 
     return true;
 
