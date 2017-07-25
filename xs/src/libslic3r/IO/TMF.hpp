@@ -135,6 +135,8 @@ struct TMFParserContext{
         NODE_TYPE_BUILD,
         NODE_TYPE_ITEM,
         NODE_TYPE_SLIC3R_METADATA,
+        NODE_TYPE_SLIC3R_MATERIALS,
+        NODE_TYPE_SLIC3R_MATERIAL,
         NODE_TYPE_SLIC3R_VOLUMES,
         NODE_TYPE_SLIC3R_VOLUME,
         NODE_TYPE_SLIC3R_OBJECT_CONFIG,
@@ -165,6 +167,9 @@ struct TMFParserContext{
 
     std::map<std::string, int> m_objects_indices;
     ///< Mapping the object id in the document to the index in the model objects vector.
+
+    std::map<std::pair<int,int>, t_model_material_id> material_groups;
+    ///< Saves the material group id and the material index in that group.
 
     std::vector<bool> m_output_objects;
     ///< a vector determines whether each read object should be ignored (1) or not (0).

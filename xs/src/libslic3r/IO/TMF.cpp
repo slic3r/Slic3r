@@ -175,10 +175,15 @@ TMFEditor::write_materials()
                         continue;
                     ModelMaterial *material = model->materials[material_id];
                     for (const std::string &key : material->config.keys()) {
-                        append_buffer("        <slic3r:material mid=\"" + to_string(material_group_index[material_id])
-                                      + "\" type=\"" + key + "\">"
-                                      + material->config.serialize(key) + "</slic3r:material>\n"
+                        append_buffer("        <slic3r:material pid=\"" + to_string(material_groups_ids[material_group.first])
+                                      + "\" pindex=\"" + to_string(material_group_index[material_id])
+                                      + "\" type=\"" + key
+                                      + "\" config=\"" + material->config.serialize(key) + "\">"
                         );
+                        std::cout << "        <slic3r:material pid=\"" + to_string(material_groups_ids[material_group.first])
+                                     + "\" pindex=\"" + to_string(material_group_index[material_id])
+                                     + "\" type=\"" + key
+                                     + "\" config=\"" + material->config.serialize(key) + "\">";
                     }
                 }
                 // close Slic3r material config group.
@@ -559,12 +564,14 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     this->stop();
 
                 node_type_new = NODE_TYPE_BASE_MATERIALS;
-            } else if (strcmp(name, "m:colorgroup") == 0){
+            } else if (strcmp(name, "m:colorgroup") == 0) {
                 if (!this->read_material_group(atts, TMFEditor::COLOR))
                     this->stop();
 
                 node_type_new = NODE_TYPE_COLOR_GROUP;
 
+            } else if (strcmp(name, "slic3r:materials") == 0) {
+                node_type_new = NODE_TYPE_SLIC3R_MATERIALS;
             } else if (strcmp(name, "object") == 0){
                 const char* object_id = get_attribute(atts, "id");
                 if (!object_id)
@@ -600,8 +607,6 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 const char* object_id = get_attribute(atts, "objectid");
                 if(!object_id)
                     this->stop();
-                ModelObject* object = m_model.objects[m_objects_indices[object_id]];
-
                 // Mark object as output.
                 m_output_objects[m_objects_indices[object_id]] = 0;
 
@@ -627,7 +632,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
             }
             break;
         case 3:
-            if (strcmp(name, "base") == 0){
+            if (strcmp(name, "base") == 0) {
                 if(!this->read_material(atts))
                     this->stop();
 
@@ -637,14 +642,36 @@ TMFParserContext::startElement(const char *name, const char **atts)
                     this->stop();
 
                 node_type_new = NODE_TYPE_COLOR;
+            } else if (strcmp(name, "slic3r:material") == 0) {
+                // Get the material group id.
+                const char* property_group_id = get_attribute(atts, "pid");
+
+                // Get the material index.
+                const char* property_index = get_attribute(atts, "pindex");
+
+                // Get the option key.
+                const char* key = get_attribute(atts, "type");
+
+                // Get the config value.
+                const char* config_value = get_attribute(atts, "config");
+
+                // Get the material.
+                std::pair<int, int> material_index(atoi(property_group_id), atoi(property_index));
+                ModelMaterial* material = m_model.materials[material_groups[material_index]];
+
+                DynamicPrintConfig* config = &material->config;
+                if (config && print_config_def.options.find(key) != print_config_def.options.end() )
+                    config->set_deserialize(key, config_value);
+
+                node_type_new = NODE_TYPE_SLIC3R_MATERIAL;
             } else if (strcmp(name, "mesh") == 0){
                 // Create a new model volume.
                 if(m_volume)
                     this->stop();
                 node_type_new = NODE_TYPE_MESH;
-            } else if (strcmp(name, "components") == 0){
+            } else if (strcmp(name, "components") == 0) {
                 node_type_new = NODE_TYPE_COMPONENTS;
-            } else if (strcmp(name, "slic3r:object")){
+            } else if (strcmp(name, "slic3r:object")) {
                 node_type_new = NODE_TYPE_SLIC3R_OBJECT_CONFIG;
 
                 // Create a config option.
