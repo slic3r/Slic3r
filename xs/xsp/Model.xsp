@@ -29,6 +29,8 @@
         %code%{ RETVAL = Slic3r::IO::OBJ::read(input_file, THIS); %};
     bool read_amf(std::string input_file)
         %code%{ RETVAL = Slic3r::IO::AMF::read(input_file, THIS); %};
+    bool read_tmf(std::string input_file)
+        %code%{ RETVAL = Slic3r::IO::TMF::read(input_file, THIS); %};
     
     bool write_stl(std::string output_file, bool binary = false)
         %code%{ RETVAL = Slic3r::IO::STL::write(*THIS, output_file, binary); %};

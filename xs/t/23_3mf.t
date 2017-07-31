@@ -19,6 +19,15 @@ my $expected_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
     ."<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n"
     ."<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>\n";
 
+# (1) Basic read test
+{
+    my $tmf_input_path = dirname($current_path). "/3mf/box.3mf";
+    # Create a new model.
+    my $model = Slic3r::Model->new;
+    my $result = $model->read_tmf($tmf_input_path);
+    is($result, 1, 'Basic 3mf read test.');
+}
+
 # (1) Basic Test with model containing vertices and triangles.
 {
     my $amf_test_file = dirname($current_path). "/amf/FaceColors.amf.xml";
