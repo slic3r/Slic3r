@@ -647,15 +647,8 @@ void PrintObject::_slice()
         raft_height += first_layer_height;
         raft_height += support_material_layer_height * (this->config.raft_layers - 1);
 
-        // reset for later layer generation
-        first_layer_height = 0;
-
-        // detachable support
-        if(this->config.support_material_contact_distance > 0) {
-            first_layer_height = min_support_nozzle_diameter;
-            raft_height += this->config.support_material_contact_distance;
-
-        }
+        first_layer_height = this->config.layer_height.value;
+        raft_height += this->config.support_material_contact_distance;
     }
 
     // Initialize layers and their slice heights.
