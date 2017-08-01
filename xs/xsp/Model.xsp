@@ -81,6 +81,9 @@
     size_t material_count() const
         %code%{ RETVAL = THIS->materials.size(); %};
 
+    size_t metadata_count() const
+        %code%{ RETVAL = THIS->metadata.size(); %};
+
     bool has_objects_with_no_instances();
     bool add_default_instances();
     Clone<BoundingBoxf3> bounding_box();
