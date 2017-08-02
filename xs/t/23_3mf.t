@@ -19,15 +19,50 @@ my $expected_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
     ."<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n"
     ."<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>\n";
 
-# (1) Basic read test
-{
-    my $tmf_input_path = dirname($current_path). "/3mf/box.3mf";
-    # Create a new model.
-    my $model = Slic3r::Model->new;
-    my $result = $model->read_tmf($tmf_input_path);
-    is($result, 1, 'Basic 3mf read test.');
+sub multiply_matrix{
+
 }
 
+# Test 1: Check read/write.
+{
+    my $input_path = dirname($current_path). "/3mf/box.3mf";
+    my $output_path = dirname($current_path). "/3mf/box2.3mf";
+    # Create a new model.
+    my $model = Slic3r::Model->new;
+
+    my $result = $model->read_tmf($input_path);
+    is($result, 1, 'Basic 3mf read test.');
+
+    $result = $model->write_tmf($output_path);
+    is($result, 1, 'Basic 3mf write test.');
+
+    # Delete the created file.
+    unlink($output_path);
+}
+
+# Test 2: Check read metadata/ materials/ objects/ components/ build items w/o or with tansformation matrics.
+{
+    my $input_path = dirname($current_path). "/3mf/gimblekeychain.3mf";
+    # Create a new model.
+    my $model = Slic3r::Model->new;
+    $model->read_tmf($input_path);
+
+    # Check the number of read matadata.
+    is($model->metadata_count(), 8, 'Test 2: Metadata count check.');
+
+    # Check the number of read materials.
+    #    is($model->material_count(), 1, 'Test 2: Materials count check.');
+
+    # Check the number of read objects.
+    is($model->objects_count(), 1, 'Test 2: Objects count check.');
+
+    # Check the number of read instances.
+    is($model->get_object(0)->instances_count(), 1, 'Test 2: Object instances count check.');
+
+    # Check the number of read volumes.
+    is($model->get_object(0)->volumes_count(), 3, 'Test 2: Object volumes count check.');
+
+}
 # (1) Basic Test with model containing vertices and triangles.
 {
     my $amf_test_file = dirname($current_path). "/amf/FaceColors.amf.xml";
