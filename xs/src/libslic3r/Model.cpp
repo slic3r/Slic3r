@@ -463,6 +463,7 @@ ModelObject::swap(ModelObject &other)
     std::swap(this->origin_translation,     other.origin_translation);
     std::swap(this->_bounding_box,          other._bounding_box);
     std::swap(this->_bounding_box_valid,    other._bounding_box_valid);
+    std::swap(this->part_number,            other.part_number);
 }
 
 ModelObject::~ModelObject()
