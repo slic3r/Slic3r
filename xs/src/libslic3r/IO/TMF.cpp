@@ -2,15 +2,6 @@
 
 namespace Slic3r { namespace IO {
 
-TMFEditor::TMFEditor(std::string input_file, Model *model)
-{
-    zip_name = input_file;
-    this->model = model;
-    buff = "";
-    material_group_id = 1;
-    object_id = 1;
-}
-
 bool
 TMFEditor::write_types()
 {

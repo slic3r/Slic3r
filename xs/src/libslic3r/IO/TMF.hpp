@@ -47,7 +47,8 @@ public:
     };
     ///< 3MF material groups in 3MF core and in 3MF materials extension.
 
-    TMFEditor(std::string input_file, Model* model);
+    TMFEditor(std::string input_file, Model* _model):zip_name(input_file), model(_model), buff(""), material_group_id(1), object_id(1)
+    {}
 
     /// Write TMF function called by TMF::write() function.
     bool produce_TMF();
