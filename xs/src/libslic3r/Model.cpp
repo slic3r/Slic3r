@@ -1035,9 +1035,15 @@ ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
     Pointf3 scale_versor = this->scaling_vector;
     scale_versor.scale(this->scaling_factor);
     mesh->scale(scale_versor);              // scale around mesh origin
-    mesh->translate(0,0,this->z_translation);
-    if (!dont_translate)
-        mesh->translate(this->offset.x, this->offset.y, 0);
+    if (!dont_translate) {
+        float z_trans = 0;
+        // In 3mf models avoid keeping the objects under z = 0 plane.
+        if (this->y_rotation || this->x_rotation)
+            z_trans = -(mesh->stl.stats.min.z);
+        mesh->translate(this->offset.x, this->offset.y, z_trans);
+    }
+
+
 }
 
 BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate) const
@@ -1074,8 +1080,9 @@ BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mes
             if (!dont_translate) {
                 v.x += this->offset.x;
                 v.y += this->offset.y;
+                if (this->y_rotation || this->x_rotation)
+                    v.z += -(mesh->stl.stats.min.z);
             }
-            v.z += this->z_translation;
             bbox.merge(Pointf3(v.x, v.y, v.z));
         }
     }
@@ -1121,7 +1128,6 @@ BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, b
             v.x += this->offset.x;
             v.y += this->offset.y;
         }
-        v.z += this->z_translation;
         out.merge(v);
     }
     return out;
