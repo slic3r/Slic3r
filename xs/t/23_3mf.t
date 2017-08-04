@@ -40,7 +40,7 @@ sub multiply_matrix{
     unlink($output_path);
 }
 
-# Test 2: Check read metadata/ materials/ objects/ components/ build items w/o or with tansformation matrics.
+# Test 2: Check read metadata/ materials/ objects/ components/ build items w/o or with tansformation matrics. // ToDo @Samir55 Improve.
 {
     my $input_path = dirname($current_path). "/3mf/gimblekeychain.3mf";
     # Create a new model.
@@ -51,7 +51,7 @@ sub multiply_matrix{
     is($model->metadata_count(), 8, 'Test 2: Metadata count check.');
 
     # Check the number of read materials.
-    #    is($model->material_count(), 1, 'Test 2: Materials count check.');
+    #is($model->material_count(), 1, 'Test 2: Materials count check.');
 
     # Check the number of read objects.
     is($model->objects_count(), 1, 'Test 2: Objects count check.');
@@ -63,6 +63,17 @@ sub multiply_matrix{
     is($model->get_object(0)->volumes_count(), 3, 'Test 2: Object volumes count check.');
 
 }
+
+# Test 3: Read an STL and write it as 3MF.
+{
+
+}
+
+# Test 4: Read an 3MF and write it as STL.
+{
+
+}
+
 # (1) Basic Test with model containing vertices and triangles.
 {
     my $amf_test_file = dirname($current_path). "/amf/FaceColors.amf.xml";

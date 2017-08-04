@@ -8,7 +8,9 @@
 
 namespace Slic3r {
 
-Model::Model() {}
+Model::Model() {
+    this->metadata.clear();
+}
 
 Model::Model(const Model &other)
 {
@@ -877,6 +879,7 @@ ModelObject::split(ModelObjectPtrs* new_objects)
         
         ModelObject* new_object = this->model->add_object(*this, false);
         new_object->input_file  = "";
+        new_object->part_number = this->part_number; //According to 3mf part number should be given to the split parts.
         ModelVolume* new_volume = new_object->add_volume(**mesh);
         new_volume->name        = volume->name;
         new_volume->config      = volume->config;
