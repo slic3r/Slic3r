@@ -83,7 +83,7 @@ sub multiply_matrix{
     # Check initialization of 3mf specific atttributes.
     is($model->metadata_count(), 0, 'Test 3: read stl model metadata count check .');
     is($model->get_object(0)->instances_count(), 0, 'Test 3: object instances count check.');
-    is($model->get_object(0)->part_number(), 0, 'Test 3: object partnumber check.');
+    is($model->get_object(0)->part_number(), -1, 'Test 3: object partnumber check.');
     is($model->material_count(), 0, 'Test 3: model materials count check.');
 
     $result = $model->write_tmf($output_path);

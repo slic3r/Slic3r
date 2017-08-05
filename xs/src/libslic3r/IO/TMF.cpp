@@ -125,8 +125,8 @@ TMFEditor::write_materials()
     for(const auto material_group : material_groups){
         int group_type = model->materials[material_group.second.front()]->material_group_type;
         switch (group_type){
-            case UNKNOWEN:
-            case BASE_MATERIAL: {
+            case static_cast<int>(TMFMaterialGroups::UNKNOWEN):
+            case static_cast<int>(TMFMaterialGroups::BASE_MATERIAL): {
                 int material_index = 0;
                 std::map<t_model_material_id, int> material_group_index;
                 // Write the base materials group.
@@ -181,7 +181,7 @@ TMFEditor::write_materials()
                 append_buffer("    </slic3r:materials>\n");
             }
                 break;
-            case COLOR:
+            case static_cast<int>(TMFMaterialGroups::COLOR):
                 break;
             default:
                 break;
@@ -268,7 +268,7 @@ TMFEditor::write_object(int index)
                 append_buffer(" v" + to_string(j+1) + "=\"" + to_string(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) + "\"");
             }
             if (!volume->material_id().empty())
-                append_buffer(" pid=\"1\" p1=\"" + to_string(volume->material_id()) + "\""); // Base Materials id = 1 and p1 is assigned to the whole triangle.
+                append_buffer(" pid=\"1\" p1=\"" + to_string(volume->material_id()) + "\""); // Base Materials id = 1 and p1 is assigned to the whole triangle. ToDo @Samir55 Finish that.
             append_buffer("/>\n");
             num_triangles++;
         }
@@ -551,12 +551,12 @@ TMFParserContext::startElement(const char *name, const char **atts)
             break;
         case 2:
             if (strcmp(name, "basematerials") == 0) {
-                if (!this->read_material_group(atts, TMFEditor::BASE_MATERIAL))
+                if (!this->read_material_group(atts, TMFMaterialGroups::BASE_MATERIAL))
                     this->stop();
 
                 node_type_new = NODE_TYPE_BASE_MATERIALS;
             } else if (strcmp(name, "m:colorgroup") == 0) {
-                if (!this->read_material_group(atts, TMFEditor::COLOR))
+                if (!this->read_material_group(atts, TMFMaterialGroups::COLOR))
                     this->stop();
 
                 node_type_new = NODE_TYPE_COLOR_GROUP;
@@ -1017,7 +1017,7 @@ TMFParserContext::add_volume(int start_offset, int end_offset, bool modifier, t_
 }
 
 bool
-TMFParserContext::read_material_group(const char** atts, TMFEditor::material_groups_types group_type) {
+TMFParserContext::read_material_group(const char** atts, TMFMaterialGroups group_type) {
 
     // Read the current property group id.
     const char* property_group_id = this->get_attribute(atts,"id");
@@ -1027,7 +1027,7 @@ TMFParserContext::read_material_group(const char** atts, TMFEditor::material_gro
         return false;
 
     this->material_group_id = std::stoi(property_group_id);
-    this->material_group_type = group_type;
+    this->material_group_type = static_cast<int>(group_type);
     this->used_material_groups.push_back(0);
 
     return true;

@@ -23,29 +23,30 @@
 
 namespace Slic3r { namespace IO {
 
+
+/// 3MF material groups in 3MF core and in 3MF materials extension.
+enum class TMFMaterialGroups{
+    UNKNOWEN,
+    BASE_MATERIAL,
+    COLOR,
+    TEXTURE,
+    COMPOSITE_MATERIAL,
+    MULTI_PROPERTIES
+};
+
 /// 3MF Editor class responsible for reading and writing 3mf files.
 class TMFEditor
 {
 public:
     const std::map<std::string, std::string> namespaces = {
             {"3mf", "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"}, // Default XML namespace.
-            {"slic3r", "http://link_to_Slic3r_schema.com/2017/06"}, // Slic3r namespace.
+            {"slic3r", "http://schemas.slic3r.org/3mf/2017/06"}, // Slic3r namespace.
             {"m", "http://schemas.microsoft.com/3dmanufacturing/material/2015/02"}, // Material Extension namespace.
             {"s", "http://schemas.microsoft.com/3dmanufacturing/slice/2015/07"}, // Slice Extension.
             {"content_types", "http://schemas.openxmlformats.org/package/2006/content-types"}, // Content_Types namespace.
             {"relationships", "http://schemas.openxmlformats.org/package/2006/relationships"} // Relationships namespace.
     };
     ///< Namespaces in the 3MF document.
-
-    enum material_groups_types{
-        UNKNOWEN,
-        BASE_MATERIAL,
-        COLOR,
-        TEXTURE,
-        COMPOSITE_MATERIAL,
-        MULTI_PROPERTIES
-    };
-    ///< 3MF material groups in 3MF core and in 3MF materials extension.
 
     TMFEditor(std::string input_file, Model* _model):zip_name(input_file), model(_model), buff(""), material_group_id(1), object_id(1)
     {}
@@ -212,7 +213,7 @@ struct TMFParserContext{
     ///
     /// \param group_type
     /// \return
-    bool read_material_group(const char** atts, TMFEditor::material_groups_types group_type);
+    bool read_material_group(const char** atts, TMFMaterialGroups group_type);
 
     ///
     /// \param atts
