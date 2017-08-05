@@ -199,6 +199,8 @@ ModelMaterial::attributes()
         %code%{ THIS->input_file = value; %};
     Ref<DynamicPrintConfig> config()
         %code%{ RETVAL = &THIS->config; %};
+    int part_number()
+        %code%{ RETVAL = THIS->part_number; %};
 
     Ref<Model> model()
         %code%{ RETVAL = THIS->get_model(); %};

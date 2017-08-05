@@ -48,33 +48,63 @@ sub multiply_matrix{
     $model->read_tmf($input_path);
 
     # Check the number of read matadata.
-    is($model->metadata_count(), 8, 'Test 2: Metadata count check.');
+    is($model->metadata_count(), 8, 'Test 2: metadata count check.');
 
     # Check the number of read materials.
     #is($model->material_count(), 1, 'Test 2: Materials count check.');
 
     # Check the number of read objects.
-    is($model->objects_count(), 1, 'Test 2: Objects count check.');
+    is($model->objects_count(), 1, 'Test 2: objects count check.');
 
     # Check the number of read instances.
-    is($model->get_object(0)->instances_count(), 1, 'Test 2: Object instances count check.');
+    is($model->get_object(0)->instances_count(), 1, 'Test 2: object instances count check.');
+
+    # Check the read object part number.
+    is($model->get_object(0)->part_number(), -1, 'Test 2: object part number check.'); # TODO @Samir55
 
     # Check the number of read volumes.
-    is($model->get_object(0)->volumes_count(), 3, 'Test 2: Object volumes count check.');
+    is($model->get_object(0)->volumes_count(), 3, 'Test 2: object volumes count check.');
+
+    # Check the number of read number of facets (triangles).
+    is($model->get_object(0)->facets_count(), 19884, 'Test 2: object number of facets check.');
+    # Check the affine transformation matrix decomposition. # TODO @Samir55
 
 }
 
 # Test 3: Read an STL and write it as 3MF.
 {
+    my $input_path = dirname($current_path).  "/models/stl/spikey_top.stl";
+    my $output_path = dirname($current_path). "/models/3mf/spikey_top.3mf";
 
+    my $model = Slic3r::Model->new;
+    my $result = $model->read_stl($input_path);
+    is($result, 1, 'Test 3: read the stl model file.');
+
+    # Check initialization of 3mf specific atttributes.
+    is($model->metadata_count(), 0, 'Test 3: read stl model metadata count check .');
+    is($model->get_object(0)->instances_count(), 0, 'Test 3: object instances count check.');
+    is($model->get_object(0)->part_number(), 0, 'Test 3: object partnumber check.');
+    is($model->material_count(), 0, 'Test 3: model materials count check.');
+
+    $result = $model->write_tmf($output_path);
+    is($result, 1, 'Test 3: Write the 3mf model file.');
+
+    unlink($output_path);
 }
 
-# Test 4: Read an 3MF and write it as STL.
+# Test 4: Read an 3MF containig multiple objects and volumes and write it as STL.
 {
+    my $input_path = dirname($current_path). "/models/3mf/gimblekeychainExtended.3mf";
+    my $output_path = dirname($current_path). "/models/stl/gimblekeychainExtended.stl";
 
+    my $model = Slic3r::Model->new;
+    $model->read_tmf($input_path);
+
+    my $result = $model->write_stl($output_path);
+    is($result, 1, 'Test 4: convert to stl check.');
 }
 
-# (1) Basic Test with model containing vertices and triangles.
+# Test 5: Basic Test with model containing vertices and triangles.
 {
     my $amf_test_file = dirname($current_path). "/models/amf/FaceColors.amf.xml";
     my $tmf_output_file = dirname($current_path). "/models/3mf/FaceColors.3mf";
@@ -143,7 +173,7 @@ sub multiply_matrix{
     is( $relationships_output, $expected_relationships, "_rels/.rels file matching");
 }
 
-# (2) Basic test with model containing materials.
+# Test 6: Basic test with model containing materials.
 {
     my $amf_test_file = dirname($current_path). "/models/amf/SplitPyramid.amf";
     my $tmf_output_file = dirname($current_path). "/models/3mf/SplitPyramid.3mf";

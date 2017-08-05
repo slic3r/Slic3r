@@ -760,8 +760,8 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 if(!m_object)
                     this->stop();
                 //m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2])); ToDo @Samir Fix slicer:volume seg. fault
-                if(!m_volume)
-                    this->stop();
+//                if(!m_volume)
+//                    this->stop();
             }
             break;
         case 6:
