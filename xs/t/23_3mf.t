@@ -109,7 +109,7 @@ sub multiply_matrix{
     my $amf_test_file = dirname($current_path). "/models/amf/FaceColors.amf.xml";
     my $tmf_output_file = dirname($current_path). "/models/3mf/FaceColors.3mf";
     my $expected_model = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns:slic3r=\"http://link_to_Slic3r_schema.com/2017/06\"> \n"
+        ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns:slic3r=\"http://schemas.slic3r.org/3mf/2017/06\"> \n"
         ."    <slic3r:metadata type=\"version\">1.3.0-dev</slic3r:metadata>\n"
         ."    <resources> \n"
         ."        <object id=\"1\" type=\"model\">\n"
@@ -178,7 +178,7 @@ sub multiply_matrix{
     my $amf_test_file = dirname($current_path). "/models/amf/SplitPyramid.amf";
     my $tmf_output_file = dirname($current_path). "/models/3mf/SplitPyramid.3mf";
     my $expected_model = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns:slic3r=\"http://link_to_Slic3r_schema.com/2017/06\"> \n"
+        ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns:slic3r=\"http://schemas.slic3r.org/3mf/2017/06\"> \n"
         ."    <slic3r:metadata type=\"version\">1.3.0-dev</slic3r:metadata>\n"
         ."    <resources> \n"
         ."    <basematerials id=\"1\">\n"
