@@ -25,8 +25,8 @@ sub multiply_matrix{
 
 # Test 1: Check read/write.
 {
-    my $input_path = dirname($current_path). "/3mf/box.3mf";
-    my $output_path = dirname($current_path). "/3mf/box2.3mf";
+    my $input_path = dirname($current_path). "/models/3mf/box.3mf";
+    my $output_path = dirname($current_path). "/models/3mf/box2.3mf";
     # Create a new model.
     my $model = Slic3r::Model->new;
 
@@ -42,7 +42,7 @@ sub multiply_matrix{
 
 # Test 2: Check read metadata/ materials/ objects/ components/ build items w/o or with tansformation matrics. // ToDo @Samir55 Improve.
 {
-    my $input_path = dirname($current_path). "/3mf/gimblekeychain.3mf";
+    my $input_path = dirname($current_path). "/models/3mf/gimblekeychain.3mf";
     # Create a new model.
     my $model = Slic3r::Model->new;
     $model->read_tmf($input_path);
@@ -76,8 +76,8 @@ sub multiply_matrix{
 
 # (1) Basic Test with model containing vertices and triangles.
 {
-    my $amf_test_file = dirname($current_path). "/amf/FaceColors.amf.xml";
-    my $tmf_output_file = dirname($current_path). "/3mf/FaceColors.3mf";
+    my $amf_test_file = dirname($current_path). "/models/amf/FaceColors.amf.xml";
+    my $tmf_output_file = dirname($current_path). "/models/3mf/FaceColors.3mf";
     my $expected_model = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns:slic3r=\"http://link_to_Slic3r_schema.com/2017/06\"> \n"
         ."    <slic3r:metadata type=\"version\">1.3.0-dev</slic3r:metadata>\n"
@@ -145,8 +145,8 @@ sub multiply_matrix{
 
 # (2) Basic test with model containing materials.
 {
-    my $amf_test_file = dirname($current_path). "/amf/SplitPyramid.amf";
-    my $tmf_output_file = dirname($current_path). "/3mf/SplitPyramid.3mf";
+    my $amf_test_file = dirname($current_path). "/models/amf/SplitPyramid.amf";
+    my $tmf_output_file = dirname($current_path). "/models/3mf/SplitPyramid.3mf";
     my $expected_model = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns:slic3r=\"http://link_to_Slic3r_schema.com/2017/06\"> \n"
         ."    <slic3r:metadata type=\"version\">1.3.0-dev</slic3r:metadata>\n"

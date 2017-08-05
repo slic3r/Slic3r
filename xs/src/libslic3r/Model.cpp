@@ -8,9 +8,7 @@
 
 namespace Slic3r {
 
-Model::Model() {
-    this->metadata.clear();
-}
+Model::Model() : metadata(std::map<std::string, std::string>()) {}
 
 Model::Model(const Model &other)
 {
