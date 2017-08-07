@@ -326,13 +326,29 @@ TMFEditor::write_build()
             append_buffer("        <item objectid=\"" + to_string(object_id + 1) + "\"");
 
             // Get the rotation about z and the scale factor.
-            double sc = instance->scaling_factor, cosine_rz = cos(instance->rotation) , sine_rz = sin(instance->rotation);
-            double tx = instance->offset.x + object->origin_translation.x , ty = instance->offset.y + object->origin_translation.y;
+            double sc = instance->scaling_factor,
+                    cosine_rz = cos(instance->rotation),
+                    sine_rz = sin(instance->rotation),
+                    cosine_ry = cos(instance->y_rotation),
+                    sine_ry = sin(instance->y_rotation),
+                    cosine_rx = cos(instance->x_rotation),
+                    sine_rx = sin(instance->x_rotation),
+                    tx = instance->offset.x + object->origin_translation.x ,
+                    ty = instance->offset.y + object->origin_translation.y,
+                    tz = instance->z_translation;
 
-            std::string transform = to_string(cosine_rz * sc) + " " + to_string(sine_rz * sc) + " 0 "
-                                    + to_string(-1 * sine_rz * sc) + " " + to_string(cosine_rz*sc) + " 0 "
-                                    + "0 " + "0 " + to_string(sc) + " "
-                                    + to_string(tx) + " " + to_string(ty) + " " + "0";
+            std::string transform = to_string(cosine_ry * cosine_rz * sc * instance->scaling_vector.x) + " "
+                                    + to_string(cosine_ry * sine_rz * sc) + " "
+                                    + to_string(-1 * sine_ry * sc) + " "
+                                    + to_string((sine_rx * sine_ry * cosine_rz -1 * cosine_rx * sine_rz) * sc)  + " "
+                                    + to_string((sine_rx * sine_ry * sine_rz + cosine_rx *cosine_rz) * sc * instance->scaling_vector.y) + " "
+                                    + to_string(sine_rx * cosine_ry * sc) + " "
+                                    + to_string((cosine_rx * sine_ry * cosine_rz + sine_rx * sine_rz) * sc) + " "
+                                    + to_string((sine_rx * sine_ry * sine_rz - sine_rx * cosine_rz) * sc) + " "
+                                    + to_string(cosine_rx * cosine_ry * sc * instance->scaling_vector.z) + " "
+                                    + to_string(tx) + " "
+                                    + to_string(ty) + " "
+                                    + to_string(tz);
 
             // Add the transform
             append_buffer(" transform=\"" + transform + "\"/>\n");
