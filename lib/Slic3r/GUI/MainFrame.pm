@@ -124,7 +124,7 @@ sub _init_menubar {
     # File menu
     my $fileMenu = Wx::Menu->new;
     {
-        wxTheApp->append_menu_item($fileMenu, "Open STL/OBJ/AMF…\tCtrl+O", 'Open a model', sub {
+        wxTheApp->append_menu_item($fileMenu, "Open STL/OBJ/AMF/3MF…\tCtrl+O", 'Open a model', sub {
             $self->{plater}->add if $self->{plater};
         }, undef, 'brick_add.png');
         wxTheApp->append_menu_item($fileMenu, "Open 2.5D TIN mesh…", 'Import a 2.5D TIN mesh', sub {
@@ -358,7 +358,7 @@ sub quick_slice {
         my $input_file;
         my $dir = $Slic3r::GUI::Settings->{recent}{skein_directory} || $Slic3r::GUI::Settings->{recent}{config_directory} || '';
         if (!$params{reslice}) {
-            my $dialog = Wx::FileDialog->new($self, 'Choose a file to slice (STL/OBJ/AMF):', $dir, "", &Slic3r::GUI::MODEL_WILDCARD, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+            my $dialog = Wx::FileDialog->new($self, 'Choose a file to slice (STL/OBJ/AMF/3MF):', $dir, "", &Slic3r::GUI::MODEL_WILDCARD, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
             if ($dialog->ShowModal != wxID_OK) {
                 $dialog->Destroy;
                 return;

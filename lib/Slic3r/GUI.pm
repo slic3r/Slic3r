@@ -59,7 +59,7 @@ use Wx::Event qw(EVT_IDLE EVT_COMMAND);
 use base 'Wx::App';
 
 use constant FILE_WILDCARDS => {
-    known   => 'Known files (*.stl, *.obj, *.amf, *.xml, *.3mf)|*.3mf;*.3MF*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML',
+    known   => 'Known files (*.stl, *.obj, *.amf, *.xml, *.3mf)|*.3mf;*.3MF;*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML',
     stl     => 'STL files (*.stl)|*.stl;*.STL',
     obj     => 'OBJ files (*.obj)|*.obj;*.OBJ',
     amf     => 'AMF files (*.amf)|*.amf;*.AMF;*.xml;*.XML',
@@ -68,7 +68,7 @@ use constant FILE_WILDCARDS => {
     gcode   => 'G-code files (*.gcode, *.gco, *.g, *.ngc)|*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC',
     svg     => 'SVG files *.svg|*.svg;*.SVG',
 };
-use constant MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(known stl obj amf)};
+use constant MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(known stl obj amf tmf)};
 use constant STL_MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(stl)};
 use constant AMF_MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(amf)};
 
@@ -398,7 +398,7 @@ sub open_model {
            || $Slic3r::GUI::Settings->{recent}{config_directory}
            || '';
     
-    my $dialog = Wx::FileDialog->new($window // $self->GetTopWindow, 'Choose one or more files (STL/OBJ/AMF):', $dir, "",
+    my $dialog = Wx::FileDialog->new($window // $self->GetTopWindow, 'Choose one or more files (STL/OBJ/AMF/3MF):', $dir, "",
         MODEL_WILDCARD, wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST);
     if ($dialog->ShowModal != wxID_OK) {
         $dialog->Destroy;
