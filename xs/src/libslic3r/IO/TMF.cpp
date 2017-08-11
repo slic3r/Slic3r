@@ -775,9 +775,9 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Add a new volume to the current object.
                 if(!m_object)
                     this->stop();
-                //m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2])); ToDo @Samir Fix slicer:volume seg. fault
-//                if(!m_volume)
-//                    this->stop();
+                m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2]));
+                if(!m_volume)
+                    this->stop();
             }
             break;
         case 6:
@@ -1018,10 +1018,13 @@ TMFParserContext::add_volume(int start_offset, int end_offset, bool modifier, t_
     stl.stats.number_of_facets = (1 + end_offset - start_offset) / 3;
     stl.stats.original_num_facets = stl.stats.number_of_facets;
     stl_allocate(&stl);
+    int i_facet = 0;
     for (int i = start_offset; i <= end_offset ;) {
-        stl_facet &facet = stl.facet_start[i / 3];
-        for (unsigned int v = 0; v < 3; ++v)
+        stl_facet &facet = stl.facet_start[i_facet / 3];
+        for (unsigned int v = 0; v < 3; ++v) {
             memcpy(&facet.vertex[v].x, &m_object_vertices[m_volume_facets[i++] * 3], 3 * sizeof(float));
+            i_facet++;
+        }
     }
     stl_get_size(&stl);
     m_volume->mesh.repair();
