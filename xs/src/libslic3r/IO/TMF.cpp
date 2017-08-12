@@ -54,7 +54,6 @@ TMFEditor::write_model()
     // Write the model element. Append any necessary namespaces.
     append_buffer("<model unit=\"millimeter\" xml:lang=\"en-US\"");
     append_buffer(" xmlns=\"" + namespaces.at("3mf") + "\"");
-    append_buffer(" xmlns:m=\"" + namespaces.at("m") + "\"");
     append_buffer(" xmlns:slic3r=\"" + namespaces.at("slic3r") + "\"> \n");
 
     // Write metadata.
@@ -62,9 +61,6 @@ TMFEditor::write_model()
 
     // Write resources.
     append_buffer("    <resources> \n");
-
-    // Write Model Material.
-    write_materials();
 
     // Write Object
     for(size_t object_index = 0; object_index < model->objects.size(); object_index++)
@@ -101,96 +97,6 @@ TMFEditor::write_metadata()
     append_buffer("    <slic3r:metadata type=\"version\">" + to_string(SLIC3R_VERSION) + "</slic3r:metadata>\n");
 
     return true;
-}
-
-bool
-TMFEditor::write_materials()
-{
-    if (model->materials.size() == 0)
-        return true;
-    // Add materials into groups.
-    std::map<int, std::vector<t_model_material_id>> material_groups;
-    for (const auto &material : model->materials){
-        if (material.first.empty())
-            continue;
-        int group_saved_id = material.second->material_group_id;
-        // Check for existance of the material group in material groups map.
-        if( material_groups.count(group_saved_id) <= 0) {
-            material_groups_ids[group_saved_id] = material_group_id++;
-        }
-        material_groups[group_saved_id].push_back(material.first);
-    }
-
-    // Write material groups.
-    for(const auto material_group : material_groups){
-        int group_type = model->materials[material_group.second.front()]->material_group_type;
-        switch (group_type){
-            case static_cast<int>(TMFMaterialGroups::UNKNOWEN):
-            case static_cast<int>(TMFMaterialGroups::BASE_MATERIAL): {
-                int material_index = 0;
-                std::map<t_model_material_id, int> material_group_index;
-                // Write the base materials group.
-                append_buffer(
-                        "    <basematerials id=\"" + to_string(material_groups_ids[material_group.first]) + "\">\n");
-                for (const auto material_id : material_group.second) {
-                    // If id is empty ignore.
-                    if (material_id.empty())
-                        continue;
-                    ModelMaterial *material = model->materials[material_id];
-                    // Change the material index in its group.
-                    material_group_index[material_id] = material_index++;
-
-                    // We add it with black color by default.
-                    append_buffer("        <base name=\"" + material->attributes["name"] + "\" ");
-
-                    // If "displaycolor" attribute is not found, add a default black colour. Color is a must in base material in 3MF.
-                    append_buffer("displaycolor=\"" +
-                                  (material->attributes.count("displaycolor") > 0 ? material->attributes["displaycolor"]
-                                                                                  : "#FFFFFFFF") + "\"/>\n");
-                    // ToDo @Samir55 to be covered in AMF write .
-                }
-                append_buffer("    </basematerials>\n");
-
-                // Write Slic3r custom config data group.
-                // It has the following structure:
-                // 1. All Slic3r metadata configs are stored in <Slic3r:materials> element which contains
-                // <Slic3r:material> element having the following attributes:
-                // material id "mid" it points to, type and then the serialized key.
-
-                // Add Slic3r material config group.
-                append_buffer("    <slic3r:materials>\n");
-
-                for (const auto material_id : material_group.second) {
-                    // If id is empty ignore.
-                    if (material_id.empty())
-                        continue;
-                    ModelMaterial *material = model->materials[material_id];
-                    for (const std::string &key : material->config.keys()) {
-                        append_buffer("        <slic3r:material pid=\"" + to_string(material_groups_ids[material_group.first])
-                                      + "\" pindex=\"" + to_string(material_group_index[material_id])
-                                      + "\" type=\"" + key
-                                      + "\" config=\"" + material->config.serialize(key) + "\">"
-                        );
-                        std::cout << "        <slic3r:material pid=\"" + to_string(material_groups_ids[material_group.first])
-                                     + "\" pindex=\"" + to_string(material_group_index[material_id])
-                                     + "\" type=\"" + key
-                                     + "\" config=\"" + material->config.serialize(key) + "\">";
-                    }
-                }
-                // close Slic3r material config group.
-                append_buffer("    </slic3r:materials>\n");
-            }
-                break;
-            case static_cast<int>(TMFMaterialGroups::COLOR):
-                break;
-            default:
-                break;
-        }
-    }
-
-    object_id += material_group_id - 1;
-    return true;
-
 }
 
 bool
@@ -267,8 +173,6 @@ TMFEditor::write_object(int index)
             for (int j = 0; j < 3; j++){
                 append_buffer(" v" + to_string(j+1) + "=\"" + to_string(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) + "\"");
             }
-            if (!volume->material_id().empty())
-                append_buffer(" pid=\"1\" p1=\"" + to_string(volume->material_id()) + "\""); // Base Materials id = 1 and p1 is assigned to the whole triangle. ToDo @Samir55 Finish that.
             append_buffer("/>\n");
             num_triangles++;
         }
@@ -502,8 +406,7 @@ TMFParserContext::TMFParserContext(XML_Parser parser, Model *model):
         m_parser(parser),
         m_model(*model),
         m_object(NULL),
-        m_volume(NULL),
-        m_material(NULL)
+        m_volume(NULL)
 {
     m_path.reserve(9);
 }
@@ -566,20 +469,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
             }
             break;
         case 2:
-            if (strcmp(name, "basematerials") == 0) {
-                if (!this->read_material_group(atts, TMFMaterialGroups::BASE_MATERIAL))
-                    this->stop();
-
-                node_type_new = NODE_TYPE_BASE_MATERIALS;
-            } else if (strcmp(name, "m:colorgroup") == 0) {
-                if (!this->read_material_group(atts, TMFMaterialGroups::COLOR))
-                    this->stop();
-
-                node_type_new = NODE_TYPE_COLOR_GROUP;
-
-            } else if (strcmp(name, "slic3r:materials") == 0) {
-                node_type_new = NODE_TYPE_SLIC3R_MATERIALS;
-            } else if (strcmp(name, "object") == 0){
+            if (strcmp(name, "object") == 0){
                 const char* object_id = get_attribute(atts, "id");
                 if (!object_id)
                     this->stop();
@@ -601,13 +491,6 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 const char*  object_name = get_attribute(atts, "name");
                 m_object->name = (!object_name) ? "" : object_name;
 
-                // Add the object material if applicable.
-                const char* property_group_id = get_attribute(atts, "pid");
-                const char* property_index = get_attribute(atts, "pindex");
-                if (property_group_id && property_index) {
-                    m_object_material_group_id = property_group_id;
-                    m_object_material_id = property_index;
-                }
                 node_type_new = NODE_TYPE_OBJECT;
             } else if (strcmp(name, "item") == 0){
                 // Get object id.
@@ -639,39 +522,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
             }
             break;
         case 3:
-            if (strcmp(name, "base") == 0) {
-                if(!this->read_material(atts))
-                    this->stop();
-
-                node_type_new = NODE_TYPE_BASE;
-            } else if (strcmp(name, "m:color") == 0){
-                if(!this->read_material(atts))
-                    this->stop();
-
-                node_type_new = NODE_TYPE_COLOR;
-            } else if (strcmp(name, "slic3r:material") == 0) {
-                // Get the material group id.
-                const char* property_group_id = get_attribute(atts, "pid");
-
-                // Get the material index.
-                const char* property_index = get_attribute(atts, "pindex");
-
-                // Get the option key.
-                const char* key = get_attribute(atts, "type");
-
-                // Get the config value.
-                const char* config_value = get_attribute(atts, "config");
-
-                // Get the material.
-                std::pair<int, int> material_index(atoi(property_group_id), atoi(property_index));
-                ModelMaterial* material = m_model.materials[material_groups[material_index]];
-
-                DynamicPrintConfig* config = &material->config;
-                if (config && print_config_def.options.find(key) != print_config_def.options.end() )
-                    config->set_deserialize(key, config_value);
-
-                node_type_new = NODE_TYPE_SLIC3R_MATERIAL;
-            } else if (strcmp(name, "mesh") == 0){
+            if (strcmp(name, "mesh") == 0){
                 // Create a new model volume.
                 if(m_volume)
                     this->stop();
@@ -912,7 +763,6 @@ TMFParserContext::get_transformations(std::string matrix, std::vector<double> &t
     transformations.push_back(sz);
 
     // Get the rotation values.
-
     // Normalize scale from the rotation matrix.
     m[0] /= sx; m[1] /= sy; m[2] /= sz;
     m[3] /= sx; m[4] /= sy; m[5] /= sz;
@@ -1004,7 +854,7 @@ TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<doub
 }
 
 ModelVolume*
-TMFParserContext::add_volume(int start_offset, int end_offset, bool modifier, t_model_material_id material_id)
+TMFParserContext::add_volume(int start_offset, int end_offset, bool modifier)
 {
     ModelVolume* m_volume = NULL;
 
@@ -1030,47 +880,7 @@ TMFParserContext::add_volume(int start_offset, int end_offset, bool modifier, t_
     m_volume->mesh.repair();
     m_volume->modifier = modifier;
 
-    if(!material_id.empty())
-        m_volume->set_material(material_id, *m_model.materials[material_id]);
     return m_volume;
-}
-
-bool
-TMFParserContext::read_material_group(const char** atts, TMFMaterialGroups group_type) {
-
-    // Read the current property group id.
-    const char* property_group_id = this->get_attribute(atts,"id");
-
-    // Property id is a required field.
-    if (!property_group_id)
-        return false;
-
-    this->material_group_id = std::stoi(property_group_id);
-    this->material_group_type = static_cast<int>(group_type);
-    this->used_material_groups.push_back(0);
-
-    return true;
-}
-
-bool
-TMFParserContext::read_material(const char **atts) {
-    // Create a new model material.
-    this->m_material = m_model.add_material(std::to_string(m_model.materials.size()));
-
-    if(!(this->m_material))
-        return false;
-
-    // Add the material group number and group type.
-    this->m_material->material_group_id = material_group_id;
-    this->m_material->material_group_type = material_group_type;
-
-    // Add the model material attributes.
-    while(*atts != NULL){
-        this->m_material->attributes[*(atts)] = *(atts + 1);
-        atts += 2;
-    }
-
-    return true;
 }
 
 } }

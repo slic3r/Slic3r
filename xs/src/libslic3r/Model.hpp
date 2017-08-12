@@ -218,12 +218,6 @@ class ModelMaterial
     DynamicPrintConfig config;
     ///< Dynamic configuration storage for the object specific configuration values, overriding the global configuration.
 
-    int material_group_id;
-    ///< The material belong to which group. Specific to 3MF file format. By default = 0 which means it's an AMF material.
-
-    int material_group_type;
-    ///< The type of the material material group which this material belongs to. Specific to 3MF file format. By default = 0 which means it's an AMF material.
-
     /// Get the parent model owing this material
     /// \return Model* the onwer Model
     Model* get_model() const { return this->model; };

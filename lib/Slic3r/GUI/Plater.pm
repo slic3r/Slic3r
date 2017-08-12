@@ -2606,7 +2606,7 @@ sub make_thumbnail {
     $self->thumbnail->clear;
     
     my $mesh = $model->objects->[$obj_idx]->raw_mesh;
-    # Apply x, y rotations and scaling vector in case of reading a 3d model object.
+    # Apply x, y rotations and scaling vector in case of reading a 3MF model object.
     my $model_instance = $model->objects->[$obj_idx]->instances->[0];
     $mesh->rotate_x($model_instance->x_rotation);
     $mesh->rotate_y($model_instance->y_rotation);

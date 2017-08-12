@@ -23,17 +23,6 @@
 
 namespace Slic3r { namespace IO {
 
-
-/// 3MF material groups in 3MF core and in 3MF materials extension.
-enum class TMFMaterialGroups{
-    UNKNOWEN,
-    BASE_MATERIAL,
-    COLOR,
-    TEXTURE,
-    COMPOSITE_MATERIAL,
-    MULTI_PROPERTIES
-};
-
 /// 3MF Editor class responsible for reading and writing 3mf files.
 class TMFEditor
 {
@@ -41,14 +30,13 @@ public:
     const std::map<std::string, std::string> namespaces = {
             {"3mf", "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"}, // Default XML namespace.
             {"slic3r", "http://schemas.slic3r.org/3mf/2017/06"}, // Slic3r namespace.
-            {"m", "http://schemas.microsoft.com/3dmanufacturing/material/2015/02"}, // Material Extension namespace.
             {"s", "http://schemas.microsoft.com/3dmanufacturing/slice/2015/07"}, // Slice Extension.
             {"content_types", "http://schemas.openxmlformats.org/package/2006/content-types"}, // Content_Types namespace.
             {"relationships", "http://schemas.openxmlformats.org/package/2006/relationships"} // Relationships namespace.
     };
     ///< Namespaces in the 3MF document.
 
-    TMFEditor(std::string input_file, Model* _model):zip_name(input_file), model(_model), buff(""), material_group_id(1), object_id(1)
+    TMFEditor(std::string input_file, Model* _model):zip_name(input_file), model(_model), buff(""), object_id(1)
     {}
 
     /// Write TMF function called by TMF::write() function.
@@ -65,9 +53,7 @@ private:
     zip_t* zip_archive; ///< The zip archive object for reading/writing zip files.
     std::string buff; ///< The buffer currently used in write functions.
     ///< When it reaches a max capacity it's written to the current entry in the zip file.
-    int material_group_id; ///< The id available for the next material property group to be written.
     int object_id; ///< The id available for the next object to be written.
-    std::map<int, int> material_groups_ids; ///<
 
     /// Write the necessary types in the 3MF package. This function is called by produceTMF() function.
     bool write_types();
@@ -80,10 +66,6 @@ private:
 
     /// Write the metadata of the model. This function is called by writeModel() function.
     bool write_metadata();
-
-    /// Write Materials. The current supported materials are only of the core specifications.
-    // The 3MF core specs support base materials, Each has by default color and name attributes.
-    bool write_materials();
 
     /// Write object of the current model. This function is called by writeModel() function.
     /// \param index int the index of the object to be read
@@ -120,12 +102,6 @@ struct TMFParserContext{
         NODE_TYPE_MODEL,
         NODE_TYPE_METADATA,
         NODE_TYPE_RESOURCES,
-        NODE_TYPE_BASE_MATERIALS,
-        NODE_TYPE_BASE,
-        NODE_TYPE_COLOR_GROUP,
-        NODE_TYPE_COLOR,
-        NODE_TYPE_COMPOSITE_MATERIALS,
-        NODE_TYPE_MULTI_PROPERTIES,
         NODE_TYPE_OBJECT,
         NODE_TYPE_MESH,
         NODE_TYPE_VERTICES,
@@ -137,8 +113,6 @@ struct TMFParserContext{
         NODE_TYPE_BUILD,
         NODE_TYPE_ITEM,
         NODE_TYPE_SLIC3R_METADATA,
-        NODE_TYPE_SLIC3R_MATERIALS,
-        NODE_TYPE_SLIC3R_MATERIAL,
         NODE_TYPE_SLIC3R_VOLUMES,
         NODE_TYPE_SLIC3R_VOLUME,
         NODE_TYPE_SLIC3R_OBJECT_CONFIG,
@@ -155,33 +129,15 @@ struct TMFParserContext{
     Model &m_model;
     ///< Model to receive objects extracted from an 3MF file.
 
-    int material_group_id;
-    ///< Current read material group id.
-
-    int material_group_type;
-    ///< Current read group type.
-
-    std::vector<bool> used_material_groups;
-    ///< Keep track of what material groups are used in Slic3r. 0: means not used.
-
     ModelObject *m_object;
     ///< Current object allocated for an model/object XML subtree.
 
     std::map<std::string, int> m_objects_indices;
     ///< Mapping the object id in the document to the index in the model objects vector.
 
-    std::map<std::pair<int,int>, t_model_material_id> material_groups;
-    ///< Saves the material group id and the material index in that group.
-
     std::vector<bool> m_output_objects;
     ///< a vector determines whether each read object should be ignored (1) or not (0).
     ///< Ignored objects are the ones not referenced in build items.
-
-    std::string m_object_material_group_id;
-    ///< The object's material group it belongs to.
-
-    std::string m_object_material_id;
-    ///< The object's material id in the material group it belongs to.
 
     std::vector<float> m_object_vertices;
     ///< Vertices parsed for the current m_object.
@@ -191,9 +147,6 @@ struct TMFParserContext{
 
     std::vector<int> m_volume_facets;
     ///< Faces collected for all volumes of the current object.
-
-    ModelMaterial *m_material;
-    ///< Current base material allocated for the current model.
 
     std::string m_value[3];
     ///< Generic string buffer for metadata, etc.
@@ -210,16 +163,6 @@ struct TMFParserContext{
     void characters(const XML_Char *s, int len);
     void stop();
 
-    ///
-    /// \param group_type
-    /// \return
-    bool read_material_group(const char** atts, TMFMaterialGroups group_type);
-
-    ///
-    /// \param atts
-    /// \return
-    bool read_material(const char** atts);
-
     /// Get scale, rotation and scale transformation from affine matrix.
     /// \param matrix string the 3D matrix where elements are separated by space.
     /// \return vector<double> a vector contains [translation, scale factor, xRotation, yRotation, zRotation].
@@ -230,7 +173,7 @@ struct TMFParserContext{
     /// \param end_offset size_t the end index in the m_volume_facets vector.
     /// \param modifier bool whether the volume is modifier or not.
     /// \return ModelVolume* a pointer to the newly added volume.
-    ModelVolume* add_volume(int start_offset, int end_offset, bool modifier, t_model_material_id material_id = "");
+    ModelVolume* add_volume(int start_offset, int end_offset, bool modifier);
 
     /// Apply scale, rotate & translate to the given object.
     /// \param object ModelObject*

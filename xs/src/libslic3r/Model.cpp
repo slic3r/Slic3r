@@ -406,9 +406,9 @@ Model::convert_multipart_object()
         this->delete_object(0);
 }
 
-ModelMaterial::ModelMaterial(Model *model) : material_group_id(0), material_group_type(0), model(model) {}
+ModelMaterial::ModelMaterial(Model *model) : model(model) {}
 ModelMaterial::ModelMaterial(Model *model, const ModelMaterial &other)
-    :  material_group_type(other.material_group_type), material_group_id(other.material_group_id), attributes(other.attributes), config(other.config), model(model)
+    : attributes(other.attributes), config(other.config), model(model)
 {}
 
 void
