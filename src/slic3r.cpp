@@ -138,9 +138,9 @@ main(int argc, char **argv)
             std::string outfile = cli_config.output.value;
             if (outfile.empty()) outfile = model.objects.front()->input_file;
             // Check if the file is already a 3mf.
-            if(outfile.substr(outfile.find_first_of('.'), outfile.length()) == ".3mf") {
+            if(outfile.substr(outfile.find_first_of('.'), outfile.length()) == ".3mf")
                 outfile = outfile.substr(0, outfile.find_first_of('.')) + "_2" + ".3mf";
-            } else
+            else
                 // Remove the previous extension and add .3mf extention.
                 outfile = outfile.substr(0, outfile.find_first_of('.')) + ".3mf";
             IO::TMF::write(model, outfile);

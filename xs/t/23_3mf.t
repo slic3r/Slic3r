@@ -122,7 +122,7 @@ sub multiply_matrix{
     my $tmf_output_file = dirname($current_path). "/models/3mf/FaceColors.3mf";
     my $expected_model = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:slic3r=\"http://schemas.slic3r.org/3mf/2017/06\"> \n"
-        ."    <slic3r:metadata version=\"1.3.0-dev\"/>\n"
+        ."    <slic3r:metadata version=\"" . Slic3r::VERSION()  . "\"/>\n"
         ."    <resources> \n"
         ."        <object id=\"1\" type=\"model\">\n"
         ."            <mesh>\n"

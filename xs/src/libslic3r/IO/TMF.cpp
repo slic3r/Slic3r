@@ -129,7 +129,7 @@ TMFEditor::write_object(int index)
     std::vector<size_t> vertices_offsets;
     size_t num_vertices = 0;
 
-    for (ModelVolume* volume : object->volumes){
+    for (auto volume : object->volumes){
         // Require mesh vertices.
         volume->mesh.require_shared_vertices();
 
