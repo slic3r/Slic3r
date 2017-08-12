@@ -128,6 +128,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
                             print rather than processed individually.
     
       Printer options:
+        --bed-shape         Coordinates in mm of the bed's points (default: 0x0,200x0,200x200,0x200)
         --nozzle-diameter   Diameter of nozzle in mm (default: 0.5)
         --print-center      Coordinates in mm of the point to center the print around
                             (default: 100,100)
