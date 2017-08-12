@@ -40,7 +40,7 @@ sub multiply_matrix{
     unlink($output_path);
 }
 
-# Test 2: Check read metadata/ objects/ components/ build items w/o or with tansformation matrics. // ToDo @Samir55 Improve.
+# Test 2: Check read metadata/ objects/ components/ build items w/o or with tansformation matrics.
 {
     my $input_path = dirname($current_path). "/models/3mf/gimblekeychain.3mf";
     # Create a new model.
@@ -50,9 +50,6 @@ sub multiply_matrix{
     # Check the number of read matadata.
     is($model->metadata_count(), 8, 'Test 2: metadata count check.');
 
-    # Check the number of read materials.
-    #is($model->material_count(), 1, 'Test 2: Materials count check.');
-
     # Check the number of read objects.
     is($model->objects_count(), 1, 'Test 2: objects count check.');
 
@@ -60,14 +57,29 @@ sub multiply_matrix{
     is($model->get_object(0)->instances_count(), 1, 'Test 2: object instances count check.');
 
     # Check the read object part number.
-    is($model->get_object(0)->part_number(), -1, 'Test 2: object part number check.'); # TODO @Samir55
+    is($model->get_object(0)->part_number(), -1, 'Test 2: object part number check.');
 
     # Check the number of read volumes.
     is($model->get_object(0)->volumes_count(), 3, 'Test 2: object volumes count check.');
 
     # Check the number of read number of facets (triangles).
     is($model->get_object(0)->facets_count(), 19884, 'Test 2: object number of facets check.');
-    # Check the affine transformation matrix decomposition. # TODO @Samir55
+
+    # Check the affine transformation matrix decomposition.
+    # Check translation.
+    cmp_ok($model->get_object(0)->get_instance(0)->offset()->x(), '<=', 0.0001, 'Test 2: X translation check.');
+    cmp_ok($model->get_object(0)->get_instance(0)->offset()->y(), '<=', 0.0001, 'Test 2: Y translation check.');
+    cmp_ok($model->get_object(0)->get_instance(0)->z_translation() - 0.0345364, '<=', 0.0001, 'Test 2: Z translation check.');
+
+    # Check scale.
+    cmp_ok($model->get_object(0)->get_instance(0)->scaling_vector()->x() - 25.4, '<=', 0.0001, 'Test 2: X scale check.');
+    cmp_ok($model->get_object(0)->get_instance(0)->scaling_vector()->y() - 25.4, '<=', 0.0001, 'Test 2: Y scale check.');
+    cmp_ok($model->get_object(0)->get_instance(0)->scaling_vector()->z() - 25.4, '<=', 0.0001, 'Test 2: Z scale check.');
+
+    # Check X, Y, & Z rotation.
+    cmp_ok($model->get_object(0)->get_instance(0)->x_rotation() - 6.2828, '<=', 0.0001, 'Test 2: X rotation check.');
+    cmp_ok($model->get_object(0)->get_instance(0)->y_rotation() - 6.2828, '<=', 0.0001, 'Test 2: Y rotation check.');
+    cmp_ok($model->get_object(0)->get_instance(0)->rotation(), '<=', 0.0001, 'Test 2: Z rotation check.');
 
 }
 
@@ -109,7 +121,7 @@ sub multiply_matrix{
     my $amf_test_file = dirname($current_path). "/models/amf/FaceColors.amf.xml";
     my $tmf_output_file = dirname($current_path). "/models/3mf/FaceColors.3mf";
     my $expected_model = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:m=\"http://schemas.microsoft.com/3dmanufacturing/material/2015/02\" xmlns:slic3r=\"http://schemas.slic3r.org/3mf/2017/06\"> \n"
+        ."<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" xmlns:slic3r=\"http://schemas.slic3r.org/3mf/2017/06\"> \n"
         ."    <slic3r:metadata type=\"version\">1.3.0-dev</slic3r:metadata>\n"
         ."    <resources> \n"
         ."        <object id=\"1\" type=\"model\">\n"
