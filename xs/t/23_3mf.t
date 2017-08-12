@@ -102,8 +102,8 @@ my $expected_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
 
 # Test 4: Read an 3MF containig multiple objects and volumes and write it as STL.
 {
-    my $input_path = dirname($current_path). "/models/3mf/gimblekeychainExtended.3mf";
-    my $output_path = dirname($current_path). "/models/stl/gimblekeychainExtended.stl";
+    my $input_path = dirname($current_path). "/models/3mf/gimblekeychain.3mf";
+    my $output_path = dirname($current_path). "/models/stl/gimblekeychain.stl";
 
     my $model = Slic3r::Model->new;
     my $result = $model->read_tmf($input_path);
