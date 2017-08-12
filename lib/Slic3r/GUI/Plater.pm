@@ -2606,6 +2606,12 @@ sub make_thumbnail {
     $self->thumbnail->clear;
     
     my $mesh = $model->objects->[$obj_idx]->raw_mesh;
+    # Apply x, y rotations and scaling vector in case of reading a 3d model object.
+    my $model_instance = $model->objects->[$obj_idx]->instances->[0];
+    $mesh->rotate_x($model_instance->x_rotation);
+    $mesh->rotate_y($model_instance->y_rotation);
+    $mesh->scale_xyz($model_instance->scaling_vector);
+
     if ($mesh->facets_count <= 5000) {
         # remove polygons with area <= 1mm
         my $area_threshold = Slic3r::Geometry::scale 1;
