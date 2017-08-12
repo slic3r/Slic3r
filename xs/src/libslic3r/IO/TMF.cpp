@@ -105,7 +105,7 @@ TMFEditor::write_object(int index)
     ModelObject* object = model->objects[index];
 
     // Create the new object element.
-    append_buffer("        <object id=\"" + to_string(index + object_id++) + "\" type=\"model\"");
+    append_buffer("        <object id=\"" + to_string(index + object_id) + "\" type=\"model\"");
 
     // Add part number if found.
     if (object->part_number != -1)
