@@ -19,10 +19,6 @@ my $expected_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
     ."<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n"
     ."<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>\n";
 
-sub multiply_matrix{
-
-}
-
 # Test 1: Check read/write.
 {
     my $input_path = dirname($current_path). "/models/3mf/box.3mf";
@@ -110,10 +106,13 @@ sub multiply_matrix{
     my $output_path = dirname($current_path). "/models/stl/gimblekeychainExtended.stl";
 
     my $model = Slic3r::Model->new;
-    $model->read_tmf($input_path);
+    my $result = $model->read_tmf($input_path);
+    is($result, 1, 'Test 4: Read 3MF file check.');
 
-    my $result = $model->write_stl($output_path);
+    $result = $model->write_stl($output_path);
     is($result, 1, 'Test 4: convert to stl check.');
+
+    unlink($output_path);
 }
 
 # Test 5: Basic Test with model containing vertices and triangles.
@@ -158,7 +157,6 @@ sub multiply_matrix{
         ."        </object>\n"
         ."    </resources> \n"
         ."    <build> \n"
-        #."        <item objectid=\"1\" transform=\"1 0 0 -0 1 0 0 0 1 0 0 0\"/>\n"
         ."    </build> \n"
         ."</model>\n";
 
@@ -172,17 +170,46 @@ sub multiply_matrix{
     my $model_output ;
     unzip $tmf_output_file => \$model_output, Name => "3D/3dmodel.model"
         or die "unzip failed: $UnzipError\n";
-    is( $model_output, $expected_model, "3dmodel.model file matching");
+    is( $model_output, $expected_model, "Test 5: 3dmodel.model file matching");
     # Check contents in content_types.xml.
     my $content_types_output ;
     unzip $tmf_output_file => \$content_types_output, Name => "[Content_Types].xml"
         or die "unzip failed: $UnzipError\n";
-    is( $content_types_output, $expected_content_types, "[Content_Types].xml file matching");
+    is( $content_types_output, $expected_content_types, "Test 5: [Content_Types].xml file matching");
     # Check contents in _rels.xml.
     my $relationships_output ;
     unzip $tmf_output_file => \$relationships_output, Name => "_rels/.rels"
         or die "unzip failed: $UnzipError\n";
-    is( $relationships_output, $expected_relationships, "_rels/.rels file matching");
+    is( $relationships_output, $expected_relationships, "Test 5: _rels/.rels file matching");
+
+    unlink($tmf_output_file);
+}
+
+# Test 6: Read a Slic3r exported 3MF file.
+{
+    my $input_path = dirname($current_path). "/models/3mf/chess.3mf";
+    my $output_path = dirname($current_path). "/models/3mf/chess_2.3mf";
+
+    # Read a 3MF model.
+    my $model = Slic3r::Model->new;
+    my $result = $model->read_tmf($input_path);
+    is($result, 1, 'Test 6: Read 3MF file check.');
+
+    # Export the 3MF file.
+    $result = $model->write_tmf($output_path);
+    is($result, 1, 'Test 6: Write 3MF file check.');
+
+    # Re-read the exported file.
+    my $model_2 = Slic3r::Model->new;
+    $result = $model_2->read_tmf($output_path);
+    is($result, 1, 'Test 6: Read second 3MF file check.');
+
+    is($model->metadata_count(), $model_2->metadata_count(), 'Test 6: metadata match check.');
+
+    # Check the number of read objects.
+    is($model->objects_count(), $model_2->objects_count(), 'Test 6: objects match check.');
+
+    unlink($output_path);
 }
 
 # Finish finish test cases.
