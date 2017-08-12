@@ -14,8 +14,6 @@
 #include <boost/nowide/fstream.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <expat/expat.h>
-#include "../../expat/expat.h" // included only For IDE code suggestions.
-#include "../../zip/zip.h" // included only For IDE code suggestions.
 
 #define WRITE_BUFFER_MAX_CAPACITY 10000
 #define ZIP_DEFLATE_COMPRESSION 8
