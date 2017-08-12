@@ -89,12 +89,12 @@ bool
 TMFEditor::write_metadata()
 {
     // Write the model metadata.
-    for(std::map<std::string, std::string>::reverse_iterator  it = model->metadata.rbegin(); it != model->metadata.rend(); ++it){
-        append_buffer("    <metadata name=\"" + it->first + "\">" + it->second + "</metadata>\n" );
+    for (auto metadata : model->metadata){
+        append_buffer("    <metadata name=\"" + metadata.first + "\">" + metadata.second + "</metadata>\n" );
     }
 
     // Write Slic3r metadata carrying the version number.
-    append_buffer("    <slic3r:metadata type=\"version\">" + to_string(SLIC3R_VERSION) + "</slic3r:metadata>\n");
+    append_buffer("    <slic3r:metadata version=\"" + to_string(SLIC3R_VERSION) + "\"/>\n");
 
     return true;
 }
@@ -274,7 +274,7 @@ TMFEditor::read_model()
     // Read 3D/3dmodel.model file.
     XML_Parser parser = XML_ParserCreate(NULL);
     if (! parser) {
-        printf("Couldn't allocate memory for parser\n");
+        std::cout << ("Couldn't allocate memory for parser\n");
         return false;
     }
 
@@ -383,32 +383,32 @@ TMFEditor::write_buffer()
     buff = "";
 }
 
-TMFEditor::~TMFEditor()
-{
-
-}
-
 bool
 TMF::write(Model& model, std::string output_file)
 {
-    TMFEditor tmf_writer(output_file, &model);
+    TMFEditor tmf_writer(std::move(output_file), &model);
     return tmf_writer.produce_TMF();
 }
 
 bool
 TMF::read(std::string input_file, Model* model)
 {
-    TMFEditor tmf_reader(input_file, model);
+    TMFEditor tmf_reader(std::move(input_file), model);
     return tmf_reader.consume_TMF();
 }
 
 TMFParserContext::TMFParserContext(XML_Parser parser, Model *model):
         m_parser(parser),
         m_model(*model),
-        m_object(NULL),
-        m_volume(NULL)
+        m_object(nullptr),
+        m_volume(nullptr)
 {
     m_path.reserve(9);
+    m_objects_indices.clear();
+    m_output_objects.clear();
+    m_object_vertices.clear();
+    m_volume_facets.clear();
+    m_value[0] = m_value[1] = m_value[2] = "";
 }
 
 void XMLCALL
@@ -589,6 +589,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 ModelVolume* volume = m_object->add_volume(component_mesh);
                 if(!volume)
                     this->stop();
+                node_type_new =NODE_TYPE_COMPONENT;
             } else if (strcmp(name, "slic3r:volumes") == 0) {
                 node_type_new = NODE_TYPE_SLIC3R_VOLUMES;
             }

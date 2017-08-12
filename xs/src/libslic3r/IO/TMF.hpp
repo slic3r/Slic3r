@@ -2,13 +2,13 @@
 #define SLIC3R_TMF_H
 
 #include "../IO.hpp"
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <cstring>
 #include <map>
 #include <vector>
 #include <algorithm>
-#include <math.h>
+#include <cmath>
 #include <zip/zip.h>
 #include <boost/move/move.hpp>
 #include <boost/nowide/fstream.hpp>
@@ -34,7 +34,7 @@ public:
     };
     ///< Namespaces in the 3MF document.
 
-    TMFEditor(std::string input_file, Model* _model):zip_name(input_file), model(_model), buff(""), object_id(1)
+    TMFEditor(std::string input_file, Model* _model): zip_archive(nullptr), zip_name(input_file), model(_model), buff(""), object_id(1)
     {}
 
     /// Write TMF function called by TMF::write() function.
@@ -43,12 +43,10 @@ public:
     /// Read TMF function called by TMF::read() function.
     bool consume_TMF();
 
-    ~TMFEditor();
-
 private:
+    zip_t* zip_archive; ///< The zip archive object for reading/writing zip files.
     std::string zip_name; ///< The zip archive file name.
     Model* model; ///< The model to be read or written.
-    zip_t* zip_archive; ///< The zip archive object for reading/writing zip files.
     std::string buff; ///< The buffer currently used in write functions.
     ///< When it reaches a max capacity it's written to the current entry in the zip file.
     int object_id; ///< The id available for the next object to be written.
@@ -114,7 +112,6 @@ struct TMFParserContext{
         NODE_TYPE_SLIC3R_VOLUMES,
         NODE_TYPE_SLIC3R_VOLUME,
         NODE_TYPE_SLIC3R_OBJECT_CONFIG,
-        NODE_TYPE_SLIC3R_VOLUME_CONFIG,
     };
     ///< Nodes found in 3MF XML document.
 
