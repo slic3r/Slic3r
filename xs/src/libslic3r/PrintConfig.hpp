@@ -171,6 +171,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 support_material_extruder;
     ConfigOptionFloatOrPercent      support_material_extrusion_width;
     ConfigOptionInt                 support_material_interface_extruder;
+    ConfigOptionFloatOrPercent      support_material_interface_extrusion_width;
     ConfigOptionInt                 support_material_interface_layers;
     ConfigOptionFloat               support_material_interface_spacing;
     ConfigOptionFloatOrPercent      support_material_interface_speed;
@@ -203,6 +204,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         OPT_PTR(support_material_extruder);
         OPT_PTR(support_material_extrusion_width);
         OPT_PTR(support_material_interface_extruder);
+        OPT_PTR(support_material_interface_extrusion_width);
         OPT_PTR(support_material_interface_layers);
         OPT_PTR(support_material_interface_spacing);
         OPT_PTR(support_material_interface_speed);

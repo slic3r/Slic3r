@@ -239,6 +239,7 @@ PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
             || opt_key == "support_material_extrusion_width"
             || opt_key == "support_material_interface_layers"
             || opt_key == "support_material_interface_extruder"
+            || opt_key == "support_material_interface_extrusion_width"
             || opt_key == "support_material_interface_spacing"
             || opt_key == "support_material_interface_speed"
             || opt_key == "support_material_buildplate_only"
