@@ -40,10 +40,12 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(Pointf(0,200));
         def->default_value = opt;
     }
+    def->cli = "bed-shape=s";
+
     def = this->add("has_heatbed", coBool);
     def->label = "Has heated bed";
     def->tooltip = "Unselecting this will suppress automatic generation of bed heating gcode.";
-    def->cli = "has_heatbed!";
+    def->cli = "has-heatbed!";
     def->default_value = new ConfigOptionBool(true);
     
     def = this->add("bed_temperature", coInt);
