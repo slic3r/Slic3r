@@ -1044,7 +1044,6 @@ ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
         mesh->translate(this->offset.x, this->offset.y, z_trans);
     }
 
-
 }
 
 BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate) const

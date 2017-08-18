@@ -64,9 +64,9 @@ private:
     bool write_metadata();
 
     /// Write object of the current model. This function is called by writeModel() function.
-    /// \param index int the index of the object to be read
+    /// \param index size_t the index of the object to be read
     /// \return bool 1: write operation is successful , otherwise not.
-    bool write_object(int index);
+    bool write_object(size_t index);
 
     /// Write the build element.
     bool write_build();

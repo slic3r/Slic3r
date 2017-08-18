@@ -100,7 +100,7 @@ TMFEditor::write_metadata()
 }
 
 bool
-TMFEditor::write_object(int index)
+TMFEditor::write_object(size_t index)
 {
     ModelObject* object = model->objects[index];
 
@@ -198,7 +198,7 @@ TMFEditor::write_object(int index)
 
         for (const std::string &key : volume->config.keys()){
             append_buffer("                        <slic3r:metadata type=\"" +  key
-                          + "\" config=\"" + volume->config.serialize(key) + "/>\n");
+                          + "\" config=\"" + volume->config.serialize(key) + "\"/>\n");
         }
 
         // Close Slic3r volume
@@ -226,10 +226,10 @@ TMFEditor::write_build()
     // Write ModelInstances for each ModelObject.
     for(size_t object_id = 0; object_id < model->objects.size(); ++object_id){
         ModelObject* object = model->objects[object_id];
-        for (const ModelInstance* instance : object->instances){
+        for (const auto instance : object->instances){
             append_buffer("        <item objectid=\"" + to_string(object_id + 1) + "\"");
 
-            // Get the rotation about z and the scale factor.
+            // Get the rotation about x, y &z, translations and the scale vector.
             double sc = instance->scaling_factor,
                     cosine_rz = cos(instance->rotation),
                     sine_rz = sin(instance->rotation),
@@ -480,7 +480,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Create a new object in the model. This object should be included in another object if
                 // it's a component in another object.
                 m_object = m_model.add_object();
-                m_objects_indices[object_id] = m_model.objects.size() - 1;
+                m_objects_indices[object_id] = int(m_model.objects.size() - 1);
                 m_output_objects.push_back(1); // default value 1 means: it's must not be an output.
 
                 // Add part number.
