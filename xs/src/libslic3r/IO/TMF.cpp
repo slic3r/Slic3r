@@ -848,9 +848,9 @@ TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<doub
     instance->y_rotation = transformations[7];
 
     // Apply translation.
-    instance->offset.x = transformations[0] < 0 ? 0: transformations[0];
-    instance->offset.y = transformations[1] < 0 ? 0: transformations[1];
-    instance->z_translation = transformations[2] < 0 ? 0: transformations[2];
+    instance->offset.x = transformations[0];
+    instance->offset.y = transformations[1];
+    instance->z_translation = transformations[2];
     return;
 }
 
