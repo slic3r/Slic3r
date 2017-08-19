@@ -400,15 +400,16 @@ TMF::read(std::string input_file, Model* model)
 
 TMFParserContext::TMFParserContext(XML_Parser parser, Model *model):
         m_parser(parser),
+        m_path(std::vector<TMFNodeType>()),
         m_model(*model),
         m_object(nullptr),
-        m_volume(nullptr)
+        m_objects_indices(std::map<std::string, int>()),
+        m_output_objects(std::vector<bool>()),
+        m_object_vertices(std::vector<float>()),
+        m_volume(nullptr),
+        m_volume_facets(std::vector<int>())
 {
     m_path.reserve(9);
-    m_objects_indices.clear();
-    m_output_objects.clear();
-    m_object_vertices.clear();
-    m_volume_facets.clear();
     m_value[0] = m_value[1] = m_value[2] = "";
 }
 
