@@ -211,6 +211,9 @@ sub _init_menubar {
         wxTheApp->append_menu_item($self->{plater_menu}, "Export plate with modifiers as AMF...", 'Export current plate as AMF, including all modifier meshes', sub {
             $plater->export_amf;
         }, undef, 'brick_go.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Export plate with modifiers as 3MF...", 'Export current plate as 3MF, including all modifier meshes', sub {
+                $plater->export_tmf;
+            }, undef, 'brick_go.png');
         $self->{object_menu} = $self->{plater}->object_menu;
         $self->on_plater_object_list_changed(0);
         $self->on_plater_selection_changed(0);

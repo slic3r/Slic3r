@@ -1981,6 +1981,23 @@ sub export_object_amf {
     $self->statusbar->SetStatusText("AMF file exported to $output_file");
 }
 
+# Export function for a single 3MF output
+sub export_object_tmf {
+    my $self = shift;
+
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+
+    my $local_model = Slic3r::Model->new;
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    # copy model_object -> local_model
+    $local_model->add_object($model_object);
+
+    my $output_file = $self->_get_export_file('TMF') or return;
+    $local_model->write_tmf($output_file);
+    $self->statusbar->SetStatusText("3MF file exported to $output_file");
+}
+
 sub export_amf {
     my $self = shift;
     
@@ -1991,11 +2008,21 @@ sub export_amf {
     $self->statusbar->SetStatusText("AMF file exported to $output_file");
 }
 
+sub export_tmf {
+    my $self = shift;
+
+    return if !@{$self->{objects}};
+
+    my $output_file = $self->_get_export_file('TMF') or return;
+    $self->{model}->write_tmf($output_file);
+    $self->statusbar->SetStatusText("3MF file exported to $output_file");
+}
+
 sub _get_export_file {
     my $self = shift;
     my ($format) = @_;
     
-    my $suffix = $format eq 'STL' ? '.stl' : '.amf';
+    my $suffix = $format eq 'STL' ? '.stl' : ( $format eq 'AMF' ?  '.amf' : '.3mf');
     
     my $output_file = $main::opt{output};
     {
@@ -2009,6 +2036,10 @@ sub _get_export_file {
         $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
             basename($output_file), &Slic3r::GUI::AMF_MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT)
             if $format eq 'AMF';
+
+        $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
+            basename($output_file), &Slic3r::GUI::TMF_MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT)
+            if $format eq 'TMF';
 
         if ($dlg->ShowModal != wxID_OK) {
             $dlg->Destroy;
@@ -2524,6 +2555,9 @@ sub object_menu {
     }, undef, 'brick_go.png');
     wxTheApp->append_menu_item($menu, "Export object and modifiers as AMF…", 'Export this single object and all associated modifiers as AMF file', sub {
         $self->export_object_amf;
+    }, undef, 'brick_go.png');
+    wxTheApp->append_menu_item($menu, "Export object and modifiers as 3MF…", 'Export this single object and all associated modifiers as 3MF file', sub {
+            $self->export_object_tmf;
     }, undef, 'brick_go.png');
     
     return $menu;
