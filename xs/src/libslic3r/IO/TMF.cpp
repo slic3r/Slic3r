@@ -634,7 +634,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
         case 6:
             if( strcmp(name, "slic3r:metadata") == 0){
                 // Create a config option.
-                DynamicPrintConfig *config = NULL;
+                DynamicPrintConfig *config = nullptr;
                 if(!m_volume)
                     this->stop();
                 config = &m_volume->config;
@@ -670,7 +670,7 @@ TMFParserContext::endElement()
                 m_volume = add_volume(0, int(m_volume_facets.size()) - 1, 0);
                 if (!m_volume)
                     this->stop();
-                m_volume = NULL;
+                m_volume = nullptr;
             }
             break;
         case NODE_TYPE_OBJECT:
@@ -678,7 +678,7 @@ TMFParserContext::endElement()
                 this->stop();
             m_object_vertices.clear();
             m_volume_facets.clear();
-            m_object = NULL;
+            m_object = nullptr;
             break;
         case NODE_TYPE_MODEL:
         {
@@ -693,7 +693,7 @@ TMFParserContext::endElement()
         }
             break;
         case NODE_TYPE_SLIC3R_VOLUME:
-            m_volume = NULL;
+            m_volume = nullptr;
             m_value[0].clear();
             m_value[1].clear();
             m_value[2].clear();
@@ -856,11 +856,11 @@ TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<doub
 ModelVolume*
 TMFParserContext::add_volume(int start_offset, int end_offset, bool modifier)
 {
-    ModelVolume* m_volume = NULL;
+    ModelVolume* m_volume = nullptr;
 
     // Add a new volume.
     m_volume = m_object->add_volume(TriangleMesh());
-    if(!m_volume || (end_offset < start_offset)) return NULL;
+    if(!m_volume || (end_offset < start_offset)) return nullptr;
 
     // Add the triangles.
     stl_file &stl = m_volume->mesh.stl;
