@@ -177,7 +177,7 @@ TMFEditor::write_object(const ModelObject* object, int index)
         }
         i_volume++;
     }
-    triangles_offsets.push_back(num_triangles-1);
+    triangles_offsets.push_back(num_triangles);
 
     // Close the triangles element
     append_buffer("                </triangles>\n");
