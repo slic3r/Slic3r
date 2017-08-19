@@ -64,9 +64,10 @@ private:
     bool write_metadata();
 
     /// Write object of the current model. This function is called by writeModel() function.
-    /// \param index size_t the index of the object to be read
+    /// \param object ModelObject* a pointer to the object to be written.
+    /// \param index int the index of the object to be read
     /// \return bool 1: write operation is successful , otherwise not.
-    bool write_object(size_t index);
+    bool write_object(const ModelObject* object, int index);
 
     /// Write the build element.
     bool write_build();
@@ -153,7 +154,7 @@ struct TMFParserContext{
 
     TMFParserContext(XML_Parser parser, Model *model);
     void startElement(const char *name, const char **atts);
-    void endElement(const char *name);
+    void endElement();
     void endDocument();
     void characters(const XML_Char *s, int len);
     void stop();

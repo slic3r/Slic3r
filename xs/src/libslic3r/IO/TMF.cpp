@@ -63,8 +63,9 @@ TMFEditor::write_model()
     append_buffer("    <resources> \n");
 
     // Write Object
-    for(size_t object_index = 0; object_index < model->objects.size(); object_index++)
-        write_object(object_index);
+    int object_index = 0;
+    for(const auto object : model->objects)
+        write_object(object, object_index++);
 
     // Close resources
     append_buffer("    </resources> \n");
@@ -89,7 +90,7 @@ bool
 TMFEditor::write_metadata()
 {
     // Write the model metadata.
-    for (auto metadata : model->metadata){
+    for (const auto metadata : model->metadata){
         append_buffer("    <metadata name=\"" + metadata.first + "\">" + metadata.second + "</metadata>\n" );
     }
 
@@ -100,10 +101,8 @@ TMFEditor::write_metadata()
 }
 
 bool
-TMFEditor::write_object(size_t index)
+TMFEditor::write_object(const ModelObject* object, int index)
 {
-    ModelObject* object = model->objects[index];
-
     // Create the new object element.
     append_buffer("        <object id=\"" + to_string(index + object_id) + "\" type=\"model\"");
 
@@ -114,7 +113,7 @@ TMFEditor::write_object(size_t index)
     append_buffer(">\n");
 
     // Write Slic3r custom configs.
-    for (const std::string &key : object->config.keys()){
+    for (const auto &key : object->config.keys()){
         append_buffer("        <slic3r:object type=\"" + key
                       + "\" config=\"" + object->config.serialize(key) + "\"" + "/>\n");
     }
@@ -126,10 +125,10 @@ TMFEditor::write_object(size_t index)
     append_buffer("                <vertices>\n");
 
     // Save the start offset of each volume vertices in the object.
-    std::vector<size_t> vertices_offsets;
-    size_t num_vertices = 0;
+    std::vector<int> vertices_offsets;
+    int num_vertices = 0;
 
-    for (auto volume : object->volumes){
+    for (const auto volume : object->volumes){
         // Require mesh vertices.
         volume->mesh.require_shared_vertices();
 
@@ -159,11 +158,11 @@ TMFEditor::write_object(size_t index)
     append_buffer("                <triangles>\n");
 
     // Save the start offset (triangle offset) of each volume (To be saved for writing Slic3r custom configs).
-    std::vector<size_t> triangles_offsets;
-    size_t num_triangles = 0;
+    std::vector<int> triangles_offsets;
+    int num_triangles = 0;
+    int i_volume = 0;
 
-    for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
-        ModelVolume *volume = object->volumes[i_volume];
+    for (const auto volume : object->volumes) {
         int vertices_offset = vertices_offsets[i_volume];
         triangles_offsets.push_back(num_triangles);
 
@@ -176,7 +175,9 @@ TMFEditor::write_object(size_t index)
             append_buffer("/>\n");
             num_triangles++;
         }
+        i_volume++;
     }
+    triangles_offsets.push_back(num_triangles-1);
 
     // Close the triangles element
     append_buffer("                </triangles>\n");
@@ -187,12 +188,10 @@ TMFEditor::write_object(size_t index)
     // Add each volume as <slic3r:volume> element containing Slic3r custom configs.
     // Each volume has the following attributes:
     // ts : "start triangle index", te : "end triangle index".
-
-    for (size_t i_volume = 0; i_volume < object->volumes.size(); ++i_volume) {
-        ModelVolume *volume = object->volumes[i_volume];
-
+    i_volume = 0;
+    for (const auto volume : object->volumes) {
         append_buffer("                    <slic3r:volume ts=\"" + to_string(triangles_offsets[i_volume]) + "\""
-                      + " te=\"" + ((i_volume + 1 == object->volumes.size()) ? to_string(int(num_triangles)-1) : to_string(triangles_offsets[i_volume+1] - 1)) + "\""
+                      + " te=\"" + to_string(triangles_offsets[i_volume+1] - 1) + "\""
                       + (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
                       + ">\n");
 
@@ -203,6 +202,7 @@ TMFEditor::write_object(size_t index)
 
         // Close Slic3r volume
         append_buffer("                    </slic3r:volume>\n");
+        i_volume++;
     }
 
     // Close Slic3r volumes group.
@@ -224,8 +224,8 @@ TMFEditor::write_build()
     append_buffer("    <build> \n");
 
     // Write ModelInstances for each ModelObject.
-    for(size_t object_id = 0; object_id < model->objects.size(); ++object_id){
-        ModelObject* object = model->objects[object_id];
+    int object_id = 0;
+    for(const auto object : model->objects){
         for (const auto instance : object->instances){
             append_buffer("        <item objectid=\"" + to_string(object_id + 1) + "\"");
 
@@ -258,6 +258,7 @@ TMFEditor::write_build()
             append_buffer(" transform=\"" + transform + "\"/>\n");
 
         }
+    object_id++;
     }
     append_buffer("    </build> \n");
     return true;
@@ -421,7 +422,7 @@ void XMLCALL
 TMFParserContext::endElement(void *userData, const char *name)
 {
     TMFParserContext *ctx = (TMFParserContext*)userData;
-    ctx->endElement(name);
+    ctx->endElement();
 }
 
 void XMLCALL
@@ -480,7 +481,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Create a new object in the model. This object should be included in another object if
                 // it's a component in another object.
                 m_object = m_model.add_object();
-                m_objects_indices[object_id] = int(m_model.objects.size() - 1);
+                m_objects_indices[object_id] = int(m_model.objects.size()) - 1;
                 m_output_objects.push_back(1); // default value 1 means: it's must not be an output.
 
                 // Add part number.
@@ -515,7 +516,6 @@ TMFParserContext::startElement(const char *name, const char **atts)
                         this->stop();
 
                     apply_transformation(instance, transformations);
-
                 }
 
                 node_type_new = NODE_TYPE_ITEM;
@@ -529,23 +529,22 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 node_type_new = NODE_TYPE_MESH;
             } else if (strcmp(name, "components") == 0) {
                 node_type_new = NODE_TYPE_COMPONENTS;
-            } else if (strcmp(name, "slic3r:object")) {
-                node_type_new = NODE_TYPE_SLIC3R_OBJECT_CONFIG;
-
+            } else if (strcmp(name, "slic3r:object") == 0) {
                 // Create a config option.
-                DynamicPrintConfig *config = NULL;
+                DynamicPrintConfig *config = nullptr;
                 if(m_path.back() == NODE_TYPE_OBJECT && m_object)
                     config = &m_object->config;
 
                 // Get the config key type.
                 const char *key = get_attribute(atts, "type");
 
-                if (config && print_config_def.options.find(key) != print_config_def.options.end() ) {
+                if (config && (print_config_def.options.find(key) != print_config_def.options.end())) {
                     // Get the key config string.
                     const char *config_value = get_attribute(atts, "config");
 
                     config->set_deserialize(key, config_value);
                 }
+                node_type_new = NODE_TYPE_SLIC3R_OBJECT_CONFIG;
             }
             break;
         case 4:
@@ -617,7 +616,6 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 m_volume_facets.push_back(atoi(v3));
                 node_type_new = NODE_TYPE_TRIANGLE;
             } else if (strcmp(name, "slic3r:volume") == 0) {
-                node_type_new = NODE_TYPE_SLIC3R_VOLUME;
                 // Read start offset of the triangles.
                 m_value[0] = get_attribute(atts, "ts");
                 m_value[1] = get_attribute(atts, "te");
@@ -627,24 +625,25 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Add a new volume to the current object.
                 if(!m_object)
                     this->stop();
-                m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, stoi(m_value[2]));
+                m_volume = add_volume(stoi(m_value[0])*3, stoi(m_value[1]) * 3 + 2, static_cast<bool>(stoi(m_value[2])));
                 if(!m_volume)
                     this->stop();
+                node_type_new = NODE_TYPE_SLIC3R_VOLUME;
             }
             break;
         case 6:
             if( strcmp(name, "slic3r:metadata") == 0){
-                node_type_new = NODE_TYPE_SLIC3R_METADATA;
                 // Create a config option.
                 DynamicPrintConfig *config = NULL;
                 if(!m_volume)
                     this->stop();
                 config = &m_volume->config;
                 const char *key = get_attribute(atts, "type");
-                if( config && print_config_def.options.find(key) != print_config_def.options.end()){
+                if( config && (print_config_def.options.find(key) != print_config_def.options.end())){
                     const char *config_value = get_attribute(atts, "config");
                     config->set_deserialize(key, config_value);
                 }
+                node_type_new = NODE_TYPE_SLIC3R_METADATA;
             }
         default:
             break;
@@ -654,7 +653,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
 }
 
 void
-TMFParserContext::endElement(const char *name)
+TMFParserContext::endElement()
 {
     switch (m_path.back()){
         case NODE_TYPE_METADATA:
@@ -668,7 +667,7 @@ TMFParserContext::endElement(const char *name)
             if(m_object->volumes.size() == 0) {
                 if(!m_object)
                     this->stop();
-                m_volume = add_volume(0, m_volume_facets.size() - 1, 0);
+                m_volume = add_volume(0, int(m_volume_facets.size()) - 1, 0);
                 if (!m_volume)
                     this->stop();
                 m_volume = NULL;
