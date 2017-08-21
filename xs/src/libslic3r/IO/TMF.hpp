@@ -2,6 +2,7 @@
 #define SLIC3R_TMF_H
 
 #include "../IO.hpp"
+#include "../Zip/ZipArchive.hpp"
 #include <cstdio>
 #include <string>
 #include <cstring>
@@ -9,14 +10,12 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
-#include <zip/zip.h>
 #include <boost/move/move.hpp>
 #include <boost/nowide/fstream.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <expat/expat.h>
 
 #define WRITE_BUFFER_MAX_CAPACITY 10000
-#define ZIP_DEFLATE_COMPRESSION 8
 #define PI 3.141592653589793238
 
 namespace Slic3r { namespace IO {
@@ -44,7 +43,7 @@ public:
     bool consume_TMF();
 
 private:
-    zip_t* zip_archive; ///< The zip archive object for reading/writing zip files.
+    ZipArchive* zip_archive; ///< The zip archive object for reading/writing zip files.
     std::string zip_name; ///< The zip archive file name.
     Model* model; ///< The model to be read or written.
     std::string buff; ///< The buffer currently used in write functions.

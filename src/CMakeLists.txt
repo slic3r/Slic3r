@@ -32,7 +32,6 @@ include_directories(${LIBDIR}/Slic3r/GUI/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/standalone/)
 include_directories(${LIBDIR}/admesh/)
 include_directories(${LIBDIR}/expat/)
-include_directories(${LIBDIR}/zip/)
 include_directories(${LIBDIR}/poly2tri/)
 include_directories(${LIBDIR}/poly2tri/sweep)
 include_directories(${LIBDIR}/poly2tri/common)
@@ -114,11 +113,6 @@ add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/sweep/sweep.cc
 )
 
-add_library(zip STATIC
-    ${LIBDIR}/zip/zip.c
-)
-set_property(TARGET zip PROPERTY C_STANDARD 99)
-
 add_executable(slic3r slic3r.cpp)
 set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
 set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
@@ -147,7 +141,7 @@ IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
 ENDIF(CMAKE_HOST_UNIX)
 
-target_link_libraries (slic3r libslic3r zip admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+target_link_libraries (slic3r libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
 
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
@@ -171,4 +165,4 @@ IF (WIN32)
     target_link_libraries(extrude-tin boost-nowide)
 ENDIF(WIN32)
 
-target_link_libraries (extrude-tin libslic3r zip admesh clipper expat zip polypartition poly2tri ${Boost_LIBRARIES})
+target_link_libraries (extrude-tin libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
