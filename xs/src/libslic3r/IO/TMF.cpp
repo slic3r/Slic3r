@@ -5,20 +5,26 @@ namespace Slic3r { namespace IO {
 bool
 TMFEditor::write_types()
 {
-    // Create a new zip entry "[Content_Types].xml" at zip directory /.
-    if(zip_entry_open(zip_archive, "[Content_Types].xml"))
+    // Create a new .[Content_Types].xml file to add to the zip file later.
+    boost::nowide::ofstream fout(".[Content_Types].xml", std::ios::out);
+    if(!fout.is_open())
         return false;
 
     // Write 3MF Types.
-    append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n");
-    append_buffer("<Types xmlns=\"" + namespaces.at("content_types") + "\">\n");
-    append_buffer("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n");
-    append_buffer("<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n");
-    append_buffer("</Types>\n");
-    write_buffer();
+    fout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n";
+    fout << "<Types xmlns=\"" << namespaces.at("content_types") << "\">\n";
+    fout << "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n";
+    fout << "<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/>\n";
+    fout << "</Types>\n";
+    fout.close();
 
-    // Close [Content_Types].xml zip entry.
-    zip_entry_close(zip_archive);
+    // Create [Content_Types].xml in the zip archive.
+    if(!zip_archive->add_entry("[Content_Types].xml", ".[Content_Types].xml"))
+        return false;
+
+    // Remove the created .[Content_Types].xml file.
+    if (remove(".[Content_Types].xml") != 0)
+        return false;
 
     return true;
 }
@@ -26,103 +32,113 @@ TMFEditor::write_types()
 bool
 TMFEditor::write_relationships()
 {
-    // Create .rels in "_rels" folder in the zip archive.
-    if(zip_entry_open(zip_archive, "_rels/.rels"))
+    // Create a new .rels file to add to the zip file later.
+    boost::nowide::ofstream fout(".rels", std::ios::out);
+    if(!fout.is_open())
         return false;
 
     // Write the primary 3dmodel relationship.
-    append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
-                          "<Relationships xmlns=\"" + namespaces.at("relationships") +
-                  "\">\n<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>\n");
-    write_buffer();
+    fout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
+                          << "<Relationships xmlns=\"" << namespaces.at("relationships") <<
+                  "\">\n<Relationship Id=\"rel0\" Target=\"/3D/3dmodel.model\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\" /></Relationships>\n";
+    fout.close();
 
-    // Close _rels.rels
-    zip_entry_close(zip_archive);
+    // Create .rels in "_rels" folder in the zip archive.
+    if(!zip_archive->add_entry("_rels/.rels", ".rels"))
+        return false;
+
+    // Remove the created .rels file.
+    if (remove(".rels") != 0)
+        return false;
+
     return true;
 }
 
 bool
 TMFEditor::write_model()
 {
-    // Create a 3dmodel.model entry in /3D/ containing the buffer.
-    if(zip_entry_open(zip_archive, "3D/3dmodel.model"))
+    // Create a new .3dmodel.model file to add to the zip file later.
+    boost::nowide::ofstream fout(".3dmodel.model", std::ios::out);
+    if(!fout.is_open())
         return false;
 
-    // add the XML document header.
-    append_buffer("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    // Add the XML document header.
+    fout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
 
     // Write the model element. Append any necessary namespaces.
-    append_buffer("<model unit=\"millimeter\" xml:lang=\"en-US\"");
-    append_buffer(" xmlns=\"" + namespaces.at("3mf") + "\"");
-    append_buffer(" xmlns:slic3r=\"" + namespaces.at("slic3r") + "\"> \n");
+    fout << "<model unit=\"millimeter\" xml:lang=\"en-US\"";
+    fout << " xmlns=\"" << namespaces.at("3mf") << "\"";
+    fout << " xmlns:slic3r=\"" << namespaces.at("slic3r") << "\"> \n";
 
     // Write metadata.
-    write_metadata();
+    write_metadata(fout);
 
     // Write resources.
-    append_buffer("    <resources> \n");
+    fout << "    <resources> \n";
 
     // Write Object
     int object_index = 0;
     for(const auto object : model->objects)
-        write_object(object, object_index++);
+        write_object(fout, object, object_index++);
 
     // Close resources
-    append_buffer("    </resources> \n");
+    fout << "    </resources> \n";
 
     // Write build element.
-    write_build();
+    write_build(fout);
 
     // Close the model element.
-    append_buffer("</model>\n");
+    fout << "</model>\n";
+    fout.close();
 
-    // Write what is found in the buffer.
-    write_buffer();
+    // Create .3dmodel.model in "3D" folder in the zip archive.
+    if(!zip_archive->add_entry("3D/3dmodel.model", ".3dmodel.model"))
+        return false;
 
-    // Close the 3dmodel.model file in /3D/ directory
-    if(zip_entry_close(zip_archive))
+    // Remove the created .rels file.
+    if (remove(".3dmodel.model") != 0)
         return false;
 
     return true;
 }
 
 bool
-TMFEditor::write_metadata()
+TMFEditor::write_metadata(boost::nowide::ofstream& fout)
 {
     // Write the model metadata.
     for (const auto metadata : model->metadata){
-        append_buffer("    <metadata name=\"" + metadata.first + "\">" + metadata.second + "</metadata>\n" );
+        fout << "    <metadata name=\"" << metadata.first << "\">" << metadata.second << "</metadata>\n";
     }
 
     // Write Slic3r metadata carrying the version number.
-    append_buffer("    <slic3r:metadata version=\"" + to_string(SLIC3R_VERSION) + "\"/>\n");
+    fout << "    <slic3r:metadata version=\"" << to_string(SLIC3R_VERSION) << "\"/>\n";
 
     return true;
 }
 
 bool
-TMFEditor::write_object(const ModelObject* object, int index)
+TMFEditor::write_object(boost::nowide::ofstream& fout, const ModelObject* object, int index)
 {
     // Create the new object element.
-    append_buffer("        <object id=\"" + to_string(index + object_id) + "\" type=\"model\"");
+    fout << "        <object id=\"" << to_string(index + object_id) << "\" type=\"model\"";
 
     // Add part number if found.
     if (object->part_number != -1)
-        append_buffer(" partnumber=\"" + to_string(object->part_number) + "\"");
+        fout << " partnumber=\"" << to_string(object->part_number) << "\"";
 
-    append_buffer(">\n");
+    fout << ">\n";
 
     // Write Slic3r custom configs.
     for (const auto &key : object->config.keys()){
-        append_buffer("        <slic3r:object type=\"" + key
-                      + "\" config=\"" + object->config.serialize(key) + "\"" + "/>\n");
+        fout << "        <slic3r:object type=\"" << key
+                      << "\" config=\"" << object->config.serialize(key) << "\"" << "/>\n";
     }
 
     // Create mesh element which contains the vertices and the volumes.
-    append_buffer("            <mesh>\n");
+    fout << "            <mesh>\n";
 
     // Create vertices element.
-    append_buffer("                <vertices>\n");
+    fout << "                <vertices>\n";
 
     // Save the start offset of each volume vertices in the object.
     std::vector<int> vertices_offsets;
@@ -143,19 +159,19 @@ TMFEditor::write_object(const ModelObject* object, int index)
             // thus any additional part added will not align with the others.
             // In order to do this we compensate for this translation in the instance placement
             // below.
-            append_buffer("                    <vertex");
-            append_buffer(" x=\"" + to_string(stl.v_shared[i].x - object->origin_translation.x) + "\"");
-            append_buffer(" y=\"" + to_string(stl.v_shared[i].y - object->origin_translation.y) + "\"");
-            append_buffer(" z=\"" + to_string(stl.v_shared[i].z - object->origin_translation.z) + "\"/>\n");
+            fout << "                    <vertex";
+            fout << " x=\"" << to_string(stl.v_shared[i].x - object->origin_translation.x) << "\"";
+            fout << " y=\"" << to_string(stl.v_shared[i].y - object->origin_translation.y) << "\"";
+            fout << " z=\"" << to_string(stl.v_shared[i].z - object->origin_translation.z) << "\"/>\n";
         }
         num_vertices += stl.stats.shared_vertices;
     }
 
     // Close the vertices element.
-    append_buffer("                </vertices>\n");
+    fout << "                </vertices>\n";
 
     // Append volumes in triangles element.
-    append_buffer("                <triangles>\n");
+    fout << "                <triangles>\n";
 
     // Save the start offset (triangle offset) of each volume (To be saved for writing Slic3r custom configs).
     std::vector<int> triangles_offsets;
@@ -168,11 +184,11 @@ TMFEditor::write_object(const ModelObject* object, int index)
 
         // Add the volume triangles to the triangles list.
         for (int i = 0; i < volume->mesh.stl.stats.number_of_facets; ++i){
-            append_buffer("                    <triangle");
+            fout << "                    <triangle";
             for (int j = 0; j < 3; j++){
-                append_buffer(" v" + to_string(j+1) + "=\"" + to_string(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) + "\"");
+                fout << " v" << to_string(j+1) << "=\"" << to_string(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) << "\"";
             }
-            append_buffer("/>\n");
+            fout << "/>\n";
             num_triangles++;
         }
         i_volume++;
@@ -180,54 +196,54 @@ TMFEditor::write_object(const ModelObject* object, int index)
     triangles_offsets.push_back(num_triangles);
 
     // Close the triangles element
-    append_buffer("                </triangles>\n");
+    fout << "                </triangles>\n";
 
     // Add Slic3r volumes group.
-    append_buffer("                <slic3r:volumes>\n");
+    fout << "                <slic3r:volumes>\n";
 
     // Add each volume as <slic3r:volume> element containing Slic3r custom configs.
     // Each volume has the following attributes:
     // ts : "start triangle index", te : "end triangle index".
     i_volume = 0;
     for (const auto volume : object->volumes) {
-        append_buffer("                    <slic3r:volume ts=\"" + to_string(triangles_offsets[i_volume]) + "\""
-                      + " te=\"" + to_string(triangles_offsets[i_volume+1] - 1) + "\""
-                      + (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
-                      + ">\n");
+        fout << "                    <slic3r:volume ts=\"" << to_string(triangles_offsets[i_volume]) << "\""
+                      << " te=\"" << to_string(triangles_offsets[i_volume+1] - 1) << "\""
+                      << (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
+                      << ">\n";
 
         for (const std::string &key : volume->config.keys()){
-            append_buffer("                        <slic3r:metadata type=\"" +  key
-                          + "\" config=\"" + volume->config.serialize(key) + "\"/>\n");
+            fout << "                        <slic3r:metadata type=\"" <<  key
+                          << "\" config=\"" << volume->config.serialize(key) << "\"/>\n";
         }
 
         // Close Slic3r volume
-        append_buffer("                    </slic3r:volume>\n");
+        fout << "                    </slic3r:volume>\n";
         i_volume++;
     }
 
     // Close Slic3r volumes group.
-    append_buffer("                </slic3r:volumes>\n");
+    fout << "                </slic3r:volumes>\n";
 
     // Close the mesh element.
-    append_buffer("            </mesh>\n");
+    fout << "            </mesh>\n";
 
     // Close the object element.
-    append_buffer("        </object>\n");
+    fout << "        </object>\n";
 
     return true;
 }
 
 bool
-TMFEditor::write_build()
+TMFEditor::write_build(boost::nowide::ofstream& fout)
 {
     // Create build element.
-    append_buffer("    <build> \n");
+    fout << "    <build> \n";
 
     // Write ModelInstances for each ModelObject.
     int object_id = 0;
     for(const auto object : model->objects){
         for (const auto instance : object->instances){
-            append_buffer("        <item objectid=\"" + to_string(object_id + 1) + "\"");
+            fout << "        <item objectid=\"" << to_string(object_id + 1) << "\"";
 
             // Get the rotation about x, y &z, translations and the scale vector.
             double sc = instance->scaling_factor,
@@ -255,12 +271,12 @@ TMFEditor::write_build()
                                     + to_string(tz);
 
             // Add the transform
-            append_buffer(" transform=\"" + transform + "\"/>\n");
+            fout << " transform=\"" << transform << "\"/>\n";
 
         }
     object_id++;
     }
-    append_buffer("    </build> \n");
+    fout << "    </build> \n";
     return true;
 }
 
@@ -268,9 +284,8 @@ bool
 TMFEditor::read_model()
 {
     // Extract 3dmodel.model entry.
-    zip_entry_open(zip_archive, "3D/3dmodel.model");
-    zip_entry_fread(zip_archive, "3dmodel.model");
-    zip_entry_close(zip_archive);
+    if(!zip_archive->extract_entry("3D/3dmodel.model", "3dmodel.model"))
+        return false;
 
     // Read 3D/3dmodel.model file.
     XML_Parser parser = XML_ParserCreate(NULL);
@@ -328,10 +343,10 @@ bool
 TMFEditor::produce_TMF()
 {
     // Create a new zip archive object.
-    zip_archive = zip_open(zip_name.c_str(), ZIP_DEFLATE_COMPRESSION, 'w');
+    zip_archive = new ZipArchive(this->zip_name, 'W');
 
-    // Check whether it's created or not.
-    if(!zip_archive) return false;
+    // Check it's successfully initialized.
+    if(zip_archive->z_stats() == 0) return false;
 
     // Prepare the 3MF Zip archive by writing the relationships.
     if(!write_relationships())
@@ -345,7 +360,8 @@ TMFEditor::produce_TMF()
     if(!write_model()) return false;
 
     // Finalize the archive and end writing.
-    zip_close(zip_archive);
+    zip_archive->finalize();
+    delete zip_archive;
     return true;
 }
 
@@ -353,35 +369,19 @@ bool
 TMFEditor::consume_TMF()
 {
     // Open the 3MF package.
-    zip_archive = zip_open(zip_name.c_str(), 0, 'r');
+    zip_archive = new ZipArchive(this->zip_name, 'R');
 
-    // Check whether it's opened or not.
-    if(!zip_archive) return false;
+    // Check it's successfully initialized.
+    if(zip_archive->z_stats() == 0) return false;
 
     // Read model.
     if(!read_model())
         return false;
 
     // Close zip archive.
-    zip_close(zip_archive);
+    zip_archive->finalize();
+    delete zip_archive;
     return true;
-}
-
-void
-TMFEditor::append_buffer(std::string s)
-{
-    buff += s;
-    if(buff.size() + s.size() > WRITE_BUFFER_MAX_CAPACITY)
-        write_buffer();
-}
-
-void
-TMFEditor::write_buffer()
-{
-    // Append the current opened entry with the current buffer.
-    zip_entry_write(zip_archive, buff.c_str(), buff.size());
-    // Clear the buffer.
-    buff = "";
 }
 
 bool

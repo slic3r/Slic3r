@@ -15,7 +15,6 @@
 #include <boost/nowide/iostream.hpp>
 #include <expat/expat.h>
 
-#define WRITE_BUFFER_MAX_CAPACITY 10000
 #define PI 3.141592653589793238
 
 namespace Slic3r { namespace IO {
@@ -46,8 +45,6 @@ private:
     ZipArchive* zip_archive; ///< The zip archive object for reading/writing zip files.
     std::string zip_name; ///< The zip archive file name.
     Model* model; ///< The model to be read or written.
-    std::string buff; ///< The buffer currently used in write functions.
-    ///< When it reaches a max capacity it's written to the current entry in the zip file.
     int object_id; ///< The id available for the next object to be written.
 
     /// Write the necessary types in the 3MF package. This function is called by produceTMF() function.
@@ -60,27 +57,22 @@ private:
     bool write_model();
 
     /// Write the metadata of the model. This function is called by writeModel() function.
-    bool write_metadata();
+    bool write_metadata(boost::nowide::ofstream& fout);
 
     /// Write object of the current model. This function is called by writeModel() function.
+    /// \param fout boost::nowide::ofstream& fout output stream.
     /// \param object ModelObject* a pointer to the object to be written.
     /// \param index int the index of the object to be read
     /// \return bool 1: write operation is successful , otherwise not.
-    bool write_object(const ModelObject* object, int index);
+    bool write_object(boost::nowide::ofstream& fout, const ModelObject* object, int index);
 
     /// Write the build element.
-    bool write_build();
+    bool write_build(boost::nowide::ofstream& fout);
 
     /// Read the Model.
     bool read_model();
 
     // Helper Functions.
-    /// Append the buffer with a string to be written. This function calls write_buffer() if the buffer reached its capacity.
-    void append_buffer(std::string s);
-
-    /// This function writes the buffer to the current opened zip entry file if it exceeds a certain capacity.
-    void write_buffer();
-
     template <class T>
     std::string to_string(T number){
         std::ostringstream s;
