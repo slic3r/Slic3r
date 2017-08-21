@@ -111,7 +111,7 @@ TMFEditor::write_metadata(boost::nowide::ofstream& fout)
     }
 
     // Write Slic3r metadata carrying the version number.
-    fout << "    <slic3r:metadata version=\"" << to_string(SLIC3R_VERSION) << "\"/>\n";
+    fout << "    <slic3r:metadata version=\"" << SLIC3R_VERSION << "\"/>\n";
 
     return true;
 }
@@ -120,11 +120,11 @@ bool
 TMFEditor::write_object(boost::nowide::ofstream& fout, const ModelObject* object, int index)
 {
     // Create the new object element.
-    fout << "        <object id=\"" << to_string(index + object_id) << "\" type=\"model\"";
+    fout << "        <object id=\"" << (index + object_id) << "\" type=\"model\"";
 
     // Add part number if found.
     if (object->part_number != -1)
-        fout << " partnumber=\"" << to_string(object->part_number) << "\"";
+        fout << " partnumber=\"" << (object->part_number) << "\"";
 
     fout << ">\n";
 
@@ -160,9 +160,9 @@ TMFEditor::write_object(boost::nowide::ofstream& fout, const ModelObject* object
             // In order to do this we compensate for this translation in the instance placement
             // below.
             fout << "                    <vertex";
-            fout << " x=\"" << to_string(stl.v_shared[i].x - object->origin_translation.x) << "\"";
-            fout << " y=\"" << to_string(stl.v_shared[i].y - object->origin_translation.y) << "\"";
-            fout << " z=\"" << to_string(stl.v_shared[i].z - object->origin_translation.z) << "\"/>\n";
+            fout << " x=\"" << (stl.v_shared[i].x - object->origin_translation.x) << "\"";
+            fout << " y=\"" << (stl.v_shared[i].y - object->origin_translation.y) << "\"";
+            fout << " z=\"" << (stl.v_shared[i].z - object->origin_translation.z) << "\"/>\n";
         }
         num_vertices += stl.stats.shared_vertices;
     }
@@ -186,7 +186,7 @@ TMFEditor::write_object(boost::nowide::ofstream& fout, const ModelObject* object
         for (int i = 0; i < volume->mesh.stl.stats.number_of_facets; ++i){
             fout << "                    <triangle";
             for (int j = 0; j < 3; j++){
-                fout << " v" << to_string(j+1) << "=\"" << to_string(volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) << "\"";
+                fout << " v" << (j+1) << "=\"" << (volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset) << "\"";
             }
             fout << "/>\n";
             num_triangles++;
@@ -206,8 +206,8 @@ TMFEditor::write_object(boost::nowide::ofstream& fout, const ModelObject* object
     // ts : "start triangle index", te : "end triangle index".
     i_volume = 0;
     for (const auto volume : object->volumes) {
-        fout << "                    <slic3r:volume ts=\"" << to_string(triangles_offsets[i_volume]) << "\""
-                      << " te=\"" << to_string(triangles_offsets[i_volume+1] - 1) << "\""
+        fout << "                    <slic3r:volume ts=\"" << (triangles_offsets[i_volume]) << "\""
+                      << " te=\"" << (triangles_offsets[i_volume+1] - 1) << "\""
                       << (volume->modifier ? " modifier=\"1\" " : " modifier=\"0\" ")
                       << ">\n";
 
@@ -243,7 +243,7 @@ TMFEditor::write_build(boost::nowide::ofstream& fout)
     int object_id = 0;
     for(const auto object : model->objects){
         for (const auto instance : object->instances){
-            fout << "        <item objectid=\"" << to_string(object_id + 1) << "\"";
+            fout << "        <item objectid=\"" << (object_id + 1) << "\"";
 
             // Get the rotation about x, y &z, translations and the scale vector.
             double sc = instance->scaling_factor,
@@ -257,21 +257,22 @@ TMFEditor::write_build(boost::nowide::ofstream& fout)
                     ty = instance->offset.y + object->origin_translation.y,
                     tz = instance->z_translation;
 
-            std::string transform = to_string(cosine_ry * cosine_rz * sc * instance->scaling_vector.x) + " "
-                                    + to_string(cosine_ry * sine_rz * sc) + " "
-                                    + to_string(-1 * sine_ry * sc) + " "
-                                    + to_string((sine_rx * sine_ry * cosine_rz -1 * cosine_rx * sine_rz) * sc)  + " "
-                                    + to_string((sine_rx * sine_ry * sine_rz + cosine_rx *cosine_rz) * sc * instance->scaling_vector.y) + " "
-                                    + to_string(sine_rx * cosine_ry * sc) + " "
-                                    + to_string((cosine_rx * sine_ry * cosine_rz + sine_rx * sine_rz) * sc) + " "
-                                    + to_string((sine_rx * sine_ry * sine_rz - sine_rx * cosine_rz) * sc) + " "
-                                    + to_string(cosine_rx * cosine_ry * sc * instance->scaling_vector.z) + " "
-                                    + to_string(tx) + " "
-                                    + to_string(ty) + " "
-                                    + to_string(tz);
-
             // Add the transform
-            fout << " transform=\"" << transform << "\"/>\n";
+            fout << " transform=\""
+                 << (cosine_ry * cosine_rz * sc * instance->scaling_vector.x)
+                 << " "
+                 << (cosine_ry * sine_rz * sc) << " "
+                 << (-1 * sine_ry * sc) << " "
+                 << ((sine_rx * sine_ry * cosine_rz -1 * cosine_rx * sine_rz) * sc)  << " "
+                 << ((sine_rx * sine_ry * sine_rz + cosine_rx *cosine_rz) * sc * instance->scaling_vector.y) << " "
+                 << (sine_rx * cosine_ry * sc) << " "
+                 << ((cosine_rx * sine_ry * cosine_rz + sine_rx * sine_rz) * sc) << " "
+                 << ((sine_rx * sine_ry * sine_rz - sine_rx * cosine_rz) * sc) << " "
+                 << (cosine_rx * cosine_ry * sc * instance->scaling_vector.z) << " "
+                 << (tx) << " "
+                 << (ty) << " "
+                 << (tz)
+                 << "\"/>\n";
 
         }
     object_id++;
@@ -361,7 +362,6 @@ TMFEditor::produce_TMF()
 
     // Finalize the archive and end writing.
     zip_archive->finalize();
-    delete zip_archive;
     return true;
 }
 
@@ -380,8 +380,11 @@ TMFEditor::consume_TMF()
 
     // Close zip archive.
     zip_archive->finalize();
-    delete zip_archive;
     return true;
+}
+
+TMFEditor::~TMFEditor(){
+    delete zip_archive;
 }
 
 bool

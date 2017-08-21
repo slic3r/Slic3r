@@ -32,7 +32,7 @@ public:
     };
     ///< Namespaces in the 3MF document.
 
-    TMFEditor(std::string input_file, Model* _model): zip_archive(nullptr), zip_name(input_file), model(_model), buff(""), object_id(1)
+    TMFEditor(std::string input_file, Model* _model): zip_archive(nullptr), zip_name(input_file), model(_model), object_id(1)
     {}
 
     /// Write TMF function called by TMF::write() function.
@@ -41,6 +41,7 @@ public:
     /// Read TMF function called by TMF::read() function.
     bool consume_TMF();
 
+    ~TMFEditor();
 private:
     ZipArchive* zip_archive; ///< The zip archive object for reading/writing zip files.
     std::string zip_name; ///< The zip archive file name.
@@ -71,14 +72,6 @@ private:
 
     /// Read the Model.
     bool read_model();
-
-    // Helper Functions.
-    template <class T>
-    std::string to_string(T number){
-        std::ostringstream s;
-        s << number;
-        return s.str();
-    }
 
 };
 
