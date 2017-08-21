@@ -1,71 +1,54 @@
 #ifndef SLIC3R_ZIPARCHIVE_H
 #define SLIC3R_ZIPARCHIVE_H
 
-
+#define MINIZ_HEADER_FILE_ONLY
 #define ZIP_DEFLATE_COMPRESSION 8
 
 #include <string>
 #include <iostream>
-#include "../../zip/miniz.h" // For IDE code suggestions only.
+#include "../../miniz/miniz.h"
 
 namespace Slic3r {
 
+/// A zip wrapper for Miniz lib.
 class ZipArchive
 {
 public:
 
-    ZipArchive (std::string zip_archive_name,const char zip_mode) : archive(mz_zip_archive()), zip_name(zip_archive_name), mode(zip_mode), stats(0){
-        // Init the miniz zip archive struct.
-        memset(&archive, 0, sizeof(archive));
+    /// Create a zip archive.
+    /// \param zip_archive_name string the name of the zip file.
+    /// \param zip_mode char the zip archive mode ('R' means read mode, 'W' means write mode). you cannot change the mode for the current object.
+    ZipArchive(std::string zip_archive_name, const char zip_mode);
 
-        if( mode == 'W'){
-            stats = mz_zip_writer_init_file(&archive, zip_name.c_str(), 0);
-        } else if (mode == 'R') {
-            stats = mz_zip_reader_init_file(&archive, zip_name.c_str(), MZ_DEFAULT_STRATEGY); // ToDo @Samir55 add flags.
-        } else {
-            std::cout << "Error unknown zip mode" << std::endl;
-        }
-    }
+    /// Get the status of the previous operation applied on the zip_archive.
+    /// \return mz_bool 0: failure 1: success.
+    mz_bool z_stats();
 
-    mz_bool z_stats() {
-        return stats;
-    }
+    /// Add a file to the current zip archive.
+    /// \param entry_path string the path of the entry in the zip archive.
+    /// \param file_path string the path of the file in the disk.
+    /// \return mz_bool 0: failure 1: success.
+    mz_bool add_entry (std::string entry_path, std::string file_path);
 
-    mz_bool add_entry (std::string entry_path, std::string file_path){
-        stats = 0;
-        // Check if it's in the write mode.
-        if(mode != 'W')
-            return stats;
-        stats = mz_zip_writer_add_file(&archive, entry_path.c_str(), file_path.c_str(), nullptr, 0, ZIP_DEFLATE_COMPRESSION);
-        return stats;
-    }
+    /// Extract a zip entry to a file on the disk.
+    /// \param entry_path string the path of the entry in the zip archive.
+    /// \param file_path string the path of the file in the disk.
+    /// \return mz_bool 0: failure 1: success.
+    mz_bool extract_entry (std::string entry_path, std::string file_path);
 
-    mz_bool extract_entry (std::string entry_path, std::string file_path){
-        stats = 0;
-        // Check if it's in the read mode.
-        if (mode != 'R')
-            return stats;
-        stats = mz_zip_reader_extract_file_to_file(&archive, entry_path.c_str(), file_path.c_str(), 0);
-        return stats;
-    }
+    /// Finalize the archive and free any allocated memory.
+    /// \return mz_bool 0: failure 1: success.
+    mz_bool finalize();
 
-    mz_bool finalize() {
-        stats = 0;
-        // Finalize the archive and end writing if it's in the write mode.
-        if(mode == 'W') {
-            stats = mz_zip_writer_finalize_archive(&archive);
-            stats |= mz_zip_writer_end(&archive);
-        } else if (mode == 'R'){
-            stats = mz_zip_reader_end(&archive);
-        }
-        return stats;
-    }
+    ~ZipArchive();
 
 private:
-    mz_zip_archive archive;
-    const std::string zip_name;
-    const char mode;
-    mz_bool stats;
+    mz_zip_archive archive; ///< Miniz zip archive struct.
+    const std::string zip_name; ///< The zip file name.
+    const char mode; ///< The zip mode either read or write.
+    mz_bool stats; ///< The status of the recently executed operation on the zip archive.
+    bool finalized; ///< Whether the zip archive is finalized or not. Used during the destructor of the object.
+
 };
 
 }

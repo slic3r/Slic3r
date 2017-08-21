@@ -2,8 +2,6 @@ Build.PL
 lib/Slic3r/XS.pm
 libslic3r.doxygen
 MANIFEST			This list of files
-src/libslic3r/IO/TMF.hpp
-src/libslic3r/IO/TMF.cpp
 src/admesh/connect.c
 src/admesh/normals.c
 src/admesh/shared.c
@@ -99,6 +97,8 @@ src/libslic3r/Geometry.hpp
 src/libslic3r/IO.cpp
 src/libslic3r/IO.hpp
 src/libslic3r/IO/AMF.cpp
+src/libslic3r/IO/TMF.hpp
+src/libslic3r/IO/TMF.cpp
 src/libslic3r/Layer.cpp
 src/libslic3r/Layer.hpp
 src/libslic3r/LayerRegion.cpp
@@ -142,6 +142,9 @@ src/libslic3r/SVG.hpp
 src/libslic3r/TriangleMesh.cpp
 src/libslic3r/TriangleMesh.hpp
 src/libslic3r/utils.cpp
+src/libslic3r/Zip/ZipArchive.cpp
+src/libslic3r/Zip/ZipArchive.hpp
+src/miniz/miniz.h
 src/perlglue.cpp
 src/poly2tri/common/shapes.cc
 src/poly2tri/common/shapes.h
