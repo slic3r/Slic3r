@@ -397,6 +397,7 @@ TMF::write(Model& model, std::string output_file)
 bool
 TMF::read(std::string input_file, Model* model)
 {
+    if(!model) return false;
     TMFEditor tmf_reader(std::move(input_file), model);
     return tmf_reader.consume_TMF();
 }

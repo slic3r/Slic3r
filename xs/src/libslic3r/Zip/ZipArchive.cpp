@@ -3,7 +3,7 @@
 
 namespace Slic3r {
 
-ZipArchive::ZipArchive (std::string zip_archive_name,const char zip_mode) : archive(mz_zip_archive()), zip_name(zip_archive_name), mode(zip_mode), stats(0), finalized(false)
+ZipArchive::ZipArchive (std::string zip_archive_name, char zip_mode) : archive(mz_zip_archive()), zip_name(zip_archive_name), mode(zip_mode), stats(0), finalized(false)
 {
     // Initialize the miniz zip archive struct.
     memset(&archive, 0, sizeof(archive));
@@ -11,9 +11,9 @@ ZipArchive::ZipArchive (std::string zip_archive_name,const char zip_mode) : arch
     if( mode == 'W'){
         stats = mz_zip_writer_init_file(&archive, zip_name.c_str(), 0);
     } else if (mode == 'R') {
-        stats = mz_zip_reader_init_file(&archive, zip_name.c_str(), MZ_DEFAULT_STRATEGY); // ToDo @Samir55 add flags.
+        stats = mz_zip_reader_init_file(&archive, zip_name.c_str(), 0);
     } else {
-        std::cout << "Error unknown zip mode" << std::endl;
+        std::cout << "Error:: Unknown zip mode" << std::endl;
     }
 }
 

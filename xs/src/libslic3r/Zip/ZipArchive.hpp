@@ -18,7 +18,7 @@ public:
     /// Create a zip archive.
     /// \param zip_archive_name string the name of the zip file.
     /// \param zip_mode char the zip archive mode ('R' means read mode, 'W' means write mode). you cannot change the mode for the current object.
-    ZipArchive(std::string zip_archive_name, const char zip_mode);
+    ZipArchive(std::string zip_archive_name, char zip_mode);
 
     /// Get the status of the previous operation applied on the zip_archive.
     /// \return mz_bool 0: failure 1: success.
