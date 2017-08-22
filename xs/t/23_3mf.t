@@ -9,6 +9,14 @@ use IO::Uncompress::Unzip qw(unzip $UnzipError) ;
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
 
+# Removes '\n' and '\r\n' from a string.
+sub clean {
+    my $text = shift;
+    $text =~ s/\n//g;
+    $text =~ s/\r//g;
+    return $text;
+}
+
 my $current_path = abs_path($0);
 my $expected_content_types = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
     ."<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n"
@@ -170,17 +178,17 @@ my $expected_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
     my $model_output ;
     unzip $tmf_output_file => \$model_output, Name => "3D/3dmodel.model"
         or die "unzip failed: $UnzipError\n";
-    is( $model_output, $expected_model, "Test 5: 3dmodel.model file matching");
+    is (clean($model_output), clean($expected_model), "Test 5: 3dmodel.model file matching");
     # Check contents in content_types.xml.
     my $content_types_output ;
     unzip $tmf_output_file => \$content_types_output, Name => "[Content_Types].xml"
         or die "unzip failed: $UnzipError\n";
-    is( $content_types_output, $expected_content_types, "Test 5: [Content_Types].xml file matching");
+    is (clean($content_types_output), clean($expected_content_types), "Test 5: [Content_Types].xml file matching");
     # Check contents in _rels.xml.
     my $relationships_output ;
     unzip $tmf_output_file => \$relationships_output, Name => "_rels/.rels"
         or die "unzip failed: $UnzipError\n";
-    is( $relationships_output, $expected_relationships, "Test 5: _rels/.rels file matching");
+    is (clean($relationships_output), clean($expected_relationships), "Test 5: _rels/.rels file matching");
 
     unlink($tmf_output_file);
 }

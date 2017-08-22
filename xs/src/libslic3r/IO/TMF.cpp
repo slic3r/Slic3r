@@ -6,7 +6,7 @@ bool
 TMFEditor::write_types()
 {
     // Create a new .[Content_Types].xml file to add to the zip file later.
-    boost::nowide::ofstream fout(".[Content_Types].xml", std::ios::out);
+    boost::nowide::ofstream fout(".[Content_Types].xml", std::ios::out | std::ios::trunc);
     if(!fout.is_open())
         return false;
 
@@ -33,7 +33,7 @@ bool
 TMFEditor::write_relationships()
 {
     // Create a new .rels file to add to the zip file later.
-    boost::nowide::ofstream fout(".rels", std::ios::out);
+    boost::nowide::ofstream fout(".rels", std::ios::out | std::ios::trunc);
     if(!fout.is_open())
         return false;
 
@@ -58,7 +58,7 @@ bool
 TMFEditor::write_model()
 {
     // Create a new .3dmodel.model file to add to the zip file later.
-    boost::nowide::ofstream fout(".3dmodel.model", std::ios::out);
+    boost::nowide::ofstream fout(".3dmodel.model", std::ios::out | std::ios::trunc);
     if(!fout.is_open())
         return false;
 
