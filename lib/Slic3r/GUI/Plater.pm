@@ -940,10 +940,20 @@ sub undo {
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
         $self->{object_identifier}--;
         $self->{objects}->[-1]->identifier($operation->{object_identifier});
+    } elsif ($operation->{type} eq "CUT") {
+        # Add the original object.
+        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        $self->{objects}->[-1]->identifier($operation->{object_identifier});
+        # Delete the produced objects.
+        my $obj_identifiers_start = $operation->{attributes}->[2];
+        for (my $i_object = 0; $i_object <= $#{$operation->{attributes}->[1]->objects}; $i_object++){
+            $self->remove($self->get_object_index($obj_identifiers_start++), 'true');
+        }
     }
 
     # Update undo/redo plater menu items.
     $self->on_model_change;
+    $self->object_list_changed;
 }
 
 sub redo {
@@ -969,10 +979,26 @@ sub redo {
         $self->mirror($operation->{attributes}->[0], 'true');
     } elsif ($operation->{type} eq "REMOVE") {
         $self->remove(undef, 'true');
+    } elsif ($operation->{type} eq "CUT") {
+        # Add the new objects.
+        $self->load_model_objects(@{$operation->{attributes}->[1]->objects});
+        # Add their identifiers.
+        my $obj_identifiers_start = $operation->{attributes}->[2];
+        my $obj_count = $#{$operation->{attributes}->[1]->objects} + 1;
+        for (my $i_object = 0; $i_object <= $#{$operation->{attributes}->[1]->objects}; $i_object++){
+            $self->{objects}->[-$obj_count]->identifier($obj_identifiers_start++);
+            $obj_count--;
+        }
+        # Delete the org objects.
+        $self->remove($self->get_object_index($operation->{object_identifier}), 'true');
     }
 
     # Push the operation to the undo stack.
     push $self->{undo_stack}, $operation;
+
+    # Update undo/redo plater menu items.
+    $self->on_model_change;
+    $self->object_list_changed;
 }
 
 sub add {
@@ -2317,8 +2343,23 @@ sub object_cut_dialog {
 	if (my @new_objects = $dlg->NewModelObjects) {
 	    my $process_dialog = Wx::ProgressDialog->new('Loading…', "Loading new objects…", 100, $self, 0);
         $process_dialog->Pulse;
-        
-	    $self->remove($obj_idx);
+
+        # Create two models to save the current object and the resulted objects.
+        my $new_objects_model = Slic3r::Model->new;
+        foreach my $new_object (@new_objects) {
+            $new_objects_model->add_object($new_object);
+        }
+
+        my $org_object_model = Slic3r::Model->new;
+        $org_object_model->add_object($self->{model}->get_object($obj_idx));
+
+        # Save the object identifiers used in undo/redo operations.
+        my $object_id = $self->{objects}->[$obj_idx]->identifier;
+        my $new_objects_id_start = $self->{object_identifier};
+
+        $self->add_undo_operation("CUT", $object_id, $org_object_model, $new_objects_model, $new_objects_id_start);
+
+	    $self->remove($obj_idx, 'true');
 	    $self->load_model_objects(grep defined($_), @new_objects);
 	    $self->arrange if @new_objects <= 2; # don't arrange for grid cuts
 	    
