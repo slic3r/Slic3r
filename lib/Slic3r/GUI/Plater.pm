@@ -1,5 +1,20 @@
 # The "Plater" tab. It contains the "3D", "2D", "Preview" and "Layers" subtabs.
 
+package Slic3r::GUI::Plater::UndoOperation;
+use strict;
+use warnings;
+
+sub new{
+    my $class = shift;
+    my $self = {
+        type => shift,
+        object_identifier => shift,
+        attributes => shift,
+    };
+    bless ($self, $class);
+    return $self;
+}
+
 package Slic3r::GUI::Plater;
 use strict;
 use warnings;
@@ -56,7 +71,16 @@ sub new {
     $self->{processed} = 0;
     # List of Perl objects Slic3r::GUI::Plater::Object, representing a 2D preview of the platter.
     $self->{objects} = [];
-    
+
+    # Objects identifier used for undo/redo operations. It's a one time id assigned to each newly created object.
+    $self->{object_identifier} = 0;
+
+    # Stack of undo operations.
+    $self->{undo_stack} = [];
+
+    # Stack of redo operations.
+    $self->{redo_stack} = [];
+
     $self->{print}->set_status_cb(sub {
         my ($percent, $message) = @_;
         
@@ -857,6 +881,100 @@ sub config {
     return $config;
 }
 
+sub get_object_index {
+    my $self = shift;
+    my ($object_indentifier) = @_;
+    for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
+        if ($self->{objects}->[$i]->identifier eq $object_indentifier) {
+            return $i;
+        }
+    }
+    return undef;
+}
+
+sub add_undo_operation {
+    my $self = shift;
+    my @parameters = @_;
+
+    my $type = $parameters[0];
+    my $object_identifier = $parameters[1];
+    my @attributes = @parameters[2..$#parameters]; # operation values.
+
+    # Create a new undoable operation.
+    my $new_undo_operation = new Slic3r::GUI::Plater::UndoOperation($type, $object_identifier, \@attributes);
+
+    # Push the new operation to the undo stack.
+    push $self->{undo_stack}, $new_undo_operation;
+
+    # Empty the redo stack
+    $self->{redo_stack} = [];
+
+    return $new_undo_operation;
+}
+
+sub undo {
+    my $self = shift;
+
+    # Pop the top operation from the undo stack.
+    my $operation = pop $self->{undo_stack};
+    return if !defined $operation;
+
+    # Push the operation to the redo stack.
+    push $self->{redo_stack}, $operation;
+
+    # ToDo @Samir55 double check if operation is supported.
+    # First Select the object.
+    my $obj_idx = $self->get_object_index($operation->{object_identifier});
+    $self->select_object($obj_idx);
+
+    if ($operation->{type} eq "ROTATE") {
+        $self->rotate(-1 * $operation->{attributes}->[0], $operation->{attributes}->[1], 'true'); # Apply inverse transformation.
+    } elsif ($operation->{type} eq "INCREASE") {
+        $self->decrease($operation->{attributes}->[0], 'true'); # ToDo @Samir55 Check if removal affects the process.
+    } elsif ($operation->{type} eq "DECREASE") {
+        $self->increase($operation->{attributes}->[0], 'true'); # ToDo @Samir55 Check if removal affects the process.
+    } elsif ($operation->{type} eq "MIRROR") {
+        $self->mirror($operation->{attributes}->[0], 'true');
+    } elsif ($operation->{type} eq "REMOVE") {
+        # ToDo @Samir55 Fix That.
+        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        $self->{object_identifier}--;
+        $self->{objects}->[-1]->identifier($operation->{object_identifier});
+    }
+
+    # Update undo/redo plater menu items.
+    $self->on_model_change;
+}
+
+sub redo {
+    my $self = shift;
+
+    # Pop the top operation from the redo stack.
+    my $operation = pop $self->{redo_stack};
+    return if !defined $operation;
+
+    # ToDo @Samir55 double check if operation is supported.
+
+    # First Select the object.
+    my $obj_idx = $self->get_object_index($operation->{object_identifier});
+    $self->select_object($obj_idx);
+
+    if ($operation->{type} eq "ROTATE") {
+        $self->rotate($operation->{attributes}->[0], $operation->{attributes}->[1], 'true');
+    } elsif ($operation->{type} eq "INCREASE") {
+        $self->increase($operation->{attributes}->[0], 'true'); # ToDo @Samir55 Check if removal affects the process.
+    } elsif ($operation->{type} eq "DECREASE") {
+        $self->decrease($operation->{attributes}->[0], 'true'); # ToDo @Samir55 Check if removal affects the process.
+    } elsif ($operation->{type} eq "MIRROR") {
+        $self->mirror($operation->{attributes}->[0], 'true');
+    } elsif ($operation->{type} eq "REMOVE") {
+        $self->remove(undef, 'true');
+    }
+
+    # Push the operation to the undo stack.
+    push $self->{undo_stack}, $operation;
+}
+
 sub add {
     my $self = shift;
     
@@ -943,7 +1061,7 @@ sub load_file {
 }
 
 sub load_model_objects {
-    my ($self, @model_objects) = @_;
+    my ($self, @model_objects, $assign_identifiers) = @_;
     
     # Always restart background process when adding new objects.
     # This prevents lack of processing in some circumstances when background process is
@@ -960,10 +1078,17 @@ sub load_model_objects {
     foreach my $model_object (@model_objects) {
         my $o = $self->{model}->add_object($model_object);
         $o->repair;
-        
-        push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
-            name => $model_object->name || basename($model_object->input_file),
-        );
+
+        if(!defined $assign_identifiers) {
+            push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
+                    name => $model_object->name || basename($model_object->input_file), identifier =>
+                    $self->{object_identifier}++
+                );
+        } else {
+            push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
+                    name => $model_object->name || basename($model_object->input_file), identifiers => -1
+                );
+        }
         push @obj_idx, $#{ $self->{objects} };
     
         if ($model_object->instances_count == 0) {
@@ -1028,7 +1153,7 @@ sub bed_centerf {
 
 sub remove {
     my $self = shift;
-    my ($obj_idx) = @_;
+    my ($obj_idx, $added_operation) = @_;
     
     $self->stop_background_process;
     
@@ -1040,7 +1165,12 @@ sub remove {
     if (!defined $obj_idx) {
         ($obj_idx, undef) = $self->selected_object;
     }
-    
+
+    # Save the object identifier and copy the object for undo/redo operations. ToDo @Samir55 improve this.
+    my $object_id = $self->{objects}->[$obj_idx]->identifier;
+    my $new_model = Slic3r::Model->new;  # store this before calling get_object()
+    $new_model->add_object($self->{model}->get_object($obj_idx));
+
     splice @{$self->{objects}}, $obj_idx, 1;
     $self->{model}->delete_object($obj_idx);
     $self->{print}->delete_object($obj_idx);
@@ -1048,6 +1178,10 @@ sub remove {
     
     $self->select_object(undef);
     $self->on_model_change;
+
+    if (!defined $added_operation) {
+        my $new_operation = $self->add_undo_operation("REMOVE", $object_id, $new_model);
+    }
 }
 
 sub reset {
@@ -1069,7 +1203,7 @@ sub reset {
 }
 
 sub increase {
-    my ($self, $copies) = @_;
+    my ($self, $copies, $added_operation) = @_;
     
     $copies //= 1;
     my ($obj_idx, $object) = $self->selected_object;
@@ -1083,7 +1217,11 @@ sub increase {
         );
         $self->{print}->objects->[$obj_idx]->add_copy($instance->offset);
     }
-    
+
+    if (!defined $added_operation) {
+        my $new_operation = $self->add_undo_operation("INCREASE", $object->identifier , $copies);
+    }
+
     # only autoarrange if user has autocentering enabled
     $self->stop_background_process;
     if ($Slic3r::GUI::Settings->{_}{autocenter}) {
@@ -1094,7 +1232,7 @@ sub increase {
 }
 
 sub decrease {
-    my ($self, $copies) = @_;
+    my ($self, $copies, $added_operation) = @_;
     
     $copies //= 1;
     $self->stop_background_process;
@@ -1111,6 +1249,10 @@ sub decrease {
     }
     
     $self->on_model_change;
+
+    if (!defined $added_operation) {
+        my $new_operation = $self->add_undo_operation("DECREASE", $obj_idx, $copies);
+    }
 }
 
 sub set_number_of_copies {
@@ -1155,7 +1297,7 @@ sub center_selected_object_on_bed {
 
 sub rotate {
     my $self = shift;
-    my ($angle, $axis) = @_;
+    my ($angle, $axis, $added_operation) = @_;
     
     # angle is in degrees
     $axis //= Z;
@@ -1194,17 +1336,24 @@ sub rotate {
         $model_object->center_around_origin;
         $self->make_thumbnail($obj_idx);
     }
-    
+
     $model_object->update_bounding_box;
     # update print and start background processing
     $self->{print}->add_model_object($model_object, $obj_idx);
-    
+
+    if (!defined $added_operation) {
+        my $object_id = $self->{objects}->[$obj_idx]->identifier;
+        my $new_operation = $self->add_undo_operation("ROTATE", $object->identifier, $angle, $axis);
+        # Debuging: test operation parameters. ToDo @ Samir remove.
+        #        print $new_operation->{type}, $new_operation->{object_index}, " ", $new_operation->{attributes}->[0], " ", $new_operation->{attributes}->[1], "\n";
+    }
+
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
 }
 
 sub mirror {
-    my ($self, $axis) = @_;
+    my ($self, $axis, $added_operation) = @_;
     
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
@@ -1225,7 +1374,13 @@ sub mirror {
     # update print and start background processing
     $self->stop_background_process;
     $self->{print}->add_model_object($model_object, $obj_idx);
-    
+
+    if (!defined $added_operation) {
+        my $new_operation = $self->add_undo_operation("MIRROR", $object->identifier, $axis);
+        # Debuging: test operation parameters. ToDo @ Samir remove.
+        #        print $new_operation->{type}, $new_operation->{object_index}, " ", $new_operation->{attributes}->[0], " ", $new_operation->{attributes}->[1], "\n";
+    }
+
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
 }
@@ -2550,6 +2705,7 @@ use List::Util qw(first);
 use Slic3r::Geometry qw(X Y Z MIN MAX deg2rad);
 
 has 'name'                  => (is => 'rw', required => 1);
+has 'identifier'            => (is => 'rw', required => 1);
 has 'input_file'            => (is => 'rw');
 has 'input_file_obj_idx'    => (is => 'rw');
 has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms

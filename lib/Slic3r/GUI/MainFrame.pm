@@ -191,6 +191,12 @@ sub _init_menubar {
             my $selectMenu = $self->{plater_select_menu} = Wx::Menu->new;
             wxTheApp->append_submenu($self->{plater_menu}, "Select", 'Select an object in the plater', $selectMenu, undef, 'brick.png');
         }
+        wxTheApp->append_menu_item($self->{plater_menu}, "Undo\tCtrl+Z", 'Undo', sub {
+                $plater->undo;
+            }, undef, 'arrow_undo.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Redo\tCtrl+Shift+Z", 'Redo', sub {
+                $plater->redo;
+            }, undef, 'arrow_redo.png');
         wxTheApp->append_menu_item($self->{plater_menu}, "Select Next Object\tCtrl+Right", 'Select Next Object in the plater', sub {
             $plater->select_next;
         }, undef, 'arrow_right.png');
@@ -334,6 +340,10 @@ sub on_plater_object_list_changed {
     return if !defined $self->{plater_menu};
     $self->{plater_menu}->Enable($_->GetId, $have_objects)
         for $self->{plater_menu}->GetMenuItems;
+
+    # Enable undo or redo if they have operations in their stack.
+    $self->{plater_menu}->Enable($self->{plater_menu}->FindItem("Undo\tCtrl+Z"), $#{$self->{plater}->{undo_stack}} < 0 ? 0 : 1);
+    $self->{plater_menu}->Enable( $self->{plater_menu}->FindItem("Redo\tCtrl+Shift+Z"),  $#{$self->{plater}->{redo_stack}} < 0 ? 0 : 1);
 }
 
 sub on_plater_selection_changed {
@@ -342,6 +352,10 @@ sub on_plater_selection_changed {
     return if !defined $self->{object_menu};
     $self->{object_menu}->Enable($_->GetId, $have_selection)
         for $self->{object_menu}->GetMenuItems;
+
+    # Enable undo or redo if they have operations in their stack.
+    $self->{plater_menu}->Enable($self->{plater_menu}->FindItem("Undo\tCtrl+Z"), $#{$self->{plater}->{undo_stack}} < 0 ? 0 : 1);
+    $self->{plater_menu}->Enable( $self->{plater_menu}->FindItem("Redo\tCtrl+Shift+Z"),  $#{$self->{plater}->{redo_stack}} < 0 ? 0 : 1);
 }
 
 sub quick_slice {
