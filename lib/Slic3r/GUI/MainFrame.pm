@@ -197,6 +197,18 @@ sub _init_menubar {
         wxTheApp->append_menu_item($self->{plater_menu}, "Select Prev Object\tCtrl+Left", 'Select Previous Object in the plater', sub {
             $plater->select_prev;
         }, undef, 'arrow_left.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Move Selected Instance\tRight", 'Move Selected Instance', sub {
+                $plater->{canvas}->nudge_instance('right');
+            }, undef, 'arrow_right.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Move Selected Instance\tLeft", 'Move Selected Instance', sub {
+                $plater->{canvas}->nudge_instance('left');
+            }, undef, 'arrow_left.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Move Selected Instance\tDown", 'Move Selected Instance', sub {
+                $plater->{canvas}->nudge_instance('down');
+            }, undef, 'arrow_down.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Move Selected Instance\tUp", 'Move Selected Instance', sub {
+                $plater->{canvas}->nudge_instance('up');
+            }, undef, 'arrow_up.png');
         wxTheApp->append_menu_item($self->{plater_menu}, "Zoom In\tCtrl+up", 'Zoom In',
             sub { $self->{plater}->zoom('in') }, undef, 'zoom_in.png');
         wxTheApp->append_menu_item($self->{plater_menu}, "Zoom Out\tCtrl+down", 'Zoom Out',

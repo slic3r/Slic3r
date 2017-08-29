@@ -202,6 +202,7 @@ sub mouse_event {
     my $point = $self->point_to_model_units([ $pos->x, $pos->y ]);  #]]
     if ($event->ButtonDown) {
         $self->{on_select_object}->(undef);
+        $self->{selected_instance} = undef;
         # traverse objects and instances in reverse order, so that if they're overlapping
         # we get the one that gets drawn last, thus on top (as user expects that to move)
         OBJECTS: for my $obj_idx (reverse 0 .. $#{$self->{objects}}) {
@@ -220,6 +221,7 @@ sub mouse_event {
                             $point->y - $instance_origin->[Y],  #-
                         ];
                         $self->{drag_object} = [ $obj_idx, $instance_idx ];
+                        $self->{selected_instance} = $self->{drag_object};
                     } elsif ($event->RightDown) {
                         $self->{on_right_click}->($pos);
                     }
@@ -236,7 +238,7 @@ sub mouse_event {
         $self->{drag_object} = undef;
         $self->SetCursor(wxSTANDARD_CURSOR);
     } elsif ($event->LeftDClick) {
-    	$self->{on_double_click}->();
+        $self->{on_double_click}->();
     } elsif ($event->Dragging) {
         return if !$self->{drag_start_pos}; # concurrency problems
         my ($obj_idx, $instance_idx) = @{ $self->{drag_object} };
@@ -255,6 +257,42 @@ sub mouse_event {
         }
         $self->SetCursor($cursor);
     }
+}
+
+sub nudge_instance{
+    my ($self, $direction) = @_;
+
+    # Get the selected instance of an object.
+    my ($obj_idx, $instance_idx) = @{ $self->{selected_instance} };
+    my $object = $self->{model}->objects->[$obj_idx];
+    my $instance = $object->instances->[$instance_idx];
+
+    # Get the nudge value.
+    my $x_nudge = 0;
+    my $y_nudge = 0;
+
+    if ($direction eq 'right'){
+        $x_nudge = 1600000;
+    } elsif ($direction eq 'left'){
+        $x_nudge = -1600000;
+    } elsif ($direction eq 'up'){
+        $y_nudge = 1600000;
+    } elsif ($direction eq 'down'){
+        $y_nudge = -1600000;
+    }
+    my $point = Slic3r::Pointf->new($x_nudge, $y_nudge);
+    my $instance_origin = [ map scale($_), @{$instance->offset} ];
+    $point = [ map scale($_), @{$point} ];
+
+    $instance->set_offset(
+        Slic3r::Pointf->new(
+            unscale( $instance_origin->[X] + $x_nudge),
+            unscale( $instance_origin->[Y] + $y_nudge),
+        ));
+
+    $object->update_bounding_box;
+    $self->Refresh;
+    $self->{on_instances_moved}->();
 }
 
 sub update_bed_size {
