@@ -904,7 +904,7 @@ sub add_undo_operation {
     my $new_undo_operation = new Slic3r::GUI::Plater::UndoOperation($type, $object_identifier, \@attributes);
 
     # Push the new operation to the undo stack.
-    push $self->{undo_stack}, $new_undo_operation;
+    push @{$self->{undo_stack}}, $new_undo_operation;
 
     # Empty the redo stack
     $self->{redo_stack} = [];
@@ -916,11 +916,11 @@ sub undo {
     my $self = shift;
 
     # Pop the top operation from the undo stack.
-    my $operation = pop $self->{undo_stack};
+    my $operation = pop @{$self->{undo_stack}};
     return if !defined $operation;
 
     # Push the operation to the redo stack.
-    push $self->{redo_stack}, $operation;
+    push @{$self->{redo_stack}}, $operation;
 
     # ToDo @Samir55 double check if operation is supported.
     # First Select the object.
@@ -940,7 +940,7 @@ sub undo {
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
         $self->{object_identifier}--;
         $self->{objects}->[-1]->identifier($operation->{object_identifier});
-    } elsif ($operation->{type} eq "CUT") {
+    } elsif ($operation->{type} eq "CUT" || $operation->{type} eq "SPLIT") {
         # Add the original object.
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
         $self->{objects}->[-1]->identifier($operation->{object_identifier});
@@ -949,6 +949,10 @@ sub undo {
         for (my $i_object = 0; $i_object <= $#{$operation->{attributes}->[1]->objects}; $i_object++){
             $self->remove($self->get_object_index($obj_identifiers_start++), 'true');
         }
+    } elsif ($operation->{type} eq "CHANGE_SCALE") {
+        $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
+    } elsif ($operation->{type} eq "RESET") {
+        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
     }
 
     # Update undo/redo plater menu items.
@@ -960,7 +964,7 @@ sub redo {
     my $self = shift;
 
     # Pop the top operation from the redo stack.
-    my $operation = pop $self->{redo_stack};
+    my $operation = pop @{$self->{redo_stack}};
     return if !defined $operation;
 
     # ToDo @Samir55 double check if operation is supported.
@@ -979,7 +983,7 @@ sub redo {
         $self->mirror($operation->{attributes}->[0], 'true');
     } elsif ($operation->{type} eq "REMOVE") {
         $self->remove(undef, 'true');
-    } elsif ($operation->{type} eq "CUT") {
+    } elsif ($operation->{type} eq "CUT" || $operation->{type} eq "SPLIT") {
         # Add the new objects.
         $self->load_model_objects(@{$operation->{attributes}->[1]->objects});
         # Add their identifiers.
@@ -991,10 +995,14 @@ sub redo {
         }
         # Delete the org objects.
         $self->remove($self->get_object_index($operation->{object_identifier}), 'true');
+    } elsif ($operation->{type} eq "CHANGE_SCALE") {
+        $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[2], 'true');
+    } elsif ($operation->{type} eq "RESET") {
+        $self->reset('true');
     }
 
     # Push the operation to the undo stack.
-    push $self->{undo_stack}, $operation;
+    push @{$self->{undo_stack}}, $operation;
 
     # Update undo/redo plater menu items.
     $self->on_model_change;
@@ -1211,19 +1219,26 @@ sub remove {
 }
 
 sub reset {
-    my $self = shift;
+    my ($self, $added_operation) = @_;
     
     $self->stop_background_process;
     
     # Prevent toolpaths preview from rendering while we modify the Print object
     $self->{toolpaths2D}->enabled(0) if $self->{toolpaths2D};
     $self->{preview3D}->enabled(0) if $self->{preview3D};
-    
+
+    # Save the current model.
+    my $current_model = $self->{model}->clone;
+
     @{$self->{objects}} = ();
     $self->{model}->clear_objects;
     $self->{print}->clear_objects;
     $self->object_list_changed;
-    
+
+    if (!defined $added_operation) {
+        $self->add_undo_operation("RESET", undef, $current_model);
+    }
+
     $self->select_object(undef);
     $self->on_model_change;
 }
@@ -1270,15 +1285,14 @@ sub decrease {
             $model_object->delete_last_instance;
             $self->{print}->objects->[$obj_idx]->delete_last_copy;
         }
+        if (!defined $added_operation) {
+            my $new_operation = $self->add_undo_operation("DECREASE", $obj_idx, $copies);
+        }
     } else {
         $self->remove;
     }
     
     $self->on_model_change;
-
-    if (!defined $added_operation) {
-        my $new_operation = $self->add_undo_operation("DECREASE", $obj_idx, $copies);
-    }
 }
 
 sub set_number_of_copies {
@@ -1412,7 +1426,7 @@ sub mirror {
 }
 
 sub changescale {
-    my ($self, $axis, $tosize) = @_;
+    my ($self, $axis, $tosize, $saved_scale, $added_operation) = @_;
     
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
@@ -1425,27 +1439,36 @@ sub changescale {
     
     my $object_size = $model_object->bounding_box->size;
     my $bed_size = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape})->bounding_box->size;
+
+    my $old_scale;
+    my $scale;
     
     if (defined $axis) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
-        my $scale;
-        if ($tosize) {
-            my $cursize = $object_size->[$axis];
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            my $newsize = Wx::GetTextFromUser(
-                sprintf("Enter the new size for the selected object (print bed: %smm):", $bed_size->[$axis]),
-                "Scale along $axis_name",
-                $cursize, $self);
-            return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
-            $scale = $newsize / $cursize * 100;
-        } else {
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:",
-                "Scale along $axis_name", 100, $self);
-            $scale =~ s/%$//;
-            return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+        if (!defined $saved_scale) {
+            if ($tosize) {
+                my $cursize = $object_size->[$axis];
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                my $newsize = Wx::GetTextFromUser(
+                    sprintf("Enter the new size for the selected object (print bed: %smm):", $bed_size->[$axis]),
+                    "Scale along $axis_name",
+                    $cursize, $self);
+                return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
+                $scale = $newsize / $cursize * 100;
+                $old_scale = $cursize / $newsize * 100;
+            } else {
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:",
+                    "Scale along $axis_name", 100, $self);
+                $scale =~ s/%$//;
+                return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+                $old_scale = 100 * 100 / $scale;
+            }
         }
-        
+        else {
+            $scale = $saved_scale;
+        }
+
         # apply Z rotation before scaling
         $model_object->transform_by_instance($model_instance, 1);
         
@@ -1455,23 +1478,28 @@ sub changescale {
         # object was already aligned to Z = 0, so no need to realign it
         $self->make_thumbnail($obj_idx);
     } else {
-        my $scale;
-        if ($tosize) {
-            my $cursize = max(@$object_size);
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            my $newsize = Wx::GetTextFromUser("Enter the new max size for the selected object:",
-                "Scale", $cursize, $self);
-            return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
-            $scale = $model_instance->scaling_factor * $newsize / $cursize * 100;
+        if (!defined $saved_scale) {
+            if ($tosize) {
+                my $cursize = max(@$object_size);
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                my $newsize = Wx::GetTextFromUser("Enter the new max size for the selected object:",
+                    "Scale", $cursize, $self);
+                return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
+                $scale = $model_instance->scaling_factor * $newsize / $cursize * 100;
+                $old_scale = $model_instance->scaling_factor * 100;
+            } else {
+                # max scale factor should be above 2540 to allow importing files exported in inches
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:", 'Scale',
+                    $model_instance->scaling_factor * 100, $self);
+                return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+                $old_scale = $model_instance->scaling_factor * 100;
+            }
+            return if !$scale || $scale < 0;
         } else {
-            # max scale factor should be above 2540 to allow importing files exported in inches
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:", 'Scale',
-                $model_instance->scaling_factor*100, $self);
-            return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+            $scale = $saved_scale;
         }
-        return if !$scale || $scale < 0;
-        
+
         $scale /= 100;  # turn percent into factor
         
         my $variation = $scale / $model_instance->scaling_factor;
@@ -1481,7 +1509,16 @@ sub changescale {
         }
         $_->set_scaling_factor($scale) for @{ $model_object->instances };
         $object->transform_thumbnail($self->{model}, $obj_idx);
+
+        $scale *= 100;
     }
+
+    # Add the new undo operation.
+    if (!defined $added_operation) {
+        my $object_id = $self->{objects}->[$obj_idx]->identifier;
+        my $new_operation = $self->add_undo_operation("CHANGE_SCALE", $object->identifier, $axis, $tosize, $scale, $old_scale);
+    }
+
     $model_object->update_bounding_box;
     
     # update print and start background processing
@@ -1506,7 +1543,7 @@ sub arrange {
 }
 
 sub split_object {
-    my $self = shift;
+    my ($self, $added_operation) = @_;
     
     my ($obj_idx, $current_object)  = $self->selected_object;
     
@@ -1547,6 +1584,21 @@ sub split_object {
     # load all model objects at once, otherwise the plate would be rearranged after each one
     # causing original positions not to be kept
     $self->load_model_objects(@model_objects);
+
+    # Create two models to save the current object and the resulted objects.
+    my $new_objects_model = Slic3r::Model->new;
+    foreach my $new_object (@model_objects) {
+        $new_objects_model->add_object($new_object);
+    }
+
+    my $org_object_model = Slic3r::Model->new;
+    $org_object_model->add_object($current_model_object);
+
+    # Save the object identifiers used in undo/redo operations.
+    my $object_id = $self->{objects}->[$obj_idx]->identifier;
+    my $new_objects_id_start = $self->{object_identifier};
+
+    $self->add_undo_operation("SPLIT", $object_id, $org_object_model, $new_objects_model, $new_objects_id_start);
 }
 
 sub toggle_print_stats {
