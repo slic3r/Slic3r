@@ -33,6 +33,7 @@ addons:
     - gcc-4.9
     - libgtk2.0-0 
     - libgtk2.0-dev
+    - freeglut3
   ssh_known_hosts: dl.slic3r.org
 notifications:
   irc:
