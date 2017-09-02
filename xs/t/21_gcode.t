@@ -19,33 +19,41 @@ use Test::More tests => 5;
     my $gcodegen = Slic3r::GCode->new;
     $config->set('use_firmware_retraction', 1);
     $config->set('gcode_flavor', "reprap");
+    $config->set('gcode_comments', 1);
     $gcodegen->apply_print_config($config);
-    printf($gcodegen->retract . " <- \n");
-    my $output = $gcodegen->retract(1);
-    is $output, "G10 S1; retract for toolchange", 'Produces long retract for fw marlin retract';
+    $gcodegen->writer->set_extruders([0]);
+    $gcodegen->writer->set_extruder(0);
+    my @output = split(/\n/, $gcodegen->retract(1));
+    is @output[0], "G10 S1 ; retract for toolchange", 'Produces long retract for fw marlin retract';
 }
 
 {
     my $config = Slic3r::Config::Static::new_FullPrintConfig;
     $config->set('use_firmware_retraction', 1);
     $config->set('gcode_flavor', "repetier");
+    $config->set('gcode_comments', 1);
 
     my $gcodegen = Slic3r::GCode->new;
     $gcodegen->apply_print_config($config);
-    my $output = $gcodegen->retract(1);
-    is $output, "G10 S1; retract for toolchange", 'Produces long retract for fw repetier retract';
+    $gcodegen->writer->set_extruders([0]);
+    $gcodegen->writer->set_extruder(0);
+    my @output = split(/\n/, $gcodegen->retract(1));
+    is @output[0], "G10 S1 ; retract for toolchange", 'Produces long retract for fw repetier retract';
 
 }
 {
     my $config = Slic3r::Config::Static::new_FullPrintConfig;
     $config->set('gcode_flavor', "smoothie");
     $config->set('use_firmware_retraction', 1);
+    $config->set('gcode_comments', 1);
 
     my $gcodegen = Slic3r::GCode->new;
     $gcodegen->apply_print_config($config);
 
-    my $output = $gcodegen->retract(1);
-    ok($output eq "G10; retract for toolchange", 'Produces regular retract for non-reprap');
+    $gcodegen->writer->set_extruders([0]);
+    $gcodegen->writer->set_extruder(0);
+    my @output = split(/\n/, $gcodegen->retract(1));
+    ok(@output[0] eq "G10 ; retract for toolchange", 'Produces regular retract for flavors that are not Marlin or Repetier');
 
 }
 
