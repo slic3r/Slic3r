@@ -457,12 +457,13 @@ GCodeWriter::retract_for_toolchange()
     return this->_retract(
         this->_extruder->retract_length_toolchange(),
         this->_extruder->retract_restart_extra_toolchange(),
-        "retract for toolchange"
+        "retract for toolchange",
+        true
     );
 }
 
 std::string
-GCodeWriter::_retract(double length, double restart_extra, const std::string &comment)
+GCodeWriter::_retract(double length, double restart_extra, const std::string &comment, bool long_retract = false)
 {
     std::ostringstream gcode;
     
@@ -483,15 +484,17 @@ GCodeWriter::_retract(double length, double restart_extra, const std::string &co
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
-                gcode << "G22 ; retract\n";
+                gcode << "G22";
+            else if ((FLAVOR_IS(gcfReprap) || FLAVOR_IS(gcfRepetier)) && long_retract)
+                gcode << "G10 S1";
             else
-                gcode << "G10 ; retract\n";
+                gcode << "G10";
         } else {
             gcode << "G1 " << this->_extrusion_axis << E_NUM(this->_extruder->E)
                            << " F" << this->_extruder->retract_speed_mm_min;
-            COMMENT(comment);
-            gcode << "\n";
         }
+        COMMENT(comment);
+        gcode << "\n";
     }
     
     if (FLAVOR_IS(gcfMakerWare))

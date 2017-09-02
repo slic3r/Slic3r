@@ -1,0 +1,1 @@
+/usr/lib/x86_64-linux-gnu/libstdc++.so.6 # needed because of ancient distros and slic3r (and perl for perl reasons) needs modern c++.
