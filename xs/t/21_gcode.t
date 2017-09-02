@@ -15,33 +15,37 @@ use Test::More tests => 5;
 }
 
 {
-    my $config = Slic3r::Config->new_from_defaults;
-    $config->set('use_firmware_retraction', 1)
-    $config->set('gcode_flavor', 'reprap')
-
+    my $config = Slic3r::Config::Static::new_FullPrintConfig;
     my $gcodegen = Slic3r::GCode->new;
-    my $output = $gcodegen->writer->retract_for_toolchange;
+    $config->set('use_firmware_retraction', 1);
+    $config->set('gcode_flavor', "reprap");
+    $gcodegen->apply_print_config($config);
+    printf($gcodegen->retract . " <- \n");
+    my $output = $gcodegen->retract(1);
     is $output, "G10 S1; retract for toolchange", 'Produces long retract for fw marlin retract';
 }
 
 {
-    my $config = Slic3r::Config->new_from_defaults;
-    $config->set('use_firmware_retraction', 1)
-    $config->set('gcode_flavor', 'repetier')
+    my $config = Slic3r::Config::Static::new_FullPrintConfig;
+    $config->set('use_firmware_retraction', 1);
+    $config->set('gcode_flavor', "repetier");
 
     my $gcodegen = Slic3r::GCode->new;
-    my $output = $gcodegen->writer->retract_for_toolchange;
+    $gcodegen->apply_print_config($config);
+    my $output = $gcodegen->retract(1);
     is $output, "G10 S1; retract for toolchange", 'Produces long retract for fw repetier retract';
 
 }
 {
-    my $config = Slic3r::Config->new_from_defaults;
-    $config->set('gcode_flavor', 'smoothie')
-    $config->set('use_firmware_retraction', 1)
+    my $config = Slic3r::Config::Static::new_FullPrintConfig;
+    $config->set('gcode_flavor', "smoothie");
+    $config->set('use_firmware_retraction', 1);
 
     my $gcodegen = Slic3r::GCode->new;
-    my $output = $gcodegen->writer->retract_for_toolchange;
-    is $output, "G10; retract for toolchange", 'Produces regular retract for non-reprap';
+    $gcodegen->apply_print_config($config);
+
+    my $output = $gcodegen->retract(1);
+    ok($output eq "G10; retract for toolchange", 'Produces regular retract for non-reprap');
 
 }
 
