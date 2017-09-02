@@ -1582,9 +1582,13 @@ sub _update {
         $self->get_field('retract_before_travel', $i)->toggle($have_retract_length || $config->use_firmware_retraction);
         
         # user can customize other retraction options if retraction is enabled
+        # Firmware retract has Z lift built in.
         my $retraction = ($have_retract_length || $config->use_firmware_retraction);
+        $self->get_field($_, $i)->toggle($retraction && !$config->use_firmware_retraction)
+            for qw(retract_lift);
+
         $self->get_field($_, $i)->toggle($retraction)
-            for qw(retract_lift retract_layer_change);
+            for qw(retract_layer_change);
         
         # retract lift above/below only applies if using retract lift
         $self->get_field($_, $i)->toggle($retraction && $config->get_at('retract_lift', $i) > 0)
@@ -1609,6 +1613,23 @@ sub _update {
                 my $wipe = $config->wipe;
                 $wipe->[$i] = 0;
                 $new_conf->set("wipe", $wipe);
+            } else {
+                $new_conf->set("use_firmware_retraction", 0);
+            }
+            $self->_load_config($new_conf);
+        }
+
+        if ($config->use_firmware_retraction && $config->get_at('retract_lift', $i) > 0) {
+            my $dialog = Wx::MessageDialog->new($self,
+                "The Z Lift option is not available when using the Firmware Retraction mode.\n"
+                . "\nShall I disable it in order to enable Firmware Retraction?",
+                'Firmware Retraction', wxICON_WARNING | wxYES | wxNO);
+            
+            my $new_conf = Slic3r::Config->new;
+            if ($dialog->ShowModal() == wxID_YES) {
+                my $wipe = $config->retract_lift;
+                $wipe->[$i] = 0;
+                $new_conf->set("retract_lift", $wipe);
             } else {
                 $new_conf->set("use_firmware_retraction", 0);
             }
