@@ -68,7 +68,7 @@ Name=$APP
 Icon=$APP
 Exec=AppRun
 Categories=Graphics;
-Version=$SLIC3R_VERSION
+X-Slic3r-Version=$SLIC3R_VERSION
 Comment=Prepare 3D Models for Printing
 EOF
 
