@@ -463,7 +463,7 @@ GCodeWriter::retract_for_toolchange()
 }
 
 std::string
-GCodeWriter::_retract(double length, double restart_extra, const std::string &comment, bool long_retract = false)
+GCodeWriter::_retract(double length, double restart_extra, const std::string &comment, bool long_retract)
 {
     std::ostringstream gcode;
     
