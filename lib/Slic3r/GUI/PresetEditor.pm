@@ -1557,6 +1557,25 @@ sub _update {
         
         # when using firmware retraction, firmware decides retraction length
         $self->get_field('retract_length', $i)->toggle(!$config->use_firmware_retraction);
+        if ($config->use_firmware_retraction && 
+            ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier') && 
+            ($config->get_at('retract_length_toolchange', $i) > 0 || $config->get_at('retract_restart_extra_toolchange', $i) > 0)) {
+            my $dialog = Wx::MessageDialog->new($self,
+                "Retract length for toolchange on extruder " . $i . " is not available when using the Firmware Retraction mode.\n"
+                . "\nShall I disable it in order to enable Firmware Retraction?",
+                'Firmware Retraction', wxICON_WARNING | wxYES | wxNO);
+            
+            my $new_conf = Slic3r::Config->new;
+            if ($dialog->ShowModal() == wxID_YES) {
+                my $retract_length_toolchange = $config->retract_length_toolchange;
+                $retract_length_toolchange->[$i] = 0;
+                $new_conf->set("retract_length_toolchange", $retract_length_toolchange);
+                $new_conf->set("retract_restart_extra_toolchange", $retract_length_toolchange);
+            } else {
+                $new_conf->set("use_firmware_retraction", 0);
+            }
+            $self->_load_config($new_conf);
+        }
         
         # user can customize travel length if we have retraction length or we're using
         # firmware retraction
@@ -1595,12 +1614,15 @@ sub _update {
             }
             $self->_load_config($new_conf);
         }
-        
-        $self->get_field('retract_length_toolchange', $i)->toggle($have_multiple_extruders);
+
+        $self->get_field('retract_length_toolchange', $i)->toggle
+            ($have_multiple_extruders && 
+            !($config->use_firmware_retraction && ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier')));
         
         my $toolchange_retraction = $config->get_at('retract_length_toolchange', $i) > 0;
         $self->get_field('retract_restart_extra_toolchange', $i)->toggle
-            ($have_multiple_extruders && $toolchange_retraction);
+            ($have_multiple_extruders && $toolchange_retraction && 
+            !($config->use_firmware_retraction && ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier')));
     }
 }
 
