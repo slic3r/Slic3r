@@ -114,6 +114,8 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
       GUI options:
         --gui               Forces the GUI launch instead of command line slicing (if you
                             supply a model file, it will be loaded into the plater)
+        --no-gui            Forces the command line slicing instead of gui. 
+                            This takes precedence over --gui if both are present.
         --autosave <file>   Automatically export current configuration to the specified file
     
       Output options:
