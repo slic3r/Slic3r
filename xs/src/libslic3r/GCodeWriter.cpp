@@ -485,7 +485,7 @@ GCodeWriter::_retract(double length, double restart_extra, const std::string &co
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
                 gcode << "G22";
-            else if ((FLAVOR_IS(gcfReprap) || FLAVOR_IS(gcfRepetier)) && long_retract)
+            else if ((FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfRepetier)) && long_retract)
                 gcode << "G10 S1";
             else
                 gcode << "G10";
