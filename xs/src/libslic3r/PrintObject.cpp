@@ -742,7 +742,7 @@ void PrintObject::_slice()
     // Apply size compensation and perform clipping of multi-part objects.
     const coord_t xy_size_compensation = scale_(this->config.xy_size_compensation.value);
     for (Layer* layer : this->layers) {
-        if (xy_size_compensation > 0) {
+        if (abs(xy_size_compensation) > 0) {
             if (layer->regions.size() == 1) {
                 // Single region, growing or shrinking.
                 LayerRegion* layerm = layer->regions.front();
@@ -758,7 +758,7 @@ void PrintObject::_slice()
                     LayerRegion* layerm = layer->regions[region_id];
                     Polygons slices = layerm->slices;
                     
-                    if (xy_size_compensation > 0)
+                    if (abs(xy_size_compensation) > 0)
                         slices = offset(slices, xy_size_compensation);
                     
                     if (region_id > 0)
