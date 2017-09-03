@@ -466,6 +466,9 @@ std::string
 GCodeWriter::_retract(double length, double restart_extra, const std::string &comment, bool long_retract)
 {
     std::ostringstream gcode;
+    std::ostringstream outcomment;
+
+    outcomment << comment;
     
     /*  If firmware retraction is enabled, we use a fake value of 1
         since we ignore the actual configured retract_length which 
@@ -482,6 +485,7 @@ GCodeWriter::_retract(double length, double restart_extra, const std::string &co
 
     double dE = this->_extruder->retract(length, restart_extra);
     if (dE != 0) {
+        outcomment << " extruder " << this->_extruder->id;
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
                 gcode << "G22";
@@ -493,7 +497,7 @@ GCodeWriter::_retract(double length, double restart_extra, const std::string &co
             gcode << "G1 " << this->_extrusion_axis << E_NUM(this->_extruder->E)
                            << " F" << this->_extruder->retract_speed_mm_min;
         }
-        COMMENT(comment);
+        COMMENT(outcomment.str());
         gcode << "\n";
     }
     
@@ -515,15 +519,17 @@ GCodeWriter::unretract()
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
-                 gcode << "G23 ; unretract\n";
+                 gcode << "G23";
             else
-                 gcode << "G11 ; unretract\n";
+                 gcode << "G11";
+            if (this->config.gcode_comments) gcode << " ; unretract extruder " << this->_extruder->id;
+            gcode << "\n";
             gcode << this->reset_e();
         } else {
             // use G1 instead of G0 because G0 will blend the restart with the previous travel move
             gcode << "G1 " << this->_extrusion_axis << E_NUM(this->_extruder->E)
                            << " F" << this->_extruder->retract_speed_mm_min;
-            if (this->config.gcode_comments) gcode << " ; unretract";
+            if (this->config.gcode_comments) gcode << " ; unretract extruder " << this->_extruder->id;
             gcode << "\n";
         }
     }

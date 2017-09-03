@@ -24,7 +24,7 @@ use Test::More tests => 5;
     $gcodegen->writer->set_extruders([0]);
     $gcodegen->writer->set_extruder(0);
     my @output = split(/\n/, $gcodegen->retract(1));
-    is $output[0], "G10 S1 ; retract for toolchange", 'Produces long retract for fw marlin retract';
+    is $output[0], "G10 S1 ; retract for toolchange extruder 0", 'Produces long retract for fw marlin retract';
 }
 
 {
@@ -38,7 +38,7 @@ use Test::More tests => 5;
     $gcodegen->writer->set_extruders([0]);
     $gcodegen->writer->set_extruder(0);
     my @output = split(/\n/, $gcodegen->retract(1));
-    is $output[0], "G10 S1 ; retract for toolchange", 'Produces long retract for fw repetier retract';
+    is $output[0], "G10 S1 ; retract for toolchange extruder 0", 'Produces long retract for fw repetier retract';
 
 }
 {
@@ -53,7 +53,7 @@ use Test::More tests => 5;
     $gcodegen->writer->set_extruders([0]);
     $gcodegen->writer->set_extruder(0);
     my @output = split(/\n/, $gcodegen->retract(1));
-    ok($output[0] eq "G10 ; retract for toolchange", 'Produces regular retract for flavors that are not Marlin or Repetier');
+    ok($output[0] eq "G10 ; retract for toolchange extruder 0", 'Produces regular retract for flavors that are not Marlin or Repetier');
 
 }
 
