@@ -884,6 +884,8 @@ sub config {
 sub get_object_index {
     my $self = shift;
     my ($object_indentifier) = @_;
+    return undef if !defined $object_indentifier;
+
     for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
         if ($self->{objects}->[$i]->identifier eq $object_indentifier) {
             return $i;
@@ -917,11 +919,11 @@ sub undo {
 
     push @{$self->{redo_stack}}, $operation;
 
+    my $type = $operation->{type};
+
     # First select the object.
     my $obj_idx = $self->get_object_index($operation->{object_identifier});
     $self->select_object($obj_idx);
-
-    my $type = $operation->{type};
 
     if ($type eq "ROTATE") {
         $self->rotate(-1 * $operation->{attributes}->[0], $operation->{attributes}->[1], 'true'); # Apply inverse transformation.
@@ -936,23 +938,30 @@ sub undo {
         $self->{object_identifier}--; # Decrement the identifier as we will change the object identifier with the saved one.
         $self->{objects}->[-1]->identifier($operation->{object_identifier});
     } elsif ($type eq "CUT" || $type eq "SPLIT") {
-        # Add the original object.
-        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
-        $self->{objects}->[-1]->identifier($operation->{object_identifier});
         # Delete the produced objects.
         my $obj_identifiers_start = $operation->{attributes}->[2];
         for (my $i_object = 0; $i_object <= $#{$operation->{attributes}->[1]->objects}; $i_object++) {
             $self->remove($self->get_object_index($obj_identifiers_start++), 'true');
         }
+        # Add the original object.
+        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        $self->{object_identifier}--;
+        $self->{objects}->[-1]->identifier($operation->{object_identifier});
     } elsif ($type eq "CHANGE_SCALE") {
         $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
     } elsif ($type eq "RESET") {
+        # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
+        my $current_objects_identifier = $self->{object_identifier};
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
-    }
+        $self->{object_identifier} = $current_objects_identifier;
 
-    # Update undo/redo plater menu items.
-    $self->on_model_change;
-    $self->object_list_changed;
+        # don't forget the identifiers.
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+        foreach my $identifier (@{$operation->{attributes}->[1]})
+        {
+            $self->{objects}->[-$objects_count]->identifier($identifier);
+        }
+    }
 }
 
 sub redo {
@@ -960,6 +969,8 @@ sub redo {
 
     my $operation = pop @{$self->{redo_stack}};
     return if !defined $operation;
+
+    push @{$self->{undo_stack}}, $operation;
 
     # First Select the object.
     my $obj_idx = $self->get_object_index($operation->{object_identifier});
@@ -978,8 +989,12 @@ sub redo {
     } elsif ($type eq "REMOVE") {
         $self->remove(undef, 'true');
     } elsif ($type eq "CUT" || $type eq "SPLIT") {
-        # Add the new objects.
+        # Delete the org objects.
+        $self->remove($self->get_object_index($operation->{object_identifier}), 'true');
+        # Add the new objects and revert changes to the plater object identifier.
+        my $current_objects_identifier = $self->{object_identifier};
         $self->load_model_objects(@{$operation->{attributes}->[1]->objects});
+        $self->{object_identifier} = $current_objects_identifier;
         # Add their identifiers.
         my $obj_identifiers_start = $operation->{attributes}->[2];
         my $obj_count = $#{$operation->{attributes}->[1]->objects} + 1;
@@ -987,19 +1002,11 @@ sub redo {
             $self->{objects}->[-$obj_count]->identifier($obj_identifiers_start++);
             $obj_count--;
         }
-        # Delete the org objects.
-        $self->remove($self->get_object_index($operation->{object_identifier}), 'true');
     } elsif ($type eq "CHANGE_SCALE") {
         $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[2], 'true');
     } elsif ($type eq "RESET") {
         $self->reset('true');
     }
-
-    push @{$self->{undo_stack}}, $operation;
-
-    # Update undo/redo plater menu items.
-    $self->on_model_change;
-    $self->object_list_changed;
 }
 
 sub add {
@@ -1091,7 +1098,7 @@ sub load_file {
 }
 
 sub load_model_objects {
-    my ($self, @model_objects, $assign_identifiers) = @_;
+    my ($self, @model_objects) = @_;
     
     # Always restart background process when adding new objects.
     # This prevents lack of processing in some circumstances when background process is
@@ -1109,16 +1116,11 @@ sub load_model_objects {
         my $o = $self->{model}->add_object($model_object);
         $o->repair;
 
-        if(!defined $assign_identifiers) {
-            push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
-                    name => $model_object->name || basename($model_object->input_file), identifier =>
-                    $self->{object_identifier}++
-                );
-        } else {
-            push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
-                    name => $model_object->name || basename($model_object->input_file), identifiers => -1
-                );
-        }
+        push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
+                name => $model_object->name || basename($model_object->input_file), identifier =>
+                $self->{object_identifier}++
+            );
+
         push @obj_idx, $#{ $self->{objects} };
     
         if ($model_object->instances_count == 0) {
@@ -1226,14 +1228,19 @@ sub reset {
     # Save the current model.
     my $current_model = $self->{model}->clone;
 
+    if (!defined $dont_push) {
+        # Get the identifiers of the curent model objects.
+        my $objects_identifiers = [];
+        for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
+            push @{$objects_identifiers}, $self->{objects}->[$i]->identifier;
+        }
+        $self->add_undo_operation("RESET", undef, $current_model, $objects_identifiers);
+    }
+
     @{$self->{objects}} = ();
     $self->{model}->clear_objects;
     $self->{print}->clear_objects;
     $self->object_list_changed;
-
-    if (!defined $dont_push) {
-        $self->add_undo_operation("RESET", undef, $current_model);
-    }
 
     $self->select_object(undef);
     $self->on_model_change;
@@ -1282,7 +1289,7 @@ sub decrease {
             $self->{print}->objects->[$obj_idx]->delete_last_copy;
         }
         if (!defined $dont_push) {
-            $self->add_undo_operation("DECREASE", $obj_idx, $copies);
+            $self->add_undo_operation("DECREASE", $object->identifier, $copies);
         }
     } else {
         $self->remove;
