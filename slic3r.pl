@@ -29,7 +29,7 @@ my %cli_options = ();
         
         'debug'                 => \$Slic3r::debug,
         'gui'                   => \$opt{gui},
-        'no-gui'                   => \$opt{no_gui},
+        'no-gui'                => \$opt{no_gui},
         'o|output=s'            => \$opt{output},
         'j|threads=i'           => \$opt{threads},
         
@@ -106,7 +106,7 @@ if ($opt{save}) {
 
 # launch GUI
 my $gui;
-if ((!@ARGV || $opt{gui}) && !(!@ARGV || $opt{no_gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
+if ((!@ARGV || $opt{gui}) && !$opt{no_gui} && !$opt{save} && eval "require Slic3r::GUI; 1") {
     {
         no warnings 'once';
         $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
@@ -126,7 +126,7 @@ if ((!@ARGV || $opt{gui}) && !(!@ARGV || $opt{no_gui}) && !$opt{save} && eval "r
     $gui->MainLoop;
     exit;
 }
-die $@ if $@ && $opt{gui};
+die $@ if $@ && $opt{gui} && !$opt{no_gui};
 
 if (@ARGV) {  # slicing from command line
     # apply command line config on top of default config
