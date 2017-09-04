@@ -1798,6 +1798,12 @@ CLIConfigDef::CLIConfigDef()
     def->tooltip = "Slice the model and export slices as SVG.";
     def->cli = "export-svg";
     def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("export_3mf", coBool);
+    def->label = "Export 3MF";
+    def->tooltip = "Slice the model and export slices as 3MF.";
+    def->cli = "export-3mf";
+    def->default_value = new ConfigOptionBool(false);
     
     def = this->add("info", coBool);
     def->label = "Output Model Info";

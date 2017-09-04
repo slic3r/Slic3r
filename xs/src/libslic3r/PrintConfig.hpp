@@ -627,6 +627,7 @@ class CLIConfig
     ConfigOptionBool                export_obj;
     ConfigOptionBool                export_pov;
     ConfigOptionBool                export_svg;
+    ConfigOptionBool                export_3mf;
     ConfigOptionBool                info;
     ConfigOptionStrings             load;
     ConfigOptionString              output;
@@ -651,6 +652,7 @@ class CLIConfig
         OPT_PTR(export_obj);
         OPT_PTR(export_pov);
         OPT_PTR(export_svg);
+        OPT_PTR(export_3mf);
         OPT_PTR(info);
         OPT_PTR(load);
         OPT_PTR(output);

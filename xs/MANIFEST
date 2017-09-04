@@ -97,6 +97,8 @@ src/libslic3r/Geometry.hpp
 src/libslic3r/IO.cpp
 src/libslic3r/IO.hpp
 src/libslic3r/IO/AMF.cpp
+src/libslic3r/IO/TMF.hpp
+src/libslic3r/IO/TMF.cpp
 src/libslic3r/Layer.cpp
 src/libslic3r/Layer.hpp
 src/libslic3r/LayerRegion.cpp
@@ -140,6 +142,9 @@ src/libslic3r/SVG.hpp
 src/libslic3r/TriangleMesh.cpp
 src/libslic3r/TriangleMesh.hpp
 src/libslic3r/utils.cpp
+src/libslic3r/Zip/ZipArchive.cpp
+src/libslic3r/Zip/ZipArchive.hpp
+src/miniz/miniz.h
 src/perlglue.cpp
 src/poly2tri/common/shapes.cc
 src/poly2tri/common/shapes.h
@@ -183,6 +188,12 @@ t/19_model.t
 t/20_print.t
 t/21_gcode.t
 t/22_exception.t
+t/23_3mf.t
+t/models/3mf/box.3mf
+t/models/3mf/chess.3mf
+t/models/3mf/gimblekeychain.3mf
+t/models/amf/FaceColors.amf.xml
+t/models/stl/spikey_top.stl
 t/inc/22_config_bad_config_options.ini
 xsp/BoundingBox.xsp
 xsp/BridgeDetector.xsp

@@ -63,6 +63,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Geometry.cpp
     ${LIBDIR}/libslic3r/IO.cpp
     ${LIBDIR}/libslic3r/IO/AMF.cpp
+    ${LIBDIR}/libslic3r/IO/TMF.cpp
     ${LIBDIR}/libslic3r/Layer.cpp
     ${LIBDIR}/libslic3r/LayerRegion.cpp
     ${LIBDIR}/libslic3r/LayerRegionFill.cpp
@@ -85,6 +86,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/SurfaceCollection.cpp
     ${LIBDIR}/libslic3r/SVG.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
+    ${LIBDIR}/libslic3r/Zip/ZipArchive.cpp
 )
 
 add_library(admesh STATIC
