@@ -85,6 +85,9 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/SurfaceCollection.cpp
     ${LIBDIR}/libslic3r/SVG.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
+    ${LIBDIR}/libslic3r/WireframePrint.cpp
+    ${LIBDIR}/libslic3r/WireframePrintObject.cpp
+    ${LIBDIR}/libslic3r/WireframePrintRegion.cpp
 )
 
 add_library(admesh STATIC
@@ -119,6 +122,10 @@ set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
 add_executable(extrude-tin utils/extrude-tin.cpp)
 set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_START_STATIC 1)
 set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_END_STATIC 1)
+
+add_executable(wireframe utils/wireframe.cpp)
+set_target_properties(wireframe PROPERTIES LINK_SEARCH_START_STATIC 1)
+set_target_properties(wireframe PROPERTIES LINK_SEARCH_END_STATIC 1)
 
 set(wxWidgets_USE_STATIC)
 SET(wxWidgets_USE_LIBS)
@@ -162,6 +169,8 @@ IF (WIN32)
 
     target_link_libraries(slic3r boost-nowide)
     target_link_libraries(extrude-tin boost-nowide)
+    target_link_libraries(wireframe boost-nowide)
 ENDIF(WIN32)
 
 target_link_libraries (extrude-tin libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+target_link_libraries (wireframe libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})

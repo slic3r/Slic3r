@@ -300,6 +300,156 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     };
 };
 
+class WireframePrintObjectConfig : public virtual StaticPrintConfig
+{
+    public:
+    // ConfigOptionBool                dont_support_bridges;
+    ConfigOptionFloatOrPercent      extrusion_width;
+    ConfigOptionFloatOrPercent      first_layer_height;
+    ConfigOptionBool                infill_only_where_needed;
+    // ConfigOptionBool                interface_shells;
+    ConfigOptionFloat               layer_height;
+    ConfigOptionFloat               max_step_height;
+    ConfigOptionFloat               min_step_height;
+    ConfigOptionInt                 raft_layers;
+    ConfigOptionEnum<SeamPosition>  seam_position;
+    // ConfigOptionBool                support_material;                Support material not supported in Wireframe yet 
+    // ConfigOptionInt                 support_material_angle;
+    // ConfigOptionBool                support_material_buildplate_only;
+    // ConfigOptionFloat               support_material_contact_distance;
+    // ConfigOptionInt                 support_material_enforce_layers;
+    // ConfigOptionInt                 support_material_extruder;
+    // ConfigOptionFloatOrPercent      support_material_extrusion_width;
+    // ConfigOptionInt                 support_material_interface_extruder;
+    // ConfigOptionInt                 support_material_interface_layers;
+    // ConfigOptionFloat               support_material_interface_spacing;
+    // ConfigOptionFloatOrPercent      support_material_interface_speed;
+    // ConfigOptionEnum<SupportMaterialPattern> support_material_pattern;
+    // ConfigOptionFloat               support_material_spacing;
+    // ConfigOptionFloat               support_material_speed;
+    // ConfigOptionFloatOrPercent      support_material_threshold;
+    ConfigOptionFloat               xy_size_compensation;
+    
+    WireframePrintObjectConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        // OPT_PTR(dont_support_bridges);
+        OPT_PTR(extrusion_width);
+        OPT_PTR(first_layer_height);
+        OPT_PTR(infill_only_where_needed);
+        // OPT_PTR(interface_shells);
+        OPT_PTR(layer_height);
+        OPT_PTR(max_step_height);
+        OPT_PTR(min_step_height);
+        OPT_PTR(raft_layers);
+        OPT_PTR(seam_position);
+        // OPT_PTR(support_material);
+        // OPT_PTR(support_material_angle);
+        // OPT_PTR(support_material_buildplate_only);
+        // OPT_PTR(support_material_contact_distance);
+        // OPT_PTR(support_material_enforce_layers);
+        // OPT_PTR(support_material_extruder);
+        // OPT_PTR(support_material_extrusion_width);
+        // OPT_PTR(support_material_interface_extruder);
+        // OPT_PTR(support_material_interface_layers);
+        // OPT_PTR(support_material_interface_spacing);
+        // OPT_PTR(support_material_interface_speed);
+        // OPT_PTR(support_material_pattern);
+        // OPT_PTR(support_material_spacing);
+        // OPT_PTR(support_material_speed);
+        // OPT_PTR(support_material_threshold);
+        OPT_PTR(xy_size_compensation);
+        
+        return NULL;
+    };
+};
+
+class WireframePrintRegionConfig : public virtual StaticPrintConfig
+{
+    public:
+    // ConfigOptionEnum<InfillPattern> bottom_infill_pattern;
+    // ConfigOptionInt                 bottom_solid_layers;
+    // ConfigOptionFloat               bridge_flow_ratio;               Everything is a bridge
+    // ConfigOptionFloat               bridge_speed;
+    // ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
+    // ConfigOptionFloatOrPercent      external_perimeter_speed;
+    // ConfigOptionBool                external_perimeters_first;
+    // ConfigOptionBool                extra_perimeters;
+    // ConfigOptionFloat               fill_angle;
+    // ConfigOptionPercent             fill_density;
+    // ConfigOptionBool                fill_gaps;
+    // ConfigOptionEnum<InfillPattern> fill_pattern;
+    // ConfigOptionFloatOrPercent      gap_fill_speed;
+    // ConfigOptionInt                 infill_extruder;
+    // ConfigOptionFloatOrPercent      infill_extrusion_width;
+    // ConfigOptionInt                 infill_every_layers;
+    // ConfigOptionFloatOrPercent      infill_overlap;
+    // ConfigOptionFloat               infill_speed;
+    // ConfigOptionBool                overhangs;                       Everything is a bridge
+    ConfigOptionInt                 perimeter_extruder;
+    ConfigOptionFloatOrPercent      perimeter_extrusion_width;
+    ConfigOptionFloat               perimeter_speed;
+    // ConfigOptionInt                 perimeters;
+    ConfigOptionFloatOrPercent      small_perimeter_speed;
+    // ConfigOptionFloat               solid_infill_below_area;
+    // ConfigOptionInt                 solid_infill_extruder;
+    // ConfigOptionFloatOrPercent      solid_infill_extrusion_width;
+    // ConfigOptionInt                 solid_infill_every_layers;
+    // ConfigOptionFloatOrPercent      solid_infill_speed;
+    ConfigOptionBool                thin_walls;
+    // ConfigOptionFloatOrPercent      top_infill_extrusion_width;
+    // ConfigOptionEnum<InfillPattern> top_infill_pattern;
+    // ConfigOptionInt                 top_solid_layers;
+    // ConfigOptionFloatOrPercent      top_solid_infill_speed;
+    
+    WireframePrintRegionConfig(bool initialize = true) : StaticPrintConfig() {
+        if (initialize)
+            this->set_defaults();
+    }
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        // OPT_PTR(bottom_infill_pattern);
+        // OPT_PTR(bottom_solid_layers);
+        // OPT_PTR(bridge_flow_ratio);
+        // OPT_PTR(bridge_speed);
+        // OPT_PTR(external_perimeter_extrusion_width);
+        // OPT_PTR(external_perimeter_speed);
+        // OPT_PTR(external_perimeters_first);
+        // OPT_PTR(extra_perimeters);
+        // OPT_PTR(fill_angle);
+        // OPT_PTR(fill_density);
+        // OPT_PTR(fill_gaps);
+        // OPT_PTR(fill_pattern);
+        // OPT_PTR(gap_fill_speed);
+        // OPT_PTR(infill_extruder);
+        // OPT_PTR(infill_extrusion_width);
+        // OPT_PTR(infill_every_layers);
+        // OPT_PTR(infill_overlap);
+        // OPT_PTR(infill_speed);
+        // OPT_PTR(overhangs);
+        OPT_PTR(perimeter_extruder);
+        OPT_PTR(perimeter_extrusion_width);
+        OPT_PTR(perimeter_speed);
+        // OPT_PTR(perimeters);
+        OPT_PTR(small_perimeter_speed);
+        // OPT_PTR(solid_infill_below_area);
+        // OPT_PTR(solid_infill_extruder);
+        // OPT_PTR(solid_infill_extrusion_width);
+        // OPT_PTR(solid_infill_every_layers);
+        // OPT_PTR(solid_infill_speed);
+        OPT_PTR(thin_walls);
+        // OPT_PTR(top_infill_extrusion_width);
+        // OPT_PTR(top_infill_pattern);
+        // OPT_PTR(top_solid_infill_speed);
+        // OPT_PTR(top_solid_layers);
+        
+        return NULL;
+    };
+};
+
 // This object is mapped to Perl as Slic3r::Config::GCode.
 class GCodeConfig : public virtual StaticPrintConfig
 {
@@ -510,6 +660,162 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(threads);
         OPT_PTR(vibration_limit);
         OPT_PTR(wipe);
+        OPT_PTR(z_offset);
+        OPT_PTR(z_steps_per_mm);
+        
+        // look in parent class
+        ConfigOption* opt;
+        if ((opt = GCodeConfig::optptr(opt_key, create)) != NULL) return opt;
+        
+        return NULL;
+    };
+};
+
+/*
+Printer Geometry
+
+    Hotend width (mm)
+    Hotend slope (degrees)
+    Nozzle diameter (mm)
+    Heated bed (bool)
+    Gcode flavor (enum)
+    Relative E (bool)
+    Firmware retraction (bool)
+    Retraction settings (mixed)
+    Z lift (mm)
+    Custom Gcode
+
+Material Settings?
+
+    Cooling settings
+    -Fan speeds (%)
+    -Pillar pause length (seconds)
+    Print temp (celsius)
+    Bed temp (celsius)
+    Filament Diameter
+    Extrusion Multiplier
+
+Print Settings
+
+    Minimum step height (mm)
+    Maximum step height (mm)
+    Mesh style
+    Extrusion width (mm)
+    Print speed (mm/s)
+    Volumetric speed? (mm^3/s)
+    Vertical speed? (mm/s)
+    Travel speed
+    Skirt settings
+    Raft option (bool)
+
+*/
+
+class WireframePrintConfig : public GCodeConfig
+{
+    public:
+    ConfigOptionPoints              bed_shape;
+    ConfigOptionBool                has_heatbed;
+    ConfigOptionInt                 bed_temperature;
+    ConfigOptionFloat               bridge_acceleration;
+    ConfigOptionInt                 bridge_fan_speed;
+    ConfigOptionFloat               brim_connections_width;
+    ConfigOptionFloat               brim_width;
+    ConfigOptionBool                cooling;
+    ConfigOptionFloat               default_acceleration;
+    ConfigOptionFloat               extruder_clearance_angle;
+    ConfigOptionFloat               extruder_clearance_height;
+    ConfigOptionFloat               extruder_clearance_radius;
+    ConfigOptionPoints              extruder_offset;
+    ConfigOptionBool                fan_always_on;
+    ConfigOptionInt                 fan_below_layer_time;
+    ConfigOptionStrings             filament_colour;
+    ConfigOptionStrings             filament_notes;
+    ConfigOptionFloat               first_layer_acceleration;
+    ConfigOptionInt                 first_layer_bed_temperature;
+    ConfigOptionFloatOrPercent      first_layer_extrusion_width;
+    ConfigOptionFloatOrPercent      first_layer_speed;
+    ConfigOptionInts                first_layer_temperature;
+    ConfigOptionBool                gcode_arcs;
+    ConfigOptionFloat               interior_brim_width;
+    ConfigOptionInt                 max_fan_speed;
+    ConfigOptionInt                 min_fan_speed;
+    ConfigOptionFloat               min_print_speed;
+    ConfigOptionFloat               min_skirt_length;
+    ConfigOptionString              notes;
+    ConfigOptionFloats              nozzle_diameter;
+    ConfigOptionBool                ooze_prevention;
+    ConfigOptionString              output_filename_format;
+    ConfigOptionFloat               perimeter_acceleration;
+    ConfigOptionStrings             post_process;
+    ConfigOptionStrings             printer_notes;
+    ConfigOptionFloat               resolution;
+    ConfigOptionFloats              retract_before_travel;
+    ConfigOptionBools               retract_layer_change;
+    ConfigOptionFloat               skirt_distance;
+    ConfigOptionInt                 skirts;
+    ConfigOptionInt                 slowdown_below_layer_time;
+    ConfigOptionInt                 standby_temperature_delta;
+    ConfigOptionInts                temperature;
+    ConfigOptionInt                 threads;
+    ConfigOptionFloat               vibration_limit;
+    ConfigOptionBools               wipe;
+    ConfigOptionBool                wireframe;
+    ConfigOptionFloat               z_offset;
+    ConfigOptionFloat               z_steps_per_mm;
+    
+    WireframePrintConfig(bool initialize = true) : GCodeConfig(false) {
+        if (initialize)
+            this->set_defaults();
+    }
+    
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(bed_shape);
+        OPT_PTR(has_heatbed);
+        OPT_PTR(bed_temperature);
+        OPT_PTR(bridge_acceleration);
+        OPT_PTR(bridge_fan_speed);
+        OPT_PTR(brim_connections_width);
+        OPT_PTR(brim_width);
+        OPT_PTR(cooling);
+        OPT_PTR(default_acceleration);
+        OPT_PTR(extruder_clearance_angle);
+        OPT_PTR(extruder_clearance_height);
+        OPT_PTR(extruder_clearance_radius);
+        OPT_PTR(extruder_offset);
+        OPT_PTR(fan_always_on);
+        OPT_PTR(fan_below_layer_time);
+        OPT_PTR(filament_colour);
+        OPT_PTR(filament_notes);
+        OPT_PTR(first_layer_acceleration);
+        OPT_PTR(first_layer_bed_temperature);
+        OPT_PTR(first_layer_extrusion_width);
+        OPT_PTR(first_layer_speed);
+        OPT_PTR(first_layer_temperature);
+        OPT_PTR(gcode_arcs);
+        OPT_PTR(interior_brim_width);
+        OPT_PTR(max_fan_speed);
+        OPT_PTR(min_fan_speed);
+        OPT_PTR(min_print_speed);
+        OPT_PTR(min_skirt_length);
+        OPT_PTR(notes);
+        OPT_PTR(nozzle_diameter);
+        OPT_PTR(ooze_prevention);
+        OPT_PTR(output_filename_format);
+        OPT_PTR(perimeter_acceleration);
+        OPT_PTR(post_process);
+        OPT_PTR(printer_notes);
+        OPT_PTR(resolution);
+        OPT_PTR(retract_before_travel);
+        OPT_PTR(retract_layer_change);
+        OPT_PTR(skirt_distance);
+        OPT_PTR(skirts);
+        OPT_PTR(slowdown_below_layer_time);
+        OPT_PTR(standby_temperature_delta);
+        OPT_PTR(temperature);
+        OPT_PTR(threads);
+        OPT_PTR(vibration_limit);
+        OPT_PTR(wipe);
+        OPT_PTR(wireframe);
         OPT_PTR(z_offset);
         OPT_PTR(z_steps_per_mm);
         
