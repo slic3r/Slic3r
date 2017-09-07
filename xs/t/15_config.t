@@ -188,7 +188,7 @@ foreach my $config (Slic3r::Config->new, Slic3r::Config::Static::new_FullPrintCo
     is $config2->get('perimeters'), 2, 'apply_dynamic';
 }
 {
-    my $config = Slic3r::Config->new_from_defaults;
+    my $config = Slic3r::Config->new;
     
     # test that no crash happens when using set_deserialize() with a key that hasn't been set() yet
     $config->set_deserialize('bed_shape', '-50x-50,50x-50,50x50,-50x50');
