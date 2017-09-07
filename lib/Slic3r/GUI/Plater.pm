@@ -908,45 +908,6 @@ sub add_undo_operation {
 
     $self->{redo_stack} = [];
 
-    # ToDo @Samir55 Remove those debugging statements.
-    if ($type eq "ROTATE") {
-        print "New Rotate operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . " ,Axis = " .  $new_undo_operation->{attributes}->[1] . " , Angle = " .  $new_undo_operation->{attributes}->[0] . "\n";
-    } elsif ($type eq "INCREASE") {
-        print "New Increase operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
-    } elsif ($type eq "DECREASE") {
-        print "New Decrease operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
-    } elsif ($type eq "MIRROR") {
-        print "New Rotate operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . " Axis = " .  $new_undo_operation->{attributes}->[0] . "\n";
-    } elsif ($type eq "REMOVE") {
-        print "New Remove operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
-    } elsif ($type eq "CUT" || $type eq "SPLIT") {
-        print "New " . $type . "operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
-        # Print the number of produced objects.
-        print "The number of " .  $type . " objects is " . ($#{$new_undo_operation->{attributes}->[1]->objects} + 1) . " Roger that.\n";
-        # Printing the produced objects identifiers.
-        print "The produced objects have the following new identififers (";
-        for (my $i = $new_undo_operation->{attributes}->[2]; $i < $#{$new_undo_operation->{attributes}->[1]->objects} + 1 + $new_undo_operation->{attributes}->[2]; $i++) {
-            print $i . ", ";
-        }
-        print ")\n";
-    } elsif ($type eq "CHANGE_SCALE") {
-        print "New Change Scale operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . " ,Axis = " .  $new_undo_operation->{attributes}->[0] . " , To_size = " .  $new_undo_operation->{attributes}->[1]  . " , Saved Scale = " .  $new_undo_operation->{attributes}->[2]   . "\n";
-        $self->changescale($new_undo_operation->{attributes}->[0], $new_undo_operation->{attributes}->[1], $new_undo_operation->{attributes}->[3], 'true');
-    } elsif ($type eq "RESET") {
-        print "New Delete All operation added\n";
-        # Printing all objects identifiers.
-        print "Plater objects have the now following identififers (";
-        foreach my $object (@{$self->{objects}}) {
-            print $object->{identifier} . ", ";
-        }
-        print ")\n";
-        print "The saved objects have the now following identififers (";
-        foreach my $identifier (@{$new_undo_operation->{attributes}->[1]}) {
-            print $identifier . ", ";
-        }
-        print ")\n";
-    }
-
     $self->limit_undo_operations(7); # Current limit of undo/redo operations.
     $self->GetFrame->on_undo_redo_stacks_changed;
 
@@ -972,40 +933,6 @@ sub undo {
     push @{$self->{redo_stack}}, $operation;
 
     my $type = $operation->{type};
-
-    # ToDo @Samir55 Remove those debugging statements.
-    if ($type eq "ROTATE") {
-        print "Undo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[1] . " , Angle = " .  $operation->{attributes}->[0] . "\n";
-    } elsif ($type eq "INCREASE") {
-        print "Undo Increase operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
-    } elsif ($type eq "DECREASE") {
-        print "Undo Decrease operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
-    } elsif ($type eq "MIRROR") {
-        print "Undo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " Axis = " .  $operation->{attributes}->[0] . "\n";
-    } elsif ($type eq "REMOVE") {
-        print "Undo Remove operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
-    } elsif ($type eq "CUT" || $type eq "SPLIT") {
-        print "Undo " . $type . "operation added with attributes" . ": Returned object identifier = " . $operation->{object_identifier} . "\n";
-        # Print the number of produced objects.
-        print "The number of " .  $type . " deleted objects is " . ($#{$operation->{attributes}->[1]->objects} + 1) . " Roger that.\n";
-        # Printing the produced objects identifiers.
-        print "The delected objects have the following new identififers (";
-        for (my $i = $operation->{attributes}->[2]; $i < $#{$operation->{attributes}->[1]->objects} + 1 + $operation->{attributes}->[2]; $i++) {
-            print $i . ", ";
-        }
-        print ")\n";
-    } elsif ($type eq "CHANGE_SCALE") {
-        print "Undo Change Scale operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[0] . " , To_size = " .  $operation->{attributes}->[1]  . " , Saved Scale = " .  $operation->{attributes}->[2]   . "\n";
-        $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
-    } elsif ($type eq "RESET") {
-        print "Undo Delete All operation added\n";
-        print "The returned objects have the now following identififers (";
-        foreach my $identifier (@{$operation->{attributes}->[1]}) {
-            print $identifier . ", ";
-        }
-        print ")\n";
-    }
-
 
     if ($type eq "ROTATE") {
         my $obj_idx = $self->get_object_index($operation->{object_identifier});
@@ -1060,12 +987,6 @@ sub undo {
             print  "\n";
             $objects_count--;
         }
-        # Printing all objects identifiers. ToDo @Samir55 remove those debugging statements.
-        print "After Undo Plater objects have the now following identififers (";
-        foreach my $object (@{$self->{objects}}) {
-            print $object->{identifier} . ", ";
-        }
-        print ")\n";
     }
 }
 
@@ -1078,46 +999,6 @@ sub redo {
     push @{$self->{undo_stack}}, $operation;
 
     my $type = $operation->{type};
-
-    # ToDo @Samir55 Remove those debugging statements.
-    if ($type eq "ROTATE") {
-        print "Redo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[1] . " , Angle = " .  $operation->{attributes}->[0] . "\n";
-    } elsif ($type eq "INCREASE") {
-        print "Redo Increase operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
-    } elsif ($type eq "DECREASE") {
-        print "Redo Decrease operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
-    } elsif ($type eq "MIRROR") {
-        print "Redo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " Axis = " .  $operation->{attributes}->[0] . "\n";
-    } elsif ($type eq "REMOVE") {
-        print "Redo Remove operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
-    } elsif ($type eq "CUT" || $type eq "SPLIT") {
-        print "Redo " . $type . "operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
-        # Print the number of produced objects.
-        print "The number of " .  $type . " objects is " . ($#{$operation->{attributes}->[1]->objects} + 1) . " Roger that.\n";
-        # Printing the produced objects identifiers.
-        print "The produced objects have the following new identififers (";
-        for (my $i = $operation->{attributes}->[2]; $i < $#{$operation->{attributes}->[1]->objects} + 1 + $operation->{attributes}->[2]; $i++) {
-            print $i . ", ";
-        }
-        print ")\n";
-    } elsif ($type eq "CHANGE_SCALE") {
-        print "Redo Change Scale operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[0] . " , To_size = " .  $operation->{attributes}->[1]  . " , Saved Scale = " .  $operation->{attributes}->[2]   . "\n";
-        $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
-    } elsif ($type eq "RESET") {
-        print "Redo Delete All operation added\n";
-        # Printing all objects identifiers.
-        print "Plater objects have the now following identififers (";
-        foreach my $object (@{$self->{objects}}) {
-            print $object->{identifier} . ", ";
-        }
-        print ")\n";
-        print "The saved objects have the now following identififers (";
-        foreach my $identifier (@{$operation->{attributes}->[1]}) {
-            print $identifier . ", ";
-        }
-        print ")\n";
-    }
-
 
     if ($type eq "ROTATE") {
         my $obj_idx = $self->get_object_index($operation->{object_identifier});
@@ -1716,7 +1597,7 @@ sub split_object {
     # Save the org object identifier.
     my $object_id = $self->{objects}->[$obj_idx]->identifier;
 
-    my @model_objects = @{$current_model_object->split_object}; # ToDo @Samir55 check this if this step doen't change the current object.
+    my @model_objects = @{$current_model_object->split_object};
     if (@model_objects == 1) {
         $self->resume_background_process;
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be split because it contains only one part.");
