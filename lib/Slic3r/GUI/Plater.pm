@@ -947,9 +947,20 @@ sub add_undo_operation {
         print ")\n";
     }
 
+    $self->limit_undo_operations(7); # Current limit of undo/redo operations.
     $self->GetFrame->on_undo_redo_stacks_changed;
 
     return $new_undo_operation;
+}
+
+sub limit_undo_operations {
+    my ($self, $limit)= @_;
+    return if !defined $limit;
+    # Delete undo operations succeeded by 4 operations or more to save memory.
+    while ($#{$self->{undo_stack}} + 1 > $limit) {
+        print "Removing an old operation.\n";
+        splice @{$self->{undo_stack}}, 0, 1;
+    }
 }
 
 sub undo {
