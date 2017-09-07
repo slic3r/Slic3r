@@ -334,16 +334,20 @@ sub is_loaded {
     return $self->{loaded};
 }
 
+sub on_undo_redo_stacks_changed {
+    my $self = shift;
+    # Enable undo or redo if they have operations in their stack.
+    $self->{plater_menu}->Enable($self->{plater_menu}->FindItem("Undo\tCtrl+Z"), $#{$self->{plater}->{undo_stack}} < 0 ? 0 : 1);
+    $self->{plater_menu}->Enable( $self->{plater_menu}->FindItem("Redo\tCtrl+Shift+Z"),  $#{$self->{plater}->{redo_stack}} < 0 ? 0 : 1);
+}
+
 sub on_plater_object_list_changed {
     my ($self, $have_objects) = @_;
     
     return if !defined $self->{plater_menu};
     $self->{plater_menu}->Enable($_->GetId, $have_objects)
         for $self->{plater_menu}->GetMenuItems;
-
-    # Enable undo or redo if they have operations in their stack.
-    $self->{plater_menu}->Enable($self->{plater_menu}->FindItem("Undo\tCtrl+Z"), $#{$self->{plater}->{undo_stack}} < 0 ? 0 : 1);
-    $self->{plater_menu}->Enable( $self->{plater_menu}->FindItem("Redo\tCtrl+Shift+Z"),  $#{$self->{plater}->{redo_stack}} < 0 ? 0 : 1);
+    $self->on_undo_redo_stacks_changed;
 }
 
 sub on_plater_selection_changed {
@@ -352,10 +356,8 @@ sub on_plater_selection_changed {
     return if !defined $self->{object_menu};
     $self->{object_menu}->Enable($_->GetId, $have_selection)
         for $self->{object_menu}->GetMenuItems;
+    $self->on_undo_redo_stacks_changed;
 
-    # Enable undo or redo if they have operations in their stack.
-    $self->{plater_menu}->Enable($self->{plater_menu}->FindItem("Undo\tCtrl+Z"), $#{$self->{plater}->{undo_stack}} < 0 ? 0 : 1);
-    $self->{plater_menu}->Enable( $self->{plater_menu}->FindItem("Redo\tCtrl+Shift+Z"),  $#{$self->{plater}->{redo_stack}} < 0 ? 0 : 1);
 }
 
 sub quick_slice {

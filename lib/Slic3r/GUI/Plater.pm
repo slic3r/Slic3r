@@ -947,6 +947,8 @@ sub add_undo_operation {
         print ")\n";
     }
 
+    $self->GetFrame->on_undo_redo_stacks_changed;
+
     return $new_undo_operation;
 }
 
@@ -959,11 +961,6 @@ sub undo {
     push @{$self->{redo_stack}}, $operation;
 
     my $type = $operation->{type};
-
-    # First select the object.
-    my $obj_idx = $self->get_object_index($operation->{object_identifier});
-    $self->select_object($obj_idx);
-
 
     # ToDo @Samir55 Remove those debugging statements.
     if ($type eq "ROTATE") {
@@ -1000,12 +997,20 @@ sub undo {
 
 
     if ($type eq "ROTATE") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->rotate(-1 * $operation->{attributes}->[0], $operation->{attributes}->[1], 'true'); # Apply inverse transformation.
     } elsif ($type eq "INCREASE") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->decrease($operation->{attributes}->[0], 'true');
     } elsif ($type eq "DECREASE") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->increase($operation->{attributes}->[0], 'true');
     } elsif ($type eq "MIRROR") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->mirror($operation->{attributes}->[0], 'true');
     } elsif ($type eq "REMOVE") {
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
@@ -1023,6 +1028,8 @@ sub undo {
         $self->{object_identifier}--;
         $self->{objects}->[-1]->identifier($operation->{object_identifier}); # Add the original assigned identifier.
     } elsif ($type eq "CHANGE_SCALE") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
     } elsif ($type eq "RESET") {
         # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
@@ -1058,10 +1065,6 @@ sub redo {
     return if !defined $operation;
 
     push @{$self->{undo_stack}}, $operation;
-
-    # First Select the object.
-    my $obj_idx = $self->get_object_index($operation->{object_identifier});
-    $self->select_object($obj_idx);
 
     my $type = $operation->{type};
 
@@ -1106,14 +1109,24 @@ sub redo {
 
 
     if ($type eq "ROTATE") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->rotate($operation->{attributes}->[0], $operation->{attributes}->[1], 'true');
     } elsif ($type eq "INCREASE") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->increase($operation->{attributes}->[0], 'true');
     } elsif ($type eq "DECREASE") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->decrease($operation->{attributes}->[0], 'true');
     } elsif ($type eq "MIRROR") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->mirror($operation->{attributes}->[0], 'true');
     } elsif ($type eq "REMOVE") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->remove(undef, 'true');
     } elsif ($type eq "CUT" || $type eq "SPLIT") {
         # Delete the org objects.
@@ -1130,6 +1143,8 @@ sub redo {
             $obj_count--;
         }
     } elsif ($type eq "CHANGE_SCALE") {
+        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        $self->select_object($obj_idx);
         $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[2], 'true');
     } elsif ($type eq "RESET") {
         $self->reset('true');
