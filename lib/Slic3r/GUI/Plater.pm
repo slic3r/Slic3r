@@ -908,6 +908,45 @@ sub add_undo_operation {
 
     $self->{redo_stack} = [];
 
+    # ToDo @Samir55 Remove those debugging statements.
+    if ($type eq "ROTATE") {
+        print "New Rotate operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . " ,Axis = " .  $new_undo_operation->{attributes}->[1] . " , Angle = " .  $new_undo_operation->{attributes}->[0] . "\n";
+    } elsif ($type eq "INCREASE") {
+        print "New Increase operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
+    } elsif ($type eq "DECREASE") {
+        print "New Decrease operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
+    } elsif ($type eq "MIRROR") {
+        print "New Rotate operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . " Axis = " .  $new_undo_operation->{attributes}->[0] . "\n";
+    } elsif ($type eq "REMOVE") {
+        print "New Remove operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
+    } elsif ($type eq "CUT" || $type eq "SPLIT") {
+        print "New " . $type . "operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
+        # Print the number of produced objects.
+        print "The number of " .  $type . " objects is " . ($#{$new_undo_operation->{attributes}->[1]->objects} + 1) . " Roger that.\n";
+        # Printing the produced objects identifiers.
+        print "The produced objects have the following new identififers (";
+        for (my $i = $new_undo_operation->{attributes}->[2]; $i < $#{$new_undo_operation->{attributes}->[1]->objects} + 1 + $new_undo_operation->{attributes}->[2]; $i++) {
+            print $i . ", ";
+        }
+        print ")\n";
+    } elsif ($type eq "CHANGE_SCALE") {
+        print "New Change Scale operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . " ,Axis = " .  $new_undo_operation->{attributes}->[0] . " , To_size = " .  $new_undo_operation->{attributes}->[1]  . " , Saved Scale = " .  $new_undo_operation->{attributes}->[2]   . "\n";
+        $self->changescale($new_undo_operation->{attributes}->[0], $new_undo_operation->{attributes}->[1], $new_undo_operation->{attributes}->[3], 'true');
+    } elsif ($type eq "RESET") {
+        print "New Delete All operation added\n";
+        # Printing all objects identifiers.
+        print "Plater objects have the now following identififers (";
+        foreach my $object (@{$self->{objects}}) {
+            print $object->{identifier} . ", ";
+        }
+        print ")\n";
+        print "The saved objects have the now following identififers (";
+        foreach my $identifier (@{$new_undo_operation->{attributes}->[1]}) {
+            print $identifier . ", ";
+        }
+        print ")\n";
+    }
+
     return $new_undo_operation;
 }
 
@@ -925,6 +964,41 @@ sub undo {
     my $obj_idx = $self->get_object_index($operation->{object_identifier});
     $self->select_object($obj_idx);
 
+
+    # ToDo @Samir55 Remove those debugging statements.
+    if ($type eq "ROTATE") {
+        print "Undo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[1] . " , Angle = " .  $operation->{attributes}->[0] . "\n";
+    } elsif ($type eq "INCREASE") {
+        print "Undo Increase operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+    } elsif ($type eq "DECREASE") {
+        print "Undo Decrease operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+    } elsif ($type eq "MIRROR") {
+        print "Undo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " Axis = " .  $operation->{attributes}->[0] . "\n";
+    } elsif ($type eq "REMOVE") {
+        print "Undo Remove operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+    } elsif ($type eq "CUT" || $type eq "SPLIT") {
+        print "Undo " . $type . "operation added with attributes" . ": Returned object identifier = " . $operation->{object_identifier} . "\n";
+        # Print the number of produced objects.
+        print "The number of " .  $type . " deleted objects is " . ($#{$operation->{attributes}->[1]->objects} + 1) . " Roger that.\n";
+        # Printing the produced objects identifiers.
+        print "The delected objects have the following new identififers (";
+        for (my $i = $operation->{attributes}->[2]; $i < $#{$operation->{attributes}->[1]->objects} + 1 + $operation->{attributes}->[2]; $i++) {
+            print $i . ", ";
+        }
+        print ")\n";
+    } elsif ($type eq "CHANGE_SCALE") {
+        print "Undo Change Scale operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[0] . " , To_size = " .  $operation->{attributes}->[1]  . " , Saved Scale = " .  $operation->{attributes}->[2]   . "\n";
+        $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
+    } elsif ($type eq "RESET") {
+        print "Undo Delete All operation added\n";
+        print "The returned objects have the now following identififers (";
+        foreach my $identifier (@{$operation->{attributes}->[1]}) {
+            print $identifier . ", ";
+        }
+        print ")\n";
+    }
+
+
     if ($type eq "ROTATE") {
         $self->rotate(-1 * $operation->{attributes}->[0], $operation->{attributes}->[1], 'true'); # Apply inverse transformation.
     } elsif ($type eq "INCREASE") {
@@ -940,13 +1014,14 @@ sub undo {
     } elsif ($type eq "CUT" || $type eq "SPLIT") {
         # Delete the produced objects.
         my $obj_identifiers_start = $operation->{attributes}->[2];
-        for (my $i_object = 0; $i_object <= $#{$operation->{attributes}->[1]->objects}; $i_object++) {
+        for (my $i_object = 0; $i_object < $#{$operation->{attributes}->[1]->objects} + 1; $i_object++) {
+            print "The removed after split undo objects identifiers are " .$obj_identifiers_start . "\n";
             $self->remove($self->get_object_index($obj_identifiers_start++), 'true');
         }
         # Add the original object.
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
         $self->{object_identifier}--;
-        $self->{objects}->[-1]->identifier($operation->{object_identifier});
+        $self->{objects}->[-1]->identifier($operation->{object_identifier}); # Add the original assigned identifier.
     } elsif ($type eq "CHANGE_SCALE") {
         $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
     } elsif ($type eq "RESET") {
@@ -957,10 +1032,22 @@ sub undo {
 
         # don't forget the identifiers.
         my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+        print "Undo Objects Count is " . $objects_count . "\n";
         foreach my $identifier (@{$operation->{attributes}->[1]})
         {
+            print "The current object of index has the following identifer BEFORE: ". $self->{objects}->[-$objects_count]->identifier. " ";
             $self->{objects}->[-$objects_count]->identifier($identifier);
+            print "AFTER: ";
+            print $self->{objects}->[-$objects_count]->identifier;
+            print  "\n";
+            $objects_count--;
         }
+        # Printing all objects identifiers. ToDo @Samir55 remove those debugging statements.
+        print "After Undo Plater objects have the now following identififers (";
+        foreach my $object (@{$self->{objects}}) {
+            print $object->{identifier} . ", ";
+        }
+        print ")\n";
     }
 }
 
@@ -977,6 +1064,46 @@ sub redo {
     $self->select_object($obj_idx);
 
     my $type = $operation->{type};
+
+    # ToDo @Samir55 Remove those debugging statements.
+    if ($type eq "ROTATE") {
+        print "Redo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[1] . " , Angle = " .  $operation->{attributes}->[0] . "\n";
+    } elsif ($type eq "INCREASE") {
+        print "Redo Increase operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+    } elsif ($type eq "DECREASE") {
+        print "Redo Decrease operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+    } elsif ($type eq "MIRROR") {
+        print "Redo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " Axis = " .  $operation->{attributes}->[0] . "\n";
+    } elsif ($type eq "REMOVE") {
+        print "Redo Remove operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+    } elsif ($type eq "CUT" || $type eq "SPLIT") {
+        print "Redo " . $type . "operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+        # Print the number of produced objects.
+        print "The number of " .  $type . " objects is " . ($#{$operation->{attributes}->[1]->objects} + 1) . " Roger that.\n";
+        # Printing the produced objects identifiers.
+        print "The produced objects have the following new identififers (";
+        for (my $i = $operation->{attributes}->[2]; $i < $#{$operation->{attributes}->[1]->objects} + 1 + $operation->{attributes}->[2]; $i++) {
+            print $i . ", ";
+        }
+        print ")\n";
+    } elsif ($type eq "CHANGE_SCALE") {
+        print "Redo Change Scale operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[0] . " , To_size = " .  $operation->{attributes}->[1]  . " , Saved Scale = " .  $operation->{attributes}->[2]   . "\n";
+        $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
+    } elsif ($type eq "RESET") {
+        print "Redo Delete All operation added\n";
+        # Printing all objects identifiers.
+        print "Plater objects have the now following identififers (";
+        foreach my $object (@{$self->{objects}}) {
+            print $object->{identifier} . ", ";
+        }
+        print ")\n";
+        print "The saved objects have the now following identififers (";
+        foreach my $identifier (@{$operation->{attributes}->[1]}) {
+            print $identifier . ", ";
+        }
+        print ")\n";
+    }
+
 
     if ($type eq "ROTATE") {
         $self->rotate($operation->{attributes}->[0], $operation->{attributes}->[1], 'true');
@@ -1555,8 +1682,15 @@ sub split_object {
     }
     
     $self->pause_background_process;
-    
-    my @model_objects = @{$current_model_object->split_object};
+
+    # Save the curent model object for undo/redo operataions.
+    my $org_object_model = Slic3r::Model->new;
+    $org_object_model->add_object($current_model_object);
+
+    # Save the org object identifier.
+    my $object_id = $self->{objects}->[$obj_idx]->identifier;
+
+    my @model_objects = @{$current_model_object->split_object}; # ToDo @Samir55 check this if this step doen't change the current object.
     if (@model_objects == 1) {
         $self->resume_background_process;
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be split because it contains only one part.");
@@ -1575,9 +1709,13 @@ sub split_object {
     # remove the original object before spawning the object_loaded event, otherwise 
     # we'll pass the wrong $obj_idx to it (which won't be recognized after the
     # thumbnail thread returns)
-    $self->remove($obj_idx);
+    $self->remove($obj_idx, 'true'); # Don't push to the undo stack it's considered a split opeation not a remove one.
     $current_object = $obj_idx = undef;
-    
+
+    # Save the object identifiers used in undo/redo operations.
+    my $new_objects_id_start = $self->{object_identifier};
+    print "The new object identifier start for split is " .$new_objects_id_start . "\n";
+
     # load all model objects at once, otherwise the plate would be rearranged after each one
     # causing original positions not to be kept
     $self->load_model_objects(@model_objects);
@@ -1587,13 +1725,6 @@ sub split_object {
     foreach my $new_object (@model_objects) {
         $new_objects_model->add_object($new_object);
     }
-
-    my $org_object_model = Slic3r::Model->new;
-    $org_object_model->add_object($current_model_object);
-
-    # Save the object identifiers used in undo/redo operations.
-    my $object_id = $self->{objects}->[$obj_idx]->identifier;
-    my $new_objects_id_start = $self->{object_identifier};
 
     $self->add_undo_operation("SPLIT", $object_id, $org_object_model, $new_objects_model, $new_objects_id_start);
 }
