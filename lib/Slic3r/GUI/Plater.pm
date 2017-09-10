@@ -987,7 +987,13 @@ sub undo {
             print  "\n";
             $objects_count--;
         }
-    }
+    } elsif ($type eq "ADD") {
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+        for (my $identifier = $operation->{attributes}->[1]; $identifier < $objects_count + $operation->{attributes}->[1]; $identifier++) {
+			my $obj_idx = $self->get_object_index($identifier);
+            $self->remove($obj_idx, 'true');
+        }
+	}
 }
 
 sub redo {
@@ -1040,14 +1046,40 @@ sub redo {
         $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[2], 'true');
     } elsif ($type eq "RESET") {
         $self->reset('true');
+    } elsif ($type eq "ADD") {
+        # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
+        my $current_objects_identifier = $self->{object_identifier};
+        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        $self->{object_identifier} = $current_objects_identifier;
+
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+        my $start_identifier = $operation->{attributes}->[0];
+        foreach my $object (@{$operation->{attributes}->[0]->objects})
+        {
+            $self->{objects}->[-$objects_count]->identifier($start_identifier++);
+        }
     }
 }
 
 sub add {
     my $self = shift;
     
+    # Save the current object identifier to track added objects.
+    my $start_object_id = $self->{object_identifier};
+    
     my @input_files = wxTheApp->open_model($self);
     $self->load_file($_) for @input_files;
+    
+    # Save the added objects.
+    my $new_model = $self->{model}->new;
+    # Get newly added objects count.
+    my $new_objects_count = $self->{object_identifier} - $start_object_id;
+    for (my $i_object = $start_object_id; $i_object < $new_objects_count + $start_object_id; $i_object++){
+			my $object_index =  $self->get_object_index($i_object);
+            $new_model->add_object($self->{model}->get_object($object_index));
+    }
+
+    $self->add_undo_operation("ADD", undef, $new_model, $start_object_id);
 }
 
 sub add_tin {
