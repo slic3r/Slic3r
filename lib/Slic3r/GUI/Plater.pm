@@ -908,7 +908,55 @@ sub add_undo_operation {
 
     $self->{redo_stack} = [];
 
-    $self->limit_undo_operations(7); # Current limit of undo/redo operations.
+    # ToDo @Samir55 Remove those debugging statements.
+    if ($type eq "ROTATE") {
+            print "New Rotate operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . " ,Axis = " .  $new_undo_operation->{attributes}->[1] . " , Angle = " .  $new_undo_operation->{attributes}->[0] . "\n";
+        } elsif ($type eq "INCREASE") {
+            print "New Increase operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
+        } elsif ($type eq "DECREASE") {
+            print "New Decrease operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
+        } elsif ($type eq "MIRROR") {
+            print "New Rotate operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . " Axis = " .  $new_undo_operation->{attributes}->[0] . "\n";
+        } elsif ($type eq "REMOVE") {
+            print "New Remove operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
+        } elsif ($type eq "CUT" || $type eq "SPLIT") {
+            print "New " . $type . "operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . "\n";
+        # Print the number of produced objects.
+            print "The number of " .  $type . " objects is " . ($#{$new_undo_operation->{attributes}->[1]->objects} + 1) . " Roger that.\n";
+        # Printing the produced objects identifiers.
+            print "The produced objects have the following new identififers (";
+        for (my $i = $new_undo_operation->{attributes}->[2]; $i < $#{$new_undo_operation->{attributes}->[1]->objects} + 1 + $new_undo_operation->{attributes}->[2]; $i++) {
+                print $i . ", ";
+            }
+        print ")\n";
+        } elsif ($type eq "CHANGE_SCALE") {
+            print "New Change Scale operation added with attributes" . ": object identifier = " . $new_undo_operation->{object_identifier} . " ,Axis = " .  $new_undo_operation->{attributes}->[0] . " , To_size = " .  $new_undo_operation->{attributes}->[1]  . " , Saved Scale = " .  $new_undo_operation->{attributes}->[2]   . "\n";
+            $self->changescale($new_undo_operation->{attributes}->[0], $new_undo_operation->{attributes}->[1], $new_undo_operation->{attributes}->[3], 'true');
+        } elsif ($type eq "RESET") {
+            print "New Delete All operation added\n";
+            # Printing all objects identifiers.
+            print "Plater objects have the now following identififers (";
+        foreach my $object (@{$self->{objects}}) {
+                print $object->{identifier} . ", ";
+            }
+        print ")\n";
+        print "The saved objects have the now following identififers (";
+        foreach my $identifier (@{$new_undo_operation->{attributes}->[1]}) {
+                print $identifier . ", ";
+            }
+            print ")\n";
+        } elsif ($type eq "ADD") {
+        print "New ADD operation added , objects count is ";
+        my $objects_count = $#{$new_undo_operation->{attributes}->[0]->objects} + 1;
+        print $objects_count. "their identifiers are ";
+        for (my $identifier = $new_undo_operation->{attributes}->[1]; $identifier < $objects_count + $new_undo_operation->{attributes}->[1]; $identifier++) {
+            print $identifier. " ";
+        }
+        print "\n";
+    }
+
+
+    $self->limit_undo_operations(8); # Current limit of undo/redo operations.
     $self->GetFrame->on_undo_redo_stacks_changed;
 
     return $new_undo_operation;
@@ -934,26 +982,88 @@ sub undo {
 
     my $type = $operation->{type};
 
+
+    # ToDo @Samir55 Remove those debugging statements.
     if ($type eq "ROTATE") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
-        $self->select_object($obj_idx);
-        $self->rotate(-1 * $operation->{attributes}->[0], $operation->{attributes}->[1], 'true'); # Apply inverse transformation.
+        print "Undo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[1] . " , Angle = " .  $operation->{attributes}->[0] . "\n";
     } elsif ($type eq "INCREASE") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
-        $self->select_object($obj_idx);
-        $self->decrease($operation->{attributes}->[0], 'true');
+        print "Undo Increase operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
     } elsif ($type eq "DECREASE") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
-        $self->select_object($obj_idx);
-        $self->increase($operation->{attributes}->[0], 'true');
+        print "Undo Decrease operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
     } elsif ($type eq "MIRROR") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
-        $self->select_object($obj_idx);
-        $self->mirror($operation->{attributes}->[0], 'true');
+        print "Undo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " Axis = " .  $operation->{attributes}->[0] . "\n";
     } elsif ($type eq "REMOVE") {
-        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        print "Undo Remove operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+    } elsif ($type eq "CUT" || $type eq "SPLIT") {
+        print "Undo ".$type."operation added with attributes".": Returned object identifier = ".$operation->{object_identifier}."\n";
+        # Print the number of produced objects.
+        print "The number of ".$type." deleted objects is ".($#{$operation->{attributes}->[1]->objects} + 1)." Roger that.\n";
+        # Printing the produced objects identifiers.
+        print "The delected objects have the following new identififers (";
+        for (my $i = $operation->{attributes}->[2]; $i < $#{$operation->{attributes}->[1]->objects} + 1 + $operation->{attributes}->[2]; $i++) {
+            print $i.", ";
+        }
+        print ")\n";
+    } elsif ($type eq "CHANGE_SCALE") {
+        print "Undo Change Scale operation added with attributes".": object identifier = ".$operation->{object_identifier}." ,Axis = ".$operation->{attributes}->[0]." , To_size = ".$operation->{attributes}->[1]." , Saved Scale = ".$operation->{attributes}->[2]."\n";
+        $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3],
+            'true');
+    } elsif ($type eq "RESET") {
+        print "Undo Delete All operation added\n";
+        print "The returned objects have the now following identififers (";
+        foreach my $identifier (@{$operation->{attributes}->[1]}) {
+            print $identifier.", ";
+        }
+        print ")\n";
+    } elsif ($type eq "ADD") {
+        print "UNDO ADD operation added , objects count is ";
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+        print $objects_count. "their identifiers are ";
+        for (my $identifier = $operation->{attributes}->[1]; $identifier < $objects_count + $operation->{attributes}->[1]; $identifier++) {
+            print $identifier. " ";
+        }
+        print "\n";
+    }
+
+    if ($type eq "ROTATE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $angle = $operation->{attributes}->[0];
+        my $axis = $operation->{attributes}->[1];
+        $self->rotate(-1 * $angle, $axis, 'true'); # Apply inverse transformation.
+
+    } elsif ($type eq "INCREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->decrease($copies, 'true');
+
+    } elsif ($type eq "DECREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->increase($copies, 'true');
+
+    } elsif ($type eq "MIRROR") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $axis = $operation->{attributes}->[0];
+        $self->mirror($axis, 'true');
+
+    } elsif ($type eq "REMOVE") {
+        my $_model = $operation->{attributes}->[0];
+        $self->load_model_objects(@{$_model->objects});
         $self->{object_identifier}--; # Decrement the identifier as we will change the object identifier with the saved one.
         $self->{objects}->[-1]->identifier($operation->{object_identifier});
+
     } elsif ($type eq "CUT" || $type eq "SPLIT") {
         # Delete the produced objects.
         my $obj_identifiers_start = $operation->{attributes}->[2];
@@ -965,14 +1075,22 @@ sub undo {
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
         $self->{object_identifier}--;
         $self->{objects}->[-1]->identifier($operation->{object_identifier}); # Add the original assigned identifier.
+
     } elsif ($type eq "CHANGE_SCALE") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
-        $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
+
+        my $axis = $operation->{attributes}->[0];
+        my $tosize = $operation->{attributes}->[1];
+        my $saved_scale = $operation->{attributes}->[3];
+        $self->changescale($axis, $tosize, $saved_scale, 'true');
+
     } elsif ($type eq "RESET") {
         # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
         my $current_objects_identifier = $self->{object_identifier};
-        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        my $_model = $operation->{attributes}->[0];
+        $self->load_model_objects(@{$_model->objects});
         $self->{object_identifier} = $current_objects_identifier;
 
         # don't forget the identifiers.
@@ -986,10 +1104,18 @@ sub undo {
             print $self->{objects}->[-$objects_count]->identifier;
             print  "\n";
             $objects_count--;
+            # Printing all objects identifiers. ToDo @Samir55 remove those debugging statements.
+                 print "After Undo Plater objects have the now following identififers (";
+                 foreach my $object (@{$self->{objects}}) {
+                     print $object->{identifier} . ", ";
+                 }
+                 print ")\n";
         }
+
     } elsif ($type eq "ADD") {
         my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
-        for (my $identifier = $operation->{attributes}->[1]; $identifier < $objects_count + $operation->{attributes}->[1]; $identifier++) {
+        my $identifier_start = $operation->{attributes}->[1];
+        for (my $identifier = $identifier_start; $identifier < $objects_count + $identifier_start; $identifier++) {
 			my $obj_idx = $self->get_object_index($identifier);
             $self->remove($obj_idx, 'true');
         }
@@ -1006,26 +1132,89 @@ sub redo {
 
     my $type = $operation->{type};
 
+
+    # ToDo @Samir55 Remove those debugging statements.
+        if ($type eq "ROTATE") {
+              print "Redo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[1] . " , Angle = " .  $operation->{attributes}->[0] . "\n";
+          } elsif ($type eq "INCREASE") {
+              print "Redo Increase operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+          } elsif ($type eq "DECREASE") {
+              print "Redo Decrease operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+          } elsif ($type eq "MIRROR") {
+              print "Redo Rotate operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " Axis = " .  $operation->{attributes}->[0] . "\n";
+          } elsif ($type eq "REMOVE") {
+              print "Redo Remove operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+          } elsif ($type eq "CUT" || $type eq "SPLIT") {
+              print "Redo " . $type . "operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . "\n";
+              # Print the number of produced objects.
+                print "The number of " .  $type . " objects is " . ($#{$operation->{attributes}->[1]->objects} + 1) . " Roger that.\n";
+            # Printing the produced objects identifiers.
+                print "The produced objects have the following new identififers (";
+            for (my $i = $operation->{attributes}->[2]; $i < $#{$operation->{attributes}->[1]->objects} + 1 + $operation->{attributes}->[2]; $i++) {
+                    print $i . ", ";
+                }
+              print ")\n";
+          } elsif ($type eq "CHANGE_SCALE") {
+              print "Redo Change Scale operation added with attributes" . ": object identifier = " . $operation->{object_identifier} . " ,Axis = " .  $operation->{attributes}->[0] . " , To_size = " .  $operation->{attributes}->[1]  . " , Saved Scale = " .  $operation->{attributes}->[2]   . "\n";
+              $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[3], 'true');
+          } elsif ($type eq "RESET") {
+            print "Redo Delete All operation added\n";
+            # Printing all objects identifiers.
+            print "Plater objects have the now following identififers (";
+            foreach my $object (@{$self->{objects}}) {
+                print $object->{identifier}.", ";
+            }
+            print ")\n";
+            print "The saved objects have the now following identififers (";
+            foreach my $identifier (@{$operation->{attributes}->[1]}) {
+                print $identifier.", ";
+            }
+            print ")\n";
+        } elsif ($type eq "ADD") {
+            print "REDO ADD operation added\n";
+        }
+
+
     if ($type eq "ROTATE") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
-        $self->rotate($operation->{attributes}->[0], $operation->{attributes}->[1], 'true');
+
+        my $angle = $operation->{attributes}->[0];
+        my $axis = $operation->{attributes}->[1];
+        $self->rotate($angle, $axis, 'true');
+
     } elsif ($type eq "INCREASE") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
-        $self->increase($operation->{attributes}->[0], 'true');
+
+        my $copies = $operation->{attributes}->[0];
+        $self->increase($copies, 'true');
+
     } elsif ($type eq "DECREASE") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
-        $self->decrease($operation->{attributes}->[0], 'true');
+
+        my $copies = $operation->{attributes}->[0];
+        $self->decrease($copies, 'true');
+
     } elsif ($type eq "MIRROR") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
-        $self->mirror($operation->{attributes}->[0], 'true');
+
+        my $axis = $operation->{attributes}->[0];
+        $self->mirror($axis, 'true');
+
     } elsif ($type eq "REMOVE") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
+
         $self->remove(undef, 'true');
+
     } elsif ($type eq "CUT" || $type eq "SPLIT") {
         # Delete the org objects.
         $self->remove($self->get_object_index($operation->{object_identifier}), 'true');
@@ -1041,9 +1230,15 @@ sub redo {
             $obj_count--;
         }
     } elsif ($type eq "CHANGE_SCALE") {
-        my $obj_idx = $self->get_object_index($operation->{object_identifier});
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
-        $self->changescale($operation->{attributes}->[0], $operation->{attributes}->[1], $operation->{attributes}->[2], 'true');
+
+        my $axis = $operation->{attributes}->[0];
+        my $tosize = $operation->{attributes}->[1];
+        my $old_scale = $operation->{attributes}->[2];
+        $self->changescale($axis, $tosize, $old_scale, 'true');
+
     } elsif ($type eq "RESET") {
         $self->reset('true');
     } elsif ($type eq "ADD") {
@@ -1053,10 +1248,11 @@ sub redo {
         $self->{object_identifier} = $current_objects_identifier;
 
         my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
-        my $start_identifier = $operation->{attributes}->[0];
+        my $start_identifier = $operation->{attributes}->[1];
         foreach my $object (@{$operation->{attributes}->[0]->objects})
         {
             $self->{objects}->[-$objects_count]->identifier($start_identifier++);
+            $objects_count--;
         }
     }
 }
@@ -1070,8 +1266,14 @@ sub add {
     my @input_files = wxTheApp->open_model($self);
     $self->load_file($_) for @input_files;
     
+    # Check if no objects are added.
+    if ($start_object_id == $self->{object_identifier}) {
+		return;
+	}
+    
     # Save the added objects.
     my $new_model = $self->{model}->new;
+    
     # Get newly added objects count.
     my $new_objects_count = $self->{object_identifier} - $start_object_id;
     for (my $i_object = $start_object_id; $i_object < $new_objects_count + $start_object_id; $i_object++){
