@@ -1,5 +1,20 @@
 # The "Plater" tab. It contains the "3D", "2D", "Preview" and "Layers" subtabs.
 
+package Slic3r::GUI::Plater::UndoOperation;
+use strict;
+use warnings;
+
+sub new{
+    my $class = shift;
+    my $self = {
+        type => shift,
+        object_identifier => shift,
+        attributes => shift,
+    };
+    bless ($self, $class);
+    return $self;
+}
+
 package Slic3r::GUI::Plater;
 use strict;
 use warnings;
@@ -56,7 +71,16 @@ sub new {
     $self->{processed} = 0;
     # List of Perl objects Slic3r::GUI::Plater::Object, representing a 2D preview of the platter.
     $self->{objects} = [];
-    
+
+    # Objects identifier used for undo/redo operations. It's a one time id assigned to each newly created object.
+    $self->{object_identifier} = 0;
+
+    # Stack of undo operations.
+    $self->{undo_stack} = [];
+
+    # Stack of redo operations.
+    $self->{redo_stack} = [];
+
     $self->{print}->set_status_cb(sub {
         my ($percent, $message) = @_;
         
@@ -857,11 +881,262 @@ sub config {
     return $config;
 }
 
+sub get_object_index {
+    my $self = shift;
+    my ($object_indentifier) = @_;
+    return undef if !defined $object_indentifier;
+
+    for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
+        if ($self->{objects}->[$i]->identifier eq $object_indentifier) {
+            return $i;
+        }
+    }
+    return undef;
+}
+
+sub add_undo_operation {
+    my $self = shift;
+    my @parameters = @_;
+
+    my $type = $parameters[0];
+    my $object_identifier = $parameters[1];
+    my @attributes = @parameters[2..$#parameters]; # operation values.
+
+    my $new_undo_operation = new Slic3r::GUI::Plater::UndoOperation($type, $object_identifier, \@attributes);
+
+    push @{$self->{undo_stack}}, $new_undo_operation;
+
+    $self->{redo_stack} = [];
+
+    $self->limit_undo_operations(8); # Current limit of undo/redo operations.
+    $self->GetFrame->on_undo_redo_stacks_changed;
+
+    return $new_undo_operation;
+}
+
+sub limit_undo_operations {
+    my ($self, $limit)= @_;
+    return if !defined $limit;
+    # Delete undo operations succeeded by 4 operations or more to save memory.
+    while ($#{$self->{undo_stack}} + 1 > $limit) {
+        print "Removing an old operation.\n";
+        splice @{$self->{undo_stack}}, 0, 1;
+    }
+}
+
+sub undo {
+    my $self = shift;
+
+    my $operation = pop @{$self->{undo_stack}};
+    return if !defined $operation;
+
+    push @{$self->{redo_stack}}, $operation;
+
+    my $type = $operation->{type};
+
+    if ($type eq "ROTATE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $angle = $operation->{attributes}->[0];
+        my $axis = $operation->{attributes}->[1];
+        $self->rotate(-1 * $angle, $axis, 'true'); # Apply inverse transformation.
+
+    } elsif ($type eq "INCREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->decrease($copies, 'true');
+
+    } elsif ($type eq "DECREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->increase($copies, 'true');
+
+    } elsif ($type eq "MIRROR") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $axis = $operation->{attributes}->[0];
+        $self->mirror($axis, 'true');
+
+    } elsif ($type eq "REMOVE") {
+        my $_model = $operation->{attributes}->[0];
+        $self->load_model_objects(@{$_model->objects});
+        $self->{object_identifier}--; # Decrement the identifier as we will change the object identifier with the saved one.
+        $self->{objects}->[-1]->identifier($operation->{object_identifier});
+
+    } elsif ($type eq "CUT" || $type eq "SPLIT") {
+        # Delete the produced objects.
+        my $obj_identifiers_start = $operation->{attributes}->[2];
+        for (my $i_object = 0; $i_object < $#{$operation->{attributes}->[1]->objects} + 1; $i_object++) {
+            $self->remove($self->get_object_index($obj_identifiers_start++), 'true');
+        }
+        # Add the original object.
+        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        $self->{object_identifier}--;
+        $self->{objects}->[-1]->identifier($operation->{object_identifier}); # Add the original assigned identifier.
+
+    } elsif ($type eq "CHANGE_SCALE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $axis = $operation->{attributes}->[0];
+        my $tosize = $operation->{attributes}->[1];
+        my $saved_scale = $operation->{attributes}->[3];
+        $self->changescale($axis, $tosize, $saved_scale, 'true');
+
+    } elsif ($type eq "RESET") {
+        # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
+        my $current_objects_identifier = $self->{object_identifier};
+        my $_model = $operation->{attributes}->[0];
+        $self->load_model_objects(@{$_model->objects});
+        $self->{object_identifier} = $current_objects_identifier;
+
+        # don't forget the identifiers.
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+
+        foreach my $identifier (@{$operation->{attributes}->[1]})
+        {
+            $self->{objects}->[-$objects_count]->identifier($identifier);
+            $objects_count--;
+        }
+
+    } elsif ($type eq "ADD") {
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+        my $identifier_start = $operation->{attributes}->[1];
+        for (my $identifier = $identifier_start; $identifier < $objects_count + $identifier_start; $identifier++) {
+			my $obj_idx = $self->get_object_index($identifier);
+            $self->remove($obj_idx, 'true');
+        }
+	}
+}
+
+sub redo {
+    my $self = shift;
+
+    my $operation = pop @{$self->{redo_stack}};
+    return if !defined $operation;
+
+    push @{$self->{undo_stack}}, $operation;
+
+    my $type = $operation->{type};
+
+    if ($type eq "ROTATE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $angle = $operation->{attributes}->[0];
+        my $axis = $operation->{attributes}->[1];
+        $self->rotate($angle, $axis, 'true');
+
+    } elsif ($type eq "INCREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->increase($copies, 'true');
+
+    } elsif ($type eq "DECREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->decrease($copies, 'true');
+
+    } elsif ($type eq "MIRROR") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $axis = $operation->{attributes}->[0];
+        $self->mirror($axis, 'true');
+
+    } elsif ($type eq "REMOVE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        $self->remove(undef, 'true');
+
+    } elsif ($type eq "CUT" || $type eq "SPLIT") {
+        # Delete the org objects.
+        $self->remove($self->get_object_index($operation->{object_identifier}), 'true');
+        # Add the new objects and revert changes to the plater object identifier.
+        my $current_objects_identifier = $self->{object_identifier};
+        $self->load_model_objects(@{$operation->{attributes}->[1]->objects});
+        $self->{object_identifier} = $current_objects_identifier;
+        # Add their identifiers.
+        my $obj_identifiers_start = $operation->{attributes}->[2];
+        my $obj_count = $#{$operation->{attributes}->[1]->objects} + 1;
+        for (my $i_object = 0; $i_object <= $#{$operation->{attributes}->[1]->objects}; $i_object++){
+            $self->{objects}->[-$obj_count]->identifier($obj_identifiers_start++);
+            $obj_count--;
+        }
+    } elsif ($type eq "CHANGE_SCALE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $axis = $operation->{attributes}->[0];
+        my $tosize = $operation->{attributes}->[1];
+        my $old_scale = $operation->{attributes}->[2];
+        $self->changescale($axis, $tosize, $old_scale, 'true');
+
+    } elsif ($type eq "RESET") {
+        $self->reset('true');
+    } elsif ($type eq "ADD") {
+        # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
+        my $current_objects_identifier = $self->{object_identifier};
+        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        $self->{object_identifier} = $current_objects_identifier;
+
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+        my $start_identifier = $operation->{attributes}->[1];
+        foreach my $object (@{$operation->{attributes}->[0]->objects})
+        {
+            $self->{objects}->[-$objects_count]->identifier($start_identifier++);
+            $objects_count--;
+        }
+    }
+}
+
 sub add {
     my $self = shift;
     
+    # Save the current object identifier to track added objects.
+    my $start_object_id = $self->{object_identifier};
+    
     my @input_files = wxTheApp->open_model($self);
     $self->load_file($_) for @input_files;
+    
+    # Check if no objects are added.
+    if ($start_object_id == $self->{object_identifier}) {
+		return;
+	}
+    
+    # Save the added objects.
+    my $new_model = $self->{model}->new;
+    
+    # Get newly added objects count.
+    my $new_objects_count = $self->{object_identifier} - $start_object_id;
+    for (my $i_object = $start_object_id; $i_object < $new_objects_count + $start_object_id; $i_object++){
+			my $object_index =  $self->get_object_index($i_object);
+            $new_model->add_object($self->{model}->get_object($object_index));
+    }
+
+    $self->add_undo_operation("ADD", undef, $new_model, $start_object_id);
 }
 
 sub add_tin {
@@ -938,7 +1213,10 @@ sub load_file {
     }
     
     $process_dialog->Destroy;
-    
+
+    # Empty the redo stack
+    $self->{redo_stack} = [];
+
     return @obj_idx;
 }
 
@@ -960,10 +1238,12 @@ sub load_model_objects {
     foreach my $model_object (@model_objects) {
         my $o = $self->{model}->add_object($model_object);
         $o->repair;
-        
+
         push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
-            name => $model_object->name || basename($model_object->input_file),
-        );
+                name => $model_object->name || basename($model_object->input_file), identifier =>
+                $self->{object_identifier}++
+            );
+
         push @obj_idx, $#{ $self->{objects} };
     
         if ($model_object->instances_count == 0) {
@@ -1028,7 +1308,7 @@ sub bed_centerf {
 
 sub remove {
     my $self = shift;
-    my ($obj_idx) = @_;
+    my ($obj_idx, $dont_push) = @_;
     
     $self->stop_background_process;
     
@@ -1040,7 +1320,12 @@ sub remove {
     if (!defined $obj_idx) {
         ($obj_idx, undef) = $self->selected_object;
     }
-    
+
+    # Save the object identifier and copy the object for undo/redo operations.
+    my $object_id = $self->{objects}->[$obj_idx]->identifier;
+    my $new_model = Slic3r::Model->new;  # store this before calling get_object()
+    $new_model->add_object($self->{model}->get_object($obj_idx));
+
     splice @{$self->{objects}}, $obj_idx, 1;
     $self->{model}->delete_object($obj_idx);
     $self->{print}->delete_object($obj_idx);
@@ -1048,28 +1333,44 @@ sub remove {
     
     $self->select_object(undef);
     $self->on_model_change;
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("REMOVE", $object_id, $new_model);
+    }
 }
 
 sub reset {
-    my $self = shift;
+    my ($self, $dont_push) = @_;
     
     $self->stop_background_process;
     
     # Prevent toolpaths preview from rendering while we modify the Print object
     $self->{toolpaths2D}->enabled(0) if $self->{toolpaths2D};
     $self->{preview3D}->enabled(0) if $self->{preview3D};
-    
+
+    # Save the current model.
+    my $current_model = $self->{model}->clone;
+
+    if (!defined $dont_push) {
+        # Get the identifiers of the curent model objects.
+        my $objects_identifiers = [];
+        for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
+            push @{$objects_identifiers}, $self->{objects}->[$i]->identifier;
+        }
+        $self->add_undo_operation("RESET", undef, $current_model, $objects_identifiers);
+    }
+
     @{$self->{objects}} = ();
     $self->{model}->clear_objects;
     $self->{print}->clear_objects;
     $self->object_list_changed;
-    
+
     $self->select_object(undef);
     $self->on_model_change;
 }
 
 sub increase {
-    my ($self, $copies) = @_;
+    my ($self, $copies, $dont_push) = @_;
     
     $copies //= 1;
     my ($obj_idx, $object) = $self->selected_object;
@@ -1087,7 +1388,11 @@ sub increase {
         );
         $self->{print}->objects->[$obj_idx]->add_copy($instance->offset);
     }
-    
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("INCREASE", $object->identifier , $copies);
+    }
+
     # only autoarrange if user has autocentering enabled
     $self->stop_background_process;
     if ($Slic3r::GUI::Settings->{_}{autocenter}) {
@@ -1098,7 +1403,7 @@ sub increase {
 }
 
 sub decrease {
-    my ($self, $copies) = @_;
+    my ($self, $copies, $dont_push) = @_;
     
     $copies //= 1;
     $self->stop_background_process;
@@ -1109,6 +1414,9 @@ sub decrease {
         for my $i (1..$copies) {
             $model_object->delete_last_instance;
             $self->{print}->objects->[$obj_idx]->delete_last_copy;
+        }
+        if (!defined $dont_push) {
+            $self->add_undo_operation("DECREASE", $object->identifier, $copies);
         }
     } else {
         $self->remove;
@@ -1159,7 +1467,7 @@ sub center_selected_object_on_bed {
 
 sub rotate {
     my $self = shift;
-    my ($angle, $axis) = @_;
+    my ($angle, $axis, $dont_push) = @_;
     
     # angle is in degrees
     $axis //= Z;
@@ -1198,17 +1506,21 @@ sub rotate {
         $model_object->center_around_origin;
         $self->make_thumbnail($obj_idx);
     }
-    
+
     $model_object->update_bounding_box;
     # update print and start background processing
     $self->{print}->add_model_object($model_object, $obj_idx);
-    
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("ROTATE", $object->identifier, $angle, $axis);
+    }
+
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
 }
 
 sub mirror {
-    my ($self, $axis) = @_;
+    my ($self, $axis, $dont_push) = @_;
     
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
@@ -1229,13 +1541,17 @@ sub mirror {
     # update print and start background processing
     $self->stop_background_process;
     $self->{print}->add_model_object($model_object, $obj_idx);
-    
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("MIRROR", $object->identifier, $axis);
+    }
+
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
 }
 
 sub changescale {
-    my ($self, $axis, $tosize) = @_;
+    my ($self, $axis, $tosize, $saved_scale, $dont_push) = @_;
     
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
@@ -1248,27 +1564,36 @@ sub changescale {
     
     my $object_size = $model_object->bounding_box->size;
     my $bed_size = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape})->bounding_box->size;
-    
+
+    my $old_scale;
+    my $scale;
+
     if (defined $axis) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
-        my $scale;
-        if ($tosize) {
-            my $cursize = $object_size->[$axis];
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            my $newsize = Wx::GetTextFromUser(
-                sprintf("Enter the new size for the selected object (print bed: %smm):", $bed_size->[$axis]),
-                "Scale along $axis_name",
-                $cursize, $self);
-            return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
-            $scale = $newsize / $cursize * 100;
-        } else {
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:",
-                "Scale along $axis_name", 100, $self);
-            $scale =~ s/%$//;
-            return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+        if (!defined $saved_scale) {
+            if ($tosize) {
+                my $cursize = $object_size->[$axis];
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                my $newsize = Wx::GetTextFromUser(
+                    sprintf("Enter the new size for the selected object (print bed: %smm):", $bed_size->[$axis]),
+                    "Scale along $axis_name",
+                    $cursize, $self);
+                return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
+                $scale = $newsize / $cursize * 100;
+                $old_scale = $cursize / $newsize * 100;
+            } else {
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:",
+                    "Scale along $axis_name", 100, $self);
+                $scale =~ s/%$//;
+                return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+                $old_scale = 100 * 100 / $scale;
+            }
         }
-        
+        else {
+            $scale = $saved_scale;
+        }
+
         # apply Z rotation before scaling
         $model_object->transform_by_instance($model_instance, 1);
         
@@ -1278,23 +1603,28 @@ sub changescale {
         # object was already aligned to Z = 0, so no need to realign it
         $self->make_thumbnail($obj_idx);
     } else {
-        my $scale;
-        if ($tosize) {
-            my $cursize = max(@$object_size);
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            my $newsize = Wx::GetTextFromUser("Enter the new max size for the selected object:",
-                "Scale", $cursize, $self);
-            return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
-            $scale = $model_instance->scaling_factor * $newsize / $cursize * 100;
+        if (!defined $saved_scale) {
+            if ($tosize) {
+                my $cursize = max(@$object_size);
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                my $newsize = Wx::GetTextFromUser("Enter the new max size for the selected object:",
+                    "Scale", $cursize, $self);
+                return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
+                $scale = $model_instance->scaling_factor * $newsize / $cursize * 100;
+                $old_scale = $model_instance->scaling_factor * 100;
+            } else {
+                # max scale factor should be above 2540 to allow importing files exported in inches
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:", 'Scale',
+                    $model_instance->scaling_factor * 100, $self);
+                return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+                $old_scale = $model_instance->scaling_factor * 100;
+            }
+            return if !$scale || $scale < 0;
         } else {
-            # max scale factor should be above 2540 to allow importing files exported in inches
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:", 'Scale',
-                $model_instance->scaling_factor*100, $self);
-            return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+            $scale = $saved_scale;
         }
-        return if !$scale || $scale < 0;
-        
+
         $scale /= 100;  # turn percent into factor
         
         my $variation = $scale / $model_instance->scaling_factor;
@@ -1304,7 +1634,15 @@ sub changescale {
         }
         $_->set_scaling_factor($scale) for @{ $model_object->instances };
         $object->transform_thumbnail($self->{model}, $obj_idx);
+
+        $scale *= 100;
     }
+
+    # Add the new undo operation.
+    if (!defined $dont_push) {
+        $self->add_undo_operation("CHANGE_SCALE", $object->identifier, $axis, $tosize, $scale, $old_scale);
+    }
+
     $model_object->update_bounding_box;
     
     # update print and start background processing
@@ -1329,7 +1667,7 @@ sub arrange {
 }
 
 sub split_object {
-    my $self = shift;
+    my ($self, $dont_push) = @_;
     
     my ($obj_idx, $current_object)  = $self->selected_object;
     
@@ -1344,7 +1682,14 @@ sub split_object {
     }
     
     $self->pause_background_process;
-    
+
+    # Save the curent model object for undo/redo operataions.
+    my $org_object_model = Slic3r::Model->new;
+    $org_object_model->add_object($current_model_object);
+
+    # Save the org object identifier.
+    my $object_id = $self->{objects}->[$obj_idx]->identifier;
+
     my @model_objects = @{$current_model_object->split_object};
     if (@model_objects == 1) {
         $self->resume_background_process;
@@ -1364,12 +1709,24 @@ sub split_object {
     # remove the original object before spawning the object_loaded event, otherwise 
     # we'll pass the wrong $obj_idx to it (which won't be recognized after the
     # thumbnail thread returns)
-    $self->remove($obj_idx);
+    $self->remove($obj_idx, 'true'); # Don't push to the undo stack it's considered a split opeation not a remove one.
     $current_object = $obj_idx = undef;
-    
+
+    # Save the object identifiers used in undo/redo operations.
+    my $new_objects_id_start = $self->{object_identifier};
+    print "The new object identifier start for split is " .$new_objects_id_start . "\n";
+
     # load all model objects at once, otherwise the plate would be rearranged after each one
     # causing original positions not to be kept
     $self->load_model_objects(@model_objects);
+
+    # Create two models to save the current object and the resulted objects.
+    my $new_objects_model = Slic3r::Model->new;
+    foreach my $new_object (@model_objects) {
+        $new_objects_model->add_object($new_object);
+    }
+
+    $self->add_undo_operation("SPLIT", $object_id, $org_object_model, $new_objects_model, $new_objects_id_start);
 }
 
 sub toggle_print_stats {
@@ -1949,6 +2306,9 @@ sub reload_from_disk {
     # event, so the on_thumbnail_made callback is called with the wrong $obj_idx.
     # When porting to C++ we'll probably have cleaner ways to do this.
     $self->make_thumbnail($_-1) for @new_obj_idx;
+
+    # Empty the redo stack
+    $self->{redo_stack} = [];
 }
 
 sub export_object_stl {
@@ -2235,8 +2595,23 @@ sub object_cut_dialog {
 	if (my @new_objects = $dlg->NewModelObjects) {
 	    my $process_dialog = Wx::ProgressDialog->new('Loading…', "Loading new objects…", 100, $self, 0);
         $process_dialog->Pulse;
-        
-	    $self->remove($obj_idx);
+
+        # Create two models to save the current object and the resulted objects.
+        my $new_objects_model = Slic3r::Model->new;
+        foreach my $new_object (@new_objects) {
+            $new_objects_model->add_object($new_object);
+        }
+
+        my $org_object_model = Slic3r::Model->new;
+        $org_object_model->add_object($self->{model}->get_object($obj_idx));
+
+        # Save the object identifiers used in undo/redo operations.
+        my $object_id = $self->{objects}->[$obj_idx]->identifier;
+        my $new_objects_id_start = $self->{object_identifier};
+
+        $self->add_undo_operation("CUT", $object_id, $org_object_model, $new_objects_model, $new_objects_id_start);
+
+	    $self->remove($obj_idx, 'true');
 	    $self->load_model_objects(grep defined($_), @new_objects);
 	    $self->arrange if @new_objects <= 2; # don't arrange for grid cuts
 	    
@@ -2626,6 +3001,7 @@ use List::Util qw(first);
 use Slic3r::Geometry qw(X Y Z MIN MAX deg2rad);
 
 has 'name'                  => (is => 'rw', required => 1);
+has 'identifier'            => (is => 'rw', required => 1);
 has 'input_file'            => (is => 'rw');
 has 'input_file_obj_idx'    => (is => 'rw');
 has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms
