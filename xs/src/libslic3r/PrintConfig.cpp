@@ -1147,7 +1147,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Speed (baud) of USB/serial port for printer connection.";
     def->cli = "serial-speed=i";
     def->min = 1;
-    def->max = 300000;
+    def->max = 500000;
     def->enum_values.push_back("57600");
     def->enum_values.push_back("115200");
     def->enum_values.push_back("250000");
