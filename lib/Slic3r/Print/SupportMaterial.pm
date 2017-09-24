@@ -179,8 +179,8 @@ sub contact_area {
                     }
                 
                     $diff = diff(
-                        offset([ map $_->p, @{$layerm->slices} ], -$d),
-                        [ map @$_, @{$lower_layer->slices} ],
+                        [ map $_->p, @{$layerm->slices} ],
+                        offset([ map @$_, @{$lower_layer->slices} ], +$d),
                     );
                 
                     # only enforce spacing from the object ($fw/2) if the threshold angle
