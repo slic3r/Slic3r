@@ -154,12 +154,15 @@ class StaticPrintConfig : public PrintConfigBase, public StaticConfig
 class PrintObjectConfig : public virtual StaticPrintConfig
 {
     public:
+	ConfigOptionBool                adaptive_slicing;
+	ConfigOptionPercent             adaptive_slicing_quality;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloatOrPercent      extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_height;
     ConfigOptionBool                infill_only_where_needed;
     ConfigOptionBool                interface_shells;
     ConfigOptionFloat               layer_height;
+    ConfigOptionBool                match_horizontal_surfaces;
     ConfigOptionInt                 raft_layers;
     ConfigOptionFloat               regions_overlap;
     ConfigOptionEnum<SeamPosition>  seam_position;
@@ -186,12 +189,15 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     }
     
     virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
+        OPT_PTR(adaptive_slicing);
+        OPT_PTR(adaptive_slicing_quality);
         OPT_PTR(dont_support_bridges);
         OPT_PTR(extrusion_width);
         OPT_PTR(first_layer_height);
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
+        OPT_PTR(match_horizontal_surfaces);
         OPT_PTR(raft_layers);
         OPT_PTR(regions_overlap);
         OPT_PTR(seam_position);
@@ -428,7 +434,9 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBool                infill_first;
     ConfigOptionFloat               interior_brim_width;
     ConfigOptionInt                 max_fan_speed;
+    ConfigOptionFloats              max_layer_height;
     ConfigOptionInt                 min_fan_speed;
+    ConfigOptionFloats              min_layer_height;
     ConfigOptionFloat               min_print_speed;
     ConfigOptionFloat               min_skirt_length;
     ConfigOptionFloats              nozzle_diameter;
@@ -488,7 +496,9 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(infill_first);
         OPT_PTR(interior_brim_width);
         OPT_PTR(max_fan_speed);
+        OPT_PTR(max_layer_height);
         OPT_PTR(min_fan_speed);
+        OPT_PTR(min_layer_height);
         OPT_PTR(min_print_speed);
         OPT_PTR(min_skirt_length);
         OPT_PTR(nozzle_diameter);

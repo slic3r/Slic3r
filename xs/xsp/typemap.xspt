@@ -133,6 +133,14 @@
 %typemap{Layer*};
 %typemap{Ref<Layer>}{simple};
 
+%typemap{SlicingAdaptive*};
+%typemap{Ref<SlicingAdaptive>}{simple};
+%typemap{Clone<SlicingAdaptive>}{simple};
+
+%typemap{LayerHeightSpline*};
+%typemap{Ref<LayerHeightSpline>}{simple};
+%typemap{Clone<LayerHeightSpline>}{simple};
+
 %typemap{SupportLayer*};
 %typemap{Ref<SupportLayer>}{simple};
 

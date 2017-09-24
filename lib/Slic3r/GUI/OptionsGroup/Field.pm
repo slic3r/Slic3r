@@ -580,6 +580,17 @@ sub get_value {
     return $self->slider->GetValue/$self->scale;
 }
 
+# Update internal scaling
+sub set_scale {
+    my ($self, $scale) = @_;
+    $self->disable_change_event(1);
+    my $current_value = $self->get_value;
+    $self->slider->SetRange($self->slider->GetMin / $self->scale * $scale, $self->slider->GetMax / $self->scale * $scale);
+    $self->scale($scale);
+    $self->set_value($current_value);
+    $self->disable_change_event(0);
+}
+
 sub _update_textctrl {
     my ($self) = @_;
     

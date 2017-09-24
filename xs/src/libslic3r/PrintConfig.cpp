@@ -22,7 +22,26 @@ PrintConfigDef::PrintConfigDef()
     external_fill_pattern.enum_labels.push_back("Octagram Spiral");
     
     ConfigOptionDef* def;
-    
+
+    def = this->add("adaptive_slicing", coBool);
+    def->label = "Use adaptive slicing";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Automatically determine layer heights by the objects topology instead of using the static value.";
+    def->cli = "adaptive-slicing!";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("adaptive_slicing_quality", coPercent);
+    def->label = "Adaptive quality";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Controls the quality / printing time tradeoff for adaptive layer generation. 0 -> fastest printing with max layer height, 100 -> highest quality, min layer height";
+    def->sidetext = "%";
+    def->cli = "adaptive_slicing_quality=f";
+    def->min = 0;
+    def->max = 100;
+    def->gui_type = "slider";
+    def->width = 200;
+    def->default_value = new ConfigOptionPercent(75);
+
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = "Avoid crossing perimeters";
     def->category = "Layers and Perimeters";
@@ -752,6 +771,12 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0.3);
 
+    def = this->add("match_horizontal_surfaces", coBool);
+    def->label = "Match horizontal surfaces";
+    def->tooltip = "Try to match horizontal surfaces during the slicing process. Matching is not guaranteed, very small surfaces and multiple surfaces with low vertical distance might cause bad results.";
+    def->cli = "match-horizontal-surfaces!";
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("max_fan_speed", coInt);
     def->label = "Max";
     def->tooltip = "This setting represents the maximum speed of your fan.";
@@ -760,6 +785,18 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->max = 100;
     def->default_value = new ConfigOptionInt(100);
+
+    def = this->add("max_layer_height", coFloats);
+	def->label = "Max";
+	def->tooltip = "This is the highest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are slightly smaller than nozzle_diameter.";
+	def->sidetext = "mm";
+	def->cli = "max-layer-height=f@";
+	def->min = 0;
+	{
+		ConfigOptionFloats* opt = new ConfigOptionFloats();
+		opt->values.push_back(0.3);
+		def->default_value = opt;
+	}
 
     def = this->add("max_print_speed", coFloat);
     def->label = "Max print speed";
@@ -787,6 +824,18 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->max = 100;
     def->default_value = new ConfigOptionInt(35);
+
+    def = this->add("min_layer_height", coFloats);
+	def->label = "Min";
+	def->tooltip = "This is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";
+	def->sidetext = "mm";
+	def->cli = "min-layer-height=f@";
+	def->min = 0;
+	{
+		ConfigOptionFloats* opt = new ConfigOptionFloats();
+		opt->values.push_back(0.15);
+		def->default_value = opt;
+	}
 
     def = this->add("min_print_speed", coFloat);
     def->label = "Min print speed";

@@ -437,6 +437,7 @@ sub title { 'Print Settings' }
 sub options {
     return qw(
         layer_height first_layer_height
+        adaptive_slicing adaptive_slicing_quality match_horizontal_surfaces
         perimeters spiral_vase
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
@@ -512,6 +513,10 @@ sub build {
             my $optgroup = $page->new_optgroup('Layer height');
             $optgroup->append_single_option_line('layer_height');
             $optgroup->append_single_option_line('first_layer_height');
+            $optgroup->append_single_option_line('adaptive_slicing');
+            $optgroup->append_single_option_line('adaptive_slicing_quality');
+            $optgroup->get_field('adaptive_slicing_quality')->set_scale(1);
+            $optgroup->append_single_option_line('match_horizontal_surfaces');
         }
         {
             my $optgroup = $page->new_optgroup('Vertical shells');
@@ -864,6 +869,12 @@ sub _update {
         for qw(extra_perimeters thin_walls overhangs seam_position external_perimeters_first
             external_perimeter_extrusion_width
             perimeter_speed small_perimeter_speed external_perimeter_speed);
+
+    my $have_adaptive_slicing = $config->adaptive_slicing;
+    $self->get_field($_)->toggle($have_adaptive_slicing)
+        for qw(adaptive_slicing_quality match_horizontal_surfaces);
+    $self->get_field($_)->toggle(!$have_adaptive_slicing)
+        for qw(layer_height);
     
     my $have_infill = $config->fill_density > 0;
     # infill_extruder uses the same logic as in Print::extruders()
@@ -1146,10 +1157,10 @@ sub _update {
     
     $self->_update_description;
     
-    my $cooling = $self->config->cooling;
+    my $cooling = $self->{config}->cooling;
     $self->get_field($_)->toggle($cooling)
         for qw(max_fan_speed fan_below_layer_time slowdown_below_layer_time min_print_speed);
-    $self->get_field($_)->toggle($cooling || $self->config->fan_always_on)
+    $self->get_field($_)->toggle($cooling || $self->{config}->fan_always_on)
         for qw(min_fan_speed disable_fan_first_layers);
 }
 
@@ -1199,7 +1210,7 @@ sub options {
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode between_objects_gcode
-        nozzle_diameter extruder_offset
+        nozzle_diameter extruder_offset min_layer_height max_layer_height
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
         retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
         printer_settings_id
@@ -1444,7 +1455,7 @@ sub _extruders_count_changed {
     $self->_update;
 }
 
-sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
+sub _extruder_options { qw(nozzle_diameter min_layer_height max_layer_height extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
     retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
 
 sub _build_extruder_pages {
@@ -1472,6 +1483,11 @@ sub _build_extruder_pages {
         {
             my $optgroup = $page->new_optgroup('Size');
             $optgroup->append_single_option_line('nozzle_diameter', $extruder_idx);
+        }
+        {
+            my $optgroup = $page->new_optgroup('Limits');
+            $optgroup->append_single_option_line($_, $extruder_idx)
+               for qw(min_layer_height max_layer_height);
         }
         {
             my $optgroup = $page->new_optgroup('Position (for multi-extruder printers)');

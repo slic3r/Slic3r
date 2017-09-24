@@ -75,15 +75,15 @@ sub new {
 }
 
 sub reload_print {
-    my ($self) = @_;
+    my ($self, $obj_idx) = @_;
     
     $self->canvas->reset_objects;
     $self->_loaded(0);
-    $self->load_print;
+    $self->load_print($obj_idx);
 }
 
 sub load_print {
-    my ($self) = @_;
+    my ($self, $obj_idx) = @_;
     
     return if $self->_loaded;
     
@@ -100,9 +100,15 @@ sub load_print {
     my $z_idx;
     {
         my %z = ();  # z => 1
-        foreach my $object (@{$self->{print}->objects}) {
-            foreach my $layer (@{$object->layers}, @{$object->support_layers}) {
+        if(defined $obj_idx) { # Load only given object
+            foreach my $layer (@{$self->{print}->get_object($obj_idx)->layers}) {
                 $z{$layer->print_z} = 1;
+            }
+        }else{ # Load all objects on the plater + support material
+            foreach my $object (@{$self->{print}->objects}) {
+                foreach my $layer (@{$object->layers}, @{$object->support_layers}) {
+                    $z{$layer->print_z} = 1;
+                }
             }
         }
         $self->enabled(1);
@@ -129,14 +135,18 @@ sub load_print {
             $self->canvas->colors([ $self->canvas->default_colors ]);
         }
         
-        # load skirt and brim
-        $self->canvas->load_print_toolpaths($self->print);
-        
-        foreach my $object (@{$self->print->objects}) {
-            $self->canvas->load_print_object_toolpaths($object);
+        if(defined $obj_idx) { # Load only one object
+            $self->canvas->load_print_object_toolpaths($self->{print}->get_object($obj_idx));
+        }else{ # load all objects
+	        # load skirt and brim
+            $self->canvas->load_print_toolpaths($self->print);
             
-            #my @volume_ids = $self->canvas->load_object($object->model_object);
-            #$self->canvas->volumes->[$_]->color->[3] = 0.2 for @volume_ids;
+            foreach my $object (@{$self->print->objects}) {
+                $self->canvas->load_print_object_toolpaths($object);
+
+                #my @volume_ids = $self->canvas->load_object($object->model_object);
+                #$self->canvas->volumes->[$_]->color->[3] = 0.2 for @volume_ids;
+            }
         }
         $self->_loaded(1);
     }

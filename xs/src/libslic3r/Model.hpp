@@ -7,6 +7,7 @@
 #include "Layer.hpp"
 #include "Point.hpp"
 #include "TriangleMesh.hpp"
+#include "LayerHeightSpline.hpp"
 #include <map>
 #include <string>
 #include <utility>
@@ -267,6 +268,7 @@ class ModelObject
     t_layer_height_ranges layer_height_ranges; ///< Variation of a layer thickness for spans of Z coordinates.
 
     int part_number; ///< It's used for the 3MF items part numbers in the build element.
+    LayerHeightSpline layer_height_spline;     ///< Spline based variations of layer thickness for interactive user manipulation
 
     Pointf3 origin_translation;
     ///< This vector accumulates the total translation applied to the object by the
