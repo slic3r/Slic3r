@@ -2228,7 +2228,7 @@ sub send_gcode {
         }else{
             # slurp the file we would send into a string - should be someplace to reference this but could not find it?
             local $/=undef;
-            open my ($gch,$path);
+            open (my $gch,$path);
             my $gcode=<$gch>;
             close($gch);
 
