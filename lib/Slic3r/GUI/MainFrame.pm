@@ -115,7 +115,8 @@ sub _init_tabpanel {
     });
     
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
-    $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
+    $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller")
+        if ($Slic3r::GUI::Settings->{_}{show_host});
 }
 
 sub _init_menubar {
