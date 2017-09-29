@@ -31,6 +31,7 @@ include_directories(${LIBDIR}/libslic3r)
 include_directories(${LIBDIR}/Slic3r/GUI/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/standalone/)
 include_directories(${LIBDIR}/admesh/)
+include_directories(${LIBDIR}/BSpline/)
 include_directories(${LIBDIR}/expat/)
 include_directories(${LIBDIR}/poly2tri/)
 include_directories(${LIBDIR}/poly2tri/sweep)
@@ -67,6 +68,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Layer.cpp
     ${LIBDIR}/libslic3r/LayerRegion.cpp
     ${LIBDIR}/libslic3r/LayerRegionFill.cpp
+    ${LIBDIR}/libslic3r/LayerHeightSpline.cpp
     ${LIBDIR}/libslic3r/Line.cpp
     ${LIBDIR}/libslic3r/Model.cpp
     ${LIBDIR}/libslic3r/MotionPlanner.cpp
@@ -82,11 +84,16 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/PrintObject.cpp
     ${LIBDIR}/libslic3r/PrintRegion.cpp
     ${LIBDIR}/libslic3r/SLAPrint.cpp
+    ${LIBDIR}/libslic3r/SlicingAdaptive.cpp
     ${LIBDIR}/libslic3r/Surface.cpp
     ${LIBDIR}/libslic3r/SurfaceCollection.cpp
     ${LIBDIR}/libslic3r/SVG.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
     ${LIBDIR}/libslic3r/Zip/ZipArchive.cpp
+)
+
+add_library(BSpline STATIC
+    ${LIBDIR}/BSpline/BSpline.cpp
 )
 
 add_library(admesh STATIC
@@ -142,7 +149,7 @@ IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
 ENDIF(CMAKE_HOST_UNIX)
 
-target_link_libraries (slic3r libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+target_link_libraries (slic3r libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
 
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
@@ -166,4 +173,4 @@ IF (WIN32)
     target_link_libraries(extrude-tin boost-nowide)
 ENDIF(WIN32)
 
-target_link_libraries (extrude-tin libslic3r admesh clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+target_link_libraries (extrude-tin libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
