@@ -10,7 +10,7 @@ use List::Util qw(min max first);
 use Slic3r::Geometry qw(X Y scale unscale convex_hull);
 use Slic3r::Geometry::Clipper qw(offset JT_ROUND intersection_pl);
 use Wx qw(:misc :pen :brush :sizer :font :cursor wxTAB_TRAVERSAL);
-use Wx::Event qw(EVT_MOUSE_EVENTS EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
+use Wx::Event qw(EVT_MOUSE_EVENTS EVT_PAINT EVT_BUTTON EVT_ERASE_BACKGROUND EVT_SIZE);
 use base 'Wx::Panel';
 
 use constant CANVAS_TEXT => join('-', +(localtime)[3,4]) eq '13-8'
@@ -43,7 +43,11 @@ sub new {
     $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(150,150,150), 1, wxSOLID);
 
     $self->{user_drawn_background} = $^O ne 'darwin';
-    
+
+    $self->{nudge_value} = 1e6;
+#    my $nudge_button = $self->{nudge} = Wx::Button->new($self, -1, 'Nudge value', wxDefaultPosition, wxDefaultSize);
+#    EVT_BUTTON($self, $nudge_button, sub { $self->set_nudge_value });
+
     EVT_PAINT($self, \&repaint);
     EVT_ERASE_BACKGROUND($self, sub {}) if $self->{user_drawn_background};
     EVT_MOUSE_EVENTS($self, \&mouse_event);
@@ -263,22 +267,29 @@ sub nudge_instance{
     my ($self, $direction) = @_;
 
     # Get the selected instance of an object.
+    # ToDo @Samir55 Disable if 2d panel is not chosen.
+    # ToDo @Samir55 fix keyboard focus error on ubuntu.
+    # ToDo @Samir55 Fix selection error between select next and select Manually.
+    # ToDo @Samir55 Fix auto selected object when changing from 3d to 2d plater.
+    return if not defined $self->{selected_instance};
     my ($obj_idx, $instance_idx) = @{ $self->{selected_instance} };
     my $object = $self->{model}->objects->[$obj_idx];
     my $instance = $object->instances->[$instance_idx];
 
-    # Get the nudge value.
+    # Get the nudge values.
     my $x_nudge = 0;
     my $y_nudge = 0;
 
+    $self->{nudge_value} = $Slic3r::GUI::Settings->{_}{nudge_val} * 1e6;
+
     if ($direction eq 'right'){
-        $x_nudge = 1600000;
+        $x_nudge = $self->{nudge_value};
     } elsif ($direction eq 'left'){
-        $x_nudge = -1600000;
+        $x_nudge = -1 * $self->{nudge_value};
     } elsif ($direction eq 'up'){
-        $y_nudge = 1600000;
+        $y_nudge = $self->{nudge_value};
     } elsif ($direction eq 'down'){
-        $y_nudge = -1600000;
+        $y_nudge = -$self->{nudge_value};
     }
     my $point = Slic3r::Pointf->new($x_nudge, $y_nudge);
     my $instance_origin = [ map scale($_), @{$instance->offset} ];
