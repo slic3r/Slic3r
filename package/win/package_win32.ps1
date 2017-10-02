@@ -89,7 +89,7 @@ if (!( (Test-Path -Path "${scriptDir}\slic3r.exe") -And (Test-Path -Path "${scri
 }
 
 # remove all static libraries, they just take up space.
-if ${env:APPVEYOR} {
+if ($env:APPVEYOR) {
     gci ${scriptDir}\..\..\ -recurse | ? {$_.Name -match ".*\.a$"} | ri
     gci -recurse ${scriptDir}\..\..\local-lib | ? {$_.PSIsContainer -And $_.Name -match "DocView|IPC|DataView|Media|Ribbon|Calendar|STC|PerlTest|WebView"} | ri
     gci -recurse ${scriptDir}\..\..\local-lib| ? {$_.Name -match ".*(webview|ribbon|stc).*\.dll"} | ri

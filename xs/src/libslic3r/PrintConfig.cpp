@@ -22,7 +22,26 @@ PrintConfigDef::PrintConfigDef()
     external_fill_pattern.enum_labels.push_back("Octagram Spiral");
     
     ConfigOptionDef* def;
-    
+
+    def = this->add("adaptive_slicing", coBool);
+    def->label = "Use adaptive slicing";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Automatically determine layer heights by the objects topology instead of using the static value.";
+    def->cli = "adaptive-slicing!";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("adaptive_slicing_quality", coPercent);
+    def->label = "Adaptive quality";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Controls the quality / printing time tradeoff for adaptive layer generation. 0 -> fastest printing with max layer height, 100 -> highest quality, min layer height";
+    def->sidetext = "%";
+    def->cli = "adaptive_slicing_quality=f";
+    def->min = 0;
+    def->max = 100;
+    def->gui_type = "slider";
+    def->width = 200;
+    def->default_value = new ConfigOptionPercent(75);
+
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = "Avoid crossing perimeters";
     def->category = "Layers and Perimeters";
@@ -40,10 +59,12 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(Pointf(0,200));
         def->default_value = opt;
     }
+    def->cli = "bed-shape=s";
+
     def = this->add("has_heatbed", coBool);
     def->label = "Has heated bed";
     def->tooltip = "Unselecting this will suppress automatic generation of bed heating gcode.";
-    def->cli = "has_heatbed!";
+    def->cli = "has-heatbed!";
     def->default_value = new ConfigOptionBool(true);
     
     def = this->add("bed_temperature", coInt);
@@ -629,6 +650,17 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("No extrusion");
     def->default_value = new ConfigOptionEnum<GCodeFlavor>(gcfRepRap);
 
+    def = this->add("host_type", coEnum);
+    def->label = "Host type";
+    def->tooltip = "Select Octoprint or Duet to connect to your machine via LAN";
+    def->cli = "host-type=s";
+    def->enum_keys_map = ConfigOptionEnum<HostType>::get_enum_values();
+    def->enum_values.push_back("octoprint");
+    def->enum_values.push_back("duet");
+    def->enum_labels.push_back("Octoprint");
+    def->enum_labels.push_back("Duet");
+    def->default_value = new ConfigOptionEnum<HostType>(htOctoprint);
+    
     def = this->add("infill_acceleration", coFloat);
     def->label = "Infill";
     def->category = "Speed > Acceleration";
@@ -739,6 +771,12 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0.3);
 
+    def = this->add("match_horizontal_surfaces", coBool);
+    def->label = "Match horizontal surfaces";
+    def->tooltip = "Try to match horizontal surfaces during the slicing process. Matching is not guaranteed, very small surfaces and multiple surfaces with low vertical distance might cause bad results.";
+    def->cli = "match-horizontal-surfaces!";
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("max_fan_speed", coInt);
     def->label = "Max";
     def->tooltip = "This setting represents the maximum speed of your fan.";
@@ -747,6 +785,18 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->max = 100;
     def->default_value = new ConfigOptionInt(100);
+
+    def = this->add("max_layer_height", coFloats);
+	def->label = "Max";
+	def->tooltip = "This is the highest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are slightly smaller than nozzle_diameter.";
+	def->sidetext = "mm";
+	def->cli = "max-layer-height=f@";
+	def->min = 0;
+	{
+		ConfigOptionFloats* opt = new ConfigOptionFloats();
+		opt->values.push_back(0.3);
+		def->default_value = opt;
+	}
 
     def = this->add("max_print_speed", coFloat);
     def->label = "Max print speed";
@@ -774,6 +824,18 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->max = 100;
     def->default_value = new ConfigOptionInt(35);
+
+    def = this->add("min_layer_height", coFloats);
+	def->label = "Min";
+	def->tooltip = "This is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";
+	def->sidetext = "mm";
+	def->cli = "min-layer-height=f@";
+	def->min = 0;
+	{
+		ConfigOptionFloats* opt = new ConfigOptionFloats();
+		opt->values.push_back(0.15);
+		def->default_value = opt;
+	}
 
     def = this->add("min_print_speed", coFloat);
     def->label = "Min print speed";
@@ -818,9 +880,9 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "octoprint-apikey=s";
     def->default_value = new ConfigOptionString("");
 
-    def = this->add("octoprint_host", coString);
+    def = this->add("print_host", coString);
     def->label = "Host or IP";
-    def->tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the hostname or IP address of the OctoPrint instance.";
+    def->tooltip = "Slic3r can upload G-code files to an Octoprint/Duet server. This field should contain the hostname or IP address of the server instance.";
     def->cli = "octoprint-host=s";
     def->default_value = new ConfigOptionString("");
 
@@ -924,18 +986,14 @@ PrintConfigDef::PrintConfigDef()
     def->height = 60;
     def->default_value = new ConfigOptionStrings();
 
-    def = this->add("printer_notes", coStrings);
+    def = this->add("printer_notes", coString);
     def->label = "Printer notes";
-    def->tooltip = "You can put your notes regarding the printer here.";
-    def->cli = "printer-notes=s@";
+    def->tooltip = "You can put your notes regarding the printer here. This text will be added to the G-code header comments.";
+    def->cli = "printer-notes=s";
     def->multiline = true;
     def->full_width = true;
     def->height = 130;
-    {
-        ConfigOptionStrings* opt = new ConfigOptionStrings();
-        opt->values.push_back("");
-        def->default_value = opt;
-    }
+    def->default_value = new ConfigOptionString("");
 
     def = this->add("print_settings_id", coString);
     def->default_value = new ConfigOptionString("");
@@ -959,6 +1017,14 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "raft-layers=i";
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
+
+    def = this->add("regions_overlap", coFloat);
+    def->label = "Regions/extruders overlap";
+    def->category = "Extruders";
+    def->tooltip = "This setting applies an additional overlap between regions printed with distinct extruders or distinct settings. This shouldn't be needed under normal circumstances.";
+    def->sidetext = "mm";
+    def->cli = "regions-overlap=s";
+    def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("raft_offset", coFloat);
     def->label = "Raft offset";
@@ -1130,7 +1196,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Speed (baud) of USB/serial port for printer connection.";
     def->cli = "serial-speed=i";
     def->min = 1;
-    def->max = 300000;
+    def->max = 500000;
     def->enum_values.push_back("57600");
     def->enum_values.push_back("115200");
     def->enum_values.push_back("250000");
@@ -1698,6 +1764,8 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
         std::ostringstream oss;
         oss << "0x0," << p.value.x << "x0," << p.value.x << "x" << p.value.y << ",0x" << p.value.y;
         value = oss.str();
+    } else if (opt_key == "octoprint_host" && !value.empty()) {
+        opt_key = "print_host";
     } else if ((opt_key == "perimeter_acceleration" && value == "25")
         || (opt_key == "infill_acceleration" && value == "50")) {
         /*  For historical reasons, the world's full of configs having these very low values;
@@ -1720,7 +1788,7 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
         || opt_key == "scale"  || opt_key == "duplicate_grid" 
         || opt_key == "start_perimeters_at_concave_points" 
         || opt_key == "start_perimeters_at_non_overhang" || opt_key == "randomize_start" 
-        || opt_key == "seal_position" || opt_key == "bed_size" 
+        || opt_key == "seal_position" || opt_key == "bed_size" || opt_key == "octoprint_host" 
         || opt_key == "print_center" || opt_key == "g0" || opt_key == "threads")
     {
         opt_key = "";
@@ -1778,6 +1846,12 @@ CLIConfigDef::CLIConfigDef()
     def->label = "Export SVG";
     def->tooltip = "Slice the model and export slices as SVG.";
     def->cli = "export-svg";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("export_3mf", coBool);
+    def->label = "Export 3MF";
+    def->tooltip = "Slice the model and export slices as 3MF.";
+    def->cli = "export-3mf";
     def->default_value = new ConfigOptionBool(false);
     
     def = this->add("info", coBool);

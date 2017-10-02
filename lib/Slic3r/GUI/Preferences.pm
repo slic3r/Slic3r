@@ -71,6 +71,13 @@ sub new {
         tooltip     => 'When opening a profile editor, it will be shown in a dialog or in a tab according to this option.',
         default     => $Slic3r::GUI::Settings->{_}{tabbed_preset_editors},
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'show_host',
+        type        => 'bool',
+        label       => 'Show Controller Tab (requires restart)',
+        tooltip     => 'Shows/Hides the Controller Tab. Requires a restart of Slic3r.',
+        default     => $Slic3r::GUI::Settings->{_}{show_host},
+    ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);

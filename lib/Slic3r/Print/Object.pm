@@ -48,9 +48,9 @@ sub slice {
     return if $self->step_done(STEP_SLICE);
     $self->set_step_started(STEP_SLICE);
     $self->print->status_cb->(10, "Processing triangulated mesh");
-    
+
     $self->_slice;
-    
+
     # detect slicing errors
     my $warning_thrown = 0;
     for my $i (0 .. ($self->layer_count - 1)) {

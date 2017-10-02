@@ -14,11 +14,16 @@ use base 'Wx::Dialog';
 sub new {
     my $class = shift;
     my ($parent, %params) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Settings for " . $params{object}->name, wxDefaultPosition, [700,500], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+    my $self = $class->SUPER::new($parent, -1, "Settings for " . $params{object}->name, wxDefaultPosition, [1000,700], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     $self->{$_} = $params{$_} for keys %params;
     
     $self->{tabpanel} = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
     $self->{tabpanel}->AddPage($self->{parts} = Slic3r::GUI::Plater::ObjectPartsPanel->new($self->{tabpanel}, model_object => $params{model_object}), "Parts");
+    $self->{tabpanel}->AddPage($self->{adaptive_layers} = Slic3r::GUI::Plater::ObjectDialog::AdaptiveLayersTab->new( $self->{tabpanel}, 
+        plater         => $parent,
+        model_object   => $params{model_object},
+        obj_idx        => $params{obj_idx}
+        ), "Adaptive Layers");
     $self->{tabpanel}->AddPage($self->{layers} = Slic3r::GUI::Plater::ObjectDialog::LayersTab->new($self->{tabpanel}), "Layers");
     
     my $buttons = $self->CreateStdDialogButtonSizer(wxOK);
@@ -67,6 +72,168 @@ sub model_object {
     my ($self) = @_;
     return $self->GetParent->GetParent->{model_object};
 }
+
+package Slic3r::GUI::Plater::ObjectDialog::AdaptiveLayersTab;
+use Slic3r::Geometry qw(X Y Z scale unscale);
+use Slic3r::Print::State ':steps';
+use List::Util qw(min max sum first);
+use Wx qw(wxTheApp :dialog :id :misc :sizer :systemsettings :statictext wxTAB_TRAVERSAL);
+use base 'Slic3r::GUI::Plater::ObjectDialog::BaseTab';
+
+sub new {
+    my $class = shift;
+    my ($parent, %params) = @_;
+    my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize);
+    my $model_object = $self->{model_object} = $params{model_object};
+    my $obj_idx = $self->{obj_idx} = $params{obj_idx};
+    my $plater = $self->{plater} = $params{plater};
+    my $object = $self->{object} = $self->{plater}->{print}->get_object($self->{obj_idx});
+
+    # store last raft height to correctly draw z-indicator plane during a running background job where the printObject is not valid
+    $self->{last_raft_height} = 0;
+
+    # Initialize 3D toolpaths preview
+    if ($Slic3r::GUI::have_OpenGL) {
+        $self->{preview3D} = Slic3r::GUI::Plater::3DPreview->new($self, $plater->{print});
+        $self->{preview3D}->canvas->set_auto_bed_shape;
+        $self->{preview3D}->canvas->SetSize([500,500]);
+        $self->{preview3D}->canvas->SetMinSize($self->{preview3D}->canvas->GetSize);
+        # object already processed?
+        wxTheApp->CallAfter(sub {
+            if (!$plater->{processed}) {
+                $self->_trigger_slicing(0); # trigger processing without invalidating STEP_SLICE to keep current height distribution
+            }else{
+                $self->{preview3D}->reload_print($obj_idx);
+                $self->{preview3D}->canvas->zoom_to_volumes;
+                $self->{preview_zoomed} = 1;
+            }
+        });
+    }
+
+    $self->{splineControl} = Slic3r::GUI::Plater::SplineControl->new($self, Wx::Size->new(150, 200), $object);
+
+    my $optgroup;
+    $optgroup = $self->{optgroup} = Slic3r::GUI::OptionsGroup->new(
+        parent      => $self,
+        title       => 'Adaptive quality %',
+        on_change   => sub {
+            my ($opt_id) = @_;
+            # There seems to be an issue with wxWidgets 3.0.2/3.0.3, where the slider
+            # genates tens of events for a single value change.
+            # Only trigger the recalculation if the value changes
+            # or a live preview was activated and the mesh cut is not valid yet.
+            if ($self->{adaptive_quality} != $optgroup->get_value($opt_id)) {
+                $self->{adaptive_quality} = $optgroup->get_value($opt_id);
+                $self->{model_object}->config->set('adaptive_slicing_quality', $optgroup->get_value($opt_id));
+                $self->{object}->config->set('adaptive_slicing_quality', $optgroup->get_value($opt_id));
+                $self->{object}->invalidate_step(STEP_LAYERS);
+                # trigger re-slicing
+                $self->_trigger_slicing;
+            }
+        },
+        label_width  => 0,
+    );
+
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'adaptive_slicing_quality',
+        type        => 'slider',
+        label       => '',
+        default     => $object->config->get('adaptive_slicing_quality'),
+        min         => 0,
+        max         => 100,
+        full_width  => 1,
+    ));
+    $optgroup->get_field('adaptive_slicing_quality')->set_scale(1);
+    $self->{adaptive_quality} = $object->config->get('adaptive_slicing_quality');
+    # init quality slider
+    if(!$object->config->get('adaptive_slicing')) {
+        # disable slider
+        $optgroup->get_field('adaptive_slicing_quality')->disable;
+    }
+
+    my $right_sizer = Wx::BoxSizer->new(wxVERTICAL);
+    $right_sizer->Add($self->{splineControl}, 1, wxEXPAND | wxALL, 0);
+    $right_sizer->Add($optgroup->sizer, 0, wxEXPAND | wxALL, 0);
+
+
+    $self->{sizer} = Wx::BoxSizer->new(wxHORIZONTAL);
+    $self->{sizer}->Add($self->{preview3D}, 3, wxEXPAND | wxTOP | wxBOTTOM, 0) if $self->{preview3D};
+    $self->{sizer}->Add($right_sizer, 1, wxEXPAND | wxTOP | wxBOTTOM, 10);
+
+    $self->SetSizerAndFit($self->{sizer});
+
+    # init spline control values
+    # determine min and max layer height from perimeter extruder capabilities.
+    my %extruders;
+    for my $region_id (0 .. ($object->region_count - 1)) {
+        foreach (qw(perimeter_extruder infill_extruder solid_infill_extruder)) {
+            my $extruder_id = $self->{plater}->{print}->get_region($region_id)->config->get($_)-1;
+            $extruders{$extruder_id} = $extruder_id;
+        }
+    }
+    my $min_height = max(map {$self->{plater}->{print}->config->get_at('min_layer_height', $_)} (values %extruders));
+    my $max_height = min(map {$self->{plater}->{print}->config->get_at('max_layer_height', $_)} (values %extruders));
+
+    $self->{splineControl}->set_size_parameters($min_height, $max_height, unscale($object->size->z));
+
+    $self->{splineControl}->on_layer_update(sub {
+        # trigger re-slicing
+        $self->_trigger_slicing;
+    });
+
+    $self->{splineControl}->on_z_indicator(sub {
+        my ($z) = @_;
+
+        if($z) { # compensate raft height
+	        $z += $self->{last_raft_height};
+        }
+        $self->{preview3D}->canvas->SetCuttingPlane(Z, $z, []);
+        $self->{preview3D}->canvas->Render;
+    });
+
+    return $self;
+}
+
+# This is called by the plater after processing to update the preview and spline
+sub reload_preview {
+    my ($self) = @_;
+    $self->{splineControl}->update;
+    $self->{preview3D}->reload_print($self->{obj_idx});
+    my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
+    if($object->layer_count-1 > 0) {
+        my $first_layer = $self->{object}->get_layer(0);
+        $self->{last_raft_height} = max(0, $first_layer->print_z - $first_layer->height);
+        $self->{preview3D}->set_z(unscale($self->{object}->size->z));
+        if(!$self->{preview_zoomed}) {
+            $self->{preview3D}->canvas->set_auto_bed_shape;
+            $self->{preview3D}->canvas->zoom_to_volumes;
+            $self->{preview_zoomed} = 1;
+        }
+    }
+}
+
+# Trigger background slicing at the plater
+sub _trigger_slicing {
+    my ($self, $invalidate) = @_;
+    $invalidate //= 1;
+    my $object = $self->{plater}->{print}->get_object($self->{obj_idx});
+    $self->{model_object}->set_layer_height_spline($self->{object}->layer_height_spline); # push modified spline object to model_object
+    #$self->{plater}->pause_background_process;
+    $self->{plater}->stop_background_process;
+    if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
+        $self->{plater}->statusbar->SetCancelCallback(sub {
+            $self->{plater}->stop_background_process;
+            $self->{plater}->statusbar->SetStatusText("Slicing cancelled");
+            $self->{plater}->preview_notebook->SetSelection(0);
+        });
+        $object->invalidate_step(STEP_SLICE) if($invalidate);
+        $self->{plater}->start_background_process;
+    }else{
+        $object->invalidate_step(STEP_SLICE) if($invalidate);
+        $self->{plater}->schedule_background_process;
+    }
+}
+
 
 package Slic3r::GUI::Plater::ObjectDialog::LayersTab;
 use Wx qw(:dialog :id :misc :sizer :systemsettings);

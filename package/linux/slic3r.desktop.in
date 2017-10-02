@@ -2,8 +2,6 @@
 
 Type=Application
 
-Version=SLIC3R_VERSION
-
 Name=APPLICATION_NAME
 
 Comment=Prepare 3D Models for printing

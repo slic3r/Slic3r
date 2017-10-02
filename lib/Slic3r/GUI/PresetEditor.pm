@@ -437,6 +437,7 @@ sub title { 'Print Settings' }
 sub options {
     return qw(
         layer_height first_layer_height
+        adaptive_slicing adaptive_slicing_quality match_horizontal_surfaces
         perimeters spiral_vase
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
@@ -467,7 +468,7 @@ sub options {
         perimeter_extruder infill_extruder solid_infill_extruder
         support_material_extruder support_material_interface_extruder
         ooze_prevention standby_temperature_delta
-        interface_shells
+        interface_shells regions_overlap
         extrusion_width first_layer_extrusion_width perimeter_extrusion_width 
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
@@ -512,6 +513,10 @@ sub build {
             my $optgroup = $page->new_optgroup('Layer height');
             $optgroup->append_single_option_line('layer_height');
             $optgroup->append_single_option_line('first_layer_height');
+            $optgroup->append_single_option_line('adaptive_slicing');
+            $optgroup->append_single_option_line('adaptive_slicing_quality');
+            $optgroup->get_field('adaptive_slicing_quality')->set_scale(1);
+            $optgroup->append_single_option_line('match_horizontal_surfaces');
         }
         {
             my $optgroup = $page->new_optgroup('Vertical shells');
@@ -665,6 +670,7 @@ sub build {
         }
         {
             my $optgroup = $page->new_optgroup('Advanced');
+            $optgroup->append_single_option_line('regions_overlap');
             $optgroup->append_single_option_line('interface_shells');
         }
     }
@@ -863,6 +869,12 @@ sub _update {
         for qw(extra_perimeters thin_walls overhangs seam_position external_perimeters_first
             external_perimeter_extrusion_width
             perimeter_speed small_perimeter_speed external_perimeter_speed);
+
+    my $have_adaptive_slicing = $config->adaptive_slicing;
+    $self->get_field($_)->toggle($have_adaptive_slicing)
+        for qw(adaptive_slicing_quality match_horizontal_surfaces);
+    $self->get_field($_)->toggle(!$have_adaptive_slicing)
+        for qw(layer_height);
     
     my $have_infill = $config->fill_density > 0;
     # infill_extruder uses the same logic as in Print::extruders()
@@ -1145,10 +1157,10 @@ sub _update {
     
     $self->_update_description;
     
-    my $cooling = $self->config->cooling;
+    my $cooling = $self->{config}->cooling;
     $self->get_field($_)->toggle($cooling)
         for qw(max_fan_speed fan_below_layer_time slowdown_below_layer_time min_print_speed);
-    $self->get_field($_)->toggle($cooling || $self->config->fan_always_on)
+    $self->get_field($_)->toggle($cooling || $self->{config}->fan_always_on)
         for qw(min_fan_speed disable_fan_first_layers);
 }
 
@@ -1194,12 +1206,11 @@ sub options {
         bed_shape z_offset z_steps_per_mm has_heatbed
         gcode_flavor use_relative_e_distances
         serial_port serial_speed
-        octoprint_host octoprint_apikey
+        host_type print_host octoprint_apikey
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode between_objects_gcode
-        notes
-        nozzle_diameter extruder_offset
+        nozzle_diameter extruder_offset min_layer_height max_layer_height
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
         retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
         printer_settings_id
@@ -1297,9 +1308,11 @@ sub build {
             $optgroup->append_line($line);
         }
         {
-            my $optgroup = $page->new_optgroup('OctoPrint upload');
+            my $optgroup = $page->new_optgroup('Print server upload');
+
+            $optgroup->append_single_option_line('host_type'); 
             
-            my $host_line = $optgroup->create_single_option_line('octoprint_host');
+            my $host_line = $optgroup->create_single_option_line('print_host');
             $host_line->append_button("Browse…", "zoom.png", sub {
                 # look for devices
                 my $entries;
@@ -1312,19 +1325,19 @@ sub build {
                     my $dlg = Slic3r::GUI::BonjourBrowser->new($self, $entries);
                     if ($dlg->ShowModal == wxID_OK) {
                         my $value = $dlg->GetValue . ":" . $dlg->GetPort;
-                        $self->config->set('octoprint_host', $value);
-                        $self->_on_value_change('octoprint_host');
+                        $self->config->set('print_host', $value);
+                        $self->_on_value_change('print_host');
                     }
                 } else {
                     Wx::MessageDialog->new($self, 'No Bonjour device found', 'Device Browser', wxOK | wxICON_INFORMATION)->ShowModal;
                 }
-            }, undef, !eval "use Net::Bonjour; 1");
+            }, \$self->{print_host_browse_btn}, !eval "use Net::Bonjour; 1");
             $host_line->append_button("Test", "wrench.png", sub {
                 my $ua = LWP::UserAgent->new;
                 $ua->timeout(10);
 
                 my $res = $ua->get(
-                    "http://" . $self->config->octoprint_host . "/api/version",
+                    "http://" . $self->config->print_host . "/api/version",
                     'X-Api-Key' => $self->config->octoprint_apikey,
                 );
                 if ($res->is_success) {
@@ -1334,7 +1347,7 @@ sub build {
                         "I wasn't able to connect to OctoPrint (" . $res->status_line . "). "
                         . "Check hostname and OctoPrint version (at least 1.1.0 is required).");
                 }
-            }, \$self->{octoprint_host_test_btn});
+            }, \$self->{print_host_test_btn});
             $optgroup->append_line($host_line);
             $optgroup->append_single_option_line('octoprint_apikey');
         }
@@ -1418,7 +1431,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Notes',
                 label_width => 0,
             );
-            my $option = $optgroup->get_option('notes');
+            my $option = $optgroup->get_option('printer_notes');
             $option->full_width(1);
             $option->height(250);
             $optgroup->append_single_option_line($option);
@@ -1442,7 +1455,7 @@ sub _extruders_count_changed {
     $self->_update;
 }
 
-sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
+sub _extruder_options { qw(nozzle_diameter min_layer_height max_layer_height extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
     retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
 
 sub _build_extruder_pages {
@@ -1470,6 +1483,11 @@ sub _build_extruder_pages {
         {
             my $optgroup = $page->new_optgroup('Size');
             $optgroup->append_single_option_line('nozzle_diameter', $extruder_idx);
+        }
+        {
+            my $optgroup = $page->new_optgroup('Limits');
+            $optgroup->append_single_option_line($_, $extruder_idx)
+               for qw(min_layer_height max_layer_height);
         }
         {
             my $optgroup = $page->new_optgroup('Position (for multi-extruder printers)');
@@ -1535,12 +1553,17 @@ sub _update {
             $self->{serial_test_btn}->Disable;
         }
     }
-    if ($config->get('octoprint_host') && eval "use LWP::UserAgent; 1") {
-        $self->{octoprint_host_test_btn}->Enable;
-    } else {
-        $self->{octoprint_host_test_btn}->Disable;
+    if (($config->get('host_type') eq 'octoprint')) {
+        $self->{print_host_browse_btn}->Enable;
+    }else{
+        $self->{print_host_browse_btn}->Disable;
     }
-    $self->get_field('octoprint_apikey')->toggle($config->get('octoprint_host'));
+    if (($config->get('host_type') eq 'octoprint') && eval "use LWP::UserAgent; 1") {
+        $self->{print_host_test_btn}->Enable;
+    } else {    
+        $self->{print_host_test_btn}->Disable;
+    }
+    $self->get_field('octoprint_apikey')->toggle($config->get('print_host'));
     
     my $have_multiple_extruders = $self->{extruders_count} > 1;
     $self->get_field('toolchange_gcode')->toggle($have_multiple_extruders);

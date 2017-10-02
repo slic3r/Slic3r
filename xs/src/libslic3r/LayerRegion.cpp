@@ -89,7 +89,7 @@ LayerRegion::process_external_surfaces()
             // (thus not visible from the outside), like a slab sustained by
             // pillars, include them in the bridge in order to have better and
             // more continuous bridging.
-            for (int i = 0; i < surfaces[j].expolygon.holes.size(); ++i) {
+            for (size_t i = 0; i < surfaces[j].expolygon.holes.size(); ++i) {
                 // reverse the hole and consider it a polygon
                 Polygon h = surfaces[j].expolygon.holes[i];
                 h.reverse();
@@ -97,7 +97,7 @@ LayerRegion::process_external_surfaces()
                 // Is this hole fully contained in the layer slices?
                 if (diff(h, this->layer()->slices).empty()) {
                     // remove any other surface contained in this hole
-                    for (int k = 0; k < surfaces.size(); ++k) {
+                    for (size_t k = 0; k < surfaces.size(); ++k) {
                         if (k == j) continue;
                         if (h.contains(surfaces[k].expolygon.contour.first_point())) {
                             surfaces.erase(surfaces.begin() + k);
