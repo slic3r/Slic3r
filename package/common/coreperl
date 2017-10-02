@@ -19,5 +19,3 @@ local::lib
 strict 
 utf8 
 parent
-Fcntl
-Fcntl:flock
