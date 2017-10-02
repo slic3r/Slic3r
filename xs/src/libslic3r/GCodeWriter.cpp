@@ -215,11 +215,15 @@ GCodeWriter::set_acceleration(unsigned int acceleration)
     this->_last_acceleration = acceleration;
     
     std::ostringstream gcode;
-    if (FLAVOR_IS(gcfRepetier)) {
+    if (FLAVOR_IS(gcfRepetier) || (FLAVOR_IS(gcfRepRap))) {
         gcode << "M201 X" << acceleration << " Y" << acceleration;
         if (this->config.gcode_comments) gcode << " ; adjust acceleration";
         gcode << "\n";
+    }
+    if (FLAVOR_IS(gcfRepetier)) {
         gcode << "M202 X" << acceleration << " Y" << acceleration;
+    } else if (FLAVOR_IS(gcfRepRap)) {
+        gcode << "M204 P" << acceleration << " T" << acceleration;
     } else {
         gcode << "M204 S" << acceleration;
     }
