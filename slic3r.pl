@@ -52,6 +52,7 @@ my %cli_options = ();
         'duplicate-grid=s'      => \$opt{duplicate_grid},
         'print-center=s'        => \$opt{print_center},
         'dont-arrange'          => \$opt{dont_arrange},
+        'model-coords'          => \$opt{model_coords},
         
         # legacy options, ignored
         'no-plater'             => \$opt{no_plater},
@@ -262,6 +263,7 @@ if (@ARGV) {  # slicing from command line
             duplicate_grid  => $opt{duplicate_grid} // [1,1],
             print_center    => $opt{print_center},
             dont_arrange    => $opt{dont_arrange}   // 0,
+            model_coords    => $opt{model_coords}   // 0,
             status_cb       => sub {
                 my ($percent, $message) = @_;
                 printf "=> %s\n", $message;

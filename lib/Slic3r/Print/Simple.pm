@@ -53,6 +53,11 @@ has 'dont_arrange' => (
     default => sub { 0 },
 );
 
+has 'model_coords' => (
+    is      => 'rw',
+    default => sub { 0 },
+);
+
 has 'output_file' => (
     is      => 'rw',
 );
@@ -72,7 +77,7 @@ sub set_model {
     $self->_print->clear_objects;
     
     # make sure all objects have at least one defined instance
-    my $need_arrange = $model->add_default_instances && ! $self->dont_arrange;
+    my $need_arrange = $model->add_default_instances && ! ($self->dont_arrange || $self->model_coords);
     
     # apply scaling and rotation supplied from command line if any
     foreach my $instance (map @{$_->instances}, @{$model->objects}) {
@@ -91,9 +96,11 @@ sub set_model {
         # if all input objects have defined position(s) apply duplication to the whole model
         $model->duplicate($self->duplicate, $self->_print->config->min_object_distance, $bb);
     }
-    $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects};
+    if (!$self->model_coords) {
+        $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects} ;
+    }
     
-    if (!$self->dont_arrange) {
+    if (!$self->dont_arrange && !$self->model_coords) {
         my $print_center = $self->print_center
             // Slic3r::Pointf->new_unscale(@{ $self->_bed_polygon->centroid });
         $model->center_instances_around_point($print_center);
