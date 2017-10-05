@@ -267,7 +267,7 @@ sub nudge_instance{
     my ($self, $direction) = @_;
 
     # Get the selected instance of an object.
-    # ToDo @Samir55 Disable if 2d panel is not chosen.
+    # ToDo @Samir55 Disable menuitems if 2d panel is not chosen.
     # ToDo @Samir55 fix keyboard focus error on ubuntu.
     # ToDo @Samir55 Fix selection error between select next and select Manually.
     # ToDo @Samir55 Fix auto selected object when changing from 3d to 2d plater.
