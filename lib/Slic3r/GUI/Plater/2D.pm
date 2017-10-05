@@ -10,7 +10,7 @@ use List::Util qw(min max first);
 use Slic3r::Geometry qw(X Y scale unscale convex_hull);
 use Slic3r::Geometry::Clipper qw(offset JT_ROUND intersection_pl);
 use Wx qw(:misc :pen :brush :sizer :font :cursor wxTAB_TRAVERSAL);
-use Wx::Event qw(EVT_MOUSE_EVENTS EVT_PAINT EVT_BUTTON EVT_ERASE_BACKGROUND EVT_SIZE);
+use Wx::Event qw(EVT_MOUSE_EVENTS EVT_KEY_DOWN EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
 use base 'Wx::Panel';
 
 use constant CANVAS_TEXT => join('-', +(localtime)[3,4]) eq '13-8'
@@ -55,6 +55,23 @@ sub new {
         $self->update_bed_size;
         $self->Refresh;
     });
+    EVT_KEY_DOWN($self, sub {
+            my ($s, $event) = @_;
+
+            my $key = $event->GetKeyCode;
+            print $key; #ToDo @Samir55 remove.
+            if ($key == 68 || $key == 314) {
+                $self->nudge_instance('left');
+            } elsif ($key == 85 || $key == 315) {
+                $self->nudge_instance('up');
+            } elsif ($key == 68 || $key == 316) {
+                $self->nudge_instance('right');
+            } elsif ($key == 68 || $key == 317) {
+                $self->nudge_instance('down');
+            } else {
+                $event->Skip;
+            }
+        });
     
     return $self;
 }

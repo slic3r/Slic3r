@@ -192,34 +192,6 @@ sub _init_menubar {
             my $selectMenu = $self->{plater_select_menu} = Wx::Menu->new;
             wxTheApp->append_submenu($self->{plater_menu}, "Select", 'Select an object in the plater', $selectMenu, undef, 'brick.png');
         }
-        {
-            my $moveObjectMenu = $self->{plater_move_instance_menu} = Wx::Menu->new;
-            wxTheApp->append_submenu($self->{plater_menu}, "Move Instance", 'Move a selected instance in the 2D plater', $moveObjectMenu, undef, 'arrow_inout.png');
-            wxTheApp->append_menu_item($self->{plater_move_instance_menu}, "Right\tRight", 'Move Selected Instance',
-                sub {
-                    if ($plater->{preview_notebook}->GetSelection == 1) {
-                        $plater->{canvas}->nudge_instance('right');
-                    }
-                }, undef, 'arrow_right.png');
-            wxTheApp->append_menu_item($self->{plater_move_instance_menu}, "Left\tLeft", 'Move Selected Instance',
-                sub {
-                    if ($plater->{preview_notebook}->GetSelection == 1) {
-                        $plater->{canvas}->nudge_instance('left');
-                    }
-                }, undef, 'arrow_left.png');
-            wxTheApp->append_menu_item($self->{plater_move_instance_menu}, "Down\tDown", 'Move Selected Instance',
-                sub {
-                    if ($plater->{preview_notebook}->GetSelection == 1) {
-                        $plater->{canvas}->nudge_instance('down');
-                    }
-                }, undef, 'arrow_down.png');
-            wxTheApp->append_menu_item($self->{plater_move_instance_menu}, "Up\tUp", 'Move Selected Instance',
-                sub {
-                    if ($plater->{preview_notebook}->GetSelection == 1) {
-                        $plater->{canvas}->nudge_instance('up');
-                    }
-                }, undef, 'arrow_up.png');
-        }
         wxTheApp->append_menu_item($self->{plater_menu}, "Undo\tCtrl+Z", 'Undo', sub {
                 $plater->undo;
             }, undef, 'arrow_undo.png');
