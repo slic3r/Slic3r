@@ -35,6 +35,7 @@ sub new {
     
     $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(210,210,210), wxSOLID);
     $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
+    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(255,166,128), wxSOLID);
     $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(128,128,255), wxSOLID);
     $self->{transparent_brush}  = Wx::Brush->new(Wx::Colour->new(0,0,0), wxTRANSPARENT);
     $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(230,230,230), 1, wxSOLID);
@@ -44,9 +45,7 @@ sub new {
 
     $self->{user_drawn_background} = $^O ne 'darwin';
 
-    $self->{nudge_value} = 1e6;
-#    my $nudge_button = $self->{nudge} = Wx::Button->new($self, -1, 'Nudge value', wxDefaultPosition, wxDefaultSize);
-#    EVT_BUTTON($self, $nudge_button, sub { $self->set_nudge_value });
+    $self->{selected_instance} = undef;
 
     EVT_PAINT($self, \&repaint);
     EVT_ERASE_BACKGROUND($self, sub {}) if $self->{user_drawn_background};
@@ -59,7 +58,7 @@ sub new {
             my ($s, $event) = @_;
 
             my $key = $event->GetKeyCode;
-            print $key; #ToDo @Samir55 remove.
+            print $key; #ToDo @Samir55 Add Ubuntu/Windows Key numbers.
             if ($key == 68 || $key == 314) {
                 $self->nudge_instance('left');
             } elsif ($key == 85 || $key == 315) {
@@ -170,6 +169,8 @@ sub repaint {
             
             if (defined $self->{drag_object} && $self->{drag_object}[0] == $obj_idx && $self->{drag_object}[1] == $instance_idx) {
                 $dc->SetBrush($self->{dragged_brush});
+            } elsif ($object->selected && $object->selected_instance == $instance_idx) {
+                $dc->SetBrush($self->{instance_brush});
             } elsif ($object->selected) {
                 $dc->SetBrush($self->{selected_brush});
             } else {
@@ -242,6 +243,7 @@ sub mouse_event {
                             $point->y - $instance_origin->[Y],  #-
                         ];
                         $self->{drag_object} = [ $obj_idx, $instance_idx ];
+                        $self->{objects}->[$obj_idx]->selected_instance($instance_idx);
                         $self->{selected_instance} = $self->{drag_object};
                     } elsif ($event->RightDown) {
                         $self->{on_right_click}->($pos);
@@ -284,11 +286,19 @@ sub nudge_instance{
     my ($self, $direction) = @_;
 
     # Get the selected instance of an object.
-    # ToDo @Samir55 Disable menuitems if 2d panel is not chosen.
-    # ToDo @Samir55 fix keyboard focus error on ubuntu.
-    # ToDo @Samir55 Fix selection error between select next and select Manually.
-    # ToDo @Samir55 Fix auto selected object when changing from 3d to 2d plater.
-    return if not defined $self->{selected_instance};
+    # ToDo @Samir55 fix keyboard focus error on ubuntu and windows. SEVERE !
+
+    if (!defined $self->{selected_instance}) {
+        # Check if an object is selected.
+        for my $obj_idx (0 .. $#{$self->{objects}}) {
+            if ($self->{objects}->[$obj_idx]->selected) {
+                if ($self->{objects}->[$obj_idx]->selected_instance != -1) {
+                    $self->{selected_instance} = [$obj_idx, $self->{objects}->[$obj_idx]->selected_instance];
+                }
+            }
+        }
+    }
+    return if not defined ($self->{selected_instance});
     my ($obj_idx, $instance_idx) = @{ $self->{selected_instance} };
     my $object = $self->{model}->objects->[$obj_idx];
     my $instance = $object->instances->[$instance_idx];
