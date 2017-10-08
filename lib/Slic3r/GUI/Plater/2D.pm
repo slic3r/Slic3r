@@ -96,7 +96,12 @@ sub on_instances_moved {
 
 sub repaint {
     my ($self, $event) = @_;
-    
+
+    if (&Wx::wxMSW) {
+        # wxMSW needs focus in order to catch keyboard events.
+        $self->SetFocus;
+    }
+
     my $dc = Wx::AutoBufferedPaintDC->new($self);
     my $size = $self->GetSize;
     my @size = ($size->GetWidth, $size->GetHeight);
