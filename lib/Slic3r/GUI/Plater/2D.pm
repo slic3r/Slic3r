@@ -293,8 +293,6 @@ sub nudge_instance{
     my ($self, $direction) = @_;
 
     # Get the selected instance of an object.
-    # ToDo @Samir55 fix keyboard focus error on ubuntu and windows. SEVERE !
-
     if (!defined $self->{selected_instance}) {
         # Check if an object is selected.
         for my $obj_idx (0 .. $#{$self->{objects}}) {
