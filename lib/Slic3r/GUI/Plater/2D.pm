@@ -34,8 +34,8 @@ sub new {
     $self->{on_instances_moved} = sub {};
     
     $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(210,210,210), wxSOLID);
-    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
-    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(255,166,128), wxSOLID);
+    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
+    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,166,128), wxSOLID);
     $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(128,128,255), wxSOLID);
     $self->{transparent_brush}  = Wx::Brush->new(Wx::Colour->new(0,0,0), wxTRANSPARENT);
     $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(230,230,230), 1, wxSOLID);
@@ -223,6 +223,9 @@ sub mouse_event {
     my $pos = $event->GetPosition;
     my $point = $self->point_to_model_units([ $pos->x, $pos->y ]);  #]]
     if ($event->ButtonDown) {
+        # On Linux, Focus is needed in order to move selected instance using keyboard arrows.
+        $self->SetFocus;
+
         $self->{on_select_object}->(undef);
         $self->{selected_instance} = undef;
         # traverse objects and instances in reverse order, so that if they're overlapping
