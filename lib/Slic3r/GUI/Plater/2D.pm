@@ -58,14 +58,13 @@ sub new {
             my ($s, $event) = @_;
 
             my $key = $event->GetKeyCode;
-            print $key; #ToDo @Samir55 Add Ubuntu/Windows Key numbers.
-            if ($key == 68 || $key == 314) {
+            if ($key == 65 || $key == 314) {
                 $self->nudge_instance('left');
-            } elsif ($key == 85 || $key == 315) {
+            } elsif ($key == 87 || $key == 315) {
                 $self->nudge_instance('up');
             } elsif ($key == 68 || $key == 316) {
                 $self->nudge_instance('right');
-            } elsif ($key == 68 || $key == 317) {
+            } elsif ($key == 83 || $key == 317) {
                 $self->nudge_instance('down');
             } else {
                 $event->Skip;
