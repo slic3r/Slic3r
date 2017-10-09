@@ -1392,6 +1392,16 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("0.2 (detachable)");
     def->default_value = new ConfigOptionFloat(0.2);
 
+    def = this->add("support_material_max_layers", coInt);
+    def->label = "Max layer count for supports";
+    def->category = "Support material";
+    def->tooltip = "Do not print supports above this layer (0 is disabled). This differs from the Enforce-layers option in a couple main ways: 1. This option will do nothing if Supports are disabled, it merely terminates generation above the selected height. 2. The Enforce option does not honor some other support option restrictions, in particular the Overhang threshold, while this Max layer count still honors those. Default is 0 (limit disabled).";
+    def->sidetext = "layers";
+    def->cli = "support-material-max-layers=f";
+    def->full_label = "Maximum layer count for support generation";
+    def->min = 0;
+    def->default_value = new ConfigOptionInt(0);
+
     def = this->add("support_material_enforce_layers", coInt);
     def->label = "Enforce support for the first";
     def->category = "Support material";
