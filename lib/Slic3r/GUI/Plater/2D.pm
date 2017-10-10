@@ -97,10 +97,8 @@ sub on_instances_moved {
 sub repaint {
     my ($self, $event) = @_;
 
-    if (&Wx::wxMSW) {
-        # wxMSW needs focus in order to catch keyboard events.
-        $self->SetFocus;
-    }
+    # Focus is needed in order to catch keyboard events.
+    $self->SetFocus;
 
     my $dc = Wx::AutoBufferedPaintDC->new($self);
     my $size = $self->GetSize;
@@ -312,7 +310,7 @@ sub nudge_instance{
     my $x_nudge = 0;
     my $y_nudge = 0;
 
-    $self->{nudge_value} = $Slic3r::GUI::Settings->{_}{nudge_val} * 1e6;
+    $self->{nudge_value} = ($Slic3r::GUI::Settings->{_}{nudge_val} < 0.1 ? 0.1 : $Slic3r::GUI::Settings->{_}{nudge_val}) / &Slic3r::SCALING_FACTOR;
 
     if ($direction eq 'right'){
         $x_nudge = $self->{nudge_value};
