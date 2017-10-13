@@ -219,7 +219,7 @@ sub export {
     if ($self->config->complete_objects) {
         # print objects from the smallest to the tallest to avoid collisions
         # when moving onto next object starting point
-        my @obj_idx = sort { $self->objects->[$a]->size->z <=> $self->objects->[$b]->size->z } 0..($self->print->object_count - 1);
+        my @obj_idx = sort { $self->objects->[$a]->config->sequential_print_priority <=> $self->objects->[$b]->config->sequential_print_priority or $self->objects->[$a]->size->z <=> $self->objects->[$b]->size->z} 0..($self->print->object_count - 1);
         
         my $finished_objects = 0;
         for my $obj_idx (@obj_idx) {
