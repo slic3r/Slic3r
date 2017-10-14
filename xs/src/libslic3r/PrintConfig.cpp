@@ -1617,6 +1617,12 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "use-relative-e-distances!";
     def->default_value = new ConfigOptionBool(false);
 
+    def = this->add("use_visivalingam", coBool);		
+    def->label = "Use the Visivalingam simplification algorithm, instead of Douglas-Puecker";		
+    def->tooltip = "Whether or not to use the experimental Visivalingam simplification algorithm. This algorithm is more performant than Douglas-Puecker, but also should do a better job of intelligently preserving detail.";	
+    def->cli = "use-visivalingam!";		
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("use_volumetric_e", coBool);
     def->label = "Use volumetric E";
     def->tooltip = "This experimental setting uses outputs the E values in cubic millimeters instead of linear millimeters. If your firmware doesn't already know filament diameter(s), you can put commands like 'M200 D[filament_diameter_0] T0' in your start G-code in order to turn volumetric mode on and use the filament diameter associated to the filament selected in Slic3r. This is only supported in recent Marlin.";
@@ -1662,6 +1668,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Set this to the number of *full* steps (not microsteps) needed for moving the Z axis by 1mm; you can calculate this by dividing the number of microsteps configured in your firmware by the microstepping amount (8, 16, 32). Slic3r will round your configured layer height to the nearest multiple of that value in order to ensure the best accuracy. This is most useful for machines with imperial leadscrews or belt-driven Z or for unusual layer heights with metric leadscrews. Set to zero to disable this experimental feature.";
     def->cli = "z-steps-per-mm=f";
     def->default_value = new ConfigOptionFloat(0);
+
 }
 
 const PrintConfigDef print_config_def;
