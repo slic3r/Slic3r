@@ -182,6 +182,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionFloat               support_material_speed;
     ConfigOptionFloatOrPercent      support_material_threshold;
     ConfigOptionFloat               xy_size_compensation;
+    ConfigOptionInt                 sequential_print_priority;
     
     PrintObjectConfig(bool initialize = true) : StaticPrintConfig() {
         if (initialize)
@@ -217,6 +218,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         OPT_PTR(support_material_speed);
         OPT_PTR(support_material_threshold);
         OPT_PTR(xy_size_compensation);
+        OPT_PTR(sequential_print_priority);
         
         return NULL;
     };
