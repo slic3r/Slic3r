@@ -6,20 +6,14 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <regex>
+
+#include <exprtk/exprtk.hpp>
 
 // Valid start tokens
 // {, {if
 // 
 // Valid end tokens
 // }
-//
-// Valid operator tokens
-//
-// &&, ||, and, or, not, xor, ==, equals, !=, <, <=, >,>=
-//
-// Everything else
-// Anything that is not recognized as a token
 //
 // Special case:
 //
@@ -30,45 +24,26 @@
 namespace Slic3r {
 using gcode_recurse_t = std::pair < std::string, bool >;
 
-const std::regex binary_op("[ ]*([-.0-9]+|true|false)[ ]*([-+*/^<>]|and|or|xor|equals|==|!=|<=|>=)[ ]*([-.0-9]+|true|false)[ ]*");
-const std::regex unary_op("[ ]*(!|not)[ ]*([01]|true|false)");
-
-
 /// Evaluate operators
-std::string evaluate(std::stringstream& val1, std::stringstream& val2, const std::string op) {
+template <typename T>
+std::string evaluate(const std::string& expression_string) {
     std::stringstream result;
-    if (op.compare("+") == 0) {
-        double v1, v2;
-        val1 >> v1;
-        val2 >> v2;
-        result << (v1 + v2);
-    } else if (op.compare("-") == 0) {
-        double v1, v2;
-        val1 >> v1;
-        val2 >> v2;
-        result << (v1 - v2);
-    } else if (op.compare("*") == 0) {
-        double v1, v2;
-        val1 >> v1;
-        val2 >> v2;
-        result << (v1 * v2);
-    } else if (op.compare("/") == 0) {
-        double v1, v2;
-        val1 >> v1;
-        val2 >> v2;
-        result << (v1 / v2);
-    } else if (op.compare("not") == 0 || op.compare("!") == 0) {
-        unsigned v1;
-        if (val1.str().compare("true") == 0) {
-            v1 = 1;
-        } else  
-        if (val1.str().compare("false") == 0) {
-            v1 = 0;
-        } else {
-            val1 >> v1;
-        }
-        result << (!v1);
+    typedef exprtk::symbol_table<T> symbol_table_t;
+    typedef exprtk::expression<T>     expression_t;
+    typedef exprtk::parser<T>             parser_t;
+
+    #if SLIC3R_DEBUG
+    std::cerr << "Evaluating expression: " << expression_string << std::endl;
+    #endif
+    T num_result = T(0);
+    if ( exprtk::compute(expression_string, num_result)) { 
+        result << num_result;
+    } else {
+        #if SLIC3R_DEBUG
+        std::cerr << "Failed to parse: " << expression_string.c_str() << std::endl;
+        #endif
     }
+
     return result.str();
 } 
 
@@ -88,38 +63,9 @@ std::pair <std::string, bool> expression(const std::string& input, const bool co
     #ifdef SLIC3R_DEBUG
     std::cerr << "depth " << depth << " input str: " << input << std::endl;
     #endif
-    if (open_bracket == 0) { // no subexpressions, resolve operators.
-    // regexes to check:
-    // VAL1 OP VAL2
-    // OP VAL1
-        std::smatch m;
-        if (std::regex_match(buffer, m, binary_op)) {
-            #ifdef SLIC3R_DEBUG
-            std::cerr << "Matched binary op with " << input << " at depth " << depth << std::endl;
-            #endif
-            std::stringstream val1_s, val2_s, op;
-            val1_s << m[1]; val2_s << m[3]; op << m[2];
-            std::string result = evaluate(val1_s, val2_s, op.str());
-            #ifdef SLIC3R_DEBUG
-            std::cerr << "Op Result: " << result << std::endl;
-            #endif
-            return gcode_recurse_t(result, cond);
-        ;
-        } else if (std::regex_match(buffer, m, unary_op)) {
-            #ifdef SLIC3R_DEBUG
-            std::cerr << "Matched unary op with " << input << " at depth " << depth << std::endl;
-            #endif
-            std::stringstream val1_s, op;
-            val1_s << m[1]; op << m[2];
-            std::string result = evaluate(val1_s, val1_s, op.str());
-            return gcode_recurse_t(result, cond);
-        ;
-        } else { // no op, do nothing
-            #ifdef SLIC3R_DEBUG
-            std::cerr << "Matched no op with " << input << " at depth " << depth << std::endl;
-            #endif
-            return gcode_recurse_t(buffer, cond);
-        }
+    if (open_bracket == 0 && depth > 0) { // no subexpressions, resolve operators.
+        
+        return gcode_recurse_t(evaluate<double>(buffer), cond);
     }
     while (open_bracket > 0) {
         // a subexpression has been found, find the end of it.
