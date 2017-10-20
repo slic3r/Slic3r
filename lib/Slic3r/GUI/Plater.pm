@@ -1253,12 +1253,20 @@ sub load_model_objects {
         push @obj_idx, $#{ $self->{objects} };
     
         if ($model_object->instances_count == 0) {
-            # if object has no defined position(s) we need to rearrange everything after loading
-            $need_arrange = 1;
-        
-            # add a default instance and center object around origin
-            $o->center_around_origin;  # also aligns object to Z = 0
-            $o->add_instance(offset => $bed_centerf);
+            if ($Slic3r::GUI::Settings->{_}{autocenter}) {
+                # if object has no defined position(s) we need to rearrange everything after loading
+                $need_arrange = 1;
+
+                # add a default instance and center object around origin
+                $o->center_around_origin;  # also aligns object to Z = 0
+                $o->add_instance(offset => $bed_centerf);
+            } else {
+                # if user turned autocentering off, automatic arranging would disappoint them
+                $need_arrange = 0;
+
+                $o->align_to_ground; # aligns object to Z = 0
+                $o->add_instance();
+            }
         } else {
             # if object has defined positions we still need to ensure it's aligned to Z = 0
             $o->align_to_ground;
@@ -1278,10 +1286,6 @@ sub load_model_objects {
         $self->{print}->add_model_object($o);
     }
     
-    # if user turned autocentering off, automatic arranging would disappoint them
-    if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
-        $need_arrange = 0;
-    }
     
     if ($scaled_down) {
         Slic3r::GUI::show_info(
