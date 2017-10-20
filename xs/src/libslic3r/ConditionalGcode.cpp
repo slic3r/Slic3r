@@ -35,14 +35,14 @@ std::string evaluate(const std::string& expression_string) {
     std::stringstream result;
 
     #if SLIC3R_DEBUG
-    std::cerr << "Evaluating expression: " << expression_string << std::endl;
+    std::cerr << __FILE__ << ":" << __LINE__ << " "<< "Evaluating expression: " << expression_string << std::endl;
     #endif
     double num_result = double(0);
     if ( exprtk::compute(expression_string, num_result)) { 
         result << num_result;
     } else {
         #if SLIC3R_DEBUG
-        std::cerr << "Failed to parse: " << expression_string.c_str() << std::endl;
+        std::cerr << __FILE__ << ":" << __LINE__ << " "<< "Failed to parse: " << expression_string.c_str() << std::endl;
         #endif
     }
     std::string output = result.str();
@@ -65,7 +65,7 @@ std::string expression(const std::string& input, const int depth) {
 
     auto i = 0;
     #ifdef SLIC3R_DEBUG
-    std::cerr << "depth " << depth << " input str: " << input << std::endl;
+    std::cerr << __FILE__ << ":" << __LINE__ << " " << "depth " << depth << " input str: " << input << std::endl;
     #endif
     if (open_bracket == 0 && depth > 0) { // no subexpressions, resolve operators.
         
@@ -83,7 +83,7 @@ std::string expression(const std::string& input, const int depth) {
         pos = (pos_if > pos ? pos_if : pos);
 
         #ifdef SLIC3R_DEBUG
-        std::cerr << "depth " << depth << " loop " << i << " pos: " << pos << std::endl;
+        std::cerr << __FILE__ << ":" << __LINE__ << " "<< "depth " << depth << " loop " << i << " pos: " << pos << std::endl;
         #endif
 
         // find the first bracket after the position
@@ -97,7 +97,7 @@ std::string expression(const std::string& input, const int depth) {
 
         #ifdef SLIC3R_DEBUG
         if (is_conditional) {
-            std::cerr << "depth " << depth << " loop " << i << " return: '" << retval  << "'" << std::endl;
+            std::cerr << __FILE__ << ":" << __LINE__ << " "<< "depth " << depth << " loop " << i << " return: '" << retval  << "'" << std::endl;
         }
         #endif
 
@@ -111,10 +111,12 @@ std::string expression(const std::string& input, const int depth) {
         if (end_pos < buffer.size()-1)  // special case, last } is final char
             tmp << buffer.substr(end_pos+1, buffer.size() - (end_pos));
         buffer = tmp.str();
-        tmp = std::stringstream();
+
+        // flush the internal string.
+        tmp.str(std::string());
 
         #ifdef SLIC3R_DEBUG
-        std::cerr << "depth: " << depth <<" Result from loop " << i << ": " << buffer << std::endl;
+        std::cerr << __FILE__ << ":" << __LINE__ << " "<< "depth: " << depth <<" Result from loop " << i << ": " << buffer << std::endl;
         #endif
 
         open_bracket = std::count(buffer.begin(), buffer.end(), '{');
