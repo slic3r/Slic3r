@@ -125,7 +125,6 @@ std::string expression(const std::string& input, const int depth) {
     }
     // {if that resolves to false/0 signifies dropping everything up to the next newline from the input buffer.
     // Also remove the result of the {if itself.
-    trim(buffer);
     return buffer;
 }
 
