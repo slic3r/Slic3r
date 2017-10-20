@@ -6,6 +6,13 @@
 %}
 
 
-%package{Slic3r::GCode::ConditionalGCode};
+%package{Slic3r::ConditionalGCode};
 
-std::string apply_math(std::string in);
+%{
+PROTOTYPES: DISABLE
+std::string apply_math(std::string input)
+    CODE:
+        RETVAL = Slic3r::apply_math(input);
+    OUTPUT:
+        RETVAL
+%}

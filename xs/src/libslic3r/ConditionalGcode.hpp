@@ -28,6 +28,6 @@ namespace Slic3r {
 std::string expression(const std::string& input, const int depth = 0);
 
 /// External access function to begin replac
-std::string apply_math(const std::string input);
+std::string apply_math(const std::string& input);
 
 }
