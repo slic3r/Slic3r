@@ -4,13 +4,19 @@ use strict;
 use warnings;
 
 use Slic3r::XS;
-use Test::More tests => 3;
+use Test::More tests => 4;
 {
     {
         my $test_string = "{if{3 == 4}} string";
 
         my $result = Slic3r::ConditionalGCode::apply_math($test_string);
         is $result, "", 'If statement with nested bracket removes on false resolution.';
+    }
+    {
+        my $test_string = "{if{3 == 4}} string\notherstring";
+
+        my $result = Slic3r::ConditionalGCode::apply_math($test_string);
+        is $result, "otherstring", 'if false only removes up to newline.';
     }
 
     {
