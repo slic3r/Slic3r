@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Slic3r::XS;
-use Test::More tests => 5;
+use Test::More tests => 6;
 {
     {
         my $test_string = "{if{3 == 4}} string";
@@ -21,6 +21,12 @@ use Test::More tests => 5;
 
     {
         my $test_string = "{if{3 == 3}} string";
+
+        my $result = Slic3r::ConditionalGCode::apply_math($test_string);
+        is $result, " string", 'If statement with nested bracket removes itself only on resulting true, does not strip text outside of brackets.';
+    }
+    {
+        my $test_string = "{if{3 == 3}}string";
 
         my $result = Slic3r::ConditionalGCode::apply_math($test_string);
         is $result, "string", 'If statement with nested bracket removes itself only on resulting true.';
