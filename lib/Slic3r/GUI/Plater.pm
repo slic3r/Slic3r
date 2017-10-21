@@ -1240,6 +1240,7 @@ sub load_model_objects {
     
     my $need_arrange = 0;
     my $scaled_down = 0;
+    my $outside_bounds = 0;
     my @obj_idx = ();
     foreach my $model_object (@model_objects) {
         my $o = $self->{model}->add_object($model_object);
@@ -1281,9 +1282,29 @@ sub load_model_objects {
                 $scaled_down = 1;
             }
         }
+
+        {
+           # if after scaling the object does not fit on the bed provide a warning
+           my $bed_bounds = Slic3r::Geometry::BoundingBoxf->new_from_points($self->{config}->bed_shape);
+           my $o_bounds = $o->bounding_box;
+           my $min = Slic3r::Pointf->new($o_bounds->x_min, $o_bounds->y_min);
+           my $max = Slic3r::Pointf->new($o_bounds->x_max, $o_bounds->y_max);
+           if (!$bed_bounds->contains_point($min) || !$bed_bounds->contains_point($max))
+           {
+               $outside_bounds = 1;
+           }
+        }
     
         $self->{print}->auto_assign_extruders($o);
         $self->{print}->add_model_object($o);
+    }
+
+    if ($outside_bounds) {
+         Slic3r::GUI::show_info(
+            $self,
+            'Some of your object(s) appear to be outside the print bed. Use the arrange button to correct this.',
+            'Outside print bed?',
+        );
     }
     
     
