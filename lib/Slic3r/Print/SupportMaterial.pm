@@ -49,6 +49,7 @@ sub generate {
         [ sort keys %$top ],
         max(map $_->height, @{$object->layers})
     );
+    $self->clip_with_object($contact, $support_z, $object);
     
     # If we wanted to apply some special logic to the first support layers lying on
     # object's top surfaces this is the place to detect them
@@ -60,13 +61,11 @@ sub generate {
     
     # Propagate contact layers downwards to generate interface layers
     my ($interface) = $self->generate_interface_layers($support_z, $contact, $top);
-    $self->clip_with_object($interface, $support_z, $object);
     $self->clip_with_shape($interface, $shape) if @$shape;
     
     # Propagate contact layers and interface layers downwards to generate
     # the main support layers.
     my ($base) = $self->generate_base_layers($support_z, $contact, $interface, $top);
-    $self->clip_with_object($base, $support_z, $object);
     $self->clip_with_shape($base, $shape) if @$shape;
     
     # Detect what part of base support layers are "reverse interfaces" because they
@@ -590,8 +589,11 @@ sub clip_with_object {
     foreach my $i (keys %$support) {
         next if !@{$support->{$i}};
         
-        my $zmax = $support_z->[$i];
-        my $zmin = ($i == 0) ? 0 : $support_z->[$i-1];
+        my $zmax = $i;
+        my $zmin = 0;
+        for (@$support_z) {
+            $zmin = $_ if $_ > $zmin and $_ < $zmax;
+        }
         my @layers = grep { $_->print_z > $zmin && ($_->print_z - $_->height) < $zmax }
             @{$object->layers};
         
