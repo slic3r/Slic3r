@@ -25,6 +25,9 @@ public:
     bool detect_angle();
     Polygons coverage() const;
     Polygons coverage(double angle) const;
+    
+    /// Return the bridge edges that are not currently supported but would permit use of the supplied
+    /// bridge angle if it was supported.
     Polylines unsupported_edges(double angle = -1) const;
     
 private:
