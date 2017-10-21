@@ -1430,6 +1430,18 @@ PrintConfigDef::PrintConfigDef()
     def->min = 1;
     def->default_value = new ConfigOptionInt(1);
 
+    def = this->add("support_material_interface_extrusion_width", coFloatOrPercent);
+    def->label = "Support material";
+    def->gui_type = "f_enum_open";
+    def->category = "Extrusion Width";
+    def->tooltip = "Set this to a non-zero value to set a manual extrusion width for support material interface. If expressed as percentage (for example 90%) it will be computed over layer height.";
+    def->sidetext = "mm or %";
+    def->cli = "support-material-interface-extrusion-width=s";
+    def->min = 0;
+    def->enum_values.push_back("0");
+    def->enum_labels.push_back("default");
+    def->default_value = new ConfigOptionFloatOrPercent(0, false);
+
     def = this->add("support_material_interface_layers", coInt);
     def->label = "Interface layers";
     def->category = "Support material";

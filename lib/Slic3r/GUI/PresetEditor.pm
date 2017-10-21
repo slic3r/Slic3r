@@ -472,7 +472,7 @@ sub options {
         extrusion_width first_layer_extrusion_width perimeter_extrusion_width 
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
-        infill_overlap bridge_flow_ratio
+        support_material_interface_extrusion_width infill_overlap bridge_flow_ratio
         xy_size_compensation resolution shortcuts compatible_printers
         print_settings_id
     )
@@ -685,7 +685,8 @@ sub build {
                 for qw(extrusion_width first_layer_extrusion_width
                     perimeter_extrusion_width external_perimeter_extrusion_width
                     infill_extrusion_width solid_infill_extrusion_width
-                    top_infill_extrusion_width support_material_extrusion_width);
+                    top_infill_extrusion_width support_material_interface_extrusion_width 
+                    support_material_extrusion_width);
         }
         {
             my $optgroup = $page->new_optgroup('Overlap');
@@ -923,7 +924,8 @@ sub _update {
         for qw(support_material_threshold support_material_pattern 
             support_material_spacing support_material_angle
             support_material_interface_layers dont_support_bridges
-            support_material_extrusion_width support_material_contact_distance);
+            support_material_extrusion_width support_material_interface_extrusion_width
+            support_material_contact_distance);
 
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
