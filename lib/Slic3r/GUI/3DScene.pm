@@ -780,16 +780,6 @@ sub InitGL {
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_MULTISAMPLE) if ($self->{can_multisample});
 
-    if ($self->UseVBOs) {
-        my $shader = new Slic3r::GUI::_3DScene::GLShader;
-        if (! $shader->load($self->_fragment_shader_Gouraud, $self->_vertex_shader_Gouraud)) {
-#        if (! $shader->load($self->_fragment_shader_Phong, $self->_vertex_shader_Phong)) {
-            print "Compilaton of path shader failed: \n" . $shader->last_error . "\n";
-            $shader = undef;
-        } else {
-            $self->{plain_shader} = $shader;
-        }
-    }
 }
 
 sub DestroyGL {
