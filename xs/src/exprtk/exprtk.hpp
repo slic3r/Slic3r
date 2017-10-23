@@ -748,10 +748,10 @@ namespace exprtk
 
          namespace details
          {
-            struct unknown_type_tag {};
-            struct real_type_tag    {};
-            struct complex_type_tag {};
-            struct int_type_tag     {};
+            struct unknown_type_tag {unknown_type_tag(){} };
+            struct real_type_tag    {real_type_tag(){} };
+            struct complex_type_tag {complex_type_tag(){} };
+            struct int_type_tag     {int_type_tag(){}};
 
             template <typename T>
             struct number_type { typedef unknown_type_tag type; };
