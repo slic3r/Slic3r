@@ -100,6 +100,7 @@ sub new {
         $self->GetContext();
     }
 
+    $self->{can_multisample} = $can_multisample;
     $self->background(1);
     $self->_quat((0, 0, 0, 1));
     $self->_stheta(45);
@@ -744,7 +745,16 @@ sub InitGL {
     # Set antialiasing/multisampling
     glDisable(GL_LINE_SMOOTH);
     glDisable(GL_POLYGON_SMOOTH);
-    glEnable(GL_MULTISAMPLE);
+    if ($self->{can_multisample}) {
+        # See "GL_MULTISAMPLE and GL_ARRAY_BUFFER_ARB messages on failed launch"
+        # https://github.com/alexrj/Slic3r/issues/4085
+        $self->{can_multisample} = 0;
+        eval {
+            glEnable(GL_MULTISAMPLE);
+#    glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
+            $self->{can_multisample} = 1;
+        }
+    }
     
     # ambient lighting
     glLightModelfv_p(GL_LIGHT_MODEL_AMBIENT, 0.3, 0.3, 0.3, 1);
@@ -769,7 +779,34 @@ sub InitGL {
     # A handy trick -- have surface material mirror the color.
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     glEnable(GL_COLOR_MATERIAL);
-    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_MULTISAMPLE) if ($self->{can_multisample});
+
+    if ($self->UseVBOs) {
+        my $shader = new Slic3r::GUI::_3DScene::GLShader;
+        if (! $shader->load($self->_fragment_shader_Gouraud, $self->_vertex_shader_Gouraud)) {
+#        if (! $shader->load($self->_fragment_shader_Phong, $self->_vertex_shader_Phong)) {
+            print "Compilaton of path shader failed: \n" . $shader->last_error . "\n";
+            $shader = undef;
+        } else {
+            $self->{plain_shader} = $shader;
+        }
+    }
+}
+
+sub DestroyGL {
+    my $self = shift;
+    if ($self->GetContext) {
+        $self->SetCurrent($self->GetContext);
+        if ($self->{plain_shader}) {
+            $self->{plain_shader}->release;
+            delete $self->{plain_shader};
+        }
+        if ($self->{layer_height_edit_shader}) {
+            $self->{layer_height_edit_shader}->release;
+            delete $self->{layer_height_edit_shader};
+        }
+        $self->volumes->release_geometry;
+    }
 }
  
 sub Render {
@@ -804,6 +841,11 @@ sub Render {
     glLightfv_p(GL_LIGHT0, GL_DIFFUSE,  0.5, 0.5, 0.5, 1);
     
     if ($self->enable_picking) {
+        # Render the object for picking.
+        # FIXME This cannot possibly work in a multi-sampled context as the color gets mangled by the anti-aliasing.
+        # Better to use software ray-casting on a bounding-box hierarchy.
+        glPushAttrib(GL_ENABLE_BIT);
+        glDisable(GL_MULTISAMPLE) if ($self->{can_multisample});
         glDisable(GL_LIGHTING);
         $self->draw_volumes(1);
         glFlush();
