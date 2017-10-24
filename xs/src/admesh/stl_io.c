@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "stl.h"
-#include "config.h"
 
 #if !defined(SEEK_SET)
 #define SEEK_SET 0

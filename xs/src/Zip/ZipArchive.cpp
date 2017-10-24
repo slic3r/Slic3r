@@ -1,5 +1,5 @@
-#include "../../miniz/miniz.h"
-#include "../Zip/ZipArchive.hpp"
+#include <miniz/miniz.h>
+#include "ZipArchive.hpp"
 
 namespace Slic3r {
 
