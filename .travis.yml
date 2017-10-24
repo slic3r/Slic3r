@@ -22,7 +22,7 @@ install:
 
 script:
 - perl Build.PL
-- CXX=${CXX_COMPILER} CC=${C_COMPILER} cmake . && make -j4
+- CXX=${CXX_COMPILER} CC=${C_COMPILER} cmake -D SLIC3R_STATIC=${SLIC3R_STATIC} . && make -j4
 after_success:
 - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
 - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
