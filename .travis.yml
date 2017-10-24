@@ -18,6 +18,7 @@ install:
 - cd ${TRAVIS_BUILD_DIR}
 - bash package/linux/travis-setup.sh
 - perlbrew switch slic3r-perl
+- eval $(perl -Mlocal::lib=${TRAVIS_BUILD_DIR}/local-lib)
 
 script:
 - perl Build.PL
