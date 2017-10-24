@@ -4,6 +4,7 @@ before_install:
 install:
 - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
 - export BOOST_DIR=${DEPS_DIR}/boost_1_63_0
+- export BOOST_ROOT=${DEPS_DIR}/boost_1_63_0
 - export SLIC3R_STATIC=1
 - export CXX_COMPILER=g++-4.9
 - export C_COMPILER=gcc-4.9
