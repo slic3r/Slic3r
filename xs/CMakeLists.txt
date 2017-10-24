@@ -1,5 +1,6 @@
 # Enable C++11 language standard.
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add our own cmake module path.
