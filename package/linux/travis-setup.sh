@@ -4,13 +4,6 @@ WXVERSION=302
 CACHE=$HOME/cache
 mkdir -p $CACHE
 
-# Install a useful version of Cmake
-mkdir -p $HOME/opt/cmake
-wget https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.sh -O $HOME/cmake-3.7.2-Linux-x86_64.sh
-sh ~/cmake-3.7.2-Linux-x86_64.sh --prefix=$HOME/opt/cmake --skip-license
-ln -s ~/opt/cmake/bin/cmake
-cmake --version
-
 if [ ! -e $CACHE/slic3r-perlbrew-5.24.tar.bz2 ]; then
     echo "Downloading http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.travis.tar.bz2 => $CACHE/slic3r-perlbrew-5.24.tar.bz2"
     curl -L "http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.travis.tar.bz2" -o $CACHE/slic3r-perlbrew-5.24.tar.bz2; 
@@ -33,5 +26,5 @@ fi
 
 tar -C$TRAVIS_BUILD_DIR -xjf $CACHE/local-lib-wx${WXVERSION}.tar.bz2
 tar -C$HOME/perl5/perlbrew/perls -xjf $CACHE/slic3r-perlbrew-5.24.tar.bz2
-tar -C$HOME -xjf $CACHE/boost-compiled.tar.bz2
-tar -C$HOME -xjf $CACHE/wx${WXVERSION}.tar.bz2
+tar -C${DEPS_DIR} -xjf $CACHE/boost-compiled.tar.bz2
+tar -C${DEPS_DIR} -xjf $CACHE/wx${WXVERSION}.tar.bz2
