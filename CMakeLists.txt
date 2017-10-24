@@ -11,7 +11,8 @@ endif()
 
 # Take Boost from environment if defined (useful on static builds)
 if(DEFINED ENV{BOOST_DIR})
-    set(BOOST_ROOT $ENV{BOOST_DIR})
+    message("BOOST Root Path: $ENV{BOOST_DIR}")
+    set(BOOST_ROOT "$ENV{BOOST_DIR}")
 endif()
 
 if(DEFINED ENV{SLIC3R_STATIC})
