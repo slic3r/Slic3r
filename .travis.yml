@@ -15,6 +15,7 @@ install:
       mkdir cmake && travis_retry wget --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
       export PATH=${DEPS_DIR}/cmake/bin:${PATH}
     fi
+- cd ${TRAVIS_BUILD_DIR}
 - bash package/linux/travis-setup.sh
 - perlbrew switch slic3r-perl
 
