@@ -5,7 +5,7 @@ CACHE=$HOME/cache
 mkdir -p $CACHE
 
 # Install a useful version of Cmake
-wget https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.sh -o ~/cmake-3.7.2-Linux-x86_64.sh
+wget https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.sh -O ~/cmake-3.7.2-Linux-x86_64.sh
 mkdir -p ~/opt/cmake
 sh ~/cmake-3.7.2-Linux-x86_64.sh --prefix=~/opt/cmake --skip-license
 ln -s ~/opt/cmake/bin/cmake
