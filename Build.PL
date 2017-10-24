@@ -141,22 +141,6 @@ EOF
             }
         }
     }
-    
-    if (!$gui) {
-        # clean xs directory before reinstalling, to make sure Build is called
-        # with current perl binary
-        if (-e './xs/Build') {
-            if ($^O eq 'MSWin32') {
-                system '.\xs\Build', 'distclean';
-            } else {
-                system './xs/Build', 'distclean';
-            }
-        }
-        my $res = system $cpanm, @cpanm_args, '--reinstall', '--verbose', './xs';
-        if ($res != 0) {
-            die "The XS/C++ code failed to compile, aborting\n";
-        }
-    }
 }
 
 if (@missing_prereqs) {

@@ -10,6 +10,7 @@ install:
 script:
 - bash package/linux/travis-setup.sh
 - perlbrew switch slic3r-perl
+- perl Build.PL
 - ~/opt/cmake/bin/cmake . && make -j4
 after_success:
 - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
