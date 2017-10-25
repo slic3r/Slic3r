@@ -27,6 +27,9 @@
 #undef recvfrom
 #undef sendto
 
+// undef macro that is causing problems on travis
+#undef random
+
 // these need to be included early for Win32 (listing it in Build.PL is not enough)
 #include <ostream>
 #include <iostream>
