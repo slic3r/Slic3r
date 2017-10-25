@@ -12,6 +12,7 @@
 #ifdef SLIC3RXS
 // on windows, the definitions of tons of macros wrecks boost::thread
 #undef sleep 
+#undef free
 #endif
 #include <boost/thread.hpp>
 
