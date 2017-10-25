@@ -438,7 +438,7 @@ if(APPLE)
 endif()
 
 # Create a slic3r executable
-add_executable(slic3r ${PROJECT_SOURCE_DIR}/src/slic3r.cpp)
+#add_executable(slic3r ${PROJECT_SOURCE_DIR}/src/slic3r.cpp)
 target_include_directories(XS PRIVATE src src/libslic3r)
 target_link_libraries(slic3r libslic3r libslic3r_gui ZipArchive BSpline admesh ${Boost_LIBRARIES} clipper ${EXPAT_LIBRARIES} polypartition poly2tri ${wxWidgets_LIBRARIES})
 
