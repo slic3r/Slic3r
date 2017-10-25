@@ -11,6 +11,7 @@ my %prereqs = qw(
     Encode                          0
     Encode::Locale                  1.05
     ExtUtils::CppGuess              0
+    ExtUtils::XSpp::Cmd             0
     ExtUtils::MakeMaker             6.80
     ExtUtils::ParseXS               3.35
     File::Basename                  0
