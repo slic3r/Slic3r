@@ -13,6 +13,7 @@
 // on windows, the definitions of tons of macros wrecks boost::thread
 #undef sleep 
 #undef free
+#undef PERL_GET_THX
 #endif
 #include <boost/thread.hpp>
 
