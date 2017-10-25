@@ -11,7 +11,6 @@ my %prereqs = qw(
     Encode                          0
     Encode::Locale                  1.05
     ExtUtils::CppGuess              0
-    ExtUtils::XSpp::Cmd             0
     ExtUtils::MakeMaker             6.80
     ExtUtils::ParseXS               3.35
     File::Basename                  0
@@ -27,15 +26,6 @@ my %prereqs = qw(
     threads                         1.96
     Time::HiRes                     0
     Unicode::Normalize              0
-
-    ExtUtils::ParseXS           3.35
-    ExtUtils::Typemaps          1.00
-    ExtUtils::Typemaps::Default 1.05
-    ExtUtils::XSpp              0.18
-    ExtUtils::CppGuess          0.07
-    Module::Build               0.38
-    Module::Build::WithXSpp     0.13
-    Test::More                  0
 );
 my %recommends = qw(
     Class::XSAccessor               0
