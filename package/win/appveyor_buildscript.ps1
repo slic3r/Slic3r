@@ -14,6 +14,7 @@ rm -r 'C:\Program Files (x86)\Microsoft Vis*\bin' -Force
 
 Add-AppveyorCompilationMessage -Message "Building Slic3r XS"
 perl ./Build.pl
+cmake -D SLIC3R_STATIC=$env:SLIC3R_STATIC .
 
 if ($LastExitCode -ne 0) { 
     Add-AppveyorCompilationMessage -Message "XS Failed to Build" -Category Error
