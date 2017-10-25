@@ -8,6 +8,11 @@
 #include <queue>
 #include <sstream>
 #include <vector>
+
+#ifdef SLIC3RXS
+// on windows, the definitions of tons of macros wrecks boost::thread
+#undef sleep 
+#endif
 #include <boost/thread.hpp>
 
 /* Implementation of CONFESS("foo"): */

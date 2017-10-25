@@ -30,6 +30,7 @@
 // undef macro that is causing problems on travis
 #undef seed
 
+
 // these need to be included early for Win32 (listing it in Build.PL is not enough)
 #include <ostream>
 #include <iostream>
@@ -46,6 +47,8 @@ extern "C" {
 #undef do_close
 #undef bind
 #undef seed
+
+
 #ifdef _MSC_VER
     // Undef some of the macros set by Perl <xsinit.h>, which cause compilation errors on Win32
     #undef send
