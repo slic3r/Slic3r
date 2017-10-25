@@ -375,6 +375,7 @@ endif()
 add_definitions(${PerlEmbed_CCCDLFLAGS})
 if (WIN32)
     target_link_libraries(XS ${PERL_LIBRARY})
+    add_definitions(-DNOGDI)
 endif()
 
 ## REQUIRED packages
