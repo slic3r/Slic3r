@@ -1,5 +1,6 @@
 %typemap{bool}{simple};
 %typemap{size_t}{simple};
+%typemap{coord_t}{simple};
 %typemap{coordf_t}{simple};
 %typemap{std::string};
 %typemap{t_config_option_key};
