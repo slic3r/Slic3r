@@ -1,6 +1,11 @@
 #ifndef _xsinit_h_
 #define _xsinit_h_
 
+#ifdef _MSC_VER
+// Disable some obnoxious warnings given by Visual Studio with the default warning level 4.
+#pragma warning(disable: 4100 4127 4189 4244 4267 4700 4702 4800)
+#endif
+
 // undef some macros set by Perl which cause compilation errors on Win32
 #undef read
 #undef seekdir
@@ -26,10 +31,7 @@
 #undef socketpair
 #undef recvfrom
 #undef sendto
-
-// undef macro that is causing problems on travis
-#undef seed
-
+#undef pause
 
 // these need to be included early for Win32 (listing it in Build.PL is not enough)
 #include <ostream>
@@ -47,12 +49,15 @@ extern "C" {
 #undef do_close
 #undef bind
 #undef seed
-
-
+#undef push
+#undef pop
 #ifdef _MSC_VER
     // Undef some of the macros set by Perl <xsinit.h>, which cause compilation errors on Win32
     #undef send
     #undef connect
+    #undef seek
+    #undef send
+    #undef write
 #endif /* _MSC_VER */
 }
 #endif
