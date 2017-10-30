@@ -860,7 +860,7 @@ Print::_make_brim()
         append_to(loops, offset2(
             islands,
             flow.scaled_width() + flow.scaled_spacing() * (i - 1.5 + 0.5),
-            flow.scaled_spacing() * -0.5,
+            flow.scaled_spacing() * -0.525, // WORKAROUND for brim placement, original 0.5 leaves too much of a gap.
             100000,
             ClipperLib::jtSquare
         ));
