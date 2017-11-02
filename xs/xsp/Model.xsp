@@ -29,6 +29,8 @@
         %code%{ RETVAL = Slic3r::IO::OBJ::read(input_file, THIS); %};
     bool read_amf(std::string input_file)
         %code%{ RETVAL = Slic3r::IO::AMF::read(input_file, THIS); %};
+    bool read_tmf(std::string input_file)
+        %code%{ RETVAL = Slic3r::IO::TMF::read(input_file, THIS); %};
     
     bool write_stl(std::string output_file, bool binary = false)
         %code%{ RETVAL = Slic3r::IO::STL::write(*THIS, output_file, binary); %};
@@ -36,7 +38,9 @@
         %code%{ RETVAL = Slic3r::IO::OBJ::write(*THIS, output_file); %};
     bool write_amf(std::string output_file)
         %code%{ RETVAL = Slic3r::IO::AMF::write(*THIS, output_file); %};
-    
+    bool write_tmf(std::string output_file)
+        %code%{ RETVAL = Slic3r::IO::TMF::write(*THIS, output_file); %};
+
     %name{_add_object} Ref<ModelObject> add_object();
     Ref<ModelObject> _add_object_clone(ModelObject* other, bool copy_volumes = true)
         %code%{ RETVAL = THIS->add_object(*other, copy_volumes); %};
@@ -76,6 +80,9 @@
 
     size_t material_count() const
         %code%{ RETVAL = THIS->materials.size(); %};
+
+    size_t metadata_count() const
+        %code%{ RETVAL = THIS->metadata.size(); %};
 
     bool has_objects_with_no_instances();
     bool add_default_instances();
@@ -192,6 +199,8 @@ ModelMaterial::attributes()
         %code%{ THIS->input_file = value; %};
     Ref<DynamicPrintConfig> config()
         %code%{ RETVAL = &THIS->config; %};
+    int part_number()
+        %code%{ RETVAL = THIS->part_number; %};
 
     Ref<Model> model()
         %code%{ RETVAL = THIS->get_model(); %};
@@ -200,6 +209,11 @@ ModelMaterial::attributes()
         %code%{ RETVAL = THIS->layer_height_ranges; %};
     void set_layer_height_ranges(t_layer_height_ranges ranges)
         %code%{ THIS->layer_height_ranges = ranges; %};
+
+    Ref<LayerHeightSpline> layer_height_spline()
+        %code%{ RETVAL = &THIS->layer_height_spline; %};
+    void set_layer_height_spline(LayerHeightSpline* spline)
+        %code%{ THIS->layer_height_spline = *spline; %};
 
     Ref<Pointf3> origin_translation()
         %code%{ RETVAL = &THIS->origin_translation; %};
@@ -287,17 +301,33 @@ ModelMaterial::attributes()
 
     double rotation()
         %code%{ RETVAL = THIS->rotation; %};
+    double x_rotation()
+        %code%{ RETVAL = THIS->x_rotation; %};
+    double y_rotation()
+        %code%{ RETVAL = THIS->y_rotation; %};
     double scaling_factor()
         %code%{ RETVAL = THIS->scaling_factor; %};
+    Ref<Pointf3> scaling_vector()
+        %code%{ RETVAL = &THIS->scaling_vector; %};
     Ref<Pointf> offset()
         %code%{ RETVAL = &THIS->offset; %};
+    double z_translation()
+        %code%{ RETVAL = THIS->z_translation; %};
 
     void set_rotation(double val)
         %code%{ THIS->rotation = val; %};
+    void set_x_rotation(double val)
+        %code%{ THIS->x_rotation = val; %};
+    void set_y_rotation(double val)
+        %code%{ THIS->y_rotation = val; %};
     void set_scaling_factor(double val)
         %code%{ THIS->scaling_factor = val; %};
+    void set_scaling_vector(Pointf3 *vec)
+        %code%{ THIS->scaling_vector = *vec; %};
     void set_offset(Pointf *offset)
         %code%{ THIS->offset = *offset; %};
+    void set_z_translation(double val)
+        %code%{ THIS->z_translation = val; %};
     
     void transform_mesh(TriangleMesh* mesh, bool dont_translate = false) const;
     void transform_polygon(Polygon* polygon) const;

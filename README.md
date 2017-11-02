@@ -7,7 +7,7 @@ The MacOS X build server is kindly sponsored by: <img width=150 src=https://clou
 
 ### So, what's this Slic3r?
 
-Slic3r is mainly a **toolpath generator** for 3D printers: it reads 3D models (STL, OBJ, AMF) and it converts them into **G-code** instructions for 3D printers. But it does much more than that, see the [features list](#features) below.
+Slic3r is mainly a **toolpath generator** for 3D printers: it reads 3D models (STL, OBJ, AMF, 3MF) and it converts them into **G-code** instructions for 3D printers. But it does much more than that, see the [features list](#features) below.
 
 Slic3r was born in **2011** within the RepRap community and thanks to its high configurability became the swiss-army knife for 3D printing. It served as a platform for experimenting several **new ideas that later became technology standards**, such as multiple extruders, brim, variable-height layers, per-object settings, modifiers, post-processing scripts, G-code macros and more. Despite being based on volunteer efforts, Slic3r is still pushing the boundaries of 3D printing.
 
@@ -29,7 +29,7 @@ See the [project homepage](http://slic3r.org/) at slic3r.org for more informatio
 (Most of these are also available in the command line interface.)
 
 * **G-code generation** for FFF/FDM printers;
-* **conversion** between STL, OBJ, AMF and POV formats;
+* **conversion** between STL, OBJ, AMF, 3MF and POV formats;
 * **auto-repair** of non-manifold meshes (and ability to re-export them);
 * **SVG export** of slices;
 * built-in **USB/serial** host controller, supporting **multiple simultaneous printers** each one with a spool queue;
@@ -114,6 +114,8 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
       GUI options:
         --gui               Forces the GUI launch instead of command line slicing (if you
                             supply a model file, it will be loaded into the plater)
+        --no-gui            Forces the command line slicing instead of gui. 
+                            This takes precedence over --gui if both are present.
         --autosave <file>   Automatically export current configuration to the specified file
     
       Output options:
@@ -128,6 +130,8 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
                             print rather than processed individually.
     
       Printer options:
+        --bed-shape         Coordinates in mm of the bed's points (default: 0x0,200x0,200x200,0x200)
+        --has-heatbed       This will provide automatic generation of bed heating gcode
         --nozzle-diameter   Diameter of nozzle in mm (default: 0.5)
         --print-center      Coordinates in mm of the point to center the print around
                             (default: 100,100)

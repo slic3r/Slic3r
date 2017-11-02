@@ -12,7 +12,7 @@ my %prereqs = qw(
     Encode::Locale                  1.05
     ExtUtils::CppGuess              0
     ExtUtils::MakeMaker             6.80
-    ExtUtils::ParseXS               3.22
+    ExtUtils::ParseXS               3.35
     ExtUtils::XSpp                  0.18
     File::Basename                  0
     File::Spec                      0

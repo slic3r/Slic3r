@@ -65,11 +65,18 @@ sub new {
         default     => $Slic3r::GUI::Settings->{_}{threads},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
-        opt_id      => 'no_controller',
+        opt_id      => 'tabbed_preset_editors',
         type        => 'bool',
-        label       => 'Disable USB/serial connection',
-        tooltip     => 'Disable communication with the printer over a serial / USB cable. This simplifies the user interface in case the printer is never attached to the computer.',
-        default     => $Slic3r::GUI::Settings->{_}{no_controller},
+        label       => 'Display profile editors as tabs',
+        tooltip     => 'When opening a profile editor, it will be shown in a dialog or in a tab according to this option.',
+        default     => $Slic3r::GUI::Settings->{_}{tabbed_preset_editors},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'show_host',
+        type        => 'bool',
+        label       => 'Show Controller Tab (requires restart)',
+        tooltip     => 'Shows/Hides the Controller Tab. Requires a restart of Slic3r.',
+        default     => $Slic3r::GUI::Settings->{_}{show_host},
     ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
@@ -88,7 +95,7 @@ sub new {
 sub _accept {
     my $self = shift;
     
-    if ($self->{values}{mode} || defined($self->{values}{no_controller})) {
+    if ($self->{values}{mode}) {
         Slic3r::GUI::warning_catcher($self)->("You need to restart Slic3r to make the changes effective.");
     }
     

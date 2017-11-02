@@ -1454,7 +1454,7 @@ sub load_print_object_toolpaths {
                             }
                         }
                         $add->($non_solid, $top_z, $copy, $color);
-                        $color = $self->colors->[ ($layerm->region->config->solid_infill_extruder-1) % @{&COLORS} ];
+                        $color = $self->colors->[ ($layerm->region->config->solid_infill_extruder-1) % @{$self->colors} ];
                         $add->($solid, $top_z, $copy, $color);
                     } else {
                         $add->($layerm->fills, $top_z, $copy, $color);

@@ -48,9 +48,9 @@ sub slice {
     return if $self->step_done(STEP_SLICE);
     $self->set_step_started(STEP_SLICE);
     $self->print->status_cb->(10, "Processing triangulated mesh");
-    
+
     $self->_slice;
-    
+
     # detect slicing errors
     my $warning_thrown = 0;
     for my $i (0 .. ($self->layer_count - 1)) {
@@ -670,11 +670,16 @@ sub support_material_flow {
     my $extruder = ($role == FLOW_ROLE_SUPPORT_MATERIAL)
         ? $self->config->support_material_extruder
         : $self->config->support_material_interface_extruder;
+
+    my $width = $self->config->support_material_extrusion_width || $self->config->extrusion_width;
+    if ($role == FLOW_ROLE_SUPPORT_MATERIAL_INTERFACE) {
+        $width = $self->config->support_material_interface_extrusion_width || $width;
+    }
     
     # we use a bogus layer_height because we use the same flow for all
     # support material layers
     return Slic3r::Flow->new_from_width(
-        width               => $self->config->support_material_extrusion_width || $self->config->extrusion_width,
+        width               => $width,
         role                => $role,
         nozzle_diameter     => $self->print->config->nozzle_diameter->[$extruder-1] // $self->print->config->nozzle_diameter->[0],
         layer_height        => $self->config->layer_height,
