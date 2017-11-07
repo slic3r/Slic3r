@@ -41,6 +41,6 @@ use Test::More tests => 6;
         my $test_string = "M104 S{a}; Sets temp to {4*5}";
 
         my $result = Slic3r::ConditionalGCode::apply_math($test_string);
-        is $result, "M104 S; Sets temp to 20", 'Blank string emittal on failure to parse';
+        is $result, "M104 S{a}; Sets temp to 20", 'Original string emittal on failure to parse';
     }
 }
