@@ -61,7 +61,7 @@ std::string evaluate(const std::string& expression_string) {
         #if SLIC3R_DEBUG
         std::cerr << __FILE__ << ":" << __LINE__ << " "<< "Failed to parse: " << expression_string.c_str() << std::endl;
         #endif
-        result << "" << expression_string << "";
+        result << "\x80" << expression_string << "\x81";
     }
     std::string output = result.str();
     trim(output);

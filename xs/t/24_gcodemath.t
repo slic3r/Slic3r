@@ -47,6 +47,6 @@ use Test::More tests => 7;
         my $test_string = "M104 S{a}; Sets temp to {4*5}";
 
         my $result = Slic3r::ConditionalGCode::apply_math($test_string);
-        is $result, "M104 Sa; Sets temp to 20", 'string (minus brackets) on failure to parse.';
+        is $result, "M104 S{a}; Sets temp to 20", 'string (minus brackets) on failure to parse.';
     }
 }
