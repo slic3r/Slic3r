@@ -358,7 +358,7 @@ find_package(PerlLibs REQUIRED)
 set(PerlEmbed_DEBUG 1)
 find_package(PerlEmbed REQUIRED)
 target_include_directories(XS PRIVATE ${PERL_INCLUDE_PATH})
-target_compile_options(XS PRIVATE ${PerlEmbed_CCFLAGS} -I${PERL_INCLUDE_PATH})
+target_compile_options(XS PRIVATE ${PerlEmbed_CCFLAGS})
 # If the Perl is compiled with optimization off, disable optimization over the whole project.
 if (WIN32 AND ";${PerlEmbed_CCFLAGS};" MATCHES ";[-/]Od;")
     message(STATUS "Perl compiled without optimization. Disabling optimization for the Slic3r build.")
@@ -377,6 +377,7 @@ add_definitions(${PerlEmbed_CCCDLFLAGS})
 if (WIN32)
     target_link_libraries(XS ${PERL_LIBRARY})
     add_definitions(-DNOGDI)
+    include_directories(src src/libslic3r ${PERL_INCLUDE_PATH})
 endif()
 
 ## REQUIRED packages
