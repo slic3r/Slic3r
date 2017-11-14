@@ -6,6 +6,7 @@
 
 #ifdef __cplusplus
 extern "C" {
+#include <intrpvar.h> 
 #endif
 #include "EXTERN.h"
 #include "perl.h"

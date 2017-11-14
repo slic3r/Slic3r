@@ -358,7 +358,7 @@ find_package(PerlLibs REQUIRED)
 set(PerlEmbed_DEBUG 1)
 find_package(PerlEmbed REQUIRED)
 target_include_directories(XS PRIVATE ${PERL_INCLUDE_PATH})
-target_compile_options(XS PRIVATE ${PerlEmbed_CCFLAGS})
+target_compile_options(XS PRIVATE ${PerlEmbed_CCFLAGS} -I${PERL_INCLUDE_PATH})
 # If the Perl is compiled with optimization off, disable optimization over the whole project.
 if (WIN32 AND ";${PerlEmbed_CCFLAGS};" MATCHES ";[-/]Od;")
     message(STATUS "Perl compiled without optimization. Disabling optimization for the Slic3r build.")
