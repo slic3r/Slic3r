@@ -28,6 +28,8 @@ include_directories(${LIBDIR}/libslic3r)
 if(WIN32)
     # BOOST_ALL_NO_LIB: Avoid the automatic linking of Boost libraries on Windows. Rather rely on explicit linking.
     add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB)
+    include_directories(${PERL_INCLUDE_PATH})
+    add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB -I${PERL_INCLUDE_PATH})
 endif()
 
 add_definitions(-DwxUSE_UNICODE -D_UNICODE -DUNICODE)
@@ -376,7 +378,7 @@ endif()
 add_definitions(${PerlEmbed_CCCDLFLAGS})
 if (WIN32)
     target_link_libraries(XS ${PERL_LIBRARY})
-    add_definitions(-DNOGDI)
+    add_definitions(-DNOGDI -I${PERL_INCLUDE_PATH})
     include_directories(src src/libslic3r ${PERL_INCLUDE_PATH})
 endif()
 
