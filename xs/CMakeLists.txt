@@ -29,7 +29,11 @@ if(WIN32)
     # BOOST_ALL_NO_LIB: Avoid the automatic linking of Boost libraries on Windows. Rather rely on explicit linking.
     add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB)
     include_directories(${PERL_INCLUDE_PATH})
-    add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB -I${PERL_INCLUDE_PATH})
+    if (DEFINE ENV{APPVEYOR})
+        include_directories(C:\Strawberry\c\include)
+        add_definitions(-Isrc -Isrc/libslic3r -O -O2 -U__STRICT_ANSI__)
+    endif()
+    add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB -I${PERL_INCLUDE_PATH} -D_GLIBCXX_USE_C99 )
 endif()
 
 add_definitions(-DwxUSE_UNICODE -D_UNICODE -DUNICODE)
@@ -453,6 +457,8 @@ if (NOT (DEFINED ENV{TRAVIS} OR DEFINED ENV{APPVEYOR}))
     elseif (NOT MSVC)
         target_link_libraries(slic3r -lstdc++)
     endif ()
+        
+        
 endif()
 
 # Installation
