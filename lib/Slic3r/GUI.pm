@@ -84,6 +84,7 @@ our $Settings = {
     _ => {
         version_check => 1,
         autocenter => 1,
+        autoalignz => 1,
         invert_zoom => 0,
         background_processing => 0,
         threads => $Slic3r::Config::Options->{threads}{default},

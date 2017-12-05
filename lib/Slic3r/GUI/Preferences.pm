@@ -43,6 +43,13 @@ sub new {
         default     => $Slic3r::GUI::Settings->{_}{autocenter},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'autoalignz',
+        type        => 'bool',
+        label       => 'Auto-align parts (z=0)',
+        tooltip     => 'If this is enabled, Slic3r will auto-align objects z value to be on the print bed at z=0.',
+        default     => $Slic3r::GUI::Settings->{_}{autoalignz},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'invert_zoom',
         type        => 'bool',
         label       => 'Invert zoom in previews',
