@@ -1265,12 +1265,16 @@ sub load_model_objects {
                 # if user turned autocentering off, automatic arranging would disappoint them
                 $need_arrange = 0;
 
-                $o->align_to_ground; # aligns object to Z = 0
+                if ($Slic3r::GUI::Settings->{_}{autoalignz}) {
+                    $o->align_to_ground; # aligns object to Z = 0
+                }
                 $o->add_instance();
             }
         } else {
-            # if object has defined positions we still need to ensure it's aligned to Z = 0
-            $o->align_to_ground;
+            if ($Slic3r::GUI::Settings->{_}{autoalignz}) {
+                # if object has defined positions we still need to ensure it's aligned to Z = 0
+                $o->align_to_ground;
+            }
         }
         
         {
