@@ -149,14 +149,18 @@ sub export {
     }
     
     # set extruder(s) temperature before and after start G-code
+    my $include_start_extruder_temp = $self->config->start_gcode !~ /M(?:109|104)/i; 
+    foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
+        $include_start_extruder_temp = $include_start_extruder_temp &&  ($start_gcode !~ /M(?:109|104)/i);
+    }
     $self->_print_first_layer_temperature(0)
-        if $self->config->start_gcode !~ /M(?:109|104)/i;
+        if $include_start_extruder_temp;
     printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($self->config->start_gcode));
     foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
         printf $fh "%s\n", $gcodegen->placeholder_parser->process($start_gcode);
     }
     $self->_print_first_layer_temperature(1)
-        if $self->config->start_gcode !~ /M(?:109|104)/i;
+        if $include_start_extruder_temp;
     
     # set other general things
     print $fh $gcodegen->preamble;
