@@ -690,7 +690,7 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
     this->_model_object->layer_height_spline = this->layer_height_spline;
 
     // apply z-gradation (this is redundant for static layer height...)
-    coordf_t gradation = 1 / this->_print->config.z_steps_per_mm * 4;
+    coordf_t gradation = 1.0 / (this->_print->config.z_steps_per_mm * 4.0);
     if(this->_print->config.z_steps_per_mm > 0) {
         coordf_t last_z = 0;
         coordf_t height;
