@@ -548,7 +548,7 @@ coordf_t PrintObject::adjust_layer_height(coordf_t layer_height) const
 {
     coordf_t result = layer_height;
     if(this->_print->config.z_steps_per_mm > 0) {
-        coordf_t min_dz = 1.0 / (this->_print->config.z_steps_per_mm * 4);
+        coordf_t min_dz = 1 / this->_print->config.z_steps_per_mm * 4;
         result = int(layer_height / min_dz + 0.5) * min_dz;
     }
 
@@ -578,7 +578,6 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
 
     // respect first layer height
     if(first_layer_height) {
-        first_layer_height = this->adjust_layer_height(first_layer_height);
         result.push_back(first_layer_height);
     }
 
