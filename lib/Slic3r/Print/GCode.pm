@@ -448,6 +448,7 @@ sub process_layer {
         my $pp = $self->_gcodegen->placeholder_parser->clone;
         $pp->set('layer_num' => $self->_gcodegen->layer_index + 1);
         $pp->set('layer_z'   => $layer->print_z);
+        $pp->set('current_retraction' => $self->_gcodegen->writer->extruder->retracted);
         $gcode .= Slic3r::ConditionalGCode::apply_math($pp->process($self->print->config->before_layer_gcode) . "\n");
     }
     $gcode .= $self->_gcodegen->change_layer($layer->as_layer);  # this will increase $self->_gcodegen->layer_index
@@ -455,6 +456,7 @@ sub process_layer {
         my $pp = $self->_gcodegen->placeholder_parser->clone;
         $pp->set('layer_num' => $self->_gcodegen->layer_index);
         $pp->set('layer_z'   => $layer->print_z);
+        $pp->set('current_retraction' => $self->_gcodegen->writer->extruder->retracted);
         $gcode .= Slic3r::ConditionalGCode::apply_math($pp->process($self->print->config->layer_gcode) . "\n");
     }
     
