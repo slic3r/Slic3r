@@ -548,7 +548,7 @@ coordf_t PrintObject::adjust_layer_height(coordf_t layer_height) const
 {
     coordf_t result = layer_height;
     if(this->_print->config.z_steps_per_mm > 0) {
-        coordf_t min_dz = 1 / this->_print->config.z_steps_per_mm * 4;
+        coordf_t min_dz = 1 / this->_print->config.z_steps_per_mm;
         result = int(layer_height / min_dz + 0.5) * min_dz;
     }
 
@@ -688,9 +688,13 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
     // push modified spline object back to model
     this->_model_object->layer_height_spline = this->layer_height_spline;
 
-    // apply z-gradation (this is redundant for static layer height...)
-    coordf_t gradation = 1 / this->_print->config.z_steps_per_mm * 4;
+    // apply z-gradation.
+    // For static layer height: the adjusted layer height is still useful
+    // to have the layer height a multiple of a printable z-interval.
+    // If we don't do this, we might get aliasing effects if a small error accumulates
+    // over multiple layer until we get a slightly thicker layer.
     if(this->_print->config.z_steps_per_mm > 0) {
+        coordf_t gradation = 1 / this->_print->config.z_steps_per_mm;
         coordf_t last_z = 0;
         coordf_t height;
         for(std::vector<coordf_t>::iterator l = result.begin(); l != result.end(); ++l) {
@@ -702,7 +706,10 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
             }else{ // round down
                 height = height - gradation_effect;
             }
-            height = std::min(std::max(height, min_layer_height), max_layer_height);
+            // limiting the height to max_ / min_layer_height can violate the gradation requirement
+            // we now might exceed the layer height limits a bit, but that is probably better than having
+            // systematic errors introduced by the steppers...
+            //height = std::min(std::max(height, min_layer_height), max_layer_height);
             *l = last_z + height;
             last_z = *l;
         }
