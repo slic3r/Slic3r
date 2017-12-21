@@ -78,7 +78,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("before_layer_gcode", coString);
     def->label = "Before layer change G-code";
-    def->tooltip = "This custom code is inserted at every layer change, right before the Z move. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z].";
+    def->tooltip = "This custom code is inserted at every layer change, right before the Z move. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num], [layer_z] and [current_retraction].";
     def->cli = "before-layer-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -755,7 +755,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("layer_gcode", coString);
     def->label = "After layer change G-code";
-    def->tooltip = "This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z].";
+    def->tooltip = "This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num], [layer_z] and [current_retraction].";
     def->cli = "after-layer-gcode|layer-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -1556,7 +1556,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("toolchange_gcode", coString);
     def->label = "Tool change G-code";
-    def->tooltip = "This custom code is inserted right before every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder] and [next_extruder].";
+    def->tooltip = "This custom code is inserted right before every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder], [next_extruder], [previous_retraction] and [next_retraction].";
     def->cli = "toolchange-gcode=s";
     def->multiline = true;
     def->full_width = true;
