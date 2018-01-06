@@ -85,6 +85,13 @@ sub new {
         tooltip     => 'Shows/Hides the Controller Tab. Requires a restart of Slic3r.',
         default     => $Slic3r::GUI::Settings->{_}{show_host},
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'nudge_val',
+        type        => 's',
+        label       => '2D plater nudge value',
+        tooltip     => 'In 2D plater, Move objects using keyboard by nudge value of',
+        default     => $Slic3r::GUI::Settings->{_}{nudge_val},
+    ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
