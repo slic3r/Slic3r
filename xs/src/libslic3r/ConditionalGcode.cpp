@@ -24,10 +24,27 @@ static inline void trim(std::string &s) {
     ltrim(s);
     rtrim(s);
 }
+
+static inline void replace_substr(std::string &str, const std::string& from, const std::string& to)
+{
+    size_t start_pos = 0;
+    while((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
+    }
+}
 /// Start of recursive function to parse gcode file.
 std::string apply_math(const std::string& input) {
-    return expression(input);
+    std::string temp_string(input);
+    replace_substr(temp_string, std::string("\\{"), std::string("\x80"));
+    replace_substr(temp_string, std::string("\\}"), std::string("\x81"));
+    temp_string = expression(temp_string);
+    replace_substr(temp_string, std::string("\x80"), std::string("{"));
+    replace_substr(temp_string, std::string("\x81"), std::string("}"));
+    return temp_string;
 }
+
+
 
 /// Evaluate expressions with exprtk
 /// Everything must resolve to a number.
@@ -44,6 +61,7 @@ std::string evaluate(const std::string& expression_string) {
         #if SLIC3R_DEBUG
         std::cerr << __FILE__ << ":" << __LINE__ << " "<< "Failed to parse: " << expression_string.c_str() << std::endl;
         #endif
+        result << "\x80" << expression_string << "\x81";
     }
     std::string output = result.str();
     trim(output);

@@ -762,6 +762,7 @@ Print::brim_flow() const
 {
     ConfigOptionFloatOrPercent width = this->config.first_layer_extrusion_width;
     if (width.value == 0) width = this->regions.front()->config.perimeter_extrusion_width;
+    if (width.value == 0) width = this->objects.front()->config.extrusion_width;
     
     /* We currently use a random region's perimeter extruder.
        While this works for most cases, we should probably consider all of the perimeter
@@ -788,6 +789,7 @@ Print::skirt_flow() const
 {
     ConfigOptionFloatOrPercent width = this->config.first_layer_extrusion_width;
     if (width.value == 0) width = this->regions.front()->config.perimeter_extrusion_width;
+    if (width.value == 0) width = this->objects.front()->config.extrusion_width;
     
     /* We currently use a random object's support material extruder.
        While this works for most cases, we should probably consider all of the support material

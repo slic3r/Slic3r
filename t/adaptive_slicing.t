@@ -138,7 +138,7 @@ subtest 'widen to match horizontal facets' => sub {
 
 subtest 'layer height gradation' => sub {
     plan tests => 5;
-    foreach my $gradation (1/0.001*4, 1/0.01*4, 1/0.02*4, 1/0.05*4, 1/0.08*4) {
+    foreach my $gradation (1/0.001, 1/0.01, 1/0.02, 1/0.05, 1/0.08) {
         $config->set('z_steps_per_mm', $gradation);
         $height_gradation_test->();
     }

@@ -1273,6 +1273,10 @@ sub build {
                     wxTheApp->CallAfter(sub {
                         $self->_extruders_count_changed($optgroup->get_value('extruders_count'));
                     });
+                } else {
+                    wxTheApp->CallAfter(sub {
+                        $self->_on_value_change($opt_id);
+                    });
                 }
             });
         }

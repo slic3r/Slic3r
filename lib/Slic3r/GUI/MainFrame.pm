@@ -100,6 +100,8 @@ sub _init_tabpanel {
         $panel->OnActivate if $panel->can('OnActivate');
         if ($self->{tabpanel}->GetSelection > 1) {
             $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+        } elsif(($Slic3r::GUI::Settings->{_}{show_host} == 0) && ($self->{tabpanel}->GetSelection == 1)){
+            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
         } else {
             $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag & ~wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
         }

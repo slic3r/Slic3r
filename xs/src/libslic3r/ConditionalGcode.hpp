@@ -3,6 +3,9 @@
  * 
  */
 
+#ifndef slic3r_ConditionalGcode_hpp_
+#define slic3r_ConditionalGcode_hpp_
+
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -31,3 +34,5 @@ std::string expression(const std::string& input, const int depth = 0);
 std::string apply_math(const std::string& input);
 
 }
+
+#endif
