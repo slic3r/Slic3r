@@ -90,18 +90,18 @@ Flow::_bridge_width(float nozzle_diameter, float bridge_flow_ratio) {
 
 /* This static method returns a sane extrusion width default. */
 float
-Flow::_auto_width(FlowRole role, float nozzle_diameter, float height) {
+Flow::_auto_width(FlowRole role, float nozzle_diameter, float height) const {
     // here we calculate a sane default by matching the flow speed (at the nozzle) and the feed rate
     // shape: rectangle with semicircles at the ends
     float width = ((nozzle_diameter*nozzle_diameter) * PI + (height*height) * (4.0 - PI)) / (4.0 * height);
     
     float min = nozzle_diameter * 1.05;
-    float max = nozzle_diameter * 3; // cap width to 3x nozzle diameter
+    float max = nozzle_diameter * 1.25; // cap width to 1.25x nozzle diameter
     if (role == frExternalPerimeter || role == frSupportMaterial || role == frSupportMaterialInterface) {
-        min = max = nozzle_diameter;
+        min = max = nozzle_diameter*1.1;
     } else if (role != frInfill) {
-        // do not limit width for sparse infill so that we use full native flow for it
-        max = nozzle_diameter * 1.7;
+        // limit width a bit for sparse infill to avoid unwanted overextrusion.
+        max = nozzle_diameter * 1.4;
     }
     if (width > max) width = max;
     if (width < min) width = min;

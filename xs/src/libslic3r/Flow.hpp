@@ -69,7 +69,8 @@ class Flow
     static float _bridge_width(float nozzle_diameter, float bridge_flow_ratio);
     /// Calculate a relatively sane extrusion width, based on height and nozzle diameter.
     /// Algorithm used does not play nice with layer heights < 0.1mm. 
-    static float _auto_width(FlowRole role, float nozzle_diameter, float height);
+    /// To avoid extra headaches, min and max are capped at 105% and 125% of nozzle diameter.
+    static float _auto_width(FlowRole role, float nozzle_diameter, float height) const;
     static float _width_from_spacing(float spacing, float nozzle_diameter, float height, bool bridge);
 };
 
