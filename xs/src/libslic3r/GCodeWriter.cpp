@@ -117,7 +117,19 @@ GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool) cons
         comment = "set temperature";
     }
     
+    int restore_extruder = -1;
     std::ostringstream gcode;
+
+    if(tool != -1 && this->multiple_extruders && FLAVOR_IS(gcfRepRap)) {
+        if(this->_extruder == NULL) {
+            gcode << this->_toolchange(tool, false);
+        }
+        else if(this->_extruder->id != tool) {
+            gcode << this->_toolchange(tool, false);
+            restore_extruder = this->_extruder->id;
+        }
+    }
+
     gcode << code << " ";
     if (FLAVOR_IS(gcfMach3) || FLAVOR_IS(gcfMachinekit)) {
         gcode << "P";
@@ -125,13 +137,17 @@ GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool) cons
         gcode << "S";
     }
     gcode << temperature;
-    if (tool != -1 && (this->multiple_extruders || FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish))) {
+    if (tool != -1 && (this->multiple_extruders || FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)) && FLAVOR_IS_NOT(gcfRepRap)) {
         gcode << " T" << tool;
     }
     gcode << " ; " << comment << "\n";
     
     if (FLAVOR_IS(gcfTeacup) && wait)
         gcode << "M116 ; wait for temperature to be reached\n";
+
+    if(restore_extruder != -1) {
+        gcode << this->_toolchange(restore_extruder, false);
+    }
     
     if (wait && tool !=-1 && (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)))
         gcode << "M6 T" << tool << " ; wait for temperature to be reached\n";
@@ -290,6 +306,12 @@ GCodeWriter::set_extruder(unsigned int extruder_id)
 std::string
 GCodeWriter::toolchange(unsigned int extruder_id)
 {
+    return this->_toolchange(extruder_id, true);
+}
+
+std::string
+GCodeWriter::_toolchange(unsigned int extruder_id, bool reset_e)
+{
     // set the new extruder
     this->_extruder = &this->extruders.find(extruder_id)->second;
     
@@ -308,7 +330,9 @@ GCodeWriter::toolchange(unsigned int extruder_id)
         if (this->config.gcode_comments) gcode << " ; change extruder";
         gcode << "\n";
         
-        gcode << this->reset_e(true);
+        if(reset_e) {
+            gcode << this->reset_e(true);
+        }
     }
     return gcode.str();
 }
