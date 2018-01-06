@@ -90,7 +90,7 @@ Flow::_bridge_width(float nozzle_diameter, float bridge_flow_ratio) {
 
 /* This static method returns a sane extrusion width default. */
 float
-Flow::_auto_width(FlowRole role, float nozzle_diameter, float height) const {
+Flow::_auto_width(FlowRole role, float nozzle_diameter, float height) {
     // here we calculate a sane default by matching the flow speed (at the nozzle) and the feed rate
     // shape: rectangle with semicircles at the ends
     float width = ((nozzle_diameter*nozzle_diameter) * PI + (height*height) * (4.0 - PI)) / (4.0 * height);
