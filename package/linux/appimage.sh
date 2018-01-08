@@ -41,6 +41,13 @@ mkdir -p ${WD}/${APP}.AppDir/usr/lib
 for i in $(ls $srcfolder/bin); do  
     install -v $srcfolder/bin/$i ${WD}/${APP}.AppDir/usr/lib
 done
+
+# copy other libraries needed to /usr/lib because this is an AppImage build.
+for i in $(cat $WD/libpaths.appimage.txt | grep -v "^#" | awk -F# '{print $1}'); do 
+    install -v $i ${WD}/${APP}.AppDir/usr/lib
+done
+
+
 cp -R $srcfolder/local-lib ${WD}/${APP}.AppDir/usr/lib/local-lib
 
 cat > $WD/${APP}.AppDir/AppRun << 'EOF'
