@@ -29,8 +29,7 @@ if(WIN32)
     # BOOST_ALL_NO_LIB: Avoid the automatic linking of Boost libraries on Windows. Rather rely on explicit linking.
     add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB)
     include_directories(${PERL_INCLUDE_PATH})
-    include_directories(C:/Strawberry/c/include)
-    add_definitions(-Isrc -Isrc/libslic3r -O -O2 -U__STRICT_ANSI__)
+    add_definitions(-Isrc -Isrc/libslic3r -IC:/Strawberry/c/include -O -O2 -U__STRICT_ANSI__)
     add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB -I${PERL_INCLUDE_PATH} -D_GLIBCXX_USE_C99 )
 endif()
 
@@ -381,7 +380,7 @@ add_definitions(${PerlEmbed_CCCDLFLAGS})
 if (WIN32)
     target_link_libraries(XS ${PERL_LIBRARY})
     add_definitions(-DNOGDI -I${PERL_INCLUDE_PATH})
-    include_directories(src src/libslic3r ${PERL_INCLUDE_PATH} C:/Strawberry/c/include)
+    include_directories(src src/libslic3r ${PERL_INCLUDE_PATH})
 endif()
 
 ## REQUIRED packages
