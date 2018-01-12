@@ -407,6 +407,14 @@ sub on_btn_lambda {
     } else {
         return;
     }
+
+    my $center = $self->{model_object}->bounding_box->center; 
+    if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
+        #TODO what we really want to do here is just align the
+        # center of the modifier to the center of the part.
+        $mesh->translate($center->x, $center->y, 0);
+    }
+
     $mesh->repair;
     my $new_volume = $self->{model_object}->add_volume(mesh => $mesh);
     $new_volume->set_modifier($is_modifier);

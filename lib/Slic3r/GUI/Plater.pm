@@ -1215,7 +1215,16 @@ sub load_file {
             $self->{objects}[$obj_idx]->input_file($input_file);
             $self->{objects}[$obj_idx]->input_file_obj_idx($i++);
         }
+
         $self->statusbar->SetStatusText("Loaded " . basename($input_file));
+
+        if($self->{scaled_down}) {
+            $self->statusbar->SetStatusText('Your object appears to be too large, so it was automatically scaled down to fit your print bed.');
+        }
+        if($self->{outside_bounds}) {
+            $self->statusbar->SetStatusText('Some of your object(s) appear to be outside the print bed. Use the arrange button to correct this.');
+        }
+
     }
     
     $process_dialog->Destroy;
@@ -1239,8 +1248,6 @@ sub load_model_objects {
     my $bed_size = $bed_shape->bounding_box->size;
     
     my $need_arrange = 0;
-    my $scaled_down = 0;
-    my $outside_bounds = 0;
     my @obj_idx = ();
     foreach my $model_object (@model_objects) {
         my $o = $self->{model}->add_object($model_object);
@@ -1265,12 +1272,16 @@ sub load_model_objects {
                 # if user turned autocentering off, automatic arranging would disappoint them
                 $need_arrange = 0;
 
-                $o->align_to_ground; # aligns object to Z = 0
+                if ($Slic3r::GUI::Settings->{_}{autoalignz}) {
+                    $o->align_to_ground; # aligns object to Z = 0
+                }
                 $o->add_instance();
             }
         } else {
-            # if object has defined positions we still need to ensure it's aligned to Z = 0
-            $o->align_to_ground;
+            if ($Slic3r::GUI::Settings->{_}{autoalignz}) {
+                # if object has defined positions we still need to ensure it's aligned to Z = 0
+                $o->align_to_ground;
+            }
         }
         
         {
@@ -1279,7 +1290,7 @@ sub load_model_objects {
             my $ratio = max(@$size[X,Y]) / unscale(max(@$bed_size[X,Y]));
             if ($ratio > 5) {
                 $_->set_scaling_factor(1/$ratio) for @{$o->instances};
-                $scaled_down = 1;
+                $self->{scaled_down} = 1;
             }
         }
 
@@ -1291,29 +1302,12 @@ sub load_model_objects {
            my $max = Slic3r::Pointf->new($o_bounds->x_max, $o_bounds->y_max);
            if (!$bed_bounds->contains_point($min) || !$bed_bounds->contains_point($max))
            {
-               $outside_bounds = 1;
+               $self->{outside_bounds} = 1;
            }
         }
     
         $self->{print}->auto_assign_extruders($o);
         $self->{print}->add_model_object($o);
-    }
-
-    if ($outside_bounds) {
-         Slic3r::GUI::show_info(
-            $self,
-            'Some of your object(s) appear to be outside the print bed. Use the arrange button to correct this.',
-            'Outside print bed?',
-        );
-    }
-    
-    
-    if ($scaled_down) {
-        Slic3r::GUI::show_info(
-            $self,
-            'Your object appears to be too large, so it was automatically scaled down to fit your print bed.',
-            'Object too large?',
-        );
     }
     
     $self->make_thumbnail($_) for @obj_idx;
@@ -1693,7 +1687,8 @@ sub arrange {
     my $success = $self->{model}->arrange_objects($self->config->min_object_distance, $bb);
     # ignore arrange failures on purpose: user has visual feedback and we don't need to warn him
     # when parts don't fit in print bed
-    
+
+    $self->statusbar->SetStatusText('Objects were arranged.');
     $self->on_model_change(1);
 }
 
@@ -2732,7 +2727,10 @@ sub selection_changed {
     
     my ($obj_idx, $object) = $self->selected_object;
     my $have_sel = defined $obj_idx;
-    
+
+    # Remove selection in 2d Plater.
+    $self->{canvas}->{selected_instance} = undef;
+
     if (my $menu = $self->GetFrame->{plater_select_menu}) {
         $_->Check(0) for $menu->GetMenuItems;
         if ($have_sel) {
@@ -2801,10 +2799,13 @@ sub selection_changed {
 
 sub select_object {
     my ($self, $obj_idx) = @_;
-    
+
     $_->selected(0) for @{ $self->{objects} };
+    $_->selected_instance(-1) for @{ $self->{objects} };
+
     if (defined $obj_idx) {
         $self->{objects}->[$obj_idx]->selected(1);
+        $self->{objects}->[$obj_idx]->selected_instance(0);
     }
     $self->selection_changed(1);
 }
@@ -3058,6 +3059,7 @@ has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled m
 has 'transformed_thumbnail' => (is => 'rw');
 has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units
 has 'selected'              => (is => 'rw', default => sub { 0 });
+has 'selected_instance'     => (is => 'rw', default => sub { -1 });
 
 sub make_thumbnail {
     my ($self, $model, $obj_idx) = @_;

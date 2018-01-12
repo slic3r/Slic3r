@@ -38,9 +38,16 @@ sub new {
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'autocenter',
         type        => 'bool',
-        label       => 'Auto-center parts',
+        label       => 'Auto-center parts (x,y)',
         tooltip     => 'If this is enabled, Slic3r will auto-center objects around the print bed center.',
         default     => $Slic3r::GUI::Settings->{_}{autocenter},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'autoalignz',
+        type        => 'bool',
+        label       => 'Auto-align parts (z=0)',
+        tooltip     => 'If this is enabled, Slic3r will auto-align objects z value to be on the print bed at z=0.',
+        default     => $Slic3r::GUI::Settings->{_}{autoalignz},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'invert_zoom',
@@ -77,6 +84,13 @@ sub new {
         label       => 'Show Controller Tab (requires restart)',
         tooltip     => 'Shows/Hides the Controller Tab. Requires a restart of Slic3r.',
         default     => $Slic3r::GUI::Settings->{_}{show_host},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'nudge_val',
+        type        => 's',
+        label       => '2D plater nudge value',
+        tooltip     => 'In 2D plater, Move objects using keyboard by nudge value of',
+        default     => $Slic3r::GUI::Settings->{_}{nudge_val},
     ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
