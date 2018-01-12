@@ -381,7 +381,7 @@ add_definitions(${PerlEmbed_CCCDLFLAGS})
 if (WIN32)
     target_link_libraries(XS ${PERL_LIBRARY})
     add_definitions(-DNOGDI -I${PERL_INCLUDE_PATH})
-    include_directories(src src/libslic3r ${PERL_INCLUDE_PATH})
+    include_directories(src src/libslic3r ${PERL_INCLUDE_PATH} C:\Strawberry\c\include)
 endif()
 
 ## REQUIRED packages
