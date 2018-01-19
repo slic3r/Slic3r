@@ -88,29 +88,25 @@ zip(const std::vector<coordf_t> &x, const std::vector<coordf_t> &y)
 static std::vector<Pointfs>
 makeNormalisedGrid(coordf_t z, size_t gridWidth, size_t gridHeight, size_t curveType)
 {
-    // offset required to create a regular octagram
-    coordf_t octagramGap = coordf_t(0.5);
-    
-    // sawtooth wave function for range f($z) = [-$octagramGap .. $octagramGap]
+    // sawtooth wave function
     coordf_t a = std::sqrt(coordf_t(2.));  // period
-    coordf_t wave = fabs(fmod(z, a) - a/2.)/a*4. - 1.;
-    coordf_t offset = wave * octagramGap;
-    
+    coordf_t offset = fabs(fmod(z, a) - a/2.)/a*2. - 0.5;
+    bool printHoriz = (fabs(fmod(z, a)) / a*2. < 1);
+
     std::vector<Pointfs> points;
-    if ((curveType & 1) != 0) {
+    if (printHoriz) {
         for (size_t x = 0; x <= gridWidth; ++x) {
             points.push_back(Pointfs());
             Pointfs &newPoints = points.back();
             newPoints = zip(
-                perpendPoints(offset, x, gridHeight), 
+                perpendPoints(offset, x, gridHeight),
                 colinearPoints(offset, 0, gridHeight));
             // trim points to grid edges
             trim(newPoints, coordf_t(0.), coordf_t(0.), coordf_t(gridWidth), coordf_t(gridHeight));
             if (x & 1)
                 std::reverse(newPoints.begin(), newPoints.end());
         }
-    }
-    if ((curveType & 2) != 0) {
+    } else {
         for (size_t y = 0; y <= gridHeight; ++y) {
             points.push_back(Pointfs());
             Pointfs &newPoints = points.back();
@@ -150,8 +146,8 @@ makeGrid(coord_t z, coord_t gridSize, size_t gridWidth, size_t gridHeight, size_
 void
 Fill3DHoneycomb::_fill_surface_single(
     unsigned int                    thickness_layers,
-    const direction_t               &direction, 
-    ExPolygon                       &expolygon, 
+    const direction_t               &direction,
+    ExPolygon                       &expolygon,
     Polylines*                      polylines_out)
 {
     // no rotation is supported for this infill pattern
@@ -159,10 +155,10 @@ Fill3DHoneycomb::_fill_surface_single(
     const coord_t distance = coord_t(scale_(this->min_spacing) / this->density);
 
     // align bounding box to a multiple of our honeycomb grid module
-    // (a module is 2*$distance since one $distance half-module is 
+    // (a module is 2*$distance since one $distance half-module is
     // growing while the other $distance half-module is shrinking)
     bb.min.align_to_grid(Point(2*distance, 2*distance));
-    
+
     // generate pattern
     Polylines polylines = makeGrid(
         scale_(this->z),
@@ -171,7 +167,7 @@ Fill3DHoneycomb::_fill_surface_single(
         ceil(bb.size().y / distance) + 1,
         ((this->layer_id/thickness_layers) % 2) + 1
     );
-    
+
     // move pattern in place
     for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it)
         it->translate(bb.min.x, bb.min.y);

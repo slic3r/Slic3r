@@ -90,6 +90,7 @@ our $Settings = {
         color_toolpaths_by => 'role',
         tabbed_preset_editors => 1,
         show_host => 0,
+        nudge_val => 1
     },
 };
 

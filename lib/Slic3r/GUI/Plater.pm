@@ -2727,7 +2727,10 @@ sub selection_changed {
     
     my ($obj_idx, $object) = $self->selected_object;
     my $have_sel = defined $obj_idx;
-    
+
+    # Remove selection in 2d Plater.
+    $self->{canvas}->{selected_instance} = undef;
+
     if (my $menu = $self->GetFrame->{plater_select_menu}) {
         $_->Check(0) for $menu->GetMenuItems;
         if ($have_sel) {
@@ -2796,10 +2799,13 @@ sub selection_changed {
 
 sub select_object {
     my ($self, $obj_idx) = @_;
-    
+
     $_->selected(0) for @{ $self->{objects} };
+    $_->selected_instance(-1) for @{ $self->{objects} };
+
     if (defined $obj_idx) {
         $self->{objects}->[$obj_idx]->selected(1);
+        $self->{objects}->[$obj_idx]->selected_instance(0);
     }
     $self->selection_changed(1);
 }
@@ -3053,6 +3059,7 @@ has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled m
 has 'transformed_thumbnail' => (is => 'rw');
 has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units
 has 'selected'              => (is => 'rw', default => sub { 0 });
+has 'selected_instance'     => (is => 'rw', default => sub { -1 });
 
 sub make_thumbnail {
     my ($self, $model, $obj_idx) = @_;
