@@ -453,7 +453,7 @@ void change_opt_value(DynamicPrintConfig& config, t_config_option_key opt_key, b
 			}
 			break;
 		case coEnum:{
-			if (opt_key.compare("external_fill_pattern") == 0 ||
+			if (opt_key.compare("top_fill_pattern") == 0 || opt_key.compare("bottom_fill_pattern") == 0 ||
 				opt_key.compare("fill_pattern") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<InfillPattern>(boost::any_cast<InfillPattern>(value))); 
 			else if (opt_key.compare("gcode_flavor") == 0)

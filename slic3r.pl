@@ -369,7 +369,8 @@ Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
     --fill-density      Infill density (range: 0%-100%, default: $config->{fill_density}%)
     --fill-angle        Infill angle in degrees (range: 0-90, default: $config->{fill_angle})
     --fill-pattern      Pattern to use to fill non-solid layers (default: $config->{fill_pattern})
-    --external-fill-pattern Pattern to use to fill solid layers (default: $config->{external_fill_pattern})
+    --top-fill-pattern Pattern to use to fill solid layers (default: $config->{top_fill_pattern})
+    --bottom-fill-pattern Pattern to use to fill solid layers (default: $config->{bottom_fill_pattern})
     --start-gcode       Load initial G-code from the supplied file. This will overwrite
                         the default command (home all axes [G28]).
     --end-gcode         Load final G-code from the supplied file. This will overwrite 

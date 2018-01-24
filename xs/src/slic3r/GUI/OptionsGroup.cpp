@@ -399,7 +399,7 @@ boost::any ConfigOptionsGroup::get_config_value(DynamicPrintConfig& config, std:
 		ret = config.opt_int(opt_key, idx);
 		break;
 	case coEnum:{
-		if (opt_key.compare("external_fill_pattern") == 0 ||
+		if (opt_key.compare("top_fill_pattern") == 0 || opt_key.compare("bottom_fill_pattern") == 0 ||
 			opt_key.compare("fill_pattern") == 0 ){
 			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
 		}

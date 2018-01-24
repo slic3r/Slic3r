@@ -454,7 +454,7 @@ boost::any Choice::get_value()
 	else
 	{
 		int ret_enum = static_cast<wxComboBox*>(window)->GetSelection(); 
-		if (m_opt_id.compare("external_fill_pattern") == 0)
+		if (m_opt_id.compare("top_fill_pattern") == 0 || m_opt_id.compare("bottom_fill_pattern") == 0 )
 		{
 			if (!m_opt.enum_values.empty()){
 				std::string key = m_opt.enum_values[ret_enum];
