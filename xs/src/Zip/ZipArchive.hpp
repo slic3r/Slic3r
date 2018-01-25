@@ -6,7 +6,7 @@
 
 #include <string>
 #include <iostream>
-#include "../../miniz/miniz.h"
+#include <miniz/miniz.h>
 
 namespace Slic3r {
 
