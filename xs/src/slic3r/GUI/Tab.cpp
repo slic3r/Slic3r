@@ -405,6 +405,7 @@ void TabPrint::build()
 
 		optgroup = page->new_optgroup(_(L("Quality (slower slicing)")));
 		optgroup->append_single_option_line("extra_perimeters");
+		optgroup->append_single_option_line("only_one_perimeter_top");
 		optgroup->append_single_option_line("ensure_vertical_shell_thickness");
 		optgroup->append_single_option_line("avoid_crossing_perimeters");
 		optgroup->append_single_option_line("thin_walls");
@@ -757,7 +758,7 @@ void TabPrint::update()
 	}
 
 	bool have_perimeters = m_config->opt_int("perimeters") > 0;
-	std::vector<std::string> vec_enable = {	"extra_perimeters", "ensure_vertical_shell_thickness", "thin_walls", "overhangs",
+	std::vector<std::string> vec_enable = {	"extra_perimeters", "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", "overhangs",
 											"seam_position", "external_perimeters_first", "external_perimeter_extrusion_width",
 											"perimeter_speed", "small_perimeter_speed", "external_perimeter_speed" };
 	for (auto el : vec_enable)

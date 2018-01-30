@@ -384,6 +384,7 @@ public:
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
     ConfigOptionBool                extra_perimeters;
+    ConfigOptionBool                only_one_perimeter_top;
     ConfigOptionFloat               fill_angle;
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
@@ -423,6 +424,7 @@ protected:
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
         OPT_PTR(extra_perimeters);
+        OPT_PTR(only_one_perimeter_top);
         OPT_PTR(fill_angle);
         OPT_PTR(fill_density);
         OPT_PTR(fill_pattern);

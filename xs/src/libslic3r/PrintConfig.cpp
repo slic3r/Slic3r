@@ -318,6 +318,14 @@ PrintConfigDef::PrintConfigDef()
                    "is supported.");
     def->cli = "extra-perimeters!";
     def->default_value = new ConfigOptionBool(true);
+	
+    def = this->add("only_one_perimeter_top", coBool);
+    def->label = "Only one perimeter on Top surfaces";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Use only one perimeter on flat top surface, to let more space to the top infill pattern.";
+    def->cli = "one-top-perimeter!";
+    def->default_value = new ConfigOptionBool(true);
+
 
     def = this->add("extruder", coInt);
     def->gui_type = "i_enum_open";

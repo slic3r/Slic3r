@@ -395,6 +395,7 @@ Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
   
    Quality options (slower slicing):
     --extra-perimeters  Add more perimeters when needed (default: yes)
+    --one-top-perimeter   Only draw 1 perimeter for the top layers (default: yes)
     --ensure-vertical-shell-thickness Add solid infill near sloping surfaces to guarantee the vertical shell thickness (top+bottom solid layers). (default: no)
     --avoid-crossing-perimeters Optimize travel moves so that no perimeters are crossed (default: no)
     --thin-walls        Detect single-width walls (default: yes)

@@ -53,9 +53,17 @@ PerimeterGenerator::process()
     // extra perimeters for each one
     for (const Surface &surface : this->slices->surfaces) {
         // detect how many perimeters must be generated for this island
-        const int loop_number = this->config->perimeters + surface.extra_perimeters -1;  // 0-indexed loops
-        
+        int loop_number =  
+		//(config->only_one_perimeter_top && surface.is_external() && !surface.is_bridge() && surface.surface_type == stTop) ? 
+		//	0 : // only 1 perimeter for top surface if the option is set (0-indexed loops)
+			(this->config->perimeters + surface.extra_perimeters -1);  // normal case (0-indexed loops)
+		
+		if(config->only_one_perimeter_top && this->upper_slices == NULL){
+			loop_number = 0;
+		}
+		
         Polygons gaps;
+        Polygons stored;
         
         Polygons last = surface.expolygon.simplify_p(SCALED_RESOLUTION);
         if (loop_number >= 0) {  // no loops = -1
@@ -165,7 +173,21 @@ PerimeterGenerator::process()
                         holes[i].push_back(loop);
                     }
                 }
+					
+				if(i==0 && config->only_one_perimeter_top && this->upper_slices != NULL){
+					//split the polygons with top/not_top
+					Polygons upper_polygons((*(this->upper_slices)));
+					Polygons stored_toosmall = diff(last, (upper_polygons), true);
+					Polygons last_toosmall = diff(last, stored_toosmall, true);
+					// increase a bit the inner scpace to fill the frontier between last and stored.
+					stored = union_(stored, intersection(offset(stored_toosmall, perimeter_spacing/2), last));
+					last = intersection(offset(last_toosmall, perimeter_spacing/2), last);
+				}
+				
             }
+			
+			// add stored polygons
+			last = union_(last, stored);
             
             // nest loops: holes first
             for (int d = 0; d <= loop_number; ++d) {

@@ -290,6 +290,7 @@ use Slic3r::Test;
     $config->set('layer_height', 0.4);
     $config->set('first_layer_height', 0.35);
     $config->set('extra_perimeters', 1);
+    $config->set('only_one_perimeter_top', 1);
     $config->set('cooling', [ 0 ]);                 # to prevent speeds from being altered
     $config->set('first_layer_speed', '100%');      # to prevent speeds from being altered
     $config->set('perimeter_speed', 99);
