@@ -1,5 +1,6 @@
 Build.PL
 lib/Slic3r/XS.pm
+libslic3r.doxygen
 MANIFEST			This list of files
 src/admesh/connect.c
 src/admesh/normals.c
@@ -8,6 +9,21 @@ src/admesh/stl.h
 src/admesh/stl_io.c
 src/admesh/stlinit.c
 src/admesh/util.c
+src/boost/nowide/args.hpp
+src/boost/nowide/cenv.hpp
+src/boost/nowide/config.hpp
+src/boost/nowide/convert.hpp
+src/boost/nowide/cstdio.hpp
+src/boost/nowide/cstdlib.hpp
+src/boost/nowide/filebuf.hpp
+src/boost/nowide/fstream.hpp
+src/boost/nowide/integration/filesystem.hpp
+src/boost/nowide/iostream.cpp
+src/boost/nowide/iostream.hpp
+src/boost/nowide/stackstring.hpp
+src/boost/nowide/system.hpp
+src/boost/nowide/utf8_codecvt.hpp
+src/boost/nowide/windows.hpp
 src/clipper.cpp
 src/clipper.hpp
 src/expat/ascii.h
@@ -81,10 +97,14 @@ src/libslic3r/Geometry.hpp
 src/libslic3r/IO.cpp
 src/libslic3r/IO.hpp
 src/libslic3r/IO/AMF.cpp
+src/libslic3r/IO/TMF.hpp
+src/libslic3r/IO/TMF.cpp
 src/libslic3r/Layer.cpp
 src/libslic3r/Layer.hpp
 src/libslic3r/LayerRegion.cpp
 src/libslic3r/LayerRegionFill.cpp
+src/libslic3r/LayerHeightSpline.hpp
+src/libslic3r/LayerHeightSpline.cpp
 src/libslic3r/libslic3r.h
 src/libslic3r/Line.cpp
 src/libslic3r/Line.hpp
@@ -124,6 +144,9 @@ src/libslic3r/SVG.hpp
 src/libslic3r/TriangleMesh.cpp
 src/libslic3r/TriangleMesh.hpp
 src/libslic3r/utils.cpp
+src/libslic3r/Zip/ZipArchive.cpp
+src/libslic3r/Zip/ZipArchive.hpp
+src/miniz/miniz.h
 src/perlglue.cpp
 src/poly2tri/common/shapes.cc
 src/poly2tri/common/shapes.h
@@ -167,6 +190,12 @@ t/19_model.t
 t/20_print.t
 t/21_gcode.t
 t/22_exception.t
+t/23_3mf.t
+t/models/3mf/box.3mf
+t/models/3mf/chess.3mf
+t/models/3mf/gimblekeychain.3mf
+t/models/amf/FaceColors.amf.xml
+t/models/stl/spikey_top.stl
 t/inc/22_config_bad_config_options.ini
 xsp/BoundingBox.xsp
 xsp/BridgeDetector.xsp
@@ -188,6 +217,7 @@ xsp/Geometry.xsp
 xsp/GUI.xsp
 xsp/GUI_3DScene.xsp
 xsp/Layer.xsp
+xsp/LayerHeightSpline.xsp
 xsp/Line.xsp
 xsp/Model.xsp
 xsp/MotionPlanner.xsp

@@ -1,0 +1,16 @@
+%module{Slic3r::XS};
+
+%{
+#include <xsinit.h>
+#include "libslic3r/SlicingAdaptive.hpp"
+%}
+
+%name{Slic3r::SlicingAdaptive} class SlicingAdaptive {
+    SlicingAdaptive();
+    ~SlicingAdaptive();
+    void clear();
+    void add_mesh(TriangleMesh *mesh);
+    void prepare(coordf_t object_size);
+    float next_layer_height(coordf_t z, coordf_t quality_factor, coordf_t min_layer_height, coordf_t max_layer_height);
+    float horizontal_facet_distance(coordf_t z, coordf_t max_layer_height);
+};

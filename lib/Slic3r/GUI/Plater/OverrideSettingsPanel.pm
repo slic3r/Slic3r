@@ -34,7 +34,8 @@ sub new {
     $self->{default_config} = Slic3r::Config->new;
     $self->{config} = Slic3r::Config->new;
     $self->{on_change} = $params{on_change};
-    $self->{editable} = 1;
+    $self->{can_add} = 1;
+    $self->{can_delete} = 1;
     $self->{fixed_options} = {};
     
     $self->{sizer} = Wx::BoxSizer->new(wxVERTICAL);
@@ -52,27 +53,32 @@ sub new {
         EVT_LEFT_DOWN($btn, sub {
             my $menu = Wx::Menu->new;
             my $last_cat = '';
+            
+            # create category submenus
+            my %categories = ();  # category => submenu
             foreach my $opt_key (@{$self->{options}}) {
-                my $id = &Wx::NewId();
-                
-                # add icon, if we have one for this category
-                my $icon;
                 if (my $cat = $Slic3r::Config::Options->{$opt_key}{category}) {
-                    if ($last_cat && $cat ne $last_cat) {
-                        $menu->AppendSeparator;
-                    }
-                    $last_cat = $cat;
-                    $icon = $icons{$cat};
+                    $categories{$cat} //= Wx::Menu->new;
                 }
+            }
+            
+            # append submenus to main menu
+            foreach my $cat (sort keys %categories) {
+                wxTheApp->append_submenu($menu, $cat, "", $categories{$cat}, undef, $icons{$cat});
+            }
+            
+            # append options to submenus
+            foreach my $opt_key (@{$self->{options}}) {
+                my $cat = $Slic3r::Config::Options->{$opt_key}{category} or next;
                 
-                my $menuItem = $menu->Append($id, $self->{option_labels}{$opt_key});
-                wxTheApp->set_menu_item_icon($menuItem, $icon) if $icon;
-                
-                EVT_MENU($menu, $id, sub {
+                my $cb = sub {
                     $self->{config}->set($opt_key, $self->{default_config}->get($opt_key));
                     $self->update_optgroup;
                     $self->{on_change}->($opt_key) if $self->{on_change};
-                });
+                };
+                
+                wxTheApp->append_menu_item($categories{$cat}, $self->{option_labels}{$opt_key},
+                    $Slic3r::Config::Options->{$opt_key}{tooltip}, $cb);
             }
             $self->PopupMenu($menu, $btn->GetPosition);
             $menu->Destroy;
@@ -84,7 +90,9 @@ sub new {
     }
     
     $self->SetSizer($self->{sizer});
-    $self->SetScrollbars(0, 1, 0, 1);
+    
+    # http://docs.wxwidgets.org/3.0/classwx_scrolled.html#details
+    $self->SetScrollRate(0, $Slic3r::GUI::scroll_step);
     
     $self->set_opt_keys($params{opt_keys}) if $params{opt_keys};
     $self->update_optgroup;
@@ -109,17 +117,11 @@ sub set_config {
 sub set_opt_keys {
     my ($self, $opt_keys) = @_;
     
-    # sort options by category+label
+    # sort options by label
     $self->{option_labels} = {};
     foreach my $opt_key (@$opt_keys) {
         my $def = $Slic3r::Config::Options->{$opt_key} or next;
-        if (!$def->{category}) {
-            #printf "Skipping %s\n", $opt_key;
-            next;
-        }
-        $self->{option_labels}{$opt_key} = sprintf '%s > %s',
-            $def->{category},
-            $def->{full_label} // $def->{label};
+        $self->{option_labels}{$opt_key} = $def->{full_label} // $def->{label};
     };
     $self->{options} = [ sort { $self->{option_labels}{$a} cmp $self->{option_labels}{$b} } keys %{$self->{option_labels}} ];
 }
@@ -143,7 +145,7 @@ sub update_optgroup {
     $self->{options_sizer}->Clear(1);
     return if !defined $self->{config};
     
-    $self->{btn_add}->Show($self->{editable});
+    $self->{btn_add}->Show($self->{can_add});
     
     my %categories = ();
     foreach my $opt_key (@{$self->{config}->get_keys}) {
@@ -172,7 +174,7 @@ sub update_optgroup {
                 my ($opt_key, $opt_index) = @{ $optgroup->_opt_map->{$opt_id} };
                 
                 # disallow deleting fixed options
-                return undef if $self->{fixed_options}{$opt_key} || !$self->{editable};
+                return undef if $self->{fixed_options}{$opt_key} || !$self->{can_delete};
                 
                 my $btn = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG),
                     wxDefaultPosition, wxDefaultSize, Wx::wxBORDER_NONE);
@@ -209,11 +211,27 @@ sub disable {
     $self->Disable;
 }
 
-# Shows or hides the Add button.
+# Shows or hides the Add/Delete buttons.
 sub set_editable {
     my ($self, $editable) = @_;
     
-    $self->{editable} = $editable;
+    $self->{can_add} = $self->{can_delete} = $editable;
+}
+
+# Shows or hides the Add button.
+sub can_add {
+    my ($self, $can) = @_;
+    
+    $self->{can_add} = $can if defined $can;
+    return $can;
+}
+
+# Shows or hides the Delete button.
+sub can_delete {
+    my ($self, $can) = @_;
+    
+    $self->{can_delete} = $can if defined $can;
+    return $can;
 }
 
 1;

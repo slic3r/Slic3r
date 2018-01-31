@@ -24,7 +24,26 @@ PrintConfigDef::PrintConfigDef()
     external_fill_pattern.enum_values.push_back("Jetting");
     
     ConfigOptionDef* def;
-    
+
+    def = this->add("adaptive_slicing", coBool);
+    def->label = "Use adaptive slicing";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Automatically determine layer heights by the objects topology instead of using the static value.";
+    def->cli = "adaptive-slicing!";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("adaptive_slicing_quality", coPercent);
+    def->label = "Adaptive quality";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Controls the quality / printing time tradeoff for adaptive layer generation. 0 -> fastest printing with max layer height, 100 -> highest quality, min layer height";
+    def->sidetext = "%";
+    def->cli = "adaptive_slicing_quality=f";
+    def->min = 0;
+    def->max = 100;
+    def->gui_type = "slider";
+    def->width = 200;
+    def->default_value = new ConfigOptionPercent(75);
+
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = "Avoid crossing perimeters";
     def->category = "Layers and Perimeters";
@@ -42,10 +61,12 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(Pointf(0,200));
         def->default_value = opt;
     }
+    def->cli = "bed-shape=s";
+
     def = this->add("has_heatbed", coBool);
     def->label = "Has heated bed";
     def->tooltip = "Unselecting this will suppress automatic generation of bed heating gcode.";
-    def->cli = "has_heatbed!";
+    def->cli = "has-heatbed!";
     def->default_value = new ConfigOptionBool(true);
     
     def = this->add("bed_temperature", coInt);
@@ -59,7 +80,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("before_layer_gcode", coString);
     def->label = "Before layer change G-code";
-    def->tooltip = "This custom code is inserted at every layer change, right before the Z move. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z].";
+    def->tooltip = "This custom code is inserted at every layer change, right before the Z move. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num], [layer_z] and [current_retraction].";
     def->cli = "before-layer-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -582,7 +603,7 @@ PrintConfigDef::PrintConfigDef()
         def->default_value = opt;
     }
     
-    def = this->add("gap_fill_speed", coFloat);
+    def = this->add("gap_fill_speed", coFloatOrPercent);
     def->label = "↳ gaps";
     def->full_label = "Gap fill speed";
     def->gui_type = "f_enum_open";
@@ -594,7 +615,7 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->enum_values.push_back("0");
     def->enum_labels.push_back("auto");
-    def->default_value = new ConfigOptionFloat(20);
+    def->default_value = new ConfigOptionFloatOrPercent(20, false);
 
     def = this->add("gcode_arcs", coBool);
     def->label = "Use native G-code arcs";
@@ -633,6 +654,17 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("No extrusion");
     def->default_value = new ConfigOptionEnum<GCodeFlavor>(gcfRepRap);
 
+    def = this->add("host_type", coEnum);
+    def->label = "Host type";
+    def->tooltip = "Select Octoprint or Duet to connect to your machine via LAN";
+    def->cli = "host-type=s";
+    def->enum_keys_map = ConfigOptionEnum<HostType>::get_enum_values();
+    def->enum_values.push_back("octoprint");
+    def->enum_values.push_back("duet");
+    def->enum_labels.push_back("Octoprint");
+    def->enum_labels.push_back("Duet");
+    def->default_value = new ConfigOptionEnum<HostType>(htOctoprint);
+    
     def = this->add("infill_acceleration", coFloat);
     def->label = "Infill";
     def->category = "Speed > Acceleration";
@@ -727,7 +759,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("layer_gcode", coString);
     def->label = "After layer change G-code";
-    def->tooltip = "This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z].";
+    def->tooltip = "This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num], [layer_z] and [current_retraction].";
     def->cli = "after-layer-gcode|layer-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -743,6 +775,12 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0.3);
 
+    def = this->add("match_horizontal_surfaces", coBool);
+    def->label = "Match horizontal surfaces";
+    def->tooltip = "Try to match horizontal surfaces during the slicing process. Matching is not guaranteed, very small surfaces and multiple surfaces with low vertical distance might cause bad results.";
+    def->cli = "match-horizontal-surfaces!";
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("max_fan_speed", coInt);
     def->label = "Max";
     def->tooltip = "This setting represents the maximum speed of your fan.";
@@ -751,6 +789,18 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->max = 100;
     def->default_value = new ConfigOptionInt(100);
+
+    def = this->add("max_layer_height", coFloats);
+	def->label = "Max";
+	def->tooltip = "This is the highest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are slightly smaller than nozzle_diameter.";
+	def->sidetext = "mm";
+	def->cli = "max-layer-height=f@";
+	def->min = 0;
+	{
+		ConfigOptionFloats* opt = new ConfigOptionFloats();
+		opt->values.push_back(0.3);
+		def->default_value = opt;
+	}
 
     def = this->add("max_print_speed", coFloat);
     def->label = "Max print speed";
@@ -778,6 +828,18 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->max = 100;
     def->default_value = new ConfigOptionInt(35);
+
+    def = this->add("min_layer_height", coFloats);
+	def->label = "Min";
+	def->tooltip = "This is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";
+	def->sidetext = "mm";
+	def->cli = "min-layer-height=f@";
+	def->min = 0;
+	{
+		ConfigOptionFloats* opt = new ConfigOptionFloats();
+		opt->values.push_back(0.15);
+		def->default_value = opt;
+	}
 
     def = this->add("min_print_speed", coFloat);
     def->label = "Min print speed";
@@ -822,9 +884,9 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "octoprint-apikey=s";
     def->default_value = new ConfigOptionString("");
 
-    def = this->add("octoprint_host", coString);
+    def = this->add("print_host", coString);
     def->label = "Host or IP";
-    def->tooltip = "Slic3r can upload G-code files to OctoPrint. This field should contain the hostname or IP address of the OctoPrint instance.";
+    def->tooltip = "Slic3r can upload G-code files to an Octoprint/Duet server. This field should contain the hostname or IP address of the server instance.";
     def->cli = "octoprint-host=s";
     def->default_value = new ConfigOptionString("");
 
@@ -857,8 +919,9 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "overhangs|detect-bridging-perimeters!";
     def->default_value = new ConfigOptionBool(true);
     
-    def = this->add("overridable", coStrings);
-    def->label = "Overridable options";
+    def = this->add("shortcuts", coStrings);
+    def->label = "Shortcuts";
+    def->aliases.push_back("overridable");
     {
         ConfigOptionStrings* opt = new ConfigOptionStrings();
         opt->values.push_back("support_material");
@@ -927,18 +990,14 @@ PrintConfigDef::PrintConfigDef()
     def->height = 60;
     def->default_value = new ConfigOptionStrings();
 
-    def = this->add("printer_notes", coStrings);
+    def = this->add("printer_notes", coString);
     def->label = "Printer notes";
-    def->tooltip = "You can put your notes regarding the printer here.";
-    def->cli = "printer-notes=s@";
+    def->tooltip = "You can put your notes regarding the printer here. This text will be added to the G-code header comments.";
+    def->cli = "printer-notes=s";
     def->multiline = true;
     def->full_width = true;
     def->height = 130;
-    {
-        ConfigOptionStrings* opt = new ConfigOptionStrings();
-        opt->values.push_back("");
-        def->default_value = opt;
-    }
+    def->default_value = new ConfigOptionString("");
 
     def = this->add("print_settings_id", coString);
     def->default_value = new ConfigOptionString("");
@@ -962,6 +1021,14 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "raft-layers=i";
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
+
+    def = this->add("regions_overlap", coFloat);
+    def->label = "Regions/extruders overlap";
+    def->category = "Extruders";
+    def->tooltip = "This setting applies an additional overlap between regions printed with distinct extruders or distinct settings. This shouldn't be needed under normal circumstances.";
+    def->sidetext = "mm";
+    def->cli = "regions-overlap=s";
+    def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("raft_offset", coFloat);
     def->label = "Raft offset";
@@ -1133,7 +1200,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Speed (baud) of USB/serial port for printer connection.";
     def->cli = "serial-speed=i";
     def->min = 1;
-    def->max = 300000;
+    def->max = 500000;
     def->enum_values.push_back("57600");
     def->enum_values.push_back("115200");
     def->enum_values.push_back("250000");
@@ -1367,6 +1434,18 @@ PrintConfigDef::PrintConfigDef()
     def->min = 1;
     def->default_value = new ConfigOptionInt(1);
 
+    def = this->add("support_material_interface_extrusion_width", coFloatOrPercent);
+    def->label = "Support interface";
+    def->gui_type = "f_enum_open";
+    def->category = "Extrusion Width";
+    def->tooltip = "Set this to a non-zero value to set a manual extrusion width for support material interface. If expressed as percentage (for example 90%) it will be computed over layer height.";
+    def->sidetext = "mm or %";
+    def->cli = "support-material-interface-extrusion-width=s";
+    def->min = 0;
+    def->enum_values.push_back("0");
+    def->enum_labels.push_back("default");
+    def->default_value = new ConfigOptionFloatOrPercent(0, false);
+
     def = this->add("support_material_interface_layers", coInt);
     def->label = "Interface layers";
     def->category = "Support material";
@@ -1387,8 +1466,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
     def->label = "↳ interface";
-    def->label = "Interface Speed";
-    def->category = "Support material interface speed";
+    def->full_label = "Support material interface speed";
     def->gui_type = "f_enum_open";
     def->category = "Support material";
     def->tooltip = "Speed for printing support material interface layers. If expressed as percentage (for example 50%) it will be calculated over support material speed.";
@@ -1482,7 +1560,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("toolchange_gcode", coString);
     def->label = "Tool change G-code";
-    def->tooltip = "This custom code is inserted right before every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder] and [next_extruder].";
+    def->tooltip = "This custom code is inserted right before every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder], [next_extruder], [previous_retraction] and [next_retraction].";
     def->cli = "toolchange-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -1597,9 +1675,16 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("z_steps_per_mm", coFloat);
     def->label = "Z full steps/mm";
-    def->tooltip = "Set this to the number of *full* steps (not microsteps) needed for moving the Z axis by 1mm; you can calculate this by dividing the number of microsteps configured in your firmware by the microstepping amount (8, 16, 32). Slic3r will round your configured layer height to the nearest multiple of that value in order to ensure the best accuracy. This is most useful for machines with imperial leadscrews or belt-driven Z or for unusual layer heights with metric leadscrews. Set to zero to disable this experimental feature.";
+    def->tooltip = "Set this to the number of *full* steps (not microsteps) needed for moving the Z axis by 1mm; you can calculate this by dividing the number of microsteps configured in your firmware by the microstepping amount (8, 16, 32). Slic3r will round your configured layer height to the nearest multiple of that value in order to ensure the best accuracy. This is most useful for machines with imperial leadscrews or belt-driven Z or for unusual layer heights with metric leadscrews. If you still experience wobbling, try using 4 * full_step to achieve the same motor phase pattern for every layer (important for belt driven z-axis). Set to zero to disable this experimental feature.";
     def->cli = "z-steps-per-mm=f";
     def->default_value = new ConfigOptionFloat(0);
+
+    def = this->add("sequential_print_priority", coInt);
+    def->label = "Sequential Printing Priority";
+    def->category = "Advanced";
+    def->tooltip ="Set this to alter object priority for sequential printing. Objects are first sorted by priority (smaller integers print first), then by height.";
+    def->cli = "sequential-print-priority=i";
+    def->default_value = new ConfigOptionInt(0);
 }
 
 const PrintConfigDef print_config_def;
@@ -1702,6 +1787,8 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
         std::ostringstream oss;
         oss << "0x0," << p.value.x << "x0," << p.value.x << "x" << p.value.y << ",0x" << p.value.y;
         value = oss.str();
+    } else if (opt_key == "octoprint_host" && !value.empty()) {
+        opt_key = "print_host";
     } else if ((opt_key == "perimeter_acceleration" && value == "25")
         || (opt_key == "infill_acceleration" && value == "50")) {
         /*  For historical reasons, the world's full of configs having these very low values;
@@ -1709,6 +1796,10 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
             values is a dirty hack and will need to be removed sometime in the future, but it
             will avoid lots of complaints for now. */
         value = "0";
+    } else if (opt_key == "support_material_threshold" && value == "0") {
+        // 0 used to be automatic threshold, but we introduced percent values so let's
+        // transform it into the default value
+        value = "60%";
     }
     
     // cemetery of old config settings
@@ -1720,7 +1811,7 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
         || opt_key == "scale"  || opt_key == "duplicate_grid" 
         || opt_key == "start_perimeters_at_concave_points" 
         || opt_key == "start_perimeters_at_non_overhang" || opt_key == "randomize_start" 
-        || opt_key == "seal_position" || opt_key == "bed_size" 
+        || opt_key == "seal_position" || opt_key == "bed_size" || opt_key == "octoprint_host" 
         || opt_key == "print_center" || opt_key == "g0" || opt_key == "threads")
     {
         opt_key = "";
@@ -1778,6 +1869,12 @@ CLIConfigDef::CLIConfigDef()
     def->label = "Export SVG";
     def->tooltip = "Slice the model and export slices as SVG.";
     def->cli = "export-svg";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("export_3mf", coBool);
+    def->label = "Export 3MF";
+    def->tooltip = "Slice the model and export slices as 3MF.";
+    def->cli = "export-3mf";
     def->default_value = new ConfigOptionBool(false);
     
     def = this->add("info", coBool);

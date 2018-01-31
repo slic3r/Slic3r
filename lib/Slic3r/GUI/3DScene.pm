@@ -50,8 +50,7 @@ use constant PI             => 3.1415927;
 
 # Constant to determine if Vertex Buffer objects are used to draw
 # bed grid and the cut plane for object separation.
-use constant HAS_VBO        => eval { glGenBuffersARB_p(0); 1 };
-
+use constant HAS_VBO        => eval { glGenBuffersARB_p(0); GL_ARRAY_BUFFER_ARB; 1 };
 
 # phi / theta angles to orient the camera.
 use constant VIEW_TOP        => [0.0,0.0];
@@ -100,6 +99,7 @@ sub new {
         $self->GetContext();
     }
 
+    $self->{can_multisample} = $can_multisample;
     $self->background(1);
     $self->_quat((0, 0, 0, 1));
     $self->_stheta(45);
@@ -328,6 +328,19 @@ sub set_viewport_from_scene {
     $self->_zoom($scene->_zoom);
     $self->_quat($scene->_quat);
     $self->_dirty(1);
+}
+
+sub zoom{
+    my ($self, $direction) = @_;
+    if( $direction eq 'in'){
+        $self->_zoom($self->_zoom / (1-0.3));
+    }
+    elsif($direction eq 'out'){
+        $self->_zoom($self->_zoom / (1+0.3));
+    }
+    $self->on_viewport_changed->() if $self->on_viewport_changed;
+    $self->_dirty(1);
+    $self->Refresh;
 }
 
 # Set the camera to a default orientation,
@@ -731,7 +744,7 @@ sub InitGL {
     # Set antialiasing/multisampling
     glDisable(GL_LINE_SMOOTH);
     glDisable(GL_POLYGON_SMOOTH);
-    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_MULTISAMPLE) if ($self->{can_multisample});
     
     # ambient lighting
     glLightModelfv_p(GL_LIGHT_MODEL_AMBIENT, 0.3, 0.3, 0.3, 1);
@@ -756,7 +769,7 @@ sub InitGL {
     # A handy trick -- have surface material mirror the color.
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     glEnable(GL_COLOR_MATERIAL);
-    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_MULTISAMPLE) if ($self->{can_multisample});
 }
  
 sub Render {
@@ -791,6 +804,7 @@ sub Render {
     glLightfv_p(GL_LIGHT0, GL_DIFFUSE,  0.5, 0.5, 0.5, 1);
     
     if ($self->enable_picking) {
+        glDisable(GL_MULTISAMPLE) if ($self->{can_multisample});
         glDisable(GL_LIGHTING);
         $self->draw_volumes(1);
         glFlush();
@@ -1441,7 +1455,7 @@ sub load_print_object_toolpaths {
                             }
                         }
                         $add->($non_solid, $top_z, $copy, $color);
-                        $color = $self->colors->[ ($layerm->region->config->solid_infill_extruder-1) % @{&COLORS} ];
+                        $color = $self->colors->[ ($layerm->region->config->solid_infill_extruder-1) % @{$self->colors} ];
                         $add->($solid, $top_z, $copy, $color);
                     } else {
                         $add->($layerm->fills, $top_z, $copy, $color);

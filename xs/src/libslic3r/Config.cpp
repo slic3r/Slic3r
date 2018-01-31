@@ -1,5 +1,4 @@
 #include "Config.hpp"
-#include <stdlib.h>  // for setenv()
 #include <assert.h>
 #include <ctime>
 #include <fstream>
@@ -11,15 +10,14 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/config.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/nowide/cenv.hpp>
+#include <boost/nowide/fstream.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <string.h>
-
-#if defined(_WIN32) && !defined(setenv) && defined(_putenv_s)
-#define setenv(k, v, o) _putenv_s(k, v)
-#endif
 
 namespace Slic3r {
 
@@ -34,6 +32,9 @@ std::string escape_string_cstyle(const std::string &str)
         if (c == '\n' || c == '\r') {
             (*outptr ++) = '\\';
             (*outptr ++) = 'n';
+        } else if (c == '\\'){
+            (*outptr ++) = '\\';
+            (*outptr ++) = '\\';
         } else
             (*outptr ++) = c;
     }
@@ -258,7 +259,7 @@ ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_
     for (const t_config_option_key &opt_key : opt_keys) {
         ConfigOption* my_opt = this->option(opt_key, true);
         if (my_opt == NULL) {
-            if (ignore_nonexistent == false) throw "Attempt to apply non-existent option";
+            if (ignore_nonexistent == false) throw UnknownOptionException();
             continue;
         }
         
@@ -341,7 +342,7 @@ ConfigBase::get_abs_value(const t_config_option_key &opt_key) const {
     } else if (const ConfigOptionFloat* optv = dynamic_cast<const ConfigOptionFloat*>(opt)) {
         return optv->value;
     } else {
-        throw "Not a valid option type for get_abs_value()";
+        throw std::runtime_error("Not a valid option type for get_abs_value()");
     }
 }
 
@@ -360,7 +361,6 @@ ConfigBase::get_abs_value(const t_config_option_key &opt_key, double ratio_over)
 void
 ConfigBase::setenv_()
 {
-#ifdef setenv
     t_config_option_keys opt_keys = this->keys();
     for (t_config_option_keys::const_iterator it = opt_keys.begin(); it != opt_keys.end(); ++it) {
         // prepend the SLIC3R_ prefix
@@ -373,9 +373,8 @@ ConfigBase::setenv_()
         for (size_t i = 0; i < envname.size(); ++i)
             envname[i] = (envname[i] <= 'z' && envname[i] >= 'a') ? envname[i]-('a'-'A') : envname[i];
         
-        setenv(envname.c_str(), this->serialize(*it).c_str(), 1);
+        boost::nowide::setenv(envname.c_str(), this->serialize(*it).c_str(), 1);
     }
-#endif
 }
 
 const ConfigOption*
@@ -393,7 +392,8 @@ ConfigBase::load(const std::string &file)
 {
     namespace pt = boost::property_tree;
     pt::ptree tree;
-    pt::read_ini(file, tree);
+	boost::nowide::ifstream ifs(file);
+	pt::read_ini(ifs, tree);
     BOOST_FOREACH(const pt::ptree::value_type &v, tree) {
         try {
             t_config_option_key opt_key = v.first;
@@ -409,8 +409,8 @@ void
 ConfigBase::save(const std::string &file) const
 {
     using namespace std;
-    ofstream c;
-    c.open(file.c_str(), ios::out | ios::trunc);
+    boost::nowide::ofstream c;
+    c.open(file, ios::out | ios::trunc);
 
     {
         time_t now;
@@ -490,7 +490,7 @@ DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
                 optv->keys_map = &optdef->enum_keys_map;
                 opt = static_cast<ConfigOption*>(optv);
             } else {
-                throw "Unknown option type";
+                throw std::runtime_error("Unknown option type");
             }
             this->options[opt_key] = opt;
             return opt;
@@ -527,19 +527,19 @@ DynamicConfig::empty() const {
 void
 DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra)
 {
-    std::vector<const char*> _argv;
+    std::vector<char*> _argv;
     
     // push a bogus executable name (argv[0])
-    _argv.push_back("");
+    _argv.push_back(const_cast<char*>(""));
 
     for (size_t i = 0; i < tokens.size(); ++i)
-        _argv.push_back(const_cast<const char*>(tokens[i].c_str()));
+        _argv.push_back(const_cast<char *>(tokens[i].c_str()));
     
     this->read_cli(_argv.size(), &_argv[0], extra);
 }
 
 void
-DynamicConfig::read_cli(const int argc, const char** argv, t_config_option_keys* extra)
+DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra)
 {
     // cache the CLI option => opt_key mapping
     std::map<std::string,std::string> opts;

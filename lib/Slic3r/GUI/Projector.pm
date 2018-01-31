@@ -9,7 +9,7 @@ use Wx::Event qw(EVT_BUTTON EVT_CLOSE EVT_TEXT_ENTER EVT_SPINCTRL EVT_SLIDER);
 use base qw(Wx::Dialog Class::Accessor);
 use utf8;
 
-__PACKAGE__->mk_accessors(qw(config config2 screen controller _optgroups));
+__PACKAGE__->mk_accessors(qw(config config2 manual_control_config screen controller _optgroups));
 
 sub new {
     my ($class, $parent) = @_;
@@ -26,6 +26,12 @@ sub new {
         z_lift                  => 5,
         z_lift_speed            => 8,
         offset                  => [0,0],
+    });
+    $self->manual_control_config({
+        xy_travel_speed         => 130,
+        z_travel_speed          => 10,
+        temperature             => '',
+        bed_temperature         => '',
     });
     
     my $ini = eval { Slic3r::Config->read_ini("$Slic3r::GUI::datadir/DLP.ini") };
@@ -286,7 +292,7 @@ sub new {
                     return;
                 }
                 my $dlg = Slic3r::GUI::Controller::ManualControlDialog->new
-                    ($self, $self->config, $sender);
+                    ($self, $self->config, $sender, $self->manual_control_config);
                 $dlg->ShowModal;
                 $sender->disconnect;
             });
@@ -605,8 +611,12 @@ sub start_print {
         }
         Slic3r::debugf "connected to " . $self->config->serial_port . "\n";
         
+        # TODO: this wait should be handled by GCodeSender
+        sleep 4;
+        
         # send custom start G-code
         $self->sender->send($_, 1) for grep !/^;/, split /\n/, $self->config->start_gcode;
+        $self->sender->("G90", 1); # set absolute positioning
     }
     
     $self->is_printing(1);

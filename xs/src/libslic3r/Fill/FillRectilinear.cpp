@@ -537,7 +537,7 @@ void FillCubic::_fill_surface_single(
     direction_t direction2 = direction;
     
     const coord_t range = scale_(this->min_spacing / this->density);
-    const coord_t x_shift = abs(( (coord_t)(scale_(this->z) + range) % (coord_t)(range * 2)) - range);
+    const coord_t x_shift = (coord_t)(scale_(this->z) + range) % (coord_t)(range*3);
     
     fill2._fill_single_direction(expolygon, direction2, -x_shift, out);
     

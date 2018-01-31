@@ -1,10 +1,9 @@
-#define DEBUG
-#undef NDEBUG
 #include <cassert>
 #include <math.h>
 #include <stdio.h>
 
 #include "../ClipperUtils.hpp"
+#include "../Geometry.hpp"
 #include "../Surface.hpp"
 #include "../PrintConfig.hpp"
 
@@ -97,10 +96,8 @@ Fill::_infill_direction(const Surface &surface) const
 
     if (surface.bridge_angle >= 0) {
 	    // use bridge angle
-		//FIXME Vojtech: Add a debugf?
-        // Slic3r::debugf "Filling bridge with angle %d\n", rad2deg($surface->bridge_angle);
         #ifdef SLIC3R_DEBUG
-        printf("Filling bridge with angle %f\n", surface.bridge_angle);
+        printf("Filling bridge with angle %f\n", Slic3r::Geometry::rad2deg(surface.bridge_angle));
         #endif
         out_angle = surface.bridge_angle;
     } else if (this->layer_id != size_t(-1)) {

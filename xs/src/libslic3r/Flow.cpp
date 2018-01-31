@@ -96,12 +96,12 @@ Flow::_auto_width(FlowRole role, float nozzle_diameter, float height) {
     float width = ((nozzle_diameter*nozzle_diameter) * PI + (height*height) * (4.0 - PI)) / (4.0 * height);
     
     float min = nozzle_diameter * 1.05;
-    float max = nozzle_diameter * 3; // cap width to 3x nozzle diameter
+    float max = nozzle_diameter * 1.25; // cap width to 1.25x nozzle diameter
     if (role == frExternalPerimeter || role == frSupportMaterial || role == frSupportMaterialInterface) {
-        min = max = nozzle_diameter;
+        min = max = nozzle_diameter*1.1;
     } else if (role != frInfill) {
-        // do not limit width for sparse infill so that we use full native flow for it
-        max = nozzle_diameter * 1.7;
+        // limit width a bit for sparse infill to avoid unwanted overextrusion.
+        max = nozzle_diameter * 1.4;
     }
     if (width > max) width = max;
     if (width < min) width = min;
@@ -120,11 +120,11 @@ Flow::_width_from_spacing(float spacing, float nozzle_diameter, float height, bo
     return spacing + OVERLAP_FACTOR * height * (1 - PI/4.0);
 }
 
-// Calculate a new spacing to fill width with possibly integer number of lines,
-// the first and last line being centered at the interval ends.
-// This function possibly increases the spacing, never decreases, 
-// and for a narrow width the increase in spacing may become severe,
-// therefore the adjustment is limited to 20% increase.
+/// Calculate a new spacing to fill width with possibly integer number of lines,
+/// the first and last line being centered at the interval ends.
+/// This function possibly increases the spacing, never decreases, 
+/// and for a narrow width the increase in spacing may become severe,
+/// therefore the adjustment is limited to 20% increase.
 template <class T>
 T
 Flow::solid_spacing(const T total_width, const T spacing)

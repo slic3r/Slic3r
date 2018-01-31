@@ -10,15 +10,22 @@
 #include <cstring>
 #include <iostream>
 #include <math.h>
-#include "boost/filesystem.hpp"
+#include <boost/filesystem.hpp>
+#include <boost/nowide/args.hpp>
+#include <boost/nowide/iostream.hpp>
+
 
 using namespace Slic3r;
 
 void confess_at(const char *file, int line, const char *func, const char *pat, ...){}
 
 int
-main(const int argc, const char **argv)
+main(int argc, char **argv)
 {
+    // Convert arguments to UTF-8 (needed on Windows).
+    // argv then points to memory owned by a.
+    boost::nowide::args a(argc, argv);
+    
     // parse all command line options into a DynamicConfig
     ConfigDef config_def;
     config_def.merge(cli_config_def);
@@ -34,18 +41,17 @@ main(const int argc, const char **argv)
     DynamicPrintConfig print_config;
     
     // load config files supplied via --load
-    for (std::vector<std::string>::const_iterator file = cli_config.load.values.begin();
-        file != cli_config.load.values.end(); ++file) {
-        if (!boost::filesystem::exists(*file)) {
-            std::cout << "No such file: " << *file << std::endl;
+    for (const std::string &file : cli_config.load.values) {
+        if (!boost::filesystem::exists(file)) {
+            boost::nowide::cout << "No such file: " << file << std::endl;
             exit(1);
         }
         
         DynamicPrintConfig c;
         try {
-            c.load(*file);
+            c.load(file);
         } catch (std::exception &e) {
-            std::cout << "Error while reading config file: " << e.what() << std::endl;
+            boost::nowide::cout << "Error while reading config file: " << e.what() << std::endl;
             exit(1);
         }
         c.normalize();
@@ -62,112 +68,130 @@ main(const int argc, const char **argv)
     
     // read input file(s) if any
     std::vector<Model> models;
-    for (t_config_option_keys::const_iterator it = input_files.begin(); it != input_files.end(); ++it) {
-        if (!boost::filesystem::exists(*it)) {
-            std::cout << "No such file: " << *it << std::endl;
+    for (const t_config_option_key &file : input_files) {
+        if (!boost::filesystem::exists(file)) {
+            boost::nowide::cerr << "No such file: " << file << std::endl;
             exit(1);
         }
         
         Model model;
         try {
-            model = Model::read_from_file(*it);
+            model = Model::read_from_file(file);
         } catch (std::exception &e) {
-            std::cout << *it << ": " << e.what() << std::endl;
+            boost::nowide::cerr << file << ": " << e.what() << std::endl;
             exit(1);
         }
         
         if (model.objects.empty()) {
-            printf("Error: file is empty: %s\n", it->c_str());
+            boost::nowide::cerr << "Error: file is empty: " << file << std::endl;
             continue;
         }
         
         model.add_default_instances();
         
         // apply command line transform options
-        for (ModelObjectPtrs::iterator o = model.objects.begin(); o != model.objects.end(); ++o) {
+        for (ModelObject* o : model.objects) {
             if (cli_config.scale_to_fit.is_positive_volume())
-                (*o)->scale_to_fit(cli_config.scale_to_fit.value);
+                o->scale_to_fit(cli_config.scale_to_fit.value);
             
             // TODO: honor option order?
-            (*o)->scale(cli_config.scale.value);
-            (*o)->rotate(Geometry::deg2rad(cli_config.rotate_x.value), X);
-            (*o)->rotate(Geometry::deg2rad(cli_config.rotate_y.value), Y);
-            (*o)->rotate(Geometry::deg2rad(cli_config.rotate.value), Z);
+            o->scale(cli_config.scale.value);
+            o->rotate(Geometry::deg2rad(cli_config.rotate_x.value), X);
+            o->rotate(Geometry::deg2rad(cli_config.rotate_y.value), Y);
+            o->rotate(Geometry::deg2rad(cli_config.rotate.value), Z);
         }
         
         // TODO: handle --merge
         models.push_back(model);
     }
     
-    for (std::vector<Model>::iterator model = models.begin(); model != models.end(); ++model) {
+    for (Model &model : models) {
         if (cli_config.info) {
             // --info works on unrepaired model
-            model->print_info();
+            model.print_info();
         } else if (cli_config.export_obj) {
             std::string outfile = cli_config.output.value;
-            if (outfile.empty()) outfile = model->objects.front()->input_file + ".obj";
+            if (outfile.empty()) outfile = model.objects.front()->input_file + ".obj";
     
-            TriangleMesh mesh = model->mesh();
+            TriangleMesh mesh = model.mesh();
             mesh.repair();
             IO::OBJ::write(mesh, outfile);
-            printf("File exported to %s\n", outfile.c_str());
+            boost::nowide::cout << "File exported to " << outfile << std::endl;
         } else if (cli_config.export_pov) {
             std::string outfile = cli_config.output.value;
-            if (outfile.empty()) outfile = model->objects.front()->input_file + ".pov";
+            if (outfile.empty()) outfile = model.objects.front()->input_file + ".pov";
     
-            TriangleMesh mesh = model->mesh();
+            TriangleMesh mesh = model.mesh();
             mesh.repair();
             IO::POV::write(mesh, outfile);
-            printf("File exported to %s\n", outfile.c_str());
+            boost::nowide::cout << "File exported to " << outfile << std::endl;
         } else if (cli_config.export_svg) {
             std::string outfile = cli_config.output.value;
-            if (outfile.empty()) outfile = model->objects.front()->input_file + ".svg";
+            if (outfile.empty()) outfile = model.objects.front()->input_file + ".svg";
             
-            SLAPrint print(&*model);
+            SLAPrint print(&model);
             print.config.apply(print_config, true);
             print.slice();
             print.write_svg(outfile);
-            printf("SVG file exported to %s\n", outfile.c_str());
+            boost::nowide::cout << "SVG file exported to " << outfile << std::endl;
+        } else if (cli_config.export_3mf) {
+            std::string outfile = cli_config.output.value;
+            if (outfile.empty()) outfile = model.objects.front()->input_file;
+            // Check if the file is already a 3mf.
+            if(outfile.substr(outfile.find_last_of('.'), outfile.length()) == ".3mf")
+                outfile = outfile.substr(0, outfile.find_last_of('.')) + "_2" + ".3mf";
+            else
+                // Remove the previous extension and add .3mf extention.
+                outfile = outfile.substr(0, outfile.find_last_of('.')) + ".3mf";
+            IO::TMF::write(model, outfile);
+            boost::nowide::cout << "File file exported to " << outfile << std::endl;
         } else if (cli_config.cut_x > 0 || cli_config.cut_y > 0 || cli_config.cut > 0) {
-            model->repair();
-            model->translate(0, 0, -model->bounding_box().min.z);
+            model.repair();
+            model.translate(0, 0, -model.bounding_box().min.z);
             
-            if (!model->objects.empty()) {
+            if (!model.objects.empty()) {
                 // FIXME: cut all objects
                 Model out;
                 if (cli_config.cut_x > 0) {
-                    model->objects.front()->cut(X, cli_config.cut_x, &out);
+                    model.objects.front()->cut(X, cli_config.cut_x, &out);
                 } else if (cli_config.cut_y > 0) {
-                    model->objects.front()->cut(Y, cli_config.cut_y, &out);
+                    model.objects.front()->cut(Y, cli_config.cut_y, &out);
                 } else {
-                    model->objects.front()->cut(Z, cli_config.cut, &out);
+                    model.objects.front()->cut(Z, cli_config.cut, &out);
                 }
                 
                 ModelObject &upper = *out.objects[0];
                 ModelObject &lower = *out.objects[1];
+
+                // Use the input name and trim off the extension.
+                std::string outfile = cli_config.output.value;
+                if (outfile.empty()) outfile = model.objects.front()->input_file;
+                outfile = outfile.substr(0, outfile.find_last_of('.'));
+                std::cerr << outfile << "\n";
             
                 if (upper.facets_count() > 0) {
                     TriangleMesh m = upper.mesh();
-                    IO::STL::write(m, upper.input_file + "_upper.stl");
+                    IO::STL::write(m, outfile + "_upper.stl");
                 }
                 if (lower.facets_count() > 0) {
                     TriangleMesh m = lower.mesh();
-                    IO::STL::write(m, lower.input_file + "_lower.stl");
+                    IO::STL::write(m, outfile + "_lower.stl");
                 }
             }
         } else if (cli_config.cut_grid.value.x > 0 && cli_config.cut_grid.value.y > 0) {
-            TriangleMesh mesh = model->mesh();
+            TriangleMesh mesh = model.mesh();
             mesh.repair();
             
             TriangleMeshPtrs meshes = mesh.cut_by_grid(cli_config.cut_grid.value);
-            for (TriangleMeshPtrs::iterator m = meshes.begin(); m != meshes.end(); ++m) {
+            size_t i = 0;
+            for (TriangleMesh* m : meshes) {
                 std::ostringstream ss;
-                ss << model->objects.front()->input_file << "_" << (m - meshes.begin()) << ".stl";
-                IO::STL::write(**m, ss.str());
-                delete *m;
+                ss << model.objects.front()->input_file << "_" << i++ << ".stl";
+                IO::STL::write(*m, ss.str());
+                delete m;
             }
         } else {
-            std::cerr << "error: command not supported" << std::endl;
+            boost::nowide::cerr << "error: command not supported" << std::endl;
             return 1;
         }
     }

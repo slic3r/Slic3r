@@ -507,9 +507,6 @@ MedialAxis::build(ThickPolylines* polylines)
     }
     */
     
-    typedef const VD::vertex_type vert_t;
-    typedef const VD::edge_type   edge_t;
-    
     // collect valid edges (i.e. prune those not belonging to MAT)
     // note: this keeps twins, so it inserts twice the number of the valid edges
     this->valid_edges.clear();
@@ -534,7 +531,7 @@ MedialAxis::build(ThickPolylines* polylines)
     
     // iterate through the valid edges to build polylines
     while (!this->edges.empty()) {
-        const edge_t* edge = *this->edges.begin();
+        const VD::edge_type* edge = *this->edges.begin();
         
         // start a polyline
         ThickPolyline polyline;

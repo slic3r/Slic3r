@@ -1,4 +1,5 @@
 #include "GCodeWriter.hpp"
+#include "utils.hpp"
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
@@ -33,10 +34,50 @@ GCodeWriter::set_extruders(const std::vector<unsigned int> &extruder_ids)
 }
 
 std::string
+GCodeWriter::notes() 
+{
+    std::ostringstream gcode;
+
+    // Write the contents of the three notes sections
+    // a semicolon at the beginning of each line.
+    if (this->config.notes.getString().size() > 0) {
+        gcode << "; Print Config Notes: \n";
+        std::vector<std::string> temp_line = split_at_regex(this->config.notes.getString(),"\n");
+        for (auto j = temp_line.cbegin(); j != temp_line.cend(); j++) {
+            gcode << "; " << *j << "\n";
+        }
+        gcode << "; \n";
+    }
+
+    for (auto i = this->config.filament_notes.values.cbegin(); i != this->config.filament_notes.values.cend(); i++) {
+        if (i->size() > 0) {
+            gcode << "; Filament notes: \n";
+            std::vector<std::string> temp_line = split_at_regex(*i,"\n");
+            for (auto j = temp_line.cbegin(); j != temp_line.cend(); j++) {
+                gcode << "; " << *j << "\n";
+            }
+            gcode << "; \n";
+        }
+    }
+
+    if (this->config.printer_notes.getString().size() > 0) {
+        gcode << "; Printer Config Notes: \n";
+        std::vector<std::string> temp_line = split_at_regex(this->config.printer_notes.getString(),"\n");
+        for (auto j = temp_line.cbegin(); j != temp_line.cend(); j++) {
+            gcode << "; " << *j << "\n";
+        }
+        gcode << "; \n";
+    }
+
+    return gcode.str();
+}
+
+
+std::string
 GCodeWriter::preamble()
 {
     std::ostringstream gcode;
-    
+
     if (FLAVOR_IS_NOT(gcfMakerWare)) {
         gcode << "G21 ; set units to millimeters\n";
         gcode << "G90 ; use absolute coordinates\n";
@@ -49,7 +90,8 @@ GCodeWriter::preamble()
         }
         gcode << this->reset_e(true);
     }
-    
+
+
     return gcode.str();
 }
 
@@ -173,11 +215,15 @@ GCodeWriter::set_acceleration(unsigned int acceleration)
     this->_last_acceleration = acceleration;
     
     std::ostringstream gcode;
-    if (FLAVOR_IS(gcfRepetier)) {
+    if (FLAVOR_IS(gcfRepetier) || (FLAVOR_IS(gcfRepRap))) {
         gcode << "M201 X" << acceleration << " Y" << acceleration;
         if (this->config.gcode_comments) gcode << " ; adjust acceleration";
         gcode << "\n";
+    }
+    if (FLAVOR_IS(gcfRepetier)) {
         gcode << "M202 X" << acceleration << " Y" << acceleration;
+    } else if (FLAVOR_IS(gcfRepRap)) {
+        gcode << "M204 P" << acceleration << " T" << acceleration;
     } else {
         gcode << "M204 S" << acceleration;
     }
@@ -330,7 +376,7 @@ GCodeWriter::travel_to_z(double z, const std::string &comment)
         reducing the lift amount that will be used for unlift. */
     if (!this->will_move_z(z)) {
         double nominal_z = this->_pos.z - this->_lifted;
-        this->_lifted = this->_lifted - (z - nominal_z);
+        this->_lifted -= (z - nominal_z);
         return "";
     }
     
@@ -415,14 +461,18 @@ GCodeWriter::retract_for_toolchange()
     return this->_retract(
         this->_extruder->retract_length_toolchange(),
         this->_extruder->retract_restart_extra_toolchange(),
-        "retract for toolchange"
+        "retract for toolchange",
+        true
     );
 }
 
 std::string
-GCodeWriter::_retract(double length, double restart_extra, const std::string &comment)
+GCodeWriter::_retract(double length, double restart_extra, const std::string &comment, bool long_retract)
 {
     std::ostringstream gcode;
+    std::ostringstream outcomment;
+
+    outcomment << comment;
     
     /*  If firmware retraction is enabled, we use a fake value of 1
         since we ignore the actual configured retract_length which 
@@ -439,17 +489,20 @@ GCodeWriter::_retract(double length, double restart_extra, const std::string &co
 
     double dE = this->_extruder->retract(length, restart_extra);
     if (dE != 0) {
+        outcomment << " extruder " << this->_extruder->id;
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
-                gcode << "G22 ; retract\n";
+                gcode << "G22";
+            else if ((FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfRepetier)) && long_retract)
+                gcode << "G10 S1";
             else
-                gcode << "G10 ; retract\n";
+                gcode << "G10";
         } else {
             gcode << "G1 " << this->_extrusion_axis << E_NUM(this->_extruder->E)
                            << " F" << this->_extruder->retract_speed_mm_min;
-            COMMENT(comment);
-            gcode << "\n";
         }
+        COMMENT(outcomment.str());
+        gcode << "\n";
     }
     
     if (FLAVOR_IS(gcfMakerWare))
@@ -470,15 +523,17 @@ GCodeWriter::unretract()
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
-                 gcode << "G23 ; unretract\n";
+                 gcode << "G23";
             else
-                 gcode << "G11 ; unretract\n";
+                 gcode << "G11";
+            if (this->config.gcode_comments) gcode << " ; unretract extruder " << this->_extruder->id;
+            gcode << "\n";
             gcode << this->reset_e();
         } else {
             // use G1 instead of G0 because G0 will blend the restart with the previous travel move
             gcode << "G1 " << this->_extrusion_axis << E_NUM(this->_extruder->E)
                            << " F" << this->_extruder->retract_speed_mm_min;
-            if (this->config.gcode_comments) gcode << " ; unretract";
+            if (this->config.gcode_comments) gcode << " ; unretract extruder " << this->_extruder->id;
             gcode << "\n";
         }
     }
@@ -500,10 +555,15 @@ GCodeWriter::lift()
         if (this->_pos.z >= above && (below == 0 || this->_pos.z <= below))
             target_lift = this->config.retract_lift.get_at(this->_extruder->id);
     }
-    if (this->_lifted == 0 && target_lift > 0) {
+    
+    // compare against epsilon because travel_to_z() does math on it
+    // and subtracting layer_height from retract_lift might not give
+    // exactly zero
+    if (std::abs(this->_lifted) < EPSILON && target_lift > 0) {
         this->_lifted = target_lift;
         return this->_travel_to_z(this->_pos.z + target_lift, "lift Z");
     }
+    
     return "";
 }
 

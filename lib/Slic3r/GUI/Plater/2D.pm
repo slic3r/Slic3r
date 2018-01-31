@@ -10,7 +10,7 @@ use List::Util qw(min max first);
 use Slic3r::Geometry qw(X Y scale unscale convex_hull);
 use Slic3r::Geometry::Clipper qw(offset JT_ROUND intersection_pl);
 use Wx qw(:misc :pen :brush :sizer :font :cursor wxTAB_TRAVERSAL);
-use Wx::Event qw(EVT_MOUSE_EVENTS EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
+use Wx::Event qw(EVT_MOUSE_EVENTS EVT_KEY_DOWN EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
 use base 'Wx::Panel';
 
 use constant CANVAS_TEXT => join('-', +(localtime)[3,4]) eq '13-8'
@@ -34,7 +34,8 @@ sub new {
     $self->{on_instances_moved} = sub {};
     
     $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(210,210,210), wxSOLID);
-    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
+    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
+    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,166,128), wxSOLID);
     $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(128,128,255), wxSOLID);
     $self->{transparent_brush}  = Wx::Brush->new(Wx::Colour->new(0,0,0), wxTRANSPARENT);
     $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(230,230,230), 1, wxSOLID);
@@ -43,7 +44,9 @@ sub new {
     $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(150,150,150), 1, wxSOLID);
 
     $self->{user_drawn_background} = $^O ne 'darwin';
-    
+
+    $self->{selected_instance} = undef;
+
     EVT_PAINT($self, \&repaint);
     EVT_ERASE_BACKGROUND($self, sub {}) if $self->{user_drawn_background};
     EVT_MOUSE_EVENTS($self, \&mouse_event);
@@ -51,6 +54,22 @@ sub new {
         $self->update_bed_size;
         $self->Refresh;
     });
+    EVT_KEY_DOWN($self, sub {
+            my ($s, $event) = @_;
+
+            my $key = $event->GetKeyCode;
+            if ($key == 65 || $key == 314) {
+                $self->nudge_instance('left');
+            } elsif ($key == 87 || $key == 315) {
+                $self->nudge_instance('up');
+            } elsif ($key == 68 || $key == 316) {
+                $self->nudge_instance('right');
+            } elsif ($key == 83 || $key == 317) {
+                $self->nudge_instance('down');
+            } else {
+                $event->Skip;
+            }
+        });
     
     return $self;
 }
@@ -77,7 +96,10 @@ sub on_instances_moved {
 
 sub repaint {
     my ($self, $event) = @_;
-    
+
+    # Focus is needed in order to catch keyboard events.
+    $self->SetFocus;
+
     my $dc = Wx::AutoBufferedPaintDC->new($self);
     my $size = $self->GetSize;
     my @size = ($size->GetWidth, $size->GetHeight);
@@ -149,6 +171,8 @@ sub repaint {
             
             if (defined $self->{drag_object} && $self->{drag_object}[0] == $obj_idx && $self->{drag_object}[1] == $instance_idx) {
                 $dc->SetBrush($self->{dragged_brush});
+            } elsif ($object->selected && $object->selected_instance == $instance_idx) {
+                $dc->SetBrush($self->{instance_brush});
             } elsif ($object->selected) {
                 $dc->SetBrush($self->{selected_brush});
             } else {
@@ -201,7 +225,11 @@ sub mouse_event {
     my $pos = $event->GetPosition;
     my $point = $self->point_to_model_units([ $pos->x, $pos->y ]);  #]]
     if ($event->ButtonDown) {
+        # On Linux, Focus is needed in order to move selected instance using keyboard arrows.
+        $self->SetFocus;
+
         $self->{on_select_object}->(undef);
+        $self->{selected_instance} = undef;
         # traverse objects and instances in reverse order, so that if they're overlapping
         # we get the one that gets drawn last, thus on top (as user expects that to move)
         OBJECTS: for my $obj_idx (reverse 0 .. $#{$self->{objects}}) {
@@ -220,6 +248,8 @@ sub mouse_event {
                             $point->y - $instance_origin->[Y],  #-
                         ];
                         $self->{drag_object} = [ $obj_idx, $instance_idx ];
+                        $self->{objects}->[$obj_idx]->selected_instance($instance_idx);
+                        $self->{selected_instance} = $self->{drag_object};
                     } elsif ($event->RightDown) {
                         $self->{on_right_click}->($pos);
                     }
@@ -236,7 +266,7 @@ sub mouse_event {
         $self->{drag_object} = undef;
         $self->SetCursor(wxSTANDARD_CURSOR);
     } elsif ($event->LeftDClick) {
-    	$self->{on_double_click}->();
+        $self->{on_double_click}->();
     } elsif ($event->Dragging) {
         return if !$self->{drag_start_pos}; # concurrency problems
         my ($obj_idx, $instance_idx) = @{ $self->{drag_object} };
@@ -255,6 +285,55 @@ sub mouse_event {
         }
         $self->SetCursor($cursor);
     }
+}
+
+sub nudge_instance{
+    my ($self, $direction) = @_;
+
+    # Get the selected instance of an object.
+    if (!defined $self->{selected_instance}) {
+        # Check if an object is selected.
+        for my $obj_idx (0 .. $#{$self->{objects}}) {
+            if ($self->{objects}->[$obj_idx]->selected) {
+                if ($self->{objects}->[$obj_idx]->selected_instance != -1) {
+                    $self->{selected_instance} = [$obj_idx, $self->{objects}->[$obj_idx]->selected_instance];
+                }
+            }
+        }
+    }
+    return if not defined ($self->{selected_instance});
+    my ($obj_idx, $instance_idx) = @{ $self->{selected_instance} };
+    my $object = $self->{model}->objects->[$obj_idx];
+    my $instance = $object->instances->[$instance_idx];
+
+    # Get the nudge values.
+    my $x_nudge = 0;
+    my $y_nudge = 0;
+
+    $self->{nudge_value} = ($Slic3r::GUI::Settings->{_}{nudge_val} < 0.1 ? 0.1 : $Slic3r::GUI::Settings->{_}{nudge_val}) / &Slic3r::SCALING_FACTOR;
+
+    if ($direction eq 'right'){
+        $x_nudge = $self->{nudge_value};
+    } elsif ($direction eq 'left'){
+        $x_nudge = -1 * $self->{nudge_value};
+    } elsif ($direction eq 'up'){
+        $y_nudge = $self->{nudge_value};
+    } elsif ($direction eq 'down'){
+        $y_nudge = -$self->{nudge_value};
+    }
+    my $point = Slic3r::Pointf->new($x_nudge, $y_nudge);
+    my $instance_origin = [ map scale($_), @{$instance->offset} ];
+    $point = [ map scale($_), @{$point} ];
+
+    $instance->set_offset(
+        Slic3r::Pointf->new(
+            unscale( $instance_origin->[X] + $x_nudge),
+            unscale( $instance_origin->[Y] + $y_nudge),
+        ));
+
+    $object->update_bounding_box;
+    $self->Refresh;
+    $self->{on_instances_moved}->();
 }
 
 sub update_bed_size {

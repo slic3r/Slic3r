@@ -163,35 +163,44 @@ sub new {
         my $item = $event->GetItem;
         my $frame = $self->GetFrame;
         my $menu = Wx::Menu->new;
-
-        my $scaleToSizeMenu = Wx::Menu->new;
-        my $scaleToSizeMenuItem = $menu->AppendSubMenu($scaleToSizeMenu, "Scale to size", 'Scale the selected object along a single axis');
-        wxTheApp->set_menu_item_icon($scaleToSizeMenuItem, 'arrow_out.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes', sub {
-                $self->changescale(undef, 1);
-                });
-        $frame->_append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
-                $self->changescale(X, 1);
-                }, undef, 'bullet_red.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
-                $self->changescale(Y, 1);
-                }, undef, 'bullet_green.png');
-        $frame->_append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
-                $self->changescale(Z, 1);
-                }, undef, 'bullet_blue.png');
-        my $rotateMenu = Wx::Menu->new;
-        my $rotateMenuItem = $menu->AppendSubMenu($rotateMenu, "Rotate", 'Rotate the selected object by an arbitrary angle');
-        wxTheApp->set_menu_item_icon($rotateMenuItem, 'textfield.png');
-        $frame->_append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
-                $self->rotate(undef, X);
-                }, undef, 'bullet_red.png');
-        $frame->_append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
-                $self->rotate(undef, Y);
-                }, undef, 'bullet_green.png');
-        $frame->_append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
-                $self->rotate(undef, Z);
-                }, undef, 'bullet_blue.png');
-
+        
+        {
+            my $scaleMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($scaleMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes',
+                sub { $self->changescale(undef, 0) });
+            wxTheApp->append_menu_item($scaleMenu, "Along X axis…", 'Scale the selected object along the X axis',
+                sub { $self->changescale(X, 0) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($scaleMenu, "Along Y axis…", 'Scale the selected object along the Y axis',
+                sub { $self->changescale(Y, 0) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($scaleMenu, "Along Z axis…", 'Scale the selected object along the Z axis',
+                sub { $self->changescale(Z, 0) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Scale", 'Scale the selected object by a given factor',
+                $scaleMenu, undef, 'arrow_out.png');
+        }
+        {
+            my $scaleToSizeMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Uniformly… ", 'Scale the selected object along the XYZ axes',
+                sub { $self->changescale(undef, 1) });
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis',
+                sub { $self->changescale(X, 1) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis',
+                sub { $self->changescale(Y, 1) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis',
+                sub { $self->changescale(Z, 1) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Scale to size", 'Scale the selected object to match a given size',
+                $scaleToSizeMenu, undef, 'arrow_out.png');
+        }
+        {
+            my $rotateMenu = Wx::Menu->new;
+            wxTheApp->append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis',
+                sub { $self->rotate(undef, X) }, undef, 'bullet_red.png');
+            wxTheApp->append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis',
+                sub { $self->rotate(undef, Y) }, undef, 'bullet_green.png');
+            wxTheApp->append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis',
+                sub { $self->rotate(undef, Z) }, undef, 'bullet_blue.png');
+            wxTheApp->append_submenu($menu, "Rotate", 'Rotate the selected object by an arbitrary angle',
+                $rotateMenu, undef, 'arrow_rotate_anticlockwise.png');
+        }
         $frame->PopupMenu($menu, $event->GetPoint);
     });
     EVT_BUTTON($self, $self->{btn_load_part}, sub { $self->on_btn_load(0) });
@@ -288,23 +297,20 @@ sub selection_changed {
             # attach volume config to settings panel
             my $volume = $self->{model_object}->volumes->[ $itemData->{volume_id} ];
    
-            if ($volume->modifier) {
-                my $movers = $self->{optgroup_movers};
-                
-                my $obj_bb = $self->{model_object}->raw_bounding_box;
-                my $vol_bb = $volume->mesh->bounding_box;
-                my $vol_size = $vol_bb->size;
-                $movers->get_field('x')->set_range($obj_bb->x_min - $vol_size->x, $obj_bb->x_max);
-                $movers->get_field('y')->set_range($obj_bb->y_min - $vol_size->y, $obj_bb->y_max);  #,,
-                $movers->get_field('z')->set_range($obj_bb->z_min - $vol_size->z, $obj_bb->z_max);
-                $movers->get_field('x')->set_value($vol_bb->x_min);
-                $movers->get_field('y')->set_value($vol_bb->y_min);
-                $movers->get_field('z')->set_value($vol_bb->z_min);
-                
-                $self->{left_sizer}->Show($movers->sizer);
-            } else {
-                $self->{left_sizer}->Hide($self->{optgroup_movers}->sizer);
-            }
+            my $movers = $self->{optgroup_movers};
+            
+            my $obj_bb = $self->{model_object}->raw_bounding_box;
+            my $vol_bb = $volume->mesh->bounding_box;
+            my $vol_size = $vol_bb->size;
+            $movers->get_field('x')->set_range($obj_bb->x_min - $vol_size->x, $obj_bb->x_max);
+            $movers->get_field('y')->set_range($obj_bb->y_min - $vol_size->y, $obj_bb->y_max);  #,,
+            $movers->get_field('z')->set_range($obj_bb->z_min - $vol_size->z, $obj_bb->z_max);
+            $movers->get_field('x')->set_value($vol_bb->x_min);
+            $movers->get_field('y')->set_value($vol_bb->y_min);
+            $movers->get_field('z')->set_value($vol_bb->z_min);
+            
+            $self->{left_sizer}->Show($movers->sizer);
+
             $config = $volume->config;
             $self->{staticbox}->SetLabel('Part Settings');
             
@@ -401,6 +407,14 @@ sub on_btn_lambda {
     } else {
         return;
     }
+
+    my $center = $self->{model_object}->bounding_box->center; 
+    if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
+        #TODO what we really want to do here is just align the
+        # center of the modifier to the center of the part.
+        $mesh->translate($center->x, $center->y, 0);
+    }
+
     $mesh->repair;
     my $new_volume = $self->{model_object}->add_volume(mesh => $mesh);
     $new_volume->set_modifier($is_modifier);
@@ -409,7 +423,6 @@ sub on_btn_lambda {
     # set a default extruder value, since user can't add it manually
     $new_volume->config->set_ifndef('extruder', 0);
 
-    $self->{parts_changed} = 1;
     $self->_parts_changed($self->{model_object}->volumes_count-1);
 }
 
@@ -436,6 +449,7 @@ sub on_btn_delete {
 sub _parts_changed {
     my ($self, $selected_volume_idx) = @_;
     
+    $self->{parts_changed} = 1;
     $self->reload_tree($selected_volume_idx);
     if ($self->{canvas}) {
         $self->{canvas}->reset_objects;

@@ -60,6 +60,8 @@ sub new {
         } elsif ($key == 68 || $key == 317) {
             $slider->SetValue($slider->GetValue - 1);
             $self->set_z($self->{layers_z}[$slider->GetValue]);
+        } else {
+            $event->Skip;
         }
     });
     
@@ -187,21 +189,21 @@ sub new {
         $zoom /= 10;
         $self->_zoom($self->_zoom / (1-$zoom));
         $self->_zoom(1) if $self->_zoom > 1;  # prevent from zooming out too much
-        
+
         {
             # In order to zoom around the mouse point we need to translate
             # the camera target. This math is almost there but not perfect yet...
             my $camera_bb_size = $self->_camera_bb->size;
             my $size = Slic3r::Pointf->new($self->GetSizeWH);
             my $pos = Slic3r::Pointf->new($e->GetPositionXY);
-            
+
             # calculate the zooming center in pixel coordinates relative to the viewport center
             my $vec = Slic3r::Pointf->new($pos->x - $size->x/2, $pos->y - $size->y/2);  #-
-            
+
             # calculate where this point will end up after applying the new zoom
             my $vec2 = $vec->clone;
             $vec2->scale($old_zoom / $self->_zoom);
-            
+
             # move the camera target by the difference of the two positions
             $self->_camera_target->translate(
                 -($vec->x - $vec2->x) * $camera_bb_size->x / $size->x,
@@ -215,6 +217,20 @@ sub new {
     EVT_MOUSE_EVENTS($self, \&mouse_event);
     
     return $self;
+}
+
+sub zoom{
+    my($self, $direction) = @_;
+    if( $direction eq 'in'){
+        $self->_zoom($self->_zoom / (1+0.3));
+    }
+    elsif($direction eq 'out'){
+        $self->_zoom($self->_zoom / (1-0.3));
+        $self->_zoom(1) if $self->_zoom > 1;  # prevent from zooming out too much
+    }
+    #apply changes
+    $self->_dirty(1);
+    $self->Refresh;
 }
 
 sub mouse_event {

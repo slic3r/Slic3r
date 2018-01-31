@@ -27,6 +27,7 @@
     bool is_solid_infill();
     bool is_bridge();
     Polygons grow();
+    Clone<Polyline> as_polyline();
 %{
 
 ExtrusionPath*

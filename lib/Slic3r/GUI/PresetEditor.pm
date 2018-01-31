@@ -87,7 +87,7 @@ sub new {
     });
     
     EVT_CHOICE($parent, $self->{presets_choice}, sub {
-        $self->on_select_preset;
+        $self->_on_select_preset;
     });
     
     EVT_BUTTON($self, $self->{btn_save_preset}, sub { $self->save_preset });
@@ -123,11 +123,18 @@ sub save_preset {
     $self->{treectrl}->SetFocus;
     
     my $preset = $self->current_preset;
-    $preset->save(undef, $self);
+    $preset->save_prompt($self);
     $self->load_presets;
     $self->select_preset_by_name($preset->name);
     
+    $self->{on_save_preset}->($self->name, $preset) if $self->{on_save_preset};
+    
     return 1;
+}
+
+sub on_save_preset {
+    my ($self, $cb) = @_;
+    $self->{on_save_preset} = $cb;
 }
 
 sub on_value_change {
@@ -141,10 +148,12 @@ sub on_value_change {
 sub _on_value_change {
     my ($self, $opt_key) = @_;
     
-    $self->current_preset->_dirty_config->apply($self->config);
-    $self->{on_value_change}->($opt_key) if $self->{on_value_change};
-    $self->load_presets;
-    $self->_update;
+    wxTheApp->CallAfter(sub {
+        $self->current_preset->_dirty_config->apply($self->config);
+        $self->{on_value_change}->($opt_key) if $self->{on_value_change};
+        $self->load_presets;
+        $self->_update;
+    });
 }
 
 sub _update {}
@@ -155,7 +164,7 @@ sub select_preset {
     my ($self, $i, $force) = @_;
     
     $self->{presets_choice}->SetSelection($i);
-    $self->on_select_preset($force);
+    $self->_on_select_preset($force);
 }
 
 sub select_preset_by_name {
@@ -163,8 +172,12 @@ sub select_preset_by_name {
     
     my $presets = wxTheApp->presets->{$self->name};
     my $i = first { $presets->[$_]->name eq $name } 0..$#$presets;
+    if (!defined $i) {
+        warn "No preset named $name";
+        return 0;
+    }
     $self->{presets_choice}->SetSelection($i);
-    $self->on_select_preset($force);
+    $self->_on_select_preset($force);
 }
 
 sub prompt_unsaved_changes {
@@ -175,6 +188,11 @@ sub prompt_unsaved_changes {
 }
 
 sub on_select_preset {
+    my ($self, $cb) = @_;
+    $self->{on_select_preset} = $cb;
+}
+
+sub _on_select_preset {
     my ($self, $force) = @_;
     
     # This method is called:
@@ -186,7 +204,12 @@ sub on_select_preset {
     my $preset = wxTheApp->presets->{$self->name}->[$self->{presets_choice}->GetSelection];
     
     # If selection didn't change, do nothing.
-    return if defined $self->current_preset && $preset->name eq $self->current_preset->name;
+    # (But still reset current_preset because it might contain an older object of the
+    # current preset)
+    if (defined $self->current_preset && $preset->name eq $self->current_preset->name) {
+        $self->current_preset($preset);
+        return;
+    }
     
     # If we have unsaved changes, prompt user.
     if (!$force && !$self->prompt_unsaved_changes) {
@@ -203,9 +226,7 @@ sub on_select_preset {
     # prompted and chose to discard changes.
     $self->load_presets;
     
-    $preset->load_config if !$preset->_loaded;
-    $self->config->clear;
-    $self->config->apply($preset->dirty_config);
+    $self->reload_preset;
     
     eval {
         local $SIG{__WARN__} = Slic3r::GUI::warning_catcher($self);
@@ -215,12 +236,13 @@ sub on_select_preset {
         
         $self->_update;
         $self->on_preset_loaded;
-        $self->reload_config;
     };
     if ($@) {
         $@ = "I was unable to load the selected config file: $@";
         Slic3r::GUI::catch_error($self);
     }
+    
+    $self->{on_select_preset}->($self->name, $preset) if $self->{on_select_preset};
 }
 
 sub add_options_page {
@@ -238,6 +260,15 @@ sub add_options_page {
     $self->{sizer}->Add($page, 1, wxEXPAND | wxLEFT, 5);
     push @{$self->{pages}}, $page;
     return $page;
+}
+
+sub reload_preset {
+    my ($self) = @_;
+    
+    $self->current_preset->load_config if !$self->current_preset->_loaded;
+    $self->config->clear;
+    $self->config->apply($self->current_preset->dirty_config);
+    $self->reload_config;
 }
 
 sub reload_config {
@@ -406,6 +437,7 @@ sub title { 'Print Settings' }
 sub options {
     return qw(
         layer_height first_layer_height
+        adaptive_slicing adaptive_slicing_quality match_horizontal_surfaces
         perimeters spiral_vase
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
@@ -436,12 +468,12 @@ sub options {
         perimeter_extruder infill_extruder solid_infill_extruder
         support_material_extruder support_material_interface_extruder
         ooze_prevention standby_temperature_delta
-        interface_shells
+        interface_shells regions_overlap
         extrusion_width first_layer_extrusion_width perimeter_extrusion_width 
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
-        infill_overlap bridge_flow_ratio
-        xy_size_compensation resolution overridable compatible_printers
+        support_material_interface_extrusion_width infill_overlap bridge_flow_ratio
+        xy_size_compensation resolution shortcuts compatible_printers
         print_settings_id
     )
 }
@@ -449,7 +481,7 @@ sub options {
 sub build {
     my $self = shift;
     
-    my $overridable_widget = sub {
+    my $shortcuts_widget = sub {
         my ($parent) = @_;
         
         my $Options = $Slic3r::Config::Options;
@@ -458,15 +490,15 @@ sub build {
                 grep { exists $Options->{$_} && $Options->{$_}{category} } $self->options
         );
         my @opt_keys = sort { $options{$a} cmp $options{$b} } keys %options;
-        $self->{overridable_opt_keys} = [ @opt_keys ];
+        $self->{shortcuts_opt_keys} = [ @opt_keys ];
         
-        my $listbox = $self->{overridable_list} = Wx::CheckListBox->new($parent, -1,
+        my $listbox = $self->{shortcuts_list} = Wx::CheckListBox->new($parent, -1,
             wxDefaultPosition, [-1, 320], [ map $options{$_}, @opt_keys ]);
         
         EVT_CHECKLISTBOX($self, $listbox, sub {
             my $value = [ map $opt_keys[$_], grep $listbox->IsChecked($_), 0..$#opt_keys ];
-            $self->config->set('overridable', $value);
-            $self->_on_value_change('overridable');
+            $self->config->set('shortcuts', $value);
+            $self->_on_value_change('shortcuts');
         });
         
         my $sizer = Wx::BoxSizer->new(wxVERTICAL);
@@ -481,6 +513,10 @@ sub build {
             my $optgroup = $page->new_optgroup('Layer height');
             $optgroup->append_single_option_line('layer_height');
             $optgroup->append_single_option_line('first_layer_height');
+            $optgroup->append_single_option_line('adaptive_slicing');
+            $optgroup->append_single_option_line('adaptive_slicing_quality');
+            $optgroup->get_field('adaptive_slicing_quality')->set_scale(1);
+            $optgroup->append_single_option_line('match_horizontal_surfaces');
         }
         {
             my $optgroup = $page->new_optgroup('Vertical shells');
@@ -634,6 +670,7 @@ sub build {
         }
         {
             my $optgroup = $page->new_optgroup('Advanced');
+            $optgroup->append_single_option_line('regions_overlap');
             $optgroup->append_single_option_line('interface_shells');
         }
     }
@@ -648,7 +685,8 @@ sub build {
                 for qw(extrusion_width first_layer_extrusion_width
                     perimeter_extrusion_width external_perimeter_extrusion_width
                     infill_extrusion_width solid_infill_extrusion_width
-                    top_infill_extrusion_width support_material_extrusion_width);
+                    top_infill_extrusion_width support_material_interface_extrusion_width 
+                    support_material_extrusion_width);
         }
         {
             my $optgroup = $page->new_optgroup('Overlap');
@@ -715,7 +753,7 @@ sub build {
     }
     
     {
-        my $page = $self->add_options_page('Overrides', 'wrench.png');
+        my $page = $self->add_options_page('Shortcuts', 'wrench.png');
         {
             my $optgroup = $page->new_optgroup('Profile preferences');
             {
@@ -727,10 +765,10 @@ sub build {
             }
         }
         {
-            my $optgroup = $page->new_optgroup('Overridable settings (they will be displayed in the plater for quick changes)');
+            my $optgroup = $page->new_optgroup('Show shortcuts for the following settings');
             {
                 my $line = Slic3r::GUI::OptionsGroup::Line->new(
-                    widget      => $overridable_widget,
+                    widget      => $shortcuts_widget,
                     full_width  => 1,
                 );
                 $optgroup->append_line($line);
@@ -745,9 +783,9 @@ sub reload_config {
     $self->_reload_compatible_printers_widget;
     
     {
-        my %overridable = map { $_ => 1 } @{ $self->config->get('overridable') };
-        for my $i (0..$#{$self->{overridable_opt_keys}}) {
-            $self->{overridable_list}->Check($i, $overridable{ $self->{overridable_opt_keys}[$i] });
+        my %shortcuts = map { $_ => 1 } @{ $self->config->get('shortcuts') };
+        for my $i (0..$#{$self->{shortcuts_opt_keys}}) {
+            $self->{shortcuts_list}->Check($i, $shortcuts{ $self->{shortcuts_opt_keys}[$i] });
         }
     }
     
@@ -832,6 +870,12 @@ sub _update {
         for qw(extra_perimeters thin_walls overhangs seam_position external_perimeters_first
             external_perimeter_extrusion_width
             perimeter_speed small_perimeter_speed external_perimeter_speed);
+
+    my $have_adaptive_slicing = $config->adaptive_slicing;
+    $self->get_field($_)->toggle($have_adaptive_slicing)
+        for qw(adaptive_slicing_quality match_horizontal_surfaces);
+    $self->get_field($_)->toggle(!$have_adaptive_slicing)
+        for qw(layer_height);
     
     my $have_infill = $config->fill_density > 0;
     # infill_extruder uses the same logic as in Print::extruders()
@@ -880,7 +924,8 @@ sub _update {
         for qw(support_material_threshold support_material_pattern 
             support_material_spacing support_material_angle
             support_material_interface_layers dont_support_bridges
-            support_material_extrusion_width support_material_contact_distance);
+            support_material_extrusion_width support_material_interface_extrusion_width
+            support_material_contact_distance);
 
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
@@ -1114,10 +1159,10 @@ sub _update {
     
     $self->_update_description;
     
-    my $cooling = $self->config->cooling;
+    my $cooling = $self->{config}->cooling;
     $self->get_field($_)->toggle($cooling)
         for qw(max_fan_speed fan_below_layer_time slowdown_below_layer_time min_print_speed);
-    $self->get_field($_)->toggle($cooling || $self->config->fan_always_on)
+    $self->get_field($_)->toggle($cooling || $self->{config}->fan_always_on)
         for qw(min_fan_speed disable_fan_first_layers);
 }
 
@@ -1163,12 +1208,11 @@ sub options {
         bed_shape z_offset z_steps_per_mm has_heatbed
         gcode_flavor use_relative_e_distances
         serial_port serial_speed
-        octoprint_host octoprint_apikey
+        host_type print_host octoprint_apikey
         use_firmware_retraction pressure_advance vibration_limit
         use_volumetric_e
         start_gcode end_gcode before_layer_gcode layer_gcode toolchange_gcode between_objects_gcode
-        notes
-        nozzle_diameter extruder_offset
+        nozzle_diameter extruder_offset min_layer_height max_layer_height
         retract_length retract_lift retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe
         retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
         printer_settings_id
@@ -1229,10 +1273,14 @@ sub build {
                     wxTheApp->CallAfter(sub {
                         $self->_extruders_count_changed($optgroup->get_value('extruders_count'));
                     });
+                } else {
+                    wxTheApp->CallAfter(sub {
+                        $self->_on_value_change($opt_id);
+                    });
                 }
             });
         }
-        unless ($Slic3r::GUI::Settings->{_}{no_controller}) {
+        {
             my $optgroup = $page->new_optgroup('USB/Serial connection');
             my $line = Slic3r::GUI::OptionsGroup::Line->new(
                 label => 'Serial port',
@@ -1266,9 +1314,11 @@ sub build {
             $optgroup->append_line($line);
         }
         {
-            my $optgroup = $page->new_optgroup('OctoPrint upload');
+            my $optgroup = $page->new_optgroup('Print server upload');
+
+            $optgroup->append_single_option_line('host_type'); 
             
-            my $host_line = $optgroup->create_single_option_line('octoprint_host');
+            my $host_line = $optgroup->create_single_option_line('print_host');
             $host_line->append_button("Browse…", "zoom.png", sub {
                 # look for devices
                 my $entries;
@@ -1281,19 +1331,19 @@ sub build {
                     my $dlg = Slic3r::GUI::BonjourBrowser->new($self, $entries);
                     if ($dlg->ShowModal == wxID_OK) {
                         my $value = $dlg->GetValue . ":" . $dlg->GetPort;
-                        $self->config->set('octoprint_host', $value);
-                        $self->_on_value_change('octoprint_host');
+                        $self->config->set('print_host', $value);
+                        $self->_on_value_change('print_host');
                     }
                 } else {
                     Wx::MessageDialog->new($self, 'No Bonjour device found', 'Device Browser', wxOK | wxICON_INFORMATION)->ShowModal;
                 }
-            }, undef, !eval "use Net::Bonjour; 1");
+            }, \$self->{print_host_browse_btn}, !eval "use Net::Bonjour; 1");
             $host_line->append_button("Test", "wrench.png", sub {
                 my $ua = LWP::UserAgent->new;
                 $ua->timeout(10);
 
                 my $res = $ua->get(
-                    "http://" . $self->config->octoprint_host . "/api/version",
+                    "http://" . $self->config->print_host . "/api/version",
                     'X-Api-Key' => $self->config->octoprint_apikey,
                 );
                 if ($res->is_success) {
@@ -1303,7 +1353,7 @@ sub build {
                         "I wasn't able to connect to OctoPrint (" . $res->status_line . "). "
                         . "Check hostname and OctoPrint version (at least 1.1.0 is required).");
                 }
-            }, \$self->{octoprint_host_test_btn});
+            }, \$self->{print_host_test_btn});
             $optgroup->append_line($host_line);
             $optgroup->append_single_option_line('octoprint_apikey');
         }
@@ -1387,13 +1437,13 @@ sub build {
             my $optgroup = $page->new_optgroup('Notes',
                 label_width => 0,
             );
-            my $option = $optgroup->get_option('notes');
+            my $option = $optgroup->get_option('printer_notes');
             $option->full_width(1);
             $option->height(250);
             $optgroup->append_single_option_line($option);
         }
     }
-    $self->_update_serial_ports unless $Slic3r::GUI::Settings->{_}{no_controller};
+    $self->_update_serial_ports;
 }
 
 sub _update_serial_ports {
@@ -1411,7 +1461,7 @@ sub _extruders_count_changed {
     $self->_update;
 }
 
-sub _extruder_options { qw(nozzle_diameter extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
+sub _extruder_options { qw(nozzle_diameter min_layer_height max_layer_height extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
     retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
 
 sub _build_extruder_pages {
@@ -1439,6 +1489,11 @@ sub _build_extruder_pages {
         {
             my $optgroup = $page->new_optgroup('Size');
             $optgroup->append_single_option_line('nozzle_diameter', $extruder_idx);
+        }
+        {
+            my $optgroup = $page->new_optgroup('Limits');
+            $optgroup->append_single_option_line($_, $extruder_idx)
+               for qw(min_layer_height max_layer_height);
         }
         {
             my $optgroup = $page->new_optgroup('Position (for multi-extruder printers)');
@@ -1504,12 +1559,17 @@ sub _update {
             $self->{serial_test_btn}->Disable;
         }
     }
-    if ($config->get('octoprint_host') && eval "use LWP::UserAgent; 1") {
-        $self->{octoprint_host_test_btn}->Enable;
-    } else {
-        $self->{octoprint_host_test_btn}->Disable;
+    if (($config->get('host_type') eq 'octoprint')) {
+        $self->{print_host_browse_btn}->Enable;
+    }else{
+        $self->{print_host_browse_btn}->Disable;
     }
-    $self->get_field('octoprint_apikey')->toggle($config->get('octoprint_host'));
+    if (($config->get('host_type') eq 'octoprint') && eval "use LWP::UserAgent; 1") {
+        $self->{print_host_test_btn}->Enable;
+    } else {    
+        $self->{print_host_test_btn}->Disable;
+    }
+    $self->get_field('octoprint_apikey')->toggle($config->get('print_host'));
     
     my $have_multiple_extruders = $self->{extruders_count} > 1;
     $self->get_field('toolchange_gcode')->toggle($have_multiple_extruders);
@@ -1519,15 +1579,38 @@ sub _update {
         
         # when using firmware retraction, firmware decides retraction length
         $self->get_field('retract_length', $i)->toggle(!$config->use_firmware_retraction);
+        if ($config->use_firmware_retraction && 
+            ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier') && 
+            ($config->get_at('retract_length_toolchange', $i) > 0 || $config->get_at('retract_restart_extra_toolchange', $i) > 0)) {
+            my $dialog = Wx::MessageDialog->new($self,
+                "Retract length for toolchange on extruder " . $i . " is not available when using the Firmware Retraction mode.\n"
+                . "\nShall I disable it in order to enable Firmware Retraction?",
+                'Firmware Retraction', wxICON_WARNING | wxYES | wxNO);
+            
+            my $new_conf = Slic3r::Config->new;
+            if ($dialog->ShowModal() == wxID_YES) {
+                my $retract_length_toolchange = $config->retract_length_toolchange;
+                $retract_length_toolchange->[$i] = 0;
+                $new_conf->set("retract_length_toolchange", $retract_length_toolchange);
+                $new_conf->set("retract_restart_extra_toolchange", $retract_length_toolchange);
+            } else {
+                $new_conf->set("use_firmware_retraction", 0);
+            }
+            $self->_load_config($new_conf);
+        }
         
         # user can customize travel length if we have retraction length or we're using
         # firmware retraction
         $self->get_field('retract_before_travel', $i)->toggle($have_retract_length || $config->use_firmware_retraction);
         
         # user can customize other retraction options if retraction is enabled
+        # Firmware retract has Z lift built in.
         my $retraction = ($have_retract_length || $config->use_firmware_retraction);
+        $self->get_field($_, $i)->toggle($retraction && !$config->use_firmware_retraction)
+            for qw(retract_lift);
+
         $self->get_field($_, $i)->toggle($retraction)
-            for qw(retract_lift retract_layer_change);
+            for qw(retract_layer_change);
         
         # retract lift above/below only applies if using retract lift
         $self->get_field($_, $i)->toggle($retraction && $config->get_at('retract_lift', $i) > 0)
@@ -1557,12 +1640,32 @@ sub _update {
             }
             $self->_load_config($new_conf);
         }
-        
-        $self->get_field('retract_length_toolchange', $i)->toggle($have_multiple_extruders);
+
+        if ($config->use_firmware_retraction && $config->get_at('retract_lift', $i) > 0) {
+            my $dialog = Wx::MessageDialog->new($self,
+                "The Z Lift option is not available when using the Firmware Retraction mode.\n"
+                . "\nShall I disable it in order to enable Firmware Retraction?",
+                'Firmware Retraction', wxICON_WARNING | wxYES | wxNO);
+            
+            my $new_conf = Slic3r::Config->new;
+            if ($dialog->ShowModal() == wxID_YES) {
+                my $wipe = $config->retract_lift;
+                $wipe->[$i] = 0;
+                $new_conf->set("retract_lift", $wipe);
+            } else {
+                $new_conf->set("use_firmware_retraction", 0);
+            }
+            $self->_load_config($new_conf);
+        }
+
+        $self->get_field('retract_length_toolchange', $i)->toggle
+            ($have_multiple_extruders && 
+            !($config->use_firmware_retraction && ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier')));
         
         my $toolchange_retraction = $config->get_at('retract_length_toolchange', $i) > 0;
         $self->get_field('retract_restart_extra_toolchange', $i)->toggle
-            ($have_multiple_extruders && $toolchange_retraction);
+            ($have_multiple_extruders && $toolchange_retraction && 
+            !($config->use_firmware_retraction && ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier')));
     }
 }
 
@@ -1602,10 +1705,11 @@ sub new {
     $self->{title}      = $title;
     $self->{iconID}     = $iconID;
     
-    $self->SetScrollbars(1, 1, 1, 1);
-    
     $self->{vsizer} = Wx::BoxSizer->new(wxVERTICAL);
     $self->SetSizer($self->{vsizer});
+    
+    # http://docs.wxwidgets.org/3.0/classwx_scrolled.html#details
+    $self->SetScrollRate($Slic3r::GUI::scroll_step, $Slic3r::GUI::scroll_step);
     
     return $self;
 }
