@@ -92,6 +92,13 @@ sub new {
         tooltip     => 'In 2D plater, Move objects using keyboard by nudge value of',
         default     => $Slic3r::GUI::Settings->{_}{nudge_val},
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'colorschema_solarized',
+        type        => 'bool',
+        label       => 'Solarized Color Scheme',
+        tooltip     => 'Precision colors for machines and people (http://ethanschoonover.com/solarized).',
+        default     => $Slic3r::GUI::Settings->{_}{colorschema_solarized}  // 0,
+    ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);

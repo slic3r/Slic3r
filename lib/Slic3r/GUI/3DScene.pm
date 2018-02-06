@@ -44,8 +44,38 @@ __PACKAGE__->mk_accessors( qw(_quat _dirty init
 use constant TRACKBALLSIZE  => 0.8;
 use constant TURNTABLE_MODE => 1;
 use constant GROUND_Z       => -0.02;
-use constant SELECTED_COLOR => [0,1,0];
-use constant HOVER_COLOR    => [0.4,0.9,0];
+
+our $SELECTED_COLOR;
+our $HOVER_COLOR;
+our $BOTTOM_COLOR;    # Background BOTTOM color
+our $TOP_COLOR;       # Background TOP color
+our $GRID_COLOR;
+our $GROUND_COLOR;    # PLATE color
+our $COLOR_ONE;       # PARTS
+our $COLOR_TWO;       # INFILL
+our $COLOR_THREE;     # ?
+our $COLOR_FOUR;      # ?
+our $COLOR_CUTPLANE;
+
+# S O L A R I Z E
+# # http://ethanschoonover.com/solarized
+our $COLOR_BASE03  = [0.00000,0.16863,0.21176];
+our $COLOR_BASE02  = [0.02745,0.21176,0.25882];
+our $COLOR_BASE01  = [0.34510,0.43137,0.45882];
+our $COLOR_BASE00  = [0.39608,0.48235,0.51373];
+our $COLOR_BASE0   = [0.51373,0.58039,0.58824];
+our $COLOR_BASE1   = [0.57647,0.63137,0.63137];
+our $COLOR_BASE2   = [0.93333,0.90980,0.83529];
+our $COLOR_BASE3   = [0.99216,0.96471,0.89020];
+our $COLOR_YELLOW  = [0.70980,0.53725,0.00000];
+our $COLOR_ORANGE  = [0.79608,0.29412,0.08627];
+our $COLOR_RED     = [0.86275,0.19608,0.18431];
+our $COLOR_MAGENTA = [0.82745,0.21176,0.50980];
+our $COLOR_VIOLET  = [0.42353,0.44314,0.76863];
+our $COLOR_BLUE    = [0.14902,0.54510,0.82353];
+our $COLOR_CYAN    = [0.16471,0.63137,0.59608];
+our $COLOR_GREEN   = [0.52157,0.60000,0.00000];
+
 use constant PI             => 3.1415927;
 
 # Constant to determine if Vertex Buffer objects are used to draw
@@ -69,11 +99,33 @@ use constant GIMBAL_LOCK_THETA_MAX => 170;
     *OpenGL::Array::CLONE_SKIP = sub { 1 };
 }
 
+sub getColorScheme {
+    # get/set color theme
+    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
+        #print "Using S O L A R I Z E color scheme\n";
+        $SELECTED_COLOR = $COLOR_MAGENTA;
+        $HOVER_COLOR    = $COLOR_VIOLET;
+        $TOP_COLOR      = $COLOR_BASE2;
+        $BOTTOM_COLOR   = $COLOR_BASE2;
+        $GRID_COLOR     = [@{$COLOR_BASE02},0.4];#[0.02745,0.21176,0.25882, 0.4]; # COLOR_BASE02
+        $GROUND_COLOR   = [@{$COLOR_BASE2},0.4];#0.93333,0.90980,0.83529, 0.4]; # COLOR_BASE2
+        $COLOR_CUTPLANE = [@{$COLOR_BASE1},0.5];
+    } else {
+        $SELECTED_COLOR = [0,1,0];
+        $HOVER_COLOR    = [0.4,0.9,0];
+        $TOP_COLOR      = [10/255,98/255,144/255];
+        $BOTTOM_COLOR   = [0,0,0];
+        $GRID_COLOR     = [0.2, 0.2, 0.2, 0.4];
+        $GROUND_COLOR   = [0.8, 0.6, 0.5, 0.4];
+        $COLOR_CUTPLANE = [.8, .8, .8, 0.5];
+    }
+}
+
 sub new {
     my ($class, $parent) = @_;
-    
+    getColorScheme();
 
-    # We can only enable multi sample anti aliasing wih wxWidgets 3.0.3 and with a hacked Wx::GLCanvas,
+    # We can only enable multi sample anti aliasing with wxWidgets 3.0.3 and with a hacked Wx::GLCanvas,
     # which exports some new WX_GL_XXX constants, namely WX_GL_SAMPLE_BUFFERS and WX_GL_SAMPLES.
     my $can_multisample =
         Wx::wxVERSION >= 3.000003 &&
@@ -844,10 +896,10 @@ sub Render {
         glLoadIdentity();
         
         glBegin(GL_QUADS);
-        glColor3f(0.0,0.0,0.0);
+        glColor3f(@{ $BOTTOM_COLOR }); #bottom color
         glVertex2f(-1.0,-1.0);
         glVertex2f(1,-1.0);
-        glColor3f(10/255,98/255,144/255);
+        glColor3f(@{ $TOP_COLOR }); #top color
         glVertex2f(1, 1);
         glVertex2f(-1.0, 1);
         glEnd();
@@ -881,7 +933,7 @@ sub Render {
             # fall back on old behavior
             glVertexPointer_c(3, GL_FLOAT, 0, $self->bed_triangles->ptr());
         }
-        glColor4f(0.8, 0.6, 0.5, 0.4);
+        glColor4f( @{ $GROUND_COLOR } );
         glNormal3d(0,0,1);
         glDrawArrays(GL_TRIANGLES, 0, $self->bed_triangles->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -904,7 +956,7 @@ sub Render {
             # fall back on old behavior
             glVertexPointer_c(3, GL_FLOAT, 0, $self->bed_grid_lines->ptr());
         }
-        glColor4f(0.2, 0.2, 0.2, 0.4);
+        glColor4f( @{ $GRID_COLOR } );
         glNormal3d(0,0,1);
         glDrawArrays(GL_LINES, 0, $self->bed_grid_lines->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -965,7 +1017,7 @@ sub Render {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glBegin(GL_QUADS);
-        glColor4f(0.8, 0.8, 0.8, 0.5);
+        glColor4f(@{ $COLOR_CUTPLANE });
         if ($self->cutting_plane_axis == X) {
             glVertex3f($bb->x_min+$plane_z, $bb->y_min-20, $bb->z_min-20);
             glVertex3f($bb->x_min+$plane_z, $bb->y_max+20, $bb->z_min-20);
@@ -1050,9 +1102,9 @@ sub draw_volumes {
             my $b = ($volume_idx & 0x00FF0000) >> 16;
             glColor4f($r/255.0, $g/255.0, $b/255.0, 1);
         } elsif ($volume->selected) {
-            glColor4f(@{ &SELECTED_COLOR }, $volume->color->[3]);
+            glColor4f(@{ $SELECTED_COLOR }, $volume->color->[3]);
         } elsif ($volume->hover) {
-            glColor4f(@{ &HOVER_COLOR }, $volume->color->[3]);
+            glColor4f(@{ $HOVER_COLOR }, $volume->color->[3]);
         } else {
             glColor4f(@{ $volume->color });
         }
@@ -1176,11 +1228,26 @@ __PACKAGE__->mk_accessors(qw(
     _objects_by_volumes
 ));
 
-sub default_colors { [1,0.95,0.2,1], [1,0.45,0.45,1], [0.5,1,0.5,1], [0.5,0.5,1,1] }
+sub getDefaultColors{
+    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
+        #print "SOLARIZE";
+        $COLOR_ONE    = [@{$COLOR_BLUE},1];
+        $COLOR_TWO    = [@{$COLOR_YELLOW},1];
+        $COLOR_THREE  = [@{$COLOR_VIOLET},1];
+        $COLOR_FOUR   = [@{$COLOR_CYAN},1];
+    } else {
+        $COLOR_ONE    = [1,0.95,0.2,1];
+        $COLOR_TWO    = [1,0.45,0.45,1];
+        $COLOR_THREE  = [0.5,1,0.5,1];
+        $COLOR_FOUR   = [0.5,0.5,1,1];
+    }
+}
+sub default_colors { $COLOR_ONE, $COLOR_TWO, $COLOR_THREE, $COLOR_FOUR }
+
 
 sub new {
     my $class = shift;
-    
+    getDefaultColors();
     my $self = $class->SUPER::new(@_);
     $self->colors([ $self->default_colors ]);
     $self->color_by('volume');      # object | volume
