@@ -96,7 +96,7 @@ sub new {
         opt_id      => 'colorschema_solarized',
         type        => 'bool',
         label       => 'Solarized Color Scheme',
-        tooltip     => 'Precision colors for machines and people (http://ethanschoonover.com/solarized).',
+        tooltip     => 'Restart of Slic3r after changes required. \n Precision colors for machines and people (http://ethanschoonover.com/solarized).',
         default     => $Slic3r::GUI::Settings->{_}{colorschema_solarized}  // 0,
     ));
     

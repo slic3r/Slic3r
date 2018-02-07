@@ -51,10 +51,10 @@ our $BOTTOM_COLOR;    # Background BOTTOM color
 our $TOP_COLOR;       # Background TOP color
 our $GRID_COLOR;
 our $GROUND_COLOR;    # PLATE color
-our $COLOR_ONE;       # PARTS
-our $COLOR_TWO;       # INFILL
-our $COLOR_THREE;     # ?
-our $COLOR_FOUR;      # ?
+our $COLOR_PARTS;     # PARTS
+our $COLOR_INFILL;    # INFILL
+our $COLOR_SUPPORT;   # Support
+our $COLOR_FOUR;      # ? what is this color for ?
 our $COLOR_CUTPLANE;
 
 # S O L A R I Z E
@@ -103,13 +103,17 @@ sub getColorScheme {
     # get/set color theme
     if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
         #print "Using S O L A R I Z E color scheme\n";
-        $SELECTED_COLOR = $COLOR_MAGENTA;
-        $HOVER_COLOR    = $COLOR_VIOLET;
-        $TOP_COLOR      = $COLOR_BASE2;
-        $BOTTOM_COLOR   = $COLOR_BASE2;
-        $GRID_COLOR     = [@{$COLOR_BASE02},0.4];#[0.02745,0.21176,0.25882, 0.4]; # COLOR_BASE02
-        $GROUND_COLOR   = [@{$COLOR_BASE2},0.4];#0.93333,0.90980,0.83529, 0.4]; # COLOR_BASE2
+        $SELECTED_COLOR = $COLOR_MAGENTA;         # Selected Model
+        $HOVER_COLOR    = $COLOR_VIOLET;          # Hover over Model
+        $TOP_COLOR      = $COLOR_BASE3;           # Backgroud color
+        $BOTTOM_COLOR   = $COLOR_BASE3;           # Backgroud color
+        $GRID_COLOR     = [@{$COLOR_BASE02},0.4]; # Grid color
+        $GROUND_COLOR   = [@{$COLOR_BASE2},0.4];  # Ground or Plate color
         $COLOR_CUTPLANE = [@{$COLOR_BASE1},0.5];
+        $COLOR_PARTS    = [@{$COLOR_BLUE},1];     # Perimeter color
+        $COLOR_INFILL   = [@{$COLOR_BASE2},1];
+        $COLOR_SUPPORT  = [@{$COLOR_ORANGE},1];
+        $COLOR_FOUR     = [@{$COLOR_CYAN},1];
     } else {
         $SELECTED_COLOR = [0,1,0];
         $HOVER_COLOR    = [0.4,0.9,0];
@@ -118,13 +122,16 @@ sub getColorScheme {
         $GRID_COLOR     = [0.2, 0.2, 0.2, 0.4];
         $GROUND_COLOR   = [0.8, 0.6, 0.5, 0.4];
         $COLOR_CUTPLANE = [.8, .8, .8, 0.5];
+        $COLOR_PARTS    = [1,0.95,0.2,1];
+        $COLOR_INFILL   = [1,0.45,0.45,1];
+        $COLOR_SUPPORT  = [0.5,1,0.5,1];
+        $COLOR_FOUR     = [0.5,0.5,1,1];
     }
 }
 
 sub new {
     my ($class, $parent) = @_;
     getColorScheme();
-
     # We can only enable multi sample anti aliasing with wxWidgets 3.0.3 and with a hacked Wx::GLCanvas,
     # which exports some new WX_GL_XXX constants, namely WX_GL_SAMPLE_BUFFERS and WX_GL_SAMPLES.
     my $can_multisample =
@@ -1228,26 +1235,12 @@ __PACKAGE__->mk_accessors(qw(
     _objects_by_volumes
 ));
 
-sub getDefaultColors{
-    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
-        #print "SOLARIZE";
-        $COLOR_ONE    = [@{$COLOR_BLUE},1];
-        $COLOR_TWO    = [@{$COLOR_YELLOW},1];
-        $COLOR_THREE  = [@{$COLOR_VIOLET},1];
-        $COLOR_FOUR   = [@{$COLOR_CYAN},1];
-    } else {
-        $COLOR_ONE    = [1,0.95,0.2,1];
-        $COLOR_TWO    = [1,0.45,0.45,1];
-        $COLOR_THREE  = [0.5,1,0.5,1];
-        $COLOR_FOUR   = [0.5,0.5,1,1];
-    }
-}
-sub default_colors { $COLOR_ONE, $COLOR_TWO, $COLOR_THREE, $COLOR_FOUR }
+
+sub default_colors { $COLOR_PARTS, $COLOR_INFILL, $COLOR_SUPPORT, $COLOR_FOUR }
 
 
 sub new {
     my $class = shift;
-    getDefaultColors();
     my $self = $class->SUPER::new(@_);
     $self->colors([ $self->default_colors ]);
     $self->color_by('volume');      # object | volume
