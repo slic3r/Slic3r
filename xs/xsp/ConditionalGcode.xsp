@@ -2,7 +2,7 @@
 
 %{
 #include <xsinit.h>
-#include "libslic3r/ConditionalGcode.hpp"
+#include "libslic3r/ConditionalGCode.hpp"
 %}
 
 

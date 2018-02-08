@@ -2,7 +2,7 @@
 
 #include <sstream>
 #include <exprtk/exprtk.hpp>
-#include "ConditionalGcode.hpp"
+#include "ConditionalGCode.hpp"
 namespace Slic3r {
 
 // trim from start (in place)
