@@ -1360,6 +1360,22 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Firmware');
             $optgroup->append_single_option_line('gcode_flavor');
+            $optgroup->on_change(sub {
+                my ($opt_id) = @_;
+                if($opt_id eq 'gcode_flavor')
+                {
+                    wxTheApp->CallAfter(sub {
+                        $self->_gcode_flavor_changed($optgroup->get_value('gcode_flavor'));
+                    });
+                }else
+                {
+                    wxTheApp->CallAfter(sub {
+                        $self->_on_value_change($opt_id);
+                    });
+                }
+
+            });
+
         }
         {
             my $optgroup = $page->new_optgroup('Advanced');
@@ -1461,8 +1477,18 @@ sub _extruders_count_changed {
     $self->_update;
 }
 
+sub _gcode_flavor_changed{
+    my ($self, $gcode_flavor) = @_;
+
+   $self->{gcode_flavor} = $gcode_flavor;
+   print "$gcode_flavor \n";
+   $self->_on_value_change('gcode_flavor');
+   $self->_update;
+}
+
 sub _extruder_options { qw(nozzle_diameter min_layer_height max_layer_height extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
     retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
+
 
 sub _build_extruder_pages {
     my $self = shift;
