@@ -1479,9 +1479,7 @@ sub _extruders_count_changed {
 
 sub _gcode_flavor_changed{
     my ($self, $gcode_flavor) = @_;
-
    $self->{gcode_flavor} = $gcode_flavor;
-   print "$gcode_flavor \n";
    $self->_on_value_change('gcode_flavor');
    $self->_update;
 }

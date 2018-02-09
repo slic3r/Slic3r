@@ -643,6 +643,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("machinekit");
     def->enum_values.push_back("smoothie");
     def->enum_values.push_back("no-extrusion");
+    def->enum_values.push_back("nordson");
     def->enum_labels.push_back("RepRap (Marlin/Sprinter)");
     def->enum_labels.push_back("Repetier");
     def->enum_labels.push_back("Teacup");
@@ -652,6 +653,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Machinekit");
     def->enum_labels.push_back("Smoothieware");
     def->enum_labels.push_back("No extrusion");
+    def->enum_labels.push_back("Nordson");
     def->default_value = new ConfigOptionEnum<GCodeFlavor>(gcfRepRap);
 
     def = this->add("host_type", coEnum);
