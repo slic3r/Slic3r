@@ -651,6 +651,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Mach3/LinuxCNC");
     def->enum_labels.push_back("Machinekit");
     def->enum_labels.push_back("Smoothieware");
+    def->enum_labels.push_back("Gordson");
     def->enum_labels.push_back("No extrusion");
     def->default_value = new ConfigOptionEnum<GCodeFlavor>(gcfRepRap);
 
