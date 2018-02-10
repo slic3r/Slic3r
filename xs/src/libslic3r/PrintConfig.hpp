@@ -466,6 +466,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
     ConfigOptionFloat               z_steps_per_mm;
+
     
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
@@ -622,6 +623,38 @@ class SLAPrintConfig
         
         return NULL;
     };
+};
+
+// This object is mapped to Perl as Slic3r::Config::NordsonPrintConfig
+class NordsonPrintConfig
+    :public virtual StaticPrintConfig
+{
+    public:
+    ConfigOptionFloat               start_height;
+    ConfigOptionPoint3              park_position;
+    ConfigOptionInt                 dwell_layers_count;
+    ConfigOptionFloat               dwell_layers_time;
+    ConfigOptionFloat               nordson_acceleration;
+    ConfigOptionFloat               nordson_retraction_distance;
+    ConfigOptionPoint               nordson_offset;
+    ConfigOptionPoint3              dwell_lines_position;
+    ConfigOptionInt                 dwell_lines_count;
+    ConfigOptionFloat               dwell_lines_time;
+
+    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false){
+        OPT_PTR(start_height);
+        OPT_PTR(park_position);
+        OPT_PTR(dwell_layers_count);
+        OPT_PTR(dwell_layers_time);
+        OPT_PTR(nordson_acceleration);
+        OPT_PTR(nordson_retraction_distance);
+        OPT_PTR(nordson_offset);
+        OPT_PTR(dwell_lines_position);
+        OPT_PTR(dwell_lines_count);
+        OPT_PTR(dwell_lines_time);
+
+        return NULL;
+    }
 };
 
 class CLIConfigDef : public ConfigDef
