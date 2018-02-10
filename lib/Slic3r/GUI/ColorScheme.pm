@@ -5,7 +5,7 @@ use warnings;
 use vars qw(@ISA @EXPORT);
 use Exporter 'import';
 our @ISA = 'Exporter';
-our @EXPORT = qw(@SELECTED_COLOR @HOVER_COLOR @TOP_COLOR @BOTTOM_COLOR @GRID_COLOR @GROUND_COLOR @COLOR_CUTPLANE @COLOR_PARTS @COLOR_INFILL @COLOR_SUPPORT @COLOR_UNKNOWN);
+our @EXPORT = qw(@SELECTED_COLOR @HOVER_COLOR @TOP_COLOR @BOTTOM_COLOR @GRID_COLOR @GROUND_COLOR @COLOR_CUTPLANE @COLOR_PARTS @COLOR_INFILL @COLOR_SUPPORT @COLOR_UNKNOWN @BED_COLOR @BED_GRID @BED_SELECTED @BED_OBJECTS);
 
 # DEFAULT values
 our @SELECTED_COLOR  = (0, 1, 0);
@@ -19,6 +19,10 @@ our @COLOR_PARTS     = (1, 0.95, 0.2, 1);       # Perimeter color
 our @COLOR_INFILL    = (1, 0.45, 0.45, 1);
 our @COLOR_SUPPORT   = (0.5, 1, 0.5, 1);
 our @COLOR_UNKNOWN   = (0.5, 0.5, 1, 1);
+our @BED_COLOR       = (255, 255, 255);
+our @BED_GRID        = (230, 230, 230);
+our @BED_SELECTED    = (255, 166, 128);
+our @BED_OBJECTS     = (210, 210, 210);
 
 # S O L A R I Z E
 # # http://ethanschoonover.com/solarized
@@ -51,6 +55,10 @@ sub getSOLARIZEDColorScheme {
     @COLOR_INFILL   = (@COLOR_BASE2,  1);
     @COLOR_SUPPORT  = (@COLOR_ORANGE, 1);
     @COLOR_UNKNOWN  = (@COLOR_CYAN,   1);
+    @BED_COLOR      = map { $_ * 255 } @COLOR_BASE2;
+    @BED_GRID       = map { $_ * 255 } @COLOR_BASE02;
+    @BED_SELECTED   = map { $_ * 255 } @SELECTED_COLOR;
+    @BED_OBJECTS    = map { $_ * 255 } @COLOR_PARTS;
 }
 
 1;

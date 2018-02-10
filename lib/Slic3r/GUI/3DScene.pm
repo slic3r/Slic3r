@@ -1184,6 +1184,7 @@ sub default_colors { [@COLOR_PARTS], [@COLOR_INFILL], [@COLOR_SUPPORT], [@COLOR_
 
 sub new {
     my $class = shift;
+    
     my $self = $class->SUPER::new(@_);
     # Get SOLARIZED if enabled
     if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {

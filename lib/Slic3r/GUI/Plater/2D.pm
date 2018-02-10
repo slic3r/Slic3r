@@ -13,6 +13,9 @@ use Wx qw(:misc :pen :brush :sizer :font :cursor wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_MOUSE_EVENTS EVT_KEY_DOWN EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
 use base 'Wx::Panel';
 
+# Color Scheme
+use Slic3r::GUI::ColorScheme;
+
 use constant CANVAS_TEXT => join('-', +(localtime)[3,4]) eq '13-8'
     ? 'What do you want to print today? ™' # Sept. 13, 2006. The first part ever printed by a RepRap to make another RepRap.
     : 'Drag your objects here';
@@ -20,6 +23,10 @@ use constant CANVAS_TEXT => join('-', +(localtime)[3,4]) eq '13-8'
 sub new {
     my $class = shift;
     my ($parent, $size, $objects, $model, $config) = @_;
+    
+    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
+        Slic3r::GUI::ColorScheme::getSOLARIZEDColorScheme();
+    }
     
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, $size, wxTAB_TRAVERSAL);
     # This has only effect on MacOS. On Windows and Linux/GTK, the background is painted by $self->repaint().
@@ -33,12 +40,12 @@ sub new {
     $self->{on_right_click}     = sub {};
     $self->{on_instances_moved} = sub {};
     
-    $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(210,210,210), wxSOLID);
-    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
-    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,166,128), wxSOLID);
+    $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_OBJECTS), wxSOLID);
+    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
+    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
     $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(128,128,255), wxSOLID);
     $self->{transparent_brush}  = Wx::Brush->new(Wx::Colour->new(0,0,0), wxTRANSPARENT);
-    $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(230,230,230), 1, wxSOLID);
+    $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(@BED_GRID), 1, wxSOLID);
     $self->{print_center_pen}   = Wx::Pen->new(Wx::Colour->new(200,200,200), 1, wxSOLID);
     $self->{clearance_pen}      = Wx::Pen->new(Wx::Colour->new(0,0,200), 1, wxSOLID);
     $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(150,150,150), 1, wxSOLID);
@@ -58,13 +65,13 @@ sub new {
             my ($s, $event) = @_;
 
             my $key = $event->GetKeyCode;
-            if ($key == 65 || $key == 314) {
+            if ($key == 65 || $key == 314) {       # 64=a ; 314 = ?
                 $self->nudge_instance('left');
-            } elsif ($key == 87 || $key == 315) {
+            } elsif ($key == 87 || $key == 315) {  # 87=w ; 315 = ?
                 $self->nudge_instance('up');
-            } elsif ($key == 68 || $key == 316) {
+            } elsif ($key == 68 || $key == 316) {  # 68=d ; 316 = ?
                 $self->nudge_instance('right');
-            } elsif ($key == 83 || $key == 317) {
+            } elsif ($key == 83 || $key == 317) {  # 83=s ; 317 = ?
                 $self->nudge_instance('down');
             } else {
                 $event->Skip;
@@ -148,7 +155,7 @@ sub repaint {
     
     # draw text if plate is empty
     if (!@{$self->{objects}}) {
-        $dc->SetTextForeground(Wx::Colour->new(150,50,50));
+        $dc->SetTextForeground(Wx::Colour->new(@BED_OBJECTS));
         $dc->SetFont(Wx::Font->new(14, wxDEFAULT, wxNORMAL, wxNORMAL));
         $dc->DrawLabel(CANVAS_TEXT, Wx::Rect->new(0, 0, $self->GetSize->GetWidth, $self->GetSize->GetHeight), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
     }

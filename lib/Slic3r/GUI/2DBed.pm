@@ -11,10 +11,17 @@ use Wx qw(:misc :pen :brush :font :systemsettings wxTAB_TRAVERSAL wxSOLID);
 use Wx::Event qw(EVT_PAINT EVT_ERASE_BACKGROUND EVT_MOUSE_EVENTS EVT_SIZE);
 use base qw(Wx::Panel Class::Accessor);
 
+# Color Scheme
+use Slic3r::GUI::ColorScheme;
+
 __PACKAGE__->mk_accessors(qw(bed_shape interactive pos _scale_factor _shift on_move _painted));
 
 sub new {
     my ($class, $parent, $bed_shape) = @_;
+
+    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
+        Slic3r::GUI::ColorScheme::getSOLARIZEDColorScheme();
+    }
     
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, [250,-1], wxTAB_TRAVERSAL);
     $self->{user_drawn_background} = $^O ne 'darwin';
@@ -89,7 +96,7 @@ sub _repaint {
     # draw bed fill
     {
         $dc->SetPen(Wx::Pen->new(Wx::Colour->new(0,0,0), 1, wxSOLID));
-        $dc->SetBrush(Wx::Brush->new(Wx::Colour->new(255,255,255), wxSOLID));
+        $dc->SetBrush(Wx::Brush->new(Wx::Colour->new(@BED_COLOR), wxSOLID));
         $dc->DrawPolygon([ map $self->to_pixels($_), @$bed_shape ], 0, 0);
     }
     
@@ -105,7 +112,7 @@ sub _repaint {
         }
         @polylines = @{intersection_pl(\@polylines, [$bed_polygon])};
         
-        $dc->SetPen(Wx::Pen->new(Wx::Colour->new(230,230,230), 1, wxSOLID));
+        $dc->SetPen(Wx::Pen->new(Wx::Colour->new(@BED_GRID), 1, wxSOLID));
         $dc->DrawLine(map @{$self->to_pixels([map unscale($_), @$_])}, @$_[0,-1]) for @polylines;
     }
     
