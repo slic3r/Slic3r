@@ -352,7 +352,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_volumetric_e;
 
     //Nordson 
-    ConfigOptionFloat               start_height;
+    ConfigOptionFloat               nordson_start_height;
     ConfigOptionPoint3              park_position;
     ConfigOptionInt                 dwell_layers_count;
     ConfigOptionFloat               dwell_layers_time;
@@ -405,7 +405,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(use_volumetric_e);
 
         //Nordson
-        OPT_PTR(start_height);
+        OPT_PTR(nordson_start_height);
         OPT_PTR(park_position);
         OPT_PTR(dwell_layers_count);
         OPT_PTR(dwell_layers_time);

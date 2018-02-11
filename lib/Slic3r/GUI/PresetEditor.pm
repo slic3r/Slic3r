@@ -1217,6 +1217,7 @@ sub options {
         retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
         printer_settings_id
         printer_notes
+        nordson_start_height
     );
 }
 
@@ -1372,7 +1373,7 @@ sub build {
         }
         {
            my $optgroup = $page->new_optgroup('Nordson');
-           $optgroup->append_single_option_line('start_height'); 
+           $optgroup->append_single_option_line('nordson_start_height'); 
         }
     }
     {
@@ -1474,7 +1475,7 @@ sub _build_extruder_pages {
     my $self = shift;
     
     my $default_config = Slic3r::Config::Full->new;
-
+    $DB::single = 1;
     foreach my $extruder_idx (@{$self->{extruder_pages}} .. $self->{extruders_count}-1) {
         # extend options
         foreach my $opt_key ($self->_extruder_options) {
