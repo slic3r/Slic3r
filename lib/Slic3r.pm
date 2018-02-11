@@ -205,6 +205,7 @@ sub thread_cleanup {
     *Slic3r::BridgeDetector::DESTROY        = sub {};
     *Slic3r::Config::DESTROY                = sub {};
     *Slic3r::Config::Full::DESTROY          = sub {};
+    *Slic3r::Config::NordsonPrintConfig::DESTROY = sub {};
     *Slic3r::Config::GCode::DESTROY         = sub {};
     *Slic3r::Config::Print::DESTROY         = sub {};
     *Slic3r::Config::PrintObject::DESTROY   = sub {};

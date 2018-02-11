@@ -63,6 +63,8 @@
         %code{% RETVAL = new FullPrintConfig (); %};
     static StaticPrintConfig* new_SLAPrintConfig()
         %code{% RETVAL = new SLAPrintConfig (); %};
+    static StaticPrintConfig* new_NordsonPrintConfig()
+        %code{% RETVAL = new NordsonPrintConfig (); %};
     ~StaticPrintConfig();
     bool has(t_config_option_key opt_key);
     SV* as_hash()
