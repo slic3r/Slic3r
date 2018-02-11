@@ -350,6 +350,18 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_firmware_retraction;
     ConfigOptionBool                use_relative_e_distances;
     ConfigOptionBool                use_volumetric_e;
+
+    //Nordson 
+    ConfigOptionFloat               start_height;
+    ConfigOptionPoint3              park_position;
+    ConfigOptionInt                 dwell_layers_count;
+    ConfigOptionFloat               dwell_layers_time;
+    ConfigOptionFloat               nordson_acceleration;
+    ConfigOptionFloat               nordson_retraction_distance;
+    ConfigOptionPoint               nordson_offset;
+    ConfigOptionPoint3              dwell_lines_position;
+    ConfigOptionInt                 dwell_lines_count;
+    ConfigOptionFloat               dwell_lines_time;
     
     GCodeConfig(bool initialize = true) : StaticPrintConfig() {
         if (initialize)
@@ -391,6 +403,18 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(use_firmware_retraction);
         OPT_PTR(use_relative_e_distances);
         OPT_PTR(use_volumetric_e);
+
+        //Nordson
+        OPT_PTR(start_height);
+        OPT_PTR(park_position);
+        OPT_PTR(dwell_layers_count);
+        OPT_PTR(dwell_layers_time);
+        OPT_PTR(nordson_acceleration);
+        OPT_PTR(nordson_retraction_distance);
+        OPT_PTR(nordson_offset);
+        OPT_PTR(dwell_lines_position);
+        OPT_PTR(dwell_lines_count);
+        OPT_PTR(dwell_lines_time); 
         
         return NULL;
     };
@@ -467,18 +491,6 @@ class PrintConfig : public GCodeConfig
     ConfigOptionFloat               z_offset;
     ConfigOptionFloat               z_steps_per_mm;
 
-    //Nordson 
-    ConfigOptionFloat               start_height;
-    ConfigOptionPoint3              park_position;
-    ConfigOptionInt                 dwell_layers_count;
-    ConfigOptionFloat               dwell_layers_time;
-    ConfigOptionFloat               nordson_acceleration;
-    ConfigOptionFloat               nordson_retraction_distance;
-    ConfigOptionPoint               nordson_offset;
-    ConfigOptionPoint3              dwell_lines_position;
-    ConfigOptionInt                 dwell_lines_count;
-    ConfigOptionFloat               dwell_lines_time;
-
     
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
@@ -540,19 +552,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(vibration_limit);
         OPT_PTR(wipe);
         OPT_PTR(z_offset);
-        OPT_PTR(z_steps_per_mm);
-
-        //Nordson
-        OPT_PTR(start_height);
-        OPT_PTR(park_position);
-        OPT_PTR(dwell_layers_count);
-        OPT_PTR(dwell_layers_time);
-        OPT_PTR(nordson_acceleration);
-        OPT_PTR(nordson_retraction_distance);
-        OPT_PTR(nordson_offset);
-        OPT_PTR(dwell_lines_position);
-        OPT_PTR(dwell_lines_count);
-        OPT_PTR(dwell_lines_time);   
+        OPT_PTR(z_steps_per_mm);  
         
         // look in parent class
         ConfigOption* opt;

@@ -1370,6 +1370,10 @@ sub build {
             $optgroup->append_single_option_line('vibration_limit');
             $optgroup->append_single_option_line('z_steps_per_mm');
         }
+        {
+           my $optgroup = $page->new_optgroup('Nordson');
+           $optgroup->append_single_option_line('start_height'); 
+        }
     }
     {
         my $page = $self->add_options_page('Custom G-code', 'script.png');
@@ -1443,12 +1447,7 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
-    {
-        my $page = $self->add_options_page('Nordson', 'printer_empty.png');
-        {
-            
-        }
-    }
+
     $self->_update_serial_ports;
 }
 
