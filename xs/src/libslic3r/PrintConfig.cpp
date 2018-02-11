@@ -1725,7 +1725,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("dwell_lines_position", coPoint3);
     def->label = "Dwell Lines position";
     def->sidetext = "mm";
-    def -> default_value = new ConfigOptionPoint3;
+    def -> default_value = new ConfigOptionPoint3();
 
     def = this->add("dwell_lines_count",coInt);
     def->min = 0;

@@ -1360,8 +1360,10 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Firmware');
             $optgroup->append_single_option_line('gcode_flavor');
+
             $optgroup->on_change(sub {
                 my ($opt_id) = @_;
+
                 if($opt_id eq 'gcode_flavor')
                 {
                     wxTheApp->CallAfter(sub {
@@ -1444,7 +1446,7 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
-
+    $self->{nordson_page} = undef;
     $self->{extruder_pages} = [];
     $self->_build_extruder_pages;
     {
@@ -1477,9 +1479,11 @@ sub _extruders_count_changed {
     $self->_update;
 }
 
-sub _gcode_flavor_changed{
+sub _gcode_flavor_changed {
     my ($self, $gcode_flavor) = @_;
+
    $self->{gcode_flavor} = $gcode_flavor;
+   $self->_build_nordson_page;
    $self->_on_value_change('gcode_flavor');
    $self->_update;
 }
@@ -1487,12 +1491,43 @@ sub _gcode_flavor_changed{
 sub _extruder_options { qw(nozzle_diameter min_layer_height max_layer_height extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
     retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
 
+sub _nordson_options {qw(start_height park_position dwell_layers_count dwell_layers_time nordson_acceleration nordson_retraction_distance nordson_offset dwell_line_position dwell_lines_count dwell_lines_time)}
+
+sub _build_nordson_page 
+{
+    my $self = shift;
+
+    if($self->{gcode_flavor} eq "nordson" and not(defined $self->{nordson_page}) )
+    {
+
+        my $page = $self->{nordson_page} = $self->add_options_page('Nordson', 'printer_empty.png');
+        {
+            my $optgroup = $page->new_optgroup('Init');
+            $optgroup->append_single_option_line('start_height');
+            $optgroup->append_single_option_line('park_position');
+            {
+                my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                    label => 'Dwell Layers',
+                );
+                $line->append_option($optgroup->get_option('dwell_layers_count'));
+                $line->append_option($optgroup->get_option('dwell_layers_time'));
+                $optgroup->append_line($line);
+            }
+        }
+    }
+    
+    #if ($self->{gcode_flavor} ne "nordson"){
+        #$self->{nordson_page}->Destroy;
+    #}
+    
+    $self->update_tree;
+}
 
 sub _build_extruder_pages {
     my $self = shift;
     
     my $default_config = Slic3r::Config::Full->new;
-    
+
     foreach my $extruder_idx (@{$self->{extruder_pages}} .. $self->{extruders_count}-1) {
         # extend options
         foreach my $opt_key ($self->_extruder_options) {
@@ -1507,7 +1542,6 @@ sub _build_extruder_pages {
             $self->config->set($opt_key, $values)
                 or die "Unable to extend $opt_key";
         }
-        
         # build page
         my $page = $self->{extruder_pages}[$extruder_idx] = $self->add_options_page("Extruder " . ($extruder_idx + 1), 'funnel.png');
         {
