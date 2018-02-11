@@ -467,6 +467,18 @@ class PrintConfig : public GCodeConfig
     ConfigOptionFloat               z_offset;
     ConfigOptionFloat               z_steps_per_mm;
 
+    //Nordson 
+    ConfigOptionFloat               start_height;
+    ConfigOptionPoint3              park_position;
+    ConfigOptionInt                 dwell_layers_count;
+    ConfigOptionFloat               dwell_layers_time;
+    ConfigOptionFloat               nordson_acceleration;
+    ConfigOptionFloat               nordson_retraction_distance;
+    ConfigOptionPoint               nordson_offset;
+    ConfigOptionPoint3              dwell_lines_position;
+    ConfigOptionInt                 dwell_lines_count;
+    ConfigOptionFloat               dwell_lines_time;
+
     
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
@@ -529,6 +541,18 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(wipe);
         OPT_PTR(z_offset);
         OPT_PTR(z_steps_per_mm);
+
+        //Nordson
+        OPT_PTR(start_height);
+        OPT_PTR(park_position);
+        OPT_PTR(dwell_layers_count);
+        OPT_PTR(dwell_layers_time);
+        OPT_PTR(nordson_acceleration);
+        OPT_PTR(nordson_retraction_distance);
+        OPT_PTR(nordson_offset);
+        OPT_PTR(dwell_lines_position);
+        OPT_PTR(dwell_lines_count);
+        OPT_PTR(dwell_lines_time);   
         
         // look in parent class
         ConfigOption* opt;
@@ -563,56 +587,17 @@ class HostConfig : public virtual StaticPrintConfig
     };
 };
 
-// This object is mapped to Perl as Slic3r::Config::NordsonPrintConfig
-class NordsonPrintConfig
-    :public virtual StaticPrintConfig
-{
-    public:
-    ConfigOptionFloat               start_height;
-    ConfigOptionPoint3              park_position;
-    ConfigOptionInt                 dwell_layers_count;
-    ConfigOptionFloat               dwell_layers_time;
-    ConfigOptionFloat               nordson_acceleration;
-    ConfigOptionFloat               nordson_retraction_distance;
-    ConfigOptionPoint               nordson_offset;
-    ConfigOptionPoint3              dwell_lines_position;
-    ConfigOptionInt                 dwell_lines_count;
-    ConfigOptionFloat               dwell_lines_time;
-
-    NordsonPrintConfig(bool initialize = true) :
-        StaticPrintConfig()
-    {
-        if (initialize)
-            this->set_defaults();
-    }
-
-    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false){
-        OPT_PTR(start_height);
-        OPT_PTR(park_position);
-        OPT_PTR(dwell_layers_count);
-        OPT_PTR(dwell_layers_time);
-        OPT_PTR(nordson_acceleration);
-        OPT_PTR(nordson_retraction_distance);
-        OPT_PTR(nordson_offset);
-        OPT_PTR(dwell_lines_position);
-        OPT_PTR(dwell_lines_count);
-        OPT_PTR(dwell_lines_time);
-
-        return NULL;
-    }
-};
 
 // This object is mapped to Perl as Slic3r::Config::Full.
 class FullPrintConfig
-    : public PrintObjectConfig, public PrintRegionConfig, public PrintConfig, public HostConfig, public NordsonPrintConfig
+    : public PrintObjectConfig, public PrintRegionConfig, public PrintConfig, public HostConfig
 {
     public:
     FullPrintConfig(bool initialize = true) :
         PrintObjectConfig(false),
         PrintRegionConfig(false), 
         PrintConfig(false), 
-        HostConfig(false),
-        NordsonPrintConfig(false)
+        HostConfig(false)
     {
         if (initialize)
             this->set_defaults();
@@ -624,7 +609,6 @@ class FullPrintConfig
         if ((opt = PrintRegionConfig::optptr(opt_key, create)) != NULL) return opt;
         if ((opt = PrintConfig::optptr(opt_key, create)) != NULL) return opt;
         if ((opt = HostConfig::optptr(opt_key, create)) != NULL) return opt;
-        if ((opt = NordsonPrintConfig::optptr(opt_key, create)) != NULL) return opt;
         return NULL;
     };
 };

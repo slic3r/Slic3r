@@ -56,7 +56,6 @@ REGISTER_CLASS(PrintRegionConfig, "Config::PrintRegion");
 REGISTER_CLASS(GCodeConfig, "Config::GCode");
 REGISTER_CLASS(PrintConfig, "Config::Print");
 REGISTER_CLASS(FullPrintConfig, "Config::Full");
-REGISTER_CLASS(NordsonPrintConfig, "Config::NordsonPrintConfig");
 REGISTER_CLASS(SLAPrint, "SLAPrint");
 REGISTER_CLASS(SlicingAdaptive, "SlicingAdaptive");
 REGISTER_CLASS(Surface, "Surface");

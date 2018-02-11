@@ -364,6 +364,5 @@ sub Slic3r::Config::PrintObject::new { Slic3r::Config::Static::new_PrintObjectCo
 sub Slic3r::Config::PrintRegion::new { Slic3r::Config::Static::new_PrintRegionConfig }
 sub Slic3r::Config::Full::new { Slic3r::Config::Static::new_FullPrintConfig }
 sub Slic3r::Config::SLAPrint::new { Slic3r::Config::Static::new_SLAPrintConfig }
-sub Slic3r::Config::NordsonPrintConfig::new { Slic3r::Config::Static::new_NordsonPrintConfig}
 
 1;
