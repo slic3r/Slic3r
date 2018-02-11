@@ -1688,9 +1688,10 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "sequential-print-priority=i";
     def->default_value = new ConfigOptionInt(0);
 
-    def = this->add("start_height", coFloat);
+    def = this->add("nordson_start_height", coFloat);
     def->label = "Start Height";
     def->sidetext = "mm";
+    def->cli="nordson-start-height=f";
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("park_position", coPoint3);
