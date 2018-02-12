@@ -228,6 +228,9 @@ ConfigBase__set(ConfigBase* THIS, const t_config_option_key &opt_key, SV* value)
     } else if (def->type == coPoint) {
         ConfigOptionPoint* optv = dynamic_cast<ConfigOptionPoint*>(opt);
         return from_SV_check(value, &optv->value);
+    }else if(def->type == coPoint3){
+        ConfigOptionPoint3* optv = dynamic_cast<ConfigOptionPoint3*>(opt);
+        return from_SV_check(value, &optv->value);
     } else if (def->type == coPoints) {
         ConfigOptionPoints* optv = dynamic_cast<ConfigOptionPoints*>(opt);
         std::vector<Pointf> values;

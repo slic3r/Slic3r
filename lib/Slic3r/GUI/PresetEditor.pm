@@ -1225,6 +1225,7 @@ sub options {
         nordson_offset
         dwell_lines_count
         dwell_lines_times
+        park_position
     );
 }
 
@@ -1238,7 +1239,6 @@ sub overridable_options {
 
 sub build {
     my $self = shift;
-    
     $self->{extruders_count} = 1;
     
     {
@@ -1456,7 +1456,15 @@ sub build {
         my $page = $self->add_options_page('Nordson', 'printer_empty.png');
         {
            my $optgroup = $page->new_optgroup('Nordson');
-           $optgroup->append_single_option_line('nordson_start_height');            
+           $optgroup->append_single_option_line('nordson_start_height');
+           $optgroup->append_single_option_line('nordson_offset');
+           $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+                opt_id      => 'park_position', 
+                type        => 'point3', # option type, use a different type if desired
+                label       => 'park position', # Label text
+                tooltip     => 'where the nozzle park',
+                default     => Slic3r::Point3->new()
+             ));            
         }
     }
 
