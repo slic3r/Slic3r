@@ -12,14 +12,21 @@ use Wx qw(:misc :sizer :slider :statictext wxWHITE);
 use Wx::Event qw(EVT_SLIDER EVT_KEY_DOWN);
 use base qw(Wx::Panel Class::Accessor);
 
+# Color Scheme
+use Slic3r::GUI::ColorScheme;
+
 __PACKAGE__->mk_accessors(qw(print enabled));
 
 sub new {
     my $class = shift;
     my ($parent, $print) = @_;
     
+    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
+        Slic3r::GUI::ColorScheme::getSOLARIZEDColorScheme();
+    }
+    
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition);
-    $self->SetBackgroundColour(wxWHITE);
+    $self->SetBackgroundColour(Wx::Colour->new(@BED_BACKGROUND));
     
     # init GUI elements
     my $canvas = $self->{canvas} = Slic3r::GUI::Plater::2DToolpaths::Canvas->new($self, $print);
@@ -130,6 +137,9 @@ use List::Util qw(min max first);
 use Slic3r::Geometry qw(scale unscale epsilon X Y);
 use Slic3r::Print::State ':steps';
 
+# Color Scheme
+use Slic3r::GUI::ColorScheme;
+
 __PACKAGE__->mk_accessors(qw(
     print z layers color init
     bb
@@ -149,6 +159,9 @@ __PACKAGE__->mk_accessors(qw(
 sub new {
     my ($class, $parent, $print) = @_;
     
+    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
+        Slic3r::GUI::ColorScheme::getSOLARIZEDColorScheme();
+    }
     my $self = (Wx::wxVERSION >= 3.000003) ?
         # The wxWidgets 3.0.3-beta have a bug, they crash with NULL attribute list.
         $class->SUPER::new($parent, -1, Wx::wxDefaultPosition, Wx::wxDefaultSize, 0, "",
@@ -358,7 +371,7 @@ sub Render {
             glTranslatef(@$copy, 0);
             
             foreach my $slice (@{$layer->slices}) {
-                glColor3f(0.95, 0.95, 0.95);
+                glColor3f(@TOOL_SHADE); # Inside part shade
                 
                 if ($tess) {
                     gluTessBeginPolygon($tess);
@@ -392,33 +405,33 @@ sub Render {
         
         # draw brim
         if ($self->print->step_done(STEP_BRIM) && $layer->id == 0 && !$brim_drawn) {
-            $self->color([0, 0, 0]);
+            $self->color(@TOOL_DARK);
             $self->_draw(undef, $print_z, $_) for @{$self->print->brim};
             $brim_drawn = 1;
         }
         if ($self->print->step_done(STEP_SKIRT)
             && ($self->print->has_infinite_skirt() || $self->print->config->skirt_height > $layer->id)
             && !$skirt_drawn) {
-            $self->color([0, 0, 0]);
+            $self->color(@TOOL_DARK);
             $self->_draw(undef, $print_z, $_) for @{$self->print->skirt};
             $skirt_drawn = 1;
         }
         
         foreach my $layerm (@{$layer->regions}) {
             if ($object->step_done(STEP_PERIMETERS)) {
-                $self->color([0.7, 0, 0]);
+                $self->color(@COLOR_PARTS);
                 $self->_draw($object, $print_z, $_) for map @$_, @{$layerm->perimeters};
             }
             
             if ($object->step_done(STEP_INFILL)) {
-                $self->color([0, 0, 0.7]);
+                $self->color(@TOOL_INFILL);
                 $self->_draw($object, $print_z, $_) for map @$_, @{$layerm->fills};
             }
         }
         
         if ($object->step_done(STEP_SUPPORTMATERIAL)) {
             if ($layer->isa('Slic3r::Layer::Support')) {
-                $self->color([0, 0, 0]);
+                $self->color(@TOOL_SUPPORT);
                 $self->_draw($object, $print_z, $_) for @{$layer->support_fills};
                 $self->_draw($object, $print_z, $_) for @{$layer->support_interface_fills};
             }
@@ -446,7 +459,7 @@ sub _draw_path {
     return if $print_z - $path->height > $self->z - epsilon;
     
     if (abs($print_z - $self->z) < epsilon) {
-        glColor3f(@{$self->color});
+        glColor3f($self->color->[0], $self->color->[1], $self->color->[2]);
     } else {
         glColor3f(0.8, 0.8, 0.8);
     }

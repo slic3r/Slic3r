@@ -18,7 +18,7 @@ sub new {
             my ($opt_id) = @_;
             $self->{values}{$opt_id} = $optgroup->get_value($opt_id);
         },
-        label_width => 200,
+        label_width => 250,
     );
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'version_check',
@@ -92,7 +92,19 @@ sub new {
         tooltip     => 'In 2D plater, Move objects using keyboard by nudge value of',
         default     => $Slic3r::GUI::Settings->{_}{nudge_val},
     ));
-    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+
+    
+    my $optgroupstyle;
+    $optgroupstyle = Slic3r::GUI::OptionsGroup->new(
+        parent  => $self,
+        title   => 'Scheme',
+        on_change => sub {
+            my ($opt_id) = @_;
+            $self->{values}{$opt_id} = $optgroupstyle->get_value($opt_id);
+        },
+        label_width => 250,
+    );
+    $optgroupstyle->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'colorschema_solarized',
         type        => 'bool',
         label       => 'Solarized Color Scheme',
@@ -102,6 +114,7 @@ sub new {
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+    $sizer->Add($optgroupstyle->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     
     my $buttons = $self->CreateStdDialogButtonSizer(wxOK | wxCANCEL);
     EVT_BUTTON($self, wxID_OK, sub { $self->_accept });

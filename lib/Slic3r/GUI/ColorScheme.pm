@@ -2,10 +2,11 @@ package Slic3r::GUI::ColorScheme;
 use strict;
 use warnings;
 
+use POSIX;
 use vars qw(@ISA @EXPORT);
 use Exporter 'import';
 our @ISA = 'Exporter';
-our @EXPORT = qw(@SELECTED_COLOR @HOVER_COLOR @TOP_COLOR @BOTTOM_COLOR @GRID_COLOR @GROUND_COLOR @COLOR_CUTPLANE @COLOR_PARTS @COLOR_INFILL @COLOR_SUPPORT @COLOR_UNKNOWN @BED_COLOR @BED_GRID @BED_SELECTED @BED_OBJECTS);
+our @EXPORT = qw(@SELECTED_COLOR @HOVER_COLOR @TOP_COLOR @BOTTOM_COLOR @GRID_COLOR @GROUND_COLOR @COLOR_CUTPLANE @COLOR_PARTS @COLOR_INFILL @COLOR_SUPPORT @COLOR_UNKNOWN @BED_COLOR @BED_GRID @BED_SELECTED @BED_OBJECTS @BED_DRAGGED @BED_CENTER @BED_SKIRT @BED_CLEARANCE @BED_BACKGROUND @TOOL_DARK @TOOL_SUPPORT @TOOL_INFILL @TOOL_SHADE);
 
 # DEFAULT values
 our @SELECTED_COLOR  = (0, 1, 0);
@@ -23,6 +24,16 @@ our @BED_COLOR       = (255, 255, 255);
 our @BED_GRID        = (230, 230, 230);
 our @BED_SELECTED    = (255, 166, 128);
 our @BED_OBJECTS     = (210, 210, 210);
+our @BED_DRAGGED     = (128, 128, 255);
+our @BED_CENTER      = (200, 200, 200);
+our @BED_SKIRT       = (150, 150, 150);
+our @BED_CLEARANCE   = (0, 0, 200);
+our @BED_BACKGROUND  = (255, 255, 255);
+our @TOOL_DARK       = (0, 0, 0);
+our @TOOL_SUPPORT    = (0, 0, 0);
+our @TOOL_INFILL     = (0, 0, 0);
+our @TOOL_SHADE      = (0.95, 0.95, 0.95);
+
 
 # S O L A R I Z E
 # # http://ethanschoonover.com/solarized
@@ -55,10 +66,19 @@ sub getSOLARIZEDColorScheme {
     @COLOR_INFILL   = (@COLOR_BASE2,  1);
     @COLOR_SUPPORT  = (@COLOR_ORANGE, 1);
     @COLOR_UNKNOWN  = (@COLOR_CYAN,   1);
-    @BED_COLOR      = map { $_ * 255 } @COLOR_BASE2;
-    @BED_GRID       = map { $_ * 255 } @COLOR_BASE02;
-    @BED_SELECTED   = map { $_ * 255 } @SELECTED_COLOR;
-    @BED_OBJECTS    = map { $_ * 255 } @COLOR_PARTS;
+    @BED_COLOR      = map { ceil($_ * 255) } @COLOR_BASE2;
+    @BED_GRID       = map { ceil($_ * 255) } @COLOR_BASE02;
+    @BED_SELECTED   = map { ceil($_ * 255) } @SELECTED_COLOR;
+    @BED_OBJECTS    = map { ceil($_ * 255) } @COLOR_PARTS;
+    @BED_DRAGGED    = map { ceil($_ * 255) } @COLOR_CYAN;
+    @BED_CENTER     = map { ceil($_ * 255) } @COLOR_BASE1;
+    @BED_SKIRT      = map { ceil($_ * 255) } @COLOR_BASE01;
+    @BED_CLEARANCE  = map { ceil($_ * 255) } @COLOR_BLUE;
+    @BED_BACKGROUND = map { ceil($_ * 255) } @COLOR_BASE3;
+    @TOOL_DARK      = @COLOR_BASE01;
+    @TOOL_SUPPORT   = @COLOR_ORANGE;
+    @TOOL_INFILL    = @COLOR_BASE01;
+
 }
 
 1;

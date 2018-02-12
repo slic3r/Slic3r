@@ -30,7 +30,7 @@ sub new {
     
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, $size, wxTAB_TRAVERSAL);
     # This has only effect on MacOS. On Windows and Linux/GTK, the background is painted by $self->repaint().
-    $self->SetBackgroundColour(Wx::wxWHITE);
+    $self->SetBackgroundColour(Wx::Colour->new(@BED_BACKGROUND));
 
     $self->{objects}            = $objects;
     $self->{model}              = $model;
@@ -43,12 +43,12 @@ sub new {
     $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_OBJECTS), wxSOLID);
     $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
     $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
-    $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(128,128,255), wxSOLID);
+    $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_DRAGGED), wxSOLID);
     $self->{transparent_brush}  = Wx::Brush->new(Wx::Colour->new(0,0,0), wxTRANSPARENT);
     $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(@BED_GRID), 1, wxSOLID);
-    $self->{print_center_pen}   = Wx::Pen->new(Wx::Colour->new(200,200,200), 1, wxSOLID);
-    $self->{clearance_pen}      = Wx::Pen->new(Wx::Colour->new(0,0,200), 1, wxSOLID);
-    $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(150,150,150), 1, wxSOLID);
+    $self->{print_center_pen}   = Wx::Pen->new(Wx::Colour->new(@BED_CENTER), 1, wxSOLID);
+    $self->{clearance_pen}      = Wx::Pen->new(Wx::Colour->new(@BED_CLEARANCE), 1, wxSOLID);
+    $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(@BED_SKIRT), 1, wxSOLID);
 
     $self->{user_drawn_background} = $^O ne 'darwin';
 
@@ -116,8 +116,9 @@ sub repaint {
         # On MacOS the background is erased, on Windows the background is not erased 
         # and on Linux/GTK the background is erased to gray color.
         # Fill DC with the background on Windows & Linux/GTK.
-        my $brush_background = Wx::Brush->new(Wx::wxWHITE, wxSOLID);
-        $dc->SetPen(wxWHITE_PEN);
+        my $brush_background = Wx::Brush->new(Wx::Colour->new(@BED_BACKGROUND), wxSOLID);# Wx::Brush->new(Wx::wxWHITE, wxSOLID);
+        my $pen_background   = Wx::Pen->new(Wx::Colour->new(@BED_BACKGROUND), 1, wxSOLID);
+        $dc->SetPen($pen_background);
         $dc->SetBrush($brush_background);
         my $rect = $self->GetUpdateRegion()->GetBox();
         $dc->DrawRectangle($rect->GetLeft(), $rect->GetTop(), $rect->GetWidth(), $rect->GetHeight());
