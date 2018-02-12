@@ -1218,6 +1218,13 @@ sub options {
         printer_settings_id
         printer_notes
         nordson_start_height
+        dwell_layers_count
+        dwell_layers_time
+        nordson_acceleration
+        nordson_retraction_distance
+        nordson_offset
+        dwell_lines_count
+        dwell_lines_times
     );
 }
 
@@ -1371,10 +1378,7 @@ sub build {
             $optgroup->append_single_option_line('vibration_limit');
             $optgroup->append_single_option_line('z_steps_per_mm');
         }
-        {
-           my $optgroup = $page->new_optgroup('Nordson');
-           $optgroup->append_single_option_line('nordson_start_height'); 
-        }
+        
     }
     {
         my $page = $self->add_options_page('Custom G-code', 'script.png');
@@ -1448,6 +1452,13 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
+    {
+        my $page = $self->add_options_page('Nordson', 'printer_empty.png');
+        {
+           my $optgroup = $page->new_optgroup('Nordson');
+           $optgroup->append_single_option_line('nordson_start_height');            
+        }
+    }
 
     $self->_update_serial_ports;
 }
@@ -1475,7 +1486,7 @@ sub _build_extruder_pages {
     my $self = shift;
     
     my $default_config = Slic3r::Config::Full->new;
-    $DB::single = 1;
+
     foreach my $extruder_idx (@{$self->{extruder_pages}} .. $self->{extruders_count}-1) {
         # extend options
         foreach my $opt_key ($self->_extruder_options) {
