@@ -1458,13 +1458,7 @@ sub build {
            my $optgroup = $page->new_optgroup('Nordson');
            $optgroup->append_single_option_line('nordson_start_height');
            $optgroup->append_single_option_line('nordson_offset');
-           $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
-                opt_id      => 'park_position', 
-                type        => 'point3', # option type, use a different type if desired
-                label       => 'park position', # Label text
-                tooltip     => 'where the nozzle park',
-                default     => Slic3r::Point3->new()
-             ));            
+           $optgroup->append_single_option_line('park_position');           
         }
     }
 
