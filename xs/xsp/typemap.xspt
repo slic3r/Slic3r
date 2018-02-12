@@ -51,7 +51,6 @@
 %typemap{PrintConfig*};
 %typemap{Ref<PrintConfig>}{simple};
 %typemap{FullPrintConfig*};
-%typemap{Ref<NordsonPrintConfig>}{simple};
 %typemap{ExPolygon*};
 %typemap{Ref<ExPolygon>}{simple};
 %typemap{Clone<ExPolygon>}{simple};
