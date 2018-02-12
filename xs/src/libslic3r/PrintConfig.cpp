@@ -1697,44 +1697,53 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("park_position", coPoint3);
     def->label = "park_position";
     def->sidetext = "mm";
+    def->cli="nordson-park-position=s";
     def->default_value = new ConfigOptionPoint3();
     
     def = this->add("dwell_layers_count", coInt);
     def->min = 0;
+    def->cli = "nordson-dwell-layers-count=i";
     def->default_value = new ConfigOptionInt(0);
 
     def = this->add("dwell_layers_time", coFloat);
     def->min = 0;
     def->sidetext = "sec";
+    def->cli="nordson-dwell-layers-time=f";
     def -> default_value = new ConfigOptionFloat(0);
 
     def = this->add("nordson_acceleration",coFloat);
     def->label = "nordson_acceleration";
     def->sidetext = "mm/s\u2072";
+    def->cli="nordson-acceleration=f";
     def -> default_value = new ConfigOptionFloat(0);
 
     def = this->add("nordson_offset",coPoint);
     def->label = "Offset";
     def->sidetext = "mm";
+    def->cli="nordson-offset=s";
     def -> default_value = new ConfigOptionPoint();
 
     def = this->add("nordson_retraction_distance", coFloat);
     def->label="Retraction Distance";
     def->sidetext = "mm";
+    def->cli="nordson-retraction-distance=f";
     def -> default_value = new ConfigOptionFloat(0);
     
     def = this->add("dwell_lines_position", coPoint3);
     def->label = "Dwell Lines position";
     def->sidetext = "mm";
+    def->cli="nordson-dwell-lines-position=s";
     def -> default_value = new ConfigOptionPoint3();
 
     def = this->add("dwell_lines_count",coInt);
     def->min = 0;
+    def->cli="nordson-dwell-lines-count=i";
     def->default_value = new ConfigOptionInt(0);
 
     def = this->add("dwell_lines_times", coFloat);
     def->min = 0;
     def->sidetext = "sec";
+    def->cli="nordson-dwell-lines-times=f";
     def->default_value = new ConfigOptionFloat(0);
     
 }
