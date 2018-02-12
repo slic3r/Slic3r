@@ -50,6 +50,7 @@
 %typemap{Ref<GCodeConfig>}{simple};
 %typemap{PrintConfig*};
 %typemap{Ref<PrintConfig>}{simple};
+%typemap{Ref<FullPrintConfig>}{simple};
 %typemap{FullPrintConfig*};
 %typemap{ExPolygon*};
 %typemap{Ref<ExPolygon>}{simple};
