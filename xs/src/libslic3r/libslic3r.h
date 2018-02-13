@@ -14,11 +14,11 @@
 #include <boost/thread.hpp>
 
 #define SLIC3R_FORK_NAME "Slic3r Prusa Edition"
-#define SLIC3R_VERSION "1.38.7"
+#define SLIC3R_VERSION "1.39.0"
 #define SLIC3R_BUILD "UNKNOWN"
 
-typedef long coord_t;
-typedef double coordf_t;
+typedef int32_t coord_t;
+typedef double  coordf_t;
 
 //FIXME This epsilon value is used for many non-related purposes:
 // For a threshold of a squared Euclidean distance,
@@ -102,7 +102,7 @@ inline std::string debug_out_path(const char *name, ...)
 
 namespace Slic3r {
 
-enum Axis { X=0, Y, Z };
+enum Axis { X=0, Y, Z, E, F, NUM_AXES };
 
 template <class T>
 inline void append_to(std::vector<T> &dst, const std::vector<T> &src)
