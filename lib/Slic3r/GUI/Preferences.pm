@@ -18,7 +18,7 @@ sub new {
             my ($opt_id) = @_;
             $self->{values}{$opt_id} = $optgroup->get_value($opt_id);
         },
-        label_width => 250,
+        label_width => 200,
     );
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'version_check',
@@ -92,29 +92,19 @@ sub new {
         tooltip     => 'In 2D plater, Move objects using keyboard by nudge value of',
         default     => $Slic3r::GUI::Settings->{_}{nudge_val},
     ));
-
-    
-    my $optgroupstyle;
-    $optgroupstyle = Slic3r::GUI::OptionsGroup->new(
-        parent  => $self,
-        title   => 'Scheme',
-        on_change => sub {
-            my ($opt_id) = @_;
-            $self->{values}{$opt_id} = $optgroupstyle->get_value($opt_id);
-        },
-        label_width => 250,
-    );
-    $optgroupstyle->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
-        opt_id      => 'colorschema_solarized',
-        type        => 'bool',
-        label       => 'Solarized Color Scheme',
-        tooltip     => 'Restart of Slic3r after changes required. \n Precision colors for machines and people (http://ethanschoonover.com/solarized).',
-        default     => $Slic3r::GUI::Settings->{_}{colorschema_solarized}  // 0,
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
+        opt_id      => 'colorscheme', # this needs to match the name chosen in $Settings
+        type        => 'select', # option type, use a different type if desired
+        label       => 'Color Scheme', # Label text
+        tooltip     => 'Choose between color schemes - restart of Slic3r required.', # tooltop text
+        labels      => ['Default','Solarized'], # this is for a select box, it's an array of values
+        values      => ['getDefault','getSolarized'], # these are the values that a selectbox can take.
+        default     => $Slic3r::GUI::Settings->{_}{colorscheme} // 'getDefault', # this is a reference to what you put in GUI.pm
+        width       => 130
     ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
-    $sizer->Add($optgroupstyle->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
     
     my $buttons = $self->CreateStdDialogButtonSizer(wxOK | wxCANCEL);
     EVT_BUTTON($self, wxID_OK, sub { $self->_accept });

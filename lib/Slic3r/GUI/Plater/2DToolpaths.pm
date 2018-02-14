@@ -8,7 +8,7 @@ use warnings;
 use utf8;
 
 use Slic3r::Print::State ':steps';
-use Wx qw(:misc :sizer :slider :statictext wxWHITE);
+use Wx qw(:misc :sizer :slider :statictext);
 use Wx::Event qw(EVT_SLIDER EVT_KEY_DOWN);
 use base qw(Wx::Panel Class::Accessor);
 
@@ -20,13 +20,15 @@ __PACKAGE__->mk_accessors(qw(print enabled));
 sub new {
     my $class = shift;
     my ($parent, $print) = @_;
-    
-    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
-        Slic3r::GUI::ColorScheme::getSOLARIZEDColorScheme();
+
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( my $getScheme =  Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        $getScheme->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
     }
     
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition);
-    $self->SetBackgroundColour(Wx::Colour->new(@BED_BACKGROUND));
+    $self->SetBackgroundColour(Wx::Colour->new(@BACKGROUND255));
     
     # init GUI elements
     my $canvas = $self->{canvas} = Slic3r::GUI::Plater::2DToolpaths::Canvas->new($self, $print);
@@ -158,9 +160,12 @@ __PACKAGE__->mk_accessors(qw(
 
 sub new {
     my ($class, $parent, $print) = @_;
-    
-    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
-        Slic3r::GUI::ColorScheme::getSOLARIZEDColorScheme();
+
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
     }
     my $self = (Wx::wxVERSION >= 3.000003) ?
         # The wxWidgets 3.0.3-beta have a bug, they crash with NULL attribute list.
@@ -383,7 +388,7 @@ sub Render {
                     gluTessEndPolygon($tess);
                 }
                 
-                glColor3f(0.9, 0.9, 0.9);
+                glColor3f(@TOOL_COLOR); # Perimeter
                 foreach my $polygon (@$slice) {
                     foreach my $line (@{$polygon->lines}) {
                         glBegin(GL_LINES);

@@ -24,13 +24,16 @@ sub new {
     my $class = shift;
     my ($parent, $size, $objects, $model, $config) = @_;
     
-    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
-        Slic3r::GUI::ColorScheme::getSOLARIZEDColorScheme();
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
     }
     
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, $size, wxTAB_TRAVERSAL);
     # This has only effect on MacOS. On Windows and Linux/GTK, the background is painted by $self->repaint().
-    $self->SetBackgroundColour(Wx::Colour->new(@BED_BACKGROUND));
+    $self->SetBackgroundColour(Wx::Colour->new(@BACKGROUND255));
 
     $self->{objects}            = $objects;
     $self->{model}              = $model;
@@ -116,8 +119,8 @@ sub repaint {
         # On MacOS the background is erased, on Windows the background is not erased 
         # and on Linux/GTK the background is erased to gray color.
         # Fill DC with the background on Windows & Linux/GTK.
-        my $brush_background = Wx::Brush->new(Wx::Colour->new(@BED_BACKGROUND), wxSOLID);# Wx::Brush->new(Wx::wxWHITE, wxSOLID);
-        my $pen_background   = Wx::Pen->new(Wx::Colour->new(@BED_BACKGROUND), 1, wxSOLID);
+        my $brush_background = Wx::Brush->new(Wx::Colour->new(@BACKGROUND255), wxSOLID);
+        my $pen_background   = Wx::Pen->new(Wx::Colour->new(@BACKGROUND255), 1, wxSOLID);
         $dc->SetPen($pen_background);
         $dc->SetBrush($brush_background);
         my $rect = $self->GetUpdateRegion()->GetBox();

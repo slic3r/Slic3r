@@ -6,34 +6,39 @@ use POSIX;
 use vars qw(@ISA @EXPORT);
 use Exporter 'import';
 our @ISA = 'Exporter';
-our @EXPORT = qw(@SELECTED_COLOR @HOVER_COLOR @TOP_COLOR @BOTTOM_COLOR @GRID_COLOR @GROUND_COLOR @COLOR_CUTPLANE @COLOR_PARTS @COLOR_INFILL @COLOR_SUPPORT @COLOR_UNKNOWN @BED_COLOR @BED_GRID @BED_SELECTED @BED_OBJECTS @BED_DRAGGED @BED_CENTER @BED_SKIRT @BED_CLEARANCE @BED_BACKGROUND @TOOL_DARK @TOOL_SUPPORT @TOOL_INFILL @TOOL_SHADE);
+our @EXPORT = qw(@SELECTED_COLOR @HOVER_COLOR @TOP_COLOR @BOTTOM_COLOR @GRID_COLOR @GROUND_COLOR @COLOR_CUTPLANE @COLOR_PARTS @COLOR_INFILL @COLOR_SUPPORT @COLOR_UNKNOWN @BED_COLOR @BED_GRID @BED_SELECTED @BED_OBJECTS @BED_DRAGGED @BED_CENTER @BED_SKIRT @BED_CLEARANCE @BACKGROUND255 @TOOL_DARK @TOOL_SUPPORT @TOOL_INFILL @TOOL_SHADE @TOOL_COLOR @BACKGROUND_COLOR @SPLINE_L_PEN @SPLINE_O_PEN @SPLINE_I_PEN @SPLINE_R_PEN);
 
 # DEFAULT values
-our @SELECTED_COLOR  = (0, 1, 0);
-our @HOVER_COLOR     = (0.4, 0.9, 0);           # Hover over Model
-our @TOP_COLOR       = (10/255,98/255,144/255); # Backgroud color
-our @BOTTOM_COLOR    = (0,0,0);                 # Backgroud color
-our @GRID_COLOR      = (0.2, 0.2, 0.2, 0.4);    # Grid color
-our @GROUND_COLOR    = (0.8, 0.6, 0.5, 0.4);    # Ground or Plate color
-our @COLOR_CUTPLANE  = (.8, .8, .8, 0.5);
-our @COLOR_PARTS     = (1, 0.95, 0.2, 1);       # Perimeter color
-our @COLOR_INFILL    = (1, 0.45, 0.45, 1);
-our @COLOR_SUPPORT   = (0.5, 1, 0.5, 1);
-our @COLOR_UNKNOWN   = (0.5, 0.5, 1, 1);
-our @BED_COLOR       = (255, 255, 255);
-our @BED_GRID        = (230, 230, 230);
-our @BED_SELECTED    = (255, 166, 128);
-our @BED_OBJECTS     = (210, 210, 210);
-our @BED_DRAGGED     = (128, 128, 255);
-our @BED_CENTER      = (200, 200, 200);
-our @BED_SKIRT       = (150, 150, 150);
-our @BED_CLEARANCE   = (0, 0, 200);
-our @BED_BACKGROUND  = (255, 255, 255);
-our @TOOL_DARK       = (0, 0, 0);
-our @TOOL_SUPPORT    = (0, 0, 0);
-our @TOOL_INFILL     = (0, 0, 0);
-our @TOOL_SHADE      = (0.95, 0.95, 0.95);
-
+our @SELECTED_COLOR   = (0, 1, 0);
+our @HOVER_COLOR      = (0.4, 0.9, 0);           # Hover over Model
+our @TOP_COLOR        = (0,0,0);                 # TOP Backgroud color
+our @BOTTOM_COLOR     = (10/255,98/255,144/255); # BOTTOM Backgroud color
+our @BACKGROUND_COLOR = @TOP_COLOR;              # SOLID background color
+our @GRID_COLOR       = (0.2, 0.2, 0.2, 0.4);    # Grid color
+our @GROUND_COLOR     = (0.8, 0.6, 0.5, 0.4);    # Ground or Plate color
+our @COLOR_CUTPLANE   = (.8, .8, .8, 0.5);
+our @COLOR_PARTS      = (1, 0.95, 0.2, 1);       # Perimeter color
+our @COLOR_INFILL     = (1, 0.45, 0.45, 1);
+our @COLOR_SUPPORT    = (0.5, 1, 0.5, 1);
+our @COLOR_UNKNOWN    = (0.5, 0.5, 1, 1);
+our @BED_COLOR        = (255, 255, 255);
+our @BED_GRID         = (230, 230, 230);
+our @BED_SELECTED     = (255, 166, 128);
+our @BED_OBJECTS      = (210, 210, 210);
+our @BED_DRAGGED      = (128, 128, 255);
+our @BED_CENTER       = (200, 200, 200);
+our @BED_SKIRT        = (150, 150, 150);
+our @BED_CLEARANCE    = (0, 0, 200);
+our @BACKGROUND255    = (255, 255, 255);
+our @TOOL_DARK        = (0, 0, 0);
+our @TOOL_SUPPORT     = (0, 0, 0);
+our @TOOL_INFILL      = (0, 0, 0);
+our @TOOL_SHADE       = (0.95, 0.95, 0.95);
+our @TOOL_COLOR       = (0.9, 0.9, 0.9);
+our @SPLINE_L_PEN     = (50, 50, 50);
+our @SPLINE_O_PEN     = (200, 200, 200);
+our @SPLINE_I_PEN     = (255, 0, 0);
+our @SPLINE_R_PEN     = (5, 120, 160);
 
 # S O L A R I Z E
 # # http://ethanschoonover.com/solarized
@@ -54,31 +59,43 @@ our @COLOR_BLUE      = (0.14902,0.54510,0.82353);
 our @COLOR_CYAN      = (0.16471,0.63137,0.59608);
 our @COLOR_GREEN     = (0.52157,0.60000,0.00000);
 
-sub getSOLARIZEDColorScheme {
-    @SELECTED_COLOR = @COLOR_MAGENTA;
-    @HOVER_COLOR    = @COLOR_VIOLET;        # Hover over Model
-    @TOP_COLOR      = @COLOR_BASE3;         # Backgroud color
-    @BOTTOM_COLOR   = @COLOR_BASE3;         # Backgroud color
-    @GRID_COLOR     = (@COLOR_BASE02, 0.4); # Grid color
-    @GROUND_COLOR   = (@COLOR_BASE2,  0.4);  # Ground or Plate color
-    @COLOR_CUTPLANE = (@COLOR_BASE1,  0.5);
-    @COLOR_PARTS    = (@COLOR_BLUE,   1);     # Perimeter color
-    @COLOR_INFILL   = (@COLOR_BASE2,  1);
-    @COLOR_SUPPORT  = (@COLOR_ORANGE, 1);
-    @COLOR_UNKNOWN  = (@COLOR_CYAN,   1);
-    @BED_COLOR      = map { ceil($_ * 255) } @COLOR_BASE2;
-    @BED_GRID       = map { ceil($_ * 255) } @COLOR_BASE02;
-    @BED_SELECTED   = map { ceil($_ * 255) } @SELECTED_COLOR;
-    @BED_OBJECTS    = map { ceil($_ * 255) } @COLOR_PARTS;
-    @BED_DRAGGED    = map { ceil($_ * 255) } @COLOR_CYAN;
-    @BED_CENTER     = map { ceil($_ * 255) } @COLOR_BASE1;
-    @BED_SKIRT      = map { ceil($_ * 255) } @COLOR_BASE01;
-    @BED_CLEARANCE  = map { ceil($_ * 255) } @COLOR_BLUE;
-    @BED_BACKGROUND = map { ceil($_ * 255) } @COLOR_BASE3;
-    @TOOL_DARK      = @COLOR_BASE01;
-    @TOOL_SUPPORT   = @COLOR_ORANGE;
-    @TOOL_INFILL    = @COLOR_BASE01;
+sub getSolarized {
+# print "S O L A R I Z E D  loaded ...\n";
+    @SELECTED_COLOR   = @COLOR_MAGENTA;
+    @HOVER_COLOR      = @COLOR_VIOLET;        # Hover over Model
+    # @TOP_COLOR        = @COLOR_BASE3;       # ! Only used in getDefault
+    # @BOTTOM_COLOR     = @COLOR_BASE3;       # ! Only used in getDefault
+    @BACKGROUND_COLOR = @COLOR_BASE3;         # SOLID Background color - REQUIRED for NOT getDefault
+    @GRID_COLOR       = (@COLOR_BASE02, 0.4); # Grid color
+    @GROUND_COLOR     = (@COLOR_BASE2,  0.4); # Ground or Plate color
+    @COLOR_CUTPLANE   = (@COLOR_BASE1,  0.5);
+    @COLOR_PARTS      = (@COLOR_BLUE,   1);   # Perimeter color
+    @COLOR_INFILL     = (@COLOR_BASE2,  1);
+    @COLOR_SUPPORT    = (@COLOR_ORANGE, 1);
+    @COLOR_UNKNOWN    = (@COLOR_CYAN,   1);
+    @BED_COLOR        = map { ceil($_ * 255) } @COLOR_BASE2;    # do math -> multiply all values with 255 and round up
+    @BED_GRID         = map { ceil($_ * 255) } @COLOR_BASE02;
+    @BED_SELECTED     = map { ceil($_ * 255) } @SELECTED_COLOR;
+    @BED_OBJECTS      = map { ceil($_ * 255) } @COLOR_PARTS;
+    @BED_DRAGGED      = map { ceil($_ * 255) } @COLOR_CYAN;
+    @BED_CENTER       = map { ceil($_ * 255) } @COLOR_BASE1;
+    @BED_SKIRT        = map { ceil($_ * 255) } @COLOR_BASE01;
+    @BED_CLEARANCE    = map { ceil($_ * 255) } @COLOR_BLUE;
+    @BACKGROUND255    = map { ceil($_ * 255) } @BACKGROUND_COLOR;
+    @TOOL_DARK        = @COLOR_BASE01;
+    @TOOL_SUPPORT     = @COLOR_ORANGE;
+    @TOOL_INFILL      = @COLOR_BASE01;
+    @TOOL_COLOR       = @COLOR_BLUE;
+    @TOOL_SHADE       = @COLOR_BASE2;
+    @SPLINE_L_PEN     = map { ceil($_ * 255) } @COLOR_BASE01;
+    @SPLINE_O_PEN     = map { ceil($_ * 255) } @COLOR_BASE1;
+    @SPLINE_I_PEN     = map { ceil($_ * 255) } @COLOR_MAGENTA;
+    @SPLINE_R_PEN     = map { ceil($_ * 255) } @COLOR_VIOLET;
 
+}
+
+sub getDefault{
+    @SELECTED_COLOR   = (0, 1, 0); # not really used... just a dummy.
 }
 
 1;

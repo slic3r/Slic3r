@@ -72,10 +72,14 @@ use constant GIMBAL_LOCK_THETA_MAX => 170;
 
 sub new {
     my ($class, $parent) = @_;
-    # Get SOLARIZED if enabled
-    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
-        Slic3r::GUI::ColorScheme::getSOLARIZEDColorScheme();
+
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
     }
+    
     # We can only enable multi sample anti aliasing with wxWidgets 3.0.3 and with a hacked Wx::GLCanvas,
     # which exports some new WX_GL_XXX constants, namely WX_GL_SAMPLE_BUFFERS and WX_GL_SAMPLES.
     my $can_multisample =
@@ -847,10 +851,17 @@ sub Render {
         glLoadIdentity();
         
         glBegin(GL_QUADS);
-        glColor3f( @BOTTOM_COLOR ); #bottom color
+        
+        my @t_color = @TOP_COLOR;
+        my @b_color = @BOTTOM_COLOR;
+        if ( $Slic3r::GUI::Settings->{_}{colorscheme} ne 'getDefault' ) {
+            @t_color = @BACKGROUND_COLOR;
+            @b_color = @BACKGROUND_COLOR;
+        }
+        glColor3f( @t_color ); # top color
         glVertex2f(-1.0,-1.0);
         glVertex2f(1,-1.0);
-        glColor3f( @TOP_COLOR ); #top color
+        glColor3f( @b_color ); # bottom color
         glVertex2f(1, 1);
         glVertex2f(-1.0, 1);
         glEnd();
@@ -894,7 +905,7 @@ sub Render {
         glEnable(GL_DEPTH_TEST);
     
         # draw grid
-        glLineWidth(3);
+        glLineWidth(2);
         glEnableClientState(GL_VERTEX_ARRAY);
         my $grid_vertex;
         if (HAS_VBO) {
@@ -1186,10 +1197,14 @@ sub new {
     my $class = shift;
     
     my $self = $class->SUPER::new(@_);
-    # Get SOLARIZED if enabled
-    if ($Slic3r::GUI::Settings->{_}{colorschema_solarized}) {
-        Slic3r::GUI::ColorScheme::getSOLARIZEDColorScheme();
+    
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
     }
+    
     $self->colors([ $self->default_colors ]);
     $self->color_by('volume');      # object | volume
     $self->color_toolpaths_by('role'); # role | extruder
