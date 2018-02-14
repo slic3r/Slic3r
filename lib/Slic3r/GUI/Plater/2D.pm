@@ -47,11 +47,13 @@ sub new {
     $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
     $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
     $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_DRAGGED), wxSOLID);
+    $self->{bed_brush}          = Wx::Brush->new(Wx::Colour->new(@BED_COLOR), wxSOLID);
     $self->{transparent_brush}  = Wx::Brush->new(Wx::Colour->new(0,0,0), wxTRANSPARENT);
     $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(@BED_GRID), 1, wxSOLID);
     $self->{print_center_pen}   = Wx::Pen->new(Wx::Colour->new(@BED_CENTER), 1, wxSOLID);
     $self->{clearance_pen}      = Wx::Pen->new(Wx::Colour->new(@BED_CLEARANCE), 1, wxSOLID);
     $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(@BED_SKIRT), 1, wxSOLID);
+    $self->{dark_pen}           = Wx::Pen->new(Wx::Colour->new(@BED_DARK), 1, wxSOLID);
 
     $self->{user_drawn_background} = $^O ne 'darwin';
 
@@ -126,15 +128,11 @@ sub repaint {
         my $rect = $self->GetUpdateRegion()->GetBox();
         $dc->DrawRectangle($rect->GetLeft(), $rect->GetTop(), $rect->GetWidth(), $rect->GetHeight());
     }
-
-    # draw grid
-    $dc->SetPen($self->{grid_pen});
-    $dc->DrawLine(map @$_, @$_) for @{$self->{grid}};
     
     # draw bed
     {
         $dc->SetPen($self->{print_center_pen});
-        $dc->SetBrush($self->{transparent_brush});
+        $dc->SetBrush($self->{bed_brush});
         $dc->DrawPolygon($self->scaled_points_to_pixel($self->{bed_polygon}, 1), 0, 0);
     }
     
@@ -152,7 +150,7 @@ sub repaint {
     
     # draw frame
     if (0) {
-        $dc->SetPen(wxBLACK_PEN);
+        $dc->SetPen($self->{dark_pen});
         $dc->SetBrush($self->{transparent_brush});
         $dc->DrawRectangle(0, 0, @size);
     }
@@ -162,10 +160,14 @@ sub repaint {
         $dc->SetTextForeground(Wx::Colour->new(@BED_OBJECTS));
         $dc->SetFont(Wx::Font->new(14, wxDEFAULT, wxNORMAL, wxNORMAL));
         $dc->DrawLabel(CANVAS_TEXT, Wx::Rect->new(0, 0, $self->GetSize->GetWidth, $self->GetSize->GetHeight), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+    } else {
+        # draw grid
+        $dc->SetPen($self->{grid_pen});
+        $dc->DrawLine(map @$_, @$_) for @{$self->{grid}};
     }
     
     # draw thumbnails
-    $dc->SetPen(wxBLACK_PEN);
+    $dc->SetPen($self->{dark_pen});
     $self->clean_instance_thumbnails;
     for my $obj_idx (0 .. $#{$self->{objects}}) {
         my $object = $self->{objects}[$obj_idx];
