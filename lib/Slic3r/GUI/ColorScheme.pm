@@ -64,8 +64,8 @@ sub getSolarized {
 # print "S O L A R I Z E D  loaded ...\n";
     @SELECTED_COLOR   = @COLOR_MAGENTA;
     @HOVER_COLOR      = @COLOR_VIOLET;        # Hover over Model
-    # @TOP_COLOR        = @COLOR_BASE3;       # ! Only used in getDefault
-    # @BOTTOM_COLOR     = @COLOR_BASE3;       # ! Only used in getDefault
+    @TOP_COLOR        = @COLOR_BASE3;         # FADE Background color
+    @BOTTOM_COLOR     = @COLOR_BASE3;         # FADE Background color
     @BACKGROUND_COLOR = @COLOR_BASE3;         # SOLID Background color - REQUIRED for NOT getDefault
     @GRID_COLOR       = (@COLOR_BASE1, 0.4); # Grid color
     @GROUND_COLOR     = (@COLOR_BASE2,  0.4); # Ground or Plate color

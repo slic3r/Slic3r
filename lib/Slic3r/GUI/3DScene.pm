@@ -852,16 +852,10 @@ sub Render {
         
         glBegin(GL_QUADS);
         
-        my @t_color = @TOP_COLOR;
-        my @b_color = @BOTTOM_COLOR;
-        if ( $Slic3r::GUI::Settings->{_}{colorscheme} ne 'getDefault' ) {
-            @t_color = @BACKGROUND_COLOR;
-            @b_color = @BACKGROUND_COLOR;
-        }
-        glColor3f( @t_color ); # top color
+        glColor3f( @TOP_COLOR ); # top color
         glVertex2f(-1.0,-1.0);
         glVertex2f(1,-1.0);
-        glColor3f( @b_color ); # bottom color
+        glColor3f( @BOTTOM_COLOR ); # bottom color
         glVertex2f(1, 1);
         glVertex2f(-1.0, 1);
         glEnd();
