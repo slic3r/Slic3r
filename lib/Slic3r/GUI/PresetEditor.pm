@@ -1217,15 +1217,6 @@ sub options {
         retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
         printer_settings_id
         printer_notes
-        nordson_start_height
-        dwell_layers_count
-        dwell_layers_time
-        nordson_acceleration
-        nordson_retraction_distance
-        nordson_offset
-        dwell_lines_count
-        dwell_lines_times
-        park_position
     );
 }
 
@@ -1240,7 +1231,6 @@ sub overridable_options {
 sub build {
     my $self = shift;
     $self->{extruders_count} = 1;
-    
     {
         my $page = $self->add_options_page('General', 'printer_empty.png');
         {
@@ -1450,15 +1440,6 @@ sub build {
             $option->full_width(1);
             $option->height(250);
             $optgroup->append_single_option_line($option);
-        }
-    }
-    {
-        my $page = $self->add_options_page('Nordson', 'printer_empty.png');
-        {
-           my $optgroup = $page->new_optgroup('Nordson');
-           $optgroup->append_single_option_line('nordson_start_height');
-           $optgroup->append_single_option_line('nordson_offset');
-           $optgroup->append_single_option_line('park_position');           
         }
     }
 

@@ -677,7 +677,6 @@ ConfigOptionPoint3::deserialize(std::string str, bool append) {
         this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
         this->value.z = boost::lexical_cast<coordf_t>(tokens[2]);
     } catch (boost::bad_lexical_cast &e){
-        std::cout << "failure str:" << str << "\n"<< std::endl;
         std::cout << "Exception caught : " << e.what() << std::endl;
         return false;
     }
