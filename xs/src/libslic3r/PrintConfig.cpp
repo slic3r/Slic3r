@@ -1698,6 +1698,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = "park_position";
     def->sidetext = "mm";
     def->cli="nordson-park-position=s";
+    def->tooltip = "Position where the Nordson stops";
     def->default_value = new ConfigOptionPoint3();
     
     def = this->add("dwell_layers_count", coInt);

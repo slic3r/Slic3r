@@ -532,7 +532,7 @@ sub BUILD {
     
     $self->x_textctrl(Wx::TextCtrl->new($self->parent, -1, $self->option->default->[X], wxDefaultPosition, $field_size));
     $self->y_textctrl(Wx::TextCtrl->new($self->parent, -1, $self->option->default->[Y], wxDefaultPosition, $field_size));
-    $self->y_textctrl(Wx::TextCtrl->new($self->parent, -1, $self->option->default->[Z], wxDefaultPosition, $field_size));
+    $self->z_textctrl(Wx::TextCtrl->new($self->parent, -1, $self->option->default->[Z], wxDefaultPosition, $field_size));
     
     my @items = (
         Wx::StaticText->new($self->parent, -1, "x:"),
