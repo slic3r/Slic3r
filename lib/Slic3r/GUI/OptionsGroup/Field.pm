@@ -562,7 +562,7 @@ sub set_value {
     $self->disable_change_event(1);
     $self->x_textctrl->SetValue($value->[X]);
     $self->y_textctrl->SetValue($value->[Y]);
-    $self->y_textctrl->SetValue($value->[Z]);
+    $self->z_textctrl->SetValue($value->[Z]);
     $self->disable_change_event(0);
 }
 
