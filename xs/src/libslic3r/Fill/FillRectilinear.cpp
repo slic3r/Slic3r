@@ -448,6 +448,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
         it->rotate(direction.first);
 }
 
+
 void FillRectilinear::_fill_surface_single(
     unsigned int                    thickness_layers,
     const direction_t               &direction,

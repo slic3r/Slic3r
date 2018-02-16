@@ -1230,9 +1230,7 @@ sub overridable_options {
 
 sub build {
     my $self = shift;
-    
     $self->{extruders_count} = 1;
-    
     {
         my $page = $self->add_options_page('General', 'printer_empty.png');
         {
@@ -1370,6 +1368,7 @@ sub build {
             $optgroup->append_single_option_line('vibration_limit');
             $optgroup->append_single_option_line('z_steps_per_mm');
         }
+        
     }
     {
         my $page = $self->add_options_page('Custom G-code', 'script.png');
@@ -1443,6 +1442,7 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
+
     $self->_update_serial_ports;
 }
 
@@ -1464,11 +1464,12 @@ sub _extruders_count_changed {
 sub _extruder_options { qw(nozzle_diameter min_layer_height max_layer_height extruder_offset retract_length retract_lift retract_lift_above retract_lift_below retract_speed retract_restart_extra retract_before_travel wipe
     retract_layer_change retract_length_toolchange retract_restart_extra_toolchange) }
 
+
 sub _build_extruder_pages {
     my $self = shift;
     
     my $default_config = Slic3r::Config::Full->new;
-    
+
     foreach my $extruder_idx (@{$self->{extruder_pages}} .. $self->{extruders_count}-1) {
         # extend options
         foreach my $opt_key ($self->_extruder_options) {
@@ -1483,7 +1484,6 @@ sub _build_extruder_pages {
             $self->config->set($opt_key, $values)
                 or die "Unable to extend $opt_key";
         }
-        
         # build page
         my $page = $self->{extruder_pages}[$extruder_idx] = $self->add_options_page("Extruder " . ($extruder_idx + 1), 'funnel.png');
         {
