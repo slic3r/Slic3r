@@ -73,24 +73,6 @@ protected:
 	    Polylines*                      polylines_out);
 };
 
-class FillJetting : public FillRectilinear
-{
-public:
-    virtual Fill* clone() const { return new FillJetting(*this); };
-    virtual ~FillJetting() {}
-    virtual bool can_solid() const { return true; };
-
-protected:
-	virtual void _fill_surface_single(
-	    unsigned int                     thickness_layers,
-	    const direction_t               &direction, 
-	    ExPolygon                       &expolygon, 
-	    Polylines*                      polylines_out);
-    
-	//void _fill_single_direction(ExPolygon expolygon, const direction_t &direction,
-	    //coord_t x_shift, Polylines* out);
-};
-
 class FillStars : public FillRectilinear
 {
 public:

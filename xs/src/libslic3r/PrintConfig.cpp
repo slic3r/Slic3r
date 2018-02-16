@@ -15,13 +15,11 @@ PrintConfigDef::PrintConfigDef()
     external_fill_pattern.enum_values.push_back("hilbertcurve");
     external_fill_pattern.enum_values.push_back("archimedeanchords");
     external_fill_pattern.enum_values.push_back("octagramspiral");
-    external_fill_pattern.enum_values.push_back("jetting");
     external_fill_pattern.enum_labels.push_back("Rectilinear");
     external_fill_pattern.enum_labels.push_back("Concentric");
     external_fill_pattern.enum_labels.push_back("Hilbert Curve");
     external_fill_pattern.enum_labels.push_back("Archimedean Chords");
     external_fill_pattern.enum_labels.push_back("Octagram Spiral");
-    external_fill_pattern.enum_values.push_back("Jetting");
     
     ConfigOptionDef* def;
 
@@ -519,7 +517,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("grid");
     def->enum_values.push_back("triangles");
-    def->enum_values.push_back("jetting");
     def->enum_values.push_back("stars");
     def->enum_values.push_back("cubic");
     def->enum_values.push_back("concentric");
@@ -532,7 +529,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Aligned Rectilinear");
     def->enum_labels.push_back("Grid");
     def->enum_labels.push_back("Triangles");
-    def->enum_labels.push_back("Jetting");
     def->enum_labels.push_back("Stars");
     def->enum_labels.push_back("Cubic");
     def->enum_labels.push_back("Concentric");
@@ -643,7 +639,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("machinekit");
     def->enum_values.push_back("smoothie");
     def->enum_values.push_back("no-extrusion");
-    def->enum_values.push_back("nordson");
     def->enum_labels.push_back("RepRap (Marlin/Sprinter)");
     def->enum_labels.push_back("Repetier");
     def->enum_labels.push_back("Teacup");
@@ -653,7 +648,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Machinekit");
     def->enum_labels.push_back("Smoothieware");
     def->enum_labels.push_back("No extrusion");
-    def->enum_labels.push_back("Nordson");
     def->default_value = new ConfigOptionEnum<GCodeFlavor>(gcfRepRap);
 
     def = this->add("host_type", coEnum);
@@ -1687,65 +1681,6 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip ="Set this to alter object priority for sequential printing. Objects are first sorted by priority (smaller integers print first), then by height.";
     def->cli = "sequential-print-priority=i";
     def->default_value = new ConfigOptionInt(0);
-
-    def = this->add("nordson_start_height", coFloat);
-    def->label = "Start Height";
-    def->sidetext = "mm";
-    def->cli="nordson-start-height=f";
-    def->default_value = new ConfigOptionFloat(0);
-
-    def = this->add("park_position", coPoint3);
-    def->label = "park_position";
-    def->sidetext = "mm";
-    def->cli="nordson-park-position=s";
-    def->tooltip = "Position where the Nordson stops";
-    def->default_value = new ConfigOptionPoint3();
-    
-    def = this->add("dwell_layers_count", coInt);
-    def->min = 0;
-    def->cli = "nordson-dwell-layers-count=i";
-    def->default_value = new ConfigOptionInt(0);
-
-    def = this->add("dwell_layers_time", coFloat);
-    def->min = 0;
-    def->sidetext = "sec";
-    def->cli="nordson-dwell-layers-time=f";
-    def -> default_value = new ConfigOptionFloat(0);
-
-    def = this->add("nordson_acceleration",coFloat);
-    def->label = "nordson_acceleration";
-    def->sidetext = "mm/s\u2072";
-    def->cli="nordson-acceleration=f";
-    def -> default_value = new ConfigOptionFloat(0);
-
-    def = this->add("nordson_offset",coPoint);
-    def->label = "Offset";
-    def->sidetext = "mm";
-    def->cli="nordson-offset=s";
-    def -> default_value = new ConfigOptionPoint();
-
-    def = this->add("nordson_retraction_distance", coFloat);
-    def->label="Retraction Distance";
-    def->sidetext = "mm";
-    def->cli="nordson-retraction-distance=f";
-    def -> default_value = new ConfigOptionFloat(0);
-    
-    def = this->add("dwell_lines_position", coPoint3);
-    def->label = "Dwell Lines position";
-    def->sidetext = "mm";
-    def->cli="nordson-dwell-lines-position=s";
-    def -> default_value = new ConfigOptionPoint3();
-
-    def = this->add("dwell_lines_count",coInt);
-    def->min = 0;
-    def->cli="nordson-dwell-lines-count=i";
-    def->default_value = new ConfigOptionInt(0);
-
-    def = this->add("dwell_lines_times", coFloat);
-    def->min = 0;
-    def->sidetext = "sec";
-    def->cli="nordson-dwell-lines-times=f";
-    def->default_value = new ConfigOptionFloat(0);
     
 }
 

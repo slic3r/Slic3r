@@ -26,7 +26,7 @@
 namespace Slic3r {
 
 enum GCodeFlavor {
-    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion, gcfSmoothie, gcfRepetier, gcfNordson,
+    gcfRepRap, gcfTeacup, gcfMakerWare, gcfSailfish, gcfMach3, gcfMachinekit, gcfNoExtrusion, gcfSmoothie, gcfRepetier,
 };
 
 enum HostType {
@@ -35,7 +35,7 @@ enum HostType {
 
 enum InfillPattern {
     ipRectilinear, ipGrid, ipAlignedRectilinear,
-    ipTriangles, ipJetting, ipStars, ipCubic, 
+    ipTriangles, ipStars, ipCubic, 
     ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
 };
@@ -59,7 +59,6 @@ template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_v
     keys_map["machinekit"]      = gcfMachinekit;
     keys_map["no-extrusion"]    = gcfNoExtrusion;
     keys_map["smoothie"]        = gcfSmoothie;
-    keys_map["nordson"]         = gcfNordson;
     return keys_map;
 }
 
@@ -76,7 +75,6 @@ template<> inline t_config_enum_values ConfigOptionEnum<InfillPattern>::get_enum
     keys_map["alignedrectilinear"]  = ipAlignedRectilinear;
     keys_map["grid"]                = ipGrid;
     keys_map["triangles"]           = ipTriangles;
-    keys_map["jetting"]             = ipJetting;
     keys_map["stars"]               = ipStars;
     keys_map["cubic"]               = ipCubic;
     keys_map["concentric"]          = ipConcentric;
@@ -350,18 +348,6 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_firmware_retraction;
     ConfigOptionBool                use_relative_e_distances;
     ConfigOptionBool                use_volumetric_e;
-
-    //Nordson 
-    ConfigOptionFloat               nordson_start_height;
-    ConfigOptionPoint3              park_position;
-    ConfigOptionInt                 dwell_layers_count;
-    ConfigOptionFloat               dwell_layers_time;
-    ConfigOptionFloat               nordson_acceleration;
-    ConfigOptionFloat               nordson_retraction_distance;
-    ConfigOptionPoint               nordson_offset;
-    ConfigOptionPoint3              dwell_lines_position;
-    ConfigOptionInt                 dwell_lines_count;
-    ConfigOptionFloat               dwell_lines_time;
     
     GCodeConfig(bool initialize = true) : StaticPrintConfig() {
         if (initialize)
@@ -404,18 +390,6 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(use_relative_e_distances);
         OPT_PTR(use_volumetric_e);
 
-        //Nordson
-        OPT_PTR(nordson_start_height);
-        OPT_PTR(park_position);
-        OPT_PTR(dwell_layers_count);
-        OPT_PTR(dwell_layers_time);
-        OPT_PTR(nordson_acceleration);
-        OPT_PTR(nordson_retraction_distance);
-        OPT_PTR(nordson_offset);
-        OPT_PTR(dwell_lines_position);
-        OPT_PTR(dwell_lines_count);
-        OPT_PTR(dwell_lines_time); 
-        
         return NULL;
     };
     
@@ -491,7 +465,6 @@ class PrintConfig : public GCodeConfig
     ConfigOptionFloat               z_offset;
     ConfigOptionFloat               z_steps_per_mm;
 
-    
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
             this->set_defaults();

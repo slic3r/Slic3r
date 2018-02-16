@@ -379,7 +379,7 @@ sub get_option {
     
     my $optdef = $Slic3r::Config::Options->{$opt_key};    # we should access this from $self->config
     my $default_value = $self->_get_config_value($opt_key, $opt_index, $optdef->{type} eq 's@');
-    print $opt_key .":". $optdef->{type} .":".$optdef->{type}.":". $default_value .":". "\n";
+
     return Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => $opt_id,
         type        => $optdef->{type},
