@@ -96,6 +96,7 @@ class Point3 : public Point
     public:
     coord_t z;
     explicit Point3(coord_t _x = 0, coord_t _y = 0, coord_t _z = 0): Point(_x, _y), z(_z) {};
+    bool coincides_with(const Point3 &point3) const { return this->x == point3.x && this->y == point3.y && this->z == point3.z; }
 };
 
 std::ostream& operator<<(std::ostream &stm, const Pointf &pointf);
@@ -122,6 +123,8 @@ class Pointf
     Pointf negative() const;
     Vectorf vector_to(const Pointf &point) const;
 };
+
+std::ostream& operator<<(std::ostream &stm, const Pointf3 &pointf3);
 
 class Pointf3 : public Pointf
 {
