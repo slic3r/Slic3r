@@ -58,7 +58,7 @@ template<> inline t_config_enum_values ConfigOptionEnum<GCodeFlavor>::get_enum_v
     keys_map["mach3"]           = gcfMach3;
     keys_map["machinekit"]      = gcfMachinekit;
     keys_map["no-extrusion"]    = gcfNoExtrusion;
-    keys_map["smoothie"]    = gcfSmoothie;
+    keys_map["smoothie"]        = gcfSmoothie;
     return keys_map;
 }
 
@@ -389,7 +389,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(use_firmware_retraction);
         OPT_PTR(use_relative_e_distances);
         OPT_PTR(use_volumetric_e);
-        
+
         return NULL;
     };
     
@@ -464,7 +464,7 @@ class PrintConfig : public GCodeConfig
     ConfigOptionBools               wipe;
     ConfigOptionFloat               z_offset;
     ConfigOptionFloat               z_steps_per_mm;
-    
+
     PrintConfig(bool initialize = true) : GCodeConfig(false) {
         if (initialize)
             this->set_defaults();
@@ -525,7 +525,7 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(vibration_limit);
         OPT_PTR(wipe);
         OPT_PTR(z_offset);
-        OPT_PTR(z_steps_per_mm);
+        OPT_PTR(z_steps_per_mm);  
         
         // look in parent class
         ConfigOption* opt;
@@ -559,6 +559,7 @@ class HostConfig : public virtual StaticPrintConfig
         return NULL;
     };
 };
+
 
 // This object is mapped to Perl as Slic3r::Config::Full.
 class FullPrintConfig
