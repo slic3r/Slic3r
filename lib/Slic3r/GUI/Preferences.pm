@@ -93,13 +93,13 @@ sub new {
         default     => $Slic3r::GUI::Settings->{_}{nudge_val},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # colorscheme
-        opt_id      => 'colorscheme', # this needs to match the name chosen in $Settings
-        type        => 'select', # option type, use a different type if desired
-        label       => 'Color Scheme', # Label text
-        tooltip     => 'Choose between color schemes - restart of Slic3r required.', # tooltop text
-        labels      => ['Default','Solarized'], # this is for a select box, it's an array of values
-        values      => ['getDefault','getSolarized'], # these are the values that a selectbox can take.
-        default     => $Slic3r::GUI::Settings->{_}{colorscheme} // 'getDefault', # this is a reference to what you put in GUI.pm
+        opt_id      => 'colorscheme',
+        type        => 'select',
+        label       => 'Color Scheme',
+        tooltip     => 'Choose between color schemes - restart of Slic3r required.',
+        labels      => ['Default','Solarized'], # add more schemes, if you want in ColorScheme.pm.
+        values      => ['getDefault','getSolarized'], # add more schemes, if you want - those are the names of the corresponding function in ColorScheme.pm.
+        default     => $Slic3r::GUI::Settings->{_}{colorscheme} // 'getDefault',
         width       => 130
     ));
     

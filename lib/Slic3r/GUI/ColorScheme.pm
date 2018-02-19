@@ -60,7 +60,12 @@ our @COLOR_BLUE      = (0.14902,0.54510,0.82353);
 our @COLOR_CYAN      = (0.16471,0.63137,0.59608);
 our @COLOR_GREEN     = (0.52157,0.60000,0.00000);
 
-sub getSolarized {
+# create your own theme:
+# 1. add new sub and name it accordingly
+# 2. add that name to Preferences.pm
+# 3. Choose your newly created theme in Slic3rs' Preferences (File -> Preferences).
+
+sub getSolarized { # add this name to Preferences.pm
 # print "S O L A R I Z E D  loaded ...\n";
     @SELECTED_COLOR   = @COLOR_MAGENTA;
     @HOVER_COLOR      = @COLOR_VIOLET;        # Hover over Model
@@ -74,7 +79,7 @@ sub getSolarized {
     @COLOR_INFILL     = (@COLOR_BASE2,  1);
     @COLOR_SUPPORT    = (@COLOR_ORANGE, 1);
     @COLOR_UNKNOWN    = (@COLOR_CYAN,   1);
-    @BED_COLOR        = map { ceil($_ * 255) } @COLOR_BASE2;    # do math -> multiply all values with 255 and round up
+    @BED_COLOR        = map { ceil($_ * 255) } @COLOR_BASE2;    # do math -> multiply each value by 255 and round up
     @BED_GRID         = map { ceil($_ * 255) } @COLOR_BASE1;
     @BED_SELECTED     = map { ceil($_ * 255) } @SELECTED_COLOR;
     @BED_OBJECTS      = map { ceil($_ * 255) } @COLOR_PARTS;
