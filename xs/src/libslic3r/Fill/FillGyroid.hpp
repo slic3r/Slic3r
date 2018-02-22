@@ -26,8 +26,7 @@ protected:
     float scaling;
 
 
-    virtual void _fill_surface_single(
-        const FillParams                &params, 
+    virtual void _fill_surface_single( 
         unsigned int                     thickness_layers,
         const std::pair<float, Point>   &direction, 
         ExPolygon                       &expolygon, 

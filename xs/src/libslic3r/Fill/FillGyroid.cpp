@@ -156,24 +156,23 @@ Polylines FillGyroid::makeGrid(coord_t gridZ, double density, double layer_width
 }
 
 void FillGyroid::_fill_surface_single(
-    const FillParams                &params, 
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction, 
     ExPolygon                       &expolygon, 
-    Polylines                       &polylines_out)
+    Polylines                       *polylines_out)
 {
     // no rotation is supported for this infill pattern
     BoundingBox bb = expolygon.contour.bounding_box();
-    coord_t     distance = coord_t(scale_(this->spacing) / (params.density*this->scaling));
+    coord_t     distance = coord_t(scale_(this->spacing) / (density*this->scaling));
 
     // align bounding box to a multiple of our grid module
-    bb.merge(_align_to_grid(bb.min, Point(2*M_PI*distance, 2*M_PI*distance)));
+    bb.min.align_to_grid(Point(2*M_PI*distance, 2*M_PI*distance));
     
     // generate pattern
     Polylines   polylines = makeGrid(
         (coord_t)scale_(this->z),
-        params.density*this->scaling,
-        this->spacing,
+        density*this->scaling,
+        this->spacing(),
         (size_t)(ceil(bb.size().x / distance) + 1),
         (size_t)(ceil(bb.size().y / distance) + 1),
         (size_t)(((this->layer_id/thickness_layers) % 2) + 1) );
@@ -187,7 +186,7 @@ void FillGyroid::_fill_surface_single(
     polylines = intersection_pl(polylines, (Polygons)expolygon);
 
     // connect lines
-    if (! params.dont_connect && ! polylines.empty()) { // prevent calling leftmost_point() on empty collections
+    if (! dont_connect && ! polylines.empty()) { // prevent calling leftmost_point() on empty collections
         ExPolygon expolygon_off;
         {
             ExPolygons expolygons_off = offset_ex(expolygon, (float)SCALED_EPSILON);
@@ -208,7 +207,7 @@ void FillGyroid::_fill_surface_single(
         for (Polylines::iterator it_polyline = chained.begin(); it_polyline != chained.end(); ++ it_polyline) {
             if (! first) {
                 // Try to connect the lines.
-                Points &pts_end = polylines_out.back().points;
+                Points &pts_end = polylines_out->back().points;
                 const Point &first_point = it_polyline->points.front();
                 const Point &last_point = pts_end.back();
                 // TODO: we should also check that both points are on a fill_boundary to avoid 
@@ -223,10 +222,10 @@ void FillGyroid::_fill_surface_single(
             }
             // The lines cannot be connected.
 #if SLIC3R_CPPVER >= 11
-            polylines_out.push_back(std::move(*it_polyline));
+            polylines_out->push_back(std::move(*it_polyline));
 #else
-            polylines_out.push_back(Polyline());
-            std::swap(polylines_out.back(), *it_polyline);
+            polylines_out->push_back(Polyline());
+            std::swap(polylines_out->back(), *it_polyline);
 #endif
             first = false;
         }
