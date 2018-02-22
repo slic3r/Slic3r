@@ -57,7 +57,7 @@ Polyline FillGyroid::makeLineHori(double xPos, double yPos, double width, double
     return polyline;
 }
 
-inline void FillGyroid::correctOrderAndAdd(const int num, Polyline &poly, Polylines &array){
+inline void FillGyroid::correctOrderAndAdd(const int num, Polyline poly, Polylines &array){
     if(num%2==0){
         Points temp(poly.points.rbegin(), poly.points.rend());
         poly.points.assign(temp.begin(),temp.end());
@@ -163,7 +163,7 @@ void FillGyroid::_fill_surface_single(
 {
     // no rotation is supported for this infill pattern
     BoundingBox bb = expolygon.contour.bounding_box();
-    coord_t     distance = coord_t(scale_(this->spacing) / (density*this->scaling));
+    coord_t     distance = coord_t(scale_(this->spacing()) / (density*this->scaling));
 
     // align bounding box to a multiple of our grid module
     bb.min.align_to_grid(Point(2*M_PI*distance, 2*M_PI*distance));

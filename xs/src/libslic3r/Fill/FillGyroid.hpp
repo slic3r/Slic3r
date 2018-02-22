@@ -5,7 +5,7 @@
 
 #include "../libslic3r.h"
 
-#include "FillBase.hpp"
+#include "Fill.hpp"
 
 namespace Slic3r {
 
@@ -30,12 +30,12 @@ protected:
         unsigned int                     thickness_layers,
         const std::pair<float, Point>   &direction, 
         ExPolygon                       &expolygon, 
-        Polylines                       &polylines_out);
+        Polylines                       *polylines_out);
     
     // create the gyroid grid to clip.
     Polylines makeGrid(coord_t gridZ, double density, double layer_width, size_t gridWidth, size_t gridHeight, size_t curveType);
     //add line poly in reverse if needed into array
-    inline void correctOrderAndAdd(const int num, Polyline &poly, Polylines &array);
+    inline void correctOrderAndAdd(const int num, Polyline poly, Polylines &array);
     //create a curved horinzontal line  (for each x, compute y)
     Polyline makeLineHori(double xPos, double yPos, double width, double height, 
         double currentYBegin, double segmentSize, coord_t scaleFactor, 
