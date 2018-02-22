@@ -561,7 +561,7 @@ sub load_config_file {
 }
 
 sub import_fromGCode{ # import configuration from gcode file sliced with Slic3r
-    my ($self, $file, $skip_no_id) = @_;
+    my ($self, $file) = @_;
     
     if (!$file) {
         my $dir = $last_config ? dirname($last_config) : $Slic3r::GUI::Settings->{recent}{config_directory} || $Slic3r::GUI::Settings->{recent}{skein_directory} || '';
@@ -588,7 +588,6 @@ sub import_fromGCode{ # import configuration from gcode file sliced with Slic3r
     open( FILE, "$file" )
         or die( "Can't open file to import gcode: $!" );
     my @lines = reverse <FILE>; # read the file from the back
-    
     
     my $line;
     my @settinglines="";
