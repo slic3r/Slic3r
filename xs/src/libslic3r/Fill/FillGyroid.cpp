@@ -65,9 +65,9 @@ inline void FillGyroid::correctOrderAndAdd(const int num, Polyline poly, Polylin
     array.push_back(poly);
 }
 
-// Generate a set of curves (array of array of 2d points) that describe a
-// horizontal slice of a truncated regular octahedron with a specified
-// grid square size.
+/// Generate a set of curves (array of array of 2d points) that describe a
+/// horizontal slice of a truncated regular octahedron with a specified
+/// grid square size.
 Polylines FillGyroid::makeGrid(coord_t gridZ, double density, double layer_width, size_t gridWidth, size_t gridHeight, size_t curveType)
 {
     coord_t  scaleFactor = coord_t(scale_(layer_width) / density);
