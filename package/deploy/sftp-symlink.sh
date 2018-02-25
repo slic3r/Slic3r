@@ -24,8 +24,9 @@ if [ -s $KEY ]; then
          filepath=$(readlink -f "$i")
          filepath=$(basename $filepath)
          tmpfile=$(mktemp)
-         echo "rm Slic3r-${current_branch}-latest.${EXT}" > $tmpfile
-         echo "symlink $filepath Slic3r-${current_branch}-latest.${EXT} " >> $tmpfile 
+
+         echo "rm Slic3r-${current_branch}-latest.${EXT}" | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+         echo "symlink $filepath Slic3r-${current_branch}-latest.${EXT} " > $tmpfile 
          sftp -b $tmpfile -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
          result=$?
          if [ $? -eq 1 ]; then 
