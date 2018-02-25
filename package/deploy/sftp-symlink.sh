@@ -22,9 +22,10 @@ fi
 if [ -s $KEY ]; then
     for i in $FILES; do 
          filepath=$(readlink -f "$i")
+         filepath=$(basename $filepath)
          tmpfile=$(mktemp)
-         echo "rm -f slic3r-${current_branch}-latest.${EXT}" > $tmpfile
-         echo "symlink slic3r-${current_branch}-latest.${EXT} $filepath" >> $tmpfile 
+         echo "rm Slic3r-${current_branch}-latest.${EXT}" > $tmpfile
+         echo "symlink $filepath Slic3r-${current_branch}-latest.${EXT} " >> $tmpfile 
          sftp -b $tmpfile -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
          result=$?
          if [ $? -eq 1 ]; then 
