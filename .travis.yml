@@ -17,7 +17,7 @@ after_success:
 - package/linux/appimage.sh x86_64
 - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
 - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
-- package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa bz2 *.bz2
+- package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
 branches:
   only:
   - master
