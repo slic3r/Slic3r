@@ -107,6 +107,7 @@ sub _accept {
         return;
     }
     
+    wxTheApp->{mainframe}->{slaconfig}->apply_static($self->config);
     $self->EndModal(wxID_OK);
     $self->Close;  # needed on Linux
     

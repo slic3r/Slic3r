@@ -294,6 +294,7 @@ sub _init_menubar {
         }, undef, 'printer_empty.png');
         wxTheApp->append_menu_item($windowMenu, "DLP Projector…\tCtrl+P", 'Open projector window for DLP printing', sub {
             $self->{plater}->pause_background_process;
+            $self->{slaconfig} = Slic3r::Config->new;
             Slic3r::GUI::SLAPrintOptions->new($self)->ShowModal;
             $self->{plater}->resume_background_process;
         }, undef, 'film.png');
