@@ -70,13 +70,13 @@ sub new {
             my ($s, $event) = @_;
 
             my $key = $event->GetKeyCode;
-            if ($key == 65 || $key == 314) {       # 64=a ; 314 = ?
+            if ($key == 65 || $key == 314) {
                 $self->nudge_instance('left');
-            } elsif ($key == 87 || $key == 315) {  # 87=w ; 315 = ?
+            } elsif ($key == 87 || $key == 315) {
                 $self->nudge_instance('up');
-            } elsif ($key == 68 || $key == 316) {  # 68=d ; 316 = ?
+            } elsif ($key == 68 || $key == 316) {
                 $self->nudge_instance('right');
-            } elsif ($key == 83 || $key == 317) {  # 83=s ; 317 = ?
+            } elsif ($key == 83 || $key == 317) {
                 $self->nudge_instance('down');
             } else {
                 $event->Skip;
