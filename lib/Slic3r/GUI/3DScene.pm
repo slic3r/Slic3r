@@ -754,7 +754,7 @@ sub InitGL {
     glEnable(GL_MULTISAMPLE) if ($self->{can_multisample});
     
     # ambient lighting
-    glLightModelfv_p(GL_LIGHT_MODEL_AMBIENT, 0.3, 0.3, 0.3, 1);
+    glLightModelfv_p(GL_LIGHT_MODEL_AMBIENT, 0.1, 0.1, 0.1, 1);
     
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -762,10 +762,10 @@ sub InitGL {
     
     # light from camera
     glLightfv_p(GL_LIGHT1, GL_POSITION, 1, 0, 1, 0);
-    glLightfv_p(GL_LIGHT1, GL_SPECULAR, 0.3, 0.3, 0.3, 1);
-    glLightfv_p(GL_LIGHT1, GL_DIFFUSE,  0.2, 0.2, 0.2, 1);
+    glLightfv_p(GL_LIGHT1, GL_SPECULAR, 0.8, 0.8, 0.8, 1);
+    glLightfv_p(GL_LIGHT1, GL_DIFFUSE,  0.4, 0.4, 0.4, 1);
     
-    # Enables Smooth Color Shading; try GL_FLAT for (lack of) fun.
+    # Enables Smooth Color Shading; try GL_FLAT for (lack of) fun. Default: GL_SMOOTH
     glShadeModel(GL_SMOOTH);
     
     glMaterialfv_p(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, 0.3, 0.3, 0.3, 1);
