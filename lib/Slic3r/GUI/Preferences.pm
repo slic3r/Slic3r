@@ -92,6 +92,16 @@ sub new {
         tooltip     => 'In 2D plater, Move objects using keyboard by nudge value of',
         default     => $Slic3r::GUI::Settings->{_}{nudge_val},
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # colorscheme
+        opt_id      => 'colorscheme',
+        type        => 'select',
+        label       => 'Color Scheme',
+        tooltip     => 'Choose between color schemes - restart of Slic3r required.',
+        labels      => ['Default','Solarized'], # add more schemes, if you want in ColorScheme.pm.
+        values      => ['getDefault','getSolarized'], # add more schemes, if you want - those are the names of the corresponding function in ColorScheme.pm.
+        default     => $Slic3r::GUI::Settings->{_}{colorscheme} // 'getDefault',
+        width       => 130,
+    ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
