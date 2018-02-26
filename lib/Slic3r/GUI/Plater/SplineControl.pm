@@ -325,9 +325,13 @@ sub _draw_layers_as_lines {
     my $last_z = 0.0;    
     foreach my $z (@$layers) {
         my $layer_h = $z - $last_z;
-        my $pl = $self->point_to_pixel(0, $z);
-        my $pr = $self->point_to_pixel($layer_h, $z);
-        $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
+        # only draw layers up to object height. The spline might contain one more layer due to
+        # print_z / slice_z effects
+        if($z le $self->{object_height}) {
+            my $pl = $self->point_to_pixel(0, $z);
+            my $pr = $self->point_to_pixel($layer_h, $z);
+            $dc->DrawLine($pl->x, $pl->y, $pr->x, $pr->y);
+        }
         $last_z = $z;
     }
 }
