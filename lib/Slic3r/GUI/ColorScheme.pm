@@ -6,13 +6,15 @@ use POSIX;
 use vars qw(@ISA @EXPORT);
 use Exporter 'import';
 our @ISA = 'Exporter';
-our @EXPORT = qw(@SELECTED_COLOR @HOVER_COLOR @TOP_COLOR @BOTTOM_COLOR @GRID_COLOR @GROUND_COLOR @COLOR_CUTPLANE @COLOR_PARTS @COLOR_INFILL @COLOR_SUPPORT @COLOR_UNKNOWN @BED_COLOR @BED_GRID @BED_SELECTED @BED_OBJECTS @BED_DRAGGED @BED_CENTER @BED_SKIRT @BED_CLEARANCE @BED_DARK @BACKGROUND255 @TOOL_DARK @TOOL_SUPPORT @TOOL_INFILL @TOOL_SHADE @TOOL_COLOR @BACKGROUND_COLOR @SPLINE_L_PEN @SPLINE_O_PEN @SPLINE_I_PEN @SPLINE_R_PEN);
+our @EXPORT = qw($DEFAULT_COLORSCHEME $SOLID_BACKGROUNDCOLOR @SELECTED_COLOR @HOVER_COLOR @TOP_COLOR @BOTTOM_COLOR @GRID_COLOR @GROUND_COLOR @COLOR_CUTPLANE @COLOR_PARTS @COLOR_INFILL @COLOR_SUPPORT @COLOR_UNKNOWN @BED_COLOR @BED_GRID @BED_SELECTED @BED_OBJECTS @BED_DRAGGED @BED_CENTER @BED_SKIRT @BED_CLEARANCE @BED_DARK @BACKGROUND255 @TOOL_DARK @TOOL_SUPPORT @TOOL_INFILL @TOOL_SHADE @TOOL_COLOR @BACKGROUND_COLOR @SPLINE_L_PEN @SPLINE_O_PEN @SPLINE_I_PEN @SPLINE_R_PEN );
 
 # DEFAULT values
+our $DEFAULT_COLORSCHEME   = 1;
+our $SOLID_BACKGROUNDCOLOR = 0;
 our @SELECTED_COLOR   = (0, 1, 0);
 our @HOVER_COLOR      = (0.4, 0.9, 0);           # Hover over Model
-our @TOP_COLOR        = (0,0,0);                 # TOP Backgroud color
-our @BOTTOM_COLOR     = (10/255,98/255,144/255); # BOTTOM Backgroud color
+our @TOP_COLOR        = (10/255,98/255,144/255); # TOP Backgroud color
+our @BOTTOM_COLOR     = (0,0,0);                 # BOTTOM Backgroud color
 our @BACKGROUND_COLOR = @TOP_COLOR;              # SOLID background color
 our @GRID_COLOR       = (0.2, 0.2, 0.2, 0.4);    # Grid color
 our @GROUND_COLOR     = (0.8, 0.6, 0.5, 0.4);    # Ground or Plate color
@@ -34,7 +36,7 @@ our @TOOL_DARK        = (0, 0, 0);
 our @TOOL_SUPPORT     = (0, 0, 0);
 our @TOOL_INFILL      = (0, 0, 0);
 our @TOOL_SHADE       = (0.95, 0.95, 0.95);
-our @TOOL_COLOR       = (0.9, 0.9, 0.9);
+our @TOOL_COLOR       = (0.7, 0, 0);
 our @SPLINE_L_PEN     = (50, 50, 50);
 our @SPLINE_O_PEN     = (200, 200, 200);
 our @SPLINE_I_PEN     = (255, 0, 0);
@@ -61,48 +63,57 @@ our @COLOR_CYAN      = (0.16471,0.63137,0.59608);
 our @COLOR_GREEN     = (0.52157,0.60000,0.00000);
 
 # create your own theme:
-# 1. add new sub and name it accordingly
+# 1. add new sub and name it according to your scheme
 # 2. add that name to Preferences.pm
 # 3. Choose your newly created theme in Slic3rs' Preferences (File -> Preferences).
 
 sub getSolarized { # add this name to Preferences.pm
-# print "S O L A R I Z E D  loaded ...\n";
-    @SELECTED_COLOR   = @COLOR_MAGENTA;
-    @HOVER_COLOR      = @COLOR_VIOLET;        # Hover over Model
-    @TOP_COLOR        = @COLOR_BASE3;         # FADE Background color
-    @BOTTOM_COLOR     = @COLOR_BASE3;         # FADE Background color
-    @BACKGROUND_COLOR = @COLOR_BASE3;         # SOLID Background color - REQUIRED for NOT getDefault
-    @GRID_COLOR       = (@COLOR_BASE1, 0.4); # Grid color
-    @GROUND_COLOR     = (@COLOR_BASE2,  0.4); # Ground or Plate color
-    @COLOR_CUTPLANE   = (@COLOR_BASE1,  0.5);
-    @COLOR_PARTS      = (@COLOR_BLUE,   1);   # Perimeter color
-    @COLOR_INFILL     = (@COLOR_BASE2,  1);
-    @COLOR_SUPPORT    = (@COLOR_ORANGE, 1);
-    @COLOR_UNKNOWN    = (@COLOR_CYAN,   1);
-    @BED_COLOR        = map { ceil($_ * 255) } @COLOR_BASE2;    # do math -> multiply each value by 255 and round up
-    @BED_GRID         = map { ceil($_ * 255) } @COLOR_BASE1;
-    @BED_SELECTED     = map { ceil($_ * 255) } @SELECTED_COLOR;
-    @BED_OBJECTS      = map { ceil($_ * 255) } @COLOR_PARTS;
-    @BED_DRAGGED      = map { ceil($_ * 255) } @COLOR_CYAN;
-    @BED_CENTER       = map { ceil($_ * 255) } @COLOR_BASE1;
-    @BED_SKIRT        = map { ceil($_ * 255) } @COLOR_BASE01;
-    @BED_CLEARANCE    = map { ceil($_ * 255) } @COLOR_BLUE;
-    @BED_DARK         = map { ceil($_ * 255) } @COLOR_BASE01;
-    @BACKGROUND255    = map { ceil($_ * 255) } @BACKGROUND_COLOR;
-    @TOOL_DARK        = @COLOR_BASE01;
-    @TOOL_SUPPORT     = @COLOR_ORANGE;
-    @TOOL_INFILL      = @COLOR_BASE01;
-    @TOOL_COLOR       = @COLOR_BLUE;
-    @TOOL_SHADE       = @COLOR_BASE2;
-    @SPLINE_L_PEN     = map { ceil($_ * 255) } @COLOR_BASE01;
-    @SPLINE_O_PEN     = map { ceil($_ * 255) } @COLOR_BASE1;
-    @SPLINE_I_PEN     = map { ceil($_ * 255) } @COLOR_MAGENTA;
-    @SPLINE_R_PEN     = map { ceil($_ * 255) } @COLOR_VIOLET;
+    $DEFAULT_COLORSCHEME   = 0;               # DISABLE default color scheme
+    $SOLID_BACKGROUNDCOLOR = 1;               # Switch between SOLID or FADED background color
+    @SELECTED_COLOR   = @COLOR_MAGENTA;       # Color of selected Model
+    @HOVER_COLOR      = @COLOR_VIOLET;        # Color when hovering over Model
+    # @TOP_COLOR        = @COLOR_BASE2;         # FADE Background color - only used if $SOLID_BACKGROUNDCOLOR = 0
+    # @BOTTOM_COLOR     = @COLOR_BASE02;        # FADE Background color - only used if $SOLID_BACKGROUNDCOLOR = 0
+    @BACKGROUND_COLOR = @COLOR_BASE3;         # SOLID Background color  - REQUIRED for NOT getDefault
+    @GRID_COLOR       = (@COLOR_BASE1, 0.4);  # Grid
+    @GROUND_COLOR     = (@COLOR_BASE2, 0.4);  # Ground or Plate
+    @COLOR_CUTPLANE   = (@COLOR_BASE1, 0.5);  # Cut plane
+    @COLOR_PARTS      = (@TOOL_COLOR,  1);    # Perimeter
+    @COLOR_INFILL     = (@COLOR_BASE2, 1);    # Infill
+    @COLOR_SUPPORT    = (@TOOL_SUPPORT, 1);   # Support
+    @COLOR_UNKNOWN    = (@COLOR_CYAN,  1);    # I don't know what that color's for!
+    
+    # 2DBed.pm and ./plater/2D.pm colors
+    @BED_COLOR        = map { ceil($_ * 255) } @COLOR_BASE2;      # do math -> multiply each value by 255 and round up
+    @BED_GRID         = map { ceil($_ * 255) } @COLOR_BASE1;      # Bed, Ground or Plate
+    @BED_SELECTED     = map { ceil($_ * 255) } @SELECTED_COLOR;   # Selected Model
+    @BED_OBJECTS      = map { ceil($_ * 255) } @COLOR_PARTS;      # Models on bed
+    @BED_DRAGGED      = map { ceil($_ * 255) } @COLOR_CYAN;       # Color while dragging
+    @BED_CENTER       = map { ceil($_ * 255) } @COLOR_BASE1;      # Cross hair
+    @BED_SKIRT        = map { ceil($_ * 255) } @COLOR_BASE01;     # Brim/Skirt
+    @BED_CLEARANCE    = map { ceil($_ * 255) } @COLOR_BLUE;       # not sure what that does
+    @BED_DARK         = map { ceil($_ * 255) } @COLOR_BASE01;     # not sure what that does
+    @BACKGROUND255    = map { ceil($_ * 255) } @BACKGROUND_COLOR; # Backgroud color, this time RGB
+    
+    # 2DToolpaths.pm colors : LAYERS Tab
+    @TOOL_DARK        = @COLOR_BASE01;  # Brim/Skirt
+    @TOOL_SUPPORT     = @COLOR_GREEN;   # Support
+    @TOOL_INFILL      = @COLOR_BASE1;   # Infill
+    @TOOL_COLOR       = @COLOR_BLUE;    # Perimeter
+    @TOOL_SHADE       = @COLOR_BASE2;   # Shade; model inside
+    
+    # Colors for *Layer heights...* dialog
+    @SPLINE_L_PEN     = map { ceil($_ * 255) } @COLOR_BASE01;  # Line color
+    @SPLINE_O_PEN     = map { ceil($_ * 255) } @COLOR_BASE1;   # Original color
+    @SPLINE_I_PEN     = map { ceil($_ * 255) } @COLOR_MAGENTA; # Interactive color
+    @SPLINE_R_PEN     = map { ceil($_ * 255) } @COLOR_VIOLET;  # Resulting color
 
 }
 
 sub getDefault{
-    @SELECTED_COLOR   = (0, 1, 0); # not really used... just a dummy.
+    $DEFAULT_COLORSCHEME   = 1;               # ENABLE default color scheme
+    # Define your function here
+    # getDefault is just a dummy function and uses the default values from above.
 }
 
 

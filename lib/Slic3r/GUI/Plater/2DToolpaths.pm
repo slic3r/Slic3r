@@ -8,7 +8,7 @@ use warnings;
 use utf8;
 
 use Slic3r::Print::State ':steps';
-use Wx qw(:misc :sizer :slider :statictext);
+use Wx qw(:misc :sizer :slider :statictext wxWHITE);
 use Wx::Event qw(EVT_SLIDER EVT_KEY_DOWN);
 use base qw(Wx::Panel Class::Accessor);
 
@@ -21,15 +21,15 @@ sub new {
     my $class = shift;
     my ($parent, $print) = @_;
 
+    my $self = $class->SUPER::new($parent, -1, wxDefaultPosition);
     if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( my $getScheme =  Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
         $getScheme->();
+        $self->SetBackgroundColour(Wx::Colour->new(@BACKGROUND255));
     } else {
         Slic3r::GUI::ColorScheme->getDefault();
+        $self->SetBackgroundColour(Wx::wxWHITE);
     }
-    
-    my $self = $class->SUPER::new($parent, -1, wxDefaultPosition);
-    $self->SetBackgroundColour(Wx::Colour->new(@BACKGROUND255));
-    
+
     # init GUI elements
     my $canvas = $self->{canvas} = Slic3r::GUI::Plater::2DToolpaths::Canvas->new($self, $print);
     my $slider = $self->{slider} = Wx::Slider->new(
@@ -328,7 +328,12 @@ sub Render {
     $self->SetCurrent($context);
     $self->InitGL;
     
-    glClearColor(1, 1, 1, 0);
+    if ($DEFAULT_COLORSCHEME==1){
+		glClearColor(1, 1, 1, 0);
+	} else{
+		glClearColor(@BACKGROUND_COLOR, 0);
+	}
+    
     glClear(GL_COLOR_BUFFER_BIT);
     
     if (!$self->GetParent->enabled || !$self->layers) {
@@ -424,7 +429,7 @@ sub Render {
         
         foreach my $layerm (@{$layer->regions}) {
             if ($object->step_done(STEP_PERIMETERS)) {
-                $self->color(@COLOR_PARTS);
+                $self->color(@TOOL_COLOR);
                 $self->_draw($object, $print_z, $_) for map @$_, @{$layerm->perimeters};
             }
             

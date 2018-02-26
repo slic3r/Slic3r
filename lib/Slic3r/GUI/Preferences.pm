@@ -100,7 +100,7 @@ sub new {
         labels      => ['Default','Solarized'], # add more schemes, if you want in ColorScheme.pm.
         values      => ['getDefault','getSolarized'], # add more schemes, if you want - those are the names of the corresponding function in ColorScheme.pm.
         default     => $Slic3r::GUI::Settings->{_}{colorscheme} // 'getDefault',
-        width       => 130
+        width       => 130,
     ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);

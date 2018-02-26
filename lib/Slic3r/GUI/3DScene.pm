@@ -788,7 +788,12 @@ sub Render {
     $self->SetCurrent($context);
     $self->InitGL;
     
-    glClearColor(1, 1, 1, 1);
+    if($SOLID_BACKGROUNDCOLOR == 1){
+        glClearColor(@BACKGROUND_COLOR, 0);
+    } else {
+        glClearColor(1, 1, 1, 1);
+    }
+    
     glClearDepth(1);
     glDepthFunc(GL_LESS);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -841,7 +846,7 @@ sub Render {
     }
     
     # draw fixed background
-    if ($self->background) {
+    if ($SOLID_BACKGROUNDCOLOR == 0 && $self->background) {
         glDisable(GL_LIGHTING);
         glPushMatrix();
         glLoadIdentity();
@@ -851,11 +856,10 @@ sub Render {
         glLoadIdentity();
         
         glBegin(GL_QUADS);
-        
-        glColor3f( @TOP_COLOR ); # top color
+        glColor3f( @BOTTOM_COLOR ); # bottom color
         glVertex2f(-1.0,-1.0);
         glVertex2f(1,-1.0);
-        glColor3f( @BOTTOM_COLOR ); # bottom color
+        glColor3f( @TOP_COLOR ); # top color
         glVertex2f(1, 1);
         glVertex2f(-1.0, 1);
         glEnd();
