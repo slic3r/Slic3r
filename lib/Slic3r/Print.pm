@@ -116,6 +116,7 @@ sub export_gcode {
     }
     
     # run post-processing scripts
+    # TODO: parse placeholder
     if (@{$self->config->post_process}) {
         $self->status_cb->(95, "Running post-processing scripts");
         $self->config->setenv;
@@ -124,6 +125,10 @@ sub export_gcode {
             my $truescriptname;
             my $newparam;
             my @myparam = split('!', $script);
+                # Possible line in Slic3r:
+                # "c:\Slic3r_PostProcessing\Slic3rPostProcessing.exe" ! --i ! --o "c:\temp\myoutputfilename.gcode"
+                # Result ==> "c:\Slic3r_PostProcessing\Slic3rPostProcessing.exe" --i $output_file --o "c:\temp\myoutputfilename.gcode"
+
             my $paranum = scalar(grep {defined $_} @myparam);
             $truescriptname=trim($myparam[0]);
             if ( $paranum == 1 ) {
@@ -135,8 +140,8 @@ sub export_gcode {
             } else {
                 die "The configured post-processing script is not executable: check permissions and parameter(s). ($truescriptname)\n";
             }
-            
-            Slic3r::debugf "  '%s' '%s'\n", $script, $output_file;
+
+            Slic3r::debugf "  '%s' %s\n", $truescriptname, $newparam;
             # -x doesn't return true on Windows except for .exe files
             if (($^O eq 'MSWin32') ? !(-e $truescriptname) : !(-x $truescriptname)) {
                 die "The configured post-processing script is not executable: check permissions. ($truescriptname)\n";
