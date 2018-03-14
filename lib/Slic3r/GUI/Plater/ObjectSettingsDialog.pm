@@ -24,7 +24,7 @@ sub new {
         model_object   => $params{model_object},
         obj_idx        => $params{obj_idx}
         ), "Adaptive Layers");
-    $self->{tabpanel}->AddPage($self->{layers} = Slic3r::GUI::Plater::ObjectDialog::LayersTab->new($self->{tabpanel}), "Layers");
+    $self->{tabpanel}->AddPage($self->{layers} = Slic3r::GUI::Plater::ObjectDialog::LayersTab->new($self->{tabpanel}), "Layer height table");
     
     my $buttons = $self->CreateStdDialogButtonSizer(wxOK);
     EVT_BUTTON($self, wxID_OK, sub {
@@ -249,9 +249,10 @@ sub new {
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     
     {
-        my $label = Wx::StaticText->new($self, -1, "You can use this section to override the default layer height for parts of this object. Set layer height to zero to skip portions of the input file.",
+        my $label = Wx::StaticText->new($self, -1, "You can use this section to override the layer height for parts of this object. The values from this table will override the default layer height and adaptive layer heights, but not the interactively modified height curve.",
             wxDefaultPosition, wxDefaultSize);
         $label->SetFont(Wx::SystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
+        $label->Wrap(800);
         $sizer->Add($label, 0, wxEXPAND | wxALL, 10);
     }
     

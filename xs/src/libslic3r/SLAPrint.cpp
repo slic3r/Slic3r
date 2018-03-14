@@ -296,6 +296,11 @@ SLAPrint::write_svg(const std::string &outputfile) const
         fprintf(f,"\t</g>\n");
     }
     fprintf(f,"</svg>\n");
+    // Ensure that the output gets written.
+    fflush(f);
+
+    // Close the file.
+    fclose(f);
 }
 
 coordf_t

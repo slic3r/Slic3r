@@ -78,7 +78,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("before_layer_gcode", coString);
     def->label = "Before layer change G-code";
-    def->tooltip = "This custom code is inserted at every layer change, right before the Z move. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z].";
+    def->tooltip = "This custom code is inserted at every layer change, right before the Z move. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num], [layer_z] and [current_retraction].";
     def->cli = "before-layer-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -522,6 +522,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("honeycomb");
     def->enum_values.push_back("3dhoneycomb");
+    def->enum_values.push_back("gyroid");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
@@ -534,6 +535,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Concentric");
     def->enum_labels.push_back("Honeycomb");
     def->enum_labels.push_back("3D Honeycomb");
+    def->enum_labels.push_back("Gyroid");
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
     def->enum_labels.push_back("Octagram Spiral");
@@ -755,7 +757,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("layer_gcode", coString);
     def->label = "After layer change G-code";
-    def->tooltip = "This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z].";
+    def->tooltip = "This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num], [layer_z] and [current_retraction].";
     def->cli = "after-layer-gcode|layer-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -1440,6 +1442,18 @@ PrintConfigDef::PrintConfigDef()
     def->min = 1;
     def->default_value = new ConfigOptionInt(1);
 
+    def = this->add("support_material_interface_extrusion_width", coFloatOrPercent);
+    def->label = "Support interface";
+    def->gui_type = "f_enum_open";
+    def->category = "Extrusion Width";
+    def->tooltip = "Set this to a non-zero value to set a manual extrusion width for support material interface. If expressed as percentage (for example 90%) it will be computed over layer height.";
+    def->sidetext = "mm or %";
+    def->cli = "support-material-interface-extrusion-width=s";
+    def->min = 0;
+    def->enum_values.push_back("0");
+    def->enum_labels.push_back("default");
+    def->default_value = new ConfigOptionFloatOrPercent(0, false);
+
     def = this->add("support_material_interface_layers", coInt);
     def->label = "Interface layers";
     def->category = "Support material";
@@ -1554,7 +1568,7 @@ PrintConfigDef::PrintConfigDef()
     
     def = this->add("toolchange_gcode", coString);
     def->label = "Tool change G-code";
-    def->tooltip = "This custom code is inserted right before every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder] and [next_extruder].";
+    def->tooltip = "This custom code is inserted right before every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder], [next_extruder], [previous_retraction] and [next_retraction].";
     def->cli = "toolchange-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -1669,9 +1683,16 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("z_steps_per_mm", coFloat);
     def->label = "Z full steps/mm";
-    def->tooltip = "Set this to the number of *full* steps (not microsteps) needed for moving the Z axis by 1mm; you can calculate this by dividing the number of microsteps configured in your firmware by the microstepping amount (8, 16, 32). Slic3r will round your configured layer height to the nearest multiple of that value in order to ensure the best accuracy. This is most useful for machines with imperial leadscrews or belt-driven Z or for unusual layer heights with metric leadscrews. Set to zero to disable this experimental feature.";
+    def->tooltip = "Set this to the number of *full* steps (not microsteps) needed for moving the Z axis by 1mm; you can calculate this by dividing the number of microsteps configured in your firmware by the microstepping amount (8, 16, 32). Slic3r will round your configured layer height to the nearest multiple of that value in order to ensure the best accuracy. This is most useful for machines with imperial leadscrews or belt-driven Z or for unusual layer heights with metric leadscrews. If you still experience wobbling, try using 4 * full_step to achieve the same motor phase pattern for every layer (important for belt driven z-axis). Set to zero to disable this experimental feature.";
     def->cli = "z-steps-per-mm=f";
     def->default_value = new ConfigOptionFloat(0);
+
+    def = this->add("sequential_print_priority", coInt);
+    def->label = "Sequential Printing Priority";
+    def->category = "Advanced";
+    def->tooltip ="Set this to alter object priority for sequential printing. Objects are first sorted by priority (smaller integers print first), then by height.";
+    def->cli = "sequential-print-priority=i";
+    def->default_value = new ConfigOptionInt(0);
 }
 
 const PrintConfigDef print_config_def;

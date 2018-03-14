@@ -1,4 +1,4 @@
-use Test::More tests => 28;
+use Test::More tests => 29;
 use strict;
 use warnings;
 
@@ -10,7 +10,7 @@ BEGIN {
 
 use List::Util qw(first);
 use Slic3r;
-use Slic3r::Geometry qw(epsilon scale);
+use Slic3r::Geometry qw(epsilon scale PI);
 use Slic3r::Geometry::Clipper qw(diff);
 use Slic3r::Test;
 
@@ -114,7 +114,6 @@ use Slic3r::Test;
     my %first_object_layer_speeds = ();  # F => 1
     Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
         my ($self, $cmd, $args, $info) = @_;
-        
         if ($info->{extruding} && $info->{dist_XY} > 0) {
             if ($layer_id <= $config->raft_layers) {
                 # this is a raft layer or the first object layer
@@ -139,6 +138,61 @@ use Slic3r::Test;
         'only one speed used in first object layer';
     ok +(keys %first_object_layer_speeds)[0] == $config->bridge_speed*60,
         'bridge speed used in first object layer';
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
+    $config->set('layer_height', 0.2);
+    $config->set('skirts', 0);
+    $config->set('raft_layers', 5);
+    $config->set('support_material_pattern', 'rectilinear');
+    $config->set('support_material_extrusion_width', 0.4);
+    $config->set('support_material_interface_extrusion_width', 0.6);
+    $config->set('support_material_interface_layers', 2);
+    $config->set('first_layer_extrusion_width', '100%');
+    $config->set('bridge_speed', 99);
+    $config->set('cooling', 0);                 # prevent speed alteration
+    $config->set('first_layer_speed', '100%');  # prevent speed alteration
+    $config->set('start_gcode', '');            # prevent any unexpected Z move
+    my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
+
+    my $layer_id = -1;
+    my $success = 1;
+    Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+        my ($self, $cmd, $args, $info) = @_;
+        if ($info->{extruding} && $info->{dist_XY} > 0) {
+            # this is a raft layer
+            if (($layer_id < $config->raft_layers) && ($layer_id > 0)) {
+                my $width;
+                my $support_layer_height = $config->nozzle_diameter->[0] * 0.75;
+
+                # support layer
+                if ($config->raft_layers - $config->support_material_interface_layers > $layer_id) {
+                    $width = $config->support_material_extrusion_width;
+                }
+                # interface layer
+                else {
+                    $width = $config->support_material_interface_extrusion_width;
+                }
+                my $expected_E_per_mm3 = 4 / (($config->filament_diameter->[0]**2) * PI);
+                my $expected_mm3_per_mm = $width * $support_layer_height + ($support_layer_height**2) / 4.0 * (PI-4.0);
+                my $expected_e_per_mm = $expected_E_per_mm3 * $expected_mm3_per_mm;
+                
+                my $e_per_mm = ($info->{dist_E} / $info->{dist_XY});;
+                
+                my $diff = abs($e_per_mm - $expected_e_per_mm);
+
+                if ($diff > 0.001) {
+                    $success = 0;
+                }
+            }
+        } elsif ($cmd eq 'G1' && $info->{dist_Z} > 0) {
+            $layer_id++;
+        }
+    });
+
+    ok $success,
+        'support material interface extrusion width is used for interfaces';
 }
 
 {

@@ -66,12 +66,8 @@ GCodeTimeEstimator::_accelerated_move(double length, double v, double accelerati
     if (half_length >= dx_init) {
         half_length -= (0.5*v*t_init);
         t += t_init;
-        t += (half_length / v); // rest of time is at constant speed.
-    } else {
-        // If too much displacement for the expected final velocity, we don't hit the max, so reduce 
-        // the average velocity to fit the displacement we actually are looking for.
-        t += std::sqrt(std::abs(length) * 2.0 * acceleration) / acceleration;
     }
+    t += (half_length / v); // constant speed for rest of the time and too short displacements
     return 2.0*t; // cut in half before, so double to get full time spent.
 }
 

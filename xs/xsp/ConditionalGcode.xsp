@@ -1,0 +1,18 @@
+%module{Slic3r::XS};
+
+%{
+#include <xsinit.h>
+#include "libslic3r/ConditionalGCode.hpp"
+%}
+
+
+%package{Slic3r::ConditionalGCode};
+
+%{
+PROTOTYPES: DISABLE
+std::string apply_math(std::string input)
+    CODE:
+        RETVAL = Slic3r::apply_math(input);
+    OUTPUT:
+        RETVAL
+%}

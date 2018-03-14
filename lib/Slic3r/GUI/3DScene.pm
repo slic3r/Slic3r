@@ -44,14 +44,11 @@ __PACKAGE__->mk_accessors( qw(_quat _dirty init
 use constant TRACKBALLSIZE  => 0.8;
 use constant TURNTABLE_MODE => 1;
 use constant GROUND_Z       => -0.02;
-use constant SELECTED_COLOR => [0,1,0];
-use constant HOVER_COLOR    => [0.4,0.9,0];
 use constant PI             => 3.1415927;
 
 # Constant to determine if Vertex Buffer objects are used to draw
 # bed grid and the cut plane for object separation.
-use constant HAS_VBO        => eval { glGenBuffersARB_p(0); 1 };
-
+use constant HAS_VBO        => eval { glGenBuffersARB_p(0); GL_ARRAY_BUFFER_ARB; 1 };
 
 # phi / theta angles to orient the camera.
 use constant VIEW_TOP        => [0.0,0.0];
@@ -61,6 +58,9 @@ use constant VIEW_RIGHT      => [-90.0,90.0];
 use constant VIEW_FRONT      => [0.0,90.0];
 use constant VIEW_BACK       => [180.0,90.0];
 use constant VIEW_DIAGONAL   => [45.0,45.0];
+
+# Color Scheme
+use Slic3r::GUI::ColorScheme;
 
 use constant GIMBAL_LOCK_THETA_MAX => 170;
 
@@ -72,9 +72,15 @@ use constant GIMBAL_LOCK_THETA_MAX => 170;
 
 sub new {
     my ($class, $parent) = @_;
-    
 
-    # We can only enable multi sample anti aliasing wih wxWidgets 3.0.3 and with a hacked Wx::GLCanvas,
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
+    }
+    
+    # We can only enable multi sample anti aliasing with wxWidgets 3.0.3 and with a hacked Wx::GLCanvas,
     # which exports some new WX_GL_XXX constants, namely WX_GL_SAMPLE_BUFFERS and WX_GL_SAMPLES.
     my $can_multisample =
         Wx::wxVERSION >= 3.000003 &&
@@ -100,6 +106,7 @@ sub new {
         $self->GetContext();
     }
 
+    $self->{can_multisample} = $can_multisample;
     $self->background(1);
     $self->_quat((0, 0, 0, 1));
     $self->_stheta(45);
@@ -744,10 +751,10 @@ sub InitGL {
     # Set antialiasing/multisampling
     glDisable(GL_LINE_SMOOTH);
     glDisable(GL_POLYGON_SMOOTH);
-    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_MULTISAMPLE) if ($self->{can_multisample});
     
     # ambient lighting
-    glLightModelfv_p(GL_LIGHT_MODEL_AMBIENT, 0.3, 0.3, 0.3, 1);
+    glLightModelfv_p(GL_LIGHT_MODEL_AMBIENT, 0.1, 0.1, 0.1, 1);
     
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -755,10 +762,10 @@ sub InitGL {
     
     # light from camera
     glLightfv_p(GL_LIGHT1, GL_POSITION, 1, 0, 1, 0);
-    glLightfv_p(GL_LIGHT1, GL_SPECULAR, 0.3, 0.3, 0.3, 1);
-    glLightfv_p(GL_LIGHT1, GL_DIFFUSE,  0.2, 0.2, 0.2, 1);
+    glLightfv_p(GL_LIGHT1, GL_SPECULAR, 0.8, 0.8, 0.8, 1);
+    glLightfv_p(GL_LIGHT1, GL_DIFFUSE,  0.4, 0.4, 0.4, 1);
     
-    # Enables Smooth Color Shading; try GL_FLAT for (lack of) fun.
+    # Enables Smooth Color Shading; try GL_FLAT for (lack of) fun. Default: GL_SMOOTH
     glShadeModel(GL_SMOOTH);
     
     glMaterialfv_p(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, 0.3, 0.3, 0.3, 1);
@@ -769,7 +776,7 @@ sub InitGL {
     # A handy trick -- have surface material mirror the color.
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     glEnable(GL_COLOR_MATERIAL);
-    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_MULTISAMPLE) if ($self->{can_multisample});
 }
  
 sub Render {
@@ -781,7 +788,12 @@ sub Render {
     $self->SetCurrent($context);
     $self->InitGL;
     
-    glClearColor(1, 1, 1, 1);
+    if($SOLID_BACKGROUNDCOLOR == 1){
+        glClearColor(@BACKGROUND_COLOR, 0);
+    } else {
+        glClearColor(1, 1, 1, 1);
+    }
+    
     glClearDepth(1);
     glDepthFunc(GL_LESS);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -804,6 +816,7 @@ sub Render {
     glLightfv_p(GL_LIGHT0, GL_DIFFUSE,  0.5, 0.5, 0.5, 1);
     
     if ($self->enable_picking) {
+        glDisable(GL_MULTISAMPLE) if ($self->{can_multisample});
         glDisable(GL_LIGHTING);
         $self->draw_volumes(1);
         glFlush();
@@ -833,7 +846,7 @@ sub Render {
     }
     
     # draw fixed background
-    if ($self->background) {
+    if ($SOLID_BACKGROUNDCOLOR == 0 && $self->background) {
         glDisable(GL_LIGHTING);
         glPushMatrix();
         glLoadIdentity();
@@ -843,10 +856,10 @@ sub Render {
         glLoadIdentity();
         
         glBegin(GL_QUADS);
-        glColor3f(0.0,0.0,0.0);
+        glColor3f( @BOTTOM_COLOR ); # bottom color
         glVertex2f(-1.0,-1.0);
         glVertex2f(1,-1.0);
-        glColor3f(10/255,98/255,144/255);
+        glColor3f( @TOP_COLOR ); # top color
         glVertex2f(1, 1);
         glVertex2f(-1.0, 1);
         glEnd();
@@ -880,7 +893,7 @@ sub Render {
             # fall back on old behavior
             glVertexPointer_c(3, GL_FLOAT, 0, $self->bed_triangles->ptr());
         }
-        glColor4f(0.8, 0.6, 0.5, 0.4);
+        glColor4f( @GROUND_COLOR );
         glNormal3d(0,0,1);
         glDrawArrays(GL_TRIANGLES, 0, $self->bed_triangles->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -890,7 +903,7 @@ sub Render {
         glEnable(GL_DEPTH_TEST);
     
         # draw grid
-        glLineWidth(3);
+        glLineWidth(2);
         glEnableClientState(GL_VERTEX_ARRAY);
         my $grid_vertex;
         if (HAS_VBO) {
@@ -903,7 +916,7 @@ sub Render {
             # fall back on old behavior
             glVertexPointer_c(3, GL_FLOAT, 0, $self->bed_grid_lines->ptr());
         }
-        glColor4f(0.2, 0.2, 0.2, 0.4);
+        glColor4f( @GRID_COLOR );
         glNormal3d(0,0,1);
         glDrawArrays(GL_LINES, 0, $self->bed_grid_lines->elements / 3);
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -964,7 +977,7 @@ sub Render {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glBegin(GL_QUADS);
-        glColor4f(0.8, 0.8, 0.8, 0.5);
+        glColor4f( @COLOR_CUTPLANE );
         if ($self->cutting_plane_axis == X) {
             glVertex3f($bb->x_min+$plane_z, $bb->y_min-20, $bb->z_min-20);
             glVertex3f($bb->x_min+$plane_z, $bb->y_max+20, $bb->z_min-20);
@@ -1049,9 +1062,9 @@ sub draw_volumes {
             my $b = ($volume_idx & 0x00FF0000) >> 16;
             glColor4f($r/255.0, $g/255.0, $b/255.0, 1);
         } elsif ($volume->selected) {
-            glColor4f(@{ &SELECTED_COLOR }, $volume->color->[3]);
+            glColor4f( @SELECTED_COLOR , $volume->color->[3]);
         } elsif ($volume->hover) {
-            glColor4f(@{ &HOVER_COLOR }, $volume->color->[3]);
+            glColor4f( @HOVER_COLOR, $volume->color->[3]);
         } else {
             glColor4f(@{ $volume->color });
         }
@@ -1164,6 +1177,7 @@ use OpenGL qw(:glconstants :gluconstants :glufunctions);
 use List::Util qw(first min max);
 use Slic3r::Geometry qw(scale unscale epsilon);
 use Slic3r::Print::State ':steps';
+use Slic3r::GUI::ColorScheme;
 
 __PACKAGE__->mk_accessors(qw(
     colors
@@ -1175,12 +1189,20 @@ __PACKAGE__->mk_accessors(qw(
     _objects_by_volumes
 ));
 
-sub default_colors { [1,0.95,0.2,1], [1,0.45,0.45,1], [0.5,1,0.5,1], [0.5,0.5,1,1] }
+sub default_colors { [@COLOR_PARTS], [@COLOR_INFILL], [@COLOR_SUPPORT], [@COLOR_UNKNOWN] }
 
 sub new {
     my $class = shift;
     
     my $self = $class->SUPER::new(@_);
+    
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
+    }
+    
     $self->colors([ $self->default_colors ]);
     $self->color_by('volume');      # object | volume
     $self->color_toolpaths_by('role'); # role | extruder
