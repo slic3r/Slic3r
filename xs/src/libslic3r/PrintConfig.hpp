@@ -376,6 +376,7 @@ public:
     ConfigOptionFloat               bridge_angle;
     ConfigOptionInt                 bottom_solid_layers;
     ConfigOptionFloat               bridge_flow_ratio;
+    ConfigOptionFloat               over_bridge_flow_ratio;
     ConfigOptionFloat               bridge_speed;
     ConfigOptionBool                ensure_vertical_shell_thickness;
     ConfigOptionEnum<InfillPattern> top_fill_pattern;
@@ -416,6 +417,7 @@ protected:
         OPT_PTR(bridge_angle);
         OPT_PTR(bottom_solid_layers);
         OPT_PTR(bridge_flow_ratio);
+        OPT_PTR(over_bridge_flow_ratio);
         OPT_PTR(bridge_speed);
         OPT_PTR(ensure_vertical_shell_thickness);
         OPT_PTR(top_fill_pattern);

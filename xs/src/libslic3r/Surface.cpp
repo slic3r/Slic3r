@@ -22,7 +22,9 @@ Surface::is_solid() const
         || this->surface_type == stBottom
         || this->surface_type == stBottomBridge
         || this->surface_type == stInternalSolid
-        || this->surface_type == stInternalBridge;
+        || this->surface_type == stInternalBridge
+        || this->surface_type == stInternalOverBridge
+		|| this->surface_type == stTopOverBridge;
 }
 
 bool
@@ -30,7 +32,15 @@ Surface::is_external() const
 {
     return this->surface_type == stTop
         || this->surface_type == stBottom
-        || this->surface_type == stBottomBridge;
+        || this->surface_type == stBottomBridge
+		|| this->surface_type == stTopOverBridge;
+}
+
+bool
+Surface::is_top() const
+{
+    return this->surface_type == stTop
+		|| this->surface_type == stTopOverBridge;
 }
 
 bool
@@ -38,6 +48,7 @@ Surface::is_internal() const
 {
     return this->surface_type == stInternal
         || this->surface_type == stInternalBridge
+		|| this->surface_type == stInternalOverBridge
         || this->surface_type == stInternalSolid
         || this->surface_type == stInternalVoid;
 }
@@ -54,6 +65,12 @@ Surface::is_bridge() const
 {
     return this->surface_type == stBottomBridge
         || this->surface_type == stInternalBridge;
+}
+bool
+Surface::is_overBridge() const
+{
+    return this->surface_type == stInternalOverBridge
+		|| this->surface_type == stTopOverBridge;
 }
 
 BoundingBox get_extents(const Surface &surface)
@@ -91,7 +108,8 @@ const char* surface_type_to_color_name(const SurfaceType surface_type)
         case stBottomBridge:    return "rgb(0,0,255)"; // "blue";
         case stInternal:        return "rgb(255,255,128)"; // yellow 
         case stInternalSolid:   return "rgb(255,0,255)"; // magenta
-        case stInternalBridge:  return "rgb(0,255,255)";
+        case stInternalBridge:  return "rgb(0,255,255)"; // cyan
+		case stInternalOverBridge: return "rgb(0,255,128)"; // green-cyan
         case stInternalVoid:    return "rgb(128,128,128)";
         case stPerimeter:       return "rgb(128,0,0)"; // maroon
         default:                return "rgb(64,64,64)";
@@ -127,6 +145,8 @@ void export_surface_type_legend_to_svg(SVG &svg, const Point &pos)
     svg.draw_legend(Point(pos_x, pos_y), "internal solid" , surface_type_to_color_name(stInternalSolid));
     pos_x += step_x;
     svg.draw_legend(Point(pos_x, pos_y), "internal bridge", surface_type_to_color_name(stInternalBridge));
+    pos_x += step_x;
+    svg.draw_legend(Point(pos_x, pos_y), "internal over bridge", surface_type_to_color_name(stInternalOverBridge));
     pos_x += step_x;
     svg.draw_legend(Point(pos_x, pos_y), "internal void"  , surface_type_to_color_name(stInternalVoid));
 }

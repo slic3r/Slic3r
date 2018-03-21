@@ -84,6 +84,7 @@ std::string PresetHints::maximum_volumetric_flow_description(const PresetBundle 
     double support_material_interface_speed = print_config.get_abs_value("support_material_interface_speed", support_material_speed);
     double bridge_speed                     = print_config.opt_float("bridge_speed");
     double bridge_flow_ratio                = print_config.opt_float("bridge_flow_ratio");
+    double over_bridge_flow_ratio           = print_config.opt_float("over_bridge_flow_ratio");
     double perimeter_speed                  = print_config.opt_float("perimeter_speed");
     double external_perimeter_speed         = print_config.get_abs_value("external_perimeter_speed", perimeter_speed);
     double gap_fill_speed                   = print_config.opt_float("gap_fill_speed");

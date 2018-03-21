@@ -121,7 +121,7 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
         fill_boundaries.reserve(number_polygons(surfaces));
         bool has_infill = this->region()->config.fill_density.value > 0.;
         for (const Surface &surface : this->fill_surfaces.surfaces) {
-            if (surface.surface_type == stTop) {
+            if (surface.is_top()) {
                 // Collect the top surfaces, inflate them and trim them by the bottom surfaces.
                 // This gives the priority to bottom surfaces.
                 surfaces_append(top, offset_ex(surface.expolygon, float(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS), surface);
@@ -132,13 +132,12 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
                 if (! surface.empty())
                     bridges.push_back(surface);
             }
-            bool internal_surface = surface.surface_type != stTop && ! surface.is_bottom();
             if (has_infill || surface.surface_type != stInternal) {
-                if (internal_surface)
+                if (!surface.is_external())
                     // Make a copy as the following line uses the move semantics.
                     internal.push_back(surface);
                 polygons_append(fill_boundaries, STDMOVE(surface.expolygon));
-            } else if (internal_surface)
+            } else if (!surface.is_external())
                 internal.push_back(STDMOVE(surface));
         }
     }
@@ -304,7 +303,7 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
                     s2.clear();
                 }
             }
-            if (s1.surface_type == stTop)
+            if (s1.is_top())
                 // Trim the top surfaces by the bottom surfaces. This gives the priority to the bottom surfaces.
                 polys = diff(polys, bottom_polygons);
             surfaces_append(
@@ -357,13 +356,13 @@ LayerRegion::prepare_fill_surfaces()
     // if no solid layers are requested, turn top/bottom surfaces to internal
     if (this->region()->config.top_solid_layers == 0) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface)
-            if (surface->surface_type == stTop)
+            if (surface->is_top())
                 surface->surface_type = (this->layer()->object()->config.infill_only_where_needed) ? 
                     stInternalVoid : stInternal;
     }
     if (this->region()->config.bottom_solid_layers == 0) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->surface_type == stBottom || surface->surface_type == stBottomBridge)
+            if (surface->is_bottom())
                 surface->surface_type = stInternal;
         }
     }

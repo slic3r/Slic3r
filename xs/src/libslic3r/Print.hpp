@@ -199,6 +199,7 @@ public:
     void process_external_surfaces();
     void discover_vertical_shells();
     void bridge_over_infill();
+	void replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replacement, SurfaceType st_under_it);
     void _make_perimeters();
     void _infill();
     void clip_fill_surfaces();

@@ -19,6 +19,9 @@ enum SurfaceType {
     stInternalSolid,
     // 1st layer of dense infill over sparse infill, printed with a bridging extrusion flow.
     stInternalBridge,
+    // 2nd layer of dense infill over sparse infill/nothing, printed with an over-extruding flow.
+    stInternalOverBridge,
+    stTopOverBridge,
     // stInternal turns into void surfaces if the sparse infill is used for supports only,
     // or if sparse infill layers get combined into a single layer.
     stInternalVoid,
@@ -97,9 +100,11 @@ public:
     void clear() { expolygon.clear(); }
     bool is_solid() const;
     bool is_external() const;
+    bool is_top() const;
     bool is_internal() const;
     bool is_bottom() const;
     bool is_bridge() const;
+	bool is_overBridge() const;
 };
 
 typedef std::vector<Surface> Surfaces;

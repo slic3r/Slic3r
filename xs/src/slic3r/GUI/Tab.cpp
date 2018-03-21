@@ -538,6 +538,7 @@ void TabPrint::build()
 
 		optgroup = page->new_optgroup(_(L("Flow")));
 		optgroup->append_single_option_line("bridge_flow_ratio");
+		optgroup->append_single_option_line("over_bridge_flow_ratio");
 
 		optgroup = page->new_optgroup(_(L("Other")));
 		optgroup->append_single_option_line("clip_multipart_objects");

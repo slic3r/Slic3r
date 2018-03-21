@@ -113,6 +113,17 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(1);
 
+    def = this->add("over_bridge_flow_ratio", coFloat);
+    def->label = L("Over-bridge flow ratio");
+    def->category = L("Advanced");
+    def->tooltip = L("This factor affects the amount of plastic to overextrude "
+                   "when we are filling on top of a bridge surface."
+                   "With a number >1, we can retreive the correct z-height "
+				   "even if the bridged layer has fallen a bit.");
+    def->cli = "over-bridge-flow-ratio=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(1);
+
     def = this->add("bridge_speed", coFloat);
     def->label = L("Bridges");
     def->category = L("Speed");
@@ -2012,6 +2023,10 @@ std::string FullPrintConfig::validate()
     // --bridge-flow-ratio
     if (this->bridge_flow_ratio <= 0)
         return "Invalid value for --bridge-flow-ratio";
+    
+    // --over-bridge-flow-ratio
+    if (this->over_bridge_flow_ratio <= 0)
+        return "Invalid value for --over-bridge-flow-ratio";
     
     // extruder clearance
     if (this->extruder_clearance_radius <= 0)

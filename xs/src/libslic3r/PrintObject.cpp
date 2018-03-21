@@ -363,10 +363,18 @@ void PrintObject::_prepare_infill()
     // the following step needs to be done before combination because it may need
     // to remove only half of the combined infill
     this->bridge_over_infill();
+	std::cout<<"INTERNAL BRIDGE ===========================================\n";
+	this->replaceSurfaceType( stInternalSolid, stInternalOverBridge, stInternalBridge);
+	std::cout<<"BOTTOM BRIDGE ===========================================\n";
+	this->replaceSurfaceType( stInternalSolid, stInternalOverBridge, stBottomBridge);
+	std::cout<<"TOP BRIDGE ===========================================\n";
+	this->replaceSurfaceType( stTop, stTopOverBridge, stInternalBridge);
+	this->replaceSurfaceType( stTop, stTopOverBridge, stBottomBridge);
 
     // combine fill surfaces to honor the "infill every N layers" option
     this->combine_infill();
 
+	
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
     for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id) {
         for (const Layer *layer : this->layers) {
@@ -435,6 +443,7 @@ void PrintObject::detect_surfaces_type()
                     // unless internal shells are requested
                     Layer       *upper_layer = (idx_layer + 1 < this->layer_count()) ? this->layers[idx_layer + 1] : nullptr;
                     Layer       *lower_layer = (idx_layer > 0) ? this->layers[idx_layer - 1] : nullptr;
+                    Layer       *under_lower_layer = (idx_layer > 1) ? this->layers[idx_layer - 2] : nullptr;
                     // collapse very narrow parts (using the safety offset in the diff is not enough)
                     float        offset = layerm->flow(frExternalPerimeter).scaled_width() / 10.f;
 
@@ -478,6 +487,7 @@ void PrintObject::detect_surfaces_type()
                                 diff(layerm_slices_surfaces, to_polygons(lower_layer->slices), true), 
                                 -offset, offset),
                             surface_type_bottom_other);
+							
                         // if user requested internal shells, we need to identify surfaces
                         // lying on other slices not belonging to this region
                         if (interface_shells) {
@@ -494,6 +504,7 @@ void PrintObject::detect_surfaces_type()
                                 stBottom);
                         }
 #endif
+						
                     } else {
                         // if no lower layer, all surfaces of this one are solid
                         // we clone surfaces because we're going to clear the slices collection
@@ -501,6 +512,22 @@ void PrintObject::detect_surfaces_type()
                         for (Surface &surface : bottom)
                             surface.surface_type = surface_type_bottom_1st;
                     }
+					
+					// Any surface lying on the void is a true bottom bridge (an overhang) 
+					// and we have to conpensate if we are over that
+                    // Surfaces bottomOverBridge;
+					// if(under_lower_layer){
+						// surfaces_append(
+							// bottomOverBridge,
+							// offset2_ex(
+								// diff(layerm_slices_surfaces, to_polygons(under_lower_layer->slices), true), 
+								// -offset, offset),
+							// stInternalOverBridge);
+						// std::cout<<idx_layer<<" under_lower_layer "<<under_lower_layer->slices.expolygons.size()<<" > "<<bottomOverBridge.size()<<", bot="<<bottom.size()<<"\n";
+						// for(int i=0;i<under_lower_layer->slices.expolygons.size();i++) std::cout<<" area of under_lower_layer "<<under_lower_layer->slices.expolygons[i].area()<<"\n";
+						// for(int i=0;i<bottom.size();i++) std::cout<<" area of bottom "<<bottom[i].area()<<"\n";
+						// for(int i=0;i<bottomOverBridge.size();i++) std::cout<<" area of overbridge "<<bottomOverBridge[i].area()<<"\n";
+					// }
                     
                     // now, if the object contained a thin membrane, we could have overlapping bottom
                     // and top surfaces; let's do an intersection to discover them and consider them
@@ -522,6 +549,7 @@ void PrintObject::detect_surfaces_type()
                         std::vector<std::pair<Slic3r::ExPolygons, SVG::ExPolygonAttributes>> expolygons_with_attributes;
                         expolygons_with_attributes.emplace_back(std::make_pair(union_ex(top),                           SVG::ExPolygonAttributes("green")));
                         expolygons_with_attributes.emplace_back(std::make_pair(union_ex(bottom),                        SVG::ExPolygonAttributes("brown")));
+                        expolygons_with_attributes.emplace_back(std::make_pair(union_ex(bottomOverBridge),              SVG::ExPolygonAttributes("grey")));
                         expolygons_with_attributes.emplace_back(std::make_pair(to_expolygons(layerm->slices.surfaces),  SVG::ExPolygonAttributes("black")));
                         SVG::export_expolygons(debug_out_path("1_detect_surfaces_type_%d_region%d-layer_%f.svg", iRun ++, idx_region, layer->print_z).c_str(), expolygons_with_attributes);
                     }
@@ -535,6 +563,12 @@ void PrintObject::detect_surfaces_type()
                     {
                         Polygons topbottom = to_polygons(top);
                         polygons_append(topbottom, to_polygons(bottom));
+                        // ExPolygons overExPolygons = diff_ex(to_polygons(bottomOverBridge), topbottom, false);
+						// surfaces_append(surfaces_out,
+                            // overExPolygons,
+                            // stInternalOverBridge);
+						// for(int i=0;i<overExPolygons.size();i++) std::cout<<" area of overExPolygons "<<overExPolygons[i].area()<<"\n";
+                        // polygons_append(topbottom, to_polygons(bottomOverBridge));
                         surfaces_append(surfaces_out,
                             diff_ex(layerm_slices_surfaces, topbottom, false),
                             stInternal);
@@ -1105,6 +1139,178 @@ void PrintObject::bridge_over_infill()
         }
     }
 }
+
+
+/* This method applies overextrude flow to the first internal solid layer above
+   bridge (which is over sparse infill) note: it's almost complete copy/paste from the method behind,
+   i think it should be merged before gitpull that.
+   */
+void PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replacement, SurfaceType st_under_it)
+{
+    BOOST_LOG_TRIVIAL(info) << "overextrude over Bridge...";
+
+    FOREACH_REGION(this->_print, region) {
+        size_t region_id = region - this->_print->regions.begin();
+        
+        FOREACH_LAYER(this, layer_it) {
+            // skip first layer
+            if (layer_it == this->layers.begin()) continue;
+            
+            Layer* layer        = *layer_it;
+            LayerRegion* layerm = layer->regions[region_id];
+            
+            // extract the stInternalSolid surfaces that might be transformed into bridges
+            Polygons internal_solid;
+            layerm->fill_surfaces.filter_by_type(st_to_replace, &internal_solid);
+			
+			double internsolidareainit=0;
+			for (ExPolygon &ex : union_ex(internal_solid)) internsolidareainit+=ex.area();
+			
+			Polygons internal_over_tot_init;
+            layerm->fill_surfaces.filter_by_type(st_replacement, &internal_over_tot_init);
+			double totoverareaInit=0;
+			for (ExPolygon &ex : union_ex(internal_over_tot_init)) totoverareaInit+=ex.area();
+
+			Polygons stBottom_init;
+            layerm->fill_surfaces.filter_by_type(stBottom, &stBottom_init);
+			double bottomeareainit=0;
+			for (ExPolygon &ex : union_ex(stBottom_init)) bottomeareainit+=ex.area();
+
+			Polygons stBottomBridge_init;
+            layerm->fill_surfaces.filter_by_type(stBottomBridge, &stBottomBridge_init);
+			double bottombridgearea=0;
+			for (ExPolygon &ex : union_ex(stBottomBridge_init)) bottombridgearea+=ex.area();
+			
+			Polygons stIntBridge_init;
+            layerm->fill_surfaces.filter_by_type(st_under_it, &stIntBridge_init);
+			double intbridgeareainit=0;
+			for (ExPolygon &ex : union_ex(stIntBridge_init)) intbridgeareainit+=ex.area();
+			
+			std::cout<<"init st_replacement="<<totoverareaInit<<", bottombridgearea="<<bottombridgearea
+			<<", st_to_replace="<<internsolidareainit<<", bottomeareainit="<<bottomeareainit
+			<<", st_under_it="<<intbridgeareainit<<"\n";
+            
+            // check whether the lower area is deep enough for absorbing the extra flow
+            // (for obvious physical reasons but also for preventing the bridge extrudates
+            // from overflowing in 3D preview)
+            ExPolygons to_overextrude;
+            {
+                Polygons to_overextrude_pp = internal_solid;
+                
+                // get previous layer
+                if (int(layer_it - this->layers.begin()) - 1 >= 0) {
+                    const Layer* lower_layer = this->layers[int(layer_it - this->layers.begin()) - 1];
+                    
+                    // iterate through regions and collect internal surfaces
+                    Polygons lower_internal;
+                    FOREACH_LAYERREGION(lower_layer, lower_layerm_it){
+						Polygons lower_internal_OK;
+						Polygons lower_internal_Bridge;
+						Polygons lower_internal_Over;
+                        (*lower_layerm_it)->fill_surfaces.filter_by_type(st_replacement, &lower_internal_OK);
+                        (*lower_layerm_it)->fill_surfaces.filter_by_type(st_under_it, &lower_internal_Bridge);
+                        (*lower_layerm_it)->fill_surfaces.filter_by_type(st_to_replace, &lower_internal_Over);
+						double okarea =0, bridgearea=0, overarea=0;
+						for (ExPolygon &ex : union_ex(lower_internal_OK)) okarea+=ex.area();
+						for (ExPolygon &ex : union_ex(lower_internal_Bridge)) bridgearea+=ex.area();
+						for (ExPolygon &ex : union_ex(lower_internal_Over)) overarea+=ex.area();
+						std::cout<<"@layer "<<int(layer_it - this->layers.begin())
+							<<" region under  has "<<lower_internal_OK.size()<<" st_replacement : "<<okarea
+							<<" , has "<<lower_internal_Bridge.size()<<" st_under_it: "<<bridgearea
+							<<" , has "<<lower_internal_Over.size()<<" st_to_replace: "<<overarea<<"\n";
+                        (*lower_layerm_it)->fill_surfaces.filter_by_type(st_under_it, &lower_internal);
+					}
+						double sumarea=0;
+						for (ExPolygon &ex : union_ex(lower_internal)) sumarea+=ex.area();
+						std::cout<<"@layer "<<int(layer_it - this->layers.begin())<<" region under  has "<<union_ex(lower_internal).size()<<" sum bridge : "<<sumarea<<"\n";
+                    
+                    // intersect such lower internal surfaces with the candidate solid surfaces
+                    to_overextrude_pp = intersection(to_overextrude_pp, lower_internal);
+                }
+                
+                // there's no point in overextruding too thin/short regions
+                //FIXME Vojtech: The offset2 function is not a geometric offset, 
+                // therefore it may create 1) gaps, and 2) sharp corners, which are outside the original contour.
+                // The gaps will be filled by a separate region, which makes the infill less stable and it takes longer.
+                // {
+                    // float min_width = float(bridge_flow.scaled_width()) * 3.f;
+                    // to_overextrude_pp = offset2(to_overextrude_pp, -min_width, +min_width);
+                // }
+                
+                if (to_overextrude_pp.empty()) continue;
+                
+                // convert into ExPolygons
+                to_overextrude = union_ex(to_overextrude_pp);
+				double finalarea = 0;
+				for (ExPolygon &ex : to_overextrude) finalarea+=ex.area();
+				std::cout<<"find an overextruding area of "<<finalarea<<" on layer "<<int(layer_it - this->layers.begin())<<"\n";
+            }
+            
+            #ifdef SLIC3R_DEBUG
+            printf("Bridging " PRINTF_ZU " internal areas at layer " PRINTF_ZU "\n", to_overextrude.size(), layer->id());
+            #endif
+            
+            // compute the remaning internal solid surfaces as difference
+            ExPolygons not_to_overextrude = diff_ex(internal_solid, to_polygons(to_overextrude), true);
+            to_overextrude = intersection_ex(to_polygons(to_overextrude), internal_solid, true);
+            // build the new collection of fill_surfaces
+            layerm->fill_surfaces.remove_type(st_to_replace);
+			double overareafinal = 0, solidareafinal=0;
+            for (ExPolygon &ex : to_overextrude){
+				overareafinal += ex.area();
+                layerm->fill_surfaces.surfaces.push_back(Surface(st_replacement, ex));
+			}
+            for (ExPolygon &ex : not_to_overextrude){
+				solidareafinal += ex.area();
+				layerm->fill_surfaces.surfaces.push_back(Surface(st_to_replace, ex));
+			}
+			Polygons internal_over_tot;
+            layerm->fill_surfaces.filter_by_type(stInternalOverBridge, &internal_over_tot);
+			double totoverarea=0;
+			for (ExPolygon &ex : union_ex(internal_over_tot)) totoverarea+=ex.area();
+			std::cout<<"final: st_to_replace="<<solidareafinal<<", st_replacement="<<overareafinal<<", totstInternalOverBridge="<<totoverarea<<"\n";
+            /*
+            # exclude infill from the layers below if needed
+            # see discussion at https://github.com/alexrj/Slic3r/issues/240
+            # Update: do not exclude any infill. Sparse infill is able to absorb the excess material.
+            if (0) {
+                my $excess = $layerm->extruders->{infill}->bridge_flow->width - $layerm->height;
+                for (my $i = $layer_id-1; $excess >= $self->get_layer($i)->height; $i--) {
+                    Slic3r::debugf "  skipping infill below those areas at layer %d\n", $i;
+                    foreach my $lower_layerm (@{$self->get_layer($i)->regions}) {
+                        my @new_surfaces = ();
+                        # subtract the area from all types of surfaces
+                        foreach my $group (@{$lower_layerm->fill_surfaces->group}) {
+                            push @new_surfaces, map $group->[0]->clone(expolygon => $_),
+                                @{diff_ex(
+                                    [ map $_->p, @$group ],
+                                    [ map @$_, @$to_overextrude ],
+                                )};
+                            push @new_surfaces, map Slic3r::Surface->new(
+                                expolygon       => $_,
+                                surface_type    => S_TYPE_INTERNALVOID,
+                            ), @{intersection_ex(
+                                [ map $_->p, @$group ],
+                                [ map @$_, @$to_overextrude ],
+                            )};
+                        }
+                        $lower_layerm->fill_surfaces->clear;
+                        $lower_layerm->fill_surfaces->append($_) for @new_surfaces;
+                    }
+                    
+                    $excess -= $self->get_layer($i)->height;
+                }
+            }
+            */
+
+#ifdef SLIC3R_DEBUG_SLICE_PROCESSING
+            layerm->export_region_slices_to_svg_debug("7_overextrude_over_bridge");
+            layerm->export_region_fill_surfaces_to_svg_debug("7_overextrude_over_bridge");
+#endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
+        }
+    }
+}
+
 
 SlicingParameters PrintObject::slicing_parameters() const
 {
@@ -1699,8 +1905,8 @@ void PrintObject::discover_horizontal_shells()
                     continue;
 //                Slic3r::debugf "Layer %d has %s surfaces\n", $i, ($type == S_TYPE_TOP) ? 'top' : 'bottom';
                 
-                size_t solid_layers = (type == stTop) ? region_config.top_solid_layers.value : region_config.bottom_solid_layers.value;                
-                for (int n = (type == stTop) ? i-1 : i+1; std::abs(n - i) < solid_layers; (type == stTop) ? -- n : ++ n) {
+                size_t solid_layers = (type == stTop || type == stTopOverBridge) ? region_config.top_solid_layers.value : region_config.bottom_solid_layers.value;                
+                for (int n = (type == stTop || type == stTopOverBridge) ? i-1 : i+1; std::abs(n - i) < solid_layers; (type == stTop || type == stTopOverBridge) ? -- n : ++ n) {
                     if (n < 0 || n >= int(this->layers.size()))
                         continue;
 //                    Slic3r::debugf "  looking for neighbors on layer %d...\n", $n;                  

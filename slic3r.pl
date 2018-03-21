@@ -531,6 +531,7 @@ Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
                         Set a different extrusion width for support material
     --infill-overlap    Overlap between infill and perimeters (default: $config->{infill_overlap})
     --bridge-flow-ratio Multiplier for extrusion when bridging (> 0, default: $config->{bridge_flow_ratio})
+    --over-bridge-flow-ratio Multiplier for extrusion when solid-filling over a bridge (> 0, default: $config->{over_bridge_flow_ratio})
   
    Multiple extruder options:
     --extruder-offset   Offset of each extruder, if firmware doesn't handle the displacement
