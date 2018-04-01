@@ -44,7 +44,7 @@ sub new {
     $self->{on_instances_moved} = sub {};
     
     $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_OBJECTS), wxSOLID);
-    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
+    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_INSTANCE), wxSOLID);
     $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
     $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_DRAGGED), wxSOLID);
     $self->{bed_brush}          = Wx::Brush->new(Wx::Colour->new(@BED_COLOR), wxSOLID);
