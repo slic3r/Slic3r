@@ -77,7 +77,9 @@ public:
         { Polygons out; this->polygons_covered_by_spacing(out, scaled_epsilon); return out; }
     size_t items_count() const;
     void flatten(ExtrusionEntityCollection* retval) const;
-    ExtrusionEntityCollection flatten() const;
+	ExtrusionEntityCollection flatten() const;
+	void flattenIfSortable(ExtrusionEntityCollection* retval) const;
+	ExtrusionEntityCollection flattenIfSortable() const;
     double min_mm3_per_mm() const;
 
     // Following methods shall never be called on an ExtrusionEntityCollection.

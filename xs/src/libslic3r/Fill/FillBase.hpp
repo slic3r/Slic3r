@@ -9,6 +9,7 @@
 #include "../libslic3r.h"
 #include "../BoundingBox.hpp"
 #include "../PrintConfig.hpp"
+#include "../Flow.hpp"
 
 namespace Slic3r {
 
@@ -20,12 +21,16 @@ struct FillParams
         memset(this, 0, sizeof(FillParams));
         // Adjustment does not work.
         dont_adjust = true;
+		flow_mult = 1.f;
     }
 
     bool        full_infill() const { return density > 0.9999f; }
 
-    // Fill density, fraction in <0, 1>
-    float       density;
+	// Fill density, fraction in <0, 1>
+	float       density;
+
+	// Fill extruding flow multiplier, fraction in <0, 1>. Used by FillSmooth
+	float       flow_mult;
 
     // Don't connect the fill lines around the inner perimeter.
     bool        dont_connect;
@@ -75,6 +80,9 @@ public:
     // Do not sort the fill lines to optimize the print head path?
     virtual bool no_sort() const { return false; }
 
+    // This method have to fill the ExtrusionEntityCollection. It call fill_surface by default
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out );
+	
     // Perform the fill.
     virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
 

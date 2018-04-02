@@ -29,7 +29,7 @@ enum GCodeFlavor {
 
 enum InfillPattern {
     ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
-    ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
+    ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipSmooth,
 };
 
 enum SupportMaterialPattern {
@@ -77,6 +77,7 @@ template<> inline t_config_enum_values& ConfigOptionEnum<InfillPattern>::get_enu
         keys_map["hilbertcurve"]        = ipHilbertCurve;
         keys_map["archimedeanchords"]   = ipArchimedeanChords;
         keys_map["octagramspiral"]      = ipOctagramSpiral;
+        keys_map["smooth"]      = ipSmooth;
     }
     return keys_map;
 }

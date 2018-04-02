@@ -1271,8 +1271,9 @@ void GCode::process_layer(
                             point_inside_surface(i, fill->first_point())) {
                             if (islands[i].by_region.empty())
                                 islands[i].by_region.assign(print.regions.size(), ObjectByExtruder::Island::Region());
-                            islands[i].by_region[region_id].infills.append(fill->entities);
-                            break;
+							//don't do fill->entities because it will discard no_sort
+							islands[i].by_region[region_id].infills.append(fill->flattenIfSortable().entities);
+							break;
                         }
                 }
             } // for regions
@@ -2001,14 +2002,34 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
     for (const ObjectByExtruder::Island::Region &region : by_region) {
         m_config.apply(print.regions[&region - &by_region.front()]->config);
 		ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
-        for (ExtrusionEntity *fill : chained.entities) {
-            auto *eec = dynamic_cast<ExtrusionEntityCollection*>(fill);
-            if (eec) {
-				ExtrusionEntityCollection chained2 = eec->chained_path_from(m_last_pos, false);
-				for (ExtrusionEntity *ee : chained2.entities)
-                    gcode += this->extrude_entity(*ee, "infill");
-            } else
-                gcode += this->extrude_entity(*fill, "infill");
+		gcode += extrude_infill(print, chained);
+	}
+	return gcode;
+}
+
+//recursive algorithm to explore the collection tree
+std::string GCode::extrude_infill(const Print &print, const ExtrusionEntityCollection &collection)
+{
+	std::string gcode;
+
+	ExtrusionEntityCollection chained;
+	if (collection.no_sort) chained = collection;
+	else chained = collection.chained_path_from(m_last_pos, false);
+	for (ExtrusionEntity *fill : chained.entities) {
+		auto *eec = dynamic_cast<ExtrusionEntityCollection*>(fill);
+		if (eec) {
+			std::cout << "recursive infill with role: " << fill->role() << " : " << (fill->role() == ExtrusionRole::erBridgeInfill) << "\n";
+			gcode += extrude_infill(print, *eec);
+		}
+		else {
+			std::cout << "extrude infill with role: " << fill->role() << " : " << (fill->role() == ExtrusionRole::erBridgeInfill) << "\n";
+			if (/*print.config.disable_fan_top_layers.value && */fill->role() == ExtrusionRole::erTopSolidInfill){ //TODO: add && params.get(disable_fan_top_layers)
+				// gcode += ";_DISABLE_FAN_START\n";
+			}
+			gcode += this->extrude_entity(*fill, "infill");
+			if (/*print.config.disable_fan_top_layers.value && */fill->role() == ExtrusionRole::erTopSolidInfill){ //TODO: add && params.get(disable_fan_top_layers)
+				// gcode += ";_DISABLE_FAN_END\n";
+			}
         }
     }
     return gcode;

@@ -3,6 +3,7 @@
 #include "../ClipperUtils.hpp"
 #include "../Surface.hpp"
 #include "../PrintConfig.hpp"
+#include "../ExtrusionEntityCollection.hpp"
 
 #include "FillBase.hpp"
 #include "FillConcentric.hpp"
@@ -13,6 +14,7 @@
 #include "FillRectilinear.hpp"
 #include "FillRectilinear2.hpp"
 #include "FillRectilinear3.hpp"
+#include "FillSmooth.hpp"
 
 namespace Slic3r {
 
@@ -34,6 +36,7 @@ Fill* Fill::new_from_type(const InfillPattern type)
     case ipArchimedeanChords:   return new FillArchimedeanChords();
     case ipHilbertCurve:        return new FillHilbertCurve();
     case ipOctagramSpiral:      return new FillOctagramSpiral();
+	case ipSmooth:              return new FillSmooth();
     default: CONFESS("unknown type"); return nullptr;
     }
 }
@@ -128,6 +131,27 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
 
     out_angle += float(M_PI/2.);
     return std::pair<float, Point>(out_angle, out_shift);
+}
+
+void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out ){
+    Polylines polylines = this->fill_surface(surface, params);
+    if (polylines.empty())
+        return;
+
+    // Save into layer.
+    auto *eec = new ExtrusionEntityCollection();
+    out.entities.push_back(eec);
+    // Only concentric fills are not sorted.
+    eec->no_sort = this->no_sort();
+    extrusion_entities_append_paths(
+        eec->entities, STDMOVE(polylines),
+        flow.bridge ?
+            erBridgeInfill :
+            (surface->is_solid() ?
+                ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+                erInternalInfill),
+				flow.mm3_per_mm() * params.flow_mult, flow.width * params.flow_mult, flow.height);
+    
 }
 
 } // namespace Slic3r

@@ -228,9 +228,6 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         params.density = 0.01 * density;
 //        params.dont_adjust = true;
         params.dont_adjust = false;
-        Polylines polylines = f->fill_surface(&surface, params);
-        if (polylines.empty())
-            continue;
 
         // calculate actual flow from spacing (which might have been adjusted by the infill
         // pattern generator)
@@ -244,22 +241,10 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 		
 		float flow_percent = 1;
 		if(surface.is_overBridge()){
-			flow_percent = layerm.region()->config.over_bridge_flow_ratio;
+			params.flow_mult = layerm.region()->config.over_bridge_flow_ratio;
 		}
-
-        // Save into layer.
-        auto *eec = new ExtrusionEntityCollection();
-        out.entities.push_back(eec);
-        // Only concentric fills are not sorted.
-        eec->no_sort = f->no_sort();
-        extrusion_entities_append_paths(
-            eec->entities, STDMOVE(polylines),
-            is_bridge ?
-                erBridgeInfill :
-                (surface.is_solid() ?
-                    ((surface.surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
-                    erInternalInfill),
-            flow.mm3_per_mm()*flow_percent, flow.width*flow_percent, flow.height);
+		
+        f->fill_surface_extrusion(&surface, params, flow, out);
     }
 
     // add thin fill regions
