@@ -116,19 +116,44 @@ sub export_gcode {
     }
     
     # run post-processing scripts
+    # TODO: parse placeholder
     if (@{$self->config->post_process}) {
         $self->status_cb->(95, "Running post-processing scripts");
         $self->config->setenv;
+        
         for my $script (@{$self->config->post_process}) {
-            Slic3r::debugf "  '%s' '%s'\n", $script, $output_file;
-            # -x doesn't return true on Windows except for .exe files
-            if (($^O eq 'MSWin32') ? !(-e $script) : !(-x $script)) {
-                die "The configured post-processing script is not executable: check permissions. ($script)\n";
+            my $truescriptname;
+            my $newparam;
+            my @myparam = split('!', $script);
+                # Possible line in Slic3r:
+                # "c:\Slic3r_PostProcessing\Slic3rPostProcessing.exe" ! --i ! --o "c:\temp\myoutputfilename.gcode"
+                # Result ==> "c:\Slic3r_PostProcessing\Slic3rPostProcessing.exe" --i $output_file --o "c:\temp\myoutputfilename.gcode"
+
+            my $paranum = scalar(grep {defined $_} @myparam);
+            $truescriptname=trim($myparam[0]);
+            if ( $paranum == 1 ) {
+                $newparam = trim($output_file);
+            } elsif ( $paranum == 2 ){
+                $newparam = trim($output_file)." ".trim($myparam[1]);
+            } elsif ( $paranum == 3 ){
+                $newparam = trim($myparam[1])." ".trim($output_file)." ".trim($myparam[2]);
+            } else {
+                die "The configured post-processing script is not executable: check permissions and parameter(s). ($truescriptname)\n";
             }
-            system($script, $output_file);
+
+            Slic3r::debugf "  '%s' %s\n", $truescriptname, $newparam;
+            # -x doesn't return true on Windows except for .exe files
+            if (($^O eq 'MSWin32') ? !(-e $truescriptname) : !(-x $truescriptname)) {
+                die "The configured post-processing script is not executable: check permissions. ($truescriptname)\n";
+            }
+            
+            system($truescriptname, $newparam);
         }
     }
 }
+
+# Trim string whitespaces start and end
+sub  trim { my $s = shift; $s =~ s/^\s+|\s+$//g; return $s };
 
 # Export SVG slices for the offline SLA printing.
 sub export_svg {
