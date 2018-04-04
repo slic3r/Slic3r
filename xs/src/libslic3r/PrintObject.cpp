@@ -288,25 +288,25 @@ PrintObject::invalidate_step(PrintObjectStep step)
     
     // propagate to dependent steps
     if (step == posPerimeters) {
-        this->invalidate_step(posPrepareInfill);
-        this->_print->invalidate_step(psSkirt);
-        this->_print->invalidate_step(psBrim);
+        invalidated |= this->invalidate_step(posPrepareInfill);
+        invalidated |= this->_print->invalidate_step(psSkirt);
+        invalidated |= this->_print->invalidate_step(psBrim);
     } else if (step == posDetectSurfaces) {
-        this->invalidate_step(posPrepareInfill);
+        invalidated |= this->invalidate_step(posPrepareInfill);
     } else if (step == posPrepareInfill) {
-        this->invalidate_step(posInfill);
+        invalidated |= this->invalidate_step(posInfill);
     } else if (step == posInfill) {
-        this->_print->invalidate_step(psSkirt);
-        this->_print->invalidate_step(psBrim);
+        invalidated |= this->_print->invalidate_step(psSkirt);
+        invalidated |= this->_print->invalidate_step(psBrim);
     } else if (step == posSlice) {
-        this->invalidate_step(posPerimeters);
-        this->invalidate_step(posDetectSurfaces);
-        this->invalidate_step(posSupportMaterial);
+        invalidated |= this->invalidate_step(posPerimeters);
+        invalidated |= this->invalidate_step(posDetectSurfaces);
+        invalidated |= this->invalidate_step(posSupportMaterial);
     }else if (step == posLayers) {
-        this->invalidate_step(posSlice);
+        invalidated |= this->invalidate_step(posSlice);
     } else if (step == posSupportMaterial) {
-        this->_print->invalidate_step(psSkirt);
-        this->_print->invalidate_step(psBrim);
+        invalidated |= this->_print->invalidate_step(psSkirt);
+        invalidated |= this->_print->invalidate_step(psBrim);
     }
     
     return invalidated;
