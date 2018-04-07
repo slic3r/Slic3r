@@ -98,6 +98,7 @@ SV* perl_to_SV_clone_ref(const T &t) {
     return sv;
 }
 
+// // poor man's  std::ref(c++11) ?
 template <class T> 
 class Ref {
     T* val;
@@ -108,7 +109,8 @@ public:
     operator T*() const { return val; }
     static const char* CLASS() { return ClassTraits<T>::name_ref; }
 };
-  
+
+// poor mam's std::shared_ptr(C++11) ?
 template <class T>
 class Clone {
     T* val;
@@ -118,6 +120,7 @@ public:
     Clone(const T& t) : val(new T(t)) {}
     operator T*() const { return val; }
     static const char* CLASS() { return ClassTraits<T>::name; }
+    Clone& operator=(const T& t) { delete val; val = new T(t); return *this; }
 };
 
 SV* ConfigBase__as_hash(ConfigBase* THIS);
