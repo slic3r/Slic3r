@@ -2018,18 +2018,9 @@ std::string GCode::extrude_infill(const Print &print, const ExtrusionEntityColle
 	for (ExtrusionEntity *fill : chained.entities) {
 		auto *eec = dynamic_cast<ExtrusionEntityCollection*>(fill);
 		if (eec) {
-			std::cout << "recursive infill with role: " << fill->role() << " : " << (fill->role() == ExtrusionRole::erBridgeInfill) << "\n";
 			gcode += extrude_infill(print, *eec);
-		}
-		else {
-			std::cout << "extrude infill with role: " << fill->role() << " : " << (fill->role() == ExtrusionRole::erBridgeInfill) << "\n";
-			if (/*print.config.disable_fan_top_layers.value && */fill->role() == ExtrusionRole::erTopSolidInfill){ //TODO: add && params.get(disable_fan_top_layers)
-				// gcode += ";_DISABLE_FAN_START\n";
-			}
+		} else {
 			gcode += this->extrude_entity(*fill, "infill");
-			if (/*print.config.disable_fan_top_layers.value && */fill->role() == ExtrusionRole::erTopSolidInfill){ //TODO: add && params.get(disable_fan_top_layers)
-				// gcode += ";_DISABLE_FAN_END\n";
-			}
         }
     }
     return gcode;

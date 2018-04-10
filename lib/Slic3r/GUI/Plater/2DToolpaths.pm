@@ -491,16 +491,20 @@ sub Render {
 sub _draw {
     my ($self, $object, $print_z, $path) = @_;
     
-    my @paths = ($path->isa('Slic3r::ExtrusionLoop') || $path->isa('Slic3r::ExtrusionMultiPath'))
-        ? @$path
-        : ($path);
+	if ($path->isa('Slic3r::ExtrusionPath::Collection')) {
+        $self->_draw($object, $print_z, $_) for @{$path};
+	}else{
+         my @paths = ($path->isa('Slic3r::ExtrusionLoop') || $path->isa('Slic3r::ExtrusionMultiPath'))
+             ? @$path
+             : ($path);
     
-    $self->_draw_path($object, $print_z, $_) for @paths;
+        $self->_draw_path($object, $print_z, $_) for @paths;
+    }
 }
 
 sub _draw_path {
     my ($self, $object, $print_z, $path) = @_;
-    
+	
     return if $print_z - $path->height > $self->z - epsilon;
     
     if (abs($print_z - $self->z) < epsilon) {

@@ -53,6 +53,66 @@ protected:
 	InfillPattern fillPattern[3];
 };
 
+
+class FillSmoothTriple : public FillSmooth
+{
+public:
+	FillSmoothTriple() {
+		nbPass = 3;
+		anglePass[0] = float(M_PI / 4);
+		anglePass[1] = -float(M_PI / 4);
+		anglePass[2] = 0;
+		fillPattern[0] = InfillPattern::ipRectilinear;
+		fillPattern[1] = InfillPattern::ipRectilinear;
+		fillPattern[2] = InfillPattern::ipRectilinear;
+		rolePass[0] = erSolidInfill;
+		rolePass[1] = erSolidInfill;
+		rolePass[2] = erTopSolidInfill;
+		percentWidth[0] = 0.9;
+		percentWidth[1] = 1.4;
+		percentWidth[2] = 2.5;
+		percentFlow[0] = 0.7 / percentWidth[0];
+		percentFlow[1] = 0.3 / percentWidth[1];
+		percentFlow[2] = 0.0 / percentWidth[2];
+		double extrusionMult = 1.0;
+		percentFlow[0] *= extrusionMult;
+		percentFlow[1] *= extrusionMult;
+		percentFlow[2] *= extrusionMult;
+	}
+	virtual Fill* clone() const { return new FillSmoothTriple(*this); }
+
+};
+
+class FillSmoothHilbert : public FillSmooth
+{
+public:
+	FillSmoothHilbert() {
+		nbPass = 3;
+		anglePass[0] = 0;
+		anglePass[1] = -float(M_PI / 4);
+		anglePass[2] = float(M_PI / 4);
+		fillPattern[0] = InfillPattern::ipHilbertCurve;
+		fillPattern[1] = InfillPattern::ipRectilinear;
+		fillPattern[2] = InfillPattern::ipRectilinear;
+		rolePass[0] = erSolidInfill;
+		rolePass[1] = erSolidInfill;
+		rolePass[2] = erTopSolidInfill;
+		percentWidth[0] = 1;
+		percentWidth[1] = 1;
+		percentWidth[2] = 2;
+		percentFlow[0] = 0.8 / percentWidth[0];
+		percentFlow[1] = 0.1 / percentWidth[1];
+		percentFlow[2] = 0.1 / percentWidth[2];
+		double extrusionMult = 1.0;
+		percentFlow[0] *= extrusionMult;
+		percentFlow[1] *= extrusionMult;
+		percentFlow[2] *= extrusionMult;
+	}
+	virtual Fill* clone() const { return new FillSmoothHilbert(*this); }
+
+};
+
+
 } // namespace Slic3r
 
 #endif // slic3r_FillSmooth_hpp_

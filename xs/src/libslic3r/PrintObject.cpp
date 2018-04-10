@@ -363,11 +363,8 @@ void PrintObject::_prepare_infill()
     // the following step needs to be done before combination because it may need
     // to remove only half of the combined infill
     this->bridge_over_infill();
-	std::cout<<"INTERNAL BRIDGE ===========================================\n";
 	this->replaceSurfaceType( stInternalSolid, stInternalOverBridge, stInternalBridge);
-	std::cout<<"BOTTOM BRIDGE ===========================================\n";
 	this->replaceSurfaceType( stInternalSolid, stInternalOverBridge, stBottomBridge);
-	std::cout<<"TOP BRIDGE ===========================================\n";
 	this->replaceSurfaceType( stTop, stTopOverBridge, stInternalBridge);
 	this->replaceSurfaceType( stTop, stTopOverBridge, stBottomBridge);
 
@@ -1185,10 +1182,6 @@ void PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_r
             layerm->fill_surfaces.filter_by_type(st_under_it, &stIntBridge_init);
 			double intbridgeareainit=0;
 			for (ExPolygon &ex : union_ex(stIntBridge_init)) intbridgeareainit+=ex.area();
-			
-			std::cout<<"init st_replacement="<<totoverareaInit<<", bottombridgearea="<<bottombridgearea
-			<<", st_to_replace="<<internsolidareainit<<", bottomeareainit="<<bottomeareainit
-			<<", st_under_it="<<intbridgeareainit<<"\n";
             
             // check whether the lower area is deep enough for absorbing the extra flow
             // (for obvious physical reasons but also for preventing the bridge extrudates
@@ -1214,16 +1207,12 @@ void PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_r
 						for (ExPolygon &ex : union_ex(lower_internal_OK)) okarea+=ex.area();
 						for (ExPolygon &ex : union_ex(lower_internal_Bridge)) bridgearea+=ex.area();
 						for (ExPolygon &ex : union_ex(lower_internal_Over)) overarea+=ex.area();
-						std::cout<<"@layer "<<int(layer_it - this->layers.begin())
-							<<" region under  has "<<lower_internal_OK.size()<<" st_replacement : "<<okarea
-							<<" , has "<<lower_internal_Bridge.size()<<" st_under_it: "<<bridgearea
-							<<" , has "<<lower_internal_Over.size()<<" st_to_replace: "<<overarea<<"\n";
+
                         (*lower_layerm_it)->fill_surfaces.filter_by_type(st_under_it, &lower_internal);
 					}
 						double sumarea=0;
 						for (ExPolygon &ex : union_ex(lower_internal)) sumarea+=ex.area();
-						std::cout<<"@layer "<<int(layer_it - this->layers.begin())<<" region under  has "<<union_ex(lower_internal).size()<<" sum bridge : "<<sumarea<<"\n";
-                    
+						
                     // intersect such lower internal surfaces with the candidate solid surfaces
                     to_overextrude_pp = intersection(to_overextrude_pp, lower_internal);
                 }
@@ -1241,9 +1230,6 @@ void PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_r
                 
                 // convert into ExPolygons
                 to_overextrude = union_ex(to_overextrude_pp);
-				double finalarea = 0;
-				for (ExPolygon &ex : to_overextrude) finalarea+=ex.area();
-				std::cout<<"find an overextruding area of "<<finalarea<<" on layer "<<int(layer_it - this->layers.begin())<<"\n";
             }
             
             #ifdef SLIC3R_DEBUG
@@ -1268,8 +1254,8 @@ void PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_r
             layerm->fill_surfaces.filter_by_type(stInternalOverBridge, &internal_over_tot);
 			double totoverarea=0;
 			for (ExPolygon &ex : union_ex(internal_over_tot)) totoverarea+=ex.area();
-			std::cout<<"final: st_to_replace="<<solidareafinal<<", st_replacement="<<overareafinal<<", totstInternalOverBridge="<<totoverarea<<"\n";
-            /*
+			
+			/*
             # exclude infill from the layers below if needed
             # see discussion at https://github.com/alexrj/Slic3r/issues/240
             # Update: do not exclude any infill. Sparse infill is able to absorb the excess material.
@@ -1768,7 +1754,7 @@ void PrintObject::_infill()
     ### $_->fill_surfaces->clear for map @{$_->regions}, @{$object->layers};
     */
     
-    this->state.set_done(posInfill);
+	this->state.set_done(posInfill);
 }
 
 // Only active if config->infill_only_where_needed. This step trims the sparse infill,

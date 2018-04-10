@@ -35,8 +35,10 @@ Fill* Fill::new_from_type(const InfillPattern type)
 //  case ipGrid:                return new FillGrid();
     case ipArchimedeanChords:   return new FillArchimedeanChords();
     case ipHilbertCurve:        return new FillHilbertCurve();
-    case ipOctagramSpiral:      return new FillOctagramSpiral();
+	case ipOctagramSpiral:      return new FillOctagramSpiral();
 	case ipSmooth:              return new FillSmooth();
+	case ipSmoothTriple:        return new FillSmoothTriple();
+	case ipSmoothHilbert:       return new FillSmoothHilbert();
     default: CONFESS("unknown type"); return nullptr;
     }
 }
