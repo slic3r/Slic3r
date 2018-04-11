@@ -959,6 +959,10 @@ ModelVolume::swap(ModelVolume &other)
     std::swap(this->mesh,       other.mesh);
     std::swap(this->config,     other.config);
     std::swap(this->modifier,   other.modifier);
+	
+	std::swap(this->input_file, other.input_file);
+	std::swap(this->obj_idx,    other.obj_idx);
+	std::swap(this->vol_idx,    other.vol_idx);
 }
 
 t_model_material_id
