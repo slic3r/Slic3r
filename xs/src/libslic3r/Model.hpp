@@ -460,8 +460,8 @@ class ModelVolume
     
     /// Input file path needed for reloading the volume from disk
     std::string input_file; ///< Input file path
-    int obj_idx;            ///< Input file object index
-    int vol_idx;            ///< Input file volume index	
+    int input_file_obj_idx; ///< Input file object index
+    int input_file_vol_idx; ///< Input file volume index
     
     bool modifier;  ///< Is it an object to be printed, or a modifier volume?
     
