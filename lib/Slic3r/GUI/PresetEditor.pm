@@ -1323,7 +1323,7 @@ sub build {
                 # look for devices
                 my $entries;
                 {
-                    my $res = Net::Bonjour->new('http');
+                    my $res = Net::Bonjour->new('octoprint');
                     $res->discover;
                     $entries = [ $res->entries ];
                 }
