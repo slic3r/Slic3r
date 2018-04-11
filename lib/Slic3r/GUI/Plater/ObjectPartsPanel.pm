@@ -358,7 +358,8 @@ sub on_btn_load {
                 my $new_volume = $self->{model_object}->add_volume($volume);
                 $new_volume->set_modifier($is_modifier);
                 $new_volume->set_name(basename($input_file));
-                
+                # input_file needed to reload / update modifiers' volumes
+                $new_volume->set_input_file($input_file);
                 # apply the same translation we applied to the object
                 $new_volume->mesh->translate(@{$self->{model_object}->origin_translation});
                 

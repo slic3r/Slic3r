@@ -2319,10 +2319,19 @@ sub reload_from_disk {
         $o->clear_instances;
         $o->add_instance($_) for @{$model_object->instances};
         
-        if ($o->volumes_count == $model_object->volumes_count) {
+        if (($o->volumes_count) <= ($model_object->volumes_count)) {
             for my $i (0..($o->volumes_count-1)) {
                 $o->get_volume($i)->config->apply($model_object->get_volume($i)->config);
             }
+            if ($o->volumes_count != $model_object->volumes_count) {
+                for my $i ($o->volumes_count..($model_object->volumes_count-1)) {
+                    # add_volume merges material and config attributes
+                    my $new_volume = $o->add_volume($model_object->get_volume($i));
+                    $new_volume->set_name($model_object->get_volume($i)->name);
+                    $new_volume->set_input_file($model_object->get_volume($i)->input_file);
+                    $new_volume->set_modifier($model_object->get_volume($i)->modifier);
+				}
+			}
         }
     }
     
