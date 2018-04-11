@@ -44,7 +44,7 @@ cat << EOF >> $plistfile
 				<string>STL</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>Slic3r.icns</string>
+			<string>stl.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>STL</string>
 			<key>CFBundleTypeRole</key>
@@ -83,6 +83,23 @@ cat << EOF >> $plistfile
 			<string>STL</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
+            <key>LISsAppleDefaultForType</key>
+            <true/>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+		</dict>
+    <dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>gcode</string>
+				<string>GCODE</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>gcode.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>GCODE</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
             <key>LISsAppleDefaultForType</key>
             <true/>
             <key>LSHandlerRank</key>
