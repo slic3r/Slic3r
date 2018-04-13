@@ -349,6 +349,8 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_firmware_retraction;
     ConfigOptionBool                use_relative_e_distances;
     ConfigOptionBool                use_volumetric_e;
+    ConfigOptionBool                use_set_and_wait_extruder;
+    ConfigOptionBool                use_set_and_wait_bed;
     
     GCodeConfig(bool initialize = true) : StaticPrintConfig() {
         if (initialize)
@@ -390,6 +392,8 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(use_firmware_retraction);
         OPT_PTR(use_relative_e_distances);
         OPT_PTR(use_volumetric_e);
+        OPT_PTR(use_set_and_wait_extruder);
+        OPT_PTR(use_set_and_wait_bed);
         
         return NULL;
     };

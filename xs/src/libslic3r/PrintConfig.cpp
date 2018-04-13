@@ -1631,6 +1631,19 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "use-relative-e-distances!";
     def->default_value = new ConfigOptionBool(false);
 
+    def = this->add("use_set_and_wait_extruder", coBool);
+    def->label = "Use Set-and-Wait GCode (Extruder)";
+    def->tooltip = "If your firmware supports a set and wait gcode for temperature changes, use it for automatically inserted temperature gcode for all extruders. Does not affect custom gcode.";
+    def->cli = "use-set-and-wait-extruder!";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("use_set_and_wait_bed", coBool);
+    def->label = "Use Set-and-Wait GCode (Bed)";
+    def->tooltip = "If your firmware supports a set and wait gcode for temperature changes, use it for automatically inserted temperature gcode for the heatbed. Does not affect custom gcode.";
+    def->cli = "use-set-and-wait-heatbed!";
+    def->default_value = new ConfigOptionBool(false);
+
+
     def = this->add("use_volumetric_e", coBool);
     def->label = "Use volumetric E";
     def->tooltip = "This experimental setting uses outputs the E values in cubic millimeters instead of linear millimeters. If your firmware doesn't already know filament diameter(s), you can put commands like 'M200 D[filament_diameter_0] T0' in your start G-code in order to turn volumetric mode on and use the filament diameter associated to the filament selected in Slic3r. This is only supported in recent Marlin.";

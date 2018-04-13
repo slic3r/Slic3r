@@ -1217,6 +1217,7 @@ sub options {
         retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
         printer_settings_id
         printer_notes
+        use_set_and_wait_bed use_set_and_wait_extruder
     );
 }
 
@@ -1369,6 +1370,8 @@ sub build {
             $optgroup->append_single_option_line('pressure_advance');
             $optgroup->append_single_option_line('vibration_limit');
             $optgroup->append_single_option_line('z_steps_per_mm');
+            $optgroup->append_single_option_line('use_set_and_wait_extruder');
+            $optgroup->append_single_option_line('use_set_and_wait_bed');
         }
     }
     {
