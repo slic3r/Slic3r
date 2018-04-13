@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Slic3r::XS;
-use Test::More tests => 7;
+use Test::More tests => 10;
 {
     {
         my $test_string = "{if{3 == 4}} string";
@@ -21,6 +21,13 @@ use Test::More tests => 7;
 
     {
         my $test_string = "{if{3 == 3}} string";
+
+        my $result = Slic3r::ConditionalGCode::apply_math($test_string);
+        is $result, " string", 'If statement with nested bracket removes itself only on resulting true, does not strip text outside of brackets.';
+    }
+
+    {
+        my $test_string = "{if 3 > 2} string";
 
         my $result = Slic3r::ConditionalGCode::apply_math($test_string);
         is $result, " string", 'If statement with nested bracket removes itself only on resulting true, does not strip text outside of brackets.';
@@ -49,4 +56,18 @@ use Test::More tests => 7;
         my $result = Slic3r::ConditionalGCode::apply_math($test_string);
         is $result, "M104 S{a}; Sets temp to 20", 'string (minus brackets) on failure to parse.';
     }
+    {
+        my $config = Slic3r::Config->new;
+        $config->set('infill_extruder', 2);
+        $config->normalize;
+        my $test_string = "{if [infill_extruder] == 2}M104 S210";
+        my $pp = Slic3r::GCode::PlaceholderParser->new;
+        $pp->apply_config($config);
+        my $interim = $pp->process($test_string);
+        is $interim, "{if 2 == 2}M104 S210", 'Placeholder parser works inside conditional gcode.';
+
+        my $result = Slic3r::ConditionalGCode::apply_math($interim);
+        is $result, "M104 S210", 'If statement with nested bracket removes itself only on resulting true, does not strip text outside of brackets.';
+    }
+
 }
