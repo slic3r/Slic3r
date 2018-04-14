@@ -133,6 +133,8 @@ sub contact_area {
             last;
         }
         my $layer = $object->get_layer($layer_id);
+		last if $conf->support_material_max_layers
+			&& $layer_id > $conf->support_material_max_layers;
 
         if ($buildplate_only) {
             # Collect the top surfaces up to this layer and merge them.

@@ -1394,6 +1394,16 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("0.2 (detachable)");
     def->default_value = new ConfigOptionFloat(0.2);
 
+    def = this->add("support_material_max_layers", coInt);
+    def->label = "Max layer count for supports";
+    def->category = "Support material";
+    def->tooltip = "Disable support generation above this layer. Setting this to 0 will disable this feature.";
+    def->sidetext = "layers";
+    def->cli = "support-material-max-layers=f";
+    def->full_label = "Maximum layer count for support generation";
+    def->min = 0;
+    def->default_value = new ConfigOptionInt(0);
+
     def = this->add("support_material_enforce_layers", coInt);
     def->label = "Enforce support for the first";
     def->category = "Support material";
