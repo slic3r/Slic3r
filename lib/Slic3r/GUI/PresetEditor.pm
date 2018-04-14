@@ -927,6 +927,10 @@ sub _update {
             support_material_interface_layers dont_support_bridges
             support_material_extrusion_width support_material_interface_extrusion_width
             support_material_contact_distance);
+    
+    # Disable features that need support to be enabled.            
+    $self->get_field($_)->toggle($config->support_material)
+        for qw(support_material_max_layers);
 
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
