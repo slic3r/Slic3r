@@ -1213,7 +1213,15 @@ sub load_file {
         my $i = 0;
         foreach my $obj_idx (@obj_idx) {
             $self->{objects}[$obj_idx]->input_file($input_file);
-            $self->{objects}[$obj_idx]->input_file_obj_idx($i++);
+            $self->{objects}[$obj_idx]->input_file_obj_idx($i);
+            
+            # additional information for reloading
+            for my $vol_idx (0..($self->{objects}[$obj_idx]->volumes_count-1)) {
+                $self->{objects}[$obj_idx]->get_volume($vol_idx)->set_input_file($input_file);
+                $self->{objects}[$obj_idx]->get_volume($vol_idx)->set_obj_idx($i);
+                $self->{objects}[$obj_idx]->get_volume($vol_idx)->set_vol_idx($vol_idx);
+            }
+            $i++;
         }
 
         $self->statusbar->SetStatusText("Loaded " . basename($input_file));
