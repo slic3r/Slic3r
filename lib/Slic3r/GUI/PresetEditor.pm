@@ -456,7 +456,7 @@ sub options {
         first_layer_acceleration default_acceleration
         skirts skirt_distance skirt_height min_skirt_length
         brim_connections_width brim_width interior_brim_width
-        support_material support_material_threshold support_material_enforce_layers
+        support_material support_material_threshold support_material_max_layers support_material_enforce_layers
         raft_layers
         support_material_pattern support_material_spacing support_material_angle 
         support_material_interface_layers support_material_interface_spacing
@@ -600,6 +600,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Support material');
             $optgroup->append_single_option_line('support_material');
             $optgroup->append_single_option_line('support_material_threshold');
+            $optgroup->append_single_option_line('support_material_max_layers');
             $optgroup->append_single_option_line('support_material_enforce_layers');
         }
         {
@@ -926,6 +927,10 @@ sub _update {
             support_material_interface_layers dont_support_bridges
             support_material_extrusion_width support_material_interface_extrusion_width
             support_material_contact_distance);
+    
+    # Disable features that need support to be enabled.            
+    $self->get_field($_)->toggle($config->support_material)
+        for qw(support_material_max_layers);
 
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
