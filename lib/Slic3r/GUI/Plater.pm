@@ -1177,7 +1177,7 @@ sub add_tin {
 
 sub load_file {
     my $self = shift;
-    my ($input_file, $obj_idx) = @_;
+    my ($input_file, $obj_idx_to_load) = @_;
     
     $Slic3r::GUI::Settings->{recent}{skein_directory} = dirname($input_file);
     wxTheApp->save_settings;
@@ -1203,24 +1203,31 @@ sub load_file {
             }
         }
         
-        if (defined $obj_idx) {
-            return () if $obj_idx >= $model->objects_count;
-            @obj_idx = $self->load_model_objects($model->get_object($obj_idx));
+        for my $obj_idx (0..($model->objects_count-1)) {
+            my $object = $model->objects->[$obj_idx];
+            $object->set_input_file($input_file);
+            for my $vol_idx (0..($object->volumes_count-1)) {
+                my $volume = $object->get_volume($vol_idx);
+                $volume->set_input_file($input_file);
+                $volume->set_input_file_obj_idx($obj_idx);
+                $volume->set_input_file_obj_idx($vol_idx);
+            }
+        }
+        
+        my $i = 0;
+        
+        if (defined $obj_idx_to_load) {
+            return () if $obj_idx_to_load >= $model->objects_count;
+            @obj_idx = $self->load_model_objects($model->get_object($obj_idx_to_load));
+            $i = $obj_idx_to_load;
         } else {
             @obj_idx = $self->load_model_objects(@{$model->objects});
         }
         
-        my $i = 0;
         foreach my $obj_idx (@obj_idx) {
+            my $object = $self->{objects}[$obj_idx];
             $self->{objects}[$obj_idx]->input_file($input_file);
             $self->{objects}[$obj_idx]->input_file_obj_idx($i);
-            
-            # additional information for reloading
-            for my $vol_idx (0..($self->{objects}[$obj_idx]->volumes_count-1)) {
-                $self->{objects}[$obj_idx]->get_volume($vol_idx)->set_input_file($input_file);
-                $self->{objects}[$obj_idx]->get_volume($vol_idx)->set_obj_idx($i);
-                $self->{objects}[$obj_idx]->get_volume($vol_idx)->set_vol_idx($vol_idx);
-            }
             $i++;
         }
 
@@ -2321,25 +2328,59 @@ sub reload_from_disk {
     my @new_obj_idx = $self->load_file($object->input_file, $object->input_file_obj_idx);
     return if !@new_obj_idx;
     
-    my $model_object = $self->{model}->objects->[$obj_idx];
+    my $original_object = $self->{model}->objects->[$obj_idx];
     foreach my $new_obj_idx (@new_obj_idx) {
         my $o = $self->{model}->objects->[$new_obj_idx];
         $o->clear_instances;
-        $o->add_instance($_) for @{$model_object->instances};
+        $o->add_instance($_) for @{$original_object->instances};
         
-        if (($o->volumes_count) <= ($model_object->volumes_count)) {
-            for my $i (0..($o->volumes_count-1)) {
-                $o->get_volume($i)->config->apply($model_object->get_volume($i)->config);
+        my $vol_idx = 0;
+        my $new_obj_vol_count=$o->volumes_count;
+        
+        for my $i (0..($original_object->volumes_count-1)) {
+            if ($vol_idx <= $new_obj_vol_count-1) {
+                # apply config from the originally read volumes
+                if($original_object->get_volume($i)->input_file eq $object->input_file) {
+                    $o->get_volume($vol_idx)->config->apply($original_object->get_volume($i)->config);
+                }else{
+                    while ($vol_idx <= $new_obj_vol_count-1) {
+                        $o->get_volume($vol_idx++)->config->apply($original_object->get_volume(0)->config);
+                    }
+                    next; #skip increment of $vol_idx, it already points the the next volume
+                }
+            }else{
+                # reload volumes of additional parts and modifiers
+                if (length ($original_object->get_volume($i)->input_file) > 0) {
+                    my $model = eval { Slic3r::Model->read_from_file($original_object->get_volume($i)->input_file) };
+
+                    if ($@) {
+                        $original_object->get_volume($i)->set_input_file("");
+                    }elsif ($original_object->get_volume($i)->input_file_obj_idx > ($model->objects_count-1)) {
+                        # Object Index for that part / modifier not found in current version of the file
+                        $original_object->get_volume($i)->set_input_file("");
+                    }else {
+                        my $model_object = $model->objects->[$original_object->get_volume($i)->input_file_obj_idx];
+                        if ($original_object->get_volume($i)->input_file_vol_idx > ($model_object->volumes_count-1)) {
+                            # Volume Index for that part / modifier not found in current version of the file
+                            $original_object->get_volume($i)->set_input_file("");
+                        }else{
+                            my $new_volume = $o->add_volume($model_object->get_volume($original_object->get_volume($i)->input_file_vol_idx));
+                            $new_volume->set_name($original_object->get_volume($i)->name);
+                            $new_volume->set_input_file($original_object->get_volume($i)->input_file);
+                            $new_volume->set_input_file_obj_idx($original_object->get_volume($i)->input_file_obj_idx);
+                            $new_volume->set_input_file_vol_idx($original_object->get_volume($i)->input_file_vol_idx);
+                            $new_volume->config->apply($original_object->get_volume($i)->config);
+                            $new_volume->set_modifier($original_object->get_volume($i)->modifier);
+                            $new_volume->mesh->translate(@{$original_object->origin_translation});
+                        }
+                    }
+                }
+                if (length ($original_object->get_volume($i)->input_file) == 0) {
+                    my $new_volume = $o->add_volume($original_object->get_volume($i)); # error -> copy old volume
+                    $self->statusbar->SetStatusText('Not all additional parts and modifiers could be found in the current files. Old meshes were kept for the affected parts.');
+                }
             }
-            if ($o->volumes_count != $model_object->volumes_count) {
-                for my $i ($o->volumes_count..($model_object->volumes_count-1)) {
-                    # add_volume merges material and config attributes
-                    my $new_volume = $o->add_volume($model_object->get_volume($i));
-                    $new_volume->set_name($model_object->get_volume($i)->name);
-                    $new_volume->set_input_file($model_object->get_volume($i)->input_file);
-                    $new_volume->set_modifier($model_object->get_volume($i)->modifier);
-				}
-			}
+            $vol_idx++;
         }
     }
     
@@ -2352,6 +2393,11 @@ sub reload_from_disk {
     # event, so the on_thumbnail_made callback is called with the wrong $obj_idx.
     # When porting to C++ we'll probably have cleaner ways to do this.
     $self->make_thumbnail($_-1) for @new_obj_idx;
+
+    # update print
+    $self->stop_background_process;
+    $self->{print}->reload_object($_-1) for @new_obj_idx;
+    $self->on_model_change;
 
     # Empty the redo stack
     $self->{redo_stack} = [];
