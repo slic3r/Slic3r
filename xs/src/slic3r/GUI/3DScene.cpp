@@ -9,6 +9,7 @@
 #include "../../libslic3r/GCode/PreviewData.hpp"
 #include "../../libslic3r/Print.hpp"
 #include "../../libslic3r/Slicing.hpp"
+#include "../../slic3r/GUI/PresetBundle.hpp"
 #include "GCode/Analyzer.hpp"
 
 #include <stdio.h>
@@ -304,7 +305,7 @@ void GLVolume::render_using_layer_height() const
         glUniform1f(z_texture_row_to_normalized_id, (GLfloat)(1.0f / layer_height_texture_height()));
 
     if (z_cursor_id >= 0)
-        glUniform1f(z_cursor_id, (GLfloat)(bounding_box.max.z * layer_height_texture_data.z_cursor_relative));
+        glUniform1f(z_cursor_id, (GLfloat)(layer_height_texture_data.print_object->model_object()->bounding_box().max.z * layer_height_texture_data.z_cursor_relative));
 
     if (z_cursor_band_width_id >= 0)
         glUniform1f(z_cursor_band_width_id, (GLfloat)layer_height_texture_data.edit_band_width);
@@ -324,6 +325,11 @@ void GLVolume::render_using_layer_height() const
 
     if ((current_program_id > 0) && (layer_height_texture_data.shader_id != current_program_id))
         glUseProgram(current_program_id);
+}
+
+double GLVolume::layer_height_texture_z_to_row_id() const
+{
+    return (this->layer_height_texture.get() == nullptr) ? 0.0 : double(this->layer_height_texture->cells - 1) / (double(this->layer_height_texture->width) * this->layer_height_texture_data.print_object->model_object()->bounding_box().max.z);
 }
 
 void GLVolume::generate_layer_height_texture(PrintObject *print_object, bool force)
@@ -381,6 +387,15 @@ std::vector<int> GLVolumeCollection::load_object(
     std::vector<int> volumes_idx;
     for (int volume_idx = 0; volume_idx < int(model_object->volumes.size()); ++ volume_idx) {
         const ModelVolume *model_volume = model_object->volumes[volume_idx];
+
+        int extruder_id = -1;
+        if (!model_volume->modifier)
+        {
+            extruder_id = model_volume->config.has("extruder") ? model_volume->config.option("extruder")->getInt() : 0;
+            if (extruder_id == 0)
+                extruder_id = model_object->config.has("extruder") ? model_object->config.option("extruder")->getInt() : 0;
+        }
+
         for (int instance_idx : instance_idxs) {
             const ModelInstance *instance = model_object->instances[instance_idx];
             TriangleMesh mesh = model_volume->mesh;
@@ -410,8 +425,14 @@ std::vector<int> GLVolumeCollection::load_object(
                 v.drag_group_id = obj_idx * 1000;
             else if (drag_by == "instance")
                 v.drag_group_id = obj_idx * 1000 + instance_idx;
-            if (! model_volume->modifier)
+
+            if (!model_volume->modifier)
+            {
                 v.layer_height_texture = layer_height_texture;
+                if (extruder_id != -1)
+                    v.extruder_id = extruder_id;
+            }
+            v.is_modifier = model_volume->modifier;
         }
     }
     
@@ -420,12 +441,17 @@ std::vector<int> GLVolumeCollection::load_object(
 
 
 int GLVolumeCollection::load_wipe_tower_preview(
-    int obj_idx, float pos_x, float pos_y, float width, float depth, float height, bool use_VBOs)
+    int obj_idx, float pos_x, float pos_y, float width, float depth, float height, float rotation_angle, bool use_VBOs)
 {
     float color[4] = { 1.0f, 1.0f, 0.0f, 0.5f };
     this->volumes.emplace_back(new GLVolume(color));
     GLVolume &v = *this->volumes.back();
-    auto mesh = make_cube(width, depth, height);
+
+    auto mesh = make_cube(width, depth, height);    
+    mesh.translate(-width/2.f,-depth/2.f,0.f);    
+    Point origin_of_rotation(0.f,0.f);
+    mesh.rotate(rotation_angle,&origin_of_rotation);
+
     if (use_VBOs)
         v.indexed_vertex_array.load_mesh_full_shading(mesh);
     else
@@ -438,6 +464,7 @@ int GLVolumeCollection::load_wipe_tower_preview(
     v.composite_id = obj_idx * 1000000;
     v.select_group_id = obj_idx * 1000000;
     v.drag_group_id = obj_idx * 1000;
+    v.is_wipe_tower = true;
     return int(this->volumes.size() - 1);
 }
 
@@ -642,6 +669,83 @@ void GLVolumeCollection::update_outside_state(const DynamicPrintConfig* config, 
     }
 }
 
+void GLVolumeCollection::update_colors_by_extruder(const DynamicPrintConfig* config)
+{
+    static const float inv_255 = 1.0f / 255.0f;
+
+    struct Color
+    {
+        std::string text;
+        unsigned char rgb[3];
+
+        Color()
+            : text("")
+        {
+            rgb[0] = 255;
+            rgb[1] = 255;
+            rgb[2] = 255;
+        }
+
+        void set(const std::string& text, unsigned char* rgb)
+        {
+            this->text = text;
+            ::memcpy((void*)this->rgb, (const void*)rgb, 3 * sizeof(unsigned char));
+        }
+    };
+
+    if (config == nullptr)
+        return;
+
+    const ConfigOptionStrings* extruders_opt = dynamic_cast<const ConfigOptionStrings*>(config->option("extruder_colour"));
+    if (extruders_opt == nullptr)
+        return;
+
+    const ConfigOptionStrings* filamemts_opt = dynamic_cast<const ConfigOptionStrings*>(config->option("filament_colour"));
+    if (filamemts_opt == nullptr)
+        return;
+
+    unsigned int colors_count = std::max((unsigned int)extruders_opt->values.size(), (unsigned int)filamemts_opt->values.size());
+    if (colors_count == 0)
+        return;
+
+    std::vector<Color> colors(colors_count);
+
+    unsigned char rgb[3];
+    for (unsigned int i = 0; i < colors_count; ++i)
+    {
+        const std::string& txt_color = config->opt_string("extruder_colour", i);
+        if (PresetBundle::parse_color(txt_color, rgb))
+        {
+            colors[i].set(txt_color, rgb);
+        }
+        else
+        {
+            const std::string& txt_color = config->opt_string("filament_colour", i);
+            if (PresetBundle::parse_color(txt_color, rgb))
+                colors[i].set(txt_color, rgb);
+        }
+    }
+
+    for (GLVolume* volume : volumes)
+    {
+        if ((volume == nullptr) || volume->is_modifier || volume->is_wipe_tower)
+            continue;
+
+        int extruder_id = volume->extruder_id - 1;
+        if ((extruder_id < 0) || ((unsigned int)colors.size() <= extruder_id))
+            extruder_id = 0;
+
+        const Color& color = colors[extruder_id];
+        if (!color.text.empty())
+        {
+            for (int i = 0; i < 3; ++i)
+            {
+                volume->color[i] = (float)color.rgb[i] * inv_255;
+            }
+        }
+    }
+}
+
 std::vector<double> GLVolumeCollection::get_current_print_zs() const
 {
     // Collect layer top positions of all volumes.
@@ -684,15 +788,14 @@ static void thick_lines_to_indexed_vertex_array(
 #define TOP     2
 #define BOTTOM  3
 
-    Line prev_line;
     // right, left, top, bottom
     int     idx_prev[4]      = { -1, -1, -1, -1 };
     double  bottom_z_prev    = 0.;
     Pointf  b1_prev;
-    Pointf  b2_prev;
     Vectorf v_prev;
     int     idx_initial[4]   = { -1, -1, -1, -1 };
     double  width_initial    = 0.;
+    double  bottom_z_initial = 0.0;
 
     // loop once more in case of closed loops
     size_t lines_end = closed ? (lines.size() + 1) : lines.size();
@@ -700,13 +803,18 @@ static void thick_lines_to_indexed_vertex_array(
         size_t i = (ii == lines.size()) ? 0 : ii;
         const Line &line = lines[i];
         double len = unscale(line.length());
+        double inv_len = 1.0 / len;
         double bottom_z = top_z - heights[i];
-        double middle_z = (top_z + bottom_z) / 2.;
+        double middle_z = 0.5 * (top_z + bottom_z);
         double width = widths[i];
-        
+
+        bool is_first = (ii == 0);
+        bool is_last = (ii == lines_end - 1);
+        bool is_closing = closed && is_last;
+
         Vectorf v = Vectorf::new_unscale(line.vector());
-        v.scale(1. / len);
-        
+        v.scale(inv_len);
+
         Pointf a = Pointf::new_unscale(line.a);
         Pointf b = Pointf::new_unscale(line.b);
         Pointf a1 = a;
@@ -714,17 +822,19 @@ static void thick_lines_to_indexed_vertex_array(
         Pointf b1 = b;
         Pointf b2 = b;
         {
-            double dist = width / 2.;  // scaled
-            a1.translate(+dist*v.y, -dist*v.x);
-            a2.translate(-dist*v.y, +dist*v.x);
-            b1.translate(+dist*v.y, -dist*v.x);
-            b2.translate(-dist*v.y, +dist*v.x);
+            double dist = 0.5 * width;  // scaled
+            double dx = dist * v.x;
+            double dy = dist * v.y;
+            a1.translate(+dy, -dx);
+            a2.translate(-dy, +dx);
+            b1.translate(+dy, -dx);
+            b2.translate(-dy, +dx);
         }
 
         // calculate new XY normals
         Vector n = line.normal();
         Vectorf3 xy_right_normal = Vectorf3::new_unscale(n.x, n.y, 0);
-        xy_right_normal.scale(1.f / len);
+        xy_right_normal.scale(inv_len);
 
         int idx_a[4];
         int idx_b[4];
@@ -733,14 +843,21 @@ static void thick_lines_to_indexed_vertex_array(
         bool bottom_z_different = bottom_z_prev != bottom_z;
         bottom_z_prev = bottom_z;
 
+        if (!is_first && bottom_z_different)
+        {
+            // Found a change of the layer thickness -> Add a cap at the end of the previous segment.
+            volume.push_quad(idx_b[BOTTOM], idx_b[LEFT], idx_b[TOP], idx_b[RIGHT]);
+        }
+
         // Share top / bottom vertices if possible.
-        if (ii == 0) {
-            idx_a[TOP] = idx_last ++;
+        if (is_first) {
+            idx_a[TOP] = idx_last++;
             volume.push_geometry(a.x, a.y, top_z   , 0., 0.,  1.); 
         } else {
             idx_a[TOP] = idx_prev[TOP];
         }
-        if (ii == 0 || bottom_z_different) {
+
+        if (is_first || bottom_z_different) {
             // Start of the 1st line segment or a change of the layer thickness while maintaining the print_z.
             idx_a[BOTTOM] = idx_last ++;
             volume.push_geometry(a.x, a.y, bottom_z, 0., 0., -1.);
@@ -748,13 +865,15 @@ static void thick_lines_to_indexed_vertex_array(
             volume.push_geometry(a2.x, a2.y, middle_z, -xy_right_normal.x, -xy_right_normal.y, -xy_right_normal.z);
             idx_a[RIGHT] = idx_last ++;
             volume.push_geometry(a1.x, a1.y, middle_z, xy_right_normal.x, xy_right_normal.y, xy_right_normal.z);
-        } else {
+        }
+        else {
             idx_a[BOTTOM] = idx_prev[BOTTOM];
         }
 
-        if (ii == 0) {
+        if (is_first) {
             // Start of the 1st line segment.
             width_initial    = width;
+            bottom_z_initial = bottom_z;
             memcpy(idx_initial, idx_a, sizeof(int) * 4);
         } else {
             // Continuing a previous segment.
@@ -762,43 +881,54 @@ static void thick_lines_to_indexed_vertex_array(
 			double v_dot    = dot(v_prev, v);
             bool   sharp    = v_dot < 0.707; // sin(45 degrees)
             if (sharp) {
-                // Allocate new left / right points for the start of this segment as these points will receive their own normals to indicate a sharp turn.
-                idx_a[RIGHT] = idx_last ++;
-                volume.push_geometry(a1.x, a1.y, middle_z, xy_right_normal.x, xy_right_normal.y, xy_right_normal.z);
-                idx_a[LEFT ] = idx_last ++;
-                volume.push_geometry(a2.x, a2.y, middle_z, -xy_right_normal.x, -xy_right_normal.y, -xy_right_normal.z);
+                if (!bottom_z_different)
+                {
+                    // Allocate new left / right points for the start of this segment as these points will receive their own normals to indicate a sharp turn.
+                    idx_a[RIGHT] = idx_last++;
+                    volume.push_geometry(a1.x, a1.y, middle_z, xy_right_normal.x, xy_right_normal.y, xy_right_normal.z);
+                    idx_a[LEFT] = idx_last++;
+                    volume.push_geometry(a2.x, a2.y, middle_z, -xy_right_normal.x, -xy_right_normal.y, -xy_right_normal.z);
+                }
             }
             if (v_dot > 0.9) {
-                // The two successive segments are nearly collinear.
-                idx_a[LEFT ] = idx_prev[LEFT];
-                idx_a[RIGHT] = idx_prev[RIGHT];
-            } else if (! sharp) {
-                // Create a sharp corner with an overshot and average the left / right normals.
-                // At the crease angle of 45 degrees, the overshot at the corner will be less than (1-1/cos(PI/8)) = 8.2% over an arc.
-                Pointf intersection;
-                Geometry::ray_ray_intersection(b1_prev, v_prev, a1, v, intersection);
-                a1 = intersection;
-                a2 = 2. * a - intersection;
-                assert(length(a1.vector_to(a)) < width);
-                assert(length(a2.vector_to(a)) < width);
-                float *n_left_prev  = volume.vertices_and_normals_interleaved.data() + idx_prev[LEFT ] * 6;
-                float *p_left_prev  = n_left_prev  + 3;
-                float *n_right_prev = volume.vertices_and_normals_interleaved.data() + idx_prev[RIGHT] * 6;
-                float *p_right_prev = n_right_prev + 3;
-                p_left_prev [0] = float(a2.x);
-                p_left_prev [1] = float(a2.y);
-                p_right_prev[0] = float(a1.x);
-                p_right_prev[1] = float(a1.y);
-                xy_right_normal.x += n_right_prev[0];
-                xy_right_normal.y += n_right_prev[1];
-                xy_right_normal.scale(1. / length(xy_right_normal));
-                n_left_prev [0] = float(-xy_right_normal.x);
-                n_left_prev [1] = float(-xy_right_normal.y);
-                n_right_prev[0] = float( xy_right_normal.x);
-                n_right_prev[1] = float( xy_right_normal.y);
-                idx_a[LEFT ] = idx_prev[LEFT ];
-                idx_a[RIGHT] = idx_prev[RIGHT];
-            } else if (cross(v_prev, v) > 0.) {
+                if (!bottom_z_different)
+                {
+                    // The two successive segments are nearly collinear.
+                    idx_a[LEFT ] = idx_prev[LEFT];
+                    idx_a[RIGHT] = idx_prev[RIGHT];
+                }
+            }
+            else if (!sharp) {
+                if (!bottom_z_different)
+                {
+                    // Create a sharp corner with an overshot and average the left / right normals.
+                    // At the crease angle of 45 degrees, the overshot at the corner will be less than (1-1/cos(PI/8)) = 8.2% over an arc.
+                    Pointf intersection;
+                    Geometry::ray_ray_intersection(b1_prev, v_prev, a1, v, intersection);
+                    a1 = intersection;
+                    a2 = 2. * a - intersection;
+                    assert(length(a1.vector_to(a)) < width);
+                    assert(length(a2.vector_to(a)) < width);
+                    float *n_left_prev  = volume.vertices_and_normals_interleaved.data() + idx_prev[LEFT ] * 6;
+                    float *p_left_prev  = n_left_prev  + 3;
+                    float *n_right_prev = volume.vertices_and_normals_interleaved.data() + idx_prev[RIGHT] * 6;
+                    float *p_right_prev = n_right_prev + 3;
+                    p_left_prev [0] = float(a2.x);
+                    p_left_prev [1] = float(a2.y);
+                    p_right_prev[0] = float(a1.x);
+                    p_right_prev[1] = float(a1.y);
+                    xy_right_normal.x += n_right_prev[0];
+                    xy_right_normal.y += n_right_prev[1];
+                    xy_right_normal.scale(1. / length(xy_right_normal));
+                    n_left_prev [0] = float(-xy_right_normal.x);
+                    n_left_prev [1] = float(-xy_right_normal.y);
+                    n_right_prev[0] = float( xy_right_normal.x);
+                    n_right_prev[1] = float( xy_right_normal.y);
+                    idx_a[LEFT ] = idx_prev[LEFT ];
+                    idx_a[RIGHT] = idx_prev[RIGHT];
+                }
+            }
+            else if (cross(v_prev, v) > 0.) {
                 // Right turn. Fill in the right turn wedge.
                 volume.push_triangle(idx_prev[RIGHT], idx_a   [RIGHT],  idx_prev[TOP]   );
                 volume.push_triangle(idx_prev[RIGHT], idx_prev[BOTTOM], idx_a   [RIGHT] );
@@ -807,18 +937,21 @@ static void thick_lines_to_indexed_vertex_array(
                 volume.push_triangle(idx_prev[LEFT],  idx_prev[TOP],    idx_a   [LEFT]  );
                 volume.push_triangle(idx_prev[LEFT],  idx_a   [LEFT],   idx_prev[BOTTOM]);
             }
-            if (ii == lines.size()) {
-                if (! sharp) {
-                    // Closing a loop with smooth transition. Unify the closing left / right vertices.
-                    memcpy(volume.vertices_and_normals_interleaved.data() + idx_initial[LEFT ] * 6, volume.vertices_and_normals_interleaved.data() + idx_prev[LEFT ] * 6, sizeof(float) * 6);
-                    memcpy(volume.vertices_and_normals_interleaved.data() + idx_initial[RIGHT] * 6, volume.vertices_and_normals_interleaved.data() + idx_prev[RIGHT] * 6, sizeof(float) * 6);
-                    volume.vertices_and_normals_interleaved.erase(volume.vertices_and_normals_interleaved.end() - 12, volume.vertices_and_normals_interleaved.end());
-                    // Replace the left / right vertex indices to point to the start of the loop. 
-                    for (size_t u = volume.quad_indices.size() - 16; u < volume.quad_indices.size(); ++ u) {
-                        if (volume.quad_indices[u] == idx_prev[LEFT])
-                            volume.quad_indices[u] = idx_initial[LEFT];
-                        else if (volume.quad_indices[u] == idx_prev[RIGHT])
-                            volume.quad_indices[u] = idx_initial[RIGHT];
+            if (is_closing) {
+                if (!sharp) {
+                    if (!bottom_z_different)
+                    {
+                        // Closing a loop with smooth transition. Unify the closing left / right vertices.
+                        memcpy(volume.vertices_and_normals_interleaved.data() + idx_initial[LEFT ] * 6, volume.vertices_and_normals_interleaved.data() + idx_prev[LEFT ] * 6, sizeof(float) * 6);
+                        memcpy(volume.vertices_and_normals_interleaved.data() + idx_initial[RIGHT] * 6, volume.vertices_and_normals_interleaved.data() + idx_prev[RIGHT] * 6, sizeof(float) * 6);
+                        volume.vertices_and_normals_interleaved.erase(volume.vertices_and_normals_interleaved.end() - 12, volume.vertices_and_normals_interleaved.end());
+                        // Replace the left / right vertex indices to point to the start of the loop. 
+                        for (size_t u = volume.quad_indices.size() - 16; u < volume.quad_indices.size(); ++ u) {
+                            if (volume.quad_indices[u] == idx_prev[LEFT])
+                                volume.quad_indices[u] = idx_initial[LEFT];
+                            else if (volume.quad_indices[u] == idx_prev[RIGHT])
+                                volume.quad_indices[u] = idx_initial[RIGHT];
+                        }
                     }
                 }
                 // This is the last iteration, only required to solve the transition.
@@ -827,13 +960,14 @@ static void thick_lines_to_indexed_vertex_array(
         }
 
         // Only new allocate top / bottom vertices, if not closing a loop.
-        if (closed && ii + 1 == lines.size()) {
+        if (is_closing) {
             idx_b[TOP] = idx_initial[TOP];
         } else {
             idx_b[TOP] = idx_last ++;
             volume.push_geometry(b.x, b.y, top_z   , 0., 0.,  1.);
         }
-        if (closed && ii + 1 == lines.size() && width == width_initial) {
+
+        if (is_closing && (width == width_initial) && (bottom_z == bottom_z_initial)) {
             idx_b[BOTTOM] = idx_initial[BOTTOM];
         } else {
             idx_b[BOTTOM] = idx_last ++;
@@ -845,22 +979,26 @@ static void thick_lines_to_indexed_vertex_array(
         idx_b[RIGHT ] = idx_last ++;
         volume.push_geometry(b1.x, b1.y, middle_z, xy_right_normal.x, xy_right_normal.y, xy_right_normal.z);
 
-        prev_line = line;
         memcpy(idx_prev, idx_b, 4 * sizeof(int));
         bottom_z_prev = bottom_z;
         b1_prev = b1;
-        b2_prev = b2;
-        v_prev  = v;
+        v_prev = v;
+
+        if (bottom_z_different)
+        {
+            // Found a change of the layer thickness -> Add a cap at the beginning of this segment.
+            volume.push_quad(idx_a[BOTTOM], idx_a[RIGHT], idx_a[TOP], idx_a[LEFT]);
+        }
 
         if (! closed) {
             // Terminate open paths with caps.
-            if (i == 0)
+            if (is_first && !bottom_z_different)
                 volume.push_quad(idx_a[BOTTOM], idx_a[RIGHT], idx_a[TOP], idx_a[LEFT]);
             // We don't use 'else' because both cases are true if we have only one line.
-            if (i + 1 == lines.size())
+            if (is_last && !bottom_z_different)
                 volume.push_quad(idx_b[BOTTOM], idx_b[LEFT], idx_b[TOP], idx_b[RIGHT]);
         }
-        
+
         // Add quads for a straight hollow tube-like segment.
         // bottom-right face
         volume.push_quad(idx_a[BOTTOM], idx_b[BOTTOM], idx_b[RIGHT], idx_a[RIGHT]);
@@ -2594,8 +2732,10 @@ void _3DScene::_load_shells(const Print& print, GLVolumeCollection& volumes, boo
     coordf_t max_z = print.objects[0]->model_object()->get_model()->bounding_box().max.z;
     const PrintConfig& config = print.config;
     unsigned int extruders_count = config.nozzle_diameter.size();
-    if ((extruders_count > 1) && config.single_extruder_multi_material && config.wipe_tower && !config.complete_objects)
-        volumes.load_wipe_tower_preview(1000, config.wipe_tower_x, config.wipe_tower_y, config.wipe_tower_width, config.wipe_tower_per_color_wipe * (extruders_count - 1), max_z, use_VBOs);
+    if ((extruders_count > 1) && config.single_extruder_multi_material && config.wipe_tower && !config.complete_objects) {
+        const float width_per_extruder = 15.f; // a simple workaround after wipe_tower_per_color_wipe got obsolete
+        volumes.load_wipe_tower_preview(1000, config.wipe_tower_x, config.wipe_tower_y, config.wipe_tower_width, width_per_extruder * (extruders_count - 1), max_z, config.wipe_tower_rotation_angle, use_VBOs);
+    }
 }
 
-}
+} // namespace Slic3r

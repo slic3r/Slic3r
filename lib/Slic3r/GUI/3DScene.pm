@@ -1281,10 +1281,7 @@ sub Render {
         # disable depth testing so that axes are not covered by ground
         glDisable(GL_DEPTH_TEST);
         my $origin = $self->origin;
-        my $axis_len = max(
-            0.3 * max(@{ $self->bed_bounding_box->size }),
-              2 * max(@{ $volumes_bb->size }),
-        );
+        my $axis_len = $self->use_plain_shader ? 0.3 * max(@{ $self->bed_bounding_box->size }) : 2 * max(@{ $volumes_bb->size });
         glLineWidth(2);
         glBegin(GL_LINES);
         # draw line for x axis
@@ -1330,8 +1327,8 @@ sub Render {
         glEnable(GL_CULL_FACE) if ($self->enable_picking);
     }
 
-    # draw cutting plane
     if (defined $self->cutting_plane_z) {
+        # draw cutting plane
         my $plane_z = $self->cutting_plane_z;
         my $bb = $volumes_bb;
         glDisable(GL_CULL_FACE);
@@ -1347,6 +1344,15 @@ sub Render {
         glEnd();
         glEnable(GL_CULL_FACE);
         glDisable(GL_BLEND);
+        
+        # draw cutting contours
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glLineWidth(2);
+        glColor3f(0, 0, 0);
+        glVertexPointer_c(3, GL_FLOAT, 0, $self->cut_lines_vertices->ptr());
+        glDrawArrays(GL_LINES, 0, $self->cut_lines_vertices->elements / 3);
+        glVertexPointer_c(3, GL_FLOAT, 0, 0);
+        glDisableClientState(GL_VERTEX_ARRAY);
     }
 
     # draw warning message
@@ -1393,18 +1399,10 @@ sub draw_volumes {
         $volume->render;
     }
     glDisableClientState(GL_NORMAL_ARRAY);
-    glDisable(GL_BLEND);
-
-    glEnable(GL_CULL_FACE);
-    
-    if (defined $self->cutting_plane_z) {
-        glLineWidth(2);
-        glColor3f(0, 0, 0);
-        glVertexPointer_c(3, GL_FLOAT, 0, $self->cut_lines_vertices->ptr());
-        glDrawArrays(GL_LINES, 0, $self->cut_lines_vertices->elements / 3);
-        glVertexPointer_c(3, GL_FLOAT, 0, 0);
-    }
     glDisableClientState(GL_VERTEX_ARRAY);
+    
+    glDisable(GL_BLEND);
+    glEnable(GL_CULL_FACE);    
 }
 
 sub mark_volumes_for_layer_height {
@@ -1527,10 +1525,13 @@ sub draw_active_object_annotations {
     my ($reset_left, $reset_bottom, $reset_right, $reset_top) = $self->_variable_layer_thickness_reset_rect_viewport;
     my $z_cursor_relative = $self->_variable_layer_thickness_bar_mouse_cursor_z_relative;
 
+    my $print_object = $self->{print}->get_object($object_idx);
+    my $z_max = $print_object->model_object->bounding_box->z_max;
+    
     $self->{layer_height_edit_shader}->enable;
     $self->{layer_height_edit_shader}->set_uniform('z_to_texture_row',            $volume->layer_height_texture_z_to_row_id);
     $self->{layer_height_edit_shader}->set_uniform('z_texture_row_to_normalized', 1. / $volume->layer_height_texture_height);
-    $self->{layer_height_edit_shader}->set_uniform('z_cursor',                    $volume->bounding_box->z_max * $z_cursor_relative);
+    $self->{layer_height_edit_shader}->set_uniform('z_cursor',                    $z_max * $z_cursor_relative);
     $self->{layer_height_edit_shader}->set_uniform('z_cursor_band_width',         $self->{layer_height_edit_band_width});
     glBindTexture(GL_TEXTURE_2D, $self->{layer_preview_z_texture_id});
     glTexImage2D_c(GL_TEXTURE_2D, 0, GL_RGBA8, $volume->layer_height_texture_width, $volume->layer_height_texture_height, 
@@ -1552,8 +1553,8 @@ sub draw_active_object_annotations {
     glBegin(GL_QUADS);
     glVertex3f($bar_left,  $bar_bottom, 0);
     glVertex3f($bar_right, $bar_bottom, 0);
-    glVertex3f($bar_right, $bar_top, $volume->bounding_box->z_max);
-    glVertex3f($bar_left,  $bar_top, $volume->bounding_box->z_max);
+    glVertex3f($bar_right, $bar_top, $z_max);
+    glVertex3f($bar_left,  $bar_top, $z_max);
     glEnd();
     glBindTexture(GL_TEXTURE_2D, 0);
     $self->{layer_height_edit_shader}->disable;
@@ -1572,7 +1573,6 @@ sub draw_active_object_annotations {
 
     # Paint the graph.
     #FIXME show some kind of legend.
-    my $print_object = $self->{print}->get_object($object_idx);
     my $max_z = unscale($print_object->size->z);
     my $profile = $print_object->model_object->layer_height_profile;
     my $layer_height = $print_object->config->get('layer_height');
@@ -1677,6 +1677,11 @@ sub draw_warning {
     }
 }
 
+sub update_volumes_colors_by_extruder {
+    my ($self, $config) = @_;    
+    $self->volumes->update_colors_by_extruder($config);
+}
+
 sub opengl_info
 {
     my ($self, %params) = @_;
@@ -1746,8 +1751,8 @@ sub _vertex_shader_Gouraud {
 // normalized values for (-0.6/1.31, 0.6/1.31, 1./1.31)
 const vec3 LIGHT_TOP_DIR = vec3(-0.4574957, 0.4574957, 0.7624929);
 #define LIGHT_TOP_DIFFUSE    (0.8 * INTENSITY_CORRECTION)
-#define LIGHT_TOP_SPECULAR   (0.25 * INTENSITY_CORRECTION)
-#define LIGHT_TOP_SHININESS  200.0
+#define LIGHT_TOP_SPECULAR   (0.125 * INTENSITY_CORRECTION)
+#define LIGHT_TOP_SHININESS  20.0
 
 // normalized values for (1./1.43, 0.2/1.43, 1./1.43)
 const vec3 LIGHT_FRONT_DIR = vec3(0.6985074, 0.1397015, 0.6985074);
@@ -1777,14 +1782,8 @@ varying vec3 delta_box_max;
 
 void main()
 {
-    vec3 eye = -normalize((gl_ModelViewMatrix * gl_Vertex).xyz);
-
     // First transform the normal into camera space and normalize the result.
     vec3 normal = normalize(gl_NormalMatrix * gl_Normal);
-    
-    // Now normalize the light's direction. Note that according to the OpenGL specification, the light is stored in eye space. 
-    // Also since we're talking about a directional light, the position field is actually direction.
-    vec3 halfVector = normalize(LIGHT_TOP_DIR + eye);
     
     // Compute the cos of the angle between the normal and lights direction. The light is directional so the direction is constant for every vertex.
     // Since these two are normalized the cosine is the dot product. We also need to clamp the result to the [0,1] range.
@@ -1794,7 +1793,7 @@ void main()
     intensity.y = 0.0;
 
     if (NdotL > 0.0)
-        intensity.y += LIGHT_TOP_SPECULAR * pow(max(dot(normal, halfVector), 0.0), LIGHT_TOP_SHININESS);
+        intensity.y += LIGHT_TOP_SPECULAR * pow(max(dot(normal, reflect(-LIGHT_TOP_DIR, normal)), 0.0), LIGHT_TOP_SHININESS);
 
     // Perform the same lighting calculation for the 2nd light source (no specular applied).
     NdotL = max(dot(normal, LIGHT_FRONT_DIR), 0.0);
@@ -1823,7 +1822,6 @@ sub _fragment_shader_Gouraud {
     return <<'FRAGMENT';
 #version 110
 
-const vec4 OUTSIDE_COLOR = vec4(0.24, 0.42, 0.62, 1.0);
 const vec3 ZERO = vec3(0.0, 0.0, 0.0);
 
 // x = tainted, y = specular;
@@ -1836,11 +1834,9 @@ uniform vec4 uniform_color;
 
 void main()
 {
-    // if the fragment is outside the print volume use predefined color
-    vec4 color = (any(lessThan(delta_box_min, ZERO)) || any(greaterThan(delta_box_max, ZERO))) ? OUTSIDE_COLOR : uniform_color;
-
-    gl_FragColor = vec4(intensity.y, intensity.y, intensity.y, 0.0) + color * intensity.x;
-    gl_FragColor.a = color.a;
+    // if the fragment is outside the print volume -> use darker color
+    vec3 color = (any(lessThan(delta_box_min, ZERO)) || any(greaterThan(delta_box_max, ZERO))) ? mix(uniform_color.rgb, ZERO, 0.3333) : uniform_color.rgb;
+    gl_FragColor = vec4(vec3(intensity.y, intensity.y, intensity.y) + color * intensity.x, uniform_color.a);
 }
 
 FRAGMENT
@@ -1922,8 +1918,8 @@ sub _vertex_shader_variable_layer_height {
 
 const vec3 LIGHT_TOP_DIR = vec3(-0.4574957, 0.4574957, 0.7624929);
 #define LIGHT_TOP_DIFFUSE    (0.8 * INTENSITY_CORRECTION)
-#define LIGHT_TOP_SPECULAR   (0.25 * INTENSITY_CORRECTION)
-#define LIGHT_TOP_SHININESS  200.0
+#define LIGHT_TOP_SPECULAR   (0.125 * INTENSITY_CORRECTION)
+#define LIGHT_TOP_SHININESS  20.0
 
 const vec3 LIGHT_FRONT_DIR = vec3(0.6985074, 0.1397015, 0.6985074);
 #define LIGHT_FRONT_DIFFUSE  (0.3 * INTENSITY_CORRECTION)
@@ -1932,8 +1928,6 @@ const vec3 LIGHT_FRONT_DIR = vec3(0.6985074, 0.1397015, 0.6985074);
 
 #define INTENSITY_AMBIENT    0.3
 
-uniform float z_to_texture_row;
-
 // x = tainted, y = specular;
 varying vec2 intensity;
 
@@ -1941,14 +1935,8 @@ varying float object_z;
 
 void main()
 {
-    vec3 eye = -normalize((gl_ModelViewMatrix * gl_Vertex).xyz);
-
     // First transform the normal into camera space and normalize the result.
     vec3 normal = normalize(gl_NormalMatrix * gl_Normal);
-    
-    // Now normalize the light's direction. Note that according to the OpenGL specification, the light is stored in eye space. 
-    // Also since we're talking about a directional light, the position field is actually direction.
-    vec3 halfVector = normalize(LIGHT_TOP_DIR + eye);
     
     // Compute the cos of the angle between the normal and lights direction. The light is directional so the direction is constant for every vertex.
     // Since these two are normalized the cosine is the dot product. We also need to clamp the result to the [0,1] range.
@@ -1958,7 +1946,7 @@ void main()
     intensity.y = 0.0;
 
     if (NdotL > 0.0)
-        intensity.y += LIGHT_TOP_SPECULAR * pow(max(dot(normal, halfVector), 0.0), LIGHT_TOP_SHININESS);
+        intensity.y += LIGHT_TOP_SPECULAR * pow(max(dot(normal, reflect(-LIGHT_TOP_DIR, normal)), 0.0), LIGHT_TOP_SHININESS);
 
     // Perform the same lighting calculation for the 2nd light source (no specular)
     NdotL = max(dot(normal, LIGHT_FRONT_DIR), 0.0);

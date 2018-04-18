@@ -164,6 +164,7 @@ SKIP:
 
 for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
     my $config = Slic3r::Config::new_from_defaults;
+    $config->set('nozzle_diameter', [0.4,0.4,0.4,0.4]);
     $config->set('fill_pattern', $pattern);
     $config->set('top_fill_pattern', $pattern);
     $config->set('bottom_fill_pattern', $pattern);
@@ -196,6 +197,7 @@ for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
 
 {
     my $config = Slic3r::Config::new_from_defaults;
+    $config->set('nozzle_diameter', [0.4,0.4,0.4,0.4]);
     $config->set('infill_only_where_needed', 1);
     $config->set('bottom_solid_layers', 0);
     $config->set('infill_extruder', 2);
@@ -277,7 +279,7 @@ for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
     $config->set('fill_density', 0);
     $config->set('layer_height', 0.2);
     $config->set('first_layer_height', 0.2);
-    $config->set('nozzle_diameter', [0.35]);
+    $config->set('nozzle_diameter', [0.35,0.35,0.35,0.35]);
     $config->set('infill_extruder', 2);
     $config->set('solid_infill_extruder', 2);
     $config->set('infill_extrusion_width', 0.52);

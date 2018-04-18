@@ -1,4 +1,5 @@
 #include "GUI.hpp"
+#include "WipeTowerDialog.hpp"
 
 #include <assert.h>
 #include <cmath>
@@ -185,6 +186,7 @@ wxLocale*	g_wxLocale;
 
 std::shared_ptr<ConfigOptionsGroup>	m_optgroup;
 double m_brim_width = 0.0;
+wxButton*	g_wiping_dialog_button = nullptr;
 
 static void init_label_colours()
 {
@@ -403,7 +405,7 @@ TabIface* get_preset_tab_iface(char *name)
 }
 
 // opt_index = 0, by the reason of zero-index in ConfigOptionVector by default (in case only one element)
-void change_opt_value(DynamicPrintConfig& config, t_config_option_key opt_key, boost::any value, int opt_index /*= 0*/)
+void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt_key, const boost::any& value, int opt_index /*= 0*/)
 {
 	try{
 		switch (config.def()->get(opt_key)->type){
@@ -439,11 +441,18 @@ void change_opt_value(DynamicPrintConfig& config, t_config_option_key opt_key, b
 			config.set_key_value(opt_key, new ConfigOptionString(boost::any_cast<std::string>(value)));
 			break;
 		case coStrings:{
-			if (opt_key.compare("compatible_printers") == 0 ||
-				config.def()->get(opt_key)->gui_flags.compare("serialized") == 0){
-				config.option<ConfigOptionStrings>(opt_key)->values.resize(0);
-				std::vector<std::string> values = boost::any_cast<std::vector<std::string>>(value);
-				if (values.size() == 1 && values[0] == "")
+			if (opt_key.compare("compatible_printers") == 0) {
+				config.option<ConfigOptionStrings>(opt_key)->values = 
+					boost::any_cast<std::vector<std::string>>(value);
+			}
+			else if (config.def()->get(opt_key)->gui_flags.compare("serialized") == 0){
+				std::string str = boost::any_cast<std::string>(value);
+				if (str.back() == ';') str.pop_back();
+				// Split a string to multiple strings by a semi - colon.This is the old way of storing multi - string values.
+				// Currently used for the post_process config value only.
+				std::vector<std::string> values;
+				boost::split(values, str, boost::is_any_of(";"));
+				if (values.size() == 1 && values[0] == "") 
 					break;
 				config.option<ConfigOptionStrings>(opt_key)->values = values;
 			}
@@ -510,17 +519,17 @@ void add_created_tab(Tab* panel)
 	g_wxTabPanel->AddPage(panel, panel->title());
 }
 
-void show_error(wxWindow* parent, wxString message){
+void show_error(wxWindow* parent, const wxString& message){
 	auto msg_wingow = new wxMessageDialog(parent, message, _(L("Error")), wxOK | wxICON_ERROR);
 	msg_wingow->ShowModal();
 }
 
-void show_info(wxWindow* parent, wxString message, wxString title){
+void show_info(wxWindow* parent, const wxString& message, const wxString& title){
 	auto msg_wingow = new wxMessageDialog(parent, message, title.empty() ? _(L("Notice")) : title, wxOK | wxICON_INFORMATION);
 	msg_wingow->ShowModal();
 }
 
-void warning_catcher(wxWindow* parent, wxString message){
+void warning_catcher(wxWindow* parent, const wxString& message){
 	if (message == _(L("GLUquadricObjPtr | Attempt to free unreferenced scalar")) )
 		return;
 	auto msg = new wxMessageDialog(parent, message, _(L("Warning")), wxOK | wxICON_WARNING);
@@ -714,12 +723,45 @@ void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFl
 	option = Option(def, "brim");
 	m_optgroup->append_single_option_line(option);
 
+
+    Line line = { _(L("")), "" };
+        line.widget = [config](wxWindow* parent){
+			g_wiping_dialog_button = new wxButton(parent, wxID_ANY, _(L("Purging volumes")) + "\u2026", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+			auto sizer = new wxBoxSizer(wxHORIZONTAL);
+			sizer->Add(g_wiping_dialog_button);
+			g_wiping_dialog_button->Bind(wxEVT_BUTTON, ([parent](wxCommandEvent& e)
+			{
+				auto &config = g_PresetBundle->project_config;
+                std::vector<double> init_matrix = (config.option<ConfigOptionFloats>("wiping_volumes_matrix"))->values;
+                std::vector<double> init_extruders = (config.option<ConfigOptionFloats>("wiping_volumes_extruders"))->values;
+
+                WipingDialog dlg(parent,std::vector<float>(init_matrix.begin(),init_matrix.end()),std::vector<float>(init_extruders.begin(),init_extruders.end()));
+
+				if (dlg.ShowModal() == wxID_OK) {
+                    std::vector<float> matrix = dlg.get_matrix();
+                    std::vector<float> extruders = dlg.get_extruders();
+                    (config.option<ConfigOptionFloats>("wiping_volumes_matrix"))->values = std::vector<double>(matrix.begin(),matrix.end());
+                    (config.option<ConfigOptionFloats>("wiping_volumes_extruders"))->values = std::vector<double>(extruders.begin(),extruders.end());
+                }
+			}));
+			return sizer;
+		};
+		m_optgroup->append_line(line);
+
+
+
 	sizer->Add(m_optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxBottom, 1);
 }
 
 ConfigOptionsGroup* get_optgroup()
 {
 	return m_optgroup.get();
+}
+
+
+wxButton* get_wiping_dialog_button()
+{
+	return g_wiping_dialog_button;
 }
 
 wxWindow* export_option_creator(wxWindow* parent)
@@ -765,6 +807,9 @@ int get_export_option(wxFileDialog* dlg)
     }
 
     return 0;
+
 }
 
-} }
+
+} // namespace GUI
+} // namespace Slic3r
