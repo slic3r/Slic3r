@@ -2364,64 +2364,61 @@ sub reload_from_disk {
         $new_obj->add_instance($_) for @{$org_obj->instances};
         $new_obj->config->apply($org_obj->config);
         
-        my $vol_idx = 0;
-        my $new_obj_vol_count=$new_obj->volumes_count;
+        my $new_vol_idx = 0;
+        my $org_vol_idx = 0;
+        my $new_vol_count=$new_obj->volumes_count;
+        my $org_vol_count=$org_obj->volumes_count;
         
-        for my $i (0..($org_obj->volumes_count-1)) {
-            if ($vol_idx <= $new_obj_vol_count-1) {
-                # apply config from the originally read volumes
-                if($org_obj->get_volume($i)->input_file eq $new_obj->input_file) {
-                    $new_obj->get_volume($vol_idx++)->config->apply($org_obj->get_volume($i)->config);
-                }
-                if (($org_obj->get_volume($i)->input_file ne $new_obj->input_file) || ($i==$org_obj->volumes_count-1)) {
-                # basically else, also accounting for original having less volumes than reloaded (i.e. loop not parsed another time)
-                    while ($vol_idx <= $new_obj_vol_count-1) {
-                        $new_obj->get_volume($vol_idx++)->config->apply($org_obj->get_volume(0)->config);
-                        $volume_unmatched=1;
-                    }
-                    next; #skip increment of $vol_idx, it already points the the next volume
-                }
-            }else{
-                last if $res==wxID_NO; # discard all other configurations according to the MessageDialog
-                if ($org_obj->input_file eq $org_obj->get_volume($i)->input_file) {
-                    # original has more volumes than reloaded
-                    $volume_unmatched=1;
-                    next;
-                }
-                # reload volumes of additional parts and modifiers
-                if ($org_obj->get_volume($i)->input_file) {
-                    my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($i)->input_file) };
-                    if ($@) {
-                        $org_obj->get_volume($i)->set_input_file("");
-                    }elsif ($org_obj->get_volume($i)->input_file_obj_idx > ($model->objects_count-1)) {
-                        # Object Index for that part / modifier not found in current version of the file
-                        $org_obj->get_volume($i)->set_input_file("");
-                    }else {
-                        my $prt_mod_obj = $model->objects->[$org_obj->get_volume($i)->input_file_obj_idx];
-                        if ($org_obj->get_volume($i)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
-                            # Volume Index for that part / modifier not found in current version of the file
-                            $org_obj->get_volume($i)->set_input_file("");
-                        }else{
-                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($i)->input_file_vol_idx));
-                            $new_volume->set_name($org_obj->get_volume($i)->name);
-                            $new_volume->set_input_file($org_obj->get_volume($i)->input_file);
-                            $new_volume->set_input_file_obj_idx($org_obj->get_volume($i)->input_file_obj_idx);
-                            $new_volume->set_input_file_vol_idx($org_obj->get_volume($i)->input_file_vol_idx);
-                            $new_volume->config->apply($org_obj->get_volume($i)->config);
-                            $new_volume->set_modifier($org_obj->get_volume($i)->modifier);
-                            $new_volume->mesh->translate(@{$org_obj->origin_translation});
-                        }
-                    }
-                }
-                if (!$org_obj->get_volume($i)->input_file) {
-                    my $new_volume = $new_obj->add_volume($org_obj->get_volume($i)); # error -> copy old volume
-                    $new_volume->set_name($new_volume->name . "-copied");
-                    $volume_unmatched=1;
-                }
+        while ($new_vol_idx<=$new_vol_count-1) {
+            if (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
+                # apply config from the matching volumes
+                $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume($org_vol_idx++)->config);
+            } else {
+                # reload has more volumes than original (first file), apply config from the first volume
+                $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume(0)->config);
+                $volume_unmatched=1;
             }
         }
+        $org_vol_idx=$org_vol_count if $res==wxID_NO; # discard all other configurations according to the MessageDialog
+        while (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
+            # original has more volumes (first file), skip those
+            $org_vol_idx++;
+            $volume_unmatched=1;
+        }
+        while ($org_vol_idx<=$org_vol_count-1) {
+            if ($org_obj->get_volume($org_vol_idx)->input_file) {
+                my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($org_vol_idx)->input_file) };
+                if ($@) {
+                    $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                }elsif ($org_obj->get_volume($org_vol_idx)->input_file_obj_idx > ($model->objects_count-1)) {
+                    # Object Index for that part / modifier not found in current version of the file
+                    $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                }else {
+                    my $prt_mod_obj = $model->objects->[$org_obj->get_volume($org_vol_idx)->input_file_obj_idx];
+                    if ($org_obj->get_volume($org_vol_idx)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
+                        # Volume Index for that part / modifier not found in current version of the file
+                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                    }else{
+                        # all checks passed, load new mesh and copy metadata
+                        my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($org_vol_idx)->input_file_vol_idx));
+                        $new_volume->set_name($org_obj->get_volume($org_vol_idx)->name);
+                        $new_volume->set_input_file($org_obj->get_volume($org_vol_idx)->input_file);
+                        $new_volume->set_input_file_obj_idx($org_obj->get_volume($org_vol_idx)->input_file_obj_idx);
+                        $new_volume->set_input_file_vol_idx($org_obj->get_volume($org_vol_idx)->input_file_vol_idx);
+                        $new_volume->config->apply($org_obj->get_volume($org_vol_idx)->config);
+                        $new_volume->set_modifier($org_obj->get_volume($org_vol_idx)->modifier);
+                        $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                    }
+                }
+            }
+            if (!$org_obj->get_volume($org_vol_idx)->input_file) {
+                my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx)); # error -> copy old mesh
+                $new_volume->set_name($new_volume->name . " - no link to path") if !($new_volume->name =~ m/link to path\z/);
+                $volume_unmatched=1;
+            }
+            $org_vol_idx++;
+        }
     }
-
     $self->remove($obj_idx);
     
     # TODO: refresh object list which contains wrong count and scale
