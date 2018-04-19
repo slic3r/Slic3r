@@ -308,6 +308,7 @@ ModelMaterial::attributes()
         %};
 };
 
+
 %name{Slic3r::Model::Instance} class ModelInstance {
     Ref<ModelObject> object()
         %code%{ RETVAL = THIS->get_object(); %};

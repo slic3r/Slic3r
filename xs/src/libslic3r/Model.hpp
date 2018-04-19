@@ -464,7 +464,7 @@ class ModelVolume
     int input_file_vol_idx; ///< Input file volume index
     
     bool modifier;  ///< Is it an object to be printed, or a modifier volume?
-    
+
     /// Get the parent object owning this modifier volume.
     /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
