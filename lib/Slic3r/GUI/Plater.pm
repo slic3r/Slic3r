@@ -2346,14 +2346,29 @@ sub reload_from_disk {
         }
     }
 
-    # ask the user how to proceed
-    my $res = wxID_YES;
-    if ($org_obj_has_modifiers) {
-        $res = Wx::MessageDialog->new($self, "Additional parts and modifiers are loaded in the current model. \n\nDo you want to also reload these volumes?\nSelecting no will discard the extra volumes and their configuration.", 'Reload additional parts and modifiers', wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxICON_QUESTION)->ShowModal;
+    my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior};
+
+    # ask the user how to proceed, if option is selected in preferences
+    if ($org_obj_has_modifiers && !$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
+        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior);
+        my $res = $dlg->ShowModal;
         if ($res==wxID_CANCEL) {
             $self->remove($_) for @new_obj_idx;
+            $dlg->Destroy;
             return;
         }
+        $reload_behavior = $dlg->GetSelection;
+        my $save = 0;
+        if ($reload_behavior != $Slic3r::GUI::Settings->{_}{reload_behavior}) {
+            $Slic3r::GUI::Settings->{_}{reload_behavior} = $reload_behavior;
+            $save = 1;
+        }
+        if ($dlg->GetHideOnNext) {
+            $Slic3r::GUI::Settings->{_}{reload_hide_dialog} = 1;
+            $save = 1;
+        }
+        Slic3r::GUI->save_settings if $save;
+        $dlg->Destroy;
     }
 
     my $volume_unmatched=0;
@@ -2379,42 +2394,62 @@ sub reload_from_disk {
                 $volume_unmatched=1;
             }
         }
-        $org_vol_idx=$org_vol_count if $res==wxID_NO; # discard all other configurations according to the MessageDialog
+        $org_vol_idx=$org_vol_count if $reload_behavior==2; # Reload behavior: discard
         while (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
             # original has more volumes (first file), skip those
             $org_vol_idx++;
             $volume_unmatched=1;
         }
         while ($org_vol_idx<=$org_vol_count-1) {
-            if ($org_obj->get_volume($org_vol_idx)->input_file) {
-                my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($org_vol_idx)->input_file) };
-                if ($@) {
-                    $org_obj->get_volume($org_vol_idx)->set_input_file("");
-                }elsif ($org_obj->get_volume($org_vol_idx)->input_file_obj_idx > ($model->objects_count-1)) {
-                    # Object Index for that part / modifier not found in current version of the file
-                    $org_obj->get_volume($org_vol_idx)->set_input_file("");
-                }else {
-                    my $prt_mod_obj = $model->objects->[$org_obj->get_volume($org_vol_idx)->input_file_obj_idx];
-                    if ($org_obj->get_volume($org_vol_idx)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
-                        # Volume Index for that part / modifier not found in current version of the file
+            if ($reload_behavior==1) { # Reload behavior: copy
+                my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx));
+                $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                if ($new_volume->name =~ m/link to path\z/) {
+                    my $new_name = $new_volume->name;
+                    $new_name =~ s/ - no link to path$/ - copied/;
+                    $new_volume->set_name($new_name);
+                }elsif(!($new_volume->name =~ m/copied\z/)) {
+                    $new_volume->set_name($new_volume->name . " - copied");
+                }
+            }else{ # Reload behavior: Reload all, also fallback solution if ini was manually edited to a wrong value
+                if ($org_obj->get_volume($org_vol_idx)->input_file) {
+                    my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($org_vol_idx)->input_file) };
+                    if ($@) {
+                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                    }elsif ($org_obj->get_volume($org_vol_idx)->input_file_obj_idx > ($model->objects_count-1)) {
+                        # Object Index for that part / modifier not found in current version of the file
                         $org_obj->get_volume($org_vol_idx)->set_input_file("");
                     }else{
-                        # all checks passed, load new mesh and copy metadata
-                        my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($org_vol_idx)->input_file_vol_idx));
-                        $new_volume->set_name($org_obj->get_volume($org_vol_idx)->name);
-                        $new_volume->set_input_file($org_obj->get_volume($org_vol_idx)->input_file);
-                        $new_volume->set_input_file_obj_idx($org_obj->get_volume($org_vol_idx)->input_file_obj_idx);
-                        $new_volume->set_input_file_vol_idx($org_obj->get_volume($org_vol_idx)->input_file_vol_idx);
-                        $new_volume->config->apply($org_obj->get_volume($org_vol_idx)->config);
-                        $new_volume->set_modifier($org_obj->get_volume($org_vol_idx)->modifier);
-                        $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                        my $prt_mod_obj = $model->objects->[$org_obj->get_volume($org_vol_idx)->input_file_obj_idx];
+                        if ($org_obj->get_volume($org_vol_idx)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
+                            # Volume Index for that part / modifier not found in current version of the file
+                            $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                        }else{
+                            # all checks passed, load new mesh and copy metadata
+                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($org_vol_idx)->input_file_vol_idx));
+                            $new_volume->set_input_file($org_obj->get_volume($org_vol_idx)->input_file);
+                            $new_volume->set_input_file_obj_idx($org_obj->get_volume($org_vol_idx)->input_file_obj_idx);
+                            $new_volume->set_input_file_vol_idx($org_obj->get_volume($org_vol_idx)->input_file_vol_idx);
+                            $new_volume->config->apply($org_obj->get_volume($org_vol_idx)->config);
+                            $new_volume->set_modifier($org_obj->get_volume($org_vol_idx)->modifier);
+                            $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                        }
                     }
                 }
-            }
-            if (!$org_obj->get_volume($org_vol_idx)->input_file) {
-                my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx)); # error -> copy old mesh
-                $new_volume->set_name($new_volume->name . " - no link to path") if !($new_volume->name =~ m/link to path\z/);
-                $volume_unmatched=1;
+                if (!$org_obj->get_volume($org_vol_idx)->input_file) {
+                    my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx)); # error -> copy old mesh
+                    $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                    $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                    if ($new_volume->name =~ m/copied\z/) {
+                        my $new_name = $new_volume->name;
+                        $new_name =~ s/ - copied$/ - no link to path/;
+                        $new_volume->set_name($new_name);
+                    }elsif(!($new_volume->name =~ m/link to path\z/)) {
+                        $new_volume->set_name($new_volume->name . " - no link to path");
+                    }
+                    $volume_unmatched=1;
+                }
             }
             $org_vol_idx++;
         }
