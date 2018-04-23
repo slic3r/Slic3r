@@ -72,11 +72,11 @@ if [[ -e "${dmgfile}" ]]; then
 fi
 
 echo "Creating new app folder: $appfolder"
-mkdir -p $appfolder
+mkdir -p $appfolder 
 mkdir -p $macosfolder
 mkdir -p $resourcefolder
 
-echo "Copying resources..."
+echo "Copying resources..." 
 cp -rf $SLIC3R_DIR/var $resourcefolder/
 mv $resourcefolder/var/Slic3r.icns $resourcefolder
 mv $resourcefolder/var/stl.icns $resourcefolder
