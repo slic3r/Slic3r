@@ -13,6 +13,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/iostream.hpp>
+#include "GUI/GUI.hpp"
 
 
 using namespace Slic3r;
@@ -39,6 +40,11 @@ main(int argc, char **argv)
     cli_config.apply(config, true);
     
     DynamicPrintConfig print_config;
+
+    Slic3rGUI *gui = new Slic3rGUI;
+
+    Slic3rGUI::SetInstance(gui);
+    wxEntry(argc, argv);
     
     // load config files supplied via --load
     for (const std::string &file : cli_config.load.values) {
