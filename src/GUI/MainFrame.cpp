@@ -1,11 +1,17 @@
 #include "MainFrame.hpp"
+#include "Plater.hpp"
+#include "Controller.hpp"
+
+namespace Slic3r { namespace GUI {
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
 wxEND_EVENT_TABLE()
 
 MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
+        : MainFrame(title, pos, size, nullptr) {}
+MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, std::shared_ptr<Settings> config)
         : wxFrame(NULL, wxID_ANY, title, pos, size), loaded(false),
-        tabpanel(NULL)
+        tabpanel(nullptr), controller(nullptr), plater(nullptr), gui_config(config)
 {
     // Set icon to either the .ico if windows or png for everything else.
 
@@ -46,11 +52,19 @@ void MainFrame::init_tabpanel()
     panel->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, ([=](wxAuiNotebookEvent& e) 
     { 
         auto panel = this->tabpanel->GetPage(this->tabpanel->GetSelection());
-        if panel->can('OnActivate') panel->OnActivate();
+        auto tabpanel = this->tabpanel;
+        // todo: trigger processing for activation(?)
+        if (tabpanel->GetSelection() > 1) {
+            tabpanel->SetWindowStyle(tabpanel->GetWindowStyleFlag() | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+        } else if (this->gui_config->show_host == false && tabpanel->GetSelection() == 1) {
+            tabpanel->SetWindowStyle(tabpanel->GetWindowStyleFlag() | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+        } else {
+            tabpanel->SetWindowStyle(tabpanel->GetWindowStyleFlag() | ~wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+        }
     }), panel->GetId());
 
-//    this->plater = Slic3r::GUI::Plater(panel, _("Plater"));
-//    this->controller = Slic3r::GUI::Controller(panel, _("Controller"));
+    this->plater = new Slic3r::GUI::Plater(panel, _("Plater"));
+    this->controller = new Slic3r::GUI::Controller(panel, _("Controller"));
     
 /* 
 sub _init_tabpanel {
@@ -88,3 +102,5 @@ sub _init_tabpanel {
 void MainFrame::init_menubar()
 {
 }
+
+}} // Namespace Slic3r::GUI

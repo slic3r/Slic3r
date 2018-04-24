@@ -8,12 +8,21 @@
 #include <wx/aui/auibook.h>
 #include <wx/tooltip.h>
 
+#include <memory>
+
+#include "Controller.hpp"
+#include "Plater.hpp"
+#include "Settings.hpp"
+
+namespace Slic3r { namespace GUI {
+
 constexpr unsigned int TOOLTIP_TIMER = 32767;
 
 class MainFrame: public wxFrame
 {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
+    MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, std::shared_ptr<Settings> gui_config);
 private:
     wxDECLARE_EVENT_TABLE();
 
@@ -25,7 +34,13 @@ private:
     // STUB: Statusbar reference
 
     wxAuiNotebook* tabpanel;
+    Controller* controller;
+    Plater* plater;
+
+
+    std::shared_ptr<Settings> gui_config;
 
 };
 
+}} // Namespace Slic3r::GUI
 #endif // MAINFRAME_HPP
