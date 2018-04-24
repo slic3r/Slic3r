@@ -318,8 +318,8 @@ sub _init_menubar {
             Wx::LaunchDefaultBrowser('http://manual.slic3r.org/');
         });
         $helpMenu->AppendSeparator();
-        wxTheApp->append_menu_item($helpMenu, "&About Slic3r", 'Show about dialog', sub {
-            wxTheApp->about;
+        $self->_append_menu_item($helpMenu, "&About Slic3r", 'Show about dialog', sub {
+            Slic3r::GUI::about();
         });
     }
     

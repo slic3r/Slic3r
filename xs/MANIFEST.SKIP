@@ -68,6 +68,8 @@
 \bBUILD.COM$
 \bbuild.com$
 ^MANIFEST\.SKIP
+^buildtmp
+\.o$
 
 # Avoid archives of this distribution
 \bSlic3r-XS-[\d\.\_]+

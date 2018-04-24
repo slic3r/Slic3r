@@ -165,8 +165,11 @@ src/polypartition.h
 src/ppport.h
 src/slic3r/GUI/3DScene.cpp
 src/slic3r/GUI/3DScene.hpp
+src/slic3r/GUI/AboutDialog.cpp
+src/slic3r/GUI/AboutDialog.hpp
 src/slic3r/GUI/GUI.cpp
 src/slic3r/GUI/GUI.hpp
+src/slic3r/GUI/wxinit.h
 src/tiny_obj_loader.h
 src/xsinit.h
 t/01_trianglemesh.t
@@ -197,6 +200,7 @@ t/models/3mf/gimblekeychain.3mf
 t/models/amf/FaceColors.amf.xml
 t/models/stl/spikey_top.stl
 t/inc/22_config_bad_config_options.ini
+xsp/AboutDialog.xsp
 xsp/BoundingBox.xsp
 xsp/BridgeDetector.xsp
 xsp/Clipper.xsp

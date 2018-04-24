@@ -1,6 +1,7 @@
 %module{Slic3r::XS};
 
 %{
+#ifdef SLIC3R_GUI
 #include <xsinit.h>
 #include "slic3r/GUI/GUI.hpp"
 %}
@@ -8,8 +9,18 @@
 
 %package{Slic3r::GUI};
 
+void about()
+    %code{% Slic3r::GUI::about(); %};
+
+void set_var_path(std::string path)
+    %code{% Slic3r::GUI::VAR_PATH = path; %};
+
 void disable_screensaver()
     %code{% Slic3r::GUI::disable_screensaver(); %};
 
 void enable_screensaver()
     %code{% Slic3r::GUI::enable_screensaver(); %};
+
+%{
+#endif
+%}

@@ -13,6 +13,7 @@ my %prereqs = qw(
     ExtUtils::CppGuess              0
     ExtUtils::MakeMaker             6.80
     ExtUtils::ParseXS               3.35
+    ExtUtils::XSpp                  0.18
     File::Basename                  0
     File::Spec                      0
     Getopt::Long                    0
@@ -34,11 +35,13 @@ my %recommends = qw(
     threads::shared                 0
 );
 
-my $sudo    = grep { $_ eq '--sudo' } @ARGV;
-my $gui     = grep { $_ eq '--gui' } @ARGV;
-my $xs_only = grep { $_ eq '--xs' }  @ARGV;
-if ($gui) {
+my $sudo    = grep { $_ eq '--sudo' }   @ARGV;
+my $no_gui  = grep { $_ eq '--no-gui' } @ARGV;
+my $xs_only = grep { $_ eq '--xs' }     @ARGV;
+my $no_xs   = grep { $_ eq '--no-xs' }  @ARGV;
+if (!$no_gui) {
     %prereqs = qw(
+    Alien::wxWidgets                0
     Class::Accessor                 0
     Wx                              0.9918
     Socket                          2.016
@@ -142,7 +145,7 @@ EOF
         }
     }
     
-    if (!$gui) {
+    if (!$no_xs) {
         # clean xs directory before reinstalling, to make sure Build is called
         # with current perl binary
         if (-e './xs/Build') {
@@ -152,6 +155,7 @@ EOF
                 system './xs/Build', 'distclean';
             }
         }
+        $ENV{SLIC3R_GUI} = !$no_gui;
         my $res = system $cpanm, @cpanm_args, '--reinstall', '--verbose', './xs';
         if ($res != 0) {
             die "The XS/C++ code failed to compile, aborting\n";
@@ -162,12 +166,10 @@ EOF
 if (@missing_prereqs) {
     printf "The following prerequisites failed to install: %s\n", join(', ', @missing_prereqs);
     exit 1;
-} elsif (!$gui) {
+} elsif (!$no_xs) {
     eval "use App::Prove; 1" or die "Failed to load App::Prove";
     my $res = App::Prove->new->run ? 0 : 1;
-    if ($res == 0) {
-        print "If you also want to use the GUI you can now run `perl Build.PL --gui` to install the required modules.\n";
-    } else {
+    if ($res != 0) {
         print "Some tests failed. Please report the failure to the author!\n";
     }
     exit $res;

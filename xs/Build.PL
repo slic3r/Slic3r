@@ -49,6 +49,9 @@ if ($linux && (defined $ENV{SLIC3R_STATIC} && $ENV{SLIC3R_STATIC})) {
         };
     }
 }
+if (defined($ENV{'LDFLAGS'})) {
+    push @ldflags, split / /, $ENV{'LDFLAGS'};
+}
 
 if ($^O eq 'darwin') {
     push @cflags, qw(-stdlib=libc++);
@@ -75,6 +78,9 @@ if ($^O eq 'darwin') {
         };
     }
 }
+
+my @early_includes = ();
+
 if ($mswin) {
     # In case windows.h is included, we don't want the min / max macros to be active.
     # If <math.h> is included, we want the #defines to be active (M_PI etc.)
@@ -83,6 +89,16 @@ if ($mswin) {
 
 my @INC  = qw(-Isrc/libslic3r);
 my @LIBS = $cpp_guess->is_msvc ? qw(-LIBPATH:src/libslic3r) : qw(-Lsrc/libslic3r);
+
+if ($ENV{SLIC3R_GUI}) {
+    print "Slic3r will be built with GUI support\n";
+    require Alien::wxWidgets;
+    Alien::wxWidgets->load;
+    push @INC, Alien::wxWidgets->include_path;
+    push @cflags, qw(-DSLIC3R_GUI -DUNICODE), Alien::wxWidgets->defines, Alien::wxWidgets->c_flags;
+    push @ldflags, Alien::wxWidgets->link_flags, Alien::wxWidgets->libraries(qw(gl html));
+    push @early_includes, qw(slic3r/GUI/wxinit.h);
+}
 
 # search for Boost in a number of places
 my @boost_include = ();
@@ -218,6 +234,62 @@ if ($cpp_guess->is_gcc) {
     push @cflags, qw(-Wno-undefined-var-template);
 }
 
+if ($mswin) {
+    # like boost, Windows lives to make things difficult for us.
+    # Use an environment option for the necesary location and pray.
+	# this assumes that WXWIN is the base source directory for a built
+	# wxWidgets. 
+	# Needs the libraries in \lib\gcc_dll 
+	# Needs most of the include files in \include\wx (copy from the wxwidgets archive is sufficient)
+	# Also needs wx/setup.h to be present either in a subdir of gcc_dll (lib\gcc_dll\mswu) or in include.
+	my @wx_libraries=qw(net xml);
+	my @wx_msw_libraries=qw(core gl html stc adv aui xrc stc richtext media);
+
+	# These libs are needed because they are used by wx
+	my @wx_extra_libraries=qw(zlib scintilla png regexu tiff);
+
+    push @INC, "-I\"$ENV{WXWIN}\\include\"";
+    push @cflags, qw(-D__WXMSW__ -D_UNICODE);
+    # add libraries
+	push @LIBS, "-L\"$ENV{WXWIN}\\lib\"";
+    if ($cpp_guess->is_msvc) {
+		push @LIBS, "-L\"$ENV{WXWIN}\\lib\\msvc_lib\"";
+		push @INC, "-I\"$ENV{WXWIN}\\lib\\msvc_lib\\mswu\"";
+    } else {
+		push @LIBS, "-L\"$ENV{WXWIN}\\lib\\gcc_lib\"";
+		push @LIBS, "-L\"$ENV{WXWIN}\\lib\\gcc_dll\"";
+		push @INC, "-I\"$ENV{WXWIN}\\lib\\gcc_lib\\mswu\"";
+		push @INC, "-I\"$ENV{WXWIN}\\lib\\gcc_dll\\mswu\"";
+    }
+    push @ldflags, qw(-pthread); 
+	if (0) {
+		push @LIBS, qw(-lwxbase31u);
+		push @LIBS, map "-lwxbase31u_${_}", @wx_libraries;
+		push @LIBS, map "-lwxmsw31u_${_}", @wx_msw_libraries;
+		push @LIBS, map "-lwx${_}", @wx_extra_libraries;
+	} else {
+		push @LIBS, qw(-lwxbase310u_gcc_custom);
+		push @LIBS, map "-lwxbase310u_${_}_gcc_custom", @wx_libraries;
+		push @LIBS, map "-lwxmsw310u_${_}_gcc_custom", @wx_msw_libraries;
+		#push @LIBS, map "-lwx${_}", @wx_extra_libraries;
+	}
+} else {
+    # on linux/osx, wx-config is hopefully in the path and can be used.
+    # if wxdir is defined (which is the prefix that wxwidgets was installed to
+    # use that instead.
+    my $wx_config_libs;
+    my $wx_config_flags;
+    if (defined($ENV{WXDIR})) {
+        chomp($wx_config_libs     = `sh $ENV{WXDIR}/bin/wx-config --libs`);
+        chomp($wx_config_flags     = `sh $ENV{WXDIR}/bin/wx-config --cxxflags`);
+    } else {
+        chomp($wx_config_libs     = `wx-config --libs`);
+        chomp($wx_config_flags     = `wx-config --cxxflags`);
+    }
+    push @cflags, $wx_config_flags;
+    push @ldflags, $wx_config_libs;
+}
+
 my $build = Module::Build::WithXSpp->new(
     module_name     => 'Slic3r::XS',
     dist_abstract   => 'XS code for Slic3r',
@@ -249,7 +321,7 @@ my $build = Module::Build::WithXSpp->new(
         ostream
         sstream
         libslic3r/GCodeSender.hpp
-    )]
+    ), @early_includes]
 );
 
 $build->create_build_script;

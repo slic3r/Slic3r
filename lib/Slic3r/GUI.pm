@@ -23,7 +23,6 @@ use List::Util qw(first any);
 use Slic3r::Geometry qw(X Y);
 
 use Slic3r::GUI::2DBed;
-use Slic3r::GUI::AboutDialog;
 use Slic3r::GUI::BedShapeDialog;
 use Slic3r::GUI::BonjourBrowser;
 use Slic3r::GUI::ConfigWizard;
@@ -237,14 +236,6 @@ sub OnInit {
     });
     
     return 1;
-}
-
-sub about {
-    my ($self) = @_;
-    
-    my $about = Slic3r::GUI::AboutDialog->new(undef);
-    $about->ShowModal;
-    $about->Destroy;
 }
 
 # static method accepting a wxWindow object as first parameter
