@@ -221,7 +221,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("end_gcode", coString);
     def->label = "End G-code";
-    def->tooltip = "This end procedure is inserted at the end of the output file. Note that you can use placeholder variables for all Slic3r settings.";
+    def->tooltip = "This end procedure is inserted at the end of the output file. Note that you can use placeholder variables for all Slic3r settings. If Slic3r detects M104, M109, M140 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions.";
     def->cli = "end-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -230,7 +230,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("end_filament_gcode", coStrings);
     def->label = "End G-code";
-    def->tooltip = "This end procedure is inserted at the end of the output file, before the printer end gcode. Note that you can use placeholder variables for all Slic3r settings. If you have multiple extruders, the gcode is processed in extruder order.";
+    def->tooltip = "This end procedure is inserted at the end of the output file, before the printer end gcode. Note that you can use placeholder variables for all Slic3r settings. If you have multiple extruders, the gcode is processed in extruder order. If Slic3r detects M104, M109, M140 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions.";
     def->cli = "end-filament-gcode=s@";
     def->multiline = true;
     def->full_width = true;

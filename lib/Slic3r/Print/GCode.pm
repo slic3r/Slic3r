@@ -153,6 +153,10 @@ sub export {
     foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
         $include_start_extruder_temp = $include_start_extruder_temp &&  ($start_gcode !~ /M(?:109|104)/i);
     }
+    my $include_end_extruder_temp = $self->config->end_gcode !~ /M(?:109|104)/i; 
+    foreach my $end_gcode (@{ $self->config->end_filament_gcode }) { # process filament gcode in order
+        $include_end_extruder_temp = $include_end_extruder_temp &&  ($end_gcode !~ /M(?:109|104)/i);
+    }
     $self->_print_first_layer_temperature(0)
         if $include_start_extruder_temp;
     printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($self->config->start_gcode));
@@ -301,6 +305,12 @@ sub export {
         printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($end_gcode));
     }
     printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($self->config->end_gcode));
+
+    $self->_print_off_temperature(0)
+        if $include_end_extruder_temp;
+    print $fh $self->_gcodegen->writer->set_bed_temperature(0, 0)
+        if $include_end_extruder_temp;
+
     print $fh $gcodegen->writer->update_progress($gcodegen->layer_count, $gcodegen->layer_count, 1);  # 100%
     print $fh $gcodegen->writer->postamble;
     
@@ -355,6 +365,16 @@ sub _print_first_layer_temperature {
         printf {$self->fh} $self->_gcodegen->writer->set_temperature($temp, $wait, $t) if $temp > 0;
     }
 }
+
+sub _print_off_temperature {
+    my ($self, $wait) = @_;
+    
+    for my $t (@{$self->print->extruders}) {
+        printf {$self->fh} $self->_gcodegen->writer->set_temperature(0, $wait, $t)
+    }
+}
+
+
 
 # Called per object's layer.
 # First a $gcode string is collected,
