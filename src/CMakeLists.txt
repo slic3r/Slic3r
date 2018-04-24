@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.10)
 project (slic3r)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
@@ -17,14 +17,17 @@ IF(CMAKE_HOST_APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE")
     set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation -lc++")
 ELSE(CMAKE_HOST_APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
+#    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -L.")
 ENDIF(CMAKE_HOST_APPLE)
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ON)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_STATIC_RUNTIME OFF)
+find_package(Threads REQUIRED)
+
 find_package(Boost COMPONENTS system thread filesystem)
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
+set(GUI_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/GUI/)
 
 include_directories(${LIBDIR})
 include_directories(${LIBDIR}/libslic3r)
@@ -53,6 +56,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Fill/FillHoneycomb.cpp
     ${LIBDIR}/libslic3r/Fill/FillPlanePath.cpp
     ${LIBDIR}/libslic3r/Fill/FillRectilinear.cpp
+    ${LIBDIR}/libslic3r/Fill/FillGyroid.cpp
     ${LIBDIR}/libslic3r/Flow.cpp
     ${LIBDIR}/libslic3r/GCode.cpp
     ${LIBDIR}/libslic3r/GCode/CoolingBuffer.cpp
@@ -122,29 +126,29 @@ add_library(poly2tri STATIC
 )
 
 add_executable(slic3r slic3r.cpp)
-set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
-set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
+#set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
+#set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
 
-add_executable(extrude-tin utils/extrude-tin.cpp)
-set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_START_STATIC 1)
-set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_END_STATIC 1)
+#add_executable(extrude-tin utils/extrude-tin.cpp)
+#set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_START_STATIC 1)
+#set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_END_STATIC 1)
 
-set(wxWidgets_USE_STATIC)
-SET(wxWidgets_USE_LIBS)
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_STATIC_RUNTIME OFF)
 
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ON)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 find_library(bsystem_l boost_system)
-add_library(bsystem STATIC IMPORTED)
+add_library(bsystem SHARED IMPORTED)
 set_target_properties(bsystem PROPERTIES IMPORTED_LOCATION ${bsystem_l})
 find_library(bthread_l boost_thread)
-add_library(bthread STATIC IMPORTED)
+add_library(bthread SHARED IMPORTED)
 set_target_properties(bthread PROPERTIES IMPORTED_LOCATION ${bthread_l})
 include_directories(${Boost_INCLUDE_DIRS})
 
-#find_package(wxWidgets)
-#disable wx for the time being - we're not building any of the gui yet
+set(wxWidgets_USE_STATIC OFF)
+set(wxWidgets_USE_UNICODE ON)
+
+find_package(wxWidgets COMPONENTS base aui core)
+
 IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
 ENDIF(CMAKE_HOST_UNIX)
@@ -154,9 +158,15 @@ target_link_libraries (slic3r libslic3r admesh BSpline clipper expat polypartiti
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
     INCLUDE("${wxWidgets_USE_FILE}")
-    add_library(slic3r_gui STATIC ${LIBDIR}/slic3r/GUI/3DScene.cpp ${LIBDIR}/slic3r/GUI/GUI.cpp)
+    include_directories(${GUI_LIBDIR})
+    include_directories(${wxWidgets_INCLUDE})
+
+    add_library(slic3r_gui STATIC 
+    ${GUI_LIBDIR}/MainFrame.cpp
+    ${GUI_LIBDIR}/GUI.cpp
+    )
     #only build GUI lib if building with wx
-    target_link_libraries (slic3r slic3r-gui ${wxWidgets_LIBRARIES})
+    target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES})
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
     MESSAGE("wx not found!")
@@ -169,8 +179,8 @@ IF (WIN32)
         ${LIBDIR}/boost/nowide/iostream.cpp
     )
 
-    target_link_libraries(slic3r boost-nowide)
-    target_link_libraries(extrude-tin boost-nowide)
+    target_link_libraries(slic3r STATIC boost-nowide)
+#    target_link_libraries(extrude-tin boost-nowide)
 ENDIF(WIN32)
 
-target_link_libraries (extrude-tin libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+#target_link_libraries (extrude-tin libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
