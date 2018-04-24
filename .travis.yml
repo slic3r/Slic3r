@@ -10,7 +10,8 @@ install:
 script:
 - bash package/linux/travis-setup.sh
 - perlbrew switch slic3r-perl
-- perl ./Build.PL
+- cmake src/
+- make -j4
 after_success:
 - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
 - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
@@ -37,6 +38,10 @@ addons:
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
+    - cmake
+    - wx3.0-headers
+    - libwxgtk3.0-dev
+    - wx-common
   ssh_known_hosts: dl.slic3r.org
 notifications:
   irc:
