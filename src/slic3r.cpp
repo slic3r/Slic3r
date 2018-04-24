@@ -41,9 +41,11 @@ main(int argc, char **argv)
     
     DynamicPrintConfig print_config;
 
-    Slic3rGUI *gui = new Slic3rGUI;
+    std::shared_ptr<GUI::Settings> gui_config = std::make_shared<GUI::Settings>();
 
-    Slic3rGUI::SetInstance(gui);
+    GUI::App *gui = new GUI::App(gui_config);
+
+    GUI::App::SetInstance(gui);
     wxEntry(argc, argv);
     
     // load config files supplied via --load

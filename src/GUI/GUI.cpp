@@ -5,18 +5,19 @@
 
 #include "MainFrame.hpp"
 #include "GUI.hpp"
-//using namespace Slic3r;
 
+namespace Slic3r { namespace GUI {
 
 enum
 {
     ID_Hello = 1
 };
-bool Slic3rGUI::OnInit()
+bool App::OnInit()
 {
-    MainFrame *frame = new MainFrame( "Slic3r", wxDefaultPosition, wxDefaultSize);
+    MainFrame *frame = new MainFrame( "Slic3r", wxDefaultPosition, wxDefaultSize, this->gui_config);
   
     frame->Show( true );
     return true;
 }
 
+}} // namespace Slic3r::GUI
