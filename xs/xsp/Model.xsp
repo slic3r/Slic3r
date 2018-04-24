@@ -258,6 +258,20 @@ ModelMaterial::attributes()
         %code%{ RETVAL = THIS->name; %};
     void set_name(std::string value)
         %code%{ THIS->name = value; %};
+
+    std::string input_file()
+        %code%{ RETVAL = THIS->input_file; %};
+    void set_input_file(std::string value)
+        %code%{ THIS->input_file = value; %};
+    int input_file_obj_idx()
+        %code%{ RETVAL = THIS->input_file_obj_idx; %};
+    void set_input_file_obj_idx(int obj_idx)
+        %code%{ THIS->input_file_obj_idx = obj_idx; %};
+    int input_file_vol_idx()
+        %code%{ RETVAL = THIS->input_file_vol_idx; %};
+    void set_input_file_vol_idx(int vol_idx)
+        %code%{ THIS->input_file_vol_idx = vol_idx; %};
+
     t_model_material_id material_id();
     void set_material_id(t_model_material_id material_id)
         %code%{ THIS->material_id(material_id); %};

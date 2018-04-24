@@ -353,11 +353,17 @@ sub on_btn_load {
             next;
         }
         
-        foreach my $object (@{$model->objects}) {
-            foreach my $volume (@{$object->volumes}) {
-                my $new_volume = $self->{model_object}->add_volume($volume);
+        for my $obj_idx (0..($model->objects_count-1)) {
+            my $object = $model->objects->[$obj_idx];
+            for my $vol_idx (0..($object->volumes_count-1)) {
+                my $new_volume = $self->{model_object}->add_volume($object->get_volume($vol_idx));
                 $new_volume->set_modifier($is_modifier);
                 $new_volume->set_name(basename($input_file));
+                 
+                # input_file needed to reload / update modifiers' volumes
+                $new_volume->set_input_file($input_file);
+                $new_volume->set_input_file_obj_idx($obj_idx);
+                $new_volume->set_input_file_vol_idx($vol_idx);
                 
                 # apply the same translation we applied to the object
                 $new_volume->mesh->translate(@{$self->{model_object}->origin_translation});
