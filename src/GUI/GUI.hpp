@@ -3,6 +3,7 @@
 #include "MainFrame.hpp"
 #include "Notifier.hpp"
 #include <string>
+#include  <vector>
 
 namespace Slic3r { namespace GUI {
 
