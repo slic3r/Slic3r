@@ -9,9 +9,12 @@
 #include <wx/tooltip.h>
 
 #include <memory>
+#include <map>
+
 
 #include "Controller.hpp"
 #include "Plater.hpp"
+#include "PresetEditor.hpp"
 #include "Settings.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -39,6 +42,7 @@ private:
 
 
     std::shared_ptr<Settings> gui_config;
+    std::map<wxWindowID, PresetEditor*> preset_editor_tabs;
 
 };
 
