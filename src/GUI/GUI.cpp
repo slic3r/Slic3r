@@ -17,6 +17,9 @@ bool App::OnInit()
     MainFrame *frame = new MainFrame( "Slic3r", wxDefaultPosition, wxDefaultSize, this->gui_config);
   
     frame->Show( true );
+
+    this->SetAppName("Slic3r");
+
     return true;
 }
 
