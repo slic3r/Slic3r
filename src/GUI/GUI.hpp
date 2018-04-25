@@ -2,14 +2,17 @@
 #define GUI_HPP
 #include "MainFrame.hpp"
 #include "Notifier.hpp"
+#include <string>
 
 namespace Slic3r { namespace GUI {
 
+// Friendly indices for the preset lists.
 enum class PresetID {
     PRINT = 0,
     FILAMENT = 1,
     PRINTER = 2
 };
+using preset_list = std::vector<std::string>;
 
 class App: public wxApp
 {
@@ -22,7 +25,7 @@ public:
 private:
     std::shared_ptr<Settings> gui_config; // GUI-specific configuration options
     Notifier* notifier;
-    
+    std::vector<preset_list> presets { preset_list(), preset_list(), preset_list() };
 };
 
 }} // namespace Slic3r::GUI

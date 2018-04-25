@@ -15,6 +15,11 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
         tabpanel(nullptr), controller(nullptr), plater(nullptr), gui_config(config), preset_editor_tabs(std::map<wxWindowID, PresetEditor*>())
 {
     // Set icon to either the .ico if windows or png for everything else.
+    if (the_os == OS::Windows) 
+        this->SetIcon(wxIcon(var("Slic3r.ico"), wxBITMAP_TYPE_ICO));
+    else
+        this->SetIcon(wxIcon(var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG));        
+    
 
     this->init_tabpanel();
     this->init_menubar();
