@@ -75,20 +75,20 @@ class PrintObject
     friend class Print;
 
     public:
-    // map of (vectors of volume ids), indexed by region_id
-    /* (we use map instead of vector so that we don't have to worry about
-       resizing it and the [] operator adds new items automagically) */
+    /// map of (vectors of volume ids), indexed by region_id
+    /// (we use map instead of vector so that we don't have to worry about
+    /// resizing it and the [] operator adds new items automagically)
     std::map< size_t,std::vector<int> > region_volumes;
-    PrintObjectConfig config;
+    PrintObjectConfig config; //< Configuration
     t_layer_height_ranges layer_height_ranges;
     
     LayerHeightSpline layer_height_spline;
 
-    // this is set to true when LayerRegion->slices is split in top/internal/bottom
-    // so that next call to make_perimeters() performs a union() before computing loops
+    /// this is set to true when LayerRegion->slices is split in top/internal/bottom
+    /// so that next call to make_perimeters() performs a union() before computing loops
     bool typed_slices;
 
-    Point3 size;           // XYZ in scaled coordinates
+    Point3 size;           //< XYZ in scaled coordinates
 
     // scaled coordinates to add to copies (to compensate for the alignment
     // operated when creating the object but still preserving a coherent API
