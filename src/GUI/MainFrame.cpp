@@ -1,4 +1,6 @@
 #include "MainFrame.hpp"
+#include <wx/accel.h>
+#include <wx/utils.h> 
 
 namespace Slic3r { namespace GUI {
 
@@ -105,6 +107,59 @@ void MainFrame::init_tabpanel()
 
 void MainFrame::init_menubar()
 {
+
+    wxMenu* menuFile = new wxMenu();
+    {
+    }
+    
+    wxMenu* menuPlater = new wxMenu();
+    {
+    }
+    wxMenu* menuObject = new wxMenu();
+    {
+    }
+    wxMenu* menuSettings = new wxMenu();
+    {
+    }
+    wxMenu* menuView = new wxMenu();
+    {
+    }
+    wxMenu* menuWindow = new wxMenu();
+    {
+    }
+    wxMenu* menuHelp = new wxMenu();
+    {
+        // TODO: Reimplement config wizard
+        //menuHelp->AppendSeparator();
+        append_menu_item(menuHelp, _("Slic3r &Website"), _("Open the Slic3r website in your browser"), [=](wxCommandEvent& e) 
+        {
+            wxLaunchDefaultBrowser("http://www.slic3r.org");
+        });
+        append_menu_item(menuHelp, _("Check for &Updates..."), _("Check for new Slic3r versions"), [=](wxCommandEvent& e)
+        {
+//            parent->check_version(true);
+        });
+        append_menu_item(menuHelp, _("Slic3r &Manual"), _("Open the Slic3r manual in your browser"), [=](wxCommandEvent& e) 
+        {
+            wxLaunchDefaultBrowser("http://manual.slic3r.org/");
+        });
+        append_menu_item(menuHelp, _("&About Slic3r"), _("Show about dialog"), [=](wxCommandEvent& e) 
+        {
+        }, wxID_ABOUT);
+        
+    }
+
+    wxMenuBar* menubar = new wxMenuBar();
+    menubar->Append(menuFile, _("&File"));
+    menubar->Append(menuPlater, _("&Plater"));
+    menubar->Append(menuObject, _("&Object"));
+    menubar->Append(menuSettings, _("&Settings"));
+    menubar->Append(menuView, _("&View"));
+    menubar->Append(menuWindow, _("&Window"));
+    menubar->Append(menuHelp, _("&Help"));
+
+    this->SetMenuBar(menubar);
+
 }
 
 }} // Namespace Slic3r::GUI
