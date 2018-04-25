@@ -309,7 +309,7 @@ sub export {
     $self->_print_off_temperature(0)
         if $include_end_extruder_temp;
     # set bed temperature
-    if ($self->config->has_heatbed && $self->config->start_gcode !~ /M(?:190|140)/i) {
+    if (($self->config->has_heatbed) && $self->config->end_gcode !~ /M(?:190|140)/i) {
         printf $fh $gcodegen->writer->set_bed_temperature(0, 0);
     }
 
