@@ -8,8 +8,8 @@
 namespace Slic3r {
 
 PrintObject::PrintObject(Print* print, ModelObject* model_object, const BoundingBoxf3 &modobj_bbox)
-:   typed_slices(false),
-    layer_height_spline(model_object->layer_height_spline),
+:   layer_height_spline(model_object->layer_height_spline),
+    typed_slices(false),
     _print(print),
     _model_object(model_object)
 {
