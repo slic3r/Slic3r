@@ -50,7 +50,6 @@ notifications:
     on_success: change
     on_failure: always
     use_notice: true
-sudo: required
 dist: trusty
 env:
   matrix: 
