@@ -44,6 +44,8 @@ main(int argc, char **argv)
     std::shared_ptr<GUI::Settings> gui_config = std::make_shared<GUI::Settings>();
 
     GUI::App *gui = new GUI::App(gui_config);
+    
+    gui_config->show_host = true;
 
     GUI::App::SetInstance(gui);
     wxEntry(argc, argv);
