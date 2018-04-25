@@ -308,8 +308,10 @@ sub export {
 
     $self->_print_off_temperature(0)
         if $include_end_extruder_temp;
-    print $fh $self->_gcodegen->writer->set_bed_temperature(0, 0)
-        if $include_end_extruder_temp;
+    # set bed temperature
+    if ($self->config->has_heatbed && $self->config->start_gcode !~ /M(?:190|140)/i) {
+        printf $fh $gcodegen->writer->set_bed_temperature(0, 0);
+    }
 
     print $fh $gcodegen->writer->update_progress($gcodegen->layer_count, $gcodegen->layer_count, 1);  # 100%
     print $fh $gcodegen->writer->postamble;
