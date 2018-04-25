@@ -936,17 +936,17 @@ ModelObject::print_info() const
 
 
 ModelVolume::ModelVolume(ModelObject* object, const TriangleMesh &mesh)
-:   mesh(mesh), modifier(false), input_file(""), object(object)
+:   mesh(mesh), input_file(""), modifier(false), object(object)
 {}
 
 ModelVolume::ModelVolume(ModelObject* object, const ModelVolume &other)
 :   name(other.name),
     mesh(other.mesh),
     config(other.config),
-    modifier(other.modifier),
     input_file(other.input_file),
     input_file_obj_idx(other.input_file_obj_idx),
     input_file_vol_idx(other.input_file_vol_idx),
+    modifier(other.modifier),
     object(object)
 {
     this->material_id(other.material_id());

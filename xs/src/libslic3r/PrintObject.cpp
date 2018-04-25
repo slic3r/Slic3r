@@ -9,9 +9,9 @@ namespace Slic3r {
 
 PrintObject::PrintObject(Print* print, ModelObject* model_object, const BoundingBoxf3 &modobj_bbox)
 :   typed_slices(false),
+    layer_height_spline(model_object->layer_height_spline),
     _print(print),
-    _model_object(model_object),
-    layer_height_spline(model_object->layer_height_spline)
+    _model_object(model_object)
 {
     // Compute the translation to be applied to our meshes so that we work with smaller coordinates
     {
