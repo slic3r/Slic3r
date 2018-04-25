@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.9)
 project (slic3r)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
