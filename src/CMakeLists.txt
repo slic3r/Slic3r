@@ -164,6 +164,7 @@ IF(wxWidgets_FOUND)
     add_library(slic3r_gui STATIC 
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/GUI.cpp
+    ${GUI_LIBDIR}/misc_ui.cpp
     )
     #only build GUI lib if building with wx
     target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES})

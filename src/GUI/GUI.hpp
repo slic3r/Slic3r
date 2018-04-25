@@ -1,6 +1,7 @@
 #ifndef GUI_HPP
 #define GUI_HPP
 #include "MainFrame.hpp"
+#include "Notifier.hpp"
 
 namespace Slic3r { namespace GUI {
 

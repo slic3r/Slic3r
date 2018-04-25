@@ -1,4 +1,5 @@
 #include "MainFrame.hpp"
+#include "misc_ui.hpp"
 #include <wx/accel.h>
 #include <wx/utils.h> 
 
@@ -137,7 +138,7 @@ void MainFrame::init_menubar()
         });
         append_menu_item(menuHelp, _("Check for &Updates..."), _("Check for new Slic3r versions"), [=](wxCommandEvent& e)
         {
-//            parent->check_version(true);
+            check_version(true);
         });
         append_menu_item(menuHelp, _("Slic3r &Manual"), _("Open the Slic3r manual in your browser"), [=](wxCommandEvent& e) 
         {
