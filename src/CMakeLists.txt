@@ -136,7 +136,7 @@ add_executable(slic3r slic3r.cpp)
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
-find_library(bsystem_l boost_system)
+find_library(bsystem_l boost_system log)
 add_library(bsystem SHARED IMPORTED)
 set_target_properties(bsystem PROPERTIES IMPORTED_LOCATION ${bsystem_l})
 find_library(bthread_l boost_thread)
@@ -164,6 +164,7 @@ IF(wxWidgets_FOUND)
     add_library(slic3r_gui STATIC 
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/GUI.cpp
+    ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
     )
     #only build GUI lib if building with wx

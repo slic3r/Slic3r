@@ -20,16 +20,7 @@
 
 namespace Slic3r { namespace GUI {
 
-template <typename T>
-void append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T lambda, int id = wxID_ANY, const wxBitmap& icon = wxBitmap(), const wxString& accel = "") {
-    wxMenuItem* tmp = menu->Append(wxID_ANY, name, help);
-    wxAcceleratorEntry* a = new wxAcceleratorEntry();
-    if (a->FromString(accel))
-        tmp->SetAccel(a); // set the accelerator if and only if the accelerator is fine
-    tmp->SetHelp(help);
 
-    menu->Bind(wxEVT_MENU, lambda, tmp->GetId(), tmp->GetId());
-}
 
 constexpr unsigned int TOOLTIP_TIMER = 32767;
 

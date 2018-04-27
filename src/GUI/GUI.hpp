@@ -1,9 +1,11 @@
 #ifndef GUI_HPP
 #define GUI_HPP
+#include <wx/toplevel.h>
 #include "MainFrame.hpp"
 #include "Notifier.hpp"
 #include <string>
-#include  <vector>
+#include <vector>
+
 
 namespace Slic3r { namespace GUI {
 
@@ -21,12 +23,19 @@ public:
     virtual bool OnInit();
     App(std::shared_ptr<Settings> config) : wxApp(), gui_config(config) {}
 
-    void check_version(bool manual) { /* stub */}
+    /// Save position, size, and maximize state for a TopLevelWindow (includes Frames) by name in Settings.
+    void save_window_pos(const wxTopLevelWindow* window, const wxString& name );
+
+    /// Move/resize a named TopLevelWindow (includes Frames) from Settings
+    void restore_window_pos(wxTopLevelWindow* window, const wxString& name );
 
 private:
     std::shared_ptr<Settings> gui_config; // GUI-specific configuration options
-    Notifier* notifier;
+    std::unique_ptr<Notifier> notifier {nullptr};
     std::vector<preset_list> presets { preset_list(), preset_list(), preset_list() };
+
+    void load_presets();
+
 };
 
 }} // namespace Slic3r::GUI
