@@ -15,11 +15,13 @@ PrintConfigDef::PrintConfigDef()
     external_fill_pattern.enum_values.push_back("hilbertcurve");
     external_fill_pattern.enum_values.push_back("archimedeanchords");
     external_fill_pattern.enum_values.push_back("octagramspiral");
+    external_fill_pattern.enum_values.push_back("jetting");
     external_fill_pattern.enum_labels.push_back("Rectilinear");
     external_fill_pattern.enum_labels.push_back("Concentric");
     external_fill_pattern.enum_labels.push_back("Hilbert Curve");
     external_fill_pattern.enum_labels.push_back("Archimedean Chords");
     external_fill_pattern.enum_labels.push_back("Octagram Spiral");
+    external_fill_pattern.enum_values.push_back("Jetting");
     
     ConfigOptionDef* def;
 
@@ -517,6 +519,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("grid");
     def->enum_values.push_back("triangles");
+    def->enum_values.push_back("jetting");
     def->enum_values.push_back("stars");
     def->enum_values.push_back("cubic");
     def->enum_values.push_back("concentric");
@@ -530,6 +533,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Aligned Rectilinear");
     def->enum_labels.push_back("Grid");
     def->enum_labels.push_back("Triangles");
+    def->enum_labels.push_back("Jetting");
     def->enum_labels.push_back("Stars");
     def->enum_labels.push_back("Cubic");
     def->enum_labels.push_back("Concentric");

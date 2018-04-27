@@ -448,6 +448,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
         it->rotate(direction.first);
 }
 
+
 void FillRectilinear::_fill_surface_single(
     unsigned int                    thickness_layers,
     const direction_t               &direction,
@@ -471,6 +472,17 @@ void FillGrid::_fill_surface_single(
     fill2._fill_single_direction(expolygon, direction,  0, out);
     fill2.dont_connect = true;
     fill2._fill_single_direction(expolygon, direction2, 0, out);
+}
+
+void FillJetting::_fill_surface_single(
+    unsigned int                    thickness_layers,
+    const direction_t               &direction,
+    ExPolygon                       &expolygon,
+    Polylines*                      out)
+{
+    FillJetting fill2 = *this;
+    fill2.dont_connect = true;
+    fill2._fill_single_direction(expolygon, direction,  0, out);
 }
 
 void FillTriangles::_fill_surface_single(
