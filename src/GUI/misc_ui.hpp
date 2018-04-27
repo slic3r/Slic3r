@@ -39,6 +39,31 @@ const wxString var(const wxString& in);
 /// Always returns path to home directory.
 const wxString home(const wxString& in = "Slic3r");
 
+template <typename T>
+void append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T lambda, int id = wxID_ANY, const wxString& icon = "", const wxString& accel = "") {
+    wxMenuItem* tmp = menu->Append(wxID_ANY, name, help);
+    wxAcceleratorEntry* a = new wxAcceleratorEntry();
+    if (!accel.IsEmpty()) {
+        a->FromString(accel);
+        tmp->SetAccel(a); // set the accelerator if and only if the accelerator is fine
+    }
+    tmp->SetHelp(help);
+    if (!icon.IsEmpty()) 
+        tmp->SetBitmap(wxBitmap(var(icon)));
+
+    menu->Bind(wxEVT_MENU, lambda, tmp->GetId(), tmp->GetId());
+}
+
+/*
+sub CallAfter {
+    my ($self, $cb) = @_;
+    push @cb, $cb;
+}
+*/
+
+wxString decode_path(const wxString& in);
+wxString encode_path(const wxString& in);
+
 }} // namespace Slic3r::GUI
 
 #endif // MISC_UI_HPP
