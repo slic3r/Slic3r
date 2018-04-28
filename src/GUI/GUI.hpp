@@ -36,6 +36,8 @@ private:
 
     void load_presets();
 
+    wxString datadir {""};
+    const std::string LogChannel {"GUI"}; //< Which log these messages should go to.
 };
 
 }} // namespace Slic3r::GUI
