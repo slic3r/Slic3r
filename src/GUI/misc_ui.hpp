@@ -29,15 +29,46 @@ constexpr bool isDev = true;
 constexpr bool isDev = false;
 #endif
 
+
+/// Mostly useful for Linux distro maintainers, this will change where Slic3r assumes 
+/// its ./var directory lives (where its art assets are). 
+/// Define VAR_ABS and VAR_ABS_PATH 
+#ifndef VAR_ABS
+    #define VAR_ABS false
+#else 
+    #define VAR_ABS true
+#endif
+#ifndef VAR_ABS_PATH
+    #define VAR_ABS_PATH "/usr/share/Slic3r/var"
+#endif
+
+#ifndef VAR_REL // Redefine on compile
+    #define VAR_REL L"/../var"
+#endif
+
 /// Performs a check via the Internet for a new version of Slic3r.
 /// If this version of Slic3r was compiled with -DSLIC3R_DEV, check the development 
 /// space instead of release.
 void check_version(bool manual = false);
 
+/// Provides a path to Slic3r's var dir.
 const wxString var(const wxString& in);
+
+/// Provide a path to where Slic3r exec'd from.
+const wxString bin();
 
 /// Always returns path to home directory.
 const wxString home(const wxString& in = "Slic3r");
+
+/// Shows an error messagebox
+void show_error(wxWindow* parent, const wxString& message);
+
+/// Shows an info messagebox.
+void show_info(wxWindow* parent, const wxString& message, const wxString& title);
+
+/// Show an error messagebox and then throw an exception.
+void fatal_error(wxWindow* parent, const wxString& message);
+
 
 template <typename T>
 void append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T lambda, int id = wxID_ANY, const wxString& icon = "", const wxString& accel = "") {
