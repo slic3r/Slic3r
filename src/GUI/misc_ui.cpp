@@ -3,6 +3,7 @@
 #include <wx/msgdlg.h>
 
 #include <exception>
+#include <stdexcept>
 
 namespace Slic3r { namespace GUI {
 
@@ -19,9 +20,9 @@ void check_version(bool manual)  {
 const wxString var(const wxString& in) {
     // TODO replace center string with path to VAR in actual distribution later
     if (VAR_ABS) {
-        return VAR_ABS_PATH + "/" + in;
+        return wxString(VAR_ABS_PATH) + "/" + in;
     } else {
-        return bin() + VAR_REL + "/" + in;
+        return bin() + wxString(VAR_REL) + "/" + in;
     }
 }
 
