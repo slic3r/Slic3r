@@ -3,6 +3,8 @@
     #include <wx/wx.h>
 #endif
 #include <wx/display.h>
+#include <wx/filefn.h> 
+#include <string>
 
 
 #include "MainFrame.hpp"
@@ -10,40 +12,65 @@
 #include "misc_ui.hpp"
 #include "Preset.hpp"
 
+// Logging mechanism
+#include "Log.hpp"
+
 namespace Slic3r { namespace GUI {
 
-enum
-{
-    ID_Hello = 1
-};
+/// Primary initialization and point of entry into the GUI application.
+/// Calls MainFrame and handles preset loading, etc.
 bool App::OnInit()
 {
-  
-
     this->SetAppName("Slic3r");
     // TODO: Call a logging function with channel GUI, severity info
 
     this->notifier = std::unique_ptr<Notifier>();
 
-    wxString datadir {decode_path(wxStandardPaths::Get().GetUserDataDir())};
+    datadir = decode_path(wxStandardPaths::Get().GetUserDataDir());
     wxString enc_datadir = encode_path(datadir);
-    std::cerr << datadir << "\n";
+
+    const wxString& slic3r_ini  {datadir + "/slic3r.ini"};
+    const wxString& print_ini   {datadir + "/print"};
+    const wxString& printer_ini {datadir + "/printer"};
+    const wxString& material_ini {datadir + "/filament"};
+
+    // if we don't have a datadir or a slic3r.ini, prompt for wizard.
+    bool run_wizard = (wxDirExists(datadir) && wxFileExists(slic3r_ini));
+    
+    /* Check to make sure if datadir exists */
+    for (auto& dir : std::vector<wxString> { enc_datadir, print_ini, printer_ini, material_ini }) {
+        if (wxDirExists(dir)) continue;
+        if (!wxMkdir(dir)) {
+            Slic3r::Log::fatal_error(LogChannel, (_("Slic3r was unable to create its data directory at ")+ dir).ToStdWstring());
+        }
+    }
 
     // TODO: Call a logging function with channel GUI, severity info for datadir path
+    Slic3r::Log::info(LogChannel, (_("Data dir: ") + datadir).ToStdWstring());
 
-    /* Check to make sure if datadir exists
-     *
-     */
+    if (wxFileExists(slic3r_ini)) {
+    /*
+        my $ini = eval { Slic3r::Config->read_ini("$datadir/slic3r.ini") };
+        if ($ini) {
+            $last_version = $ini->{_}{version};
+            $ini->{_}{$_} = $Settings->{_}{$_}
+                for grep !exists $ini->{_}{$_}, keys %{$Settings->{_}};
+            $Settings = $ini;
+        }
+        delete $Settings->{_}{mode};  # handle legacy
+    */
+    }
 
-    // Load settings
+
     this->gui_config->save_settings();
+
+    // Load presets
     this->load_presets();
 
 
     wxImage::AddHandler(new wxPNGHandler());
     MainFrame *frame = new MainFrame( "Slic3r", wxDefaultPosition, wxDefaultSize, this->gui_config);
     this->SetTopWindow(frame);
-    frame->Show( true );
 
     // Load init bundle
     //
@@ -56,7 +83,7 @@ bool App::OnInit()
             && (!$Settings->{_}{last_version_check} || (time - $Settings->{_}{last_version_check}) >= 86400);
     */
 
-    // run callback functions during idle
+    // run callback functions during idle on the main frame
     /*
     EVT_IDLE($frame, sub {
         while (my $cb = shift @cb) {
