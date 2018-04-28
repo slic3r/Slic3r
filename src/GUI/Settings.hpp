@@ -25,7 +25,7 @@ enum class ReloadBehavior {
 };
 
 /// Stub class to hold onto GUI-specific settings options. 
-/// TODO: Incorporate a copy of Slic3r::Config 
+/// TODO: Incorporate the system from libslic3r
 class Settings { 
     public:
         bool show_host {false};
@@ -50,9 +50,14 @@ class Settings {
         const wxString version { wxString(SLIC3R_VERSION) };
 
         void save_settings();
+        void load_settings();
         
         /// Storage for window positions
         std::map<wxString, std::tuple<wxPoint, wxSize, bool> > window_pos { std::map<wxString, std::tuple<wxPoint, wxSize, bool> >() };
+
+    private:
+        const std::string LogChannel {"GUI_Settings"}; //< Which log these messages should go to.
+        
 };
 
 }} //namespace Slic3r::GUI
