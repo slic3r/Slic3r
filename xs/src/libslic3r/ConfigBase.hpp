@@ -1,5 +1,5 @@
-#ifndef slic3r_Config_hpp_
-#define slic3r_Config_hpp_
+#ifndef slic3r_ConfigBase_hpp_
+#define slic3r_ConfigBase_hpp_
 
 #include <map>
 #include <climits>
@@ -751,4 +751,4 @@ class UnknownOptionException : public std::exception {};
 
 }
 
-#endif
+#endif 

@@ -1,4 +1,4 @@
-#include "Config.hpp"
+#include "ConfigBase.hpp"
 #include "Geometry.hpp"
 #include "IO.hpp"
 #include "Model.hpp"
