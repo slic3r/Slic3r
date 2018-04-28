@@ -1,5 +1,8 @@
 #include "misc_ui.hpp"
 #include <wx/stdpaths.h>
+#include <wx/msgdlg.h>
+
+#include <exception>
 
 namespace Slic3r { namespace GUI {
 
@@ -14,11 +17,18 @@ void check_version(bool manual)  {
 #endif
 
 const wxString var(const wxString& in) {
+    // TODO replace center string with path to VAR in actual distribution later
+    if (VAR_ABS) {
+        return VAR_ABS_PATH + "/" + in;
+    } else {
+        return bin() + VAR_REL + "/" + in;
+    }
+}
+
+const wxString bin() { 
     wxFileName f(wxStandardPaths::Get().GetExecutablePath());
     wxString appPath(f.GetPath());
-
-    // replace center string with path to VAR in actual distribution later
-    return appPath + "/../var/" + in;
+    return appPath;
 }
 
 /// Returns the path to Slic3r's default user data directory.
@@ -27,7 +37,6 @@ const wxString home(const wxString& in) {
         return wxGetHomeDir() + "/" + in + "/";
     return wxGetHomeDir() + "/." + in + "/";
 }
-
 
 wxString decode_path(const wxString& in) {
     // TODO Stub
@@ -38,6 +47,21 @@ wxString encode_path(const wxString& in) {
     // TODO Stub
     return in;
 }
+
+void show_error(wxWindow* parent, const wxString& message) {
+    wxMessageDialog(parent, message, _("Error"), wxOK | wxICON_ERROR).ShowModal();
+}
+
+void show_info(wxWindow* parent, const wxString& message, const wxString& title = _("Notice")) {
+    wxMessageDialog(parent, message, title, wxOK | wxICON_INFORMATION).ShowModal();
+}
+
+void fatal_error(wxWindow* parent, const wxString& message) {
+    show_error(parent, message);
+    throw std::runtime_error(message.ToStdString());
+}
+
+
 /*
 sub append_submenu {
     my ($self, $menu, $string, $description, $submenu, $id, $icon) = @_;
