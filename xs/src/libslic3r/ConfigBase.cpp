@@ -1,4 +1,4 @@
-#include "Config.hpp"
+#include "ConfigBase.hpp"
 #include <assert.h>
 #include <ctime>
 #include <fstream>
