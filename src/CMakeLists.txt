@@ -1,8 +1,12 @@
 cmake_minimum_required (VERSION 3.9)
 project (slic3r)
 
+
 # only on newer GCCs: -ftemplate-backtrace-limit=0
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE")
+
+execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION)
+
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -DSLIC3R_DEBUG")
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
@@ -158,6 +162,17 @@ target_link_libraries (slic3r libslic3r admesh BSpline clipper expat polypartiti
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
     INCLUDE("${wxWidgets_USE_FILE}")
+
+    if (NOT GIT_VERSION STREQUAL "")
+        if (MSVC)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DSLIC3R_BUILD_COMMIT=${GIT_VERSION} ")
+        else(MSVC)
+            execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSLIC3R_BUILD_COMMIT=${GIT_VERSION}")
+            string(REGEX REPLACE "\n$" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+        endif(MSVC)
+    endif(NOT GIT_VERSION STREQUAL "")
+
     include_directories(${GUI_LIBDIR})
     include_directories(${wxWidgets_INCLUDE})
 
