@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "Plater.hpp"
 #include "Log.hpp"
 
@@ -5,8 +7,8 @@ namespace Slic3r { namespace GUI {
 
 const auto PROGRESS_BAR_EVENT = wxNewEventType();
 
-Plater::Plater(wxWindow* parent, const wxString& title) : 
-    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, title)
+Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings> _settings) : 
+    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, title), settings(_settings)
 {
 
     // Set callback for status event for worker threads
@@ -53,7 +55,7 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
         });
     }
     */
-    canvas2D = new Plate2D(preview_notebook, wxDefaultSize, objects, model, config);
+    canvas2D = new Plate2D(preview_notebook, wxDefaultSize, objects, model, config, settings);
 
     /*
     # Initialize 2D preview canvas
