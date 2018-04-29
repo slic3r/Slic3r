@@ -9,6 +9,8 @@
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 
+#include "Log.hpp"
+
 /// Common static (that is, free-standing) functions, not part of an object hierarchy.
 
 namespace Slic3r { namespace GUI {
@@ -82,7 +84,8 @@ void append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T
     if (!icon.IsEmpty()) 
         tmp->SetBitmap(wxBitmap(var(icon)));
 
-    menu->Bind(wxEVT_MENU, lambda, tmp->GetId(), tmp->GetId());
+    if (typeid(lambda) != typeid(nullptr))
+        menu->Bind(wxEVT_MENU, lambda, tmp->GetId(), tmp->GetId());
 }
 
 /*
