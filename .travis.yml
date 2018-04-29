@@ -33,8 +33,8 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - g++-4.9
-    - gcc-4.9
+    - g++-7.3.0
+    - gcc-7.3.0
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
