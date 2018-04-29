@@ -9,15 +9,12 @@
 #include <tuple>
 
 #include "libslic3r.h"
+#include "ColorScheme.hpp"
 
 namespace Slic3r { namespace GUI {
 
 enum class PathColor {
     role
-};
-
-enum class ColorScheme {
-    solarized, slic3r
 };
 
 enum class ReloadBehavior {
@@ -40,7 +37,7 @@ class Settings {
         bool hide_reload_dialog {false};
 
         ReloadBehavior reload {ReloadBehavior::all};
-        ColorScheme color {ColorScheme::slic3r};
+        std::unique_ptr<ColorScheme> color {new Slic3r::GUI::DefaultColor};
         PathColor color_toolpaths_by {PathColor::role};
 
         float nudge {1.0}; //< 2D plater nudge amount in mm
