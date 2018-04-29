@@ -13,7 +13,7 @@
 
 
 #ifndef SLIC3R_BUILD_COMMIT
-#define SLIC3R_BUILD_COMMIT "(Unknown revision)"
+#define SLIC3R_BUILD_COMMIT (Unknown revision)
 #endif 
 
 #define VER1_(x) #x
