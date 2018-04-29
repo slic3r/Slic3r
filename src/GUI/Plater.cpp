@@ -56,6 +56,7 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
     }
     */
     canvas2D = new Plate2D(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    preview_notebook->AddPage(canvas2D, _("2D"));
 
     /*
     # Initialize 2D preview canvas
