@@ -1,4 +1,4 @@
-language: perl
+language: c++
 before_install:
 - sh package/linux/travis-decrypt-key
 install:
@@ -6,14 +6,11 @@ install:
 - export SLIC3R_STATIC=1
 - export CXX=g++-4.9
 - export CC=gcc-4.9
-- source $HOME/perl5/perlbrew/etc/bashrc
 script:
 - bash package/linux/travis-setup.sh
-- perlbrew switch slic3r-perl
 - cmake -DBOOST_ROOT=$BOOST_DIR src/
 - make
 after_success:
-- eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
 - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
 - package/linux/appimage.sh x86_64
 - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
@@ -33,8 +30,8 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - g++-7.3
-    - gcc-7.3
+    - g++-6.3
+    - gcc-6.3
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
