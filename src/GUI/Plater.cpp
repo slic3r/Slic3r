@@ -1,12 +1,20 @@
 #include "Plater.hpp"
+#include "Log.hpp"
 
 namespace Slic3r { namespace GUI {
 
+const auto PROGRESS_BAR_EVENT = wxNewEventType();
+
 Plater::Plater(wxWindow* parent, const wxString& title) : 
-    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, title),
-    print(Slic3r::Print())
+    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, title)
 {
 
+    // Set callback for status event for worker threads
+    /*
+    this->print->set_status_cb([=](std::string percent percent, std::wstring message) {
+        wxPostEvent(this, new wxPlThreadEvent(-1, PROGRESS_BAR_EVENT, 
+    });
+    */
     auto on_select_object { [=](uint32_t& obj_idx) {
        // this->select_object(obj_idx);
     } };
@@ -44,6 +52,10 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
             $self->{preview3D}->canvas->set_viewport_from_scene($self->{canvas3D});
         });
     }
+    */
+    canvas2D = new Plate2D(preview_notebook, wxDefaultSize, objects, model, config);
+
+    /*
     # Initialize 2D preview canvas
     $self->{canvas} = Slic3r::GUI::Plater::2D->new($self->{preview_notebook}, wxDefaultSize, $self->{objects}, $self->{model}, $self->{config});
     $self->{preview_notebook}->AddPage($self->{canvas}, '2D');
@@ -51,7 +63,6 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
     $self->{canvas}->on_double_click($on_double_click);
     $self->{canvas}->on_right_click(sub { $on_right_click->($self->{canvas}, @_); });
     $self->{canvas}->on_instances_moved($on_instances_moved);
-    
     # Initialize 3D toolpaths preview
     $self->{preview3D_page_idx} = -1;
     if ($Slic3r::GUI::have_OpenGL) {
@@ -94,7 +105,7 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
 
 }
 void Plater::add() {
-
+    Log::info("GUI", L"Called Add function");
 }
 
 
