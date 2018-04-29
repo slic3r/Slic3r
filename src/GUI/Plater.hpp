@@ -52,6 +52,8 @@ private:
 
     Plate2D* canvas2D {};
 
+    const std::string LogChannel {"GUI_Plater"}; //< Which log these messages should go to.
+
 };
 
 
