@@ -118,6 +118,7 @@ void MainFrame::init_menubar()
 
     wxMenu* menuFile = new wxMenu();
     {
+        append_menu_item(menuFile, _(L"Open STL/OBJ/AMF/3MF…"), _("Open a model"), [=](wxCommandEvent& e) { if (this->plater != nullptr) this->plater->add();}, wxID_ANY, "brick_add.png", "Ctrl+O");
     }
     
     wxMenu* menuPlater = new wxMenu();
