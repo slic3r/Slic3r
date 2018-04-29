@@ -3,6 +3,8 @@
 #include <wx/accel.h>
 #include <wx/utils.h> 
 
+#include "AboutDialog.hpp"
+
 namespace Slic3r { namespace GUI {
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
@@ -151,6 +153,9 @@ void MainFrame::init_menubar()
         });
         append_menu_item(menuHelp, _("&About Slic3r"), _("Show about dialog"), [=](wxCommandEvent& e) 
         {
+            auto about = new AboutDialog(nullptr);
+            about->ShowModal();
+            about->Destroy();
         }, wxID_ABOUT);
         
     }

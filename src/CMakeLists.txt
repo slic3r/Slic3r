@@ -147,7 +147,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 set(wxWidgets_USE_STATIC OFF)
 set(wxWidgets_USE_UNICODE ON)
 
-find_package(wxWidgets COMPONENTS base aui core)
+find_package(wxWidgets COMPONENTS base aui core html)
 
 IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
@@ -165,6 +165,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/GUI.cpp
     ${GUI_LIBDIR}/Settings.cpp
+    ${GUI_LIBDIR}/AboutDialog.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
     )
     #only build GUI lib if building with wx
