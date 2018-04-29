@@ -177,10 +177,11 @@ IF(wxWidgets_FOUND)
     include_directories(${wxWidgets_INCLUDE})
 
     add_library(slic3r_gui STATIC 
-    ${GUI_LIBDIR}/MainFrame.cpp
-    ${GUI_LIBDIR}/GUI.cpp
-    ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/AboutDialog.cpp
+    ${GUI_LIBDIR}/GUI.cpp
+    ${GUI_LIBDIR}/MainFrame.cpp
+    ${GUI_LIBDIR}/Plater.cpp
+    ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
     )
     #only build GUI lib if building with wx
