@@ -44,6 +44,11 @@ include_directories(${LIBDIR}/poly2tri/)
 include_directories(${LIBDIR}/poly2tri/sweep)
 include_directories(${LIBDIR}/poly2tri/common)
 
+add_library(ZipArchive STATIC
+    ${LIBDIR}/Zip/ZipArchive.cpp
+)
+
+
 add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/BoundingBox.cpp
     ${LIBDIR}/libslic3r/BridgeDetector.cpp
@@ -97,7 +102,6 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/SurfaceCollection.cpp
     ${LIBDIR}/libslic3r/SVG.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
-    ${LIBDIR}/libslic3r/Zip/ZipArchive.cpp
 )
 
 add_library(BSpline STATIC
