@@ -162,7 +162,6 @@ IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
 ENDIF(CMAKE_HOST_UNIX)
 
-target_link_libraries (slic3r libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
 
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
@@ -197,6 +196,8 @@ ELSE(wxWidgets_FOUND)
     MESSAGE("wx not found!")
     #skip gui when no wx included
 ENDIF(wxWidgets_FOUND)
+
+target_link_libraries (slic3r libslic3r admesh BSpline clipper expat polypartition poly2tri ZipArchive ${Boost_LIBRARIES})
 
 # Windows needs a compiled component for Boost.nowide
 IF (WIN32)
