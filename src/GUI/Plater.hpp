@@ -16,22 +16,25 @@
 
 #include "Plater/Plater2DObject.hpp"
 #include "Plater/Plate2D.hpp"
+#include "Settings.hpp"
 
 namespace Slic3r { namespace GUI {
 
 using UndoOperation = int;
 
 class Plater2DObject;
+class Plate2D;
 
 class Plater : public wxPanel 
 {
 public:
-    Plater(wxWindow* parent, const wxString& title);
+    Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings> _settings);
     void add();
 
 private:
     std::shared_ptr<Slic3r::Print> print {std::make_shared<Print>(Slic3r::Print())};
     std::shared_ptr<Slic3r::Model> model {std::make_shared<Model>(Slic3r::Model())};
+    std::shared_ptr<Settings> settings {};
 
     std::shared_ptr<Slic3r::Config> config { Slic3r::Config::new_from_defaults(
         {"bed_shape", "complete_objects", "extruder_clearance_radius", "skirts", "skirt_distance", 

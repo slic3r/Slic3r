@@ -12,9 +12,9 @@ wxEND_EVENT_TABLE()
 
 MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
         : MainFrame(title, pos, size, nullptr) {}
-MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, std::shared_ptr<Settings> config)
+MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, std::shared_ptr<Settings> _gui_config)
         : wxFrame(NULL, wxID_ANY, title, pos, size), loaded(false),
-        tabpanel(nullptr), controller(nullptr), plater(nullptr), gui_config(config), preset_editor_tabs(std::map<wxWindowID, PresetEditor*>())
+        tabpanel(nullptr), controller(nullptr), plater(nullptr), gui_config(_gui_config), preset_editor_tabs(std::map<wxWindowID, PresetEditor*>())
 {
     // Set icon to either the .ico if windows or png for everything else.
     if (the_os == OS::Windows) 
@@ -105,7 +105,7 @@ void MainFrame::init_tabpanel()
         wxTheApp->CallAfter([=] { this->tabpanel->SetSelection(0); });
     }), panel->GetId());
 
-    this->plater = new Slic3r::GUI::Plater(panel, _("Plater"));
+    this->plater = new Slic3r::GUI::Plater(panel, _("Plater"), gui_config);
     this->controller = new Slic3r::GUI::Controller(panel, _("Controller"));
 
     panel->AddPage(this->plater, this->plater->GetName());
