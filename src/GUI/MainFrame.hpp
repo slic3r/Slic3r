@@ -28,7 +28,7 @@ class MainFrame: public wxFrame
 {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-    MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, std::shared_ptr<Settings> gui_config);
+    MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, std::shared_ptr<Settings> _gui_config);
 private:
     wxDECLARE_EVENT_TABLE();
 
