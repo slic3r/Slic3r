@@ -108,7 +108,7 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
 
 }
 void Plater::add() {
-    Log::info("GUI", L"Called Add function");
+    Log::info(LogChannel, L"Called Add function");
 }
 
 
