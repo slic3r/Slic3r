@@ -48,6 +48,7 @@ bool App::OnInit()
     // TODO: Call a logging function with channel GUI, severity info for datadir path
     Slic3r::Log::info(LogChannel, (_("Data dir: ") + datadir).ToStdWstring());
 
+    // Load gui settings from slic3r.ini
     if (wxFileExists(slic3r_ini)) {
     /*
         my $ini = eval { Slic3r::Config->read_ini("$datadir/slic3r.ini") };
