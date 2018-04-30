@@ -17,6 +17,11 @@ public:
         std::wclog << message << std::endl;
     }
 
+    static void warn(std::string topic, std::wstring message) {
+        std::cerr << topic << ": ";
+        std::wcerr << message << std::endl;
+    }
+
 };
 
 }
