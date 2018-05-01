@@ -4,6 +4,7 @@
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
 #endif
+#include <wx/datetime.h>
 
 #include <vector>
 #include <functional>
@@ -18,6 +19,12 @@
 
 
 namespace Slic3r { namespace GUI {
+
+
+// Setup for an Easter Egg with the canvas text.
+const wxDateTime today_date {wxDateTime().GetDateOnly()}; 
+const wxDateTime special_date {13, wxDateTime::Month::Sep, 2006, 0, 0, 0, 0};
+const bool today_is_special = {today_date.GetDay() == special_date.GetDay() && today_date.GetMonth() == special_date.GetMonth()};
 
 enum class MoveDirection {
     Up, Down, Left, Right
@@ -84,6 +91,10 @@ private:
 
     wxPoint bed_origin {};
     Slic3r::Polygon bed_polygon {};
+    /// Set up the 2D canvas blank canvas text. 
+    /// Easter egg: Sept. 13, 2006. The first part ever printed by a RepRap to make another RepRap.
+    const wxString CANVAS_TEXT { today_is_special ? _(L"What do you want to print today?™") : _("Drag your objects here") };
+    
 
     /// How much to scale the points to fit in the draw bounding box area.
     /// Expressed as pixel / mm
