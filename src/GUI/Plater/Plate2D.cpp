@@ -26,6 +26,7 @@ Plate2D::Plate2D(wxWindow* parent, const wxSize& size, std::vector<Plater2DObjec
 
     // Set the brushes
     set_colors();
+    this->SetBackgroundStyle(wxBG_STYLE_PAINT);
 }
 
 void Plate2D::repaint(wxPaintEvent& e) {
