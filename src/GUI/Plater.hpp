@@ -21,6 +21,7 @@
 namespace Slic3r { namespace GUI {
 
 using UndoOperation = int;
+using obj_index = unsigned int;
 
 class Plater2DObject;
 class Plate2D;
