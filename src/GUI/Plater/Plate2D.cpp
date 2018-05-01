@@ -35,7 +35,7 @@ void Plate2D::repaint(wxPaintEvent& e) {
     this->SetFocus();
 
     auto dc {new wxAutoBufferedPaintDC(this)};
-    const auto& size = this->GetSize();
+    const auto& size {wxSize(this->GetSize().GetWidth(), this->GetSize().GetHeight())};
 
 
     if (this->user_drawn_background) {
@@ -55,8 +55,38 @@ void Plate2D::repaint(wxPaintEvent& e) {
     {
         dc->SetPen(this->print_center_pen);
         dc->SetBrush(this->bed_brush);
-        
-        dc->DrawPolygon(scaled_points_to_pixel(this->bed_polygon, true), 0, 0);
+        auto tmp {scaled_points_to_pixel(this->bed_polygon, true)};
+        dc->DrawPolygon(this->bed_polygon.points.size(), tmp.data(), 0, 0);
+    }
+
+    // draw print center
+    {
+        if (this->objects.size() > 0 && settings->autocenter) {
+            const auto center = this->unscaled_point_to_pixel(this->print_center);
+            dc->SetPen(print_center_pen);
+            dc->DrawLine(center.x, 0, center.x, size.y);
+            dc->DrawLine(0, center.y, size.x, center.y);
+            dc->SetTextForeground(wxColor(0,0,0));
+            dc->SetFont(wxFont(10, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+
+            dc->DrawLabel("X = ", wxRect(0,0, center.x*2, this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_BOTTOM);
+            dc->DrawRotatedText("Y = ", 0, center.y + 15, 90);
+        }
+    }
+
+    // draw text if plate is empty
+    if (this->objects.size() == 0) {
+        dc->SetTextForeground(settings->color->BED_OBJECTS());
+        dc->SetFont(wxFont(14, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+        dc->DrawLabel(CANVAS_TEXT, wxRect(0,0, this->GetSize().GetWidth(), this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+    } else { 
+        // draw grid
+        dc->SetPen(grid_pen);
+        // Assumption: grid of lines is arranged
+        // as adjacent pairs of wxPoints
+        for (auto i = 0U; i < grid.size(); i+=2) {
+            dc->DrawLine(grid[i], grid[i+1]);
+        }
     }
 
 
