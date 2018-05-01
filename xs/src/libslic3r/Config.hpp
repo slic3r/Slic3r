@@ -8,7 +8,7 @@
 
 namespace Slic3r {
 
-class Config : DynamicPrintConfig {
+class Config : public DynamicPrintConfig {
 public:
     static std::shared_ptr<Config> new_from_defaults();
     static std::shared_ptr<Config> new_from_defaults(std::initializer_list<std::string> init);
