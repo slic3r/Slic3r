@@ -90,7 +90,10 @@ private:
     const std::string LogChannel {"GUI_2D"};
 
     wxPoint bed_origin {};
+    wxPoint print_center {};
     Slic3r::Polygon bed_polygon {};
+    std::vector<wxPoint> grid {};
+
     /// Set up the 2D canvas blank canvas text. 
     /// Easter egg: Sept. 13, 2006. The first part ever printed by a RepRap to make another RepRap.
     const wxString CANVAS_TEXT { today_is_special ? _(L"What do you want to print today?™") : _("Drag your objects here") };
