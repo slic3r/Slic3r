@@ -152,6 +152,15 @@ to_points(const std::vector<T> &items)
     return pp;
 }
 
+inline Points
+scale(const std::vector<Pointf>&in ) {
+    Points out; 
+    for (const auto& p : in) {out.push_back(Point(scale_(p.x), scale_(p.y))); }
+    return out;
+}
+
+
+
 }
 
 // start Boost
