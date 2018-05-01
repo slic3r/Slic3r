@@ -66,7 +66,8 @@ private:
     void set_colors();
 
     /// Convert a scale point array to a pixel polygon suitable for DrawPolygon
-    std::vector<wxPoint> scaled_points_to_pixel(std::vector<wxPoint> points, bool unscale);
+    std::vector<wxPoint> scaled_points_to_pixel(const Slic3r::Polygon& poly, bool unscale);
+    std::vector<wxPoint> scaled_points_to_pixel(const Slic3r::Polyline& poly, bool unscale);
 
     // For a specific point, unscaled it 
     wxPoint unscaled_point_to_pixel(const wxPoint& in) {
