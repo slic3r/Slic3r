@@ -14,7 +14,6 @@
 #include "Plater/Plater2DObject.hpp"
 #include "misc_ui.hpp"
 
-
 #include "Log.hpp"
 
 
@@ -42,7 +41,7 @@ private:
     std::shared_ptr<Slic3r::Config> config;
     std::shared_ptr<Settings> settings;
 
-    // Different brushes to draw with
+    // Different brushes to draw with, initialized from settings->Color during the constructor
     wxBrush objects_brush {};
     wxBrush instance_brush {};
     wxBrush selected_brush {};
@@ -76,7 +75,7 @@ private:
     std::vector<wxPoint> scaled_points_to_pixel(const Slic3r::Polygon& poly, bool unscale);
     std::vector<wxPoint> scaled_points_to_pixel(const Slic3r::Polyline& poly, bool unscale);
 
-    // For a specific point, unscaled it 
+    /// For a specific point, unscale it relative to the origin
     wxPoint unscaled_point_to_pixel(const wxPoint& in) {
         const auto& canvas_height {this->GetSize().GetHeight()};
         const auto& zero = this->bed_origin;
@@ -102,6 +101,20 @@ private:
     double scaling_factor {1.0};
     
     const std::string LogChannel {"GUI_2D"};
+
+    Slic3r::Point point_to_model_units(coordf_t x, coordf_t y) {
+        const auto& zero {this->bed_origin};
+        return Slic3r::Point(
+            scale_(x - zero.x) / this->scaling_factor,
+            scale_(y - zero.y) / this->scaling_factor
+        );
+    }
+    Slic3r::Point point_to_model_units(const wxPoint& pt) {
+        return this->point_to_model_units(pt.x, pt.y);
+    }
+    Slic3r::Point point_to_model_units(const Pointf& pt) {
+        return this->point_to_model_units(pt.x, pt.y);
+    }
 
 };
 
