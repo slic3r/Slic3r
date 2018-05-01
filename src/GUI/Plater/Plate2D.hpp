@@ -84,11 +84,10 @@ private:
                        in.y * this->scaling_factor + (zero.y - canvas_height));
     }
 
-    /// Read print bed size from config.
+    /// Read print bed size from config and calculate the scaled rendition of the bed given the draw canvas.
     void update_bed_size();
 
-    const std::string LogChannel {"GUI_2D"};
-
+    /// private class variables to stash bits for drawing the print bed area.
     wxPoint bed_origin {};
     wxPoint print_center {};
     Slic3r::Polygon bed_polygon {};
@@ -97,11 +96,12 @@ private:
     /// Set up the 2D canvas blank canvas text. 
     /// Easter egg: Sept. 13, 2006. The first part ever printed by a RepRap to make another RepRap.
     const wxString CANVAS_TEXT { today_is_special ? _(L"What do you want to print today?™") : _("Drag your objects here") };
-    
 
     /// How much to scale the points to fit in the draw bounding box area.
     /// Expressed as pixel / mm
     double scaling_factor {1.0};
+    
+    const std::string LogChannel {"GUI_2D"};
 
 };
 

@@ -2,7 +2,9 @@
 
 // libslic3r includes
 #include "Geometry.hpp"
+#include "Point.hpp"
 #include "Log.hpp"
+#include "ClipperUtils.hpp"
 
 // wx includes
 #include <wx/colour.h>
@@ -27,6 +29,7 @@ Plate2D::Plate2D(wxWindow* parent, const wxSize& size, std::vector<Plater2DObjec
     // Set the brushes
     set_colors();
     this->SetBackgroundStyle(wxBG_STYLE_PAINT);
+
 }
 
 void Plate2D::repaint(wxPaintEvent& e) {
@@ -69,8 +72,11 @@ void Plate2D::repaint(wxPaintEvent& e) {
             dc->SetTextForeground(wxColor(0,0,0));
             dc->SetFont(wxFont(10, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
-            dc->DrawLabel("X = ", wxRect(0,0, center.x*2, this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_BOTTOM);
-            dc->DrawRotatedText("Y = ", 0, center.y + 15, 90);
+            wxString val {};
+            val.Printf("X = %.0f", this->print_center.x);
+            dc->DrawLabel(val , wxRect(0,0, center.x*2, this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_BOTTOM);
+            val.Printf("Y = %.0f", this->print_center.y);
+            dc->DrawRotatedText(val, 0, center.y + 15, 90);
         }
     }
 
@@ -157,7 +163,7 @@ void Plate2D::nudge(MoveDirection dir) {
     if (this->selected_instance < this->objects.size()) {
         auto i = 0U;
         for (auto& obj : this->objects) {
-            if (obj.selected()) {
+            if (obj.selected) {
                 if (obj.selected_instance != -1) {
                 }
             }
@@ -176,17 +182,47 @@ void Plate2D::update_bed_size() {
     const auto& canvas_h {canvas_size.GetHeight()};
     if (canvas_w == 0) return; // Abort early if we haven't drawn canvas yet.
 
-    this->bed_polygon = Slic3r::Polygon();
+    this->bed_polygon = Slic3r::Polygon(scale(dynamic_cast<ConfigOptionPoints*>(config->optptr("bed_shape"))->values));
+
     const auto& polygon = bed_polygon;
 
     const auto& bb = bed_polygon.bounding_box();
     const auto& size = bb.size();
 
-    this->scaling_factor = std::min(static_cast<double>(canvas_w) / unscale(size.x), 
-    static_cast<double>(canvas_h) / unscale(size.y));
+    this->scaling_factor = std::min(canvas_w / unscale(size.x), canvas_h / unscale(size.y));
 
-    assert(this->scaling_factor != 0);
+    this->bed_origin = wxPoint(
+        canvas_w / 2 - (unscale(bb.max.x + bb.min.x)/2 * this->scaling_factor),
+        canvas_h - (canvas_h / 2 - (unscale(bb.max.y + bb.min.y)/2 * this->scaling_factor))
+    );
 
+    const auto& center = bb.center();
+    this->print_center = wxPoint(unscale(center.x), unscale(center.y));
+
+    // Cache bed contours and grid
+    {
+        const auto& step { scale_(10) };
+        auto grid {Polylines()};
+
+        for (coord_t x = (bb.min.x - (bb.min.x % step) + step); x < bb.max.x; x += step) {
+            grid.push_back(Polyline());
+            grid.back().append(Point(x, bb.min.y));
+            grid.back().append(Point(x, bb.max.y));
+        };
+
+        for (coord_t y = (bb.min.y - (bb.min.y % step) + step); y < bb.max.y; y += step) {
+            grid.push_back(Polyline());
+            grid.back().append(Point(bb.min.x, y));
+            grid.back().append(Point(bb.max.x, y));
+        };
+
+        grid = intersection_pl(grid, polygon);
+        for (auto& i : grid) {
+            const auto& tmpline { this->scaled_points_to_pixel(i, 1) };
+            this->grid.insert(this->grid.end(), tmpline.begin(), tmpline.end());
+        }
+    }
+}
 
 std::vector<wxPoint> Plate2D::scaled_points_to_pixel(const Slic3r::Polygon& poly, bool unscale) {
     return this->scaled_points_to_pixel(Polyline(poly),  unscale);
@@ -200,4 +236,7 @@ std::vector<wxPoint> Plate2D::scaled_points_to_pixel(const Slic3r::Polyline& pol
     }
     return result;
 }
+
+
+
 } } // Namespace Slic3r::GUI
