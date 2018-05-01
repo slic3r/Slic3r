@@ -157,6 +157,16 @@ void Plate2D::update_bed_size() {
     assert(this->scaling_factor != 0);
 
 
+std::vector<wxPoint> Plate2D::scaled_points_to_pixel(const Slic3r::Polygon& poly, bool unscale) {
+    return this->scaled_points_to_pixel(Polyline(poly),  unscale);
 }
 
+std::vector<wxPoint> Plate2D::scaled_points_to_pixel(const Slic3r::Polyline& poly, bool unscale) {
+    std::vector<wxPoint> result;
+    for (const auto& pt : poly.points) {
+        const auto tmp {wxPoint(pt.x, pt.y)};
+        result.push_back( (unscale ? unscaled_point_to_pixel(tmp) : tmp) );
+    }
+    return result;
+}
 } } // Namespace Slic3r::GUI
