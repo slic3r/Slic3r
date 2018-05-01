@@ -73,7 +73,7 @@ private:
         const auto& canvas_height {this->GetSize().GetHeight()};
         const auto& zero = this->bed_origin;
         return wxPoint(in.x * this->scaling_factor + zero.x, 
-                       in.x * this->scaling_factor + (zero.y - canvas_height));
+                       in.y * this->scaling_factor + (zero.y - canvas_height));
     }
 
     /// Read print bed size from config.
