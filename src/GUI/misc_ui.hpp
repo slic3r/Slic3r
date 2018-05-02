@@ -9,6 +9,8 @@
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 
+#include "Settings.hpp"
+
 #include "Log.hpp"
 
 /// Common static (that is, free-standing) functions, not part of an object hierarchy.
@@ -97,6 +99,8 @@ sub CallAfter {
 
 wxString decode_path(const wxString& in);
 wxString encode_path(const wxString& in);
+
+std::vector<wxString> open_model(wxWindow* parent, const Settings& settings, wxWindow* top);
 
 }} // namespace Slic3r::GUI
 
