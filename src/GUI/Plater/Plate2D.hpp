@@ -11,7 +11,7 @@
 #include "Plater.hpp"
 #include "ColorScheme.hpp"
 #include "Settings.hpp"
-#include "Plater/Plater2DObject.hpp"
+#include "Plater/PlaterObject.hpp"
 #include "misc_ui.hpp"
 
 #include "Log.hpp"
@@ -31,12 +31,12 @@ enum class MoveDirection {
 
 class Plate2D : public wxPanel {
 public:
-    Plate2D(wxWindow* parent, const wxSize& size, std::vector<Plater2DObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config, std::shared_ptr<Settings> _settings);
+    Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config, std::shared_ptr<Settings> _settings);
 
 
 //    std::function<> on_select_object {};
 private:
-    std::vector<Plater2DObject>& objects;
+    std::vector<PlaterObject>& objects;
     std::shared_ptr<Slic3r::Model> model;
     std::shared_ptr<Slic3r::Config> config;
     std::shared_ptr<Settings> settings;
