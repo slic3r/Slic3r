@@ -114,7 +114,7 @@ sub show_error {
 
 std::vector<wxString> open_model(wxWindow* parent, const Settings& settings, wxWindow* top) {
     auto dialog {new wxFileDialog((parent != nullptr ? parent : top), _("Choose one or more files") + wxString(" (STL/OBJ/AMF/3MF):"), ".", "",
-        "", wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST)};
+    MODEL_WILDCARD, wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST)};
     if (dialog->ShowModal() != wxID_OK) { 
         dialog->Destroy(); 
         return std::vector<wxString>();
