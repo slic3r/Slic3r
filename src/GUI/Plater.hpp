@@ -44,14 +44,19 @@ private:
 
     bool processed {false};
 
-    std::vector<PlaterObject> objects {};
+    std::vector<PlaterObject> objects {}; //< Main object vector.
+
+    size_t object_identifier {0U}; //< Counter for adding objects to Slic3r
 
     std::stack<UndoOperation> undo {}; 
     std::stack<UndoOperation> redo {}; 
 
     wxNotebook* preview_notebook {new wxNotebook(this, -1, wxDefaultPosition, wxSize(335,335), wxNB_BOTTOM)};
 
-    Plate2D* canvas2D {};
+    Plate2D* canvas2D {}; //< 2D plater canvas
+
+    /// Handles the actual load of the file from the dialog handoff.
+    std::vector<int> load_file(const wxString& file);
 
     const std::string LogChannel {"GUI_Plater"}; //< Which log these messages should go to.
 
