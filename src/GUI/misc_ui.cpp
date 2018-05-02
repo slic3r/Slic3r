@@ -1,9 +1,11 @@
 #include "misc_ui.hpp"
 #include <wx/stdpaths.h>
 #include <wx/msgdlg.h>
+#include <wx/arrstr.h>
 
 #include <exception>
 #include <stdexcept>
+
 
 namespace Slic3r { namespace GUI {
 
@@ -109,6 +111,23 @@ sub show_error {
     Wx::MessageDialog->new($parent, $message, 'Error', wxOK | wxICON_ERROR)->ShowModal;
 }
 */
+
+std::vector<wxString> open_model(wxWindow* parent, const Settings& settings, wxWindow* top) {
+    auto dialog {new wxFileDialog((parent != nullptr ? parent : top), _("Choose one or more files") + wxString(" (STL/OBJ/AMF/3MF):"), ".", "",
+        "", wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST)};
+    if (dialog->ShowModal() != wxID_OK) { 
+        dialog->Destroy(); 
+        return std::vector<wxString>();
+    }
+    std::vector<wxString> tmp;
+    wxArrayString tmpout;
+    dialog->GetPaths(tmpout);
+    for (const auto& i : tmpout) {
+        tmp.push_back(i);
+    }
+    dialog->Destroy(); 
+    return tmp;
+}
 
 }} // namespace Slic3r::GUI
 
