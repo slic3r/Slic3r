@@ -6,6 +6,7 @@
 #endif
 
 #include "ExPolygonCollection.hpp"
+#include "Model.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -26,8 +27,8 @@ public:
     bool selected {false};
     int selected_instance {-1};
 
-    Slic3r::ExPolygonCollection& make_thumbnail(Slic3r::Model model, int obj_index);
-    Slic3r::ExPolygonCollection& transform_thumbnail(Slic3r::Model model, int obj_index);
+    Slic3r::ExPolygonCollection& make_thumbnail(const Slic3r::Model& model, int obj_idx);
+    Slic3r::ExPolygonCollection& transform_thumbnail(const Slic3r::Model& model, int obj_idx);
 };
 
 }} // Namespace Slic3r::GUI
