@@ -14,7 +14,7 @@
 #include "Print.hpp"
 #include "Config.hpp"
 
-#include "Plater/Plater2DObject.hpp"
+#include "Plater/PlaterObject.hpp"
 #include "Plater/Plate2D.hpp"
 #include "Settings.hpp"
 
@@ -23,7 +23,7 @@ namespace Slic3r { namespace GUI {
 using UndoOperation = int;
 using obj_index = unsigned int;
 
-class Plater2DObject;
+class PlaterObject;
 class Plate2D;
 
 class Plater : public wxPanel 
@@ -44,7 +44,7 @@ private:
 
     bool processed {false};
 
-    std::vector<Plater2DObject> objects {};
+    std::vector<PlaterObject> objects {};
 
     std::stack<UndoOperation> undo {}; 
     std::stack<UndoOperation> redo {}; 

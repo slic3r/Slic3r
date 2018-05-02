@@ -187,6 +187,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/Plater.cpp
     ${GUI_LIBDIR}/Plater/Plate2D.cpp
+    ${GUI_LIBDIR}/Plater/PlaterObject.cpp
     ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
     )
