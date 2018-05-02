@@ -36,7 +36,7 @@ public:
 
 //    std::function<> on_select_object {};
 private:
-    std::vector<PlaterObject>& objects;
+    std::vector<PlaterObject>& objects; //< reference to parent vector
     std::shared_ptr<Slic3r::Model> model;
     std::shared_ptr<Slic3r::Config> config;
     std::shared_ptr<Settings> settings;
@@ -60,6 +60,9 @@ private:
 
     /// Handle mouse-move events
     void mouse_drag(wxMouseEvent& e);
+    void mouse_down(wxMouseEvent& e);
+    void mouse_up(wxMouseEvent& e);
+    void mouse_dclick(wxMouseEvent& e);
 
     /// Handle repaint events
     void repaint(wxPaintEvent& e);
