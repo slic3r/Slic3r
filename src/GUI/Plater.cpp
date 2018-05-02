@@ -109,8 +109,27 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
 }
 void Plater::add() {
     Log::info(LogChannel, L"Called Add function");
+
+    auto& start_object_id = this->object_identifier;
+    const auto& input_files{open_model(this, *(this->settings), wxTheApp->GetTopWindow())};
+    for (const auto& f : input_files) {
+        Log::info(LogChannel, (wxString(L"Calling Load File for ") + f).ToStdWstring());
+        this->load_file(f);
+    }
+
+    // abort if no objects actually added.
+    if (start_object_id == this->object_identifier) return;
+
+    // save the added objects
+   
+    // get newly added objects count
+
 }
 
+std::vector<int> Plater::load_file(const wxString& file) {
+    return std::vector<int>();
+    
+}
 
 }} // Namespace Slic3r::GUI
 
