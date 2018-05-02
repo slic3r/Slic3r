@@ -8,6 +8,8 @@
 
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
+#include <map>
+#include <utility>
 
 #include "Settings.hpp"
 
@@ -32,6 +34,23 @@ constexpr bool isDev = true;
 #else
 constexpr bool isDev = false;
 #endif
+
+// hopefully the compiler is smart enough to figure this out
+const std::map<const std::string, const std::string> FILE_WILDCARDS { 
+      std::make_pair("known", "Known files (*.stl, *.obj, *.amf, *.xml, *.3mf)|*.3mf;*.3MF;*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML"),
+      std::make_pair("stl", "STL files (*.stl)|*.stl;*.STL"),
+      std::make_pair("obj", "OBJ files (*.obj)|*.obj;*.OBJ"),
+      std::make_pair("amf", "AMF files (*.amf)|*.amf;*.AMF;*.xml;*.XML"),
+      std::make_pair("tmf", "3MF files (*.3mf)|*.3mf;*.3MF"),
+      std::make_pair("ini", "INI files *.ini|*.ini;*.INI"),
+      std::make_pair("gcode", "G-code files (*.gcode, *.gco, *.g, *.ngc)|*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC"),
+      std::make_pair("svg", "SVG files *.svg|*.svg;*.SVG")
+    };
+
+const std::string MODEL_WILDCARD { FILE_WILDCARDS.at("known") + std::string("|") + FILE_WILDCARDS.at("stl")+ std::string("|") + FILE_WILDCARDS.at("obj") + std::string("|") + FILE_WILDCARDS.at("amf")+ std::string("|") + FILE_WILDCARDS.at("tmf")};
+const std::string STL_MODEL_WILDCARD { FILE_WILDCARDS.at("stl") };
+const std::string AMF_MODEL_WILDCARD { FILE_WILDCARDS.at("amf") };
+const std::string TMF_MODEL_WILDCARD { FILE_WILDCARDS.at("tmf") };
 
 
 /// Mostly useful for Linux distro maintainers, this will change where Slic3r assumes 
