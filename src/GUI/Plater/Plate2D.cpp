@@ -18,6 +18,10 @@ Plate2D::Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>
     
     this->Bind(wxEVT_PAINT, [=](wxPaintEvent &e) { this->repaint(e); });
     this->Bind(wxEVT_MOTION, [=](wxMouseEvent &e) { this->mouse_drag(e); });
+    this->Bind(wxEVT_LEFT_DOWN, [=](wxMouseEvent &e) { this->mouse_down(e); });
+    this->Bind(wxEVT_LEFT_UP, [=](wxMouseEvent &e) { this->mouse_up(e); });
+    this->Bind(wxEVT_LEFT_DCLICK, [=](wxMouseEvent &e) { this->mouse_dclick(e); });
+
     if (user_drawn_background) {
         this->Bind(wxEVT_ERASE_BACKGROUND, [=](wxEraseEvent& e){ });
     }
@@ -99,11 +103,26 @@ void Plate2D::repaint(wxPaintEvent& e) {
 }
 
 void Plate2D::mouse_drag(wxMouseEvent& e) {
+    const auto pos {e.GetPosition()};
+    const auto& point {this->point_to_model_units(e.GetPosition())};
     if (e.Dragging()) {
         Slic3r::Log::info(LogChannel, L"Mouse dragging");
     } else {
-        Slic3r::Log::info(LogChannel, L"Mouse moving");
+        auto cursor = wxSTANDARD_CURSOR;
+        /*
+        if (find_first_of(this->objects.begin(), this->objects.end(); [=](const PlaterObject& o) { return o.contour->contains_point(point);} ) == this->object.end()) {
+            cursor = wxCursor(wxCURSOR_HAND);
+        }
+        */
+        this->SetCursor(*cursor);
     }
+}
+
+void Plate2D::mouse_down(wxMouseEvent& e) {
+}
+void Plate2D::mouse_up(wxMouseEvent& e) {
+}
+void Plate2D::mouse_dclick(wxMouseEvent& e) {
 }
 
 void Plate2D::set_colors() {
