@@ -17,6 +17,7 @@
 #include "PresetEditor.hpp"
 #include "Settings.hpp"
 #include "GUI.hpp"
+#include "ProgressStatusBar.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -46,6 +47,8 @@ private:
 
     std::shared_ptr<Settings> gui_config;
     std::map<wxWindowID, PresetEditor*> preset_editor_tabs;
+
+    ProgressStatusBar* statusbar {new ProgressStatusBar(this, -1)};
 
 };
 

@@ -28,11 +28,10 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
     wxToolTip::SetAutoPop(TOOLTIP_TIMER);
 
-    // STUB: Initialize status bar with text.
-    /*    # initialize status bar
-    $self->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($self, -1);
-    $self->{statusbar}->SetStatusText("Version $Slic3r::VERSION - Remember to check for updates at http://slic3r.org/");
-    $self->SetStatusBar($self->{statusbar}); */
+    // initialize status bar
+    this->statusbar = new ProgressStatusBar(this, -1);
+    this->statusbar->SetStatusText("Version $Slic3r::VERSION - Remember to check for updates at http://slic3r.org/");
+    this->SetStatusBar(this->statusbar);
 
     this->loaded = 1;
 
