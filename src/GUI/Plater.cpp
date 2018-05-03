@@ -1,6 +1,9 @@
 #include <memory>
+#include <wx/progdlg.h>
+
 
 #include "Plater.hpp"
+#include "ProgressStatusBar.hpp"
 #include "Log.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -126,9 +129,82 @@ void Plater::add() {
 
 }
 
-std::vector<int> Plater::load_file(const wxString& file) {
-    return std::vector<int>();
+std::vector<int> Plater::load_file(const wxString& file, const int obj_idx_to_load) {
     
+    auto input_file {wxFileName(file)};
+    settings->skein_directory = input_file.GetPath();
+    settings->save_settings();
+    
+    Slic3r::Model model;
+    bool valid_load {true};
+
+    auto obj_idx {std::vector<int>()};
+    auto progress_dialog {new wxProgressDialog(_(L"Loading…"), _(L"Processing input file…"), 100, this, 0)};
+    progress_dialog->Pulse();
+    //TODO: Add a std::wstring so we can handle non-roman characters as file names.
+    try { 
+        auto model {Slic3r::Model::read_from_file(file.ToStdString())};
+    } catch (std::runtime_error& e) {
+        show_error(this, e.what());
+        valid_load = false;
+    }
+
+    if (valid_load) {
+        if (model.looks_like_multipart_object()) {
+            auto dialog {new wxMessageDialog(this, 
+            _("This file contains several objects positioned at multiple heights. Instead of considering them as multiple objects, should I consider\n them this file as a single object having multiple parts?\n"), _("Multi-part object detected"), wxICON_WARNING | wxYES | wxNO)};
+            if (dialog->ShowModal() == wxID_YES) {
+                model.convert_multipart_object();
+            }
+        } 
+        
+        for (auto i = 0U; i < model.objects.size(); i++) {
+            auto object {model.objects[i]};
+            object->input_file = file.ToStdString();
+            for (auto j = 0U; j < object->volumes.size(); j++) {
+                auto volume {object->volumes.at(j)};
+                volume->input_file = file.ToStdString();
+                volume->input_file_obj_idx = i;
+                volume->input_file_vol_idx = j;
+            }
+        }
+        auto i {0U};
+        if (obj_idx_to_load > 0) {
+            const size_t idx_load = obj_idx_to_load;
+            if (idx_load >= model.objects.size()) return std::vector<int>();
+            obj_idx = this->load_model_objects(model.objects.at(idx_load));
+            i = idx_load;
+        } else {
+            obj_idx = this->load_model_objects(model.objects);
+        }
+
+        for (const auto &j : obj_idx) {
+            this->objects[j].input_file = file;
+            this->objects[j].input_file_obj_idx = i++;
+        }
+        ProgressStatusBar::SendStatusText(this, this->GetId(), _("Loaded ") + input_file.GetName());
+
+        if (this->scaled_down) {
+            ProgressStatusBar::SendStatusText(this, this->GetId(), _("Your object appears to be too large, so it was automatically scaled down to fit your print bed."));
+        }
+        if (this->outside_bounds) {
+            ProgressStatusBar::SendStatusText(this, this->GetId(), _("Some of your object(s) appear to be outside the print bed. Use the arrange button to correct this."));
+        }
+    }
+
+    progress_dialog->Destroy();
+    this->redo = std::stack<UndoOperation>();
+    return obj_idx;
+}
+
+
+
+std::vector<int> Plater::load_model_objects(ModelObject* model_object) { 
+    ModelObjectPtrs tmp {model_object}; //  wrap in a std::vector
+    return load_model_objects(tmp);
+}
+std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
+    return std::vector<int>();
 }
 
 }} // Namespace Slic3r::GUI

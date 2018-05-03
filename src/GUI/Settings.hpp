@@ -46,6 +46,8 @@ class Settings {
 
         const wxString version { wxString(SLIC3R_VERSION) };
 
+        wxString skein_directory {}; //< Recently-opened skien directory.
+
         void save_settings();
         void load_settings();
         
