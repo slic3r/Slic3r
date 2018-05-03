@@ -18,6 +18,8 @@
 #include "Plater/Plate2D.hpp"
 #include "Settings.hpp"
 
+#include "MainFrame.hpp"
+
 namespace Slic3r { namespace GUI {
 
 using UndoOperation = int;
@@ -25,6 +27,7 @@ using obj_index = unsigned int;
 
 class PlaterObject;
 class Plate2D;
+class MainFrame;
 
 class Plater : public wxPanel 
 {
@@ -65,6 +68,7 @@ private:
 
     bool scaled_down {false};
     bool outside_bounds {false};
+    MainFrame* GetFrame();
 
 };
 
