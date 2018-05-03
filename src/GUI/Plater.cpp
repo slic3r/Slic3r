@@ -1,10 +1,12 @@
 #include <memory>
 #include <wx/progdlg.h>
+#include <wx/window.h> 
 
 
 #include "Plater.hpp"
 #include "ProgressStatusBar.hpp"
 #include "Log.hpp"
+#include "MainFrame.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -182,13 +184,13 @@ std::vector<int> Plater::load_file(const wxString& file, const int obj_idx_to_lo
             this->objects[j].input_file = file;
             this->objects[j].input_file_obj_idx = i++;
         }
-        ProgressStatusBar::SendStatusText(this, this->GetId(), _("Loaded ") + input_file.GetName());
+        GetFrame()->statusbar->SetStatusText(_("Loaded ") + input_file.GetName());
 
         if (this->scaled_down) {
-            ProgressStatusBar::SendStatusText(this, this->GetId(), _("Your object appears to be too large, so it was automatically scaled down to fit your print bed."));
+            GetFrame()->statusbar->SetStatusText(_("Your object appears to be too large, so it was automatically scaled down to fit your print bed."));
         }
         if (this->outside_bounds) {
-            ProgressStatusBar::SendStatusText(this, this->GetId(), _("Some of your object(s) appear to be outside the print bed. Use the arrange button to correct this."));
+            GetFrame()->statusbar->SetStatusText(_("Some of your object(s) appear to be outside the print bed. Use the arrange button to correct this."));
         }
     }
 
@@ -206,6 +208,9 @@ std::vector<int> Plater::load_model_objects(ModelObject* model_object) {
 std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
     return std::vector<int>();
 }
+
+MainFrame* Plater::GetFrame() { return dynamic_cast<MainFrame*>(wxGetTopLevelParent(this)); }
+
 
 }} // Namespace Slic3r::GUI
 

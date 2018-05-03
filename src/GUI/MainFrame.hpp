@@ -21,7 +21,7 @@
 
 namespace Slic3r { namespace GUI {
 
-
+class Plater;
 
 constexpr unsigned int TOOLTIP_TIMER = 32767;
 
@@ -30,6 +30,7 @@ class MainFrame: public wxFrame
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, std::shared_ptr<Settings> _gui_config);
+    ProgressStatusBar* statusbar {new ProgressStatusBar(this, -1)};
 private:
     wxDECLARE_EVENT_TABLE();
 
@@ -48,7 +49,6 @@ private:
     std::shared_ptr<Settings> gui_config;
     std::map<wxWindowID, PresetEditor*> preset_editor_tabs;
 
-    ProgressStatusBar* statusbar {new ProgressStatusBar(this, -1)};
 
 };
 
