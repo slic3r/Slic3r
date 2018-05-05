@@ -73,7 +73,12 @@ private:
     MainFrame* GetFrame();
 
     void select_object(size_t& obj_idx) { };
+    int get_object_index(size_t object_id);
 
+    Slic3r::Pointf bed_centerf() {
+        auto bed_shape { Slic3r::Polygon::new_scale(this->config->get<ConfigOptionPoints>("bed_shape").values) };
+        return Slic3r::Pointf();
+    }
 };
 
 
