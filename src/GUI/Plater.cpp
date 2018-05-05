@@ -126,8 +126,21 @@ void Plater::add() {
     if (start_object_id == this->object_identifier) return;
 
     // save the added objects
-   
+    auto new_model {this->model};
+
     // get newly added objects count
+    auto new_objects_count = this->object_identifier - start_object_id;
+    
+    Slic3r::Log::info(LogChannel, (wxString("Obj id:") << object_identifier).ToStdWstring());
+    for (auto i = start_object_id; i < new_objects_count + start_object_id; i++) {
+        const auto& obj_idx {this->get_object_index(i)};
+        new_model->add_object(*(this->model->objects.at(obj_idx)));
+    }
+    Slic3r::Log::info(LogChannel, (wxString("Obj id:") << object_identifier).ToStdWstring());
+
+    // Prepare for undo
+    //this->add_undo_operation("ADD", nullptr, new_model, start_object_id);
+   
 
 }
 
@@ -145,11 +158,13 @@ std::vector<int> Plater::load_file(const wxString& file, const int obj_idx_to_lo
     progress_dialog->Pulse();
     //TODO: Add a std::wstring so we can handle non-roman characters as file names.
     try { 
-        auto model {Slic3r::Model::read_from_file(file.ToStdString())};
+        model = Slic3r::Model::read_from_file(file.ToStdString());
     } catch (std::runtime_error& e) {
         show_error(this, e.what());
+        Slic3r::Log::error(LogChannel, LOG_WSTRING(file << " failed to load: " << e.what()));
         valid_load = false;
     }
+    Slic3r::Log::info(LogChannel, LOG_WSTRING("load_valid is " << valid_load));
 
     if (valid_load) {
         if (model.looks_like_multipart_object()) {
@@ -172,12 +187,15 @@ std::vector<int> Plater::load_file(const wxString& file, const int obj_idx_to_lo
         }
         auto i {0U};
         if (obj_idx_to_load > 0) {
+            Slic3r::Log::info(LogChannel, L"Loading model objects, obj_idx_to_load > 0");
             const size_t idx_load = obj_idx_to_load;
             if (idx_load >= model.objects.size()) return std::vector<int>();
             obj_idx = this->load_model_objects(model.objects.at(idx_load));
             i = idx_load;
         } else {
+            Slic3r::Log::info(LogChannel, L"Loading model objects, obj_idx_to_load = 0");
             obj_idx = this->load_model_objects(model.objects);
+            Slic3r::Log::info(LogChannel, LOG_WSTRING("obj_idx size: " << obj_idx.size()));
         }
 
         for (const auto &j : obj_idx) {
@@ -206,11 +224,77 @@ std::vector<int> Plater::load_model_objects(ModelObject* model_object) {
     return load_model_objects(tmp);
 }
 std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
-    return std::vector<int>();
+    auto bed_center {this->bed_centerf()};
+
+    auto bed_shape {Slic3r::Polygon::new_scale(this->config->get<ConfigOptionPoints>("bed_shape").values)};
+    auto bed_size {bed_shape.bounding_box().size()};
+
+    bool need_arrange {false};
+
+    auto obj_idx {std::vector<int>()};
+    Slic3r::Log::info(LogChannel, LOG_WSTRING("Objects: " << model_objects.size()));
+
+    for (auto& obj : model_objects) {
+        auto o {this->model->add_object(*obj)};
+        o->repair();
+        
+        auto tmpobj {PlaterObject()};
+        const auto objfile {wxFileName::FileName( obj->input_file )};
+        tmpobj.name = wxString(std::string() == obj->name ? obj->name : objfile.GetName());
+        tmpobj.identifier = (this->object_identifier)++;
+
+        this->objects.push_back(tmpobj);
+        obj_idx.push_back(this->objects.size());
+        Slic3r::Log::info(LogChannel, LOG_WSTRING("Object array new size: " << this->objects.size()));
+        Slic3r::Log::info(LogChannel, LOG_WSTRING("Instances: " << obj->instances.size()));
+
+        if (obj->instances.size() == 0) {
+            if (settings->autocenter) {
+                need_arrange = true;
+                o->center_around_origin();
+
+                o->add_instance();
+                o->instances.back()->offset = this->bed_centerf();
+            } else {
+                need_arrange = false;
+                if (settings->autoalignz) {
+                    o->align_to_ground();
+                }
+                o->add_instance();
+            }
+        } else {
+            if (settings->autoalignz) {
+                o->align_to_ground();
+            }
+        }
+        {
+            // If the object is too large (more than 5x the bed) scale it down.
+            auto size {o->bounding_box().size()};
+            double ratio {0.0f};
+            if (ratio > 5) {
+                for (auto& instance : o->instances) {
+                    instance->scaling_factor = (1.0f/ratio);
+                    this->scaled_down = true;
+                }
+            }
+        }
+
+        { 
+            // Provide a warning if downscaling by 5x still puts it over the bed size.
+
+        }
+    }
+    return obj_idx;
 }
 
 MainFrame* Plater::GetFrame() { return dynamic_cast<MainFrame*>(wxGetTopLevelParent(this)); }
 
+int Plater::get_object_index(size_t object_id) {
+    for (size_t i = 0U; i < this->objects.size(); i++) {
+        if (this->objects.at(i).identifier == object_id) return static_cast<int>(i);
+    }
+    return -1;
+}
 
 }} // Namespace Slic3r::GUI
 
