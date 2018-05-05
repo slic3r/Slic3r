@@ -5,6 +5,7 @@
 #include <wx/timer.h>
 #include <wx/gauge.h>
 #include <wx/button.h>
+#include <functional>
 
 namespace Slic3r { namespace GUI {
 
@@ -42,10 +43,14 @@ public:
 
     void SetRange(int range) { if (range != this->prog->GetRange() ) this->prog->SetRange(range);}
 
+    /// Start the timer.
+    void Run(int rate = 100) { if (this->timer->IsRunning()) this->timer->Start(rate);};
+
+    void StartBusy(int rate = 100) { this->busy = true; this->ShowProgress(true); if (!this->timer->IsRunning()) this->timer->Start(rate); }
+
 private:
     void OnSize(wxSizeEvent& e);
     void OnTimer(wxTimerEvent& e);
-    void Run(int rate = 100) { if (this->timer->IsRunning()) this->timer->Start(rate);};
 
     // Cancel callback function
     std::function<void()> cancel_cb {[](){;}};
