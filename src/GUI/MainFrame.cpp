@@ -48,6 +48,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
         this->SetMinSize(wxSize(760, 490));
         this->SetSize(this->GetMinSize());
         wxTheApp->SetTopWindow(this);
+        gui_config->restore_window_pos(this, "main_frame");
         this->Show();
         this->Layout();
     }

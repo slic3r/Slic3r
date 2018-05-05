@@ -15,4 +15,7 @@ sub save_settings {
 
 void Settings::save_window_pos(wxWindow* ref, wxString name) {
 }
+
+void Settings::restore_window_pos(wxWindow* ref, wxString name) {
+}
 }} // namespace Slic3r::GUI
