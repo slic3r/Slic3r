@@ -76,17 +76,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
             e.Skip();
         }
     });
-/*
-    # declare events
-    EVT_CLOSE($self, sub {
-        my (undef, $event) = @_;
-        
-        
-        
-        # propagate event
-        $event->Skip;
-    });
-*/
 }
 
 /// Private initialization function for the main frame tab panel.
