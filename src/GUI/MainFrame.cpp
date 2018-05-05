@@ -51,17 +51,14 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
         this->Show();
         this->Layout();
     }
-/*
-    # declare events
-    EVT_CLOSE($self, sub {
-        my (undef, $event) = @_;
-        
-        if ($event->CanVeto) {
-            if (!$self->{plater}->prompt_unsaved_changes) {
-                $event->Veto;
+    // Set up event handlers.
+    this->Bind(wxEVT_CLOSE_WINDOW, [=](wxCloseEvent& e) {
+        if (e.CanVeto()) {
+            if (!this->plater->prompt_unsaved_changes()) {
+                e.Veto();
                 return;
             }
-            
+            /*
             if ($self->{controller} && $self->{controller}->printing) {
                 my $confirm = Wx::MessageDialog->new($self, "You are currently printing. Do you want to stop printing and continue anyway?",
                     'Unfinished Print', wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT);
@@ -70,10 +67,21 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
                     return;
                 }
             }
+
+            */
+            // save window size
+            gui_config->save_window_pos(this, "main_frame");
+
+            // Propagate event
+            e.Skip();
         }
+    });
+/*
+    # declare events
+    EVT_CLOSE($self, sub {
+        my (undef, $event) = @_;
         
-        # save window size
-        wxTheApp->save_window_pos($self, "main_frame");
+        
         
         # propagate event
         $event->Skip;
