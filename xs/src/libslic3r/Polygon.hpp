@@ -48,6 +48,8 @@ class Polygon : public MultiPoint {
     std::string wkt() const;
     Points concave_points(double angle = PI) const;
     Points convex_points(double angle = PI) const;
+
+    static Polygon new_scale(const Pointfs& p);
 };
 
 inline Polygons
