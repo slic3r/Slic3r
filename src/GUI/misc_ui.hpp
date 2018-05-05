@@ -27,6 +27,11 @@ constexpr OS the_os = OS::Windows;
 constexpr OS the_os = OS::Mac;
 #elif __linux__
 constexpr OS the_os = OS::Linux;
+    #ifdef __WXGTK__
+    constexpr bool wxGTK {true};
+    #else 
+    constexpr bool wxGTK {false};
+    #endif
 #endif
 
 #ifdef SLIC3R_DEV
