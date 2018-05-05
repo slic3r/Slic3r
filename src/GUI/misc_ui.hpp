@@ -15,6 +15,11 @@
 
 #include "Log.hpp"
 
+
+/// Macro to build std::wstring that slic3r::log expects using << syntax of wxString
+/// Avoids wx pollution of libslic3r
+#define LOG_WSTRING(...) ((wxString("") << __VA_ARGS__).ToStdWstring())
+
 /// Common static (that is, free-standing) functions, not part of an object hierarchy.
 
 namespace Slic3r { namespace GUI {
