@@ -72,6 +72,8 @@ private:
     bool outside_bounds {false};
     MainFrame* GetFrame();
 
+    void select_object(size_t& obj_idx) { };
+
 };
 
 

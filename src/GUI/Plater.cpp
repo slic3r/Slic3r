@@ -22,8 +22,8 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
         wxPostEvent(this, new wxPlThreadEvent(-1, PROGRESS_BAR_EVENT, 
     });
     */
-    auto on_select_object { [=](uint32_t& obj_idx) {
-       // this->select_object(obj_idx);
+    auto on_select_object { [=](size_t& obj_idx) {
+       this->select_object(obj_idx);
     } };
     /* 
    # Initialize handlers for canvases
