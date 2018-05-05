@@ -54,6 +54,8 @@ class Settings {
         /// Storage for window positions
         std::map<wxString, std::tuple<wxPoint, wxSize, bool> > window_pos { std::map<wxString, std::tuple<wxPoint, wxSize, bool> >() };
 
+        void save_window_pos(wxWindow* ref, wxString name);
+
     private:
         const std::string LogChannel {"GUI_Settings"}; //< Which log these messages should go to.
         
