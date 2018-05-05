@@ -6,6 +6,7 @@ install:
 - export SLIC3R_STATIC=1
 - export CXX=g++-7
 - export CC=gcc-7
+- export SLIC3R_VAR_REL=./var
 script:
 - bash package/linux/travis-setup.sh
 - cmake -DBOOST_ROOT=$BOOST_DIR src/
