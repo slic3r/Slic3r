@@ -293,4 +293,15 @@ Polygon::convex_points(double angle) const
     return convex;
 }
 
+Polygon Polygon::new_scale(const Pointfs& p) {
+    Points scaled_p;
+    for (auto i : p) {
+        // scale each individual point and append to a new array
+        scaled_p.push_back(scale_(i.x), scale_(i.y));
+    }
+    return Slic3r::Polygon(scaled_p);
+};
+
+
+
 }
