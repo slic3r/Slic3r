@@ -4,6 +4,7 @@
 #include <wx/utils.h> 
 
 #include "AboutDialog.hpp"
+#include "libslic3r.h"
 
 namespace Slic3r { namespace GUI {
 
@@ -29,8 +30,11 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxToolTip::SetAutoPop(TOOLTIP_TIMER);
 
     // initialize status bar
+    // we call SetStatusBar() here because MainFrame is the direct owner. 
     this->statusbar = new ProgressStatusBar(this, -1);
-    this->statusbar->SetStatusText("Version $Slic3r::VERSION - Remember to check for updates at http://slic3r.org/");
+    wxString welcome_text {_("Version SLIC3R_VERSION_REPLACE - Remember to check for updates at http://slic3r.org/")};
+    welcome_text.Replace("SLIC3R_VERSION_REPLACE", wxString(SLIC3R_VERSION));
+    this->statusbar->SetStatusText(welcome_text);
     this->SetStatusBar(this->statusbar);
 
     this->loaded = 1;
