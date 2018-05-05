@@ -35,6 +35,8 @@ public:
     Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings> _settings);
     void add();
 
+    /// Ask if there are any unsaved changes.
+    bool prompt_unsaved_changes() { return true; }
 private:
     std::shared_ptr<Slic3r::Print> print {std::make_shared<Print>(Slic3r::Print())};
     std::shared_ptr<Slic3r::Model> model {std::make_shared<Model>(Slic3r::Model())};
