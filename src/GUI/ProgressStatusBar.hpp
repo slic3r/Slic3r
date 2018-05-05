@@ -32,14 +32,14 @@ public:
         cb == nullptr ? this->cancelbutton->Hide() : this->cancelbutton->Show();
     }
    
-    /// Accessor function for the current value of the progress bar
-    size_t GetProgress() {return this->prog->GetValue();}
-
-    /// Accessor function for busy state
-    bool IsBusy() {return this->busy;}
-
     /// Show the progress bar.
     void ShowProgress(bool show = true) { this->prog->Show(show); this->prog->Pulse(); }
+
+    /// Accessor function for the current value of the progress bar
+    inline size_t GetProgress() {return this->prog->GetValue();}
+    
+    /// Accessor set function for the current value of the progress bar
+    void SetProgress(size_t val);
 
     void SetRange(int range) { if (range != this->prog->GetRange() ) this->prog->SetRange(range);}
 
@@ -47,6 +47,10 @@ public:
     void Run(int rate = 100) { if (this->timer->IsRunning()) this->timer->Start(rate);};
 
     void StartBusy(int rate = 100) { this->busy = true; this->ShowProgress(true); if (!this->timer->IsRunning()) this->timer->Start(rate); }
+    void StopBusy() { this->timer->Stop(); this->ShowProgress(false); this->prog->SetValue(0); this->busy = false;}
+    
+    /// Accessor function for busy state
+    bool IsBusy() {return this->busy;}
 
 private:
     void OnSize(wxSizeEvent& e);

@@ -52,6 +52,18 @@ void ProgressStatusBar::OnSize(wxSizeEvent &e) {
     e.Skip();
 }
 
+void ProgressStatusBar::SetProgress(size_t val) {
+    if (!this->prog->IsShown()) {
+        this->ShowProgress(true);
+    }
+    if (val == this->prog->GetRange()) {
+        this->prog->SetValue(0);
+        this->ShowProgress(false);
+    } else {
+        this->prog->SetValue(val);
+    }
+}
+
 void ProgressStatusBar::OnTimer(wxTimerEvent& e) {
     if (this->prog->IsShown())
         this->timer->Stop();
