@@ -30,7 +30,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxToolTip::SetAutoPop(TOOLTIP_TIMER);
 
     // initialize status bar
-    // we call SetStatusBar() here because MainFrame is the direct owner. 
     this->statusbar = new ProgressStatusBar(this, -1);
     wxString welcome_text {_("Version SLIC3R_VERSION_REPLACE - Remember to check for updates at http://slic3r.org/")};
     welcome_text.Replace("SLIC3R_VERSION_REPLACE", wxString(SLIC3R_VERSION));
@@ -44,6 +43,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
         wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
         sizer->Add(this->tabpanel, 1, wxEXPAND);
         sizer->SetSizeHints(this);
+        this->SetSizer(sizer);
         this->Fit();
         this->SetMinSize(wxSize(760, 490));
         this->SetSize(this->GetMinSize());
