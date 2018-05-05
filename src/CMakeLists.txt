@@ -24,8 +24,14 @@ ELSE(CMAKE_HOST_APPLE)
 #    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -L.")
 ENDIF(CMAKE_HOST_APPLE)
 
-set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_STATIC_RUNTIME OFF)
+if(DEFINED ENV{SLIC3R_STATIC})
+    set(Boost_USE_STATIC_LIBS ON)
+    set(Boost_USE_STATIC_RUNTIME ON)
+else(DEFINED ENV{SLIC3R_STATIC})
+    set(Boost_USE_STATIC_LIBS OFF)
+    set(Boost_USE_STATIC_RUNTIME OFF)
+endif(DEFINED ENV{SLIC3R_STATIC})
+
 find_package(Threads REQUIRED)
 
 find_package(Boost COMPONENTS system thread filesystem)
@@ -154,7 +160,12 @@ add_library(bthread SHARED IMPORTED)
 set_target_properties(bthread PROPERTIES IMPORTED_LOCATION ${bthread_l})
 include_directories(${Boost_INCLUDE_DIRS})
 
-set(wxWidgets_USE_STATIC OFF)
+if(DEFINED ENV{SLIC3R_STATIC})
+    set(wxWidgets_USE_STATIC ON)
+ELSE(DEFINED ENV{SLIC3R_STATIC})
+    set(wxWidgets_USE_STATIC OFF)
+ENDIF(DEFINED ENV{SLIC3R_STATIC})
+
 set(wxWidgets_USE_UNICODE ON)
 
 find_package(wxWidgets COMPONENTS base aui core html)
