@@ -16,6 +16,13 @@ public:
 
     void write_ini(const std::string& file) { save(file); }
     void read_ini(const std::string& file) { load(file); }
+
+    /// Template function to retrieve and cast in hopefully a slightly nicer 
+    /// format than longwinded dynamic_cast<> 
+    template <class T>
+    T& get(const t_config_option_key& opt_key, bool create=false) {
+        return *(dynamic_cast<T*>(this->optptr(opt_key, create)));
+    }
 };
 
 } // namespace Slic3r
