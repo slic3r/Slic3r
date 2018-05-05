@@ -13,7 +13,7 @@ namespace Slic3r { namespace GUI {
 class PlaterObject {
 public:
     wxString name {L""};
-    wxString identifier {L""};
+    size_t identifier {0U};
     wxString input_file {L""};
     int input_file_obj_idx {-1};
 
