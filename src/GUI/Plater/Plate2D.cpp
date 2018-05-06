@@ -76,11 +76,8 @@ void Plate2D::repaint(wxPaintEvent& e) {
             dc->SetTextForeground(wxColor(0,0,0));
             dc->SetFont(wxFont(10, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
-            wxString val {};
-            val.Printf("X = %.0f", this->print_center.x);
-            dc->DrawLabel(val , wxRect(0,0, center.x*2, this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_BOTTOM);
-            val.Printf("Y = %.0f", this->print_center.y);
-            dc->DrawRotatedText(val, 0, center.y + 15, 90);
+            dc->DrawLabel(wxString::Format("X = %.0f", this->print_center.x), wxRect(0,0, center.x*2, this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_BOTTOM);
+            dc->DrawRotatedText(wxString::Format("Y = %.0f", this->print_center.y), 0, center.y + 15, 90);
         }
     }
 
