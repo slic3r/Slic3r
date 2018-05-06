@@ -33,6 +33,7 @@ class ExPolygonCollection
     Polygons contours() const;
     Polygons holes() const;
     void append(const ExPolygons &expolygons);
+    void append(const ExPolygon &expolygons);
 };
 
 inline ExPolygonCollection&

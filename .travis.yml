@@ -1,18 +1,16 @@
-language: perl
+language: c++
 before_install:
 - sh package/linux/travis-decrypt-key
 install:
 - export BOOST_DIR=$HOME/boost_1_63_0
 - export SLIC3R_STATIC=1
-- export CXX=g++-4.9
-- export CC=g++-4.9
-- source $HOME/perl5/perlbrew/etc/bashrc
+- export CXX=g++-7
+- export CC=gcc-7
 script:
 - bash package/linux/travis-setup.sh
-- perlbrew switch slic3r-perl
-- perl ./Build.PL
+- cmake -DBOOST_ROOT=$BOOST_DIR src/
+- make
 after_success:
-- eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
 - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
 - package/linux/appimage.sh x86_64
 - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
@@ -22,6 +20,7 @@ branches:
   only:
   - master
   - xsgui
+  - cppgui
 cache:
   apt: true
   directories:
@@ -31,11 +30,15 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - g++-4.9
-    - gcc-4.9
+    - g++-7
+    - gcc-7
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
+    - cmake
+    - wx3.0-headers
+    - libwxgtk3.0-dev
+    - wx-common
   ssh_known_hosts: dl.slic3r.org
 notifications:
   irc:

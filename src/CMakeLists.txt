@@ -1,8 +1,25 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.9)
 project (slic3r)
 
+
 # only on newer GCCs: -ftemplate-backtrace-limit=0
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE")
+set(CMAKE_CXX_FLAGS "-g ${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE")
+
+if(DEFINED ENV{SLIC3R_VAR_REL})
+    set(CMAKE_CXX_FLAGS "-DVAR_REL=$ENV{SLIC3R_VAR_REL}")
+endif(DEFINED ENV{SLIC3R_VAR_REL})
+
+if(DEFINED ENV{SLIC3R_VAR_ABS})
+    set(CMAKE_CXX_FLAGS "-DVAR_ABS")
+endif(DEFINED ENV{SLIC3R_VAR_ABS})
+
+if(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
+    set(CMAKE_CXX_FLAGS "-DVAR_ABS_PATH=$ENV{SLIC3R_VAR_ABS_PATH}")
+endif(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
+
+
+execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION ERROR_QUIET)
+
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -DSLIC3R_DEBUG")
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
@@ -17,14 +34,23 @@ IF(CMAKE_HOST_APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE")
     set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation -lc++")
 ELSE(CMAKE_HOST_APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
+#    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -L.")
 ENDIF(CMAKE_HOST_APPLE)
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ON)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
+if(DEFINED ENV{SLIC3R_STATIC})
+    set(Boost_USE_STATIC_LIBS ON)
+    set(Boost_USE_STATIC_RUNTIME ON)
+else(DEFINED ENV{SLIC3R_STATIC})
+    set(Boost_USE_STATIC_LIBS OFF)
+    set(Boost_USE_STATIC_RUNTIME OFF)
+endif(DEFINED ENV{SLIC3R_STATIC})
+
+find_package(Threads REQUIRED)
+
 find_package(Boost COMPONENTS system thread filesystem)
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
+set(GUI_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/GUI/)
 
 include_directories(${LIBDIR})
 include_directories(${LIBDIR}/libslic3r)
@@ -37,10 +63,16 @@ include_directories(${LIBDIR}/poly2tri/)
 include_directories(${LIBDIR}/poly2tri/sweep)
 include_directories(${LIBDIR}/poly2tri/common)
 
+add_library(ZipArchive STATIC
+    ${LIBDIR}/Zip/ZipArchive.cpp
+)
+
+
 add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/BoundingBox.cpp
     ${LIBDIR}/libslic3r/BridgeDetector.cpp
     ${LIBDIR}/libslic3r/ClipperUtils.cpp
+    ${LIBDIR}/libslic3r/ConfigBase.cpp
     ${LIBDIR}/libslic3r/Config.cpp
     ${LIBDIR}/libslic3r/ExPolygon.cpp
     ${LIBDIR}/libslic3r/ExPolygonCollection.cpp
@@ -53,6 +85,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Fill/FillHoneycomb.cpp
     ${LIBDIR}/libslic3r/Fill/FillPlanePath.cpp
     ${LIBDIR}/libslic3r/Fill/FillRectilinear.cpp
+    ${LIBDIR}/libslic3r/Fill/FillGyroid.cpp
     ${LIBDIR}/libslic3r/Flow.cpp
     ${LIBDIR}/libslic3r/GCode.cpp
     ${LIBDIR}/libslic3r/GCode/CoolingBuffer.cpp
@@ -89,8 +122,8 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/SurfaceCollection.cpp
     ${LIBDIR}/libslic3r/SVG.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
-    ${LIBDIR}/libslic3r/Zip/ZipArchive.cpp
 )
+target_compile_features(libslic3r PUBLIC cxx_std_11)
 
 add_library(BSpline STATIC
     ${LIBDIR}/BSpline/BSpline.cpp
@@ -122,46 +155,77 @@ add_library(poly2tri STATIC
 )
 
 add_executable(slic3r slic3r.cpp)
-set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
-set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
+#set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
+#set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
 
-add_executable(extrude-tin utils/extrude-tin.cpp)
-set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_START_STATIC 1)
-set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_END_STATIC 1)
+#add_executable(extrude-tin utils/extrude-tin.cpp)
+#set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_START_STATIC 1)
+#set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_END_STATIC 1)
 
-set(wxWidgets_USE_STATIC)
-SET(wxWidgets_USE_LIBS)
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_STATIC_RUNTIME OFF)
 
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ON)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-find_library(bsystem_l boost_system)
-add_library(bsystem STATIC IMPORTED)
+find_library(bsystem_l boost_system log)
+add_library(bsystem SHARED IMPORTED)
 set_target_properties(bsystem PROPERTIES IMPORTED_LOCATION ${bsystem_l})
 find_library(bthread_l boost_thread)
-add_library(bthread STATIC IMPORTED)
+add_library(bthread SHARED IMPORTED)
 set_target_properties(bthread PROPERTIES IMPORTED_LOCATION ${bthread_l})
 include_directories(${Boost_INCLUDE_DIRS})
 
-#find_package(wxWidgets)
-#disable wx for the time being - we're not building any of the gui yet
+if(DEFINED ENV{SLIC3R_STATIC})
+    set(wxWidgets_USE_STATIC ON)
+ELSE(DEFINED ENV{SLIC3R_STATIC})
+    set(wxWidgets_USE_STATIC OFF)
+ENDIF(DEFINED ENV{SLIC3R_STATIC})
+
+set(wxWidgets_USE_UNICODE ON)
+
+find_package(wxWidgets COMPONENTS base aui core html)
+
 IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
 ENDIF(CMAKE_HOST_UNIX)
 
-target_link_libraries (slic3r libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
 
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
     INCLUDE("${wxWidgets_USE_FILE}")
-    add_library(slic3r_gui STATIC ${LIBDIR}/slic3r/GUI/3DScene.cpp ${LIBDIR}/slic3r/GUI/GUI.cpp)
+
+    if (NOT GIT_VERSION STREQUAL "")
+        if (MSVC)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DSLIC3R_BUILD_COMMIT=${GIT_VERSION} ")
+        else(MSVC)
+            execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSLIC3R_BUILD_COMMIT=${GIT_VERSION}")
+            string(REGEX REPLACE "\n$" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+        endif(MSVC)
+    endif(NOT GIT_VERSION STREQUAL "")
+
+    include_directories(${GUI_LIBDIR})
+    include_directories(${wxWidgets_INCLUDE})
+
+    add_library(slic3r_gui STATIC 
+    ${GUI_LIBDIR}/AboutDialog.cpp
+    ${GUI_LIBDIR}/GUI.cpp
+    ${GUI_LIBDIR}/MainFrame.cpp
+    ${GUI_LIBDIR}/Plater.cpp
+    ${GUI_LIBDIR}/ProgressStatusBar.cpp
+    ${GUI_LIBDIR}/Plater/Plate2D.cpp
+    ${GUI_LIBDIR}/Plater/PlaterObject.cpp
+    ${GUI_LIBDIR}/Settings.cpp
+    ${GUI_LIBDIR}/misc_ui.cpp
+    )
+    target_compile_features(slic3r_gui PUBLIC cxx_std_11)
     #only build GUI lib if building with wx
-    target_link_libraries (slic3r slic3r-gui ${wxWidgets_LIBRARIES})
+    target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES})
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
     MESSAGE("wx not found!")
     #skip gui when no wx included
 ENDIF(wxWidgets_FOUND)
+
+target_link_libraries (slic3r libslic3r admesh BSpline clipper expat polypartition poly2tri ZipArchive ${Boost_LIBRARIES})
 
 # Windows needs a compiled component for Boost.nowide
 IF (WIN32)
@@ -169,8 +233,8 @@ IF (WIN32)
         ${LIBDIR}/boost/nowide/iostream.cpp
     )
 
-    target_link_libraries(slic3r boost-nowide)
-    target_link_libraries(extrude-tin boost-nowide)
+    target_link_libraries(slic3r STATIC boost-nowide)
+#    target_link_libraries(extrude-tin boost-nowide)
 ENDIF(WIN32)
 
-target_link_libraries (extrude-tin libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+#target_link_libraries (extrude-tin libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
