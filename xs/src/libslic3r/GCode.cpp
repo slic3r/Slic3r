@@ -503,8 +503,8 @@ std::string
 GCode::_extrude(ExtrusionPath path, std::string description, double speed)
 {
     path.simplify(SCALED_RESOLUTION);
-    
     std::string gcode;
+    description = path.is_bridge() ? description + " (bridge)" : description;
     
     // go to first point of extrusion path
     if (!this->_last_pos_defined || !this->_last_pos.coincides_with(path.first_point())) {

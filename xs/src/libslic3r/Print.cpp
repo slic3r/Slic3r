@@ -288,7 +288,7 @@ Print::invalidate_step(PrintStep step)
     
     // propagate to dependent steps
     if (step == psSkirt) {
-        this->invalidate_step(psBrim);
+        invalidated |= this->invalidate_step(psBrim);
     }
     
     return invalidated;

@@ -936,12 +936,18 @@ ModelObject::print_info() const
 
 
 ModelVolume::ModelVolume(ModelObject* object, const TriangleMesh &mesh)
-:   mesh(mesh), modifier(false), object(object)
+:   mesh(mesh), input_file(""), modifier(false), object(object)
 {}
 
 ModelVolume::ModelVolume(ModelObject* object, const ModelVolume &other)
-:   name(other.name), mesh(other.mesh), config(other.config),
-    modifier(other.modifier), object(object)
+:   name(other.name),
+    mesh(other.mesh),
+    config(other.config),
+    input_file(other.input_file),
+    input_file_obj_idx(other.input_file_obj_idx),
+    input_file_vol_idx(other.input_file_vol_idx),
+    modifier(other.modifier),
+    object(object)
 {
     this->material_id(other.material_id());
 }
@@ -959,6 +965,10 @@ ModelVolume::swap(ModelVolume &other)
     std::swap(this->mesh,       other.mesh);
     std::swap(this->config,     other.config);
     std::swap(this->modifier,   other.modifier);
+	
+	std::swap(this->input_file,            other.input_file);
+	std::swap(this->input_file_obj_idx,    other.input_file_obj_idx);
+	std::swap(this->input_file_vol_idx,    other.input_file_vol_idx);
 }
 
 t_model_material_id

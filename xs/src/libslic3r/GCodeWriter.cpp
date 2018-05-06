@@ -107,7 +107,7 @@ GCodeWriter::postamble() const
 std::string
 GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool) const
 {
-    
+    wait = this->config.use_set_and_wait_extruder ? true : wait;
     std::string code, comment;
     if (wait && FLAVOR_IS_NOT(gcfTeacup) && FLAVOR_IS_NOT(gcfMakerWare) && FLAVOR_IS_NOT(gcfSailfish)) {
         code = "M109";
@@ -143,6 +143,7 @@ std::string
 GCodeWriter::set_bed_temperature(unsigned int temperature, bool wait) const
 {
     std::string code, comment;
+    wait = this->config.use_set_and_wait_bed ? true : wait;
     if (wait && FLAVOR_IS_NOT(gcfTeacup)) {
         if (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)) {
             code = "M109";

@@ -135,5 +135,10 @@ ExPolygonCollection::append(const ExPolygons &expp)
 {
     this->expolygons.insert(this->expolygons.end(), expp.begin(), expp.end());
 }
+void
+ExPolygonCollection::append(const ExPolygon &expp)
+{
+    this->expolygons.push_back(expp);
+}
 
 }

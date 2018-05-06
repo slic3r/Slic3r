@@ -221,7 +221,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("end_gcode", coString);
     def->label = "End G-code";
-    def->tooltip = "This end procedure is inserted at the end of the output file. Note that you can use placeholder variables for all Slic3r settings.";
+    def->tooltip = "This end procedure is inserted at the end of the output file. Note that you can use placeholder variables for all Slic3r settings. If Slic3r detects M104, M109, M140 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions.";
     def->cli = "end-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -230,7 +230,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("end_filament_gcode", coStrings);
     def->label = "End G-code";
-    def->tooltip = "This end procedure is inserted at the end of the output file, before the printer end gcode. Note that you can use placeholder variables for all Slic3r settings. If you have multiple extruders, the gcode is processed in extruder order.";
+    def->tooltip = "This end procedure is inserted at the end of the output file, before the printer end gcode. Note that you can use placeholder variables for all Slic3r settings. If you have multiple extruders, the gcode is processed in extruder order. If Slic3r detects M104, M109, M140 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions.";
     def->cli = "end-filament-gcode=s@";
     def->multiline = true;
     def->full_width = true;
@@ -1394,6 +1394,16 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("0.2 (detachable)");
     def->default_value = new ConfigOptionFloat(0.2);
 
+    def = this->add("support_material_max_layers", coInt);
+    def->label = "Max layer count for supports";
+    def->category = "Support material";
+    def->tooltip = "Disable support generation above this layer. Setting this to 0 will disable this feature.";
+    def->sidetext = "layers";
+    def->cli = "support-material-max-layers=f";
+    def->full_label = "Maximum layer count for support generation";
+    def->min = 0;
+    def->default_value = new ConfigOptionInt(0);
+
     def = this->add("support_material_enforce_layers", coInt);
     def->label = "Enforce support for the first";
     def->category = "Support material";
@@ -1630,6 +1640,19 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "If your firmware requires relative E values, check this, otherwise leave it unchecked. Most firmwares use absolute values.";
     def->cli = "use-relative-e-distances!";
     def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("use_set_and_wait_extruder", coBool);
+    def->label = "Use Set-and-Wait GCode (Extruder)";
+    def->tooltip = "If your firmware supports a set and wait gcode for temperature changes, use it for automatically inserted temperature gcode for all extruders. Does not affect custom gcode.";
+    def->cli = "use-set-and-wait-extruder!";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("use_set_and_wait_bed", coBool);
+    def->label = "Use Set-and-Wait GCode (Bed)";
+    def->tooltip = "If your firmware supports a set and wait gcode for temperature changes, use it for automatically inserted temperature gcode for the heatbed. Does not affect custom gcode.";
+    def->cli = "use-set-and-wait-heatbed!";
+    def->default_value = new ConfigOptionBool(false);
+
 
     def = this->add("use_volumetric_e", coBool);
     def->label = "Use volumetric E";

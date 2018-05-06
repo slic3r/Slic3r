@@ -1177,7 +1177,7 @@ sub add_tin {
 
 sub load_file {
     my $self = shift;
-    my ($input_file, $obj_idx) = @_;
+    my ($input_file, $obj_idx_to_load) = @_;
     
     $Slic3r::GUI::Settings->{recent}{skein_directory} = dirname($input_file);
     wxTheApp->save_settings;
@@ -1203,14 +1203,27 @@ sub load_file {
             }
         }
         
-        if (defined $obj_idx) {
-            return () if $obj_idx >= $model->objects_count;
-            @obj_idx = $self->load_model_objects($model->get_object($obj_idx));
+        for my $obj_idx (0..($model->objects_count-1)) {
+            my $object = $model->objects->[$obj_idx];
+            $object->set_input_file($input_file);
+            for my $vol_idx (0..($object->volumes_count-1)) {
+                my $volume = $object->get_volume($vol_idx);
+                $volume->set_input_file($input_file);
+                $volume->set_input_file_obj_idx($obj_idx);
+                $volume->set_input_file_obj_idx($vol_idx);
+            }
+        }
+        
+        my $i = 0;
+        
+        if (defined $obj_idx_to_load) {
+            return () if $obj_idx_to_load >= $model->objects_count;
+            @obj_idx = $self->load_model_objects($model->get_object($obj_idx_to_load));
+            $i = $obj_idx_to_load;
         } else {
             @obj_idx = $self->load_model_objects(@{$model->objects});
         }
         
-        my $i = 0;
         foreach my $obj_idx (@obj_idx) {
             $self->{objects}[$obj_idx]->input_file($input_file);
             $self->{objects}[$obj_idx]->input_file_obj_idx($i++);
@@ -2306,26 +2319,141 @@ sub reload_from_disk {
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
     
-    return if !$object->input_file
-        || !-e $object->input_file;
+    if (!$object->input_file) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because it isn't referenced to its input file any more. This is the case after performing operations like cut or split.");
+        return;
+    }
+    if (!-e $object->input_file) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the file doesn't exist anymore on the disk.");
+        return;
+    }
     
     # Only reload the selected object and not all objects from the input file.
     my @new_obj_idx = $self->load_file($object->input_file, $object->input_file_obj_idx);
-    return if !@new_obj_idx;
-    
-    my $model_object = $self->{model}->objects->[$obj_idx];
-    foreach my $new_obj_idx (@new_obj_idx) {
-        my $o = $self->{model}->objects->[$new_obj_idx];
-        $o->clear_instances;
-        $o->add_instance($_) for @{$model_object->instances};
-        
-        if ($o->volumes_count == $model_object->volumes_count) {
-            for my $i (0..($o->volumes_count-1)) {
-                $o->get_volume($i)->config->apply($model_object->get_volume($i)->config);
-            }
+    if (!@new_obj_idx) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
+        return;
+    }
+
+    my $org_obj = $self->{model}->objects->[$obj_idx];
+
+    # check if the object is dependant of more than one file
+    my $org_obj_has_modifiers=0;
+    for my $i (0..($org_obj->volumes_count-1)) {
+        if ($org_obj->input_file ne $org_obj->get_volume($i)->input_file) {
+            $org_obj_has_modifiers=1;
+            last;
         }
     }
-    
+
+    my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior};
+
+    # ask the user how to proceed, if option is selected in preferences
+    if ($org_obj_has_modifiers && !$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
+        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior);
+        my $res = $dlg->ShowModal;
+        if ($res==wxID_CANCEL) {
+            $self->remove($_) for @new_obj_idx;
+            $dlg->Destroy;
+            return;
+        }
+        $reload_behavior = $dlg->GetSelection;
+        my $save = 0;
+        if ($reload_behavior != $Slic3r::GUI::Settings->{_}{reload_behavior}) {
+            $Slic3r::GUI::Settings->{_}{reload_behavior} = $reload_behavior;
+            $save = 1;
+        }
+        if ($dlg->GetHideOnNext) {
+            $Slic3r::GUI::Settings->{_}{reload_hide_dialog} = 1;
+            $save = 1;
+        }
+        Slic3r::GUI->save_settings if $save;
+        $dlg->Destroy;
+    }
+
+    my $volume_unmatched=0;
+
+    foreach my $new_obj_idx (@new_obj_idx) {
+        my $new_obj = $self->{model}->objects->[$new_obj_idx];
+        $new_obj->clear_instances;
+        $new_obj->add_instance($_) for @{$org_obj->instances};
+        $new_obj->config->apply($org_obj->config);
+        
+        my $new_vol_idx = 0;
+        my $org_vol_idx = 0;
+        my $new_vol_count=$new_obj->volumes_count;
+        my $org_vol_count=$org_obj->volumes_count;
+        
+        while ($new_vol_idx<=$new_vol_count-1) {
+            if (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
+                # apply config from the matching volumes
+                $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume($org_vol_idx++)->config);
+            } else {
+                # reload has more volumes than original (first file), apply config from the first volume
+                $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume(0)->config);
+                $volume_unmatched=1;
+            }
+        }
+        $org_vol_idx=$org_vol_count if $reload_behavior==2; # Reload behavior: discard
+        while (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
+            # original has more volumes (first file), skip those
+            $org_vol_idx++;
+            $volume_unmatched=1;
+        }
+        while ($org_vol_idx<=$org_vol_count-1) {
+            if ($reload_behavior==1) { # Reload behavior: copy
+                my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx));
+                $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                if ($new_volume->name =~ m/link to path\z/) {
+                    my $new_name = $new_volume->name;
+                    $new_name =~ s/ - no link to path$/ - copied/;
+                    $new_volume->set_name($new_name);
+                }elsif(!($new_volume->name =~ m/copied\z/)) {
+                    $new_volume->set_name($new_volume->name . " - copied");
+                }
+            }else{ # Reload behavior: Reload all, also fallback solution if ini was manually edited to a wrong value
+                if ($org_obj->get_volume($org_vol_idx)->input_file) {
+                    my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($org_vol_idx)->input_file) };
+                    if ($@) {
+                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                    }elsif ($org_obj->get_volume($org_vol_idx)->input_file_obj_idx > ($model->objects_count-1)) {
+                        # Object Index for that part / modifier not found in current version of the file
+                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                    }else{
+                        my $prt_mod_obj = $model->objects->[$org_obj->get_volume($org_vol_idx)->input_file_obj_idx];
+                        if ($org_obj->get_volume($org_vol_idx)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
+                            # Volume Index for that part / modifier not found in current version of the file
+                            $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                        }else{
+                            # all checks passed, load new mesh and copy metadata
+                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($org_vol_idx)->input_file_vol_idx));
+                            $new_volume->set_input_file($org_obj->get_volume($org_vol_idx)->input_file);
+                            $new_volume->set_input_file_obj_idx($org_obj->get_volume($org_vol_idx)->input_file_obj_idx);
+                            $new_volume->set_input_file_vol_idx($org_obj->get_volume($org_vol_idx)->input_file_vol_idx);
+                            $new_volume->config->apply($org_obj->get_volume($org_vol_idx)->config);
+                            $new_volume->set_modifier($org_obj->get_volume($org_vol_idx)->modifier);
+                            $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                        }
+                    }
+                }
+                if (!$org_obj->get_volume($org_vol_idx)->input_file) {
+                    my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx)); # error -> copy old mesh
+                    $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                    $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                    if ($new_volume->name =~ m/copied\z/) {
+                        my $new_name = $new_volume->name;
+                        $new_name =~ s/ - copied$/ - no link to path/;
+                        $new_volume->set_name($new_name);
+                    }elsif(!($new_volume->name =~ m/link to path\z/)) {
+                        $new_volume->set_name($new_volume->name . " - no link to path");
+                    }
+                    $volume_unmatched=1;
+                }
+            }
+            $org_vol_idx++;
+        }
+    }
     $self->remove($obj_idx);
     
     # TODO: refresh object list which contains wrong count and scale
@@ -2336,8 +2464,17 @@ sub reload_from_disk {
     # When porting to C++ we'll probably have cleaner ways to do this.
     $self->make_thumbnail($_-1) for @new_obj_idx;
 
+    # update print
+    $self->stop_background_process;
+    $self->{print}->reload_object($_-1) for @new_obj_idx;
+    $self->on_model_change;
+
     # Empty the redo stack
     $self->{redo_stack} = [];
+
+    if ($volume_unmatched) {
+        Slic3r::GUI::warning_catcher($self)->("At least 1 volume couldn't be matched between the original object and the reloaded one.");
+    }
 }
 
 sub export_object_stl {

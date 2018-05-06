@@ -92,6 +92,23 @@ sub new {
         tooltip     => 'In 2D plater, Move objects using keyboard by nudge value of',
         default     => $Slic3r::GUI::Settings->{_}{nudge_val},
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # reload hide dialog
+        opt_id      => 'reload_hide_dialog',
+        type        => 'bool',
+        label       => 'Hide Dialog on Reload',
+        tooltip     => 'When checked, the dialog on reloading files with added parts & modifiers is suppressed. The reload is performed according to the option given in \'Default Reload Behavior\'',
+        default     => $Slic3r::GUI::Settings->{_}{reload_hide_dialog},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # default reload behavior
+        opt_id      => 'reload_behavior',
+        type        => 'select',
+        label       => 'Default Reload Behavior',
+        tooltip     => 'Choose the default behavior of the \'Reload from disk\' function regarding additional parts and modifiers.',
+        labels      => ['Reload all','Reload main, copy added','Reload main, discard added'],
+        values      => [0, 1, 2],
+        default     => $Slic3r::GUI::Settings->{_}{reload_behavior},
+        width       => 180,
+    ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # colorscheme
         opt_id      => 'colorscheme',
         type        => 'select',
@@ -100,7 +117,7 @@ sub new {
         labels      => ['Default','Solarized'], # add more schemes, if you want in ColorScheme.pm.
         values      => ['getDefault','getSolarized'], # add more schemes, if you want - those are the names of the corresponding function in ColorScheme.pm.
         default     => $Slic3r::GUI::Settings->{_}{colorscheme} // 'getDefault',
-        width       => 130,
+        width       => 180,
     ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);

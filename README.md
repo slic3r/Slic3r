@@ -1,4 +1,4 @@
-![](var/Slic3r_128px.png) Slic3r [![Build Status](https://travis-ci.org/alexrj/Slic3r.svg?branch=master)](https://travis-ci.org/alexrj/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/8iqmeat6cj158vo6?svg=true)](https://ci.appveyor.com/project/lordofhyphens/slic3r) [![Build Status](http://osx-build.slic3r.org:8080/buildStatus/icon?job=Slic3r)](http://osx-build.slic3r.org:8080/job/Slic3r)
+![](var/Slic3r_128px.png) Slic3r [![Build Status](https://travis-ci.org/slic3r/Slic3r.svg?branch=master)](https://travis-ci.org/slic3r/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/8iqmeat6cj158vo6?svg=true)](https://ci.appveyor.com/project/lordofhyphens/slic3r) [![Build Status](http://osx-build.slic3r.org:8080/buildStatus/icon?job=Slic3r)](http://osx-build.slic3r.org:8080/job/Slic3r)
 ======
 
 We have automated builds for Windows (64-bit) and OSX (>= 10.7). [Get a fresh build now](http://dl.slic3r.org/dev/) and stay up-to-date with the development!
@@ -46,7 +46,7 @@ The core parts of Slic3r are written in C++11, with multithreading. The graphica
 
 You can download a precompiled package from [slic3r.org](http://slic3r.org/) (releases) or from [dl.slicr3r.org](http://dl.slic3r.org/dev/) (automated builds).
 
-If you want to compile the source yourself follow the instructions on one of these wiki pages: 
+If you want to compile the source yourself follow the instructions on one of these wiki pages:
 * [Linux](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
 * [Windows](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-Windows)
 * [Mac OSX](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-OS-X)
@@ -58,7 +58,7 @@ Sure! You can do the following to find things that are available to help with:
 * Development
 	* [Low Effort tasks](https://github.com/alexrj/Slic3r/labels/Low%20Effort): pick one of them!
 	* [More available tasks](https://github.com/alexrj/Slic3r/milestone/31): let's discuss together before you start working on them
-	* Please comment in the related GitHub issue that you are working on it so that other people know. 
+	* Please comment in the related GitHub issue that you are working on it so that other people know.
 * Contribute to the [Manual](http://manual.slic3r.org/)! (see its [GitHub repository](https://github.com/alexrj/Slic3r-Manual))
 * You can also find us in #slic3r on [FreeNode](https://webchat.freenode.net): talk to _Sound_, _LoH_ or the other members of the Slic3r community.
 * Add an [issue](https://github.com/alexrj/Slic3r/issues) to the GitHub tracker if it isn't already present.
@@ -84,12 +84,12 @@ The main author of Slic3r is Alessandro Ranellucci (@alexrj, *Sound* in IRC, [@a
 
 Joseph Lenox (@lordofhyphens, *Loh* in IRC) is the current co-maintainer.
 
-Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake, Kliment Yanev and numerous others. Original manual by Gary Hodgson. Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James.
+Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake, Kliment Yanev and numerous others. Original manual by Gary Hodgson. Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James, stl and gcode file icons designed by Akira Yasuda.
 
 ### How can I invoke Slic3r using the command line?
 
     Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
-    
+
         --help              Output this usage screen and exit
         --version           Output the version of Slic3r and exit
         --save <file>       Save configuration to the specified file
@@ -108,16 +108,16 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
                             them as <name>_upper.stl and <name>_lower.stl
         --split             Split the shells contained in given STL file into several STL files
         --info              Output information about the supplied file(s) and exit
-    
+
         -j, --threads <num> Number of threads to use (1+, default: 2)
-    
+
       GUI options:
         --gui               Forces the GUI launch instead of command line slicing (if you
                             supply a model file, it will be loaded into the plater)
-        --no-gui            Forces the command line slicing instead of gui. 
+        --no-gui            Forces the command line slicing instead of gui.
                             This takes precedence over --gui if both are present.
         --autosave <file>   Automatically export current configuration to the specified file
-    
+
       Output options:
         --output-filename-format
                             Output file name format; all config options enclosed in brackets
@@ -128,7 +128,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
         --export-svg        Export a SVG file containing slices instead of G-code.
         -m, --merge         If multiple files are supplied, they will be composed into a single
                             print rather than processed individually.
-    
+
       Printer options:
         --bed-shape         Coordinates in mm of the bed's points (default: 0x0,200x0,200x200,0x200)
         --has-heatbed       This will provide automatic generation of bed heating gcode
@@ -149,7 +149,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
                             default: 0)
         --pressure-advance  Adjust pressure using the experimental advance algorithm (K constant,
                             set zero to disable; default: 0)
-    
+
       Filament options:
         --filament-diameter Diameter in mm of your raw filament (default: 3)
         --extrusion-multiplier
@@ -162,7 +162,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
         --bed-temperature   Heated bed temperature in degree Celsius, set 0 to disable (default: 0)
         --first-layer-bed-temperature Heated bed temperature for the first layer, in degree Celsius,
                             set 0 to disable (default: same as --bed-temperature)
-    
+
       Speed options:
         --travel-speed      Speed of non-print moves in mm/s (default: 130)
         --perimeter-speed   Speed of print moves for perimeters in mm/s (default: 30)
@@ -186,7 +186,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
         --gap-fill-speed    Speed of gap fill print moves in mm/s (default: 20)
         --first-layer-speed Speed of print moves for bottom layer, expressed either as an absolute
                             value or as a percentage over normal speeds (default: 30%)
-    
+
       Acceleration options:
         --perimeter-acceleration
                             Overrides firmware's default acceleration for perimeters. (mm/s^2, set zero
@@ -203,7 +203,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
         --default-acceleration
                             Acceleration will be reset to this value after the specific settings above
                             have been applied. (mm/s^2, set zero to disable; default: 0)
-    
+
       Accuracy options:
         --layer-height      Layer height in mm (default: 0.3)
         --first-layer-height Layer height for first layer (mm or %, default: 0.35)
@@ -211,7 +211,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
                             Infill every N layers (default: 1)
         --solid-infill-every-layers
                             Force a solid layer every N layers (default: 0)
-    
+
       Print options:
         --perimeters        Number of perimeters/horizontal skins (range: 0+, default: 3)
         --top-solid-layers  Number of solid layers to do for top surfaces (range: 0+, default: 3)
@@ -242,14 +242,14 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
         --infill-only-where-needed
                             Only infill under ceilings (default: no)
         --infill-first      Make infill before perimeters (default: no)
-    
+
        Quality options (slower slicing):
         --extra-perimeters  Add more perimeters when needed (default: yes)
         --avoid-crossing-perimeters Optimize travel moves so that no perimeters are crossed (default: no)
         --thin-walls        Detect single-width walls (default: yes)
         --overhangs         Experimental option to use bridge flow, speed and fan for overhangs
                             (default: yes)
-    
+
        Support material options:
         --support-material  Generate support material for overhangs
         --support-material-threshold
@@ -274,7 +274,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
                             regardless of --support-material and threshold (0+, default: 0)
         --dont-support-bridges
                             Experimental option for preventing support material from being generated under bridged areas (default: yes)
-    
+
        Retraction options:
         --retract-length    Length of retraction in mm when pausing extrusion (default: 1)
         --retract-speed     Speed for retraction in mm/s (default: 30)
@@ -289,14 +289,14 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
         --retract-layer-change
                             Enforce a retraction before each Z move (default: no)
         --wipe              Wipe the nozzle while doing a retraction (default: no)
-    
+
        Retraction options for multi-extruder setups:
         --retract-length-toolchange
                             Length of retraction in mm when disabling tool (default: 10)
         --retract-restart-extra-toolchange
                             Additional amount of filament in mm to push after
                             switching tool (default: 0)
-    
+
        Cooling options:
         --cooling           Enable fan and cooling control
         --min-fan-speed     Minimum fan speed (default: 35%)
@@ -310,7 +310,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
         --disable-fan-first-layers Disable fan for the first N layers (default: 1)
         --fan-always-on     Keep fan always on at min fan speed, even for layers that don't need
                             cooling
-    
+
        Skirt options:
         --skirts            Number of skirts to draw (0+, default: 1)
         --skirt-distance    Distance in mm between innermost skirt and object
@@ -320,7 +320,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
                             of filament on the first layer, for each extruder (mm, 0+, default: 0)
         --brim-width        Width of the brim that will get added to each object to help adhesion
                             (mm, default: 0)
-    
+
        Transform options:
         --scale             Factor for scaling input object (default: 1)
         --rotate            Rotation angle in degrees (0-360, default: 0)
@@ -328,11 +328,11 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
         --duplicate-grid    Number of items with grid arrangement (default: 1,1)
         --duplicate-distance Distance in mm between copies (default: 6)
         --dont-arrange      Don't arrange the objects on the build plate. The model coordinates
-                            define the absolute positions on the build plate. 
+                            define the absolute positions on the build plate.
                             The option --print-center will be ignored.
         --xy-size-compensation
                             Grow/shrink objects by the configured absolute distance (mm, default: 0)
-    
+
        Sequential printing options:
         --complete-objects  When printing multiple objects and/or copies, complete each one before
                             starting the next one; watch out for extruder collisions (default: no)
@@ -340,11 +340,11 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
                             (default: 20)
         --extruder-clearance-height Maximum vertical extruder depth; i.e. vertical distance from
                             extruder tip and carriage bottom (default: 20)
-    
+
        Miscellaneous options:
         --notes             Notes to be added as comments to the output file
         --resolution        Minimum detail resolution (mm, set zero for full resolution, default: 0)
-    
+
        Flow options (advanced):
         --extrusion-width   Set extrusion width manually; it accepts either an absolute value in mm
                             (like 0.65) or a percentage over layer height (like 200%)
@@ -364,7 +364,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
                             Set a different extrusion width for support material
         --infill-overlap    Overlap between infill and perimeters (default: 15%)
         --bridge-flow-ratio Multiplier for extrusion when bridging (> 0, default: 1)
-    
+
        Multiple extruder options:
         --extruder-offset   Offset of each extruder, if firmware doesn't handle the displacement
                             (can be specified multiple times, default: 0x0)

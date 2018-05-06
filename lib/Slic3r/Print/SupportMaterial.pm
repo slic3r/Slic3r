@@ -133,6 +133,8 @@ sub contact_area {
             last;
         }
         my $layer = $object->get_layer($layer_id);
+		last if $conf->support_material_max_layers
+			&& $layer_id > $conf->support_material_max_layers;
 
         if ($buildplate_only) {
             # Collect the top surfaces up to this layer and merge them.
@@ -753,7 +755,9 @@ sub generate_toolpaths {
         
         # interface and contact infill
         if (@$interface || @$contact_infill) {
-            $fillers{interface}->set_angle(deg2rad($interface_angle));
+            # make interface layers alternate angles by 90 degrees
+            my $alternate_angle = $interface_angle + (90 * (($layer_id + 1) % 2));
+            $fillers{interface}->set_angle(deg2rad($alternate_angle));
             $fillers{interface}->set_min_spacing($_interface_flow->spacing);
             
             # find centerline of the external loop

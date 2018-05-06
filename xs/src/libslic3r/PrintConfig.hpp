@@ -19,7 +19,7 @@
 #define slic3r_PrintConfig_hpp_
 
 #include "libslic3r.h"
-#include "Config.hpp"
+#include "ConfigBase.hpp"
 
 #define OPT_PTR(KEY) if (opt_key == #KEY) return &this->KEY
 
@@ -171,6 +171,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 support_material_angle;
     ConfigOptionBool                support_material_buildplate_only;
     ConfigOptionFloat               support_material_contact_distance;
+    ConfigOptionInt                 support_material_max_layers;
     ConfigOptionInt                 support_material_enforce_layers;
     ConfigOptionInt                 support_material_extruder;
     ConfigOptionFloatOrPercent      support_material_extrusion_width;
@@ -208,6 +209,7 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         OPT_PTR(support_material_angle);
         OPT_PTR(support_material_buildplate_only);
         OPT_PTR(support_material_contact_distance);
+        OPT_PTR(support_material_max_layers);
         OPT_PTR(support_material_enforce_layers);
         OPT_PTR(support_material_extruder);
         OPT_PTR(support_material_extrusion_width);
@@ -349,6 +351,8 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionBool                use_firmware_retraction;
     ConfigOptionBool                use_relative_e_distances;
     ConfigOptionBool                use_volumetric_e;
+    ConfigOptionBool                use_set_and_wait_extruder;
+    ConfigOptionBool                use_set_and_wait_bed;
     
     GCodeConfig(bool initialize = true) : StaticPrintConfig() {
         if (initialize)
@@ -390,6 +394,8 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(use_firmware_retraction);
         OPT_PTR(use_relative_e_distances);
         OPT_PTR(use_volumetric_e);
+        OPT_PTR(use_set_and_wait_extruder);
+        OPT_PTR(use_set_and_wait_bed);
         
         return NULL;
     };

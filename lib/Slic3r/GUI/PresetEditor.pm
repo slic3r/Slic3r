@@ -4,7 +4,7 @@ use warnings;
 use utf8;
 
 use File::Basename qw(basename);
-use List::Util qw(first);
+use List::Util qw(first any);
 use Wx qw(:bookctrl :dialog :keycode :icon :id :misc :panel :sizer :treectrl :window
     :button wxTheApp);
 use Wx::Event qw(EVT_BUTTON EVT_CHOICE EVT_KEY_DOWN EVT_TREE_SEL_CHANGED EVT_CHECKBOX);
@@ -147,12 +147,11 @@ sub on_value_change {
 # propagate event to the parent
 sub _on_value_change {
     my ($self, $opt_key) = @_;
-    
     wxTheApp->CallAfter(sub {
         $self->current_preset->_dirty_config->apply($self->config);
         $self->{on_value_change}->($opt_key) if $self->{on_value_change};
         $self->load_presets;
-        $self->_update;
+        $self->_update($opt_key);
     });
 }
 
@@ -456,7 +455,7 @@ sub options {
         first_layer_acceleration default_acceleration
         skirts skirt_distance skirt_height min_skirt_length
         brim_connections_width brim_width interior_brim_width
-        support_material support_material_threshold support_material_enforce_layers
+        support_material support_material_threshold support_material_max_layers support_material_enforce_layers
         raft_layers
         support_material_pattern support_material_spacing support_material_angle 
         support_material_interface_layers support_material_interface_spacing
@@ -600,6 +599,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Support material');
             $optgroup->append_single_option_line('support_material');
             $optgroup->append_single_option_line('support_material_threshold');
+            $optgroup->append_single_option_line('support_material_max_layers');
             $optgroup->append_single_option_line('support_material_enforce_layers');
         }
         {
@@ -793,122 +793,141 @@ sub reload_config {
 }
 
 sub _update {
-    my ($self) = @_;
-    
+    my ($self, $key) = @_;
+    my $opt_key = $key;
+    $opt_key = "all_keys" if (length($key // '') == 0); 
     my $config = $self->{config};
-    
-    if ($config->spiral_vase && !($config->perimeters == 1 && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->support_material == 0)) {
-        my $dialog = Wx::MessageDialog->new($self,
-            "The Spiral Vase mode requires:\n"
-            . "- one perimeter\n"
-            . "- no top solid layers\n"
-            . "- 0% fill density\n"
-            . "- no support material\n"
-            . "\nShall I adjust those settings in order to enable Spiral Vase?",
-            'Spiral Vase', wxICON_WARNING | wxYES | wxNO);
-        if ($dialog->ShowModal() == wxID_YES) {
-            my $new_conf = Slic3r::Config->new;
-            $new_conf->set("perimeters", 1);
-            $new_conf->set("top_solid_layers", 0);
-            $new_conf->set("fill_density", 0);
-            $new_conf->set("support_material", 0);
-            $self->_load_config($new_conf);
-        } else {
-            my $new_conf = Slic3r::Config->new;
-            $new_conf->set("spiral_vase", 0);
-            $self->_load_config($new_conf);
-        }
-    }
-
-    if ($config->support_material) {
-        # Ask only once.
-        if (! $self->{support_material_overhangs_queried}) {
-            $self->{support_material_overhangs_queried} = 1;
-            if ($config->overhangs != 1) {
-                my $dialog = Wx::MessageDialog->new($self,
-                    "Supports work better, if the following feature is enabled:\n"
-                    . "- Detect bridging perimeters\n"
-                    . "\nShall I adjust those settings for supports?",
-                    'Support Generator', wxICON_WARNING | wxYES | wxNO | wxCANCEL);
-                my $answer = $dialog->ShowModal();
+    if (any { /$opt_key/ } qw(all_keys spiral_vase perimeters top_solid_layers fill_density support_material)) {
+        if ($config->spiral_vase && !($config->perimeters == 1 && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->support_material == 0)) {
+            my $dialog = Wx::MessageDialog->new($self,
+                "The Spiral Vase mode requires:\n"
+                . "- one perimeter\n"
+                . "- no top solid layers\n"
+                . "- 0% fill density\n"
+                . "- no support material\n"
+                . "\nShall I adjust those settings in order to enable Spiral Vase?",
+                'Spiral Vase', wxICON_WARNING | wxYES | wxNO);
+            if ($dialog->ShowModal() == wxID_YES) {
                 my $new_conf = Slic3r::Config->new;
-                if ($answer == wxID_YES) {
-                    # Enable "detect bridging perimeters".
-                    $new_conf->set("overhangs", 1);
-                } elsif ($answer == wxID_NO) {
-                    # Do nothing, leave supports on and "detect bridging perimeters" off.
-                } elsif ($answer == wxID_CANCEL) {
-                    # Disable supports.
-                    $new_conf->set("support_material", 0);
-                    $self->{support_material_overhangs_queried} = 0;
-                }
+                $new_conf->set("perimeters", 1);
+                $new_conf->set("top_solid_layers", 0);
+                $new_conf->set("fill_density", 0);
+                $new_conf->set("support_material", 0);
+                $self->_load_config($new_conf);
+            } else {
+                my $new_conf = Slic3r::Config->new;
+                $new_conf->set("spiral_vase", 0);
                 $self->_load_config($new_conf);
             }
         }
-    } else {
-        $self->{support_material_overhangs_queried} = 0;
+    }
+
+    if (any { /$opt_key/ } qw(all_keys support_material)) {
+        if ($config->support_material) {
+            # Ask only once.
+            if (! $self->{support_material_overhangs_queried}) {
+                $self->{support_material_overhangs_queried} = 1;
+                if ($config->overhangs != 1) {
+                    my $dialog = Wx::MessageDialog->new($self,
+                            "Supports work better, if the following feature is enabled:\n"
+                            . "- Detect bridging perimeters\n"
+                            . "\nShall I adjust those settings for supports?",
+                            'Support Generator', wxICON_WARNING | wxYES | wxNO | wxCANCEL);
+                    my $answer = $dialog->ShowModal();
+                    my $new_conf = Slic3r::Config->new;
+                    if ($answer == wxID_YES) {
+                        # Enable "detect bridging perimeters".
+                        $new_conf->set("overhangs", 1);
+                    } elsif ($answer == wxID_NO) {
+                        # Do nothing, leave supports on and "detect bridging perimeters" off.
+                    } elsif ($answer == wxID_CANCEL) {
+                        # Disable supports.
+                        $new_conf->set("support_material", 0);
+                        $self->{support_material_overhangs_queried} = 0;
+                    }
+                    $self->_load_config($new_conf);
+                }
+            }
+        } else {
+            $self->{support_material_overhangs_queried} = 0;
+        }
     }
     
-    if ($config->fill_density == 100
-        && !first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{top_infill_pattern}{values}}) {
-        my $dialog = Wx::MessageDialog->new($self,
-            "The " . $config->fill_pattern . " infill pattern is not supposed to work at 100% density.\n"
-            . "\nShall I switch to rectilinear fill pattern?",
-            'Infill', wxICON_WARNING | wxYES | wxNO);
-        
-        my $new_conf = Slic3r::Config->new;
-        if ($dialog->ShowModal() == wxID_YES) {
-            $new_conf->set("fill_pattern", 'rectilinear');
-        } else {
-            $new_conf->set("fill_density", 40);
+    if (any { /$opt_key/ } qw(all_keys fill_density fill_pattern top_infill_pattern)) {
+        if ($config->fill_density == 100
+                && !first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{top_infill_pattern}{values}}) {
+            my $dialog = Wx::MessageDialog->new($self,
+                    "The " . $config->fill_pattern . " infill pattern is not supposed to work at 100% density.\n"
+                    . "\nShall I switch to rectilinear fill pattern?",
+                    'Infill', wxICON_WARNING | wxYES | wxNO);
+
+            my $new_conf = Slic3r::Config->new;
+            if ($dialog->ShowModal() == wxID_YES) {
+                $new_conf->set("fill_pattern", 'rectilinear');
+            } else {
+                $new_conf->set("fill_density", 40);
+            }
+            $self->_load_config($new_conf);
         }
-        $self->_load_config($new_conf);
     }
+
     
     my $have_perimeters = $config->perimeters > 0;
-    $self->get_field($_)->toggle($have_perimeters)
-        for qw(extra_perimeters thin_walls overhangs seam_position external_perimeters_first
-            external_perimeter_extrusion_width
-            perimeter_speed small_perimeter_speed external_perimeter_speed);
+    if (any { /$opt_key/ } qw(all_keys perimeters)) {
+        $self->get_field($_)->toggle($have_perimeters)
+            for qw(extra_perimeters thin_walls overhangs seam_position external_perimeters_first
+                    external_perimeter_extrusion_width
+                    perimeter_speed small_perimeter_speed external_perimeter_speed);
+    }
 
     my $have_adaptive_slicing = $config->adaptive_slicing;
-    $self->get_field($_)->toggle($have_adaptive_slicing)
-        for qw(adaptive_slicing_quality match_horizontal_surfaces);
-    $self->get_field($_)->toggle(!$have_adaptive_slicing)
-        for qw(layer_height);
-    
+    if (any { /$opt_key/ } qw(all_keys adaptive_slicing)) {
+        $self->get_field($_)->toggle($have_adaptive_slicing)
+            for qw(adaptive_slicing_quality match_horizontal_surfaces);
+        $self->get_field($_)->toggle(!$have_adaptive_slicing)
+            for qw(layer_height);
+    }
+
     my $have_infill = $config->fill_density > 0;
-    # infill_extruder uses the same logic as in Print::extruders()
-    $self->get_field($_)->toggle($have_infill)
-        for qw(fill_pattern infill_every_layers infill_only_where_needed solid_infill_every_layers
-            solid_infill_below_area infill_extruder);
-    
+    if (any { /$opt_key/ } qw(all_keys fill_density)) {
+        # infill_extruder uses the same logic as in Print::extruders()
+        $self->get_field($_)->toggle($have_infill)
+            for qw(fill_pattern infill_every_layers infill_only_where_needed solid_infill_every_layers
+                    solid_infill_below_area infill_extruder);
+    }
+
     my $have_solid_infill = ($config->top_solid_layers > 0) || ($config->bottom_solid_layers > 0);
-    # solid_infill_extruder uses the same logic as in Print::extruders()
-    $self->get_field($_)->toggle($have_solid_infill)
-        for qw(top_infill_pattern bottom_infill_pattern infill_first solid_infill_extruder
-            solid_infill_extrusion_width solid_infill_speed);
-    
-    $self->get_field($_)->toggle($have_infill || $have_solid_infill)
-        for qw(fill_angle infill_extrusion_width infill_speed bridge_speed);
-    
-    $self->get_field('fill_gaps')->toggle($have_perimeters && $have_infill);
-    $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill && $config->fill_gaps);
-    
+    if (any { /$opt_key/ } qw(all_keys top_solid_layers bottom_solid_layers)) {
+        # solid_infill_extruder uses the same logic as in Print::extruders()
+        $self->get_field($_)->toggle($have_solid_infill)
+            for qw(top_infill_pattern bottom_infill_pattern infill_first solid_infill_extruder
+                    solid_infill_extrusion_width solid_infill_speed);
+    }
+
+    if (any { /$opt_key/ } qw(all_keys top_solid_layers bottom_solid_layers fill_density)) {
+        $self->get_field($_)->toggle($have_infill || $have_solid_infill)
+            for qw(fill_angle infill_extrusion_width infill_speed bridge_speed);
+    }
+
+    if (any { /$opt_key/ } qw(all_keys fill_density perimeters)) {
+        $self->get_field('fill_gaps')->toggle($have_perimeters && $have_infill);
+        $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill && $config->fill_gaps);
+    }
+
     my $have_top_solid_infill = $config->top_solid_layers > 0;
     $self->get_field($_)->toggle($have_top_solid_infill)
         for qw(top_infill_extrusion_width top_solid_infill_speed);
-    
+
     my $have_autospeed = any { $config->get("${_}_speed") eq '0' }
-        qw(perimeter external_perimeter small_perimeter
-        infill solid_infill top_solid_infill gap_fill support_material
-        support_material_interface);
+    qw(perimeter external_perimeter small_perimeter
+            infill solid_infill top_solid_infill gap_fill support_material
+            support_material_interface);
     $self->get_field('max_print_speed')->toggle($have_autospeed);
-    
+
     my $have_default_acceleration = $config->default_acceleration > 0;
     $self->get_field($_)->toggle($have_default_acceleration)
         for qw(perimeter_acceleration infill_acceleration bridge_acceleration first_layer_acceleration);
-    
+
     my $have_skirt = $config->skirts > 0 || $config->min_skirt_length > 0;
     $self->get_field($_)->toggle($have_skirt)
         for qw(skirt_distance skirt_height);
@@ -926,6 +945,10 @@ sub _update {
             support_material_interface_layers dont_support_bridges
             support_material_extrusion_width support_material_interface_extrusion_width
             support_material_contact_distance);
+    
+    # Disable features that need support to be enabled.            
+    $self->get_field($_)->toggle($config->support_material)
+        for qw(support_material_max_layers);
 
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
@@ -1217,6 +1240,7 @@ sub options {
         retract_length_toolchange retract_restart_extra_toolchange retract_lift_above retract_lift_below
         printer_settings_id
         printer_notes
+        use_set_and_wait_bed use_set_and_wait_extruder
     );
 }
 
@@ -1323,7 +1347,7 @@ sub build {
                 # look for devices
                 my $entries;
                 {
-                    my $res = Net::Bonjour->new('http');
+                    my $res = Net::Bonjour->new('octoprint');
                     $res->discover;
                     $entries = [ $res->entries ];
                 }
@@ -1369,6 +1393,8 @@ sub build {
             $optgroup->append_single_option_line('pressure_advance');
             $optgroup->append_single_option_line('vibration_limit');
             $optgroup->append_single_option_line('z_steps_per_mm');
+            $optgroup->append_single_option_line('use_set_and_wait_extruder');
+            $optgroup->append_single_option_line('use_set_and_wait_bed');
         }
     }
     {
