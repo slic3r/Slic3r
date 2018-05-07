@@ -16,6 +16,8 @@
 
 #include "Plater/PlaterObject.hpp"
 #include "Plater/Plate2D.hpp"
+#include "Plater/Plate3D.hpp"
+#include "Plater/Preview3D.hpp"
 #include "Settings.hpp"
 
 #include "MainFrame.hpp"
@@ -58,7 +60,10 @@ private:
 
     wxNotebook* preview_notebook {new wxNotebook(this, -1, wxDefaultPosition, wxSize(335,335), wxNB_BOTTOM)};
 
-    Plate2D* canvas2D {}; //< 2D plater canvas
+    Plate2D* canvas2D {nullptr}; //< 2D plater canvas
+    Plate3D* canvas3D {nullptr}; //< 3D plater canvas
+
+    Preview3D* preview3D {nullptr}; //< 3D Preview 
 
     /// Handles the actual load of the file from the dialog handoff.
     std::vector<int> load_file(const std::string file, const int obj_idx_to_load = -1);
