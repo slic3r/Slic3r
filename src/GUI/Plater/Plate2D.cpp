@@ -121,6 +121,7 @@ void Plate2D::repaint(wxPaintEvent& e) {
             }
         }
     }
+    e.Skip();
 }
 
 void Plate2D::clean_instance_thumbnails() {
