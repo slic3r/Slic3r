@@ -284,6 +284,7 @@ std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
 
         }
     }
+    for (const auto& i : obj_idx) { this->make_thumbnail(i); }
     return obj_idx;
 }
 
@@ -296,6 +297,42 @@ int Plater::get_object_index(size_t object_id) {
     return -1;
 }
 
+void Plater::make_thumbnail(size_t idx) {
+    auto& plater_object {this->objects.at(idx)};
+    if (threaded) {
+        // spin off a thread to create the thumbnail and post an event when it is done.
+    } else {
+        plater_object.make_thumbnail(this->model, idx);
+        this->on_thumbnail_made(idx);
+    }
+/*
+    my $plater_object = $self->{objects}[$obj_idx];
+    $plater_object->thumbnail(Slic3r::ExPolygon::Collection->new);
+    my $cb = sub {
+        $plater_object->make_thumbnail($self->{model}, $obj_idx);
+        
+        if ($Slic3r::have_threads) {
+            Wx::PostEvent($self, Wx::PlThreadEvent->new(-1, $THUMBNAIL_DONE_EVENT, shared_clone([ $obj_idx ])));
+            Slic3r::thread_cleanup();
+            threads->exit;
+        } else {
+            $self->on_thumbnail_made($obj_idx);
+        }
+    };
+    
+    @_ = ();
+    $Slic3r::have_threads
+        ? threads->create(sub { $cb->(); Slic3r::thread_cleanup(); })->detach
+        : $cb->();
+}
+*/
+}
+
+void Plater::on_thumbnail_made(size_t idx) {
+    this->objects.at(idx).transform_thumbnail(this->model, idx);
+    this->refresh_canvases();
+}
+
 void Plater::refresh_canvases() {
     if (this->canvas2D != nullptr)
         this->canvas2D->Refresh();
@@ -305,5 +342,6 @@ void Plater::refresh_canvases() {
         this->preview3D->reload_print();
 
 }
+
 }} // Namespace Slic3r::GUI
 
