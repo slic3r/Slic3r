@@ -96,6 +96,32 @@ void Plate2D::repaint(wxPaintEvent& e) {
         }
     }
 
+    // Draw thumbnails
+
+    dc->SetPen(dark_pen); 
+    this->clean_instance_thumbnails();
+    for (auto& obj : this->objects) {
+        auto model_object {this->model->objects.at(obj.identifier)};
+        if (obj.thumbnail.expolygons.size() == 0) 
+            continue; // if there's no thumbnail move on
+        for (size_t instance_idx = 0U; instance_idx < model_object->instances.size(); instance_idx++) {
+            auto& instance {model_object->instances.at(instance_idx)};
+            if (obj.transformed_thumbnail.expolygons.size()) continue;
+            auto thumbnail {obj.transformed_thumbnail}; // starts in unscaled model coords
+
+            thumbnail.translate(Point::new_scale(instance->offset));
+
+            obj.instance_thumbnails.emplace_back(thumbnail);
+
+            for (auto& poly : obj.instance_thumbnails) {
+                for (const auto& points : poly.expolygons) {
+                    auto poly { this->scaled_points_to_pixel(Polygon(points), 1) };
+                    dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
+                }
+            }
+        }
+    }
+}
 
 void Plate2D::clean_instance_thumbnails() {
     for (auto& obj : this->objects) {
