@@ -199,8 +199,8 @@ std::vector<int> Plater::load_file(const wxString& file, const int obj_idx_to_lo
         }
 
         for (const auto &j : obj_idx) {
-            this->objects[j].input_file = file;
-            this->objects[j].input_file_obj_idx = i++;
+            this->objects.at(j).input_file = file;
+            this->objects.at(j).input_file_obj_idx = i++;
         }
         GetFrame()->statusbar->SetStatusText(_("Loaded ") + input_file.GetName());
 
