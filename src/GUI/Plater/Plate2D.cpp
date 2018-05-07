@@ -113,11 +113,22 @@ void Plate2D::repaint(wxPaintEvent& e) {
 
             obj.instance_thumbnails.emplace_back(thumbnail);
 
-            for (auto& poly : obj.instance_thumbnails) {
-                for (const auto& points : poly.expolygons) {
-                    auto poly { this->scaled_points_to_pixel(Polygon(points), 1) };
-                    dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
-                }
+            if (0) { // object is dragged 
+                dc->SetBrush(dragged_brush);
+            } else if (0) { 
+                dc->SetBrush(instance_brush);
+            } else if (0) {
+                dc->SetBrush(selected_brush);
+            } else {
+                dc->SetBrush(objects_brush);
+            }
+            // porting notes: perl here seems to be making a single-item array of the 
+            // thumbnail set.
+            // no idea why. It doesn't look necessary, so skip the outer layer
+            // and draw the contained expolygons
+            for (const auto& points : obj.instance_thumbnails.back().expolygons) {
+                auto poly { this->scaled_points_to_pixel(Polygon(points), 1) };
+                dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
             }
         }
     }
