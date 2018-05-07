@@ -97,6 +97,10 @@ void Plate2D::repaint(wxPaintEvent& e) {
     }
 
 
+void Plate2D::clean_instance_thumbnails() {
+    for (auto& obj : this->objects) {
+        obj.instance_thumbnails.clear();
+    }
 }
 
 void Plate2D::mouse_drag(wxMouseEvent& e) {
