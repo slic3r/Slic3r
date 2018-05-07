@@ -244,7 +244,7 @@ std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
         tmpobj.identifier = (this->object_identifier)++;
 
         this->objects.push_back(tmpobj);
-        obj_idx.push_back(this->objects.size());
+        obj_idx.push_back(this->objects.size() - 1);
         Slic3r::Log::info(LogChannel, LOG_WSTRING("Object array new size: " << this->objects.size()));
         Slic3r::Log::info(LogChannel, LOG_WSTRING("Instances: " << obj->instances.size()));
 
