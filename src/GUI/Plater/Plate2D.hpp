@@ -119,6 +119,9 @@ private:
         return this->point_to_model_units(pt.x, pt.y);
     }
 
+    /// Remove all instance thumbnails.
+    void clean_instance_thumbnails();
+
 };
 
 } } // Namespace Slic3r::GUI
