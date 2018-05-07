@@ -119,7 +119,7 @@ void Plater::add() {
     const auto& input_files{open_model(this, *(this->settings), wxTheApp->GetTopWindow())};
     for (const auto& f : input_files) {
         Log::info(LogChannel, (wxString(L"Calling Load File for ") + f).ToStdWstring());
-        this->load_file(f);
+        this->load_file(f.ToStdString());
     }
 
     // abort if no objects actually added.
@@ -144,7 +144,7 @@ void Plater::add() {
 
 }
 
-std::vector<int> Plater::load_file(const wxString& file, const int obj_idx_to_load) {
+std::vector<int> Plater::load_file(const std::string file, const int obj_idx_to_load) {
     
     auto input_file {wxFileName(file)};
     settings->skein_directory = input_file.GetPath();
@@ -158,7 +158,7 @@ std::vector<int> Plater::load_file(const wxString& file, const int obj_idx_to_lo
     progress_dialog->Pulse();
     //TODO: Add a std::wstring so we can handle non-roman characters as file names.
     try { 
-        model = Slic3r::Model::read_from_file(file.ToStdString());
+        model = Slic3r::Model::read_from_file(file);
     } catch (std::runtime_error& e) {
         show_error(this, e.what());
         Slic3r::Log::error(LogChannel, LOG_WSTRING(file << " failed to load: " << e.what()));
@@ -177,10 +177,10 @@ std::vector<int> Plater::load_file(const wxString& file, const int obj_idx_to_lo
         
         for (auto i = 0U; i < model.objects.size(); i++) {
             auto object {model.objects[i]};
-            object->input_file = file.ToStdString();
+            object->input_file = file;
             for (auto j = 0U; j < object->volumes.size(); j++) {
                 auto volume {object->volumes.at(j)};
-                volume->input_file = file.ToStdString();
+                volume->input_file = file;
                 volume->input_file_obj_idx = i;
                 volume->input_file_vol_idx = j;
             }
@@ -199,8 +199,8 @@ std::vector<int> Plater::load_file(const wxString& file, const int obj_idx_to_lo
         }
 
         for (const auto &j : obj_idx) {
-            this->objects[j].input_file = file;
-            this->objects[j].input_file_obj_idx = i++;
+            this->objects.at(j).input_file = file;
+            this->objects.at(j).input_file_obj_idx = i++;
         }
         GetFrame()->statusbar->SetStatusText(_("Loaded ") + input_file.GetName());
 
@@ -244,7 +244,7 @@ std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
         tmpobj.identifier = (this->object_identifier)++;
 
         this->objects.push_back(tmpobj);
-        obj_idx.push_back(this->objects.size());
+        obj_idx.push_back(this->objects.size() - 1);
         Slic3r::Log::info(LogChannel, LOG_WSTRING("Object array new size: " << this->objects.size()));
         Slic3r::Log::info(LogChannel, LOG_WSTRING("Instances: " << obj->instances.size()));
 

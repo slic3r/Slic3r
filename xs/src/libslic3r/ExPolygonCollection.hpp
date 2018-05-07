@@ -24,6 +24,8 @@ class ExPolygonCollection
     operator ExPolygons&();
     void scale(double factor);
     void translate(double x, double y);
+    void translate(const Point offset) { translate(static_cast<coordf_t>(offset.x), static_cast<coordf_t>(offset.y)); }
+    void translate(const Pointf offset) { translate(offset.x, offset.y); }
     void rotate(double angle, const Point &center);
     template <class T> bool contains(const T &item) const;
     bool contains_b(const Point &point) const;

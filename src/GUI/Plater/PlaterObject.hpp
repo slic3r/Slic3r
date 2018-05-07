@@ -12,9 +12,9 @@ namespace Slic3r { namespace GUI {
 
 class PlaterObject {
 public:
-    wxString name {L""};
+    std::string name {""};
     size_t identifier {0U};
-    wxString input_file {L""};
+    std::string input_file {""};
     int input_file_obj_idx {-1};
 
     

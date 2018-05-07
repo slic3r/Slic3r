@@ -2,6 +2,8 @@
 #define slic3r_LOG_HPP
 
 #include <string>
+#include <vector>
+#include <sstream>
 
 namespace Slic3r {
 
@@ -27,6 +29,28 @@ public:
     }
 
 };
+
+/// Utility debug function to transform a std::vector of anything that 
+/// supports ostream& operator<<() into a std::string.
+template <typename T>
+std::string 
+log_string(const std::vector<T>& in) 
+{
+    std::stringstream ss;
+    bool first {true};
+    ss << "[ ";
+    for (auto& c : in) {
+        if (!first) {
+            ss << ", ";
+        }
+        ss << c;
+        first = false;
+    }
+
+    ss << " ]";
+
+    return ss.str();
+}
 
 }
 

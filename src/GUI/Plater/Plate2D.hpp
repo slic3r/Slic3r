@@ -90,8 +90,8 @@ private:
     void update_bed_size();
 
     /// private class variables to stash bits for drawing the print bed area.
-    wxPoint bed_origin {};
-    wxPoint print_center {};
+    wxRealPoint bed_origin {};
+    wxRealPoint print_center {};
     Slic3r::Polygon bed_polygon {};
     std::vector<wxPoint> grid {};
 
@@ -118,6 +118,9 @@ private:
     Slic3r::Point point_to_model_units(const Pointf& pt) {
         return this->point_to_model_units(pt.x, pt.y);
     }
+
+    /// Remove all instance thumbnails.
+    void clean_instance_thumbnails();
 
 };
 

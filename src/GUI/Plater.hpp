@@ -61,7 +61,7 @@ private:
     Plate2D* canvas2D {}; //< 2D plater canvas
 
     /// Handles the actual load of the file from the dialog handoff.
-    std::vector<int> load_file(const wxString& file, const int obj_idx_to_load = -1);
+    std::vector<int> load_file(const std::string file, const int obj_idx_to_load = -1);
 
     const std::string LogChannel {"GUI_Plater"}; //< Which log these messages should go to.
 

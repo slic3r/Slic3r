@@ -76,11 +76,8 @@ void Plate2D::repaint(wxPaintEvent& e) {
             dc->SetTextForeground(wxColor(0,0,0));
             dc->SetFont(wxFont(10, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
-            wxString val {};
-            val.Printf("X = %.0f", this->print_center.x);
-            dc->DrawLabel(val , wxRect(0,0, center.x*2, this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_BOTTOM);
-            val.Printf("Y = %.0f", this->print_center.y);
-            dc->DrawRotatedText(val, 0, center.y + 15, 90);
+            dc->DrawLabel(wxString::Format("X = %.0f", this->print_center.x), wxRect(0,0, center.x*2, this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_BOTTOM);
+            dc->DrawRotatedText(wxString::Format("Y = %.0f", this->print_center.y), 0, center.y + 15, 90);
         }
     }
 
@@ -99,7 +96,38 @@ void Plate2D::repaint(wxPaintEvent& e) {
         }
     }
 
+    // Draw thumbnails
 
+    dc->SetPen(dark_pen); 
+    this->clean_instance_thumbnails();
+    for (auto& obj : this->objects) {
+        auto model_object {this->model->objects.at(obj.identifier)};
+        if (obj.thumbnail.expolygons.size() == 0) 
+            continue; // if there's no thumbnail move on
+        for (size_t instance_idx = 0U; instance_idx < model_object->instances.size(); instance_idx++) {
+            auto& instance {model_object->instances.at(instance_idx)};
+            if (obj.transformed_thumbnail.expolygons.size()) continue;
+            auto thumbnail {obj.transformed_thumbnail}; // starts in unscaled model coords
+
+            thumbnail.translate(Point::new_scale(instance->offset));
+
+            obj.instance_thumbnails.emplace_back(thumbnail);
+
+            for (auto& poly : obj.instance_thumbnails) {
+                for (const auto& points : poly.expolygons) {
+                    auto poly { this->scaled_points_to_pixel(Polygon(points), 1) };
+                    dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
+                }
+            }
+        }
+    }
+    e.Skip();
+}
+
+void Plate2D::clean_instance_thumbnails() {
+    for (auto& obj : this->objects) {
+        obj.instance_thumbnails.clear();
+    }
 }
 
 void Plate2D::mouse_drag(wxMouseEvent& e) {
