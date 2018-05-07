@@ -45,6 +45,8 @@ constexpr bool isDev = true;
 constexpr bool isDev = false;
 #endif
 
+constexpr bool threaded = false;
+
 // hopefully the compiler is smart enough to figure this out
 const std::map<const std::string, const std::string> FILE_WILDCARDS { 
       std::make_pair("known", "Known files (*.stl, *.obj, *.amf, *.xml, *.3mf)|*.3mf;*.3MF;*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML"),
