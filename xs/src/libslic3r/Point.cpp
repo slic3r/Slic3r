@@ -18,6 +18,11 @@ Point::operator==(const Point& rhs) const
     return this->coincides_with(rhs);
 }
 
+Point
+Point::new_scale(Pointf p) {
+    return Point(scale_(p.x), scale_(p.y));
+}
+
 std::string
 Point::wkt() const
 {

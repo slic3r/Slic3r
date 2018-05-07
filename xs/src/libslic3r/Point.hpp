@@ -36,6 +36,9 @@ class Point
     static Point new_scale(coordf_t x, coordf_t y) {
         return Point(scale_(x), scale_(y));
     };
+
+    /// Scale and create a Point from a Pointf.
+    static Point new_scale(Pointf p);
     bool operator==(const Point& rhs) const;
     std::string wkt() const;
     std::string dump_perl() const;
