@@ -296,5 +296,14 @@ int Plater::get_object_index(size_t object_id) {
     return -1;
 }
 
+void Plater::refresh_canvases() {
+    if (this->canvas2D != nullptr)
+        this->canvas2D->Refresh();
+    if (this->canvas3D != nullptr)
+        this->canvas3D->update();
+    if (this->preview3D != nullptr)
+        this->preview3D->reload_print();
+
+}
 }} // Namespace Slic3r::GUI
 

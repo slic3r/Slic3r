@@ -84,6 +84,7 @@ private:
         auto bed_shape { Slic3r::Polygon::new_scale(this->config->get<ConfigOptionPoints>("bed_shape").values) };
         return Slic3r::Pointf();
     }
+    void refresh_canvases();
 };
 
 
