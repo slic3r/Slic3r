@@ -36,6 +36,9 @@ class Plater : public wxPanel
 public:
     Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings> _settings);
     void add();
+    
+    /// Arrange models
+    void arrange();
 
     /// Ask if there are any unsaved changes.
     bool prompt_unsaved_changes() { return true; }
@@ -96,8 +99,6 @@ private:
     void on_thumbnail_made(size_t idx); 
     void refresh_canvases();
 
-    /// Arrange models
-    void arrange();
 
     /// Run everything that needs to happen when models change.
     /// Includes updating canvases, reloading menus, etc.
