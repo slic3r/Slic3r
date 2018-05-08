@@ -7,6 +7,7 @@
 #include "ProgressStatusBar.hpp"
 #include "Log.hpp"
 #include "MainFrame.hpp"
+#include "BoundingBox.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -311,7 +312,8 @@ std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
 
         }
     }
-    for (const auto& i : obj_idx) { this->make_thumbnail(i); }
+    for (const auto& i : obj_idx) { this->make_thumbnail(i); } 
+    if (need_arrange) this->arrange();
     return obj_idx;
 }
 
@@ -368,6 +370,19 @@ void Plater::refresh_canvases() {
     if (this->preview3D != nullptr)
         this->preview3D->reload_print();
 
+}
+
+void Plater::arrange() {
+    // pause background process
+    auto bb {Slic3r::BoundingBoxf(this->config->get<ConfigOptionPoints>("bed_shape").values)};
+    bool success {this->model->arrange_objects(this->config->min_object_distance(), &bb)};
+
+    GetFrame()->statusbar->SetStatusText(_("Objects were arranged."));
+    this->on_model_change(true);
+}
+
+void Plater::on_model_change(bool force_autocenter) {
+    this->refresh_canvases();
 }
 
 }} // Namespace Slic3r::GUI
