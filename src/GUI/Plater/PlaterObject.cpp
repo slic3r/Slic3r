@@ -3,16 +3,18 @@
 #include "Geometry.hpp"
 #include "ExPolygon.hpp"
 #include "libslic3r.h"
+#include "Log.hpp"
+#include "misc_ui.hpp"
 
 namespace Slic3r { namespace GUI {
 
-Slic3r::ExPolygonCollection& PlaterObject::make_thumbnail(const Slic3r::Model& model, int obj_idx) {
+Slic3r::ExPolygonCollection& PlaterObject::make_thumbnail(std::shared_ptr<Slic3r::Model> model, int obj_idx) {
 
     // make method idempotent
     this->thumbnail.expolygons.clear();
 
-    auto mesh {model.objects[obj_idx]->raw_mesh()};
-    auto model_instance {model.objects[obj_idx]->instances[0]};
+    auto mesh {model->objects[obj_idx]->raw_mesh()};
+    auto model_instance {model->objects[obj_idx]->instances[0]};
 
     // Apply any x/y rotations and scaling vector if this came from a 3MF object.
     mesh.rotate_x(model_instance->x_rotation);
@@ -22,7 +24,10 @@ Slic3r::ExPolygonCollection& PlaterObject::make_thumbnail(const Slic3r::Model& m
     if (mesh.facets_count() <= 5000) {
         auto area_threshold {scale_(1.0)};
         ExPolygons tmp {};
-        std::copy_if(tmp.end(), mesh.horizontal_projection().begin(), mesh.horizontal_projection().end(), [=](const ExPolygon& p) { return p.area() >= area_threshold; } ); // return all polys bigger than the area
+        for (auto p : mesh.horizontal_projection()) {
+            if (p.area() >= area_threshold) tmp.push_back(p);
+        }
+        // return all polys bigger than the area
         this->thumbnail.append(tmp);
         this->thumbnail.simplify(0.5);
     } else {
@@ -32,10 +37,12 @@ Slic3r::ExPolygonCollection& PlaterObject::make_thumbnail(const Slic3r::Model& m
 
     return this->thumbnail;
 }
-Slic3r::ExPolygonCollection& PlaterObject::transform_thumbnail(const Slic3r::Model& model, int obj_idx) {
+
+
+Slic3r::ExPolygonCollection& PlaterObject::transform_thumbnail(std::shared_ptr<Slic3r::Model> model, int obj_idx) {
     if (this->thumbnail.expolygons.size() == 0) return this->thumbnail; 
 
-    const auto& model_object {model.objects[obj_idx] };
+    const auto& model_object {model->objects[obj_idx] };
     const auto& model_instance {model_object->instances[0]};
 
     // the order of these transformations MUST be the same everywhere, including
