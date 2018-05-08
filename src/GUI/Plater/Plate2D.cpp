@@ -251,8 +251,8 @@ void Plate2D::update_bed_size() {
 
     this->scaling_factor = std::min(static_cast<double>(canvas_w) / unscale(size.x), static_cast<double>(canvas_h) / unscale(size.y));
     this->bed_origin = wxPoint(
-        canvas_w / 2.0 - (unscale(bb.max.x + bb.min.x)/2.0 * this->scaling_factor),
-        canvas_h - (canvas_h / 2.0 - (unscale(bb.max.y + bb.min.y)/2.0 * this->scaling_factor))
+        canvas_w / 2 - (unscale(bb.max.x + bb.min.x)/2 * this->scaling_factor),
+        canvas_h - (canvas_h / 2 - (unscale(bb.max.y + bb.min.y)/2 * this->scaling_factor))
     );
 
     const auto& center = bb.center();
