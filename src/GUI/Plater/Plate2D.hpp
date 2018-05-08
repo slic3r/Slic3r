@@ -84,8 +84,10 @@ private:
     wxPoint unscaled_point_to_pixel(const wxPoint& in);
 
 
+    /// Displacement needed to center bed.
+    wxPoint bed_origin {};
+
     /// private class variables to stash bits for drawing the print bed area.
-    wxRealPoint bed_origin {};
     wxRealPoint print_center {};
     Slic3r::Polygon bed_polygon {};
     std::vector<wxPoint> grid {};
