@@ -286,15 +286,22 @@ std::vector<wxPoint> Plate2D::scaled_points_to_pixel(const Slic3r::Polygon& poly
     return this->scaled_points_to_pixel(Polyline(poly),  unscale);
 }
 
-std::vector<wxPoint> Plate2D::scaled_points_to_pixel(const Slic3r::Polyline& poly, bool unscale) {
+std::vector<wxPoint> Plate2D::scaled_points_to_pixel(const Slic3r::Polyline& poly, bool _unscale) {
     std::vector<wxPoint> result;
     for (const auto& pt : poly.points) {
-        const auto tmp {wxPoint(pt.x, pt.y)};
-        result.push_back( (unscale ? unscaled_point_to_pixel(tmp) : tmp) );
+        const auto x {_unscale ? Slic3r::unscale(pt.x) : pt.x};
+        const auto y {_unscale ? Slic3r::unscale(pt.y) : pt.y};
+        result.push_back(wxPoint(x, y));
     }
     return result;
 }
 
+wxPoint Plate2D::unscaled_point_to_pixel(const wxPoint& in) {
+    const auto& canvas_height {this->GetSize().GetHeight()};
+    const auto& zero = this->bed_origin;
+    return wxPoint(in.x * this->scaling_factor + zero.x, 
+            in.y * this->scaling_factor + (zero.y - canvas_height));
+}
 
 
 } } // Namespace Slic3r::GUI
