@@ -89,6 +89,9 @@ private:
         return Slic3r::Pointf();
     }
 
+    /// Build thumbnails for the models
+    void make_thumbnail(size_t idx);
+
     /// Complete thumbnail transformation and refresh canvases  
     void on_thumbnail_made(size_t idx); 
     void refresh_canvases();
