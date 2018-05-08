@@ -374,14 +374,18 @@ void Plater::refresh_canvases() {
 
 void Plater::arrange() {
     // pause background process
+    Slic3r::Log::info(LogChannel, L"Called arrange()");
     auto bb {Slic3r::BoundingBoxf(this->config->get<ConfigOptionPoints>("bed_shape").values)};
-    bool success {this->model->arrange_objects(this->config->min_object_distance(), &bb)};
+    bool success {this->model->arrange_objects(5, &bb)};
 
     GetFrame()->statusbar->SetStatusText(_("Objects were arranged."));
     this->on_model_change(true);
 }
 
 void Plater::on_model_change(bool force_autocenter) {
+    if (force_autocenter || settings->autocenter) {
+        this->model->center_instances_around_point(this->bed_centerf());
+    }
     this->refresh_canvases();
 }
 
