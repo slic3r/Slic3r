@@ -247,11 +247,11 @@ void Plate2D::update_bed_size() {
     const auto& bb = bed_polygon.bounding_box();
     const auto& size = bb.size();
 
-    this->scaling_factor = std::min(canvas_w / unscale(size.x), canvas_h / unscale(size.y));
 
+    this->scaling_factor = std::min(static_cast<double>(canvas_w) / unscale(size.x), static_cast<double>(canvas_h) / unscale(size.y));
     this->bed_origin = wxPoint(
-        canvas_w / 2 - (unscale(bb.max.x + bb.min.x)/2 * this->scaling_factor),
-        canvas_h - (canvas_h / 2 - (unscale(bb.max.y + bb.min.y)/2 * this->scaling_factor))
+        canvas_w / 2.0 - (unscale(bb.max.x + bb.min.x)/2.0 * this->scaling_factor),
+        canvas_h - (canvas_h / 2.0 - (unscale(bb.max.y + bb.min.y)/2.0 * this->scaling_factor))
     );
 
     const auto& center = bb.center();
@@ -259,7 +259,7 @@ void Plate2D::update_bed_size() {
 
     // Cache bed contours and grid
     {
-        const auto& step { scale_(10) };
+        const auto& step { scale_(10.0) }; // want a 10mm step for the lines
         auto grid {Polylines()};
 
         for (coord_t x = (bb.min.x - (bb.min.x % step) + step); x < bb.max.x; x += step) {
