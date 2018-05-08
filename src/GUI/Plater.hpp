@@ -59,6 +59,10 @@ private:
     std::stack<UndoOperation> redo {}; 
 
     wxNotebook* preview_notebook {new wxNotebook(this, -1, wxDefaultPosition, wxSize(335,335), wxNB_BOTTOM)};
+    wxBoxSizer* right_sizer {new wxBoxSizer(wxVERTICAL)};
+
+    wxToolBar* htoolbar {nullptr}; //< toolbar for non-MSW platforms.
+    wxBoxSizer* btoolbar {nullptr}; //< button-based toolbar for Windows
 
     Plate2D* canvas2D {nullptr}; //< 2D plater canvas
     Plate3D* canvas3D {nullptr}; //< 3D plater canvas

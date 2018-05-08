@@ -111,6 +111,31 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
     });
     */
 
+    // Finally assemble the sizers into the display.
+    
+    // export/print/send/export buttons
+
+    // right panel sizer
+    auto right_sizer = this->right_sizer;
+//    $right_sizer->Add($presets, 0, wxEXPAND | wxTOP, 10) if defined $presets;
+//    $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
+//    $right_sizer->Add($self->{settings_override_panel}, 1, wxEXPAND, 5);
+//    $right_sizer->Add($object_info_sizer, 0, wxEXPAND, 0);
+//    $right_sizer->Add($print_info_sizer, 0, wxEXPAND, 0);
+//    $right_sizer->Hide($print_info_sizer);
+
+    auto hsizer {new wxBoxSizer(wxHORIZONTAL)};
+    hsizer->Add(this->preview_notebook, 1, wxEXPAND | wxTOP, 1);
+    hsizer->Add(right_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 3);
+
+    auto sizer {new wxBoxSizer(wxVERTICAL)};
+    if (this->htoolbar != nullptr) sizer->Add(this->htoolbar, 0, wxEXPAND, 0);
+    if (this->btoolbar != nullptr) sizer->Add(this->btoolbar, 0, wxEXPAND, 0);
+    sizer->Add(hsizer, 1, wxEXPAND,0);
+
+    sizer->SetSizeHints(this);
+    this->SetSizer(sizer);
+
 }
 void Plater::add() {
     Log::info(LogChannel, L"Called Add function");
