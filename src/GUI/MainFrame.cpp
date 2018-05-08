@@ -82,7 +82,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 /// Private initialization function for the main frame tab panel.
 void MainFrame::init_tabpanel()
 {
-    this->tabpanel = new wxAuiNotebook(this, -1, wxDefaultPosition, wxDefaultSize, wxAUI_NB_TOP);
+    this->tabpanel = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxAUI_NB_TOP);
     auto panel = this->tabpanel; 
 
     panel->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, ([=](wxAuiNotebookEvent& e) 
