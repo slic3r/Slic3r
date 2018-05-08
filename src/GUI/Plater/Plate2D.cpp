@@ -64,7 +64,7 @@ void Plate2D::repaint(wxPaintEvent& e) {
         dc->SetPen(this->print_center_pen);
         dc->SetBrush(this->bed_brush);
         auto tmp {scaled_points_to_pixel(this->bed_polygon, true)};
-        dc->DrawPolygon(this->bed_polygon.points.size(), tmp.data(), 0, 0);
+        dc->DrawPolygon(tmp.size(), tmp.data(), 0, 0);
     }
 
     // draw print center
