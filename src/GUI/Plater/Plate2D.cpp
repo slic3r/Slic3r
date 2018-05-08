@@ -5,6 +5,7 @@
 #include "Point.hpp"
 #include "Log.hpp"
 #include "ClipperUtils.hpp"
+#include "misc_ui.hpp"
 
 // wx includes
 #include <wx/colour.h>
