@@ -47,7 +47,7 @@ private:
     std::shared_ptr<Slic3r::Config> config { Slic3r::Config::new_from_defaults(
         {"bed_shape", "complete_objects", "extruder_clearance_radius", "skirts", "skirt_distance", 
         "brim_width", "serial_port", "serial_speed", "host_type", "print_host", "octoprint_apikey",
-        "shortcuts", "filament_colour"})};
+        "shortcuts", "filament_colour", "duplicate_distance"})};
 
     bool processed {false};
 
@@ -95,6 +95,13 @@ private:
     /// Complete thumbnail transformation and refresh canvases  
     void on_thumbnail_made(size_t idx); 
     void refresh_canvases();
+
+    /// Arrange models
+    void arrange();
+
+    /// Run everything that needs to happen when models change.
+    /// Includes updating canvases, reloading menus, etc.
+    void on_model_change(bool force_autocenter = false);
 };
 
 
