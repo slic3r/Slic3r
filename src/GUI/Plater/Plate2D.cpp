@@ -127,7 +127,7 @@ void Plate2D::repaint(wxPaintEvent& e) {
             // no idea why. It doesn't look necessary, so skip the outer layer
             // and draw the contained expolygons
             for (const auto& points : obj.instance_thumbnails.back().expolygons) {
-                auto poly { this->scaled_points_to_pixel(Polygon(points), 1) };
+                auto poly { this->scaled_points_to_pixel(Polygon(points), true) };
                 dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
             }
         }
