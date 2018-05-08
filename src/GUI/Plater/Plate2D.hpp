@@ -79,12 +79,7 @@ private:
     std::vector<wxPoint> scaled_points_to_pixel(const Slic3r::Polyline& poly, bool unscale);
 
     /// For a specific point, unscale it relative to the origin
-    wxPoint unscaled_point_to_pixel(const wxPoint& in) {
-        const auto& canvas_height {this->GetSize().GetHeight()};
-        const auto& zero = this->bed_origin;
-        return wxPoint(in.x * this->scaling_factor + zero.x, 
-                       in.y * this->scaling_factor + (zero.y - canvas_height));
-    }
+    wxPoint unscaled_point_to_pixel(const wxPoint& in);
 
     /// Read print bed size from config and calculate the scaled rendition of the bed given the draw canvas.
     void update_bed_size();
