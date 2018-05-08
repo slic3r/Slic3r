@@ -300,7 +300,8 @@ std::vector<wxPoint> Plate2D::scaled_points_to_pixel(const Slic3r::Polyline& pol
 wxPoint Plate2D::unscaled_point_to_pixel(const wxPoint& in) {
     const auto& canvas_height {this->GetSize().GetHeight()};
     const auto& zero = this->bed_origin;
-    return wxPoint(in.x * this->scaling_factor + zero.x, 
+    return wxPoint(
+            in.x * this->scaling_factor + zero.x, 
             in.y * this->scaling_factor + (zero.y - canvas_height));
 }
 
