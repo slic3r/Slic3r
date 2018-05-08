@@ -34,6 +34,8 @@ public:
     Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config, std::shared_ptr<Settings> _settings);
 
 
+    /// Read print bed size from config and calculate the scaled rendition of the bed given the draw canvas.
+    void update_bed_size();
 //    std::function<> on_select_object {};
 private:
     std::vector<PlaterObject>& objects; //< reference to parent vector
@@ -81,8 +83,6 @@ private:
     /// For a specific point, unscale it relative to the origin
     wxPoint unscaled_point_to_pixel(const wxPoint& in);
 
-    /// Read print bed size from config and calculate the scaled rendition of the bed given the draw canvas.
-    void update_bed_size();
 
     /// private class variables to stash bits for drawing the print bed area.
     wxRealPoint bed_origin {};
