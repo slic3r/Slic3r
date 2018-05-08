@@ -17,6 +17,9 @@ public:
     std::string input_file {""};
     int input_file_obj_idx {-1};
 
+    bool selected {false};
+    int selected_instance {-1};
+
     
     Slic3r::ExPolygonCollection thumbnail;
     Slic3r::ExPolygonCollection transformed_thumbnail;
@@ -24,11 +27,13 @@ public:
     // read only
     std::vector<Slic3r::ExPolygonCollection> instance_thumbnails;
 
-    bool selected {false};
-    int selected_instance {-1};
+    Slic3r::ExPolygonCollection& make_thumbnail(const Slic3r::Model model, int obj_idx);
+    Slic3r::ExPolygonCollection& make_thumbnail(const std::shared_ptr<Slic3r::Model> model, int obj_idx);
+    
+    Slic3r::ExPolygonCollection& transform_thumbnail(const Slic3r::Model model, int obj_idx);
+    Slic3r::ExPolygonCollection& transform_thumbnail(const std::shared_ptr<Slic3r::Model> model, int obj_idx);
 
-    Slic3r::ExPolygonCollection& make_thumbnail(const Slic3r::Model& model, int obj_idx);
-    Slic3r::ExPolygonCollection& transform_thumbnail(const Slic3r::Model& model, int obj_idx);
+
 };
 
 }} // Namespace Slic3r::GUI
