@@ -258,6 +258,7 @@ void Plate2D::update_bed_size() {
     const auto& center = bb.center();
     this->print_center = wxPoint(unscale(center.x), unscale(center.y));
 
+    this->grid.clear(); // clear out the old grid 
     // Cache bed contours and grid
     {
         const auto& step { scale_(10.0) }; // want a 10mm step for the lines
