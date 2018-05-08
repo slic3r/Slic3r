@@ -106,7 +106,7 @@ void Plate2D::repaint(wxPaintEvent& e) {
             continue; // if there's no thumbnail move on
         for (size_t instance_idx = 0U; instance_idx < model_object->instances.size(); instance_idx++) {
             auto& instance {model_object->instances.at(instance_idx)};
-            if (obj.transformed_thumbnail.expolygons.size()) continue;
+            if (obj.transformed_thumbnail.expolygons.size() == 0) continue;
             auto thumbnail {obj.transformed_thumbnail}; // starts in unscaled model coords
 
             thumbnail.translate(Point::new_scale(instance->offset));
