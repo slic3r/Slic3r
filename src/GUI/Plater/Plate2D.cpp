@@ -292,7 +292,7 @@ std::vector<wxPoint> Plate2D::scaled_points_to_pixel(const Slic3r::Polyline& pol
     for (const auto& pt : poly.points) {
         const auto x {_unscale ? Slic3r::unscale(pt.x) : pt.x};
         const auto y {_unscale ? Slic3r::unscale(pt.y) : pt.y};
-        result.push_back(wxPoint(x, y));
+        result.push_back(unscaled_point_to_pixel(wxPoint(x, y)));
     }
     return result;
 }
