@@ -111,6 +111,8 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
     });
     */
 
+    this->canvas2D->update_bed_size();
+
     // Finally assemble the sizers into the display.
     
     // export/print/send/export buttons
