@@ -140,5 +140,12 @@ ExPolygonCollection::append(const ExPolygon &expp)
 {
     this->expolygons.push_back(expp);
 }
+bool 
+ExPolygonCollection::contains(const Point &point) const {
+    for (const auto& poly : this->expolygons) {
+        if (poly.contour.contains(point)) return true;
+    }
+    return false;
+}
 
 }
