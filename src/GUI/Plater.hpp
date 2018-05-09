@@ -31,6 +31,8 @@ class PlaterObject;
 class Plate2D;
 class MainFrame;
 
+/// Extension of wxPanel class to handle the main plater.
+/// 2D, 3D, preview, etc tabs.
 class Plater : public wxPanel 
 {
 public:
