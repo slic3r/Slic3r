@@ -344,6 +344,52 @@ operator*(double scalar, const Point& point2)
     return Point(scalar * point2.x, scalar * point2.y);
 }
 
+bool
+Point3::operator==(const Point3& rhs) const
+{
+    return this->coincides_with(rhs);
+}
+
+std::string
+Point3::wkt() const
+{
+    std::ostringstream ss;
+    ss << "POINT3(" << this->x << " " << this->y << " " << this->z << ")";
+    return ss.str();
+}
+
+void
+Point3::scale(double factor)
+{
+    Point::scale(factor);
+    this->z *= factor;
+}
+
+void
+Point3::translate(double x, double y, double z)
+{
+    Point::translate(x, y);
+    this->z += z;
+}
+
+void
+Point3::translate(const Vector3 &vector)
+{
+    this->translate(vector.x, vector.y, vector.z);
+}
+
+void
+Point3::rotate_z(double angle)
+{
+    Point::rotate(angle);
+}
+
+void
+Point3::rotate_z(double angle, const Point3 &center)
+{
+    Point::rotate(angle, Point(center.x, center.y));
+}
+
 std::ostream&
 operator<<(std::ostream &stm, const Pointf &pointf)
 {
@@ -420,6 +466,14 @@ Pointf::vector_to(const Pointf &point) const
     return Vectorf(point.x - this->x, point.y - this->y);
 }
 
+std::string
+Pointf3::wkt() const
+{
+    std::ostringstream ss;
+    ss << "POINTF3(" << this->x << " " << this->y << " " << this->z << ")";
+    return ss.str();
+}
+
 void
 Pointf3::scale(double factor)
 {
@@ -438,6 +492,18 @@ Pointf3::translate(double x, double y, double z)
 {
     Pointf::translate(x, y);
     this->z += z;
+}
+
+void
+Pointf3::rotate_z(double angle)
+{
+    Pointf::rotate(angle);
+}
+
+void
+Pointf3::rotate_z(double angle, const Pointf3 &center)
+{
+    Pointf::rotate(angle, Pointf(center.x, center.y));
 }
 
 double

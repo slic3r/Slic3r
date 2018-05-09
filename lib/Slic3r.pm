@@ -235,6 +235,7 @@ sub thread_cleanup {
     *Slic3r::Model::DESTROY                 = sub {};
     *Slic3r::Model::Object::DESTROY         = sub {};
     *Slic3r::Point::DESTROY                 = sub {};
+    *Slic3r::Point3::DESTROY                = sub {};
     *Slic3r::Pointf::DESTROY                = sub {};
     *Slic3r::Pointf3::DESTROY               = sub {};
     *Slic3r::Polygon::DESTROY               = sub {};

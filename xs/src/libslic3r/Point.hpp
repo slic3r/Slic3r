@@ -13,12 +13,15 @@ class Line;
 class Linef;
 class MultiPoint;
 class Point;
+class Point3;
 class Pointf;
 class Pointf3;
 typedef Point Vector;
+typedef Point3 Vector3;
 typedef Pointf Vectorf;
 typedef Pointf3 Vectorf3;
 typedef std::vector<Point> Points;
+typedef std::vector<Point3> Point3s;
 typedef std::vector<Point*> PointPtrs;
 typedef std::vector<const Point*> PointConstPtrs;
 typedef std::vector<Pointf> Pointfs;
@@ -96,6 +99,17 @@ class Point3 : public Point
     public:
     coord_t z;
     explicit Point3(coord_t _x = 0, coord_t _y = 0, coord_t _z = 0): Point(_x, _y), z(_z) {};
+    static Point3 new_scale(coordf_t x, coordf_t y, coordf_t z) {
+        return Point3(scale_(x), scale_(y), scale_(z));
+    };
+    bool operator==(const Point3& rhs) const;
+    std::string wkt() const;
+    void scale(double factor);
+    void translate(double x, double y, double z);
+    void translate(const Vector3 &vector);
+    void rotate_z(double angle);
+    void rotate_z(double angle, const Point3 &center);
+    bool coincides_with(const Point3 &point) const { return this->x == point.x && this->y == point.y && this->z == point.z; }
 };
 
 std::ostream& operator<<(std::ostream &stm, const Pointf &pointf);
@@ -131,9 +145,15 @@ class Pointf3 : public Pointf
     static Pointf3 new_unscale(coord_t x, coord_t y, coord_t z) {
         return Pointf3(unscale(x), unscale(y), unscale(z));
     };
+    static Pointf3 new_unscale(const Point3 &p) {
+        return Pointf3(unscale(p.x), unscale(p.y), unscale(p.z));
+    };
+    std::string wkt() const;
     void scale(double factor);
     void translate(const Vectorf3 &vector);
     void translate(double x, double y, double z);
+    void rotate_z(double angle);
+    void rotate_z(double angle, const Pointf3 &center);
     double distance_to(const Pointf3 &point) const;
     Pointf3 negative() const;
     Vectorf3 vector_to(const Pointf3 &point) const;

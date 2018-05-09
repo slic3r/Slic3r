@@ -252,6 +252,7 @@ ClipperLib::PolyFillType		T_UV
 
 # we return these types whenever we want the items to be cloned
 Points          T_ARRAYREF
+Point3s         T_ARRAYREF
 Pointfs         T_ARRAYREF
 Lines           T_ARRAYREF
 Polygons        T_ARRAYREF
