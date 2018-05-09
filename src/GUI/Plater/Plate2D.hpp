@@ -120,7 +120,7 @@ private:
         const auto& zero {this->bed_origin};
         return Slic3r::Point(
             scale_(x - zero.x) / this->scaling_factor,
-            scale_(y - zero.y) / this->scaling_factor
+            scale_(zero.y - y) / this->scaling_factor
         );
     }
     Slic3r::Point point_to_model_units(const wxPoint& pt) {
