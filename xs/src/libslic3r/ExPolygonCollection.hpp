@@ -36,6 +36,11 @@ class ExPolygonCollection
     Polygons holes() const;
     void append(const ExPolygons &expolygons);
     void append(const ExPolygon &expolygons);
+
+    /// Convenience function to iterate through all of the owned 
+    /// ExPolygons and check if at least one contains the point.
+    bool contains(const Point &point) const;
+
 };
 
 inline ExPolygonCollection&
