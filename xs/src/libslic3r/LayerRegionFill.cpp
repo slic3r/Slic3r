@@ -30,7 +30,7 @@ void
 LayerRegion::make_fill()
 {
     this->fills.clear();
-    
+
     const double fill_density          = this->region()->config.fill_density;
     const Flow   infill_flow           = this->flow(frInfill);
     const Flow   solid_infill_flow     = this->flow(frSolidInfill);
@@ -38,7 +38,7 @@ LayerRegion::make_fill()
     const coord_t perimeter_spacing    = this->flow(frPerimeter).scaled_spacing();
 
     SurfaceCollection surfaces;
-    
+
     // merge adjacent surfaces
     // in case of bridge surfaces, the ones with defined angle will be attached to the ones
     // without any angle (shouldn't this logic be moved to process_external_surfaces()?)
@@ -48,13 +48,13 @@ LayerRegion::make_fill()
         for (Surfaces::const_iterator it = this->fill_surfaces.surfaces.begin(); it != this->fill_surfaces.surfaces.end(); ++it)
             if (it->is_bridge() && it->bridge_angle >= 0)
                 append_to(polygons_bridged, (Polygons)*it);
-        
+
         // group surfaces by distinct properties (equal surface_type, thickness, thickness_layers, bridge_angle)
         // group is of type SurfaceCollection
         // FIXME: Use some smart heuristics to merge similar surfaces to eliminate tiny regions.
         std::vector<SurfacesConstPtr> groups;
         this->fill_surfaces.group(&groups);
-        
+
         // merge compatible solid groups (we can generate continuous infill for them)
         {
             // cache flow widths and patterns used for all solid groups
@@ -65,10 +65,10 @@ LayerRegion::make_fill()
                 // we can only merge solid non-bridge surfaces, so discard
                 // non-solid or bridge surfaces
                 if (!surface.is_solid() || surface.is_bridge()) continue;
-                
+
                 group_attrib[i].is_solid = true;
-                group_attrib[i].fw = (surface.surface_type == stTop) ? top_solid_infill_flow.width : solid_infill_flow.width;
-                group_attrib[i].pattern = surface.surface_type == stTop ? this->region()->config.top_infill_pattern.value
+                group_attrib[i].fw = (surface.surface_type == stTop || surface.surface_type == stTopNonplanar) ? top_solid_infill_flow.width : solid_infill_flow.width;
+                group_attrib[i].pattern = (surface.surface_type == stTop || surface.surface_type == stTopNonplanar) ? this->region()->config.top_infill_pattern.value
                     : surface.is_bottom() ? this->region()->config.bottom_infill_pattern.value
                     : ipRectilinear;
             }
@@ -88,7 +88,7 @@ LayerRegion::make_fill()
                 }
             }
         }
-        
+
         // Give priority to oriented bridges. Process the bridges in the first round, the rest of the surfaces in the 2nd round.
         for (size_t round = 0; round < 2; ++ round) {
             for (std::vector<SurfacesConstPtr>::const_iterator it_group = groups.begin(); it_group != groups.end(); ++ it_group) {
@@ -96,14 +96,14 @@ LayerRegion::make_fill()
                 const bool is_oriented_bridge = group.front()->is_bridge() && group.front()->bridge_angle >= 0;
                 if (is_oriented_bridge != (round == 0))
                     continue;
-                
+
                 // Make a union of polygons defining the infiill regions of a group, use a safety offset.
                 Polygons union_p = union_(to_polygons(group), true);
-                
+
                 // Subtract surfaces having a defined bridge_angle from any other, use a safety offset.
                 if (!is_oriented_bridge && !polygons_bridged.empty())
                     union_p = diff(union_p, polygons_bridged, true);
-                
+
                 // subtract any other surface already processed
                 //FIXME Vojtech: Because the bridge surfaces came first, they are subtracted twice!
                 surfaces.append(
@@ -113,7 +113,7 @@ LayerRegion::make_fill()
             }
         }
     }
-    
+
     // we need to detect any narrow surfaces that might collapse
     // when adding spacing below
     // such narrow surfaces are often generated in sloping walls
@@ -128,17 +128,17 @@ LayerRegion::make_fill()
             std::max(infill_flow.scaled_spacing(), solid_infill_flow.scaled_spacing()),
             top_solid_infill_flow.scaled_spacing()
         );
-        
+
         Polygons surfaces_polygons = (Polygons)surfaces;
         Polygons collapsed = diff(
             surfaces_polygons,
             offset2(surfaces_polygons, -distance_between_surfaces/2, +distance_between_surfaces/2),
             true
         );
-            
+
         Polygons to_subtract;
         surfaces.filter_by_type(stInternalVoid, &to_subtract);
-                
+
         append_to(to_subtract, collapsed);
         surfaces.append(
             intersection_ex(
@@ -160,18 +160,18 @@ LayerRegion::make_fill()
 
     for (Surfaces::const_iterator surface_it = surfaces.surfaces.begin();
         surface_it != surfaces.surfaces.end(); ++surface_it) {
-        
+
         const Surface &surface = *surface_it;
         if (surface.surface_type == stInternalVoid)
             continue;
-        
+
         InfillPattern fill_pattern = this->region()->config.fill_pattern.value;
         double density = fill_density;
-        FlowRole role = (surface.surface_type == stTop) ? frTopSolidInfill
+        FlowRole role = (surface.surface_type == stTop || surface.surface_type == stTopNonplanar) ? frTopSolidInfill
             : surface.is_solid() ? frSolidInfill
             : frInfill;
         const bool is_bridge = this->layer()->id() > 0 && surface.is_bridge();
-        
+
         if (surface.is_solid()) {
             density = 100.;
             fill_pattern = (surface.surface_type == stTop) ? this->region()->config.top_infill_pattern.value
@@ -186,7 +186,7 @@ LayerRegion::make_fill()
         #else
             std::auto_ptr<Fill> f = std::auto_ptr<Fill>(Fill::new_from_type(fill_pattern));
         #endif
-        
+
         // switch to rectilinear if this pattern doesn't support solid infill
         if (density > 99 && !f->can_solid())
             #if SLIC3R_CPPVER >= 11
@@ -195,8 +195,17 @@ LayerRegion::make_fill()
                 f = std::auto_ptr<Fill>(Fill::new_from_type(ipRectilinear));
             #endif
         
+        //set fill pattern to rectilinear for all nonplanar surfaces
+        if (surface.is_nonplanar()) {
+            #if SLIC3R_CPPVER >= 11
+                f = std::unique_ptr<Fill>(Fill::new_from_type(ipRectilinear));
+            #else
+                f = std::auto_ptr<Fill>(Fill::new_from_type(ipRectilinear));
+            #endif
+        }
+            
         f->bounding_box = this->layer()->object()->bounding_box();
-        
+
         // calculate the actual flow we'll be using for this infill
         coordf_t h = (surface.thickness == -1) ? this->layer()->height : surface.thickness;
         Flow flow = this->region()->flow(
@@ -207,7 +216,7 @@ LayerRegion::make_fill()
             -1,                                 // auto width
             *this->layer()->object()
         );
-        
+
         // calculate flow spacing for infill pattern generation
         bool using_internal_flow = false;
         if (!surface.is_solid() && !is_bridge) {
@@ -228,22 +237,22 @@ LayerRegion::make_fill()
         } else {
             f->min_spacing = flow.spacing();
         }
-        
+
         f->endpoints_overlap = this->region()->config.get_abs_value("infill_overlap",
             (perimeter_spacing + scale_(f->min_spacing))/2);
 
         f->layer_id = this->layer()->id();
         f->z        = this->layer()->print_z;
         f->angle    = Geometry::deg2rad(this->region()->config.fill_angle.value);
-        
+
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = (!is_bridge && density > 80)
             ? scale_(3 * f->min_spacing)
             : 0;
-        
+
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
         f->loop_clipping = scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER;
-        
+
         // apply half spacing using this flow's own spacing and generate infill
         f->density = density/100;
         f->dont_adjust = false;
@@ -271,22 +280,22 @@ LayerRegion::make_fill()
         ExtrusionEntityCollection* coll = new ExtrusionEntityCollection();
         coll->no_sort = f->no_sort();
         this->fills.entities.push_back(coll);
-        
+
         {
             ExtrusionRole role;
             if (is_bridge) {
                 role = erBridgeInfill;
             } else if (surface.is_solid()) {
-                role = (surface.surface_type == stTop) ? erTopSolidInfill : erSolidInfill;
+                role = (surface.surface_type == stTop || surface.surface_type == stTopNonplanar) ? erTopSolidInfill : erSolidInfill;
             } else {
                 role = erInternalInfill;
             }
-            
+
             ExtrusionPath templ(role);
             templ.mm3_per_mm    = flow.mm3_per_mm();
             templ.width         = flow.width;
             templ.height        = flow.height;
-            
+
             coll->append(STDMOVE(polylines), templ);
         }
     }

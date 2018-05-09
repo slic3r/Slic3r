@@ -23,7 +23,7 @@
 %{
 
 Surface*
-_new(CLASS, expolygon, surface_type, thickness, thickness_layers, bridge_angle, extra_perimeters)
+_new(CLASS, expolygon, surface_type, thickness, thickness_layers, bridge_angle, extra_perimeters, suface_layer_number)
     char*           CLASS;
     ExPolygon*      expolygon;
     SurfaceType     surface_type;
@@ -31,12 +31,14 @@ _new(CLASS, expolygon, surface_type, thickness, thickness_layers, bridge_angle, 
     unsigned short  thickness_layers;
     double          bridge_angle;
     unsigned short  extra_perimeters;
+    unsigned short  suface_layer_number;
     CODE:
         RETVAL = new Surface (surface_type, *expolygon);
         RETVAL->thickness           = thickness;
         RETVAL->thickness_layers    = thickness_layers;
         RETVAL->bridge_angle        = bridge_angle;
         RETVAL->extra_perimeters    = extra_perimeters;
+        RETVAL->suface_layer_number = suface_layer_number;
         // we don't delete expolygon here because it's referenced by a Perl SV
         // whose DESTROY will take care of destruction
     OUTPUT:
@@ -72,6 +74,16 @@ Surface::extra_perimeters(...)
     OUTPUT:
         RETVAL
 
+unsigned short
+Surface::suface_layer_number(...)
+    CODE:
+        if (items > 1) {
+            THIS->suface_layer_number = (double)SvUV(ST(1));
+        }
+        RETVAL = THIS->suface_layer_number;
+    OUTPUT:
+        RETVAL
+                        
 Polygons
 Surface::polygons()
     CODE:
@@ -102,17 +114,18 @@ Surface::offset(delta, scale = CLIPPER_OFFSET_SCALE, joinType = ClipperLib::jtMi
 IV
 _constant()
   ALIAS:
-    S_TYPE_TOP              = stTop
-    S_TYPE_BOTTOM           = stBottom
-    S_TYPE_BOTTOMBRIDGE     = stBottomBridge
-    S_TYPE_INTERNAL         = stInternal
-    S_TYPE_INTERNALSOLID    = stInternalSolid
-    S_TYPE_INTERNALBRIDGE   = stInternalBridge
-    S_TYPE_INTERNALVOID     = stInternalVoid
+    S_TYPE_TOP                       = stTop
+    S_TYPE_BOTTOM                    = stBottom
+    S_TYPE_BOTTOMBRIDGE              = stBottomBridge
+    S_TYPE_INTERNAL                  = stInternal
+    S_TYPE_INTERNALSOLID             = stInternalSolid
+    S_TYPE_INTERNALBRIDGE            = stInternalBridge
+    S_TYPE_INTERNALVOID              = stInternalVoid
+    S_TYPE_TOP_NONPLANAR             = stTopNonplanar
+    S_TYPE_INTERNALSOLID_NONPLANAR   = stInternalSolidNonplanar
   PROTOTYPE:
   CODE:
     RETVAL = ix;
   OUTPUT: RETVAL
 
 %}
-

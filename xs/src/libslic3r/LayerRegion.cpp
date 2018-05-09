@@ -162,6 +162,14 @@ LayerRegion::process_external_surfaces()
         top.append(grown, surface);
     }
     
+    SurfaceCollection nonplanar;
+    for (const Surface &surface : surfaces) {
+        if (!surface.is_nonplanar()) continue;
+        
+        ExPolygons grown = offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
+        nonplanar.append(grown, surface);
+    }
+    
     /*  if we're slicing with no infill, we can't extend external surfaces
         over non-existent infill */
     SurfaceCollection fill_boundaries;
@@ -176,9 +184,10 @@ LayerRegion::process_external_surfaces()
     // intersect the grown surfaces with the actual fill boundaries
     SurfaceCollection new_surfaces;
     {
-        // merge top and bottom in a single collection
+        // merge top, bottom and nonplanar in a single collection
         SurfaceCollection tb = top;
         tb.append(bottom);
+        tb.append(nonplanar);
         
         // group surfaces
         std::vector<SurfacesConstPtr> groups;
@@ -203,7 +212,7 @@ LayerRegion::process_external_surfaces()
     {
         SurfaceCollection other;
         for (const Surface &s : surfaces)
-            if (s.surface_type != stTop && !s.is_bottom())
+            if (s.surface_type != stTop && !s.is_bottom() && !s.is_nonplanar())
                 other.surfaces.push_back(s);
         
         // group surfaces

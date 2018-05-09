@@ -6,7 +6,7 @@
 
 namespace Slic3r {
 
-enum SurfaceType { stTop, stBottom, stBottomBridge, stInternal, stInternalSolid, stInternalBridge, stInternalVoid };
+enum SurfaceType { stTop, stBottom, stBottomBridge, stInternal, stInternalSolid, stInternalBridge, stInternalVoid, stTopNonplanar, stInternalSolidNonplanar};
 
 class Surface
 {
@@ -17,14 +17,16 @@ class Surface
     unsigned short  thickness_layers;   // in layers
     double          bridge_angle;       // in radians, ccw, 0 = East, only 0+ (negative means undefined)
     unsigned short  extra_perimeters;
-    
+    unsigned short  suface_layer_number;// top is 0
+
     Surface(SurfaceType _surface_type, const ExPolygon &_expolygon)
         : surface_type(_surface_type), expolygon(_expolygon),
-            thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0)
+            thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0), suface_layer_number(0)
         {};
     operator Polygons() const;
     double area() const;
     bool is_solid() const;
+    bool is_nonplanar() const;
     bool is_external() const;
     bool is_internal() const;
     bool is_bottom() const;

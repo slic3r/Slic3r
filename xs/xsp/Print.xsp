@@ -35,7 +35,7 @@ _constant()
     Ref<StaticPrintConfig> config()
         %code%{ RETVAL = &THIS->config; %};
     Ref<Print> print();
-    
+
     Clone<Flow> flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, PrintObject* object)
         %code%{ RETVAL = THIS->flow(role, layer_height, bridge, first_layer, width, *object); %};
 };
@@ -83,12 +83,12 @@ _constant()
                 RETVAL.push_back(*e);
             }
         %};
-    
+
     bool typed_slices()
         %code%{ RETVAL = THIS->typed_slices; %};
     void set_typed_slices(bool value)
         %code%{ THIS->typed_slices = value; %};
-    
+
     Points _shifted_copies()
         %code%{ RETVAL = THIS->_shifted_copies; %};
     void set_shifted_copies(Points value)
@@ -116,7 +116,7 @@ _constant()
     Ref<SupportLayer> get_support_layer(int idx);
     Ref<SupportLayer> add_support_layer(int id, coordf_t height, coordf_t print_z);
     void delete_support_layer(int idx);
-    
+
     bool invalidate_step(PrintObjectStep step);
     bool invalidate_all_steps();
     bool step_done(PrintObjectStep step)
@@ -125,8 +125,10 @@ _constant()
         %code%{ THIS->state.set_done(step); %};
     void set_step_started(PrintObjectStep step)
         %code%{ THIS->state.set_started(step); %};
-    
+
     %name{_detect_surfaces_type} void detect_surfaces_type();
+    void project_nonplanar_surfaces();
+    void debug_svg_print();
     void process_external_surfaces();
     void bridge_over_infill();
     void _slice();
@@ -151,7 +153,8 @@ _constant()
         %};
     void _make_perimeters();
     void _infill();
-    
+    void _detect_nonplanar_surfaces();
+
     int ptr()
         %code%{ RETVAL = (int)(intptr_t)THIS; %};
 };
@@ -191,7 +194,7 @@ _constant()
     Ref<PrintRegion> add_region();
     size_t region_count()
         %code%{ RETVAL = THIS->regions.size(); %};
-    
+
     bool invalidate_step(PrintStep step);
     bool invalidate_all_steps();
     bool step_done(PrintStep step)
@@ -202,7 +205,7 @@ _constant()
         %code%{ THIS->state.set_done(step); %};
     void set_step_started(PrintStep step)
         %code%{ THIS->state.set_started(step); %};
-    
+
     std::vector<int> object_extruders()
         %code%{
             std::set<size_t> extruders = THIS->object_extruders();
@@ -245,7 +248,7 @@ _constant()
                 std::ostringstream ss;
                 ss << it->first;
                 std::string str = ss.str();
-                
+
                 (void)hv_store( hv, str.c_str(), str.length(), newSViv(it->second), 0 );
                 RETVAL = newRV_noinc((SV*)hv);
             }
@@ -256,7 +259,7 @@ _constant()
     void auto_assign_extruders(ModelObject* model_object);
     std::string output_filename();
     std::string output_filepath(std::string path = "");
-    
+
     void add_model_object(ModelObject* model_object, int idx = -1);
     bool apply_config(DynamicPrintConfig* config)
         %code%{ RETVAL = THIS->apply_config(*config); %};
