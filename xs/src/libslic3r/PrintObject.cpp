@@ -603,7 +603,7 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
         }
 
         // loop until we have at least one layer and the max slice_z reaches the object height
-        while (print_z < unscale(this->size.z)) {
+        while ((scale_(print_z + EPSILON)) < this->size.z) {
 
             if (this->config.adaptive_slicing.value) {
                 height = 999;
@@ -652,34 +652,48 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
             result.push_back(print_z);
         }
 
+        // Store layer vector for interactive manipulation
+        this->layer_height_spline.setLayers(result);
+        if (this->config.adaptive_slicing.value) {
+            // smoothing after adaptive algorithm
+            result = this->layer_height_spline.getInterpolatedLayers();
+            // remove top layer if empty
+            coordf_t slice_z = result.back() - (result[result.size()-1] - result[result.size()-2])/2.0;
+            if(slice_z > unscale(this->size.z)) {
+                result.pop_back();
+            }
+        }
+
         // Reduce or thicken the top layer in order to match the original object size.
         // This is not actually related to z_steps_per_mm but we only enable it in case
         // user provided that value, as it means they really care about the layer height
         // accuracy and we don't provide unexpected result for people noticing the last
         // layer has a different layer height.
-        if (this->_print->config.z_steps_per_mm > 0 && result.size() > 1 && !this->config.adaptive_slicing.value) {
+        if ((this->_print->config.z_steps_per_mm > 0 || this->config.adaptive_slicing.value) && result.size() > 1) {
             coordf_t diff = result.back() - unscale(this->size.z);
             int last_layer = result.size()-1;
 
             if (diff < 0) {
                 // we need to thicken last layer
                 coordf_t new_h = result[last_layer] - result[last_layer-1];
-                new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negativ) diff value
+                if(this->config.adaptive_slicing.value) { // use min/max layer_height values from adaptive algo.
+                    new_h = std::min(max_layer_height, new_h - diff); // add (negativ) diff value
+                }else{
+                    new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negativ) diff value
+                }
                 result[last_layer] = result[last_layer-1] + new_h;
             } else {
                 // we need to reduce last layer
                 coordf_t new_h = result[last_layer] - result[last_layer-1];
-                if(min_nozzle_diameter/2 < new_h) { //prevent generation of a too small layer
-                    new_h = std::max(min_nozzle_diameter/2, new_h - diff); // subtract (positive) diff value
-                    result[last_layer] = result[last_layer-1] + new_h;
+                if(this->config.adaptive_slicing.value) { // use min/max layer_height values from adaptive algo.
+                    new_h = std::max(min_layer_height, new_h - diff); // subtract (positive) diff value
+                }else{
+                    if(min_nozzle_diameter/2 < new_h) { //prevent generation of a too small layer
+                        new_h = std::max(min_nozzle_diameter/2, new_h - diff); // subtract (positive) diff value
+                    }
                 }
+                result[last_layer] = result[last_layer-1] + new_h;
             }
-        }
-
-        // Store layer vector for interactive manipulation
-        this->layer_height_spline.setLayers(result);
-        if (this->config.adaptive_slicing.value) { // smoothing after adaptive algorithm
-            result = this->layer_height_spline.getInterpolatedLayers();
         }
 
         this->state.set_done(posLayers);
