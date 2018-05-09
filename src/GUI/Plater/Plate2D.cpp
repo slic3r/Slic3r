@@ -348,7 +348,7 @@ wxPoint Plate2D::unscaled_point_to_pixel(const wxPoint& in) {
     const auto& zero = this->bed_origin;
     return wxPoint(
             in.x * this->scaling_factor + zero.x, 
-            in.y * this->scaling_factor + (zero.y - canvas_height));
+            canvas_height - in.y * this->scaling_factor + (zero.y - canvas_height));
 }
 
 
