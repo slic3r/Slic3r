@@ -264,7 +264,7 @@ void Plate2D::nudge_key(wxKeyEvent& e) {
 }
 
 void Plate2D::nudge(MoveDirection dir) {
-    if (this->selected_instance < this->objects.size()) {
+    if (this->selected_instance.obj < this->objects.size()) {
         auto i = 0U;
         for (auto& obj : this->objects) {
             if (obj.selected) {
@@ -274,7 +274,7 @@ void Plate2D::nudge(MoveDirection dir) {
             i++;
         }
     }
-    if (selected_instance >= this->objects.size()) { 
+    if (selected_instance.obj >= this->objects.size()) { 
         Slic3r::Log::warn(LogChannel, L"Nudge failed because there is no selected instance.");
         return; // Abort
     }
@@ -294,6 +294,7 @@ void Plate2D::update_bed_size() {
     const auto& size = bb.size();
 
 
+    // calculate the scaling factor needed for constraining print bed area inside preview
     this->scaling_factor = std::min(static_cast<double>(canvas_w) / unscale(size.x), static_cast<double>(canvas_h) / unscale(size.y));
     this->bed_origin = wxPoint(
         canvas_w / 2 - (unscale(bb.max.x + bb.min.x)/2 * this->scaling_factor),
