@@ -13,7 +13,7 @@ namespace Slic3r { namespace GUI {
 class PlaterObject {
 public:
     std::string name {""};
-    size_t identifier {0U};
+    int identifier {0};
     std::string input_file {""};
     int input_file_obj_idx {-1};
 
