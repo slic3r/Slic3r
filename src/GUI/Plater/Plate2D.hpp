@@ -29,6 +29,12 @@ enum class MoveDirection {
     Up, Down, Left, Right
 };
 
+/// simple POD to make referencing this pair of identifiers easy
+struct InstanceIdx {
+    long obj;
+    long inst;
+};
+
 class Plate2D : public wxPanel {
 public:
     Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config, std::shared_ptr<Settings> _settings);
@@ -58,13 +64,21 @@ private:
     wxPen dark_pen {};
 
     bool user_drawn_background {(the_os == OS::Mac ? false : true)};
-    size_t selected_instance;
+
+    /// The object id and selected 
+    InstanceIdx selected_instance;
+    InstanceIdx drag_object;
 
     /// Handle mouse-move events
     void mouse_drag(wxMouseEvent& e);
     void mouse_down(wxMouseEvent& e);
     void mouse_up(wxMouseEvent& e);
     void mouse_dclick(wxMouseEvent& e);
+
+    wxPoint drag_start_pos {};
+
+    /// Do something on right-clicks.
+    void on_right_click(const wxPoint& pos) { }
 
     /// Handle repaint events
     void repaint(wxPaintEvent& e);
@@ -119,6 +133,7 @@ private:
     /// Remove all instance thumbnails.
     void clean_instance_thumbnails();
 
+    void on_select_object(int);
 };
 
 } } // Namespace Slic3r::GUI

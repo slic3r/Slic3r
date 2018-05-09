@@ -159,7 +159,52 @@ void Plate2D::mouse_drag(wxMouseEvent& e) {
 }
 
 void Plate2D::mouse_down(wxMouseEvent& e) {
+    this->SetFocus(); // Focus needed to move selected instance with keyboard arrows
+
+    const auto& pos = e.GetPosition();
+    const auto point = this->point_to_model_units(pos);
+    this->on_select_object(-1);
+    this->selected_instance = {-1, -1};
+    
+    Slic3r::Log::info(LogChannel, LOG_WSTRING("Mouse down at scaled point " << point.x << ", " << point.y));
+
+    // Iterate through the list backwards to catch the highest object (last placed/drawn), which 
+    // is usually what the user wants.
+    for (auto obj = this->objects.rbegin(); obj != this->objects.rend(); obj++) {
+        const auto& obj_idx {obj->identifier};
+        for (auto thumbnail = obj->instance_thumbnails.crbegin(); thumbnail != obj->instance_thumbnails.crend(); thumbnail++) {
+            Slic3r::Log::info(LogChannel, LOG_WSTRING("First point: " << thumbnail->contours()[0].points[0].x << "," << thumbnail->contours()[0].points[0].y));
+            if (thumbnail->contains(point)) {
+                const auto& instance_idx {std::distance(thumbnail, obj->instance_thumbnails.crend()) - 1};
+                Slic3r::Log::info(LogChannel, LOG_WSTRING(instance_idx << " contains this point"));
+                this->on_select_object(obj_idx);
+                if (e.LeftDown()) {
+                    // start dragging
+                    auto& instance {this->model->objects.at(obj_idx)->instances.at(instance_idx)};
+                    auto instance_origin { Point::new_scale(instance->offset) };
+
+                    this->drag_start_pos { Slic3r::Point(
+                        point.x - instance_origin.x,
+                        point.y - instance_origin.y,
+                    )};
+
+                    this->drag_object = { obj_idx, instance_idx };
+                    this->selected_instance = this->drag_object;
+
+                    obj->selected_instance = instance_idx;
+
+                } else if(e.RightDown()) {
+                    this->on_right_click(pos);
+                }
+            }
+        }
+
+    }
+
 }
+void Plate2D::on_select_object(int i) {
+}
+
 void Plate2D::mouse_up(wxMouseEvent& e) {
 }
 void Plate2D::mouse_dclick(wxMouseEvent& e) {
