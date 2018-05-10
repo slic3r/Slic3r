@@ -39,7 +39,7 @@ public:
     Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings> _settings);
     void add();
     
-    /// Arrange models
+    /// Arrange models via a simple packing mechanism based on bounding boxes.
     void arrange();
 
     /// Ask if there are any unsaved changes.
@@ -90,8 +90,9 @@ private:
     int get_object_index(size_t object_id);
 
     Slic3r::Pointf bed_centerf() {
-        auto bed_shape { Slic3r::Polygon::new_scale(this->config->get<ConfigOptionPoints>("bed_shape").values) };
-        return Slic3r::Pointf();
+        const auto& bed_shape { Slic3r::Polygon::new_scale(this->config->get<ConfigOptionPoints>("bed_shape").values) };
+        const auto& bed_center {BoundingBox(bed_shape).center()};
+        return Slic3r::Pointf::new_unscale(bed_center);
     }
 
     /// Build thumbnails for the models
