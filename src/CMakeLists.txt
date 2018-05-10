@@ -173,15 +173,15 @@ add_library(bthread SHARED IMPORTED)
 set_target_properties(bthread PROPERTIES IMPORTED_LOCATION ${bthread_l})
 include_directories(${Boost_INCLUDE_DIRS})
 
-if(DEFINED ENV{SLIC3R_STATIC})
+if(${SLIC3R_STATIC})
     set(wxWidgets_USE_STATIC ON)
-ELSE(DEFINED ENV{SLIC3R_STATIC})
+else(${SLIC3R_STATIC})
     set(wxWidgets_USE_STATIC OFF)
-ENDIF(DEFINED ENV{SLIC3R_STATIC})
+endif(${SLIC3R_STATIC})
 
 set(wxWidgets_USE_UNICODE ON)
 
-find_package(wxWidgets COMPONENTS base aui core html)
+find_package(wxWidgets COMPONENTS net gl html aui core base)
 
 IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
