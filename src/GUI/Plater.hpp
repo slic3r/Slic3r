@@ -17,7 +17,10 @@
 #include "Plater/PlaterObject.hpp"
 #include "Plater/Plate2D.hpp"
 #include "Plater/Plate3D.hpp"
+#include "Plater/Preview2D.hpp"
 #include "Plater/Preview3D.hpp"
+#include "Plater/PreviewDLP.hpp"
+
 #include "Settings.hpp"
 
 #include "MainFrame.hpp"
@@ -76,7 +79,10 @@ private:
     Plate2D* canvas2D {nullptr}; //< 2D plater canvas
     Plate3D* canvas3D {nullptr}; //< 3D plater canvas
 
+    Preview2D* preview2D {nullptr}; //< 2D Preview 
     Preview3D* preview3D {nullptr}; //< 3D Preview 
+
+    PreviewDLP* previewDLP {nullptr}; //< DLP/SLA Preview canvas
 
     /// Handles the actual load of the file from the dialog handoff.
     std::vector<int> load_file(const std::string file, const int obj_idx_to_load = -1);

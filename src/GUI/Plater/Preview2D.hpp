@@ -1,5 +1,5 @@
-#ifndef PREVIEW3D_HPP
-#define PREVIEW3D_HPP
+#ifndef PREVIEW2D_HPP
+#define PREVIEW2D_HPP
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
@@ -11,10 +11,10 @@
 
 namespace Slic3r { namespace GUI {
 
-class Preview3D : public wxPanel {
+class Preview2D : public wxPanel {
 public:
     void reload_print() {};
-    Preview3D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config, std::shared_ptr<Settings> _settings) :
+    Preview2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config, std::shared_ptr<Settings> _settings) :
     wxPanel(parent, wxID_ANY, wxDefaultPosition, size, wxTAB_TRAVERSAL), objects(_objects), model(_model), config(_config), settings(_settings)
     {}
 private:
