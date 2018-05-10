@@ -66,7 +66,7 @@ private:
     std::stack<UndoOperation> undo {}; 
     std::stack<UndoOperation> redo {}; 
 
-    wxNotebook* preview_notebook {new wxNotebook(this, -1, wxDefaultPosition, wxSize(335,335), wxNB_BOTTOM)};
+    wxNotebook* preview_notebook {new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(335,335), wxNB_BOTTOM)};
     wxBoxSizer* right_sizer {new wxBoxSizer(wxVERTICAL)};
 
     wxToolBar* htoolbar {nullptr}; //< toolbar for non-MSW platforms.
