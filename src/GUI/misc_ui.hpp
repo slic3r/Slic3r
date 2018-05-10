@@ -14,6 +14,7 @@
 #include "Settings.hpp"
 
 #include "Log.hpp"
+#include "Point.hpp"
 
 
 /// Macro to build std::wstring that slic3r::log expects using << syntax of wxString
@@ -132,6 +133,8 @@ wxString decode_path(const wxString& in);
 wxString encode_path(const wxString& in);
 
 std::vector<wxString> open_model(wxWindow* parent, const Settings& settings, wxWindow* top);
+
+inline Slic3r::Point new_scale(const wxPoint& p) { return Slic3r::Point::new_scale(p.x, p.y); }
 
 }} // namespace Slic3r::GUI
 
