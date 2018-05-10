@@ -373,12 +373,15 @@ void Plater::refresh_canvases() {
 }
 
 void Plater::arrange() {
-    // pause background process
-    Slic3r::Log::info(LogChannel, L"Called arrange()");
-    auto bb {Slic3r::BoundingBoxf(this->config->get<ConfigOptionPoints>("bed_shape").values)};
-    bool success {this->model->arrange_objects(5, &bb)};
+    // TODO pause background process
+    const Slic3r::BoundingBoxf bb {Slic3r::BoundingBoxf(this->config->get<ConfigOptionPoints>("bed_shape").values)};
+    bool success {this->model->arrange_objects(this->config->min_object_distance(), &bb)};
 
-    GetFrame()->statusbar->SetStatusText(_("Objects were arranged."));
+    if (success) {
+        GetFrame()->statusbar->SetStatusText(_("Objects were arranged."));
+    } else {
+        GetFrame()->statusbar->SetStatusText(_("Arrange failed."));
+    }
     this->on_model_change(true);
 }
 
