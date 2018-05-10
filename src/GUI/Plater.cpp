@@ -63,6 +63,18 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
     */
     canvas2D = new Plate2D(preview_notebook, wxDefaultSize, objects, model, config, settings);
     preview_notebook->AddPage(canvas2D, _("2D"));
+    
+    canvas3D = new Plate3D(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    preview_notebook->AddPage(canvas3D, _("3D"));
+
+    preview3D = new Preview3D(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    preview_notebook->AddPage(preview3D, _("Preview"));
+
+    preview2D = new Preview2D(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    preview_notebook->AddPage(preview2D, _("Toolpaths"));
+
+    previewDLP = new PreviewDLP(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    preview_notebook->AddPage(previewDLP, _("DLP/SLA"));
 
     /*
     # Initialize 2D preview canvas
@@ -369,6 +381,11 @@ void Plater::refresh_canvases() {
         this->canvas3D->update();
     if (this->preview3D != nullptr)
         this->preview3D->reload_print();
+    if (this->preview2D != nullptr)
+        this->preview2D->reload_print();
+
+    if (this->previewDLP != nullptr)
+        this->previewDLP->reload_print();
 
 }
 
