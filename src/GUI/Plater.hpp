@@ -37,6 +37,9 @@ class Plater : public wxPanel
 {
 public:
     Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings> _settings);
+
+    /// User-level function called through external interface.
+    /// Pops file dialog.
     void add();
     
     /// Arrange models via a simple packing mechanism based on bounding boxes.
@@ -58,7 +61,7 @@ private:
 
     std::vector<PlaterObject> objects {}; //< Main object vector.
 
-    size_t object_identifier {0U}; //< Counter for adding objects to Slic3r
+    size_t object_identifier {0U}; //< Counter for adding objects to Slic3r. Increment after adding each object.
 
     std::stack<UndoOperation> undo {}; 
     std::stack<UndoOperation> redo {}; 
@@ -79,16 +82,20 @@ private:
 
     const std::string LogChannel {"GUI_Plater"}; //< Which log these messages should go to.
 
+    /// Populate the PlaterObject vector.
     std::vector<int> load_model_objects(ModelObject* model_object);
     std::vector<int> load_model_objects(ModelObjectPtrs model_objects);
 
     bool scaled_down {false};
     bool outside_bounds {false};
+
+    /// Method to get the top-level window and cast it as a MainFrame.
     MainFrame* GetFrame();
 
     void select_object(size_t& obj_idx) { };
     int get_object_index(size_t object_id);
 
+    /// Get the center of the configured bed's bounding box.
     Slic3r::Pointf bed_centerf() {
         const auto& bed_shape { Slic3r::Polygon::new_scale(this->config->get<ConfigOptionPoints>("bed_shape").values) };
         const auto& bed_center {BoundingBox(bed_shape).center()};
@@ -100,6 +107,9 @@ private:
 
     /// Complete thumbnail transformation and refresh canvases  
     void on_thumbnail_made(size_t idx); 
+
+
+    /// Issue a repaint event to all of the canvasses.
     void refresh_canvases();
 
 
