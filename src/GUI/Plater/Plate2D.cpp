@@ -183,10 +183,10 @@ void Plate2D::mouse_down(wxMouseEvent& e) {
                     auto& instance {this->model->objects.at(obj_idx)->instances.at(instance_idx)};
                     auto instance_origin { Point::new_scale(instance->offset) };
 
-                    this->drag_start_pos { Slic3r::Point(
+                    this->drag_start_pos = wxPoint(
                         point.x - instance_origin.x,
-                        point.y - instance_origin.y,
-                    )};
+                        point.y - instance_origin.y
+                    );
 
                     this->drag_object = { obj_idx, instance_idx };
                     this->selected_instance = this->drag_object;
