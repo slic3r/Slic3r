@@ -232,8 +232,15 @@ IF (WIN32)
     add_library(boost-nowide STATIC 
         ${LIBDIR}/boost/nowide/iostream.cpp
     )
+    target_link_libraries(slic3r boost-nowide)
 
-    target_link_libraries(slic3r STATIC boost-nowide)
+    # Windows findwxwidgets doesn't get everything needed for wxMSW
+    target_link_libraries(slic3r uxtheme)    
+    # MinGW apparently has some multiple definitions of UUID-related items
+    # deal with it.
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+       set(CMAKE_EXE_LINKER_FLAGS "-Wl,--allow-multiple-definition")
+    endif()   
 #    target_link_libraries(extrude-tin boost-nowide)
 ENDIF(WIN32)
 
