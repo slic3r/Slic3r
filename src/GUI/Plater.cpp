@@ -280,7 +280,7 @@ std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
         
         auto tmpobj {PlaterObject()};
         const auto objfile {wxFileName::FileName( obj->input_file )};
-        tmpobj.name = wxString(std::string() == obj->name ? obj->name : objfile.GetName());
+        tmpobj.name = (std::string() == obj->name ? wxString(obj->name) : objfile.GetName());
         tmpobj.identifier = (this->object_identifier)++;
 
         this->objects.push_back(tmpobj);
