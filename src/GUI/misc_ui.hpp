@@ -29,8 +29,10 @@ enum class OS { Linux, Mac, Windows } ;
 // constants to reduce the proliferation of macros in the rest of the code
 #ifdef __WIN32
 constexpr OS the_os = OS::Windows;
+constexpr bool wxGTK {false};
 #elif __APPLE__
 constexpr OS the_os = OS::Mac;
+constexpr bool wxGTK {false};
 #elif __linux__
 constexpr OS the_os = OS::Linux;
     #ifdef __WXGTK__
