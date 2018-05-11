@@ -115,8 +115,13 @@ void append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T
         tmp->SetAccel(a); // set the accelerator if and only if the accelerator is fine
     }
     tmp->SetHelp(help);
-    if (!icon.IsEmpty()) 
-        tmp->SetBitmap(wxBitmap(var(icon)));
+    if (!icon.IsEmpty()) {
+        wxBitmap ico;
+        if(ico.LoadFile(var(icon), wxBITMAP_TYPE_PNG))  
+            tmp->SetBitmap(ico);
+        else 
+            std::cerr<< var(icon) << " failed to load \n";
+        }
 
     if (typeid(lambda) != typeid(nullptr))
         menu->Bind(wxEVT_MENU, lambda, tmp->GetId(), tmp->GetId());
