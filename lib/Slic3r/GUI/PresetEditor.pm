@@ -942,7 +942,7 @@ sub _update {
     
     my $have_support_material = $config->support_material || $config->raft_layers > 0;
     my $have_support_interface = $config->support_material_interface_layers > 0;
-    my $have_support_pillars = $have_support_material && $config->support_material_pattern == 'pillars';
+    my $have_support_pillars = $have_support_material && $config->support_material_pattern eq 'pillars';
     $self->get_field($_)->toggle($have_support_material)
         for qw(support_material_threshold support_material_pattern 
             support_material_spacing support_material_angle
