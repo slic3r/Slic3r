@@ -33,6 +33,8 @@ public:
     Slic3r::ExPolygonCollection& transform_thumbnail(const Slic3r::Model model, int obj_idx);
     Slic3r::ExPolygonCollection& transform_thumbnail(const std::shared_ptr<Slic3r::Model> model, int obj_idx);
 
+    bool instance_contains(Slic3r::Point point) const;
+
 protected:
     const std::string LogChannel {"PlaterObject"};
 
