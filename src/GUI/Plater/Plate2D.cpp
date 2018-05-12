@@ -210,6 +210,12 @@ void Plate2D::mouse_down(wxMouseEvent& e) {
 }
 
 void Plate2D::mouse_up(wxMouseEvent& e) {
+    if (e.LeftUp()) {
+        //if (this->drag_object.obj != -1 && this->drag_object.inst != -1) this->on_instances_moved();
+        this->drag_start_pos = wxPoint(-1, -1);
+        this->drag_object = {-1, -1};
+        this->SetCursor(*wxSTANDARD_CURSOR);
+    }
 }
 void Plate2D::mouse_dclick(wxMouseEvent& e) {
 }
