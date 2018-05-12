@@ -28,7 +28,8 @@
 namespace Slic3r { namespace GUI {
 
 using UndoOperation = int;
-using obj_index = unsigned int;
+using ObjIdx = unsigned int;
+using ObjRef = std::vector<PlaterObject>::iterator;
 
 class PlaterObject;
 class Plate2D;
@@ -99,8 +100,13 @@ private:
     /// Method to get the top-level window and cast it as a MainFrame.
     MainFrame* GetFrame();
 
-    void select_object(size_t& obj_idx) { };
-    int get_object_index(size_t object_id);
+    void select_object(ObjRef obj_idx);
+    void select_object(ObjIdx obj_idx);
+
+    /// Overload to unselect objects
+    void select_object();
+    
+    int get_object_index(ObjIdx object_id);
 
     /// Get the center of the configured bed's bounding box.
     Slic3r::Pointf bed_centerf() {
