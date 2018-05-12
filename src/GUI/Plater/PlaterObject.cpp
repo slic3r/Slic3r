@@ -55,4 +55,11 @@ Slic3r::ExPolygonCollection& PlaterObject::transform_thumbnail(std::shared_ptr<S
     return this->transformed_thumbnail;
 }
 
+bool PlaterObject::instance_contains(Slic3r::Point point) const {
+    return std::any_of(this->instance_thumbnails.cbegin(), this->instance_thumbnails.cend(), 
+    [point](const ExPolygonCollection ep) {
+        return ep.contains(point);
+    });
+}
+
 } } // Namespace Slic3r::GUI

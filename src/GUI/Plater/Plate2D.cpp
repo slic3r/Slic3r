@@ -154,14 +154,16 @@ void Plate2D::mouse_drag(wxMouseEvent& e) {
             );
         model_object->update_bounding_box();
         this->Refresh();
-    } else {
-        auto cursor = wxSTANDARD_CURSOR;
-        /*
-        if (find_first_of(this->objects.begin(), this->objects.end(); [=](const PlaterObject& o) { return o.contour->contains_point(point);} ) == this->object.end()) {
-            cursor = wxCursor(wxCURSOR_HAND);
+    } else { // moving
+
+        if (std::any_of(this->objects.cbegin(), this->objects.cend(), 
+                [=](const Slic3r::GUI::PlaterObject o) { return o.instance_contains(point); })
+           ) 
+        {
+            this->SetCursor(wxCURSOR_HAND);
+        } else {
+            this->SetCursor(*wxSTANDARD_CURSOR);
         }
-        */
-        this->SetCursor(*cursor);
     }
 }
 
