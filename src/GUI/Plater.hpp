@@ -119,10 +119,24 @@ private:
     /// Issue a repaint event to all of the canvasses.
     void refresh_canvases();
 
+    /// Action to take when selection changes. Update platers, etc.
+    void selection_changed();
 
     /// Run everything that needs to happen when models change.
     /// Includes updating canvases, reloading menus, etc.
     void on_model_change(bool force_autocenter = false);
+
+    /// Searches the object vector for the first selected object and returns an iterator to it.
+    ObjRef selected_object();
+
+    /// Create and launch dialog for object settings.
+    void object_settings_dialog();
+    void object_settings_dialog(ObjIdx obj_idx);
+    void object_settings_dialog(ObjRef obj);
+
+    /// Create and launch menu for object.
+    wxMenu* object_menu();
+
 };
 
 
