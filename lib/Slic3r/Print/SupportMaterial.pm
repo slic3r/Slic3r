@@ -907,8 +907,8 @@ sub generate_pillars_shape {
     # this prevents supplying an empty point set to BoundingBox constructor
     return if !%$contact;
     
-    my $pillar_size     = scale $self->object_config->pillar_size;
-    my $pillar_spacing  = scale $self->object_config->pillar_spacing;
+    my $pillar_size     = scale $self->object_config->support_material_pillar_size;
+    my $pillar_spacing  = scale $self->object_config->support_material_pillar_spacing;
     
     my $grid;  # arrayref of polygons
     {

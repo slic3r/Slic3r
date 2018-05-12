@@ -1518,7 +1518,7 @@ PrintConfigDef::PrintConfigDef()
     def->sidetext = "mm";
     def->cli = "support-material-pillar-spacing=f";
     def->min = 0;
-    def->default_value = new ConfigOptionFloat(10.0);
+    def->default_value = new ConfigOptionFloat(10);
 
     def = this->add("support_material_spacing", coFloat);
     def->label = "Pattern spacing";
