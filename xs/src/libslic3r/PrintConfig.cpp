@@ -1512,7 +1512,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(2.5);
 
     def = this->add("support_material_pillar_spacing", coFloat);
-    def->label = "Pattern spacing";
+    def->label = "Pillar spacing";
     def->category = "Support material";
     def->tooltip = "Spacing between pillars in the pillar support pattern";
     def->sidetext = "mm";
