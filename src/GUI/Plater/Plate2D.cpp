@@ -220,6 +220,9 @@ void Plate2D::mouse_up(wxMouseEvent& e) {
     }
 }
 void Plate2D::mouse_dclick(wxMouseEvent& e) {
+    if (e.LeftDClick()) {
+        this->on_double_click();
+    }
 }
 
 void Plate2D::set_colors() {
