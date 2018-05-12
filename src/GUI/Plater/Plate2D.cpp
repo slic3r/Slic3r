@@ -202,8 +202,6 @@ void Plate2D::mouse_down(wxMouseEvent& e) {
     }
 
 }
-void Plate2D::on_select_object(int i) {
-}
 
 void Plate2D::mouse_up(wxMouseEvent& e) {
 }

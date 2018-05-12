@@ -42,7 +42,17 @@ public:
 
     /// Read print bed size from config and calculate the scaled rendition of the bed given the draw canvas.
     void update_bed_size();
-//    std::function<> on_select_object {};
+
+    std::function<void (const unsigned int obj_idx)> on_select_object {};
+    std::function<void ()> on_double_click {};
+
+    /// Do something on right-clicks.
+    std::function<void (const wxPoint& pos)> on_right_click {};
+    std::function<void ()> on_instances_moved {};
+
+
+    void set_selected (long obj, long inst) { this->selected_instance = {obj, inst}; }
+
 private:
     std::vector<PlaterObject>& objects; //< reference to parent vector
     std::shared_ptr<Slic3r::Model> model;
@@ -77,8 +87,6 @@ private:
 
     wxPoint drag_start_pos {};
 
-    /// Do something on right-clicks.
-    void on_right_click(const wxPoint& pos) { }
 
     /// Handle repaint events
     void repaint(wxPaintEvent& e);
@@ -132,8 +140,6 @@ private:
 
     /// Remove all instance thumbnails.
     void clean_instance_thumbnails();
-
-    void on_select_object(int);
 };
 
 } } // Namespace Slic3r::GUI
