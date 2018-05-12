@@ -60,6 +60,8 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
     canvas2D->on_select_object = std::function<void (ObjIdx obj_idx)>(on_select_object);
     canvas2D->on_double_click = std::function<void ()>(on_double_click);
     canvas2D->on_right_click = std::function<void (const wxPoint& pos)>([=](const wxPoint& pos){ on_right_click(canvas2D, pos); });
+    canvas2D->on_instances_moved = std::function<void ()>(on_instances_moved);
+
 
     canvas3D = new Plate3D(preview_notebook, wxDefaultSize, objects, model, config, settings);
     preview_notebook->AddPage(canvas3D, _("3D"));
