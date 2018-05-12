@@ -409,7 +409,7 @@ void Plater::on_model_change(bool force_autocenter) {
 ObjRef Plater::selected_object() {
     Slic3r::Log::info(LogChannel, L"Calling selected_object()");
     auto it {this->objects.begin()};
-    for (it; it != this->objects.end(); it++)
+    for (; it != this->objects.end(); it++)
         if (it->selected) return it;
     Slic3r::Log::info(LogChannel, L"No object selected.");
     return this->objects.end();
