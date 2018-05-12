@@ -328,7 +328,7 @@ std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
 
 MainFrame* Plater::GetFrame() { return dynamic_cast<MainFrame*>(wxGetTopLevelParent(this)); }
 
-int Plater::get_object_index(size_t object_id) {
+int Plater::get_object_index(ObjIdx object_id) {
     for (size_t i = 0U; i < this->objects.size(); i++) {
         if (this->objects.at(i).identifier == object_id) return static_cast<int>(i);
     }
