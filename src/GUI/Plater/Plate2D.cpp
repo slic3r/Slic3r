@@ -17,19 +17,22 @@ Plate2D::Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>
     wxPanel(parent, wxID_ANY, wxDefaultPosition, size, wxTAB_TRAVERSAL), objects(_objects), model(_model), config(_config), settings(_settings)
 { 
     
-    this->Bind(wxEVT_PAINT, [=](wxPaintEvent &e) { this->repaint(e); });
-    this->Bind(wxEVT_MOTION, [=](wxMouseEvent &e) { this->mouse_drag(e); });
-    this->Bind(wxEVT_LEFT_DOWN, [=](wxMouseEvent &e) { this->mouse_down(e); });
-    this->Bind(wxEVT_LEFT_UP, [=](wxMouseEvent &e) { this->mouse_up(e); });
-    this->Bind(wxEVT_LEFT_DCLICK, [=](wxMouseEvent &e) { this->mouse_dclick(e); });
-
-    if (user_drawn_background) {
-        this->Bind(wxEVT_ERASE_BACKGROUND, [=](wxEraseEvent& e){ });
-    }
-
-    this->Bind(wxEVT_SIZE, [=](wxSizeEvent &e) { this->update_bed_size(); this->Refresh(); });
+    this->Bind(wxEVT_PAINT, [this](wxPaintEvent &e) { this->repaint(e); });
+    this->Bind(wxEVT_MOTION, [this](wxMouseEvent &e) { this->mouse_drag(e); });
 
     // Bind the varying mouse events
+    this->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { this->mouse_down(e); });
+    this->Bind(wxEVT_RIGHT_DOWN, [this](wxMouseEvent &e) { this->mouse_down(e); });
+    this->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &e) { this->mouse_up(e); });
+    this->Bind(wxEVT_LEFT_DCLICK, [this](wxMouseEvent &e) { this->mouse_dclick(e); });
+
+    if (user_drawn_background) {
+        this->Bind(wxEVT_ERASE_BACKGROUND, [this](wxEraseEvent& e){ });
+    }
+
+    this->Bind(wxEVT_SIZE, [this](wxSizeEvent &e) { this->update_bed_size(); this->Refresh(); });
+
+
 
     // Set the brushes
     set_colors();
