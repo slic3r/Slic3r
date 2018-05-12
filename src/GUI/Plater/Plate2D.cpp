@@ -143,10 +143,8 @@ void Plate2D::clean_instance_thumbnails() {
 }
 
 void Plate2D::mouse_drag(wxMouseEvent& e) {
-    const auto pos {e.GetPosition()};
     const auto& point {this->point_to_model_units(e.GetPosition())};
     if (e.Dragging()) {
-        Slic3r::Log::info(LogChannel, L"Mouse dragging");
         this->Refresh();
     } else {
         auto cursor = wxSTANDARD_CURSOR;
