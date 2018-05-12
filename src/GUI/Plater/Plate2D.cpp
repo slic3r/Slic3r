@@ -145,6 +145,14 @@ void Plate2D::clean_instance_thumbnails() {
 void Plate2D::mouse_drag(wxMouseEvent& e) {
     const auto& point {this->point_to_model_units(e.GetPosition())};
     if (e.Dragging()) {
+        if (!this->drag_start_pos.IsFullySpecified()) return; // possible concurrency problems?
+        auto model_object = this->model->objects.at(this->drag_object.obj);
+        model_object->instances.at(this->drag_object.inst)->offset = 
+            Slic3r::Pointf(
+                unscale(point.x - this->drag_start_pos.x), 
+                unscale(point.y - this->drag_start_pos.y)
+            );
+        model_object->update_bounding_box();
         this->Refresh();
     } else {
         auto cursor = wxSTANDARD_CURSOR;
