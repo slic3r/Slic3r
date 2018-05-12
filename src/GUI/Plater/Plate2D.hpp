@@ -21,7 +21,7 @@ namespace Slic3r { namespace GUI {
 
 
 // Setup for an Easter Egg with the canvas text.
-const wxDateTime today_date {wxDateTime().GetDateOnly()}; 
+const wxDateTime today_date {wxDateTime::Now()}; 
 const wxDateTime special_date {13, wxDateTime::Month::Sep, 2006, 0, 0, 0, 0};
 const bool today_is_special = {today_date.GetDay() == special_date.GetDay() && today_date.GetMonth() == special_date.GetMonth()};
 
