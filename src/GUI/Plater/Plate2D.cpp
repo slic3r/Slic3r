@@ -134,6 +134,16 @@ void Plate2D::repaint(wxPaintEvent& e) {
             for (const auto& points : obj.instance_thumbnails.back().expolygons) {
                 auto poly { this->scaled_points_to_pixel(Polygon(points), true) };
                 dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
+            // TODO draw bounding box if that debug option is turned on.
+
+            // if sequential printing is enabled and more than one object, draw clearance area
+            if (this->config->get<ConfigOptionBool>("complete_objects") && 
+            std::count_if(this->model->objects.cbegin(), this->model->objects.cend(), [](const ModelObject* o){ return o->instances.size() > 0; }) > 1) {
+                auto clearance {offset(thumbnail.convex_hull(), (scale_(this->config->get<ConfigOptionFloat>("extruder_clearance_radius")) / 2.0), 1.0, ClipperLib::jtRound, scale_(0.1))};
+                dc->SetPen(this->clearance_pen);
+                dc->SetBrush(this->transparent_brush);
+                auto poly { this->scaled_points_to_pixel(Polygon(clearance.front()), true) };
+                dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
             }
         }
     }
