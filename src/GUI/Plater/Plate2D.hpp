@@ -76,8 +76,8 @@ private:
     bool user_drawn_background {(the_os == OS::Mac ? false : true)};
 
     /// The object id and selected 
-    InstanceIdx selected_instance;
-    InstanceIdx drag_object;
+    InstanceIdx selected_instance {-1, -1};
+    InstanceIdx drag_object {-1, -1};
 
     /// Handle mouse-move events
     void mouse_drag(wxMouseEvent& e);
@@ -85,7 +85,7 @@ private:
     void mouse_up(wxMouseEvent& e);
     void mouse_dclick(wxMouseEvent& e);
 
-    wxPoint drag_start_pos {};
+    wxPoint drag_start_pos {wxPoint(-1, -1)};
 
 
     /// Handle repaint events
