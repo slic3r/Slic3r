@@ -154,8 +154,7 @@ void Plate2D::mouse_drag(wxMouseEvent& e) {
             );
         model_object->update_bounding_box();
         this->Refresh();
-    } else { // moving
-
+    } else { // moving, set the cursor to the hand cursor.
         if (std::any_of(this->objects.cbegin(), this->objects.cend(), 
                 [=](const Slic3r::GUI::PlaterObject o) { return o.instance_contains(point); })
            ) 
