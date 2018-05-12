@@ -32,6 +32,7 @@ Plate2D::Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>
 
     this->Bind(wxEVT_SIZE, [this](wxSizeEvent &e) { this->update_bed_size(); this->Refresh(); });
 
+    this->Bind(wxEVT_CHAR, [this](wxKeyEvent &e) { this->nudge_key(e);});
 
 
     // Set the brushes
@@ -272,12 +273,16 @@ void Plate2D::nudge_key(wxKeyEvent& e) {
     switch( key ) {
         case WXK_LEFT:
             this->nudge(MoveDirection::Left);
+            break;
         case WXK_RIGHT:
             this->nudge(MoveDirection::Right);
+            break;
         case WXK_DOWN:
             this->nudge(MoveDirection::Down);
+            break;
         case WXK_UP:
             this->nudge(MoveDirection::Up);
+            break;
         default:
             break; // do nothing
     }
@@ -299,6 +304,37 @@ void Plate2D::nudge(MoveDirection dir) {
         Slic3r::Log::warn(LogChannel, L"Nudge failed because there is no selected instance.");
         return; // Abort
     }
+    auto selected {this->selected_instance};
+    auto obj {this->model->objects.at(selected.obj)};
+    auto instance {obj->instances.at(selected.inst)};
+
+    Slic3r::Point shift(0,0);
+
+    auto nudge_value {settings->nudge < 0.1 ? 0.1 : scale_(settings->nudge) };
+
+    switch (dir) {
+        case MoveDirection::Up:
+            shift.y = nudge_value;
+            break;
+        case MoveDirection::Down:
+            shift.y = -1.0f * nudge_value;
+            break;
+        case MoveDirection::Left:
+            shift.x = -1.0f * nudge_value;
+            break;
+        case MoveDirection::Right:
+            shift.x = nudge_value;
+            break;
+        default:
+            Slic3r::Log::error(LogChannel, L"Invalid direction supplied to nudge.");
+    }
+    Slic3r::Point instance_origin {Slic3r::Point::new_scale(instance->offset)};
+    instance->offset = Slic3r::Pointf::new_unscale(shift + instance_origin);
+
+    obj->update_bounding_box();
+    this->Refresh();
+    this->on_instances_moved();
+
 }
 
 void Plate2D::update_bed_size() {
