@@ -116,9 +116,9 @@ void Plate2D::repaint(wxPaintEvent& e) {
 
             if (0) { // object is dragged 
                 dc->SetBrush(dragged_brush);
-            } else if (0) { 
+            } else if (obj.selected && obj.selected_instance >= 0 && obj.selected_instance == static_cast<int>(instance_idx)) { 
                 dc->SetBrush(instance_brush);
-            } else if (0) {
+            } else if (obj.selected) {
                 dc->SetBrush(selected_brush);
             } else {
                 dc->SetBrush(objects_brush);
@@ -147,6 +147,7 @@ void Plate2D::mouse_drag(wxMouseEvent& e) {
     const auto& point {this->point_to_model_units(e.GetPosition())};
     if (e.Dragging()) {
         Slic3r::Log::info(LogChannel, L"Mouse dragging");
+        this->Refresh();
     } else {
         auto cursor = wxSTANDARD_CURSOR;
         /*
@@ -198,9 +199,8 @@ void Plate2D::mouse_down(wxMouseEvent& e) {
                 }
             }
         }
-
     }
-
+    this->Refresh();
 }
 
 void Plate2D::mouse_up(wxMouseEvent& e) {
