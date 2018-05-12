@@ -1507,7 +1507,7 @@ PrintConfigDef::PrintConfigDef()
     def->category = "Support material";
     def->tooltip = "Size of the pillars in the pillar support pattern";
     def->sidetext = "mm";
-    def->cli = "support-material-spacing=f";
+    def->cli = "support-material-pillar-size=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(2.5);
 
@@ -1516,7 +1516,7 @@ PrintConfigDef::PrintConfigDef()
     def->category = "Support material";
     def->tooltip = "Spacing between pillars in the pillar support pattern";
     def->sidetext = "mm";
-    def->cli = "support-material-spacing=f";
+    def->cli = "support-material-pillar-spacing=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(10.0);
 
