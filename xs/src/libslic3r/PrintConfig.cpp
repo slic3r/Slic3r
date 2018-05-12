@@ -1502,6 +1502,24 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("pillars");
     def->default_value = new ConfigOptionEnum<SupportMaterialPattern>(smpPillars);
 
+    def = this->add("support_material_pillar_size", coFloat);
+    def->label = "Pillar size";
+    def->category = "Size of the pillars in the pillar support pattern";
+    def->tooltip = "The size o";
+    def->sidetext = "mm";
+    def->cli = "support-material-spacing=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(2.5);
+
+    def = this->add("support_material_pillar_spacing", coFloat);
+    def->label = "Pattern spacing";
+    def->category = "Support material";
+    def->tooltip = "Spacing between pillars in the pillar support pattern";
+    def->sidetext = "mm";
+    def->cli = "support-material-spacing=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(10);
+
     def = this->add("support_material_spacing", coFloat);
     def->label = "Pattern spacing";
     def->category = "Support material";

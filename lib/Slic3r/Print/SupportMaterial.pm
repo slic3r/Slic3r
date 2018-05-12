@@ -22,10 +22,6 @@ use constant DEBUG_CONTACT_ONLY => 0;
 # increment used to reach MARGIN in steps to avoid trespassing thin objects
 use constant MARGIN_STEP => MARGIN/3;
 
-# generate a tree-like structure to save material
-use constant PILLAR_SIZE    => 2.5;
-use constant PILLAR_SPACING => 10;
-
 sub generate {
     # $object is Slic3r::Print::Object
     my ($self, $object) = @_;
@@ -911,8 +907,8 @@ sub generate_pillars_shape {
     # this prevents supplying an empty point set to BoundingBox constructor
     return if !%$contact;
     
-    my $pillar_size     = scale PILLAR_SIZE;
-    my $pillar_spacing  = scale PILLAR_SPACING;
+    my $pillar_size     = scale $self->object_config->pillar_size;
+    my $pillar_spacing  = scale $self->object_config->pillar_spacing;
     
     my $grid;  # arrayref of polygons
     {

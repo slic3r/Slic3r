@@ -457,7 +457,8 @@ sub options {
         brim_connections_width brim_width interior_brim_width
         support_material support_material_threshold support_material_max_layers support_material_enforce_layers
         raft_layers
-        support_material_pattern support_material_spacing support_material_angle 
+        support_material_pattern support_material_spacing support_material_angle
+        support_material_pillar_size support_material_pillar_spacing
         support_material_interface_layers support_material_interface_spacing
         support_material_contact_distance support_material_buildplate_only dont_support_bridges
         notes
@@ -612,6 +613,8 @@ sub build {
             $optgroup->append_single_option_line('support_material_pattern');
             $optgroup->append_single_option_line('support_material_spacing');
             $optgroup->append_single_option_line('support_material_angle');
+            $optgroup->append_single_option_line('support_material_pillar_size');
+            $optgroup->append_single_option_line('support_material_pillar_spacing');
             $optgroup->append_single_option_line('support_material_interface_layers');
             $optgroup->append_single_option_line('support_material_interface_spacing');
             $optgroup->append_single_option_line('support_material_buildplate_only');
@@ -939,6 +942,7 @@ sub _update {
     
     my $have_support_material = $config->support_material || $config->raft_layers > 0;
     my $have_support_interface = $config->support_material_interface_layers > 0;
+    my $have_support_pillars = $have_support_material && $config->support_material_pattern == 'pillars';
     $self->get_field($_)->toggle($have_support_material)
         for qw(support_material_threshold support_material_pattern 
             support_material_spacing support_material_angle
@@ -949,6 +953,10 @@ sub _update {
     # Disable features that need support to be enabled.            
     $self->get_field($_)->toggle($config->support_material)
         for qw(support_material_max_layers);
+    
+    # Only enable pillar configuration when using pillars
+    $self->get_field($_)->toggle($have_support_pillars)
+        for qw(support_material_pillar_size support_material_pillar_spacing);
 
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
