@@ -23,31 +23,22 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
         wxPostEvent(this, new wxPlThreadEvent(-1, PROGRESS_BAR_EVENT, 
     });
     */
-    auto on_select_object { [=](size_t& obj_idx) {
-       this->select_object(obj_idx);
-    } };
+
+    // Initialize handlers for canvases
+    auto on_select_object {[this](ObjIdx obj_idx) { this->select_object(obj_idx); }};
+    auto on_double_click {[this]() { if (this->selected_object() != this->objects.end()) this->object_settings_dialog(); }};
+    auto on_right_click {[this](wxPanel* canvas, const wxPoint& pos) 
+        {
+            auto obj = this->selected_object();
+            if (obj == this->objects.end()) return;
+
+            auto menu = this->object_menu();
+            canvas->PopupMenu(menu, pos);
+            delete menu;
+        }};
+    auto on_instances_moved {[this]() { this->on_model_change(); }};
+
     /* 
-   # Initialize handlers for canvases
-    my $on_select_object = sub {
-        my ($obj_idx) = @_;
-        $self->select_object($obj_idx);
-    };
-    my $on_double_click = sub {
-        $self->object_settings_dialog if $self->selected_object;
-    };
-    my $on_right_click = sub {
-        my ($canvas, $click_pos) = @_;
-        
-        my ($obj_idx, $object) = $self->selected_object;
-        return if !defined $obj_idx;
-        
-        my $menu = $self->object_menu;
-        $canvas->PopupMenu($menu, $click_pos);
-        $menu->Destroy;
-    };
-    my $on_instances_moved = sub {
-        $self->on_model_change;
-    };
     # Initialize 3D plater
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{canvas3D} = Slic3r::GUI::Plater::3D->new($self->{preview_notebook}, $self->{objects}, $self->{model}, $self->{config});
@@ -61,9 +52,15 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
         });
     }
     */
+
+    // initialize 2D Preview Canvas
     canvas2D = new Plate2D(preview_notebook, wxDefaultSize, objects, model, config, settings);
     preview_notebook->AddPage(canvas2D, _("2D"));
-    
+
+    canvas2D->on_select_object = std::function<void (ObjIdx obj_idx)>(on_select_object);
+    canvas2D->on_double_click = std::function<void ()>(on_double_click);
+    canvas2D->on_right_click = std::function<void (const wxPoint& pos)>([=](const wxPoint& pos){ on_right_click(canvas2D, pos); });
+
     canvas3D = new Plate3D(preview_notebook, wxDefaultSize, objects, model, config, settings);
     preview_notebook->AddPage(canvas3D, _("3D"));
 
