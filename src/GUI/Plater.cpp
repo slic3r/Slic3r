@@ -431,7 +431,8 @@ void Plater::select_object(ObjRef obj) {
         o.selected = false;
         o.selected_instance = -1;
     }
-    if (obj >= this->objects.end() && obj < this->objects.begin()) {
+    // range check the iterator
+    if (obj < this->objects.end() && obj >= this->objects.begin()) {
         obj->selected = true;
         obj->selected_instance = 0;
     }
