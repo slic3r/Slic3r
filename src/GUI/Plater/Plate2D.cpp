@@ -147,6 +147,29 @@ void Plate2D::repaint(wxPaintEvent& e) {
             }
         }
     }
+
+    // Draw skirt
+    if (this->objects.size() > 0 && this->config->get<ConfigOptionInt>("skirts") > 0) 
+    {
+        // get all of the contours of the instances
+        Slic3r::Polygons tmp_cont {};
+        for (auto obj : this->objects) {
+            for (auto inst : obj.instance_thumbnails) {
+                tmp_cont.push_back(inst.convex_hull());
+            }
+        }
+
+        // Calculate the offset hull and draw the points.
+        if (tmp_cont.size() > 0) {
+            dc->SetPen(this->skirt_pen);
+            dc->SetBrush(this->transparent_brush);
+            auto skirt {offset(Slic3r::Geometry::convex_hull(tmp_cont), 
+                scale_(this->config->get<ConfigOptionFloat>("brim_width") + this->config->get<ConfigOptionFloat>("skirt_distance")), 1.0, ClipperLib::jtRound, scale_(0.1))};
+            auto poly { this->scaled_points_to_pixel(skirt.front(), true) };
+            dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
+        }
+    }
+
     e.Skip();
 }
 
