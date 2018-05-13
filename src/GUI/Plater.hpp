@@ -31,7 +31,7 @@ namespace Slic3r { namespace GUI {
 using UndoOperation = int;
 
 enum class UndoCmd {
-    Remove, Add, Reset
+    Remove, Add, Reset, Increase, Decrease
 };
 
 using ObjIdx = unsigned int;
@@ -66,6 +66,9 @@ public:
 
     /// Push an undo op onto the stack.
     void add_undo_operation(UndoCmd cmd, std::vector<int>& obj_ids, Slic3r::Model& model);
+    
+    /// Undo for increase/decrease 
+    void add_undo_operation(UndoCmd cmd, int obj_id, size_t copies);
 
 private:
     std::shared_ptr<Slic3r::Print> print {std::make_shared<Print>(Slic3r::Print())};
