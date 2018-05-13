@@ -37,4 +37,5 @@ elif [ $TRAVIS_OS_NAME == "osx" ]; then
     fi
     export PATH=${PATH}:${WXDIR}
     cd $TRAVIS_BUILD_DIR # go back to the build dir
+    brew install wxmac # install via homebrew
 fi
