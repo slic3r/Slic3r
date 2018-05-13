@@ -46,7 +46,8 @@ void Plate2D::repaint(wxPaintEvent& e) {
     // Need focus to catch keyboard events.
     this->SetFocus();
 
-    auto dc {new wxAutoBufferedPaintDC(this)};
+    // create the device context.
+    wxAutoBufferedPaintDC dc(this);
     const auto& size {wxSize(this->GetSize().GetWidth(), this->GetSize().GetHeight())};
 
 
@@ -57,60 +58,63 @@ void Plate2D::repaint(wxPaintEvent& e) {
         // Fill DC with the background on Windows & Linux/GTK.
         const auto& brush_background {wxBrush(this->settings->color->BACKGROUND255(), wxBRUSHSTYLE_SOLID)};
         const auto& pen_background {wxPen(this->settings->color->BACKGROUND255(), 1, wxPENSTYLE_SOLID)};
-        dc->SetPen(pen_background);
-        dc->SetBrush(brush_background);
+        dc.SetPen(pen_background);
+        dc.SetBrush(brush_background);
         const auto& rect {this->GetUpdateRegion().GetBox()};
-        dc->DrawRectangle(rect.GetLeft(), rect.GetTop(), rect.GetWidth(), rect.GetHeight());
+        dc.DrawRectangle(rect.GetLeft(), rect.GetTop(), rect.GetWidth(), rect.GetHeight());
     }
 
     // Draw bed
     {
-        dc->SetPen(this->print_center_pen);
-        dc->SetBrush(this->bed_brush);
+        dc.SetPen(this->print_center_pen);
+        dc.SetBrush(this->bed_brush);
         auto tmp {scaled_points_to_pixel(this->bed_polygon, true)};
-        dc->DrawPolygon(tmp.size(), tmp.data(), 0, 0);
+        dc.DrawPolygon(tmp.size(), tmp.data(), 0, 0);
     }
 
     // draw print center
     {
         if (this->objects.size() > 0 && settings->autocenter) {
             const auto center = this->unscaled_point_to_pixel(this->print_center);
-            dc->SetPen(print_center_pen);
-            dc->DrawLine(center.x, 0, center.x, size.y);
-            dc->DrawLine(0, center.y, size.x, center.y);
-            dc->SetTextForeground(wxColor(0,0,0));
-            dc->SetFont(wxFont(10, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+            dc.SetPen(print_center_pen);
+            dc.DrawLine(center.x, 0, center.x, size.y);
+            dc.DrawLine(0, center.y, size.x, center.y);
+            dc.SetTextForeground(wxColor(0,0,0));
+            dc.SetFont(wxFont(10, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
-            dc->DrawLabel(wxString::Format("X = %.0f", this->print_center.x), wxRect(0,0, center.x*2, this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_BOTTOM);
-            dc->DrawRotatedText(wxString::Format("Y = %.0f", this->print_center.y), 0, center.y + 15, 90);
+            dc.DrawLabel(wxString::Format("X = %.0f", this->print_center.x), wxRect(0,0, center.x*2, this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_BOTTOM);
+            dc.DrawRotatedText(wxString::Format("Y = %.0f", this->print_center.y), 0, center.y + 15, 90);
         }
     }
 
     // draw text if plate is empty
     if (this->objects.size() == 0) {
-        dc->SetTextForeground(settings->color->BED_OBJECTS());
-        dc->SetFont(wxFont(14, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
-        dc->DrawLabel(CANVAS_TEXT, wxRect(0,0, this->GetSize().GetWidth(), this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+        dc.SetTextForeground(settings->color->BED_OBJECTS());
+        dc.SetFont(wxFont(14, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+        dc.DrawLabel(CANVAS_TEXT, wxRect(0,0, this->GetSize().GetWidth(), this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
     } else { 
         // draw grid
-        dc->SetPen(grid_pen);
+        dc.SetPen(grid_pen);
         // Assumption: grid of lines is arranged
         // as adjacent pairs of wxPoints
         for (auto i = 0U; i < grid.size(); i+=2) {
-            dc->DrawLine(grid[i], grid[i+1]);
+            dc.DrawLine(grid[i], grid[i+1]);
         }
     }
 
     // Draw thumbnails
 
-    dc->SetPen(dark_pen); 
+    dc.SetPen(dark_pen); 
     this->clean_instance_thumbnails();
     for (auto& obj : this->objects) {
+        Slic3r::Log::info(LogChannel, LOG_WSTRING("Iterating over object " << obj.identifier));
         auto model_object {this->model->objects.at(obj.identifier)};
+        Slic3r::Log::info(LogChannel, "at() didn't crash");
         if (obj.thumbnail.expolygons.size() == 0) 
             continue; // if there's no thumbnail move on
         for (size_t instance_idx = 0U; instance_idx < model_object->instances.size(); instance_idx++) {
             auto& instance {model_object->instances.at(instance_idx)};
+            Slic3r::Log::info(LogChannel, LOG_WSTRING("Drawing polygon for " << obj.input_file));
             if (obj.transformed_thumbnail.expolygons.size() == 0) continue;
             auto thumbnail {obj.transformed_thumbnail}; // starts in unscaled model coords
 
@@ -119,13 +123,16 @@ void Plate2D::repaint(wxPaintEvent& e) {
             obj.instance_thumbnails.emplace_back(thumbnail);
 
             if (0) { // object is dragged 
-                dc->SetBrush(dragged_brush);
+                dc.SetBrush(dragged_brush);
             } else if (obj.selected && obj.selected_instance >= 0 && obj.selected_instance == static_cast<int>(instance_idx)) { 
-                dc->SetBrush(instance_brush);
+                Slic3r::Log::info(LogChannel, L"Using instance brush.");
+                dc.SetBrush(instance_brush);
             } else if (obj.selected) {
-                dc->SetBrush(selected_brush);
+                Slic3r::Log::info(LogChannel, L"Using selection brush.");
+                dc.SetBrush(selected_brush);
             } else {
-                dc->SetBrush(objects_brush);
+                Slic3r::Log::info(LogChannel, L"Using default objects brush.");
+                dc.SetBrush(objects_brush);
             }
             // porting notes: perl here seems to be making a single-item array of the 
             // thumbnail set.
@@ -133,18 +140,20 @@ void Plate2D::repaint(wxPaintEvent& e) {
             // and draw the contained expolygons
             for (const auto& points : obj.instance_thumbnails.back().expolygons) {
                 auto poly { this->scaled_points_to_pixel(Polygon(points), true) };
-                dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
+                dc.DrawPolygon(poly.size(), poly.data(), 0, 0);
+                Slic3r::Log::info(LogChannel, LOG_WSTRING("Drawing polygon for " << obj.input_file));
             }
+
             // TODO draw bounding box if that debug option is turned on.
 
             // if sequential printing is enabled and more than one object, draw clearance area
             if (this->config->get<ConfigOptionBool>("complete_objects") && 
             std::count_if(this->model->objects.cbegin(), this->model->objects.cend(), [](const ModelObject* o){ return o->instances.size() > 0; }) > 1) {
                 auto clearance {offset(thumbnail.convex_hull(), (scale_(this->config->get<ConfigOptionFloat>("extruder_clearance_radius")) / 2.0), 1.0, ClipperLib::jtRound, scale_(0.1))};
-                dc->SetPen(this->clearance_pen);
-                dc->SetBrush(this->transparent_brush);
+                dc.SetPen(this->clearance_pen);
+                dc.SetBrush(this->transparent_brush);
                 auto poly { this->scaled_points_to_pixel(Polygon(clearance.front()), true) };
-                dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
+                dc.DrawPolygon(poly.size(), poly.data(), 0, 0);
             }
         }
     }
@@ -162,12 +171,12 @@ void Plate2D::repaint(wxPaintEvent& e) {
 
         // Calculate the offset hull and draw the points.
         if (tmp_cont.size() > 0) {
-            dc->SetPen(this->skirt_pen);
-            dc->SetBrush(this->transparent_brush);
+            dc.SetPen(this->skirt_pen);
+            dc.SetBrush(this->transparent_brush);
             auto skirt {offset(Slic3r::Geometry::convex_hull(tmp_cont), 
                 scale_(this->config->get<ConfigOptionFloat>("brim_width") + this->config->get<ConfigOptionFloat>("skirt_distance")), 1.0, ClipperLib::jtRound, scale_(0.1))};
             auto poly { this->scaled_points_to_pixel(skirt.front(), true) };
-            dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
+            dc.DrawPolygon(poly.size(), poly.data(), 0, 0);
         }
     }
 
