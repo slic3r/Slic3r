@@ -20,7 +20,7 @@ AboutDialog::AboutDialog(wxWindow* parent) : wxDialog(parent, -1, _("About Slic3
 
         // title
         auto title = new wxStaticText(this, -1, "Slic3r", wxDefaultPosition, wxDefaultSize);
-        auto title_font { wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
+        auto title_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 
         title_font.SetWeight(wxFONTWEIGHT_BOLD);
         title_font.SetFamily(wxFONTFAMILY_ROMAN);
@@ -32,7 +32,7 @@ AboutDialog::AboutDialog(wxWindow* parent) : wxDialog(parent, -1, _("About Slic3
         // version
         
         auto version = new wxStaticText(this, -1, wxString("Version ") + wxString(SLIC3R_VERSION), wxDefaultPosition, wxDefaultSize);
-        auto version_font { wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
+        auto version_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
         version_font.SetPointSize((the_os == OS::Windows ? 9 : 11));
         version->SetFont(version_font);
         vsizer->Add(version, 0, wxALIGN_LEFT | wxBOTTOM, 10);
