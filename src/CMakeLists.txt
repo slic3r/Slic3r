@@ -206,7 +206,7 @@ IF(wxWidgets_FOUND)
     include_directories(${wxWidgets_INCLUDE})
 
     add_library(slic3r_gui STATIC 
-    ${GUI_LIBDIR}/AboutDialog.cpp
+    ${GUI_LIBDIR}/Dialogs/AboutDialog.cpp
     ${GUI_LIBDIR}/GUI.cpp
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/Plater.cpp

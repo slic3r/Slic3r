@@ -3,8 +3,9 @@
 #include <wx/accel.h>
 #include <wx/utils.h> 
 
-#include "AboutDialog.hpp"
 #include "libslic3r.h"
+
+#include "Dialogs/AboutDialog.hpp"
 
 namespace Slic3r { namespace GUI {
 
