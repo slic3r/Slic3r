@@ -13,6 +13,11 @@ if [ $TRAVIS_OS_NAME == "linux" ]; then
         echo "Downloading http://www.siusgs.com/slic3r/buildserver/wx${WXVERSION}-libs.tar.bz2 => $CACHE/wx${WXVERSION}.tar.bz2"
         curl -L "http://www.siusgs.com/slic3r/buildserver/wx${WXVERSION}-libs.tar.bz2" -o $CACHE/wx${WXVERSION}.tar.bz2
     fi
-tar -C$HOME -xjf $CACHE/boost-compiled.tar.bz2
-tar -C$HOME -xjf $CACHE/wx${WXVERSION}.tar.bz2
+    
+    tar -C$HOME -xjf $CACHE/boost-compiled.tar.bz2
+    tar -C$HOME -xjf $CACHE/wx${WXVERSION}.tar.bz2
+
+    # Set some env variables specific to Travis Linux
+    export CXX=g++-7
+    export CC=gcc-7
 fi
