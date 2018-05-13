@@ -677,12 +677,51 @@ void Plater::reset(bool dont_push) {
     this->on_model_change();
 }
 
-void Plater::increase() {
-    //TODO
+void Plater::increase(size_t copies, bool dont_push) {
+    auto obj {this->selected_object()};
+    if (obj == this->objects.end()) return; // do nothing; nothing is selected.
+    
+    this->stop_background_process();
+
+    auto* model_object {this->model->objects.at(obj->identifier)};
+    ModelInstance* instance {model_object->instances.back()};
+
+    for (size_t i = 1; i <= copies; i++) {
+        instance = model_object->add_instance(*instance);
+        instance->offset.x += 10;
+        instance->offset.y += 10;
+        this->print->objects.at(obj->identifier)->add_copy(instance->offset);
+    }
+
+    if (!dont_push) {
+        this->add_undo_operation(UndoCmd::Increase, obj->identifier, copies);
+    }
+
+    if(settings->autocenter) {
+        this->arrange();
+    } else {
+        this->on_model_change();
+    }
 } 
 
-void Plater::decrease() {
-    //TODO
+void Plater::decrease(size_t copies, bool dont_push) {
+    auto obj {this->selected_object()};
+    if (obj == this->objects.end()) return; // do nothing; nothing is selected.
+    
+    this->stop_background_process();
+    auto* model_object {this->model->objects.at(obj->identifier)};
+    if (model_object->instances.size() > copies) {
+        for (size_t i = 1; i <= copies; i++) {
+            model_object->delete_last_instance();
+            this->print->objects.at(obj->identifier)->delete_last_copy();
+        }
+        if (!dont_push) {
+            this->add_undo_operation(UndoCmd::Decrease, obj->identifier, copies);
+        }
+    } else {
+        this->remove();
+    }
+    this->on_model_change();
 } 
 
 void Plater::rotate(double angle) {
@@ -714,7 +753,25 @@ void Plater::add_undo_operation(UndoCmd cmd, int obj_id, Slic3r::Model& model) {
     add_undo_operation(cmd, tmp, model);
 }
 
+void Plater::add_undo_operation(UndoCmd cmd, int obj_id, size_t copies) {
+}
+
 void Plater::object_list_changed() {
+    //TODO
+}
+
+void Plater::stop_background_process() {
+    //TODO
+}
+
+void Plater::start_background_process() {
+    //TODO
+}
+
+void Plater::pause_background_process() {
+    //TODO
+}
+void Plater::resume_background_process() {
     //TODO
 }
 

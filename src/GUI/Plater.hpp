@@ -165,10 +165,10 @@ private:
     void reset(bool dont_push = false);
 
     /// Make instances of the currently selected model.
-    void increase(); 
+    void increase(size_t copies = 1, bool dont_push = false); 
 
     /// Remove instances of the currently selected model.
-    void decrease(); 
+    void decrease(size_t copies = 1, bool dont_push = false); 
 
     /// Rotate the currently selected model.
     void rotate(double angle); 
@@ -188,6 +188,13 @@ private:
     /// Process a change in the object list.
     void object_list_changed();
 
+    /// Halt ongoing background processes.
+    void stop_background_process();
+
+    void start_background_process();
+
+    void pause_background_process();
+    void resume_background_process();
 };
 
 
