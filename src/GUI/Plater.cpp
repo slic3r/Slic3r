@@ -520,6 +520,27 @@ void Plater::selection_changed() {
     # prepagate the event to the frame (a custom Wx event would be cleaner)
     $self->GetFrame->on_plater_selection_changed($have_sel);
 */
+}
+
+void Plater::build_toolbar() {
+    wxToolTip::Enable(true);
+    auto* toolbar = this->htoolbar = new wxToolBar(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_HORIZONTAL | wxTB_TEXT | wxBORDER_SIMPLE | wxTAB_TRAVERSAL);
+    toolbar->AddTool(TB_ADD, _(L"Add…"), wxBitmap(var("brick_add.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddTool(TB_REMOVE, _("Delete"), wxBitmap(var("brick_delete.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddTool(TB_RESET, _("Delete All"), wxBitmap(var("cross.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddTool(TB_ARRANGE, _("Arrange"), wxBitmap(var("bricks.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddSeparator();
+    toolbar->AddTool(TB_MORE, _("More"), wxBitmap(var("add.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddTool(TB_FEWER, _("Fewer"), wxBitmap(var("delete.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddSeparator();
+    toolbar->AddTool(TB_45CCW, _(L"45° ccw"), wxBitmap(var("arrow_rotate_anticlockwise.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddTool(TB_45CW, _(L"45° cw"), wxBitmap(var("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddTool(TB_SCALE, _(L"Scale…"), wxBitmap(var("arrow_out.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddTool(TB_SPLIT, _("Split"), wxBitmap(var("shape_ungroup.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddTool(TB_CUT, _(L"Cut…"), wxBitmap(var("package.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddSeparator();
+    toolbar->AddTool(TB_SETTINGS, _(L"Settings…"), wxBitmap(var("cog.png"), wxBITMAP_TYPE_PNG), "");
+    toolbar->AddTool(TB_LAYERS, _(L"Layer heights…"), wxBitmap(var("variable_layer_height.png"), wxBITMAP_TYPE_PNG), "");
     
 
 }
