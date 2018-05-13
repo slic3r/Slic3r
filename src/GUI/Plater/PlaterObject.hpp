@@ -20,7 +20,6 @@ public:
     bool selected {false};
     int selected_instance {-1};
 
-    
     Slic3r::ExPolygonCollection thumbnail;
     Slic3r::ExPolygonCollection transformed_thumbnail;
 
@@ -34,6 +33,12 @@ public:
     Slic3r::ExPolygonCollection& transform_thumbnail(const std::shared_ptr<Slic3r::Model> model, int obj_idx);
 
     bool instance_contains(Slic3r::Point point) const;
+
+    PlaterObject& operator=(const PlaterObject& other);
+    PlaterObject& operator=(PlaterObject&& other);
+
+    PlaterObject(const PlaterObject& other) = default;
+    PlaterObject() = default;
 
 protected:
     const std::string LogChannel {"PlaterObject"};
