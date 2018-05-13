@@ -9,7 +9,7 @@ install:
 - export SLIC3R_STATIC=1
 script:
 - bash package/linux/travis-setup.sh
-- cmake -DBOOST_ROOT=$BOOST_DIR -DwxWidgets_CONFIG_OPTIONS=--prefix=$WXDIR -DwxWIDGETS_LIB_DIR=$WXDIR/lib -DwxWidgets_ROOT_DIR=$WXDIR src/
+- cmake -DBOOST_ROOT=$BOOST_DIR -DwxWidgets_ROOT_DIR=$WXDIR src/
 - make
 after_success:
 - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
