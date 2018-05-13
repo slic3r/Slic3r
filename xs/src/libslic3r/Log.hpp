@@ -18,9 +18,18 @@ public:
         std::wcerr << message << std::endl;
     }
 
+    static void error(std::string topic, std::string message) {
+        std::cerr << topic << "  ERR" << ": ";
+        std::cerr << message << std::endl;
+    }
+
     static void info(std::string topic, std::wstring message) {
         std::clog << topic << " INFO" << ": ";
         std::wclog << message << std::endl;
+    }
+    static void info(std::string topic, std::string message) {
+        std::clog << topic << " INFO" << ": ";
+        std::clog << message << std::endl;
     }
 
     static void warn(std::string topic, std::wstring message) {
