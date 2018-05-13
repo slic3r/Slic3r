@@ -13,7 +13,11 @@
 #include <boost/filesystem.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/iostream.hpp>
-#include "GUI/GUI.hpp"
+
+
+#ifdef USE_WX
+    #include "GUI/GUI.hpp"
+#endif
 
 
 using namespace Slic3r;
@@ -41,6 +45,7 @@ main(int argc, char **argv)
     
     DynamicPrintConfig print_config;
 
+#ifdef USE_WX
     std::shared_ptr<GUI::Settings> gui_config = std::make_shared<GUI::Settings>();
 
     GUI::App *gui = new GUI::App(gui_config);
@@ -49,7 +54,7 @@ main(int argc, char **argv)
 
     GUI::App::SetInstance(gui);
     wxEntry(argc, argv);
-    
+#endif    
     // load config files supplied via --load
     for (const std::string &file : cli_config.load.values) {
         if (!boost::filesystem::exists(file)) {
