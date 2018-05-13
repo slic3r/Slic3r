@@ -181,6 +181,8 @@ class PrintObjectConfig : public virtual StaticPrintConfig
     ConfigOptionFloat               support_material_interface_spacing;
     ConfigOptionFloatOrPercent      support_material_interface_speed;
     ConfigOptionEnum<SupportMaterialPattern> support_material_pattern;
+    ConfigOptionFloat               support_material_pillar_size;
+    ConfigOptionFloat               support_material_pillar_spacing;
     ConfigOptionFloat               support_material_spacing;
     ConfigOptionFloat               support_material_speed;
     ConfigOptionFloatOrPercent      support_material_threshold;
@@ -219,6 +221,8 @@ class PrintObjectConfig : public virtual StaticPrintConfig
         OPT_PTR(support_material_interface_spacing);
         OPT_PTR(support_material_interface_speed);
         OPT_PTR(support_material_pattern);
+        OPT_PTR(support_material_pillar_size);
+        OPT_PTR(support_material_pillar_spacing);
         OPT_PTR(support_material_spacing);
         OPT_PTR(support_material_speed);
         OPT_PTR(support_material_threshold);
