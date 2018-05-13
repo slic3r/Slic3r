@@ -1,10 +1,10 @@
-#include "MainFrame.hpp"
-#include "misc_ui.hpp"
 #include <wx/accel.h>
 #include <wx/utils.h> 
 
 #include "libslic3r.h"
 
+#include "MainFrame.hpp"
+#include "misc_ui.hpp"
 #include "Dialogs/AboutDialog.hpp"
 
 namespace Slic3r { namespace GUI {
