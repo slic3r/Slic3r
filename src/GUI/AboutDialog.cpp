@@ -83,7 +83,7 @@ AboutDialogLogo::AboutDialogLogo(wxWindow* parent) :
 
 void AboutDialogLogo::repaint(wxPaintEvent& event)
 {
-    auto dc = wxPaintDC(this);
+    wxPaintDC dc(this);
 
     dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
 
