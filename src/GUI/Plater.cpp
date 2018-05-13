@@ -342,6 +342,8 @@ std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
             // Provide a warning if downscaling by 5x still puts it over the bed size.
 
         }
+        this->print->auto_assign_extruders(o);
+        this->print->add_model_object(o);
     }
     for (const auto& i : obj_idx) { this->make_thumbnail(i); } 
     if (need_arrange) this->arrange();
