@@ -219,6 +219,7 @@ IF(wxWidgets_FOUND)
     target_compile_features(slic3r_gui PUBLIC cxx_std_11)
     #only build GUI lib if building with wx
     target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_WX")
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
     MESSAGE("wx not found!")
