@@ -23,12 +23,13 @@ if [ $TRAVIS_OS_NAME == "linux" ]; then
     export CC=gcc-7
 elif [ $TRAVIS_OS_NAME == "osx" ]; then
     WXVERSION=311
+    WXVER_EXPANDED=${WXVERSION:0:1}.${WXVERSION:1:1}.${WXVERSION:2:1}
     export WXDIR=$HOME/wx${WXVERSION}
     if [ ! -e $CACHE/wx${WXVERSION}-${TRAVIS_OS_NAME}.tar.bz2 ]; then
-        curl -L "https://github.com/wxWidgets/wxWidgets/releases/download/v3.1.1/wxWidgets-3.1.1.tar.bz2" -o $HOME/wx311-src.tar.bz2
-        tar -C$HOME -xjf $HOME/wx311-src.tar.bz2
+        curl -L "https://github.com/wxWidgets/wxWidgets/releases/download/v${WXVER_EXPANDED}/wxWidgets-${WXVER_EXPANDED}.tar.bz2" -o $HOME/wx${WXVERSION}-src.tar.bz2
+        tar -C$HOME -xjf $HOME/wx${WXVERSION}-src.tar.bz2
         mkdir $WXDIR
-        cd $HOME/$WXDIR && cmake $HOME/wxWidgets-3.1.1  -DwxBUILD_SHARED=OFF
+        cd $HOME/$WXDIR && cmake $HOME/wxWidgets-${WXVER_EXPANDED}  -DwxBUILD_SHARED=OFF
         cmake --build . --target -- -j4
         tar -C$HOME -cjf $CACHE/wx${WXVERSION}-${TRAVIS_OS_NAME}.tar.bz2 $(basename ${WXDIR})
     else 
