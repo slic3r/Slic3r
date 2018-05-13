@@ -1,4 +1,4 @@
-#include "AboutDialog.hpp"
+#include "Dialogs/AboutDialog.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -87,7 +87,7 @@ void AboutDialogLogo::repaint(wxPaintEvent& event)
 
     dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
 
-    const auto size {this->GetSize()};
+    const wxSize size {this->GetSize()};
     const auto logo_w {this->logo.GetWidth()};
     const auto logo_h {this->logo.GetHeight()};
 
