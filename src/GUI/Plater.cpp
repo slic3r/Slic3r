@@ -11,6 +11,22 @@
 
 namespace Slic3r { namespace GUI {
 
+const auto TB_ADD           {wxNewId()};
+const auto TB_REMOVE        {wxNewId()};
+const auto TB_RESET         {wxNewId()};
+const auto TB_ARRANGE       {wxNewId()};
+const auto TB_EXPORT_GCODE  {wxNewId()};
+const auto TB_EXPORT_STL    {wxNewId()};
+const auto TB_MORE          {wxNewId()};
+const auto TB_FEWER         {wxNewId()};
+const auto TB_45CW          {wxNewId()};
+const auto TB_45CCW         {wxNewId()};
+const auto TB_SCALE         {wxNewId()};
+const auto TB_SPLIT         {wxNewId()};
+const auto TB_CUT           {wxNewId()};
+const auto TB_LAYERS        {wxNewId()};
+const auto TB_SETTINGS      {wxNewId()};
+
 const auto PROGRESS_BAR_EVENT = wxNewEventType();
 
 Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings> _settings) : 
@@ -123,7 +139,11 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
     });
     */
 
+
     this->canvas2D->update_bed_size();
+
+    // Toolbar
+    this->build_toolbar();
 
     // Finally assemble the sizers into the display.
     
@@ -541,10 +561,162 @@ void Plater::build_toolbar() {
     toolbar->AddSeparator();
     toolbar->AddTool(TB_SETTINGS, _(L"Settings…"), wxBitmap(var("cog.png"), wxBITMAP_TYPE_PNG), "");
     toolbar->AddTool(TB_LAYERS, _(L"Layer heights…"), wxBitmap(var("variable_layer_height.png"), wxBITMAP_TYPE_PNG), "");
-    
 
+
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->add(); }, TB_ADD);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->remove(); }, TB_REMOVE);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->reset(); }, TB_RESET);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->arrange(); }, TB_ARRANGE);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->increase(); }, TB_MORE);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->decrease(); }, TB_FEWER);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->rotate(-45); }, TB_45CW);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->rotate(45); }, TB_45CCW);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->changescale(); }, TB_SCALE);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->split_object(); }, TB_SPLIT);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->object_cut_dialog(); }, TB_CUT);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->object_layers_dialog(); }, TB_LAYERS);
+    toolbar->Bind(wxEVT_TOOL, [this](wxCommandEvent &e) { this->object_settings_dialog(); }, TB_SETTINGS);
 }
 
+void Plater::remove() {
+    this->remove(-1, false);
+}
+
+void Plater::remove(int obj_idx, bool dont_push) {
+    
+    // TODO: $self->stop_background_process;
+    
+    // Prevent toolpaths preview from rendering while we modify the Print object
+    if (this->preview2D != nullptr) 
+        this->preview2D->enabled(false);
+
+    if (this->preview3D != nullptr) 
+        this->preview3D->enabled(false);
+
+    if (this->previewDLP != nullptr) 
+        this->previewDLP->enabled(false);
+    
+    ObjRef obj_ref;
+    // if no object index is supplied or an invalid one is supplied, remove the selected one
+    if (obj_idx < 0 || obj_idx >= this->objects.size()) {
+        obj_ref = this->selected_object();
+    } else { // otherwise 
+        obj_ref = this->objects.begin() + obj_idx;
+    }
+    std::vector<PlaterObject>::const_iterator const_ref = obj_ref;
+
+    if (obj_ref >= this->objects.end()) return; // do nothing, nothing was selected.
+
+    Slic3r::Log::info(LogChannel, "Assigned obj_ref");
+    // Save the object identifier and copy the object for undo/redo operations.
+    auto object_id { obj_ref->identifier };
+    auto new_model { Slic3r::Model() };
+    new_model.add_object(*(this->model->objects.at(obj_ref->identifier)));
+   
+    Slic3r::Log::info(LogChannel, "Assigned obj_ref");
+    try {
+        this->model->delete_object(obj_ref->identifier);
+    } catch (InvalidObjectException& ex) {
+        Slic3r::Log::error(LogChannel, LOG_WSTRING("Failed to delete object " << obj_ref->identifier << " from Model."));
+    }
+    try {
+        this->print->delete_object(obj_ref->identifier);
+    } catch (InvalidObjectException& ex) {
+        Slic3r::Log::error(LogChannel, LOG_WSTRING("Failed to delete object " << obj_ref->identifier << " from Print."));
+    }
+
+    this->objects.erase(const_ref);
+    int i = 0;
+    for (auto o : this->objects) { o.identifier = i++; } // fix identifiers
+    this->object_identifier = this->objects.size();
+
+    this->object_list_changed();
+    
+    this->select_object();
+
+    this->on_model_change();
+
+    if (!dont_push) {
+        Slic3r::Log::info(LogChannel, "Push to undo stack.");
+        this->add_undo_operation(UndoCmd::Remove, object_id, new_model);
+        Slic3r::Log::info(LogChannel, "Pushed to undo stack.");
+    }
+}
+
+void Plater::reset(bool dont_push) {
+    // TODO: $self->stop_background_process;
+    
+    // Prevent toolpaths preview from rendering while we modify the Print object
+    if (this->preview2D != nullptr) 
+        this->preview2D->enabled(false);
+
+    if (this->preview3D != nullptr) 
+        this->preview3D->enabled(false);
+
+    if (this->previewDLP != nullptr) 
+        this->previewDLP->enabled(false);
+
+    if (!dont_push) {
+        Slic3r::Model current_model {*(this->model)};
+        std::vector<int> tmp_ids;
+        for (const auto& obj : this->objects) {
+            tmp_ids.push_back(obj.identifier);
+        }
+        this->add_undo_operation(UndoCmd::Reset, tmp_ids, current_model);
+    }
+   
+    this->objects.clear();
+    this->object_identifier = this->objects.size();
+
+    this->model->clear_objects();
+    this->print->clear_objects();
+
+    this->object_list_changed();
+    this->select_object();
+
+    this->on_model_change();
+}
+
+void Plater::increase() {
+    //TODO
+} 
+
+void Plater::decrease() {
+    //TODO
+} 
+
+void Plater::rotate(double angle) {
+    //TODO
+} 
+
+void Plater::split_object() {
+    //TODO
+} 
+
+void Plater::changescale() {
+    //TODO
+}
+
+void Plater::object_cut_dialog() {
+    //TODO
+}
+
+void Plater::object_layers_dialog() {
+    //TODO
+}
+
+void Plater::add_undo_operation(UndoCmd cmd, std::vector<int>& obj_ids, Slic3r::Model& model) {
+    //TODO
+}
+
+void Plater::add_undo_operation(UndoCmd cmd, int obj_id, Slic3r::Model& model) {
+    std::vector<int> tmp {obj_id};
+    add_undo_operation(cmd, tmp, model);
+}
+
+void Plater::object_list_changed() {
+    //TODO
+}
 
 }} // Namespace Slic3r::GUI
 

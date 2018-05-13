@@ -6,6 +6,7 @@
 #endif
 
 #include <wx/notebook.h>
+#include <wx/toolbar.h>
 
 #include <stack>
 
@@ -28,6 +29,11 @@
 namespace Slic3r { namespace GUI {
 
 using UndoOperation = int;
+
+enum class UndoCmd {
+    Remove, Add, Reset
+};
+
 using ObjIdx = unsigned int;
 using ObjRef = std::vector<PlaterObject>::iterator;
 
@@ -45,12 +51,21 @@ public:
     /// User-level function called through external interface.
     /// Pops file dialog.
     void add();
+
+    /// Remove a selected model from the plater.
+    void remove(int obj_idx, bool dont_push = false);
+    void remove();
     
     /// Arrange models via a simple packing mechanism based on bounding boxes.
     void arrange();
 
     /// Ask if there are any unsaved changes.
     bool prompt_unsaved_changes() { return true; }
+
+    void add_undo_operation(UndoCmd cmd, int obj_id, Slic3r::Model& model);
+
+    /// Push an undo op onto the stack.
+    void add_undo_operation(UndoCmd cmd, std::vector<int>& obj_ids, Slic3r::Model& model);
 
 private:
     std::shared_ptr<Slic3r::Print> print {std::make_shared<Print>(Slic3r::Print())};
@@ -142,6 +157,36 @@ private:
 
     /// Create and launch menu for object.
     wxMenu* object_menu();
+
+    /// Instantiate the toolbar 
+    void build_toolbar();
+
+    /// Clear plate.
+    void reset(bool dont_push = false);
+
+    /// Make instances of the currently selected model.
+    void increase(); 
+
+    /// Remove instances of the currently selected model.
+    void decrease(); 
+
+    /// Rotate the currently selected model.
+    void rotate(double angle); 
+
+    /// Separate a multipart model to its component interfaces.
+    void split_object(); 
+
+    /// Prompt a change of scaling.
+    void changescale();
+
+    /// Open the dialog to perform a cut on the current model.
+    void object_cut_dialog();
+
+    /// Open a menu to configure the layer heights.
+    void object_layers_dialog();
+
+    /// Process a change in the object list.
+    void object_list_changed();
 
 };
 
