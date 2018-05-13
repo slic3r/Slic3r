@@ -26,7 +26,7 @@ elif [ $TRAVIS_OS_NAME == "osx" ]; then
     export WXDIR=$HOME/wx${WXVERSION}
     if [ ! -e $CACHE/wx${WXVERSION}.tar.bz2 ]; then
         curl -L "https://github.com/wxWidgets/wxWidgets/releases/download/v3.1.1/wxWidgets-3.1.1.tar.bz2" -o $HOME/wx311-src.tar.bz2
-        tar -C$HOME -xjr $HOME/wx311-src.tar.bz2
+        tar -C$HOME -xjf $HOME/wx311-src.tar.bz2
         mkdir $HOME/wxbuild-${WXVERSION}
         cd $HOME/wxbuild-${WXVERSION} && cmake $HOME/wxWidgets-3.1.1  -DwxBUILD_SHARED=off -DCMAKE_INSTALL_PREFIX=${WXDIR}
         cmake --build . --target install
