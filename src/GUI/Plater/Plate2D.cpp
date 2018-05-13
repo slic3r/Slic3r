@@ -134,6 +134,7 @@ void Plate2D::repaint(wxPaintEvent& e) {
             for (const auto& points : obj.instance_thumbnails.back().expolygons) {
                 auto poly { this->scaled_points_to_pixel(Polygon(points), true) };
                 dc->DrawPolygon(poly.size(), poly.data(), 0, 0);
+            }
             // TODO draw bounding box if that debug option is turned on.
 
             // if sequential printing is enabled and more than one object, draw clearance area
