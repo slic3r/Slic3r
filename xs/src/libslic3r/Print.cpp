@@ -77,6 +77,8 @@ void
 Print::delete_object(size_t idx)
 {
     PrintObjectPtrs::iterator i = this->objects.begin() + idx;
+    if (i >= this->objects.end()) 
+        throw InvalidObjectException();
     
     // before deleting object, invalidate all of its steps in order to 
     // invalidate all of the dependent ones in Print
