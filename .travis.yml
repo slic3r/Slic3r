@@ -1,12 +1,9 @@
 before_install:
 - sh package/linux/travis-decrypt-key
+- bash package/linux/travis-setup.sh
 install:
 - export BOOST_DIR=$HOME/boost_1_63_0
 - export SLIC3R_STATIC=1
-script:
-- bash package/linux/travis-setup.sh
-- cmake -DBOOST_ROOT=$BOOST_DIR -DwxWidgets_ROOT_DIR=$WXDIR src/
-- make VERBOSE=1
 after_success:
 - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
 - package/linux/appimage.sh x86_64
@@ -50,12 +47,16 @@ matrix:
         - os: linux
           language: c++
           env: 
-            - CXX=g++-7
-            - CX=gcc-7
             - WXVERSION=pkg
+          script:
+            - CXX=g++-7 CC=gcc-7 cmake -DBOOST_ROOT=$BOOST_DIR src/
+            - make
         - os: osx      
           language: c++
           env: WXVERSION=pkg
+          script:
+            - cmake -DBOOST_ROOT=$BOOST_DIR src/
+            - make
 env:
   global:
   - secure: eEVRZNMv7FM6jrOU9iAFkDhWxFQ1WtHBEaObImcvtFUxy6vWSt3ehFFeTRouj3uHQAnbvUzziDyvPPm8/95alv5g/du8ML6YzzqKBKfazM0xQ7SF6R2DQL8lfFIp+RSV7T02byEP1f1g7Zva7xH9szIlDcSfU0pXW4KWbkBFMd8=
