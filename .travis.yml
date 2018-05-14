@@ -52,9 +52,9 @@ matrix:
     include:
         - os: linux
           env: 
-            - WXVERSION=pkg
-            - CC7=gcc-7
-            - CXX7=g++-7
+            - export WXVERSION=pkg
+            - export CC7=gcc-7
+            - export CXX7=g++-7
         - os: osx      
           env:
             - WXVERSION=pkg
