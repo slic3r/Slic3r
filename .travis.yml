@@ -49,12 +49,10 @@ dist: trusty
 matrix:
     include:
         - os: linux
-          language: c++
           env: 
             - WXVERSION=pkg
             - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - os: osx      
-          language: c++
           env:
             - WXVERSION=pkg
 env:
