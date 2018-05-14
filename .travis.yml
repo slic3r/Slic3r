@@ -49,9 +49,10 @@ matrix:
     include:
         - os: linux
           language: c++
-          env: CXX=g++-7
-          env: CX=gcc-7
-          env: WXVERSION=pkg
+          env: 
+            - CXX=g++-7
+            - CX=gcc-7
+            - WXVERSION=pkg
         - os: osx      
           language: c++
           env: WXVERSION=pkg
