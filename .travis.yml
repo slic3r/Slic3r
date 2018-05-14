@@ -5,8 +5,6 @@ env:
     - BOOST_DIR=$HOME/boost_1_63_0
     - SLIC3R_STATIC=1
 script:
-    - if [ -z ${CXX7+x} ]; then export CXX=$CXX7; fi
-    - if [ -z ${CC7+x} ]; then export CC=$CC7; fi
     - bash package/linux/travis-setup.sh
     - cmake -DBOOST_ROOT=$BOOST_DIR src/
     - make
@@ -52,9 +50,9 @@ matrix:
     include:
         - os: linux
           env: 
-            - export WXVERSION=pkg
-            - export CC=gcc-7
-            - export CXX=g++-7
+            - WXVERSION=pkg
+            - CC=gcc-7
+            - CXX=g++-7
         - os: osx      
           env:
             - WXVERSION=pkg
