@@ -1,4 +1,4 @@
-language: 
+language: generic
 before_install:
     - sh package/linux/travis-decrypt-key
 env:
