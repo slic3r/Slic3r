@@ -5,12 +5,6 @@ script:
     - bash package/linux/travis-setup.sh
     - cmake -DBOOST_ROOT=$BOOST_DIR src/
     - make
-after_success:
-    - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
-    - package/linux/appimage.sh x86_64
-    - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
-    - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
-    - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
 branches:
   only:
   - master
@@ -52,6 +46,12 @@ matrix:
             - CXX=g++-7
             - BOOST_DIR=$HOME/boost_1_63_0
             - SLIC3R_STATIC=1
+          after_success:
+            - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
+            - package/linux/appimage.sh x86_64
+            - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
+            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
+            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
         - os: osx      
           env:
             - WXVERSION=pkg
