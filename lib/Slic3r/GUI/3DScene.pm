@@ -33,6 +33,7 @@ __PACKAGE__->mk_accessors( qw(_quat _dirty init
                               origin
                               _mouse_pos
                               _hover_volume_idx
+                              _hover_face_idx
                               _drag_volume_idx
                               _drag_start_pos
                               _drag_start_xy
@@ -826,6 +827,7 @@ sub Render {
             my $col = [ glReadPixels_p($pos->x, $self->GetSize->GetHeight - $pos->y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE) ];
             my $volume_idx = $col->[0] + $col->[1]*256 + $col->[2]*256*256;
             $self->_hover_volume_idx(undef);
+            $self->_hover_face_idx(undef);
             $_->hover(0) for @{$self->volumes};
             if ($volume_idx <= $#{$self->volumes}) {
                 $self->_hover_volume_idx($volume_idx);
@@ -837,6 +839,16 @@ sub Render {
                 }
                 
                 $self->on_hover->($volume_idx) if $self->on_hover;
+
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                glFlush();
+                glFinish();
+                $self->draw_volumes(2);
+                my $color = [ glReadPixels_p($pos->x, $self->GetSize->GetHeight - $pos->y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE) ];
+                my $face_idx = $color->[0] + $color->[1]*256 + $color->[2]*256*256;
+                $self->_hover_face_idx($face_idx);
+                print ($face_idx);
+                print ("\n");
             }
         }
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -966,7 +978,7 @@ sub Render {
     glEnable(GL_LIGHTING);
     
     # draw objects
-    $self->draw_volumes;
+    $self->draw_volumes();
     
     # draw cutting plane
     if (defined $self->cutting_plane_z) {
@@ -1055,18 +1067,20 @@ sub draw_volumes {
         my $volume = $self->volumes->[$volume_idx];
         glPushMatrix();
         glTranslatef(@{$volume->origin});
-        
+        my @baseColor; 
         if ($fakecolor) {
             my $r = ($volume_idx & 0x000000FF) >>  0;
             my $g = ($volume_idx & 0x0000FF00) >>  8;
             my $b = ($volume_idx & 0x00FF0000) >> 16;
-            glColor4f($r/255.0, $g/255.0, $b/255.0, 1);
+            @baseColor = ($r/255.0, $g/255.0, $b/255.0, 1);
         } elsif ($volume->selected) {
-            glColor4f( @SELECTED_COLOR , $volume->color->[3]);
+            @baseColor = @SELECTED_COLOR;
+            push(@baseColor, $volume->color->[3]);
         } elsif ($volume->hover) {
-            glColor4f( @HOVER_COLOR, $volume->color->[3]);
+            @baseColor = @HOVER_COLOR;
+            push(@baseColor, $volume->color->[3]);
         } else {
-            glColor4f(@{ $volume->color });
+            @baseColor = @{ $volume->color };
         }
         
         my @sorted_z = ();
@@ -1090,7 +1104,7 @@ sub draw_volumes {
             }
             $min_offset //= 0;
             $max_offset //= $volume->qverts->size;
-            
+             
             glVertexPointer_c(3, GL_FLOAT, 0, $volume->qverts->verts_ptr);
             glNormalPointer_c(GL_FLOAT, 0, $volume->qverts->norms_ptr);
             glDrawArrays(GL_QUADS, $min_offset / 3, ($max_offset-$min_offset) / 3);
@@ -1106,10 +1120,45 @@ sub draw_volumes {
             }
             $min_offset //= 0;
             $max_offset //= $volume->tverts->size;
-            
-            glVertexPointer_c(3, GL_FLOAT, 0, $volume->tverts->verts_ptr);
-            glNormalPointer_c(GL_FLOAT, 0, $volume->tverts->norms_ptr);
-            glDrawArrays(GL_TRIANGLES, $min_offset / 3, ($max_offset-$min_offset) / 3);
+            if($fakecolor && $fakecolor == 2){
+                my @colors = (@baseColor)x($max_offset*4);
+                for my $i (0 .. ($#colors/12)){
+                     my $r = (($i) & 0x000000FF) >>  0;
+                     my $g = (($i) & 0x0000FF00) >>  8;
+                     my $b = (($i) & 0x00FF0000) >> 16;
+                     $colors[$i*4*3 + 0] = $r / 255.0;
+                     $colors[$i*4*3 + 1] = $g / 255.0;
+                     $colors[$i*4*3 + 2] = $b / 255.0;
+                     $colors[$i*4*3 + 3] = 1.0;
+                     $colors[$i*4*3 + 4] = $r / 255.0;
+                     $colors[$i*4*3 + 5] = $g / 255.0;
+                     $colors[$i*4*3 + 6] = $b / 255.0;
+                     $colors[$i*4*3 + 7] = 1.0;
+                     $colors[$i*4*3 + 8] = $r / 255.0;
+                     $colors[$i*4*3 + 9] = $g / 255.0;
+                     $colors[$i*4*3 + 10] = $b / 255.0;
+                     $colors[$i*4*3 + 11] = 1.0;
+                }
+                my $ptr = OpenGL::Array->new_list(GL_FLOAT,@colors);
+                glEnableClientState(GL_COLOR_ARRAY);
+                glColorPointer_c(4, GL_FLOAT, 0,  $ptr->ptr());
+                glVertexPointer_c(3, GL_FLOAT, 0, $volume->tverts->verts_ptr);
+                glNormalPointer_c(GL_FLOAT, 0, $volume->tverts->norms_ptr);
+                glDrawArrays(GL_TRIANGLES, $min_offset / 3, ($max_offset-$min_offset) / 3);
+                glDisableClientState(GL_COLOR_ARRAY);
+            } else {
+                     glVertexPointer_c(3, GL_FLOAT, 0, $volume->tverts->verts_ptr);
+                     glNormalPointer_c(GL_FLOAT, 0, $volume->tverts->norms_ptr);
+                     if ( not $fakecolor && defined $self->_hover_volume_idx && $volume_idx == $self->_hover_volume_idx && defined $self->_hover_face_idx && $self->_hover_face_idx <= $max_offset/3){
+                         my $i = $self->_hover_face_idx;
+                         glColor4f(0.0,0.0,1.0,1.0);
+                         glDrawArrays(GL_TRIANGLES, $i*3, 3);
+                     }
+                     glColor4f(@baseColor);
+                     glDrawArrays(GL_TRIANGLES, $min_offset / 3, ($max_offset-$min_offset) / 3);
+                      
+                     
+            }
         }
         
         glPopMatrix();
