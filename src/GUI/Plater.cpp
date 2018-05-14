@@ -9,6 +9,8 @@
 #include "MainFrame.hpp"
 #include "BoundingBox.hpp"
 #include "Geometry.hpp"
+#include "Dialogs/AnglePicker.hpp"
+
 
 namespace Slic3r { namespace GUI {
 
@@ -450,11 +452,6 @@ void Plater::object_settings_dialog(ObjRef obj) {
 
 }
 
-wxMenu* Plater::object_menu() {
-    return new wxMenu();
-}
-
-
 void Plater::select_object(ObjRef obj) {
     for (auto& o : this->objects) {
         o.selected = false;
@@ -733,8 +730,26 @@ void Plater::decrease(size_t copies, bool dont_push) {
     this->on_model_change();
 } 
 
+void Plater::rotate(Axis axis, bool dont_push) {
+    ObjRef obj {this->selected_object()};
+    if (obj == this->objects.end()) return;
+    double angle {0.0};
+
+    auto* model_object {this->model->objects.at(obj->identifier)};
+    auto model_instance {model_object->instances.begin()};
+
+    // pop a menu to get the angle
+    auto* pick = new AnglePicker<1000>(this, "Set Angle", angle);
+    if (pick->ShowModal() == wxID_OK) {
+        angle = pick->angle();
+        pick->Destroy(); // cleanup afterwards.
+        this->rotate(angle, axis, dont_push);
+    } else {
+        pick->Destroy(); // cleanup afterwards.
+    }
+}
+
 void Plater::rotate(double angle, Axis axis, bool dont_push) {
-    //TODO
     ObjRef obj {this->selected_object()};
     if (obj == this->objects.end()) return;
 
@@ -761,7 +776,7 @@ void Plater::rotate(double angle, Axis axis, bool dont_push) {
     this->print->add_model_object(model_object, obj->identifier);
 
     if (!dont_push) {
-        // TODO
+        add_undo_operation(UndoCmd::Rotate, obj->identifier, angle, axis);
     }
 
     this->selection_changed();
@@ -797,6 +812,9 @@ void Plater::add_undo_operation(UndoCmd cmd, int obj_id, Slic3r::Model& model) {
 void Plater::add_undo_operation(UndoCmd cmd, int obj_id, size_t copies) {
 }
 
+void Plater::add_undo_operation(UndoCmd cmd, int obj_id, double angle, Axis axis) {
+}
+
 void Plater::object_list_changed() {
     //TODO
 }
@@ -814,6 +832,128 @@ void Plater::pause_background_process() {
 }
 void Plater::resume_background_process() {
     //TODO
+}
+
+wxMenu* Plater::object_menu() {
+    auto* frame {this->GetFrame()};
+    auto* menu {new wxMenu()};
+
+    append_menu_item(menu, _("Delete"), _("Remove the selected object."), [=](wxCommandEvent& e) { this->remove();}, wxID_ANY, "brick_delete.png", "Ctrl+Del");
+/*
+    wxTheApp->append_menu_item($menu, "Delete\tCtrl+Del", 'Remove the selected object', sub {
+        $self->remove;
+    }, undef, 'brick_delete.png');
+    wxTheApp->append_menu_item($menu, "Increase copies\tCtrl++", 'Place one more copy of the selected object', sub {
+        $self->increase;
+    }, undef, 'add.png');
+    wxTheApp->append_menu_item($menu, "Decrease copies\tCtrl+-", 'Remove one copy of the selected object', sub {
+        $self->decrease;
+    }, undef, 'delete.png');
+    wxTheApp->append_menu_item($menu, "Set number of copies…", 'Change the number of copies of the selected object', sub {
+        $self->set_number_of_copies;
+    }, undef, 'textfield.png');
+    $menu->AppendSeparator();
+    wxTheApp->append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
+        $self->center_selected_object_on_bed;
+    }, undef, 'arrow_in.png');
+    wxTheApp->append_menu_item($menu, "Rotate 45° clockwise", 'Rotate the selected object by 45° clockwise', sub {
+        $self->rotate(-45);
+    }, undef, 'arrow_rotate_clockwise.png');
+    wxTheApp->append_menu_item($menu, "Rotate 45° counter-clockwise", 'Rotate the selected object by 45° counter-clockwise', sub {
+        $self->rotate(+45);
+    }, undef, 'arrow_rotate_anticlockwise.png');
+   */ 
+    {
+        auto* rotateMenu {new wxMenu};
+        append_menu_item(rotateMenu, _(L"Around X axis…"), _("Rotate the selected object by an arbitrary angle around X axis."), [this](wxCommandEvent& e) { this->rotate(X); }, wxID_ANY, "bullet_red.png");
+
+        append_menu_item(rotateMenu, _(L"Around Y axis…"), _("Rotate the selected object by an arbitrary angle around Y axis."), [this](wxCommandEvent& e) { this->rotate(Y); }, wxID_ANY, "bullet_green.png");
+
+        append_menu_item(rotateMenu, _(L"Around Z axis…"), _("Rotate the selected object by an arbitrary angle around Z axis."), [this](wxCommandEvent& e) { this->rotate(Z); }, wxID_ANY, "bullet_blue.png");
+
+        append_submenu(menu, _("Rotate"), _("Rotate the selected object by an arbitrary angle"), rotateMenu, wxID_ANY, "textfield.png");
+    }
+    /*
+    
+    {
+        my $mirrorMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($mirrorMenu, "Along X axis…", 'Mirror the selected object along the X axis', sub {
+            $self->mirror(X);
+        }, undef, 'bullet_red.png');
+        wxTheApp->append_menu_item($mirrorMenu, "Along Y axis…", 'Mirror the selected object along the Y axis', sub {
+            $self->mirror(Y);
+        }, undef, 'bullet_green.png');
+        wxTheApp->append_menu_item($mirrorMenu, "Along Z axis…", 'Mirror the selected object along the Z axis', sub {
+            $self->mirror(Z);
+        }, undef, 'bullet_blue.png');
+        wxTheApp->append_submenu($menu, "Mirror", 'Mirror the selected object', $mirrorMenu, undef, 'shape_flip_horizontal.png');
+    }
+    
+    {
+        my $scaleMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($scaleMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
+            $self->changescale(undef);
+        });
+        wxTheApp->append_menu_item($scaleMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
+            $self->changescale(X);
+        }, undef, 'bullet_red.png');
+        wxTheApp->append_menu_item($scaleMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
+            $self->changescale(Y);
+        }, undef, 'bullet_green.png');
+        wxTheApp->append_menu_item($scaleMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
+            $self->changescale(Z);
+        }, undef, 'bullet_blue.png');
+        wxTheApp->append_submenu($menu, "Scale", 'Scale the selected object by a given factor', $scaleMenu, undef, 'arrow_out.png');
+    }
+    
+    {
+        my $scaleToSizeMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($scaleToSizeMenu, "Uniformly…", 'Scale the selected object along the XYZ axes', sub {
+            $self->changescale(undef, 1);
+        });
+        wxTheApp->append_menu_item($scaleToSizeMenu, "Along X axis…", 'Scale the selected object along the X axis', sub {
+            $self->changescale(X, 1);
+        }, undef, 'bullet_red.png');
+        wxTheApp->append_menu_item($scaleToSizeMenu, "Along Y axis…", 'Scale the selected object along the Y axis', sub {
+            $self->changescale(Y, 1);
+        }, undef, 'bullet_green.png');
+        wxTheApp->append_menu_item($scaleToSizeMenu, "Along Z axis…", 'Scale the selected object along the Z axis', sub {
+            $self->changescale(Z, 1);
+        }, undef, 'bullet_blue.png');
+        wxTheApp->append_submenu($menu, "Scale to size", 'Scale the selected object to match a given size', $scaleToSizeMenu, undef, 'arrow_out.png');
+    }
+    
+    wxTheApp->append_menu_item($menu, "Split", 'Split the selected object into individual parts', sub {
+        $self->split_object;
+    }, undef, 'shape_ungroup.png');
+    wxTheApp->append_menu_item($menu, "Cut…", 'Open the 3D cutting tool', sub {
+        $self->object_cut_dialog;
+    }, undef, 'package.png');
+    wxTheApp->append_menu_item($menu, "Layer heights…", 'Open the dynamic layer height control', sub {
+        $self->object_layers_dialog;
+    }, undef, 'variable_layer_height.png');
+    $menu->AppendSeparator();
+    wxTheApp->append_menu_item($menu, "Settings…", 'Open the object editor dialog', sub {
+        $self->object_settings_dialog;
+    }, undef, 'cog.png');
+    $menu->AppendSeparator();
+    wxTheApp->append_menu_item($menu, "Reload from Disk", 'Reload the selected file from Disk', sub {
+        $self->reload_from_disk;
+    }, undef, 'arrow_refresh.png');
+    wxTheApp->append_menu_item($menu, "Export object as STL…", 'Export this single object as STL file', sub {
+        $self->export_object_stl;
+    }, undef, 'brick_go.png');
+    wxTheApp->append_menu_item($menu, "Export object and modifiers as AMF…", 'Export this single object and all associated modifiers as AMF file', sub {
+        $self->export_object_amf;
+    }, undef, 'brick_go.png');
+    wxTheApp->append_menu_item($menu, "Export object and modifiers as 3MF…", 'Export this single object and all associated modifiers as 3MF file', sub {
+            $self->export_object_tmf;
+    }, undef, 'brick_go.png');
+    
+    return $menu;
+}
+*/
+    return menu;
 }
 
 }} // Namespace Slic3r::GUI

@@ -120,11 +120,9 @@ void MainFrame::init_menubar()
     
     wxMenu* menuPlater = new wxMenu();
     {
-        append_menu_item(menuPlater, _(L"Arrange…"), _("Arrange models on plater"), [=](wxCommandEvent& e) { if (this->plater != nullptr) this->plater->arrange();}, wxID_ANY, "bricks.png", "Ctrl+G");
+        append_menu_item(menuPlater, _(L"Arrange…"), _("Arrange models on plater"), [this](wxCommandEvent& e) { if (this->plater != nullptr) this->plater->arrange();}, wxID_ANY, "bricks.png", "Ctrl+G");
     }
-    wxMenu* menuObject = new wxMenu();
-    {
-    }
+    wxMenu* menuObject = this->plater->object_menu();
     wxMenu* menuSettings = new wxMenu();
     {
     }

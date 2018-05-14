@@ -31,7 +31,7 @@ namespace Slic3r { namespace GUI {
 using UndoOperation = int;
 
 enum class UndoCmd {
-    Remove, Add, Reset, Increase, Decrease
+    Remove, Add, Reset, Increase, Decrease, Rotate
 };
 
 using ObjIdx = unsigned int;
@@ -69,6 +69,12 @@ public:
     
     /// Undo for increase/decrease 
     void add_undo_operation(UndoCmd cmd, int obj_id, size_t copies);
+
+    /// Undo for increase/decrease 
+    void add_undo_operation(UndoCmd cmd, int obj_id, double angle, Axis axis);
+
+    /// Create menu for object.
+    wxMenu* object_menu();
 
 private:
     std::shared_ptr<Slic3r::Print> print {std::make_shared<Print>(Slic3r::Print())};
@@ -158,8 +164,6 @@ private:
     void object_settings_dialog(ObjIdx obj_idx);
     void object_settings_dialog(ObjRef obj);
 
-    /// Create and launch menu for object.
-    wxMenu* object_menu();
 
     /// Instantiate the toolbar 
     void build_toolbar();
@@ -173,6 +177,8 @@ private:
     /// Remove instances of the currently selected model.
     void decrease(size_t copies = 1, bool dont_push = false); 
 
+    /// Rotate the currently selected model, triggering a user prompt.
+    void rotate(Axis axis = Z, bool dont_push = false); 
     /// Rotate the currently selected model.
     void rotate(double angle, Axis axis = Z, bool dont_push = false); 
 
