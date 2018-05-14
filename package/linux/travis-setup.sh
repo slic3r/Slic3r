@@ -3,7 +3,7 @@
 CACHE=$HOME/cache
 mkdir -p $CACHE
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-    if [[ "$WXVERSION" -neq "pkg" ]]; then
+    if [[ "$WXVERSION"  != "pkg" ]]; then
         export WXDIR=$HOME/wx${WXVERSION}
         if [ ! -e $CACHE/boost-compiled.tar.bz2 ]; then
             echo "Downloading http://www.siusgs.com/slic3r/buildserver/boost_1_63_0.built.gcc-4.9.4-buildserver.tar.bz2 => $CACHE/boost-compiled.tar.bz2"
@@ -20,7 +20,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     fi
 
 elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    if [[ "$WXVERSION" -neq "pkg" ]]; then
+    if [[ "$WXVERSION" != "pkg" ]]; then
         WXVER_EXPANDED=${WXVERSION:0:1}.${WXVERSION:1:1}.${WXVERSION:2:1}
         export WXDIR=$HOME/wx${WXVERSION}
         if [ ! -e $CACHE/wx${WXVERSION}-${TRAVIS_OS_NAME}.tar.bz2 ]; then
