@@ -10,17 +10,17 @@ static void link_clicked(wxHtmlLinkEvent& e)
 
 AboutDialog::AboutDialog(wxWindow* parent) : wxDialog(parent, -1, _("About Slic3r"), wxDefaultPosition, wxSize(600, 460), wxCAPTION)
 { 
-        auto hsizer = new wxBoxSizer(wxHORIZONTAL) ;
+        auto* hsizer {new wxBoxSizer(wxHORIZONTAL)} ;
 
-        auto vsizer = new wxBoxSizer(wxVERTICAL) ;
+        auto* vsizer {new wxBoxSizer(wxVERTICAL)} ;
 
         // logo
-        auto logo = new AboutDialogLogo(this);
+        auto* logo {new AboutDialogLogo(this)};
         hsizer->Add(logo, 0, wxEXPAND | wxLEFT | wxRIGHT, 30);
 
         // title
-        auto title = new wxStaticText(this, -1, "Slic3r", wxDefaultPosition, wxDefaultSize);
-        auto title_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+        auto* title     { new wxStaticText(this, -1, "Slic3r", wxDefaultPosition, wxDefaultSize)};
+        auto title_font { wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT)};
 
         title_font.SetWeight(wxFONTWEIGHT_BOLD);
         title_font.SetFamily(wxFONTFAMILY_ROMAN);
@@ -31,8 +31,8 @@ AboutDialog::AboutDialog(wxWindow* parent) : wxDialog(parent, -1, _("About Slic3
 
         // version
         
-        auto version = new wxStaticText(this, -1, wxString("Version ") + wxString(SLIC3R_VERSION), wxDefaultPosition, wxDefaultSize);
-        auto version_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+        auto* version {new wxStaticText(this, -1, wxString("Version ") + wxString(SLIC3R_VERSION), wxDefaultPosition, wxDefaultSize)};
+        auto version_font { wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
         version_font.SetPointSize((the_os == OS::Windows ? 9 : 11));
         version->SetFont(version_font);
         vsizer->Add(version, 0, wxALIGN_LEFT | wxBOTTOM, 10);
@@ -54,7 +54,7 @@ AboutDialog::AboutDialog(wxWindow* parent) : wxDialog(parent, -1, _("About Slic3
             << "Built on " << build_date << " at git version " << git_version << "."
             << "</body>"
             << "</html>";
-        auto html = new wxHtmlWindow(this, -1, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_NEVER);
+        auto* html {new wxHtmlWindow(this, -1, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_NEVER)};
         html->SetBorders(2);
         html->SetPage(text);
 
@@ -83,13 +83,13 @@ AboutDialogLogo::AboutDialogLogo(wxWindow* parent) :
 
 void AboutDialogLogo::repaint(wxPaintEvent& event)
 {
-    wxPaintDC dc(this);
+    wxPaintDC dc {this};
 
     dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
 
-    const wxSize size = this->GetSize() ;
-    const auto logo_w = this->logo.GetWidth();
-    const auto logo_h = this->logo.GetHeight();
+    const wxSize size {this->GetSize()} ;
+    const auto logo_w {this->logo.GetWidth()};
+    const auto logo_h {this->logo.GetHeight()};
 
     dc.DrawBitmap(this->logo, (size.GetWidth() - logo_w) / 2, (size.GetHeight() - logo_h) / 2, 1);
     event.Skip();
