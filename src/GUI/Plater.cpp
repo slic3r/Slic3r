@@ -839,36 +839,19 @@ wxMenu* Plater::object_menu() {
     auto* menu {new wxMenu()};
 
     append_menu_item(menu, _("Delete"), _("Remove the selected object."), [=](wxCommandEvent& e) { this->remove();}, wxID_ANY, "brick_delete.png", "Ctrl+Del");
-/*
-    wxTheApp->append_menu_item($menu, "Delete\tCtrl+Del", 'Remove the selected object', sub {
-        $self->remove;
-    }, undef, 'brick_delete.png');
-    wxTheApp->append_menu_item($menu, "Increase copies\tCtrl++", 'Place one more copy of the selected object', sub {
-        $self->increase;
-    }, undef, 'add.png');
-    wxTheApp->append_menu_item($menu, "Decrease copies\tCtrl+-", 'Remove one copy of the selected object', sub {
-        $self->decrease;
-    }, undef, 'delete.png');
-    wxTheApp->append_menu_item($menu, "Set number of copies…", 'Change the number of copies of the selected object', sub {
-        $self->set_number_of_copies;
-    }, undef, 'textfield.png');
-    $menu->AppendSeparator();
-    wxTheApp->append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
-        $self->center_selected_object_on_bed;
-    }, undef, 'arrow_in.png');
-    wxTheApp->append_menu_item($menu, "Rotate 45° clockwise", 'Rotate the selected object by 45° clockwise', sub {
-        $self->rotate(-45);
-    }, undef, 'arrow_rotate_clockwise.png');
-    wxTheApp->append_menu_item($menu, "Rotate 45° counter-clockwise", 'Rotate the selected object by 45° counter-clockwise', sub {
-        $self->rotate(+45);
-    }, undef, 'arrow_rotate_anticlockwise.png');
-   */ 
+    append_menu_item(menu, _("Increase copies"), _("Place one more copy of the selected object."), [=](wxCommandEvent& e) { this->increase();}, wxID_ANY, "add.png", "Ctrl++");
+    append_menu_item(menu, _("Decrease copies"), _("Remove one copy of the selected object."), [=](wxCommandEvent& e) { this->decrease();}, wxID_ANY, "delete.png", "Ctrl+-");
+    append_menu_item(menu, _(L"Set number of copies…"), _("Change the number of copies of the selected object."), [=](wxCommandEvent& e) { this->decrease();}, wxID_ANY, "textfield.png");
+    menu->AppendSeparator();
+    append_menu_item(menu, _(L"Move to bed center"), _(L"Center object around bed center."), [=](wxCommandEvent& e) { this->center_selected_object_on_bed();}, wxID_ANY, "arrow_in.png");
+    append_menu_item(menu, _(L"Rotate 45° clockwise"), _(L"Rotate the selected object by 45° clockwise."), [=](wxCommandEvent& e) { this->rotate(45);}, wxID_ANY, "arrow_rotate_clockwise.png");
+    append_menu_item(menu, _(L"Rotate 45° counter-clockwise"), _(L"Rotate the selected object by 45° counter-clockwise."), [=](wxCommandEvent& e) { this->rotate(-45);}, wxID_ANY, "arrow_rotate_anticlockwise.png");
+    
     {
         auto* rotateMenu {new wxMenu};
+
         append_menu_item(rotateMenu, _(L"Around X axis…"), _("Rotate the selected object by an arbitrary angle around X axis."), [this](wxCommandEvent& e) { this->rotate(X); }, wxID_ANY, "bullet_red.png");
-
         append_menu_item(rotateMenu, _(L"Around Y axis…"), _("Rotate the selected object by an arbitrary angle around Y axis."), [this](wxCommandEvent& e) { this->rotate(Y); }, wxID_ANY, "bullet_green.png");
-
         append_menu_item(rotateMenu, _(L"Around Z axis…"), _("Rotate the selected object by an arbitrary angle around Z axis."), [this](wxCommandEvent& e) { this->rotate(Z); }, wxID_ANY, "bullet_blue.png");
 
         append_submenu(menu, _("Rotate"), _("Rotate the selected object by an arbitrary angle"), rotateMenu, wxID_ANY, "textfield.png");
