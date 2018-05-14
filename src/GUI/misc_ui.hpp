@@ -107,6 +107,8 @@ void show_info(wxWindow* parent, const wxString& message, const wxString& title)
 /// Show an error messagebox and then throw an exception.
 void fatal_error(wxWindow* parent, const wxString& message);
 
+/// Assign a menu item icon
+void set_menu_item_icon(wxMenuItem* item, const wxString& icon);
 
 template <typename T>
 void append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T lambda, int id = wxID_ANY, const wxString& icon = "", const wxString& accel = "") {
@@ -117,17 +119,13 @@ void append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T
         tmp->SetAccel(a); // set the accelerator if and only if the accelerator is fine
     }
     tmp->SetHelp(help);
-    if (!icon.IsEmpty()) {
-        wxBitmap ico;
-        if(ico.LoadFile(var(icon), wxBITMAP_TYPE_PNG))  
-            tmp->SetBitmap(ico);
-        else 
-            std::cerr<< var(icon) << " failed to load \n";
-        }
+    set_menu_item_icon(tmp, icon);
 
     if (typeid(lambda) != typeid(nullptr))
         menu->Bind(wxEVT_MENU, lambda, tmp->GetId(), tmp->GetId());
 }
+
+wxMenuItem* append_submenu(wxMenu* menu, const wxString& name, const wxString& help, wxMenu* submenu, int id = wxID_ANY, const wxString& icon = "");
 
 /*
 sub CallAfter {

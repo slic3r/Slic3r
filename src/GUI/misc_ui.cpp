@@ -64,6 +64,24 @@ void fatal_error(wxWindow* parent, const wxString& message) {
     throw std::runtime_error(message.ToStdString());
 }
 
+wxMenuItem* append_submenu(wxMenu* menu, const wxString& name, const wxString& help, wxMenu* submenu, int id, const wxString& icon) {
+    auto* item {new wxMenuItem(menu, id, name, help)};
+    
+    set_menu_item_icon(item,icon);
+    item->SetSubMenu(submenu);
+    menu->Append(item);
+    return item;
+}
+
+void set_menu_item_icon(wxMenuItem* item, const wxString& icon) {
+    if (!icon.IsEmpty()) {
+        wxBitmap ico;
+        if(ico.LoadFile(var(icon), wxBITMAP_TYPE_PNG))  
+            item->SetBitmap(ico);
+        else 
+            std::cerr<< var(icon) << " failed to load \n";
+    }
+}
 
 /*
 sub append_submenu {
