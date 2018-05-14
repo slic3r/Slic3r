@@ -52,7 +52,7 @@ matrix:
           env: 
             - WXVERSION=pkg
             - CC=gcc-7
-            - CXX-g++-7
+            - CXX=g++-7
         - os: osx      
           env:
             - WXVERSION=pkg
