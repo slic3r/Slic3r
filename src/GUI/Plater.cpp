@@ -1,6 +1,7 @@
 #include <memory>
 #include <wx/progdlg.h>
 #include <wx/window.h> 
+#include <wx/numdlg.h> 
 
 
 #include "Plater.hpp"
@@ -841,7 +842,7 @@ wxMenu* Plater::object_menu() {
     append_menu_item(menu, _("Delete"), _("Remove the selected object."), [=](wxCommandEvent& e) { this->remove();}, wxID_ANY, "brick_delete.png", "Ctrl+Del");
     append_menu_item(menu, _("Increase copies"), _("Place one more copy of the selected object."), [=](wxCommandEvent& e) { this->increase();}, wxID_ANY, "add.png", "Ctrl++");
     append_menu_item(menu, _("Decrease copies"), _("Remove one copy of the selected object."), [=](wxCommandEvent& e) { this->decrease();}, wxID_ANY, "delete.png", "Ctrl+-");
-    append_menu_item(menu, _(L"Set number of copies…"), _("Change the number of copies of the selected object."), [=](wxCommandEvent& e) { this->decrease();}, wxID_ANY, "textfield.png");
+    append_menu_item(menu, _(L"Set number of copies…"), _("Change the number of copies of the selected object."), [=](wxCommandEvent& e) { this->set_number_of_copies();}, wxID_ANY, "textfield.png");
     menu->AppendSeparator();
     append_menu_item(menu, _(L"Move to bed center"), _(L"Center object around bed center."), [=](wxCommandEvent& e) { this->center_selected_object_on_bed();}, wxID_ANY, "arrow_in.png");
     append_menu_item(menu, _(L"Rotate 45° clockwise"), _(L"Rotate the selected object by 45° clockwise."), [=](wxCommandEvent& e) { this->rotate(45);}, wxID_ANY, "arrow_rotate_clockwise.png");
@@ -937,6 +938,41 @@ wxMenu* Plater::object_menu() {
 }
 */
     return menu;
+}
+
+void Plater::set_number_of_copies() {
+    this->pause_background_process();
+
+    ObjRef obj {this->selected_object()};
+    if (obj == this->objects.end()) return;
+    auto* model_object { this->model->objects.at(obj->identifier) };
+
+    long copies = -1;
+    copies = wxGetNumberFromUser("", _("Enter the number of copies of the selected object:"), _("Copies"), model_object->instances.size(), 0, 1000, this);
+    if (copies < 0) return;
+    long diff {copies - model_object->instances.size() };
+
+    if      (diff == 0) { this->resume_background_process(); }
+    else if (diff > 0)  { this->increase(diff); }
+    else if (diff < 0)  { this->decrease(-diff); }
+}
+void Plater::center_selected_object_on_bed() {
+    ObjRef obj {this->selected_object()};
+    
+    if (obj == this->objects.end()) return;
+    auto* model_object { this->model->objects.at(obj->identifier) };
+    auto bb {model_object->bounding_box()};
+    auto size {bb.size()};
+
+    auto vector { Slic3r::Pointf(
+            this->bed_centerf().x - bb.min.x - size.x/2.0,
+            this->bed_centerf().y - bb.min.y - size.y/2.0)};
+    for (auto* inst : model_object->instances) {
+        inst->offset.translate(vector);
+    }
+
+    this->refresh_canvases();
+
 }
 
 }} // Namespace Slic3r::GUI

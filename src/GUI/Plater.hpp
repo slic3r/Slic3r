@@ -145,7 +145,6 @@ private:
     /// Complete thumbnail transformation and refresh canvases  
     void on_thumbnail_made(size_t idx); 
 
-
     /// Issue a repaint event to all of the canvasses.
     void refresh_canvases();
 
@@ -163,7 +162,6 @@ private:
     void object_settings_dialog();
     void object_settings_dialog(ObjIdx obj_idx);
     void object_settings_dialog(ObjRef obj);
-
 
     /// Instantiate the toolbar 
     void build_toolbar();
@@ -204,6 +202,11 @@ private:
 
     void pause_background_process();
     void resume_background_process();
+
+    /// Move the selected object to the center of bed.
+    void center_selected_object_on_bed();
+
+    void set_number_of_copies();
 };
 
 
