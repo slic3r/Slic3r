@@ -174,7 +174,7 @@ private:
     void decrease(size_t copies = 1, bool dont_push = false); 
 
     /// Rotate the currently selected model.
-    void rotate(double angle); 
+    void rotate(double angle, Axis axis = Z, bool dont_push = false); 
 
     /// Separate a multipart model to its component interfaces.
     void split_object(); 

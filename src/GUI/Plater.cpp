@@ -8,6 +8,7 @@
 #include "Log.hpp"
 #include "MainFrame.hpp"
 #include "BoundingBox.hpp"
+#include "Geometry.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -732,8 +733,40 @@ void Plater::decrease(size_t copies, bool dont_push) {
     this->on_model_change();
 } 
 
-void Plater::rotate(double angle) {
+void Plater::rotate(double angle, Axis axis, bool dont_push) {
     //TODO
+    ObjRef obj {this->selected_object()};
+    if (obj == this->objects.end()) return;
+
+    auto* model_object {this->model->objects.at(obj->identifier)};
+    auto* model_instance {model_object->instances.front()};
+
+    if(obj->thumbnail.expolygons.size() == 0) { return; }
+
+    if (axis == Z) {
+        for (auto* instance : model_object->instances)
+            instance->rotation += Geometry::deg2rad(angle);
+        obj->transform_thumbnail(this->model, obj->identifier);
+    } else {
+        model_object->transform_by_instance(*model_instance, true);
+        model_object->rotate(Geometry::deg2rad(angle), axis);
+
+        // realign object to Z=0
+        model_object->center_around_origin();
+        this->make_thumbnail(obj->identifier);
+    }
+
+    model_object->update_bounding_box();
+
+    this->print->add_model_object(model_object, obj->identifier);
+
+    if (!dont_push) {
+        // TODO
+    }
+
+    this->selection_changed();
+    this->on_model_change();
+
 } 
 
 void Plater::split_object() {
