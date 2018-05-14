@@ -1,4 +1,6 @@
 #include <memory>
+#include <climits>
+
 #include <wx/progdlg.h>
 #include <wx/window.h> 
 #include <wx/numdlg.h> 

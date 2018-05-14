@@ -88,8 +88,8 @@ void AboutDialogLogo::repaint(wxPaintEvent& event)
     dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
 
     const wxSize size = this->GetSize() ;
-    const auto logo_w {this->logo.GetWidth()};
-    const auto logo_h {this->logo.GetHeight()};
+    const auto logo_w = this->logo.GetWidth();
+    const auto logo_h = this->logo.GetHeight();
 
     dc.DrawBitmap(this->logo, (size.GetWidth() - logo_w) / 2, (size.GetHeight() - logo_h) / 2, 1);
     event.Skip();
