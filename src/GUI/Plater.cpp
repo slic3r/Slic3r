@@ -950,7 +950,13 @@ void Plater::set_number_of_copies() {
     long copies = -1;
     copies = wxGetNumberFromUser("", _("Enter the number of copies of the selected object:"), _("Copies"), model_object->instances.size(), 0, 1000, this);
     if (copies < 0) return;
-    long diff {copies - model_object->instances.size() };
+    long instance_count = 0;
+    if (model_object->instances.size() <= LONG_MAX) {
+        instance_count = static_cast<long>(model_object->instances.size());
+    } else {
+        instance_count = LONG_MAX;
+    }
+    long diff {copies - instance_count };
 
     if      (diff == 0) { this->resume_background_process(); }
     else if (diff > 0)  { this->increase(diff); }
