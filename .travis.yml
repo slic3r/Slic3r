@@ -8,7 +8,6 @@ script:
 branches:
   only:
   - master
-  - xsgui
   - cppgui
 cache:
   apt: true
