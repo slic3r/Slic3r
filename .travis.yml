@@ -1,7 +1,3 @@
-os:
-    - linux
-    - osx
-language: c++
 before_install:
 - sh package/linux/travis-decrypt-key
 install:
@@ -51,6 +47,15 @@ notifications:
 dist: trusty
 env:
   matrix:
+    include:
+        - os: linux
+          language: c++
+          env: CXX=g++-7
+          env: CX=gcc-7
+          env: WXVERSION=pkg
+        - os: osx      
+          language: c++
+          env: WXVERSION=pkg
   global:
   - secure: eEVRZNMv7FM6jrOU9iAFkDhWxFQ1WtHBEaObImcvtFUxy6vWSt3ehFFeTRouj3uHQAnbvUzziDyvPPm8/95alv5g/du8ML6YzzqKBKfazM0xQ7SF6R2DQL8lfFIp+RSV7T02byEP1f1g7Zva7xH9szIlDcSfU0pXW4KWbkBFMd8=
   - secure: gj338h+qHGccTD/VQFmEJkqdg2McIe2pO0iZ4Ae9BvY5vxkIML4BpoYZQXQTqiAOETnUjlcknY9lx0hI/PfkDD9MSJc5BC/3fMYRCu3SgAclEwklWf9vvtodUeT69mtnZuw1zze1nTbExuOw2mepbqFjxKKMl+9l5oCz4O54fXU=
