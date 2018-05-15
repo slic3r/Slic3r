@@ -33,14 +33,12 @@ __PACKAGE__->mk_accessors( qw(_quat _dirty init
                               origin
                               _mouse_pos
                               _hover_volume_idx
-                              _hover_face_idx
                               _drag_volume_idx
                               _drag_start_pos
                               _drag_start_xy
                               _dragged
                               _camera_target
                               _zoom
-                              _cached_colors
                               ) );
 
 use constant TRACKBALLSIZE  => 0.8;
@@ -519,13 +517,16 @@ sub set_bed_shape {
 sub deselect_volumes {
     my ($self) = @_;
     $_->selected(0) for @{$self->volumes};
+    $_->selected_face(-1) for @{$self->volumes};
 }
 
 sub select_volume {
     my ($self, $volume_idx) = @_;
     
-    $self->volumes->[$volume_idx]->selected(1)
-        if $volume_idx != -1;
+    if ($volume_idx != -1) {
+        $self->volumes->[$volume_idx]->selected(1);
+        $self->volumes->[$volume_idx]->selected_face($self->volumes->[$volume_idx]->hover_face);
+    }
 }
 
 sub SetCuttingPlane {
@@ -828,8 +829,8 @@ sub Render {
             my $col = [ glReadPixels_p($pos->x, $self->GetSize->GetHeight - $pos->y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE) ];
             my $volume_idx = $col->[0] + $col->[1]*256 + $col->[2]*256*256;
             $self->_hover_volume_idx(undef);
-            $self->_hover_face_idx(undef);
             $_->hover(0) for @{$self->volumes};
+            $_->hover_face(-1) for @{$self->volumes};
             if ($volume_idx <= $#{$self->volumes}) {
                 $self->_hover_volume_idx($volume_idx);
                 
@@ -847,7 +848,8 @@ sub Render {
                 $self->draw_volumes(2);
                 my $color = [ glReadPixels_p($pos->x, $self->GetSize->GetHeight - $pos->y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE) ];
                 my $face_idx = $color->[0] + $color->[1]*256 + $color->[2]*256*256;
-                $self->_hover_face_idx($face_idx);
+                $self->volumes->[$volume_idx]->hover_face($face_idx);
+                #$self->_hover_face_idx($face_idx);
             }
         }
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1154,8 +1156,13 @@ sub draw_volumes {
             } else {
                      glVertexPointer_c(3, GL_FLOAT, 0, $volume->tverts->verts_ptr);
                      glNormalPointer_c(GL_FLOAT, 0, $volume->tverts->norms_ptr);
-                     if ( (not $fakecolor) && defined $self->_hover_volume_idx && $volume_idx == $self->_hover_volume_idx && defined $self->_hover_face_idx && $self->_hover_face_idx <= $max_offset/3){
-                         my $i = $self->_hover_face_idx;
+                     if ( (not $fakecolor) && $volume->selected && $volume->selected_face != -1 && $volume->selected_face <= $max_offset/3){
+                         my $i = $volume->selected_face;
+                         glColor4f(1.0,0.0,0.0,1.0);
+                         glDrawArrays(GL_TRIANGLES, $i*3, 3);
+                     }
+                     if ( (not $fakecolor) && $volume->hover && $volume->hover_face != -1 && $volume->hover_face <= $max_offset/3){
+                         my $i = $volume->hover_face;
                          glColor4f(0.0,0.0,1.0,1.0);
                          glDrawArrays(GL_TRIANGLES, $i*3, 3);
                      }
@@ -1207,7 +1214,9 @@ has 'color'             => (is => 'ro', required => 1);
 has 'select_group_id'   => (is => 'rw', default => sub { -1 });
 has 'drag_group_id'     => (is => 'rw', default => sub { -1 });
 has 'selected'          => (is => 'rw', default => sub { 0 });
+has 'selected_face'     => (is => 'rw', default => sub { -1 });
 has 'hover'             => (is => 'rw', default => sub { 0 });
+has 'hover_face'        => (is => 'rw', default => sub { -1 });
 has 'range'             => (is => 'rw');
 
 # geometric data
