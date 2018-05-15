@@ -47,7 +47,7 @@ endif(DEFINED ENV{SLIC3R_STATIC})
 
 find_package(Threads REQUIRED)
 
-find_package(Boost COMPONENTS system thread filesystem)
+find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
 set(GUI_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/GUI/)
