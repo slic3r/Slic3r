@@ -32,18 +32,23 @@ class Point
     public:
     coord_t x;
     coord_t y;
-    Point(coord_t _x = 0, coord_t _y = 0): x(_x), y(_y) {};
-    Point(int _x, int _y): x(_x), y(_y) {};
-    Point(long long _x, long long _y): x(_x), y(_y) {};  // for Clipper
-    Point(double x, double y);
+    coord_t z;
+    Point(coord_t _x = 0, coord_t _y = 0, coord_t _z = -1): x(_x), y(_y), z(_z) {};
+    Point(int _x, int _y, int _z): x(_x), y(_y), z(_z) {};
+    Point(long long _x, long long _y, long long _z): x(_x), y(_y), z(_z) {};  // for Clipper
+    Point(double x, double y, double z);
     static Point new_scale(coordf_t x, coordf_t y) {
         return Point(scale_(x), scale_(y));
+    };
+    static Point new_scale(coordf_t x, coordf_t y, coordf_t z) {
+        return Point(scale_(x), scale_(y), scale_(z));
     };
     bool operator==(const Point& rhs) const;
     std::string wkt() const;
     std::string dump_perl() const;
     void scale(double factor);
     void translate(double x, double y);
+    void translate(double x, double y, double z);
     void translate(const Vector &vector);
     void rotate(double angle);
     void rotate(double angle, const Point &center);
@@ -57,7 +62,7 @@ class Point
         p.rotate(angle, center);
         return p;
     }
-    bool coincides_with(const Point &point) const { return this->x == point.x && this->y == point.y; }
+    bool coincides_with(const Point &point) const { return this->x == point.x && this->y == point.y && this->z == point.z; }
     bool coincides_with_epsilon(const Point &point) const;
     int nearest_point_index(const Points &points) const;
     int nearest_point_index(const PointConstPtrs &points) const;
@@ -75,7 +80,7 @@ class Point
     Point projection_onto(const Line &line) const;
     Point negative() const;
     Vector vector_to(const Point &point) const;
-    void align_to_grid(const Point &spacing, const Point &base = Point(0,0));
+    void align_to_grid(const Point &spacing, const Point &base = Point(0,0,0));
 };
 
 Point operator+(const Point& point1, const Point& point2);
@@ -94,6 +99,7 @@ operator+=(Points &dst, const Point &p) {
     return dst;
 };
 
+//TODO remove point3 and Point3f
 class Point3 : public Point
 {
     public:

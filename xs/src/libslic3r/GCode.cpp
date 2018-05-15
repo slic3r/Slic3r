@@ -594,9 +594,8 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
         for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
             const double line_length = line->length() * SCALING_FACTOR;
             path_length += line_length;
-            
-            gcode += this->writer.extrude_to_xy(
-                this->point_to_gcode(line->b),
+            gcode += this->writer.extrude_to_xyz(
+                this->point3_to_gcode(line->b),
                 e_per_mm * line_length,
                 comment
             );
@@ -783,6 +782,18 @@ GCode::point_to_gcode(const Point &point)
     return Pointf(
         unscale(point.x) + this->origin.x - extruder_offset.x,
         unscale(point.y) + this->origin.y - extruder_offset.y
+    );
+}
+
+// convert a model-space scaled point into G-code coordinates
+Pointf3
+GCode::point3_to_gcode(const Point &point)
+{
+    Pointf extruder_offset = EXTRUDER_CONFIG(extruder_offset);
+    return Pointf3(
+        unscale(point.x) + this->origin.x - extruder_offset.x,
+        unscale(point.y) + this->origin.y - extruder_offset.y,
+        unscale(point.z) //TODO Origin?
     );
 }
 

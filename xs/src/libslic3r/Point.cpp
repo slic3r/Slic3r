@@ -6,10 +6,11 @@
 
 namespace Slic3r {
 
-Point::Point(double x, double y)
+Point::Point(double x, double y, double z)
 {
     this->x = lrint(x);
     this->y = lrint(y);
+    this->z = lrint(z);
 }
 
 bool
@@ -22,7 +23,7 @@ std::string
 Point::wkt() const
 {
     std::ostringstream ss;
-    ss << "POINT(" << this->x << " " << this->y << ")";
+    ss << "POINT(" << this->x << " " << this->y << " " << this->z << ")";
     return ss.str();
 }
 
@@ -30,7 +31,7 @@ std::string
 Point::dump_perl() const
 {
     std::ostringstream ss;
-    ss << "[" << this->x << "," << this->y << "]";
+    ss << "[" << this->x << "," << this->y << "," << this->z << "]";
     return ss.str();
 }
 
@@ -39,6 +40,7 @@ Point::scale(double factor)
 {
     this->x *= factor;
     this->y *= factor;
+    this->z *= factor;
 }
 
 void
@@ -46,6 +48,13 @@ Point::translate(double x, double y)
 {
     this->x += x;
     this->y += y;
+}
+
+void
+Point::translate(double x, double y, double z)
+{
+    this->translate(x,y);
+    this->z += z;
 }
 
 void
@@ -179,7 +188,8 @@ Point::distance_to(const Point &point) const
 {
     double dx = ((double)point.x - this->x);
     double dy = ((double)point.y - this->y);
-    return sqrt(dx*dx + dy*dy);
+    double dz = ((double)point.z - this->z);
+    return sqrt(dx*dx + dy*dy + dz*dz);
 }
 
 /* distance to the closest point of line */
@@ -329,19 +339,19 @@ Point::align_to_grid(const Point &spacing, const Point &base)
 Point
 operator+(const Point& point1, const Point& point2)
 {
-    return Point(point1.x + point2.x, point1.y + point2.y);
+    return Point(point1.x + point2.x, point1.y + point2.y, point1.z + point2.z);
 }
 
 Point
 operator-(const Point& point1, const Point& point2)
 {
-    return Point(point1.x - point2.x, point1.y - point2.y);
+    return Point(point1.x - point2.x, point1.y - point2.y, point1.z - point2.z);
 }
 
 Point
 operator*(double scalar, const Point& point2)
 {
-    return Point(scalar * point2.x, scalar * point2.y);
+    return Point(scalar * point2.x, scalar * point2.y, scalar * point2.z);
 }
 
 bool

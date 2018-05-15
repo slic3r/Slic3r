@@ -112,6 +112,7 @@ class GCode {
     std::string unretract();
     std::string set_extruder(unsigned int extruder_id);
     Pointf point_to_gcode(const Point &point);
+    Pointf3 point3_to_gcode(const Point &point);
     
     private:
     Point _last_pos;
