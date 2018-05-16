@@ -7,6 +7,7 @@
 
 #include <wx/notebook.h>
 #include <wx/toolbar.h>
+#include <wx/menu.h>
 
 #include <stack>
 
@@ -32,6 +33,10 @@ using UndoOperation = int;
 
 enum class UndoCmd {
     Remove, Add, Reset, Increase, Decrease, Rotate
+};
+
+enum class Zoom {
+    In, Out
 };
 
 using ObjIdx = unsigned int;
@@ -76,6 +81,17 @@ public:
     /// Create menu for object.
     wxMenu* object_menu();
 
+    void undo() {};
+    void redo() {};
+
+    void select_next() {};
+    void select_prev() {};
+    void zoom(Zoom dir) {};
+
+    void export_gcode() {};
+    void export_amf() {};
+    void export_tmf() {};
+    void export_stl() {};
 private:
     std::shared_ptr<Slic3r::Print> print {std::make_shared<Print>(Slic3r::Print())};
     std::shared_ptr<Slic3r::Model> model {std::make_shared<Model>(Slic3r::Model())};
@@ -92,8 +108,8 @@ private:
 
     size_t object_identifier {0U}; //< Counter for adding objects to Slic3r. Increment after adding each object.
 
-    std::stack<UndoOperation> undo {}; 
-    std::stack<UndoOperation> redo {}; 
+    std::stack<UndoOperation> _undo {}; 
+    std::stack<UndoOperation> _redo {}; 
 
     wxNotebook* preview_notebook {new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(335,335), wxNB_BOTTOM)};
     wxBoxSizer* right_sizer {new wxBoxSizer(wxVERTICAL)};
