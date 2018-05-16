@@ -434,6 +434,28 @@ void Plater::arrange() {
 }
 
 void Plater::on_model_change(bool force_autocenter) {
+
+    // reload the select submenu (if already initialized)
+    {
+        auto* menu = this->GetFrame()->plater_select_menu;
+
+        if (menu != nullptr) {
+            for (auto* item : menu->GetMenuItems() ) { menu->Delete(item); }
+            for (const auto& obj : this->objects) {
+                const auto idx {obj.identifier};
+                auto name {wxString(obj.name)};
+                auto inst_count = this->model->objects.at(idx)->instances.size();
+                if (inst_count > 1) {
+                    name << " (" << inst_count << "x)";
+                }
+                wxMenuItem* item {append_menu_item(menu, name, _("Select object."), 
+                        [this,idx](wxCommandEvent& e) { this->select_object(idx); this->refresh_canvases(); }, 
+                        wxID_ANY, "", "", wxITEM_CHECK)};
+                if (obj.selected) item->Check(true);
+            }
+        }
+    }
+
     if (force_autocenter || settings->autocenter) {
         this->model->center_instances_around_point(this->bed_centerf());
     }
@@ -484,8 +506,8 @@ void Plater::selection_changed() {
     bool have_sel {obj != this->objects.end()};
     auto* menu {this->GetFrame()->plater_select_menu};
     if (menu != nullptr) {
-        for (auto* item : menu->GetMenuItems()) {
-            item->Check(false);
+        for (auto item = menu->GetMenuItems().begin(); item != menu->GetMenuItems().end(); item++) {
+            (*item)->Check(false);
         }
         if (have_sel) 
             menu->FindItemByPosition(obj->identifier)->Check(true);
