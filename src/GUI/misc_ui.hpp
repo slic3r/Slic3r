@@ -6,6 +6,7 @@
     #include <wx/wx.h>
 #endif
 
+#include <wx/settings.h>
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 #include <map>
@@ -49,6 +50,9 @@ constexpr bool isDev = false;
 #endif
 
 constexpr bool threaded = false;
+
+const wxFont small_font { wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
+
 
 // hopefully the compiler is smart enough to figure this out
 const std::map<const std::string, const std::string> FILE_WILDCARDS { 

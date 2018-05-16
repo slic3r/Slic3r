@@ -15,6 +15,7 @@
 #include "Model.hpp"
 #include "Print.hpp"
 #include "Config.hpp"
+#include "misc_ui.hpp"
 
 #include "Plater/PlaterObject.hpp"
 #include "Plater/Plate2D.hpp"
@@ -45,6 +46,18 @@ using ObjRef = std::vector<PlaterObject>::iterator;
 class PlaterObject;
 class Plate2D;
 class MainFrame;
+
+/// Struct to group object info text fields together
+struct info_fields {
+    wxChoice* choice {nullptr};
+    wxStaticText* copies {nullptr};
+    wxStaticText* size {nullptr};
+    wxStaticText* volume {nullptr};
+    wxStaticText* facets {nullptr};
+    wxStaticText* materials {nullptr};
+    wxStaticText* manifold {nullptr};
+    wxStaticBitmap* manifold_warning_icon {nullptr};
+};
 
 /// Extension of wxPanel class to handle the main plater.
 /// 2D, 3D, preview, etc tabs.
@@ -124,6 +137,8 @@ private:
     Preview3D* preview3D {nullptr}; //< 3D Preview 
 
     PreviewDLP* previewDLP {nullptr}; //< DLP/SLA Preview canvas
+
+    wxStaticBoxSizer* object_info_size {nullptr};
 
     /// Handles the actual load of the file from the dialog handoff.
     std::vector<int> load_file(const std::string file, const int obj_idx_to_load = -1);
@@ -223,9 +238,23 @@ private:
     void center_selected_object_on_bed();
 
     void set_number_of_copies();
+
+    /// Struct containing various object info fields.
+    info_fields object_info;
 };
 
 
+template <typename T>
+static void add_info_field(wxWindow* parent, T*& field, wxString name, wxGridSizer* sizer) {
+    name << ":";
+    auto* text {new wxStaticText(parent, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT)};
+    text->SetFont(small_font);
+    sizer->Add(text, 0);
+
+    field = new wxStaticText(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    field->SetFont(small_font);
+    sizer->Add(field, 0);
+}
 
 } } // Namespace Slic3r::GUI
 
