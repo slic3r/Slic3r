@@ -110,6 +110,10 @@ void fatal_error(wxWindow* parent, const wxString& message);
 /// Assign a menu item icon
 void set_menu_item_icon(wxMenuItem* item, const wxString& icon);
 
+/// Construct a menu item for Slic3r, append it to a menu, and return it. 
+/// Automatically binds the lambda method to the event handler of the menu for this menu item's id.
+/// Assign the accelerator separately if one is desired (instead of the \t interface in the name) 
+/// to permit translation.
 template <typename T>
 wxMenuItem* append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T lambda, int id = wxID_ANY, const wxString& icon = "", const wxString& accel = "", const wxItemKind kind = wxITEM_NORMAL) {
     wxMenuItem* tmp = menu->Append(wxID_ANY, name, help, kind);
@@ -127,6 +131,7 @@ wxMenuItem* append_menu_item(wxMenu* menu, const wxString& name,const wxString& 
     return tmp;
 }
 
+/// Construct and return a submenu to the menu, optionally with an icon. 
 wxMenuItem* append_submenu(wxMenu* menu, const wxString& name, const wxString& help, wxMenu* submenu, int id = wxID_ANY, const wxString& icon = "");
 
 /*
