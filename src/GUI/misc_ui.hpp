@@ -111,8 +111,8 @@ void fatal_error(wxWindow* parent, const wxString& message);
 void set_menu_item_icon(wxMenuItem* item, const wxString& icon);
 
 template <typename T>
-void append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T lambda, int id = wxID_ANY, const wxString& icon = "", const wxString& accel = "") {
-    wxMenuItem* tmp = menu->Append(wxID_ANY, name, help);
+wxMenuItem* append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T lambda, int id = wxID_ANY, const wxString& icon = "", const wxString& accel = "", const wxItemKind kind = wxITEM_NORMAL) {
+    wxMenuItem* tmp = menu->Append(wxID_ANY, name, help, kind);
     wxAcceleratorEntry* a = new wxAcceleratorEntry();
     if (!accel.IsEmpty()) {
         a->FromString(accel);
@@ -123,6 +123,8 @@ void append_menu_item(wxMenu* menu, const wxString& name,const wxString& help, T
 
     if (typeid(lambda) != typeid(nullptr))
         menu->Bind(wxEVT_MENU, lambda, tmp->GetId(), tmp->GetId());
+
+    return tmp;
 }
 
 wxMenuItem* append_submenu(wxMenu* menu, const wxString& name, const wxString& help, wxMenu* submenu, int id = wxID_ANY, const wxString& icon = "");
