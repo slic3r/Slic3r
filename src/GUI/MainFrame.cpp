@@ -118,11 +118,37 @@ void MainFrame::init_menubar()
         append_menu_item(menuFile, _(L"Open STL/OBJ/AMF/3MF…"), _("Open a model"), [=](wxCommandEvent& e) { if (this->plater != nullptr) this->plater->add();}, wxID_ANY, "brick_add.png", "Ctrl+O");
     }
     
-    wxMenu* menuPlater = new wxMenu();
+    wxMenu* menuPlater = this->plater_menu = new wxMenu();
     {
-        append_menu_item(menuPlater, _(L"Arrange…"), _("Arrange models on plater"), [this](wxCommandEvent& e) { if (this->plater != nullptr) this->plater->arrange();}, wxID_ANY, "bricks.png", "Ctrl+G");
+        wxMenu* selectMenu = this->plater_select_menu = new wxMenu();
+        append_submenu(menuPlater, _("Select"), _("Select an object in the plater"), selectMenu, wxID_ANY, "brick.png"); 
+        append_menu_item(menuPlater, _("Undo"), _("Undo"), [this](wxCommandEvent& e) { this->plater->undo(); }, wxID_ANY, "arrow_undo.png", "Ctrl+Z");
+        append_menu_item(menuPlater, _("Redo"), _("Redo"), [this](wxCommandEvent& e) { this->plater->redo(); }, wxID_ANY, "arrow_redo.png", "Ctrl+Shift+Z");
+        append_menu_item(menuPlater, _("Select Next Object"), _("Select Next Object in the plater"), 
+                [this](wxCommandEvent& e) { this->plater->select_next(); }, wxID_ANY, "arrow_right.png", "Ctrl+Right");
+        append_menu_item(menuPlater, _("Select Prev Object"), _("Select Previous Object in the plater"), 
+                [this](wxCommandEvent& e) { this->plater->select_prev(); }, wxID_ANY, "arrow_left.png", "Ctrl+Left");
+        append_menu_item(menuPlater, _("Zoom In"), _("Zoom In"), 
+                [this](wxCommandEvent& e) { this->plater->zoom(Zoom::In); }, wxID_ANY, "zoom_in.png", "Ctrl+Up");
+        append_menu_item(menuPlater, _("Zoom Out"), _("Zoom Out"), 
+                [this](wxCommandEvent& e) { this->plater->zoom(Zoom::In); }, wxID_ANY, "zoom_out.png", "Ctrl+Down");
+        menuPlater->AppendSeparator();
+        append_menu_item(menuPlater, _("Export G-code..."), _("Export current plate as G-code"), 
+                [this](wxCommandEvent& e) { this->plater->export_gcode(); }, wxID_ANY, "cog_go.png");
+        append_menu_item(menuPlater, _("Export plate as STL..."), _("Export current plate as STL"), 
+                [this](wxCommandEvent& e) { this->plater->export_stl(); }, wxID_ANY, "brick_go.png");
+        append_menu_item(menuPlater, _("Export plate with modifiers as AMF..."), _("Export current plate as AMF, including all modifier meshes"), 
+                [this](wxCommandEvent& e) { this->plater->export_amf(); }, wxID_ANY, "brick_go.png");
+        append_menu_item(menuPlater, _("Export plate with modifiers as 3MF..."), _("Export current plate as 3MF, including all modifier meshes"), 
+                [this](wxCommandEvent& e) { this->plater->export_tmf(); }, wxID_ANY, "brick_go.png");
+
+
+
     }
     wxMenu* menuObject = this->plater->object_menu();
+    this->on_plater_object_list_changed(false);
+    this->on_plater_selection_changed(false);
+
     wxMenu* menuSettings = new wxMenu();
     {
     }

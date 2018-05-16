@@ -278,7 +278,7 @@ std::vector<int> Plater::load_file(const std::string file, const int obj_idx_to_
     }
 
     progress_dialog->Destroy();
-    this->redo = std::stack<UndoOperation>();
+    this->_redo = std::stack<UndoOperation>();
     return obj_idx;
 }
 
@@ -482,13 +482,15 @@ void Plater::selection_changed() {
 
     auto obj = this->selected_object();
     bool have_sel {obj != this->objects.end()};
-    /*
-        if (my $menu = $self->GetFrame->{plater_select_menu}) {
-        $_->Check(0) for $menu->GetMenuItems;
-        if ($have_sel) {
-            $menu->FindItemByPosition($obj_idx)->Check(1);
+    auto* menu {this->GetFrame()->plater_select_menu};
+    if (menu != nullptr) {
+        for (auto* item : menu->GetMenuItems()) {
+            item->Check(false);
         }
+        if (have_sel) 
+            menu->FindItemByPosition(obj->identifier)->Check(true);
     }
+    /*
     
     my $method = $have_sel ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
