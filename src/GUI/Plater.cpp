@@ -144,8 +144,63 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
         });
     });
     */
+    wxStaticBoxSizer* object_info_sizer {nullptr};
+    {
+        auto* box {new wxStaticBox(this, wxID_ANY, _("Info"))};
+        object_info_sizer = new wxStaticBoxSizer(box, wxVERTICAL);
+        object_info_sizer->SetMinSize(wxSize(350, -1));
+        {
+            auto* sizer {new wxBoxSizer(wxHORIZONTAL)};
+            object_info_sizer->Add(sizer, 0, wxEXPAND | wxBOTTOM, 5);
+            auto* text  {new wxStaticText(this, wxID_ANY, _("Object:"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT)};
+            text->SetFont(small_font);
+            sizer->Add(text, 0, wxALIGN_CENTER_VERTICAL);
 
+            /* We supply a bogus width to wxChoice (sizer will override it and stretch 
+             * the control anyway), because if we leave the default (-1) it will stretch
+             * too much according to the contents, and this is bad with long file names.
+             */
+            this->object_info.choice = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(100, -1));
+            this->object_info.choice->SetFont(small_font);
+            sizer->Add(this->object_info.choice, 1, wxALIGN_CENTER_VERTICAL);
 
+            // Select object on change.
+            this->Bind(wxEVT_CHOICE, [this](wxCommandEvent& e) { this->select_object(this->object_info.choice->GetSelection()); this->refresh_canvases();});
+                
+        }
+        
+        auto* grid_sizer { new wxFlexGridSizer(3, 4, 5, 5)};
+        grid_sizer->SetFlexibleDirection(wxHORIZONTAL);
+        grid_sizer->AddGrowableCol(1, 1);
+        grid_sizer->AddGrowableCol(3, 1);
+
+        add_info_field(this, this->object_info.copies, _("Copies"), grid_sizer);
+        add_info_field(this, this->object_info.size, _("Size"), grid_sizer);
+        add_info_field(this, this->object_info.volume, _("Volume"), grid_sizer);
+        add_info_field(this, this->object_info.facets, _("Facets"), grid_sizer);
+        add_info_field(this, this->object_info.materials, _("Materials"), grid_sizer);
+        {
+            wxString name {"Manifold:"};
+            auto* text {new wxStaticText(parent, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT)};
+            text->SetFont(small_font);
+            grid_sizer->Add(text, 0);
+
+            this->object_info.manifold = new wxStaticText(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+            this->object_info.manifold->SetFont(small_font);
+
+            this->object_info.manifold_warning_icon = new wxStaticBitmap(this, wxID_ANY, wxBitmap(var("error.png"), wxBITMAP_TYPE_PNG));
+            this->object_info.manifold_warning_icon->Hide();
+
+            auto* h_sizer {new wxBoxSizer(wxHORIZONTAL)};
+            h_sizer->Add(this->object_info.manifold_warning_icon, 0);
+            h_sizer->Add(this->object_info.manifold, 0);
+
+            grid_sizer->Add(h_sizer, 0, wxEXPAND);
+        }
+
+        object_info_sizer->Add(grid_sizer, 0, wxEXPAND);
+    }
+    this->selection_changed();
     this->canvas2D->update_bed_size();
 
     // Toolbar
@@ -156,10 +211,11 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
     // export/print/send/export buttons
 
     // right panel sizer
-    auto right_sizer = this->right_sizer;
+    auto* right_sizer {this->right_sizer};
 //    $right_sizer->Add($presets, 0, wxEXPAND | wxTOP, 10) if defined $presets;
 //    $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
 //    $right_sizer->Add($self->{settings_override_panel}, 1, wxEXPAND, 5);
+    right_sizer->Add(object_info_sizer, 0, wxEXPAND, 0);
 //    $right_sizer->Add($object_info_sizer, 0, wxEXPAND, 0);
 //    $right_sizer->Add($print_info_sizer, 0, wxEXPAND, 0);
 //    $right_sizer->Hide($print_info_sizer);
@@ -523,11 +579,6 @@ void Plater::selection_changed() {
     my $method = $have_sel ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
         for grep $self->{"btn_$_"}, qw(remove increase decrease rotate45cw rotate45ccw changescale split cut layers settings);
-    
-    if ($self->{htoolbar}) {
-        $self->{htoolbar}->EnableTool($_, $have_sel)
-            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
-    }
     
     if ($self->{object_info_size}) { # have we already loaded the info pane?
         
