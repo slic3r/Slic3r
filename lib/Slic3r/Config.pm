@@ -170,7 +170,7 @@ sub validate {
         if $self->get_value('first_layer_height') <= 0;
 
     die "Adaptive slicing requires a non-relative first layer height.\n"
-        if $self->get_value('adaptive_slicing') == 1 and $self->first_layer_height =~ /^(?:\d*(?:\.\d+)?)%?$/;
+        if $self->get_value('adaptive_slicing') == 1 and $self->first_layer_height =~ /^(?:\d*(?:\.\d+)?)%$/;
     
     # --filament-diameter
     die "Invalid value for --filament-diameter\n"
