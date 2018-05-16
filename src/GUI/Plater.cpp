@@ -512,6 +512,12 @@ void Plater::selection_changed() {
         if (have_sel) 
             menu->FindItemByPosition(obj->identifier)->Check(true);
     }
+
+    if (this->htoolbar != nullptr) {
+        for (auto tb : {TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS}) {
+            this->htoolbar->EnableTool(tb, have_sel);
+        }
+    }
     /*
     
     my $method = $have_sel ? 'Enable' : 'Disable';
