@@ -109,6 +109,16 @@ sub new {
         default     => $Slic3r::GUI::Settings->{_}{reload_behavior},
         width       => 180,
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # Extended GUI - Context and/or Toolbar
+        opt_id      => 'extended_gui',
+        type        => 'select',
+        label       => 'Extended GUI: ',
+        tooltip     => 'Choose extended rotate commands in the toolbar and/or in the context menu. If you don\'t use the default color scheme, the themed icons for the toolbar will be used. Requires a restart of Slic3r.',
+        labels      => ['Default', 'Context only', 'Toolbar only', 'Toolbar and Context', 'Toolbar only (big)', 'Toolbar (big) and Context'],
+        values      => [0, 1, 2, 3, 4, 5],
+        default     => $Slic3r::GUI::Settings->{_}{extended_gui},
+        width       => 180,
+    ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # colorscheme
         opt_id      => 'colorscheme',
         type        => 'select',
