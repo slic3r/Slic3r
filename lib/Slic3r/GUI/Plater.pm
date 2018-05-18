@@ -1513,7 +1513,6 @@ sub rotate_face {
   print "Not implemented yet\n";
   my ($obj_idx, $object) = $self->selected_object;
   return if !defined $obj_idx;
-  
 }
 
 sub rotate {
@@ -3046,7 +3045,7 @@ sub object_menu {
     wxTheApp->append_menu_item($menu, "Rotate 45° counter-clockwise", 'Rotate the selected object by 45° counter-clockwise', sub {
         $self->rotate(+45);
     }, undef, 'arrow_rotate_anticlockwise.png');
-    wxTheApp->append_menu_item($menu, "Rotate Face to Bed", 'Rotates the selcted object to have the selected face coplanar with the bed', sub {
+    wxTheApp->append_menu_item($menu, "Rotate Face to Bed", 'Rotates the selected object to have the selected face parallel with the bed', sub {
         $self->rotate_face;
     }, undef, 'rotate_to_bed.png');
     
