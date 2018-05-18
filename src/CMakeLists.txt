@@ -181,7 +181,7 @@ endif(${SLIC3R_STATIC})
 
 set(wxWidgets_USE_UNICODE ON)
 
-find_package(wxWidgets COMPONENTS net gl html aui core base)
+find_package(wxWidgets COMPONENTS net gl html aui adv core base)
 
 IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
