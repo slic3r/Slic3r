@@ -845,7 +845,7 @@ sub Render {
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                 glFlush();
                 glFinish();
-                $self->draw_volumes(2);
+                $self->draw_volumes(2, $volume_idx);
                 my $color = [ glReadPixels_p($pos->x, $self->GetSize->GetHeight - $pos->y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE) ];
                 my $face_idx = $color->[0] + $color->[1]*256 + $color->[2]*256*256;
                 $self->volumes->[$volume_idx]->hover_face($face_idx);
@@ -1055,7 +1055,7 @@ sub draw_center_of_rotation {
 }
 
 sub draw_volumes {
-    my ($self, $fakecolor) = @_;
+    my ($self, $fakecolor, $volume_to_render) = @_;
     
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1063,7 +1063,9 @@ sub draw_volumes {
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
     
-    foreach my $volume_idx (0..$#{$self->volumes}) {
+    my $upper = $volume_to_render // $#{$self->volumes};
+    my $lower = $volume_to_render // 0;  
+    foreach my $volume_idx ($lower..$upper) {
         my $volume = $self->volumes->[$volume_idx];
         glPushMatrix();
         glTranslatef(@{$volume->origin});
@@ -1122,9 +1124,11 @@ sub draw_volumes {
             $max_offset //= $volume->tverts->size;
             if($fakecolor && $fakecolor == 2){
                 our @_cached_colors;
+                our $_cached_ptr;
                 my $pLen = @_cached_colors;
                 my $toAdd = max($max_offset/3*4 - $pLen, 0);
                 if($toAdd){
+                    # TODO: move this into CPP to reduce memory consumption and decrease time when new models are added
                     my @colors = (@baseColor)x($toAdd);
                     for my $i (0 .. ($#colors/12)){
                         my $r = (($i+($pLen/12)) & 0x000000FF) >>  0;
@@ -1144,10 +1148,10 @@ sub draw_volumes {
                         $colors[$i*4*3 + 11] = 1.0;
                     }
                     push(@_cached_colors, @colors);
+                    $_cached_ptr = OpenGL::Array->new_list(GL_FLOAT,@_cached_colors);
                 }
-                my $ptr = OpenGL::Array->new_list(GL_FLOAT,@_cached_colors);
                 glEnableClientState(GL_COLOR_ARRAY);
-                glColorPointer_c(4, GL_FLOAT, 0,  $ptr->ptr());
+                glColorPointer_c(4, GL_FLOAT, 0,  $_cached_ptr->ptr());
                 glVertexPointer_c(3, GL_FLOAT, 0, $volume->tverts->verts_ptr);
                 glNormalPointer_c(GL_FLOAT, 0, $volume->tverts->norms_ptr);
                 glDrawArrays(GL_TRIANGLES, $min_offset / 3, ($max_offset-$min_offset) / 3);
