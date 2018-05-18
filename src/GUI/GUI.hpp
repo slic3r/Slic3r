@@ -5,9 +5,12 @@
 #include "Notifier.hpp"
 #include <string>
 #include <vector>
+#include <stack>
+#include <mutex>
 
 
 namespace Slic3r { namespace GUI {
+
 
 // Friendly indices for the preset lists.
 enum class PresetID {
@@ -29,6 +32,11 @@ public:
     /// Move/resize a named TopLevelWindow (includes Frames) from Settings
     void restore_window_pos(wxTopLevelWindow* window, const wxString& name );
 
+    /// Function to add callback functions to the idle loop stack.
+    void CallAfter(std::function<void()> cb_function); 
+
+
+
 private:
     std::shared_ptr<Settings> gui_config; // GUI-specific configuration options
     std::unique_ptr<Notifier> notifier {nullptr};
@@ -37,8 +45,15 @@ private:
     void load_presets();
 
     wxString datadir {""};
-    const std::string LogChannel {"GUI"}; //< Which log these messages should go to.
+    const std::string LogChannel {"APP"}; //< Which log these messages should go to.
+
+    /// Lock to guard the callback stack
+    std::mutex callback_register;
+    
+    /// callbacks registered to run during idle event.
+    std::stack<std::function<void()> > cb {};
 };
+
 
 }} // namespace Slic3r::GUI
 #endif // GUI_HPP
