@@ -8,6 +8,7 @@
 #include <wx/notebook.h>
 #include <wx/toolbar.h>
 #include <wx/menu.h>
+#include <wx/bmpcbox.h>
 
 #include <stack>
 
@@ -249,6 +250,20 @@ private:
 
     /// Struct containing various object info fields.
     info_fields object_info;
+
+    /// Build the preset chooser
+    void build_preset_chooser();
+
+    wxFlexGridSizer* presets_sizer {};
+
+    std::vector<wxBitmapComboBox*> preset_choosers {preset_count, nullptr};
+    void _on_change_combobox(preset_t preset, wxBitmapComboBox* choice);
+
+    void show_preset_editor(preset_t preset, unsigned int idx) { };
+
+    void _on_select_preset(preset_t preset) {};
+    void load_presets() {};
+
 };
 
 

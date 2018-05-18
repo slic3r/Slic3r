@@ -144,6 +144,7 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
         });
     });
     */
+    build_preset_chooser();
     wxStaticBoxSizer* object_info_sizer {nullptr};
     {
         auto* box {new wxStaticBox(this, wxID_ANY, _("Info"))};
@@ -212,7 +213,7 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
 
     // right panel sizer
     auto* right_sizer {this->right_sizer};
-//    $right_sizer->Add($presets, 0, wxEXPAND | wxTOP, 10) if defined $presets;
+    if (this->presets_sizer != nullptr) right_sizer->Add(this->presets_sizer, 0, wxEXPAND | wxTOP, 10);
 //    $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
 //    $right_sizer->Add($self->{settings_override_panel}, 1, wxEXPAND, 5);
     right_sizer->Add(object_info_sizer, 0, wxEXPAND, 0);
@@ -1062,6 +1063,134 @@ void Plater::center_selected_object_on_bed() {
 
     this->refresh_canvases();
 
+}
+void Plater::build_preset_chooser() {
+    this->presets_sizer = new wxFlexGridSizer(3,3,1,2);
+    auto& presets {this->presets_sizer}; // reference for local use
+
+    presets->AddGrowableCol(1,1);
+    presets->SetFlexibleDirection(wxHORIZONTAL);
+
+    this->preset_choosers.clear();
+    for (auto group : { preset_t::Print, preset_t::Material, preset_t::Printer }) {
+        wxString name = "";
+        switch(group) {
+            case preset_t::Print:
+                name << _("Print settings:");
+                break;
+            case preset_t::Material:
+                name << _("Material:");
+                break;
+            case preset_t::Printer:
+                name << _("Printer:");
+                break;
+            default:
+                break;
+        }
+        auto* text {new wxStaticText(this, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT)};
+        text->SetFont(small_font);
+
+        auto* choice {new wxBitmapComboBox(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY)};
+        this->preset_choosers[static_cast<int>(group)] = choice;
+        
+        // setup listener. 
+        // On a combobox event, puts a call to _on_change_combobox() on the evt_idle stack.
+        choice->Bind(wxEVT_COMBOBOX, 
+            [=](wxCommandEvent& e) { 
+                wxTheApp->CallAfter([=]() { this->_on_change_combobox(group, choice);} );
+            });
+
+        // Settings button
+        auto* settings_btn {new wxBitmapButton(this, wxID_ANY, wxBitmap(var("cog.png"), wxBITMAP_TYPE_PNG), wxDefaultPosition, wxDefaultSize, wxBORDER_NONE)};
+
+        settings_btn->Bind(wxEVT_BUTTON, [=](wxCommandEvent& e) { 
+            this->show_preset_editor(group, 0);
+        });
+
+        presets->Add(text, 0, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL | wxRIGHT, 4);
+        presets->Add(choice, 1, wxALIGN_CENTER_VERTICAL | wxEXPAND | wxBOTTOM, 0);
+        presets->Add(settings_btn, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND | wxLEFT, 3);
+
+    }
+/*
+        my %group_labels = (
+            print       => 'Print settings',
+            filament    => 'Filament',
+            printer     => 'Printer',
+        );
+        $self->{preset_choosers} = {};
+        $self->{preset_choosers_names} = {};  # wxChoice* => []
+        for my $group (qw(print filament printer)) {
+            # label
+            my $text = Wx::StaticText->new($self, -1, "$group_labels{$group}:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+            $text->SetFont($Slic3r::GUI::small_font);
+            
+            # dropdown control
+            my $choice = Wx::BitmapComboBox->new($self, -1, "", wxDefaultPosition, wxDefaultSize, [], wxCB_READONLY);
+            $self->{preset_choosers}{$group} = [$choice];
+            # setup the listener
+            EVT_COMBOBOX($choice, $choice, sub {
+                my ($choice) = @_;
+                wxTheApp->CallAfter(sub {
+                    $self->_on_change_combobox($group, $choice);
+                });
+            });
+            
+            # settings button
+            my $settings_btn = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG), 
+                wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+            EVT_BUTTON($self, $settings_btn, sub {
+                $self->show_preset_editor($group, 0);
+            });
+            
+            $presets->Add($text, 0, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL | wxRIGHT, 4);
+            $presets->Add($choice, 1, wxALIGN_CENTER_VERTICAL | wxEXPAND | wxBOTTOM, 0);
+            $presets->Add($settings_btn, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND | wxLEFT, 3);
+            */
+}
+
+void Plater::_on_change_combobox(preset_t preset, wxBitmapComboBox* choice) {
+    
+    // Prompt for unsaved changes and undo selections if cancelled and return early
+    // Callback to close preset editor tab, close editor tabs, reload presets.
+    wxTheApp->CallAfter([=](){
+
+        this->_on_select_preset(preset);
+        // reload presets; removes the modified mark
+        this->load_presets();
+    });
+    /*
+    sub _on_change_combobox {
+    my ($self, $group, $choice) = @_;
+    
+    if (0) {
+        # This code is disabled because wxPerl doesn't provide GetCurrentSelection
+        my $current_name = $self->{preset_choosers_names}{$choice}[$choice->GetCurrentSelection];
+        my $current = first { $_->name eq $current_name } @{wxTheApp->presets->{$group}};
+        if (!$current->prompt_unsaved_changes($self)) {
+            # Restore the previous one
+            $choice->SetSelection($choice->GetCurrentSelection);
+            return;
+        }
+    } else {
+        return 0 if !$self->prompt_unsaved_changes;
+    }
+    wxTheApp->CallAfter(sub {
+        # Close the preset editor tab if any
+        if (exists $self->GetFrame->{preset_editor_tabs}{$group}) {
+            my $tabpanel = $self->GetFrame->{tabpanel};
+            $tabpanel->DeletePage($tabpanel->GetPageIndex($self->GetFrame->{preset_editor_tabs}{$group}));
+            delete $self->GetFrame->{preset_editor_tabs}{$group};
+            $tabpanel->SetSelection(0); # without this, a newly created tab will not be selected by wx
+        }
+        
+        $self->_on_select_preset($group);
+        
+        # This will remove the "(modified)" mark from any dirty preset handled here.
+        $self->load_presets;
+    });
+}
+*/
 }
 
 }} // Namespace Slic3r::GUI
