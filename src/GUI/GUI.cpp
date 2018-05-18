@@ -209,4 +209,11 @@ void App::CallAfter(std::function<void()> cb_function) {
     this->callback_register.unlock();
 }
 
+void App::OnUnhandledException() {
+    try { throw; } 
+    catch (std::exception &e) {
+        Slic3r::Log::fatal_error(LogChannel, LOG_WSTRING("Exception Caught: " << e.what()));
+    }
+}
+
 }} // namespace Slic3r::GUI
