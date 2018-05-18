@@ -36,6 +36,7 @@ public:
     void CallAfter(std::function<void()> cb_function); 
 
 
+    void OnUnhandledException() override;
 
 private:
     std::shared_ptr<Settings> gui_config; // GUI-specific configuration options
