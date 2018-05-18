@@ -83,8 +83,24 @@ bool App::OnInit()
             && ($Settings->{_}{version_check} // 1)
             && (!$Settings->{_}{last_version_check} || (time - $Settings->{_}{last_version_check}) >= 86400);
     */
-
+    
     // run callback functions during idle on the main frame
+    this->Bind(wxEVT_IDLE, 
+        [this](wxIdleEvent& e) { 
+            std::function<void()> func {nullptr}; // 
+            // try to get the mutex. If we can't, just skip this idle event and get the next one.
+            if (!this->callback_register.try_lock()) return;
+            // pop callback
+            if (cb.size() >= 1) { 
+                func = cb.top();
+                cb.pop();
+            }
+            // unlock mutex
+            this->callback_register.unlock();
+            try { // call the function if it's not nullptr;
+                if (func != nullptr) func();
+            } catch (std::exception& e) { Slic3r::Log::error(LogChannel, LOG_WSTRING("Exception thrown: " <<  e.what())); }
+        });
     /*
     EVT_IDLE($frame, sub {
         while (my $cb = shift @cb) {
@@ -182,6 +198,15 @@ void App::load_presets() {
         );
     }
 */
+}
+
+void App::CallAfter(std::function<void()> cb_function) {
+    // set mutex
+    this->callback_register.lock();
+    // push function onto stack
+    this->cb.emplace(cb_function);
+    // unset mutex
+    this->callback_register.unlock();
 }
 
 }} // namespace Slic3r::GUI
