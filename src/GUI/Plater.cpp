@@ -1193,5 +1193,12 @@ void Plater::_on_change_combobox(preset_t preset, wxBitmapComboBox* choice) {
 */
 }
 
+void Plater::load_presets() {
+
+    for (auto group : {preset_t::Printer, preset_t::Material, preset_t::Print}) {
+        // skip presets not compatible with selected printer 
+    }
+}
+
 }} // Namespace Slic3r::GUI
 
