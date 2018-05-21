@@ -9,16 +9,10 @@
 #include <mutex>
 
 
+#include "Preset.hpp"
+
 namespace Slic3r { namespace GUI {
 
-
-// Friendly indices for the preset lists.
-enum class PresetID {
-    PRINT = 0,
-    FILAMENT = 1,
-    PRINTER = 2
-};
-using preset_list = std::vector<std::string>;
 
 class App: public wxApp
 {
@@ -41,7 +35,7 @@ public:
 private:
     std::shared_ptr<Settings> gui_config; // GUI-specific configuration options
     std::unique_ptr<Notifier> notifier {nullptr};
-    std::vector<preset_list> presets { preset_list(), preset_list(), preset_list() };
+    std::vector<Presets> presets { preset_types, Presets() };
 
     void load_presets();
 
