@@ -18,6 +18,8 @@
 #include "Config.hpp"
 #include "misc_ui.hpp"
 
+#include "Preset.hpp"
+
 #include "Plater/PlaterObject.hpp"
 #include "Plater/Plate2D.hpp"
 #include "Plater/Plate3D.hpp"
@@ -37,13 +39,6 @@ enum class UndoCmd {
     Remove, Add, Reset, Increase, Decrease, Rotate
 };
 
-/// Preset tab list
-enum class preset_t : uint8_t {
-    Print = 0, Material, Printer,
-    Last // This MUST be the last enumeration. Don't use it for anything.
-};
-/// Convenience counter to determine how many preset tabs exist.
-constexpr size_t preset_count = static_cast<uint8_t>(preset_t::Last);
 
 enum class Zoom {
     In, Out
@@ -262,7 +257,7 @@ private:
     void show_preset_editor(preset_t preset, unsigned int idx) { };
 
     void _on_select_preset(preset_t preset) {};
-    void load_presets() {};
+    void load_presets();
 
 };
 
