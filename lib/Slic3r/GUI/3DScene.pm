@@ -1111,7 +1111,7 @@ sub draw_volumes {
             }
             $min_offset //= 0;
             $max_offset //= $volume->qverts->size;
-             
+            
             glVertexPointer_c(3, GL_FLOAT, 0, $volume->qverts->verts_ptr);
             glNormalPointer_c(GL_FLOAT, 0, $volume->qverts->norms_ptr);
             glDrawArrays(GL_QUADS, $min_offset / 3, ($max_offset-$min_offset) / 3);
@@ -1220,9 +1220,9 @@ sub calculate_normal {
     
     if ($volume->selected && $volume->selected_face != -1 && $volume->selected_face <= $max_offset/3){
         my $i = $volume->selected_face;
-        my $p1 = $volume->tverts->getPoint($i*3);
-        my $p2 = $volume->tverts->getPoint($i*3+1);
-        my $p3 = $volume->tverts->getPoint($i*3+2);
+        my $p1 = $volume->tverts->get_point($i*3);
+        my $p2 = $volume->tverts->get_point($i*3+1);
+        my $p3 = $volume->tverts->get_point($i*3+2);
         my $v1 = $p1->vector_to($p2);
         my $v2 = $p1->vector_to($p3);
         

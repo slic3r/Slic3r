@@ -41,8 +41,8 @@ class GLVertexArray {
         this->norms.push_back(z);
     };
     void load_mesh(const TriangleMesh &mesh);
-    Pointf3 getPoint(int i){
-        return Pointf3(this->verts[i*3],this->verts[i*3+1],this->verts[i*3+2]);
+    Pointf3 get_point(int i){
+        return Pointf3(this->verts.at(i*3),this->verts.at(i*3+1),this->verts.at(i*3+2));
     }
 };
 

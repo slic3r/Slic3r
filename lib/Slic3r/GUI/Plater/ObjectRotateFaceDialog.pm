@@ -34,10 +34,6 @@ sub new {
         title       => 'Align Face with Plane',
         on_change   => sub {
             my ($opt_id) = @_;
-            # There seems to be an issue with wxWidgets 3.0.2/3.0.3, where the slider
-            # genates tens of events for a single value change.
-            # Only trigger the recalculation if the value changes
-            # or a live preview was activated and the mesh cut is not valid yet.
             if ($self->{options}{$opt_id} != $optgroup->get_value($opt_id)){
                 $self->{options}{$opt_id} = $optgroup->get_value($opt_id);
             }
