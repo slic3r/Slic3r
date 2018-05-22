@@ -251,7 +251,7 @@ private:
 
     wxFlexGridSizer* presets_sizer {};
 
-    std::vector<wxBitmapComboBox*> preset_choosers {preset_count, nullptr};
+    std::vector<wxBitmapComboBox*> preset_choosers {preset_types, nullptr};
     void _on_change_combobox(preset_t preset, wxBitmapComboBox* choice);
 
     void show_preset_editor(preset_t preset, unsigned int idx) { };
