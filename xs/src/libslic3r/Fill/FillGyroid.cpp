@@ -9,178 +9,150 @@
 
 namespace Slic3r {
 
-Polyline FillGyroid::makeLineVert(double xPos, double yPos, double width, double height, double currentXBegin, double segmentSize, coord_t scaleFactor, 
-        double zCs, double zSn, bool flip, double decal){
-    double maxSlope = abs(abs(zCs)-abs(zSn));
-    Polyline polyline;
-    polyline.points.push_back(Point(coord_t((std::max(std::min(currentXBegin, xPos+width),xPos) + decal) * scaleFactor), coord_t(yPos * scaleFactor)));
-    for(double y=yPos;y<yPos+height+segmentSize;y+=segmentSize){
-        if(y>yPos+height) y = yPos+height;
-        double ySn = sin(y +(zCs<0?3.14:0) + 3.14);
-        double yCs = cos(y +(zCs<0?3.14:0) + 3.14+(!flip?0:3.14));
 
-        double a = ySn;
-        double b = -zCs;
-        double res = zSn*yCs;
-        double r = sqrt(a*a + b*b);
-        double x = asin(a/r) + asin(res/r) +3.14;
-        x += currentXBegin;
-        
-        double ydeviation = 0.5*(flip?-1:1)*(zSn>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
-        polyline.points.push_back(Point(coord_t((std::max(std::min(x, xPos+width),xPos)+decal-ydeviation/2) * scaleFactor), coord_t((y + ydeviation) * scaleFactor)));
-    }
-    
-    return polyline;
-}
 
-Polyline FillGyroid::makeLineHori(double xPos, double yPos, double width, double height, double currentYBegin, double segmentSize, coord_t scaleFactor, 
-        double zCs, double zSn, bool flip, double decal){
-    double maxSlope = abs(abs(zCs)-abs(zSn));
-    Polyline polyline;
-    polyline.points.push_back(Point(coord_t(xPos * scaleFactor), coord_t((std::max(std::min(currentYBegin, yPos+height),yPos)+decal) * scaleFactor)));
-    for(double x=xPos;x<xPos+width+segmentSize;x+=segmentSize){
-        if(x>xPos+width) x = xPos+width;
-        double xSn = sin(x +(zSn<0?3.14:0) +(flip?0:3.14));
-        double xCs = cos(x +(zSn<0?3.14:0) );
-        
-        double a = xCs;
-        double b = -zSn;
-        double res = zCs*xSn;
-        double r = sqrt(a*a + b*b);
-        double y = asin(a/r) + asin(res/r) +3.14/2;
-        y += currentYBegin;
-        
-        double xdeviation = 0.5*(flip?-1:1)*(zCs>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
-        polyline.points.push_back(Point(coord_t((x + xdeviation) * scaleFactor), coord_t((std::max(std::min(y, yPos+height),yPos)+decal-xdeviation/2) * scaleFactor)));
-    }
-    
-    return polyline;
-}
-
-inline void FillGyroid::correctOrderAndAdd(const int num, Polyline poly, Polylines &array){
-    if(num%2==0){
-        Points temp(poly.points.rbegin(), poly.points.rend());
-        poly.points.assign(temp.begin(),temp.end());
-    }
-    array.push_back(poly);
-}
-
-/// Generate a set of curves (array of array of 2d points) that describe a
-/// horizontal slice of a truncated regular octahedron with a specified
-/// grid square size.
-Polylines FillGyroid::makeGrid(coord_t gridZ, double density, double layer_width, size_t gridWidth, size_t gridHeight, size_t curveType)
+static inline double f(double x, double z_sin, double z_cos, bool vertical, bool flip)
 {
-    coord_t  scaleFactor = coord_t(scale_(layer_width) / density);
-    Polylines result;
-    Polyline *polyline2;
-    double segmentSize = density/2;
-    double decal = layer_width*density;
-    double xPos = 0, yPos=0, width=gridWidth, height=gridHeight;
-     //scale factor for 5% : 8 712 388
-     // 1z = 10^-6 mm ?
-    double z = gridZ/(1.0 * scaleFactor);
-    double zSn = sin(z);
-    double zCs = cos(z);
-    
+    if (vertical) {
+        double phase_offset = (z_cos < 0 ? M_PI : 0) + M_PI;
+        double a   = sin(x + phase_offset);
+        double b   = - z_cos;
+        double res = z_sin * cos(x + phase_offset + (flip ? M_PI : 0.));
+        double r   = sqrt(a*a + b*b);
+        return asin(a/r) + asin(res/r) + M_PI;
+    }
+    else {
+        double phase_offset = z_sin < 0 ? M_PI : 0.;
+        double a   = cos(x + phase_offset);
+        double b   = - z_sin;
+        double res = z_cos * sin(x + phase_offset + (flip ? 0 : M_PI));
+        double r   = sqrt(a*a + b*b);
+        return (asin(a/r) + asin(res/r) + 0.5 * M_PI);
+    }
+}
 
-    int numLine = 0;
-    
-    if(abs(zSn)<=abs(zCs)){
-        //vertical
-        //begin to first one
-        int iter = 1;
-        double currentXBegin = xPos - PI/2;
-        currentXBegin = PI*(int)(currentXBegin/PI -1);
-        iter = (int)(currentXBegin/PI +1)%2;
-        bool flip = iter%2==1;
-        // bool needNewLine =false;
-        while(currentXBegin<xPos+width-PI/2){
-            
-            correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
-            numLine++;
-            
-            //then, return by the other side
-            iter++;
-            currentXBegin = currentXBegin + PI;
-            flip = iter%2==1;
-            
-            if(currentXBegin < xPos+width-PI/2){
-                
-                correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
-                numLine++;
+static inline Polyline make_wave(
+    const std::vector<Pointf>& one_period, double width, double height, double offset, double scaleFactor,
+    double z_cos, double z_sin, bool vertical)
+{
+    std::vector<Pointf> points = one_period;
+    double period = points.back().x;
+    points.pop_back();
+    int n = points.size();
+    do {
+        points.emplace_back(Pointf(points[points.size()-n].x + period, points[points.size()-n].y));
+    } while (points.back().x < width);
+    points.back().x = width;
 
-                // relance
-                iter++;
-                currentXBegin = currentXBegin + PI;
-                flip = iter%2==1;
-            }
-        }
-    }else{
-        //horizontal
-        
+    // and construct the final polyline to return:
+    Polyline polyline;
+    for (Pointf& point : points) {
+        point.y += offset;
+        point.y = std::max(0., std::min(height, point.y));
+        if (vertical)
+            std::swap(point.x, point.y);
+        polyline.points.emplace_back(Point(coord_t(point.x * scaleFactor), coord_t(point.y * scaleFactor)));
+    }
 
-        //begin to first one
-        int iter = 1;
-        //search first line output
-        double currentYBegin = yPos ;
-        currentYBegin = PI*(int)(currentYBegin/PI -0);
-        iter = (int)(currentYBegin/PI +1)%2;
-        
-        bool flip = iter%2==1;
-        
-        
-        while(currentYBegin < yPos+width){
+    return polyline;
+}
 
-            correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
-            numLine++;
-        
-            //then, return by the other side
-            iter++;
-            currentYBegin = currentYBegin + PI;
-            flip = iter%2==1;
-            
-            if(currentYBegin<yPos+width){
-                
-                correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
-                numLine++;
-                
-                //relance
-                iter++;
-                currentYBegin = currentYBegin + PI;
-                flip = iter%2==1;
-            }
+
+static bool sortPointf (Pointf& lfs,Pointf& rhs) { return lfs.x < rhs.x || (lfs.x == rhs.x && lfs.y < rhs.y); }
+
+static std::vector<Pointf> make_one_period(double width, double scaleFactor, double z_cos, double z_sin, bool vertical, bool flip)
+{
+    std::vector<Pointf> points;
+    double dx = M_PI_4; // very coarse spacing to begin with
+    double limit = std::min(2*M_PI, width);
+    for (double x = 0.; x < limit + EPSILON; x += dx) {  // so the last point is there too
+        x = std::min(x, limit);
+        points.emplace_back(Pointf(x,f(x, z_sin,z_cos, vertical, flip)));
+    }
+
+    // now we will check all internal points and in case some are too far from the line connecting its neighbours,
+    // we will add one more point on each side:
+    const double tolerance = .1;
+    for (unsigned int i=1;i<points.size()-1;++i) {
+        Pointf& lp = points[i-1]; // left point
+        Pointf& tp = points[i];   // this point
+        Pointf& rp = points[i+1]; // right point
+        // calculate distance of the point to the line:
+        double dist_mm = unscale(scaleFactor * std::abs( (rp.y - lp.y)*tp.x + (lp.x - rp.x)*tp.y + (rp.x*lp.y - rp.y*lp.x) ) / std::hypot((rp.y - lp.y),(lp.x - rp.x)));
+
+        if (dist_mm > tolerance) {                               // if the difference from straight line is more than this
+            double x = 0.5f * (points[i-1].x + points[i].x);
+            points.emplace_back(Pointf(x, f(x, z_sin, z_cos, vertical, flip)));
+            x = 0.5f * (points[i+1].x + points[i].x);
+            points.emplace_back(Pointf(x, f(x, z_sin, z_cos, vertical, flip)));
+            std::sort(points.begin(), points.end(), sortPointf);            // we added the points to the end, but need them all in order
+            --i;                                                // decrement i so we also check the first newly added point
         }
     }
-    
+    return points;
+}
+
+static Polylines make_gyroid_waves(double gridZ, double density_adjusted, double line_spacing, double width, double height)
+{
+    const double scaleFactor = scale_(line_spacing) / density_adjusted;
+ //scale factor for 5% : 8 712 388
+ // 1z = 10^-6 mm ?
+    const double z     = gridZ / scaleFactor;
+    const double z_sin = sin(z);
+    const double z_cos = cos(z);
+
+    bool vertical = (std::abs(z_sin) <= std::abs(z_cos));
+    double lower_bound = 0.;
+    double upper_bound = height;
+    bool flip = true;
+    if (vertical) {
+        flip = false;
+        lower_bound = -M_PI;
+        upper_bound = width - M_PI_2;
+        std::swap(width,height);
+    }
+
+    std::vector<Pointf> one_period = make_one_period(width, scaleFactor, z_cos, z_sin, vertical, flip); // creates one period of the waves, so it doesn't have to be recalculated all the time
+    Polylines result;
+
+    for (double y0 = lower_bound; y0 < upper_bound+EPSILON; y0 += 2*M_PI)           // creates odd polylines
+            result.emplace_back(make_wave(one_period, width, height, y0, scaleFactor, z_cos, z_sin, vertical));
+
+    flip = !flip;                                                                   // even polylines are a bit shifted
+    one_period = make_one_period(width, scaleFactor, z_cos, z_sin, vertical, flip); // updates the one period sample
+    for (double y0 = lower_bound + M_PI; y0 < upper_bound+EPSILON; y0 += 2*M_PI)    // creates even polylines
+            result.emplace_back(make_wave(one_period, width, height, y0, scaleFactor, z_cos, z_sin, vertical));
+
     return result;
 }
 
-void FillGyroid::_fill_surface_single(
+void FillGyroid::_fill_surface_single( 
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction, 
     ExPolygon                       &expolygon, 
     Polylines                       *polylines_out)
 {
-    // no rotation is supported for this infill pattern
+    // no rotation is supported for this infill pattern (yet)
     BoundingBox bb = expolygon.contour.bounding_box();
-    coord_t     distance = coord_t(scale_(this->spacing()) / (density*this->scaling));
+    // Density adjusted to have a good %of weight.
+    double      density_adjusted = std::max(0., density * 2.);
+    // Distance between the gyroid waves in scaled coordinates.
+    coord_t     distance = coord_t(scale_(this->spacing()) / density_adjusted);
 
     // align bounding box to a multiple of our grid module
     bb.min.align_to_grid(Point(2*M_PI*distance, 2*M_PI*distance));
-    
+
     // generate pattern
-    Polylines   polylines = makeGrid(
-        (coord_t)scale_(this->z),
-        density*this->scaling,
+    Polylines   polylines = make_gyroid_waves(
+        scale_(this->z),
+        density_adjusted,
         this->spacing(),
-        (size_t)(ceil(bb.size().x / distance) + 1),
-        (size_t)(ceil(bb.size().y / distance) + 1),
-        (size_t)(((this->layer_id/thickness_layers) % 2) + 1) );
+        ceil(bb.size().x / distance) + 1.,
+        ceil(bb.size().y / distance) + 1.);
     
     // move pattern in place
-    for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it)
-        it->translate(bb.min.x, bb.min.y);
-    
+    for (Polyline &polyline : polylines)
+        polyline.translate(bb.min.x, bb.min.y);
 
     // clip pattern to boundaries
     polylines = intersection_pl(polylines, (Polygons)expolygon);
@@ -197,18 +169,14 @@ void FillGyroid::_fill_surface_single(
             }
         }
         Polylines chained = PolylineCollection::chained_path_from(
-#if SLIC3R_CPPVER >= 11
             std::move(polylines), 
-#else
-            polylines,
-#endif
             PolylineCollection::leftmost_point(polylines), false); // reverse allowed
         bool first = true;
-        for (Polylines::iterator it_polyline = chained.begin(); it_polyline != chained.end(); ++ it_polyline) {
+        for (Polyline &polyline : chained) {
             if (! first) {
                 // Try to connect the lines.
                 Points &pts_end = polylines_out->back().points;
-                const Point &first_point = it_polyline->points.front();
+                const Point &first_point = polyline.points.front();
                 const Point &last_point = pts_end.back();
                 // TODO: we should also check that both points are on a fill_boundary to avoid 
                 // connecting paths on the boundaries of internal regions
@@ -216,20 +184,16 @@ void FillGyroid::_fill_surface_single(
                 if (first_point.distance_to(last_point) <= 5 * distance && 
                     expolygon_off.contains(Line(last_point, first_point))) {
                     // Append the polyline.
-                    pts_end.insert(pts_end.end(), it_polyline->points.begin(), it_polyline->points.end());
+                    pts_end.insert(pts_end.end(), polyline.points.begin(), polyline.points.end());
                     continue;
                 }
             }
             // The lines cannot be connected.
-#if SLIC3R_CPPVER >= 11
-            polylines_out->push_back(std::move(*it_polyline));
-#else
-            polylines_out->push_back(Polyline());
-            std::swap(polylines_out->back(), *it_polyline);
-#endif
+            polylines_out->emplace_back(std::move(polyline));
             first = false;
         }
     }
 }
+
 
 } // namespace Slic3r
