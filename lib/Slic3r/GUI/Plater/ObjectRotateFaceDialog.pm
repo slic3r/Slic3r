@@ -76,6 +76,7 @@ sub new {
         $canvas->set_auto_bed_shape;
         $canvas->SetSize([500,500]);
         $canvas->enable_picking(1);
+        $canvas->enable_face_select(1);
         $canvas->SetMinSize($canvas->GetSize);
         $canvas->zoom_to_volumes;
         $canvas->on_select(sub {

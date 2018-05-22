@@ -14,6 +14,7 @@ use Wx::GLCanvas qw(:all);
 
 __PACKAGE__->mk_accessors( qw(_quat _dirty init
                               enable_picking
+                              enable_face_select
                               enable_moving
                               on_viewport_changed
                               on_hover
@@ -845,10 +846,12 @@ sub Render {
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                 glFlush();
                 glFinish();
-                $self->draw_volumes(2, $volume_idx);
-                my $color = [ glReadPixels_p($pos->x, $self->GetSize->GetHeight - $pos->y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE) ];
-                my $face_idx = $color->[0] + $color->[1]*256 + $color->[2]*256*256;
-                $self->volumes->[$volume_idx]->hover_face($face_idx);
+                if($self->enable_face_select){
+                    $self->draw_volumes(2, $volume_idx);
+                    my $color = [ glReadPixels_p($pos->x, $self->GetSize->GetHeight - $pos->y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE) ];
+                    my $face_idx = $color->[0] + $color->[1]*256 + $color->[2]*256*256;
+                    $self->volumes->[$volume_idx]->hover_face($face_idx);
+                }
             }
         }
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1075,6 +1078,8 @@ sub draw_volumes {
             my $g = ($volume_idx & 0x0000FF00) >>  8;
             my $b = ($volume_idx & 0x00FF0000) >> 16;
             @baseColor = ($r/255.0, $g/255.0, $b/255.0, 1);
+        } elsif ($self->enable_face_select){
+            @baseColor = @{ $volume->color };
         } elsif ($volume->selected) {
             @baseColor = @SELECTED_COLOR;
             push(@baseColor, $volume->color->[3]);
@@ -1161,12 +1166,12 @@ sub draw_volumes {
                 glNormalPointer_c(GL_FLOAT, 0, $volume->tverts->norms_ptr);
                 if ( (not $fakecolor) && $volume->selected && $volume->selected_face != -1 && $volume->selected_face <= $max_offset/3){
                     my $i = $volume->selected_face;
-                    glColor4f(1.0,0.0,0.0,1.0);
+                    glColor4f(@SELECTED_COLOR,$volume->color->[3]);
                     glDrawArrays(GL_TRIANGLES, $i*3, 3);
                 }
                 if ( (not $fakecolor) && $volume->hover && $volume->hover_face != -1 && $volume->hover_face <= $max_offset/3){
                     my $i = $volume->hover_face;
-                    glColor4f(0.0,0.0,1.0,1.0);
+                    glColor4f(@HOVER_COLOR,$volume->color->[3]);
                     glDrawArrays(GL_TRIANGLES, $i*3, 3);
                 }
                 glColor4f(@baseColor);
