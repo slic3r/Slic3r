@@ -216,6 +216,7 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
         --perimeters        Number of perimeters/horizontal skins (range: 0+, default: 3)
         --top-solid-layers  Number of solid layers to do for top surfaces (range: 0+, default: 3)
         --bottom-solid-layers  Number of solid layers to do for bottom surfaces (range: 0+, default: 3)
+        --min-shell-thickness  Minimum thickness of all solid shells (range: 0+, default: 0)
         --solid-layers      Shortcut for setting the two options above at once
         --fill-density      Infill density (range: 0%-100%, default: 40%)
         --fill-angle        Infill angle in degrees (range: 0-90, default: 45)

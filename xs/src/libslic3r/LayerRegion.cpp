@@ -237,21 +237,23 @@ LayerRegion::prepare_fill_surfaces()
         the only meaningful information returned by psPerimeters. */
     
     // if no solid layers are requested, turn top/bottom surfaces to internal
-    if (this->region()->config.top_solid_layers == 0) {
-        for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->surface_type == stTop) {
-                if (this->layer()->object()->config.infill_only_where_needed) {
-                    surface->surface_type = stInternalVoid;
-                } else {
-                    surface->surface_type = stInternal;
+    if (this->region()->config.min_shell_thickness == 0) {
+        if (this->region()->config.top_solid_layers == 0) {
+            for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
+                if (surface->surface_type == stTop) {
+                    if (this->layer()->object()->config.infill_only_where_needed) {
+                        surface->surface_type = stInternalVoid;
+                    } else {
+                        surface->surface_type = stInternal;
+                    }
                 }
             }
         }
-    }
-    if (this->region()->config.bottom_solid_layers == 0) {
-        for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->surface_type == stBottom || surface->surface_type == stBottomBridge)
-                surface->surface_type = stInternal;
+        if (this->region()->config.bottom_solid_layers == 0) {
+            for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
+                if (surface->surface_type == stBottom || surface->surface_type == stBottomBridge)
+                    surface->surface_type = stInternal;
+            }
         }
     }
         

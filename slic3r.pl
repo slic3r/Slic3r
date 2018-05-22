@@ -439,6 +439,7 @@ $j
     --perimeters        Number of perimeters/horizontal skins (range: 0+, default: $config->{perimeters})
     --top-solid-layers  Number of solid layers to do for top surfaces (range: 0+, default: $config->{top_solid_layers})
     --bottom-solid-layers  Number of solid layers to do for bottom surfaces (range: 0+, default: $config->{bottom_solid_layers})
+    --min-shell-thickness  Minimum thickness of all solid shells (range: 0+, default: 0)
     --solid-layers      Shortcut for setting the two options above at once
     --fill-density      Infill density (range: 0%-100%, default: $config->{fill_density}%)
     --fill-angle        Infill angle in degrees (range: 0-90, default: $config->{fill_angle})
