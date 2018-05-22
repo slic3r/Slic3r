@@ -1206,6 +1206,34 @@ sub draw_volumes {
     glDisableClientState(GL_VERTEX_ARRAY);
 }
 
+sub calculate_normal {
+    my $self = shift;
+    my ($volume_idx) = @_;
+    return undef if $volume_idx == -1;
+    my $volume = $self->volumes->[$volume_idx];
+    my $max_offset = $volume->tverts->size; # For now just assume this TODO: add the other checks
+    
+    if ($volume->selected && $volume->selected_face != -1 && $volume->selected_face <= $max_offset/3){
+        my $i = $volume->selected_face;
+        my $p1 = $volume->tverts->getPoint($i*3);
+        my $p2 = $volume->tverts->getPoint($i*3+1);
+        my $p3 = $volume->tverts->getPoint($i*3+2);
+        my $v1 = $p1->vector_to($p2);
+        my $v2 = $p1->vector_to($p3);
+        
+        # Calculate the cross product
+        my $x =  $v1->y() * $v2->z() - $v1->z() * $v2->y();
+        my $y =  $v1->z() * $v2->x() - $v1->x() * $v2->z();
+        my $z =  $v1->x() * $v2->y() - $v1->y() * $v2->x();
+        
+        # Normalize it
+        my $d = sqrt($x*$x + $y*$y + $z*$z);
+        return Slic3r::Pointf3->new($x/$d,$y/$d,$z/$d);
+    }
+    
+    return undef;
+}
+
 package Slic3r::GUI::3DScene::Volume;
 use Moo;
 

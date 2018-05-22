@@ -23,6 +23,7 @@ use utf8;
 use File::Basename qw(basename dirname);
 use List::Util qw(sum first max none any);
 use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad rad2deg);
+use Math::Trig qw(acos);
 use LWP::UserAgent;
 use threads::shared qw(shared_clone);
 use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :misc 
@@ -1510,9 +1511,28 @@ sub center_selected_object_on_bed {
 }
 
 sub rotate_face {
-  print "Not implemented yet\n";
-  my ($obj_idx, $object) = $self->selected_object;
-  return if !defined $obj_idx;
+    my $self = shift;
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    # Get the selected normal
+    if (!$Slic3r::GUI::have_OpenGL) {
+        Slic3r::GUI::show_error($self, "Please install the OpenGL modules to use this feature (see build instructions).");
+        return;
+    }
+    my $dlg = Slic3r::GUI::Plater::ObjectRotateFaceDialog->new($self,
+		object              => $self->{objects}[$obj_idx],
+		model_object        => $self->{model}->objects->[$obj_idx],
+	);
+	return unless $dlg->ShowModal == wxID_OK;
+    my $normal = $dlg->SelectedNormal;
+    return if !defined $normal;
+    
+    # Actual math to rotate
+    my $angleToXZ = atan2($normal->y(),$normal->x());
+    my $angleToZ = acos(-$normal->z());
+    $self->rotate(-rad2deg($angleToXZ),Z);
+    $self->rotate(rad2deg($angleToZ),Y);
 }
 
 sub rotate {
