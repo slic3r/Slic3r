@@ -10,8 +10,11 @@ use List::Util qw(min max first);
 use Slic3r::Geometry qw(X Y scale unscale convex_hull);
 use Slic3r::Geometry::Clipper qw(offset JT_ROUND intersection_pl);
 use Wx qw(:misc :pen :brush :sizer :font :cursor wxTAB_TRAVERSAL);
-use Wx::Event qw(EVT_MOUSE_EVENTS EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
+use Wx::Event qw(EVT_MOUSE_EVENTS EVT_KEY_DOWN EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
 use base 'Wx::Panel';
+
+# Color Scheme
+use Slic3r::GUI::ColorScheme;
 
 use constant CANVAS_TEXT => join('-', +(localtime)[3,4]) eq '13-8'
     ? 'What do you want to print today? ™' # Sept. 13, 2006. The first part ever printed by a RepRap to make another RepRap.
@@ -21,9 +24,16 @@ sub new {
     my $class = shift;
     my ($parent, $size, $objects, $model, $config) = @_;
     
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
+    }
+    
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, $size, wxTAB_TRAVERSAL);
     # This has only effect on MacOS. On Windows and Linux/GTK, the background is painted by $self->repaint().
-    $self->SetBackgroundColour(Wx::wxWHITE);
+    $self->SetBackgroundColour(Wx::Colour->new(@BACKGROUND255));
 
     $self->{objects}            = $objects;
     $self->{model}              = $model;
@@ -33,17 +43,22 @@ sub new {
     $self->{on_right_click}     = sub {};
     $self->{on_instances_moved} = sub {};
     
-    $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(210,210,210), wxSOLID);
-    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
-    $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(128,128,255), wxSOLID);
+    $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_OBJECTS), wxSOLID);
+    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_INSTANCE), wxSOLID);
+    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
+    $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_DRAGGED), wxSOLID);
+    $self->{bed_brush}          = Wx::Brush->new(Wx::Colour->new(@BED_COLOR), wxSOLID);
     $self->{transparent_brush}  = Wx::Brush->new(Wx::Colour->new(0,0,0), wxTRANSPARENT);
-    $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(230,230,230), 1, wxSOLID);
-    $self->{print_center_pen}   = Wx::Pen->new(Wx::Colour->new(200,200,200), 1, wxSOLID);
-    $self->{clearance_pen}      = Wx::Pen->new(Wx::Colour->new(0,0,200), 1, wxSOLID);
-    $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(150,150,150), 1, wxSOLID);
+    $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(@BED_GRID), 1, wxSOLID);
+    $self->{print_center_pen}   = Wx::Pen->new(Wx::Colour->new(@BED_CENTER), 1, wxSOLID);
+    $self->{clearance_pen}      = Wx::Pen->new(Wx::Colour->new(@BED_CLEARANCE), 1, wxSOLID);
+    $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(@BED_SKIRT), 1, wxSOLID);
+    $self->{dark_pen}           = Wx::Pen->new(Wx::Colour->new(@BED_DARK), 1, wxSOLID);
 
     $self->{user_drawn_background} = $^O ne 'darwin';
-    
+
+    $self->{selected_instance} = undef;
+
     EVT_PAINT($self, \&repaint);
     EVT_ERASE_BACKGROUND($self, sub {}) if $self->{user_drawn_background};
     EVT_MOUSE_EVENTS($self, \&mouse_event);
@@ -51,6 +66,22 @@ sub new {
         $self->update_bed_size;
         $self->Refresh;
     });
+    EVT_KEY_DOWN($self, sub {
+            my ($s, $event) = @_;
+
+            my $key = $event->GetKeyCode;
+            if ($key == 65 || $key == 314) {
+                $self->nudge_instance('left');
+            } elsif ($key == 87 || $key == 315) {
+                $self->nudge_instance('up');
+            } elsif ($key == 68 || $key == 316) {
+                $self->nudge_instance('right');
+            } elsif ($key == 83 || $key == 317) {
+                $self->nudge_instance('down');
+            } else {
+                $event->Skip;
+            }
+        });
     
     return $self;
 }
@@ -77,7 +108,10 @@ sub on_instances_moved {
 
 sub repaint {
     my ($self, $event) = @_;
-    
+
+    # Focus is needed in order to catch keyboard events.
+    $self->SetFocus;
+
     my $dc = Wx::AutoBufferedPaintDC->new($self);
     my $size = $self->GetSize;
     my @size = ($size->GetWidth, $size->GetHeight);
@@ -87,21 +121,18 @@ sub repaint {
         # On MacOS the background is erased, on Windows the background is not erased 
         # and on Linux/GTK the background is erased to gray color.
         # Fill DC with the background on Windows & Linux/GTK.
-        my $brush_background = Wx::Brush->new(Wx::wxWHITE, wxSOLID);
-        $dc->SetPen(wxWHITE_PEN);
+        my $brush_background = Wx::Brush->new(Wx::Colour->new(@BACKGROUND255), wxSOLID);
+        my $pen_background   = Wx::Pen->new(Wx::Colour->new(@BACKGROUND255), 1, wxSOLID);
+        $dc->SetPen($pen_background);
         $dc->SetBrush($brush_background);
         my $rect = $self->GetUpdateRegion()->GetBox();
         $dc->DrawRectangle($rect->GetLeft(), $rect->GetTop(), $rect->GetWidth(), $rect->GetHeight());
     }
-
-    # draw grid
-    $dc->SetPen($self->{grid_pen});
-    $dc->DrawLine(map @$_, @$_) for @{$self->{grid}};
     
     # draw bed
     {
         $dc->SetPen($self->{print_center_pen});
-        $dc->SetBrush($self->{transparent_brush});
+        $dc->SetBrush($self->{bed_brush});
         $dc->DrawPolygon($self->scaled_points_to_pixel($self->{bed_polygon}, 1), 0, 0);
     }
     
@@ -119,20 +150,24 @@ sub repaint {
     
     # draw frame
     if (0) {
-        $dc->SetPen(wxBLACK_PEN);
+        $dc->SetPen($self->{dark_pen});
         $dc->SetBrush($self->{transparent_brush});
         $dc->DrawRectangle(0, 0, @size);
     }
     
     # draw text if plate is empty
     if (!@{$self->{objects}}) {
-        $dc->SetTextForeground(Wx::Colour->new(150,50,50));
+        $dc->SetTextForeground(Wx::Colour->new(@BED_OBJECTS));
         $dc->SetFont(Wx::Font->new(14, wxDEFAULT, wxNORMAL, wxNORMAL));
         $dc->DrawLabel(CANVAS_TEXT, Wx::Rect->new(0, 0, $self->GetSize->GetWidth, $self->GetSize->GetHeight), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+    } else {
+        # draw grid
+        $dc->SetPen($self->{grid_pen});
+        $dc->DrawLine(map @$_, @$_) for @{$self->{grid}};
     }
     
     # draw thumbnails
-    $dc->SetPen(wxBLACK_PEN);
+    $dc->SetPen($self->{dark_pen});
     $self->clean_instance_thumbnails;
     for my $obj_idx (0 .. $#{$self->{objects}}) {
         my $object = $self->{objects}[$obj_idx];
@@ -149,6 +184,8 @@ sub repaint {
             
             if (defined $self->{drag_object} && $self->{drag_object}[0] == $obj_idx && $self->{drag_object}[1] == $instance_idx) {
                 $dc->SetBrush($self->{dragged_brush});
+            } elsif ($object->selected && $object->selected_instance == $instance_idx) {
+                $dc->SetBrush($self->{instance_brush});
             } elsif ($object->selected) {
                 $dc->SetBrush($self->{selected_brush});
             } else {
@@ -201,7 +238,11 @@ sub mouse_event {
     my $pos = $event->GetPosition;
     my $point = $self->point_to_model_units([ $pos->x, $pos->y ]);  #]]
     if ($event->ButtonDown) {
+        # On Linux, Focus is needed in order to move selected instance using keyboard arrows.
+        $self->SetFocus;
+
         $self->{on_select_object}->(undef);
+        $self->{selected_instance} = undef;
         # traverse objects and instances in reverse order, so that if they're overlapping
         # we get the one that gets drawn last, thus on top (as user expects that to move)
         OBJECTS: for my $obj_idx (reverse 0 .. $#{$self->{objects}}) {
@@ -220,6 +261,8 @@ sub mouse_event {
                             $point->y - $instance_origin->[Y],  #-
                         ];
                         $self->{drag_object} = [ $obj_idx, $instance_idx ];
+                        $self->{objects}->[$obj_idx]->selected_instance($instance_idx);
+                        $self->{selected_instance} = $self->{drag_object};
                     } elsif ($event->RightDown) {
                         $self->{on_right_click}->($pos);
                     }
@@ -236,7 +279,7 @@ sub mouse_event {
         $self->{drag_object} = undef;
         $self->SetCursor(wxSTANDARD_CURSOR);
     } elsif ($event->LeftDClick) {
-    	$self->{on_double_click}->();
+        $self->{on_double_click}->();
     } elsif ($event->Dragging) {
         return if !$self->{drag_start_pos}; # concurrency problems
         my ($obj_idx, $instance_idx) = @{ $self->{drag_object} };
@@ -255,6 +298,55 @@ sub mouse_event {
         }
         $self->SetCursor($cursor);
     }
+}
+
+sub nudge_instance{
+    my ($self, $direction) = @_;
+
+    # Get the selected instance of an object.
+    if (!defined $self->{selected_instance}) {
+        # Check if an object is selected.
+        for my $obj_idx (0 .. $#{$self->{objects}}) {
+            if ($self->{objects}->[$obj_idx]->selected) {
+                if ($self->{objects}->[$obj_idx]->selected_instance != -1) {
+                    $self->{selected_instance} = [$obj_idx, $self->{objects}->[$obj_idx]->selected_instance];
+                }
+            }
+        }
+    }
+    return if not defined ($self->{selected_instance});
+    my ($obj_idx, $instance_idx) = @{ $self->{selected_instance} };
+    my $object = $self->{model}->objects->[$obj_idx];
+    my $instance = $object->instances->[$instance_idx];
+
+    # Get the nudge values.
+    my $x_nudge = 0;
+    my $y_nudge = 0;
+
+    $self->{nudge_value} = ($Slic3r::GUI::Settings->{_}{nudge_val} < 0.1 ? 0.1 : $Slic3r::GUI::Settings->{_}{nudge_val}) / &Slic3r::SCALING_FACTOR;
+
+    if ($direction eq 'right'){
+        $x_nudge = $self->{nudge_value};
+    } elsif ($direction eq 'left'){
+        $x_nudge = -1 * $self->{nudge_value};
+    } elsif ($direction eq 'up'){
+        $y_nudge = $self->{nudge_value};
+    } elsif ($direction eq 'down'){
+        $y_nudge = -$self->{nudge_value};
+    }
+    my $point = Slic3r::Pointf->new($x_nudge, $y_nudge);
+    my $instance_origin = [ map scale($_), @{$instance->offset} ];
+    $point = [ map scale($_), @{$point} ];
+
+    $instance->set_offset(
+        Slic3r::Pointf->new(
+            unscale( $instance_origin->[X] + $x_nudge),
+            unscale( $instance_origin->[Y] + $y_nudge),
+        ));
+
+    $object->update_bounding_box;
+    $self->Refresh;
+    $self->{on_instances_moved}->();
 }
 
 sub update_bed_size {

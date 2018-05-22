@@ -503,8 +503,8 @@ std::string
 GCode::_extrude(ExtrusionPath path, std::string description, double speed)
 {
     path.simplify(SCALED_RESOLUTION);
-    
     std::string gcode;
+    description = path.is_bridge() ? description + " (bridge)" : description;
     
     // go to first point of extrusion path
     if (!this->_last_pos_defined || !this->_last_pos.coincides_with(path.first_point())) {
@@ -755,7 +755,9 @@ GCode::set_extruder(unsigned int extruder_id)
         PlaceholderParser pp = *this->placeholder_parser;
         pp.set("previous_extruder", this->writer.extruder()->id);
         pp.set("next_extruder",     extruder_id);
-        gcode += pp.process(this->config.toolchange_gcode.value) + '\n';
+        pp.set("previous_retraction", this->writer.extruder()->retracted);
+        pp.set("next_retraction", this->writer.extruders.find(extruder_id)->second.retracted);
+        gcode += Slic3r::apply_math(pp.process(this->config.toolchange_gcode.value))  + '\n';
     }
     
     // if ooze prevention is enabled, park current extruder in the nearest

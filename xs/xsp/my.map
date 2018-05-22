@@ -178,6 +178,14 @@ Ref<Layer>                 O_OBJECT_SLIC3R_T
 SupportLayer*              O_OBJECT_SLIC3R
 Ref<SupportLayer>          O_OBJECT_SLIC3R_T
 
+SlicingAdaptive*           O_OBJECT_SLIC3R
+Ref<SlicingAdaptive>       O_OBJECT_SLIC3R_T
+Clone<SlicingAdaptive>     O_OBJECT_SLIC3R_T
+
+LayerHeightSpline*         O_OBJECT_SLIC3R
+Ref<LayerHeightSpline>     O_OBJECT_SLIC3R_T
+Clone<LayerHeightSpline>   O_OBJECT_SLIC3R_T
+
 PlaceholderParser*         O_OBJECT_SLIC3R
 Ref<PlaceholderParser>     O_OBJECT_SLIC3R_T
 Clone<PlaceholderParser>   O_OBJECT_SLIC3R_T

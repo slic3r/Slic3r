@@ -217,7 +217,7 @@ LayerRegion::make_fill()
             // layer height
             Flow internal_flow = this->region()->flow(
                 frInfill,
-                this->layer()->object()->config.layer_height.value,  // TODO: handle infill_every_layers?
+                h,  // use the calculated surface thickness here for internal infill instead of the layer height to account for infill_every_layers
                 false,  // no bridge
                 false,  // no first layer
                 -1,     // auto width

@@ -100,6 +100,8 @@ sub _init_tabpanel {
         $panel->OnActivate if $panel->can('OnActivate');
         if ($self->{tabpanel}->GetSelection > 1) {
             $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+        } elsif(($Slic3r::GUI::Settings->{_}{show_host} == 0) && ($self->{tabpanel}->GetSelection == 1)){
+            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
         } else {
             $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag & ~wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
         }
@@ -115,7 +117,8 @@ sub _init_tabpanel {
     });
     
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
-    $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller");
+    $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller")
+        if ($Slic3r::GUI::Settings->{_}{show_host});
 }
 
 sub _init_menubar {
@@ -124,7 +127,7 @@ sub _init_menubar {
     # File menu
     my $fileMenu = Wx::Menu->new;
     {
-        wxTheApp->append_menu_item($fileMenu, "Open STL/OBJ/AMF…\tCtrl+O", 'Open a model', sub {
+        wxTheApp->append_menu_item($fileMenu, "Open STL/OBJ/AMF/3MF…\tCtrl+O", 'Open a model', sub {
             $self->{plater}->add if $self->{plater};
         }, undef, 'brick_add.png');
         wxTheApp->append_menu_item($fileMenu, "Open 2.5D TIN mesh…", 'Import a 2.5D TIN mesh', sub {
@@ -143,6 +146,9 @@ sub _init_menubar {
         wxTheApp->append_menu_item($fileMenu, "&Export Config Bundle…", 'Export all presets to file', sub {
             $self->export_configbundle;
         }, undef, 'lorry_go.png');
+        wxTheApp->append_menu_item($fileMenu, "&Import Config from GCode-File…", 'Load presets from a created GCode-File', sub {
+            $self->import_fromGCode;
+        }, undef, 'lorry_import.png');
         $fileMenu->AppendSeparator();
         my $repeat;
         wxTheApp->append_menu_item($fileMenu, "Q&uick Slice…\tCtrl+U", 'Slice file', sub {
@@ -191,6 +197,12 @@ sub _init_menubar {
             my $selectMenu = $self->{plater_select_menu} = Wx::Menu->new;
             wxTheApp->append_submenu($self->{plater_menu}, "Select", 'Select an object in the plater', $selectMenu, undef, 'brick.png');
         }
+        wxTheApp->append_menu_item($self->{plater_menu}, "Undo\tCtrl+Z", 'Undo', sub {
+                $plater->undo;
+            }, undef, 'arrow_undo.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Redo\tCtrl+Shift+Z", 'Redo', sub {
+                $plater->redo;
+            }, undef, 'arrow_redo.png');
         wxTheApp->append_menu_item($self->{plater_menu}, "Select Next Object\tCtrl+Right", 'Select Next Object in the plater', sub {
             $plater->select_next;
         }, undef, 'arrow_right.png');
@@ -211,6 +223,9 @@ sub _init_menubar {
         wxTheApp->append_menu_item($self->{plater_menu}, "Export plate with modifiers as AMF...", 'Export current plate as AMF, including all modifier meshes', sub {
             $plater->export_amf;
         }, undef, 'brick_go.png');
+        wxTheApp->append_menu_item($self->{plater_menu}, "Export plate with modifiers as 3MF...", 'Export current plate as 3MF, including all modifier meshes', sub {
+                $plater->export_tmf;
+            }, undef, 'brick_go.png');
         $self->{object_menu} = $self->{plater}->object_menu;
         $self->on_plater_object_list_changed(0);
         $self->on_plater_selection_changed(0);
@@ -279,6 +294,7 @@ sub _init_menubar {
         }, undef, 'printer_empty.png');
         wxTheApp->append_menu_item($windowMenu, "DLP Projector…\tCtrl+P", 'Open projector window for DLP printing', sub {
             $self->{plater}->pause_background_process;
+            $self->{slaconfig} = Slic3r::Config->new;
             Slic3r::GUI::SLAPrintOptions->new($self)->ShowModal;
             $self->{plater}->resume_background_process;
         }, undef, 'film.png');
@@ -328,12 +344,20 @@ sub is_loaded {
     return $self->{loaded};
 }
 
+sub on_undo_redo_stacks_changed {
+    my $self = shift;
+    # Enable undo or redo if they have operations in their stack.
+    $self->{plater_menu}->Enable($self->{plater_menu}->FindItem("Undo\tCtrl+Z"), $#{$self->{plater}->{undo_stack}} < 0 ? 0 : 1);
+    $self->{plater_menu}->Enable( $self->{plater_menu}->FindItem("Redo\tCtrl+Shift+Z"),  $#{$self->{plater}->{redo_stack}} < 0 ? 0 : 1);
+}
+
 sub on_plater_object_list_changed {
     my ($self, $have_objects) = @_;
     
     return if !defined $self->{plater_menu};
     $self->{plater_menu}->Enable($_->GetId, $have_objects)
         for $self->{plater_menu}->GetMenuItems;
+    $self->on_undo_redo_stacks_changed;
 }
 
 sub on_plater_selection_changed {
@@ -342,6 +366,8 @@ sub on_plater_selection_changed {
     return if !defined $self->{object_menu};
     $self->{object_menu}->Enable($_->GetId, $have_selection)
         for $self->{object_menu}->GetMenuItems;
+    $self->on_undo_redo_stacks_changed;
+
 }
 
 sub quick_slice {
@@ -358,7 +384,7 @@ sub quick_slice {
         my $input_file;
         my $dir = $Slic3r::GUI::Settings->{recent}{skein_directory} || $Slic3r::GUI::Settings->{recent}{config_directory} || '';
         if (!$params{reslice}) {
-            my $dialog = Wx::FileDialog->new($self, 'Choose a file to slice (STL/OBJ/AMF):', $dir, "", &Slic3r::GUI::MODEL_WILDCARD, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+            my $dialog = Wx::FileDialog->new($self, 'Choose a file to slice (STL/OBJ/AMF/3MF):', $dir, "", &Slic3r::GUI::MODEL_WILDCARD, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
             if ($dialog->ShowModal != wxID_OK) {
                 $dialog->Destroy;
                 return;
@@ -533,6 +559,64 @@ sub load_config_file {
     my $name = wxTheApp->add_external_preset($file);
     $self->{plater}->load_presets;
     $self->{plater}->select_preset_by_name($name, $_) for qw(print filament printer);
+}
+
+sub import_fromGCode{ # import configuration from gcode file sliced with Slic3r
+    my ($self, $file) = @_;
+    
+    if (!$file) {
+        my $dir = $last_config ? dirname($last_config) : $Slic3r::GUI::Settings->{recent}{config_directory} || $Slic3r::GUI::Settings->{recent}{skein_directory} || '';
+        my $dlg = Wx::FileDialog->new($self, 'Select GCode File to load config from:', $dir, &Slic3r::GUI::FILE_WILDCARDS->{gcode}, &Slic3r::GUI::FILE_WILDCARDS->{gcode}, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+        return unless $dlg->ShowModal == wxID_OK;
+        $file = Slic3r::decode_path($dlg->GetPaths);
+        $dlg->Destroy;
+    }
+    
+    $Slic3r::GUI::Settings->{recent}{config_directory} = dirname($file);
+    wxTheApp->save_settings;
+    
+    # open $file and read the first line to make sure it was sliced using Slic3r
+    open(FILEFIRSTLINE, '<', "$file")
+        or die( "Can't open file to import gcode: $!" );
+    my $firstLine = <FILEFIRSTLINE>;
+    close (FILEFIRSTLINE);
+
+    # Exit, if file was not sliced using Slic3r
+    if( index($firstLine, "generated by Slic3r") < 0){
+        return;
+    }
+
+    # if file sliced by Slic3r, read it
+    open(GFILE, "$file")
+        or die( "Can't open file to import gcode: $!" );
+    my @lines = reverse <GFILE>; # read the file from the back
+    
+    my $line;
+    my @settinglines="";
+    foreach $line (@lines) {
+        # if line is empty, we're done -> EOF
+        if (substr($line, 0, 1) eq ";"){
+            $line = substr($line,2, length($line)-2);
+            push @settinglines, $line;
+        } else {
+            last;
+        }
+    }
+    
+    close (GFILE);
+    
+    # (over-) write config to temp-file -> <gcode-filename.ini>
+    my $tempfile = substr $file, 0, rindex( $file, q{.} );
+    $tempfile="$tempfile.ini";
+    
+    open (TEMPFILESETTINGS, "> $tempfile");
+    print TEMPFILESETTINGS @settinglines;
+    close (TEMPFILESETTINGS);
+    
+    $self->load_config_file($tempfile);
+
+    # todo: do we want to delete the <gcode-filename.ini> file after load_config?
+
 }
 
 sub export_configbundle {

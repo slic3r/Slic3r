@@ -14,6 +14,7 @@ sub new {
     
     # Set some defaults
     $self->config->set('infill_extrusion_width', 0.5)  if $self->config->infill_extrusion_width == 0;
+    $self->config->set('support_material_extrusion_width', 1)  if $self->config->support_material_extrusion_width == 0;
     $self->config->set('perimeter_extrusion_width', 1) if $self->config->perimeter_extrusion_width == 0;
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
@@ -76,7 +77,7 @@ sub new {
             $line->label('Pillars diameter');
             my $opt = $line->get_options->[0];
             $opt->sidetext('mm');
-            $opt->tooltip('Diameter of the cylindrical support pillars.');
+            $opt->tooltip('Diameter of the cylindrical support pillars. 0.4mm and higher is supported.');
             $optgroup->append_line($line);
         }
     }
@@ -107,6 +108,7 @@ sub _accept {
         return;
     }
     
+    wxTheApp->{mainframe}->{slaconfig}->apply_static($self->config);
     $self->EndModal(wxID_OK);
     $self->Close;  # needed on Linux
     

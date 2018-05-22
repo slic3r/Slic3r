@@ -359,7 +359,7 @@ GCodeSender::on_read(const boost::system::error_code& error,
             boost::algorithm::trim_left_if(line, !boost::algorithm::is_digit());
             size_t toresend = boost::lexical_cast<size_t>(line.substr(0, line.find_first_not_of("0123456789")));
             toresend++; // N is 0-based
-            if (toresend >= this->sent - this->last_sent.size()) {
+            if (toresend >= this->sent - this->last_sent.size() && toresend < this->last_sent.size()) {
                 {
                     boost::lock_guard<boost::mutex> l(this->queue_mutex);
                     

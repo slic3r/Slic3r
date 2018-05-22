@@ -172,8 +172,9 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
             || opt_key == "brim_connections_width") {
             steps.insert(psBrim);
             steps.insert(psSkirt);
-        } else if (opt_key == "nozzle_diameter"
-            || opt_key == "resolution"
+        } else if (opt_key == "nozzle_diameter") {
+                osteps.insert(posLayers);
+        } else if (opt_key == "resolution"
             || opt_key == "z_steps_per_mm") {
             osteps.insert(posSlice);
         } else if (opt_key == "avoid_crossing_perimeters"
@@ -287,7 +288,7 @@ Print::invalidate_step(PrintStep step)
     
     // propagate to dependent steps
     if (step == psSkirt) {
-        this->invalidate_step(psBrim);
+        invalidated |= this->invalidate_step(psBrim);
     }
     
     return invalidated;
@@ -676,7 +677,7 @@ Print::validate() const
     if (this->config.spiral_vase) {
         size_t total_copies_count = 0;
         FOREACH_OBJECT(this, i_object) total_copies_count += (*i_object)->copies().size();
-        if (total_copies_count > 1 && !this->config.complete_objects)
+        if (total_copies_count > 1 && !this->config.complete_objects.getBool())
             return "The Spiral Vase option can only be used when printing a single object.";
         if (this->regions.size() > 1)
             return "The Spiral Vase option can only be used when printing single material objects.";
@@ -761,6 +762,7 @@ Print::brim_flow() const
 {
     ConfigOptionFloatOrPercent width = this->config.first_layer_extrusion_width;
     if (width.value == 0) width = this->regions.front()->config.perimeter_extrusion_width;
+    if (width.value == 0) width = this->objects.front()->config.extrusion_width;
     
     /* We currently use a random region's perimeter extruder.
        While this works for most cases, we should probably consider all of the perimeter
@@ -787,6 +789,7 @@ Print::skirt_flow() const
 {
     ConfigOptionFloatOrPercent width = this->config.first_layer_extrusion_width;
     if (width.value == 0) width = this->regions.front()->config.perimeter_extrusion_width;
+    if (width.value == 0) width = this->objects.front()->config.extrusion_width;
     
     /* We currently use a random object's support material extruder.
        While this works for most cases, we should probably consider all of the support material
@@ -859,7 +862,7 @@ Print::_make_brim()
         append_to(loops, offset2(
             islands,
             flow.scaled_width() + flow.scaled_spacing() * (i - 1.5 + 0.5),
-            flow.scaled_spacing() * -0.5,
+            flow.scaled_spacing() * -0.525, // WORKAROUND for brim placement, original 0.5 leaves too much of a gap.
             100000,
             ClipperLib::jtSquare
         ));

@@ -420,6 +420,12 @@ Pointf::vector_to(const Pointf &point) const
     return Vectorf(point.x - this->x, point.y - this->y);
 }
 
+std::ostream&
+operator<<(std::ostream &stm, const Pointf3 &pointf3)
+{
+    return stm << pointf3.x << "," << pointf3.y << "," << pointf3.z;
+}
+
 void
 Pointf3::scale(double factor)
 {

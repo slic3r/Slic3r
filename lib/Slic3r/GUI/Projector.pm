@@ -50,7 +50,7 @@ sub new {
     $self->config(Slic3r::Config->new_from_defaults(
         qw(serial_port serial_speed bed_shape start_gcode end_gcode z_offset)
     ));
-    $self->config->apply(wxTheApp->{mainframe}->{plater}->config);
+    $self->config->apply(wxTheApp->{mainframe}->{slaconfig});
     
     my @optgroups = ();
     {
@@ -559,6 +559,7 @@ sub BUILD {
     {
         my $print = Slic3r::SLAPrint->new(wxTheApp->{mainframe}->{plater}->{model});
         $print->apply_config(wxTheApp->{mainframe}->{plater}->config);
+        $print->apply_config(wxTheApp->{mainframe}->{slaconfig});
         $self->_print($print);
         $self->screen->print($print);
     

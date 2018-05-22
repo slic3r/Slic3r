@@ -32,6 +32,9 @@ std::string escape_string_cstyle(const std::string &str)
         if (c == '\n' || c == '\r') {
             (*outptr ++) = '\\';
             (*outptr ++) = 'n';
+        } else if (c == '\\'){
+            (*outptr ++) = '\\';
+            (*outptr ++) = '\\';
         } else
             (*outptr ++) = c;
     }

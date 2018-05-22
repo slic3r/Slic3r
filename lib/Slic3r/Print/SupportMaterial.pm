@@ -22,10 +22,6 @@ use constant DEBUG_CONTACT_ONLY => 0;
 # increment used to reach MARGIN in steps to avoid trespassing thin objects
 use constant MARGIN_STEP => MARGIN/3;
 
-# generate a tree-like structure to save material
-use constant PILLAR_SIZE    => 2.5;
-use constant PILLAR_SPACING => 10;
-
 sub generate {
     # $object is Slic3r::Print::Object
     my ($self, $object) = @_;
@@ -133,6 +129,8 @@ sub contact_area {
             last;
         }
         my $layer = $object->get_layer($layer_id);
+		last if $conf->support_material_max_layers
+			&& $layer_id > $conf->support_material_max_layers;
 
         if ($buildplate_only) {
             # Collect the top surfaces up to this layer and merge them.
@@ -179,8 +177,8 @@ sub contact_area {
                     }
                 
                     $diff = diff(
-                        offset([ map $_->p, @{$layerm->slices} ], -$d),
-                        [ map @$_, @{$lower_layer->slices} ],
+                        [ map $_->p, @{$layerm->slices} ],
+                        offset([ map @$_, @{$lower_layer->slices} ], +$d),
                     );
                 
                     # only enforce spacing from the object ($fw/2) if the threshold angle
@@ -753,7 +751,9 @@ sub generate_toolpaths {
         
         # interface and contact infill
         if (@$interface || @$contact_infill) {
-            $fillers{interface}->set_angle(deg2rad($interface_angle));
+            # make interface layers alternate angles by 90 degrees
+            my $alternate_angle = $interface_angle + (90 * (($layer_id + 1) % 2));
+            $fillers{interface}->set_angle(deg2rad($alternate_angle));
             $fillers{interface}->set_min_spacing($_interface_flow->spacing);
             
             # find centerline of the external loop
@@ -907,8 +907,8 @@ sub generate_pillars_shape {
     # this prevents supplying an empty point set to BoundingBox constructor
     return if !%$contact;
     
-    my $pillar_size     = scale PILLAR_SIZE;
-    my $pillar_spacing  = scale PILLAR_SPACING;
+    my $pillar_size     = scale $self->object_config->support_material_pillar_size;
+    my $pillar_spacing  = scale $self->object_config->support_material_pillar_spacing;
     
     my $grid;  # arrayref of polygons
     {

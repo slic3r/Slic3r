@@ -16,3 +16,9 @@ package/osx/Slic3r*.app
 *.dmg
 *.swp
 *.swo
+CMakeFiles
+*.orig
+*.a
+core
+CMakeCache.txt
+*.cmake

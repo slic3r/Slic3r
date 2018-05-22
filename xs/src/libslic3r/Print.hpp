@@ -13,7 +13,8 @@
 #include "Layer.hpp"
 #include "Model.hpp"
 #include "PlaceholderParser.hpp"
-
+#include "SlicingAdaptive.hpp"
+#include "LayerHeightSpline.hpp"
 
 namespace Slic3r {
 
@@ -26,7 +27,7 @@ enum PrintStep {
     psSkirt, psBrim,
 };
 enum PrintObjectStep {
-    posSlice, posPerimeters, posDetectSurfaces,
+    posLayers, posSlice, posPerimeters, posDetectSurfaces,
     posPrepareInfill, posInfill, posSupportMaterial,
 };
 
@@ -74,18 +75,20 @@ class PrintObject
     friend class Print;
 
     public:
-    // map of (vectors of volume ids), indexed by region_id
-    /* (we use map instead of vector so that we don't have to worry about
-       resizing it and the [] operator adds new items automagically) */
+    /// map of (vectors of volume ids), indexed by region_id
+    /// (we use map instead of vector so that we don't have to worry about
+    /// resizing it and the [] operator adds new items automagically)
     std::map< size_t,std::vector<int> > region_volumes;
-    PrintObjectConfig config;
+    PrintObjectConfig config; //< Configuration
     t_layer_height_ranges layer_height_ranges;
     
-    // this is set to true when LayerRegion->slices is split in top/internal/bottom
-    // so that next call to make_perimeters() performs a union() before computing loops
+    LayerHeightSpline layer_height_spline;
+
+    /// this is set to true when LayerRegion->slices is split in top/internal/bottom
+    /// so that next call to make_perimeters() performs a union() before computing loops
     bool typed_slices;
 
-    Point3 size;           // XYZ in scaled coordinates
+    Point3 size;           //< XYZ in scaled coordinates
 
     // scaled coordinates to add to copies (to compensate for the alignment
     // operated when creating the object but still preserving a coherent API

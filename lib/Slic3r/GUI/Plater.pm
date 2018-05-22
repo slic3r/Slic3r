@@ -1,5 +1,20 @@
 # The "Plater" tab. It contains the "3D", "2D", "Preview" and "Layers" subtabs.
 
+package Slic3r::GUI::Plater::UndoOperation;
+use strict;
+use warnings;
+
+sub new{
+    my $class = shift;
+    my $self = {
+        type => shift,
+        object_identifier => shift,
+        attributes => shift,
+    };
+    bless ($self, $class);
+    return $self;
+}
+
 package Slic3r::GUI::Plater;
 use strict;
 use warnings;
@@ -13,7 +28,7 @@ use threads::shared qw(shared_clone);
 use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :misc 
     :panel :sizer :toolbar :window wxTheApp :notebook :combobox);
 use Wx::Event qw(EVT_BUTTON EVT_COMMAND EVT_KEY_DOWN EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL 
-    EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED EVT_LEFT_UP);
+    EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED EVT_LEFT_UP EVT_CLOSE);
 use base qw(Wx::Panel Class::Accessor);
 
 __PACKAGE__->mk_accessors(qw(presets));
@@ -31,6 +46,7 @@ use constant TB_45CCW   => &Wx::NewId;
 use constant TB_SCALE   => &Wx::NewId;
 use constant TB_SPLIT   => &Wx::NewId;
 use constant TB_CUT     => &Wx::NewId;
+use constant TB_LAYERS  => &Wx::NewId;
 use constant TB_SETTINGS => &Wx::NewId;
 
 # package variables to avoid passing lexicals to threads
@@ -56,7 +72,16 @@ sub new {
     $self->{processed} = 0;
     # List of Perl objects Slic3r::GUI::Plater::Object, representing a 2D preview of the platter.
     $self->{objects} = [];
-    
+
+    # Objects identifier used for undo/redo operations. It's a one time id assigned to each newly created object.
+    $self->{object_identifier} = 0;
+
+    # Stack of undo operations.
+    $self->{undo_stack} = [];
+
+    # Stack of redo operations.
+    $self->{redo_stack} = [];
+
     $self->{print}->set_status_cb(sub {
         my ($percent, $message) = @_;
         
@@ -171,6 +196,7 @@ sub new {
         $self->{htoolbar}->AddTool(TB_CUT, "Cut…", Wx::Bitmap->new($Slic3r::var->("package.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
         $self->{htoolbar}->AddTool(TB_SETTINGS, "Settings…", Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_LAYERS, "Layer heights…", Wx::Bitmap->new($Slic3r::var->("variable_layer_height.png"), wxBITMAP_TYPE_PNG), '');
     } else {
         my %tbar_buttons = (
             add             => "Add…",
@@ -184,10 +210,11 @@ sub new {
             changescale     => "Scale…",
             split           => "Split",
             cut             => "Cut…",
+            layers          => "Layer heights…",
             settings        => "Settings…",
         );
         $self->{btoolbar} = Wx::BoxSizer->new(wxHORIZONTAL);
-        for (qw(add remove reset arrange increase decrease rotate45ccw rotate45cw changescale split cut settings)) {
+        for (qw(add remove reset arrange increase decrease rotate45ccw rotate45cw changescale split cut layers settings)) {
             $self->{"btn_$_"} = Wx::Button->new($self, -1, $tbar_buttons{$_}, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
             $self->{btoolbar}->Add($self->{"btn_$_"});
         }
@@ -221,6 +248,7 @@ sub new {
             changescale     arrow_out.png
             split           shape_ungroup.png
             cut             package.png
+            layers          variable_layer_height.png
             settings        cog.png
         );
         for (grep $self->{"btn_$_"}, keys %icons) {
@@ -257,6 +285,7 @@ sub new {
         EVT_TOOL($self, TB_SCALE, sub { $self->changescale(undef); });
         EVT_TOOL($self, TB_SPLIT, sub { $self->split_object; });
         EVT_TOOL($self, TB_CUT, sub { $_[0]->object_cut_dialog });
+        EVT_TOOL($self, TB_LAYERS, sub { $_[0]->object_layers_dialog });
         EVT_TOOL($self, TB_SETTINGS, sub { $_[0]->object_settings_dialog });
     } else {
         EVT_BUTTON($self, $self->{btn_add}, sub { $self->add; });
@@ -270,6 +299,7 @@ sub new {
         EVT_BUTTON($self, $self->{btn_changescale}, sub { $self->changescale(undef); });
         EVT_BUTTON($self, $self->{btn_split}, sub { $self->split_object; });
         EVT_BUTTON($self, $self->{btn_cut}, sub { $_[0]->object_cut_dialog });
+        EVT_BUTTON($self, $self->{btn_layers}, sub { $_[0]->object_layers_dialog });
         EVT_BUTTON($self, $self->{btn_settings}, sub { $_[0]->object_settings_dialog });
     }
     
@@ -857,11 +887,262 @@ sub config {
     return $config;
 }
 
+sub get_object_index {
+    my $self = shift;
+    my ($object_indentifier) = @_;
+    return undef if !defined $object_indentifier;
+
+    for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
+        if ($self->{objects}->[$i]->identifier eq $object_indentifier) {
+            return $i;
+        }
+    }
+    return undef;
+}
+
+sub add_undo_operation {
+    my $self = shift;
+    my @parameters = @_;
+
+    my $type = $parameters[0];
+    my $object_identifier = $parameters[1];
+    my @attributes = @parameters[2..$#parameters]; # operation values.
+
+    my $new_undo_operation = new Slic3r::GUI::Plater::UndoOperation($type, $object_identifier, \@attributes);
+
+    push @{$self->{undo_stack}}, $new_undo_operation;
+
+    $self->{redo_stack} = [];
+
+    $self->limit_undo_operations(8); # Current limit of undo/redo operations.
+    $self->GetFrame->on_undo_redo_stacks_changed;
+
+    return $new_undo_operation;
+}
+
+sub limit_undo_operations {
+    my ($self, $limit)= @_;
+    return if !defined $limit;
+    # Delete undo operations succeeded by 4 operations or more to save memory.
+    while ($#{$self->{undo_stack}} + 1 > $limit) {
+        print "Removing an old operation.\n";
+        splice @{$self->{undo_stack}}, 0, 1;
+    }
+}
+
+sub undo {
+    my $self = shift;
+
+    my $operation = pop @{$self->{undo_stack}};
+    return if !defined $operation;
+
+    push @{$self->{redo_stack}}, $operation;
+
+    my $type = $operation->{type};
+
+    if ($type eq "ROTATE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $angle = $operation->{attributes}->[0];
+        my $axis = $operation->{attributes}->[1];
+        $self->rotate(-1 * $angle, $axis, 'true'); # Apply inverse transformation.
+
+    } elsif ($type eq "INCREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->decrease($copies, 'true');
+
+    } elsif ($type eq "DECREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->increase($copies, 'true');
+
+    } elsif ($type eq "MIRROR") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $axis = $operation->{attributes}->[0];
+        $self->mirror($axis, 'true');
+
+    } elsif ($type eq "REMOVE") {
+        my $_model = $operation->{attributes}->[0];
+        $self->load_model_objects(@{$_model->objects});
+        $self->{object_identifier}--; # Decrement the identifier as we will change the object identifier with the saved one.
+        $self->{objects}->[-1]->identifier($operation->{object_identifier});
+
+    } elsif ($type eq "CUT" || $type eq "SPLIT") {
+        # Delete the produced objects.
+        my $obj_identifiers_start = $operation->{attributes}->[2];
+        for (my $i_object = 0; $i_object < $#{$operation->{attributes}->[1]->objects} + 1; $i_object++) {
+            $self->remove($self->get_object_index($obj_identifiers_start++), 'true');
+        }
+        # Add the original object.
+        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        $self->{object_identifier}--;
+        $self->{objects}->[-1]->identifier($operation->{object_identifier}); # Add the original assigned identifier.
+
+    } elsif ($type eq "CHANGE_SCALE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $axis = $operation->{attributes}->[0];
+        my $tosize = $operation->{attributes}->[1];
+        my $saved_scale = $operation->{attributes}->[3];
+        $self->changescale($axis, $tosize, $saved_scale, 'true');
+
+    } elsif ($type eq "RESET") {
+        # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
+        my $current_objects_identifier = $self->{object_identifier};
+        my $_model = $operation->{attributes}->[0];
+        $self->load_model_objects(@{$_model->objects});
+        $self->{object_identifier} = $current_objects_identifier;
+
+        # don't forget the identifiers.
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+
+        foreach my $identifier (@{$operation->{attributes}->[1]})
+        {
+            $self->{objects}->[-$objects_count]->identifier($identifier);
+            $objects_count--;
+        }
+
+    } elsif ($type eq "ADD") {
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+        my $identifier_start = $operation->{attributes}->[1];
+        for (my $identifier = $identifier_start; $identifier < $objects_count + $identifier_start; $identifier++) {
+			my $obj_idx = $self->get_object_index($identifier);
+            $self->remove($obj_idx, 'true');
+        }
+	}
+}
+
+sub redo {
+    my $self = shift;
+
+    my $operation = pop @{$self->{redo_stack}};
+    return if !defined $operation;
+
+    push @{$self->{undo_stack}}, $operation;
+
+    my $type = $operation->{type};
+
+    if ($type eq "ROTATE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $angle = $operation->{attributes}->[0];
+        my $axis = $operation->{attributes}->[1];
+        $self->rotate($angle, $axis, 'true');
+
+    } elsif ($type eq "INCREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->increase($copies, 'true');
+
+    } elsif ($type eq "DECREASE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $copies = $operation->{attributes}->[0];
+        $self->decrease($copies, 'true');
+
+    } elsif ($type eq "MIRROR") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $axis = $operation->{attributes}->[0];
+        $self->mirror($axis, 'true');
+
+    } elsif ($type eq "REMOVE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        $self->remove(undef, 'true');
+
+    } elsif ($type eq "CUT" || $type eq "SPLIT") {
+        # Delete the org objects.
+        $self->remove($self->get_object_index($operation->{object_identifier}), 'true');
+        # Add the new objects and revert changes to the plater object identifier.
+        my $current_objects_identifier = $self->{object_identifier};
+        $self->load_model_objects(@{$operation->{attributes}->[1]->objects});
+        $self->{object_identifier} = $current_objects_identifier;
+        # Add their identifiers.
+        my $obj_identifiers_start = $operation->{attributes}->[2];
+        my $obj_count = $#{$operation->{attributes}->[1]->objects} + 1;
+        for (my $i_object = 0; $i_object <= $#{$operation->{attributes}->[1]->objects}; $i_object++){
+            $self->{objects}->[-$obj_count]->identifier($obj_identifiers_start++);
+            $obj_count--;
+        }
+    } elsif ($type eq "CHANGE_SCALE") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $axis = $operation->{attributes}->[0];
+        my $tosize = $operation->{attributes}->[1];
+        my $old_scale = $operation->{attributes}->[2];
+        $self->changescale($axis, $tosize, $old_scale, 'true');
+
+    } elsif ($type eq "RESET") {
+        $self->reset('true');
+    } elsif ($type eq "ADD") {
+        # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
+        my $current_objects_identifier = $self->{object_identifier};
+        $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
+        $self->{object_identifier} = $current_objects_identifier;
+
+        my $objects_count = $#{$operation->{attributes}->[0]->objects} + 1;
+        my $start_identifier = $operation->{attributes}->[1];
+        foreach my $object (@{$operation->{attributes}->[0]->objects})
+        {
+            $self->{objects}->[-$objects_count]->identifier($start_identifier++);
+            $objects_count--;
+        }
+    }
+}
+
 sub add {
     my $self = shift;
     
+    # Save the current object identifier to track added objects.
+    my $start_object_id = $self->{object_identifier};
+    
     my @input_files = wxTheApp->open_model($self);
     $self->load_file($_) for @input_files;
+    
+    # Check if no objects are added.
+    if ($start_object_id == $self->{object_identifier}) {
+		return;
+	}
+    
+    # Save the added objects.
+    my $new_model = $self->{model}->new;
+    
+    # Get newly added objects count.
+    my $new_objects_count = $self->{object_identifier} - $start_object_id;
+    for (my $i_object = $start_object_id; $i_object < $new_objects_count + $start_object_id; $i_object++){
+			my $object_index =  $self->get_object_index($i_object);
+            $new_model->add_object($self->{model}->get_object($object_index));
+    }
+
+    $self->add_undo_operation("ADD", undef, $new_model, $start_object_id);
 }
 
 sub add_tin {
@@ -896,7 +1177,7 @@ sub add_tin {
 
 sub load_file {
     my $self = shift;
-    my ($input_file, $obj_idx) = @_;
+    my ($input_file, $obj_idx_to_load) = @_;
     
     $Slic3r::GUI::Settings->{recent}{skein_directory} = dirname($input_file);
     wxTheApp->save_settings;
@@ -922,23 +1203,48 @@ sub load_file {
             }
         }
         
-        if (defined $obj_idx) {
-            return () if $obj_idx >= $model->objects_count;
-            @obj_idx = $self->load_model_objects($model->get_object($obj_idx));
+        for my $obj_idx (0..($model->objects_count-1)) {
+            my $object = $model->objects->[$obj_idx];
+            $object->set_input_file($input_file);
+            for my $vol_idx (0..($object->volumes_count-1)) {
+                my $volume = $object->get_volume($vol_idx);
+                $volume->set_input_file($input_file);
+                $volume->set_input_file_obj_idx($obj_idx);
+                $volume->set_input_file_obj_idx($vol_idx);
+            }
+        }
+        
+        my $i = 0;
+        
+        if (defined $obj_idx_to_load) {
+            return () if $obj_idx_to_load >= $model->objects_count;
+            @obj_idx = $self->load_model_objects($model->get_object($obj_idx_to_load));
+            $i = $obj_idx_to_load;
         } else {
             @obj_idx = $self->load_model_objects(@{$model->objects});
         }
         
-        my $i = 0;
         foreach my $obj_idx (@obj_idx) {
             $self->{objects}[$obj_idx]->input_file($input_file);
             $self->{objects}[$obj_idx]->input_file_obj_idx($i++);
         }
+
         $self->statusbar->SetStatusText("Loaded " . basename($input_file));
+
+        if($self->{scaled_down}) {
+            $self->statusbar->SetStatusText('Your object appears to be too large, so it was automatically scaled down to fit your print bed.');
+        }
+        if($self->{outside_bounds}) {
+            $self->statusbar->SetStatusText('Some of your object(s) appear to be outside the print bed. Use the arrange button to correct this.');
+        }
+
     }
     
     $process_dialog->Destroy;
-    
+
+    # Empty the redo stack
+    $self->{redo_stack} = [];
+
     return @obj_idx;
 }
 
@@ -955,27 +1261,40 @@ sub load_model_objects {
     my $bed_size = $bed_shape->bounding_box->size;
     
     my $need_arrange = 0;
-    my $scaled_down = 0;
     my @obj_idx = ();
     foreach my $model_object (@model_objects) {
         my $o = $self->{model}->add_object($model_object);
         $o->repair;
-        
+
         push @{ $self->{objects} }, Slic3r::GUI::Plater::Object->new(
-            name => $model_object->name || basename($model_object->input_file),
-        );
+                name => $model_object->name || basename($model_object->input_file), identifier =>
+                $self->{object_identifier}++
+            );
+
         push @obj_idx, $#{ $self->{objects} };
     
         if ($model_object->instances_count == 0) {
-            # if object has no defined position(s) we need to rearrange everything after loading
-            $need_arrange = 1;
-        
-            # add a default instance and center object around origin
-            $o->center_around_origin;  # also aligns object to Z = 0
-            $o->add_instance(offset => $bed_centerf);
+            if ($Slic3r::GUI::Settings->{_}{autocenter}) {
+                # if object has no defined position(s) we need to rearrange everything after loading
+                $need_arrange = 1;
+
+                # add a default instance and center object around origin
+                $o->center_around_origin;  # also aligns object to Z = 0
+                $o->add_instance(offset => $bed_centerf);
+            } else {
+                # if user turned autocentering off, automatic arranging would disappoint them
+                $need_arrange = 0;
+
+                if ($Slic3r::GUI::Settings->{_}{autoalignz}) {
+                    $o->align_to_ground; # aligns object to Z = 0
+                }
+                $o->add_instance();
+            }
         } else {
-            # if object has defined positions we still need to ensure it's aligned to Z = 0
-            $o->align_to_ground;
+            if ($Slic3r::GUI::Settings->{_}{autoalignz}) {
+                # if object has defined positions we still need to ensure it's aligned to Z = 0
+                $o->align_to_ground;
+            }
         }
         
         {
@@ -984,25 +1303,24 @@ sub load_model_objects {
             my $ratio = max(@$size[X,Y]) / unscale(max(@$bed_size[X,Y]));
             if ($ratio > 5) {
                 $_->set_scaling_factor(1/$ratio) for @{$o->instances};
-                $scaled_down = 1;
+                $self->{scaled_down} = 1;
             }
+        }
+
+        {
+           # if after scaling the object does not fit on the bed provide a warning
+           my $bed_bounds = Slic3r::Geometry::BoundingBoxf->new_from_points($self->{config}->bed_shape);
+           my $o_bounds = $o->bounding_box;
+           my $min = Slic3r::Pointf->new($o_bounds->x_min, $o_bounds->y_min);
+           my $max = Slic3r::Pointf->new($o_bounds->x_max, $o_bounds->y_max);
+           if (!$bed_bounds->contains_point($min) || !$bed_bounds->contains_point($max))
+           {
+               $self->{outside_bounds} = 1;
+           }
         }
     
         $self->{print}->auto_assign_extruders($o);
         $self->{print}->add_model_object($o);
-    }
-    
-    # if user turned autocentering off, automatic arranging would disappoint them
-    if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
-        $need_arrange = 0;
-    }
-    
-    if ($scaled_down) {
-        Slic3r::GUI::show_info(
-            $self,
-            'Your object appears to be too large, so it was automatically scaled down to fit your print bed.',
-            'Object too large?',
-        );
     }
     
     $self->make_thumbnail($_) for @obj_idx;
@@ -1028,7 +1346,7 @@ sub bed_centerf {
 
 sub remove {
     my $self = shift;
-    my ($obj_idx) = @_;
+    my ($obj_idx, $dont_push) = @_;
     
     $self->stop_background_process;
     
@@ -1040,7 +1358,12 @@ sub remove {
     if (!defined $obj_idx) {
         ($obj_idx, undef) = $self->selected_object;
     }
-    
+
+    # Save the object identifier and copy the object for undo/redo operations.
+    my $object_id = $self->{objects}->[$obj_idx]->identifier;
+    my $new_model = Slic3r::Model->new;  # store this before calling get_object()
+    $new_model->add_object($self->{model}->get_object($obj_idx));
+
     splice @{$self->{objects}}, $obj_idx, 1;
     $self->{model}->delete_object($obj_idx);
     $self->{print}->delete_object($obj_idx);
@@ -1048,28 +1371,44 @@ sub remove {
     
     $self->select_object(undef);
     $self->on_model_change;
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("REMOVE", $object_id, $new_model);
+    }
 }
 
 sub reset {
-    my $self = shift;
+    my ($self, $dont_push) = @_;
     
     $self->stop_background_process;
     
     # Prevent toolpaths preview from rendering while we modify the Print object
     $self->{toolpaths2D}->enabled(0) if $self->{toolpaths2D};
     $self->{preview3D}->enabled(0) if $self->{preview3D};
-    
+
+    # Save the current model.
+    my $current_model = $self->{model}->clone;
+
+    if (!defined $dont_push) {
+        # Get the identifiers of the curent model objects.
+        my $objects_identifiers = [];
+        for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
+            push @{$objects_identifiers}, $self->{objects}->[$i]->identifier;
+        }
+        $self->add_undo_operation("RESET", undef, $current_model, $objects_identifiers);
+    }
+
     @{$self->{objects}} = ();
     $self->{model}->clear_objects;
     $self->{print}->clear_objects;
     $self->object_list_changed;
-    
+
     $self->select_object(undef);
     $self->on_model_change;
 }
 
 sub increase {
-    my ($self, $copies) = @_;
+    my ($self, $copies, $dont_push) = @_;
     
     $copies //= 1;
     my ($obj_idx, $object) = $self->selected_object;
@@ -1078,12 +1417,20 @@ sub increase {
     for my $i (1..$copies) {
         $instance = $model_object->add_instance(
             offset          => Slic3r::Pointf->new(map 10+$_, @{$instance->offset}),
+            z_translation   => $instance->z_translation,
             scaling_factor  => $instance->scaling_factor,
+            scaling_vector  => $instance->scaling_vector,
             rotation        => $instance->rotation,
+            x_rotation      => $instance->x_rotation,
+            y_rotation      => $instance->y_rotation,
         );
         $self->{print}->objects->[$obj_idx]->add_copy($instance->offset);
     }
-    
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("INCREASE", $object->identifier , $copies);
+    }
+
     # only autoarrange if user has autocentering enabled
     $self->stop_background_process;
     if ($Slic3r::GUI::Settings->{_}{autocenter}) {
@@ -1094,7 +1441,7 @@ sub increase {
 }
 
 sub decrease {
-    my ($self, $copies) = @_;
+    my ($self, $copies, $dont_push) = @_;
     
     $copies //= 1;
     $self->stop_background_process;
@@ -1105,6 +1452,9 @@ sub decrease {
         for my $i (1..$copies) {
             $model_object->delete_last_instance;
             $self->{print}->objects->[$obj_idx]->delete_last_copy;
+        }
+        if (!defined $dont_push) {
+            $self->add_undo_operation("DECREASE", $object->identifier, $copies);
         }
     } else {
         $self->remove;
@@ -1155,7 +1505,7 @@ sub center_selected_object_on_bed {
 
 sub rotate {
     my $self = shift;
-    my ($angle, $axis) = @_;
+    my ($angle, $axis, $dont_push) = @_;
     
     # angle is in degrees
     $axis //= Z;
@@ -1194,17 +1544,21 @@ sub rotate {
         $model_object->center_around_origin;
         $self->make_thumbnail($obj_idx);
     }
-    
+
     $model_object->update_bounding_box;
     # update print and start background processing
     $self->{print}->add_model_object($model_object, $obj_idx);
-    
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("ROTATE", $object->identifier, $angle, $axis);
+    }
+
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
 }
 
 sub mirror {
-    my ($self, $axis) = @_;
+    my ($self, $axis, $dont_push) = @_;
     
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
@@ -1225,13 +1579,17 @@ sub mirror {
     # update print and start background processing
     $self->stop_background_process;
     $self->{print}->add_model_object($model_object, $obj_idx);
-    
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("MIRROR", $object->identifier, $axis);
+    }
+
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
 }
 
 sub changescale {
-    my ($self, $axis, $tosize) = @_;
+    my ($self, $axis, $tosize, $saved_scale, $dont_push) = @_;
     
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
@@ -1244,27 +1602,36 @@ sub changescale {
     
     my $object_size = $model_object->bounding_box->size;
     my $bed_size = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape})->bounding_box->size;
-    
+
+    my $old_scale;
+    my $scale;
+
     if (defined $axis) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
-        my $scale;
-        if ($tosize) {
-            my $cursize = $object_size->[$axis];
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            my $newsize = Wx::GetTextFromUser(
-                sprintf("Enter the new size for the selected object (print bed: %smm):", $bed_size->[$axis]),
-                "Scale along $axis_name",
-                $cursize, $self);
-            return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
-            $scale = $newsize / $cursize * 100;
-        } else {
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:",
-                "Scale along $axis_name", 100, $self);
-            $scale =~ s/%$//;
-            return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+        if (!defined $saved_scale) {
+            if ($tosize) {
+                my $cursize = $object_size->[$axis];
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                my $newsize = Wx::GetTextFromUser(
+                    sprintf("Enter the new size for the selected object (print bed: %smm):", $bed_size->[$axis]),
+                    "Scale along $axis_name",
+                    $cursize, $self);
+                return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
+                $scale = $newsize / $cursize * 100;
+                $old_scale = $cursize / $newsize * 100;
+            } else {
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:",
+                    "Scale along $axis_name", 100, $self);
+                $scale =~ s/%$//;
+                return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+                $old_scale = 100 * 100 / $scale;
+            }
         }
-        
+        else {
+            $scale = $saved_scale;
+        }
+
         # apply Z rotation before scaling
         $model_object->transform_by_instance($model_instance, 1);
         
@@ -1274,23 +1641,28 @@ sub changescale {
         # object was already aligned to Z = 0, so no need to realign it
         $self->make_thumbnail($obj_idx);
     } else {
-        my $scale;
-        if ($tosize) {
-            my $cursize = max(@$object_size);
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            my $newsize = Wx::GetTextFromUser("Enter the new max size for the selected object:",
-                "Scale", $cursize, $self);
-            return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
-            $scale = $model_instance->scaling_factor * $newsize / $cursize * 100;
+        if (!defined $saved_scale) {
+            if ($tosize) {
+                my $cursize = max(@$object_size);
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                my $newsize = Wx::GetTextFromUser("Enter the new max size for the selected object:",
+                    "Scale", $cursize, $self);
+                return if !$newsize || $newsize !~ /^\d*(?:\.\d*)?$/ || $newsize < 0;
+                $scale = $model_instance->scaling_factor * $newsize / $cursize * 100;
+                $old_scale = $model_instance->scaling_factor * 100;
+            } else {
+                # max scale factor should be above 2540 to allow importing files exported in inches
+                # Wx::GetNumberFromUser() does not support decimal numbers
+                $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:", 'Scale',
+                    $model_instance->scaling_factor * 100, $self);
+                return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+                $old_scale = $model_instance->scaling_factor * 100;
+            }
+            return if !$scale || $scale < 0;
         } else {
-            # max scale factor should be above 2540 to allow importing files exported in inches
-            # Wx::GetNumberFromUser() does not support decimal numbers
-            $scale = Wx::GetTextFromUser("Enter the scale % for the selected object:", 'Scale',
-                $model_instance->scaling_factor*100, $self);
-            return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
+            $scale = $saved_scale;
         }
-        return if !$scale || $scale < 0;
-        
+
         $scale /= 100;  # turn percent into factor
         
         my $variation = $scale / $model_instance->scaling_factor;
@@ -1300,7 +1672,15 @@ sub changescale {
         }
         $_->set_scaling_factor($scale) for @{ $model_object->instances };
         $object->transform_thumbnail($self->{model}, $obj_idx);
+
+        $scale *= 100;
     }
+
+    # Add the new undo operation.
+    if (!defined $dont_push) {
+        $self->add_undo_operation("CHANGE_SCALE", $object->identifier, $axis, $tosize, $scale, $old_scale);
+    }
+
     $model_object->update_bounding_box;
     
     # update print and start background processing
@@ -1320,12 +1700,13 @@ sub arrange {
     my $success = $self->{model}->arrange_objects($self->config->min_object_distance, $bb);
     # ignore arrange failures on purpose: user has visual feedback and we don't need to warn him
     # when parts don't fit in print bed
-    
+
+    $self->statusbar->SetStatusText('Objects were arranged.');
     $self->on_model_change(1);
 }
 
 sub split_object {
-    my $self = shift;
+    my ($self, $dont_push) = @_;
     
     my ($obj_idx, $current_object)  = $self->selected_object;
     
@@ -1340,7 +1721,14 @@ sub split_object {
     }
     
     $self->pause_background_process;
-    
+
+    # Save the curent model object for undo/redo operataions.
+    my $org_object_model = Slic3r::Model->new;
+    $org_object_model->add_object($current_model_object);
+
+    # Save the org object identifier.
+    my $object_id = $self->{objects}->[$obj_idx]->identifier;
+
     my @model_objects = @{$current_model_object->split_object};
     if (@model_objects == 1) {
         $self->resume_background_process;
@@ -1360,12 +1748,24 @@ sub split_object {
     # remove the original object before spawning the object_loaded event, otherwise 
     # we'll pass the wrong $obj_idx to it (which won't be recognized after the
     # thumbnail thread returns)
-    $self->remove($obj_idx);
+    $self->remove($obj_idx, 'true'); # Don't push to the undo stack it's considered a split opeation not a remove one.
     $current_object = $obj_idx = undef;
-    
+
+    # Save the object identifiers used in undo/redo operations.
+    my $new_objects_id_start = $self->{object_identifier};
+    print "The new object identifier start for split is " .$new_objects_id_start . "\n";
+
     # load all model objects at once, otherwise the plate would be rearranged after each one
     # causing original positions not to be kept
     $self->load_model_objects(@model_objects);
+
+    # Create two models to save the current object and the resulted objects.
+    my $new_objects_model = Slic3r::Model->new;
+    foreach my $new_object (@model_objects) {
+        $new_objects_model->add_object($new_object);
+    }
+
+    $self->add_undo_operation("SPLIT", $object_id, $org_object_model, $new_objects_model, $new_objects_id_start);
 }
 
 sub toggle_print_stats {
@@ -1460,6 +1860,7 @@ sub async_apply_config {
     # reset preview canvases (invalidated contents will be hidden)
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+    $self->{AdaptiveLayersDialog}->reload_preview if $self->{AdaptiveLayersDialog};
     
     if (!$Slic3r::GUI::Settings->{_}{background_processing}) {
         $self->hide_preview if $invalidated;
@@ -1536,6 +1937,7 @@ sub stop_background_process {
     
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+    $self->{AdaptiveLayersDialog}->reload_preview if $self->{AdaptiveLayersDialog};
     
     if ($self->{process_thread}) {
         Slic3r::debugf "Killing background process.\n";
@@ -1679,6 +2081,7 @@ sub on_process_completed {
     return if $error;
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+    $self->{AdaptiveLayersDialog}->reload_preview if $self->{AdaptiveLayersDialog};
     
     # if we have an export filename, start a new thread for exporting G-code
     if ($self->{export_gcode_output_file}) {
@@ -1852,7 +2255,7 @@ sub send_gcode {
     my $filename = basename($self->{print}->output_filepath($main::opt{output} // ''));
     my $res;
     if($self->{config}->print_host){
-        if($self->{config}->host_type eq 'Octoprint'){
+        if($self->{config}->host_type eq 'octoprint'){
             $res = $ua->post(
                 "http://" . $self->{config}->print_host . "/api/files/local",
                 Content_Type => 'form-data',
@@ -1865,22 +2268,30 @@ sub send_gcode {
                 ],
             );
         }else{
-            $res = $ua->post(
-                "http://" . $self->{config}->print_host . "/rr_upload?name=0:/gcodes/" . basename($path) . "&time=1234567890123",
-                Content_Type => 'form-data',
-                Content => [
-                    # OctoPrint doesn't like Windows paths so we use basename()
-                    # Also, since we need to read from filesystem we process it through encode_path()
-                    file => [ $path, basename($path) ],
-                ],
-            );        
-            if ($self->{send_gcode_file_print}) {
-                $res = $ua->get(
-                    "http://" . $self->{config}->print_host . "/rr_gcode?gcode=M32%20" . basename($path),
-                );
+            # slurp the file we would send into a string - should be someplace to reference this but could not find it?
+            local $/=undef;
+            open (my $gch,$path);
+            my $gcode=<$gch>;
+            close($gch);
+
+            # get the time string            
+            my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+            my $t = sprintf("%4d-%02d-%02dT%02d:%02d:%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec);
+
+            my $req = HTTP::Request->new(POST => "http://" . $self->{config}->print_host . "/rr_upload?name=0:/gcodes/" . basename($path) . "&time=$t",);
+            $req->content( $gcode );
+            $res = $ua->request($req);
+ 
+            if ($res->is_success) {
+                if ($self->{send_gcode_file_print}) {
+                    $res = $ua->get(
+                        "http://" . $self->{config}->print_host . "/rr_gcode?gcode=M32%20" . basename($path),
+                    );
+                }
             }
         }
     }
+
     $self->statusbar->StopBusy;
     
     if ($res->is_success) {
@@ -1908,26 +2319,141 @@ sub reload_from_disk {
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
     
-    return if !$object->input_file
-        || !-e $object->input_file;
+    if (!$object->input_file) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because it isn't referenced to its input file any more. This is the case after performing operations like cut or split.");
+        return;
+    }
+    if (!-e $object->input_file) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the file doesn't exist anymore on the disk.");
+        return;
+    }
     
     # Only reload the selected object and not all objects from the input file.
     my @new_obj_idx = $self->load_file($object->input_file, $object->input_file_obj_idx);
-    return if !@new_obj_idx;
-    
-    my $model_object = $self->{model}->objects->[$obj_idx];
-    foreach my $new_obj_idx (@new_obj_idx) {
-        my $o = $self->{model}->objects->[$new_obj_idx];
-        $o->clear_instances;
-        $o->add_instance($_) for @{$model_object->instances};
-        
-        if ($o->volumes_count == $model_object->volumes_count) {
-            for my $i (0..($o->volumes_count-1)) {
-                $o->get_volume($i)->config->apply($model_object->get_volume($i)->config);
-            }
+    if (!@new_obj_idx) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
+        return;
+    }
+
+    my $org_obj = $self->{model}->objects->[$obj_idx];
+
+    # check if the object is dependant of more than one file
+    my $org_obj_has_modifiers=0;
+    for my $i (0..($org_obj->volumes_count-1)) {
+        if ($org_obj->input_file ne $org_obj->get_volume($i)->input_file) {
+            $org_obj_has_modifiers=1;
+            last;
         }
     }
-    
+
+    my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior};
+
+    # ask the user how to proceed, if option is selected in preferences
+    if ($org_obj_has_modifiers && !$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
+        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior);
+        my $res = $dlg->ShowModal;
+        if ($res==wxID_CANCEL) {
+            $self->remove($_) for @new_obj_idx;
+            $dlg->Destroy;
+            return;
+        }
+        $reload_behavior = $dlg->GetSelection;
+        my $save = 0;
+        if ($reload_behavior != $Slic3r::GUI::Settings->{_}{reload_behavior}) {
+            $Slic3r::GUI::Settings->{_}{reload_behavior} = $reload_behavior;
+            $save = 1;
+        }
+        if ($dlg->GetHideOnNext) {
+            $Slic3r::GUI::Settings->{_}{reload_hide_dialog} = 1;
+            $save = 1;
+        }
+        Slic3r::GUI->save_settings if $save;
+        $dlg->Destroy;
+    }
+
+    my $volume_unmatched=0;
+
+    foreach my $new_obj_idx (@new_obj_idx) {
+        my $new_obj = $self->{model}->objects->[$new_obj_idx];
+        $new_obj->clear_instances;
+        $new_obj->add_instance($_) for @{$org_obj->instances};
+        $new_obj->config->apply($org_obj->config);
+        
+        my $new_vol_idx = 0;
+        my $org_vol_idx = 0;
+        my $new_vol_count=$new_obj->volumes_count;
+        my $org_vol_count=$org_obj->volumes_count;
+        
+        while ($new_vol_idx<=$new_vol_count-1) {
+            if (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
+                # apply config from the matching volumes
+                $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume($org_vol_idx++)->config);
+            } else {
+                # reload has more volumes than original (first file), apply config from the first volume
+                $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume(0)->config);
+                $volume_unmatched=1;
+            }
+        }
+        $org_vol_idx=$org_vol_count if $reload_behavior==2; # Reload behavior: discard
+        while (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
+            # original has more volumes (first file), skip those
+            $org_vol_idx++;
+            $volume_unmatched=1;
+        }
+        while ($org_vol_idx<=$org_vol_count-1) {
+            if ($reload_behavior==1) { # Reload behavior: copy
+                my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx));
+                $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                if ($new_volume->name =~ m/link to path\z/) {
+                    my $new_name = $new_volume->name;
+                    $new_name =~ s/ - no link to path$/ - copied/;
+                    $new_volume->set_name($new_name);
+                }elsif(!($new_volume->name =~ m/copied\z/)) {
+                    $new_volume->set_name($new_volume->name . " - copied");
+                }
+            }else{ # Reload behavior: Reload all, also fallback solution if ini was manually edited to a wrong value
+                if ($org_obj->get_volume($org_vol_idx)->input_file) {
+                    my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($org_vol_idx)->input_file) };
+                    if ($@) {
+                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                    }elsif ($org_obj->get_volume($org_vol_idx)->input_file_obj_idx > ($model->objects_count-1)) {
+                        # Object Index for that part / modifier not found in current version of the file
+                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                    }else{
+                        my $prt_mod_obj = $model->objects->[$org_obj->get_volume($org_vol_idx)->input_file_obj_idx];
+                        if ($org_obj->get_volume($org_vol_idx)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
+                            # Volume Index for that part / modifier not found in current version of the file
+                            $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                        }else{
+                            # all checks passed, load new mesh and copy metadata
+                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($org_vol_idx)->input_file_vol_idx));
+                            $new_volume->set_input_file($org_obj->get_volume($org_vol_idx)->input_file);
+                            $new_volume->set_input_file_obj_idx($org_obj->get_volume($org_vol_idx)->input_file_obj_idx);
+                            $new_volume->set_input_file_vol_idx($org_obj->get_volume($org_vol_idx)->input_file_vol_idx);
+                            $new_volume->config->apply($org_obj->get_volume($org_vol_idx)->config);
+                            $new_volume->set_modifier($org_obj->get_volume($org_vol_idx)->modifier);
+                            $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                        }
+                    }
+                }
+                if (!$org_obj->get_volume($org_vol_idx)->input_file) {
+                    my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx)); # error -> copy old mesh
+                    $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                    $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                    if ($new_volume->name =~ m/copied\z/) {
+                        my $new_name = $new_volume->name;
+                        $new_name =~ s/ - copied$/ - no link to path/;
+                        $new_volume->set_name($new_name);
+                    }elsif(!($new_volume->name =~ m/link to path\z/)) {
+                        $new_volume->set_name($new_volume->name . " - no link to path");
+                    }
+                    $volume_unmatched=1;
+                }
+            }
+            $org_vol_idx++;
+        }
+    }
     $self->remove($obj_idx);
     
     # TODO: refresh object list which contains wrong count and scale
@@ -1937,6 +2463,18 @@ sub reload_from_disk {
     # event, so the on_thumbnail_made callback is called with the wrong $obj_idx.
     # When porting to C++ we'll probably have cleaner ways to do this.
     $self->make_thumbnail($_-1) for @new_obj_idx;
+
+    # update print
+    $self->stop_background_process;
+    $self->{print}->reload_object($_-1) for @new_obj_idx;
+    $self->on_model_change;
+
+    # Empty the redo stack
+    $self->{redo_stack} = [];
+
+    if ($volume_unmatched) {
+        Slic3r::GUI::warning_catcher($self)->("At least 1 volume couldn't be matched between the original object and the reloaded one.");
+    }
 }
 
 sub export_object_stl {
@@ -1969,6 +2507,23 @@ sub export_object_amf {
     $self->statusbar->SetStatusText("AMF file exported to $output_file");
 }
 
+# Export function for a single 3MF output
+sub export_object_tmf {
+    my $self = shift;
+
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+
+    my $local_model = Slic3r::Model->new;
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    # copy model_object -> local_model
+    $local_model->add_object($model_object);
+
+    my $output_file = $self->_get_export_file('TMF') or return;
+    $local_model->write_tmf($output_file);
+    $self->statusbar->SetStatusText("3MF file exported to $output_file");
+}
+
 sub export_amf {
     my $self = shift;
     
@@ -1979,11 +2534,21 @@ sub export_amf {
     $self->statusbar->SetStatusText("AMF file exported to $output_file");
 }
 
+sub export_tmf {
+    my $self = shift;
+
+    return if !@{$self->{objects}};
+
+    my $output_file = $self->_get_export_file('TMF') or return;
+    $self->{model}->write_tmf($output_file);
+    $self->statusbar->SetStatusText("3MF file exported to $output_file");
+}
+
 sub _get_export_file {
     my $self = shift;
     my ($format) = @_;
     
-    my $suffix = $format eq 'STL' ? '.stl' : '.amf';
+    my $suffix = $format eq 'STL' ? '.stl' : ( $format eq 'AMF' ?  '.amf' : '.3mf');
     
     my $output_file = $main::opt{output};
     {
@@ -1997,6 +2562,10 @@ sub _get_export_file {
         $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
             basename($output_file), &Slic3r::GUI::AMF_MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT)
             if $format eq 'AMF';
+
+        $dlg = Wx::FileDialog->new($self, "Save $format file as:", dirname($output_file),
+            basename($output_file), &Slic3r::GUI::TMF_MODEL_WILDCARD, wxFD_SAVE | wxFD_OVERWRITE_PROMPT)
+            if $format eq 'TMF';
 
         if ($dlg->ShowModal != wxID_OK) {
             $dlg->Destroy;
@@ -2192,8 +2761,23 @@ sub object_cut_dialog {
 	if (my @new_objects = $dlg->NewModelObjects) {
 	    my $process_dialog = Wx::ProgressDialog->new('Loading…', "Loading new objects…", 100, $self, 0);
         $process_dialog->Pulse;
-        
-	    $self->remove($obj_idx);
+
+        # Create two models to save the current object and the resulted objects.
+        my $new_objects_model = Slic3r::Model->new;
+        foreach my $new_object (@new_objects) {
+            $new_objects_model->add_object($new_object);
+        }
+
+        my $org_object_model = Slic3r::Model->new;
+        $org_object_model->add_object($self->{model}->get_object($obj_idx));
+
+        # Save the object identifiers used in undo/redo operations.
+        my $object_id = $self->{objects}->[$obj_idx]->identifier;
+        my $new_objects_id_start = $self->{object_identifier};
+
+        $self->add_undo_operation("CUT", $object_id, $org_object_model, $new_objects_model, $new_objects_id_start);
+
+	    $self->remove($obj_idx, 'true');
 	    $self->load_model_objects(grep defined($_), @new_objects);
 	    $self->arrange if @new_objects <= 2; # don't arrange for grid cuts
 	    
@@ -2201,9 +2785,16 @@ sub object_cut_dialog {
 	}
 }
 
-sub object_settings_dialog {
+sub object_layers_dialog {
     my $self = shift;
     my ($obj_idx) = @_;
+
+    $self->object_settings_dialog($obj_idx, adaptive_layers => 1);
+}
+
+sub object_settings_dialog {
+    my $self = shift;
+    my ($obj_idx, %params) = @_;
     
     if (!defined $obj_idx) {
         ($obj_idx, undef) = $self->selected_object;
@@ -2218,9 +2809,15 @@ sub object_settings_dialog {
     my $dlg = Slic3r::GUI::Plater::ObjectSettingsDialog->new($self,
 		object          => $self->{objects}[$obj_idx],
 		model_object    => $model_object,
+		obj_idx         => $obj_idx,
 	);
+	# store pointer to the adaptive layer tab to push preview updates
+	$self->{AdaptiveLayersDialog} = $dlg->{adaptive_layers};
+	# and jump directly to the tab if called by "promo-button"
+	$dlg->{tabpanel}->SetSelection(1) if $params{adaptive_layers};
 	$self->pause_background_process;
 	$dlg->ShowModal;
+	$self->{AdaptiveLayersDialog} = undef;
 	
     # update thumbnail since parts may have changed
     if ($dlg->PartsChanged) {
@@ -2267,7 +2864,10 @@ sub selection_changed {
     
     my ($obj_idx, $object) = $self->selected_object;
     my $have_sel = defined $obj_idx;
-    
+
+    # Remove selection in 2d Plater.
+    $self->{canvas}->{selected_instance} = undef;
+
     if (my $menu = $self->GetFrame->{plater_select_menu}) {
         $_->Check(0) for $menu->GetMenuItems;
         if ($have_sel) {
@@ -2277,11 +2877,11 @@ sub selection_changed {
     
     my $method = $have_sel ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
-        for grep $self->{"btn_$_"}, qw(remove increase decrease rotate45cw rotate45ccw changescale split cut settings);
+        for grep $self->{"btn_$_"}, qw(remove increase decrease rotate45cw rotate45ccw changescale split cut layers settings);
     
     if ($self->{htoolbar}) {
         $self->{htoolbar}->EnableTool($_, $have_sel)
-            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_SCALE, TB_SPLIT, TB_CUT, TB_SETTINGS);
+            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
     }
     
     if ($self->{object_info_size}) { # have we already loaded the info pane?
@@ -2336,10 +2936,13 @@ sub selection_changed {
 
 sub select_object {
     my ($self, $obj_idx) = @_;
-    
+
     $_->selected(0) for @{ $self->{objects} };
+    $_->selected_instance(-1) for @{ $self->{objects} };
+
     if (defined $obj_idx) {
         $self->{objects}->[$obj_idx]->selected(1);
+        $self->{objects}->[$obj_idx]->selected_instance(0);
     }
     $self->selection_changed(1);
 }
@@ -2499,6 +3102,9 @@ sub object_menu {
     wxTheApp->append_menu_item($menu, "Cut…", 'Open the 3D cutting tool', sub {
         $self->object_cut_dialog;
     }, undef, 'package.png');
+    wxTheApp->append_menu_item($menu, "Layer heights…", 'Open the dynamic layer height control', sub {
+        $self->object_layers_dialog;
+    }, undef, 'variable_layer_height.png');
     $menu->AppendSeparator();
     wxTheApp->append_menu_item($menu, "Settings…", 'Open the object editor dialog', sub {
         $self->object_settings_dialog;
@@ -2512,6 +3118,9 @@ sub object_menu {
     }, undef, 'brick_go.png');
     wxTheApp->append_menu_item($menu, "Export object and modifiers as AMF…", 'Export this single object and all associated modifiers as AMF file', sub {
         $self->export_object_amf;
+    }, undef, 'brick_go.png');
+    wxTheApp->append_menu_item($menu, "Export object and modifiers as 3MF…", 'Export this single object and all associated modifiers as 3MF file', sub {
+            $self->export_object_tmf;
     }, undef, 'brick_go.png');
     
     return $menu;
@@ -2580,12 +3189,14 @@ use List::Util qw(first);
 use Slic3r::Geometry qw(X Y Z MIN MAX deg2rad);
 
 has 'name'                  => (is => 'rw', required => 1);
+has 'identifier'            => (is => 'rw', required => 1);
 has 'input_file'            => (is => 'rw');
 has 'input_file_obj_idx'    => (is => 'rw');
 has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms
 has 'transformed_thumbnail' => (is => 'rw');
 has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units
 has 'selected'              => (is => 'rw', default => sub { 0 });
+has 'selected_instance'     => (is => 'rw', default => sub { -1 });
 
 sub make_thumbnail {
     my ($self, $model, $obj_idx) = @_;
@@ -2594,6 +3205,12 @@ sub make_thumbnail {
     $self->thumbnail->clear;
     
     my $mesh = $model->objects->[$obj_idx]->raw_mesh;
+    # Apply x, y rotations and scaling vector in case of reading a 3MF model object.
+    my $model_instance = $model->objects->[$obj_idx]->instances->[0];
+    $mesh->rotate_x($model_instance->x_rotation);
+    $mesh->rotate_y($model_instance->y_rotation);
+    $mesh->scale_xyz($model_instance->scaling_vector);
+
     if ($mesh->facets_count <= 5000) {
         # remove polygons with area <= 1mm
         my $area_threshold = Slic3r::Geometry::scale 1;

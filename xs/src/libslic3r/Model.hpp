@@ -7,6 +7,7 @@
 #include "Layer.hpp"
 #include "Point.hpp"
 #include "TriangleMesh.hpp"
+#include "LayerHeightSpline.hpp"
 #include <map>
 #include <string>
 #include <utility>
@@ -44,6 +45,9 @@ class Model
     ModelObjectPtrs objects;
     ///< Objects are owned by a model. Each object may have multiple instances
     ///< , each instance having its own transformation (shift, scale, rotation).
+
+    std::map<std::string, std::string> metadata;
+    ///< Model metadata <name, value>, this is needed for 3MF format read/write.
 
     /// Model constructor.
     Model();
@@ -134,6 +138,8 @@ class Model
     /// This transformation works in the XY plane only and no transformation in Z is performed.
     /// \param point pointf object to center the model instances of model objects around
     void center_instances_around_point(const Pointf &point);
+
+    void align_instances_to_origin();
 
     /// Translate each ModelObject with x, y, z units.
     /// \param x coordf_t units in the x direction
@@ -259,8 +265,10 @@ class ModelObject
 
     DynamicPrintConfig config; ///< Configuration parameters specific to a single ModelObject, overriding the global Slic3r settings.
 
-
     t_layer_height_ranges layer_height_ranges; ///< Variation of a layer thickness for spans of Z coordinates.
+
+    int part_number; ///< It's used for the 3MF items part numbers in the build element.
+    LayerHeightSpline layer_height_spline;     ///< Spline based variations of layer thickness for interactive user manipulation
 
     Pointf3 origin_translation;
     ///< This vector accumulates the total translation applied to the object by the
@@ -342,7 +350,6 @@ class ModelObject
 
     /// Center the current ModelObject to origin by translating the ModelVolumes
     void center_around_origin();
-    void align_instances_to_origin();
 
     /// Translate the current ModelObject by translating ModelVolumes with (x,y,z) units.
     /// This function calls translate(coordf_t x, coordf_t y, coordf_t z) to translate every TriangleMesh in each ModelVolume.
@@ -450,7 +457,12 @@ class ModelVolume
     DynamicPrintConfig config;
     ///< Configuration parameters specific to an object model geometry or a modifier volume,
     ///< overriding the global Slic3r settings and the ModelObject settings.
-
+    
+    /// Input file path needed for reloading the volume from disk
+    std::string input_file; ///< Input file path
+    int input_file_obj_idx; ///< Input file object index
+    int input_file_vol_idx; ///< Input file volume index
+    
     bool modifier;  ///< Is it an object to be printed, or a modifier volume?
 
     /// Get the parent object owning this modifier volume.
@@ -510,9 +522,13 @@ class ModelInstance
 {
     friend class ModelObject;
     public:
-    double rotation;            ///< Rotation around the Z axis, in radians around mesh center point
-    double scaling_factor;      ///< scaling factor
-    Pointf offset;              ///< offset in unscaled coordinates
+    double rotation;            ///< Rotation around the Z axis, in radians around mesh center point.
+    double x_rotation;          ///< Rotation around the X axis, in radians around mesh center point. Specific to 3MF format.
+    double y_rotation;          ///< Rotation around the Y axis, in radians around mesh center point. Specific to 3MF format.
+    double scaling_factor;      ///< uniform scaling factor.
+    Pointf3 scaling_vector;     ///< scaling vector. Specific to 3MF format.
+    Pointf offset;              ///< offset in unscaled coordinates.
+    double z_translation;       ///< translation in z axis. Specific to 3MF format. It's not used anywhere in Slic3r except at writing/reading 3mf.
 
     /// Get the owning ModelObject
     /// \return ModelObject* pointer to the owner ModelObject

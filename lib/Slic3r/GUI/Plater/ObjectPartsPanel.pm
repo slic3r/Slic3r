@@ -297,23 +297,20 @@ sub selection_changed {
             # attach volume config to settings panel
             my $volume = $self->{model_object}->volumes->[ $itemData->{volume_id} ];
    
-            if ($volume->modifier) {
-                my $movers = $self->{optgroup_movers};
-                
-                my $obj_bb = $self->{model_object}->raw_bounding_box;
-                my $vol_bb = $volume->mesh->bounding_box;
-                my $vol_size = $vol_bb->size;
-                $movers->get_field('x')->set_range($obj_bb->x_min - $vol_size->x, $obj_bb->x_max);
-                $movers->get_field('y')->set_range($obj_bb->y_min - $vol_size->y, $obj_bb->y_max);  #,,
-                $movers->get_field('z')->set_range($obj_bb->z_min - $vol_size->z, $obj_bb->z_max);
-                $movers->get_field('x')->set_value($vol_bb->x_min);
-                $movers->get_field('y')->set_value($vol_bb->y_min);
-                $movers->get_field('z')->set_value($vol_bb->z_min);
-                
-                $self->{left_sizer}->Show($movers->sizer);
-            } else {
-                $self->{left_sizer}->Hide($self->{optgroup_movers}->sizer);
-            }
+            my $movers = $self->{optgroup_movers};
+            
+            my $obj_bb = $self->{model_object}->raw_bounding_box;
+            my $vol_bb = $volume->mesh->bounding_box;
+            my $vol_size = $vol_bb->size;
+            $movers->get_field('x')->set_range($obj_bb->x_min - $vol_size->x, $obj_bb->x_max);
+            $movers->get_field('y')->set_range($obj_bb->y_min - $vol_size->y, $obj_bb->y_max);  #,,
+            $movers->get_field('z')->set_range($obj_bb->z_min - $vol_size->z, $obj_bb->z_max);
+            $movers->get_field('x')->set_value($vol_bb->x_min);
+            $movers->get_field('y')->set_value($vol_bb->y_min);
+            $movers->get_field('z')->set_value($vol_bb->z_min);
+            
+            $self->{left_sizer}->Show($movers->sizer);
+
             $config = $volume->config;
             $self->{staticbox}->SetLabel('Part Settings');
             
@@ -356,11 +353,17 @@ sub on_btn_load {
             next;
         }
         
-        foreach my $object (@{$model->objects}) {
-            foreach my $volume (@{$object->volumes}) {
-                my $new_volume = $self->{model_object}->add_volume($volume);
+        for my $obj_idx (0..($model->objects_count-1)) {
+            my $object = $model->objects->[$obj_idx];
+            for my $vol_idx (0..($object->volumes_count-1)) {
+                my $new_volume = $self->{model_object}->add_volume($object->get_volume($vol_idx));
                 $new_volume->set_modifier($is_modifier);
                 $new_volume->set_name(basename($input_file));
+                 
+                # input_file needed to reload / update modifiers' volumes
+                $new_volume->set_input_file($input_file);
+                $new_volume->set_input_file_obj_idx($obj_idx);
+                $new_volume->set_input_file_vol_idx($vol_idx);
                 
                 # apply the same translation we applied to the object
                 $new_volume->mesh->translate(@{$self->{model_object}->origin_translation});
@@ -410,6 +413,14 @@ sub on_btn_lambda {
     } else {
         return;
     }
+
+    my $center = $self->{model_object}->bounding_box->center; 
+    if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
+        #TODO what we really want to do here is just align the
+        # center of the modifier to the center of the part.
+        $mesh->translate($center->x, $center->y, 0);
+    }
+
     $mesh->repair;
     my $new_volume = $self->{model_object}->add_volume(mesh => $mesh);
     $new_volume->set_modifier($is_modifier);
