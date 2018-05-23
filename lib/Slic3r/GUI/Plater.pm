@@ -1030,7 +1030,14 @@ sub undo {
 			my $obj_idx = $self->get_object_index($identifier);
             $self->remove($obj_idx, 'true');
         }
-	}
+    } elsif ($type eq "GROUP"){
+        my @ops = @{$operation->{attributes}};
+        push @{$self->{undo_stack}}, @ops;
+        foreach my $op (@ops) {
+            $self->undo;
+            pop @{$self->{redo_stack}};
+        }
+    }
 }
 
 sub redo {
@@ -1121,6 +1128,13 @@ sub redo {
         {
             $self->{objects}->[-$objects_count]->identifier($start_identifier++);
             $objects_count--;
+        }
+    } elsif ($type eq "GROUP"){
+        my @ops = @{$operation->{attributes}};
+        foreach my $op (@ops) {
+            push @{$self->{redo_stack}}, $op;
+            $self->redo;
+            pop @{$self->{undo_stack}};
         }
     }
 }
@@ -1533,6 +1547,8 @@ sub rotate_face {
     my $angleToZ = acos(-$normal->z());
     $self->rotate(-rad2deg($angleToXZ),Z);
     $self->rotate(rad2deg($angleToZ),Y);
+    
+    $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-2));
 }
 
 sub rotate {
