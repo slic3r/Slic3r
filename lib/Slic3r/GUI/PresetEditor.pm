@@ -622,7 +622,7 @@ sub build {
             $optgroup->append_single_option_line('dont_support_bridges');
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Speed', 'time.png');
         {
@@ -807,6 +807,7 @@ sub _update {
             my $dialog = Wx::MessageDialog->new($self,
                 "The Spiral Vase mode requires:\n"
                 . "- one perimeter\n"
+                . "- shell thickness to be 0\n"
                 . "- no top solid layers\n"
                 . "- 0% fill density\n"
                 . "- no support material\n"
