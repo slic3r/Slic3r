@@ -3,6 +3,7 @@ package Slic3r::Print::Object;
 use strict;
 use warnings;
 
+use POSIX;
 use List::Util qw(min max sum first any);
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(X Y Z PI scale unscale chained_path epsilon);
@@ -387,7 +388,22 @@ sub discover_horizontal_shells {
                 ];
                 next if !@$solid;
                 Slic3r::debugf "Layer %d has %s surfaces\n", $i, ($type == S_TYPE_TOP) ? 'top' : 'bottom';
-                
+
+                # TODO @Samir55, this is where you can modify the layer shell thickness, Let's assume for now it's the
+                # min_shell thickness value, to be split int 3 values: min_top_shell_thickness, min_bottom_shell_thickness
+                # and min_shell_thickness.
+                #print ("Discover horizontal shells is Called, where the min_shell_thickness ${$layerm->region->config->min_shell_thickness}, and the layer top and bottom layers count are: ${$layerm->region->config->top_solid_layers}, ${$layerm->region->config->bottom_solid_layers}");
+                if ($layerm->region->config->min_shell_thickness > 0) {
+                    my $top_shell_thickness = unscale($layerm->region->config->min_shell_thickness);
+                    my $bottom_shell_thickness = unscale($layerm->region->config->min_shell_thickness);
+
+                    my $current_top_shell_thickness = ($layerm->region->config->top_solid_layers * $self->get_layer($i)->height);
+
+                    if ($current_top_shell_thickness < $top_shell_thickness) {
+                        $layerm->region->config->top_solid_layers = ceil($top_shell_thickness / $self->get_layer($i)->height);
+                    }
+                }
+
                 my $solid_layers = ($type == S_TYPE_TOP)
                     ? $layerm->region->config->top_solid_layers
                     : $layerm->region->config->bottom_solid_layers;
