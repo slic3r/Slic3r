@@ -110,4 +110,9 @@ sub SelectedNormal {
     return  $self->{normal};
 }
 
+sub SelectedAxis {
+    my ($self) = @_;
+    return  $self->{options}->{axis};
+}
+
 1;

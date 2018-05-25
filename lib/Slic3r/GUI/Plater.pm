@@ -1541,6 +1541,8 @@ sub rotate_face {
 	return unless $dlg->ShowModal == wxID_OK;
     my $normal = $dlg->SelectedNormal;
     return if !defined $normal;
+    my $axis = $dlg->SelectedAxis;
+    return if !defined $axis;
     
     # Actual math to rotate
     my $angleToXZ = atan2($normal->y(),$normal->x());
@@ -1548,7 +1550,16 @@ sub rotate_face {
     $self->rotate(-rad2deg($angleToXZ),Z);
     $self->rotate(rad2deg($angleToZ),Y);
     
-    $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-2));
+    if($axis == Z){
+        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-2));
+    } else {
+        if($axis == X){
+            $self->rotate(90,Y);
+        } else {
+            $self->rotate(90,X);
+        }
+        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-3));
+    }
 }
 
 sub rotate {
