@@ -2630,9 +2630,12 @@ sub make_thumbnail {
     my ($obj_idx) = @_;
     
     my $plater_object = $self->{objects}[$obj_idx];
+    return if($plater_object->remaking_thumbnail);
+    $plater_object->remaking_thumbnail(1);
     $plater_object->thumbnail(Slic3r::ExPolygon::Collection->new);
     my $cb = sub {
         $plater_object->make_thumbnail($self->{model}, $obj_idx);
+        $plater_object->remaking_thumbnail(0);
         
         if ($Slic3r::have_threads) {
             Wx::PostEvent($self, Wx::PlThreadEvent->new(-1, $THUMBNAIL_DONE_EVENT, shared_clone([ $obj_idx ])));
@@ -3245,6 +3248,7 @@ has 'input_file'            => (is => 'rw');
 has 'input_file_obj_idx'    => (is => 'rw');
 has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms
 has 'transformed_thumbnail' => (is => 'rw');
+has 'remaking_thumbnail'    => (is => 'rw', default => sub { 0 });
 has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units
 has 'selected'              => (is => 'rw', default => sub { 0 });
 has 'selected_instance'     => (is => 'rw', default => sub { -1 });
