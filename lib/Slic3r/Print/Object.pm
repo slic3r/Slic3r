@@ -397,16 +397,8 @@ sub discover_horizontal_shells {
                     my $current_shell_thickness = $solid_layers * $self->get_layer($i)->height;
                     my $minimum_shell_thickness = $layerm->region->config->min_top_bottom_shell_thickness;
 
-                    print("\n\nNew Layer \n", ($type == S_TYPE_TOP) ? 'TOP': 'BOTTOM');
-                    print("Current layer height ", $self->get_layer($i)->height, "\n");
-                    print("Solid Layers count ", $solid_layers, "\n");
-                    print("Current shell thickness ", $current_shell_thickness, "\n");
-                    print("Minimum shell thickness ", $minimum_shell_thickness, "\n");
                     if ($minimum_shell_thickness - $current_shell_thickness > 1e-4) {
-                        my $ret = ceil(($minimum_shell_thickness - $current_shell_thickness) / $self->get_layer($i)->height);
-                        $solid_layers += $ret;
-                        print("Added layers count is ", $ret, "\n");
-                        print("Total layers count is ", $solid_layers, "\n");
+                        $solid_layers += ceil(($minimum_shell_thickness - $current_shell_thickness) / $self->get_layer($i)->height);
                     }
                 }
 
