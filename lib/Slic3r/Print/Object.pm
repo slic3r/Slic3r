@@ -402,7 +402,7 @@ sub discover_horizontal_shells {
                     print("Solid Layers count ", $solid_layers, "\n");
                     print("Current shell thickness ", $current_shell_thickness, "\n");
                     print("Minimum shell thickness ", $minimum_shell_thickness, "\n");
-                    if ($current_shell_thickness < $minimum_shell_thickness) {
+                    if ($minimum_shell_thickness - $current_shell_thickness > 1e-4) {
                         my $ret = ceil(($minimum_shell_thickness - $current_shell_thickness) / $self->get_layer($i)->height);
                         $solid_layers += $ret;
                         print("Added layers count is ", $ret, "\n");
