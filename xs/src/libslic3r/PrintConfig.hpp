@@ -256,7 +256,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
     ConfigOptionFloat               min_shell_thickness;
-    ConfigOptionFloat               min_vertical_shell_thickness;
+    ConfigOptionFloat               min_top_bottom_shell_thickness;
     ConfigOptionBool                overhangs;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
@@ -315,7 +315,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         OPT_PTR(top_infill_pattern);
         OPT_PTR(top_solid_infill_speed);
         OPT_PTR(top_solid_layers);
-        OPT_PTR(min_vertical_shell_thickness);
+        OPT_PTR(min_top_bottom_shell_thickness);
 
         return NULL;
     };

@@ -837,8 +837,8 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
 
-    def = this->add("min_vertical_shell_thickness", coFloat);
-    def->label = "Minimum vertical shell thickness";
+    def = this->add("min_top_bottom_shell_thickness", coFloat);
+    def->label = "Minimum shell thickness";
     def->category = "Layers and Perimeters";
     def->sidetext = "mm";
     def->tooltip = "Alternative method of configuring top/bottom layers. If this is above 0 extra solid layers will be generated when necessary";

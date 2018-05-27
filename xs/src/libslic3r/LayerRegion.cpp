@@ -237,7 +237,7 @@ LayerRegion::prepare_fill_surfaces()
         the only meaningful information returned by psPerimeters. */
     
     // if no solid layers are requested, turn top/bottom surfaces to internal
-    if (this->region()->config.top_solid_layers == 0 && this->region()->config.min_vertical_shell_thickness < 1e-4) {
+    if (this->region()->config.top_solid_layers == 0 && !(this->region()->config.min_top_bottom_shell_thickness > 0)) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
             if (surface->surface_type == stTop) {
                 if (this->layer()->object()->config.infill_only_where_needed) {
@@ -249,7 +249,7 @@ LayerRegion::prepare_fill_surfaces()
         }
     }
     
-    if (this->region()->config.bottom_solid_layers == 0 && this->region()->config.min_vertical_shell_thickness < 1e-4) {
+    if (this->region()->config.bottom_solid_layers == 0 && !(this->region()->config.min_top_bottom_shell_thickness > 0)) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
             if (surface->surface_type == stBottom || surface->surface_type == stBottomBridge)
                 surface->surface_type = stInternal;

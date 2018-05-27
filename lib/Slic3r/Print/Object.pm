@@ -393,14 +393,9 @@ sub discover_horizontal_shells {
                     ? $layerm->region->config->top_solid_layers
                     : $layerm->region->config->bottom_solid_layers;
 
-                # TODO @Samir55, this is where you can modify the layer shell thickness, Let's assume for now it's the
-                # min_shell thickness value, to be split int 3 values: min_top_shell_thickness, min_bottom_shell_thickness
-                # and min_shell_thickness.
-                #print ("Discover horizontal shells is Called, where the min_shell_thickness ${$layerm->region->config->min_shell_thickness}, and the layer top and bottom layers count are: ${$layerm->region->config->top_solid_layers}, ${$layerm->region->config->bottom_solid_layers}");
-                if ($layerm->region->config->min_vertical_shell_thickness > 0) {
-
-                    my $current_shell_thickness = $solid_layers * $self->get_layer($i)->height; # in mm (unscaled).
-                    my $minimum_shell_thickness = $layerm->region->config->min_vertical_shell_thickness; # in mm (unscaled).
+                if ($layerm->region->config->min_top_bottom_shell_thickness > 0) {
+                    my $current_shell_thickness = $solid_layers * $self->get_layer($i)->height;
+                    my $minimum_shell_thickness = $layerm->region->config->min_top_bottom_shell_thickness;
 
                     print("\n\nNew Layer \n", ($type == S_TYPE_TOP) ? 'TOP': 'BOTTOM');
                     print("Current layer height ", $self->get_layer($i)->height, "\n");

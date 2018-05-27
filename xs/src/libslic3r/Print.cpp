@@ -340,7 +340,7 @@ Print::object_extruders() const
         
         if ((*region)->config.top_solid_layers.value > 0
             || (*region)->config.bottom_solid_layers.value > 0
-            || (*region)->config.min_vertical_shell_thickness.value > 1e-4)
+            || (*region)->config.min_top_bottom_shell_thickness.value > 1e-4)
             extruders.insert((*region)->config.solid_infill_extruder - 1);
     }
     
