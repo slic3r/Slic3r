@@ -397,8 +397,9 @@ sub discover_horizontal_shells {
                     my $current_shell_thickness = $solid_layers * $self->get_layer($i)->height;
                     my $minimum_shell_thickness = $layerm->region->config->min_top_bottom_shell_thickness;
 
-                    if ($minimum_shell_thickness - $current_shell_thickness > 1e-4) {
-                        $solid_layers += ceil(($minimum_shell_thickness - $current_shell_thickness) / $self->get_layer($i)->height);
+                    while ($minimum_shell_thickness - $current_shell_thickness > 1e-4) {
+                        $solid_layers++;
+                        $current_shell_thickness = $solid_layers * $self->get_layer($i)->height;
                     }
                 }
 
