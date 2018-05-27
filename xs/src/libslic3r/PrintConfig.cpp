@@ -837,6 +837,15 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
 
+    def = this->add("min_vertical_shell_thickness", coFloat);
+    def->label = "Minimum vertical shell thickness";
+    def->category = "Layers and Perimeters";
+    def->sidetext = "mm";
+    def->tooltip = "Alternative method of configuring top/bottom layers. If this is above 0 extra solid layers will be generated when necessary";
+    def->cli = "min-vertical-shell-thickness=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
+
     def = this->add("min_layer_height", coFloats);
     def->label = "Min";
     def->tooltip = "This is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";

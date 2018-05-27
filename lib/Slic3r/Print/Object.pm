@@ -389,24 +389,32 @@ sub discover_horizontal_shells {
                 next if !@$solid;
                 Slic3r::debugf "Layer %d has %s surfaces\n", $i, ($type == S_TYPE_TOP) ? 'top' : 'bottom';
 
+                my $solid_layers = ($type == S_TYPE_TOP)
+                    ? $layerm->region->config->top_solid_layers
+                    : $layerm->region->config->bottom_solid_layers;
+
                 # TODO @Samir55, this is where you can modify the layer shell thickness, Let's assume for now it's the
                 # min_shell thickness value, to be split int 3 values: min_top_shell_thickness, min_bottom_shell_thickness
                 # and min_shell_thickness.
                 #print ("Discover horizontal shells is Called, where the min_shell_thickness ${$layerm->region->config->min_shell_thickness}, and the layer top and bottom layers count are: ${$layerm->region->config->top_solid_layers}, ${$layerm->region->config->bottom_solid_layers}");
-                if ($layerm->region->config->min_shell_thickness > 0) {
-                    my $top_shell_thickness = unscale($layerm->region->config->min_shell_thickness);
-                    my $bottom_shell_thickness = unscale($layerm->region->config->min_shell_thickness);
+                if ($layerm->region->config->min_vertical_shell_thickness > 0) {
 
-                    my $current_top_shell_thickness = ($layerm->region->config->top_solid_layers * $self->get_layer($i)->height);
+                    my $current_shell_thickness = $solid_layers * $self->get_layer($i)->height; # in mm (unscaled).
+                    my $minimum_shell_thickness = $layerm->region->config->min_vertical_shell_thickness; # in mm (unscaled).
 
-                    if ($current_top_shell_thickness < $top_shell_thickness) {
-                        $layerm->region->config->top_solid_layers = ceil($top_shell_thickness / $self->get_layer($i)->height);
+                    print("\n\nNew Layer \n", ($type == S_TYPE_TOP) ? 'TOP': 'BOTTOM');
+                    print("Current layer height ", $self->get_layer($i)->height, "\n");
+                    print("Solid Layers count ", $solid_layers, "\n");
+                    print("Current shell thickness ", $current_shell_thickness, "\n");
+                    print("Minimum shell thickness ", $minimum_shell_thickness, "\n");
+                    if ($current_shell_thickness < $minimum_shell_thickness) {
+                        my $ret = ceil(($minimum_shell_thickness - $current_shell_thickness) / $self->get_layer($i)->height);
+                        $solid_layers += $ret;
+                        print("Added layers count is ", $ret, "\n");
+                        print("Total layers count is ", $solid_layers, "\n");
                     }
                 }
 
-                my $solid_layers = ($type == S_TYPE_TOP)
-                    ? $layerm->region->config->top_solid_layers
-                    : $layerm->region->config->bottom_solid_layers;
                 NEIGHBOR: for (my $n = ($type == S_TYPE_TOP) ? $i-1 : $i+1; 
                         abs($n - $i) <= $solid_layers-1; 
                         ($type == S_TYPE_TOP) ? $n-- : $n++) {

@@ -191,6 +191,7 @@ sub validate {
     die "Invalid value for --solid-layers\n" if defined $self->solid_layers && $self->solid_layers < 0;
     die "Invalid value for --top-solid-layers\n"    if $self->top_solid_layers      < 0;
     die "Invalid value for --bottom-solid-layers\n" if $self->bottom_solid_layers   < 0;
+    die "Invalid value for --min-vertical-shell-thickness\n" if $self->min_vertical_shell_thickness < 0;
     
     # --gcode-flavor
     die "Invalid value for --gcode-flavor\n"
