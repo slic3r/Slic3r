@@ -255,8 +255,7 @@ LayerRegion::prepare_fill_surfaces()
                 surface->surface_type = stInternal;
         }
     }
-    
-        
+
     // turn too small internal regions into solid regions according to the user setting
     const float &fill_density = this->region()->config.fill_density;
     if (fill_density > 0 && fill_density < 100) {
