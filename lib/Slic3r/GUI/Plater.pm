@@ -44,7 +44,7 @@ use constant TB_MORE    => &Wx::NewId;
 use constant TB_FEWER   => &Wx::NewId;
 use constant TB_45CW    => &Wx::NewId;
 use constant TB_45CCW   => &Wx::NewId;
-use constant TB_ROTBED  => &Wx::NewId;
+use constant TB_ROTFACE => &Wx::NewId;
 use constant TB_SCALE   => &Wx::NewId;
 use constant TB_SPLIT   => &Wx::NewId;
 use constant TB_CUT     => &Wx::NewId;
@@ -193,7 +193,7 @@ sub new {
         $self->{htoolbar}->AddSeparator;
         $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_anticlockwise.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_ROTBED, "Rotate face", Wx::Bitmap->new($Slic3r::var->("rotate_to_bed.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_ROTFACE, "Rotate face", Wx::Bitmap->new($Slic3r::var->("rotate_face.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_SCALE, "Scale…", Wx::Bitmap->new($Slic3r::var->("arrow_out.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_SPLIT, "Split", Wx::Bitmap->new($Slic3r::var->("shape_ungroup.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_CUT, "Cut…", Wx::Bitmap->new($Slic3r::var->("package.png"), wxBITMAP_TYPE_PNG), '');
@@ -210,7 +210,7 @@ sub new {
             decrease        => "",
             rotate45ccw     => "",
             rotate45cw      => "",
-            rotateToBed     => "",
+            rotateFace      => "",
             changescale     => "Scale…",
             split           => "Split",
             cut             => "Cut…",
@@ -218,7 +218,7 @@ sub new {
             settings        => "Settings…",
         );
         $self->{btoolbar} = Wx::BoxSizer->new(wxHORIZONTAL);
-        for (qw(add remove reset arrange increase decrease rotate45ccw rotate45cw rotateToBed changescale split cut layers settings)) {
+        for (qw(add remove reset arrange increase decrease rotate45ccw rotate45cw rotateFace changescale split cut layers settings)) {
             $self->{"btn_$_"} = Wx::Button->new($self, -1, $tbar_buttons{$_}, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
             $self->{btoolbar}->Add($self->{"btn_$_"});
         }
@@ -249,7 +249,7 @@ sub new {
             decrease        delete.png
             rotate45cw      arrow_rotate_clockwise.png
             rotate45ccw     arrow_rotate_anticlockwise.png
-            rotateToBed     rotate_to_bed.png
+            rotateFace      rotate_face.png
             changescale     arrow_out.png
             split           shape_ungroup.png
             cut             package.png
@@ -287,7 +287,7 @@ sub new {
         EVT_TOOL($self, TB_FEWER, sub { $self->decrease; });
         EVT_TOOL($self, TB_45CW, sub { $_[0]->rotate(-45) });
         EVT_TOOL($self, TB_45CCW, sub { $_[0]->rotate(45) });
-        EVT_TOOL($self, TB_ROTBED, sub { $_[0]->rotate_face });
+        EVT_TOOL($self, TB_ROTFACE, sub { $_[0]->rotate_face });
         EVT_TOOL($self, TB_SCALE, sub { $self->changescale(undef); });
         EVT_TOOL($self, TB_SPLIT, sub { $self->split_object; });
         EVT_TOOL($self, TB_CUT, sub { $_[0]->object_cut_dialog });
@@ -302,7 +302,7 @@ sub new {
         EVT_BUTTON($self, $self->{btn_decrease}, sub { $self->decrease; });
         EVT_BUTTON($self, $self->{btn_rotate45cw}, sub { $_[0]->rotate(-45) });
         EVT_BUTTON($self, $self->{btn_rotate45ccw}, sub { $_[0]->rotate(45) });
-        EVT_BUTTON($self, $self->{btn_rotateToBed}, sub { $_[0]->rotate_face });
+        EVT_BUTTON($self, $self->{btn_rotateFace}, sub { $_[0]->rotate_face });
         EVT_BUTTON($self, $self->{btn_changescale}, sub { $self->changescale(undef); });
         EVT_BUTTON($self, $self->{btn_split}, sub { $self->split_object; });
         EVT_BUTTON($self, $self->{btn_cut}, sub { $_[0]->object_cut_dialog });
@@ -2939,11 +2939,11 @@ sub selection_changed {
     
     my $method = $have_sel ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
-        for grep $self->{"btn_$_"}, qw(remove increase decrease rotate45cw rotate45ccw rotateToBed changescale split cut layers settings);
+        for grep $self->{"btn_$_"}, qw(remove increase decrease rotate45cw rotate45ccw rotateFace changescale split cut layers settings);
     
     if ($self->{htoolbar}) {
         $self->{htoolbar}->EnableTool($_, $have_sel)
-            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_ROTBED, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
+            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_ROTFACE, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
     }
     
     if ($self->{object_info_size}) { # have we already loaded the info pane?
@@ -3095,9 +3095,9 @@ sub object_menu {
     wxTheApp->append_menu_item($menu, "Rotate 45° counter-clockwise", 'Rotate the selected object by 45° counter-clockwise', sub {
         $self->rotate(+45);
     }, undef, 'arrow_rotate_anticlockwise.png');
-    wxTheApp->append_menu_item($menu, "Rotate Face to Bed", 'Rotates the selected object to have the selected face parallel with the bed', sub {
+    wxTheApp->append_menu_item($menu, "Rotate Face to Plane", 'Rotates the selected object to have the selected face parallel with a plane', sub {
         $self->rotate_face;
-    }, undef, 'rotate_to_bed.png');
+    }, undef, 'rotate_face.png');
     
     {
         my $rotateMenu = Wx::Menu->new;

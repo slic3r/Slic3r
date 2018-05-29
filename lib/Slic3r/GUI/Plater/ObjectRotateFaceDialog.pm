@@ -31,7 +31,7 @@ sub new {
     my $optgroup;
     $optgroup = $self->{optgroup} = Slic3r::GUI::OptionsGroup->new(
         parent      => $self,
-        title       => 'Align Face with Plane',
+        title       => 'Rotate to Align Face with Plane',
         on_change   => sub {
             my ($opt_id) = @_;
             if ($self->{options}{$opt_id} != $optgroup->get_value($opt_id)){
@@ -43,7 +43,7 @@ sub new {
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'axis',
         type        => 'select',
-        label       => 'Axis',
+        label       => 'Plane',
         labels      => ['YZ','XZ','XY'],
         values      => [X,Y,Z],
         default     => $self->{options}{axis},
@@ -52,7 +52,7 @@ sub new {
     {
         my $button_sizer = Wx::BoxSizer->new(wxVERTICAL);
         
-        $self->{btn_rot} = Wx::Button->new($self, -1, "Rotate Face to Plane", wxDefaultPosition, wxDefaultSize);
+        $self->{btn_rot} = Wx::Button->new($self, -1, "Rotate to Plane", wxDefaultPosition, wxDefaultSize);
         $self->{btn_rot}->SetDefault;
         $button_sizer->Add($self->{btn_rot}, 0, wxALIGN_RIGHT | wxALL, 10);
         $optgroup->append_line(Slic3r::GUI::OptionsGroup::Line->new(
