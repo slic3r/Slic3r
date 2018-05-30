@@ -41,9 +41,9 @@ _3DScene::_extrusionentity_to_verts_do(const Lines &lines, const std::vector<dou
             middle_z_a = (top_z + bottom_z_a) / 2;
         }
         else {
-            top_z_a = line.a.z;
-            bottom_z_a = line.a.z - heights.at(i);
-            middle_z_a = (line.a.z + bottom_z_a) / 2;
+            top_z_a = unscale(line.a.z);
+            bottom_z_a = unscale(line.a.z) - heights.at(i);
+            middle_z_a = (unscale(line.a.z) + bottom_z_a) / 2;
         }
         
         if (line.b.z == -1) {
@@ -52,9 +52,9 @@ _3DScene::_extrusionentity_to_verts_do(const Lines &lines, const std::vector<dou
             middle_z_b = (top_z + bottom_z_b) / 2;
         }
         else {
-            top_z_b = line.b.z;
-            bottom_z_b = line.b.z - heights.at(i);
-            middle_z_b = (line.b.z + bottom_z_b) / 2;
+            top_z_b = unscale(line.b.z);
+            bottom_z_b = unscale(line.b.z) - heights.at(i);
+            middle_z_b = (unscale(line.b.z) + bottom_z_b) / 2;
         }
         
         Vectorf v = Vectorf::new_unscale(line.vector());

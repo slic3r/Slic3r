@@ -51,7 +51,8 @@ SurfaceCollection::group(std::vector<SurfacesConstPtr> *retval) const
             if (   gkey->surface_type      == it->surface_type
                 && gkey->thickness         == it->thickness
                 && gkey->thickness_layers  == it->thickness_layers
-                && gkey->bridge_angle      == it->bridge_angle) {
+                && gkey->bridge_angle      == it->bridge_angle
+                && gkey->distance_to_top   == it->distance_to_top) {
                 group = &*git;
                 break;
             }
@@ -137,6 +138,17 @@ SurfaceCollection::append(const ExPolygons &src, SurfaceType surfaceType)
     this->surfaces.reserve(this->surfaces.size() + src.size());
     for (ExPolygons::const_iterator it = src.begin(); it != src.end(); ++ it)
         this->surfaces.push_back(Surface(surfaceType, *it));
+}
+
+void
+SurfaceCollection::append(const ExPolygons &src, SurfaceType surfaceType, float distance_to_top)
+{
+    this->surfaces.reserve(this->surfaces.size() + src.size());
+    for (ExPolygons::const_iterator it = src.begin(); it != src.end(); ++ it){
+        Surface s = Surface(surfaceType, *it);
+        s.distance_to_top = distance_to_top;
+        this->surfaces.push_back(s);
+    }
 }
 
 size_t

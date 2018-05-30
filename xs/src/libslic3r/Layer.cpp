@@ -311,6 +311,73 @@ Layer::detect_nonplanar_layers()
     }
 }
 
+void
+Layer::project_nonplanar_surfaces()
+{
+    FOREACH_LAYERREGION(this, it_layerm) {
+        //for all perimeters
+        for (ExtrusionEntitiesPtr::iterator col_it = (*it_layerm)->perimeters.entities.begin(); col_it != (*it_layerm)->perimeters.entities.end(); ++col_it) {
+            ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
+            for (ExtrusionEntitiesPtr::iterator loop_it = collection->entities.begin(); loop_it != collection->entities.end(); ++loop_it) {
+                ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(*loop_it);
+                ExtrusionPaths paths = loop->paths;
+                for (ExtrusionPaths::iterator path_it = paths.begin(); path_it != paths.end(); ++path_it) {
+                    project_nonplanar_path(&(*path_it));
+                }
+            }
+        }
+        
+        //and all fill paths
+        for (ExtrusionEntitiesPtr::iterator col_it = (*it_layerm)->fills.entities.begin(); col_it != (*it_layerm)->fills.entities.end(); ++col_it) {
+            ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
+            for (ExtrusionEntitiesPtr::iterator path_it = collection->entities.begin(); path_it != collection->entities.end(); ++path_it) {
+                project_nonplanar_path(dynamic_cast<ExtrusionPath*>(*path_it));
+            }
+        }
+
+    }
+}
+
+void
+Layer::project_nonplanar_path(ExtrusionPath *path)
+{
+    //Skip if surface path is not nonplanar
+    if ( path->distance_to_top == -1.0f) return;
+    
+    PrintObject &object = *this->object();
+    //First check all points and project them regarding the triangle mesh
+    std::cout << path->distance_to_top << '\n';
+    for (Point& point : path->polyline.points) {
+        //std::cout << "X: " << unscale(point.x) << " Y: " << unscale(point.y) << '\n';
+        for (auto& facet : object.nonplanar_surfaces) {
+            //skip if point is outside of the bounding box of the triangle
+            if (unscale(point.x) < std::min({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
+                unscale(point.x) > std::max({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
+                unscale(point.y) < std::min({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}) ||
+                unscale(point.y) > std::max({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}))
+            {
+                continue;
+            }
+            //check if point is inside of Triangle
+            if (Slic3r::Geometry::Point_in_triangle(
+                Pointf(unscale(point.x),unscale(point.y)),
+                Pointf(facet.second.vertex[0].x, facet.second.vertex[0].y),
+                Pointf(facet.second.vertex[1].x, facet.second.vertex[1].y),
+                Pointf(facet.second.vertex[2].x, facet.second.vertex[2].y)))
+            {
+                Slic3r::Geometry::Project_point_on_plane(Pointf3(facet.second.vertex[0].x,facet.second.vertex[0].y,facet.second.vertex[0].z),
+                                                         Pointf3(facet.second.normal.x,facet.second.normal.y,facet.second.normal.z),
+                                                         point);
+                //Shift down when on lower layer
+                point.z = point.z - scale_(path->distance_to_top);
+                break;
+            } 
+        }
+    }
+
+    //Then check all line intersections, cut line on intersection and project new point
+}
+
 /// Analyzes slices of a region (SurfaceCollection slices).
 /// Each region slice (instance of Surface) is analyzed, whether it is supported or whether it is the top surface.
 /// Initially all slices are of type S_TYPE_INTERNAL.
@@ -497,7 +564,8 @@ Layer::detect_surfaces_type()
                 // No other instance of this function modifies fill_surfaces.
                 layerm.fill_surfaces.append(
                     intersection_ex(surface, fill_boundaries),
-                    surface.surface_type
+                    surface.surface_type,
+                    surface.distance_to_top
                 );
             }
         }

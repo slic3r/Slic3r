@@ -29,6 +29,7 @@ enum PrintStep {
 enum PrintObjectStep {
     posLayers, posSlice, posPerimeters, posDetectSurfaces,
     posPrepareInfill, posInfill, posSupportMaterial,
+    posNonplanarProjection,
 };
 
 // To be instantiated over PrintStep or PrintObjectStep enums.
@@ -83,6 +84,8 @@ class PrintObject
     t_layer_height_ranges layer_height_ranges;
 
     LayerHeightSpline layer_height_spline;
+
+    std::map<int, stl_facet> nonplanar_surfaces;
 
     // this is set to true when LayerRegion->slices is split in top/internal/bottom
     // so that next call to make_perimeters() performs a union() before computing loops
@@ -142,8 +145,10 @@ class PrintObject
 
     bool has_support_material() const;
     void detect_surfaces_type();
-    void project_nonplanar_surfaces();
+    void move_nonplanar_surfaces_up();
     void debug_svg_print();
+    void _detect_nonplanar_surfaces();
+    void project_nonplanar_surfaces();
     void process_external_surfaces();
     void bridge_over_infill();
     coordf_t adjust_layer_height(coordf_t layer_height) const;
@@ -152,7 +157,6 @@ class PrintObject
     std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
     void _make_perimeters();
     void _infill();
-    void _detect_nonplanar_surfaces();
 
     private:
     Print* _print;

@@ -165,7 +165,7 @@ sub detect_nonplanar_surfaces {
     $self->discover_horizontal_nonplanar_shells;
 
     # project the nonplanar surfaces to the highest layer
-    $self->project_nonplanar_surfaces;
+    $self->move_nonplanar_surfaces_up;
 
 }
 
@@ -176,7 +176,6 @@ sub prepare_infill {
 
     #detect the nonplanar surfaces and move them to top layer
     $self->detect_nonplanar_surfaces;
-
 
     # This prepare_infill() is not really idempotent.
     # TODO: It should clear and regenerate fill_surfaces at every run
@@ -221,6 +220,8 @@ sub infill {
     $self->prepare_infill;
 
     $self->_infill;
+    
+    $self->project_nonplanar_surfaces;
 }
 
 sub generate_support_material {
@@ -408,14 +409,14 @@ sub discover_horizontal_shells {
                 ];
                 next if !@$solid;
                 Slic3r::debugf "Layer %d has %s surfaces\n", $i, ($type == S_TYPE_TOP) ? 'top' : 'bottom';
-
+                my $distance_to_top = $layerm->layer()->height;
                 my $solid_layers = ($type == S_TYPE_TOP)
                     ? $layerm->region->config->top_solid_layers
                     : $layerm->region->config->bottom_solid_layers;
                 NEIGHBOR: for (my $n = ($type == S_TYPE_TOP) ? $i-1 : $i+1;
                         abs($n - $i) <= $solid_layers-1;
                         ($type == S_TYPE_TOP) ? $n-- : $n++) {
-
+                            
                     next if $n < 0 || $n >= $self->layer_count;
                     Slic3r::debugf "  looking for neighbors on layer %d...\n", $n;
 
@@ -535,7 +536,7 @@ sub discover_horizontal_shells {
 
                     # assign new internal-solid_nonplar surfaces to layer
                     foreach my $s (@$internal_solid_nonplanar) {
-                        my $newsurface = Slic3r::Surface->new(expolygon => $s, surface_type => S_TYPE_INTERNALSOLID_NONPLANAR, suface_layer_number => abs($n - $i));
+                        my $newsurface = Slic3r::Surface->new(expolygon => $s, surface_type => S_TYPE_INTERNALSOLID_NONPLANAR, distance_to_top => $distance_to_top);
                         $neighbor_fill_surfaces->append($newsurface);
                     }
 
@@ -549,6 +550,7 @@ sub discover_horizontal_shells {
                         $neighbor_fill_surfaces->append($_)
                             for map $s->[0]->clone(expolygon => $_), @$solid_surfaces;
                     }
+                    $distance_to_top = $distance_to_top + $neighbor_layerm->layer()->height;
                 }
             }
         }
@@ -572,6 +574,7 @@ sub discover_horizontal_nonplanar_shells {
             Slic3r::debugf "Layer %d has nonplanar top surfaces\n", $i;
 
             my $solid_layers =  $layerm->region->config->top_solid_layers;
+            my $distance_to_top = $layerm->layer()->height;
             NEIGHBOR: for (my $n = $i-1; abs($n - $i) <= $solid_layers-1; $n--) {
 
                 next if $n < 0 || $n >= $self->layer_count;
@@ -622,7 +625,7 @@ sub discover_horizontal_nonplanar_shells {
 
                 # assign new internal-solid_nonplar surfaces to layer
                 foreach my $s (@$internal_solid_nonplanar) {
-                    my $newsurface = Slic3r::Surface->new(expolygon => $s, surface_type => S_TYPE_INTERNALSOLID_NONPLANAR, suface_layer_number => abs($n - $i));
+                    my $newsurface = Slic3r::Surface->new(expolygon => $s, surface_type => S_TYPE_INTERNALSOLID_NONPLANAR, distance_to_top => $distance_to_top);
                     $neighbor_fill_surfaces->append($newsurface);
                 }
 
@@ -636,6 +639,7 @@ sub discover_horizontal_nonplanar_shells {
                     $neighbor_fill_surfaces->append($_)
                         for map $s->[0]->clone(expolygon => $_), @$solid_surfaces;
                 }
+                $distance_to_top = $distance_to_top + $neighbor_layerm->layer()->height;
             }
         }
     }

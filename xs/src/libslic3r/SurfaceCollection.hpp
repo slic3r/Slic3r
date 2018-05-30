@@ -37,6 +37,7 @@ class SurfaceCollection
     void append(const Surfaces &surfaces);
     void append(const ExPolygons &src, const Surface &templ);
     void append(const ExPolygons &src, SurfaceType surfaceType);
+    void append(const ExPolygons &src, SurfaceType surfaceType, float distance_to_top);
     size_t polygons_count() const;
     bool empty() const { return this->surfaces.empty(); };
     size_t size() const { return this->surfaces.size(); };

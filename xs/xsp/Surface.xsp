@@ -23,7 +23,7 @@
 %{
 
 Surface*
-_new(CLASS, expolygon, surface_type, thickness, thickness_layers, bridge_angle, extra_perimeters, suface_layer_number)
+_new(CLASS, expolygon, surface_type, thickness, thickness_layers, bridge_angle, extra_perimeters, distance_to_top)
     char*           CLASS;
     ExPolygon*      expolygon;
     SurfaceType     surface_type;
@@ -31,14 +31,14 @@ _new(CLASS, expolygon, surface_type, thickness, thickness_layers, bridge_angle, 
     unsigned short  thickness_layers;
     double          bridge_angle;
     unsigned short  extra_perimeters;
-    unsigned short  suface_layer_number;
+    float           distance_to_top;
     CODE:
         RETVAL = new Surface (surface_type, *expolygon);
         RETVAL->thickness           = thickness;
         RETVAL->thickness_layers    = thickness_layers;
         RETVAL->bridge_angle        = bridge_angle;
         RETVAL->extra_perimeters    = extra_perimeters;
-        RETVAL->suface_layer_number = suface_layer_number;
+        RETVAL->distance_to_top = distance_to_top;
         // we don't delete expolygon here because it's referenced by a Perl SV
         // whose DESTROY will take care of destruction
     OUTPUT:
@@ -74,13 +74,13 @@ Surface::extra_perimeters(...)
     OUTPUT:
         RETVAL
 
-unsigned short
-Surface::suface_layer_number(...)
+float
+Surface::distance_to_top(...)
     CODE:
         if (items > 1) {
-            THIS->suface_layer_number = (double)SvUV(ST(1));
+            THIS->distance_to_top = (double)SvUV(ST(1));
         }
-        RETVAL = THIS->suface_layer_number;
+        RETVAL = THIS->distance_to_top;
     OUTPUT:
         RETVAL
                         

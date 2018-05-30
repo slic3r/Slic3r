@@ -46,7 +46,6 @@ sub process {
     ### until we fix the idempotency issue.
     ###$self->status_cb->(20, "Generating perimeters");
     ###$_->make_perimeters for @{$self->objects};
-    
     $self->status_cb->(70, "Infilling layers");
     $_->infill for @{$self->objects};
     

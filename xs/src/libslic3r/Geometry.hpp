@@ -26,9 +26,11 @@ double rad2deg_dir(double angle);
 double deg2rad(double angle);
 
 double linint(double value, double oldmin, double oldmax, double newmin, double newmax);
+bool Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3);
+void Project_point_on_plane(Pointf3 v1,  Pointf3 n, Point &pt);
 bool arrange(
     // input
-    size_t num_parts, const Pointf &part_size, coordf_t gap, const BoundingBoxf* bed_bounding_box, 
+    size_t num_parts, const Pointf &part_size, coordf_t gap, const BoundingBoxf* bed_bounding_box,
     // output
     Pointfs &positions);
 
@@ -42,7 +44,7 @@ class MedialAxis {
         : expolygon(_expolygon), max_width(_max_width), min_width(_min_width) {};
     void build(ThickPolylines* polylines);
     void build(Polylines* polylines);
-    
+
     private:
     typedef voronoi_diagram<double> VD;
     VD vd;

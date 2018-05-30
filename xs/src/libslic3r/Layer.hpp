@@ -135,6 +135,10 @@ class Layer {
     void make_fills();
     /// Marks Nonplanar Surfaces inside the layers
     void detect_nonplanar_layers();
+    /// Projects nonplanar surfaces downwards regarding the structure of the stl mesh.
+    void project_nonplanar_surfaces();
+    ///project a nonplanar path
+    void project_nonplanar_path(ExtrusionPath* path);
     /// Determines the type of surface (top/bottombridge/bottom/internal) each region is
     void detect_surfaces_type();
     /// Processes the external surfaces

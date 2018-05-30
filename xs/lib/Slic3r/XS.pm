@@ -178,7 +178,7 @@ sub new {
         $args{thickness_layers}  // 1,
         $args{bridge_angle}      // -1,
         $args{extra_perimeters}  // 0,
-        $args{suface_layer_number} // 0,
+        $args{distance_to_top} // 0,
     );
 }
 
@@ -192,7 +192,7 @@ sub clone {
         delete $args{thickness_layers}  // $self->thickness_layers,
         delete $args{bridge_angle}      // $self->bridge_angle,
         delete $args{extra_perimeters}  // $self->extra_perimeters,
-        delete $args{suface_layer_number} // $self->suface_layer_number,
+        delete $args{distance_to_top} // $self->distance_to_top,
     );
 }
 

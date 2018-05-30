@@ -354,12 +354,12 @@ PrintObject::detect_surfaces_type()
 }
 
 void
-PrintObject::project_nonplanar_surfaces() {
+PrintObject::move_nonplanar_surfaces_up() {
     FOREACH_REGION(this->_print, region) {
         //get the heighest nonplanar layer to anchor layer here
         double top_z = 0;
         double bot_z = 9999;
-        unsigned short max_layer_count = 0;
+        float max_distance_to_top = 0.0f;
         FOREACH_LAYER(this, layer_it) {
             Layer* layer        = *layer_it;
             LayerRegion* layerm = layer->get_region(region - this->_print->regions.begin());
@@ -369,13 +369,13 @@ PrintObject::project_nonplanar_surfaces() {
                         top_z = layer->slice_z;
                     if (bot_z > layer->slice_z)
                         bot_z = layer->slice_z;
-                    if (max_layer_count < surface->suface_layer_number)
-                        max_layer_count = surface->suface_layer_number;
+                    if (max_distance_to_top < surface->distance_to_top)
+                        max_distance_to_top = surface->distance_to_top;
                 }
             }
         }
 
-        unsigned short layer_count = 0;
+        float layer_top_distance = 0.0f;
         for (LayerPtrs::reverse_iterator home_layer_it = this->layers.rbegin(); home_layer_it != this->layers.rend(); ++home_layer_it){
             //Skip if home_layer is above top_z or below bot_z
             Layer* home_layer        = *home_layer_it;
@@ -389,11 +389,10 @@ PrintObject::project_nonplanar_surfaces() {
 
                 //clone layer if on current layer
                 LayerRegion* layerm = layer->get_region(region - this->_print->regions.begin());
-                Surfaces::iterator surface = layerm->slices.surfaces.begin();
+                Surfaces::iterator surface = layerm->slices.surfaces.begin();    
                 while (surface != layerm->slices.surfaces.end()) {
                     bool delete_surface = false;
-                    if ((surface->surface_type == stTopNonplanar || surface->surface_type == stInternalSolidNonplanar)
-                        && surface->suface_layer_number == layer_count) {
+                    if (surface->is_nonplanar() && surface->distance_to_top == layer_top_distance) {
                             // Move surface to new layer
                             Surfaces new_surfaces;
                             Surface s = *surface;
@@ -410,42 +409,58 @@ PrintObject::project_nonplanar_surfaces() {
                     }
                 }
             }
-            layer_count++;
-            if (layer_count > max_layer_count) break;
+            layer_top_distance = layer_top_distance + home_layerm->layer()->height;
+            if (layer_top_distance > max_distance_to_top) break;
         }
 
         //merge layer regions again
         FOREACH_LAYER(this, layer_it) {
             Layer* layer        = *layer_it;
             LayerRegion* layerm = layer->get_region(region - this->_print->regions.begin());
-            SurfaceCollection polyInternal, polyTopNonplanar, polyInternalNonplanar;
 
-            for (Surfaces::iterator surface = layerm->slices.surfaces.begin(); surface != layerm->slices.surfaces.end(); ++surface) {
-                Surface s = *surface;
-                if (surface->surface_type == stTopNonplanar) {
-                    polyTopNonplanar.surfaces.push_back(s);
-                }
-                else if (surface->surface_type == stInternalSolidNonplanar) {
-                    polyInternalNonplanar.surfaces.push_back(s);
-                }
-                else {
+            Surfaces new_surfaces;
+            //save all internal surfaces
+            SurfaceCollection polyInternal;
+            for(Surface s : layerm->slices.surfaces) {
+                if (!s.is_nonplanar()) {
                     polyInternal.surfaces.push_back(s);
                 }
             }
             ExPolygons exppInternal = union_ex((Polygons)polyInternal, true);
-            ExPolygons exppTopNonplanar = union_ex((Polygons)polyTopNonplanar, true);
-            ExPolygons exppInternalNonplanar = union_ex((Polygons)polyInternalNonplanar, true);
-            layerm->slices.surfaces.clear();
-            layerm->slices.surfaces.reserve(exppInternal.size()+exppTopNonplanar.size()+exppInternalNonplanar.size());
-
-            for (ExPolygons::const_iterator expoly = exppInternal.begin(); expoly != exppInternal.end(); ++expoly)
-                layerm->slices.surfaces.push_back(Surface(stInternal, *expoly));
-
-            for (ExPolygons::const_iterator expoly = exppTopNonplanar.begin(); expoly != exppTopNonplanar.end(); ++expoly)
-                layerm->slices.surfaces.push_back(Surface(stTopNonplanar, *expoly));
-
-            for (ExPolygons::const_iterator expoly = exppInternalNonplanar.begin(); expoly != exppInternalNonplanar.end(); ++expoly)
-                layerm->slices.surfaces.push_back(Surface(stInternalSolidNonplanar, *expoly));
+            new_surfaces.reserve(exppInternal.size());
+            for (ExPolygon expoly : exppInternal)
+                new_surfaces.push_back(Surface(stInternal, expoly));
+                
+            //get all surface elements
+            std::vector<float> elements;
+            for(Surface s : layerm->slices.surfaces) {
+                if (std::find(elements.begin(), elements.end(), s.distance_to_top) == elements.end())
+                {
+                    elements.push_back(s.distance_to_top);
+                }
+            }
+            
+            //save all nonplanar surfaces grouped by distance_to_top
+            for(float f : elements) {
+                SurfaceCollection polyNonplanar;
+                for(Surface s : layerm->slices.surfaces) {
+                    if (s.is_nonplanar() && s.distance_to_top == f) {
+                        polyNonplanar.surfaces.push_back(s);
+                    }
+                }
+                //skip if no surfaces meet condition
+                if (polyNonplanar.size() == 0)
+                    continue;
+                ExPolygons exppNonplanar = union_ex((Polygons)polyNonplanar, true);
+                new_surfaces.reserve(new_surfaces.size() +exppNonplanar.size());
+                
+                for (ExPolygon expoly : exppNonplanar) {
+                    Surface new_s = Surface( f == 0.0f ? stTopNonplanar : stInternalSolidNonplanar, expoly);
+                    new_s.distance_to_top = f;
+                    new_surfaces.push_back(new_s);
+                }
+            }
+            layerm->slices.surfaces = new_surfaces;
         }
     }
 }
@@ -504,6 +519,22 @@ PrintObject::_detect_nonplanar_surfaces()
         this->_print->config.threads.value
     );
 
+}
+
+void
+PrintObject::project_nonplanar_surfaces()
+{
+    //TODO check when steps should be invalidated
+    if (this->state.is_done(posNonplanarProjection)) return;
+    this->state.set_started(posNonplanarProjection);
+
+    parallelize<Layer*>(
+        std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
+        boost::bind(&Slic3r::Layer::project_nonplanar_surfaces, _1),
+        this->_print->config.threads.value
+    );
+
+    this->state.set_done(posNonplanarProjection);
 }
 
 void
@@ -899,61 +930,79 @@ void PrintObject::_slice()
             const TriangleMesh mesh = (*it)->mesh;
 
             //store all meshes with slope <= max_angle in map. Map is necessary to keep facet ID
-            std::map<int, stl_facet*> slope_meshes;
             for (int i = 0; i < mesh.stl.stats.number_of_facets; ++ i) {
                 stl_facet* facet = mesh.stl.facet_start + i;
                 //TODO check if normals exist
                 if (facet->normal.z >= std::cos(max_angle * 3.14159265/180.0)) {
-                    slope_meshes[i] = facet;
+                    //copy facet
+                    stl_facet new_facet;
+                    new_facet.normal.x = facet->normal.x;
+                    new_facet.normal.y = facet->normal.y;
+                    new_facet.normal.z = facet->normal.z;
+                    for (int i=0; i<=2 ;i++) {
+                        new_facet.vertex[i].x = facet->vertex[i].x;
+                        new_facet.vertex[i].y = facet->vertex[i].y;
+                        new_facet.vertex[i].z = facet->vertex[i].z;
+                    }
+                    new_facet.extra[0] = facet->extra[0];
+                    new_facet.extra[1] = facet->extra[1];
+                    this->nonplanar_surfaces[i] = new_facet;
+                }
+            }
+            
+            //Move facets to 0,0,0
+            for (auto& facet : this->nonplanar_surfaces) {
+                for (auto& vert : facet.second.vertex) {
+                    vert.x = vert.x - mesh.stl.stats.min.x;
+                    vert.y = vert.y - mesh.stl.stats.min.y;
+                    vert.z = vert.z - mesh.stl.stats.min.z;
                 }
             }
 
             //group facets to connected component
             //TODO implement grouping algorithm
             //TODO filter candidates
-            std::vector<std::map<int, stl_facet*>*> slope_groups;
-            for ( std::map<int, stl_facet*>::iterator it = slope_meshes.begin(); it != slope_meshes.end(); it++ ) {
-                stl_neighbors* neighbors = mesh.stl.neighbors_start + it->first;
-                for(const auto& n : neighbors->neighbor) {
-                    //do something
-                }
-            }
-            //Temporary all in one group
-            slope_groups.push_back(&(slope_meshes));
-
-            //testprint
-            // for(uint i = 0; i < slope_groups.size(); i++){
-            //     for ( std::map<int, stl_facet*>::iterator it = slope_groups[i]->begin(); it != slope_groups[i]->end(); it++ ) {
-            //         std::cout << "triangle " << it->first << ": " ;
-            //         std::cout << " | V0:";
-            //         std::cout << " X:"<< it->second->vertex[0].x;
-            //         std::cout << " Y:"<< it->second->vertex[0].y;
-            //         std::cout << " Z:"<< it->second->vertex[0].z;
-            //
-            //         std::cout << " | V1:";
-            //         std::cout << " X:"<< it->second->vertex[1].x;
-            //         std::cout << " Y:"<< it->second->vertex[1].y;
-            //         std::cout << " Z:"<< it->second->vertex[1].z;
-            //
-            //         std::cout << " | V2:";
-            //         std::cout << " X:"<< it->second->vertex[2].x;
-            //         std::cout << " Y:"<< it->second->vertex[2].y;
-            //         std::cout << " Z:"<< it->second->vertex[2].z;
-            //
-            //         std::cout << " | Normal:";
-            //         std::cout << " X:"<< it->second->normal.x;
-            //         std::cout << " Y:"<< it->second->normal.y;
-            //         std::cout << " Z:"<< it->second->normal.z;
-            //
-            //         //TODO check if neighbors exist
-            //         stl_neighbors* neighbors = mesh.stl.neighbors_start + it->first;
-            //         std::cout << " | Neighbors:";
-            //         std::cout << " 0:"<< neighbors->neighbor[0];
-            //         std::cout << " 1:"<< neighbors->neighbor[1];
-            //         std::cout << " 2:"<< neighbors->neighbor[2];
-            //         std::cout << std::endl;
+            // std::vector<std::map<int, stl_facet>*> slope_groups;
+            // for ( std::map<int, stl_facet>::iterator it = slope_meshes.begin(); it != slope_meshes.end(); it++ ) {
+            //     stl_neighbors* neighbors = mesh.stl.neighbors_start + it->first;
+            //     for(const auto& n : neighbors->neighbor) {
+            //         //do something
             //     }
             // }
+            //Temporary all in one group
+
+
+            //testprint
+            for (auto& facet : this->nonplanar_surfaces) {
+                std::cout << "triangle " << facet.first << ": " ;
+                std::cout << " | V0:";
+                std::cout << " X:"<< facet.second.vertex[0].x;
+                std::cout << " Y:"<< facet.second.vertex[0].y;
+                std::cout << " Z:"<< facet.second.vertex[0].z;
+            
+                std::cout << " | V1:";
+                std::cout << " X:"<< facet.second.vertex[1].x;
+                std::cout << " Y:"<< facet.second.vertex[1].y;
+                std::cout << " Z:"<< facet.second.vertex[1].z;
+            
+                std::cout << " | V2:";
+                std::cout << " X:"<< facet.second.vertex[2].x;
+                std::cout << " Y:"<< facet.second.vertex[2].y;
+                std::cout << " Z:"<< facet.second.vertex[2].z;
+            
+                std::cout << " | Normal:";
+                std::cout << " X:"<< facet.second.normal.x;
+                std::cout << " Y:"<< facet.second.normal.y;
+                std::cout << " Z:"<< facet.second.normal.z;
+            
+                //TODO check if neighbors exist
+                stl_neighbors* neighbors = mesh.stl.neighbors_start + facet.first;
+                std::cout << " | Neighbors:";
+                std::cout << " 0:"<< neighbors->neighbor[0];
+                std::cout << " 1:"<< neighbors->neighbor[1];
+                std::cout << " 2:"<< neighbors->neighbor[2];
+                std::cout << std::endl;
+            }
         }
     }
 

@@ -21,6 +21,7 @@ _constant()
     STEP_SUPPORTMATERIAL    = posSupportMaterial
     STEP_SKIRT              = psSkirt
     STEP_BRIM               = psBrim
+    STEP_NONPLANAR_PROJECTION = posNonplanarProjection
   PROTOTYPE:
   CODE:
     RETVAL = ix;
@@ -128,6 +129,7 @@ _constant()
 
     %name{_detect_surfaces_type} void detect_surfaces_type();
     void project_nonplanar_surfaces();
+    void move_nonplanar_surfaces_up();
     void debug_svg_print();
     void process_external_surfaces();
     void bridge_over_infill();
