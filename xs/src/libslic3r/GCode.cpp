@@ -634,6 +634,9 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     // check whether a straight travel move would need retraction
     bool needs_retraction = this->needs_retraction(travel, role);
     
+    //Check if source or target points lay below the current Layer
+    bool needs_zmove = this->needs_zmove(travel);
+
     // if a retraction would be needed, try to use avoid_crossing_perimeters to plan a
     // multi-hop travel path inside the configuration space
     if (needs_retraction
@@ -654,10 +657,19 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     std::string gcode;
     if (needs_retraction) gcode += this->retract();
     
+    // Move Z up if necessary
+    if (needs_zmove) {
+        gcode += this->writer.travel_to_z(this->layer->print_z, "Move up before moving");
+    }
+    
     // use G1 because we rely on paths being straight (G0 may make round paths)
     Lines lines = travel.lines();
     for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line)
-        gcode += this->writer.travel_to_xy(this->point_to_gcode(line->b), comment);
+        if (needs_zmove){
+            gcode += this->writer.travel_to_xy(this->point_to_gcode(line->b), comment);
+        } else {
+            gcode += this->writer.travel_to_xyz(this->point3_to_gcode(line->b), comment);
+        }
     
     /*  While this makes the estimate more accurate, CoolingBuffer calculates the slowdown
         factor on the whole elapsed time but only alters non-travel moves, thus the resulting
@@ -666,6 +678,11 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     if (this->config.cooling)
         this->elapsed_time += unscale(travel.length()) / this->config.get_abs_value("travel_speed");
     */
+    
+    // Move Z down if necessary
+    if (needs_zmove) {
+        gcode += this->writer.travel_to_z(point.z, "Move down after moving");
+    }
     
     return gcode;
 }
@@ -697,6 +714,19 @@ GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
     
     // retract if only_retract_when_crossing_perimeters is disabled or doesn't apply
     return true;
+}
+
+bool
+GCode::needs_zmove(const Polyline &travel)
+{
+    //check if any point in travel is below the layer z
+    for (Point p : travel.points)
+    {
+        if ((p.z != -1.0) && (p.z < this->layer->print_z))
+            return true;
+    }
+    
+    return false;
 }
 
 std::string

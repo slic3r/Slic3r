@@ -178,6 +178,14 @@ MultiPoint::_douglas_peucker(const Points &points, const double tolerance)
 {
     assert(points.size() >= 2);
     Points results;
+    //TODO fix segfault in this function
+    //Temporary
+    for (Point p : points) {
+        results.push_back(p);
+    }
+    return results;
+    ///Temporary
+    
     double dmax = 0;
     size_t index = 0;
     Line full(points.front(), points.back());

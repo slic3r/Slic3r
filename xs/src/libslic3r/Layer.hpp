@@ -139,6 +139,8 @@ class Layer {
     void project_nonplanar_surfaces();
     ///project a nonplanar path
     void project_nonplanar_path(ExtrusionPath* path);
+    ///sets the z coordinates correctly for all points TODO move to generation of points
+    void correct_z_on_path(ExtrusionPath *path);
     /// Determines the type of surface (top/bottombridge/bottom/internal) each region is
     void detect_surfaces_type();
     /// Processes the external surfaces

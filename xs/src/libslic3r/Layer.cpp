@@ -320,9 +320,10 @@ Layer::project_nonplanar_surfaces()
             ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
             for (ExtrusionEntitiesPtr::iterator loop_it = collection->entities.begin(); loop_it != collection->entities.end(); ++loop_it) {
                 ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(*loop_it);
-                ExtrusionPaths paths = loop->paths;
-                for (ExtrusionPaths::iterator path_it = paths.begin(); path_it != paths.end(); ++path_it) {
+                for (ExtrusionPaths::iterator path_it = loop->paths.begin(); path_it != loop->paths.end(); ++path_it) {
                     project_nonplanar_path(&(*path_it));
+                    
+                    correct_z_on_path(&(*path_it));
                 }
             }
         }
@@ -332,6 +333,8 @@ Layer::project_nonplanar_surfaces()
             ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
             for (ExtrusionEntitiesPtr::iterator path_it = collection->entities.begin(); path_it != collection->entities.end(); ++path_it) {
                 project_nonplanar_path(dynamic_cast<ExtrusionPath*>(*path_it));
+                
+                correct_z_on_path(dynamic_cast<ExtrusionPath*>(*path_it));
             }
         }
 
@@ -346,7 +349,6 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
     
     PrintObject &object = *this->object();
     //First check all points and project them regarding the triangle mesh
-    std::cout << path->distance_to_top << '\n';
     for (Point& point : path->polyline.points) {
         //std::cout << "X: " << unscale(point.x) << " Y: " << unscale(point.y) << '\n';
         for (auto& facet : object.nonplanar_surfaces) {
@@ -376,6 +378,16 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
     }
 
     //Then check all line intersections, cut line on intersection and project new point
+}
+
+void
+Layer::correct_z_on_path(ExtrusionPath *path)
+{
+    for (Point& point : path->polyline.points) {
+        if(point.z == -1.0){
+            point.z = scale_(this->print_z);
+        }
+    }
 }
 
 /// Analyzes slices of a region (SurfaceCollection slices).
