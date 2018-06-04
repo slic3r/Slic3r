@@ -266,11 +266,11 @@ template <typename T>
 static void add_info_field(wxWindow* parent, T*& field, wxString name, wxGridSizer* sizer) {
     name << ":";
     auto* text {new wxStaticText(parent, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT)};
-    text->SetFont(small_font);
+    text->SetFont(small_font());
     sizer->Add(text, 0);
 
     field = new wxStaticText(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    field->SetFont(small_font);
+    field->SetFont(small_font());
     sizer->Add(field, 0);
 }
 
