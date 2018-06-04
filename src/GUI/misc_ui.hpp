@@ -51,8 +51,8 @@ constexpr bool isDev = false;
 
 constexpr bool threaded = false;
 
-const wxFont small_font { wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
-
+/// Font definition
+wxFont small_font();
 
 // hopefully the compiler is smart enough to figure this out
 const std::map<const std::string, const std::string> FILE_WILDCARDS { 
