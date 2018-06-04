@@ -14,7 +14,7 @@
 
 #include "Controller.hpp"
 #include "Plater.hpp"
-#include "PresetEditor.hpp"
+#include "Dialogs/PresetEditor.hpp"
 #include "Settings.hpp"
 #include "GUI.hpp"
 #include "ProgressStatusBar.hpp"
