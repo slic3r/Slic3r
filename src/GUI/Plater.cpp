@@ -233,6 +233,9 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
     sizer->SetSizeHints(this);
     this->SetSizer(sizer);
 
+    // Initialize the toolbar
+    this->selection_changed();
+
 }
 void Plater::add() {
     Log::info(LogChannel, L"Called Add function");
