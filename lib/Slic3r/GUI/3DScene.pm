@@ -1112,6 +1112,7 @@ sub draw_volumes {
             $min_offset //= 0;
             $max_offset //= $volume->qverts->size;
             
+            glColor4f(@baseColor);
             glVertexPointer_c(3, GL_FLOAT, 0, $volume->qverts->verts_ptr);
             glNormalPointer_c(GL_FLOAT, 0, $volume->qverts->norms_ptr);
             glDrawArrays(GL_QUADS, $min_offset / 3, ($max_offset-$min_offset) / 3);

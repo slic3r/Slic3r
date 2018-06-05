@@ -54,6 +54,7 @@ sub new {
         
         $self->{btn_rot} = Wx::Button->new($self, -1, "Rotate to Plane", wxDefaultPosition, wxDefaultSize);
         $self->{btn_rot}->SetDefault;
+        $self->{btn_rot}->Disable;
         $button_sizer->Add($self->{btn_rot}, 0, wxALIGN_RIGHT | wxALL, 10);
         $optgroup->append_line(Slic3r::GUI::OptionsGroup::Line->new(
             sizer => $button_sizer,
@@ -77,7 +78,9 @@ sub new {
         $canvas->zoom_to_volumes;
         $canvas->on_select(sub {
             my ($volume_idx) = @_;
+            $self->{btn_rot}->Disable;
             $self->{normal} = $canvas->calculate_normal($volume_idx);
+            $self->{btn_rot}->Enable if defined $self->{normal};
         });
     }
     
