@@ -1,8 +1,22 @@
 #ifndef PRESETEDITOR_HPP
 #define PRESETEDITOR_HPP
 
+// stdlib
 #include <string>
+#include <functional>
+
+// Libslic3r
 #include "libslic3r.h"
+#include "ConfigBase.hpp"
+#include "Config.hpp"
+
+// GUI
+#include "misc_ui.hpp"
+
+// Wx
+#include <wx/treectrl.h>
+#include <wx/imaglist.h>
+#include <wx/panel.h>
 
 #if SLIC3R_CPPVER==11
     #define st(A) (std::string(#A))
@@ -16,15 +30,65 @@ namespace Slic3r { namespace GUI {
 
 class PresetEditor : public wxPanel {
 
+public: 
     /// Member function to retrieve a list of options 
     /// that this preset governs. Subclasses should 
     /// call their own static method.
     virtual t_config_option_keys my_options() = 0;
     static t_config_option_keys options() { return t_config_option_keys {}; }
+
+    wxSizer* sizer() { return _sizer; };
+    PresetEditor(wxWindow* parent, t_config_option_keys options = {});
+    PresetEditor() : PresetEditor(nullptr, {}) {};
+
+    bool prompt_unsaved_changes();
+    void select_preset_by_name(const wxString& name, bool force = false);
+    
+    /// suppress the callback when the tree selection is changed.
+    bool disable_tree_sel_changed_event {false};
+
+    void save_preset();
+    std::function<void ()> on_save_preset {};
+    std::function<void ()> on_value_change {};
+
+    config_ptr config;
+
+    virtual wxString title() = 0;
+    virtual std::string name() = 0;
+protected:
+    // Main sizer
+    wxSizer* _sizer {nullptr};
+    wxString presets;
+    wxImageList* _icons {nullptr};
+    wxTreeCtrl* _treectrl {nullptr};
+    wxBitmapButton* _btn_save_preset {nullptr}; 
+    wxBitmapButton* _btn_delete_preset {nullptr};
+    wxChoice* _presets_choice {nullptr};
+    int _iconcount {-1};
+
+    std::vector<wxString> _pages {};
+
+    const unsigned int left_col_width {150};
+    void _update_tree();
+    void load_presets();
+
+    virtual void _build() = 0;
+    virtual void _update() = 0;
+    virtual void _on_preset_loaded() = 0;
+    void set_tooltips() { 
+        this->_btn_save_preset->SetToolTip(wxString(_("Save current ")) + this->title());
+        this->_btn_delete_preset->SetToolTip(_("Delete this preset."));
+    }
 };
 
 class PrintEditor : public PresetEditor {
 public:
+
+    PrintEditor(wxWindow* parent, t_config_option_keys options = {});
+    PrintEditor() : PrintEditor(nullptr, {}) {};
+
+    wxString title() override { return _("Print Settings"); }
+    std::string name() override { return st("print"); }
 
     /// Static method to retrieve list of options that this preset governs.
     static t_config_option_keys options() {
@@ -73,10 +137,20 @@ public:
     }
 
     t_config_option_keys my_options() override { return PrintEditor::options(); }
+
+protected:
+    void _update() override;
+    void _build() override;
 };
 
 class MaterialEditor : public PresetEditor {
-    
+public:
+
+    wxString title() override { return _("Material Settings"); }
+    std::string name() override { return st("material"); }
+    MaterialEditor(wxWindow* parent, t_config_option_keys options = {});
+    MaterialEditor() : MaterialEditor(nullptr, {}) {};
+
     static t_config_option_keys options() {
         return t_config_option_keys
         {
@@ -91,9 +165,18 @@ class MaterialEditor : public PresetEditor {
     }
     
     t_config_option_keys my_options() override { return MaterialEditor::options(); }
+protected:
+    void _update() override;
+    void _build() override;
 };
 
 class PrinterEditor : public PresetEditor {
+public:
+    PrinterEditor(wxWindow* parent, t_config_option_keys options = {});
+    PrinterEditor() : PrinterEditor(nullptr, {}) {};
+
+    wxString title() override { return _("Printer Settings"); }
+    std::string name() override { return st("printer"); }
     
     static t_config_option_keys options() {
         return t_config_option_keys
@@ -115,6 +198,9 @@ class PrinterEditor : public PresetEditor {
     }
     
     t_config_option_keys my_options() override { return PrinterEditor::options(); }
+protected:
+    void _update() override;
+    void _build() override;
 };
 
 

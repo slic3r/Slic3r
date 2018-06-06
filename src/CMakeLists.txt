@@ -207,6 +207,10 @@ IF(wxWidgets_FOUND)
 
     add_library(slic3r_gui STATIC 
     ${GUI_LIBDIR}/Dialogs/AboutDialog.cpp
+    ${GUI_LIBDIR}/Dialogs/PresetEditor.cpp
+    ${GUI_LIBDIR}/Dialogs/PrintEditor.cpp
+    ${GUI_LIBDIR}/Dialogs/PrinterEditor.cpp
+    ${GUI_LIBDIR}/Dialogs/MaterialEditor.cpp
     ${GUI_LIBDIR}/GUI.cpp
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/Plater.cpp
