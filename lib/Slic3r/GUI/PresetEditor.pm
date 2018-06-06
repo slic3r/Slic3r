@@ -905,7 +905,7 @@ sub _update {
                     solid_infill_below_area infill_extruder);
     }
 
-    my $have_solid_infill = ($config->top_solid_layers > 0) || ($config->bottom_solid_layers > 0) || ($config->min_top_bottom_shell_thickness > 1e-4);
+    my $have_solid_infill = ($config->top_solid_layers > 0) || ($config->bottom_solid_layers > 0) || ($config->min_top_bottom_shell_thickness > 0);
     if (any { /$opt_key/ } qw(all_keys top_solid_layers bottom_solid_layers)) {
         # solid_infill_extruder uses the same logic as in Print::extruders()
         $self->get_field($_)->toggle($have_solid_infill)
