@@ -11,6 +11,12 @@ Config::new_from_defaults()
 std::shared_ptr<Config> 
 Config::new_from_defaults(std::initializer_list<std::string> init)
 {
+    return Config::new_from_defaults(t_config_option_keys(init));
+}
+
+std::shared_ptr<Config> 
+Config::new_from_defaults(t_config_option_keys init)
+{
     auto my_config(std::make_shared<Config>());
     for (auto& opt_key : init) {
         if (print_config_def.has(opt_key)) {

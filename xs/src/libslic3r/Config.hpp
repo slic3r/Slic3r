@@ -5,13 +5,18 @@
 #include <memory>
 
 #include "PrintConfig.hpp"
+#include "ConfigBase.hpp"
 
 namespace Slic3r {
+
+class Config;
+using config_ptr = std::shared_ptr<Config>;
 
 class Config : public DynamicPrintConfig {
 public:
     static std::shared_ptr<Config> new_from_defaults();
     static std::shared_ptr<Config> new_from_defaults(std::initializer_list<std::string> init);
+    static std::shared_ptr<Config> new_from_defaults(t_config_option_keys init);
     static std::shared_ptr<Config> new_from_cli(const int& argc, const char* argv[]);
 
     void write_ini(const std::string& file) { save(file); }
