@@ -438,7 +438,7 @@ sub options {
         layer_height first_layer_height
         adaptive_slicing adaptive_slicing_quality match_horizontal_surfaces
         perimeters spiral_vase
-        top_solid_layers min_shell_thickness bottom_solid_layers
+        top_solid_layers min_shell_thickness min_top_bottom_shell_thickness bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
         seam_position external_perimeters_first
         fill_density fill_pattern top_infill_pattern bottom_infill_pattern fill_gaps
@@ -532,6 +532,8 @@ sub build {
             $line->append_option($optgroup->get_option('top_solid_layers'));
             $line->append_option($optgroup->get_option('bottom_solid_layers'));
             $optgroup->append_line($line);
+
+            $optgroup->append_single_option_line('min_top_bottom_shell_thickness');
         }
         {
             my $optgroup = $page->new_optgroup('Quality (slower slicing)');
@@ -622,7 +624,7 @@ sub build {
             $optgroup->append_single_option_line('dont_support_bridges');
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Speed', 'time.png');
         {
@@ -802,11 +804,12 @@ sub _update {
     $opt_key = "all_keys" if (length($key // '') == 0); 
     my $config = $self->{config};
 
-    if (any { /$opt_key/ } qw(all_keys spiral_vase perimeters top_solid_layers fill_density support_material min_shell_thickness)) {
-        if ($config->spiral_vase && !($config->perimeters == 1 && $config->min_shell_thickness == 0 && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->support_material == 0)) {
+    if (any { /$opt_key/ } qw(all_keys spiral_vase perimeters top_solid_layers fill_density support_material min_shell_thickness min_top_bottom_shell_thickness)) {
+        if ($config->spiral_vase && !($config->perimeters == 1 && $config->min_shell_thickness == 0 && $config->min_top_bottom_shell_thickness == 0 && $config->top_solid_layers == 0 && $config->fill_density == 0 && $config->support_material == 0)) {
             my $dialog = Wx::MessageDialog->new($self,
                 "The Spiral Vase mode requires:\n"
                 . "- one perimeter\n"
+                . "- shell thickness to be 0\n"
                 . "- no top solid layers\n"
                 . "- 0% fill density\n"
                 . "- no support material\n"
@@ -816,6 +819,7 @@ sub _update {
                 my $new_conf = Slic3r::Config->new;
                 $new_conf->set("perimeters", 1);
                 $new_conf->set("min_shell_thickness", 0);
+                $new_conf->set("min_top_bottom_shell_thickness", 0);
                 $new_conf->set("top_solid_layers", 0);
                 $new_conf->set("fill_density", 0);
                 $new_conf->set("support_material", 0);
@@ -901,7 +905,7 @@ sub _update {
                     solid_infill_below_area infill_extruder);
     }
 
-    my $have_solid_infill = ($config->top_solid_layers > 0) || ($config->bottom_solid_layers > 0);
+    my $have_solid_infill = ($config->top_solid_layers > 0) || ($config->bottom_solid_layers > 0) || ($config->min_top_bottom_shell_thickness > 0);
     if (any { /$opt_key/ } qw(all_keys top_solid_layers bottom_solid_layers)) {
         # solid_infill_extruder uses the same logic as in Print::extruders()
         $self->get_field($_)->toggle($have_solid_infill)
@@ -919,7 +923,7 @@ sub _update {
         $self->get_field('gap_fill_speed')->toggle($have_perimeters && $have_infill && $config->fill_gaps);
     }
 
-    my $have_top_solid_infill = ($config->top_solid_layers > 0) || ($config->min_shell_thickness > 0);
+    my $have_top_solid_infill = ($config->top_solid_layers > 0) || ($config->min_top_bottom_shell_thickness > 0);
 
     $self->get_field($_)->toggle($have_top_solid_infill)
         for qw(top_infill_extrusion_width top_solid_infill_speed);

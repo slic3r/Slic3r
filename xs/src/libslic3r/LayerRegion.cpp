@@ -237,26 +237,25 @@ LayerRegion::prepare_fill_surfaces()
         the only meaningful information returned by psPerimeters. */
     
     // if no solid layers are requested, turn top/bottom surfaces to internal
-    if (this->region()->config.min_shell_thickness == 0) {
-        if (this->region()->config.top_solid_layers == 0) {
-            for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-                if (surface->surface_type == stTop) {
-                    if (this->layer()->object()->config.infill_only_where_needed) {
-                        surface->surface_type = stInternalVoid;
-                    } else {
-                        surface->surface_type = stInternal;
-                    }
+    if (this->region()->config.top_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
+        for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
+            if (surface->surface_type == stTop) {
+                if (this->layer()->object()->config.infill_only_where_needed) {
+                    surface->surface_type = stInternalVoid;
+                } else {
+                    surface->surface_type = stInternal;
                 }
             }
         }
-        if (this->region()->config.bottom_solid_layers == 0) {
-            for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-                if (surface->surface_type == stBottom || surface->surface_type == stBottomBridge)
-                    surface->surface_type = stInternal;
-            }
+    }
+    
+    if (this->region()->config.bottom_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
+        for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
+            if (surface->surface_type == stBottom || surface->surface_type == stBottomBridge)
+                surface->surface_type = stInternal;
         }
     }
-        
+
     // turn too small internal regions into solid regions according to the user setting
     const float &fill_density = this->region()->config.fill_density;
     if (fill_density > 0 && fill_density < 100) {

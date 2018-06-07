@@ -3,6 +3,7 @@ package Slic3r::Print::Object;
 use strict;
 use warnings;
 
+use POSIX;
 use List::Util qw(min max sum first any);
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(X Y Z PI scale unscale chained_path epsilon);
@@ -387,10 +388,21 @@ sub discover_horizontal_shells {
                 ];
                 next if !@$solid;
                 Slic3r::debugf "Layer %d has %s surfaces\n", $i, ($type == S_TYPE_TOP) ? 'top' : 'bottom';
-                
+
                 my $solid_layers = ($type == S_TYPE_TOP)
                     ? $layerm->region->config->top_solid_layers
                     : $layerm->region->config->bottom_solid_layers;
+
+                if ($layerm->region->config->min_top_bottom_shell_thickness > 0) {
+                    my $current_shell_thickness = $solid_layers * $self->get_layer($i)->height;
+                    my $minimum_shell_thickness = $layerm->region->config->min_top_bottom_shell_thickness;
+
+                    while ($minimum_shell_thickness - $current_shell_thickness > epsilon) {
+                        $solid_layers++;
+                        $current_shell_thickness = $solid_layers * $self->get_layer($i)->height;
+                    }
+                }
+
                 NEIGHBOR: for (my $n = ($type == S_TYPE_TOP) ? $i-1 : $i+1; 
                         abs($n - $i) <= $solid_layers-1; 
                         ($type == S_TYPE_TOP) ? $n-- : $n++) {
