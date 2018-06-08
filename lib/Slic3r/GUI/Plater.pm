@@ -2646,7 +2646,6 @@ sub make_thumbnail {
     $plater_object->thumbnail(Slic3r::ExPolygon::Collection->new);
     my $cb = sub {
         $plater_object->make_thumbnail($self->{model}, $obj_idx);
-        $plater_object->remaking_thumbnail(0);
         
         if ($Slic3r::have_threads) {
             Wx::PostEvent($self, Wx::PlThreadEvent->new(-1, $THUMBNAIL_DONE_EVENT, shared_clone([ $obj_idx ])));
@@ -2667,6 +2666,7 @@ sub on_thumbnail_made {
     my $self = shift;
     my ($obj_idx) = @_;
     
+    $self->{objects}[$obj_idx]->remaking_thumbnail(0);
     $self->{objects}[$obj_idx]->transform_thumbnail($self->{model}, $obj_idx);
     $self->refresh_canvases;
 }
