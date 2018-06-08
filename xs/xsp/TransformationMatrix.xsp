@@ -1,0 +1,65 @@
+%module{Slic3r::XS};
+
+%{
+#include <xsinit.h>
+#include "libslic3r/TransformationMatrix.hpp"
+%}
+
+%name{Slic3r::TransformationMatrix} class TransformationMatrix {
+    TransformationMatrix();
+    ~TransformationMatrix();
+    Clone<TransformationMatrix> clone()
+        %code{% RETVAL = THIS; %};
+        
+    float m11;
+        %code%{ RETVAL = THIS->m11; %}
+    void set_m11(float value)
+        %code%{ THIS->m11 = value; %}
+    float m12;
+        %code%{ RETVAL = THIS->m12; %}
+    void set_m12(float value)
+        %code%{ THIS->m12 = value; %}
+    float m13;
+        %code%{ RETVAL = THIS->m13; %}
+    void set_m13(float value)
+        %code%{ THIS->m13 = value; %}
+    float m14;
+        %code%{ RETVAL = THIS->m14; %}
+    void set_m14(float value)
+        %code%{ THIS->m14 = value; %}
+
+    float m21;
+        %code%{ RETVAL = THIS->m21; %}
+    void set_m21(float value)
+        %code%{ THIS->m21 = value; %}
+    float m22;
+        %code%{ RETVAL = THIS->m22; %}
+    void set_m22(float value)
+        %code%{ THIS->m22 = value; %}
+    float m23;
+        %code%{ RETVAL = THIS->m23; %}
+    void set_m23(float value)
+        %code%{ THIS->m23 = value; %}
+    float m24;
+        %code%{ RETVAL = THIS->m24; %}
+    void set_m24(float value)
+        %code%{ THIS->m24 = value; %}
+
+    float m31;
+        %code%{ RETVAL = THIS->m31; %}
+    void set_m31(float value)
+        %code%{ THIS->m31 = value; %}
+    float m32;
+        %code%{ RETVAL = THIS->m32; %}
+    void set_m32(float value)
+        %code%{ THIS->m32 = value; %}
+    float m33;
+        %code%{ RETVAL = THIS->m33; %}
+    void set_m33(float value)
+        %code%{ THIS->m33 = value; %}
+    float m34;
+        %code%{ RETVAL = THIS->m34; %}
+    void set_m34(float value)
+        %code%{ THIS->m34 = value; %}
+        
+};
