@@ -827,17 +827,36 @@ PrintConfigDef::PrintConfigDef()
     def->max = 100;
     def->default_value = new ConfigOptionInt(35);
 
+
+    def = this->add("min_shell_thickness", coFloat);
+    def->label = "Minimum shell thickness";
+    def->category = "Layers and Perimeters";
+    def->sidetext = "mm";
+    def->tooltip = "Alternative method of configuring perimeters and top/bottom layers. If this is above 0 extra perimeters and solid layers will be generated when necessary";
+    def->cli = "min-shell-thickness=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
+
+    def = this->add("min_top_bottom_shell_thickness", coFloat);
+    def->label = "Minimum shell thickness";
+    def->category = "Layers and Perimeters";
+    def->sidetext = "mm";
+    def->tooltip = "Alternative method of configuring top/bottom layers. If this is above 0 extra solid layers will be generated when necessary";
+    def->cli = "min-vertical-shell-thickness=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
+
     def = this->add("min_layer_height", coFloats);
-	def->label = "Min";
-	def->tooltip = "This is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";
-	def->sidetext = "mm";
-	def->cli = "min-layer-height=f@";
-	def->min = 0;
-	{
-		ConfigOptionFloats* opt = new ConfigOptionFloats();
-		opt->values.push_back(0.15);
-		def->default_value = opt;
-	}
+    def->label = "Min";
+    def->tooltip = "This is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";
+    def->sidetext = "mm";
+    def->cli = "min-layer-height=f@";
+    def->min = 0;
+    {
+        ConfigOptionFloats* opt = new ConfigOptionFloats();
+        opt->values.push_back(0.15);
+        def->default_value = opt;
+    }
 
     def = this->add("min_print_speed", coFloat);
     def->label = "Min print speed";
@@ -1501,6 +1520,24 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("honeycomb");
     def->enum_labels.push_back("pillars");
     def->default_value = new ConfigOptionEnum<SupportMaterialPattern>(smpPillars);
+
+    def = this->add("support_material_pillar_size", coFloat);
+    def->label = "Pillar size";
+    def->category = "Support material";
+    def->tooltip = "Size of the pillars in the pillar support pattern";
+    def->sidetext = "mm";
+    def->cli = "support-material-pillar-size=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(2.5);
+
+    def = this->add("support_material_pillar_spacing", coFloat);
+    def->label = "Pillar spacing";
+    def->category = "Support material";
+    def->tooltip = "Spacing between pillars in the pillar support pattern";
+    def->sidetext = "mm";
+    def->cli = "support-material-pillar-spacing=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(10);
 
     def = this->add("support_material_spacing", coFloat);
     def->label = "Pattern spacing";

@@ -168,11 +168,17 @@ sub validate {
         if $self->first_layer_height !~ /^(?:\d*(?:\.\d+)?)%?$/;
     die "Invalid value for --first-layer-height\n"
         if $self->get_value('first_layer_height') <= 0;
+
+    die "Adaptive slicing requires a non-relative first layer height.\n"
+        if $self->get_value('adaptive_slicing') == 1 and $self->first_layer_height =~ /^(?:\d*(?:\.\d+)?)%$/;
     
     # --filament-diameter
     die "Invalid value for --filament-diameter\n"
         if grep $_ < 1, @{$self->filament_diameter};
     
+    die "Invalid value for --min-shell-thickness\n"
+        if $self->min_shell_thickness < 0;
+
     # --nozzle-diameter
     die "Invalid value for --nozzle-diameter\n"
         if grep $_ < 0, @{$self->nozzle_diameter};
@@ -185,6 +191,7 @@ sub validate {
     die "Invalid value for --solid-layers\n" if defined $self->solid_layers && $self->solid_layers < 0;
     die "Invalid value for --top-solid-layers\n"    if $self->top_solid_layers      < 0;
     die "Invalid value for --bottom-solid-layers\n" if $self->bottom_solid_layers   < 0;
+    die "Invalid value for --min-top-bottom-shell-thickness\n" if $self->min_top_bottom_shell_thickness < 0;
     
     # --gcode-flavor
     die "Invalid value for --gcode-flavor\n"
@@ -250,7 +257,10 @@ sub validate {
         
         die "Can't make less than one perimeter when spiral vase mode is enabled\n"
             if $self->perimeters < 1;
-        
+
+        die "Minimum shell thickness should be 0 when spiral vase mode is enabled\n"
+            if $self->min_shell_thickness > 0;
+
         die "Spiral vase mode can only print hollow objects, so you need to set Fill density to 0\n"
             if $self->fill_density > 0;
         
