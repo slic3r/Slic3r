@@ -363,28 +363,49 @@ Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3)
 void
 Project_point_on_plane(Pointf3 v1,  Pointf3 n, Point &pt)
 {
+    //if no intersection leave point unchanged (should never happen)
+    if(n.z == 0) {
+        return;
+    }
     //unscale point for calculations
     float px = unscale(pt.x);
     float py = unscale(pt.y);
     float pz = unscale(pt.z);
 
     //Calculate space plane
-    //Normalize
-    float distance = sqrtf(n.x * n.x + n.y * n.y + n.z * n.z);
-    float a = n.x / distance;
-    float b = n.y / distance;
-    float c = n.z / distance;
-    //calculate
-    float d = -(v1.x * a + v1.y * b + v1.z * c);
-    float denominator = c * -2000000.0f;
-    //if no intersection leave point unchanged (should never happen)
-    if(denominator == 0) {
-        return;
-    }
-    float u = -(a * px + b * py + c * pz + d) / denominator;
-    //scale up again
-    pt.z = scale_(pz + u * -2000000.0f);
+    float d = -(v1.x * n.x + v1.y * n.y + v1.z * n.z);
 
+    float u = -(n.x * px + n.y * py + n.z * pz + d) / n.z;
+    //scale up again
+    pt.z = scale_(pz + u);
+
+}
+
+Point*
+Line_intersection(Pointf3 p1, Pointf3 p2, Pointf3 p3, Pointf3 p4) {
+    //p1 & p2 has to be the triangle edge while p3 & p4 is the polygon line
+    float d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+    // If d is zero, there is no intersection
+    if (d == 0) return NULL;
+     
+    // Get the x and y
+    float pre = (p1.x * p2.y - p1.y * p2.x);
+    float post = (p3.x * p4.y - p3.y * p4.x);
+    float x = ( pre * (p3.x - p4.x) - (p1.x - p2.x) * post ) / d;
+    float y = ( pre * (p3.y - p4.y) - (p1.y - p2.y) * post ) / d;
+     
+    // Check if the x and y coordinates are within both lines
+    if ( x < std::min(p1.x, p2.x) || x > std::max(p1.x, p2.x) || x < std::min(p3.x, p4.x) || x > std::max(p3.x, p4.x) ) return NULL;
+    if ( y < std::min(p1.y, p2.y) || y > std::max(p1.y, p2.y) || y < std::min(p3.y, p4.y) || y > std::max(p3.y, p4.y) ) return NULL;
+     
+    // Return the point of intersection
+    Point* ret = new Point();
+    ret->x = scale_(x);
+    ret->y = scale_(y);
+    ret->z = scale_(p1.z - ((sqrt((p1.x-x)*(p1.x-x) + (p1.y-y)*(p1.y-y))
+              / sqrt((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y))) 
+              * (p1.z - p2.z)));
+    return ret;
 }
 
 class ArrangeItem {

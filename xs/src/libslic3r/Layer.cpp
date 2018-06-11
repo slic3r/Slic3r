@@ -341,6 +341,20 @@ Layer::project_nonplanar_surfaces()
     }
 }
 
+bool
+greater(const Point &p1, const Point &p2)
+{
+   if (p1.x != p2.x) return p1.x < p2.x;
+   return p1.y < p2.y;
+}
+
+bool
+smaller(const Point &p1, const Point &p2)
+{
+   if (p1.x != p2.x) return p1.x > p2.x;
+   return p1.y > p2.y;
+}
+
 void
 Layer::project_nonplanar_path(ExtrusionPath *path)
 {
@@ -378,6 +392,70 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
     }
 
     //Then check all line intersections, cut line on intersection and project new point
+    std::vector<Point>::size_type size = path->polyline.points.size();
+    for (std::vector<Point>::size_type i = 0; i < size; ++i)
+    {
+        if (i == size-1) break;
+        //unscale points of line
+        Pointf3 p3 = Pointf3(unscale(path->polyline.points[i].x), unscale(path->polyline.points[i].y), unscale(path->polyline.points[i].z));
+        Pointf3 p4 = Pointf3(unscale(path->polyline.points[i+1].x), unscale(path->polyline.points[i+1].y), unscale(path->polyline.points[i+1].z));
+        
+        Points intersections;
+        //check against every facet if lines intersect
+        for (auto& facet : object.nonplanar_surfaces) {
+            for(int j= 0; j < 3; j++){
+                //TODO precheck for faster computation
+                Pointf3 p1 = Pointf3(facet.second.vertex[j % 3].x, facet.second.vertex[j % 3].y, facet.second.vertex[j % 3].z);
+                Pointf3 p2 = Pointf3(facet.second.vertex[(j+1) % 3].x, facet.second.vertex[(j+1) % 3].y, facet.second.vertex[(j+1) % 3].z);
+                Point* p = Slic3r::Geometry::Line_intersection(p1,p2,p3,p4);
+                if (p) {
+                    intersections.push_back(*p);
+                }
+            }
+        }
+        //Stop if no intersections are found
+        if (intersections.size() == 0) continue;
+        
+        //sort found intersectons if there are more than 1
+        if ( intersections.size() > 1 ){
+            if ( p3.x < p4.x || (p3.x == p4.x && p3.y < p4.y )){ 
+                std::sort(intersections.begin(), intersections.end(),smaller);
+            }
+            else {
+                std::sort(intersections.begin(), intersections.end(),greater);
+            }
+        }
+        
+        //remove duplicates
+        Points::iterator point = intersections.begin();    
+        while (point != intersections.end()-1) {
+            bool delete_point = false;
+            Points::iterator point2 = point;
+            ++point2;
+            //compare with next point if they are the same, delete current point
+            if ((*point).x == (*point2).x && (*point).y == (*point2).y) {
+                    //remove duplicate point
+                    delete_point = true;
+                    point = intersections.erase(point);
+            }
+            //continue loop when no point is removed. Otherwise the new point is set while deleting the old one.
+            if (!delete_point){
+                ++point;
+            }
+        }
+        
+        //insert new points into array
+        for (Point p : intersections)
+        {
+            //add distance to top for every added point
+            p.z = p.z - scale_(path->distance_to_top);
+            path->polyline.points.insert(path->polyline.points.begin()+i+1, p);
+        }
+        
+        //modifiy array boundary
+        i = i + intersections.size();
+        size = size + intersections.size();
+    }
 }
 
 void

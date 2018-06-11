@@ -28,6 +28,7 @@ double deg2rad(double angle);
 double linint(double value, double oldmin, double oldmax, double newmin, double newmax);
 bool Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3);
 void Project_point_on_plane(Pointf3 v1,  Pointf3 n, Point &pt);
+Point* Line_intersection(Pointf3 p1, Pointf3 p2, Pointf3 p3, Pointf3 p4);
 bool arrange(
     // input
     size_t num_parts, const Pointf &part_size, coordf_t gap, const BoundingBoxf* bed_bounding_box,
