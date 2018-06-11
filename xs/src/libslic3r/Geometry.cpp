@@ -352,13 +352,12 @@ sign(Pointf p1, Pointf p2, Pointf p3)
 bool
 Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3)
 {
-    bool b1, b2, b3;
+    //Check if point is right of every edge
+    if (sign(pt, v1, v2) <= 0.0f) return false;
+    if (sign(pt, v2, v3) <= 0.0f) return false;
+    if (sign(pt, v3, v1) <= 0.0f) return false;
 
-    b1 = sign(pt, v1, v2) < 0.0f;
-    b2 = sign(pt, v2, v3) < 0.0f;
-    b3 = sign(pt, v3, v1) < 0.0f;
-
-    return ((b1 == b2) && (b2 == b3));
+    return true;
 }
 
 void
@@ -368,14 +367,14 @@ Project_point_on_plane(Pointf3 v1,  Pointf3 n, Point &pt)
     float px = unscale(pt.x);
     float py = unscale(pt.y);
     float pz = unscale(pt.z);
-    
+
     //Calculate space plane
     //Normalize
     float distance = sqrtf(n.x * n.x + n.y * n.y + n.z * n.z);
     float a = n.x / distance;
     float b = n.y / distance;
     float c = n.z / distance;
-    //calculate 
+    //calculate
     float d = -(v1.x * a + v1.y * b + v1.z * c);
     float denominator = c * -2000000.0f;
     //if no intersection leave point unchanged (should never happen)

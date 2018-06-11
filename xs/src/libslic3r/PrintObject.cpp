@@ -417,7 +417,7 @@ PrintObject::move_nonplanar_surfaces_up() {
         FOREACH_LAYER(this, layer_it) {
             Layer* layer        = *layer_it;
             LayerRegion* layerm = layer->get_region(region - this->_print->regions.begin());
-
+        
             Surfaces new_surfaces;
             //save all internal surfaces
             SurfaceCollection polyInternal;
@@ -430,7 +430,7 @@ PrintObject::move_nonplanar_surfaces_up() {
             new_surfaces.reserve(exppInternal.size());
             for (ExPolygon expoly : exppInternal)
                 new_surfaces.push_back(Surface(stInternal, expoly));
-                
+        
             //get all surface elements
             std::vector<float> elements;
             for(Surface s : layerm->slices.surfaces) {
@@ -439,7 +439,7 @@ PrintObject::move_nonplanar_surfaces_up() {
                     elements.push_back(s.distance_to_top);
                 }
             }
-            
+        
             //save all nonplanar surfaces grouped by distance_to_top
             for(float f : elements) {
                 SurfaceCollection polyNonplanar;
@@ -453,7 +453,7 @@ PrintObject::move_nonplanar_surfaces_up() {
                     continue;
                 ExPolygons exppNonplanar = union_ex((Polygons)polyNonplanar, true);
                 new_surfaces.reserve(new_surfaces.size() +exppNonplanar.size());
-                
+        
                 for (ExPolygon expoly : exppNonplanar) {
                     Surface new_s = Surface( f == 0.0f ? stTopNonplanar : stInternalSolidNonplanar, expoly);
                     new_s.distance_to_top = f;
