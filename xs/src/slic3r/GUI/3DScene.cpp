@@ -100,7 +100,7 @@ _3DScene::_extrusionentity_to_verts_do(const Lines &lines, const std::vector<dou
                 {
                     // use the normal going to the right calculated for the previous line
                     tverts->push_norm(prev_xy_right_normal);
-                    tverts->push_vert(prev_b1.x, prev_b1.y, middle_z_b);
+                    tverts->push_vert(prev_b1.x, prev_b1.y, middle_z_a);
             
                     // normal going downwards
                     tverts->push_norm(0,0,-1);
@@ -115,7 +115,7 @@ _3DScene::_extrusionentity_to_verts_do(const Lines &lines, const std::vector<dou
                 {
                     // use the normal going to the left calculated for the previous line
                     tverts->push_norm(prev_xy_left_normal);
-                    tverts->push_vert(prev_b2.x, prev_b2.y, middle_z_b);
+                    tverts->push_vert(prev_b2.x, prev_b2.y, middle_z_a);
             
                     // normal going upwards
                     tverts->push_norm(0,0,1);
@@ -129,7 +129,7 @@ _3DScene::_extrusionentity_to_verts_do(const Lines &lines, const std::vector<dou
                 {
                     // use the normal going to the left calculated for the previous line
                     tverts->push_norm(prev_xy_left_normal);
-                    tverts->push_vert(prev_b2.x, prev_b2.y, middle_z_b);
+                    tverts->push_vert(prev_b2.x, prev_b2.y, middle_z_a);
             
                     // use the normal going to the right calculated for this line
                     tverts->push_norm(xy_left_normal);
