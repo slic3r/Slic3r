@@ -88,8 +88,9 @@ protected:
     void load_presets();
 
     virtual void _build() = 0;
-    virtual void _update() = 0;
+    virtual void _update(const std::string& opt_key = "") = 0;
     virtual void _on_preset_loaded() = 0;
+
     void set_tooltips() { 
         this->_btn_save_preset->SetToolTip(wxString(_("Save current ")) + this->title());
         this->_btn_delete_preset->SetToolTip(_("Delete this preset."));
@@ -125,6 +126,8 @@ public:
     wxString title() override { return _("Print Settings"); }
     std::string name() override { return "print"s; }
 
+    preset_t type() override  { return preset_t::Print; }; 
+    int typeId() override  { return static_cast<int>(preset_t::Print); }; 
 
     t_config_option_keys my_overridable_options() override { return PresetEditor::overridable_options(); };
     static t_config_option_keys overridable_options() { return PresetEditor::overridable_options(); };
@@ -181,8 +184,11 @@ public:
     t_config_option_keys my_options() override { return PrintEditor::options(); }
 
 protected:
-    void _update() override;
+    void _update(const std::string& opt_key = "") override;
     void _build() override;
+    void _on_preset_loaded() override;
+    const std::string LogChannel() override {return "PrintEditor"s; } //< Which log these messages should go to.
+    
 };
 
 class PrinterEditor : public PresetEditor {
@@ -192,6 +198,9 @@ public:
 
     wxString title() override { return _("Printer Settings"); }
     std::string name() override { return "printer"s; }
+    preset_t type() override  { return preset_t::Printer; }; 
+    int typeId() override  { return static_cast<int>(preset_t::Printer); }; 
+
     static t_config_option_keys overridable_options() { return t_config_option_keys 
     {
         "pressure_advance"s,
@@ -225,8 +234,9 @@ public:
     
     t_config_option_keys my_options() override { return PrinterEditor::options(); }
 protected:
-    void _update() override;
+    void _update(const std::string& opt_key = "") override;
     void _build() override;
+    void _on_preset_loaded() override;
     const std::string LogChannel() override {return "PrinterEditor"s;} //< Which log these messages should go to.
 };
 
@@ -261,8 +271,9 @@ public:
     
     t_config_option_keys my_options() override { return MaterialEditor::options(); }
 protected:
-    void _update() override;
+    void _update(const std::string& opt_key = "") override;
     void _build() override;
+    void _on_preset_loaded() override;
     const std::string LogChannel() override {return "MaterialEditor"s;} //< Which log these messages should go to.
 };
 
