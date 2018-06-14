@@ -53,8 +53,8 @@ public:
     bool disable_tree_sel_changed_event {false};
 
     void save_preset();
-    std::function<void ()> on_save_preset {};
-    std::function<void ()> on_value_change {};
+    std::function<void (wxString, preset_t)> on_save_preset {nullptr};
+    std::function<void (std::string)> on_value_change {nullptr};
 
     config_ptr config;
     void reload_config();
