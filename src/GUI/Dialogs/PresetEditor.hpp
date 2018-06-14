@@ -12,11 +12,13 @@
 
 // GUI
 #include "misc_ui.hpp"
+#include "Preset.hpp"
 
 // Wx
 #include <wx/treectrl.h>
 #include <wx/imaglist.h>
 #include <wx/panel.h>
+#include <wx/scrolwin.h>
 
 using namespace std::string_literals;
 namespace Slic3r { namespace GUI {
