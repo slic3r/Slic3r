@@ -3,6 +3,7 @@
 #include "GUI.hpp"
 #include <wx/bookctrl.h>
 
+
 namespace Slic3r { namespace GUI {
 
 PresetEditor::PresetEditor(wxWindow* parent, t_config_option_keys options) : 
@@ -40,7 +41,7 @@ PresetEditor::PresetEditor(wxWindow* parent, t_config_option_keys options) :
     left_sizer->Add(this->_treectrl, 1, wxEXPAND);
     this->_icons = new wxImageList(16, 16, 1);
     this->_treectrl->AssignImageList(this->_icons);
-    this->_iconcount = - 1;
+    this->_iconcount = -1;
 
     this->_treectrl->AddRoot("root");
     this->_treectrl->SetIndent(0);
@@ -80,10 +81,6 @@ void PresetEditor::select_preset(int id, bool force) {
     this->_on_select_preset(force);
 }
 
-// TODO
-void PresetEditor::delete_preset() {
-}
-
 void PresetEditor::select_preset_by_name(const wxString& name, bool force) {
     const auto presets {SLIC3RAPP->presets.at(this->typeId())};
     int id = -1;
@@ -100,14 +97,14 @@ void PresetEditor::select_preset_by_name(const wxString& name, bool force) {
 PresetPage* PresetEditor::add_options_page(const wxString& _title, const wxString& _icon) {
     
     if (_icon.size() > 0) {
-        auto* bitmap { new wxBitmap(var(_icon), wxBITMAPT_TYPE_PNG);
-        this->_icons.Add(bitmap);
+        auto* bitmap { new wxBitmap(var(_icon), wxBITMAP_TYPE_PNG);
+        this->_icons->Add(bitmap);
         this->_iconcount += 1;
     }
 
     PresetPage* page {new PresetPage(this, _title, this->_iconcount)};
     page->Hide();
-    this->sizer->Add(page, 1, wxEXPAND | wxLEFT, 5); 
+    this->_sizer->Add(page, 1, wxEXPAND | wxLEFT, 5); 
     _pages.push_back(page);
     return page;
 }
