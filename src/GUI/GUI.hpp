@@ -32,9 +32,9 @@ public:
 
     void OnUnhandledException() override;
 
+    std::vector<Presets> presets { preset_types, Presets() };
 private:
     std::unique_ptr<Notifier> notifier {nullptr};
-    std::vector<Presets> presets { preset_types, Presets() };
 
     void load_presets();
 
