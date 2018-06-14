@@ -57,10 +57,14 @@ public:
     std::function<void ()> on_value_change {};
 
     config_ptr config;
+    void reload_config();
+    void reload_preset();
     PresetPage* add_options_page(const wxString& _title, const wxString& _icon = "");
 
     virtual wxString title() = 0;
     virtual std::string name() = 0;
+    virtual preset_t type() = 0; 
+    virtual int typeId() = 0; 
 protected:
     // Main sizer
     wxSizer* _sizer {nullptr};
@@ -86,6 +90,23 @@ protected:
         this->_btn_save_preset->SetToolTip(wxString(_("Save current ")) + this->title());
         this->_btn_delete_preset->SetToolTip(_("Delete this preset."));
     }
+
+
+    void reload_compatible_printers_widget();
+    wxSizer* compatible_printers_widget();
+
+    /// This method is called:
+    ///  - upon first initialization;
+    ///  - whenever user selects a preset from the dropdown;
+    ///  - whenever select_preset() or select_preset_by_name() are called.
+    void _on_select_preset(bool force = false);
+
+    /// This method is supposed to be called whenever new values are loaded
+    /// or changed by the user (including when presets are loaded).
+    /// Pushes a callback onto the owning Slic3r app to be processed during 
+    /// an idle event.
+    void _on_value_change(std::string opt_key);
+
     virtual const std::string LogChannel() = 0; //< Which log these messages should go to.
 
 
