@@ -280,7 +280,7 @@ protected:
 
 
 
-class PresetPage : wxScrolledWindow {
+class PresetPage : public wxScrolledWindow {
 public:
     PresetPage(wxWindow* parent, wxString _title, int _iconID) : 
         wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL),
