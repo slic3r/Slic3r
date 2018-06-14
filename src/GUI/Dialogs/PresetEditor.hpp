@@ -21,6 +21,8 @@
 using namespace std::string_literals;
 namespace Slic3r { namespace GUI {
 
+class PresetPage;
+
 class PresetEditor : public wxPanel {
 
 public: 
@@ -39,6 +41,7 @@ public:
     wxSizer* sizer() { return _sizer; };
     PresetEditor(wxWindow* parent, t_config_option_keys options = {});
     PresetEditor() : PresetEditor(nullptr, {}) {};
+    std::shared_ptr<Preset> current_preset;
 
     bool prompt_unsaved_changes();
     void select_preset_by_name(const wxString& name, bool force = false);
@@ -51,6 +54,7 @@ public:
     std::function<void ()> on_value_change {};
 
     config_ptr config;
+    PresetPage* add_options_page(const wxString& _title, const wxString& _icon = "");
 
     virtual wxString title() = 0;
     virtual std::string name() = 0;
@@ -65,8 +69,9 @@ protected:
     wxChoice* _presets_choice {nullptr};
     int _iconcount {-1};
 
-    std::vector<wxString> _pages {};
-
+    /// Vector of PresetPage pointers; trust wxWidgets RTTI to avoid leaks
+    std::vector<PresetPage*> _pages {};
+    
     const unsigned int left_col_width {150};
     void _update_tree();
     void load_presets();
@@ -230,6 +235,23 @@ protected:
     const std::string LogChannel() override {return "MaterialEditor"s;} //< Which log these messages should go to.
 };
 
+
+
+
+class PresetPage : wxScrolledWindow {
+public:
+    PresetPage(wxWindow* parent, wxString _title, int _iconID) : 
+        wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL),
+        title(_title), iconID(_iconID) {
+            this->vsizer = new wxBoxSizer(wxVERTICAL);
+            this->SetSizer(this->vsizer);
+            this->SetScrollRate(ui_settings->scroll_step(), ui_settings->scroll_step());
+        }
+protected:
+    wxSizer* vsizer {nullptr};
+    wxString title {""};
+    int iconID {0};
+};
 
 }} // namespace Slic3r::GUI
 #endif // PRESETEDITOR_HPP
