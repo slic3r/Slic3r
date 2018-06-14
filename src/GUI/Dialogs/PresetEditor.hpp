@@ -86,6 +86,9 @@ protected:
         this->_btn_save_preset->SetToolTip(wxString(_("Save current ")) + this->title());
         this->_btn_delete_preset->SetToolTip(_("Delete this preset."));
     }
+    virtual const std::string LogChannel() = 0; //< Which log these messages should go to.
+
+
 };
 
 class PrintEditor : public PresetEditor {
