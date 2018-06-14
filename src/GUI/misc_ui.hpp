@@ -153,7 +153,7 @@ std::vector<wxString> open_model(wxWindow* parent, wxWindow* top);
 inline Slic3r::Point new_scale(const wxPoint& p) { return Slic3r::Point::new_scale(p.x, p.y); }
 
 /// Singleton for UI settings.
-std::unique_ptr<Settings> ui_settings {nullptr}; 
+extern std::unique_ptr<Settings> ui_settings; 
 
 }} // namespace Slic3r::GUI
 
