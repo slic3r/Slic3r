@@ -21,6 +21,7 @@ class Preset;
 using Presets = std::vector<Preset>;
 
 class Preset {
+public:
     preset_t group; 
     std::string name {""};
 
@@ -62,6 +63,11 @@ class Preset {
 
     /// Clear the dirty config.
     void dismiss_changes();
+
+    void apply_dirty(const Slic3r::Config& other) { this->dirty_config.apply(other); }
+    void apply_dirty(const config_ptr& other) { this->apply_dirty(*other); }
+    bool operator==(const wxString& _name) const { return this->operator==(_name.ToStdString()); }
+    bool operator==(const std::string& _name) const { return _name.compare(this->name) == 0; }
 private:
     bool external {false};
 
