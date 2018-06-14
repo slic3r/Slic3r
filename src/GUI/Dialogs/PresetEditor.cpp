@@ -58,4 +58,65 @@ PresetEditor::PresetEditor(wxWindow* parent, t_config_option_keys options) :
     /// bind a lambda for the event EVT_BUTTON from btn_delete_preset 
     
 }
+
+void PresetEditor::save_preset() {
+}
+
+
+/// TODO: Can this get deleted before the callback executes?
+void PresetEditor::_on_value_change(std::string opt_key) {
+    SLIC3RAPP->CallAfter(
+    [this, opt_key]() {
+        this->current_preset->apply_dirty(this->config);
+        if (this->on_value_change != nullptr) this->on_value_change(opt_key);
+        this->load_presets();
+        this->_update(opt_key);
+    } ); 
+}
+
+void PresetEditor::select_preset(int id, bool force) {
+    this->_presets_choice->SetSelection(id);
+    this->_on_select_preset(force);
+}
+
+// TODO
+void PresetEditor::delete_preset() {
+}
+
+void PresetEditor::select_preset_by_name(const wxString& name, bool force) {
+    const auto presets {SLIC3RAPP->presets.at(this->typeId())};
+    int id = -1;
+    auto result = std::find(presets.cbegin(), presets.cend(), name);
+    if (result != presets.cend()) id = std::distance(presets.cbegin(), result);
+    if (id == -1) {
+        Slic3r::Log::warn(this->LogChannel(), LOG_WSTRING("No preset named" + name)); 
+        return;
+    }
+    this->_presets_choice->SetSelection(id);
+    this->_on_select_preset(force);
+}
+
+PresetPage* PresetEditor::add_options_page(wxString _title, wxString _icon) {
+    
+    if (_icon.size() > 0) {
+        auto* bitmap { new wxBitmap(var(_icon), wxBITMAPT_TYPE_PNG);
+        this->_icons.Add(bitmap);
+        this->_iconcount += 1;
+    }
+
+    PresetPage* page {new PresetPage(this, _title, this->_iconcount)};
+    page->Hide();
+    this->sizer->Add(page, 1, wxEXPAND | wxLEFT, 5); 
+    _pages.push_back(page);
+    return page;
+}
+
+// TODO
+void PresetEditor::reload_config() {
+}
+
+// TODO
+void PresetEditor::reload_preset() {
+}
+
 }} // namespace Slic3r::GUI

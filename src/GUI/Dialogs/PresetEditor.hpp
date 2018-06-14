@@ -47,6 +47,10 @@ public:
 
     /// Check if there is a dirty config that is different than the loaded config.
     bool prompt_unsaved_changes();
+
+    /// Perform a preset selection and possibly trigger the _on_select_preset 
+    /// method.
+    void select_preset(int id, bool force = false);
     void select_preset_by_name(const wxString& name, bool force = false);
     
     /// suppress the callback when the tree selection is changed.
