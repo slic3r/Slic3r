@@ -11,6 +11,7 @@
 #include <wx/stdpaths.h>
 #include <map>
 #include <utility>
+#include <memory>
 
 #include "Settings.hpp"
 
@@ -21,6 +22,7 @@
 /// Macro to build std::wstring that slic3r::log expects using << syntax of wxString
 /// Avoids wx pollution of libslic3r
 #define LOG_WSTRING(...) ((wxString("") << __VA_ARGS__).ToStdWstring())
+
 
 /// Common static (that is, free-standing) functions, not part of an object hierarchy.
 
@@ -51,8 +53,6 @@ constexpr bool isDev = false;
 
 constexpr bool threaded = false;
 
-/// Font definition
-wxFont small_font();
 
 // hopefully the compiler is smart enough to figure this out
 const std::map<const std::string, const std::string> FILE_WILDCARDS { 
@@ -151,6 +151,9 @@ wxString encode_path(const wxString& in);
 std::vector<wxString> open_model(wxWindow* parent, const Settings& settings, wxWindow* top);
 
 inline Slic3r::Point new_scale(const wxPoint& p) { return Slic3r::Point::new_scale(p.x, p.y); }
+
+/// Singleton for UI settings.
+std::unique_ptr<Settings> ui_settings {nullptr}; 
 
 }} // namespace Slic3r::GUI
 

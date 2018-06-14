@@ -6,6 +6,7 @@
     #include <wx/wx.h>
 #endif
 #include <map>
+#include <memory>
 #include <tuple>
 
 #include "libslic3r.h"
@@ -32,7 +33,7 @@ class Settings {
         bool invert_zoom {false};
         bool background_processing {false};
 
-        bool preset_editor_tabs {false};
+        bool preset_editor_tabs {true};
 
         bool hide_reload_dialog {false};
 
@@ -57,9 +58,31 @@ class Settings {
         void save_window_pos(wxWindow* ref, wxString name);
         void restore_window_pos(wxWindow* ref, wxString name);
 
-    private:
-        const std::string LogChannel {"GUI_Settings"}; //< Which log these messages should go to.
+
+        const wxFont& small_font() { return _small_font;}
+        const wxFont& small_bold_font() { return _small_bold_font;}
+        const wxFont& medium_font() { return _medium_font;}
+        const int& scroll_step() { return _scroll_step; }
+
+        static std::unique_ptr<Settings> init_settings() {
+            return std::make_unique<Settings>();
+        }
+        Settings(Settings&&) = default;
+        Settings& operator=(Settings&&) = default;
         
+        Settings();
+    private:
+        Settings& operator=(const Settings&) = default;
+        Settings(const Settings&) = default;
+
+        const std::string LogChannel {"GUI_Settings"}; //< Which log these messages should go to.
+
+        /// Fonts used by the UI.
+        wxFont _small_font;
+        wxFont _small_bold_font;
+        wxFont _medium_font;
+
+        int _scroll_step {0};
 };
 
 }} //namespace Slic3r::GUI

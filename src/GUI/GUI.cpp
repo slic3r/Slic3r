@@ -10,6 +10,7 @@
 #include "MainFrame.hpp"
 #include "GUI.hpp"
 #include "misc_ui.hpp"
+#include "Settings.hpp"
 #include "Preset.hpp"
 
 // Logging mechanism
@@ -48,6 +49,8 @@ bool App::OnInit()
     // TODO: Call a logging function with channel GUI, severity info for datadir path
     Slic3r::Log::info(LogChannel, (_("Data dir: ") + datadir).ToStdWstring());
 
+    ui_settings = Settings::init_settings();
+
     // Load gui settings from slic3r.ini
     if (wxFileExists(slic3r_ini)) {
     /*
@@ -62,15 +65,14 @@ bool App::OnInit()
     */
     }
 
-
-    this->gui_config->save_settings();
+    ui_settings->save_settings();
 
     // Load presets
     this->load_presets();
 
 
     wxImage::AddHandler(new wxPNGHandler());
-    MainFrame *frame = new MainFrame( "Slic3r", wxDefaultPosition, wxDefaultSize, this->gui_config);
+    MainFrame *frame = new MainFrame( "Slic3r", wxDefaultPosition, wxDefaultSize);
     this->SetTopWindow(frame);
 
     // Load init bundle
@@ -135,18 +137,18 @@ bool App::OnInit()
 }
 
 void App::save_window_pos(const wxTopLevelWindow* window, const wxString& name ) {
-    this->gui_config->window_pos[name] = 
+    ui_settings->window_pos[name] = 
         std::make_tuple<wxPoint, wxSize, bool>(
             window->GetScreenPosition(),
             window->GetSize(),
             window->IsMaximized());
 
-    this->gui_config->save_settings();
+    ui_settings->save_settings();
 }
 
 void App::restore_window_pos(wxTopLevelWindow* window, const wxString& name ) {
     try {
-        auto tmp = gui_config->window_pos[name];
+        auto tmp = ui_settings->window_pos[name];
         const auto& size = std::get<1>(tmp);
         const auto& pos = std::get<0>(tmp);
         window->SetSize(size);

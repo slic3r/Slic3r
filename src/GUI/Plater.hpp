@@ -68,7 +68,7 @@ struct info_fields {
 class Plater : public wxPanel 
 {
 public:
-    Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings> _settings);
+    Plater(wxWindow* parent, const wxString& title);
 
     /// User-level function called through external interface.
     /// Pops file dialog.
@@ -112,7 +112,6 @@ public:
 private:
     std::shared_ptr<Slic3r::Print> print {std::make_shared<Print>(Slic3r::Print())};
     std::shared_ptr<Slic3r::Model> model {std::make_shared<Model>(Slic3r::Model())};
-    std::shared_ptr<Settings> settings {};
 
     std::shared_ptr<Slic3r::Config> config { Slic3r::Config::new_from_defaults(
         {"bed_shape", "complete_objects", "extruder_clearance_radius", "skirts", "skirt_distance", 
@@ -266,11 +265,11 @@ template <typename T>
 static void add_info_field(wxWindow* parent, T*& field, wxString name, wxGridSizer* sizer) {
     name << ":";
     auto* text {new wxStaticText(parent, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT)};
-    text->SetFont(small_font());
+    text->SetFont(ui_settings->small_font());
     sizer->Add(text, 0);
 
     field = new wxStaticText(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    field->SetFont(small_font());
+    field->SetFont(ui_settings->small_font());
     sizer->Add(field, 0);
 }
 

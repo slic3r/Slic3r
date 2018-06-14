@@ -147,7 +147,5 @@ std::vector<wxString> open_model(wxWindow* parent, const Settings& settings, wxW
     return tmp;
 }
 
-wxFont small_font() { return wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT); }
-
 }} // namespace Slic3r::GUI
 

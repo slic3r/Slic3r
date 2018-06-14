@@ -15,7 +15,7 @@ PresetEditor::PresetEditor(wxWindow* parent, t_config_option_keys options) :
     {
         // choice menu
         this->_presets_choice = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(left_col_width, -1));
-        this->_presets_choice->SetFont(small_font());
+        this->_presets_choice->SetFont(ui_settings->small_font());
 
 
         // buttons
