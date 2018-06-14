@@ -1,5 +1,6 @@
 #include "Dialogs/PresetEditor.hpp"
 #include "misc_ui.hpp"
+#include "GUI.hpp"
 #include <wx/bookctrl.h>
 
 namespace Slic3r { namespace GUI {
