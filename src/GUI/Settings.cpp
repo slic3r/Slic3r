@@ -3,6 +3,8 @@
 
 namespace Slic3r { namespace GUI {
 
+std::unique_ptr<Settings> ui_settings {nullptr}; 
+
 Settings::Settings() {
     // Initialize fonts
     _small_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
