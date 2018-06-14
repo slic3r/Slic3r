@@ -9,11 +9,11 @@ void Settings::Settings() {
     if (the_os == OS::Mac) _small_font.SetPointSize(11);
     _small_bold_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
     if (the_os == OS::Mac) _small_bold_font.SetPointSize(11);
-    _small_bold_font.MakeBold()
+    _small_bold_font.MakeBold();
     _medium_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
     _medium_font.SetPointSize(12);
 
-    _scroll_step = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT)->GetPointSize();
+    _scroll_step = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT).GetPointSize();
 }
 void Settings::save_settings() {
 /*
