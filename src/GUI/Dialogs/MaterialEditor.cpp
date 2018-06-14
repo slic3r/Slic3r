@@ -11,7 +11,7 @@ MaterialEditor::MaterialEditor(wxWindow* parent, t_config_option_keys options) :
     this->_build();
     }
 
-void MaterialEditor::_update() {
+void MaterialEditor::_update(const std::string& opt_key) {
 }
 
 void MaterialEditor::_build() {
