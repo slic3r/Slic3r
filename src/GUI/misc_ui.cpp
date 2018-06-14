@@ -130,7 +130,7 @@ sub show_error {
 }
 */
 
-std::vector<wxString> open_model(wxWindow* parent, const Settings& settings, wxWindow* top) {
+std::vector<wxString> open_model(wxWindow* parent, wxWindow* top) {
     auto dialog {new wxFileDialog((parent != nullptr ? parent : top), _("Choose one or more files") + wxString(" (STL/OBJ/AMF/3MF):"), ".", "",
     MODEL_WILDCARD, wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST)};
     if (dialog->ShowModal() != wxID_OK) { 
