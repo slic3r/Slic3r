@@ -13,10 +13,8 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
 wxEND_EVENT_TABLE()
 
 MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
-        : MainFrame(title, pos, size, nullptr) {}
-MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, std::shared_ptr<Settings> _gui_config)
         : wxFrame(NULL, wxID_ANY, title, pos, size), loaded(false),
-        tabpanel(nullptr), controller(nullptr), plater(nullptr), gui_config(_gui_config), preset_editor_tabs(std::map<wxWindowID, PresetEditor*>())
+        tabpanel(nullptr), controller(nullptr), plater(nullptr), preset_editor_tabs(std::map<wxWindowID, PresetEditor*>())
 {
     this->SetIcon(wxIcon(var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG));        
 
@@ -44,7 +42,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
         this->SetMinSize(wxSize(760, 490));
         this->SetSize(this->GetMinSize());
         wxTheApp->SetTopWindow(this);
-        gui_config->restore_window_pos(this, "main_frame");
+        ui_settings->restore_window_pos(this, "main_frame");
         this->Show();
         this->Layout();
     }
@@ -67,7 +65,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
             */
             // save window size
-            gui_config->save_window_pos(this, "main_frame");
+            ui_settings->save_window_pos(this, "main_frame");
 
             // Propagate event
             e.Skip();
@@ -87,7 +85,7 @@ void MainFrame::init_tabpanel()
         // TODO: trigger processing for activation event
         if (tabpanel->GetSelection() > 1) {
             tabpanel->SetWindowStyle(tabpanel->GetWindowStyleFlag() | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
-        } else if (this->gui_config->show_host == false && tabpanel->GetSelection() == 1) {
+        } else if (ui_settings->show_host == false && tabpanel->GetSelection() == 1) {
             tabpanel->SetWindowStyle(tabpanel->GetWindowStyleFlag() | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
         } else {
             tabpanel->SetWindowStyle(tabpanel->GetWindowStyleFlag() | ~wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
@@ -102,11 +100,11 @@ void MainFrame::init_tabpanel()
         wxTheApp->CallAfter([=] { this->tabpanel->SetSelection(0); });
     }), panel->GetId());
 
-    this->plater = new Slic3r::GUI::Plater(panel, _("Plater"), gui_config);
+    this->plater = new Slic3r::GUI::Plater(panel, _("Plater"));
     this->controller = new Slic3r::GUI::Controller(panel, _("Controller"));
 
     panel->AddPage(this->plater, this->plater->GetName());
-    if (this->gui_config->show_host) panel->AddPage(this->controller, this->controller->GetName());
+    if (ui_settings->show_host) panel->AddPage(this->controller, this->controller->GetName());
     
 }
 

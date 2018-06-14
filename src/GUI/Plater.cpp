@@ -35,8 +35,8 @@ const auto TB_SETTINGS      {wxNewId()};
 
 const auto PROGRESS_BAR_EVENT = wxNewEventType();
 
-Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings> _settings) : 
-    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, title), settings(_settings)
+Plater::Plater(wxWindow* parent, const wxString& title) : 
+    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, title)
 {
 
     // Set callback for status event for worker threads
@@ -154,7 +154,7 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
             auto* sizer {new wxBoxSizer(wxHORIZONTAL)};
             object_info_sizer->Add(sizer, 0, wxEXPAND | wxBOTTOM, 5);
             auto* text  {new wxStaticText(this, wxID_ANY, _("Object:"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT)};
-            text->SetFont(small_font());
+            text->SetFont(ui_settings->small_font());
             sizer->Add(text, 0, wxALIGN_CENTER_VERTICAL);
 
             /* We supply a bogus width to wxChoice (sizer will override it and stretch 
@@ -162,7 +162,7 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
              * too much according to the contents, and this is bad with long file names.
              */
             this->object_info.choice = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(100, -1));
-            this->object_info.choice->SetFont(small_font());
+            this->object_info.choice->SetFont(ui_settings->small_font());
             sizer->Add(this->object_info.choice, 1, wxALIGN_CENTER_VERTICAL);
 
             // Select object on change.
@@ -183,11 +183,11 @@ Plater::Plater(wxWindow* parent, const wxString& title, std::shared_ptr<Settings
         {
             wxString name {"Manifold:"};
             auto* text {new wxStaticText(parent, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT)};
-            text->SetFont(small_font());
+            text->SetFont(ui_settings->small_font());
             grid_sizer->Add(text, 0);
 
             this->object_info.manifold = new wxStaticText(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-            this->object_info.manifold->SetFont(small_font());
+            this->object_info.manifold->SetFont(ui_settings->small_font());
 
             this->object_info.manifold_warning_icon = new wxStaticBitmap(this, wxID_ANY, wxBitmap(var("error.png"), wxBITMAP_TYPE_PNG));
             this->object_info.manifold_warning_icon->Hide();
@@ -1091,7 +1091,7 @@ void Plater::build_preset_chooser() {
                 break;
         }
         auto* text {new wxStaticText(this, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT)};
-        text->SetFont(small_font());
+        text->SetFont(ui_settings->small_font());
 
         auto* choice {new wxBitmapComboBox(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY)};
         this->preset_choosers[static_cast<int>(group)] = choice;
