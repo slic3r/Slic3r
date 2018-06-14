@@ -30,6 +30,12 @@ public:
     virtual t_config_option_keys my_options() = 0;
     static t_config_option_keys options() { return t_config_option_keys {}; }
 
+    static t_config_option_keys overridable_options() { return t_config_option_keys {}; };
+    static t_config_option_keys overriding_options() { return t_config_option_keys {}; };
+
+    virtual t_config_option_keys my_overridable_options() = 0;
+    virtual t_config_option_keys my_overriding_options() = 0;
+
     wxSizer* sizer() { return _sizer; };
     PresetEditor(wxWindow* parent, t_config_option_keys options = {});
     PresetEditor() : PresetEditor(nullptr, {}) {};
@@ -82,6 +88,13 @@ public:
 
     wxString title() override { return _("Print Settings"); }
     std::string name() override { return "print"s; }
+
+
+    t_config_option_keys my_overridable_options() override { return PresetEditor::overridable_options(); };
+    static t_config_option_keys overridable_options() { return PresetEditor::overridable_options(); };
+
+    t_config_option_keys my_overriding_options() override { return PresetEditor::overriding_options(); };
+    static t_config_option_keys overriding_options() { return PresetEditor::overriding_options(); };
 
     /// Static method to retrieve list of options that this preset governs.
     static t_config_option_keys options() {
@@ -149,7 +162,12 @@ public:
         "retract_length"s, "retract_lift"s, "retract_speed"s, "retract_restart_extra"s,
         "retract_before_travel"s, "retract_layer_change"s, "wipe"s
     }; };
+    static t_config_option_keys overriding_options() { return PresetEditor::overriding_options(); };
 
+    t_config_option_keys my_overridable_options() override { return PrinterEditor::overridable_options(); };
+    t_config_option_keys my_overriding_options() override { return PrinterEditor::overriding_options(); };
+
+    
     static t_config_option_keys options() {
         return t_config_option_keys
         {
@@ -186,6 +204,12 @@ public:
     MaterialEditor(wxWindow* parent, t_config_option_keys options = {});
     MaterialEditor() : MaterialEditor(nullptr, {}) {};
     
+    t_config_option_keys my_overridable_options() override { return PresetEditor::overridable_options(); };
+    t_config_option_keys my_overriding_options() override { return PrinterEditor::overridable_options(); };
+
+    static t_config_option_keys overriding_options() { return PrinterEditor::overridable_options(); };
+    static t_config_option_keys overridable_options() { return PresetEditor::overridable_options(); };
+
     static t_config_option_keys options() {
         return t_config_option_keys
         {
