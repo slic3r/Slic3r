@@ -3,7 +3,7 @@
 
 namespace Slic3r { namespace GUI {
 
-void Settings::Settings() {
+Settings::Settings() {
     // Initialize fonts
     _small_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
     if (the_os == OS::Mac) _small_font.SetPointSize(11);
