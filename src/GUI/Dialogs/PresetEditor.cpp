@@ -97,7 +97,7 @@ void PresetEditor::select_preset_by_name(const wxString& name, bool force) {
 PresetPage* PresetEditor::add_options_page(const wxString& _title, const wxString& _icon) {
     
     if (_icon.size() > 0) {
-        auto* bitmap { new wxBitmap(var(_icon), wxBITMAP_TYPE_PNG);
+        auto bitmap { wxBitmap(var(_icon), wxBITMAP_TYPE_PNG) };
         this->_icons->Add(bitmap);
         this->_iconcount += 1;
     }
