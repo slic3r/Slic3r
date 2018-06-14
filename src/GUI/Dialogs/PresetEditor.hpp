@@ -43,6 +43,7 @@ public:
     PresetEditor() : PresetEditor(nullptr, {}) {};
     std::shared_ptr<Preset> current_preset;
 
+    /// Check if there is a dirty config that is different than the loaded config.
     bool prompt_unsaved_changes();
     void select_preset_by_name(const wxString& name, bool force = false);
     
