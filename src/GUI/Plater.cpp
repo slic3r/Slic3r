@@ -76,7 +76,7 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
     */
 
     // initialize 2D Preview Canvas
-    canvas2D = new Plate2D(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    canvas2D = new Plate2D(preview_notebook, wxDefaultSize, objects, model, config);
     preview_notebook->AddPage(canvas2D, _("2D"));
 
     canvas2D->on_select_object = std::function<void (ObjIdx obj_idx)>(on_select_object);
@@ -241,7 +241,7 @@ void Plater::add() {
     Log::info(LogChannel, L"Called Add function");
 
     auto& start_object_id = this->object_identifier;
-    const auto& input_files{open_model(this, *(this->settings), wxTheApp->GetTopWindow())};
+    const auto& input_files{open_model(this, wxTheApp->GetTopWindow())};
     for (const auto& f : input_files) {
         Log::info(LogChannel, (wxString(L"Calling Load File for ") + f).ToStdWstring());
         this->load_file(f.ToStdString());
@@ -272,8 +272,8 @@ void Plater::add() {
 std::vector<int> Plater::load_file(const std::string file, const int obj_idx_to_load) {
     
     auto input_file {wxFileName(file)};
-    settings->skein_directory = input_file.GetPath();
-    settings->save_settings();
+    ui_settings->skein_directory = input_file.GetPath();
+    ui_settings->save_settings();
     
     Slic3r::Model model;
     bool valid_load {true};
@@ -791,7 +791,7 @@ void Plater::increase(size_t copies, bool dont_push) {
         this->add_undo_operation(UndoCmd::Increase, obj->identifier, copies);
     }
 
-    if(settings->autocenter) {
+    if(ui_settings->autocenter) {
         this->arrange();
     } else {
         this->on_model_change();
