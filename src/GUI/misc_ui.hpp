@@ -148,7 +148,7 @@ sub CallAfter {
 wxString decode_path(const wxString& in);
 wxString encode_path(const wxString& in);
 
-std::vector<wxString> open_model(wxWindow* parent, const Settings& settings, wxWindow* top);
+std::vector<wxString> open_model(wxWindow* parent, wxWindow* top);
 
 inline Slic3r::Point new_scale(const wxPoint& p) { return Slic3r::Point::new_scale(p.x, p.y); }
 
