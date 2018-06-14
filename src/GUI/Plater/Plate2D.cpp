@@ -13,8 +13,8 @@
 
 namespace Slic3r { namespace GUI {
 
-Plate2D::Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config, std::shared_ptr<Settings> _settings) :
-    wxPanel(parent, wxID_ANY, wxDefaultPosition, size, wxTAB_TRAVERSAL), objects(_objects), model(_model), config(_config), settings(_settings)
+Plate2D::Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config) :
+    wxPanel(parent, wxID_ANY, wxDefaultPosition, size, wxTAB_TRAVERSAL), objects(_objects), model(_model), config(_config)
 { 
     
     this->Bind(wxEVT_PAINT, [this](wxPaintEvent &e) { this->repaint(e); });
@@ -56,8 +56,8 @@ void Plate2D::repaint(wxPaintEvent& e) {
         // On MacOS the background is erased, on Windows the background is not erased 
         // and on Linux/GTK the background is erased to gray color.
         // Fill DC with the background on Windows & Linux/GTK.
-        const auto& brush_background {wxBrush(this->settings->color->BACKGROUND255(), wxBRUSHSTYLE_SOLID)};
-        const auto& pen_background {wxPen(this->settings->color->BACKGROUND255(), 1, wxPENSTYLE_SOLID)};
+        const auto& brush_background {wxBrush(ui_settings->color->BACKGROUND255(), wxBRUSHSTYLE_SOLID)};
+        const auto& pen_background {wxPen(ui_settings->color->BACKGROUND255(), 1, wxPENSTYLE_SOLID)};
         dc.SetPen(pen_background);
         dc.SetBrush(brush_background);
         const auto& rect {this->GetUpdateRegion().GetBox()};

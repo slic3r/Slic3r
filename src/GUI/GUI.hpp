@@ -18,7 +18,7 @@ class App: public wxApp
 {
 public:
     virtual bool OnInit();
-    App(std::shared_ptr<Settings> config) : wxApp(), gui_config(config) {}
+    App() : wxApp() {}
 
     /// Save position, size, and maximize state for a TopLevelWindow (includes Frames) by name in Settings.
     void save_window_pos(const wxTopLevelWindow* window, const wxString& name );
@@ -33,7 +33,6 @@ public:
     void OnUnhandledException() override;
 
 private:
-    std::shared_ptr<Settings> gui_config; // GUI-specific configuration options
     std::unique_ptr<Notifier> notifier {nullptr};
     std::vector<Presets> presets { preset_types, Presets() };
 

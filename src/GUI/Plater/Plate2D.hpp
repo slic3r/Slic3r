@@ -12,7 +12,6 @@
 #include "ColorScheme.hpp"
 #include "Plater.hpp"
 #include "Plater/PlaterObject.hpp"
-#include "Settings.hpp"
 #include "misc_ui.hpp"
 
 #include "Log.hpp"
@@ -39,7 +38,7 @@ class Plate2D : public wxPanel {
 public:
 
     /// Constructor. Keeps a reference to the main configuration, the model, and the gui settings.
-    Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config, std::shared_ptr<Settings> _settings);
+    Plate2D(wxWindow* parent, const wxSize& size, std::vector<PlaterObject>& _objects, std::shared_ptr<Model> _model, std::shared_ptr<Config> _config);
 
     /// Read print bed size from config and calculate the scaled rendition of the bed given the draw canvas.
     void update_bed_size();
@@ -63,7 +62,6 @@ private:
     std::vector<PlaterObject>& objects; //< reference to parent vector
     std::shared_ptr<Slic3r::Model> model;
     std::shared_ptr<Slic3r::Config> config;
-    std::shared_ptr<Settings> settings;
 
     /// Different brushes to draw with, initialized from settings->Color during the constructor
     wxBrush objects_brush {};

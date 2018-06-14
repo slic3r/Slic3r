@@ -29,7 +29,6 @@ class MainFrame: public wxFrame
 {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-    MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, std::shared_ptr<Settings> _gui_config);
     ProgressStatusBar* statusbar {new ProgressStatusBar(this, -1)};
 
     bool has_plater_menu() { return this->plater_menu != nullptr; }
@@ -50,8 +49,6 @@ private:
 
     wxMenu* plater_menu {nullptr};
 
-
-    std::shared_ptr<Settings> gui_config;
     std::map<wxWindowID, PresetEditor*> preset_editor_tabs;
 
     void on_plater_object_list_changed(bool force) {};
