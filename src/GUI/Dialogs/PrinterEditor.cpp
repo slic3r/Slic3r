@@ -11,7 +11,7 @@ PrinterEditor::PrinterEditor(wxWindow* parent, t_config_option_keys options) :
     this->_build();
     }
 
-void PrinterEditor::_update() {
+void PrinterEditor::_update(const std::string& opt_key) {
 }
 
 void PrinterEditor::_build() {
