@@ -85,16 +85,16 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
     canvas2D->on_instances_moved = std::function<void ()>(on_instances_moved);
 
 
-    canvas3D = new Plate3D(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    canvas3D = new Plate3D(preview_notebook, wxDefaultSize, objects, model, config);
     preview_notebook->AddPage(canvas3D, _("3D"));
 
-    preview3D = new Preview3D(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    preview3D = new Preview3D(preview_notebook, wxDefaultSize, objects, model, config);
     preview_notebook->AddPage(preview3D, _("Preview"));
 
-    preview2D = new Preview2D(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    preview2D = new Preview2D(preview_notebook, wxDefaultSize, objects, model, config);
     preview_notebook->AddPage(preview2D, _("Toolpaths"));
 
-    previewDLP = new PreviewDLP(preview_notebook, wxDefaultSize, objects, model, config, settings);
+    previewDLP = new PreviewDLP(preview_notebook, wxDefaultSize, objects, model, config);
     preview_notebook->AddPage(previewDLP, _("DLP/SLA"));
 
     /*
@@ -374,7 +374,7 @@ std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
         Slic3r::Log::info(LogChannel, LOG_WSTRING("Instances: " << obj->instances.size()));
 
         if (obj->instances.size() == 0) {
-            if (settings->autocenter) {
+            if (ui_settings->autocenter) {
                 need_arrange = true;
                 o->center_around_origin();
 
@@ -382,13 +382,13 @@ std::vector<int> Plater::load_model_objects(ModelObjectPtrs model_objects) {
                 o->instances.back()->offset = this->bed_centerf();
             } else {
                 need_arrange = false;
-                if (settings->autoalignz) {
+                if (ui_settings->autoalignz) {
                     o->align_to_ground();
                 }
                 o->add_instance();
             }
         } else {
-            if (settings->autoalignz) {
+            if (ui_settings->autoalignz) {
                 o->align_to_ground();
             }
         }
@@ -516,7 +516,7 @@ void Plater::on_model_change(bool force_autocenter) {
         }
     }
 
-    if (force_autocenter || settings->autocenter) {
+    if (force_autocenter || ui_settings->autocenter) {
         this->model->center_instances_around_point(this->bed_centerf());
     }
     this->refresh_canvases();
