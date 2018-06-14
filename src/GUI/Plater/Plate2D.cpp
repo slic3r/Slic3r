@@ -74,7 +74,7 @@ void Plate2D::repaint(wxPaintEvent& e) {
 
     // draw print center
     {
-        if (this->objects.size() > 0 && settings->autocenter) {
+        if (this->objects.size() > 0 && ui_settings->autocenter) {
             const auto center = this->unscaled_point_to_pixel(this->print_center);
             dc.SetPen(print_center_pen);
             dc.DrawLine(center.x, 0, center.x, size.y);
@@ -89,7 +89,7 @@ void Plate2D::repaint(wxPaintEvent& e) {
 
     // draw text if plate is empty
     if (this->objects.size() == 0) {
-        dc.SetTextForeground(settings->color->BED_OBJECTS());
+        dc.SetTextForeground(ui_settings->color->BED_OBJECTS());
         dc.SetFont(wxFont(14, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
         dc.DrawLabel(CANVAS_TEXT, wxRect(0,0, this->GetSize().GetWidth(), this->GetSize().GetHeight()), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
     } else { 
@@ -277,34 +277,34 @@ void Plate2D::mouse_dclick(wxMouseEvent& e) {
 
 void Plate2D::set_colors() {
 
-    this->SetBackgroundColour(settings->color->BACKGROUND255());
+    this->SetBackgroundColour(ui_settings->color->BACKGROUND255());
 
-    this->objects_brush.SetColour(settings->color->BED_OBJECTS());
+    this->objects_brush.SetColour(ui_settings->color->BED_OBJECTS());
     this->objects_brush.SetStyle(wxBRUSHSTYLE_SOLID);
-    this->instance_brush.SetColour(settings->color->BED_INSTANCE());
+    this->instance_brush.SetColour(ui_settings->color->BED_INSTANCE());
     this->instance_brush.SetStyle(wxBRUSHSTYLE_SOLID);
-    this->selected_brush.SetColour(settings->color->BED_SELECTED());
+    this->selected_brush.SetColour(ui_settings->color->BED_SELECTED());
     this->selected_brush.SetStyle(wxBRUSHSTYLE_SOLID);
-    this->dragged_brush.SetColour(settings->color->BED_DRAGGED());
+    this->dragged_brush.SetColour(ui_settings->color->BED_DRAGGED());
     this->dragged_brush.SetStyle(wxBRUSHSTYLE_SOLID);
-    this->bed_brush.SetColour(settings->color->BED_COLOR());
+    this->bed_brush.SetColour(ui_settings->color->BED_COLOR());
     this->bed_brush.SetStyle(wxBRUSHSTYLE_SOLID);
     this->transparent_brush.SetColour(wxColour(0,0,0));
     this->transparent_brush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
 
-    this->grid_pen.SetColour(settings->color->BED_GRID());
+    this->grid_pen.SetColour(ui_settings->color->BED_GRID());
     this->grid_pen.SetWidth(1);
     this->grid_pen.SetStyle(wxPENSTYLE_SOLID);
-    this->print_center_pen.SetColour(settings->color->BED_CENTER());
+    this->print_center_pen.SetColour(ui_settings->color->BED_CENTER());
     this->print_center_pen.SetWidth(1);
     this->print_center_pen.SetStyle(wxPENSTYLE_SOLID);
-    this->clearance_pen.SetColour(settings->color->BED_CLEARANCE());
+    this->clearance_pen.SetColour(ui_settings->color->BED_CLEARANCE());
     this->clearance_pen.SetWidth(1);
     this->clearance_pen.SetStyle(wxPENSTYLE_SOLID);
-    this->skirt_pen.SetColour(settings->color->BED_SKIRT());
+    this->skirt_pen.SetColour(ui_settings->color->BED_SKIRT());
     this->skirt_pen.SetWidth(1);
     this->skirt_pen.SetStyle(wxPENSTYLE_SOLID);
-    this->dark_pen.SetColour(settings->color->BED_DARK());
+    this->dark_pen.SetColour(ui_settings->color->BED_DARK());
     this->dark_pen.SetWidth(1);
     this->dark_pen.SetStyle(wxPENSTYLE_SOLID);
 
@@ -353,7 +353,7 @@ void Plate2D::nudge(MoveDirection dir) {
 
     Slic3r::Point shift(0,0);
 
-    auto nudge_value {settings->nudge < 0.1 ? 0.1 : scale_(settings->nudge) };
+    auto nudge_value {ui_settings->nudge < 0.1 ? 0.1 : scale_(ui_settings->nudge) };
 
     switch (dir) {
         case MoveDirection::Up:
