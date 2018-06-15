@@ -23,8 +23,6 @@ namespace Slic3r { namespace GUI {
 bool App::OnInit()
 {
     this->SetAppName("Slic3r");
-    // TODO: Call a logging function with channel GUI, severity info
-
     this->notifier = std::unique_ptr<Notifier>();
 
     datadir = decode_path(wxStandardPaths::Get().GetUserDataDir());
@@ -46,7 +44,6 @@ bool App::OnInit()
         }
     }
 
-    // TODO: Call a logging function with channel GUI, severity info for datadir path
     Slic3r::Log::info(LogChannel, (_("Data dir: ") + datadir).ToStdWstring());
 
     ui_settings = Settings::init_settings();
