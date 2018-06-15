@@ -1196,6 +1196,80 @@ void Plater::_on_change_combobox(preset_t preset, wxBitmapComboBox* choice) {
 */
 }
 
+void Plater::show_preset_editor(preset_t preset, unsigned int idx) {
+    
+    std::function<void ()> cbfunc {
+        [this, preset, idx]() {
+            auto presets { this->selected_presets(preset) };
+            auto* mainframe {this->GetFrame()};
+            auto* tabpanel {mainframe->tabs()};
+            if (mainframe->preset_editor_tabs[preset] != nullptr) {
+                // editor is already open
+                tabpanel->SetSelection(tabpanel->GetPageIndex(mainframe->preset_editor_tabs[preset]));
+                return;
+            } else if (ui_settings->preset_editor_tabs) {
+                // open a tab
+                PresetEditor* tab {nullptr};
+                switch (preset) {
+                    case preset_t::Print:
+                        tab = new PrintEditor(this);
+                    break;
+                    /*
+                    case preset_t::Material:
+                        tab = new MaterialEditor(this);
+                    break;
+                    case preset_t::Printer:
+                        tab = new PrinterEditor(this);
+                    break;
+                    */
+                    default: // do nothing
+                        return;
+                }
+                tabpanel->AddPage(tab, wxString(tab->name()) + wxString(" Settings"));
+
+            } else {
+                // pop a dialog
+                switch (preset) {
+                    case preset_t::Print:
+                    break;
+                    case preset_t::Material:
+                    break;
+                    case preset_t::Printer:
+                    break;
+                    default:; // do nothing
+                        return;
+                }
+            }
+        
+        }
+    };
+    SLIC3RAPP->CallAfter(cbfunc); 
+
+}
+
+Preset* Plater::selected_presets(preset_t preset) {
+    auto& preset_list {SLIC3RAPP->presets.at(static_cast<int>(preset))};
+    auto sel = this->preset_choosers.at(static_cast<int>(preset))->GetSelection();
+    if (sel == -1) sel = 0;
+
+    // Retrieve the string associated with this
+    auto preset_name {this->preset_choosers.at(static_cast<int>(preset))->GetString(sel)};
+    auto iter = std::find(preset_list.begin(), preset_list.end(), preset_name);
+    if (iter == preset_list.end()) { 
+        Slic3r::Log::warn(LogChannel, LOG_WSTRING(preset_name + LOG_WSTRING(" not found in Presets list.")));
+        iter = preset_list.begin(); // get the first one if not found for some reason.
+    }
+    return &(*iter);
+}
+
+std::vector<Preset*> Plater::selected_presets() {
+    std::vector<Preset*> tmp(static_cast<int>(preset_t::Last)); // preallocate
+    for (uint8_t i = 0; i < static_cast<uint8_t>(preset_t::Last); i++) {
+        tmp[i] = selected_presets(static_cast<preset_t>(i));
+    }
+    return tmp;
+}
+
 void Plater::load_presets() {
 
     for (auto group : {preset_t::Printer, preset_t::Material, preset_t::Print}) {

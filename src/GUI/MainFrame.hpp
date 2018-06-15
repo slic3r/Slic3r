@@ -33,6 +33,9 @@ public:
 
     bool has_plater_menu() { return this->plater_menu != nullptr; }
     wxMenu* plater_select_menu {nullptr};
+    wxAuiNotebook* tabs() { return tabpanel; }
+
+    std::map<preset_t, PresetEditor*> preset_editor_tabs;
 private:
     wxDECLARE_EVENT_TABLE();
 
@@ -49,7 +52,6 @@ private:
 
     wxMenu* plater_menu {nullptr};
 
-    std::map<wxWindowID, PresetEditor*> preset_editor_tabs;
 
     void on_plater_object_list_changed(bool force) {};
     void on_plater_selection_changed(bool force) {};

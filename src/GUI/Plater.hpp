@@ -98,6 +98,8 @@ public:
     /// Create menu for object.
     wxMenu* object_menu();
 
+
+    /// Retrieve the identifier for the currently selected preset.
     void undo() {};
     void redo() {};
 
@@ -109,6 +111,11 @@ public:
     void export_amf() {};
     void export_tmf() {};
     void export_stl() {};
+
+    /// Return a reference to the currently selected preset for a group.
+    Preset* selected_presets(preset_t preset);
+    /// Return a reference to all currently selected presets.
+    std::vector<Preset*> selected_presets();
 private:
     std::shared_ptr<Slic3r::Print> print {std::make_shared<Print>(Slic3r::Print())};
     std::shared_ptr<Slic3r::Model> model {std::make_shared<Model>(Slic3r::Model())};
@@ -253,7 +260,7 @@ private:
     std::vector<wxBitmapComboBox*> preset_choosers {preset_types, nullptr};
     void _on_change_combobox(preset_t preset, wxBitmapComboBox* choice);
 
-    void show_preset_editor(preset_t preset, unsigned int idx) { };
+    void show_preset_editor(preset_t preset, unsigned int idx);
 
     void _on_select_preset(preset_t preset) {};
     void load_presets();
