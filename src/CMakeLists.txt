@@ -54,7 +54,7 @@ set(GUI_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/GUI/)
 
 include_directories(${LIBDIR})
 include_directories(${LIBDIR}/libslic3r)
-include_directories(${LIBDIR}/Slic3r/GUI/)
+include_directories(${LIBDIR}/slic3r/GUI/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/standalone/)
 include_directories(${LIBDIR}/admesh/)
 include_directories(${LIBDIR}/BSpline/)
