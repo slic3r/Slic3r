@@ -1,4 +1,4 @@
-#include "GUI.hpp"
+#include "xsGUI.hpp"
 
 #if __APPLE__
 #import <IOKit/pwr_mgt/IOPMLib.h>
