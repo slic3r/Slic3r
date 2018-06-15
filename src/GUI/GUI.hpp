@@ -50,7 +50,7 @@ private:
 
 
 /// Quick reference to this app with its cast applied.
-#define SLIC3RAPP dynamic_cast<App*>(wxTheApp)
+#define SLIC3RAPP (dynamic_cast<App*>(wxTheApp))
 
 
 }} // namespace Slic3r::GUI

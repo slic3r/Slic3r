@@ -6,7 +6,8 @@
 
 namespace Slic3r { namespace GUI {
 
-/// Preset types list. We assign numbers to permit static_casts and use as preset tab indices
+/// Preset types list. We assign numbers to permit static_casts and use as preset tab indices.
+/// Don't skip numbers in the enumeration, we use this as an index into vectors (instead of using std::map).
 enum class preset_t : uint8_t {
     Print = 0, Material, Printer,
     Last // This MUST be the last enumeration. Don't use it for anything.

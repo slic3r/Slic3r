@@ -14,7 +14,7 @@ wxEND_EVENT_TABLE()
 
 MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
         : wxFrame(NULL, wxID_ANY, title, pos, size), loaded(false),
-        tabpanel(nullptr), controller(nullptr), plater(nullptr), preset_editor_tabs(std::map<wxWindowID, PresetEditor*>())
+        tabpanel(nullptr), controller(nullptr), plater(nullptr), preset_editor_tabs(std::map<preset_t, PresetEditor*>())
 {
     this->SetIcon(wxIcon(var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG));        
 
@@ -95,7 +95,7 @@ void MainFrame::init_tabpanel()
     panel->Bind(wxEVT_AUINOTEBOOK_PAGE_CLOSE, ([=](wxAuiNotebookEvent& e) 
     {
         if (typeid(panel) == typeid(Slic3r::GUI::PresetEditor)) {
-            wxDELETE(this->preset_editor_tabs[panel->GetId()]);
+            wxDELETE(this->preset_editor_tabs[dynamic_cast<PresetEditor*>(panel)->type()]);
         }
         wxTheApp->CallAfter([=] { this->tabpanel->SetSelection(0); });
     }), panel->GetId());

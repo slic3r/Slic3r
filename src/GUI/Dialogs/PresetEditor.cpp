@@ -76,6 +76,11 @@ void PresetEditor::_on_value_change(std::string opt_key) {
     } ); 
 }
 
+// TODO
+void PresetEditor::_on_select_preset(bool force) {
+}
+
+
 void PresetEditor::select_preset(int id, bool force) {
     this->_presets_choice->SetSelection(id);
     this->_on_select_preset(force);
@@ -115,6 +120,14 @@ void PresetEditor::reload_config() {
 
 // TODO
 void PresetEditor::reload_preset() {
+}
+
+// TODO
+void PresetEditor::_update_tree() {
+}
+
+// TODO
+void PresetEditor::load_presets() {
 }
 
 }} // namespace Slic3r::GUI
