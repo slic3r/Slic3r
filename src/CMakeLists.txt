@@ -4,6 +4,8 @@ project (slic3r)
 
 option(GUI_BUILD_TESTS "Build tests for Slic3r GUI." ON)
 option(SLIC3R_BUILD_TESTS "Build tests for libslic3r." ON)
+option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
+option(BUILD_EXTRUDE_TIN "Build and link the extrude-tin application." OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
 set(CMAKE_CXX_FLAGS "-g ${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE")
@@ -46,7 +48,6 @@ ELSE(CMAKE_HOST_APPLE)
 #    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -L.")
 ENDIF(CMAKE_HOST_APPLE)
 
-option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
 
 if(SLIC3R_STATIC)
     set(Boost_USE_STATIC_LIBS ON)
@@ -138,6 +139,8 @@ add_library(libslic3r STATIC
 )
 target_compile_features(libslic3r PUBLIC cxx_std_11)
 
+
+
 add_library(BSpline STATIC
     ${LIBDIR}/BSpline/BSpline.cpp
 )
@@ -167,6 +170,8 @@ add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/sweep/sweep.cc
 )
 
+
+
 set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/testableframe.cpp
     ${GUI_TESTDIR}/test_harness_gui.cpp
@@ -179,9 +184,6 @@ add_executable(slic3r slic3r.cpp)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
 
-#add_executable(extrude-tin utils/extrude-tin.cpp)
-#set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_START_STATIC 1)
-#set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_END_STATIC 1)
 
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -207,6 +209,18 @@ find_package(wxWidgets COMPONENTS net gl html aui adv core base)
 IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
 ENDIF(CMAKE_HOST_UNIX)
+
+# Libraries that Libslic3r itself depends on.
+set(LIBSLIC3R_DEPENDS
+    admesh
+    BSpline
+    clipper
+    expat
+    polypartition
+    poly2tri
+    ZipArchive
+    ${Boost_LIBRARIES}
+)
 
 
 IF(wxWidgets_FOUND)
@@ -287,7 +301,13 @@ ELSE(wxWidgets_FOUND)
     #skip gui when no wx included
 ENDIF(wxWidgets_FOUND)
 
-target_link_libraries (slic3r libslic3r admesh BSpline clipper expat polypartition poly2tri ZipArchive ${Boost_LIBRARIES})
+target_link_libraries (slic3r libslic3r ${LIBSLIC3R_DEPENDS})
+
+if (BUILD_EXTRUDE_TIN)
+    add_executable(extrude-tin utils/extrude-tin.cpp)
+    set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_START_STATIC 1)
+    set_target_properties(extrude-tin PROPERTIES LINK_SEARCH_END_STATIC 1)
+endif() 
 
 # Windows needs a compiled component for Boost.nowide
 IF (WIN32)
@@ -302,8 +322,10 @@ IF (WIN32)
     # deal with it.
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
        set(CMAKE_EXE_LINKER_FLAGS "-Wl,--allow-multiple-definition")
-    endif()   
-#    target_link_libraries(extrude-tin boost-nowide)
+    endif()
+    if (BUILD_EXTRUDE_TIN)
+        target_link_libraries(extrude-tin boost-nowide)
+    endif()
 ENDIF(WIN32)
 
 
@@ -339,9 +361,9 @@ if (SLIC3R_BUILD_TESTS)
     endif()
     add_executable(slic3r_test ${SLIC3R_TEST_SOURCES}) 
     add_test(NAME TestSlic3r COMMAND slic3r_test)
-    target_link_libraries(slic3r_test PUBLIC libslic3r Catch admesh BSpline clipper expat polypartition poly2tri ZipArchive ${Boost_LIBRARIES})
+    target_link_libraries(slic3r_test PUBLIC libslic3r Catch ${LIBSLIC3R_DEPENDS})
 endif()
 
-
-
-#target_link_libraries (extrude-tin libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
+if (BUILD_EXTRUDE_TIN)
+    target_link_libraries (extrude-tin libslic3r ${LIBSLIC3R_DEPENDS})
+endif()
