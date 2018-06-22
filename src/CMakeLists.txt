@@ -339,7 +339,7 @@ if (SLIC3R_BUILD_TESTS)
     endif()
     add_executable(slic3r_test ${SLIC3R_TEST_SOURCES}) 
     add_test(NAME TestSlic3r COMMAND slic3r_test)
-    target_link_libraries(slic3r_test PUBLIC libslic3r Catch)
+    target_link_libraries(slic3r_test PUBLIC libslic3r Catch admesh BSpline clipper expat polypartition poly2tri ZipArchive ${Boost_LIBRARIES})
 endif()
 
 
