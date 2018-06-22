@@ -18,7 +18,7 @@ SCENARIO( "GUI Checkbox option items fire their on_change event when clicked and
         wxTheApp->GetTopWindow()->Show();
         wxTheApp->GetTopWindow()->Fit();
         test_field->disable_change_event = false;
-        auto changefunc {[exec_counter](const std::string& opt_id, bool value) { std::cout << *exec_counter << " " ; *exec_counter += 1; std::cout << "Executing On_Action " << *exec_counter << "\n"; }};
+        auto changefunc {[exec_counter](const std::string& opt_id, bool value) { *exec_counter += 1; }};
         test_field->on_change = changefunc;
 
         WHEN ( "the box is checked") {
@@ -51,5 +51,44 @@ SCENARIO( "GUI Checkbox option items fire their on_change event when clicked and
         }
         delete test_field;
         delete exec_counter;
+    }
+    GIVEN( "A checkbox field item and disable_change = true") {
+        int exec_counter {0};
+        auto changefunc {[&exec_counter] (const std::string& opt_id, bool value) { exec_counter++; }};
+        auto* test_field {new Slic3r::GUI::UI_Checkbox(wxTheApp->GetTopWindow(), wxID_ANY)};
+        wxTheApp->GetTopWindow()->Show();
+        wxTheApp->GetTopWindow()->Fit();
+        test_field->disable_change_event = true;
+        test_field->on_change = changefunc;
+
+        WHEN ( "the box is checked") {
+            exec_counter = 0;
+            sim.MouseMove(test_field->check()->GetScreenPosition() + wxPoint(10, 10));
+            wxYield();
+            sim.MouseMove(test_field->check()->GetScreenPosition() + wxPoint(10, 10));
+            wxYield();
+            sim.MouseClick(wxMOUSE_BTN_LEFT);
+            wxYield();
+            sim.MouseClick(wxMOUSE_BTN_LEFT);
+            wxYield();
+            THEN ( "on_change is not executed.") {
+                REQUIRE(exec_counter == 0);
+            }
+        }
+        WHEN ( "the box is unchecked") {
+            exec_counter = 0;
+            sim.MouseMove(test_field->check()->GetScreenPosition() + wxPoint(10, 10));
+            wxYield();
+            sim.MouseMove(test_field->check()->GetScreenPosition() + wxPoint(10, 10));
+            wxYield();
+            sim.MouseClick(wxMOUSE_BTN_LEFT);
+            wxYield();
+            sim.MouseClick(wxMOUSE_BTN_LEFT);
+            wxYield();
+            THEN ( "on_change is not executed.") {
+                REQUIRE(exec_counter == 0);
+            }
+        }
+        delete test_field;
     }
 }
