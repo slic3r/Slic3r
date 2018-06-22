@@ -249,11 +249,14 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/GUI.cpp
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/Plater.cpp
+    ${GUI_LIBDIR}/Scene3D.cpp
     ${GUI_LIBDIR}/Plater/Plate2D.cpp
+    ${GUI_LIBDIR}/Plater/Plate3D.cpp
     ${GUI_LIBDIR}/Plater/PlaterObject.cpp
     ${GUI_LIBDIR}/ProgressStatusBar.cpp
     ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
+    ${LIBDIR}/slic3r/GUI/3DScene.cpp
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
     #only build GUI lib if building with wx
@@ -301,7 +304,8 @@ ELSE(wxWidgets_FOUND)
     #skip gui when no wx included
 ENDIF(wxWidgets_FOUND)
 
-target_link_libraries (slic3r libslic3r ${LIBSLIC3R_DEPENDS})
+find_package(OpenGL)
+target_link_libraries (slic3r libslic3r ${LIBSLIC3R_DEPENDS} ${OPENGL_LIBRARIES})
 
 if (BUILD_EXTRUDE_TIN)
     add_executable(extrude-tin utils/extrude-tin.cpp)
