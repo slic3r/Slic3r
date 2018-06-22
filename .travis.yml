@@ -6,6 +6,7 @@ script:
     - mkdir build && cd build
     - cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON ../src
     - cmake --build .
+    - ctest .
 branches:
   only:
   - master
