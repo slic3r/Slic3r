@@ -500,7 +500,8 @@ void Plater::on_model_change(bool force_autocenter) {
         auto* menu = this->GetFrame()->plater_select_menu;
 
         if (menu != nullptr) {
-            for (auto* item : menu->GetMenuItems() ) { menu->Delete(item); }
+            auto list = menu->GetMenuItems();
+            for (auto it = list.begin();it!=list.end(); it++) { menu->Delete(*it); }
             for (const auto& obj : this->objects) {
                 const auto idx {obj.identifier};
                 auto name {wxString(obj.name)};
