@@ -1,12 +1,14 @@
 language: generic
 before_install:
     - sh package/linux/travis-decrypt-key
+    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
 script:
     - bash package/linux/travis-setup.sh
     - mkdir build && cd build
     - cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON ../src
     - cmake --build .
-    - xvfb-run ctest .
+    - ctest . -R TestSlic3r
+    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ctest . -R TestGUI; fi
 branches:
   only:
   - master
