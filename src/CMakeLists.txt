@@ -20,6 +20,12 @@ if(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
     set(CMAKE_CXX_FLAGS "-DVAR_ABS_PATH=$ENV{SLIC3R_VAR_ABS_PATH}")
 endif(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
 
+if($ENV{TRAVIS})
+    if($ENV{TRAVIS} STREQUAL "true")
+        message(STATUS "Building on Travis-CI.")
+        set(IS_TRAVIS_BUILD TRUE)
+    endif()
+endif()
 
 execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION ERROR_QUIET)
 
