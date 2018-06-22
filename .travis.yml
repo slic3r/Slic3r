@@ -8,7 +8,7 @@ script:
     - cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON ../src
     - cmake --build .
     - ctest . -R TestSlic3r
-    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ctest . -R TestGUI; fi
+#    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ctest . -R TestGUI; fi
 branches:
   only:
   - master
