@@ -172,7 +172,9 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_harness_gui.cpp
     ${GUI_TESTDIR}/test_field_checkbox.cpp
 )
-
+set(SLIC3R_TEST_SOURCES
+    ${TESTDIR}/test_harness.cpp
+)
 add_executable(slic3r slic3r.cpp)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
@@ -276,9 +278,8 @@ IF(wxWidgets_FOUND)
             target_compile_definitions(Catch INTERFACE $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CXX17_UNCAUGHT_EXCEPTION_DEPRECATION_WARNING>)
         endif()
         add_executable(gui_test ${UI_TEST_SOURCES}) 
-        add_test(NAME TestBase COMMAND gui_test)
+        add_test(NAME TestGUI COMMAND gui_test)
         target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES})
-
     endif()
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
@@ -306,7 +307,40 @@ IF (WIN32)
 ENDIF(WIN32)
 
 
-
+if (SLIC3R_BUILD_TESTS)
+    enable_testing()
+    if (NOT TARGET Catch)
+        include (ExternalProject)
+        if(IS_TRAVIS_BUILD)     # on travis, use git for fetching instead of wget
+            set(FETCH_EXTERNAL_CATCH
+                GIT_REPOSITORY https://github.com/philsquared/Catch.git
+                GIT_TAG 19ab2117c5bac2f376f8da4a4b25e183137bcec0)
+        elseif(WIN32)
+            set(FETCH_EXTERNAL_CATCH
+                URL https://github.com/catchorg/Catch2/archive/v2.0.1.zip
+                URL_HASH MD5=1abca1b324b99b1631e999119b172620)
+        else()
+            set(FETCH_EXTERNAL_CATCH
+                URL https://github.com/catchorg/Catch2/archive/v2.0.1.tar.gz
+                URL_HASH MD5=2080f4696579351d9323b3b5a8c3c71b)
+        endif()
+        ExternalProject_Add(Catch-External
+            PREFIX ${CMAKE_BINARY_DIR}/external/Catch
+            ${FETCH_EXTERNAL_CATCH}
+            CONFIGURE_COMMAND ""
+            BUILD_COMMAND ""
+            INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/external/Catch/src/Catch-External/single_include/catch.hpp
+                                                     ${CMAKE_BINARY_DIR}/external/Catch/include/catch.hpp
+        )
+        add_library(Catch INTERFACE)
+        add_dependencies(Catch Catch-External)
+        target_include_directories(Catch INTERFACE ${CMAKE_BINARY_DIR}/external/Catch/include)
+        target_compile_definitions(Catch INTERFACE $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CXX17_UNCAUGHT_EXCEPTION_DEPRECATION_WARNING>)
+    endif()
+    add_executable(slic3r_test ${SLIC3R_TEST_SOURCES}) 
+    add_test(NAME TestSlic3r COMMAND slic3r_test)
+    target_link_libraries(slic3r_test PUBLIC libslic3r Catch)
+endif()
 
 
 

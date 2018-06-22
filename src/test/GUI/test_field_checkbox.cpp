@@ -1,4 +1,4 @@
-#include "test/catch.hpp"
+#include <catch.hpp>
 
 #ifndef WX_PRECOMP
     #include "wx/app.h"
