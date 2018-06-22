@@ -1,6 +1,8 @@
 language: generic
 before_install:
     - sh package/linux/travis-decrypt-key
+    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
+    - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then sh -e /etc/init.d/xvfb start; fi
 script:
     - bash package/linux/travis-setup.sh
     - mkdir build && cd build
@@ -46,6 +48,7 @@ matrix:
             - CC=gcc-7
             - CXX=g++-7
             - BOOST_DIR=$HOME/boost_1_63_0
+            - DISPLAY=:99.0
           after_success:
             - cp slic3r ../
             - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
@@ -57,6 +60,7 @@ matrix:
           env:
             - WXVERSION=pkg
             - BOOST_DIR=$HOME/boost_1_63_0
+            - DISPLAY=:99.0
 env:
   global:
   - secure: eEVRZNMv7FM6jrOU9iAFkDhWxFQ1WtHBEaObImcvtFUxy6vWSt3ehFFeTRouj3uHQAnbvUzziDyvPPm8/95alv5g/du8ML6YzzqKBKfazM0xQ7SF6R2DQL8lfFIp+RSV7T02byEP1f1g7Zva7xH9szIlDcSfU0pXW4KWbkBFMd8=
