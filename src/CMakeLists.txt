@@ -2,6 +2,9 @@ cmake_minimum_required (VERSION 3.9)
 project (slic3r)
 
 
+option(GUI_BUILD_TESTS "Build tests for Slic3r GUI." ON)
+option(SLIC3R_BUILD_TESTS "Build tests for libslic3r." ON)
+
 # only on newer GCCs: -ftemplate-backtrace-limit=0
 set(CMAKE_CXX_FLAGS "-g ${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE")
 
@@ -37,13 +40,15 @@ ELSE(CMAKE_HOST_APPLE)
 #    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -L.")
 ENDIF(CMAKE_HOST_APPLE)
 
-if(DEFINED ENV{SLIC3R_STATIC})
+option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
+
+if(SLIC3R_STATIC)
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_STATIC_RUNTIME ON)
-else(DEFINED ENV{SLIC3R_STATIC})
+else(SLIC3R_STATIC)
     set(Boost_USE_STATIC_LIBS OFF)
     set(Boost_USE_STATIC_RUNTIME OFF)
-endif(DEFINED ENV{SLIC3R_STATIC})
+endif(SLIC3R_STATIC)
 
 find_package(Threads REQUIRED)
 
@@ -51,6 +56,8 @@ find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
 set(GUI_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/GUI/)
+set(TESTDIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
+set(GUI_TESTDIR ${CMAKE_CURRENT_SOURCE_DIR}/test/GUI/)
 
 include_directories(${LIBDIR})
 include_directories(${LIBDIR}/libslic3r)
@@ -154,6 +161,12 @@ add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/sweep/sweep.cc
 )
 
+set(UI_TEST_SOURCES
+    ${GUI_TESTDIR}/testableframe.cpp
+    ${GUI_TESTDIR}/test_harness_gui.cpp
+    ${GUI_TESTDIR}/test_field_checkbox.cpp
+)
+
 add_executable(slic3r slic3r.cpp)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
@@ -224,6 +237,43 @@ IF(wxWidgets_FOUND)
     #only build GUI lib if building with wx
     target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_WX")
+
+    if (GUI_BUILD_TESTS)
+        enable_testing()
+        if (NOT TARGET Catch)
+            include (ExternalProject)
+            if(IS_TRAVIS_BUILD)     # on travis, use git for fetching instead of wget
+                set(FETCH_EXTERNAL_CATCH
+                    GIT_REPOSITORY https://github.com/philsquared/Catch.git
+                    GIT_TAG 19ab2117c5bac2f376f8da4a4b25e183137bcec0)
+            elseif(WIN32)
+                set(FETCH_EXTERNAL_CATCH
+                    URL https://github.com/catchorg/Catch2/archive/v2.0.1.zip
+                    URL_HASH MD5=1abca1b324b99b1631e999119b172620)
+            else()
+                set(FETCH_EXTERNAL_CATCH
+                    URL https://github.com/catchorg/Catch2/archive/v2.0.1.tar.gz
+                    URL_HASH MD5=2080f4696579351d9323b3b5a8c3c71b)
+            endif()
+            ExternalProject_Add(Catch-External
+                PREFIX ${CMAKE_BINARY_DIR}/external/Catch
+                ${FETCH_EXTERNAL_CATCH}
+                CONFIGURE_COMMAND ""
+                BUILD_COMMAND ""
+                INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/external/Catch/src/Catch-External/single_include/catch.hpp
+                                                         ${CMAKE_BINARY_DIR}/external/Catch/include/catch.hpp
+            )
+            add_library(Catch INTERFACE)
+            add_dependencies(Catch Catch-External)
+
+            target_include_directories(Catch INTERFACE ${CMAKE_BINARY_DIR}/external/Catch/include)
+            target_compile_definitions(Catch INTERFACE $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CXX17_UNCAUGHT_EXCEPTION_DEPRECATION_WARNING>)
+        endif()
+        add_executable(gui_test ${UI_TEST_SOURCES}) 
+        add_test(NAME TestBase COMMAND gui_test)
+        target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES})
+
+    endif()
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
     MESSAGE("wx not found!")
@@ -248,5 +298,10 @@ IF (WIN32)
     endif()   
 #    target_link_libraries(extrude-tin boost-nowide)
 ENDIF(WIN32)
+
+
+
+
+
 
 #target_link_libraries (extrude-tin libslic3r admesh BSpline clipper expat polypartition poly2tri ${Boost_LIBRARIES})
