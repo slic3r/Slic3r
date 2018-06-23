@@ -46,7 +46,7 @@ void Plate3D::update(){
             } 
         }
     }
-
+    color_volumes();
 }
 
 void Plate3D::color_volumes(){
@@ -59,8 +59,9 @@ void Plate3D::color_volumes(){
                 if(object.selected){
                     rendervolume.color = ui_settings->color->SELECTED_COLOR();
                 }else{
-                    rendervolume.color = wxColor(255,255,0);//ui_settings->color->COLOR_PARTS(); <- invisible because alpha is 1 (out of 255)
+                    rendervolume.color = ui_settings->color->COLOR_PARTS();
                 }
+                i++;
             } 
         }
     }
@@ -74,7 +75,7 @@ void Plate3D::before_render(){
 
     //glDisable(GL_MULTISAMPLE) if ($self->{can_multisample});
     glDisable(GL_LIGHTING);
-    uint i = 0;
+    uint i = 1;
     for(Volume &volume : volumes){
         volume.color = wxColor((i>>16)&0xFF,(i>>8)&0xFF,i&0xFF);
         i++;
@@ -82,16 +83,16 @@ void Plate3D::before_render(){
     draw_volumes();
     glFlush();
     glFinish();
-    GLubyte color[4] = {0,0,0,0}; 
-    glReadPixels(pos.x, /*offset*/GetSize().GetHeight()-  pos.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, color);
+    GLubyte color[4] = {0,0,0,0};
+    glReadPixels(pos.x, GetSize().GetHeight()-  pos.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, color);
 
-    uint index = color[0] + (color[1]<<8) + (color[2]<<16);
+    uint index = (color[0]<<16) + (color[1]<<8) + color[2];
     hover = false;
     ///*$self->_hover_volume_idx(undef);
     //$_->hover(0) for @{$self->volumes};
-    if (index < volumes.size()) {
+    if (index != 0 && index <= volumes.size()) {
         hover = true;
-        hover_volume = index;
+        hover_volume = index - 1;
         /*
         $self->volumes->[$volume_idx]->hover(1);
         my $group_id = $self->volumes->[$volume_idx]->select_group_id;
@@ -105,7 +106,7 @@ void Plate3D::before_render(){
     glFlush();
     glFinish();
     glEnable(GL_LIGHTING);
-    color_volumes();    
+    color_volumes();
     mouse = false;
 }
 
