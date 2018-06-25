@@ -88,6 +88,9 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
     canvas3D = new Plate3D(preview_notebook, wxDefaultSize, objects, model, config);
     preview_notebook->AddPage(canvas3D, _("3D"));
 
+    canvas3D->on_select_object = std::function<void (ObjIdx obj_idx)>(on_select_object);
+    canvas3D->on_instances_moved = std::function<void ()>(on_instances_moved);
+    
     preview3D = new Preview3D(preview_notebook, wxDefaultSize, objects, model, config);
     preview_notebook->AddPage(preview3D, _("Preview"));
 
@@ -494,6 +497,7 @@ void Plater::arrange() {
 }
 
 void Plater::on_model_change(bool force_autocenter) {
+    Log::info(LogChannel, L"Called on_modal_change");
 
     // reload the select submenu (if already initialized)
     {
@@ -562,6 +566,7 @@ void Plater::select_object() {
 void Plater::selection_changed() {
     // Remove selection in 2D plater
     this->canvas2D->set_selected(-1, -1);
+    this->canvas3D->selection_changed();
 
     auto obj = this->selected_object();
     bool have_sel {obj != this->objects.end()};

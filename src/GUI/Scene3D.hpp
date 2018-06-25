@@ -39,6 +39,7 @@ private:
     void draw_ground();
     void draw_axes(Pointf3 center, float length, int width, bool alwaysvisible);
 protected:
+    Linef3 mouse_ray(Point win);
     void draw_volumes();
     virtual void mouse_up(wxMouseEvent &e); 
     virtual void mouse_move(wxMouseEvent &e);

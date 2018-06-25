@@ -47,7 +47,7 @@ float clamp(float low, float x, float high){
     return x;
 }
 
-Linef3 mouse_ray(Point win){
+Linef3 Scene3D::mouse_ray(Point win){
     GLdouble proj[16], mview[16]; 
     glGetDoublev(GL_MODELVIEW_MATRIX, mview);
     glGetDoublev(GL_PROJECTION_MATRIX, proj);
