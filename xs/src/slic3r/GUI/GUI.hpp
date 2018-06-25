@@ -5,6 +5,9 @@
 #include <vector>
 #include "Config.hpp"
 
+#include <wx/intl.h>
+#include <wx/string.h>
+
 class wxApp;
 class wxWindow;
 class wxFrame;
@@ -26,8 +29,15 @@ namespace Slic3r {
 class PresetBundle;
 class PresetCollection;
 class AppConfig;
+class PresetUpdater;
 class DynamicPrintConfig;
 class TabIface;
+
+#define _(s)    Slic3r::translate((s))
+inline wxString translate(const char *s)    	 { return wxGetTranslation(wxString(s, wxConvUTF8)); }
+inline wxString translate(const wchar_t *s) 	 { return wxGetTranslation(s); }
+inline wxString translate(const std::string &s)  { return wxGetTranslation(wxString(s.c_str(), wxConvUTF8)); }
+inline wxString translate(const std::wstring &s) { return wxGetTranslation(s.c_str()); }
 
 // !!! If you needed to translate some wxString,
 // !!! please use _(L(string))
@@ -67,7 +77,6 @@ inline t_file_wild_card& get_file_wild_card() {
 
 void disable_screensaver();
 void enable_screensaver();
-std::vector<std::string> scan_serial_ports();
 bool debugged();
 void break_to_debugger();
 
@@ -77,18 +86,35 @@ void set_main_frame(wxFrame *main_frame);
 void set_tab_panel(wxNotebook *tab_panel);
 void set_app_config(AppConfig *app_config);
 void set_preset_bundle(PresetBundle *preset_bundle);
+void set_preset_updater(PresetUpdater *updater);
 
 AppConfig*	get_app_config();
 wxApp*		get_app();
+PresetBundle* get_preset_bundle();
 
-const wxColour& get_modified_label_clr();
-const wxColour& get_sys_label_clr();
+const wxColour& get_label_clr_modified();
+const wxColour& get_label_clr_sys();
+const wxColour& get_label_clr_default();
 unsigned get_colour_approx_luma(const wxColour &colour);
+void set_label_clr_modified(const wxColour& clr);
+void set_label_clr_sys(const wxColour& clr);
 
-void add_debug_menu(wxMenuBar *menu, int event_language_change);
+extern void add_menus(wxMenuBar *menu, int event_preferences_changed, int event_language_change);
+
+// This is called when closing the application, when loading a config file or when starting the config wizard
+// to notify the user whether he is aware that some preset changes will be lost.
+extern bool check_unsaved_changes();
+
+// Checks if configuration wizard needs to run, calls config_wizard if so.
+// Returns whether the Wizard ran.
+extern bool config_wizard_startup(bool app_config_exists);
+
+// Opens the configuration wizard, returns true if wizard is finished & accepted.
+// The run_reason argument is actually ConfigWizard::RunReason, but int is used here because of Perl.
+extern void config_wizard(int run_reason);
 
 // Create "Preferences" dialog after selecting menu "Preferences" in Perl part
-void open_preferences_dialog(int event_preferences);
+extern void open_preferences_dialog(int event_preferences);
 
 // Create a new preset tab (print, filament and printer),
 void create_preset_tabs(bool no_controller, int event_value_change, int event_presets_changed);
@@ -99,7 +125,11 @@ void add_created_tab(Tab* panel);
 // Change option value in config
 void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt_key, const boost::any& value, int opt_index = 0);
 
+// Update UI / Tabs to reflect changes in the currently loaded presets
+void load_current_presets();
+
 void show_error(wxWindow* parent, const wxString& message);
+void show_error_id(int id, const std::string& message);   // For Perl
 void show_info(wxWindow* parent, const wxString& message, const wxString& title);
 void warning_catcher(wxWindow* parent, const wxString& message);
 
@@ -138,7 +168,16 @@ wxButton*			get_wiping_dialog_button();
 
 void add_export_option(wxFileDialog* dlg, const std::string& format);
 int get_export_option(wxFileDialog* dlg);
-}
-}
+
+// Returns the dimensions of the screen on which the main frame is displayed
+void get_current_screen_size(unsigned &width, unsigned &height);
+
+// Display an About dialog
+extern void about();
+// Ask the destop to open the datadir using the default file explorer.
+extern void desktop_open_datadir_folder();
+
+} // namespace GUI
+} // namespace Slic3r
 
 #endif

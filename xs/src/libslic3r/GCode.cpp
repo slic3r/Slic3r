@@ -789,14 +789,19 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
     }
 
     // Process filament-specific gcode in extruder order.
-    if (print.config.single_extruder_multi_material) {
-        // Process the end_filament_gcode for the active filament only.
-        _writeln(file, this->placeholder_parser_process("end_filament_gcode", print.config.end_filament_gcode.get_at(m_writer.extruder()->id()), m_writer.extruder()->id()));
-    } else {
-        for (const std::string &end_gcode : print.config.end_filament_gcode.values)
-            _writeln(file, this->placeholder_parser_process("end_filament_gcode", end_gcode, (unsigned int)(&end_gcode - &print.config.end_filament_gcode.values.front())));
+    {
+        DynamicConfig config;
+        config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index));
+        config.set_key_value("layer_z",   new ConfigOptionFloat(m_writer.get_position().z - m_config.z_offset.value));
+        if (print.config.single_extruder_multi_material) {
+            // Process the end_filament_gcode for the active filament only.
+            _writeln(file, this->placeholder_parser_process("end_filament_gcode", print.config.end_filament_gcode.get_at(m_writer.extruder()->id()), m_writer.extruder()->id(), &config));
+        } else {
+            for (const std::string &end_gcode : print.config.end_filament_gcode.values)
+                _writeln(file, this->placeholder_parser_process("end_filament_gcode", end_gcode, (unsigned int)(&end_gcode - &print.config.end_filament_gcode.values.front()), &config));
+        }
+        _writeln(file, this->placeholder_parser_process("end_gcode", print.config.end_gcode, m_writer.extruder()->id(), &config));
     }
-    _writeln(file, this->placeholder_parser_process("end_gcode", print.config.end_gcode, m_writer.extruder()->id()));
     _write(file, m_writer.update_progress(m_layer_count, m_layer_count, true)); // 100%
     _write(file, m_writer.postamble());
 
@@ -1287,6 +1292,10 @@ void GCode::process_layer(
         gcode += (layer_tools.has_wipe_tower && m_wipe_tower) ?
             m_wipe_tower->tool_change(*this, extruder_id, extruder_id == layer_tools.extruders.back()) :
             this->set_extruder(extruder_id);
+
+        // let analyzer tag generator aware of a role type change
+        if (m_enable_analyzer && layer_tools.has_wipe_tower && m_wipe_tower)
+            m_last_analyzer_extrusion_role = erWipeTower;
 
         if (extrude_skirt) {
             auto loops_it = skirt_loops_per_extruder.find(extruder_id);
@@ -2182,7 +2191,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
     double F = speed * 60;  // convert mm/sec to mm/min
     
     // extrude arc or line
-    if (m_enable_extrusion_role_markers || m_enable_analyzer)
+    if (m_enable_extrusion_role_markers)
     {
         if (path.role() != m_last_extrusion_role)
         {
@@ -2193,18 +2202,20 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
                 sprintf(buf, ";_EXTRUSION_ROLE:%d\n", int(m_last_extrusion_role));
                 gcode += buf;
             }
-            if (m_enable_analyzer)
-            {
-                char buf[32];
-                sprintf(buf, ";%s%d\n", GCodeAnalyzer::Extrusion_Role_Tag.c_str(), int(m_last_extrusion_role));
-                gcode += buf;
-            }
         }
     }
 
     // adds analyzer tags and updates analyzer's tracking data
     if (m_enable_analyzer)
     {
+        if (path.role() != m_last_analyzer_extrusion_role)
+        {
+            m_last_analyzer_extrusion_role = path.role();
+            char buf[32];
+            sprintf(buf, ";%s%d\n", GCodeAnalyzer::Extrusion_Role_Tag.c_str(), int(m_last_analyzer_extrusion_role));
+            gcode += buf;
+        }
+
         if (m_last_mm3_per_mm != path.mm3_per_mm)
         {
             m_last_mm3_per_mm = path.mm3_per_mm;
@@ -2242,6 +2253,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         if (path.role() == erExternalPerimeter)
             comment += ";_EXTERNAL_PERIMETER";
     }
+
     // F is mm per minute.
     gcode += m_writer.set_speed(F, "", comment);
     double path_length = 0.;

@@ -2,12 +2,7 @@
 #include <wx/dcbuffer.h>
 
 #include "RammingChart.hpp"
-
-
-//! macro used to mark string used at localization,
-//! return same string
-#define L(s) s
-
+#include "GUI.hpp"
 
 
 wxDEFINE_EVENT(EVT_WIPE_TOWER_CHART_CHANGED, wxCommandEvent);
@@ -25,7 +20,7 @@ void Chart::draw() {
     dc.DrawRectangle(m_rect);
     
     if (visible_area.m_width < 0.499) {
-        dc.DrawText("NO RAMMING AT ALL",wxPoint(m_rect.GetLeft()+m_rect.GetWidth()/2-50,m_rect.GetBottom()-m_rect.GetHeight()/2));
+        dc.DrawText(_(L("NO RAMMING AT ALL")),wxPoint(m_rect.GetLeft()+m_rect.GetWidth()/2-50,m_rect.GetBottom()-m_rect.GetHeight()/2));
         return;
     }
     
@@ -78,12 +73,12 @@ void Chart::draw() {
     }
     
     // axis labels:
-    wxString label = L("Time (s)");
+    wxString label = _(L("Time")) + " ("+_(L("s"))+")";
     int text_width = 0;
     int text_height = 0;
     dc.GetTextExtent(label,&text_width,&text_height);
     dc.DrawText(label,wxPoint(0.5*(m_rect.GetRight()+m_rect.GetLeft())-text_width/2.f, m_rect.GetBottom()+25));
-    label = L("Volumetric speed (mm\u00B3/s)");
+    label = _(L("Volumetric speed")) + " (" + _(L("mm")) + wxString("³/", wxConvUTF8) + _(L("s")) + ")";
     dc.GetTextExtent(label,&text_width,&text_height);
     dc.DrawRotatedText(label,wxPoint(0,0.5*(m_rect.GetBottom()+m_rect.GetTop())+text_width/2.f),90);
 }

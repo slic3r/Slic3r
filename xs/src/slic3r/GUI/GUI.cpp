@@ -4,11 +4,8 @@
 #include <assert.h>
 #include <cmath>
 
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 
 #if __APPLE__
@@ -25,7 +22,6 @@
 #undef max
 #endif
 #include "boost/nowide/convert.hpp"
-#pragma comment(lib, "user32.lib")
 #endif
 
 #include <wx/app.h>
@@ -39,16 +35,28 @@
 #include <wx/sizer.h>
 #include <wx/combo.h>
 #include <wx/window.h>
+#include <wx/msgdlg.h>
 #include <wx/settings.h>
+#include <wx/display.h>
 
 #include "wxExtensions.hpp"
 
 #include "Tab.hpp"
 #include "TabIface.hpp"
+#include "AboutDialog.hpp"
 #include "AppConfig.hpp"
+#include "ConfigSnapshotDialog.hpp"
 #include "Utils.hpp"
+#include "MsgDialog.hpp"
+#include "ConfigWizard.hpp"
 #include "Preferences.hpp"
 #include "PresetBundle.hpp"
+#include "UpdateDialogs.hpp"
+#include "FirmwareDialog.hpp"
+
+#include "../Utils/PresetUpdater.hpp"
+#include "../Config/Snapshot.hpp"
+
 
 namespace Slic3r { namespace GUI {
 
@@ -77,83 +85,6 @@ void enable_screensaver()
     #endif
 }
 
-std::vector<std::string> scan_serial_ports()
-{
-    std::vector<std::string> out;
-#ifdef _WIN32
-    // 1) Open the registry key SERIALCOM.
-    HKEY hKey;
-    LONG lRes = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"HARDWARE\\DEVICEMAP\\SERIALCOMM", 0, KEY_READ, &hKey);
-    assert(lRes == ERROR_SUCCESS);
-    if (lRes == ERROR_SUCCESS) {
-        // 2) Get number of values of SERIALCOM key.
-        DWORD        cValues;                   // number of values for key 
-        {
-            TCHAR    achKey[255];               // buffer for subkey name
-            DWORD    cbName;                    // size of name string 
-            TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name 
-            DWORD    cchClassName = MAX_PATH;   // size of class string 
-            DWORD    cSubKeys=0;                // number of subkeys 
-            DWORD    cbMaxSubKey;               // longest subkey size 
-            DWORD    cchMaxClass;               // longest class string 
-            DWORD    cchMaxValue;               // longest value name 
-            DWORD    cbMaxValueData;            // longest value data 
-            DWORD    cbSecurityDescriptor;      // size of security descriptor 
-            FILETIME ftLastWriteTime;           // last write time 
-            // Get the class name and the value count.
-            lRes = RegQueryInfoKey(
-                hKey,                    // key handle 
-                achClass,                // buffer for class name 
-                &cchClassName,           // size of class string 
-                NULL,                    // reserved 
-                &cSubKeys,               // number of subkeys 
-                &cbMaxSubKey,            // longest subkey size 
-                &cchMaxClass,            // longest class string 
-                &cValues,                // number of values for this key 
-                &cchMaxValue,            // longest value name 
-                &cbMaxValueData,         // longest value data 
-                &cbSecurityDescriptor,   // security descriptor 
-                &ftLastWriteTime);       // last write time
-            assert(lRes == ERROR_SUCCESS);
-        }
-        // 3) Read the SERIALCOM values.
-        {
-            DWORD dwIndex = 0;
-            for (int i = 0; i < cValues; ++ i, ++ dwIndex) {
-                wchar_t valueName[2048];
-                DWORD	valNameLen = 2048;
-                DWORD	dataType;
-				wchar_t data[2048];
-				DWORD	dataSize = 4096;
-				lRes = ::RegEnumValueW(hKey, dwIndex, valueName, &valNameLen, nullptr, &dataType, (BYTE*)&data, &dataSize);
-                if (lRes == ERROR_SUCCESS && dataType == REG_SZ && valueName[0] != 0)
-					out.emplace_back(boost::nowide::narrow(data));
-            }
-        }
-        ::RegCloseKey(hKey);
-    }
-#else
-    // UNIX and OS X
-    std::initializer_list<const char*> prefixes { "ttyUSB" , "ttyACM", "tty.", "cu.", "rfcomm" };
-    for (auto &dir_entry : boost::filesystem::directory_iterator(boost::filesystem::path("/dev"))) {
-        std::string name = dir_entry.path().filename().string();
-        for (const char *prefix : prefixes) {
-            if (boost::starts_with(name, prefix)) {
-                out.emplace_back(dir_entry.path().string());
-                break;
-            }
-        }
-    }
-#endif
-
-    out.erase(std::remove_if(out.begin(), out.end(), 
-        [](const std::string &key){ 
-            return boost::starts_with(key, "Bluetooth") || boost::starts_with(key, "FireFly"); 
-        }),
-        out.end());
-    return out;
-}
-
 bool debugged()
 {
     #ifdef _WIN32
@@ -177,8 +108,10 @@ wxFrame     *g_wxMainFrame  = nullptr;
 wxNotebook  *g_wxTabPanel   = nullptr;
 AppConfig	*g_AppConfig	= nullptr;
 PresetBundle *g_PresetBundle= nullptr;
+PresetUpdater *g_PresetUpdater = nullptr;
 wxColour    g_color_label_modified;
 wxColour    g_color_label_sys;
+wxColour    g_color_label_default;
 
 std::vector<Tab *> g_tabs_list;
 
@@ -192,11 +125,27 @@ static void init_label_colours()
 {
 	auto luma = get_colour_approx_luma(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 	if (luma >= 128) {
-		g_color_label_modified = wxColour(253, 88, 0);
+		g_color_label_modified = wxColour(252, 77, 1);
 		g_color_label_sys = wxColour(26, 132, 57);
 	} else {
 		g_color_label_modified = wxColour(253, 111, 40);
 		g_color_label_sys = wxColour(115, 220, 103);
+	}
+	g_color_label_default = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+}
+
+void update_label_colours_from_appconfig()
+{
+	if (g_AppConfig->has("label_clr_sys")){
+		auto str = g_AppConfig->get("label_clr_sys");
+		if (str != "")
+			g_color_label_sys = wxColour(str);
+	}
+	
+	if (g_AppConfig->has("label_clr_modified")){
+		auto str = g_AppConfig->get("label_clr_modified");
+		if (str != "")
+			g_color_label_modified = wxColour(str);
 	}
 }
 
@@ -224,6 +173,11 @@ void set_app_config(AppConfig *app_config)
 void set_preset_bundle(PresetBundle *preset_bundle)
 {
 	g_PresetBundle = preset_bundle;
+}
+
+void set_preset_updater(PresetUpdater *updater)
+{
+	g_PresetUpdater = updater;
 }
 
 std::vector<Tab *>& get_tabs_list()
@@ -277,22 +231,18 @@ bool select_language(wxArrayString & names,
 
 bool load_language()
 {
-	long language;
-	if (!g_AppConfig->has("translation_language"))
-		language = wxLANGUAGE_UNKNOWN;
-	else {
-		auto str_language = g_AppConfig->get("translation_language");
-		language = str_language != "" ? stol(str_language) : wxLANGUAGE_UNKNOWN;
-	}
+	wxString language = wxEmptyString;
+	if (g_AppConfig->has("translation_language"))
+		language = g_AppConfig->get("translation_language");
 
-	if (language == wxLANGUAGE_UNKNOWN) 
+	if (language.IsEmpty()) 
 		return false;
 	wxArrayString	names;
 	wxArrayLong		identifiers;
 	get_installed_languages(names, identifiers);
 	for (size_t i = 0; i < identifiers.Count(); i++)
 	{
-		if (identifiers[i] == language)
+		if (wxLocale::GetLanguageCanonicalName(identifiers[i]) == language)
 		{
 			g_wxLocale = new wxLocale;
 			g_wxLocale->Init(identifiers[i]);
@@ -307,12 +257,11 @@ bool load_language()
 
 void save_language()
 {
-	long language = wxLANGUAGE_UNKNOWN;
-	if (g_wxLocale)	{
-		language = g_wxLocale->GetLanguage();
-	}
-	std::string str_language = std::to_string(language);
-	g_AppConfig->set("translation_language", str_language);
+	wxString language = wxEmptyString; 
+	if (g_wxLocale)	
+		language = g_wxLocale->GetCanonicalName();
+
+	g_AppConfig->set("translation_language", language.ToStdString());
 	g_AppConfig->save();
 }
 
@@ -349,26 +298,163 @@ void get_installed_languages(wxArrayString & names,
 	}
 }
 
-void add_debug_menu(wxMenuBar *menu, int event_language_change)
+enum ConfigMenuIDs {
+	ConfigMenuWizard,
+	ConfigMenuSnapshots,
+	ConfigMenuTakeSnapshot,
+	ConfigMenuUpdate,
+	ConfigMenuPreferences,
+	ConfigMenuLanguage,
+	ConfigMenuFlashFirmware,
+	ConfigMenuCnt,
+};
+
+static wxString dots("…", wxConvUTF8);
+
+void add_config_menu(wxMenuBar *menu, int event_preferences_changed, int event_language_change)
 {
-//#if 0
     auto local_menu = new wxMenu();
-	local_menu->Append(wxWindow::NewControlId(1), _(L("Change Application Language")));
-	local_menu->Bind(wxEVT_MENU, [event_language_change](wxEvent&){
-		wxArrayString names;
-		wxArrayLong identifiers;
-		get_installed_languages(names, identifiers);
-		if (select_language(names, identifiers)){
-			save_language();
-			show_info(g_wxTabPanel, _(L("Application will be restarted")), _(L("Attention!")));
-			if (event_language_change > 0) {
-				wxCommandEvent event(event_language_change);
-				g_wxApp->ProcessEvent(event);
+    wxWindowID config_id_base = wxWindow::NewControlId((int)ConfigMenuCnt);
+
+    const auto config_wizard_tooltip = wxString::Format(_(L("Run %s")), ConfigWizard::name());
+    // Cmd+, is standard on OS X - what about other operating systems?
+   	local_menu->Append(config_id_base + ConfigMenuWizard, 		ConfigWizard::name() + dots, 			config_wizard_tooltip);
+   	local_menu->Append(config_id_base + ConfigMenuSnapshots, 	_(L("Configuration Snapshots"))+dots,	_(L("Inspect / activate configuration snapshots")));
+   	local_menu->Append(config_id_base + ConfigMenuTakeSnapshot, _(L("Take Configuration Snapshot")), 		_(L("Capture a configuration snapshot")));
+// 	local_menu->Append(config_id_base + ConfigMenuUpdate, 		_(L("Check for updates")), 					_(L("Check for configuration updates")));
+   	local_menu->AppendSeparator();
+   	local_menu->Append(config_id_base + ConfigMenuPreferences, 	_(L("Preferences"))+dots+"\tCtrl+,", 		_(L("Application preferences")));
+   	local_menu->Append(config_id_base + ConfigMenuLanguage, 	_(L("Change Application Language")));
+   	local_menu->AppendSeparator();
+	local_menu->Append(config_id_base + ConfigMenuFlashFirmware, _(L("Flash printer firmware")), _(L("Upload a firmware image into an Arduino based printer")));
+	// TODO: for when we're able to flash dictionaries
+	// local_menu->Append(config_id_base + FirmwareMenuDict,  _(L("Flash language file")),    _(L("Upload a language dictionary file into a Prusa printer")));
+
+	local_menu->Bind(wxEVT_MENU, [config_id_base, event_language_change, event_preferences_changed](wxEvent &event){
+		switch (event.GetId() - config_id_base) {
+		case ConfigMenuWizard:
+            config_wizard(ConfigWizard::RR_USER);
+            break;
+		case ConfigMenuTakeSnapshot:
+			// Take a configuration snapshot.
+			if (check_unsaved_changes()) {
+				wxTextEntryDialog dlg(nullptr, _(L("Taking configuration snapshot")), _(L("Snapshot name")));
+				if (dlg.ShowModal() == wxID_OK)
+					g_AppConfig->set("on_snapshot", 
+						Slic3r::GUI::Config::SnapshotDB::singleton().take_snapshot(
+							*g_AppConfig, Slic3r::GUI::Config::Snapshot::SNAPSHOT_USER, dlg.GetValue().ToUTF8().data()).id);
 			}
+			break;
+		case ConfigMenuSnapshots:
+			if (check_unsaved_changes()) {
+				std::string on_snapshot;
+		    	if (Config::SnapshotDB::singleton().is_on_snapshot(*g_AppConfig))
+		    		on_snapshot = g_AppConfig->get("on_snapshot");
+		    	ConfigSnapshotDialog dlg(Slic3r::GUI::Config::SnapshotDB::singleton(), on_snapshot);
+		    	dlg.ShowModal();
+		    	if (! dlg.snapshot_to_activate().empty()) {
+		    		if (! Config::SnapshotDB::singleton().is_on_snapshot(*g_AppConfig))
+		    			Config::SnapshotDB::singleton().take_snapshot(*g_AppConfig, Config::Snapshot::SNAPSHOT_BEFORE_ROLLBACK);
+		    		g_AppConfig->set("on_snapshot", 
+		    			Config::SnapshotDB::singleton().restore_snapshot(dlg.snapshot_to_activate(), *g_AppConfig).id);
+		    		g_PresetBundle->load_presets(*g_AppConfig);
+		    		// Load the currently selected preset into the GUI, update the preset selection box.
+					load_current_presets();
+		    	}
+		    }
+		    break;
+		case ConfigMenuPreferences:
+		{
+			PreferencesDialog dlg(g_wxMainFrame, event_preferences_changed);
+			dlg.ShowModal();
+			break;
+		}
+		case ConfigMenuLanguage:
+		{
+			wxArrayString names;
+			wxArrayLong identifiers;
+			get_installed_languages(names, identifiers);
+			if (select_language(names, identifiers)) {
+				save_language();
+				show_info(g_wxTabPanel, _(L("Application will be restarted")), _(L("Attention!")));
+				if (event_language_change > 0) {
+					wxCommandEvent event(event_language_change);
+					g_wxApp->ProcessEvent(event);
+				}
+			}
+			break;
+		}
+		case ConfigMenuFlashFirmware:
+			FirmwareDialog::run(g_wxMainFrame);
+			break;
+		default:
+			break;
 		}
 	});
-	menu->Append(local_menu, _(L("&Localization")));
-//#endif
+	menu->Append(local_menu, _(L("&Configuration")));
+}
+
+void add_menus(wxMenuBar *menu, int event_preferences_changed, int event_language_change)
+{
+    add_config_menu(menu, event_preferences_changed, event_language_change);
+}
+
+// This is called when closing the application, when loading a config file or when starting the config wizard
+// to notify the user whether he is aware that some preset changes will be lost.
+bool check_unsaved_changes()
+{
+	std::string dirty;
+	for (Tab *tab : g_tabs_list)
+		if (tab->current_preset_is_dirty())
+			if (dirty.empty())
+				dirty = tab->name();
+			else
+				dirty += std::string(", ") + tab->name();
+	if (dirty.empty())
+		// No changes, the application may close or reload presets.
+		return true;
+	// Ask the user.
+	auto dialog = new wxMessageDialog(g_wxMainFrame,
+		_(L("You have unsaved changes ")) + dirty + _(L(". Discard changes and continue anyway?")), 
+		_(L("Unsaved Presets")),
+		wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT);
+	return dialog->ShowModal() == wxID_YES;
+}
+
+bool config_wizard_startup(bool app_config_exists)
+{
+	if (! app_config_exists || g_PresetBundle->printers.size() <= 1) {
+		config_wizard(ConfigWizard::RR_DATA_EMPTY);
+		return true;
+	} else if (g_AppConfig->legacy_datadir()) {
+		// Looks like user has legacy pre-vendorbundle data directory,
+		// explain what this is and run the wizard
+
+		MsgDataLegacy dlg;
+		dlg.ShowModal();
+
+		config_wizard(ConfigWizard::RR_DATA_LEGACY);
+		return true;
+	}
+	return false;
+}
+
+void config_wizard(int reason)
+{
+    // Exit wizard if there are unsaved changes and the user cancels the action.
+    if (! check_unsaved_changes())
+    	return;
+
+	try {
+		ConfigWizard wizard(nullptr, static_cast<ConfigWizard::RunReason>(reason));
+		wizard.run(g_PresetBundle, g_PresetUpdater);
+	}
+	catch (const std::exception &e) {
+		show_error(nullptr, e.what());
+	}
+
+	// Load the currently selected preset into the GUI, update the preset selection box.
+	load_current_presets();
 }
 
 void open_preferences_dialog(int event_preferences)
@@ -379,6 +465,7 @@ void open_preferences_dialog(int event_preferences)
 
 void create_preset_tabs(bool no_controller, int event_value_change, int event_presets_changed)
 {	
+	update_label_colours_from_appconfig();
 	add_created_tab(new TabPrint	(g_wxTabPanel, no_controller));
 	add_created_tab(new TabFilament	(g_wxTabPanel, no_controller));
 	add_created_tab(new TabPrinter	(g_wxTabPanel, no_controller));
@@ -519,33 +606,70 @@ void add_created_tab(Tab* panel)
 	g_wxTabPanel->AddPage(panel, panel->title());
 }
 
-void show_error(wxWindow* parent, const wxString& message){
-	auto msg_wingow = new wxMessageDialog(parent, message, _(L("Error")), wxOK | wxICON_ERROR);
-	msg_wingow->ShowModal();
+void load_current_presets()
+{
+	for (Tab *tab : g_tabs_list) {
+		tab->load_current_preset();
+	}
+}
+
+void show_error(wxWindow* parent, const wxString& message) {
+	ErrorDialog msg(parent, message);
+	msg.ShowModal();
+}
+
+void show_error_id(int id, const std::string& message) {
+	auto *parent = id != 0 ? wxWindow::FindWindowById(id) : nullptr;
+	show_error(parent, wxString::FromUTF8(message.data()));
 }
 
 void show_info(wxWindow* parent, const wxString& message, const wxString& title){
-	auto msg_wingow = new wxMessageDialog(parent, message, title.empty() ? _(L("Notice")) : title, wxOK | wxICON_INFORMATION);
-	msg_wingow->ShowModal();
+	wxMessageDialog msg_wingow(parent, message, title.empty() ? _(L("Notice")) : title, wxOK | wxICON_INFORMATION);
+	msg_wingow.ShowModal();
 }
 
 void warning_catcher(wxWindow* parent, const wxString& message){
-	if (message == _(L("GLUquadricObjPtr | Attempt to free unreferenced scalar")) )
+	if (message == "GLUquadricObjPtr | " + _(L("Attempt to free unreferenced scalar")) )
 		return;
-	auto msg = new wxMessageDialog(parent, message, _(L("Warning")), wxOK | wxICON_WARNING);
-	msg->ShowModal();	
+	wxMessageDialog msg(parent, message, _(L("Warning")), wxOK | wxICON_WARNING);
+	msg.ShowModal();
 }
 
 wxApp* get_app(){
 	return g_wxApp;
 }
 
-const wxColour& get_modified_label_clr() {
+PresetBundle* get_preset_bundle()
+{
+	return g_PresetBundle;
+}
+
+const wxColour& get_label_clr_modified() {
 	return g_color_label_modified;
 }
 
-const wxColour& get_sys_label_clr() {
+const wxColour& get_label_clr_sys() {
 	return g_color_label_sys;
+}
+
+void set_label_clr_modified(const wxColour& clr) {
+	g_color_label_modified = clr;
+	auto clr_str = wxString::Format(wxT("#%02X%02X%02X"), clr.Red(), clr.Green(), clr.Blue());
+	std::string str = clr_str.ToStdString();
+	g_AppConfig->set("label_clr_modified", str);
+	g_AppConfig->save();
+}
+
+void set_label_clr_sys(const wxColour& clr) {
+	g_color_label_sys = clr;
+	auto clr_str = wxString::Format(wxT("#%02X%02X%02X"), clr.Red(), clr.Green(), clr.Blue());
+	std::string str = clr_str.ToStdString();
+	g_AppConfig->set("label_clr_sys", str);
+	g_AppConfig->save();
+}
+
+const wxColour& get_label_clr_default() {
+	return g_color_label_default;
 }
 
 unsigned get_colour_approx_luma(const wxColour &colour)
@@ -635,7 +759,7 @@ void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFl
 	DynamicPrintConfig*	config = &g_PresetBundle->prints.get_edited_preset().config;
 	m_optgroup = std::make_shared<ConfigOptionsGroup>(parent, "", config);
 	const wxArrayInt& ar = preset_sizer->GetColWidths();
-	m_optgroup->label_width = ar.IsEmpty() ? 100 : ar.front();
+	m_optgroup->label_width = ar.IsEmpty() ? 100 : ar.front()-4; // doesn't work
 	m_optgroup->m_on_change = [config](t_config_option_key opt_key, boost::any value){
 		TabPrint* tab_print = nullptr;
 		for (size_t i = 0; i < g_wxTabPanel->GetPageCount(); ++i) {
@@ -689,10 +813,9 @@ void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFl
 		tab_print->update_dirty();
 	};
 
-	const int width = 250;
 	Option option = m_optgroup->get_option("fill_density");
 	option.opt.sidetext = "";
-	option.opt.width = width;
+	option.opt.full_width = true;
 	m_optgroup->append_single_option_line(option);
 
 	ConfigOptionDef def;
@@ -711,7 +834,7 @@ void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFl
 		"Everywhere";
 	def.default_value = new ConfigOptionStrings { selection };
 	option = Option(def, "support");
-	option.opt.width = width;
+	option.opt.full_width = true;
 	m_optgroup->append_single_option_line(option);
 
 	m_brim_width = config->opt_float("brim_width");
@@ -724,9 +847,9 @@ void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFl
 	m_optgroup->append_single_option_line(option);
 
 
-    Line line = { _(L("")), "" };
+    Line line = { "", "" };
         line.widget = [config](wxWindow* parent){
-			g_wiping_dialog_button = new wxButton(parent, wxID_ANY, _(L("Purging volumes")) + "\u2026", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+			g_wiping_dialog_button = new wxButton(parent, wxID_ANY, _(L("Purging volumes")) + dots, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 			auto sizer = new wxBoxSizer(wxHORIZONTAL);
 			sizer->Add(g_wiping_dialog_button);
 			g_wiping_dialog_button->Bind(wxEVT_BUTTON, ([parent](wxCommandEvent& e)
@@ -750,7 +873,7 @@ void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFl
 
 
 
-	sizer->Add(m_optgroup->sizer, 0, wxEXPAND | wxBOTTOM | wxBottom, 1);
+	sizer->Add(m_optgroup->sizer, 1, wxEXPAND | wxBOTTOM, 2);
 }
 
 ConfigOptionsGroup* get_optgroup()
@@ -769,6 +892,7 @@ wxWindow* export_option_creator(wxWindow* parent)
     wxPanel* panel = new wxPanel(parent, -1);
     wxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
     wxCheckBox* cbox = new wxCheckBox(panel, wxID_HIGHEST + 1, L("Export print config"));
+    cbox->SetValue(true);
     sizer->AddSpacer(5);
     sizer->Add(cbox, 0, wxEXPAND | wxALL | wxALIGN_CENTER_VERTICAL, 5);
     panel->SetSizer(sizer);
@@ -810,6 +934,67 @@ int get_export_option(wxFileDialog* dlg)
 
 }
 
+void get_current_screen_size(unsigned &width, unsigned &height)
+{
+	wxDisplay display(wxDisplay::GetFromWindow(g_wxMainFrame));
+	const auto disp_size = display.GetClientArea();
+	width = disp_size.GetWidth();
+	height = disp_size.GetHeight();
+}
 
-} // namespace GUI
-} // namespace Slic3r
+void about()
+{
+    AboutDialog dlg;
+    dlg.ShowModal();
+    dlg.Destroy();
+}
+
+void desktop_open_datadir_folder()
+{
+	// Execute command to open a file explorer, platform dependent.
+	// FIXME: The const_casts aren't needed in wxWidgets 3.1, remove them when we upgrade.
+
+	const auto path = data_dir();
+#ifdef _WIN32
+		const auto widepath = wxString::FromUTF8(path.data());
+		const wchar_t *argv[] = { L"explorer", widepath.GetData(), nullptr };
+		::wxExecute(const_cast<wchar_t**>(argv), wxEXEC_ASYNC, nullptr);
+#elif __APPLE__
+		const char *argv[] = { "open", path.data(), nullptr };
+		::wxExecute(const_cast<char**>(argv), wxEXEC_ASYNC, nullptr);
+#else
+		const char *argv[] = { "xdg-open", path.data(), nullptr };
+
+		// Check if we're running in an AppImage container, if so, we need to remove AppImage's env vars,
+		// because they may mess up the environment expected by the file manager.
+		// Mostly this is about LD_LIBRARY_PATH, but we remove a few more too for good measure.
+		if (wxGetEnv("APPIMAGE", nullptr)) {
+			// We're running from AppImage
+			wxEnvVariableHashMap env_vars;
+			wxGetEnvMap(&env_vars);
+
+			env_vars.erase("APPIMAGE");
+			env_vars.erase("APPDIR");
+			env_vars.erase("LD_LIBRARY_PATH");
+			env_vars.erase("LD_PRELOAD");
+			env_vars.erase("UNION_PRELOAD");
+
+			wxExecuteEnv exec_env;
+			exec_env.env = std::move(env_vars);
+
+			wxString owd;
+			if (wxGetEnv("OWD", &owd)) {
+				// This is the original work directory from which the AppImage image was run,
+				// set it as CWD for the child process:
+				exec_env.cwd = std::move(owd);
+			}
+
+			::wxExecute(const_cast<char**>(argv), wxEXEC_ASYNC, nullptr, &exec_env);
+		} else {
+			// Looks like we're NOT running from AppImage, we'll make no changes to the environment.
+			::wxExecute(const_cast<char**>(argv), wxEXEC_ASYNC, nullptr, nullptr);
+		}
+#endif
+}
+
+} }

@@ -1,14 +1,9 @@
 #include <algorithm>
 #include <sstream>
 #include "WipeTowerDialog.hpp"
+#include "GUI.hpp"
 
 #include <wx/sizer.h>
-
-//! macro used to mark string used at localization,
-//! return same string
-#define L(s) s
-
-
 
 RammingDialog::RammingDialog(wxWindow* parent,const std::string& parameters)
 : wxDialog(parent, wxID_ANY, _(L("Ramming customization")), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE/* | wxRESIZE_BORDER*/)
@@ -79,15 +74,15 @@ RammingPanel::RammingPanel(wxWindow* parent, const std::string& parameters)
     m_widget_ramming_step_multiplicator		  = new wxSpinCtrl(this,wxID_ANY,wxEmptyString,wxDefaultPosition,wxSize(75, -1),wxSP_ARROW_KEYS,10,200,100);        
 
 	auto gsizer_param = new wxFlexGridSizer(2, 5, 15);
-	gsizer_param->Add(new wxStaticText(this, wxID_ANY, wxString(_(L("Total ramming time (s):")))), 0, wxALIGN_CENTER_VERTICAL);
+	gsizer_param->Add(new wxStaticText(this, wxID_ANY, wxString(_(L("Total ramming time")) + " (" + _(L("s")) + "):")), 0, wxALIGN_CENTER_VERTICAL);
 	gsizer_param->Add(m_widget_time);
-	gsizer_param->Add(new wxStaticText(this, wxID_ANY, wxString(_(L("Total rammed volume (mm"))+"\u00B3):")), 0, wxALIGN_CENTER_VERTICAL);
+	gsizer_param->Add(new wxStaticText(this, wxID_ANY, wxString(_(L("Total rammed volume")) + " (" + _(L("mm")) + wxString("³):", wxConvUTF8))), 0, wxALIGN_CENTER_VERTICAL);
 	gsizer_param->Add(m_widget_volume);
 	gsizer_param->AddSpacer(20);
 	gsizer_param->AddSpacer(20);
-	gsizer_param->Add(new wxStaticText(this, wxID_ANY, wxString(_(L("Ramming line width (%):")))), 0, wxALIGN_CENTER_VERTICAL);
+	gsizer_param->Add(new wxStaticText(this, wxID_ANY, wxString(_(L("Ramming line width")) + " (%):")), 0, wxALIGN_CENTER_VERTICAL);
 	gsizer_param->Add(m_widget_ramming_line_width_multiplicator);
-	gsizer_param->Add(new wxStaticText(this, wxID_ANY, wxString(_(L("Ramming line spacing (%):")))), 0, wxALIGN_CENTER_VERTICAL);
+	gsizer_param->Add(new wxStaticText(this, wxID_ANY, wxString(_(L("Ramming line spacing")) + " (%):")), 0, wxALIGN_CENTER_VERTICAL);
 	gsizer_param->Add(m_widget_ramming_step_multiplicator);
 
 	sizer_param->Add(gsizer_param, 0, wxTOP, 100);
@@ -220,7 +215,7 @@ WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, con
 
 	// collect and format sizer
 	format_sizer(m_sizer_advanced, m_page_advanced, m_gridsizer_advanced,
-		_(L("Here you can adjust required purging volume (mm\u00B3) for any given pair of tools.")),
+		_(L("Here you can adjust required purging volume (mm³) for any given pair of tools.")),
 		_(L("Extruder changed to")));
 
 	// Hide preview page before new page creating 
@@ -243,7 +238,7 @@ WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, con
 	// collect and format sizer
 	format_sizer(m_sizer_simple, m_page_simple, gridsizer_simple,
 		_(L("Total purging volume is calculated by summing two values below, depending on which tools are loaded/unloaded.")),
-		_(L("Volume to purge (mm\u00B3) when the filament is being")), 50);
+		_(L("Volume to purge (mm³) when the filament is being")), 50);
 
 	m_sizer = new wxBoxSizer(wxVERTICAL);
 	m_sizer->Add(m_page_simple, 0, wxEXPAND | wxALL, 25);

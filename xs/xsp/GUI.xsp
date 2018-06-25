@@ -4,10 +4,15 @@
 #include <xsinit.h>
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/Utils/ASCIIFolding.hpp"
+#include "slic3r/Utils/FixModelByWin10.hpp"
+#include "slic3r/Utils/Serial.hpp"
 %}
 
 
 %package{Slic3r::GUI};
+
+void about()
+    %code{% Slic3r::GUI::about(); %};
 
 void disable_screensaver()
     %code{% Slic3r::GUI::disable_screensaver(); %};
@@ -16,13 +21,16 @@ void enable_screensaver()
     %code{% Slic3r::GUI::enable_screensaver(); %};
 
 std::vector<std::string> scan_serial_ports()
-    %code{% RETVAL=Slic3r::GUI::scan_serial_ports(); %};
+    %code{% RETVAL=Slic3r::Utils::scan_serial_ports(); %};
 
 bool debugged()
     %code{% RETVAL=Slic3r::GUI::debugged(); %};
 
 void break_to_debugger()
     %code{% Slic3r::GUI::break_to_debugger(); %};
+
+bool is_windows10()
+    %code{% RETVAL=Slic3r::is_windows10(); %};
 
 void set_wxapp(SV *ui)
     %code%{ Slic3r::GUI::set_wxapp((wxApp*)wxPli_sv_2_object(aTHX_ ui, "Wx::App")); %};
@@ -32,12 +40,15 @@ void set_main_frame(SV *ui)
 
 void set_tab_panel(SV *ui)
     %code%{ Slic3r::GUI::set_tab_panel((wxNotebook*)wxPli_sv_2_object(aTHX_ ui, "Wx::Notebook")); %};
-    
-void add_debug_menu(SV *ui, int event_language_change)
-    %code%{ Slic3r::GUI::add_debug_menu((wxMenuBar*)wxPli_sv_2_object(aTHX_ ui, "Wx::MenuBar"), event_language_change); %};
+
+void add_menus(SV *ui, int event_preferences_changed, int event_language_change)    
+    %code%{ Slic3r::GUI::add_menus((wxMenuBar*)wxPli_sv_2_object(aTHX_ ui, "Wx::MenuBar"), event_preferences_changed, event_language_change); %};
 
 void create_preset_tabs(bool no_controller, int event_value_change, int event_presets_changed)
     %code%{ Slic3r::GUI::create_preset_tabs(no_controller, event_value_change, event_presets_changed); %};
+
+void show_error_id(int id, std::string msg)
+    %code%{ Slic3r::GUI::show_error_id(id, msg); %};
 
 TabIface* get_preset_tab(char *name)
     %code%{ RETVAL=Slic3r::GUI::get_preset_tab_iface(name); %};
@@ -54,11 +65,22 @@ int combochecklist_get_flags(SV *ui)
 void set_app_config(AppConfig *app_config)
     %code%{ Slic3r::GUI::set_app_config(app_config); %};
 
+bool check_unsaved_changes()
+    %code%{ RETVAL=Slic3r::GUI::check_unsaved_changes(); %};
+
+bool config_wizard_startup(int app_config_exists)
+    %code%{
+        RETVAL=Slic3r::GUI::config_wizard_startup(app_config_exists != 0);
+    %};
+
 void open_preferences_dialog(int preferences_event)
     %code%{ Slic3r::GUI::open_preferences_dialog(preferences_event); %};
 
 void set_preset_bundle(PresetBundle *preset_bundle)
     %code%{ Slic3r::GUI::set_preset_bundle(preset_bundle); %};
+
+void set_preset_updater(PresetUpdater* updater)
+    %code%{ Slic3r::GUI::set_preset_updater(updater); %};
 
 void add_frequently_changed_parameters(SV *ui_parent, SV *ui_sizer, SV *ui_p_sizer)
     %code%{ Slic3r::GUI::add_frequently_changed_parameters((wxWindow*)wxPli_sv_2_object(aTHX_ ui_parent, "Wx::Window"),
@@ -74,3 +96,8 @@ void add_export_option(SV *ui, std::string format)
 int get_export_option(SV *ui)
     %code%{ RETVAL = Slic3r::GUI::get_export_option((wxFileDialog*)wxPli_sv_2_object(aTHX_ ui, "Wx::FileDialog")); %};
     
+void desktop_open_datadir_folder()
+    %code%{ Slic3r::GUI::desktop_open_datadir_folder(); %};
+
+void fix_model_by_win10_sdk_gui(ModelObject *model_object_src, Print *print, Model *model_dst)
+    %code%{ Slic3r::fix_model_by_win10_sdk_gui(*model_object_src, *print, *model_dst); %};

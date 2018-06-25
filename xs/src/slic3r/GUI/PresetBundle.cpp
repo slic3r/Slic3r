@@ -4,6 +4,7 @@
 #include "PresetBundle.hpp"
 #include "BitmapCache.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/clamp.hpp>
@@ -52,27 +53,29 @@ PresetBundle::PresetBundle() :
         wxImage::AddHandler(new wxPNGHandler);
 
     // Create the ID config keys, as they are not part of the Static print config classes.
-    this->prints.preset(0).config.opt_string("print_settings_id", true);
-    this->filaments.preset(0).config.opt_string("filament_settings_id", true);
-    this->printers.preset(0).config.opt_string("print_settings_id", true);
-    // Create the "compatible printers" keys, as they are not part of the Static print config classes.
-    this->filaments.preset(0).config.optptr("compatible_printers", true);
-    this->filaments.preset(0).config.optptr("compatible_printers_condition", true);
-    this->prints.preset(0).config.optptr("compatible_printers", true);
-    this->prints.preset(0).config.optptr("compatible_printers_condition", true);
-    // Create the "inherits" keys.
-    this->prints.preset(0).config.optptr("inherits", true);
-    this->filaments.preset(0).config.optptr("inherits", true);
-    this->printers.preset(0).config.optptr("inherits", true);
+    this->prints.default_preset().config.opt_string("print_settings_id", true);
+    this->filaments.default_preset().config.option<ConfigOptionStrings>("filament_settings_id", true)->values.assign(1, std::string());
+    this->printers.default_preset().config.opt_string("printer_settings_id", true);
+    // "compatible printers" are not mandatory yet. 
+    //FIXME Rename "compatible_printers" and "compatible_printers_condition", as they are defined in both print and filament profiles,
+    // therefore they are clashing when generating a a config file, G-code or AMF/3MF.
+//    this->filaments.default_preset().config.optptr("compatible_printers", true);
+//    this->filaments.default_preset().config.optptr("compatible_printers_condition", true);
+//    this->prints.default_preset().config.optptr("compatible_printers", true);
+//    this->prints.default_preset().config.optptr("compatible_printers_condition", true);
     // Create the "printer_vendor", "printer_model" and "printer_variant" keys.
-    this->printers.preset(0).config.optptr("printer_vendor", true);
-    this->printers.preset(0).config.optptr("printer_model", true);
-    this->printers.preset(0).config.optptr("printer_variant", true);
-
+    this->printers.default_preset().config.optptr("printer_vendor", true);
+    this->printers.default_preset().config.optptr("printer_model", true);
+    this->printers.default_preset().config.optptr("printer_variant", true);
+    // Load the default preset bitmaps.
     this->prints   .load_bitmap_default("cog.png");
     this->filaments.load_bitmap_default("spool.png");
     this->printers .load_bitmap_default("printer_empty.png");
     this->load_compatible_bitmaps();
+    // Re-activate the default presets, so their "edited" preset copies will be updated with the additional configuration values above.
+    this->prints   .select_preset(0);
+    this->filaments.select_preset(0);
+    this->printers .select_preset(0);
 
     this->project_config.apply_only(FullPrintConfig::defaults(), s_project_options);
 }
@@ -98,11 +101,15 @@ PresetBundle::~PresetBundle()
 void PresetBundle::reset(bool delete_files)
 {
     // Clear the existing presets, delete their respective files.
+    this->vendors.clear();
     this->prints   .reset(delete_files);
     this->filaments.reset(delete_files);
     this->printers .reset(delete_files);
     this->filament_presets.clear();
     this->filament_presets.emplace_back(this->filaments.get_selected_preset().name);
+    this->obsolete_presets.prints.clear();
+    this->obsolete_presets.filaments.clear();
+    this->obsolete_presets.printers.clear();
 }
 
 void PresetBundle::setup_directories()
@@ -111,6 +118,7 @@ void PresetBundle::setup_directories()
     std::initializer_list<boost::filesystem::path> paths = { 
         data_dir,
 		data_dir / "vendor",
+        data_dir / "cache",
 #ifdef SLIC3R_PROFILE_USE_PRESETS_SUBDIR
         // Store the print/filament/printer presets into a "presets" directory.
         data_dir / "presets", 
@@ -176,6 +184,7 @@ std::string PresetBundle::load_system_presets()
     // Here the vendor specific read only Config Bundles are stored.
     boost::filesystem::path dir = (boost::filesystem::path(data_dir()) / "vendor").make_preferred();
     std::string errors_cummulative;
+    bool        first = true;
     for (auto &dir_entry : boost::filesystem::directory_iterator(dir))
         if (boost::filesystem::is_regular_file(dir_entry.status()) && boost::algorithm::iends_with(dir_entry.path().filename().string(), ".ini")) {
             std::string name = dir_entry.path().filename().string();
@@ -183,13 +192,50 @@ std::string PresetBundle::load_system_presets()
             name.erase(name.size() - 4);
             try {
                 // Load the config bundle, flatten it.
-                this->load_configbundle(dir_entry.path().string(), LOAD_CFGBNDLE_SYSTEM);
+                if (first) {
+                    // Reset this PresetBundle and load the first vendor config.
+                    this->load_configbundle(dir_entry.path().string(), LOAD_CFGBNDLE_SYSTEM);
+                    first = false;
+                } else {
+                    // Load the other vendor configs, merge them with this PresetBundle.
+                    // Report duplicate profiles.
+                    PresetBundle other;
+                    other.load_configbundle(dir_entry.path().string(), LOAD_CFGBNDLE_SYSTEM);
+                    std::vector<std::string> duplicates = this->merge_presets(std::move(other));
+                    if (! duplicates.empty()) {
+                        errors_cummulative += "Vendor configuration file " + name + " contains the following presets with names used by other vendors: ";
+                        for (size_t i = 0; i < duplicates.size(); ++ i) {
+                            if (i > 0)
+                                errors_cummulative += ", ";
+                            errors_cummulative += duplicates[i];
+                        }
+                    }
+                }
             } catch (const std::runtime_error &err) {
                 errors_cummulative += err.what();
                 errors_cummulative += "\n";
             }
         }
+	if (first) {
+		// No config bundle loaded, reset.
+		this->reset(false);
+	}
     return errors_cummulative;
+}
+
+// Merge one vendor's presets with the other vendor's presets, report duplicates.
+std::vector<std::string> PresetBundle::merge_presets(PresetBundle &&other)
+{
+    this->vendors.insert(other.vendors.begin(), other.vendors.end());
+    std::vector<std::string> duplicate_prints    = this->prints   .merge_presets(std::move(other.prints),    this->vendors);
+    std::vector<std::string> duplicate_filaments = this->filaments.merge_presets(std::move(other.filaments), this->vendors);
+    std::vector<std::string> duplicate_printers  = this->printers .merge_presets(std::move(other.printers),  this->vendors);
+	append(this->obsolete_presets.prints,    std::move(other.obsolete_presets.prints));
+	append(this->obsolete_presets.filaments, std::move(other.obsolete_presets.filaments));
+	append(this->obsolete_presets.printers,  std::move(other.obsolete_presets.printers));
+	append(duplicate_prints, std::move(duplicate_filaments));
+    append(duplicate_prints, std::move(duplicate_printers));
+    return duplicate_prints;
 }
 
 static inline std::string remove_ini_suffix(const std::string &name)
@@ -205,26 +251,44 @@ static inline std::string remove_ini_suffix(const std::string &name)
 // If the "vendor" section is missing, enable all models and variants of the particular vendor.
 void PresetBundle::load_installed_printers(const AppConfig &config)
 {
-    // m_storage
+    for (auto &preset : printers) {
+        preset.set_visible_from_appconfig(config);
+    }
 }
 
 // Load selections (current print, current filaments, current printer) from config.ini
 // This is done just once on application start up.
 void PresetBundle::load_selections(const AppConfig &config)
 {
-    prints.select_preset_by_name(remove_ini_suffix(config.get("presets", "print")), true);
-    filaments.select_preset_by_name(remove_ini_suffix(config.get("presets", "filament")), true);
-    printers.select_preset_by_name(remove_ini_suffix(config.get("presets", "printer")), true);
+	// Update visibility of presets based on application vendor / model / variant configuration.
+	this->load_installed_printers(config);
+
+    // Parse the initial print / filament / printer profile names.
+    std::string                 initial_print_profile_name     = remove_ini_suffix(config.get("presets", "print"));
+    std::vector<std::string>    initial_filament_profile_names;
+    std::string                 initial_printer_profile_name   = remove_ini_suffix(config.get("presets", "printer"));
+
     auto   *nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(printers.get_selected_preset().config.option("nozzle_diameter"));
     size_t  num_extruders   = nozzle_diameter->values.size();   
-    this->set_filament_preset(0, filaments.get_selected_preset().name);
+    initial_filament_profile_names.emplace_back(remove_ini_suffix(config.get("presets", "filament")));
+    this->set_filament_preset(0, initial_filament_profile_names.back());
     for (unsigned int i = 1; i < (unsigned int)num_extruders; ++ i) {
         char name[64];
         sprintf(name, "filament_%d", i);
         if (! config.has("presets", name))
             break;
-        this->set_filament_preset(i, remove_ini_suffix(config.get("presets", name)));
+        initial_filament_profile_names.emplace_back(remove_ini_suffix(config.get("presets", name)));
+        this->set_filament_preset(i, initial_filament_profile_names.back());
     }
+
+	// Activate print / filament / printer profiles from the config.
+	// If the printer profile enumerated by the config are not visible, select an alternate preset.
+    // Do not select alternate profiles for the print / filament profiles as those presets
+    // will be selected by the following call of this->update_compatible_with_printer(true).
+    prints.select_preset_by_name_strict(initial_print_profile_name);
+    filaments.select_preset_by_name_strict(initial_filament_profile_names.front());
+    printers.select_preset_by_name(initial_printer_profile_name, true);
+
     // Update visibility of presets based on their compatibility with the active printer.
     // Always try to select a compatible print and filament preset to the current printer preset,
     // as the application may have been closed with an active "external" preset, which does not
@@ -299,7 +363,9 @@ DynamicPrintConfig PresetBundle::full_config() const
     DynamicPrintConfig out;
     out.apply(FullPrintConfig());
     out.apply(this->prints.get_edited_preset().config);
-    out.apply(this->printers.get_edited_preset().config);
+    // Add the default filament preset to have the "filament_preset_id" defined.
+	out.apply(this->filaments.default_preset().config);
+	out.apply(this->printers.get_edited_preset().config);
     out.apply(this->project_config);
 
     auto   *nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(out.option("nozzle_diameter"));
@@ -310,6 +376,7 @@ DynamicPrintConfig PresetBundle::full_config() const
     } else {
         // Retrieve filament presets and build a single config object for them.
         // First collect the filament configurations based on the user selection of this->filament_presets.
+        // Here this->filaments.find_preset() and this->filaments.first_visible() return the edited copy of the preset if active.
         std::vector<const DynamicPrintConfig*> filament_configs;
         for (const std::string &filament_preset_name : this->filament_presets)
             filament_configs.emplace_back(&this->filaments.find_preset(filament_preset_name, true)->config);
@@ -319,7 +386,7 @@ DynamicPrintConfig PresetBundle::full_config() const
         std::vector<const ConfigOption*> filament_opts(num_extruders, nullptr);
         // loop through options and apply them to the resulting config.
         for (const t_config_option_key &key : this->filaments.default_preset().config.keys()) {
-			if (key == "compatible_printers")
+			if (key == "compatible_printers" || key == "compatible_printers_condition")
 				continue;
             // Get a destination option.
             ConfigOption *opt_dst = out.option(key, false);
@@ -337,7 +404,9 @@ DynamicPrintConfig PresetBundle::full_config() const
         }
     }
 
+    //FIXME These two value types clash between the print and filament profiles. They should be renamed.
     out.erase("compatible_printers");
+    out.erase("compatible_printers_condition");
     
     static const char *keys[] = { "perimeter", "infill", "solid_infill", "support_material", "support_material_interface" };
     for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); ++ i) {
@@ -675,48 +744,6 @@ static void flatten_configbundle_hierarchy(boost::property_tree::ptree &tree)
     flatten_configbundle_hierarchy(tree, "printer");
 }
 
-static void load_vendor_profile(const boost::property_tree::ptree &tree, VendorProfile &vendor_profile)
-{
-    const std::string printer_model_key = "printer_model:";
-    for (auto &section : tree)
-        if (section.first == "vendor") {
-            // Load the names of the active presets.
-            for (auto &kvp : section.second) {
-                if (kvp.first == "name")
-                    vendor_profile.name = kvp.second.data();
-                else if (kvp.first == "id")
-                    vendor_profile.id = kvp.second.data();
-                else if (kvp.first == "config_version")
-                    vendor_profile.config_version = kvp.second.data();
-                else if (kvp.first == "config_update_url")
-                    vendor_profile.config_update_url = kvp.second.data();
-            }
-        } else if (boost::starts_with(section.first, printer_model_key)) {
-            VendorProfile::PrinterModel model;
-            model.name = section.first.substr(printer_model_key.size());
-            section.second.get<std::string>("variants", "");
-            std::vector<std::string> variants;
-            if (Slic3r::unescape_strings_cstyle(section.second.get<std::string>("variants", ""), variants)) {
-                for (const std::string &variant_name : variants) {
-                    if (model.variant(variant_name) == nullptr)
-                        model.variants.emplace_back(VendorProfile::PrinterVariant(variant_name));
-                }
-            } else {
-                // Log error?
-            }
-            if (! model.name.empty() && ! model.variants.empty())
-                vendor_profile.models.insert(model);
-        }
-}
-
-// Load a config bundle file, into presets and store the loaded presets into separate files
-// of the local configuration directory.
-void PresetBundle::install_vendor_configbundle(const std::string &src_path0)
-{
-    boost::filesystem::path src_path(src_path0);
-    boost::filesystem::copy_file(src_path, (boost::filesystem::path(data_dir()) / "vendor" / src_path.filename()).make_preferred(), boost::filesystem::copy_option::overwrite_if_exists);
-}
-
 // Load a config bundle file, into presets and store the loaded presets into separate files
 // of the local configuration directory.
 size_t PresetBundle::load_configbundle(const std::string &path, unsigned int flags)
@@ -730,21 +757,24 @@ size_t PresetBundle::load_configbundle(const std::string &path, unsigned int fla
     pt::ptree tree;
     boost::nowide::ifstream ifs(path);
     pt::read_ini(ifs, tree);
-    // Flatten the config bundle by applying the inheritance rules. Internal profiles (with names starting with '*') are removed.
-    flatten_configbundle_hierarchy(tree);
 
     const VendorProfile *vendor_profile = nullptr;
-    if (flags & LOAD_CFGBNDLE_SYSTEM) {
-        VendorProfile vp;
-        load_vendor_profile(tree, vp);
-        if (vp.name.empty())
-            throw std::runtime_error(std::string("Vendor Config Bundle is not valid: Missing vendor name key."));
+    if (flags & (LOAD_CFGBNDLE_SYSTEM | LOAD_CFGBUNDLE_VENDOR_ONLY)) {
+        auto vp = VendorProfile::from_ini(tree, path);
         if (vp.num_variants() == 0)
             return 0;
         vendor_profile = &(*this->vendors.insert(vp).first);
     }
+    
+    if (flags & LOAD_CFGBUNDLE_VENDOR_ONLY) {
+        return 0;
+    }
+
+    // 1.5) Flatten the config bundle by applying the inheritance rules. Internal profiles (with names starting with '*') are removed.
+    flatten_configbundle_hierarchy(tree);
 
     // 2) Parse the property_tree, extract the active preset names and the profiles, save them into local config files.
+    // Parse the obsolete preset names, to be deleted when upgrading from the old configuration structure.
     std::vector<std::string> loaded_prints;
     std::vector<std::string> loaded_filaments;
     std::vector<std::string> loaded_printers;
@@ -784,6 +814,20 @@ size_t PresetBundle::load_configbundle(const std::string &path, unsigned int fla
                     active_printer = kvp.second.data();
                 }
             }
+        } else if (section.first == "obsolete_presets") {
+            // Parse the names of obsolete presets. These presets will be deleted from user's
+            // profile directory on installation of this vendor preset.
+            for (auto &kvp : section.second) {
+                std::vector<std::string> *dst = nullptr;
+                if (kvp.first == "print")
+                    dst = &this->obsolete_presets.prints;
+                else if (kvp.first == "filament")
+                    dst = &this->obsolete_presets.filaments;
+                else if (kvp.first == "printer")
+                    dst = &this->obsolete_presets.printers;
+                if (dst)
+                    unescape_strings_cstyle(kvp.second.data(), *dst);
+            }
         } else if (section.first == "settings") {
             // Load the settings.
             for (auto &kvp : section.second) {
@@ -795,10 +839,28 @@ size_t PresetBundle::load_configbundle(const std::string &path, unsigned int fla
             continue;
         if (presets != nullptr) {
             // Load the print, filament or printer preset.
-            DynamicPrintConfig config(presets->default_preset().config);
+            const DynamicPrintConfig &default_config = presets->default_preset().config;
+            DynamicPrintConfig config(default_config);
             for (auto &kvp : section.second)
                 config.set_deserialize(kvp.first, kvp.second.data());
             Preset::normalize(config);
+            // Report configuration fields, which are misplaced into a wrong group.
+            std::string incorrect_keys;
+            size_t      n_incorrect_keys = 0;
+            for (const std::string &key : config.keys())
+                if (! default_config.has(key)) {
+                    if (incorrect_keys.empty())
+                        incorrect_keys = key;
+                    else {
+                        incorrect_keys += ", ";
+                        incorrect_keys += key;
+                    }
+                    config.erase(key);
+                    ++ n_incorrect_keys;
+                }
+            if (! incorrect_keys.empty())
+                BOOST_LOG_TRIVIAL(error) << "Error in a Vendor Config Bundle \"" << path << "\": The printer preset \"" << 
+                    section.first << "\" contains the following incorrect keys: " << incorrect_keys << ", which were removed";
             if ((flags & LOAD_CFGBNDLE_SYSTEM) && presets == &printers) {
                 // Filter out printer presets, which are not mentioned in the vendor profile.
                 // These presets are considered not installed.
@@ -814,7 +876,9 @@ size_t PresetBundle::load_configbundle(const std::string &path, unsigned int fla
                         section.first << "\" defines no printer variant, it will be ignored.";
                     continue;
                 }
-                auto it_model = vendor_profile->models.find(VendorProfile::PrinterModel(printer_model));
+                auto it_model = std::find_if(vendor_profile->models.cbegin(), vendor_profile->models.cend(),
+                    [&](const VendorProfile::PrinterModel &m) { return m.id == printer_model; }
+                );
                 if (it_model == vendor_profile->models.end()) {
                     BOOST_LOG_TRIVIAL(error) << "Error in a Vendor Config Bundle \"" << path << "\": The printer preset \"" << 
                         section.first << "\" defines invalid printer model \"" << printer_model << "\", it will be ignored.";
@@ -916,14 +980,35 @@ void PresetBundle::update_multi_material_filament_presets()
 
 void PresetBundle::update_compatible_with_printer(bool select_other_if_incompatible)
 {
-    this->prints.update_compatible_with_printer(this->printers.get_edited_preset(), select_other_if_incompatible);
-    this->filaments.update_compatible_with_printer(this->printers.get_edited_preset(), select_other_if_incompatible);
+    const Preset                   &printer_preset             = this->printers.get_edited_preset();
+    const std::string              &prefered_print_profile     = printer_preset.config.opt_string("default_print_profile");
+    const std::vector<std::string> &prefered_filament_profiles = printer_preset.config.option<ConfigOptionStrings>("default_filament_profile")->values;
+    prefered_print_profile.empty() ?
+        this->prints.update_compatible_with_printer(printer_preset, select_other_if_incompatible) :
+        this->prints.update_compatible_with_printer(printer_preset, select_other_if_incompatible,
+            [&prefered_print_profile](const std::string& profile_name){ return profile_name == prefered_print_profile; });
+    prefered_filament_profiles.empty() ?
+        this->filaments.update_compatible_with_printer(printer_preset, select_other_if_incompatible) :
+        this->filaments.update_compatible_with_printer(printer_preset, select_other_if_incompatible,
+            [&prefered_filament_profiles](const std::string& profile_name)
+                { return std::find(prefered_filament_profiles.begin(), prefered_filament_profiles.end(), profile_name) != prefered_filament_profiles.end(); });
     if (select_other_if_incompatible) {
         // Verify validity of the current filament presets.
-        for (std::string &filament_name : this->filament_presets) {
-            Preset *preset = this->filaments.find_preset(filament_name, false);
-            if (preset == nullptr || ! preset->is_compatible)
-                filament_name = this->filaments.first_compatible().name;
+        this->filament_presets.front() = this->filaments.get_edited_preset().name;
+        for (size_t idx = 1; idx < this->filament_presets.size(); ++ idx) {
+            std::string &filament_name = this->filament_presets[idx];
+            Preset      *preset        = this->filaments.find_preset(filament_name, false);
+            if (preset == nullptr || ! preset->is_compatible) {
+                // Pick a compatible profile. If there are prefered_filament_profiles, use them.
+                if (prefered_filament_profiles.empty())
+                    filament_name = this->filaments.first_compatible().name;
+                else {
+                    const std::string &preferred = (idx < prefered_filament_profiles.size()) ? 
+                        prefered_filament_profiles[idx] : prefered_filament_profiles.front();
+                    filament_name = this->filaments.first_compatible(
+                        [&preferred](const std::string& profile_name){ return profile_name == preferred; }).name;
+                }
+            }
         }
     }
 }
@@ -977,6 +1062,9 @@ void PresetBundle::export_configbundle(const std::string &path) //, const Dynami
 // an optional "(modified)" suffix will be removed from the filament name.
 void PresetBundle::set_filament_preset(size_t idx, const std::string &name)
 {
+	if (name.find_first_of("-------") == 0)
+		return;
+
     if (idx >= filament_presets.size())
         filament_presets.resize(idx + 1, filaments.default_preset().name);
     filament_presets[idx] = Preset::remove_suffix_modified(name);
@@ -1025,9 +1113,11 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, wxBitma
     // and draw a red flag in front of the selected preset.
     bool          wide_icons      = selected_preset != nullptr && ! selected_preset->is_compatible && m_bitmapIncompatible != nullptr;
     assert(selected_preset != nullptr);
-	std::map<wxString, wxBitmap> nonsys_presets;
+	std::map<wxString, wxBitmap*> nonsys_presets;
 	wxString selected_str = "";
-    for (int i = this->filaments().front().is_visible ? 0 : 1; i < int(this->filaments().size()); ++ i) {
+	if (!this->filaments().front().is_visible)
+		ui->Append("------- " + _(L("System presets")) + " -------", wxNullBitmap);
+	for (int i = this->filaments().front().is_visible ? 0 : 1; i < int(this->filaments().size()); ++i) {
         const Preset &preset    = this->filaments.preset(i);
         bool          selected  = this->filament_presets[idx_extruder] == preset.name;
 		if (! preset.is_visible || (! preset.is_compatible && ! selected))
@@ -1059,14 +1149,11 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, wxBitma
                 bmps.emplace_back(m_bitmapCache->mksolid(8,  16, rgb));
             }
             // Paint a lock at the system presets.
-            bmps.emplace_back(m_bitmapCache->mkclear(4, 16));
-            bmps.emplace_back((preset.is_system || preset.is_default) ? 
-                (preset.is_dirty ? *m_bitmapLockOpen : *m_bitmapLock) : m_bitmapCache->mkclear(16, 16));
+            bmps.emplace_back(m_bitmapCache->mkclear(2, 16));
+			bmps.emplace_back((preset.is_system || preset.is_default) ? *m_bitmapLock : m_bitmapCache->mkclear(16, 16));
+//                 (preset.is_dirty ? *m_bitmapLockOpen : *m_bitmapLock) : m_bitmapCache->mkclear(16, 16));
             bitmap = m_bitmapCache->insert(bitmap_key, bmps);
 		}
-// 		ui->Append(wxString::FromUTF8((preset.name + (preset.is_dirty ? Preset::suffix_modified() : "")).c_str()), (bitmap == 0) ? wxNullBitmap : *bitmap);
-//         if (selected)
-//             ui->SetSelection(ui->GetCount() - 1);
 
 		if (preset.is_default || preset.is_system){
 			ui->Append(wxString::FromUTF8((preset.name + (preset.is_dirty ? Preset::suffix_modified() : "")).c_str()), 
@@ -1077,19 +1164,19 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, wxBitma
 		else
 		{
 			nonsys_presets.emplace(wxString::FromUTF8((preset.name + (preset.is_dirty ? Preset::suffix_modified() : "")).c_str()), 
-				(bitmap == 0) ? wxNullBitmap : *bitmap);
+				(bitmap == 0) ? &wxNullBitmap : bitmap);
 			if (selected)
 				selected_str = wxString::FromUTF8((preset.name + (preset.is_dirty ? Preset::suffix_modified() : "")).c_str());
 		}
 		if (preset.is_default)
-			ui->Append("------------------------------------", wxNullBitmap);
+			ui->Append("------- " + _(L("System presets")) + " -------", wxNullBitmap);
     }
 
 	if (!nonsys_presets.empty())
 	{
-		ui->Append("------------------------------------", wxNullBitmap);
-		for (std::map<wxString, wxBitmap>::iterator it = nonsys_presets.begin(); it != nonsys_presets.end(); ++it) {
-			ui->Append(it->first, it->second);
+		ui->Append("-------  " + _(L("User presets")) + "  -------", wxNullBitmap);
+		for (std::map<wxString, wxBitmap*>::iterator it = nonsys_presets.begin(); it != nonsys_presets.end(); ++it) {
+			ui->Append(it->first, *it->second);
 			if (it->first == selected_str)
 				ui->SetSelection(ui->GetCount() - 1);
 		}

@@ -111,7 +111,8 @@ PrintConfigDef::PrintConfigDef()
                    "with cooling (use a fan) before tweaking this.");
     def->cli = "bridge-flow-ratio=f";
     def->min = 0;
-    def->default_value = new ConfigOptionFloat(1);
+	def->max = 2;
+	def->default_value = new ConfigOptionFloat(1);
 
     def = this->add("over_bridge_flow_ratio", coFloat);
     def->label = L("Over-bridge flow ratio");
@@ -989,7 +990,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloats { 10. };
 
     def = this->add("min_skirt_length", coFloat);
-    def->label = L("Minimum extrusion length");
+    def->label = L("Minimal filament extrusion length");
     def->tooltip = L("Generate no less than the number of skirt loops required to consume "
                    "the specified amount of filament on the bottom layer. For multi-extruder machines, "
                    "this minimum applies to each extruder.");
@@ -1721,7 +1722,7 @@ PrintConfigDef::PrintConfigDef()
                    "temperature control commands in the output.");
     def->cli = "temperature=i@";
     def->full_label = L("Temperature");
-    def->max = 0;
+    def->min = 0;
     def->max = max_temp;
     def->default_value = new ConfigOptionInts { 200 };
     
@@ -1952,8 +1953,10 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         std::ostringstream oss;
         oss << "0x0," << p.value.x << "x0," << p.value.x << "x" << p.value.y << ",0x" << p.value.y;
         value = oss.str();
-    } else if (opt_key == "octoprint_host" && !value.empty()) {
-        opt_key = "print_host";
+// Maybe one day we will rename octoprint_host to print_host as it has been done in the upstream Slic3r.
+// Commenting this out fixes github issue #869 for now.
+//    } else if (opt_key == "octoprint_host" && !value.empty()) {
+//        opt_key = "print_host";
     } else if ((opt_key == "perimeter_acceleration" && value == "25")
         || (opt_key == "infill_acceleration" && value == "50")) {
         /*  For historical reasons, the world's full of configs having these very low values;
@@ -1964,10 +1967,6 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
     } else if (opt_key == "support_material_pattern" && value == "pillars") {
         // Slic3r PE does not support the pillars. They never worked well.
         value = "rectilinear";
-    } else if (opt_key == "support_material_threshold" && value == "0") {
-        // 0 used to be automatic threshold, but we introduced percent values so let's
-        // transform it into the default value
-        value = "60%";
     }
     
     // Ignore the following obsolete configuration keys:
@@ -1976,7 +1975,10 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         "support_material_tool", "acceleration", "adjust_overhang_flow", 
         "standby_temperature", "scale", "rotate", "duplicate", "duplicate_grid",
         "start_perimeters_at_concave_points", "start_perimeters_at_non_overhang", "randomize_start", 
-        "seal_position", "vibration_limit", "bed_size", "octoprint_host",
+        "seal_position", "vibration_limit", "bed_size", 
+        // Maybe one day we will rename octoprint_host to print_host as it has been done in the upstream Slic3r.
+        // Commenting this out fixes github issue #869 for now.
+        // "octoprint_host",
         "print_center", "g0", "threads", "pressure_advance", "wipe_tower_per_color_wipe"
     };
 

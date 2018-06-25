@@ -7,12 +7,12 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules/)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Workaround for an old CMake, which does not understand CMAKE_CXX_STANDARD.
-    add_compile_options(-std=c++11 -Wall)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall" )
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUXX)
     # Adding -fext-numeric-literals to enable GCC extensions on definitions of quad float literals, which are required by Boost.
-    add_compile_options(-fext-numeric-literals)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fext-numeric-literals" )
 endif()
 
 # Where all the bundled libraries reside?
@@ -27,9 +27,16 @@ if(WIN32)
     # BOOST_ALL_NO_LIB: Avoid the automatic linking of Boost libraries on Windows. Rather rely on explicit linking.
     add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB)
     # -D_ITERATOR_DEBUG_LEVEL)
+    if(WIN10SDK_PATH)
+        message("Building with Win10 Netfabb STL fixing service support")
+        add_definitions(-DHAS_WIN10SDK)
+        include_directories("${WIN10SDK_PATH}/Include")
+    else()
+        message("Building without Win10 Netfabb STL fixing service support")
+    endif()
 endif()
 
-add_definitions(-DwxUSE_UNICODE -D_UNICODE -DUNICODE)
+add_definitions(-DwxUSE_UNICODE -D_UNICODE -DUNICODE -DWXINTL_NO_GETTEXT_MACRO)
 
 add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/BoundingBox.cpp
@@ -172,14 +179,26 @@ add_library(libslic3r STATIC
 )
 
 add_library(libslic3r_gui STATIC
+    ${LIBDIR}/slic3r/GUI/AboutDialog.cpp
+    ${LIBDIR}/slic3r/GUI/AboutDialog.hpp
     ${LIBDIR}/slic3r/GUI/AppConfig.cpp
     ${LIBDIR}/slic3r/GUI/AppConfig.hpp
     ${LIBDIR}/slic3r/GUI/BitmapCache.cpp
     ${LIBDIR}/slic3r/GUI/BitmapCache.hpp
+    ${LIBDIR}/slic3r/GUI/ConfigSnapshotDialog.cpp
+    ${LIBDIR}/slic3r/GUI/ConfigSnapshotDialog.hpp
     ${LIBDIR}/slic3r/GUI/3DScene.cpp
     ${LIBDIR}/slic3r/GUI/3DScene.hpp
     ${LIBDIR}/slic3r/GUI/GLShader.cpp
-    ${LIBDIR}/slic3r/GUI/GLShader.hpp
+    ${LIBDIR}/slic3r/GUI/GLShader.hpp    
+    ${LIBDIR}/slic3r/GUI/GLCanvas3D.hpp
+    ${LIBDIR}/slic3r/GUI/GLCanvas3D.cpp
+    ${LIBDIR}/slic3r/GUI/GLCanvas3DManager.hpp
+    ${LIBDIR}/slic3r/GUI/GLCanvas3DManager.cpp
+    ${LIBDIR}/slic3r/GUI/GLGizmo.hpp
+    ${LIBDIR}/slic3r/GUI/GLGizmo.cpp    
+    ${LIBDIR}/slic3r/GUI/GLTexture.hpp
+    ${LIBDIR}/slic3r/GUI/GLTexture.cpp    
     ${LIBDIR}/slic3r/GUI/Preferences.cpp
     ${LIBDIR}/slic3r/GUI/Preferences.hpp
     ${LIBDIR}/slic3r/GUI/Preset.cpp
@@ -210,18 +229,36 @@ add_library(libslic3r_gui STATIC
     ${LIBDIR}/slic3r/GUI/RammingChart.hpp
     ${LIBDIR}/slic3r/GUI/BonjourDialog.cpp
     ${LIBDIR}/slic3r/GUI/BonjourDialog.hpp
+    ${LIBDIR}/slic3r/GUI/ButtonsDescription.cpp
+    ${LIBDIR}/slic3r/GUI/ButtonsDescription.hpp
     ${LIBDIR}/slic3r/Config/Snapshot.cpp
     ${LIBDIR}/slic3r/Config/Snapshot.hpp
     ${LIBDIR}/slic3r/Config/Version.cpp
     ${LIBDIR}/slic3r/Config/Version.hpp    
     ${LIBDIR}/slic3r/Utils/ASCIIFolding.cpp
     ${LIBDIR}/slic3r/Utils/ASCIIFolding.hpp
+    ${LIBDIR}/slic3r/Utils/Serial.cpp
+    ${LIBDIR}/slic3r/Utils/Serial.hpp
+    ${LIBDIR}/slic3r/GUI/ConfigWizard.cpp
+    ${LIBDIR}/slic3r/GUI/ConfigWizard.hpp
+    ${LIBDIR}/slic3r/GUI/MsgDialog.cpp
+    ${LIBDIR}/slic3r/GUI/MsgDialog.hpp
+    ${LIBDIR}/slic3r/GUI/UpdateDialogs.cpp
+    ${LIBDIR}/slic3r/GUI/UpdateDialogs.hpp
+    ${LIBDIR}/slic3r/GUI/FirmwareDialog.cpp
+    ${LIBDIR}/slic3r/GUI/FirmwareDialog.hpp
     ${LIBDIR}/slic3r/Utils/Http.cpp
     ${LIBDIR}/slic3r/Utils/Http.hpp
+    ${LIBDIR}/slic3r/Utils/FixModelByWin10.cpp
+    ${LIBDIR}/slic3r/Utils/FixModelByWin10.hpp
     ${LIBDIR}/slic3r/Utils/OctoPrint.cpp
     ${LIBDIR}/slic3r/Utils/OctoPrint.hpp
     ${LIBDIR}/slic3r/Utils/Bonjour.cpp
     ${LIBDIR}/slic3r/Utils/Bonjour.hpp
+    ${LIBDIR}/slic3r/Utils/PresetUpdater.cpp
+    ${LIBDIR}/slic3r/Utils/PresetUpdater.hpp
+    ${LIBDIR}/slic3r/Utils/Time.cpp
+    ${LIBDIR}/slic3r/Utils/Time.hpp
 )
 
 add_library(admesh STATIC
@@ -317,6 +354,7 @@ add_library(semver STATIC
     ${LIBDIR}/semver/semver.c
 )
 
+
 # Generate the Slic3r Perl module (XS) typemap file.
 set(MyTypemap ${CMAKE_CURRENT_BINARY_DIR}/typemap)
 add_custom_command(
@@ -367,6 +405,7 @@ set(XS_XSP_FILES
     ${XSP_DIR}/SurfaceCollection.xsp
     ${XSP_DIR}/TriangleMesh.xsp
     ${XSP_DIR}/Utils_OctoPrint.xsp
+    ${XSP_DIR}/Utils_PresetUpdater.xsp
     ${XSP_DIR}/XS.xsp
 )
 foreach (file ${XS_XSP_FILES})
@@ -412,7 +451,7 @@ if(APPLE)
     # Ignore undefined symbols of the perl interpreter, they will be found in the caller image.
     target_link_libraries(XS "-undefined dynamic_lookup")
 endif()
-target_link_libraries(XS libslic3r libslic3r_gui admesh miniz clipper nowide polypartition poly2tri)
+target_link_libraries(XS libslic3r libslic3r_gui admesh miniz clipper nowide polypartition poly2tri semver avrdude)
 if(SLIC3R_PROFILE)
     target_link_libraries(XS Shiny)
 endif()
@@ -420,7 +459,7 @@ endif()
 # Add the OpenGL and GLU libraries.
 if (SLIC3R_GUI)
     if (MSVC)
-        target_link_libraries(XS OpenGL32.Lib GlU32.Lib)
+        target_link_libraries(XS user32.lib Setupapi.lib OpenGL32.Lib GlU32.Lib)
     elseif (MINGW)
         target_link_libraries(XS -lopengl32)
     elseif (APPLE)
@@ -460,10 +499,6 @@ if (SLIC3R_PROFILE)
     add_definitions(-DSLIC3R_PROFILE)
 endif ()
 
-if (SLIC3R_HAS_BROKEN_CROAK)
-    target_compile_definitions(XS PRIVATE -DSLIC3R_HAS_BROKEN_CROAK)
-endif ()
-
 if (CMAKE_BUILD_TYPE MATCHES DEBUG)
     target_compile_definitions(XS PRIVATE -DSLIC3R_DEBUG -DDEBUG -D_DEBUG)
 else ()
@@ -482,18 +517,20 @@ if (WIN32 AND ";${PerlEmbed_CCFLAGS};" MATCHES ";[-/]Od;")
     message("Old CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
     message("Old CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELEASE}")
     message("Old CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS_RELEASE}")
-    set(CMAKE_CXX_FLAGS_RELEASE "/MD /Od /Zi /EHsc /DNDEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "/MD /Od /Zi /DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MD /Od /Zi /EHsc /DNDEBUG")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MD /Od /Zi /DNDEBUG")
-    set(CMAKE_CXX_FLAGS "/MD /Od /Zi /EHsc /DNDEBUG")
-    set(CMAKE_C_FLAGS "/MD /Od /Zi /DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "/MD /Od /Zi /EHsc /DNDEBUG /DWIN32")
+    set(CMAKE_C_FLAGS_RELEASE "/MD /Od /Zi /DNDEBUG /DWIN32")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MD /Od /Zi /EHsc /DNDEBUG /DWIN32")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MD /Od /Zi /DNDEBUG /DWIN32")
+    set(CMAKE_CXX_FLAGS "/MD /Od /Zi /EHsc /DNDEBUG /DWIN32")
+    set(CMAKE_C_FLAGS "/MD /Od /Zi /DNDEBUG /DWIN32")
 endif()
 # The following line will add -fPIC on Linux to make the XS.so rellocable.
 add_definitions(${PerlEmbed_CCCDLFLAGS})
 if (WIN32)
     target_link_libraries(XS ${PERL_LIBRARY})
 endif()
+
+add_subdirectory(src/avrdude)
 
 ## REQUIRED packages
 
@@ -539,13 +576,13 @@ if (SLIC3R_PRUSACONTROL)
     set(wxWidgets_UseAlienWx 1)
     if (wxWidgets_UseAlienWx)
         set(AlienWx_DEBUG 1)
-        find_package(AlienWx REQUIRED COMPONENTS base core adv)
+        find_package(AlienWx REQUIRED COMPONENTS base core adv html gl)
         include_directories(${AlienWx_INCLUDE_DIRS})
         #add_compile_options(${AlienWx_CXX_FLAGS})
         add_definitions(${AlienWx_DEFINITIONS})
         set(wxWidgets_LIBRARIES ${AlienWx_LIBRARIES})
     else ()
-        find_package(wxWidgets REQUIRED COMPONENTS base core adv)
+        find_package(wxWidgets REQUIRED COMPONENTS base core adv html gl)
         include(${wxWidgets_USE_FILE})
     endif ()
     add_definitions(-DSLIC3R_GUI -DSLIC3R_PRUS)
@@ -625,6 +662,7 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:XS>" "${PERL_LOCAL_LIB_DIR}/auto/Slic3r/XS/"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${PERL_LOCAL_LIB_DIR}/Slic3r/"
         COMMAND ${CMAKE_COMMAND} -E copy "${PROJECT_SOURCE_DIR}/xs/lib/Slic3r/XS.pm" "${PERL_LOCAL_LIB_DIR}/Slic3r/"
+    COMMENT "Installing XS.pm and XS.{so,dll,bundle} into the local-lib directory ..."
 )
 if(APPLE)
     add_custom_command(
@@ -649,7 +687,12 @@ endif ()
 
 if (MSVC)
     # Here we associate some additional properties with the MSVC project to enable compilation and debugging out of the box.
-    set_target_properties(XS PROPERTIES VS_USER_PROPS "${PROJECT_SOURCE_DIR}/cmake/msvc/xs.wperl64d.props")
+    get_filename_component(PROPS_PERL_BIN_PATH "${PERL_EXECUTABLE}" DIRECTORY)
+    string(REPLACE "/" "\\" PROPS_PERL_BIN_PATH "${PROPS_PERL_BIN_PATH}")
+    string(REPLACE "/" "\\" PROPS_PERL_EXECUTABLE "${PERL_EXECUTABLE}")
+    string(REPLACE "/" "\\" PROPS_CMAKE_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
+    configure_file("${PROJECT_SOURCE_DIR}/cmake/msvc/xs.wperl.props.in" "${CMAKE_BINARY_DIR}/xs.wperl.props" NEWLINE_STYLE CRLF)
+    set_target_properties(XS PROPERTIES VS_USER_PROPS "${CMAKE_BINARY_DIR}/xs.wperl.props")
 endif()
 
 # l10n

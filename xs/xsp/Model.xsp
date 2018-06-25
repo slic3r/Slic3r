@@ -95,12 +95,9 @@
     void duplicate_objects_grid(unsigned int x, unsigned int y, double dist);
 
     bool looks_like_multipart_object() const;
-    void convert_multipart_object();
+    void convert_multipart_object(unsigned int max_extruders);
 
     void print_info() const;
-
-    bool fits_print_volume(DynamicPrintConfig* config) const
-        %code%{ RETVAL = THIS->fits_print_volume(config); %};
 
     bool store_stl(char *path, bool binary)
         %code%{ TriangleMesh mesh = THIS->mesh(); RETVAL = Slic3r::store_stl(path, &mesh, binary); %};
@@ -346,7 +343,7 @@ ModelMaterial::attributes()
     void set_modifier(bool modifier)
         %code%{ THIS->modifier = modifier; %};
 
-    size_t split();
+    size_t split(unsigned int max_extruders);
     
     ModelMaterial* assign_unique_material();
 };

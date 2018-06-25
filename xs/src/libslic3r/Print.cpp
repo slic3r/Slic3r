@@ -522,7 +522,7 @@ std::string Print::validate() const
     // Allow the objects to protrude below the print bed, only the part of the object above the print bed will be sliced.
     print_volume.min.z = -1e10;
     for (PrintObject *po : this->objects) {
-        if (! print_volume.contains(po->model_object()->tight_bounding_box(false)))
+        if (!print_volume.contains(po->model_object()->tight_bounding_box(false)))
             return "Some objects are outside of the print volume.";
     }
 
@@ -598,10 +598,10 @@ std::string Print::validate() const
             return "The Wipe Tower is currently only supported with the relative extruder addressing (use_relative_e_distances=1).";
         SlicingParameters slicing_params0 = this->objects.front()->slicing_parameters();
 
-        const PrintObject* most_layered_object = this->objects.front(); // object with highest layer_height_profile.size() encountered so far
+        const PrintObject* tallest_object = this->objects.front(); // let's find the tallest object
         for (const auto* object : objects)
-            if (object->layer_height_profile.size() > most_layered_object->layer_height_profile.size())
-                most_layered_object = object;
+            if (*(object->layer_height_profile.end()-2) > *(tallest_object->layer_height_profile.end()-2) )
+                    tallest_object = object;
 
         for (PrintObject *object : this->objects) {
             SlicingParameters slicing_params = object->slicing_parameters();
@@ -618,17 +618,26 @@ std::string Print::validate() const
             object->update_layer_height_profile();
             object->layer_height_profile_valid = was_layer_height_profile_valid;
 
-            if ( this->config.variable_layer_height ) {
-                int i = 0;
-                while ( i < object->layer_height_profile.size() ) {
-                    if (std::abs(most_layered_object->layer_height_profile[i] - object->layer_height_profile[i]) > EPSILON)
-                        return "The Wipe tower is only supported if all objects have the same layer height profile";
-                    ++i;
-                    if (i == object->layer_height_profile.size()-2) // this element contains the objects max z, if the other object is taller,
-                                                                    // it does not have to match - we will step over it
-                        if (most_layered_object->layer_height_profile[i] > object->layer_height_profile[i])
-                            ++i;
+            if ( this->config.variable_layer_height ) { // comparing layer height profiles
+                bool failed = false;
+                if (tallest_object->layer_height_profile.size() >= object->layer_height_profile.size() ) {
+                    int i = 0;
+                    while ( i < object->layer_height_profile.size() && i < tallest_object->layer_height_profile.size()) {
+                        if (std::abs(tallest_object->layer_height_profile[i] - object->layer_height_profile[i])) {
+                            failed = true;
+                            break;
+                        }
+                        ++i;
+                        if (i == object->layer_height_profile.size()-2) // this element contains this objects max z
+                            if (tallest_object->layer_height_profile[i] > object->layer_height_profile[i]) // the difference does not matter in this case
+                                ++i;
+                    }
                 }
+                else
+                    failed = true;
+
+                if (failed)
+                    return "The Wipe tower is only supported if all objects have the same layer height profile";
             }
 
             /*for (size_t i = 5; i < object->layer_height_profile.size(); i += 2)
@@ -914,7 +923,9 @@ void Print::_make_skirt()
 
     // Initial offset of the brim inner edge from the object (possible with a support & raft).
     // The skirt will touch the brim if the brim is extruded.
-    coord_t distance = scale_(std::max(this->config.skirt_distance.value, this->config.brim_width.value));
+    Flow brim_flow = this->brim_flow();
+    double actual_brim_width = brim_flow.spacing() * floor(this->config.brim_width.value / brim_flow.spacing());
+    coord_t distance = scale_(std::max(this->config.skirt_distance.value, actual_brim_width) - spacing/2.);
     // Draw outlines from outside to inside.
     // Loop while we have less skirts than required or any extruder hasn't reached the min length if any.
     std::vector<coordf_t> extruded_length(extruders.size(), 0.);
@@ -980,7 +991,7 @@ void Print::_make_brim()
             }
     }
     Polygons loops;
-    size_t num_loops = size_t(floor(this->config.brim_width.value / flow.width));
+    size_t num_loops = size_t(floor(this->config.brim_width.value / flow.spacing()));
     for (size_t i = 0; i < num_loops; ++ i) {
         islands = offset(islands, float(flow.scaled_spacing()), jtSquare);
         for (Polygon &poly : islands) {
