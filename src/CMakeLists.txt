@@ -8,7 +8,7 @@ option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
 option(BUILD_EXTRUDE_TIN "Build and link the extrude-tin application." OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
-set(CMAKE_CXX_FLAGS "-g ${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE")
+set(CMAKE_CXX_FLAGS "-g ${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -DNO_PERL")
 
 if(DEFINED ENV{SLIC3R_VAR_REL})
     set(CMAKE_CXX_FLAGS "-DVAR_REL=$ENV{SLIC3R_VAR_REL}")
@@ -136,6 +136,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/SurfaceCollection.cpp
     ${LIBDIR}/libslic3r/SVG.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
+    ${LIBDIR}/libslic3r/utils.cpp
 )
 target_compile_features(libslic3r PUBLIC cxx_std_11)
 
