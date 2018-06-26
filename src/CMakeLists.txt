@@ -294,7 +294,7 @@ IF(wxWidgets_FOUND)
         endif()
         add_executable(gui_test ${UI_TEST_SOURCES}) 
         add_test(NAME TestGUI COMMAND gui_test)
-        target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES})
+        target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES} ${LIBSLIC3R_DEPENDS})
     endif()
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
