@@ -1303,6 +1303,7 @@ void TabFilament::build()
 		optgroup->append_line(line);
 
         optgroup->append_single_option_line("bridge_fan_speed");
+        optgroup->append_single_option_line("top_fan_speed");
 		optgroup->append_single_option_line("disable_fan_first_layers");
 
 		optgroup = page->new_optgroup(_(L("Cooling thresholds")), 250);

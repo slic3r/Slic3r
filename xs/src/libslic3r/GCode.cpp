@@ -2248,6 +2248,8 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
     if (m_enable_cooling_markers) {
         if (is_bridge(path.role()))
             gcode += ";_BRIDGE_FAN_START\n";
+        else if (ExtrusionRole::erTopSolidInfill == path.role())
+            gcode += ";_TOP_FAN_START\n";
         else
             comment = ";_EXTRUDE_SET_SPEED";
         if (path.role() == erExternalPerimeter)
@@ -2269,7 +2271,13 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         }
     }
     if (m_enable_cooling_markers)
-        gcode += is_bridge(path.role()) ? ";_BRIDGE_FAN_END\n" : ";_EXTRUDE_END\n";
+        if (is_bridge(path.role()))
+            gcode += ";_BRIDGE_FAN_END\n";
+        else if (ExtrusionRole::erTopSolidInfill == path.role())
+            gcode += ";_TOP_FAN_END\n";
+        else
+            gcode += ";_EXTRUDE_END\n";
+
     
     this->set_last_pos(path.last_point());
     return gcode;

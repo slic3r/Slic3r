@@ -590,6 +590,7 @@ public:
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloat               bridge_acceleration;
     ConfigOptionInts                bridge_fan_speed;
+    ConfigOptionInts                top_fan_speed;
     ConfigOptionFloat               brim_width;
     ConfigOptionBool                complete_objects;
     ConfigOptionBools               cooling;
@@ -659,6 +660,7 @@ protected:
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
+        OPT_PTR(top_fan_speed);
         OPT_PTR(brim_width);
         OPT_PTR(complete_objects);
         OPT_PTR(cooling);

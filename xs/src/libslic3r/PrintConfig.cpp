@@ -102,6 +102,15 @@ PrintConfigDef::PrintConfigDef()
     def->max = 100;
     def->default_value = new ConfigOptionInts{ 100 };
 
+    def = this->add("top_fan_speed", coInts);
+    def->label = L("Top fan speed");
+    def->tooltip = L("This fan speed is enforced during all top fills.");
+    def->sidetext = L("%");
+    def->cli = "top-fan-speed=i@";
+    def->min = 0;
+    def->max = 100;
+    def->default_value = new ConfigOptionInts{ 100 };
+
     def = this->add("bridge_flow_ratio", coFloat);
     def->label = L("Bridge flow ratio");
     def->category = L("Advanced");
