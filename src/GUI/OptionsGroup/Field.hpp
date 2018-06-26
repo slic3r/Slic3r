@@ -11,8 +11,9 @@ public:
         ui_window = new wxCheckBox(parent, checkid, "");
         _check = dynamic_cast<wxCheckBox*>(ui_window);
         _check->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+        _check->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { this->on_kill_focus(""); e.Skip(); });
     }
-    ~UI_Checkbox() { wxDELETE(ui_window); ui_window = _check = nullptr; }
+    ~UI_Checkbox() { wxDELETE(_check); ui_window = _check = nullptr; }
     /// Function to call when the contents of this change.
     std::function<void (const std::string&, bool value)> on_change {nullptr};
     std::function<void (const std::string&)> on_kill_focus {nullptr};
@@ -34,7 +35,7 @@ private:
     wxCheckBox* _check {nullptr};
 
     void _on_change(std::string opt_id) {
-        if (!this->disable_change_event) {
+        if (!this->disable_change_event && this->on_change != nullptr) {
             this->on_change(opt_id, this->get_bool());
         }
     }
