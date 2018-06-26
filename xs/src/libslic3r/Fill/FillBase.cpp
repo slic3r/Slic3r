@@ -141,7 +141,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
         return;
 	// ensure it doesn't over or under-extrude
 	double multFlow = 1;
-	if (!params.dont_adjust && params.density == 1 && !flow.bridge){
+    if (!params.dont_adjust && params.full_infill() && !flow.bridge && params.fill_exactly){
 		// compute the path of the nozzle -> extruded volume
 		double lengthTot = 0;
 		int nbLines = 0;

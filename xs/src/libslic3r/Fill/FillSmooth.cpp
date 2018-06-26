@@ -35,7 +35,7 @@ namespace Slic3r {
 		//a small under-overlap to prevent over-extrudion on thin surfaces (i.e. remove the overlap)
 		Surface surfaceNoOverlap(*surface);
 		//remove the overlap (prevent over-extruding) if possible
-		ExPolygons noOffsetPolys = offset2_ex(surfaceNoOverlap.expolygon, -scale_(this->overlap) * 1, 0);
+        ExPolygons noOffsetPolys = offset2_ex(surfaceNoOverlap.expolygon, -scale_(this->overlap) * (flow.bridge?0:1), 0);
 		//printf("FillSmooth::fill_surface() : overlap=%f->%f.\n", overlap, -scale_(this->overlap));
 		//printf("FillSmooth::polys : 1->%i.\n", noOffsetPolys.size());
 		//printf("FillSmooth::polys : %f  %f->%f.\n", surface->expolygon.area(), surfaceNoOverlap.expolygon.area(), noOffsetPolys[0].area());
@@ -97,12 +97,13 @@ namespace Slic3r {
 				double extrudedVolume = flow.mm3_per_mm() * lengthTot;
 				volumeToOccupy += poylineVolume;
 
-				printf("FillSmooth: request extruding of %f length, with mm3_per_mm of %f =volume=> %f / %f (%f)\n",
+				printf("FillSmooth: request extruding of %f length, with mm3_per_mm of %f =volume=> %f / %f (%f) %s\n",
 					lengthTot,
 					flow.mm3_per_mm(),
 					flow.mm3_per_mm() * lengthTot,
 					flow.height*unscale(unscale(surfaceNoOverlap.area())),
-					(flow.mm3_per_mm() * lengthTot) / (flow.height*unscale(unscale(surfaceNoOverlap.area())))
+					(flow.mm3_per_mm() * lengthTot) / (flow.height*unscale(unscale(surfaceNoOverlap.area()))),
+                    params.fill_exactly ? "ready" : "only for info"
 					);
 				printf("FillSmooth: extruding flow mult %f vs old: %f\n", percentFlow[0] * poylineVolume / extrudedVolume, percentFlow[0] / percentWidth[0]);
 
@@ -113,7 +114,8 @@ namespace Slic3r {
 					eec->entities, STDMOVE(polylines_layer1),
 					flow.bridge ? erBridgeInfill : rolePass[0],
 					//reduced flow height for a better view (it's only a gui thing)
-					params.flow_mult * flow.mm3_per_mm() * percentFlow[0] * poylineVolume / extrudedVolume, (float)flow.width*percentFlow[0] * poylineVolume / extrudedVolume, (float)flow.height*0.8);
+                    params.flow_mult * flow.mm3_per_mm() * percentFlow[0] * (params.fill_exactly? poylineVolume / extrudedVolume : 1), 
+                        (float)(flow.width*percentFlow[0] * (params.fill_exactly ? poylineVolume / extrudedVolume : 1)), (float)flow.height*0.8);
 			}
 			else{
 				return;
@@ -173,7 +175,8 @@ namespace Slic3r {
 					eec->entities, STDMOVE(polylines_layer2),
 					rolePass[1],
 					//reduced flow width for a better view (it's only a gui thing)
-					params.flow_mult * flow.mm3_per_mm() * percentFlow[1] * volumeToOccupy / extrudedVolume, (float)flow.width*(percentFlow[1] < 0.1 ? 0.1 : percentFlow[1]), (float)flow.height);
+                    params.flow_mult * flow.mm3_per_mm() * percentFlow[1] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1), 
+                        (float)(flow.width*(percentFlow[1] < 0.1 ? 0.1 : percentFlow[1])), (float)flow.height);
 			}
 			else{
 				return;
@@ -226,7 +229,8 @@ namespace Slic3r {
 					eec->entities, STDMOVE(polylines_layer3),
 					rolePass[2], //slow (if last)
 					//reduced flow width for a better view (it's only a gui thing)
-					params.flow_mult * flow.mm3_per_mm() * percentFlow[2] * volumeToOccupy / extrudedVolume, (float)flow.width*(percentFlow[2] < 0.1 ? 0.1 : percentFlow[2]), (float)flow.height);
+                    params.flow_mult * flow.mm3_per_mm() * percentFlow[2] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1),
+                        (float)(flow.width*(percentFlow[2] < 0.1 ? 0.1 : percentFlow[2])), (float)flow.height);
 			}
 		}
 

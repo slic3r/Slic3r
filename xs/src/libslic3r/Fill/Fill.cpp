@@ -224,23 +224,12 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 //        f->layer_height = h;
 		//give the overlap size, it's not the real value (it can depend of the external_perimeter_extrusion_width)
 		f->overlap = layerm.region()->config.infill_overlap.get_abs_value(flow.nozzle_diameter);
-		
-		/*printf("infill_overlap : widdth=%d  scaled=%d unscaled=%d,  widdth=%d  scaled=%d unscaled=%d, infill_overlap=%d, absvalue_scaled=%d, absvalue_UNscaled=%d.\n", 
-			layerm.region()->config.perimeter_extrusion_width.getFloat(), 
-			scale_(layerm.region()->config.perimeter_extrusion_width.getFloat()), 
-			unscale(layerm.region()->config.perimeter_extrusion_width.getFloat()),
-			layerm.flow(frPerimeter).width,
-			scale_(layerm.flow(frPerimeter).width),
-			unscale(layerm.flow(frPerimeter).width),
-			layerm.region()->config.infill_overlap.getFloat(), 
-			layerm.region()->config.infill_overlap.get_abs_value(layerm.region()->config.perimeter_extrusion_width), 
-			f->overlap);*/
-		
         // apply half spacing using this flow's own spacing and generate infill
         FillParams params;
         params.density = 0.01 * density;
-//        params.dont_adjust = true;
         params.dont_adjust = false;
+        params.fill_exactly = layerm.region()->config.enforce_full_fill_volume.getBool();
+
 
         // calculate actual flow from spacing (which might have been adjusted by the infill
         // pattern generator)

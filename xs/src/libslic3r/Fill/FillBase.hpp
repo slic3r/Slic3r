@@ -22,6 +22,7 @@ struct FillParams
         // Adjustment does not work.
         dont_adjust = true;
 		flow_mult = 1.f;
+        fill_exactly = false;
     }
 
     bool        full_infill() const { return density > 0.9999f; }
@@ -37,6 +38,9 @@ struct FillParams
 
     // Don't adjust spacing to fill the space evenly.
     bool        dont_adjust;
+
+    // Try to extrude the exact amount of plastic to fill the volume requested
+    bool        fill_exactly;
 
     // For Honeycomb.
     // we were requested to complete each loop;

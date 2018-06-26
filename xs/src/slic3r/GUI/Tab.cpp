@@ -851,6 +851,7 @@ void TabPrint::build()
 		optgroup->append_single_option_line("fill_pattern");
 		optgroup->append_single_option_line("top_fill_pattern");
 		optgroup->append_single_option_line("bottom_fill_pattern");
+		optgroup->append_single_option_line("enforce_full_fill_volume");
 
 		optgroup = page->new_optgroup(_(L("Reducing printing time")));
 		optgroup->append_single_option_line("infill_every_layers");
@@ -1190,8 +1191,8 @@ void TabPrint::update()
 
 	bool have_solid_infill = m_config->opt_int("top_solid_layers") > 0 || m_config->opt_int("bottom_solid_layers") > 0;
 	// solid_infill_extruder uses the same logic as in Print::extruders()
-	for (auto el : {"top_fill_pattern", "bottom_fill_pattern", "infill_first", "solid_infill_extruder",
-					"solid_infill_extrusion_width", "solid_infill_speed" })
+	for (auto el : {"top_fill_pattern", "bottom_fill_pattern", "enforce_full_fill_volume", "infill_first",
+					"solid_infill_extruder", "solid_infill_extrusion_width", "solid_infill_speed" })
 		get_field(el)->toggle(have_solid_infill);
 
 	for (auto el : {"fill_angle", "bridge_angle", "infill_extrusion_width",
@@ -1301,7 +1302,7 @@ void TabFilament::build()
 		line.append_option(optgroup->get_option("max_fan_speed"));
 		optgroup->append_line(line);
 
-		optgroup->append_single_option_line("bridge_fan_speed");
+        optgroup->append_single_option_line("bridge_fan_speed");
 		optgroup->append_single_option_line("disable_fan_first_layers");
 
 		optgroup = page->new_optgroup(_(L("Cooling thresholds")), 250);

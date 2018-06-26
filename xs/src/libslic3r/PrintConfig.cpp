@@ -100,7 +100,7 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "bridge-fan-speed=i@";
     def->min = 0;
     def->max = 100;
-    def->default_value = new ConfigOptionInts { 100 };
+    def->default_value = new ConfigOptionInts{ 100 };
 
     def = this->add("bridge_flow_ratio", coFloat);
     def->label = L("Bridge flow ratio");
@@ -326,6 +326,13 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Octagram Spiral");
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
+    def = this->add("enforce_full_fill_volume", coBool);
+    def->label = L("Enforce full fill volume");
+    def->category = L("Infill");
+    def->tooltip = L("Experimental option wich modify (top/bottom) fill flow to have the exact amount of plastic inside the volume to fill.");
+    def->cli = "enforce-full-fill-volume!";
+    def->default_value = new ConfigOptionBool(true);
+
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = L("External perimeters");
     def->category = L("Extrusion Width");
@@ -364,7 +371,7 @@ PrintConfigDef::PrintConfigDef()
                    "is supported.");
     def->cli = "extra-perimeters!";
     def->default_value = new ConfigOptionBool(true);
-	
+
     def = this->add("only_one_perimeter_top", coBool);
     def->label = "Only one perimeter on Top surfaces";
     def->category = "Layers and Perimeters";
