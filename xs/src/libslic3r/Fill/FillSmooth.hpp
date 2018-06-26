@@ -24,16 +24,9 @@ public:
 		percentWidth[0] = 0.9;
 		percentWidth[1] = 2;
 		percentWidth[2] = 1.0;
-		percentFlow[0] = 0.7/percentWidth[0]; //* 1.25 => 0.9
-		percentFlow[1] = 0.3/percentWidth[1]; //*1.25 => 0.35
-		percentFlow[2] = 0.0/percentWidth[2];
-		// percentWidth[0] = 2.0;
-		// percentWidth[1] = 0.6;
-		// percentWidth[2] = 1.0;
-		// percentFlow[0] = 0.65;
-		// percentFlow[1] = 0.0;
-		// percentFlow[2] = 0.0;
-//		(extrusion mult => 0.9 + 0.15*2 = 1.2)
+		percentFlow[0] = 0.7;
+		percentFlow[1] = 0.3;
+		percentFlow[2] = 0.0;
 		double extrusionMult = 1.0;
 		percentFlow[0] *= extrusionMult;
 		percentFlow[1] *= extrusionMult;
@@ -61,19 +54,19 @@ public:
 		nbPass = 3;
 		anglePass[0] = float(M_PI / 4);
 		anglePass[1] = -float(M_PI / 4);
-		anglePass[2] = 0;
+		anglePass[2] = float(M_PI / 12); //align with nothing
 		fillPattern[0] = InfillPattern::ipRectilinear;
-		fillPattern[1] = InfillPattern::ipRectilinear;
+		fillPattern[1] = InfillPattern::ipConcentric;
 		fillPattern[2] = InfillPattern::ipRectilinear;
 		rolePass[0] = erSolidInfill;
 		rolePass[1] = erSolidInfill;
 		rolePass[2] = erTopSolidInfill;
-		percentWidth[0] = 0.9;
-		percentWidth[1] = 1.4;
-		percentWidth[2] = 2.5;
-		percentFlow[0] = 0.7 / percentWidth[0];
-		percentFlow[1] = 0.3 / percentWidth[1];
-		percentFlow[2] = 0.0 / percentWidth[2];
+		percentWidth[0] = 0.8;
+		percentWidth[1] = 1.5;
+		percentWidth[2] = 2.8;
+		percentFlow[0] = 0.7;
+		percentFlow[1] = 0.2;
+		percentFlow[2] = 0.1;
 		double extrusionMult = 1.0;
 		percentFlow[0] *= extrusionMult;
 		percentFlow[1] *= extrusionMult;
@@ -87,22 +80,22 @@ class FillSmoothHilbert : public FillSmooth
 {
 public:
 	FillSmoothHilbert() {
-		nbPass = 3;
+		nbPass = 2;
 		anglePass[0] = 0;
 		anglePass[1] = -float(M_PI / 4);
 		anglePass[2] = float(M_PI / 4);
-		fillPattern[0] = InfillPattern::ipHilbertCurve;
+		fillPattern[0] = InfillPattern::ipHilbertCurve; //ipHilbertCurve
 		fillPattern[1] = InfillPattern::ipRectilinear;
 		fillPattern[2] = InfillPattern::ipRectilinear;
 		rolePass[0] = erSolidInfill;
 		rolePass[1] = erSolidInfill;
 		rolePass[2] = erTopSolidInfill;
-		percentWidth[0] = 1;
-		percentWidth[1] = 1;
-		percentWidth[2] = 2;
-		percentFlow[0] = 0.8 / percentWidth[0];
-		percentFlow[1] = 0.1 / percentWidth[1];
-		percentFlow[2] = 0.1 / percentWidth[2];
+		percentWidth[0] = 1.0;
+		percentWidth[1] = 1.0;
+		percentWidth[2] = 1.0;
+		percentFlow[0] = 0.8;
+		percentFlow[1] = 0.1;
+		percentFlow[2] = 0.1;
 		double extrusionMult = 1.0;
 		percentFlow[0] *= extrusionMult;
 		percentFlow[1] *= extrusionMult;

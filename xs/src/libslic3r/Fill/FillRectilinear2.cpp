@@ -779,8 +779,8 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     ExPolygonWithOffset poly_with_offset(
         surface->expolygon, 
         - rotate_vector.first, 
-        scale_(this->overlap - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->spacing),
-        scale_(this->overlap - 0.5 * this->spacing));
+        scale_(0 - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->spacing),
+        scale_(0 - 0.5 * this->spacing));
     if (poly_with_offset.n_contours_inner == 0) {
         // Not a single infill line fits.
         //FIXME maybe one shall trigger the gap fill here?

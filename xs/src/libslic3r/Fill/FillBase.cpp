@@ -53,7 +53,7 @@ Fill* Fill::new_from_type(const std::string &type)
 Polylines Fill::fill_surface(const Surface *surface, const FillParams &params)
 {
     // Perform offset.
-    Slic3r::ExPolygons expp = offset_ex(surface->expolygon, float(scale_(this->overlap - 0.5 * this->spacing)));
+    Slic3r::ExPolygons expp = offset_ex(surface->expolygon, float(scale_(0 - 0.5 * this->spacing)));
     // Create the infills for each of the regions.
     Polylines polylines_out;
     for (size_t i = 0; i < expp.size(); ++ i)
@@ -139,12 +139,51 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
     Polylines polylines = this->fill_surface(surface, params);
     if (polylines.empty())
         return;
+	// ensure it doesn't over or under-extrude
+	double multFlow = 1;
+	if (!params.dont_adjust && params.density == 1 && !flow.bridge){
+		// compute the path of the nozzle -> extruded volume
+		double lengthTot = 0;
+		int nbLines = 0;
+		for (auto pline = polylines.begin(); pline != polylines.end(); ++pline){
+			Lines lines = pline->lines();
+			for (auto line = lines.begin(); line != lines.end(); ++line){
+				lengthTot += unscale(line->length());
+				nbLines++;
+			}
+		}
+		double extrudedVolume = flow.mm3_per_mm() * lengthTot;
+		// compute real volume
+		double poylineVolume = 0;
+		/// un-overlap the surface (it's done in perimeterGenerator, it just pass the surface polys a bit bigger to us, 
+		///		so we have to shrink it, it's silly, it should be here we should decide how to use the overlap setting!)
+		ExPolygons noOffsetPolys = offset2_ex(surface->expolygon, -scale_(this->overlap), 0);
+		for (auto poly = noOffsetPolys.begin(); poly != noOffsetPolys.end(); ++poly){
+			poylineVolume += flow.height*unscale(unscale(poly->area()));
+			// add external "perimeter gap"
+			double perimeterRoundGap = unscale(poly->contour.length()) * flow.height * (1 - 0.25*PI) * 0.5;
+			// add holes "perimeter gaps"
+			double holesGaps = 0;
+			for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole){
+				holesGaps += unscale(hole->length()) * flow.height * (1 - 0.25*PI) * 0.5;
+			}
+			/*printf("process want %f mm3 extruded for a volume of %f (%f + %f + %f) space : we mult by %f \n",
+				extrudedVolume,
+				(poylineVolume + perimeterRoundGap + holesGaps),
+				poylineVolume, perimeterRoundGap, holesGaps,
+				(poylineVolume + perimeterRoundGap + holesGaps) / extrudedVolume);*/
+			poylineVolume += perimeterRoundGap + holesGaps;
+		}
+		if (extrudedVolume != 0) multFlow = poylineVolume / extrudedVolume;
+	}
 
     // Save into layer.
     auto *eec = new ExtrusionEntityCollection();
-    out.entities.push_back(eec);
-    // Only concentric fills are not sorted.
+    /// pass the no_sort attribute to the extrusion path
     eec->no_sort = this->no_sort();
+	/// add it into the collection
+	out.entities.push_back(eec);
+	/// push the path
     extrusion_entities_append_paths(
         eec->entities, STDMOVE(polylines),
         flow.bridge ?
@@ -152,7 +191,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
             (surface->is_solid() ?
                 ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
                 erInternalInfill),
-				flow.mm3_per_mm() * params.flow_mult, flow.width * params.flow_mult, flow.height);
+				flow.mm3_per_mm() * params.flow_mult * multFlow, flow.width * params.flow_mult, flow.height);
     
 }
 

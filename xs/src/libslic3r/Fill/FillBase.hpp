@@ -29,7 +29,7 @@ struct FillParams
 	// Fill density, fraction in <0, 1>
 	float       density;
 
-	// Fill extruding flow multiplier, fraction in <0, 1>. Used by FillSmooth
+	// Fill extruding flow multiplier, fraction in <0, 1>. Used by "over bridge compensation"
 	float       flow_mult;
 
     // Don't connect the fill lines around the inner perimeter.
@@ -53,7 +53,7 @@ public:
     coordf_t    z;
     // in unscaled coordinates
     coordf_t    spacing;
-    // infill / perimeter overlap, in unscaled coordinates
+    // infill / perimeter overlap, in unscaled coordinates 
     coordf_t    overlap;
     // in radians, ccw, 0 = East
     float       angle;
