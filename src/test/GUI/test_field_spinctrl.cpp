@@ -40,7 +40,7 @@ SCENARIO( "Receiving a Spinctrl event") {
     wxMilliSleep(250);
     GIVEN ( "A UI Spinctrl") {
         auto exec_counter {0};
-        auto changefunc {[&exec_counter] (const std::string& opt_id, bool value) { exec_counter++; }};
+        auto changefunc {[&exec_counter] (const std::string& opt_id, int value) { exec_counter++; }};
         auto test_field {Slic3r::GUI::UI_SpinCtrl(wxTheApp->GetTopWindow(), Slic3r::ConfigOptionDef())};
 
         test_field.on_change = changefunc;
@@ -81,7 +81,7 @@ SCENARIO( "Changing the text via entry works on pressing enter") {
     wxMilliSleep(500);
     GIVEN ( "A UI Spinctrl") {
         auto exec_counter {0};
-        auto changefunc {[&exec_counter] (const std::string& opt_id, bool value) { exec_counter++; }};
+        auto changefunc {[&exec_counter] (const std::string& opt_id, int value) { exec_counter++; }};
         auto test_field {Slic3r::GUI::UI_SpinCtrl(wxTheApp->GetTopWindow(), Slic3r::ConfigOptionDef())};
 
         test_field.on_change = changefunc;

@@ -9,6 +9,8 @@
 #include "Log.hpp"
 
 #include "wx/spinctrl.h"
+#include "wx/checkbox.h"
+#include "wx/textctrl.h"
 
 namespace Slic3r { namespace GUI {
 
@@ -37,9 +39,9 @@ public:
     /// Getter functions for UI_Window items.
     virtual bool get_bool() { Slic3r::Log::warn(this->LogChannel(), "get_bool does not exist"s); return false; } //< return false all the time if this is not implemented.
     virtual int get_int() { Slic3r::Log::warn(this->LogChannel(), "get_int does not exist"s); return 0; } //< return 0 all the time if this is not implemented.
+    virtual std::string get_string() { Slic3r::Log::warn(this->LogChannel(), "get_string does not exist"s); return 0; } //< return 0 all the time if this is not implemented.
 
-    /// Function to call when the contents of this change.
-    std::function<void (const std::string&, bool value)> on_change {nullptr};
+    /// Function to call when focus leaves.
     std::function<void (const std::string&)> on_kill_focus {nullptr};
 
 protected:
@@ -71,7 +73,7 @@ public:
         _check->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus("");} e.Skip(); });
     }
 
-    ~UI_Checkbox() = default;
+    ~UI_Checkbox() { _check->Destroy(); }
 
     /// Returns a bare pointer to the underlying checkbox, usually for test interface
     wxCheckBox* check() { return _check; }
@@ -83,6 +85,9 @@ public:
     /// Casts the containing value to boolean and sets the built-in checkbox appropriately.
     /// implements set_value
     virtual void set_value(boost::any value) override { this->_check->SetValue(boost::any_cast<bool>(value)); }
+
+    /// Function to call when the contents of this change.
+    std::function<void (const std::string&, bool value)> on_change {nullptr};
 
 protected:
     wxCheckBox* _check {nullptr};
@@ -113,12 +118,15 @@ public:
         _spin->Bind(wxEVT_SPINCTRL, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
         _spin->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus("");} e.Skip(); });
     }
-    ~UI_SpinCtrl() = default;
+    ~UI_SpinCtrl() { _spin->Destroy();}
     int get_int() { return this->_spin->GetValue(); }
     void set_value(boost::any value) { this->_spin->SetValue(boost::any_cast<int>(value)); }
 
     /// Access method for the underlying SpinCtrl
     wxSpinCtrl* spinctrl() { return _spin; }
+    
+    /// Function to call when the contents of this change.
+    std::function<void (const std::string&, int value)> on_change {nullptr};
 
 protected:
     virtual std::string LogChannel() { return "UI_SpinCtrl"s; }
@@ -131,6 +139,53 @@ protected:
 
 private:
     wxSpinCtrl* _spin {nullptr};
+    int _tmp {0};
+};
+
+class UI_TextCtrl : public UI_Window {
+public:
+    UI_TextCtrl(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY) : UI_Window(parent, _opt) {
+        int style {0};
+        if (opt.multiline) {
+            style |= wxHSCROLL;
+            style |= wxTE_MULTILINE;
+        } else {
+            style |= wxTE_PROCESS_ENTER;
+        }
+        /// Initialize and set defaults, if available.
+        _text = new wxTextCtrl(parent, id, 
+            (opt.default_value != NULL ? wxString(opt.default_value->getString()) : wxString()), 
+            wxDefaultPosition, 
+            _default_size(), 
+            style);
+
+        window = _text;
+
+        // Set up event handlers
+        _text->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+        _text->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus("");} e.Skip(); });
+    }
+    ~UI_TextCtrl() { _text->Destroy(); }
+    std::string get_string() { return this->_text->GetValue().ToStdString(); }
+    void set_value(boost::any value) { this->_text->SetValue(boost::any_cast<std::string>(value)); }
+
+    /// Access method for the underlying SpinCtrl
+    wxTextCtrl* textctrl() { return _text; }
+
+    /// Function to call when the contents of this change.
+    std::function<void (const std::string&, std::string value)> on_change {nullptr};
+
+protected:
+    virtual std::string LogChannel() { return "UI_TextCtrl"s; }
+
+    void _on_change(std::string opt_id) {
+        if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, this->get_string());
+        }
+    }
+
+private:
+    wxTextCtrl* _text {nullptr};
     int _tmp {0};
 };
 
