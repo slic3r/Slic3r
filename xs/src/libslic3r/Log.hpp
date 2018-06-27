@@ -37,6 +37,10 @@ public:
         std::cerr << topic << " WARN" << ": ";
         std::wcerr << message << std::endl;
     }
+    static void warn(std::string topic, std::string message) {
+        std::cerr << topic << " WARN" << ": ";
+        std::cerr << message << std::endl;
+    }
 
 };
 
