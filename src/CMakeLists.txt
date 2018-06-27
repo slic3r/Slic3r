@@ -178,6 +178,7 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_harness_gui.cpp
     ${GUI_TESTDIR}/test_field_checkbox.cpp
     ${GUI_TESTDIR}/test_field_spinctrl.cpp
+    ${GUI_TESTDIR}/test_field_textbox.cpp
 )
 set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/test_harness.cpp
