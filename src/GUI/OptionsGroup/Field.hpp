@@ -116,7 +116,7 @@ public:
 
         // Set up event handlers
         _spin->Bind(wxEVT_SPINCTRL, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
-        _spin->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus("");} e.Skip(); });
+        _spin->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) { this->_on_change(""); this->on_kill_focus("");} e.Skip(); });
     }
     ~UI_SpinCtrl() { _spin->Destroy();}
     int get_int() { return this->_spin->GetValue(); }
@@ -162,14 +162,16 @@ public:
         window = _text;
 
         // Set up event handlers
-        _text->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
-        _text->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus("");} e.Skip(); });
+        if (!opt.multiline) {
+            _text->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+        }
+        _text->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(""); this->_on_change("");} e.Skip(); });
     }
     ~UI_TextCtrl() { _text->Destroy(); }
     std::string get_string() { return this->_text->GetValue().ToStdString(); }
     void set_value(boost::any value) { this->_text->SetValue(boost::any_cast<std::string>(value)); }
 
-    /// Access method for the underlying SpinCtrl
+    /// Access method for the underlying TextCtrl
     wxTextCtrl* textctrl() { return _text; }
 
     /// Function to call when the contents of this change.
