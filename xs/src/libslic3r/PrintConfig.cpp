@@ -65,7 +65,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionString("");
 
     def = this->add("bottom_solid_layers", coInt);
-    def->label = L("Bottom");
+    def->label = L("          Bottom");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Number of solid layers to generate on bottom surfaces.");
     def->cli = "bottom-solid-layers=i";
@@ -83,7 +83,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("bridge_angle", coFloat);
-    def->label = L("Bridging angle");
+    def->label = L("Bridging");
     def->category = L("Infill");
     def->tooltip = L("Bridging angle override. If left to zero, the bridging angle will be calculated "
                    "automatically. Otherwise the provided angle will be used for all bridges. "
@@ -112,7 +112,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInts{ 100 };
 
     def = this->add("bridge_flow_ratio", coFloat);
-    def->label = L("Bridge flow ratio");
+    def->label = L("Bridge");
     def->category = L("Advanced");
     def->tooltip = L("This factor affects the amount of plastic for bridging. "
                    "You can decrease it slightly to pull the extrudates and prevent sagging, "
@@ -124,15 +124,16 @@ PrintConfigDef::PrintConfigDef()
 	def->default_value = new ConfigOptionFloat(1);
 
     def = this->add("over_bridge_flow_ratio", coFloat);
-    def->label = L("Over-bridge flow ratio");
+    def->label = L("Above the bridges");
     def->category = L("Advanced");
     def->tooltip = L("This factor affects the amount of plastic to overextrude "
                    "when we are filling on top of a bridge surface."
-                   "With a number >1, we can retreive the correct z-height "
-				   "even if the bridged layer has fallen a bit.");
+                   "With a number >1, we can retrieve a correct z-height "
+				   "even if the bridged layer has fallen a bit. "
+                   "It's useful if you want to have a nice flat top layer.");
     def->cli = "over-bridge-flow-ratio=f";
     def->min = 0;
-    def->default_value = new ConfigOptionFloat(1);
+    def->default_value = new ConfigOptionFloat(1.15);
 
     def = this->add("bridge_speed", coFloat);
     def->label = L("Bridges");
@@ -253,10 +254,10 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(6);
 
     def = this->add("elefant_foot_compensation", coFloat);
-    def->label = L("Elephant foot compensation");
+    def->label = L("First layer");
     def->category = L("Advanced");
     def->tooltip = L("The first layer will be shrunk in the XY plane by the configured value "
-                   "to compensate for the 1st layer squish aka an Elephant Foot effect.");
+                   "to compensate for the 1st layer squish aka an Elephant Foot effect. (must be negative = inwards)");
     def->sidetext = L("mm");
     def->cli = "elefant-foot-compensation=f";
     def->min = 0;
@@ -292,7 +293,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("top_fill_pattern", coEnum);
-    def->label = L("Top fill pattern");
+    def->label = L("   Top");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for top infill. This only affects the top external visible layer, and not its adjacent solid shells.");
     def->cli = "top-fill-pattern|solid-fill-pattern=s";
@@ -318,7 +319,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("bottom_fill_pattern", coEnum);
-    def->label = L("bottom fill pattern");
+    def->label = L("Bottom");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for bottom infill. This only affects the bottom external visible layer, and not its adjacent solid shells.");
     def->cli = "bottom-fill-pattern|solid-fill-pattern=s";
@@ -336,9 +337,10 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("enforce_full_fill_volume", coBool);
-    def->label = L("Enforce full fill volume");
+    def->label = L("Enforce 100% fill volume");
     def->category = L("Infill");
-    def->tooltip = L("Experimental option wich modify (top/bottom) fill flow to have the exact amount of plastic inside the volume to fill.");
+    def->tooltip = L("Experimental option wich modify (top/bottom) fill flow to have the exact amount of plastic inside the volume to fill "
+        "(it generally changes the flow from -7% to +4%, depending on the size of the surface to fill and the overlap parameters).");
     def->cli = "enforce-full-fill-volume!";
     def->default_value = new ConfigOptionBool(true);
 
@@ -362,7 +364,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloatOrPercent(0, false);
 
     def = this->add("external_perimeter_speed", coFloatOrPercent);
-    def->label = L("External perimeters");
+    def->label = L("External");
     def->category = L("Speed");
     def->tooltip = L("This separate setting will affect the speed of external perimeters (the visible ones). "
                    "If expressed as percentage (for example: 80%) it will be calculated "
@@ -614,7 +616,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionStrings { "" };
 
     def = this->add("fill_angle", coFloat);
-    def->label = L("Fill angle");
+    def->label = L("Fill");
     def->category = L("Infill");
     def->tooltip = L("Default base angle for infill orientation. Cross-hatching will be applied to this. "
                    "Bridges will be infilled using the best direction Slic3r can detect, so this setting "
@@ -628,7 +630,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("fill_density", coPercent);
     def->gui_type = "f_enum_open";
     def->gui_flags = "show_value";
-    def->label = L("Fill density");
+    def->label = L("Density");
     def->category = L("Infill");
     def->tooltip = L("Density of internal infill, expressed in the range 0% - 100%.");
     def->sidetext = L("%");
@@ -666,7 +668,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionPercent(20);
 
     def = this->add("fill_pattern", coEnum);
-    def->label = L("Fill pattern");
+    def->label = L("Inside");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for general low-density infill.");
     def->cli = "fill-pattern=s";
@@ -873,7 +875,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloatOrPercent(25, true);
 
     def = this->add("infill_speed", coFloat);
-    def->label = L("Infill");
+    def->label = L(" Sparse\t");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing the internal fill. Set to zero for auto.");
     def->sidetext = L("mm/s");
@@ -1135,7 +1137,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloatOrPercent(0, false);
 
     def = this->add("perimeter_speed", coFloat);
-    def->label = L("Perimeters");
+    def->label = L("Default");
     def->category = L("Speed");
     def->tooltip = L("Speed for perimeters (contours, aka vertical shells). Set to zero for auto.");
     def->sidetext = L("mm/s");
@@ -1422,7 +1424,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInts { 5 };
 
     def = this->add("small_perimeter_speed", coFloatOrPercent);
-    def->label = L("Small perimeters");
+    def->label = L("Small");
     def->category = L("Speed");
     def->tooltip = L("This separate setting will affect the speed of perimeters having radius <= 6.5mm "
                    "(usually holes). If expressed as percentage (for example: 80%) it will be calculated "
@@ -1473,7 +1475,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloatOrPercent(0, false);
 
     def = this->add("solid_infill_speed", coFloatOrPercent);
-    def->label = L("Solid infill");
+    def->label = L("Solid");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing solid regions (top/bottom/internal horizontal shells). "
                    "This can be expressed as a percentage (for example: 80%) over the default "
@@ -1669,7 +1671,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
-    def->label = L("Support material interface");
+    def->label = L("Interface");
     def->category = L("Support material");
     def->tooltip = L("Speed for printing support material interface layers. If expressed as percentage "
                    "(for example 50%) it will be calculated over support material speed.");
@@ -1703,7 +1705,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(2.5);
 
     def = this->add("support_material_speed", coFloat);
-    def->label = L("Support material");
+    def->label = L("Default");
     def->category = L("Support material");
     def->tooltip = L("Speed for printing support material.");
     def->sidetext = L("mm/s");
@@ -1794,7 +1796,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloatOrPercent(0, false);
 
     def = this->add("top_solid_infill_speed", coFloatOrPercent);
-    def->label = L("Top solid infill");
+    def->label = L("Top solid");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing top solid layers (it only applies to the uppermost "
                    "external layers and not to their internal solid layers). You may want "
@@ -1891,14 +1893,14 @@ PrintConfigDef::PrintConfigDef()
                                                   140.f, 140.f, 140.f, 140.f,   0.f };
 
     def = this->add("wipe_tower_x", coFloat);
-    def->label = L("Position X");
+    def->label = L("X");
     def->tooltip = L("X coordinate of the left front corner of a wipe tower");
     def->sidetext = L("mm");
     def->cli = "wipe-tower-x=f";
     def->default_value = new ConfigOptionFloat(180.);
 
     def = this->add("wipe_tower_y", coFloat);
-    def->label = L("Position Y");
+    def->label = L("Y");
     def->tooltip = L("Y coordinate of the left front corner of a wipe tower");
     def->sidetext = L("mm");
     def->cli = "wipe-tower-y=f";
@@ -1926,7 +1928,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(10.);
 
     def = this->add("xy_size_compensation", coFloat);
-    def->label = L("XY Size Compensation");
+    def->label = L("All layers");
     def->category = L("Advanced");
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
                    "(negative = inwards, positive = outwards). This might be useful "

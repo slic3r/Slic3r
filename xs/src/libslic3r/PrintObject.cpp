@@ -1465,7 +1465,7 @@ end:
                 // Apply size compensation and perform clipping of multi-part objects.
                 float delta = float(scale_(this->config.xy_size_compensation.value));
                 if (layer_id == 0)
-                    delta -= float(scale_(this->config.elefant_foot_compensation.value));
+                    delta += float(scale_(this->config.elefant_foot_compensation.value));
                 bool  scale = delta != 0.f;
                 bool  clip  = this->config.clip_multipart_objects.value || delta > 0.f;
                 if (layer->regions.size() == 1) {
