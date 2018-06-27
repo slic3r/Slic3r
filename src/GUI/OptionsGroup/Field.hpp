@@ -11,6 +11,8 @@
 #include "wx/spinctrl.h"
 #include "wx/checkbox.h"
 #include "wx/textctrl.h"
+#include "wx/combobox.h"
+#include "wx/arrstr.h"
 
 namespace Slic3r { namespace GUI {
 
@@ -90,8 +92,6 @@ public:
     std::function<void (const std::string&, bool value)> on_change {nullptr};
 
 protected:
-    wxCheckBox* _check {nullptr};
-
     virtual std::string LogChannel() override { return "UI_Checkbox"s; }
 
     void _on_change(std::string opt_id) {
@@ -99,6 +99,8 @@ protected:
             this->on_change(opt_id, this->get_bool());
         }
     }
+private:
+    wxCheckBox* _check {nullptr};
 
 };
 
@@ -139,7 +141,6 @@ protected:
 
 private:
     wxSpinCtrl* _spin {nullptr};
-    int _tmp {0};
 };
 
 class UI_TextCtrl : public UI_Window {
@@ -188,7 +189,62 @@ protected:
 
 private:
     wxTextCtrl* _text {nullptr};
-    int _tmp {0};
+};
+
+class UI_Choice : public UI_Window {
+public:
+    UI_Choice(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY) : UI_Window(parent, _opt) {
+        int style {0};
+        style |= wxTE_PROCESS_ENTER;
+        if (opt.gui_type.size() > 0 && opt.gui_type.compare("select_open"s)) style |= wxCB_READONLY;
+
+        /// Load the values
+        auto values {wxArrayString()};
+        for (auto v : opt.enum_values) values.Add(wxString(v));
+
+        _choice = new wxComboBox(parent, id, 
+        (opt.default_value != nullptr ? opt.default_value->getString() : ""),
+        wxDefaultPosition, _default_size(), values, style);
+        window = _choice;
+
+        _choice->Bind(wxEVT_COMBOBOX, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+        _choice->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+        _choice->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(""); this->_on_change("");} e.Skip(); });
+    }
+    std::string get_string() override { 
+        if (opt.enum_values.size() > 0) {
+            auto idx = this->_choice->GetSelection();
+            if (idx != wxNOT_FOUND) return this->opt.enum_values.at(idx);
+        }
+        return this->_choice->GetValue().ToStdString();
+    }
+
+
+    /// Returns a bare pointer to the underlying combobox, usually for test interface
+    wxComboBox* choice() { return this->_choice; }
+
+    void set_value(boost::any value) override {
+        auto result {std::find(opt.enum_values.cbegin(), opt.enum_values.cend(), boost::any_cast<std::string>(value))};
+        if (result == opt.enum_values.cend()) {
+            this->_choice->SetValue(wxString(boost::any_cast<std::string>(value)));
+        } else {
+            auto idx = std::distance(opt.enum_values.cbegin(), result);
+            this->_choice->SetSelection(idx);
+        }
+    }
+
+    /// Function to call when the contents of this change.
+    std::function<void (const std::string&, std::string value)> on_change {nullptr};
+protected:
+    virtual std::string LogChannel() override { return "UI_Choice"s; }
+
+    void _on_change(std::string opt_id) {
+        if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, this->get_string());
+        }
+    }
+private:
+    wxComboBox* _choice {nullptr};
 };
 
 } } // Namespace Slic3r::GUI
