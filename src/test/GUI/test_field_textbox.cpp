@@ -22,9 +22,9 @@ SCENARIO( "TextCtrl initializes with default value if available.") {
     wxMilliSleep(250);
 
     Slic3r::ConfigOptionDef simple_option;
-    simple_option.type = coInt;
-    auto* intopt { new Slic3r::ConfigOptionInt(7) };
-    simple_option.default_value = intopt; // no delete, it's taken care of by ConfigOptionDef
+    simple_option.type = coString;
+    auto* stropt { new Slic3r::ConfigOptionString("7") };
+    simple_option.default_value = stropt; // no delete, it's taken care of by ConfigOptionDef
     GIVEN ( "A UI Textctrl") {
         auto test_field {Slic3r::GUI::UI_TextCtrl(wxTheApp->GetTopWindow(), simple_option)};
 
@@ -169,10 +169,10 @@ SCENARIO( "Multiline doesn't update other than on focus change.") {
     wxMilliSleep(500);
 
     Slic3r::ConfigOptionDef simple_option;
-    simple_option.type = coInt;
+    simple_option.type = coString;
     simple_option.multiline = true;
     auto* stropt { new Slic3r::ConfigOptionString("7") };
-    GIVEN ( "A UI Textctrl") {
+    GIVEN ( "A multiline UI Textctrl") {
         auto exec_counter {0};
         auto changefunc {[&exec_counter] (const std::string& opt_id, std::string value) { exec_counter++; }};
         auto test_field {Slic3r::GUI::UI_TextCtrl(wxTheApp->GetTopWindow(), Slic3r::ConfigOptionDef())};
@@ -181,7 +181,7 @@ SCENARIO( "Multiline doesn't update other than on focus change.") {
 
         wxTheApp->GetTopWindow()->Show();
         wxTheApp->GetTopWindow()->Fit();
-        WHEN( "pressing enter") {
+        WHEN( "text is entered and focus is lost") {
             auto killfunc {[&exec_counter](const std::string& opt_id) { exec_counter += 1; }};
             test_field.on_kill_focus = killfunc;
             
@@ -189,14 +189,17 @@ SCENARIO( "Multiline doesn't update other than on focus change.") {
             ev.SetEventObject(test_field.textctrl());
             
             exec_counter = 0;
-            test_field.textctrl()->SetValue("3");
             test_field.textctrl()->SetFocus();
             wxYield();
             wxMilliSleep(250);
+            sim.Char(WXK_LEFT);
+            sim.Char('7');
+            wxYield();
             sim.Char('7');
             wxYield();
             wxMilliSleep(250);
             test_field.textctrl()->ProcessWindowEvent(ev);
+            wxYield();
             wxMilliSleep(250);
             wxYield();
             THEN( "on_kill_focus is executed and on_change are both executed.") {
