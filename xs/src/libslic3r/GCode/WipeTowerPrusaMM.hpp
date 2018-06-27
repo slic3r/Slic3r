@@ -44,7 +44,7 @@ public:
 	// wipe_area	-- space available for one toolchange in mm
 	WipeTowerPrusaMM(float x, float y, float width, float rotation_angle, float cooling_tube_retraction,
                      float cooling_tube_length, float parking_pos_retraction, float bridging, const std::vector<float>& wiping_matrix,
-                     unsigned int initial_tool) :
+                     unsigned int initial_tool, float first_layer_width) :
 		m_wipe_tower_pos(x, y),
 		m_wipe_tower_width(width),
 		m_wipe_tower_rotation_angle(rotation_angle),
@@ -55,7 +55,8 @@ public:
         m_cooling_tube_length(cooling_tube_length),
         m_parking_pos_retraction(parking_pos_retraction),
 		m_bridging(bridging),
-        m_current_tool(initial_tool)
+        m_current_tool(initial_tool),
+        m_brim_width(first_layer_width)
  	{
         unsigned int number_of_extruders = (unsigned int)(sqrt(wiping_matrix.size())+WT_EPSILON);
         for (unsigned int i = 0; i<number_of_extruders; ++i)
@@ -200,7 +201,8 @@ private:
     float           m_bridging                  = 0.f;
     bool            m_adhesion                  = true;
 
-	float m_perimeter_width = 0.4 * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
+    float m_perimeter_width = 0.4 * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
+    float m_brim_width = 0.4 * Width_To_Nozzle_Ratio * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
 	float m_extrusion_flow = 0.038; //0.029f;// Extrusion flow is derived from m_perimeter_width, layer height and filament diameter.
 
 

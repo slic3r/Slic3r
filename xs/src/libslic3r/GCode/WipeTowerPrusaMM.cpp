@@ -646,7 +646,9 @@ WipeTower::ToolChangeResult WipeTowerPrusaMM::toolchange_Brim(bool sideOnly, flo
 		m_wipe_tower_width,
 		m_wipe_tower_depth);
 
-	PrusaMultiMaterial::Writer writer(m_layer_height, m_perimeter_width);
+    //use first layer width parameter
+
+    PrusaMultiMaterial::Writer writer(m_layer_height, m_brim_width);
 	writer.set_extrusion_flow(m_extrusion_flow * 1.1f)
 		  .set_z(m_z_pos) // Let the writer know the current Z position as a base for Z-hop.
 		  .set_initial_tool(m_current_tool)
@@ -654,21 +656,21 @@ WipeTower::ToolChangeResult WipeTowerPrusaMM::toolchange_Brim(bool sideOnly, flo
 		  .append(";-------------------------------------\n"
 				  "; CP WIPE TOWER FIRST LAYER BRIM START\n");
 
-	xy initial_position = wipeTower_box.lu - xy(m_perimeter_width * 6.f, 0);
+    xy initial_position = wipeTower_box.lu - xy(m_brim_width * 6.f, 0);
 	writer.set_initial_position(initial_position);
 
-    writer.extrude_explicit(wipeTower_box.ld - xy(m_perimeter_width * 6.f, 0), // Prime the extruder left of the wipe tower.
+    writer.extrude_explicit(wipeTower_box.ld - xy(m_brim_width * 6.f, 0), // Prime the extruder left of the wipe tower.
         1.5f * m_extrusion_flow * (wipeTower_box.lu.y - wipeTower_box.ld.y), 2400);
 
     // The tool is supposed to be active and primed at the time when the wipe tower brim is extruded.
     // Extrude 4 rounds of a brim around the future wipe tower.
     box_coordinates box(wipeTower_box);
-    box.expand(m_perimeter_width);
+    box.expand(m_brim_width);
     for (size_t i = 0; i < 4; ++ i) {
         writer.travel (box.ld, 7000)
                 .extrude(box.lu, 2100).extrude(box.ru)
                 .extrude(box.rd      ).extrude(box.ld);
-        box.expand(m_perimeter_width);
+        box.expand(m_brim_width);
     }
 
     writer.travel(wipeTower_box.ld, 7000); // Move to the front left corner.
