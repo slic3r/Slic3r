@@ -39,9 +39,6 @@ typedef double  coordf_t;
 // Maximum perimeter length for the loop to apply the small perimeter speed. 
 #define SMALL_PERIMETER_LENGTH (6.5 / SCALING_FACTOR) * 2 * PI
 #define INSET_OVERLAP_TOLERANCE 0.4
-// 3mm ring around the top / bottom / bridging areas.
-//FIXME This is quite a lot.
-#define EXTERNAL_INFILL_MARGIN 3.
 //FIXME Better to use an inline function with an explicit return type.
 //inline coord_t scale_(coordf_t v) { return coord_t(floor(v / SCALING_FACTOR + 0.5f)); }
 #define scale_(val) ((val) / SCALING_FACTOR)

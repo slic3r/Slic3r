@@ -392,6 +392,7 @@ public:
     ConfigOptionEnum<InfillPattern> top_fill_pattern;
     ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
     ConfigOptionBool                enforce_full_fill_volume;
+	ConfigOptionFloat               external_infill_margin;
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
@@ -434,6 +435,7 @@ protected:
         OPT_PTR(top_fill_pattern);
         OPT_PTR(bottom_fill_pattern);
         OPT_PTR(enforce_full_fill_volume);
+        OPT_PTR(external_infill_margin);
         OPT_PTR(external_perimeter_extrusion_width);
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);

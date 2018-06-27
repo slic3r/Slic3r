@@ -157,7 +157,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
 		double poylineVolume = 0;
 		/// un-overlap the surface (it's done in perimeterGenerator, it just pass the surface polys a bit bigger to us, 
 		///		so we have to shrink it, it's silly, it should be here we should decide how to use the overlap setting!)
-		ExPolygons noOffsetPolys = offset2_ex(surface->expolygon, -scale_(this->overlap), 0);
+		ExPolygons noOffsetPolys = offset_ex(surface->expolygon, -scale_(this->overlap));
 		for (auto poly = noOffsetPolys.begin(); poly != noOffsetPolys.end(); ++poly){
 			poylineVolume += flow.height*unscale(unscale(poly->area()));
 			// add external "perimeter gap"

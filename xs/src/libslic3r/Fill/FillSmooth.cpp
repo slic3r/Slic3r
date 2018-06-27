@@ -35,7 +35,7 @@ namespace Slic3r {
 		//a small under-overlap to prevent over-extrudion on thin surfaces (i.e. remove the overlap)
 		Surface surfaceNoOverlap(*surface);
 		//remove the overlap (prevent over-extruding) if possible
-        ExPolygons noOffsetPolys = offset2_ex(surfaceNoOverlap.expolygon, -scale_(this->overlap) * (flow.bridge?0:1), 0);
+        ExPolygons noOffsetPolys = offset_ex(surfaceNoOverlap.expolygon, -scale_(this->overlap) * (flow.bridge?0:1));
 		//printf("FillSmooth::fill_surface() : overlap=%f->%f.\n", overlap, -scale_(this->overlap));
 		//printf("FillSmooth::polys : 1->%i.\n", noOffsetPolys.size());
 		//printf("FillSmooth::polys : %f  %f->%f.\n", surface->expolygon.area(), surfaceNoOverlap.expolygon.area(), noOffsetPolys[0].area());

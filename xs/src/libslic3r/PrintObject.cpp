@@ -192,6 +192,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "bottom_solid_layers"
             || opt_key == "top_solid_layers"
             || opt_key == "solid_infill_below_area"
+			|| opt_key == "external_infill_margin"
             || opt_key == "infill_extruder"
             || opt_key == "solid_infill_extruder"
             || opt_key == "infill_extrusion_width"
@@ -1874,7 +1875,7 @@ void PrintObject::discover_horizontal_shells()
                 // not work in some situations, as there won't be any grown region in the perimeter 
                 // area (this was seen in a model where the top layer had one extra perimeter, thus
                 // its fill_surfaces were thinner than the lower layer's infill), however it's the best
-                // solution so far. Growing the external slices by EXTERNAL_INFILL_MARGIN will put
+                // solution so far. Growing the external slices by external_infill_margin will put
                 // too much solid infill inside nearly-vertical slopes.
 
                 // Surfaces including the area of perimeters. Everything, that is visible from the top / bottom

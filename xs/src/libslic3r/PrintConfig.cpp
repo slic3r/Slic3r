@@ -342,6 +342,15 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "enforce-full-fill-volume!";
     def->default_value = new ConfigOptionBool(true);
 
+    def = this->add("external_infill_margin", coFloat);
+    def->label = L("Anchor the top by X mm");
+    def->category = L("Infill");
+    def->tooltip = L("This parameter grow the top/bottom layers by some mm to anchor them into the part. Put 0 to deactivate it.");
+    def->sidetext = L("mm");
+    def->cli = "top-layer-anchor=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(3);
+
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = L("External perimeters");
     def->category = L("Extrusion Width");

@@ -93,7 +93,7 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
 void LayerRegion::process_external_surfaces(const Layer* lower_layer)
 {
     const Surfaces &surfaces = this->fill_surfaces.surfaces;
-    const double margin = scale_(EXTERNAL_INFILL_MARGIN);
+    const double margin = scale_(this->region()->config.external_infill_margin.getFloat());
     
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
     export_region_fill_surfaces_to_svg_debug("3_process_external_surfaces-initial");

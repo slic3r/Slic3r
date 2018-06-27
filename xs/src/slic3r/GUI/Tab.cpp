@@ -861,6 +861,7 @@ void TabPrint::build()
 		optgroup->append_single_option_line("solid_infill_every_layers");
 		optgroup->append_single_option_line("fill_angle");
 		optgroup->append_single_option_line("solid_infill_below_area");
+		optgroup->append_single_option_line("external_infill_margin");
 		optgroup->append_single_option_line("bridge_angle");
 		optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
 		optgroup->append_single_option_line("infill_first");
@@ -1191,7 +1192,7 @@ void TabPrint::update()
 
 	bool have_solid_infill = m_config->opt_int("top_solid_layers") > 0 || m_config->opt_int("bottom_solid_layers") > 0;
 	// solid_infill_extruder uses the same logic as in Print::extruders()
-	for (auto el : {"top_fill_pattern", "bottom_fill_pattern", "enforce_full_fill_volume", "infill_first",
+	for (auto el : {"top_fill_pattern", "bottom_fill_pattern", "enforce_full_fill_volume", "external_infill_margin", "infill_first",
 					"solid_infill_extruder", "solid_infill_extrusion_width", "solid_infill_speed" })
 		get_field(el)->toggle(have_solid_infill);
 
