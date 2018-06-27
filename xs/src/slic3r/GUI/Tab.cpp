@@ -848,10 +848,8 @@ void TabPrint::build()
 
 	page = add_options_page(_(L("Infill")), "infill.png");
 		optgroup = page->new_optgroup(_(L("Infill")));
-        line = { _(L("Fill inside pattern")), "" };
-        line.append_option(optgroup->get_option("fill_density"));
-        line.append_option(optgroup->get_option("fill_pattern"));
-        optgroup->append_line(line);
+        optgroup->append_single_option_line("fill_density");
+        optgroup->append_single_option_line("fill_pattern");
         line = { _(L("Fill external pattern")), "" };
         line.append_option(optgroup->get_option("top_fill_pattern"));
         line.append_option(optgroup->get_option("bottom_fill_pattern"));

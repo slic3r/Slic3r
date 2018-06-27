@@ -630,13 +630,14 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("fill_density", coPercent);
     def->gui_type = "f_enum_open";
     def->gui_flags = "show_value";
-    def->label = L("Density");
+    def->label = L("Fill density");
     def->category = L("Infill");
     def->tooltip = L("Density of internal infill, expressed in the range 0% - 100%.");
     def->sidetext = L("%");
     def->cli = "fill-density=s";
     def->min = 0;
     def->max = 100;
+	/*
     def->enum_values.push_back("0");
     def->enum_values.push_back("5");
     def->enum_values.push_back("10");
@@ -665,11 +666,38 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("80%");
     def->enum_labels.push_back("90%");
     def->enum_labels.push_back("100%");
+	*/
+    def->enum_values.push_back("0");
+    def->enum_values.push_back("4");
+    def->enum_values.push_back("5.5");
+    def->enum_values.push_back("7.5");
+    def->enum_values.push_back("10");
+    def->enum_values.push_back("13");
+    def->enum_values.push_back("18");
+    def->enum_values.push_back("23");
+    def->enum_values.push_back("31");
+    def->enum_values.push_back("42");
+    def->enum_values.push_back("55");
+    def->enum_values.push_back("75");
+    def->enum_values.push_back("100");
+    def->enum_labels.push_back("0");
+    def->enum_labels.push_back("4");
+    def->enum_labels.push_back("5.5");
+    def->enum_labels.push_back("7.5");
+    def->enum_labels.push_back("10");
+    def->enum_labels.push_back("13");
+    def->enum_labels.push_back("18");
+    def->enum_labels.push_back("23");
+    def->enum_labels.push_back("31");
+    def->enum_labels.push_back("42");
+    def->enum_labels.push_back("55");
+    def->enum_labels.push_back("75");
+    def->enum_labels.push_back("100");
     def->default_value = new ConfigOptionPercent(20);
 
     def = this->add("fill_pattern", coEnum);
     def->label = L("Inside");
-    def->category = L("Infill");
+    def->category = L("Sparse fill pattern");
     def->tooltip = L("Fill pattern for general low-density infill.");
     def->cli = "fill-pattern=s";
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
@@ -875,7 +903,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloatOrPercent(25, true);
 
     def = this->add("infill_speed", coFloat);
-    def->label = L(" Sparse\t");
+    def->label = L("Sparse");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing the internal fill. Set to zero for auto.");
     def->sidetext = L("mm/s");
