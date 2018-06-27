@@ -473,7 +473,7 @@ void Choice::set_value(const boost::any& value, bool change_event)
 	}
 	case coEnum:{
 		int val = boost::any_cast<int>(value);
-		if (m_opt_id.compare("external_fill_pattern") == 0)
+		if (m_opt_id.compare("top_fill_pattern") == 0 || m_opt_id.compare("bottom_fill_pattern") == 0 )
 		{
 			if (!m_opt.enum_values.empty()){
 				std::string key;
