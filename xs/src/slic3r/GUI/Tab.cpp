@@ -831,7 +831,8 @@ void TabPrint::build()
 		line = { _(L("Solid layers")), "" };
 		line.append_option(optgroup->get_option("top_solid_layers"));
 		line.append_option(optgroup->get_option("bottom_solid_layers"));
-		optgroup->append_line(line);
+        optgroup->append_line(line);
+        optgroup->append_single_option_line("enforce_full_fill_volume");
 
 		optgroup = page->new_optgroup(_(L("Quality (slower slicing)")));
 		optgroup->append_single_option_line("extra_perimeters");
@@ -847,11 +848,12 @@ void TabPrint::build()
 
 	page = add_options_page(_(L("Infill")), "infill.png");
 		optgroup = page->new_optgroup(_(L("Infill")));
-		optgroup->append_single_option_line("fill_density");
-		optgroup->append_single_option_line("fill_pattern");
-		optgroup->append_single_option_line("top_fill_pattern");
-		optgroup->append_single_option_line("bottom_fill_pattern");
-		optgroup->append_single_option_line("enforce_full_fill_volume");
+        optgroup->append_single_option_line("fill_density");
+        optgroup->append_single_option_line("fill_pattern");
+        line = { _(L("Fill external pattern")), "" };
+        line.append_option(optgroup->get_option("top_fill_pattern"));
+        line.append_option(optgroup->get_option("bottom_fill_pattern"));
+        optgroup->append_line(line);
 
 		optgroup = page->new_optgroup(_(L("Reducing printing time")));
 		optgroup->append_single_option_line("infill_every_layers");
@@ -859,10 +861,12 @@ void TabPrint::build()
 
 		optgroup = page->new_optgroup(_(L("Advanced")));
 		optgroup->append_single_option_line("solid_infill_every_layers");
-		optgroup->append_single_option_line("fill_angle");
 		optgroup->append_single_option_line("solid_infill_below_area");
+        line = { _(L("Angle")), "" };
+        line.append_option(optgroup->get_option("fill_angle"));
+        line.append_option(optgroup->get_option("bridge_angle"));
+        optgroup->append_line(line);
 		optgroup->append_single_option_line("external_infill_margin");
-		optgroup->append_single_option_line("bridge_angle");
 		optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
 		optgroup->append_single_option_line("infill_first");
 
@@ -901,15 +905,21 @@ void TabPrint::build()
 		optgroup->append_single_option_line("support_material_synchronize_layers");
 
 	page = add_options_page(_(L("Speed")), "time.png");
-		optgroup = page->new_optgroup(_(L("Speed for print moves")));
-		optgroup->append_single_option_line("perimeter_speed");
-		optgroup->append_single_option_line("small_perimeter_speed");
-		optgroup->append_single_option_line("external_perimeter_speed");
-		optgroup->append_single_option_line("infill_speed");
-		optgroup->append_single_option_line("solid_infill_speed");
-		optgroup->append_single_option_line("top_solid_infill_speed");
-		optgroup->append_single_option_line("support_material_speed");
-		optgroup->append_single_option_line("support_material_interface_speed");
+        optgroup = page->new_optgroup(_(L("Speed for print moves")));
+        line = { _(L("Perimeter speed")), "" };
+        line.append_option(optgroup->get_option("perimeter_speed"));
+        line.append_option(optgroup->get_option("external_perimeter_speed"));
+        line.append_option(optgroup->get_option("small_perimeter_speed"));
+        optgroup->append_line(line);
+        line = { _(L("Infill speed")), "" };
+        line.append_option(optgroup->get_option("infill_speed"));
+        line.append_option(optgroup->get_option("solid_infill_speed"));
+        line.append_option(optgroup->get_option("top_solid_infill_speed"));
+        optgroup->append_line(line);
+        line = { _(L("Support speed")), "" };
+        line.append_option(optgroup->get_option("support_material_speed"));
+        line.append_option(optgroup->get_option("support_material_interface_speed"));
+        optgroup->append_line(line);
 		optgroup->append_single_option_line("bridge_speed");
 		optgroup->append_single_option_line("gap_fill_speed");
 
@@ -945,9 +955,11 @@ void TabPrint::build()
 		optgroup->append_single_option_line("standby_temperature_delta");
 
 		optgroup = page->new_optgroup(_(L("Wipe tower")));
-		optgroup->append_single_option_line("wipe_tower");
-		optgroup->append_single_option_line("wipe_tower_x");
-		optgroup->append_single_option_line("wipe_tower_y");
+        optgroup->append_single_option_line("wipe_tower");
+        line = { _(L("Wipe tower position")), "" };
+        line.append_option(optgroup->get_option("wipe_tower_x"));
+        line.append_option(optgroup->get_option("wipe_tower_y"));
+        optgroup->append_line(line);
 		optgroup->append_single_option_line("wipe_tower_width");
 		optgroup->append_single_option_line("wipe_tower_rotation_angle");
         optgroup->append_single_option_line("wipe_tower_bridging");
@@ -969,14 +981,18 @@ void TabPrint::build()
 		optgroup = page->new_optgroup(_(L("Overlap")));
 		optgroup->append_single_option_line("infill_overlap");
 
-		optgroup = page->new_optgroup(_(L("Flow")));
-		optgroup->append_single_option_line("bridge_flow_ratio");
-		optgroup->append_single_option_line("over_bridge_flow_ratio");
+        optgroup = page->new_optgroup(_(L("Flow")));
+        line = { _(L("Bridge flow ratio")), "" };
+        line.append_option(optgroup->get_option("bridge_flow_ratio"));
+        line.append_option(optgroup->get_option("over_bridge_flow_ratio"));
+        optgroup->append_line(line);
 
 		optgroup = page->new_optgroup(_(L("Other")));
-		optgroup->append_single_option_line("clip_multipart_objects");
-		optgroup->append_single_option_line("elefant_foot_compensation");
-		optgroup->append_single_option_line("xy_size_compensation");
+        optgroup->append_single_option_line("clip_multipart_objects");
+        line = { _(L("XY compensation")), "" };
+        line.append_option(optgroup->get_option("xy_size_compensation"));
+        line.append_option(optgroup->get_option("elefant_foot_compensation"));
+        optgroup->append_line(line);
 //		#            optgroup->append_single_option_line("threads");
 		optgroup->append_single_option_line("resolution");
 
