@@ -31,9 +31,8 @@ void Plate3D::mouse_up(wxMouseEvent &e){
         for(const PlaterObject &object: objects){
             const auto &modelobj = model->objects.at(object.identifier);
             for(ModelInstance *instance: modelobj->instances){
-                uint size = modelobj->volumes.size(); 
+                uint size = modelobj->volumes.size();
                 if(i <= moving_volume && moving_volume < i+size){
-                    
                     instance->offset.translate(volumes.at(i).origin);
                     modelobj->update_bounding_box();
                     on_instances_moved();
@@ -47,6 +46,7 @@ void Plate3D::mouse_up(wxMouseEvent &e){
     }
     Scene3D::mouse_up(e);
 }
+
 void Plate3D::mouse_move(wxMouseEvent &e){
     if(!e.Dragging()){
         pos = Point(e.GetX(),e.GetY());
@@ -61,7 +61,7 @@ void Plate3D::mouse_move(wxMouseEvent &e){
         for(const PlaterObject &object: objects){
             const auto &modelobj = model->objects.at(object.identifier);
             for(ModelInstance *instance: modelobj->instances){
-                uint size = modelobj->volumes.size(); 
+                uint size = modelobj->volumes.size();
                 if(i <= moving_volume && moving_volume < i+size){
                     for(ModelVolume* volume: modelobj->volumes){
                         volumes.at(i).origin.translate(old.vector_to(current));
@@ -79,15 +79,18 @@ void Plate3D::mouse_move(wxMouseEvent &e){
     }
 }
 
-
 void Plate3D::update(){
     volumes.clear();
     for(const PlaterObject &object: objects){
         const auto &modelobj = model->objects.at(object.identifier);
         for(ModelInstance *instance: modelobj->instances){
             for(ModelVolume* volume: modelobj->volumes){
-                volumes.push_back(load_object(*volume,*instance));
-            } 
+                TriangleMesh copy = volume->mesh;
+                instance->transform_mesh(&copy);
+                GLVertexArray model;
+                model.load_mesh(copy);
+                volumes.push_back(Volume{ wxColor(200,200,200), Pointf3(0,0,0), model, copy.bounding_box()});
+            }
         }
     }
     color_volumes();
@@ -110,7 +113,7 @@ void Plate3D::color_volumes(){
                     rendervolume.color = ui_settings->color->COLOR_PARTS();
                 }
                 i++;
-            } 
+            }
         }
     }
 }
@@ -122,6 +125,7 @@ void Plate3D::before_render(){
     }
 
     // Color each volume a different color, render and test which color is beneath the mouse.
+    
     //glDisable(GL_MULTISAMPLE) if ($self->{can_multisample});
     glDisable(GL_LIGHTING);
     uint i = 1;
@@ -134,7 +138,6 @@ void Plate3D::before_render(){
     glFinish();
     GLubyte color[4] = {0,0,0,0};
     glReadPixels(pos.x, GetSize().GetHeight()-  pos.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, color);
-
 
     // Handle the hovered volume
     uint index = (color[0]<<16) + (color[1]<<8) + color[2];
@@ -149,7 +152,7 @@ void Plate3D::before_render(){
             const auto &modelobj = model->objects.at(object.identifier);
             if(k <= hover_volume && hover_volume < k+modelobj->instances.size()*modelobj->volumes.size()){
                 hover_object = k;
-                break; 
+                break;
             }
             k++;
         }

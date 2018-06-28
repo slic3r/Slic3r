@@ -25,13 +25,7 @@ Scene3D::Scene3D(wxWindow* parent, const wxSize& size) :
     this->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent &e) { this->mouse_up(e); });
     this->Bind(wxEVT_MIDDLE_DCLICK, [this](wxMouseEvent &e) { this->mouse_dclick(e); });
     this->Bind(wxEVT_MOUSEWHEEL, [this](wxMouseEvent &e) { this->mouse_wheel(e); });
-/*
-    if (user_drawn_background) {
-        this->Bind(wxEVT_ERASE_BACKGROUND, [this](wxEraseEvent& e){ });
-    }
-
-    this->Bind(wxEVT_CHAR, [this](wxKeyEvent &e) { this->nudge_key(e);});
-    */
+    
     Points p;
     const coord_t w = scale_(200), z = 0;
     p.push_back(Point(z,z));
@@ -495,14 +489,6 @@ void Scene3D::repaint(wxPaintEvent& e) {
     // Calling glFinish has a performance penalty, but it seems to fix some OpenGL driver hang-up with extremely large scenes.
     glFinish();
 
-}
-
-Volume Scene3D::load_object(ModelVolume &mv, ModelInstance &mi){
-    TriangleMesh copy = mv.mesh;
-    mi.transform_mesh(&copy);
-    GLVertexArray model;
-    model.load_mesh(copy);
-    return Volume{ wxColor(200,200,200), Pointf3(0,0,0), model, copy.bounding_box()};
 }
 
 } } // Namespace Slic3r::GUI
