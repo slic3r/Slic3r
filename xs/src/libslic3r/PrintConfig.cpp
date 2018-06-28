@@ -567,8 +567,10 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "first-layer-extrusion-width=s";
     def->ratio_over = "first_layer_height";
     def->min = 0;
-    def->enum_values.push_back("0");
+    def->enum_values.push_back("200%");
     def->enum_labels.push_back("default");
+    def->enum_values.push_back("0");
+    def->enum_labels.push_back("auto");
     def->default_value = new ConfigOptionFloatOrPercent(200, true);
 
     def = this->add("first_layer_height", coFloatOrPercent);
