@@ -27,13 +27,13 @@ public:
 
     /// Return the row-major form of the represented transformation matrix
     /// for admesh transform
-    float * matrix3x4f();
+    float * matrix3x4f() const;
 
     /// Return the determinante of the matrix
-    double determinante();
+    double determinante() const;
 
     /// Returns the inverse of the matrix
-    bool inverse(TransformationMatrix * inverse);
+    bool inverse(TransformationMatrix * inverse) const;
 
     /// Perform Translation
     void translate(double x, double y, double z);
