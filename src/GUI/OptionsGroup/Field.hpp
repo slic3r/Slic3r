@@ -4,6 +4,8 @@
 #include <functional>
 #include <string>
 #include <limits>
+#include <regex>
+
 #include <boost/any.hpp>
 #include "ConfigBase.hpp"
 #include "Log.hpp"
@@ -40,6 +42,7 @@ public:
 
     /// Getter functions for UI_Window items.
     virtual bool get_bool() { Slic3r::Log::warn(this->LogChannel(), "get_bool does not exist"s); return false; } //< return false all the time if this is not implemented.
+    virtual double get_double() { Slic3r::Log::warn(this->LogChannel(), "get_double does not exist"s); return 0.0; } //< return 0.0 all the time if this is not implemented.
     virtual int get_int() { Slic3r::Log::warn(this->LogChannel(), "get_int does not exist"s); return 0; } //< return 0 all the time if this is not implemented.
     virtual std::string get_string() { Slic3r::Log::warn(this->LogChannel(), "get_string does not exist"s); return 0; } //< return 0 all the time if this is not implemented.
 
@@ -246,6 +249,50 @@ protected:
 private:
     wxComboBox* _choice {nullptr};
 };
+
+
+class UI_NumChoice : public UI_Window {
+public:
+    UI_NumChoice(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY);
+    ~UI_NumChoice() { _choice->Destroy(); }
+
+    /// Returns the underlying value for the selected value (defined by enum_values). If there are labels, this may not 
+    /// match the underlying combobox->GetValue(). 
+    std::string get_string() override;
+
+    /// Returns the item in the value field of the associated option as an integer.
+    int get_int() override { return std::stoi(this->get_string()); }
+
+    /// Returns the item in the value field of the associated option as a double.
+    double get_double() override { return std::stod(this->get_string()); }
+
+
+    /// Returns a bare pointer to the underlying combobox, usually for test interface
+    wxComboBox* choice() { return this->_choice; }
+
+    /// For NumChoice, value can be the actual input value or an index into the value.
+    void set_value(boost::any value) override;
+
+    /// Function to call when the contents of this change.
+    std::function<void (const std::string&, std::string value)> on_change {nullptr};
+protected:
+    virtual std::string LogChannel() override { return "UI_NumChoice"s; }
+
+    void _set_value(int value, bool show_value = false);
+    void _set_value(double value, bool show_value = false);
+    void _set_value(std::string value);
+
+    void _on_change(std::string opt_id) {
+        if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, this->get_string());
+        }
+    }
+private:
+    wxComboBox* _choice {nullptr};
+    std::regex show_value_flag {"\bshow_value\b"};
+};
+
+
 
 } } // Namespace Slic3r::GUI
 

@@ -42,6 +42,15 @@ public:
         std::cerr << message << std::endl;
     }
 
+    static void debug(std::string topic, std::wstring message) {
+        std::cerr << topic << " DEBUG" << ": ";
+        std::wcerr << message << std::endl;
+    }
+    static void debug(std::string topic, std::string message) {
+        std::cerr << topic << " DEBUG" << ": ";
+        std::cerr << message << std::endl;
+    }
+
 };
 
 /// Utility debug function to transform a std::vector of anything that 
