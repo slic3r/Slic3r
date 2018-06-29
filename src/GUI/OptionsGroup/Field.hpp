@@ -50,7 +50,7 @@ public:
     std::function<void (const std::string&)> on_kill_focus {nullptr};
 
 protected:
-    wxWindow* parent {nullptr};
+    wxWindow* parent {nullptr}; //< Cached copy of the parent object
     wxWindow* window {nullptr}; //< Pointer copy of the derived classes
 
     const Slic3r::ConfigOptionDef opt; //< Reference to the UI-specific bits of this option
