@@ -221,6 +221,7 @@ public:
         }
         return this->_choice->GetValue().ToStdString();
     }
+    ~UI_Choice() { _choice->Destroy(); }
 
 
     /// Returns a bare pointer to the underlying combobox, usually for test interface
