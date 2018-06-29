@@ -180,6 +180,7 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_field_spinctrl.cpp
     ${GUI_TESTDIR}/test_field_textbox.cpp
     ${GUI_TESTDIR}/test_field_choice.cpp
+    ${GUI_TESTDIR}/test_field_numchoice.cpp
 )
 set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/test_harness.cpp
@@ -258,6 +259,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/ProgressStatusBar.cpp
     ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
+    ${GUI_LIBDIR}/OptionsGroup/UI_NumChoice.cpp
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
     #only build GUI lib if building with wx
