@@ -260,6 +260,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_NumChoice.cpp
+    ${GUI_LIBDIR}/OptionsGroup/UI_Choice.cpp
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
     #only build GUI lib if building with wx
