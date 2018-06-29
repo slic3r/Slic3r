@@ -68,7 +68,7 @@ void TransformationMatrix::swap(TransformationMatrix &other)
     std::swap(this->m33, other.m33); std::swap(this->m34, other.m34);
 }
 
-float* TransformationMatrix::matrix3x4f()
+float* TransformationMatrix::matrix3x4f() const
 {
     float out_arr[12];
     out_arr[0] = this->m11;  out_arr[1] = this->m12;  out_arr[2] = this->m13;  out_arr[3] = this->m14;
@@ -77,21 +77,24 @@ float* TransformationMatrix::matrix3x4f()
     return out_arr;
 }
 
-double TransformationMatrix::determinante()
+double TransformationMatrix::determinante() const
 {
     // translation elements don't influence the determinante
     // because of the 0s on the other side of main diagonal
     return m11*(m22*m33 - m23*m32) - m12*(m21*m33 - m23*m31) + m13*(m21*m32 - m31*m22);
 }
 
-bool TransformationMatrix::inverse(TransformationMatrix* inverse)
+bool TransformationMatrix::inverse(TransformationMatrix* inverse) const
 {
     // from http://mathworld.wolfram.com/MatrixInverse.html
     // and https://math.stackexchange.com/questions/152462/inverse-of-transformation-matrix
     TransformationMatrix mat;
     double det = this->determinante();
     if (abs(det) < 1e-9)
+    {
+        inverse = &mat;
         return false;
+    }
     double fac = 1.0 / det;
 
     mat.m11 = fac*(this->m22*this->m33 - this->m23*this->m32);
