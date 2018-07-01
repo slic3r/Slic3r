@@ -1,4 +1,4 @@
-_Q: Oh cool, a new RepRap slicer?_
+_Q: Oh cool, a new fork of slic3r?_
 
 A: Yes.
 
@@ -18,9 +18,8 @@ See the [project homepage](http://slic3r.org/) at slic3r.org and the
 
 ### What language is it written in?
 
-The core geometric algorithms and data structures are written in C++,
-and Perl is used for high-level flow abstraction, GUI and testing.
-If you're wondering why Perl, see https://xkcd.com/224/
+Almost everything are written in C++,
+Perl is used a bit but the prusa fork is getting rid of it (uless for scripting, maybe).
 
 The C++ API is public and its use in other projects is encouraged.
 The goal is to make Slic3r fully modular so that any part of its logic
@@ -41,12 +40,12 @@ Key features are:
 
 Other major features are:
 
-* combine infill every 'n' perimeters layer to speed up printing
+* combine infill every 'n' perimeters layer & varying density to speed up printing
 * **3D preview** (including multi-material files)
 * **multiple layer heights** in a single print
 * **spiral vase** mode for bumpless vases
 * fine-grained configuration of speed, acceleration, extrusion width
-* several infill patterns including honeycomb, spirals, Hilbert curves
+* several infill patterns including honeycomb, spirals, Hilbert curves, gyroid
 * support material, raft, brim, skirt
 * **standby temperature** and automatic wiping for multi-extruder printing
 * customizable **G-code macros** and output filename with variable placeholders
@@ -55,24 +54,18 @@ Other major features are:
 
 ### How to install?
 
-You can download a precompiled package from [slic3r.org](http://slic3r.org/);
+You can download a precompiled package from the release page.
 it will run without the need for any dependency.
 
 If you want to compile the source yourself follow the instructions on one of these wiki pages: 
-* [Linux](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
-* [Windows](https://github.com/prusa3d/Slic3r/wiki/How-to-compile-Slic3r-Prusa-Edition-on-MS-Windows)
-* [Mac OSX](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-OS-X)
+* [Linux](https://github.com/supermerill/Slic3r/tree/supermerill-experiment/doc/How to build - UNIX.md)
+* [Windows](https://github.com/supermerill/Slic3r/tree/supermerill-experiment/doc/How to build - Windows.md)
+* [Mac OSX](https://github.com/supermerill/Slic3r/tree/supermerill-experiment/doc/How_to_build_Slic3r.txt)
 
 ### Can I help?
 
 Sure! You can do the following to find things that are available to help with:
-* [Pull Request Milestone](https://github.com/alexrj/Slic3r/milestone/31)
-    * Please comment in the related github issue that you are working on it so that other people know. 
-* Items in the [TODO](https://github.com/alexrj/Slic3r/wiki/TODO) wiki page.
-    * Please comment in the related github issue that you are working on it so that other people know. 
-* Drop me a line at aar@cpan.org.
-* You can also find me (rarely) in #reprap and in #slic3r on [FreeNode](https://webchat.freenode.net) with the nickname _Sound_. Another contributor, _LoH_, is also in both channels.
-* Add an [issue](https://github.com/alexrj/Slic3r/issues) to the github tracker if it isn't already present.
+* Add an issue to the github tracker if it isn't already present.
 
 Before sending patches and pull requests contact me (preferably through opening a github issue or commenting on an existing, related, issue) to discuss your proposed
 changes: this way we'll ensure nobody wastes their time and no conflicts arise
@@ -87,7 +80,7 @@ The [Silk icon set](http://www.famfamfam.com/lab/icons/silk/) used in Slic3r is
 licensed under the _Creative Commons Attribution 3.0 License_.
 The author of the Silk icon set is Mark James.
 
-### How can I invoke slic3r.pl using the command line?
+### How can I invoke slic3r.pl using the command line? (not up-to-date yet)
 
     Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
     
@@ -296,6 +289,7 @@ The author of the Silk icon set is Mark James.
         --min-fan-speed     Minimum fan speed (default: 35%)
         --max-fan-speed     Maximum fan speed (default: 100%)
         --bridge-fan-speed  Fan speed to use when bridging (default: 100%)
+        --top-fan-speed     Fan speed to use when printing top layer (default: 100%)
         --fan-below-layer-time Enable fan if layer print time is below this approximate number
                             of seconds (default: 60)
         --slowdown-below-layer-time Slow down if layer print time is below this approximate number
@@ -358,6 +352,7 @@ The author of the Silk icon set is Mark James.
                             Set a different extrusion width for support material
         --infill-overlap    Overlap between infill and perimeters (default: 15%)
         --bridge-flow-ratio Multiplier for extrusion when bridging (> 0, default: 1)
+        --over-bridge-flow-ratio Multiplier for extrusion when printing the layer above a bride (> 0, default: 1.15)
     
        Multiple extruder options:
         --extruder-offset   Offset of each extruder, if firmware doesn't handle the displacement
