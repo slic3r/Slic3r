@@ -205,6 +205,7 @@ public:
     void _make_perimeters();
     void _infill();
     void clip_fill_surfaces();
+    void count_distance_top();
     void discover_horizontal_shells();
     void combine_infill();
     void _generate_support_material();

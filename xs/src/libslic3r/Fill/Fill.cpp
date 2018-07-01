@@ -164,8 +164,15 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             fill_pattern = (surface.is_external() && ! is_bridge) ? 
                 (surface.is_top() ? layerm.region()->config.top_fill_pattern.value : layerm.region()->config.bottom_fill_pattern.value) :
                 ipRectilinear;
-        } else if (density <= 0)
-            continue;
+        } else {
+            if (layerm.region()->config.infill_dense_layers.getInt() > 0 
+                && surface.maxNbLayersOnTop < layerm.region()->config.infill_dense_layers.getInt() + layerm.region()->config.top_solid_layers.getInt()
+                && surface.maxNbLayersOnTop >= layerm.region()->config.top_solid_layers.getInt()){
+                density = layerm.region()->config.infill_dense_density.getFloat();
+            }
+            if (density <= 0)
+                continue;
+        }
         
         // get filler object
         std::unique_ptr<Fill> f = std::unique_ptr<Fill>(Fill::new_from_type(fill_pattern));
@@ -222,14 +229,13 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
         f->loop_clipping = scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER;
 //        f->layer_height = h;
-		//give the overlap size, it's not the real value (it can depend of the external_perimeter_extrusion_width)
-		f->overlap = layerm.region()->config.infill_overlap.get_abs_value(flow.nozzle_diameter);
+        //give the overlap size, it's not the real value (it can depend of the external_perimeter_extrusion_width)
+        f->overlap = layerm.region()->config.infill_overlap.get_abs_value(flow.nozzle_diameter);
         // apply half spacing using this flow's own spacing and generate infill
         FillParams params;
         params.density = 0.01 * density;
         params.dont_adjust = false;
         params.fill_exactly = layerm.region()->config.enforce_full_fill_volume.getBool();
-
 
         // calculate actual flow from spacing (which might have been adjusted by the infill
         // pattern generator)
@@ -240,12 +246,12 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         } else {
             flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
         }
-		
-		float flow_percent = 1;
-		if(surface.is_overBridge()){
-			params.flow_mult = layerm.region()->config.over_bridge_flow_ratio;
-		}
-		
+        
+        float flow_percent = 1;
+        if(surface.is_overBridge()){
+            params.flow_mult = layerm.region()->config.over_bridge_flow_ratio;
+        }
+        
         f->fill_surface_extrusion(&surface, params, flow, out);
     }
 

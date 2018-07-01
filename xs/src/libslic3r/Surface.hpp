@@ -41,35 +41,42 @@ public:
     unsigned short  thickness_layers;   // in layers
     double          bridge_angle;       // in radians, ccw, 0 = East, only 0+ (negative means undefined)
     unsigned short  extra_perimeters;
+    unsigned short    maxNbLayersOnTop;
     
     Surface(const Slic3r::Surface &rhs)
         : surface_type(rhs.surface_type), expolygon(rhs.expolygon),
             thickness(rhs.thickness), thickness_layers(rhs.thickness_layers), 
-            bridge_angle(rhs.bridge_angle), extra_perimeters(rhs.extra_perimeters)
+            bridge_angle(rhs.bridge_angle), extra_perimeters(rhs.extra_perimeters),
+            maxNbLayersOnTop(rhs.maxNbLayersOnTop)
         {};
 
     Surface(SurfaceType _surface_type, const ExPolygon &_expolygon)
         : surface_type(_surface_type), expolygon(_expolygon),
-            thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0)
+            thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0),
+            maxNbLayersOnTop(0)
         {};
     Surface(const Surface &other, const ExPolygon &_expolygon)
         : surface_type(other.surface_type), expolygon(_expolygon),
             thickness(other.thickness), thickness_layers(other.thickness_layers), 
-            bridge_angle(other.bridge_angle), extra_perimeters(other.extra_perimeters)
+            bridge_angle(other.bridge_angle), extra_perimeters(other.extra_perimeters),
+            maxNbLayersOnTop(other.maxNbLayersOnTop)
         {};
     Surface(Surface &&rhs)
         : surface_type(rhs.surface_type), expolygon(std::move(rhs.expolygon)),
             thickness(rhs.thickness), thickness_layers(rhs.thickness_layers), 
-            bridge_angle(rhs.bridge_angle), extra_perimeters(rhs.extra_perimeters)
+            bridge_angle(rhs.bridge_angle), extra_perimeters(rhs.extra_perimeters),
+            maxNbLayersOnTop(rhs.maxNbLayersOnTop)
         {};
     Surface(SurfaceType _surface_type, const ExPolygon &&_expolygon)
         : surface_type(_surface_type), expolygon(std::move(_expolygon)),
-            thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0)
+        thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0),
+        maxNbLayersOnTop(0)
         {};
     Surface(const Surface &other, const ExPolygon &&_expolygon)
         : surface_type(other.surface_type), expolygon(std::move(_expolygon)),
             thickness(other.thickness), thickness_layers(other.thickness_layers), 
-            bridge_angle(other.bridge_angle), extra_perimeters(other.extra_perimeters)
+            bridge_angle(other.bridge_angle), extra_perimeters(other.extra_perimeters),
+            maxNbLayersOnTop(other.maxNbLayersOnTop)
         {};
 
     Surface& operator=(const Surface &rhs)
@@ -80,6 +87,7 @@ public:
         thickness_layers = rhs.thickness_layers;
         bridge_angle     = rhs.bridge_angle;
         extra_perimeters = rhs.extra_perimeters;
+        maxNbLayersOnTop = rhs.maxNbLayersOnTop;
         return *this;
     }
 
@@ -91,6 +99,7 @@ public:
         thickness_layers = rhs.thickness_layers;
         bridge_angle     = rhs.bridge_angle;
         extra_perimeters = rhs.extra_perimeters;
+        maxNbLayersOnTop = rhs.maxNbLayersOnTop;
         return *this;
     }
 
@@ -104,7 +113,7 @@ public:
     bool is_internal() const;
     bool is_bottom() const;
     bool is_bridge() const;
-	bool is_overBridge() const;
+    bool is_overBridge() const;
 };
 
 typedef std::vector<Surface> Surfaces;
@@ -151,12 +160,12 @@ inline ExPolygons to_expolygons(const Surfaces &src)
 
 inline ExPolygons to_expolygons(Surfaces &&src)
 {
-	ExPolygons expolygons;
-	expolygons.reserve(src.size());
-	for (Surfaces::const_iterator it = src.begin(); it != src.end(); ++it)
-		expolygons.emplace_back(ExPolygon(std::move(it->expolygon)));
-	src.clear();
-	return expolygons;
+    ExPolygons expolygons;
+    expolygons.reserve(src.size());
+    for (Surfaces::const_iterator it = src.begin(); it != src.end(); ++it)
+        expolygons.emplace_back(ExPolygon(std::move(it->expolygon)));
+    src.clear();
+    return expolygons;
 }
 
 inline ExPolygons to_expolygons(const SurfacesPtr &src)

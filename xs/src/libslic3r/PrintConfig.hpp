@@ -29,7 +29,7 @@ enum GCodeFlavor {
 
 enum InfillPattern {
     ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
-	ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipSmooth, ipSmoothHilbert, ipSmoothTriple,
+    ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipSmooth, ipSmoothHilbert, ipSmoothTriple,
 };
 
 enum SupportMaterialPattern {
@@ -242,12 +242,12 @@ protected:
             m_defaults = defaults;
             m_keys.clear();
             m_keys.reserve(m_map_name_to_offset.size());
-			for (const auto &kvp : defs->options) {
-				// Find the option given the option name kvp.first by an offset from (char*)m_defaults.
-				ConfigOption *opt = this->optptr(kvp.first, m_defaults);
-				if (opt == nullptr)
-					// This option is not defined by the ConfigBase of type T.
-					continue;
+            for (const auto &kvp : defs->options) {
+                // Find the option given the option name kvp.first by an offset from (char*)m_defaults.
+                ConfigOption *opt = this->optptr(kvp.first, m_defaults);
+                if (opt == nullptr)
+                    // This option is not defined by the ConfigBase of type T.
+                    continue;
                 m_keys.emplace_back(kvp.first);
                 const ConfigOptionDef *def = defs->get(kvp.first);
                 assert(def != nullptr);
@@ -392,7 +392,7 @@ public:
     ConfigOptionEnum<InfillPattern> top_fill_pattern;
     ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
     ConfigOptionBool                enforce_full_fill_volume;
-	ConfigOptionFloat               external_infill_margin;
+    ConfigOptionFloat               external_infill_margin;
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
@@ -407,6 +407,8 @@ public:
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
+    ConfigOptionInt                 infill_dense_layers;
+    ConfigOptionPercent             infill_dense_density;
     ConfigOptionBool                overhangs;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
@@ -450,6 +452,8 @@ protected:
         OPT_PTR(infill_every_layers);
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
+        OPT_PTR(infill_dense_layers);
+        OPT_PTR(infill_dense_density);
         OPT_PTR(overhangs);
         OPT_PTR(perimeter_extruder);
         OPT_PTR(perimeter_extrusion_width);
@@ -753,7 +757,7 @@ class FullPrintConfig :
     public HostConfig
 {
     STATIC_PRINT_CONFIG_CACHE_DERIVED(FullPrintConfig)
-	FullPrintConfig() : PrintObjectConfig(0), PrintRegionConfig(0), PrintConfig(0), HostConfig(0) { initialize_cache(); *this = s_cache_FullPrintConfig.defaults(); }
+    FullPrintConfig() : PrintObjectConfig(0), PrintRegionConfig(0), PrintConfig(0), HostConfig(0) { initialize_cache(); *this = s_cache_FullPrintConfig.defaults(); }
 
 public:
     // Validate the FullPrintConfig. Returns an empty string on success, otherwise an error message is returned.
