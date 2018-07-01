@@ -861,14 +861,17 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("infill_dense_density"));
         optgroup->append_line(line);
 
-		optgroup = page->new_optgroup(_(L("Advanced")));
-		optgroup->append_single_option_line("solid_infill_every_layers");
-		optgroup->append_single_option_line("fill_angle");
-		optgroup->append_single_option_line("solid_infill_below_area");
-		optgroup->append_single_option_line("external_infill_margin");
-		optgroup->append_single_option_line("bridge_angle");
-		optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
-		optgroup->append_single_option_line("infill_first");
+        optgroup = page->new_optgroup(_(L("Advanced")));
+        optgroup->append_single_option_line("solid_infill_every_layers");
+        optgroup->append_single_option_line("solid_infill_below_area");
+        optgroup->append_single_option_line("fill_angle");
+        optgroup->append_single_option_line("bridge_angle");
+        line = { _(L("Anchor solid infill by X mm")), "" };
+        line.append_option(optgroup->get_option("external_infill_margin"));
+        line.append_option(optgroup->get_option("bridged_infill_margin"));
+        optgroup->append_line(line);
+        optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
+        optgroup->append_single_option_line("infill_first");
 
 	page = add_options_page(_(L("Skirt and brim")), "box.png");
 		optgroup = page->new_optgroup(_(L("Skirt")));

@@ -195,6 +195,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "top_solid_layers"
             || opt_key == "solid_infill_below_area"
             || opt_key == "external_infill_margin"
+            || opt_key == "bridged_infill_margin"
             || opt_key == "infill_extruder"
             || opt_key == "solid_infill_extruder"
             || opt_key == "infill_extrusion_width"
@@ -309,7 +310,7 @@ void PrintObject::_prepare_infill()
     // It produces enlarged overlapping bridging areas.
     //
     // 1) S_TYPE_BOTTOMBRIDGE / S_TYPE_BOTTOM infill is grown by 3mm and clipped by the total infill area. Bridges are detected. The areas may overlap.
-    // 2) S_TYPE_TOP is grown by 3mm and clipped by the grown bottom areas. The areas may overlap.
+    // 2) S_TYPE_TOP is grown by 3mm (or external_infill_margin) and clipped by the grown bottom areas. The areas may overlap.
     // 3) Clip the internal surfaces by the grown top/bottom surfaces.
     // 4) Merge surfaces with the same style. This will mostly get rid of the overlaps.
     //FIXME This does not likely merge surfaces, which are supported by a material with different colors, but same properties.

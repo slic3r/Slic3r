@@ -94,12 +94,13 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
 {
     const Surfaces &surfaces = this->fill_surfaces.surfaces;
     const double margin = scale_(this->region()->config.external_infill_margin.getFloat());
+    const double margin_bridged = scale_(this->region()->config.bridged_infill_margin.getFloat());
     
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
     export_region_fill_surfaces_to_svg_debug("3_process_external_surfaces-initial");
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
 
-    // 1) Collect bottom and bridge surfaces, each of them grown by a fixed 3mm offset
+    // 1) Collect bottom and bridge surfaces, each of them grown by a parametrised ~3mm offset
     // for better anchoring.
     // Bottom surfaces, grown.
     Surfaces                    bottom;
@@ -186,8 +187,8 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
                         idx_island = j;
                         break;
                     }
-                // Grown by 3mm.
-                Polygons polys = offset(to_polygons(bridges[i].expolygon), float(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS);
+                // Grown by bridged_infill_margin.
+                Polygons polys = offset(to_polygons(bridges[i].expolygon), float(margin_bridged), EXTERNAL_SURFACES_OFFSET_PARAMETERS);
                 if (idx_island == -1) {
                     printf("Bridge did not fall into the source region!\r\n");
                 } else {
