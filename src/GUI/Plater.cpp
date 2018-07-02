@@ -13,6 +13,7 @@
 #include "BoundingBox.hpp"
 #include "Geometry.hpp"
 #include "Dialogs/AnglePicker.hpp"
+#include "Dialogs/ObjectCutDialog.hpp"
 
 
 namespace Slic3r { namespace GUI {
@@ -888,6 +889,13 @@ void Plater::changescale() {
 
 void Plater::object_cut_dialog() {
     //TODO
+    ObjRef obj {this->selected_object()};
+    if (obj == this->objects.end()) return;
+
+    auto* model_object {this->model->objects.at(obj->identifier)};
+    auto cut_dialog = new ObjectCutDialog(nullptr, model_object);
+    cut_dialog->ShowModal();
+    cut_dialog->Destroy();
 }
 
 void Plater::object_layers_dialog() {

@@ -246,6 +246,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/Dialogs/PrintEditor.cpp
     ${GUI_LIBDIR}/Dialogs/PrinterEditor.cpp
     ${GUI_LIBDIR}/Dialogs/MaterialEditor.cpp
+    ${GUI_LIBDIR}/Dialogs/ObjectCutDialog.cpp
     ${GUI_LIBDIR}/GUI.cpp
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/Plater.cpp
