@@ -370,6 +370,8 @@ std::string GCodePreviewData::get_legend_title() const
         return L("Volumetric flow rate (mm3/s)");
     case Extrusion::Tool:
         return L("Tool");
+    case Extrusion::Filament:
+        return L("Filament");
     }
 
     return "";
@@ -431,6 +433,7 @@ GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::
             break;
         }
     case Extrusion::Tool:
+    case Extrusion::Filament:
         {
             unsigned int tools_colors_count = tool_colors.size() / 4;
             items.reserve(tools_colors_count);

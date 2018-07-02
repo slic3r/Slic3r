@@ -3674,6 +3674,7 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
             case GCodePreviewData::Extrusion::VolumetricRate:
                 return path.feedrate * (float)path.mm3_per_mm;
             case GCodePreviewData::Extrusion::Tool:
+            case GCodePreviewData::Extrusion::Filament:
                 return (float)path.extruder_id;
             default:
                 return 0.0f;
@@ -3697,6 +3698,7 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
             case GCodePreviewData::Extrusion::VolumetricRate:
                 return data.get_volumetric_rate_color(value);
             case GCodePreviewData::Extrusion::Tool:
+            case GCodePreviewData::Extrusion::Filament:
             {
                 GCodePreviewData::Color color;
                 ::memcpy((void*)color.rgba, (const void*)(tool_colors.data() + (unsigned int)value * 4), 4 * sizeof(float));
@@ -3829,6 +3831,7 @@ void GLCanvas3D::_load_gcode_travel_paths(const GCodePreviewData& preview_data, 
         break;
     }
     case GCodePreviewData::Extrusion::Tool:
+    case GCodePreviewData::Extrusion::Filament:
     {
         res = _travel_paths_by_tool(preview_data, tool_colors);
         break;

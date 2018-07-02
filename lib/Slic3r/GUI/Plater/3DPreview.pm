@@ -77,10 +77,12 @@ sub new {
     $choice_view_type->Append(L("Speed"));
     $choice_view_type->Append(L("Volumetric flow rate"));
     $choice_view_type->Append(L("Tool"));
+    $choice_view_type->Append(L("Filament"));
     $choice_view_type->SetSelection(0);
 
     # the following value needs to be changed if new items are added into $choice_view_type before "Tool"
     $self->{tool_idx} = 5;
+    $self->{filament_idx} = 6;
     
     my $label_show_features = $self->{label_show_features} = Wx::StaticText->new($self, -1, L("Show"));
     
@@ -357,6 +359,15 @@ sub load_print {
             push @colors, $color;
         }
     }
+	if($self->gcode_preview_data->type == $self->{filament_idx}) {
+        my @extruder_colors = @{$self->{config}->extruder_colour};
+        my @filament_colors = @{$self->{config}->filament_colour};
+        for (my $i = 0; $i <= $#extruder_colors; $i += 1) {
+            my $color = $filament_colors[$i];
+            $color = '#FFFFFF' if (! defined($color) || $color !~ m/^#[[:xdigit:]]{6}/);
+            push @colors, $color;
+        }
+	}
 
     if ($self->IsShown) {
         # used to set the sliders to the extremes of the current zs range
