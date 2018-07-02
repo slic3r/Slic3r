@@ -1521,7 +1521,7 @@ sub center_selected_object_on_bed {
         $self->bed_centerf->y - $bb->y_min - $size->y/2,    #//
     );
     $_->offset->translate(@$vector) for @{$model_object->instances};
-    $self->refresh_canvases;
+    $self->on_model_change;
 }
 
 sub rotate_face {
