@@ -4,7 +4,7 @@ A: Yes.
 
 Slic3r
 ======
-Prebuilt Windows, OSX and Linux binaries are available through the [git releases page](https://github.com/prusa3d/Slic3r/releases).
+Prebuilt Windows 32b is available through the [git releases page](https://github.com/supermerill/Slic3r/releases).
 
 <img width=256 src=https://cloud.githubusercontent.com/assets/31754/22719818/09998c92-ed6d-11e6-9fa0-09de638f3a36.png />
 
@@ -19,11 +19,16 @@ See the [project homepage](http://slic3r.org/) at slic3r.org and the
 ### What language is it written in?
 
 Almost everything are written in C++,
-Perl is used a bit but the prusa fork is getting rid of it (uless for scripting, maybe).
+Perl is used a bit but the prusa fork is getting rid of it (unless for scripting, maybe).
 
 The C++ API is public and its use in other projects is encouraged.
 The goal is to make Slic3r fully modular so that any part of its logic
 can be used separately.
+
+### What are this fork main features/differences?
+
+* **Ironing** top surface & many new settings to fine-tune the top surface quality.
+* A denser infill option for 1-X layers before the top solid layers to better support them.
 
 ### What are Slic3r's main features?
 

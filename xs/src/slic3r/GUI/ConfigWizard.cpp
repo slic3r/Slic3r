@@ -23,6 +23,7 @@
 namespace Slic3r {
 namespace GUI {
 
+#define MAIN_VENDOR "None"
 
 // Printer model picker GUI control
 
@@ -88,7 +89,7 @@ PrinterPicker::PrinterPicker(wxWindow *parent, const VendorProfile &vendor, cons
 			auto *cbox = new Checkbox(panel, label, model_id, variant.name);
 			const size_t idx = cboxes.size();
 			cboxes.push_back(cbox);
-			bool enabled = appconfig_vendors.get_variant("PrusaResearch", model_id, variant.name);
+			bool enabled = appconfig_vendors.get_variant(MAIN_VENDOR, model_id, variant.name);
 			variants_checked += enabled;
 			cbox->SetValue(enabled);
 			col_sizer->Add(cbox, 0, wxBOTTOM, 3);
@@ -226,7 +227,8 @@ PageWelcome::PageWelcome(ConfigWizard *parent) :
 	}
 
 	const auto &vendors = wizard_p()->vendors;
-	const auto vendor_prusa = vendors.find("PrusaResearch");
+	printf("vendors count : %d", vendors.size());
+	const auto vendor_prusa = vendors.find(MAIN_VENDOR);
 
 	if (vendor_prusa != vendors.cend()) {
 		AppConfig &appconfig_vendors = this->wizard_p()->appconfig_vendors;
@@ -311,7 +313,7 @@ PageVendors::PageVendors(ConfigWizard *parent) :
 
 	for (const auto vendor_pair : wizard_p()->vendors) {
 		const auto &vendor = vendor_pair.second;
-		if (vendor.id == "PrusaResearch") { continue; }
+		if (vendor.id == MAIN_VENDOR) { continue; }
 
 		auto *picker = new PrinterPicker(this, vendor, appconfig_vendors);
 		picker->Hide();
@@ -614,8 +616,8 @@ static const std::unordered_map<std::string, std::pair<std::string, std::string>
 
 void ConfigWizard::priv::load_vendors()
 {
-	const auto vendor_dir = fs::path(Slic3r::data_dir()) / "vendor";
-	const auto rsrc_vendor_dir = fs::path(resources_dir()) / "profiles";
+	const fs::path vendor_dir = fs::path(Slic3r::data_dir()) / "vendor";
+	const fs::path rsrc_vendor_dir = fs::path(resources_dir()) / "profiles";
 
 	// Load vendors from the "vendors" directory in datadir
 	for (fs::directory_iterator it(vendor_dir); it != fs::directory_iterator(); ++it) {
@@ -661,7 +663,7 @@ void ConfigWizard::priv::load_vendors()
 
 			const auto &model = needle->second.first;
 			const auto &variant = needle->second.second;
-			appconfig_vendors.set_variant("PrusaResearch", model, variant, true);
+			appconfig_vendors.set_variant(MAIN_VENDOR, model, variant, true);
 		}
 	}
 }
