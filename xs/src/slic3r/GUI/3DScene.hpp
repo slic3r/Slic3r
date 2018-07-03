@@ -516,7 +516,6 @@ public:
 
     static bool init(wxGLCanvas* canvas);
 
-    static void set_active(wxGLCanvas* canvas, bool active);
     static void set_as_dirty(wxGLCanvas* canvas);
 
     static unsigned int get_volumes_count(wxGLCanvas* canvas);

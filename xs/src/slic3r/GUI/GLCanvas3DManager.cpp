@@ -114,17 +114,11 @@ std::string GLCanvas3DManager::GLInfo::to_string(bool format_as_html, bool exten
 }
 
 GLCanvas3DManager::GLCanvas3DManager()
-    : m_context(nullptr)
+    : m_current(nullptr)
     , m_gl_initialized(false)
     , m_use_legacy_opengl(false)
     , m_use_VBOs(false)
 {
-}
-
-GLCanvas3DManager::~GLCanvas3DManager()
-{
-    if (m_context != nullptr)
-        delete m_context;
 }
 
 bool GLCanvas3DManager::add(wxGLCanvas* canvas)
@@ -135,14 +129,7 @@ bool GLCanvas3DManager::add(wxGLCanvas* canvas)
     if (_get_canvas(canvas) != m_canvases.end())
         return false;
 
-    if (m_context == nullptr)
-    {
-        m_context = new wxGLContext(canvas);
-        if (m_context == nullptr)
-            return false;
-    }
-
-    GLCanvas3D* canvas3D = new GLCanvas3D(canvas, m_context);
+    GLCanvas3D* canvas3D = new GLCanvas3D(canvas);
     if (canvas3D == nullptr)
         return false;
 
@@ -210,13 +197,6 @@ bool GLCanvas3DManager::init(wxGLCanvas* canvas)
         return (it->second != nullptr) ? _init(*it->second) : false;
     else
         return false;
-}
-
-void GLCanvas3DManager::set_active(wxGLCanvas* canvas, bool active)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_active(active);
 }
 
 void GLCanvas3DManager::set_as_dirty(wxGLCanvas* canvas)

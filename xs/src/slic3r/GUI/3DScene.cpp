@@ -1754,11 +1754,6 @@ bool _3DScene::init(wxGLCanvas* canvas)
     return s_canvas_mgr.init(canvas);
 }
 
-void _3DScene::set_active(wxGLCanvas* canvas, bool active)
-{
-    s_canvas_mgr.set_active(canvas, active);
-}
-
 void _3DScene::set_as_dirty(wxGLCanvas* canvas)
 {
     s_canvas_mgr.set_as_dirty(canvas);

@@ -1408,15 +1408,14 @@ GLGizmoBase* GLCanvas3D::Gizmos::_get_current() const
     return (it != m_gizmos.end()) ? it->second : nullptr;
 }
 
-GLCanvas3D::GLCanvas3D(wxGLCanvas* canvas, wxGLContext* context)
+GLCanvas3D::GLCanvas3D(wxGLCanvas* canvas)
     : m_canvas(canvas)
-    , m_context(context)
+    , m_context(nullptr)
     , m_timer(nullptr)
     , m_config(nullptr)
     , m_print(nullptr)
     , m_model(nullptr)
     , m_dirty(true)
-    , m_active(true)
     , m_initialized(false)
     , m_use_VBOs(false)
     , m_force_zoom_to_bed_enabled(false)
@@ -1434,7 +1433,10 @@ GLCanvas3D::GLCanvas3D(wxGLCanvas* canvas, wxGLContext* context)
     , m_reload_delayed(false)
 {
     if (m_canvas != nullptr)
+    {
+        m_context = new wxGLContext(m_canvas);
         m_timer = new wxTimer(m_canvas);
+    }
 }
 
 GLCanvas3D::~GLCanvas3D()
@@ -1447,6 +1449,12 @@ GLCanvas3D::~GLCanvas3D()
         m_timer = nullptr;
     }
 
+    if (m_context != nullptr)
+    {
+        delete m_context;
+        m_context = nullptr;
+    }
+
     _deregister_callbacks();
 }
 
@@ -1454,6 +1462,9 @@ bool GLCanvas3D::init(bool useVBOs, bool use_legacy_opengl)
 {
     if (m_initialized)
         return true;
+
+    if ((m_canvas == nullptr) || (m_context == nullptr))
+        return false;
 
     ::glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     ::glClearDepth(1.0f);
@@ -1523,17 +1534,9 @@ bool GLCanvas3D::init(bool useVBOs, bool use_legacy_opengl)
 bool GLCanvas3D::set_current()
 {
     if ((m_canvas != nullptr) && (m_context != nullptr))
-    {
-        m_canvas->SetCurrent(*m_context);
-        return true;
-    }
+        return m_canvas->SetCurrent(*m_context);
 
     return false;
-}
-
-void GLCanvas3D::set_active(bool active)
-{
-    m_active = active;
 }
 
 void GLCanvas3D::set_as_dirty()
@@ -1548,8 +1551,13 @@ unsigned int GLCanvas3D::get_volumes_count() const
 
 void GLCanvas3D::reset_volumes()
 {
-    if (set_current())
+
+    if (!m_volumes.empty())
     {
+        // ensures this canvas is current
+        if (!set_current())
+            return;
+
         m_volumes.release_geometry();
         m_volumes.clear();
         m_dirty = true;
@@ -1653,6 +1661,8 @@ void GLCanvas3D::set_bed_shape(const Pointfs& shape)
     // Set the origin and size for painting of the coordinate system axes.
     m_axes.origin = Pointf3(0.0, 0.0, (coordf_t)GROUND_Z);
     set_axes_length(0.3f * (float)m_bed.get_bounding_box().max_size());
+
+    m_dirty = true;
 }
 
 void GLCanvas3D::set_auto_bed_shape()
@@ -1847,7 +1857,7 @@ void GLCanvas3D::render()
     if (!_is_shown_on_screen())
         return;
 
-    // ensures that the proper context is selected and that this canvas is initialized
+    // ensures this canvas is current and initialized
     if (!set_current() || !_3DScene::init(m_canvas))
         return;
 
@@ -1929,6 +1939,11 @@ void GLCanvas3D::reload_scene(bool force)
         return;
 
     reset_volumes();
+
+    // ensures this canvas is current
+    if (!set_current())
+        return;
+
     set_bed_shape(dynamic_cast<const ConfigOptionPoints*>(m_config->option("bed_shape"))->values);
 
     if (!m_canvas->IsShown() && !force)
@@ -2000,6 +2015,10 @@ void GLCanvas3D::reload_scene(bool force)
 
 void GLCanvas3D::load_print_toolpaths()
 {
+    // ensures this canvas is current
+    if (!set_current())
+        return;
+
     if (m_print == nullptr)
         return;
 
@@ -2364,7 +2383,7 @@ void GLCanvas3D::load_gcode_preview(const GCodePreviewData& preview_data, const 
 {
     if ((m_canvas != nullptr) && (m_print != nullptr))
     {
-        // ensures that the proper context is selected
+        // ensures that this canvas is current
         if (!set_current())
             return;
 
@@ -2985,7 +3004,7 @@ Point GLCanvas3D::get_local_mouse_position() const
 
 bool GLCanvas3D::_is_shown_on_screen() const
 {
-    return (m_canvas != nullptr) ? m_active && m_canvas->IsShownOnScreen() : false;
+    return (m_canvas != nullptr) ? m_canvas->IsShownOnScreen() : false;
 }
 
 void GLCanvas3D::_force_zoom_to_bed()
@@ -2996,9 +3015,10 @@ void GLCanvas3D::_force_zoom_to_bed()
 
 void GLCanvas3D::_resize(unsigned int w, unsigned int h)
 {
-    if (m_context == nullptr)
+    if ((m_canvas == nullptr) && (m_context == nullptr))
         return;
 
+    // ensures that this canvas is current
     set_current();
     ::glViewport(0, 0, w, h);
 
@@ -3585,8 +3605,10 @@ void GLCanvas3D::_perform_layer_editing_action(wxMouseEvent* evt)
 
 Pointf3 GLCanvas3D::_mouse_to_3d(const Point& mouse_pos, float* z)
 {
-    if (!set_current())
+    if (m_canvas == nullptr)
         return Pointf3(DBL_MAX, DBL_MAX, DBL_MAX);
+
+    _camera_tranform();
 
     GLint viewport[4];
     ::glGetIntegerv(GL_VIEWPORT, viewport);
