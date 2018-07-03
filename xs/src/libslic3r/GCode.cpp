@@ -1341,10 +1341,10 @@ void GCode::process_layer(
         for (const ObjectByExtruder &object_by_extruder : objects_by_extruder_it->second) {
             const size_t       layer_id     = &object_by_extruder - objects_by_extruder_it->second.data();
             const PrintObject *print_object = layers[layer_id].object();
-			if (print_object == nullptr)
-				// This layer is empty for this particular object, it has neither object extrusions nor support extrusions at this print_z.
-				continue;
-
+            if (print_object == nullptr)
+                // This layer is empty for this particular object, it has neither object extrusions nor support extrusions at this print_z.
+                continue;
+            
             m_config.apply(print_object->config, true);
             m_layer = layers[layer_id].layer();
             if (m_config.avoid_crossing_perimeters)
@@ -1354,9 +1354,14 @@ void GCode::process_layer(
                 copies = print_object->_shifted_copies;
             else
                 copies.push_back(print_object->_shifted_copies[single_object_idx]);
-            // Sort the copies by the closest point starting with the current print position.
+            //FIXME: Sort the copies by the closest point starting with the current print position.
+            // be careful to set a good copy_idx (used to identify the copy).
             
+            int copy_idx = 0;
             for (const Point &copy : copies) {
+                if (this->config().gcode_comments){
+                    gcode += ((std::ostringstream&)(std::ostringstream() << "; printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_idx << "\n")).str();
+                }
                 // When starting a new object, use the external motion planner for the first travel move.
                 std::pair<const PrintObject*, Point> this_object_copy(print_object, copy);
                 if (m_last_obj_copy != this_object_copy)
@@ -1379,6 +1384,10 @@ void GCode::process_layer(
                         gcode += this->extrude_infill(print, island.by_region);
                     }
                 }
+                if (this->config().gcode_comments){
+                    gcode += ((std::ostringstream&)(std::ostringstream() << "; stop printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_idx << "\n")).str();
+                }
+                copy_idx++;
             }
         }
     }
@@ -2362,6 +2371,10 @@ std::string GCode::retract(bool toolchange)
     
     if (m_writer.extruder() == nullptr)
         return gcode;
+
+    // We need to reset e before any extrusion or wipe to allow the reset to happen at the real 
+    // begining of an object gcode
+    gcode += m_writer.reset_e();
     
     // wipe (if it's enabled for this extruder and we have a stored wipe path)
     if (EXTRUDER_CONFIG(wipe) && m_wipe.has_path()) {
@@ -2375,7 +2388,6 @@ std::string GCode::retract(bool toolchange)
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
     
-    gcode += m_writer.reset_e();
     if (m_writer.extruder()->retract_length() > 0 || m_config.use_firmware_retraction)
         gcode += m_writer.lift();
     
