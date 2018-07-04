@@ -116,6 +116,10 @@ class Pointf
     static Pointf new_unscale(const Point &p) {
         return Pointf(unscale(p.x), unscale(p.y));
     };
+
+    // equality operator based on the scaled coordinates
+    bool operator==(const Pointf& rhs) const;
+
     std::string wkt() const;
     std::string dump_perl() const;
     void scale(double factor);

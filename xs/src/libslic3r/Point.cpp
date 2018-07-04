@@ -438,6 +438,10 @@ Pointf3::scale(double factor)
     this->z *= factor;
 }
 
+bool Pointf::operator==(const Pointf& rhs) const { 
+    return Point::new_scale(*this) == Point::new_scale(rhs);
+}
+
 void
 Pointf3::translate(const Vectorf3 &vector)
 {
