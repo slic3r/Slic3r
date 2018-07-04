@@ -291,10 +291,10 @@ private:
     std::regex show_value_flag {"\bshow_value\b"};
 };
 
-class UI_Point : public UI_Sizer{ 
+class UI_Point : public UI_Sizer {
 public:
 
-    UI_Point(wxWindow* _parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY);
+    UI_Point(wxWindow* _parent, Slic3r::ConfigOptionDef _opt);
     ~UI_Point() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); }
     std::string get_string();
 
