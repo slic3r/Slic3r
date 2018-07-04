@@ -80,6 +80,24 @@ SCENARIO( "UI_Point: set_value works with several types of inputs") {
                 REQUIRE(test_field.ctrl_y()->GetValue() == wxString("2.1"s));
             }
         }
+        WHEN( "set_value is called with a Pointf3(19.0, 2.1, 0.2)") {
+            test_field.set_value(Pointf3(19.0, 2.1, 0.2));
+            THEN( "get_point() returns a Pointf(19.0, 2.1)") {
+                REQUIRE(test_field.get_point() == Pointf(19.0, 2.1));
+            }
+            THEN( "get_point() returns a Pointf(19.0, 2.1)") {
+                REQUIRE(test_field.get_point3() == Pointf3(19.0, 2.1, 0.0));
+            }
+            THEN( "get_string() returns '19.0;2.1'") {
+                REQUIRE(test_field.get_string() == "19.0;2.1"s);
+            }
+            THEN( "X TextCtrl contains X coordinate") {
+                REQUIRE(test_field.ctrl_x()->GetValue() == wxString("19.0"s));
+            }
+            THEN( "Y TextCtrl contains Y coordinate") {
+                REQUIRE(test_field.ctrl_y()->GetValue() == wxString("2.1"s));
+            }
+        }
         WHEN( "set_value is called with a string of the form '30.9;211.2'") {
             test_field.set_value("30.9;211.2"s);
             THEN( "get_point() returns a Pointf(30.9, 211.2)") {
