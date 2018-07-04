@@ -182,6 +182,8 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_field_choice.cpp
     ${GUI_TESTDIR}/test_field_numchoice.cpp
     ${GUI_TESTDIR}/test_field_point.cpp
+    ${GUI_TESTDIR}/test_field_point3.cpp
+    ${GUI_TESTDIR}/test_misc_ui.cpp
 )
 set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/test_harness.cpp
@@ -263,6 +265,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/OptionsGroup/UI_NumChoice.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Choice.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Point.cpp
+    ${GUI_LIBDIR}/OptionsGroup/UI_Point3.cpp
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
     #only build GUI lib if building with wx
