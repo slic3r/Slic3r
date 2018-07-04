@@ -118,7 +118,7 @@ void ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEnt
     for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
         if (role != erMixed) {
             // The caller wants only paths with a specific extrusion role.
-            auto role2 = (*it)->role();
+            ExtrusionRole role2 = (*it)->role();
             if (role != role2) {
                 // This extrusion entity does not match the role asked.
                 assert(role2 != erMixed);

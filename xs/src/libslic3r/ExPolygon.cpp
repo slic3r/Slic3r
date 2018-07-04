@@ -207,7 +207,7 @@ void ExPolygon::simplify(double tolerance, ExPolygons* expolygons) const
 }
 
 void
-ExPolygon::medial_axis(double max_width, double min_width, ThickPolylines* polylines) const
+ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_width, ThickPolylines* polylines) const
 {
     // init helper object
     Slic3r::Geometry::MedialAxis ma(max_width, min_width, this);
@@ -229,92 +229,243 @@ ExPolygon::medial_axis(double max_width, double min_width, ThickPolylines* polyl
     double max_w = 0;
     for (ThickPolylines::const_iterator it = pp.begin(); it != pp.end(); ++it)
         max_w = fmaxf(max_w, *std::max_element(it->width.begin(), it->width.end()));
-    
+
+    /*  Aligned fusion: Fusion the bits at the end of lines by "increasing thikness"
+    *   For that, we have to find other lines,
+    *   and with a next point no more distant than the max width.
+    *   Then, we can merge the bit from the first point to the second by following the mean.
+    */
+    bool changes = true;
+    while (changes) {
+        changes = false;
+        for (size_t i = 0; i < pp.size(); ++i) {
+            ThickPolyline& polyline = pp[i];
+
+            ThickPolyline* best_candidate = nullptr;
+            float best_dot = -1;
+            int best_idx = 0;
+
+            // find another polyline starting here
+            for (size_t j = i + 1; j < pp.size(); ++j) {
+                ThickPolyline& other = pp[j];
+                if (polyline.last_point().coincides_with(other.last_point())) {
+                    polyline.reverse();
+                    other.reverse();
+                }
+                else if (polyline.first_point().coincides_with(other.last_point())) {
+                    other.reverse();
+                }
+                else if (polyline.first_point().coincides_with(other.first_point())) {
+                }
+                else if (polyline.last_point().coincides_with(other.first_point())) {
+                    polyline.reverse();
+                } else {
+                    continue;
+                }
+
+                //only consider the other if the next point is near us
+                if (polyline.points.size() < 2 && other.points.size() < 2) continue;
+                if (!polyline.endpoints.second || !other.endpoints.second) continue;
+                if (polyline.points.back().distance_to(other.points.back()) > max_width) continue;
+                if (polyline.points.size() != other.points.size()) continue;
+
+
+                Pointf v_poly(polyline.lines().front().vector().x, polyline.lines().front().vector().y);
+                v_poly.scale(1 / std::sqrt(v_poly.x*v_poly.x + v_poly.y*v_poly.y));
+                Pointf v_other(other.lines().front().vector().x, other.lines().front().vector().y);
+                v_other.scale(1 / std::sqrt(v_other.x*v_other.x + v_other.y*v_other.y));
+                float other_dot = v_poly.x*v_other.x + v_poly.y*v_other.y;
+                if (other_dot > best_dot) {
+                    best_candidate = &other;
+                    best_idx = j;
+                    best_dot = other_dot;
+                }
+            }
+            if (best_candidate != nullptr) {
+
+                //TODO: witch if polyline.size > best_candidate->size
+                //doesn't matter rright now because a if in the selection process prevent this.
+
+                //iterate the points
+                // as voronoi should create symetric thing, we can iterate synchonously
+                unsigned int idx_point = 1;
+                while (idx_point < polyline.points.size() && polyline.points[idx_point].distance_to(best_candidate->points[idx_point]) < max_width) {
+                    //fusion
+                    polyline.points[idx_point].x += best_candidate->points[idx_point].x;
+                    polyline.points[idx_point].x /= 2;
+                    polyline.points[idx_point].y += best_candidate->points[idx_point].y;
+                    polyline.points[idx_point].y /= 2;
+                    polyline.width[idx_point] += best_candidate->width[idx_point];
+                    ++idx_point;
+                }
+                if (idx_point < best_candidate->points.size()) {
+                    if (idx_point + 1 < best_candidate->points.size()) {
+                        //create a new polyline
+                        pp.emplace_back();
+                        pp.back().endpoints.first = true;
+                        pp.back().endpoints.second = best_candidate->endpoints.second;
+                        for (int idx_point_new_line = idx_point; idx_point_new_line < best_candidate->points.size(); ++idx_point_new_line) {
+                            pp.back().points.push_back(best_candidate->points[idx_point_new_line]);
+                            pp.back().width.push_back(best_candidate->width[idx_point_new_line]);
+                        }
+                    } else {
+                        //Add last point
+                        polyline.points.push_back(best_candidate->points[idx_point]);
+                        polyline.width.push_back(best_candidate->width[idx_point]);
+                        //select if an end opccur
+                        polyline.endpoints.second &= best_candidate->endpoints.second;
+                    }
+
+                } else {
+                    //select if an end opccur
+                    polyline.endpoints.second &= best_candidate->endpoints.second;
+                }
+
+                //remove points that are the same or too close each other, ie simplify
+                for (unsigned int idx_point = 1; idx_point < polyline.points.size(); ++idx_point) {
+                    //distance of 1 is on the sclaed coordinates, so it correspond to SCALE_FACTOR, so it's very small
+                    if (polyline.points[idx_point - 1].distance_to(polyline.points[idx_point]) < 1) {
+                        if (idx_point < polyline.points.size() -1) {
+                            polyline.points.erase(polyline.points.begin() + idx_point);
+                        } else {
+                            polyline.points.erase(polyline.points.begin() + idx_point -1);
+                        }
+                        --idx_point;
+                    }
+                }
+                //remove points that are outside of the geometry
+                for (unsigned int idx_point = 0; idx_point < polyline.points.size(); ++idx_point) {
+                    //distance of 1 is on the sclaed coordinates, so it correspond to SCALE_FACTOR, so it's very small
+                    if (!bounds.contains_b(polyline.points[idx_point])) {
+                        polyline.points.erase(polyline.points.begin() + idx_point);
+                        --idx_point;
+                    }
+                }
+                if (polyline.points.size() < 2) {
+                    //remove self
+                    pp.erase(pp.begin() + i);
+                    --i;
+                    --best_idx;
+                }
+
+                pp.erase(pp.begin() + best_idx);
+                changes = true;
+            }
+        }
+    }
+
+
     /* Loop through all returned polylines in order to extend their endpoints to the 
        expolygon boundaries */
     bool removed = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
-        
+
         // extend initial and final segments of each polyline if they're actual endpoints
         /* We assign new endpoints to temporary variables because in case of a single-line
            polyline, after we extend the start point it will be caught by the intersection()
            call, so we keep the inner point until we perform the second intersection() as well */
         Point new_front = polyline.points.front();
-        Point new_back  = polyline.points.back();
-        if (polyline.endpoints.first && !this->has_boundary_point(new_front)) {
+        Point new_back = polyline.points.back();
+        if (polyline.endpoints.first && !bounds.has_boundary_point(new_front)) {
             Line line(polyline.points.front(), polyline.points[1]);
-            
+
             // prevent the line from touching on the other side, otherwise intersection() might return that solution
             if (polyline.points.size() == 2) line.b = line.midpoint();
-            
+
             line.extend_start(max_width);
-            (void)this->contour.intersection(line, &new_front);
+            (void)bounds.contour.intersection(line, &new_front);
         }
-        if (polyline.endpoints.second && !this->has_boundary_point(new_back)) {
+        if (polyline.endpoints.second && !bounds.has_boundary_point(new_back)) {
             Line line(
                 *(polyline.points.end() - 2),
                 polyline.points.back()
-            );
-            
+                );
+
             // prevent the line from touching on the other side, otherwise intersection() might return that solution
             if (polyline.points.size() == 2) line.a = line.midpoint();
             line.extend_end(max_width);
-            
-            (void)this->contour.intersection(line, &new_back);
+
+            (void)bounds.contour.intersection(line, &new_back);
         }
         polyline.points.front() = new_front;
-        polyline.points.back()  = new_back;
-        
-        /*  remove too short polylines
-            (we can't do this check before endpoints extension and clipping because we don't
-            know how long will the endpoints be extended since it depends on polygon thickness
-            which is variable - extension will be <= max_width/2 on each side)  */
-        if ((polyline.endpoints.first || polyline.endpoints.second)
-            && polyline.length() < max_w*2) {
-            pp.erase(pp.begin() + i);
-            --i;
-            removed = true;
-            continue;
-        }
+        polyline.points.back() = new_back;
+
     }
-    
+
+
+
     /*  If we removed any short polylines we now try to connect consecutive polylines
         in order to allow loop detection. Note that this algorithm is greedier than 
         MedialAxis::process_edge_neighbors() as it will connect random pairs of 
         polylines even when more than two start from the same point. This has no 
         drawbacks since we optimize later using nearest-neighbor which would do the 
         same, but should we use a more sophisticated optimization algorithm we should
-        not connect polylines when more than two meet.  */
-    if (removed) {
-        for (size_t i = 0; i < pp.size(); ++i) {
-            ThickPolyline& polyline = pp[i];
-            if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
+        not connect polylines when more than two meet. 
+        Optimisation of the old algorithm : now we select the most "strait line" choice 
+        when we merge with an other line at a point with more than two meet.
+        */
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline& polyline = pp[i];
+        if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
             
-            // find another polyline starting here
-            for (size_t j = i+1; j < pp.size(); ++j) {
-                ThickPolyline& other = pp[j];
-                if (polyline.last_point().coincides_with(other.last_point())) {
-                    other.reverse();
-                } else if (polyline.first_point().coincides_with(other.last_point())) {
-                    polyline.reverse();
-                    other.reverse();
-                } else if (polyline.first_point().coincides_with(other.first_point())) {
-                    polyline.reverse();
-                } else if (!polyline.last_point().coincides_with(other.first_point())) {
-                    continue;
-                }
-                
-                polyline.points.insert(polyline.points.end(), other.points.begin() + 1, other.points.end());
-                polyline.width.insert(polyline.width.end(), other.width.begin(), other.width.end());
-                polyline.endpoints.second = other.endpoints.second;
-                assert(polyline.width.size() == polyline.points.size()*2 - 2);
-                
-                pp.erase(pp.begin() + j);
-                j = i;  // restart search from i+1
+        ThickPolyline* best_candidate = nullptr;
+        float best_dot = -1;
+        int best_idx = 0;
+
+        // find another polyline starting here
+        for (size_t j = i + 1; j < pp.size(); ++j) {
+            ThickPolyline& other = pp[j];
+            if (polyline.last_point().coincides_with(other.last_point())) {
+                other.reverse();
+            } else if (polyline.first_point().coincides_with(other.last_point())) {
+                polyline.reverse();
+                other.reverse();
+            } else if (polyline.first_point().coincides_with(other.first_point())) {
+                polyline.reverse();
+            } else if (!polyline.last_point().coincides_with(other.first_point())) {
+                continue;
+            }
+
+            Pointf v_poly(polyline.lines().back().vector().x, polyline.lines().back().vector().y);
+            v_poly.scale(1 / std::sqrt(v_poly.x*v_poly.x + v_poly.y*v_poly.y));
+            Pointf v_other(other.lines().front().vector().x, other.lines().front().vector().y);
+            v_other.scale(1 / std::sqrt(v_other.x*v_other.x + v_other.y*v_other.y));
+            float other_dot = v_poly.x*v_other.x + v_poly.y*v_other.y;
+            if (other_dot > best_dot) {
+                best_candidate = &other;
+                best_idx = j;
+                best_dot = other_dot;
             }
         }
+        if (best_candidate != nullptr) {
+
+            polyline.points.insert(polyline.points.end(), best_candidate->points.begin() + 1, best_candidate->points.end());
+            polyline.width.insert(polyline.width.end(), best_candidate->width.begin(), best_candidate->width.end());
+            polyline.endpoints.second = best_candidate->endpoints.second;
+            assert(polyline.width.size() == polyline.points.size()*2 - 2);
+                
+            pp.erase(pp.begin() + best_idx);
+        }
     }
+
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline& polyline = pp[i];
+
+        /*  remove too short polylines
+        (we can't do this check before endpoints extension and clipping because we don't
+        know how long will the endpoints be extended since it depends on polygon thickness
+        which is variable - extension will be <= max_width/2 on each side)  */
+        if ((polyline.endpoints.first || polyline.endpoints.second)
+            && polyline.length() < max_w * 2) {
+            pp.erase(pp.begin() + i);
+            --i;
+            removed = true;
+            continue;
+        }
+
+    }
+
     
     polylines->insert(polylines->end(), pp.begin(), pp.end());
 }
@@ -323,7 +474,7 @@ void
 ExPolygon::medial_axis(double max_width, double min_width, Polylines* polylines) const
 {
     ThickPolylines tp;
-    this->medial_axis(max_width, min_width, &tp);
+    this->medial_axis(*this, max_width, min_width, &tp);
     polylines->insert(polylines->end(), tp.begin(), tp.end());
 }
 

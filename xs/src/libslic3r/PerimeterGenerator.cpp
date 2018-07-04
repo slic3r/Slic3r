@@ -84,16 +84,27 @@ void PerimeterGenerator::process()
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
+                        
+                        Polygons no_thin_zone = offset(offsets, (float)(ext_perimeter_width / 2));
                         ExPolygons expp = offset2_ex(
                             // medial axis requires non-overlapping geometry
                             diff_ex(to_polygons(last),
-                                    offset(offsets, ext_perimeter_width / 2),
+                                    no_thin_zone,
                                     true),
-                            - min_width / 2, min_width / 2);
-                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                        for (ExPolygon &ex : expp)
-                            ex.medial_axis(ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls);
+                                    (float)(-min_width / 2), (float)(min_width / 2));
+                        // compute a bit of overlap to anchor thin walls inside the print.
+                        ExPolygons anchor = intersection_ex(to_polygons(offset_ex(expp, (float)(ext_perimeter_width / 2))), no_thin_zone, true);
+                        for (ExPolygon &ex : expp) {
+                            ExPolygons bounds = _clipper_ex(ClipperLib::ctUnion, to_polygons(ex), to_polygons(anchor), true);
+                            for (ExPolygon &bound : bounds) {
+                                if (!intersection_ex(ex, bound).empty()) {
+                                    // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
+                                    ex.medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls);
+                                    continue;
+                                }
+                            }
                         }
+                    }
                 } else {
                     //FIXME Is this offset correct if the line width of the inner perimeters differs
                     // from the line width of the infill?
@@ -235,7 +246,7 @@ void PerimeterGenerator::process()
                 true);
             ThickPolylines polylines;
             for (const ExPolygon &ex : gaps_ex)
-                ex.medial_axis(max, min, &polylines);
+                ex.medial_axis(ex, max, min, &polylines);
             if (!polylines.empty()) {
                 ExtrusionEntityCollection gap_fill = this->_variable_width(polylines, 
                     erGapFill, this->solid_infill_flow);
@@ -474,13 +485,17 @@ ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylin
             paths.emplace_back(std::move(path));        
         // Append paths to collection.
         if (!paths.empty()) {
-            if (paths.front().first_point().coincides_with(paths.back().last_point()))
+            if (paths.front().first_point().coincides_with(paths.back().last_point())) {
                 coll.append(ExtrusionLoop(paths));
-            else
-                coll.append(paths);
+            } else {
+                //not a loop : avoid to "sort" it.
+                ExtrusionEntityCollection unsortable_coll(paths);
+                unsortable_coll.no_sort = true;
+                coll.append(unsortable_coll);
+            }
         }
     }
-    
+
     return coll;
 }
 
