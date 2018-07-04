@@ -85,7 +85,7 @@ SCENARIO( "UI_Point: set_value works with several types of inputs") {
             THEN( "get_point() returns a Pointf(19.0, 2.1)") {
                 REQUIRE(test_field.get_point() == Pointf(19.0, 2.1));
             }
-            THEN( "get_point() returns a Pointf(19.0, 2.1)") {
+            THEN( "get_point3() returns a Pointf3(19.0, 2.1, 0.0)") {
                 REQUIRE(test_field.get_point3() == Pointf3(19.0, 2.1, 0.0));
             }
             THEN( "get_string() returns '19.0;2.1'") {
