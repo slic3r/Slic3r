@@ -640,7 +640,7 @@ class ConfigOptionDef
     /// Initialized by ConfigOptionEnum<xxx>::get_enum_values()
     t_config_enum_values enum_keys_map;
 
-    ConfigOptionDef() : type(coNone), default_value(NULL),
+    ConfigOptionDef() : type(coNone), default_value(nullptr),
                         multiline(false), full_width(false), readonly(false),
                         height(-1), width(-1), min(INT_MIN), max(INT_MAX) {};
     ConfigOptionDef(const ConfigOptionDef &other);
