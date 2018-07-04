@@ -308,7 +308,6 @@ public:
     /// Function to call when the contents of this change.
     std::function<void (const std::string&, std::tuple<std::string, std::string> value)> on_change {nullptr};
 
-
     void enable() override { _ctrl_x->Enable(); _ctrl_y->Enable(); }
     void disable() override { _ctrl_x->Disable(); _ctrl_y->Disable(); }
 
@@ -342,9 +341,57 @@ private:
     void _set_value(Slic3r::Pointf3 value);
     void _set_value(std::string value);
 
+};
+
+class UI_Point3 : public UI_Sizer { 
+public:
+    UI_Point3(wxWindow* _parent, Slic3r::ConfigOptionDef _opt);
+    ~UI_Point3() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); _lbl_z->Destroy(); _ctrl_z->Destroy(); }
+    std::string get_string();
+
+    void set_value(boost::any value) override; //< Implements set_value
+
+    Slic3r::Pointf get_point() override; /// return a Slic3r::Pointf corresponding to the textctrl contents.
+    Slic3r::Pointf3 get_point3() override; /// return a Slic3r::Pointf3 corresponding to the textctrl contents.
+
+    void enable() override { _ctrl_x->Enable(); _ctrl_y->Enable(); _ctrl_z->Enable(); }
+    void disable() override { _ctrl_x->Disable(); _ctrl_y->Disable(); _ctrl_z->Disable(); }
+
+    std::function<void (const std::string&, std::tuple<std::string, std::string, std::string> value)> on_change {nullptr};
+
+    /// Local-access items
+    wxTextCtrl* ctrl_x() { return _ctrl_x;}
+    wxTextCtrl* ctrl_y() { return _ctrl_y;}
+    wxTextCtrl* ctrl_z() { return _ctrl_z;}
+
+    wxStaticText* lbl_x() { return _lbl_x;}
+    wxStaticText* lbl_y() { return _lbl_y;}
+    wxStaticText* lbl_z() { return _lbl_z;}
+
+protected:
+    virtual std::string LogChannel() override { return "UI_Point3"s; }
+
+    void _on_change(std::string opt_id) override { 
+        if (!this->disable_change_event && this->_ctrl_x->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, std::make_tuple<std::string, std::string, std::string>(_ctrl_x->GetValue().ToStdString(), _ctrl_y->GetValue().ToStdString(),  _ctrl_z->GetValue().ToStdString()));
+        }
     }
 
+private:
+    wxSize field_size {40, 1};
+    wxStaticText* _lbl_x {nullptr};
+    wxStaticText* _lbl_y {nullptr};
+    wxStaticText* _lbl_z {nullptr};
 
+    wxTextCtrl* _ctrl_x {nullptr};
+    wxTextCtrl* _ctrl_y {nullptr};
+    wxTextCtrl* _ctrl_z {nullptr};
+
+    wxBoxSizer* _sizer {nullptr};
+
+    void _set_value(Slic3r::Pointf value);
+    void _set_value(Slic3r::Pointf3 value);
+    void _set_value(std::string value);
 
 };
 
