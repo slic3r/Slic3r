@@ -22,25 +22,25 @@ namespace Slic3r { namespace GUI {
 
 using namespace std::string_literals;
 
-class UI_Window { 
+class UI_Field {
 public:
-    UI_Window(wxWindow* _parent, Slic3r::ConfigOptionDef _opt) : parent(_parent), opt(_opt) {};
-    virtual ~UI_Window() = default; 
+    UI_Field(wxWindow* _parent, Slic3r::ConfigOptionDef _opt) : parent(_parent), opt(_opt) { };
+    virtual ~UI_Field() = default; 
 
     /// Don't trigger on_change when this is true.
     bool disable_change_event {false};
-
+    
     /// Set the underlying control to the value (cast it and throw bad_any_cast if there are problems).
     virtual void set_value(boost::any value) = 0;
 
     /// Enables the underlying UI widget.
-    void enable() { this->window->Enable(); }
+    virtual void enable() { this->window->Enable(); }
     
     /// Disables the underlying UI widget.
-    void disable() { this->window->Disable(); }
-
+    virtual void disable() { this->window->Disable(); }
+    
     /// Set the underlying widget to either enabled or disabled.
-    void toggle(bool enable = true) { enable ? this->enable() : this->disable(); }
+    virtual void toggle(bool enable = true) { enable ? this->enable() : this->disable(); }
 
     /// Getter functions for UI_Window items.
     virtual bool get_bool() { Slic3r::Log::warn(this->LogChannel(), "get_bool does not exist"s); return false; } //< return false all the time if this is not implemented.
@@ -48,21 +48,47 @@ public:
     virtual int get_int() { Slic3r::Log::warn(this->LogChannel(), "get_int does not exist"s); return 0; } //< return 0 all the time if this is not implemented.
     virtual std::string get_string() { Slic3r::Log::warn(this->LogChannel(), "get_string does not exist"s); return 0; } //< return 0 all the time if this is not implemented.
 
+    virtual Slic3r::Pointf get_point() { Slic3r::Log::warn(this->LogChannel(), "get_point does not exist"s); return Slic3r::Pointf(); } //< return 0 all the time if this is not implemented.
+
+    /// Provide access in a generic fashion to the underlying Window.
+    virtual wxWindow* get_window() { return this->window; }
+
+    /// Provide access in a generic fashion to the underlying Sizer.
+    virtual wxSizer* get_sizer() { return this->sizer; }
+
     /// Function to call when focus leaves.
     std::function<void (const std::string&)> on_kill_focus {nullptr};
 
 protected:
     wxWindow* parent {nullptr}; //< Cached copy of the parent object
     wxWindow* window {nullptr}; //< Pointer copy of the derived classes
+    wxSizer* sizer {nullptr}; //< Pointer copy of the derived classes
 
     const Slic3r::ConfigOptionDef opt; //< Reference to the UI-specific bits of this option
 
-    virtual std::string LogChannel() { return "UI_Window"s; }
-
+    virtual std::string LogChannel() { return "UI_Field"s; }
+    
     virtual void _on_change(std::string opt_id) = 0; 
 
     /// Define a default size for derived classes.
     wxSize _default_size() { return wxSize((opt.width >= 0 ? opt.width : 60), (opt.height != -1 ? opt.height : -1)); }
+};
+
+
+/// Organizing class for single-part UI elements.
+class UI_Window : public UI_Field { 
+public:
+    UI_Window(wxWindow* _parent, Slic3r::ConfigOptionDef _opt) : UI_Field(_parent, _opt) {};
+    virtual ~UI_Window() = default; 
+    virtual std::string LogChannel() override { return "UI_Window"s; }
+};
+
+/// Organizing class for multi-part UI elements.
+class UI_Sizer : public UI_Field {
+public:
+    UI_Sizer(wxWindow* _parent, Slic3r::ConfigOptionDef _opt) : UI_Field(_parent, _opt) {};
+    virtual ~UI_Sizer() = default; 
+    virtual std::string LogChannel() override { return "UI_Sizer"s; }
 };
 
 class UI_Checkbox : public UI_Window {
@@ -265,47 +291,47 @@ private:
     std::regex show_value_flag {"\bshow_value\b"};
 };
 
-class UI_Point { 
+class UI_Point : public UI_Sizer{ 
 public:
 
-    UI_Point(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY);
+    UI_Point(wxWindow* _parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY);
     ~UI_Point() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); }
     std::string get_string();
 
-    Pointf get_point(); 
+    void set_value(boost::any value) override; //< Implements set_value
+
+    Pointf get_point() override; /// return a Slic3r::Pointf corresponding to the textctrl contents.
 
     /// Return the underlying sizer.
     wxSizer* get_sizer() { return _sizer; };
 
-    
-    void set_value(boost::any value);
-    
     /// Function to call when the contents of this change.
     std::function<void (const std::string&, std::tuple<std::string, std::string> value)> on_change {nullptr};
-    std::function<void (const std::string&)> on_kill_focus {nullptr};
 
+
+    void enable() override { _ctrl_x->Enable(); _ctrl_y->Enable(); }
+    void disable() override { _ctrl_x->Disable(); _ctrl_y->Disable(); }
+
+    /// Local-access items
     wxTextCtrl* ctrl_x() { return _ctrl_x;}
     wxTextCtrl* ctrl_y() { return _ctrl_y;}
 
     wxStaticText* lbl_x() { return _lbl_x;}
     wxStaticText* lbl_y() { return _lbl_y;}
 
-    void enable() { _ctrl_x->Enable(); _ctrl_y->Enable(); }
-    void disable() { _ctrl_x->Disable(); _ctrl_y->Disable(); }
-    void toggle(bool en = true) { en ? this->enable() : this->disable(); }
-
-    bool disable_change_event {false};
-
 protected:
-    virtual std::string LogChannel() { return "UI_Point"s; }
-    const Slic3r::ConfigOptionDef opt; //< Reference to the UI-specific bits of this option
+    virtual std::string LogChannel() override { return "UI_Point"s; }
+
+    void _on_change(std::string opt_id) override { 
+        if (!this->disable_change_event && this->_ctrl_x->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, std::make_pair<std::string, std::string>(_ctrl_x->GetValue().ToStdString(), _ctrl_y->GetValue().ToStdString()));
+        }
+    }
 
 private:
     wxSize field_size {40, 1};
     wxStaticText* _lbl_x {nullptr};
     wxStaticText* _lbl_y {nullptr};
-
-    wxWindow* window {nullptr};
 
     wxTextCtrl* _ctrl_x {nullptr};
     wxTextCtrl* _ctrl_y {nullptr};
@@ -325,11 +351,7 @@ private:
     }
     wxString trim_zeroes(wxString in) { return wxString(trim_zeroes(in.ToStdString())); }
 
-    void _on_change(std::string opt_id) { 
-        if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
-            this->on_change(opt_id, std::make_pair<std::string, std::string>(_ctrl_x->GetValue().ToStdString(), _ctrl_y->GetValue().ToStdString()));
-        }
-    }
+
 
 };
 
