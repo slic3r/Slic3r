@@ -298,6 +298,7 @@ public:
 
 protected:
     virtual std::string LogChannel() { return "UI_Point"s; }
+    const Slic3r::ConfigOptionDef opt; //< Reference to the UI-specific bits of this option
 
 private:
     wxSize field_size {40, 1};
