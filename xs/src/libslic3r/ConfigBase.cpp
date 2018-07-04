@@ -189,7 +189,7 @@ operator!= (const ConfigOption &a, const ConfigOption &b)
 }
 
 ConfigOptionDef::ConfigOptionDef(const ConfigOptionDef &other)
-    : type(other.type), default_value(NULL),
+    : type(other.type), default_value(nullptr),
       gui_type(other.gui_type), gui_flags(other.gui_flags), label(other.label), 
       full_label(other.full_label), category(other.category), tooltip(other.tooltip), 
       sidetext(other.sidetext), cli(other.cli), ratio_over(other.ratio_over), 
@@ -198,13 +198,13 @@ ConfigOptionDef::ConfigOptionDef(const ConfigOptionDef &other)
       aliases(other.aliases), shortcut(other.shortcut), enum_values(other.enum_values),
       enum_labels(other.enum_labels), enum_keys_map(other.enum_keys_map)
 {
-    if (other.default_value != NULL)
+    if (other.default_value != nullptr)
         this->default_value = other.default_value->clone();
 }
 
 ConfigOptionDef::~ConfigOptionDef()
 {
-    if (this->default_value != NULL)
+    if (this->default_value != nullptr)
         delete this->default_value;
 }
 
@@ -457,7 +457,7 @@ DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
             const ConfigOptionDef* optdef = this->def->get(opt_key);
             if (optdef == NULL) return NULL;
             ConfigOption* opt;
-            if (optdef->default_value != NULL) {
+            if (optdef->default_value != nullptr) {
                 opt = optdef->default_value->clone();
             } else if (optdef->type == coFloat) {
                 opt = new ConfigOptionFloat ();
@@ -639,7 +639,7 @@ StaticConfig::set_defaults()
     t_config_option_keys keys = this->keys();
     for (t_config_option_keys::const_iterator it = keys.begin(); it != keys.end(); ++it) {
         const ConfigOptionDef* def = this->def->get(*it);
-        if (def->default_value != NULL)
+        if (def->default_value != nullptr)
             this->option(*it)->set(*def->default_value);
     }
 }
