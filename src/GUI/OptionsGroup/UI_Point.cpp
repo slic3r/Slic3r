@@ -41,9 +41,9 @@ void UI_Point::_set_value(Slic3r::Pointf value) {
 
 void UI_Point::_set_value(std::string value) {
     /// parse the string into the two parts.
-    std::regex format_regex("([0-9.]+);([0-9.]+)");
-    auto f_begin { std::sregex_iterator(value.begin(), value.end(), format_regex) };
-    auto f_end { std::sregex_iterator() };
+    std::regex format_regex(";");
+    auto f_begin { std::sregex_token_iterator(value.begin(), value.end(), format_regex, -1) };
+    auto f_end { std::sregex_token_iterator() };
 
     if (f_begin != f_end) {
         auto iter = f_begin;
