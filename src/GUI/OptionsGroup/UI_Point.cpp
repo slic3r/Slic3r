@@ -67,10 +67,26 @@ UI_Point::UI_Point(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id
     this->_lbl_x = new wxStaticText(parent, wxID_ANY, wxString("x:"));
     this->_lbl_y = new wxStaticText(parent, wxID_ANY, wxString("y:"));
 
+    this->_sizer = new wxBoxSizer(wxHORIZONTAL);
+
+    this->_sizer->Add(_lbl_x, 0, wxALIGN_CENTER_VERTICAL, 0);
+    this->_sizer->Add(_ctrl_x, 0, wxALIGN_CENTER_VERTICAL, 0);
+    this->_sizer->Add(_lbl_y, 0, wxALIGN_CENTER_VERTICAL, 0);
+    this->_sizer->Add(_ctrl_y, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    if (this->opt.tooltip != ""s) { 
+        this->_ctrl_x->SetToolTip(this->opt.tooltip);
+        this->_ctrl_y->SetToolTip(this->opt.tooltip);
+    }
+
+    // events
     _ctrl_x->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
     _ctrl_y->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
     _ctrl_x->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(""); this->_on_change("");} e.Skip(); });
     _ctrl_y->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(""); this->_on_change("");} e.Skip(); });
+
+
+
 }
 
 } } // Namespace Slic3r::GUI

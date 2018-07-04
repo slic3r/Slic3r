@@ -265,23 +265,13 @@ SCENARIO( "UI_Point: get_sizer()") {
         auto simple_option {ConfigOptionDef()};
         auto test_field {Slic3r::GUI::UI_Point(wxTheApp->GetTopWindow(), simple_option)};
         WHEN( "get_sizer() is called") {
-            THEN( "get_sizer() returns a wxSizer that has 2 direct children in it that are sizers.") {
-                REQUIRE(test_field.get_sizer()->GetItemCount() == 2);
+            THEN( "get_sizer() returns a wxSizer that has 4 direct children in it that are Windows.") {
+                REQUIRE(test_field.get_sizer()->GetItemCount() == 4);
                 auto tmp {test_field.get_sizer()->GetChildren().begin()};
-                REQUIRE((*tmp)->IsSizer() == true);
-                tmp++;
-                REQUIRE((*tmp)->IsSizer() == true);
-            }
-            THEN( "The two children have two wxWindows as their children") {
-                auto tmp_sizer {test_field.get_sizer()->GetChildren().begin()};
-                auto tmp {(*tmp_sizer)->GetSizer()->GetChildren().begin()};
                 REQUIRE((*tmp)->IsWindow() == true);
                 tmp++;
                 REQUIRE((*tmp)->IsWindow() == true);
-
-                // now for the other one
-                tmp_sizer++;
-                tmp = (*tmp_sizer)->GetSizer()->GetChildren().begin();
+                tmp++;
                 REQUIRE((*tmp)->IsWindow() == true);
                 tmp++;
                 REQUIRE((*tmp)->IsWindow() == true);
