@@ -155,6 +155,10 @@ inline Slic3r::Point new_scale(const wxPoint& p) { return Slic3r::Point::new_sca
 /// Singleton for UI settings.
 extern std::unique_ptr<Settings> ui_settings; 
 
+std::string trim_zeroes(std::string in);
+wxString trim_zeroes(wxString in);
+
+
 }} // namespace Slic3r::GUI
 
 #endif // MISC_UI_HPP
