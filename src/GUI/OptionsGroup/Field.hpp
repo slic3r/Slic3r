@@ -5,6 +5,7 @@
 #include <string>
 #include <limits>
 #include <regex>
+#include <tuple>
 
 #include <boost/any.hpp>
 #include "ConfigBase.hpp"
@@ -49,6 +50,7 @@ public:
     virtual std::string get_string() { Slic3r::Log::warn(this->LogChannel(), "get_string does not exist"s); return 0; } //< return 0 all the time if this is not implemented.
 
     virtual Slic3r::Pointf get_point() { Slic3r::Log::warn(this->LogChannel(), "get_point does not exist"s); return Slic3r::Pointf(); } //< return 0 all the time if this is not implemented.
+    virtual Slic3r::Pointf3 get_point3() { Slic3r::Log::warn(this->LogChannel(), "get_point3 does not exist"s); return Slic3r::Pointf3(); } //< return 0 all the time if this is not implemented.
 
     /// Provide access in a generic fashion to the underlying Window.
     virtual wxWindow* get_window() { return this->window; }
@@ -300,10 +302,8 @@ public:
 
     void set_value(boost::any value) override; //< Implements set_value
 
-    Pointf get_point() override; /// return a Slic3r::Pointf corresponding to the textctrl contents.
-
-    /// Return the underlying sizer.
-    wxSizer* get_sizer() { return _sizer; };
+    Slic3r::Pointf get_point() override; //< return a Slic3r::Pointf corresponding to the textctrl contents.
+    Slic3r::Pointf3 get_point3() override; //< return a Slic3r::Pointf3 corresponding to the textctrl contents.
 
     /// Function to call when the contents of this change.
     std::function<void (const std::string&, std::tuple<std::string, std::string> value)> on_change {nullptr};
@@ -339,6 +339,7 @@ private:
     wxBoxSizer* _sizer {nullptr};
 
     void _set_value(Slic3r::Pointf value);
+    void _set_value(Slic3r::Pointf3 value);
     void _set_value(std::string value);
 
     /// Remove extra zeroes generated from std::to_string on doubles

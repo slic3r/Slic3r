@@ -20,10 +20,19 @@ Slic3r::Pointf UI_Point::get_point() {
     return Pointf(std::stod(this->_ctrl_x->GetValue().ToStdString()), std::stod(this->_ctrl_y->GetValue().ToStdString()));
 }
 
+Slic3r::Pointf3 UI_Point::get_point3() {
+    return Pointf3(
+        std::stod(this->_ctrl_x->GetValue().ToStdString()), 
+        std::stod(this->_ctrl_y->GetValue().ToStdString()), 
+        0.0);
+}
+
 void UI_Point::set_value(boost::any value) {
     // type detection and handing off to children
     if (value.type() == typeid(Slic3r::Pointf)) {
         this->_set_value(boost::any_cast<Pointf>(value));
+    } else if (value.type() == typeid(Slic3r::Pointf3)) {
+        this->_set_value(boost::any_cast<Pointf3>(value));
     } else if (value.type() == typeid(std::string)) {
         this->_set_value(boost::any_cast<std::string>(value));
     } else if (value.type() == typeid(wxString)) {
@@ -37,6 +46,9 @@ void UI_Point::_set_value(Slic3r::Pointf value) {
     /// load the controls directly from the value
     this->_ctrl_x->SetValue(trim_zeroes(std::to_string(value.x)));
     this->_ctrl_y->SetValue(trim_zeroes(std::to_string(value.y)));
+}
+void UI_Point::_set_value(Slic3r::Pointf3 value) {
+    this->_set_value(Pointf(value.x, value.y));
 }
 
 void UI_Point::_set_value(std::string value) {
