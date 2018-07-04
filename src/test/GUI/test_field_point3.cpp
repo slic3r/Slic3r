@@ -23,9 +23,9 @@ SCENARIO( "UI_Point3: default values from options and basic accessor methods") {
     wxUIActionSimulator sim;
     wxMilliSleep(500);
 
-    GIVEN( "A UI point method and a X,Y coordinate (3.2, 10.2) as the default_value") {
+    GIVEN( "A UI point method and a X,Y coordinate (3.2, 10.2, 0.0) as the default_value") {
         auto simple_option {ConfigOptionDef()};
-        auto* default_point {new ConfigOptionPoint(Pointf(3.2, 10.2))};
+        auto* default_point {new ConfigOptionPoint3(Pointf3(3.2, 10.2, 0.0))};
         simple_option.default_value = default_point;
         auto test_field {Slic3r::GUI::UI_Point3(wxTheApp->GetTopWindow(), simple_option)};
 
@@ -44,7 +44,7 @@ SCENARIO( "UI_Point3: default values from options and basic accessor methods") {
     }
     GIVEN( "A UI point, coordinate in X/Y/Z and a tooltip in simple_option") {
         auto simple_option {ConfigOptionDef()};
-        auto* default_point {new ConfigOptionPoint(Pointf3(3.2, 10.2, 0.2))};
+        auto* default_point {new ConfigOptionPoint3(Pointf3(3.2, 10.2, 0.2))};
         simple_option.default_value = default_point;
 
         auto test_field {Slic3r::GUI::UI_Point3(wxTheApp->GetTopWindow(), simple_option)};
@@ -122,7 +122,7 @@ SCENARIO( "UI_Point3: set_value works with several types of inputs") {
         WHEN( "set_value is called with a string of the form '30.9;211.2;411.0'") {
             test_field.set_value("30.9;211.2;411.0"s);
             THEN( "get_point3() returns a Pointf3(30.9, 211.2, 411.0)") {
-                REQUIRE(test_field.get_point3() == Pointf(30.9, 211.2, 411.0));
+                REQUIRE(test_field.get_point3() == Pointf3(30.9, 211.2, 411.0));
             }
             THEN( "get_point() returns a Pointf(30.9, 211.2)") {
                 REQUIRE(test_field.get_point() == Pointf(30.9, 211.2));
@@ -173,7 +173,7 @@ SCENARIO( "UI_Point3: Event responses") {
         auto simple_option {ConfigOptionDef()};
         auto test_field {Slic3r::GUI::UI_Point3(wxTheApp->GetTopWindow(), simple_option)};
         auto event_count {0};
-        auto changefunc {[&event_count] (const std::string& opt_id, std::tuple<std::string, std::string> value) { event_count++; }};
+        auto changefunc {[&event_count] (const std::string& opt_id, std::tuple<std::string, std::string, std::string> value) { event_count++; }};
         auto killfunc {[&event_count](const std::string& opt_id) { event_count++; }};
 
         test_field.on_change = changefunc;
@@ -240,7 +240,7 @@ SCENARIO( "UI_Point3: Event responses") {
         auto simple_option {ConfigOptionDef()};
         auto test_field {Slic3r::GUI::UI_Point3(wxTheApp->GetTopWindow(), simple_option)};
         auto event_count {0};
-        auto changefunc {[&event_count] (const std::string& opt_id, std::tuple<std::string, std::string> value) { event_count++; }};
+        auto changefunc {[&event_count] (const std::string& opt_id, std::tuple<std::string, std::string, std::string> value) { event_count++; }};
         auto killfunc {[&event_count](const std::string& opt_id) { event_count += 1; }};
 
         test_field.on_change = changefunc;
