@@ -15,6 +15,8 @@
 #include "wx/textctrl.h"
 #include "wx/combobox.h"
 #include "wx/arrstr.h"
+#include "wx/stattext.h"
+#include "wx/sizer.h"
 
 namespace Slic3r { namespace GUI {
 
@@ -245,6 +247,7 @@ public:
 
     /// Function to call when the contents of this change.
     std::function<void (const std::string&, std::string value)> on_change {nullptr};
+
 protected:
     virtual std::string LogChannel() override { return "UI_NumChoice"s; }
 
@@ -262,7 +265,63 @@ private:
     std::regex show_value_flag {"\bshow_value\b"};
 };
 
+class UI_Point { 
+public:
 
+    UI_Point(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY);
+    ~UI_Point() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); }
+    std::string get_string();
+
+    Pointf get_point(); 
+
+    /// Return the underlying sizer.
+    wxSizer* get_sizer() { return _sizer; };
+
+    
+    void set_value(boost::any value);
+    
+    /// Function to call when the contents of this change.
+    std::function<void (const std::string&, std::tuple<std::string, std::string> value)> on_change {nullptr};
+    std::function<void (const std::string&)> on_kill_focus {nullptr};
+
+    wxTextCtrl* ctrl_x() { return _ctrl_x;}
+    wxTextCtrl* ctrl_y() { return _ctrl_y;}
+
+    wxStaticText* lbl_x() { return _lbl_x;}
+    wxStaticText* lbl_y() { return _lbl_y;}
+
+    void enable() { _ctrl_x->Enable(); _ctrl_y->Enable(); }
+    void disable() { _ctrl_x->Disable(); _ctrl_y->Disable(); }
+    void toggle(bool en = true) { en ? this->enable() : this->disable(); }
+
+protected:
+    virtual std::string LogChannel() { return "UI_Point"s; }
+
+private:
+    wxSize field_size {40, 1};
+    wxStaticText* _lbl_x {nullptr};
+    wxStaticText* _lbl_y {nullptr};
+
+    wxTextCtrl* _ctrl_x {nullptr};
+    wxTextCtrl* _ctrl_y {nullptr};
+
+    wxBoxSizer* _sizer {nullptr};
+
+    void _set_value(Slic3r::Pointf value);
+    void _set_value(std::string value);
+
+    /// Remove extra zeroes generated from std::to_string on doubles
+    std::string trim_zeroes(std::string in) {
+        std::string result {""};
+        std::regex strip_zeroes("(0*)$");
+        std::regex_replace (std::back_inserter(result), in.begin(), in.end(), strip_zeroes, "");
+        if (result.back() == '.') result.append("0");
+        return result;
+    }
+    wxString trim_zeroes(wxString in) { return wxString(trim_zeroes(in.ToStdString())); }
+
+
+};
 
 } } // Namespace Slic3r::GUI
 
