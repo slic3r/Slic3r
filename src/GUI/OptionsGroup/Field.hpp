@@ -294,6 +294,8 @@ public:
     void disable() { _ctrl_x->Disable(); _ctrl_y->Disable(); }
     void toggle(bool en = true) { en ? this->enable() : this->disable(); }
 
+    bool disable_change_event {false};
+
 protected:
     virtual std::string LogChannel() { return "UI_Point"s; }
 
@@ -301,6 +303,8 @@ private:
     wxSize field_size {40, 1};
     wxStaticText* _lbl_x {nullptr};
     wxStaticText* _lbl_y {nullptr};
+
+    wxWindow* window {nullptr};
 
     wxTextCtrl* _ctrl_x {nullptr};
     wxTextCtrl* _ctrl_y {nullptr};
@@ -320,6 +324,11 @@ private:
     }
     wxString trim_zeroes(wxString in) { return wxString(trim_zeroes(in.ToStdString())); }
 
+    void _on_change(std::string opt_id) { 
+        if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, std::make_pair<std::string, std::string>(_ctrl_x->GetValue().ToStdString(), _ctrl_y->GetValue().ToStdString()));
+        }
+    }
 
 };
 

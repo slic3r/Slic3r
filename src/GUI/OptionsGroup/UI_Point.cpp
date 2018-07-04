@@ -59,11 +59,18 @@ void UI_Point::_set_value(std::string value) {
 UI_Point::UI_Point(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id) {
     Slic3r::Pointf def_val {_opt.default_value == nullptr ? Pointf() : Pointf(*(dynamic_cast<ConfigOptionPoint*>(_opt.default_value))) };
     
-    this->_ctrl_x = new wxTextCtrl(parent, wxID_ANY, trim_zeroes(wxString::FromDouble(def_val.x)), wxDefaultPosition, this->field_size);
-    this->_ctrl_y = new wxTextCtrl(parent, wxID_ANY, trim_zeroes(wxString::FromDouble(def_val.y)), wxDefaultPosition, this->field_size);
+    this->_ctrl_x = new wxTextCtrl(parent, wxID_ANY, trim_zeroes(wxString::FromDouble(def_val.x)), wxDefaultPosition, this->field_size, wxTE_PROCESS_ENTER);
+    this->_ctrl_y = new wxTextCtrl(parent, wxID_ANY, trim_zeroes(wxString::FromDouble(def_val.y)), wxDefaultPosition, this->field_size, wxTE_PROCESS_ENTER);
+
+    this->window = this->_ctrl_x;
 
     this->_lbl_x = new wxStaticText(parent, wxID_ANY, wxString("x:"));
     this->_lbl_y = new wxStaticText(parent, wxID_ANY, wxString("y:"));
+
+    _ctrl_x->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+    _ctrl_y->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+    _ctrl_x->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(""); this->_on_change("");} e.Skip(); });
+    _ctrl_y->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(""); this->_on_change("");} e.Skip(); });
 }
 
 } } // Namespace Slic3r::GUI
