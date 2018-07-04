@@ -123,33 +123,95 @@ SCENARIO( "UI_Point: Event responses") {
         auto test_field {Slic3r::GUI::UI_Point(wxTheApp->GetTopWindow(), simple_option)};
         auto event_count {0};
         auto changefunc {[&event_count] (const std::string& opt_id, std::tuple<std::string, std::string> value) { event_count++; }};
-        auto killfunc {[&event_count](const std::string& opt_id) { event_count += 1; }};
+        auto killfunc {[&event_count](const std::string& opt_id) { event_count++; }};
 
         test_field.on_change = changefunc;
         test_field.on_kill_focus = killfunc;
 
+        test_field.disable_change_event = false;
+
         WHEN( "kill focus event is received on X") {
             event_count = 0;
+            auto ev {wxFocusEvent(wxEVT_KILL_FOCUS, test_field.ctrl_x()->GetId())};
+            ev.SetEventObject(test_field.ctrl_x());
+            test_field.ctrl_x()->ProcessWindowEvent(ev);
             THEN( "on_kill_focus is executed.") {
-                REQUIRE(event_count == 1);
+                REQUIRE(event_count == 2);
             }
         }
         WHEN( "kill focus event is received on Y") {
             event_count = 0;
+            auto ev {wxFocusEvent(wxEVT_KILL_FOCUS, test_field.ctrl_y()->GetId())};
+            ev.SetEventObject(test_field.ctrl_y());
+            test_field.ctrl_y()->ProcessWindowEvent(ev);
             THEN( "on_kill_focus is executed.") {
-                REQUIRE(event_count == 1);
+                REQUIRE(event_count == 2);
             }
         }
         WHEN( "enter key pressed event is received on X") {
             event_count = 0;
+            auto ev {wxCommandEvent(wxEVT_TEXT_ENTER, test_field.ctrl_x()->GetId())};
+            ev.SetEventObject(test_field.ctrl_x());
+            test_field.ctrl_x()->ProcessWindowEvent(ev);
             THEN( "on_change is executed.") {
                 REQUIRE(event_count == 1);
             }
         }
         WHEN( "enter key pressed event is received on Y") {
             event_count = 0;
+            auto ev {wxCommandEvent(wxEVT_TEXT_ENTER, test_field.ctrl_y()->GetId())};
+            ev.SetEventObject(test_field.ctrl_y());
+            test_field.ctrl_y()->ProcessWindowEvent(ev);
             THEN( "on_change is executed.") {
                 REQUIRE(event_count == 1);
+            }
+        }
+    }
+    GIVEN ( "A UI_Point with no default value and a registered on_change method that increments a counter only when disable_change_event = false.") {
+        auto simple_option {ConfigOptionDef()};
+        auto test_field {Slic3r::GUI::UI_Point(wxTheApp->GetTopWindow(), simple_option)};
+        auto event_count {0};
+        auto changefunc {[&event_count] (const std::string& opt_id, std::tuple<std::string, std::string> value) { event_count++; }};
+        auto killfunc {[&event_count](const std::string& opt_id) { event_count += 1; }};
+
+        test_field.on_change = changefunc;
+        test_field.on_kill_focus = killfunc;
+        test_field.disable_change_event = true;
+
+        WHEN( "kill focus event is received on X") {
+            event_count = 0;
+            auto ev {wxFocusEvent(wxEVT_KILL_FOCUS, test_field.ctrl_x()->GetId())};
+            ev.SetEventObject(test_field.ctrl_x());
+            test_field.ctrl_x()->ProcessWindowEvent(ev);
+            THEN( "on_kill_focus is executed.") {
+                REQUIRE(event_count == 1);
+            }
+        }
+        WHEN( "kill focus event is received on Y") {
+            event_count = 0;
+            auto ev {wxFocusEvent(wxEVT_KILL_FOCUS, test_field.ctrl_y()->GetId())};
+            ev.SetEventObject(test_field.ctrl_y());
+            test_field.ctrl_y()->ProcessWindowEvent(ev);
+            THEN( "on_kill_focus is executed.") {
+                REQUIRE(event_count == 1);
+            }
+        }
+        WHEN( "enter key pressed event is received on X") {
+            event_count = 0;
+            auto ev {wxCommandEvent(wxEVT_TEXT_ENTER, test_field.ctrl_x()->GetId())};
+            ev.SetEventObject(test_field.ctrl_x());
+            test_field.ctrl_x()->ProcessWindowEvent(ev);
+            THEN( "on_change is not executed.") {
+                REQUIRE(event_count == 0);
+            }
+        }
+        WHEN( "enter key pressed event is received on Y") {
+            event_count = 0;
+            auto ev {wxCommandEvent(wxEVT_TEXT_ENTER, test_field.ctrl_y()->GetId())};
+            ev.SetEventObject(test_field.ctrl_y());
+            test_field.ctrl_y()->ProcessWindowEvent(ev);
+            THEN( "on_change is not executed.") {
+                REQUIRE(event_count == 0);
             }
         }
     }
