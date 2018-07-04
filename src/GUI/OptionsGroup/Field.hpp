@@ -324,7 +324,7 @@ protected:
 
     void _on_change(std::string opt_id) override { 
         if (!this->disable_change_event && this->_ctrl_x->IsEnabled() && this->on_change != nullptr) {
-            this->on_change(opt_id, std::make_pair<std::string, std::string>(_ctrl_x->GetValue().ToStdString(), _ctrl_y->GetValue().ToStdString()));
+            this->on_change(opt_id, std::make_tuple<std::string, std::string>(_ctrl_x->GetValue().ToStdString(), _ctrl_y->GetValue().ToStdString()));
         }
     }
 
