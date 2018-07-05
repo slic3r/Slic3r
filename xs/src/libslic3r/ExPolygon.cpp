@@ -195,25 +195,25 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
     ThickPolylines pp;
     ma.build(&pp);
     
-    /*
+    /* // Commented out debug code
     SVG svg("medial_axis.svg");
     svg.draw(*this);
     svg.draw(pp);
     svg.Close();
     */
     
-    /* Find the maximum width returned; we're going to use this for validating and 
-       filtering the output segments. */
+    // Find the maximum width returned; we're going to use this for validating and 
+    // filtering the output segments.
     double max_w = 0;
     for (ThickPolylines::const_iterator it = pp.begin(); it != pp.end(); ++it)
         max_w = fmaxf(max_w, *std::max_element(it->width.begin(), it->width.end()));
     
     
-    /*  Aligned fusion: Fusion the bits at the end of lines by "increasing thikness"
-    *   For that, we have to find other lines,
-    *   and with a next point no more distant than the max width.
-    *   Then, we can merge the bit from the first point to the second by following the mean.
-    */
+    //  Aligned fusion: Fusion the bits at the end of lines by "increasing thickness"
+    //  For that, we have to find other lines,
+    //  and with a next point no more distant than the max width.
+    //  Then, we can merge the bit from the first point to the second by following the mean.
+
     bool changes = true;
     while (changes) {
         changes = false;
@@ -312,16 +312,16 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
         }
     }
     
-    /* Loop through all returned polylines in order to extend their endpoints to the 
-       expolygon boundaries */
+    // Loop through all returned polylines in order to extend their endpoints to the 
+    //   expolygon boundaries
     bool removed = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         
         // extend initial and final segments of each polyline if they're actual endpoints
-        /* We assign new endpoints to temporary variables because in case of a single-line
-           polyline, after we extend the start point it will be caught by the intersection()
-           call, so we keep the inner point until we perform the second intersection() as well */
+        // Assign new endpoints to temporary variables because in case of a single-line
+        // polyline. After the start point is extended it will be caught by the intersection()
+        // call, so keep the inner point until the second intersection() is performed.
         Point new_front = polyline.points.front();
         Point new_back  = polyline.points.back();
         if (polyline.endpoints.first && !bounds.has_boundary_point(new_front)) {
@@ -349,16 +349,16 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
         polyline.points.back()  = new_back;
     }
     
-    /*  If we removed any short polylines we now try to connect consecutive polylines
-        in order to allow loop detection. Note that this algorithm is greedier than 
-        MedialAxis::process_edge_neighbors() as it will connect random pairs of 
-        polylines even when more than two start from the same point. This has no 
-        drawbacks since we optimize later using nearest-neighbor which would do the 
-        same, but should we use a more sophisticated optimization algorithm we should
-        not connect polylines when more than two meet. 
-        Optimisation of the old algorithm : now we select the most "strait line" choice 
-        when we merge with an other line at a point with more than two meet.
-        */
+    // If we removed any short polylines, we now try to connect consecutive polylines
+    // in order to allow loop detection. Note that this algorithm is greedier than 
+    // MedialAxis::process_edge_neighbors(), as it will connect random pairs of 
+    // polylines even when more than two start from the same point. This has no 
+    // drawbacks since we optimize later using nearest-neighbor which would do the 
+    // same, but should we use a more sophisticated optimization algorithm.
+    // We should not connect polylines when more than two meet. 
+    // Optimisation of the old algorithm : Select the most "straight line" choice 
+    // when we merge with an other line at a point with more than two meet.
+        
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
@@ -406,10 +406,10 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
 
-        /*  remove too short polylines
-        (we can't do this check before endpoints extension and clipping because we don't
-        know how long will the endpoints be extended since it depends on polygon thickness
-        which is variable - extension will be <= max_width/2 on each side)  */
+        //  remove too short polylines
+        // (we can't do this check before endpoints extension and clipping because we don't
+        // know how long will the endpoints be extended since it depends on polygon thickness
+        // which is variable - extension will be <= max_width/2 on each side)
         if ((polyline.endpoints.first || polyline.endpoints.second)
             && polyline.length() < max_w * 2) {
             pp.erase(pp.begin() + i);
