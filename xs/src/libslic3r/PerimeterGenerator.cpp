@@ -116,7 +116,7 @@ PerimeterGenerator::process()
                         
                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                         for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
-                            ExPolygons &bounds = _clipper_ex(ClipperLib::ctUnion, (Polygons)*ex, to_polygons(anchor), true);
+                            ExPolygons bounds = _clipper_ex(ClipperLib::ctUnion, (Polygons)*ex, to_polygons(anchor), true);
 							//search our bound
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(*ex, bound).empty()) {
