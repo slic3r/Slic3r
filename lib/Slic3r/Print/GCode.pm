@@ -547,7 +547,7 @@ sub process_layer {
     my $copy_idx = 0;
     for my $copy (@$object_copies) {
         if ($self->config->gcode_comments) {
-            $gcode .=   "; printing object " . $object->model_object()->name . " " . $obj_idx . " copy "  . $copy_idx . "\n";
+            $gcode .=   "; printing object " . $object->model_object()->name . " id:" . $obj_idx . " copy "  . $copy_idx . "\n";
         }
         # when starting a new object, use the external motion planner for the first travel move
         $self->_gcodegen->avoid_crossing_perimeters->set_use_external_mp_once(1) if ($self->_last_obj_copy // '') ne "$copy";
@@ -676,7 +676,7 @@ sub process_layer {
             }
         }
         if ($self->config->gcode_comments) {
-            $gcode .=   "; stop printing object " . $object->model_object()->name . " " . $obj_idx . " copy "  . $copy_idx . "\n";
+            $gcode .=   "; stop printing object " . $object->model_object()->name . " id:" . $obj_idx . " copy "  . $copy_idx . "\n";
         }
         $copy_idx = $copy_idx + 1;
     }
