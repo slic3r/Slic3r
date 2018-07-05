@@ -74,7 +74,7 @@ sub OnInit {
     my ($self) = @_;
     
     $self->SetAppName('Slic3rPE');
-    $self->SetAppDisplayName('Slic3r Prusa Edition');
+    $self->SetAppDisplayName('Slic3r++');
     Slic3r::debugf "wxWidgets version %s, Wx version %s\n", &Wx::wxVERSION_STRING, $Wx::VERSION;
 
     # Set the Slic3r data directory at the Slic3r XS module.

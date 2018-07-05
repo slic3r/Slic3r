@@ -10,7 +10,7 @@ use base 'Wx::Dialog';
 
 sub new {
     my ($class, %params) = @_;
-    my $self = $class->SUPER::new($params{parent}, -1, 'Slic3r Prusa Edition - System Information', wxDefaultPosition, [600, 340], 
+    my $self = $class->SUPER::new($params{parent}, -1, 'Slic3r++ - System Information', wxDefaultPosition, [600, 340], 
         wxDEFAULT_DIALOG_STYLE | wxMAXIMIZE_BOX | wxRESIZE_BORDER);
     $self->{text_info} = $params{text_info};
 
