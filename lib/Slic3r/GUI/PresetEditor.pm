@@ -464,6 +464,7 @@ sub options {
         notes
         complete_objects extruder_clearance_radius extruder_clearance_height
         gcode_comments output_filename_format
+        label_printed_objects
         post_process
         perimeter_extruder infill_extruder solid_infill_extruder
         support_material_extruder support_material_interface_extruder
@@ -727,6 +728,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Output file');
             $optgroup->append_single_option_line('gcode_comments');
+            $optgroup->append_single_option_line('label_printed_objects');
             
             {
                 my $option = $optgroup->get_option('output_filename_format');

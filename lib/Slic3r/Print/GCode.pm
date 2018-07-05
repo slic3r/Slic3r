@@ -546,7 +546,7 @@ sub process_layer {
     
     my $copy_idx = 0;
     for my $copy (@$object_copies) {
-        if ($self->config->gcode_comments) {
+        if ($self->config->label_printed_objects) {
             $gcode .=   "; printing object " . $object->model_object()->name . " id:" . $obj_idx . " copy "  . $copy_idx . "\n";
         }
         # when starting a new object, use the external motion planner for the first travel move

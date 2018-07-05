@@ -757,6 +757,12 @@ PrintConfigDef::PrintConfigDef()
     def->category = "Layers and Perimeters";
     def->default_value = new ConfigOptionBool(false);
 
+    def = this->add("label_printed_objects", coBool);
+    def->label = "Label Prints with Object ID";
+    def->tooltip = "Enable this to add comments in the G-Code that label print moves with what object they belong. Can be used with Octoprint CancelObject plugin.";
+    def->cli = "label-printed-objects!";
+    def->default_value = new ConfigOptionBool(0);
+
     def = this->add("layer_gcode", coString);
     def->label = "After layer change G-code";
     def->tooltip = "This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num], [layer_z] and [current_retraction].";
