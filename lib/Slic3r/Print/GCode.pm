@@ -675,7 +675,7 @@ sub process_layer {
                 }
             }
         }
-        if ($self->config->gcode_comments) {
+        if ($self->config->label_printed_objects) {
             $gcode .=   "; stop printing object " . $object->model_object()->name . " id:" . $obj_idx . " copy "  . $copy_idx . "\n";
         }
         $copy_idx = $copy_idx + 1;
