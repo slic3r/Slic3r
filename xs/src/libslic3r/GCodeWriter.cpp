@@ -291,12 +291,16 @@ GCodeWriter::set_extruder(unsigned int extruder_id)
 std::string
 GCodeWriter::toolchange(unsigned int extruder_id)
 {
+    std::ostringstream gcode;
+    
     // set the new extruder
     this->_extruder = &this->extruders.find(extruder_id)->second;
     
+    //first thing to do : reset E (because a new item is now printed or with a new extruder)
+    gcode << this->reset_e(true);
+    
     // return the toolchange command
     // if we are running a single-extruder setup, just set the extruder and return nothing
-    std::ostringstream gcode;
     if (this->multiple_extruders) {
         if (FLAVOR_IS(gcfMakerWare)) {
             gcode << "M135 T";
@@ -308,8 +312,6 @@ GCodeWriter::toolchange(unsigned int extruder_id)
         gcode << extruder_id;
         if (this->config.gcode_comments) gcode << " ; change extruder";
         gcode << "\n";
-        
-        gcode << this->reset_e(true);
     }
     return gcode.str();
 }

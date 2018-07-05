@@ -266,7 +266,7 @@ sub export {
                             if $self->config->between_objects_gcode !~ /M(?:109|104)/i;
                         printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($self->config->between_objects_gcode));
                     }
-                    $self->process_layer($layer, [$copy]);
+                    $self->process_layer($obj_idx, $layer, [$copy]);
                 }
                 $self->flush_filters;
                 $finished_objects++;
@@ -291,7 +291,7 @@ sub export {
         foreach my $print_z (sort { $a <=> $b } keys %layers) {
             foreach my $obj_idx (@obj_idx) {
                 foreach my $layer (@{ $layers{$print_z}[$obj_idx] // [] }) {
-                    $self->process_layer($layer, $layer->object->_shifted_copies);
+                    $self->process_layer($obj_idx, $layer, $layer->object->_shifted_copies);
                 }
             }
         }
@@ -383,7 +383,7 @@ sub _print_off_temperature {
 # then filtered and finally written to a file $fh.
 sub process_layer {
     my $self = shift;
-    my ($layer, $object_copies) = @_;
+    my ($obj_idx, $layer, $object_copies) = @_;
     my $gcode = "";
     
     my $object = $layer->object;
@@ -544,7 +544,11 @@ sub process_layer {
         $self->_gcodegen->avoid_crossing_perimeters->set_disable_once(1);
     }
     
+    my $copy_idx = 0;
     for my $copy (@$object_copies) {
+        if ($self->config->gcode_comments) {
+            $gcode .=   "; printing object " . $object->model_object()->name . " id:" . $obj_idx . " copy "  . $copy_idx . "\n";
+        }
         # when starting a new object, use the external motion planner for the first travel move
         $self->_gcodegen->avoid_crossing_perimeters->set_use_external_mp_once(1) if ($self->_last_obj_copy // '') ne "$copy";
         $self->_last_obj_copy("$copy");
@@ -671,6 +675,10 @@ sub process_layer {
                 }
             }
         }
+        if ($self->config->gcode_comments) {
+            $gcode .=   "; stop printing object " . $object->model_object()->name . " id:" . $obj_idx . " copy "  . $copy_idx . "\n";
+        }
+        $copy_idx = $copy_idx + 1;
     }
     
     # apply spiral vase post-processing if this layer contains suitable geometry
