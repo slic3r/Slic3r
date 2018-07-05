@@ -207,8 +207,8 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
     double max_w = 0;
     for (ThickPolylines::const_iterator it = pp.begin(); it != pp.end(); ++it)
         max_w = fmaxf(max_w, *std::max_element(it->width.begin(), it->width.end()));
-	
-	
+    
+    
     /*  Aligned fusion: Fusion the bits at the end of lines by "increasing thikness"
     *   For that, we have to find other lines,
     *   and with a next point no more distant than the max width.
@@ -262,8 +262,7 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
             }
             if (best_candidate != nullptr) {
 
-                //TODO: witch if polyline.size > best_candidate->size
-                //doesn't matter rright now because a if in the selection process prevent this.
+                //assert polyline.size == best_candidate->size (see selection loop, an 'if' takes care of that)
 
                 //iterate the points
                 // as voronoi should create symetric thing, we can iterate synchonously
@@ -277,31 +276,8 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                     polyline.width[idx_point] += best_candidate->width[idx_point];
                     ++idx_point;
                 }
-                if (idx_point < best_candidate->points.size()) {
-                    if (idx_point + 1 < best_candidate->points.size()) {
-                        //create a new polyline
-                        pp.emplace_back();
-                        pp.back().endpoints.first = true;
-                        pp.back().endpoints.second = best_candidate->endpoints.second;
-                        for (int idx_point_new_line = idx_point; idx_point_new_line < best_candidate->points.size(); ++idx_point_new_line) {
-                            pp.back().points.push_back(best_candidate->points[idx_point_new_line]);
-                            pp.back().width.push_back(best_candidate->width[idx_point_new_line]);
-                        }
-                        for (unsigned int i = 0; i < pp.back().points.size() && i < 10; i++) {
-                            std::cout << "->" << unscale(pp.back().points[i].x) << ":" << unscale(pp.back().points[i].y);
-                        }
-                    } else {
-                        //Add last point
-                        polyline.points.push_back(best_candidate->points[idx_point]);
-                        polyline.width.push_back(best_candidate->width[idx_point]);
-                        //select if an end opccur
-                        polyline.endpoints.second &= best_candidate->endpoints.second;
-                    }
-
-                } else {
-                    //select if an end opccur
-                    polyline.endpoints.second &= best_candidate->endpoints.second;
-                }
+                //select if an end occur
+                polyline.endpoints.second &= best_candidate->endpoints.second;
 
                 //remove points that are the same or too close each other, ie simplify
                 for (unsigned int idx_point = 1; idx_point < polyline.points.size(); ++idx_point) {
@@ -383,28 +359,28 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
         Optimisation of the old algorithm : now we select the most "strait line" choice 
         when we merge with an other line at a point with more than two meet.
         */
-	for (size_t i = 0; i < pp.size(); ++i) {
-		ThickPolyline& polyline = pp[i];
-		if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
-		
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline& polyline = pp[i];
+        if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
+        
         ThickPolyline* best_candidate = nullptr;
         float best_dot = -1;
         int best_idx = 0;
         
-		// find another polyline starting here
-		for (size_t j = i+1; j < pp.size(); ++j) {
-			ThickPolyline& other = pp[j];
-			if (polyline.last_point().coincides_with(other.last_point())) {
-				other.reverse();
-			} else if (polyline.first_point().coincides_with(other.last_point())) {
-				polyline.reverse();
-				other.reverse();
-			} else if (polyline.first_point().coincides_with(other.first_point())) {
-				polyline.reverse();
-			} else if (!polyline.last_point().coincides_with(other.first_point())) {
-				continue;
-			}
-			
+        // find another polyline starting here
+        for (size_t j = i+1; j < pp.size(); ++j) {
+            ThickPolyline& other = pp[j];
+            if (polyline.last_point().coincides_with(other.last_point())) {
+                other.reverse();
+            } else if (polyline.first_point().coincides_with(other.last_point())) {
+                polyline.reverse();
+                other.reverse();
+            } else if (polyline.first_point().coincides_with(other.first_point())) {
+                polyline.reverse();
+            } else if (!polyline.last_point().coincides_with(other.first_point())) {
+                continue;
+            }
+            
             Pointf v_poly(polyline.lines().back().vector().x, polyline.lines().back().vector().y);
             v_poly.scale(1 / std::sqrt(v_poly.x*v_poly.x + v_poly.y*v_poly.y));
             Pointf v_other(other.lines().front().vector().x, other.lines().front().vector().y);
@@ -425,7 +401,7 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                 
             pp.erase(pp.begin() + best_idx);
         }
-	}
+    }
     
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
