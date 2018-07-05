@@ -99,9 +99,10 @@ PerimeterGenerator::process()
                     
                     // look for thin walls
                     if (this->config->thin_walls) {
+                        Polygons no_thin_zone = offset(offsets, +ext_pwidth/2);
                         Polygons diffpp = diff(
                             last,
-                            offset(offsets, +ext_pwidth/2),
+                            no_thin_zone,
                             true  // medial axis requires non-overlapping geometry
                         );
                         
@@ -109,11 +110,22 @@ PerimeterGenerator::process()
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
                         ExPolygons expp = offset2_ex(diffpp, -min_width/2, +min_width/2);
+						
+                         // compute a bit of overlap to anchor thin walls inside the print.
+                        ExPolygons anchor = intersection_ex(to_polygons(offset_ex(expp, (float)(ext_pwidth / 2))), no_thin_zone, true);
                         
                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                        for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex)
-                            ex->medial_axis(ext_pwidth + ext_pspacing2, min_width, &thin_walls);
-                        
+                        for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
+                            ExPolygons &bounds = _clipper_ex(ClipperLib::ctUnion, to_polygons(*ex), to_polygons(anchor), true);
+							//search our bound
+                            for (ExPolygon &bound : bounds) {
+                                if (!intersection_ex(*ex, bound).empty()) {
+                                    // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
+                                    ex->medial_axis(bound, ext_pwidth + ext_pspacing2, min_width, &thin_walls);
+                                    continue;
+                                }
+                            }
+                        }
                         #ifdef DEBUG
                         printf("  %zu thin walls detected\n", thin_walls.size());
                         #endif
@@ -281,7 +293,7 @@ PerimeterGenerator::process()
             
             ThickPolylines polylines;
             for (ExPolygons::const_iterator ex = gaps_ex.begin(); ex != gaps_ex.end(); ++ex)
-                ex->medial_axis(max, min, &polylines);
+                ex->medial_axis(*ex, max, min, &polylines);
             
             if (!polylines.empty()) {
                 ExtrusionEntityCollection gap_fill = this->_variable_width(polylines, 
