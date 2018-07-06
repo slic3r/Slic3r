@@ -68,6 +68,29 @@ void PerimeterGenerator::process()
             ThickPolylines thin_walls;
             // we loop one time more than needed in order to find gaps after the last perimeter was applied
             for (int i = 0;; ++ i) {  // outer loop is 0
+                // We can add more perimeters if there are uncovered overhangs
+                // improvement for future: find a way to add perimeters only where it's needed.
+                // It's hard to do, so here is a simple version.
+                bool may_add_more_perimeters = false;
+                if (this->config->extra_perimeters && i > loop_number && !last.empty()
+                    && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()){
+                    //split the polygons with bottom/notbottom
+                    ExPolygons support(this->lower_slices->expolygons);
+                    ExPolygons unsupported = diff_ex(last, support, true);
+                    if (!unsupported.empty()) {
+                        //only consider overhangs and let bridges alone
+                        // it's more reliable than the BridgeDetector
+                        ExPolygonCollection coll_last(support);
+                        ExPolygon hull;
+                        hull.contour = coll_last.convex_hull();
+                        unsupported = diff_ex(unsupported, ExPolygons() = { hull });
+                        if (!unsupported.empty()) {
+                            //add fake perimeters here
+                            may_add_more_perimeters = true;
+                        }
+                    }
+                }
+
                 // Calculate next onion shell of perimeters.
                 ExPolygons offsets;
                 if (i == 0) {
@@ -138,8 +161,14 @@ void PerimeterGenerator::process()
                     last.clear();
                     break;
                 } else if (i > loop_number) {
-                    // If i > loop_number, we were looking just for gaps.
-                    break;
+                    if (may_add_more_perimeters) {
+                        loop_number++;
+                        contours.emplace_back();
+                        holes.emplace_back();
+                    } else {
+                        // If i > loop_number, we were looking just for gaps.
+                        break;
+                    }
                 }
                 for (const ExPolygon &expolygon : offsets) {
                     contours[i].emplace_back(PerimeterGeneratorLoop(expolygon.contour, i, true));
@@ -151,7 +180,7 @@ void PerimeterGenerator::process()
                 }
                 last = std::move(offsets);
                     
-                if(i==0 && config->only_one_perimeter_top && this->upper_slices != NULL){
+                if(i==0 && config->only_one_perimeter_top && this->upper_slices != NULL) {
                     //split the polygons with top/not_top
                     ExPolygons upper_polygons(this->upper_slices->expolygons);
                     ExPolygons inner_polygons = diff_ex(last, (upper_polygons), true);
