@@ -807,6 +807,11 @@ void TabPrint::build()
 		optgroup->append_single_option_line("avoid_crossing_perimeters");
 		optgroup->append_single_option_line("thin_walls");
 		optgroup->append_single_option_line("overhangs");
+        line = { _(L("Avoid unsupported perimeters")), "" };
+        line.append_option(optgroup->get_option("no_perimeter_unsupported"));
+        line.append_option(optgroup->get_option("min_perimeter_unsupported"));
+        line.append_option(optgroup->get_option("noperi_bridge_only")); 
+        optgroup->append_line(line);
 
 		optgroup = page->new_optgroup(_(L("Advanced")));
 		optgroup->append_single_option_line("seam_position");
@@ -1157,6 +1162,10 @@ void TabPrint::update()
 					"seam_position", "external_perimeters_first", "external_perimeter_extrusion_width",
 					"perimeter_speed", "small_perimeter_speed", "external_perimeter_speed" })
 		get_field(el)->toggle(have_perimeters);
+
+    bool have_no_perimeter_unsupported = have_perimeters && m_config->opt_bool("no_perimeter_unsupported");
+    for (auto el : { "min_perimeter_unsupported", "noperi_bridge_only" })
+        get_field(el)->toggle(have_no_perimeter_unsupported);
 
 	bool have_infill = m_config->option<ConfigOptionPercent>("fill_density")->value > 0;
 	// infill_extruder uses the same logic as in Print::extruders()

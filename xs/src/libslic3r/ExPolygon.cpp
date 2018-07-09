@@ -539,13 +539,59 @@ ExPolygon::get_trapezoids2(Polygons* polygons) const
 }
 
 void
-ExPolygon::get_trapezoids2(Polygons* polygons, double angle) const
-{
+ExPolygon::get_trapezoids2(Polygons* polygons, double angle) const {
     ExPolygon clone = *this;
-    clone.rotate(PI/2 - angle, Point(0,0));
+    clone.rotate(PI / 2 - angle, Point(0, 0));
     clone.get_trapezoids2(polygons);
     for (Polygons::iterator polygon = polygons->begin(); polygon != polygons->end(); ++polygon)
-        polygon->rotate(-(PI/2 - angle), Point(0,0));
+        polygon->rotate(-(PI / 2 - angle), Point(0, 0));
+}
+
+void
+ExPolygon::get_trapezoids3_half(Polygons* polygons, float spacing) const {
+
+    // get all points of this ExPolygon
+    Points pp = *this;
+
+    if (pp.empty()) return;
+
+    // build our bounding box
+    BoundingBox bb(pp);
+
+    // get all x coordinates
+    int min_x = pp[0].x, max_x = pp[0].x;
+    std::vector<coord_t> xx;
+    for (Points::const_iterator p = pp.begin(); p != pp.end(); ++p) {
+        if (min_x > p->x) min_x = p->x;
+        if (max_x < p->x) max_x = p->x;
+    }
+    for (int x = min_x; x < max_x-spacing/2; x += spacing) {
+        xx.push_back(x);
+    }
+    xx.push_back(max_x);
+    //std::sort(xx.begin(), xx.end());
+
+    // find trapezoids by looping from first to next-to-last coordinate
+    for (std::vector<coord_t>::const_iterator x = xx.begin(); x != xx.end() - 1; ++x) {
+        coord_t next_x = *(x + 1);
+        if (*x == next_x) continue;
+
+        // build rectangle
+        Polygon poly;
+        poly.points.resize(4);
+        poly[0].x = *x +spacing / 4;
+        poly[0].y = bb.min.y;
+        poly[1].x = next_x -spacing / 4;
+        poly[1].y = bb.min.y;
+        poly[2].x = next_x -spacing / 4;
+        poly[2].y = bb.max.y;
+        poly[3].x = *x +spacing / 4;
+        poly[3].y = bb.max.y;
+
+        // intersect with this expolygon
+        // append results to return value
+        polygons_append(*polygons, intersection(poly, to_polygons(*this)));
+    }
 }
 
 // While this triangulates successfully, it's NOT a constrained triangulation

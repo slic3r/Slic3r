@@ -1147,8 +1147,30 @@ PrintConfigDef::PrintConfigDef()
     def->label = L("Detect bridging perimeters");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Experimental option to adjust flow for overhangs (bridge flow will be used), "
-                   "to apply bridge speed to them and enable fan.");
+        "to apply bridge speed to them and enable fan.");
     def->cli = "overhangs!";
+    def->default_value = new ConfigOptionBool(true);
+
+    def = this->add("no_perimeter_unsupported", coBool);
+    def->label = L("");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Experimental option to remove perimeters where there are nothing under and a bridged infill should be better.");
+    def->cli = "no-perimeter-unsupported!";
+    def->default_value = new ConfigOptionBool(true);
+
+    def = this->add("min_perimeter_unsupported", coInt);
+    def->label = L("Minimum perimeters");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Number of permieter exluded from this option.");
+    def->cli = "min-perimeter-unsupported=i";
+    def->min = 0;
+    def->default_value = new ConfigOptionInt(0);
+
+    def = this->add("noperi_bridge_only", coBool);
+    def->label = L("Only on briged area");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Only remove perimeters over area marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
+    def->cli = "noperi-bridge-only!";
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("parking_pos_retraction", coFloat);

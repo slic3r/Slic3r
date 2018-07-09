@@ -203,8 +203,8 @@ std::vector<double> BridgeDetector::bridge_direction_candidates() const
     return angles;
 }
 
-Polygons BridgeDetector::coverage(double angle) const
-{
+Polygons BridgeDetector::coverage(double angle, bool precise) const {
+
     if (angle == -1)
         angle = this->angle;
 
@@ -213,52 +213,92 @@ Polygons BridgeDetector::coverage(double angle) const
     if (angle != -1) {
         // Get anchors, convert them to Polygons and rotate them.
         Polygons anchors = to_polygons(this->_anchor_regions);
-        polygons_rotate(anchors, PI/2.0 - angle);
-        
+        polygons_rotate(anchors, PI / 2.0 - angle);
+        //same for region which do not need bridging
+        //Polygons supported_area = diff(this->lower_slices.expolygons, this->_anchor_regions, true);
+        //polygons_rotate(anchors, PI / 2.0 - angle);
+
         for (ExPolygon expolygon : this->expolygons) {
             // Clone our expolygon and rotate it so that we work with vertical lines.
-            expolygon.rotate(PI/2.0 - angle);            
+            expolygon.rotate(PI / 2.0 - angle);
             // Outset the bridge expolygon by half the amount we used for detecting anchors;
             // we'll use this one to generate our trapezoids and be sure that their vertices
             // are inside the anchors and not on their contours leading to false negatives.
             for (ExPolygon &expoly : offset_ex(expolygon, 0.5f * float(this->spacing))) {
                 // Compute trapezoids according to a vertical orientation
                 Polygons trapezoids;
-                expoly.get_trapezoids2(&trapezoids, PI/2.0);
-                for (const Polygon &trapezoid : trapezoids) {
+                if (!precise) expoly.get_trapezoids2(&trapezoids, PI / 2);
+                else expoly.get_trapezoids3_half(&trapezoids, float(this->spacing));
+                for (Polygon &trapezoid : trapezoids) {
                     // not nice, we need a more robust non-numeric check
+                    // imporvment 1: take into account when we go in the supported area.
                     size_t n_supported = 0;
-                    for (const Line &supported_line : intersection_ln(trapezoid.lines(), anchors))
-                        if (supported_line.length() >= this->spacing)
-                            ++ n_supported;
-                    if (n_supported >= 2) 
+                    if (!precise) {
+                        for (const Line &supported_line : intersection_ln(trapezoid.lines(), anchors))
+                            if (supported_line.length() >= this->spacing)
+                                ++n_supported;
+                    } else {
+                        Polygons intersects = intersection(trapezoid, anchors);
+                        n_supported = intersects.size();
+
+                        if (n_supported >= 2) {
+                            // trim it to not allow to go outside of the intersections
+                            BoundingBox center_bound = intersects[0].bounding_box();
+                            coord_t min_y = center_bound.center().y, max_y = center_bound.center().y;
+                            for (Polygon &poly_bound : intersects) {
+                                center_bound = poly_bound.bounding_box();
+                                if (min_y > center_bound.center().y) min_y = center_bound.center().y;
+                                if (max_y < center_bound.center().y) max_y = center_bound.center().y;
+                            }
+                            coord_t min_x = trapezoid[0].x, max_x = trapezoid[0].x;
+                            for (Point &p : trapezoid.points) {
+                                if (min_x > p.x) min_x = p.x;
+                                if (max_x < p.x) max_x = p.x;
+                            }
+                            //add what get_trapezoids3 has removed (+EPSILON)
+                            min_x -= (this->spacing / 4 + 1);
+                            max_x += (this->spacing / 4 + 1);
+                            coord_t mid_x = (min_x + max_x) / 2;
+                            for (Point &p : trapezoid.points) {
+                                if (p.y < min_y) p.y = min_y;
+                                if (p.y > max_y) p.y = max_y;
+                                if (p.x > min_x && p.x < mid_x) p.x = min_x;
+                                if (p.x < max_x && p.x > mid_x) p.x = max_x;
+                            }
+                        }
+                    }
+
+                    if (n_supported >= 2) {
+                        //add it
                         covered.push_back(std::move(trapezoid));
+                    }
                 }
             }
         }
 
-        // Unite the trapezoids before rotation, as the rotation creates tiny gaps and intersections between the trapezoids
-        // instead of exact overlaps.
-        covered = union_(covered);
-        // Intersect trapezoids with actual bridge area to remove extra margins and append it to result.
-        polygons_rotate(covered, -(PI/2.0 - angle));
-    	covered = intersection(covered, to_polygons(this->expolygons));
+            // Unite the trapezoids before rotation, as the rotation creates tiny gaps and intersections between the trapezoids
+            // instead of exact overlaps.
+            covered = union_(covered);
+            // Intersect trapezoids with actual bridge area to remove extra margins and append it to result.
+            polygons_rotate(covered, -(PI/2.0 - angle));
+            covered = intersection(covered, to_polygons(this->expolygons));
 #if 0
-        {
-            my @lines = map @{$_->lines}, @$trapezoids;
-            $_->rotate(-(PI/2 - $angle), [0,0]) for @lines;
-            
-            require "Slic3r/SVG.pm";
-            Slic3r::SVG::output(
-                "coverage_" . rad2deg($angle) . ".svg",
-                expolygons          => [$self->expolygon],
-                green_expolygons    => $self->_anchor_regions,
-                red_expolygons      => $coverage,
-                lines               => \@lines,
-            );
+            {
+                my @lines = map @{$_->lines}, @$trapezoids;
+                $_->rotate(-(PI/2 - $angle), [0,0]) for @lines;
+
+                require "Slic3r/SVG.pm";
+                Slic3r::SVG::output(
+                    "coverage_" . rad2deg($angle) . ".svg",
+                    expolygons          => [$self->expolygon],
+                    green_expolygons    => $self->_anchor_regions,
+                    red_expolygons      => $coverage,
+                    lines               => \@lines,
+                    );
         }
 #endif
     }
+
     return covered;
 }
 

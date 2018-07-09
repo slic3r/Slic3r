@@ -213,6 +213,14 @@ inline Slic3r::ExPolygons union_ex(const Slic3r::Surfaces &subject, bool safety_
     return _clipper_ex(ClipperLib::ctUnion, to_polygons(subject), Slic3r::Polygons(), safety_offset_);
 }
 
+inline Slic3r::ExPolygons union_ex(const Slic3r::ExPolygons &subject1, const Slic3r::ExPolygons &subject2, bool safety_offset_ = false) {
+    Polygons poly_union;
+    polygons_append(poly_union, to_polygons(subject1));
+    polygons_append(poly_union, to_polygons(subject2));
+    return _clipper_ex(ClipperLib::ctUnion, poly_union, Slic3r::Polygons(), safety_offset_);
+    //OR that, i don't know what is the best
+    //return _clipper_ex(ClipperLib::ctUnion, to_polygons(subject1), to_polygons(subject2), safety_offset_);
+}
 
 ClipperLib::PolyTree union_pt(const Slic3r::Polygons &subject, bool safety_offset_ = false);
 Slic3r::Polygons union_pt_chained(const Slic3r::Polygons &subject, bool safety_offset_ = false);

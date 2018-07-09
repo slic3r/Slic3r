@@ -411,6 +411,9 @@ public:
     ConfigOptionInt                 infill_dense_layers;
     ConfigOptionPercent             infill_dense_density;
     ConfigOptionBool                overhangs;
+    ConfigOptionBool                no_perimeter_unsupported;
+    ConfigOptionInt                 min_perimeter_unsupported;
+    ConfigOptionBool                noperi_bridge_only;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
     ConfigOptionFloat               perimeter_speed;
@@ -457,6 +460,9 @@ protected:
         OPT_PTR(infill_dense_layers);
         OPT_PTR(infill_dense_density);
         OPT_PTR(overhangs);
+        OPT_PTR(no_perimeter_unsupported);
+        OPT_PTR(min_perimeter_unsupported);
+        OPT_PTR(noperi_bridge_only);
         OPT_PTR(perimeter_extruder);
         OPT_PTR(perimeter_extrusion_width);
         OPT_PTR(perimeter_speed);

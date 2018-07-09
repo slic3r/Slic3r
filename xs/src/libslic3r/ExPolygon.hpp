@@ -59,6 +59,7 @@ public:
     void get_trapezoids(Polygons* polygons, double angle) const;
     void get_trapezoids2(Polygons* polygons) const;
     void get_trapezoids2(Polygons* polygons, double angle) const;
+    void get_trapezoids3_half(Polygons* polygons, float spacing) const;
     void triangulate(Polygons* polygons) const;
     void triangulate_pp(Polygons* polygons) const;
     void triangulate_p2t(Polygons* polygons) const;
