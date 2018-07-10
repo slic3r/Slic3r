@@ -91,7 +91,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/SVG.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
     ${LIBDIR}/libslic3r/Zip/ZipArchive.cpp
-)
+        ../xs/src/libslic3r/SupportMaterial.cpp)
 
 add_library(BSpline STATIC
     ${LIBDIR}/BSpline/BSpline.cpp

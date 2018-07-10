@@ -2,6 +2,8 @@
 #define slic3r_SupportMaterial_hpp_
 
 #include <vector>
+#include <iostream>
+#include <algorithm>
 #include "libslic3r.h"
 #include "PrintConfig.hpp"
 #include "Flow.hpp"
@@ -14,31 +16,32 @@
 
 using namespace std;
 
-#define MARGIN_STEP MARGIN/3
-#define PILLAR_SIZE 2.5
-#define PILLAR_SPACING 10
-
-namespace Slic3r {
+namespace Slic3r
+{
 
 // how much we extend support around the actual contact area
 constexpr coordf_t SUPPORT_MATERIAL_MARGIN = 1.5;
 
-class Supports
+constexpr coordf_t PILLAR_SIZE = 2.5;
+
+constexpr coordf_t PILLAR_SPACING = 10;
+
+class SupportMaterial
 {
 public:
-    PrintConfig *print_config; ///<
-    PrintObjectConfig *print_object_config; ///<
+    PrintConfig *config; ///<
+    PrintObjectConfig *object_config; ///<
     Flow flow; ///<
     Flow first_layer_flow; ///<
     Flow interface_flow; ///<
 
-    Supports(PrintConfig *print_config,
-             PrintObjectConfig *print_object_config,
-             const Flow &flow,
-             const Flow &first_layer_flow,
-             const Flow &interface_flow)
-        : print_config(print_config),
-          print_object_config(print_object_config),
+    SupportMaterial(PrintConfig *print_config,
+                    PrintObjectConfig *print_object_config,
+                    const Flow &flow,
+                    const Flow &first_layer_flow,
+                    const Flow &interface_flow)
+        : config(print_config),
+          object_config(print_object_config),
           flow(flow),
           first_layer_flow(first_layer_flow),
           interface_flow(interface_flow)
@@ -49,14 +52,15 @@ public:
 
     void contact_area(PrintObject *object)
     {
-        PrintObjectConfig conf = this->print_object_config;
+        PrintObjectConfig conf = this->object_config;
 
         // If user specified a custom angle threshold, convert it to radians.
         float threshold_rad;
         cout << conf.support_material_threshold << endl;
         if (conf.support_material_threshold > 0) {
-            threshold_rad = deg2rad(conf.support_material_threshold + 1);
-            cout << "Threshold angle = %d°\n", rad2deg(threshold_rad) << endl;
+            threshold_rad = Geometry::deg2rad(conf.support_material_threshold.value + 1.0);
+
+            // TODO @Samir55 add debug statetments.
         }
 
         // Build support on a build plate only? If so, then collect top surfaces into $buildplate_only_top_surfaces
@@ -66,7 +70,7 @@ public:
             && conf.support_material_buildplate_only;
         SurfacesPtr buildplate_only_top_surfaces = SurfacesPtr();
 
-        auto contact;
+        Polygons contact;
         Polygons overhangs; // This stores the actual overhang supported by each contact layer
 
         for (int layer_id = 0; layer_id < object->layers.size(); layer_id++) {
@@ -104,7 +108,7 @@ public:
                     // but don't apply the safety offset during the union operation as it would
                     // inflate the polygons over and over.
                     for (auto surface : projection_new) {
-                        buildplate_only_top_surfaces.push_back(offset(surface, scale(0.01)));
+//                        buildplate_only_top_surfaces.push_back(offset(surface, scale_(0.01)));
                     }
                 }
             }
@@ -117,14 +121,14 @@ public:
                 for (auto const &contour : layer->slices.contours()) {
                     auto contour_clone = contour;
                     overhangs.push_back(contour_clone);
-                    contact.push_back(offset(overhangs.back(), static_cast<const float>(SUPPORT_MATERIAL_MARGIN)));
+//                    contact.push_back(offset(overhangs.back(), static_cast<const float>(SUPPORT_MATERIAL_MARGIN)));
                 }
             }
             else {
                 Layer *lower_layer = object->get_layer(layer_id - 1);
                 for (auto layerm : layer->regions) {
                     float fw = layerm->flow(frExternalPerimeter).scaled_width();
-                    auto difference;
+                    Polygons difference;
 
                     // If a threshold angle was specified, use a different logic for detecting overhangs.
                     if ((conf.support_material && threshold_rad > 0)
@@ -134,10 +138,10 @@ public:
                         float layer_threshold_rad = threshold_rad;
                         if (layer_id <= conf.support_material_enforce_layers) {
                             // Use ~45 deg number for enforced supports if we are in auto.
-                            layer_threshold_rad = deg2rad(89);
+                            layer_threshold_rad = Geometry::deg2rad(89);
                         }
                         if (layer_threshold_rad > 0) {
-                            d = scale(lower_layer->height) *
+                            d = scale_(lower_layer->height) *
                                 ((cos(layer_threshold_rad)) / (sin(layer_threshold_rad)));
                         }
 
@@ -147,10 +151,11 @@ public:
                         // is not too high: in that case, $d will be very small (as we need to catch
                         // very short overhangs), and such contact area would be eaten by the
                         // enforced spacing, resulting in high threshold angles to be almost ignored
-                        if (d > fw/2) {
-                            difference = diff(offset(difference, d - fw/2), lower_layer->slices);
+                        if (d > fw / 2) {
+                            difference = diff(offset(difference, d - fw / 2), lower_layer->slices);
                         }
-                    } else {
+                    }
+                    else {
                         // $diff now contains the ring or stripe comprised between the boundary of
                         // lower slices and the centerline of the last perimeter in this overhanging layer.
                         // Void $diff means that there's no upper perimeter whose centerline is
@@ -162,11 +167,87 @@ public:
 
     }
 
-    void object_top()
-    {}
+    ExPolygons *object_top(PrintObject *object, SurfacesPtr contact)
+    {
+        // find object top surfaces
+        // we'll use them to clip our support and detect where does it stick.
+        ExPolygons *top = new ExPolygons();
+        if (object_config->support_material_buildplate_only.value)
+            return top;
 
-    void support_layers_z()
-    {}
+    }
+
+    vector<coordf_t> support_layers_z(vector<float> contact_z, vector<float> top_z, coordf_t max_object_layer_height)
+    {
+        // Quick table to check whether a given Z is a top surface.
+        map<float, bool> is_top;
+        for (auto z : top_z) is_top[z] = true;
+
+        // determine layer height for any non-contact layer
+        // we use max() to prevent many ultra-thin layers to be inserted in case
+        // layer_height > nozzle_diameter * 0.75.
+        auto nozzle_diameter = config->nozzle_diameter.get_at(object_config->support_material_extruder - 1);
+        auto support_material_height = (max_object_layer_height, (nozzle_diameter * 0.75));
+        coordf_t _contact_distance = this->contact_distance(support_material_height, nozzle_diameter);
+
+        // Initialize known, fixed, support layers.
+        vector<coordf_t> z;
+        for (auto c_z : contact_z) z.push_back(c_z);
+        for (auto t_z : top_z) {
+            z.push_back(t_z);
+            z.push_back(t_z + _contact_distance);
+        }
+        sort(z.begin(), z.end());
+
+        // Enforce first layer height.
+        coordf_t first_layer_height = object_config->first_layer_height;
+        while (!z.empty() && z.front() <= first_layer_height) z.erase(z.begin());
+        z.insert(z.begin(), first_layer_height);
+
+        // Add raft layers by dividing the space between first layer and
+        // first contact layer evenly.
+        if (object_config->raft_layers > 1 && z.size() >= 2) {
+            // z[1] is last raft layer (contact layer for the first layer object) TODO @Samir55 How so?
+            coordf_t height = (z[1] - z[0]) / (object_config->raft_layers - 1);
+
+            // since we already have two raft layers ($z[0] and $z[1]) we need to insert
+            // raft_layers-2 more
+            int idx = 1;
+            for (int j = 0; j < object_config->raft_layers - 2; j++) {
+                float z_new =
+                    roundf(static_cast<float>((z[0] + height * idx) * 100)) / 100; // round it to 2 decimal places.
+                z.insert(z.begin() + idx, z_new);
+                idx++;
+            }
+        }
+
+        // Create other layers (skip raft layers as they're already done and use thicker layers).
+        for (size_t i = z.size(); i >= object_config->raft_layers; i--) {
+            coordf_t target_height = support_material_height;
+            if (i > 0 && is_top[z[i - 1]]) {
+                target_height = nozzle_diameter;
+            }
+
+            // Enforce first layer height.
+            if ((i == 0 && z[i] > target_height + first_layer_height)
+                || (z[i] - z[i - 1] > target_height + EPSILON)) {
+                z.insert(z.begin() + i, (z[i] - target_height));
+                i++;
+            }
+        }
+
+        // Remove duplicates and make sure all 0.x values have the leading 0.
+        {
+            set<coordf_t> s;
+            for (auto el : z)
+                s.insert(roundf(static_cast<float>((el * 100)) / 100)); // round it to 2 decimal places.
+            z = vector<coordf_t>();
+            for (auto el : s)
+                z.push_back(el);
+        }
+
+        return z;
+    }
 
     void generate_interface_layers()
     {}
@@ -212,9 +293,9 @@ public:
         return ret;
     }
 
-    float contact_distance(float layer_height, float nozzle_diameter)
+    coordf_t contact_distance(coordf_t layer_height, coordf_t nozzle_diameter)
     {
-        float extra = static_cast<float>(print_object_config->support_material_contact_distance.value);
+        coordf_t extra = static_cast<float>(object_config->support_material_contact_distance.value);
         if (extra == 0) {
             return layer_height;
         }
