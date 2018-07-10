@@ -76,12 +76,10 @@ void PerimeterGenerator::process()
                 //store surface for bridge infill to avoid unsupported perimeters (but the first one, this one is always good)
                 if (this->config->no_perimeter_unsupported && i == this->config->min_perimeter_unsupported
                     && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()) {
-                    //note: i don't know where to use the safety offset or not, so if you know, please modify the block.
 
                     //compute our unsupported surface
                     ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons, true);
                     if (!unsupported.empty()) {
-                        ExPolygons to_draw;
                         //remove small overhangs
                         ExPolygons unsupported_filtered = offset2_ex(unsupported, -(float)(perimeter_spacing), (float)(perimeter_spacing));
                         if (!unsupported_filtered.empty()) {
@@ -103,13 +101,13 @@ void PerimeterGenerator::process()
                                         //simplify to avoid most of artefacts from printing lines.
                                         ExPolygons bridgeable_simplified;
                                         for (ExPolygon &poly : bridgeable) {
-                                            poly.simplify(perimeter_spacing/4, &bridgeable_simplified);
+                                            poly.simplify(perimeter_spacing/2, &bridgeable_simplified);
                                         }
                                         //offset by perimeter spacing because the simplify may have reduced it a bit.
                                         //it's not dangerous as it will be intersected by 'unsupported' later
-                                        to_draw.insert(to_draw.end(), bridgeable.begin(), bridgeable.end());
+                                        //FIXME: add overlap in this->fill_surfaces->append
                                         // add overlap (perimeter_spacing/4 was good in test, ie 25%)
-                                        coord_t overlap = scale_(this->config->get_abs_value("infill_overlap", perimeter_spacing));
+                                        coord_t overlap = scale_(this->config->get_abs_value("infill_overlap", unscale(perimeter_spacing)));
                                         unsupported_filtered = intersection_ex(unsupported_filtered, offset_ex(bridgeable_simplified, overlap));
                                     } else {
                                         unsupported_filtered.clear();
@@ -126,24 +124,32 @@ void PerimeterGenerator::process()
                                 unsupported_filtered = intersection_ex(unsupported_filtered, ExPolygons() = { hull });
                             }
                             if (!unsupported_filtered.empty()) {
-                                        //to_draw.insert(to_draw.end(), detector._anchor_regions.begin(), detector._anchor_regions.end());
                                 //and we want at least 1 perimeter of overlap
                                 ExPolygons bridge = unsupported_filtered;
                                 unsupported_filtered = intersection_ex(offset_ex(unsupported_filtered, (float)(perimeter_spacing)), last);
-                                // unsupported need to be offset_ex by -(float)(perimeter_spacing/2) for the hole to be flush
-                                ExPolygons supported = diff_ex(last, unsupported_filtered); //offset_ex(unsupported_filtered, -(float)(perimeter_spacing / 2)), true);
-                                ExPolygons bridge_and_support = union_ex(bridge, support);
-                                //to_draw.insert(to_draw.end(), support.begin(), support.end());
+                                // remove from the bridge & support the small inmperfections of the union
+                                ExPolygons bridge_and_support = offset2_ex(union_ex(bridge, support, true), perimeter_spacing/2, -perimeter_spacing/2);
                                 // make him flush with perimeter area
                                 unsupported_filtered = intersection_ex(offset_ex(unsupported_filtered, (float)(perimeter_spacing / 2)), bridge_and_support);
-                                // store the results
-                                last = supported;
-
+                                
                                 //add this directly to the infill list.
                                 // this will avoid to throw wrong offsets into a good polygons
                                 this->fill_surfaces->append(
                                     unsupported_filtered,
                                     stInternal);
+                                
+                                // store the results
+                                last = diff_ex(last, unsupported_filtered, true);
+                                //remove "thin air" polygons
+                                for (int i = 0; i < last.size();i++) {
+                                    if (intersection_ex(support, ExPolygons() = { last[i] }).empty()) {
+                                        this->fill_surfaces->append(
+                                            ExPolygons() = { last[i] },
+                                            stInternal);
+                                        last.erase(last.begin() + i);
+                                        i--;
+                                    }
+                                }
                             }
                         }
                     }
