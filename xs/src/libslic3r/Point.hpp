@@ -157,8 +157,10 @@ to_points(const std::vector<T> &items)
 #include <boost/version.hpp>
 #include <boost/polygon/polygon.hpp>
 namespace boost { namespace polygon {
+    /* Boost::Polygon already defines long long as a geometry concept.
     template <>
     struct geometry_concept<coord_t> { typedef coordinate_concept type; };
+    */
     
 /* Boost.Polygon already defines a specialization for coordinate_traits<long> as of 1.60:
    https://github.com/boostorg/polygon/commit/0ac7230dd1f8f34cb12b86c8bb121ae86d3d9b97 */
