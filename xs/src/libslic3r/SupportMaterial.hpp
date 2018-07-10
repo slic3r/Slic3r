@@ -14,6 +14,9 @@
 #include "SupportMaterial.hpp"
 #include "ExPolygon.hpp"
 
+// Supports Material tests.
+
+
 using namespace std;
 
 namespace Slic3r
@@ -177,6 +180,50 @@ public:
 
     }
 
+    void generate_interface_layers()
+    {}
+
+    void generate_bottom_interface_layers()
+    {}
+
+    void generate_base_layers()
+    {}
+
+    void clip_with_object()
+    {}
+
+    void generate_toolpaths()
+    {}
+
+    void generate_pillars_shape()
+    {}
+
+    void clip_with_shape()
+    {
+        //TODO
+    }
+
+    /// This method returns the indices of the layers overlapping with the given one.
+    vector<int> overlapping_layers(int layer_idx, vector<float> support_z)
+    {
+        vector<int> ret;
+
+        float z_max = support_z[layer_idx];
+        float z_min = layer_idx == 0 ? 0 : support_z[layer_idx - 1];
+
+        for (int i = 0; i < support_z.size(); i++) {
+            if (i == layer_idx) continue;
+
+            float z_max2 = support_z[i];
+            float z_min2 = i == 0 ? 0 : support_z[i - 1];
+
+            if (z_max > z_min2 && z_min < z_max2)
+                ret.push_back(i);
+        }
+
+        return ret;
+    }
+
     vector<coordf_t> support_layers_z(vector<float> contact_z, vector<float> top_z, coordf_t max_object_layer_height)
     {
         // Quick table to check whether a given Z is a top surface.
@@ -249,50 +296,6 @@ public:
         return z;
     }
 
-    void generate_interface_layers()
-    {}
-
-    void generate_bottom_interface_layers()
-    {}
-
-    void generate_base_layers()
-    {}
-
-    void clip_with_object()
-    {}
-
-    void generate_toolpaths()
-    {}
-
-    void generate_pillars_shape()
-    {}
-
-    void clip_with_shape()
-    {
-        //TODO
-    }
-
-    /// This method returns the indices of the layers overlapping with the given one.
-    vector<int> overlapping_layers(int layer_idx, vector<float> support_z)
-    {
-        vector<int> ret;
-
-        float z_max = support_z[layer_idx];
-        float z_min = layer_idx == 0 ? 0 : support_z[layer_idx - 1];
-
-        for (int i = 0; i < support_z.size(); i++) {
-            if (i == layer_idx) continue;
-
-            float z_max2 = support_z[i];
-            float z_min2 = i == 0 ? 0 : support_z[i - 1];
-
-            if (z_max > z_min2 && z_min < z_max2)
-                ret.push_back(i);
-        }
-
-        return ret;
-    }
-
     coordf_t contact_distance(coordf_t layer_height, coordf_t nozzle_diameter)
     {
         coordf_t extra = static_cast<float>(object_config->support_material_contact_distance.value);
@@ -306,6 +309,39 @@ public:
 
 };
 
+class SupportMaterialTests
+{
+public:
+    bool test_1()
+    {
+        // Create a mesh & modelObject.
+        TriangleMesh mesh = TriangleMesh::make_cube(20, 20, 20);
+
+        // Create modelObject.
+        Model model = Model();
+        ModelObject *object = model.add_object();
+        object->add_volume(mesh);
+        model.add_default_instances();
+
+        // Align to origin.
+        model.align_instances_to_origin();
+
+        // Create Print.
+        Print print = Print();
+
+        // Configure the printObjectConfig.
+        print.default_object_config.set_deserialize("support_material", "1");
+
+        // Add the modelObject.
+        print.add_model_object(model.objects[0]);
+
+        // Create new supports.
+        SupportMaterial support = SupportMaterial(&print, &print.objects.front()->config,
+        print.objects.front().suppo)
+
+    }
+
+};
 }
 
 #endif

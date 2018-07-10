@@ -228,7 +228,28 @@ class Print
     void auto_assign_extruders(ModelObject* model_object) const;
     std::string output_filename();
     std::string output_filepath(const std::string &path);
-    
+
+//    Flow support_material_flow (FlowRole role){
+//
+//        int extruder = (role == FlowRole::frSupportMaterial)
+//                       ? default_object_config.support_material_extruder
+//                       : default_object_config.support_material_interface_extruder;
+//
+//        ConfigOptionFloatOrPercent width = default_object_config.support_material_extrusion_width || config.extrusion_width;
+//
+//        if (role == FlowRole::frSupportMaterialInterface) {
+//            width = default_object_config.support_material_interface_extrusion_width || width;
+//        }
+//
+//        // We use a bogus layer_height because we use the same flow for all
+//        // support material layers.
+//        return Flow::new_from_config_width(
+//            role,
+//            width,
+//            config.nozzle_diameter.get_at(extruder-1),
+//            default_object_config.layer_height,
+//            0);
+//    }
     private:
     void clear_regions();
     void delete_region(size_t idx);
