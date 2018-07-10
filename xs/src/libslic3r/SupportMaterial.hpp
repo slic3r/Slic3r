@@ -34,15 +34,15 @@ class SupportMaterial
 public:
     PrintConfig *config; ///<
     PrintObjectConfig *object_config; ///<
-    Flow flow; ///<
-    Flow first_layer_flow; ///<
-    Flow interface_flow; ///<
+    Flow *flow; ///<
+    Flow *first_layer_flow; ///<
+    Flow *interface_flow; ///<
 
     SupportMaterial(PrintConfig *print_config,
                     PrintObjectConfig *print_object_config,
-                    const Flow &flow,
-                    const Flow &first_layer_flow,
-                    const Flow &interface_flow)
+                    Flow *flow = nullptr,
+                    Flow *first_layer_flow = nullptr,
+                    Flow *interface_flow = nullptr)
         : config(print_config),
           object_config(print_object_config),
           flow(flow),
@@ -198,9 +198,17 @@ public:
     void generate_pillars_shape()
     {}
 
-    void clip_with_shape()
+    void clip_with_shape(map<int, Polygons> &support, map<int, Polygons> &shape)
     {
-        //TODO
+        for (auto layer : support) {
+            // Don't clip bottom layer with shape so that we
+            // can generate a continuous base flange
+            // also don't clip raft layers
+            if (layer.first == 0) continue;
+            else if (layer.first < object_config->raft_layers) continue;
+
+            layer.second = intersection(layer.second, shape[layer.first]);
+        }
     }
 
     /// This method returns the indices of the layers overlapping with the given one.
@@ -331,13 +339,23 @@ public:
 
         // Configure the printObjectConfig.
         print.default_object_config.set_deserialize("support_material", "1");
+        print.default_object_config.set_deserialize("layer_height", "0.2");
+        print.config.set_deserialize("first_layer_height", "0.3");
+
+        vector<float> contact_z;
+        vector<float> top_z;
+        contact_z.push_back(1.9);
+        top_z.push_back(1.9);
 
         // Add the modelObject.
         print.add_model_object(model.objects[0]);
 
         // Create new supports.
-        SupportMaterial support = SupportMaterial(&print, &print.objects.front()->config,
-        print.objects.front().suppo)
+        SupportMaterial support = SupportMaterial(&print.config, &print.objects.front()->config);
+
+        vector<coordf_t>
+            support_z = support.support_layers_z(contact_z, top_z, print.default_object_config.layer_height);
+        assert(support_z[0] == print.default_object_config.first_layer_height);
 
     }
 
