@@ -92,7 +92,7 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
     canvas3D->on_select_object = std::function<void (ObjIdx obj_idx)>(on_select_object);
     canvas3D->on_instances_moved = std::function<void ()>(on_instances_moved);
     
-    preview3D = new Preview3D(preview_notebook, wxDefaultSize, objects, model, config);
+    preview3D = new Preview3D(preview_notebook, wxDefaultSize, print, objects, model, config);
     preview_notebook->AddPage(preview3D, _("Preview"));
 
     preview2D = new Preview2D(preview_notebook, wxDefaultSize, objects, model, config);

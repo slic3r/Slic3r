@@ -253,6 +253,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/Scene3D.cpp
     ${GUI_LIBDIR}/Plater/Plate2D.cpp
     ${GUI_LIBDIR}/Plater/Plate3D.cpp
+    ${GUI_LIBDIR}/Plater/Preview3D.cpp
     ${GUI_LIBDIR}/Plater/PlaterObject.cpp
     ${GUI_LIBDIR}/ProgressStatusBar.cpp
     ${GUI_LIBDIR}/Settings.cpp
