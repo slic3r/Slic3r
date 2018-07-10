@@ -332,6 +332,14 @@ void TriangleMesh::translate(float x, float y, float z)
     stl_invalidate_shared_vertices(&this->stl);
 }
 
+void TriangleMesh::translate(Pointf3 vec) {
+    this->translate(
+        static_cast<float>(vec.x),
+        static_cast<float>(vec.y),
+        static_cast<float>(vec.z)
+    );
+}
+
 void TriangleMesh::rotate(float angle, const Axis &axis)
 {
     // admesh uses degrees
@@ -417,6 +425,11 @@ void TriangleMesh::rotate(double angle, const Point& center)
     this->translate(-center.x, -center.y, 0);
     stl_rotate_z(&(this->stl), (float)angle);
     this->translate(+center.x, +center.y, 0);
+}
+
+Pointf3
+TriangleMesh::center() const {
+    return this->bounding_box().center();
 }
 
 TriangleMeshPtrs
@@ -532,6 +545,23 @@ TriangleMesh::merge(const TriangleMesh &mesh)
     
     // update size
     stl_get_size(&this->stl);
+}
+
+void TriangleMesh::cut(Axis axis, double z, TriangleMesh* upper, TriangleMesh* lower) 
+{
+    switch(axis) {
+        case X:
+            TriangleMeshSlicer<X>(this).cut(z, upper, lower);
+            break;
+        case Y:
+            TriangleMeshSlicer<Y>(this).cut(z, upper, lower);
+            break;
+        case Z:
+            TriangleMeshSlicer<Z>(this).cut(z, upper, lower);
+            break;
+        default: 
+            Slic3r::Log::error("TriangleMesh", "Invalid Axis supplied to cut()");
+    }
 }
 
 /* this will return scaled ExPolygons */

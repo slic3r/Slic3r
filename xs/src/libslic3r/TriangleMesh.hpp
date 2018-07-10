@@ -36,7 +36,14 @@ class TriangleMesh
     void WriteOBJFile(const std::string &output_file);
     void scale(float factor);
     void scale(const Pointf3 &versor);
+
+    /// Translate the mesh to a new location.
     void translate(float x, float y, float z);
+
+    /// Translate the mesh to a new location.
+    void translate(Pointf3 vec);
+
+
     void rotate(float angle, const Axis &axis);
     void rotate_x(float angle);
     void rotate_y(float angle);
@@ -76,6 +83,12 @@ class TriangleMesh
 
     /// Return the size of the mesh in coordinates.
     Pointf3 size() const;
+
+    /// Return the center of the related bounding box.
+    Pointf3 center() const;
+
+    /// Perform a cut of the mesh and put the output in upper and lower
+    void cut(Axis axis, double z, TriangleMesh* upper, TriangleMesh* lower);
 	
 	/// Generate a mesh representing a cube with dimensions (x, y, z), with one corner at (0,0,0).
     static TriangleMesh make_cube(double x, double y, double z);
