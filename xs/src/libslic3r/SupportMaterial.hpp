@@ -207,11 +207,11 @@ public:
                 continue;
             }
             coordf_t z_max = support_z[i];
-            coordf_t z_min = (i == 0) ? 0 : support_z[i-1];
+            coordf_t z_min = (i == 0) ? 0 : support_z[i - 1];
 
             LayerPtrs layers;
             for (auto layer : object.layers) {
-                if (layer->print_z > z_min && (layer->print_z -  layer->height) < z_max) {
+                if (layer->print_z > z_min && (layer->print_z - layer->height) < z_max) {
                     layers.push_back(layer);
                 }
             }
@@ -393,8 +393,47 @@ public:
 
         vector<coordf_t>
             support_z = support.support_layers_z(contact_z, top_z, print.default_object_config.layer_height);
-        assert(support_z[0] == print.default_object_config.first_layer_height);
 
+        bool
+            is_1 = (support_z[0] == print.default_object_config.first_layer_height); // 'first layer height is honored'.
+
+        bool is_2 = false; // 'no null or negative support layers'.
+        for (int i = 1; i < support_z.size(); ++i) {
+            if (support_z[i] - support_z[i - 1] <= 0) is_2 = true;
+        }
+
+        bool is_3 = false; // 'no layers thicker than nozzle diameter'.
+        for (int i = 1; i < support_z.size(); ++i) {
+            if (support_z[i] - support_z[i - 1] > print.config.nozzle_diameter.get_at(0) + EPSILON) is_2 = true;
+        }
+
+        coordf_t expected_top_spacing =
+            support.contact_distance(print.default_object_config.layer_height, print.config.nozzle_diameter.get_at(0));
+        coordf_t wrong_top_spacing = 0;
+        for (auto top_z_el : top_z) {
+            // find layer index of this top surface.
+            int layer_id = -1;
+            for (int i = 0; i < support_z.size(); i++) {
+                if (abs(support_z[i] - top_z_el) < EPSILON) {
+                    layer_id = i;
+                    i = static_cast<int>(support_z.size());
+                }
+            }
+
+            // check that first support layer above this top surface (or the next one) is spaced with nozzle diameter
+            if ((support_z[layer_id + 1] - support_z[layer_id]) != expected_top_spacing
+                && (support_z[layer_id + 2] - support_z[layer_id]) != expected_top_spacing)
+                wrong_top_spacing = 1;
+        }
+        bool is_4 = !wrong_top_spacing; // 'layers above top surfaces are spaced correctly'
+
+        /* Test Also with this
+               $config->set('first_layer_height', 0.4);
+               $test->();
+
+               $config->set('layer_height', $config->nozzle_diameter->[0]);
+               $test->();
+        */
     }
 
 };
