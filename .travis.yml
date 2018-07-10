@@ -5,7 +5,7 @@ before_install:
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update        ; fi
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ccache; fi
 script:
-    - travis wait 30 bash package/linux/travis-setup.sh
+    - travis_wait 30 bash package/linux/travis-setup.sh
     - mkdir build && cd build
     - cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON ../src
     - cmake --build .
