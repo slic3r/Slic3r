@@ -8,7 +8,7 @@
 %}
 
 %name{Slic3r::Point} class Point {
-    Point(long _x = 0, long _y = 0);
+    Point(long long _x = 0, long long _y = 0);
     ~Point();
     Clone<Point> clone()
         %code{% RETVAL=THIS; %}; 
@@ -76,7 +76,7 @@ Point::coincides_with(point_sv)
 };
 
 %name{Slic3r::Point3} class Point3 {
-    Point3(long _x = 0, long _y = 0, long _z = 0);
+    Point3(long long _x = 0, long long _y = 0, long long _z = 0);
     ~Point3();
     Clone<Point3> clone()
         %code{% RETVAL = THIS; %};
