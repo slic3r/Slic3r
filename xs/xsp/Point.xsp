@@ -2,13 +2,14 @@
 
 %{
 #include <xsinit.h>
+#include <stdint.h>
 #include "libslic3r/Point.hpp"
 #include "libslic3r/Polygon.hpp"
 #include "libslic3r/Polyline.hpp"
 %}
 
 %name{Slic3r::Point} class Point {
-    Point(long long _x = 0, long long _y = 0);
+    Point(int64_t _x = 0, int64_t _y = 0);
     ~Point();
     Clone<Point> clone()
         %code{% RETVAL=THIS; %}; 
@@ -22,9 +23,9 @@
         %code{% RETVAL = THIS->x; %};
     long y()
         %code{% RETVAL = THIS->y; %};
-    void set_x(long val)
+    void set_x(int64_t val)
         %code{% THIS->x = val; %};
-    void set_y(long val)
+    void set_y(int64_t val)
         %code{% THIS->y = val; %};
     int nearest_point_index(Points points);
     Clone<Point> nearest_point(Points points)
@@ -76,7 +77,7 @@ Point::coincides_with(point_sv)
 };
 
 %name{Slic3r::Point3} class Point3 {
-    Point3(long long _x = 0, long long _y = 0, long long _z = 0);
+    Point3(int64_t _x = 0, int64_t _y = 0, int64_t _z = 0);
     ~Point3();
     Clone<Point3> clone()
         %code{% RETVAL = THIS; %};
