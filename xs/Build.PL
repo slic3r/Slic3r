@@ -10,6 +10,7 @@ use Module::Build::WithXSpp;
 
 my $cpp_guess = ExtUtils::CppGuess->new;
 my $mswin = $^O eq 'MSWin32';
+my $linux = $^O eq 'linux';
 
 # prevent an annoying concatenation warning by Devel::CheckLib
 $ENV{LD_RUN_PATH} //= "";
@@ -18,19 +19,37 @@ $ENV{LD_RUN_PATH} //= "";
 # HAS_BOOL         : stops Perl/lib/CORE/handy.h from doing "#  define bool char" for MSVC
 # NOGDI            : prevents inclusion of wingdi.h which defines functions Polygon() and Polyline() in global namespace
 # BOOST_ASIO_DISABLE_KQUEUE : prevents a Boost ASIO bug on OS X: https://svn.boost.org/trac/boost/ticket/5339
-my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE);
+my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE -Dexprtk_disable_rtl_io_file -Dexprtk_disable_return_statement -Dexprtk_disable_rtl_vecops -Dexprtk_disable_string_capabilities -Dexprtk_disable_enhanced_features);
 if ($cpp_guess->is_gcc)	{
 	# GCC is pedantic with c++11 std, so undefine strict ansi to get M_PI back
 	push @cflags, qw(-U__STRICT_ANSI__);
 }
-if (`$Config{cc} -v` =~ /gcc version 4\.6\./) {
-    # Compatibility with GCC 4.6 is not a requirement, but as long as code compiles on it we try to support it.
-    push @cflags, qw(-std=c++0x);
-} else {
-    # std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
-    push @cflags, qw(-std=c++11);
-}
+
+# std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
+push @cflags, qw(-std=c++11);
+
 my @ldflags = ();
+
+if ($linux && (defined $ENV{SLIC3R_STATIC} && $ENV{SLIC3R_STATIC})) {
+    push @ldflags, qw(-static-libgcc -static-libstdc++);
+    if ($ENV{TRAVIS}) {
+        # On the build server, link to the actual static libraries to make sure we get them in the list.
+    	push @ldflags, qw(/usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libgcc.a);
+    }
+    # ExtUtils::CppGuess has a hard-coded -lstdc++, so we filter it out
+    {
+        no strict 'refs';
+        no warnings 'redefine';
+        my $func = "ExtUtils::CppGuess::_get_lflags";
+        my $orig = *$func{CODE};
+        *{$func} = sub {
+            my $lflags = $orig->(@_);
+            $lflags =~ s/\s*-lstdc\+\+//;
+            return $lflags;
+        };
+    }
+}
+
 if ($^O eq 'darwin') {
     push @cflags, qw(-stdlib=libc++);
     push @ldflags, qw(-framework IOKit -framework CoreFoundation -lc++);
@@ -192,17 +211,9 @@ if ($ENV{SLIC3R_DEBUG}) {
     push @cflags, $cpp_guess->is_msvc ? '-Gd' : '-g';
 } else {
     # Disable asserts in the release builds.
-    push @cflags, '-DNDEBUG';
+    push @cflags, '-DNDEBUG', '-O';
 }
 if ($cpp_guess->is_gcc) {
-    # check whether we're dealing with a buggy GCC version
-    # see https://github.com/alexrj/Slic3r/issues/1965
-    if (`cc --version` =~ / 4\.7\.[012]/) {
-        # Workaround suggested by Boost devs:
-        # https://svn.boost.org/trac/boost/ticket/8695
-        push @cflags, qw(-fno-inline-small-functions);
-    }
-    
     # our templated XS bindings cause undefined-var-template warnings
     push @cflags, qw(-Wno-undefined-var-template);
 }
@@ -211,10 +222,10 @@ my $build = Module::Build::WithXSpp->new(
     module_name     => 'Slic3r::XS',
     dist_abstract   => 'XS code for Slic3r',
     build_requires => {qw(
-        ExtUtils::ParseXS           3.18
+        ExtUtils::ParseXS           3.35
         ExtUtils::Typemaps          1.00
         ExtUtils::Typemaps::Default 1.05
-        ExtUtils::XSpp              0.17
+        ExtUtils::XSpp              0.18
         Module::Build               0.3601
         Test::More                  0
     )},

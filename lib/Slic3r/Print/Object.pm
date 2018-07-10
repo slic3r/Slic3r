@@ -3,6 +3,7 @@ package Slic3r::Print::Object;
 use strict;
 use warnings;
 
+use POSIX;
 use List::Util qw(min max sum first any);
 use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(X Y Z PI scale unscale chained_path epsilon);
@@ -48,9 +49,9 @@ sub slice {
     return if $self->step_done(STEP_SLICE);
     $self->set_step_started(STEP_SLICE);
     $self->print->status_cb->(10, "Processing triangulated mesh");
-    
+
     $self->_slice;
-    
+
     # detect slicing errors
     my $warning_thrown = 0;
     for my $i (0 .. ($self->layer_count - 1)) {
@@ -387,10 +388,21 @@ sub discover_horizontal_shells {
                 ];
                 next if !@$solid;
                 Slic3r::debugf "Layer %d has %s surfaces\n", $i, ($type == S_TYPE_TOP) ? 'top' : 'bottom';
-                
+
                 my $solid_layers = ($type == S_TYPE_TOP)
                     ? $layerm->region->config->top_solid_layers
                     : $layerm->region->config->bottom_solid_layers;
+
+                if ($layerm->region->config->min_top_bottom_shell_thickness > 0) {
+                    my $current_shell_thickness = $solid_layers * $self->get_layer($i)->height;
+                    my $minimum_shell_thickness = $layerm->region->config->min_top_bottom_shell_thickness;
+
+                    while ($minimum_shell_thickness - $current_shell_thickness > epsilon) {
+                        $solid_layers++;
+                        $current_shell_thickness = $solid_layers * $self->get_layer($i)->height;
+                    }
+                }
+
                 NEIGHBOR: for (my $n = ($type == S_TYPE_TOP) ? $i-1 : $i+1; 
                         abs($n - $i) <= $solid_layers-1; 
                         ($type == S_TYPE_TOP) ? $n-- : $n++) {
@@ -670,11 +682,16 @@ sub support_material_flow {
     my $extruder = ($role == FLOW_ROLE_SUPPORT_MATERIAL)
         ? $self->config->support_material_extruder
         : $self->config->support_material_interface_extruder;
+
+    my $width = $self->config->support_material_extrusion_width || $self->config->extrusion_width;
+    if ($role == FLOW_ROLE_SUPPORT_MATERIAL_INTERFACE) {
+        $width = $self->config->support_material_interface_extrusion_width || $width;
+    }
     
     # we use a bogus layer_height because we use the same flow for all
     # support material layers
     return Slic3r::Flow->new_from_width(
-        width               => $self->config->support_material_extrusion_width || $self->config->extrusion_width,
+        width               => $width,
         role                => $role,
         nozzle_diameter     => $self->print->config->nozzle_diameter->[$extruder-1] // $self->print->config->nozzle_diameter->[0],
         layer_height        => $self->config->layer_height,

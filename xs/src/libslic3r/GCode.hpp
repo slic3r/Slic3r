@@ -10,6 +10,7 @@
 #include "PlaceholderParser.hpp"
 #include "Print.hpp"
 #include "PrintConfig.hpp"
+#include "ConditionalGCode.hpp"
 #include <string>
 
 namespace Slic3r {
@@ -100,6 +101,7 @@ class GCode {
     void set_extruders(const std::vector<unsigned int> &extruder_ids);
     void set_origin(const Pointf &pointf);
     std::string preamble();
+    std::string notes();
     std::string change_layer(const Layer &layer);
     std::string extrude(const ExtrusionEntity &entity, std::string description = "", double speed = -1);
     std::string extrude(ExtrusionLoop loop, std::string description = "", double speed = -1);

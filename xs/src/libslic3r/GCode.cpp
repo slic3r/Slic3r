@@ -263,6 +263,12 @@ GCode::set_origin(const Pointf &pointf)
 }
 
 std::string
+GCode::notes()
+{
+    return this->writer.notes();
+}
+
+std::string
 GCode::preamble()
 {
     std::string gcode = this->writer.preamble();
@@ -420,7 +426,10 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
         && loop.length() <= SMALL_PERIMETER_LENGTH
         && speed == -1)
         speed = this->config.get_abs_value("small_perimeter_speed");
-    
+        description = "small perimeter";
+    if (paths.front().role == erExternalPerimeter)
+        description = std::string("external ") + description;
+
     // extrude along the path
     std::string gcode;
     for (ExtrusionPaths::const_iterator path = paths.begin(); path != paths.end(); ++path)
@@ -497,8 +506,8 @@ std::string
 GCode::_extrude(ExtrusionPath path, std::string description, double speed)
 {
     path.simplify(SCALED_RESOLUTION);
-    
     std::string gcode;
+    description = path.is_bridge() ? description + " (bridge)" : description;
     
     // go to first point of extrusion path
     if (!this->_last_pos_defined || !this->_last_pos.coincides_with(path.first_point())) {
@@ -749,7 +758,9 @@ GCode::set_extruder(unsigned int extruder_id)
         PlaceholderParser pp = *this->placeholder_parser;
         pp.set("previous_extruder", this->writer.extruder()->id);
         pp.set("next_extruder",     extruder_id);
-        gcode += pp.process(this->config.toolchange_gcode.value) + '\n';
+        pp.set("previous_retraction", this->writer.extruder()->retracted);
+        pp.set("next_retraction", this->writer.extruders.find(extruder_id)->second.retracted);
+        gcode += Slic3r::apply_math(pp.process(this->config.toolchange_gcode.value))  + '\n';
     }
     
     // if ooze prevention is enabled, park current extruder in the nearest

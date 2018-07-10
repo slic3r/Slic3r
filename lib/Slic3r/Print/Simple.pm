@@ -91,7 +91,8 @@ sub set_model {
         # if all input objects have defined position(s) apply duplication to the whole model
         $model->duplicate($self->duplicate, $self->_print->config->min_object_distance, $bb);
     }
-    $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects};
+    $_->translate(0,0,-$_->bounding_box->z_min) for @{$model->objects} ;
+    
     
     if (!$self->dont_arrange) {
         my $print_center = $self->print_center

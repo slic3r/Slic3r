@@ -29,6 +29,7 @@ my %cli_options = ();
         
         'debug'                 => \$Slic3r::debug,
         'gui'                   => \$opt{gui},
+        'no-gui'                => \$opt{no_gui},
         'o|output=s'            => \$opt{output},
         'j|threads=i'           => \$opt{threads},
         
@@ -105,7 +106,7 @@ if ($opt{save}) {
 
 # launch GUI
 my $gui;
-if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
+if ((!@ARGV || $opt{gui}) && !$opt{no_gui} && !$opt{save} && eval "require Slic3r::GUI; 1") {
     {
         no warnings 'once';
         $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
@@ -125,7 +126,7 @@ if ((!@ARGV || $opt{gui}) && !$opt{save} && eval "require Slic3r::GUI; 1") {
     $gui->MainLoop;
     exit;
 }
-die $@ if $@ && $opt{gui};
+die $@ if $@ && $opt{gui} && !$opt{no_gui};
 
 if (@ARGV) {  # slicing from command line
     # apply command line config on top of default config
@@ -336,6 +337,8 @@ $j
   GUI options:
     --gui               Forces the GUI launch instead of command line slicing (if you
                         supply a model file, it will be loaded into the plater)
+    --no-gui            Forces the command line slicing instead of gui. 
+                        This takes precedence over --gui if both are present.
     --autosave <file>   Automatically export current configuration to the specified file
 
   Output options:
@@ -436,6 +439,7 @@ $j
     --perimeters        Number of perimeters/horizontal skins (range: 0+, default: $config->{perimeters})
     --top-solid-layers  Number of solid layers to do for top surfaces (range: 0+, default: $config->{top_solid_layers})
     --bottom-solid-layers  Number of solid layers to do for bottom surfaces (range: 0+, default: $config->{bottom_solid_layers})
+    --min-shell-thickness  Minimum thickness of all solid shells (range: 0+, default: 0)
     --solid-layers      Shortcut for setting the two options above at once
     --fill-density      Infill density (range: 0%-100%, default: $config->{fill_density}%)
     --fill-angle        Infill angle in degrees (range: 0-90, default: $config->{fill_angle})
@@ -483,6 +487,10 @@ $j
                         Pattern to use for support material (default: $config->{support_material_pattern})
     --support-material-spacing
                         Spacing between pattern lines (mm, default: $config->{support_material_spacing})
+    --support-material-pillar-size
+                        Size of the pillars in the pillar support pattern (default: $config->{support_material_pillar_size})
+    --support-material-pillar-spacing
+                        Spacing between the pillars in the pillar support pattern (default: $config->{support_material_pillar_spacing})
     --support-material-angle
                         Support material angle in degrees (range: 0-90, default: $config->{support_material_angle})
     --support-material-contact-distance

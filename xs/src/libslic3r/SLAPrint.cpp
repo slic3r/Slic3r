@@ -189,10 +189,11 @@ SLAPrint::_infill_layer(size_t i, const Fill* _fill)
         fill->z        = layer.print_z;
         
         ExtrusionPath templ(erInternalInfill);
-        templ.width = fill->spacing();
+
         const ExPolygons internal_ex = intersection_ex(infill, internal);
         for (ExPolygons::const_iterator it = internal_ex.begin(); it != internal_ex.end(); ++it) {
             Polylines polylines = fill->fill_surface(Surface(stInternal, *it));
+            templ.width = fill->spacing(); // fill->spacing doesn't have anything defined until after fill_surface
             layer.infill.append(polylines, templ);
         }
     }
@@ -296,6 +297,11 @@ SLAPrint::write_svg(const std::string &outputfile) const
         fprintf(f,"\t</g>\n");
     }
     fprintf(f,"</svg>\n");
+    // Ensure that the output gets written.
+    fflush(f);
+
+    // Close the file.
+    fclose(f);
 }
 
 coordf_t

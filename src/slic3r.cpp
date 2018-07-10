@@ -134,6 +134,17 @@ main(int argc, char **argv)
             print.slice();
             print.write_svg(outfile);
             boost::nowide::cout << "SVG file exported to " << outfile << std::endl;
+        } else if (cli_config.export_3mf) {
+            std::string outfile = cli_config.output.value;
+            if (outfile.empty()) outfile = model.objects.front()->input_file;
+            // Check if the file is already a 3mf.
+            if(outfile.substr(outfile.find_last_of('.'), outfile.length()) == ".3mf")
+                outfile = outfile.substr(0, outfile.find_last_of('.')) + "_2" + ".3mf";
+            else
+                // Remove the previous extension and add .3mf extention.
+                outfile = outfile.substr(0, outfile.find_last_of('.')) + ".3mf";
+            IO::TMF::write(model, outfile);
+            boost::nowide::cout << "File file exported to " << outfile << std::endl;
         } else if (cli_config.cut_x > 0 || cli_config.cut_y > 0 || cli_config.cut > 0) {
             model.repair();
             model.translate(0, 0, -model.bounding_box().min.z);
@@ -151,14 +162,20 @@ main(int argc, char **argv)
                 
                 ModelObject &upper = *out.objects[0];
                 ModelObject &lower = *out.objects[1];
+
+                // Use the input name and trim off the extension.
+                std::string outfile = cli_config.output.value;
+                if (outfile.empty()) outfile = model.objects.front()->input_file;
+                outfile = outfile.substr(0, outfile.find_last_of('.'));
+                std::cerr << outfile << "\n";
             
                 if (upper.facets_count() > 0) {
                     TriangleMesh m = upper.mesh();
-                    IO::STL::write(m, upper.input_file + "_upper.stl");
+                    IO::STL::write(m, outfile + "_upper.stl");
                 }
                 if (lower.facets_count() > 0) {
                     TriangleMesh m = lower.mesh();
-                    IO::STL::write(m, lower.input_file + "_lower.stl");
+                    IO::STL::write(m, outfile + "_lower.stl");
                 }
             }
         } else if (cli_config.cut_grid.value.x > 0 && cli_config.cut_grid.value.y > 0) {

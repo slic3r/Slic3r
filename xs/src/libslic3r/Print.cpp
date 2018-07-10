@@ -172,8 +172,9 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
             || opt_key == "brim_connections_width") {
             steps.insert(psBrim);
             steps.insert(psSkirt);
-        } else if (opt_key == "nozzle_diameter"
-            || opt_key == "resolution"
+        } else if (opt_key == "nozzle_diameter") {
+                osteps.insert(posLayers);
+        } else if (opt_key == "resolution"
             || opt_key == "z_steps_per_mm") {
             osteps.insert(posSlice);
         } else if (opt_key == "avoid_crossing_perimeters"
@@ -197,6 +198,7 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
             || opt_key == "fan_below_layer_time"
             || opt_key == "filament_colour"
             || opt_key == "filament_diameter"
+            || opt_key == "filament_notes"
             || opt_key == "first_layer_acceleration"
             || opt_key == "first_layer_bed_temperature"
             || opt_key == "first_layer_speed"
@@ -216,6 +218,7 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
             || opt_key == "perimeter_acceleration"
             || opt_key == "post_process"
             || opt_key == "pressure_advance"
+            || opt_key == "printer_notes"
             || opt_key == "retract_before_travel"
             || opt_key == "retract_layer_change"
             || opt_key == "retract_length"
@@ -285,7 +288,7 @@ Print::invalidate_step(PrintStep step)
     
     // propagate to dependent steps
     if (step == psSkirt) {
-        this->invalidate_step(psBrim);
+        invalidated |= this->invalidate_step(psBrim);
     }
     
     return invalidated;
@@ -335,7 +338,9 @@ Print::object_extruders() const
         if ((*region)->config.fill_density.value > 0)
             extruders.insert((*region)->config.infill_extruder - 1);
         
-        if ((*region)->config.top_solid_layers.value > 0 || (*region)->config.bottom_solid_layers.value > 0)
+        if ((*region)->config.top_solid_layers.value > 0
+            || (*region)->config.bottom_solid_layers.value > 0
+            || (*region)->config.min_top_bottom_shell_thickness.value > 0)
             extruders.insert((*region)->config.solid_infill_extruder - 1);
     }
     
@@ -674,7 +679,7 @@ Print::validate() const
     if (this->config.spiral_vase) {
         size_t total_copies_count = 0;
         FOREACH_OBJECT(this, i_object) total_copies_count += (*i_object)->copies().size();
-        if (total_copies_count > 1 && !this->config.complete_objects)
+        if (total_copies_count > 1 && !this->config.complete_objects.getBool())
             return "The Spiral Vase option can only be used when printing a single object.";
         if (this->regions.size() > 1)
             return "The Spiral Vase option can only be used when printing single material objects.";
@@ -753,11 +758,13 @@ Print::skirt_first_layer_height() const
     return this->objects.front()->config.get_abs_value("first_layer_height");
 }
 
+// This will throw an exception when called without PrintObjects
 Flow
 Print::brim_flow() const
 {
     ConfigOptionFloatOrPercent width = this->config.first_layer_extrusion_width;
     if (width.value == 0) width = this->regions.front()->config.perimeter_extrusion_width;
+    if (width.value == 0) width = this->objects.front()->config.extrusion_width;
     
     /* We currently use a random region's perimeter extruder.
        While this works for most cases, we should probably consider all of the perimeter
@@ -778,11 +785,13 @@ Print::brim_flow() const
     return flow;
 }
 
+// This will throw an exception when called without PrintObjects
 Flow
 Print::skirt_flow() const
 {
     ConfigOptionFloatOrPercent width = this->config.first_layer_extrusion_width;
     if (width.value == 0) width = this->regions.front()->config.perimeter_extrusion_width;
+    if (width.value == 0) width = this->objects.front()->config.extrusion_width;
     
     /* We currently use a random object's support material extruder.
        While this works for most cases, we should probably consider all of the support material
@@ -808,15 +817,15 @@ Print::_make_brim()
     // checking whether we need to generate them
     this->brim.clear();
     
-    if (this->config.brim_width == 0
-        && this->config.interior_brim_width == 0
-        && this->config.brim_connections_width == 0) {
+    if (this->objects.empty()
+        || (this->config.brim_width == 0
+            && this->config.interior_brim_width == 0
+            && this->config.brim_connections_width == 0)) {
         this->state.set_done(psBrim);
         return;
     }
     
     // brim is only printed on first layer and uses perimeter extruder
-    const double first_layer_height = this->skirt_first_layer_height();
     const Flow flow  = this->brim_flow();
     const double mm3_per_mm = flow.mm3_per_mm();
     
@@ -855,7 +864,7 @@ Print::_make_brim()
         append_to(loops, offset2(
             islands,
             flow.scaled_width() + flow.scaled_spacing() * (i - 1.5 + 0.5),
-            flow.scaled_spacing() * -0.5,
+            flow.scaled_spacing() * -0.525, // WORKAROUND for brim placement, original 0.5 leaves too much of a gap.
             100000,
             ClipperLib::jtSquare
         ));
@@ -864,7 +873,7 @@ Print::_make_brim()
     {
         Polygons chained = union_pt_chained(loops);
         for (Polygons::const_reverse_iterator p = chained.rbegin(); p != chained.rend(); ++p) {
-            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, first_layer_height);
+            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, flow.height);
             path.polyline = p->split_at_first_point();
             this->brim.append(ExtrusionLoop(path));
         }
@@ -920,7 +929,7 @@ Print::_make_brim()
                 
                 const Polylines paths = filler->fill_surface(Surface(stBottom, *ex));
                 for (Polylines::const_iterator pl = paths.begin(); pl != paths.end(); ++pl) {
-                    ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, first_layer_height);
+                    ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, flow.height);
                     path.polyline = *pl;
                     this->brim.append(path);
                 }
@@ -963,7 +972,7 @@ Print::_make_brim()
         
         loops = union_pt_chained(loops);
         for (const Polygon &p : loops) {
-            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, first_layer_height);
+            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, flow.height);
             path.polyline = p.split_at_first_point();
             this->brim.append(ExtrusionLoop(path));
         }

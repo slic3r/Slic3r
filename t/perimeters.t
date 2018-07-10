@@ -1,4 +1,4 @@
-use Test::More tests => 63;
+use Test::More tests => 66;
 use strict;
 use warnings;
 
@@ -315,9 +315,58 @@ use Slic3r::Test;
 
 {
     my $config = Slic3r::Config->new_from_defaults;
+    $config->set('skirts', 0);
+    $config->set('perimeters', 3);
+    $config->set('min_shell_thickness', 3);
+    $config->set('layer_height', 0.4);
+    $config->set('first_layer_height', 0.35);
+    $config->set('extra_perimeters', 0);
+    $config->set('first_layer_extrusion_width', 0.5);
+    $config->set('perimeter_extrusion_width', 0.5);
+    $config->set('external_perimeter_extrusion_width', 0.5);
+    $config->set('cooling', 0);                     # to prevent speeds from being altered
+    $config->set('first_layer_speed', '100%');      # to prevent speeds from being altered
+    $config->set('perimeter_speed', 99);
+    $config->set('external_perimeter_speed', 99);
+    $config->set('small_perimeter_speed', 99);
+    $config->set('thin_walls', 0);
+    
+    my $test = sub {
+        my $print = Slic3r::Test::init_print('ipadstand', config => $config);
+        my %perimeters = ();  # z => number of loops
+        my $in_loop = 0;
+        Slic3r::GCode::Reader->new->parse(Slic3r::Test::gcode($print), sub {
+            my ($self, $cmd, $args, $info) = @_;
+            
+            if ($info->{extruding} && $info->{dist_XY} > 0 && ($args->{F} // $self->F) == $config->perimeter_speed*60) {
+                $perimeters{$self->Z}++ if !$in_loop;
+                $in_loop = 1;
+            } else {
+                $in_loop = 0;
+            }
+        });
+        ok !(grep { $_ % $config->min_shell_thickness/$config->perimeter_extrusion_width } values %perimeters), 'should be 6 perimeters';
+    };
+
+    $test->();
+
+    $config->set('first_layer_extrusion_width', 0.54);
+    $config->set('perimeter_extrusion_width', 0.54);
+    $config->set('external_perimeter_extrusion_width', 0.54);
+    $test->();
+
+    $config->set('first_layer_extrusion_width', 0.59);
+    $config->set('perimeter_extrusion_width', 0.51);
+    $config->set('external_perimeter_extrusion_width', 0.51);
+    $test->();
+}
+
+{
+    my $config = Slic3r::Config->new_from_defaults;
     $config->set('nozzle_diameter', [0.4]);
     $config->set('perimeters', 2);
     $config->set('perimeter_extrusion_width', 0.4);
+    $config->set('external_perimeter_extrusion_width', 0.4);
     $config->set('infill_extrusion_width', 0.53);
     $config->set('solid_infill_extrusion_width', 0.53);
     

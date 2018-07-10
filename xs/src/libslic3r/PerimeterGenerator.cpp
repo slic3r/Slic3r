@@ -38,6 +38,9 @@ PerimeterGenerator::process()
     // internal flow which is unrelated.
     coord_t min_spacing         = pspacing      * (1 - INSET_OVERLAP_TOLERANCE);
     coord_t ext_min_spacing     = ext_pspacing  * (1 - INSET_OVERLAP_TOLERANCE);
+
+    // minimum shell thickness
+    coord_t min_shell_thickness = scale_(this->config->min_shell_thickness);
     
     // prepare grown lower layer slices for overhang detection
     if (this->lower_slices != NULL && this->config->overhangs) {
@@ -54,8 +57,21 @@ PerimeterGenerator::process()
     for (Surfaces::const_iterator surface = this->slices->surfaces.begin();
         surface != this->slices->surfaces.end(); ++surface) {
         // detect how many perimeters must be generated for this island
-        const int loop_number = this->config->perimeters + surface->extra_perimeters -1;  // 0-indexed loops
+        int loops = this->config->perimeters + surface->extra_perimeters;
+
+        // If the user has defined a minimum shell thickness compute the number of loops needed to satisfy
+        if (min_shell_thickness > 0) {
+            int min_loops = 1;
+
+            min_loops += ceil(((float)min_shell_thickness-ext_pwidth)/pwidth);
+
+            if (loops < min_loops)
+                loops = min_loops;
+        }
+
+        const int loop_number = loops-1;  // 0-indexed loops
         
+
         Polygons gaps;
         
         Polygons last = surface->expolygon.simplify_p(SCALED_RESOLUTION);
@@ -83,9 +99,10 @@ PerimeterGenerator::process()
                     
                     // look for thin walls
                     if (this->config->thin_walls) {
+                        Polygons no_thin_zone = offset(offsets, +ext_pwidth/2);
                         Polygons diffpp = diff(
                             last,
-                            offset(offsets, +ext_pwidth/2),
+                            no_thin_zone,
                             true  // medial axis requires non-overlapping geometry
                         );
                         
@@ -93,11 +110,22 @@ PerimeterGenerator::process()
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
                         ExPolygons expp = offset2_ex(diffpp, -min_width/2, +min_width/2);
+						
+                         // compute a bit of overlap to anchor thin walls inside the print.
+                        ExPolygons anchor = intersection_ex(to_polygons(offset_ex(expp, (float)(ext_pwidth / 2))), no_thin_zone, true);
                         
                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                        for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex)
-                            ex->medial_axis(ext_pwidth + ext_pspacing2, min_width, &thin_walls);
-                        
+                        for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
+                            ExPolygons bounds = _clipper_ex(ClipperLib::ctUnion, (Polygons)*ex, to_polygons(anchor), true);
+							//search our bound
+                            for (ExPolygon &bound : bounds) {
+                                if (!intersection_ex(*ex, bound).empty()) {
+                                    // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
+                                    ex->medial_axis(bound, ext_pwidth + ext_pspacing2, min_width, &thin_walls);
+                                    continue;
+                                }
+                            }
+                        }
                         #ifdef DEBUG
                         printf("  %zu thin walls detected\n", thin_walls.size());
                         #endif
@@ -215,7 +243,7 @@ PerimeterGenerator::process()
                 
                     // find the contour loop that contains it
                     for (int t = d-1; t >= 0; --t) {
-                        for (int j = 0; j < contours[t].size(); ++j) {
+                        for (size_t j = 0; j < contours[t].size(); ++j) {
                             PerimeterGeneratorLoop &candidate_parent = contours[t][j];
                             if (candidate_parent.polygon.contains(loop.polygon.first_point())) {
                                 candidate_parent.children.push_back(loop);
@@ -265,7 +293,7 @@ PerimeterGenerator::process()
             
             ThickPolylines polylines;
             for (ExPolygons::const_iterator ex = gaps_ex.begin(); ex != gaps_ex.end(); ++ex)
-                ex->medial_axis(max, min, &polylines);
+                ex->medial_axis(*ex, max, min, &polylines);
             
             if (!polylines.empty()) {
                 ExtrusionEntityCollection gap_fill = this->_variable_width(polylines, 

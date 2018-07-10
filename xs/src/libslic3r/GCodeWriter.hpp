@@ -23,6 +23,10 @@ public:
     std::string extrusion_axis() const { return this->_extrusion_axis; }
     void apply_print_config(const PrintConfig &print_config);
     void set_extruders(const std::vector<unsigned int> &extruder_ids);
+    /// Write any notes provided by the user as comments in the gcode header.
+    std::string notes();
+
+    /// Actually write the preamble information.
     std::string preamble();
     std::string postamble() const;
     std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1) const;
@@ -56,7 +60,7 @@ private:
     Pointf3 _pos;
     
     std::string _travel_to_z(double z, const std::string &comment);
-    std::string _retract(double length, double restart_extra, const std::string &comment);
+    std::string _retract(double length, double restart_extra, const std::string &comment, bool long_retract = false);
 };
 
 } /* namespace Slic3r */

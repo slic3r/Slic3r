@@ -8,7 +8,8 @@
 namespace Slic3r {
 
 PrintObject::PrintObject(Print* print, ModelObject* model_object, const BoundingBoxf3 &modobj_bbox)
-:   typed_slices(false),
+:   layer_height_spline(model_object->layer_height_spline),
+    typed_slices(false),
     _print(print),
     _model_object(model_object)
 {
@@ -223,7 +224,12 @@ PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
     for (const t_config_option_key &opt_key : diff) {
         if (opt_key == "layer_height"
             || opt_key == "first_layer_height"
-            || opt_key == "xy_size_compensation"
+            || opt_key == "adaptive_slicing"
+            || opt_key == "adaptive_slicing_quality"
+            || opt_key == "match_horizontal_surfaces"
+            || opt_key == "regions_overlap") {
+            steps.insert(posLayers);
+        } else if (opt_key == "xy_size_compensation"
             || opt_key == "raft_layers") {
             steps.insert(posSlice);
         } else if (opt_key == "support_material_contact_distance") {
@@ -238,12 +244,15 @@ PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
             || opt_key == "support_material_extrusion_width"
             || opt_key == "support_material_interface_layers"
             || opt_key == "support_material_interface_extruder"
+            || opt_key == "support_material_interface_extrusion_width"
             || opt_key == "support_material_interface_spacing"
             || opt_key == "support_material_interface_speed"
             || opt_key == "support_material_buildplate_only"
             || opt_key == "support_material_pattern"
             || opt_key == "support_material_spacing"
             || opt_key == "support_material_threshold"
+            || opt_key == "support_material_pillar_size"
+            || opt_key == "support_material_pillar_spacing"
             || opt_key == "dont_support_bridges") {
             steps.insert(posSupportMaterial);
         } else if (opt_key == "interface_shells"
@@ -281,23 +290,25 @@ PrintObject::invalidate_step(PrintObjectStep step)
     
     // propagate to dependent steps
     if (step == posPerimeters) {
-        this->invalidate_step(posPrepareInfill);
-        this->_print->invalidate_step(psSkirt);
-        this->_print->invalidate_step(psBrim);
+        invalidated |= this->invalidate_step(posPrepareInfill);
+        invalidated |= this->_print->invalidate_step(psSkirt);
+        invalidated |= this->_print->invalidate_step(psBrim);
     } else if (step == posDetectSurfaces) {
-        this->invalidate_step(posPrepareInfill);
+        invalidated |= this->invalidate_step(posPrepareInfill);
     } else if (step == posPrepareInfill) {
-        this->invalidate_step(posInfill);
+        invalidated |= this->invalidate_step(posInfill);
     } else if (step == posInfill) {
-        this->_print->invalidate_step(psSkirt);
-        this->_print->invalidate_step(psBrim);
+        invalidated |= this->_print->invalidate_step(psSkirt);
+        invalidated |= this->_print->invalidate_step(psBrim);
     } else if (step == posSlice) {
-        this->invalidate_step(posPerimeters);
-        this->invalidate_step(posDetectSurfaces);
-        this->invalidate_step(posSupportMaterial);
+        invalidated |= this->invalidate_step(posPerimeters);
+        invalidated |= this->invalidate_step(posDetectSurfaces);
+        invalidated |= this->invalidate_step(posSupportMaterial);
+    }else if (step == posLayers) {
+        invalidated |= this->invalidate_step(posSlice);
     } else if (step == posSupportMaterial) {
-        this->_print->invalidate_step(psSkirt);
-        this->_print->invalidate_step(psBrim);
+        invalidated |= this->_print->invalidate_step(psSkirt);
+        invalidated |= this->_print->invalidate_step(psBrim);
     }
     
     return invalidated;
@@ -537,11 +548,11 @@ PrintObject::bridge_over_infill()
 // adjust the layer height to the next multiple of the z full-step resolution
 coordf_t PrintObject::adjust_layer_height(coordf_t layer_height) const
 {
-	coordf_t result = layer_height;
-	if(this->_print->config.z_steps_per_mm > 0) {
-		coordf_t min_dz = 1 / this->_print->config.z_steps_per_mm * 4;
-		result = int(layer_height / min_dz + 0.5) * min_dz;
-	}
+    coordf_t result = layer_height;
+    if(this->_print->config.z_steps_per_mm > 0) {
+        coordf_t min_dz = 1 / this->_print->config.z_steps_per_mm;
+        result = int(layer_height / min_dz + 0.5) * min_dz;
+    }
 
     return result > 0 ? result : layer_height;
 }
@@ -552,64 +563,175 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
 
     std::vector<coordf_t> result;
 
-	coordf_t min_nozzle_diameter = 1.0;
+    // collect values from config
+    coordf_t min_nozzle_diameter = 1.0;
+    coordf_t min_layer_height = 0.0;
+    coordf_t max_layer_height = 10.0;
     std::set<size_t> object_extruders = this->_print->object_extruders();
-	for (std::set<size_t>::const_iterator it_extruder = object_extruders.begin(); it_extruder != object_extruders.end(); ++ it_extruder) {
-		min_nozzle_diameter = std::min(min_nozzle_diameter, this->_print->config.nozzle_diameter.get_at(*it_extruder));
-	}
-	coordf_t layer_height = std::min(min_nozzle_diameter, this->config.layer_height.getFloat());
-	layer_height = this->adjust_layer_height(layer_height);
+    for (std::set<size_t>::const_iterator it_extruder = object_extruders.begin(); it_extruder != object_extruders.end(); ++ it_extruder) {
+        min_nozzle_diameter = std::min(min_nozzle_diameter, this->_print->config.nozzle_diameter.get_at(*it_extruder));
+        min_layer_height = std::max(min_layer_height, this->_print->config.min_layer_height.get_at(*it_extruder));
+        max_layer_height = std::min(max_layer_height, this->_print->config.max_layer_height.get_at(*it_extruder));
+
+    }
+    coordf_t layer_height = std::min(min_nozzle_diameter, this->config.layer_height.getFloat());
+    layer_height = this->adjust_layer_height(layer_height);
     this->config.layer_height.value = layer_height;
+
+    // respect first layer height
     if(first_layer_height) {
         result.push_back(first_layer_height);
     }
 
     coordf_t print_z = first_layer_height;
     coordf_t height = first_layer_height;
-    // loop until we have at least one layer and the max slice_z reaches the object height
-    while (print_z < unscale(this->size.z)) {
-        height = layer_height;
 
-        // look for an applicable custom range
-        for (t_layer_height_ranges::const_iterator it_range = this->layer_height_ranges.begin(); it_range != this->layer_height_ranges.end(); ++ it_range) {
-            if(print_z >= it_range->first.first && print_z <= it_range->first.second) {
-                if(it_range->second > 0) {
-                    height = it_range->second;
+    // Update object size at the spline object to define upper border
+    this->layer_height_spline.setObjectHeight(unscale(this->size.z));
+    if (this->state.is_done(posLayers)) {
+        // layer heights are already generated, just update layers from spline
+        // we don't need to respect first layer here, it's correctly provided by the spline object
+        result = this->layer_height_spline.getInterpolatedLayers();
+    }else{ // create new set of layers
+        // create stateful objects and variables for the adaptive slicing process
+        SlicingAdaptive as;
+        coordf_t adaptive_quality = this->config.adaptive_slicing_quality.value;
+        if(this->config.adaptive_slicing.value) {
+            const ModelVolumePtrs volumes = this->model_object()->volumes;
+            for (ModelVolumePtrs::const_iterator it = volumes.begin(); it != volumes.end(); ++ it)
+                if (! (*it)->modifier)
+                    as.add_mesh(&(*it)->mesh);
+            as.prepare(unscale(this->size.z));
+        }
+
+        // loop until we have at least one layer and the max slice_z reaches the object height
+        while ((scale_(print_z + EPSILON)) < this->size.z) {
+
+            if (this->config.adaptive_slicing.value) {
+                height = 999;
+
+                // determine next layer height
+                height = as.next_layer_height(print_z, adaptive_quality, min_layer_height, max_layer_height);
+
+                // check for horizontal features and object size
+                if(this->config.match_horizontal_surfaces.value) {
+                    coordf_t horizontal_dist = as.horizontal_facet_distance(print_z + height, min_layer_height);
+                    if((horizontal_dist < min_layer_height) && (horizontal_dist > 0)) {
+                        #ifdef SLIC3R_DEBUG
+                        std::cout << "Horizontal feature ahead, distance: " << horizontal_dist << std::endl;
+                        #endif
+                        // can we shrink the current layer a bit?
+                        if(height-(min_layer_height - horizontal_dist) > min_layer_height) {
+                            // yes we can
+                            height -= (min_layer_height - horizontal_dist);
+                            #ifdef SLIC3R_DEBUG
+                            std::cout << "Shrink layer height to " << height << std::endl;
+                            #endif
+                        }else{
+                            // no, current layer would become too thin
+                            height += horizontal_dist;
+                            #ifdef SLIC3R_DEBUG
+                            std::cout << "Widen layer height to " << height << std::endl;
+                            #endif
+                        }
+                    }
                 }
+            }else{
+                height = layer_height;
+            }
+
+            // look for an applicable custom range
+            for (t_layer_height_ranges::const_iterator it_range = this->layer_height_ranges.begin(); it_range != this->layer_height_ranges.end(); ++ it_range) {
+                if(print_z >= it_range->first.first && print_z <= it_range->first.second) {
+                    if(it_range->second > 0) {
+                        height = it_range->second;
+                    }
+                }
+            }
+
+            print_z += height;
+
+            result.push_back(print_z);
+        }
+
+        // Store layer vector for interactive manipulation
+        this->layer_height_spline.setLayers(result);
+        if (this->config.adaptive_slicing.value) {
+            // smoothing after adaptive algorithm
+            result = this->layer_height_spline.getInterpolatedLayers();
+            // remove top layer if empty
+            coordf_t slice_z = result.back() - (result[result.size()-1] - result[result.size()-2])/2.0;
+            if(slice_z > unscale(this->size.z)) {
+                result.pop_back();
             }
         }
 
-        print_z += height;
+        // Reduce or thicken the top layer in order to match the original object size.
+        // This is not actually related to z_steps_per_mm but we only enable it in case
+        // user provided that value, as it means they really care about the layer height
+        // accuracy and we don't provide unexpected result for people noticing the last
+        // layer has a different layer height.
+        if ((this->_print->config.z_steps_per_mm > 0 || this->config.adaptive_slicing.value) && result.size() > 1) {
+            coordf_t diff = result.back() - unscale(this->size.z);
+            int last_layer = result.size()-1;
 
-        result.push_back(print_z);
-    }
-
-    // Reduce or thicken the top layer in order to match the original object size.
-    // This is not actually related to z_steps_per_mm but we only enable it in case
-    // user provided that value, as it means they really care about the layer height
-    // accuracy and we don't provide unexpected result for people noticing the last
-    // layer has a different layer height.
-    if (this->_print->config.z_steps_per_mm > 0 && result.size() > 1) {
-        coordf_t diff = result.back() - unscale(this->size.z);
-        int last_layer = result.size()-1;
-
-        if (diff < 0) {
-            // we need to thicken last layer
-            coordf_t new_h = result[last_layer] - result[last_layer-1];
-            new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negativ) diff value
-            std::cout << new_h << std::endl;
-            result[last_layer] = result[last_layer-1] + new_h;
-        } else {
-            // we need to reduce last layer
-            coordf_t new_h = result[last_layer] - result[last_layer-1];
-            if(min_nozzle_diameter/2 < new_h) { //prevent generation of a too small layer
-                new_h = std::max(min_nozzle_diameter/2, new_h - diff); // subtract (positive) diff value
-                std::cout << new_h << std::endl;
+            if (diff < 0) {
+                // we need to thicken last layer
+                coordf_t new_h = result[last_layer] - result[last_layer-1];
+                if(this->config.adaptive_slicing.value) { // use min/max layer_height values from adaptive algo.
+                    new_h = std::min(max_layer_height, new_h - diff); // add (negativ) diff value
+                }else{
+                    new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negativ) diff value
+                }
+                result[last_layer] = result[last_layer-1] + new_h;
+            } else {
+                // we need to reduce last layer
+                coordf_t new_h = result[last_layer] - result[last_layer-1];
+                if(this->config.adaptive_slicing.value) { // use min/max layer_height values from adaptive algo.
+                    new_h = std::max(min_layer_height, new_h - diff); // subtract (positive) diff value
+                }else{
+                    if(min_nozzle_diameter/2 < new_h) { //prevent generation of a too small layer
+                        new_h = std::max(min_nozzle_diameter/2, new_h - diff); // subtract (positive) diff value
+                    }
+                }
                 result[last_layer] = result[last_layer-1] + new_h;
             }
         }
+
+        this->state.set_done(posLayers);
     }
-	return result;
+
+    // push modified spline object back to model
+    this->_model_object->layer_height_spline = this->layer_height_spline;
+
+    // apply z-gradation.
+    // For static layer height: the adjusted layer height is still useful
+    // to have the layer height a multiple of a printable z-interval.
+    // If we don't do this, we might get aliasing effects if a small error accumulates
+    // over multiple layer until we get a slightly thicker layer.
+    if(this->_print->config.z_steps_per_mm > 0) {
+        coordf_t gradation = 1 / this->_print->config.z_steps_per_mm;
+        coordf_t last_z = 0;
+        coordf_t height;
+        for(std::vector<coordf_t>::iterator l = result.begin(); l != result.end(); ++l) {
+            height = *l - last_z;
+
+            coordf_t gradation_effect = unscale((scale_(height)) % (scale_(gradation)));
+            if(gradation_effect > gradation/2 && (height + (gradation-gradation_effect)) <= max_layer_height) { // round up
+                height = height + (gradation-gradation_effect);
+            }else{ // round down
+                height = height - gradation_effect;
+            }
+            // limiting the height to max_ / min_layer_height can violate the gradation requirement
+            // we now might exceed the layer height limits a bit, but that is probably better than having
+            // systematic errors introduced by the steppers...
+            //height = std::min(std::max(height, min_layer_height), max_layer_height);
+            *l = last_z + height;
+            last_z = *l;
+        }
+    }
+
+    return result;
 }
 
 // 1) Decides Z positions of the layers,
@@ -624,8 +746,8 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
 void PrintObject::_slice()
 {
 
-	coordf_t raft_height = 0;
-	coordf_t first_layer_height = this->config.first_layer_height.get_abs_value(this->config.layer_height.value);
+    coordf_t raft_height = 0;
+    coordf_t first_layer_height = this->config.first_layer_height.get_abs_value(this->config.layer_height.value);
 
 
     // take raft layers into account
@@ -737,38 +859,57 @@ void PrintObject::_slice()
         }
         this->delete_layer(int(this->layers.size()) - 1);
     }
-
-    for (size_t layer_id = 0; layer_id < layers.size(); ++ layer_id) {
-        Layer *layer = this->layers[layer_id];
-        // Apply size compensation and perform clipping of multi-part objects.
-        float delta = float(scale_(this->config.xy_size_compensation.value));
-        bool  scale = delta != 0.f;
-        if (layer->regions.size() == 1) {
-            if (scale) {
+    
+    // Apply size compensation and perform clipping of multi-part objects.
+    const coord_t xy_size_compensation = scale_(this->config.xy_size_compensation.value);
+    for (Layer* layer : this->layers) {
+        if (abs(xy_size_compensation) > 0) {
+            if (layer->regions.size() == 1) {
                 // Single region, growing or shrinking.
-                LayerRegion *layerm = layer->regions.front();
-                layerm->slices.set(offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), delta), stInternal);
-            }
-        } else if (scale) {
-            // Multiple regions, growing, shrinking or just clipping one region by the other.
-            // When clipping the regions, priority is given to the first regions.
-            Polygons processed;
-			for (size_t region_id = 0; region_id < layer->regions.size(); ++ region_id) {
-                LayerRegion *layerm = layer->regions[region_id];
-				ExPolygons slices = to_expolygons(std::move(layerm->slices.surfaces));
-				if (scale)
-					slices = offset_ex(slices, delta);
-                if (region_id > 0)
-                    // Trim by the slices of already processed regions.
-                    slices = diff_ex(to_polygons(std::move(slices)), processed);
-                if (region_id + 1 < layer->regions.size())
-                    // Collect the already processed regions to trim the to be processed regions.
-                    processed += to_polygons(slices);
-                layerm->slices.set(std::move(slices), stInternal);
+                LayerRegion* layerm = layer->regions.front();
+                layerm->slices.set(
+                    offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), xy_size_compensation),
+                    stInternal
+                );
+            } else {
+                // Multiple regions, growing, shrinking or just clipping one region by the other.
+                // When clipping the regions, priority is given to the first regions.
+                Polygons processed;
+                for (size_t region_id = 0; region_id < layer->regions.size(); ++region_id) {
+                    LayerRegion* layerm = layer->regions[region_id];
+                    Polygons slices = layerm->slices;
+                    
+                    if (abs(xy_size_compensation) > 0)
+                        slices = offset(slices, xy_size_compensation);
+                    
+                    if (region_id > 0)
+                        // Trim by the slices of already processed regions.
+                        slices = diff(std::move(slices), processed);
+                    
+                    if (region_id + 1 < layer->regions.size())
+                        // Collect the already processed regions to trim the to be processed regions.
+                        append_to(processed, slices);
+                    
+                    layerm->slices.set(union_ex(slices), stInternal);
+                }
             }
         }
+        
         // Merge all regions' slices to get islands, chain them by a shortest path.
         layer->make_slices();
+        
+        // Apply regions overlap
+        if (this->config.regions_overlap.value > 0) {
+            const coord_t delta = scale_(this->config.regions_overlap.value)/2;
+            for (LayerRegion* layerm : layer->regions)
+                layerm->slices.set(
+                    intersection_ex(
+                        offset(layerm->slices, +delta),
+                        layer->slices
+                    ),
+                    stInternal
+                );
+        }
     }
 }
 

@@ -12,6 +12,7 @@
 IV
 _constant()
   ALIAS:
+    STEP_LAYERS             = posLayers
     STEP_SLICE              = posSlice
     STEP_PERIMETERS         = posPerimeters
     STEP_DETECT_SURFACES    = posDetectSurfaces
@@ -59,6 +60,8 @@ _constant()
     Points copies();
     t_layer_height_ranges layer_height_ranges()
         %code%{ RETVAL = THIS->layer_height_ranges; %};
+    Ref<LayerHeightSpline> layer_height_spline()
+        %code%{ RETVAL = &THIS->layer_height_spline; %};
     Ref<Point3> size()
         %code%{ RETVAL = &THIS->size; %};
     Clone<BoundingBox> bounding_box();

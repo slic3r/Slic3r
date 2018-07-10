@@ -89,7 +89,7 @@ LayerRegion::process_external_surfaces()
             // (thus not visible from the outside), like a slab sustained by
             // pillars, include them in the bridge in order to have better and
             // more continuous bridging.
-            for (int i = 0; i < surfaces[j].expolygon.holes.size(); ++i) {
+            for (size_t i = 0; i < surfaces[j].expolygon.holes.size(); ++i) {
                 // reverse the hole and consider it a polygon
                 Polygon h = surfaces[j].expolygon.holes[i];
                 h.reverse();
@@ -97,7 +97,7 @@ LayerRegion::process_external_surfaces()
                 // Is this hole fully contained in the layer slices?
                 if (diff(h, this->layer()->slices).empty()) {
                     // remove any other surface contained in this hole
-                    for (int k = 0; k < surfaces.size(); ++k) {
+                    for (size_t k = 0; k < surfaces.size(); ++k) {
                         if (k == j) continue;
                         if (h.contains(surfaces[k].expolygon.contour.first_point())) {
                             surfaces.erase(surfaces.begin() + k);
@@ -237,7 +237,7 @@ LayerRegion::prepare_fill_surfaces()
         the only meaningful information returned by psPerimeters. */
     
     // if no solid layers are requested, turn top/bottom surfaces to internal
-    if (this->region()->config.top_solid_layers == 0) {
+    if (this->region()->config.top_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
             if (surface->surface_type == stTop) {
                 if (this->layer()->object()->config.infill_only_where_needed) {
@@ -248,13 +248,14 @@ LayerRegion::prepare_fill_surfaces()
             }
         }
     }
-    if (this->region()->config.bottom_solid_layers == 0) {
+    
+    if (this->region()->config.bottom_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
             if (surface->surface_type == stBottom || surface->surface_type == stBottomBridge)
                 surface->surface_type = stInternal;
         }
     }
-        
+
     // turn too small internal regions into solid regions according to the user setting
     const float &fill_density = this->region()->config.fill_density;
     if (fill_density > 0 && fill_density < 100) {

@@ -254,9 +254,9 @@ BridgeDetector::coverage(double angle) const
     */
 }
 
-/*  This method returns the bridge edges (as polylines) that are not supported
-    but would allow the entire bridge area to be bridged with detected angle
-    if supported too */
+///  This method returns the bridge edges (as polylines) that are not supported
+///    but would allow the entire bridge area to be bridged with detected angle
+///    if supported too
 Polylines
 BridgeDetector::unsupported_edges(double angle) const
 {

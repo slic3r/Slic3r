@@ -39,9 +39,11 @@ use Slic3r::GUI::Plater::3D;
 use Slic3r::GUI::Plater::3DPreview;
 use Slic3r::GUI::Plater::ObjectPartsPanel;
 use Slic3r::GUI::Plater::ObjectCutDialog;
+use Slic3r::GUI::Plater::ObjectRotateFaceDialog;
 use Slic3r::GUI::Plater::ObjectSettingsDialog;
 use Slic3r::GUI::Plater::LambdaObjectDialog;
 use Slic3r::GUI::Plater::OverrideSettingsPanel;
+use Slic3r::GUI::Plater::SplineControl;
 use Slic3r::GUI::Preferences;
 use Slic3r::GUI::ProgressStatusBar;
 use Slic3r::GUI::Projector;
@@ -51,6 +53,7 @@ use Slic3r::GUI::Preset;
 use Slic3r::GUI::PresetEditor;
 use Slic3r::GUI::PresetEditorDialog;
 use Slic3r::GUI::SLAPrintOptions;
+use Slic3r::GUI::ReloadDialog;
 
 our $have_OpenGL = eval "use Slic3r::GUI::3DScene; 1";
 our $have_LWP    = eval "use LWP::UserAgent; 1";
@@ -59,17 +62,19 @@ use Wx::Event qw(EVT_IDLE EVT_COMMAND);
 use base 'Wx::App';
 
 use constant FILE_WILDCARDS => {
-    known   => 'Known files (*.stl, *.obj, *.amf, *.xml)|*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML',
+    known   => 'Known files (*.stl, *.obj, *.amf, *.xml, *.3mf)|*.3mf;*.3MF;*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML',
     stl     => 'STL files (*.stl)|*.stl;*.STL',
     obj     => 'OBJ files (*.obj)|*.obj;*.OBJ',
     amf     => 'AMF files (*.amf)|*.amf;*.AMF;*.xml;*.XML',
+    tmf     => '3MF files (*.3mf)|*.3mf;*.3MF',
     ini     => 'INI files *.ini|*.ini;*.INI',
     gcode   => 'G-code files (*.gcode, *.gco, *.g, *.ngc)|*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC',
     svg     => 'SVG files *.svg|*.svg;*.SVG',
 };
-use constant MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(known stl obj amf)};
+use constant MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(known stl obj amf tmf)};
 use constant STL_MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(stl)};
 use constant AMF_MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(amf)};
+use constant TMF_MODEL_WILDCARD => join '|', @{&FILE_WILDCARDS}{qw(tmf)};
 
 our $datadir;
 # If set, the "Controller" tab for the control of the printer over serial line and the serial port settings are hidden.
@@ -81,11 +86,16 @@ our $Settings = {
     _ => {
         version_check => 1,
         autocenter => 1,
+        autoalignz => 1,
         invert_zoom => 0,
         background_processing => 0,
         threads => $Slic3r::Config::Options->{threads}{default},
         color_toolpaths_by => 'role',
         tabbed_preset_editors => 1,
+        show_host => 0,
+        nudge_val => 1,
+        reload_hide_dialog => 0,
+        reload_behavior => 0
     },
 };
 
@@ -397,7 +407,7 @@ sub open_model {
            || $Slic3r::GUI::Settings->{recent}{config_directory}
            || '';
     
-    my $dialog = Wx::FileDialog->new($window // $self->GetTopWindow, 'Choose one or more files (STL/OBJ/AMF):', $dir, "",
+    my $dialog = Wx::FileDialog->new($window // $self->GetTopWindow, 'Choose one or more files (STL/OBJ/AMF/3MF):', $dir, "",
         MODEL_WILDCARD, wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST);
     if ($dialog->ShowModal != wxID_OK) {
         $dialog->Destroy;

@@ -92,20 +92,16 @@ cp -f $WD/startup_script.sh $archivefolder/$appname
 chmod +x $archivefolder/$appname
 
 echo "Copying perl from $PERL_BIN"
+# Edit package/common/coreperl to add/remove core Perl modules added to this package, one per line.
 cp -f $PERL_BIN $archivefolder/perl-local
 ${PP_BIN} wxextension .0 \
-	  -M attributes -M base -M bytes -M B -M POSIX \
-          -M FindBin -M Unicode::Normalize -M Tie::Handle \
-          -M Time::Local -M Math::Trig -M IO::Socket -M Errno \
-          -M lib -M overload \
-          -M warnings -M local::lib \
-          -M strict -M utf8 -M parent \
+	  -M $(grep -v "^#" ${WD}/../common/coreperl | xargs | awk 'BEGIN { OFS=" -M "}; {$1=$1; print $0}') \
           -B -p -e "print 123" -o $WD/_tmp/test.par
 unzip -qq -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
 cp -rf $WD/_tmp/shlib $archivefolder/
 rm -rf $WD/_tmp
-for i in $(cat $WD/libpaths.txt); do 
+for i in $(cat $WD/libpaths.txt | grep -v "^#" | awk -F# '{print $1}'); do 
 	install -v $i $archivefolder/bin
 done
 
