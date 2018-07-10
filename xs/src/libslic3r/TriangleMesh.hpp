@@ -47,7 +47,11 @@ class TriangleMesh
     void mirror_z();
     void align_to_origin();
     void center_around_origin();
+
+    /// Rotate angle around a specified point.
+    void rotate(double angle, const Point& center);
     void rotate(double angle, Point* center);
+
     TriangleMeshPtrs split() const;
     TriangleMeshPtrs cut_by_grid(const Pointf &grid) const;
     void merge(const TriangleMesh &mesh);
@@ -60,6 +64,18 @@ class TriangleMesh
     void extrude_tin(float offset);
     void require_shared_vertices();
     void reverse_normals();
+
+    /// Return a copy of the vertex array defining this mesh.
+    Pointf3s vertices();
+
+    /// Return a copy of the facet array defining this mesh.
+    Point3s facets();
+
+    /// Return a copy of the normals array defining this mesh.
+    Pointf3s normals() const;
+
+    /// Return the size of the mesh in coordinates.
+    Pointf3 size() const;
 	
 	/// Generate a mesh representing a cube with dimensions (x, y, z), with one corner at (0,0,0).
     static TriangleMesh make_cube(double x, double y, double z);
