@@ -3,7 +3,7 @@
 %typemap{coord_t}{simple};
 %typemap{coordf_t}{simple};
 %typemap{std::string};
-%typemap{int64_t};
+%typemap{int64_t}{simple};
 %typemap{t_config_option_key};
 %typemap{t_model_material_id};
 %typemap{std::vector<int>};
