@@ -13,16 +13,20 @@ class Line;
 class Linef;
 class MultiPoint;
 class Point;
+class Point3;
 class Pointf;
 class Pointf3;
 typedef Point Vector;
 typedef Pointf Vectorf;
 typedef Pointf3 Vectorf3;
+using Vector3 = Point3;
 typedef std::vector<Point> Points;
 typedef std::vector<Point*> PointPtrs;
 typedef std::vector<const Point*> PointConstPtrs;
 typedef std::vector<Pointf> Pointfs;
 typedef std::vector<Pointf3> Pointf3s;
+
+using Point3s = std::vector<Point3>;
 
 class Point
 {
