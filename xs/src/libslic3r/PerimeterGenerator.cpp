@@ -156,15 +156,41 @@ void PerimeterGenerator::process()
                 if (this->config->extra_perimeters && i > loop_number && !last.empty()
                     && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()){
                     //split the polygons with bottom/notbottom
-                    ExPolygons support(this->lower_slices->expolygons);
-                    ExPolygons unsupported = diff_ex(last, support, true);
+                    ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons, true);
                     if (!unsupported.empty()) {
                         //only consider overhangs and let bridges alone
-                        // it's more reliable than the BridgeDetector
-                        ExPolygonCollection coll_last(support);
-                        ExPolygon hull;
-                        hull.contour = coll_last.convex_hull();
-                        unsupported = diff_ex(unsupported, ExPolygons() = { hull });
+                        if (true) {
+                            //only consider the part that can be bridged (really, by the bridge algorithm)
+                            //first, separate into islands (ie, each ExPlolygon)
+                            int numploy = 0;
+                            //only consider the bottom layer that intersect unsupported, to be sure it's only on our island.
+                            ExPolygonCollection lower_island(diff_ex(last, unsupported, true));
+                            BridgeDetector detector(unsupported,
+                                lower_island,
+                                perimeter_spacing);
+                            if (detector.detect_angle(Geometry::deg2rad(this->config->bridge_angle.value))) {
+                                ExPolygons bridgeable = union_ex(detector.coverage(-1, true));
+                                if (!bridgeable.empty()) {
+                                    //simplify to avoid most of artefacts from printing lines.
+                                    ExPolygons bridgeable_simplified;
+                                    for (ExPolygon &poly : bridgeable) {
+                                        poly.simplify(perimeter_spacing / 2, &bridgeable_simplified);
+                                    }
+                                    
+                                    if (!bridgeable_simplified.empty())
+                                        bridgeable_simplified = offset_ex(bridgeable_simplified, perimeter_spacing/1.9);
+                                    if (!bridgeable_simplified.empty()) {
+                                        //offset by perimeter spacing because the simplify may have reduced it a bit.
+                                        unsupported = diff_ex(unsupported, bridgeable_simplified, true);
+                                    }
+                                } 
+                            }
+                        } else {
+                            ExPolygonCollection coll_last(intersection_ex(last, offset_ex(this->lower_slices->expolygons, -perimeter_spacing / 2)));
+                            ExPolygon hull;
+                            hull.contour = coll_last.convex_hull();
+                            unsupported = diff_ex(offset_ex(unsupported, perimeter_spacing), ExPolygons() = { hull });
+                        }
                         if (!unsupported.empty()) {
                             //add fake perimeters here
                             may_add_more_perimeters = true;
