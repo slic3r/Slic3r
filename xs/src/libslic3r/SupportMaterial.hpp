@@ -189,14 +189,52 @@ public:
     void generate_base_layers()
     {}
 
-    void clip_with_object()
-    {}
-
     void generate_toolpaths()
     {}
 
     void generate_pillars_shape()
     {}
+
+    // This method removes object silhouette from support material
+    // (it's used with interface and base only). It removes a bit more,
+    // leaving a thin gap between object and support in the XY plane.
+    void clip_with_object(map<int, Polygons> &support, vector<coordf_t> support_z, PrintObject &object)
+    {
+        int i = 0;
+        for (auto support_layer: support) {
+            if (support_layer.second.empty()) {
+                i++;
+                continue;
+            }
+            coordf_t z_max = support_z[i];
+            coordf_t z_min = (i == 0) ? 0 : support_z[i-1];
+
+            LayerPtrs layers;
+            for (auto layer : object.layers) {
+                if (layer->print_z > z_min && (layer->print_z -  layer->height) < z_max) {
+                    layers.push_back(layer);
+                }
+            }
+
+            // $layer->slices contains the full shape of layer, thus including
+            // perimeter's width. $support contains the full shape of support
+            // material, thus including the width of its foremost extrusion.
+            // We leave a gap equal to a full extrusion width. TODO ask about this line @samir
+            Polygons slices;
+            for (Layer *l : layers) {
+                for (auto s : l->slices.contours()) {
+                    slices.push_back(s);
+                }
+            }
+            support_layer.second = diff(support_layer.second, offset(slices, flow->scaled_width()));
+        }
+        /*
+            $support->{$i} = diff(
+                $support->{$i},
+                offset([ map @$_, map @{$_->slices}, @layers ], +$self->flow->scaled_width),
+            );
+         */
+    }
 
     void clip_with_shape(map<int, Polygons> &support, map<int, Polygons> &shape)
     {
