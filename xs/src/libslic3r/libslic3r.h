@@ -9,6 +9,7 @@
 #include <sstream>
 #include <vector>
 #include <boost/thread.hpp>
+#include <cstdint>
 
 /* Implementation of CONFESS("foo"): */
 #ifdef _MSC_VER
@@ -38,7 +39,7 @@ namespace Slic3r {
 
 constexpr auto SLIC3R_VERSION = "1.3.1-dev";
 
-typedef long coord_t;
+using coord_t = intmax_t;
 typedef double coordf_t;
 
 // Scaling factor for a conversion from coord_t to coordf_t: 10e-6
