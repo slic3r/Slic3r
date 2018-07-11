@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.9)
 project (slic3r)
 
-
+option(Enable_GUI "Use the wxWidgets code in slic3r.cpp" OFF)
 option(GUI_BUILD_TESTS "Build tests for Slic3r GUI." ON)
 option(SLIC3R_BUILD_TESTS "Build tests for libslic3r." ON)
 option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
@@ -21,6 +21,10 @@ endif(DEFINED ENV{SLIC3R_VAR_ABS})
 if(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
     set(CMAKE_CXX_FLAGS "-DVAR_ABS_PATH=$ENV{SLIC3R_VAR_ABS_PATH}")
 endif(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
+
+if(Enable_GUI) 
+    set(CMAKE_CXX_FLAGS "-DUSE_WX")
+endif(Enable_GUI)
 
 if($ENV{TRAVIS})
     if($ENV{TRAVIS} STREQUAL "true")
@@ -230,7 +234,6 @@ set(LIBSLIC3R_DEPENDS
     ZipArchive
     ${Boost_LIBRARIES}
 )
-
 
 IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
