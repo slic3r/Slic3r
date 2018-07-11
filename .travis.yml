@@ -1,15 +1,14 @@
 language: generic
 before_install:
     - sh package/linux/travis-decrypt-key
-    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update -v        ; fi
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ccache; fi
 script:
     - travis_wait 30 bash package/linux/travis-setup.sh
-    - mkdir build && cd build
-    - cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON ../src
-    - cmake --build .
-    - ctest . -R TestSlic3r
+    - if [[ "$BUILD_PL" == false ]]; then mkdir build && cd build; fi
+    - if [[ "$BUILD_PL" == false ]]; then cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON ../src; fi
+    - if [[ "$BUILD_PL" == false ]]; then cmake --build .; fi
+    - if [[ "$BUILD_PL" == false ]]; then ctest . -R TestSlic3r; fi
+    - if [[ "$BUILD_PL" == true ]]; then perlbrew switch slic3r-perl; fi
+    - if [[ "$BUILD_PL" == true ]]; then perl ./Build.PL
 #    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ctest . -R TestGUI; fi
 branches:
   only:
@@ -40,6 +39,13 @@ notifications:
 dist: trusty
 matrix:
     include:
+        - lanugage: perl
+          os: linux
+          env:
+            - BUILD_PL=true
+            - SLIC3R_STATIC=1
+            - CC=gcc-7
+            - CXX=g++-7
         - os: linux
           env: 
             - WXVERSION=pkg
@@ -58,7 +64,11 @@ matrix:
             - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
             - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
             - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
-        - os: osx      
+        - os: osx
+          before_install:
+            - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
+            - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update -v        ; fi
+            - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ccache; fi
           env:
             - WXVERSION=pkg
             - BOOST_DIR=$HOME/boost_1_63_0
