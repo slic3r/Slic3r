@@ -55,6 +55,21 @@ public:
     void generate()
     {}
 
+    void generate_interface_layers()
+    {}
+
+    void generate_bottom_interface_layers()
+    {}
+
+    void generate_base_layers()
+    {}
+
+    void generate_toolpaths()
+    {}
+
+    void generate_pillars_shape()
+    {}
+
     pair<Polygons, Polygons> contact_area(PrintObject *object)
     {
         PrintObjectConfig conf = this->object_config;
@@ -408,278 +423,115 @@ public:
         return make_pair(contact, overhang);
     }
 
-    ExPolygons *object_top(PrintObject *object, SurfacesPtr contact)
-    {
-        // find object top surfaces
-        // we'll use them to clip our support and detect where does it stick.
-        ExPolygons *top = new ExPolygons();
-        if (object_config->support_material_buildplate_only.value)
-            return top;
-
-    }
-
-    void generate_interface_layers()
-    {}
-
-    void generate_bottom_interface_layers()
-    {}
-
-    void generate_base_layers()
-    {}
-
-    void generate_toolpaths()
-    {}
-
-    void generate_pillars_shape()
-    {}
+    // Is this expolygons or polygons?
+    map<coordf_t, Polygons> object_top(PrintObject *object, map<coordf_t, Polygons> *contact);
 
     // This method removes object silhouette from support material
     // (it's used with interface and base only). It removes a bit more,
     // leaving a thin gap between object and support in the XY plane.
-    void clip_with_object(map<int, Polygons> &support, vector<coordf_t> support_z, PrintObject &object)
-    {
-        int i = 0;
-        for (auto support_layer: support) {
-            if (support_layer.second.empty()) {
-                i++;
-                continue;
-            }
-            coordf_t z_max = support_z[i];
-            coordf_t z_min = (i == 0) ? 0 : support_z[i - 1];
+    void clip_with_object(map<int, Polygons> &support, vector<coordf_t> support_z, PrintObject &object);
 
-            LayerPtrs layers;
-            for (auto layer : object.layers) {
-                if (layer->print_z > z_min && (layer->print_z - layer->height) < z_max) {
-                    layers.push_back(layer);
-                }
-            }
-
-            // $layer->slices contains the full shape of layer, thus including
-            // perimeter's width. $support contains the full shape of support
-            // material, thus including the width of its foremost extrusion.
-            // We leave a gap equal to a full extrusion width. TODO ask about this line @samir
-            Polygons slices;
-            for (Layer *l : layers) {
-                for (auto s : l->slices.contours()) {
-                    slices.push_back(s);
-                }
-            }
-            support_layer.second = diff(support_layer.second, offset(slices, flow->scaled_width()));
-        }
-        /*
-            $support->{$i} = diff(
-                $support->{$i},
-                offset([ map @$_, map @{$_->slices}, @layers ], +$self->flow->scaled_width),
-            );
-         */
-    }
-
-    void clip_with_shape(map<int, Polygons> &support, map<int, Polygons> &shape)
-    {
-        for (auto layer : support) {
-            // Don't clip bottom layer with shape so that we
-            // can generate a continuous base flange
-            // also don't clip raft layers
-            if (layer.first == 0) continue;
-            else if (layer.first < object_config->raft_layers) continue;
-
-            layer.second = intersection(layer.second, shape[layer.first]);
-        }
-    }
+    void clip_with_shape(map<int, Polygons> &support, map<int, Polygons> &shape);
 
     /// This method returns the indices of the layers overlapping with the given one.
-    vector<int> overlapping_layers(int layer_idx, vector<float> support_z)
-    {
-        vector<int> ret;
+    vector<int> overlapping_layers(int layer_idx, vector<float> support_z);
 
-        float z_max = support_z[layer_idx];
-        float z_min = layer_idx == 0 ? 0 : support_z[layer_idx - 1];
+    vector<coordf_t> support_layers_z(vector<float> contact_z, vector<float> top_z, coordf_t max_object_layer_height);
 
-        for (int i = 0; i < support_z.size(); i++) {
-            if (i == layer_idx) continue;
+    coordf_t contact_distance(coordf_t layer_height, coordf_t nozzle_diameter);
 
-            float z_max2 = support_z[i];
-            float z_min2 = i == 0 ? 0 : support_z[i - 1];
-
-            if (z_max > z_min2 && z_min < z_max2)
-                ret.push_back(i);
-        }
-
-        return ret;
-    }
-
-    vector<coordf_t> support_layers_z(vector<float> contact_z, vector<float> top_z, coordf_t max_object_layer_height)
-    {
-        // Quick table to check whether a given Z is a top surface.
-        map<float, bool> is_top;
-        for (auto z : top_z) is_top[z] = true;
-
-        // determine layer height for any non-contact layer
-        // we use max() to prevent many ultra-thin layers to be inserted in case
-        // layer_height > nozzle_diameter * 0.75.
-        auto nozzle_diameter = config->nozzle_diameter.get_at(object_config->support_material_extruder - 1);
-        auto support_material_height = (max_object_layer_height, (nozzle_diameter * 0.75));
-        coordf_t _contact_distance = this->contact_distance(support_material_height, nozzle_diameter);
-
-        // Initialize known, fixed, support layers.
-        vector<coordf_t> z;
-        for (auto c_z : contact_z) z.push_back(c_z);
-        for (auto t_z : top_z) {
-            z.push_back(t_z);
-            z.push_back(t_z + _contact_distance);
-        }
-        sort(z.begin(), z.end());
-
-        // Enforce first layer height.
-        coordf_t first_layer_height = object_config->first_layer_height;
-        while (!z.empty() && z.front() <= first_layer_height) z.erase(z.begin());
-        z.insert(z.begin(), first_layer_height);
-
-        // Add raft layers by dividing the space between first layer and
-        // first contact layer evenly.
-        if (object_config->raft_layers > 1 && z.size() >= 2) {
-            // z[1] is last raft layer (contact layer for the first layer object) TODO @Samir55 How so?
-            coordf_t height = (z[1] - z[0]) / (object_config->raft_layers - 1);
-
-            // since we already have two raft layers ($z[0] and $z[1]) we need to insert
-            // raft_layers-2 more
-            int idx = 1;
-            for (int j = 0; j < object_config->raft_layers - 2; j++) {
-                float z_new =
-                    roundf(static_cast<float>((z[0] + height * idx) * 100)) / 100; // round it to 2 decimal places.
-                z.insert(z.begin() + idx, z_new);
-                idx++;
-            }
-        }
-
-        // Create other layers (skip raft layers as they're already done and use thicker layers).
-        for (size_t i = z.size(); i >= object_config->raft_layers; i--) {
-            coordf_t target_height = support_material_height;
-            if (i > 0 && is_top[z[i - 1]]) {
-                target_height = nozzle_diameter;
-            }
-
-            // Enforce first layer height.
-            if ((i == 0 && z[i] > target_height + first_layer_height)
-                || (z[i] - z[i - 1] > target_height + EPSILON)) {
-                z.insert(z.begin() + i, (z[i] - target_height));
-                i++;
-            }
-        }
-
-        // Remove duplicates and make sure all 0.x values have the leading 0.
-        {
-            set<coordf_t> s;
-            for (auto el : z)
-                s.insert(roundf(static_cast<float>((el * 100)) / 100)); // round it to 2 decimal places.
-            z = vector<coordf_t>();
-            for (auto el : s)
-                z.push_back(el);
-        }
-
-        return z;
-    }
-
-    coordf_t contact_distance(coordf_t layer_height, coordf_t nozzle_diameter)
-    {
-        coordf_t extra = static_cast<float>(object_config->support_material_contact_distance.value);
-        if (extra == 0) {
-            return layer_height;
-        }
-        else {
-            return nozzle_diameter + extra;
-        }
-    }
-
+    Polygons p(SurfacesPtr &surfaces);
 };
 
-class SupportMaterialTests
-{
-public:
-    bool test_1()
-    {
-        // Create a mesh & modelObject.
-        TriangleMesh mesh = TriangleMesh::make_cube(20, 20, 20);
+//// TO Be converted to catch.
+//class SupportMaterialTests
+//{
+//public:
+//    bool test_1()
+//    {
+//        // Create a mesh & modelObject.
+//        TriangleMesh mesh = TriangleMesh::make_cube(20, 20, 20);
+//
+//        // Create modelObject.
+//        Model model = Model();
+//        ModelObject *object = model.add_object();
+//        object->add_volume(mesh);
+//        model.add_default_instances();
+//
+//        // Align to origin.
+//        model.align_instances_to_origin();
+//
+//        // Create Print.
+//        Print print = Print();
+//
+//        // Configure the printObjectConfig.
+//        print.default_object_config.set_deserialize("support_material", "1");
+//        print.default_object_config.set_deserialize("layer_height", "0.2");
+//        print.config.set_deserialize("first_layer_height", "0.3");
+//
+//        vector<float> contact_z;
+//        vector<float> top_z;
+//        contact_z.push_back(1.9);
+//        top_z.push_back(1.9);
+//
+//        // Add the modelObject.
+//        print.add_model_object(model.objects[0]);
+//
+//        // Create new supports.
+//        SupportMaterial support = SupportMaterial(&print.config, &print.objects.front()->config);
+//
+//        vector<coordf_t>
+//            support_z = support.support_layers_z(contact_z, top_z, print.default_object_config.layer_height);
+//
+//        bool
+//            is_1 = (support_z[0] == print.default_object_config.first_layer_height); // 'first layer height is honored'.
+//
+//        bool is_2 = false; // 'no null or negative support layers'.
+//        for (int i = 1; i < support_z.size(); ++i) {
+//            if (support_z[i] - support_z[i - 1] <= 0) is_2 = true;
+//        }
+//
+//        bool is_3 = false; // 'no layers thicker than nozzle diameter'.
+//        for (int i = 1; i < support_z.size(); ++i) {
+//            if (support_z[i] - support_z[i - 1] > print.config.nozzle_diameter.get_at(0) + EPSILON) is_2 = true;
+//        }
+//
+//        coordf_t expected_top_spacing =
+//            support.contact_distance(print.default_object_config.layer_height, print.config.nozzle_diameter.get_at(0));
+//        coordf_t wrong_top_spacing = 0;
+//        for (auto top_z_el : top_z) {
+//            // find layer index of this top surface.
+//            int layer_id = -1;
+//            for (int i = 0; i < support_z.size(); i++) {
+//                if (abs(support_z[i] - top_z_el) < EPSILON) {
+//                    layer_id = i;
+//                    i = static_cast<int>(support_z.size());
+//                }
+//            }
+//
+//            // check that first support layer above this top surface (or the next one) is spaced with nozzle diameter
+//            if ((support_z[layer_id + 1] - support_z[layer_id]) != expected_top_spacing
+//                && (support_z[layer_id + 2] - support_z[layer_id]) != expected_top_spacing)
+//                wrong_top_spacing = 1;
+//        }
+//        bool is_4 = !wrong_top_spacing; // 'layers above top surfaces are spaced correctly'
+//
+//        /* Test Also with this
+//               $config->set('first_layer_height', 0.4);
+//               $test->();
+//
+//               $config->set('layer_height', $config->nozzle_diameter->[0]);
+//               $test->();
+//        */
+//    }
+//
+//    bool test_2()
+//    {
+//
+//    }
+//
+//};
 
-        // Create modelObject.
-        Model model = Model();
-        ModelObject *object = model.add_object();
-        object->add_volume(mesh);
-        model.add_default_instances();
-
-        // Align to origin.
-        model.align_instances_to_origin();
-
-        // Create Print.
-        Print print = Print();
-
-        // Configure the printObjectConfig.
-        print.default_object_config.set_deserialize("support_material", "1");
-        print.default_object_config.set_deserialize("layer_height", "0.2");
-        print.config.set_deserialize("first_layer_height", "0.3");
-
-        vector<float> contact_z;
-        vector<float> top_z;
-        contact_z.push_back(1.9);
-        top_z.push_back(1.9);
-
-        // Add the modelObject.
-        print.add_model_object(model.objects[0]);
-
-        // Create new supports.
-        SupportMaterial support = SupportMaterial(&print.config, &print.objects.front()->config);
-
-        vector<coordf_t>
-            support_z = support.support_layers_z(contact_z, top_z, print.default_object_config.layer_height);
-
-        bool
-            is_1 = (support_z[0] == print.default_object_config.first_layer_height); // 'first layer height is honored'.
-
-        bool is_2 = false; // 'no null or negative support layers'.
-        for (int i = 1; i < support_z.size(); ++i) {
-            if (support_z[i] - support_z[i - 1] <= 0) is_2 = true;
-        }
-
-        bool is_3 = false; // 'no layers thicker than nozzle diameter'.
-        for (int i = 1; i < support_z.size(); ++i) {
-            if (support_z[i] - support_z[i - 1] > print.config.nozzle_diameter.get_at(0) + EPSILON) is_2 = true;
-        }
-
-        coordf_t expected_top_spacing =
-            support.contact_distance(print.default_object_config.layer_height, print.config.nozzle_diameter.get_at(0));
-        coordf_t wrong_top_spacing = 0;
-        for (auto top_z_el : top_z) {
-            // find layer index of this top surface.
-            int layer_id = -1;
-            for (int i = 0; i < support_z.size(); i++) {
-                if (abs(support_z[i] - top_z_el) < EPSILON) {
-                    layer_id = i;
-                    i = static_cast<int>(support_z.size());
-                }
-            }
-
-            // check that first support layer above this top surface (or the next one) is spaced with nozzle diameter
-            if ((support_z[layer_id + 1] - support_z[layer_id]) != expected_top_spacing
-                && (support_z[layer_id + 2] - support_z[layer_id]) != expected_top_spacing)
-                wrong_top_spacing = 1;
-        }
-        bool is_4 = !wrong_top_spacing; // 'layers above top surfaces are spaced correctly'
-
-        /* Test Also with this
-               $config->set('first_layer_height', 0.4);
-               $test->();
-
-               $config->set('layer_height', $config->nozzle_diameter->[0]);
-               $test->();
-        */
-    }
-
-    bool test_2()
-    {
-
-    }
-
-};
 }
 
 #endif

@@ -2,7 +2,7 @@
 # only generate() and contact_distance() are called from the outside of this module.
 package Slic3r::Print::SupportMaterial;
 use Moo;
-
+use Data::Dumper;
 use List::Util qw(sum min max);
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Flow ':roles';
@@ -391,7 +391,6 @@ sub object_top {
             $projection = diff($projection, $touching);
         }
     }
-    
     return \%top;
 }
 
