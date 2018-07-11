@@ -52,8 +52,57 @@ public:
 
     void generate(PrintObject *object);
 
-    void generate_interface_layers()
-    {}
+    map<coordf_t, Polygons> generate_interface_layers(vector<coordf_t> support_z, map<coordf_t, Polygons> contact, map<coordf_t, Polygons> top)
+    {
+        // let's now generate interface layers below contact areas.
+        map<coordf_t, Polygons> interface;
+        auto interface_layers_num = object_config->support_material_interface_layers.value;
+
+        for (int layer_id = 0; layer_id < support_z.size(); layer_id++)
+        {
+            // Todo Ask about how to port this line. "my $this = $contact->{$z} // next;"
+            auto z = support_z[layer_id];
+            if (contact.count(z) <= 0)
+                continue;
+            Polygons &_contact = contact[z];
+
+            // Count contact layer as interface layer.
+            for (int i = layer_id - 1; i >= 0 && i > layer_id - interface_layers_num; i--)
+            {
+                auto _z = support_z[i];
+                auto overlapping_layers = this->overlapping_layers(i, support_z);
+                vector<coordf_t> overlapping_z;
+                for (auto z_el : overlapping_layers)
+                    overlapping_z.push_back(support_z[z_el]);
+
+                // Compute interface area on this layer as diff of upper contact area
+                // (or upper interface area) and layer slices.
+                // This diff is responsible of the contact between support material and
+                // the top surfaces of the object. We should probably offset the top
+                // surfaces vertically before performing the diff, but this needs
+                // investigation.
+                Polygons ps_1;
+                append_polygons(ps_1, _contact); // clipped projection of the current contact regions.
+                append_polygons(ps_1, interface[i]); // interface regions already applied to this layer.
+
+                Polygons ps_2;
+                for (auto el : overlapping_z)
+                {
+                    if (top.count(el) > 0)
+                        append_polygons(ps_2, top[el]); // top slices on this layer.
+                    if (contact.count(el))
+                        append_polygons(ps_2, contact[el]); // contact regions on this layer.
+                }
+
+                _contact = interface[i] = diff(
+                    ps_1,
+                    ps_2,
+                    true
+                );
+            }
+        }
+        return interface;
+    }
 
     void generate_bottom_interface_layers()
     {}
@@ -83,7 +132,7 @@ public:
     void clip_with_shape(map<int, Polygons> &support, map<int, Polygons> &shape);
 
     /// This method returns the indices of the layers overlapping with the given one.
-    vector<int> overlapping_layers(int layer_idx, vector<float> support_z);
+    vector<int> overlapping_layers(int layer_idx, vector<coordf_t> support_z);
 
     vector<coordf_t> support_layers_z(vector<coordf_t> contact_z,
                                       vector<coordf_t> top_z,

@@ -147,18 +147,18 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
 }
 
 vector<int>
-SupportMaterial::overlapping_layers(int layer_idx, vector<float> support_z)
+SupportMaterial::overlapping_layers(int layer_idx, vector<coordf_t> support_z)
 {
     vector<int> ret;
 
-    float z_max = support_z[layer_idx];
-    float z_min = layer_idx == 0 ? 0 : support_z[layer_idx - 1];
+    coordf_t z_max = support_z[layer_idx];
+    coordf_t z_min = layer_idx == 0 ? 0 : support_z[layer_idx - 1];
 
     for (int i = 0; i < support_z.size(); i++) {
         if (i == layer_idx) continue;
 
-        float z_max2 = support_z[i];
-        float z_min2 = i == 0 ? 0 : support_z[i - 1];
+        coordf_t z_max2 = support_z[i];
+        coordf_t z_min2 = i == 0 ? 0 : support_z[i - 1];
 
         if (z_max > z_min2 && z_min < z_max2)
             ret.push_back(i);
