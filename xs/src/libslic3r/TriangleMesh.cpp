@@ -728,7 +728,8 @@ TriangleMesh::make_cube(double x, double y, double z) {
     Pointf3s vertices(&pv[0], &pv[0]+8);
 
     TriangleMesh mesh(vertices ,facets);
-    return mesh;
+    mesh.repair();
+    return std::move(mesh);
 }
 
 // Generate the mesh for a cylinder and return it, using 
@@ -773,7 +774,8 @@ TriangleMesh::make_cylinder(double r, double h, double fa) {
     facets.push_back(Point3(id, 2, id - 1));
     
     TriangleMesh mesh(vertices, facets);
-    return mesh;
+    mesh.repair();
+    return std::move(mesh);
 }
 
 // Generates mesh for a sphere centered about the origin, using the generated angle
@@ -854,7 +856,8 @@ TriangleMesh::make_sphere(double rho, double fa) {
     }
     id++;
     TriangleMesh mesh(vertices, facets);
-    return mesh;
+    mesh.repair();
+    return std::move(mesh);
 }
 
 template <Axis A>
