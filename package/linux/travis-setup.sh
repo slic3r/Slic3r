@@ -4,6 +4,7 @@ CACHE=$HOME/cache
 mkdir -p $CACHE
 
 if [[ "$BUILD_PL" == true ]]; then
+    WXVERSION=302
     if [ ! -e $CACHE/slic3r-perlbrew-5.24.tar.bz2 ]; then
         echo "Downloading http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.travis.tar.bz2 => $CACHE/slic3r-perlbrew-5.24.tar.bz2"
         curl -L "http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.travis.tar.bz2" -o $CACHE/slic3r-perlbrew-5.24.tar.bz2; 
