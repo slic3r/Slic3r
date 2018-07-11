@@ -144,8 +144,8 @@ src/libslic3r/SVG.hpp
 src/libslic3r/TriangleMesh.cpp
 src/libslic3r/TriangleMesh.hpp
 src/libslic3r/utils.cpp
-src/libslic3r/Zip/ZipArchive.cpp
-src/libslic3r/Zip/ZipArchive.hpp
+src/Zip/ZipArchive.cpp
+src/Zip/ZipArchive.hpp
 src/miniz/miniz.h
 src/perlglue.cpp
 src/poly2tri/common/shapes.cc
@@ -166,7 +166,7 @@ src/ppport.h
 src/slic3r/GUI/3DScene.cpp
 src/slic3r/GUI/3DScene.hpp
 src/slic3r/GUI/GUI.cpp
-src/slic3r/GUI/GUI.hpp
+src/slic3r/GUI/xsGUI.hpp
 src/tiny_obj_loader.h
 src/xsinit.h
 t/01_trianglemesh.t

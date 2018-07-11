@@ -2,7 +2,7 @@
 
 %{
 #include <xsinit.h>
-#include "slic3r/GUI/GUI.hpp"
+#include "slic3r/GUI/xsGUI.hpp"
 %}
 
 
