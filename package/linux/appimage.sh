@@ -32,7 +32,7 @@ cd $WD/${APP}.AppDir
 
 mkdir -p $WD/${APP}.AppDir/usr/bin
 # Copy primary Slic3r script here and perl-local, as well as var
-for i in {var,Slic3r}; do
+for i in {var,slic3r.pl,perl-local}; do
     cp -R $srcfolder/$i $WD/${APP}.AppDir/usr/bin/
 done
 
@@ -47,6 +47,8 @@ for i in $(cat $WD/libpaths.appimage.txt | grep -v "^#" | awk -F# '{print $1}');
     install -v $i ${WD}/${APP}.AppDir/usr/lib
 done
 
+
+cp -R $srcfolder/local-lib ${WD}/${APP}.AppDir/usr/lib/local-lib
 
 cat > $WD/${APP}.AppDir/AppRun << 'EOF'
 #!/usr/bin/env bash
