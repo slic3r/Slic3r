@@ -408,7 +408,7 @@ SupportMaterial::contact_area(PrintObject *object)
         else {
             Layer *lower_layer = object->get_layer(layer_id - 1);
             for (auto layerm : layer->regions) {
-                float fw = layerm->flow(frExternalPerimeter).scaled_width();
+                auto fw = layerm->flow(frExternalPerimeter).scaled_width();
                 Polygons difference;
 
                 // If a threshold angle was specified, use a different logic for detecting overhangs.
@@ -519,12 +519,12 @@ SupportMaterial::contact_area(PrintObject *object)
                         {
                             // For bridges we can't assume width is larger than spacing because they
                             // are positioned according to non-bridging perimeters spacing.
-                            coordf_t widths[] = {bridge_flow.scaled_width(),
+                            coord_t widths[] = {bridge_flow.scaled_width(),
                                                  bridge_flow.scaled_spacing(),
                                                  fw,
                                                  layerm->flow(FlowRole::frPerimeter).scaled_width()};
 
-                            coordf_t w = *max_element(widths, widths + 4);
+                            auto w = *max_element(widths, widths + 4);
 
                             // Also apply safety offset to ensure no gaps are left in between.
                             // TODO CHeck this.
