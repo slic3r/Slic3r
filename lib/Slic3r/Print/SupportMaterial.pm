@@ -2,7 +2,7 @@
 # only generate() and contact_distance() are called from the outside of this module.
 package Slic3r::Print::SupportMaterial;
 use Moo;
-use Data::Dumper;
+
 use List::Util qw(sum min max);
 use Slic3r::ExtrusionPath ':roles';
 use Slic3r::Flow ':roles';
@@ -33,9 +33,9 @@ sub generate {
     # that it will be effective, regardless of how it's built below.
     my ($contact, $overhang) = $self->contact_area($object);
     
-    # // Determine the top surfaces of the object. We need these to determine
-    # // the layer heights of support material and to clip support to the object
-    # // silhouette.
+    # Determine the top surfaces of the object. We need these to determine 
+    # the layer heights of support material and to clip support to the object
+    # silhouette.
     my ($top) = $self->object_top($object, $contact);
 
     # We now know the upper and lower boundaries for our support material object
@@ -60,7 +60,7 @@ sub generate {
     $self->clip_with_shape($interface, $shape) if @$shape;
     
     # Propagate contact layers and interface layers downwards to generate
-    # the main support layers.
+    # the main support layers.
     my ($base) = $self->generate_base_layers($support_z, $contact, $interface, $top);
     $self->clip_with_object($base, $support_z, $object);
     $self->clip_with_shape($base, $shape) if @$shape;
@@ -108,7 +108,7 @@ sub contact_area {
 
     # determine contact areas
     my %contact  = ();  # contact_z => [ polygons ]
-    my %overhang = ();  # contact_z => [ polygons ] - this stores the actual overhang supported by each contact layer
+    my %overhang = ();  # contact_z => [ polygons ] - this stores the actual overhang supported by each contact layer
     for my $layer_id (0 .. $#{$object->layers}) {
         # note $layer_id might != $layer->id when raft_layers > 0
         # so $layer_id == 0 means first object layer
@@ -224,7 +224,7 @@ sub contact_area {
                         
                         # Get all perimeters as polylines.
                         # TODO: split_at_first_point() (called by as_polyline() for ExtrusionLoops)
-                        # could split a bridge mid-way
+                        # could split a bridge mid-way
                         my @overhang_perimeters = map $_->as_polyline, @{$layerm->perimeters->flatten};
                         
                         # Only consider the overhang parts of such perimeters,
@@ -374,7 +374,7 @@ sub object_top {
             # we considered)
             my $min_top = min(keys %top) // max(keys %$contact);
             # use <= instead of just < because otherwise we'd ignore any contact regions
-            # having the same Z of top layers
+            # having the same Z of top layers
             push @$projection, map @{$contact->{$_}}, grep { $_ > $layer->print_z && $_ <= $min_top } keys %$contact;
             
             # now find whether any projection falls onto this top surface
@@ -391,6 +391,7 @@ sub object_top {
             $projection = diff($projection, $touching);
         }
     }
+    
     return \%top;
 }
 
@@ -421,12 +422,11 @@ sub support_layers_z {
     # add raft layers by dividing the space between first layer and
     # first contact layer evenly
     if ($self->object_config->raft_layers > 1 && @z >= 2) {
-        print @z;
         # $z[1] is last raft layer (contact layer for the first layer object)
         my $height = ($z[1] - $z[0]) / ($self->object_config->raft_layers - 1);
         # since we already have two raft layers ($z[0] and $z[1]) we need to insert
         # raft_layers-2 more
-        splice @z, 1, 0, #
+        splice @z, 1, 0,
             map { sprintf "%.2f", $_ }
             map { $z[0] + $height * $_ }
             1..($self->object_config->raft_layers - 2);
@@ -511,7 +511,7 @@ sub generate_bottom_interface_layers {
         my $interface_layers = 0;
         
         # loop through support layers until we find the one(s) right above the top
-        # surface
+        # surface
         foreach my $layer_id (0 .. $#$support_z) {
             my $z = $support_z->[$layer_id];
             next unless $z > $top_z;
@@ -581,7 +581,7 @@ sub generate_base_layers {
 
 # This method removes object silhouette from support material
 # (it's used with interface and base only). It removes a bit more,
-# leaving a thin gap between object and support in the XY plane.
+# leaving a thin gap between object and support in the XY plane.
 sub clip_with_object {
     my ($self, $support, $support_z, $object) = @_;
     
@@ -595,7 +595,7 @@ sub clip_with_object {
         
         # $layer->slices contains the full shape of layer, thus including
         # perimeter's width. $support contains the full shape of support
-        # material, thus including the width of its foremost extrusion.
+        # material, thus including the width of its foremost extrusion.
         # We leave a gap equal to a full extrusion width.
         $support->{$i} = diff(
             $support->{$i},
@@ -825,7 +825,7 @@ sub generate_toolpaths {
                 $base_flow      = $self->first_layer_flow;
                 
                 # use the proper spacing for first layer as we don't need to align
-                # its pattern to the other layers
+                # its pattern to the other layers
                 $filler->set_min_spacing($base_flow->spacing);
                 
                 # subtract brim so that it goes around the object fully (and support gets its own brim)
@@ -1018,3 +1018,4 @@ sub contact_distance {
 }
 
 1;
+
