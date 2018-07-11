@@ -53,7 +53,8 @@ SupportMaterial::contact_distance(coordf_t layer_height, coordf_t nozzle_diamete
 }
 
 vector<coordf_t>
-SupportMaterial::get_keys_sorted(map<coordf_t, Polygons> _map) {
+SupportMaterial::get_keys_sorted(map<coordf_t, Polygons> _map)
+{
     vector<coordf_t> ret;
     for (auto el : _map)
         ret.push_back(el.first);
@@ -62,16 +63,17 @@ SupportMaterial::get_keys_sorted(map<coordf_t, Polygons> _map) {
 }
 
 coordf_t
-SupportMaterial::get_max_layer_height(PrintObject* object) {
-    coordf_t  ret = -1;
+SupportMaterial::get_max_layer_height(PrintObject *object)
+{
+    coordf_t ret = -1;
     for (auto layer : object->layers)
         ret = max(ret, layer->height);
     return ret;
 }
 
 vector<coordf_t>
-SupportMaterial::support_layers_z(vector<coordf_t > contact_z,
-                                  vector<coordf_t > top_z,
+SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
+                                  vector<coordf_t> top_z,
                                   coordf_t max_object_layer_height)
 {
     // Quick table to check whether a given Z is a top surface.
@@ -648,6 +650,63 @@ SupportMaterial::contact_area(PrintObject *object)
     }
 
     return make_pair(contact, overhang);
+}
+
+void
+SupportMaterial::generate(PrintObject *object)
+{
+    // Determine the top surfaces of the support, defined as:
+    // contact = overhangs - clearance + margin
+    // This method is responsible for identifying what contact surfaces
+    // should the support material expose to the object in order to guarantee
+    // that it will be effective, regardless of how it's built below.
+    pair<map<coordf_t, Polygons>, map<coordf_t, Polygons>> contact_overhang = contact_area(object);
+    map<coordf_t, Polygons> &contact = contact_overhang.first;
+    map<coordf_t, Polygons> &overhang = contact_overhang.second;
+
+
+    // Determine the top surfaces of the object. We need these to determine
+    // the layer heights of support material and to clip support to the object
+    // silhouette.
+    map<coordf_t, Polygons> top = object_top(object, &contact);
+
+    // We now know the upper and lower boundaries for our support material object
+    // (@$contact_z and @$top_z), so we can generate intermediate layers.
+    vector<coordf_t> support_z = support_layers_z(get_keys_sorted(contact),
+                                                  get_keys_sorted(top),
+                                                  get_max_layer_height(object));
+
+    // If we wanted to apply some special logic to the first support layers lying on
+    // object's top surfaces this is the place to detect them. TODO
+
+
+    // Propagate contact layers downwards to generate interface layers. TODO
+
+    // Propagate contact layers and interface layers downwards to generate
+    // the main support layers. TODO
+
+
+    // Detect what part of base support layers are "reverse interfaces" because they
+    // lie above object's top surfaces. TODO
+
+
+    // Install support layers into object.
+    for (int i = 0; i < support_z.size(); i++) {
+        object->add_support_layer(
+            i, // id.
+            (i == 0) ? support_z[0] - 0 : (support_z[i] - support_z[i - 1]), // height.
+            support_z[i] // print_z
+        );
+
+        if (i >= 1) {
+            object->support_layers.end()[-2]->upper_layer = object->support_layers.end()[-1];
+            object->support_layers.end()[-1]->lower_layer = object->support_layers.end()[-2];
+        }
+    }
+
+    // Generate the actual toolpaths and save them into each layer.
+    generate_toolpaths(object, overhang, contact, interface, base);
+
 }
 
 }
