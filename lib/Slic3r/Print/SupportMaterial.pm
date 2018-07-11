@@ -427,7 +427,7 @@ sub support_layers_z {
         my $height = ($z[1] - $z[0]) / ($self->object_config->raft_layers - 1);
         # since we already have two raft layers ($z[0] and $z[1]) we need to insert
         # raft_layers-2 more
-        splice @z, 1, 0, #splice ARRAY,OFFSET,LENGTH,LIST
+        splice @z, 1, 0, #
             map { sprintf "%.2f", $_ }
             map { $z[0] + $height * $_ }
             1..($self->object_config->raft_layers - 2);
@@ -451,7 +451,6 @@ sub support_layers_z {
     # remove duplicates and make sure all 0.x values have the leading 0
     {
         my %sl = map { 1 * $_ => 1 } @z;
-        print "HERE";
         @z = sort { $a <=> $b } keys %sl;
     }
     

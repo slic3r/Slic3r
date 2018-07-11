@@ -312,6 +312,7 @@ use Slic3r::Test;
         @{ $layer_heights_by_tool{$config->support_material_extruder-1} }),
         'no support material layer is as thin as object layers';
 }
+
 {
     my $config = Slic3r::Config->new_from_defaults;
     $config->set('support_material_enforce_layers', 100);

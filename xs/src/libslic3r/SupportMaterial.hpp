@@ -1,6 +1,7 @@
 #ifndef slic3r_SupportMaterial_hpp_
 #define slic3r_SupportMaterial_hpp_
 
+#include <numeric>
 #include <vector>
 #include <iostream>
 #include <algorithm>
@@ -13,6 +14,7 @@
 #include "ClipperUtils.hpp"
 #include "SupportMaterial.hpp"
 #include "ExPolygon.hpp"
+#include "SVG.hpp"
 
 // Supports Material tests.
 
@@ -53,7 +55,7 @@ public:
     void generate()
     {}
 
-    void contact_area(PrintObject *object)
+    pair<Polygons, Polygons> contact_area(PrintObject *object)
     {
         PrintObjectConfig conf = this->object_config;
 
@@ -61,20 +63,22 @@ public:
         float threshold_rad;
         cout << conf.support_material_threshold << endl;
         if (conf.support_material_threshold > 0) {
-            threshold_rad = Geometry::deg2rad(conf.support_material_threshold.value + 1.0);
-
+            threshold_rad = static_cast<float>(Geometry::deg2rad(
+                conf.support_material_threshold.value + 1)); // +1 makes the threshold inclusive
             // TODO @Samir55 add debug statetments.
         }
 
         // Build support on a build plate only? If so, then collect top surfaces into $buildplate_only_top_surfaces
-        // and subtract $buildplate_only_top_surfaces from the contact surfaces, so
+        // and subtract buildplate_only_top_surfaces from the contact surfaces, so
         // there is no contact surface supported by a top surface.
-        bool buildplate_only = (conf.support_material || conf.support_material_enforce_layers)
-            && conf.support_material_buildplate_only;
-        SurfacesPtr buildplate_only_top_surfaces = SurfacesPtr();
+        bool buildplate_only =
+            (conf.support_material || conf.support_material_enforce_layers)
+                && conf.support_material_buildplate_only;
+        Surfaces buildplate_only_top_surfaces;
 
+        // Determine contact areas.
         Polygons contact;
-        Polygons overhangs; // This stores the actual overhang supported by each contact layer
+        Polygons overhang; // This stores the actual overhang supported by each contact layer
 
         for (int layer_id = 0; layer_id < object->layers.size(); layer_id++) {
             // Note $layer_id might != $layer->id when raft_layers > 0
@@ -88,15 +92,22 @@ public:
             // With or without raft, if we're above layer 1, we need to quit
             // support generation if supports are disabled, or if we're at a high
             // enough layer that enforce-supports no longer applies.
-            if (layer_id > 0 && !conf.support_material && (layer_id >= conf.support_material_enforce_layers))
+            if (layer_id > 0
+                && !conf.support_material
+                && (layer_id >= conf.support_material_enforce_layers))
                 // If we are only going to generate raft just check
                 // the 'overhangs' of the first object layer.
                 break;
 
             auto layer = object->get_layer(layer_id);
 
+            if (conf.support_material_max_layers
+                && layer_id > conf.support_material_max_layers)
+                break;
+
+            ExPolygons buildplate_only_top_surfaces_polygons;
             if (buildplate_only) {
-                // Collect the top surfaces up to this layer and merge them.
+                // Collect the top surfaces up to this layer and merge them. TODO @Ask about this line.
                 SurfacesPtr projection_new;
                 for (auto const &region : layer->regions) {
                     SurfacesPtr top_surfaces = region->slices.filter_by_type(stTop);
@@ -110,9 +121,13 @@ public:
                     // with the polygons collected before,
                     // but don't apply the safety offset during the union operation as it would
                     // inflate the polygons over and over.
-                    for (auto surface : projection_new) {
-//                        buildplate_only_top_surfaces.push_back(offset(surface, scale_(0.01)));
+                    for (Surface *surface : projection_new) {
+                        Surfaces s = offset(*surface, scale_(0.01));
+                        for (auto el : s)
+                            buildplate_only_top_surfaces.push_back(el);
                     }
+                    // TODO @Ask about this
+                    buildplate_only_top_surfaces_polygons = union_ex(buildplate_only_top_surfaces, 0);
                 }
             }
 
@@ -123,9 +138,12 @@ public:
                 // we only consider contours and discard holes to get a more continuous raft.
                 for (auto const &contour : layer->slices.contours()) {
                     auto contour_clone = contour;
-                    overhangs.push_back(contour_clone);
-//                    contact.push_back(offset(overhangs.back(), static_cast<const float>(SUPPORT_MATERIAL_MARGIN)));
+                    overhang.push_back(contour_clone);
                 }
+
+                Polygons ps = offset(overhang, scale_(+SUPPORT_MATERIAL_MARGIN));
+                for (auto p : ps)
+                    contact.push_back(p);
             }
             else {
                 Layer *lower_layer = object->get_layer(layer_id - 1);
@@ -144,30 +162,250 @@ public:
                             layer_threshold_rad = Geometry::deg2rad(89);
                         }
                         if (layer_threshold_rad > 0) {
-                            d = scale_(lower_layer->height) *
-                                ((cos(layer_threshold_rad)) / (sin(layer_threshold_rad)));
+                            d = scale_(lower_layer->height
+                                           * ((cos(layer_threshold_rad)) / (sin(layer_threshold_rad))));
                         }
 
-                        difference = diff(offset(layerm->slices, -d), lower_layer->slices);
+                        // TODO Ask about this.
+                        difference = diff(
+                            layerm->slices,
+                            offset(lower_layer->slices, +d)
+                        );
 
                         // only enforce spacing from the object ($fw/2) if the threshold angle
                         // is not too high: in that case, $d will be very small (as we need to catch
                         // very short overhangs), and such contact area would be eaten by the
                         // enforced spacing, resulting in high threshold angles to be almost ignored
                         if (d > fw / 2) {
-                            difference = diff(offset(difference, d - fw / 2), lower_layer->slices);
+                            difference = diff(
+                                offset(difference, d - fw / 2),
+                                lower_layer->slices);
                         }
                     }
                     else {
+                        difference = diff(
+                            layerm->slices,
+                            offset(lower_layer->slices,
+                                   static_cast<const float>(+conf.get_abs_value("support_material_threshols", fw)))
+                        );
+
+                        // Collapse very tiny spots.
+                        difference = offset2(difference, -fw / 10, +fw / 10);
                         // $diff now contains the ring or stripe comprised between the boundary of
                         // lower slices and the centerline of the last perimeter in this overhanging layer.
                         // Void $diff means that there's no upper perimeter whose centerline is
                         // outside the lower slice boundary, thus no overhang
                     }
+
+                    if (conf.dont_support_bridges) {
+                        // Compute the area of bridging perimeters.
+                        Polygons bridged_perimeters;
+                        {
+                            auto bridge_flow = layerm->flow(FlowRole::frPerimeter, 1);
+
+                            // Get the lower layer's slices and grow them by half the nozzle diameter
+                            // because we will consider the upper perimeters supported even if half nozzle
+                            // falls outside the lower slices.
+                            Polygons lower_grown_slices;
+                            {
+                                coordf_t nozzle_diameter = this->config->nozzle_diameter
+                                    .get_at(layerm->region()->config.perimeter_extruder - 1);
+
+                                lower_grown_slices = offset(
+                                    lower_layer->slices,
+                                    scale_(nozzle_diameter / 2)
+                                );
+                            }
+
+                            // Get all perimeters as polylines.
+                            // TODO: split_at_first_point() (called by as_polyline() for ExtrusionLoops)
+                            // could split a bridge mid-way.
+                            Polyline overhang_perimeters_polyline = layerm->perimeters.flatten().as_polyline();
+                            Polylines overhang_perimeters_polylines;
+
+                            // Only consider the overhang parts of such perimeters,
+                            // overhangs being those parts not supported by
+                            // workaround for Clipper bug, see Slic3r::Polygon::clip_as_polyline()
+                            // ASk About htis.
+                            overhang_perimeters_polyline.translate(1, 0);
+                            Polylines ps = diff_pl(overhang_perimeters_polyline, lower_grown_slices);
+                            for (const auto &p : ps) {
+                                overhang_perimeters_polylines.push_back(p);
+                            }
+
+                            // Only consider straight overhangs.
+                            Polylines new_overhangs_perimeters_polylines;
+                            for (auto p : overhang_perimeters_polylines) {
+                                if (p.is_straight())
+                                    new_overhangs_perimeters_polylines.push_back(p);
+                            }
+                            overhang_perimeters_polylines = new_overhangs_perimeters_polylines;
+                            new_overhangs_perimeters_polylines = Polylines();
+
+                            // Only consider overhangs having endpoints inside layer's slices
+                            for (auto &p : overhang_perimeters_polylines) {
+                                p.extend_start(fw);
+                                p.extend_end(fw);
+                            }
+
+                            for (auto p : overhang_perimeters_polylines) {
+                                if (layer->slices.contains_b(p.first_point())
+                                    && layer->slices.contains_b(p.last_point())) {
+                                    new_overhangs_perimeters_polylines.push_back(p);
+                                }
+                            }
+
+                            overhang_perimeters_polylines = new_overhangs_perimeters_polylines;
+                            new_overhangs_perimeters_polylines = Polylines();
+
+                            // Convert bridging polylines into polygons by inflating them with their thickness.
+                            {
+                                // For bridges we can't assume width is larger than spacing because they
+                                // are positioned according to non-bridging perimeters spacing.
+                                coordf_t widths[] = {bridge_flow.scaled_width(),
+                                                     bridge_flow.scaled_spacing(),
+                                                     fw,
+                                                     layerm->flow(FlowRole::frPerimeter).scaled_width()};
+
+                                coordf_t w = *max_element(widths, widths + 4);
+
+                                // Also apply safety offset to ensure no gaps are left in between.
+                                for (auto &p : overhang_perimeters_polylines) {
+                                    Polygons ps = union_(offset(p, w / 2 + 10));
+                                    for (auto ps_el : ps)
+                                        bridged_perimeters.push_back(ps_el);
+                                }
+                            }
+                        }
+
+                        if (1) {
+                            // Remove the entire bridges and only support the unsupported edges.
+                            ExPolygons bridges;
+                            for (auto surface : layerm->fill_surfaces.filter_by_type(stBottomBridge)) {
+                                if (surface->bridge_angle != -1) {
+                                    bridges.push_back(surface->expolygon);
+                                }
+                            }
+
+                            ExPolygons ps;
+                            for (auto p : bridged_perimeters)
+                                ps.push_back(ExPolygon(p));
+                            for (auto p : bridges)
+                                ps.push_back(p);
+
+                            // TODO ASK about this.
+                            difference = diff(
+                                difference,
+                                to_polygons(ps),
+                                true
+                            );
+
+                            // TODO Ask about this.
+                            auto p_intersections = intersection(offset(layerm->unsupported_bridge_edges.polylines,
+                                                                       +scale_(SUPPORT_MATERIAL_MARGIN)),
+                                                                to_polygons(bridges));
+                            for (auto p: p_intersections) {
+                                difference.push_back(p);
+                            }
+                        }
+                        else {
+                            // just remove bridged areas.
+                            difference = diff(
+                                difference,
+                                layerm->bridged,
+                                1
+                            );
+                        }
+                    } // if ($conf->dont_support_bridges)
+
+                    if (buildplate_only) {
+                        // Don't support overhangs above the top surfaces.
+                        // This step is done before the contact surface is calcuated by growing the overhang region.
+                        // TODO Ask about this.
+                        difference = diff(difference, to_polygons(buildplate_only_top_surfaces_polygons));
+                    }
+
+                    if (difference.empty()) continue;
+
+                    // NOTE: this is not the full overhang as it misses the outermost half of the perimeter width!
+                    for (auto p : difference) {
+                        overhang.push_back(p);
+                    }
+
+                    // Let's define the required contact area by using a max gap of half the upper
+                    // extrusion width and extending the area according to the configured margin.
+                    //    We increment the area in steps because we don't want our support to overflow
+                    // on the other side of the object (if it's very thin).
+                    {
+                        auto slices_margin = offset(lower_layer->slices, +fw / 2);
+
+                        if (buildplate_only) {
+                            // TODO Ask about this.
+                            // Trim the inflated contact surfaces by the top surfaces as well.
+                            for (auto s_p : to_polygons(buildplate_only_top_surfaces)) {
+                                slices_margin.push_back(s_p);
+                            }
+                            slices_margin = union_(slices_margin);
+                        }
+
+                        // TODO Ask how to port this.
+                        /*
+                         for ($fw/2, map {scale MARGIN_STEP} 1..(MARGIN / MARGIN_STEP)) {
+                            $diff = diff(
+                                offset($diff, $_),
+                                $slices_margin,
+                            );
+                         }
+                         */
+                    }
+
+                    for (auto p : difference)
+                        contact.push_back(p);
                 }
             }
-        }
+            if (contact.empty())
+                continue;
 
+            // Now apply the contact areas to the layer were they need to be made.
+            {
+                // Get the average nozzle diameter used on this layer.
+                vector<double> nozzle_diameters;
+                for (auto region : layer->regions) {
+                    nozzle_diameters.push_back(config->nozzle_diameter.get_at(static_cast<size_t>(
+                                                                                  region->region()->config
+                                                                                      .perimeter_extruder - 1)));
+                    nozzle_diameters.push_back(config->nozzle_diameter.get_at(static_cast<size_t>(
+                                                                                  region->region()->config
+                                                                                      .infill_extruder - 1)));
+                    nozzle_diameters.push_back(config->nozzle_diameter.get_at(static_cast<size_t>(
+                                                                                  region->region()->config
+                                                                                      .solid_infill_extruder - 1)));
+                }
+
+                auto nozzle_diameter =
+                    accumulate(nozzle_diameters.begin(), nozzle_diameters.end(), 0.0) / nozzle_diameters.size();
+
+                auto contact_z = layer->print_z - contact_distance(layer->height, nozzle_diameter);
+
+                // Ignore this contact area if it's too low.
+                if (contact_z < conf.first_layer_height - EPSILON)
+                    continue;
+
+                // TODO ASK how to port this.
+                /*
+                     $contact{$contact_z}  = [ @contact ];
+                     $overhang{$contact_z} = [ @overhang ];
+
+                     require "Slic3r/SVG.pm";
+                     Slic3r::SVG::output("out\\contact_" . $contact_z . ".svg",
+                     green_expolygons => union_ex($buildplate_only_top_surfaces),
+                     blue_expolygons  => union_ex(\@contact),
+                     red_expolygons   => union_ex(\@overhang),
+                     );
+                 */
+            }
+        }
+        return make_pair(contact, overhang);
     }
 
     ExPolygons *object_top(PrintObject *object, SurfacesPtr contact)
@@ -434,6 +672,11 @@ public:
                $config->set('layer_height', $config->nozzle_diameter->[0]);
                $test->();
         */
+    }
+
+    bool test_2()
+    {
+
     }
 
 };
