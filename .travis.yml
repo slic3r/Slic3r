@@ -43,13 +43,13 @@ matrix:
           env:
             - BUILD_PL=true
             - SLIC3R_STATIC=1
-            - CC=gcc-7
-            - CXX=g++-7
+            - CC=gcc-4.9
+            - CXX=g++-4.9
           install:
             - export BOOST_DIR=$HOME/boost_1_63_0
             - export SLIC3R_STATIC=1
-            - export CXX=g++-7
-            - export CC=g++-7
+            - export CXX=g++-4.9
+            - export CC=g++-4.9
             - source $HOME/perl5/perlbrew/etc/bashrc
           after_success:
             - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
@@ -58,8 +58,18 @@ matrix:
             - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
             - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
             - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
-        - os: linux
-          env: 
+            addons:
+          apt:
+            sources:
+            - ubuntu-toolchain-r-test
+            packages:
+            - g++-4.9
+            - gcc-4.9
+            - libgtk2.0-0 
+            - libgtk2.0-dev
+            - freeglut3
+            - os: linux
+            env: 
             - WXVERSION=pkg
             - CC=gcc-7
             - CXX=g++-7
@@ -68,7 +78,7 @@ matrix:
           cache:
             apt: true
             directories:
-              - "$HOME/cache"
+            - "$HOME/cache"
           after_success:
             - cp slic3r ../
             - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
