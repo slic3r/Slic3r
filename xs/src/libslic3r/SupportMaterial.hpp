@@ -16,9 +16,6 @@
 #include "ExPolygon.hpp"
 #include "SVG.hpp"
 
-// Supports Material tests.
-
-
 using namespace std;
 
 namespace Slic3r
@@ -53,8 +50,61 @@ public:
           object(nullptr)
     {}
 
-    void generate()
-    {}
+    void generate(PrintObject *object)
+    {
+        // Determine the top surfaces of the support, defined as:
+        // contact = overhangs - clearance + margin
+        // This method is responsible for identifying what contact surfaces
+        // should the support material expose to the object in order to guarantee
+        // that it will be effective, regardless of how it's built below.
+        pair<map<coordf_t, Polygons>, map<coordf_t, Polygons>> contact_overhang = contact_area(object);
+        map<coordf_t, Polygons> &contact = contact_overhang.first;
+        map<coordf_t, Polygons> &overhang = contact_overhang.second;
+
+
+        // Determine the top surfaces of the object. We need these to determine
+        // the layer heights of support material and to clip support to the object
+        // silhouette.
+        map<coordf_t, Polygons> top = object_top(object, &contact);
+
+        // We now know the upper and lower boundaries for our support material object
+        // (@$contact_z and @$top_z), so we can generate intermediate layers.
+        vector<coordf_t> support_z = support_layers_z(get_keys_sorted(contact),
+                                                      get_keys_sorted(top),
+                                                      get_max_layer_height(object));
+
+        // If we wanted to apply some special logic to the first support layers lying on
+        // object's top surfaces this is the place to detect them. TODO
+
+
+        // Propagate contact layers downwards to generate interface layers. TODO
+
+        // Propagate contact layers and interface layers downwards to generate
+        // the main support layers. TODO
+
+
+        // Detect what part of base support layers are "reverse interfaces" because they
+        // lie above object's top surfaces. TODO
+
+
+        // Install support layers into object.
+        for (int i = 0; i < support_z.size(); i++) {
+            object->add_support_layer(
+                i, // id.
+                (i == 0) ? support_z[0] - 0 : (support_z[i] - support_z[i-1]), // height.
+                support_z[i] // print_z
+            );
+
+            if (i >= 1) {
+                object->support_layers.end()[-2]->upper_layer = object->support_layers.end()[-1];
+                object->support_layers.end()[-1]->lower_layer = object->support_layers.end()[-2];
+            }
+        }
+
+        // Generate the actual toolpaths and save them into each layer.
+        generate_toolpaths(object, overhang, contact, interface, base);
+
+    }
 
     void generate_interface_layers()
     {}
@@ -89,7 +139,9 @@ public:
     /// This method returns the indices of the layers overlapping with the given one.
     vector<int> overlapping_layers(int layer_idx, vector<float> support_z);
 
-    vector<coordf_t> support_layers_z(vector<float> contact_z, vector<float> top_z, coordf_t max_object_layer_height);
+    vector<coordf_t> support_layers_z(vector<coordf_t> contact_z,
+                                      vector<coordf_t> top_z,
+                                      coordf_t max_object_layer_height);
 
     coordf_t contact_distance(coordf_t layer_height, coordf_t nozzle_diameter);
 
@@ -98,6 +150,10 @@ public:
     Polygon create_circle(coordf_t radius);
 
     void append_polygons(Polygons &dst, Polygons &src);
+
+    vector<coordf_t> get_keys_sorted(map<coordf_t, Polygons> _map);
+
+    coordf_t get_max_layer_height(PrintObject *object);
 
     void process_layer(int layer_id)
     {
@@ -133,6 +189,7 @@ private:
 };
 
 // To Be converted to catch.
+// Supports Material tests.
 class SupportMaterialTests
 {
 public:
@@ -158,8 +215,8 @@ public:
         print.default_object_config.set_deserialize("layer_height", "0.2");
         print.config.set_deserialize("first_layer_height", "0.3");
 
-        vector<float> contact_z;
-        vector<float> top_z;
+        vector<coordf_t > contact_z;
+        vector<coordf_t > top_z;
         contact_z.push_back(1.9);
         top_z.push_back(1.9);
 

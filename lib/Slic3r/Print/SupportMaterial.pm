@@ -33,9 +33,9 @@ sub generate {
     # that it will be effective, regardless of how it's built below.
     my ($contact, $overhang) = $self->contact_area($object);
     
-    # Determine the top surfaces of the object. We need these to determine 
-    # the layer heights of support material and to clip support to the object
-    # silhouette.
+    # // Determine the top surfaces of the object. We need these to determine
+    # // the layer heights of support material and to clip support to the object
+    # // silhouette.
     my ($top) = $self->object_top($object, $contact);
 
     # We now know the upper and lower boundaries for our support material object

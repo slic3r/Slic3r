@@ -53,8 +53,25 @@ SupportMaterial::contact_distance(coordf_t layer_height, coordf_t nozzle_diamete
 }
 
 vector<coordf_t>
-SupportMaterial::support_layers_z(vector<float> contact_z,
-                                  vector<float> top_z,
+SupportMaterial::get_keys_sorted(map<coordf_t, Polygons> _map) {
+    vector<coordf_t> ret;
+    for (auto el : _map)
+        ret.push_back(el.first);
+    sort(ret.begin(), ret.end());
+    return ret;
+}
+
+coordf_t
+SupportMaterial::get_max_layer_height(PrintObject* object) {
+    coordf_t  ret = -1;
+    for (auto layer : object->layers)
+        ret = max(ret, layer->height);
+    return ret;
+}
+
+vector<coordf_t>
+SupportMaterial::support_layers_z(vector<coordf_t > contact_z,
+                                  vector<coordf_t > top_z,
                                   coordf_t max_object_layer_height)
 {
     // Quick table to check whether a given Z is a top surface.
@@ -629,7 +646,7 @@ SupportMaterial::contact_area(PrintObject *object)
             overhang[contact_z] = m_overhang;
         }
     }
-    
+
     return make_pair(contact, overhang);
 }
 
