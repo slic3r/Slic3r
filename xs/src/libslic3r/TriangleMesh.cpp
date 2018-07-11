@@ -754,7 +754,7 @@ TriangleMesh::make_cylinder(double r, double h, double fa) {
     unsigned id = vertices.size() - 1;
     vertices.push_back(Pointf3(sin(0) * r , cos(0) * r, 0));
     vertices.push_back(Pointf3(sin(0) * r , cos(0) * r, h));
-    for (double i = 0; i < 2*PI; i+=angle) {
+    for (double i = angle; i < 2*PI - angle; i+=angle) {
         Pointf3 b(0, r, 0);
         Pointf3 t(0, r, h);
         b.rotate(i, Pointf3(0,0,0)); 
