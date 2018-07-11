@@ -8,7 +8,7 @@ script:
     - if [[ "$BUILD_PL" == false ]]; then cmake --build .; fi
     - if [[ "$BUILD_PL" == false ]]; then ctest . -R TestSlic3r; fi
     - if [[ "$BUILD_PL" == true ]]; then perlbrew switch slic3r-perl; fi
-    - if [[ "$BUILD_PL" == true ]]; then perl ./Build.PL
+    - if [[ "$BUILD_PL" == true ]]; then perl ./Build.PL; fi
 #    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ctest . -R TestGUI; fi
 branches:
   only:
