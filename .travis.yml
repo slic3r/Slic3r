@@ -46,6 +46,13 @@ matrix:
             - SLIC3R_STATIC=1
             - CC=gcc-7
             - CXX=g++-7
+          after_success:
+            - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
+            - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
+            - package/linux/appimage.sh x86_64
+            - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
+            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
+            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
         - os: linux
           env: 
             - WXVERSION=pkg
