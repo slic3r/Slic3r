@@ -1,5 +1,8 @@
+#ifndef SLIC3RXS
+
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
+
 
 #include <initializer_list>
 #include <memory>
@@ -33,3 +36,5 @@ public:
 } // namespace Slic3r
 
 #endif // CONFIG_HPP
+
+#endif // SLIC3RXS

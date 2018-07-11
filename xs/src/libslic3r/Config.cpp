@@ -1,3 +1,4 @@
+#ifndef SLIC3RXS
 #include "Config.hpp"
 #include "Log.hpp"
 
@@ -35,3 +36,7 @@ new_from_cli(const int& argc, const char* argv[])
 }
 
 } // namespace Slic3r
+
+
+
+#endif // SLIC3RXS
