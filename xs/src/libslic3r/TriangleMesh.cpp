@@ -432,6 +432,41 @@ TriangleMesh::center() const {
     return this->bounding_box().center();
 }
 
+std::vector<ExPolygons> 
+TriangleMesh::slice(const std::vector<double>& z)
+{
+    // convert doubles to floats
+    std::vector<float> z_f(z.begin(), z.end());
+    TriangleMeshSlicer<Z> mslicer(this);
+    std::vector<ExPolygons> layers;
+
+    mslicer.slice(z_f, &layers);
+
+    return std::move(layers);
+}
+
+mesh_stats
+TriangleMesh::stats() const {
+    mesh_stats tmp_stats;
+    tmp_stats.number_of_facets = this->stl.stats.number_of_facets;
+    tmp_stats.number_of_parts = this->stl.stats.number_of_parts;
+    tmp_stats.volume = this->stl.stats.volume;
+    tmp_stats.degenerate_facets = this->stl.stats.degenerate_facets;
+    tmp_stats.edges_fixed = this->stl.stats.edges_fixed;
+    tmp_stats.facets_removed = this->stl.stats.facets_removed;
+    tmp_stats.facets_added = this->stl.stats.facets_added;
+    tmp_stats.facets_reversed = this->stl.stats.facets_reversed;
+    tmp_stats.backwards_edges = this->stl.stats.backwards_edges;
+    tmp_stats.normals_fixed = this->stl.stats.normals_fixed;
+    return std::move(tmp_stats);
+}
+
+BoundingBoxf3 TriangleMesh::bb3() const {
+    Pointf3 min(this->stl.stats.min.x, this->stl.stats.min.y, this->stl.stats.min.z);
+    Pointf3 max(this->stl.stats.max.x, this->stl.stats.max.y, this->stl.stats.max.z);
+    return std::move(BoundingBoxf3(min, max));
+}
+
 TriangleMeshPtrs
 TriangleMesh::split() const
 {

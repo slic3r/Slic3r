@@ -17,6 +17,21 @@ class TriangleMesh;
 template <Axis A> class TriangleMeshSlicer;
 typedef std::vector<TriangleMesh*> TriangleMeshPtrs;
 
+
+/// Interface to available statistics from the underlying mesh. 
+struct mesh_stats {
+    size_t number_of_facets {0};
+    size_t number_of_parts {0};
+    double volume {0};
+    size_t degenerate_facets {0};
+    size_t edges_fixed {0};
+    size_t facets_removed {0};
+    size_t facets_added {0};
+    size_t facets_reversed {0};
+    size_t backwards_edges {0};
+    size_t normals_fixed {0};
+};
+
 class TriangleMesh
 {
     public:
@@ -86,6 +101,14 @@ class TriangleMesh
 
     /// Return the center of the related bounding box.
     Pointf3 center() const;
+
+    /// Slice this mesh at the provided Z levels and return the vector
+    std::vector<ExPolygons> slice(const std::vector<double>& z);
+
+    /// Contains general statistics from underlying mesh structure.
+    mesh_stats stats() const;
+
+    BoundingBoxf3 bb3() const;
 
     /// Perform a cut of the mesh and put the output in upper and lower
     void cut(Axis axis, double z, TriangleMesh* upper, TriangleMesh* lower);
