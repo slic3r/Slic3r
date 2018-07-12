@@ -1718,7 +1718,8 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
     }
   
     // extrude all loops ccw
-    bool was_clockwise = loop.make_counter_clockwise();
+    //no! this was decided in perimeter_generator
+    bool was_clockwise = false;// loop.make_counter_clockwise();
     
     SeamPosition seam_position = m_config.seam_position;
     if (loop.loop_role() == elrSkirt) 

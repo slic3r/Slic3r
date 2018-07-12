@@ -158,8 +158,8 @@ void PerimeterGenerator::process()
                 // We can add more perimeters if there are uncovered overhangs
                 // improvement for future: find a way to add perimeters only where it's needed.
                 // It's hard to do, so here is a simple version.
-                bool may_add_more_perimeters = false;
-                if (this->config->extra_perimeters && i > loop_number && !last.empty()
+                bool has_overhang = false;
+                if (this->config->extra_perimeters /*&& i > loop_number*/ && !last.empty()
                     && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()){
                     //split the polygons with bottom/notbottom
                     ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons, true);
@@ -199,7 +199,7 @@ void PerimeterGenerator::process()
                         }
                         if (!unsupported.empty()) {
                             //add fake perimeters here
-                            may_add_more_perimeters = true;
+                            has_overhang = true;
                         }
                     }
                 }
@@ -279,7 +279,7 @@ void PerimeterGenerator::process()
                     last.clear();
                     break;
                 } else if (i > loop_number) {
-                    if (may_add_more_perimeters) {
+                    if (has_overhang) {
                         loop_number++;
                         contours.emplace_back();
                         holes.emplace_back();
@@ -290,11 +290,11 @@ void PerimeterGenerator::process()
                 }
 
                 for (const ExPolygon &expolygon : next_onion) {
-                    contours[i].emplace_back(PerimeterGeneratorLoop(expolygon.contour, i, true));
+                    contours[i].emplace_back(PerimeterGeneratorLoop(expolygon.contour, i, true, has_overhang));
                     if (! expolygon.holes.empty()) {
                         holes[i].reserve(holes[i].size() + expolygon.holes.size());
                         for (const Polygon &hole : expolygon.holes)
-                            holes[i].emplace_back(PerimeterGeneratorLoop(hole, i, false));
+                            holes[i].emplace_back(PerimeterGeneratorLoop(hole, i, false, has_overhang));
                     }
                 }
                 last = std::move(next_onion);
@@ -536,7 +536,10 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             
             ExtrusionEntityCollection children = this->_traverse_loops(loop.children, thin_walls);
             if (loop.is_contour) {
-                eloop.make_counter_clockwise();
+                if (loop.is_overhang && this->layer_id % 2 == 1)
+                    eloop.make_clockwise();
+                else
+                    eloop.make_counter_clockwise();
                 entities.append(children.entities);
                 entities.append(eloop);
             } else {
