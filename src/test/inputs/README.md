@@ -1,6 +1,6 @@
 Directory containing test-specific input files that are not source code.
 
-===
+---
 
 Rules
 ===
