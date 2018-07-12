@@ -16,7 +16,11 @@
 #include "SlicingAdaptive.hpp"
 #include "LayerHeightSpline.hpp"
 
+#include <exception>
+
 namespace Slic3r {
+
+class InvalidObjectException : public std::exception {};
 
 class Print;
 class PrintObject;

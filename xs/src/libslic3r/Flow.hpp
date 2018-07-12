@@ -2,7 +2,7 @@
 #define slic3r_Flow_hpp_
 
 #include "libslic3r.h"
-#include "Config.hpp"
+#include "ConfigBase.hpp"
 #include "ExtrusionEntity.hpp"
 
 namespace Slic3r {

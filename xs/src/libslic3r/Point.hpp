@@ -13,16 +13,20 @@ class Line;
 class Linef;
 class MultiPoint;
 class Point;
+class Point3;
 class Pointf;
 class Pointf3;
 typedef Point Vector;
 typedef Pointf Vectorf;
 typedef Pointf3 Vectorf3;
+using Vector3 = Point3;
 typedef std::vector<Point> Points;
 typedef std::vector<Point*> PointPtrs;
 typedef std::vector<const Point*> PointConstPtrs;
 typedef std::vector<Pointf> Pointfs;
 typedef std::vector<Pointf3> Pointf3s;
+
+using Point3s = std::vector<Point3>;
 
 class Point
 {
@@ -36,6 +40,9 @@ class Point
     static Point new_scale(coordf_t x, coordf_t y) {
         return Point(scale_(x), scale_(y));
     };
+
+    /// Scale and create a Point from a Pointf.
+    static Point new_scale(Pointf p);
     bool operator==(const Point& rhs) const;
     std::string wkt() const;
     std::string dump_perl() const;
@@ -113,6 +120,10 @@ class Pointf
     static Pointf new_unscale(const Point &p) {
         return Pointf(unscale(p.x), unscale(p.y));
     };
+
+    // equality operator based on the scaled coordinates
+    bool operator==(const Pointf& rhs) const;
+
     std::string wkt() const;
     std::string dump_perl() const;
     void scale(double factor);
@@ -151,6 +162,15 @@ to_points(const std::vector<T> &items)
         append_to(pp, (Points)*it);
     return pp;
 }
+
+inline Points
+scale(const std::vector<Pointf>&in ) {
+    Points out; 
+    for (const auto& p : in) {out.push_back(Point(scale_(p.x), scale_(p.y))); }
+    return out;
+}
+
+
 
 }
 

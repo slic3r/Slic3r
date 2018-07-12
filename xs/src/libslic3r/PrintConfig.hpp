@@ -19,7 +19,7 @@
 #define slic3r_PrintConfig_hpp_
 
 #include "libslic3r.h"
-#include "Config.hpp"
+#include "ConfigBase.hpp"
 
 #define OPT_PTR(KEY) if (opt_key == #KEY) return &this->KEY
 

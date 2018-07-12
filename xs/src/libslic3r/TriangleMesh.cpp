@@ -1,5 +1,6 @@
 #include "TriangleMesh.hpp"
 #include "ClipperUtils.hpp"
+#include "Log.hpp"
 #include "Geometry.hpp"
 #include <cmath>
 #include <deque>
@@ -92,7 +93,6 @@ TriangleMesh::TriangleMesh(const TriangleMesh &other)
         std::copy(other.stl.v_shared, other.stl.v_shared + other.stl.stats.shared_vertices, this->stl.v_shared);
     }
 }
-
 TriangleMesh& TriangleMesh::operator= (TriangleMesh other)
 {
     this->swap(other);
@@ -278,6 +278,14 @@ void TriangleMesh::translate(float x, float y, float z)
     stl_invalidate_shared_vertices(&this->stl);
 }
 
+void TriangleMesh::translate(Pointf3 vec) {
+    this->translate(
+        static_cast<float>(vec.x),
+        static_cast<float>(vec.y),
+        static_cast<float>(vec.z)
+    );
+}
+
 void TriangleMesh::rotate(float angle, const Axis &axis)
 {
     // admesh uses degrees
@@ -356,10 +364,132 @@ void TriangleMesh::center_around_origin()
 
 void TriangleMesh::rotate(double angle, Point* center)
 {
-    this->translate(-center->x, -center->y, 0);
-    stl_rotate_z(&(this->stl), (float)angle);
-    this->translate(+center->x, +center->y, 0);
+    this->rotate(angle, *center);
 }
+void TriangleMesh::rotate(double angle, const Point& center)
+{
+    this->translate(-center.x, -center.y, 0);
+    stl_rotate_z(&(this->stl), (float)angle);
+    this->translate(+center.x, +center.y, 0);
+}
+
+#ifndef SLIC3RXS
+
+Pointf3s TriangleMesh::vertices()
+{
+    Pointf3s tmp {};
+    if (this->repaired) {
+        if (this->stl.v_shared == nullptr) 
+            stl_generate_shared_vertices(&stl); // build the list of vertices
+        for (auto i = 0; i < this->stl.stats.shared_vertices; i++) {
+            const auto& v {this->stl.v_shared[i]};
+            tmp.emplace_back(Pointf3(v.x, v.y, v.z));
+        }
+    } else {
+        Slic3r::Log::warn("TriangleMesh", "vertices() requires repair()");
+    }
+    return std::move(tmp);
+}
+
+Point3s TriangleMesh::facets() 
+{
+    Point3s tmp {};
+    if (this->repaired) {
+        if (this->stl.v_shared == nullptr) 
+            stl_generate_shared_vertices(&stl); // build the list of vertices
+        for (auto i = 0; i < stl.stats.number_of_facets; i++) {
+            const auto& v {stl.v_indices[i]};
+            tmp.emplace_back(Point3(v.vertex[0], v.vertex[1], v.vertex[2]));
+        }
+    } else {
+        Slic3r::Log::warn("TriangleMesh", "facets() requires repair()");
+    }
+    return std::move(tmp);
+}
+
+Pointf3s TriangleMesh::normals() const
+{
+    Pointf3s tmp {};
+    if (this->repaired) {
+        for (auto i = 0; i < stl.stats.number_of_facets; i++) {
+            const auto& n {stl.facet_start[i].normal};
+            tmp.emplace_back(Pointf3(n.x, n.y, n.z));
+        }
+    } else {
+        Slic3r::Log::warn("TriangleMesh", "normals() requires repair()");
+    }
+    return std::move(tmp);
+}
+
+Pointf3 TriangleMesh::size() const
+{
+    const auto& sz {stl.stats.size};
+    return std::move(Pointf3(sz.x, sz.y, sz.z));
+}
+
+
+
+Pointf3
+TriangleMesh::center() const {
+    return this->bounding_box().center();
+}
+
+std::vector<ExPolygons> 
+TriangleMesh::slice(const std::vector<double>& z)
+{
+    // convert doubles to floats
+    std::vector<float> z_f(z.begin(), z.end());
+    TriangleMeshSlicer<Z> mslicer(this);
+    std::vector<ExPolygons> layers;
+
+    mslicer.slice(z_f, &layers);
+
+    return std::move(layers);
+}
+
+mesh_stats
+TriangleMesh::stats() const {
+    mesh_stats tmp_stats;
+    tmp_stats.number_of_facets = this->stl.stats.number_of_facets;
+    tmp_stats.number_of_parts = this->stl.stats.number_of_parts;
+    tmp_stats.volume = this->stl.stats.volume;
+    tmp_stats.degenerate_facets = this->stl.stats.degenerate_facets;
+    tmp_stats.edges_fixed = this->stl.stats.edges_fixed;
+    tmp_stats.facets_removed = this->stl.stats.facets_removed;
+    tmp_stats.facets_added = this->stl.stats.facets_added;
+    tmp_stats.facets_reversed = this->stl.stats.facets_reversed;
+    tmp_stats.backwards_edges = this->stl.stats.backwards_edges;
+    tmp_stats.normals_fixed = this->stl.stats.normals_fixed;
+    return std::move(tmp_stats);
+}
+
+BoundingBoxf3 TriangleMesh::bb3() const {
+    Pointf3 min(this->stl.stats.min.x, this->stl.stats.min.y, this->stl.stats.min.z);
+    Pointf3 max(this->stl.stats.max.x, this->stl.stats.max.y, this->stl.stats.max.z);
+    return std::move(BoundingBoxf3(min, max));
+}
+
+
+void TriangleMesh::cut(Axis axis, double z, TriangleMesh* upper, TriangleMesh* lower) 
+{
+    switch(axis) {
+        case X:
+            TriangleMeshSlicer<X>(this).cut(z, upper, lower);
+            break;
+        case Y:
+            TriangleMeshSlicer<Y>(this).cut(z, upper, lower);
+            break;
+        case Z:
+            TriangleMeshSlicer<Z>(this).cut(z, upper, lower);
+            break;
+        default: 
+            Slic3r::Log::error("TriangleMesh", "Invalid Axis supplied to cut()");
+    }
+}
+
+
+
+#endif // SLIC3RXS
 
 TriangleMeshPtrs
 TriangleMesh::split() const
@@ -605,7 +735,8 @@ TriangleMesh::make_cube(double x, double y, double z) {
     Pointf3s vertices(&pv[0], &pv[0]+8);
 
     TriangleMesh mesh(vertices ,facets);
-    return mesh;
+    mesh.repair();
+    return std::move(mesh);
 }
 
 // Generate the mesh for a cylinder and return it, using 
@@ -630,7 +761,7 @@ TriangleMesh::make_cylinder(double r, double h, double fa) {
     unsigned id = vertices.size() - 1;
     vertices.push_back(Pointf3(sin(0) * r , cos(0) * r, 0));
     vertices.push_back(Pointf3(sin(0) * r , cos(0) * r, h));
-    for (double i = 0; i < 2*PI; i+=angle) {
+    for (double i = angle; i < 2*PI - angle; i+=angle) {
         Pointf3 b(0, r, 0);
         Pointf3 t(0, r, h);
         b.rotate(i, Pointf3(0,0,0)); 
@@ -650,7 +781,8 @@ TriangleMesh::make_cylinder(double r, double h, double fa) {
     facets.push_back(Point3(id, 2, id - 1));
     
     TriangleMesh mesh(vertices, facets);
-    return mesh;
+    mesh.repair();
+    return std::move(mesh);
 }
 
 // Generates mesh for a sphere centered about the origin, using the generated angle
@@ -731,7 +863,8 @@ TriangleMesh::make_sphere(double rho, double fa) {
     }
     id++;
     TriangleMesh mesh(vertices, facets);
-    return mesh;
+    mesh.repair();
+    return std::move(mesh);
 }
 
 template <Axis A>
@@ -1392,6 +1525,7 @@ TriangleMeshSlicer<A>::cut(float z, TriangleMesh* upper, TriangleMesh* lower) co
     stl_get_size(&(upper->stl));
     stl_get_size(&(lower->stl));
 }
+
 
 template <Axis A>
 TriangleMeshSlicer<A>::TriangleMeshSlicer(TriangleMesh* _mesh) : mesh(_mesh), v_scaled_shared(NULL)

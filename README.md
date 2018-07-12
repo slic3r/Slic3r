@@ -40,7 +40,7 @@ See the [project homepage](http://slic3r.org/) at slic3r.org for more informatio
 
 ### What language is it written in?
 
-The core parts of Slic3r are written in C++11, with multithreading. The graphical interface is still mostly written in Perl, but we're gradually porting it to C++ (want to help?). The goal is to port everything to C++.
+The core parts of Slic3r are written in C++11, with multithreading. The graphical interface is in the process of being ported to C++11.
 
 ### How to install?
 
@@ -66,23 +66,20 @@ Sure! You can do the following to find things that are available to help with:
 
 ### Directory structure
 
-* `Build.PL`: this script installs dependencies into `local-lib/`, compiles the C++ part and runs tests
-* `lib/`: the Perl code
 * `package/`: the scripts used for packaging the executables
-* `slic3r.pl`: the main executable script, launching the GUI and providing the CLI
-* `src/`: the C++ source of the `slic3r` executable the and CMake definition file for compiling it (note that this C++ `slic3r` executable can do many things but can't generate G-code yet because the porting isn't finished yet - the main executable is `slic3r.pl`)
+* `src/`: the C++ source of the `slic3r` executable the and CMake definition file for compiling it
+* `src/GUI`: The C++ GUI.
 * `t/`: the test suite
 * `utils/`: various useful scripts
 * `xs/src/libslic3r/`: C++ sources for libslic3r
-* `xs/src/slic3r/`: C++ sources for the Slic3r GUI application
 * `xs/t/`: test suite for libslic3r
 * `xs/xsp/`: bindings for calling libslic3r from Perl (XS)
 
 ### Acknowledgements
 
-The main author of Slic3r is Alessandro Ranellucci (@alexrj, *Sound* in IRC, [@alranel](http://twitter.com/alranel) on Twitter), who started the project in 2011 and still leads development.
+The main author of Slic3r is Alessandro Ranellucci (@alexrj, *Sound* in IRC, [@alranel](http://twitter.com/alranel) on Twitter), who started the project in 2011.
 
-Joseph Lenox (@lordofhyphens, *Loh* in IRC) is the current co-maintainer.
+Joseph Lenox (@lordofhyphens, *LoH* in IRC, [@LenoxPlay](http://twitter.com/LenoxPlay) on Twitter) is the current co-maintainer.
 
 Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake, Kliment Yanev and numerous others. Original manual by Gary Hodgson. Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James, stl and gcode file icons designed by Akira Yasuda.
 

@@ -1,6 +1,12 @@
-#include <xsinit.h>
-#include "utils.hpp" 
+#include "utils.hpp"
 #include <regex>
+#ifndef NO_PERL
+#include <xsinit.h>
+#else
+#include "Log.hpp"
+#endif
+
+#include <cstdarg>
 
 void
 confess_at(const char *file, int line, const char *func,
@@ -26,6 +32,12 @@ confess_at(const char *file, int line, const char *func,
      call_pv("Carp::confess", G_DISCARD);
      FREETMPS;
      LEAVE;
+    #else
+    std::stringstream ss;
+    ss << "Error in function " << func << " at " << file << ":" << line << ": ";
+    ss << pat << "\n";
+
+    Slic3r::Log::error(std::string("Libslic3r"), ss.str() );
     #endif
 }
 

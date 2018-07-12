@@ -17,6 +17,21 @@ class TriangleMesh;
 template <Axis A> class TriangleMeshSlicer;
 typedef std::vector<TriangleMesh*> TriangleMeshPtrs;
 
+
+/// Interface to available statistics from the underlying mesh. 
+struct mesh_stats {
+    size_t number_of_facets {0};
+    size_t number_of_parts {0};
+    double volume {0};
+    size_t degenerate_facets {0};
+    size_t edges_fixed {0};
+    size_t facets_removed {0};
+    size_t facets_added {0};
+    size_t facets_reversed {0};
+    size_t backwards_edges {0};
+    size_t normals_fixed {0};
+};
+
 class TriangleMesh
 {
     public:
@@ -36,7 +51,14 @@ class TriangleMesh
     void WriteOBJFile(const std::string &output_file);
     void scale(float factor);
     void scale(const Pointf3 &versor);
+
+    /// Translate the mesh to a new location.
     void translate(float x, float y, float z);
+
+    /// Translate the mesh to a new location.
+    void translate(Pointf3 vec);
+
+
     void rotate(float angle, const Axis &axis);
     void rotate_x(float angle);
     void rotate_y(float angle);
@@ -47,7 +69,11 @@ class TriangleMesh
     void mirror_z();
     void align_to_origin();
     void center_around_origin();
+
+    /// Rotate angle around a specified point.
+    void rotate(double angle, const Point& center);
     void rotate(double angle, Point* center);
+
     TriangleMeshPtrs split() const;
     TriangleMeshPtrs cut_by_grid(const Pointf &grid) const;
     void merge(const TriangleMesh &mesh);
@@ -60,6 +86,36 @@ class TriangleMesh
     void extrude_tin(float offset);
     void require_shared_vertices();
     void reverse_normals();
+
+#ifndef SLIC3RXS // Don't build these functions when also building the Perl interface.
+
+    /// Return a copy of the vertex array defining this mesh.
+    Pointf3s vertices();
+
+    /// Return a copy of the facet array defining this mesh.
+    Point3s facets();
+
+    /// Return a copy of the normals array defining this mesh.
+    Pointf3s normals() const;
+
+    /// Return the size of the mesh in coordinates.
+    Pointf3 size() const;
+
+    /// Return the center of the related bounding box.
+    Pointf3 center() const;
+
+    /// Slice this mesh at the provided Z levels and return the vector
+    std::vector<ExPolygons> slice(const std::vector<double>& z);
+
+    /// Contains general statistics from underlying mesh structure.
+    mesh_stats stats() const;
+
+    BoundingBoxf3 bb3() const;
+
+    /// Perform a cut of the mesh and put the output in upper and lower
+    void cut(Axis axis, double z, TriangleMesh* upper, TriangleMesh* lower);
+    
+#endif // SLIC3RXS
 	
 	/// Generate a mesh representing a cube with dimensions (x, y, z), with one corner at (0,0,0).
     static TriangleMesh make_cube(double x, double y, double z);
@@ -74,6 +130,7 @@ class TriangleMesh
 	/// param[in] rho Distance from center to the shell of the sphere. 
 	/// param[in] fa Facet angle. A smaller angle produces more facets. Default value is 2pi / 360.  
     static TriangleMesh make_sphere(double rho, double fa=(2*PI/360));
+
     
     stl_file stl;
 	/// Whether or not this mesh has been repaired.
