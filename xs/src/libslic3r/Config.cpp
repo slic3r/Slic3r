@@ -35,6 +35,27 @@ new_from_cli(const int& argc, const char* argv[])
     return std::make_shared<Config>();
 }
 
+bool
+Config::validate()
+{
+    return false;
+}
+
+void
+Config::set(const t_config_option_key& opt_key, const std::string& value)
+{
+}
+
+void
+Config::set(const t_config_option_key& opt_key, const int value)
+{
+}
+
+void
+Config::set(const t_config_option_key& opt_key, const double value)
+{
+}
+
 } // namespace Slic3r
 
 

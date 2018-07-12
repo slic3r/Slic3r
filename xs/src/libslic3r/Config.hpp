@@ -12,6 +12,16 @@
 
 namespace Slic3r {
 
+/// Exception class for invalid (but correct type) option values. 
+/// Thrown by validate()
+class InvalidOptionValue : public std::runtime_error {};
+
+/// Exception class to handle config options that don't exist.
+class InvalidConfigOption : public std::runtime_error {};
+
+/// Exception class for type mismatches
+class InvalidOptionType : public std::runtime_error {};
+
 class Config;
 using config_ptr = std::shared_ptr<Config>;
 
@@ -31,6 +41,23 @@ public:
     T& get(const t_config_option_key& opt_key, bool create=false) {
         return *(dynamic_cast<T*>(this->optptr(opt_key, create)));
     }
+
+    /// Function to parse value from a string to whatever opt_key is.
+    void set(const t_config_option_key& opt_key, const std::string& value);
+    
+    /// Function to parse value from an integer to whatever opt_key is, if
+    /// opt_key is a numeric type. This will throw an exception and do 
+    /// nothing if called with an incorrect type.
+    void set(const t_config_option_key& opt_key, const int value);
+    
+    /// Function to parse value from an integer to whatever opt_key is, if
+    /// opt_key is a numeric type. This will throw an exception and do 
+    /// nothing if called with an incorrect type.
+    void set(const t_config_option_key& opt_key, const double value);
+
+    /// Method to validate the different configuration options. 
+    /// It will throw InvalidConfigOption exceptions on failure.
+    bool validate();
 };
 
 } // namespace Slic3r
