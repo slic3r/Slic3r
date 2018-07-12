@@ -12,9 +12,9 @@
 #include "Geometry.hpp"
 #include "Print.hpp"
 #include "ClipperUtils.hpp"
-#include "SupportMaterial.hpp"
 #include "ExPolygon.hpp"
 #include "SVG.hpp"
+#include <libslic3r/Fill/Fill.hpp>
 
 using namespace std;
 
@@ -27,6 +27,35 @@ constexpr coordf_t SUPPORT_MATERIAL_MARGIN = 1.5;
 constexpr coordf_t PILLAR_SIZE = 2.5;
 
 constexpr coordf_t PILLAR_SPACING = 10;
+
+struct toolpaths_params
+{
+    int contact_loops;
+    coordf_t circle_radius;
+    coordf_t circle_distance;
+    Polygon circle;
+    SupportMaterialPattern pattern;
+    vector<int> angles;
+    double interface_angle;
+    double interface_spacing;
+    float interface_density;
+    double support_spacing;
+    double support_density;
+
+    toolpaths_params(int contact_loops = 0,
+                     coordf_t circle_radius = 0,
+                     coordf_t circle_distance = 0,
+                     const Polygon &circle = Polygon(),
+                     const SupportMaterialPattern &pattern = SupportMaterialPattern(),
+                     const vector<int> &angles = vector<int>())
+        : contact_loops(contact_loops),
+          circle_radius(circle_radius),
+          circle_distance(circle_distance),
+          circle(circle),
+          pattern(pattern),
+          angles(angles)
+    {}
+};
 
 class SupportMaterial
 {
@@ -49,29 +78,6 @@ public:
           interface_flow(interface_flow),
           object(nullptr)
     {}
-
-    void process_layer(int layer_id)
-    {
-        SupportLayer *layer = this->object->support_layers[layer_id];
-        coordf_t z = layer->print_z;
-
-        // We redefine flows locally by applyinh this layer's height.
-        auto _flow = *flow;
-        auto _interface_flow = *interface_flow;
-        _flow.height = static_cast<float>(layer->height);
-        _interface_flow.height = static_cast<float>(layer->height);
-
-        Polygons overhang = this->overhang.count(z) > 0 ? this->overhang[z] : Polygons();
-        Polygons contact = this->contact.count(z) > 0 ? this->contact[z] : Polygons();
-        Polygons interface = interface[layer_id];
-        Polygons base = base[layer_id];
-
-        // TODO add the equivalent debug code.
-
-        // Islands.
-//        layer->support_islands.append()
-
-    }
 
     void generate_toolpaths(PrintObject *object,
                             map<coordf_t, Polygons> overhang,
@@ -119,6 +125,8 @@ public:
     // (it's used with interface and base only). It removes a bit more,
     // leaving a thin gap between object and support in the XY plane.
     void clip_with_object(map<int, Polygons> &support, vector<coordf_t> support_z, PrintObject &object);
+
+    void process_layer(int layer_id, toolpaths_params params);
 
 private:
     coordf_t get_max_layer_height(PrintObject *object);

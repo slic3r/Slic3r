@@ -2,6 +2,14 @@
 
 namespace Slic3r
 {
+
+PolylineCollection _fill_surface(Fill *fill, Surface *surface)
+{
+    PolylineCollection ps;
+    ps.polylines = fill->fill_surface(*surface);
+    return ps;
+}
+
 void
 SupportMaterial::generate_toolpaths(PrintObject *object,
                                     map<coordf_t, Polygons> overhang,
@@ -13,35 +21,35 @@ SupportMaterial::generate_toolpaths(PrintObject *object,
     this->object = object;
 
     // Shape of contact area.
-    int contact_loops = 1;
-    coordf_t circle_radius = 1.5 * interface_flow->scaled_width();
-    coordf_t circle_distance = 3 * circle_radius;
-    Polygon circle = create_circle(circle_radius);
+    toolpaths_params params;
+    params.contact_loops = 1;
+    params.circle_radius = 1.5 * interface_flow->scaled_width();
+    params.circle_distance = 3 * params.circle_radius;
+    params.circle = create_circle(params.circle_radius);
 
     // TODO Add Slic3r debug. "Generating patterns\n"
     // Prepare fillers.
-    auto pattern = object_config->support_material_pattern;
-    vector<int> angles;
-    angles.push_back(object_config->support_material_angle.value);
+    params.pattern = object_config->support_material_pattern.value;
+    params.angles.push_back(object_config->support_material_angle.value);
 
-    if (pattern == smpRectilinearGrid) {
-        pattern = smpRectilinear;
-        angles.push_back(angles[0] + 90);
+    if (params.pattern == smpRectilinearGrid) {
+        params.pattern = smpRectilinear;
+        params.angles.push_back(params.angles[0] + 90);
     }
-    else if (pattern == smpPillars) {
-        pattern = smpHoneycomb;
+    else if (params.pattern == smpPillars) {
+        params.pattern = smpHoneycomb;
     }
 
-    auto interface_angle = object_config->support_material_angle.value + 90;
-    auto interface_spacing = object_config->support_material_interface_spacing.value + interface_flow->spacing();
-    auto interface_density = interface_spacing == 0 ? 1 : interface_flow->spacing() / interface_spacing;
-    auto support_spacing = object_config->support_material_spacing + flow->spacing();
-    auto support_density = support_spacing == 0 ? 1 : flow->spacing() / support_spacing;
+    params.interface_angle = object_config->support_material_angle.value + 90;
+    params.interface_spacing = object_config->support_material_interface_spacing.value + interface_flow->spacing();
+    params.interface_density = params.interface_spacing == 0 ? 1 : interface_flow->spacing() / params.interface_spacing;
+    params.support_spacing = object_config->support_material_spacing.value + flow->spacing();
+    params.support_density = params.support_spacing == 0 ? 1 : flow->spacing() / params.support_spacing;
 
     parallelize<size_t>(
         0,
         object->support_layers.size() - 1,
-        boost::bind(&SupportMaterial::process_layer, this, _1),
+        boost::bind(&SupportMaterial::process_layer, this, _1, params),
         this->config->threads.value
     );
 }
@@ -571,8 +579,8 @@ SupportMaterial::object_top(PrintObject *object, map<coordf_t, Polygons> *contac
 
 void
 SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
-                            const vector<coordf_t> &support_z,
-                            map<int, Polygons> &shape)
+                                        const vector<coordf_t> &support_z,
+                                        map<int, Polygons> &shape)
 {
     // This prevents supplying an empty point set to BoundingBox constructor.
     if (contact.empty()) return;
@@ -758,9 +766,9 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
 
 void
 SupportMaterial::generate_bottom_interface_layers(const vector<coordf_t> &support_z,
-                                      map<int, Polygons> &base,
-                                      map<coordf_t, Polygons> &top,
-                                      map<int, Polygons> &interface)
+                                                  map<int, Polygons> &base,
+                                                  map<coordf_t, Polygons> &top,
+                                                  map<int, Polygons> &interface)
 {
     // If no interface layers are allowed, don't generate bottom interface layers.
     if (object_config->support_material_interface_layers.value == 0)
@@ -896,6 +904,283 @@ SupportMaterial::clip_with_object(map<int, Polygons> &support, vector<coordf_t> 
             offset([ map @$_, map @{$_->slices}, @layers ], +$self->flow->scaled_width),
         );
      */
+}
+
+void
+SupportMaterial::process_layer(int layer_id, toolpaths_params params)
+{
+    SupportLayer *layer = this->object->support_layers[layer_id];
+    coordf_t z = layer->print_z;
+
+    // We redefine flows locally by applyinh this layer's height.
+    auto _flow = *flow;
+    auto _interface_flow = *interface_flow;
+    _flow.height = static_cast<float>(layer->height);
+    _interface_flow.height = static_cast<float>(layer->height);
+
+    Polygons overhang = this->overhang.count(z) > 0 ? this->overhang[z] : Polygons();
+    Polygons contact = this->contact.count(z) > 0 ? this->contact[z] : Polygons();
+    Polygons interface = this->interface.count(layer_id) > 0 ? this->interface[layer_id] : Polygons();
+    Polygons base = this->base.count(layer_id) > 0 ? this->base[layer_id] : Polygons();
+
+    // Islands.
+    {
+        Polygons ps;
+        append_to(ps, base);
+        append_to(ps, contact);
+        append_to(ps, interface);
+        layer->support_islands.append(union_ex(ps));
+    }
+
+    // Contact.
+    Polygons contact_infill;
+    if (object_config->support_material_interface_layers.value == 0) {
+        // If no interface layers were requested we treat the contact layer
+        // exactly as a generic base layer.
+        append_to(base, contact);
+    }
+    else if (!contact.empty() && params.contact_loops > 0) { // Generate the outermost loop.
+        // Find the centerline of the external loop (or any other kind of extrusions should the loop be skipped).
+        contact = offset(contact, -_interface_flow.scaled_width() / 2);
+
+        Polygons loops0;
+        {
+            // Find centerline of the external loop of the contours.
+            auto external_loops = contact;
+
+            // Only consider the loops facing the overhang.
+            {
+                auto overhang_with_margin = offset(overhang, +_interface_flow.scaled_width() / 2);
+                {
+                    Polygons ps;
+                    for (auto p : external_loops) {
+                        if (!intersection_pl(
+                            p.split_at_first_point(),
+                            overhang_with_margin).empty()
+                            )
+                            ps.push_back(p);
+                    }
+                    external_loops = ps;
+                }
+            }
+
+            // Apply a pattern to the loop.
+            Points positions;
+            for (auto p : external_loops)
+                append_to(positions, Polygon(p).equally_spaced_points(params.circle_distance));
+            Polygons circles;
+            for (auto pos : positions) {
+                circles.push_back(params.circle);
+                circles.back().translate(pos.x, pos.y);
+            }
+            loops0 = diff(
+                external_loops,
+                circles
+            );
+        }
+
+        // TODO Revise the loop range.
+        // Make more loops.
+        auto loops = loops0;
+        for (int i = 2; i <= params.contact_loops; i++) {
+            auto d = (i - 1) * _interface_flow.scaled_spacing();
+            append_to(loops,
+                      offset2(loops0,
+                              -d - 0.5 * _interface_flow.scaled_spacing(),
+                              +0.5 * _interface_flow.scaled_spacing()));
+        }
+
+        // Clip such loops to the side oriented towards the object.
+        Polylines ps;
+        for (auto p : loops)
+            ps.push_back(p.split_at_first_point());
+
+        auto new_loops = intersection_pl(
+            ps,
+            offset(overhang, scale_(SUPPORT_MATERIAL_MARGIN))
+        );
+
+        // Add the contact infill area to the interface area
+        // note that growing loops by $circle_radius ensures no tiny
+        // extrusions are left inside the circles; however it creates
+        // a very large gap between loops and contact_infill, so maybe another
+        // solution should be found to achieve both goals.
+        {
+            Polygons ps;
+            for (auto pl : new_loops)
+                append_to(ps, offset(pl, params.circle_radius * 1.1));
+
+            contact_infill = diff(
+                contact,
+                ps
+            );
+        }
+
+        // Transform loops into ExtrusionPath objects.
+        auto mm3_per_mm = _interface_flow.mm3_per_mm();
+        ExtrusionPaths loops_extrusion_paths;
+        for (auto l : new_loops) {
+            ExtrusionPath extrusion_path(erSupportMaterialInterface);
+            extrusion_path.polyline = l;
+            extrusion_path.mm3_per_mm = mm3_per_mm;
+            extrusion_path.width = _interface_flow.width;
+            extrusion_path.height = layer->height;
+            loops_extrusion_paths.push_back(extrusion_path);
+        }
+
+        layer->support_interface_fills.append(loops_extrusion_paths);
+    }
+
+    // Allocate the fillers exclusively in the worker threads! Don't allocate them at the main thread,
+    // as Perl copies the C++ pointers by default, so then the C++ objects are shared between threads!
+    map<string, Fill *> fillers;
+    fillers["interface"] = Fill::new_from_type("rectilinear");
+    fillers["support"] = Fill::new_from_type(InfillPattern(params.pattern)); // FIXME @Samir55
+
+    BoundingBox bounding_box = object->bounding_box();
+    fillers["interface"]->bounding_box = bounding_box;
+    fillers["support"]->bounding_box = bounding_box;
+
+    // Interface and contact infill.
+    if (!interface.empty() || !contact_infill.empty()) {
+        // Make interface layers alternate angles by 90 degrees.
+        double alternate_angle = params.interface_angle + (90 * ((layer_id + 1) % 2));
+        fillers["interface"]->angle = static_cast<float>(Geometry::deg2rad(alternate_angle));
+        fillers["interface"]->min_spacing = _interface_flow.spacing();
+
+        // Find centerline of the external loop.
+        interface = offset2(interface, +SCALED_EPSILON, -(SCALED_EPSILON + _interface_flow.scaled_width() / 2));
+
+        // Join regions by offsetting them to ensure they're merged.
+        {
+            Polygons ps;
+            append_to(ps, interface);
+            append_to(ps, contact_infill);
+            interface = offset(ps, SCALED_EPSILON);
+        }
+
+        // turn base support into interface when it's contained in our holes
+        // (this way we get wider interface anchoring).
+        {
+            Polygons ps = interface;
+            interface = Polygons();
+            for (auto p: ps) {
+                if (p.is_clockwise()) {
+                    Polygon p2 = p;
+                    p2.make_counter_clockwise();
+                    if (diff(Polygons({p2}), base, 1).empty())
+                        continue;
+                    interface.push_back(p);
+                }
+            }
+        }
+        base = diff(base, interface);
+
+        ExtrusionPaths paths;
+        ExPolygons expolygons = union_ex(interface);
+        for (auto expolygon : expolygons) {
+            Surface surface(stInternal, expolygon);
+            fillers["interface"]->density = params.interface_density;
+            fillers["interface"]->complete = true;
+            // TODO What layer height come from FIXME. or Polyline collection
+            Polylines ps = fillers["interface"]->fill_surface(surface);
+
+            auto mm3_per_mm = _interface_flow.mm3_per_mm();
+
+            for (auto p : ps) {
+                ExtrusionPath extrusion_path(erSupportMaterialInterface);
+                extrusion_path.polyline = p;
+                extrusion_path.mm3_per_mm = mm3_per_mm;
+                extrusion_path.width = _interface_flow.width;
+                extrusion_path.height = layer->height;
+                paths.push_back(extrusion_path);
+            }
+        }
+
+        layer->support_interface_fills.append(paths);
+    }
+
+    // Support or flange
+    if (!base.empty()) {
+        Fill *filler = fillers["support"];
+        filler->angle = static_cast<float>(Geometry::deg2rad(params.angles[layer_id % int(params.angles.size())]));
+
+        // We don't use $base_flow->spacing because we need a constant spacing
+        // value that guarantees that all layers are correctly aligned.
+        filler->min_spacing = flow->spacing();
+
+        auto density = params.support_density;
+        Flow *base_flow = &_flow;
+
+        // Find centerline of the external loop/extrusions.
+        Polygons to_infill = offset2(base, +SCALED_EPSILON, -(SCALED_EPSILON + _flow.scaled_width() / 2));
+        ExPolygons new_to_infill;
+
+        ExtrusionPaths paths;
+
+        // Base flange.
+        if (layer_id == 0) {
+            filler = fillers["interface"];
+            filler->angle = static_cast<float>(Geometry::deg2rad(object_config->support_material_angle.value + 90));
+            density = 0.5;
+            base_flow = first_layer_flow;
+
+            // Use the proper spacing for first layer as we don't need to align
+            // its pattern to the other layers.
+            filler->min_spacing = base_flow->spacing();
+
+            // Subtract brim so that it goes around the object fully (and support gets its own brim).
+            if (config->brim_width.value > 0) {
+                float d = +scale_(config->brim_width.value * 2);
+
+                new_to_infill = diff_ex(
+                    to_infill,
+                    offset(to_polygons(object->get_layer(0)->slices), d)
+                );
+            }
+            else {
+                new_to_infill = union_ex(to_infill);
+            }
+        }
+        else {
+            // Draw a perimeter all around support infill.
+            // TODO: use brim ordering algorithm.
+            auto mm3_per_mm = _flow.mm3_per_mm();
+            for (auto p : to_infill) {
+                ExtrusionPath extrusionPath(erSupportMaterial);
+                extrusionPath.polyline = p.split_at_first_point();
+                extrusionPath.mm3_per_mm = mm3_per_mm;
+                extrusionPath.width = _flow.width;
+                extrusionPath.height = layer->height;
+
+                paths.push_back(extrusionPath);
+            }
+
+            // TODO: use offset2_ex()
+            new_to_infill = offset_ex(to_infill, -_flow.scaled_spacing());
+        }
+
+        auto mm3_per_mm = base_flow->mm3_per_mm();
+        for (const auto &expolygon : new_to_infill) {
+            Surface surface(stInternal, expolygon);
+            filler->density = static_cast<float>(density);
+            filler->complete = true;
+            // TODO What layer height come from FIXME. or Polyline collection
+            Polylines ps = filler->fill_surface(surface);
+
+            for (auto pl : ps) {
+                ExtrusionPath extrusionPath(erSupportMaterial);
+                extrusionPath.polyline = pl;
+                extrusionPath.mm3_per_mm = mm3_per_mm;
+                extrusionPath.width = base_flow->width;
+                extrusionPath.height = static_cast<float>(layer->height);
+
+                paths.push_back(extrusionPath);
+            }
+        }
+
+        layer->support_fills.append(paths);
+    }
 }
 
 Polygons
