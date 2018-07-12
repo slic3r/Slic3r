@@ -381,7 +381,7 @@ if (SLIC3R_BUILD_TESTS)
         target_compile_definitions(Catch INTERFACE $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CXX17_UNCAUGHT_EXCEPTION_DEPRECATION_WARNING>)
     endif()
     include_directories(${LIBDIR}/test)
-    configure_file("${LIBDIR}/test/test_options.hpp.in" "${LIBDIR}/test/test_options.hpp")
+    configure_file("${TESTDIR}/test_options.hpp.in" "${TESTDIR}/test_options.hpp")
     add_executable(slic3r_test ${SLIC3R_TEST_SOURCES}) 
     add_test(NAME TestSlic3r COMMAND slic3r_test)
 
@@ -390,4 +390,4 @@ endif()
 
 if (BUILD_EXTRUDE_TIN)
     target_link_libraries (extrude-tin libslic3r ${LIBSLIC3R_DEPENDS})
-endif(
+endif()
