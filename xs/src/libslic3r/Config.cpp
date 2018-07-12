@@ -57,12 +57,12 @@ Config::set(const t_config_option_key& opt_key, const double value)
 }
 
 void
-read_ini(const std::string& file)
+Config::read_ini(const std::string& file)
 {
 }
 
 void
-write_ini(const std::string& file) const
+Config::write_ini(const std::string& file) const
 {
 }
 
