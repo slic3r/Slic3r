@@ -189,8 +189,8 @@ SCENARIO( "make_xxx functions produce meshes.") {
     }
     GIVEN("make_cylinder() function") {
         WHEN("make_cylinder() is called with arguments 10,10, PI / 3") {
-            auto cyl {TriangleMesh::make_cylinder(10, 10, PI / 3.0)};
-            double angle = (2*PI / floor(2*PI / (PI / 3.0)));
+            auto cyl {TriangleMesh::make_cylinder(10, 10, PI / 243.0)};
+            double angle = (2*PI / floor(2*PI / (PI / 243.0)));
             THEN("The resulting mesh has one and only one vertex at 0,0,0") {
                 auto verts {cyl.vertices()};
                 REQUIRE(std::count_if(verts.begin(), verts.end(), [](Pointf3& t) { return t.x == 0 && t.y == 0 && t.z == 0; } ) == 1);
@@ -208,13 +208,16 @@ SCENARIO( "make_xxx functions produce meshes.") {
             THEN("The resulting mesh is in the repaired state.") {
                 REQUIRE(cyl.repaired == true);
             }
+            THEN( "The mesh volume is approximately 10pi * 10^2") {
+                REQUIRE(abs(cyl.volume() - (10.0 * M_PI * std::pow(10,2))) < 1);
+            }
         }
     }
 
     GIVEN("make_sphere() function") {
         WHEN("make_sphere() is called with arguments 10, PI / 3") {
-            auto sph {TriangleMesh::make_sphere(10, PI / 3.0)};
-            double angle = (2.0*PI / floor(2.0*PI / (PI / 3.0)));
+            auto sph {TriangleMesh::make_sphere(10, PI / 243.0)};
+            double angle = (2.0*PI / floor(2.0*PI / (PI / 243.0)));
             THEN("Resulting mesh has one point at 0,0,-10 and one at 0,0,10") {
                 auto verts {sph.vertices()};
                 REQUIRE(std::count_if(verts.begin(), verts.end(), [](Pointf3& t) { return t.x == 0 && t.y == 0 && t.z == 10; } ) == 1);
@@ -222,6 +225,9 @@ SCENARIO( "make_xxx functions produce meshes.") {
             }
             THEN("The resulting mesh is in the repaired state.") {
                 REQUIRE(sph.repaired == true);
+            }
+            THEN( "The mesh volume is approximately 4/3 * pi * 10^3") {
+                REQUIRE(abs(sph.volume() - (4.0/3.0 * M_PI * std::pow(10,3))) < 1); // 1% tolerance?
             }
         }
     }
