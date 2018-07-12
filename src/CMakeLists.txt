@@ -67,8 +67,12 @@ find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
 set(GUI_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/GUI/)
+
 set(TESTDIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
 set(GUI_TESTDIR ${CMAKE_CURRENT_SOURCE_DIR}/test/GUI/)
+
+# directory that contains the dependent non-source files, like models and configurations
+set(TESTFILE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test/inputs/)
 
 include_directories(${LIBDIR})
 include_directories(${LIBDIR}/libslic3r)
@@ -376,11 +380,14 @@ if (SLIC3R_BUILD_TESTS)
         target_include_directories(Catch INTERFACE ${CMAKE_BINARY_DIR}/external/Catch/include)
         target_compile_definitions(Catch INTERFACE $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CXX17_UNCAUGHT_EXCEPTION_DEPRECATION_WARNING>)
     endif()
+    include_directories(${LIBDIR}/test)
+    configure_file("${LIBDIR}/test/test_options.hpp.in" "${LIBDIR}/test/test_options.hpp")
     add_executable(slic3r_test ${SLIC3R_TEST_SOURCES}) 
     add_test(NAME TestSlic3r COMMAND slic3r_test)
+
     target_link_libraries(slic3r_test PUBLIC libslic3r Catch ${LIBSLIC3R_DEPENDS})
 endif()
 
 if (BUILD_EXTRUDE_TIN)
     target_link_libraries (extrude-tin libslic3r ${LIBSLIC3R_DEPENDS})
-endif()
+endif(
