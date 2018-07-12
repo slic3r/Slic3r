@@ -50,8 +50,91 @@ public:
           object(nullptr)
     {}
 
-    void generate_pillars_shape(vector<coordf_t, Polygons> contact, vector<coordf_t> support_z)
-    {}
+    void generate_pillars_shape(const map<coordf_t, Polygons> &contact,
+                                const vector<coordf_t> &support_z,
+                                map<int, Polygons> &shape)
+    {
+        // This prevents supplying an empty point set to BoundingBox constructor.
+        if (contact.empty()) return;
+
+        coord_t pillar_size = scale_(object_config->support_material_pillar_size.value);
+        coord_t pillar_spacing = scale_(object_config->support_material_pillar_spacing.value);
+
+        Polygons grid;
+        {
+            auto pillar = Polygon({
+                                      Point(0, 0),
+                                      Point(pillar_size, coord_t(0)),
+                                      Point(pillar_size, pillar_size),
+                                      Point(coord_t(0), pillar_size)
+                                  });
+
+            Polygons pillars;
+            BoundingBox bb;
+            {
+                Points bb_points;
+                for (auto contact_el : contact) {
+                    append_to(bb_points, to_points(contact_el.second));
+                }
+                bb = BoundingBox(bb_points);
+            }
+
+            for (auto x = bb.min.x; x <= bb.max.x - pillar_size; x += pillar_spacing) {
+                for (auto y = bb.min.y; y <= bb.max.y - pillar_size; y += pillar_spacing) {
+                    pillars.push_back(pillar);
+                    pillar.translate(x, y);
+                }
+            }
+
+            grid = union_(pillars);
+        }
+
+        // Add pillars to every layer.
+        for (auto i = 0; i < support_z.size(); i++) {
+            shape[i] = grid;
+        }
+
+        // Build capitals.
+        for (auto i = 0; i < support_z.size(); i++) {
+            coordf_t z = support_z[i];
+
+            auto capitals = intersection(
+                grid,
+                contact.at(z)
+            );
+
+            // Work on one pillar at time (if any) to prevent the capitals from being merged
+            // but store the contact area supported by the capital because we need to make
+            // sure nothing is left.
+            Polygons contact_supported_by_capitals;
+            for (auto capital : capitals) {
+                // Enlarge capital tops.
+                auto capital_polygons = offset(Polygons({capital}), +(pillar_spacing - pillar_size) / 2);
+                append_to(contact_supported_by_capitals, capital_polygons);
+
+                for (int j = i - 1; j >= 0; j--) {
+                    auto jz = support_z[j];
+                    capital_polygons = offset(Polygons{capital}, -interface_flow->scaled_width() / 2);
+                    if (capitals.empty()) break;
+                    append_to(shape[i], capital_polygons);
+                }
+            }
+
+            // Work on one pillar at time (if any) to prevent the capitals from being merged
+            // but store the contact area supported by the capital because we need to make
+            // sure nothing is left.
+            auto contact_not_supported_by_capitals = diff(
+                contact.at(z),
+                contact_supported_by_capitals
+            );
+
+            if (!contact_not_supported_by_capitals.empty()) {
+                for (int j = i - 1; j >= 0; j--) {
+                    append_to(shape[j], contact_not_supported_by_capitals);
+                }
+            }
+        }
+    }
 
     void generate_bottom_interface_layers(const vector<coordf_t> &support_z,
                                           map<int, Polygons> &base,
