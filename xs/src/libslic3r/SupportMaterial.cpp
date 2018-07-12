@@ -162,12 +162,11 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
     }
 
     // Create other layers (skip raft layers as they're already done and use thicker layers).
-    for (size_t i = z.size(); i >= object_config->raft_layers; i--) {
+    for (int i = static_cast<int>(z.size()); i >= object_config->raft_layers.value; i--) {
         coordf_t target_height = support_material_height;
         if (i > 0 && is_top[z[i - 1]]) {
             target_height = nozzle_diameter;
         }
-
         // Enforce first layer height.
         if ((i == 0 && z[i] > target_height + first_layer_height)
             || (z[i] - z[i - 1] > target_height + EPSILON)) {
@@ -179,10 +178,10 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
     // Remove duplicates and make sure all 0.x values have the leading 0.
     {
         set<coordf_t> s;
-        for (auto el : z)
-            s.insert(roundf(static_cast<float>((el * 100)) / 100)); // round it to 2 decimal places.
+        for (coordf_t el : z)
+            s.insert(int(el * 100) / 100.0); // round it to 2 decimal places.
         z = vector<coordf_t>();
-        for (auto el : s)
+        for (coordf_t el : s)
             z.push_back(el);
     }
 
