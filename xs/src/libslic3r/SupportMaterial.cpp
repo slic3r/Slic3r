@@ -147,7 +147,7 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
 }
 
 vector<int>
-SupportMaterial::overlapping_layers(int layer_idx, vector<coordf_t> support_z)
+SupportMaterial::overlapping_layers(int layer_idx, const vector<coordf_t> &support_z)
 {
     vector<int> ret;
 
@@ -520,9 +520,9 @@ SupportMaterial::contact_area(PrintObject *object)
                             // For bridges we can't assume width is larger than spacing because they
                             // are positioned according to non-bridging perimeters spacing.
                             coord_t widths[] = {bridge_flow.scaled_width(),
-                                                 bridge_flow.scaled_spacing(),
-                                                 fw,
-                                                 layerm->flow(FlowRole::frPerimeter).scaled_width()};
+                                                bridge_flow.scaled_spacing(),
+                                                fw,
+                                                layerm->flow(FlowRole::frPerimeter).scaled_width()};
 
                             auto w = *max_element(widths, widths + 4);
 
@@ -680,7 +680,10 @@ SupportMaterial::generate(PrintObject *object)
     // object's top surfaces this is the place to detect them. TODO
 
 
-    // Propagate contact layers downwards to generate interface layers. TODO
+    // Propagate contact layers downwards to generate interface layers.
+    map<int, Polygons> interface = generate_interface_layers(support_z, contact, top);
+    clip_with_object(interface, support_z, *object);
+//    clip_with_shape(base, shape); // TODO
 
     // Propagate contact layers and interface layers downwards to generate
     // the main support layers. TODO
@@ -709,16 +712,16 @@ SupportMaterial::generate(PrintObject *object)
 
 }
 
-
-map<coordf_t, Polygons>
-SupportMaterial::generate_interface_layers(vector<coordf_t> support_z, map<coordf_t, Polygons> contact, map<coordf_t, Polygons> top)
+map<int, Polygons>
+SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
+                                           map<coordf_t, Polygons> contact,
+                                           map<coordf_t, Polygons> top)
 {
     // let's now generate interface layers below contact areas.
-    map<coordf_t, Polygons> interface;
+    map<int, Polygons> interface;
     auto interface_layers_num = object_config->support_material_interface_layers.value;
 
-    for (int layer_id = 0; layer_id < support_z.size(); layer_id++)
-    {
+    for (int layer_id = 0; layer_id < support_z.size(); layer_id++) {
         // Todo Ask about how to port this line. "my $this = $contact->{$z} // next;"
         auto z = support_z[layer_id];
         if (contact.count(z) <= 0)
@@ -726,8 +729,7 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z, map<coord
         Polygons &_contact = contact[z];
 
         // Count contact layer as interface layer.
-        for (int i = layer_id - 1; i >= 0 && i > layer_id - interface_layers_num; i--)
-        {
+        for (int i = layer_id - 1; i >= 0 && i > layer_id - interface_layers_num; i--) {
             auto _z = support_z[i];
             auto overlapping_layers = this->overlapping_layers(i, support_z);
             vector<coordf_t> overlapping_z;
@@ -745,8 +747,7 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z, map<coord
             append_polygons(ps_1, interface[i]); // interface regions already applied to this layer.
 
             Polygons ps_2;
-            for (auto el : overlapping_z)
-            {
+            for (auto el : overlapping_z) {
                 if (top.count(el) > 0)
                     append_polygons(ps_2, top[el]); // top slices on this layer.
                 if (contact.count(el))
