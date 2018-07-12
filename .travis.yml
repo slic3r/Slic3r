@@ -21,6 +21,8 @@ addons:
     packages:
     - g++-7
     - gcc-7
+    - g++-4.9
+    - gcc-4.9
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
@@ -58,17 +60,7 @@ matrix:
             - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
             - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
             - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
-            addons:
-          apt:
-            sources:
-            - ubuntu-toolchain-r-test
-            packages:
-            - g++-4.9
-            - gcc-4.9
-            - libgtk2.0-0 
-            - libgtk2.0-dev
-            - freeglut3
-            - os: linux
+        - os: linux
             env: 
             - WXVERSION=pkg
             - CC=gcc-7
