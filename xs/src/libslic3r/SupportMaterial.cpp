@@ -750,7 +750,7 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
             for (auto el : overlapping_z) {
                 if (top.count(el) > 0)
                     append_polygons(ps_2, top[el]); // top slices on this layer.
-                if (contact.count(el))
+                if (contact.count(el) > 0)
                     append_polygons(ps_2, contact[el]); // contact regions on this layer.
             }
 
@@ -796,9 +796,9 @@ SupportMaterial::generate_base_layers(vector<coordf_t> support_z,
             for (auto el : overlapping_z) {
                 if (top.count(el) > 0)
                     append_polygons(ps_2, top[el]); // top slices on this layer.
-                if (interface.count(el))
+                if (interface.count(el) > 0)
                     append_polygons(ps_2, interface[el]); // interface regions on this layer.
-                if (contact.count(el))
+                if (contact.count(el) > 0)
                     append_polygons(ps_2, contact[el]); // contact regions on this layer.
             }
 
