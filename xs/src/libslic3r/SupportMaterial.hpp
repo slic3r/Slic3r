@@ -53,55 +53,13 @@ public:
     void generate_bottom_interface_layers()
     {}
 
+    void generate_pillars_shape()
+    {}
+
     map<int, Polygons> generate_base_layers(vector<coordf_t> support_z,
                                             map<coordf_t, Polygons> contact,
                                             map<int, Polygons> interface,
-                                            map<coordf_t, Polygons> top)
-    {
-        // Let's now generate support layers under interface layers.
-        map<int, Polygons> base;
-        {
-            for (int i = static_cast<int>(support_z.size() - 1); i >= 0; i--) {
-                auto z = support_z[i];
-                auto overlapping_layers = this->overlapping_layers(i, support_z);
-                vector<coordf_t> overlapping_z;
-                for (auto el : overlapping_layers)
-                    overlapping_z.push_back(support_z[el]);
-
-                // In case we have no interface layers, look at upper contact
-                // (1 interface layer means we only have contact layer, so $interface->{$i+1} is empty).
-                Polygons upper_contact;
-                if (object_config->support_material_interface_layers.value <= 1) {
-                    append_polygons(upper_contact, contact[support_z[i + 1]]);
-                }
-
-                Polygons ps_1;
-                append_polygons(ps_1, base[i + 1]); // support regions on upper layer.
-                append_polygons(ps_1, interface[i + 1]); // interface regions on upper layer
-                append_polygons(ps_1, upper_contact); // contact regions on upper layer
-
-                Polygons ps_2;
-                for (auto el : overlapping_z) {
-                    if (top.count(el) > 0)
-                        append_polygons(ps_2, top[el]); // top slices on this layer.
-                    if (interface.count(el))
-                        append_polygons(ps_2, interface[el]); // interface regions on this layer.
-                    if (contact.count(el))
-                        append_polygons(ps_2, contact[el]); // contact regions on this layer.
-                }
-
-                base[i] = diff(
-                    ps_1,
-                    ps_2,
-                    1
-                );
-            }
-        }
-        return base;
-    }
-
-    void generate_pillars_shape()
-    {}
+                                            map<coordf_t, Polygons> top);
 
     map<int, Polygons> generate_interface_layers(vector<coordf_t> support_z,
                                                  map<coordf_t, Polygons> contact,
