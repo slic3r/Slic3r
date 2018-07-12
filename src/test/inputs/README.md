@@ -15,6 +15,7 @@ Rules
     * Do not add NonCommercial models, these would need to be relicensed from the original holder.
     * Add any necessary licensing or attributation information as `<filename>.license`
         * Example: A CC-By-SA 3D model called `cool_statue_bro.stl` should have its attributation/license information included in a file called `cool_statue_bro.license`
+        * Any submitted files without an accompanying `.license` file are assumed to be licensed under [CC-By-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/us/).
 * The author of a commit adding any extra input files asserts that, via the process of committing those files, that they 
     * have abided by the terms of all licensing agreements involved with the files added or 
     * are the author of the files in question and submit them to the Slic3r project under the terms of [CC-By-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/us/).
