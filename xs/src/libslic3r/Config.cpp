@@ -35,6 +35,15 @@ new_from_cli(const int& argc, const char* argv[])
     return std::make_shared<Config>();
 }
 
+std::shared_ptr<Config> 
+Config::new_from_ini(const std::string& inifile) 
+{ 
+    
+    auto my_config(std::make_shared<Config>());
+    my_config->read_ini(inifile);
+    return my_config;
+}
+
 bool
 Config::validate()
 {

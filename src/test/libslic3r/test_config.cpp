@@ -1,12 +1,12 @@
 #include <catch.hpp>
 
 #include "Config.hpp"
-#include <test_paths.hpp>
+#include <test_options.hpp>
 
 #include <string>
 
 using namespace Slic3r;
-using namespace std::string_literals;
+using namespace std::literals::string_literals;
 
 SCENARIO("Generic config validation performs as expected.", "[!mayfail]") {
     GIVEN("A config generated from default options") {
@@ -101,7 +101,7 @@ SCENARIO("Config accessor functions perform as expected.", "[!mayfail]") {
 
 SCENARIO("Config ini load/save interface", "[!mayfail]") {
     WHEN("new_from_ini is called") {
-        auto config {Slic3r::Config::new_from_config(std::string(testfile_dir) + "test_config/new_from_ini.ini"s) };
+        auto config {Slic3r::Config::new_from_ini(std::string(testfile_dir) + "test_config/new_from_ini.ini"s) };
         THEN("Config object contains ini file options.") {
         }
     }

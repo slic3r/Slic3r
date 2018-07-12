@@ -40,6 +40,9 @@ public:
     /// Factory method to construct a Config from CLI options.
     static std::shared_ptr<Config> new_from_cli(const int& argc, const char* argv[]);
 
+    /// Factory method to construct a Config from an ini file.
+    static std::shared_ptr<Config> new_from_ini(const std::string& inifile);
+
     /// Write a windows-style opt=value ini file with categories from the configuration store.
     void write_ini(const std::string& file) const;
 
