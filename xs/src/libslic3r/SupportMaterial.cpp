@@ -2,75 +2,6 @@
 
 namespace Slic3r
 {
-Polygon
-SupportMaterial::create_circle(coordf_t radius)
-{
-    Points points;
-    coordf_t positions[] = {5 * PI / 3,
-                            4 * PI / 3,
-                            PI,
-                            2 * PI / 3,
-                            PI / 3,
-                            0};
-    for (auto pos : positions) {
-        points.emplace_back(radius * cos(pos), (radius * sin(pos)));
-    }
-
-    return Polygon(points);
-}
-
-Polygons
-SupportMaterial::p(SurfacesPtr &surfaces)
-{
-    Polygons ret;
-    for (auto surface : surfaces) {
-        ret.push_back(surface->expolygon.contour);
-        for (const auto &hole_polygon : surface->expolygon.holes) {
-            ret.push_back(hole_polygon);
-        }
-    }
-    return ret;
-}
-
-void
-SupportMaterial::append_polygons(Polygons &dst, Polygons &src)
-{
-    for (const auto polygon : src) {
-        dst.push_back(polygon);
-    }
-}
-
-coordf_t
-SupportMaterial::contact_distance(coordf_t layer_height, coordf_t nozzle_diameter)
-{
-    coordf_t extra = static_cast<float>(object_config->support_material_contact_distance.value);
-    if (extra == 0) {
-        return layer_height;
-    }
-    else {
-        return nozzle_diameter + extra;
-    }
-}
-
-vector<coordf_t>
-SupportMaterial::get_keys_sorted(map<coordf_t, Polygons> _map)
-{
-    vector<coordf_t> ret;
-    for (auto el : _map)
-        ret.push_back(el.first);
-    sort(ret.begin(), ret.end());
-    return ret;
-}
-
-coordf_t
-SupportMaterial::get_max_layer_height(PrintObject *object)
-{
-    coordf_t ret = -1;
-    for (auto layer : object->layers)
-        ret = max(ret, layer->height);
-    return ret;
-}
-
 void
 SupportMaterial::generate_toolpaths(PrintObject *object,
                                     map<coordf_t, Polygons> overhang,
@@ -638,6 +569,93 @@ SupportMaterial::object_top(PrintObject *object, map<coordf_t, Polygons> *contac
     return top;
 }
 
+void
+SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
+                            const vector<coordf_t> &support_z,
+                            map<int, Polygons> &shape)
+{
+    // This prevents supplying an empty point set to BoundingBox constructor.
+    if (contact.empty()) return;
+
+    coord_t pillar_size = scale_(object_config->support_material_pillar_size.value);
+    coord_t pillar_spacing = scale_(object_config->support_material_pillar_spacing.value);
+
+    Polygons grid;
+    {
+        auto pillar = Polygon({
+                                  Point(0, 0),
+                                  Point(pillar_size, coord_t(0)),
+                                  Point(pillar_size, pillar_size),
+                                  Point(coord_t(0), pillar_size)
+                              });
+
+        Polygons pillars;
+        BoundingBox bb;
+        {
+            Points bb_points;
+            for (auto contact_el : contact) {
+                append_to(bb_points, to_points(contact_el.second));
+            }
+            bb = BoundingBox(bb_points);
+        }
+
+        for (auto x = bb.min.x; x <= bb.max.x - pillar_size; x += pillar_spacing) {
+            for (auto y = bb.min.y; y <= bb.max.y - pillar_size; y += pillar_spacing) {
+                pillars.push_back(pillar);
+                pillar.translate(x, y);
+            }
+        }
+
+        grid = union_(pillars);
+    }
+
+    // Add pillars to every layer.
+    for (auto i = 0; i < support_z.size(); i++) {
+        shape[i] = grid;
+    }
+
+    // Build capitals.
+    for (auto i = 0; i < support_z.size(); i++) {
+        coordf_t z = support_z[i];
+
+        auto capitals = intersection(
+            grid,
+            contact.at(z)
+        );
+
+        // Work on one pillar at time (if any) to prevent the capitals from being merged
+        // but store the contact area supported by the capital because we need to make
+        // sure nothing is left.
+        Polygons contact_supported_by_capitals;
+        for (auto capital : capitals) {
+            // Enlarge capital tops.
+            auto capital_polygons = offset(Polygons({capital}), +(pillar_spacing - pillar_size) / 2);
+            append_to(contact_supported_by_capitals, capital_polygons);
+
+            for (int j = i - 1; j >= 0; j--) {
+                auto jz = support_z[j];
+                capital_polygons = offset(Polygons{capital}, -interface_flow->scaled_width() / 2);
+                if (capitals.empty()) break;
+                append_to(shape[i], capital_polygons);
+            }
+        }
+
+        // Work on one pillar at time (if any) to prevent the capitals from being merged
+        // but store the contact area supported by the capital because we need to make
+        // sure nothing is left.
+        auto contact_not_supported_by_capitals = diff(
+            contact.at(z),
+            contact_supported_by_capitals
+        );
+
+        if (!contact_not_supported_by_capitals.empty()) {
+            for (int j = i - 1; j >= 0; j--) {
+                append_to(shape[j], contact_not_supported_by_capitals);
+            }
+        }
+    }
+}
+
 map<int, Polygons>
 SupportMaterial::generate_base_layers(vector<coordf_t> support_z,
                                       map<coordf_t, Polygons> contact,
@@ -794,6 +812,18 @@ SupportMaterial::generate_bottom_interface_layers(const vector<coordf_t> &suppor
     }
 }
 
+coordf_t
+SupportMaterial::contact_distance(coordf_t layer_height, coordf_t nozzle_diameter)
+{
+    coordf_t extra = static_cast<float>(object_config->support_material_contact_distance.value);
+    if (extra == 0) {
+        return layer_height;
+    }
+    else {
+        return nozzle_diameter + extra;
+    }
+}
+
 vector<int>
 SupportMaterial::overlapping_layers(int layer_idx, const vector<coordf_t> &support_z)
 {
@@ -866,6 +896,63 @@ SupportMaterial::clip_with_object(map<int, Polygons> &support, vector<coordf_t> 
             offset([ map @$_, map @{$_->slices}, @layers ], +$self->flow->scaled_width),
         );
      */
+}
+
+Polygons
+SupportMaterial::p(SurfacesPtr &surfaces)
+{
+    Polygons ret;
+    for (auto surface : surfaces) {
+        ret.push_back(surface->expolygon.contour);
+        for (const auto &hole_polygon : surface->expolygon.holes) {
+            ret.push_back(hole_polygon);
+        }
+    }
+    return ret;
+}
+
+void
+SupportMaterial::append_polygons(Polygons &dst, Polygons &src)
+{
+    for (const auto polygon : src) {
+        dst.push_back(polygon);
+    }
+}
+
+vector<coordf_t>
+SupportMaterial::get_keys_sorted(map<coordf_t, Polygons> _map)
+{
+    vector<coordf_t> ret;
+    for (auto el : _map)
+        ret.push_back(el.first);
+    sort(ret.begin(), ret.end());
+    return ret;
+}
+
+coordf_t
+SupportMaterial::get_max_layer_height(PrintObject *object)
+{
+    coordf_t ret = -1;
+    for (auto layer : object->layers)
+        ret = max(ret, layer->height);
+    return ret;
+}
+
+Polygon
+SupportMaterial::create_circle(coordf_t radius)
+{
+    Points points;
+    coordf_t positions[] = {5 * PI / 3,
+                            4 * PI / 3,
+                            PI,
+                            2 * PI / 3,
+                            PI / 3,
+                            0};
+    for (auto pos : positions) {
+        points.emplace_back(radius * cos(pos), (radius * sin(pos)));
+    }
+
+    return Polygon(points);
 }
 
 }

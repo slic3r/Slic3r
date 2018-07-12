@@ -50,145 +50,6 @@ public:
           object(nullptr)
     {}
 
-    void generate_pillars_shape(const map<coordf_t, Polygons> &contact,
-                                const vector<coordf_t> &support_z,
-                                map<int, Polygons> &shape)
-    {
-        // This prevents supplying an empty point set to BoundingBox constructor.
-        if (contact.empty()) return;
-
-        coord_t pillar_size = scale_(object_config->support_material_pillar_size.value);
-        coord_t pillar_spacing = scale_(object_config->support_material_pillar_spacing.value);
-
-        Polygons grid;
-        {
-            auto pillar = Polygon({
-                                      Point(0, 0),
-                                      Point(pillar_size, coord_t(0)),
-                                      Point(pillar_size, pillar_size),
-                                      Point(coord_t(0), pillar_size)
-                                  });
-
-            Polygons pillars;
-            BoundingBox bb;
-            {
-                Points bb_points;
-                for (auto contact_el : contact) {
-                    append_to(bb_points, to_points(contact_el.second));
-                }
-                bb = BoundingBox(bb_points);
-            }
-
-            for (auto x = bb.min.x; x <= bb.max.x - pillar_size; x += pillar_spacing) {
-                for (auto y = bb.min.y; y <= bb.max.y - pillar_size; y += pillar_spacing) {
-                    pillars.push_back(pillar);
-                    pillar.translate(x, y);
-                }
-            }
-
-            grid = union_(pillars);
-        }
-
-        // Add pillars to every layer.
-        for (auto i = 0; i < support_z.size(); i++) {
-            shape[i] = grid;
-        }
-
-        // Build capitals.
-        for (auto i = 0; i < support_z.size(); i++) {
-            coordf_t z = support_z[i];
-
-            auto capitals = intersection(
-                grid,
-                contact.at(z)
-            );
-
-            // Work on one pillar at time (if any) to prevent the capitals from being merged
-            // but store the contact area supported by the capital because we need to make
-            // sure nothing is left.
-            Polygons contact_supported_by_capitals;
-            for (auto capital : capitals) {
-                // Enlarge capital tops.
-                auto capital_polygons = offset(Polygons({capital}), +(pillar_spacing - pillar_size) / 2);
-                append_to(contact_supported_by_capitals, capital_polygons);
-
-                for (int j = i - 1; j >= 0; j--) {
-                    auto jz = support_z[j];
-                    capital_polygons = offset(Polygons{capital}, -interface_flow->scaled_width() / 2);
-                    if (capitals.empty()) break;
-                    append_to(shape[i], capital_polygons);
-                }
-            }
-
-            // Work on one pillar at time (if any) to prevent the capitals from being merged
-            // but store the contact area supported by the capital because we need to make
-            // sure nothing is left.
-            auto contact_not_supported_by_capitals = diff(
-                contact.at(z),
-                contact_supported_by_capitals
-            );
-
-            if (!contact_not_supported_by_capitals.empty()) {
-                for (int j = i - 1; j >= 0; j--) {
-                    append_to(shape[j], contact_not_supported_by_capitals);
-                }
-            }
-        }
-    }
-
-    void generate_bottom_interface_layers(const vector<coordf_t> &support_z,
-                                          map<int, Polygons> &base,
-                                          map<coordf_t, Polygons> &top,
-                                          map<int, Polygons> &interface);
-
-    map<int, Polygons> generate_base_layers(vector<coordf_t> support_z,
-                                            map<coordf_t, Polygons> contact,
-                                            map<int, Polygons> interface,
-                                            map<coordf_t, Polygons> top);
-
-    map<int, Polygons> generate_interface_layers(vector<coordf_t> support_z,
-                                                 map<coordf_t, Polygons> contact,
-                                                 map<coordf_t, Polygons> top);
-
-    pair<map<coordf_t, Polygons>, map<coordf_t, Polygons>> contact_area(PrintObject *object);
-
-    void generate(PrintObject *object);
-
-    void generate_toolpaths(PrintObject *object,
-                            map<coordf_t, Polygons> overhang,
-                            map<coordf_t, Polygons> contact,
-                            map<int, Polygons> interface,
-                            map<int, Polygons> base);
-
-    // Is this expolygons or polygons?
-    map<coordf_t, Polygons> object_top(PrintObject *object, map<coordf_t, Polygons> *contact);
-
-    // This method removes object silhouette from support material
-    // (it's used with interface and base only). It removes a bit more,
-    // leaving a thin gap between object and support in the XY plane.
-    void clip_with_object(map<int, Polygons> &support, vector<coordf_t> support_z, PrintObject &object);
-
-    void clip_with_shape(map<int, Polygons> &support, map<int, Polygons> &shape);
-
-    /// This method returns the indices of the layers overlapping with the given one.
-    vector<int> overlapping_layers(int layer_idx, const vector<coordf_t> &support_z);
-
-    vector<coordf_t> support_layers_z(vector<coordf_t> contact_z,
-                                      vector<coordf_t> top_z,
-                                      coordf_t max_object_layer_height);
-
-    coordf_t contact_distance(coordf_t layer_height, coordf_t nozzle_diameter);
-
-    Polygons p(SurfacesPtr &surfaces);
-
-    Polygon create_circle(coordf_t radius);
-
-    void append_polygons(Polygons &dst, Polygons &src);
-
-    vector<coordf_t> get_keys_sorted(map<coordf_t, Polygons> _map);
-
-    coordf_t get_max_layer_height(PrintObject *object);
-
     void process_layer(int layer_id)
     {
         SupportLayer *layer = this->object->support_layers[layer_id];
@@ -212,7 +73,64 @@ public:
 
     }
 
+    void generate_toolpaths(PrintObject *object,
+                            map<coordf_t, Polygons> overhang,
+                            map<coordf_t, Polygons> contact,
+                            map<int, Polygons> interface,
+                            map<int, Polygons> base);
+
+    void generate(PrintObject *object);
+
+    vector<coordf_t> support_layers_z(vector<coordf_t> contact_z,
+                                      vector<coordf_t> top_z,
+                                      coordf_t max_object_layer_height);
+
+    pair<map<coordf_t, Polygons>, map<coordf_t, Polygons>> contact_area(PrintObject *object);
+
+    // Is this expolygons or polygons?
+    map<coordf_t, Polygons> object_top(PrintObject *object, map<coordf_t, Polygons> *contact);
+
+    void generate_pillars_shape(const map<coordf_t, Polygons> &contact,
+                                const vector<coordf_t> &support_z,
+                                map<int, Polygons> &shape);
+
+    map<int, Polygons> generate_base_layers(vector<coordf_t> support_z,
+                                            map<coordf_t, Polygons> contact,
+                                            map<int, Polygons> interface,
+                                            map<coordf_t, Polygons> top);
+
+    map<int, Polygons> generate_interface_layers(vector<coordf_t> support_z,
+                                                 map<coordf_t, Polygons> contact,
+                                                 map<coordf_t, Polygons> top);
+
+    void generate_bottom_interface_layers(const vector<coordf_t> &support_z,
+                                          map<int, Polygons> &base,
+                                          map<coordf_t, Polygons> &top,
+                                          map<int, Polygons> &interface);
+
+    coordf_t contact_distance(coordf_t layer_height, coordf_t nozzle_diameter);
+
+    /// This method returns the indices of the layers overlapping with the given one.
+    vector<int> overlapping_layers(int layer_idx, const vector<coordf_t> &support_z);
+
+    void clip_with_shape(map<int, Polygons> &support, map<int, Polygons> &shape);
+
+    // This method removes object silhouette from support material
+    // (it's used with interface and base only). It removes a bit more,
+    // leaving a thin gap between object and support in the XY plane.
+    void clip_with_object(map<int, Polygons> &support, vector<coordf_t> support_z, PrintObject &object);
+
 private:
+    coordf_t get_max_layer_height(PrintObject *object);
+
+    void append_polygons(Polygons &dst, Polygons &src);
+
+    Polygons p(SurfacesPtr &surfaces);
+
+    vector<coordf_t> get_keys_sorted(map<coordf_t, Polygons> _map);
+
+    Polygon create_circle(coordf_t radius);
+
     // Used during generate_toolpaths function.
     PrintObject *object;
     map<coordf_t, Polygons> overhang;
