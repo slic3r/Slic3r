@@ -50,63 +50,13 @@ public:
           object(nullptr)
     {}
 
+    void generate_pillars_shape(vector<coordf_t, Polygons> contact, vector<coordf_t> support_z)
+    {}
+
     void generate_bottom_interface_layers(const vector<coordf_t> &support_z,
                                           map<int, Polygons> &base,
                                           map<coordf_t, Polygons> &top,
-                                          map<int, Polygons> &interface)
-    {
-        // If no interface layers are allowed, don't generate bottom interface layers.
-        if (object_config->support_material_interface_layers.value == 0)
-            return;
-
-        auto area_threshold = interface_flow->scaled_spacing() * interface_flow->scaled_spacing();
-
-        // Loop through object's top surfaces. TODO CHeck if the keys are sorted.
-        for (auto &top_el : top) {
-            // Keep a count of the interface layers we generated for this top surface.
-            int interface_layers = 0;
-
-            // Loop through support layers until we find the one(s) right above the top
-            // surface.
-            for (int layer_id = 0; layer_id < support_z.size(); layer_id++) {
-                auto z = support_z[layer_id];
-                if (!z > top_el.first) // next unless $z > $top_z;
-                    continue;
-
-                if (base.count(layer_id) > 0) {
-                    // Get the support material area that should be considered interface.
-                    auto interface_area = intersection(
-                        base[layer_id],
-                        top_el.second
-                    );
-
-                    // Discard too small areas.
-                    Polygons new_interface_area;
-                    for (auto p : interface_area) {
-                        if (abs(p.area()) >= area_threshold)
-                            new_interface_area.push_back(p);
-                    }
-                    interface_area = new_interface_area;
-
-                    // Subtract new interface area from base.
-                    base[layer_id] = diff(
-                        base[layer_id],
-                        interface_area
-                    );
-
-                    // Add the new interface area to interface.
-                    append_polygons(interface[layer_id], interface_area);
-                }
-
-                interface_layers++;
-                if (interface_layers == object_config->support_material_interface_layers.value)
-                    layer_id = support_z.size();
-            }
-        }
-    }
-
-    void generate_pillars_shape()
-    {}
+                                          map<int, Polygons> &interface);
 
     map<int, Polygons> generate_base_layers(vector<coordf_t> support_z,
                                             map<coordf_t, Polygons> contact,
