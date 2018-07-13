@@ -40,6 +40,8 @@ class ConfigOption {
     virtual double getFloat() const { return 0; };
     virtual bool getBool() const { return false; };
     virtual void setInt(int val) {};
+    virtual void setFloat(double val) {};
+    virtual void setString(std::string val) {};
     virtual std::string getString() const { return ""; };
     friend bool operator== (const ConfigOption &a, const ConfigOption &b);
     friend bool operator!= (const ConfigOption &a, const ConfigOption &b);
@@ -100,6 +102,8 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
     ConfigOptionFloat* clone() const { return new ConfigOptionFloat(this->value); };
     
     double getFloat() const { return this->value; };
+    void setFloat(double val) { this->value = val; }
+    void setInt(int val) { this->value = val; }
     
     std::string serialize() const {
         std::ostringstream ss;
