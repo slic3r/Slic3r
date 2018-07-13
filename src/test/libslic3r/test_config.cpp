@@ -8,7 +8,7 @@
 using namespace Slic3r;
 using namespace std::literals::string_literals;
 
-SCENARIO("Generic config validation performs as expected.", "[!mayfail]") {
+SCENARIO("Generic config validation performs as expected.") {
     GIVEN("A config generated from default options") {
         auto config {Slic3r::Config::new_from_defaults()};
         WHEN( "perimeter_extrusion_width is set to 250%, a valid value") {
@@ -19,7 +19,7 @@ SCENARIO("Generic config validation performs as expected.", "[!mayfail]") {
         }
         WHEN( "perimeter_extrusion_width is set to -10, an invalid value") {
             config->set("perimeter_extrusion_width", -10);
-            THEN( "An exception is thrown.") {
+            THEN( "An InvalidOptionValue exception is thrown.") {
                 auto except_thrown {false};
                 try {
                     config->validate();

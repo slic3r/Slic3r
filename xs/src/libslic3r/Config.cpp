@@ -2,7 +2,11 @@
 #include "Config.hpp"
 #include "Log.hpp"
 
+#include <string>
+
 namespace Slic3r {
+
+extern const PrintConfigDef print_config_def;
 
 std::shared_ptr<Config> 
 Config::new_from_defaults() 
@@ -47,7 +51,41 @@ Config::new_from_ini(const std::string& inifile)
 bool
 Config::validate()
 {
-    return false;
+    // general validation
+    for (auto k : this->keys()) {
+        if (print_config_def.options.count(k) == 0) continue; // skip over keys that aren't in the master list
+        const auto& opt {print_config_def.options.at(k)};
+        if (opt.cli == "" || std::regex_search(opt.cli, _match_info, _cli_pattern) == false) continue;
+        auto type {_match_info.str(1)};
+        std::vector<std::string> values;
+        if (std::regex_search(type, _match_info, std::regex("@$"))) {
+            type = std::regex_replace(type, std::regex("@$"), std::string("")); // strip off the @ for later;
+            ConfigOptionVectorBase* tmp_opt;
+            try {
+                tmp_opt = get_ptr<ConfigOptionVectorBase>(k);
+            } catch (std::bad_cast) {
+                throw InvalidOptionValue((std::string("Invalid value for ") + std::string(k)).c_str());
+            }
+            auto tmp_str {tmp_opt->vserialize()};
+            values.insert(values.end(), tmp_str.begin(), tmp_str.end());
+        } else {
+            Slic3r::Log::debug("Config::validate", std::string("Not an array"));
+            Slic3r::Log::debug("Config::validate", type);
+            values.emplace_back(get_ptr<ConfigOption>(k)->serialize());
+        }
+        // Verify each value
+        for (auto v : values) {
+            Slic3r::Log::debug("Config::validate", v);
+            if (type == "i" || type == "f" || opt.type == coPercent || opt.type == coFloatOrPercent) {
+                if (opt.type == coPercent || opt.type == coFloatOrPercent)
+                    v = std::regex_replace(v, std::regex("%$"), std::string(""));
+                if (!is_valid_int(type, opt, v) || !is_valid_float(type, opt, v)) {
+                    throw InvalidOptionValue((std::string("Invalid value for ") + std::string(k)).c_str());
+                }
+            }
+        }
+    }
+    return true;
 }
 
 void
@@ -58,6 +96,36 @@ Config::set(const t_config_option_key& opt_key, const std::string& value)
 void
 Config::set(const t_config_option_key& opt_key, const int value)
 {
+    const auto& def {print_config_def.options.at(opt_key)};
+    switch (def.type) {
+        case coInt:
+            {
+                auto* ptr {dynamic_cast<ConfigOptionInt*>(this->optptr(opt_key, true))};
+                ptr->setInt(value);
+            } break;
+        case coInts:
+            {
+                auto* ptr {dynamic_cast<ConfigOptionInts*>(this->optptr(opt_key, true))};
+                ptr->deserialize(std::to_string(value), true);
+            } break;
+        case coFloat:
+            {
+                auto* ptr {dynamic_cast<ConfigOptionFloat*>(this->optptr(opt_key, true))};
+                ptr->setFloat(value);
+            } break;
+        case coFloatOrPercent:
+            {
+                auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->optptr(opt_key, true))};
+                ptr->setFloat(value);
+            } break;
+        case coFloats:
+            {
+                auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->optptr(opt_key, true))};
+                ptr->deserialize(std::to_string(value), true);
+            } break;
+        default: 
+            Slic3r::Log::warn("Config::set", "Unknown set type.");
+    }
 }
 
 void
@@ -74,6 +142,44 @@ void
 Config::write_ini(const std::string& file) const
 {
 }
+
+bool
+is_valid_int(const std::string& type, const ConfigOptionDef& opt, const std::string& ser_value)
+{
+    std::regex _valid_int {"^-?\\d+$"};
+    std::smatch match;
+    ConfigOptionInt tmp;
+    
+    bool result {type == "i"};
+    if (result) 
+        result = result && std::regex_search(ser_value, match, _valid_int);
+    if (result) {
+        tmp.deserialize(ser_value);
+        result = result & (tmp.getInt() <= opt.max && tmp.getInt() >= opt.min);
+    }
+
+    return result;
+}
+
+bool
+is_valid_float(const std::string& type, const ConfigOptionDef& opt, const std::string& ser_value)
+{
+    std::regex _valid_float {"^-?(?:\\d+|\\d*\\.\\d+)$"};
+    std::smatch match;
+    ConfigOptionFloat tmp;
+    Slic3r::Log::debug("is_valid_float", ser_value);
+
+    bool result {type == "f" || opt.type == coPercent || opt.type == coFloatOrPercent};
+    if (result) 
+        result = result && std::regex_search(ser_value, match, _valid_float);
+    if (result) {
+        tmp.deserialize(ser_value);
+        result = result & (tmp.getFloat() <= opt.max && tmp.getFloat() >= opt.min);
+    }
+    return result;
+}
+
+
 
 } // namespace Slic3r
 

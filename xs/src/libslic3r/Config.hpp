@@ -6,6 +6,7 @@
 
 #include <initializer_list>
 #include <memory>
+#include <regex>
 
 #include "PrintConfig.hpp"
 #include "ConfigBase.hpp"
@@ -14,13 +15,19 @@ namespace Slic3r {
 
 /// Exception class for invalid (but correct type) option values. 
 /// Thrown by validate()
-class InvalidOptionValue : public std::runtime_error {};
+class InvalidOptionValue : public std::runtime_error {
+public:
+    InvalidOptionValue(const char* v) : runtime_error(v) {}
+};
 
 /// Exception class to handle config options that don't exist.
 class InvalidConfigOption : public std::runtime_error {};
 
 /// Exception class for type mismatches
-class InvalidOptionType : public std::runtime_error {};
+class InvalidOptionType : public std::runtime_error {
+public:
+    InvalidOptionType(const char* v) : runtime_error(v) {}
+};
 
 class Config;
 using config_ptr = std::shared_ptr<Config>;
@@ -56,6 +63,12 @@ public:
         return *(dynamic_cast<T*>(this->optptr(opt_key, create)));
     }
 
+    /// Template function to dynamic cast and leave it in pointer form.
+    template <class T>
+    T* get_ptr(const t_config_option_key& opt_key, bool create=false) {
+        return dynamic_cast<T*>(this->optptr(opt_key, create));
+    }
+
     /// Function to parse value from a string to whatever opt_key is.
     void set(const t_config_option_key& opt_key, const std::string& value);
     
@@ -72,7 +85,14 @@ public:
     /// Method to validate the different configuration options. 
     /// It will throw InvalidConfigOption exceptions on failure.
     bool validate();
+
+private:
+    std::regex _cli_pattern {"=(.+)$"};
+    std::smatch _match_info {};
 };
+
+bool is_valid_int(const std::string& type, const ConfigOptionDef& opt, const std::string& ser_value);
+bool is_valid_float(const std::string& type, const ConfigOptionDef& opt, const std::string& ser_value);
 
 } // namespace Slic3r
 
