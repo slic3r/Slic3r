@@ -64,7 +64,7 @@ Config::validate()
             try {
                 tmp_opt = get_ptr<ConfigOptionVectorBase>(k);
             } catch (std::bad_cast) {
-                throw InvalidOptionValue((std::string("Invalid value for ") + std::string(k)).c_str());
+                throw InvalidOptionType((std::string("(cast failure) Invalid value for ") + std::string(k)).c_str());
             }
             auto tmp_str {tmp_opt->vserialize()};
             values.insert(values.end(), tmp_str.begin(), tmp_str.end());
@@ -75,11 +75,10 @@ Config::validate()
         }
         // Verify each value
         for (auto v : values) {
-            Slic3r::Log::debug("Config::validate", v);
             if (type == "i" || type == "f" || opt.type == coPercent || opt.type == coFloatOrPercent) {
                 if (opt.type == coPercent || opt.type == coFloatOrPercent)
                     v = std::regex_replace(v, std::regex("%$"), std::string(""));
-                if (!is_valid_int(type, opt, v) || !is_valid_float(type, opt, v)) {
+                if ((type == "i" && !is_valid_int(type, opt, v)) || !is_valid_float(type, opt, v)) {
                     throw InvalidOptionValue((std::string("Invalid value for ") + std::string(k)).c_str());
                 }
             }
@@ -91,46 +90,130 @@ Config::validate()
 void
 Config::set(const t_config_option_key& opt_key, const std::string& value)
 {
+    try {
+        const auto& def {print_config_def.options.at(opt_key)};
+        switch (def.type) {
+            case coInt:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionInt*>(this->optptr(opt_key, true))};
+                    ptr->setInt(std::stoi(value));
+                } break;
+            case coInts:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionInts*>(this->optptr(opt_key, true))};
+                    if (!ptr->deserialize(value, true) ) {
+                        throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
+                    }
+                } break;
+            case coFloat:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionFloat*>(this->optptr(opt_key, true))};
+                    ptr->setFloat(std::stod(value));
+                } break;
+            case coFloatOrPercent:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->optptr(opt_key, true))};
+                    const size_t perc = value.find("%");
+                    ptr->percent = (perc != std::string::npos);
+                    if (ptr->percent)
+                        ptr->setFloat(std::stod(std::string(value).replace(value.find("%"), std::string("%").length(), "")));
+                    else 
+                        ptr->setFloat(std::stod(value));
+                } break;
+            case coFloats:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->optptr(opt_key, true))};
+                    if (!ptr->deserialize(value, true) ) {
+                        throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
+                    }
+                } break;
+            default: 
+                Slic3r::Log::warn("Config::set", "Unknown set type.");
+        }
+    } catch (std::invalid_argument &e) {
+        throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
+    } catch (std::out_of_range &e) {
+        throw InvalidOptionType(std::string(opt_key) + std::string(" is an invalid Slic3r option."));
+    }
 }
 
 void
 Config::set(const t_config_option_key& opt_key, const int value)
 {
-    const auto& def {print_config_def.options.at(opt_key)};
-    switch (def.type) {
-        case coInt:
-            {
-                auto* ptr {dynamic_cast<ConfigOptionInt*>(this->optptr(opt_key, true))};
-                ptr->setInt(value);
-            } break;
-        case coInts:
-            {
-                auto* ptr {dynamic_cast<ConfigOptionInts*>(this->optptr(opt_key, true))};
-                ptr->deserialize(std::to_string(value), true);
-            } break;
-        case coFloat:
-            {
-                auto* ptr {dynamic_cast<ConfigOptionFloat*>(this->optptr(opt_key, true))};
-                ptr->setFloat(value);
-            } break;
-        case coFloatOrPercent:
-            {
-                auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->optptr(opt_key, true))};
-                ptr->setFloat(value);
-            } break;
-        case coFloats:
-            {
-                auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->optptr(opt_key, true))};
-                ptr->deserialize(std::to_string(value), true);
-            } break;
-        default: 
-            Slic3r::Log::warn("Config::set", "Unknown set type.");
+    try {
+        const auto& def {print_config_def.options.at(opt_key)};
+        switch (def.type) {
+            case coInt:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionInt*>(this->optptr(opt_key, true))};
+                    ptr->setInt(value);
+                } break;
+            case coInts:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionInts*>(this->optptr(opt_key, true))};
+                    ptr->deserialize(std::to_string(value), true);
+                } break;
+            case coFloat:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionFloat*>(this->optptr(opt_key, true))};
+                    ptr->setFloat(value);
+                } break;
+            case coFloatOrPercent:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->optptr(opt_key, true))};
+                    ptr->setFloat(value);
+                } break;
+            case coFloats:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->optptr(opt_key, true))};
+                    ptr->deserialize(std::to_string(value), true);
+                } break;
+            default: 
+                Slic3r::Log::warn("Config::set", "Unknown set type.");
+        }
+
+    } catch (std::out_of_range &e) {
+        throw InvalidOptionType(std::string(opt_key) + std::string(" is an invalid Slic3r option."));
     }
 }
 
 void
 Config::set(const t_config_option_key& opt_key, const double value)
 {
+    try {
+        const auto& def {print_config_def.options.at(opt_key)};
+        switch (def.type) {
+            case coInt:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionInt*>(this->optptr(opt_key, true))};
+                    ptr->setInt(std::round(value));
+                } break;
+            case coInts:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionInts*>(this->optptr(opt_key, true))};
+                    ptr->deserialize(std::to_string(std::round(value)), true);
+                } break;
+            case coFloat:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionFloat*>(this->optptr(opt_key, true))};
+                    ptr->setFloat(value);
+                } break;
+            case coFloatOrPercent:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->optptr(opt_key, true))};
+                    ptr->setFloat(value);
+                } break;
+            case coFloats:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->optptr(opt_key, true))};
+                    ptr->deserialize(std::to_string(value), true);
+                } break;
+            default: 
+                Slic3r::Log::warn("Config::set", "Unknown set type.");
+        }
+    } catch (std::out_of_range &e) {
+        throw InvalidOptionType(std::string(opt_key) + std::string(" is an invalid Slic3r option."));
+    }
 }
 
 void

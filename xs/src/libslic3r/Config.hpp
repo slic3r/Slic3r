@@ -18,6 +18,7 @@ namespace Slic3r {
 class InvalidOptionValue : public std::runtime_error {
 public:
     InvalidOptionValue(const char* v) : runtime_error(v) {}
+    InvalidOptionValue(const std::string v) : runtime_error(v.c_str()) {}
 };
 
 /// Exception class to handle config options that don't exist.
@@ -27,6 +28,7 @@ class InvalidConfigOption : public std::runtime_error {};
 class InvalidOptionType : public std::runtime_error {
 public:
     InvalidOptionType(const char* v) : runtime_error(v) {}
+    InvalidOptionType(const std::string v) : runtime_error(v.c_str()) {}
 };
 
 class Config;
@@ -60,12 +62,14 @@ public:
     /// format than longwinded dynamic_cast<> 
     template <class T>
     T& get(const t_config_option_key& opt_key, bool create=false) {
+        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return *(dynamic_cast<T*>(this->optptr(opt_key, create)));
     }
 
     /// Template function to dynamic cast and leave it in pointer form.
     template <class T>
     T* get_ptr(const t_config_option_key& opt_key, bool create=false) {
+        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return dynamic_cast<T*>(this->optptr(opt_key, create));
     }
 
