@@ -54,6 +54,7 @@ SCENARIO("Config accessor functions perform as expected.") {
                 REQUIRE(config->get<ConfigOptionInt>("bed_temperature").getInt() == 100);
             }
         }
+
         WHEN("An integer-based option is set through the integer interface") {
             config->set("bed_temperature", 100);
             THEN("The underlying value is set correctly.") {
@@ -90,6 +91,24 @@ SCENARIO("Config accessor functions perform as expected.") {
             }
             THEN("The value does not change.") {
                 REQUIRE(config->get<ConfigOptionFloat>("perimeter_speed").getFloat() == 60.0);
+            }
+        }
+        WHEN("A string option is set through the string interface") {
+            config->set("octoprint_apikey", "100");
+            THEN("The underlying value is set correctly.") {
+                REQUIRE(config->get<ConfigOptionString>("octoprint_apikey").getString() == "100");
+            }
+        }
+        WHEN("A string option is set through the integer interface") {
+            config->set("octoprint_apikey", 100);
+            THEN("The underlying value is set correctly.") {
+                REQUIRE(config->get<ConfigOptionString>("octoprint_apikey").getString() == "100");
+            }
+        }
+        WHEN("A string option is set through the double interface") {
+            config->set("octoprint_apikey", 100.5);
+            THEN("The underlying value is set correctly.") {
+                REQUIRE(config->get<ConfigOptionString>("octoprint_apikey").getString() == std::to_string(100.5));
             }
         }
         WHEN("An invalid option is requested during set (string).") {

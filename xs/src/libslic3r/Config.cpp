@@ -127,12 +127,19 @@ Config::set(const t_config_option_key& opt_key, const std::string& value)
                         throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
                     }
                 } break;
+            case coString:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionString*>(this->optptr(opt_key, true))};
+                    if (!ptr->deserialize(value) ) {
+                        throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
+                    }
+                } break;
             default: 
                 Slic3r::Log::warn("Config::set", "Unknown set type.");
         }
-    } catch (std::invalid_argument &e) {
+    } catch (std::invalid_argument e) {
         throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
-    } catch (std::out_of_range &e) {
+    } catch (std::out_of_range e) {
         throw InvalidOptionType(std::string(opt_key) + std::string(" is an invalid Slic3r option."));
     }
 }
@@ -167,6 +174,13 @@ Config::set(const t_config_option_key& opt_key, const int value)
                 {
                     auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->optptr(opt_key, true))};
                     ptr->deserialize(std::to_string(value), true);
+                } break;
+            case coString:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionString*>(this->optptr(opt_key, true))};
+                    if (!ptr->deserialize(std::to_string(value)) ) {
+                        throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
+                    }
                 } break;
             default: 
                 Slic3r::Log::warn("Config::set", "Unknown set type.");
@@ -207,6 +221,13 @@ Config::set(const t_config_option_key& opt_key, const double value)
                 {
                     auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->optptr(opt_key, true))};
                     ptr->deserialize(std::to_string(value), true);
+                } break;
+            case coString:
+                {
+                    auto* ptr {dynamic_cast<ConfigOptionString*>(this->optptr(opt_key, true))};
+                    if (!ptr->deserialize(std::to_string(value)) ) {
+                        throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
+                    }
                 } break;
             default: 
                 Slic3r::Log::warn("Config::set", "Unknown set type.");
