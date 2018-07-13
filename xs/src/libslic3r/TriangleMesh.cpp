@@ -28,7 +28,6 @@ TriangleMesh::TriangleMesh()
     stl_initialize(&this->stl);
 }
 
-TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& facets ) : TriangleMesh(points.data(), facets.data(), facets.size()) {}
 TriangleMesh::TriangleMesh(const Pointf3* points, const Point3* facets, size_t n_facets) 
     : repaired(false)
 {
