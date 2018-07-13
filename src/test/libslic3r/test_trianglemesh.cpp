@@ -12,7 +12,7 @@ SCENARIO( "TriangleMesh: Basic mesh statistics") {
     GIVEN( "A 20mm cube, built from constexpr std::array" ) {
         constexpr std::array<Pointf3, 8> vertices { Pointf3(20,20,0), Pointf3(20,0,0), Pointf3(0,0,0), Pointf3(0,20,0), Pointf3(20,20,20), Pointf3(0,20,20), Pointf3(0,0,20), Pointf3(20,0,20) };
         constexpr std::array<Point3, 12> facets { Point3(0,1,2), Point3(0,2,3), Point3(4,5,6), Point3(4,6,7), Point3(0,4,7), Point3(0,7,1), Point3(1,7,6), Point3(1,6,2), Point3(2,6,5), Point3(2,5,3), Point3(4,0,3), Point3(4,3,5) };
-        auto cube {TriangleMesh(vertices.cbegin(), vertices.cend(), facets.cbegin(), facets.cend())};
+        auto cube {TriangleMesh(vertices, facets)};
         cube.repair();
         
         THEN( "Volume is appropriate for 20mm square cube.") {

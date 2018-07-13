@@ -36,11 +36,13 @@ class TriangleMesh
 {
     public:
     TriangleMesh();
+    TriangleMesh(const Pointf3* points, const Point3* facets, size_t n_facets); 
     TriangleMesh(const Pointf3s &points, const std::vector<Point3> &facets);
 
-    /// Templated constructor that takes a pair of iterators to build a TriangleMesh.
-    template <typename Iter_vert, typename Iter_fac>
-    TriangleMesh(Iter_vert p_begin, Iter_vert p_end, Iter_fac f_begin, Iter_fac f_end) : TriangleMesh(Pointf3s(p_begin, p_end), Point3s(f_begin, f_end)) {}
+    /// Templated constructor to adapt containers that offer .data() and .size()
+    template <typename Vertex_Cont, typename Facet_Cont>
+    TriangleMesh(const Vertex_Cont& vertices, const Facet_Cont& facets) : TriangleMesh(vertices.data(), facets.data(), facets.size()) {}
+
     TriangleMesh(const TriangleMesh &other);
     TriangleMesh& operator= (TriangleMesh other);
     void swap(TriangleMesh &other);

@@ -28,7 +28,8 @@ TriangleMesh::TriangleMesh()
     stl_initialize(&this->stl);
 }
 
-TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& facets )
+TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& facets ) : TriangleMesh(points.data(), facets.data(), facets.size()) {}
+TriangleMesh::TriangleMesh(const Pointf3* points, const Point3* facets, size_t n_facets) 
     : repaired(false)
 {
     stl_initialize(&this->stl);
@@ -37,7 +38,7 @@ TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& fa
     stl.stats.type = inmemory;
 
     // count facets and allocate memory
-    stl.stats.number_of_facets = facets.size();
+    stl.stats.number_of_facets = n_facets;
     stl.stats.original_num_facets = stl.stats.number_of_facets;
     stl_allocate(&stl);
 
