@@ -195,6 +195,7 @@ set(UI_TEST_SOURCES
 )
 set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/test_harness.cpp
+    ${TESTDIR}/test_data.cpp
     ${TESTDIR}/libslic3r/test_trianglemesh.cpp
     ${TESTDIR}/libslic3r/test_config.cpp
 )
