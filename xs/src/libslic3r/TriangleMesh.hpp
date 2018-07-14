@@ -47,10 +47,11 @@ class TriangleMesh
     ///  copy assignment
     TriangleMesh& operator= (const TriangleMesh& other);
 
+#ifndef SLIC3RXS
     /// Move assignment
     TriangleMesh& operator= (TriangleMesh&& other);
     TriangleMesh(TriangleMesh&& other);
-
+#endif 
     void swap(TriangleMesh &other);
     ~TriangleMesh();
     void ReadSTLFile(const std::string &input_file);

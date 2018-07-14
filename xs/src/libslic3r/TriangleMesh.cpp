@@ -108,6 +108,7 @@ void TriangleMesh::clone(const TriangleMesh& other) {
     }
 }
 
+#ifndef SLIC3RXS
 TriangleMesh::TriangleMesh(TriangleMesh&& other) {
     this->repaired = std::move(other.repaired);
     this->stl = std::move(other.stl);
@@ -120,6 +121,7 @@ TriangleMesh& TriangleMesh::operator= (TriangleMesh&& other)
 
     return *this;
 }
+#endif
 
 void
 TriangleMesh::swap(TriangleMesh &other)
