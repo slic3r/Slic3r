@@ -46,7 +46,7 @@ Flow::spacing() const {
     }
     
     // rectangle with semicircles at the ends
-    float min_flow_spacing = this->width - this->height * (1 - PI/4.0);
+    float min_flow_spacing = this->width - this->height * (1.0 - PI/4.0);
     return this->width - OVERLAP_FACTOR * (this->width - min_flow_spacing);
 }
 
@@ -64,10 +64,10 @@ Flow::spacing(const Flow &other) const {
     assert(this->bridge == other.bridge);
     
     if (this->bridge) {
-        return this->width/2 + other.width/2 + BRIDGE_EXTRA_SPACING;
+        return this->width/2.0 + other.width/2.0 + BRIDGE_EXTRA_SPACING;
     }
     
-    return this->spacing()/2 + other.spacing()/2;
+    return this->spacing()/2.0 + other.spacing()/2.0;
 }
 
 /* This method returns extrusion volume per head move unit. */
