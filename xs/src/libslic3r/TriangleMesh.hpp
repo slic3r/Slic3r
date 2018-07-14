@@ -44,7 +44,13 @@ class TriangleMesh
     TriangleMesh(const Vertex_Cont& vertices, const Facet_Cont& facets) : TriangleMesh(vertices.data(), facets.data(), facets.size()) {}
 
     TriangleMesh(const TriangleMesh &other);
-    TriangleMesh& operator= (TriangleMesh other);
+    ///  copy assignment
+    TriangleMesh& operator= (const TriangleMesh& other);
+
+    /// Move assignment
+    TriangleMesh& operator= (TriangleMesh&& other);
+    TriangleMesh(TriangleMesh&& other);
+
     void swap(TriangleMesh &other);
     ~TriangleMesh();
     void ReadSTLFile(const std::string &input_file);
@@ -148,6 +154,9 @@ class TriangleMesh
     /// It doesn't do any bounds checking on points and operates on raw pointers, so we hide it. 
     /// Other constructors can call this one!
     TriangleMesh(const Pointf3* points, const Point3* facets, size_t n_facets); 
+
+    /// Perform the mechanics of a stl copy
+    void clone(const TriangleMesh& other);
 
     friend class TriangleMeshSlicer<X>;
     friend class TriangleMeshSlicer<Y>;

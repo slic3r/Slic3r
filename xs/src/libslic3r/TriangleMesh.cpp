@@ -73,6 +73,20 @@ TriangleMesh::TriangleMesh(const Pointf3* points, const Point3* facets, size_t n
 TriangleMesh::TriangleMesh(const TriangleMesh &other)
     : stl(other.stl), repaired(other.repaired)
 {
+    this->clone(other);
+}
+
+TriangleMesh& TriangleMesh::operator= (const TriangleMesh& other)
+{
+    this->stl = other.stl;
+    this->repaired = other.repaired;
+    this->clone(other);
+
+    return *this;
+}
+
+
+void TriangleMesh::clone(const TriangleMesh& other) {
     this->stl.heads = NULL;
     this->stl.tail  = NULL;
     this->stl.error = other.stl.error;
@@ -93,9 +107,17 @@ TriangleMesh::TriangleMesh(const TriangleMesh &other)
         std::copy(other.stl.v_shared, other.stl.v_shared + other.stl.stats.shared_vertices, this->stl.v_shared);
     }
 }
-TriangleMesh& TriangleMesh::operator= (TriangleMesh other)
+
+TriangleMesh::TriangleMesh(TriangleMesh&& other) {
+    this->repaired = std::move(other.repaired);
+    this->stl = std::move(other.stl);
+}
+
+TriangleMesh& TriangleMesh::operator= (TriangleMesh&& other)
 {
-    this->swap(other);
+    this->repaired = std::move(other.repaired);
+    this->stl = std::move(other.stl);
+
     return *this;
 }
 
@@ -736,7 +758,7 @@ TriangleMesh::make_cube(double x, double y, double z) {
 
     TriangleMesh mesh(vertices ,facets);
     mesh.repair();
-    return std::move(mesh);
+    return mesh;
 }
 
 // Generate the mesh for a cylinder and return it, using 
@@ -782,7 +804,7 @@ TriangleMesh::make_cylinder(double r, double h, double fa) {
     
     TriangleMesh mesh(vertices, facets);
     mesh.repair();
-    return std::move(mesh);
+    return mesh;
 }
 
 // Generates mesh for a sphere centered about the origin, using the generated angle
@@ -864,7 +886,7 @@ TriangleMesh::make_sphere(double rho, double fa) {
     id++;
     TriangleMesh mesh(vertices, facets);
     mesh.repair();
-    return std::move(mesh);
+    return mesh;
 }
 
 template <Axis A>
