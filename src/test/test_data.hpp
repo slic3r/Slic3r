@@ -1,6 +1,7 @@
 #ifndef SLIC3R_TEST_DATA_HPP
 #include "Point.hpp"
 #include "TriangleMesh.hpp"
+#include "Geometry.hpp"
 
 namespace Slic3r { namespace Test {
 
@@ -24,11 +25,15 @@ enum class TestMesh {
     two_hollow_squares
 };
 
-/// Port of Slic3r::Test::Mesh
-/// Basic cubes/boxes should call TriangleMesh::make_cube() directly and rescale it
+/// Port of Slic3r::Test::mesh
+/// Basic cubes/boxes should call TriangleMesh::make_cube() directly and rescale/translate it
 TriangleMesh mesh(TestMesh m);
 
 TriangleMesh mesh(TestMesh m, Pointf3 translate, Pointf3 scale = Pointf3(1.0, 1.0, 1.0));
+
+/// Templated function to see if two values are equivalent (+/- epsilon)
+template <typename T, typename U>
+bool _equiv(T a, U b) { return abs(a - b) < Slic3r::Geometry::epsilon; }
 
 } } // namespace Slic3r::Test
 
