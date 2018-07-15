@@ -56,8 +56,8 @@ public:
     /// Returns whether or not this config is different from its modified state.
     bool dirty();
 
-    /// Loads the selected config from file and return a reference.
-    Slic3r::Config& load_config(); 
+    /// Loads the selected config from file and return a shared_ptr to that config
+    config_ptr load_config(); 
 
     /// Pass-through to Slic3r::Config, returns whether or not a config was loaded.
     bool loaded() { return !this->config.empty(); }
