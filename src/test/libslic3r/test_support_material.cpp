@@ -1,7 +1,6 @@
-//#include <catch.hpp>
+#include <catch.hpp>
 #include <libslic3r/IO.hpp>
 #include <libslic3r/GCodeReader.hpp>
-#include "/home/ahmedsamir/Work/SamirSlic3r/Slic3r/build/external/Catch/include/catch.hpp"
 
 #include "libslic3r.h"
 #include "TriangleMesh.hpp"
