@@ -75,6 +75,7 @@ set(GUI_TESTDIR ${CMAKE_CURRENT_SOURCE_DIR}/test/GUI/)
 # directory that contains the dependent non-source files, like models and configurations
 set(TESTFILE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test/inputs/)
 
+
 include_directories(${LIBDIR})
 include_directories(${LIBDIR}/libslic3r)
 include_directories(${LIBDIR}/slic3r/GUI/)
@@ -112,6 +113,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Fill/FillGyroid.cpp
     ${LIBDIR}/libslic3r/Flow.cpp
     ${LIBDIR}/libslic3r/GCode.cpp
+    ${LIBDIR}/libslic3r/PrintGCode.cpp
     ${LIBDIR}/libslic3r/GCode/CoolingBuffer.cpp
     ${LIBDIR}/libslic3r/GCode/SpiralVase.cpp
     ${LIBDIR}/libslic3r/GCodeReader.cpp
@@ -166,6 +168,7 @@ add_library(admesh STATIC
 set_property(TARGET admesh PROPERTY C_STANDARD 99)
 
 add_library(clipper STATIC ${LIBDIR}/clipper.cpp)
+
 add_library(expat STATIC
     ${LIBDIR}/expat/xmlparse.c
     ${LIBDIR}/expat/xmlrole.c
@@ -182,8 +185,6 @@ add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/sweep/sweep.cc
 )
 
-
-
 set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/testableframe.cpp
     ${GUI_TESTDIR}/test_harness_gui.cpp
@@ -196,13 +197,17 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_field_point3.cpp
     ${GUI_TESTDIR}/test_misc_ui.cpp
 )
+
 set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/test_harness.cpp
     ${TESTDIR}/test_data.cpp
     ${TESTDIR}/libslic3r/test_trianglemesh.cpp
     ${TESTDIR}/libslic3r/test_config.cpp
     ${TESTDIR}/libslic3r/test_support_material.cpp
+    ${TESTDIR}/libslic3r/test_flow.cpp
+    ${TESTDIR}/libslic3r/test_printgcode.cpp
 )
+
 add_executable(slic3r slic3r.cpp)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)

@@ -1,6 +1,38 @@
 #include "test_data.hpp"
+#include "TriangleMesh.hpp"
+#include "GCodeReader.hpp"
+#include "Config.hpp"
+#include "Print.hpp"
+#include <cstdlib>
+#include <string>
+
+using namespace std::string_literals;
+using namespace std;
 
 namespace Slic3r { namespace Test {
+
+// Mesh enumeration to name mapping
+const std::unordered_map<TestMesh, const char*> mesh_names { 
+    std::make_pair<TestMesh, const char*>(TestMesh::A,"A"),
+    std::make_pair<TestMesh, const char*>(TestMesh::L,"L"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::V,"V"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::_40x10,"40x10"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::bridge,"bridge"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::bridge_with_hole,"bridge_with_hole"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::cube_with_concave_hole,"cube_with_concave_hole"),
+    std::make_pair<TestMesh, const char*>(TestMesh::cube_with_hole,"cube_with_hole"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::gt2_teeth,"gt2_teeth"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::ipadstand,"ipadstand"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::overhang,"overhang"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::pyramid,"pyramid"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::sloping_hole,"sloping_hole"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::slopy_cube,"slopy_cube"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::small_dorito,"small_dorito"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::step,"step"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::two_hollow_squares,"two_hollow_squares")
+};
+
+
 
 TriangleMesh mesh(TestMesh m) {
     Point3s facets;
@@ -150,11 +182,71 @@ TriangleMesh mesh(TestMesh m) {
     return _mesh;
 }
 
+TriangleMesh mesh(TestMesh m, Pointf3 translate, double scale) {
+    return mesh(m, translate, Pointf3(scale, scale, scale));
+}
 TriangleMesh mesh(TestMesh m, Pointf3 translate, Pointf3 scale) {
     TriangleMesh _mesh {mesh(m)};
     _mesh.scale(scale);
     _mesh.translate(translate);
     return _mesh;
+}
+/*
+Slic3r::Model model(const std::string& model_name, TestMesh m, Pointf3 translate = Pointf3(0,0,0), double scale = 1.0) {
+    return model(model_name, m, translate, Pointf3(scale, scale, scale));
+}
+*/
+
+Slic3r::Test::Print init_print(std::tuple<int,int,int> cube, config_ptr _config) {
+    std::stringstream s; 
+    s << "cube_" << get<0>(cube) << "x" << get<1>(cube) << "x" << get<2>(cube);
+
+    auto config {Slic3r::Config::new_from_defaults()};
+
+    config->apply(_config);
+    const char* v {std::getenv("SLIC3R_TESTS_GCODE")};
+    auto tests_gcode {(v == nullptr ? ""s : std::string(v))};
+
+    if (tests_gcode != ""s)
+        config->set("gcode_comments", 1);
+
+    std::shared_ptr<Slic3r::Print> print = std::make_shared<Slic3r::Print>();
+    print->apply_config(config);
+
+    auto model {Slic3r::Test::model(s.str(), Slic3r::TriangleMesh::make_cube(get<0>(cube), get<1>(cube), get<1>(cube))) };
+
+    model.arrange_objects(print->config.min_object_distance());
+    model.center_instances_around_point(Slic3r::Pointf(100,100));
+    for (auto* mo : model.objects) {
+        print->auto_assign_extruders(mo);
+        print->add_model_object(mo);
+    }
+
+    print->validate();
+
+    std::vector<Slic3r::Model> models {};
+    models.emplace_back(model);
+    return Slic3r::Test::Print(print, models);
+}
+
+void gcode(std::stringstream& gcode, Slic3r::Test::Print& _print) {
+    Slic3r::Print& print {_print.print()};
+    print.process();
+    print.export_gcode(gcode, true);
+}
+
+Slic3r::Model model(const std::string& model_name, TriangleMesh&& _mesh) {
+    Slic3r::Model result;
+
+    auto* object {result.add_object()};
+    object->name += model_name + ".stl"s;
+    object->add_volume(_mesh);
+
+    auto* inst {object->add_instance()};
+    inst->rotation = 0;
+    inst->scaling_factor = 1.0;
+
+    return result;
 }
 
 } } // namespace Slic3r::Test

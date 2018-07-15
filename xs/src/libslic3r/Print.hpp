@@ -9,6 +9,7 @@
 #include "BoundingBox.hpp"
 #include "Flow.hpp"
 #include "PrintConfig.hpp"
+#include "Config.hpp"
 #include "Point.hpp"
 #include "Layer.hpp"
 #include "Model.hpp"
@@ -184,6 +185,13 @@ class Print
     PrintRegionPtrs regions;
     PlaceholderParser placeholder_parser;
     // TODO: status_cb
+    #ifndef SLIC3RXS
+    std::function<void(int, const std::string&)> status_cb {nullptr};
+
+    /// Function pointer for the UI side to call post-processing scripts.
+    /// Vector is assumed to be the executable script and all arguments.
+    std::function<void(std::vector<std::string>)> post_process_cb {nullptr};
+    #endif 
     double total_used_filament, total_extruded_volume, total_cost, total_weight;
     std::map<size_t,float> filament_stats;
     PrintState<PrintStep> state;
@@ -206,6 +214,21 @@ class Print
     PrintRegion* get_region(size_t idx) { return this->regions.at(idx); };
     const PrintRegion* get_region(size_t idx) const { return this->regions.at(idx); };
     PrintRegion* add_region();
+
+    #ifndef SLIC3RXS
+    /// Triggers the rest of the print process
+    void process(); 
+
+    /// Performs a gcode export.
+    void export_gcode(std::ostream& output, bool quiet = false);
+    
+    /// Performs a gcode export and then runs post-processing scripts (if any)
+    void export_gcode(const std::string& filename, bool quiet = false);
+
+    /// commands a gcode export to a temporary file and return its name
+    std::string export_gcode(bool quiet = false);
+
+    #endif // SLIC3RXS
     
     // methods for handling state
     bool invalidate_state_by_config(const PrintConfigBase &config);
@@ -214,6 +237,10 @@ class Print
     bool step_done(PrintObjectStep step) const;
     
     void add_model_object(ModelObject* model_object, int idx = -1);
+    #ifndef SLIC3RXS
+    /// Apply a provided configuration to the internal copy
+    bool apply_config(config_ptr config);
+    #endif // SLIC3RXS
     bool apply_config(DynamicPrintConfig config);
     bool has_infinite_skirt() const;
     bool has_skirt() const;
@@ -225,6 +252,16 @@ class Print
     Flow brim_flow() const;
     Flow skirt_flow() const;
     void _make_brim();
+
+    #ifndef SLIC3RXS
+    /// Generates a skirt around the union of all of 
+    /// the objects in the print.
+    void make_skirt();
+
+    /// Generates a brim around all of the objects in the print.
+    void make_brim();
+    #endif // SLIC3RXS
+    
     
     std::set<size_t> object_extruders() const;
     std::set<size_t> support_material_extruders() const;

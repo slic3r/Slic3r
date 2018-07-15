@@ -1,0 +1,91 @@
+#include <catch.hpp>
+
+#include <regex>
+#include "test_data.hpp"
+#include "libslic3r.h"
+
+SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
+    GIVEN("A default configuration and a print test object") {
+        auto config {Slic3r::Config::new_from_defaults()};
+        auto gcode {std::stringstream("")};
+
+        WHEN("the output is executed with no support material") {
+            config->set("first_layer_extrusion_width", 0);
+            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            Slic3r::Test::gcode(gcode, print);
+            auto exported {gcode.str()};
+            THEN("Some text output is generated.") {
+                REQUIRE(exported.size() > 0);
+            }
+            THEN("Exported text contains slic3r version") {
+                REQUIRE(exported.find(SLIC3R_VERSION) != std::string::npos);
+            }
+            THEN("Exported text contains git commit id") {
+                REQUIRE(exported.find("; Git Commit") != std::string::npos);
+                REQUIRE(exported.find(BUILD_COMMIT) != std::string::npos);
+            }
+            THEN("Exported text contains extrusion statistics.") {
+                REQUIRE(exported.find("; external perimeters extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; perimeters extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; infill extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; solid infill extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; top solid infill extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; support material extrusion width") == std::string::npos);
+                REQUIRE(exported.find("; first layer extrusion width") == std::string::npos);
+            }
+
+            THEN("GCode preamble is emitted.") {
+                REQUIRE(exported.find("G21 ; set units to millimeters") != std::string::npos);
+            }
+        }
+        WHEN("the output is executed with support material") {
+            config->set("first_layer_extrusion_width", 0);
+            config->set("support_material", true);
+            config->set("raft_layers", 3);
+            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            Slic3r::Test::gcode(gcode, print);
+            auto exported {gcode.str()};
+            THEN("Some text output is generated.") {
+                REQUIRE(exported.size() > 0);
+            }
+            THEN("Exported text contains extrusion statistics.") {
+                REQUIRE(exported.find("; external perimeters extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; perimeters extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; infill extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; solid infill extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; top solid infill extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; support material extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; first layer extrusion width") == std::string::npos);
+            }
+        }
+        WHEN("the output is executed with a separate first layer extrusion width") {
+            config->set("first_layer_extrusion_width", 0.5);
+            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            Slic3r::Test::gcode(gcode, print);
+            auto exported {gcode.str()};
+            THEN("Some text output is generated.") {
+                REQUIRE(exported.size() > 0);
+            }
+            THEN("Exported text contains extrusion statistics.") {
+                REQUIRE(exported.find("; external perimeters extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; perimeters extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; infill extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; solid infill extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; top solid infill extrusion width") != std::string::npos);
+                REQUIRE(exported.find("; support material extrusion width") == std::string::npos);
+                REQUIRE(exported.find("; first layer extrusion width") != std::string::npos);
+            }
+        }
+        WHEN("Cooling is enabled and the fan is disabled.") {
+            config->set("cooling", true);
+            config->set("disable_fan_first_layers", 5);
+            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            Slic3r::Test::gcode(gcode, print);
+            auto exported {gcode.str()};
+            THEN("GCode to disable fan is emitted."){
+                REQUIRE(exported.find("M107") != std::string::npos);
+            }
+        }
+        gcode.clear();
+    }
+}

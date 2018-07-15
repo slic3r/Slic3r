@@ -1,4 +1,5 @@
 #include "Print.hpp"
+#include "PrintGCode.hpp"
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "Fill/Fill.hpp"
@@ -90,6 +91,25 @@ Print::delete_object(size_t idx)
 
     // TODO: purge unused regions
 }
+
+#ifndef SLIC3RXS
+
+void
+Print::process() 
+{
+}
+
+void
+Print::make_brim() 
+{
+}
+
+void
+Print::make_skirt()
+{
+}
+
+#endif // SLIC3RXS
 
 void
 Print::reload_object(size_t idx)
@@ -499,6 +519,27 @@ Print::add_model_object(ModelObject* model_object, int idx)
         }
     }
 }
+
+#ifndef SLIC3RXS
+void
+Print::export_gcode(std::ostream& output, bool quiet)
+{
+    this->process();
+    if (this->status_cb != nullptr) 
+        this->status_cb(90, "Exporting G-Code...");
+
+    auto export_handler {Slic3r::PrintGCode(*this, output)};
+    export_handler.output();
+
+}
+
+bool
+Print::apply_config(config_ptr config) {
+    // dereference the stored pointer and pass the resulting data to apply_config()
+    return this->apply_config(config->config());
+}
+
+#endif
 
 bool
 Print::apply_config(DynamicPrintConfig config)
