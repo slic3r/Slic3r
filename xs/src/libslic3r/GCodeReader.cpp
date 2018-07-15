@@ -17,8 +17,13 @@ void
 GCodeReader::parse(const std::string &gcode, callback_t callback)
 {
     std::istringstream ss(gcode);
+    this->parse_stream(ss, callback);
+}
+
+void GCodeReader::parse_stream(std::istream &gcode, callback_t callback)
+{
     std::string line;
-    while (std::getline(ss, line))
+    while (std::getline(gcode, line))
         this->parse_line(line, callback);
 }
 
