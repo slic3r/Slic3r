@@ -97,6 +97,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/ClipperUtils.cpp
     ${LIBDIR}/libslic3r/ConfigBase.cpp
     ${LIBDIR}/libslic3r/Config.cpp
+    ${LIBDIR}/libslic3r/ConditionalGCode.cpp
     ${LIBDIR}/libslic3r/ExPolygon.cpp
     ${LIBDIR}/libslic3r/ExPolygonCollection.cpp
     ${LIBDIR}/libslic3r/Extruder.cpp
