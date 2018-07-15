@@ -88,7 +88,6 @@ public:
 
     pair<map<coordf_t, Polygons>, map<coordf_t, Polygons>> contact_area(PrintObject *object);
 
-    // TODO Is this expolygons or polygons?
     map<coordf_t, Polygons> object_top(PrintObject *object, map<coordf_t, Polygons> *contact);
 
     void generate_pillars_shape(const map<coordf_t, Polygons> &contact,

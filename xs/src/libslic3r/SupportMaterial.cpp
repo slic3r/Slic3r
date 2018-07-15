@@ -74,36 +74,36 @@ SupportMaterial::generate(PrintObject *object)
     // that it will be effective, regardless of how it's built below.
     pair<map<coordf_t, Polygons>, map<coordf_t, Polygons>> contact_overhang = contact_area(object);
     map<coordf_t, Polygons> &contact = contact_overhang.first;
-    cout << "Contact size " << contact.size() << endl;
+    //cout << "Contact size " << contact.size() << endl;
     map<coordf_t, Polygons> &overhang = contact_overhang.second;
 
     int ppp = 0;
-    cout << "Samir " << ppp++ << endl;
+    //cout << "Samir " << ppp++ << endl;
 
     // Determine the top surfaces of the object. We need these to determine
     // the layer heights of support material and to clip support to the object
     // silhouette.
     map<coordf_t, Polygons> top = object_top(object, &contact);
-    cout << "Samir " << ppp++ << endl;
+    //cout << "Samir " << ppp++ << endl;
     // We now know the upper and lower boundaries for our support material object
     // (@$contact_z and @$top_z), so we can generate intermediate layers.
     vector<coordf_t> support_z = support_layers_z(get_keys_sorted(contact),
                                                   get_keys_sorted(top),
                                                   get_max_layer_height(object));
-    cout << "Samir " << ppp++ << endl;
+    //cout << "Samir " << ppp++ << endl;
     // If we wanted to apply some special logic to the first support layers lying on
     // object's top surfaces this is the place to detect them.
     map<int, Polygons> shape;
     if (object_config->support_material_pattern.value == smpPillars)
         this->generate_pillars_shape(contact, support_z, shape);
 
-    cout << "Samir " << ppp++ << endl;
+    //cout << "Samir " << ppp++ << endl;
     // Propagate contact layers downwards to generate interface layers.
     map<int, Polygons> interface = generate_interface_layers(support_z, contact, top);
     clip_with_object(interface, support_z, *object);
     if (!shape.empty())
         clip_with_shape(interface, shape);
-    cout << "Samir " << ppp++ << endl;
+    //cout << "Samir " << ppp++ << endl;
     // Propagate contact layers and interface layers downwards to generate
     // the main support layers.
     map<int, Polygons> base = generate_base_layers(support_z, contact, interface, top);
@@ -111,11 +111,11 @@ SupportMaterial::generate(PrintObject *object)
     if (!shape.empty())
         clip_with_shape(base, shape);
 
-    cout << "Samir " << ppp++ << endl;
+    //cout << "Samir " << ppp++ << endl;
     // Detect what part of base support layers are "reverse interfaces" because they
     // lie above object's top surfaces.
     generate_bottom_interface_layers(support_z, base, top, interface);
-    cout << "Samir " << ppp++ << endl;
+    //cout << "Samir " << ppp++ << endl;
     // Install support layers into object.
     for (int i = 0; i < int(support_z.size()); i++) {
         object->add_support_layer(
@@ -129,11 +129,11 @@ SupportMaterial::generate(PrintObject *object)
             object->support_layers.end()[-1]->lower_layer = object->support_layers.end()[-2];
         }
     }
-    cout << "Supports z count is " << support_z.size() << endl;
-    cout << "Samir " << ppp++ << endl;
+    //cout << "Supports z count is " << support_z.size() << endl;
+    //cout << "Samir " << ppp++ << endl;
     // Generate the actual toolpaths and save them into each layer.
     generate_toolpaths(object, overhang, contact, interface, base);
-    cout << "Samir " << ppp++ << endl;
+    //cout << "Samir " << ppp++ << endl;
 }
 
 vector<coordf_t>
@@ -142,7 +142,7 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
                                   coordf_t max_object_layer_height)
 {
     // Quick table to check whether a given Z is a top surface.
-    map<float, bool> is_top;
+    map<coordf_t, bool> is_top;
     for (auto z : top_z) is_top[z] = true;
 
     // determine layer height for any non-contact layer
@@ -150,9 +150,8 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
     // layer_height > nozzle_diameter * 0.75.
     auto nozzle_diameter = config->nozzle_diameter.get_at(static_cast<size_t>(
                                                               object_config->support_material_extruder - 1));
-    auto support_material_height = (max_object_layer_height, (nozzle_diameter * 0.75));
+    auto support_material_height = max(max_object_layer_height, (nozzle_diameter * 0.75));
     coordf_t _contact_distance = this->contact_distance(support_material_height, nozzle_diameter);
-
     // Initialize known, fixed, support layers.
     vector<coordf_t> z;
     for (auto c_z : contact_z) z.push_back(c_z);
@@ -176,7 +175,7 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
         // since we already have two raft layers ($z[0] and $z[1]) we need to insert
         // raft_layers-2 more
         int idx = 1;
-        for (int j = 0; j < object_config->raft_layers - 2; j++) {
+        for (int j = 1; j <= object_config->raft_layers - 2; j++) {
             float z_new =
                 roundf(static_cast<float>((z[0] + height * idx) * 100)) / 100; // round it to 2 decimal places.
             z.insert(z.begin() + idx, z_new);
@@ -185,14 +184,14 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
     }
 
     // Create other layers (skip raft layers as they're already done and use thicker layers).
-    for (int i = static_cast<int>(z.size()); i >= object_config->raft_layers.value; i--) {
+    for (auto i = static_cast<int>(z.size()) - 1; i >= object_config->raft_layers; i--) {
         coordf_t target_height = support_material_height;
-        if (i > 0 && is_top[z[i - 1]]) {
+        if (i > 0 && is_top.count(z[i - 1]) > 0 && is_top[z[i - 1]]) {
             target_height = nozzle_diameter;
         }
         // Enforce first layer height.
         if ((i == 0 && z[i] > target_height + first_layer_height)
-            || (z[i] - z[i - 1] > target_height + EPSILON)) {
+            || (i > 0 && z[i] - z[i - 1] > target_height + EPSILON)) {
             z.insert(z.begin() + i, (z[i] - target_height));
             i++;
         }
@@ -248,7 +247,7 @@ SupportMaterial::contact_area(PrintObject *object)
         // and $layer->id == 0 means first print layer (including raft).
 
         // If no raft, and we're at layer 0, skip to layer 1
-        cout << "LAYER ID " << layer_id << endl;
+        //cout << "LAYER ID " << layer_id << endl;
         if (conf.raft_layers == 0 && layer_id == 0) {
             continue;
         }
@@ -601,12 +600,12 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
     if (contact.empty()) return;
 
     int u = 0;
-    cout << "Pillars generation " << contact.size() << endl;
+    //cout << "Pillars generation " << contact.size() << endl;
 
     coord_t pillar_size = scale_(object_config->support_material_pillar_size.value);
     coord_t pillar_spacing = scale_(object_config->support_material_pillar_spacing.value);
 
-    cout << "Samir U " << u++ << endl;
+    //cout << "Samir U " << u++ << endl;
     Polygons grid;
     {
         auto pillar = Polygon({
@@ -635,28 +634,28 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
 
         grid = union_(pillars);
     }
-    cout << "Samir U " << u++ << endl; //1
-    cout << "Support z size " << support_z.size() << endl;
+    //cout << "Samir U " << u++ << endl; //1
+    //cout << "Support z size " << support_z.size() << endl;
     // Add pillars to every layer.
     for (auto i = 0; i < support_z.size(); i++) {
         shape[i] = grid;
     }
-    cout << "Samir U " << u++ << endl;
+    //cout << "Samir U " << u++ << endl;
     // Build capitals.
-    cout << "contacts START " << endl;
+    //cout << "contacts START " << endl;
     for (auto el : contact) {
-        cout << el.first << endl;
+        //cout << el.first << endl;
     }
-    cout << "contacts END" << endl;
+    //cout << "contacts END" << endl;
     for (auto i = 0; i < support_z.size(); i++) {
         coordf_t z = support_z[i];
 
-        cout << z << endl;
+        //cout << z << endl;
         auto capitals = intersection(
             grid,
             contact.count(z) > 0 ? contact.at(z) : Polygons()
         );
-        cout << "Samir U " << u++ << endl;
+        //cout << "Samir U " << u++ << endl;
         // Work on one pillar at time (if any) to prevent the capitals from being merged
         // but store the contact area supported by the capital because we need to make
         // sure nothing is left.
@@ -673,7 +672,7 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
                 append_to(shape[i], capital_polygons);
             }
         }
-        cout << "Samir U " << u++ << endl;
+        //cout << "Samir U " << u++ << endl;
         // Work on one pillar at time (if any) to prevent the capitals from being merged
         // but store the contact area supported by the capital because we need to make
         // sure nothing is left.
@@ -688,7 +687,7 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
             }
         }
     }
-    cout << "Samir U " << u++ << endl;
+    //cout << "Samir U " << u++ << endl;
 }
 
 map<int, Polygons>
@@ -749,7 +748,6 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
     auto interface_layers_num = object_config->support_material_interface_layers.value;
 
     for (int layer_id = 0; layer_id < support_z.size(); layer_id++) {
-        // Todo Ask about how to port this line. "my $this = $contact->{$z} // next;"
         auto z = support_z[layer_id];
 
         if (contact.count(z) <= 0)
