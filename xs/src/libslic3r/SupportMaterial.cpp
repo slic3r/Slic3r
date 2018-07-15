@@ -347,7 +347,6 @@ SupportMaterial::contact_area(PrintObject *object)
                             );
                         }
 
-                        // TODO Revise Here.
                         // Get all perimeters as polylines.
                         // TODO: split_at_first_point() (called by as_polyline() for ExtrusionLoops)
                         // could split a bridge mid-way.
@@ -757,7 +756,7 @@ SupportMaterial::generate_bottom_interface_layers(const vector<coordf_t> &suppor
 
     auto area_threshold = interface_flow.scaled_spacing() * interface_flow.scaled_spacing();
 
-    // Loop through object's top surfaces. TODO CHeck if the keys are sorted.
+    // Loop through object's top surfaces.
     for (auto &top_el : top) {
         // Keep a count of the interface layers we generated for this top surface.
         int interface_layers = 0;
@@ -960,7 +959,6 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
             );
         }
 
-        // TODO Revise the loop range.
         // Make more loops.
         auto loops = loops0;
         for (int i = 2; i <= params.contact_loops; i++) {
