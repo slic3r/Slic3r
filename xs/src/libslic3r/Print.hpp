@@ -15,6 +15,7 @@
 #include "PlaceholderParser.hpp"
 #include "SlicingAdaptive.hpp"
 #include "LayerHeightSpline.hpp"
+#include "SupportMaterial.hpp"
 
 #include <exception>
 
@@ -25,6 +26,7 @@ class InvalidObjectException : public std::exception {};
 class Print;
 class PrintObject;
 class ModelObject;
+class SupportMaterial;
 
 // Print step IDs for keeping track of the print state.
 enum PrintStep {
@@ -132,6 +134,8 @@ class PrintObject
     Layer* add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z);
     void delete_layer(int idx);
 
+    SupportMaterial* _support_material();
+    Flow _support_material_flow(FlowRole role = frSupportMaterial);
     size_t support_layer_count() const;
     void clear_support_layers();
     SupportLayer* get_support_layer(int idx) { return this->support_layers.at(idx); };
@@ -232,7 +236,6 @@ class Print
     void auto_assign_extruders(ModelObject* model_object) const;
     std::string output_filename();
     std::string output_filepath(const std::string &path);
-    
     private:
     void clear_regions();
     void delete_region(size_t idx);

@@ -89,7 +89,7 @@ include_directories(${LIBDIR}/poly2tri/common)
 add_library(ZipArchive STATIC
     ${LIBDIR}/Zip/ZipArchive.cpp
 )
-
+target_compile_features(ZipArchive PUBLIC cxx_std_11)
 
 add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/BoundingBox.cpp
@@ -146,11 +146,10 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/SurfaceCollection.cpp
     ${LIBDIR}/libslic3r/SVG.cpp
     ${LIBDIR}/libslic3r/TriangleMesh.cpp
+    ${LIBDIR}/libslic3r/SupportMaterial.cpp
     ${LIBDIR}/libslic3r/utils.cpp
 )
 target_compile_features(libslic3r PUBLIC cxx_std_11)
-
-
 
 add_library(BSpline STATIC
     ${LIBDIR}/BSpline/BSpline.cpp
@@ -172,6 +171,8 @@ add_library(expat STATIC
     ${LIBDIR}/expat/xmlrole.c
     ${LIBDIR}/expat/xmltok.c
 )
+target_compile_features(clipper PUBLIC cxx_std_11)
+
 add_library(polypartition STATIC ${LIBDIR}/polypartition.cpp)
 add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/common/shapes.cc
@@ -200,6 +201,7 @@ set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/test_data.cpp
     ${TESTDIR}/libslic3r/test_trianglemesh.cpp
     ${TESTDIR}/libslic3r/test_config.cpp
+    ${TESTDIR}/libslic3r/test_support_material.cpp
 )
 add_executable(slic3r slic3r.cpp)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)

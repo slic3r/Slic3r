@@ -1095,4 +1095,55 @@ PrintObject::_infill()
     this->state.set_done(posInfill);
 }
 
+SupportMaterial *
+PrintObject::_support_material()
+{
+    // TODO what does this line do //= FLOW_ROLE_SUPPORT_MATERIAL;
+    Flow first_layer_flow = Flow::new_from_config_width(
+        frSupportMaterial,
+        print()->config
+            .first_layer_extrusion_width,  // check why this line is put || config.support_material_extrusion_width,
+        static_cast<float>(print()->config.nozzle_diameter.get_at(static_cast<size_t>(
+                                                                      config.support_material_extruder
+                                                                          - 1))), // Check why this is put in perl "// $self->print->config->nozzle_diameter->[0]"
+        static_cast<float>(config.get_abs_value("first_layer_height")),
+        0 // No bridge flow ratio.
+    );
+
+    return new SupportMaterial(
+        &print()->config,
+        &config,
+        first_layer_flow,
+        _support_material_flow(),
+        _support_material_flow(frSupportMaterialInterface)
+    );
+}
+
+Flow
+PrintObject::_support_material_flow(FlowRole role)
+{
+    // Create support flow.
+    int extruder =
+        (role == frSupportMaterial) ?
+        config.support_material_extruder.value : config
+            .support_material_interface_extruder.value;
+
+    auto width = config.support_material_extrusion_width; // || config.extrusion_width;
+
+    if (role == frSupportMaterialInterface)
+        width = config.support_material_interface_extrusion_width;  // || width;
+
+    // We use a bogus layer_height because we use the same flow for all
+    // support material layers.
+    Flow support_flow = Flow::new_from_config_width(
+        role,
+        width,
+        static_cast<float>(print()->config.nozzle_diameter
+            .get_at(static_cast<size_t>(extruder - 1))), // Check this line $self->print->config->nozzle_diameter->[0].
+        static_cast<float>(config.layer_height.value),
+        0
+    );
+
+    return support_flow;
+}
 }
