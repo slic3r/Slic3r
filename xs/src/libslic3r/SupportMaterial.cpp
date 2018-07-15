@@ -285,8 +285,7 @@ SupportMaterial::contact_area(PrintObject *object)
                 // If a threshold angle was specified, use a different logic for detecting overhangs.
                 if ((conf.support_material && threshold_rad != 0.0)
                     || layer_id <= conf.support_material_enforce_layers
-                    || (conf.raft_layers > 0 && layer_id
-                        == 0)) { // TODO ASK @Samir why layer_id ==0 check , layer_id will never equal to zero
+                    || (conf.raft_layers > 0)) {
                     float d = 0;
                     float layer_threshold_rad = threshold_rad;
                     if (layer_id <= conf.support_material_enforce_layers) {
