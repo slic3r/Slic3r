@@ -131,10 +131,13 @@ SCENARIO("Config accessor functions perform as expected.") {
             }
         }
 
-        WHEN("getFloat called on an unset option.") {
+        WHEN("getX called on an unset option.") {
             THEN("The default is returned.") {
                 REQUIRE(config->getFloat("layer_height") == 0.3);
                 REQUIRE(config->getString("layer_height") == "0.3");
+                REQUIRE(config->getString("layer_height") == "0.3");
+                REQUIRE(config->getInt("raft_layers") == 0);
+                REQUIRE(config->getBool("support_material") == false);
             }
         }
 
