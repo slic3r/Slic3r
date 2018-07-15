@@ -28,7 +28,7 @@ SupportMaterial::generate_toolpaths(PrintObject *object,
     params.circle = create_circle(params.circle_radius);
 
 #ifdef SLIC3R_DEBUG
-    printf("Generating patterns\n");
+    printf("Generating patterns.\n");
 #endif
 
     // Prepare fillers.
@@ -448,7 +448,7 @@ SupportMaterial::contact_area(PrintObject *object)
                 if (difference.empty()) continue;
 
                 // NOTE: this is not the full overhang as it misses the outermost half of the perimeter width!
-                append_polygons(tmp_overhang, difference);
+                append_to(tmp_overhang, difference);
 
                 // Let's define the required contact area by using a max gap of half the upper
                 // extrusion width and extending the area according to the configured margin.
@@ -473,7 +473,7 @@ SupportMaterial::contact_area(PrintObject *object)
                         );
                     }
                 }
-                append_polygons(tmp_contact, difference);
+                append_to(tmp_contact, difference);
             }
         }
         if (tmp_contact.empty())
@@ -666,22 +666,22 @@ SupportMaterial::generate_base_layers(vector<coordf_t> support_z,
             // (1 interface layer means we only have contact layer, so $interface->{$i+1} is empty).
             Polygons upper_contact;
             if (object_config->support_material_interface_layers.value <= 1) {
-                append_polygons(upper_contact, (i + 1 < support_z.size() ? contact[support_z[i + 1]] : contact[-1]));
+                append_to(upper_contact, (i + 1 < support_z.size() ? contact[support_z[i + 1]] : contact[-1]));
             }
 
             Polygons ps_1;
-            append_polygons(ps_1, base[i + 1]); // support regions on upper layer.
-            append_polygons(ps_1, interface[i + 1]); // interface regions on upper layer
-            append_polygons(ps_1, upper_contact); // contact regions on upper layer
+            append_to(ps_1, base[i + 1]); // support regions on upper layer.
+            append_to(ps_1, interface[i + 1]); // interface regions on upper layer
+            append_to(ps_1, upper_contact); // contact regions on upper layer
 
             Polygons ps_2;
             for (auto el : overlapping_z) {
                 if (top.count(el) > 0)
-                    append_polygons(ps_2, top[el]); // top slices on this layer.
+                    append_to(ps_2, top[el]); // top slices on this layer.
                 if (interface.count(el) > 0)
-                    append_polygons(ps_2, interface[el]); // interface regions on this layer.
+                    append_to(ps_2, interface[el]); // interface regions on this layer.
                 if (contact.count(el) > 0)
-                    append_polygons(ps_2, contact[el]); // contact regions on this layer.
+                    append_to(ps_2, contact[el]); // contact regions on this layer.
             }
 
             base[i] = diff(
@@ -725,15 +725,15 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
             // surfaces vertically before performing the diff, but this needs
             // investigation.
             Polygons ps_1;
-            append_polygons(ps_1, _contact); // clipped projection of the current contact regions.
-            append_polygons(ps_1, interface[i]); // interface regions already applied to this layer.
+            append_to(ps_1, _contact); // clipped projection of the current contact regions.
+            append_to(ps_1, interface[i]); // interface regions already applied to this layer.
 
             Polygons ps_2;
             for (auto el : overlapping_z) {
                 if (top.count(el) > 0)
-                    append_polygons(ps_2, top[el]); // top slices on this layer.
+                    append_to(ps_2, top[el]); // top slices on this layer.
                 if (contact.count(el) > 0)
-                    append_polygons(ps_2, contact[el]); // contact regions on this layer.
+                    append_to(ps_2, contact[el]); // contact regions on this layer.
             }
 
             _contact = interface[i] = diff(
@@ -792,7 +792,7 @@ SupportMaterial::generate_bottom_interface_layers(const vector<coordf_t> &suppor
                 );
 
                 // Add the new interface area to interface.
-                append_polygons(interface[layer_id], interface_area);
+                append_to(interface[layer_id], interface_area);
             }
 
             interface_layers++;

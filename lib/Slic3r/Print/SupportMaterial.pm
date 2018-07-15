@@ -1018,4 +1018,3 @@ sub contact_distance {
 }
 
 1;
-

@@ -81,7 +81,7 @@ public:
     /// Generate support material for the given print object.
     void generate(PrintObject *object);
 
-    /// Generate the support layers z coordinates. (TODO Dicuss more).
+    /// Generate the support layers slicing z coordinates.
     vector<coordf_t> support_layers_z(vector<coordf_t> contact_z,
                                       vector<coordf_t> top_z,
                                       coordf_t max_object_layer_height);
@@ -140,7 +140,7 @@ private:
     // Get the maximum layer height given a print object.
     coordf_t get_max_layer_height(PrintObject *object);
 
-    // (Deprecated) use append_to instead TODO @Samir55.
+    // (Deprecated) use append_to instead
     void append_polygons(Polygons &dst, Polygons &src);
 
     // Return polygon vector given a vector of surfaces.
