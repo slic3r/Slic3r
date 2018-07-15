@@ -483,7 +483,7 @@ void Plater::arrange() {
         GetFrame()->statusbar->SetStatusText(_("Nothing to arrange."));
         return; 
     }
-    bool success {this->model->arrange_objects(this->config->min_object_distance(), &bb)};
+    bool success {this->model->arrange_objects(this->config->config().min_object_distance(), &bb)};
 
     if (success) {
         GetFrame()->statusbar->SetStatusText(_("Objects were arranged."));
