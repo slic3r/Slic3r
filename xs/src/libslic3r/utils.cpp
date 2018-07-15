@@ -50,3 +50,11 @@ split_at_regex(const std::string& input, const std::string& regex) {
         last;
     return {first, last};
 }
+/// Remove extra zeroes generated from std::to_string on doubles
+std::string trim_zeroes(std::string in) {
+    std::string result {""};
+    std::regex strip_zeroes("(0*)$");
+    std::regex_replace (std::back_inserter(result), in.begin(), in.end(), strip_zeroes, "");
+    if (result.back() == '.') result.append("0");
+    return result;
+}
