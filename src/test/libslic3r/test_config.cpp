@@ -80,14 +80,8 @@ SCENARIO("Config accessor functions perform as expected.") {
             }
         }
         WHEN("A numeric option is set to a non-numeric value.") {
-            auto except_thrown {false};
-            try {
-                config->set("perimeter_speed", "zzzz");
-            } catch (const InvalidOptionValue& e) {
-                except_thrown = true;
-            }
             THEN("An InvalidOptionValue exception is thown.") {
-                REQUIRE(except_thrown == true);
+                REQUIRE_THROWS_AS(config->set("perimeter_speed", "zzzz"), InvalidOptionValue);
             }
             THEN("The value does not change.") {
                 REQUIRE(config->get<ConfigOptionFloat>("perimeter_speed").getFloat() == 60.0);
@@ -111,59 +105,44 @@ SCENARIO("Config accessor functions perform as expected.") {
                 REQUIRE(config->get<ConfigOptionString>("octoprint_apikey").getString() == std::to_string(100.5));
             }
         }
-        WHEN("An invalid option is requested during set (string).") {
-            auto except_thrown {false};
-            try {
-                config->set("deadbeef_invalid_option", "1");
-            } catch (const InvalidOptionType& e) {
-                except_thrown = true;
-            }
+        WHEN("An invalid option is requested during set.") {
             THEN("An InvalidOptionType exception is thrown.") {
-                REQUIRE(except_thrown == true);
+                REQUIRE_THROWS_AS(config->set("deadbeef_invalid_option", 1), InvalidOptionType);
+                REQUIRE_THROWS_AS(config->set("deadbeef_invalid_option", 1.0), InvalidOptionType);
+                REQUIRE_THROWS_AS(config->set("deadbeef_invalid_option", "1"), InvalidOptionType);
+                REQUIRE_THROWS_AS(config->set("deadbeef_invalid_option", true), InvalidOptionType);
             }
         }
-        WHEN("An invalid option is requested during set (double).") {
-            auto except_thrown {false};
-            try {
-                config->set("deadbeef_invalid_option", 1.0);
-            } catch (const InvalidOptionType& e) {
-                except_thrown = true;
-            }
-            THEN("An InvalidOptionType exception is thrown.") {
-                REQUIRE(except_thrown == true);
-            }
-        }
-        WHEN("An invalid option is requested during set (int).") {
-            auto except_thrown {false};
-            try {
-                config->set("deadbeef_invalid_option", 1);
-            } catch (const InvalidOptionType& e) {
-                except_thrown = true;
-            }
-            THEN("An InvalidOptionType exception is thrown.") {
-                REQUIRE(except_thrown == true);
-            }
-        }
+
         WHEN("An invalid option is requested during get.") {
-            auto except_thrown {false};
-            try {
-                config->get<std::string>("deadbeef_invalid_option", false);
-            } catch (const InvalidOptionType& e) {
-                except_thrown = true;
-            }
             THEN("An InvalidOptionType exception is thrown.") {
-                REQUIRE(except_thrown == true);
+                REQUIRE_THROWS_AS(config->get<ConfigOptionString>("deadbeef_invalid_option", false), InvalidOptionType);
+                REQUIRE_THROWS_AS(config->get<ConfigOptionFloat>("deadbeef_invalid_option", false), InvalidOptionType);
+                REQUIRE_THROWS_AS(config->get<ConfigOptionInt>("deadbeef_invalid_option", false), InvalidOptionType);
+                REQUIRE_THROWS_AS(config->get<ConfigOptionBool>("deadbeef_invalid_option", false), InvalidOptionType);
             }
         }
         WHEN("An invalid option is requested during get_ptr.") {
-            auto except_thrown {false};
-            try {
-                config->get_ptr<std::string>("deadbeef_invalid_option", false);
-            } catch (const InvalidOptionType& e) {
-                except_thrown = true;
-            }
             THEN("An InvalidOptionType exception is thrown.") {
-                REQUIRE(except_thrown == true);
+                REQUIRE_THROWS_AS(config->get_ptr<ConfigOptionString>("deadbeef_invalid_option", false), InvalidOptionType);
+                REQUIRE_THROWS_AS(config->get_ptr<ConfigOptionFloat>("deadbeef_invalid_option", false), InvalidOptionType);
+                REQUIRE_THROWS_AS(config->get_ptr<ConfigOptionInt>("deadbeef_invalid_option", false), InvalidOptionType);
+                REQUIRE_THROWS_AS(config->get_ptr<ConfigOptionBool>("deadbeef_invalid_option", false), InvalidOptionType);
+            }
+        }
+
+        WHEN("getFloat called on an unset option.") {
+            THEN("The default is returned.") {
+                REQUIRE(config->getFloat("layer_height") == 0.3);
+                REQUIRE(config->getString("layer_height") == "0.3");
+            }
+        }
+
+        WHEN("getFloat called on an option that has been set.") {
+            config->set("layer_height", 0.5);
+            THEN("The set value is returned.") {
+                REQUIRE(config->getFloat("layer_height") == 0.5);
+                REQUIRE(config->getString("layer_height") == "0.5");
             }
         }
     }
