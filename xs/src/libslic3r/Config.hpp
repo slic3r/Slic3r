@@ -68,6 +68,10 @@ public:
         if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getInt();
     }
+    bool getBool(const t_config_option_key& opt_key, bool create=true) {
+        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
+        return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getBool();
+    }
     std::string getString(const t_config_option_key& opt_key, bool create=true) {
         if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getString();
