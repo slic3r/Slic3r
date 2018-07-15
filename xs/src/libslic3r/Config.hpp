@@ -58,24 +58,17 @@ public:
     /// Parse a windows-style opt=value ini file with categories and load the configuration store.
     void read_ini(const std::string& file);
 
-    /// Template function to retrieve and cast in hopefully a slightly nicer 
-    /// format than longwinded dynamic_cast<> 
-    template <class T>
-    T& get(const t_config_option_key& opt_key, bool create=false) {
-        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
-        return *(dynamic_cast<T*>(this->_config.optptr(opt_key, create)));
-    }
-    
-    double getFloat(const t_config_option_key& opt_key, bool create=false) {
+
+    double getFloat(const t_config_option_key& opt_key, bool create=true) {
         if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getFloat();
     }
 
-    int getInt(const t_config_option_key& opt_key, bool create=false) {
+    int getInt(const t_config_option_key& opt_key, bool create=true) {
         if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getInt();
     }
-    std::string getString(const t_config_option_key& opt_key, bool create=false) {
+    std::string getString(const t_config_option_key& opt_key, bool create=true) {
         if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getString();
     }
@@ -83,11 +76,19 @@ public:
 
     /// Template function to dynamic cast and leave it in pointer form.
     template <class T>
-    T* get_ptr(const t_config_option_key& opt_key, bool create=false) {
+    T* get_ptr(const t_config_option_key& opt_key, bool create=true) {
         if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return dynamic_cast<T*>(this->_config.optptr(opt_key, create));
     }
 
+    /// Template function to retrieve and cast in hopefully a slightly nicer 
+    /// format than longwinded dynamic_cast<> 
+    template <class T>
+    T& get(const t_config_option_key& opt_key, bool create=true) {
+        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
+        return *(dynamic_cast<T*>(this->_config.optptr(opt_key, create)));
+    }
+    
     /// Function to parse value from a string to whatever opt_key is.
     void set(const t_config_option_key& opt_key, const std::string& value);
     
