@@ -113,8 +113,12 @@ public:
     void apply(const config_ptr& other) { _config.apply(other->config()); }
     void apply(const Slic3r::Config& other) { _config.apply(other.config()); }
 
+    /// Allow other configs to be applied to this one.
+    void apply(const Slic3r::ConfigBase& other) { _config.apply(other); }
 
-    Config();
+
+    /// Do not use; prefer static factory methods instead.
+    Config(); 
 
 private:
     std::regex _cli_pattern {"=(.+)$"};
