@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include "libslic3r.h"
+#include "utils.hpp"
 #include "Point.hpp"
 
 namespace Slic3r {
@@ -104,6 +105,7 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
     double getFloat() const { return this->value; };
     void setFloat(double val) { this->value = val; }
     void setInt(int val) { this->value = val; }
+    std::string getString() const override { return trim_zeroes(std::to_string(this->value)); }
     
     std::string serialize() const {
         std::ostringstream ss;
@@ -169,6 +171,7 @@ class ConfigOptionInt : public ConfigOptionSingle<int>
     
     int getInt() const { return this->value; };
     void setInt(int val) { this->value = val; };
+    std::string getString() const override { return std::to_string(this->value); }
     
     std::string serialize() const {
         std::ostringstream ss;
