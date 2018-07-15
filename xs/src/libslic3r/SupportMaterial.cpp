@@ -17,25 +17,20 @@ SupportMaterial::generate_toolpaths(PrintObject *object,
                                     map<int, Polygons> interface,
                                     map<int, Polygons> base)
 {
-    int ll = 0;
-    //cout << "Generate toolpaths " << ll++ << endl;
-    // Assig the object to the supports class.
+    // Assign the object to the supports class.
     this->object = object;
 
     // Shape of contact area.
     toolpaths_params params;
     params.contact_loops = 1;
-    //cout << "Generate toolpaths " << ll++ << endl;
-
     params.circle_radius = 1.5 * interface_flow.scaled_width();
-    //cout << "Generate toolpaths " << ll++ << endl;
-
     params.circle_distance = 3 * params.circle_radius;
-    //cout << "Generate toolpaths " << ll++ << endl;
-
     params.circle = create_circle(params.circle_radius);
-    //cout << "Generate toolpaths " << ll++ << endl;
-    // TODO Add Slic3r debug. "Generating patterns\n"
+
+#ifdef SLIC3R_DEBUG
+    printf("Generating patterns\n");
+#endif
+
     // Prepare fillers.
     params.pattern = object_config->support_material_pattern.value;
     params.angles.push_back(object_config->support_material_angle.value);
@@ -47,7 +42,6 @@ SupportMaterial::generate_toolpaths(PrintObject *object,
     else if (params.pattern == smpPillars) {
         params.pattern = smpHoneycomb;
     }
-    //cout << "Generate toolpaths " << ll++ << endl;
     params.interface_angle = object_config->support_material_angle.value + 90;
     params.interface_spacing = object_config->support_material_interface_spacing.value + interface_flow.spacing();
     params.interface_density =
@@ -61,7 +55,6 @@ SupportMaterial::generate_toolpaths(PrintObject *object,
         boost::bind(&SupportMaterial::process_layer, this, _1, params),
         this->config->threads.value
     );
-    //cout << "Generate toolpaths finished" << ll++ << endl;
 }
 
 void
@@ -74,36 +67,28 @@ SupportMaterial::generate(PrintObject *object)
     // that it will be effective, regardless of how it's built below.
     pair<map<coordf_t, Polygons>, map<coordf_t, Polygons>> contact_overhang = contact_area(object);
     map<coordf_t, Polygons> &contact = contact_overhang.first;
-    //cout << "Contact size " << contact.size() << endl;
     map<coordf_t, Polygons> &overhang = contact_overhang.second;
-
-    int ppp = 0;
-    //cout << "Samir " << ppp++ << endl;
 
     // Determine the top surfaces of the object. We need these to determine
     // the layer heights of support material and to clip support to the object
     // silhouette.
     map<coordf_t, Polygons> top = object_top(object, &contact);
-    //cout << "Samir " << ppp++ << endl;
     // We now know the upper and lower boundaries for our support material object
     // (@$contact_z and @$top_z), so we can generate intermediate layers.
     vector<coordf_t> support_z = support_layers_z(get_keys_sorted(contact),
                                                   get_keys_sorted(top),
                                                   get_max_layer_height(object));
-    //cout << "Samir " << ppp++ << endl;
     // If we wanted to apply some special logic to the first support layers lying on
     // object's top surfaces this is the place to detect them.
     map<int, Polygons> shape;
     if (object_config->support_material_pattern.value == smpPillars)
         this->generate_pillars_shape(contact, support_z, shape);
 
-    //cout << "Samir " << ppp++ << endl;
     // Propagate contact layers downwards to generate interface layers.
     map<int, Polygons> interface = generate_interface_layers(support_z, contact, top);
     clip_with_object(interface, support_z, *object);
     if (!shape.empty())
         clip_with_shape(interface, shape);
-    //cout << "Samir " << ppp++ << endl;
     // Propagate contact layers and interface layers downwards to generate
     // the main support layers.
     map<int, Polygons> base = generate_base_layers(support_z, contact, interface, top);
@@ -111,11 +96,9 @@ SupportMaterial::generate(PrintObject *object)
     if (!shape.empty())
         clip_with_shape(base, shape);
 
-    //cout << "Samir " << ppp++ << endl;
     // Detect what part of base support layers are "reverse interfaces" because they
     // lie above object's top surfaces.
     generate_bottom_interface_layers(support_z, base, top, interface);
-    //cout << "Samir " << ppp++ << endl;
     // Install support layers into object.
     for (int i = 0; i < int(support_z.size()); i++) {
         object->add_support_layer(
@@ -129,11 +112,8 @@ SupportMaterial::generate(PrintObject *object)
             object->support_layers.end()[-1]->lower_layer = object->support_layers.end()[-2];
         }
     }
-    //cout << "Supports z count is " << support_z.size() << endl;
-    //cout << "Samir " << ppp++ << endl;
     // Generate the actual toolpaths and save them into each layer.
     generate_toolpaths(object, overhang, contact, interface, base);
-    //cout << "Samir " << ppp++ << endl;
 }
 
 vector<coordf_t>
@@ -201,7 +181,7 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
     {
         set<coordf_t> s;
         for (coordf_t el : z)
-            s.insert(int(el * 100) / 100.0); // round it to 2 decimal places.
+            s.insert(int(el * 1000) / 1000.0); // round it to 2 decimal places.
         z = vector<coordf_t>();
         for (coordf_t el : s)
             z.push_back(el);
@@ -213,10 +193,7 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
 pair<map<coordf_t, Polygons>, map<coordf_t, Polygons>>
 SupportMaterial::contact_area(PrintObject *object)
 {
-    //cout << "After " << this->object_config->support_material.value << " ," << (this->object_config->support_material ? " Support Material is enabled" : "Support Material is disabled") << endl;
-
     PrintObjectConfig &conf = *this->object_config;
-    //cout << conf.support_material.value << " " << (conf.support_material.value ? " Support Material is enabled" : "Support Material is disabled") << endl;
 
     // If user specified a custom angle threshold, convert it to radians.
     float threshold_rad = 0.0;
@@ -247,11 +224,9 @@ SupportMaterial::contact_area(PrintObject *object)
         // and $layer->id == 0 means first print layer (including raft).
 
         // If no raft, and we're at layer 0, skip to layer 1
-        //cout << "LAYER ID " << layer_id << endl;
         if (conf.raft_layers == 0 && layer_id == 0) {
             continue;
         }
-        //cout << conf.support_material.value << " " << (conf.support_material.value ? " Support Material is enabled" : "Support Material is disabled") << endl;
         // With or without raft, if we're above layer 1, we need to quit
         // support generation if supports are disabled, or if we're at a high
         // enough layer that enforce-supports no longer applies.
@@ -283,9 +258,7 @@ SupportMaterial::contact_area(PrintObject *object)
                 // with the polygons collected before,
                 // but don't apply the safety offset during the union operation as it would
                 // inflate the polygons over and over.
-                //cout << "Old Build plate only surfaces " << buildplate_only_top_surfaces.size() << endl;
                 append_to(buildplate_only_top_surfaces, offset(projection_new, scale_(0.01)));
-                //cout << "New Build plate only surfaces " << buildplate_only_top_surfaces.size() << endl;
 
                 buildplate_only_top_surfaces = union_(buildplate_only_top_surfaces, 0);
             }
@@ -531,7 +504,6 @@ SupportMaterial::contact_area(PrintObject *object)
             // Ignore this contact area if it's too low.
             if (contact_z < conf.first_layer_height - EPSILON)
                 continue;
-//cout << contact_z << " " << tmp_contact.size() << endl;
 
             contact[contact_z] = tmp_contact;
             overhang[contact_z] = tmp_overhang;
@@ -599,13 +571,9 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
     // This prevents supplying an empty point set to BoundingBox constructor.
     if (contact.empty()) return;
 
-    int u = 0;
-    //cout << "Pillars generation " << contact.size() << endl;
-
     coord_t pillar_size = scale_(object_config->support_material_pillar_size.value);
     coord_t pillar_spacing = scale_(object_config->support_material_pillar_spacing.value);
 
-    //cout << "Samir U " << u++ << endl;
     Polygons grid;
     {
         auto pillar = Polygon({
@@ -634,28 +602,18 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
 
         grid = union_(pillars);
     }
-    //cout << "Samir U " << u++ << endl; //1
-    //cout << "Support z size " << support_z.size() << endl;
     // Add pillars to every layer.
     for (auto i = 0; i < support_z.size(); i++) {
         shape[i] = grid;
     }
-    //cout << "Samir U " << u++ << endl;
     // Build capitals.
-    //cout << "contacts START " << endl;
-    for (auto el : contact) {
-        //cout << el.first << endl;
-    }
-    //cout << "contacts END" << endl;
     for (auto i = 0; i < support_z.size(); i++) {
         coordf_t z = support_z[i];
 
-        //cout << z << endl;
         auto capitals = intersection(
             grid,
             contact.count(z) > 0 ? contact.at(z) : Polygons()
         );
-        //cout << "Samir U " << u++ << endl;
         // Work on one pillar at time (if any) to prevent the capitals from being merged
         // but store the contact area supported by the capital because we need to make
         // sure nothing is left.
@@ -672,7 +630,6 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
                 append_to(shape[i], capital_polygons);
             }
         }
-        //cout << "Samir U " << u++ << endl;
         // Work on one pillar at time (if any) to prevent the capitals from being merged
         // but store the contact area supported by the capital because we need to make
         // sure nothing is left.
@@ -687,7 +644,6 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
             }
         }
     }
-    //cout << "Samir U " << u++ << endl;
 }
 
 map<int, Polygons>
