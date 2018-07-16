@@ -129,10 +129,10 @@ PrintGCode::output()
     if (include_start_extruder_temp) this->_print_first_layer_temperature(0);
 
     // Apply gcode math to start and end gcode
-//    fh << apply_math(gcodegen.placeholder_parser->process(config.start_gcode.value));
+    fh << apply_math(gcodegen.placeholder_parser->process(config.start_gcode.value));
 
     for(const auto& start_gcode : config.start_filament_gcode.values) {
-//        fh << apply_math(gcodegen.placeholder_parser->process(start_gcode));
+        fh << apply_math(gcodegen.placeholder_parser->process(start_gcode));
     }
     
     if (include_start_extruder_temp) this->_print_first_layer_temperature(1);
@@ -143,12 +143,12 @@ PrintGCode::output()
 
     // initialize motion planner for object-to-object travel moves
     if (config.avoid_crossing_perimeters.getBool()) {
-        auto distance_from_objects {scale_(1)};
 
         // compute the offsetted convex hull for each object and repeat it for each copy
         Polygons islands_p {};
         for (auto object : this->objects) {
             Polygons polygons {};
+            // Add polygons that aren't just thin walls.
             for (auto layer : object->layers) {
                 const auto& slice {ExPolygons(layer->slices)};
                 std::for_each(slice.cbegin(), slice.cend(), [&polygons] (const ExPolygon& a) { polygons.emplace_back(a.contour); });
@@ -205,6 +205,31 @@ PrintGCode::_print_first_layer_temperature(bool wait)
         if (config.ooze_prevention.value) temp += config.standby_temperature_delta.value;
         if (temp > 0) fh << gcodegen.writer.set_temperature(temp, wait, t);
     }
+}
+
+PrintGCode::PrintGCode(Slic3r::Print& print, std::ostream& _fh) : 
+        _print(print), 
+        config(print.config), 
+        _gcodegen(Slic3r::GCode()),
+        objects(print.objects),
+        fh(_fh),
+        _cooling_buffer(Slic3r::CoolingBuffer(this->_gcodegen)),
+        _spiral_vase(Slic3r::SpiralVase(this->config))
+{ 
+    size_t layer_count {0};
+    if (config.complete_objects) {
+        layer_count = std::accumulate(objects.cbegin(), objects.cend(), layer_count, [](const size_t& ret, const PrintObject* obj){ return ret + (obj->copies().size() * obj->total_layer_count()); });
+    } else {
+        layer_count = std::accumulate(objects.cbegin(), objects.cend(), layer_count, [](const size_t& ret, const PrintObject* obj){ return ret + obj->total_layer_count(); });
+    }
+    _gcodegen.placeholder_parser = &(print.placeholder_parser); // initialize 
+    _gcodegen.layer_count = layer_count;
+    _gcodegen.enable_cooling_markers = true;
+    _gcodegen.apply_print_config(config);
+    std::cerr << "Setting " << print.extruders().size() << "\n";
+
+    auto extruders {print.extruders()}; 
+    _gcodegen.set_extruders(extruders.cbegin(), extruders.cend());
 }
 
 } // namespace Slic3r

@@ -17,15 +17,8 @@ namespace Slic3r {
 
 class PrintGCode {
 public:
-    PrintGCode(Slic3r::Print& print, std::ostream& _fh) : 
-        _print(print), 
-        config(print.config), 
-        _gcodegen(Slic3r::GCode()),
-        objects(print.objects),
-        fh(_fh),
-        _cooling_buffer(Slic3r::CoolingBuffer(this->_gcodegen)),
-        _spiral_vase(Slic3r::SpiralVase(this->config))
-        { };
+    /// Constructor.
+    PrintGCode(Slic3r::Print& print, std::ostream& _fh);
 
     /// Perform the export. export is a reserved name in C++, so changed to output
     void output();
