@@ -226,7 +226,6 @@ PrintGCode::PrintGCode(Slic3r::Print& print, std::ostream& _fh) :
     _gcodegen.layer_count = layer_count;
     _gcodegen.enable_cooling_markers = true;
     _gcodegen.apply_print_config(config);
-    std::cerr << "Setting " << print.extruders().size() << "\n";
 
     auto extruders {print.extruders()}; 
     _gcodegen.set_extruders(extruders.cbegin(), extruders.cend());
