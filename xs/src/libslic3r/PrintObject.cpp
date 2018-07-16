@@ -1146,4 +1146,39 @@ PrintObject::_support_material_flow(FlowRole role)
 
     return support_flow;
 }
+
+void
+PrintObject::generate_support_material() 
+{
+    auto* print { this->_print };
+    auto& config {this->config };
+    //prereqs 
+    this->_slice();
+    if (this->state.is_done(posSupportMaterial)) { return; }
+
+    this->state.set_started(posSupportMaterial); 
+
+    this->clear_support_layers();
+
+    if ((!config.support_material
+                && config.raft_layers == 0
+                && config.support_material_enforce_layers == 0)
+            || this->layers.size() < 2
+       ) {
+        this->state.set_done(posSupportMaterial);
+        return;
+    }
+    if (print->status_cb != nullptr)
+        print->status_cb(85, "Generating support material");
+
+    this->_support_material()->generate(this);
+
+    this->state.set_done(posSupportMaterial);
+
+    std::stringstream stats {""};
+
+    if (print->status_cb != nullptr)
+        print->status_cb(85, stats.str().c_str());
+
+}
 }

@@ -136,6 +136,10 @@ class PrintObject
     void delete_layer(int idx);
 
     SupportMaterial* _support_material();
+
+    /// Initialize and generate support material.
+    void generate_support_material();
+
     Flow _support_material_flow(FlowRole role = frSupportMaterial);
     size_t support_layer_count() const;
     void clear_support_layers();
