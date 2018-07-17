@@ -210,6 +210,7 @@ set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/libslic3r/test_print.cpp
     ${TESTDIR}/libslic3r/test_skirt_brim.cpp
     ${TESTDIR}/libslic3r/test_test_data.cpp
+    ${TESTDIR}/libslic3r/test_geometry.cpp
 )
 
 add_executable(slic3r slic3r.cpp)
