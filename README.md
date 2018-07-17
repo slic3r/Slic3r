@@ -40,7 +40,7 @@ See the [project homepage](http://slic3r.org/) at slic3r.org for more informatio
 
 ### What language is it written in?
 
-The core parts of Slic3r are written in C++11, with multithreading. The graphical interface is in the process of being ported to C++11.
+The core parts of Slic3r are written in C++11, with multithreading. The graphical interface is in the process of being ported to C++14.
 
 ### How to install?
 
