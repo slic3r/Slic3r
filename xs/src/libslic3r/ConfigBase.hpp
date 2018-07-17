@@ -102,18 +102,18 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
     ConfigOptionFloat(double _value) : ConfigOptionSingle<double>(_value) {};
     ConfigOptionFloat* clone() const { return new ConfigOptionFloat(this->value); };
     
-    double getFloat() const { return this->value; };
-    void setFloat(double val) { this->value = val; }
-    void setInt(int val) { this->value = val; }
+    double getFloat() const override { return this->value; };
+    void setFloat(double val) override { this->value = val; }
+    void setInt(int val) override { this->value = val; }
     std::string getString() const override { return trim_zeroes(std::to_string(this->value)); }
     
-    std::string serialize() const {
+    std::string serialize() const override {
         std::ostringstream ss;
         ss << this->value;
         return ss.str();
     };
     
-    bool deserialize(std::string str, bool append = false) {
+    bool deserialize(std::string str, bool append = false) override {
         std::istringstream iss(str);
         iss >> this->value;
         return !iss.fail();
@@ -167,19 +167,19 @@ class ConfigOptionInt : public ConfigOptionSingle<int>
     public:
     ConfigOptionInt() : ConfigOptionSingle<int>(0) {};
     ConfigOptionInt(double _value) : ConfigOptionSingle<int>(_value) {};
-    ConfigOptionInt* clone() const { return new ConfigOptionInt(this->value); };
+    ConfigOptionInt* clone() const override { return new ConfigOptionInt(this->value); };
     
-    int getInt() const { return this->value; };
-    void setInt(int val) { this->value = val; };
+    int getInt() const override { return this->value; };
+    void setInt(int val) override { this->value = val; };
     std::string getString() const override { return std::to_string(this->value); }
     
-    std::string serialize() const {
+    std::string serialize() const override {
         std::ostringstream ss;
         ss << this->value;
         return ss.str();
     };
     
-    bool deserialize(std::string str, bool append = false) {
+    bool deserialize(std::string str, bool append = false) override {
         std::istringstream iss(str);
         iss >> this->value;
         return !iss.fail();
@@ -191,7 +191,7 @@ class ConfigOptionInts : public ConfigOptionVector<int>
     public:
     ConfigOptionInts() {};
     ConfigOptionInts(const std::vector<int> _values) : ConfigOptionVector<int>(_values) {};
-    ConfigOptionInts* clone() const { return new ConfigOptionInts(this->values); };
+    ConfigOptionInts* clone() const override { return new ConfigOptionInts(this->values); };
     
     std::string serialize() const {
         std::ostringstream ss;
