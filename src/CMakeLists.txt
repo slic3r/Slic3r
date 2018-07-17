@@ -212,6 +212,9 @@ add_executable(slic3r slic3r.cpp)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
 
+cmake_policy(SET CMP0072 NEW)
+find_package(OpenGL)
+
 
 if(SLIC3R_STATIC)
     set(Boost_USE_STATIC_LIBS ON)
@@ -306,7 +309,7 @@ IF(wxWidgets_FOUND)
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
     #only build GUI lib if building with wx
-    target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES})
+    target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_WX")
 
     if (GUI_BUILD_TESTS)
@@ -342,7 +345,7 @@ IF(wxWidgets_FOUND)
         endif()
         add_executable(gui_test ${UI_TEST_SOURCES}) 
         add_test(NAME TestGUI COMMAND gui_test)
-        target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES} ${LIBSLIC3R_DEPENDS})
+        target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES} ${LIBSLIC3R_DEPENDS} ${OPENGL_LIBRARIES})
     endif()
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
