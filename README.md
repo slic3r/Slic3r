@@ -57,23 +57,26 @@ Sure! You can do the following to find things that are available to help with:
 
 * Development
 	* [Low Effort tasks](https://github.com/alexrj/Slic3r/labels/Low%20Effort): pick one of them!
-	* [More available tasks](https://github.com/alexrj/Slic3r/milestone/31): let's discuss together before you start working on them
+	* [Help Wanted tasks](https://github.com/alexrj/Slic3r/labels/help%20wanted): pick one of them!
+	* [More available tasks](https://github.com/alexrj/Slic3r/milestone/32): let's discuss together before you start working on them
 	* Please comment in the related GitHub issue that you are working on it so that other people know.
 * Contribute to the [Manual](http://manual.slic3r.org/)! (see its [GitHub repository](https://github.com/alexrj/Slic3r-Manual))
 * You can also find us in #slic3r on [FreeNode](https://webchat.freenode.net): talk to _Sound_, _LoH_ or the other members of the Slic3r community.
 * Add an [issue](https://github.com/alexrj/Slic3r/issues) to the GitHub tracker if it isn't already present.
 * Drop Alessandro a line at aar@cpan.org.
+* Drop Joseph a line at lenox.joseph@gmail.com
 
 ### Directory structure
 
 * `package/`: the scripts used for packaging the executables
 * `src/`: the C++ source of the `slic3r` executable the and CMake definition file for compiling it
 * `src/GUI`: The C++ GUI.
-* `t/`: the test suite
+* `src/test`: New test suite for libslic3r and the GUI. Implemented with [Catch2](https://github.com/catchorg/Catch2)
+* `t/`: the test suite (deprecated)
 * `utils/`: various useful scripts
 * `xs/src/libslic3r/`: C++ sources for libslic3r
-* `xs/t/`: test suite for libslic3r
-* `xs/xsp/`: bindings for calling libslic3r from Perl (XS)
+* `xs/t/`: test suite for libslic3r (deprecated)
+* `xs/xsp/`: bindings for calling libslic3r from Perl (XS) (deprecated)
 
 ### Acknowledgements
 
