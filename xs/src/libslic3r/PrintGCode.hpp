@@ -23,6 +23,9 @@ public:
     /// Perform the export. export is a reserved name in C++, so changed to output
     void output();
 
+    /// Process an individual output for export. Writes to the ostream.
+    void process_layer(size_t idx, const Layer* layer, const Points& copies);
+
     void flush_filters() { fh << this->filter(this->_cooling_buffer.flush(), 1); }
 
     /// Applies various filters, if enabled.
@@ -53,6 +56,9 @@ private:
 
     void _print_first_layer_temperature(bool wait);
     void _print_off_temperature(bool wait);
+
+    void _print_config(const ConfigBase& config);
+
 
 };
 

@@ -37,6 +37,10 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
             THEN("GCode preamble is emitted.") {
                 REQUIRE(exported.find("G21 ; set units to millimeters") != std::string::npos);
             }
+
+            THEN("Config options emitted.") {
+                REQUIRE(exported.find("; layer_height") != std::string::npos);
+            }
         }
         WHEN("the output is executed with support material") {
             config->set("first_layer_extrusion_width", 0);
@@ -86,6 +90,7 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
                 REQUIRE(exported.find("M107") != std::string::npos);
             }
         }
+
         gcode.clear();
     }
 }

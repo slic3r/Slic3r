@@ -1,5 +1,6 @@
 #ifndef SLIC3RXS
 #include "PrintGCode.hpp"
+#include "PrintConfig.hpp"
 
 #include <ctime>
 #include <iostream>
@@ -12,6 +13,7 @@ PrintGCode::output()
     auto& fh {this->fh};
     auto& print {this->_print};
     const auto& config {this->config};
+    const auto extruders {print.extruders()};
 
     // Write information about the generator.
     time_t rawtime; tm * timeinfo;
@@ -111,7 +113,7 @@ PrintGCode::output()
     auto bed_temp_regex { std::regex("M(?:190|140)", std::regex_constants::icase)};
     auto ex_temp_regex { std::regex("M(?:109|104)", std::regex_constants::icase)};
     auto temp{config.first_layer_bed_temperature.getFloat()};
-    if (config.has_heatbed.getBool() && temp > 0 && std::regex_search(config.start_gcode.getString(), bed_temp_regex)) {
+    if (config.has_heatbed && temp > 0 && std::regex_search(config.start_gcode.getString(), bed_temp_regex)) {
         fh << gcodegen.writer.set_bed_temperature(temp, 1);
     }
     
@@ -167,23 +169,112 @@ PrintGCode::output()
     }
 
     // Calculate wiping points if needed.
-    //
-    
+    if (config.ooze_prevention && extruders.size() > 1) {
+    }
+
     // Set initial extruder only after custom start gcode
+    fh << gcodegen.set_extruder(*(extruders.begin()));
 
     // Do all objects for each layer.
 
-    if (config.complete_objects.getBool()) {
+    if (config.complete_objects) {
     } else {
+        // order objects using a nearest neighbor search
+        std::vector<Points::size_type> obj_idx {};
+        Points p;
+        for (const auto obj : this->objects ) 
+            p.emplace_back(obj->_shifted_copies.at(0));
+
+        std::vector<size_t> z(100); // preallocate with 100 layers
+        std::map<size_t, LayerPtrs> layers {};
+        for (size_t idx = 0U; idx < print.objects.size(); ++idx) {
+            const auto& object {*(objects.at(idx))};
+            // sort layers by Z into buckets
+            for (auto* layer : object.layers) {
+                if (layers.count(layer->print_z) == 0) { // initialize bucket if empty
+                    layers[layer->print_z] = LayerPtrs();
+                    z.emplace_back(layer->print_z);
+                }
+                layers[layer->print_z].emplace_back(layer);
+            }
+            for (Layer* layer : object.support_layers) { // don't use auto here to not have to cast later
+                if (layers.count(layer->print_z) == 0) { // initialize bucket if empty
+                    layers[layer->print_z] = LayerPtrs();
+                    z.emplace_back(layer->print_z);
+                }
+                layers[layer->print_z].emplace_back(layer);
+            }
+        }
+
+        // pass the comparator to leave no doubt.
+        std::sort(z.begin(), z.end(),  std::less<size_t>());
+        
+        //  call process_layers in the order given by obj_idx
+        for (const auto& print_z : z) {
+            for (const auto idx : obj_idx) {
+                for (const auto* layer : layers.at(print_z)) {
+                    this->process_layer(idx, layer, layer->object()->_shifted_copies);
+                }
+            }
+        }
+        
+        this->flush_filters();
     }
 
     // Write end commands to file.
+    fh << gcodegen.retract(); // TODO: process this retract through PressureRegulator in order to discharge fully
 
     // set bed temperature
+    if (config.has_heatbed && temp > 0 && std::regex_search(config.end_gcode.getString(), bed_temp_regex)) {
+        fh << gcodegen.writer.set_bed_temperature(0, 0);
+    }
 
     // Get filament stats
+    print.filament_stats.clear();
+    print.total_used_filament = 0.0;
+    print.total_extruded_volume = 0.0;
+    print.total_weight = 0.0;
+    print.total_cost = 0.0;
+
+    
+    for (auto extruder_pair : gcodegen.writer.extruders) {
+        const auto& extruder {extruder_pair.second};
+        auto used_material {extruder.used_filament()};
+        auto extruded_volume {extruder.extruded_volume()};
+        auto material_weight {extruded_volume * extruder.filament_density() / 1000.0};
+        auto material_cost { material_weight * (extruder.filament_cost() / 1000.0)};
+
+        print.filament_stats[extruder.id] = used_material;
+
+        fh << "; material used = ";
+        fh << std::fixed << std::setprecision(2) << used_material << "mm ";
+        fh << "(" << std::fixed << std::setprecision(2) 
+           << extruded_volume / 1000.0 
+           << used_material << "cm3)\n";
+
+        if (material_weight > 0) {
+            print.total_weight += material_weight;
+            fh << "; material used = " 
+               << std::fixed << std::setprecision(2) << material_weight << "g\n";
+            if (material_cost > 0) {
+                print.total_cost += material_cost;
+                fh << "; material cost = " 
+                   << std::fixed << std::setprecision(2) << material_weight << "g\n";
+            }
+        }
+        print.total_used_filament += used_material;
+        print.total_extruded_volume += extruded_volume;
+    }
+    fh << "; total filament cost = " 
+       << std::fixed << std::setprecision(2) << print.total_cost << "\n";
 
     // Append full config
+    fh << std::endl;
+
+    // print config
+    _print_config(print.config);
+//    _print_config(print.default_object_config);
+//    _print_config(print.default_region_config);
 }
 
 std::string 
@@ -193,20 +284,35 @@ PrintGCode::filter(const std::string& in, bool wait)
 }
 
 void
+PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
+{
+}
+
+void
 PrintGCode::_print_first_layer_temperature(bool wait) 
 {
     auto& gcodegen {this->_gcodegen};
     auto& fh {this->fh};
     const auto& print {this->_print};
     const auto& config {this->config};
+    const auto extruders {print.extruders()};
 
-    for (auto& t : print.extruders()) {
+    for (auto& t : extruders) {
         auto temp { config.first_layer_temperature.get_at(t) };
         if (config.ooze_prevention.value) temp += config.standby_temperature_delta.value;
         if (temp > 0) fh << gcodegen.writer.set_temperature(temp, wait, t);
     }
 }
 
+void 
+PrintGCode::_print_config(const ConfigBase& config)
+{
+    for (const auto& key : config.keys()) {
+        // skip if a shortcut option
+        //            if (std::find(print_config_def.cbegin(), print_config_def.cend(), key) > 0) continue;
+        fh << "; " << key << " = " << config.serialize(key) << "\n";
+    }
+}
 PrintGCode::PrintGCode(Slic3r::Print& print, std::ostream& _fh) : 
         _print(print), 
         config(print.config), 
