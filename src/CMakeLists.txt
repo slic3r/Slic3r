@@ -286,10 +286,14 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/Dialogs/PrintEditor.cpp
     ${GUI_LIBDIR}/Dialogs/PrinterEditor.cpp
     ${GUI_LIBDIR}/Dialogs/MaterialEditor.cpp
+    ${GUI_LIBDIR}/Dialogs/ObjectCutDialog.cpp
     ${GUI_LIBDIR}/GUI.cpp
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/Plater.cpp
+    ${GUI_LIBDIR}/Scene3D.cpp
     ${GUI_LIBDIR}/Plater/Plate2D.cpp
+    ${GUI_LIBDIR}/Plater/Plate3D.cpp
+    ${GUI_LIBDIR}/Plater/Preview3D.cpp
     ${GUI_LIBDIR}/Plater/PlaterObject.cpp
     ${GUI_LIBDIR}/ProgressStatusBar.cpp
     ${GUI_LIBDIR}/Settings.cpp
@@ -298,6 +302,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/OptionsGroup/UI_Choice.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Point.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Point3.cpp
+    ${LIBDIR}/slic3r/GUI/3DScene.cpp
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
     #only build GUI lib if building with wx

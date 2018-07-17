@@ -20,6 +20,8 @@
 
 #include <exception>
 
+#include <exception>
+
 namespace Slic3r {
 
 class InvalidObjectException : public std::exception {};
