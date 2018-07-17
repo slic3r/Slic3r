@@ -412,7 +412,7 @@ Pointf3s TriangleMesh::vertices()
     } else {
         Slic3r::Log::warn("TriangleMesh", "vertices() requires repair()");
     }
-    return std::move(tmp);
+    return tmp;
 }
 
 Point3s TriangleMesh::facets() 
@@ -428,7 +428,7 @@ Point3s TriangleMesh::facets()
     } else {
         Slic3r::Log::warn("TriangleMesh", "facets() requires repair()");
     }
-    return std::move(tmp);
+    return tmp;
 }
 
 Pointf3s TriangleMesh::normals() const
@@ -448,7 +448,7 @@ Pointf3s TriangleMesh::normals() const
 Pointf3 TriangleMesh::size() const
 {
     const auto& sz {stl.stats.size};
-    return std::move(Pointf3(sz.x, sz.y, sz.z));
+    return Pointf3(sz.x, sz.y, sz.z);
 }
 
 
@@ -468,7 +468,7 @@ TriangleMesh::slice(const std::vector<double>& z)
 
     mslicer.slice(z_f, &layers);
 
-    return std::move(layers);
+    return layers;
 }
 
 mesh_stats
@@ -484,13 +484,13 @@ TriangleMesh::stats() const {
     tmp_stats.facets_reversed = this->stl.stats.facets_reversed;
     tmp_stats.backwards_edges = this->stl.stats.backwards_edges;
     tmp_stats.normals_fixed = this->stl.stats.normals_fixed;
-    return std::move(tmp_stats);
+    return tmp_stats;
 }
 
 BoundingBoxf3 TriangleMesh::bb3() const {
     Pointf3 min(this->stl.stats.min.x, this->stl.stats.min.y, this->stl.stats.min.z);
     Pointf3 max(this->stl.stats.max.x, this->stl.stats.max.y, this->stl.stats.max.z);
-    return std::move(BoundingBoxf3(min, max));
+    return BoundingBoxf3(min, max);
 }
 
 
