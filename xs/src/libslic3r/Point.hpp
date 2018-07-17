@@ -35,7 +35,6 @@ class Point
     coord_t y;
     Point(coord_t _x = 0, coord_t _y = 0): x(_x), y(_y) {};
     Point(int _x, int _y): x(_x), y(_y) {};
-    Point(long long _x, long long _y): x(_x), y(_y) {};  // for Clipper
     Point(double x, double y);
     static Point new_scale(coordf_t x, coordf_t y) {
         return Point(scale_(x), scale_(y));
@@ -178,8 +177,10 @@ scale(const std::vector<Pointf>&in ) {
 #include <boost/version.hpp>
 #include <boost/polygon/polygon.hpp>
 namespace boost { namespace polygon {
+    /* Boost::Polygon already defines long long as a geometry concept.
     template <>
     struct geometry_concept<coord_t> { typedef coordinate_concept type; };
+    */
     
 /* Boost.Polygon already defines a specialization for coordinate_traits<long> as of 1.60:
    https://github.com/boostorg/polygon/commit/0ac7230dd1f8f34cb12b86c8bb121ae86d3d9b97 */
