@@ -7,6 +7,7 @@
 #include <algorithm>
 
 using namespace Slic3r;
+using namespace std;
 
 SCENARIO( "TriangleMesh: Basic mesh statistics") {
     GIVEN( "A 20mm cube, built from constexpr std::array" ) {
