@@ -4,7 +4,8 @@
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
 #endif
-    #include <wx/glcanvas.h>
+    
+#include <wx/glcanvas.h>
 #include "Settings.hpp"
 #include "Point.hpp"
 #include "3DScene.hpp"

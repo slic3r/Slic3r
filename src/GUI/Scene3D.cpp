@@ -8,7 +8,7 @@
 namespace Slic3r { namespace GUI {
 
 Scene3D::Scene3D(wxWindow* parent, const wxSize& size) :
-    wxGLCanvas(parent, wxID_ANY, wxDefaultPosition, size)
+    wxGLCanvas(parent, wxID_ANY, nullptr, wxDefaultPosition, size)
 { 
 
     this->glContext = new wxGLContext(this);
