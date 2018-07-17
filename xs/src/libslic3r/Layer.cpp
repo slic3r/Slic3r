@@ -322,18 +322,18 @@ Layer::project_nonplanar_surfaces()
                 ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(*loop_it);
                 for (ExtrusionPaths::iterator path_it = loop->paths.begin(); path_it != loop->paths.end(); ++path_it) {
                     project_nonplanar_path(&(*path_it));
-                    
+
                     correct_z_on_path(&(*path_it));
                 }
             }
         }
-        
+
         //and all fill paths
         for (ExtrusionEntitiesPtr::iterator col_it = (*it_layerm)->fills.entities.begin(); col_it != (*it_layerm)->fills.entities.end(); ++col_it) {
             ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
             for (ExtrusionEntitiesPtr::iterator path_it = collection->entities.begin(); path_it != collection->entities.end(); ++path_it) {
                 project_nonplanar_path(dynamic_cast<ExtrusionPath*>(*path_it));
-                
+
                 correct_z_on_path(dynamic_cast<ExtrusionPath*>(*path_it));
             }
         }
@@ -342,17 +342,15 @@ Layer::project_nonplanar_surfaces()
 }
 
 bool
-greater(const Point &p1, const Point &p2)
+greater(const Point &a, const Point &b)
 {
-   if (p1.x != p2.x) return p1.x < p2.x;
-   return p1.y < p2.y;
+   return (a.x < b.x) || (a.x == b.x && a.y < b.y);
 }
 
 bool
-smaller(const Point &p1, const Point &p2)
+smaller(const Point &a, const Point &b)
 {
-   if (p1.x != p2.x) return p1.x > p2.x;
-   return p1.y > p2.y;
+   return (a.x > b.x) || (a.x == b.x && a.y > b.y);
 }
 
 void
@@ -360,7 +358,7 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
 {
     //Skip if surface path is not nonplanar
     if ( path->distance_to_top == -1.0f) return;
-    
+
     PrintObject &object = *this->object();
     //First check all points and project them regarding the triangle mesh
     for (Point& point : path->polyline.points) {
@@ -387,27 +385,22 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
                 //Shift down when on lower layer
                 point.z = point.z - scale_(path->distance_to_top);
                 break;
-            } 
+            }
         }
     }
 
     //Then check all line intersections, cut line on intersection and project new point
     std::vector<Point>::size_type size = path->polyline.points.size();
-    for (std::vector<Point>::size_type i = 0; i < size; ++i)
+    for (std::vector<Point>::size_type i = 0; i < size-1; ++i)
     {
-        if (i == size-1) break;
-        //unscale points of line
-        Pointf3 p3 = Pointf3(unscale(path->polyline.points[i].x), unscale(path->polyline.points[i].y), unscale(path->polyline.points[i].z));
-        Pointf3 p4 = Pointf3(unscale(path->polyline.points[i+1].x), unscale(path->polyline.points[i+1].y), unscale(path->polyline.points[i+1].z));
-        
         Points intersections;
         //check against every facet if lines intersect
         for (auto& facet : object.nonplanar_surfaces) {
             for(int j= 0; j < 3; j++){
                 //TODO precheck for faster computation
-                Pointf3 p1 = Pointf3(facet.second.vertex[j % 3].x, facet.second.vertex[j % 3].y, facet.second.vertex[j % 3].z);
-                Pointf3 p2 = Pointf3(facet.second.vertex[(j+1) % 3].x, facet.second.vertex[(j+1) % 3].y, facet.second.vertex[(j+1) % 3].z);
-                Point* p = Slic3r::Geometry::Line_intersection(p1,p2,p3,p4);
+                Point p1 = Point(scale_(facet.second.vertex[j].x), scale_(facet.second.vertex[j].y), scale_(facet.second.vertex[j].z));
+                Point p2 = Point(scale_(facet.second.vertex[(j+1) % 3].x), scale_(facet.second.vertex[(j+1) % 3].y), scale_(facet.second.vertex[(j+1) % 3].z));
+                Point* p = Slic3r::Geometry::Line_intersection(p1, p2, path->polyline.points[i], path->polyline.points[i+1]);
                 if (p) {
                     intersections.push_back(*p);
                 }
@@ -415,19 +408,20 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
         }
         //Stop if no intersections are found
         if (intersections.size() == 0) continue;
-        
+
         //sort found intersectons if there are more than 1
         if ( intersections.size() > 1 ){
-            if ( p3.x < p4.x || (p3.x == p4.x && p3.y < p4.y )){ 
+            if ( path->polyline.points[i].x < path->polyline.points[i+1].x ||
+                (path->polyline.points[i].x == path->polyline.points[i+1].x && path->polyline.points[i].y < path->polyline.points[i+1].y )){
                 std::sort(intersections.begin(), intersections.end(),smaller);
             }
             else {
                 std::sort(intersections.begin(), intersections.end(),greater);
             }
         }
-        
+
         //remove duplicates
-        Points::iterator point = intersections.begin();    
+        Points::iterator point = intersections.begin();
         while (point != intersections.end()-1) {
             bool delete_point = false;
             Points::iterator point2 = point;
@@ -443,7 +437,7 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
                 ++point;
             }
         }
-        
+
         //insert new points into array
         for (Point p : intersections)
         {
@@ -451,7 +445,7 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
             p.z = p.z - scale_(path->distance_to_top);
             path->polyline.points.insert(path->polyline.points.begin()+i+1, p);
         }
-        
+
         //modifiy array boundary
         i = i + intersections.size();
         size = size + intersections.size();

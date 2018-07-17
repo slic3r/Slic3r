@@ -381,31 +381,40 @@ Project_point_on_plane(Pointf3 v1,  Pointf3 n, Point &pt)
 
 }
 
+// http://paulbourke.net/geometry/pointlineplane/index.html
 Point*
-Line_intersection(Pointf3 p1, Pointf3 p2, Pointf3 p3, Pointf3 p4) {
-    //p1 & p2 has to be the triangle edge while p3 & p4 is the polygon line
-    float d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
-    // If d is zero, there is no intersection
-    if (d == 0) return NULL;
-     
-    // Get the x and y
-    float pre = (p1.x * p2.y - p1.y * p2.x);
-    float post = (p3.x * p4.y - p3.y * p4.x);
-    float x = ( pre * (p3.x - p4.x) - (p1.x - p2.x) * post ) / d;
-    float y = ( pre * (p3.y - p4.y) - (p1.y - p2.y) * post ) / d;
-     
-    // Check if the x and y coordinates are within both lines
-    if ( x < std::min(p1.x, p2.x) || x > std::max(p1.x, p2.x) || x < std::min(p3.x, p4.x) || x > std::max(p3.x, p4.x) ) return NULL;
-    if ( y < std::min(p1.y, p2.y) || y > std::max(p1.y, p2.y) || y < std::min(p3.y, p4.y) || y > std::max(p3.y, p4.y) ) return NULL;
-     
-    // Return the point of intersection
-    Point* ret = new Point();
-    ret->x = scale_(x);
-    ret->y = scale_(y);
-    ret->z = scale_(p1.z - ((sqrt((p1.x-x)*(p1.x-x) + (p1.y-y)*(p1.y-y))
-              / sqrt((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y))) 
-              * (p1.z - p2.z)));
-    return ret;
+Line_intersection(Point p1, Point p2, Point p3, Point p4) {
+
+    float denom = ((p4.y - p3.y)*(p2.x - p1.x)) -
+                  ((p4.x - p3.x)*(p2.y - p1.y));
+
+    float nume_a = ((p4.x - p3.x)*(p1.y - p3.y)) -
+                   ((p4.y - p3.y)*(p1.x - p3.x));
+
+    float nume_b = ((p2.x - p1.x)*(p1.y - p3.y)) -
+                   ((p2.y - p1.y)*(p1.x - p3.x));
+
+    if(denom == 0.0f)
+    {
+        return NULL;
+    }
+
+    float ua = nume_a / denom;
+    float ub = nume_b / denom;
+
+    if(ua >= 0.0f && ua <= 1.0f && ub >= 0.0f && ub <= 1.0f)
+    {
+        // Get the intersection point anc calculate z component
+        Point* ret = new Point();
+        ret->x = p1.x + ua*(p2.x - p1.x);
+        ret->y = p1.y + ua*(p2.y - p1.y);
+        ret->z = p1.z - ((sqrt((p1.x-ret->x)*(p1.x-ret->x) + (p1.y-ret->y)*(p1.y-ret->y))
+                  / sqrt((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y)))
+                  * (p1.z - p2.z));
+        return ret;
+    }
+
+    return NULL;
 }
 
 class ArrangeItem {
