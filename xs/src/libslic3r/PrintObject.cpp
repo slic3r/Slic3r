@@ -1146,7 +1146,7 @@ PrintObject::_support_material_flow(FlowRole role)
 
     return support_flow;
 }
-
+#ifndef SLIC3RXS
 void
 PrintObject::generate_support_material() 
 {
@@ -1181,4 +1181,5 @@ PrintObject::generate_support_material()
         print->status_cb(85, stats.str().c_str());
 
 }
+#endif // SLIC3RXS
 }

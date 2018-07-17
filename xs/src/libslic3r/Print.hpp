@@ -136,9 +136,11 @@ class PrintObject
     void delete_layer(int idx);
 
     SupportMaterial* _support_material();
-
+    
+#ifndef SLIC3RXS
     /// Initialize and generate support material.
     void generate_support_material();
+#endif // SLIC3RXS
 
     Flow _support_material_flow(FlowRole role = frSupportMaterial);
     size_t support_layer_count() const;
