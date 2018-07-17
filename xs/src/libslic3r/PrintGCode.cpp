@@ -273,8 +273,8 @@ PrintGCode::output()
 
     // print config
     _print_config(print.config);
-//    _print_config(print.default_object_config);
-//    _print_config(print.default_region_config);
+    _print_config(print.default_object_config);
+    _print_config(print.default_region_config);
 }
 
 std::string 
@@ -286,6 +286,15 @@ PrintGCode::filter(const std::string& in, bool wait)
 void
 PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
 {
+    std::string gcode {""};
+    auto& gcodegen {this->_gcodegen};
+
+    const auto& obj {*(layer->object())};
+    gcodegen.config.apply(obj.config, true);
+
+
+
+    fh << this->filter(gcode);
 }
 
 void
@@ -313,6 +322,7 @@ PrintGCode::_print_config(const ConfigBase& config)
         fh << "; " << key << " = " << config.serialize(key) << "\n";
     }
 }
+
 PrintGCode::PrintGCode(Slic3r::Print& print, std::ostream& _fh) : 
         _print(print), 
         config(print.config), 

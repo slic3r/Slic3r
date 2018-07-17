@@ -99,8 +99,8 @@ Print::process()
 {
     if (this->status_cb != nullptr)
         this->status_cb(70, "Infilling layers");
-    for(auto obj : this->objects) { obj->_infill(); }
-    for(auto obj : this->objects) { obj->generate_support_material(); }
+    for(auto& obj : this->objects) { obj->_infill(); }
+    for(auto& obj : this->objects) { obj->generate_support_material(); }
 
     this->make_skirt();
     this->make_brim(); // must follow make_skirt

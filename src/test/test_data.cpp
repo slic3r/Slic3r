@@ -231,7 +231,6 @@ Slic3r::Test::Print init_print(std::tuple<int,int,int> cube, config_ptr _config)
 
 void gcode(std::stringstream& gcode, Slic3r::Test::Print& _print) {
     Slic3r::Print& print {_print.print()};
-    print.process();
     print.export_gcode(gcode, true);
 }
 

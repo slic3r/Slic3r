@@ -38,8 +38,10 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
                 REQUIRE(exported.find("G21 ; set units to millimeters") != std::string::npos);
             }
 
-            THEN("Config options emitted.") {
+            THEN("Config options emitted for print config, default region config, default object config") {
+                REQUIRE(exported.find("; first_layer_temperature") != std::string::npos);
                 REQUIRE(exported.find("; layer_height") != std::string::npos);
+                REQUIRE(exported.find("; fill_density") != std::string::npos);
             }
         }
         WHEN("the output is executed with support material") {

@@ -26,10 +26,10 @@ public:
     /// Process an individual output for export. Writes to the ostream.
     void process_layer(size_t idx, const Layer* layer, const Points& copies);
 
-    void flush_filters() { fh << this->filter(this->_cooling_buffer.flush(), 1); }
+    void flush_filters() { fh << this->filter(this->_cooling_buffer.flush(), true); }
 
     /// Applies various filters, if enabled.
-    std::string filter(const std::string& in, bool wait);
+    std::string filter(const std::string& in, bool wait = false);
 
 private:
     
@@ -57,6 +57,7 @@ private:
     void _print_first_layer_temperature(bool wait);
     void _print_off_temperature(bool wait);
 
+    /// Utility function to print config options as gcode comments
     void _print_config(const ConfigBase& config);
 
 
