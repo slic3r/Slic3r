@@ -1,4 +1,4 @@
-use Test::More tests => 4;
+use Test::More tests => 1;
 use strict;
 use warnings;
 
@@ -17,20 +17,6 @@ use Slic3r::Test;
     ok $config->validate, 'percent extrusion width is validated';
 
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config, scale => 2);
-    {
-        my $invalid = $print->apply_config($config);
-        ok !($invalid), 're-applying same config does not invalidate';
-    }
-    $config->set('perimeters', 20);
-    {
-        my $invalid = $print->apply_config($config);
-        ok $invalid, 're-applying with changed perimeters does invalidate previous config';
-    }
-    $config->set('fill_density', '75%');
-    {
-        my $invalid = $print->apply_config($config);
-        ok $invalid, 're-applying with changed fill_density does invalidate previous config';
-    }
 }
 
 __END__
