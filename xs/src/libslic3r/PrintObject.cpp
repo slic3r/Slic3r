@@ -975,6 +975,8 @@ void PrintObject::_slice()
             //testprint
             for (auto& facet : this->nonplanar_surfaces) {
                 std::cout << "triangle " << facet.first << ": " ;
+                std::cout << " (" << (180*std::acos(facet.second.normal.z))/3.14159265 << "°)";
+                
                 std::cout << " | V0:";
                 std::cout << " X:"<< facet.second.vertex[0].x;
                 std::cout << " Y:"<< facet.second.vertex[0].y;
