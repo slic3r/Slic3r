@@ -48,7 +48,8 @@ private:
 //    Slic3r::ArcFitting _arc_fitting;
 //    Slic3r::PressureRegulator _pressure_regulator;
 
-    size_t _skirt_done {0};
+    /// presence in the array indicates that the 
+    std::map<double, bool> _skirt_done {};
     bool _brim_done {false};
     bool _second_layer_things_done {false};
     std::string _last_obj_copy {""};

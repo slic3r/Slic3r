@@ -186,7 +186,7 @@ PrintGCode::output()
             p.emplace_back(obj->_shifted_copies.at(0));
 
         std::vector<size_t> z(100); // preallocate with 100 layers
-        std::map<size_t, LayerPtrs> layers {};
+        std::map<coordf_t, LayerPtrs> layers {};
         for (size_t idx = 0U; idx < print.objects.size(); ++idx) {
             const auto& object {*(objects.at(idx))};
             // sort layers by Z into buckets
@@ -288,12 +288,154 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
 {
     std::string gcode {""};
     auto& gcodegen {this->_gcodegen};
+    const auto& print {this->_print};
+    const auto& config {this->config};
 
     const auto& obj {*(layer->object())};
     gcodegen.config.apply(obj.config, true);
 
+    // check for usage of spiralvase logic.
 
 
+    // if using spiralvase, disable loop clipping.
+
+    // initialize autospeed.
+    {
+        // get the minimum cross-section used in the layer.
+        std::vector<double> mm3_per_mm;
+        for (auto region_id = 0U; region_id < print.regions.size(); ++region_id) {
+            const auto& region {print.regions.at(region_id)};
+            const auto& layerm {layer->get_region(region_id)};
+
+            if (!(region->config.get_abs_value("perimeter_speed") > 0 &&
+                region->config.get_abs_value("small_perimeter_speed") > 0 &&
+                region->config.get_abs_value("external_perimeter_speed") > 0 &&
+                region->config.get_abs_value("bridge_speed") > 0)) 
+            {
+                mm3_per_mm.emplace_back(layerm->perimeters.min_mm3_per_mm());
+            }
+            if (!(region->config.get_abs_value("infill_speed") > 0 &&
+                region->config.get_abs_value("solid_infill_speed") > 0 &&
+                region->config.get_abs_value("top_solid_infill_speed") > 0 &&
+                region->config.get_abs_value("bridge_speed") > 0 &&
+                region->config.get_abs_value("gap_fill_speed") > 0)) // TODO: make this configurable? 
+            {
+                mm3_per_mm.emplace_back(layerm->fills.min_mm3_per_mm());
+            }
+        }
+        if (typeid(layer) == typeid(SupportLayer*)) {
+            const SupportLayer* slayer = dynamic_cast<const SupportLayer*>(layer);
+            if (!(obj.config.get_abs_value("support_material_speed") > 0 && 
+                  obj.config.get_abs_value("support_material_interface_speed") > 0))
+            {
+                mm3_per_mm.emplace_back(slayer->support_fills.min_mm3_per_mm());
+                mm3_per_mm.emplace_back(slayer->support_interface_fills.min_mm3_per_mm());
+            }
+
+        }
+
+        // ignore too-thin segments.
+        // TODO make the definition of "too thin" based on a config somewhere
+        mm3_per_mm.erase(std::remove_if(mm3_per_mm.begin(), mm3_per_mm.end(), [] (const double& vol) { return vol <= 0.01;} ), mm3_per_mm.end());
+        if (mm3_per_mm.size() > 0) {
+            const auto min_mm3_per_mm {*(std::min_element(mm3_per_mm.begin(), mm3_per_mm.end()))};
+            // In order to honor max_print_speed we need to find a target volumetric
+            // speed that we can use throughout the print. So we define this target 
+            // volumetric speed as the volumetric speed produced by printing the 
+            // smallest cross-section at the maximum speed: any larger cross-section
+            // will need slower feedrates.
+            auto volumetric_speed {min_mm3_per_mm * config.max_print_speed};
+            if (config.max_volumetric_speed > 0) {
+                volumetric_speed = std::min(volumetric_speed, config.max_volumetric_speed.getFloat());
+            }
+            gcodegen.volumetric_speed = volumetric_speed;
+        }
+    }
+    // set the second layer + temp
+    if (!this->_second_layer_things_done && layer->id() == 1) {
+        for (const auto& extruder_ref : gcodegen.writer.extruders) {
+            const auto& extruder { extruder_ref.second };
+            auto temp { config.temperature.get_at(extruder.id) };
+
+            if (temp > 0 && temp != config.first_layer_temperature.get_at(extruder.id) )
+                gcode += gcodegen.writer.set_temperature(temp, 0, extruder.id);
+
+        }
+        if (config.has_heatbed && print.config.first_layer_bed_temperature > 0 && print.config.bed_temperature != print.config.first_layer_bed_temperature) {
+            gcode += gcodegen.writer.set_bed_temperature(print.config.bed_temperature);
+        }
+        this->_second_layer_things_done = true;
+    }
+
+    // set new layer - this will change Z and force a retraction if retract_layer_change is enabled
+    if (print.config.before_layer_gcode.getString().size() > 0) {
+        auto pp {*(gcodegen.placeholder_parser)};
+        pp.set("layer_num", gcodegen.layer_index);
+        pp.set("layer_z", layer->print_z);
+        pp.set("current_retraction", gcodegen.writer.extruder()->retracted);
+
+        gcode += apply_math(pp.process(print.config.layer_gcode.getString()));
+        gcode += "\n";
+    }
+
+    
+    // extrude skirt along raft layers and normal obj layers
+    // (not along interlaced support material layers)
+    if ((print.has_infinite_skirt() || (_skirt_done.rbegin())->first < print.config.skirt_height)
+        && typeid(layer) != typeid(SupportLayer*)
+        && _skirt_done.count(layer->print_z) > 0
+        && layer->id() < static_cast<size_t>(obj.config.raft_layers)) {
+
+        gcodegen.set_origin(Pointf(0,0));
+        gcodegen.avoid_crossing_perimeters.use_external_mp = true;
+        
+        /// data load 
+        std::vector<size_t> extruder_ids {gcodegen.writer.extruders.size()};
+        std::transform(gcodegen.writer.extruders.cbegin(), gcodegen.writer.extruders.cend(), std::back_inserter(extruder_ids), 
+                       [] (const std::pair<unsigned int, Extruder>& z) -> std::size_t { return z.second.id; } );
+        gcode += gcodegen.set_extruder(extruder_ids.at(0));
+
+        // skip skirt if a large brim
+        if (print.has_infinite_skirt() || layer->id() < static_cast<size_t>(print.config.skirt_height)) {
+            const auto& skirt_flow {print.skirt_flow()};
+
+            // distribute skirt loops across all extruders in layer 0
+            auto skirt_loops {print.skirt.entities};
+            for (size_t i = 0; i < skirt_loops.size(); ++i) {
+                // when printing layers > 0 ignore 'min_skirt_length' and 
+                // just use the 'skirts' setting; also just use the current extruder
+                if (layer->id() > 0 && i >= static_cast<size_t>(print.config.skirts)) break; 
+                const auto extruder_id { extruder_ids.at((i / extruder_ids.size()) & extruder_ids.size()) };
+                if (layer->id() == 0)
+                    gcode += gcodegen.set_extruder(extruder_id);
+
+                // adjust flow according to layer height
+                auto& loop {*(dynamic_cast<ExtrusionLoop*>(skirt_loops.at(i)))};
+                {
+                    Flow layer_skirt_flow(skirt_flow);
+                    layer_skirt_flow.height = layer->height;
+
+                    auto mm3_per_mm {layer_skirt_flow.mm3_per_mm()};
+
+                    for (auto& path : loop.paths) {
+                        path.height = layer->height;
+                        path.mm3_per_mm = mm3_per_mm;
+                    }
+                }
+                gcode += gcodegen.extrude(loop, "skirt", obj.config.support_material_speed);
+            }
+
+        }
+
+        this->_skirt_done[layer->print_z] = true; 
+        gcodegen.avoid_crossing_perimeters.use_external_mp = false;
+
+        if (layer->id() == 0) gcodegen.avoid_crossing_perimeters.disable_once = true;
+    }
+
+    // extrude brim
+
+    // write the resulting gcode
     fh << this->filter(gcode);
 }
 
