@@ -44,6 +44,7 @@ class Point
     /// Scale and create a Point from a Pointf.
     static Point new_scale(Pointf p);
     bool operator==(const Point& rhs) const;
+    bool operator!=(const Point& rhs) const { return !(*this == rhs); }
     std::string wkt() const;
     std::string dump_perl() const;
     void scale(double factor);
