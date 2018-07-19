@@ -953,6 +953,21 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
 }
 
 void
+PrintObject::make_perimeters()
+{
+    if (this->state.is_done(posPerimeters)) return;
+    if (this->typed_slices)
+        this->state.invalidate(posSlice);
+    this->slice();
+    this->_make_perimeters();
+}
+
+void
+PrintObject::slice()
+{
+}
+
+void
 PrintObject::_make_perimeters()
 {
     if (this->state.is_done(posPerimeters)) return;
@@ -1096,6 +1111,52 @@ PrintObject::_infill()
 }
 
 void
+PrintObject::prepare_infill()
+{
+    if (this->state.is_done(posInfill)) return;
+    // This prepare_infill() is not really idempotent.
+    // TODO: It should clear and regenerate fill_surfaces at every run 
+    // instead of modifying it in place.
+
+    this->state.invalidate(posPerimeters);
+    this->make_perimeters();
+
+    this->state.set_started(posPrepareInfill);
+
+    // prerequisites
+    this->detect_surfaces_type();
+
+    if (this->print()->status_cb != nullptr) 
+        this->print()->status_cb(30, "Preparing infill");
+    
+
+    // decide what surfaces are to be filled
+    for (auto& layer : this->layers) {
+        for (auto& region : layer->regions) {
+            region->prepare_fill_surfaces();
+        }
+    }
+
+    // this will detect bridges and reverse bridges
+    // and rearrange top/bottom/internal surfaces
+    this->process_external_surfaces();
+
+    // detect which fill surfaces are near external layers
+    // they will be split in internal and internal-solid surfaces
+    this->discover_horizontal_shells();
+    this->clip_fill_surfaces();
+
+    // the following step needs to be done before combination because it may need
+    // to remove only half of the combined infill
+    this->bridge_over_infill();
+
+    // combine fill surfaces to honor the "infill every N layers" option
+    this->combine_infill();
+
+    this->state.set_done(posPrepareInfill);
+}
+
+void
 PrintObject::combine_infill()
 {
     // Work on each region separately.
@@ -1201,6 +1262,15 @@ PrintObject::combine_infill()
         }
     }
 }
+
+
+void
+PrintObject::infill()
+{
+    this->prepare_infill();
+    this->_infill();
+}
+
 SupportMaterial *
 PrintObject::_support_material()
 {
@@ -1288,6 +1358,13 @@ PrintObject::generate_support_material()
 
 }
 #endif // SLIC3RXS
+
+
+void PrintObject::discover_horizontal_shells()
+{
+
+}
+
 void PrintObject::clip_fill_surfaces()
 {
     if (! this->config.infill_only_where_needed.value ||
