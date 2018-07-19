@@ -434,6 +434,171 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     }
 
     // extrude brim
+    if (this->_brim_done) {
+        gcode += gcodegen.set_extruder(print.brim_extruder() - 1);
+        gcodegen.set_origin(Pointf(0,0));
+        gcodegen.avoid_crossing_perimeters.use_external_mp = true;
+        for (const auto& b : print.brim.entities) {
+            gcode += gcodegen.extrude(*b, "brim", obj.config.get_abs_value("support_material_speed"));
+        }
+        this->_brim_done = true;
+        gcodegen.avoid_crossing_perimeters.use_external_mp = false;
+        
+        // allow a straight travel move to the first object point
+        gcodegen.avoid_crossing_perimeters.disable_once = true;
+    }
+
+    auto copy_idx = 0U;
+    for (const auto& copy : copies) {
+        if (config.label_printed_objects) {
+            gcode +=   "; printing object " + obj.model_object().name + " id:" + std::to_string(idx) + " copy "  + std::to_string(copy_idx) + "\n"; 
+        }
+
+        // when starting a new object, use the external motion planner for the first travel move
+        if (this->_last_obj_copy.first != copy && this->_last_obj_copy.second )
+            gcodegen.avoid_crossing_perimeters.use_external_mp = true;
+        this->_last_obj_copy.first = copy;
+        this->_last_obj_copy.second = true;
+        gcodegen.set_origin(Pointf::new_unscale(copy));
+
+        // extrude support material before other things because it might use a lower Z
+        // and also because we avoid travelling on other things when printing it
+        if(layer->is_support()) {
+            const SupportLayer* slayer = dynamic_cast<const SupportLayer*>(layer);
+            ExtrusionEntityCollection paths; 
+            if (slayer->support_interface_fills.size() > 0) {
+                gcode += gcodegen.set_extruder(obj.config.support_material_interface_extruder - 1);
+                slayer->support_interface_fills.chained_path_from(gcodegen.last_pos(), &paths, false);
+                for (const auto& path : paths) {
+                    gcode += gcodegen.extrude(*path, "support material interface", obj.config.get_abs_value("support_material_interface_speed"));
+                }
+            }
+            if (slayer->support_fills.size() > 0) {
+                gcode += gcodegen.set_extruder(obj.config.support_material_extruder - 1);
+                slayer->support_fills.chained_path_from(gcodegen.last_pos(), &paths, false);
+                for (const auto& path : paths) {
+                    gcode += gcodegen.extrude(*path, "support material", obj.config.get_abs_value("support_material_speed"));
+                }
+            }
+        }
+        // We now define a strategy for building perimeters and fills. The separation 
+        // between regions doesn't matter in terms of printing order, as we follow 
+        // another logic instead:
+        // - we group all extrusions by extruder so that we minimize toolchanges
+        // - we start from the last used extruder
+        // - for each extruder, we group extrusions by island
+        // - for each island, we extrude perimeters first, unless user set the infill_first
+        //   option
+        // (Still, we have to keep track of regions because we need to apply their config)
+
+        // group extrusions by extruder and then by island
+        std::map<size_t,std::tuple<ExtrusionEntityCollection, ExtrusionEntityCollection> > by_extruder; // extruder_id => [ { perimeters => \@perimeters, infill => \@infill } ]
+
+        // cache bounding boxes of layer slices
+        std::vector<BoundingBox> layer_slices_bb;
+        std::transform(layer->slices.cbegin(), layer->slices.cend(), std::back_inserter(layer_slices_bb), [] (const ExPolygon& s)-> BoundingBox { return s.bounding_box(); });
+        auto point_inside_surface { [&layer_slices_bb, &layer] (size_t i, Point& point) -> bool { 
+            const auto& bbox {layer_slices_bb.at(i)};
+            return bbox.contains(point) && layer->slices.at(i).contour.contains(point);
+        }};
+        const auto n_slices {layer->slices.size() - 1};
+
+        for (auto region_id = 0U; region_id < print.regions.size(); ++region_id) {
+        }
+
+    }
+/*
+    my $copy_idx = 0;
+    for my $copy (@$object_copies) {
+
+        my $n_slices = $layer->slices->count - 1;
+        foreach my $region_id (0..($self->print->region_count-1)) {
+            my $layerm = $layer->regions->[$region_id] or next;
+            my $region = $self->print->get_region($region_id);
+            
+            # process perimeters
+            {
+                my $extruder_id = $region->config->perimeter_extruder-1;
+                foreach my $perimeter_coll (@{$layerm->perimeters}) {
+                    next if $perimeter_coll->empty;  # this shouldn't happen but first_point() would fail
+                    
+                    # init by_extruder item only if we actually use the extruder
+                    $by_extruder{$extruder_id} //= [];
+                    
+                    # $perimeter_coll is an ExtrusionPath::Collection object representing a single slice
+                    for my $i (0 .. $n_slices) {
+                        if (
+                            # $perimeter_coll->first_point does not fit inside any slice
+                            $i == $n_slices 
+                            # $perimeter_coll->first_point fits inside ith slice
+                            || $point_inside_surface->($i, $perimeter_coll->first_point)) {
+                            $by_extruder{$extruder_id}[$i] //= { perimeters => {} };
+                            $by_extruder{$extruder_id}[$i]{perimeters}{$region_id} //= [];
+                            push @{ $by_extruder{$extruder_id}[$i]{perimeters}{$region_id} }, @$perimeter_coll;
+                            last;
+                        }
+                    }
+                }
+            }
+            
+            # process infill
+            # $layerm->fills is a collection of ExtrusionPath::Collection objects, each one containing
+            # the ExtrusionPath objects of a certain infill "group" (also called "surface"
+            # throughout the code). We can redefine the order of such Collections but we have to 
+            # do each one completely at once.
+            foreach my $fill (@{$layerm->fills}) {
+                next if $fill->empty;  # this shouldn't happen but first_point() would fail
+                
+                # init by_extruder item only if we actually use the extruder
+                my $extruder_id = $fill->[0]->is_solid_infill
+                    ? $region->config->solid_infill_extruder-1
+                    : $region->config->infill_extruder-1;
+                
+                $by_extruder{$extruder_id} //= [];
+                
+                # $fill is an ExtrusionPath::Collection object
+                for my $i (0 .. $n_slices) {
+                    if ($i == $n_slices
+                        || $point_inside_surface->($i, $fill->first_point)) {
+                        $by_extruder{$extruder_id}[$i] //= { infill => {} };
+                        $by_extruder{$extruder_id}[$i]{infill}{$region_id} //= [];
+                        push @{ $by_extruder{$extruder_id}[$i]{infill}{$region_id} }, $fill;
+                        last;
+                    }
+                }
+            }
+        }
+        
+        # tweak extruder ordering to save toolchanges
+        my @extruders = sort { $a <=> $b } keys %by_extruder;
+        if (@extruders > 1) {
+            my $last_extruder_id = $self->_gcodegen.writer->extruder->id;
+            if (exists $by_extruder{$last_extruder_id}) {
+                @extruders = (
+                    $last_extruder_id,
+                    grep $_ != $last_extruder_id, @extruders,
+                );
+            }
+        }
+        
+        foreach my $extruder_id (@extruders) {
+            $gcode .= $self->_gcodegen.set_extruder($extruder_id);
+            foreach my $island (@{ $by_extruder{$extruder_id} }) {
+                if ($self->print->config->infill_first) {
+                    $gcode .= $self->_extrude_infill($island->{infill} // {});
+                    $gcode .= $self->_extrude_perimeters($island->{perimeters} // {});
+                } else {
+                    $gcode .= $self->_extrude_perimeters($island->{perimeters} // {});
+                    $gcode .= $self->_extrude_infill($island->{infill} // {});
+                }
+            }
+        }
+        if ($self->config->label_printed_objects) {
+            $gcode .=   "; stop printing object " . $object->model_object()->name . " id:" . $obj_idx . " copy "  . $copy_idx . "\n";
+        }
+        $copy_idx = $copy_idx + 1;
+    }
+*/
 
     // write the resulting gcode
     fh << this->filter(gcode);
