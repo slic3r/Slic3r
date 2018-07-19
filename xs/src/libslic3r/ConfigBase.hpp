@@ -55,6 +55,7 @@ class ConfigOptionSingle : public ConfigOption {
     T value;
     ConfigOptionSingle(T _value) : value(_value) {};
     operator T() const { return this->value; };
+    T operator()() const { return this->value; };
     
     void set(const ConfigOption &option) {
         const ConfigOptionSingle<T>* other = dynamic_cast< const ConfigOptionSingle<T>* >(&option);
