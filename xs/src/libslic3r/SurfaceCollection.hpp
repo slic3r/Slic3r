@@ -24,6 +24,25 @@ class SurfaceCollection
     SurfacesPtr filter_by_type(SurfaceType type);
     void filter_by_type(SurfaceType type, Polygons* polygons);
 
+    /// deletes all surfaces that match the supplied type.
+    void remove_type(const SurfaceType type);
+
+    void remove_types(std::initializer_list<SurfaceType> types);
+
+    template<int N>
+    void remove_types(std::array<SurfaceType, N> types) {
+        remove_types(types.data(), types.size());
+    }
+    /// group surfaces by common properties
+    void group(std::vector<SurfacesPtr> *retval);
+
+    void keep_type(const SurfaceType type);
+    void keep_types(std::initializer_list<SurfaceType> types);
+    void keep_types(const SurfaceType *types, int ntypes);
+
+    /// deletes all surfaces that match the supplied aggregate of types.
+    void remove_types(const SurfaceType *types, size_t ntypes);
+
     void set(const SurfaceCollection &coll) { surfaces = coll.surfaces; }
     void set(SurfaceCollection &&coll) { surfaces = std::move(coll.surfaces); }
     void set(const ExPolygons &src, SurfaceType surfaceType) { clear(); this->append(src, surfaceType); }
@@ -42,6 +61,10 @@ class SurfaceCollection
     size_t size() const { return this->surfaces.size(); };
     void clear() { this->surfaces.clear(); };
     void erase(size_t i) { this->surfaces.erase(this->surfaces.begin() + i); };
+    Surfaces::iterator begin() { return this->surfaces.begin();}
+    Surfaces::iterator end() { return this->surfaces.end();}
+    Surfaces::const_iterator cbegin() const { return this->surfaces.cbegin();}
+    Surfaces::const_iterator cend() const { return this->surfaces.cend();}
 };
 
 }

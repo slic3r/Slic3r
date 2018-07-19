@@ -160,6 +160,12 @@ class PrintObject
     bool has_support_material() const;
     void detect_surfaces_type();
     void process_external_surfaces();
+
+    /// Combine fill surfaces across layers.
+    /// Idempotence of this method is guaranteed by the fact that we don't remove things from
+    /// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
+    void combine_infill();
+
     void bridge_over_infill();
     coordf_t adjust_layer_height(coordf_t layer_height) const;
     std::vector<coordf_t> generate_object_layers(coordf_t first_layer_height);
@@ -167,6 +173,18 @@ class PrintObject
     std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
     void _make_perimeters();
     void _infill();
+    /// Find all horizontal shells in  this object
+    void discover_horizontal_shells();
+
+    /// Only active if config->infill_only_where_needed. This step trims the sparse infill,
+    /// so it acts as an internal support. It maintains all other infill types intact.
+    /// Here the internal surfaces and perimeters have to be supported by the sparse infill.
+    ///FIXME The surfaces are supported by a sparse infill, but the sparse infill is only as large as the area to support.
+    /// Likely the sparse infill will not be anchored correctly, so it will not work as intended.
+    /// Also one wishes the perimeters to be supported by a full infill.
+    /// Idempotence of this method is guaranteed by the fact that we don't remove things from
+    /// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
+    void clip_fill_surfaces();
     
     private:
     Print* _print;
