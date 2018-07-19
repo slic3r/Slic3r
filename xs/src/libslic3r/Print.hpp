@@ -114,6 +114,7 @@ class PrintObject
     
     Print* print();
     ModelObject* model_object() { return this->_model_object; };
+    const ModelObject& model_object() const { return *(this->_model_object); };
     
     Points copies() const;
     bool add_copy(const Pointf &point);
