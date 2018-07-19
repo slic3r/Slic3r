@@ -171,8 +171,21 @@ class PrintObject
     std::vector<coordf_t> generate_object_layers(coordf_t first_layer_height);
     void _slice();
     std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
+
+    /// Generate perimeters for this PrintObject.
+    void make_perimeters();
+
     void _make_perimeters();
     void _infill();
+
+    /// Preparation step for generating infill.
+    void prepare_infill();
+
+    /// Generate infill for this PrintObject.
+    void infill();
+
+    /// Kick off the slice process for this object
+    void slice();
     /// Find all horizontal shells in  this object
     void discover_horizontal_shells();
 

@@ -109,11 +109,65 @@ Print::process()
 void
 Print::make_brim() 
 {
+    // prereqs
+    for(auto& obj: this->objects) {
+        obj->make_perimeters();
+        obj->infill();
+        obj->generate_support_material();
+    }
+
+    if (this->status_cb != nullptr)
+        this->status_cb(88, "Generating brim");
 }
 
 void
 Print::make_skirt()
 {
+    // prereqs
+    for(auto& obj: this->objects) {
+        obj->make_perimeters();
+        obj->infill();
+        obj->generate_support_material();
+    }
+
+    if (this->state.is_done(psSkirt)) return;
+    this->state.set_started(psSkirt);
+
+    // since this method must be idempotent, we clear skirt paths *before*
+    // checking whether we need to generate them
+    this->skirt.clear();
+
+    if (!this->has_skirt()) {
+        this->state.set_done(psSkirt);
+        return;
+    }
+
+    if (this->status_cb != nullptr)
+        this->status_cb(88, "Generating skirt");
+
+    // First off we need to decide how tall the skirt must be.
+    // The skirt_height option from config is expressed in layers, but our
+    // object might have different layer heights, so we need to find the print_z
+    // of the highest layer involved.
+    // Note that unless has_infinite_skirt() == true
+    // the actual skirt might not reach this $skirt_height_z value since the print
+    // order of objects on each layer is not guaranteed and will not generally
+    // include the thickest object first. It is just guaranteed that a skirt is
+    // prepended to the first 'n' layers (with 'n' = skirt_height).
+    // $skirt_height_z in this case is the highest possible skirt height for safety.
+    double skirt_height_z {-1.0};
+    for (const auto& object : this->objects) {
+        size_t skirt_height {
+            this->has_infinite_skirt() ? object->layer_count() :
+            std::min(size_t(this->config.skirt_height()), object->layer_count())};
+        std::cerr << object->layer_count();
+        auto* highest_layer {object->get_layer(skirt_height - 1)};
+        skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
+    }
+
+    // collect points from all layers contained in skirt height
+
+
 }
 
 #endif // SLIC3RXS
