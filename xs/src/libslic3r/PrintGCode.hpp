@@ -52,7 +52,7 @@ private:
     std::map<double, bool> _skirt_done {};
     bool _brim_done {false};
     bool _second_layer_things_done {false};
-    std::string _last_obj_copy {""};
+    std::pair<Point, bool> _last_obj_copy {std::pair<Point, bool>(Point(), false)};
     bool _autospeed {false};
 
     void _print_first_layer_temperature(bool wait);
