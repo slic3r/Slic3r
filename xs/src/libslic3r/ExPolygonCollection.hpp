@@ -41,6 +41,14 @@ class ExPolygonCollection
     /// ExPolygons and check if at least one contains the point.
     bool contains(const Point &point) const;
 
+    size_t size() const { return expolygons.size(); }
+    ExPolygons::iterator begin() { return expolygons.begin(); }
+    ExPolygons::iterator end() { return expolygons.end(); }
+    ExPolygons::const_iterator cbegin() const { return expolygons.cbegin();}
+    ExPolygons::const_iterator cend() const { return expolygons.cend();}
+    ExPolygon& at(size_t i) { return expolygons.at(i); }
+    const ExPolygon& at(size_t i) const { return expolygons.at(i); }
+
 };
 
 inline ExPolygonCollection&

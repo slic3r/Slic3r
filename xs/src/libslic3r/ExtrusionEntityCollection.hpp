@@ -31,6 +31,7 @@ class ExtrusionEntityCollection : public ExtrusionEntity
         return this->entities.empty();
     };
     void clear();
+    size_t size() const { return this->entities.size(); }
     void swap (ExtrusionEntityCollection &c);
     void append(const ExtrusionEntity &entity);
     void append(const ExtrusionEntitiesPtr &entities);
@@ -53,6 +54,12 @@ class ExtrusionEntityCollection : public ExtrusionEntity
         CONFESS("Calling as_polyline() on a ExtrusionEntityCollection");
         return Polyline();
     };
+    ExtrusionEntitiesPtr::iterator begin() { return entities.begin(); }
+    ExtrusionEntitiesPtr::iterator end() { return entities.end(); }
+    ExtrusionEntitiesPtr::const_iterator cbegin() const { return entities.cbegin(); }
+    ExtrusionEntitiesPtr::const_iterator cend() const { return entities.cend(); }
+
+    
 };
 
 }
