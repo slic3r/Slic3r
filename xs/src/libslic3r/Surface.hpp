@@ -149,6 +149,15 @@ inline void polygons_append(Polygons &dst, SurfacesPtr &&src)
     }
 }
 
+inline bool surfaces_could_merge(const Surface &s1, const Surface &s2)
+{
+    return 
+        s1.surface_type      == s2.surface_type     &&
+        s1.thickness         == s2.thickness        &&
+        s1.thickness_layers  == s2.thickness_layers &&
+        s1.bridge_angle      == s2.bridge_angle;
 }
+
+} // namespace Slic3r
 
 #endif
