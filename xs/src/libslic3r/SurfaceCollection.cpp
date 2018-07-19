@@ -214,4 +214,4 @@ SurfaceCollection::group(std::vector<SurfacesPtr> *retval)
 
 
 
-}
+} // namespace Slic3r

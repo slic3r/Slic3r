@@ -36,9 +36,13 @@ class SurfaceCollection
     /// group surfaces by common properties
     void group(std::vector<SurfacesPtr> *retval);
 
+    /// Deletes every surface other than the ones that match the provided type.
     void keep_type(const SurfaceType type);
+    /// Deletes every surface other than the ones that match the provided types.
     void keep_types(std::initializer_list<SurfaceType> types);
-    void keep_types(const SurfaceType *types, int ntypes);
+
+    /// Deletes every surface other than the ones that match the provided types.
+    void keep_types(const SurfaceType *types, size_t ntypes);
 
     /// deletes all surfaces that match the supplied aggregate of types.
     void remove_types(const SurfaceType *types, size_t ntypes);
