@@ -6,7 +6,17 @@
 
 namespace Slic3r {
 
-enum SurfaceType { stTop, stBottom, stBottomBridge, stInternal, stInternalSolid, stInternalBridge, stInternalVoid };
+/// Surface type enumerations.
+/// As it is very unlikely that there will be more than 32 or 64 of these surface types, pack into a flag 
+enum SurfaceType { 
+    stTop            = 0b1, 
+    stBottom         = 0b10, 
+    stBottomBridge   = 0b100, 
+    stInternal       = 0b1000, 
+    stInternalSolid  = 0b10000, 
+    stInternalBridge = 0b100000, 
+    stInternalVoid   = 0b1000000
+};
 
 class Surface
 {

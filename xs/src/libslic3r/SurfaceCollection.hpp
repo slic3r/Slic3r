@@ -22,6 +22,7 @@ class SurfaceCollection
     template <class T> bool any_internal_contains(const T &item) const;
     template <class T> bool any_bottom_contains(const T &item) const;
     SurfacesPtr filter_by_type(SurfaceType type);
+    SurfacesPtr filter_by_type(std::initializer_list<SurfaceType> types);
     void filter_by_type(SurfaceType type, Polygons* polygons);
 
     /// deletes all surfaces that match the supplied type.
