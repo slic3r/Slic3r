@@ -13,6 +13,7 @@
 #include "libslic3r.h"
 #include "utils.hpp"
 #include "Point.hpp"
+#include "Geometry.hpp"
 
 namespace Slic3r {
 
@@ -119,6 +120,10 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
         iss >> this->value;
         return !iss.fail();
     };
+
+    /// Floating point values we conpare within some small value for equality.
+    template<typename Y>
+    bool operator==(const Y& other) { return std::abs(value - other) < Slic3r::Geometry::epsilon; }
 };
 
 /// Vector form of template specialization for floating point numbers.
