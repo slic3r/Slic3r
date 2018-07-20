@@ -681,7 +681,7 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     
     // Move Z down if necessary
     if (needs_zmove) {
-        gcode += this->writer.travel_to_z(point.z, "Move down after moving");
+        gcode += this->writer.travel_to_z(unscale(point.z), "Move down after moving");
     }
     
     return gcode;
@@ -719,10 +719,15 @@ GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
 bool
 GCode::needs_zmove(const Polyline &travel)
 {
+    if (travel.length() < scale_(1.0)) {
+        // skip zmove if the move is shorter 1 mm
+        return false;
+    }
+    
     //check if any point in travel is below the layer z
     for (Point p : travel.points)
     {
-        if ((p.z != -1.0) && (p.z < this->layer->print_z))
+        if ((p.z != -1.0) && (p.z < scale_(this->layer->print_z)))
             return true;
     }
     

@@ -342,15 +342,27 @@ Layer::project_nonplanar_surfaces()
 }
 
 bool
-greater(const Point &a, const Point &b)
+greaterX(const Point &a, const Point &b)
 {
-   return (a.x < b.x) || (a.x == b.x && a.y < b.y);
+   return (a.x < b.x);
 }
 
 bool
-smaller(const Point &a, const Point &b)
+smallerX(const Point &a, const Point &b)
 {
-   return (a.x > b.x) || (a.x == b.x && a.y > b.y);
+   return (a.x > b.x);
+}
+
+bool
+greaterY(const Point &a, const Point &b)
+{
+   return (a.y < b.y);
+}
+
+bool
+smallerY(const Point &a, const Point &b)
+{
+   return (a.y > b.y);
 }
 
 void
@@ -411,12 +423,19 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
 
         //sort found intersectons if there are more than 1
         if ( intersections.size() > 1 ){
-            if ( path->polyline.points[i].x < path->polyline.points[i+1].x ||
-                (path->polyline.points[i].x == path->polyline.points[i+1].x && path->polyline.points[i].y < path->polyline.points[i+1].y )){
-                std::sort(intersections.begin(), intersections.end(),smaller);
-            }
-            else {
-                std::sort(intersections.begin(), intersections.end(),greater);
+            //sort by X
+            if (abs(path->polyline.points[i+1].x - path->polyline.points[i].x) >= abs(path->polyline.points[i+1].y - path->polyline.points[i].y) ){
+                if(path->polyline.points[i].x < path->polyline.points[i+1].x) {
+                    std::sort(intersections.begin(), intersections.end(),smallerX);
+                }else {
+                    std::sort(intersections.begin(), intersections.end(),greaterX);
+                }
+            } else {//sort by Y
+                if(path->polyline.points[i].y < path->polyline.points[i+1].y) {
+                    std::sort(intersections.begin(), intersections.end(),smallerY);
+                }else {
+                    std::sort(intersections.begin(), intersections.end(),greaterY);
+                }
             }
         }
 

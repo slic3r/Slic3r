@@ -176,7 +176,7 @@ sub prepare_infill {
 
     #detect the nonplanar surfaces and move them to top layer
     $self->detect_nonplanar_surfaces;
-    $self->debug_svg_print;
+
     # This prepare_infill() is not really idempotent.
     # TODO: It should clear and regenerate fill_surfaces at every run
     # instead of modifying it in place.
@@ -210,7 +210,7 @@ sub prepare_infill {
     $self->combine_infill;
 
     $self->set_step_done(STEP_PREPARE_INFILL);
-    
+    $self->debug_svg_print;
 }
 
 sub infill {
