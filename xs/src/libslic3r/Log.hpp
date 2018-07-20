@@ -51,6 +51,11 @@ public:
         std::cerr << message << std::endl;
     }
 
+    static std::ostream& debug(std::string topic) {
+        std::cerr << topic << " DEBUG" << ": ";
+        return std::cerr;
+    }
+
 };
 
 /// Utility debug function to transform a std::vector of anything that 
