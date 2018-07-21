@@ -50,7 +50,10 @@ public:
         std::cerr << topic << " DEBUG" << ": ";
         std::cerr << message << std::endl;
     }
-
+    static std::ostream& error(std::string topic) {
+        std::cerr << topic << "   ERR" << ": ";
+        return std::cerr;
+    }
     static std::ostream& debug(std::string topic) {
         std::cerr << topic << " DEBUG" << ": ";
         return std::cerr;
