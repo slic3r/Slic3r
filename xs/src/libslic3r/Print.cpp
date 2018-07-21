@@ -97,9 +97,13 @@ Print::delete_object(size_t idx)
 void
 Print::process() 
 {
+    /// No need to call this as we call it as part of prepare_infill()
+    /// until we fix the idempotency issue.
+    ///$self->status_cb->(20, "Generating perimeters");
+    ///$_->make_perimeters for @{$self->objects};
     if (this->status_cb != nullptr)
         this->status_cb(70, "Infilling layers");
-    for(auto& obj : this->objects) { obj->_infill(); }
+    for(auto& obj : this->objects) { obj->infill(); }
     for(auto& obj : this->objects) { obj->generate_support_material(); }
 
     this->make_skirt();
@@ -159,7 +163,8 @@ Print::make_skirt()
     for (const auto& object : this->objects) {
         size_t skirt_height {
             this->has_infinite_skirt() ? object->layer_count() :
-            std::min(size_t(this->config.skirt_height()), object->layer_count())};
+            std::min(size_t(this->config.skirt_height()), object->layer_count())
+        };
         std::cerr << object->layer_count();
         auto* highest_layer {object->get_layer(skirt_height - 1)};
         skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
