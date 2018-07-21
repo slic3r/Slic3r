@@ -112,12 +112,14 @@ void TriangleMesh::clone(const TriangleMesh& other) {
 TriangleMesh::TriangleMesh(TriangleMesh&& other) {
     this->repaired = std::move(other.repaired);
     this->stl = std::move(other.stl);
+    stl_initialize(&other.stl);
 }
 
 TriangleMesh& TriangleMesh::operator= (TriangleMesh&& other)
 {
     this->repaired = std::move(other.repaired);
     this->stl = std::move(other.stl);
+    stl_initialize(&other.stl);
 
     return *this;
 }
