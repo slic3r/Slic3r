@@ -166,8 +166,122 @@ Print::make_skirt()
     }
 
     // collect points from all layers contained in skirt height
+    Points points;
+    for(auto* object : this->objects) {
+        Points object_points;
+        
+        // get object layers up to skirt_height_z
+        for(auto* layer : object->layers) {
+            if(layer->print_z > skirt_height_z)break;
+            for(ExPolygon poly : layer->slices){
+                for(Point point : static_cast<Points>(poly)){
+                    object_points.push_back(point);
+                }
+            }
+        }
+        
+        // get support layers up to $skirt_height_z
+        for(auto* layer : object->support_layers) {
+            if(layer->print_z > skirt_height_z)break;
+            for(auto* ee : layer->support_fills){
+                for(Point point : ee->as_polyline().points){
+                    object_points.push_back(point);
+                }
+            }
+            for(auto* ee : layer->support_interface_fills){
+                for(Point point : ee->as_polyline().points){
+                    object_points.push_back(point);
+                }
+            }
+        }
+        
+        // repeat points for each object copy
+        for(auto copy : object->_shifted_copies) {
+            for(Point point : object_points){
+                point.translate(copy);
+                points.push_back(point);
+            }
+        }
+    }
+    if (points.size() < 3) return;  // at least three points required for a convex hull
+    
+    // find out convex hull
+    auto convex = Geometry::convex_hull(points);
+    
+    // skirt may be printed on several layers, having distinct layer heights,
+    // but loops must be aligned so can't vary width/spacing
+    // TODO: use each extruder's own flow
+    auto first_layer_height = this->skirt_first_layer_height();
+    auto flow = this->skirt_flow();
+    auto spacing = flow.spacing();
+    auto mm3_per_mm = flow.mm3_per_mm();
+    
+    
+    auto skirts = this->config.skirts;
+    if(this->has_infinite_skirt() && skirts == 0){
+      skirts = 1;
+    }
+    
+    //my @extruded_length = ();  # for each extruder
+    //extruders_e_per_mm = ();
+    //size_t extruder_idx = 0;
+    
+    // new to the cpp implementation
+    float e_per_mm, extruded_length = 0;
+    size_t extruders_warm = 0;
+    if (this->config.min_skirt_length.getFloat() > 0) {
+        //my $config = Config::GCode();
+        //$config->apply_static($self->config);
+        auto extruder = Extruder(0, &this->config);
+        e_per_mm = extruder.e_per_mm(mm3_per_mm);
+    }
+    
+    // draw outlines from outside to inside
+    // loop while we have less skirts than required or any extruder hasn't reached the min length if any
+    float distance = scale_(std::max(this->config.skirt_distance.getFloat(), this->config.brim_width.getFloat()));
+    for (int i = skirts; i > 0; i--) {
+        distance += scale_(spacing);
+        auto loop = offset(Polygons{convex}, distance, 1, jtRound, scale_(0.1)).at(0);
+        auto epath = ExtrusionPath(erSkirt,
+                mm3_per_mm,        // this will be overridden at G-code export time
+                flow.width,
+                first_layer_height // this will be overridden at G-code export time
+        );
+        epath.polyline = loop.split_at_first_point();
+        auto eloop = ExtrusionLoop(epath,elrSkirt);
+        this->skirt.append(eloop);
+        
+        if (this->config.min_skirt_length.getFloat() > 0) {
+            // Alternative simpler method
+            extruded_length += unscale(loop.length()) * e_per_mm;
+            if(extruded_length >= this->config.min_skirt_length.getFloat()){
+                extruders_warm++;
+                extruded_length = 0;
+            }
+            if (extruders_warm < this->extruders().size()){
+                i++;
+            }
+           
+            /*$extruded_length[$extruder_idx] ||= 0;
+            if (!$extruders_e_per_mm[$extruder_idx]) {
+                my $config = Slic3r::Config::GCode->new;
+                $config->apply_static($self->config);
+                my $extruder = Slic3r::Extruder->new($extruder_idx, $config);
+                $extruders_e_per_mm[$extruder_idx] = $extruder->e_per_mm($mm3_per_mm);
+            }
+            $extruded_length[$extruder_idx] += unscale $loop->length * $extruders_e_per_mm[$extruder_idx];
+            $i++ if defined first { ($extruded_length[$_] // 0) < $self->config->min_skirt_length } 0 .. $#{$self->extruders};
+            if ($extruded_length[$extruder_idx] >= $self->config->min_skirt_length) {
+                if ($extruder_idx < $#{$self->extruders}) {
+                    $extruder_idx++;
+                    next;
+                }
+            }*/
+        }
+    }
 
-
+    this->skirt.reverse();
+    this->state.set_done(psSkirt);
 }
 
 #endif // SLIC3RXS
