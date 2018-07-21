@@ -405,7 +405,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
                 // when printing layers > 0 ignore 'min_skirt_length' and 
                 // just use the 'skirts' setting; also just use the current extruder
                 if (layer->id() > 0 && i >= static_cast<size_t>(print.config.skirts)) break; 
-                const auto extruder_id { extruder_ids.at((i / extruder_ids.size()) & extruder_ids.size()) };
+                const auto extruder_id { extruder_ids.at((i / extruder_ids.size()) % extruder_ids.size()) };
                 if (layer->id() == 0)
                     gcode += gcodegen.set_extruder(extruder_id);
 

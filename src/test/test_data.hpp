@@ -16,6 +16,7 @@ enum class TestMesh {
     L,
     V,
     _40x10,
+    cube_20x20x20,
     bridge,
     bridge_with_hole,
     cube_with_concave_hole,
@@ -67,6 +68,7 @@ bool _equiv(const T& a, const U& b, double epsilon) { return abs(a - b) < epsilo
 Slic3r::Model model(const std::string& model_name, TriangleMesh&& _mesh);
 
 Slic3r::Test::Print init_print(std::tuple<int,int,int> cube, config_ptr _config = Slic3r::Config::new_from_defaults());
+Slic3r::Test::Print init_print(std::initializer_list<TestMesh> meshes, config_ptr _config = Slic3r::Config::new_from_defaults());
 
 void gcode(std::stringstream& gcode, Slic3r::Test::Print& print);
 
