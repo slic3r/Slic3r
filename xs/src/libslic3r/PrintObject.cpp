@@ -925,10 +925,10 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
     
     // compose mesh
     TriangleMesh mesh;
-    for (std::vector<int>::const_iterator it = region_volumes.begin();
-        it != region_volumes.end(); ++it) {
+    for (const auto& i : region_volumes) {
         
-        const ModelVolume &volume = *object.volumes[*it];
+        const ModelVolume &volume = *(object.volumes[i]);
+
         if (volume.modifier != modifier) continue;
         
         mesh.merge(volume.mesh);
@@ -958,13 +958,43 @@ PrintObject::make_perimeters()
     if (this->state.is_done(posPerimeters)) return;
     if (this->typed_slices)
         this->state.invalidate(posSlice);
-    this->slice();
+    this->slice(); // take care of prereqs
     this->_make_perimeters();
 }
 
 void
 PrintObject::slice()
 {
+    auto* print {this->print()};
+    if (this->state.is_done(posSlice)) return;
+    this->state.set_started(posSlice);
+    if (print->status_cb != nullptr) {
+        print->status_cb(10, "Processing triangulated mesh");
+    }
+
+
+    this->_slice(); 
+
+    // detect slicing errors
+    bool warning_thrown = false;
+    for (size_t i = 0U; i < this->layer_count(); ++i) {
+        auto* layer {this->get_layer(i)};
+        if (!layer->slicing_errors) continue;
+        if (!warning_thrown) {
+            Slic3r::Log::warn("PrintObject") << "The model has overlapping or self-intersecting facets. " 
+                                             << "I tried to repair it, however you might want to check " 
+                                             << "the results or repair the input file and retry.\n";
+            warning_thrown = true;
+        }
+    }
+    if (this->layers.size() == 0) {
+        Slic3r::Log::error("PrintObject") << "slice(): " << "No layers were detected. You might want to repair your STL file(s) or check their size or thickness and retry.\n";
+        return; // make this throw an exception instead?
+    }
+
+
+    this->typed_slices = false;
+    this->state.set_done(posSlice);
 }
 
 void
