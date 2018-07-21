@@ -205,7 +205,10 @@ set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/libslic3r/test_config.cpp
     ${TESTDIR}/libslic3r/test_support_material.cpp
     ${TESTDIR}/libslic3r/test_flow.cpp
+    ${TESTDIR}/libslic3r/test_model.cpp
     ${TESTDIR}/libslic3r/test_printgcode.cpp
+    ${TESTDIR}/libslic3r/test_skirt_brim.cpp
+    ${TESTDIR}/libslic3r/test_test_data.cpp
 )
 
 add_executable(slic3r slic3r.cpp)
