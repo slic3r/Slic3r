@@ -171,9 +171,8 @@ PrintObject::clear_layers()
 Layer*
 PrintObject::add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z)
 {
-    Layer* layer = new Layer(id, this, height, print_z, slice_z);
-    layers.push_back(layer);
-    return layer;
+    layers.emplace_back(new Layer(id, this, height, print_z, slice_z));
+    return layers.back();
 }
 
 void
