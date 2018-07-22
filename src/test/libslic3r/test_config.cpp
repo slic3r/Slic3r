@@ -105,6 +105,38 @@ SCENARIO("Config accessor functions perform as expected.") {
                 REQUIRE(config->get<ConfigOptionString>("octoprint_apikey").getString() == std::to_string(100.5));
             }
         }
+        WHEN("A float or percent is set as a percent through the string interface.") {
+            config->set("first_layer_extrusion_width", "100%");
+            THEN("Value and percent flag are 100/true") {
+                auto tmp {config->get<ConfigOptionFloatOrPercent>("first_layer_extrusion_width")};
+                REQUIRE(tmp.percent == true);
+                REQUIRE(tmp.value == 100);
+            }
+        }
+        WHEN("A float or percent is set as a float through the string interface.") {
+            config->set("first_layer_extrusion_width", "100");
+            THEN("Value and percent flag are 100/false") {
+                auto tmp {config->get<ConfigOptionFloatOrPercent>("first_layer_extrusion_width")};
+                REQUIRE(tmp.percent == false);
+                REQUIRE(tmp.value == 100);
+            }
+        }
+        WHEN("A float or percent is set as a float through the int interface.") {
+            config->set("first_layer_extrusion_width", 100);
+            THEN("Value and percent flag are 100/false") {
+                auto tmp {config->get<ConfigOptionFloatOrPercent>("first_layer_extrusion_width")};
+                REQUIRE(tmp.percent == false);
+                REQUIRE(tmp.value == 100);
+            }
+        }
+        WHEN("A float or percent is set as a float through the double interface.") {
+            config->set("first_layer_extrusion_width", 100.5);
+            THEN("Value and percent flag are 100.5/false") {
+                auto tmp {config->get<ConfigOptionFloatOrPercent>("first_layer_extrusion_width")};
+                REQUIRE(tmp.percent == false);
+                REQUIRE(tmp.value == 100.5);
+            }
+        }
         WHEN("An invalid option is requested during set.") {
             THEN("An InvalidOptionType exception is thrown.") {
                 REQUIRE_THROWS_AS(config->set("deadbeef_invalid_option", 1), InvalidOptionType);
