@@ -1394,7 +1394,6 @@ PrintObject::generate_support_material()
         print->status_cb(85, stats.str().c_str());
 
 }
-#endif // SLIC3RXS
 
 
 void 
@@ -1652,4 +1651,6 @@ PrintObject::clip_fill_surfaces()
         }
     }
 }
+
+#endif // SLIC3RXS
 }
