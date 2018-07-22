@@ -952,6 +952,7 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
     return layers;
 }
 
+#ifndef SLIC3RXS
 void
 PrintObject::make_perimeters()
 {
@@ -962,7 +963,6 @@ PrintObject::make_perimeters()
     this->_make_perimeters();
 }
 
-#ifndef SLIC3RXS
 void
 PrintObject::slice()
 {
@@ -1189,7 +1189,6 @@ PrintObject::prepare_infill()
     this->state.set_done(posPrepareInfill);
 }
 
-#endif //SLIC3RXS
 
 void
 PrintObject::combine_infill()
@@ -1298,7 +1297,6 @@ PrintObject::combine_infill()
     }
 }
 
-#ifndef SLIC3RXS
 void
 PrintObject::infill()
 {
