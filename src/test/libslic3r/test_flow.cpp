@@ -25,8 +25,10 @@ SCENARIO("Extrusion width specifics") {
         config->set("first_layer_height", "100%");
 
         WHEN("first layer width set to 2mm") {
-            config->set("first_layer_extrusion_width", 2);
-            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            Slic3r::Model model;
+            config->set("first_layer_extrusion_width", 1.3);
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+
             std::vector<double> E_per_mm_bottom;
             auto gcode {std::stringstream("")};
             Slic3r::Test::gcode(gcode, print);
@@ -46,7 +48,7 @@ SCENARIO("Extrusion width specifics") {
 
                 pass = std::count_if(E_per_mm_bottom.cbegin(), E_per_mm_bottom.cend(), [avg_E] (double v) { return _equiv(v, avg_E, 0.015); }) == 0;
                 REQUIRE(pass == true);
-                REQUIRE(E_per_mm_bottom.size() > 0);
+                REQUIRE(E_per_mm_bottom.size() > 0); // make sure it actually passed because of extrusion
             }
             THEN(" First layer width does not apply to upper layer.") {
             }

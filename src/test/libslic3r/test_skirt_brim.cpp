@@ -19,7 +19,8 @@ SCENARIO("Original Slic3r Skirt/Brim tests", "[!mayfail]") {
 
         WHEN("multiple objects are printed") {
             auto gcode {std::stringstream("")};
-            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20, TestMesh::cube_20x20x20}, config)};
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20, TestMesh::cube_20x20x20}, model, config)};
             std::map<double, bool> layers_with_skirt;
             Slic3r::Test::gcode(gcode, print);
             auto parser {Slic3r::GCodeReader()};
@@ -96,8 +97,9 @@ SCENARIO("Original Slic3r Skirt/Brim tests", "[!mayfail]") {
             config->set("cooling", 0);                     // to prevent speeds to be altered
             config->set("first_layer_speed", "100%");      // to prevent speeds to be altered
 
-            auto print {Slic3r::Test::init_print({TestMesh::overhang}, config)};
-            print.process();
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::overhang}, model, config)};
+            print->process();
             
             config->set("support_material", true);      // to prevent speeds to be altered
 
@@ -108,7 +110,8 @@ SCENARIO("Original Slic3r Skirt/Brim tests", "[!mayfail]") {
         WHEN("Large minimum skirt length is used.") {
             config->set("min_skirt_length", 20);
             auto gcode {std::stringstream("")};
-            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
             THEN("Gcode generation doesn't crash") {
                 Slic3r::Test::gcode(gcode, print);
                 auto exported {gcode.str()};

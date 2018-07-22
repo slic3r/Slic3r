@@ -5,6 +5,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <memory>
 #include <boost/thread.hpp>
 #include "BoundingBox.hpp"
 #include "Flow.hpp"
@@ -324,6 +325,8 @@ class Print
     void delete_region(size_t idx);
     PrintRegionConfig _region_config_from_model_volume(const ModelVolume &volume);
 };
+
+using shared_Print = std::shared_ptr<Print>;
 
 #define FOREACH_BASE(type, container, iterator) for (type::const_iterator iterator = (container).begin(); iterator != (container).end(); ++iterator)
 #define FOREACH_REGION(print, region)       FOREACH_BASE(PrintRegionPtrs, (print)->regions, region)

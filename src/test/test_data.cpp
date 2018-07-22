@@ -18,6 +18,7 @@ const std::unordered_map<TestMesh, const char*> mesh_names {
     std::make_pair<TestMesh, const char*>(TestMesh::V,"V"), 
     std::make_pair<TestMesh, const char*>(TestMesh::_40x10,"40x10"), 
     std::make_pair<TestMesh, const char*>(TestMesh::cube_20x20x20,"cube_20x20x20"), 
+    std::make_pair<TestMesh, const char*>(TestMesh::sphere_50mm,"sphere_50mm"), 
     std::make_pair<TestMesh, const char*>(TestMesh::bridge,"bridge"), 
     std::make_pair<TestMesh, const char*>(TestMesh::bridge_with_hole,"bridge_with_hole"), 
     std::make_pair<TestMesh, const char*>(TestMesh::cube_with_concave_hole,"cube_with_concave_hole"),
@@ -175,83 +176,51 @@ TriangleMesh mesh(TestMesh m) {
                 Point3(2,3,10) , Point3(9,10,12) , Point3(13,9,12) , Point3(3,1,8) , Point3(11,3,8) , Point3(10,11,8) , Point3(4,10,8) , Point3(6,12,10) , Point3(4,6,10) , 
                 Point3(7,13,12) , Point3(6,7,12) , Point3(7,5,9) , Point3(13,7,9) 
             });
+            break;        
         default:
-            return TriangleMesh();
+            break;        
     }
-    auto _mesh {TriangleMesh(vertices, facets)};
+    TriangleMesh _mesh;
+    if (vertices.size() == 0) {
+        switch(m) {
+            case TestMesh::cube_20x20x20:
+                _mesh = Slic3r::TriangleMesh::make_cube(20,20,20);
+                break;
+            case TestMesh::sphere_50mm:
+                _mesh = Slic3r::TriangleMesh::make_sphere(50, PI / 243.0);
+                break;
+            default:
+                break;
+        }
+    } else {
+        _mesh = TriangleMesh(vertices, facets);
+    }
+
     _mesh.repair();
     return _mesh;
 }
 
-TriangleMesh mesh(TestMesh m, Pointf3 translate, double scale) {
-    return mesh(m, translate, Pointf3(scale, scale, scale));
-}
-TriangleMesh mesh(TestMesh m, Pointf3 translate, Pointf3 scale) {
-    TriangleMesh _mesh;
-    switch(TestMesh) {
-        case TestMesh::cube_20x20x20: 
-            _mesh = Slic3r::TriangleMesh::make_cube(20, 20, 20);
-            break;
-        default:
-            _mesh = mesh(m);
-    }
-    
-    _mesh.scale(scale);
-    _mesh.translate(translate);
-    return _mesh;
-}
-/*
-Slic3r::Model model(const std::string& model_name, TestMesh m, Pointf3 translate = Pointf3(0,0,0), double scale = 1.0) {
-    return model(model_name, m, translate, Pointf3(scale, scale, scale));
-}
-*/
-Slic3r::Test::Print init_print(std::initializer_list<TestMesh> meshes, config_ptr _config) {
-    auto config {Slic3r::Config::new_from_defaults()};
 
+shared_Print init_print(std::initializer_list<TestMesh> meshes, Slic3r::Model& model, config_ptr _config, bool comments) {
+    auto config {Slic3r::Config::new_from_defaults()};
     config->apply(_config);
+
     const char* v {std::getenv("SLIC3R_TESTS_GCODE")};
     auto tests_gcode {(v == nullptr ? ""s : std::string(v))};
 
     if (tests_gcode != ""s)
         config->set("gcode_comments", 1);
 
-    std::shared_ptr<Slic3r::Print> print = std::make_shared<Slic3r::Print>();
+    shared_Print print {std::make_shared<Slic3r::Print>()};
     print->apply_config(config);
+    for (auto t : meshes) {
+        auto* object {model.add_object()};
+        object->name += std::string(mesh_names.at(t)) + ".stl"s;
+        object->add_volume(mesh(t));
 
-    auto model {Slic3r::Test::model(s.str(), Slic3r::TriangleMesh::make_cube(get<0>(cube), get<1>(cube), get<1>(cube))) };
-
-    model.arrange_objects(print->config.min_object_distance());
-    model.center_instances_around_point(Slic3r::Pointf(100,100));
-    for (auto* mo : model.objects) {
-        print->auto_assign_extruders(mo);
-        print->add_model_object(mo);
-    }
-
-    print->validate();
-
-    std::vector<Slic3r::Model> models {};
-    models.emplace_back(model);
-    return Slic3r::Test::Print(print, models);
-}
-Slic3r::Test::Print init_print(std::tuple<int,int,int> cube, config_ptr _config) {
-    std::stringstream s; 
-    s << "cube_" << get<0>(cube) << "x" << get<1>(cube) << "x" << get<2>(cube);
-
-    auto config {Slic3r::Config::new_from_defaults()};
-
-    config->apply(_config);
-    const char* v {std::getenv("SLIC3R_TESTS_GCODE")};
-    auto tests_gcode {(v == nullptr ? ""s : std::string(v))};
-
-    if (tests_gcode != ""s)
-        config->set("gcode_comments", 1);
-
-    std::shared_ptr<Slic3r::Print> print = std::make_shared<Slic3r::Print>();
-    print->apply_config(config);
-    Slic3r::Model model;
-
-    for (const auto& testm : meshes) {
-        add_testmesh_to_model(model, mesh_names[testm], mesh(testm, Pointf3(0,0,0), 1.0));
+        auto* inst {object->add_instance()};
+        inst->rotation = 0;
+        inst->scaling_factor = 1.0;
     }
 
     model.arrange_objects(print->config.min_object_distance());
@@ -263,14 +232,11 @@ Slic3r::Test::Print init_print(std::tuple<int,int,int> cube, config_ptr _config)
 
     print->validate();
 
-    std::vector<Slic3r::Model> models {};
-    models.emplace_back(model);
-    return Slic3r::Test::Print(print, models);
+    return print;
 }
 
-void gcode(std::stringstream& gcode, Slic3r::Test::Print& _print) {
-    Slic3r::Print& print {_print.print()};
-    print.export_gcode(gcode, true);
+void gcode(std::stringstream& gcode, shared_Print _print) {
+    _print->export_gcode(gcode, true);
 }
 
 Slic3r::Model model(const std::string& model_name, TriangleMesh&& _mesh) {
@@ -294,8 +260,6 @@ void add_testmesh_to_model(Slic3r::Model& result, const std::string& model_name,
     auto* inst {object->add_instance()};
     inst->rotation = 0;
     inst->scaling_factor = 1.0;
-
-    return result;
 }
 
 } } // namespace Slic3r::Test

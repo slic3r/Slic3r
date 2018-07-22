@@ -4,6 +4,8 @@
 #include "test_data.hpp"
 #include "libslic3r.h"
 
+using namespace Slic3r::Test;
+
 SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
     GIVEN("A default configuration and a print test object") {
         auto config {Slic3r::Config::new_from_defaults()};
@@ -11,7 +13,8 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
 
         WHEN("the output is executed with no support material") {
             config->set("first_layer_extrusion_width", 0);
-            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
             Slic3r::Test::gcode(gcode, print);
             auto exported {gcode.str()};
             THEN("Some text output is generated.") {
@@ -45,10 +48,11 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
             }
         }
         WHEN("the output is executed with support material") {
+            Slic3r::Model model;
             config->set("first_layer_extrusion_width", 0);
             config->set("support_material", true);
             config->set("raft_layers", 3);
-            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
             Slic3r::Test::gcode(gcode, print);
             auto exported {gcode.str()};
             THEN("Some text output is generated.") {
@@ -65,8 +69,9 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
             }
         }
         WHEN("the output is executed with a separate first layer extrusion width") {
+            Slic3r::Model model;
             config->set("first_layer_extrusion_width", 0.5);
-            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
             Slic3r::Test::gcode(gcode, print);
             auto exported {gcode.str()};
             THEN("Some text output is generated.") {
@@ -85,7 +90,8 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
         WHEN("Cooling is enabled and the fan is disabled.") {
             config->set("cooling", true);
             config->set("disable_fan_first_layers", 5);
-            auto print {Slic3r::Test::init_print(std::make_tuple<int,int,int>(20,20,20), config)};
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
             Slic3r::Test::gcode(gcode, print);
             auto exported {gcode.str()};
             THEN("GCode to disable fan is emitted."){

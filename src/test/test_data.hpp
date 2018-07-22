@@ -17,6 +17,7 @@ enum class TestMesh {
     V,
     _40x10,
     cube_20x20x20,
+    sphere_50mm,
     bridge,
     bridge_with_hole,
     cube_with_concave_hole,
@@ -31,19 +32,6 @@ enum class TestMesh {
     step,
     two_hollow_squares
 };
-
-class Print {
-public:
-    Print(std::shared_ptr<Slic3r::Print> _print, std::vector<Slic3r::Model> _models) : models(_models), _print(_print) {}
-    void process() { _print->process(); }
-    void apply_config(config_ptr _config) { _print->apply_config(_config); }
-    Slic3r::Print& print() { return *(_print); }
-
-    const std::vector<Slic3r::Model> models {};
-private:
-    std::shared_ptr<Slic3r::Print> _print {nullptr};
-};
-
 
 /// Mesh enumeration to name mapping
 extern const std::unordered_map<TestMesh, const char*> mesh_names;
@@ -67,10 +55,9 @@ bool _equiv(const T& a, const U& b, double epsilon) { return abs(a - b) < epsilo
 
 Slic3r::Model model(const std::string& model_name, TriangleMesh&& _mesh);
 
-Slic3r::Test::Print init_print(std::tuple<int,int,int> cube, config_ptr _config = Slic3r::Config::new_from_defaults());
-Slic3r::Test::Print init_print(std::initializer_list<TestMesh> meshes, config_ptr _config = Slic3r::Config::new_from_defaults());
+shared_Print init_print(std::initializer_list<TestMesh> meshes, Slic3r::Model& model, config_ptr _config = Slic3r::Config::new_from_defaults(), bool comments = false);
 
-void gcode(std::stringstream& gcode, Slic3r::Test::Print& print);
+void gcode(std::stringstream& gcode, shared_Print print);
 
 } } // namespace Slic3r::Test
 
