@@ -501,7 +501,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
             const auto& bbox {layer_slices_bb.at(i)};
             return bbox.contains(point) && layer->slices.at(i).contour.contains(point);
         }};
-        const auto n_slices {layer->slices.size() - 1};
+        const auto n_slices {layer->slices.size()};
 
         for (auto region_id = 0U; region_id < print.regions.size(); ++region_id) {
         }
