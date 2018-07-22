@@ -141,11 +141,6 @@ class PrintObject
 
     SupportMaterial* _support_material();
     
-#ifndef SLIC3RXS
-    /// Initialize and generate support material.
-    void generate_support_material();
-#endif // SLIC3RXS
-
     Flow _support_material_flow(FlowRole role = frSupportMaterial);
     size_t support_layer_count() const;
     void clear_support_layers();
@@ -163,22 +158,27 @@ class PrintObject
     void detect_surfaces_type();
     void process_external_surfaces();
 
-    /// Combine fill surfaces across layers.
-    /// Idempotence of this method is guaranteed by the fact that we don't remove things from
-    /// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
-    void combine_infill();
-
     void bridge_over_infill();
     coordf_t adjust_layer_height(coordf_t layer_height) const;
     std::vector<coordf_t> generate_object_layers(coordf_t first_layer_height);
     void _slice();
     std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
 
+    void _make_perimeters();
+    void _infill();
+
+#ifndef SLIC3RXS
+
+    /// Initialize and generate support material.
+    void generate_support_material();
+
     /// Generate perimeters for this PrintObject.
     void make_perimeters();
 
-    void _make_perimeters();
-    void _infill();
+    /// Combine fill surfaces across layers.
+    /// Idempotence of this method is guaranteed by the fact that we don't remove things from
+    /// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
+    void combine_infill();
 
     /// Preparation step for generating infill.
     void prepare_infill();
@@ -200,7 +200,7 @@ class PrintObject
     /// Idempotence of this method is guaranteed by the fact that we don't remove things from
     /// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
     void clip_fill_surfaces();
-    
+#endif // SLIC3RXS    
     private:
     Print* _print;
     ModelObject* _model_object;

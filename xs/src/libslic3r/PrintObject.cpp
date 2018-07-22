@@ -962,6 +962,7 @@ PrintObject::make_perimeters()
     this->_make_perimeters();
 }
 
+#ifndef SLIC3RXS
 void
 PrintObject::slice()
 {
@@ -997,6 +998,7 @@ PrintObject::slice()
     this->state.set_done(posSlice);
 }
 
+#endif // SLIC3RXS
 void
 PrintObject::_make_perimeters()
 {
@@ -1140,6 +1142,7 @@ PrintObject::_infill()
     this->state.set_done(posInfill);
 }
 
+#ifndef SLIC3RXS
 void
 PrintObject::prepare_infill()
 {
@@ -1185,6 +1188,8 @@ PrintObject::prepare_infill()
 
     this->state.set_done(posPrepareInfill);
 }
+
+#endif //SLIC3RXS
 
 void
 PrintObject::combine_infill()
@@ -1293,13 +1298,15 @@ PrintObject::combine_infill()
     }
 }
 
-
+#ifndef SLIC3RXS
 void
 PrintObject::infill()
 {
     this->prepare_infill();
     this->_infill();
 }
+
+#endif //SLIC3RXS
 
 SupportMaterial *
 PrintObject::_support_material()
