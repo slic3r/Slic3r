@@ -165,7 +165,7 @@ SurfaceCollection::remove_type(const SurfaceType type)
 {
     // Use stl remove_if to remove 
     auto ptr {std::remove_if(surfaces.begin(), surfaces.end(),[type] (Surface& s) { return s.surface_type == type; })};
-    surfaces.erase(ptr, surfaces.end());
+    surfaces.erase(ptr, surfaces.cend());
 }
 
 void
@@ -187,7 +187,7 @@ SurfaceCollection::keep_type(const SurfaceType type)
 {
     // Use stl remove_if to remove 
     auto ptr {std::remove_if(surfaces.begin(), surfaces.end(),[type] (const Surface& s) { return s.surface_type != type; })};
-    surfaces.erase(ptr, surfaces.end());
+    surfaces.erase(ptr, surfaces.cend());
 }
 
 void
@@ -198,7 +198,7 @@ SurfaceCollection::keep_types(const SurfaceType *types, size_t ntypes)
         n |= types[i]; // form bitmask.
     // Use stl remove_if to remove 
     auto ptr {std::remove_if(surfaces.begin(), surfaces.end(),[n] (const Surface& s) { return s.surface_type & n != s.surface_type; })};
-    surfaces.erase(ptr, surfaces.end());
+    surfaces.erase(ptr, surfaces.cend());
 }
 
 void 
