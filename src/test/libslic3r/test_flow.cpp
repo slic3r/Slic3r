@@ -26,7 +26,7 @@ SCENARIO("Extrusion width specifics") {
 
         WHEN("first layer width set to 2mm") {
             Slic3r::Model model;
-            config->set("first_layer_extrusion_width", "500%");
+            config->set("first_layer_extrusion_width", 2.0);
             auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
 
             std::vector<double> E_per_mm_bottom;
