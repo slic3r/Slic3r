@@ -21,12 +21,12 @@ SCENARIO("Extrusion width specifics") {
         config->set("skirts", 1);
         config->set("brim_width", 2);
         config->set("perimeters", 3);
-        config->set("fill_density", 0.4);
+        config->set("fill_density", 40);
         config->set("first_layer_height", "100%");
 
         WHEN("first layer width set to 2mm") {
             Slic3r::Model model;
-            config->set("first_layer_extrusion_width", 1.3);
+            config->set("first_layer_extrusion_width", "500%");
             auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
 
             std::vector<double> E_per_mm_bottom;
