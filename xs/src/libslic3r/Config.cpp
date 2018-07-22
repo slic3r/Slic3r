@@ -115,10 +115,13 @@ Config::set(const t_config_option_key& opt_key, const std::string& value)
                     auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
                     const size_t perc = value.find("%");
                     ptr->percent = (perc != std::string::npos);
-                    if (ptr->percent)
+                    if (ptr->percent) {
                         ptr->setFloat(std::stod(std::string(value).replace(value.find("%"), std::string("%").length(), "")));
-                    else 
+                        ptr->percent = true;
+                    } else {
                         ptr->setFloat(std::stod(value));
+                        ptr->percent = false;
+                    }
                 } break;
             case coFloats:
                 {
@@ -169,6 +172,7 @@ Config::set(const t_config_option_key& opt_key, const int value)
                 {
                     auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
                     ptr->setFloat(value);
+                    ptr->percent = false;
                 } break;
             case coFloats:
                 {
@@ -216,6 +220,7 @@ Config::set(const t_config_option_key& opt_key, const double value)
                 {
                     auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
                     ptr->setFloat(value);
+                    ptr->percent = false;
                 } break;
             case coFloats:
                 {
