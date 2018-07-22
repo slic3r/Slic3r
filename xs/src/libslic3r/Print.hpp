@@ -211,10 +211,12 @@ class PrintObject
     PrintObject(Print* print, ModelObject* model_object, const BoundingBoxf3 &modobj_bbox);
     ~PrintObject();
 
+#ifndef SLIC3RXS
     /// Outer loop of logic for horizontal shell discovery
     void _discover_external_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id);
     /// Inner loop of logic for horizontal shell discovery
     void _discover_neighbor_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id, const SurfaceType& type, Polygons& solid, const size_t& solid_layers);
+#endif // SLIC3RXS    
 
 };
 
