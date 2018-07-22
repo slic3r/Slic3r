@@ -127,7 +127,7 @@ public:
 protected:
     virtual std::string LogChannel() override { return "UI_Checkbox"s; }
 
-    void _on_change(std::string opt_id) {
+    void _on_change(std::string opt_id) override {
         if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
             this->on_change(opt_id, this->get_bool());
         }
@@ -241,7 +241,7 @@ public:
 protected:
     virtual std::string LogChannel() override { return "UI_Choice"s; }
 
-    void _on_change(std::string opt_id) {
+    void _on_change(std::string opt_id) override {
         if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
             this->on_change(opt_id, this->get_string());
         }
@@ -283,7 +283,7 @@ protected:
     void _set_value(double value, bool show_value = false);
     void _set_value(std::string value);
 
-    void _on_change(std::string opt_id) {
+    void _on_change(std::string opt_id) override {
         if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
             this->on_change(opt_id, this->get_string());
         }
@@ -298,7 +298,7 @@ public:
 
     UI_Point(wxWindow* _parent, Slic3r::ConfigOptionDef _opt);
     ~UI_Point() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); }
-    std::string get_string();
+    std::string get_string() override;
 
     void set_value(boost::any value) override; //< Implements set_value
 
@@ -347,7 +347,7 @@ class UI_Point3 : public UI_Sizer {
 public:
     UI_Point3(wxWindow* _parent, Slic3r::ConfigOptionDef _opt);
     ~UI_Point3() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); _lbl_z->Destroy(); _ctrl_z->Destroy(); }
-    std::string get_string();
+    std::string get_string() override;
 
     void set_value(boost::any value) override; //< Implements set_value
 

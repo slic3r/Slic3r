@@ -2,9 +2,11 @@
 #include "Line.hpp"
 #include "ClipperUtils.hpp"
 #include "misc_ui.hpp"
-
+#ifdef __APPLE__
+#include <OpenGL/glu.h>
+#else
 #include <GL/glu.h>
-
+#endif
 namespace Slic3r { namespace GUI {
 
 Scene3D::Scene3D(wxWindow* parent, const wxSize& size) :

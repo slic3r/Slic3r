@@ -102,7 +102,7 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
     public:
     ConfigOptionFloat() : ConfigOptionSingle<double>(0) {};
     ConfigOptionFloat(double _value) : ConfigOptionSingle<double>(_value) {};
-    ConfigOptionFloat* clone() const { return new ConfigOptionFloat(this->value); };
+    ConfigOptionFloat* clone() const override { return new ConfigOptionFloat(this->value); };
     
     double getFloat() const override { return this->value; };
     void setFloat(double val) override { this->value = val; }
@@ -199,7 +199,7 @@ class ConfigOptionInts : public ConfigOptionVector<int>
     ConfigOptionInts(const std::vector<int> _values) : ConfigOptionVector<int>(_values) {};
     ConfigOptionInts* clone() const override { return new ConfigOptionInts(this->values); };
     
-    std::string serialize() const {
+    std::string serialize() const override {
         std::ostringstream ss;
         for (std::vector<int>::const_iterator it = this->values.begin(); it != this->values.end(); ++it) {
             if (it - this->values.begin() != 0) ss << ",";
@@ -208,7 +208,7 @@ class ConfigOptionInts : public ConfigOptionVector<int>
         return ss.str();
     };
     
-    std::vector<std::string> vserialize() const {
+    std::vector<std::string> vserialize() const override {
         std::vector<std::string> vv;
         vv.reserve(this->values.size());
         for (std::vector<int>::const_iterator it = this->values.begin(); it != this->values.end(); ++it) {
@@ -219,7 +219,7 @@ class ConfigOptionInts : public ConfigOptionVector<int>
         return vv;
     };
     
-    bool deserialize(std::string str, bool append = false) {
+    bool deserialize(std::string str, bool append = false) override {
         if (!append) this->values.clear();
         std::istringstream is(str);
         std::string item_str;
