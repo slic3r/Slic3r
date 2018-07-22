@@ -1460,7 +1460,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
     auto* print {this->print()};
     const auto& region_config {layerm->region()->config};
 
-    for (int n = (type == stTop ? i-1 : i+1); std::abs(n-int(i)) <= solid_layers-1; (type == stTop ? n-- : n++)) {
+    for (int n = (type == stTop ? i-1 : i+1); std::abs(n-int(i)) < solid_layers; (type == stTop ? n-- : n++)) {
         if (n < 0 || n >= this->layer_count()) continue;
         Slic3r::Log::debug("PrintObject") << " looking for neighbors on layer " << n << "...\n";
 
