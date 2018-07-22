@@ -15,7 +15,7 @@
 using namespace Slic3r::Test;
 using namespace Slic3r;
 
-SCENARIO("Extrusion width specifics") {
+SCENARIO("Extrusion width specifics", "[!mayfail]") {
     GIVEN("A config with a skirt, brim, some fill density, 3 perimeters, and 1 bottom solid layer and a 20mm cube mesh") {
         // this is a sharedptr
         auto config {Slic3r::Config::new_from_defaults()};
@@ -56,6 +56,7 @@ SCENARIO("Extrusion width specifics") {
         }
     }
 }
+// needs gcode export
 SCENARIO(" Bridge flow specifics.", "[!mayfail]") {
     GIVEN("A default config with no cooling and a fixed bridge speed, flow ratio and an overhang mesh.") {
         WHEN("bridge_flow_ratio is set to 1.0") {
