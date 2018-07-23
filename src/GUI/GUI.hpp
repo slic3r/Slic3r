@@ -17,7 +17,7 @@ namespace Slic3r { namespace GUI {
 class App: public wxApp
 {
 public:
-    virtual bool OnInit();
+    virtual bool OnInit() override;
     App() : wxApp() {}
 
     /// Save position, size, and maximize state for a TopLevelWindow (includes Frames) by name in Settings.
