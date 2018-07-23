@@ -18,6 +18,8 @@
 #include "wx/arrstr.h"
 #include "wx/stattext.h"
 #include "wx/sizer.h"
+#include <wx/colour.h>
+#include <wx/clrpicker.h>
 
 namespace Slic3r { namespace GUI {
 
@@ -393,6 +395,27 @@ private:
     void _set_value(Slic3r::Pointf3 value);
     void _set_value(std::string value);
 
+};
+
+class UI_Color : public UI_Window { 
+public:
+    UI_Color(wxWindow* parent, Slic3r::ConfigOptionDef _opt );  
+    ~UI_Color() { _picker->Destroy(); }
+    wxColourPickerCtrl* picker() { return this->_picker; }
+
+    void set_value(boost::any value) override;
+    std::string get_string() override; 
+    std::function<void (const std::string&, const std::string&)> on_change {nullptr};
+protected:
+    virtual std::string LogChannel() override { return "UI_Color"s; }
+    void _on_change(std::string opt_id) override {
+        if (!this->disable_change_event && this->_picker->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, _picker->GetColour().GetAsString(wxC2S_HTML_SYNTAX).ToStdString());
+        }
+    }
+private:
+    wxColour _string_to_color(const std::string& _color);
+    wxColourPickerCtrl* _picker {nullptr};
 };
 
 } } // Namespace Slic3r::GUI

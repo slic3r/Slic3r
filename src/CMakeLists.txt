@@ -195,6 +195,7 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_field_numchoice.cpp
     ${GUI_TESTDIR}/test_field_point.cpp
     ${GUI_TESTDIR}/test_field_point3.cpp
+    ${GUI_TESTDIR}/test_field_colorpicker.cpp
     ${GUI_TESTDIR}/test_misc_ui.cpp
 )
 
@@ -311,6 +312,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/OptionsGroup/UI_Choice.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Point.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Point3.cpp
+    ${GUI_LIBDIR}/OptionsGroup/UI_Color.cpp
     ${LIBDIR}/slic3r/GUI/3DScene.cpp
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
