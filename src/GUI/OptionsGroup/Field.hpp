@@ -20,6 +20,7 @@
 #include "wx/sizer.h"
 #include <wx/colour.h>
 #include <wx/clrpicker.h>
+#include <wx/slider.h>
 
 namespace Slic3r { namespace GUI {
 
@@ -416,6 +417,37 @@ protected:
 private:
     wxColour _string_to_color(const std::string& _color);
     wxColourPickerCtrl* _picker {nullptr};
+};
+
+class UI_Slider : public UI_Sizer { 
+public:
+    UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt);  
+    UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt, size_t scale);  
+
+    ~UI_Slider();
+
+    void set_value(boost::any value) override;
+    std::string get_string() override;
+    double get_double() override;
+    int get_int() override;
+
+    /// Change the scale of the slider bar. Return value from get_X functions does not change.
+    void set_scale(size_t new_scale);
+    
+    wxSlider* slider() { return _slider;}
+    wxTextCtrl* textctrl() { return _textctrl;}
+    std::function<void (const std::string&, const double&)> on_change {nullptr};
+protected:
+    virtual std::string LogChannel() override { return "UI_Slider"s; }
+private:
+    void _on_change(std::string opt_id) override {
+        if (!this->disable_change_event && this->_slider->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, _slider->GetValue() / _scale);
+        }
+    }
+    wxTextCtrl* _textctrl {nullptr};
+    wxSlider* _slider {nullptr};
+    size_t _scale {10};
 };
 
 } } // Namespace Slic3r::GUI

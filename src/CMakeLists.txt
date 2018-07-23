@@ -311,6 +311,7 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/OptionsGroup/UI_Point.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Point3.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Color.cpp
+    ${GUI_LIBDIR}/OptionsGroup/UI_Slider.cpp
     ${LIBDIR}/slic3r/GUI/3DScene.cpp
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
