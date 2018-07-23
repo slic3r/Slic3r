@@ -10,7 +10,9 @@ UI_Color::UI_Color(wxWindow* parent, Slic3r::ConfigOptionDef _opt ) : UI_Window(
     }
     this->_picker = new wxColourPickerCtrl(parent, wxID_ANY, default_color, wxDefaultPosition, this->_default_size());
     this->window = dynamic_cast<wxWindow*>(this->_picker);
-    
+
+    this->_picker->Bind(wxEVT_COLOURPICKER_CHANGED, [this](wxColourPickerEvent& e) { this->_on_change(""); e.Skip(); });
+
 }
 
 void UI_Color::set_value(boost::any value) {

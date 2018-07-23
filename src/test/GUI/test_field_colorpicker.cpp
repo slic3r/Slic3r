@@ -14,7 +14,7 @@
 #include "ConfigBase.hpp"
 using namespace std::string_literals;
 
-SCENARIO( "UI_ColorPick: default values from options and basic accessor methods") {
+SCENARIO("UI_Color: default values from options and basic accessor methods") {
     wxTestableFrame* old = dynamic_cast<wxTestableFrame*>(wxTheApp->GetTopWindow()); 
     old->Destroy();
     wxTheApp->SetTopWindow(new wxTestableFrame());
@@ -25,7 +25,10 @@ SCENARIO( "UI_ColorPick: default values from options and basic accessor methods"
     auto event_count {0};
     auto changefunc {[&event_count] (const std::string& opt_id, const std::string& color) { event_count++; }};
     GIVEN("A Color Picker") {
+        simple_option.default_value = default_color;
         auto test_field {Slic3r::GUI::UI_Color(wxTheApp->GetTopWindow(), simple_option)};
+
+        test_field.on_change = changefunc;
         WHEN("Object is constructed with default_value of '#FFFF00'.") {
             THEN("get_string() returns '#FFFF00'") {
                 REQUIRE(test_field.get_string() == "#FFFF00"s);
