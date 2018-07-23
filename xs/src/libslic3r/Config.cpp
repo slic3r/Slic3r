@@ -63,7 +63,7 @@ Config::validate()
             ConfigOptionVectorBase* tmp_opt;
             try {
                 tmp_opt = get_ptr<ConfigOptionVectorBase>(k);
-            } catch (std::bad_cast) {
+            } catch (std::bad_cast& e) {
                 throw InvalidOptionType((std::string("(cast failure) Invalid value for ") + std::string(k)).c_str());
             }
             auto tmp_str {tmp_opt->vserialize()};
@@ -140,9 +140,9 @@ Config::set(const t_config_option_key& opt_key, const std::string& value)
             default: 
                 Slic3r::Log::warn("Config::set", "Unknown set type.");
         }
-    } catch (std::invalid_argument e) {
+    } catch (std::invalid_argument& e) {
         throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
-    } catch (std::out_of_range e) {
+    } catch (std::out_of_range& e) {
         throw InvalidOptionType(std::string(opt_key) + std::string(" is an invalid Slic3r option."));
     }
 }
