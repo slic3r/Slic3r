@@ -1,4 +1,5 @@
 #include "misc_ui.hpp"
+#include "utils.hpp"
 #include <wx/stdpaths.h>
 #include <wx/msgdlg.h>
 #include <wx/arrstr.h>
@@ -150,7 +151,8 @@ std::vector<wxString> open_model(wxWindow* parent, wxWindow* top) {
 
 
 
-wxString trim_zeroes(wxString in) { return wxString(trim_zeroes(in.ToStdString())); }
+wxString trim_zeroes(wxString in) { return wxString(_trim_zeroes(in.ToStdString())); }
+
 
 }} // namespace Slic3r::GUI
 
