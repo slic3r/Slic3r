@@ -8,7 +8,11 @@ option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
 option(BUILD_EXTRUDE_TIN "Build and link the extrude-tin application." OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -DNO_PERL")
+set(CMAKE_CXX_FLAGS_1 "${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -DNO_PERL")
+
+# Flags for debug and release tuning
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 ${CMAKE_CXX_FLAGS_1}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 ${CMAKE_CXX_FLAGS_1}")
 
 if(DEFINED ENV{SLIC3R_VAR_REL})
     set(CMAKE_CXX_FLAGS "-DVAR_REL=$ENV{SLIC3R_VAR_REL}")
@@ -213,6 +217,7 @@ set(SLIC3R_TEST_SOURCES
 )
 
 add_executable(slic3r slic3r.cpp)
+target_compile_features(slic3r PUBLIC cxx_std_14)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
 
