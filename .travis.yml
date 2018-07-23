@@ -4,7 +4,7 @@ before_install:
 script:
     - bash package/linux/travis-setup.sh
     - if [[ "$BUILD_PL" == false ]]; then mkdir build && cd build; fi
-    - if [[ "$BUILD_PL" == false ]]; then cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON ../src; fi
+    - if [[ "$BUILD_PL" == false ]]; then cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON -DCMAKE_BUILD_TYPE=Release ../src; fi
     - if [[ "$BUILD_PL" == false ]]; then cmake --build .; fi
     - if [[ "$BUILD_PL" == false ]]; then ./slic3r_test -s; fi
     - if [[ "$BUILD_PL" == true ]]; then perlbrew switch slic3r-perl; fi
