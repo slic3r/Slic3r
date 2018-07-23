@@ -19,29 +19,40 @@ SCENARIO( "UI_Slider: Defaults, Min/max handling, accessors.") {
     wxUIActionSimulator sim;
     wxMilliSleep(500);
     auto simple_option {ConfigOptionDef()};
-    auto* default_color {new ConfigOptionString("30")};
+    auto* default_color {new ConfigOptionFloat(30.0)};
     simple_option.min = 0;
     simple_option.max = 60;
+    simple_option.default_value = default_color;
     GIVEN("A UI Slider with default scale") {
         auto event_count {0};
-        auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), Slic3r::ConfigOptionDef())};
         auto changefunc {[&event_count] (const std::string& opt_id, const double& color) { event_count++; }};
         WHEN("Option min is 0") {
-            WHEN("default of 0 is used.") {
+            simple_option.default_value = default_color;
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option)};
+            THEN("default of 0 is used.") {
                 REQUIRE(test_field.slider()->GetMin() == 0);
             }
         }
         WHEN("Option max is 0") {
-            WHEN("default of 100*10(scale) is used.") {
+            simple_option.max = 0;
+            simple_option.default_value = default_color;
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option)};
+            THEN("default of 100*10(scale) is used.") {
                 REQUIRE(test_field.slider()->GetMax() == 1000);
             }
         }
         WHEN("Default value is used.") {
+            simple_option.default_value = default_color;
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option)};
             THEN("Raw slider value is 30 * scale (10) = 300") {
                 REQUIRE(test_field.slider()->GetValue() == 300);
             }
         }
         WHEN("set_scale is called with 25 for argument") {
+            simple_option.default_value = default_color;
+            simple_option.max = 100;
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option)};
+            test_field.set_scale(25);
             THEN("Slider min is 0") {
                 REQUIRE(test_field.slider()->GetMin() == 0);
             }
@@ -69,7 +80,7 @@ SCENARIO( "UI_Slider: Defaults, Min/max handling, accessors.") {
     GIVEN("A UI Slider with default scale") {
         WHEN("No default value is given from config.") {
             simple_option.default_value = nullptr;
-            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), Slic3r::ConfigOptionDef())};
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option)};
             THEN("Initial value of slider is 0.") {
                 REQUIRE(test_field.get_int() == 0);
                 REQUIRE(test_field.get_double() == 0);
@@ -78,6 +89,8 @@ SCENARIO( "UI_Slider: Defaults, Min/max handling, accessors.") {
             }
         }
         WHEN("disable() is called") {
+            simple_option.default_value = default_color;
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option)};
             test_field.slider()->Enable();
             test_field.textctrl()->Enable();
             test_field.textctrl()->SetEditable(true);
@@ -92,6 +105,8 @@ SCENARIO( "UI_Slider: Defaults, Min/max handling, accessors.") {
             }
         }
         WHEN("enable() is called") {
+            simple_option.default_value = default_color;
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option)};
             test_field.slider()->Disable();
             test_field.textctrl()->Disable();
             test_field.textctrl()->SetEditable(false);
@@ -108,18 +123,25 @@ SCENARIO( "UI_Slider: Defaults, Min/max handling, accessors.") {
     }
 
     GIVEN("A UI Slider with scale of 1") {
-        auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), Slic3r::ConfigOptionDef(), 1)};
         WHEN("Option min is 0") {
+            simple_option.default_value = default_color;
+            simple_option.min = 0;
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option, 1)};
             WHEN("default of 0 is used.") {
                 REQUIRE(test_field.slider()->GetMin() == 0);
             }
         }
         WHEN("Option max is 0") {
-            WHEN("default of 100 is used.") {
+            simple_option.default_value = default_color;
+            simple_option.max = 0;
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option, 1)};
+            WHEN("default of 10 * 100 = 1000 is used.") {
                 REQUIRE(test_field.slider()->GetMax() == 100);
             }
         }
         WHEN("Default value is used.") {
+            simple_option.default_value = default_color;
+            auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option, 1)};
             THEN("Raw slider value is 30 * scale (1)") {
                 REQUIRE(test_field.slider()->GetValue() == 30);
             }
@@ -142,7 +164,7 @@ SCENARIO( "UI_Slider: Event handlers") {
     auto changefunc {[&event_count] (const std::string& opt_id, const double& color) { event_count++; }};
     auto killfunc {[&event_count](const std::string& opt_id) { event_count += 1; }};
     GIVEN("A UI Slider") {
-        auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), Slic3r::ConfigOptionDef())};
+        auto test_field {Slic3r::GUI::UI_Slider(wxTheApp->GetTopWindow(), simple_option)};
         test_field.on_change = changefunc;
         test_field.on_kill_focus = killfunc;
         WHEN("UI Slider receives a text change event (enter is pressed).") {

@@ -5,7 +5,7 @@ namespace Slic3r { namespace GUI {
 
 UI_Slider::UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt, size_t scale) : UI_Sizer(parent, _opt), _scale(scale) {
     double default_value {0.0};
-
+    if (_opt.default_value != nullptr) { default_value = _opt.default_value->getFloat(); }
     sizer = new wxBoxSizer(wxHORIZONTAL);
     _slider = new wxSlider(parent, wxID_ANY, 
                            (default_value < _opt.min ? _opt.min : default_value) * this->_scale,
@@ -15,9 +15,10 @@ UI_Slider::UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt, size_t scal
                            wxSize(_opt.width, _opt.height));
 
     _textctrl = new wxTextCtrl(parent, wxID_ANY, 
-                               static_cast<double>(_slider->GetValue()) / this->_scale, 
+                               trim_zeroes(std::to_string(static_cast<double>(_slider->GetValue()) / this->_scale)), 
                                wxDefaultPosition,
-                               wxSize(50, -1));
+                               wxSize(50, -1),
+                               wxTE_PROCESS_ENTER);
 
 
     sizer->Add(_slider, 1, wxALIGN_CENTER_VERTICAL, 0);
@@ -92,9 +93,21 @@ void UI_Slider::_update_textctrl() {
     this->_textctrl->SetInsertionPointEnd();
 }
 
+void UI_Slider::disable() {
+    this->_slider->Disable();
+    this->_textctrl->Disable();
+    this->_textctrl->SetEditable(false);
+}
+
+void UI_Slider::enable() {
+    this->_slider->Enable();
+    this->_textctrl->Enable();
+    this->_textctrl->SetEditable(true);
+}
+
 template <typename T>
 void UI_Slider::set_range(T min, T max) { 
-    this->_slider->SetRange(static_cast<int>(min * static_cast<int>(self->_scale)), static_cast<int>(max * static_cast<int>(self->_scale)));
+    this->_slider->SetRange(static_cast<int>(min * static_cast<int>(this->_scale)), static_cast<int>(max * static_cast<int>(this->_scale)));
 }
 
 } } // Namespace Slic3r::GUI
