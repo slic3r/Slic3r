@@ -53,6 +53,7 @@ private:
         double angle;
         double coverage;
         double max_length;
+        double mean_length;
     };
 
     // Get possible briging direction candidates.
