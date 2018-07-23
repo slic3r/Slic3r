@@ -6,10 +6,10 @@ script:
     - if [[ "$BUILD_PL" == false ]]; then mkdir build && cd build; fi
     - if [[ "$BUILD_PL" == false ]]; then cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON ../src; fi
     - if [[ "$BUILD_PL" == false ]]; then cmake --build .; fi
-    - if [[ "$BUILD_PL" == false ]]; then ctest . -R TestSlic3r; fi
+    - if [[ "$BUILD_PL" == false ]]; then ./slic3r_test -s; fi
     - if [[ "$BUILD_PL" == true ]]; then perlbrew switch slic3r-perl; fi
     - if [[ "$BUILD_PL" == true ]]; then perl ./Build.PL; fi
-#    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ctest . -R TestGUI; fi
+#    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ./gui_test -s; fi
 branches:
   only:
   - master
