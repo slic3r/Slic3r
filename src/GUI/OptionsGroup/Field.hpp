@@ -421,8 +421,7 @@ private:
 
 class UI_Slider : public UI_Sizer { 
 public:
-    UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt);  
-    UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt, size_t scale);  
+    UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt, size_t scale = 10);  
 
     ~UI_Slider();
 
@@ -431,11 +430,21 @@ public:
     double get_double() override;
     int get_int() override;
 
+    void enable() override;
+    void disable() override;
+
+    /// change the min/max of the built-in slider
+    template <typename T> void set_range(T min, T max);
+
     /// Change the scale of the slider bar. Return value from get_X functions does not change.
     void set_scale(size_t new_scale);
     
+    /// Returns pointer to owned wxSlider.
     wxSlider* slider() { return _slider;}
+    /// Returns pointer to owned wxTextCtrl.
     wxTextCtrl* textctrl() { return _textctrl;}
+
+    /// Registered on_change callback.
     std::function<void (const std::string&, const double&)> on_change {nullptr};
 protected:
     virtual std::string LogChannel() override { return "UI_Slider"s; }
@@ -445,6 +454,7 @@ private:
             this->on_change(opt_id, _slider->GetValue() / _scale);
         }
     }
+    void _update_textctrl();
     wxTextCtrl* _textctrl {nullptr};
     wxSlider* _slider {nullptr};
     size_t _scale {10};

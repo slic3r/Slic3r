@@ -193,6 +193,7 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_field_point.cpp
     ${GUI_TESTDIR}/test_field_point3.cpp
     ${GUI_TESTDIR}/test_field_colorpicker.cpp
+    ${GUI_TESTDIR}/test_field_slider.cpp
     ${GUI_TESTDIR}/test_misc_ui.cpp
 )
 

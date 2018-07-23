@@ -77,6 +77,34 @@ SCENARIO( "UI_Slider: Defaults, Min/max handling, accessors.") {
                 REQUIRE(test_field.textctrl()->GetValue() == "0.0");
             }
         }
+        WHEN("disable() is called") {
+            test_field.slider()->Enable();
+            test_field.textctrl()->Enable();
+            test_field.textctrl()->SetEditable(true);
+            
+            test_field.disable();
+            THEN("Internal slider is disabled.") {
+                REQUIRE(test_field.slider()->IsEnabled() == false);
+            }
+            THEN("Internal textctrl is disabled.") {
+                REQUIRE(test_field.textctrl()->IsEnabled() == false);
+                REQUIRE(test_field.textctrl()->IsEditable() == false);
+            }
+        }
+        WHEN("enable() is called") {
+            test_field.slider()->Disable();
+            test_field.textctrl()->Disable();
+            test_field.textctrl()->SetEditable(false);
+
+            test_field.enable();
+            THEN("Internal slider is enabled.") {
+                REQUIRE(test_field.slider()->IsEnabled() == true);
+            }
+            THEN("Internal textctrl is enabled.") {
+                REQUIRE(test_field.textctrl()->IsEnabled() == true);
+                REQUIRE(test_field.textctrl()->IsEditable() == true);
+            }
+        }
     }
 
     GIVEN("A UI Slider with scale of 1") {
@@ -98,6 +126,7 @@ SCENARIO( "UI_Slider: Defaults, Min/max handling, accessors.") {
         }
     }
 }
+
 SCENARIO( "UI_Slider: Event handlers") {
     wxTestableFrame* old = dynamic_cast<wxTestableFrame*>(wxTheApp->GetTopWindow()); 
     old->Destroy();
