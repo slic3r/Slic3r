@@ -61,7 +61,11 @@ private:
     /// Utility function to print config options as gcode comments
     void _print_config(const ConfigBase& config);
 
+    // Extrude perimeters: Decide where to put seams (hide or align seams).
+    std::string _extrude_perimeters(std::map<size_t,ExtrusionEntityCollection> &by_region);
 
+    // Chain the paths hierarchically by a greedy algorithm to minimize a travel distance.
+    std::string _extrude_infill(std::map<size_t,ExtrusionEntityCollection> &by_region);
 };
 
 } // namespace Slic3r

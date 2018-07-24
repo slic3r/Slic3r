@@ -492,117 +492,136 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
         // (Still, we have to keep track of regions because we need to apply their config)
 
         // group extrusions by extruder and then by island
-        std::map<size_t,std::tuple<ExtrusionEntityCollection, ExtrusionEntityCollection> > by_extruder; // extruder_id => [ { perimeters => \@perimeters, infill => \@infill } ]
+        //       extruder        island
+        std::map<size_t,std::map<size_t,
+            //                  region
+            std::tuple<std::map<size_t,ExtrusionEntityCollection>, // perimeters
+                       std::map<size_t,ExtrusionEntityCollection>>  // infill
+        >> by_extruder;
 
         // cache bounding boxes of layer slices
         std::vector<BoundingBox> layer_slices_bb;
         std::transform(layer->slices.cbegin(), layer->slices.cend(), std::back_inserter(layer_slices_bb), [] (const ExPolygon& s)-> BoundingBox { return s.bounding_box(); });
-        auto point_inside_surface { [&layer_slices_bb, &layer] (size_t i, Point& point) -> bool { 
+        auto point_inside_surface { [&layer_slices_bb, &layer] (size_t i, Point point) -> bool {
             const auto& bbox {layer_slices_bb.at(i)};
             return bbox.contains(point) && layer->slices.at(i).contour.contains(point);
         }};
         const auto n_slices {layer->slices.size()};
 
         for (auto region_id = 0U; region_id < print.regions.size(); ++region_id) {
-        }
-
-    }
-/*
-    my $copy_idx = 0;
-    for my $copy (@$object_copies) {
-
-        my $n_slices = $layer->slices->count - 1;
-        foreach my $region_id (0..($self->print->region_count-1)) {
-            my $layerm = $layer->regions->[$region_id] or next;
-            my $region = $self->print->get_region($region_id);
+            auto* layerm = layer->get_region(region_id); //or next; TODO: handle error case
+            auto* region = print.get_region(region_id);
             
-            # process perimeters
+            // process perimeters
             {
-                my $extruder_id = $region->config->perimeter_extruder-1;
-                foreach my $perimeter_coll (@{$layerm->perimeters}) {
-                    next if $perimeter_coll->empty;  # this shouldn't happen but first_point() would fail
+                auto extruder_id = region->config.perimeter_extruder-1;
+                // Casting away const just to avoid double dereferences
+                for(auto* perimeter_coll : const_cast<LayerRegion*>(layerm)->perimeters) {
+                    if(perimeter_coll->length() == 0) continue;  // this shouldn't happen but first_point() would fail
                     
-                    # init by_extruder item only if we actually use the extruder
-                    $by_extruder{$extruder_id} //= [];
-                    
-                    # $perimeter_coll is an ExtrusionPath::Collection object representing a single slice
-                    for my $i (0 .. $n_slices) {
-                        if (
-                            # $perimeter_coll->first_point does not fit inside any slice
-                            $i == $n_slices 
-                            # $perimeter_coll->first_point fits inside ith slice
-                            || $point_inside_surface->($i, $perimeter_coll->first_point)) {
-                            $by_extruder{$extruder_id}[$i] //= { perimeters => {} };
-                            $by_extruder{$extruder_id}[$i]{perimeters}{$region_id} //= [];
-                            push @{ $by_extruder{$extruder_id}[$i]{perimeters}{$region_id} }, @$perimeter_coll;
-                            last;
+                    // perimeter_coll is an ExtrusionPath::Collection object representing a single slice
+                    for(auto i = 0U; i < n_slices; i++){
+                        if (// perimeter_coll->first_point does not fit inside any slice
+                            i == n_slices - 1
+                            // perimeter_coll->first_point fits inside ith slice
+                            || point_inside_surface(i, perimeter_coll->first_point())) {
+                            std::get<0>(by_extruder[extruder_id][i])[region_id].append(*perimeter_coll);
+                            break;
                         }
                     }
                 }
             }
             
-            # process infill
-            # $layerm->fills is a collection of ExtrusionPath::Collection objects, each one containing
-            # the ExtrusionPath objects of a certain infill "group" (also called "surface"
-            # throughout the code). We can redefine the order of such Collections but we have to 
-            # do each one completely at once.
-            foreach my $fill (@{$layerm->fills}) {
-                next if $fill->empty;  # this shouldn't happen but first_point() would fail
+            // process infill
+            // $layerm->fills is a collection of ExtrusionPath::Collection objects, each one containing
+            // the ExtrusionPath objects of a certain infill "group" (also called "surface"
+            // throughout the code). We can redefine the order of such Collections but we have to 
+            // do each one completely at once.
+            for(auto* fill : const_cast<LayerRegion*>(layerm)->fills) {
+                if(fill->length() == 0) continue;  // this shouldn't happen but first_point() would fail
                 
-                # init by_extruder item only if we actually use the extruder
-                my $extruder_id = $fill->[0]->is_solid_infill
-                    ? $region->config->solid_infill_extruder-1
-                    : $region->config->infill_extruder-1;
+                auto extruder_id = fill->is_solid_infill()
+                    ? region->config.solid_infill_extruder-1
+                    : region->config.infill_extruder-1;
                 
-                $by_extruder{$extruder_id} //= [];
-                
-                # $fill is an ExtrusionPath::Collection object
-                for my $i (0 .. $n_slices) {
-                    if ($i == $n_slices
-                        || $point_inside_surface->($i, $fill->first_point)) {
-                        $by_extruder{$extruder_id}[$i] //= { infill => {} };
-                        $by_extruder{$extruder_id}[$i]{infill}{$region_id} //= [];
-                        push @{ $by_extruder{$extruder_id}[$i]{infill}{$region_id} }, $fill;
-                        last;
+                // $fill is an ExtrusionPath::Collection object
+                for(auto i = 0U; i < n_slices; i++){
+                    if (i == n_slices - 1
+                        || point_inside_surface(i, fill->first_point())) {
+                        std::get<1>(by_extruder[extruder_id][i])[region_id].append(*fill);
+                        break;
                     }
                 }
             }
         }
         
-        # tweak extruder ordering to save toolchanges
-        my @extruders = sort { $a <=> $b } keys %by_extruder;
-        if (@extruders > 1) {
-            my $last_extruder_id = $self->_gcodegen.writer->extruder->id;
-            if (exists $by_extruder{$last_extruder_id}) {
-                @extruders = (
-                    $last_extruder_id,
-                    grep $_ != $last_extruder_id, @extruders,
-                );
-            }
-        }
+        // tweak extruder ordering to save toolchanges
         
-        foreach my $extruder_id (@extruders) {
-            $gcode .= $self->_gcodegen.set_extruder($extruder_id);
-            foreach my $island (@{ $by_extruder{$extruder_id} }) {
-                if ($self->print->config->infill_first) {
-                    $gcode .= $self->_extrude_infill($island->{infill} // {});
-                    $gcode .= $self->_extrude_perimeters($island->{perimeters} // {});
+        auto last_extruder = gcodegen.writer.extruder()->id;
+        if (by_extruder.count(last_extruder)) {
+            for(auto &island : by_extruder[last_extruder]) {
+               if (print.config.infill_first()) {
+                    gcode += this->_extrude_infill(std::get<1>(island.second));
+                    gcode += this->_extrude_perimeters(std::get<0>(island.second));
                 } else {
-                    $gcode .= $self->_extrude_perimeters($island->{perimeters} // {});
-                    $gcode .= $self->_extrude_infill($island->{infill} // {});
+                    gcode += this->_extrude_perimeters(std::get<0>(island.second));
+                    gcode += this->_extrude_infill(std::get<1>(island.second));
                 }
             }
         }
-        if ($self->config->label_printed_objects) {
-            $gcode .=   "; stop printing object " . $object->model_object()->name . " id:" . $obj_idx . " copy "  . $copy_idx . "\n";
+        for(auto &pair : by_extruder) {
+            if(pair.first == last_extruder)continue;
+            gcode += gcodegen.set_extruder(pair.first);
+            for(auto &island : pair.second) {
+               if (print.config.infill_first()) {
+                    gcode += this->_extrude_infill(std::get<1>(island.second));
+                    gcode += this->_extrude_perimeters(std::get<0>(island.second));
+                } else {
+                    gcode += this->_extrude_perimeters(std::get<0>(island.second));
+                    gcode += this->_extrude_infill(std::get<1>(island.second));
+                }
+            }
         }
-        $copy_idx = $copy_idx + 1;
+        if (config.label_printed_objects) {
+            gcode +=   "; stop printing object " + obj.model_object().name + " id:" + std::to_string(idx) + " copy "  + std::to_string(copy_idx) + "\n";
+        }
+        copy_idx++;
     }
-*/
-
     // write the resulting gcode
     fh << this->filter(gcode);
 }
+
+
+// Extrude perimeters: Decide where to put seams (hide or align seams).
+std::string
+PrintGCode::_extrude_perimeters(std::map<size_t,ExtrusionEntityCollection> &by_region)
+{
+    std::string gcode = "";
+    for(auto& pair : by_region) {
+        this->_gcodegen.config.apply(this->_print.get_region(pair.first)->config);
+        for(auto& ee : pair.second){
+            gcode += this->_gcodegen.extrude(*ee, "perimeter");
+        }
+    }
+    return gcode;
+}
+
+// Chain the paths hierarchically by a greedy algorithm to minimize a travel distance.
+std::string
+PrintGCode::_extrude_infill(std::map<size_t,ExtrusionEntityCollection> &by_region)
+{
+    std::string gcode = "";
+    for(auto& pair : by_region) {
+        this->_gcodegen.config.apply(this->_print.get_region(pair.first)->config);
+        ExtrusionEntityCollection tmp;
+        pair.second.chained_path_from(this->_gcodegen.last_pos(),&tmp);
+        for(auto& ee : tmp){
+            gcode += this->_gcodegen.extrude(*ee, "infill");
+        }
+    }
+    return gcode;
+}
+
 
 void
 PrintGCode::_print_first_layer_temperature(bool wait) 
