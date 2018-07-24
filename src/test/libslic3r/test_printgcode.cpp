@@ -6,6 +6,10 @@
 
 using namespace Slic3r::Test;
 
+std::regex perimeter_regex(R"^G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; perimeter[ ]*$");
+std::regex infill_regex(R"^G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; infill[ ]*$");
+std::regex skirt_regex(R"^G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; skirt[ ]*$");
+
 SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
     GIVEN("A default configuration and a print test object") {
         auto config {Slic3r::Config::new_from_defaults()};
@@ -13,6 +17,7 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
 
         WHEN("the output is executed with no support material") {
             config->set("first_layer_extrusion_width", 0);
+            config->set("gcode_comments", true);
             Slic3r::Model model;
             auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
             Slic3r::Test::gcode(gcode, print);
@@ -45,6 +50,18 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
                 REQUIRE(exported.find("; first_layer_temperature") != std::string::npos);
                 REQUIRE(exported.find("; layer_height") != std::string::npos);
                 REQUIRE(exported.find("; fill_density") != std::string::npos);
+            }
+            THEN("Infill is emitted.") {
+                std::smatch has_match;
+                REQUIRE(std::regex_search(exported, has_match, infill_regex));
+            }
+            THEN("Perimeters are emitted.") {
+                std::smatch has_match;
+                REQUIRE(std::regex_search(exported, has_match, perimeters_regex));
+            }
+            THEN("Skirt is emitted.") {
+                std::smatch has_match;
+                REQUIRE(std::regex_search(exported, has_match, skirt_regex));
             }
         }
         WHEN("the output is executed with support material") {
