@@ -1,5 +1,6 @@
 #include "OptionsGroup/Field.hpp"
 #include "misc_ui.hpp"
+#include "utils.hpp"
 
 namespace Slic3r { namespace GUI {
 
