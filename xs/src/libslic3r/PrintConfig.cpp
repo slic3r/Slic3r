@@ -844,6 +844,15 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "infill-dense-layers=i";
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
+    
+    def = this->add("infill_dense_angle", coFloat);
+    def->label = L("angle");
+    def->category = L("Infill");
+    def->tooltip = L("Set the Angle of dense infill.");
+    def->sidetext = L("layers");
+    def->cli = "infill-dense-angle=i";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("infill_dense_density", coPercent);
     def->gui_type = "f_enum_open";
@@ -882,6 +891,40 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("75");
     def->enum_labels.push_back("100");
     def->default_value = new ConfigOptionPercent(42);
+	
+    def = this->add("infill_dense_pattern", coEnum);
+    def->label = L("pattern");
+    def->category = L("Sparse fill pattern");
+    def->tooltip = L("Fill pattern for denser-density sparse infill.");
+    def->cli = "dense-fill-pattern=s";
+    def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
+    def->enum_values.push_back("rectilinear");
+    def->enum_values.push_back("grid");
+    def->enum_values.push_back("triangles");
+    def->enum_values.push_back("stars");
+    def->enum_values.push_back("cubic");
+    def->enum_values.push_back("line");
+    def->enum_values.push_back("concentric");
+    def->enum_values.push_back("honeycomb");
+    def->enum_values.push_back("3dhoneycomb");
+    def->enum_values.push_back("gyroid");
+    def->enum_values.push_back("hilbertcurve");
+    def->enum_values.push_back("archimedeanchords");
+    def->enum_values.push_back("octagramspiral");
+    def->enum_labels.push_back("Rectilinear");
+    def->enum_labels.push_back("Grid");
+    def->enum_labels.push_back("Triangles");
+    def->enum_labels.push_back("Stars");
+    def->enum_labels.push_back("Cubic");
+    def->enum_labels.push_back("Line");
+    def->enum_labels.push_back("Concentric");
+    def->enum_labels.push_back("Honeycomb");
+    def->enum_labels.push_back("3D Honeycomb");
+    def->enum_labels.push_back("Gyroid");
+    def->enum_labels.push_back("Hilbert Curve");
+    def->enum_labels.push_back("Archimedean Chords");
+    def->enum_labels.push_back("Octagram Spiral");
+    def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("infill_extruder", coInt);
     def->label = L("Infill extruder");
@@ -2233,6 +2276,11 @@ std::string FullPrintConfig::validate()
     // --bottom-fill-pattern
     if (! print_config_def.get("bottom_fill_pattern")->has_enum_value(this->bottom_fill_pattern.serialize()))
         return "Invalid value for --bottom-fill-pattern";
+    
+    // --infill-dense-pattern
+    if (! print_config_def.get("infill_dense_pattern")->has_enum_value(this->infill_dense_pattern.serialize()))
+        return "Invalid value for --infill-dense-pattern";
+    
 
     // --fill-density
     if (fabs(this->fill_density.value - 100.) < EPSILON &&

@@ -56,6 +56,32 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         //FIXME: Use some smart heuristics to merge similar surfaces to eliminate tiny regions.
         std::vector<SurfacesPtr> groups;
         layerm.fill_surfaces.group(&groups);
+
+        //if internal infill can be dense, place it on his own group
+        if (layerm.region()->config.infill_dense_layers.getInt() > 0) {
+            SurfacesPtr *denseGroup = NULL;
+            const uint32_t nbGroups = groups.size();
+            for (uint32_t num_group = 0; num_group < nbGroups; ++num_group) {
+                for (uint32_t num_srf = 0; num_srf < groups[num_group].size(); ++num_srf) {
+                    Surface *srf = groups[num_group][num_srf];
+                    //if solid, wrong group
+                    if (srf->is_solid()) break;
+                    //find surface that can be used as dense infill
+                    if (srf->maxNbSolidLayersOnTop <= layerm.region()->config.infill_dense_layers.getInt()
+                        && srf->maxNbSolidLayersOnTop > 0) {
+                        //remove from the group
+                        groups[num_group].erase(groups[num_group].begin() + num_srf);
+                        --num_srf;
+                        //add to the "dense" group
+                        if (denseGroup == NULL) {
+                            groups.resize(groups.size() + 1);
+                            denseGroup = &groups.back();
+                        }
+                        denseGroup->push_back(srf);
+                    }
+                }
+            }
+        }
         
         // merge compatible groups (we can generate continuous infill for them)
         {
@@ -91,7 +117,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         
         // Give priority to bridges. Process the bridges in the first round, the rest of the surfaces in the 2nd round.
         for (size_t round = 0; round < 2; ++ round) {
-            for (std::vector<SurfacesPtr>::iterator it_group = groups.begin(); it_group != groups.end(); ++ it_group) {
+            for (std::vector<SurfacesPtr>::iterator it_group = groups.begin(); it_group != groups.end(); ++it_group) {
                 const SurfacesPtr &group = *it_group;
                 bool is_bridge = group.front()->bridge_angle >= 0;
                 if (is_bridge != (round == 0))
@@ -99,12 +125,13 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 // Make a union of polygons defining the infiill regions of a group, use a safety offset.
                 Polygons union_p = union_(to_polygons(*it_group), true);
                 // Subtract surfaces having a defined bridge_angle from any other, use a safety offset.
-                if (! polygons_bridged.empty() && ! is_bridge)
+                if (!polygons_bridged.empty() && !is_bridge)
                     union_p = diff(union_p, polygons_bridged, true);
                 // subtract any other surface already processed
                 //FIXME Vojtech: Because the bridge surfaces came first, they are subtracted twice!
                 // Using group.front() as a template.
                 surfaces_append(surfaces, diff_ex(union_p, to_polygons(surfaces), true), *group.front());
+                
             }
         }
     }
@@ -149,7 +176,6 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 //            red_expolygons  => [ map $_->expolygon, grep  $_->is_solid, @surfaces ],
 //        );
     }
-
     for (const Surface &surface : surfaces) {
         if (surface.surface_type == stInternalVoid)
             continue;
@@ -158,7 +184,8 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         FlowRole role = (surface.is_top()) ? frTopSolidInfill :
             (surface.is_solid() ? frSolidInfill : frInfill);
         bool is_bridge = layerm.layer()->id() > 0 && surface.is_bridge();
-        
+        bool is_denser = false;
+
         if (surface.is_solid()) {
             density = 100.;
             fill_pattern = (surface.is_external() && ! is_bridge) ? 
@@ -166,9 +193,11 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 ipRectilinear;
         } else {
             if (layerm.region()->config.infill_dense_layers.getInt() > 0 
-                && surface.maxNbLayersOnTop < layerm.region()->config.infill_dense_layers.getInt() + layerm.region()->config.top_solid_layers.getInt()
-                && surface.maxNbLayersOnTop >= layerm.region()->config.top_solid_layers.getInt()){
+                && surface.maxNbSolidLayersOnTop <= layerm.region()->config.infill_dense_layers.getInt()
+                && surface.maxNbSolidLayersOnTop > 0) {
                 density = layerm.region()->config.infill_dense_density.getFloat();
+                is_denser = true;
+                fill_pattern = layerm.region()->config.infill_dense_pattern.value;
             }
             if (density <= 0)
                 continue;
@@ -223,12 +252,12 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 
         f->layer_id = layerm.layer()->id();
         f->z = layerm.layer()->print_z;
-        f->angle = float(Geometry::deg2rad(layerm.region()->config.fill_angle.value));
+        if (is_denser)f->angle = float(Geometry::deg2rad(layerm.region()->config.infill_dense_angle.value));
+        else f->angle = float(Geometry::deg2rad(layerm.region()->config.fill_angle.value));
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = scale_(link_max_length);
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
         f->loop_clipping = scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER;
-//        f->layer_height = h;
         //give the overlap size, it's not the real value (it can depend of the external_perimeter_extrusion_width)
         f->overlap = layerm.region()->config.infill_overlap.get_abs_value(flow.nozzle_diameter);
         // apply half spacing using this flow's own spacing and generate infill
@@ -249,7 +278,8 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         
         float flow_percent = 1;
         if(surface.is_overBridge()){
-            params.flow_mult = layerm.region()->config.over_bridge_flow_ratio;
+            params.density = layerm.region()->config.over_bridge_flow_ratio;
+            //params.flow_mult = layerm.region()->config.over_bridge_flow_ratio;
         }
         
         f->fill_surface_extrusion(&surface, params, flow, out);

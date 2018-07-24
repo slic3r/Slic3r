@@ -569,7 +569,7 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
 			break;
 		case coEnum:{
 			if (opt_key.compare("top_fill_pattern") == 0 || opt_key.compare("bottom_fill_pattern") == 0 ||
-				opt_key.compare("fill_pattern") == 0)
+				opt_key.compare("fill_pattern") == 0 || opt_key.compare("infill_dense_pattern") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<InfillPattern>(boost::any_cast<InfillPattern>(value))); 
 			else if (opt_key.compare("gcode_flavor") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<GCodeFlavor>(boost::any_cast<GCodeFlavor>(value))); 

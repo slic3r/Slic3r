@@ -41,42 +41,42 @@ public:
     unsigned short  thickness_layers;   // in layers
     double          bridge_angle;       // in radians, ccw, 0 = East, only 0+ (negative means undefined)
     unsigned short  extra_perimeters;
-    unsigned short    maxNbLayersOnTop;
+    uint16_t        maxNbSolidLayersOnTop;
     
     Surface(const Slic3r::Surface &rhs)
         : surface_type(rhs.surface_type), expolygon(rhs.expolygon),
             thickness(rhs.thickness), thickness_layers(rhs.thickness_layers), 
             bridge_angle(rhs.bridge_angle), extra_perimeters(rhs.extra_perimeters),
-            maxNbLayersOnTop(rhs.maxNbLayersOnTop)
+            maxNbSolidLayersOnTop(rhs.maxNbSolidLayersOnTop)
         {};
 
     Surface(SurfaceType _surface_type, const ExPolygon &_expolygon)
         : surface_type(_surface_type), expolygon(_expolygon),
             thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0),
-            maxNbLayersOnTop(0)
+            maxNbSolidLayersOnTop(-1)
         {};
     Surface(const Surface &other, const ExPolygon &_expolygon)
         : surface_type(other.surface_type), expolygon(_expolygon),
             thickness(other.thickness), thickness_layers(other.thickness_layers), 
             bridge_angle(other.bridge_angle), extra_perimeters(other.extra_perimeters),
-            maxNbLayersOnTop(other.maxNbLayersOnTop)
+            maxNbSolidLayersOnTop(other.maxNbSolidLayersOnTop)
         {};
     Surface(Surface &&rhs)
         : surface_type(rhs.surface_type), expolygon(std::move(rhs.expolygon)),
             thickness(rhs.thickness), thickness_layers(rhs.thickness_layers), 
             bridge_angle(rhs.bridge_angle), extra_perimeters(rhs.extra_perimeters),
-            maxNbLayersOnTop(rhs.maxNbLayersOnTop)
+            maxNbSolidLayersOnTop(rhs.maxNbSolidLayersOnTop)
         {};
     Surface(SurfaceType _surface_type, const ExPolygon &&_expolygon)
         : surface_type(_surface_type), expolygon(std::move(_expolygon)),
         thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0),
-        maxNbLayersOnTop(0)
+        maxNbSolidLayersOnTop(-1)
         {};
     Surface(const Surface &other, const ExPolygon &&_expolygon)
         : surface_type(other.surface_type), expolygon(std::move(_expolygon)),
             thickness(other.thickness), thickness_layers(other.thickness_layers), 
             bridge_angle(other.bridge_angle), extra_perimeters(other.extra_perimeters),
-            maxNbLayersOnTop(other.maxNbLayersOnTop)
+            maxNbSolidLayersOnTop(other.maxNbSolidLayersOnTop)
         {};
 
     Surface& operator=(const Surface &rhs)
@@ -87,7 +87,7 @@ public:
         thickness_layers = rhs.thickness_layers;
         bridge_angle     = rhs.bridge_angle;
         extra_perimeters = rhs.extra_perimeters;
-        maxNbLayersOnTop = rhs.maxNbLayersOnTop;
+        maxNbSolidLayersOnTop = rhs.maxNbSolidLayersOnTop;
         return *this;
     }
 
@@ -99,7 +99,7 @@ public:
         thickness_layers = rhs.thickness_layers;
         bridge_angle     = rhs.bridge_angle;
         extra_perimeters = rhs.extra_perimeters;
-        maxNbLayersOnTop = rhs.maxNbLayersOnTop;
+        maxNbSolidLayersOnTop = rhs.maxNbSolidLayersOnTop;
         return *this;
     }
 

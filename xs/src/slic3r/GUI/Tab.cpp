@@ -817,7 +817,7 @@ void TabPrint::build()
 		optgroup->append_single_option_line("seam_position");
 		optgroup->append_single_option_line("external_perimeters_first");
 
-	page = add_options_page(_(L("Infill")), "infill.png");
+        page = add_options_page(_(L("Infill")), "infill.png");
 		optgroup = page->new_optgroup(_(L("Infill")));
 		optgroup->append_single_option_line("fill_density");
 		optgroup->append_single_option_line("fill_pattern");
@@ -828,9 +828,11 @@ void TabPrint::build()
 		optgroup = page->new_optgroup(_(L("Reducing printing time")));
 		optgroup->append_single_option_line("infill_every_layers");
 		optgroup->append_single_option_line("infill_only_where_needed");
-        line = { _(L("Use denser infill below top layers")), "" };
+        line = { _(L("Use denser infill below solid layers")), "" };
         line.append_option(optgroup->get_option("infill_dense_layers"));
         line.append_option(optgroup->get_option("infill_dense_density"));
+        line.append_option(optgroup->get_option("infill_dense_pattern"));
+        line.append_option(optgroup->get_option("infill_dense_angle"));
         optgroup->append_line(line);
 
         optgroup = page->new_optgroup(_(L("Advanced")));

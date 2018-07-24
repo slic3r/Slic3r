@@ -448,7 +448,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		break;
 	case coEnum:{
 		if (opt_key.compare("top_fill_pattern") == 0 || opt_key.compare("bottom_fill_pattern") == 0 ||
-			opt_key.compare("fill_pattern") == 0 ){
+			opt_key.compare("fill_pattern") == 0 || opt_key.compare("infill_dense_pattern") == 0 ){
 			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
 		}
 		else if (opt_key.compare("gcode_flavor") == 0 ){

@@ -25,7 +25,7 @@ struct FillParams
         fill_exactly = false;
     }
 
-    bool        full_infill() const { return density > 0.9999f; }
+    bool        full_infill() const { return density > 0.9999f && density < 1.0001f; }
 
 	// Fill density, fraction in <0, 1>
 	float       density;

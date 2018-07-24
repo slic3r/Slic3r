@@ -409,7 +409,9 @@ public:
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
     ConfigOptionInt                 infill_dense_layers;
+    ConfigOptionFloat               infill_dense_angle;
     ConfigOptionPercent             infill_dense_density;
+    ConfigOptionEnum<InfillPattern> infill_dense_pattern;
     ConfigOptionBool                overhangs;
     ConfigOptionBool                no_perimeter_unsupported;
     ConfigOptionInt                 min_perimeter_unsupported;
@@ -458,7 +460,9 @@ protected:
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
         OPT_PTR(infill_dense_layers);
+        OPT_PTR(infill_dense_angle);
         OPT_PTR(infill_dense_density);
+        OPT_PTR(infill_dense_pattern);
         OPT_PTR(overhangs);
         OPT_PTR(no_perimeter_unsupported);
         OPT_PTR(min_perimeter_unsupported);
