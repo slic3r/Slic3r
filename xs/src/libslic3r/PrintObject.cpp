@@ -389,7 +389,7 @@ PrintObject::move_nonplanar_surfaces_up() {
 
                 //clone layer if on current layer
                 LayerRegion* layerm = layer->get_region(region - this->_print->regions.begin());
-                Surfaces::iterator surface = layerm->slices.surfaces.begin();    
+                Surfaces::iterator surface = layerm->slices.surfaces.begin();
                 while (surface != layerm->slices.surfaces.end()) {
                     bool delete_surface = false;
                     if (surface->is_nonplanar() && surface->distance_to_top == layer_top_distance) {
@@ -417,7 +417,7 @@ PrintObject::move_nonplanar_surfaces_up() {
         FOREACH_LAYER(this, layer_it) {
             Layer* layer        = *layer_it;
             LayerRegion* layerm = layer->get_region(region - this->_print->regions.begin());
-        
+
             Surfaces new_surfaces;
             //save all internal surfaces
             SurfaceCollection polyInternal;
@@ -430,7 +430,7 @@ PrintObject::move_nonplanar_surfaces_up() {
             new_surfaces.reserve(exppInternal.size());
             for (ExPolygon expoly : exppInternal)
                 new_surfaces.push_back(Surface(stInternal, expoly));
-        
+
             //get all surface elements
             std::vector<float> elements;
             for(Surface s : layerm->slices.surfaces) {
@@ -439,7 +439,7 @@ PrintObject::move_nonplanar_surfaces_up() {
                     elements.push_back(s.distance_to_top);
                 }
             }
-        
+
             //save all nonplanar surfaces grouped by distance_to_top
             for(float f : elements) {
                 SurfaceCollection polyNonplanar;
@@ -453,7 +453,7 @@ PrintObject::move_nonplanar_surfaces_up() {
                     continue;
                 ExPolygons exppNonplanar = union_ex((Polygons)polyNonplanar, true);
                 new_surfaces.reserve(new_surfaces.size() +exppNonplanar.size());
-        
+
                 for (ExPolygon expoly : exppNonplanar) {
                     Surface new_s = Surface( f == 0.0f ? stTopNonplanar : stInternalSolidNonplanar, expoly);
                     new_s.distance_to_top = f;
@@ -920,98 +920,6 @@ void PrintObject::_slice()
     coordf_t raft_height = 0;
     coordf_t first_layer_height = this->config.first_layer_height.get_abs_value(this->config.layer_height.value);
 
-    //Daniel
-    //Max angle of facets
-    float max_angle = 20.0;
-
-    //Itterate over all model volumes
-    const ModelVolumePtrs volumes = this->model_object()->volumes;
-    for (ModelVolumePtrs::const_iterator it = volumes.begin(); it != volumes.end(); ++ it) {
-        //only check non modifier volumes
-        if (! (*it)->modifier) {
-            const TriangleMesh mesh = (*it)->mesh;
-
-            //store all meshes with slope <= max_angle in map. Map is necessary to keep facet ID
-            for (int i = 0; i < mesh.stl.stats.number_of_facets; ++ i) {
-                stl_facet* facet = mesh.stl.facet_start + i;
-                //TODO check if normals exist
-                if (facet->normal.z >= std::cos(max_angle * 3.14159265/180.0)) {
-                    //copy facet
-                    stl_facet new_facet;
-                    new_facet.normal.x = facet->normal.x;
-                    new_facet.normal.y = facet->normal.y;
-                    new_facet.normal.z = facet->normal.z;
-                    for (int i=0; i<=2 ;i++) {
-                        new_facet.vertex[i].x = facet->vertex[i].x;
-                        new_facet.vertex[i].y = facet->vertex[i].y;
-                        new_facet.vertex[i].z = facet->vertex[i].z;
-                    }
-                    new_facet.extra[0] = facet->extra[0];
-                    new_facet.extra[1] = facet->extra[1];
-                    this->nonplanar_surfaces[i] = new_facet;
-                }
-            }
-            
-            //Move facets to 0,0,0
-            for (auto& facet : this->nonplanar_surfaces) {
-                for (auto& vert : facet.second.vertex) {
-                    vert.x = vert.x - mesh.stl.stats.min.x;
-                    vert.y = vert.y - mesh.stl.stats.min.y;
-                    vert.z = vert.z - mesh.stl.stats.min.z;
-                }
-            }
-
-            //group facets to connected component
-            //TODO implement grouping algorithm
-            //TODO filter candidates
-            // std::vector<std::map<int, stl_facet>*> slope_groups;
-            // for ( std::map<int, stl_facet>::iterator it = slope_meshes.begin(); it != slope_meshes.end(); it++ ) {
-            //     stl_neighbors* neighbors = mesh.stl.neighbors_start + it->first;
-            //     for(const auto& n : neighbors->neighbor) {
-            //         //do something
-            //     }
-            // }
-            //Temporary all in one group
-
-
-            //testprint
-            for (auto& facet : this->nonplanar_surfaces) {
-                std::cout << "triangle " << facet.first << ": " ;
-                std::cout << " (" << (180*std::acos(facet.second.normal.z))/3.14159265 << "°)";
-                
-                std::cout << " | V0:";
-                std::cout << " X:"<< facet.second.vertex[0].x;
-                std::cout << " Y:"<< facet.second.vertex[0].y;
-                std::cout << " Z:"<< facet.second.vertex[0].z;
-            
-                std::cout << " | V1:";
-                std::cout << " X:"<< facet.second.vertex[1].x;
-                std::cout << " Y:"<< facet.second.vertex[1].y;
-                std::cout << " Z:"<< facet.second.vertex[1].z;
-            
-                std::cout << " | V2:";
-                std::cout << " X:"<< facet.second.vertex[2].x;
-                std::cout << " Y:"<< facet.second.vertex[2].y;
-                std::cout << " Z:"<< facet.second.vertex[2].z;
-            
-                std::cout << " | Normal:";
-                std::cout << " X:"<< facet.second.normal.x;
-                std::cout << " Y:"<< facet.second.normal.y;
-                std::cout << " Z:"<< facet.second.normal.z;
-            
-                //TODO check if neighbors exist
-                stl_neighbors* neighbors = mesh.stl.neighbors_start + facet.first;
-                std::cout << " | Neighbors:";
-                std::cout << " 0:"<< neighbors->neighbor[0];
-                std::cout << " 1:"<< neighbors->neighbor[1];
-                std::cout << " 2:"<< neighbors->neighbor[2];
-                std::cout << std::endl;
-            }
-        }
-    }
-
-    //\Daniel
-
     // take raft layers into account
     int id = 0;
 
@@ -1107,6 +1015,8 @@ void PrintObject::_slice()
         }
     }
 
+    this->find_nonplanar_surfaces();
+
     // remove last layer(s) if empty
     bool done = false;
     while (! this->layers.empty()) {
@@ -1173,6 +1083,108 @@ void PrintObject::_slice()
                 );
         }
     }
+}
+
+void
+PrintObject::find_nonplanar_surfaces()
+{
+
+    //Daniel
+    //Max angle of facets
+    float max_angle = 20.0;
+
+    //Itterate over all model volumes
+    const ModelVolumePtrs volumes = this->model_object()->volumes;
+    for (ModelVolumePtrs::const_iterator it = volumes.begin(); it != volumes.end(); ++ it) {
+        //only check non modifier volumes
+        if (! (*it)->modifier) {
+            const TriangleMesh mesh = (*it)->mesh;
+            std::vector<stl_facet>& facets
+            //store all meshes with slope <= max_angle in map. Map is necessary to keep facet ID
+            for (int i = 0; i < mesh.stl.stats.number_of_facets; ++ i) {
+                stl_facet* facet = mesh.stl.facet_start + i;
+                //TODO check if normals exist
+                if (facet->normal.z >= std::cos(max_angle * 3.14159265/180.0)) {
+                    facets.push_back(facet);
+
+                    stl_facet new_facet;
+                    new_facet.normal.x = facet->normal.x;
+                    new_facet.normal.y = facet->normal.y;
+                    new_facet.normal.z = facet->normal.z;
+                    for (int i=0; i<=2 ;i++) {
+                        new_facet.vertex[i].x = facet->vertex[i].x;
+                        new_facet.vertex[i].y = facet->vertex[i].y;
+                        new_facet.vertex[i].z = facet->vertex[i].z;
+                    }
+                    new_facet.extra[0] = facet->extra[0];
+                    new_facet.extra[1] = facet->extra[1];
+                    this->nonplanar_surfaces[i] = new_facet;
+                }
+            }
+            TriangleMesh new_mesh = new TriangleMesh(new_facets);
+            NonplanarSurface ns = new NonplanarSurface(new_mesh, 0);
+
+            //Move facets to 0,0,0
+            for (auto& facet : this->nonplanar_surfaces) {
+                for (auto& vert : facet.second.vertex) {
+                    vert.x = vert.x - mesh.stl.stats.min.x;
+                    vert.y = vert.y - mesh.stl.stats.min.y;
+                    vert.z = vert.z - mesh.stl.stats.min.z;
+                }
+            }
+
+            //group facets to connected component
+            //TODO implement grouping algorithm
+            //TODO filter candidates
+            // std::vector<std::map<int, stl_facet>*> slope_groups;
+            // for ( std::map<int, stl_facet>::iterator it = slope_meshes.begin(); it != slope_meshes.end(); it++ ) {
+            //     stl_neighbors* neighbors = mesh.stl.neighbors_start + it->first;
+            //     for(const auto& n : neighbors->neighbor) {
+            //         //do something
+            //     }
+            // }
+            //Temporary all in one group
+
+
+            //testprint
+            for (auto& facet : this->nonplanar_surfaces) {
+                std::cout << "triangle " << facet.first << ": " ;
+                std::cout << " (" << (180*std::acos(facet.second.normal.z))/3.14159265 << "°)";
+
+                std::cout << " | V0:";
+                std::cout << " X:"<< facet.second.vertex[0].x;
+                std::cout << " Y:"<< facet.second.vertex[0].y;
+                std::cout << " Z:"<< facet.second.vertex[0].z;
+
+                std::cout << " | V1:";
+                std::cout << " X:"<< facet.second.vertex[1].x;
+                std::cout << " Y:"<< facet.second.vertex[1].y;
+                std::cout << " Z:"<< facet.second.vertex[1].z;
+
+                std::cout << " | V2:";
+                std::cout << " X:"<< facet.second.vertex[2].x;
+                std::cout << " Y:"<< facet.second.vertex[2].y;
+                std::cout << " Z:"<< facet.second.vertex[2].z;
+
+                std::cout << " | Normal:";
+                std::cout << " X:"<< facet.second.normal.x;
+                std::cout << " Y:"<< facet.second.normal.y;
+                std::cout << " Z:"<< facet.second.normal.z;
+
+                //TODO check if neighbors exist
+                stl_neighbors* neighbors = mesh.stl.neighbors_start + facet.first;
+                std::cout << " | Neighbors:";
+                std::cout << " 0:"<< neighbors->neighbor[0];
+                std::cout << " 1:"<< neighbors->neighbor[1];
+                std::cout << " 2:"<< neighbors->neighbor[2];
+                std::cout << std::endl;
+            }
+        }
+    }
+
+    //\Daniel
+
+
 }
 
 // called from slice()
