@@ -29,6 +29,8 @@ can be used separately.
 
 * **Ironing** top surface & many new settings to fine-tune the top surface quality.
 * A denser infill option for 1-X layers before the top solid layers to better support them.
+* Better overhangs (add perimeters if needed, slice them in opposite direction each layer).
+* Better Thin walls (anchored inside the print, no more random bits at the ends).
 
 ### What are Slic3r's main features?
 
@@ -63,9 +65,9 @@ You can download a precompiled package from the release page.
 it will run without the need for any dependency.
 
 If you want to compile the source yourself follow the instructions on one of these wiki pages: 
-* [Linux](https://github.com/supermerill/Slic3r/tree/supermerill-experiment/doc/How to build - UNIX.md)
-* [Windows](https://github.com/supermerill/Slic3r/tree/supermerill-experiment/doc/How to build - Windows.md)
-* [Mac OSX](https://github.com/supermerill/Slic3r/tree/supermerill-experiment/doc/How_to_build_Slic3r.txt)
+* [Linux](https://github.com/supermerill/Slic3r/tree/master/doc/How%20to%20build%20-%20UNIX.md)
+* [Windows](https://github.com/supermerill/Slic3r/tree/master/doc/How%20to%20build%20-%20Windows.md)
+* [Mac OSX](https://github.com/supermerill/Slic3r/tree/master/doc/How_to_build_Slic3r.txt)
 
 ### Can I help?
 
@@ -73,19 +75,20 @@ Sure! You can do the following to find things that are available to help with:
 * Add an issue to the github tracker if it isn't already present.
 
 Before sending patches and pull requests contact me (preferably through opening a github issue or commenting on an existing, related, issue) to discuss your proposed
-changes: this way we'll ensure nobody wastes their time and no conflicts arise
-in development.
+changes: this way we'll ensure nobody wastes their time and no conflicts arise in development.
 
 ### What's Slic3r license?
 
 Slic3r is licensed under the _GNU Affero General Public License, version 3_.
-The author is Alessandro Ranellucci.
+The first author is Alessandro Ranellucci, and many contributors
+Then the he Prusa team
+Then Durand remi for this fork
 
-The [Silk icon set](http://www.famfamfam.com/lab/icons/silk/) used in Slic3r is
+The [Silk icon set](http://www.famfamfam.com/lab/icons/silk/) used (and modified) in Slic3r is
 licensed under the _Creative Commons Attribution 3.0 License_.
 The author of the Silk icon set is Mark James.
 
-### How can I invoke slic3r.pl using the command line? (not up-to-date yet)
+### How can I invoke slic3r.pl using the command line? (not up-to-date yet, use the --help command instead)
 
     Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
     
