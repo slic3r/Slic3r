@@ -184,6 +184,7 @@ PrintGCode::output()
         Points p;
         for (const auto obj : this->objects ) 
             p.emplace_back(obj->_shifted_copies.at(0));
+        Geometry::chained_path(p, obj_idx);
 
         std::vector<size_t> z(100); // preallocate with 100 layers
         std::map<coord_t, LayerPtrs> layers {};
