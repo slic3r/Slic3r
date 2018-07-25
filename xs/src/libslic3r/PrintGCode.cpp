@@ -186,7 +186,8 @@ PrintGCode::output()
             p.emplace_back(obj->_shifted_copies.at(0));
         Geometry::chained_path(p, obj_idx);
 
-        std::vector<size_t> z(100); // preallocate with 100 layers
+        std::vector<size_t> z;
+        z.reserve(100); // preallocate with 100 layers
         std::map<coord_t, LayerPtrs> layers {};
         for (size_t idx = 0U; idx < print.objects.size(); ++idx) {
             const auto& object {*(objects.at(idx))};
