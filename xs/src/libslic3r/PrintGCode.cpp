@@ -383,7 +383,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     
     // extrude skirt along raft layers and normal obj layers
     // (not along interlaced support material layers)
-    if ((print.has_infinite_skirt() || (_skirt_done.rbegin())->first < print.config.skirt_height)
+    if (!_skirt_done.size() == 0 && (print.has_infinite_skirt() || (_skirt_done.rbegin())->first < print.config.skirt_height)
         && typeid(layer) != typeid(SupportLayer*)
         && _skirt_done.count(scale_(layer->print_z)) > 0
         && layer->id() < static_cast<size_t>(obj.config.raft_layers)) {
