@@ -12,7 +12,7 @@ using namespace std;
 namespace Slic3r { namespace Test {
 
 // Mesh enumeration to name mapping
-const std::unordered_map<TestMesh, const char*> mesh_names { 
+const std::unordered_map<TestMesh, const char*, TestMeshHash> mesh_names {
     std::make_pair<TestMesh, const char*>(TestMesh::A,"A"),
     std::make_pair<TestMesh, const char*>(TestMesh::L,"L"), 
     std::make_pair<TestMesh, const char*>(TestMesh::V,"V"), 

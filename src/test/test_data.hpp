@@ -33,8 +33,15 @@ enum class TestMesh {
     two_hollow_squares
 };
 
+// Neccessary for <c++17
+struct TestMeshHash {
+    std::size_t operator()(TestMesh tm) const {
+        return static_cast<std::size_t>(tm);
+    }
+};
+
 /// Mesh enumeration to name mapping
-extern const std::unordered_map<TestMesh, const char*> mesh_names;
+extern const std::unordered_map<TestMesh, const char*, TestMeshHash> mesh_names;
 
 /// Port of Slic3r::Test::mesh
 /// Basic cubes/boxes should call TriangleMesh::make_cube() directly and rescale/translate it

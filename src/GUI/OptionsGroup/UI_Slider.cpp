@@ -73,7 +73,7 @@ int UI_Slider::get_int() {
 }
 
 std::string UI_Slider::get_string() {
-    return trim_zeroes(std::to_string(static_cast<double>(this->_slider->GetValue()) / this->_scale));
+    return _trim_zeroes(std::to_string(static_cast<double>(this->_slider->GetValue()) / this->_scale));
 }
 
 void UI_Slider::set_scale(size_t new_scale) {
