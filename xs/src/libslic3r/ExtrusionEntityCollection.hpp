@@ -11,7 +11,11 @@ class ExtrusionEntityCollection : public ExtrusionEntity
 {
     public:
     ExtrusionEntityCollection* clone() const;
+
+    /// Owned ExtrusionEntities and descendent ExtrusionEntityCollections.
+    /// Iterating over this needs to check each child to see if it, too is a collection.
     ExtrusionEntitiesPtr entities;     // we own these entities
+
     std::vector<size_t> orig_indices;  // handy for XS
     bool no_sort;
     ExtrusionEntityCollection(): no_sort(false) {};
@@ -19,6 +23,8 @@ class ExtrusionEntityCollection : public ExtrusionEntity
     ExtrusionEntityCollection(const ExtrusionPaths &paths);
     ExtrusionEntityCollection& operator= (const ExtrusionEntityCollection &other);
     ~ExtrusionEntityCollection();
+
+    /// Operator to convert and flatten this collection to a single vefctor of ExtrusionPaths.
     operator ExtrusionPaths() const;
     
     bool is_collection() const {
@@ -46,7 +52,11 @@ class ExtrusionEntityCollection : public ExtrusionEntity
     Point first_point() const;
     Point last_point() const;
     Polygons grow() const;
+
+    /// Recursively count paths and loops contained in this collection 
     size_t items_count() const;
+
+    /// Returns a single vector of pointers to all non-collection items contained in this one
     void flatten(ExtrusionEntityCollection* retval) const;
     ExtrusionEntityCollection flatten() const;
     double min_mm3_per_mm() const;
