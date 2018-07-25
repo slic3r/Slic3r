@@ -37,6 +37,7 @@ SCENARIO("PrintObject: Perimeter generation") {
         }
     }
 }
+
 SCENARIO("Print: Skirt generation") {
     GIVEN("20mm cube and default config") {
         auto config {Slic3r::Config::new_from_defaults()};
@@ -54,6 +55,46 @@ SCENARIO("Print: Skirt generation") {
             THEN("Skirt Extrusion collection has 2 loops in it") {
                 REQUIRE(print->skirt.items_count() == 2);
                 REQUIRE(print->skirt.flatten().entities.size() == 2);
+            }
+        }
+    }
+}
+
+SCENARIO("Print: Brim generation") {
+    GIVEN("20mm cube and default config, 1mm first layer width") {
+        auto config {Slic3r::Config::new_from_defaults()};
+        TestMesh m { TestMesh::cube_20x20x20 };
+        Slic3r::Model model;
+        auto event_counter {0U};
+        std::string stage;
+        int value {0};
+        config->set("first_layer_extrusion_width", 1);
+        WHEN("Brim is set to 3mm")  {
+            config->set("brim_width", 3);
+            auto print {Slic3r::Test::init_print({m}, model, config)};
+            print->make_brim();
+            THEN("Brim Extrusion collection has 3 loops in it") {
+                REQUIRE(print->brim.items_count() == 3);
+                REQUIRE(print->brim.flatten().entities.size() == 3);
+            }
+        }
+        WHEN("Brim is set to 6mm")  {
+            config->set("brim_width", 3);
+            auto print {Slic3r::Test::init_print({m}, model, config)};
+            print->make_brim();
+            THEN("Brim Extrusion collection has 6 loops in it") {
+                REQUIRE(print->brim.items_count() == 6);
+                REQUIRE(print->brim.flatten().entities.size() == 6);
+            }
+        }
+        WHEN("Brim is set to 6mm, extrusion width 0.5mm")  {
+            config->set("brim_width", 3);
+            config->set("first_layer_extrusion_width", 0.5);
+            auto print {Slic3r::Test::init_print({m}, model, config)};
+            print->make_brim();
+            THEN("Brim Extrusion collection has 12 loops in it") {
+                REQUIRE(print->brim.items_count() == 12);
+                REQUIRE(print->brim.flatten().entities.size() == 12);
             }
         }
     }
