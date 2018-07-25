@@ -186,23 +186,23 @@ PrintGCode::output()
             p.emplace_back(obj->_shifted_copies.at(0));
 
         std::vector<size_t> z(100); // preallocate with 100 layers
-        std::map<coordf_t, LayerPtrs> layers {};
+        std::map<coord_t, LayerPtrs> layers {};
         for (size_t idx = 0U; idx < print.objects.size(); ++idx) {
             const auto& object {*(objects.at(idx))};
             // sort layers by Z into buckets
-            for (auto* layer : object.layers) {
-                if (layers.count(layer->print_z) == 0) { // initialize bucket if empty
-                    layers[layer->print_z] = LayerPtrs();
-                    z.emplace_back(layer->print_z);
+            for (Layer* layer : object.layers) {
+                if (layers.count(scale_(layer->print_z)) == 0) { // initialize bucket if empty
+                    layers[scale_(layer->print_z)] = LayerPtrs();
+                    z.emplace_back(scale_(layer->print_z));
                 }
-                layers[layer->print_z].emplace_back(layer);
+                layers[scale_(layer->print_z)].emplace_back(layer);
             }
             for (Layer* layer : object.support_layers) { // don't use auto here to not have to cast later
-                if (layers.count(layer->print_z) == 0) { // initialize bucket if empty
-                    layers[layer->print_z] = LayerPtrs();
-                    z.emplace_back(layer->print_z);
+                if (layers.count(scale_(layer->print_z)) == 0) { // initialize bucket if empty
+                    layers[scale_(layer->print_z)] = LayerPtrs();
+                    z.emplace_back(scale_(layer->print_z));
                 }
-                layers[layer->print_z].emplace_back(layer);
+                layers[scale_(layer->print_z)].emplace_back(layer);
             }
         }
 
@@ -211,7 +211,7 @@ PrintGCode::output()
         
         //  call process_layers in the order given by obj_idx
         for (const auto& print_z : z) {
-            for (const auto idx : obj_idx) {
+            for (const auto& idx : obj_idx) {
                 for (const auto* layer : layers.at(print_z)) {
                     this->process_layer(idx, layer, layer->object()->_shifted_copies);
                 }
@@ -383,7 +383,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     // (not along interlaced support material layers)
     if ((print.has_infinite_skirt() || (_skirt_done.rbegin())->first < print.config.skirt_height)
         && typeid(layer) != typeid(SupportLayer*)
-        && _skirt_done.count(layer->print_z) > 0
+        && _skirt_done.count(scale_(layer->print_z)) > 0
         && layer->id() < static_cast<size_t>(obj.config.raft_layers)) {
 
         gcodegen.set_origin(Pointf(0,0));
@@ -427,7 +427,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
 
         }
 
-        this->_skirt_done[layer->print_z] = true; 
+        this->_skirt_done[scale_(layer->print_z)] = true; 
         gcodegen.avoid_crossing_perimeters.use_external_mp = false;
 
         if (layer->id() == 0) gcodegen.avoid_crossing_perimeters.disable_once = true;
