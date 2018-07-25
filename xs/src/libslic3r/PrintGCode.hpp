@@ -49,7 +49,7 @@ private:
 //    Slic3r::PressureRegulator _pressure_regulator;
 
     /// presence in the array indicates that the 
-    std::map<double, bool> _skirt_done {};
+    std::map<coord_t, bool> _skirt_done {};
     bool _brim_done {false};
     bool _second_layer_things_done {false};
     std::pair<Point, bool> _last_obj_copy {std::pair<Point, bool>(Point(), false)};
