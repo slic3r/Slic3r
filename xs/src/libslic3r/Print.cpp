@@ -99,8 +99,9 @@ Print::process()
 {
     /// No need to call this as we call it as part of prepare_infill()
     /// until we fix the idempotency issue.
-    ///$self->status_cb->(20, "Generating perimeters");
-    ///$_->make_perimeters for @{$self->objects};
+//    if (this->status_cb != nullptr)
+//        this->status_cb(20, "Generating perimeters");
+  //  for(auto& obj : this->objects) { obj->make_perimeters(); }
     if (this->status_cb != nullptr)
         this->status_cb(70, "Infilling layers");
     for(auto& obj : this->objects) { obj->infill(); }
