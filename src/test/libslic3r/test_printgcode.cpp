@@ -6,9 +6,9 @@
 
 using namespace Slic3r::Test;
 
-std::regex perimeters_regex("^G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; perimeter[ ]*$");
-std::regex infill_regex("^G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; infill[ ]*$");
-std::regex skirt_regex("^G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; skirt[ ]*$");
+std::regex perimeters_regex("G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; perimeter");
+std::regex infill_regex("G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; infill");
+std::regex skirt_regex("G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; skirt");
 
 SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
     GIVEN("A default configuration and a print test object") {
