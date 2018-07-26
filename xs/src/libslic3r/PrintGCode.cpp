@@ -392,7 +392,8 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
         gcodegen.avoid_crossing_perimeters.use_external_mp = true;
         
         /// data load 
-        std::vector<size_t> extruder_ids {gcodegen.writer.extruders.size()};
+        std::vector<size_t> extruder_ids;
+        extruder_ids.reserve(gcodegen.writer.extruders.size());
         std::transform(gcodegen.writer.extruders.cbegin(), gcodegen.writer.extruders.cend(), std::back_inserter(extruder_ids), 
                        [] (const std::pair<unsigned int, Extruder>& z) -> std::size_t { return z.second.id; } );
         gcode += gcodegen.set_extruder(extruder_ids.at(0));
