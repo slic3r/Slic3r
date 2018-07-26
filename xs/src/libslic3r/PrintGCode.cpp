@@ -514,9 +514,13 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
         const auto n_slices {layer->slices.size()};
 
         for (auto region_id = 0U; region_id < print.regions.size(); ++region_id) {
-            auto* layerm = layer->get_region(region_id); //or next; TODO: handle error case
-            auto* region = print.get_region(region_id);
-            
+            LayerRegion* layerm;
+            try {
+                layerm = const_cast<LayerRegion*>(layer->get_region(region_id));
+            } catch (std::out_of_range &e) {
+                continue; // if no regions, bail;
+            }
+            auto* region {print.get_region(region_id)};
             // process perimeters
             {
                 auto extruder_id = region->config.perimeter_extruder-1;
