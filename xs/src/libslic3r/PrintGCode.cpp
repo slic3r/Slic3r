@@ -403,8 +403,9 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
             const auto& skirt_flow {print.skirt_flow()};
 
             // distribute skirt loops across all extruders in layer 0
-            auto skirt_loops {print.skirt.entities};
+            auto skirt_loops {print.skirt.flatten().entities};
             for (size_t i = 0; i < skirt_loops.size(); ++i) {
+                
                 // when printing layers > 0 ignore 'min_skirt_length' and 
                 // just use the 'skirts' setting; also just use the current extruder
                 if (layer->id() > 0 && i >= static_cast<size_t>(print.config.skirts)) break; 
