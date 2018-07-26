@@ -339,6 +339,7 @@ public:
     ConfigOptionBool                support_material_with_sheath;
     ConfigOptionFloatOrPercent      support_material_xy_spacing;
     ConfigOptionFloat               xy_size_compensation;
+    ConfigOptionFloat               hole_size_compensation;
     ConfigOptionBool                wipe_into_objects;
 
 protected:
@@ -376,6 +377,7 @@ protected:
         OPT_PTR(support_material_threshold);
         OPT_PTR(support_material_with_sheath);
         OPT_PTR(xy_size_compensation);
+        OPT_PTR(hole_size_compensation);
         OPT_PTR(wipe_into_objects);
     }
 };

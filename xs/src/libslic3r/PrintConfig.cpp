@@ -2210,9 +2210,19 @@ PrintConfigDef::PrintConfigDef()
     def->category = L("Advanced");
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
                    "(negative = inwards, positive = outwards). This might be useful "
-                   "for fine-tuning hole sizes.");
+                   "for fine-tuning sizes.");
     def->sidetext = L("mm");
     def->cli = "xy-size-compensation=f";
+    def->default_value = new ConfigOptionFloat(0);
+
+    def = this->add("hole_size_compensation", coFloat);
+    def->label = L("Holes");
+    def->category = L("Advanced");
+    def->tooltip = L("The convex holes will be grown in the XY plane by the configured value"
+                   " (negative = inwards, positive = outwards, should be positive as the holes are always a bit smaller)."
+                   " This might be useful for fine-tuning hole sizes.");
+    def->sidetext = L("mm");
+    def->cli = "hole-size-compensation=f";
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("z_offset", coFloat);

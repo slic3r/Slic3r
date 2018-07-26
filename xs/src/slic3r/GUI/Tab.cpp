@@ -963,6 +963,7 @@ void TabPrint::build()
 		optgroup->append_single_option_line("clip_multipart_objects");
 		optgroup->append_single_option_line("elefant_foot_compensation");
 		optgroup->append_single_option_line("xy_size_compensation");
+		optgroup->append_single_option_line("hole_size_compensation");
 //		#            optgroup->append_single_option_line("threads");
 		optgroup->append_single_option_line("resolution");
 
