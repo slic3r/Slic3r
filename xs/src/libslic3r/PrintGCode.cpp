@@ -514,9 +514,9 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
         const auto n_slices {layer->slices.size()};
 
         for (auto region_id = 0U; region_id < print.regions.size(); ++region_id) {
-            LayerRegion* layerm;
+            const LayerRegion* layerm;
             try {
-                layerm = const_cast<LayerRegion*>(layer->get_region(region_id));
+                layerm = layer->get_region(region_id); // we promise to be good and not give this to anyone who will modify it
             } catch (std::out_of_range &e) {
                 continue; // if no regions, bail;
             }
