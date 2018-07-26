@@ -115,6 +115,7 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
         }
 
         double total_length = 0;
+        uint32_t nbLines = 0;
         double max_length = 0;
         {
             Lines clipped_lines = intersection_ln(lines, clip_area);
@@ -125,10 +126,11 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
                     double len = line.length();
                     total_length += len;
                     max_length = std::max(max_length, len);
+                    nbLines++;
                 }
             }        
         }
-        if (total_length == 0.)
+        if (total_length == 0. || nbLines == 0)
             continue;
 
         have_coverage = true;
@@ -139,6 +141,7 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
         // $directions_coverage{$angle} = sum(map $_->area, @{$self->coverage($angle)}) // 0;
         // max length of bridged lines
         candidates[i_angle].max_length = max_length;
+        candidates[i_angle].mean_length = total_length / nbLines;
     }
 
     // if no direction produced coverage, then there's no bridge direction
@@ -149,10 +152,12 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
     std::sort(candidates.begin(), candidates.end());
     
     // if any other direction is within extrusion width of coverage, prefer it if shorter
+    // shorter = shorter max length, or if in espilon (10) range, the shorter mean length.
     // TODO: There are two options here - within width of the angle with most coverage, or within width of the currently perferred?
     size_t i_best = 0;
     for (size_t i = 1; i < candidates.size() && candidates[i_best].coverage - candidates[i].coverage < this->spacing; ++ i)
-        if (candidates[i].max_length < candidates[i_best].max_length)
+        if (candidates[i].max_length < candidates[i_best].max_length ||
+            (candidates[i].max_length < candidates[i_best].max_length - 10 && candidates[i].mean_length < candidates[i_best].mean_length))
             i_best = i;
 
     this->angle = candidates[i_best].angle;

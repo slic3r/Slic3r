@@ -1111,7 +1111,7 @@ void Print::_make_wipe_tower()
         float(this->config.wipe_tower_rotation_angle.value), float(this->config.cooling_tube_retraction.value),
         float(this->config.cooling_tube_length.value), float(this->config.parking_pos_retraction.value),
         float(this->config.extra_loading_move.value), float(this->config.wipe_tower_bridging), wipe_volumes,
-        m_tool_ordering.first_extruder());
+        m_tool_ordering.first_extruder(), float(this->config.first_layer_extrusion_width));
 
     //wipe_tower.set_retract();
     //wipe_tower.set_zhop();

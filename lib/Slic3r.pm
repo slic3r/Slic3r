@@ -28,7 +28,7 @@ BEGIN {
     use Config;
     use Moo;
     my $have_threads = $Config{useithreads} && eval "use threads; use threads::shared; use Thread::Queue; 1";
-    die "Slic3r Prusa Edition requires working Perl threads.\n" if ! $have_threads;
+    die "Slic3r++ requires working Perl threads.\n" if ! $have_threads;
     die "threads.pm >= 1.96 is required, please update\n" if $threads::VERSION < 1.96;
     die "Perl threading is broken with this Moo version: " . $Moo::VERSION . "\n" if $Moo::VERSION == 1.003000;
     $debug = 1 if (defined($ENV{'SLIC3R_DEBUGOUT'}) && $ENV{'SLIC3R_DEBUGOUT'} == 1);
