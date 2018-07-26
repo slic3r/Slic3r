@@ -268,7 +268,7 @@ PrintConfigDef::PrintConfigDef()
                    "to compensate for the 1st layer squish aka an Elephant Foot effect. (must be negative = inwards)");
     def->sidetext = L("mm");
     def->cli = "elefant-foot-compensation=f";
-    def->min = 0;
+    def->max = 0;
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("end_gcode", coString);
@@ -910,10 +910,10 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInt(0);
     
     def = this->add("infill_dense_angle", coFloat);
-    def->label = L("angle");
+    def->label = L("Angle");
     def->category = L("Infill");
     def->tooltip = L("Set the Angle of dense infill.");
-    def->sidetext = L("layers");
+    def->sidetext = L("°");
     def->cli = "infill-dense-angle=i";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
@@ -921,7 +921,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("infill_dense_density", coPercent);
     def->gui_type = "f_enum_open";
     def->gui_flags = "show_value";
-    def->label = L("Dense fill density");
+    def->label = L("Density");
     def->category = L("Infill");
     def->tooltip = L("Density of the dense internal infill, expressed in the range 0% - 100%.");
     def->sidetext = L("%");
@@ -957,7 +957,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionPercent(42);
 	
     def = this->add("infill_dense_pattern", coEnum);
-    def->label = L("pattern");
+    def->label = L("Pattern");
     def->category = L("Sparse fill pattern");
     def->tooltip = L("Fill pattern for denser-density sparse infill.");
     def->cli = "dense-fill-pattern=s";
