@@ -414,6 +414,7 @@ public:
     ConfigOptionFloat               infill_dense_angle;
     ConfigOptionPercent             infill_dense_density;
     ConfigOptionEnum<InfillPattern> infill_dense_pattern;
+    ConfigOptionBool                infill_first;
     ConfigOptionBool                overhangs;
     ConfigOptionBool                no_perimeter_unsupported;
     ConfigOptionInt                 min_perimeter_unsupported;
@@ -466,6 +467,7 @@ protected:
         OPT_PTR(infill_dense_angle);
         OPT_PTR(infill_dense_density);
         OPT_PTR(infill_dense_pattern);
+        OPT_PTR(infill_first);
         OPT_PTR(overhangs);
         OPT_PTR(no_perimeter_unsupported);
         OPT_PTR(min_perimeter_unsupported);
@@ -692,7 +694,6 @@ public:
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionInts                first_layer_temperature;
     ConfigOptionFloat               infill_acceleration;
-    ConfigOptionBool                infill_first;
     ConfigOptionInts                max_fan_speed;
     ConfigOptionFloats              max_layer_height;
     ConfigOptionInts                min_fan_speed;
@@ -764,7 +765,6 @@ protected:
         OPT_PTR(first_layer_speed);
         OPT_PTR(first_layer_temperature);
         OPT_PTR(infill_acceleration);
-        OPT_PTR(infill_first);
         OPT_PTR(max_fan_speed);
         OPT_PTR(max_layer_height);
         OPT_PTR(min_fan_speed);

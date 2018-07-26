@@ -1477,13 +1477,9 @@ void GCode::process_layer(
                     for (ObjectByExtruder::Island &island : object_by_extruder.islands) {
                         const auto& by_region_specific = const_cast<LayerTools&>(layer_tools).wiping_extrusions().is_anything_overridden() ? island.by_region_per_copy(copy_id, extruder_id, print_wipe_extrusions) : island.by_region;
 
-                        if (print.config.infill_first) {
-                                gcode += this->extrude_infill(print, by_region_specific);
-                                gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[layer_id]);
-                        } else {
-                                gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[layer_id]);
-                                gcode += this->extrude_infill(print,by_region_specific);
-                        }
+                        gcode += this->extrude_infill(print, by_region_specific, true);
+                        gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[layer_id]);
+                        gcode += this->extrude_infill(print, by_region_specific, false);
                     }
                     if (this->config().gcode_comments) {
                         gcode += ((std::ostringstream&)(std::ostringstream() << "; stop printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_id << "\n")).str();
@@ -2133,13 +2129,15 @@ std::string GCode::extrude_perimeters(const Print &print, const std::vector<Obje
 }
 
 // Chain the paths hierarchically by a greedy algorithm to minimize a travel distance.
-std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region)
+std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region, bool is_infill_first)
 {
     std::string gcode;
     for (const ObjectByExtruder::Island::Region &region : by_region) {
-        m_config.apply(print.regions[&region - &by_region.front()]->config);
-		ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
-		gcode += extrude_entity(chained, "infill");
+        if (print.regions[&region - &by_region.front()]->config.infill_first == is_infill_first) {
+            m_config.apply(print.regions[&region - &by_region.front()]->config);
+            ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
+            gcode += extrude_entity(chained, "infill");
+        }
 	}
 	return gcode;
 }
