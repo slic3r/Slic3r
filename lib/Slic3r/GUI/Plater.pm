@@ -14,6 +14,7 @@ use Wx qw(:button :colour :cursor :dialog :filedialog :keycode :icon :font :id :
 use Wx::Event qw(EVT_BUTTON EVT_TOGGLEBUTTON EVT_COMMAND EVT_KEY_DOWN EVT_LIST_ITEM_ACTIVATED 
     EVT_LIST_ITEM_DESELECTED EVT_LIST_ITEM_SELECTED EVT_LEFT_DOWN EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL 
     EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED);
+use Slic3r::Geometry qw(PI);
 use base 'Wx::Panel';
 
 use constant TB_ADD             => &Wx::NewId;
@@ -45,6 +46,7 @@ use constant FILAMENT_CHOOSERS_SPACING => 0;
 use constant PROCESS_DELAY => 0.5 * 1000; # milliseconds
 
 my $PreventListEvents = 0;
+our $appController;
 
 sub new {
     my ($class, $parent) = @_;
@@ -115,6 +117,8 @@ sub new {
 
         my $model_object = $self->{model}->objects->[$obj_idx];
         my $model_instance = $model_object->instances->[0];
+
+        $self->stop_background_process;
         
         my $variation = $scale / $model_instance->scaling_factor;
         #FIXME Scale the layer height profile?
@@ -123,15 +127,37 @@ sub new {
             $range->[1] *= $variation;
         }
         $_->set_scaling_factor($scale) for @{ $model_object->instances };
+        
+        $self->{list}->SetItem($obj_idx, 2, ($model_object->instances->[0]->scaling_factor * 100) . "%");        
         $object->transform_thumbnail($self->{model}, $obj_idx);
     
         #update print and start background processing
-        $self->stop_background_process;
         $self->{print}->add_model_object($model_object, $obj_idx);
     
         $self->selection_changed(1);  # refresh info (size, volume etc.)
         $self->update;
         $self->schedule_background_process;
+    };
+    
+    # callback to react to gizmo rotate
+    my $on_gizmo_rotate = sub {
+        my ($angle_z) = @_;
+        $self->rotate(rad2deg($angle_z), Z, 'absolute');
+    };
+    
+    # callback to update object's geometry info while using gizmos
+    my $on_update_geometry_info = sub {
+        my ($size_x, $size_y, $size_z, $scale_factor) = @_;
+    
+        my ($obj_idx, $object) = $self->selected_object;
+    
+        if ((defined $obj_idx) && ($self->{object_info_size})) { # have we already loaded the info pane?
+            $self->{object_info_size}->SetLabel(sprintf("%.2f x %.2f x %.2f", $size_x, $size_y, $size_z));
+            my $model_object = $self->{model}->objects->[$obj_idx];
+            if (my $stats = $model_object->mesh_stats) {
+                $self->{object_info_volume}->SetLabel(sprintf('%.2f', $stats->{volume} * $scale_factor**3));
+            }
+        }
     };
     
     # Initialize 3D plater
@@ -151,7 +177,9 @@ sub new {
         Slic3r::GUI::_3DScene::register_on_instance_moved_callback($self->{canvas3D}, $on_instances_moved);
         Slic3r::GUI::_3DScene::register_on_enable_action_buttons_callback($self->{canvas3D}, $enable_action_buttons);
         Slic3r::GUI::_3DScene::register_on_gizmo_scale_uniformly_callback($self->{canvas3D}, $on_gizmo_scale_uniformly);
-#        Slic3r::GUI::_3DScene::enable_gizmos($self->{canvas3D}, 1);
+        Slic3r::GUI::_3DScene::register_on_gizmo_rotate_callback($self->{canvas3D}, $on_gizmo_rotate);
+        Slic3r::GUI::_3DScene::register_on_update_geometry_info_callback($self->{canvas3D}, $on_update_geometry_info);
+        Slic3r::GUI::_3DScene::enable_gizmos($self->{canvas3D}, 1);
         Slic3r::GUI::_3DScene::enable_shader($self->{canvas3D}, 1);
         Slic3r::GUI::_3DScene::enable_force_zoom_to_bed($self->{canvas3D}, 1);
 
@@ -168,7 +196,7 @@ sub new {
                 $self->schedule_background_process;
             } else {
                 # Hide the print info box, it is no more valid.
-                $self->{"print_info_box_show"}->(0);
+                $self->print_info_box_show(0);
             }
         });
 
@@ -203,7 +231,7 @@ sub new {
         if (($preview != $self->{preview3D}) && ($preview != $self->{canvas3D})) {
             $preview->OnActivate if $preview->can('OnActivate');        
         } elsif ($preview == $self->{preview3D}) {
-            $self->{preview3D}->load_print;
+            $self->{preview3D}->reload_print;
             # sets the canvas as dirty to force a render at the 1st idle event (wxWidgets IsShownOnScreen() is buggy and cannot be used reliably)
             Slic3r::GUI::_3DScene::set_as_dirty($self->{preview3D}->canvas);
         } elsif ($preview == $self->{canvas3D}) {
@@ -266,9 +294,9 @@ sub new {
     $self->{right_panel} = Wx::Panel->new($self, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     
     ### Scrolled Window for info boxes
-    my $scrolled_window_sizer = Wx::BoxSizer->new(wxVERTICAL);
+    my $scrolled_window_sizer = $self->{scrolled_window_sizer} = Wx::BoxSizer->new(wxVERTICAL);
     $scrolled_window_sizer->SetMinSize([310, -1]);
-    my $scrolled_window_panel = Wx::ScrolledWindow->new($self->{right_panel}, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    my $scrolled_window_panel = $self->{scrolled_window_panel} = Wx::ScrolledWindow->new($self->{right_panel}, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $scrolled_window_panel->SetSizer($scrolled_window_sizer);
     $scrolled_window_panel->SetScrollbars(1, 1, 1, 1);    
 
@@ -494,34 +522,9 @@ sub new {
             }
         }
 
-        my $print_info_sizer;
-        {
-            my $box = Wx::StaticBox->new($scrolled_window_panel, -1, L("Sliced Info"));
-            $print_info_sizer = Wx::StaticBoxSizer->new($box, wxVERTICAL);
-            $print_info_sizer->SetMinSize([300,-1]);
-            my $grid_sizer = Wx::FlexGridSizer->new(2, 2, 5, 5);
-            $grid_sizer->SetFlexibleDirection(wxHORIZONTAL);
-            $grid_sizer->AddGrowableCol(1, 1);
-            $grid_sizer->AddGrowableCol(3, 1);
-            $print_info_sizer->Add($grid_sizer, 0, wxEXPAND);
-            my @info = (
-                fil_m   => L("Used Filament (m)"),
-                fil_mm3 => L("Used Filament (mm³)"),
-                fil_g   => L("Used Filament (g)"),
-                cost    => L("Cost"),
-                time    => L("Estimated printing time"),
-            );
-            while (my $field = shift @info) {
-                my $label = shift @info;
-                my $text = Wx::StaticText->new($scrolled_window_panel, -1, "$label:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
-                $text->SetFont($Slic3r::GUI::small_font);
-                $grid_sizer->Add($text, 0);
-                
-                $self->{"print_info_$field"} = Wx::StaticText->new($scrolled_window_panel, -1, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-                $self->{"print_info_$field"}->SetFont($Slic3r::GUI::small_font);
-                $grid_sizer->Add($self->{"print_info_$field"}, 0);
-            }
-        }
+        my $print_info_sizer = $self->{print_info_sizer} = Wx::StaticBoxSizer->new(
+                Wx::StaticBox->new($scrolled_window_panel, -1, L("Sliced Info")), wxVERTICAL);
+        $print_info_sizer->SetMinSize([300,-1]);
         
         my $buttons_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $self->{buttons_sizer} = $buttons_sizer;
@@ -542,19 +545,8 @@ sub new {
         $right_sizer->Add($frequently_changed_parameters_sizer, 0, wxEXPAND | wxTOP, 0) if defined $frequently_changed_parameters_sizer;
         $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
         $right_sizer->Add($scrolled_window_panel, 1, wxEXPAND | wxALL, 1);
-        # Callback for showing / hiding the print info box.
-        $self->{"print_info_box_show"} = sub {
-#            if ($right_sizer->IsShown(5) != $_[0]) { 
-#                $right_sizer->Show(5, $_[0]); 
-#                $self->Layout
-#            }
-            if ($scrolled_window_sizer->IsShown(2) != $_[0]) { 
-                $scrolled_window_sizer->Show(2, $_[0]); 
-                $scrolled_window_panel->Layout
-            }
-        };
         # Show the box initially, let it be shown after the slicing is finished.
-        $self->{"print_info_box_show"}->(0);
+        $self->print_info_box_show(0);
 
         $self->{right_panel}->SetSizer($right_sizer);
 
@@ -1054,7 +1046,17 @@ sub rotate {
     
     if ($axis == Z) {
         my $new_angle = deg2rad($angle);
-        $_->set_rotation(($relative ? $_->rotation : 0.) + $new_angle) for @{ $model_object->instances };
+        foreach my $inst (@{ $model_object->instances }) {
+            my $rotation = ($relative ? $inst->rotation : 0.) + $new_angle;
+            while ($rotation > 2.0 * PI) {
+                $rotation -= 2.0 * PI;
+            }
+            while ($rotation < 0.0) {
+                $rotation += 2.0 * PI;
+            }
+            $inst->set_rotation($rotation);
+            Slic3r::GUI::_3DScene::update_gizmos_data($self->{canvas3D}) if ($self->{canvas3D});            
+        }
         $object->transform_thumbnail($self->{model}, $obj_idx);
     } else {
         # rotation around X and Y needs to be performed on mesh
@@ -1188,13 +1190,17 @@ sub arrange {
     
     $self->pause_background_process;
     
-    my $bb = Slic3r::Geometry::BoundingBoxf->new_from_points($self->{config}->bed_shape);
-    my $success = $self->{model}->arrange_objects(wxTheApp->{preset_bundle}->full_config->min_object_distance, $bb);
+    # my $bb = Slic3r::Geometry::BoundingBoxf->new_from_points($self->{config}->bed_shape);
+    # my $success = $self->{model}->arrange_objects(wxTheApp->{preset_bundle}->full_config->min_object_distance, $bb);
+    
+    # Update is not implemented in C++ so we cannot call this for now
+    $self->{appController}->arrange_model;
+
     # ignore arrange failures on purpose: user has visual feedback and we don't need to warn him
     # when parts don't fit in print bed
     
     # Force auto center of the aligned grid of of objects on the print bed.
-    $self->update(1);
+    $self->update(0);
 }
 
 sub split_object {
@@ -1256,7 +1262,7 @@ sub async_apply_config {
     $self->{canvas3D}->Refresh if Slic3r::GUI::_3DScene::is_layers_editing_enabled($self->{canvas3D});
 
     # Hide the slicing results if the current slicing status is no more valid.    
-    $self->{"print_info_box_show"}->(0) if $invalidated;
+    $self->print_info_box_show(0) if $invalidated;
 
     if (wxTheApp->{app_config}->get("background_processing")) {    
         if ($invalidated) {
@@ -1574,12 +1580,7 @@ sub on_export_completed {
 
     $self->{print_file} = undef;
     $self->{send_gcode_file} = undef;
-    $self->{"print_info_cost"}->SetLabel(sprintf("%.2f" , $self->{print}->total_cost));
-    $self->{"print_info_fil_g"}->SetLabel(sprintf("%.2f" , $self->{print}->total_weight));
-    $self->{"print_info_fil_mm3"}->SetLabel(sprintf("%.2f" , $self->{print}->total_extruded_volume));
-    $self->{"print_info_time"}->SetLabel($self->{print}->estimated_print_time);
-    $self->{"print_info_fil_m"}->SetLabel(sprintf("%.2f" , $self->{print}->total_used_filament / 1000));
-    $self->{"print_info_box_show"}->(1);
+    $self->print_info_box_show(1);
 
     # this updates buttons status
     $self->object_list_changed;
@@ -1587,6 +1588,51 @@ sub on_export_completed {
     # refresh preview
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+}
+
+# Fill in the "Sliced info" box with the result of the G-code generator.
+sub print_info_box_show {
+    my ($self, $show) = @_;
+    my $scrolled_window_panel = $self->{scrolled_window_panel}; 
+    my $scrolled_window_sizer = $self->{scrolled_window_sizer};
+    return if $scrolled_window_sizer->IsShown(2) == $show;
+
+    if ($show) {
+        my $print_info_sizer = $self->{print_info_sizer};
+        $print_info_sizer->Clear(1);
+        my $grid_sizer = Wx::FlexGridSizer->new(2, 2, 5, 5);
+        $grid_sizer->SetFlexibleDirection(wxHORIZONTAL);
+        $grid_sizer->AddGrowableCol(1, 1);
+        $grid_sizer->AddGrowableCol(3, 1);
+        $print_info_sizer->Add($grid_sizer, 0, wxEXPAND);
+        my @info = (
+            L("Used Filament (m)")
+                => sprintf("%.2f" , $self->{print}->total_used_filament / 1000),
+            L("Used Filament (mm³)")
+                => sprintf("%.2f" , $self->{print}->total_extruded_volume),
+            L("Used Filament (g)"),
+                => sprintf("%.2f" , $self->{print}->total_weight),
+            L("Cost"),
+                => sprintf("%.2f" , $self->{print}->total_cost),
+            L("Estimated printing time (normal mode)")
+                => $self->{print}->estimated_normal_print_time,
+            L("Estimated printing time (silent mode)")
+                => $self->{print}->estimated_silent_print_time
+        );
+        while ( my $label = shift @info) {
+            my $value = shift @info;
+            next if $value eq "N/A";
+            my $text = Wx::StaticText->new($scrolled_window_panel, -1, "$label:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+            $text->SetFont($Slic3r::GUI::small_font);
+            $grid_sizer->Add($text, 0);            
+            my $field = Wx::StaticText->new($scrolled_window_panel, -1, $value, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+            $field->SetFont($Slic3r::GUI::small_font);
+            $grid_sizer->Add($field, 0);
+        }
+    }
+
+    $scrolled_window_sizer->Show(2, $show);
+    $scrolled_window_panel->Layout;
 }
 
 sub do_print {
@@ -1621,7 +1667,7 @@ sub reload_from_disk {
     my $model_object = $self->{model}->objects->[$obj_idx];
     #FIXME convert to local file encoding
     return if !$model_object->input_file
-        || !-e $model_object->input_file;
+        || !-e Slic3r::encode_path($model_object->input_file);
     
     my @new_obj_idx = $self->load_files([$model_object->input_file]);
     return if !@new_obj_idx;
@@ -2056,7 +2102,8 @@ sub object_list_changed {
 
     my $export_in_progress = $self->{export_gcode_output_file} || $self->{send_gcode_file};
     my $model_fits = $self->{canvas3D} ? Slic3r::GUI::_3DScene::check_volumes_outside_state($self->{canvas3D}, $self->{config}) : 1;
-    my $method = ($have_objects && ! $export_in_progress && $model_fits) ? 'Enable' : 'Disable';
+    # $model_fits == 1 -> ModelInstance::PVS_Partly_Outside
+    my $method = ($have_objects && ! $export_in_progress && ($model_fits != 1)) ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
         for grep $self->{"btn_$_"}, qw(reslice export_gcode print send_gcode);
 }
