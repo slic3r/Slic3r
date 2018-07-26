@@ -169,7 +169,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
                opt_key == "clip_multipart_objects"
             || opt_key == "elefant_foot_compensation"
             || opt_key == "support_material_contact_distance" 
-            || opt_key == "xy_size_compensation") {
+            || opt_key == "xy_size_compensation"
+			|| opt_key == "hole_size_compensation") {
             steps.emplace_back(posSlice);
         } else if (
                opt_key == "support_material"
@@ -1575,6 +1576,7 @@ end:
                 Layer *layer = this->layers[layer_id];
                 // Apply size compensation and perform clipping of multi-part objects.
                 float delta = float(scale_(this->config.xy_size_compensation.value));
+                float hole_delta = float(scale_(this->config.hole_size_compensation.value));
                 if (layer_id == 0)
                     delta += float(scale_(this->config.elefant_foot_compensation.value));
                 bool  scale = delta != 0.f;
@@ -1585,7 +1587,8 @@ end:
                         LayerRegion *layerm = layer->regions.front();
                         layerm->slices.set(offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), delta), stInternal);
                     }
-                } else if (scale || clip) {
+                    _offsetHoles(hole_delta, layer->regions.front());
+                } else if (scale || clip || hole_delta != 0.f) {
                     // Multiple regions, growing, shrinking or just clipping one region by the other.
                     // When clipping the regions, priority is given to the first regions.
                     Polygons processed;
@@ -1601,6 +1604,7 @@ end:
                             // Collect the already processed regions to trim the to be processed regions.
                             polygons_append(processed, slices);
                         layerm->slices.set(std::move(slices), stInternal);
+                        _offsetHoles(hole_delta, layerm);
                     }
                 }
                 // Merge all regions' slices to get islands, chain them by a shortest path.
@@ -1608,6 +1612,45 @@ end:
             }
         });
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - make_slices in parallel - end";
+}
+
+void PrintObject::_offsetHoles(float hole_delta, LayerRegion *layerm) {
+    if (hole_delta != 0.f) {
+        ExPolygons& polys = to_expolygons(std::move(layerm->slices.surfaces));
+        ExPolygons new_polys;
+        for (ExPolygon ex_poly : polys) {
+            ExPolygon new_ex_poly(ex_poly);
+            new_ex_poly.holes.clear();
+            for (Polygon hole : ex_poly.holes) {
+                //check if convex to reduce it
+                // check whether first point forms a convex angle
+                bool ok = true;
+                ok = (hole.points.front().ccw_angle(hole.points.back(), *(hole.points.begin() + 1)) <= PI + 0.001);
+                   
+                
+                // check whether points 1..(n-1) form convex angles
+                if (ok)
+                    for (Points::const_iterator p = hole.points.begin() + 1; p != hole.points.end() - 1; ++p) {
+                        ok = (p->ccw_angle(*(p - 1), *(p + 1)) <= PI + 0.001);
+                        if (!ok) break;
+                    }
+
+                // check whether last point forms a convex angle
+                ok &= (hole.points.back().ccw_angle(*(hole.points.end() - 2), hole.points.front()) <= PI + 0.001);
+
+                if (ok) {
+                    for (Polygon newHole : offset(hole, hole_delta)) {
+                        //reverse because it's a hole, not an object
+                        newHole.make_clockwise();
+                        new_ex_poly.holes.push_back(newHole);
+                    }
+                } else
+                    new_ex_poly.holes.push_back(hole);
+            }
+            new_polys.push_back(new_ex_poly);
+        }
+        layerm->slices.set(std::move(new_polys), stInternal);
+    }
 }
 
 std::vector<ExPolygons> PrintObject::_slice_region(size_t region_id, const std::vector<float> &z, bool modifier)

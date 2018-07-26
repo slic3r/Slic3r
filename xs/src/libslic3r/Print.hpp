@@ -194,6 +194,7 @@ public:
     SlicingParameters slicing_parameters() const;
 
     void _slice();
+    void _offsetHoles(float hole_delta, LayerRegion *layerm);
     std::string _fix_slicing_errors();
     void _simplify_slices(double distance);
     void _prepare_infill();

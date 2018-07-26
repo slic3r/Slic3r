@@ -978,6 +978,7 @@ void TabPrint::build()
         line = { _(L("XY compensation")), "" };
         line.append_option(optgroup->get_option("xy_size_compensation"));
         line.append_option(optgroup->get_option("elefant_foot_compensation"));
+        line.append_option(optgroup->get_option("hole_size_compensation"));
         optgroup->append_line(line);
 //		#            optgroup->append_single_option_line("threads");
 		optgroup->append_single_option_line("resolution");
