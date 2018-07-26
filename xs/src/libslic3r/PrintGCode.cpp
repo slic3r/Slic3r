@@ -547,7 +547,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
             // the ExtrusionPath objects of a certain infill "group" (also called "surface"
             // throughout the code). We can redefine the order of such Collections but we have to 
             // do each one completely at once.
-            for(auto* fill : const_cast<LayerRegion*>(layerm)->fills) {
+            for(auto* fill : layerm->fills.flatten().entities) {
                 if(fill->length() == 0) continue;  // this shouldn't happen but first_point() would fail
                 
                 auto extruder_id = fill->is_solid_infill()
