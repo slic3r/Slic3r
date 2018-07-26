@@ -20,6 +20,7 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
             config->set("gcode_comments", true);
             Slic3r::Model model;
             auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+            print->process();
             Slic3r::Test::gcode(gcode, print);
             auto exported {gcode.str()};
             THEN("Some text output is generated.") {
