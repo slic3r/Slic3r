@@ -26,10 +26,12 @@ class ExtrusionEntityCollection : public ExtrusionEntity
 
     /// Operator to convert and flatten this collection to a single vefctor of ExtrusionPaths.
     operator ExtrusionPaths() const;
-    
+   
+    /// This particular ExtrusionEntity is a collection.
     bool is_collection() const {
         return true;
     };
+
     bool can_reverse() const {
         return !this->no_sort;
     };
@@ -58,12 +60,18 @@ class ExtrusionEntityCollection : public ExtrusionEntity
 
     /// Returns a single vector of pointers to all non-collection items contained in this one
     void flatten(ExtrusionEntityCollection* retval) const;
+
+    /// Returns a flattened copy of this ExtrusionEntityCollection. That is, all of the items in its entities vector are not collections.
+    /// You should be iterating over flatten().entities if you are interested in the underlying ExtrusionEntities (and don't care about hierarchy).
     ExtrusionEntityCollection flatten() const;
+
+
     double min_mm3_per_mm() const;
     Polyline as_polyline() const {
         CONFESS("Calling as_polyline() on a ExtrusionEntityCollection");
         return Polyline();
     };
+
     ExtrusionEntitiesPtr::iterator begin() { return entities.begin(); }
     ExtrusionEntitiesPtr::iterator end() { return entities.end(); }
     ExtrusionEntitiesPtr::const_iterator cbegin() const { return entities.cbegin(); }
