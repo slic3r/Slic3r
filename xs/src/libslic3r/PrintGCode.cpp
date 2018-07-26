@@ -525,7 +525,8 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
             {
                 auto extruder_id = region->config.perimeter_extruder-1;
                 // Casting away const just to avoid double dereferences
-                for(auto* perimeter_coll : const_cast<LayerRegion*>(layerm)->perimeters) {
+                for(auto* perimeter_coll : layerm->perimeters.flatten().entities) {
+
                     if(perimeter_coll->length() == 0) continue;  // this shouldn't happen but first_point() would fail
                     
                     // perimeter_coll is an ExtrusionPath::Collection object representing a single slice
