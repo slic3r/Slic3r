@@ -53,12 +53,13 @@ public:
     Polygons simplify_p(double tolerance) const;
     ExPolygons simplify(double tolerance) const;
     void simplify(double tolerance, ExPolygons* expolygons) const;
-    void medial_axis(double max_width, double min_width, ThickPolylines* polylines) const;
+    void medial_axis(const ExPolygon &bounds, double max_width, double min_width, ThickPolylines* polylines) const;
     void medial_axis(double max_width, double min_width, Polylines* polylines) const;
     void get_trapezoids(Polygons* polygons) const;
     void get_trapezoids(Polygons* polygons, double angle) const;
     void get_trapezoids2(Polygons* polygons) const;
     void get_trapezoids2(Polygons* polygons, double angle) const;
+    void get_trapezoids3_half(Polygons* polygons, float spacing) const;
     void triangulate(Polygons* polygons) const;
     void triangulate_pp(Polygons* polygons) const;
     void triangulate_p2t(Polygons* polygons) const;

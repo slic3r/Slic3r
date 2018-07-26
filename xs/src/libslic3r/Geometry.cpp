@@ -839,7 +839,7 @@ void
 MedialAxis::build(ThickPolylines* polylines)
 {
     construct_voronoi(this->lines.begin(), this->lines.end(), &this->vd);
-    
+
     /*
     // DEBUG: dump all Voronoi edges
     {

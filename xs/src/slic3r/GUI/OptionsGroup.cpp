@@ -31,6 +31,8 @@ const t_field& OptionsGroup::build_field(const t_config_option_key& id, const Co
 		m_fields.emplace(id, STDMOVE(Choice::Create<Choice>(parent(), opt, id)));
     } else if (opt.gui_type.compare("slider") == 0) {
     } else if (opt.gui_type.compare("i_spin") == 0) { // Spinctrl
+    } else if (opt.gui_type.compare("legend") == 0) { // StaticText
+		m_fields.emplace(id, STDMOVE(StaticText::Create<StaticText>(parent(), opt, id)));
     } else { 
         switch (opt.type) {
             case coFloatOrPercent:
@@ -86,7 +88,7 @@ const t_field& OptionsGroup::build_field(const t_config_option_key& id, const Co
 		if (!this->m_disabled)
 			this->back_to_sys_value(opt_id);
 	};
-	if (!m_is_tab_opt) {
+	if (!m_show_modified_btns) {
 		field->m_Undo_btn->Hide();
 		field->m_Undo_to_sys_btn->Hide();
 	}
@@ -150,8 +152,15 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
     // Build a label if we have it
 	wxStaticText* label=nullptr;
     if (label_width != 0) {
+		long label_style = staticbox ? 0 : wxALIGN_RIGHT;
+#ifdef __WXGTK__
+		// workaround for correct text align of the StaticBox on Linux
+		// flags wxALIGN_RIGHT and wxALIGN_CENTRE don't work when Ellipsize flags are _not_ given.
+		// Text is properly aligned only when Ellipsize is checked.
+		label_style |= staticbox ? 0 : wxST_ELLIPSIZE_END;
+#endif /* __WXGTK__ */
 		label = new wxStaticText(parent(), wxID_ANY, line.label + (line.label.IsEmpty() ? "" : ":"), 
-							wxDefaultPosition, wxSize(label_width, -1), staticbox ? 0 : wxALIGN_RIGHT);
+							wxDefaultPosition, wxSize(label_width, -1), label_style);
         label->SetFont(label_font);
         label->Wrap(label_width); // avoid a Linux/GTK bug
 		grid_sizer->Add(label, 0, (staticbox ? 0 : wxALIGN_RIGHT | wxRIGHT) | wxALIGN_CENTER_VERTICAL, 5);
@@ -192,7 +201,7 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
 		ConfigOptionDef option = opt.opt;
 		// add label if any
 		if (option.label != "") {
-			wxString str_label = L_str(option.label);
+			wxString str_label = _(option.label);
 //!			To correct translation by context have to use wxGETTEXT_IN_CONTEXT macro from wxWidget 3.1.1
 // 			wxString str_label = (option.label == "Top" || option.label == "Bottom") ?
 // 								wxGETTEXT_IN_CONTEXT("Layers", wxString(option.label.c_str()):
@@ -213,7 +222,7 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
 		
 		// add sidetext if any
 		if (option.sidetext != "") {
-			auto sidetext = new wxStaticText(parent(), wxID_ANY, L_str(option.sidetext), wxDefaultPosition, wxDefaultSize);
+			auto sidetext = new wxStaticText(parent(), wxID_ANY, _(option.sidetext), wxDefaultPosition, wxDefaultSize);
 			sidetext->SetFont(sidetext_font);
 			sizer->Add(sidetext, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, 4);
 		}
@@ -235,7 +244,7 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
 }
 
 Line OptionsGroup::create_single_option_line(const Option& option) const {
-	Line retval{ L_str(option.opt.label), L_str(option.opt.tooltip) };
+	Line retval{ _(option.opt.label), _(option.opt.tooltip) };
     Option tmp(option);
     tmp.opt.label = std::string("");
     retval.append_option(tmp);
@@ -441,7 +450,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		break;
 	case coEnum:{
 		if (opt_key.compare("top_fill_pattern") == 0 || opt_key.compare("bottom_fill_pattern") == 0 ||
-			opt_key.compare("fill_pattern") == 0 ){
+			opt_key.compare("fill_pattern") == 0 || opt_key.compare("infill_dense_pattern") == 0 ){
 			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
 		}
 		else if (opt_key.compare("gcode_flavor") == 0 ){

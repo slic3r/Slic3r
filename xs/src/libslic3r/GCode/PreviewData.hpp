@@ -72,6 +72,7 @@ public:
             Feedrate,
             VolumetricRate,
             Tool,
+            Filament,
             Num_View_Types
         };
 
