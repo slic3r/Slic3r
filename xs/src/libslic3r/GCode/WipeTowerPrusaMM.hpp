@@ -45,7 +45,7 @@ public:
 	// wipe_area	-- space available for one toolchange in mm
 	WipeTowerPrusaMM(float x, float y, float width, float rotation_angle, float cooling_tube_retraction,
                      float cooling_tube_length, float parking_pos_retraction, float extra_loading_move, float bridging,
-                     const std::vector<std::vector<float>>& wiping_matrix, unsigned int initial_tool) :
+                     const std::vector<std::vector<float>>& wiping_matrix, unsigned int initial_tool, float first_layer_width) :
 		m_wipe_tower_pos(x, y),
 		m_wipe_tower_width(width),
 		m_wipe_tower_rotation_angle(rotation_angle),
@@ -58,7 +58,8 @@ public:
         m_extra_loading_move(extra_loading_move),
 		m_bridging(bridging),
         m_current_tool(initial_tool),
-        wipe_volumes(wiping_matrix)
+        wipe_volumes(wiping_matrix),
+        m_brim_width(first_layer_width)
         {}
 
 	virtual ~WipeTowerPrusaMM() {}
