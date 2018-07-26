@@ -1364,7 +1364,7 @@ PrintObject::generate_support_material()
     auto* print { this->_print };
     const auto& config { this->config };
     //prereqs 
-    this->_slice();
+    this->slice();
     if (this->state.is_done(posSupportMaterial)) { return; }
 
     this->state.set_started(posSupportMaterial); 
