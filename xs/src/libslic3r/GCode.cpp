@@ -408,9 +408,10 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
     if (paths.front().is_perimeter()
         && !loop.has(erOverhangPerimeter)
         && loop.length() <= SMALL_PERIMETER_LENGTH
-        && speed == -1)
+        && speed == -1) {
         speed = this->config.get_abs_value("small_perimeter_speed");
         description = "small perimeter";
+    }
     if (paths.front().role == erExternalPerimeter)
         description = std::string("external ") + description;
 
