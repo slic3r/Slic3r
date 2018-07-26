@@ -95,11 +95,18 @@ public:
     
     /// Function to parse value from a string to whatever opt_key is.
     void set(const t_config_option_key& opt_key, const std::string& value);
+
+    void set(const t_config_option_key& opt_key, const char* value) { this->set(opt_key, std::string(value));} 
     
     /// Function to parse value from an integer to whatever opt_key is, if
     /// opt_key is a numeric type. This will throw an exception and do 
     /// nothing if called with an incorrect type.
     void set(const t_config_option_key& opt_key, const int value);
+
+    /// Function to parse value from an boolean to whatever opt_key is, if
+    /// opt_key is a numeric type. This will throw an exception and do 
+    /// nothing if called with an incorrect type.
+    void set(const t_config_option_key& opt_key, const bool value);
     
     /// Function to parse value from an integer to whatever opt_key is, if
     /// opt_key is a numeric type. This will throw an exception and do 

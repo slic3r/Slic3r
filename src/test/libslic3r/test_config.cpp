@@ -48,6 +48,24 @@ SCENARIO("Generic config validation performs as expected.") {
 SCENARIO("Config accessor functions perform as expected.") {
     GIVEN("A config generated from default options") {
         auto config {Slic3r::Config::new_from_defaults()};
+        WHEN("A boolean option is set through the bool interface") {
+            config->set("gcode_comments", true);
+            THEN("The underlying value is set correctly.") {
+                REQUIRE(config->get<ConfigOptionBool>("gcode_comments").getBool() == true);
+            }
+        }
+        WHEN("A boolean option is set through the string interface") {
+            config->set("gcode_comments", "1");
+            THEN("The underlying value is set correctly.") {
+                REQUIRE(config->get<ConfigOptionBool>("gcode_comments").getBool() == true);
+            }
+        }
+        WHEN("A boolean option is set through the int interface") {
+            config->set("gcode_comments", 1);
+            THEN("The underlying value is set correctly.") {
+                REQUIRE(config->get<ConfigOptionBool>("gcode_comments").getBool() == true);
+            }
+        }
         WHEN("A numeric option is set through the string interface") {
             config->set("bed_temperature", "100");
             THEN("The underlying value is set correctly.") {
