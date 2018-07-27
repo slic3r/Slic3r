@@ -186,33 +186,34 @@ PrintGCode::output()
 
         std::vector<size_t> z;
         z.reserve(100); // preallocate with 100 layers
-        std::map<coord_t, LayerPtrs> layers {};
+        std::map<coord_t, std::map<size_t, LayerPtrs > > layers {};
         for (size_t idx = 0U; idx < print.objects.size(); ++idx) {
             const auto& object {*(objects.at(idx))};
             // sort layers by Z into buckets
             for (Layer* layer : object.layers) {
                 if (layers.count(scale_(layer->print_z)) == 0) { // initialize bucket if empty
-                    layers[scale_(layer->print_z)] = LayerPtrs();
+                    
+                    layers[scale_(layer->print_z)] = std::map<size_t, LayerPtrs >();
+                    layers[scale_(layer->print_z)][idx] = LayerPtrs();
                     z.emplace_back(scale_(layer->print_z));
                 }
-                layers[scale_(layer->print_z)].emplace_back(layer);
+                layers[scale_(layer->print_z)][idx].emplace_back(layer);
             }
             for (Layer* layer : object.support_layers) { // don't use auto here to not have to cast later
                 if (layers.count(scale_(layer->print_z)) == 0) { // initialize bucket if empty
-                    layers[scale_(layer->print_z)] = LayerPtrs();
-                    z.emplace_back(scale_(layer->print_z));
+                    layers[scale_(layer->print_z)] = std::map<size_t, LayerPtrs >();
+                    layers[scale_(layer->print_z)][idx] = LayerPtrs();
                 }
-                layers[scale_(layer->print_z)].emplace_back(layer);
+                layers[scale_(layer->print_z)][idx].emplace_back(layer);
             }
         }
 
         // pass the comparator to leave no doubt.
         std::sort(z.begin(), z.end(),  std::less<size_t>());
-        
         //  call process_layers in the order given by obj_idx
         for (const auto& print_z : z) {
             for (const auto& idx : obj_idx) {
-                for (const auto* layer : layers.at(print_z)) {
+                for (const auto* layer : layers[print_z][idx] ) {
                     this->process_layer(idx, layer, layer->object()->_shifted_copies);
                 }
             }
