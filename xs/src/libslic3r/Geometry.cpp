@@ -343,6 +343,69 @@ linint(double value, double oldmin, double oldmax, double newmin, double newmax)
     return (value - oldmin) * (newmax - newmin) / (oldmax - oldmin) + newmin;
 }
 
+/*
+== Perl implementations for methods tested in geometry.t but not translated.  ==
+== The first three are unreachable in the current perl code and the fourth is ==
+== only called from ArcFitting which currently dies before reaching the call. ==
+sub point_in_segment {
+    my ($point, $line) = @_;
+
+    my ($x, $y) = @$point;
+    my $line_p = $line->pp;
+    my @line_x = sort { $a <=> $b } $line_p->[A][X], $line_p->[B][X];
+    my @line_y = sort { $a <=> $b } $line_p->[A][Y], $line_p->[B][Y];
+
+    # check whether the point is in the segment bounding box
+    return 0 unless $x >= ($line_x[0] - epsilon) && $x <= ($line_x[1] + epsilon)
+        && $y >= ($line_y[0] - epsilon) && $y <= ($line_y[1] + epsilon);
+
+    # if line is vertical, check whether point's X is the same as the line
+    if ($line_p->[A][X] == $line_p->[B][X]) {
+        return abs($x - $line_p->[A][X]) < epsilon ? 1 : 0;
+    }
+
+    # calculate the Y in line at X of the point
+    my $y3 = $line_p->[A][Y] + ($line_p->[B][Y] - $line_p->[A][Y])
+        * ($x - $line_p->[A][X]) / ($line_p->[B][X] - $line_p->[A][X]);
+    return abs($y3 - $y) < epsilon ? 1 : 0;
+}
+
+
+# given a $polygon, return the (first) segment having $point
+sub polygon_segment_having_point {
+    my ($polygon, $point) = @_;
+
+    foreach my $line (@{ $polygon->lines }) {
+        return $line if point_in_segment($point, $line);
+    }
+    return undef;
+}
+
+
+# polygon must be simple (non complex) and ccw
+sub polygon_is_convex {
+    my ($points) = @_;
+    for (my $i = 0; $i <= $#$points; $i++) {
+        my $angle = angle3points($points->[$i-1], $points->[$i-2], $points->[$i]);
+        return 0 if $angle < PI;
+    }
+    return 1;
+}
+
+# this assumes a CCW rotation from $p2 to $p3 around $p1
+sub angle3points {
+    my ($p1, $p2, $p3) = @_;
+    # p1 is the center
+
+    my $angle = atan2($p2->[X] - $p1->[X], $p2->[Y] - $p1->[Y])
+              - atan2($p3->[X] - $p1->[X], $p3->[Y] - $p1->[Y]);
+
+    # we only want to return only positive angles
+    return $angle <= 0 ? $angle + 2*PI() : $angle;
+}
+*/
+
+
 class ArrangeItem {
     public:
     Pointf pos;

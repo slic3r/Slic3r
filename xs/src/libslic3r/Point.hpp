@@ -33,17 +33,18 @@ class Point
     public:
     coord_t x;
     coord_t y;
-    Point(coord_t _x = 0, coord_t _y = 0): x(_x), y(_y) {};
-    Point(int _x, int _y): x(_x), y(_y) {};
-    Point(long long _x, long long _y): x(_x), y(_y) {};  // for Clipper
+    constexpr Point(coord_t _x = 0, coord_t _y = 0): x(_x), y(_y) {};
+    constexpr Point(int _x, int _y): x(_x), y(_y) {};
+    constexpr Point(long long _x, long long _y): x(_x), y(_y) {};  // for Clipper
     Point(double x, double y);
-    static Point new_scale(coordf_t x, coordf_t y) {
+    static constexpr Point new_scale(coordf_t x, coordf_t y) {
         return Point(scale_(x), scale_(y));
     };
 
     /// Scale and create a Point from a Pointf.
     static Point new_scale(Pointf p);
     bool operator==(const Point& rhs) const;
+    bool operator!=(const Point& rhs) const { return !(*this == rhs); }
     std::string wkt() const;
     std::string dump_perl() const;
     void scale(double factor);
@@ -102,8 +103,8 @@ class Point3 : public Point
 {
     public:
     coord_t z;
-    explicit Point3(coord_t _x = 0, coord_t _y = 0, coord_t _z = 0): Point(_x, _y), z(_z) {};
-    bool coincides_with(const Point3 &point3) const { return this->x == point3.x && this->y == point3.y && this->z == point3.z; }
+    explicit constexpr Point3(coord_t _x = 0, coord_t _y = 0, coord_t _z = 0): Point(_x, _y), z(_z) {};
+    bool constexpr coincides_with(const Point3 &point3) const { return this->x == point3.x && this->y == point3.y && this->z == point3.z; }
 };
 
 std::ostream& operator<<(std::ostream &stm, const Pointf &pointf);
@@ -113,11 +114,11 @@ class Pointf
     public:
     coordf_t x;
     coordf_t y;
-    explicit Pointf(coordf_t _x = 0, coordf_t _y = 0): x(_x), y(_y) {};
-    static Pointf new_unscale(coord_t x, coord_t y) {
+    explicit constexpr Pointf(coordf_t _x = 0, coordf_t _y = 0): x(_x), y(_y) {};
+    static constexpr Pointf new_unscale(coord_t x, coord_t y) {
         return Pointf(unscale(x), unscale(y));
     };
-    static Pointf new_unscale(const Point &p) {
+    static constexpr Pointf new_unscale(const Point &p) {
         return Pointf(unscale(p.x), unscale(p.y));
     };
 
@@ -141,8 +142,8 @@ class Pointf3 : public Pointf
 {
     public:
     coordf_t z;
-    explicit Pointf3(coordf_t _x = 0, coordf_t _y = 0, coordf_t _z = 0): Pointf(_x, _y), z(_z) {};
-    static Pointf3 new_unscale(coord_t x, coord_t y, coord_t z) {
+    explicit constexpr Pointf3(coordf_t _x = 0, coordf_t _y = 0, coordf_t _z = 0): Pointf(_x, _y), z(_z) {};
+    static constexpr Pointf3 new_unscale(coord_t x, coord_t y, coord_t z) {
         return Pointf3(unscale(x), unscale(y), unscale(z));
     };
     void scale(double factor);

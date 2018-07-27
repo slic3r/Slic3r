@@ -7,8 +7,57 @@
 #include <algorithm>
 
 using namespace Slic3r;
+using namespace std;
 
 SCENARIO( "TriangleMesh: Basic mesh statistics") {
+    GIVEN( "A 20mm cube, built from constexpr std::array" ) {
+        constexpr std::array<Pointf3, 8> vertices { Pointf3(20,20,0), Pointf3(20,0,0), Pointf3(0,0,0), Pointf3(0,20,0), Pointf3(20,20,20), Pointf3(0,20,20), Pointf3(0,0,20), Pointf3(20,0,20) };
+        constexpr std::array<Point3, 12> facets { Point3(0,1,2), Point3(0,2,3), Point3(4,5,6), Point3(4,6,7), Point3(0,4,7), Point3(0,7,1), Point3(1,7,6), Point3(1,6,2), Point3(2,6,5), Point3(2,5,3), Point3(4,0,3), Point3(4,3,5) };
+        auto cube {TriangleMesh(vertices, facets)};
+        cube.repair();
+        
+        THEN( "Volume is appropriate for 20mm square cube.") {
+            REQUIRE(abs(cube.volume() - 20.0*20.0*20.0) < 1e-2);
+        }
+
+        THEN( "Vertices array matches input.") {
+            for (auto i = 0U; i < cube.vertices().size(); i++) {
+                REQUIRE(cube.vertices().at(i) == vertices.at(i));
+            }
+            for (auto i = 0U; i < vertices.size(); i++) {
+                REQUIRE(vertices.at(i) == cube.vertices().at(i));
+            }
+        }
+        THEN( "Vertex count matches vertex array size.") {
+            REQUIRE(cube.facets_count() == facets.size());
+        }
+
+        THEN( "Facet array matches input.") {
+            for (auto i = 0U; i < cube.facets().size(); i++) {
+                REQUIRE(cube.facets().at(i) == facets.at(i));
+            }
+
+            for (auto i = 0U; i < facets.size(); i++) {
+                REQUIRE(facets.at(i) == cube.facets().at(i));
+            }
+        }
+        THEN( "Facet count matches facet array size.") {
+            REQUIRE(cube.facets_count() == facets.size());
+        }
+
+        THEN( "Number of normals is equal to the number of facets.") {
+            REQUIRE(cube.normals().size() == facets.size());
+        }
+
+        THEN( "center() returns the center of the object.") {
+            REQUIRE(cube.center() == Pointf3(10.0,10.0,10.0));
+        }
+
+        THEN( "Size of cube is (20,20,20)") {
+            REQUIRE(cube.size() == Pointf3(20,20,20));
+        }
+
+    }
     GIVEN( "A 20mm cube with one corner on the origin") {
         const Pointf3s vertices { Pointf3(20,20,0), Pointf3(20,0,0), Pointf3(0,0,0), Pointf3(0,20,0), Pointf3(20,20,20), Pointf3(0,20,20), Pointf3(0,0,20), Pointf3(20,0,20) };
         const Point3s facets { Point3(0,1,2), Point3(0,2,3), Point3(4,5,6), Point3(4,6,7), Point3(0,4,7), Point3(0,7,1), Point3(1,7,6), Point3(1,6,2), Point3(2,6,5), Point3(2,5,3), Point3(4,0,3), Point3(4,3,5) };

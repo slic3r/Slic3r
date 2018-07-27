@@ -8,7 +8,11 @@ option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
 option(BUILD_EXTRUDE_TIN "Build and link the extrude-tin application." OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
-set(CMAKE_CXX_FLAGS "-g ${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -DNO_PERL")
+set(CMAKE_CXX_FLAGS_1 "${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -DNO_PERL")
+
+# Flags for debug and release tuning
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 ${CMAKE_CXX_FLAGS_1}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 ${CMAKE_CXX_FLAGS_1}")
 
 if(DEFINED ENV{SLIC3R_VAR_REL})
     set(CMAKE_CXX_FLAGS "-DVAR_REL=$ENV{SLIC3R_VAR_REL}")
@@ -35,13 +39,7 @@ endif()
 
 execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION ERROR_QUIET)
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -DSLIC3R_DEBUG")
 
-if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.3)
-       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-inline-small-functions")
-    endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.3)
-endif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7.0)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -67,8 +65,13 @@ find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
 set(GUI_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/GUI/)
+
 set(TESTDIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
 set(GUI_TESTDIR ${CMAKE_CURRENT_SOURCE_DIR}/test/GUI/)
+
+# directory that contains the dependent non-source files, like models and configurations
+set(TESTFILE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test/inputs/)
+
 
 include_directories(${LIBDIR})
 include_directories(${LIBDIR}/libslic3r)
@@ -92,6 +95,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/ClipperUtils.cpp
     ${LIBDIR}/libslic3r/ConfigBase.cpp
     ${LIBDIR}/libslic3r/Config.cpp
+    ${LIBDIR}/libslic3r/ConditionalGCode.cpp
     ${LIBDIR}/libslic3r/ExPolygon.cpp
     ${LIBDIR}/libslic3r/ExPolygonCollection.cpp
     ${LIBDIR}/libslic3r/Extruder.cpp
@@ -106,6 +110,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Fill/FillGyroid.cpp
     ${LIBDIR}/libslic3r/Flow.cpp
     ${LIBDIR}/libslic3r/GCode.cpp
+    ${LIBDIR}/libslic3r/PrintGCode.cpp
     ${LIBDIR}/libslic3r/GCode/CoolingBuffer.cpp
     ${LIBDIR}/libslic3r/GCode/SpiralVase.cpp
     ${LIBDIR}/libslic3r/GCodeReader.cpp
@@ -160,6 +165,7 @@ add_library(admesh STATIC
 set_property(TARGET admesh PROPERTY C_STANDARD 99)
 
 add_library(clipper STATIC ${LIBDIR}/clipper.cpp)
+
 add_library(expat STATIC
     ${LIBDIR}/expat/xmlparse.c
     ${LIBDIR}/expat/xmlrole.c
@@ -176,8 +182,6 @@ add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/sweep/sweep.cc
 )
 
-
-
 set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/testableframe.cpp
     ${GUI_TESTDIR}/test_harness_gui.cpp
@@ -188,33 +192,67 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_field_numchoice.cpp
     ${GUI_TESTDIR}/test_field_point.cpp
     ${GUI_TESTDIR}/test_field_point3.cpp
+    ${GUI_TESTDIR}/test_field_colorpicker.cpp
+    ${GUI_TESTDIR}/test_field_slider.cpp
+    ${GUI_TESTDIR}/test_optionsgroup.cpp
     ${GUI_TESTDIR}/test_misc_ui.cpp
 )
+
 set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/test_harness.cpp
+    ${TESTDIR}/test_data.cpp
     ${TESTDIR}/libslic3r/test_trianglemesh.cpp
-    ${TESTDIR}/libslic3r/test_support_material.cpp)
+    ${TESTDIR}/libslic3r/test_config.cpp
+    ${TESTDIR}/libslic3r/test_support_material.cpp
+    ${TESTDIR}/libslic3r/test_flow.cpp
+    ${TESTDIR}/libslic3r/test_model.cpp
+    ${TESTDIR}/libslic3r/test_printgcode.cpp
+    ${TESTDIR}/libslic3r/test_print.cpp
+    ${TESTDIR}/libslic3r/test_skirt_brim.cpp
+    ${TESTDIR}/libslic3r/test_test_data.cpp
+    ${TESTDIR}/libslic3r/test_geometry.cpp
+)
 add_executable(slic3r slic3r.cpp)
+target_compile_features(slic3r PUBLIC cxx_std_14)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
 
+if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 3.10)
+cmake_policy(SET CMP0072 NEW)
+endif (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 3.10)
 
-set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_STATIC_RUNTIME OFF)
+find_package(OpenGL)
+
+
+if(SLIC3R_STATIC)
+    set(Boost_USE_STATIC_LIBS ON)
+    set(Boost_USE_STATIC_RUNTIME ON)
+else(SLIC3R_STATIC)
+    set(Boost_USE_STATIC_LIBS OFF)
+    set(Boost_USE_STATIC_RUNTIME OFF)
+endif(SLIC3R_STATIC)
 
 find_library(bsystem_l boost_system log)
-add_library(bsystem SHARED IMPORTED)
+if(SLIC3R_STATIC)
+    add_library(bsystem STATIC IMPORTED)
+else(SLIC3R_STATIC)
+    add_library(bsystem SHARED IMPORTED)
+endif(SLIC3R_STATIC)
 set_target_properties(bsystem PROPERTIES IMPORTED_LOCATION ${bsystem_l})
 find_library(bthread_l boost_thread)
+if(SLIC3R_STATIC)
+    add_library(bthread STATIC IMPORTED)
+else(SLIC3R_STATIC)
 add_library(bthread SHARED IMPORTED)
+endif(SLIC3R_STATIC)
 set_target_properties(bthread PROPERTIES IMPORTED_LOCATION ${bthread_l})
 include_directories(${Boost_INCLUDE_DIRS})
 
-if(${SLIC3R_STATIC})
+if(SLIC3R_STATIC)
     set(wxWidgets_USE_STATIC ON)
-else(${SLIC3R_STATIC})
+else(SLIC3R_STATIC)
     set(wxWidgets_USE_STATIC OFF)
-endif(${SLIC3R_STATIC})
+endif(SLIC3R_STATIC)
 
 set(wxWidgets_USE_UNICODE ON)
 
@@ -259,10 +297,14 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/Dialogs/PrintEditor.cpp
     ${GUI_LIBDIR}/Dialogs/PrinterEditor.cpp
     ${GUI_LIBDIR}/Dialogs/MaterialEditor.cpp
+    ${GUI_LIBDIR}/Dialogs/ObjectCutDialog.cpp
     ${GUI_LIBDIR}/GUI.cpp
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/Plater.cpp
+    ${GUI_LIBDIR}/Scene3D.cpp
     ${GUI_LIBDIR}/Plater/Plate2D.cpp
+    ${GUI_LIBDIR}/Plater/Plate3D.cpp
+    ${GUI_LIBDIR}/Plater/Preview3D.cpp
     ${GUI_LIBDIR}/Plater/PlaterObject.cpp
     ${GUI_LIBDIR}/ProgressStatusBar.cpp
     ${GUI_LIBDIR}/Settings.cpp
@@ -271,10 +313,13 @@ IF(wxWidgets_FOUND)
     ${GUI_LIBDIR}/OptionsGroup/UI_Choice.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Point.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Point3.cpp
+    ${GUI_LIBDIR}/OptionsGroup/UI_Color.cpp
+    ${GUI_LIBDIR}/OptionsGroup/UI_Slider.cpp
+    ${LIBDIR}/slic3r/GUI/3DScene.cpp
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
     #only build GUI lib if building with wx
-    target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES})
+    target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_WX")
 
     if (GUI_BUILD_TESTS)
@@ -310,7 +355,7 @@ IF(wxWidgets_FOUND)
         endif()
         add_executable(gui_test ${UI_TEST_SOURCES}) 
         add_test(NAME TestGUI COMMAND gui_test)
-        target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES} ${LIBSLIC3R_DEPENDS})
+        target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES} ${LIBSLIC3R_DEPENDS} ${OPENGL_LIBRARIES})
     endif()
 ELSE(wxWidgets_FOUND)
     # For convenience. When we cannot continue, inform the user
@@ -376,8 +421,12 @@ if (SLIC3R_BUILD_TESTS)
         target_include_directories(Catch INTERFACE ${CMAKE_BINARY_DIR}/external/Catch/include)
         target_compile_definitions(Catch INTERFACE $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CXX17_UNCAUGHT_EXCEPTION_DEPRECATION_WARNING>)
     endif()
+    include_directories(${TESTDIR})
+    configure_file("${TESTDIR}/test_options.hpp.in" "${TESTDIR}/test_options.hpp")
     add_executable(slic3r_test ${SLIC3R_TEST_SOURCES}) 
     add_test(NAME TestSlic3r COMMAND slic3r_test)
+    target_compile_features(slic3r_test PUBLIC cxx_std_14)
+
     target_link_libraries(slic3r_test PUBLIC libslic3r Catch ${LIBSLIC3R_DEPENDS})
 endif()
 

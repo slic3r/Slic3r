@@ -15,6 +15,8 @@ use Slic3r::Test;
     my $config = Slic3r::Config->new_from_defaults;
     $config->set('perimeter_extrusion_width', '250%');
     ok $config->validate, 'percent extrusion width is validated';
+
+    my $print = Slic3r::Test::init_print('20mm_cube', config => $config, scale => 2);
 }
 
 __END__

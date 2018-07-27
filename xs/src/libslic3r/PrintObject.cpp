@@ -2,6 +2,7 @@
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
+#include "Log.hpp"
 #include <algorithm>
 #include <vector>
 
@@ -170,9 +171,8 @@ PrintObject::clear_layers()
 Layer*
 PrintObject::add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z)
 {
-    Layer* layer = new Layer(id, this, height, print_z, slice_z);
-    layers.push_back(layer);
-    return layer;
+    layers.emplace_back(new Layer(id, this, height, print_z, slice_z));
+    return layers.back();
 }
 
 void
@@ -925,10 +925,10 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
     
     // compose mesh
     TriangleMesh mesh;
-    for (std::vector<int>::const_iterator it = region_volumes.begin();
-        it != region_volumes.end(); ++it) {
+    for (const auto& i : region_volumes) {
         
-        const ModelVolume &volume = *object.volumes[*it];
+        const ModelVolume &volume = *(object.volumes[i]);
+
         if (volume.modifier != modifier) continue;
         
         mesh.merge(volume.mesh);
@@ -952,6 +952,53 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
     return layers;
 }
 
+#ifndef SLIC3RXS
+void
+PrintObject::make_perimeters()
+{
+    if (this->state.is_done(posPerimeters)) return;
+    if (this->typed_slices)
+        this->state.invalidate(posSlice);
+    this->slice(); // take care of prereqs
+    this->_make_perimeters();
+}
+
+void
+PrintObject::slice()
+{
+    auto* print {this->print()};
+    if (this->state.is_done(posSlice)) return;
+    this->state.set_started(posSlice);
+    if (print->status_cb != nullptr) {
+        print->status_cb(10, "Processing triangulated mesh");
+    }
+
+
+    this->_slice(); 
+
+    // detect slicing errors
+    bool warning_thrown = false;
+    for (size_t i = 0U; i < this->layer_count(); ++i) {
+        auto* layer {this->get_layer(i)};
+        if (!layer->slicing_errors) continue;
+        if (!warning_thrown) {
+            Slic3r::Log::warn("PrintObject") << "The model has overlapping or self-intersecting facets. " 
+                                             << "I tried to repair it, however you might want to check " 
+                                             << "the results or repair the input file and retry.\n";
+            warning_thrown = true;
+        }
+    }
+    if (this->layers.size() == 0) {
+        Slic3r::Log::error("PrintObject") << "slice(): " << "No layers were detected. You might want to repair your STL file(s) or check their size or thickness and retry.\n";
+        return; // make this throw an exception instead?
+    }
+
+
+    this->typed_slices = false;
+    this->state.set_done(posSlice);
+}
+
+#endif // SLIC3RXS
 void
 PrintObject::_make_perimeters()
 {
@@ -1095,6 +1142,170 @@ PrintObject::_infill()
     this->state.set_done(posInfill);
 }
 
+#ifndef SLIC3RXS
+void
+PrintObject::prepare_infill()
+{
+    if (this->state.is_done(posInfill)) return;
+    // This prepare_infill() is not really idempotent.
+    // TODO: It should clear and regenerate fill_surfaces at every run 
+    // instead of modifying it in place.
+
+    this->state.invalidate(posPerimeters);
+    this->make_perimeters();
+
+    this->state.set_started(posPrepareInfill);
+
+    // prerequisites
+    this->detect_surfaces_type();
+
+    if (this->print()->status_cb != nullptr) 
+        this->print()->status_cb(30, "Preparing infill");
+    
+
+    // decide what surfaces are to be filled
+    for (auto& layer : this->layers) {
+        for (auto& region : layer->regions) {
+            region->prepare_fill_surfaces();
+        }
+    }
+
+    // this will detect bridges and reverse bridges
+    // and rearrange top/bottom/internal surfaces
+    this->process_external_surfaces();
+
+    // detect which fill surfaces are near external layers
+    // they will be split in internal and internal-solid surfaces
+    this->discover_horizontal_shells();
+    this->clip_fill_surfaces();
+
+    // the following step needs to be done before combination because it may need
+    // to remove only half of the combined infill
+    this->bridge_over_infill();
+
+    // combine fill surfaces to honor the "infill every N layers" option
+    this->combine_infill();
+
+    this->state.set_done(posPrepareInfill);
+}
+
+
+void
+PrintObject::combine_infill()
+{
+    // Work on each region separately.
+    for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id) {
+        const PrintRegion *region = this->print()->regions[region_id];
+        const int every = region->config.infill_every_layers.value;
+        if (every < 2 || region->config.fill_density == 0.)
+            continue;
+        // Limit the number of combined layers to the maximum height allowed by this regions' nozzle.
+        //FIXME limit the layer height to max_layer_height
+        double nozzle_diameter = std::min(
+                this->print()->config.nozzle_diameter.get_at(region->config.infill_extruder.value - 1),
+                this->print()->config.nozzle_diameter.get_at(region->config.solid_infill_extruder.value - 1));
+        // define the combinations
+        std::vector<size_t> combine(this->layers.size(), 0);
+        {
+            double current_height = 0.;
+            size_t num_layers = 0;
+            for (size_t layer_idx = 0; layer_idx < this->layers.size(); ++ layer_idx) {
+                const Layer *layer = this->layers[layer_idx];
+                if (layer->id() == 0)
+                    // Skip first print layer (which may not be first layer in array because of raft).
+                    continue;
+                // Check whether the combination of this layer with the lower layers' buffer
+                // would exceed max layer height or max combined layer count.
+                if (current_height + layer->height >= nozzle_diameter + EPSILON || num_layers >= every) {
+                    // Append combination to lower layer.
+                    combine[layer_idx - 1] = num_layers;
+                    current_height = 0.;
+                    num_layers = 0;
+                }
+                current_height += layer->height;
+                ++ num_layers;
+            }
+
+            // Append lower layers (if any) to uppermost layer.
+            combine[this->layers.size() - 1] = num_layers;
+        }
+
+        // loop through layers to which we have assigned layers to combine
+        for (size_t layer_idx = 0; layer_idx < this->layers.size(); ++ layer_idx) {
+            size_t num_layers = combine[layer_idx];
+            if (num_layers <= 1)
+                continue;
+            // Get all the LayerRegion objects to be combined.
+            std::vector<LayerRegion*> layerms;
+            layerms.reserve(num_layers);
+            for (size_t i = layer_idx + 1 - num_layers; i <= layer_idx; ++ i)
+                layerms.emplace_back(this->layers[i]->regions[region_id]);
+            // We need to perform a multi-layer intersection, so let's split it in pairs.
+            // Initialize the intersection with the candidates of the lowest layer.
+            ExPolygons intersection = to_expolygons(layerms.front()->fill_surfaces.filter_by_type(stInternal));
+            // Start looping from the second layer and intersect the current intersection with it.
+            for (size_t i = 1; i < layerms.size(); ++ i)
+                intersection = intersection_ex(
+                        to_polygons(intersection),
+                        to_polygons(layerms[i]->fill_surfaces.filter_by_type(stInternal)),
+                        false);
+            double area_threshold = layerms.front()->infill_area_threshold();
+            if (! intersection.empty() && area_threshold > 0.)
+                intersection.erase(std::remove_if(intersection.begin(), intersection.end(), 
+                            [area_threshold](const ExPolygon &expoly) { return expoly.area() <= area_threshold; }), 
+                        intersection.end());
+            if (intersection.empty())
+                continue;
+            //            Slic3r::debugf "  combining %d %s regions from layers %d-%d\n",
+            //                scalar(@$intersection),
+            //                ($type == S_TYPE_INTERNAL ? 'internal' : 'internal-solid'),
+            //                $layer_idx-($every-1), $layer_idx;
+            // intersection now contains the regions that can be combined across the full amount of layers,
+            // so let's remove those areas from all layers.
+            Polygons intersection_with_clearance;
+            intersection_with_clearance.reserve(intersection.size());
+            float clearance_offset = 
+                0.5f * layerms.back()->flow(frPerimeter).scaled_width() +
+                // Because fill areas for rectilinear and honeycomb are grown 
+                // later to overlap perimeters, we need to counteract that too.
+                ((region->config.fill_pattern == ipRectilinear   ||
+                  region->config.fill_pattern == ipGrid          ||
+                  region->config.fill_pattern == ipHoneycomb) ? 1.5f : 0.5f) * 
+                layerms.back()->flow(frSolidInfill).scaled_width();
+            for (ExPolygon &expoly : intersection)
+                polygons_append(intersection_with_clearance, offset(expoly, clearance_offset));
+            for (LayerRegion *layerm : layerms) {
+                Polygons internal = to_polygons(layerm->fill_surfaces.filter_by_type(stInternal));
+                layerm->fill_surfaces.remove_type(stInternal);
+                layerm->fill_surfaces.append(diff_ex(internal, intersection_with_clearance, false), stInternal);
+                if (layerm == layerms.back()) {
+                    // Apply surfaces back with adjusted depth to the uppermost layer.
+                    Surface templ(stInternal, ExPolygon());
+                    templ.thickness = 0.;
+                    for (LayerRegion *layerm2 : layerms)
+                        templ.thickness += layerm2->layer()->height;
+                    templ.thickness_layers = (unsigned short)layerms.size();
+                    layerm->fill_surfaces.append(intersection, templ);
+                } else {
+                    // Save void surfaces.
+                    layerm->fill_surfaces.append(
+                            intersection_ex(internal, intersection_with_clearance, false),
+                            stInternalVoid);
+                }
+            }
+        }
+    }
+}
+
+void
+PrintObject::infill()
+{
+    this->prepare_infill();
+    this->_infill();
+}
+
+#endif //SLIC3RXS
+
 SupportMaterial *
 PrintObject::_support_material()
 {
@@ -1146,4 +1357,298 @@ PrintObject::_support_material_flow(FlowRole role)
 
     return support_flow;
 }
+#ifndef SLIC3RXS
+void
+PrintObject::generate_support_material() 
+{
+    auto* print { this->_print };
+    const auto& config { this->config };
+    //prereqs 
+    this->slice();
+    if (this->state.is_done(posSupportMaterial)) { return; }
+
+    this->state.set_started(posSupportMaterial); 
+
+    this->clear_support_layers();
+
+    if ((!config.support_material
+                && config.raft_layers == 0
+                && config.support_material_enforce_layers == 0)
+            || this->layers.size() < 2
+       ) {
+        this->state.set_done(posSupportMaterial);
+        return;
+    }
+    if (print->status_cb != nullptr)
+        print->status_cb(85, "Generating support material");
+
+    this->_support_material()->generate(this);
+
+    this->state.set_done(posSupportMaterial);
+
+    std::stringstream stats {""};
+
+    if (print->status_cb != nullptr)
+        print->status_cb(85, stats.str().c_str());
+
+}
+
+
+void 
+PrintObject::discover_horizontal_shells()
+{
+    auto* print {this->print()};
+    for (size_t region_id = 0U; region_id < print->regions.size(); ++region_id) {
+        for (size_t i = 0; i < this->layer_count(); ++i) {
+            auto* layerm {this->get_layer(i)->regions.at(region_id)};
+            const auto& region_config {layerm->region()->config};
+
+            if (region_config.solid_infill_every_layers() > 0 && region_config.fill_density() > 0
+                && (i % region_config.solid_infill_every_layers()) == 0) {
+                const auto type {region_config.fill_density() == 100 ? stInternalSolid : stInternalBridge };
+                // set the surface type to internal for the types
+                std::for_each(layerm->fill_surfaces.begin(), layerm->fill_surfaces.end(), [type] (Surface& s) { s.surface_type = (s.surface_type == type ? stInternal : s.surface_type); });
+            }
+            this->_discover_external_horizontal_shells(layerm, i, region_id);
+        }
+    }
+}
+
+void
+PrintObject::_discover_external_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id)
+{
+    auto* print {this->print()};
+    const auto& region_config {layerm->region()->config};
+    for (auto& type : { stTop, stBottom, stBottomBridge }) {
+        // find slices of current type for current layer
+        // use slices instead of fill_surfaces because they also include the perimeter area
+        // which needs to be propagated in shells; we need to grow slices like we did for
+        // fill_surfaces though.  Using both ungrown slices and grown fill_surfaces will
+        // not work in some situations, as there won't be any grown region in the perimeter 
+        // area (this was seen in a model where the top layer had one extra perimeter, thus
+        // its fill_surfaces were thinner than the lower layer's infill), however it's the best
+        // solution so far. Growing the external slices by EXTERNAL_INFILL_MARGIN will put
+        // too much solid infill inside nearly-vertical slopes.
+      
+        Polygons solid; 
+        auto tmp {layerm->slices.filter_by_type(type)};
+        polygons_append(solid, tmp);
+        tmp.clear();
+        tmp = layerm->fill_surfaces.filter_by_type(type);
+        polygons_append(solid, tmp);
+
+        if (solid.size() == 0) continue;
+
+        Slic3r::Log::debug("PrintObject") << "Layer " << i << " has " << (type == stTop ? "top" : "bottom") << "surfaces.\n";
+        auto solid_layers { type == stTop ? region_config.top_solid_layers() : region_config.bottom_solid_layers() };
+
+        if (region_config.min_top_bottom_shell_thickness() > 0) {
+            auto current_shell_thick { static_cast<coordf_t>(solid_layers) * this->get_layer(i)->height };
+            const auto& min_shell_thick { region_config.min_top_bottom_shell_thickness() };
+            while (std::abs(min_shell_thick - current_shell_thick) > Slic3r::Geometry::epsilon) {
+                solid_layers++;
+                current_shell_thick = static_cast<coordf_t>(solid_layers) * this->get_layer(i)->height;
+            }
+        }
+        _discover_neighbor_horizontal_shells(layerm, i, region_id, type, solid, solid_layers);
+    }
+}
+
+void
+PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id, const SurfaceType& type, Polygons& solid, const size_t& solid_layers)
+{
+    auto* print {this->print()};
+    const auto& region_config {layerm->region()->config};
+
+    for (int n = (type == stTop ? i-1 : i+1); std::abs(n-int(i)) < solid_layers; (type == stTop ? n-- : n++)) {
+        if (n < 0 || n >= this->layer_count()) continue;
+        Slic3r::Log::debug("PrintObject") << " looking for neighbors on layer " << n << "...\n";
+
+        auto* neighbor_layerm { this->get_layer(n)->regions.at(region_id) };
+        // make a copy so we can use them even after clearing the original collection
+        auto  neighbor_fill_surfaces{ SurfaceCollection(neighbor_layerm->fill_surfaces) };
+        // find intersection between neighbor and current layer's surfaces
+        // intersections have contours and holes
+        Polygons filtered_poly;
+        polygons_append(filtered_poly, neighbor_fill_surfaces.filter_by_type({stInternal, stInternalSolid}));
+        auto new_internal_solid { intersection(solid, filtered_poly , 1 ) };
+        if (new_internal_solid.size() == 0) {
+            // No internal solid needed on this layer. In order to decide whether to continue
+            // searching on the next neighbor (thus enforcing the configured number of solid
+            // layers, use different strategies according to configured infill density:
+            if(region_config.fill_density == 0) {
+                // If user expects the object to be void (for example a hollow sloping vase),
+                // don't continue the search. In this case, we only generate the external solid
+                // shell if the object would otherwise show a hole (gap between perimeters of 
+                // the two layers), and internal solid shells are a subset of the shells found 
+                // on each previous layer.
+                return;
+            } else {
+                // If we have internal infill, we can generate internal solid shells freely.
+                continue;
+            }
+        }
+
+        if (region_config.fill_density == 0) {
+            // if we're printing a hollow object we discard any solid shell thinner
+            // than a perimeter width, since it's probably just crossing a sloping wall
+            // and it's not wanted in a hollow print even if it would make sense when
+            // obeying the solid shell count option strictly (DWIM!)
+            auto margin { neighbor_layerm->flow(frExternalPerimeter).scaled_width()};
+            auto too_narrow { diff(new_internal_solid, offset2(new_internal_solid, -margin, +margin, CLIPPER_OFFSET_SCALE, ClipperLib::jtMiter, 5), 1)}; 
+            if (too_narrow.size() > 0) 
+                new_internal_solid = solid = diff(new_internal_solid, too_narrow);
+        }
+
+        // make sure the new internal solid is wide enough, as it might get collapsed
+        // when spacing is added in Slic3r::Fill
+        {
+            auto margin {3 * layerm->flow(frSolidInfill).scaled_width()};
+
+            // we use a higher miterLimit here to handle areas with acute angles
+            // in those cases, the default miterLimit would cut the corner and we'd
+            // get a triangle in $too_narrow; if we grow it below then the shell
+            // would have a different shape from the external surface and we'd still
+            // have the same angle, so the next shell would be grown even more and so on.
+            auto too_narrow { diff(new_internal_solid, offset2(new_internal_solid, -margin, +margin, CLIPPER_OFFSET_SCALE, ClipperLib::jtMiter, 5), 1) };
+
+            if (too_narrow.size() > 0) {
+                // grow the collapsing parts and add the extra area to  the neighbor layer 
+                // as well as to our original surfaces so that we support this 
+                // additional area in the next shell too
+
+                // make sure our grown surfaces don't exceed the fill area
+                Polygons tmp_internal;
+                for (auto& s : neighbor_fill_surfaces) {
+                    if (s.is_internal() && !s.is_bridge()) tmp_internal.emplace_back(Polygon(s.expolygon)); 
+                }
+                auto grown {intersection(
+                offset(too_narrow, +margin),
+                // Discard bridges as they are grown for anchoring and we cant
+                // remove such anchors. (This may happen when a bridge is being 
+                // anchored onto a wall where little space remains after the bridge
+                // is grown, and that little space is an internal solid shell so 
+                // it triggers this too_narrow logic.)
+                tmp_internal)
+                };
+                new_internal_solid = solid = diff(new_internal_solid, too_narrow);
+            }
+        }
+        // internal-solid are the union of the existing internal-solid surfaces
+        // and new ones
+        
+        Polygons tmp_internal { to_polygons(neighbor_fill_surfaces.filter_by_type(stInternalSolid)) };
+        polygons_append(tmp_internal, neighbor_fill_surfaces.surfaces);
+        auto internal_solid {union_ex(tmp_internal)};
+
+        // subtract intersections from layer surfaces to get resulting internal surfaces
+        tmp_internal = to_polygons(neighbor_fill_surfaces.filter_by_type(stInternal));
+        auto internal { diff_ex(tmp_internal, to_polygons(internal_solid), 1) };
+
+        Slic3r::Log::debug("PrintObject") << "    " << internal_solid.size() << " internal-solid and " << internal.size() << " internal surfaces found\n";
+        // assign resulting internal surfaces to layer
+        neighbor_fill_surfaces.clear();
+        for (const auto& poly : internal) {
+            neighbor_fill_surfaces.surfaces.emplace_back(Surface(stInternal, poly));
+        }
+
+        // assign new internal-solid surfaces to layer
+        for (const auto& poly : internal_solid) {
+            neighbor_fill_surfaces.surfaces.emplace_back(Surface(stInternalSolid, poly));
+        }
+
+        // assign top and bottom surfaces to layer
+        SurfaceCollection tmp_collection;
+        for (auto& s : tmp_collection) {
+            Polygons pp;
+            append_to(pp, (Polygons)s);
+            ExPolygons both_solids;
+            both_solids.reserve(internal_solid.size() + internal.size());
+
+            both_solids.insert(both_solids.end(), internal_solid.begin(), internal_solid.end());
+            both_solids.insert(both_solids.end(), internal.begin(), internal.end());
+
+            auto solid_surfaces { diff_ex(pp, to_polygons(both_solids), 1) };
+            for (auto exp : solid_surfaces) 
+                neighbor_fill_surfaces.surfaces.emplace_back(Surface(s.surface_type, exp));
+        }
+    }
+}
+
+void
+PrintObject::clip_fill_surfaces()
+{
+    if (! this->config.infill_only_where_needed.value ||
+        ! std::any_of(this->print()->regions.begin(), this->print()->regions.end(), 
+            [](const PrintRegion *region) { return region->config.fill_density > 0; }))
+        return;
+
+    // We only want infill under ceilings; this is almost like an
+    // internal support material.
+    // Proceed top-down, skipping the bottom layer.
+    Polygons upper_internal;
+    for (int layer_id = int(this->layers.size()) - 1; layer_id > 0; -- layer_id) {
+        Layer *layer       = this->layers[layer_id];
+        Layer *lower_layer = this->layers[layer_id - 1];
+        // Detect things that we need to support.
+        // Cummulative slices.
+        Polygons slices;
+        for (const ExPolygon &expoly : layer->slices.expolygons)
+            polygons_append(slices, to_polygons(expoly));
+        // Cummulative fill surfaces.
+        Polygons fill_surfaces;
+        // Solid surfaces to be supported.
+        Polygons overhangs;
+        for (const LayerRegion *layerm : layer->regions)
+            for (const Surface &surface : layerm->fill_surfaces.surfaces) {
+                Polygons polygons = to_polygons(surface.expolygon);
+                if (surface.is_solid())
+                    polygons_append(overhangs, polygons);
+                polygons_append(fill_surfaces, std::move(polygons));
+            }
+        Polygons lower_layer_fill_surfaces;
+        Polygons lower_layer_internal_surfaces;
+        for (const LayerRegion *layerm : lower_layer->regions)
+            for (const Surface &surface : layerm->fill_surfaces.surfaces) {
+                Polygons polygons = to_polygons(surface.expolygon);
+                if (surface.surface_type == stInternal || surface.surface_type == stInternalVoid)
+                    polygons_append(lower_layer_internal_surfaces, polygons);
+                polygons_append(lower_layer_fill_surfaces, std::move(polygons));
+            }
+        // We also need to support perimeters when there's at least one full unsupported loop
+        {
+            // Get perimeters area as the difference between slices and fill_surfaces
+            // Only consider the area that is not supported by lower perimeters
+            Polygons perimeters = intersection(diff(slices, fill_surfaces), lower_layer_fill_surfaces);
+            // Only consider perimeter areas that are at least one extrusion width thick.
+            //FIXME Offset2 eats out from both sides, while the perimeters are create outside in.
+            //Should the pw not be half of the current value?
+            float pw = FLT_MAX;
+            for (const LayerRegion *layerm : layer->regions)
+                pw = std::min<float>(pw, layerm->flow(frPerimeter).scaled_width());
+            // Append such thick perimeters to the areas that need support
+            polygons_append(overhangs, offset2(perimeters, -pw, +pw));
+        }
+        // Find new internal infill.
+        polygons_append(overhangs, std::move(upper_internal));
+        upper_internal = intersection(overhangs, lower_layer_internal_surfaces);
+        // Apply new internal infill to regions.
+        for (LayerRegion *layerm : lower_layer->regions) {
+            if (layerm->region()->config.fill_density.value == 0)
+                continue;
+            Polygons internal;
+            for (Surface &surface : layerm->fill_surfaces.surfaces)
+                if (surface.surface_type == stInternal || surface.surface_type == stInternalVoid)
+                    polygons_append(internal, std::move(surface.expolygon));
+            layerm->fill_surfaces.remove_types({ stInternal, stInternalVoid });
+            layerm->fill_surfaces.append(intersection_ex(internal, upper_internal, true), stInternal);
+            layerm->fill_surfaces.append(diff_ex        (internal, upper_internal, true), stInternalVoid);
+            // If there are voids it means that our internal infill is not adjacent to
+            // perimeters. In this case it would be nice to add a loop around infill to
+            // make it more robust and nicer. TODO.
+        }
+    }
+}
+
+#endif // SLIC3RXS
 }

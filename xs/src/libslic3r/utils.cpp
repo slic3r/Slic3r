@@ -1,9 +1,9 @@
 #include "utils.hpp"
 #include <regex>
 #ifndef NO_PERL
-#include <xsinit.h>
+    #include <xsinit.h>
 #else
-#include "Log.hpp"
+    #include "Log.hpp"
 #endif
 
 #include <cstdarg>
@@ -49,4 +49,14 @@ split_at_regex(const std::string& input, const std::string& regex) {
         first{input.begin(), input.end(), re, -1},
         last;
     return {first, last};
+}
+
+std::string _trim_zeroes(std::string in) { return trim_zeroes(in); }
+/// Remove extra zeroes generated from std::to_string on doubles
+std::string trim_zeroes(std::string in) {
+    std::string result {""};
+    std::regex strip_zeroes("(0*)$");
+    std::regex_replace (std::back_inserter(result), in.begin(), in.end(), strip_zeroes, "");
+    if (result.back() == '.') result.append("0");
+    return result;
 }

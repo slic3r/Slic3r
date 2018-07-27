@@ -28,7 +28,7 @@ TriangleMesh::TriangleMesh()
     stl_initialize(&this->stl);
 }
 
-TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& facets )
+TriangleMesh::TriangleMesh(const Pointf3* points, const Point3* facets, size_t n_facets) 
     : repaired(false)
 {
     stl_initialize(&this->stl);
@@ -37,7 +37,7 @@ TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& fa
     stl.stats.type = inmemory;
 
     // count facets and allocate memory
-    stl.stats.number_of_facets = facets.size();
+    stl.stats.number_of_facets = n_facets;
     stl.stats.original_num_facets = stl.stats.number_of_facets;
     stl_allocate(&stl);
 
@@ -73,6 +73,20 @@ TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& fa
 TriangleMesh::TriangleMesh(const TriangleMesh &other)
     : stl(other.stl), repaired(other.repaired)
 {
+    this->clone(other);
+}
+
+TriangleMesh& TriangleMesh::operator= (const TriangleMesh& other)
+{
+    this->stl = other.stl;
+    this->repaired = other.repaired;
+    this->clone(other);
+
+    return *this;
+}
+
+
+void TriangleMesh::clone(const TriangleMesh& other) {
     this->stl.heads = NULL;
     this->stl.tail  = NULL;
     this->stl.error = other.stl.error;
@@ -93,11 +107,23 @@ TriangleMesh::TriangleMesh(const TriangleMesh &other)
         std::copy(other.stl.v_shared, other.stl.v_shared + other.stl.stats.shared_vertices, this->stl.v_shared);
     }
 }
-TriangleMesh& TriangleMesh::operator= (TriangleMesh other)
+
+#ifndef SLIC3RXS
+TriangleMesh::TriangleMesh(TriangleMesh&& other) {
+    this->repaired = std::move(other.repaired);
+    this->stl = std::move(other.stl);
+    stl_initialize(&other.stl);
+}
+
+TriangleMesh& TriangleMesh::operator= (TriangleMesh&& other)
 {
-    this->swap(other);
+    this->repaired = std::move(other.repaired);
+    this->stl = std::move(other.stl);
+    stl_initialize(&other.stl);
+
     return *this;
 }
+#endif
 
 void
 TriangleMesh::swap(TriangleMesh &other)
@@ -388,7 +414,7 @@ Pointf3s TriangleMesh::vertices()
     } else {
         Slic3r::Log::warn("TriangleMesh", "vertices() requires repair()");
     }
-    return std::move(tmp);
+    return tmp;
 }
 
 Point3s TriangleMesh::facets() 
@@ -404,7 +430,7 @@ Point3s TriangleMesh::facets()
     } else {
         Slic3r::Log::warn("TriangleMesh", "facets() requires repair()");
     }
-    return std::move(tmp);
+    return tmp;
 }
 
 Pointf3s TriangleMesh::normals() const
@@ -424,7 +450,7 @@ Pointf3s TriangleMesh::normals() const
 Pointf3 TriangleMesh::size() const
 {
     const auto& sz {stl.stats.size};
-    return std::move(Pointf3(sz.x, sz.y, sz.z));
+    return Pointf3(sz.x, sz.y, sz.z);
 }
 
 
@@ -444,7 +470,7 @@ TriangleMesh::slice(const std::vector<double>& z)
 
     mslicer.slice(z_f, &layers);
 
-    return std::move(layers);
+    return layers;
 }
 
 mesh_stats
@@ -460,13 +486,13 @@ TriangleMesh::stats() const {
     tmp_stats.facets_reversed = this->stl.stats.facets_reversed;
     tmp_stats.backwards_edges = this->stl.stats.backwards_edges;
     tmp_stats.normals_fixed = this->stl.stats.normals_fixed;
-    return std::move(tmp_stats);
+    return tmp_stats;
 }
 
 BoundingBoxf3 TriangleMesh::bb3() const {
     Pointf3 min(this->stl.stats.min.x, this->stl.stats.min.y, this->stl.stats.min.z);
     Pointf3 max(this->stl.stats.max.x, this->stl.stats.max.y, this->stl.stats.max.z);
-    return std::move(BoundingBoxf3(min, max));
+    return BoundingBoxf3(min, max);
 }
 
 
@@ -736,7 +762,7 @@ TriangleMesh::make_cube(double x, double y, double z) {
 
     TriangleMesh mesh(vertices ,facets);
     mesh.repair();
-    return std::move(mesh);
+    return mesh;
 }
 
 // Generate the mesh for a cylinder and return it, using 
@@ -782,7 +808,7 @@ TriangleMesh::make_cylinder(double r, double h, double fa) {
     
     TriangleMesh mesh(vertices, facets);
     mesh.repair();
-    return std::move(mesh);
+    return mesh;
 }
 
 // Generates mesh for a sphere centered about the origin, using the generated angle
@@ -864,7 +890,7 @@ TriangleMesh::make_sphere(double rho, double fa) {
     id++;
     TriangleMesh mesh(vertices, facets);
     mesh.repair();
-    return std::move(mesh);
+    return mesh;
 }
 
 template <Axis A>

@@ -23,3 +23,6 @@ core
 CMakeCache.txt
 *.cmake
 *.exe
+src/test/test_options.hpp
+src/slic3r
+build/*
