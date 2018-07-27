@@ -137,6 +137,9 @@ class Layer {
     void detect_surfaces_type();
     /// Processes the external surfaces
     void process_external_surfaces();
+
+    /// polymorphic id
+    virtual bool is_support() const { return false;}
     
     protected:
     size_t _id;     ///< sequential number of layer, 0-based
@@ -168,6 +171,9 @@ class SupportLayer : public Layer {
     /// Collection of support interface fills.
     /// Populated in SupportMaterial.pm in sub generate_toolpaths
     ExtrusionEntityCollection support_interface_fills;
+
+    /// polymorphic id
+    bool is_support() const override { return true;}
 
     protected:
     /// Constructor

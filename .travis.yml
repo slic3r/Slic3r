@@ -4,12 +4,12 @@ before_install:
 script:
     - bash package/linux/travis-setup.sh
     - if [[ "$BUILD_PL" == false ]]; then mkdir build && cd build; fi
-    - if [[ "$BUILD_PL" == false ]]; then cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON ../src; fi
+    - if [[ "$BUILD_PL" == false ]]; then cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON -DCMAKE_BUILD_TYPE=Release ../src; fi
     - if [[ "$BUILD_PL" == false ]]; then cmake --build .; fi
-    - if [[ "$BUILD_PL" == false ]]; then ctest . -R TestSlic3r; fi
+    - if [[ "$BUILD_PL" == false ]]; then ./slic3r_test -s; fi
     - if [[ "$BUILD_PL" == true ]]; then perlbrew switch slic3r-perl; fi
     - if [[ "$BUILD_PL" == true ]]; then perl ./Build.PL; fi
-#    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ctest . -R TestGUI; fi
+#    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ./gui_test -s; fi
 branches:
   only:
   - master
@@ -21,8 +21,6 @@ addons:
     packages:
     - g++-7
     - gcc-7
-    - g++-4.9
-    - gcc-4.9
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
@@ -50,8 +48,8 @@ matrix:
           install:
             - export BOOST_DIR=$HOME/boost_1_63_0
             - export SLIC3R_STATIC=1
-            - export CXX=g++-4.9
-            - export CC=g++-4.9
+            - export CXX=g++-7
+            - export CC=g++-7
             - source $HOME/perl5/perlbrew/etc/bashrc
           after_success:
             - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
@@ -62,6 +60,7 @@ matrix:
             - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
         - os: linux
           env: 
+            - BUILD_PL=false
             - WXVERSION=pkg
             - CC=gcc-7
             - CXX=g++-7
@@ -84,6 +83,7 @@ matrix:
             - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update -v        ; fi
             - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ccache; fi
           env:
+            - BUILD_PL=false
             - WXVERSION=pkg
             - BOOST_DIR=$HOME/boost_1_63_0
             - DISPLAY=:99.0

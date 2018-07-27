@@ -25,6 +25,10 @@ double rad2deg(double angle);
 double rad2deg_dir(double angle);
 double deg2rad(double angle);
 
+/// Epsilon value
+constexpr double epsilon { 1e-4 };
+constexpr coord_t scaled_epsilon { static_cast<coord_t>(epsilon / SCALING_FACTOR) };
+
 double linint(double value, double oldmin, double oldmax, double newmin, double newmax);
 bool arrange(
     // input

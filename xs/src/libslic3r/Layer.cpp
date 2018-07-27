@@ -248,7 +248,8 @@ void
 Layer::make_fills()
 {
     #ifdef SLIC3R_DEBUG
-    printf("Making fills for layer %zu\n", this->id());
+    Slic3r::Log::debug("Layer") << "Making fills for layer " 
+                                << this->id() << "\n";
     #endif
     
     FOREACH_LAYERREGION(this, it_layerm) {

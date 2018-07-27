@@ -386,7 +386,7 @@ void Plate2D::update_bed_size() {
     const auto& canvas_h {canvas_size.GetHeight()};
     if (canvas_w == 0) return; // Abort early if we haven't drawn canvas yet.
 
-    this->bed_polygon = Slic3r::Polygon(scale(dynamic_cast<ConfigOptionPoints*>(config->optptr("bed_shape"))->values));
+    this->bed_polygon = Slic3r::Polygon(scale(config->get<ConfigOptionPoints>("bed_shape").values));
 
     const auto& polygon = bed_polygon;
 

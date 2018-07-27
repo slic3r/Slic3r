@@ -1,4 +1,5 @@
 #include "misc_ui.hpp"
+#include "utils.hpp"
 #include <wx/stdpaths.h>
 #include <wx/msgdlg.h>
 #include <wx/arrstr.h>
@@ -148,16 +149,10 @@ std::vector<wxString> open_model(wxWindow* parent, wxWindow* top) {
     return tmp;
 }
 
-/// Remove extra zeroes generated from std::to_string on doubles
-std::string trim_zeroes(std::string in) {
-    std::string result {""};
-    std::regex strip_zeroes("(0*)$");
-    std::regex_replace (std::back_inserter(result), in.begin(), in.end(), strip_zeroes, "");
-    if (result.back() == '.') result.append("0");
-    return result;
-}
 
-wxString trim_zeroes(wxString in) { return wxString(trim_zeroes(in.ToStdString())); }
+
+wxString trim_zeroes(wxString in) { return wxString(_trim_zeroes(in.ToStdString())); }
+
 
 }} // namespace Slic3r::GUI
 

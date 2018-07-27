@@ -13,6 +13,7 @@
 #include "BoundingBox.hpp"
 #include "Geometry.hpp"
 #include "Dialogs/AnglePicker.hpp"
+#include "Dialogs/ObjectCutDialog.hpp"
 
 
 namespace Slic3r { namespace GUI {
@@ -88,7 +89,10 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
     canvas3D = new Plate3D(preview_notebook, wxDefaultSize, objects, model, config);
     preview_notebook->AddPage(canvas3D, _("3D"));
 
-    preview3D = new Preview3D(preview_notebook, wxDefaultSize, objects, model, config);
+    canvas3D->on_select_object = std::function<void (ObjIdx obj_idx)>(on_select_object);
+    canvas3D->on_instances_moved = std::function<void ()>(on_instances_moved);
+    
+    preview3D = new Preview3D(preview_notebook, wxDefaultSize, print, objects, model, config);
     preview_notebook->AddPage(preview3D, _("Preview"));
 
     preview2D = new Preview2D(preview_notebook, wxDefaultSize, objects, model, config);
@@ -483,7 +487,7 @@ void Plater::arrange() {
         GetFrame()->statusbar->SetStatusText(_("Nothing to arrange."));
         return; 
     }
-    bool success {this->model->arrange_objects(this->config->min_object_distance(), &bb)};
+    bool success {this->model->arrange_objects(this->config->config().min_object_distance(), &bb)};
 
     if (success) {
         GetFrame()->statusbar->SetStatusText(_("Objects were arranged."));
@@ -494,13 +498,15 @@ void Plater::arrange() {
 }
 
 void Plater::on_model_change(bool force_autocenter) {
+    Log::info(LogChannel, L"Called on_modal_change");
 
     // reload the select submenu (if already initialized)
     {
         auto* menu = this->GetFrame()->plater_select_menu;
 
         if (menu != nullptr) {
-            for (auto* item : menu->GetMenuItems() ) { menu->Delete(item); }
+            auto list = menu->GetMenuItems();
+            for (auto it = list.begin();it!=list.end(); it++) { menu->Delete(*it); }
             for (const auto& obj : this->objects) {
                 const auto idx {obj.identifier};
                 auto name {wxString(obj.name)};
@@ -561,6 +567,7 @@ void Plater::select_object() {
 void Plater::selection_changed() {
     // Remove selection in 2D plater
     this->canvas2D->set_selected(-1, -1);
+    this->canvas3D->selection_changed();
 
     auto obj = this->selected_object();
     bool have_sel {obj != this->objects.end()};
@@ -882,6 +889,13 @@ void Plater::changescale() {
 
 void Plater::object_cut_dialog() {
     //TODO
+    ObjRef obj {this->selected_object()};
+    if (obj == this->objects.end()) return;
+
+    auto* model_object {this->model->objects.at(obj->identifier)};
+    auto cut_dialog = new ObjectCutDialog(nullptr, model_object);
+    cut_dialog->ShowModal();
+    cut_dialog->Destroy();
 }
 
 void Plater::object_layers_dialog() {

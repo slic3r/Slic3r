@@ -7,16 +7,16 @@ if [[ "$BUILD_PL" == true ]]; then
     WXVERSION=302
     if [ ! -e $CACHE/slic3r-perlbrew-5.24.tar.bz2 ]; then
         echo "Downloading http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.travis.tar.bz2 => $CACHE/slic3r-perlbrew-5.24.tar.bz2"
-        curl -L "http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.travis.tar.bz2" -o $CACHE/slic3r-perlbrew-5.24.tar.bz2; 
+        curl -L "http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.gcc7.travis.tar.bz2" -o $CACHE/slic3r-perlbrew-5.24.tar.bz2; 
     fi
 
     if [ ! -e $CACHE/boost-compiled.tar.bz2 ]; then
         echo "Downloading http://www.siusgs.com/slic3r/buildserver/boost_1_63_0.built.gcc-4.9.4-buildserver.tar.bz2 => $CACHE/boost-compiled.tar.bz2"
-        curl -L "http://www.siusgs.com/slic3r/buildserver/boost_1_63_0.built.gcc-4.9.4-buildserver.tar.bz2" -o $CACHE/boost-compiled.tar.bz2
+        curl -L "http://www.siusgs.com/slic3r/buildserver/boost_1_63_0.built.gcc-7.3.0-buildserver.tar.bz2" -o $CACHE/boost-compiled.tar.bz2
     fi
 
     if [ ! -e $CACHE/local-lib-wx${WXVERSION}.tar.bz2 ]; then
-        echo "Downloading http://www.siusgs.com/slic3r/buildserver/slic3r-dependencies.travis-wx${WXVERSION}.tar.bz2 => $CACHE/local-lib-wx${WXVERSION}.tar.bz2"
+        echo "Downloading http://www.siusgs.com/slic3r/buildserver/slic3r-dependencies.gcc7.travis-wx${WXVERSION}.tar.bz2 => $CACHE/local-lib-wx${WXVERSION}.tar.bz2"
         curl -L "http://www.siusgs.com/slic3r/buildserver/slic3r-dependencies.travis-wx${WXVERSION}.tar.bz2" -o $CACHE/local-lib-wx${WXVERSION}.tar.bz2
     fi
 
@@ -42,7 +42,7 @@ else
 
         if [ ! -e $CACHE/boost-compiled.tar.bz2 ]; then
             echo "Downloading http://www.siusgs.com/slic3r/buildserver/boost_1_63_0.built.gcc-4.9.4-buildserver.tar.bz2 => $CACHE/boost-compiled.tar.bz2"
-            curl -L "http://www.siusgs.com/slic3r/buildserver/boost_1_63_0.built.gcc-4.9.4-buildserver.tar.bz2" -o $CACHE/boost-compiled.tar.bz2
+            curl -L "http://www.siusgs.com/slic3r/buildserver/boost_1_63_0.built.gcc-7.3.0-buildserver.tar.bz2" -o $CACHE/boost-compiled.tar.bz2
         fi
             
         tar -C$HOME -xjf $CACHE/boost-compiled.tar.bz2

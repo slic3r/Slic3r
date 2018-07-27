@@ -22,7 +22,24 @@ public:
     Extruder* extruder() const { return this->_extruder; }
     std::string extrusion_axis() const { return this->_extrusion_axis; }
     void apply_print_config(const PrintConfig &print_config);
-    void set_extruders(const std::vector<unsigned int> &extruder_ids);
+
+
+    template <typename Iter>
+    void set_extruders(Iter begin, Iter end) {
+        for (auto i = begin; i != end; ++i)
+            this->extruders.insert( std::pair<unsigned int,Extruder>(*i, Extruder(*i, &this->config)) );
+
+        /*  we enable support for multiple extruder if any extruder greater than 0 is used
+            (even if prints only uses that one) since we need to output Tx commands
+            first extruder has index 0 */
+        this->multiple_extruders = (*std::max_element(begin, end)) > 0;
+    }
+
+    template <typename T>
+    void set_extruders(const std::vector<T> &extruder_ids) { this->set_extruders(extruder_ids.cbegin(), extruder_ids.cend()); }
+    template <typename T>
+    void set_extruders(const std::set<T> &extruder_ids) { this->set_extruders(extruder_ids.cbegin(), extruder_ids.cend()); }
+
     /// Write any notes provided by the user as comments in the gcode header.
     std::string notes();
 
