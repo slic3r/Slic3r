@@ -12,7 +12,7 @@ std::regex perimeters_regex("G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; perimeter");
 std::regex infill_regex("G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; infill");
 std::regex skirt_regex("G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; skirt");
 
-SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
+SCENARIO( "PrintGCode basic functionality") {
     GIVEN("A default configuration and a print test object") {
         auto config {Slic3r::Config::new_from_defaults()};
         auto gcode {std::stringstream("")};
@@ -76,18 +76,18 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
                     final_z = std::max(final_z, static_cast<double>(self.Z)); // record the highest Z point we reach
                 });
                 REQUIRE(final_z == Approx(20.15));
-                std::cerr << exported << "\n";
             }
         }
         WHEN("output is executed with complete objects and two differently-sized meshes") {
             Slic3r::Model model;
             config->set("first_layer_extrusion_width", 0);
+            config->set("first_layer_height", 0.3);
             config->set("support_material", false);
             config->set("raft_layers", 0);
             config->set("complete_objects", true);
             config->set("gcode_comments", true);
             config->set("between_objects_gcode", "; between-object-gcode");
-            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20, TestMesh::overhang}, model, config)};
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20, TestMesh::ipadstand}, model, config)};
             Slic3r::Test::gcode(gcode, print);
             auto exported {gcode.str()};
             THEN("Some text output is generated.") {
@@ -107,6 +107,46 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
             }
             THEN("Between-object-gcode is emitted.") {
                 REQUIRE(exported.find("; between-object-gcode") != std::string::npos);
+            }
+            THEN("final Z height is ~27mm") {
+                double final_z {0.0};
+                auto reader {GCodeReader()};
+                reader.apply_config(print->config);
+                reader.parse(exported, [&final_z] (GCodeReader& self, const GCodeReader::GCodeLine& line) 
+                {
+                    final_z = std::max(final_z, static_cast<double>(self.Z)); // record the highest Z point we reach
+                });
+                REQUIRE(final_z == Approx(30).margin(0.1)); // close enough
+            }
+            THEN("Z height resets on object change") {
+                double final_z {0.0};
+                bool reset {false};
+                auto reader {GCodeReader()};
+                reader.apply_config(print->config);
+                reader.parse(exported, [&final_z, &reset] (GCodeReader& self, const GCodeReader::GCodeLine& line) 
+                {
+                    if (final_z > 0 && std::abs(self.Z - 0.3) < 0.01 ) { // saw higher Z before this, now it's lower
+                        reset = true;
+                    } else {
+                        final_z = std::max(final_z, static_cast<double>(self.Z)); // record the highest Z point we reach
+                    }
+                });
+                REQUIRE(reset == true);
+            }
+            THEN("Shorter object is printed before taller object.") {
+                double final_z {0.0};
+                bool reset {false};
+                auto reader {GCodeReader()};
+                reader.apply_config(print->config);
+                reader.parse(exported, [&final_z, &reset] (GCodeReader& self, const GCodeReader::GCodeLine& line) 
+                {
+                    if (final_z > 0 && std::abs(self.Z - 0.3) < 0.01 ) { 
+                        reset = (final_z > 20.0);
+                    } else {
+                        final_z = std::max(final_z, static_cast<double>(self.Z)); // record the highest Z point we reach
+                    }
+                });
+                REQUIRE(reset == true);
             }
         }
         WHEN("the output is executed with support material") {
