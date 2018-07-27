@@ -164,7 +164,7 @@ void
 SurfaceCollection::remove_type(const SurfaceType type)
 {
     // Use stl remove_if to remove 
-    auto ptr {std::remove_if(surfaces.begin(), surfaces.end(),[type] (Surface& s) { return s.surface_type == type; })};
+    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[type] (Surface& s) { return s.surface_type == type; });
     surfaces.erase(ptr, surfaces.cend());
 }
 
