@@ -12,6 +12,7 @@
 
 #include <string>
 #include <iostream>
+#include <regex>
 
 namespace Slic3r {
 
@@ -66,6 +67,11 @@ private:
 
     // Chain the paths hierarchically by a greedy algorithm to minimize a travel distance.
     std::string _extrude_infill(std::map<size_t,ExtrusionEntityCollection> &by_region);
+
+    /// regular expression to match heater gcodes
+    std::regex bed_temp_regex { std::regex("M(?:190|140)", std::regex_constants::icase)};
+    /// regular expression to match heater gcodes
+    std::regex ex_temp_regex { std::regex("M(?:109|104)", std::regex_constants::icase)};
 };
 
 } // namespace Slic3r

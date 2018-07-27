@@ -110,8 +110,6 @@ PrintGCode::output()
     }
 
     // set bed temperature
-    auto bed_temp_regex { std::regex("M(?:190|140)", std::regex_constants::icase)};
-    auto ex_temp_regex { std::regex("M(?:109|104)", std::regex_constants::icase)};
     auto temp{config.first_layer_bed_temperature.getFloat()};
     if (config.has_heatbed && temp > 0 && std::regex_search(config.start_gcode.getString(), bed_temp_regex)) {
         fh << gcodegen.writer.set_bed_temperature(temp, 1);
