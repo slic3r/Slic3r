@@ -193,7 +193,7 @@ set(UI_TEST_SOURCES
 set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/test_harness.cpp
     ${TESTDIR}/libslic3r/test_trianglemesh.cpp
-        test/libslic3r/test_support_material.cpp)
+    ${TESTDIR}/libslic3r/test_support_material.cpp)
 add_executable(slic3r slic3r.cpp)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_END_STATIC 1)
