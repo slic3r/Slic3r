@@ -765,7 +765,7 @@ SupportMaterial::generate_bottom_interface_layers(const vector<coordf_t> &suppor
         // surface.
         for (int layer_id = 0; layer_id < support_z.size(); layer_id++) {
             auto z = support_z[layer_id];
-            if (!z > top_el.first) // next unless $z > $top_z;
+            if (!(z > top_el.first)) // next unless $z > $top_z;
                 continue;
 
             if (base.count(layer_id) > 0) {
