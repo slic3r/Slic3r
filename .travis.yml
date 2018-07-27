@@ -21,6 +21,8 @@ addons:
     packages:
     - g++-7
     - gcc-7
+    - g++-4.9
+    - gcc-4.9
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
