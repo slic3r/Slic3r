@@ -374,6 +374,16 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
         pp.set("layer_z", layer->print_z);
         pp.set("current_retraction", gcodegen.writer.extruder()->retracted);
 
+        gcode += apply_math(pp.process(print.config.before_layer_gcode.getString()));
+        gcode += "\n";
+    }
+    gcode += gcodegen.change_layer(*layer);
+    if (print.config.layer_gcode.getString().size() > 0) {
+        auto pp {*(gcodegen.placeholder_parser)};
+        pp.set("layer_num", gcodegen.layer_index);
+        pp.set("layer_z", layer->print_z);
+        pp.set("current_retraction", gcodegen.writer.extruder()->retracted);
+
         gcode += apply_math(pp.process(print.config.layer_gcode.getString()));
         gcode += "\n";
     }
