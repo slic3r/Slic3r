@@ -3,8 +3,10 @@
 #include <regex>
 #include "test_data.hpp"
 #include "libslic3r.h"
+#include "GCodeReader.hpp"
 
 using namespace Slic3r::Test;
+using namespace Slic3r;
 
 std::regex perimeters_regex("G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; perimeter");
 std::regex infill_regex("G1 X[-0-9.]* Y[-0-9.]* E[-0-9.]* ; infill");
@@ -18,6 +20,7 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
         WHEN("the output is executed with no support material") {
             config->set("first_layer_extrusion_width", 0);
             config->set("gcode_comments", true);
+            config->set("start_gcode", "");
             Slic3r::Model model;
             auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
             print->process();
@@ -63,6 +66,47 @@ SCENARIO( "PrintGCode basic functionality", "[!mayfail]") {
             THEN("Skirt is emitted.") {
                 std::smatch has_match;
                 REQUIRE(std::regex_search(exported, has_match, skirt_regex));
+            }
+            THEN("final Z height is ~20mm") {
+                double final_z {0.0};
+                auto reader {GCodeReader()};
+                reader.apply_config(print->config);
+                reader.parse(exported, [&final_z] (GCodeReader& self, const GCodeReader::GCodeLine& line) 
+                {
+                    final_z = std::max(final_z, static_cast<double>(self.Z)); // record the highest Z point we reach
+                });
+                REQUIRE(final_z == Approx(20.15));
+                std::cerr << exported << "\n";
+            }
+        }
+        WHEN("output is executed with complete objects and two differently-sized meshes") {
+            Slic3r::Model model;
+            config->set("first_layer_extrusion_width", 0);
+            config->set("support_material", false);
+            config->set("raft_layers", 0);
+            config->set("complete_objects", true);
+            config->set("gcode_comments", true);
+            config->set("between_objects_gcode", "; between-object-gcode");
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20, TestMesh::overhang}, model, config)};
+            Slic3r::Test::gcode(gcode, print);
+            auto exported {gcode.str()};
+            THEN("Some text output is generated.") {
+                REQUIRE(exported.size() > 0);
+            }
+            THEN("Infill is emitted.") {
+                std::smatch has_match;
+                REQUIRE(std::regex_search(exported, has_match, infill_regex));
+            }
+            THEN("Perimeters are emitted.") {
+                std::smatch has_match;
+                REQUIRE(std::regex_search(exported, has_match, perimeters_regex));
+            }
+            THEN("Skirt is emitted.") {
+                std::smatch has_match;
+                REQUIRE(std::regex_search(exported, has_match, skirt_regex));
+            }
+            THEN("Between-object-gcode is emitted.") {
+                REQUIRE(exported.find("; between-object-gcode") != std::string::npos);
             }
         }
         WHEN("the output is executed with support material") {
