@@ -154,6 +154,7 @@ SCENARIO( "PrintGCode basic functionality") {
             config->set("first_layer_extrusion_width", 0);
             config->set("support_material", true);
             config->set("raft_layers", 3);
+            config->set("gcode_comments", true);
             auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
             Slic3r::Test::gcode(gcode, print);
             auto exported {gcode.str()};
@@ -168,6 +169,9 @@ SCENARIO( "PrintGCode basic functionality") {
                 REQUIRE(exported.find("; top solid infill extrusion width") != std::string::npos);
                 REQUIRE(exported.find("; support material extrusion width") != std::string::npos);
                 REQUIRE(exported.find("; first layer extrusion width") == std::string::npos);
+            }
+            THEN("Raft is emitted.") {
+                REQUIRE(exported.find("; raft") != std::string::npos);
             }
         }
         WHEN("the output is executed with a separate first layer extrusion width") {
