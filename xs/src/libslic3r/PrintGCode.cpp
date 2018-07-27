@@ -176,6 +176,58 @@ PrintGCode::output()
     // Do all objects for each layer.
 
     if (config.complete_objects) {
+        // print objects from the smallest to the tallest to avoid collisions
+        // when moving onto next object starting point
+        std::sort(print.objects.begin(), print.objects.end(), [] (const PrintObject* a, const PrintObject* b) {
+            return (a->config.sequential_print_priority < a->config.sequential_print_priority) || (a->size.z < b->size.z);
+        });
+        size_t finished_objects {0};
+        
+        for (size_t obj_idx {0}; obj_idx < print.objects.size(); ++obj_idx) {
+            PrintObject& object {*(this->objects.at(obj_idx))};
+            for (const Point& copy : object._shifted_copies) {
+                if (finished_objects > 0) {
+                    gcodegen.set_origin(Pointf::new_unscale(copy));
+                    gcodegen.enable_cooling_markers = false;
+                    gcodegen.avoid_crossing_perimeters.use_external_mp_once = true;
+                    fh << gcodegen.retract();
+                    fh << gcodegen.travel_to(Point(0,0), erNone, "move to origin position for next object");
+
+                    gcodegen.enable_cooling_markers = true;
+                    // disable motion planner when traveling to first object point
+                    gcodegen.avoid_crossing_perimeters.disable_once = true;
+                }
+                std::vector<Layer*> layers;
+                layers.reserve(object.layers.size() + object.support_layers.size());
+                for (auto l : object.layers) {
+                    layers.emplace_back(l);
+                }
+                for (auto l : object.support_layers) {
+                    layers.emplace_back(static_cast<Layer*>(l));
+                }
+                std::sort(layers.begin(), layers.end(), [] (const Layer* a, const Layer* b) { return a->print_z < b->print_z; });
+                for (Layer* layer : layers) {
+                    // if we are printing the bottom layer of an object, and we have already finished
+                    // another one, set first layer temperatures. this happens before the Z move
+                    // is triggered, so machine has more time to reach such temperatures
+                    if (layer->id() == 0 && finished_objects > 0) {
+                        if (config.first_layer_bed_temperature > 0 &&
+                                config.has_heatbed &&
+                                std::regex_search(config.between_objects_gcode.getString(), bed_temp_regex)) 
+                        {
+                            fh << gcodegen.writer.set_bed_temperature(config.first_layer_bed_temperature);
+                        }
+                        if (std::regex_search(config.between_objects_gcode.getString(), ex_temp_regex)) {
+                            _print_first_layer_temperature(false);
+                        }
+                    }
+                    this->process_layer(obj_idx, layer, Points({copy}));
+                }
+                this->flush_filters();
+                finished_objects++;
+                this->_second_layer_things_done = false;
+            }
+        }
     } else {
         // order objects using a nearest neighbor search
         std::vector<Points::size_type> obj_idx {};
