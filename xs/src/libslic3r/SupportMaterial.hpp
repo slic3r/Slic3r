@@ -1,20 +1,24 @@
 #ifndef slic3r_SupportMaterial_hpp_
 #define slic3r_SupportMaterial_hpp_
 
+#include <algorithm>
+#include <iostream>
+#include <map>
 #include <numeric>
 #include <vector>
-#include <iostream>
-#include <algorithm>
+
 #include "libslic3r.h"
-#include "PrintConfig.hpp"
-#include "Flow.hpp"
-#include "Layer.hpp"
-#include "Geometry.hpp"
-#include "Print.hpp"
+
 #include "ClipperUtils.hpp"
 #include "ExPolygon.hpp"
+#include "Fill/Fill.hpp"
+#include "Flow.hpp"
+#include "Geometry.hpp"
+#include "Layer.hpp"
+#include "Polygon.hpp"
+#include "Print.hpp"
+#include "PrintConfig.hpp"
 #include "SVG.hpp"
-#include <libslic3r/Fill/Fill.hpp>
 
 using namespace std;
 
