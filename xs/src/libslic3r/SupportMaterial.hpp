@@ -1,4 +1,3 @@
-#ifndef SLIC3RXS
 #ifndef slic3r_SupportMaterial_hpp_
 #define slic3r_SupportMaterial_hpp_
 
@@ -168,4 +167,3 @@ private:
 
 #endif
 
-#endif // SLIC3RXS

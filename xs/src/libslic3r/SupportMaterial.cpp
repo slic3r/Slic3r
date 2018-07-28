@@ -1,4 +1,3 @@
-#ifndef SLIC3RXS
 #include "SupportMaterial.hpp"
 
 namespace Slic3r
@@ -1224,4 +1223,3 @@ SupportMaterial::create_circle(coordf_t radius)
 }
 
 }
-#endif // SLIC3RXS
