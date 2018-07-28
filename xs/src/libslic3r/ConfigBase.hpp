@@ -11,7 +11,9 @@
 #include <string>
 #include <vector>
 #include "libslic3r.h"
+#include "utils.hpp"
 #include "Point.hpp"
+#include "Geometry.hpp"
 
 namespace Slic3r {
 
@@ -40,6 +42,8 @@ class ConfigOption {
     virtual double getFloat() const { return 0; };
     virtual bool getBool() const { return false; };
     virtual void setInt(int val) {};
+    virtual void setFloat(double val) {};
+    virtual void setString(std::string val) {};
     virtual std::string getString() const { return ""; };
     friend bool operator== (const ConfigOption &a, const ConfigOption &b);
     friend bool operator!= (const ConfigOption &a, const ConfigOption &b);
@@ -52,6 +56,7 @@ class ConfigOptionSingle : public ConfigOption {
     T value;
     ConfigOptionSingle(T _value) : value(_value) {};
     operator T() const { return this->value; };
+    T operator()() const { return this->value; };
     
     void set(const ConfigOption &option) {
         const ConfigOptionSingle<T>* other = dynamic_cast< const ConfigOptionSingle<T>* >(&option);
@@ -97,21 +102,28 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
     public:
     ConfigOptionFloat() : ConfigOptionSingle<double>(0) {};
     ConfigOptionFloat(double _value) : ConfigOptionSingle<double>(_value) {};
-    ConfigOptionFloat* clone() const { return new ConfigOptionFloat(this->value); };
+    ConfigOptionFloat* clone() const override { return new ConfigOptionFloat(this->value); };
     
-    double getFloat() const { return this->value; };
+    double getFloat() const override { return this->value; };
+    void setFloat(double val) override { this->value = val; }
+    void setInt(int val) override { this->value = val; }
+    std::string getString() const override { return trim_zeroes(std::to_string(this->value)); }
     
-    std::string serialize() const {
+    std::string serialize() const override {
         std::ostringstream ss;
         ss << this->value;
         return ss.str();
     };
     
-    bool deserialize(std::string str, bool append = false) {
+    bool deserialize(std::string str, bool append = false) override {
         std::istringstream iss(str);
         iss >> this->value;
         return !iss.fail();
     };
+
+    /// Floating point values we conpare within some small value for equality.
+    template<typename Y>
+    bool operator==(const Y& other) { return std::abs(value - other) < Slic3r::Geometry::epsilon; }
 };
 
 /// Vector form of template specialization for floating point numbers.
@@ -161,18 +173,19 @@ class ConfigOptionInt : public ConfigOptionSingle<int>
     public:
     ConfigOptionInt() : ConfigOptionSingle<int>(0) {};
     ConfigOptionInt(double _value) : ConfigOptionSingle<int>(_value) {};
-    ConfigOptionInt* clone() const { return new ConfigOptionInt(this->value); };
+    ConfigOptionInt* clone() const override { return new ConfigOptionInt(this->value); };
     
-    int getInt() const { return this->value; };
-    void setInt(int val) { this->value = val; };
+    int getInt() const override { return this->value; };
+    void setInt(int val) override { this->value = val; };
+    std::string getString() const override { return std::to_string(this->value); }
     
-    std::string serialize() const {
+    std::string serialize() const override {
         std::ostringstream ss;
         ss << this->value;
         return ss.str();
     };
     
-    bool deserialize(std::string str, bool append = false) {
+    bool deserialize(std::string str, bool append = false) override {
         std::istringstream iss(str);
         iss >> this->value;
         return !iss.fail();
@@ -184,9 +197,9 @@ class ConfigOptionInts : public ConfigOptionVector<int>
     public:
     ConfigOptionInts() {};
     ConfigOptionInts(const std::vector<int> _values) : ConfigOptionVector<int>(_values) {};
-    ConfigOptionInts* clone() const { return new ConfigOptionInts(this->values); };
+    ConfigOptionInts* clone() const override { return new ConfigOptionInts(this->values); };
     
-    std::string serialize() const {
+    std::string serialize() const override {
         std::ostringstream ss;
         for (std::vector<int>::const_iterator it = this->values.begin(); it != this->values.end(); ++it) {
             if (it - this->values.begin() != 0) ss << ",";
@@ -195,7 +208,7 @@ class ConfigOptionInts : public ConfigOptionVector<int>
         return ss.str();
     };
     
-    std::vector<std::string> vserialize() const {
+    std::vector<std::string> vserialize() const override {
         std::vector<std::string> vv;
         vv.reserve(this->values.size());
         for (std::vector<int>::const_iterator it = this->values.begin(); it != this->values.end(); ++it) {
@@ -206,7 +219,7 @@ class ConfigOptionInts : public ConfigOptionVector<int>
         return vv;
     };
     
-    bool deserialize(std::string str, bool append = false) {
+    bool deserialize(std::string str, bool append = false) override {
         if (!append) this->values.clear();
         std::istringstream is(str);
         std::string item_str;

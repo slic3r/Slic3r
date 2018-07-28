@@ -36,9 +36,22 @@ class TriangleMesh
 {
     public:
     TriangleMesh();
-    TriangleMesh(const Pointf3s &points, const std::vector<Point3> &facets);
+
+    /// Templated constructor to adapt containers that offer .data() and .size()
+    /// First argument is a container (either vector or array) of Pointf3 for the vertex data.
+    /// Second argument is container of facets (currently Point3).
+    template <typename Vertex_Cont, typename Facet_Cont>
+    TriangleMesh(const Vertex_Cont& vertices, const Facet_Cont& facets) : TriangleMesh(vertices.data(), facets.data(), facets.size()) {}
+
     TriangleMesh(const TriangleMesh &other);
-    TriangleMesh& operator= (TriangleMesh other);
+    ///  copy assignment
+    TriangleMesh& operator= (const TriangleMesh& other);
+
+#ifndef SLIC3RXS
+    /// Move assignment
+    TriangleMesh& operator= (TriangleMesh&& other);
+    TriangleMesh(TriangleMesh&& other);
+#endif 
     void swap(TriangleMesh &other);
     ~TriangleMesh();
     void ReadSTLFile(const std::string &input_file);
@@ -137,6 +150,15 @@ class TriangleMesh
     bool repaired;
     
     private:
+
+    /// Private constructor that is called from the public sphere. 
+    /// It doesn't do any bounds checking on points and operates on raw pointers, so we hide it. 
+    /// Other constructors can call this one!
+    TriangleMesh(const Pointf3* points, const Point3* facets, size_t n_facets); 
+
+    /// Perform the mechanics of a stl copy
+    void clone(const TriangleMesh& other);
+
     friend class TriangleMeshSlicer<X>;
     friend class TriangleMeshSlicer<Y>;
     friend class TriangleMeshSlicer<Z>;

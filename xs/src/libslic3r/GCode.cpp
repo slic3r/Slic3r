@@ -234,22 +234,6 @@ GCode::apply_print_config(const PrintConfig &print_config)
 }
 
 void
-GCode::set_extruders(const std::vector<unsigned int> &extruder_ids)
-{
-    this->writer.set_extruders(extruder_ids);
-    
-    // enable wipe path generation if any extruder has wipe enabled
-    this->wipe.enable = false;
-    for (std::vector<unsigned int>::const_iterator it = extruder_ids.begin();
-        it != extruder_ids.end(); ++it) {
-        if (this->config.wipe.get_at(*it)) {
-            this->wipe.enable = true;
-            break;
-        }
-    }
-}
-
-void
 GCode::set_origin(const Pointf &pointf)
 {    
     // if origin increases (goes towards right), last_pos decreases because it goes towards left
@@ -424,9 +408,10 @@ GCode::extrude(ExtrusionLoop loop, std::string description, double speed)
     if (paths.front().is_perimeter()
         && !loop.has(erOverhangPerimeter)
         && loop.length() <= SMALL_PERIMETER_LENGTH
-        && speed == -1)
+        && speed == -1) {
         speed = this->config.get_abs_value("small_perimeter_speed");
         description = "small perimeter";
+    }
     if (paths.front().role == erExternalPerimeter)
         description = std::string("external ") + description;
 

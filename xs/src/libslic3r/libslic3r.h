@@ -38,6 +38,15 @@ namespace Slic3r {
 
 constexpr auto SLIC3R_VERSION = "1.3.1-dev";
 
+#ifndef SLIC3RXS
+#ifndef SLIC3R_BUILD_COMMIT
+#define SLIC3R_BUILD_COMMIT (Unknown revision)
+#endif 
+#define VER1_(x) #x
+#define VER_(x) VER1_(x)
+#define BUILD_COMMIT VER_(SLIC3R_BUILD_COMMIT)
+#endif
+
 typedef long coord_t;
 typedef double coordf_t;
 

@@ -50,7 +50,23 @@ public:
         std::cerr << topic << " DEBUG" << ": ";
         std::cerr << message << std::endl;
     }
+    static std::ostream& error(std::string topic) {
+        std::cerr << topic << "   ERR" << ": ";
+        return std::cerr;
+    }
+    static std::ostream& debug(std::string topic) {
+        std::cerr << topic << " DEBUG" << ": ";
+        return std::cerr;
+    }
 
+    static std::ostream& warn(std::string topic) {
+        std::cerr << topic << "  WARN" << ": ";
+        return std::cerr;
+    }
+    static std::ostream& info(std::string topic) {
+        std::cerr << topic << "  INFO" << ": ";
+        return std::cerr;
+    }
 };
 
 /// Utility debug function to transform a std::vector of anything that 

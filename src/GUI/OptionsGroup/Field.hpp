@@ -18,6 +18,9 @@
 #include "wx/arrstr.h"
 #include "wx/stattext.h"
 #include "wx/sizer.h"
+#include <wx/colour.h>
+#include <wx/clrpicker.h>
+#include <wx/slider.h>
 
 namespace Slic3r { namespace GUI {
 
@@ -127,7 +130,7 @@ public:
 protected:
     virtual std::string LogChannel() override { return "UI_Checkbox"s; }
 
-    void _on_change(std::string opt_id) {
+    void _on_change(std::string opt_id) override {
         if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
             this->on_change(opt_id, this->get_bool());
         }
@@ -241,7 +244,7 @@ public:
 protected:
     virtual std::string LogChannel() override { return "UI_Choice"s; }
 
-    void _on_change(std::string opt_id) {
+    void _on_change(std::string opt_id) override {
         if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
             this->on_change(opt_id, this->get_string());
         }
@@ -283,7 +286,7 @@ protected:
     void _set_value(double value, bool show_value = false);
     void _set_value(std::string value);
 
-    void _on_change(std::string opt_id) {
+    void _on_change(std::string opt_id) override {
         if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
             this->on_change(opt_id, this->get_string());
         }
@@ -298,7 +301,7 @@ public:
 
     UI_Point(wxWindow* _parent, Slic3r::ConfigOptionDef _opt);
     ~UI_Point() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); }
-    std::string get_string();
+    std::string get_string() override;
 
     void set_value(boost::any value) override; //< Implements set_value
 
@@ -347,7 +350,7 @@ class UI_Point3 : public UI_Sizer {
 public:
     UI_Point3(wxWindow* _parent, Slic3r::ConfigOptionDef _opt);
     ~UI_Point3() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); _lbl_z->Destroy(); _ctrl_z->Destroy(); }
-    std::string get_string();
+    std::string get_string() override;
 
     void set_value(boost::any value) override; //< Implements set_value
 
@@ -393,6 +396,68 @@ private:
     void _set_value(Slic3r::Pointf3 value);
     void _set_value(std::string value);
 
+};
+
+class UI_Color : public UI_Window { 
+public:
+    UI_Color(wxWindow* parent, Slic3r::ConfigOptionDef _opt );  
+    ~UI_Color() { _picker->Destroy(); }
+    wxColourPickerCtrl* picker() { return this->_picker; }
+
+    void set_value(boost::any value) override;
+    std::string get_string() override; 
+    std::function<void (const std::string&, const std::string&)> on_change {nullptr};
+protected:
+    virtual std::string LogChannel() override { return "UI_Color"s; }
+    void _on_change(std::string opt_id) override {
+        if (!this->disable_change_event && this->_picker->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, _picker->GetColour().GetAsString(wxC2S_HTML_SYNTAX).ToStdString());
+        }
+    }
+private:
+    wxColour _string_to_color(const std::string& _color);
+    wxColourPickerCtrl* _picker {nullptr};
+};
+
+class UI_Slider : public UI_Sizer { 
+public:
+    UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt, size_t scale = 10);  
+
+    ~UI_Slider();
+
+    void set_value(boost::any value) override;
+    std::string get_string() override;
+    double get_double() override;
+    int get_int() override;
+
+    void enable() override;
+    void disable() override;
+
+    /// change the min/max of the built-in slider
+    template <typename T> void set_range(T min, T max);
+
+    /// Change the scale of the slider bar. Return value from get_X functions does not change.
+    void set_scale(size_t new_scale);
+    
+    /// Returns pointer to owned wxSlider.
+    wxSlider* slider() { return _slider;}
+    /// Returns pointer to owned wxTextCtrl.
+    wxTextCtrl* textctrl() { return _textctrl;}
+
+    /// Registered on_change callback.
+    std::function<void (const std::string&, const double&)> on_change {nullptr};
+protected:
+    virtual std::string LogChannel() override { return "UI_Slider"s; }
+private:
+    void _on_change(std::string opt_id) override {
+        if (!this->disable_change_event && this->_slider->IsEnabled() && this->on_change != nullptr) {
+            this->on_change(opt_id, _slider->GetValue() / _scale);
+        }
+    }
+    void _update_textctrl();
+    wxTextCtrl* _textctrl {nullptr};
+    wxSlider* _slider {nullptr};
+    size_t _scale {10};
 };
 
 } } // Namespace Slic3r::GUI

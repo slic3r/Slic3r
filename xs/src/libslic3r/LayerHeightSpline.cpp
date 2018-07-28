@@ -176,12 +176,14 @@ bool LayerHeightSpline::_updateBSpline()
     this->_spline_layers.push_back(this->_spline_layers.back()+1);
 
     this->_spline_layer_heights = this->_layer_heights;
-    this->_spline_layer_heights[0] = this->_spline_layer_heights[1]; // override fixed first layer height with first "real" layer
+
+    if (this->_layer_heights.size() > 1)
+        this->_spline_layer_heights.at(0) = this->_spline_layer_heights.at(1); // override fixed first layer height with first "real" layer
     this->_spline_layer_heights.push_back(this->_spline_layer_heights.back());
 
-    this->_layer_height_spline.reset(new BSpline<double>(&this->_spline_layers[0],
+    this->_layer_height_spline.reset(new BSpline<double>(&this->_spline_layers.at(0),
             this->_spline_layers.size(),
-            &this->_spline_layer_heights[0],
+            &this->_spline_layer_heights.at(0),
             0,
             1,
             0)
