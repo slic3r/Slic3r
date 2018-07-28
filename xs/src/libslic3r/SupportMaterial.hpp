@@ -79,7 +79,7 @@ public:
     void generate_toolpaths(PrintObject *object,
                             map<coordf_t, Polygons> overhang,
                             map<coordf_t, Polygons> contact,
-                            map<int, Polygons> interface,
+                            map<int, Polygons> _interface,
                             map<int, Polygons> base);
 
     /// Generate support material for the given print object.
@@ -100,7 +100,7 @@ public:
 
     map<int, Polygons> generate_base_layers(vector<coordf_t> support_z,
                                             map<coordf_t, Polygons> contact,
-                                            map<int, Polygons> interface,
+                                            map<int, Polygons> _interface,
                                             map<coordf_t, Polygons> top);
 
     map<int, Polygons> generate_interface_layers(vector<coordf_t> support_z,
@@ -110,7 +110,7 @@ public:
     void generate_bottom_interface_layers(const vector<coordf_t> &support_z,
                                           map<int, Polygons> &base,
                                           map<coordf_t, Polygons> &top,
-                                          map<int, Polygons> &interface);
+                                          map<int, Polygons> &_interface);
 
     coordf_t contact_distance(coordf_t layer_height, coordf_t nozzle_diameter);
 
@@ -158,7 +158,7 @@ private:
     PrintObject *object;
     map<coordf_t, Polygons> overhang;
     map<coordf_t, Polygons> contact;
-    map<int, Polygons> interface;
+    map<int, Polygons> _interface;
     map<int, Polygons> base;
 
 };
