@@ -80,6 +80,7 @@ matrix:
             - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
             - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
         - os: osx
+          osx_image: xcode9.4
           before_install:
             - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
             - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update -v        ; fi
