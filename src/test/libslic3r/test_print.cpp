@@ -75,26 +75,23 @@ SCENARIO("Print: Brim generation") {
             print->make_brim();
             THEN("Brim Extrusion collection has 3 loops in it") {
                 REQUIRE(print->brim.items_count() == 3);
-                REQUIRE(print->brim.flatten().entities.size() == 3);
             }
         }
         WHEN("Brim is set to 6mm")  {
-            config->set("brim_width", 3);
+            config->set("brim_width", 6);
             auto print {Slic3r::Test::init_print({m}, model, config)};
             print->make_brim();
             THEN("Brim Extrusion collection has 6 loops in it") {
                 REQUIRE(print->brim.items_count() == 6);
-                REQUIRE(print->brim.flatten().entities.size() == 6);
             }
         }
         WHEN("Brim is set to 6mm, extrusion width 0.5mm")  {
-            config->set("brim_width", 3);
+            config->set("brim_width", 6);
             config->set("first_layer_extrusion_width", 0.5);
             auto print {Slic3r::Test::init_print({m}, model, config)};
             print->make_brim();
             THEN("Brim Extrusion collection has 12 loops in it") {
                 REQUIRE(print->brim.items_count() == 12);
-                REQUIRE(print->brim.flatten().entities.size() == 12);
             }
         }
     }

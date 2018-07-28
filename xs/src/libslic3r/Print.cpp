@@ -114,15 +114,18 @@ Print::process()
 void
 Print::make_brim() 
 {
+    if (this->state.is_done(psBrim)) return;
     // prereqs
     for(auto& obj: this->objects) {
         obj->make_perimeters();
         obj->infill();
         obj->generate_support_material();
     }
-
+    this->state.set_started(psBrim);
     if (this->status_cb != nullptr)
         this->status_cb(88, "Generating brim");
+    this->_make_brim();
+    this->state.set_done(psBrim);
 }
 
 void
