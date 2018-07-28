@@ -47,7 +47,7 @@ SCENARIO("Extrusion width specifics", "[!mayfail]") {
                 bool pass = false;
                 auto avg_E {std::accumulate(E_per_mm_bottom.cbegin(), E_per_mm_bottom.cend(), 0.0) / static_cast<double>(E_per_mm_bottom.size())};
 
-                pass = std::count_if(E_per_mm_bottom.cbegin(), E_per_mm_bottom.cend(), [avg_E] (double v) { return _equiv(v, avg_E, 0.015); }) == 0;
+                pass = (std::count_if(E_per_mm_bottom.cbegin(), E_per_mm_bottom.cend(), [avg_E] (const double& v) { return v == Approx(avg_E); }) == 0);
                 REQUIRE(pass == true);
                 REQUIRE(E_per_mm_bottom.size() > 0); // make sure it actually passed because of extrusion
             }
