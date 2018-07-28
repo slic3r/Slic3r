@@ -8,11 +8,7 @@ option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
 option(BUILD_EXTRUDE_TIN "Build and link the extrude-tin application." OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
-set(CMAKE_CXX_FLAGS_1 "${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -DNO_PERL")
-
-# Flags for debug and release tuning
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 ${CMAKE_CXX_FLAGS_1}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 ${CMAKE_CXX_FLAGS_1}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -DNO_PERL ")
 
 if(DEFINED ENV{SLIC3R_VAR_REL})
     set(CMAKE_CXX_FLAGS "-DVAR_REL=$ENV{SLIC3R_VAR_REL}")
@@ -25,6 +21,11 @@ endif(DEFINED ENV{SLIC3R_VAR_ABS})
 if(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
     set(CMAKE_CXX_FLAGS "-DVAR_ABS_PATH=$ENV{SLIC3R_VAR_ABS_PATH}")
 endif(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
+
+# mingw needs to be told to deal with large objects
+if(MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj") 
+endif()
 
 if(Enable_GUI) 
     set(CMAKE_CXX_FLAGS "-DUSE_WX")
@@ -434,3 +435,9 @@ endif()
 if (BUILD_EXTRUDE_TIN)
     target_link_libraries (extrude-tin libslic3r ${LIBSLIC3R_DEPENDS})
 endif()
+
+
+# Flags for debug and release tuning
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 ${CMAKE_CXX_FLAGS}")
+
