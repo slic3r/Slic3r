@@ -13,7 +13,7 @@ cd C:\projects\slic3r
 rm -r 'C:\Program Files (x86)\Microsoft Vis*\bin' -Force
 
 Add-AppveyorCompilationMessage -Message "Building Slic3r XS"
-wget "http://www.siusgs.com/slic3r/buildserver/win/Build.PL" -o "Build.PL"
+wget "http://www.siusgs.com/slic3r/buildserver/win/Build_PL" -O "Build.PL"
 perl ./Build.pl
 
 if ($LastExitCode -ne 0) { 
