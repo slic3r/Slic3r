@@ -11,7 +11,7 @@ namespace Slic3r {
 
 class Polygon;
 class Polyline;
-typedef std::vector<Polygon> Polygons;
+using Polygons = std::vector<Polygon>;
 
 class Polygon : public MultiPoint {
     public:
