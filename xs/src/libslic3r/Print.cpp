@@ -236,7 +236,7 @@ Print::make_skirt()
     //size_t extruder_idx = 0;
     
     // new to the cpp implementation
-    float e_per_mm, extruded_length = 0;
+    float e_per_mm {0.0}, extruded_length = 0;
     size_t extruders_warm = 0;
     if (this->config.min_skirt_length.getFloat() > 0) {
         //my $config = Config::GCode();
