@@ -109,7 +109,7 @@ SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types)
         n |= t;
     }
     for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if (surface->surface_type & n == surface->surface_type) ss.push_back(&*surface);
+        if ((surface->surface_type & n) == surface->surface_type) ss.push_back(&*surface);
     }
     return ss;
 }
@@ -197,7 +197,7 @@ SurfaceCollection::keep_types(const SurfaceType *types, size_t ntypes)
     for (size_t i = 0; i < ntypes; ++i)
         n |= types[i]; // form bitmask.
     // Use stl remove_if to remove 
-    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[n] (const Surface& s) { return s.surface_type & n != s.surface_type; });
+    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[n] (const Surface& s) { return (s.surface_type & n) != s.surface_type; });
     surfaces.erase(ptr, surfaces.cend());
 }
 
