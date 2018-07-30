@@ -122,8 +122,10 @@ class Pointf
         return Pointf(unscale(p.x), unscale(p.y));
     };
 
-    // equality operator based on the scaled coordinates
+    // equality operator based on coincides_with_epsilon
     bool operator==(const Pointf& rhs) const;
+    bool coincides_with_epsilon(const Pointf& rhs) const;
+    Pointf& operator/=(const double& scalar); 
 
     std::string wkt() const;
     std::string dump_perl() const;
@@ -135,6 +137,9 @@ class Pointf
     Pointf negative() const;
     Vectorf vector_to(const Pointf &point) const;
 };
+
+Pointf operator+(const Pointf& point1, const Pointf& point2);
+Pointf operator/(const Pointf& point1, const double& scalar);
 
 std::ostream& operator<<(std::ostream &stm, const Pointf3 &pointf3);
 
