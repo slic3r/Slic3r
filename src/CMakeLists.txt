@@ -205,6 +205,7 @@ set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/libslic3r/test_trianglemesh.cpp
     ${TESTDIR}/libslic3r/test_config.cpp
     ${TESTDIR}/libslic3r/test_support_material.cpp
+    ${TESTDIR}/libslic3r/test_fill.cpp
     ${TESTDIR}/libslic3r/test_flow.cpp
     ${TESTDIR}/libslic3r/test_model.cpp
     ${TESTDIR}/libslic3r/test_printgcode.cpp
