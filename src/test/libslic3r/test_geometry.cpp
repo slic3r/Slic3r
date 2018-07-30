@@ -161,6 +161,98 @@ TEST_CASE("Offseting a line generates a polygon correctly"){
     REQUIRE(area.area() == Polygon(std::vector<Point>({Point(10,5),Point(20,5),Point(20,15),Point(10,15)})).area());
 }
 
+SCENARIO("Circle Fit, TaubinFit with Newton's method") {
+    GIVEN("A vector of Pointfs arranged in a half-circle with approximately the same distance R from some point") {
+        Pointf expected_center(-6, 0);
+        Pointfs sample {Pointf(6.0, 0), Pointf(5.1961524, 3), Pointf(3 ,5.1961524), Pointf(0, 6.0), Pointf(3, 5.1961524), Pointf(-5.1961524, 3), Pointf(-6.0, 0)};
+        std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Pointf& a) { return a + expected_center;});
+
+        WHEN("Circle fit is called on the entire array") {
+            Pointf result_center(0,0);
+            result_center = Geometry::circle_taubin_newton(sample);
+            THEN("A center point of -6,0 is returned.") {
+                REQUIRE(result_center == expected_center);
+            }
+        }
+        WHEN("Circle fit is called on the first four points") {
+            Pointf result_center(0,0);
+            result_center = Geometry::circle_taubin_newton(sample.cbegin(), sample.cbegin()+4);
+            THEN("A center point of -6,0 is returned.") {
+                REQUIRE(result_center == expected_center);
+            }
+        }
+        WHEN("Circle fit is called on the middle four points") {
+            Pointf result_center(0,0);
+            result_center = Geometry::circle_taubin_newton(sample.cbegin()+2, sample.cbegin()+6);
+            THEN("A center point of -6,0 is returned.") {
+                REQUIRE(result_center == expected_center);
+            }
+        }
+    }
+    GIVEN("A vector of Pointfs arranged in a half-circle with approximately the same distance R from some point") {
+        Pointf expected_center(-3, 9);
+        Pointfs sample {Pointf(6.0, 0), Pointf(5.1961524, 3), Pointf(3 ,5.1961524), 
+                        Pointf(0, 6.0), 
+                        Pointf(3, 5.1961524), Pointf(-5.1961524, 3), Pointf(-6.0, 0)};
+
+        std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Pointf& a) { return a + expected_center;});
+
+
+        WHEN("Circle fit is called on the entire array") {
+            Pointf result_center(0,0);
+            result_center = Geometry::circle_taubin_newton(sample);
+            THEN("A center point of 3,9 is returned.") {
+                REQUIRE(result_center == expected_center);
+            }
+        }
+        WHEN("Circle fit is called on the first four points") {
+            Pointf result_center(0,0);
+            result_center = Geometry::circle_taubin_newton(sample.cbegin(), sample.cbegin()+4);
+            THEN("A center point of 3,9 is returned.") {
+                REQUIRE(result_center == expected_center);
+            }
+        }
+        WHEN("Circle fit is called on the middle four points") {
+            Pointf result_center(0,0);
+            result_center = Geometry::circle_taubin_newton(sample.cbegin()+2, sample.cbegin()+6);
+            THEN("A center point of 3,9 is returned.") {
+                REQUIRE(result_center == expected_center);
+            }
+        }
+    }
+    GIVEN("A vector of Points arranged in a half-circle with approximately the same distance R from some point") {
+        Point expected_center { Point::new_scale(-3, 9)};
+        Points sample {Point::new_scale(6.0, 0), Point::new_scale(5.1961524, 3), Point::new_scale(3 ,5.1961524), 
+                        Point::new_scale(0, 6.0), 
+                        Point::new_scale(3, 5.1961524), Point::new_scale(-5.1961524, 3), Point::new_scale(-6.0, 0)};
+
+        std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Point& a) { return a + expected_center;});
+
+
+        WHEN("Circle fit is called on the entire array") {
+            Point result_center(0,0);
+            result_center = Geometry::circle_taubin_newton(sample);
+            THEN("A center point of scaled 3,9 is returned.") {
+                REQUIRE(result_center.coincides_with_epsilon(expected_center));
+            }
+        }
+        WHEN("Circle fit is called on the first four points") {
+            Point result_center(0,0);
+            result_center = Geometry::circle_taubin_newton(sample.cbegin(), sample.cbegin()+4);
+            THEN("A center point of scaled 3,9 is returned.") {
+                REQUIRE(result_center.coincides_with_epsilon(expected_center));
+            }
+        }
+        WHEN("Circle fit is called on the middle four points") {
+            Point result_center(0,0);
+            result_center = Geometry::circle_taubin_newton(sample.cbegin()+2, sample.cbegin()+6);
+            THEN("A center point of scaled 3,9 is returned.") {
+                REQUIRE(result_center.coincides_with_epsilon(expected_center));
+            }
+        }
+    }
+}
+
 
 TEST_CASE("Chained path working correctly"){
     // if chained_path() works correctly, these points should be joined with no diagonal paths
