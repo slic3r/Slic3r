@@ -2,13 +2,14 @@
 
 %{
 #include <xsinit.h>
+#include "libslic3r/libslic3r.h"
 #include "libslic3r/Point.hpp"
 #include "libslic3r/Polygon.hpp"
 #include "libslic3r/Polyline.hpp"
 %}
 
 %name{Slic3r::Point} class Point {
-    Point(long _x = 0, long _y = 0);
+    Point(coord_t _x = 0, coord_t _y = 0);
     ~Point();
     Clone<Point> clone()
         %code{% RETVAL=THIS; %}; 

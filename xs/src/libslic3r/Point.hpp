@@ -35,7 +35,9 @@ class Point
     coord_t y;
     constexpr Point(coord_t _x = 0, coord_t _y = 0): x(_x), y(_y) {};
     constexpr Point(int _x, int _y): x(_x), y(_y) {};
+    #ifndef _WIN32
     constexpr Point(long long _x, long long _y): x(_x), y(_y) {};  // for Clipper
+    #endif 
     Point(double x, double y);
     static constexpr Point new_scale(coordf_t x, coordf_t y) {
         return Point(scale_(x), scale_(y));
@@ -184,9 +186,10 @@ scale(const std::vector<Pointf>&in ) {
 #include <boost/version.hpp>
 #include <boost/polygon/polygon.hpp>
 namespace boost { namespace polygon {
+#ifndef _WIN32
     template <>
     struct geometry_concept<coord_t> { typedef coordinate_concept type; };
-    
+#endif     
 /* Boost.Polygon already defines a specialization for coordinate_traits<long> as of 1.60:
    https://github.com/boostorg/polygon/commit/0ac7230dd1f8f34cb12b86c8bb121ae86d3d9b97 */
 #if BOOST_VERSION < 106000
