@@ -1,6 +1,6 @@
 #include <catch.hpp>
 #include "test_data.hpp"
-#include "Fill.hpp"
+#include "Fill/Fill.hpp"
 /* 
 BEGIN {
     use FindBin;
