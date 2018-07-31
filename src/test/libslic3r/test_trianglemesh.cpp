@@ -3,6 +3,7 @@
 #include "TriangleMesh.hpp"
 #include "libslic3r.h"
 #include "Point.hpp"
+#include "test_options.hpp"
 
 #include <algorithm>
 
@@ -367,4 +368,9 @@ SCENARIO( "TriangleMeshSlicer: Cut behavior.") {
             }
         }
     }
+}
+
+TEST_CASE("Regression test for issue #4486") {
+    TriangleMesh mesh;
+    mesh.ReadSTLFile();
 }
