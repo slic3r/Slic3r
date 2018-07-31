@@ -1,4 +1,5 @@
 #ifndef SLIC3R_TEST_DATA_HPP
+#define SLIC3R_TEST_DATA_HPP
 #include "Point.hpp"
 #include "TriangleMesh.hpp"
 #include "Geometry.hpp"
