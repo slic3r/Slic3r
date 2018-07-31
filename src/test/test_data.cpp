@@ -234,6 +234,39 @@ shared_Print init_print(std::initializer_list<TestMesh> meshes, Slic3r::Model& m
 
     return print;
 }
+shared_Print init_print(std::initializer_list<TriangleMesh>& meshes, Slic3r::Model& model, config_ptr _config, bool comments) {
+    auto config {Slic3r::Config::new_from_defaults()};
+    config->apply(_config);
+
+    const char* v {std::getenv("SLIC3R_TESTS_GCODE")};
+    auto tests_gcode {(v == nullptr ? ""s : std::string(v))};
+
+    if (tests_gcode != ""s)
+        config->set("gcode_comments", 1);
+
+    shared_Print print {std::make_shared<Slic3r::Print>()};
+    print->apply_config(config);
+    for (auto& t : meshes) {
+        auto* object {model.add_object()};
+        object->name += "object.stl"s;
+        object->add_volume(t);
+
+        auto* inst {object->add_instance()};
+        inst->rotation = 0;
+        inst->scaling_factor = 1.0;
+    }
+
+    model.arrange_objects(print->config.min_object_distance());
+    model.center_instances_around_point(Slic3r::Pointf(100,100));
+    for (auto* mo : model.objects) {
+        print->auto_assign_extruders(mo);
+        print->add_model_object(mo);
+    }
+
+    print->validate();
+
+    return print;
+}
 
 void gcode(std::stringstream& gcode, shared_Print _print) {
     _print->export_gcode(gcode, true);
