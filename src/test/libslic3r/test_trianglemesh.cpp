@@ -6,6 +6,8 @@
 #include "test_options.hpp"
 
 #include <algorithm>
+#include <future>
+#include <chrono>
 
 using namespace Slic3r;
 using namespace std;
@@ -370,7 +372,27 @@ SCENARIO( "TriangleMeshSlicer: Cut behavior.") {
     }
 }
 
-TEST_CASE("Regression test for issue #4486") {
+TEST_CASE("Regression test for issue #4486 - files take forever to slice") {
     TriangleMesh mesh;
-    mesh.ReadSTLFile();
+    auto config {Slic3r::Config::new_from_defaults()};
+    mesh.ReadSTLFile(std::string(testfile_dir) + "test_trianglemesh/4486/100_000.stl");
+    mesh.repair();
+    mesh.scale(0.1);
+    mesh.repair();
+
+    config->set("layer_height", 500);
+    config->set("first_layer_height", 250);
+    config->set("nozzle_diameter", 500);
+
+    Slic3r::Model model;
+    auto print {Slic3r::Test::init_print({mesh}, model, config)};
+
+    std::future<bool> fut = std::async(print->process);
+    std::chrono::milliseconds span {60000};
+    bool timedout {false};
+    if(fut.wait_for(span) == std::future_status::timeout) {
+        timedout = true;
+    }
+
+    REQUIRE(timedout == false);
 }
