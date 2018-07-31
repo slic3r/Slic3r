@@ -20,6 +20,9 @@ class ExPolygon
     Polygons holes;
     ExPolygon() {};
     explicit ExPolygon(const Polygon &_contour) : contour(_contour) {};
+    explicit ExPolygon(const Points &_contour) : contour(Polygon(_contour)) {};
+    /// Constructor to build a single holed 
+    explicit ExPolygon(const Points &_contour, const Points &_hole) : contour(Polygon(_contour)), holes(Polygons(Polygon(_hole))) { };
     operator Points() const;
     operator Polygons() const;
     void scale(double factor);
