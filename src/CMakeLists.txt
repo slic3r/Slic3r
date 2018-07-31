@@ -70,6 +70,17 @@ else(SLIC3R_STATIC)
     set(Boost_USE_STATIC_RUNTIME OFF)
 endif(SLIC3R_STATIC)
 
+
+if (NOT GIT_VERSION STREQUAL "")
+    if (MSVC)
+        add_compile_options(/DSLIC3R_BUILD_COMMIT=${GIT_VERSION})
+    else(MSVC)
+        execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION_1)
+        string(REGEX REPLACE "\n$" "" GIT_VERSION "${GIT_VERSION_1}")
+        add_compile_options(-DSLIC3R_BUILD_COMMIT=${GIT_VERSION})
+    endif(MSVC)
+endif(NOT GIT_VERSION STREQUAL "")
+
 find_package(Threads REQUIRED)
 
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
@@ -292,15 +303,6 @@ IF(wxWidgets_FOUND)
     MESSAGE("wx found!")
     INCLUDE("${wxWidgets_USE_FILE}")
 
-    if (NOT GIT_VERSION STREQUAL "")
-        if (MSVC)
-            add_compile_options(/DSLIC3R_BUILD_COMMIT=${GIT_VERSION})
-        else(MSVC)
-            execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION)
-            string(REGEX REPLACE "\n$" "" GIT_VERSION "${GIT_VERSION}")
-            add_compile_options(-DSLIC3R_BUILD_COMMIT=${GIT_VERSION})
-        endif(MSVC)
-    endif(NOT GIT_VERSION STREQUAL "")
 
     include_directories(${GUI_LIBDIR})
     include_directories(${wxWidgets_INCLUDE})
