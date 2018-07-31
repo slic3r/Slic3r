@@ -8,27 +8,27 @@ option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
 option(BUILD_EXTRUDE_TIN "Build and link the extrude-tin application." OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE -DNO_PERL ")
+add_compile_options(-DNO_PERL -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE)
 
 if(DEFINED ENV{SLIC3R_VAR_REL})
-    set(CMAKE_CXX_FLAGS "-DVAR_REL=$ENV{SLIC3R_VAR_REL}")
+    add_compile_options(-DVAR_REL=$ENV{SLIC3R_VAR_REL})
 endif(DEFINED ENV{SLIC3R_VAR_REL})
 
 if(DEFINED ENV{SLIC3R_VAR_ABS})
-    set(CMAKE_CXX_FLAGS "-DVAR_ABS")
+    add_compile_options(-DVAR_ABS)
 endif(DEFINED ENV{SLIC3R_VAR_ABS})
 
 if(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
-    set(CMAKE_CXX_FLAGS "-DVAR_ABS_PATH=$ENV{SLIC3R_VAR_ABS_PATH}")
+    add_compile_options(-DVAR_ABS_PATH=$ENV{SLIC3R_VAR_ABS_PATH})
 endif(DEFINED ENV{SLIC3R_VAR_ABS_PATH})
 
 # mingw needs to be told to deal with large objects
 if(MINGW)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj") 
+    add_compile_options(-Wa,-mbig-obj) 
 endif()
 
 if(Enable_GUI) 
-    set(CMAKE_CXX_FLAGS "-DUSE_WX")
+    add_compile_options(-DUSE_WX)
 endif(Enable_GUI)
 
 if($ENV{TRAVIS})
@@ -40,12 +40,22 @@ endif()
 
 execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION ERROR_QUIET)
 
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+    add_compile_options(-g -O0)
+elseif (CMAKE_BUILD_TYPE MATCHES Release)
+    add_compile_options(-O3)
+elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
+    add_compile_options(-g -O3)
+endif()
+# Flags for debug and release tuning
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 ${CMAKE_CXX_FLAGS}")
 
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 IF(CMAKE_HOST_APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE")
+    add_compile_options(-std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE)
     set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation -lc++")
 ELSE(CMAKE_HOST_APPLE)
 #    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -L.")
@@ -284,11 +294,11 @@ IF(wxWidgets_FOUND)
 
     if (NOT GIT_VERSION STREQUAL "")
         if (MSVC)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DSLIC3R_BUILD_COMMIT=${GIT_VERSION} ")
+            add_compile_options(/DSLIC3R_BUILD_COMMIT=${GIT_VERSION})
         else(MSVC)
             execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_VERSION)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSLIC3R_BUILD_COMMIT=${GIT_VERSION}")
-            string(REGEX REPLACE "\n$" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+            string(REGEX REPLACE "\n$" "" GIT_VERSION "${GIT_VERSION}")
+            add_compile_options(-DSLIC3R_BUILD_COMMIT=${GIT_VERSION})
         endif(MSVC)
     endif(NOT GIT_VERSION STREQUAL "")
 
@@ -324,7 +334,7 @@ IF(wxWidgets_FOUND)
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
     #only build GUI lib if building with wx
     target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_WX")
+    add_compile_options(-DUSE_WX)
 
     if (GUI_BUILD_TESTS)
         enable_testing()
@@ -438,8 +448,4 @@ if (BUILD_EXTRUDE_TIN)
     target_link_libraries (extrude-tin libslic3r ${LIBSLIC3R_DEPENDS})
 endif()
 
-
-# Flags for debug and release tuning
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 ${CMAKE_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 ${CMAKE_CXX_FLAGS}")
 
