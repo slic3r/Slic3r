@@ -3017,7 +3017,7 @@ msgstr ""
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:66
 msgid ""
-" - Remember to check for updates at http://github.com/prusa3d/slic3r/releases"
+" - Remember to check for updates at http://github.com/supermerill/slic3r/releases"
 msgstr ""
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:118
@@ -3289,11 +3289,11 @@ msgid "Open the Prusa3D drivers download page in your browser"
 msgstr ""
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Prusa Edition Releases"
+msgid "Slic3r++ Releases"
 msgstr ""
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Open the Prusa Edition releases page in your browser"
+msgid "Open the Slic3r++ releases page in your browser"
 msgstr ""
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:395
@@ -3325,7 +3325,7 @@ msgid "Report an Issue"
 msgstr ""
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:405
-msgid "Report an issue on the Slic3r Prusa Edition"
+msgid "Report an issue on the Slic3r Slic3r++"
 msgstr ""
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:408

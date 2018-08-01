@@ -86,8 +86,8 @@ msgstr ""
 "Nečíselná hodnota."
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:66
-msgid " - Remember to check for updates at http://github.com/prusa3d/slic3r/releases"
-msgstr " - Nezapomeňte zkontrolovat aktualizace na http://github.com/prusa3d/slic3r/releases"
+msgid " - Remember to check for updates at http://github.com/supermerill/slic3r/releases"
+msgstr " - Nezapomeňte zkontrolovat aktualizace na http://github.com/supermerill/slic3r/releases"
 
 # Used in this context: _("Save ") + title + _(" as:")
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.cpp:1751
@@ -1604,8 +1604,8 @@ msgstr "Výška obrysu vyjádřená ve vrstvách. Nastavte tuto hodnotu vysokou,
 
 #: xs/src/slic3r/GUI/ConfigWizard.cpp:213
 #, c-format
-msgid "Hello, welcome to Slic3r Prusa Edition! This %s helps you with the initial configuration; just a few settings and you will be ready to print."
-msgstr "Zdravím, vítejte ve Slic3r Prusa Edition! Tento %s vám pomůže se základní konfigurací; jen několik nastavení a budete připraveni k tisku."
+msgid "Hello, welcome to Slic3r Slic3r++! This %s helps you with the initial configuration; just a few settings and you will be ready to print."
+msgstr "Zdravím, vítejte ve Slic3r Slic3r++! Tento %s vám pomůže se základní konfigurací; jen několik nastavení a budete připraveni k tisku."
 
 #: xs/src/slic3r/GUI/WipeTowerDialog.cpp:218
 msgid "Here you can adjust required purging volume (mm³) for any given pair of tools."
@@ -2346,7 +2346,7 @@ msgid "Open the object editor dialog"
 msgstr "Otevře dialogové okno editoru objektů"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Open the Prusa Edition releases page in your browser"
+msgid "Open the Slic3r++ releases page in your browser"
 msgstr "Otavřít stránku vydání Prusa Edice ve vašem prohlížeči"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:385
@@ -2593,7 +2593,7 @@ msgid "Prusa 3D Drivers"
 msgstr "Prusa 3D Ovladače"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Prusa Edition Releases"
+msgid "Slic3r++ Releases"
 msgstr "Vydání Prusa Edice"
 
 #: xs/src/slic3r/GUI/GUI.cpp:908
@@ -2752,7 +2752,7 @@ msgid "Report an Issue"
 msgstr "Nahlásit chybu"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:405
-msgid "Report an issue on the Slic3r Prusa Edition"
+msgid "Report an issue on the Slic3r Slic3r++"
 msgstr "Nahlásit chybu ve Slic3eru Prusa Edice"
 
 #: xs/src/slic3r/Utils/PresetUpdater.cpp:514

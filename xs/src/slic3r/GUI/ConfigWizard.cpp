@@ -233,7 +233,7 @@ PageWelcome::PageWelcome(ConfigWizard *parent, bool check_first_variant) :
 	if (wizard_p()->run_reason == ConfigWizard::RR_DATA_EMPTY) {
 		wxString::Format(_(L("Run %s")), ConfigWizard::name());
 		append_text(wxString::Format(
-			_(L("Hello, welcome to Slic3r++ (fork of Slic3r Prusa Edition)! This %s helps you with the initial configuration; just a few settings and you will be ready to print.")),
+			_(L("Hello, welcome to Slic3r++ (fork of Slic3r Slic3r++)! This %s helps you with the initial configuration; just a few settings and you will be ready to print.")),
 			ConfigWizard::name())
 		);
 	} else {

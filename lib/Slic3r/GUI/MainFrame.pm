@@ -63,7 +63,7 @@ sub new {
     
     # initialize status bar
     $self->{statusbar} = Slic3r::GUI::ProgressStatusBar->new($self, Wx::NewId);
-    $self->{statusbar}->SetStatusText(L("Version ").$Slic3r::VERSION.L(" - Remember to check for updates at http://github.com/prusa3d/slic3r/releases"));
+    $self->{statusbar}->SetStatusText(L("Version ").$Slic3r::VERSION.L(" - Remember to check for updates at http://github.com/supermerill/slic3r/releases"));
     $self->SetStatusBar($self->{statusbar});
     
     # Make the global status bar and its progress indicator available in C++
@@ -335,11 +335,11 @@ sub _init_menubar {
     # Help menu
     my $helpMenu = Wx::Menu->new;
     {
-        $self->_append_menu_item($helpMenu, L("Prusa 3D Drivers"), L('Open the Prusa3D drivers download page in your browser'), sub {
-            Wx::LaunchDefaultBrowser('http://www.prusa3d.com/drivers/');
-        });
-        $self->_append_menu_item($helpMenu, L("Prusa Edition Releases"), L('Open the Prusa Edition releases page in your browser'), sub {
-            Wx::LaunchDefaultBrowser('http://github.com/prusa3d/slic3r/releases');
+        
+        
+        
+        $self->_append_menu_item($helpMenu, L("Slic3r++ Releases"), L('Open the Slic3r++ releases page in your browser'), sub {
+            Wx::LaunchDefaultBrowser('http://github.com/supermerill/slic3r/releases');
         });
 #        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", 'Check for new Slic3r versions', sub {
 #            wxTheApp->check_version(1);
