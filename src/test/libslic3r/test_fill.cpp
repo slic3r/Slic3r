@@ -8,6 +8,7 @@
 using namespace Slic3r;
 using namespace Slic3r::Geometry;
 
+bool test_if_solid_surface_filled(const ExPolygon& expolygon, double flow_spacing, double angle = 0, double density = 1.0);
 
 TEST_CASE("Fill: adjusted solid distance") {
     Print print;
@@ -83,7 +84,7 @@ TEST_CASE("Fill: Pattern Path Length") {
             }
         }
     }
-    SECTION("Rotated Square") {
+    SECTION("Regression: Missing infill segments in some rare circumstances") {
         filler->angle = (PI/4.0);
         filler->dont_adjust = false;
         filler->min_spacing = 0.654498;
@@ -102,76 +103,47 @@ TEST_CASE("Fill: Pattern Path Length") {
         REQUIRE(std::abs(paths[0].length() - static_cast<double>(scale_(3*100 + 2*50))) - SCALED_EPSILON > 0); // path has expected length
     }
 
+    SECTION("Rotated Square") {
+        Points square { Point::new_scale(0,0), Point::new_scale(50,0), Point::new_scale(50,50), Point::new_scale(0,50)};
+        ExPolygon expolygon(square);
+        auto filler {Slic3r::Fill::new_from_type("rectilinear")};
+        filler->bounding_box = expolygon.bounding_box();
+        filler->angle = 0;
+        
+        auto surface {Surface(stTop, expolygon)};
+        auto flow {Slic3r::Flow(0.69, 0.4, 0.50)};
+
+        filler->min_spacing = flow.spacing();
+        filler->density = 1.0;
+
+        for (auto angle : { 0.0, 45.0}) {
+            surface.expolygon.rotate(angle, Point(0,0));
+            auto paths {filler->fill_surface(surface)};
+            REQUIRE(paths.size() == 1);
+        }
+    }
+    SECTION("Solid surface fill") {
+        Points points {
+            Point::new_scale(6883102, 9598327.01296997),
+            Point::new_scale(6883102, 20327272.01297),
+            Point::new_scale(3116896, 20327272.01297),
+            Point::new_scale(3116896, 9598327.01296997) 
+        };
+        ExPolygon expolygon(points);
+         
+        REQUIRE(test_if_solid_surface_filled(expolygon, 0.55) == true);
+        for (size_t i = 0; i <= 20; ++i)
+        {
+            expolygon.scale(1.05);
+            REQUIRE(test_if_solid_surface_filled(expolygon, 0.55) == true);
+        }
+    }
+
 }
 
 /* 
-{
-    my $expolygon = Slic3r::ExPolygon->new([ scale_points [0,0], [50,0], [50,50], [0,50] ]);
-    my $filler = Slic3r::Filler->new_from_type('rectilinear');
-    $filler->set_bounding_box($expolygon->bounding_box);
-    $filler->set_angle(0);
-    my $surface = Slic3r::Surface->new(
-            surface_type    => S_TYPE_TOP,
-            expolygon       => $expolygon,
-            );
-    my $flow = Slic3r::Flow->new(
-            width           => 0.69,
-            height          => 0.4,
-            nozzle_diameter => 0.50,
-            );
-    $filler->set_min_spacing($flow->spacing);
-    $filler->set_density(1);
-    foreach my $angle (0, 45) {
-        $surface->expolygon->rotate(Slic3r::Geometry::deg2rad($angle), [0,0]);
-        my $paths = $filler->fill_surface($surface, layer_height => 0.4, density => 0.4);
-        is scalar @$paths, 1, 'one continuous path';
-    }
-}
 
 {
-    my $test = sub {
-        my ($expolygon, $flow_spacing, $angle, $density) = @_;
-
-        my $filler = Slic3r::Filler->new_from_type('rectilinear');
-        $filler->set_bounding_box($expolygon->bounding_box);
-        $filler->set_angle($angle // 0);
-        $filler->set_dont_adjust(0);
-        my $surface = Slic3r::Surface->new(
-                surface_type    => S_TYPE_BOTTOM,
-                expolygon       => $expolygon,
-                );
-        my $flow = Slic3r::Flow->new(
-                width           => $flow_spacing,
-                height          => 0.4,
-                nozzle_diameter => $flow_spacing,
-                );
-        $filler->set_min_spacing($flow->spacing);
-        my $paths = $filler->fill_surface(
-                $surface,
-                layer_height    => $flow->height,
-                density         => $density // 1,
-                );
-
-        # check whether any part was left uncovered
-        my @grown_paths = map @{Slic3r::Polyline->new(@$_)->grow(scale $filler->spacing/2)}, @$paths;
-        my $uncovered = diff_ex([ @$expolygon ], [ @grown_paths ], 1);
-
-        # ignore very small dots
-        @$uncovered = grep $_->area > (scale $flow_spacing)**2, @$uncovered;
-
-        is scalar(@$uncovered), 0, 'solid surface is fully filled';
-
-        if (0 && @$uncovered) {
-            require "Slic3r/SVG.pm";
-            Slic3r::SVG::output(
-                    "uncovered.svg",
-                    expolygons      => [$expolygon],
-                    red_expolygons  => $uncovered,
-                    polylines       => $paths,
-                    );
-            exit;
-        }
-    };
 
     my $expolygon = Slic3r::ExPolygon->new([
             [6883102, 9598327.01296997],
@@ -433,3 +405,37 @@ for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
 }
 */
 
+bool test_if_solid_surface_filled(const ExPolygon& expolygon, double flow_spacing, double angle, double density) {
+    auto* filler {Slic3r::Fill::new_from_type("rectilinear")};
+    filler->bounding_box = expolygon.bounding_box();
+    filler->angle = angle;
+    filler->dont_adjust = false;
+
+    Surface surface(stBottom, expolygon);
+    Flow flow(flow_spacing, 0.4, flow_spacing);
+
+    filler->min_spacing = flow.spacing();
+
+    Polylines paths {filler->fill_surface(surface)};
+
+    // check whether any part was left uncovered
+    Polygons grown_paths;
+    grown_paths.reserve(paths.size());
+
+// figure out what is actually going on here re: data types
+    std::for_each(paths.begin(), paths.end(), [filler, &grown_paths] (const Polyline& p) { 
+        polygons_append(grown_paths, p.grow(scale_(filler->spacing() / 2.0)));
+    });
+    
+    ExPolygons uncovered = diff_ex(expolygon, grown_paths, true);
+
+    // ignore very small dots
+    const auto scaled_flow_spacing { std::pow(scale_(flow_spacing), 2) };
+    auto iter {std::remove_if(uncovered.begin(), uncovered.end(), [scaled_flow_spacing] (const ExPolygon& poly) {
+        return poly.area() > scaled_flow_spacing;
+    }) };
+    uncovered.erase(iter, uncovered.end());
+
+    return uncovered.size() == 0; // solid surface is fully filled
+
+}
