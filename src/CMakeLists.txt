@@ -6,6 +6,8 @@ option(GUI_BUILD_TESTS "Build tests for Slic3r GUI." ON)
 option(SLIC3R_BUILD_TESTS "Build tests for libslic3r." ON)
 option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
 option(BUILD_EXTRUDE_TIN "Build and link the extrude-tin application." OFF)
+option(PROFILE "Build with gprof profiling output." OFF)
+option(COVERAGE "Build with gcov code coverage profiling." OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
 add_compile_options(-DNO_PERL -Wall -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE)
@@ -47,15 +49,19 @@ elseif (CMAKE_BUILD_TYPE MATCHES Release)
 elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     add_compile_options(-g -O3)
 endif()
-# Flags for debug and release tuning
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 ${CMAKE_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 ${CMAKE_CXX_FLAGS}")
 
+if(PROFILE)
+    add_compile_options(-g -pg -DBUILD_PROFILE)
+endif(PROFILE)
+
+if(COVERAGE)
+    add_compile_options(-g -ftest-coverage)
+endif(COVERAGE)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 IF(CMAKE_HOST_APPLE)
-    add_compile_options(-std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE)
+    add_compile_options(-stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE)
     set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation -lc++")
 ELSE(CMAKE_HOST_APPLE)
 #    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -L.")
