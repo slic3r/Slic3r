@@ -406,12 +406,13 @@ TEST_CASE("Regression test for issue #4486 - files take forever to slice") {
 TEST_CASE("Profile test for issue #4486 - files take forever to slice") {
     TriangleMesh mesh;
     auto config {Slic3r::Config::new_from_defaults()};
-    mesh.ReadSTLFile(std::string(testfile_dir) + "test_trianglemesh/4486/100_000.stl");
+    mesh.ReadSTLFile(std::string(testfile_dir) + "test_trianglemesh/4486/10_000.stl");
     mesh.repair();
 
     config->set("layer_height", 500);
     config->set("first_layer_height", 250);
     config->set("nozzle_diameter", 500);
+    config->set("fill_density", "5%");
 
     Slic3r::Model model;
     auto print {Slic3r::Test::init_print({mesh}, model, config)};
