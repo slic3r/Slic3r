@@ -81,6 +81,8 @@ constexpr coordf_t INSET_OVERLAP_TOLERANCE = 0.4;
 constexpr coordf_t EXTERNAL_INFILL_MARGIN = 3;
 constexpr coord_t SCALED_EXTERNAL_INFILL_MARGIN = scale_(EXTERNAL_INFILL_MARGIN);
 
+constexpr float CLIPPER_OFFSET_SCALE = 100000.0;
+
 enum Axis { X=0, Y, Z };
 
 template <class T>

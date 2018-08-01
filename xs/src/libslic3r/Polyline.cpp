@@ -3,6 +3,7 @@
 #include "ExPolygonCollection.hpp"
 #include "Line.hpp"
 #include "Polygon.hpp"
+#include "ClipperUtils.hpp"
 #include <iostream>
 #include <utility>
 
@@ -218,6 +219,12 @@ Polyline::wkt() const
     }
     wkt << "))";
     return wkt.str();
+}
+
+Polygons
+Polyline::grow(double delta, double scale, ClipperLib::JoinType joinType, double miterLimit) const
+{
+    return offset(*this, delta, scale, joinType, miterLimit);
 }
 
 ThickLines
