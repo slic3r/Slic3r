@@ -4,6 +4,11 @@
 #include "libslic3r.h"
 #include "Point.hpp"
 #include "test_options.hpp"
+#include "Config.hpp"
+#include "Model.hpp"
+#include "test_data.hpp"
+
+#include "Log.hpp"
 
 #include <algorithm>
 #include <future>
@@ -377,7 +382,31 @@ TEST_CASE("Regression test for issue #4486 - files take forever to slice") {
     auto config {Slic3r::Config::new_from_defaults()};
     mesh.ReadSTLFile(std::string(testfile_dir) + "test_trianglemesh/4486/100_000.stl");
     mesh.repair();
-    mesh.scale(0.1);
+
+    config->set("layer_height", 500);
+    config->set("first_layer_height", 250);
+    config->set("nozzle_diameter", 500);
+
+    Slic3r::Model model;
+    auto print {Slic3r::Test::init_print({mesh}, model, config)};
+
+    print->status_cb = [] (int ln, const std::string& msg) { Slic3r::Log::info("Print") << ln << " " << msg << "\n";};
+
+    std::future<void> fut = std::async([&print] () { print->process(); });
+    std::chrono::milliseconds span {120000};
+    bool timedout {false};
+    if(fut.wait_for(span) == std::future_status::timeout) {
+        timedout = true;
+    }
+    REQUIRE(timedout == false);
+
+}
+
+#ifdef BUILD_PROFILE
+TEST_CASE("Profile test for issue #4486 - files take forever to slice") {
+    TriangleMesh mesh;
+    auto config {Slic3r::Config::new_from_defaults()};
+    mesh.ReadSTLFile(std::string(testfile_dir) + "test_trianglemesh/4486/100_000.stl");
     mesh.repair();
 
     config->set("layer_height", 500);
@@ -387,12 +416,11 @@ TEST_CASE("Regression test for issue #4486 - files take forever to slice") {
     Slic3r::Model model;
     auto print {Slic3r::Test::init_print({mesh}, model, config)};
 
-    std::future<bool> fut = std::async(print->process);
-    std::chrono::milliseconds span {60000};
-    bool timedout {false};
-    if(fut.wait_for(span) == std::future_status::timeout) {
-        timedout = true;
-    }
+    print->status_cb = [] (int ln, const std::string& msg) { Slic3r::Log::info("Print") << ln << " " << msg << "\n";};
 
-    REQUIRE(timedout == false);
+    print->process();
+
+    REQUIRE(true);
+
 }
+#endif //BUILD_PROFILE

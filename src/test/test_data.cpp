@@ -234,7 +234,7 @@ shared_Print init_print(std::initializer_list<TestMesh> meshes, Slic3r::Model& m
 
     return print;
 }
-shared_Print init_print(std::initializer_list<TriangleMesh>& meshes, Slic3r::Model& model, config_ptr _config, bool comments) {
+shared_Print init_print(std::initializer_list<TriangleMesh> meshes, Slic3r::Model& model, config_ptr _config, bool comments) {
     auto config {Slic3r::Config::new_from_defaults()};
     config->apply(_config);
 
