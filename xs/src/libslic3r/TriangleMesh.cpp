@@ -69,37 +69,6 @@ TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& fa
     stl_get_size(&stl);
 }
 
-TriangleMesh::TriangleMesh(std::vector<stl_facet*> &facets)
-    : repaired(false)
-{
-    stl_file stl;
-    stl_initialize(&stl);
-    stl.error = 0;
-    stl.stats.type = inmemory;
-
-    // count facets and allocate memory
-    stl.stats.number_of_facets = facets.size();
-    stl.stats.original_num_facets = stl.stats.number_of_facets;
-    stl_allocate(&stl);
-
-    for (int i = 0; i < stl.stats.number_of_facets; i++) {
-        stl_facet new_facet;
-        new_facet.normal.x = facets[i]->normal.x;
-        new_facet.normal.y = facets[i]->normal.y;
-        new_facet.normal.z = facets[i]->normal.z;
-        for (int j=0; j<=2 ;j++) {
-            new_facet.vertex[j].x = facets[i]->vertex[j].x;
-            new_facet.vertex[j].y = facets[i]->vertex[j].y;
-            new_facet.vertex[j].z = facets[i]->vertex[j].z;
-        }
-        new_facet.extra[0] = facets[i]->extra[0];
-        new_facet.extra[1] = facets[i]->extra[1];
-
-        stl.facet_start[i] = new_facet;
-    }
-    stl_get_size(&stl);
-}
-
 TriangleMesh::TriangleMesh(const TriangleMesh &other)
     : stl(other.stl), repaired(other.repaired)
 {
