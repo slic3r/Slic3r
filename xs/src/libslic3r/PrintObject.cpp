@@ -499,7 +499,7 @@ ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, c
 void PrintObject::count_distance_solid() {
     //if dense area * COEFF_SPLIT > sparse area then fill all with dense
     // sparse area = layer's fill area - dense area
-    const float COEFF_SPLIT = .1;
+    const float COEFF_SPLIT = 1;
     const int NB_DENSE_LAYERS = 1;
     for (int idx_region = 0; idx_region < this->_print->regions.size(); ++idx_region) {
         //count how many surface there are on each one

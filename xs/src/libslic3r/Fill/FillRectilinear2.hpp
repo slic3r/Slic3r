@@ -75,7 +75,8 @@ public:
 
     virtual Fill* clone() const { return new FillRectilinear2Peri(*this); };
     virtual ~FillRectilinear2Peri() {}
-    virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
+    //virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out);
 
 };
 

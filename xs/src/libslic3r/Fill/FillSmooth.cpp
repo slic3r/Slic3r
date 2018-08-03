@@ -95,9 +95,6 @@ namespace Slic3r {
                 if (extrudedVolume == 0) extrudedVolume = 1;
 
                 // Save into layer smoothing path.
-                eec = new ExtrusionEntityCollection();
-                eecroot->entities.push_back(eec);
-                eec->no_sort = false;
                 // print thin
 
                 eec = new ExtrusionEntityCollection();
