@@ -425,8 +425,10 @@ void PerimeterGenerator::process()
                 // two or more loops?
                 perimeter_spacing / 2;
         // only apply infill overlap if we actually have one perimeter
-        if (inset > 0)
-            inset -= scale_(this->config->get_abs_value("infill_overlap", unscale(inset + solid_infill_spacing / 2)));
+        coord_t overlap = 0;
+        if (inset > 0) {
+            overlap = scale_(this->config->get_abs_value("infill_overlap", unscale(inset + solid_infill_spacing / 2)));
+        }
         // simplify infill contours according to resolution
         Polygons pp;
         for (ExPolygon &ex : last)
@@ -434,12 +436,20 @@ void PerimeterGenerator::process()
         // collapse too narrow infill areas
         coord_t min_perimeter_infill_spacing = solid_infill_spacing * (1. - INSET_OVERLAP_TOLERANCE);
         // append infill areas to fill_surfaces
+        //auto it_surf = this->fill_surfaces->surfaces.end();
         this->fill_surfaces->append(
             offset2_ex(
                 union_ex(pp),
-                -inset -min_perimeter_infill_spacing/2,
+                -inset - min_perimeter_infill_spacing / 2 + overlap,
                 min_perimeter_infill_spacing / 2),
-            stInternal);
+                stInternal);
+        if (overlap != 0) {
+            ExPolygons polyWithoutOverlap = offset2_ex(
+                union_ex(pp),
+                -inset - min_perimeter_infill_spacing / 2,
+                min_perimeter_infill_spacing / 2);
+            this->fill_no_overlap.insert(this->fill_no_overlap.end(), polyWithoutOverlap.begin(), polyWithoutOverlap.end());
+        }
     } // for each island
 }
 

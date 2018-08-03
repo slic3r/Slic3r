@@ -34,10 +34,11 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 {    
 //    Slic3r::debugf "Filling layer %d:\n", $layerm->layer->id;
     
-    double  fill_density           = layerm.region()->config.fill_density;
-    Flow    infill_flow            = layerm.flow(frInfill);
-    Flow    solid_infill_flow      = layerm.flow(frSolidInfill);
-    Flow    top_solid_infill_flow  = layerm.flow(frTopSolidInfill);
+    double  fill_density            = layerm.region()->config.fill_density;
+    Flow    infill_flow             = layerm.flow(frInfill);
+    Flow    solid_infill_flow       = layerm.flow(frSolidInfill);
+    Flow    top_solid_infill_flow   = layerm.flow(frTopSolidInfill);
+    const float perimeter_spacing = layerm.flow(frPerimeter).spacing();
 
     Surfaces surfaces;
     
@@ -258,8 +259,20 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         f->link_max_length = scale_(link_max_length);
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
         f->loop_clipping = scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER;
-        //give the overlap size, it's not the real value (it can depend of the external_perimeter_extrusion_width)
-        f->overlap = layerm.region()->config.infill_overlap.get_abs_value(flow.nozzle_diameter);
+        //give the overlap size to let the infill do his overlap
+        //add overlap if at least one perimeter
+        if (layerm.region()->config.perimeters.getInt() > 0) {
+            f->overlap = layerm.region()->config.get_abs_value("infill_overlap", (perimeter_spacing + (f->spacing)) / 2);
+            if (f->overlap!=0) {
+                f->no_overlap_expolygons = intersection_ex(layerm.fill_no_overlap_expolygons, ExPolygons() = { surface.expolygon });
+            } else {
+                f->no_overlap_expolygons.push_back(surface.expolygon);
+            }
+        } else {
+            f->overlap = 0;
+            f->no_overlap_expolygons.push_back(surface.expolygon);
+        }
+        
         // apply half spacing using this flow's own spacing and generate infill
         FillParams params;
         params.density = 0.01 * density;

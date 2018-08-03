@@ -84,6 +84,8 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
     g.solid_infill_flow     = this->flow(frSolidInfill);
     
     g.process();
+
+    this->fill_no_overlap_expolygons = g.fill_no_overlap;
 }
 
 //#define EXTERNAL_SURFACES_OFFSET_PARAMETERS ClipperLib::jtMiter, 3.

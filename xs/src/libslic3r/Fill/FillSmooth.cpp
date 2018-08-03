@@ -32,18 +32,22 @@ namespace Slic3r {
         params2.density *= percentWidth[1];
         params3.density *= percentWidth[2];
 
-        //a small under-overlap to prevent over-extrudion on thin surfaces (i.e. remove the overlap)
-        Surface surfaceNoOverlap(*surface);
-        //remove the overlap (prevent over-extruding) if possible
-        ExPolygons noOffsetPolys = offset_ex(surfaceNoOverlap.expolygon, -scale_(this->overlap) * (flow.bridge?0:1));
-        //printf("FillSmooth::fill_surface() : overlap=%f->%f.\n", overlap, -scale_(this->overlap));
-        //printf("FillSmooth::polys : 1->%i.\n", noOffsetPolys.size());
-        //printf("FillSmooth::polys : %f  %f->%f.\n", surface->expolygon.area(), surfaceNoOverlap.expolygon.area(), noOffsetPolys[0].area());
-        //if (offsetPolys.size() == 1) surfaceNoOverlap.expolygon = offsetPolys[0];
+        // compute the volume to extrude
+        double volumeToOccupy = 0;
+        for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
+            // add external "perimeter gap"
+            double poylineVolume = flow.height*unscale(unscale(poly->area()));
+            double perimeterRoundGap = unscale(poly->contour.length()) * flow.height * (1 - 0.25*PI) * 0.5;
+            // add holes "perimeter gaps"
+            double holesGaps = 0;
+            for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
+                holesGaps += unscale(hole->length()) * flow.height * (1 - 0.25*PI) * 0.5;
+            }
+            poylineVolume += perimeterRoundGap + holesGaps;
 
-        //TODO: recursive if multiple polys instead of failing
-
-
+            //extruded volume: see http://manual.slic3r.org/advanced/flow-math, and we need to remove a circle at an end (as the flow continue)
+            volumeToOccupy += poylineVolume;
+        }
         //if (polylines_layer1.empty() && polylines_layer2.empty() && polylines_layer3.empty())
         //    return;
 
@@ -54,7 +58,6 @@ namespace Slic3r {
 
         ExtrusionEntityCollection *eec;
 
-        double volumeToOccupy = 0;
 
         // first infill
         std::unique_ptr<Fill> f1 = std::unique_ptr<Fill>(Fill::new_from_type(fillPattern[0]));
@@ -67,34 +70,35 @@ namespace Slic3r {
         f1->link_max_length = this->link_max_length;
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
         f1->loop_clipping = this->loop_clipping;
-        for (auto poly = noOffsetPolys.begin(); poly != noOffsetPolys.end(); ++poly){
-            surfaceNoOverlap.expolygon = *poly;
-            Polylines polylines_layer1 = f1->fill_surface(&surfaceNoOverlap, params1);
-            if (!polylines_layer1.empty()){
+        Surface surfaceNoOverlap(*surface);
+        if (flow.bridge) {
 
+            Polylines polylines_layer1 = f1->fill_surface(surface, params1);
+
+            if (!polylines_layer1.empty()) {
+                if (fillPattern[2] == InfillPattern::ipRectilinear && polylines_layer1[0].points.size() > 3) {
+                    polylines_layer1[0].points.erase(polylines_layer1[0].points.begin());
+                    polylines_layer1[polylines_layer1.size() - 1].points.pop_back();
+                }
+
+                //compute the path of the nozzle
                 double lengthTot = 0;
                 int nbLines = 0;
-                for (auto pline = polylines_layer1.begin(); pline != polylines_layer1.end(); ++pline){
+                for (auto pline = polylines_layer1.begin(); pline != polylines_layer1.end(); ++pline) {
                     Lines lines = pline->lines();
-                    for (auto line = lines.begin(); line != lines.end(); ++line){
+                    for (auto line = lines.begin(); line != lines.end(); ++line) {
                         lengthTot += unscale(line->length());
                         nbLines++;
                     }
                 }
-
-                // add external "perimeter gap"
-                double poylineVolume = flow.height*unscale(unscale(poly->area()));
-                double perimeterRoundGap = unscale(poly->contour.length()) * flow.height * (1 - 0.25*PI) * 0.5;
-                // add holes "perimeter gaps"
-                double holesGaps = 0;
-                for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole){
-                    holesGaps += unscale(hole->length()) * flow.height * (1 - 0.25*PI) * 0.5;
-                }
-                poylineVolume += perimeterRoundGap + holesGaps;
-
-                //extruded volume: see http://manual.slic3r.org/advanced/flow-math, and we need to remove a circle at an end (as the flow continue)
                 double extrudedVolume = flow.mm3_per_mm() * lengthTot;
-                volumeToOccupy += poylineVolume;
+                if (extrudedVolume == 0) extrudedVolume = 1;
+
+                // Save into layer smoothing path.
+                eec = new ExtrusionEntityCollection();
+                eecroot->entities.push_back(eec);
+                eec->no_sort = false;
+                // print thin
 
                 eec = new ExtrusionEntityCollection();
                 eecroot->entities.push_back(eec);
@@ -103,11 +107,53 @@ namespace Slic3r {
                     eec->entities, STDMOVE(polylines_layer1),
                     flow.bridge ? erBridgeInfill : rolePass[0],
                     //reduced flow height for a better view (it's only a gui thing)
-                    params.flow_mult * flow.mm3_per_mm() * percentFlow[0] * (params.fill_exactly? poylineVolume / extrudedVolume : 1), 
-                        (float)(flow.width*percentFlow[0] * (params.fill_exactly ? poylineVolume / extrudedVolume : 1)), (float)flow.height*0.8);
-            }
-            else{
+                    params.flow_mult * flow.mm3_per_mm() * percentFlow[0] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1),
+                    (float)(flow.width*percentFlow[0] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1)), (float)flow.height*0.8);
+            } else {
                 return;
+            }
+
+        } else {
+            for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
+                surfaceNoOverlap.expolygon = *poly;
+                Polylines polylines_layer1 = f1->fill_surface(&surfaceNoOverlap, params1);
+                if (!polylines_layer1.empty()) {
+
+                    double lengthTot = 0;
+                    int nbLines = 0;
+                    for (auto pline = polylines_layer1.begin(); pline != polylines_layer1.end(); ++pline) {
+                        Lines lines = pline->lines();
+                        for (auto line = lines.begin(); line != lines.end(); ++line) {
+                            lengthTot += unscale(line->length());
+                            nbLines++;
+                        }
+                    }
+
+                    // add external "perimeter gap"
+                    double poylineVolume = flow.height*unscale(unscale(poly->area()));
+                    double perimeterRoundGap = unscale(poly->contour.length()) * flow.height * (1 - 0.25*PI) * 0.5;
+                    // add holes "perimeter gaps"
+                    double holesGaps = 0;
+                    for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
+                        holesGaps += unscale(hole->length()) * flow.height * (1 - 0.25*PI) * 0.5;
+                    }
+                    poylineVolume += perimeterRoundGap + holesGaps;
+
+                    //extruded volume: see http://manual.slic3r.org/advanced/flow-math, and we need to remove a circle at an end (as the flow continue)
+                    double extrudedVolume = flow.mm3_per_mm() * lengthTot;
+
+                    eec = new ExtrusionEntityCollection();
+                    eecroot->entities.push_back(eec);
+                    eec->no_sort = false; //can be sorted inside the pass
+                    extrusion_entities_append_paths(
+                        eec->entities, STDMOVE(polylines_layer1),
+                        flow.bridge ? erBridgeInfill : rolePass[0],
+                        //reduced flow height for a better view (it's only a gui thing)
+                        params.flow_mult * flow.mm3_per_mm() * percentFlow[0] * (params.fill_exactly ? poylineVolume / extrudedVolume : 1),
+                        (float)(flow.width*percentFlow[0] * (params.fill_exactly ? poylineVolume / extrudedVolume : 1)), (float)flow.height*0.8);
+                } else {
+                    return;
+                }
             }
         }
 
@@ -154,8 +200,8 @@ namespace Slic3r {
                 extrusion_entities_append_paths(
                     eec->entities, STDMOVE(polylines_layer2),
                     rolePass[1],
-                    //reduced flow width for a better view (it's only a gui thing)
-                    params.flow_mult * flow.mm3_per_mm() * percentFlow[1] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1), 
+                    params.flow_mult * flow.mm3_per_mm() * percentFlow[1] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1),
+                    //min-reduced flow width for a better view (it's only a gui thing)
                         (float)(flow.width*(percentFlow[1] < 0.1 ? 0.1 : percentFlow[1])), (float)flow.height);
             }
             else{
