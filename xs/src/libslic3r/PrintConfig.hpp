@@ -30,6 +30,7 @@ enum GCodeFlavor {
 enum InfillPattern {
     ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipSmooth, ipSmoothHilbert, ipSmoothTriple,
+    ipRectiWithPerimeter,
 };
 
 enum SupportMaterialPattern {
@@ -80,6 +81,7 @@ template<> inline t_config_enum_values& ConfigOptionEnum<InfillPattern>::get_enu
         keys_map["smooth"]              = ipSmooth;
         keys_map["smoothtriple"]        = ipSmoothTriple;
         keys_map["smoothhilbert"]       = ipSmoothHilbert;
+        keys_map["rectiwithperimeter"]  = ipRectiWithPerimeter;
     }
     return keys_map;
 }
@@ -412,10 +414,7 @@ public:
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
-    ConfigOptionInt                 infill_dense_layers;
-    ConfigOptionFloat               infill_dense_angle;
-    ConfigOptionPercent             infill_dense_density;
-    ConfigOptionEnum<InfillPattern> infill_dense_pattern;
+    ConfigOptionBool                 infill_dense;
     ConfigOptionBool                infill_first;
     ConfigOptionBool                overhangs;
     ConfigOptionBool                no_perimeter_unsupported;
@@ -465,10 +464,7 @@ protected:
         OPT_PTR(infill_every_layers);
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
-        OPT_PTR(infill_dense_layers);
-        OPT_PTR(infill_dense_angle);
-        OPT_PTR(infill_dense_density);
-        OPT_PTR(infill_dense_pattern);
+        OPT_PTR(infill_dense);
         OPT_PTR(infill_first);
         OPT_PTR(overhangs);
         OPT_PTR(no_perimeter_unsupported);

@@ -306,7 +306,7 @@ const std::vector<std::string>& Preset::print_options()
         "elefant_foot_compensation", "xy_size_compensation", "hole_size_compensation", "threads", "resolution",
 		"wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging",
 		"only_one_perimeter_top", "compatible_printers", "compatible_printers_condition", "inherits", 
-		"infill_dense_layers", "infill_dense_density", "infill_dense_pattern", "infill_dense_angle", 
+		"infill_dense", 
 		"no_perimeter_unsupported", "min_perimeter_unsupported", "noperi_bridge_only"
     };
     return s_opts;

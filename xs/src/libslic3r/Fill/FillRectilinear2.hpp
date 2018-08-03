@@ -68,6 +68,16 @@ protected:
     virtual float _layer_angle(size_t idx) const { return 0.f; }
 };
 
+class FillRectilinear2Peri : public FillRectilinear2 {
+public:
+    // require bridge flow since it's a pre-bridge over very sparse infill
+    virtual bool use_bridge_flow() const { return true; }
+
+    virtual Fill* clone() const { return new FillRectilinear2Peri(*this); };
+    virtual ~FillRectilinear2Peri() {}
+    virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
+
+};
 
 }; // namespace Slic3r
 

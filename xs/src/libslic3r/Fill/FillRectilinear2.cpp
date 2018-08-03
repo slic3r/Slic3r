@@ -1472,4 +1472,30 @@ Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &para
     return polylines_out; 
 }
 
+
+Polylines FillRectilinear2Peri::fill_surface(const Surface *surface, const FillParams &params) {
+    Polylines polylines_out;
+    //generate perimeter:
+    //TODO: better optimize start/end point?
+    ExPolygons path_perimeter = offset_ex(surface->expolygon, scale_(-this->spacing/2));
+    for (ExPolygon &expolygon : path_perimeter) {
+        expolygon.contour.make_counter_clockwise();
+        polylines_out.push_back(expolygon.contour.split_at_index(0));
+        for (Polygon hole : expolygon.holes) {
+            hole.make_clockwise();
+            polylines_out.push_back(hole.split_at_index(0));
+        }
+    }
+
+    //50% overlap with the new perimeter
+    ExPolygons path_inner = offset2_ex(surface->expolygon, scale_(-this->spacing * 1.5), scale_(this->spacing));
+    for (ExPolygon &expolygon : path_inner) {
+        Surface surfInner(*surface, expolygon);
+        if (!fill_surface_by_lines(&surfInner, params, 0.f, 0.f, polylines_out)) {
+            printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
+        }
+    }
+    return polylines_out;
+}
+
 } // namespace Slic3r

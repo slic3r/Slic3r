@@ -170,7 +170,9 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "elefant_foot_compensation"
             || opt_key == "support_material_contact_distance" 
             || opt_key == "xy_size_compensation"
-			|| opt_key == "hole_size_compensation") {
+            || opt_key == "external_infill_margin"
+            || opt_key == "bridged_infill_margin"
+            || opt_key == "hole_size_compensation") {
             steps.emplace_back(posSlice);
         } else if (
                opt_key == "support_material"
@@ -197,15 +199,10 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "infill_only_where_needed"
             || opt_key == "infill_every_layers"
             || opt_key == "solid_infill_every_layers"
-            || opt_key == "infill_dense_layers"
-            || opt_key == "infill_dense_angle"
-            || opt_key == "infill_dense_density"
-            || opt_key == "infill_dense_pattern"
+            || opt_key == "infill_dense"
             || opt_key == "bottom_solid_layers"
             || opt_key == "top_solid_layers"
             || opt_key == "solid_infill_below_area"
-            || opt_key == "external_infill_margin"
-            || opt_key == "bridged_infill_margin"
             || opt_key == "infill_extruder"
             || opt_key == "solid_infill_extruder"
             || opt_key == "infill_extrusion_width"
@@ -414,13 +411,101 @@ void PrintObject::_prepare_infill()
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
 }
 
-void PrintObject::count_distance_solid() {
+// Function used by fit_to_size. 
+// It check if polygon_to_check can be decimated, using only point into allowedPoints and also cover polygon_to_cover
+ExPolygon try_fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, const ExPolygons &allowedPoints) {
 
+    ExPolygon polygon_reduced = polygon_to_check;
+    auto point = polygon_reduced.contour.points.begin();
+    bool has_del = false;
+    while (point != polygon_reduced.contour.points.end()) {
+        bool ok = false;
+        for (ExPolygon poly : allowedPoints) {
+            if (poly.contains_b(*point)) {
+                ok = true;
+                has_del = true;
+                break;
+            }
+        }
+        if (ok) ++point;
+        else polygon_reduced.contour.points.erase(point);
+    }
+    if (has_del) polygon_reduced.holes.clear();
+    return polygon_reduced;
+}
+
+// find one of the smallest polygon, growing polygon_to_check, only using point into allowedPoints and covering polygon_to_cover.
+ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, const ExPolygons &allowedPoints, 
+    const ExPolygon &growing_area, const coord_t offset, float coverage) {
+
+    //grow the polygon_to_check enough to cover polygon_to_cover
+    float current_coverage = current_coverage;
+    coord_t previous_offset = 0;
+    coord_t current_offset = offset;
+    ExPolygon polygon_reduced = try_fit_to_size(polygon_to_cover, polygon_to_check, allowedPoints);
+    while (!diff_ex(polygon_to_cover, polygon_reduced).empty()){
+        //not enough, use a bigger offset
+        float percent_coverage = polygon_reduced.area() / growing_area.area();
+        float next_coverage = percent_coverage + (percent_coverage - current_coverage) * 4;
+        previous_offset = current_offset;
+        current_offset *= 2;
+        if (next_coverage < 0.1) current_offset *= 2;
+        //create the bigger polygon and test it
+        ExPolygons bigger_polygon = offset_ex(polygon_to_check, current_offset);
+        if (bigger_polygon.size() != 1) {
+            // Error, growing a single polygon result in many/no other  => fallback to full coverage
+            return ExPolygons({ growing_area });
+        }
+        bigger_polygon = intersection_ex(bigger_polygon[0], growing_area);
+        if (bigger_polygon.size() != 1 || bigger_polygon[0].area() > growing_area.area()) {
+            // Growing too much  => we can as well use the full coverage, in this case
+            return ExPolygons() = { growing_area };
+        }
+        polygon_reduced = try_fit_to_size(polygon_to_cover, bigger_polygon[0], allowedPoints);
+    }
+    //ok, we have a good one, now try to optimise (unless there are almost no growth)
+    if (current_offset > offset * 3){
+        //try to shrink
+        uint32_t nb_opti_max = 6;
+        for (uint32_t i = 0; i < nb_opti_max; ++i){
+            coord_t new_offset = (previous_offset + current_offset) / 2;
+            ExPolygons bigger_polygon = offset_ex(polygon_to_check, new_offset);
+            if (bigger_polygon.size() != 1) {
+                //Warn, growing a single polygon result in many/no other, use previous good result
+                break;
+            }
+            bigger_polygon = intersection_ex(bigger_polygon[0], growing_area);
+            if (bigger_polygon.size() != 1 || bigger_polygon[0].area() > growing_area.area()) {
+                //growing too much, use previous good result (imo, should not be possible to enter this branch)
+                break;
+            }
+            ExPolygon polygon_test = try_fit_to_size(polygon_to_cover, bigger_polygon[0], allowedPoints);
+            if (!diff_ex(polygon_to_cover, polygon_test).empty()){
+                //bad, not enough, use a bigger offset
+                previous_offset = new_offset;
+            }
+            else {
+                //good, we may now try a smaller offset
+                current_offset = new_offset;
+                polygon_reduced = polygon_test;
+            }
+        }
+    }
+
+    //return the area which cover the growing_area. Intersect it to retreive the holes.
+    return intersection_ex(polygon_reduced, growing_area);
+}
+
+void PrintObject::count_distance_solid() {
+    //if dense area * COEFF_SPLIT > sparse area then fill all with dense
+    // sparse area = layer's fill area - dense area
+    const float COEFF_SPLIT = .1;
+    const int NB_DENSE_LAYERS = 1;
     for (int idx_region = 0; idx_region < this->_print->regions.size(); ++idx_region) {
         //count how many surface there are on each one
         LayerRegion *previousOne = NULL;
         if (this->layers.size() > 1) previousOne = this->layers[this->layers.size() - 1]->get_region(idx_region);
-        if (previousOne != NULL && previousOne->region()->config.infill_dense_layers.getInt() > 0) {
+        if (previousOne != NULL && previousOne->region()->config.infill_dense.getBool() && previousOne->region()->config.fill_density<40) {
             for (Surface &surf : previousOne->fill_surfaces.surfaces) {
                 if (surf.is_solid()) {
                     surf.maxNbSolidLayersOnTop = 0;
@@ -442,54 +527,70 @@ void PrintObject::count_distance_solid() {
                             // upp.expolygon.overlaps(surf.expolygon) or surf.expolygon.overlaps(upp.expolygon)
                             ExPolygons intersect = intersection_ex(sparse_polys, ExPolygons() = { upp.expolygon }, true);
                             if (!intersect.empty()) {
-                                uint16_t dist = (uint16_t)(upp.maxNbSolidLayersOnTop + 1);
-                                if (dist <= layerm->region()->config.infill_dense_layers.getInt()) {
-                                    // it will be a dense infill, split the surface if needed
-                                    uint64_t area_intersect = 0;
-                                    for (ExPolygon poly_inter : intersect) area_intersect += poly_inter.area();
-                                    //if it's in a dense area and the current surface isn't a dense one yet and the not-dense is too small.
-                                    if (surf.area() > area_intersect * 3 && 
-                                        surf.maxNbSolidLayersOnTop > layerm->region()->config.infill_dense_layers.getInt()) {
-                                        //split in two
-                                        if (dist == 1) {
-                                            //if just under the solid area, we can expand a bit
-                                            //remove too small sections and grew a bit to anchor it into the part
-                                            intersect = offset2_ex(intersect,
-                                                -layerm->flow(frInfill).scaled_width(),
-                                                layerm->flow(frInfill).scaled_width() + scale_(layerm->region()->config.external_infill_margin));
-                                        } else {
-                                            //just remove too small sections
-                                            intersect = offset2_ex(intersect,
-                                                -layerm->flow(frInfill).scaled_width(),
-                                                layerm->flow(frInfill).scaled_width());
+                                double area_intersect = 0;
+                                for (ExPolygon poly_inter : intersect) area_intersect += poly_inter.area();
+                                //like intersect.empty() but more resilient
+                                if (area_intersect > layerm->flow(frInfill).scaled_width() * layerm->flow(frInfill).scaled_width() * 2){
+                                    uint16_t dist = (uint16_t)(upp.maxNbSolidLayersOnTop + 1);
+                                    if (dist <= NB_DENSE_LAYERS) {
+                                        // it will be a dense infill, split the surface if needed
+                                        //if the not-dense is too big to do a full dense and the current surface isn't a dense one yet.
+                                        if (surf.area() > area_intersect * COEFF_SPLIT &&
+                                            surf.maxNbSolidLayersOnTop > NB_DENSE_LAYERS) {
+                                            //split in two
+                                            if (dist == 1) {
+                                                //if just under the solid area, we can expand a bit
+                                                ExPolygons cover_intersect;
+                                                for (ExPolygon &expoly_tocover : intersect) {
+                                                    ExPolygons temp = (fit_to_size(expoly_tocover, expoly_tocover,
+                                                        diff_ex(offset_ex(layerm->fill_no_overlap_expolygons, layerm->flow(frInfill).scaled_width()),
+                                                        offset_ex(layerm->fill_no_overlap_expolygons, -layerm->flow(frInfill).scaled_width())),
+                                                        surf.expolygon,
+                                                        4 * layerm->flow(frInfill).scaled_width(), 0.01));
+                                                    cover_intersect.insert(cover_intersect.end(), temp.begin(), temp.end());
+                                                }
+                                                intersect = offset2_ex(cover_intersect,
+                                                    -layerm->flow(frInfill).scaled_width(),
+                                                    layerm->flow(frInfill).scaled_width());// +scale_(expandby));
+                                                //layerm->region()->config.external_infill_margin));
+                                            }
+                                            else {
+                                                //just remove too small sections
+                                                intersect = offset2_ex(intersect,
+                                                    -layerm->flow(frInfill).scaled_width(),
+                                                    layerm->flow(frInfill).scaled_width());
+                                            }
+                                            if (!intersect.empty()) {
+                                                ExPolygons sparse_surfaces = offset2_ex(
+                                                    diff_ex(sparse_polys, intersect, true),
+                                                    -layerm->flow(frInfill).scaled_width(),
+                                                    layerm->flow(frInfill).scaled_width());
+                                                ExPolygons dense_surfaces = diff_ex(sparse_polys, sparse_surfaces, true);
+                                                //assign (copy)
+                                                sparse_polys.clear();
+                                                sparse_polys.insert(sparse_polys.begin(), sparse_surfaces.begin(), sparse_surfaces.end());
+                                                dense_polys.insert(dense_polys.end(), dense_surfaces.begin(), dense_surfaces.end());
+                                                dense_dist = std::min(dense_dist, dist);
+                                            }
                                         }
-                                        if (!intersect.empty()) {
-                                            ExPolygons sparse_surfaces = offset2_ex(
-                                                diff_ex(sparse_polys, intersect, true),
-                                                -layerm->flow(frInfill).scaled_width(),
-                                                layerm->flow(frInfill).scaled_width());
-                                            ExPolygons dense_surfaces = diff_ex(sparse_polys, sparse_surfaces, true);
-                                            //assign (copy)
-                                            sparse_polys.clear();
-                                            sparse_polys.insert(sparse_polys.begin(), sparse_surfaces.begin(), sparse_surfaces.end());
-                                            dense_polys.insert(dense_polys.end(), dense_surfaces.begin(), dense_surfaces.end());
-                                            dense_dist = std::min(dense_dist, dist);
+                                        else {
+                                            if (area_intersect < layerm->flow(frInfill).scaled_width() * layerm->flow(frInfill).scaled_width() * 2)
+                                                surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
                                         }
-                                    } else {
+                                    }
+                                    else {
                                         surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
                                     }
-                                } else {
-                                    surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
                                 }
                             }
                         }
                         //check if we need to split the surface
                         if (dense_dist != 30000) {
-                            uint64_t area_dense = 0;
+                            double area_dense = 0;
                             for (ExPolygon poly_inter : dense_polys) area_dense += poly_inter.area();
-                            uint64_t area_sparse = 0;
+                            double area_sparse = 0;
                             for (ExPolygon poly_inter : sparse_polys) area_sparse += poly_inter.area();
-                            if (area_sparse > area_dense * 3) {
+                            if (area_sparse > area_dense * COEFF_SPLIT) {
                                 //split
                                 dense_polys = union_ex(dense_polys);
                                 for (ExPolygon dense_poly : dense_polys) {
@@ -525,6 +626,7 @@ void PrintObject::count_distance_solid() {
         }
     }
 }
+
 
 // This function analyzes slices of a region (SurfaceCollection slices).
 // Each region slice (instance of Surface) is analyzed, whether it is supported or whether it is the top surface.
