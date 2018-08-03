@@ -374,29 +374,30 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
     PrintObject &object = *this->object();
     //First check all points and project them regarding the triangle mesh
     for (Point& point : path->polyline.points) {
-        //std::cout << "X: " << unscale(point.x) << " Y: " << unscale(point.y) << '\n';
-        for (auto& facet : object.nonplanar_surfaces) {
-            //skip if point is outside of the bounding box of the triangle
-            if (unscale(point.x) < std::min({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
-                unscale(point.x) > std::max({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
-                unscale(point.y) < std::min({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}) ||
-                unscale(point.y) > std::max({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}))
-            {
-                continue;
-            }
-            //check if point is inside of Triangle
-            if (Slic3r::Geometry::Point_in_triangle(
-                Pointf(unscale(point.x),unscale(point.y)),
-                Pointf(facet.second.vertex[0].x, facet.second.vertex[0].y),
-                Pointf(facet.second.vertex[1].x, facet.second.vertex[1].y),
-                Pointf(facet.second.vertex[2].x, facet.second.vertex[2].y)))
-            {
-                Slic3r::Geometry::Project_point_on_plane(Pointf3(facet.second.vertex[0].x,facet.second.vertex[0].y,facet.second.vertex[0].z),
-                                                         Pointf3(facet.second.normal.x,facet.second.normal.y,facet.second.normal.z),
-                                                         point);
-                //Shift down when on lower layer
-                point.z = point.z - scale_(path->distance_to_top);
-                break;
+        for (auto& surface : object.nonplanar_surfaces) {
+            for(auto& facet : surface.mesh) {
+                //skip if point is outside of the bounding box of the triangle
+                if (unscale(point.x) < std::min({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
+                    unscale(point.x) > std::max({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
+                    unscale(point.y) < std::min({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}) ||
+                    unscale(point.y) > std::max({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}))
+                {
+                    continue;
+                }
+                //check if point is inside of Triangle
+                if (Slic3r::Geometry::Point_in_triangle(
+                    Pointf(unscale(point.x),unscale(point.y)),
+                    Pointf(facet.second.vertex[0].x, facet.second.vertex[0].y),
+                    Pointf(facet.second.vertex[1].x, facet.second.vertex[1].y),
+                    Pointf(facet.second.vertex[2].x, facet.second.vertex[2].y)))
+                {
+                    Slic3r::Geometry::Project_point_on_plane(Pointf3(facet.second.vertex[0].x,facet.second.vertex[0].y,facet.second.vertex[0].z),
+                                                             Pointf3(facet.second.normal.x,facet.second.normal.y,facet.second.normal.z),
+                                                             point);
+                    //Shift down when on lower layer
+                    point.z = point.z - scale_(path->distance_to_top);
+                    //break;
+                }
             }
         }
     }
@@ -407,16 +408,19 @@ Layer::project_nonplanar_path(ExtrusionPath *path)
     {
         Points intersections;
         //check against every facet if lines intersect
-        for (auto& facet : object.nonplanar_surfaces) {
-            for(int j= 0; j < 3; j++){
-                //TODO precheck for faster computation
-                Point p1 = Point(scale_(facet.second.vertex[j].x), scale_(facet.second.vertex[j].y), scale_(facet.second.vertex[j].z));
-                Point p2 = Point(scale_(facet.second.vertex[(j+1) % 3].x), scale_(facet.second.vertex[(j+1) % 3].y), scale_(facet.second.vertex[(j+1) % 3].z));
-                Point* p = Slic3r::Geometry::Line_intersection(p1, p2, path->polyline.points[i], path->polyline.points[i+1]);
-                if (p) {
-                    intersections.push_back(*p);
+        for (auto& surface : object.nonplanar_surfaces) {
+            for(auto& facet : surface.mesh) {
+                for(int j= 0; j < 3; j++){
+                    //TODO precheck for faster computation
+                    Point p1 = Point(scale_(facet.second.vertex[j].x), scale_(facet.second.vertex[j].y), scale_(facet.second.vertex[j].z));
+                    Point p2 = Point(scale_(facet.second.vertex[(j+1) % 3].x), scale_(facet.second.vertex[(j+1) % 3].y), scale_(facet.second.vertex[(j+1) % 3].z));
+                    Point* p = Slic3r::Geometry::Line_intersection(p1, p2, path->polyline.points[i], path->polyline.points[i+1]);
+                    if (p) {
+                        intersections.push_back(*p);
+                    }
                 }
             }
+
         }
         //Stop if no intersections are found
         if (intersections.size() == 0) continue;

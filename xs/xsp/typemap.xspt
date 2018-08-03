@@ -137,6 +137,12 @@
 %typemap{Ref<SlicingAdaptive>}{simple};
 %typemap{Clone<SlicingAdaptive>}{simple};
 
+%typemap{NonplanarFacet*};
+%typemap{Ref<NonplanarFacet>}{simple};
+
+%typemap{NonplanarSurface*};
+%typemap{Ref<NonplanarSurface>}{simple};
+
 %typemap{LayerHeightSpline*};
 %typemap{Ref<LayerHeightSpline>}{simple};
 %typemap{Clone<LayerHeightSpline>}{simple};

@@ -41,6 +41,8 @@ REGISTER_CLASS(ModelObject, "Model::Object");
 REGISTER_CLASS(ModelVolume, "Model::Volume");
 REGISTER_CLASS(ModelInstance, "Model::Instance");
 REGISTER_CLASS(MotionPlanner, "MotionPlanner");
+REGISTER_CLASS(NonplanarFacet, "NonplanarFacet");
+REGISTER_CLASS(NonplanarSurface, "NonplanarSurface");
 REGISTER_CLASS(BoundingBox, "Geometry::BoundingBox");
 REGISTER_CLASS(BoundingBoxf, "Geometry::BoundingBoxf");
 REGISTER_CLASS(BoundingBoxf3, "Geometry::BoundingBoxf3");

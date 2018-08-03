@@ -250,6 +250,8 @@ for my $class (qw(
         Slic3r::Model::Material
         Slic3r::Model::Object
         Slic3r::Model::Volume
+        Slic3r::NonplanarFacet
+        Slic3r::NonplanarSurface
         Slic3r::Point
         Slic3r::Point3
         Slic3r::Pointf

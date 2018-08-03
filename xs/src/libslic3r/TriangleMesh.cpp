@@ -69,11 +69,11 @@ TriangleMesh::TriangleMesh(const Pointf3s &points, const std::vector<Point3>& fa
     stl_get_size(&stl);
 }
 
-TriangleMesh::TriangleMesh(std::vector<stl_facet>& facets)
+TriangleMesh::TriangleMesh(std::vector<stl_facet*> &facets)
     : repaired(false)
 {
-    stl_initialize(&this->stl);
-    stl_file &stl = this->stl;
+    stl_file stl;
+    stl_initialize(&stl);
     stl.error = 0;
     stl.stats.type = inmemory;
 
@@ -84,16 +84,16 @@ TriangleMesh::TriangleMesh(std::vector<stl_facet>& facets)
 
     for (int i = 0; i < stl.stats.number_of_facets; i++) {
         stl_facet new_facet;
-        new_facet.normal.x = facet->normal.x;
-        new_facet.normal.y = facet->normal.y;
-        new_facet.normal.z = facet->normal.z;
-        for (int i=0; i<=2 ;i++) {
-            new_facet.vertex[i].x = facet->vertex[i].x;
-            new_facet.vertex[i].y = facet->vertex[i].y;
-            new_facet.vertex[i].z = facet->vertex[i].z;
+        new_facet.normal.x = facets[i]->normal.x;
+        new_facet.normal.y = facets[i]->normal.y;
+        new_facet.normal.z = facets[i]->normal.z;
+        for (int j=0; j<=2 ;j++) {
+            new_facet.vertex[j].x = facets[i]->vertex[j].x;
+            new_facet.vertex[j].y = facets[i]->vertex[j].y;
+            new_facet.vertex[j].z = facets[i]->vertex[j].z;
         }
-        new_facet.extra[0] = facet->extra[0];
-        new_facet.extra[1] = facet->extra[1];
+        new_facet.extra[0] = facets[i]->extra[0];
+        new_facet.extra[1] = facets[i]->extra[1];
 
         stl.facet_start[i] = new_facet;
     }

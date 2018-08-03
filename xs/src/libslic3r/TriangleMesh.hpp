@@ -22,7 +22,7 @@ class TriangleMesh
     public:
     TriangleMesh();
     TriangleMesh(const Pointf3s &points, const std::vector<Point3> &facets);
-    TriangleMesh(std::vector<stl_facet>& facets);
+    TriangleMesh(std::vector<stl_facet*> &facets);
     TriangleMesh(const TriangleMesh &other);
     TriangleMesh& operator= (TriangleMesh other);
     void swap(TriangleMesh &other);

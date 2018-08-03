@@ -1088,10 +1088,9 @@ void PrintObject::_slice()
 void
 PrintObject::find_nonplanar_surfaces()
 {
-
-    //Daniel
     //Max angle of facets
     float max_angle = 20.0;
+    float max_height = 10.0;
 
     //Itterate over all model volumes
     const ModelVolumePtrs volumes = this->model_object()->volumes;
@@ -1099,38 +1098,48 @@ PrintObject::find_nonplanar_surfaces()
         //only check non modifier volumes
         if (! (*it)->modifier) {
             const TriangleMesh mesh = (*it)->mesh;
-            std::vector<stl_facet>& facets
+            std::map<int, NonplanarFacet> facets;
             //store all meshes with slope <= max_angle in map. Map is necessary to keep facet ID
             for (int i = 0; i < mesh.stl.stats.number_of_facets; ++ i) {
                 stl_facet* facet = mesh.stl.facet_start + i;
                 //TODO check if normals exist
                 if (facet->normal.z >= std::cos(max_angle * 3.14159265/180.0)) {
-                    facets.push_back(facet);
-
-                    stl_facet new_facet;
+                    //copy facet
+                    NonplanarFacet new_facet;
                     new_facet.normal.x = facet->normal.x;
                     new_facet.normal.y = facet->normal.y;
                     new_facet.normal.z = facet->normal.z;
-                    for (int i=0; i<=2 ;i++) {
-                        new_facet.vertex[i].x = facet->vertex[i].x;
-                        new_facet.vertex[i].y = facet->vertex[i].y;
-                        new_facet.vertex[i].z = facet->vertex[i].z;
+                    stl_neighbors* neighbors = mesh.stl.neighbors_start + i;
+                    for (int j=0; j<=2 ;j++) {
+                        new_facet.vertex[j].x = facet->vertex[j].x;
+                        new_facet.vertex[j].y = facet->vertex[j].y;
+                        new_facet.vertex[j].z = facet->vertex[j].z;
+                        new_facet.neighbor[j] = neighbors->neighbor[j];
                     }
-                    new_facet.extra[0] = facet->extra[0];
-                    new_facet.extra[1] = facet->extra[1];
-                    this->nonplanar_surfaces[i] = new_facet;
+                    new_facet.calculate_stats();
+                    facets[i] = new_facet;
                 }
             }
-            TriangleMesh new_mesh = new TriangleMesh(new_facets);
-            NonplanarSurface ns = new NonplanarSurface(new_mesh, 0);
+            //create nonplanar surface from 
+            NonplanarSurface nf = NonplanarSurface(facets);
 
+            //group surfaces and attach all nonplanar surfaces to the PrintObject
+            this->nonplanar_surfaces = nf.group_surfaces();
+            
+            //check if surfaces maintain maximum printing height
+            for (auto& surface : this->nonplanar_surfaces) {
+                surface.check_max_printing_height(max_height);
+            }
+            
+            //check if surfaces are printable
+            for (auto& surface : this->nonplanar_surfaces) {
+                surface.check_printable_surfaces(max_angle);
+            }
+                
+            
             //Move facets to 0,0,0
-            for (auto& facet : this->nonplanar_surfaces) {
-                for (auto& vert : facet.second.vertex) {
-                    vert.x = vert.x - mesh.stl.stats.min.x;
-                    vert.y = vert.y - mesh.stl.stats.min.y;
-                    vert.z = vert.z - mesh.stl.stats.min.z;
-                }
+            for (auto& surface : this->nonplanar_surfaces) {
+                surface.translate(-mesh.stl.stats.min.x,-mesh.stl.stats.min.y,-mesh.stl.stats.min.z);
             }
 
             //group facets to connected component
@@ -1146,45 +1155,12 @@ PrintObject::find_nonplanar_surfaces()
             //Temporary all in one group
 
 
-            //testprint
-            for (auto& facet : this->nonplanar_surfaces) {
-                std::cout << "triangle " << facet.first << ": " ;
-                std::cout << " (" << (180*std::acos(facet.second.normal.z))/3.14159265 << "°)";
-
-                std::cout << " | V0:";
-                std::cout << " X:"<< facet.second.vertex[0].x;
-                std::cout << " Y:"<< facet.second.vertex[0].y;
-                std::cout << " Z:"<< facet.second.vertex[0].z;
-
-                std::cout << " | V1:";
-                std::cout << " X:"<< facet.second.vertex[1].x;
-                std::cout << " Y:"<< facet.second.vertex[1].y;
-                std::cout << " Z:"<< facet.second.vertex[1].z;
-
-                std::cout << " | V2:";
-                std::cout << " X:"<< facet.second.vertex[2].x;
-                std::cout << " Y:"<< facet.second.vertex[2].y;
-                std::cout << " Z:"<< facet.second.vertex[2].z;
-
-                std::cout << " | Normal:";
-                std::cout << " X:"<< facet.second.normal.x;
-                std::cout << " Y:"<< facet.second.normal.y;
-                std::cout << " Z:"<< facet.second.normal.z;
-
-                //TODO check if neighbors exist
-                stl_neighbors* neighbors = mesh.stl.neighbors_start + facet.first;
-                std::cout << " | Neighbors:";
-                std::cout << " 0:"<< neighbors->neighbor[0];
-                std::cout << " 1:"<< neighbors->neighbor[1];
-                std::cout << " 2:"<< neighbors->neighbor[2];
-                std::cout << std::endl;
+            //debug output
+            for (auto& surface : this->nonplanar_surfaces) {
+                surface.debug_output();
             }
         }
     }
-
-    //\Daniel
-
-
 }
 
 // called from slice()

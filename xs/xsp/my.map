@@ -57,6 +57,12 @@ TriangleMesh*              O_OBJECT_SLIC3R
 Ref<TriangleMesh>          O_OBJECT_SLIC3R_T
 Clone<TriangleMesh>        O_OBJECT_SLIC3R_T
 
+NonplanarFacet*          O_OBJECT_SLIC3R
+Ref<NonplanarFacet>      O_OBJECT_SLIC3R_T
+
+NonplanarSurface*          O_OBJECT_SLIC3R
+Ref<NonplanarSurface>      O_OBJECT_SLIC3R_T
+
 SLAPrint*                  O_OBJECT_SLIC3R
 Ref<SLAPrint>              O_OBJECT_SLIC3R_T
 Clone<SLAPrint>            O_OBJECT_SLIC3R_T

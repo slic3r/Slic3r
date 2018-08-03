@@ -73,6 +73,8 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Model.cpp
     ${LIBDIR}/libslic3r/MotionPlanner.cpp
     ${LIBDIR}/libslic3r/MultiPoint.cpp
+    ${LIBDIR}/libslic3r/NonplanarFacet.cpp
+    ${LIBDIR}/libslic3r/NonplanarSurface.cpp
     ${LIBDIR}/libslic3r/PerimeterGenerator.cpp
     ${LIBDIR}/libslic3r/PlaceholderParser.cpp
     ${LIBDIR}/libslic3r/Point.cpp

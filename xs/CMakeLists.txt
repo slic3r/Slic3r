@@ -108,6 +108,10 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/MotionPlanner.hpp
     ${LIBDIR}/libslic3r/MultiPoint.cpp
     ${LIBDIR}/libslic3r/MultiPoint.hpp
+    ${LIBDIR}/libslic3r/NonplanarFacet.cpp
+    ${LIBDIR}/libslic3r/NonplanarFacet.hpp
+    ${LIBDIR}/libslic3r/NonplanarSurface.cpp
+    ${LIBDIR}/libslic3r/NonplanarSurface.hpp
     ${LIBDIR}/libslic3r/PerimeterGenerator.cpp
     ${LIBDIR}/libslic3r/PerimeterGenerator.hpp
     ${LIBDIR}/libslic3r/PlaceholderParser.cpp
@@ -252,6 +256,8 @@ set(XS_XSP_FILES
     ${XSP_DIR}/Line.xsp
     ${XSP_DIR}/Model.xsp
     ${XSP_DIR}/MotionPlanner.xsp
+    ${XSP_DIR}/NonplanarFacet.xsp
+    ${XSP_DIR}/NonplanarSurface.xsp
     ${XSP_DIR}/PerimeterGenerator.xsp
     ${XSP_DIR}/PlaceholderParser.xsp
     ${XSP_DIR}/Point.xsp
