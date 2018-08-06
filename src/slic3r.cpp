@@ -51,6 +51,10 @@ main(int argc, char **argv)
         GUI::App::SetInstance(gui);
         wxEntry(argc, argv);
     }
+#else
+    if (cli_config.gui) {
+        std::cout << "GUI support has not been built." << "\n";
+    }
 #endif    
     // load config files supplied via --load
     for (const std::string &file : cli_config.load.values) {
