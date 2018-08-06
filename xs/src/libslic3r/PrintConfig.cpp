@@ -1605,6 +1605,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = "Threads";
     def->tooltip = "Threads are used to parallelize long-running tasks. Optimal threads number is slightly above the number of available cores/processors.";
     def->readonly = true;
+    def->cli = "threads=i";
     def->min = 1;
     {
         unsigned int threads = boost::thread::hardware_concurrency();
@@ -1942,6 +1943,24 @@ CLIConfigDef::CLIConfigDef()
     def->tooltip = "Slice the model and export slices as 3MF.";
     def->cli = "export-3mf";
     def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("slice", coBool);
+    def->label = "Slice";
+    def->tooltip = "Slice the model and export gcode.";
+    def->cli = "slice";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("help", coBool);
+    def->label = "Help";
+    def->tooltip = "Show this help.";
+    def->cli = "help";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("gui", coBool);
+    def->label = "Use GUI";
+    def->tooltip = "Start the Slic3r GUI.";
+    def->cli = "gui";
+    def->default_value = new ConfigOptionBool(false);
     
     def = this->add("info", coBool);
     def->label = "Output Model Info";
@@ -1996,8 +2015,27 @@ CLIConfigDef::CLIConfigDef()
     def->tooltip = "Scale to fit the given volume.";
     def->cli = "scale-to-fit";
     def->default_value = new ConfigOptionPoint3(Pointf3(0,0,0));
+
+    def = this->add("center", coPoint3);
+    def->label = "Center";
+    def->tooltip = "Center the print around the given center (default: 100, 100).";
+    def->cli = "center";
+    def->default_value = new ConfigOptionPoint(Pointf(100,100));
 }
 
 const CLIConfigDef cli_config_def;
+
+std::ostream&
+print_cli_options(std::ostream& out) {
+    for (const auto& opt : print_config_def.options) {
+        out << "\t" << std::left << std::setw(40) << std::string("--") + opt.second.cli; 
+        out << "\t" << opt.second.tooltip << "\n";
+        if (opt.second.default_value != nullptr) 
+            out << "\t" << std::setw(40) << " " << "\t" << " (default: " << opt.second.default_value->serialize() << ")";
+        out << "\n";
+    }
+    std::cerr << std::endl;
+    return out;
+}
 
 }

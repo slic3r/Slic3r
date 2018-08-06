@@ -305,7 +305,7 @@ set(LIBSLIC3R_DEPENDS
     ${Boost_LIBRARIES}
 )
 
-IF(wxWidgets_FOUND)
+IF(wxWidgets_FOUND AND Enable_GUI)
     MESSAGE("wx found!")
     INCLUDE("${wxWidgets_USE_FILE}")
 
@@ -379,11 +379,13 @@ IF(wxWidgets_FOUND)
         add_test(NAME TestGUI COMMAND gui_test)
         target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES} ${LIBSLIC3R_DEPENDS} ${OPENGL_LIBRARIES})
     endif()
-ELSE(wxWidgets_FOUND)
+ELSE(wxWidgets_FOUND AND Enable_GUI)
     # For convenience. When we cannot continue, inform the user
-    MESSAGE("wx not found!")
+    if (Enable_GUI)
+        MESSAGE("wx not found!")
+    endif (Enable_GUI)
     #skip gui when no wx included
-ENDIF(wxWidgets_FOUND)
+ENDIF(wxWidgets_FOUND AND Enable_GUI)
 
 target_link_libraries (slic3r libslic3r ${LIBSLIC3R_DEPENDS})
 

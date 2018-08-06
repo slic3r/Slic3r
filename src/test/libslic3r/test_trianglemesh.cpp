@@ -376,7 +376,7 @@ SCENARIO( "TriangleMeshSlicer: Cut behavior.") {
         }
     }
 }
-
+#ifdef TEST_PERFORMANCE
 TEST_CASE("Regression test for issue #4486 - files take forever to slice") {
     TriangleMesh mesh;
     auto config {Slic3r::Config::new_from_defaults()};
@@ -401,6 +401,7 @@ TEST_CASE("Regression test for issue #4486 - files take forever to slice") {
     REQUIRE(timedout == false);
 
 }
+#endif // TEST_PERFORMANCE
 
 #ifdef BUILD_PROFILE
 TEST_CASE("Profile test for issue #4486 - files take forever to slice") {
