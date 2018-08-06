@@ -169,7 +169,6 @@ Print::make_skirt()
             this->has_infinite_skirt() ? object->layer_count() :
             std::min(size_t(this->config.skirt_height()), object->layer_count())
         };
-        std::cerr << object->layer_count();
         auto* highest_layer {object->get_layer(skirt_height - 1)};
         skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
     }
