@@ -303,6 +303,7 @@ set(LIBSLIC3R_DEPENDS
     poly2tri
     ZipArchive
     ${Boost_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT} 
 )
 
 IF(wxWidgets_FOUND AND Enable_GUI)
