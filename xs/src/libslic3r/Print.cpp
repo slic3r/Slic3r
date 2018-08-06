@@ -717,6 +717,14 @@ Print::export_gcode(std::ostream& output, bool quiet)
 
 }
 
+void
+Print::export_gcode(const std::string& outfile, bool quiet)
+{
+    std::ofstream outstream(outfile);
+    this->export_gcode(outstream);
+}
+
+
 bool
 Print::apply_config(config_ptr config) {
     // dereference the stored pointer and pass the resulting data to apply_config()

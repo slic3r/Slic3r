@@ -3,6 +3,7 @@
 #include "IO.hpp"
 #include "Model.hpp"
 #include "SLAPrint.hpp"
+#include "Print.hpp"
 #include "TriangleMesh.hpp"
 #include "libslic3r.h"
 #include <cstdio>
@@ -44,10 +45,12 @@ main(int argc, char **argv)
     DynamicPrintConfig print_config;
 
 #ifdef USE_WX
-    GUI::App *gui = new GUI::App();
-    
-    GUI::App::SetInstance(gui);
-    wxEntry(argc, argv);
+    if (cli_config.gui) {
+        GUI::App *gui = new GUI::App();
+
+        GUI::App::SetInstance(gui);
+        wxEntry(argc, argv);
+    }
 #endif    
     // load config files supplied via --load
     for (const std::string &file : cli_config.load.values) {
@@ -112,6 +115,14 @@ main(int argc, char **argv)
         
         // TODO: handle --merge
         models.push_back(model);
+    }
+    if (cli_config.help) {
+        std::cout << "Slic3r " << SLIC3R_VERSION << " is a STL-to-GCODE translator for RepRap 3D printers" << "\n"
+                  << "written by Alessandro Ranellucci <aar@cpan.org> - http://slic3r.org/ - https://github.com/slic3r/Slic3r" << "\n"
+                  << "Git Version " << BUILD_COMMIT << "\n\n"
+                  << "Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ..." << "\n";
+        print_cli_options(boost::nowide::cout);
+        return 0;
     }
     
     for (Model &model : models) {
@@ -199,6 +210,23 @@ main(int argc, char **argv)
                 IO::STL::write(*m, ss.str());
                 delete m;
             }
+        } else if (cli_config.slice) {
+            std::string outfile = cli_config.output.value;
+            Print print;
+
+            model.arrange_objects(print.config.min_object_distance());
+            model.center_instances_around_point(cli_config.center);
+            if (outfile.empty()) outfile = model.objects.front()->input_file + ".gcode";
+            print.apply_config(print_config);
+
+            for (auto* mo : model.objects) {
+                print.auto_assign_extruders(mo);
+                print.add_model_object(mo);
+            }
+            print.validate();
+
+            print.export_gcode(outfile);
+
         } else {
             boost::nowide::cerr << "error: command not supported" << std::endl;
             return 1;
