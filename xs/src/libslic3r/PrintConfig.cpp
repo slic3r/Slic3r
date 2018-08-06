@@ -2028,11 +2028,13 @@ const CLIConfigDef cli_config_def;
 std::ostream&
 print_cli_options(std::ostream& out) {
     for (const auto& opt : print_config_def.options) {
-        out << "\t" << std::left << std::setw(40) << std::string("--") + opt.second.cli; 
-        out << "\t" << opt.second.tooltip << "\n";
-        if (opt.second.default_value != nullptr) 
-            out << "\t" << std::setw(40) << " " << "\t" << " (default: " << opt.second.default_value->serialize() << ")";
-        out << "\n";
+        if (opt.second.cli.size() != 0) {
+            out << "\t" << std::left << std::setw(40) << std::string("--") + opt.second.cli; 
+            out << "\t" << opt.second.tooltip << "\n";
+            if (opt.second.default_value != nullptr) 
+                out << "\t" << std::setw(40) << " " << "\t" << " (default: " << opt.second.default_value->serialize() << ")";
+            out << "\n";
+        }
     }
     std::cerr << std::endl;
     return out;
