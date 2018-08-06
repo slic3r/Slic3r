@@ -45,6 +45,9 @@ SCENARIO( "PrintGCode basic functionality") {
                 REQUIRE(exported.find("; support material extrusion width") == std::string::npos);
                 REQUIRE(exported.find("; first layer extrusion width") == std::string::npos);
             }
+            THEN("Exported text does not contain cooling markers (they were consumed)") {
+                REQUIRE(exported.find(";_EXTRUDE_SET_SPEED") == std::string::npos);
+            }
 
             THEN("GCode preamble is emitted.") {
                 REQUIRE(exported.find("G21 ; set units to millimeters") != std::string::npos);

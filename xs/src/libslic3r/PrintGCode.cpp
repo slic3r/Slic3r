@@ -659,6 +659,8 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
         copy_idx++;
     }
     // write the resulting gcode
+    gcode = this->_cooling_buffer.append(gcode, std::to_string(reinterpret_cast<long long unsigned int>(layer->object())) + std::string(typeid(layer).name()), 
+                                         layer->id(), layer->print_z);
     fh << this->filter(gcode);
 }
 
