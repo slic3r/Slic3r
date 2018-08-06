@@ -348,6 +348,17 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     gcodegen.config.apply(obj.config, true);
 
     // check for usage of spiralvase logic.
+    this->_spiral_vase.enable = (
+            layer->id() > 0 
+            && (print.config.skirts == 0 || (layer->id() >= print.config.skirt_height && !print.has_infinite_skirt()))
+            && std::find_if(layer->regions.cbegin(), layer->regions.cend(), [layer] (const LayerRegion* l) 
+                { return    l->region()->config.bottom_solid_layers > layer->id() 
+                         || l->perimeters.items_count() > 1 
+                         || l->fills.items_count() > 0; 
+                }) == layer->regions.cend()
+            );
+    this->_gcodegen.enable_loop_clipping = this->_spiral_vase.enable;
+
 
 
     // if using spiralvase, disable loop clipping.
@@ -658,9 +669,17 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
         }
         copy_idx++;
     }
-    // write the resulting gcode
+
+    // Apply spiral vase post-processing if this layer contains suitable geometry
+    // (we must feed all the G-code into the post-processor, including the first 
+    // bottom non-spiral layers otherwise it will mess with positions)
+    // we apply spiral vase at this stage because it requires a full layer
+    gcode = this->_spiral_vase.process_layer(gcode);
+    // Apply the cooling logic.
     gcode = this->_cooling_buffer.append(gcode, std::to_string(reinterpret_cast<long long unsigned int>(layer->object())) + std::string(typeid(layer).name()), 
                                          layer->id(), layer->print_z);
+    
+    // write the resulting gcode
     fh << this->filter(gcode);
 }
 
@@ -741,6 +760,8 @@ PrintGCode::PrintGCode(Slic3r::Print& print, std::ostream& _fh) :
     _gcodegen.layer_count = layer_count;
     _gcodegen.enable_cooling_markers = true;
     _gcodegen.apply_print_config(config);
+    
+    if (config.spiral_vase) _spiral_vase.enable = true;
 
     auto extruders {print.extruders()}; 
     _gcodegen.set_extruders(extruders.cbegin(), extruders.cend());
