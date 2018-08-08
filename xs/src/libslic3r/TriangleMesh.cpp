@@ -490,9 +490,9 @@ TriangleMesh::stats() const {
 }
 
 BoundingBoxf3 TriangleMesh::bb3() const {
-    Pointf3 min(this->stl.stats.min.x, this->stl.stats.min.y, this->stl.stats.min.z);
-    Pointf3 max(this->stl.stats.max.x, this->stl.stats.max.y, this->stl.stats.max.z);
-    return BoundingBoxf3(min, max);
+    Pointf3 pmin(this->stl.stats.min.x, this->stl.stats.min.y, this->stl.stats.min.z);
+    Pointf3 pmax(this->stl.stats.max.x, this->stl.stats.max.y, this->stl.stats.max.z);
+    return BoundingBoxf3(pmin, pmax);
 }
 
 

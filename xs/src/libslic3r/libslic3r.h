@@ -4,6 +4,7 @@
 // this needs to be included early for MSVC (listing it in Build.PL is not enough)
 #include <ostream>
 #include <iostream>
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <queue>
 #include <sstream>
@@ -11,6 +12,10 @@
 #include <boost/thread.hpp>
 #include <cstdint>
 
+#ifdef _MSC_VER
+#include <limits>
+#define NOMINMAX
+#endif
 /* Implementation of CONFESS("foo"): */
 #ifdef _MSC_VER
 	#define CONFESS(...) confess_at(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
