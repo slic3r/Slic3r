@@ -431,8 +431,6 @@ IF (WIN32)
     )
     target_link_libraries(slic3r boost-nowide)
 
-    # Windows findwxwidgets doesn't get everything needed for wxMSW
-    target_link_libraries(slic3r uxtheme)    
     # MinGW apparently has some multiple definitions of UUID-related items
     # deal with it.
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
