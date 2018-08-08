@@ -429,6 +429,10 @@ IF (WIN32)
     add_library(boost-nowide STATIC 
         ${LIBDIR}/boost/nowide/iostream.cpp
     )
+    if(MSVC)
+        # Tell boost pragmas to not rename nowide as we are building it
+        add_definitions(-DBOOST_NOWIDE_NO_LIB)
+    endif()    
     target_link_libraries(slic3r boost-nowide)
 
     # MinGW apparently has some multiple definitions of UUID-related items
