@@ -13,7 +13,7 @@ option(COVERAGE "Build with gcov code coverage profiling." OFF)
 add_compile_options(-DNO_PERL  -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE)
 
 if (MSVC)
-    add_compile_options(-W4)
+    add_compile_options(-W3)
     add_compile_options(-bigobj) 
 else()
     add_compile_options(-Wall)
