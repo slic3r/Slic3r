@@ -85,44 +85,65 @@ PerimeterGenerator::process()
             for (int i = 0; i <= loop_number+1; ++i) {  // outer loop is 0
                 Polygons offsets;
                 if (i == 0) {
-                    // the minimum thickness of a single loop is:
-                    // ext_width/2 + ext_spacing/2 + spacing/2 + width/2
+                    // compute next onion, without taking care of thin_walls : destroy too thin areas.
+                    if (!this->config->thin_walls)
+                        offsets = offset(last, -(float)(ext_pwidth / 2));
+
+
+                    // look for thin walls
                     if (this->config->thin_walls) {
+                        // the minimum thickness of a single loop is:
+                        // ext_width/2 + ext_spacing/2 + spacing/2 + width/2
                         offsets = offset2(
                             last,
                             -(ext_pwidth/2 + ext_min_spacing/2 - 1),
-                            +(ext_min_spacing/2 - 1)
-                        );
-                    } else {
-                        offsets = offset(last, -ext_pwidth/2);
-                    }
-                    
-                    // look for thin walls
-                    if (this->config->thin_walls) {
-                        Polygons no_thin_zone = offset(offsets, +ext_pwidth/2);
-                        Polygons diffpp = diff(
-                            last,
-                            no_thin_zone,
-                            true  // medial axis requires non-overlapping geometry
-                        );
+                            +(ext_min_spacing/2 - 1));
+
+                        // detect edge case where a curve can be split in multiple small chunks.
+                        Polygons no_thin_onion = offset(last, -(float)(ext_pwidth / 2));
+                        if (no_thin_onion.size()>0 && offsets.size() > 3 * no_thin_onion.size()) {
+                            //use a sightly smaller spacing to try to drastically improve the split
+                            Polygons next_onion_secondTry = offset2(
+                                last,
+                                -(float)(ext_pwidth / 2 + ext_min_spacing / 2.5 - 1),
+                                +(float)(ext_min_spacing / 2.5 - 1));
+                            if (abs(((int32_t)offsets.size()) - ((int32_t)no_thin_onion.size())) > 
+                                2*abs(((int32_t)next_onion_secondTry.size()) - ((int32_t)no_thin_onion.size()))) {
+                                offsets = next_onion_secondTry;
+                            }
+                        }
                         
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
-                        ExPolygons expp = offset2_ex(diffpp, -min_width/2, +min_width/2);
-						
-                         // compute a bit of overlap to anchor thin walls inside the print.
-                        ExPolygons anchor = intersection_ex(to_polygons(offset_ex(expp, (float)(ext_pwidth / 2))), no_thin_zone, true);
                         
-                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                        for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex) {
-                            ExPolygons bounds = _clipper_ex(ClipperLib::ctUnion, (Polygons)*ex, to_polygons(anchor), true);
-							//search our bound
+                        Polygons no_thin_zone = offset(offsets, +ext_pwidth/2);
+                        // medial axis requires non-overlapping geometry
+                        Polygons thin_zones = diff(last, no_thin_zone, true);
+                        //don't use offset2_ex, because we don't want to merge the zones that have been separated.
+                        Polygons expp = offset(thin_zones, (float)(-min_width / 2));
+                        //we push the bits removed and put them into what we will use as our anchor
+                        if (expp.size() > 0) {
+                            no_thin_zone = diff(last, offset(expp, (float)(min_width / 2)), true);
+                        }
+                        // compute a bit of overlap to anchor thin walls inside the print.
+                        for (Polygon &ex : expp) {
+                            //growing back the polygon
+                            //a vary little bit of overlap can be created here with other thin polygon, but it's more useful than worisome.
+                            ExPolygons ex_bigger = offset_ex(ex, (float)(min_width / 2));
+                            if (ex_bigger.size() != 1) continue; // impossible error, growing a single polygon can't create multiple or 0.
+                            ExPolygons anchor = intersection_ex(offset(ex, (float)(ext_pwidth / 2), 
+                                    CLIPPER_OFFSET_SCALE, jtSquare, 3), no_thin_zone, true);
+                            ExPolygons bounds = _clipper_ex(ClipperLib::ctUnion, to_polygons(ex_bigger), to_polygons(anchor), true);
                             for (ExPolygon &bound : bounds) {
-                                if (!intersection_ex(*ex, bound).empty()) {
-                                    // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                    ex->medial_axis(bound, ext_pwidth + ext_pspacing2, min_width, &thin_walls);
-                                    continue;
+                                if (!intersection_ex(ex_bigger[0], bound).empty()) {
+                                    //be sure it's not too small to extrude reliably
+                                    if (ex_bigger[0].area() > min_width*(ext_pwidth + ext_pspacing2)) {
+                                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
+                                        ex_bigger[0].medial_axis(bound, ext_pwidth + ext_pspacing2, min_width, 
+                                            &thin_walls, this->layer_height);
+                                    }
+                                    break;
                                 }
                             }
                         }
@@ -292,9 +313,13 @@ PerimeterGenerator::process()
             );
             
             ThickPolylines polylines;
-            for (ExPolygons::const_iterator ex = gaps_ex.begin(); ex != gaps_ex.end(); ++ex)
-                ex->medial_axis(*ex, max, min, &polylines);
-            
+            for (const ExPolygon &ex : gaps_ex) {
+                //remove too small gaps that are too hard to fill.
+                //ie one that are smaller than an extrusion with width of min and a length of max.
+                if (ex.area() > min*max) {
+                    ex.medial_axis(ex, max, min, &polylines, this->layer_height);
+                }
+            }
             if (!polylines.empty()) {
                 ExtrusionEntityCollection gap_fill = this->_variable_width(polylines, 
                     erGapFill, this->solid_infill_flow);
