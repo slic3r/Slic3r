@@ -31,9 +31,9 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("adaptive_slicing_quality", coPercent);
-    def->label = "Adaptive quality";
-    def->category = "Layers and Perimeters";
-    def->tooltip = "Controls the quality / printing time tradeoff for adaptive layer generation. 0 -> fastest printing with max layer height, 100 -> highest quality, min layer height";
+    def->label = __TRANS("Adaptive quality");
+    def->category = __TRANS("Layers and Perimeters");
+    def->tooltip = __TRANS("Controls the quality / printing time tradeoff for adaptive layer generation. 0 -> fastest printing with max layer height, 100 -> highest quality, min layer height");
     def->sidetext = "%";
     def->cli = "adaptive_slicing_quality=f";
     def->min = 0;
@@ -86,8 +86,8 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionString("");
 
     def = this->add("between_objects_gcode", coString);
-    def->label = "Between objects G-code";
-    def->tooltip = "This code is inserted between objects when using sequential printing. By default extruder and bed temperature are reset using non-wait command; however if M104, M109, M140 or M190 are detected in this custom code, Slic3r will not add temperature commands. Note that you can use placeholder variables for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want.";
+    def->label = __TRANS("Between objects G-code");
+    def->tooltip = __TRANS("This code is inserted between objects when using sequential printing. By default extruder and bed temperature are reset using non-wait command; however if M104, M109, M140 or M190 are detected in this custom code, Slic3r will not add temperature commands. Note that you can use placeholder variables for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want.");
     def->cli = "between-objects-gcode=s";
     def->multiline = true;
     def->full_width = true;
@@ -526,19 +526,19 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
-    def->enum_labels.push_back("Rectilinear");
-    def->enum_labels.push_back("Aligned Rectilinear");
-    def->enum_labels.push_back("Grid");
-    def->enum_labels.push_back("Triangles");
-    def->enum_labels.push_back("Stars");
-    def->enum_labels.push_back("Cubic");
-    def->enum_labels.push_back("Concentric");
-    def->enum_labels.push_back("Honeycomb");
-    def->enum_labels.push_back("3D Honeycomb");
-    def->enum_labels.push_back("Gyroid");
-    def->enum_labels.push_back("Hilbert Curve");
-    def->enum_labels.push_back("Archimedean Chords");
-    def->enum_labels.push_back("Octagram Spiral");
+    def->enum_labels.push_back(__TRANS("Rectilinear"));
+    def->enum_labels.push_back(__TRANS("Aligned Rectilinear"));
+    def->enum_labels.push_back(__TRANS("Grid"));
+    def->enum_labels.push_back(__TRANS("Triangles"));
+    def->enum_labels.push_back(__TRANS("Stars"));
+    def->enum_labels.push_back(__TRANS("Cubic"));
+    def->enum_labels.push_back(__TRANS("Concentric"));
+    def->enum_labels.push_back(__TRANS("Honeycomb"));
+    def->enum_labels.push_back(__TRANS("3D Honeycomb"));
+    def->enum_labels.push_back(__TRANS("Gyroid"));
+    def->enum_labels.push_back(__TRANS("Hilbert Curve"));
+    def->enum_labels.push_back(__TRANS("Archimedean Chords"));
+    def->enum_labels.push_back(__TRANS("Octagram Spiral"));
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipStars);
 
     def = this->add("first_layer_acceleration", coFloat);
@@ -1016,8 +1016,8 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionStrings();
 
     def = this->add("printer_notes", coString);
-    def->label = "Printer notes";
-    def->tooltip = "You can put your notes regarding the printer here. This text will be added to the G-code header comments.";
+    def->label = __TRANS("Printer notes");
+    def->tooltip = __TRANS("You can put your notes regarding the printer here. This text will be added to the G-code header comments.");
     def->cli = "printer-notes=s";
     def->multiline = true;
     def->full_width = true;
@@ -1042,15 +1042,15 @@ PrintConfigDef::PrintConfigDef()
     def->label = __TRANS("Raft layers");
     def->category = __TRANS("Support material");
     def->tooltip = __TRANS("The object will be raised by this number of layers, and support material will be generated under it.");
-    def->sidetext = "layers";
+    def->sidetext = __TRANS("layers");
     def->cli = "raft-layers=i";
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
 
     def = this->add("regions_overlap", coFloat);
-    def->label = "Regions/extruders overlap";
-    def->category = "Extruders";
-    def->tooltip = "This setting applies an additional overlap between regions printed with distinct extruders or distinct settings. This shouldn't be needed under normal circumstances.";
+    def->label = __TRANS("Regions/extruders overlap");
+    def->category = __TRANS("Extruders");
+    def->tooltip = __TRANS("This setting applies an additional overlap between regions printed with distinct extruders or distinct settings. This shouldn't be needed under normal circumstances.");
     def->sidetext = "mm";
     def->cli = "regions-overlap=s";
     def->default_value = new ConfigOptionFloat(0);
@@ -1112,7 +1112,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = __TRANS("Length");
     def->full_label = "Retraction Length (Toolchange)";
     def->tooltip = __TRANS("When retraction is triggered before changing tool, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder).");
-    def->sidetext = "mm (zero to disable)";
+    def->sidetext = __TRANS("mm (zero to disable)");
     def->cli = "retract-length-toolchange=f@";
     {
         ConfigOptionFloats* opt = new ConfigOptionFloats();
@@ -1134,7 +1134,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("retract_lift_above", coFloats);
     def->label = __TRANS("Above Z");
-    def->full_label = "Only lift Z above";
+    def->full_label = __TRANS("Only lift Z above");
     def->category = __TRANS("Retraction");
     def->tooltip = __TRANS("If you set this to a positive value, Z lift will only take place above the specified absolute Z. You can tune this setting for skipping lift on the first layers.");
     def->sidetext = "mm";
@@ -1147,7 +1147,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("retract_lift_below", coFloats);
     def->label = __TRANS("Below Z");
-    def->full_label = "Only lift Z below";
+    def->full_label = __TRANS("Only lift Z below");
     def->category = __TRANS("Retraction");
     def->tooltip = __TRANS("If you set this to a positive value, Z lift will only take place below the specified absolute Z. You can tune this setting for limiting lift to the first layers.");
     def->sidetext = "mm";
@@ -1212,7 +1212,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("serial_port", coString);
     def->gui_type = "select_open";
     def->label = "";
-    def->full_label = "Serial port";
+    def->full_label = __TRANS("Serial port");
     def->tooltip = __TRANS("USB/serial port for printer connection.");
     def->cli = "serial-port=s";
     def->width = 200;
@@ -1260,7 +1260,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("slowdown_below_layer_time", coInt);
     def->label = __TRANS("Slow down if layer print time is below");
     def->tooltip = __TRANS("If layer print time is estimated below this number of seconds, print moves speed will be scaled down to extend duration to this value.");
-    def->sidetext = "approximate seconds";
+    def->sidetext = __TRANS("approximate seconds");
     def->cli = "slowdown-below-layer-time=i";
     def->width = 60;
     def->min = 0;
@@ -1269,7 +1269,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("small_perimeter_speed", coFloatOrPercent);
     def->label = __TRANS("↳ small");
-    def->full_label = "Small perimeters speed";
+    def->full_label = __TRANS("Small perimeters speed");
     def->gui_type = "f_enum_open";
     def->category = __TRANS("Speed");
     def->tooltip = __TRANS("This separate setting will affect the speed of perimeters having radius <= 6.5mm (usually holes). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above.");
@@ -1302,14 +1302,14 @@ PrintConfigDef::PrintConfigDef()
     def->label = __TRANS("Solid infill every");
     def->category = __TRANS("Infill");
     def->tooltip = __TRANS("This feature allows to force a solid layer every given number of layers. Zero to disable. You can set this to any value (for example 9999); Slic3r will automatically choose the maximum possible number of layers to combine according to nozzle diameter and layer height.");
-    def->sidetext = "layers";
+    def->sidetext = __TRANS("layers");
     def->cli = "solid-infill-every-layers=i";
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
 
     def = this->add("solid_infill_extrusion_width", coFloatOrPercent);
     def->label = __TRANS("↳ solid");
-    def->full_label = "Solid infill extrusion width";
+    def->full_label = __TRANS("Solid infill extrusion width");
     def->gui_type = "f_enum_open";
     def->category = __TRANS("Extrusion Width");
     def->tooltip = __TRANS("Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. If expressed as percentage (for example 90%) it will be computed over layer height.");
@@ -1322,7 +1322,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("solid_infill_speed", coFloatOrPercent);
     def->label = __TRANS("↳ solid");
-    def->full_label = "Solid infill speed";
+    def->full_label = __TRANS("Solid infill speed");
     def->gui_type = "f_enum_open";
     def->category = __TRANS("Speed");
     def->tooltip = __TRANS("Speed for printing solid regions (top/bottom/internal horizontal shells). This can be expressed as a percentage (for example: 80%) over the default infill speed above.");
@@ -1352,7 +1352,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("standby_temperature_delta", coInt);
     def->label = __TRANS("Temperature variation");
-    def->full_label = "Standby temperature delta";
+    def->full_label = __TRANS("Standby temperature delta");
     def->category = __TRANS("Extruders");
     def->tooltip = __TRANS("Temperature difference to be applied when an extruder is not active.  Enables a full-height \"sacrificial\" skirt on which the nozzles are periodically wiped.");
     def->sidetext = "∆°C";
@@ -1422,10 +1422,10 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(0.2);
 
     def = this->add("support_material_max_layers", coInt);
-    def->label = "Max layer count for supports";
-    def->category = "Support material";
-    def->tooltip = "Disable support generation above this layer. Setting this to 0 will disable this feature.";
-    def->sidetext = "layers";
+    def->label = __TRANS("Max layer count for supports");
+    def->category = __TRANS("Support material");
+    def->tooltip = __TRANS("Disable support generation above this layer. Setting this to 0 will disable this feature.");
+    def->sidetext = __TRANS("layers");
     def->cli = "support-material-max-layers=f";
     def->full_label = "Maximum layer count for support generation";
     def->min = 0;
@@ -1437,7 +1437,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = __TRANS("Generate support material for the specified number of layers counting from bottom, regardless of whether normal support material is enabled or not and regardless of any angle threshold. This is useful for getting more adhesion of objects having a very thin or poor footprint on the build plate.");
     def->sidetext = "layers";
     def->cli = "support-material-enforce-layers=f";
-    def->full_label = "Enforce support for the first n layers";
+    def->full_label = __TRANS("Enforce support for the first n layers");
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
 
@@ -1470,10 +1470,10 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInt(1);
 
     def = this->add("support_material_interface_extrusion_width", coFloatOrPercent);
-    def->label = "Support interface";
+    def->label = __TRANS("Support interface");
     def->gui_type = "f_enum_open";
-    def->category = "Extrusion Width";
-    def->tooltip = "Set this to a non-zero value to set a manual extrusion width for support material interface. If expressed as percentage (for example 90%) it will be computed over layer height.";
+    def->category = __TRANS("Extrusion Width");
+    def->tooltip = __TRANS("Set this to a non-zero value to set a manual extrusion width for support material interface. If expressed as percentage (for example 90%) it will be computed over layer height.");
     def->sidetext = "mm or %";
     def->cli = "support-material-interface-extrusion-width=s";
     def->min = 0;
@@ -1485,7 +1485,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = __TRANS("Interface layers");
     def->category = __TRANS("Support material");
     def->tooltip = __TRANS("Number of interface layers to insert between the object(s) and support material.");
-    def->sidetext = "layers";
+    def->sidetext = __TRANS("layers");
     def->cli = "support-material-interface-layers=i";
     def->min = 0;
     def->default_value = new ConfigOptionInt(3);
@@ -1519,29 +1519,29 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = __TRANS("Pattern used to generate support material.");
     def->cli = "support-material-pattern=s";
     def->enum_keys_map = ConfigOptionEnum<SupportMaterialPattern>::get_enum_values();
-    def->enum_values.push_back("rectilinear");
-    def->enum_values.push_back("rectilinear-grid");
-    def->enum_values.push_back("honeycomb");
-    def->enum_values.push_back("pillars");
-    def->enum_labels.push_back("rectilinear");
-    def->enum_labels.push_back("rectilinear grid");
-    def->enum_labels.push_back("honeycomb");
-    def->enum_labels.push_back("pillars");
+    def->enum_values.push_back(__TRANS("rectilinear"));
+    def->enum_values.push_back(__TRANS("rectilinear-grid"));
+    def->enum_values.push_back(__TRANS("honeycomb"));
+    def->enum_values.push_back(__TRANS("pillars"));
+    def->enum_labels.push_back(__TRANS("rectilinear"));
+    def->enum_labels.push_back(__TRANS("rectilinear grid"));
+    def->enum_labels.push_back(__TRANS("honeycomb"));
+    def->enum_labels.push_back(__TRANS("pillars"));
     def->default_value = new ConfigOptionEnum<SupportMaterialPattern>(smpPillars);
 
     def = this->add("support_material_pillar_size", coFloat);
-    def->label = "Pillar size";
-    def->category = "Support material";
-    def->tooltip = "Size of the pillars in the pillar support pattern";
+    def->label = __TRANS("Pillar size");
+    def->category = __TRANS("Support material");
+    def->tooltip = __TRANS("Size of the pillars in the pillar support pattern");
     def->sidetext = "mm";
     def->cli = "support-material-pillar-size=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(2.5);
 
     def = this->add("support_material_pillar_spacing", coFloat);
-    def->label = "Pillar spacing";
-    def->category = "Support material";
-    def->tooltip = "Spacing between pillars in the pillar support pattern";
+    def->label = __TRANS("Pillar spacing");
+    def->category = __TRANS("Support material");
+    def->tooltip = __TRANS("Spacing between pillars in the pillar support pattern");
     def->sidetext = "mm";
     def->cli = "support-material-pillar-spacing=f";
     def->min = 0;
@@ -1585,7 +1585,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = __TRANS("Other layers");
     def->tooltip = __TRANS("Extruder temperature for layers after the first one. Set this to zero to disable temperature control commands in the output.");
     def->cli = "temperature=i@";
-    def->full_label = "Temperature";
+    def->full_label = __TRANS("Temperature");
     def->max = 0;
     def->max = 500;
     {
@@ -1623,7 +1623,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("top_infill_extrusion_width", coFloatOrPercent);
     def->label = __TRANS("↳ top solid");
-    def->full_label = "Top solid infill extrusion width";
+    def->full_label = __TRANS("Top solid infill extrusion width");
     def->gui_type = "f_enum_open";
     def->category = __TRANS("Extrusion Width");
     def->tooltip = __TRANS("Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. If expressed as percentage (for example 90%) it will be computed over layer height.");
@@ -1636,7 +1636,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("top_infill_pattern", external_fill_pattern);
     def->label = __TRANS("Top");
-    def->full_label = "Top infill pattern";
+    def->full_label = __TRANS("Top infill pattern");
     def->category = __TRANS("Infill");
     def->tooltip = __TRANS("Infill pattern for top layers. This only affects the external visible layer, and not its adjacent solid shells.");
     def->cli = "top-infill-pattern=s";
@@ -1644,7 +1644,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("top_solid_infill_speed", coFloatOrPercent);
     def->label = __TRANS("↳ top solid");
-    def->full_label = "Top solid infill speed";
+    def->full_label = __TRANS("Top solid infill speed");
     def->gui_type = "f_enum_open";
     def->category = __TRANS("Speed");
     def->tooltip = __TRANS("Speed for printing top solid layers (it only applies to the uppermost external layers and not to their internal solid layers). You may want to slow down this to get a nicer surface finish. This can be expressed as a percentage (for example: 80%) over the solid infill speed above.");
@@ -1688,14 +1688,14 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("use_set_and_wait_extruder", coBool);
-    def->label = "Use Set-and-Wait GCode (Extruder)";
-    def->tooltip = "If your firmware supports a set and wait gcode for temperature changes, use it for automatically inserted temperature gcode for all extruders. Does not affect custom gcode.";
+    def->label = __TRANS("Use Set-and-Wait GCode (Extruder)");
+    def->tooltip = __TRANS("If your firmware supports a set and wait gcode for temperature changes, use it for automatically inserted temperature gcode for all extruders. Does not affect custom gcode.");
     def->cli = "use-set-and-wait-extruder!";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("use_set_and_wait_bed", coBool);
-    def->label = "Use Set-and-Wait GCode (Bed)";
-    def->tooltip = "If your firmware supports a set and wait gcode for temperature changes, use it for automatically inserted temperature gcode for the heatbed. Does not affect custom gcode.";
+    def->label = __TRANS("Use Set-and-Wait GCode (Bed)");
+    def->tooltip = __TRANS("If your firmware supports a set and wait gcode for temperature changes, use it for automatically inserted temperature gcode for the heatbed. Does not affect custom gcode.");
     def->cli = "use-set-and-wait-heatbed!";
     def->default_value = new ConfigOptionBool(false);
 
@@ -1747,9 +1747,9 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("sequential_print_priority", coInt);
-    def->label = "Sequential Printing Priority";
-    def->category = "Advanced";
-    def->tooltip ="Set this to alter object priority for sequential printing. Objects are first sorted by priority (smaller integers print first), then by height.";
+    def->label = __TRANS("Sequential Printing Priority");
+    def->category = __TRANS("Advanced");
+    def->tooltip =__TRANS("Set this to alter object priority for sequential printing. Objects are first sorted by priority (smaller integers print first), then by height.");
     def->cli = "sequential-print-priority=i";
     def->default_value = new ConfigOptionInt(0);
 }
@@ -1939,26 +1939,26 @@ CLIConfigDef::CLIConfigDef()
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("export_3mf", coBool);
-    def->label = "Export 3MF";
-    def->tooltip = "Slice the model and export slices as 3MF.";
+    def->label = __TRANS("Export 3MF");
+    def->tooltip = __TRANS("Slice the model and export slices as 3MF.");
     def->cli = "export-3mf";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("slice", coBool);
-    def->label = "Slice";
-    def->tooltip = "Slice the model and export gcode.";
+    def->label = __TRANS("Slice");
+    def->tooltip = __TRANS("Slice the model and export gcode.");
     def->cli = "slice";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("help", coBool);
-    def->label = "Help";
-    def->tooltip = "Show this help.";
+    def->label = __TRANS("Help");
+    def->tooltip = __TRANS("Show this help.");
     def->cli = "help";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("gui", coBool);
-    def->label = "Use GUI";
-    def->tooltip = "Start the Slic3r GUI.";
+    def->label = __TRANS("Use GUI");
+    def->tooltip = __TRANS("Start the Slic3r GUI.");
     def->cli = "gui";
     def->default_value = new ConfigOptionBool(false);
     
@@ -2017,8 +2017,8 @@ CLIConfigDef::CLIConfigDef()
     def->default_value = new ConfigOptionPoint3(Pointf3(0,0,0));
 
     def = this->add("center", coPoint3);
-    def->label = "Center";
-    def->tooltip = "Center the print around the given center (default: 100, 100).";
+    def->label = __TRANS("Center");
+    def->tooltip = __TRANS("Center the print around the given center (default: 100, 100).");
     def->cli = "center";
     def->default_value = new ConfigOptionPoint(Pointf(100,100));
 }
