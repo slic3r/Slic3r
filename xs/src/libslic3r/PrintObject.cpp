@@ -562,7 +562,9 @@ PrintObject::move_nonplanar_surfaces_up()
                 }
             }
         }
-    }  
+    }
+    //set typed_slices to true to force merge
+    this->typed_slices = true;
 }
 
 void

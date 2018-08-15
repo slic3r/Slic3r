@@ -160,9 +160,9 @@ sub detect_nonplanar_surfaces {
 
     # Detect nonplanar surfaces areas and move them to the heighest layer of the nonplanar_surface
     $self->move_nonplanar_surfaces_up;
-    $self->debug_svg_print;
+
     # merge the projected nonplanar surfaces back into one surface per layer
-    $self->merge_nonplanar_surfaces;
+    #$self->merge_nonplanar_surfaces;
 }
 
 sub prepare_infill {
@@ -207,7 +207,7 @@ sub prepare_infill {
     $self->combine_infill;
 
     $self->set_step_done(STEP_PREPARE_INFILL);
-
+    $self->debug_svg_print;
 }
 
 sub infill {
