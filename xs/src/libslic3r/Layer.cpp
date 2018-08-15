@@ -281,12 +281,16 @@ Layer::detect_nonplanar_layers()
             } else {
                 upper_slices = upper_layer->slices;
             }
-
-            topNonplanar.append(
-                union_ex(diff(layerm_slices_surfaces, upper_slices, true)),
-                //TODO Check if Non Planar, Now every top surface is non planar
-                stTopNonplanar
-            );
+            for (auto& surface : object.nonplanar_surfaces){
+                if (this->slice_z >= surface.stats.min.z-this->height && this->slice_z <= surface.stats.max.z) {
+                    topNonplanar.append(
+                        intersection_ex(surface.horizontal_projection(),
+                        union_ex(diff(layerm_slices_surfaces, upper_slices, true))),
+                        //TODO Check if Non Planar, Now every top surface is non planar
+                        stTopNonplanar
+                    );
+                }
+            }
         } else {
             // if no upper layer, all surfaces of this one are solid
             // we clone surfaces because we're going to clear the slices collection

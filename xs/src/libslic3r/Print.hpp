@@ -147,9 +147,9 @@ class PrintObject
 
     bool has_support_material() const;
     void detect_surfaces_type();
-    void move_nonplanar_surfaces_up();
+    void merge_nonplanar_surfaces();
     void debug_svg_print();
-    void _detect_nonplanar_surfaces();
+    void move_nonplanar_surfaces_up();
     void project_nonplanar_surfaces();
     void process_external_surfaces();
     void bridge_over_infill();

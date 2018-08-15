@@ -165,8 +165,15 @@ LayerRegion::process_external_surfaces()
     SurfaceCollection nonplanar;
     for (const Surface &surface : surfaces) {
         if (!surface.is_nonplanar()) continue;
-        
-        ExPolygons grown = offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
+        //remove other areas from grown areas to avoid overlaps
+        SurfaceCollection not_nonplanar;
+        for (auto& s : surfaces){
+            if (!s.is_nonplanar()) {
+                not_nonplanar.surfaces.push_back(s);
+            }
+        }
+        ExPolygons grown = diff_ex((offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN)),
+                                    union_ex(not_nonplanar.surfaces));
         nonplanar.append(grown, surface);
     }
     

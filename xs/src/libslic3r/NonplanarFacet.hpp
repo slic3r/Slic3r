@@ -31,6 +31,7 @@ class NonplanarFacet
     void translate(float x, float y, float z);
     void scale(float versor[3]);
     bool check_printable_facet(float max_angle);
+    bool check_angle(int neighbor, float max_angle);
 
 };
 };

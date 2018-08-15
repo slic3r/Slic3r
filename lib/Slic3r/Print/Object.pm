@@ -158,15 +158,11 @@ sub detect_nonplanar_surfaces {
     # prerequisites
     $self->slice;
 
-    # Detect nonplanar surfaces on top of object
-    $self->_detect_nonplanar_surfaces;
-
-    # Add shells
-    $self->discover_horizontal_nonplanar_shells;
-
-    # project the nonplanar surfaces to the highest layer
+    # Detect nonplanar surfaces areas and move them to the heighest layer of the nonplanar_surface
     $self->move_nonplanar_surfaces_up;
-
+    $self->debug_svg_print;
+    # merge the projected nonplanar surfaces back into one surface per layer
+    $self->merge_nonplanar_surfaces;
 }
 
 sub prepare_infill {
@@ -176,6 +172,7 @@ sub prepare_infill {
 
     #detect the nonplanar surfaces and move them to top layer
     $self->detect_nonplanar_surfaces;
+    
 
     # This prepare_infill() is not really idempotent.
     # TODO: It should clear and regenerate fill_surfaces at every run
@@ -210,7 +207,7 @@ sub prepare_infill {
     $self->combine_infill;
 
     $self->set_step_done(STEP_PREPARE_INFILL);
-    $self->debug_svg_print;
+
 }
 
 sub infill {
@@ -552,94 +549,6 @@ sub discover_horizontal_shells {
                     }
                     $distance_to_top = $distance_to_top + $neighbor_layerm->layer()->height;
                 }
-            }
-        }
-    }
-}
-
-sub discover_horizontal_nonplanar_shells {
-    my $self = shift;
-
-    Slic3r::debugf "==> DISCOVERING HORIZONTAL NONPLANAR SHELLS\n";
-
-    for my $region_id (0 .. ($self->print->region_count-1)) {
-        for (my $i = 0; $i < $self->layer_count; $i++) {
-            my $layerm = $self->get_layer($i)->regions->[$region_id];
-            my $type = S_TYPE_TOP_NONPLANAR;
-
-            my $solid = [
-                (map $_->p, @{$layerm->slices->filter_by_type($type)}),
-            ];
-            next if !@$solid;
-            Slic3r::debugf "Layer %d has nonplanar top surfaces\n", $i;
-
-            my $solid_layers =  $layerm->region->config->top_solid_layers;
-            my $distance_to_top = $layerm->layer()->height;
-            NEIGHBOR: for (my $n = $i-1; abs($n - $i) <= $solid_layers-1; $n--) {
-
-                next if $n < 0 || $n >= $self->layer_count;
-                Slic3r::debugf "  looking for neighbors on layer %d...\n", $n;
-
-                my $neighbor_layerm = $self->get_layer($n)->regions->[$region_id];
-                my $neighbor_fill_surfaces = $neighbor_layerm->slices;
-                my @neighbor_fill_surfaces = map $_->clone, @$neighbor_fill_surfaces;  # clone because we will use these surfaces even after clearing the collection
-
-                # find intersection between neighbor and current layer's surfaces
-                # intersections have contours and holes
-                my $new_internal_solid = intersection(
-                    $solid,
-                    [ map $_->p, grep { ($_->surface_type == S_TYPE_INTERNAL) || ($_->surface_type == S_TYPE_INTERNALSOLID_NONPLANAR) } @neighbor_fill_surfaces ],
-                    1,
-                );
-                if (!@$new_internal_solid) {
-                    next NEIGHBOR;
-                }
-
-                # internal-solid_nonplanar are new surfaces
-                my $internal_solid_nonplanar = union_ex([
-                    @$new_internal_solid
-                ]);
-
-                # subtract intersections from layer surfaces to get resulting internal surfaces
-                my $internal = diff_ex(
-                    [ map $_->p, grep $_->surface_type == S_TYPE_INTERNAL, @neighbor_fill_surfaces ],
-                    [ map @$_, @$internal_solid_nonplanar ],
-                    1,
-                );
-
-                Slic3r::debugf "    %d internal and %d nonplanar-internal-solid surfaces found\n",
-                    scalar(@$internal), scalar(@$internal_solid_nonplanar);
-
-                # Backup internal nonplanar surfaces
-                my @nonplanar_surface_backup = map $_->clone, grep $_->surface_type == S_TYPE_INTERNALSOLID_NONPLANAR, @neighbor_fill_surfaces;
-
-                # clear all surfaces and restore Backup
-                $neighbor_fill_surfaces->clear;
-                $neighbor_fill_surfaces->append($_)
-                    for map $_->clone, @nonplanar_surface_backup;
-
-                # assign resulting internal surfaces to layer
-                $neighbor_fill_surfaces->append($_)
-                    for map Slic3r::Surface->new(expolygon => $_, surface_type => S_TYPE_INTERNAL),
-                        @$internal;
-
-                # assign new internal-solid_nonplar surfaces to layer
-                foreach my $s (@$internal_solid_nonplanar) {
-                    my $newsurface = Slic3r::Surface->new(expolygon => $s, surface_type => S_TYPE_INTERNALSOLID_NONPLANAR, distance_to_top => $distance_to_top);
-                    $neighbor_fill_surfaces->append($newsurface);
-                }
-
-                # assign top and bottom surfaces to layer
-                foreach my $s (@{Slic3r::Surface::Collection->new(grep {($_->surface_type == S_TYPE_TOP_NONPLANAR)} @neighbor_fill_surfaces)->group}) {
-                    my $solid_surfaces = diff_ex(
-                        [ map $_->p, @$s ],
-                        [ map @$_, @$internal_solid_nonplanar, @$internal ],
-                        1,
-                    );
-                    $neighbor_fill_surfaces->append($_)
-                        for map $s->[0]->clone(expolygon => $_), @$solid_surfaces;
-                }
-                $distance_to_top = $distance_to_top + $neighbor_layerm->layer()->height;
             }
         }
     }

@@ -129,8 +129,9 @@ _constant()
 
     %name{_detect_surfaces_type} void detect_surfaces_type();
     void project_nonplanar_surfaces();
-    void move_nonplanar_surfaces_up();
+    void merge_nonplanar_surfaces();
     void debug_svg_print();
+    void move_nonplanar_surfaces_up();
     void process_external_surfaces();
     void bridge_over_infill();
     void _slice();
@@ -155,7 +156,6 @@ _constant()
         %};
     void _make_perimeters();
     void _infill();
-    void _detect_nonplanar_surfaces();
 
     int ptr()
         %code%{ RETVAL = (int)(intptr_t)THIS; %};

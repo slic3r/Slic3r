@@ -64,7 +64,7 @@ bool
 NonplanarFacet::check_printable_facet(float max_angle)
 {
     for(int j = 0; j < 3; j++) {
-      if(!this->check_angle(this->neighbor[j], float max_angle)){
+      if(!this->check_angle(this->neighbor[j], max_angle)){
           return false;
       }
     }
@@ -72,9 +72,9 @@ NonplanarFacet::check_printable_facet(float max_angle)
 }
 
 bool
-NonplanarFacet::check_angle(int neighbor, float max_angle))
+NonplanarFacet::check_angle(int neighbor, float max_angle)
 {
-    
+    return true;
 }
 
 }

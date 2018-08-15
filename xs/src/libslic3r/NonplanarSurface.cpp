@@ -193,4 +193,26 @@ NonplanarSurface::check_printable_surfaces(float max_angle)
     //TODO do something
 }
 
+/* this will return scaled ExPolygons */
+ExPolygons
+NonplanarSurface::horizontal_projection() const
+{
+    Polygons pp;
+    pp.reserve(this->mesh.size());
+    for(auto& facet : this->mesh) {
+        Polygon p;
+        p.points.resize(3);
+        p.points[0] = Point(facet.second.vertex[0].x / SCALING_FACTOR, facet.second.vertex[0].y / SCALING_FACTOR);
+        p.points[1] = Point(facet.second.vertex[1].x / SCALING_FACTOR, facet.second.vertex[1].y / SCALING_FACTOR);
+        p.points[2] = Point(facet.second.vertex[2].x / SCALING_FACTOR, facet.second.vertex[2].y / SCALING_FACTOR);
+        p.make_counter_clockwise();  // do this after scaling, as winding order might change while doing that
+        pp.push_back(p);
+    }
+
+    // the offset factor was tuned using groovemount.stl
+    return union_ex(offset(pp, 0.01 / SCALING_FACTOR), true);
+}
+
+
+
 }

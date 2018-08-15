@@ -3,6 +3,11 @@
 
 #include "libslic3r.h"
 #include "NonplanarFacet.hpp"
+#include "Point.hpp"
+#include "Polygon.hpp"
+#include "ExPolygon.hpp"
+#include "Geometry.hpp"
+#include "ClipperUtils.hpp"
 
 namespace Slic3r {
 
@@ -39,6 +44,7 @@ class NonplanarSurface
     void mark_neighbour_surfaces(int id);
     void check_max_printing_height(float height);
     void check_printable_surfaces(float max_angle);
+    ExPolygons horizontal_projection() const;
 
 };
 };
