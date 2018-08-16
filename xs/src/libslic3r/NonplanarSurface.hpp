@@ -34,6 +34,7 @@ class NonplanarSurface
     NonplanarSurface() {};
     ~NonplanarSurface() {};
     NonplanarSurface(std::map<int, NonplanarFacet> &_mesh);
+    bool operator==(const NonplanarSurface& other) const;
     void calculate_stats();
     void translate(float x, float y, float z);
     void scale(float factor);

@@ -165,15 +165,8 @@ LayerRegion::process_external_surfaces()
     SurfaceCollection nonplanar;
     for (const Surface &surface : surfaces) {
         if (!surface.is_nonplanar()) continue;
-        //remove other areas from grown areas to avoid overlaps
-        SurfaceCollection not_nonplanar;
-        for (auto& s : surfaces){
-            if (!s.is_nonplanar()) {
-                not_nonplanar.surfaces.push_back(s);
-            }
-        }
-        ExPolygons grown = diff_ex((offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN)),
-                                    union_ex(not_nonplanar.surfaces));
+
+        ExPolygons grown = offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
         nonplanar.append(grown, surface);
     }
     
@@ -290,6 +283,194 @@ LayerRegion::infill_area_threshold() const
 {
     double ss = this->flow(frSolidInfill).scaled_spacing();
     return ss*ss;
+}
+
+void
+LayerRegion::append_nonplanar_surface(NonplanarSurface& surface)
+{
+    for(auto & s : this->nonplanar_surfaces){
+        if (s == surface){
+            return;
+        }    
+    }
+    nonplanar_surfaces.push_back(surface);
+}
+
+void
+LayerRegion::project_nonplanar_surfaces()
+{
+    //skip if there are no nonplanar_surfaces on this LayerRegion
+    if (this->nonplanar_surfaces.size() == 0){
+        return;
+    }
+    
+    //for all perimeters do path projection
+    for (ExtrusionEntitiesPtr::iterator col_it = this->perimeters.entities.begin(); col_it != this->perimeters.entities.end(); ++col_it) {
+        ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
+        for (ExtrusionEntitiesPtr::iterator loop_it = collection->entities.begin(); loop_it != collection->entities.end(); ++loop_it) {
+            ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(*loop_it);
+            for (ExtrusionPaths::iterator path_it = loop->paths.begin(); path_it != loop->paths.end(); ++path_it) {
+                project_nonplanar_path(&(*path_it));
+
+                correct_z_on_path(&(*path_it));
+            }
+        }
+    }
+
+    //and all fill paths do path projection
+    for (ExtrusionEntitiesPtr::iterator col_it = this->fills.entities.begin(); col_it != this->fills.entities.end(); ++col_it) {
+        ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
+        for (ExtrusionEntitiesPtr::iterator path_it = collection->entities.begin(); path_it != collection->entities.end(); ++path_it) {
+            project_nonplanar_path(dynamic_cast<ExtrusionPath*>(*path_it));
+
+            correct_z_on_path(dynamic_cast<ExtrusionPath*>(*path_it));
+        }
+    }
+}
+
+//Sorting functions for soring of paths
+bool
+greaterX(const Point &a, const Point &b)
+{
+   return (a.x < b.x);
+}
+
+bool
+smallerX(const Point &a, const Point &b)
+{
+   return (a.x > b.x);
+}
+
+bool
+greaterY(const Point &a, const Point &b)
+{
+   return (a.y < b.y);
+}
+
+bool
+smallerY(const Point &a, const Point &b)
+{
+   return (a.y > b.y);
+}
+
+void
+LayerRegion::project_nonplanar_path(ExtrusionPath *path)
+{
+    PrintObject &object = *this->layer()->object();
+    //First check all points and project them regarding the triangle mesh
+    for (Point& point : path->polyline.points) {
+        for (auto& surface : this->nonplanar_surfaces) {
+            float distance_to_top = surface.stats.max.z - this->layer()->print_z;
+            for(auto& facet : surface.mesh) {
+                //skip if point is outside of the bounding box of the triangle
+                if (unscale(point.x) < std::min({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
+                    unscale(point.x) > std::max({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
+                    unscale(point.y) < std::min({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}) ||
+                    unscale(point.y) > std::max({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}))
+                {
+                    continue;
+                }
+                //check if point is inside of Triangle
+                if (Slic3r::Geometry::Point_in_triangle(
+                    Pointf(unscale(point.x),unscale(point.y)),
+                    Pointf(facet.second.vertex[0].x, facet.second.vertex[0].y),
+                    Pointf(facet.second.vertex[1].x, facet.second.vertex[1].y),
+                    Pointf(facet.second.vertex[2].x, facet.second.vertex[2].y)))
+                {
+                    Slic3r::Geometry::Project_point_on_plane(Pointf3(facet.second.vertex[0].x,facet.second.vertex[0].y,facet.second.vertex[0].z),
+                                                             Pointf3(facet.second.normal.x,facet.second.normal.y,facet.second.normal.z),
+                                                             point);
+                    //Shift down when on lower layer
+                    point.z = point.z - scale_(distance_to_top);
+                    //break;
+                }
+            }
+        }
+    }
+
+    //Then check all line intersections, cut line on intersection and project new point
+    std::vector<Point>::size_type size = path->polyline.points.size();
+    for (std::vector<Point>::size_type i = 0; i < size-1; ++i)
+    {
+        Points intersections;
+        //check against every facet if lines intersect
+        for (auto& surface : this->nonplanar_surfaces) {
+            float distance_to_top = surface.stats.max.z - this->layer()->print_z;
+            for(auto& facet : surface.mesh) {
+                for(int j= 0; j < 3; j++){
+                    //TODO precheck for faster computation
+                    Point p1 = Point(scale_(facet.second.vertex[j].x), scale_(facet.second.vertex[j].y), scale_(facet.second.vertex[j].z));
+                    Point p2 = Point(scale_(facet.second.vertex[(j+1) % 3].x), scale_(facet.second.vertex[(j+1) % 3].y), scale_(facet.second.vertex[(j+1) % 3].z));
+                    Point* p = Slic3r::Geometry::Line_intersection(p1, p2, path->polyline.points[i], path->polyline.points[i+1]);
+                    
+                    if (p) {
+                        //add distance to top for every added point
+                        p->z = p->z - scale_(distance_to_top);
+                        intersections.push_back(*p);
+                    }
+                }
+            }
+
+        }
+        //Stop if no intersections are found
+        if (intersections.size() == 0) continue;
+
+        //sort found intersectons if there are more than 1
+        if ( intersections.size() > 1 ){
+            //sort by X
+            if (abs(path->polyline.points[i+1].x - path->polyline.points[i].x) >= abs(path->polyline.points[i+1].y - path->polyline.points[i].y) ){
+                if(path->polyline.points[i].x < path->polyline.points[i+1].x) {
+                    std::sort(intersections.begin(), intersections.end(),smallerX);
+                }else {
+                    std::sort(intersections.begin(), intersections.end(),greaterX);
+                }
+            } else {//sort by Y
+                if(path->polyline.points[i].y < path->polyline.points[i+1].y) {
+                    std::sort(intersections.begin(), intersections.end(),smallerY);
+                }else {
+                    std::sort(intersections.begin(), intersections.end(),greaterY);
+                }
+            }
+        }
+
+        //remove duplicates
+        Points::iterator point = intersections.begin();
+        while (point != intersections.end()-1) {
+            bool delete_point = false;
+            Points::iterator point2 = point;
+            ++point2;
+            //compare with next point if they are the same, delete current point
+            if ((*point).x == (*point2).x && (*point).y == (*point2).y) {
+                    //remove duplicate point
+                    delete_point = true;
+                    point = intersections.erase(point);
+            }
+            //continue loop when no point is removed. Otherwise the new point is set while deleting the old one.
+            if (!delete_point){
+                ++point;
+            }
+        }
+
+        //insert new points into array
+        for (Point p : intersections)
+        {
+            path->polyline.points.insert(path->polyline.points.begin()+i+1, p);
+        }
+
+        //modifiy array boundary
+        i = i + intersections.size();
+        size = size + intersections.size();
+    }
+}
+
+void
+LayerRegion::correct_z_on_path(ExtrusionPath *path)
+{
+    for (Point& point : path->polyline.points) {
+        if(point.z == -1.0){
+            point.z = scale_(this->layer()->print_z);
+        }
+    }
 }
 
 }

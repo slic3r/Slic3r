@@ -9,6 +9,16 @@ NonplanarSurface::NonplanarSurface(std::map<int, NonplanarFacet> &_mesh)
     this->calculate_stats();
 }
 
+bool 
+NonplanarSurface::operator==(const NonplanarSurface& other) const {
+   return (stats.min.x == other.stats.min.x &&
+           stats.min.y == other.stats.min.y &&
+           stats.min.z == other.stats.min.z &&
+           stats.max.x == other.stats.max.x &&
+           stats.max.y == other.stats.max.y &&
+           stats.max.z == other.stats.max.z);
+}
+
 void
 NonplanarSurface::calculate_stats()
 {

@@ -354,62 +354,6 @@ PrintObject::detect_surfaces_type()
 }
 
 void
-PrintObject::merge_nonplanar_surfaces() {
-    FOREACH_REGION(this->_print, region) {
-
-        //merge layer regions again
-        FOREACH_LAYER(this, layer_it) {
-            Layer* layer        = *layer_it;
-            LayerRegion* layerm = layer->get_region(region - this->_print->regions.begin());
-
-            Surfaces new_surfaces;
-            //save all internal surfaces
-            SurfaceCollection polyInternal;
-            for(Surface s : layerm->slices.surfaces) {
-                if (!s.is_nonplanar()) {
-                    polyInternal.surfaces.push_back(s);
-                }
-            }
-            ExPolygons exppInternal = union_ex((Polygons)polyInternal, true);
-            new_surfaces.reserve(exppInternal.size());
-            for (ExPolygon expoly : exppInternal)
-                new_surfaces.push_back(Surface(stInternal, expoly));
-
-            //get all surface elements
-            std::vector<float> elements;
-            for(Surface s : layerm->slices.surfaces) {
-                if (std::find(elements.begin(), elements.end(), s.distance_to_top) == elements.end())
-                {
-                    elements.push_back(s.distance_to_top);
-                }
-            }
-
-            //save all nonplanar surfaces grouped by distance_to_top
-            for(float f : elements) {
-                SurfaceCollection polyNonplanar;
-                for(Surface s : layerm->slices.surfaces) {
-                    if (s.is_nonplanar() && s.distance_to_top == f) {
-                        polyNonplanar.surfaces.push_back(s);
-                    }
-                }
-                //skip if no surfaces meet condition
-                if (polyNonplanar.size() == 0)
-                    continue;
-                ExPolygons exppNonplanar = union_ex((Polygons)polyNonplanar, true);
-                new_surfaces.reserve(new_surfaces.size() +exppNonplanar.size());
-
-                for (ExPolygon expoly : exppNonplanar) {
-                    Surface new_s = Surface( f == 0.0f ? stTopNonplanar : stInternalSolidNonplanar, expoly);
-                    new_s.distance_to_top = f;
-                    new_surfaces.push_back(new_s);
-                }
-            }
-            layerm->slices.surfaces = new_surfaces;
-        }
-    }
-}
-
-void
 PrintObject::debug_svg_print()
 {
     FOREACH_REGION(this->_print, region) {
@@ -553,6 +497,9 @@ PrintObject::move_nonplanar_surfaces_up()
                             
                             //move nonplanar surfaces to home layer
                             home_layerm.slices.append(STDMOVE(topNonplanar));
+                            
+                            //save nonplanar_surface to home_layers nonplanar_surface list
+                            home_layerm.append_nonplanar_surface(nonplanar_surface);
                             
                         }
                     }
@@ -1133,7 +1080,7 @@ void
 PrintObject::find_nonplanar_surfaces()
 {
     //Max angle of facets
-    float max_angle = 20.0;
+    float max_angle = 10.0;
     float max_height = 10.0;
 
     //Itterate over all model volumes

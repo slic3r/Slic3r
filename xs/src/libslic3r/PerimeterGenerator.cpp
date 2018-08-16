@@ -234,16 +234,6 @@ PerimeterGenerator::process()
             
             ExtrusionEntityCollection entities = this->_traverse_loops(contours.front(), thin_walls);
             
-            // Set distance to top if surface is nonplanar
-            if (surface->is_nonplanar()) {
-                for (ExtrusionEntitiesPtr::iterator loop_it = entities.entities.begin(); loop_it != entities.entities.end(); ++loop_it) {
-                    ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(*loop_it);
-                    for (ExtrusionPaths::iterator path_it = loop->paths.begin(); path_it != loop->paths.end(); ++path_it) {
-                        path_it->distance_to_top = surface->distance_to_top;
-                    }
-                }
-            }
-            
             // if brim will be printed, reverse the order of perimeters so that
             // we continue inwards after having finished the brim
             // TODO: add test for perimeter order

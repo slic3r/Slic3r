@@ -12,14 +12,13 @@ namespace Slic3r {
 /// Used for comparing properties
 struct SurfaceGroupAttrib
 {
-    SurfaceGroupAttrib() : is_solid(false), fw(0.f), pattern(-1), distance_to_top(-1.0f) {}
+    SurfaceGroupAttrib() : is_solid(false), fw(0.f), pattern(-1) {}
     /// True iff all all three attributes are the same
     bool operator==(const SurfaceGroupAttrib &other) const
-        { return is_solid == other.is_solid && fw == other.fw && pattern == other.pattern && distance_to_top == other.distance_to_top; }
+        { return is_solid == other.is_solid && fw == other.fw && pattern == other.pattern; }
     bool    is_solid;   ///< if a solid infill should be used
     float   fw;         ///< flow Width
     int     pattern;    ///< pattern is of type InfillPattern, -1 for an unset pattern.
-    float   distance_to_top; ///<distance to top of object in nonplanar surfaces
 };
 
 /// The LayerRegion at this point of time may contain
@@ -72,7 +71,6 @@ LayerRegion::make_fill()
                 group_attrib[i].pattern = (surface.surface_type == stTop || surface.surface_type == stTopNonplanar) ? this->region()->config.top_infill_pattern.value
                     : surface.is_bottom() ? this->region()->config.bottom_infill_pattern.value
                     : ipRectilinear;
-                group_attrib[i].distance_to_top = surface.distance_to_top;
             }
             // Loop through solid groups, find compatible groups and append them to this one.
             for (size_t i = 0; i < groups.size(); ++i) {
@@ -297,12 +295,6 @@ LayerRegion::make_fill()
             templ.mm3_per_mm    = flow.mm3_per_mm();
             templ.width         = flow.width;
             templ.height        = flow.height;
-            
-            if (surface.is_nonplanar()) {
-                templ.distance_to_top = surface.distance_to_top;
-            } else {
-                templ.distance_to_top = -1.0f;
-            }
 
             coll->append(STDMOVE(polylines), templ);
         }

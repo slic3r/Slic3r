@@ -262,230 +262,10 @@ Layer::make_fills()
 }
 
 void
-Layer::detect_nonplanar_layers()
-{
-    PrintObject &object = *this->object();
-    for (size_t region_id = 0; region_id < this->regions.size(); ++region_id) {
-        LayerRegion &layerm = *this->regions[region_id];
-        Layer* const &upper_layer = this->upper_layer;
-
-        const Polygons layerm_slices_surfaces = layerm.slices;
-        SurfaceCollection topNonplanar;
-
-        if (upper_layer != NULL) {
-            Polygons upper_slices;
-            if (object.config.interface_shells.value) {
-                const LayerRegion* upper_layerm = upper_layer->get_region(region_id);
-                boost::lock_guard<boost::mutex> l(upper_layerm->_slices_mutex);
-                upper_slices = upper_layerm->slices;
-            } else {
-                upper_slices = upper_layer->slices;
-            }
-            for (auto& surface : object.nonplanar_surfaces){
-                if (this->slice_z >= surface.stats.min.z-this->height && this->slice_z <= surface.stats.max.z) {
-                    topNonplanar.append(
-                        intersection_ex(surface.horizontal_projection(),
-                        union_ex(diff(layerm_slices_surfaces, upper_slices, true))),
-                        //TODO Check if Non Planar, Now every top surface is non planar
-                        stTopNonplanar
-                    );
-                }
-            }
-        } else {
-            // if no upper layer, all surfaces of this one are solid
-            // we clone surfaces because we're going to clear the slices collection
-            topNonplanar = layerm.slices;
-            //TODO Check if Non Planar, Now every top surface is non planar
-            for (Surface &s : topNonplanar.surfaces) s.surface_type = stTopNonplanar;
-        }
-
-        {
-            boost::lock_guard<boost::mutex> l(layerm._slices_mutex);
-            layerm.slices.clear();
-            layerm.slices.append(STDMOVE(topNonplanar));
-
-            // find internal surfaces (difference between top/bottom surfaces and others)
-            {
-                layerm.slices.append(
-                    union_ex(diff(layerm_slices_surfaces, topNonplanar, true)),
-                    stInternal
-                );
-            }
-        }
-    }
-}
-
-void
 Layer::project_nonplanar_surfaces()
 {
     FOREACH_LAYERREGION(this, it_layerm) {
-        //for all perimeters
-        for (ExtrusionEntitiesPtr::iterator col_it = (*it_layerm)->perimeters.entities.begin(); col_it != (*it_layerm)->perimeters.entities.end(); ++col_it) {
-            ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
-            for (ExtrusionEntitiesPtr::iterator loop_it = collection->entities.begin(); loop_it != collection->entities.end(); ++loop_it) {
-                ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(*loop_it);
-                for (ExtrusionPaths::iterator path_it = loop->paths.begin(); path_it != loop->paths.end(); ++path_it) {
-                    project_nonplanar_path(&(*path_it));
-
-                    correct_z_on_path(&(*path_it));
-                }
-            }
-        }
-
-        //and all fill paths
-        for (ExtrusionEntitiesPtr::iterator col_it = (*it_layerm)->fills.entities.begin(); col_it != (*it_layerm)->fills.entities.end(); ++col_it) {
-            ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
-            for (ExtrusionEntitiesPtr::iterator path_it = collection->entities.begin(); path_it != collection->entities.end(); ++path_it) {
-                project_nonplanar_path(dynamic_cast<ExtrusionPath*>(*path_it));
-
-                correct_z_on_path(dynamic_cast<ExtrusionPath*>(*path_it));
-            }
-        }
-
-    }
-}
-
-bool
-greaterX(const Point &a, const Point &b)
-{
-   return (a.x < b.x);
-}
-
-bool
-smallerX(const Point &a, const Point &b)
-{
-   return (a.x > b.x);
-}
-
-bool
-greaterY(const Point &a, const Point &b)
-{
-   return (a.y < b.y);
-}
-
-bool
-smallerY(const Point &a, const Point &b)
-{
-   return (a.y > b.y);
-}
-
-void
-Layer::project_nonplanar_path(ExtrusionPath *path)
-{
-    //Skip if surface path is not nonplanar
-    if ( path->distance_to_top == -1.0f) return;
-
-    PrintObject &object = *this->object();
-    //First check all points and project them regarding the triangle mesh
-    for (Point& point : path->polyline.points) {
-        for (auto& surface : object.nonplanar_surfaces) {
-            for(auto& facet : surface.mesh) {
-                //skip if point is outside of the bounding box of the triangle
-                if (unscale(point.x) < std::min({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
-                    unscale(point.x) > std::max({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
-                    unscale(point.y) < std::min({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}) ||
-                    unscale(point.y) > std::max({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}))
-                {
-                    continue;
-                }
-                //check if point is inside of Triangle
-                if (Slic3r::Geometry::Point_in_triangle(
-                    Pointf(unscale(point.x),unscale(point.y)),
-                    Pointf(facet.second.vertex[0].x, facet.second.vertex[0].y),
-                    Pointf(facet.second.vertex[1].x, facet.second.vertex[1].y),
-                    Pointf(facet.second.vertex[2].x, facet.second.vertex[2].y)))
-                {
-                    Slic3r::Geometry::Project_point_on_plane(Pointf3(facet.second.vertex[0].x,facet.second.vertex[0].y,facet.second.vertex[0].z),
-                                                             Pointf3(facet.second.normal.x,facet.second.normal.y,facet.second.normal.z),
-                                                             point);
-                    //Shift down when on lower layer
-                    point.z = point.z - scale_(path->distance_to_top);
-                    //break;
-                }
-            }
-        }
-    }
-
-    //Then check all line intersections, cut line on intersection and project new point
-    std::vector<Point>::size_type size = path->polyline.points.size();
-    for (std::vector<Point>::size_type i = 0; i < size-1; ++i)
-    {
-        Points intersections;
-        //check against every facet if lines intersect
-        for (auto& surface : object.nonplanar_surfaces) {
-            for(auto& facet : surface.mesh) {
-                for(int j= 0; j < 3; j++){
-                    //TODO precheck for faster computation
-                    Point p1 = Point(scale_(facet.second.vertex[j].x), scale_(facet.second.vertex[j].y), scale_(facet.second.vertex[j].z));
-                    Point p2 = Point(scale_(facet.second.vertex[(j+1) % 3].x), scale_(facet.second.vertex[(j+1) % 3].y), scale_(facet.second.vertex[(j+1) % 3].z));
-                    Point* p = Slic3r::Geometry::Line_intersection(p1, p2, path->polyline.points[i], path->polyline.points[i+1]);
-                    if (p) {
-                        intersections.push_back(*p);
-                    }
-                }
-            }
-
-        }
-        //Stop if no intersections are found
-        if (intersections.size() == 0) continue;
-
-        //sort found intersectons if there are more than 1
-        if ( intersections.size() > 1 ){
-            //sort by X
-            if (abs(path->polyline.points[i+1].x - path->polyline.points[i].x) >= abs(path->polyline.points[i+1].y - path->polyline.points[i].y) ){
-                if(path->polyline.points[i].x < path->polyline.points[i+1].x) {
-                    std::sort(intersections.begin(), intersections.end(),smallerX);
-                }else {
-                    std::sort(intersections.begin(), intersections.end(),greaterX);
-                }
-            } else {//sort by Y
-                if(path->polyline.points[i].y < path->polyline.points[i+1].y) {
-                    std::sort(intersections.begin(), intersections.end(),smallerY);
-                }else {
-                    std::sort(intersections.begin(), intersections.end(),greaterY);
-                }
-            }
-        }
-
-        //remove duplicates
-        Points::iterator point = intersections.begin();
-        while (point != intersections.end()-1) {
-            bool delete_point = false;
-            Points::iterator point2 = point;
-            ++point2;
-            //compare with next point if they are the same, delete current point
-            if ((*point).x == (*point2).x && (*point).y == (*point2).y) {
-                    //remove duplicate point
-                    delete_point = true;
-                    point = intersections.erase(point);
-            }
-            //continue loop when no point is removed. Otherwise the new point is set while deleting the old one.
-            if (!delete_point){
-                ++point;
-            }
-        }
-
-        //insert new points into array
-        for (Point p : intersections)
-        {
-            //add distance to top for every added point
-            p.z = p.z - scale_(path->distance_to_top);
-            path->polyline.points.insert(path->polyline.points.begin()+i+1, p);
-        }
-
-        //modifiy array boundary
-        i = i + intersections.size();
-        size = size + intersections.size();
-    }
-}
-
-void
-Layer::correct_z_on_path(ExtrusionPath *path)
-{
-    for (Point& point : path->polyline.points) {
-        if(point.z == -1.0){
-            point.z = scale_(this->print_z);
-        }
+        (*it_layerm)->project_nonplanar_surfaces();
     }
 }
 
@@ -522,14 +302,16 @@ Layer::detect_surfaces_type()
 
         const Polygons layerm_slices_surfaces = layerm.slices;
 
-        //Find previously marked nonplanar surfaces
+        //Find mark nonplanar surfaces
         SurfaceCollection nonplanar_surfaces;
-        for (Surfaces::iterator surface = layerm.slices.surfaces.begin(); surface != layerm.slices.surfaces.end(); ++surface) {
-            if (surface->surface_type == stTopNonplanar || surface->surface_type == stInternalSolidNonplanar) {
-                Surface s = *surface;
-                nonplanar_surfaces.surfaces.push_back(s);
-            }
+        for(auto& surface : layerm.nonplanar_surfaces){
+            nonplanar_surfaces.append(
+                intersection_ex(surface.horizontal_projection(),
+                union_ex(layerm_slices_surfaces)),
+                (surface.stats.max.z < this->print_z+this->height ? stTopNonplanar : stInternalSolidNonplanar)
+            );    
         }
+        
         //remove non planar surfaces form all surfaces to get planar surfaces
         Polygons planar_surfaces = diff(layerm_slices_surfaces,nonplanar_surfaces,true);
 
@@ -675,8 +457,7 @@ Layer::detect_surfaces_type()
                 // No other instance of this function modifies fill_surfaces.
                 layerm.fill_surfaces.append(
                     intersection_ex(surface, fill_boundaries),
-                    surface.surface_type,
-                    surface.distance_to_top
+                    surface.surface_type
                 );
             }
         }
