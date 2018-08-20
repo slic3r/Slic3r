@@ -66,7 +66,7 @@ echo "Copying resources..."
 cp -rf $SLIC3R_DIR/var $resourcefolder/
 
 echo "Copying Slic3r..."
-cp $SLIC3R_DIR/slic3r $archivefolder/Slic3r
+cp $SLIC3R_DIR/Slic3r $archivefolder/Slic3r
 
 mkdir $archivefolder/bin
 echo "Installing libraries to $archivefolder/bin ..."
