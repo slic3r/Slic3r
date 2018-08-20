@@ -437,7 +437,7 @@ PrintObject::move_nonplanar_surfaces_up()
                             Polygons upper_slices = upper_layerm.slices;
                             topNonplanar.append(
                                 intersection_ex(nonplanar_surface.horizontal_projection(),
-                                union_ex(diff(layerm_slices_surfaces, upper_slices, true), true), true),
+                                union_ex(diff(layerm_slices_surfaces, upper_slices, false), false), false),
                                 (shell_thickness == 0 ? stTopNonplanar : stInternalSolidNonplanar),
                                 distance_to_top
                             );
@@ -452,7 +452,7 @@ PrintObject::move_nonplanar_surfaces_up()
                             if (upper_nonplanar.size() > 0)
                             topNonplanar.append(
                                 intersection_ex(nonplanar_surface.horizontal_projection(),
-                                upper_nonplanar, true),
+                                upper_nonplanar, false),
                                 (shell_thickness == 0 ? stTopNonplanar : stInternalSolidNonplanar),
                                 distance_to_top
                             );
@@ -462,7 +462,7 @@ PrintObject::move_nonplanar_surfaces_up()
                         else {
                             topNonplanar.append(
                                 intersection_ex(nonplanar_surface.horizontal_projection(),
-                                union_ex(layerm_slices_surfaces, true),true),
+                                union_ex(layerm_slices_surfaces, false),false),
                                 (shell_thickness == 0 ? stTopNonplanar : stInternalSolidNonplanar),
                                 distance_to_top
                             );
@@ -478,20 +478,13 @@ PrintObject::move_nonplanar_surfaces_up()
                             }
                             
                             //save internal surfaces
-                            SurfaceCollection polyInternal;
-                            for(Surface s : layerm.slices.surfaces) {
-                                if (s.surface_type == stInternal) {
-                                    polyInternal.surfaces.push_back(s);
-                                }
-                            }
                             
                             layerm.slices.clear();
                             //add old surfaces again
-                            layerm.slices.append(polyNonplanar);
                             
-                            // readd internal surfaces without the found topNonplanar surfaces
+                            // append internal surfaces without the found topNonplanar surfaces
                             layerm.slices.append(
-                                diff_ex(ExPolygons(polyInternal), ExPolygons(topNonplanar), true),
+                                diff_ex(union_ex(layerm_slices_surfaces), ExPolygons(topNonplanar), false),
                                 stInternal
                             );
                             
@@ -1117,9 +1110,13 @@ PrintObject::find_nonplanar_surfaces()
             //group surfaces and attach all nonplanar surfaces to the PrintObject
             this->nonplanar_surfaces = nf.group_surfaces();
             
-            //check if surfaces maintain maximum printing height
-            for (auto& surface : this->nonplanar_surfaces) {
-                surface.check_max_printing_height(max_height);
+            //check if surfaces maintain maximum printing height, if not, erase it
+            for (NonplanarSurfaces::iterator it = this->nonplanar_surfaces.begin(); it!=this->nonplanar_surfaces.end();) {
+                if((*it).check_max_printing_height(max_height)) {
+                    it = this->nonplanar_surfaces.erase(it);
+                }else {
+                    it++;
+                }
             }
             
             //check if surfaces are printable

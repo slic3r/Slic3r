@@ -308,8 +308,8 @@ Layer::detect_surfaces_type()
             nonplanar_surfaces.append(
                 intersection_ex(surface.horizontal_projection(),
                 union_ex(layerm_slices_surfaces)),
-                (surface.stats.max.z < this->print_z+this->height ? stTopNonplanar : stInternalSolidNonplanar)
-            );    
+                (surface.stats.max.z <= this->slice_z + this->height ? stTopNonplanar : stInternalSolidNonplanar)
+            );
         }
         
         //remove non planar surfaces form all surfaces to get planar surfaces

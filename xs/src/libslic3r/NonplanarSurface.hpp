@@ -43,7 +43,7 @@ class NonplanarSurface
     void debug_output();
     NonplanarSurfaces group_surfaces();
     void mark_neighbour_surfaces(int id);
-    void check_max_printing_height(float height);
+    bool check_max_printing_height(float height);
     void check_printable_surfaces(float max_angle);
     ExPolygons horizontal_projection() const;
 

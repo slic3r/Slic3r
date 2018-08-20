@@ -106,7 +106,8 @@ void
 NonplanarSurface::debug_output()
 {
     std::cout << "Facets(" << this->mesh.size() << "): (min:X:" << this->stats.min.x << " Y:" << this->stats.min.y << " Z:" << this->stats.min.z <<
-                           " max:X:" << this->stats.max.x << " Y:" << this->stats.max.y << " Z:" << this->stats.max.z << ")" << std::endl;
+                           " max:X:" << this->stats.max.x << " Y:" << this->stats.max.y << " Z:" << this->stats.max.z << ")" << 
+                           "Height " << this->stats.max.z - this->stats.min.z << std::endl;
     for(auto& facet : this->mesh) {
         std::cout << "triangle: (" << facet.first << ")(" << facet.second.marked << ") ";
         std::cout << " (" << (180*std::acos(facet.second.normal.z))/3.14159265 << "°)";
@@ -184,22 +185,19 @@ NonplanarSurface::mark_neighbour_surfaces(int id)
     }
 }
 
-void
+bool
 NonplanarSurface::check_max_printing_height(float height) 
 {
-    //TODO do something
+    if ((this->stats.max.z - this->stats.min.z) > height ) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void
 NonplanarSurface::check_printable_surfaces(float max_angle)
 {
-    bool printable = true;
-    for(auto& facet : this->mesh) {
-        if(!facet.second.check_printable_facet(max_angle)){
-            printable = false;
-            break;
-        }
-    }
     //TODO do something
 }
 
