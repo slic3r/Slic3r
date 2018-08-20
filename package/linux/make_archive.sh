@@ -43,7 +43,11 @@ resourcefolder=$appfolder
 echo "Appfolder: $appfolder, archivefolder: $archivefolder"
 
 # Our slic3r dir and location of perl
-SLIC3R_DIR="$(dirname $(readlink -F $0))/../../"
+if [[ -z "$TRAVIS_BUILD_DIR" ]]; then
+    SLIC3R_DIR="${TRAVIS_BUILD_DIR}"
+else
+    SLIC3R_DIR="./"
+fi
 
 if [[ -d "${appfolder}" ]]; then
     echo "Deleting old working folder: ${appfolder}"
