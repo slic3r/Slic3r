@@ -403,6 +403,9 @@ PrintObject::debug_svg_print()
 void
 PrintObject::move_nonplanar_surfaces_up()
 {
+    //skip if not active
+    if(!this->config.nonplanar_layers.value) return;
+    
     FOREACH_REGION(this->_print, region_it) {
         size_t region_id = region_it - this->_print->regions.begin();
         const PrintRegion &region = **region_it;
@@ -510,6 +513,9 @@ PrintObject::move_nonplanar_surfaces_up()
 void
 PrintObject::project_nonplanar_surfaces()
 {
+    //skip if not active
+    if(!this->config.nonplanar_layers.value) return;
+    
     //TODO check when steps should be invalidated
     if (this->state.is_done(posNonplanarProjection)) return;
     this->state.set_started(posNonplanarProjection);
@@ -1072,9 +1078,8 @@ void PrintObject::_slice()
 void
 PrintObject::find_nonplanar_surfaces()
 {
-    //Max angle of facets
-    float max_angle = 10.0;
-    float max_height = 10.0;
+    //skip if not active
+    if(!this->config.nonplanar_layers.value) return;
 
     //Itterate over all model volumes
     const ModelVolumePtrs volumes = this->model_object()->volumes;
@@ -1083,11 +1088,11 @@ PrintObject::find_nonplanar_surfaces()
         if (! (*it)->modifier) {
             const TriangleMesh mesh = (*it)->mesh;
             std::map<int, NonplanarFacet> facets;
-            //store all meshes with slope <= max_angle in map. Map is necessary to keep facet ID
+            //store all meshes with slope <= nonplanar_layers_angle in map. Map is necessary to keep facet ID
             for (int i = 0; i < mesh.stl.stats.number_of_facets; ++ i) {
                 stl_facet* facet = mesh.stl.facet_start + i;
                 //TODO check if normals exist
-                if (facet->normal.z >= std::cos(max_angle * 3.14159265/180.0)) {
+                if (facet->normal.z >= std::cos(this->config.nonplanar_layers_angle.value * 3.14159265/180.0)) {
                     //copy facet
                     NonplanarFacet new_facet;
                     new_facet.normal.x = facet->normal.x;
@@ -1112,7 +1117,7 @@ PrintObject::find_nonplanar_surfaces()
             
             //check if surfaces maintain maximum printing height, if not, erase it
             for (NonplanarSurfaces::iterator it = this->nonplanar_surfaces.begin(); it!=this->nonplanar_surfaces.end();) {
-                if((*it).check_max_printing_height(max_height)) {
+                if((*it).check_max_printing_height(this->config.nonplanar_layers_height.value)) {
                     it = this->nonplanar_surfaces.erase(it);
                 }else {
                     it++;
@@ -1121,7 +1126,7 @@ PrintObject::find_nonplanar_surfaces()
             
             //check if surfaces are printable
             for (auto& surface : this->nonplanar_surfaces) {
-                surface.check_printable_surfaces(max_angle);
+                surface.check_printable_surfaces(this->config.nonplanar_layers_angle.value);
             }
             
             //Move facets to 0,0,0

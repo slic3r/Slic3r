@@ -41,6 +41,31 @@ PrintConfigDef::PrintConfigDef()
     def->gui_type = "slider";
     def->width = 200;
     def->default_value = new ConfigOptionPercent(75);
+    
+    def = this->add("nonplanar_layers", coBool);
+    def->label = "Use nonplanar layers";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Generate nonplanar layers ontop of the object";
+    def->cli = "nonplanar_layers!";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("nonplanar_layers_angle", coFloat);
+    def->label = "Maximum nonplanar angle";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "This is the maximum angle the printer can print without collisions.";
+    def->sidetext = "°";
+    def->cli = "nonplanar_layers_angle=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(10.0);
+    
+    def = this->add("nonplanar_layers_height", coFloat);
+    def->label = "Maximum nonplanar height";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "This is the maximum height the printer can print without collisions.";
+    def->sidetext = "mm";
+    def->cli = "nonplanar_layers_height=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(10.0);
 
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = "Avoid crossing perimeters";
