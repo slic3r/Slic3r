@@ -305,25 +305,28 @@ LayerRegion::project_nonplanar_surfaces()
     }
     
     //for all perimeters do path projection
-    for (ExtrusionEntitiesPtr::iterator col_it = this->perimeters.entities.begin(); col_it != this->perimeters.entities.end(); ++col_it) {
-        ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
-        for (ExtrusionEntitiesPtr::iterator loop_it = collection->entities.begin(); loop_it != collection->entities.end(); ++loop_it) {
-            ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(*loop_it);
-            for (ExtrusionPaths::iterator path_it = loop->paths.begin(); path_it != loop->paths.end(); ++path_it) {
-                project_nonplanar_path(&(*path_it));
-
-                correct_z_on_path(&(*path_it));
-            }
+    for (auto& col : this->perimeters.entities) {
+        ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(col);
+        for (auto& lo : collection->entities) {
+            if (ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(lo)) {
+                for(auto& path : loop->paths) {
+                    project_nonplanar_path(&path);
+                    correct_z_on_path(&path);
+                }
+            } else if (ExtrusionPath* path = dynamic_cast<ExtrusionPath*>(lo)) {
+                project_nonplanar_path(path);
+                correct_z_on_path(path);
+            } 
+            
         }
     }
 
     //and all fill paths do path projection
-    for (ExtrusionEntitiesPtr::iterator col_it = this->fills.entities.begin(); col_it != this->fills.entities.end(); ++col_it) {
-        ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*col_it);
-        for (ExtrusionEntitiesPtr::iterator path_it = collection->entities.begin(); path_it != collection->entities.end(); ++path_it) {
-            project_nonplanar_path(dynamic_cast<ExtrusionPath*>(*path_it));
-
-            correct_z_on_path(dynamic_cast<ExtrusionPath*>(*path_it));
+    for (auto& col : this->fills.entities) {
+        ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(col);
+        for(auto& path : collection->entities) {
+            project_nonplanar_path(dynamic_cast<ExtrusionPath*>(path));
+            correct_z_on_path(dynamic_cast<ExtrusionPath*>(path));
         }
     }
 }
@@ -356,7 +359,6 @@ smallerY(const Point &a, const Point &b)
 void
 LayerRegion::project_nonplanar_path(ExtrusionPath *path)
 {
-    PrintObject &object = *this->layer()->object();
     //First check all points and project them regarding the triangle mesh
     for (Point& point : path->polyline.points) {
         for (auto& surface : this->nonplanar_surfaces) {
