@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+#include <fstream>
 
 namespace Slic3r {
 
