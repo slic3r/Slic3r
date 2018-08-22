@@ -828,8 +828,9 @@ GCode::point3_to_gcode(const Point &point)
     return Pointf3(
         unscale(point.x) + this->origin.x - extruder_offset.x,
         unscale(point.y) + this->origin.y - extruder_offset.y,
-        unscale(point.z) //TODO Origin?
+        (point.z == -1.0f ? this->layer->print_z : unscale(point.z)) //TODO Origin?
     );
+    
 }
 
 }
