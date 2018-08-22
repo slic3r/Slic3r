@@ -195,6 +195,21 @@ NonplanarSurface::check_max_printing_height(float height)
     }
 }
 
+bool
+NonplanarSurface::check_surface_area()
+{
+    //calculate surface area of nonplanar surface.
+    float area = 0.0f;
+    for(auto& facet : this->mesh) {
+        area += facet.second.calculate_surface_area();
+    }
+    if (area < 20.0f) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void
 NonplanarSurface::check_printable_surfaces(float max_angle)
 {

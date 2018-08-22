@@ -60,21 +60,10 @@ NonplanarFacet::scale(float versor[3])
     this->stats.max.z *= versor[2];
 }
 
-bool
-NonplanarFacet::check_printable_facet(float max_angle)
+float
+NonplanarFacet::calculate_surface_area()
 {
-    for(int j = 0; j < 3; j++) {
-      if(!this->check_angle(this->neighbor[j], max_angle)){
-          return false;
-      }
-    }
-    return true;
-}
-
-bool
-NonplanarFacet::check_angle(int neighbor, float max_angle)
-{
-    return true;
+    return Slic3r::Geometry::triangle_surface(Point(this->vertex[0].x, this->vertex[0].y), Point(this->vertex[1].x, this->vertex[1].y), Point(this->vertex[2].x, this->vertex[2].y));;
 }
 
 }

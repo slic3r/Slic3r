@@ -2,6 +2,7 @@
 #define slic3r_NonplanarFacet_hpp_
 
 #include "libslic3r.h"
+#include "Geometry.hpp"
 
 namespace Slic3r {
 
@@ -30,8 +31,7 @@ class NonplanarFacet
     void calculate_stats();
     void translate(float x, float y, float z);
     void scale(float versor[3]);
-    bool check_printable_facet(float max_angle);
-    bool check_angle(int neighbor, float max_angle);
+    float calculate_surface_area();
 
 };
 };

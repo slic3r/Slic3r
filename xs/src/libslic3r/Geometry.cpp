@@ -417,6 +417,11 @@ Line_intersection(Point p1, Point p2, Point p3, Point p4) {
     return NULL;
 }
 
+float
+triangle_surface(Point p1, Point p2, Point p3) {
+    return 0.5 * ((p2.x-p1.x) * (p3.y-p1.y) - (p2.y-p1.y) * (p3.x-p1.x));
+}
+
 class ArrangeItem {
     public:
     Pointf pos;

@@ -1124,9 +1124,13 @@ PrintObject::find_nonplanar_surfaces()
                 }
             }
             
-            //check if surfaces are printable
-            for (auto& surface : this->nonplanar_surfaces) {
-                surface.check_printable_surfaces(this->config.nonplanar_layers_angle.value);
+            //check if surfaces area is not too small
+            for (NonplanarSurfaces::iterator it = this->nonplanar_surfaces.begin(); it!=this->nonplanar_surfaces.end();) {
+                if((*it).check_surface_area()) {
+                    it = this->nonplanar_surfaces.erase(it);
+                }else {
+                    it++;
+                }
             }
             
             //Move facets to 0,0,0
