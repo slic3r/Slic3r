@@ -297,6 +297,23 @@ LayerRegion::append_nonplanar_surface(NonplanarSurface& surface)
 }
 
 void
+LayerRegion::project_nonplanar_extrusion(ExtrusionEntityCollection* collection)
+{
+    for (auto& entity : collection->entities) {
+        if (ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(entity)) {
+            for(auto& path : loop->paths) {
+                project_nonplanar_path(&path);
+                correct_z_on_path(&path);
+            }
+        } else if (ExtrusionPath* path = dynamic_cast<ExtrusionPath*>(entity)) {
+            project_nonplanar_path(path);
+            correct_z_on_path(path);
+        } 
+        
+    }
+}
+
+void
 LayerRegion::project_nonplanar_surfaces()
 {
     //skip if there are no nonplanar_surfaces on this LayerRegion
@@ -307,27 +324,13 @@ LayerRegion::project_nonplanar_surfaces()
     //for all perimeters do path projection
     for (auto& col : this->perimeters.entities) {
         ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(col);
-        for (auto& lo : collection->entities) {
-            if (ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(lo)) {
-                for(auto& path : loop->paths) {
-                    project_nonplanar_path(&path);
-                    correct_z_on_path(&path);
-                }
-            } else if (ExtrusionPath* path = dynamic_cast<ExtrusionPath*>(lo)) {
-                project_nonplanar_path(path);
-                correct_z_on_path(path);
-            } 
-            
-        }
+        this->project_nonplanar_extrusion(collection);
     }
 
     //and all fill paths do path projection
     for (auto& col : this->fills.entities) {
         ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(col);
-        for(auto& path : collection->entities) {
-            project_nonplanar_path(dynamic_cast<ExtrusionPath*>(path));
-            correct_z_on_path(dynamic_cast<ExtrusionPath*>(path));
-        }
+        this->project_nonplanar_extrusion(collection);
     }
 }
 

@@ -76,6 +76,8 @@ class LayerRegion
     double infill_area_threshold() const;
     //append a new nonplanar surface to the list skip if already in list
     void append_nonplanar_surface(NonplanarSurface& surface);
+    // Projects the paths of a collection regarding the structure of a stl mesh
+    void project_nonplanar_extrusion(ExtrusionEntityCollection* collection);
     /// Projects nonplanar surfaces downwards regarding the structure of the stl mesh.
     void project_nonplanar_surfaces();
     ///project a nonplanar path
