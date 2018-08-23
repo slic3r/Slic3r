@@ -1921,7 +1921,7 @@ CLIConfigDef::CLIConfigDef()
     def->default_value = new ConfigOptionFloat(0);
     
     def = this->add("export_obj", coBool);
-    def->label = __TRANS("Export SVG");
+    def->label = __TRANS("Export OBJ");
     def->tooltip = __TRANS("Export the model as OBJ.");
     def->cli = "export-obj";
     def->default_value = new ConfigOptionBool(false);
