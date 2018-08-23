@@ -1921,7 +1921,7 @@ CLIConfigDef::CLIConfigDef()
     def->default_value = new ConfigOptionFloat(0);
     
     def = this->add("export_obj", coBool);
-    def->label = __TRANS("Export OBJ");
+    def->label = __TRANS("Export SVG");
     def->tooltip = __TRANS("Export the model as OBJ.");
     def->cli = "export-obj";
     def->default_value = new ConfigOptionBool(false);
@@ -2027,6 +2027,21 @@ const CLIConfigDef cli_config_def;
 
 std::ostream&
 print_cli_options(std::ostream& out) {
+    for (const auto& opt : cli_config_def.options) {
+        if (opt.second.cli.size() != 0) {
+            out << "\t" << std::left << std::setw(40) << std::string("--") + opt.second.cli; 
+            out << "\t" << opt.second.tooltip << "\n";
+            if (opt.second.default_value != nullptr) 
+                out << "\t" << std::setw(40) << " " << "\t" << " (default: " << opt.second.default_value->serialize() << ")";
+            out << "\n";
+        }
+    }
+    std::cerr << std::endl;
+    return out;
+}
+
+std::ostream&
+print_print_options(std::ostream& out) {
     for (const auto& opt : print_config_def.options) {
         if (opt.second.cli.size() != 0) {
             out << "\t" << std::left << std::setw(40) << std::string("--") + opt.second.cli; 

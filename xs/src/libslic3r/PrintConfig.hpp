@@ -706,8 +706,11 @@ class CLIConfig
     };
 };
 
-/// Iterate through all of the options and write them to a stream.
-std::ostream& print_cli_options(std::ostream& out);
+/// Iterate through all of the print options and write them to a stream.
+std::ostream& print_print_options(std::ostream& out);
+/// Iterate through all of the CLI options and write them to a stream.
+std::ostream&
+print_cli_options(std::ostream& out);
 }
 
 #endif
