@@ -538,7 +538,7 @@ DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_
     this->read_cli(_argv.size(), &_argv[0], extra);
 }
 
-void
+bool
 DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra)
 {
     // cache the CLI option => opt_key mapping
@@ -594,7 +594,10 @@ DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra)
         const auto it = opts.find(token);
         if (it == opts.end()) {
             printf("Warning: unknown option --%s\n", token.c_str());
-            continue;
+            // instead of continuing, return false to caller
+            // to stop execution and print usage
+            return false;
+            //continue;
         }
         const t_config_option_key opt_key = it->second;
         const ConfigOptionDef &optdef = this->def->options.at(opt_key);
@@ -629,6 +632,7 @@ DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra)
             this->set_deserialize(opt_key, value, true);
         }
     }
+    return true;
 }
 
 void

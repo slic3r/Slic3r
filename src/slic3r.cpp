@@ -20,6 +20,8 @@
     #include "GUI/GUI.hpp"
 #endif
 
+/// utility function for displaying CLI usage
+void printUsage();
 
 using namespace Slic3r;
 
@@ -36,7 +38,12 @@ main(int argc, char **argv)
     config_def.merge(print_config_def);
     DynamicConfig config(&config_def);
     t_config_option_keys input_files;
-    config.read_cli(argc, argv, &input_files);
+    // if any option is unsupported, print usage and abort immediately
+    if ( !config.read_cli(argc, argv, &input_files) )
+    {
+        printUsage();
+        return 0;
+    }
     
     // apply command line options to a more handy CLIConfig
     CLIConfig cli_config;
@@ -121,11 +128,7 @@ main(int argc, char **argv)
         models.push_back(model);
     }
     if (cli_config.help) {
-        std::cout << "Slic3r " << SLIC3R_VERSION << " is a STL-to-GCODE translator for RepRap 3D printers" << "\n"
-                  << "written by Alessandro Ranellucci <aar@cpan.org> - http://slic3r.org/ - https://github.com/slic3r/Slic3r" << "\n"
-                  << "Git Version " << BUILD_COMMIT << "\n\n"
-                  << "Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ..." << "\n";
-        print_cli_options(boost::nowide::cout);
+        printUsage();
         return 0;
     }
     
@@ -238,4 +241,19 @@ main(int argc, char **argv)
     }
     
     return 0;
+}
+void printUsage()
+{
+        std::cout << "Slic3r " << SLIC3R_VERSION << " is a STL-to-GCODE translator for RepRap 3D printers" << "\n"
+                  << "written by Alessandro Ranellucci <aar@cpan.org> - http://slic3r.org/ - https://github.com/slic3r/Slic3r" << "\n"
+                  << "Git Version " << BUILD_COMMIT << "\n\n"
+                  << "Usage (C++ only): ./slic3r [ OPTIONS ] [ file.stl ] [ file2.stl ] ..." << "\n";
+        // CLI Options
+        std::cout << "** CLI OPTIONS **\n";
+        print_cli_options(boost::nowide::cout);
+        std::cout << "****\n";
+            // Print options
+            std::cout << "** PRINT OPTIONS **\n";
+        print_print_options(boost::nowide::cout);
+        std::cout << "****\n";
 }
