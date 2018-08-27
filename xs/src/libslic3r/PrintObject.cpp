@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 #include "SVG.hpp"
+#include <time.h> 
 
 namespace Slic3r {
 
@@ -400,6 +401,58 @@ PrintObject::debug_svg_print()
     }
 }
 
+bool
+PrintObject::check_nonplanar_collisions(NonplanarSurface &surface)
+{
+    FOREACH_REGION(this->_print, region_it) {
+        size_t region_id = region_it - this->_print->regions.begin();
+        Polygons collider;
+        Polygons nonplanar_polygon = to_polygons(surface.horizontal_projection());
+        //check each layer
+        for (LayerPtrs::iterator layer_it = this->layers.begin(); layer_it != this->layers.end(); ++layer_it){
+            Layer* layer        = *layer_it;
+            LayerRegion &layerm = *layer->regions[region_id];
+            
+            //skip if below minimum nonplanar surface
+            if (surface.stats.min.z-layer->height > layer->slice_z) continue;
+            //break if above nonplanar surface
+            if (surface.stats.max.z < layer->slice_z) break;
+            
+            float angle_rad = this->config.nonplanar_layers_angle.value * 3.14159265/180.0;
+            float angle_offset = scale_(layer->height*std::sin(1.57079633-angle_rad)/std::sin(angle_rad));
+            Polygons layerm_slices_surfaces = layerm.slices;
+            
+            //debug
+            SVG svg("svg/collider" + std::to_string(layer->id()) + ".svg");
+            svg.draw(layerm_slices_surfaces, "blue");
+            svg.draw(union_ex(diff(collider,nonplanar_polygon)), "red", 0.7f);
+            svg.draw_outline(collider);
+            svg.arrows = false;
+            svg.Close();
+            
+            //check if current surface collides with previous collider
+            if (!intersection(layerm_slices_surfaces, diff(collider,nonplanar_polygon)).empty()){
+                //collsion found
+                return true;
+            }
+            
+            if (layer->upper_layer != NULL) {
+                Layer* upper_layer = layer->upper_layer;
+                LayerRegion &upper_layerm = *upper_layer->regions[region_id];
+                Polygons upper_slices = upper_layerm.slices;
+                //merge the ofsetted surface to the collider
+                collider= offset(union_(intersection(nonplanar_polygon, 
+                                        diff(layerm_slices_surfaces, 
+                                            upper_slices, false), false), 
+                                collider),
+                            angle_offset);
+            }
+        }
+    }
+    
+    return false;
+}
+
 void
 PrintObject::move_nonplanar_surfaces_up()
 {
@@ -519,12 +572,17 @@ PrintObject::project_nonplanar_surfaces()
     //TODO check when steps should be invalidated
     if (this->state.is_done(posNonplanarProjection)) return;
     this->state.set_started(posNonplanarProjection);
-
+    double time1=0.0, tstart;      // time measurment variables
+     tstart = clock(); 
     parallelize<Layer*>(
         std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
         boost::bind(&Slic3r::Layer::project_nonplanar_surfaces, _1),
         this->_print->config.threads.value
     );
+    
+    time1 += clock() - tstart;     // end
+    time1 = time1/CLOCKS_PER_SEC;  // rescale to seconds
+    std::cout << "time " << time1 << '\n';
 
     this->state.set_done(posNonplanarProjection);
 }
@@ -1137,10 +1195,14 @@ PrintObject::find_nonplanar_surfaces()
             for (auto& surface : this->nonplanar_surfaces) {
                 surface.translate(-mesh.stl.stats.min.x,-mesh.stl.stats.min.y,-mesh.stl.stats.min.z);
             }
-
-            //debug output
-            for (auto& surface : this->nonplanar_surfaces) {
-                surface.debug_output();
+            
+            //check if surfaces areas collide
+            for (NonplanarSurfaces::iterator it = this->nonplanar_surfaces.begin(); it!=this->nonplanar_surfaces.end();) {
+                if(check_nonplanar_collisions((*it))) {
+                    it = this->nonplanar_surfaces.erase(it);
+                }else {
+                    it++;
+                }
             }
         }
     }

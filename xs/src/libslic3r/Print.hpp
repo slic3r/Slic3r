@@ -149,6 +149,7 @@ class PrintObject
     void detect_surfaces_type();
     void merge_nonplanar_surfaces();
     void debug_svg_print();
+    bool check_nonplanar_collisions(NonplanarSurface &surface);
     void move_nonplanar_surfaces_up();
     void project_nonplanar_surfaces();
     void process_external_surfaces();
