@@ -154,12 +154,14 @@ main(int argc, char **argv)
             boost::nowide::cout << "File exported to " << outfile << std::endl;
         } else if (cli_config.export_svg) {
             std::string outfile = cli_config.output.value;
-            if (outfile.empty()) outfile = model.objects.front()->input_file + ".svg";
-            
-            SLAPrint print(&model);
-            print.config.apply(print_config, true);
-            print.slice();
-            print.write_svg(outfile);
+            if (outfile.empty()) 
+                outfile = model.objects.front()->input_file + ".svg";
+
+            SLAPrint print(&model); // initialize print with model
+            print.config.apply(print_config, true); // apply configuration
+            if( !print.slice() ) // slice file
+                return -1;
+            print.write_svg(outfile); // write SVG
             boost::nowide::cout << "SVG file exported to " << outfile << std::endl;
         } else if (cli_config.export_3mf) {
             std::string outfile = cli_config.output.value;

@@ -39,7 +39,7 @@ class SLAPrint
     std::vector<SupportPillar> sm_pillars;
     
     SLAPrint(Model* _model) : model(_model) {};
-    void slice();
+    bool slice();
     void write_svg(const std::string &outputfile) const;
     
     private:
