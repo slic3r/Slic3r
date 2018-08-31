@@ -50,6 +50,7 @@ class SLAPrint
     coordf_t sm_pillars_radius() const;
     std::string _SVG_path_d(const Polygon &polygon) const;
     std::string _SVG_path_d(const ExPolygon &expolygon) const;
+    std::string get_time() const;
 };
 
 }

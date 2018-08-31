@@ -34,3 +34,9 @@ gui_test
 slic3r_test
 compile_commands.json
 tags
+
+.DS_Store
+.dir-locals.el
+GPATH
+GRTAGS
+GTAGS
