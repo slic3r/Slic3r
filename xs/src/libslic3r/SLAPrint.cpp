@@ -5,8 +5,6 @@
 #include "Geometry.hpp"
 #include "Surface.hpp"
 #include <iostream>
-#include <iomanip> 
-#include <ctime>
 #include <complex>
 #include <cstdio>
 
@@ -228,8 +226,8 @@ SLAPrint::write_svg(const std::string &outputfile) const
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.0//EN\" \"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n"
         "<svg width=\"%f\" height=\"%f\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns:slic3r=\"http://slic3r.org/namespaces/slic3r\" viewport-fill=\"black\">\n"
-        "<!-- Generated using Slic3r %s http://slic3r.org/ on %s -->\n"
-            , size.x, size.y, SLIC3R_VERSION, get_time().c_str());
+        "<!-- Generated using Slic3r %s http://slic3r.org/ -->\n"
+        , size.x, size.y, SLIC3R_VERSION);
     
     for (size_t i = 0; i < this->layers.size(); ++i) {
         const Layer &layer = this->layers[i];
@@ -346,15 +344,6 @@ SLAPrint::_SVG_path_d(const ExPolygon &expolygon) const
     for (Polygons::const_iterator mp = pp.begin(); mp != pp.end(); ++mp) 
         pd += this->_SVG_path_d(*mp) + " ";
     return pd;
-}
-
-std::string
-SLAPrint::get_time() const
-{
-   std::time_t t = std::time(nullptr);
-   std::ostringstream ts;
-   ts << std::put_time(std::localtime(&t), "%c %Z");
-   return ts.str(); 
 }
 
 }
