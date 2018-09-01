@@ -159,8 +159,7 @@ main(int argc, char **argv)
 
             SLAPrint print(&model); // initialize print with model
             print.config.apply(print_config, true); // apply configuration
-            if( !print.slice() ) // slice file
-                return -1;
+            print.slice(); // slice file
             print.write_svg(outfile); // write SVG
             boost::nowide::cout << "SVG file exported to " << outfile << std::endl;
         } else if (cli_config.export_3mf) {
