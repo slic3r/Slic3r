@@ -10,7 +10,7 @@
 
 namespace Slic3r {
 
-bool
+void
 SLAPrint::slice()
 {
     TriangleMesh mesh = this->model->mesh();
@@ -64,15 +64,10 @@ SLAPrint::slice()
         fill->angle         = Geometry::deg2rad(this->config.fill_angle.value);
         fill->density       = this->config.fill_density.value/100;
 
-        // Check min_spacing bounds: (lower: > 0); (upper ??)
-        // - lower should probably be equal to nozzle_diameter
-        // - this solves the problem of floating point exception
-        if(fill->min_spacing <= 0)
-        {
-            std::cerr << "Aborted: Infill_extrusion_width must be above 0!\n";
-            return false; 
-        }
-        
+        // Minimum spacing has a lower bound of > 0. Set to a sane default 
+        // if the user gets an invalid value here.
+        fill->min_spacing = (fill->min_spacing <= 0 ? 0.5 : fill->min_spacing);
+
         parallelize<size_t>(
             0,
             this->layers.size()-1,
@@ -157,7 +152,6 @@ SLAPrint::slice()
         for (size_t i = this->config.raft_layers; i < this->layers.size(); ++i)
             this->layers[i].print_z += first_lh + lh * (this->config.raft_layers-1);
     }
-    return true;
 }
 
 void
