@@ -6,6 +6,7 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
 #include "miniz/miniz.h"
 
 namespace Slic3r {
@@ -39,6 +40,10 @@ public:
     /// Finalize the archive and free any allocated memory.
     /// \return mz_bool 0: failure 1: success.
     mz_bool finalize();
+
+    /// Get list of file names contained in this archive.
+    /// On failure, sets stats to 0 and returns an empty vector
+    std::vector<std::string> list_entries(); 
 
     ~ZipArchive();
 

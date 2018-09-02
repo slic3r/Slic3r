@@ -14,6 +14,7 @@ ZipArchive::ZipArchive (std::string zip_archive_name, char zip_mode) : archive(m
         stats = mz_zip_reader_init_file(&archive, zip_name.c_str(), 0);
     } else {
         std::cout << "Error:: Unknown zip mode" << std::endl;
+        stats = 0;
     }
 }
 
@@ -59,6 +60,31 @@ ZipArchive::finalize()
     if(stats)
         finalized = true;
     return stats;
+}
+
+std::vector<std::string>
+ZipArchive::list_entries() {
+    std::vector<std::string> files = {};
+    stats = 0;
+    int file_count = (int)mz_zip_reader_get_num_files(&archive);
+    if (file_count == 0) {
+        return files;
+        std::cerr << "Error:: No files in zip archive" << std::endl;
+    }
+    mz_zip_archive_file_stat file_stat;
+    if (!mz_zip_reader_file_stat(&archive, 0, &file_stat)) 
+    {
+        std::cerr << "Error:: No files in zip archive or not a zip archive." << std::endl;
+        return files;
+    }
+
+    for (int i = 0; i < file_count; i++)
+    {
+        if (!mz_zip_reader_file_stat(&archive, i, &file_stat)) continue;
+        if (mz_zip_reader_is_file_a_directory(&archive, i)) continue; // skip directories for now
+
+        files.emplace_back(file_stat.m_filename);
+    }
 }
 
 ZipArchive::~ZipArchive() {
