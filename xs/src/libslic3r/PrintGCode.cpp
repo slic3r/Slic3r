@@ -269,6 +269,8 @@ PrintGCode::output()
                     this->process_layer(idx, layer, layer->object()->_shifted_copies);
                 }
             }
+            gcodegen.placeholder_parser->set("layer_z", unscale(print_z));
+            gcodegen.placeholder_parser->set("layer_num", gcodegen.layer_index);
         }
         
         this->flush_filters();

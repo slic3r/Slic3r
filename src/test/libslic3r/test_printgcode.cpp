@@ -208,6 +208,23 @@ SCENARIO( "PrintGCode basic functionality") {
             }
         }
 
+
+        WHEN("end_gcode exists with layer_num and layer_z") {
+            config->set("end_gcode", "; Layer_num [layer_num]\n; Layer_z [layer_z]");
+            config->set("layer_height", 0.1);
+            config->set("first_layer_height", 0.1);
+
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+            Slic3r::Test::gcode(gcode, print);
+
+            auto exported {gcode.str()};
+            THEN("layer_num and layer_z are processed in the end gcode") {\
+                REQUIRE(exported.find("; Layer_num 199") != std::string::npos);
+                REQUIRE(exported.find("; Layer_z 20") != std::string::npos);
+            }
+        }
+
         gcode.clear();
     }
 }
