@@ -1,4 +1,5 @@
 #include "../IO.hpp"
+#include "Zip/ZipArchive.hpp"
 #include <iostream>
 #include <fstream>
 #include <string.h>
@@ -450,15 +451,31 @@ void AMFParserContext::endDocument()
 bool
 AMF::read(std::string input_file, Model* model)
 {
+    ZipArchive zip_archive(input_file, 'R');
+    auto file_list = zip_archive.list_entries();
+    if (file_list.size() > 1) {
+        return false; // only support single file archives
+    }
+    std::string deflated_input_file {""};
+    if (file_list.size() == 1) {
+        // extract the file with ZipArchive
+        if(!zip_archive.extract_entry(file_list[0], "3dmodel.xml"))
+            return false;
+        deflated_input_file = "3dmodel.xml";
+    } else {
+        // not a deflated file
+        deflated_input_file = input_file;
+    }
+
     XML_Parser parser = XML_ParserCreate(NULL); // encoding
     if (! parser) {
         printf("Couldn't allocate memory for parser\n");
         return false;
     }
     
-    boost::nowide::ifstream fin(input_file, std::ios::in);
+    boost::nowide::ifstream fin(deflated_input_file, std::ios::in);
     if (!fin.is_open()) {
-        boost::nowide::cerr << "Cannot open file: " << input_file << std::endl;
+        boost::nowide::cerr << "Cannot open file: " << deflated_input_file << std::endl;
         return false;
     }
 
@@ -489,6 +506,11 @@ AMF::read(std::string input_file, Model* model)
 
     XML_ParserFree(parser);
     fin.close();
+    if (file_list.size() == 1) {
+        // Remove the extracted 3dmodel.xml file.
+        if (remove("3dmodel.xml") != 0)
+            return false;
+    }
 
     if (result)
         ctx.endDocument();
