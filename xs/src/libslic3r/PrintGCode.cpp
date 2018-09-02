@@ -128,7 +128,7 @@ PrintGCode::output()
 
     if (include_start_extruder_temp) this->_print_first_layer_temperature(0);
 
-    // Apply gcode math to start and end gcode
+    // Apply gcode math to start gcode
     fh << apply_math(gcodegen.placeholder_parser->process(config.start_gcode.value));
 
     for(const auto& start_gcode : config.start_filament_gcode.values) {
@@ -276,6 +276,11 @@ PrintGCode::output()
 
     // Write end commands to file.
     fh << gcodegen.retract(); // TODO: process this retract through PressureRegulator in order to discharge fully
+    for(const auto& end_gcode : config.end_filament_gcode.values) {
+        fh << apply_math(gcodegen.placeholder_parser->process(end_gcode));
+    }
+
+    fh << apply_math(gcodegen.placeholder_parser->process(config.end_gcode));
 
     // set bed temperature
     if (config.has_heatbed && temp > 0 && std::regex_search(config.end_gcode.getString(), bed_temp_regex)) {
