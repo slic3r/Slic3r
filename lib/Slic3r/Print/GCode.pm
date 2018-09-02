@@ -294,6 +294,8 @@ sub export {
                     $self->process_layer($obj_idx, $layer, $layer->object->_shifted_copies);
                 }
             }
+            $gcodegen->placeholder_parser->set('layer_z' => $print_z);
+            $gcodegen->placeholder_parser->set("layer_num" => $gcodegen->layer_index);
         }
         $self->flush_filters;
     }
