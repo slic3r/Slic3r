@@ -27,9 +27,14 @@ enum GCodeFlavor {
     gcfSmoothie, gcfNoExtrusion,
 };
 
+enum PrintHostType {
+    htOctoPrint, htDuet,
+};
+
 enum InfillPattern {
     ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipSmooth, ipSmoothHilbert, ipSmoothTriple,
+    ipRectiWithPerimeter,
 };
 
 enum SupportMaterialPattern {
@@ -61,6 +66,15 @@ template<> inline t_config_enum_values& ConfigOptionEnum<GCodeFlavor>::get_enum_
     return keys_map;
 }
 
+template<> inline t_config_enum_values& ConfigOptionEnum<PrintHostType>::get_enum_values() {
+    static t_config_enum_values keys_map;
+    if (keys_map.empty()) {
+        keys_map["octoprint"]       = htOctoPrint;
+        keys_map["duet"]            = htDuet;
+    }
+    return keys_map;
+}
+
 template<> inline t_config_enum_values& ConfigOptionEnum<InfillPattern>::get_enum_values() {
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
@@ -80,6 +94,7 @@ template<> inline t_config_enum_values& ConfigOptionEnum<InfillPattern>::get_enu
         keys_map["smooth"]              = ipSmooth;
         keys_map["smoothtriple"]        = ipSmoothTriple;
         keys_map["smoothhilbert"]       = ipSmoothHilbert;
+        keys_map["rectiwithperimeter"]  = ipRectiWithPerimeter;
     }
     return keys_map;
 }
@@ -412,10 +427,7 @@ public:
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
-    ConfigOptionInt                 infill_dense_layers;
-    ConfigOptionFloat               infill_dense_angle;
-    ConfigOptionPercent             infill_dense_density;
-    ConfigOptionEnum<InfillPattern> infill_dense_pattern;
+    ConfigOptionBool                 infill_dense;
     ConfigOptionBool                infill_first;
     ConfigOptionBool                overhangs;
     ConfigOptionBool                no_perimeter_unsupported;
@@ -465,10 +477,7 @@ protected:
         OPT_PTR(infill_every_layers);
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
-        OPT_PTR(infill_dense_layers);
-        OPT_PTR(infill_dense_angle);
-        OPT_PTR(infill_dense_density);
-        OPT_PTR(infill_dense_pattern);
+        OPT_PTR(infill_dense);
         OPT_PTR(infill_first);
         OPT_PTR(overhangs);
         OPT_PTR(no_perimeter_unsupported);
@@ -561,10 +570,15 @@ public:
     ConfigOptionFloats              filament_cost;
     ConfigOptionFloats              filament_max_volumetric_speed;
     ConfigOptionFloats              filament_loading_speed;
+    ConfigOptionFloats              filament_loading_speed_start;
+    ConfigOptionFloats              filament_load_time;
     ConfigOptionFloats              filament_unloading_speed;
+    ConfigOptionFloats              filament_unloading_speed_start;
     ConfigOptionFloats              filament_toolchange_delay;
+    ConfigOptionFloats              filament_unload_time;
     ConfigOptionInts                filament_cooling_moves;
     ConfigOptionFloats              filament_cooling_initial_speed;
+    ConfigOptionFloats              filament_minimal_purge_on_wipe_tower;
     ConfigOptionFloats              filament_cooling_final_speed;
     ConfigOptionStrings             filament_ramming_parameters;
     ConfigOptionBool                gcode_comments;
@@ -586,6 +600,7 @@ public:
     ConfigOptionString              start_gcode;
     ConfigOptionStrings             start_filament_gcode;
     ConfigOptionBool                single_extruder_multi_material;
+    ConfigOptionBool                single_extruder_multi_material_priming;
     ConfigOptionString              toolchange_gcode;
     ConfigOptionFloat               travel_speed;
     ConfigOptionBool                use_firmware_retraction;
@@ -595,6 +610,7 @@ public:
     ConfigOptionFloat               cooling_tube_retraction;
     ConfigOptionFloat               cooling_tube_length;
     ConfigOptionFloat               parking_pos_retraction;
+    ConfigOptionBool                remaining_times;
     ConfigOptionBool                silent_mode;
     ConfigOptionFloat               extra_loading_move;
 
@@ -622,10 +638,15 @@ protected:
         OPT_PTR(filament_cost);
         OPT_PTR(filament_max_volumetric_speed);
         OPT_PTR(filament_loading_speed);
+        OPT_PTR(filament_loading_speed_start);
+        OPT_PTR(filament_load_time);
         OPT_PTR(filament_unloading_speed);
+        OPT_PTR(filament_unloading_speed_start);
+        OPT_PTR(filament_unload_time);
         OPT_PTR(filament_toolchange_delay);
         OPT_PTR(filament_cooling_moves);
         OPT_PTR(filament_cooling_initial_speed);
+        OPT_PTR(filament_minimal_purge_on_wipe_tower);
         OPT_PTR(filament_cooling_final_speed);
         OPT_PTR(filament_ramming_parameters);
         OPT_PTR(gcode_comments);
@@ -645,6 +666,7 @@ protected:
         OPT_PTR(retract_restart_extra_toolchange);
         OPT_PTR(retract_speed);
         OPT_PTR(single_extruder_multi_material);
+        OPT_PTR(single_extruder_multi_material_priming);
         OPT_PTR(start_gcode);
         OPT_PTR(start_filament_gcode);
         OPT_PTR(toolchange_gcode);
@@ -656,6 +678,7 @@ protected:
         OPT_PTR(cooling_tube_retraction);
         OPT_PTR(cooling_tube_length);
         OPT_PTR(parking_pos_retraction);
+        OPT_PTR(remaining_times);
         OPT_PTR(silent_mode);
         OPT_PTR(extra_loading_move);
     }
@@ -812,18 +835,20 @@ class HostConfig : public StaticPrintConfig
 {
     STATIC_PRINT_CONFIG_CACHE(HostConfig)
 public:
-    ConfigOptionString              octoprint_host;
-    ConfigOptionString              octoprint_apikey;
-    ConfigOptionString              octoprint_cafile;
+    ConfigOptionEnum<PrintHostType> host_type;
+    ConfigOptionString              print_host;
+    ConfigOptionString              printhost_apikey;
+    ConfigOptionString              printhost_cafile;
     ConfigOptionString              serial_port;
     ConfigOptionInt                 serial_speed;
     
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
-        OPT_PTR(octoprint_host);
-        OPT_PTR(octoprint_apikey);
-        OPT_PTR(octoprint_cafile);
+        OPT_PTR(host_type);
+        OPT_PTR(print_host);
+        OPT_PTR(printhost_apikey);
+        OPT_PTR(printhost_cafile);
         OPT_PTR(serial_port);
         OPT_PTR(serial_speed);
     }

@@ -58,6 +58,7 @@ public:
     ExtrusionEntityCollection* loops;
     ExtrusionEntityCollection* gap_fill;
     SurfaceCollection* fill_surfaces;
+    ExPolygons fill_no_overlap;
     
     PerimeterGenerator(
         // Input:

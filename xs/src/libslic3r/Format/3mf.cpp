@@ -603,6 +603,8 @@ namespace Slic3r {
 
             if (!_generate_volumes(*object.second, obj_geometry->second, *volumes_ptr))
                 return false;
+
+            object.second->center_around_origin();
         }
 
         // fixes the min z of the model if negative
@@ -1491,6 +1493,7 @@ namespace Slic3r {
 
             stl_get_size(&stl);
             volume->mesh.repair();
+            volume->calculate_convex_hull();
 
             // apply volume's name and config data
             for (const Metadata& metadata : volume_data.metadata)

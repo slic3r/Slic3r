@@ -450,7 +450,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		break;
 	case coEnum:{
 		if (opt_key.compare("top_fill_pattern") == 0 || opt_key.compare("bottom_fill_pattern") == 0 ||
-			opt_key.compare("fill_pattern") == 0 || opt_key.compare("infill_dense_pattern") == 0 ){
+			opt_key.compare("fill_pattern") == 0 ){
 			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
 		}
 		else if (opt_key.compare("gcode_flavor") == 0 ){
@@ -459,8 +459,12 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		else if (opt_key.compare("support_material_pattern") == 0){
 			ret = static_cast<int>(config.option<ConfigOptionEnum<SupportMaterialPattern>>(opt_key)->value);
 		}
-		else if (opt_key.compare("seam_position") == 0)
+		else if (opt_key.compare("seam_position") == 0){
 			ret = static_cast<int>(config.option<ConfigOptionEnum<SeamPosition>>(opt_key)->value);
+		}
+		else if (opt_key.compare("host_type") == 0){
+			ret = static_cast<int>(config.option<ConfigOptionEnum<PrintHostType>>(opt_key)->value);
+		}
 	}
 		break;
 	case coPoints:

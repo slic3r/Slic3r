@@ -59,6 +59,7 @@ public:
     coordf_t    spacing;
     // infill / perimeter overlap, in unscaled coordinates 
     coordf_t    overlap;
+    ExPolygons  no_overlap_expolygons;
     // in radians, ccw, 0 = East
     float       angle;
     // In scaled coordinates. Maximum lenght of a perimeter segment connecting two infill lines.

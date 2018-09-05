@@ -7,6 +7,7 @@
 
 #include <boost/static_assert.hpp>
 
+#include "../ExtrusionEntityCollection.hpp"
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
 #include "../Geometry.hpp"
@@ -1470,6 +1471,71 @@ Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &para
         printf("FillCubic::fill_surface() failed to fill a region.\n");
     } 
     return polylines_out; 
+}
+
+
+//Polylines FillRectilinear2Peri::fill_surface(const Surface *surface, const FillParams &params) {
+
+void FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out) {
+    ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
+    //you don't want to sort the extrusions: big infill first, small second
+    eecroot->no_sort = true;
+
+    Polylines polylines_1;
+    //generate perimeter:
+    //TODO: better optimize start/end point?
+    ExPolygons path_perimeter = offset_ex(surface->expolygon, scale_(-this->spacing/2));
+    for (ExPolygon &expolygon : path_perimeter) {
+        expolygon.contour.make_counter_clockwise();
+        polylines_1.push_back(expolygon.contour.split_at_index(0));
+        for (Polygon hole : expolygon.holes) {
+            hole.make_clockwise();
+            polylines_1.push_back(hole.split_at_index(0));
+        }
+    }
+
+    // Save into layer.
+    auto *eec = new ExtrusionEntityCollection();
+    /// pass the no_sort attribute to the extrusion path
+    eec->no_sort = this->no_sort();
+    /// add it into the collection
+    eecroot->entities.push_back(eec);
+    /// push the path
+    extrusion_entities_append_paths(
+        eec->entities, STDMOVE(polylines_1),
+        flow.bridge ?
+    erBridgeInfill :
+                   (surface->is_solid() ?
+                   ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+                   erInternalInfill),
+                   flow.mm3_per_mm() * params.flow_mult, flow.width * params.flow_mult, flow.height);
+
+    Polylines polylines_2;
+    //50% overlap with the new perimeter
+    ExPolygons path_inner = offset2_ex(surface->expolygon, scale_(-this->spacing * 1.5), scale_(this->spacing));
+    for (ExPolygon &expolygon : path_inner) {
+        Surface surfInner(*surface, expolygon);
+        if (!fill_surface_by_lines(&surfInner, params, 0.f, 0.f, polylines_2)) {
+            printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
+        }
+    }
+    // Save into layer.
+    eec = new ExtrusionEntityCollection();
+    /// pass the no_sort attribute to the extrusion path
+    eec->no_sort = this->no_sort();
+    /// add it into the collection
+    eecroot->entities.push_back(eec);
+    /// push the path
+    extrusion_entities_append_paths(
+        eec->entities, STDMOVE(polylines_2),
+        flow.bridge ?
+    erBridgeInfill :
+                   (surface->is_solid() ?
+                   ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+                   erInternalInfill),
+                   flow.mm3_per_mm() * params.flow_mult, flow.width * params.flow_mult, flow.height);
+
+    out.entities.push_back(eecroot);
 }
 
 } // namespace Slic3r

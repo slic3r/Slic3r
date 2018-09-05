@@ -53,7 +53,7 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{config} = Slic3r::Config::new_from_defaults_keys([qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width variable_layer_height
-        serial_port serial_speed octoprint_host octoprint_apikey octoprint_cafile
+        serial_port serial_speed host_type print_host printhost_apikey printhost_cafile
         nozzle_diameter single_extruder_multi_material wipe_tower wipe_tower_x wipe_tower_y wipe_tower_width
 	wipe_tower_rotation_angle extruder_colour filament_colour max_print_height printer_model
     )]);
@@ -140,11 +140,18 @@ sub new {
     };
     
     # callback to react to gizmo rotate
+    # omitting last three parameters means rotation around Z
+    # otherwise they are the components of the rotation axis vector
     my $on_gizmo_rotate = sub {
-        my ($angle_z) = @_;
-        $self->rotate(rad2deg($angle_z), Z, 'absolute');
+        my ($angle, $axis_x, $axis_y, $axis_z) = @_;
+	if (!defined $axis_x) {
+            $self->rotate(rad2deg($angle), Z, 'absolute');
+        }
+        else {
+            $self->rotate(rad2deg($angle), undef, 'absolute', $axis_x, $axis_y, $axis_z) if $angle != 0;
+        }
     };
-    
+
     # callback to update object's geometry info while using gizmos
     my $on_update_geometry_info = sub {
         my ($size_x, $size_y, $size_z, $scale_factor) = @_;
@@ -202,6 +209,8 @@ sub new {
 
         Slic3r::GUI::_3DScene::register_on_viewport_changed_callback($self->{canvas3D}, sub { Slic3r::GUI::_3DScene::set_viewport_from_scene($self->{preview3D}->canvas, $self->{canvas3D}); });
     }
+
+    Slic3r::GUI::register_on_request_update_callback(sub { $self->schedule_background_process; });
     
 #    # Initialize 2D preview canvas
 #    $self->{canvas} = Slic3r::GUI::Plater::2D->new($self->{preview_notebook}, wxDefaultSize, $self->{objects}, $self->{model}, $self->{config});
@@ -993,9 +1002,10 @@ sub set_number_of_copies {
     my $model_object = $self->{model}->objects->[$obj_idx];
     
     # prompt user
-    my $copies = Wx::GetNumberFromUser("", L("Enter the number of copies of the selected object:"), L("Copies"), $model_object->instances_count, 0, 1000, $self);
+    my $copies = -1;
+    $copies = Wx::GetNumberFromUser("", L("Enter the number of copies of the selected object:"), L("Copies"), $model_object->instances_count, 0, 1000, $self);
     my $diff = $copies - $model_object->instances_count;
-    if ($diff == 0) {
+    if ($diff == 0 || $copies == -1) {
         # no variation
         $self->resume_background_process;
     } elsif ($diff > 0) {
@@ -1028,28 +1038,40 @@ sub _get_number_from_user {
 }
 
 sub rotate {
-    my ($self, $angle, $axis, $relative_key) = @_;
+    my ($self, $angle, $axis, $relative_key, $axis_x, $axis_y, $axis_z) = @_;
     $relative_key //= 'absolute'; # relative or absolute coordinates
-    $axis //= Z; # angle is in degrees
-
+    $axis_x //= 0;
+    $axis_y //= 0;
+    $axis_z //= 0;
     my $relative = $relative_key eq 'relative';    
-    
+
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
-    
+
     my $model_object = $self->{model}->objects->[$obj_idx];
     my $model_instance = $model_object->instances->[0];
-        
+
     if (!defined $angle) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
         my $default = $axis == Z ? rad2deg($model_instance->rotation) : 0;
         $angle = $self->_get_number_from_user(L("Enter the rotation angle:"), L("Rotate around ").$axis_name.(" axis"), L("Invalid rotation angle entered"), $default);
         return if $angle eq '';
     }
+
+    # Let's calculate vector of rotation axis (if we don't have it already)
+    # The minus is there so that the direction is the same as was established
+    if (defined $axis) {
+        if ($axis == X) {
+            $axis_x = -1;
+        }
+        if ($axis == Y) {
+            $axis_y = -1;
+        }
+    }
     
     $self->stop_background_process;
     
-    if ($axis == Z) {
+    if (defined $axis && $axis == Z) {
         my $new_angle = deg2rad($angle);
         foreach my $inst (@{ $model_object->instances }) {
             my $rotation = ($relative ? $inst->rotation : 0.) + $new_angle;
@@ -1064,13 +1086,15 @@ sub rotate {
         }
 #        $object->transform_thumbnail($self->{model}, $obj_idx);
     } else {
-        # rotation around X and Y needs to be performed on mesh
-        # so we first apply any Z rotation
-        if ($model_instance->rotation != 0) {
-            $model_object->rotate($model_instance->rotation, Z);
-            $_->set_rotation(0) for @{ $model_object->instances };
+        if (defined $axis) {
+            # rotation around X and Y needs to be performed on mesh
+            # so we first apply any Z rotation
+            if ($model_instance->rotation != 0) {
+                $model_object->rotate($model_instance->rotation, Slic3r::Pointf3->new(0, 0, -1));
+                $_->set_rotation(0) for @{ $model_object->instances };
+            }
         }
-        $model_object->rotate(deg2rad($angle), $axis);
+        $model_object->rotate(deg2rad($angle), Slic3r::Pointf3->new($axis_x, $axis_y, $axis_z));
         
 #        # realign object to Z = 0
 #        $model_object->center_around_origin;
@@ -1096,7 +1120,7 @@ sub mirror {
     
     # apply Z rotation before mirroring
     if ($model_instance->rotation != 0) {
-        $model_object->rotate($model_instance->rotation, Z);
+        $model_object->rotate($model_instance->rotation, Slic3r::Pointf3->new(0, 0, 1));
         $_->set_rotation(0) for @{ $model_object->instances };
     }
     
@@ -1124,8 +1148,7 @@ sub changescale {
     my $model_object = $self->{model}->objects->[$obj_idx];
     my $model_instance = $model_object->instances->[0];
     
-    my $object_size = $model_object->bounding_box->size;
-    my $bed_size = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape})->bounding_box->size;
+    my $object_size = $model_object->instance_bounding_box(0)->size;
     
     if (defined $axis) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
@@ -1133,7 +1156,7 @@ sub changescale {
         if ($tosize) {
             my $cursize = $object_size->[$axis];
             my $newsize = $self->_get_number_from_user(
-                sprintf(L('Enter the new size for the selected object (print bed: %smm):'), unscale($bed_size->[$axis])), 
+                L('Enter the new size for the selected object:'), 
                 L("Scale along ").$axis_name, L('Invalid scaling value entered'), $cursize, 1);
             return if $newsize eq '';
             $scale = $newsize / $cursize * 100;
@@ -1144,7 +1167,7 @@ sub changescale {
         
         # apply Z rotation before scaling
         if ($model_instance->rotation != 0) {
-            $model_object->rotate($model_instance->rotation, Z);
+            $model_object->rotate($model_instance->rotation, Slic3r::Pointf3->new(0, 0, 1));
             $_->set_rotation(0) for @{ $model_object->instances };
         }
         
@@ -1286,6 +1309,13 @@ sub async_apply_config {
         $self->{gcode_preview_data}->reset;
         $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
         $self->{preview3D}->reload_print if $self->{preview3D};
+
+        # We also need to reload 3D scene because of the wipe tower preview box
+        if ($self->{config}->wipe_tower) {
+            my $selections = $self->collect_selections;
+            Slic3r::GUI::_3DScene::set_objects_selections($self->{canvas3D}, \@$selections);
+	        Slic3r::GUI::_3DScene::reload_scene($self->{canvas3D}, 1) if $self->{canvas3D}
+        }
     }
 }
 
@@ -1498,6 +1528,11 @@ sub on_process_completed {
     return if $error;
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+
+    # in case this was MM print, wipe tower bounding box on 3D tab might need redrawing with exact depth:
+    my $selections = $self->collect_selections;
+    Slic3r::GUI::_3DScene::set_objects_selections($self->{canvas3D}, \@$selections);
+    Slic3r::GUI::_3DScene::reload_scene($self->{canvas3D}, 1);
     
     # if we have an export filename, start a new thread for exporting G-code
     if ($self->{export_gcode_output_file}) {
@@ -1559,7 +1594,7 @@ sub on_export_completed {
             $message = L("File added to print queue");
             $do_print = 1;
         } elsif ($self->{send_gcode_file}) {
-            $message = L("Sending G-code file to the OctoPrint server...");
+            $message = L("Sending G-code file to the Printer Host ...");
             $send_gcode = 1;
         } else {
             $message = L("G-code file exported to ") . $self->{export_gcode_output_file};
@@ -1575,9 +1610,10 @@ sub on_export_completed {
 
     # Send $self->{send_gcode_file} to OctoPrint.
     if ($send_gcode) {
-        my $op = Slic3r::OctoPrint->new($self->{config});
-        if ($op->send_gcode($self->{send_gcode_file})) {
-            $self->statusbar->SetStatusText(L("OctoPrint upload finished."));
+        my $host = Slic3r::PrintHost::get_print_host($self->{config});
+
+        if ($host->send_gcode($self->{send_gcode_file})) {
+            $self->statusbar->SetStatusText(L("Upload to host finished."));
         } else {
             $self->statusbar->SetStatusText("");
         }
@@ -1904,8 +1940,8 @@ sub on_config_change {
         } elsif ($opt_key eq 'serial_port') {
             $self->{btn_print}->Show($config->get('serial_port'));
             $self->Layout;
-        } elsif ($opt_key eq 'octoprint_host') {
-            $self->{btn_send_gcode}->Show($config->get('octoprint_host'));
+        } elsif ($opt_key eq 'print_host') {
+            $self->{btn_send_gcode}->Show($config->get('print_host'));
             $self->Layout;
         } elsif ($opt_key eq 'variable_layer_height') {
             if ($config->get('variable_layer_height') != 1) {

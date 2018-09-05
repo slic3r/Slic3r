@@ -632,6 +632,20 @@ private:
     Points                  m_island_samples;
 };
 
+void push_entity_as_polyline(Polylines &push_into, ExtrusionEntity* entity) {
+    if (const ExtrusionPath* path = dynamic_cast<const ExtrusionPath*>(entity)) {
+        push_into.push_back(path->polyline);
+    } else if (const ExtrusionMultiPath* multipath = dynamic_cast<const ExtrusionMultiPath*>(entity)) {
+        push_into.push_back(multipath->as_polyline());
+    } else if (const ExtrusionLoop* loop = dynamic_cast<const ExtrusionLoop*>(entity)) {
+        push_into.push_back(loop->as_polyline());
+    } else if (const ExtrusionEntityCollection* coll = dynamic_cast<const ExtrusionEntityCollection*>(entity)) {
+        for (ExtrusionEntity* child_entity : coll->entities) {
+            push_entity_as_polyline(push_into, child_entity);
+        }
+    }
+}
+
 // Generate top contact layers supporting overhangs.
 // For a soluble interface material synchronize the layer heights with the object, otherwise leave the layer height undefined.
 // If supports over bed surface only are requested, don't generate contact layers over an object.
@@ -776,15 +790,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                                     // TODO: split_at_first_point() could split a bridge mid-way
                                     Polylines overhang_perimeters;
                                     for (ExtrusionEntity* extrusion_entity : layerm->perimeters.entities) {
-                                        const ExtrusionEntityCollection *island = dynamic_cast<ExtrusionEntityCollection*>(extrusion_entity);
-                                        assert(island != NULL);
-                                        for (size_t i = 0; i < island->entities.size(); ++ i) {
-                                            ExtrusionEntity *entity = island->entities[i];
-                                            ExtrusionLoop *loop = dynamic_cast<Slic3r::ExtrusionLoop*>(entity);
-                                            overhang_perimeters.push_back(loop ? 
-                                                loop->as_polyline() :
-                                                dynamic_cast<const Slic3r::ExtrusionPath*>(entity)->polyline);
-                                        }
+                                        push_entity_as_polyline(overhang_perimeters, extrusion_entity);
                                     }
                                     
                                     // workaround for Clipper bug, see Slic3r::Polygon::clip_as_polyline()

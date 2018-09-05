@@ -162,7 +162,8 @@ public:
         bool is_custom() const;
 
         const Pointfs& get_shape() const;
-        void set_shape(const Pointfs& shape);
+        // Return true if the bed shape changed, so the calee will update the UI.
+        bool set_shape(const Pointfs& shape);
 
         const BoundingBoxf3& get_bounding_box() const;
         bool contains(const Point& point) const;
@@ -337,7 +338,12 @@ public:
             Undefined,
             Scale,
             Rotate,
+            Flatten,
             Num_Types
+        };
+        enum RenderOrder : unsigned char {
+            BeforeBed,
+            AfterBed
         };
 
     private:
@@ -381,7 +387,10 @@ public:
         float get_angle_z() const;
         void set_angle_z(float angle_z);
 
-        void render(const GLCanvas3D& canvas, const BoundingBoxf3& box) const;
+        void set_flattening_data(const ModelObject* model_object);
+        Pointf3 get_flattening_normal() const;
+
+        void render(const GLCanvas3D& canvas, const BoundingBoxf3& box, RenderOrder render_order) const;
         void render_current_gizmo_for_picking_pass(const BoundingBoxf3& box) const;
 
     private:
@@ -628,7 +637,7 @@ private:
     void _render_legend_texture() const;
     void _render_layer_editing_overlay() const;
     void _render_volumes(bool fake_colors) const;
-    void _render_gizmo() const;
+    void _render_gizmo(Gizmos::RenderOrder render_order) const;
 
     float _get_layers_editing_cursor_z_relative() const;
     void _perform_layer_editing_action(wxMouseEvent* evt = nullptr);

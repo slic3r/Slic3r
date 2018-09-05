@@ -34,10 +34,11 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 {    
 //    Slic3r::debugf "Filling layer %d:\n", $layerm->layer->id;
     
-    double  fill_density           = layerm.region()->config.fill_density;
-    Flow    infill_flow            = layerm.flow(frInfill);
-    Flow    solid_infill_flow      = layerm.flow(frSolidInfill);
-    Flow    top_solid_infill_flow  = layerm.flow(frTopSolidInfill);
+    double  fill_density            = layerm.region()->config.fill_density;
+    Flow    infill_flow             = layerm.flow(frInfill);
+    Flow    solid_infill_flow       = layerm.flow(frSolidInfill);
+    Flow    top_solid_infill_flow   = layerm.flow(frTopSolidInfill);
+    const float perimeter_spacing = layerm.flow(frPerimeter).spacing();
 
     Surfaces surfaces;
     
@@ -58,7 +59,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         layerm.fill_surfaces.group(&groups);
 
         //if internal infill can be dense, place it on his own group
-        if (layerm.region()->config.infill_dense_layers.getInt() > 0) {
+        if (layerm.region()->config.infill_dense.getBool() && layerm.region()->config.fill_density<40) {
             SurfacesPtr *denseGroup = NULL;
             const uint32_t nbGroups = groups.size();
             for (uint32_t num_group = 0; num_group < nbGroups; ++num_group) {
@@ -67,7 +68,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                     //if solid, wrong group
                     if (srf->is_solid()) break;
                     //find surface that can be used as dense infill
-                    if (srf->maxNbSolidLayersOnTop <= layerm.region()->config.infill_dense_layers.getInt()
+                    if (srf->maxNbSolidLayersOnTop <= 1
                         && srf->maxNbSolidLayersOnTop > 0) {
                         //remove from the group
                         groups[num_group].erase(groups[num_group].begin() + num_srf);
@@ -192,12 +193,13 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 (surface.is_top() ? layerm.region()->config.top_fill_pattern.value : layerm.region()->config.bottom_fill_pattern.value) :
                 ipRectilinear;
         } else {
-            if (layerm.region()->config.infill_dense_layers.getInt() > 0 
-                && surface.maxNbSolidLayersOnTop <= layerm.region()->config.infill_dense_layers.getInt()
+            if (layerm.region()->config.infill_dense.getBool()
+                && layerm.region()->config.fill_density<40
+                && surface.maxNbSolidLayersOnTop <= 1
                 && surface.maxNbSolidLayersOnTop > 0) {
-                density = layerm.region()->config.infill_dense_density.getFloat();
+                density = 42;
                 is_denser = true;
-                fill_pattern = layerm.region()->config.infill_dense_pattern.value;
+                fill_pattern = ipRectiWithPerimeter;
             }
             if (density <= 0)
                 continue;
@@ -252,14 +254,26 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 
         f->layer_id = layerm.layer()->id();
         f->z = layerm.layer()->print_z;
-        if (is_denser)f->angle = float(Geometry::deg2rad(layerm.region()->config.infill_dense_angle.value));
+        if (is_denser)f->angle = 0;
         else f->angle = float(Geometry::deg2rad(layerm.region()->config.fill_angle.value));
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = scale_(link_max_length);
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
         f->loop_clipping = scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER;
-        //give the overlap size, it's not the real value (it can depend of the external_perimeter_extrusion_width)
-        f->overlap = layerm.region()->config.infill_overlap.get_abs_value(flow.nozzle_diameter);
+        //give the overlap size to let the infill do his overlap
+        //add overlap if at least one perimeter
+        if (layerm.region()->config.perimeters.getInt() > 0) {
+            f->overlap = layerm.region()->config.get_abs_value("infill_overlap", (perimeter_spacing + (f->spacing)) / 2);
+            if (f->overlap!=0) {
+                f->no_overlap_expolygons = intersection_ex(layerm.fill_no_overlap_expolygons, ExPolygons() = { surface.expolygon });
+            } else {
+                f->no_overlap_expolygons.push_back(surface.expolygon);
+            }
+        } else {
+            f->overlap = 0;
+            f->no_overlap_expolygons.push_back(surface.expolygon);
+        }
+        
         // apply half spacing using this flow's own spacing and generate infill
         FillParams params;
         params.density = 0.01 * density;
