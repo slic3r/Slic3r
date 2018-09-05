@@ -65,7 +65,6 @@
              %};
     Clone<BoundingBoxf3> bounding_box() const
         %code%{ RETVAL = THIS->bounding_box; %};
-    Clone<BoundingBoxf3> transformed_bounding_box() const;
 
     bool                empty() const;
     bool                indexed() const;
@@ -89,7 +88,7 @@
 
     std::vector<int> load_object(ModelObject *object, int obj_idx, std::vector<int> instance_idxs, std::string color_by, std::string select_by, std::string drag_by, bool use_VBOs);
 
-    int load_wipe_tower_preview(int obj_idx, float pos_x, float pos_y, float width, float depth, float height, float rotation_angle, bool use_VBOs);
+    int load_wipe_tower_preview(int obj_idx, float pos_x, float pos_y, float width, float depth, float height, float rotation_angle, bool use_VBOs, bool size_unknown, float brim_width);
 
     void erase()
         %code{% THIS->clear(); %};

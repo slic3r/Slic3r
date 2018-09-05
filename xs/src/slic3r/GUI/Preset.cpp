@@ -304,10 +304,9 @@ const std::vector<std::string>& Preset::print_options()
         "top_infill_extrusion_width", "support_material_extrusion_width", "infill_overlap", "bridge_flow_ratio", 
         "over_bridge_flow_ratio", "clip_multipart_objects", "enforce_full_fill_volume", "external_infill_margin", "bridged_infill_margin",
         "elefant_foot_compensation", "xy_size_compensation", "hole_size_compensation", "threads", "resolution",
-		"wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging",
-		"only_one_perimeter_top", "compatible_printers", "compatible_printers_condition", "inherits", 
-		"infill_dense", 
-		"no_perimeter_unsupported", "min_perimeter_unsupported", "noperi_bridge_only"
+        "wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging",
+        "only_one_perimeter_top", "single_extruder_multi_material_priming", "compatible_printers", "compatible_printers_condition", "inherits", 
+        "infill_dense", "no_perimeter_unsupported", "min_perimeter_unsupported", "noperi_bridge_only"
     };
     return s_opts;
 }
@@ -316,11 +315,12 @@ const std::vector<std::string>& Preset::filament_options()
 {    
     static std::vector<std::string> s_opts {
         "filament_colour", "filament_diameter", "filament_type", "filament_soluble", "filament_notes", "filament_max_volumetric_speed",
-        "extrusion_multiplier", "filament_density", "filament_cost", "filament_loading_speed", "filament_unloading_speed", "filament_toolchange_delay",
-        "filament_cooling_moves", "filament_cooling_initial_speed", "filament_cooling_final_speed", "filament_ramming_parameters", "temperature",
-        "first_layer_temperature", "bed_temperature", "first_layer_bed_temperature", "fan_always_on", "cooling", "min_fan_speed", "max_fan_speed",
-        "bridge_fan_speed", "top_fan_speed", "disable_fan_first_layers", "fan_below_layer_time", "slowdown_below_layer_time", "min_print_speed",
-        "start_filament_gcode", "end_filament_gcode","compatible_printers", "compatible_printers_condition", "inherits"
+        "extrusion_multiplier", "filament_density", "filament_cost", "filament_loading_speed", "filament_loading_speed_start", "filament_load_time",
+        "filament_unloading_speed", "filament_toolchange_delay", "filament_unloading_speed_start", "filament_unload_time", "filament_cooling_moves",
+        "filament_cooling_initial_speed", "filament_cooling_final_speed", "filament_ramming_parameters", "filament_minimal_purge_on_wipe_tower",
+        "temperature", "first_layer_temperature", "bed_temperature", "first_layer_bed_temperature", "fan_always_on", "cooling", "min_fan_speed",
+        "max_fan_speed", "bridge_fan_speed", "top_fan_speed", "disable_fan_first_layers", "fan_below_layer_time", "slowdown_below_layer_time",
+        "min_print_speed", "start_filament_gcode", "end_filament_gcode","compatible_printers", "compatible_printers_condition", "inherits"
     };
     return s_opts;
 }
@@ -330,12 +330,12 @@ const std::vector<std::string>& Preset::printer_options()
     static std::vector<std::string> s_opts;
     if (s_opts.empty()) {
         s_opts = {
-            "bed_shape", "z_offset", "gcode_flavor", "use_relative_e_distances", "serial_port", "serial_speed", 
-            "octoprint_host", "octoprint_apikey", "octoprint_cafile", "use_firmware_retraction", "use_volumetric_e", "variable_layer_height",
+            "bed_shape", "z_offset", "gcode_flavor", "use_relative_e_distances", "serial_port", "serial_speed", "host_type",
+            "print_host", "printhost_apikey", "printhost_cafile", "use_firmware_retraction", "use_volumetric_e", "variable_layer_height",
             "single_extruder_multi_material", "start_gcode", "end_gcode", "before_layer_gcode", "layer_gcode", "toolchange_gcode",
             "between_objects_gcode", "printer_vendor", "printer_model", "printer_variant", "printer_notes", "cooling_tube_retraction",
             "cooling_tube_length", "parking_pos_retraction", "extra_loading_move", "max_print_height", "default_print_profile", "inherits",
-            "silent_mode", "machine_max_acceleration_extruding", "machine_max_acceleration_retracting",
+            "remaining_times", "silent_mode", "machine_max_acceleration_extruding", "machine_max_acceleration_retracting",
 			"machine_max_acceleration_x", "machine_max_acceleration_y", "machine_max_acceleration_z", "machine_max_acceleration_e",
         	"machine_max_feedrate_x", "machine_max_feedrate_y", "machine_max_feedrate_z", "machine_max_feedrate_e",
         	"machine_min_extruding_rate", "machine_min_travel_rate",

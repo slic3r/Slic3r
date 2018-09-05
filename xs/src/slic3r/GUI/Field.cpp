@@ -95,9 +95,10 @@ namespace Slic3r { namespace GUI {
 		wxString tooltip_text("");
 		wxString tooltip = _(m_opt.tooltip);
 		if (tooltip.length() > 0)
-			tooltip_text = tooltip + "(" + _(L("default")) + ": " +
-							(boost::iends_with(m_opt_id, "_gcode") ? "\n" : "") + 
-							default_string + ")";
+            tooltip_text = tooltip + "\n" + _(L("default value")) + "\t: " +
+            (boost::iends_with(m_opt_id, "_gcode") ? "\n" : "") + default_string +
+            (boost::iends_with(m_opt_id, "_gcode") ? "" : "\n") + 
+            _(L("parameter name")) + "\t: " + m_opt_id;
 
 		return tooltip_text;
 	}
@@ -223,24 +224,20 @@ namespace Slic3r { namespace GUI {
 		}), temp->GetId());
 #endif // __WXGTK__
 
-		temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent)
+		temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent& evt)
 		{
 #ifdef __WXGTK__
-			bChangedValueEvent = true;
-#else
-			on_change_field();
+			if (bChangedValueEvent)
 #endif //__WXGTK__
+			on_change_field();
 		}), temp->GetId());
 
 #ifdef __WXGTK__
-		temp->Bind(wxEVT_KEY_UP, [this](wxKeyEvent& event)
-		{
-			if (bChangedValueEvent)	{
-				on_change_field();
-				bChangedValueEvent = false;
-			}
-			event.Skip();
-		});
+        // to correct value updating on GTK we should:
+        // call on_change_field() on wxEVT_KEY_UP instead of wxEVT_TEXT
+        // and prevent value updating on wxEVT_KEY_DOWN
+        temp->Bind(wxEVT_KEY_DOWN, &TextCtrl::change_field_value, this);
+        temp->Bind(wxEVT_KEY_UP, &TextCtrl::change_field_value, this);
 #endif //__WXGTK__
 
 		// select all text using Ctrl+A
@@ -265,6 +262,15 @@ namespace Slic3r { namespace GUI {
 
 	void TextCtrl::enable() { dynamic_cast<wxTextCtrl*>(window)->Enable(); dynamic_cast<wxTextCtrl*>(window)->SetEditable(true); }
     void TextCtrl::disable() { dynamic_cast<wxTextCtrl*>(window)->Disable(); dynamic_cast<wxTextCtrl*>(window)->SetEditable(false); }
+
+#ifdef __WXGTK__
+    void TextCtrl::change_field_value(wxEvent& event)
+    {
+    	if (bChangedValueEvent = event.GetEventType()==wxEVT_KEY_UP)
+    		on_change_field();
+        event.Skip();
+    };
+#endif //__WXGTK__
 
 void CheckBox::BUILD() {
 	auto size = wxSize(wxDefaultSize);
@@ -585,6 +591,8 @@ boost::any& Choice::get_value()
 			m_value = static_cast<SupportMaterialPattern>(ret_enum);
 		else if (m_opt_id.compare("seam_position") == 0)
 			m_value = static_cast<SeamPosition>(ret_enum);
+		else if (m_opt_id.compare("host_type") == 0)
+			m_value = static_cast<PrintHostType>(ret_enum);
 	}	
 
 	return m_value;
