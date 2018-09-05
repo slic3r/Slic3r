@@ -174,6 +174,9 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
         //    (poylineVolume) / extrudedVolume,
         //    this->no_overlap_expolygons.size());
         if (extrudedVolume != 0 && poylineVolume != 0) multFlow = poylineVolume / extrudedVolume;
+        //failsafe, it can happen
+        if (multFlow > 1.3) multFlow = 1.3;
+        if (multFlow < 0.8) multFlow = 0.8;
     }
 
     // Save into layer.

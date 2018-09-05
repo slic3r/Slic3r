@@ -1,4 +1,4 @@
-use Test::More tests => 23;
+use Test::More tests => 28;
 use strict;
 use warnings;
 
@@ -106,6 +106,28 @@ if (0) {
     my @angles = map { $lines[$_-1]->ccw($lines[$_]->b) } 1..$#lines;
     ok !!(none { $_ < 0 } @angles) || (none { $_ > 0 } @angles),
         'all medial axis segments of a semicircumference have the same orientation';
+}
+
+{
+    my $expolygon = Slic3r::ExPolygon->new(Slic3r::Polygon->new_scale(
+        [4.3, 4], [4.3, 0], [4,0], [4,4], [0,4], [0,4.5], [4,4.5], [4,10], [4.3,10], [4.3, 4.5],
+        [6, 4.5], [6,10], [6.2,10], [6.2,4.5], [10,4.5], [10,4], [6.2,4], [6.2,0], [6, 0], [6, 4],
+    ));
+    my $res = $expolygon->medial_axis(scale 0.55, scale 0.25);
+    is scalar(@$res), 2, 'medial axis of a (bit too narrow) french cross is two lines';
+    ok unscale($res->[0]->length) >= (9.9) - epsilon, 'medial axis has reasonable length';
+    ok unscale($res->[1]->length) >= (9.9) - epsilon, 'medial axis has reasonable length';
+}
+
+{
+    my $expolygon = Slic3r::ExPolygon->new(Slic3r::Polygon->new_scale(
+        [0.86526705,1.4509841], [0.57696039,1.8637021], [0.4502297,2.5569978], [0.45626199,3.2965596], [1.1218851,3.3049455], [0.96681072,2.8243202], [0.86328971,2.2056997], [0.85367905,1.7790778],
+    ));
+    my $res = $expolygon->medial_axis(scale 1, scale 0.25);
+    is scalar(@$res), 1, 'medial axis of a (bit too narrow) french cross is two lines';
+    ok unscale($res->[0]->length) >= (1.4) - epsilon, 'medial axis has reasonable length';
+	# TODO: check if min width is < 0.3 and max width is > 0.6 (min($res->[0]->width.front, $res->[0]->width.back) # problem: can't have access to width
+	
 }
 
 {
