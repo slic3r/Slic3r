@@ -1336,9 +1336,9 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("no_perimeter_unsupported", coBool);
     def->label = L("");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Experimental option to remove perimeters where there are nothing under and a bridged infill should be better.");
+    def->tooltip = L("Experimental option to remove perimeters where there are nothing under and where a bridged infill should be better. Computationaly intensive!");
     def->cli = "no-perimeter-unsupported!";
-    def->default_value = new ConfigOptionBool(true);
+    def->default_value = new ConfigOptionBool(false);
 
     def = this->add("min_perimeter_unsupported", coInt);
     def->label = L("Minimum perimeters");
