@@ -52,6 +52,7 @@ matrix:
             - export SLIC3R_STATIC=1
             - export CXX=g++-4.9
             - export CC=g++-4.9
+            - export SLIC3R_GIT_VERSION=$(git rev-parse HEAD)
             - source $HOME/perl5/perlbrew/etc/bashrc
           after_success:
             - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
