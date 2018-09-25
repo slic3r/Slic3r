@@ -850,7 +850,8 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("bridged_infill_margin"));
         optgroup->append_line(line);
 		optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
-		optgroup->append_single_option_line("infill_first");
+        optgroup->append_single_option_line("infill_first");
+        optgroup->append_single_option_line("gap_fill");
 
 	page = add_options_page(_(L("Skirt and brim")), "box.png");
 		optgroup = page->new_optgroup(_(L("Skirt")));
@@ -1212,7 +1213,7 @@ void TabPrint::update()
 					"infill_speed", "bridge_speed" })
 		get_field(el)->toggle(have_infill || have_solid_infill);
 
-	get_field("gap_fill_speed")->toggle(have_perimeters && have_infill);
+    get_field("gap_fill_speed")->toggle(have_perimeters && m_config->option<ConfigOptionPercent>("gap_fill"));
 
 	bool have_top_solid_infill = m_config->opt_int("top_solid_layers") > 0;
 	for (auto el : { "top_infill_extrusion_width", "top_solid_infill_speed" })

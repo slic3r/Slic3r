@@ -871,13 +871,21 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "first-layer-temperature=i@";
     def->min = 0;
     def->max = max_temp;
-    def->default_value = new ConfigOptionInts { 200 };
-    
+    def->default_value = new ConfigOptionInts{ 200 };
+
+    def = this->add("gap_fill", coBool);
+    def->label = L("Gap fill");
+    def->category = L("Advanced");
+    def->tooltip = L("Enable gap fill algorithm. It will extrude small lines between perimeter "
+        "when there are not enough space for an other perimeter or an infill.");
+    def->cli = "gap-fill!";
+    def->default_value = new ConfigOptionBool(true);
+
     def = this->add("gap_fill_speed", coFloat);
     def->label = L("Gap fill");
     def->category = L("Speed");
     def->tooltip = L("Speed for filling small gaps using short zigzag moves. Keep this reasonably low "
-                   "to avoid too much shaking and resonance issues. Set zero to disable gaps filling.");
+        "to avoid too much shaking and resonance issues. Set zero to disable gaps filling.");
     def->sidetext = L("mm/s");
     def->cli = "gap-fill-speed=f";
     def->min = 0;

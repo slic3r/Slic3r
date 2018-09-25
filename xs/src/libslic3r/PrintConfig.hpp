@@ -423,6 +423,7 @@ public:
     ConfigOptionFloat               fill_angle;
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
+    ConfigOptionBool                gap_fill;
     ConfigOptionFloat               gap_fill_speed;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
@@ -473,6 +474,7 @@ protected:
         OPT_PTR(fill_angle);
         OPT_PTR(fill_density);
         OPT_PTR(fill_pattern);
+        OPT_PTR(gap_fill);
         OPT_PTR(gap_fill_speed);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
