@@ -301,10 +301,10 @@ void concatThickPolylines(ThickPolylines& pp) {
         for (size_t i = 0; i < pp.size(); ++i) {
             ThickPolyline *polyline = &pp[i];
 
-            int32_t id_candidate_first_point = -1;
-            int32_t id_candidate_last_point = -1;
-            int32_t nbCandidate_first_point = 0;
-            int32_t nbCandidate_last_point = 0;
+            size_t id_candidate_first_point = -1;
+            size_t id_candidate_last_point = -1;
+            size_t nbCandidate_first_point = 0;
+            size_t nbCandidate_last_point = 0;
             // find another polyline starting here
             for (size_t j = 0; j < pp.size(); ++j) {
                 if (j == i) continue;

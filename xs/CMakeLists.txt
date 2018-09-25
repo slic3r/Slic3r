@@ -136,6 +136,8 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/libslic3r.h
     ${LIBDIR}/libslic3r/Line.cpp
     ${LIBDIR}/libslic3r/Line.hpp
+    ${LIBDIR}/libslic3r/MedialAxis.cpp
+    ${LIBDIR}/libslic3r/MedialAxis.hpp
     ${LIBDIR}/libslic3r/Model.cpp
     ${LIBDIR}/libslic3r/Model.hpp
     ${LIBDIR}/libslic3r/ModelArrange.hpp
@@ -506,7 +508,7 @@ if (WIN32)
 endif ()
 
 # SLIC3R_MSVC_PDB
-if (MSVC AND SLIC3R_MSVC_PDB AND ${CMAKE_BUILD_TYPE} STREQUAL "Release")
+if (MSVC AND SLIC3R_MSVC_PDB AND "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     set_target_properties(XS PROPERTIES
         COMPILE_FLAGS "/Zi"
         LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF"
