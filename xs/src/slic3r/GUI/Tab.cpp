@@ -786,7 +786,8 @@ void TabPrint::build()
 	auto page = add_options_page(_(L("Layers and perimeters")), "layers.png");
 		auto optgroup = page->new_optgroup(_(L("Layer height")));
 		optgroup->append_single_option_line("layer_height");
-		optgroup->append_single_option_line("first_layer_height");
+        optgroup->append_single_option_line("first_layer_height");
+        optgroup->append_single_option_line("exact_last_layer_height");
 
 		optgroup = page->new_optgroup(_(L("Vertical shells")));
 		optgroup->append_single_option_line("perimeters");
@@ -1042,15 +1043,22 @@ void TabPrint::update()
 
 	double fill_density = m_config->option<ConfigOptionPercent>("fill_density")->value;
 
-	if (m_config->opt_bool("spiral_vase") &&
-		!(m_config->opt_int("perimeters") == 1 && m_config->opt_int("top_solid_layers") == 0 &&
-		fill_density == 0)) {
+    if (m_config->opt_bool("spiral_vase") && !(
+        m_config->opt_int("perimeters") == 1 
+        && m_config->opt_int("top_solid_layers") == 0
+        && fill_density == 0
+        && m_config->opt_bool("support_material") == false
+        && m_config->opt_int("support_material_enforce_layers") == 0
+        && m_config->opt_bool("exact_last_layer_height") == false
+        && m_config->opt_bool("ensure_vertical_shell_thickness") == false
+        )) {
 		wxString msg_text = _(L("The Spiral Vase mode requires:\n"
 			"- one perimeter\n"
 			"- no top solid layers\n"
 			"- 0% fill density\n"
 			"- no support material\n"
 			"- no ensure_vertical_shell_thickness\n"
+			"- unchecked 'exact last layer height'\n"
 			"\nShall I adjust those settings in order to enable Spiral Vase?"));
 		auto dialog = new wxMessageDialog(parent(), msg_text, _(L("Spiral Vase")), wxICON_WARNING | wxYES | wxNO);
 		DynamicPrintConfig new_conf = *m_config;
@@ -1059,7 +1067,8 @@ void TabPrint::update()
 			new_conf.set_key_value("top_solid_layers", new ConfigOptionInt(0));
 			new_conf.set_key_value("fill_density", new ConfigOptionPercent(0));
 			new_conf.set_key_value("support_material", new ConfigOptionBool(false));
-			new_conf.set_key_value("support_material_enforce_layers", new ConfigOptionInt(0));
+            new_conf.set_key_value("support_material_enforce_layers", new ConfigOptionInt(0));
+            new_conf.set_key_value("exact_last_layer_height", new ConfigOptionBool(false));
 			new_conf.set_key_value("ensure_vertical_shell_thickness", new ConfigOptionBool(false));
 			fill_density = 0;
 		}

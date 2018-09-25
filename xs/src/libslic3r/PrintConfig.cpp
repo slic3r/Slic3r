@@ -1046,6 +1046,13 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0.3);
 
+    def = this->add("exact_last_layer_height", coBool);
+    def->label = L("Exact last layer height");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("This setting controls the height of last object layers to put the last layer at the exact highest height possible. Experimental.");
+    def->cli = "exact_last-layer-height=f";
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("remaining_times", coBool);
     def->label = L("Supports remaining times");
     def->tooltip = L("Emit M73 P[percent printed] R[remaining time in minutes] at 1 minute"
@@ -2364,9 +2371,13 @@ void DynamicPrintConfig::normalize()
             opt->values.assign(opt->values.size(), false);  // set all values to false
         }
         {
-            this->opt<ConfigOptionInt>("perimeters", true)->value       = 1;
+            this->opt<ConfigOptionInt>("perimeters", true)->value = 1;
             this->opt<ConfigOptionInt>("top_solid_layers", true)->value = 0;
-            this->opt<ConfigOptionPercent>("fill_density", true)->value  = 0;
+            this->opt<ConfigOptionPercent>("fill_density", true)->value = 0;
+            this->opt<ConfigOptionBool>("support_material", true)->value = false;
+            this->opt<ConfigOptionInt>("support_material_enforce_layers")->value = 0;
+            this->opt<ConfigOptionBool>("exact_last_layer_height", true)->value  = false;
+            this->opt<ConfigOptionBool>("ensure_vertical_shell_thickness", true)->value  = false;
         }
     }
 }

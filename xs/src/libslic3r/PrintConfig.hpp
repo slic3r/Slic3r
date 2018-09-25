@@ -330,6 +330,7 @@ public:
     ConfigOptionBool                infill_only_where_needed;
     ConfigOptionBool                interface_shells;
     ConfigOptionFloat               layer_height;
+    ConfigOptionBool                exact_last_layer_height;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
 //    ConfigOptionFloat               seam_preferred_direction;
@@ -368,6 +369,7 @@ protected:
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
+        OPT_PTR(exact_last_layer_height);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);
 //        OPT_PTR(seam_preferred_direction);
