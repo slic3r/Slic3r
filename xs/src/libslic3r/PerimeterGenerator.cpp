@@ -117,7 +117,7 @@ PerimeterGenerator::process()
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
                         
-                        Polygons no_thin_zone = offset(offsets, +ext_pwidth/2);
+                        Polygons no_thin_zone = offset(offsets, +ext_pwidth/2, jtSquare);
                         // medial axis requires non-overlapping geometry
                         Polygons thin_zones = diff(last, no_thin_zone, true);
                         //don't use offset2_ex, because we don't want to merge the zones that have been separated.
@@ -129,7 +129,8 @@ PerimeterGenerator::process()
                         // compute a bit of overlap to anchor thin walls inside the print.
                         for (Polygon &ex : expp) {
                             //growing back the polygon
-                            //a vary little bit of overlap can be created here with other thin polygon, but it's more useful than worisome.
+                            //a very little bit of overlap can be created here with other thin polygons, but it's more useful than worisome.
+                            ex.remove_point_too_near(SCALED_RESOLUTION);
                             ExPolygons ex_bigger = offset_ex(ex, (float)(min_width / 2));
                             if (ex_bigger.size() != 1) continue; // impossible error, growing a single polygon can't create multiple or 0.
                             ExPolygons anchor = intersection_ex(offset(ex, (float)(ext_pwidth / 2), 
@@ -140,7 +141,7 @@ PerimeterGenerator::process()
                                     //be sure it's not too small to extrude reliably
                                     if (ex_bigger[0].area() > min_width*(ext_pwidth + ext_pspacing2)) {
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        ex_bigger[0].medial_axis(bound, ext_pwidth + ext_pspacing2, min_width, 
+                                        ex_bigger[0].medial_axis(bound, ext_pwidth + ext_pspacing2, min_width,
                                             &thin_walls, this->layer_height);
                                     }
                                     break;
@@ -496,8 +497,10 @@ PerimeterGenerator::_variable_width(const ThickPolylines &polylines, ExtrusionRo
     // of segments, and any pruning shall be performed before we apply this tolerance
     const double tolerance = scale_(0.05);
     
+    int id_line = 0;
     ExtrusionEntityCollection coll;
     for (ThickPolylines::const_iterator p = polylines.begin(); p != polylines.end(); ++p) {
+        id_line++;
         ExtrusionPaths paths;
         ExtrusionPath path(role);
         ThickLines lines = p->thicklines();
@@ -563,7 +566,7 @@ PerimeterGenerator::_variable_width(const ThickPolylines &polylines, ExtrusionRo
                 path.polyline.append(line.b);
             } else {
                 thickness_delta = fabs(scale_(flow.width) - w);
-                if (thickness_delta <= tolerance) {
+                if (thickness_delta <= tolerance/2) {
                     // the width difference between this line and the current flow width is 
                     // within the accepted tolerance
                 
