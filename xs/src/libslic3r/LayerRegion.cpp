@@ -95,9 +95,18 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
 void LayerRegion::process_external_surfaces(const Layer* lower_layer)
 {
     const Surfaces &surfaces = this->fill_surfaces.surfaces;
-    const double margin = scale_(this->region()->config.external_infill_margin.getFloat());
-    const double margin_bridged = scale_(this->region()->config.bridged_infill_margin.getFloat());
-    
+    const bool has_infill = this->region()->config.fill_density.value > 0.;
+    coord_t margin = scale_(this->region()->config.external_infill_margin.getFloat());
+    coord_t margin_bridged = scale_(this->region()->config.bridged_infill_margin.getFloat());
+    //if no infill, reduce the margin for averythign to only the perimeter
+    if (!has_infill) {
+        if ((this->region()->config.perimeters.value > 0)) {
+            const coord_t perimeter_width = scale_(this->region()->config.perimeter_extrusion_width.get_abs_value(this->layer()->object()->config.layer_height.value));
+            const coord_t first_perimeter_width = scale_(this->region()->config.external_perimeter_extrusion_width.get_abs_value(this->layer()->object()->config.layer_height.value));
+            margin = first_perimeter_width + perimeter_width * (this->region()->config.perimeters.value - 1);
+        } else margin = 0;
+        margin_bridged = margin;
+    }
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
     export_region_fill_surfaces_to_svg_debug("3_process_external_surfaces-initial");
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
@@ -122,7 +131,6 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
     {
         // bottom_polygons are used to trim inflated top surfaces.
         fill_boundaries.reserve(number_polygons(surfaces));
-        bool has_infill = this->region()->config.fill_density.value > 0.;
         for (const Surface &surface : this->fill_surfaces.surfaces) {
             if (surface.is_top()) {
                 // Collect the top surfaces, inflate them and trim them by the bottom surfaces.
@@ -140,8 +148,15 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
                     // Make a copy as the following line uses the move semantics.
                     internal.push_back(surface);
                 polygons_append(fill_boundaries, STDMOVE(surface.expolygon));
-            } else if (!surface.is_external())
-                internal.push_back(STDMOVE(surface));
+            } else{
+                if (!surface.is_external())
+                    internal.push_back(STDMOVE(surface));
+                //push surface as perimeter-only inside the fill_boundaries
+                if (margin_bridged > 0) {
+                    ExPolygons peri_poly = diff_ex(ExPolygons() = { surface.expolygon }, offset_ex(surface.expolygon, -margin_bridged));
+                    polygons_append(fill_boundaries, peri_poly);
+                }
+            }
         }
     }
 
