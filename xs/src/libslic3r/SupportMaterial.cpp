@@ -1869,11 +1869,7 @@ static inline void fill_expolygons_generate_paths(
     fill_params.dont_adjust = true;
     for (ExPolygons::const_iterator it_expolygon = expolygons.begin(); it_expolygon != expolygons.end(); ++ it_expolygon) {
         Surface surface(stInternal, *it_expolygon);
-        extrusion_entities_append_paths(
-            dst,
-            filler->fill_surface(&surface, fill_params),
-            role, 
-            flow.mm3_per_mm(), flow.width, flow.height);
+        filler->fill_surface_extrusion(&surface, fill_params, flow, role, dst);
     }
 }
 
@@ -1889,13 +1885,9 @@ static inline void fill_expolygons_generate_paths(
     fill_params.density = density;
     fill_params.complete = true;
     fill_params.dont_adjust = true;
-    for (ExPolygons::iterator it_expolygon = expolygons.begin(); it_expolygon != expolygons.end(); ++ it_expolygon) {
+    for (ExPolygons::iterator it_expolygon = expolygons.begin(); it_expolygon != expolygons.end(); ++it_expolygon) {
         Surface surface(stInternal, std::move(*it_expolygon));
-        extrusion_entities_append_paths(
-            dst,
-            filler->fill_surface(&surface, fill_params),
-            role,
-            flow.mm3_per_mm(), flow.width, flow.height);
+        filler->fill_surface_extrusion(&surface, fill_params, flow, role, dst);
     }
 }
 
@@ -2546,7 +2538,8 @@ void PrintObjectSupportMaterial::generate_toolpaths(
             MyLayer      &raft_layer    = *raft_layers[support_layer_id];
 
             std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(ipRectilinear));
-            std::unique_ptr<Fill> filler_support   = std::unique_ptr<Fill>(Fill::new_from_type(infill_pattern));
+            std::unique_ptr<Fill> filler_support = std::unique_ptr<Fill>(Fill::new_from_type(infill_pattern));
+            std::unique_ptr<Fill> filler_dense = std::unique_ptr<Fill>(Fill::new_from_type(ipRectiWithPerimeter));
             filler_interface->set_bounding_box(bbox_object);
             filler_support->set_bounding_box(bbox_object);
 
@@ -2577,7 +2570,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     if (! to_infill.empty()) {
                         // We don't use $base_flow->spacing because we need a constant spacing
                         // value that guarantees that all layers are correctly aligned.
-                        Fill *filler    = filler_support.get();
+                        Fill *filler = filler_support.get();
                         filler->angle   = raft_angle_base;
                         filler->spacing = m_support_material_flow.spacing();
                         filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / support_density));
@@ -2599,10 +2592,16 @@ void PrintObjectSupportMaterial::generate_toolpaths(
             float density = 0.f;
             if (support_layer_id == 0) {
                 // Base flange.
-                filler->angle = raft_angle_1st_layer;
+                if (this->m_object_config->support_material_solid_first_layer.value) {
+                    filler = filler_dense.get();
+                    density = 1.f;
+                    filler->angle = 0;
+                } else {
+                    filler->angle = raft_angle_1st_layer;
+                    // 70% of density on the 1st layer.
+                    density = 0.7f;
+                }
                 filler->spacing = m_first_layer_flow.spacing();
-                // 70% of density on the 1st layer.
-                density       = 0.7f;
             } else if (support_layer_id >= m_slicing_params.base_raft_layers) {
                 filler->angle = raft_angle_interface;
                 // We don't use $base_flow->spacing because we need a constant spacing
@@ -2649,7 +2648,8 @@ void PrintObjectSupportMaterial::generate_toolpaths(
         size_t idx_layer_intermediate     = size_t(-1);
         size_t idx_layer_inteface         = size_t(-1);
         std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(m_slicing_params.soluble_interface ? ipConcentric : ipRectilinear));
-        std::unique_ptr<Fill> filler_support   = std::unique_ptr<Fill>(Fill::new_from_type(infill_pattern));
+        std::unique_ptr<Fill> filler_support = std::unique_ptr<Fill>(Fill::new_from_type(infill_pattern));
+        std::unique_ptr<Fill> filler_solid = std::unique_ptr<Fill>(Fill::new_from_type(ipRectiWithPerimeter));
         filler_interface->set_bounding_box(bbox_object);
         filler_support->set_bounding_box(bbox_object);
         for (size_t support_layer_id = range.begin(); support_layer_id < range.end(); ++ support_layer_id)
@@ -2722,20 +2722,31 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     float(layer_ex.layer->height),
                     m_support_material_interface_flow.nozzle_diameter,
                     layer_ex.layer->bridging);
-                filler_interface->angle = interface_as_base ?
+                Fill *filler = filler_interface.get();
+                float density = interface_density;
+                //if first alyer and solid first layer : draw concentric with 100% density
+                if (support_layer.id() == 0 && this->m_object_config->support_material_solid_first_layer.value) {
+                    filler = filler_solid.get();
+                    density = 1.f;
+                    interface_flow = m_first_layer_flow;
+                    filler->angle = 0;
+                    filler->spacing = interface_flow.spacing();
+                } else {
+                    filler->angle = interface_as_base ?
                         // If zero interface layers are configured, use the same angle as for the base layers.
                         angles[support_layer_id % angles.size()] :
                         // Use interface angle for the interface layers.
                         interface_angle;
-                filler_interface->spacing = m_support_material_interface_flow.spacing();
-                filler_interface->link_max_length = coord_t(scale_(filler_interface->spacing * link_max_length_factor / interface_density));
+                    filler->spacing = m_support_material_interface_flow.spacing();
+                    filler->link_max_length = coord_t(scale_(filler_interface->spacing * link_max_length_factor / density));
+                }
                 fill_expolygons_generate_paths(
                     // Destination
                     layer_ex.extrusions, 
                     // Regions to fill
                     union_ex(layer_ex.polygons_to_extrude(), true),
                     // Filler and its parameters
-                    filler_interface.get(), float(interface_density),
+                    filler, float(density),
                     // Extrusion parameters
                     erSupportMaterialInterface, interface_flow);
             }
@@ -2761,16 +2772,21 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     offset2_ex(base_layer.polygons_to_extrude(), float(SCALED_EPSILON), float(- SCALED_EPSILON)) :
                     offset2_ex(base_layer.polygons_to_extrude(), float(SCALED_EPSILON), float(- SCALED_EPSILON - 0.5*flow.scaled_width()));
                 if (base_layer.layer->bottom_z < EPSILON) {
-                    // Base flange (the 1st layer).
-                    filler = filler_interface.get();
-                    filler->angle = Geometry::deg2rad(float(m_object_config->support_material_angle.value + 90.));
-                    density = 0.5f;
-                    flow = m_first_layer_flow;
+                    if (this->m_object_config->support_material_solid_first_layer.value) {
+                        // Base flange (the 1st layer).
+                        filler = filler_solid.get();
+                        filler->angle = 0;
+                        density = 1.f;
+                    } else {
+                        filler = filler_interface.get();
+                        filler->angle = Geometry::deg2rad(float(m_object_config->support_material_angle.value + 90.));
+                        density = 0.5f;
+                        filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / density));
+                    }
                     // use the proper spacing for first layer as we don't need to align
                     // its pattern to the other layers
-                    //FIXME When paralellizing, each thread shall have its own copy of the fillers.
+                    flow = m_first_layer_flow;
                     filler->spacing = flow.spacing();
-                    filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / density));
                 } else if (with_sheath) {
                     // Draw a perimeter all around the support infill. This makes the support stable, but difficult to remove.
                     // TODO: use brim ordering algorithm
