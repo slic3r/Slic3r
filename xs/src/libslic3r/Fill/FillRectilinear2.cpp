@@ -1474,8 +1474,6 @@ Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &para
 }
 
 
-//Polylines FillRectilinear2Peri::fill_surface(const Surface *surface, const FillParams &params) {
-
 void
 FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillParams &params,
     const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out)
@@ -1484,10 +1482,10 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
     //you don't want to sort the extrusions: big infill first, small second
     eecroot->no_sort = true;
 
+    // === extrude perimeter ===
     Polylines polylines_1;
     //generate perimeter:
-    //TODO: better optimize start/end point?
-    ExPolygons path_perimeter = offset_ex(surface->expolygon, scale_(-this->spacing/2));
+    ExPolygons path_perimeter = offset2_ex(surface->expolygon, scale_(-this->spacing), scale_(this->spacing / 2));
     for (ExPolygon &expolygon : path_perimeter) {
         expolygon.contour.make_counter_clockwise();
         polylines_1.push_back(expolygon.contour.split_at_index(0));
@@ -1497,53 +1495,78 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
         }
     }
 
-    // Save into layer.
-    auto *eec = new ExtrusionEntityCollection();
-    /// pass the no_sort attribute to the extrusion path
-    eec->no_sort = this->no_sort();
-    /// add it into the collection
-    eecroot->entities.push_back(eec);
-    //get the role
-    ExtrusionRole good_role = role;
-    if (good_role == erNone || good_role == erCustom) {
-        good_role = flow.bridge ?
-                    erBridgeInfill :
-                       (surface->is_solid() ?
-                       ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
-                       erInternalInfill);
+    if (!polylines_1.empty()) {
+        // Save into layer.
+        ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+        /// pass the no_sort attribute to the extrusion path
+        eec->no_sort = this->no_sort();
+        /// add it into the collection
+        eecroot->entities.push_back(eec);
+        //get the role
+        ExtrusionRole good_role = role;
+        if (good_role == erNone || good_role == erCustom) {
+            good_role = flow.bridge ?
+            erBridgeInfill :
+                           (surface->is_solid() ?
+                           ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+                           erInternalInfill);
+        }
+        /// push the path
+        extrusion_entities_append_paths(
+            eec->entities,
+            polylines_1,
+            good_role,
+            flow.mm3_per_mm() * params.flow_mult,
+            flow.width * params.flow_mult,
+            flow.height);
     }
-    /// push the path
-    extrusion_entities_append_paths(
-        eec->entities, STDMOVE(polylines_1),
-        good_role,
-        flow.mm3_per_mm() * params.flow_mult,
-        flow.width * params.flow_mult,
-        flow.height);
 
+
+    // === extrude dense infill ===
     Polylines polylines_2;
+    bool canFill = true;
     //50% overlap with the new perimeter
     ExPolygons path_inner = offset2_ex(surface->expolygon, scale_(-this->spacing * 1.5), scale_(this->spacing));
     for (ExPolygon &expolygon : path_inner) {
         Surface surfInner(*surface, expolygon);
         if (!fill_surface_by_lines(&surfInner, params, 0.f, 0.f, polylines_2)) {
             printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
+            canFill = false;
         }
     }
-    // Save into layer.
-    eec = new ExtrusionEntityCollection();
-    /// pass the no_sort attribute to the extrusion path
-    eec->no_sort = this->no_sort();
-    /// add it into the collection
-    eecroot->entities.push_back(eec);
-    /// push the path
-    extrusion_entities_append_paths(
-        eec->entities, STDMOVE(polylines_2),
-        good_role,
-        flow.mm3_per_mm() * params.flow_mult,
-        flow.width * params.flow_mult,
-        flow.height);
+    if (canFill && !polylines_2.empty()) {
+        // Save into layer.
+        ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+        /// pass the no_sort attribute to the extrusion path
+        eec->no_sort = this->no_sort();
+        /// add it into the collection
+        eecroot->entities.push_back(eec);
+        //get the role
+        ExtrusionRole good_role = role;
+        if (good_role == erNone || good_role == erCustom) {
+            good_role = flow.bridge ?
+            erBridgeInfill :
+                           (surface->is_solid() ?
+                           ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+                           erInternalInfill);
+        }
+        /// push the path
+        extrusion_entities_append_paths(
+            eec->entities,
+            polylines_2,
+            good_role,
+            flow.mm3_per_mm() * params.flow_mult,
+            flow.width * params.flow_mult,
+            flow.height);
+    }
 
-    out.push_back(eecroot);
+    // === end ===
+    if (!eecroot->empty()) {
+        out.push_back(eecroot);
+    } else {
+        delete eecroot;
+    }
+
 }
 
 } // namespace Slic3r
