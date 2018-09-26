@@ -35,7 +35,8 @@ public:
     virtual Fill* clone() const { return new FillSmooth(*this); }
 
 	virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
-    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out );
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params,
+        const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out);
 	
 protected:
 	int nbPass=2;

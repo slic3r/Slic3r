@@ -19,7 +19,8 @@ namespace Slic3r {
     }
 
 
-    void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out)
+    void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams &params,
+        const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out)
     {
         coordf_t init_spacing = this->spacing;
 
@@ -142,9 +143,14 @@ namespace Slic3r {
                     eec = new ExtrusionEntityCollection();
                     eecroot->entities.push_back(eec);
                     eec->no_sort = false; //can be sorted inside the pass
+                    //get the role
+                    ExtrusionRole good_role = role;
+                    if (good_role == erNone || good_role == erCustom) {
+                        good_role = flow.bridge ? erBridgeInfill : rolePass[0];
+                    }
                     extrusion_entities_append_paths(
                         eec->entities, STDMOVE(polylines_layer1),
-                        flow.bridge ? erBridgeInfill : rolePass[0],
+                        good_role,
                         //reduced flow height for a better view (it's only a gui thing)
                         params.flow_mult * flow.mm3_per_mm() * percentFlow[0] * (params.fill_exactly ? poylineVolume / extrudedVolume : 1),
                         (float)(flow.width*percentFlow[0] * (params.fill_exactly ? poylineVolume / extrudedVolume : 1)), (float)flow.height*0.8);
@@ -192,11 +198,15 @@ namespace Slic3r {
                 eec = new ExtrusionEntityCollection();
                 eecroot->entities.push_back(eec);
                 eec->no_sort = false;
+                //get the role
+                ExtrusionRole good_role = role;
+                if (good_role == erNone || good_role == erCustom) {
+                    good_role = rolePass[1];
+                }
                 // print thin
-
                 extrusion_entities_append_paths(
                     eec->entities, STDMOVE(polylines_layer2),
-                    rolePass[1],
+                    good_role,
                     params.flow_mult * flow.mm3_per_mm() * percentFlow[1] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1),
                     //min-reduced flow width for a better view (it's only a gui thing)
                         (float)(flow.width*(percentFlow[1] < 0.1 ? 0.1 : percentFlow[1])), (float)flow.height);
@@ -244,10 +254,15 @@ namespace Slic3r {
                 eec = new ExtrusionEntityCollection();
                 eecroot->entities.push_back(eec);
                 eec->no_sort = false;
+                //get the role
+                ExtrusionRole good_role = role;
+                if (good_role == erNone || good_role == erCustom) {
+                    good_role = rolePass[2];
+                }
                 // print thin
                 extrusion_entities_append_paths(
                     eec->entities, STDMOVE(polylines_layer3),
-                    rolePass[2], //slow (if last)
+                    good_role, //slow (if last)
                     //reduced flow width for a better view (it's only a gui thing)
                     params.flow_mult * flow.mm3_per_mm() * percentFlow[2] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1),
                         (float)(flow.width*(percentFlow[2] < 0.1 ? 0.1 : percentFlow[2])), (float)flow.height);
@@ -255,7 +270,7 @@ namespace Slic3r {
         }
 
         if (!eecroot->entities.empty())
-            out.entities.push_back(eecroot);
+            out.push_back(eecroot);
 
     }
 
