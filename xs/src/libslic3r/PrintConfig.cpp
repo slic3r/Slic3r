@@ -264,11 +264,10 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("elefant_foot_compensation", coFloat);
     def->label = L("First layer");
     def->category = L("Advanced");
-    def->tooltip = L("The first layer will be shrunk in the XY plane by the configured value "
-                   "to compensate for the 1st layer squish aka an Elephant Foot effect. (must be negative = inwards)");
+    def->tooltip = L("The first layer will be  grown / shrunk in the XY plane by the configured value "
+                   "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)");
     def->sidetext = L("mm");
     def->cli = "elefant-foot-compensation=f";
-    def->max = 0;
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("end_gcode", coString);
@@ -320,8 +319,8 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back(L("Archimedean Chords"));
     def->enum_labels.push_back(L("Octagram Spiral"));
 	def->enum_labels.push_back("Ironing");
-	def->enum_labels.push_back("Ironing (triple)");
-	def->enum_labels.push_back("Ironing (hilbert)");
+	//def->enum_labels.push_back("Ironing (triple)");
+	//def->enum_labels.push_back("Ironing (hilbert)");
     // solid_fill_pattern is an obsolete equivalent to top_fill_pattern/bottom_fill_pattern.
     def->aliases.push_back("solid_fill_pattern");
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
@@ -776,7 +775,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("55");
     def->enum_labels.push_back("75");
     def->enum_labels.push_back("100");
-    def->default_value = new ConfigOptionPercent(20);
+    def->default_value = new ConfigOptionPercent(18);
 
     def = this->add("fill_pattern", coEnum);
     def->label = L("Inside");
@@ -953,7 +952,7 @@ PrintConfigDef::PrintConfigDef()
     def->category = L("Infill");
     def->tooltip = L("Enable the creation of a support layer under the first solid layer. Allow to use lower infill ratio without compromizing the top quality");
     def->cli = "infill-dense!";
-    def->default_value = new ConfigOptionBool(1);
+    def->default_value = new ConfigOptionBool(false);
 	
     def = this->add("infill_extruder", coInt);
     def->label = L("Infill extruder");
@@ -2253,7 +2252,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("hole_size_compensation", coFloat);
     def->label = L("Holes");
     def->category = L("Advanced");
-    def->tooltip = L("The convex holes will be grown in the XY plane by the configured value"
+    def->tooltip = L("The convex holes will be grown / shrunk in the XY plane by the configured value"
                    " (negative = inwards, positive = outwards, should be positive as the holes are always a bit smaller)."
                    " This might be useful for fine-tuning hole sizes.");
     def->sidetext = L("mm");
