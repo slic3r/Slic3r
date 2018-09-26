@@ -196,7 +196,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "support_material_threshold"
             || opt_key == "support_material_with_sheath"
             || opt_key == "dont_support_bridges"
-            || opt_key == "first_layer_extrusion_width") {
+            || opt_key == "first_layer_extrusion_width"
+            || opt_key == "support_material_solid_first_layer") {
             steps.emplace_back(posSupportMaterial);
         } else if (
                opt_key == "interface_shells"

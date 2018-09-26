@@ -1484,11 +1484,18 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("printer_settings_id", coString);
     def->default_value = new ConfigOptionString("");
 
+    def = this->add("support_material_solid_first_layer", coBool);
+    def->label = L("Solid first layer");
+    def->category = L("Support material");
+    def->tooltip = L("Use a solid layer instead of a raft for the layer that touch the build plate.");
+    def->cli = "support-material-solid-first-layer!";
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("raft_layers", coInt);
     def->label = L("Raft layers");
     def->category = L("Support material");
     def->tooltip = L("The object will be raised by this number of layers, and support material "
-                   "will be generated under it.");
+        "will be generated under it.");
     def->sidetext = L("layers");
     def->cli = "raft-layers=i";
     def->min = 0;

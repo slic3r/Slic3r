@@ -136,7 +136,7 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
     return std::pair<float, Point>(out_angle, out_shift);
 }
 
-void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out) {
+void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out) {
     //add overlap & call fill_surface
     Polylines polylines = this->fill_surface(surface, params);
     if (polylines.empty())
@@ -184,16 +184,22 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
     /// pass the no_sort attribute to the extrusion path
     eec->no_sort = this->no_sort();
     /// add it into the collection
-    out.entities.push_back(eec);
+    out.push_back(eec);
+    //get the role
+    ExtrusionRole good_role = role;
+    if (good_role == erNone || good_role == erCustom) {
+        good_role = (flow.bridge ? erBridgeInfill :
+            (surface->is_solid() ?
+            ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+            erInternalInfill));
+    }
     /// push the path
     extrusion_entities_append_paths(
         eec->entities, STDMOVE(polylines),
-        flow.bridge ?
-            erBridgeInfill :
-            (surface->is_solid() ?
-                ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
-                erInternalInfill),
-                flow.mm3_per_mm() * params.flow_mult * multFlow, flow.width * params.flow_mult * multFlow, flow.height);
+        good_role,
+        flow.mm3_per_mm() * params.flow_mult * multFlow,
+        flow.width * params.flow_mult * multFlow,
+        flow.height);
     
 }
 

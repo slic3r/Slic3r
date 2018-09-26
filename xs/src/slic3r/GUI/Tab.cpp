@@ -869,8 +869,9 @@ void TabPrint::build()
 		optgroup->append_single_option_line("support_material_threshold");
 		optgroup->append_single_option_line("support_material_enforce_layers");
 
-		optgroup = page->new_optgroup(_(L("Raft")));
-		optgroup->append_single_option_line("raft_layers");
+        optgroup = page->new_optgroup(_(L("Raft")));
+        optgroup->append_single_option_line("support_material_solid_first_layer");
+        optgroup->append_single_option_line("raft_layers");
 //		# optgroup->append_single_option_line(get_option_("raft_contact_distance");
 
 		optgroup = page->new_optgroup(_(L("Options for support material and raft")));

@@ -1474,9 +1474,10 @@ Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &para
 }
 
 
-//Polylines FillRectilinear2Peri::fill_surface(const Surface *surface, const FillParams &params) {
-
-void FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out) {
+void
+FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillParams &params,
+    const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out)
+{
     ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
     //you don't want to sort the extrusions: big infill first, small second
     eecroot->no_sort = true;
@@ -1501,16 +1502,25 @@ void FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const 
         eec->no_sort = this->no_sort();
         /// add it into the collection
         eecroot->entities.push_back(eec);
+        //get the role
+        ExtrusionRole good_role = role;
+        if (good_role == erNone || good_role == erCustom) {
+            good_role = flow.bridge ?
+            erBridgeInfill :
+                           (surface->is_solid() ?
+                           ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+                           erInternalInfill);
+        }
         /// push the path
         extrusion_entities_append_paths(
-            eec->entities, (polylines_1),
-            flow.bridge ?
-        erBridgeInfill :
-                       (surface->is_solid() ?
-                       ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
-                       erInternalInfill),
-                       flow.mm3_per_mm() * params.flow_mult, flow.width * params.flow_mult, flow.height);
+            eec->entities,
+            polylines_1,
+            good_role,
+            flow.mm3_per_mm() * params.flow_mult,
+            flow.width * params.flow_mult,
+            flow.height);
     }
+
 
     // === extrude dense infill ===
     Polylines polylines_2;
@@ -1531,20 +1541,28 @@ void FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const 
         eec->no_sort = this->no_sort();
         /// add it into the collection
         eecroot->entities.push_back(eec);
+        //get the role
+        ExtrusionRole good_role = role;
+        if (good_role == erNone || good_role == erCustom) {
+            good_role = flow.bridge ?
+            erBridgeInfill :
+                           (surface->is_solid() ?
+                           ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+                           erInternalInfill);
+        }
         /// push the path
         extrusion_entities_append_paths(
-            eec->entities, (polylines_2),
-            flow.bridge ?
-        erBridgeInfill :
-                       (surface->is_solid() ?
-                       ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
-                       erInternalInfill),
-                       flow.mm3_per_mm() * params.flow_mult, flow.width * params.flow_mult, flow.height);
+            eec->entities,
+            polylines_2,
+            good_role,
+            flow.mm3_per_mm() * params.flow_mult,
+            flow.width * params.flow_mult,
+            flow.height);
     }
 
     // === end ===
     if (!eecroot->empty()) {
-        out.entities.push_back(eecroot);
+        out.push_back(eecroot);
     } else {
         delete eecroot;
     }

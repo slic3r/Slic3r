@@ -86,7 +86,9 @@ public:
     virtual bool no_sort() const { return false; }
 
     // This method have to fill the ExtrusionEntityCollection. It call fill_surface by default
-    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out );
+    // if role == erNone or ERCustom, this method have to choose the best role itself, else it must use the argument's role.
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, 
+        const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out);
 	
     // Perform the fill.
     virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
