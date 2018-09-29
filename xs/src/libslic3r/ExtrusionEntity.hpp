@@ -52,6 +52,7 @@ public:
     virtual double min_mm3_per_mm() const = 0;
     virtual Polyline as_polyline() const = 0;
     virtual double length() const { return 0; };
+    virtual bool is_solid_infill() const{return false;};
 };
 
 typedef std::vector<ExtrusionEntity*> ExtrusionEntitiesPtr;
@@ -95,7 +96,7 @@ public:
             || this->role == erSolidInfill
             || this->role == erTopSolidInfill;
     };
-    bool is_solid_infill() const {
+    virtual bool is_solid_infill() const {
         return this->role == erBridgeInfill
             || this->role == erSolidInfill
             || this->role == erTopSolidInfill;
@@ -155,7 +156,7 @@ class ExtrusionLoop : public ExtrusionEntity
             || this->paths.front().role == erSolidInfill
             || this->paths.front().role == erTopSolidInfill;
     };
-    bool is_solid_infill() const {
+    virtual bool is_solid_infill() const {
         return this->paths.front().role == erBridgeInfill
             || this->paths.front().role == erSolidInfill
             || this->paths.front().role == erTopSolidInfill;

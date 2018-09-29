@@ -152,7 +152,7 @@ LayerRegion::process_external_surfaces()
     
     SurfaceCollection top;
     for (const Surface &surface : surfaces) {
-        if (surface.surface_type != stTop) continue;
+        if (!surface.is_top()) continue;
         
         // give priority to bottom surfaces
         ExPolygons grown = diff_ex(
@@ -203,7 +203,7 @@ LayerRegion::process_external_surfaces()
     {
         SurfaceCollection other;
         for (const Surface &s : surfaces)
-            if (s.surface_type != stTop && !s.is_bottom())
+            if (!s.is_top() && !s.is_bottom())
                 other.surfaces.push_back(s);
         
         // group surfaces
@@ -239,7 +239,7 @@ LayerRegion::prepare_fill_surfaces()
     // if no solid layers are requested, turn top/bottom surfaces to internal
     if (this->region()->config.top_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->surface_type == stTop) {
+            if (surface->is_top()) {
                 if (this->layer()->object()->config.infill_only_where_needed) {
                     surface->surface_type = stInternalVoid;
                 } else {

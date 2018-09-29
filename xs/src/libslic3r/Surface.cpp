@@ -20,7 +20,9 @@ Surface::is_solid() const
         || this->surface_type == stBottom
         || this->surface_type == stBottomBridge
         || this->surface_type == stInternalSolid
-        || this->surface_type == stInternalBridge;
+        || this->surface_type == stInternalBridge
+        || this->surface_type == stInternalOverBridge
+        || this->surface_type == stTopOverBridge;
 }
 
 bool
@@ -28,7 +30,8 @@ Surface::is_external() const
 {
     return this->surface_type == stTop
         || this->surface_type == stBottom
-        || this->surface_type == stBottomBridge;
+        || this->surface_type == stBottomBridge
+        || this->surface_type == stTopOverBridge;
 }
 
 bool
@@ -36,8 +39,16 @@ Surface::is_internal() const
 {
     return this->surface_type == stInternal
         || this->surface_type == stInternalBridge
+        || this->surface_type == stInternalOverBridge
         || this->surface_type == stInternalSolid
         || this->surface_type == stInternalVoid;
+}
+
+bool
+Surface::is_top() const
+{
+    return this->surface_type == stTop
+        || this->surface_type == stTopOverBridge;
 }
 
 bool
@@ -52,6 +63,13 @@ Surface::is_bridge() const
 {
     return this->surface_type == stBottomBridge
         || this->surface_type == stInternalBridge;
+}
+
+bool
+Surface::is_over_bridge() const
+{
+    return this->surface_type == stInternalOverBridge
+        || this->surface_type == stTopOverBridge;
 }
 
 }

@@ -106,6 +106,7 @@ class GCode {
     std::string extrude(const ExtrusionEntity &entity, std::string description = "", double speed = -1);
     std::string extrude(ExtrusionLoop loop, std::string description = "", double speed = -1);
     std::string extrude(const ExtrusionPath &path, std::string description = "", double speed = -1);
+    std::string is_solid_infill(const ExtrusionEntity &entity){entity.is_solid_infill();}
     std::string travel_to(const Point &point, ExtrusionRole role, std::string comment);
     bool needs_retraction(const Polyline &travel, ExtrusionRole role = erNone);
     std::string retract(bool toolchange = false);

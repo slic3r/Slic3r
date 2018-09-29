@@ -48,11 +48,14 @@ class ExtrusionEntityCollection : public ExtrusionEntity
     size_t items_count() const;
     void flatten(ExtrusionEntityCollection* retval) const;
     ExtrusionEntityCollection flatten() const;
+    void flatten_if_sortable(ExtrusionEntityCollection* retval) const;
+    ExtrusionEntityCollection flatten_if_sortable() const;
     double min_mm3_per_mm() const;
     Polyline as_polyline() const {
         CONFESS("Calling as_polyline() on a ExtrusionEntityCollection");
         return Polyline();
     };
+    virtual bool is_solid_infill() const;
 };
 
 }

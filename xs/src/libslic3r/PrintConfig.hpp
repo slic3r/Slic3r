@@ -34,7 +34,7 @@ enum HostType {
 };
 
 enum InfillPattern {
-    ipRectilinear, ipGrid, ipAlignedRectilinear,
+    ipRectilinear, ipGrid, ipAlignedRectilinear, ipSmooth,
     ipTriangles, ipStars, ipCubic, 
     ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
@@ -84,6 +84,7 @@ template<> inline t_config_enum_values ConfigOptionEnum<InfillPattern>::get_enum
     keys_map["hilbertcurve"]        = ipHilbertCurve;
     keys_map["archimedeanchords"]   = ipArchimedeanChords;
     keys_map["octagramspiral"]      = ipOctagramSpiral;
+    keys_map["smooth"]              = ipSmooth;
     return keys_map;
 }
 
@@ -240,6 +241,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionEnum<InfillPattern> bottom_infill_pattern;
     ConfigOptionInt                 bottom_solid_layers;
     ConfigOptionFloat               bridge_flow_ratio;
+    ConfigOptionFloat               over_bridge_flow_ratio;
     ConfigOptionFloat               bridge_speed;
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
@@ -283,6 +285,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         OPT_PTR(bottom_infill_pattern);
         OPT_PTR(bottom_solid_layers);
         OPT_PTR(bridge_flow_ratio);
+        OPT_PTR(over_bridge_flow_ratio);
         OPT_PTR(bridge_speed);
         OPT_PTR(external_perimeter_extrusion_width);
         OPT_PTR(external_perimeter_speed);

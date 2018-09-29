@@ -6,7 +6,8 @@
 
 namespace Slic3r {
 
-enum SurfaceType { stTop, stBottom, stBottomBridge, stInternal, stInternalSolid, stInternalBridge, stInternalVoid };
+enum SurfaceType { stTop, stBottom, stBottomBridge, stInternal, stInternalSolid, stInternalBridge,
+    stInternalOverBridge, stTopOverBridge,stInternalVoid };
 
 class Surface
 {
@@ -27,8 +28,10 @@ class Surface
     bool is_solid() const;
     bool is_external() const;
     bool is_internal() const;
+    bool is_top() const;
     bool is_bottom() const;
     bool is_bridge() const;
+    bool is_over_bridge() const;
 };
 
 typedef std::vector<Surface> Surfaces;

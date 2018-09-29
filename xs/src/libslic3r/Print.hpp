@@ -144,6 +144,7 @@ class PrintObject
     void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    void replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replacement, SurfaceType st_under_it);
     coordf_t adjust_layer_height(coordf_t layer_height) const;
     std::vector<coordf_t> generate_object_layers(coordf_t first_layer_height);
     void _slice();
