@@ -7,6 +7,7 @@
 #include "Polygon.hpp"
 #include <string>
 #include <vector>
+#include "clipper.hpp"
 
 namespace Slic3r {
 
@@ -32,6 +33,7 @@ class Polyline : public MultiPoint {
     void split_at(const Point &point, Polyline* p1, Polyline* p2) const;
     bool is_straight() const;
     std::string wkt() const;
+    Polygons grow(double delta, double scale = CLIPPER_OFFSET_SCALE, ClipperLib::JoinType joinType = ClipperLib::jtSquare, double miterLimit = 3.0) const;
 };
 
 class ThickPolyline : public Polyline {

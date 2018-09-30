@@ -1,8 +1,9 @@
-#include "Config.hpp"
+#include "ConfigBase.hpp"
 #include "Geometry.hpp"
 #include "IO.hpp"
 #include "Model.hpp"
 #include "SLAPrint.hpp"
+#include "Print.hpp"
 #include "TriangleMesh.hpp"
 #include "libslic3r.h"
 #include <cstdio>
@@ -15,9 +16,14 @@
 #include <boost/nowide/iostream.hpp>
 
 
-using namespace Slic3r;
+#ifdef USE_WX
+    #include "GUI/GUI.hpp"
+#endif
 
-void confess_at(const char *file, int line, const char *func, const char *pat, ...){}
+/// utility function for displaying CLI usage
+void printUsage();
+
+using namespace Slic3r;
 
 int
 main(int argc, char **argv)
@@ -32,14 +38,31 @@ main(int argc, char **argv)
     config_def.merge(print_config_def);
     DynamicConfig config(&config_def);
     t_config_option_keys input_files;
-    config.read_cli(argc, argv, &input_files);
+    // if any option is unsupported, print usage and abort immediately
+    if ( !config.read_cli(argc, argv, &input_files) )
+    {
+        printUsage();
+        return 0;
+    }
     
     // apply command line options to a more handy CLIConfig
     CLIConfig cli_config;
     cli_config.apply(config, true);
     
     DynamicPrintConfig print_config;
-    
+
+#ifdef USE_WX
+    if (cli_config.gui) {
+        GUI::App *gui = new GUI::App();
+
+        GUI::App::SetInstance(gui);
+        wxEntry(argc, argv);
+    }
+#else
+    if (cli_config.gui) {
+        std::cout << "GUI support has not been built." << "\n";
+    }
+#endif    
     // load config files supplied via --load
     for (const std::string &file : cli_config.load.values) {
         if (!boost::filesystem::exists(file)) {
@@ -104,6 +127,10 @@ main(int argc, char **argv)
         // TODO: handle --merge
         models.push_back(model);
     }
+    if (cli_config.help) {
+        printUsage();
+        return 0;
+    }
     
     for (Model &model : models) {
         if (cli_config.info) {
@@ -127,12 +154,13 @@ main(int argc, char **argv)
             boost::nowide::cout << "File exported to " << outfile << std::endl;
         } else if (cli_config.export_svg) {
             std::string outfile = cli_config.output.value;
-            if (outfile.empty()) outfile = model.objects.front()->input_file + ".svg";
-            
-            SLAPrint print(&model);
-            print.config.apply(print_config, true);
-            print.slice();
-            print.write_svg(outfile);
+            if (outfile.empty()) 
+                outfile = model.objects.front()->input_file + ".svg";
+
+            SLAPrint print(&model); // initialize print with model
+            print.config.apply(print_config, true); // apply configuration
+            print.slice(); // slice file
+            print.write_svg(outfile); // write SVG
             boost::nowide::cout << "SVG file exported to " << outfile << std::endl;
         } else if (cli_config.export_3mf) {
             std::string outfile = cli_config.output.value;
@@ -190,6 +218,23 @@ main(int argc, char **argv)
                 IO::STL::write(*m, ss.str());
                 delete m;
             }
+        } else if (cli_config.slice) {
+            std::string outfile = cli_config.output.value;
+            Print print;
+
+            model.arrange_objects(print.config.min_object_distance());
+            model.center_instances_around_point(cli_config.center);
+            if (outfile.empty()) outfile = model.objects.front()->input_file + ".gcode";
+            print.apply_config(print_config);
+
+            for (auto* mo : model.objects) {
+                print.auto_assign_extruders(mo);
+                print.add_model_object(mo);
+            }
+            print.validate();
+
+            print.export_gcode(outfile);
+
         } else {
             boost::nowide::cerr << "error: command not supported" << std::endl;
             return 1;
@@ -197,4 +242,19 @@ main(int argc, char **argv)
     }
     
     return 0;
+}
+void printUsage()
+{
+        std::cout << "Slic3r " << SLIC3R_VERSION << " is a STL-to-GCODE translator for RepRap 3D printers" << "\n"
+                  << "written by Alessandro Ranellucci <aar@cpan.org> - http://slic3r.org/ - https://github.com/slic3r/Slic3r" << "\n"
+                  << "Git Version " << BUILD_COMMIT << "\n\n"
+                  << "Usage (C++ only): ./slic3r [ OPTIONS ] [ file.stl ] [ file2.stl ] ..." << "\n";
+        // CLI Options
+        std::cout << "** CLI OPTIONS **\n";
+        print_cli_options(boost::nowide::cout);
+        std::cout << "****\n";
+            // Print options
+            std::cout << "** PRINT OPTIONS **\n";
+        print_print_options(boost::nowide::cout);
+        std::cout << "****\n";
 }

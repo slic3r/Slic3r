@@ -40,7 +40,7 @@ See the [project homepage](http://slic3r.org/) at slic3r.org for more informatio
 
 ### What language is it written in?
 
-The core parts of Slic3r are written in C++11, with multithreading. The graphical interface is still mostly written in Perl, but we're gradually porting it to C++ (want to help?). The goal is to port everything to C++.
+The core parts of Slic3r are written in C++11, with multithreading. The graphical interface is in the process of being ported to C++14.
 
 ### How to install?
 
@@ -57,32 +57,32 @@ Sure! You can do the following to find things that are available to help with:
 
 * Development
 	* [Low Effort tasks](https://github.com/alexrj/Slic3r/labels/Low%20Effort): pick one of them!
-	* [More available tasks](https://github.com/alexrj/Slic3r/milestone/31): let's discuss together before you start working on them
+	* [Help Wanted tasks](https://github.com/alexrj/Slic3r/labels/help%20wanted): pick one of them!
+	* [More available tasks](https://github.com/alexrj/Slic3r/milestone/32): let's discuss together before you start working on them
 	* Please comment in the related GitHub issue that you are working on it so that other people know.
 * Contribute to the [Manual](http://manual.slic3r.org/)! (see its [GitHub repository](https://github.com/alexrj/Slic3r-Manual))
 * You can also find us in #slic3r on [FreeNode](https://webchat.freenode.net): talk to _Sound_, _LoH_ or the other members of the Slic3r community.
 * Add an [issue](https://github.com/alexrj/Slic3r/issues) to the GitHub tracker if it isn't already present.
 * Drop Alessandro a line at aar@cpan.org.
+* Drop Joseph a line at lenox.joseph@gmail.com
 
 ### Directory structure
 
-* `Build.PL`: this script installs dependencies into `local-lib/`, compiles the C++ part and runs tests
-* `lib/`: the Perl code
 * `package/`: the scripts used for packaging the executables
-* `slic3r.pl`: the main executable script, launching the GUI and providing the CLI
-* `src/`: the C++ source of the `slic3r` executable the and CMake definition file for compiling it (note that this C++ `slic3r` executable can do many things but can't generate G-code yet because the porting isn't finished yet - the main executable is `slic3r.pl`)
-* `t/`: the test suite
+* `src/`: the C++ source of the `slic3r` executable the and CMake definition file for compiling it
+* `src/GUI`: The C++ GUI.
+* `src/test`: New test suite for libslic3r and the GUI. Implemented with [Catch2](https://github.com/catchorg/Catch2)
+* `t/`: the test suite (deprecated)
 * `utils/`: various useful scripts
 * `xs/src/libslic3r/`: C++ sources for libslic3r
-* `xs/src/slic3r/`: C++ sources for the Slic3r GUI application
-* `xs/t/`: test suite for libslic3r
-* `xs/xsp/`: bindings for calling libslic3r from Perl (XS)
+* `xs/t/`: test suite for libslic3r (deprecated)
+* `xs/xsp/`: bindings for calling libslic3r from Perl (XS) (deprecated)
 
 ### Acknowledgements
 
-The main author of Slic3r is Alessandro Ranellucci (@alexrj, *Sound* in IRC, [@alranel](http://twitter.com/alranel) on Twitter), who started the project in 2011 and still leads development.
+The main author of Slic3r is Alessandro Ranellucci (@alexrj, *Sound* in IRC, [@alranel](http://twitter.com/alranel) on Twitter), who started the project in 2011.
 
-Joseph Lenox (@lordofhyphens, *Loh* in IRC) is the current co-maintainer.
+Joseph Lenox (@lordofhyphens, *LoH* in IRC, [@LenoxPlay](http://twitter.com/LenoxPlay) on Twitter) is the current co-maintainer.
 
 Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Y. Sapir, Mike Sheldrake, Kliment Yanev and numerous others. Original manual by Gary Hodgson. Slic3r logo designed by Corey Daniels, <a href="http://www.famfamfam.com/lab/icons/silk/">Silk Icon Set</a> designed by Mark James, stl and gcode file icons designed by Akira Yasuda.
 

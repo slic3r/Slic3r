@@ -12,7 +12,7 @@
 #ifndef PORTABLE_ENDIAN_H__
 #define PORTABLE_ENDIAN_H__
 
-#if (defined(_WIN16) || defined(_WIN32) || defined(_WIN64)) && !defined(__WINDOWS__)
+#if (defined(_MSC_VER) || defined(_WIN16) || defined(_WIN32) || defined(_WIN64)) && !defined(__WINDOWS__)
 
 #	define __WINDOWS__
 
@@ -66,7 +66,7 @@
 #elif defined(__WINDOWS__)
 
 /* #	include <winsock2.h> */
-#	include <sys/param.h>
+/* #	include <sys/param.h> */
 
 #	if BYTE_ORDER == LITTLE_ENDIAN
 

@@ -1,6 +1,12 @@
-#include <xsinit.h>
-#include "utils.hpp" 
+#include "utils.hpp"
 #include <regex>
+#ifndef NO_PERL
+    #include <xsinit.h>
+#else
+    #include "Log.hpp"
+#endif
+
+#include <cstdarg>
 
 void
 confess_at(const char *file, int line, const char *func,
@@ -26,6 +32,12 @@ confess_at(const char *file, int line, const char *func,
      call_pv("Carp::confess", G_DISCARD);
      FREETMPS;
      LEAVE;
+    #else
+    std::stringstream ss;
+    ss << "Error in function " << func << " at " << file << ":" << line << ": ";
+    ss << pat << "\n";
+
+    Slic3r::Log::error(std::string("Libslic3r"), ss.str() );
     #endif
 }
 
@@ -37,4 +49,14 @@ split_at_regex(const std::string& input, const std::string& regex) {
         first{input.begin(), input.end(), re, -1},
         last;
     return {first, last};
+}
+
+std::string _trim_zeroes(std::string in) { return trim_zeroes(in); }
+/// Remove extra zeroes generated from std::to_string on doubles
+std::string trim_zeroes(std::string in) {
+    std::string result {""};
+    std::regex strip_zeroes("(0*)$");
+    std::regex_replace (std::back_inserter(result), in.begin(), in.end(), strip_zeroes, "");
+    if (result.back() == '.') result.append("0");
+    return result;
 }

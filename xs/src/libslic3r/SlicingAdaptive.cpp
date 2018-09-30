@@ -1,4 +1,5 @@
 #include "libslic3r.h"
+#include <limits>
 #include "TriangleMesh.hpp"
 #include "SlicingAdaptive.hpp"
 
