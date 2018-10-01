@@ -590,9 +590,11 @@ boost::any& Choice::get_value()
 		else if (m_opt_id.compare("support_material_pattern") == 0)
 			m_value = static_cast<SupportMaterialPattern>(ret_enum);
 		else if (m_opt_id.compare("seam_position") == 0)
-			m_value = static_cast<SeamPosition>(ret_enum);
-		else if (m_opt_id.compare("host_type") == 0)
-			m_value = static_cast<PrintHostType>(ret_enum);
+            m_value = static_cast<SeamPosition>(ret_enum);
+        else if (m_opt_id.compare("host_type") == 0)
+            m_value = static_cast<PrintHostType>(ret_enum);
+        else if (m_opt_id.compare("infill_dense_algo") == 0)
+            m_value = static_cast<DenseInfillAlgo>(ret_enum);
 	}	
 
 	return m_value;

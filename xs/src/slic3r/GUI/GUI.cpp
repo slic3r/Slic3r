@@ -605,7 +605,9 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
 			else if (opt_key.compare("seam_position") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<SeamPosition>(boost::any_cast<SeamPosition>(value)));
 			else if (opt_key.compare("host_type") == 0)
-				config.set_key_value(opt_key, new ConfigOptionEnum<PrintHostType>(boost::any_cast<PrintHostType>(value)));
+                config.set_key_value(opt_key, new ConfigOptionEnum<PrintHostType>(boost::any_cast<PrintHostType>(value)));
+            else if (opt_key.compare("infill_dense_algo") == 0)
+                config.set_key_value(opt_key, new ConfigOptionEnum<DenseInfillAlgo>(boost::any_cast<DenseInfillAlgo>(value)));
 			}
 			break;
 		case coPoints:{

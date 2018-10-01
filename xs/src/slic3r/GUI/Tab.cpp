@@ -833,7 +833,10 @@ void TabPrint::build()
 		optgroup = page->new_optgroup(_(L("Reducing printing time")));
         optgroup->append_single_option_line("infill_every_layers");
         optgroup->append_single_option_line("infill_only_where_needed");
-        optgroup->append_single_option_line("infill_dense");
+        line = { _(L("Suporting dense layer")), "" };
+        line.append_option(optgroup->get_option("infill_dense"));
+        line.append_option(optgroup->get_option("infill_dense_algo"));
+        optgroup->append_line(line);
 
         optgroup = page->new_optgroup(_(L("Advanced")));
         optgroup->append_single_option_line("solid_infill_every_layers");
@@ -1172,11 +1175,19 @@ void TabPrint::update()
     for (auto el : { "min_perimeter_unsupported", "noperi_bridge_only" })
         get_field(el)->toggle(have_no_perimeter_unsupported);
 
+
 	bool have_infill = m_config->option<ConfigOptionPercent>("fill_density")->value > 0;
 	// infill_extruder uses the same logic as in Print::extruders()
 	for (auto el : {"fill_pattern", "infill_every_layers", "infill_only_where_needed",
 					"solid_infill_every_layers", "solid_infill_below_area", "infill_extruder" })
 		get_field(el)->toggle(have_infill);
+
+    bool can_have_infill_dense = m_config->option<ConfigOptionPercent>("fill_density")->value < 50;
+    for (auto el : { "infill_dense" })
+        get_field(el)->toggle(can_have_infill_dense);
+    bool have_infill_dense = m_config->opt_bool("infill_dense") && can_have_infill_dense;
+    for (auto el : { "infill_dense_algo" })
+        get_field(el)->toggle(have_infill_dense);
 
 	bool have_solid_infill = m_config->opt_int("top_solid_layers") > 0 || m_config->opt_int("bottom_solid_layers") > 0;
 	// solid_infill_extruder uses the same logic as in Print::extruders()

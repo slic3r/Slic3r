@@ -49,6 +49,10 @@ enum FilamentType {
     ftPLA, ftABS, ftPET, ftHIPS, ftFLEX, ftSCAFF, ftEDGE, ftNGEN, ftPVA
 };
 
+enum DenseInfillAlgo {
+    dfaAutomatic, dfaEnlarged,
+};
+
 template<> inline t_config_enum_values& ConfigOptionEnum<GCodeFlavor>::get_enum_values() {
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
@@ -132,6 +136,15 @@ template<> inline t_config_enum_values& ConfigOptionEnum<FilamentType>::get_enum
         keys_map["EDGE"]            = ftEDGE;
         keys_map["NGEN"]            = ftNGEN;
         keys_map["PVA"]             = ftPVA;
+    }
+    return keys_map;
+}
+
+template<> inline t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
+    static t_config_enum_values keys_map;
+    if (keys_map.empty()) {
+        keys_map["automatic"] = dfaAutomatic;
+        keys_map["enlarged"] = dfaEnlarged;
     }
     return keys_map;
 }
@@ -429,7 +442,8 @@ public:
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
-    ConfigOptionBool                 infill_dense;
+    ConfigOptionBool                infill_dense;
+    ConfigOptionEnum<DenseInfillAlgo> infill_dense_algo;
     ConfigOptionBool                infill_first;
     ConfigOptionBool                overhangs;
     ConfigOptionBool                no_perimeter_unsupported;
@@ -480,6 +494,7 @@ protected:
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
         OPT_PTR(infill_dense);
+        OPT_PTR(infill_dense_algo);
         OPT_PTR(infill_first);
         OPT_PTR(overhangs);
         OPT_PTR(no_perimeter_unsupported);

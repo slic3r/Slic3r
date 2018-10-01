@@ -911,12 +911,26 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInt(1);
 
     def = this->add("infill_dense", coBool);
-    def->label = L("Suporting dense layer");
+    def->label = ("");
     def->category = L("Infill");
-    def->tooltip = L("Enable the creation of a support layer under the first solid layer. Allow to use lower infill ratio without compromizing the top quality");
+    def->tooltip = L("Enable the creation of a support layer under the first solid layer. Allow to use lower infill ratio without compromizing the top quality."
+        " The dense infill is layed out with a 50% infill density.");
     def->cli = "infill-dense!";
     def->default_value = new ConfigOptionBool(1);
-	
+
+    def = this->add("infill_dense_algo", coEnum);
+    def->label = L("Algorithm");
+    def->tooltip = L("Choose the way the dense layer is lay out."
+        " The automatic option let it try to draw the smallest surface with only strait lines inside the sparse infill."
+        " The anchored just enlarge a bit (by bridged anchor) the surfaces that need a better support.");
+    def->cli = "infill-dense-algo=s";
+    def->enum_keys_map = &ConfigOptionEnum<DenseInfillAlgo>::get_enum_values();
+    def->enum_values.push_back("automatic");
+    def->enum_values.push_back("enxtended");
+    def->enum_labels.push_back(L("Automatic"));
+    def->enum_labels.push_back(L("Anchored"));
+    def->default_value = new ConfigOptionEnum<DenseInfillAlgo>(dfaAutomatic);
+
     def = this->add("infill_extruder", coInt);
     def->label = L("Infill extruder");
     def->category = L("Extruders");
