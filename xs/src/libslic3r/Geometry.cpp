@@ -2,9 +2,11 @@
 #include "ClipperUtils.hpp"
 #include "ExPolygon.hpp"
 #include "Line.hpp"
+#include "Log.hpp"
 #include "PolylineCollection.hpp"
 #include "clipper.hpp"
 #include <algorithm>
+#include <numeric>
 #include <cassert>
 #include <cmath>
 #include <list>
@@ -342,6 +344,172 @@ linint(double value, double oldmin, double oldmax, double newmin, double newmax)
 {
     return (value - oldmin) * (newmax - newmin) / (oldmax - oldmin) + newmin;
 }
+
+Point
+circle_taubin_newton(const Points& input, size_t cycles)
+{
+    return circle_taubin_newton(input.cbegin(), input.cend(), cycles);
+}
+
+Point
+circle_taubin_newton(const Points::const_iterator& input_begin, const Points::const_iterator& input_end, size_t cycles)
+{
+    Pointfs tmp;
+    tmp.reserve(std::distance(input_begin, input_end));
+    std::transform(input_begin, input_end, std::back_inserter(tmp), [] (const Point& in) {return Pointf::new_unscale(in); } );
+    return Point::new_scale(circle_taubin_newton(tmp.cbegin(), tmp.end(), cycles));
+}
+
+Pointf
+circle_taubin_newton(const Pointfs& input, size_t cycles)
+{
+    return circle_taubin_newton(input.cbegin(), input.cend(), cycles);
+}
+
+
+/// Adapted from work in "Circular and Linear Regression: Fitting circles and lines by least squares", pg 126
+/// Returns a point corresponding to the center of a circle for which all of the points from input_begin to input_end
+/// lie on.
+Pointf
+circle_taubin_newton(const Pointfs::const_iterator& input_begin, const Pointfs::const_iterator& input_end, size_t cycles)
+{
+    // calculate the centroid of the data set
+    const Pointf sum = std::accumulate(input_begin, input_end, Pointf(0,0));
+    const size_t n = std::distance(input_begin, input_end);
+    const double n_flt = static_cast<double>(n);
+    const Pointf centroid { sum / n_flt };
+
+    // Compute the normalized moments of the data set.
+    double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
+    for (auto it = input_begin; it < input_end; ++it) {
+        // center/normalize the data.
+        double Xi {it->x - centroid.x};
+        double Yi {it->y - centroid.y};
+        double Zi {Xi*Xi + Yi*Yi};
+        Mxy += (Xi*Yi);
+        Mxx += (Xi*Xi);
+        Myy += (Yi*Yi);
+        Mxz += (Xi*Zi);
+        Myz += (Yi*Zi);
+        Mzz += (Zi*Zi);
+    }
+
+    // divide by number of points to get the moments
+    Mxx /= n_flt;
+    Myy /= n_flt;
+    Mxy /= n_flt;
+    Mxz /= n_flt;
+    Myz /= n_flt;
+    Mzz /= n_flt;
+
+    // Compute the coefficients of the characteristic polynomial for the circle
+    // eq 5.60
+    const double Mz {Mxx + Myy}; // xx + yy = z
+    const double Cov_xy {Mxx*Myy - Mxy*Mxy}; // this shows up a couple times so cache it here.
+    const double C3 {4.0*Mz};
+    const double C2 {-3.0*(Mz*Mz) - Mzz};
+    const double C1 {Mz*(Mzz - (Mz*Mz)) + 4.0*Mz*Cov_xy - (Mxz*Mxz) - (Myz*Myz)};
+    const double C0 {(Mxz*Mxz)*Myy + (Myz*Myz)*Mxx - 2.0*Mxz*Myz*Mxy - Cov_xy*(Mzz - (Mz*Mz))};
+
+    const double C22 = {C2 + C2};
+    const double C33 = {C3 + C3 + C3};
+
+    // solve the characteristic polynomial with Newton's method.
+    double xnew = 0.0;
+    double ynew = 1e20;
+
+    for (size_t i = 0; i < cycles; ++i) {
+        const double yold {ynew};
+        ynew = C0 + xnew * (C1 + xnew*(C2 + xnew * C3));
+        if (std::abs(ynew) > std::abs(yold)) {
+            Slic3r::Log::error("Geometry") << "Fit is going in the wrong direction.\n";
+            return Pointf(std::nan(""), std::nan(""));
+        }
+        const double Dy {C1 + xnew*(C22 + xnew*C33)};
+
+        const double xold {xnew};
+        xnew = xold - (ynew / Dy);
+
+        if (std::abs((xnew-xold) / xnew) < 1e-12) i = cycles; // converged, we're done here
+
+        if (xnew < 0) {
+            // reset, we went negative
+            xnew = 0.0;
+        }
+    }
+    
+    // compute the determinant and the circle's parameters now that we've solved.
+    double DET = xnew*xnew - xnew*Mz + Cov_xy;
+
+    Pointf center {Pointf(Mxz * (Myy - xnew) - Myz * Mxy, Myz * (Mxx - xnew) - Mxz*Mxy)};
+    center = center / DET / 2;
+
+    return center + centroid;
+    
+}
+
+/*
+== Perl implementations for methods tested in geometry.t but not translated.  ==
+== The first three are unreachable in the current perl code and the fourth is ==
+== only called from ArcFitting which currently dies before reaching the call. ==
+sub point_in_segment {
+    my ($point, $line) = @_;
+
+    my ($x, $y) = @$point;
+    my $line_p = $line->pp;
+    my @line_x = sort { $a <=> $b } $line_p->[A][X], $line_p->[B][X];
+    my @line_y = sort { $a <=> $b } $line_p->[A][Y], $line_p->[B][Y];
+
+    # check whether the point is in the segment bounding box
+    return 0 unless $x >= ($line_x[0] - epsilon) && $x <= ($line_x[1] + epsilon)
+        && $y >= ($line_y[0] - epsilon) && $y <= ($line_y[1] + epsilon);
+
+    # if line is vertical, check whether point's X is the same as the line
+    if ($line_p->[A][X] == $line_p->[B][X]) {
+        return abs($x - $line_p->[A][X]) < epsilon ? 1 : 0;
+    }
+
+    # calculate the Y in line at X of the point
+    my $y3 = $line_p->[A][Y] + ($line_p->[B][Y] - $line_p->[A][Y])
+        * ($x - $line_p->[A][X]) / ($line_p->[B][X] - $line_p->[A][X]);
+    return abs($y3 - $y) < epsilon ? 1 : 0;
+}
+
+
+# given a $polygon, return the (first) segment having $point
+sub polygon_segment_having_point {
+    my ($polygon, $point) = @_;
+
+    foreach my $line (@{ $polygon->lines }) {
+        return $line if point_in_segment($point, $line);
+    }
+    return undef;
+}
+
+
+# polygon must be simple (non complex) and ccw
+sub polygon_is_convex {
+    my ($points) = @_;
+    for (my $i = 0; $i <= $#$points; $i++) {
+        my $angle = angle3points($points->[$i-1], $points->[$i-2], $points->[$i]);
+        return 0 if $angle < PI;
+    }
+    return 1;
+}
+
+# this assumes a CCW rotation from $p2 to $p3 around $p1
+sub angle3points {
+    my ($p1, $p2, $p3) = @_;
+    # p1 is the center
+
+    my $angle = atan2($p2->[X] - $p1->[X], $p2->[Y] - $p1->[Y])
+              - atan2($p3->[X] - $p1->[X], $p3->[Y] - $p1->[Y]);
+
+    # we only want to return only positive angles
+    return $angle <= 0 ? $angle + 2*PI() : $angle;
+}
+*/
+
 
 class ArrangeItem {
     public:

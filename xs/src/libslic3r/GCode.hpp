@@ -12,6 +12,8 @@
 #include "PrintConfig.hpp"
 #include "ConditionalGCode.hpp"
 #include <string>
+#include <vector>
+#include <set>
 
 namespace Slic3r {
 
@@ -98,7 +100,30 @@ class GCode {
     void set_last_pos(const Point &pos);
     bool last_pos_defined() const;
     void apply_print_config(const PrintConfig &print_config);
-    void set_extruders(const std::vector<unsigned int> &extruder_ids);
+
+    /// Template function.
+    template <typename Iter>
+    void set_extruders(Iter begin, Iter end) {
+        this->writer.set_extruders(begin, end);
+        // enable wipe path generation if any extruder has wipe enabled
+        this->wipe.enable = false;
+        for (Iter it = begin; it != end; ++it) {
+            if (this->config.wipe.get_at(*it)) {
+                this->wipe.enable = true;
+                break;
+            }
+        }
+    }
+    template <typename T>
+    void set_extruders(const std::vector<T> &extruder_ids) {
+        this->set_extruders(extruder_ids.cbegin(), extruder_ids.cend());
+    }
+
+    template <typename T>
+    void set_extruders(const std::set<T> &extruder_ids) {
+        this->set_extruders(extruder_ids.cbegin(), extruder_ids.cend());
+    }
+
     void set_origin(const Pointf &pointf);
     std::string preamble();
     std::string notes();

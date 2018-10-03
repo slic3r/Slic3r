@@ -63,7 +63,11 @@ SLAPrint::slice()
         fill->min_spacing   = this->config.get_abs_value("infill_extrusion_width", this->config.layer_height.value);
         fill->angle         = Geometry::deg2rad(this->config.fill_angle.value);
         fill->density       = this->config.fill_density.value/100;
-        
+
+        // Minimum spacing has a lower bound of > 0. Set to a sane default 
+        // if the user gets an invalid value here.
+        fill->min_spacing = (fill->min_spacing <= 0 ? 0.5 : fill->min_spacing);
+
         parallelize<size_t>(
             0,
             this->layers.size()-1,

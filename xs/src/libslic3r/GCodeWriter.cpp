@@ -21,18 +21,6 @@ GCodeWriter::apply_print_config(const PrintConfig &print_config)
     this->_extrusion_axis = this->config.get_extrusion_axis();
 }
 
-void
-GCodeWriter::set_extruders(const std::vector<unsigned int> &extruder_ids)
-{
-    for (std::vector<unsigned int>::const_iterator i = extruder_ids.begin(); i != extruder_ids.end(); ++i)
-        this->extruders.insert( std::pair<unsigned int,Extruder>(*i, Extruder(*i, &this->config)) );
-    
-    /*  we enable support for multiple extruder if any extruder greater than 0 is used
-        (even if prints only uses that one) since we need to output Tx commands
-        first extruder has index 0 */
-    this->multiple_extruders = (*std::max_element(extruder_ids.begin(), extruder_ids.end())) > 0;
-}
-
 std::string
 GCodeWriter::notes() 
 {
@@ -107,7 +95,7 @@ GCodeWriter::postamble() const
 std::string
 GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool) const
 {
-    
+    wait = this->config.use_set_and_wait_extruder ? true : wait;
     std::string code, comment;
     if (wait && FLAVOR_IS_NOT(gcfTeacup) && FLAVOR_IS_NOT(gcfMakerWare) && FLAVOR_IS_NOT(gcfSailfish)) {
         code = "M109";
@@ -143,6 +131,7 @@ std::string
 GCodeWriter::set_bed_temperature(unsigned int temperature, bool wait) const
 {
     std::string code, comment;
+    wait = this->config.use_set_and_wait_bed ? true : wait;
     if (wait && FLAVOR_IS_NOT(gcfTeacup)) {
         if (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)) {
             code = "M109";
@@ -290,12 +279,16 @@ GCodeWriter::set_extruder(unsigned int extruder_id)
 std::string
 GCodeWriter::toolchange(unsigned int extruder_id)
 {
+    std::ostringstream gcode;
+    
     // set the new extruder
     this->_extruder = &this->extruders.find(extruder_id)->second;
     
+    //first thing to do : reset E (because a new item is now printed or with a new extruder)
+    gcode << this->reset_e(true);
+    
     // return the toolchange command
     // if we are running a single-extruder setup, just set the extruder and return nothing
-    std::ostringstream gcode;
     if (this->multiple_extruders) {
         if (FLAVOR_IS(gcfMakerWare)) {
             gcode << "M135 T";
@@ -307,8 +300,6 @@ GCodeWriter::toolchange(unsigned int extruder_id)
         gcode << extruder_id;
         if (this->config.gcode_comments) gcode << " ; change extruder";
         gcode << "\n";
-        
-        gcode << this->reset_e(true);
     }
     return gcode.str();
 }

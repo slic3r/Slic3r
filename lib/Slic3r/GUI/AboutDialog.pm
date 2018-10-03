@@ -12,7 +12,7 @@ use base 'Wx::Dialog';
 sub new {
     my $class = shift;
     my ($parent) = @_;
-    my $self = $class->SUPER::new($parent, -1, 'About Slic3r', wxDefaultPosition, [600, 340], wxCAPTION);
+    my $self = $class->SUPER::new($parent, -1, 'About Slic3r', wxDefaultPosition, [600, 440], wxCAPTION);
 
     $self->SetBackgroundColour(Wx::wxWHITE);
     my $hsizer = Wx::BoxSizer->new(wxHORIZONTAL);
@@ -20,7 +20,7 @@ sub new {
 
     # logo
     my $logo = Slic3r::GUI::AboutDialog::Logo->new($self, -1, wxDefaultPosition, wxDefaultSize);
-    $logo->SetBackgroundColour(Wx::wxWHITE);
+        $logo->SetBackgroundColour(Wx::wxWHITE);
     $hsizer->Add($logo, 0, wxEXPAND | wxLEFT | wxRIGHT, 30);
 
     my $vsizer = Wx::BoxSizer->new(wxVERTICAL);
@@ -45,8 +45,10 @@ sub new {
     # text
     my $text =
         '<html>' .
-        '<body bgcolor="#ffffff" link="#808080">' .
-        '<font color="#808080">' .
+        '<body link="#808080">' .
+        'Build commit: ' . $Slic3r::GITVERSION .
+        '<br /><br />' .
+        '<font>' .
         'Copyright &copy; 2011-2017 Alessandro Ranellucci. <br />' .
         '<a href="http://slic3r.org/">Slic3r</a> is licensed under the ' .
         '<a href="http://www.gnu.org/licenses/agpl-3.0.html">GNU Affero General Public License, version 3</a>.' .

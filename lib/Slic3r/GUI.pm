@@ -39,6 +39,7 @@ use Slic3r::GUI::Plater::3D;
 use Slic3r::GUI::Plater::3DPreview;
 use Slic3r::GUI::Plater::ObjectPartsPanel;
 use Slic3r::GUI::Plater::ObjectCutDialog;
+use Slic3r::GUI::Plater::ObjectRotateFaceDialog;
 use Slic3r::GUI::Plater::ObjectSettingsDialog;
 use Slic3r::GUI::Plater::LambdaObjectDialog;
 use Slic3r::GUI::Plater::OverrideSettingsPanel;
@@ -52,6 +53,7 @@ use Slic3r::GUI::Preset;
 use Slic3r::GUI::PresetEditor;
 use Slic3r::GUI::PresetEditorDialog;
 use Slic3r::GUI::SLAPrintOptions;
+use Slic3r::GUI::ReloadDialog;
 
 our $have_OpenGL = eval "use Slic3r::GUI::3DScene; 1";
 our $have_LWP    = eval "use LWP::UserAgent; 1";
@@ -91,7 +93,9 @@ our $Settings = {
         color_toolpaths_by => 'role',
         tabbed_preset_editors => 1,
         show_host => 0,
-        nudge_val => 1
+        nudge_val => 1,
+        reload_hide_dialog => 0,
+        reload_behavior => 0
     },
 };
 

@@ -11,6 +11,7 @@ use warnings;
 require v5.10;
 
 our $VERSION = VERSION();
+our $GITVERSION = GITVERSION();
 
 our $debug = 0;
 sub debugf {

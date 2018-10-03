@@ -23,6 +23,7 @@ use utf8;
 use File::Basename qw(basename dirname);
 use List::Util qw(sum first max none any);
 use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad rad2deg);
+use Math::Trig qw(acos);
 use LWP::UserAgent;
 use threads::shared qw(shared_clone);
 use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :misc 
@@ -43,6 +44,7 @@ use constant TB_MORE    => &Wx::NewId;
 use constant TB_FEWER   => &Wx::NewId;
 use constant TB_45CW    => &Wx::NewId;
 use constant TB_45CCW   => &Wx::NewId;
+use constant TB_ROTFACE => &Wx::NewId;
 use constant TB_SCALE   => &Wx::NewId;
 use constant TB_SPLIT   => &Wx::NewId;
 use constant TB_CUT     => &Wx::NewId;
@@ -191,6 +193,7 @@ sub new {
         $self->{htoolbar}->AddSeparator;
         $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_anticlockwise.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_ROTFACE, "Rotate face", Wx::Bitmap->new($Slic3r::var->("rotate_face.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_SCALE, "Scale…", Wx::Bitmap->new($Slic3r::var->("arrow_out.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_SPLIT, "Split", Wx::Bitmap->new($Slic3r::var->("shape_ungroup.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_CUT, "Cut…", Wx::Bitmap->new($Slic3r::var->("package.png"), wxBITMAP_TYPE_PNG), '');
@@ -207,6 +210,7 @@ sub new {
             decrease        => "",
             rotate45ccw     => "",
             rotate45cw      => "",
+            rotateFace      => "",
             changescale     => "Scale…",
             split           => "Split",
             cut             => "Cut…",
@@ -214,7 +218,7 @@ sub new {
             settings        => "Settings…",
         );
         $self->{btoolbar} = Wx::BoxSizer->new(wxHORIZONTAL);
-        for (qw(add remove reset arrange increase decrease rotate45ccw rotate45cw changescale split cut layers settings)) {
+        for (qw(add remove reset arrange increase decrease rotate45ccw rotate45cw rotateFace changescale split cut layers settings)) {
             $self->{"btn_$_"} = Wx::Button->new($self, -1, $tbar_buttons{$_}, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
             $self->{btoolbar}->Add($self->{"btn_$_"});
         }
@@ -245,6 +249,7 @@ sub new {
             decrease        delete.png
             rotate45cw      arrow_rotate_clockwise.png
             rotate45ccw     arrow_rotate_anticlockwise.png
+            rotateFace      rotate_face.png
             changescale     arrow_out.png
             split           shape_ungroup.png
             cut             package.png
@@ -282,6 +287,7 @@ sub new {
         EVT_TOOL($self, TB_FEWER, sub { $self->decrease; });
         EVT_TOOL($self, TB_45CW, sub { $_[0]->rotate(-45) });
         EVT_TOOL($self, TB_45CCW, sub { $_[0]->rotate(45) });
+        EVT_TOOL($self, TB_ROTFACE, sub { $_[0]->rotate_face });
         EVT_TOOL($self, TB_SCALE, sub { $self->changescale(undef); });
         EVT_TOOL($self, TB_SPLIT, sub { $self->split_object; });
         EVT_TOOL($self, TB_CUT, sub { $_[0]->object_cut_dialog });
@@ -296,6 +302,7 @@ sub new {
         EVT_BUTTON($self, $self->{btn_decrease}, sub { $self->decrease; });
         EVT_BUTTON($self, $self->{btn_rotate45cw}, sub { $_[0]->rotate(-45) });
         EVT_BUTTON($self, $self->{btn_rotate45ccw}, sub { $_[0]->rotate(45) });
+        EVT_BUTTON($self, $self->{btn_rotateFace}, sub { $_[0]->rotate_face });
         EVT_BUTTON($self, $self->{btn_changescale}, sub { $self->changescale(undef); });
         EVT_BUTTON($self, $self->{btn_split}, sub { $self->split_object; });
         EVT_BUTTON($self, $self->{btn_cut}, sub { $_[0]->object_cut_dialog });
@@ -1023,7 +1030,14 @@ sub undo {
 			my $obj_idx = $self->get_object_index($identifier);
             $self->remove($obj_idx, 'true');
         }
-	}
+    } elsif ($type eq "GROUP"){
+        my @ops = @{$operation->{attributes}};
+        push @{$self->{undo_stack}}, @ops;
+        foreach my $op (@ops) {
+            $self->undo;
+            pop @{$self->{redo_stack}};
+        }
+    }
 }
 
 sub redo {
@@ -1115,6 +1129,13 @@ sub redo {
             $self->{objects}->[-$objects_count]->identifier($start_identifier++);
             $objects_count--;
         }
+    } elsif ($type eq "GROUP"){
+        my @ops = @{$operation->{attributes}};
+        foreach my $op (@ops) {
+            push @{$self->{redo_stack}}, $op;
+            $self->redo;
+            pop @{$self->{undo_stack}};
+        }
     }
 }
 
@@ -1177,7 +1198,7 @@ sub add_tin {
 
 sub load_file {
     my $self = shift;
-    my ($input_file, $obj_idx) = @_;
+    my ($input_file, $obj_idx_to_load) = @_;
     
     $Slic3r::GUI::Settings->{recent}{skein_directory} = dirname($input_file);
     wxTheApp->save_settings;
@@ -1203,14 +1224,27 @@ sub load_file {
             }
         }
         
-        if (defined $obj_idx) {
-            return () if $obj_idx >= $model->objects_count;
-            @obj_idx = $self->load_model_objects($model->get_object($obj_idx));
+        for my $obj_idx (0..($model->objects_count-1)) {
+            my $object = $model->objects->[$obj_idx];
+            $object->set_input_file($input_file);
+            for my $vol_idx (0..($object->volumes_count-1)) {
+                my $volume = $object->get_volume($vol_idx);
+                $volume->set_input_file($input_file);
+                $volume->set_input_file_obj_idx($obj_idx);
+                $volume->set_input_file_obj_idx($vol_idx);
+            }
+        }
+        
+        my $i = 0;
+        
+        if (defined $obj_idx_to_load) {
+            return () if $obj_idx_to_load >= $model->objects_count;
+            @obj_idx = $self->load_model_objects($model->get_object($obj_idx_to_load));
+            $i = $obj_idx_to_load;
         } else {
             @obj_idx = $self->load_model_objects(@{$model->objects});
         }
         
-        my $i = 0;
         foreach my $obj_idx (@obj_idx) {
             $self->{objects}[$obj_idx]->input_file($input_file);
             $self->{objects}[$obj_idx]->input_file_obj_idx($i++);
@@ -1487,7 +1521,45 @@ sub center_selected_object_on_bed {
         $self->bed_centerf->y - $bb->y_min - $size->y/2,    #//
     );
     $_->offset->translate(@$vector) for @{$model_object->instances};
-    $self->refresh_canvases;
+    $self->on_model_change;
+}
+
+sub rotate_face {
+    my $self = shift;
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    # Get the selected normal
+    if (!$Slic3r::GUI::have_OpenGL) {
+        Slic3r::GUI::show_error($self, "Please install the OpenGL modules to use this feature (see build instructions).");
+        return;
+    }
+    my $dlg = Slic3r::GUI::Plater::ObjectRotateFaceDialog->new($self,
+		object              => $self->{objects}[$obj_idx],
+		model_object        => $self->{model}->objects->[$obj_idx],
+	);
+	return unless $dlg->ShowModal == wxID_OK;
+    my $normal = $dlg->SelectedNormal;
+    return if !defined $normal;
+    my $axis = $dlg->SelectedAxis;
+    return if !defined $axis;
+    
+    # Actual math to rotate
+    my $angleToXZ = atan2($normal->y(),$normal->x());
+    my $angleToZ = acos(-$normal->z());
+    $self->rotate(-rad2deg($angleToXZ),Z);
+    $self->rotate(rad2deg($angleToZ),Y);
+    
+    if($axis == Z){
+        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-2));
+    } else {
+        if($axis == X){
+            $self->rotate(90,Y);
+        } else {
+            $self->rotate(90,X);
+        }
+        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-3));
+    }
 }
 
 sub rotate {
@@ -2306,26 +2378,141 @@ sub reload_from_disk {
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
     
-    return if !$object->input_file
-        || !-e $object->input_file;
+    if (!$object->input_file) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because it isn't referenced to its input file any more. This is the case after performing operations like cut or split.");
+        return;
+    }
+    if (!-e $object->input_file) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the file doesn't exist anymore on the disk.");
+        return;
+    }
     
     # Only reload the selected object and not all objects from the input file.
     my @new_obj_idx = $self->load_file($object->input_file, $object->input_file_obj_idx);
-    return if !@new_obj_idx;
-    
-    my $model_object = $self->{model}->objects->[$obj_idx];
-    foreach my $new_obj_idx (@new_obj_idx) {
-        my $o = $self->{model}->objects->[$new_obj_idx];
-        $o->clear_instances;
-        $o->add_instance($_) for @{$model_object->instances};
-        
-        if ($o->volumes_count == $model_object->volumes_count) {
-            for my $i (0..($o->volumes_count-1)) {
-                $o->get_volume($i)->config->apply($model_object->get_volume($i)->config);
-            }
+    if (!@new_obj_idx) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
+        return;
+    }
+
+    my $org_obj = $self->{model}->objects->[$obj_idx];
+
+    # check if the object is dependant of more than one file
+    my $org_obj_has_modifiers=0;
+    for my $i (0..($org_obj->volumes_count-1)) {
+        if ($org_obj->input_file ne $org_obj->get_volume($i)->input_file) {
+            $org_obj_has_modifiers=1;
+            last;
         }
     }
-    
+
+    my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior};
+
+    # ask the user how to proceed, if option is selected in preferences
+    if ($org_obj_has_modifiers && !$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
+        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior);
+        my $res = $dlg->ShowModal;
+        if ($res==wxID_CANCEL) {
+            $self->remove($_) for @new_obj_idx;
+            $dlg->Destroy;
+            return;
+        }
+        $reload_behavior = $dlg->GetSelection;
+        my $save = 0;
+        if ($reload_behavior != $Slic3r::GUI::Settings->{_}{reload_behavior}) {
+            $Slic3r::GUI::Settings->{_}{reload_behavior} = $reload_behavior;
+            $save = 1;
+        }
+        if ($dlg->GetHideOnNext) {
+            $Slic3r::GUI::Settings->{_}{reload_hide_dialog} = 1;
+            $save = 1;
+        }
+        Slic3r::GUI->save_settings if $save;
+        $dlg->Destroy;
+    }
+
+    my $volume_unmatched=0;
+
+    foreach my $new_obj_idx (@new_obj_idx) {
+        my $new_obj = $self->{model}->objects->[$new_obj_idx];
+        $new_obj->clear_instances;
+        $new_obj->add_instance($_) for @{$org_obj->instances};
+        $new_obj->config->apply($org_obj->config);
+        
+        my $new_vol_idx = 0;
+        my $org_vol_idx = 0;
+        my $new_vol_count=$new_obj->volumes_count;
+        my $org_vol_count=$org_obj->volumes_count;
+        
+        while ($new_vol_idx<=$new_vol_count-1) {
+            if (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
+                # apply config from the matching volumes
+                $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume($org_vol_idx++)->config);
+            } else {
+                # reload has more volumes than original (first file), apply config from the first volume
+                $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume(0)->config);
+                $volume_unmatched=1;
+            }
+        }
+        $org_vol_idx=$org_vol_count if $reload_behavior==2; # Reload behavior: discard
+        while (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
+            # original has more volumes (first file), skip those
+            $org_vol_idx++;
+            $volume_unmatched=1;
+        }
+        while ($org_vol_idx<=$org_vol_count-1) {
+            if ($reload_behavior==1) { # Reload behavior: copy
+                my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx));
+                $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                if ($new_volume->name =~ m/link to path\z/) {
+                    my $new_name = $new_volume->name;
+                    $new_name =~ s/ - no link to path$/ - copied/;
+                    $new_volume->set_name($new_name);
+                }elsif(!($new_volume->name =~ m/copied\z/)) {
+                    $new_volume->set_name($new_volume->name . " - copied");
+                }
+            }else{ # Reload behavior: Reload all, also fallback solution if ini was manually edited to a wrong value
+                if ($org_obj->get_volume($org_vol_idx)->input_file) {
+                    my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($org_vol_idx)->input_file) };
+                    if ($@) {
+                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                    }elsif ($org_obj->get_volume($org_vol_idx)->input_file_obj_idx > ($model->objects_count-1)) {
+                        # Object Index for that part / modifier not found in current version of the file
+                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                    }else{
+                        my $prt_mod_obj = $model->objects->[$org_obj->get_volume($org_vol_idx)->input_file_obj_idx];
+                        if ($org_obj->get_volume($org_vol_idx)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
+                            # Volume Index for that part / modifier not found in current version of the file
+                            $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                        }else{
+                            # all checks passed, load new mesh and copy metadata
+                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($org_vol_idx)->input_file_vol_idx));
+                            $new_volume->set_input_file($org_obj->get_volume($org_vol_idx)->input_file);
+                            $new_volume->set_input_file_obj_idx($org_obj->get_volume($org_vol_idx)->input_file_obj_idx);
+                            $new_volume->set_input_file_vol_idx($org_obj->get_volume($org_vol_idx)->input_file_vol_idx);
+                            $new_volume->config->apply($org_obj->get_volume($org_vol_idx)->config);
+                            $new_volume->set_modifier($org_obj->get_volume($org_vol_idx)->modifier);
+                            $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                        }
+                    }
+                }
+                if (!$org_obj->get_volume($org_vol_idx)->input_file) {
+                    my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx)); # error -> copy old mesh
+                    $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                    $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                    if ($new_volume->name =~ m/copied\z/) {
+                        my $new_name = $new_volume->name;
+                        $new_name =~ s/ - copied$/ - no link to path/;
+                        $new_volume->set_name($new_name);
+                    }elsif(!($new_volume->name =~ m/link to path\z/)) {
+                        $new_volume->set_name($new_volume->name . " - no link to path");
+                    }
+                    $volume_unmatched=1;
+                }
+            }
+            $org_vol_idx++;
+        }
+    }
     $self->remove($obj_idx);
     
     # TODO: refresh object list which contains wrong count and scale
@@ -2336,8 +2523,17 @@ sub reload_from_disk {
     # When porting to C++ we'll probably have cleaner ways to do this.
     $self->make_thumbnail($_-1) for @new_obj_idx;
 
+    # update print
+    $self->stop_background_process;
+    $self->{print}->reload_object($_-1) for @new_obj_idx;
+    $self->on_model_change;
+
     # Empty the redo stack
     $self->{redo_stack} = [];
+
+    if ($volume_unmatched) {
+        Slic3r::GUI::warning_catcher($self)->("At least 1 volume couldn't be matched between the original object and the reloaded one.");
+    }
 }
 
 sub export_object_stl {
@@ -2445,6 +2641,8 @@ sub make_thumbnail {
     my ($obj_idx) = @_;
     
     my $plater_object = $self->{objects}[$obj_idx];
+    return if($plater_object->remaking_thumbnail);
+    $plater_object->remaking_thumbnail(1);
     $plater_object->thumbnail(Slic3r::ExPolygon::Collection->new);
     my $cb = sub {
         $plater_object->make_thumbnail($self->{model}, $obj_idx);
@@ -2468,6 +2666,7 @@ sub on_thumbnail_made {
     my $self = shift;
     my ($obj_idx) = @_;
     
+    $self->{objects}[$obj_idx]->remaking_thumbnail(0);
     $self->{objects}[$obj_idx]->transform_thumbnail($self->{model}, $obj_idx);
     $self->refresh_canvases;
 }
@@ -2740,11 +2939,11 @@ sub selection_changed {
     
     my $method = $have_sel ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
-        for grep $self->{"btn_$_"}, qw(remove increase decrease rotate45cw rotate45ccw changescale split cut layers settings);
+        for grep $self->{"btn_$_"}, qw(remove increase decrease rotate45cw rotate45ccw rotateFace changescale split cut layers settings);
     
     if ($self->{htoolbar}) {
         $self->{htoolbar}->EnableTool($_, $have_sel)
-            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
+            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_ROTFACE, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
     }
     
     if ($self->{object_info_size}) { # have we already loaded the info pane?
@@ -2896,6 +3095,9 @@ sub object_menu {
     wxTheApp->append_menu_item($menu, "Rotate 45° counter-clockwise", 'Rotate the selected object by 45° counter-clockwise', sub {
         $self->rotate(+45);
     }, undef, 'arrow_rotate_anticlockwise.png');
+    wxTheApp->append_menu_item($menu, "Rotate Face to Plane", 'Rotates the selected object to have the selected face parallel with a plane', sub {
+        $self->rotate_face;
+    }, undef, 'rotate_face.png');
     
     {
         my $rotateMenu = Wx::Menu->new;
@@ -3057,6 +3259,7 @@ has 'input_file'            => (is => 'rw');
 has 'input_file_obj_idx'    => (is => 'rw');
 has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms
 has 'transformed_thumbnail' => (is => 'rw');
+has 'remaking_thumbnail'    => (is => 'rw', default => sub { 0 });
 has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units
 has 'selected'              => (is => 'rw', default => sub { 0 });
 has 'selected_instance'     => (is => 'rw', default => sub { -1 });

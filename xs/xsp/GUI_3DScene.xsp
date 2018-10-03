@@ -14,6 +14,7 @@
         %code%{ RETVAL = THIS->verts.empty() ? 0 : &THIS->verts.front(); %};
     void* norms_ptr() const
         %code%{ RETVAL = THIS->verts.empty() ? 0 : &THIS->norms.front(); %};
+    Clone< Pointf3 > get_point(int i);
 };
 
 %package{Slic3r::GUI::_3DScene};

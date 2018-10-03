@@ -71,6 +71,34 @@ sub process {
     }
 }
 
+sub escaped_split {
+    my ($line) = @_;
+
+    # Free up three characters for temporary replacement
+    $line =~ s/%/%%/g;
+    $line =~ s/#/##/g;
+    $line =~ s/\?/\?\?/g;
+
+    # replace escaped !'s
+    $line =~ s/\!\!/%#\?/g;
+    
+    # split on non-escaped whitespace
+    my @split = split /(?<=[^\!])\s+/, $line, -1;
+
+    for my $part (@split) {
+      # replace escaped whitespace with the whitespace
+      $part =~ s/\!(\s+)/$1/g;
+
+      # resub temp symbols
+      $part =~ s/%#\?/\!/g;
+      $part =~ s/%%/%/g;
+      $part =~ s/##/#/g;
+      $part =~ s/\?\?/\?/g;
+    }
+
+    return @split;
+}
+
 sub export_gcode {
     my $self = shift;
     my %params = @_;
@@ -121,11 +149,14 @@ sub export_gcode {
         $self->config->setenv;
         for my $script (@{$self->config->post_process}) {
             Slic3r::debugf "  '%s' '%s'\n", $script, $output_file;
+            my @parsed_script = escaped_split $script;
+            my $executable = shift @parsed_script ;
+            push @parsed_script, $output_file;
             # -x doesn't return true on Windows except for .exe files
-            if (($^O eq 'MSWin32') ? !(-e $script) : !(-x $script)) {
-                die "The configured post-processing script is not executable: check permissions. ($script)\n";
+            if (($^O eq 'MSWin32') ? !(-e $executable) : !(-x $executable)) {
+                die "The configured post-processing script is not executable: check permissions or escape whitespace/exclamation points. ($executable) \n";
             }
-            system($script, $output_file);
+            system($executable, @parsed_script);
         }
     }
 }

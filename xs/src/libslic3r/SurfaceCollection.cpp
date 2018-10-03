@@ -100,6 +100,19 @@ SurfaceCollection::filter_by_type(SurfaceType type)
     return ss;
 }
 
+SurfacesPtr
+SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types)
+{
+    size_t n {0};
+    SurfacesPtr ss;
+    for (const auto& t : types) {
+        n |= t;
+    }
+    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
+        if ((surface->surface_type & n) == surface->surface_type) ss.push_back(&*surface);
+    }
+    return ss;
+}
 void
 SurfaceCollection::filter_by_type(SurfaceType type, Polygons* polygons)
 {
@@ -147,5 +160,75 @@ SurfaceCollection::polygons_count() const
         count += 1 + it->expolygon.holes.size();
     return count;
 }
-
+void
+SurfaceCollection::remove_type(const SurfaceType type)
+{
+    // Use stl remove_if to remove 
+    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[type] (Surface& s) { return s.surface_type == type; });
+    surfaces.erase(ptr, surfaces.cend());
 }
+
+void
+SurfaceCollection::remove_types(const SurfaceType *types, size_t ntypes) 
+{
+    for (size_t i = 0; i < ntypes; ++i)
+        this->remove_type(types[i]);
+}
+
+void 
+SurfaceCollection::remove_types(std::initializer_list<SurfaceType> types) {
+    for (const auto& t : types) {
+        this->remove_type(t);
+    }
+}
+
+void
+SurfaceCollection::keep_type(const SurfaceType type)
+{
+    // Use stl remove_if to remove 
+    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[type] (const Surface& s) { return s.surface_type != type; });
+    surfaces.erase(ptr, surfaces.cend());
+}
+
+void
+SurfaceCollection::keep_types(const SurfaceType *types, size_t ntypes) 
+{
+    size_t n {0};
+    for (size_t i = 0; i < ntypes; ++i)
+        n |= types[i]; // form bitmask.
+    // Use stl remove_if to remove 
+    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[n] (const Surface& s) { return (s.surface_type & n) != s.surface_type; });
+    surfaces.erase(ptr, surfaces.cend());
+}
+
+void 
+SurfaceCollection::keep_types(std::initializer_list<SurfaceType> types) {
+    for (const auto& t : types) {
+        this->keep_type(t);
+    }
+}
+/* group surfaces by common properties */
+void
+SurfaceCollection::group(std::vector<SurfacesPtr> *retval)
+{
+    for (Surfaces::iterator it = this->surfaces.begin(); it != this->surfaces.end(); ++it) {
+        // find a group with the same properties
+        SurfacesPtr* group = NULL;
+        for (std::vector<SurfacesPtr>::iterator git = retval->begin(); git != retval->end(); ++git)
+            if (! git->empty() && surfaces_could_merge(*git->front(), *it)) {
+                group = &*git;
+                break;
+            }
+        // if no group with these properties exists, add one
+        if (group == NULL) {
+            retval->resize(retval->size() + 1);
+            group = &retval->back();
+        }
+        // append surface to group
+        group->push_back(&*it);
+    }
+}
+
+
+
+} // namespace Slic3r

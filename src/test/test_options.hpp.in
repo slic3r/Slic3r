@@ -1,0 +1,6 @@
+#ifndef TEST_OPTIONS_HPP
+
+/// Directory path, passed in from the outside, for the path to the test inputs dir.
+constexpr auto* testfile_dir {"@TESTFILE_DIR@"};
+
+#endif // TEST_OPTIONS_HPP

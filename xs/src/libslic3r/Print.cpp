@@ -1,4 +1,5 @@
 #include "Print.hpp"
+#include "PrintGCode.hpp"
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "Fill/Fill.hpp"
@@ -8,6 +9,7 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+#include <fstream>
 
 namespace Slic3r {
 
@@ -77,6 +79,8 @@ void
 Print::delete_object(size_t idx)
 {
     PrintObjectPtrs::iterator i = this->objects.begin() + idx;
+    if (i >= this->objects.end()) 
+        throw InvalidObjectException();
     
     // before deleting object, invalidate all of its steps in order to 
     // invalidate all of the dependent ones in Print
@@ -88,6 +92,208 @@ Print::delete_object(size_t idx)
 
     // TODO: purge unused regions
 }
+
+#ifndef SLIC3RXS
+
+void
+Print::process() 
+{
+    /// No need to call this as we call it as part of prepare_infill()
+    /// until we fix the idempotency issue.
+//    if (this->status_cb != nullptr)
+//        this->status_cb(20, "Generating perimeters");
+  //  for(auto& obj : this->objects) { obj->make_perimeters(); }
+    if (this->status_cb != nullptr)
+        this->status_cb(70, "Infilling layers");
+    for(auto& obj : this->objects) { obj->infill(); }
+    for(auto& obj : this->objects) { obj->generate_support_material(); }
+
+    this->make_skirt();
+    this->make_brim(); // must follow make_skirt
+}
+
+void
+Print::make_brim() 
+{
+    if (this->state.is_done(psBrim)) return;
+    // prereqs
+    for(auto& obj: this->objects) {
+        obj->make_perimeters();
+        obj->infill();
+        obj->generate_support_material();
+    }
+    this->state.set_started(psBrim);
+    if (this->status_cb != nullptr)
+        this->status_cb(88, "Generating brim");
+    this->_make_brim();
+    this->state.set_done(psBrim);
+}
+
+void
+Print::make_skirt()
+{
+    // prereqs
+    for(auto& obj: this->objects) {
+        obj->make_perimeters();
+        obj->infill();
+        obj->generate_support_material();
+    }
+
+    if (this->state.is_done(psSkirt)) return;
+    this->state.set_started(psSkirt);
+
+    // since this method must be idempotent, we clear skirt paths *before*
+    // checking whether we need to generate them
+    this->skirt.clear();
+
+    if (!this->has_skirt()) {
+        this->state.set_done(psSkirt);
+        return;
+    }
+
+    if (this->status_cb != nullptr)
+        this->status_cb(88, "Generating skirt");
+
+    // First off we need to decide how tall the skirt must be.
+    // The skirt_height option from config is expressed in layers, but our
+    // object might have different layer heights, so we need to find the print_z
+    // of the highest layer involved.
+    // Note that unless has_infinite_skirt() == true
+    // the actual skirt might not reach this $skirt_height_z value since the print
+    // order of objects on each layer is not guaranteed and will not generally
+    // include the thickest object first. It is just guaranteed that a skirt is
+    // prepended to the first 'n' layers (with 'n' = skirt_height).
+    // $skirt_height_z in this case is the highest possible skirt height for safety.
+    double skirt_height_z {-1.0};
+    for (const auto& object : this->objects) {
+        size_t skirt_height {
+            this->has_infinite_skirt() ? object->layer_count() :
+            std::min(size_t(this->config.skirt_height()), object->layer_count())
+        };
+        auto* highest_layer {object->get_layer(skirt_height - 1)};
+        skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
+    }
+
+    // collect points from all layers contained in skirt height
+    Points points;
+    for(auto* object : this->objects) {
+        Points object_points;
+        
+        // get object layers up to skirt_height_z
+        for(auto* layer : object->layers) {
+            if(layer->print_z > skirt_height_z)break;
+            for(ExPolygon poly : layer->slices){
+                for(Point point : static_cast<Points>(poly)){
+                    object_points.push_back(point);
+                }
+            }
+        }
+        
+        // get support layers up to $skirt_height_z
+        for(auto* layer : object->support_layers) {
+            if(layer->print_z > skirt_height_z)break;
+            for(auto* ee : layer->support_fills){
+                for(Point point : ee->as_polyline().points){
+                    object_points.push_back(point);
+                }
+            }
+            for(auto* ee : layer->support_interface_fills){
+                for(Point point : ee->as_polyline().points){
+                    object_points.push_back(point);
+                }
+            }
+        }
+        
+        // repeat points for each object copy
+        for(auto copy : object->_shifted_copies) {
+            for(Point point : object_points){
+                point.translate(copy);
+                points.push_back(point);
+            }
+        }
+    }
+    if (points.size() < 3) return;  // at least three points required for a convex hull
+    
+    // find out convex hull
+    auto convex = Geometry::convex_hull(points);
+    
+    // skirt may be printed on several layers, having distinct layer heights,
+    // but loops must be aligned so can't vary width/spacing
+    // TODO: use each extruder's own flow
+    auto first_layer_height = this->skirt_first_layer_height();
+    auto flow = this->skirt_flow();
+    auto spacing = flow.spacing();
+    auto mm3_per_mm = flow.mm3_per_mm();
+    
+    
+    auto skirts = this->config.skirts;
+    if(this->has_infinite_skirt() && skirts == 0){
+      skirts = 1;
+    }
+    
+    //my @extruded_length = ();  # for each extruder
+    //extruders_e_per_mm = ();
+    //size_t extruder_idx = 0;
+    
+    // new to the cpp implementation
+    float e_per_mm {0.0}, extruded_length = 0;
+    size_t extruders_warm = 0;
+    if (this->config.min_skirt_length.getFloat() > 0) {
+        //my $config = Config::GCode();
+        //$config->apply_static($self->config);
+        auto extruder = Extruder(0, &this->config);
+        e_per_mm = extruder.e_per_mm(mm3_per_mm);
+    }
+    
+    // draw outlines from outside to inside
+    // loop while we have less skirts than required or any extruder hasn't reached the min length if any
+    float distance = scale_(std::max(this->config.skirt_distance.getFloat(), this->config.brim_width.getFloat()));
+    for (int i = skirts; i > 0; i--) {
+        distance += scale_(spacing);
+        auto loop = offset(Polygons{convex}, distance, 1, jtRound, scale_(0.1)).at(0);
+        auto epath = ExtrusionPath(erSkirt,
+                mm3_per_mm,        // this will be overridden at G-code export time
+                flow.width,
+                first_layer_height // this will be overridden at G-code export time
+        );
+        epath.polyline = loop.split_at_first_point();
+        auto eloop = ExtrusionLoop(epath,elrSkirt);
+        this->skirt.append(eloop);
+        
+        if (this->config.min_skirt_length.getFloat() > 0) {
+            // Alternative simpler method
+            extruded_length += unscale(loop.length()) * e_per_mm;
+            if(extruded_length >= this->config.min_skirt_length.getFloat()){
+                extruders_warm++;
+                extruded_length = 0;
+            }
+            if (extruders_warm < this->extruders().size()){
+                i++;
+            }
+           
+            /*$extruded_length[$extruder_idx] ||= 0;
+            if (!$extruders_e_per_mm[$extruder_idx]) {
+                my $config = Slic3r::Config::GCode->new;
+                $config->apply_static($self->config);
+                my $extruder = Slic3r::Extruder->new($extruder_idx, $config);
+                $extruders_e_per_mm[$extruder_idx] = $extruder->e_per_mm($mm3_per_mm);
+            }
+            $extruded_length[$extruder_idx] += unscale $loop->length * $extruders_e_per_mm[$extruder_idx];
+            $i++ if defined first { ($extruded_length[$_] // 0) < $self->config->min_skirt_length } 0 .. $#{$self->extruders};
+            if ($extruded_length[$extruder_idx] >= $self->config->min_skirt_length) {
+                if ($extruder_idx < $#{$self->extruders}) {
+                    $extruder_idx++;
+                    next;
+                }
+            }*/
+        }
+    }
+
+    this->skirt.reverse();
+    this->state.set_done(psSkirt);
+}
+
+#endif // SLIC3RXS
 
 void
 Print::reload_object(size_t idx)
@@ -288,7 +494,7 @@ Print::invalidate_step(PrintStep step)
     
     // propagate to dependent steps
     if (step == psSkirt) {
-        this->invalidate_step(psBrim);
+        invalidated |= this->invalidate_step(psBrim);
     }
     
     return invalidated;
@@ -338,7 +544,9 @@ Print::object_extruders() const
         if ((*region)->config.fill_density.value > 0)
             extruders.insert((*region)->config.infill_extruder - 1);
         
-        if ((*region)->config.top_solid_layers.value > 0 || (*region)->config.bottom_solid_layers.value > 0)
+        if ((*region)->config.top_solid_layers.value > 0
+            || (*region)->config.bottom_solid_layers.value > 0
+            || (*region)->config.min_top_bottom_shell_thickness.value > 0)
             extruders.insert((*region)->config.solid_infill_extruder - 1);
     }
     
@@ -495,6 +703,35 @@ Print::add_model_object(ModelObject* model_object, int idx)
         }
     }
 }
+
+#ifndef SLIC3RXS
+void
+Print::export_gcode(std::ostream& output, bool quiet)
+{
+    this->process();
+    if (this->status_cb != nullptr) 
+        this->status_cb(90, "Exporting G-Code...");
+
+    auto export_handler {Slic3r::PrintGCode(*this, output)};
+    export_handler.output();
+
+}
+
+void
+Print::export_gcode(const std::string& outfile, bool quiet)
+{
+    std::ofstream outstream(outfile);
+    this->export_gcode(outstream);
+}
+
+
+bool
+Print::apply_config(config_ptr config) {
+    // dereference the stored pointer and pass the resulting data to apply_config()
+    return this->apply_config(config->config());
+}
+
+#endif
 
 bool
 Print::apply_config(DynamicPrintConfig config)

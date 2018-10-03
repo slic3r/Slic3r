@@ -79,6 +79,8 @@ mkdir -p $resourcefolder
 echo "Copying resources..." 
 cp -rf $SLIC3R_DIR/var $resourcefolder/
 mv $resourcefolder/var/Slic3r.icns $resourcefolder
+mv $resourcefolder/var/stl.icns $resourcefolder
+mv $resourcefolder/var/gcode.icns $resourcefolder
 
 echo "Copying Slic3r..."
 cp $SLIC3R_DIR/slic3r.pl $macosfolder/slic3r.pl
