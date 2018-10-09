@@ -624,11 +624,15 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
             new_back = polyline.points.back();
         } else {
             (void)this->expolygon.contour.first_intersection(line, &new_back);
+            // safety check if no intersection
+            if (new_back.x == 0 && new_back.y == 0) return;
             polyline.points.push_back(new_back);
             polyline.width.push_back(polyline.width.back());
         }
         Point new_bound;
         (void)bounds.contour.first_intersection(line, &new_bound);
+        // safety check if no intersection
+        if (new_bound.x == 0 && new_bound.y == 0) return;
        /* if (new_bound.coincides_with_epsilon(new_back)) {
             return;
         }*/
