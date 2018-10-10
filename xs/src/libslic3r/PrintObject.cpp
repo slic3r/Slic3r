@@ -483,6 +483,8 @@ PrintObject::move_nonplanar_surfaces_up()
                         if (nonplanar_surface.stats.min.z-layer->height-distance_to_top > layer->slice_z) continue;
                         //break if above home layer
                         if (home_layer->slice_z < layer->slice_z) break;
+                        //skip if bottom layer because we dont want to project the bottom layers up
+                        if (layer->lower_layer == NULL) continue;
                     
                         Polygons layerm_slices_surfaces = layerm.slices;
                         SurfaceCollection topNonplanar;

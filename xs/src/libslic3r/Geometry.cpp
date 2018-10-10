@@ -360,6 +360,7 @@ Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3)
     return true;
 }
 
+//https://graphics.stanford.edu/~mdfisher/Code/Engine/Plane.cpp.html
 void
 Project_point_on_plane(Pointf3 v1,  Pointf3 n, Point &pt)
 {
