@@ -64,6 +64,17 @@ Line::length() const
     return this->a.distance_to(this->b);
 }
 
+double
+Line::angle() const
+{
+    if (this->b.z == this->a.z){
+        return 0.0f;
+    }else 
+    {
+        return std::atan((this->b.z-this->a.z) / this->length());
+    }
+}
+
 Point
 Line::midpoint() const
 {

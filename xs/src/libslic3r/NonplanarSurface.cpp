@@ -146,7 +146,7 @@ NonplanarSurfaces
 NonplanarSurface::group_surfaces()
 {
     std::pair<int, NonplanarFacet> begin = *this->mesh.begin();
-    this->mark_neighbour_surfaces(begin.first);
+    this->mark_neighbor_surfaces(begin.first);
     NonplanarSurface newSurface;
     for (std::map<int, NonplanarFacet>::iterator it=this->mesh.begin(); it!=this->mesh.end();) {
         if((*it).second.marked == false) {
@@ -173,7 +173,7 @@ NonplanarSurface::group_surfaces()
 }
 
 void
-NonplanarSurface::mark_neighbour_surfaces(int id)
+NonplanarSurface::mark_neighbor_surfaces(int id)
 {
     //if already marked return
     if(this->mesh.find(id) == this->mesh.end() || this->mesh[id].marked == true) return;
@@ -181,7 +181,7 @@ NonplanarSurface::mark_neighbour_surfaces(int id)
     this->mesh[id].marked = true;
     //mark all neighbors
     for(int j = 0; j < 3; j++) {
-        this->mark_neighbour_surfaces(this->mesh[id].neighbor[j]);
+        this->mark_neighbor_surfaces(this->mesh[id].neighbor[j]);
     }
 }
 

@@ -42,7 +42,7 @@ class NonplanarSurface
     void rotate_z(float angle);
     void debug_output();
     NonplanarSurfaces group_surfaces();
-    void mark_neighbour_surfaces(int id);
+    void mark_neighbor_surfaces(int id);
     bool check_max_printing_height(float height);
     void check_printable_surfaces(float max_angle);
     bool check_surface_area();
