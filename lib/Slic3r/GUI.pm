@@ -39,6 +39,7 @@ use Slic3r::GUI::Plater::3D;
 use Slic3r::GUI::Plater::3DPreview;
 use Slic3r::GUI::Plater::ObjectPartsPanel;
 use Slic3r::GUI::Plater::ObjectCutDialog;
+use Slic3r::GUI::Plater::ObjectRotateFaceDialog;
 use Slic3r::GUI::Plater::ObjectSettingsDialog;
 use Slic3r::GUI::Plater::LambdaObjectDialog;
 use Slic3r::GUI::Plater::OverrideSettingsPanel;

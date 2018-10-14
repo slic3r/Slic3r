@@ -2,7 +2,7 @@
 #define slic3r_Flow_hpp_
 
 #include "libslic3r.h"
-#include "Config.hpp"
+#include "ConfigBase.hpp"
 #include "ExtrusionEntity.hpp"
 
 namespace Slic3r {
@@ -12,13 +12,13 @@ constexpr auto OVERLAP_FACTOR = 1.0;
 
 /// Enumeration for different flow roles
 enum FlowRole {
-    frExternalPerimeter,
-    frPerimeter,
-    frInfill,
-    frSolidInfill,
-    frTopSolidInfill,
-    frSupportMaterial,
-    frSupportMaterialInterface,
+    frExternalPerimeter        = 0b1,
+    frPerimeter                = 0b10,
+    frInfill                   = 0b100,
+    frSolidInfill              = 0b1000,
+    frTopSolidInfill           = 0b10000,
+    frSupportMaterial          = 0b100000,
+    frSupportMaterialInterface = 0b1000000,
 };
 
 

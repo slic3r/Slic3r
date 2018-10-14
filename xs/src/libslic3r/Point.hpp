@@ -13,30 +13,40 @@ class Line;
 class Linef;
 class MultiPoint;
 class Point;
+class Point3;
 class Pointf;
 class Pointf3;
 typedef Point Vector;
 typedef Pointf Vectorf;
 typedef Pointf3 Vectorf3;
+using Vector3 = Point3;
 typedef std::vector<Point> Points;
 typedef std::vector<Point*> PointPtrs;
 typedef std::vector<const Point*> PointConstPtrs;
 typedef std::vector<Pointf> Pointfs;
 typedef std::vector<Pointf3> Pointf3s;
 
+using Point3s = std::vector<Point3>;
+
 class Point
 {
     public:
     coord_t x;
     coord_t y;
-    Point(coord_t _x = 0, coord_t _y = 0): x(_x), y(_y) {};
-    Point(int _x, int _y): x(_x), y(_y) {};
-    Point(long long _x, long long _y): x(_x), y(_y) {};  // for Clipper
+    constexpr Point(coord_t _x = 0, coord_t _y = 0): x(_x), y(_y) {};
+    constexpr Point(int _x, int _y): x(_x), y(_y) {};
+    #ifndef _WIN32
+    constexpr Point(long long _x, long long _y): x(_x), y(_y) {};  // for Clipper
+    #endif 
     Point(double x, double y);
-    static Point new_scale(coordf_t x, coordf_t y) {
+    static constexpr Point new_scale(coordf_t x, coordf_t y) {
         return Point(scale_(x), scale_(y));
     };
+
+    /// Scale and create a Point from a Pointf.
+    static Point new_scale(Pointf p);
     bool operator==(const Point& rhs) const;
+    bool operator!=(const Point& rhs) const { return !(*this == rhs); }
     std::string wkt() const;
     std::string dump_perl() const;
     void scale(double factor);
@@ -95,8 +105,8 @@ class Point3 : public Point
 {
     public:
     coord_t z;
-    explicit Point3(coord_t _x = 0, coord_t _y = 0, coord_t _z = 0): Point(_x, _y), z(_z) {};
-    bool coincides_with(const Point3 &point3) const { return this->x == point3.x && this->y == point3.y && this->z == point3.z; }
+    explicit constexpr Point3(coord_t _x = 0, coord_t _y = 0, coord_t _z = 0): Point(_x, _y), z(_z) {};
+    bool constexpr coincides_with(const Point3 &point3) const { return this->x == point3.x && this->y == point3.y && this->z == point3.z; }
 };
 
 std::ostream& operator<<(std::ostream &stm, const Pointf &pointf);
@@ -106,13 +116,19 @@ class Pointf
     public:
     coordf_t x;
     coordf_t y;
-    explicit Pointf(coordf_t _x = 0, coordf_t _y = 0): x(_x), y(_y) {};
-    static Pointf new_unscale(coord_t x, coord_t y) {
+    explicit constexpr Pointf(coordf_t _x = 0, coordf_t _y = 0): x(_x), y(_y) {};
+    static constexpr Pointf new_unscale(coord_t x, coord_t y) {
         return Pointf(unscale(x), unscale(y));
     };
-    static Pointf new_unscale(const Point &p) {
+    static constexpr Pointf new_unscale(const Point &p) {
         return Pointf(unscale(p.x), unscale(p.y));
     };
+
+    // equality operator based on coincides_with_epsilon
+    bool operator==(const Pointf& rhs) const;
+    bool coincides_with_epsilon(const Pointf& rhs) const;
+    Pointf& operator/=(const double& scalar); 
+
     std::string wkt() const;
     std::string dump_perl() const;
     void scale(double factor);
@@ -124,14 +140,17 @@ class Pointf
     Vectorf vector_to(const Pointf &point) const;
 };
 
+Pointf operator+(const Pointf& point1, const Pointf& point2);
+Pointf operator/(const Pointf& point1, const double& scalar);
+
 std::ostream& operator<<(std::ostream &stm, const Pointf3 &pointf3);
 
 class Pointf3 : public Pointf
 {
     public:
     coordf_t z;
-    explicit Pointf3(coordf_t _x = 0, coordf_t _y = 0, coordf_t _z = 0): Pointf(_x, _y), z(_z) {};
-    static Pointf3 new_unscale(coord_t x, coord_t y, coord_t z) {
+    explicit constexpr Pointf3(coordf_t _x = 0, coordf_t _y = 0, coordf_t _z = 0): Pointf(_x, _y), z(_z) {};
+    static constexpr Pointf3 new_unscale(coord_t x, coord_t y, coord_t z) {
         return Pointf3(unscale(x), unscale(y), unscale(z));
     };
     void scale(double factor);
@@ -152,15 +171,25 @@ to_points(const std::vector<T> &items)
     return pp;
 }
 
+inline Points
+scale(const std::vector<Pointf>&in ) {
+    Points out; 
+    for (const auto& p : in) {out.push_back(Point(scale_(p.x), scale_(p.y))); }
+    return out;
+}
+
+
+
 }
 
 // start Boost
 #include <boost/version.hpp>
 #include <boost/polygon/polygon.hpp>
 namespace boost { namespace polygon {
+#ifndef _WIN32
     template <>
     struct geometry_concept<coord_t> { typedef coordinate_concept type; };
-    
+#endif     
 /* Boost.Polygon already defines a specialization for coordinate_traits<long> as of 1.60:
    https://github.com/boostorg/polygon/commit/0ac7230dd1f8f34cb12b86c8bb121ae86d3d9b97 */
 #if BOOST_VERSION < 106000

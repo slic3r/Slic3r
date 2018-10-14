@@ -18,6 +18,11 @@ Point::operator==(const Point& rhs) const
     return this->coincides_with(rhs);
 }
 
+Point
+Point::new_scale(Pointf p) {
+    return Point(scale_(p.x), scale_(p.y));
+}
+
 std::string
 Point::wkt() const
 {
@@ -332,6 +337,9 @@ operator+(const Point& point1, const Point& point2)
     return Point(point1.x + point2.x, point1.y + point2.y);
 }
 
+
+
+
 Point
 operator-(const Point& point1, const Point& point2)
 {
@@ -364,6 +372,18 @@ Pointf::dump_perl() const
     std::ostringstream ss;
     ss << "[" << this->x << "," << this->y << "]";
     return ss.str();
+}
+
+Pointf
+operator+(const Pointf& point1, const Pointf& point2)
+{
+    return Pointf(point1.x + point2.x, point1.y + point2.y);
+}
+
+Pointf
+operator/(const Pointf& point1, const double& scalar)
+{
+    return Pointf(point1.x / scalar, point1.y / scalar);
 }
 
 void
@@ -420,6 +440,14 @@ Pointf::vector_to(const Pointf &point) const
     return Vectorf(point.x - this->x, point.y - this->y);
 }
 
+Pointf&
+Pointf::operator/=(const double& scalar)
+{
+    this->x /= scalar;
+    this->y /= scalar;
+    return *this;
+}
+
 std::ostream&
 operator<<(std::ostream &stm, const Pointf3 &pointf3)
 {
@@ -432,6 +460,14 @@ Pointf3::scale(double factor)
     Pointf::scale(factor);
     this->z *= factor;
 }
+bool Pointf::coincides_with_epsilon(const Pointf& rhs) const { 
+    return std::abs(this->x - rhs.x) < EPSILON && std::abs(this->y - rhs.y) < EPSILON ;
+}
+
+bool Pointf::operator==(const Pointf& rhs) const { 
+    return this->coincides_with_epsilon(rhs);
+}
+
 
 void
 Pointf3::translate(const Vectorf3 &vector)

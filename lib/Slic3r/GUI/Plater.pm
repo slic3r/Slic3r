@@ -23,6 +23,7 @@ use utf8;
 use File::Basename qw(basename dirname);
 use List::Util qw(sum first max none any);
 use Slic3r::Geometry qw(X Y Z MIN MAX scale unscale deg2rad rad2deg);
+use Math::Trig qw(acos);
 use LWP::UserAgent;
 use threads::shared qw(shared_clone);
 use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :misc 
@@ -50,6 +51,7 @@ use constant TB_Z90CW   => &Wx::NewId;
 use constant TB_Z90CCW  => &Wx::NewId;
 use constant TB_45CW    => &Wx::NewId;
 use constant TB_45CCW   => &Wx::NewId;
+use constant TB_ROTFACE => &Wx::NewId;
 use constant TB_SCALE   => &Wx::NewId;
 use constant TB_SPLIT   => &Wx::NewId;
 use constant TB_CUT     => &Wx::NewId;
@@ -196,7 +198,7 @@ sub new {
         $self->{htoolbar}->AddTool(TB_MORE, "More", Wx::Bitmap->new($Slic3r::var->("add.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_FEWER, "Fewer", Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
-        
+       
         if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 2) {  # if Toolbar enabled
             $self->{htoolbar}->AddTool(TB_X90CCW, "90° X ccw", Wx::Bitmap->new(@rotateX90ccwT, wxBITMAP_TYPE_PNG), '');
             $self->{htoolbar}->AddTool(TB_X90CW, "90° X cw", Wx::Bitmap->new(@rotateX90cwT, wxBITMAP_TYPE_PNG), '');
@@ -208,8 +210,10 @@ sub new {
         
         $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new(@rotateZ45ccwT, wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new(@rotateZ45cwT, wxBITMAP_TYPE_PNG), '');
-       
+        $self->{htoolbar}->AddTool(TB_ROTFACE, "Rotate face", Wx::Bitmap->new($Slic3r::var->("rotate_face.png"), wxBITMAP_TYPE_PNG), '');
+        
         $self->{htoolbar}->AddSeparator;
+
         $self->{htoolbar}->AddTool(TB_SCALE, "Scale…", Wx::Bitmap->new($Slic3r::var->("arrow_out.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_SPLIT, "Split", Wx::Bitmap->new($Slic3r::var->("shape_ungroup.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_CUT, "Cut…", Wx::Bitmap->new($Slic3r::var->("package.png"), wxBITMAP_TYPE_PNG), '');
@@ -232,6 +236,7 @@ sub new {
             rotateZ90cw     => "",
             rotateZ45ccw    => "",
             rotateZ45cw     => "",
+            rotateFace      => "",
             changescale     => "Scale…",
             split           => "Split",
             cut             => "Cut…",
@@ -253,12 +258,14 @@ sub new {
             rotateZ90cw     => "Rotate around Z by 90° clockwise",
             rotateZ45ccw    => "Rotate around Z by 45° counter clockwise",
             rotateZ45cw     => "Rotate around Z by 45° clockwise",
+            rotateFace      => "Rotate to Face",
             changescale     => "Change Scale of Object",
             split           => "Split Object",
             cut             => "Cut Object",
             settings        => "Settings, Parts, Modifiers and Layers",
         );
         $self->{btoolbar} = Wx::BoxSizer->new(wxHORIZONTAL);
+
 
         if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 2) { # if Toolbar enabled
             for (qw(add remove reset arrange increase decrease rotateX90ccw rotateX90cw rotateY90ccw rotateY90cw rotateZ90ccw rotateZ90cw rotateZ45ccw rotateZ45cw changescale split cut settings)) {
@@ -267,19 +274,20 @@ sub new {
                 $self->{"btn_$_"}->SetToolTipString($tbar_buttonsToolTip{$_});
             }
         } else {
-            for (qw(add remove reset arrange increase decrease rotateZ45ccw rotateZ45cw changescale split cut settings)) {
+            for (qw(add remove reset arrange increase decrease rotateZ45ccw rotateZ45cw rotateFace changescale split cut settings)) {
                 $self->{"btn_$_"} = Wx::Button->new($self, -1, $tbar_buttons{$_}, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
                 $self->{btoolbar}->Add($self->{"btn_$_"});
                 $self->{"btn_$_"}->SetToolTipString($tbar_buttonsToolTip{$_});
             }
+
         }
     }
 
     # right pane buttons
-    $self->{btn_export_gcode} = Wx::Button->new($self, -1, "Export G-code…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
-    $self->{btn_print} = Wx::Button->new($self, -1, "Print…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
-    $self->{btn_send_gcode} = Wx::Button->new($self, -1, "Send to printer", wxDefaultPosition, [-1, 30], wxBU_LEFT);
-    $self->{btn_export_stl} = Wx::Button->new($self, -1, "Export STL…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
+    $self->{btn_export_gcode} = Wx::Button->new($self, -1, "Export G-code…", wxDefaultPosition, [-1, -1], wxBU_LEFT);
+    $self->{btn_print} = Wx::Button->new($self, -1, "Print…", wxDefaultPosition, [-1, -1], wxBU_LEFT);
+    $self->{btn_send_gcode} = Wx::Button->new($self, -1, "Send to printer", wxDefaultPosition, [-1, -1], wxBU_LEFT);
+    $self->{btn_export_stl} = Wx::Button->new($self, -1, "Export STL…", wxDefaultPosition, [-1, -1], wxBU_LEFT);
     #$self->{btn_export_gcode}->SetFont($Slic3r::GUI::small_font);
     #$self->{btn_export_stl}->SetFont($Slic3r::GUI::small_font);
     $self->{btn_print}->Hide;
@@ -299,6 +307,7 @@ sub new {
             increase       => "add.png",
             decrease       => "delete.png",
             
+
             rotateX90cw    => @rotateX90cwT,
             rotateX90ccw   => @rotateX90ccwT,
             rotateY90cw    => @rotateY90cwT,
@@ -307,12 +316,14 @@ sub new {
             rotateZ90ccw   => @rotateZ90ccwT,
             rotateZ45cw    => @rotateZ45cwT,
             rotateZ45ccw   => @rotateZ45ccwT,
-                           
+            
+            rotateFace     => "rotate_face.png",
             changescale    => "arrow_out.png",
             split          => "shape_ungroup.png",
             cut            => "package.png",
             layers         => "variable_layer_height.png",
             settings       => "cog.png",
+
         );
         for (grep $self->{"btn_$_"}, keys %icons) {
             $self->{"btn_$_"}->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icons{$_}), wxBITMAP_TYPE_PNG));
@@ -353,6 +364,8 @@ sub new {
         }
         EVT_TOOL($self, TB_45CW, sub { $_[0]->rotate(-45, Z) });
         EVT_TOOL($self, TB_45CCW, sub { $_[0]->rotate(45, Z) });
+        EVT_TOOL($self, TB_ROTFACE, sub { $_[0]->rotate_face });
+
         EVT_TOOL($self, TB_SCALE, sub { $self->changescale(undef); });
         EVT_TOOL($self, TB_SPLIT, sub { $self->split_object; });
         EVT_TOOL($self, TB_CUT, sub { $_[0]->object_cut_dialog });
@@ -365,6 +378,7 @@ sub new {
         EVT_BUTTON($self, $self->{btn_arrange}, sub { $self->arrange; });
         EVT_BUTTON($self, $self->{btn_increase}, sub { $self->increase; });
         EVT_BUTTON($self, $self->{btn_decrease}, sub { $self->decrease; });
+
         if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 2) { # if Toolbar enabled
             EVT_BUTTON($self, $self->{btn_rotateX90cw}, sub { $_[0]->rotate(-90, X) });
             EVT_BUTTON($self, $self->{btn_rotateX90ccw}, sub { $_[0]->rotate(90, X) });
@@ -375,6 +389,11 @@ sub new {
         }
         EVT_BUTTON($self, $self->{btn_rotateZ45cw}, sub { $_[0]->rotate(-45, Z) });
         EVT_BUTTON($self, $self->{btn_rotateZ45ccw}, sub { $_[0]->rotate(45, Z) });
+        EVT_BUTTON($self, $self->{btn_rotateFace}, sub { $_[0]->rotate_face });
+
+        EVT_BUTTON($self, $self->{btn_rotate45cw}, sub { $_[0]->rotate(-45) });
+        EVT_BUTTON($self, $self->{btn_rotate45ccw}, sub { $_[0]->rotate(45) });
+        
         EVT_BUTTON($self, $self->{btn_changescale}, sub { $self->changescale(undef); });
         EVT_BUTTON($self, $self->{btn_split}, sub { $self->split_object; });
         EVT_BUTTON($self, $self->{btn_cut}, sub { $_[0]->object_cut_dialog });
@@ -1102,7 +1121,14 @@ sub undo {
 			my $obj_idx = $self->get_object_index($identifier);
             $self->remove($obj_idx, 'true');
         }
-	}
+    } elsif ($type eq "GROUP"){
+        my @ops = @{$operation->{attributes}};
+        push @{$self->{undo_stack}}, @ops;
+        foreach my $op (@ops) {
+            $self->undo;
+            pop @{$self->{redo_stack}};
+        }
+    }
 }
 
 sub redo {
@@ -1193,6 +1219,13 @@ sub redo {
         {
             $self->{objects}->[-$objects_count]->identifier($start_identifier++);
             $objects_count--;
+        }
+    } elsif ($type eq "GROUP"){
+        my @ops = @{$operation->{attributes}};
+        foreach my $op (@ops) {
+            push @{$self->{redo_stack}}, $op;
+            $self->redo;
+            pop @{$self->{undo_stack}};
         }
     }
 }
@@ -1579,7 +1612,45 @@ sub center_selected_object_on_bed {
         $self->bed_centerf->y - $bb->y_min - $size->y/2,    #//
     );
     $_->offset->translate(@$vector) for @{$model_object->instances};
-    $self->refresh_canvases;
+    $self->on_model_change;
+}
+
+sub rotate_face {
+    my $self = shift;
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    # Get the selected normal
+    if (!$Slic3r::GUI::have_OpenGL) {
+        Slic3r::GUI::show_error($self, "Please install the OpenGL modules to use this feature (see build instructions).");
+        return;
+    }
+    my $dlg = Slic3r::GUI::Plater::ObjectRotateFaceDialog->new($self,
+		object              => $self->{objects}[$obj_idx],
+		model_object        => $self->{model}->objects->[$obj_idx],
+	);
+	return unless $dlg->ShowModal == wxID_OK;
+    my $normal = $dlg->SelectedNormal;
+    return if !defined $normal;
+    my $axis = $dlg->SelectedAxis;
+    return if !defined $axis;
+    
+    # Actual math to rotate
+    my $angleToXZ = atan2($normal->y(),$normal->x());
+    my $angleToZ = acos(-$normal->z());
+    $self->rotate(-rad2deg($angleToXZ),Z);
+    $self->rotate(rad2deg($angleToZ),Y);
+    
+    if($axis == Z){
+        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-2));
+    } else {
+        if($axis == X){
+            $self->rotate(90,Y);
+        } else {
+            $self->rotate(90,X);
+        }
+        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-3));
+    }
 }
 
 sub rotate {
@@ -2661,6 +2732,8 @@ sub make_thumbnail {
     my ($obj_idx) = @_;
     
     my $plater_object = $self->{objects}[$obj_idx];
+    return if($plater_object->remaking_thumbnail);
+    $plater_object->remaking_thumbnail(1);
     $plater_object->thumbnail(Slic3r::ExPolygon::Collection->new);
     my $cb = sub {
         $plater_object->make_thumbnail($self->{model}, $obj_idx);
@@ -2684,6 +2757,7 @@ sub on_thumbnail_made {
     my $self = shift;
     my ($obj_idx) = @_;
     
+    $self->{objects}[$obj_idx]->remaking_thumbnail(0);
     $self->{objects}[$obj_idx]->transform_thumbnail($self->{model}, $obj_idx);
     $self->refresh_canvases;
 }
@@ -2956,11 +3030,11 @@ sub selection_changed {
     
     my $method = $have_sel ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
-        for grep $self->{"btn_$_"}, qw(remove increase decrease rotateX90cw rotateX90ccw rotateY90cw rotateY90ccw rotateZ90cw rotateZ90ccw rotateZ45cw rotateZ45ccw changescale split cut layers settings);
+        for grep $self->{"btn_$_"}, qw(remove increase decrease rotateX90cw rotateX90ccw rotateY90cw rotateY90ccw rotateZ90cw rotateZ90ccw rotateZ45cw rotateZ45ccw rotateFace changescale split cut layers settings);
     
     if ($self->{htoolbar}) {
         $self->{htoolbar}->EnableTool($_, $have_sel)
-            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_X90CW, TB_X90CCW, TB_Y90CW, TB_Y90CCW, TB_Z90CW, TB_Z90CCW, TB_45CW, TB_45CCW, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
+            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_X90CW, TB_X90CCW, TB_Y90CW, TB_Y90CCW, TB_Z90CW, TB_Z90CCW, TB_45CW, TB_45CCW, TB_ROTFACE, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
     }
     
     if ($self->{object_info_size}) { # have we already loaded the info pane?
@@ -3102,6 +3176,7 @@ sub object_menu {
     wxTheApp->append_menu_item($menu, "Set number of copies…", 'Change the number of copies of the selected object', sub {
         $self->set_number_of_copies;
     }, undef, 'textfield.png');
+
     if (!$Slic3r::GUI::Settings->{_}{autocenter}){
         $menu->AppendSeparator();
         wxTheApp->append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
@@ -3182,7 +3257,11 @@ sub object_menu {
         wxTheApp->append_menu_item($menu, "Rotate 45° counter clockwise (Z))", 'Rotate the selected object by 45° counter clockwise', sub {
             $self->rotate(+45, Z);
         }, undef, @rotateZ90ccw);
+        
     }
+    wxTheApp->append_menu_item($menu, "Rotate Face to Plane", 'Rotates the selected object to have the selected face parallel with a plane', sub {
+        $self->rotate_face;
+    }, undef, 'rotate_face.png');
     $menu->AppendSeparator();
     
     # Extended GUI:
@@ -3349,6 +3428,7 @@ has 'input_file'            => (is => 'rw');
 has 'input_file_obj_idx'    => (is => 'rw');
 has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms
 has 'transformed_thumbnail' => (is => 'rw');
+has 'remaking_thumbnail'    => (is => 'rw', default => sub { 0 });
 has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units
 has 'selected'              => (is => 'rw', default => sub { 0 });
 has 'selected_instance'     => (is => 'rw', default => sub { -1 });

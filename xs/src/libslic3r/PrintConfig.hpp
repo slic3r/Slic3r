@@ -19,7 +19,7 @@
 #define slic3r_PrintConfig_hpp_
 
 #include "libslic3r.h"
-#include "Config.hpp"
+#include "ConfigBase.hpp"
 
 #define OPT_PTR(KEY) if (opt_key == #KEY) return &this->KEY
 
@@ -255,6 +255,8 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
+    ConfigOptionFloat               min_shell_thickness;
+    ConfigOptionFloat               min_top_bottom_shell_thickness;
     ConfigOptionBool                overhangs;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
@@ -296,6 +298,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         OPT_PTR(infill_every_layers);
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
+        OPT_PTR(min_shell_thickness);
         OPT_PTR(overhangs);
         OPT_PTR(perimeter_extruder);
         OPT_PTR(perimeter_extrusion_width);
@@ -312,7 +315,8 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         OPT_PTR(top_infill_pattern);
         OPT_PTR(top_solid_infill_speed);
         OPT_PTR(top_solid_layers);
-        
+        OPT_PTR(min_top_bottom_shell_thickness);
+
         return NULL;
     };
 };
@@ -334,6 +338,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionStrings             filament_notes;
     ConfigOptionBool                gcode_comments;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
+    ConfigOptionBool                label_printed_objects;
     ConfigOptionString              layer_gcode;
     ConfigOptionFloat               max_print_speed;
     ConfigOptionFloat               max_volumetric_speed;
@@ -377,6 +382,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(filament_notes);
         OPT_PTR(gcode_comments);
         OPT_PTR(gcode_flavor);
+        OPT_PTR(label_printed_objects);
         OPT_PTR(layer_gcode);
         OPT_PTR(max_print_speed);
         OPT_PTR(max_volumetric_speed);
@@ -653,7 +659,9 @@ class CLIConfig
     ConfigOptionBool                export_pov;
     ConfigOptionBool                export_svg;
     ConfigOptionBool                export_3mf;
+    ConfigOptionBool                gui;
     ConfigOptionBool                info;
+    ConfigOptionBool                help;
     ConfigOptionStrings             load;
     ConfigOptionString              output;
     ConfigOptionFloat               rotate;
@@ -662,6 +670,8 @@ class CLIConfig
     ConfigOptionString              save;
     ConfigOptionFloat               scale;
     ConfigOptionPoint3              scale_to_fit;
+    ConfigOptionPoint               center;
+    ConfigOptionBool                slice;
     ConfigOptionBool                threads;
     
     CLIConfig() : ConfigBase(), StaticConfig() {
@@ -678,6 +688,8 @@ class CLIConfig
         OPT_PTR(export_pov);
         OPT_PTR(export_svg);
         OPT_PTR(export_3mf);
+        OPT_PTR(gui);
+        OPT_PTR(help);
         OPT_PTR(info);
         OPT_PTR(load);
         OPT_PTR(output);
@@ -687,12 +699,18 @@ class CLIConfig
         OPT_PTR(save);
         OPT_PTR(scale);
         OPT_PTR(scale_to_fit);
+        OPT_PTR(slice);
         OPT_PTR(threads);
         
         return NULL;
     };
 };
 
+/// Iterate through all of the print options and write them to a stream.
+std::ostream& print_print_options(std::ostream& out);
+/// Iterate through all of the CLI options and write them to a stream.
+std::ostream&
+print_cli_options(std::ostream& out);
 }
 
 #endif

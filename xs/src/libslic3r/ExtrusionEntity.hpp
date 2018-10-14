@@ -52,6 +52,9 @@ public:
     virtual double min_mm3_per_mm() const = 0;
     virtual Polyline as_polyline() const = 0;
     virtual double length() const { return 0; };
+    virtual bool is_perimeter() const {return false;};
+    virtual bool is_infill() const {return false;};
+    virtual bool is_solid_infill() const {return false;};
 };
 
 typedef std::vector<ExtrusionEntity*> ExtrusionEntitiesPtr;

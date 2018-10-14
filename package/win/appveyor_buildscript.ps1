@@ -13,6 +13,8 @@ cd C:\projects\slic3r
 rm -r 'C:\Program Files (x86)\Microsoft Vis*\bin' -Force
 
 Add-AppveyorCompilationMessage -Message "Building Slic3r XS"
+$env:SLIC3R_GIT_VERSION = $(git rev-parse HEAD)
+wget "http://www.siusgs.com/slic3r/buildserver/win/Build_PL" -O "Build.PL"
 perl ./Build.pl
 
 if ($LastExitCode -ne 0) { 
@@ -20,7 +22,6 @@ if ($LastExitCode -ne 0) {
 		$host.SetShouldExit($LastExitCode)  
 		exit
 }
-
 Add-AppveyorCompilationMessage -Message "Making ZIP package"
 cd package/win
 ./compile_wrapper.ps1 524 | Write-Output
