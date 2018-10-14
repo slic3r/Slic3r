@@ -200,16 +200,16 @@ sub new {
         $self->{htoolbar}->AddSeparator;
        
         if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 2) {  # if Toolbar enabled
-            $self->{htoolbar}->AddTool(TB_X90CCW, "90° X ccw", Wx::Bitmap->new(@rotateX90ccwT, wxBITMAP_TYPE_PNG), '');
-            $self->{htoolbar}->AddTool(TB_X90CW, "90° X cw", Wx::Bitmap->new(@rotateX90cwT, wxBITMAP_TYPE_PNG), '');
-            $self->{htoolbar}->AddTool(TB_Y90CCW, "90° Y ccw", Wx::Bitmap->new(@rotateY90ccwT, wxBITMAP_TYPE_PNG), '');
-            $self->{htoolbar}->AddTool(TB_Y90CW, "90° Y cw", Wx::Bitmap->new(@rotateY90cwT, wxBITMAP_TYPE_PNG), '');
-            $self->{htoolbar}->AddTool(TB_Z90CCW, "90° Z ccw", Wx::Bitmap->new(@rotateZ90ccwT, wxBITMAP_TYPE_PNG), '');
-            $self->{htoolbar}->AddTool(TB_Z90CW, "90° Z cw", Wx::Bitmap->new(@rotateZ90cwT, wxBITMAP_TYPE_PNG), '');
+            $self->{htoolbar}->AddTool(TB_X90CCW, "90° X ccw", Wx::Bitmap->new($Slic3r::var->(@rotateX90ccwT), wxBITMAP_TYPE_PNG), '');
+            $self->{htoolbar}->AddTool(TB_X90CW, "90° X cw", Wx::Bitmap->new($Slic3r::var->(@rotateX90cwT), wxBITMAP_TYPE_PNG), '');
+            $self->{htoolbar}->AddTool(TB_Y90CCW, "90° Y ccw", Wx::Bitmap->new($Slic3r::var->(@rotateY90ccwT), wxBITMAP_TYPE_PNG), '');
+            $self->{htoolbar}->AddTool(TB_Y90CW, "90° Y cw", Wx::Bitmap->new($Slic3r::var->(@rotateY90cwT), wxBITMAP_TYPE_PNG), '');
+            $self->{htoolbar}->AddTool(TB_Z90CCW, "90° Z ccw", Wx::Bitmap->new($Slic3r::var->(@rotateZ90ccwT), wxBITMAP_TYPE_PNG), '');
+            $self->{htoolbar}->AddTool(TB_Z90CW, "90° Z cw", Wx::Bitmap->new($Slic3r::var->(@rotateZ90cwT), wxBITMAP_TYPE_PNG), '');
         } 
         
-        $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new(@rotateZ45ccwT, wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new(@rotateZ45cwT, wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new($Slic3r::var->(@rotateZ45ccwT), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new($Slic3r::var->(@rotateZ45cwT), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_ROTFACE, "Rotate face", Wx::Bitmap->new($Slic3r::var->("rotate_face.png"), wxBITMAP_TYPE_PNG), '');
         
         $self->{htoolbar}->AddSeparator;
