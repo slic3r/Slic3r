@@ -2367,6 +2367,8 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
             speed = m_config.get_abs_value("top_solid_infill_speed");
         } else if (path.role() == erGapFill) {
             speed = m_config.get_abs_value("gap_fill_speed");
+        } else if (path.role() == erNone) {
+            speed = m_config.get_abs_value("travel_speed");
         } else {
             CONFESS("Invalid speed");
         }
