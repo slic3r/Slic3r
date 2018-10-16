@@ -395,8 +395,16 @@ PrintConfigDef::PrintConfigDef()
     def->label = L("External perimeters first");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Print contour perimeters from the outermost one to the innermost one "
-                   "instead of the default inverse order.");
+        "instead of the default inverse order.");
     def->cli = "external-perimeters-first!";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("perimeter_loop", coBool);
+    def->label = L("Looping perimeters");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Join the perimeters to create only one continuous extrusion without any z-hop."
+        " Long inside travel (from external to holes) are not extruded to give some place to the infill.");
+    def->cli = "loop-perimeter!";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("extra_perimeters", coBool);

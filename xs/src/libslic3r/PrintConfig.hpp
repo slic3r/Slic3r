@@ -433,6 +433,7 @@ public:
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
+    ConfigOptionBool                perimeter_loop;
     ConfigOptionBool                extra_perimeters;
     ConfigOptionBool                only_one_perimeter_top;
     ConfigOptionFloat               fill_angle;
@@ -485,6 +486,7 @@ protected:
         OPT_PTR(external_perimeter_extrusion_width);
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
+        OPT_PTR(perimeter_loop);
         OPT_PTR(extra_perimeters);
         OPT_PTR(only_one_perimeter_top);
         OPT_PTR(fill_angle);

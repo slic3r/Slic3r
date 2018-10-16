@@ -1938,8 +1938,8 @@ struct MyLayerExtruded
             *this->m_polygons_to_extrude = union_(*this->m_polygons_to_extrude, true);
         }
         // 2) Merge the extrusions.
-        this->extrusions.insert(this->extrusions.end(), other.extrusions.begin(), other.extrusions.end());
-        other.extrusions.clear();
+        this->extrusions.entities.insert(this->extrusions.entities.end(), other.extrusions.entities.begin(), other.extrusions.entities.end());
+        other.extrusions.entities.clear();
         // 3) Merge the infill polygons.
         Slic3r::polygons_append(this->layer->polygons, std::move(other.layer->polygons));
         this->layer->polygons = union_(this->layer->polygons, true);
@@ -1954,7 +1954,7 @@ struct MyLayerExtruded
     // The source layer. It carries the height and extrusion type (bridging / non bridging, extrusion height).
     PrintObjectSupportMaterial::MyLayer  *layer;
     // Collect extrusions. They will be exported sorted by the bottom height.
-    ExtrusionEntitiesPtr                  extrusions;
+    ExtrusionEntityCollection            extrusions;
     // In case the extrusions are non-empty, m_polygons_to_extrude may contain the rest areas yet to be filled by additional support.
     // This is useful mainly for the loop interfaces, which are generated before the zig-zag infills.
     Polygons                             *m_polygons_to_extrude;
@@ -2188,7 +2188,7 @@ void LoopInterfaceProcessor::generate(MyLayerExtruded &top_contact_layer, const 
 
     // Transform loops into ExtrusionPath objects.
     extrusion_entities_append_paths(
-        top_contact_layer.extrusions,
+        top_contact_layer.extrusions.entities,
         STDMOVE(loop_lines),
         erSupportMaterialInterface, flow.mm3_per_mm(), flow.width, flow.height);
 }
@@ -2215,7 +2215,7 @@ static std::string dbg_index_to_color(int idx)
 // to stick too firmly to the object.
 void modulate_extrusion_by_overlapping_layers(
     // Extrusions generated for this_layer.
-    ExtrusionEntitiesPtr                               &extrusions_in_out,
+    ExtrusionEntityCollection                          &extrusions_in_out,
     const PrintObjectSupportMaterial::MyLayer          &this_layer,
     // Multiple layers overlapping with this_layer, sorted bottom up.
     const PrintObjectSupportMaterial::MyLayersPtr      &overlapping_layers)
@@ -2225,10 +2225,12 @@ void modulate_extrusion_by_overlapping_layers(
         // The extrusions do not overlap with any other extrusion.
         return;
 
+    ExtrusionEntityCollection flatten_extrusions_in_out = extrusions_in_out.flatten();
+
     // Get the initial extrusion parameters.
-    ExtrusionPath *extrusion_path_template = dynamic_cast<ExtrusionPath*>(extrusions_in_out.front());
+    ExtrusionPath *extrusion_path_template = dynamic_cast<ExtrusionPath*>(flatten_extrusions_in_out.entities.front());
     assert(extrusion_path_template != nullptr);
-    ExtrusionRole extrusion_role  = extrusion_path_template->role();
+    ExtrusionRole extrusion_role = extrusion_path_template->role();
     float         extrusion_width = extrusion_path_template->width;
 
     struct ExtrusionPathFragment
@@ -2301,7 +2303,7 @@ void modulate_extrusion_by_overlapping_layers(
     // Collect the paths of this_layer.
     {
         Polylines &polylines = path_fragments.back().polylines;
-        for (ExtrusionEntitiesPtr::const_iterator it = extrusions_in_out.begin(); it != extrusions_in_out.end(); ++ it) {
+        for (ExtrusionEntitiesPtr::const_iterator it = flatten_extrusions_in_out.entities.begin(); it != flatten_extrusions_in_out.entities.end(); ++it) {
             ExtrusionPath *path = dynamic_cast<ExtrusionPath*>(*it);
             assert(path != nullptr);
             polylines.emplace_back(Polyline(std::move(path->polyline)));
@@ -2436,18 +2438,18 @@ void modulate_extrusion_by_overlapping_layers(
         if (!multipath.paths.empty()) {
             if (multipath.paths.size() == 1) {
                 // This path was not fragmented.
-                extrusions_in_out.push_back(new ExtrusionPath(std::move(multipath.paths.front())));
+                extrusions_in_out.entities.push_back(new ExtrusionPath(std::move(multipath.paths.front())));
             } else {
                 // This path was fragmented. Copy the collection as a whole object, so the order inside the collection will not be changed
                 // during the chaining of extrusions_in_out.
-                extrusions_in_out.push_back(new ExtrusionMultiPath(std::move(multipath)));
+                extrusions_in_out.entities.push_back(new ExtrusionMultiPath(std::move(multipath)));
             }
         }
     }
     // If there are any non-consumed fragments, add them separately.
     //FIXME this shall not happen, if the Clipper works as expected and all paths split to fragments could be re-connected.
     for (auto it_fragment = path_fragments.begin(); it_fragment != path_fragments.end(); ++ it_fragment)
-        extrusion_entities_append_paths(extrusions_in_out, std::move(it_fragment->polylines), extrusion_role, it_fragment->mm3_per_mm, it_fragment->width, it_fragment->height);
+        extrusion_entities_append_paths(extrusions_in_out.entities, std::move(it_fragment->polylines), extrusion_role, it_fragment->mm3_per_mm, it_fragment->width, it_fragment->height);
 }
 
 void PrintObjectSupportMaterial::generate_toolpaths(
@@ -2742,7 +2744,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                 }
                 fill_expolygons_generate_paths(
                     // Destination
-                    layer_ex.extrusions, 
+                    layer_ex.extrusions.entities, 
                     // Regions to fill
                     union_ex(layer_ex.polygons_to_extrude(), true),
                     // Filler and its parameters
@@ -2794,13 +2796,13 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     // TODO: use offset2_ex()
                     to_infill = offset_ex(to_infill, - 0.4 * float(flow.scaled_spacing()));
                     extrusion_entities_append_paths(
-                        base_layer.extrusions, 
+                        base_layer.extrusions.entities,
                         to_polylines(STDMOVE(to_infill_polygons)),
                         erSupportMaterial, flow.mm3_per_mm(), flow.width, flow.height);
                 }
                 fill_expolygons_generate_paths(
                     // Destination
-                    base_layer.extrusions, 
+                    base_layer.extrusions.entities,
                     // Regions to fill
                     STDMOVE(to_infill), 
                     // Filler and its parameters

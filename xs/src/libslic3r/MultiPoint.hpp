@@ -76,6 +76,8 @@ public:
     bool intersection(const Line& line, Point* intersection) const;
     bool first_intersection(const Line& line, Point* intersection) const;
     std::string dump_perl() const;
+    // Projection of a point onto the lines defined by the points.
+    virtual Point point_projection(const Point &point) const;
     
     static Points _douglas_peucker(const Points &points, const double tolerance);
 };

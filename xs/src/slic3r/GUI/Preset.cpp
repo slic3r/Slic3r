@@ -307,7 +307,7 @@ const std::vector<std::string>& Preset::print_options()
         "wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging",
         "only_one_perimeter_top", "single_extruder_multi_material_priming", "compatible_printers", "compatible_printers_condition", "inherits", 
         "infill_dense", "infill_dense_algo", "no_perimeter_unsupported", "min_perimeter_unsupported", "noperi_bridge_only",
-        "support_material_solid_first_layer", "exact_last_layer_height"
+        "support_material_solid_first_layer", "exact_last_layer_height", "perimeter_loop"
     };
     return s_opts;
 }

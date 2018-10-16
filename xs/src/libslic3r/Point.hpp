@@ -46,6 +46,8 @@ public:
     Point& operator+=(const Point& rhs) { this->x += rhs.x; this->y += rhs.y; return *this; }
     Point& operator-=(const Point& rhs) { this->x -= rhs.x; this->y -= rhs.y; return *this; }
     Point& operator*=(const coord_t& rhs) { this->x *= rhs; this->y *= rhs;   return *this; }
+    //Point& operator=(const Point& p) { this->x = p.x; this->y = p.y;          return *this; }
+    //Point& operator=(Point&& p) { this->x = p.x; this->y = p.y;               return *this; }
 
     std::string wkt() const;
     std::string dump_perl() const;
