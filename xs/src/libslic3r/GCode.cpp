@@ -594,7 +594,6 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
         for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
             const double line_length = line->length() * SCALING_FACTOR;
             const double multiplicator = std::cos(line->angle());
-            std::cout << multiplicator << '\n';
             path_length += line_length;
             gcode += this->writer.extrude_to_xyz(
                 this->point3_to_gcode(line->b),
@@ -683,7 +682,11 @@ GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
     
     // Move Z down if necessary
     if (needs_zmove) {
-        gcode += this->writer.travel_to_z(unscale(point.z), "Move down after moving");
+        float move_z = unscale(point.z);
+        if(point.z == -1.0f) {
+            move_z = this->layer->print_z;
+        }
+        gcode += this->writer.travel_to_z(move_z, "Move down after moving");
     }
     
     return gcode;

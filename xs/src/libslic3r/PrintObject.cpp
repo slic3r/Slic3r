@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <vector>
 #include "SVG.hpp"
-#include <time.h> 
 
 namespace Slic3r {
 
@@ -574,17 +573,11 @@ PrintObject::project_nonplanar_surfaces()
     //TODO check when steps should be invalidated
     if (this->state.is_done(posNonplanarProjection)) return;
     this->state.set_started(posNonplanarProjection);
-    double time1=0.0, tstart;      // time measurment variables
-     tstart = clock(); 
     parallelize<Layer*>(
         std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
         boost::bind(&Slic3r::Layer::project_nonplanar_surfaces, _1),
         this->_print->config.threads.value
     );
-    
-    time1 += clock() - tstart;     // end
-    time1 = time1/CLOCKS_PER_SEC;  // rescale to seconds
-    std::cout << "time " << time1 << '\n';
 
     this->state.set_done(posNonplanarProjection);
 }
