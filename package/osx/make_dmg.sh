@@ -151,3 +151,12 @@ fi
 
 echo "Creating dmg file...."
 hdiutil create -fs HFS+ -srcfolder "$appfolder" -volname "$appname" "$dmgfile"
+
+if [[ -e "${KEYCHAIN_FILE}" ]]; then
+    echo "Signing app dmg..."
+    chmod +w $dmgfile
+    security list-keychains -s "${KEYCHAIN_FILE}"
+    security default-keychain -s "${KEYCHAIN_FILE}"
+    security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
+    codesign --sign "${KEYCHAIN_IDENTITY}" "$dmgfile"
+fi
