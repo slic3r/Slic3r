@@ -1046,6 +1046,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Optional information');
             $optgroup->append_single_option_line('filament_density', 0);
             $optgroup->append_single_option_line('filament_cost', 0);
+            $optgroup->append_single_option_line('filament_settings_id', 0);
         }
     }
     

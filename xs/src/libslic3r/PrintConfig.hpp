@@ -336,6 +336,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionFloats              filament_cost;
     ConfigOptionFloats              filament_max_volumetric_speed;
     ConfigOptionStrings             filament_notes;
+    ConfigOptionStrings             filament_settings_id;
     ConfigOptionBool                gcode_comments;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionBool                label_printed_objects;
@@ -380,6 +381,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(filament_cost);
         OPT_PTR(filament_max_volumetric_speed);
         OPT_PTR(filament_notes);
+        OPT_PTR(filament_settings_id);
         OPT_PTR(gcode_comments);
         OPT_PTR(gcode_flavor);
         OPT_PTR(label_printed_objects);

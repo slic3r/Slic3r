@@ -447,8 +447,15 @@ PrintConfigDef::PrintConfigDef()
         def->default_value = opt;
     }
     
-    def = this->add("filament_settings_id", coString);
-    def->default_value = new ConfigOptionString("");
+    def = this->add("filament_settings_id", coStrings);
+    def->label = __TRANS("Custom GCode ID");
+    def->tooltip = __TRANS("Identifer for this filament. Used to mark specific filament profiles for custom gcode.");
+    def->cli = "filament-settings-id=s@";
+    {
+        ConfigOptionStrings* opt = new ConfigOptionStrings();
+        opt->values.push_back("");
+        def->default_value = opt;
+    }
     
     def = this->add("fill_angle", coFloat);
     def->label = __TRANS("Fill angle");
