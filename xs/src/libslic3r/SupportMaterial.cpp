@@ -3263,13 +3263,13 @@ void PrintObjectSupportMaterial::generate_toolpaths(
             }
 
             layer_cache.overlaps.reserve(4);
-            if (! bottom_contact_layer.empty())
+            if (!bottom_contact_layer.empty() && !bottom_contact_layer.extrusions.empty())
                 layer_cache.overlaps.push_back(&bottom_contact_layer);
-            if (! top_contact_layer.empty())
+            if (!top_contact_layer.empty() && !top_contact_layer.extrusions.empty())
                 layer_cache.overlaps.push_back(&top_contact_layer);
-            if (! interface_layer.empty())
+            if (!interface_layer.empty() && !interface_layer.extrusions.empty())
                 layer_cache.overlaps.push_back(&interface_layer);
-            if (! base_layer.empty())
+            if (!base_layer.empty() && !base_layer.extrusions.empty())
                 layer_cache.overlaps.push_back(&base_layer);
             // Sort the layers with the same print_z coordinate by their heights, thickest first.
             std::sort(layer_cache.overlaps.begin(), layer_cache.overlaps.end(), [](const LayerCacheItem &lc1, const LayerCacheItem &lc2) { return lc1.layer_extruded->layer->height > lc2.layer_extruded->layer->height; });
