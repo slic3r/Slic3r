@@ -292,7 +292,7 @@ const std::vector<std::string>& Preset::print_options()
         "top_solid_infill_speed", "support_material_speed", "support_material_xy_spacing", "support_material_interface_speed",
         "bridge_speed", "gap_fill", "gap_fill_speed", "travel_speed", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
         "bridge_acceleration", "first_layer_acceleration", "default_acceleration", "skirts", "skirt_distance", "skirt_height",
-        "min_skirt_length", "brim_width", "support_material", "support_material_threshold", "support_material_enforce_layers", 
+        "min_skirt_length", "brim_width", "support_material", "support_material_auto", "support_material_threshold", "support_material_enforce_layers", 
         "raft_layers", "support_material_pattern", "support_material_with_sheath", "support_material_spacing", 
         "support_material_synchronize_layers", "support_material_angle", "support_material_interface_layers", 
         "support_material_interface_spacing", "support_material_interface_contact_loops", "support_material_contact_distance", 
@@ -420,7 +420,14 @@ void PresetCollection::load_presets(const std::string &dir_path, const std::stri
             try {
                 Preset preset(m_type, name, false);
                 preset.file = dir_entry.path().string();
-                preset.load(keys);
+                DynamicPrintConfig &config = preset.load(keys);
+                // Report configuration fields, which are misplaced into a wrong group.
+                std::string incorrect_keys;
+                if (config.remove_keys_not_in(this->default_preset().config, incorrect_keys) > 0)
+                    BOOST_LOG_TRIVIAL(error) << "Error in \"" << dir_entry.path().string() << "\": The preset contains the following incorrect keys: " << 
+                        incorrect_keys << ", which were ignored";
+                // Normalize once again to set the length of the filament specific vectors to 1.
+                Preset::normalize(config);
                 m_presets.emplace_back(preset);
             } catch (const std::runtime_error &err) {
                 errors_cummulative += err.what();
