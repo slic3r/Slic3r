@@ -948,7 +948,10 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                         break;
                     }
                 }
-                if (idx_before == (size_t)-1) std::cout << "ERROR: idx_before can't be finded\n";
+                if (idx_before == (size_t)-1) {
+                    std::cout << "ERROR: idx_before can't be finded\n";
+                    continue;
+                }
 
                 Points &my_polyline_points = outer_start->polyline.points;
                 my_polyline_points.erase(my_polyline_points.begin() + idx_before + 1, my_polyline_points.end());
@@ -976,6 +979,7 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
 
             //FIXME: if child_loop has no point or 1 point or not enough space !!!!!!!
             const size_t child_paths_size = child_loop.paths.size();
+            if (child_paths_size == 0) continue;
             my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + 1, child_loop.paths.begin(), child_loop.paths.end());
             for (size_t i = 0; i < child_paths_size; i++)  path_is_ccw.insert(path_is_ccw.begin() + nearest.idx_polyline_outter + 1, !cut_path_is_ccw);
             
@@ -986,12 +990,20 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
             ExtrusionPath *inner_end = &my_loop.paths[nearest.idx_polyline_outter + child_paths_size];
             //TRIM
             //choose trim direction
-            if (outer_start->polyline.points.size() == 1) {
+            if (outer_start->polyline.points.size() == 1 && outer_end->polyline.points.size() == 1) {
+                //do nothing
+            } else if (outer_start->polyline.points.size() == 1) {
                 outer_end->polyline.clip_start(outer_end_spacing);
-                my_loop.paths[nearest.idx_polyline_outter + child_paths_size].polyline.clip_end(inner_child_spacing);
+                if (inner_end->polyline.length() > inner_child_spacing)
+                    inner_end->polyline.clip_end(inner_child_spacing);
+                else
+                    inner_end->polyline.clip_end(inner_end->polyline.length() / 2);
             } else if (outer_end->polyline.points.size() == 1) {
                 outer_start->polyline.clip_end(outer_start_spacing);
-                inner_start->polyline.clip_start(inner_child_spacing);
+                if (inner_start->polyline.length() > inner_child_spacing)
+                    inner_start->polyline.clip_start(inner_child_spacing);
+                else
+                    inner_start->polyline.clip_start(inner_start->polyline.length()/2);
             } else {
                 coord_t length_poly_1 = outer_start->polyline.length();
                 coord_t length_poly_2 = outer_end->polyline.length();
