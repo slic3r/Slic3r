@@ -15,7 +15,7 @@ leave cmd window open
 
 start git bash
 > cd /c
-> git clone http://github.com/alexrj/slic3r
+> git clone http://github.com/slic3r/slic3r
 > cd slic3r
 > git checkout cppsvg
 close git bash when done

@@ -16,7 +16,7 @@ Slic3r is:
 * **Open:** it is totally **open source** and it's **independent from any commercial company** or printer manufacturer. We want to keep 3D printing open and free.
 * **Compatible:** it supports all the known G-code dialects (Marlin, Repetier, Mach3, LinuxCNC, Machinekit, Smoothie, Makerware, Sailfish).
 * **Advanced:** many configuration options allow for fine-tuning and full control. While novice users often need just few options, Slic3r is mostly used by advanced users.
-* **Community-driven:** new features or issues are discussed in the [GitHub repository](https://github.com/alexrj/Slic3r/issues). Join our collaborative effort and help improve it!
+* **Community-driven:** new features or issues are discussed in the [GitHub repository](https://github.com/slic3r/Slic3r/issues). Join our collaborative effort and help improve it!
 * **Robust:** the codebase includes more than 1,000 unit and regression tests, collected in 6 years of development.
 * **Modular:** the core of Slic3r is libslic3r, a C++ library that provides a granular API and reusable components.
 * **Embeddable:** a complete and powerful command line interface allows to use Slic3r from the shell or to integrate it in server-side applications.
@@ -47,22 +47,22 @@ The core parts of Slic3r are written in C++11, with multithreading. The graphica
 You can download a precompiled package from [slic3r.org](http://slic3r.org/) (releases) or from [dl.slicr3r.org](http://dl.slic3r.org/dev/) (automated builds).
 
 If you want to compile the source yourself follow the instructions on one of these wiki pages:
-* [Linux](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
-* [Windows](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-Windows)
-* [Mac OSX](https://github.com/alexrj/Slic3r/wiki/Running-Slic3r-from-git-on-OS-X)
+* [Linux](https://github.com/slic3r/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
+* [Windows](https://github.com/slic3r/Slic3r/wiki/Running-Slic3r-from-git-on-Windows)
+* [Mac OSX](https://github.com/slic3r/Slic3r/wiki/Running-Slic3r-from-git-on-OS-X)
 
 ### Can I help?
 
 Sure! You can do the following to find things that are available to help with:
 
 * Development
-	* [Low Effort tasks](https://github.com/alexrj/Slic3r/labels/Low%20Effort): pick one of them!
-	* [Help Wanted tasks](https://github.com/alexrj/Slic3r/labels/help%20wanted): pick one of them!
-	* [More available tasks](https://github.com/alexrj/Slic3r/milestone/32): let's discuss together before you start working on them
+	* [Low Effort tasks](https://github.com/slic3r/Slic3r/labels/Low%20Effort): pick one of them!
+	* [Help Wanted tasks](https://github.com/slic3r/Slic3r/labels/help%20wanted): pick one of them!
+	* [More available tasks](https://github.com/slic3r/Slic3r/milestone/32): let's discuss together before you start working on them
 	* Please comment in the related GitHub issue that you are working on it so that other people know.
-* Contribute to the [Manual](http://manual.slic3r.org/)! (see its [GitHub repository](https://github.com/alexrj/Slic3r-Manual))
+* Contribute to the [Manual](http://manual.slic3r.org/)! (see its [GitHub repository](https://github.com/slic3r/Slic3r-Manual))
 * You can also find us in #slic3r on [FreeNode](https://webchat.freenode.net): talk to _Sound_, _LoH_ or the other members of the Slic3r community.
-* Add an [issue](https://github.com/alexrj/Slic3r/issues) to the GitHub tracker if it isn't already present.
+* Add an [issue](https://github.com/slic3r/Slic3r/issues) to the GitHub tracker if it isn't already present.
 * Drop Alessandro a line at aar@cpan.org.
 * Drop Joseph a line at lenox.joseph@gmail.com
 
@@ -80,7 +80,7 @@ Sure! You can do the following to find things that are available to help with:
 
 ### Acknowledgements
 
-The main author of Slic3r is Alessandro Ranellucci (@alexrj, *Sound* in IRC, [@alranel](http://twitter.com/alranel) on Twitter), who started the project in 2011.
+The main author of Slic3r is Alessandro Ranellucci (@alranel, *Sound* in IRC, [@alranel](http://twitter.com/alranel) on Twitter), who started the project in 2011.
 
 Joseph Lenox (@lordofhyphens, *LoH* in IRC, [@LenoxPlay](http://twitter.com/LenoxPlay) on Twitter) is the current co-maintainer.
 

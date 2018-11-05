@@ -510,7 +510,7 @@ PrintObject::bridge_over_infill()
             
             /*
             # exclude infill from the layers below if needed
-            # see discussion at https://github.com/alexrj/Slic3r/issues/240
+            # see discussion at https://github.com/slic3r/Slic3r/issues/240
             # Update: do not exclude any infill. Sparse infill is able to absorb the excess material.
             if (0) {
                 my $excess = $layerm->extruders->{infill}->bridge_flow->width - $layerm->height;
