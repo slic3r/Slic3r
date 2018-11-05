@@ -100,7 +100,7 @@ sub _init_tabpanel {
         $panel->OnActivate if $panel->can('OnActivate');
         if ($self->{tabpanel}->GetSelection > 1) {
             $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
-        } elsif(($Slic3r::GUI::Settings->{_}{show_host} == 0) && ($self->{tabpanel}->GetSelection == 1)){
+        } elsif(!$Slic3r::GUI::Settings->{_}{show_host} && ($self->{tabpanel}->GetSelection == 1)){
             $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
         } else {
             $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag & ~wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
@@ -290,7 +290,17 @@ sub _init_menubar {
             $self->select_tab(0);
         }, undef, 'application_view_tile.png');
         wxTheApp->append_menu_item($windowMenu, "&Controller\tCtrl+Y", 'Show the printer controller', sub {
-            $self->select_tab(1);
+            if ($Slic3r::GUI::Settings->{_}{show_host}) {
+                $self->select_tab(1);
+            } else {
+                my $confirm = Wx::MessageDialog->new($self, "The printer controller is currently disabled in the preferences. Do you want to enable it?",
+                    'Controller', wxICON_QUESTION | wxYES_NO | wxYES_DEFAULT);
+                if ($confirm->ShowModal == wxID_YES) {
+                    $Slic3r::GUI::Settings->{_}{show_host} = 1;
+                    wxTheApp->save_settings;
+                    Slic3r::GUI::show_info($self, "The controller is now enabled. You must restart Slic3r now to make the change effective.", "Controller");
+                }
+            }
         }, undef, 'printer_empty.png');
         wxTheApp->append_menu_item($windowMenu, "DLP Projector…\tCtrl+P", 'Open projector window for DLP printing', sub {
             $self->{plater}->pause_background_process;

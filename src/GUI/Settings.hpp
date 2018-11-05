@@ -26,7 +26,7 @@ enum class ReloadBehavior {
 /// TODO: Incorporate the system from libslic3r
 class Settings { 
     public:
-        bool show_host {false};
+        bool show_host {true};
         bool version_check {true};
         bool autocenter {true};
         bool autoalignz {true};
