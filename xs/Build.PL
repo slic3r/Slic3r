@@ -127,7 +127,7 @@ if (defined $ENV{BOOST_LIBRARYPATH}) {
     push @boost_libs, $ENV{BOOST_LIBRARYPATH}
 } elsif (defined $ENV{BOOST_DIR}) {
     # User might have provided a path relative to the Build.PL in the main directory
-    foreach my $subdir ("$ENV{BOOST_DIR}/stage/lib", "../$ENV{BOOST_DIR}/stage/lib") {
+    foreach my $subdir ("$ENV{BOOST_DIR}/stage/lib", "../$ENV{BOOST_DIR}/stage/lib", "$ENV{BOOST_DIR}/lib", "../$ENV{BOOST_DIR}/lib") {
         next if $subdir =~ m{^\.\.//};
         printf "Checking %s: ", $subdir;
         if (-d $subdir) {
