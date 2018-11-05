@@ -28,10 +28,6 @@
 #include <stddef.h>
 #include <boost/detail/endian.hpp>
 
-#ifndef BOOST_LITTLE_ENDIAN
-#error "admesh works correctly on little endian machines only!"
-#endif
-
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     #include "windows.h"
     #define ADMESH_CHAR wchar_t
