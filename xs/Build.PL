@@ -93,11 +93,16 @@ if (defined $ENV{BOOST_INCLUDEDIR}) {
 } elsif (defined $ENV{BOOST_DIR}) {
     # User might have provided a path relative to the Build.PL in the main directory
     foreach my $subdir ($ENV{BOOST_DIR}, "../$ENV{BOOST_DIR}", "$ENV{BOOST_DIR}/include", "../$ENV{BOOST_DIR}/include") {
+        next if $subdir =~ m{^\.\.//};
+        printf "Checking %s: ", $subdir;
         if (-d $subdir) {
             push @boost_include, $subdir;
+            print "found\n";
+        } else {
+            print "not found\n";
         }
     }
-    die "Invalid BOOST_DIR: no such directory\n" if !@boost_include;
+    die "Invalid BOOST_DIR: could not find Boost headers\n" if !@boost_include;
 } else {
     # Boost library was not defined by the environment.
     # Try to guess at some default paths.
@@ -123,11 +128,16 @@ if (defined $ENV{BOOST_LIBRARYPATH}) {
 } elsif (defined $ENV{BOOST_DIR}) {
     # User might have provided a path relative to the Build.PL in the main directory
     foreach my $subdir ("$ENV{BOOST_DIR}/stage/lib", "../$ENV{BOOST_DIR}/stage/lib") {
+        next if $subdir =~ m{^\.\.//};
+        printf "Checking %s: ", $subdir;
         if (-d $subdir) {
             push @boost_libs, $subdir;
+            print "found\n";
+        } else {
+            print "not found\n";
         }
     }
-    die "Invalid BOOST_DIR: no such directory\n" if !@boost_libs;
+    die "Invalid BOOST_DIR: could not find Boost libs\n" if !@boost_libs;
 } else {
     # Boost library was not defined by the environment.
     # Try to guess at some default paths.
