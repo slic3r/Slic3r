@@ -133,7 +133,7 @@ PrintGCode::output()
 
     auto filament_extruder {0U};
     for(const auto& start_gcode : config.start_filament_gcode.values) {
-        gcodegen.placeholder_parser->set("filament_extruder", filament_extruder++);
+        gcodegen.placeholder_parser->set("filament_extruder_id", filament_extruder++);
         fh << apply_math(gcodegen.placeholder_parser->process(start_gcode));
     }
     
@@ -283,7 +283,7 @@ PrintGCode::output()
 
     auto filament_extruder {0U};
     for(const auto& end_gcode : config.end_filament_gcode.values) {
-        gcodegen.placeholder_parser->set("filament_extruder", filament_extruder++);
+        gcodegen.placeholder_parser->set("filament_extruder_id", filament_extruder++);
         fh << apply_math(gcodegen.placeholder_parser->process(end_gcode));
     }
 
