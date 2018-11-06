@@ -160,7 +160,10 @@ sub export {
     $self->_print_first_layer_temperature(0)
         if $include_start_extruder_temp;
     printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($self->config->start_gcode));
+    my $filament_extruder = 0;
     foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
+        $gcodegen->placeholder_parser->set("filament_extruder_id", $filament_extruder);
+        $filament_extruder++;
         printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($start_gcode));
     }
     $self->_print_first_layer_temperature(1)
@@ -303,7 +306,10 @@ sub export {
     # write end commands to file
     print $fh $gcodegen->retract;   # TODO: process this retract through PressureRegulator in order to discharge fully
     print $fh $gcodegen->writer->set_fan(0);
+    my $filament_extruder = 0;
     foreach my $end_gcode (@{ $self->config->end_filament_gcode }) { # Process filament-specific gcode in extruder order.
+        $gcodegen->placeholder_parser->set("filament_extruder_id", $filament_extruder);
+        $filament_extruder++;
         printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($end_gcode));
     }
     printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($self->config->end_gcode));

@@ -131,7 +131,9 @@ PrintGCode::output()
     // Apply gcode math to start gcode
     fh << apply_math(gcodegen.placeholder_parser->process(config.start_gcode.value));
 
+    auto filament_extruder {0U};
     for(const auto& start_gcode : config.start_filament_gcode.values) {
+        gcodegen.placeholder_parser->set("filament_extruder", filament_extruder++);
         fh << apply_math(gcodegen.placeholder_parser->process(start_gcode));
     }
     
@@ -278,7 +280,10 @@ PrintGCode::output()
 
     // Write end commands to file.
     fh << gcodegen.retract(); // TODO: process this retract through PressureRegulator in order to discharge fully
+
+    auto filament_extruder {0U};
     for(const auto& end_gcode : config.end_filament_gcode.values) {
+        gcodegen.placeholder_parser->set("filament_extruder", filament_extruder++);
         fh << apply_math(gcodegen.placeholder_parser->process(end_gcode));
     }
 
