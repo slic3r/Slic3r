@@ -306,7 +306,7 @@ sub export {
     # write end commands to file
     print $fh $gcodegen->retract;   # TODO: process this retract through PressureRegulator in order to discharge fully
     print $fh $gcodegen->writer->set_fan(0);
-    my $filament_extruder = 0;
+    $filament_extruder = 0;
     foreach my $end_gcode (@{ $self->config->end_filament_gcode }) { # Process filament-specific gcode in extruder order.
         $gcodegen->placeholder_parser->set("filament_extruder_id", $filament_extruder);
         $filament_extruder++;
