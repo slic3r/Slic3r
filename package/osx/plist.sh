@@ -18,11 +18,7 @@ cat << EOF > $plistfile
   <key>CFBundleShortVersionString</key>
 EOF
 
-if [ $TAGGED ]; then
-    echo "  <string>Slic3r $SLIC3R_BUILD_ID</string>" >>$plistfile
-else
-    echo "  <string>Slic3r $SLIC3R_BUILD_ID-$(git rev-parse --short head)</string>" >>$plistfile
-fi
+echo "  <string>Slic3r $SLIC3R_BUILD_ID</string>" >>$plistfile
 
 cat << EOF >> $plistfile
   <key>CFBundleIdentifier</key>
