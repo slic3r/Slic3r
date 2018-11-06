@@ -147,10 +147,16 @@ if [[ -e "${KEYCHAIN_FILE}" ]]; then
     security default-keychain -s "${KEYCHAIN_FILE}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
     codesign --sign "${KEYCHAIN_IDENTITY}" --deep "$appfolder"
+else
+    echo "No KEYCHAIN_FILE env variable; skipping codesign"
 fi
 
 echo "Creating dmg file...."
 hdiutil create -fs HFS+ -srcfolder "$appfolder" -volname "$appname" "$dmgfile"
+
+# Compress the DMG image
+hdiutil convert "$dmgfile" -format UDZO -imagekey zlib-level=9 -o "$dmgfile-compressed.dmg"
+mv "$dmgfile-compressed.dmg" "$dmgfile"
 
 if [[ -e "${KEYCHAIN_FILE}" ]]; then
     echo "Signing app dmg..."
