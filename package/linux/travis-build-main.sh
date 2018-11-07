@@ -31,10 +31,7 @@ tar -C$HOME/perl5/perlbrew/perls -xjf $CACHE/slic3r-perlbrew-5.24.tar.bz2
 tar -C$HOME -xjf $CACHE/boost-compiled.tar.bz2
 tar -C$HOME -xjf $CACHE/wx${WXVERSION}.tar.bz2
 
-export PERLBREW_SKIP_INIT=0
 source $HOME/perl5/perlbrew/etc/bashrc
 perlbrew switch slic3r-perl
 
-# CXX=g++-4.9 ?
-# CC=g++-4.9 ?
-SLIC3R_STATIC=1 CC=gcc-7 CXX=g++-7 BOOST_DIR=$HOME/boost_1_63_0 perl ./Build.PL
+SLIC3R_STATIC=1 CC=g++-4.9 CXX=g++-4.9 BOOST_DIR=$HOME/boost_1_63_0 perl ./Build.PL

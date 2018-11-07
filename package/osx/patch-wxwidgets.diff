@@ -17,7 +17,7 @@ diff --git src/osx/core/bitmap.cpp src/osx/core/bitmap.cpp
 index 3c61c173e7..3322b605fc 100644
 --- src/osx/core/bitmap.cpp
 +++ src/osx/core/bitmap.cpp
-@@ -35,10 +35,6 @@ IMPLEMENT_DYNAMIC_CLASS(wxMask, wxObject)
+@@ -35,10 +35,6 @@
  #include "wx/osx/private.h"
  #endif
  
@@ -32,7 +32,7 @@ diff --git src/stc/scintilla/src/Editor.cxx src/stc/scintilla/src/Editor.cxx
 index cd72953ae7..a3ee41c49b 100644
 --- src/stc/scintilla/src/Editor.cxx
 +++ src/stc/scintilla/src/Editor.cxx
-@@ -5841,9 +5841,9 @@ void Editor::GoToLine(int lineNo) {
+@@ -5841,9 +5841,9 @@
  }
  
  static bool Close(Point pt1, Point pt2) {
