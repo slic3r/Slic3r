@@ -1,5 +1,7 @@
 #!/bin/bash
-set -euo pipefail
+
+# This is too strict for source $HOME/perl5/perlbrew/etc/bashrc:
+### set -euo pipefail
 
 mkdir -p $CACHE
 
