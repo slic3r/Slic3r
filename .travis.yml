@@ -20,7 +20,7 @@ before_install:
 script:
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$BUILD_PL" == true  ]]; then ./package/linux/travis-build-main.sh; fi
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$BUILD_PL" == false ]]; then ./package/linux/travis-build-cpp.sh; fi
-    - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$BUILD_PL" == true  ]]; then ./package/osx/travis-build-main.sh; fi
+    - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$BUILD_PL" == true  ]]; then travis_wait 60 ./package/osx/travis-build-main.sh; fi
     - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$BUILD_PL" == false ]]; then ./package/osx/travis-build-cpp.sh; fi
 
 branches:
