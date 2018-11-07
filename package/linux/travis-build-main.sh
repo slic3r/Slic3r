@@ -29,6 +29,7 @@ tar -C$HOME/perl5/perlbrew/perls -xjf $CACHE/slic3r-perlbrew-5.24.tar.bz2
 tar -C$HOME -xjf $CACHE/boost-compiled.tar.bz2
 tar -C$HOME -xjf $CACHE/wx${WXVERSION}.tar.bz2
 
+export PERLBREW_SKIP_INIT=0
 source $HOME/perl5/perlbrew/etc/bashrc
 perlbrew switch slic3r-perl
 

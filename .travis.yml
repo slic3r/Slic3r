@@ -1,4 +1,18 @@
+# TravisCI configuration for Slic3r - https://slic3r.org
+# 
+# We build Linux and macOS versions on TravisCI, both the main program
+# (perl/C++) and the pure C++ one.
+# 
+# Each job performs the following steps:
+# - install dependencies (cached across builds)
+# - build
+# - test
+# - package
+# - deploy to dl.slic3r.org
+
 language: generic
+dist: trusty
+
 before_install:
     - sh package/common/travis-decrypt-key
     - export SLIC3R_GIT_VERSION=$(git rev-parse HEAD)
@@ -33,8 +47,6 @@ addons:
     - wx-common
   ssh_known_hosts: dl.slic3r.org
 
-dist: trusty
-
 matrix:
     include:
         - os: linux
@@ -43,15 +55,11 @@ matrix:
             - CACHE=$HOME/cache
           cache:
             directories:
-              - "$HOME/local-lib"
+              - $HOME/cache
+              - local-lib
           after_success:
-            - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
-            - cd package/linux && make -f build_shell.mk && mv Slic3r* $TRAVIS_BUILD_DIR && cd $TRAVIS_BUILD_DIR
-            - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
-            - package/linux/appimage.sh x86_64
-            - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
-            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
-            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
+            - package/linux/travis-deploy-main.sh
+
         - os: linux
           env: 
             - BUILD_PL=false
@@ -59,21 +67,22 @@ matrix:
           cache:
             apt: true
             directories:
-              - "$HOME/cache"
+              - $HOME/cache
           after_success:
-            - cp slic3r ../
-            - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
-            - package/linux/appimage.sh x86_64
-            - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
-            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
-            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
+            - package/linux/travis-deploy-cpp.sh
+
         - os: osx
           osx_image: xcode9.4
           env:
             - BUILD_PL=true
           cache:
             directories:
-              - "$HOME/local-lib"
+              - /usr/local/Homebrew
+              - $HOME/Library/Caches/Homebrew
+              - local-lib
+          after_success:
+            - package/osx/travis-deploy-main.sh
+
         - os: osx
           osx_image: xcode9.4
           env:
@@ -82,6 +91,7 @@ matrix:
           cache:
             ccache: true
             directories:
+              - /usr/local/Homebrew
               - $HOME/cache
               - $HOME/Library/Caches/Homebrew
 
