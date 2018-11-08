@@ -9,7 +9,7 @@ export BOOST_DIR=/usr/local
 perl ./Build.PL
 
 # Only recompile Wx if it's not already there
-if !(perl -MWx -e1 2> /dev/null); then
+if !(perl -MWx -e1); then
     # our patch-wxwidgets.diff assumes Alien::wxWidgets installs wxWidgets 3.0.2
     PERL_USE_UNSAFE_INC=1 \
         CXX="clang++ -mmacosx-version-min=10.12" \
