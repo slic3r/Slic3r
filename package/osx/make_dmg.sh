@@ -7,6 +7,15 @@ set -euo pipefail
 # Adapted from script written by bubnikv for Prusa3D.
 # Run from slic3r repo root directory.
 
+# While we might have a pp executable in our path, it might not be
+# using the perl binary we have in path, so make sure they belong
+# to the same Perl instance:
+if !(perl -Mlocal::lib=local-lib -MPAR::Packer -e1 2> /dev/null); then
+    echo "The PAR::Packer module was not found; installing..."
+    cpanm --local-lib local-lib PAR::Packer
+    exit 1
+fi
+
 WD=$(dirname $0)
 appname=Slic3r
 
@@ -59,6 +68,7 @@ PkgInfoContents="APPL????"
 source $WD/plist.sh
 
 # Our slic3r dir and location of perl
+eval $(perl -Mlocal::lib=local-lib)
 PERL_BIN=$(which perl)
 PP_BIN=$(which pp)
 SLIC3R_DIR=$(perl -MCwd=realpath -e "print realpath '${WD}/../../'")

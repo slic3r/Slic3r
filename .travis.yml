@@ -15,12 +15,12 @@ dist: trusty
 
 before_install:
     - sh package/common/travis-decrypt-key
-    - export SLIC3R_GIT_VERSION=$(git rev-parse HEAD)
+    - export SLIC3R_GIT_VERSION=$(git rev-parse --short HEAD)
 
 script:
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "main" ]]; then ./package/linux/travis-build-main.sh; fi
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "cpp"  ]]; then ./package/linux/travis-build-cpp.sh; fi
-    - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "main" ]]; then travis_wait 60 ./package/osx/travis-build-main.sh; fi
+    - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "main" ]]; then ./package/osx/travis-build-main.sh; fi
     - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "cpp"  ]]; then ./package/osx/travis-build-cpp.sh; fi
 
 branches:
