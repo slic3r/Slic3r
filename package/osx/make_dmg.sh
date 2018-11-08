@@ -13,7 +13,6 @@ set -euo pipefail
 if !(perl -Mlocal::lib=local-lib -MPAR::Packer -e1 2> /dev/null); then
     echo "The PAR::Packer module was not found; installing..."
     cpanm --local-lib local-lib PAR::Packer
-    exit 1
 fi
 
 WD=$(dirname $0)
