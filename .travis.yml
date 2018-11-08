@@ -8,7 +8,7 @@
 # - build
 # - test
 # - package
-# - deploy to dl.slic3r.org
+# - deploy to dl.slic3r.org (except for the cppgui branch)
 
 language: generic
 dist: trusty
@@ -52,13 +52,14 @@ matrix:
         - os: linux
           env:
             - BUILD_PL=true
-            - CACHE=$HOME/cache
           cache:
             directories:
-              - $HOME/cache
+              - $HOME/boost_1_63_0
+              - $HOME/perl5
+              - $HOME/wx302
               - local-lib
           after_success:
-            - package/linux/travis-deploy-main.sh
+            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/linux/travis-deploy-main.sh; fi
 
         - os: linux
           env: 
@@ -81,7 +82,7 @@ matrix:
               - $HOME/Library/Caches/Homebrew
               - local-lib
           after_success:
-            - package/osx/travis-deploy-main.sh
+            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/osx/travis-deploy-main.sh; fi
 
         - os: osx
           osx_image: xcode9.4

@@ -6,7 +6,7 @@ brew install boost perl cpanminus
 
 export SLIC3R_STATIC=1
 export BOOST_DIR=/usr/local
-#perl ./Build.PL
+perl ./Build.PL
 
 # Only recompile Wx if it's not already there
 if !(perl -MWx -e1 2> /dev/null); then
