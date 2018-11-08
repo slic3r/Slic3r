@@ -8,6 +8,8 @@ brew link --overwrite perl cpanminus
 export SLIC3R_STATIC=1
 export BOOST_DIR=/usr/local
 #perl ./Build.PL
+
+export LIBRARY_PATH=/usr/local/lib
 cpanm -v --reinstall --local-lib local-lib Alien::wxWidgets
 cpanm -v --reinstall --local-lib local-lib Wx
 perl ./Build.PL --gui
