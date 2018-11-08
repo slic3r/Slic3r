@@ -27,7 +27,6 @@ branches:
   only:
   - master
   - cppgui
-  - osxbuild
 
 addons:
   apt:
