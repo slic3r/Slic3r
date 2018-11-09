@@ -131,9 +131,9 @@ find -d $macosfolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
     -or -name Calendar -or -name DataView \
     -or -name DateTime -or -name Media -or -name PerlTest \
     -or -name Ribbon \) -exec rm -rf "{}" \;
-find -d $macosfolder/local-lib -name libwx_osx_cocoau_ribbon-3.0.0.2.0.dylib -delete
-find -d $macosfolder/local-lib -name libwx_osx_cocoau_stc-3.0.0.2.0.dylib -delete
-find -d $macosfolder/local-lib -name libwx_osx_cocoau_webview-3.0.0.2.0.dylib -delete
+find -d $macosfolder/local-lib -name libwx_osx_cocoau_ribbon-3.* -delete
+find -d $macosfolder/local-lib -name libwx_osx_cocoau_stc-3.* -delete
+find -d $macosfolder/local-lib -name libwx_osx_cocoau_webview-3.* -delete
 rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include
 find -d $macosfolder/local-lib -type d -empty -delete
 
@@ -145,7 +145,6 @@ KEYCHAIN_FILE_=${KEYCHAIN_FILE:-}
 if [ ! -z $KEYCHAIN_FILE_ ]; then
     echo "Signing app..."
     chmod -R +w $macosfolder/*
-    xattr -cr $appfolder
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE_}"
