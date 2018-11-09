@@ -2,10 +2,10 @@
 set -euo pipefail
 
 brew update -v
-brew upgrade boost     || brew install boost
-brew upgrade perl      || brew install perl
-brew upgrade cpanminus || brew install cpanminus
-brew upgrade wxwidgets || brew install wxwidgets
+brew install boost     || brew upgrade boost
+brew install perl      || brew upgrade perl
+brew install cpanminus || brew upgrade cpanminus
+brew install wxwidgets || brew upgrade wxwidgets
 brew link --overwrite perl cpanminus
 
 export SLIC3R_STATIC=1

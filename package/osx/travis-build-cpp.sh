@@ -8,7 +8,7 @@ mkdir -p $CACHE
 
 ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )&
 brew update -v
-brew upgrade ccache || brew install ccache
+brew install ccache || brew upgrade ccache
 
 if [[ "$WXVERSION" != "pkg" ]]; then
     WXVER_EXPANDED=${WXVERSION:0:1}.${WXVERSION:1:1}.${WXVERSION:2:1}
@@ -26,7 +26,7 @@ if [[ "$WXVERSION" != "pkg" ]]; then
     export PATH=${PATH}:${WXDIR}
     cd $TRAVIS_BUILD_DIR # go back to the build dir
 else
-    brew upgrade wxmac || brew install wxmac # install via homebrew
+    brew install wxmac || brew upgrade wxmac # install via homebrew
 fi
 
 mkdir build && cd build
