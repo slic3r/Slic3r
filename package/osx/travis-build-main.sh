@@ -11,3 +11,6 @@ perl ./Build.PL
 
 export LIBRARY_PATH=/usr/local/lib
 perl ./Build.PL --gui
+
+# Install PAR::Packer now so that it gets cached by Travis
+cpanm --local-lib local-lib PAR::Packer

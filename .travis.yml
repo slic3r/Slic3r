@@ -72,7 +72,7 @@ matrix:
             - package/linux/travis-deploy-cpp.sh
 
         - os: osx
-          osx_image: xcode6.4 # OS X 10.10
+          osx_image: xcode8 # OS X 10.11
           env:
             - TARGET=main
           cache:

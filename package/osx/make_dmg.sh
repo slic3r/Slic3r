@@ -25,18 +25,17 @@ if [ $(git describe --exact-match &>/dev/null) ]; then
     SLIC3R_BUILD_ID=$(git describe)
 else
     # Get the current branch
-    if [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
-        current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
+    if [ ! -z ${GIT_BRANCH+x} ]; then
+        echo "Setting to GIT_BRANCH"
+        current_branch=$(echo $GIT_BRANCH | cut -d / -f 2)
+    elif [ ! -z ${TRAVIS_BRANCH+x} ]; then
+        echo "Setting to TRAVIS_BRANCH"
+        current_branch=$TRAVIS_BRANCH
+    elif [ ! -z ${APPVEYOR_REPO_BRANCH+x} ]; then
+        echo "Setting to APPVEYOR_REPO_BRANCH"
+        current_branch=$APPVEYOR_REPO_BRANCH
     else
-        current_branch="unknown"
-        if [ ! -z ${GIT_BRANCH+x} ]; then
-            echo "Setting to GIT_BRANCH"
-            current_branch=$(echo $GIT_BRANCH | cut -d / -f 2)
-        fi
-        if [ ! -z ${APPVEYOR_REPO_BRANCH+x} ]; then
-            echo "Setting to APPVEYOR_REPO_BRANCH"
-            current_branch=$APPVEYOR_REPO_BRANCH
-        fi
+        current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
     fi
     
     if [ "$current_branch" == "master" ]; then
@@ -52,8 +51,6 @@ fi
 
 dmgfile=slic3r-${SLIC3R_BUILD_ID}.dmg
 echo "DMG filename: ${dmgfile}"
-
-# If we're on a branch, add the branch name to the app name.
 
 rm -rf $WD/_tmp
 mkdir -p $WD/_tmp
