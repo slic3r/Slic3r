@@ -20,7 +20,7 @@ before_install:
 script:
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "main" ]]; then ./package/linux/travis-build-main.sh; fi
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "cpp"  ]]; then ./package/linux/travis-build-cpp.sh; fi
-    - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "main" ]]; then travis_wait 60 ./package/osx/travis-build-main.sh; fi
+    - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "main" ]]; then ./package/osx/travis-build-main.sh; fi
     - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "cpp"  ]]; then ./package/osx/travis-build-cpp.sh; fi
 
 branches:
@@ -72,7 +72,8 @@ matrix:
             - package/linux/travis-deploy-cpp.sh
 
         - os: osx
-          osx_image: xcode8 # OS X 10.11
+          #osx_image: xcode8 # OS X 10.11
+          osx_image: xcode9.2 # OS X 10.12
           env:
             - TARGET=main
           cache:
