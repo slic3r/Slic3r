@@ -143,6 +143,7 @@ echo $PkgInfoContents >$appfolder/Contents/PkgInfo
 if [[ -e "${KEYCHAIN_FILE}" ]]; then
     echo "Signing app..."
     chmod -R +w $macosfolder/*
+    xattr -cr $macosfolder # fix x attributes for this path
     security list-keychains -s "${KEYCHAIN_FILE}"
     security default-keychain -s "${KEYCHAIN_FILE}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE}"
