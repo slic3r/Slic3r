@@ -145,6 +145,7 @@ KEYCHAIN_FILE_=${KEYCHAIN_FILE:-}
 if [ ! -z $KEYCHAIN_FILE_ ]; then
     echo "Signing app..."
     chmod -R +w $macosfolder/*
+    xattr -cr $appfolder
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE_}"
