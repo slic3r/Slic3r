@@ -16,48 +16,48 @@ sub new {
     my $class = shift;
     my ($parent, %params) = @_;
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxBK_LEFT | wxTAB_TRAVERSAL);
-    
+
     $self->{presets} = wxTheApp->presets->{$self->name};
-    
+
     # horizontal sizer
     $self->{sizer} = Wx::BoxSizer->new(wxHORIZONTAL);
     #$self->{sizer}->SetSizeHints($self);
     $self->SetSizer($self->{sizer});
-    
+
     # left vertical sizer
     my $left_sizer = Wx::BoxSizer->new(wxVERTICAL);
     $self->{sizer}->Add($left_sizer, 0, wxEXPAND | wxLEFT | wxTOP | wxBOTTOM, 3);
-    
+
     my $left_col_width = -1;
-    
+
     # preset chooser
     {
-        
+
         # choice menu
         $self->{presets_choice} = Wx::Choice->new($self, -1, wxDefaultPosition, [$left_col_width, -1], []);
         $self->{presets_choice}->SetFont($Slic3r::GUI::small_font);
-        
+
         # buttons
-        $self->{btn_save_preset} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("disk.png"), wxBITMAP_TYPE_PNG), 
+        $self->{btn_save_preset} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("disk.png"), wxBITMAP_TYPE_PNG),
             wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
-        $self->{btn_delete_preset} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG), 
+        $self->{btn_delete_preset} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG),
             wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
         $self->{btn_save_preset}->SetToolTipString("Save current " . lc($self->title));
         $self->{btn_delete_preset}->SetToolTipString("Delete this preset");
         $self->{btn_delete_preset}->Disable;
-        
+
         ### These cause GTK warnings:
         ###my $box = Wx::StaticBox->new($self, -1, "Presets:", wxDefaultPosition, [$left_col_width, 50]);
         ###my $hsizer = Wx::StaticBoxSizer->new($box, wxHORIZONTAL);
-        
+
         my $hsizer = Wx::BoxSizer->new(wxHORIZONTAL);
-        
+
         $left_sizer->Add($hsizer, 0, wxEXPAND | wxBOTTOM, 5);
         $hsizer->Add($self->{presets_choice}, 1, wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
         $hsizer->Add($self->{btn_save_preset}, 0, wxALIGN_CENTER_VERTICAL);
         $hsizer->Add($self->{btn_delete_preset}, 0, wxALIGN_CENTER_VERTICAL);
     }
-    
+
     # tree
     $self->{treectrl} = Wx::TreeCtrl->new($self, -1, wxDefaultPosition, [$left_col_width, -1], wxTR_NO_BUTTONS | wxTR_HIDE_ROOT | wxTR_SINGLE | wxTR_NO_LINES | wxBORDER_SUNKEN | wxWANTS_CHARS);
     $left_sizer->Add($self->{treectrl}, 1, wxEXPAND);
@@ -85,50 +85,50 @@ sub new {
             $event->Skip;
         }
     });
-    
+
     EVT_CHOICE($parent, $self->{presets_choice}, sub {
         $self->_on_select_preset;
     });
-    
+
     EVT_BUTTON($self, $self->{btn_save_preset}, sub { $self->save_preset });
-    
+
     EVT_BUTTON($self, $self->{btn_delete_preset}, sub {
         my $res = Wx::MessageDialog->new($self, "Are you sure you want to delete the selected preset?", 'Delete Preset', wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION)->ShowModal;
         return unless $res == wxID_YES;
-        
+
         $self->current_preset->delete;
         $self->current_preset(undef);
         wxTheApp->load_presets;
         $self->load_presets;
         $self->select_preset(0, 1);
     });
-    
+
     $self->config(Slic3r::Config->new_from_defaults($self->options));
-    
+
     $self->build;
     $self->update_tree;
     $self->load_presets;
     $self->_update;
-    
+
     return $self;
 }
 
 # This is called by the save button.
 sub save_preset {
     my ($self) = @_;
-    
+
     # since buttons (and choices too) don't get focus on Mac, we set focus manually
     # to the treectrl so that the EVT_* events are fired for the input field having
     # focus currently. is there anything better than this?
     $self->{treectrl}->SetFocus;
-    
+
     my $preset = $self->current_preset;
     $preset->save_prompt($self);
     $self->load_presets;
     $self->select_preset_by_name($preset->name);
-    
+
     $self->{on_save_preset}->($self->name, $preset) if $self->{on_save_preset};
-    
+
     return 1;
 }
 
@@ -161,14 +161,14 @@ sub on_preset_loaded {}
 
 sub select_preset {
     my ($self, $i, $force) = @_;
-    
+
     $self->{presets_choice}->SetSelection($i);
     $self->_on_select_preset($force);
 }
 
 sub select_preset_by_name {
     my ($self, $name, $force) = @_;
-    
+
     my $presets = wxTheApp->presets->{$self->name};
     my $i = first { $presets->[$_]->name eq $name } 0..$#$presets;
     if (!defined $i) {
@@ -181,7 +181,7 @@ sub select_preset_by_name {
 
 sub prompt_unsaved_changes {
     my ($self) = @_;
-    
+
     return 1 if !$self->current_preset;
     return $self->current_preset->prompt_unsaved_changes($self);
 }
@@ -193,15 +193,15 @@ sub on_select_preset {
 
 sub _on_select_preset {
     my ($self, $force) = @_;
-    
+
     # This method is called:
     # - upon first initialization;
     # - whenever user selects a preset from the dropdown;
     # - whenever select_preset() or select_preset_by_name() are called.
-    
+
     # Get the selected name.
     my $preset = wxTheApp->presets->{$self->name}->[$self->{presets_choice}->GetSelection];
-    
+
     # If selection didn't change, do nothing.
     # (But still reset current_preset because it might contain an older object of the
     # current preset)
@@ -209,7 +209,7 @@ sub _on_select_preset {
         $self->current_preset($preset);
         return;
     }
-    
+
     # If we have unsaved changes, prompt user.
     if (!$force && !$self->prompt_unsaved_changes) {
         # User decided not to save the current changes, so we restore the previous selection.
@@ -218,21 +218,21 @@ sub _on_select_preset {
         $self->{presets_choice}->SetSelection($i);
         return;
     }
-    
+
     $self->current_preset($preset);
-    
-    # We reload presets in order to remove the "(modified)" suffix in case user was 
+
+    # We reload presets in order to remove the "(modified)" suffix in case user was
     # prompted and chose to discard changes.
     $self->load_presets;
-    
+
     $self->reload_preset;
-    
+
     eval {
         local $SIG{__WARN__} = Slic3r::GUI::warning_catcher($self);
         ($preset->default || $preset->external)
             ? $self->{btn_delete_preset}->Disable
             : $self->{btn_delete_preset}->Enable;
-        
+
         $self->_update;
         $self->on_preset_loaded;
     };
@@ -240,20 +240,20 @@ sub _on_select_preset {
         $@ = "I was unable to load the selected config file: $@";
         Slic3r::GUI::catch_error($self);
     }
-    
+
     $self->{on_select_preset}->($self->name, $preset) if $self->{on_select_preset};
 }
 
 sub add_options_page {
     my $self = shift;
     my ($title, $icon, %params) = @_;
-    
+
     if ($icon) {
         my $bitmap = Wx::Bitmap->new($Slic3r::var->($icon), wxBITMAP_TYPE_PNG);
         $self->{icons}->Add($bitmap);
         $self->{iconcount}++;
     }
-    
+
     my $page = Slic3r::GUI::PresetEditor::Page->new($self, $title, $self->{iconcount});
     $page->Hide;
     $self->{sizer}->Add($page, 1, wxEXPAND | wxLEFT, 5);
@@ -263,7 +263,7 @@ sub add_options_page {
 
 sub reload_preset {
     my ($self) = @_;
-    
+
     $self->current_preset->load_config if !$self->current_preset->_loaded;
     $self->config->clear;
     $self->config->apply($self->current_preset->dirty_config);
@@ -272,16 +272,16 @@ sub reload_preset {
 
 sub reload_config {
     my $self = shift;
-    
+
     $_->reload_config for @{$self->{pages}};
 }
 
 sub update_tree {
     my ($self) = @_;
-    
+
     # get label of the currently selected item
     my $selected = $self->{treectrl}->GetItemText($self->{treectrl}->GetSelection);
-    
+
     my $rootItem = $self->{treectrl}->GetRootItem;
     $self->{treectrl}->DeleteChildren($rootItem);
     my $have_selection = 0;
@@ -294,7 +294,7 @@ sub update_tree {
             $have_selection = 1;
         }
     }
-    
+
     if (!$have_selection) {
         # this is triggered on first load, so we don't disable the sel change event
         $self->{treectrl}->SelectItem($self->{treectrl}->GetFirstChild($rootItem));
@@ -303,12 +303,12 @@ sub update_tree {
 
 sub load_presets {
     my $self = shift;
-    
+
     my $presets = wxTheApp->presets->{$self->name};
     $self->{presets_choice}->Clear;
     foreach my $preset (@$presets) {
         $self->{presets_choice}->Append($preset->dropdown_name);
-        
+
         # Preserve selection.
         if ($self->current_preset && $self->current_preset->name eq $preset->name) {
             $self->{presets_choice}->SetSelection($self->{presets_choice}->GetCount-1);
@@ -321,7 +321,7 @@ sub load_presets {
 sub _load_config {
     my $self = shift;
     my ($config) = @_;
-    
+
     my $diff = $self->config->diff($config);
     $self->config->set($_, $config->get($_)) for @$diff;
     # First apply all changes, then call all the _on_value_change triggers.
@@ -332,7 +332,7 @@ sub _load_config {
 
 sub get_field {
     my ($self, $opt_key, $opt_index) = @_;
-    
+
     foreach my $page (@{ $self->{pages} }) {
         my $field = $page->get_field($opt_key, $opt_index);
         return $field if defined $field;
@@ -343,7 +343,7 @@ sub get_field {
 sub set_value {
     my $self = shift;
     my ($opt_key, $value) = @_;
-    
+
     my $changed = 0;
     foreach my $page (@{ $self->{pages} }) {
         $changed = 1 if $page->set_value($opt_key, $value);
@@ -353,23 +353,23 @@ sub set_value {
 
 sub _compatible_printers_widget {
     my ($self) = @_;
-    
+
     return sub {
         my ($parent) = @_;
-        
+
         my $checkbox = $self->{compatible_printers_checkbox} = Wx::CheckBox->new($parent, -1, "All");
-        
+
         my $btn = $self->{compatible_printers_btn} = Wx::Button->new($parent, -1, "Set…", wxDefaultPosition, wxDefaultSize,
             wxBU_LEFT | wxBU_EXACTFIT);
         $btn->SetFont($Slic3r::GUI::small_font);
         if ($Slic3r::GUI::have_button_icons) {
             $btn->SetBitmap(Wx::Bitmap->new($Slic3r::var->("printer_empty.png"), wxBITMAP_TYPE_PNG));
         }
-        
+
         my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $sizer->Add($checkbox, 0, wxALIGN_CENTER_VERTICAL);
         $sizer->Add($btn, 0, wxALIGN_CENTER_VERTICAL);
-        
+
         EVT_CHECKBOX($self, $checkbox, sub {
             if ($checkbox->GetValue) {
                 $btn->Disable;
@@ -377,21 +377,21 @@ sub _compatible_printers_widget {
                 $btn->Enable;
             }
         });
-        
+
         EVT_BUTTON($self, $btn, sub {
             my @presets = map $_->name, grep !$_->default && !$_->external,
                 @{wxTheApp->presets->{printer}};
-            
+
             my $dlg = Wx::MultiChoiceDialog->new($self,
                 "Select the printers this profile is compatible with.",
                 "Compatible printers", \@presets);
-            
+
             my @selections = ();
             foreach my $preset_name (@{ $self->config->get('compatible_printers') }) {
                 push @selections, first { $presets[$_] eq $preset_name } 0..$#presets;
             }
             $dlg->SetSelections(@selections);
-            
+
             if ($dlg->ShowModal == wxID_OK) {
                 my $value = [ @presets[$dlg->GetSelections] ];
                 if (!@$value) {
@@ -402,14 +402,14 @@ sub _compatible_printers_widget {
                 $self->_on_value_change('compatible_printers');
             }
         });
-        
+
         return $sizer;
     };
 }
 
 sub _reload_compatible_printers_widget {
     my ($self) = @_;
-    
+
     if (@{ $self->config->get('compatible_printers') }) {
         $self->{compatible_printers_checkbox}->SetValue(0);
         $self->{compatible_printers_btn}->Enable;
@@ -443,15 +443,15 @@ sub options {
         seam_position external_perimeters_first
         fill_density fill_pattern top_infill_pattern bottom_infill_pattern fill_gaps
         infill_every_layers infill_only_where_needed
-        solid_infill_every_layers fill_angle solid_infill_below_area 
+        solid_infill_every_layers fill_angle solid_infill_below_area
         only_retract_when_crossing_perimeters infill_first
-        max_print_speed max_volumetric_speed
-        perimeter_speed small_perimeter_speed external_perimeter_speed infill_speed 
-        solid_infill_speed top_solid_infill_speed support_material_speed 
+        max_print_speed max_volumetric_speed small_perimeter_length
+        perimeter_speed small_perimeter_speed external_perimeter_speed infill_speed
+        solid_infill_speed top_solid_infill_speed support_material_speed
         support_material_interface_speed bridge_speed gap_fill_speed
         travel_speed
         first_layer_speed
-        perimeter_acceleration infill_acceleration bridge_acceleration 
+        perimeter_acceleration infill_acceleration bridge_acceleration
         first_layer_acceleration default_acceleration
         skirts skirt_distance skirt_height min_skirt_length
         brim_connections_width brim_width interior_brim_width
@@ -470,8 +470,8 @@ sub options {
         support_material_extruder support_material_interface_extruder
         ooze_prevention standby_temperature_delta
         interface_shells regions_overlap
-        extrusion_width first_layer_extrusion_width perimeter_extrusion_width 
-        external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
+        extrusion_width first_layer_extrusion_width perimeter_extrusion_width
+        external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width
         top_infill_extrusion_width support_material_extrusion_width
         support_material_interface_extrusion_width infill_overlap bridge_flow_ratio
         xy_size_compensation resolution shortcuts compatible_printers
@@ -481,10 +481,10 @@ sub options {
 
 sub build {
     my $self = shift;
-    
+
     my $shortcuts_widget = sub {
         my ($parent) = @_;
-        
+
         my $Options = $Slic3r::Config::Options;
         my %options = (
             map { $_ => sprintf('%s > %s', $Options->{$_}{category}, $Options->{$_}{full_label} // $Options->{$_}{label}) }
@@ -492,22 +492,22 @@ sub build {
         );
         my @opt_keys = sort { $options{$a} cmp $options{$b} } keys %options;
         $self->{shortcuts_opt_keys} = [ @opt_keys ];
-        
+
         my $listbox = $self->{shortcuts_list} = Wx::CheckListBox->new($parent, -1,
             wxDefaultPosition, [-1, 320], [ map $options{$_}, @opt_keys ]);
-        
+
         EVT_CHECKLISTBOX($self, $listbox, sub {
             my $value = [ map $opt_keys[$_], grep $listbox->IsChecked($_), 0..$#opt_keys ];
             $self->config->set('shortcuts', $value);
             $self->_on_value_change('shortcuts');
         });
-        
+
         my $sizer = Wx::BoxSizer->new(wxVERTICAL);
         $sizer->Add($listbox, 0, wxEXPAND);
-        
+
         return $sizer;
     };
-    
+
     {
         my $page = $self->add_options_page('Layers and perimeters', 'layers.png');
         {
@@ -549,7 +549,7 @@ sub build {
             $optgroup->append_single_option_line('external_perimeters_first');
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Infill', 'infill.png');
         {
@@ -580,7 +580,7 @@ sub build {
             $optgroup->append_single_option_line('infill_first');
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Skirt and brim', 'box.png');
         {
@@ -597,7 +597,7 @@ sub build {
             $optgroup->append_single_option_line('brim_connections_width');
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Support material', 'building.png');
         {
@@ -632,8 +632,8 @@ sub build {
             my $optgroup = $page->new_optgroup('Speed for print moves');
             $optgroup->append_single_option_line($_, undef, width => 100)
                 for qw(perimeter_speed small_perimeter_speed external_perimeter_speed
-                    infill_speed solid_infill_speed top_solid_infill_speed
-                    gap_fill_speed bridge_speed
+                    small_perimeter_length infill_speed solid_infill_speed
+                    top_solid_infill_speed gap_fill_speed bridge_speed
                     support_material_speed support_material_interface_speed
                 );
         }
@@ -659,7 +659,7 @@ sub build {
             $optgroup->append_single_option_line('max_volumetric_speed');
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Multiple extruders', 'funnel.png');
         {
@@ -681,7 +681,7 @@ sub build {
             $optgroup->append_single_option_line('interface_shells');
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Advanced', 'wand.png');
         {
@@ -692,7 +692,7 @@ sub build {
                 for qw(extrusion_width first_layer_extrusion_width
                     perimeter_extrusion_width external_perimeter_extrusion_width
                     infill_extrusion_width solid_infill_extrusion_width
-                    top_infill_extrusion_width support_material_interface_extrusion_width 
+                    top_infill_extrusion_width support_material_interface_extrusion_width
                     support_material_extrusion_width);
         }
         {
@@ -709,7 +709,7 @@ sub build {
             $optgroup->append_single_option_line('resolution');
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Output options', 'page_white_go.png');
         {
@@ -729,7 +729,7 @@ sub build {
             my $optgroup = $page->new_optgroup('Output file');
             $optgroup->append_single_option_line('gcode_comments');
             $optgroup->append_single_option_line('label_printed_objects');
-            
+
             {
                 my $option = $optgroup->get_option('output_filename_format');
                 $option->full_width(1);
@@ -746,7 +746,7 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Notes', 'note.png');
         {
@@ -759,7 +759,7 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Shortcuts', 'wrench.png');
         {
@@ -787,23 +787,23 @@ sub build {
 
 sub reload_config {
     my ($self) = @_;
-    
+
     $self->_reload_compatible_printers_widget;
-    
+
     {
         my %shortcuts = map { $_ => 1 } @{ $self->config->get('shortcuts') };
         for my $i (0..$#{$self->{shortcuts_opt_keys}}) {
             $self->{shortcuts_list}->Check($i, $shortcuts{ $self->{shortcuts_opt_keys}[$i] });
         }
     }
-    
+
     $self->SUPER::reload_config;
 }
 
 sub _update {
     my ($self, $key) = @_;
     my $opt_key = $key;
-    $opt_key = "all_keys" if (length($key // '') == 0); 
+    $opt_key = "all_keys" if (length($key // '') == 0);
     my $config = $self->{config};
 
     if (any { /$opt_key/ } qw(all_keys spiral_vase perimeters top_solid_layers fill_density support_material min_shell_thickness min_top_bottom_shell_thickness)) {
@@ -864,7 +864,7 @@ sub _update {
             $self->{support_material_overhangs_queried} = 0;
         }
     }
-    
+
     if (any { /$opt_key/ } qw(all_keys fill_density fill_pattern top_infill_pattern)) {
         if ($config->fill_density == 100
                 && !first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{top_infill_pattern}{values}}) {
@@ -887,7 +887,7 @@ sub _update {
     if (any { /$opt_key/ } qw(all_keys perimeters)) {
         $self->get_field($_)->toggle($have_perimeters)
             for qw(extra_perimeters thin_walls overhangs seam_position external_perimeters_first
-                    external_perimeter_extrusion_width
+                    external_perimeter_extrusion_width small_perimeter_length
                     perimeter_speed small_perimeter_speed external_perimeter_speed);
     }
 
@@ -943,26 +943,26 @@ sub _update {
     my $have_skirt = $config->skirts > 0 || $config->min_skirt_length > 0;
     $self->get_field($_)->toggle($have_skirt)
         for qw(skirt_distance skirt_height);
-    
+
     my $have_brim = $config->brim_width > 0 || $config->interior_brim_width
         || $config->brim_connections_width;
     # perimeter_extruder uses the same logic as in Print::extruders()
     $self->get_field('perimeter_extruder')->toggle($have_perimeters || $have_brim);
-    
+
     my $have_support_material = $config->support_material || $config->raft_layers > 0;
     my $have_support_interface = $config->support_material_interface_layers > 0;
     my $have_support_pillars = $have_support_material && $config->support_material_pattern eq 'pillars';
     $self->get_field($_)->toggle($have_support_material)
-        for qw(support_material_threshold support_material_pattern 
+        for qw(support_material_threshold support_material_pattern
             support_material_spacing support_material_angle
             support_material_interface_layers dont_support_bridges
             support_material_extrusion_width support_material_interface_extrusion_width
             support_material_contact_distance);
-    
-    # Disable features that need support to be enabled.            
+
+    # Disable features that need support to be enabled.
     $self->get_field($_)->toggle($config->support_material)
         for qw(support_material_max_layers);
-    
+
     # Only enable pillar configuration when using pillars
     $self->get_field($_)->toggle($have_support_pillars)
         for qw(support_material_pillar_size support_material_pillar_spacing);
@@ -970,15 +970,15 @@ sub _update {
     $self->get_field($_)->toggle($have_support_material && $have_support_interface)
         for qw(support_material_interface_spacing support_material_interface_extruder
             support_material_interface_speed);
-    
+
     $self->get_field('perimeter_extrusion_width')->toggle($have_perimeters || $have_skirt || $have_brim);
     $self->get_field('support_material_extruder')->toggle($have_support_material || $have_skirt);
     $self->get_field('support_material_speed')->toggle($have_support_material || $have_brim || $have_skirt);
-    
+
     my $have_sequential_printing = $config->complete_objects;
     $self->get_field($_)->toggle($have_sequential_printing)
         for qw(extruder_clearance_radius extruder_clearance_height);
-    
+
     my $have_ooze_prevention = $config->ooze_prevention;
     $self->get_field($_)->toggle($have_ooze_prevention)
         for qw(standby_temperature_delta);
@@ -1012,7 +1012,7 @@ sub overriding_options {
 
 sub build {
     my $self = shift;
-    
+
     {
         my $page = $self->add_options_page('Filament', 'spool.png');
         {
@@ -1023,7 +1023,7 @@ sub build {
         }
         {
             my $optgroup = $page->new_optgroup('Temperature (°C)');
-        
+
             {
                 my $line = Slic3r::GUI::OptionsGroup::Line->new(
                     label => 'Extruder',
@@ -1032,7 +1032,7 @@ sub build {
                 $line->append_option($optgroup->get_option('temperature', 0));
                 $optgroup->append_line($line);
             }
-        
+
             {
                 my $line = Slic3r::GUI::OptionsGroup::Line->new(
                     label => 'Bed',
@@ -1048,14 +1048,14 @@ sub build {
             $optgroup->append_single_option_line('filament_cost', 0);
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Cooling', 'hourglass.png');
         {
             my $optgroup = $page->new_optgroup('Enable');
             $optgroup->append_single_option_line('fan_always_on');
             $optgroup->append_single_option_line('cooling');
-            
+
             my $line = Slic3r::GUI::OptionsGroup::Line->new(
                 label       => '',
                 full_width  => 1,
@@ -1068,7 +1068,7 @@ sub build {
         }
         {
             my $optgroup = $page->new_optgroup('Fan settings');
-            
+
             {
                 my $line = Slic3r::GUI::OptionsGroup::Line->new(
                     label => 'Fan speed',
@@ -1077,7 +1077,7 @@ sub build {
                 $line->append_option($optgroup->get_option('max_fan_speed'));
                 $optgroup->append_line($line);
             }
-            
+
             $optgroup->append_single_option_line('bridge_fan_speed');
             $optgroup->append_single_option_line('disable_fan_first_layers');
         }
@@ -1124,7 +1124,7 @@ sub build {
             $optgroup->append_single_option_line($option);
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Overrides', 'wrench.png');
         {
@@ -1138,22 +1138,22 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Overrides');
             $optgroup->append_single_option_line('filament_max_volumetric_speed', 0);
-            
+
             # Populate the overrides config.
             my @overridable = $self->overriding_options;
             $self->{overrides_config} = Slic3r::Config->new;
-            
+
             # Populate the defaults with the current preset.
             $self->{overrides_default_config} = Slic3r::Config->new;
             $self->{overrides_default_config}->apply_only
                 (wxTheApp->{mainframe}->{plater}->config, \@overridable);
-            
+
             my $line = Slic3r::GUI::OptionsGroup::Line->new(
                 label       => '',
                 full_width  => 1,
                 widget      => sub {
                     my ($parent) = @_;
-                    
+
                     $self->{overrides_panel} = my $panel = Slic3r::GUI::Plater::OverrideSettingsPanel->new($parent,
                         size => [-1, 300],
                         on_change => sub {
@@ -1167,7 +1167,7 @@ sub build {
                     $panel->set_default_config($self->{overrides_default_config});
                     $panel->set_config($self->{overrides_config});
                     $panel->set_opt_keys([@overridable]);
-                    
+
                     return $panel;
                 },
             );
@@ -1178,9 +1178,9 @@ sub build {
 
 sub reload_config {
     my ($self) = @_;
-    
+
     $self->_reload_compatible_printers_widget;
-    
+
     {
         $self->{overrides_config}->clear;
         foreach my $opt_key (@{$self->{overrides_default_config}->get_keys}) {
@@ -1190,15 +1190,15 @@ sub reload_config {
         }
         $self->{overrides_panel}->update_optgroup;
     }
-    
+
     $self->SUPER::reload_config;
 }
 
 sub _update {
     my ($self) = @_;
-    
+
     $self->_update_description;
-    
+
     my $cooling = $self->{config}->cooling;
     $self->get_field($_)->toggle($cooling)
         for qw(max_fan_speed fan_below_layer_time slowdown_below_layer_time min_print_speed);
@@ -1208,9 +1208,9 @@ sub _update {
 
 sub _update_description {
     my $self = shift;
-    
+
     my $config = $self->config;
-    
+
     my $msg = "";
     my $fan_other_layers = $config->fan_always_on
         ? sprintf "will always run at %d%%%s.", $config->min_fan_speed,
@@ -1220,7 +1220,7 @@ sub _update_description {
                         ? " except for the first layer"
                         : "")
         : "will be turned off.";
-    
+
     if ($config->cooling) {
         $msg = sprintf "If estimated layer time is below ~%ds, fan will run at %d%% and print speed will be reduced so that no less than %ds are spent on that layer (however, speed will never be reduced below %dmm/s).",
             $config->slowdown_below_layer_time, $config->max_fan_speed, $config->slowdown_below_layer_time, $config->min_print_speed;
@@ -1271,14 +1271,14 @@ sub overridable_options {
 
 sub build {
     my $self = shift;
-    
+
     $self->{extruders_count} = 1;
-    
+
     {
         my $page = $self->add_options_page('General', 'printer_empty.png');
         {
             my $optgroup = $page->new_optgroup('Size and coordinates');
-            
+
             my $line = Slic3r::GUI::OptionsGroup::Line->new(
                 label => 'Bed shape',
             );
@@ -1291,7 +1291,7 @@ sub build {
                 }
             });
             $optgroup->append_line($line);
-            
+
             $optgroup->append_single_option_line('z_offset');
         }
         {
@@ -1329,13 +1329,13 @@ sub build {
             my $serial_port = $optgroup->get_option('serial_port');
             $serial_port->side_widget(sub {
                 my ($parent) = @_;
-                
+
                 my $btn = Wx::BitmapButton->new($parent, -1, Wx::Bitmap->new($Slic3r::var->("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG),
                     wxDefaultPosition, wxDefaultSize, &Wx::wxBORDER_NONE);
                 $btn->SetToolTipString("Rescan serial ports")
                     if $btn->can('SetToolTipString');
                 EVT_BUTTON($self, $btn, \&_update_serial_ports);
-                
+
                 return $btn;
             });
             $line->append_option($serial_port);
@@ -1357,8 +1357,8 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Print server upload');
 
-            $optgroup->append_single_option_line('host_type'); 
-            
+            $optgroup->append_single_option_line('host_type');
+
             my $host_line = $optgroup->create_single_option_line('print_host');
             $host_line->append_button("Browse…", "zoom.png", sub {
                 # look for devices
@@ -1491,13 +1491,13 @@ sub build {
 
 sub _update_serial_ports {
     my ($self) = @_;
-    
+
     $self->get_field('serial_port')->set_values([ wxTheApp->scan_serial_ports ]);
 }
 
 sub _extruders_count_changed {
     my ($self, $extruders_count) = @_;
-    
+
     $self->{extruders_count} = $extruders_count;
     $self->_build_extruder_pages;
     $self->_on_value_change('extruders_count');
@@ -1509,9 +1509,9 @@ sub _extruder_options { qw(nozzle_diameter min_layer_height max_layer_height ext
 
 sub _build_extruder_pages {
     my $self = shift;
-    
+
     my $default_config = Slic3r::Config::Full->new;
-    
+
     foreach my $extruder_idx (@{$self->{extruder_pages}} .. $self->{extruders_count}-1) {
         # extend options
         foreach my $opt_key ($self->_extruder_options) {
@@ -1526,7 +1526,7 @@ sub _build_extruder_pages {
             $self->config->set($opt_key, $values)
                 or die "Unable to extend $opt_key";
         }
-        
+
         # build page
         my $page = $self->{extruder_pages}[$extruder_idx] = $self->add_options_page("Extruder " . ($extruder_idx + 1), 'funnel.png');
         {
@@ -1546,7 +1546,7 @@ sub _build_extruder_pages {
             my $optgroup = $page->new_optgroup('Retraction');
             $optgroup->append_single_option_line($_, $extruder_idx)
                 for qw(retract_length retract_lift);
-            
+
             {
                 my $line = Slic3r::GUI::OptionsGroup::Line->new(
                     label => 'Only lift Z',
@@ -1555,7 +1555,7 @@ sub _build_extruder_pages {
                 $line->append_option($optgroup->get_option('retract_lift_below', $extruder_idx));
                 $optgroup->append_line($line);
             }
-            
+
             $optgroup->append_single_option_line($_, $extruder_idx)
                 for qw(retract_speed retract_restart_extra retract_before_travel retract_layer_change wipe);
         }
@@ -1565,13 +1565,13 @@ sub _build_extruder_pages {
                 for qw(retract_length_toolchange retract_restart_extra_toolchange);
         }
     }
-    
+
     # remove extra pages
     if ($self->{extruders_count} <= $#{$self->{extruder_pages}}) {
         $_->Destroy for @{$self->{extruder_pages}}[$self->{extruders_count}..$#{$self->{extruder_pages}}];
         splice @{$self->{extruder_pages}}, $self->{extruders_count};
     }
-    
+
     # remove extra config values
     foreach my $opt_key ($self->_extruder_options) {
         my $values = $self->config->get($opt_key);
@@ -1579,7 +1579,7 @@ sub _build_extruder_pages {
         $self->config->set($opt_key, $values)
             or die "Unable to truncate $opt_key";
     }
-    
+
     # rebuild page list
     @{$self->{pages}} = (
         (grep $_->{title} !~ /^Extruder \d+/, @{$self->{pages}}),
@@ -1590,9 +1590,9 @@ sub _build_extruder_pages {
 
 sub _update {
     my ($self) = @_;
-    
+
     my $config = $self->{config};
-    
+
     my $serial_speed = $self->get_field('serial_speed');
     if ($serial_speed) {
         $self->get_field('serial_speed')->toggle($config->get('serial_port'));
@@ -1609,27 +1609,27 @@ sub _update {
     }
     if (($config->get('host_type') eq 'octoprint') && eval "use LWP::UserAgent; 1") {
         $self->{print_host_test_btn}->Enable;
-    } else {    
+    } else {
         $self->{print_host_test_btn}->Disable;
     }
     $self->get_field('octoprint_apikey')->toggle($config->get('print_host'));
-    
+
     my $have_multiple_extruders = $self->{extruders_count} > 1;
     $self->get_field('toolchange_gcode')->toggle($have_multiple_extruders);
-    
+
     for my $i (0 .. ($self->{extruders_count}-1)) {
         my $have_retract_length = $config->get_at('retract_length', $i) > 0;
-        
+
         # when using firmware retraction, firmware decides retraction length
         $self->get_field('retract_length', $i)->toggle(!$config->use_firmware_retraction);
-        if ($config->use_firmware_retraction && 
-            ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier') && 
+        if ($config->use_firmware_retraction &&
+            ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier') &&
             ($config->get_at('retract_length_toolchange', $i) > 0 || $config->get_at('retract_restart_extra_toolchange', $i) > 0)) {
             my $dialog = Wx::MessageDialog->new($self,
                 "Retract length for toolchange on extruder " . $i . " is not available when using the Firmware Retraction mode.\n"
                 . "\nShall I disable it in order to enable Firmware Retraction?",
                 'Firmware Retraction', wxICON_WARNING | wxYES | wxNO);
-            
+
             my $new_conf = Slic3r::Config->new;
             if ($dialog->ShowModal() == wxID_YES) {
                 my $retract_length_toolchange = $config->retract_length_toolchange;
@@ -1641,11 +1641,11 @@ sub _update {
             }
             $self->_load_config($new_conf);
         }
-        
+
         # user can customize travel length if we have retraction length or we're using
         # firmware retraction
         $self->get_field('retract_before_travel', $i)->toggle($have_retract_length || $config->use_firmware_retraction);
-        
+
         # user can customize other retraction options if retraction is enabled
         # Firmware retract has Z lift built in.
         my $retraction = ($have_retract_length || $config->use_firmware_retraction);
@@ -1654,25 +1654,25 @@ sub _update {
 
         $self->get_field($_, $i)->toggle($retraction)
             for qw(retract_layer_change);
-        
+
         # retract lift above/below only applies if using retract lift
         $self->get_field($_, $i)->toggle($retraction && $config->get_at('retract_lift', $i) > 0)
             for qw(retract_lift_above retract_lift_below);
-        
+
         # some options only apply when not using firmware retraction
         $self->get_field($_, $i)->toggle($retraction && !$config->use_firmware_retraction)
             for qw(retract_restart_extra wipe);
-        
+
         # retraction speed is also used by auto-speed pressure regulator, even when
         # user enabled firmware retraction
         $self->get_field('retract_speed', $i)->toggle($retraction);
-        
+
         if ($config->use_firmware_retraction && $config->get_at('wipe', $i)) {
             my $dialog = Wx::MessageDialog->new($self,
                 "The Wipe option is not available when using the Firmware Retraction mode.\n"
                 . "\nShall I disable it in order to enable Firmware Retraction?",
                 'Firmware Retraction', wxICON_WARNING | wxYES | wxNO);
-            
+
             my $new_conf = Slic3r::Config->new;
             if ($dialog->ShowModal() == wxID_YES) {
                 my $wipe = $config->wipe;
@@ -1689,7 +1689,7 @@ sub _update {
                 "The Z Lift option is not available when using the Firmware Retraction mode.\n"
                 . "\nShall I disable it in order to enable Firmware Retraction?",
                 'Firmware Retraction', wxICON_WARNING | wxYES | wxNO);
-            
+
             my $new_conf = Slic3r::Config->new;
             if ($dialog->ShowModal() == wxID_YES) {
                 my $wipe = $config->retract_lift;
@@ -1702,12 +1702,12 @@ sub _update {
         }
 
         $self->get_field('retract_length_toolchange', $i)->toggle
-            ($have_multiple_extruders && 
+            ($have_multiple_extruders &&
             !($config->use_firmware_retraction && ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier')));
-        
+
         my $toolchange_retraction = $config->get_at('retract_length_toolchange', $i) > 0;
         $self->get_field('retract_restart_extra_toolchange', $i)->toggle
-            ($have_multiple_extruders && $toolchange_retraction && 
+            ($have_multiple_extruders && $toolchange_retraction &&
             !($config->use_firmware_retraction && ($config->gcode_flavor eq 'reprap' || $config->gcode_flavor eq 'repetier')));
     }
 }
@@ -1715,7 +1715,7 @@ sub _update {
 # this gets executed after preset is loaded and before GUI fields are updated
 sub on_preset_loaded {
     my $self = shift;
-    
+
     # update the extruders count field
     {
         # update the GUI field according to the number of nozzle diameters supplied
@@ -1728,7 +1728,7 @@ sub on_preset_loaded {
 sub load_config_file {
     my $self = shift;
     $self->SUPER::load_config_file(@_);
-    
+
     Slic3r::GUI::warning_catcher($self)->(
         "Your configuration was imported. However, Slic3r is currently only able to import settings "
         . "for the first defined filament. We recommend you don't use exported configuration files "
@@ -1747,19 +1747,19 @@ sub new {
     $self->{optgroups}  = [];
     $self->{title}      = $title;
     $self->{iconID}     = $iconID;
-    
+
     $self->{vsizer} = Wx::BoxSizer->new(wxVERTICAL);
     $self->SetSizer($self->{vsizer});
-    
+
     # http://docs.wxwidgets.org/3.0/classwx_scrolled.html#details
     $self->SetScrollRate($Slic3r::GUI::scroll_step, $Slic3r::GUI::scroll_step);
-    
+
     return $self;
 }
 
 sub new_optgroup {
     my ($self, $title, %params) = @_;
-    
+
     my $optgroup = Slic3r::GUI::ConfigOptionsGroup->new(
         parent          => $self,
         title           => $title,
@@ -1772,10 +1772,10 @@ sub new_optgroup {
             });
         },
     );
-    
+
     push @{$self->{optgroups}}, $optgroup;
     $self->{vsizer}->Add($optgroup->sizer, 0, wxEXPAND | wxALL, 10);
-    
+
     return $optgroup;
 }
 
@@ -1786,7 +1786,7 @@ sub reload_config {
 
 sub get_field {
     my ($self, $opt_key, $opt_index) = @_;
-    
+
     foreach my $optgroup (@{ $self->{optgroups} }) {
         my $field = $optgroup->get_fieldc($opt_key, $opt_index);
         return $field if defined $field;
@@ -1797,7 +1797,7 @@ sub get_field {
 sub set_value {
     my $self = shift;
     my ($opt_key, $value) = @_;
-    
+
     my $changed = 0;
     foreach my $optgroup (@{$self->{optgroups}}) {
         $changed = 1 if $optgroup->set_value($opt_key, $value);
@@ -1814,25 +1814,25 @@ sub new {
     my $class = shift;
     my ($parent, %params) = @_;
     my $self = $class->SUPER::new($parent, -1, "Save preset", wxDefaultPosition, wxDefaultSize);
-    
+
     my @values = @{$params{values}};
-    
+
     my $text = Wx::StaticText->new($self, -1, "Save profile as:", wxDefaultPosition, wxDefaultSize);
     $self->{combo} = Wx::ComboBox->new($self, -1, $params{default}, wxDefaultPosition, wxDefaultSize, \@values,
                                        wxTE_PROCESS_ENTER);
     my $buttons = $self->CreateStdDialogButtonSizer(wxOK | wxCANCEL);
-    
+
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
     $sizer->Add($text, 0, wxEXPAND | wxTOP | wxLEFT | wxRIGHT, 10);
     $sizer->Add($self->{combo}, 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
     $sizer->Add($buttons, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
-    
+
     EVT_BUTTON($self, wxID_OK, \&accept);
     EVT_TEXT_ENTER($self, $self->{combo}, \&accept);
-    
+
     $self->SetSizer($sizer);
     $sizer->SetSizeHints($self);
-    
+
     return $self;
 }
 
