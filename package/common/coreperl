@@ -9,6 +9,7 @@ Getopt::Long
 Unicode::Normalize 
 Tie::Handle
 Time::Local 
+Thread::Semaphore
 Math::Trig 
 IO::Socket 
 Errno
