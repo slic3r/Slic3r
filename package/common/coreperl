@@ -5,6 +5,7 @@ bytes
 B
 POSIX
 FindBin 
+Getopt::Long
 Unicode::Normalize 
 Tie::Handle
 Time::Local 
