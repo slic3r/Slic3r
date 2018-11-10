@@ -102,7 +102,7 @@ sub getSolarized { # add this name to Preferences.pm
     $SOLID_BACKGROUNDCOLOR = 1;               # Switch between SOLID or FADED background color
     my $largeicons         = 0;               # Default: 0. 1 for large icons-set.
     
-    if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 4){
+    if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big'){
         $largeicons = 1;
     }
     

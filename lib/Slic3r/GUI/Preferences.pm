@@ -111,13 +111,13 @@ sub new {
         width       => 180,
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # Extended GUI - Context and/or Toolbar
-        opt_id      => 'extended_gui',
+        opt_id      => 'rotation_controls',
         type        => 'select',
-        label       => 'Extended GUI: ',
-        tooltip     => 'Choose extended rotate commands in the toolbar and/or in the context menu. If you don\'t use the default color scheme, the themed icons for the toolbar will be used.(Restart of Slic3r required.)',
-        labels      => ['Default', 'Context only', 'Toolbar only', 'Toolbar and Context', 'Toolbar only (big)', 'Toolbar (big) and Context'],
-        values      => [0, 1, 2, 3, 4, 5],
-        default     => $Slic3r::GUI::Settings->{_}{extended_gui},
+        label       => 'Rotation controls in toolbar',
+        tooltip     => 'What rotation controls to show in the toolbar. (Restart of Slic3r required.)',
+        labels      => ['Z only', 'X,Y,Z', 'X,Y,Z (big buttons)'],
+        values      => ['z', 'xyz', 'xyz-big'],
+        default     => $Slic3r::GUI::Settings->{_}{rotation_controls},
         width       => 180,
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # colorscheme
@@ -147,7 +147,7 @@ sub new {
 sub _accept {
     my $self = shift;
     
-    if (any { exists $self->{values}{$_} } qw(show_host extended_gui colorscheme)) {
+    if (any { exists $self->{values}{$_} } qw(show_host rotation_controls colorscheme)) {
         Slic3r::GUI::warning_catcher($self)->("You need to restart Slic3r to make the changes effective.");
     }
     
