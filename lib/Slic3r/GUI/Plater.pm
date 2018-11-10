@@ -199,14 +199,12 @@ sub new {
         $self->{htoolbar}->AddTool(TB_FEWER, "Fewer", Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
        
-        if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 2) {  # if Toolbar enabled
+        if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz' || $Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big') {
             $self->{htoolbar}->AddTool(TB_X90CCW, "90° X ccw", Wx::Bitmap->new($Slic3r::var->(@rotateX90ccwT), wxBITMAP_TYPE_PNG), '');
             $self->{htoolbar}->AddTool(TB_X90CW, "90° X cw", Wx::Bitmap->new($Slic3r::var->(@rotateX90cwT), wxBITMAP_TYPE_PNG), '');
             $self->{htoolbar}->AddTool(TB_Y90CCW, "90° Y ccw", Wx::Bitmap->new($Slic3r::var->(@rotateY90ccwT), wxBITMAP_TYPE_PNG), '');
             $self->{htoolbar}->AddTool(TB_Y90CW, "90° Y cw", Wx::Bitmap->new($Slic3r::var->(@rotateY90cwT), wxBITMAP_TYPE_PNG), '');
-            $self->{htoolbar}->AddTool(TB_Z90CCW, "90° Z ccw", Wx::Bitmap->new($Slic3r::var->(@rotateZ90ccwT), wxBITMAP_TYPE_PNG), '');
-            $self->{htoolbar}->AddTool(TB_Z90CW, "90° Z cw", Wx::Bitmap->new($Slic3r::var->(@rotateZ90cwT), wxBITMAP_TYPE_PNG), '');
-        } 
+        }
         
         $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new($Slic3r::var->(@rotateZ45ccwT), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new($Slic3r::var->(@rotateZ45cwT), wxBITMAP_TYPE_PNG), '');
@@ -265,21 +263,16 @@ sub new {
             settings        => "Settings, Parts, Modifiers and Layers",
         );
         $self->{btoolbar} = Wx::BoxSizer->new(wxHORIZONTAL);
-
-
-        if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 2) { # if Toolbar enabled
-            for (qw(add remove reset arrange increase decrease rotateX90ccw rotateX90cw rotateY90ccw rotateY90cw rotateZ90ccw rotateZ90cw rotateZ45ccw rotateZ45cw changescale split cut settings)) {
-                $self->{"btn_$_"} = Wx::Button->new($self, -1, $tbar_buttons{$_}, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-                $self->{btoolbar}->Add($self->{"btn_$_"});
-                $self->{"btn_$_"}->SetToolTipString($tbar_buttonsToolTip{$_});
-            }
-        } else {
-            for (qw(add remove reset arrange increase decrease rotateZ45ccw rotateZ45cw rotateFace changescale split cut settings)) {
-                $self->{"btn_$_"} = Wx::Button->new($self, -1, $tbar_buttons{$_}, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-                $self->{btoolbar}->Add($self->{"btn_$_"});
-                $self->{"btn_$_"}->SetToolTipString($tbar_buttonsToolTip{$_});
-            }
-
+        
+        my @buttons = qw(add remove reset arrange increase decrease);
+        if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz' || $Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big') {
+            push @buttons, qw(rotateX90ccw rotateX90cw rotateY90ccw rotateY90cw rotateZ45ccw rotateZ45cw);
+        }
+        push @buttons, qw(changescale split cut settings);
+        for (@buttons) {
+            $self->{"btn_$_"} = Wx::Button->new($self, -1, $tbar_buttons{$_}, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+            $self->{btoolbar}->Add($self->{"btn_$_"});
+            $self->{"btn_$_"}->SetToolTipString($tbar_buttonsToolTip{$_});
         }
     }
 
@@ -354,7 +347,7 @@ sub new {
         EVT_TOOL($self, TB_ARRANGE, sub { $self->arrange; });
         EVT_TOOL($self, TB_MORE, sub { $self->increase; });
         EVT_TOOL($self, TB_FEWER, sub { $self->decrease; });
-        if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 2) { # if Toolbar enabled
+        if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz' || $Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big') {
             EVT_TOOL($self, TB_X90CW, sub { $_[0]->rotate(-90, X) });
             EVT_TOOL($self, TB_X90CCW, sub { $_[0]->rotate(90, X) });
             EVT_TOOL($self, TB_Y90CW, sub { $_[0]->rotate(-90, Y) });
@@ -3180,117 +3173,47 @@ sub object_menu {
             $self->center_selected_object_on_bed;
         }, undef, 'arrow_in.png');
     }
-    if ($Slic3r::GUI::Settings->{_}{extended_gui} == 1 or $Slic3r::GUI::Settings->{_}{extended_gui} == 3 or $Slic3r::GUI::Settings->{_}{extended_gui} == 5){ # if context enabled
-        $menu->AppendSeparator();
-        if ($Slic3r::GUI::Settings->{_}{extended_gui} == 1) {
-            wxTheApp->append_menu_item($menu, "Rotate 90° clockwise (X)", 'Rotate the selected object by 90° clockwise', sub {
-                $self->rotate(-90, X);
-            }, undef, @rotateX90cw);
-            wxTheApp->append_menu_item($menu, "Rotate 90° counter clockwise (X)", 'Rotate the selected object by 90° counter clockwise', sub {
-                $self->rotate(90, X);
-            }, undef, @rotateX90ccw);
-            wxTheApp->append_menu_item($menu, "Rotate 180° (X)", 'Rotate the selected object by 180°', sub {
-                $self->rotate(180, X);
-            }, undef, @rotateX180);
-        } elsif ($Slic3r::GUI::Settings->{_}{extended_gui} > 1) {
-            wxTheApp->append_menu_item($menu, "Rotate 180° (X)", 'Rotate the selected object by 180°', sub {
-                $self->rotate(180, X);
-            }, undef, @rotateX180);
-            wxTheApp->append_menu_item($menu, "Rotate around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
-                $self->rotate(undef, X);
-            }, undef, @rotateX90ccw);
-            wxTheApp->append_menu_item($menu, "Mirror along X axis", 'Mirror the selected object along the X axis', sub {
-                $self->mirror(X);
-            }, undef, @mirrorX);
-        }
-        $menu->AppendSeparator();
-        if ($Slic3r::GUI::Settings->{_}{extended_gui} == 1) {
-            wxTheApp->append_menu_item($menu, "Rotate 90° clockwise (Y)", 'Rotate the selected object by 90° clockwise', sub {
-                $self->rotate(-90, Y);
-            }, undef, @rotateY90cw);
-            wxTheApp->append_menu_item($menu, "Rotate 90° counter clockwise (Y)", 'Rotate the selected object by 90° counter clockwise', sub {
-                $self->rotate(90, Y);
-            }, undef, @rotateY90ccw);
-            wxTheApp->append_menu_item($menu, "Rotate 180° (Y)", 'Rotate the selected object by 180°', sub {
-                $self->rotate(180, Y);
-            }, undef, @rotateY180);
-        } elsif ($Slic3r::GUI::Settings->{_}{extended_gui} > 1) {
-            wxTheApp->append_menu_item($menu, "Rotate 180° (Y)", 'Rotate the selected object by 180°', sub {
-                $self->rotate(180, Y);
-            }, undef, @rotateY180);
-            wxTheApp->append_menu_item($menu, "Rotate around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
-                $self->rotate(undef, Y);
-            }, undef, @rotateY90ccw);
-            wxTheApp->append_menu_item($menu, "Mirror along Y axis", 'Mirror the selected object along the Y axis', sub {
-                $self->mirror(Y);
-            }, undef, @mirrorY);
-        }
-        $menu->AppendSeparator();
-        if ($Slic3r::GUI::Settings->{_}{extended_gui} == 1) {
-            wxTheApp->append_menu_item($menu, "Rotate 90° clockwise (Z)", 'Rotate the selected object by 90° clockwise', sub {
-                $self->rotate(-90, Z);
-            }, undef, @rotateZ90cw);
-            wxTheApp->append_menu_item($menu, "Rotate 90° counter clockwise (Z)", 'Rotate the selected object by 90° counter clockwise', sub {
-                $self->rotate(90, Z);
-            }, undef, @rotateZ90ccw);
-            wxTheApp->append_menu_item($menu, "Rotate 180° (Z)", 'Rotate the selected object by 180°', sub {
-                $self->rotate(180, Z);
-            }, undef, @rotateZ180);
-        } elsif ($Slic3r::GUI::Settings->{_}{extended_gui} > 1) {
-            wxTheApp->append_menu_item($menu, "Rotate 180° (Z)", 'Rotate the selected object by 180°', sub {
-                $self->rotate(180, Z);
-            }, undef, @rotateZ180);
-            wxTheApp->append_menu_item($menu, "Rotate around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
-                $self->rotate(undef, Z);
-            }, undef, @rotateZ90ccw);
-            wxTheApp->append_menu_item($menu, "Mirror along Z axis", 'Mirror the selected object along the Z axis', sub {
-                $self->mirror(Z);
-            }, undef, @mirrorZ);
-        }
-    } else {
-        wxTheApp->append_menu_item($menu, "Rotate 45° clockwise (Z))", 'Rotate the selected object by 45° clockwise', sub {
-            $self->rotate(-45, Z);
-        }, undef, @rotateZ90cw);
-        wxTheApp->append_menu_item($menu, "Rotate 45° counter clockwise (Z))", 'Rotate the selected object by 45° counter clockwise', sub {
-            $self->rotate(+45, Z);
-        }, undef, @rotateZ90ccw);
-        
-    }
     wxTheApp->append_menu_item($menu, "Rotate Face to Plane", 'Rotates the selected object to have the selected face parallel with a plane', sub {
         $self->rotate_face;
     }, undef, 'rotate_face.png');
     $menu->AppendSeparator();
     
-    # Extended GUI:
-    #  only at option 0,2,4
-    if ($Slic3r::GUI::Settings->{_}{extended_gui} == 0 or $Slic3r::GUI::Settings->{_}{extended_gui} == 2 or $Slic3r::GUI::Settings->{_}{extended_gui} == 4){
-        {
-            my $rotateMenu = Wx::Menu->new;
-            wxTheApp->append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
-                $self->rotate(undef, X);
-            }, undef, @rotateX90ccw);
-            wxTheApp->append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
-                $self->rotate(undef, Y);
-            }, undef, @rotateY90ccw);
-            wxTheApp->append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
-                $self->rotate(undef, Z);
-            }, undef, @rotateZ90ccw);
-            wxTheApp->append_submenu($menu, "Rotate", 'Rotate the selected object by an arbitrary angle', $rotateMenu, undef, 'textfield.png');
-        }
-        
-        {
-            my $mirrorMenu = Wx::Menu->new;
-            wxTheApp->append_menu_item($mirrorMenu, "Along X axis", 'Mirror the selected object along the X axis', sub {
-                $self->mirror(X);
-            }, undef, @mirrorX);
-            wxTheApp->append_menu_item($mirrorMenu, "Along Y axis", 'Mirror the selected object along the Y axis', sub {
-                $self->mirror(Y);
-            }, undef, @mirrorY);
-            wxTheApp->append_menu_item($mirrorMenu, "Along Z axis", 'Mirror the selected object along the Z axis', sub {
-                $self->mirror(Z);
-            }, undef, @mirrorZ);
-            wxTheApp->append_submenu($menu, "Mirror", 'Mirror the selected object', $mirrorMenu, undef, 'shape_flip_horizontal.png');
-        }
+    {
+        my $rotateMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($rotateMenu, "180° around X axis", 'Rotate the selected object by 180° around X axis', sub {
+            $self->rotate(180, X);
+        }, undef, @rotateX90ccw);
+        wxTheApp->append_menu_item($rotateMenu, "180° around Y axis", 'Rotate the selected object by 180° around Y axis', sub {
+            $self->rotate(180, Y);
+        }, undef, @rotateY90ccw);
+        wxTheApp->append_menu_item($rotateMenu, "180° around Z axis", 'Rotate the selected object by 180° around Z axis', sub {
+            $self->rotate(180, Z);
+        }, undef, @rotateZ90ccw);
+        $rotateMenu->AppendSeparator();
+        wxTheApp->append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
+            $self->rotate(undef, X);
+        }, undef, @rotateX90ccw);
+        wxTheApp->append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
+            $self->rotate(undef, Y);
+        }, undef, @rotateY90ccw);
+        wxTheApp->append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
+            $self->rotate(undef, Z);
+        }, undef, @rotateZ90ccw);
+        wxTheApp->append_submenu($menu, "Rotate", 'Rotate the selected object', $rotateMenu, undef, 'arrow_rotate_anticlockwise.png');
+    }
+    
+    {
+        my $mirrorMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($mirrorMenu, "Along X axis", 'Mirror the selected object along the X axis', sub {
+            $self->mirror(X);
+        }, undef, @mirrorX);
+        wxTheApp->append_menu_item($mirrorMenu, "Along Y axis", 'Mirror the selected object along the Y axis', sub {
+            $self->mirror(Y);
+        }, undef, @mirrorY);
+        wxTheApp->append_menu_item($mirrorMenu, "Along Z axis", 'Mirror the selected object along the Z axis', sub {
+            $self->mirror(Z);
+        }, undef, @mirrorZ);
+        wxTheApp->append_submenu($menu, "Mirror", 'Mirror the selected object', $mirrorMenu, undef, 'shape_flip_horizontal.png');
     }
     
     {
