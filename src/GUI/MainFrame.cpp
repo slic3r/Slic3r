@@ -84,7 +84,7 @@ void MainFrame::init_tabpanel()
         auto tabpanel = this->tabpanel;
         // TODO: trigger processing for activation event
         if (tabpanel->GetSelection() > 1) {
-            tabpanel->SetWindowStyle(tabpanel->GetWindowStyleFlag() | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+            tabpanel->SetWindowStyle(tabpanel->GetWindowStyleFlag());
         } else if (ui_settings->show_host == false && tabpanel->GetSelection() == 1) {
             tabpanel->SetWindowStyle(tabpanel->GetWindowStyleFlag() | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
         } else {
@@ -105,6 +105,11 @@ void MainFrame::init_tabpanel()
 
     panel->AddPage(this->plater, this->plater->GetName());
     if (ui_settings->show_host) panel->AddPage(this->controller, this->controller->GetName());
+    if (ui_settings->preset_editor_tabs) {
+        this->plater->show_preset_editor(preset_t::Print,0);
+        this->plater->show_preset_editor(preset_t::Material,0);
+        this->plater->show_preset_editor(preset_t::Printer,0);
+    }
     
 }
 
