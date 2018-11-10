@@ -1,6 +1,7 @@
 # Preferences dialog, opens from Menu: File->Preferences
 
 package Slic3r::GUI::Preferences;
+use List::Util qw(any);
 use Wx qw(:dialog :id :misc :sizer :systemsettings wxTheApp);
 use Wx::Event qw(EVT_BUTTON EVT_TEXT_ENTER);
 use base 'Wx::Dialog';
@@ -82,7 +83,7 @@ sub new {
         opt_id      => 'show_host',
         type        => 'bool',
         label       => 'Show Controller Tab (requires restart)',
-        tooltip     => 'Shows/Hides the Controller Tab. Requires a restart of Slic3r.',
+        tooltip     => 'Shows/Hides the Controller Tab. (Restart of Slic3r required.)',
         default     => $Slic3r::GUI::Settings->{_}{show_host},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # nudge_val
@@ -113,7 +114,7 @@ sub new {
         opt_id      => 'extended_gui',
         type        => 'select',
         label       => 'Extended GUI: ',
-        tooltip     => 'Choose extended rotate commands in the toolbar and/or in the context menu. If you don\'t use the default color scheme, the themed icons for the toolbar will be used. Requires a restart of Slic3r.',
+        tooltip     => 'Choose extended rotate commands in the toolbar and/or in the context menu. If you don\'t use the default color scheme, the themed icons for the toolbar will be used.(Restart of Slic3r required.)',
         labels      => ['Default', 'Context only', 'Toolbar only', 'Toolbar and Context', 'Toolbar only (big)', 'Toolbar (big) and Context'],
         values      => [0, 1, 2, 3, 4, 5],
         default     => $Slic3r::GUI::Settings->{_}{extended_gui},
@@ -123,7 +124,7 @@ sub new {
         opt_id      => 'colorscheme',
         type        => 'select',
         label       => 'Color Scheme',
-        tooltip     => 'Choose between color schemes - restart of Slic3r required.',
+        tooltip     => 'Choose between color schemes. (Restart of Slic3r required.)',
         labels      => ['Default','Solarized'], # add more schemes, if you want in ColorScheme.pm.
         values      => ['getDefault','getSolarized'], # add more schemes, if you want - those are the names of the corresponding function in ColorScheme.pm.
         default     => $Slic3r::GUI::Settings->{_}{colorscheme},
@@ -146,7 +147,7 @@ sub new {
 sub _accept {
     my $self = shift;
     
-    if ($self->{values}{mode}) {
+    if (any { exists $self->{values}{$_} } qw(show_host extended_gui colorscheme)) {
         Slic3r::GUI::warning_catcher($self)->("You need to restart Slic3r to make the changes effective.");
     }
     
