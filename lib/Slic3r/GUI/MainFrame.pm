@@ -99,7 +99,7 @@ sub _init_tabpanel {
         my $panel = $self->{tabpanel}->GetPage($self->{tabpanel}->GetSelection);
         $panel->OnActivate if $panel->can('OnActivate');
         if ($self->{tabpanel}->GetSelection > 1) {
-            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag);
         } elsif(!$Slic3r::GUI::Settings->{_}{show_host} && ($self->{tabpanel}->GetSelection == 1)){
             $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
         } else {
@@ -119,6 +119,13 @@ sub _init_tabpanel {
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
     $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller")
         if ($Slic3r::GUI::Settings->{_}{show_host});
+
+    if ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
+        $self->{plater}->show_preset_editor('print', 0,0,0);
+        $self->{plater}->show_preset_editor('filament', 0,0,0);
+        $self->{plater}->show_preset_editor('printer', 0, 0, 0);
+    }
+
 }
 
 sub _init_menubar {

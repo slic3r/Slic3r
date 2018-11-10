@@ -892,7 +892,7 @@ sub selected_presets {
 }
 
 sub show_preset_editor {
-    my ($self, $group, $i) = @_;
+    my ($self, $group, $i, $load) = @_;
     
     wxTheApp->CallAfter(sub {
         my @presets = $self->selected_presets($group);
@@ -908,7 +908,7 @@ sub show_preset_editor {
         } elsif ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
             my $class = "Slic3r::GUI::PresetEditor::" . ucfirst($group);
             $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($self->GetFrame);
-            $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings", 1);
+            $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings", $load);
         } else {
             my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
             $dlg = $class->new($self);
