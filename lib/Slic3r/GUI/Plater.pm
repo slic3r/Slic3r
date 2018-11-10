@@ -690,14 +690,6 @@ sub _on_change_combobox {
         return 0 if !$self->prompt_unsaved_changes;
     }
     wxTheApp->CallAfter(sub {
-        # Close the preset editor tab if any
-        if (exists $self->GetFrame->{preset_editor_tabs}{$group}) {
-            my $tabpanel = $self->GetFrame->{tabpanel};
-            $tabpanel->DeletePage($tabpanel->GetPageIndex($self->GetFrame->{preset_editor_tabs}{$group}));
-            delete $self->GetFrame->{preset_editor_tabs}{$group};
-            $tabpanel->SetSelection(0); # without this, a newly created tab will not be selected by wx
-        }
-        
         $self->_on_select_preset($group);
         
         # This will remove the "(modified)" mark from any dirty preset handled here.
