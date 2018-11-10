@@ -95,7 +95,7 @@ cp $SLIC3R_DIR/slic3r.pl $macosfolder/slic3r.pl
 cp -fRP $SLIC3R_DIR/local-lib $macosfolder/local-lib
 cp -fRP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
 
-echo "Relocating dylib paths..."
+echo "Relocating Wx dylib paths..."
 for bundle in $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/auto/Wx -name '*.bundle') $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets -name '*.dylib' -type f); do
     chmod +w $bundle
     for dylib in $(otool -l $bundle | grep .dylib | grep local-lib | awk '{print $2}'); do
@@ -108,8 +108,15 @@ cp -f $WD/startup_script.sh $macosfolder/$appname
 chmod +x $macosfolder/$appname
 
 echo "Copying perl from $PERL_BIN"
-# Edit package/common/coreperl to add/remove core Perl modules added to this package, one per line.
 cp -f $PERL_BIN $macosfolder/perl-local
+chmod +w $macosfolder/perl-local
+for dylib in $(otool -l $macosfolder/perl-local | grep libperl.dylib | awk '{print $2}'); do
+    cp $dylib $macosfolder/
+    install_name_tool -change "$dylib" "@executable_path/$(basename $dylib)" $macosfolder/perl-local
+done
+
+echo "Copying core modules"
+# Edit package/common/coreperl to add/remove core Perl modules added to this package, one per line.
 ${PP_BIN} \
           -M $(grep -v "^#" ${WD}/../common/coreperl | xargs | awk 'BEGIN { OFS=" -M "}; {$1=$1; print $0}') \
           -B -p -e "print 123" -o $WD/_tmp/bundle.par
