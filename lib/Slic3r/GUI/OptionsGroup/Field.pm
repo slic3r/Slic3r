@@ -217,7 +217,7 @@ extends 'Slic3r::GUI::OptionsGroup::Field::wxWindow';
 
 use List::Util qw(first);
 use Wx qw(:misc :combobox);
-use Wx::Event qw(EVT_COMBOBOX EVT_TEXT);
+use Wx::Event qw(EVT_CHOICE EVT_COMBOBOX EVT_TEXT);
 
 sub BUILD {
     my ($self) = @_;
@@ -227,17 +227,20 @@ sub BUILD {
     if (defined $self->option->gui_type && $self->option->gui_type ne 'select_open') {
         $field = Wx::Choice->new($self->parent, -1, wxDefaultPosition, $self->_default_size,
             $self->option->labels || $self->option->values || [], $style);
+        EVT_CHOICE($self->parent, $field, sub {
+            $self->_on_change($self->option->opt_id);
+        });
     } else {
         $field = Wx::ComboBox->new($self->parent, -1, "", wxDefaultPosition, $self->_default_size,
             $self->option->labels || $self->option->values || [], $style);
+        EVT_COMBOBOX($self->parent, $field, sub {
+            $self->_on_change($self->option->opt_id);
+        });
     }
     $self->wxWindow($field);
     
     $self->set_value($self->option->default);
     
-    EVT_COMBOBOX($self->parent, $field, sub {
-        $self->_on_change($self->option->opt_id);
-    });
     EVT_TEXT($self->parent, $field, sub {
         $self->_on_change($self->option->opt_id);
     });
