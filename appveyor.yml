@@ -42,7 +42,7 @@ artifacts:
 - path: .\slic3r*zip
   name: slic3r-dev
 deploy_script:
-- ps:  "cd C:/projects/slic3r; & package/win/appveyor_deploy.ps1"
+    - ps:  "if ($env:APPVEYOR_REPO_BRANCH -eq 'master') { cd C:/projects/slic3r; & package/win/appveyor_deploy.ps1 }"
 on_success:
 - ps: 
 on_failure:
