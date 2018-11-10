@@ -167,8 +167,7 @@ if [[ -z "$KEYCHAIN_FILE_" && ! -z "$KEYCHAIN_BASE64_" ]]; then
     KEYCHAIN_FILE_=$WD/_tmp/build.keychain
     echo "Creating temporary keychain at ${KEYCHAIN_FILE_}"
     echo "$KEYCHAIN_BASE64_" | base64 --decode > "${KEYCHAIN_FILE_}.p12"
-    rm -f "$KEYCHAIN_FILE_"
-    security delete-keychain "$KEYCHAIN_FILE_"
+    security delete-keychain "$KEYCHAIN_FILE_" || true
     security create-keychain -p "${KEYCHAIN_PASSWORD_}" "$KEYCHAIN_FILE_"
     security set-keychain-settings -t 3600 -u "$KEYCHAIN_FILE_"
     security import "${KEYCHAIN_FILE_}.p12" -k "$KEYCHAIN_FILE_" -P "${KEYCHAIN_PASSWORD_}" -T /usr/bin/codesign
