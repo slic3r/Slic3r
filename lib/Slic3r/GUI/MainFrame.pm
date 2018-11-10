@@ -9,9 +9,8 @@ use File::Basename qw(basename dirname);
 use List::Util qw(min);
 use Slic3r::Geometry qw(X Y Z);
 use Wx qw(:frame :bitmap :id :misc :panel :sizer :menu :dialog :filedialog
-    :font :icon :aui wxTheApp);
-use Wx::AUI;
-use Wx::Event qw(EVT_CLOSE EVT_AUINOTEBOOK_PAGE_CHANGED EVT_AUINOTEBOOK_PAGE_CLOSE);
+    :font :icon :notebook wxTheApp);
+use Wx::Event qw(EVT_CLOSE EVT_NOTEBOOK_PAGE_CHANGED);
 use base 'Wx::Frame';
 
 our $qs_last_input_file;
@@ -94,26 +93,10 @@ sub new {
 sub _init_tabpanel {
     my ($self) = @_;
     
-    $self->{tabpanel} = my $panel = Wx::AuiNotebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxAUI_NB_TOP);
-    EVT_AUINOTEBOOK_PAGE_CHANGED($self, $self->{tabpanel}, sub {
-        my $panel = $self->{tabpanel}->GetPage($self->{tabpanel}->GetSelection);
+    $self->{tabpanel} = my $panel = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
+    EVT_NOTEBOOK_PAGE_CHANGED($self, $self->{tabpanel}, sub {
+        my $panel = $self->{tabpanel}->GetCurrentPage;
         $panel->OnActivate if $panel->can('OnActivate');
-        if ($self->{tabpanel}->GetSelection > 1) {
-            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag);
-        } elsif(!$Slic3r::GUI::Settings->{_}{show_host} && ($self->{tabpanel}->GetSelection == 1)){
-            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
-        } else {
-            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag & ~wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
-        }
-    });
-    EVT_AUINOTEBOOK_PAGE_CLOSE($self, $self->{tabpanel}, sub {
-        my $panel = $self->{tabpanel}->GetPage($self->{tabpanel}->GetSelection);
-        if ($panel->isa('Slic3r::GUI::PresetEditor')) {
-            delete $self->{preset_editor_tabs}{$panel->name};
-        }
-        wxTheApp->CallAfter(sub {
-            $self->{tabpanel}->SetSelection(0);
-        });
     });
     
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
@@ -121,9 +104,9 @@ sub _init_tabpanel {
         if ($Slic3r::GUI::Settings->{_}{show_host});
 
     if ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
-        $self->{plater}->show_preset_editor('print', 0,0,0);
-        $self->{plater}->show_preset_editor('filament', 0,0,0);
-        $self->{plater}->show_preset_editor('printer', 0, 0, 0);
+        foreach my $group (qw(print filament printer)) {
+            $self->{plater}->show_preset_editor($group, 0, $panel);
+        }
     }
 
 }

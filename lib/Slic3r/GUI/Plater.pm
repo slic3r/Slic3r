@@ -884,7 +884,7 @@ sub selected_presets {
 }
 
 sub show_preset_editor {
-    my ($self, $group, $i, $load) = @_;
+    my ($self, $group, $i, $panel) = @_;
     
     wxTheApp->CallAfter(sub {
         my @presets = $self->selected_presets($group);
@@ -894,13 +894,18 @@ sub show_preset_editor {
         my $mainframe = $self->GetFrame;
         my $tabpanel = $mainframe->{tabpanel};
         if (exists $mainframe->{preset_editor_tabs}{$group}) {
+            my $tabindex = 0;
+            $tabindex = 1 if $Slic3r::GUI::Settings->{_}{show_host};
+            $tabindex += 1 if $group eq 'print';
+            $tabindex += 2 if $group eq 'filament';
+            $tabindex += 3 if $group eq 'printer';
             # we already have an open editor
-            $tabpanel->SetSelection($tabpanel->GetPageIndex($mainframe->{preset_editor_tabs}{$group}));
+            $tabpanel->SetSelection($tabindex);
             return;
         } elsif ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
             my $class = "Slic3r::GUI::PresetEditor::" . ucfirst($group);
-            $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($self->GetFrame);
-            $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings", $load);
+            $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($tabpanel);
+            $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings");
         } else {
             my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
             $dlg = $class->new($self);
