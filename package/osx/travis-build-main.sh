@@ -1,11 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-brew update -v
-
 # These two commands are only needed on 10.12:
 rm -rf /usr/local/Homebrew/Library/Taps/homebrew/homebrew-cask
 brew uninstall --force postgis cgal sfcgal
+
+brew update -v
 
 brew install boost     || brew upgrade boost
 brew install perl      || brew upgrade perl
@@ -19,7 +19,6 @@ perl ./Build.PL
 
 # remove X11 because otherwise OpenGL.pm will link libglut.3.dylib instead of GLUT.framework
 sudo rm -rf /opt/X11*
-cpanm --local-lib local-lib --reinstall OpenGL  # this updates the cache, remove it after one commit
 
 export LIBRARY_PATH=/usr/local/lib
 
