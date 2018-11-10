@@ -4,6 +4,12 @@
 #include "PrintConfig.hpp"
 #include "Config.hpp"
 
+#include <wx/wxprec.h>
+#ifndef WX_PRECOMP
+    #include <wx/wx.h>
+    #include <wx/string.h>
+#endif
+
 namespace Slic3r { namespace GUI {
 
 /// Preset types list. We assign numbers to permit static_casts and use as preset tab indices.
@@ -54,7 +60,7 @@ public:
     t_config_option_keys dirty_options();
 
     /// Returns whether or not this config is different from its modified state.
-    bool dirty();
+    bool dirty() const;
 
     /// Loads the selected config from file and return a shared_ptr to that config
     config_ptr load_config(); 
@@ -69,6 +75,8 @@ public:
     void apply_dirty(const config_ptr& other) { this->apply_dirty(*other); }
     bool operator==(const wxString& _name) const { return this->operator==(_name.ToStdString()); }
     bool operator==(const std::string& _name) const { return _name.compare(this->name) == 0; }
+
+    Preset(std::string load_dir, std::string filename, preset_t p);
 private:
     bool external {false};
 
@@ -76,9 +84,13 @@ private:
     Slic3r::Config config { Slic3r::Config() };
 
     /// Alternative config store for a modified configuration.
-    Slic3r::Config dirty_config {Slic3r::Config()};
+    Slic3r::Config dirty_config { Slic3r::Config() };
 
+    /// Underlying filename for this preset config
     std::string file {""};
+
+    /// dirname for the file.
+    std::string dir  {""};
 
     /// reach through to the appropriate material type
     t_config_option_keys _group_class(); 
