@@ -223,9 +223,14 @@ sub BUILD {
     my ($self) = @_;
     
     my $style = 0;
-    $style |= wxCB_READONLY if defined $self->option->gui_type && $self->option->gui_type ne 'select_open';
-    my $field = Wx::ComboBox->new($self->parent, -1, "", wxDefaultPosition, $self->_default_size,
-        $self->option->labels || $self->option->values || [], $style);
+    my $field = 0;
+    if (defined $self->option->gui_type && $self->option->gui_type ne 'select_open') {
+        $field = Wx::Choice->new($self->parent, -1, wxDefaultPosition, $self->_default_size,
+            $self->option->labels || $self->option->values || [], $style);
+    } else {
+        $field = Wx::ComboBox->new($self->parent, -1, "", wxDefaultPosition, $self->_default_size,
+            $self->option->labels || $self->option->values || [], $style);
+    }
     $self->wxWindow($field);
     
     $self->set_value($self->option->default);
