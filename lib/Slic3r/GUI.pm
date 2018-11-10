@@ -95,8 +95,7 @@ our $Settings = {
         show_host => 1,
         nudge_val => 1,
         extended_gui => 0,
-        reload_hide_dialog => 0,
-        reload_behavior => 0
+        reload_behavior => 'prompt',
     },
 };
 

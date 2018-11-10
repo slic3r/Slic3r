@@ -2493,10 +2493,10 @@ sub reload_from_disk {
         }
     }
 
-    my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior};
+    my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior} || 'prompt';
 
     # ask the user how to proceed, if option is selected in preferences
-    if ($org_obj_has_modifiers && !$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
+    if ($org_obj_has_modifiers && $reload_behavior eq 'prompt') {
         my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior);
         my $res = $dlg->ShowModal;
         if ($res==wxID_CANCEL) {
@@ -2510,8 +2510,8 @@ sub reload_from_disk {
             $Slic3r::GUI::Settings->{_}{reload_behavior} = $reload_behavior;
             $save = 1;
         }
-        if ($dlg->GetHideOnNext) {
-            $Slic3r::GUI::Settings->{_}{reload_hide_dialog} = 1;
+        if (!$dlg->GetHideOnNext) {
+            $Slic3r::GUI::Settings->{_}{reload_behavior} = 'prompt';
             $save = 1;
         }
         Slic3r::GUI->save_settings if $save;
