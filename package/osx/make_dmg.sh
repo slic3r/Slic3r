@@ -98,16 +98,17 @@ cp -fRP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
 echo "Relocating Wx dylib paths..."
 mkdir $macosfolder/dylibs
 function relocate_dylibs {
-    bundle=$1
+    local bundle=$1
     chmod +w $bundle
-    for dylib in $(otool -l $bundle | grep .dylib | grep -v /usr/lib | awk '{print $2}'); do
-        dylib_dest="$macosfolder/dylibs/$(basename $dylib)"
+    local dylib
+    for dylib in $(otool -l $bundle | grep .dylib | grep -v /usr/lib | awk '{print $2}' | grep -v '^@'); do
+        local dylib_dest="$macosfolder/dylibs/$(basename $dylib)"
         if [ ! -e $dylib_dest ]; then
             echo "  relocating $dylib"
-            install_name_tool -change "$dylib" "@executable_path/dylibs/$(basename $dylib)" $bundle
             cp $dylib $macosfolder/dylibs/
             relocate_dylibs $dylib_dest
         fi
+        install_name_tool -change "$dylib" "@executable_path/dylibs/$(basename $dylib)" $bundle
     done
 }
 for bundle in $(find $macosfolder/local-lib/ \( -name '*.bundle' -or -name '*.dylib' \) -type f); do
