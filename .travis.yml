@@ -71,16 +71,18 @@ matrix:
           after_success:
             - package/linux/travis-deploy-cpp.sh
 
-        - os: osx
-          # osx_image: xcode8 # OS X 10.11
-          osx_image: xcode9.2 # OS X 10.12
-          env:
-            - TARGET=main
-          cache:
-            directories:
-              - /usr/local/Homebrew
-              - $HOME/Library/Caches/Homebrew
-              - local-lib
+        # While this works, it does not appear to be needed as the 10.13 builds
+        # work on 10.12 as well.
+        # - os: osx
+        #   # osx_image: xcode8 # OS X 10.11
+        #   osx_image: xcode9.2 # OS X 10.12
+        #   env:
+        #     - TARGET=main
+        #   cache:
+        #     directories:
+        #       - /usr/local/Homebrew
+        #       - $HOME/Library/Caches/Homebrew
+        #       - local-lib
 
         - os: osx
           osx_image: xcode9.4 # OS X 10.13

@@ -96,10 +96,12 @@ cp -fRP $SLIC3R_DIR/local-lib $macosfolder/local-lib
 cp -fRP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
 
 echo "Relocating Wx dylib paths..."
-for bundle in $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/auto/Wx -name '*.bundle') $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets -name '*.dylib' -type f); do
+for bundle in $(find $macosfolder/local-lib/ \( -name '*.bundle' -or -name '*.dylib' \) -type f); do
     chmod +w $bundle
-    for dylib in $(otool -l $bundle | grep .dylib | grep local-lib | awk '{print $2}'); do
-        install_name_tool -change "$dylib" "@executable_path/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/lib/$(basename $dylib)" $bundle
+    for dylib in $(otool -l $bundle | grep .dylib | grep -v /usr/lib | awk '{print $2}'); do
+        echo "  relocating $dylib"
+        install_name_tool -change "$dylib" "@loader_path/$(basename $dylib)" $bundle
+        cp -n $dylib $(dirname $bundle) || true
     done
 done
 
@@ -155,15 +157,33 @@ make_plist
 echo $PkgInfoContents >$appfolder/Contents/PkgInfo
 
 KEYCHAIN_FILE_=${KEYCHAIN_FILE:-}
+KEYCHAIN_BASE64_=${KEYCHAIN_BASE64:-}
+KEYCHAIN_PASSWORD_=${KEYCHAIN_PASSWORD:-travis}
+KEYCHAIN_IDENTITY_=${KEYCHAIN_IDENTITY:-Developer ID Application: Alessandro Ranellucci (975MZ9YJL7)}
+
+# In case we were supplied a base64-encoded .p12 file instead of the path
+# to an existing keychain, create a temporary one
+if [[ -z "$KEYCHAIN_FILE_" && ! -z "$KEYCHAIN_BASE64_" ]]; then
+    KEYCHAIN_FILE_=$WD/_tmp/build.keychain
+    echo "Creating temporary keychain at ${KEYCHAIN_FILE_}"
+    echo "$KEYCHAIN_BASE64_" | base64 --decode > "${KEYCHAIN_FILE_}.p12"
+    rm -f "$KEYCHAIN_FILE_"
+    security delete-keychain "$KEYCHAIN_FILE_"
+    security create-keychain -p "${KEYCHAIN_PASSWORD_}" "$KEYCHAIN_FILE_"
+    security set-keychain-settings -t 3600 -u "$KEYCHAIN_FILE_"
+    security import "${KEYCHAIN_FILE_}.p12" -k "$KEYCHAIN_FILE_" -P "${KEYCHAIN_PASSWORD_}" -T /usr/bin/codesign
+    security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PASSWORD_}" "$KEYCHAIN_FILE_"
+fi
+
 if [ ! -z $KEYCHAIN_FILE_ ]; then
     echo "Signing app..."
     chmod -R +w $macosfolder/*
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
-    security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY}" --deep "$appfolder"
+    security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" --deep "$appfolder"
 else
-    echo "No KEYCHAIN_FILE env variable; skipping codesign"
+    echo "No KEYCHAIN_FILE or KEYCHAIN_BASE64 env variable; skipping codesign"
 fi
 
 echo "Creating dmg file...."
@@ -177,8 +197,8 @@ if [ ! -z $KEYCHAIN_FILE_ ]; then
     chmod +w $dmgfile
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
-    security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY}" "$dmgfile"
+    security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" "$dmgfile"
 fi
 
 rm -rf $WD/_tmp
