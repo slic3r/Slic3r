@@ -8,6 +8,7 @@ FindBin
 Getopt::Long
 Unicode::Normalize 
 Tie::Handle
+Time::HiRes
 Time::Local 
 Thread::Semaphore
 Math::Trig 
