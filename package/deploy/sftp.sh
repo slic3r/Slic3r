@@ -18,7 +18,7 @@ fi
 
 if [ -s $KEY ]; then
     for i in $FILES; do 
-         filepath=$(readlink -f "$i")
+         filepath=$i  # this is expected to be an absolute path
          tmpfile=$(mktemp)
          echo put $filepath > $tmpfile 
          sftp -b $tmpfile -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"

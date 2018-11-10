@@ -7,6 +7,14 @@ set -euo pipefail
 # Adapted from script written by bubnikv for Prusa3D.
 # Run from slic3r repo root directory.
 
+# While we might have a pp executable in our path, it might not be
+# using the perl binary we have in path, so make sure they belong
+# to the same Perl instance:
+if !(perl -Mlocal::lib=local-lib -MPAR::Packer -e1 2> /dev/null); then
+    echo "The PAR::Packer module was not found; installing..."
+    cpanm --local-lib local-lib PAR::Packer
+fi
+
 WD=$(dirname $0)
 appname=Slic3r
 
@@ -17,18 +25,17 @@ if [ $(git describe --exact-match &>/dev/null) ]; then
     SLIC3R_BUILD_ID=$(git describe)
 else
     # Get the current branch
-    if [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
-        current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
+    if [ ! -z ${GIT_BRANCH+x} ]; then
+        echo "Setting to GIT_BRANCH"
+        current_branch=$(echo $GIT_BRANCH | cut -d / -f 2)
+    elif [ ! -z ${TRAVIS_BRANCH+x} ]; then
+        echo "Setting to TRAVIS_BRANCH"
+        current_branch=$TRAVIS_BRANCH
+    elif [ ! -z ${APPVEYOR_REPO_BRANCH+x} ]; then
+        echo "Setting to APPVEYOR_REPO_BRANCH"
+        current_branch=$APPVEYOR_REPO_BRANCH
     else
-        current_branch="unknown"
-        if [ ! -z ${GIT_BRANCH+x} ]; then
-            echo "Setting to GIT_BRANCH"
-            current_branch=$(echo $GIT_BRANCH | cut -d / -f 2)
-        fi
-        if [ ! -z ${APPVEYOR_REPO_BRANCH+x} ]; then
-            echo "Setting to APPVEYOR_REPO_BRANCH"
-            current_branch=$APPVEYOR_REPO_BRANCH
-        fi
+        current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
     fi
     
     if [ "$current_branch" == "master" ]; then
@@ -45,8 +52,6 @@ fi
 dmgfile=slic3r-${SLIC3R_BUILD_ID}.dmg
 echo "DMG filename: ${dmgfile}"
 
-# If we're on a branch, add the branch name to the app name.
-
 rm -rf $WD/_tmp
 mkdir -p $WD/_tmp
 
@@ -59,6 +64,7 @@ PkgInfoContents="APPL????"
 source $WD/plist.sh
 
 # Our slic3r dir and location of perl
+eval $(perl -Mlocal::lib=local-lib)
 PERL_BIN=$(which perl)
 PP_BIN=$(which pp)
 SLIC3R_DIR=$(perl -MCwd=realpath -e "print realpath '${WD}/../../'")
@@ -89,12 +95,24 @@ cp $SLIC3R_DIR/slic3r.pl $macosfolder/slic3r.pl
 cp -fRP $SLIC3R_DIR/local-lib $macosfolder/local-lib
 cp -fRP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
 
-echo "Relocating dylib paths..."
-for bundle in $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/auto/Wx -name '*.bundle') $(find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets -name '*.dylib' -type f); do
+echo "Relocating Wx dylib paths..."
+mkdir $macosfolder/dylibs
+function relocate_dylibs {
+    local bundle=$1
     chmod +w $bundle
-    for dylib in $(otool -l $bundle | grep .dylib | grep local-lib | awk '{print $2}'); do
-        install_name_tool -change "$dylib" "@executable_path/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/lib/$(basename $dylib)" $bundle
+    local dylib
+    for dylib in $(otool -l $bundle | grep .dylib | grep -v /usr/lib | awk '{print $2}' | grep -v '^@'); do
+        local dylib_dest="$macosfolder/dylibs/$(basename $dylib)"
+        if [ ! -e $dylib_dest ]; then
+            echo "  relocating $dylib"
+            cp $dylib $macosfolder/dylibs/
+            relocate_dylibs $dylib_dest
+        fi
+        install_name_tool -change "$dylib" "@executable_path/dylibs/$(basename $dylib)" $bundle
     done
+}
+for bundle in $(find $macosfolder/local-lib/ \( -name '*.bundle' -or -name '*.dylib' \) -type f); do
+    relocate_dylibs "$bundle"
 done
 
 echo "Copying startup script..."
@@ -102,8 +120,12 @@ cp -f $WD/startup_script.sh $macosfolder/$appname
 chmod +x $macosfolder/$appname
 
 echo "Copying perl from $PERL_BIN"
-# Edit package/common/coreperl to add/remove core Perl modules added to this package, one per line.
 cp -f $PERL_BIN $macosfolder/perl-local
+chmod +w $macosfolder/perl-local
+relocate_dylibs $macosfolder/perl-local
+
+echo "Copying core modules"
+# Edit package/common/coreperl to add/remove core Perl modules added to this package, one per line.
 ${PP_BIN} \
           -M $(grep -v "^#" ${WD}/../common/coreperl | xargs | awk 'BEGIN { OFS=" -M "}; {$1=$1; print $0}') \
           -B -p -e "print 123" -o $WD/_tmp/bundle.par
@@ -142,16 +164,33 @@ make_plist
 echo $PkgInfoContents >$appfolder/Contents/PkgInfo
 
 KEYCHAIN_FILE_=${KEYCHAIN_FILE:-}
+KEYCHAIN_BASE64_=${KEYCHAIN_BASE64:-}
+KEYCHAIN_PASSWORD_=${KEYCHAIN_PASSWORD:-travis}
+KEYCHAIN_IDENTITY_=${KEYCHAIN_IDENTITY:-Developer ID Application: Alessandro Ranellucci (975MZ9YJL7)}
+
+# In case we were supplied a base64-encoded .p12 file instead of the path
+# to an existing keychain, create a temporary one
+if [[ -z "$KEYCHAIN_FILE_" && ! -z "$KEYCHAIN_BASE64_" ]]; then
+    KEYCHAIN_FILE_=$WD/_tmp/build.keychain
+    echo "Creating temporary keychain at ${KEYCHAIN_FILE_}"
+    echo "$KEYCHAIN_BASE64_" | base64 --decode > "${KEYCHAIN_FILE_}.p12"
+    security delete-keychain "$KEYCHAIN_FILE_" || true
+    security create-keychain -p "${KEYCHAIN_PASSWORD_}" "$KEYCHAIN_FILE_"
+    security set-keychain-settings -t 3600 -u "$KEYCHAIN_FILE_"
+    security import "${KEYCHAIN_FILE_}.p12" -k "$KEYCHAIN_FILE_" -P "${KEYCHAIN_PASSWORD_}" -T /usr/bin/codesign
+    security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PASSWORD_}" "$KEYCHAIN_FILE_"
+fi
+
 if [ ! -z $KEYCHAIN_FILE_ ]; then
     echo "Signing app..."
     chmod -R +w $macosfolder/*
     xattr -cr $appfolder
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
-    security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY}" --deep "$appfolder"
+    security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" --deep "$appfolder"
 else
-    echo "No KEYCHAIN_FILE env variable; skipping codesign"
+    echo "No KEYCHAIN_FILE or KEYCHAIN_BASE64 env variable; skipping codesign"
 fi
 
 echo "Creating dmg file...."
@@ -165,8 +204,8 @@ if [ ! -z $KEYCHAIN_FILE_ ]; then
     chmod +w $dmgfile
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
-    security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY}" "$dmgfile"
+    security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" "$dmgfile"
 fi
 
 rm -rf $WD/_tmp

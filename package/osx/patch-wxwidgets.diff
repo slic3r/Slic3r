@@ -1,0 +1,46 @@
+diff --git src/osx/carbon/dataobj.cpp src/osx/carbon/dataobj.cpp
+index 758e3a7928..5445aa6b14 100644
+--- src/osx/carbon/dataobj.cpp
++++ src/osx/carbon/dataobj.cpp
+@@ -29,10 +29,6 @@
+ 
+ #include "wx/osx/private.h"
+ 
+-#if wxOSX_USE_COCOA_OR_CARBON
+-    #include <QuickTime/QuickTime.h>
+-#endif
+-
+ // ----------------------------------------------------------------------------
+ // wxDataFormat
+ // ----------------------------------------------------------------------------
+diff --git src/osx/core/bitmap.cpp src/osx/core/bitmap.cpp
+index 3c61c173e7..3322b605fc 100644
+--- src/osx/core/bitmap.cpp
++++ src/osx/core/bitmap.cpp
+@@ -35,10 +35,6 @@
+ #include "wx/osx/private.h"
+ #endif
+ 
+-#ifndef __WXOSX_IPHONE__
+-#include <QuickTime/QuickTime.h>
+-#endif
+-
+ CGColorSpaceRef wxMacGetGenericRGBColorSpace();
+ CGDataProviderRef wxMacCGDataProviderCreateWithMemoryBuffer( const wxMemoryBuffer& buf );
+ 
+diff --git src/stc/scintilla/src/Editor.cxx src/stc/scintilla/src/Editor.cxx
+index cd72953ae7..a3ee41c49b 100644
+--- src/stc/scintilla/src/Editor.cxx
++++ src/stc/scintilla/src/Editor.cxx
+@@ -5841,9 +5841,9 @@
+ }
+ 
+ static bool Close(Point pt1, Point pt2) {
+-	if (abs(pt1.x - pt2.x) > 3)
++	if (labs(pt1.x - pt2.x) > 3)
+ 		return false;
+-	if (abs(pt1.y - pt2.y) > 3)
++	if (labs(pt1.y - pt2.y) > 3)
+ 		return false;
+ 	return true;
+ }
