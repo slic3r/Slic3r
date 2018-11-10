@@ -96,13 +96,22 @@ cp -fRP $SLIC3R_DIR/local-lib $macosfolder/local-lib
 cp -fRP $SLIC3R_DIR/lib/* $macosfolder/local-lib/lib/perl5/
 
 echo "Relocating Wx dylib paths..."
-for bundle in $(find $macosfolder/local-lib/ \( -name '*.bundle' -or -name '*.dylib' \) -type f); do
+mkdir $macosfolder/dylibs
+function relocate_dylibs {
+    bundle=$1
     chmod +w $bundle
     for dylib in $(otool -l $bundle | grep .dylib | grep -v /usr/lib | awk '{print $2}'); do
-        echo "  relocating $dylib"
-        install_name_tool -change "$dylib" "@loader_path/$(basename $dylib)" $bundle
-        cp -n $dylib $(dirname $bundle) || true
+        dylib_dest="$macosfolder/dylibs/$(basename $dylib)"
+        if [ ! -e $dylib_dest ]; then
+            echo "  relocating $dylib"
+            install_name_tool -change "$dylib" "@executable_path/dylibs/$(basename $dylib)" $bundle
+            cp $dylib $macosfolder/dylibs/
+            relocate_dylibs $dylib_dest
+        fi
     done
+}
+for bundle in $(find $macosfolder/local-lib/ \( -name '*.bundle' -or -name '*.dylib' \) -type f); do
+    relocate_dylibs "$bundle"
 done
 
 echo "Copying startup script..."
@@ -112,10 +121,7 @@ chmod +x $macosfolder/$appname
 echo "Copying perl from $PERL_BIN"
 cp -f $PERL_BIN $macosfolder/perl-local
 chmod +w $macosfolder/perl-local
-for dylib in $(otool -l $macosfolder/perl-local | grep libperl.dylib | awk '{print $2}'); do
-    cp $dylib $macosfolder/
-    install_name_tool -change "$dylib" "@executable_path/$(basename $dylib)" $macosfolder/perl-local
-done
+relocate_dylibs $macosfolder/perl-local
 
 echo "Copying core modules"
 # Edit package/common/coreperl to add/remove core Perl modules added to this package, one per line.
