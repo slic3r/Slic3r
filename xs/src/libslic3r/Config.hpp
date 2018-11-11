@@ -123,6 +123,10 @@ public:
     /// Pass-through of apply()
     void apply(const config_ptr& other) { _config.apply(other->config()); }
     void apply(const Slic3r::Config& other) { _config.apply(other.config()); }
+   
+    /// Apply only configuration options in the array.
+    void apply_with_defaults(const config_ptr& other, const t_config_option_keys& keys) { _config.apply_only(other->_config, keys, false, true); }
+    void apply(const config_ptr& other, const t_config_option_keys& keys) { _config.apply_only(other->_config, keys, false, false); }
 
     /// Allow other configs to be applied to this one.
     void apply(const Slic3r::ConfigBase& other) { _config.apply(other); }
