@@ -11,6 +11,7 @@
     #include <wx/wx.h>
     #include <wx/string.h>
     #include <wx/filefn.h> 
+    #include <wx/filename.h> 
 #endif
 
 namespace Slic3r { namespace GUI {
@@ -37,7 +38,7 @@ class Preset {
 public:
     friend class PresetEditor;
     preset_t group; 
-    std::string name {""};
+    wxString name {""};
     bool external {false};
 
     /// Preset
@@ -46,12 +47,13 @@ public:
     /// Search the compatible_printers config option list for this preset name.
     /// Assume that Printer configs are compatible with other Printer configs
     bool compatible(std::string printer_name) { return true; }
+    bool compatible(const wxString& printer_name) { if (group == preset_t::Printer) return true; return true; }
     bool compatible(const Preset& other) {return (this->group == preset_t::Printer || (compatible(other.name) && other.group == preset_t::Printer));}
 
     /// Format the name appropriately.
-    wxString dropdown_name() { return (this->dirty() ? wxString(this->name) << " " << _("(modified)") : wxString(this->name)); }
+    wxString dropdown_name() { return (this->dirty() ? this->name << " " << _("(modified)") : this->name); }
 
-    bool file_exists() const { return wxFileExists(this->name); }
+    bool file_exists() const { return this->_file.IsFileReadable(); }
 
     bool prompt_unsaved_changes(wxWindow* parent);
 
@@ -101,10 +103,7 @@ private:
     config_ptr _dirty_config { nullptr };
 
     /// Underlying filename for this preset config
-    std::string file {""};
-
-    /// dirname for the file.
-    std::string dir  {""};
+    wxFileName _file {};
 
     /// All the options owned by the corresponding editor
     t_config_option_keys _group_keys() const;
