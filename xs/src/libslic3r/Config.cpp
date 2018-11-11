@@ -308,6 +308,7 @@ Config::set(const t_config_option_key& opt_key, const double value)
 void
 Config::read_ini(const std::string& file)
 {
+    this->_config.load(file);
 }
 
 void
