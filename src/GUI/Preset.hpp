@@ -89,7 +89,9 @@ public:
     bool operator==(const wxString& _name) const { return this->operator==(_name.ToStdString()); }
     bool operator==(const std::string& _name) const { return _name.compare(this->name) == 0; }
 
+    /// Constructor for adding a file-backed 
     Preset(std::string load_dir, std::string filename, preset_t p);
+    Preset(bool is_default, wxString name, preset_t p) : group(p), name(name), external(false), default_preset(is_default) {};
 private:
 
     /// store to keep config options for this preset
@@ -103,7 +105,7 @@ private:
     config_ptr _dirty_config { nullptr };
 
     /// Underlying filename for this preset config
-    wxFileName _file {};
+    wxFileName _file {wxFileName()};
 
     /// All the options owned by the corresponding editor
     t_config_option_keys _group_keys() const;
