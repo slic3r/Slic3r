@@ -1,10 +1,10 @@
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
+    #include <wx/display.h>
+    #include <wx/filefn.h> 
     #include <wx/dir.h>
 #endif
-#include <wx/display.h>
-#include <wx/filefn.h> 
 #include <string>
 
 
