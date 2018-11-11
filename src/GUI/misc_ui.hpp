@@ -4,6 +4,7 @@
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
+    #include <wx/dir.h>
 #endif
 
 #include <wx/settings.h>
@@ -157,6 +158,24 @@ extern std::unique_ptr<Settings> ui_settings;
 
 wxString trim_zeroes(wxString in);
 
+/// Extensible directory traversal sink, cribbed from wxwidgets docs
+class wxDirTraverserSimple : public wxDirTraverser
+{
+public:
+    std::function<void(const wxString&)> file_cb {nullptr};
+    std::function<void(const wxString&)> dir_cb {nullptr};
+    wxDirTraverserSimple() { }
+    virtual wxDirTraverseResult OnFile(const wxString& filename)
+    {
+        if (this->file_cb != nullptr) this->file_cb(filename);
+        return wxDIR_CONTINUE;
+    }
+    virtual wxDirTraverseResult OnDir(const wxString& dirname)
+    {
+        if (this->dir_cb != nullptr) this->file_cb(dirname);
+        return wxDIR_CONTINUE;
+    }
+};
 
 }} // namespace Slic3r::GUI
 
