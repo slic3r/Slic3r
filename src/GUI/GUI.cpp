@@ -177,56 +177,28 @@ void App::load_presets() {
         if (wxDirExists(ini)) {
             auto sink { wxDirTraverserSimple() };
             sink.file_cb = ([&preset_list, group] (const wxString& filename) {
+
+                    // skip if we already have it
                     if (std::find_if(preset_list.begin(), preset_list.end(), 
                             [filename] (const Preset& t) 
                                 { return filename.ToStdString() == t.name; }) != preset_list.end()) return;
                     wxString path, name, ext;
                     wxFileName::SplitPath(filename, &path, &name, &ext);
+
                     preset_list.push_back(Preset(path.ToStdString(), (name + ext).ToStdString(), static_cast<preset_t>(group)));
                     });
 
             wxDir dir(ini);
             dir.Traverse(sink, "*.ini");
 
-            Slic3r::Log::debug("file") << "found " << preset_list.size() << " files " << "\n";
+            // Sort the list by name
+            std::sort(preset_list.begin(), preset_list.end(), [] (const Preset& x, const Preset& y) -> bool { return x.name < y.name; });
+
+            // Prepend default Preset
+            preset_list.emplace(preset_list.begin(), Preset(true, "- default -"s, static_cast<preset_t>(group)));
         }
 
     }
-/*
-    for my $group (qw(printer filament print)) {
-        my $presets = $self->{presets}{$group};
-        
-        # keep external or dirty presets
-        @$presets = grep { ($_->external && $_->file_exists) || $_->dirty } @$presets;
-        
-        my $dir = "$Slic3r::GUI::datadir/$group";
-        opendir my $dh, Slic3r::encode_path($dir)
-            or die "Failed to read directory $dir (errno: $!)\n";
-        foreach my $file (grep /\.ini$/i, readdir $dh) {
-            $file = Slic3r::decode_path($file);
-            my $name = basename($file);
-            $name =~ s/\.ini$//i;
-            
-            # skip if we already have it
-            next if any { $_->name eq $name } @$presets;
-            
-            push @$presets, Slic3r::GUI::Preset->new(
-                group   => $group,
-                name    => $name,
-                file    => "$dir/$file",
-            );
-        }
-        closedir $dh;
-    
-        @$presets = sort { $a->name cmp $b->name } @$presets;
-    
-        unshift @$presets, Slic3r::GUI::Preset->new(
-            group   => $group,
-            default => 1,
-            name    => '- default -',
-        );
-    }
-*/
 }
 
 void App::CallAfter(std::function<void()> cb_function) {
