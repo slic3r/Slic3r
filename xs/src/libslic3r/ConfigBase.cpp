@@ -250,16 +250,32 @@ ConfigBase::has(const t_config_option_key &opt_key) const {
 void
 ConfigBase::apply(const ConfigBase &other, bool ignore_nonexistent) {
     // apply all options
-    this->apply_only(other, other.keys(), ignore_nonexistent);
+    this->apply_only(other, other.keys(), ignore_nonexistent, false);
 }
 
 void
 ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent) {
+    this->apply_only(other, opt_keys, ignore_nonexistent, false);
+}
+
+void
+ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent, bool default_nonexistent) {
     // loop through options and apply them
     for (const t_config_option_key &opt_key : opt_keys) {
         ConfigOption* my_opt = this->option(opt_key, true);
+        if (opt_key.size() == 0) continue;
         if (my_opt == NULL) {
             if (ignore_nonexistent == false) throw UnknownOptionException();
+            continue;
+        }
+        if (default_nonexistent && !other.has(opt_key)) {
+            auto* def_opt = this->def->get(opt_key)->default_value->clone();
+            // not the most efficient way, but easier than casting pointers to subclasses
+            bool res = my_opt->deserialize( def_opt->serialize() );
+            if (!res) {
+                std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
+                CONFESS(error.c_str());
+            }
             continue;
         }
         
