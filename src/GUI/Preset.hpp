@@ -37,6 +37,7 @@ public:
     friend class PresetEditor;
     preset_t group; 
     std::string name {""};
+    bool external {false};
 
     /// Preset
     bool default_preset {false};
@@ -87,7 +88,6 @@ public:
 
     Preset(std::string load_dir, std::string filename, preset_t p);
 private:
-    bool external {false};
 
     /// store to keep config options for this preset
     /// This is intented to be a "pristine" copy from the underlying
