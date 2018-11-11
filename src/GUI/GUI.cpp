@@ -161,7 +161,7 @@ void App::restore_window_pos(wxTopLevelWindow* window, const wxString& name ) {
 
         window->Maximize(std::get<2>(tmp));
     }
-    catch (std::out_of_range e) {
+    catch (std::out_of_range& e) {
         // config was empty
     }
 }
