@@ -10,6 +10,7 @@
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
     #include <wx/string.h>
+    #include <wx/filefn.h> 
 #endif
 
 namespace Slic3r { namespace GUI {
@@ -50,7 +51,7 @@ public:
     /// Format the name appropriately.
     wxString dropdown_name() { return (this->dirty() ? wxString(this->name) << " " << _("(modified)") : wxString(this->name)); }
 
-    bool file_exists(wxString name);
+    bool file_exists() const { return wxFileExists(this->name); }
 
     bool prompt_unsaved_changes(wxWindow* parent);
 
