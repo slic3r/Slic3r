@@ -1,9 +1,11 @@
 #ifndef PRESET_HPP
 #define PRESET_HPP
 
+// Libslic3r 
 #include "PrintConfig.hpp"
 #include "Config.hpp"
 
+// wx
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
@@ -11,6 +13,7 @@
 #endif
 
 namespace Slic3r { namespace GUI {
+
 
 /// Preset types list. We assign numbers to permit static_casts and use as preset tab indices.
 /// Don't skip numbers in the enumeration, we use this as an index into vectors (instead of using std::map).
@@ -27,8 +30,11 @@ class Preset;
 
 using Presets = std::vector<Preset>;
 
+class PresetEditor;
+
 class Preset {
 public:
+    friend class PresetEditor;
     preset_t group; 
     std::string name {""};
 
@@ -57,21 +63,24 @@ public:
     void delete_preset();
 
     /// Returns list of options that have been modified from the config.
-    t_config_option_keys dirty_options();
+    t_config_option_keys dirty_options() const;
 
     /// Returns whether or not this config is different from its modified state.
     bool dirty() const;
 
-    /// Loads the selected config from file and return a shared_ptr to that config
+    /// Loads the selected config from file and return a shared_ptr to the dirty config
     config_ptr load_config(); 
 
+    /// Retrieve a copy of the loaded version of the configuration with any options applied.
+    Slic3r::Config dirty_config(); 
+
     /// Pass-through to Slic3r::Config, returns whether or not a config was loaded.
-    bool loaded() { return !this->config.empty(); }
+    bool loaded() { return !this->_config->empty(); }
 
     /// Clear the dirty config.
     void dismiss_changes();
 
-    void apply_dirty(const Slic3r::Config& other) { this->dirty_config.apply(other); }
+    void apply_dirty(const Slic3r::Config& other) { this->_dirty_config->apply(other); }
     void apply_dirty(const config_ptr& other) { this->apply_dirty(*other); }
     bool operator==(const wxString& _name) const { return this->operator==(_name.ToStdString()); }
     bool operator==(const std::string& _name) const { return _name.compare(this->name) == 0; }
@@ -81,10 +90,14 @@ private:
     bool external {false};
 
     /// store to keep config options for this preset
-    Slic3r::Config config { Slic3r::Config() };
+    /// This is intented to be a "pristine" copy from the underlying
+    /// file store.
+    config_ptr  _config { nullptr };
 
     /// Alternative config store for a modified configuration.
-    Slic3r::Config dirty_config { Slic3r::Config() };
+    /// This is the config reference that the rest of the system gets
+    /// from load_config
+    config_ptr _dirty_config { nullptr };
 
     /// Underlying filename for this preset config
     std::string file {""};
@@ -92,8 +105,10 @@ private:
     /// dirname for the file.
     std::string dir  {""};
 
-    /// reach through to the appropriate material type
-    t_config_option_keys _group_class(); 
+    /// All the options owned by the corresponding editor
+    t_config_option_keys _group_keys() const;
+    /// All the override options owned by the corresponding editor
+    t_config_option_keys _group_overrides() const;
 
 
 };
