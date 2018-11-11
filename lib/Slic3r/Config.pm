@@ -28,7 +28,7 @@ $Options->{threads}{readonly} = !$Slic3r::have_threads;
 sub new_from_defaults {
     my $class = shift;
     my (@opt_keys) = @_;
-    
+
     my $self = $class->new;
     if (@opt_keys) {
         $self->set($_, $Options->{$_}{default})
@@ -43,10 +43,10 @@ sub new_from_defaults {
 sub new_from_cli {
     my $class = shift;
     my %args = @_;
-    
+
     # Delete hash keys with undefined value.
     delete $args{$_} for grep !defined $args{$_}, keys %args;
-    
+
     # Replace the start_gcode, end_gcode ... hash values
     # with the content of the files they reference.
     for (qw(start end layer toolchange)) {
@@ -65,8 +65,8 @@ sub new_from_cli {
     my $self = $class->new;
     foreach my $opt_key (keys %args) {
         my $opt_def = $Options->{$opt_key};
-        
-        # we use set_deserialize() for bool options since GetOpt::Long doesn't handle 
+
+        # we use set_deserialize() for bool options since GetOpt::Long doesn't handle
         # arrays of boolean values
         if ($opt_key =~ /^(?:bed_shape|duplicate_grid|extruder_offset)$/ || $opt_def->{type} eq 'bool') {
             $self->set_deserialize($opt_key, $args{$opt_key});
@@ -76,7 +76,7 @@ sub new_from_cli {
             $self->set($opt_key, $args{$opt_key});
         }
     }
-    
+
     return $self;
 }
 
@@ -92,10 +92,10 @@ sub merge {
 sub load {
     my $class = shift;
     my ($file) = @_;
-    
+
     # legacy syntax of load()
     my $config = $class->new;
-	
+
     $config->_load($file);
     return $config;
 }
@@ -103,7 +103,7 @@ sub load {
 sub save {
     my $self = shift;
     my ($file) = @_;
-    
+
     return $self->_save($file);
 }
 
@@ -112,7 +112,7 @@ sub save {
 sub load_ini_hash {
     my $class = shift;
     my ($ini_hash) = @_;
-    
+
     my $config = $class->new;
     $config->set_deserialize($_, $ini_hash->{$_}) for keys %$ini_hash;
     return $config;
@@ -120,7 +120,7 @@ sub load_ini_hash {
 
 sub clone {
     my $self = shift;
-    
+
     my $new = (ref $self)->new;
     $new->apply($self);
     return $new;
@@ -129,7 +129,7 @@ sub clone {
 sub get_value {
     my $self = shift;
     my ($opt_key) = @_;
-    
+
     return $Options->{$opt_key}{ratio_over}
         ? $self->get_abs_value($opt_key)
         : $self->get($opt_key);
@@ -139,7 +139,7 @@ sub get_value {
 # The first hash key is '_' meaning no category.
 sub as_ini {
     my ($self) = @_;
-    
+
     my $ini = { _ => {} };
     foreach my $opt_key (sort @{$self->get_keys}) {
         next if $Options->{$opt_key}{shortcut};
@@ -152,7 +152,7 @@ sub as_ini {
 # objects because it performs cross checks
 sub validate {
     my $self = shift;
-    
+
     # -j, --threads
     die "Invalid value for --threads\n"
         if $self->threads < 1;
@@ -162,7 +162,7 @@ sub validate {
         if $self->layer_height <= 0;
     die "--layer-height must be a multiple of print resolution\n"
         if $self->layer_height / &Slic3r::SCALING_FACTOR % 1 != 0;
-    
+
     # --first-layer-height
     die "Invalid value for --first-layer-height\n"
         if $self->first_layer_height !~ /^(?:\d*(?:\.\d+)?)%?$/;
@@ -171,18 +171,18 @@ sub validate {
 
     die "Adaptive slicing requires a non-relative first layer height.\n"
         if $self->get_value('adaptive_slicing') == 1 and $self->first_layer_height =~ /^(?:\d*(?:\.\d+)?)%$/;
-    
+
     # --filament-diameter
     die "Invalid value for --filament-diameter\n"
         if grep $_ < 1, @{$self->filament_diameter};
-    
+
     die "Invalid value for --min-shell-thickness\n"
         if $self->min_shell_thickness < 0;
 
     # --nozzle-diameter
     die "Invalid value for --nozzle-diameter\n"
         if grep $_ < 0, @{$self->nozzle_diameter};
-    
+
     # --perimeters
     die "Invalid value for --perimeters\n"
         if $self->perimeters < 0;
@@ -190,75 +190,74 @@ sub validate {
     die "Invalid value for --small_perimeter_length\n"
         if $self->small_perimeter_length < 0;
 
-    
     # --solid-layers
     die "Invalid value for --solid-layers\n" if defined $self->solid_layers && $self->solid_layers < 0;
     die "Invalid value for --top-solid-layers\n"    if $self->top_solid_layers      < 0;
     die "Invalid value for --bottom-solid-layers\n" if $self->bottom_solid_layers   < 0;
     die "Invalid value for --min-top-bottom-shell-thickness\n" if $self->min_top_bottom_shell_thickness < 0;
-    
+
     # --gcode-flavor
     die "Invalid value for --gcode-flavor\n"
         if !first { $_ eq $self->gcode_flavor } @{$Options->{gcode_flavor}{values}};
-    
+
     die "--use-firmware-retraction is only supported by Marlin, Smoothie, Repetier and Machinekit firmware\n"
-        if $self->use_firmware_retraction && $self->gcode_flavor ne 'smoothie' 
-        && $self->gcode_flavor ne 'reprap' 
-        && $self->gcode_flavor ne 'machinekit' 
+        if $self->use_firmware_retraction && $self->gcode_flavor ne 'smoothie'
+        && $self->gcode_flavor ne 'reprap'
+        && $self->gcode_flavor ne 'machinekit'
         && $self->gcode_flavor ne 'repetier';
-    
+
     die "--use-firmware-retraction is not compatible with --wipe\n"
         if $self->use_firmware_retraction && first {$_} @{$self->wipe};
-    
+
     # --fill-pattern
     die "Invalid value for --fill-pattern\n"
         if !first { $_ eq $self->fill_pattern } @{$Options->{fill_pattern}{values}};
-    
+
     # --external-fill-pattern
     die "Invalid value for --top-infill-pattern\n"
         if !first { $_ eq $self->top_infill_pattern } @{$Options->{top_infill_pattern}{values}};
     die "Invalid value for --bottom-infill-pattern\n"
         if !first { $_ eq $self->bottom_infill_pattern } @{$Options->{bottom_infill_pattern}{values}};
-    
+
     # --fill-density
     die "The selected fill pattern is not supposed to work at 100% density\n"
         if $self->fill_density == 100
             && !first { $_ eq $self->fill_pattern } @{$Options->{external_fill_pattern}{values}};
-    
+
     # --infill-every-layers
     die "Invalid value for --infill-every-layers\n"
         if $self->infill_every_layers !~ /^\d+$/ || $self->infill_every_layers < 1;
-    
+
     # --skirt-height
     die "Invalid value for --skirt-height\n"
         if $self->skirt_height < -1;  # -1 means as tall as the object
-    
+
     # --bridge-flow-ratio
     die "Invalid value for --bridge-flow-ratio\n"
         if $self->bridge_flow_ratio <= 0;
-    
+
     # extruder clearance
     die "Invalid value for --extruder-clearance-radius\n"
         if $self->extruder_clearance_radius <= 0;
     die "Invalid value for --extruder-clearance-height\n"
         if $self->extruder_clearance_height <= 0;
-    
+
     # --extrusion-multiplier
     die "Invalid value for --extrusion-multiplier\n"
         if defined first { $_ <= 0 } @{$self->extrusion_multiplier};
-    
+
     # --default-acceleration
     die "Invalid zero value for --default-acceleration when using other acceleration settings\n"
         if ($self->perimeter_acceleration || $self->infill_acceleration || $self->bridge_acceleration || $self->first_layer_acceleration)
             && !$self->default_acceleration;
-    
+
     # --spiral-vase
     if ($self->spiral_vase) {
         # Note that we might want to have more than one perimeter on the bottom
         # solid layers.
         die "Can't make more than one perimeter when spiral vase mode is enabled\n"
             if $self->perimeters > 1;
-        
+
         die "Can't make less than one perimeter when spiral vase mode is enabled\n"
             if $self->perimeters < 1;
 
@@ -267,14 +266,14 @@ sub validate {
 
         die "Spiral vase mode can only print hollow objects, so you need to set Fill density to 0\n"
             if $self->fill_density > 0;
-        
+
         die "Spiral vase mode is not compatible with top solid layers\n"
             if $self->top_solid_layers > 0;
-        
+
         die "Spiral vase mode is not compatible with support material\n"
             if $self->support_material || $self->support_material_enforce_layers > 0;
     }
-    
+
     # extrusion widths
     {
         my $max_nozzle_diameter = max(@{ $self->nozzle_diameter });
@@ -283,8 +282,8 @@ sub validate {
                 map $self->get_abs_value_over("${_}_extrusion_width", $max_nozzle_diameter),
                 qw(perimeter infill solid_infill top_infill support_material first_layer);
     }
-    
-    
+
+
     # general validation, quick and dirty
     foreach my $opt_key (@{$self->get_keys}) {
         my $opt = $Options->{$opt_key};
@@ -312,7 +311,7 @@ sub validate {
             }
         }
     }
-    
+
     return 1;
 }
 
@@ -322,7 +321,7 @@ sub validate {
 sub write_ini {
     my $class = shift;
     my ($file, $ini) = @_;
-    
+
     Slic3r::open(\my $fh, '>', $file);
     binmode $fh, ':utf8';
     my $localtime = localtime;
@@ -344,12 +343,12 @@ sub write_ini {
 sub read_ini {
     my $class = shift;
     my ($file) = @_;
-    
+
     local $/ = "\n";
     Slic3r::open(\my $fh, '<', $file)
         or die "Unable to open $file: $!\n";
     binmode $fh, ':utf8';
-    
+
     my $ini = { _ => {} };
     my $category = '_';
     while (<$fh>) {
@@ -365,7 +364,7 @@ sub read_ini {
         $ini->{$category}{$1} = $2;
     }
     close $fh;
-    
+
     return $ini;
 }
 

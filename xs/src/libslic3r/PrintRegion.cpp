@@ -47,7 +47,7 @@ PrintRegion::flow(FlowRole role, double layer_height, bool bridge, bool first_la
     if (config_width.value == 0) {
         config_width = object.config.extrusion_width;
     }
-    
+
     // get the configured nozzle_diameter for the extruder associated
     // to the flow role requested
     size_t extruder = 0;    // 1-based
@@ -61,7 +61,7 @@ PrintRegion::flow(FlowRole role, double layer_height, bool bridge, bool first_la
         CONFESS("Unknown role $role");
     }
     double nozzle_diameter = this->_print->config.nozzle_diameter.get_at(extruder-1);
-    
+
     return Flow::new_from_config_width(role, config_width, nozzle_diameter, layer_height, bridge ? (float)this->config.bridge_flow_ratio : 0.0);
 }
 
@@ -69,10 +69,10 @@ bool
 PrintRegion::invalidate_state_by_config(const PrintConfigBase &config)
 {
     const t_config_option_keys diff = this->config.diff(config);
-    
+
     std::set<PrintObjectStep> steps;
     bool all = false;
-    
+
     for (const t_config_option_key &opt_key : diff) {
         if (opt_key == "perimeters"
             || opt_key == "extra_perimeters"
@@ -121,7 +121,7 @@ PrintRegion::invalidate_state_by_config(const PrintConfigBase &config)
             const float &new_value = this->config.fill_density.value;
             if ((cur_value == 0) != (new_value == 0) || (cur_value == 100) != (new_value == 100))
                 steps.insert(posPerimeters);
-            
+
             steps.insert(posInfill);
         } else if (opt_key == "external_perimeter_extrusion_width"
             || opt_key == "perimeter_extruder") {
@@ -145,10 +145,10 @@ PrintRegion::invalidate_state_by_config(const PrintConfigBase &config)
             break;
         }
     }
-    
+
     if (!diff.empty())
         this->config.apply(config, true);
-    
+
     bool invalidated = false;
     if (all) {
         for (PrintObject* object : this->print()->objects)
@@ -160,7 +160,7 @@ PrintRegion::invalidate_state_by_config(const PrintConfigBase &config)
                 if (object->invalidate_step(step))
                     invalidated = true;
     }
-    
+
     return invalidated;
 }
 
