@@ -708,6 +708,13 @@ class ConfigBase
     virtual t_config_option_keys keys() const = 0;
     void apply(const ConfigBase &other, bool ignore_nonexistent = false);
     void apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent = false);
+
+    /// Apply one configuration store to another. 
+    /// @param other configuration store to apply from
+    /// @param opt_keys Vector of string keys to apply one to the other
+    /// @param ignore_nonexistant if true, don't throw an exception if the key is not known to Slic3r
+    /// @default nonexistant Set the configuration option to its default if it is not found in other.
+    void apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent = false, bool default_nonexistent = false);
     bool equals(const ConfigBase &other) const;
     t_config_option_keys diff(const ConfigBase &other) const;
     std::string serialize(const t_config_option_key &opt_key) const;

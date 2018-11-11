@@ -28,7 +28,7 @@
     void apply(DynamicPrintConfig* other)
         %code{% THIS->apply(*other, true); %};
     void apply_only(DynamicPrintConfig* other, std::vector<std::string> opt_keys)
-        %code{% THIS->apply_only(*other, opt_keys, true); %};
+        %code{% THIS->apply_only(*other, opt_keys, true, false); %};
     std::vector<std::string> diff(DynamicPrintConfig* other)
         %code{% RETVAL = THIS->diff(*other); %};
     std::vector<std::string> diff_static(StaticPrintConfig* other)
