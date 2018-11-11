@@ -1281,6 +1281,14 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("auto");
     def->default_value = new ConfigOptionFloatOrPercent(15, false);
 
+    def = this->add("small_perimeter_length", coFloat);
+    def->label = __TRANS("Small perimeter length");
+    def->category = __TRANS("Layers and Perimeters");
+    def->tooltip = __TRANS("This setting controls the length of the small perimeter parameter.");
+    def->sidetext = "mm";
+    def->cli = "small-perimeter-length=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(20);
     def = this->add("solid_infill_below_area", coFloat);
     def->label = __TRANS("Solid infill threshold area");
     def->category = __TRANS("Infill");

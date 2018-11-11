@@ -43,6 +43,7 @@ _arguments -S \
     '--perimeter-speed[specify speed of print moves for perimeters]:speed of print moves for perimeters in mm/s' \
     '--external-perimeter-speed[specify speed of print moves for external perimeters]:speed of print moves for external perimeters in mm/s or % of --perimeter-speed' \
     '--small-perimeter-speed[specify speed of print moves for small perimeters]:speed of print moves for small perimeters in mm/s or % of --perimeter-speed' \
+    '--small-perimeter-length[specify length of the small perimeters]: length of the small perimeters in mm' \
     '--infill-speed[specify speed of infill print moves]:speed of infill print moves in mm/s' \
     '--solid-infill-speed[specify speed of solid surface print moves]:speed of solid surface print moves in mm/s or % of --infill-speed' \
     '--top-solid-infill-speed[specify speed of top surface print moves]:speed of top surface print moves in mm/s or % of --solid-infill-speed' \

@@ -186,6 +186,10 @@ sub validate {
     # --perimeters
     die "Invalid value for --perimeters\n"
         if $self->perimeters < 0;
+
+    die "Invalid value for --small_perimeter_length\n"
+        if $self->small_perimeter_length < 0;
+
     
     # --solid-layers
     die "Invalid value for --solid-layers\n" if defined $self->solid_layers && $self->solid_layers < 0;
