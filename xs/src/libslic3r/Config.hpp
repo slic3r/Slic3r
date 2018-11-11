@@ -127,6 +127,12 @@ public:
     /// Allow other configs to be applied to this one.
     void apply(const Slic3r::ConfigBase& other) { _config.apply(other); }
 
+    /// Pass-through of diff()
+    t_config_option_keys diff(const config_ptr& other) { return _config.diff(other->config()); };
+    t_config_option_keys diff(const Slic3r::Config& other) { return _config.diff(other.config()); }
+
+    /// Return whether or not the underlying ConfigBase contains a key k
+    bool has(const t_config_option_key& k) const { return _config.has(k); };
 
     /// Do not use; prefer static factory methods instead.
     Config(); 
