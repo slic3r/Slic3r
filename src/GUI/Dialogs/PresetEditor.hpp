@@ -27,9 +27,9 @@ class PresetPage;
 
 class PresetEditor : public wxPanel {
 
-public: 
-    /// Member function to retrieve a list of options 
-    /// that this preset governs. Subclasses should 
+public:
+    /// Member function to retrieve a list of options
+    /// that this preset governs. Subclasses should
     /// call their own static method.
     virtual t_config_option_keys my_options() = 0;
     static t_config_option_keys options() { return t_config_option_keys {}; }
@@ -48,11 +48,11 @@ public:
     /// Check if there is a dirty config that is different than the loaded config.
     bool prompt_unsaved_changes();
 
-    /// Perform a preset selection and possibly trigger the _on_select_preset 
+    /// Perform a preset selection and possibly trigger the _on_select_preset
     /// method.
     void select_preset(int id, bool force = false);
     void select_preset_by_name(const wxString& name, bool force = false);
-    
+
     /// suppress the callback when the tree selection is changed.
     bool disable_tree_sel_changed_event {false};
 
@@ -67,22 +67,22 @@ public:
 
     virtual wxString title() = 0;
     virtual std::string name() = 0;
-    virtual preset_t type() = 0; 
-    virtual int typeId() = 0; 
+    virtual preset_t type() = 0;
+    virtual int typeId() = 0;
 protected:
     // Main sizer
     wxSizer* _sizer {nullptr};
     wxString presets;
     wxImageList* _icons {nullptr};
     wxTreeCtrl* _treectrl {nullptr};
-    wxBitmapButton* _btn_save_preset {nullptr}; 
+    wxBitmapButton* _btn_save_preset {nullptr};
     wxBitmapButton* _btn_delete_preset {nullptr};
     wxChoice* _presets_choice {nullptr};
     int _iconcount {-1};
 
     /// Vector of PresetPage pointers; trust wxWidgets RTTI to avoid leaks
     std::vector<PresetPage*> _pages {};
-    
+
     const unsigned int left_col_width {150};
     void _update_tree();
     void load_presets();
@@ -91,7 +91,7 @@ protected:
     virtual void _update(const std::string& opt_key = "") = 0;
     virtual void _on_preset_loaded() = 0;
 
-    void set_tooltips() { 
+    void set_tooltips() {
         this->_btn_save_preset->SetToolTip(wxString(_("Save current ")) + this->title());
         this->_btn_delete_preset->SetToolTip(_("Delete this preset."));
     }
@@ -108,7 +108,7 @@ protected:
 
     /// This method is supposed to be called whenever new values are loaded
     /// or changed by the user (including when presets are loaded).
-    /// Pushes a callback onto the owning Slic3r app to be processed during 
+    /// Pushes a callback onto the owning Slic3r app to be processed during
     /// an idle event.
     void _on_value_change(std::string opt_key);
 
@@ -126,8 +126,8 @@ public:
     wxString title() override { return _("Print Settings"); }
     std::string name() override { return "print"s; }
 
-    preset_t type() override  { return preset_t::Print; }; 
-    int typeId() override  { return static_cast<int>(preset_t::Print); }; 
+    preset_t type() override  { return preset_t::Print; };
+    int typeId() override  { return static_cast<int>(preset_t::Print); };
 
     t_config_option_keys my_overridable_options() override { return PresetEditor::overridable_options(); };
     static t_config_option_keys overridable_options() { return PresetEditor::overridable_options(); };
@@ -188,7 +188,7 @@ protected:
     void _build() override;
     void _on_preset_loaded() override;
     const std::string LogChannel() override {return "PrintEditor"s; } //< Which log these messages should go to.
-    
+
 };
 
 class PrinterEditor : public PresetEditor {
@@ -198,10 +198,10 @@ public:
 
     wxString title() override { return _("Printer Settings"); }
     std::string name() override { return "printer"s; }
-    preset_t type() override  { return preset_t::Printer; }; 
-    int typeId() override  { return static_cast<int>(preset_t::Printer); }; 
+    preset_t type() override  { return preset_t::Printer; };
+    int typeId() override  { return static_cast<int>(preset_t::Printer); };
 
-    static t_config_option_keys overridable_options() { return t_config_option_keys 
+    static t_config_option_keys overridable_options() { return t_config_option_keys
     {
         "pressure_advance"s,
         "retract_length"s, "retract_lift"s, "retract_speed"s, "retract_restart_extra"s,
@@ -212,7 +212,7 @@ public:
     t_config_option_keys my_overridable_options() override { return PrinterEditor::overridable_options(); };
     t_config_option_keys my_overriding_options() override { return PrinterEditor::overriding_options(); };
 
-    
+
     static t_config_option_keys options() {
         return t_config_option_keys
         {
@@ -231,7 +231,7 @@ public:
             "use_set_and_wait_bed"s, "use_set_and_wait_extruder"s
         };
     }
-    
+
     t_config_option_keys my_options() override { return PrinterEditor::options(); }
 protected:
     void _update(const std::string& opt_key = "") override;
@@ -245,11 +245,11 @@ public:
 
     wxString title() override { return _("Material Settings"); }
     std::string name() override { return "material"s; }
-    preset_t type() override  { return preset_t::Material; }; 
-    int typeId() override  { return static_cast<int>(preset_t::Material); }; 
+    preset_t type() override  { return preset_t::Material; };
+    int typeId() override  { return static_cast<int>(preset_t::Material); };
     MaterialEditor(wxWindow* parent, t_config_option_keys options = {});
     MaterialEditor() : MaterialEditor(nullptr, {}) {};
-    
+
     t_config_option_keys my_overridable_options() override { return PresetEditor::overridable_options(); };
     t_config_option_keys my_overriding_options() override { return PrinterEditor::overridable_options(); };
 
@@ -268,7 +268,7 @@ public:
             "filament_settings_id"s
         };
     }
-    
+
     t_config_option_keys my_options() override { return MaterialEditor::options(); }
 protected:
     void _update(const std::string& opt_key = "") override;
@@ -282,7 +282,7 @@ protected:
 
 class PresetPage : public wxScrolledWindow {
 public:
-    PresetPage(wxWindow* parent, wxString _title, int _iconID) : 
+    PresetPage(wxWindow* parent, wxString _title, int _iconID) :
         wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL),
         title(_title), iconID(_iconID) {
             this->vsizer = new wxBoxSizer(wxVERTICAL);
