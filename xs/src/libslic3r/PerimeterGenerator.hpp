@@ -103,6 +103,7 @@ private:
         ThickPolylines &thin_walls) const;
     ExtrusionLoop _traverse_and_join_loops(const PerimeterGeneratorLoop &loop, const PerimeterGeneratorLoops &childs, const Point entryPoint) const;
     ExtrusionLoop _extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, const Point entryPoint, const Line &direction = Line(Point(0,0),Point(0,0))) const;
+    PerimeterIntersectionPoint _get_nearest_point(const PerimeterGeneratorLoops &children, ExtrusionLoop &myPolylines, const coord_t dist_cut, const coord_t max_dist) const;
     ExtrusionEntityCollection _variable_width
         (const ThickPolylines &polylines, ExtrusionRole role, Flow flow) const;
 };

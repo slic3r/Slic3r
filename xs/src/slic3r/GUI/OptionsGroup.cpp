@@ -458,10 +458,10 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		}
 		else if (opt_key.compare("support_material_pattern") == 0){
 			ret = static_cast<int>(config.option<ConfigOptionEnum<SupportMaterialPattern>>(opt_key)->value);
-		}
-		else if (opt_key.compare("seam_position") == 0){
-			ret = static_cast<int>(config.option<ConfigOptionEnum<SeamPosition>>(opt_key)->value);
-		}
+        }
+        else if (opt_key.compare("seam_position") == 0 || opt_key.compare("perimeter_loop_seam") == 0) {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<SeamPosition>>(opt_key)->value);
+        }
 		else if (opt_key.compare("host_type") == 0){
 			ret = static_cast<int>(config.option<ConfigOptionEnum<PrintHostType>>(opt_key)->value);
 		}

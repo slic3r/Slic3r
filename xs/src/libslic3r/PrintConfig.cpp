@@ -400,13 +400,25 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("perimeter_loop", coBool);
-    def->label = L("Looping perimeters");
+    def->label = L(" ");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Join the perimeters to create only one continuous extrusion without any z-hop."
         " Long inside travel (from external to holes) are not extruded to give some place to the infill.");
     def->cli = "loop-perimeter!";
     def->default_value = new ConfigOptionBool(false);
-
+    
+    def = this->add("perimeter_loop_seam", coEnum);
+    def->label = L("Seam position");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Position of perimeters starting points.");
+    def->cli = "perimeter-seam-position=s";
+    def->enum_keys_map = &ConfigOptionEnum<SeamPosition>::get_enum_values();
+    def->enum_values.push_back("nearest");
+    def->enum_values.push_back("rear");
+    def->enum_labels.push_back(L("Nearest"));
+    def->enum_labels.push_back(L("Rear"));
+    def->default_value = new ConfigOptionEnum<SeamPosition>(spRear); 
+    
     def = this->add("extra_perimeters", coBool);
     def->label = L("Extra perimeters if needed");
     def->category = L("Layers and Perimeters");
@@ -1600,11 +1612,20 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("nearest");
     def->enum_values.push_back("aligned");
     def->enum_values.push_back("rear");
+    def->enum_values.push_back("hidden");
     def->enum_labels.push_back(L("Random"));
     def->enum_labels.push_back(L("Nearest"));
     def->enum_labels.push_back(L("Aligned"));
-    def->enum_labels.push_back(L("Rear")); 
+    def->enum_labels.push_back(L("Rear"));
+    def->enum_labels.push_back(L("Hidden"));
     def->default_value = new ConfigOptionEnum<SeamPosition>(spAligned);
+
+    def = this->add("seam_travel", coBool);
+    def->label = L("Travel move reduced");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Add a big cost to travel paths when possible (when going into a loop), so it will prefer a less optimal seam posistion if it's nearer.");
+    def->cli = "seam-travel!";
+    def->default_value = new ConfigOptionBool(false);
 
 #if 0
     def = this->add("seam_preferred_direction", coFloat);

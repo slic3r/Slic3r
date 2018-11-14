@@ -1920,7 +1920,7 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
             #endif
         }
     }
-  
+    
     // extrude all loops ccw
     //no! this was decided in perimeter_generator
     bool was_clockwise = false;// loop.make_counter_clockwise();
@@ -1934,7 +1934,7 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
     Point last_pos = this->last_pos();
     if (m_config.spiral_vase) {
         loop.split_at(last_pos, false);
-    } else if (seam_position == spNearest || seam_position == spAligned || seam_position == spRear) {
+    } else if (seam_position == spNearest || seam_position == spAligned || seam_position == spRear || seam_position == spHidden) {
         Polygon        polygon    = loop.polygon();
         const coordf_t nozzle_dmr = EXTRUDER_CONFIG(nozzle_diameter);
         const coord_t  nozzle_r   = coord_t(scale_(0.5 * nozzle_dmr) + 0.5);
@@ -1949,11 +1949,18 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
                 last_pos_weight = 1.f;
             }
             break;
+        case spNearest:
+            last_pos_weight = 5.f;
+            break;
         case spRear:
             last_pos = m_layer->object()->bounding_box().center();
             last_pos.y += coord_t(3. * m_layer->object()->bounding_box().radius());
             last_pos_weight = 5.f;
             break;
+        case spHidden:
+            last_pos_weight = 0.1f;
+            break;
+
         }
 
         // Insert a projection of last_pos into the polygon.
@@ -1975,7 +1982,16 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
         const float penaltySeam         = 1.3f;
         const float penaltyOverhangHalf = 10.f;
         // Penalty for visible seams.
-        for (size_t i = 0; i < polygon.points.size(); ++ i) {
+        float dist_max = 0.1f * lengths.back();// 5.f * nozzle_dmr
+        if (this->config().seam_travel) {
+            dist_max = 0;
+            for (size_t i = 0; i < polygon.points.size(); ++i) {
+                dist_max = std::max(dist_max, (float)polygon.points[i].distance_to(last_pos_proj));
+            }
+        }
+        //TODO: ignore the angle penalty if the new point is not in an external path (bot/top/ext_peri)
+        for (size_t i = 0; i < polygon.points.size(); ++i) {
+            //std::cout << "check point  @" << unscale(polygon.points[i].x) << ":" << unscale(polygon.points[i].y);
             float ccwAngle = penalties[i];
             if (was_clockwise)
                 ccwAngle = - ccwAngle;
@@ -1996,13 +2012,15 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
                 // Interpolate penalty between maximum and the penalty for a convex vertex.
                 penalty = penaltyConvexVertex + (penaltyFlatSurface - penaltyConvexVertex) * bspline_kernel(ccwAngle * float(PI * 2. / 3.));
             }
-            // Give a negative penalty for points close to the last point or the prefered seam location.
-            //float dist_to_last_pos_proj = last_pos_proj.distance_to(polygon.points[i]);
-            float dist_to_last_pos_proj = (i < last_pos_proj_idx) ? 
-                std::min(lengths[last_pos_proj_idx] - lengths[i], lengths.back() - lengths[last_pos_proj_idx] + lengths[i]) : 
-                std::min(lengths[i] - lengths[last_pos_proj_idx], lengths.back() - lengths[i] + lengths[last_pos_proj_idx]);
-            float dist_max = 0.1f * lengths.back(); // 5.f * nozzle_dmr
-            penalty -= last_pos_weight * bspline_kernel(dist_to_last_pos_proj / dist_max);
+            if (this->config().seam_travel) {
+                penalty += last_pos_weight * polygon.points[i].distance_to(last_pos_proj) / dist_max;
+            }else{
+                // Give a negative penalty for points close to the last point or the prefered seam location.
+                float dist_to_last_pos_proj = (i < last_pos_proj_idx) ?
+                    std::min(lengths[last_pos_proj_idx] - lengths[i], lengths.back() - lengths[last_pos_proj_idx] + lengths[i]) :
+                    std::min(lengths[i] - lengths[last_pos_proj_idx], lengths.back() - lengths[i] + lengths[last_pos_proj_idx]);
+                penalty -= last_pos_weight * bspline_kernel(dist_to_last_pos_proj / dist_max);
+            }
             penalties[i] = std::max(0.f, penalty);
         }
 

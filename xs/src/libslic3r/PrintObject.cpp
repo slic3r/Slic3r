@@ -157,6 +157,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "thin_walls"
             || opt_key == "external_perimeters_first"
             || opt_key == "perimeter_loop"
+            || opt_key == "perimeter_loop_seam"
             || opt_key == "no_perimeter_unsupported"
             || opt_key == "min_perimeter_unsupported"
             || opt_key == "noperi_bridge_only") {
@@ -241,6 +242,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             steps.emplace_back(posInfill);
         } else if (
                opt_key == "seam_position"
+            || opt_key == "seam_travel"
             || opt_key == "seam_preferred_direction"
             || opt_key == "seam_preferred_direction_jitter"
             || opt_key == "support_material_speed"

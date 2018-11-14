@@ -644,10 +644,10 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
 }
 
 PerimeterIntersectionPoint
-get_nearest_point(const PerimeterGeneratorLoops &children, ExtrusionLoop &myPolylines, const coord_t dist_cut, const coord_t max_dist) {
+PerimeterGenerator::_get_nearest_point(const PerimeterGeneratorLoops &children, ExtrusionLoop &myPolylines, const coord_t dist_cut, const coord_t max_dist) const {
     //find best points of intersections
     PerimeterIntersectionPoint intersect;
-    intersect.distance = 0x7FFFFFFF;
+    intersect.distance = 0x7FFFFFFF; // ! assumption on intersect type & max value
     intersect.idx_polyline_outter = -1;
     intersect.idx_children = -1;
     for (size_t idx_child = 0; idx_child < children.size(); idx_child++) {
@@ -656,23 +656,54 @@ get_nearest_point(const PerimeterGeneratorLoops &children, ExtrusionLoop &myPoly
             if (myPolylines.paths[idx_poly].extruder_id == (unsigned int)-1) continue;
             if (myPolylines.paths[idx_poly].length() < dist_cut + SCALED_RESOLUTION) continue;
 
-            //first, try to find 2 point near enough
-            for (size_t idx_point = 0; idx_point < myPolylines.paths[idx_poly].polyline.points.size(); idx_point++) {
-                const Point &p = myPolylines.paths[idx_poly].polyline.points[idx_point];
-                const Point &nearest_p = *child.polygon.closest_point(p);
-                const coord_t dist = (coord_t)nearest_p.distance_to(p);
-                if (dist + SCALED_EPSILON / 2 < intersect.distance) {
-                    //ok, copy the idx
-                    intersect.distance = dist;
-                    intersect.idx_children = idx_child;
-                    intersect.idx_polyline_outter = idx_poly;
-                    intersect.outter_best = p;
-                    intersect.child_best = nearest_p;
+            if ((myPolylines.paths[idx_poly].role() == erExternalPerimeter || child.is_external() )
+                && this->object_config->seam_position.value != SeamPosition::spRandom) {
+                //first, try to find 2 point near enough
+                for (size_t idx_point = 0; idx_point < myPolylines.paths[idx_poly].polyline.points.size(); idx_point++) {
+                    const Point &p = myPolylines.paths[idx_poly].polyline.points[idx_point];
+                    const Point &nearest_p = *child.polygon.closest_point(p);
+                    const double dist = nearest_p.distance_to(p);
+                    //Try to find a point in the far side, aligning them
+                    if (dist + dist_cut / 20 < intersect.distance || 
+                        (config->perimeter_loop_seam.value == spRear && (intersect.idx_polyline_outter <0 || p.y > intersect.outter_best.y)
+                            && dist <= max_dist && intersect.distance + dist_cut / 20)) {
+                        //ok, copy the idx
+                        intersect.distance = (coord_t)nearest_p.distance_to(p);
+                        intersect.idx_children = idx_child;
+                        intersect.idx_polyline_outter = idx_poly;
+                        intersect.outter_best = p;
+                        intersect.child_best = nearest_p;
+                    }
+                }
+            } else {
+                //first, try to find 2 point near enough
+                for (size_t idx_point = 0; idx_point < myPolylines.paths[idx_poly].polyline.points.size(); idx_point++) {
+                    const Point &p = myPolylines.paths[idx_poly].polyline.points[idx_point];
+                    const Point &nearest_p = *child.polygon.closest_point(p);
+                    const double dist = nearest_p.distance_to(p);
+                    if (dist + SCALED_EPSILON < intersect.distance || 
+                        (config->perimeter_loop_seam.value == spRear && (intersect.idx_polyline_outter<0 || p.y < intersect.outter_best.y)
+                            && dist <= max_dist && intersect.distance + dist_cut / 20)) {
+                        //ok, copy the idx
+                        intersect.distance = (coord_t)nearest_p.distance_to(p);
+                        intersect.idx_children = idx_child;
+                        intersect.idx_polyline_outter = idx_poly;
+                        intersect.outter_best = p;
+                        intersect.child_best = nearest_p;
+                    }
                 }
             }
-            if (intersect.distance <= max_dist) {
-                return intersect;
-            }
+        }
+    }
+    if (intersect.distance <= max_dist) {
+        return intersect;
+    }
+
+    for (size_t idx_child = 0; idx_child < children.size(); idx_child++) {
+        const PerimeterGeneratorLoop &child = children[idx_child];
+        for (size_t idx_poly = 0; idx_poly < myPolylines.paths.size(); idx_poly++) {
+            if (myPolylines.paths[idx_poly].extruder_id == (unsigned int)-1) continue;
+            if (myPolylines.paths[idx_poly].length() < dist_cut + SCALED_RESOLUTION) continue;
 
             //second, try to check from one of my points
             //don't check the last point, as it's used to go outter, can't use it to go inner.
@@ -692,9 +723,18 @@ get_nearest_point(const PerimeterGeneratorLoops &children, ExtrusionLoop &myPoly
                     intersect.child_best = nearest_p;
                 }
             }
-            if (intersect.distance <= max_dist) {
-                return intersect;
-            }
+        }
+    }
+    if (intersect.distance <= max_dist) {
+        return intersect;
+    }
+
+    for (size_t idx_child = 0; idx_child < children.size(); idx_child++) {
+        const PerimeterGeneratorLoop &child = children[idx_child];
+        for (size_t idx_poly = 0; idx_poly < myPolylines.paths.size(); idx_poly++) {
+            if (myPolylines.paths[idx_poly].extruder_id == (unsigned int)-1) continue;
+            if (myPolylines.paths[idx_poly].length() < dist_cut + SCALED_RESOLUTION) continue;
+
             //lastly, try to check from one of his points
             for (size_t idx_point = 0; idx_point < child.polygon.points.size(); idx_point++) {
                 const Point &p = child.polygon.points[idx_point];
@@ -898,17 +938,14 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
     //TODO change this->external_perimeter_flow.scaled_width() if it's the first one!
     const coord_t max_width_extrusion = this->perimeter_flow.scaled_width();
     ExtrusionLoop my_loop = _extrude_and_cut_loop(loop, entry_point);
-    vector<bool> path_is_ccw;
 
-    for (size_t idx_poly = 0; idx_poly < my_loop.paths.size(); idx_poly++) {
-        path_is_ccw.push_back(true);
-    }
-
+    int child_idx = 0;
     //Polylines myPolylines = { myPolyline };
     //iterate on each point ot find the best place to go into the child
     vector<PerimeterGeneratorLoop> childs = children;
     while (!childs.empty()) {
-        PerimeterIntersectionPoint nearest = get_nearest_point(childs, my_loop, this->perimeter_flow.scaled_width(), this->perimeter_flow.scaled_width()* 0.8);
+        child_idx++;
+        PerimeterIntersectionPoint nearest = this->_get_nearest_point(childs, my_loop, this->perimeter_flow.scaled_width(), this->perimeter_flow.scaled_width()* 1.42);
         if (nearest.idx_children == (size_t)-1) {
             //return ExtrusionEntityCollection();
             break;
@@ -920,9 +957,7 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
             //PerimeterGeneratorLoops less_childs = childs;
             //less_childs.erase(less_childs.begin() + nearest.idx_children);
             //create new node with recursive ask for the inner perimeter & COPY of the points, ready to be cut
-            const bool cut_path_is_ccw = path_is_ccw[nearest.idx_polyline_outter];
             my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + 1, my_loop.paths[nearest.idx_polyline_outter]);
-            path_is_ccw.insert(path_is_ccw.begin() + nearest.idx_polyline_outter + 1, cut_path_is_ccw);
 
             ExtrusionPath *outer_start = &my_loop.paths[nearest.idx_polyline_outter];
             ExtrusionPath *outer_end = &my_loop.paths[nearest.idx_polyline_outter + 1];
@@ -981,7 +1016,6 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
             const size_t child_paths_size = child_loop.paths.size();
             if (child_paths_size == 0) continue;
             my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + 1, child_loop.paths.begin(), child_loop.paths.end());
-            for (size_t i = 0; i < child_paths_size; i++)  path_is_ccw.insert(path_is_ccw.begin() + nearest.idx_polyline_outter + 1, !cut_path_is_ccw);
             
             //add paths into my_loop => need to re-get the refs
             outer_start = &my_loop.paths[nearest.idx_polyline_outter];
@@ -1005,8 +1039,8 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 else
                     inner_start->polyline.clip_start(inner_start->polyline.length()/2);
             } else {
-                coord_t length_poly_1 = outer_start->polyline.length();
-                coord_t length_poly_2 = outer_end->polyline.length();
+                double length_poly_1 = outer_start->polyline.length();
+                double length_poly_2 = outer_end->polyline.length();
                 coord_t length_trim_1 = outer_start_spacing / 2;
                 coord_t length_trim_2 = outer_end_spacing / 2;
                 if (length_poly_1 < length_trim_1) {
@@ -1065,9 +1099,9 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                         my_loop.paths[idx].reverse();
                     }
                     outer_start = &my_loop.paths[nearest.idx_polyline_outter];
-                    outer_end = &my_loop.paths[nearest.idx_polyline_outter + child_paths_size + 1];
                     inner_start = &my_loop.paths[nearest.idx_polyline_outter + 1];
                     inner_end = &my_loop.paths[nearest.idx_polyline_outter + child_paths_size];
+                    outer_end = &my_loop.paths[nearest.idx_polyline_outter + child_paths_size + 1];
                 }
 
             }
@@ -1152,7 +1186,8 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 travel_path_end[0].polyline.append(outer_end->polyline.points.front());
             }
             //check if we add path or reuse bits
-            if (outer_start->polyline.points.size() == 1) {
+            //FIXME
+            /*if (outer_start->polyline.points.size() == 1) {
                 outer_start->polyline = travel_path_begin.front().polyline;
                 travel_path_begin.erase(travel_path_begin.begin());
                 outer_start->extruder_id = -1;
@@ -1160,15 +1195,13 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 outer_end->polyline = travel_path_end.back().polyline;
                 travel_path_end.erase(travel_path_end.end() - 1);
                 outer_end->extruder_id = -1;
-            }
+            }*/
             //add paths into my_loop => after that all ref are wrong!
             for (int i = travel_path_end.size() - 1; i >= 0; i--) {
                 my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + child_paths_size + 1, travel_path_end[i]);
-                path_is_ccw.insert(path_is_ccw.begin() + nearest.idx_polyline_outter + child_paths_size + 1, cut_path_is_ccw);
             }
             for (int i = travel_path_begin.size() - 1; i >= 0; i--) {
                 my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + 1, travel_path_begin[i]);
-                path_is_ccw.insert(path_is_ccw.begin() + nearest.idx_polyline_outter + 1, cut_path_is_ccw);
             }
         }
 
