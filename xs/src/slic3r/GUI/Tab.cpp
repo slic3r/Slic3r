@@ -1227,7 +1227,7 @@ void TabPrint::update()
 					"infill_speed", "bridge_speed" })
 		get_field(el)->toggle(have_infill || have_solid_infill);
 
-    get_field("gap_fill_speed")->toggle(have_perimeters && m_config->option<ConfigOptionPercent>("gap_fill"));
+    get_field("gap_fill_speed")->toggle(have_perimeters && m_config->opt_bool("gap_fill"));
 
 	bool have_top_solid_infill = m_config->opt_int("top_solid_layers") > 0;
 	for (auto el : { "top_infill_extrusion_width", "top_solid_infill_speed" })
