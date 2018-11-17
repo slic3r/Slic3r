@@ -80,7 +80,7 @@ Print::delete_object(size_t idx)
 {
     PrintObjectPtrs::iterator i = this->objects.begin() + idx;
     if (i >= this->objects.end()) 
-        throw InvalidObjectException();
+        throw std::out_of_range("Object not found");
     
     // before deleting object, invalidate all of its steps in order to 
     // invalidate all of the dependent ones in Print
@@ -858,7 +858,7 @@ bool Print::has_skirt() const
         || this->has_infinite_skirt();
 }
 
-std::string
+void
 Print::validate() const
 {
     if (this->config.complete_objects) {
@@ -896,7 +896,7 @@ Print::validate() const
                     Polygon p = convex_hull;
                     p.translate(*copy);
                     if (!intersection(a, p).empty())
-                        return "Some objects are too close; your extruder will collide with them.";
+                        throw InvalidPrintException{"Some objects are too close; your extruder will collide with them."};
                     
                     a = union_(a, p);
                 }
@@ -915,7 +915,7 @@ Print::validate() const
             // it will be printed as last one so its height doesn't matter
             object_height.pop_back();
             if (!object_height.empty() && object_height.back() > scale_(this->config.extruder_clearance_height.value))
-                return "Some objects are too tall and cannot be printed without extruder collisions.";
+                throw InvalidPrintException{"Some objects are too tall and cannot be printed without extruder collisions."};
         }
     } // end if (this->config.complete_objects)
     
@@ -923,15 +923,13 @@ Print::validate() const
         size_t total_copies_count = 0;
         FOREACH_OBJECT(this, i_object) total_copies_count += (*i_object)->copies().size();
         if (total_copies_count > 1 && !this->config.complete_objects.getBool())
-            return "The Spiral Vase option can only be used when printing a single object.";
+            throw InvalidPrintException{"The Spiral Vase option can only be used when printing a single object."};
         if (this->regions.size() > 1)
-            return "The Spiral Vase option can only be used when printing single material objects.";
+            throw InvalidPrintException{"The Spiral Vase option can only be used when printing single material objects."};
     }
     
     if (this->extruders().empty())
-        return "The supplied settings will cause an empty print.";
-    
-    return std::string();
+        throw InvalidPrintException{"The supplied settings will cause an empty print."};
 }
 
 // the bounding box of objects placed in copies position

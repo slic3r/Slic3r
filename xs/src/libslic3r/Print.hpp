@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <exception>
+#include <stdexcept>
 #include <boost/thread.hpp>
 #include "BoundingBox.hpp"
 #include "Flow.hpp"
@@ -19,13 +21,11 @@
 #include "LayerHeightSpline.hpp"
 #include "SupportMaterial.hpp"
 
-#include <exception>
-
-#include <exception>
-
 namespace Slic3r {
 
-class InvalidObjectException : public std::exception {};
+class InvalidPrintException : public std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
 
 class Print;
 class PrintObject;
@@ -292,8 +292,8 @@ class Print
     bool apply_config(DynamicPrintConfig config);
     bool has_infinite_skirt() const;
     bool has_skirt() const;
-    // Returns an empty string if valid, otherwise returns an error message.
-    std::string validate() const;
+    // Throws exceptions if print is not valid.
+    void validate() const;
     BoundingBox bounding_box() const;
     BoundingBox total_bounding_box() const;
     double skirt_first_layer_height() const;

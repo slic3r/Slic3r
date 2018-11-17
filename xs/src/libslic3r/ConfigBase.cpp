@@ -265,7 +265,7 @@ ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_
         ConfigOption* my_opt = this->option(opt_key, true);
         if (opt_key.size() == 0) continue;
         if (my_opt == NULL) {
-            if (ignore_nonexistent == false) throw UnknownOptionException();
+            if (ignore_nonexistent == false) throw UnknownOptionException(opt_key);
             continue;
         }
         if (default_nonexistent && !other.has(opt_key)) {
@@ -328,7 +328,7 @@ ConfigBase::set_deserialize(t_config_option_key opt_key, std::string str, bool a
             if (optdef != NULL) break;
         }
         if (optdef == NULL)
-            throw UnknownOptionException();
+            throw UnknownOptionException(opt_key);
     }
     
     if (!optdef->shortcut.empty()) {
@@ -470,6 +470,35 @@ ConfigBase::save(const std::string &file) const
     for (t_config_option_keys::const_iterator opt_key = my_keys.begin(); opt_key != my_keys.end(); ++opt_key)
         c << *opt_key << " = " << this->serialize(*opt_key) << endl;
     c.close();
+}
+
+void
+ConfigBase::validate() const
+{
+    for (auto &opt_key : this->keys()) {
+        // get option definition
+        const ConfigOptionDef* def = this->def->get(opt_key);
+        assert(def != nullptr);
+        
+        if (def->type == coInt) {
+            auto &value = this->opt<ConfigOptionInt>(opt_key)->value;
+            if (value < def->min || value > def->max)
+                throw InvalidOptionException(opt_key);
+        } else if (def->type == coFloat) {
+            auto &value = this->opt<ConfigOptionFloat>(opt_key)->value;
+            if (value < def->min || value > def->max)
+                throw InvalidOptionException(opt_key);
+        } else if (def->type == coInts) {
+            for (auto &value : this->opt<ConfigOptionInts>(opt_key)->values)
+                if (value < def->min || value > def->max)
+                    throw InvalidOptionException(opt_key);
+        } else if (def->type == coFloats) {
+            for (auto &value : this->opt<ConfigOptionFloats>(opt_key)->values)
+                if (value < def->min || value > def->max)
+                    throw InvalidOptionException(opt_key);
+        }
+        // TODO: validate coFloatOrPercent (semantics of min/max are ambiguous for it)
+    }
 }
 
 DynamicConfig& DynamicConfig::operator= (DynamicConfig other)

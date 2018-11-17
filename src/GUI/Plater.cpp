@@ -718,12 +718,12 @@ void Plater::remove(int obj_idx, bool dont_push) {
     Slic3r::Log::info(LogChannel, "Assigned obj_ref");
     try {
         this->model->delete_object(obj_ref->identifier);
-    } catch (InvalidObjectException& ex) {
+    } catch (out_of_range &ex) {
         Slic3r::Log::error(LogChannel, LOG_WSTRING("Failed to delete object " << obj_ref->identifier << " from Model."));
     }
     try {
         this->print->delete_object(obj_ref->identifier);
-    } catch (InvalidObjectException& ex) {
+    } catch (out_of_range &ex) {
         Slic3r::Log::error(LogChannel, LOG_WSTRING("Failed to delete object " << obj_ref->identifier << " from Print."));
     }
 
