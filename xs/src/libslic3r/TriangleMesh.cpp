@@ -147,22 +147,22 @@ TriangleMesh::ReadSTLFile(const std::string &input_file) {
 }
 
 void
-TriangleMesh::write_ascii(const std::string &output_file)
+TriangleMesh::write_ascii(const std::string &output_file) const
 {
     #ifdef BOOST_WINDOWS
-    stl_write_ascii(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    stl_write_ascii(const_cast<stl_file*>(&this->stl), boost::nowide::widen(output_file).c_str(), "");
     #else
-    stl_write_ascii(&this->stl, output_file.c_str(), "");
+    stl_write_ascii(const_cast<stl_file*>(&this->stl), output_file.c_str(), "");
     #endif
 }
 
 void
-TriangleMesh::write_binary(const std::string &output_file)
+TriangleMesh::write_binary(const std::string &output_file) const
 {
     #ifdef BOOST_WINDOWS
-    stl_write_binary(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    stl_write_binary(const_cast<stl_file*>(&this->stl), boost::nowide::widen(output_file).c_str(), "");
     #else
-    stl_write_binary(&this->stl, output_file.c_str(), "");
+    stl_write_binary(const_cast<stl_file*>(&this->stl), output_file.c_str(), "");
     #endif
 }
 
@@ -272,13 +272,13 @@ TriangleMesh::facets_count() const
 }
 
 void
-TriangleMesh::WriteOBJFile(const std::string &output_file) {
-    stl_generate_shared_vertices(&stl);
+TriangleMesh::WriteOBJFile(const std::string &output_file) const {
+    stl_generate_shared_vertices(const_cast<stl_file*>(&this->stl));
     
     #ifdef BOOST_WINDOWS
-    stl_write_obj(&stl, boost::nowide::widen(output_file).c_str());
+    stl_write_obj(const_cast<stl_file*>(&this->stl), boost::nowide::widen(output_file).c_str());
     #else
-    stl_write_obj(&stl, output_file.c_str());
+    stl_write_obj(const_cast<stl_file*>(&this->stl), output_file.c_str());
     #endif
 }
 

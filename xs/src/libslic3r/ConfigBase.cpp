@@ -358,6 +358,36 @@ ConfigBase::get_abs_value(const t_config_option_key &opt_key, double ratio_over)
     return opt->get_abs_value(ratio_over);
 }
 
+bool
+ConfigBase::getBool(const t_config_option_key &opt_key, bool default_value) const {
+    auto opt = this->opt<ConfigOptionBool>(opt_key);
+    return opt == nullptr ? default_value : opt->value;
+}
+
+double
+ConfigBase::getFloat(const t_config_option_key &opt_key, double default_value) const {
+    auto opt = this->opt<ConfigOptionFloat>(opt_key);
+    return opt == nullptr ? default_value : opt->value;
+}
+
+int
+ConfigBase::getInt(const t_config_option_key &opt_key, double default_value) const {
+    auto opt = this->opt<ConfigOptionInt>(opt_key);
+    return opt == nullptr ? default_value : opt->value;
+}
+
+std::string
+ConfigBase::getString(const t_config_option_key &opt_key, std::string default_value) const {
+    auto opt = this->opt<ConfigOptionString>(opt_key);
+    return opt == nullptr ? default_value : opt->value;
+}
+
+std::vector<std::string>
+ConfigBase::getStrings(const t_config_option_key &opt_key, std::vector<std::string> default_value) const {
+    auto opt = this->opt<ConfigOptionStrings>(opt_key);
+    return opt == nullptr ? default_value : opt->values;
+}
+
 void
 ConfigBase::setenv_()
 {
@@ -435,6 +465,7 @@ DynamicConfig& DynamicConfig::operator= (DynamicConfig other)
 void
 DynamicConfig::swap(DynamicConfig &other)
 {
+    std::swap(this->def, other.def);
     std::swap(this->options, other.options);
 }
 
@@ -525,7 +556,7 @@ DynamicConfig::empty() const {
 }
 
 void
-DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra)
+DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra, t_config_option_keys* keys)
 {
     std::vector<char*> _argv;
     
@@ -535,11 +566,11 @@ DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_
     for (size_t i = 0; i < tokens.size(); ++i)
         _argv.push_back(const_cast<char *>(tokens[i].c_str()));
     
-    this->read_cli(_argv.size(), &_argv[0], extra);
+    this->read_cli(_argv.size(), &_argv[0], extra, keys);
 }
 
 bool
-DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra)
+DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra, t_config_option_keys* keys)
 {
     // cache the CLI option => opt_key mapping
     std::map<std::string,std::string> opts;
@@ -614,6 +645,10 @@ DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra)
         
         // Store the option value.
         const bool existing = this->has(opt_key);
+        if (keys != nullptr && !existing) {
+            // save the order of detected keys
+            keys->push_back(opt_key);
+        }
         if (ConfigOptionBool* opt = this->opt<ConfigOptionBool>(opt_key, true)) {
             opt->value = !no;
         } else if (ConfigOptionBools* opt = this->opt<ConfigOptionBools>(opt_key, true)) {
