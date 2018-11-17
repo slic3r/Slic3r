@@ -86,6 +86,14 @@ int CLI::run(int argc, char **argv) {
     // create a static (full) print config to be used in our logic
     this->full_print_config.apply(this->print_config);
     
+    // validate config
+    try {
+        this->full_print_config.validate();
+    } catch (InvalidOptionException &e) {
+        boost::nowide::cerr << e.what() << std::endl;
+        return 1;
+    }
+    
     // read input file(s) if any
     for (auto const &file : input_files) {
         Model model;
@@ -271,6 +279,7 @@ int CLI::run(int argc, char **argv) {
                 print.status_cb = [](int ln, const std::string& msg) {
                     boost::nowide::cout << msg << std::endl;
                 };
+                print.apply_config(this->print_config);
                 print.center = !this->config.has("center")
                     && !this->config.has("align_xy")
                     && !this->config.getBool("dont_arrange");
@@ -282,7 +291,12 @@ int CLI::run(int argc, char **argv) {
                 std::chrono::time_point<clock_> t0{ clock_::now() };
                 
                 const std::string outfile = this->output_filepath(model, IO::Gcode);
-                print.export_gcode(outfile);
+                try {
+                    print.export_gcode(outfile);
+                } catch (InvalidPrintException &e) {
+                    boost::nowide::cerr << e.what() << std::endl;
+                    return 1;
+                }
                 boost::nowide::cout << "G-code exported to " << outfile << std::endl;
                 
                 // output some statistics

@@ -725,6 +725,7 @@ class ConfigBase
     void setenv_();
     void load(const std::string &file);
     void save(const std::string &file) const;
+    void validate() const;
 };
 
 /// Configuration store with dynamic number of configuration values.
@@ -768,7 +769,25 @@ class StaticConfig : public virtual ConfigBase
 };
 
 /// Specialization of std::exception to indicate that an unknown config option has been encountered.
-class UnknownOptionException : public std::exception {};
+class ConfigOptionException : public std::exception {
+    public:
+    t_config_option_key opt_key;
+    ConfigOptionException(t_config_option_key _opt_key)
+        : opt_key(_opt_key) {};
+};
+class UnknownOptionException : public ConfigOptionException {
+    using ConfigOptionException::ConfigOptionException;
+};
+class InvalidOptionException : public ConfigOptionException {
+    using ConfigOptionException::ConfigOptionException;
+    
+    public:
+    virtual const char* what() const noexcept {
+        std::string s("Invalid value for option: ");
+        s += this->opt_key;
+        return s.c_str();
+    }
+};
 
 }
 
