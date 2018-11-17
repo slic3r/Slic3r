@@ -496,7 +496,7 @@ AMF::read(std::string input_file, Model* model)
 }
 
 bool
-AMF::write(Model& model, std::string output_file)
+AMF::write(const Model& model, std::string output_file)
 {
     using namespace std;
     

@@ -55,13 +55,13 @@ class TriangleMesh
     void swap(TriangleMesh &other);
     ~TriangleMesh();
     void ReadSTLFile(const std::string &input_file);
-    void write_ascii(const std::string &output_file);
-    void write_binary(const std::string &output_file);
+    void write_ascii(const std::string &output_file) const;
+    void write_binary(const std::string &output_file) const;
     void repair();
     void check_topology();
     float volume();
     bool is_manifold() const;
-    void WriteOBJFile(const std::string &output_file);
+    void WriteOBJFile(const std::string &output_file) const;
     void scale(float factor);
     void scale(const Pointf3 &versor);
 
