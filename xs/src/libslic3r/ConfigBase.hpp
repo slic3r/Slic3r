@@ -45,6 +45,7 @@ class ConfigOption {
     virtual void setFloat(double val) {};
     virtual void setString(std::string val) {};
     virtual std::string getString() const { return ""; };
+    virtual std::vector<std::string> getStrings() const { return std::vector<std::string>(); };
     friend bool operator== (const ConfigOption &a, const ConfigOption &b);
     friend bool operator!= (const ConfigOption &a, const ConfigOption &b);
 };
@@ -259,6 +260,8 @@ class ConfigOptionStrings : public ConfigOptionVector<std::string>
     ConfigOptionStrings(const std::vector<std::string> _values) : ConfigOptionVector<std::string>(_values) {};
     ConfigOptionStrings* clone() const { return new ConfigOptionStrings(this->values); };
     
+    std::vector<std::string> getStrings() const { return this->values; };
+    
     std::string serialize() const {
         return escape_strings_cstyle(this->values);
     };
@@ -387,7 +390,7 @@ class ConfigOptionPoint3 : public ConfigOptionSingle<Pointf3>
     
     bool deserialize(std::string str, bool append = false);
     
-    bool is_positive_volume () {
+    bool is_positive_volume() const {
         return this->value.x > 0 && this->value.y > 0 && this->value.z > 0;
     };
 };
@@ -721,6 +724,11 @@ class ConfigBase
     virtual bool set_deserialize(t_config_option_key opt_key, std::string str, bool append = false);
     double get_abs_value(const t_config_option_key &opt_key) const;
     double get_abs_value(const t_config_option_key &opt_key, double ratio_over) const;
+    bool getBool(const t_config_option_key &opt_key, bool default_value = false) const;
+    double getFloat(const t_config_option_key &opt_key, double default_value = 0.0) const;
+    int getInt(const t_config_option_key &opt_key, double default_value = 0) const;
+    std::string getString(const t_config_option_key &opt_key, std::string default_value = "") const;
+    std::vector<std::string> getStrings(const t_config_option_key &opt_key, std::vector<std::string> default_value = std::vector<std::string>()) const;
     void setenv_();
     void load(const std::string &file);
     void save(const std::string &file) const;
@@ -742,8 +750,8 @@ class DynamicConfig : public virtual ConfigBase
     void erase(const t_config_option_key &opt_key);
     void clear();
     bool empty() const;
-    void read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra);
-    bool read_cli(int argc, char** argv, t_config_option_keys* extra);
+    void read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra, t_config_option_keys* keys = nullptr);
+    bool read_cli(int argc, char** argv, t_config_option_keys* extra, t_config_option_keys* keys = nullptr);
     
     private:
     typedef std::map<t_config_option_key,ConfigOption*> t_options_map;

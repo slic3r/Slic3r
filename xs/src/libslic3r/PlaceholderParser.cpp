@@ -76,7 +76,7 @@ PlaceholderParser::update_timestamp()
     }
 }
 
-void PlaceholderParser::apply_config(const DynamicPrintConfig &config)
+void PlaceholderParser::apply_config(const DynamicConfig &config)
 {
     t_config_option_keys opt_keys = config.keys();
     for (t_config_option_keys::const_iterator i = opt_keys.begin(); i != opt_keys.end(); ++i) {

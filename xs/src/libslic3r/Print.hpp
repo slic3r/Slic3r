@@ -233,7 +233,6 @@ class Print
     PrintObjectPtrs objects;
     PrintRegionPtrs regions;
     PlaceholderParser placeholder_parser;
-    // TODO: status_cb
     #ifndef SLIC3RXS
     std::function<void(int, const std::string&)> status_cb {nullptr};
 
@@ -272,7 +271,7 @@ class Print
     void export_gcode(std::ostream& output, bool quiet = false);
     
     /// Performs a gcode export and then runs post-processing scripts (if any)
-    void export_gcode(const std::string& filename, bool quiet = false);
+    void export_gcode(std::string filename, bool quiet = false);
 
     /// commands a gcode export to a temporary file and return its name
     std::string export_gcode(bool quiet = false);

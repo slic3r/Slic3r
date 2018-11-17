@@ -705,10 +705,13 @@ Print::add_model_object(ModelObject* model_object, int idx)
 }
 
 #ifndef SLIC3RXS
+
 void
 Print::export_gcode(std::ostream& output, bool quiet)
 {
+    // prerequisites
     this->process();
+    
     if (this->status_cb != nullptr) 
         this->status_cb(90, "Exporting G-Code...");
 
@@ -718,10 +721,15 @@ Print::export_gcode(std::ostream& output, bool quiet)
 }
 
 void
-Print::export_gcode(const std::string& outfile, bool quiet)
+Print::export_gcode(std::string outfile, bool quiet)
 {
+    // compute the actual output filepath
+    outfile = this->output_filepath(outfile);
+    
     std::ofstream outstream(outfile);
     this->export_gcode(outstream);
+    
+    // TODO: export_gcode() is not ported completely from Perl
 }
 
 
