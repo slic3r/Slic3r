@@ -391,19 +391,10 @@ ConfigBase::getStrings(const t_config_option_key &opt_key, std::vector<std::stri
 void
 ConfigBase::setenv_()
 {
-    t_config_option_keys opt_keys = this->keys();
-    for (t_config_option_keys::const_iterator it = opt_keys.begin(); it != opt_keys.end(); ++it) {
-        // prepend the SLIC3R_ prefix
-        std::ostringstream ss;
-        ss << "SLIC3R_";
-        ss << *it;
-        std::string envname = ss.str();
-        
-        // capitalize environment variable name
-        for (size_t i = 0; i < envname.size(); ++i)
-            envname[i] = (envname[i] <= 'z' && envname[i] >= 'a') ? envname[i]-('a'-'A') : envname[i];
-        
-        boost::nowide::setenv(envname.c_str(), this->serialize(*it).c_str(), 1);
+    for (auto &opt_key : this->keys()) {
+        std::string envname = "SLIC3R_" + opt_key;
+        boost::to_upper(envname);
+        boost::nowide::setenv(envname.c_str(), this->serialize(opt_key).c_str(), 1);
     }
 }
 
