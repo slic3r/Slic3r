@@ -127,6 +127,23 @@ bool PresetChooser::prompt_unsaved_changes() {
     return true;
 }
 
+std::vector<wxString> PresetChooser::_get_selected_presets(preset_t group) const {
+        const auto& choosers { this->preset_choosers[get_preset(group)] };
+        std::vector<wxString> selected;
+        selected.reserve(choosers.size());
+
+        for (auto* chooser :  choosers) {
+            selected.push_back(chooser->GetString(chooser->GetSelection()));
+        }
+        return selected;
+}
+
+wxString PresetChooser::_get_selected_preset(preset_t group, size_t index) const {
+    auto selected { this->_get_selected_presets(group) };
+    if (index > selected.size()) { return wxString(""); }
+    return selected.at(index);
+}
+
 void PresetChooser::_on_change_combobox(preset_t preset, wxBitmapComboBox* choice) {
     
     // Prompt for unsaved changes and undo selections if cancelled and return early
