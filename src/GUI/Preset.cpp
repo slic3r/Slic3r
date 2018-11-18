@@ -12,9 +12,21 @@ namespace Slic3r { namespace GUI {
 
 Preset::Preset(std::string load_dir, std::string filename, preset_t p) : group(p), _file(wxFileName(load_dir, filename)) {
     this->name = this->_file.GetName();
-
-    this->_dirty_config = std::make_shared<Slic3r::Config>();
-    this->_config = std::make_shared<Slic3r::Config>();
+    t_config_option_keys keylist;
+    switch (this->group) {
+        case preset_t::Print:
+            keylist = PrintEditor::options();
+            break;
+        case preset_t::Material:
+            keylist = MaterialEditor::options();
+            break;
+        case preset_t::Printer:
+            keylist = PrinterEditor::options();
+            break;
+        default: break;
+    }
+    this->_dirty_config = Slic3r::Config::new_from_defaults(keylist);
+    this->_config = Slic3r::Config::new_from_defaults(keylist);
 }
 
 t_config_option_keys Preset::dirty_options() const {
