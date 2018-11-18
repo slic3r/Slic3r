@@ -1,4 +1,5 @@
 #include "PresetChooser.hpp"
+#include "misc_ui.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -87,37 +88,58 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
                 __chooser_names[get_preset(group)].push_back(preset.name);
             }
             // Apply default options from settings
+            bool updated_from_settings = false;
             if (settings_defaults.size() > i) { // only apply if there is a value from Settings
-                this->select_preset_by_name(settings_defaults.at(i), chooser);
-            } else {
-                chooser->SetSelection(0);
+                updated_from_settings = this->select_preset_by_name(settings_defaults.at(i), chooser);
             }
 
+            if (!updated_from_settings) // default
+                chooser->SetSelection(0);
+
+            wxString selected_preset { chooser->GetString(chooser->GetSelection()) };
             if (group == preset_t::Printer) {
-                selected_printer_name = chooser->GetString(chooser->GetSelection());
+                selected_printer_name = selected_preset;
             }
+            // update settings
+            if (settings_defaults.size() > i) {
+                settings_defaults[i] = selected_preset.ToStdString();
+            } else {
+                settings_defaults.push_back(selected_preset.ToStdString());
+            }
+
             ++i;
         }
     }
 }
 
-void PresetChooser::select_preset_by_name(wxString name, preset_t group, size_t index = 0) {
+bool PresetChooser::select_preset_by_name(wxString name, preset_t group, size_t index = 0) {
     auto& ps_list = this->preset_choosers.at(get_preset(group));
+    bool updated = false;
     if (ps_list.size() > index) {
-        select_preset_by_name(name, ps_list.at(index));
+        updated = select_preset_by_name(name, ps_list.at(index));
     }
-    this->_on_select_preset(group);
+    if (updated)
+        this->_on_select_preset(group);
+    return updated;
 }
 
-void PresetChooser::select_preset_by_name(wxString name, wxBitmapComboBox* chooser) {
+bool PresetChooser::select_preset_by_name(wxString name, wxBitmapComboBox* chooser) {
     auto index { chooser->FindString(name) };
     if (index != wxNOT_FOUND) {
         chooser->SetSelection(index);
+        return true;
     }
-
+    return false;
 }
 
 void PresetChooser::_on_select_preset(preset_t preset) {
+    // update settings store
+    auto& settings_presets {_settings.default_presets.at(get_preset(preset))};
+    settings_presets.clear(); // make sure previous contents are deconstructed
+    settings_presets = this->_get_selected_presets(preset);
+
+    // save settings
+    _settings.save_settings();
     if (preset == preset_t::Printer) {
         this->load(); // reload print/filament settings to honor compatible printers
     }
