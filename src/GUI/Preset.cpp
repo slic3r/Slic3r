@@ -44,6 +44,11 @@ Slic3r::Config Preset::dirty_config() {
     return result;
 }
 
+config_ref Preset::config() {
+    std::weak_ptr<Slic3r::Config> result { this->_dirty_config };
+    return result;
+}
+
 config_ptr Preset::load_config() {
     if (this->loaded()) return this->_dirty_config;
 

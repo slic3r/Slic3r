@@ -33,6 +33,7 @@ public:
 
 class Config;
 using config_ptr = std::shared_ptr<Config>;
+using config_ref = std::weak_ptr<Config>;
 
 class Config {
 public:
