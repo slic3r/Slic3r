@@ -8,9 +8,12 @@
     #include <wx/bmpcbox.h>
 #endif
 
+#include "Print.hpp"
+
 #include "misc_ui.hpp"
 #include "Preset.hpp"
 #include "GUI.hpp"
+#include "Settings.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -37,10 +40,31 @@ public:
     /// Const reference to internal name map (used for testing)
     const chooser_name_map& _chooser_names() const { return this->__chooser_names; }
 
+    /// Set the selection of one of the preset lists to the entry matching the
+    /// supplied name.
+    /// @param[in]  name    Name of preset to select. Case-sensitive.
+    /// @param[in]  group   Type of preset to change.
+    /// @param[in]  index   Preset chooser index to operate on (default is 0)
+    ///
+    /// Note: If index is greater than the number of active presets, nothing
+    /// happens.
+    /// Note: If name is not found, nothing happens.
+    void select_preset_by_name(wxString name, preset_t group, size_t index);
+
+    /// Set the selection of one of the preset lists to the entry matching the
+    /// supplied name.
+    /// @param[in]  name    Name of preset to select. Case-sensitive.
+    /// @param[in]  chooser Direct pointer to the appropriate wxBitmapComboBox
+    ///
+    /// Note: If name is not found, nothing happens.
+    void select_preset_by_name(wxString name, wxBitmapComboBox* chooser);
+
+    /// Cycle through active presets and prompt user to save dirty configs, if necessary.
+    bool prompt_unsaved_changes();
 private:
     wxSizer* local_sizer {};
     void _on_change_combobox(preset_t preset, wxBitmapComboBox* choice);
-    chooser_name_map __chooser_names; 
+    chooser_name_map __chooser_names;
 
     /// Reference to a Slic3r::Settings object.
     Settings& _settings;
