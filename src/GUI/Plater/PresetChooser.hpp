@@ -79,6 +79,12 @@ private:
 
     void _on_select_preset(preset_t preset);
 
+    /// Return the vector of strings representing the selected preset names.
+    std::vector<wxString> _get_selected_presets(preset_t group) const;
+
+    /// Fetch the preset name corresponding to the chooser index
+    wxString _get_selected_preset(preset_t group, size_t index) const;
+
 };
 
 }} // Slic3r::GUI
