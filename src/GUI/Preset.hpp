@@ -78,6 +78,9 @@ public:
     /// Retrieve a copy of the loaded version of the configuration with any options applied.
     Slic3r::Config dirty_config(); 
 
+    /// Retrieve a shared (cast through a weak) pointer. 
+    config_ref config();
+
     /// Pass-through to Slic3r::Config, returns whether or not a config was loaded.
     bool loaded() { return !this->_config->empty(); }
 
