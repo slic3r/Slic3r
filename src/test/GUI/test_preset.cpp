@@ -21,7 +21,7 @@ SCENARIO( "Preset construction" ) {
             }
         }
     }
-    GIVEN("A default preset construction") {
+    GIVEN("A default preset construction for Print") {
         WHEN( "Preset is constructed." ) {
             Preset item {true, "- default -", preset_t::Print};
             THEN("Name is - default -") {
@@ -35,6 +35,85 @@ SCENARIO( "Preset construction" ) {
             }
             THEN("file_exists() is false") {
                 REQUIRE(item.file_exists() == false);
+            }
+            THEN("Does not contain filament_colour (a material option)") {
+                if (auto config = item.config().lock()) {
+                    REQUIRE(!config->has("filament_colours"));
+                }
+            }
+            THEN("Does not contain extruders (a printer option)") {
+                if (auto config = item.config().lock()) {
+                    REQUIRE(!config->has("extruders"));
+                }
+            }
+            THEN("Does contain layer_height (a print option)") {
+                if (auto config = item.config().lock()) {
+                    REQUIRE(config->has("layer_height"));
+                }
+            }
+        }
+    }
+    GIVEN("A default preset construction for Material") {
+        WHEN( "Preset is constructed." ) {
+            Preset item {true, "- default -", preset_t::Material};
+            THEN("Name is - default -") {
+                REQUIRE(item.name == "- default -"s);
+            }
+            THEN("group is Material") {
+                REQUIRE(item.group == preset_t::Material);
+            }
+            THEN("preset default is true.") {
+                REQUIRE(item.default_preset == true);
+            }
+            THEN("file_exists() is false") {
+                REQUIRE(item.file_exists() == false);
+            }
+            THEN("Does contain filament_colour (a material option)") {
+                if (auto config = item.config().lock()) {
+                    REQUIRE(config->has("filament_colours"));
+                }
+            }
+            THEN("Does not contain extruders (a printer option)") {
+                if (auto config = item.config().lock()) {
+                    REQUIRE(!config->has("extruders"));
+                }
+            }
+            THEN("Does not contain layer_height (a print option)") {
+                if (auto config = item.config().lock()) {
+                    REQUIRE(!config->has("layer_height"));
+                }
+            }
+        }
+    }
+    GIVEN("A default preset construction for Printer") {
+        WHEN( "Preset is constructed." ) {
+            Preset item {true, "- default -", preset_t::Printer};
+            THEN("Name is - default -") {
+                REQUIRE(item.name == "- default -"s);
+            }
+            THEN("group is Printer") {
+                REQUIRE(item.group == preset_t::Printer);
+            }
+            THEN("preset default is true.") {
+                REQUIRE(item.default_preset == true);
+            }
+            THEN("file_exists() is false") {
+                REQUIRE(item.file_exists() == false);
+            }
+            THEN("Does not contain filament_colour (a material option)") {
+                if (auto config = item.config().lock()) {
+                    REQUIRE(!config->has("filament_colours"));
+                }
+            }
+            THEN("Does contain extruders (a printer option)") {
+                if (auto config = item.config().lock()) {
+                    REQUIRE(config->has("extruders"));
+                }
+            }
+            THEN("Does not contain layer_height (a print option)") {
+                if (auto config = item.config().lock()) {
+                    REQUIRE(!config->has("layer_height"));
+                }
             }
         }
     }
