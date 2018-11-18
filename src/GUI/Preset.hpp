@@ -24,9 +24,11 @@ enum class preset_t : uint8_t {
     Last // This MUST be the last enumeration. Don't use it for anything.
 };
 
+/// Convenient constexpr to avoid a thousand static_casts
+constexpr uint8_t get_preset(preset_t preset) { return static_cast<uint8_t>(preset); }
+constexpr preset_t to_preset(uint8_t preset) { return static_cast<preset_t>(preset); }
 /// Convenience counter to determine how many preset tabs exist.
-constexpr uint8_t preset(preset_t preset) { return static_cast<uint8_t>(preset); }
-constexpr size_t preset_types = preset(preset_t::Last);
+constexpr size_t preset_types = get_preset(preset_t::Last);
 
 class Preset; 
 
