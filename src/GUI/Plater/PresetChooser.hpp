@@ -20,7 +20,10 @@ using chooser_name_map = std::array<chooser_name_list, preset_types>;
 
 class PresetChooser : public wxPanel {
 public:
-    PresetChooser(wxWindow* parent);
+
+        /// Build a panel to contain a sizer for dropdowns for preset selection.
+    PresetChooser(wxWindow* parent, Print& print);
+    PresetChooser(wxWindow* parent, Print& print, Settings& external);
 
     std::array<Choosers, preset_types> preset_choosers;
 
@@ -38,6 +41,8 @@ private:
     wxSizer* local_sizer {};
     void _on_change_combobox(preset_t preset, wxBitmapComboBox* choice);
     chooser_name_map __chooser_names; 
+    /// Reference to owning Plater's print
+    Print& _print;
 
 };
 
