@@ -66,9 +66,10 @@ SCENARIO( "PresetChooser Preset loading" ) {
     wxTheApp->SetTopWindow(new wxTestableFrame());
 
     GIVEN( "A PresetChooser object." ) {
-        PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, default_settings);
         WHEN( "load() is called with only default presets" ) {
-            cut.load(defaults());
+            auto preset_list {defaults()};
+            PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, default_settings, preset_list);
+            cut.load();
             THEN( "Number of preset choosers created is 3" ) {
                 REQUIRE(cut.preset_choosers.size() == 3);
             }
@@ -87,7 +88,9 @@ SCENARIO( "PresetChooser Preset loading" ) {
             }
         }
         WHEN( "load is called with non-default presets and default presets" ) {
-            cut.load(sample());
+            auto preset_list {sample()};
+            PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, default_settings, preset_list);
+            cut.load();
             THEN( "Number of preset choosers created is 3" ) {
                 REQUIRE(cut.preset_choosers.size() == 3);
             }
@@ -109,9 +112,10 @@ SCENARIO( "PresetChooser Preset loading" ) {
     GIVEN( "A PresetChooser object and a Settings indicating that print-profile is the default option." ) {
         Settings test_settings;
         test_settings.default_presets.at(get_preset(preset_t::Printer)).push_back(wxString("printer-profile"));
-        PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, test_settings);
+        auto preset_list {sample_compatible()};
+        PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, test_settings, preset_list);
         WHEN( "load is called with non-default presets and default presets and the material is listed with an incompatible printer" ) {
-            cut.load(sample_compatible());
+            cut.load();
             THEN( "Number of preset choosers created is 3" ) {
                 REQUIRE(cut.preset_choosers.size() == 3);
             }
@@ -140,10 +144,10 @@ SCENARIO( "PresetChooser Preset loading" ) {
                 REQUIRE(cut._chooser_names()[get_preset(preset_t::Print)].at(0) == wxString("print-profile"));
             }
             THEN( "Printer profile entry has an entry named \"printer-profile\"" ) {
-                REQUIRE(cut._chooser_names()[get_preset(preset_t::Printer)].at(0) == wxString("printer-profile"));
+                REQUIRE(cut._chooser_names()[get_preset(preset_t::Printer)].at(1) == wxString("printer-profile"));
             }
             THEN( "Printer profile entry has an entry named \"printer-profile\"" ) {
-                REQUIRE(cut._chooser_names()[get_preset(preset_t::Printer)].at(1) == wxString("printer-profile-2"));
+                REQUIRE(cut._chooser_names()[get_preset(preset_t::Printer)].at(0) == wxString("printer-profile-2"));
             }
             THEN( "Material profile entry has one entry named \"- default -\"" ) {
                 REQUIRE(cut._chooser_names()[get_preset(preset_t::Material)].at(0) == wxString("- default -"));
