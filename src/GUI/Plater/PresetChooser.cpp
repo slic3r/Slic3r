@@ -109,6 +109,7 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
 
             ++i;
         }
+        this->_update_preset_settings(group);
     }
 }
 
@@ -132,12 +133,16 @@ bool PresetChooser::select_preset_by_name(wxString name, wxBitmapComboBox* choos
     return false;
 }
 
-void PresetChooser::_on_select_preset(preset_t preset) {
-    // update settings store
+void PresetChooser::_update_preset_settings(preset_t preset) {
     auto& settings_presets {_settings.default_presets.at(get_preset(preset))};
     settings_presets.clear(); // make sure previous contents are deconstructed
     settings_presets = this->_get_selected_presets(preset);
 
+}
+
+void PresetChooser::_on_select_preset(preset_t preset) {
+    // update settings store
+    this->_update_preset_settings(preset);
     // save settings
     _settings.save_settings();
     if (preset == preset_t::Printer) {
@@ -165,7 +170,6 @@ wxString PresetChooser::_get_selected_preset(preset_t group, size_t index) const
     if (index > selected.size()) { return wxString(""); }
     return selected.at(index);
 }
-
 void PresetChooser::_on_change_combobox(preset_t preset, wxBitmapComboBox* choice) {
     
     // Prompt for unsaved changes and undo selections if cancelled and return early
