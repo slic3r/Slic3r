@@ -64,7 +64,7 @@ public:
     /// Cycle through active presets and prompt user to save dirty configs, if necessary.
     bool prompt_unsaved_changes();
 private:
-    wxSizer* local_sizer {};
+    wxFlexGridSizer* _local_sizer {};
     void _on_change_combobox(preset_t preset, wxBitmapComboBox* choice);
     chooser_name_map __chooser_names;
 
