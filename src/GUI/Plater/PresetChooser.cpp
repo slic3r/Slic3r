@@ -6,8 +6,11 @@ PresetChooser::PresetChooser(wxWindow* parent, Print& print) : PresetChooser(par
 
 PresetChooser::PresetChooser(wxWindow* parent, Print& print, Settings& external_settings, preset_store& external_presets) :
     wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, ""),
-    _settings(external_settings), _print(print), _presets(external_presets)
+    _local_sizer(new wxFlexGridSizer(3,3,1,2)), _parent(parent), _settings(external_settings), _print(print), _presets(external_presets)
 {
+    _local_sizer->AddGrowableCol(1, 1);
+    _local_sizer->SetFlexibleDirection(wxHORIZONTAL);
+
     for (auto group : { preset_t::Print, preset_t::Material, preset_t::Printer }) {
         wxString name = "";
         switch(group) {
@@ -36,6 +39,8 @@ PresetChooser::PresetChooser(wxWindow* parent, Print& print, Settings& external_
                 wxTheApp->CallAfter([=]() { this->_on_change_combobox(group, choice);} );
             });
     }
+
+    this->SetSizer(_local_sizer);
 }
 
 void PresetChooser::load(std::array<Presets, preset_types> presets) {
