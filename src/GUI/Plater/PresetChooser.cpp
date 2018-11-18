@@ -66,7 +66,7 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
             current_list = grep(current_list, [] (const Preset& x) -> bool { return !x.default_preset; });
         }
 
-        // # Read the current defaults from the settings file
+        // Read the current defaults from the settings file
         const auto& settings_defaults {_settings->default_presets.at(get_preset(group))};
 
         size_t i {0};
