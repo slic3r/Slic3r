@@ -128,6 +128,7 @@ bool Preset::compatible(const std::string& printer_name) const {
     auto compatible_list {this->_dirty_config->get<ConfigOptionStrings>("compatible_printers").values};
     if (compatible_list.size() == 0) return true;
     return std::any_of(compatible_list.cbegin(), compatible_list.cend(), [printer_name] (const std::string& x) -> bool { return x.compare(printer_name) == 0; });
+}
 
 const std::string preset_name(preset_t group) {
     switch(group) {
