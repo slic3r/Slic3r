@@ -33,6 +33,7 @@ constexpr size_t preset_types = get_preset(preset_t::Last);
 class Preset; 
 
 using Presets = std::vector<Preset>;
+using preset_store = std::array<Presets, preset_types>;
 
 class PresetEditor;
 
