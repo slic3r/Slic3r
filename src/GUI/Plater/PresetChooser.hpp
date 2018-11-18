@@ -24,7 +24,7 @@ using chooser_name_map = std::array<chooser_name_list, preset_types>;
 class PresetChooser : public wxPanel {
 public:
 
-        /// Build a panel to contain a sizer for dropdowns for preset selection.
+    /// Build a panel to contain a sizer for dropdowns for preset selection.
     PresetChooser(wxWindow* parent, Print& print);
     PresetChooser(wxWindow* parent, Print& print, Settings& external_settings, preset_store& external_presets);
 
