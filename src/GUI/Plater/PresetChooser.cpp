@@ -72,8 +72,9 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
         size_t i {0};
         std::vector<std::string> preset_names {};
         // populate the chooser
-        for (auto* chooser :  this->preset_choosers[get_preset(group)]) {
+        for (auto* chooser : this->preset_choosers[get_preset(group)]) {
             chooser->Clear();
+            assert(chooser->GetCount() == 0);
             for (auto preset : current_list) {
                 wxBitmap bitmap;
                 switch (group) {
@@ -96,6 +97,8 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
                 chooser->Append(preset.name, bitmap);
                 __chooser_names[get_preset(group)].push_back(preset.name);
             }
+            assert(chooser->GetCount() == current_list.size());
+
             // Apply default options from settings
             bool updated_from_settings = false;
             if (settings_defaults.size() > i) { // only apply if there is a value from Settings
