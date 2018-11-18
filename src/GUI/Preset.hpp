@@ -96,7 +96,7 @@ public:
 
     /// Constructor for adding a file-backed 
     Preset(std::string load_dir, std::string filename, preset_t p);
-    Preset(bool is_default, wxString name, preset_t p) : group(p), name(name), external(false), default_preset(is_default) {};
+    Preset(bool is_default, wxString name, preset_t p);
 private:
 
     /// store to keep config options for this preset
