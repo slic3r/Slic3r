@@ -74,6 +74,16 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
     }
 }
 
+void PresetChooser::_on_select_preset(preset_t preset) {
+    if (preset == preset_t::Printer) {
+        this->load(); // reload print/filament settings to honor compatible printers
+    }
+}
+
+bool PresetChooser::prompt_unsaved_changes() {
+    return true;
+}
+
 void PresetChooser::_on_change_combobox(preset_t preset, wxBitmapComboBox* choice) {
     
     // Prompt for unsaved changes and undo selections if cancelled and return early
