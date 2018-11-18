@@ -3,9 +3,9 @@
 
 namespace Slic3r { namespace GUI {
 
-PresetChooser::PresetChooser(wxWindow* parent, Print& print) : PresetChooser(parent, print, SLIC3RAPP->settings, SLIC3RAPP->presets) {}
+PresetChooser::PresetChooser(wxWindow* parent, std::weak_ptr<Print> print) : PresetChooser(parent, print, SLIC3RAPP->settings(), SLIC3RAPP->presets) {}
 
-PresetChooser::PresetChooser(wxWindow* parent, Print& print, Settings& external_settings, preset_store& external_presets) :
+PresetChooser::PresetChooser(wxWindow* parent, std::weak_ptr<Print> print, Settings* external_settings, preset_store& external_presets) :
     wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, ""),
     _local_sizer(new wxFlexGridSizer(3,3,1,2)), _parent(parent), _settings(external_settings), _print(print), _presets(external_presets)
 {
