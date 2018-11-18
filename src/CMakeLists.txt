@@ -276,6 +276,8 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_field_colorpicker.cpp
     ${GUI_TESTDIR}/test_field_slider.cpp
     ${GUI_TESTDIR}/test_optionsgroup.cpp
+    ${GUI_TESTDIR}/test_preset.cpp
+    ${GUI_TESTDIR}/test_preset_chooser.cpp
     ${GUI_TESTDIR}/test_misc_ui.cpp
 )
 
@@ -389,11 +391,13 @@ IF(wxWidgets_FOUND AND OPENGL_FOUND AND Enable_GUI)
     ${GUI_LIBDIR}/GUI.cpp
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/Plater.cpp
+    ${GUI_LIBDIR}/Preset.cpp
     ${GUI_LIBDIR}/Scene3D.cpp
     ${GUI_LIBDIR}/Plater/Plate2D.cpp
     ${GUI_LIBDIR}/Plater/Plate3D.cpp
     ${GUI_LIBDIR}/Plater/Preview3D.cpp
     ${GUI_LIBDIR}/Plater/PlaterObject.cpp
+    ${GUI_LIBDIR}/Plater/PresetChooser.cpp
     ${GUI_LIBDIR}/ProgressStatusBar.cpp
     ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
