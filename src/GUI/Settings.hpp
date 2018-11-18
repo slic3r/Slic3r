@@ -11,6 +11,7 @@
 
 #include "libslic3r.h"
 #include "ColorScheme.hpp"
+#include "Preset.hpp"
 
 namespace Slic3r { namespace GUI {
 
