@@ -58,6 +58,55 @@ std::array<Presets, preset_types> sample_compatible() {
     return preset_list;
 }
 
+// Tests to cover behavior when the printer profile is changed.
+// System should update its selected choosers based on changed print profile,
+// update settings, etc.
+SCENARIO( "PresetChooser changed printer") {
+    Print fake_print;
+    Settings default_settings;
+    wxUIActionSimulator sim;
+    wxTestableFrame* old = dynamic_cast<wxTestableFrame*>(wxTheApp->GetTopWindow());
+    old->Destroy();
+    wxTheApp->SetTopWindow(new wxTestableFrame());
+
+    GIVEN( "A PresetChooser with printer-profile selected." ) {
+        Settings test_settings;
+        test_settings.default_presets.at(get_preset(preset_t::Printer)).push_back(wxString("printer-profile"));
+        auto preset_list {sample_compatible()};
+        PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, test_settings, preset_list);
+        cut.load();
+
+        WHEN( "Printer profile is changed to printer-profile-2 via select_preset_by_name" ) {
+            cut.select_preset_by_name("printer-profile-2", preset_t::Printer, 0);
+            THEN( "Selected printer profile entry is \"printer-profile-2\"" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Printer)]) {
+                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("printer-profile-2"));
+                }
+            }
+            THEN( "Print profile chooser has 1 entry" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Print)]) {
+                    REQUIRE(chooser->GetCount() == 1);
+                }
+            }
+            THEN( "Selected print profile entry is \"print-profile\"" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Print)]) {
+                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("print-profile"));
+                }
+            }
+            THEN( "Material profile chooser has one entry" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Material)]) {
+                    REQUIRE(chooser->GetCount() == 1);
+                }
+            }
+            THEN( "Selected material profile entry is \"material-profile\"" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Material)]) {
+                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("material-profile"));
+                }
+            }
+        }
+    }
+}
+
 SCENARIO( "PresetChooser Preset loading" ) {
     Print fake_print;
     Settings default_settings;
