@@ -57,7 +57,9 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
     for (const auto& group : { preset_t::Printer, preset_t::Material, preset_t::Print }) {
         auto current_list = presets.at(get_preset(group));
         // Filter out profiles not compatible with this printer
-        current_list = grep(presets.at(get_preset(group)), [selected_printer_name] (const Preset& x) -> bool { return x.compatible(selected_printer_name); });
+        if (group != preset_t::Printer) {
+            current_list = grep(presets.at(get_preset(group)), [selected_printer_name] (const Preset& x) -> bool { return x.compatible(selected_printer_name); });
+        }
 
         // show default names if no other presets visible.
         if (current_list.size() > 1) {
