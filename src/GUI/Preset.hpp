@@ -49,7 +49,7 @@ public:
 
     /// Search the compatible_printers config option list for this preset name.
     /// Assume that Printer configs are compatible with other Printer configs
-    /// @param [in] Printer preset name to use to compare.
+    /// \param [in] Printer preset name to use to compare.
     bool compatible(const std::string& printer_name) const;
     bool compatible(const wxString& printer_name) const { return this->compatible(printer_name.ToStdString()); }
     bool compatible(const Preset& other) const {return (this->group == preset_t::Printer || (compatible(other.name) && other.group == preset_t::Printer));}
