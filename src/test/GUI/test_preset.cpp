@@ -162,8 +162,8 @@ SCENARIO( "Preset loading" ) {
             THEN("Config is not dirty.") {
                 REQUIRE(item.dirty() == false);
             }
-            THEN("adaptive_slicing = 0 in the preset config") {
-                REQUIRE(item.dirty_config().get<ConfigOptionBool>("adaptive_slicing").getBool() == false);
+            THEN("adaptive_slicing = 1 in the preset config") {
+                REQUIRE(item.dirty_config().get<ConfigOptionBool>("adaptive_slicing").getBool() == true);
             }
             THEN("loaded is true") {
                 REQUIRE(item.loaded() == true);
@@ -172,14 +172,14 @@ SCENARIO( "Preset loading" ) {
                 REQUIRE(item.load_config() == ref);
             }
         }
-        ref = item.load_config();
         WHEN("Option is changed in the config") {
-            ref->set("adaptive_slicing", true);
+            ref = item.load_config();
+            ref->set("adaptive_slicing", false);
             THEN("Config is dirty.") {
                 REQUIRE(item.dirty() == true);
             }
-            THEN("adaptive_slicing = 1 in the preset config") {
-                REQUIRE(item.dirty_config().get<ConfigOptionBool>("adaptive_slicing").getBool() == true);
+            THEN("adaptive_slicing = 0 in the preset config") {
+                REQUIRE(item.dirty_config().get<ConfigOptionBool>("adaptive_slicing").getBool() == false);
             }
         }
     }
