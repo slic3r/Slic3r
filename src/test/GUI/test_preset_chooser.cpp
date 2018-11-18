@@ -110,6 +110,7 @@ SCENARIO( "PresetChooser changed printer") {
 SCENARIO( "PresetChooser Preset loading" ) {
     Print fake_print;
     Settings default_settings;
+    auto& settings_presets = default_settings.default_presets;
     wxUIActionSimulator sim;
     wxTestableFrame* old = dynamic_cast<wxTestableFrame*>(wxTheApp->GetTopWindow()); 
     old->Destroy();
@@ -156,6 +157,11 @@ SCENARIO( "PresetChooser Preset loading" ) {
                 for (const auto& group : { preset_t::Print, preset_t::Material, preset_t::Printer }) {
                     REQUIRE(cut._chooser_names()[get_preset(group)].at(0) != wxString("- default -"));
                 }
+            }
+            THEN( "Settings are updated to match selected." ) {
+                REQUIRE(settings_presets[get_preset(preset_t::Print)].at(0) == wxString("print-profile"));
+                REQUIRE(settings_presets[get_preset(preset_t::Printer)].at(0) == wxString("printer-profile"));
+                REQUIRE(settings_presets[get_preset(preset_t::Material)].at(0) == wxString("material-profile"));
             }
         }
     }
