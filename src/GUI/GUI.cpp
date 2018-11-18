@@ -185,7 +185,7 @@ void App::load_presets() {
                     wxString path, name, ext;
                     wxFileName::SplitPath(filename, &path, &name, &ext);
 
-                    preset_list.push_back(Preset(path.ToStdString(), (name + ext).ToStdString(), static_cast<preset_t>(group)));
+                    preset_list.push_back(Preset(path.ToStdString(), (name + wxString(".") + ext).ToStdString(), static_cast<preset_t>(group)));
                     });
 
             wxDir dir(ini);
