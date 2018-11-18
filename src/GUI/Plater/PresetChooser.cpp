@@ -88,9 +88,11 @@ void PresetChooser::_on_change_combobox(preset_t preset, wxBitmapComboBox* choic
     
     // Prompt for unsaved changes and undo selections if cancelled and return early
     // Callback to close preset editor tab, close editor tabs, reload presets.
-    wxTheApp->CallAfter([this](){
-
-//        this->_on_select_preset(preset);
+    //
+    if (!this->prompt_unsaved_changes()) return;
+    wxTheApp->CallAfter([this,preset]()
+    {
+        this->_on_select_preset(preset);
         // reload presets; removes the modified mark
         this->load();
     });
