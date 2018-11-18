@@ -177,6 +177,14 @@ public:
     }
 };
 
+/// Quick implementation of grep to filter containers based on some lambda function.
+template<class T, class G>
+T grep(const T& container, G lambda_func) {
+    T result;
+    std::copy_if(container.cbegin(), container.cend(),  std::back_inserter(result), lambda_func);
+    return result;
+}
+
 }} // namespace Slic3r::GUI
 
 #endif // MISC_UI_HPP
