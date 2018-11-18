@@ -39,12 +39,23 @@ PresetChooser::PresetChooser(wxWindow* parent, Print& print, Settings& external_
 }
 
 void PresetChooser::load(std::array<Presets, preset_types> presets) {
-    for (const auto& group : { preset_t::Print, preset_t::Material, preset_t::Printer }) {
+
+    wxString selected_printer_name {""};
+    for (const auto& group : { preset_t::Printer, preset_t::Material, preset_t::Print }) {
         auto current_list = presets.at(get_preset(group));
+        // Filter out profiles not compatible with this printer
+        current_list = grep(presets.at(get_preset(group)), [selected_printer_name] (const Preset& x) -> bool { return x.compatible(selected_printer_name); });
+
+        // show default names if no other presets visible.
         if (current_list.size() > 1) {
             current_list = grep(presets.at(get_preset(group)), [] (const Preset& x) -> bool { return !x.default_preset; });
         }
-        
+
+        // # Read the current defaults from the settings file
+        auto settings_defaults {_settings.default_presets.at(get_preset(group))};
+
+        size_t i {0};
+        std::vector<std::string> preset_names {};
         // populate the chooser
         for (auto* chooser :  this->preset_choosers[get_preset(group)]) {
             chooser->Clear();
@@ -70,8 +81,35 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
                 chooser->Append(preset.name, bitmap);
                 __chooser_names[get_preset(group)].push_back(preset.name);
             }
+            // Apply default options from settings
+            if (settings_defaults.size() > i) { // only apply if there is a value from Settings
+                this->select_preset_by_name(settings_defaults.at(i), chooser);
+            } else {
+                chooser->SetSelection(0);
+            }
+
+            if (group == preset_t::Printer) {
+                selected_printer_name = chooser->GetString(chooser->GetSelection());
+            }
+            ++i;
         }
     }
+}
+
+void PresetChooser::select_preset_by_name(wxString name, preset_t group, size_t index = 0) {
+    auto& ps_list = this->preset_choosers.at(get_preset(group));
+    if (ps_list.size() > index) {
+        select_preset_by_name(name, ps_list.at(index));
+    }
+    this->_on_select_preset(group);
+}
+
+void PresetChooser::select_preset_by_name(wxString name, wxBitmapComboBox* chooser) {
+    auto index { chooser->FindString(name) };
+    if (index != wxNOT_FOUND) {
+        chooser->SetSelection(index);
+    }
+
 }
 
 void PresetChooser::_on_select_preset(preset_t preset) {
