@@ -33,7 +33,7 @@ public:
 
     void OnUnhandledException() override;
 
-    std::array<Presets, preset_types> presets { Presets() };
+    preset_store presets { Presets() };
     std::array<wxString, preset_types> preset_ini { };
 private:
     std::unique_ptr<Notifier> notifier {nullptr};
