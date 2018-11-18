@@ -84,7 +84,7 @@ config_ptr Preset::load_config() {
             config->apply_with_defaults(external_config, keys);
 
             // For extra_keys don't populate defaults.
-            if (extra_keys.size() > 0 && !this->external){
+            if (extra_keys.size() > 0 && !this->external) {
                 config->apply(external_config, extra_keys);
             }
 
