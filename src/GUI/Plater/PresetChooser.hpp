@@ -65,6 +65,7 @@ public:
     bool prompt_unsaved_changes();
 private:
     wxFlexGridSizer* _local_sizer {};
+    wxWindow* _parent {};
     void _on_change_combobox(preset_t preset, wxBitmapComboBox* choice);
     chooser_name_map __chooser_names;
 
@@ -85,6 +86,8 @@ private:
     /// Fetch the preset name corresponding to the chooser index
     wxString _get_selected_preset(preset_t group, size_t index) const;
 
+    /// Update Settings presets with the state of this system
+    void _update_preset_settings(preset_t preset);
 };
 
 }} // Slic3r::GUI
