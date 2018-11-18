@@ -47,7 +47,8 @@ std::array<Presets, preset_types> sample_compatible() {
     preset_list[get_preset(preset_t::Print)].push_back(Preset(true, "- default -", preset_t::Print));
 
     preset_list[get_preset(preset_t::Material)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "material-profile.ini", preset_t::Material));
-    preset_list[get_preset(preset_t::Material)][0].config().lock()->get_ptr<ConfigOptionStrings>("compatible_printers"s)->append("not-printer-profile"s);
+    // set the material to be compatible to printer-profile-2, not 1
+    preset_list[get_preset(preset_t::Material)][0].config().lock()->get_ptr<ConfigOptionStrings>("compatible_printers"s)->values.push_back("printer-profile-2"s);
     preset_list[get_preset(preset_t::Material)].push_back(Preset(true, "- default -", preset_t::Material));
 
     preset_list[get_preset(preset_t::Printer)].push_back(Preset(true, "- default -", preset_t::Printer));
