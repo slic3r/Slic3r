@@ -38,12 +38,12 @@ SCENARIO( "Preset construction" ) {
             }
             THEN("Does not contain filament_colour (a material option)") {
                 if (auto config = item.config().lock()) {
-                    REQUIRE(!config->has("filament_colours"));
+                    REQUIRE(!config->has("filament_colour"));
                 }
             }
-            THEN("Does not contain extruders (a printer option)") {
+            THEN("Does not contain gcode_flavor (a printer option)") {
                 if (auto config = item.config().lock()) {
-                    REQUIRE(!config->has("extruders"));
+                    REQUIRE(!config->has("gcode_flavor"));
                 }
             }
             THEN("Does contain layer_height (a print option)") {
@@ -70,12 +70,12 @@ SCENARIO( "Preset construction" ) {
             }
             THEN("Does contain filament_colour (a material option)") {
                 if (auto config = item.config().lock()) {
-                    REQUIRE(config->has("filament_colours"));
+                    REQUIRE(config->has("filament_colour"));
                 }
             }
-            THEN("Does not contain extruders (a printer option)") {
+            THEN("Does not contain gcode_flavor (a printer option)") {
                 if (auto config = item.config().lock()) {
-                    REQUIRE(!config->has("extruders"));
+                    REQUIRE(!config->has("gcode_flavor"));
                 }
             }
             THEN("Does not contain layer_height (a print option)") {
@@ -102,12 +102,12 @@ SCENARIO( "Preset construction" ) {
             }
             THEN("Does not contain filament_colour (a material option)") {
                 if (auto config = item.config().lock()) {
-                    REQUIRE(!config->has("filament_colours"));
+                    REQUIRE(!config->has("filament_colour"));
                 }
             }
-            THEN("Does contain extruders (a printer option)") {
+            THEN("Does contain gcode_flavor (a printer option)") {
                 if (auto config = item.config().lock()) {
-                    REQUIRE(config->has("extruders"));
+                    REQUIRE(config->has("gcode_flavor"));
                 }
             }
             THEN("Does not contain layer_height (a print option)") {
