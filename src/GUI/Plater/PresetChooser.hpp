@@ -48,6 +48,8 @@ private:
     /// Reference to owning Plater's print
     Print& _print;
 
+    void _on_select_preset(preset_t preset);
+
 };
 
 }} // Slic3r::GUI
