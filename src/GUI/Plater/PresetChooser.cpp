@@ -63,7 +63,7 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
 
         // show default names if no other presets visible.
         if (current_list.size() > 1) {
-            current_list = grep(presets.at(get_preset(group)), [] (const Preset& x) -> bool { return !x.default_preset; });
+            current_list = grep(current_list, [] (const Preset& x) -> bool { return !x.default_preset; });
         }
 
         // # Read the current defaults from the settings file
