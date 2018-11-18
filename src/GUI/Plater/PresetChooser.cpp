@@ -71,6 +71,7 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
 
         size_t i {0};
         std::vector<std::string> preset_names {};
+        __chooser_names[get_preset(group)].clear();
         // populate the chooser
         for (auto* chooser : this->preset_choosers[get_preset(group)]) {
             chooser->Clear();
