@@ -374,12 +374,7 @@ set(SLIC3R_GUI_INCLUDES
 IF(wxWidgets_FOUND AND OPENGL_FOUND AND Enable_GUI)
     MESSAGE("wx found!")
     MESSAGE("OpenGL found!")
-    MESSAGE(${OPENGL_INCLUDE_DIR})
     INCLUDE("${wxWidgets_USE_FILE}")
-
-
-    include_directories(${GUI_LIBDIR})
-    include_directories(${wxWidgets_INCLUDE})
 
     add_library(slic3r_gui STATIC 
     ${GUI_LIBDIR}/Dialogs/AboutDialog.cpp
