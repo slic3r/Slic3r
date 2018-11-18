@@ -48,9 +48,10 @@ public:
 
     /// Search the compatible_printers config option list for this preset name.
     /// Assume that Printer configs are compatible with other Printer configs
-    bool compatible(std::string printer_name) { return true; }
-    bool compatible(const wxString& printer_name) { if (group == preset_t::Printer) return true; return true; }
-    bool compatible(const Preset& other) {return (this->group == preset_t::Printer || (compatible(other.name) && other.group == preset_t::Printer));}
+    /// @param [in] Printer preset name to use to compare.
+    bool compatible(const std::string& printer_name) const;
+    bool compatible(const wxString& printer_name) const { return this->compatible(printer_name.ToStdString()); }
+    bool compatible(const Preset& other) const {return (this->group == preset_t::Printer || (compatible(other.name) && other.group == preset_t::Printer));}
 
     /// Format the name appropriately.
     wxString dropdown_name() { return (this->dirty() ? this->name << " " << _("(modified)") : this->name); }
