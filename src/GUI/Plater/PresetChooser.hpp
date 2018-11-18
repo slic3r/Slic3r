@@ -42,22 +42,24 @@ public:
 
     /// Set the selection of one of the preset lists to the entry matching the
     /// supplied name.
-    /// @param[in]  name    Name of preset to select. Case-sensitive.
-    /// @param[in]  group   Type of preset to change.
-    /// @param[in]  index   Preset chooser index to operate on (default is 0)
+    /// \param[in]  name    Name of preset to select. Case-sensitive.
+    /// \param[in]  group   Type of preset to change.
+    /// \param[in]  index   Preset chooser index to operate on (default is 0)
+    /// \return Whether or not the preset was actually updated.
     ///
     /// Note: If index is greater than the number of active presets, nothing
     /// happens.
     /// Note: If name is not found, nothing happens.
-    void select_preset_by_name(wxString name, preset_t group, size_t index);
+    bool select_preset_by_name(wxString name, preset_t group, size_t index);
 
     /// Set the selection of one of the preset lists to the entry matching the
     /// supplied name.
-    /// @param[in]  name    Name of preset to select. Case-sensitive.
-    /// @param[in]  chooser Direct pointer to the appropriate wxBitmapComboBox
+    /// \param[in]  name    Name of preset to select. Case-sensitive.
+    /// \param[in]  chooser Direct pointer to the appropriate wxBitmapComboBox
+    /// \return Whether or not the preset was actually updated.
     ///
     /// Note: If name is not found, nothing happens.
-    void select_preset_by_name(wxString name, wxBitmapComboBox* chooser);
+    bool select_preset_by_name(wxString name, wxBitmapComboBox* chooser);
 
     /// Cycle through active presets and prompt user to save dirty configs, if necessary.
     bool prompt_unsaved_changes();
