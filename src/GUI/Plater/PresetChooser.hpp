@@ -41,6 +41,10 @@ private:
     wxSizer* local_sizer {};
     void _on_change_combobox(preset_t preset, wxBitmapComboBox* choice);
     chooser_name_map __chooser_names; 
+
+    /// Reference to a Slic3r::Settings object.
+    Settings& _settings;
+
     /// Reference to owning Plater's print
     Print& _print;
 
