@@ -62,7 +62,7 @@ std::array<Presets, preset_types> sample_compatible() {
 // System should update its selected choosers based on changed print profile,
 // update settings, etc.
 SCENARIO( "PresetChooser changed printer") {
-    Print fake_print;
+    std::shared_ptr<Print> fake_print {std::make_shared<Print>()};
     Settings default_settings;
     wxUIActionSimulator sim;
     wxTestableFrame* old = dynamic_cast<wxTestableFrame*>(wxTheApp->GetTopWindow());
@@ -73,7 +73,7 @@ SCENARIO( "PresetChooser changed printer") {
         Settings test_settings;
         test_settings.default_presets.at(get_preset(preset_t::Printer)).push_back(wxString("printer-profile"));
         auto preset_list {sample_compatible()};
-        PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, test_settings, preset_list);
+        PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, &test_settings, preset_list);
         cut.load();
 
         WHEN( "Printer profile is changed to printer-profile-2 via select_preset_by_name" ) {
@@ -108,7 +108,7 @@ SCENARIO( "PresetChooser changed printer") {
 }
 
 SCENARIO( "PresetChooser Preset loading" ) {
-    Print fake_print;
+    std::shared_ptr<Print> fake_print {std::make_shared<Print>()};
     Settings default_settings;
     auto& settings_presets = default_settings.default_presets;
     wxUIActionSimulator sim;
@@ -119,7 +119,7 @@ SCENARIO( "PresetChooser Preset loading" ) {
     GIVEN( "A PresetChooser object." ) {
         WHEN( "load() is called with only default presets" ) {
             auto preset_list {defaults()};
-            PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, default_settings, preset_list);
+            PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, &default_settings, preset_list);
             cut.load();
             THEN( "Number of preset choosers created is 3" ) {
                 REQUIRE(cut.preset_choosers.size() == 3);
@@ -140,7 +140,7 @@ SCENARIO( "PresetChooser Preset loading" ) {
         }
         WHEN( "load is called with non-default presets and default presets" ) {
             auto preset_list {sample()};
-            PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, default_settings, preset_list);
+            PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, &default_settings, preset_list);
             cut.load();
             THEN( "Number of preset choosers created is 3" ) {
                 REQUIRE(cut.preset_choosers.size() == 3);
@@ -169,7 +169,7 @@ SCENARIO( "PresetChooser Preset loading" ) {
         Settings test_settings;
         test_settings.default_presets.at(get_preset(preset_t::Printer)).push_back(wxString("printer-profile"));
         auto preset_list {sample_compatible()};
-        PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, test_settings, preset_list);
+        PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, &test_settings, preset_list);
         WHEN( "load is called with non-default presets and default presets and the material is listed with an incompatible printer" ) {
             cut.load();
             THEN( "Number of preset choosers created is 3" ) {

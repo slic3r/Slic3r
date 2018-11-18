@@ -25,8 +25,8 @@ class PresetChooser : public wxPanel {
 public:
 
     /// Build a panel to contain a sizer for dropdowns for preset selection.
-    PresetChooser(wxWindow* parent, Print& print);
-    PresetChooser(wxWindow* parent, Print& print, Settings& external_settings, preset_store& external_presets);
+    PresetChooser(wxWindow* parent, std::weak_ptr<Print> print);
+    PresetChooser(wxWindow* parent, std::weak_ptr<Print> print, Settings* external_settings, preset_store& external_presets);
 
     std::array<Choosers, preset_types> preset_choosers;
 
@@ -70,10 +70,10 @@ private:
     chooser_name_map __chooser_names;
 
     /// Reference to a Slic3r::Settings object.
-    Settings& _settings;
+    Settings* _settings;
 
-    /// Reference to owning Plater's print
-    Print& _print;
+    /// Weak reference to Plater's print
+    std::weak_ptr<Print> _print;
 
     /// Reference to owning Application's preset database.
     preset_store& _presets;
