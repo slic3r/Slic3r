@@ -121,4 +121,14 @@ t_config_option_keys Preset::_group_overrides() const {
     }
 }
 
+bool Preset::compatible(const std::string& printer_name) const {
+    if (!this->_dirty_config->has("compatible_printers") || this->default_preset || this->group == preset_t::Printer) {
+        return true;
+    }
+    auto compatible_list {this->_dirty_config->get<ConfigOptionStrings>("compatible_printers").values};
+    if (compatible_list.size() == 0) return true;
+    return std::any_of(compatible_list.cbegin(), compatible_list.cend(), [printer_name] (const std::string& x) -> bool { return x.compare(printer_name) == 0; });
+}
+
+
 }} // namespace Slic3r::GUI
