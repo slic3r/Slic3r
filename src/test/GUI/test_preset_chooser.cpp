@@ -7,7 +7,7 @@
 #include <iostream>
 #include "testableframe.h"
 
-
+#include "Log.hpp"
 #include "Print.hpp"
 
 #include "Preset.hpp"
@@ -46,9 +46,8 @@ std::array<Presets, preset_types> sample_compatible() {
     preset_list[get_preset(preset_t::Print)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "print-profile.ini", preset_t::Print));
     preset_list[get_preset(preset_t::Print)].push_back(Preset(true, "- default -", preset_t::Print));
 
-    preset_list[get_preset(preset_t::Material)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "material-profile.ini", preset_t::Material));
-    // set the material to be compatible to printer-profile-2, not 1
-    preset_list[get_preset(preset_t::Material)][0].config().lock()->get_ptr<ConfigOptionStrings>("compatible_printers"s)->values.push_back("printer-profile-2"s);
+    // set the material to be compatible to printer-profile-2 only
+    preset_list[get_preset(preset_t::Material)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "incompat-material-profile.ini", preset_t::Material));
     preset_list[get_preset(preset_t::Material)].push_back(Preset(true, "- default -", preset_t::Material));
 
     preset_list[get_preset(preset_t::Printer)].push_back(Preset(true, "- default -", preset_t::Printer));
@@ -100,7 +99,44 @@ SCENARIO( "PresetChooser changed printer") {
             }
             THEN( "Selected material profile entry is \"material-profile\"" ) {
                 for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Material)]) {
-                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("material-profile"));
+                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("incompat-material-profile"));
+                }
+            }
+        }
+        WHEN( "Printer profile is changed to printer-profile-2 via combobox event" ) {
+            auto* printer_chooser = cut.preset_choosers[get_preset(preset_t::Printer)].at(0);
+            printer_chooser->SetSelection(0);
+
+            auto ev {wxCommandEvent(wxEVT_COMBOBOX, printer_chooser->GetId())};
+            ev.SetEventObject(printer_chooser);
+            Slic3r::Log::debug("test") << "Firing combobox event" << "\n";
+            printer_chooser->ProcessWindowEvent(ev);
+            wxYield();
+            wxMilliSleep(150);
+
+            THEN( "Selected printer profile entry is \"printer-profile-2\"" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Printer)]) {
+                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("printer-profile-2"));
+                }
+            }
+            THEN( "Print profile chooser has 1 entry" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Print)]) {
+                    REQUIRE(chooser->GetCount() == 1);
+                }
+            }
+            THEN( "Selected print profile entry is \"print-profile\"" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Print)]) {
+                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("print-profile"));
+                }
+            }
+            THEN( "Material profile chooser has one entry" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Material)]) {
+                    REQUIRE(chooser->GetCount() == 1);
+                }
+            }
+            THEN( "Selected material profile entry is \"material-profile\"" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Material)]) {
+                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("incompat-material-profile"));
                 }
             }
         }
