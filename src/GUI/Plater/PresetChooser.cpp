@@ -2,11 +2,11 @@
 
 namespace Slic3r { namespace GUI {
 
-PresetChooser::PresetChooser(wxWindow* parent, Print& print) : PresetChooser(parent, print, SLIC3RAPP->settings) {}
+PresetChooser::PresetChooser(wxWindow* parent, Print& print) : PresetChooser(parent, print, SLIC3RAPP->settings, SLIC3RAPP->presets) {}
 
-PresetChooser::PresetChooser(wxWindow* parent, Print& print, Settings& external) :
+PresetChooser::PresetChooser(wxWindow* parent, Print& print, Settings& external_settings, preset_store& external_presets) :
     wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, ""),
-    _settings(external), _print(print)
+    _settings(external_settings), _print(print), _presets(external_presets)
 {
     for (auto group : { preset_t::Print, preset_t::Material, preset_t::Printer }) {
         wxString name = "";
