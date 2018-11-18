@@ -10,8 +10,7 @@ using namespace boost;
 
 namespace Slic3r { namespace GUI {
 
-Preset::Preset(std::string load_dir, std::string filename, preset_t p) : group(p), _file(wxFileName(load_dir, filename)) {
-    this->name = this->_file.GetName();
+Preset::Preset(bool is_default, wxString name, preset_t p) : group(p), name(name), external(false), default_preset(is_default) {
     t_config_option_keys keylist;
     switch (this->group) {
         case preset_t::Print:
@@ -27,6 +26,13 @@ Preset::Preset(std::string load_dir, std::string filename, preset_t p) : group(p
     }
     this->_dirty_config = Slic3r::Config::new_from_defaults(keylist);
     this->_config = Slic3r::Config::new_from_defaults(keylist);
+}
+
+Preset::Preset(std::string load_dir, std::string filename, preset_t p) : group(p), _file(wxFileName(load_dir, filename)) {
+    this->name = this->_file.GetName();
+    this->_dirty_config = Slic3r::Config::new_from_ini(_file.GetFullPath().ToStdString());
+    this->_config = Slic3r::Config::new_from_ini(_file.GetFullPath().ToStdString());
+
 }
 
 t_config_option_keys Preset::dirty_options() const {
