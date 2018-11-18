@@ -58,7 +58,7 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
         }
 
         // # Read the current defaults from the settings file
-        const auto& settings_defaults {_settings.default_presets.at(get_preset(group))};
+        const auto& settings_defaults {_settings->default_presets.at(get_preset(group))};
 
         size_t i {0};
         std::vector<std::string> preset_names {};
@@ -128,7 +128,7 @@ bool PresetChooser::select_preset_by_name(wxString name, wxBitmapComboBox* choos
 }
 
 void PresetChooser::_update_preset_settings(preset_t preset) {
-    auto& settings_presets {_settings.default_presets.at(get_preset(preset))};
+    auto& settings_presets {_settings->default_presets.at(get_preset(preset))};
     settings_presets.clear(); // make sure previous contents are deconstructed
     settings_presets = this->_get_selected_presets(preset);
 
@@ -138,7 +138,7 @@ void PresetChooser::_on_select_preset(preset_t preset) {
     // update settings store
     this->_update_preset_settings(preset);
     // save settings
-    _settings.save_settings();
+    _settings->save_settings();
     if (preset == preset_t::Printer) {
         this->load(); // reload print/filament settings to honor compatible printers
     }
