@@ -51,7 +51,9 @@ class Settings {
 
         void save_settings();
         void load_settings();
-        
+
+        std::array<std::vector<wxString>, preset_types> default_presets {};
+
         /// Storage for window positions
         std::map<wxString, std::tuple<wxPoint, wxSize, bool> > window_pos { std::map<wxString, std::tuple<wxPoint, wxSize, bool> >() };
 
