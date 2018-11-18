@@ -109,7 +109,6 @@ SCENARIO( "PresetChooser changed printer") {
 
             auto ev {wxCommandEvent(wxEVT_COMBOBOX, printer_chooser->GetId())};
             ev.SetEventObject(printer_chooser);
-            Slic3r::Log::debug("test") << "Firing combobox event" << "\n";
             printer_chooser->ProcessWindowEvent(ev);
             wxYield();
             wxMilliSleep(150);
