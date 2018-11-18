@@ -58,7 +58,7 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
         }
 
         // # Read the current defaults from the settings file
-        auto settings_defaults {_settings.default_presets.at(get_preset(group))};
+        const auto& settings_defaults {_settings.default_presets.at(get_preset(group))};
 
         size_t i {0};
         std::vector<std::string> preset_names {};
@@ -99,12 +99,6 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
             wxString selected_preset { chooser->GetString(chooser->GetSelection()) };
             if (group == preset_t::Printer) {
                 selected_printer_name = selected_preset;
-            }
-            // update settings
-            if (settings_defaults.size() > i) {
-                settings_defaults[i] = selected_preset.ToStdString();
-            } else {
-                settings_defaults.push_back(selected_preset.ToStdString());
             }
 
             ++i;
