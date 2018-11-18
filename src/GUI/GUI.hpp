@@ -35,6 +35,8 @@ public:
 
     preset_store presets { Presets() };
     std::array<wxString, preset_types> preset_ini { };
+    Settings settings { };
+
 private:
     std::unique_ptr<Notifier> notifier {nullptr};
 
