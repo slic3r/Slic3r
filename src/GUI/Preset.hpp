@@ -15,7 +15,7 @@
 #endif
 
 namespace Slic3r { namespace GUI {
-
+using namespace std::literals::string_literals;
 
 /// Preset types list. We assign numbers to permit static_casts and use as preset tab indices.
 /// Don't skip numbers in the enumeration, we use this as an index into vectors (instead of using std::map).
@@ -29,6 +29,10 @@ constexpr uint8_t get_preset(preset_t preset) { return static_cast<uint8_t>(pres
 constexpr preset_t to_preset(uint8_t preset) { return static_cast<preset_t>(preset); }
 /// Convenience counter to determine how many preset tabs exist.
 constexpr size_t preset_types = get_preset(preset_t::Last);
+
+/// Convenience/debug method to get a useful name from the enumeration.
+const std::string preset_name(preset_t group);
+
 
 class Preset; 
 
