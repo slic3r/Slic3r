@@ -57,6 +57,24 @@ std::array<Presets, preset_types> sample_compatible() {
     return preset_list;
 }
 
+std::array<Presets, preset_types> compatible_reversion() {
+    std::array<Presets, preset_types> preset_list;
+    preset_list[get_preset(preset_t::Print)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "print-profile.ini", preset_t::Print));
+    preset_list[get_preset(preset_t::Print)].push_back(Preset(true, "- default -", preset_t::Print));
+
+    // set the material to be compatible to printer-profile-2 only
+    preset_list[get_preset(preset_t::Material)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "incompat-material-profile.ini", preset_t::Material));
+    preset_list[get_preset(preset_t::Material)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "material-profile.ini", preset_t::Material));
+    preset_list[get_preset(preset_t::Material)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "other-material-profile.ini", preset_t::Material));
+    preset_list[get_preset(preset_t::Material)].push_back(Preset(true, "- default -", preset_t::Material));
+
+    preset_list[get_preset(preset_t::Printer)].push_back(Preset(true, "- default -", preset_t::Printer));
+    preset_list[get_preset(preset_t::Printer)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "printer-profile-2.ini", preset_t::Printer));
+    preset_list[get_preset(preset_t::Printer)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "printer-profile.ini", preset_t::Printer));
+
+    return preset_list;
+}
+
 // Tests to cover behavior when the printer profile is changed.
 // System should update its selected choosers based on changed print profile,
 // update settings, etc.
@@ -136,6 +154,49 @@ SCENARIO( "PresetChooser changed printer") {
             THEN( "Selected material profile entry is \"material-profile\"" ) {
                 for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Material)]) {
                     REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("incompat-material-profile"));
+                }
+            }
+        }
+    }
+    GIVEN( "A PresetChooser with printer-profile selected and 2+ non-default entries for material ." ) {
+        Settings test_settings;
+        test_settings.default_presets.at(get_preset(preset_t::Printer)).push_back(wxString("printer-profile"));
+        auto preset_list {compatible_reversion()};
+        PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, &test_settings, preset_list);
+        cut.load();
+        WHEN( "Printer profile has only 2 compatible materials" ) {
+            THEN( "Material profile chooser has two entries" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Material)]) {
+                    REQUIRE(chooser->GetCount() == 2);
+                }
+            }
+            THEN( "incompat-material-profile is not in the chooser" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Material)]) {
+                    REQUIRE(chooser->FindString("incompat-material-profile") == wxNOT_FOUND);
+                }
+            }
+        }
+
+        WHEN( "Printer profile is changed to printer-profile-2 via select_preset_by_name" ) {
+            cut.select_preset_by_name("printer-profile-2", preset_t::Printer, 0);
+            THEN( "Selected printer profile entry is \"printer-profile-2\"" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Printer)]) {
+                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("printer-profile-2"));
+                }
+            }
+            THEN( "Print profile chooser has 1 entry" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Print)]) {
+                    REQUIRE(chooser->GetCount() == 1);
+                }
+            }
+            THEN( "Selected print profile entry is \"print-profile\"" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Print)]) {
+                    REQUIRE(chooser->GetString(chooser->GetSelection()) == wxString("print-profile"));
+                }
+            }
+            THEN( "Material profile chooser has one entry" ) {
+                for (auto* chooser : cut.preset_choosers[get_preset(preset_t::Material)]) {
+                    REQUIRE(chooser->GetCount() == 3);
                 }
             }
         }
