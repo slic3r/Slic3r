@@ -41,7 +41,7 @@ std::array<Presets, preset_types> sample() {
     return preset_list;
 }
 
-std::array<Presets, preset_types> sample_compatible() {
+std::array<Presets, preset_types> default_compatible_reversion() {
     std::array<Presets, preset_types> preset_list;
     preset_list[get_preset(preset_t::Print)].push_back(Preset(testfile_dir + "test_preset_chooser"s, "print-profile.ini", preset_t::Print));
     preset_list[get_preset(preset_t::Print)].push_back(Preset(true, "- default -", preset_t::Print));
@@ -89,7 +89,7 @@ SCENARIO( "PresetChooser changed printer") {
     GIVEN( "A PresetChooser with printer-profile selected." ) {
         Settings test_settings;
         test_settings.default_presets.at(get_preset(preset_t::Printer)).push_back(wxString("printer-profile"));
-        auto preset_list {sample_compatible()};
+        auto preset_list {default_compatible_reversion()};
         PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, &test_settings, preset_list);
         cut.load();
 
@@ -264,7 +264,7 @@ SCENARIO( "PresetChooser Preset loading" ) {
     GIVEN( "A PresetChooser object and a Settings indicating that print-profile is the default option." ) {
         Settings test_settings;
         test_settings.default_presets.at(get_preset(preset_t::Printer)).push_back(wxString("printer-profile"));
-        auto preset_list {sample_compatible()};
+        auto preset_list {default_compatible_reversion()};
         PresetChooser cut(wxTheApp->GetTopWindow(), fake_print, &test_settings, preset_list);
         WHEN( "load is called with non-default presets and default presets and the material is listed with an incompatible printer" ) {
             cut.load();
