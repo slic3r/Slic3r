@@ -5,7 +5,7 @@
 #include "../../libslic3r/Utils.hpp"
 
 #include "slic3r/Utils/Http.hpp"
-#include "slic3r/Utils/OctoPrint.hpp"
+#include "slic3r/Utils/PrintHost.hpp"
 #include "slic3r/Utils/Serial.hpp"
 #include "BonjourDialog.hpp"
 #include "WipeTowerDialog.hpp"
@@ -847,6 +847,7 @@ void TabPrint::build()
 	page = add_options_page(_(L("Support material")), "building.png");
 		optgroup = page->new_optgroup(_(L("Support material")));
 		optgroup->append_single_option_line("support_material");
+		optgroup->append_single_option_line("support_material_auto");
 		optgroup->append_single_option_line("support_material_threshold");
 		optgroup->append_single_option_line("support_material_enforce_layers");
 
@@ -919,6 +920,7 @@ void TabPrint::build()
 		optgroup->append_single_option_line("wipe_tower_width");
 		optgroup->append_single_option_line("wipe_tower_rotation_angle");
         optgroup->append_single_option_line("wipe_tower_bridging");
+        optgroup->append_single_option_line("single_extruder_multi_material_priming");
 
 		optgroup = page->new_optgroup(_(L("Advanced")));
 		optgroup->append_single_option_line("interface_shells");
@@ -1182,13 +1184,15 @@ void TabPrint::update()
 
 	bool have_raft = m_config->opt_int("raft_layers") > 0;
 	bool have_support_material = m_config->opt_bool("support_material") || have_raft;
+	bool have_support_material_auto = have_support_material && m_config->opt_bool("support_material_auto");
 	bool have_support_interface = m_config->opt_int("support_material_interface_layers") > 0;
 	bool have_support_soluble = have_support_material && m_config->opt_float("support_material_contact_distance") == 0;
-	for (auto el : {"support_material_threshold", "support_material_pattern", "support_material_with_sheath",
+	for (auto el : {"support_material_pattern", "support_material_with_sheath",
 					"support_material_spacing", "support_material_angle", "support_material_interface_layers",
 					"dont_support_bridges", "support_material_extrusion_width", "support_material_contact_distance",
 					"support_material_xy_spacing" })
 		get_field(el)->toggle(have_support_material);
+	get_field("support_material_threshold")->toggle(have_support_material_auto);
 
 	for (auto el : {"support_material_interface_spacing", "support_material_interface_extruder",
 					"support_material_interface_speed", "support_material_interface_contact_loops" })
@@ -1289,9 +1293,18 @@ void TabFilament::build()
 		optgroup->append_line(line);
 
         optgroup = page->new_optgroup(_(L("Toolchange parameters with single extruder MM printers")));
-		optgroup->append_single_option_line("filament_loading_speed");
+		optgroup->append_single_option_line("filament_loading_speed_start");
+        optgroup->append_single_option_line("filament_loading_speed");
+        optgroup->append_single_option_line("filament_unloading_speed_start");
         optgroup->append_single_option_line("filament_unloading_speed");
+		optgroup->append_single_option_line("filament_load_time");
+		optgroup->append_single_option_line("filament_unload_time");
         optgroup->append_single_option_line("filament_toolchange_delay");
+        optgroup->append_single_option_line("filament_cooling_moves");
+        optgroup->append_single_option_line("filament_cooling_initial_speed");
+        optgroup->append_single_option_line("filament_cooling_final_speed");
+        optgroup->append_single_option_line("filament_minimal_purge_on_wipe_tower");
+
         line = { _(L("Ramming")), "" };
         line.widget = [this](wxWindow* parent){
 			auto ramming_dialog_btn = new wxButton(parent, wxID_ANY, _(L("Ramming settings"))+dots, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
@@ -1513,10 +1526,12 @@ void TabPrinter::build()
 			optgroup->append_line(line);
 		}
 
-		optgroup = page->new_optgroup(_(L("OctoPrint upload")));
+		optgroup = page->new_optgroup(_(L("Printer Host upload")));
 
-		auto octoprint_host_browse = [this, optgroup] (wxWindow* parent) {
-			auto btn = new wxButton(parent, wxID_ANY, _(L(" Browse "))+dots, wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
+		optgroup->append_single_option_line("host_type");
+
+		auto printhost_browse = [this, optgroup] (wxWindow* parent) {
+			auto btn = m_printhost_browse_btn = new wxButton(parent, wxID_ANY, _(L(" Browse "))+dots, wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
 			btn->SetBitmap(wxBitmap(from_u8(Slic3r::var("zoom.png")), wxBITMAP_TYPE_PNG));
 			auto sizer = new wxBoxSizer(wxHORIZONTAL);
 			sizer->Add(btn);
@@ -1524,47 +1539,50 @@ void TabPrinter::build()
 			btn->Bind(wxEVT_BUTTON, [this, parent, optgroup](wxCommandEvent e) {
 				BonjourDialog dialog(parent);
 				if (dialog.show_and_lookup()) {
-					optgroup->set_value("octoprint_host", std::move(dialog.get_selected()), true);
+					optgroup->set_value("print_host", std::move(dialog.get_selected()), true);
 				}
 			});
 
 			return sizer;
 		};
 
-		auto octoprint_host_test = [this](wxWindow* parent) {
-			auto btn = m_octoprint_host_test_btn = new wxButton(parent, wxID_ANY, _(L("Test")), 
+		auto print_host_test = [this](wxWindow* parent) {
+			auto btn = m_print_host_test_btn = new wxButton(parent, wxID_ANY, _(L("Test")), 
 				wxDefaultPosition, wxDefaultSize, wxBU_LEFT | wxBU_EXACTFIT);
 			btn->SetBitmap(wxBitmap(from_u8(Slic3r::var("wrench.png")), wxBITMAP_TYPE_PNG));
 			auto sizer = new wxBoxSizer(wxHORIZONTAL);
 			sizer->Add(btn);
 
 			btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent e) {
-				OctoPrint octoprint(m_config);
-				wxString msg;
-				if (octoprint.test(msg)) {
-					show_info(this, _(L("Connection to OctoPrint works correctly.")), _(L("Success!")));
-				} else {
-					const auto text = wxString::Format("%s: %s\n\n%s",
-						_(L("Could not connect to OctoPrint")), msg, _(L("Note: OctoPrint version at least 1.1.0 is required."))
-					);
+				std::unique_ptr<PrintHost> host(PrintHost::get_print_host(m_config));
+				if (! host) {
+					const auto text = wxString::Format("%s",
+						_(L("Could not get a valid Printer Host reference")));
 					show_error(this, text);
+					return;
+				}
+				wxString msg;
+				if (host->test(msg)) {
+					show_info(this, host->get_test_ok_msg(), _(L("Success!")));
+				} else {
+					show_error(this, host->get_test_failed_msg(msg));
 				}
 			});
 
 			return sizer;
 		};
 
-		Line host_line = optgroup->create_single_option_line("octoprint_host");
-		host_line.append_widget(octoprint_host_browse);
-		host_line.append_widget(octoprint_host_test);
+		Line host_line = optgroup->create_single_option_line("print_host");
+		host_line.append_widget(printhost_browse);
+		host_line.append_widget(print_host_test);
 		optgroup->append_line(host_line);
-		optgroup->append_single_option_line("octoprint_apikey");
+		optgroup->append_single_option_line("printhost_apikey");
 
 		if (Http::ca_file_supported()) {
 
-			Line cafile_line = optgroup->create_single_option_line("octoprint_cafile");
+			Line cafile_line = optgroup->create_single_option_line("printhost_cafile");
 
-			auto octoprint_cafile_browse = [this, optgroup] (wxWindow* parent) {
+			auto printhost_cafile_browse = [this, optgroup] (wxWindow* parent) {
 				auto btn = new wxButton(parent, wxID_ANY, _(L(" Browse "))+dots, wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
 				btn->SetBitmap(wxBitmap(from_u8(Slic3r::var("zoom.png")), wxBITMAP_TYPE_PNG));
 				auto sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -1574,17 +1592,17 @@ void TabPrinter::build()
 					static const auto filemasks = _(L("Certificate files (*.crt, *.pem)|*.crt;*.pem|All files|*.*"));
 					wxFileDialog openFileDialog(this, _(L("Open CA certificate file")), "", "", filemasks, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 					if (openFileDialog.ShowModal() != wxID_CANCEL) {
-						optgroup->set_value("octoprint_cafile", std::move(openFileDialog.GetPath()), true);
+						optgroup->set_value("printhost_cafile", std::move(openFileDialog.GetPath()), true);
 					}
 				});
 
 				return sizer;
 			};
 
-			cafile_line.append_widget(octoprint_cafile_browse);
+			cafile_line.append_widget(printhost_cafile_browse);
 			optgroup->append_line(cafile_line);
 
-			auto octoprint_cafile_hint = [this, optgroup] (wxWindow* parent) {
+			auto printhost_cafile_hint = [this, optgroup] (wxWindow* parent) {
 				auto txt = new wxStaticText(parent, wxID_ANY, 
 					_(L("HTTPS CA file is optional. It is only needed if you use HTTPS with a self-signed certificate.")));
 				auto sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -1594,13 +1612,30 @@ void TabPrinter::build()
 
 			Line cafile_hint { "", "" };
 			cafile_hint.full_width = 1;
-			cafile_hint.widget = std::move(octoprint_cafile_hint);
+			cafile_hint.widget = std::move(printhost_cafile_hint);
 			optgroup->append_line(cafile_hint);
 
 		}
 
 		optgroup = page->new_optgroup(_(L("Firmware")));
 		optgroup->append_single_option_line("gcode_flavor");
+		optgroup->append_single_option_line("silent_mode");
+		optgroup->append_single_option_line("remaining_times");
+
+		optgroup->m_on_change = [this, optgroup](t_config_option_key opt_key, boost::any value){
+			wxTheApp->CallAfter([this, opt_key, value](){
+				if (opt_key.compare("silent_mode") == 0) {
+					bool val = boost::any_cast<bool>(value);
+					if (m_use_silent_mode != val) {
+						m_rebuild_kinematics_page = true;
+						m_use_silent_mode = val;
+					}
+				}
+				build_extruder_pages();
+				update_dirty();
+				on_value_change(opt_key, value);
+			});
+		};
 
 		optgroup = page->new_optgroup(_(L("Advanced")));
 		optgroup->append_single_option_line("use_relative_e_distances");
@@ -1682,8 +1717,94 @@ void TabPrinter::extruders_count_changed(size_t extruders_count){
 	on_value_change("extruders_count", extruders_count);
 }
 
-void TabPrinter::build_extruder_pages(){
+void TabPrinter::append_option_line(ConfigOptionsGroupShp optgroup, const std::string opt_key)
+{
+	auto option = optgroup->get_option(opt_key, 0);
+	auto line = Line{ option.opt.full_label, "" };
+	line.append_option(option);
+	if (m_use_silent_mode)
+		line.append_option(optgroup->get_option(opt_key, 1));
+	optgroup->append_line(line);
+}
+
+PageShp TabPrinter::build_kinematics_page()
+{
+	auto page = add_options_page(_(L("Machine limits")), "cog.png", true);
+
+	if (m_use_silent_mode)	{
+		// Legend for OptionsGroups
+		auto optgroup = page->new_optgroup(_(L("")));
+		optgroup->set_show_modified_btns_val(false);
+		optgroup->label_width = 230;
+		auto line = Line{ "", "" };
+
+		ConfigOptionDef def;
+		def.type = coString;
+		def.width = 150;
+		def.gui_type = "legend";
+		def.tooltip = L("Values in this column are for Full Power mode");
+		def.default_value = new ConfigOptionString{ L("Full Power") };
+
+		auto option = Option(def, "full_power_legend");
+		line.append_option(option);
+
+		def.tooltip = L("Values in this column are for Silent mode");
+		def.default_value = new ConfigOptionString{ L("Silent") };
+		option = Option(def, "silent_legend");
+		line.append_option(option);
+
+		optgroup->append_line(line);
+	}
+
+	std::vector<std::string> axes{ "x", "y", "z", "e" };
+	auto optgroup = page->new_optgroup(_(L("Maximum feedrates")));
+		for (const std::string &axis : axes)	{
+			append_option_line(optgroup, "machine_max_feedrate_" + axis);
+		}
+
+	optgroup = page->new_optgroup(_(L("Maximum accelerations")));
+		for (const std::string &axis : axes)	{
+			append_option_line(optgroup, "machine_max_acceleration_" + axis);
+		}
+		append_option_line(optgroup, "machine_max_acceleration_extruding");
+		append_option_line(optgroup, "machine_max_acceleration_retracting");
+
+	optgroup = page->new_optgroup(_(L("Jerk limits")));
+		for (const std::string &axis : axes)	{
+			append_option_line(optgroup, "machine_max_jerk_" + axis);
+		}
+
+	optgroup = page->new_optgroup(_(L("Minimum feedrates")));
+		append_option_line(optgroup, "machine_min_extruding_rate");
+		append_option_line(optgroup, "machine_min_travel_rate");
+
+	return page;
+}
+
+
+void TabPrinter::build_extruder_pages()
+{
 	size_t		n_before_extruders = 2;			//	Count of pages before Extruder pages
+	bool		is_marlin_flavor = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfMarlin;
+
+	// Add/delete Kinematics page according to is_marlin_flavor
+	size_t existed_page = 0;
+	for (int i = n_before_extruders; i < m_pages.size(); ++i) // first make sure it's not there already
+		if (m_pages[i]->title().find(_(L("Machine limits"))) != std::string::npos) {
+			if (!is_marlin_flavor || m_rebuild_kinematics_page)
+				m_pages.erase(m_pages.begin() + i);
+			else
+				existed_page = i;
+			break;
+		}
+
+	if (existed_page < n_before_extruders && is_marlin_flavor){
+		auto page = build_kinematics_page();
+		m_pages.insert(m_pages.begin() + n_before_extruders, page);
+	}
+
+	if (is_marlin_flavor) 
+		n_before_extruders++;
 	size_t		n_after_single_extruder_MM = 2; //	Count of pages after single_extruder_multi_material page
 
 	if (m_extruders_count_old == m_extruders_count || 
@@ -1704,6 +1825,7 @@ void TabPrinter::build_extruder_pages(){
 		optgroup->append_single_option_line("cooling_tube_retraction");
 		optgroup->append_single_option_line("cooling_tube_length");
 		optgroup->append_single_option_line("parking_pos_retraction");
+        optgroup->append_single_option_line("extra_loading_move");
 		m_pages.insert(m_pages.end() - n_after_single_extruder_MM, page);
 		m_has_single_extruder_MM_page = true;
 	}
@@ -1757,7 +1879,6 @@ void TabPrinter::build_extruder_pages(){
 						m_pages.begin() + n_before_extruders + m_extruders_count_old);
 
 	m_extruders_count_old = m_extruders_count;
-
 	rebuild_page_tree();
 }
 
@@ -1786,11 +1907,33 @@ void TabPrinter::update(){
 			m_serial_test_btn->Disable();
 	}
 
-	m_octoprint_host_test_btn->Enable(!m_config->opt_string("octoprint_host").empty());
-	
+	{
+		std::unique_ptr<PrintHost> host(PrintHost::get_print_host(m_config));
+		m_print_host_test_btn->Enable(!m_config->opt_string("print_host").empty() && host->can_test());
+		m_printhost_browse_btn->Enable(host->has_auto_discovery());
+	}
+
 	bool have_multiple_extruders = m_extruders_count > 1;
 	get_field("toolchange_gcode")->toggle(have_multiple_extruders);
 	get_field("single_extruder_multi_material")->toggle(have_multiple_extruders);
+
+	bool is_marlin_flavor = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfMarlin;
+
+	{
+		Field *sm = get_field("silent_mode");
+		if (! is_marlin_flavor)
+			// Disable silent mode for non-marlin firmwares.
+			get_field("silent_mode")->toggle(false);
+		if (is_marlin_flavor)
+			sm->enable();
+		else
+			sm->disable();
+	}
+
+	if (m_use_silent_mode != m_config->opt_bool("silent_mode"))	{
+		m_rebuild_kinematics_page = true;
+		m_use_silent_mode = m_config->opt_bool("silent_mode");
+	}
 
 	for (size_t i = 0; i < m_extruders_count; ++i) {
 		bool have_retract_length = m_config->opt_float("retract_length", i) > 0;
@@ -1910,7 +2053,8 @@ void Tab::rebuild_page_tree()
 		auto itemId = m_treectrl->AppendItem(rootItem, p->title(), p->iconID());
 		m_treectrl->SetItemTextColour(itemId, p->get_item_colour());
 		if (p->title() == selected) {
-			m_disable_tree_sel_changed_event = 1;
+			if (!(p->title() == _(L("Machine limits")) || p->title() == _(L("Single extruder MM setup")))) // These Pages have to be updated inside OnTreeSelChange
+				m_disable_tree_sel_changed_event = 1;
 			m_treectrl->SelectItem(itemId);
 			m_disable_tree_sel_changed_event = 0;
 			have_selection = 1;
@@ -2603,7 +2747,7 @@ void SavePresetWindow::accept()
 		const char* unusable_symbols = "<>:/\\|?*\"";
 		bool is_unusable_symbol = false;
 		bool is_unusable_postfix = false;
-		const std::string unusable_postfix = "(modified)";
+		const std::string unusable_postfix = PresetCollection::get_suffix_modified();//"(modified)";
 		for (size_t i = 0; i < std::strlen(unusable_symbols); i++){
 			if (m_chosen_name.find_first_of(unusable_symbols[i]) != std::string::npos){
 				is_unusable_symbol = true;
@@ -2618,8 +2762,9 @@ void SavePresetWindow::accept()
 							_(L("the following characters are not allowed:")) + " <>:/\\|?*\"");
 		}
 		else if (is_unusable_postfix){
-			show_error(this,	_(L("The supplied name is not valid;")) + "\n" + 
-								_(L("the following postfix are not allowed:")) + "\n\t" + unusable_postfix);
+			show_error(this,_(L("The supplied name is not valid;")) + "\n" +
+							_(L("the following postfix are not allowed:")) + "\n\t" + //unusable_postfix);
+							wxString::FromUTF8(unusable_postfix.c_str()));
 		}
 		else if (m_chosen_name.compare("- default -") == 0) {
 			show_error(this, _(L("The supplied name is not available.")));

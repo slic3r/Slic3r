@@ -75,7 +75,7 @@ public:
     void deselect_volumes(wxGLCanvas* canvas);
     void select_volume(wxGLCanvas* canvas, unsigned int id);
     void update_volumes_selection(wxGLCanvas* canvas, const std::vector<int>& selections);
-    bool check_volumes_outside_state(wxGLCanvas* canvas, const DynamicPrintConfig* config) const;
+    int check_volumes_outside_state(wxGLCanvas* canvas, const DynamicPrintConfig* config) const;
     bool move_volume_up(wxGLCanvas* canvas, unsigned int id);
     bool move_volume_down(wxGLCanvas* canvas, unsigned int id);
 
@@ -112,6 +112,7 @@ public:
     void enable_gizmos(wxGLCanvas* canvas, bool enable);
     void enable_shader(wxGLCanvas* canvas, bool enable);
     void enable_force_zoom_to_bed(wxGLCanvas* canvas, bool enable);
+    void enable_dynamic_background(wxGLCanvas* canvas, bool enable);
     void allow_multisample(wxGLCanvas* canvas, bool allow);
 
     void zoom_to_bed(wxGLCanvas* canvas);
@@ -120,6 +121,7 @@ public:
     void set_viewport_from_scene(wxGLCanvas* canvas, wxGLCanvas* other);
 
     void update_volumes_colors_by_extruder(wxGLCanvas* canvas);
+    void update_gizmos_data(wxGLCanvas* canvas);
 
     void render(wxGLCanvas* canvas) const;
 
@@ -131,10 +133,10 @@ public:
 
     void reload_scene(wxGLCanvas* canvas, bool force);
 
-    void load_print_toolpaths(wxGLCanvas* canvas);
-    void load_print_object_toolpaths(wxGLCanvas* canvas, const PrintObject* print_object, const std::vector<std::string>& tool_colors);
-    void load_wipe_tower_toolpaths(wxGLCanvas* canvas, const std::vector<std::string>& str_tool_colors);
     void load_gcode_preview(wxGLCanvas* canvas, const GCodePreviewData* preview_data, const std::vector<std::string>& str_tool_colors);
+    void load_preview(wxGLCanvas* canvas, const std::vector<std::string>& str_tool_colors);
+
+    void reset_legend_texture();
 
     void register_on_viewport_changed_callback(wxGLCanvas* canvas, void* callback);
     void register_on_double_click_callback(wxGLCanvas* canvas, void* callback);
@@ -152,6 +154,8 @@ public:
     void register_on_wipe_tower_moved_callback(wxGLCanvas* canvas, void* callback);
     void register_on_enable_action_buttons_callback(wxGLCanvas* canvas, void* callback);
     void register_on_gizmo_scale_uniformly_callback(wxGLCanvas* canvas, void* callback);
+    void register_on_gizmo_rotate_callback(wxGLCanvas* canvas, void* callback);
+    void register_on_update_geometry_info_callback(wxGLCanvas* canvas, void* callback);
 
 private:
     CanvasesMap::iterator _get_canvas(wxGLCanvas* canvas);

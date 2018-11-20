@@ -26,7 +26,7 @@ include_directories(${LIBDIR}/libslic3r)
 
 if(WIN32)
     # BOOST_ALL_NO_LIB: Avoid the automatic linking of Boost libraries on Windows. Rather rely on explicit linking.
-    add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB)
+    add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB -DBOOST_USE_WINAPI_VERSION=0x601)
     # -D_ITERATOR_DEBUG_LEVEL)
     if(WIN10SDK_PATH)
         message("Building with Win10 Netfabb STL fixing service support")
@@ -136,6 +136,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/Line.hpp
     ${LIBDIR}/libslic3r/Model.cpp
     ${LIBDIR}/libslic3r/Model.hpp
+    ${LIBDIR}/libslic3r/ModelArrange.hpp
     ${LIBDIR}/libslic3r/MotionPlanner.cpp
     ${LIBDIR}/libslic3r/MotionPlanner.hpp
     ${LIBDIR}/libslic3r/MultiPoint.cpp
@@ -250,14 +251,26 @@ add_library(libslic3r_gui STATIC
     ${LIBDIR}/slic3r/Utils/Http.hpp
     ${LIBDIR}/slic3r/Utils/FixModelByWin10.cpp
     ${LIBDIR}/slic3r/Utils/FixModelByWin10.hpp
+    ${LIBDIR}/slic3r/Utils/PrintHostSendDialog.cpp
+    ${LIBDIR}/slic3r/Utils/PrintHostSendDialog.hpp
     ${LIBDIR}/slic3r/Utils/OctoPrint.cpp
     ${LIBDIR}/slic3r/Utils/OctoPrint.hpp
+    ${LIBDIR}/slic3r/Utils/Duet.cpp
+    ${LIBDIR}/slic3r/Utils/Duet.hpp
+    ${LIBDIR}/slic3r/Utils/PrintHost.cpp
+    ${LIBDIR}/slic3r/Utils/PrintHost.hpp
     ${LIBDIR}/slic3r/Utils/Bonjour.cpp
     ${LIBDIR}/slic3r/Utils/Bonjour.hpp
     ${LIBDIR}/slic3r/Utils/PresetUpdater.cpp
     ${LIBDIR}/slic3r/Utils/PresetUpdater.hpp
     ${LIBDIR}/slic3r/Utils/Time.cpp
     ${LIBDIR}/slic3r/Utils/Time.hpp
+    ${LIBDIR}/slic3r/Utils/HexFile.cpp
+    ${LIBDIR}/slic3r/Utils/HexFile.hpp
+    ${LIBDIR}/slic3r/ProgressIndicator.hpp
+    ${LIBDIR}/slic3r/AppController.hpp
+    ${LIBDIR}/slic3r/AppController.cpp
+    ${LIBDIR}/slic3r/AppControllerWx.cpp
 )
 
 add_library(admesh STATIC
@@ -359,7 +372,7 @@ set(MyTypemap ${CMAKE_CURRENT_BINARY_DIR}/typemap)
 add_custom_command(
         OUTPUT ${MyTypemap}
         DEPENDS ${CMAKE_CURRENT_LIST_DIR}/xsp/my.map
-        COMMAND ${PERL_EXECUTABLE} -MExtUtils::Typemaps -MExtUtils::Typemaps::Basic -e "$typemap = ExtUtils::Typemaps->new(file => \"${CMAKE_CURRENT_LIST_DIR}/xsp/my.map\"); $typemap->merge(typemap => ExtUtils::Typemaps::Basic->new); $typemap->write(file => \"${MyTypemap}\")"
+        COMMAND ${PERL5LIB_ENV_CMD} ${PERL_EXECUTABLE} -MExtUtils::Typemaps -MExtUtils::Typemaps::Basic -e "$typemap = ExtUtils::Typemaps->new(file => \"${CMAKE_CURRENT_LIST_DIR}/xsp/my.map\"); $typemap->merge(typemap => ExtUtils::Typemaps::Basic->new); $typemap->write(file => \"${MyTypemap}\")"
         VERBATIM
 )
 
@@ -403,8 +416,9 @@ set(XS_XSP_FILES
     ${XSP_DIR}/Surface.xsp
     ${XSP_DIR}/SurfaceCollection.xsp
     ${XSP_DIR}/TriangleMesh.xsp
-    ${XSP_DIR}/Utils_OctoPrint.xsp
+    ${XSP_DIR}/Utils_PrintHost.xsp
     ${XSP_DIR}/Utils_PresetUpdater.xsp
+    ${XSP_DIR}/AppController.xsp
     ${XSP_DIR}/XS.xsp
 )
 foreach (file ${XS_XSP_FILES})
@@ -423,7 +437,8 @@ set(XS_MAIN_CPP ${CMAKE_CURRENT_BINARY_DIR}/XS.cpp)
 add_custom_command(
         OUTPUT ${XS_MAIN_CPP}
         DEPENDS ${MyTypemap} ${XS_XSP_FILES} ${CMAKE_CURRENT_LIST_DIR}/xsp/typemap.xspt
-        COMMAND COMMAND xsubpp -typemap typemap -output ${XS_MAIN_CPP} -hiertype ${XS_MAIN_XS}
+        COMMAND ${PERL5LIB_ENV_CMD} xsubpp -typemap typemap -output ${XS_MAIN_CPP} -hiertype ${XS_MAIN_XS}
+        VERBATIM
 )
 
 # Define the Perl XS shared library.
@@ -450,7 +465,7 @@ if(APPLE)
     # Ignore undefined symbols of the perl interpreter, they will be found in the caller image.
     target_link_libraries(XS "-undefined dynamic_lookup")
 endif()
-target_link_libraries(XS libslic3r libslic3r_gui admesh miniz clipper nowide polypartition poly2tri semver avrdude)
+target_link_libraries(XS libslic3r libslic3r_gui admesh miniz clipper nowide polypartition poly2tri semver avrdude qhull)
 if(SLIC3R_PROFILE)
     target_link_libraries(XS Shiny)
 endif()
@@ -486,6 +501,14 @@ endif ()
 if (WIN32)
     target_compile_definitions(XS PRIVATE -DNOGDI -DNOMINMAX -DHAS_BOOL)
 endif ()
+
+# SLIC3R_MSVC_PDB
+if (MSVC AND SLIC3R_MSVC_PDB AND "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    set_target_properties(XS PROPERTIES
+        COMPILE_FLAGS "/Zi"
+        LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF"
+    )
+endif()
 
 ## Configuration flags
 if (SLIC3R_GUI)
@@ -530,6 +553,10 @@ if (WIN32)
 endif()
 
 add_subdirectory(src/avrdude)
+
+add_subdirectory(src/qhull)
+include_directories(${LIBDIR}/qhull/src)
+message(STATUS ${LIBDIR}/qhull/src)
 
 ## REQUIRED packages
 
@@ -712,6 +739,21 @@ add_custom_target(pot
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     COMMENT "Generate pot file from strings in the source tree"
 )
+
+# ##############################################################################
+# Adding libnest2d project for bin packing...
+# ##############################################################################
+
+set(LIBNEST2D_UNITTESTS ON CACHE BOOL "Force generating unittests for libnest2d")
+
+add_subdirectory(${LIBDIR}/libnest2d)
+target_compile_definitions(libslic3r PUBLIC -DUSE_TBB)
+target_include_directories(libslic3r PUBLIC BEFORE ${LIBNEST2D_INCLUDES})
+target_include_directories(libslic3r_gui PUBLIC BEFORE ${LIBNEST2D_INCLUDES})
+
+message(STATUS "Libnest2D Libraries: ${LIBNEST2D_LIBRARIES}")
+target_link_libraries(libslic3r ${LIBNEST2D_LIBRARIES})
+# ##############################################################################
 
 # Installation
 install(TARGETS XS DESTINATION ${PERL_VENDORARCH}/auto/Slic3r/XS)

@@ -45,6 +45,22 @@ namespace Slic3r { namespace GUI {
 		set_undo_bitmap(&bmp);
 		set_undo_to_sys_bitmap(&bmp);
 
+		switch (m_opt.type)
+		{
+		case coPercents:
+		case coFloats:
+		case coStrings:	
+		case coBools:		
+		case coInts: {
+			auto tag_pos = m_opt_id.find("#");
+			if (tag_pos != std::string::npos)
+				m_opt_idx = stoi(m_opt_id.substr(tag_pos + 1, m_opt_id.size()));
+			break;
+		}
+		default:
+			break;
+		}
+
 		BUILD();
 	}
 
@@ -77,11 +93,12 @@ namespace Slic3r { namespace GUI {
 	wxString Field::get_tooltip_text(const wxString& default_string)
 	{
 		wxString tooltip_text("");
-		wxString tooltip = L_str(m_opt.tooltip);
+		wxString tooltip = _(m_opt.tooltip);
 		if (tooltip.length() > 0)
-			tooltip_text = tooltip + "(" + _(L("default")) + ": " +
-							(boost::iends_with(m_opt_id, "_gcode") ? "\n" : "") + 
-							default_string + ")";
+            tooltip_text = tooltip + "\n" + _(L("default value")) + "\t: " +
+            (boost::iends_with(m_opt_id, "_gcode") ? "\n" : "") + default_string +
+            (boost::iends_with(m_opt_id, "_gcode") ? "" : "\n") + 
+            _(L("parameter name")) + "\t: " + m_opt_id;
 
 		return tooltip_text;
 	}
@@ -161,10 +178,10 @@ namespace Slic3r { namespace GUI {
 		case coFloat:
 		{
 			double val = m_opt.type == coFloats ?
-				static_cast<const ConfigOptionFloats*>(m_opt.default_value)->get_at(0) :
+				static_cast<const ConfigOptionFloats*>(m_opt.default_value)->get_at(m_opt_idx) :
 				m_opt.type == coFloat ? 
 					m_opt.default_value->getFloat() :
-					static_cast<const ConfigOptionPercents*>(m_opt.default_value)->get_at(0);
+					static_cast<const ConfigOptionPercents*>(m_opt.default_value)->get_at(m_opt_idx);
 			text_value = double_to_string(val);
 			break;
 		}
@@ -174,10 +191,8 @@ namespace Slic3r { namespace GUI {
 		case coStrings:
 		{
 			const ConfigOptionStrings *vec = static_cast<const ConfigOptionStrings*>(m_opt.default_value);
-			if (vec == nullptr || vec->empty()) break;
-			if (vec->size() > 1)
-				break;
-			text_value = vec->values.at(0);
+			if (vec == nullptr || vec->empty()) break; //for the case of empty default value
+			text_value = vec->get_at(m_opt_idx);
 			break;
 		}
 		default:
@@ -209,24 +224,20 @@ namespace Slic3r { namespace GUI {
 		}), temp->GetId());
 #endif // __WXGTK__
 
-		temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent)
+		temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent& evt)
 		{
 #ifdef __WXGTK__
-			bChangedValueEvent = true;
-#else
-			on_change_field();
+			if (bChangedValueEvent)
 #endif //__WXGTK__
+			on_change_field();
 		}), temp->GetId());
 
 #ifdef __WXGTK__
-		temp->Bind(wxEVT_KEY_UP, [this](wxKeyEvent& event)
-		{
-			if (bChangedValueEvent)	{
-				on_change_field();
-				bChangedValueEvent = false;
-			}
-			event.Skip();
-		});
+        // to correct value updating on GTK we should:
+        // call on_change_field() on wxEVT_KEY_UP instead of wxEVT_TEXT
+        // and prevent value updating on wxEVT_KEY_DOWN
+        temp->Bind(wxEVT_KEY_DOWN, &TextCtrl::change_field_value, this);
+        temp->Bind(wxEVT_KEY_UP, &TextCtrl::change_field_value, this);
 #endif //__WXGTK__
 
 		// select all text using Ctrl+A
@@ -252,6 +263,15 @@ namespace Slic3r { namespace GUI {
 	void TextCtrl::enable() { dynamic_cast<wxTextCtrl*>(window)->Enable(); dynamic_cast<wxTextCtrl*>(window)->SetEditable(true); }
     void TextCtrl::disable() { dynamic_cast<wxTextCtrl*>(window)->Disable(); dynamic_cast<wxTextCtrl*>(window)->SetEditable(false); }
 
+#ifdef __WXGTK__
+    void TextCtrl::change_field_value(wxEvent& event)
+    {
+    	if (bChangedValueEvent = event.GetEventType()==wxEVT_KEY_UP)
+    		on_change_field();
+        event.Skip();
+    };
+#endif //__WXGTK__
+
 void CheckBox::BUILD() {
 	auto size = wxSize(wxDefaultSize);
 	if (m_opt.height >= 0) size.SetHeight(m_opt.height);
@@ -259,7 +279,7 @@ void CheckBox::BUILD() {
 
 	bool check_value =	m_opt.type == coBool ? 
 						m_opt.default_value->getBool() : m_opt.type == coBools ? 
-						static_cast<ConfigOptionBools*>(m_opt.default_value)->values.at(0) : 
+						static_cast<ConfigOptionBools*>(m_opt.default_value)->get_at(m_opt_idx) : 
     					false;
 
 	auto temp = new wxCheckBox(m_parent, wxID_ANY, wxString(""), wxDefaultPosition, size); 
@@ -365,7 +385,7 @@ void Choice::BUILD() {
 	}
 	else{
 		for (auto el : m_opt.enum_labels.empty() ? m_opt.enum_values : m_opt.enum_labels){
-			const wxString& str = m_opt_id == "support" ? L_str(el) : el;
+			const wxString& str = _(el);//m_opt_id == "support" ? _(el) : el;
 			temp->Append(str);
 		}
 		set_selection();
@@ -418,7 +438,7 @@ void Choice::set_selection()
 		break;
 	}
 	case coStrings:{
-		text_value = static_cast<const ConfigOptionStrings*>(m_opt.default_value)->values.at(0);
+		text_value = static_cast<const ConfigOptionStrings*>(m_opt.default_value)->get_at(m_opt_idx);
 
 		size_t idx = 0;
 		for (auto el : m_opt.enum_values)
@@ -571,6 +591,8 @@ boost::any& Choice::get_value()
 			m_value = static_cast<SupportMaterialPattern>(ret_enum);
 		else if (m_opt_id.compare("seam_position") == 0)
 			m_value = static_cast<SeamPosition>(ret_enum);
+		else if (m_opt_id.compare("host_type") == 0)
+			m_value = static_cast<PrintHostType>(ret_enum);
 	}	
 
 	return m_value;
@@ -582,7 +604,7 @@ void ColourPicker::BUILD()
 	if (m_opt.height >= 0) size.SetHeight(m_opt.height);
 	if (m_opt.width >= 0) size.SetWidth(m_opt.width);
 
-	wxString clr(static_cast<ConfigOptionStrings*>(m_opt.default_value)->values.at(0));
+	wxString clr(static_cast<ConfigOptionStrings*>(m_opt.default_value)->get_at(m_opt_idx));
 	auto temp = new wxColourPickerCtrl(m_parent, wxID_ANY, clr, wxDefaultPosition, size);
 		
 	// 	// recast as a wxWindow to fit the calling convention
@@ -673,6 +695,22 @@ boost::any& PointCtrl::get_value()
 	y_textctrl->GetValue().ToDouble(&val);
 	ret_point.y = val;
 	return m_value = ret_point;
+}
+
+void StaticText::BUILD()
+{
+	auto size = wxSize(wxDefaultSize);
+	if (m_opt.height >= 0) size.SetHeight(m_opt.height);
+	if (m_opt.width >= 0) size.SetWidth(m_opt.width);
+
+	wxString legend(static_cast<ConfigOptionString*>(m_opt.default_value)->value);
+	auto temp = new wxStaticText(m_parent, wxID_ANY, legend, wxDefaultPosition, size);
+	temp->SetFont(bold_font());
+
+	// 	// recast as a wxWindow to fit the calling convention
+	window = dynamic_cast<wxWindow*>(temp);
+
+	temp->SetToolTip(get_tooltip_text(legend));
 }
 
 } // GUI

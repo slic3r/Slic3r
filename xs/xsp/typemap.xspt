@@ -268,3 +268,6 @@
     $CVar = (PrintObjectStep)SvUV($PerlVar);
   %};
 };
+%typemap{AppController*};
+%typemap{PrintController*};
+%typemap{PrintHost*};

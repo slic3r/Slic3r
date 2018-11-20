@@ -83,8 +83,10 @@ public:
         const WipeTower::ToolChangeResult                           &priming,
         const std::vector<std::vector<WipeTower::ToolChangeResult>> &tool_changes,
         const WipeTower::ToolChangeResult                           &final_purge) :
-        m_left(float(print_config.wipe_tower_x.value)),
-        m_right(float(print_config.wipe_tower_x.value + print_config.wipe_tower_width.value)),
+        m_left(/*float(print_config.wipe_tower_x.value)*/ 0.f),
+        m_right(float(/*print_config.wipe_tower_x.value +*/ print_config.wipe_tower_width.value)),
+        m_wipe_tower_pos(float(print_config.wipe_tower_x.value), float(print_config.wipe_tower_y.value)),
+        m_wipe_tower_rotation(float(print_config.wipe_tower_rotation_angle)),
         m_priming(priming),
         m_tool_changes(tool_changes),
         m_final_purge(final_purge),
@@ -96,14 +98,20 @@ public:
     void next_layer() { ++ m_layer_idx; m_tool_change_idx = 0; }
     std::string tool_change(GCode &gcodegen, int extruder_id, bool finish_layer);
     std::string finalize(GCode &gcodegen);
+    std::vector<float> used_filament_length() const;
 
 private:
     WipeTowerIntegration& operator=(const WipeTowerIntegration&);
     std::string append_tcr(GCode &gcodegen, const WipeTower::ToolChangeResult &tcr, int new_extruder_id) const;
 
+    // Postprocesses gcode: rotates and moves all G1 extrusions and returns result
+    std::string rotate_wipe_tower_moves(const std::string& gcode_original, const WipeTower::xy& start_pos, const WipeTower::xy& translation, float angle) const;
+
     // Left / right edges of the wipe tower, for the planning of wipe moves.
     const float                                                  m_left;
     const float                                                  m_right;
+    const WipeTower::xy                                          m_wipe_tower_pos;
+    const float                                                  m_wipe_tower_rotation;
     // Reference to cached values at the Printer class.
     const WipeTower::ToolChangeResult                           &m_priming;
     const std::vector<std::vector<WipeTower::ToolChangeResult>> &m_tool_changes;
@@ -112,6 +120,7 @@ private:
     int                                                          m_layer_idx;
     int                                                          m_tool_change_idx;
     bool                                                         m_brim_done;
+    bool                                                         i_have_brim = false;
 };
 
 class GCode {
@@ -133,6 +142,9 @@ public:
         m_last_height(GCodeAnalyzer::Default_Height),
         m_brim_done(false),
         m_second_layer_things_done(false),
+        m_normal_time_estimator(GCodeTimeEstimator::Normal),
+        m_silent_time_estimator(GCodeTimeEstimator::Silent),
+        m_silent_time_estimator_enabled(false),
         m_last_obj_copy(nullptr, Point(std::numeric_limits<coord_t>::max(), std::numeric_limits<coord_t>::max()))
         {}
     ~GCode() {}
@@ -185,7 +197,7 @@ protected:
         const Print                     &print,
         // Set of object & print layers of the same PrintObject and with the same print_z.
         const std::vector<LayerToPrint> &layers,
-        const ToolOrdering::LayerTools  &layer_tools,
+        const LayerTools  &layer_tools,
         // If set to size_t(-1), then print all copies of all objects.
         // Otherwise print a single copy of a single object.
         const size_t                     single_object_idx = size_t(-1));
@@ -200,6 +212,7 @@ protected:
     std::string     extrude_multi_path(ExtrusionMultiPath multipath, std::string description = "", double speed = -1.);
     std::string     extrude_path(ExtrusionPath path, std::string description = "", double speed = -1.);
 
+    typedef std::vector<int> ExtruderPerCopy;
     // Extruding multiple objects with soluble / non-soluble / combined supports
     // on a multi-material printer, trying to minimize tool switches.
     // Following structures sort extrusions by the extruder ID, by an order of objects and object islands.
@@ -215,11 +228,24 @@ protected:
             struct Region {
                 ExtrusionEntityCollection perimeters;
                 ExtrusionEntityCollection infills;
+
+                std::vector<const ExtruderPerCopy*> infills_overrides;
+                std::vector<const ExtruderPerCopy*> perimeters_overrides;
+
+                // Appends perimeter/infill entities and writes don't indices of those that are not to be extruder as part of perimeter/infill wiping
+                void append(const std::string& type, const ExtrusionEntityCollection* eec, const ExtruderPerCopy* copy_extruders, unsigned int object_copies_num);
             };
-            std::vector<Region> by_region;
+
+            std::vector<Region> by_region;                                    // all extrusions for this island, grouped by regions
+            const std::vector<Region>& by_region_per_copy(unsigned int copy, int extruder, bool wiping_entities = false); // returns reference to subvector of by_region
+
+        private:
+            std::vector<Region> by_region_per_copy_cache;   // caches vector generated by function above to avoid copying and recalculating
         };
         std::vector<Island>         islands;
     };
+
+
     std::string     extrude_perimeters(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region, std::unique_ptr<EdgeGrid::Grid> &lower_layer_edge_grid);
     std::string     extrude_infill(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region);
     std::string     extrude_support(const ExtrusionEntityCollection &support_fills);
@@ -289,8 +315,10 @@ protected:
     // Index of a last object copy extruded.
     std::pair<const PrintObject*, Point> m_last_obj_copy;
 
-    // Time estimator
-    GCodeTimeEstimator m_time_estimator;
+    // Time estimators
+    GCodeTimeEstimator m_normal_time_estimator;
+    GCodeTimeEstimator m_silent_time_estimator;
+    bool m_silent_time_estimator_enabled;
 
     // Analyzer
     GCodeAnalyzer m_analyzer;
@@ -308,6 +336,7 @@ protected:
     void _write_format(FILE* file, const char* format, ...);
 
     std::string _extrude(const ExtrusionPath &path, std::string description = "", double speed = -1);
+    void print_machine_envelope(FILE *file, Print &print);
     void _print_first_layer_bed_temperature(FILE *file, Print &print, const std::string &gcode, unsigned int first_printing_extruder_id, bool wait);
     void _print_first_layer_extruder_temperatures(FILE *file, Print &print, const std::string &gcode, unsigned int first_printing_extruder_id, bool wait);
     // this flag triggers first layer speeds

@@ -1,4 +1,5 @@
 #include "Utils.hpp"
+#include "I18N.hpp"
 
 #include <locale>
 #include <ctime>
@@ -22,6 +23,9 @@
 #include <boost/nowide/fstream.hpp>
 #include <boost/nowide/integration/filesystem.hpp>
 #include <boost/nowide/convert.hpp>
+#include <boost/nowide/cstdio.hpp>
+
+#include <tbb/task_scheduler_init.h>
 
 namespace Slic3r {
 
@@ -81,6 +85,14 @@ void trace(unsigned int level, const char *message)
         (::boost::log::keywords::severity = severity)) << message;
 }
 
+void disable_multi_threading()
+{
+    // Disable parallelization so the Shiny profiler works
+    static tbb::task_scheduler_init *tbb_init = nullptr;
+    if (tbb_init == nullptr)
+        tbb_init = new tbb::task_scheduler_init(1);
+}
+
 static std::string g_var_dir;
 
 void set_var_dir(const std::string &dir)
@@ -123,6 +135,9 @@ const std::string& localization_dir()
 	return g_local_dir;
 }
 
+// Translate function callback, to call wxWidgets translate function to convert non-localized UTF8 string to a localized one.
+Slic3r::I18N::translate_fn_type Slic3r::I18N::translate_fn = nullptr;
+
 static std::string g_data_dir;
 
 void set_data_dir(const std::string &dir)
@@ -133,6 +148,68 @@ void set_data_dir(const std::string &dir)
 const std::string& data_dir()
 {
     return g_data_dir;
+}
+
+// borrowed from LLVM lib/Support/Windows/Path.inc
+int rename_file(const std::string &from, const std::string &to)
+{
+    int ec = 0;
+
+#ifdef _WIN32
+
+    // Convert to utf-16.
+    std::wstring wide_from = boost::nowide::widen(from);
+    std::wstring wide_to   = boost::nowide::widen(to);
+
+    // Retry while we see recoverable errors.
+    // System scanners (eg. indexer) might open the source file when it is written
+    // and closed.
+    bool TryReplace = true;
+
+    // This loop may take more than 2000 x 1ms to finish.
+    for (int i = 0; i < 2000; ++ i) {
+        if (i > 0)
+            // Sleep 1ms
+            ::Sleep(1);
+        if (TryReplace) {
+            // Try ReplaceFile first, as it is able to associate a new data stream
+            // with the destination even if the destination file is currently open.
+            if (::ReplaceFileW(wide_to.data(), wide_from.data(), NULL, 0, NULL, NULL))
+                return 0;
+            DWORD ReplaceError = ::GetLastError();
+            ec = -1; // ReplaceError
+            // If ReplaceFileW returned ERROR_UNABLE_TO_MOVE_REPLACEMENT or
+            // ERROR_UNABLE_TO_MOVE_REPLACEMENT_2, retry but only use MoveFileExW().
+            if (ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT ||
+                ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT_2) {
+                TryReplace = false;
+                continue;
+            }
+            // If ReplaceFileW returned ERROR_UNABLE_TO_REMOVE_REPLACED, retry
+            // using ReplaceFileW().
+            if (ReplaceError == ERROR_UNABLE_TO_REMOVE_REPLACED)
+                continue;
+            // We get ERROR_FILE_NOT_FOUND if the destination file is missing.
+            // MoveFileEx can handle this case.
+            if (ReplaceError != ERROR_ACCESS_DENIED && ReplaceError != ERROR_FILE_NOT_FOUND && ReplaceError != ERROR_SHARING_VIOLATION)
+                break;
+        }
+        if (::MoveFileExW(wide_from.c_str(), wide_to.c_str(), MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING))
+            return 0;
+        DWORD MoveError = ::GetLastError();
+        ec = -1; // MoveError
+        if (MoveError != ERROR_ACCESS_DENIED && MoveError != ERROR_SHARING_VIOLATION)
+            break;
+    }
+
+#else
+
+    boost::nowide::remove(to.c_str());
+    ec = boost::nowide::rename(from.c_str(), to.c_str());
+
+#endif
+
+    return ec;
 }
 
 } // namespace Slic3r
@@ -262,7 +339,7 @@ void PerlCallback::call(double d) const
     LEAVE;
 }
 
-void PerlCallback::call(double x, double y) const
+void PerlCallback::call(double a, double b) const
 {
     if (!m_callback)
         return;
@@ -270,8 +347,26 @@ void PerlCallback::call(double x, double y) const
     ENTER;
     SAVETMPS;
     PUSHMARK(SP);
-    XPUSHs(sv_2mortal(newSVnv(x)));
-    XPUSHs(sv_2mortal(newSVnv(y)));
+    XPUSHs(sv_2mortal(newSVnv(a)));
+    XPUSHs(sv_2mortal(newSVnv(b)));
+    PUTBACK;
+    perl_call_sv(SvRV((SV*)m_callback), G_DISCARD);
+    FREETMPS;
+    LEAVE;
+}
+
+void PerlCallback::call(double a, double b, double c, double d) const
+{
+    if (!m_callback)
+        return;
+    dSP;
+    ENTER;
+    SAVETMPS;
+    PUSHMARK(SP);
+    XPUSHs(sv_2mortal(newSVnv(a)));
+    XPUSHs(sv_2mortal(newSVnv(b)));
+    XPUSHs(sv_2mortal(newSVnv(c)));
+    XPUSHs(sv_2mortal(newSVnv(d)));
     PUTBACK;
     perl_call_sv(SvRV((SV*)m_callback), G_DISCARD);
     FREETMPS;
@@ -363,6 +458,33 @@ unsigned get_current_pid()
 #else
     return ::getpid();
 #endif
+}
+
+std::string xml_escape(std::string text)
+{
+    std::string::size_type pos = 0;
+    for (;;)
+    {
+        pos = text.find_first_of("\"\'&<>", pos);
+        if (pos == std::string::npos)
+            break;
+
+        std::string replacement;
+        switch (text[pos])
+        {
+        case '\"': replacement = "&quot;"; break;
+        case '\'': replacement = "&apos;"; break;
+        case '&':  replacement = "&amp;";  break;
+        case '<':  replacement = "&lt;";   break;
+        case '>':  replacement = "&gt;";   break;
+        default: break;
+        }
+
+        text.replace(pos, 1, replacement);
+        pos += replacement.size();
+    }
+
+    return text;
 }
 
 }; // namespace Slic3r

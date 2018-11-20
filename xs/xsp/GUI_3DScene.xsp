@@ -56,12 +56,15 @@
     int                 volume_idx() const;
     int                 instance_idx() const;
     Clone<Pointf3>      origin() const
-        %code%{ RETVAL = THIS->origin; %};
+        %code%{ RETVAL = THIS->get_origin(); %};
     void                translate(double x, double y, double z)
-        %code%{ THIS->origin.translate(x, y, z); %};
+        %code%{
+                Pointf3 o = THIS->get_origin();
+                o.translate(x, y, z);
+                THIS->set_origin(o);
+             %};
     Clone<BoundingBoxf3> bounding_box() const
         %code%{ RETVAL = THIS->bounding_box; %};
-    Clone<BoundingBoxf3> transformed_bounding_box() const;
 
     bool                empty() const;
     bool                indexed() const;
@@ -85,7 +88,7 @@
 
     std::vector<int> load_object(ModelObject *object, int obj_idx, std::vector<int> instance_idxs, std::string color_by, std::string select_by, std::string drag_by, bool use_VBOs);
 
-    int load_wipe_tower_preview(int obj_idx, float pos_x, float pos_y, float width, float depth, float height, float rotation_angle, bool use_VBOs);
+    int load_wipe_tower_preview(int obj_idx, float pos_x, float pos_y, float width, float depth, float height, float rotation_angle, bool use_VBOs, bool size_unknown, float brim_width);
 
     void erase()
         %code{% THIS->clear(); %};
@@ -101,10 +104,6 @@
     void release_geometry();
 
     void set_print_box(float min_x, float min_y, float min_z, float max_x, float max_y, float max_z);
-    bool check_outside_state(DynamicPrintConfig* config)
-        %code%{ 
-                RETVAL = THIS->check_outside_state(config);
-        %};
     
     void reset_outside_state();    
     void update_colors_by_extruder(DynamicPrintConfig* config);
@@ -230,7 +229,7 @@ update_volumes_selection(canvas, selections)
     CODE:
         _3DScene::update_volumes_selection((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), selections);
 
-bool
+int
 check_volumes_outside_state(canvas, config)
         SV                 *canvas;
         DynamicPrintConfig *config;
@@ -431,6 +430,13 @@ enable_force_zoom_to_bed(canvas, enable)
         _3DScene::enable_force_zoom_to_bed((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), enable);
 
 void
+enable_dynamic_background(canvas, enable)
+        SV   *canvas;
+        bool enable;
+    CODE:
+        _3DScene::enable_dynamic_background((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), enable);
+
+void
 allow_multisample(canvas, allow)
         SV   *canvas;
         bool allow;
@@ -468,6 +474,12 @@ update_volumes_colors_by_extruder(canvas)
         SV *canvas;
     CODE:
         _3DScene::update_volumes_colors_by_extruder((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"));
+
+void
+update_gizmos_data(canvas)
+        SV *canvas;
+    CODE:
+        _3DScene::update_gizmos_data((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"));
 
 void
 render(canvas)
@@ -604,62 +616,24 @@ register_on_gizmo_scale_uniformly_callback(canvas, callback)
     CODE:
         _3DScene::register_on_gizmo_scale_uniformly_callback((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), (void*)callback);
 
-unsigned int
-finalize_legend_texture()
+void
+register_on_gizmo_rotate_callback(canvas, callback)
+        SV *canvas;
+        SV *callback;
     CODE:
-        RETVAL = _3DScene::finalize_legend_texture();
-    OUTPUT:
-        RETVAL
+        _3DScene::register_on_gizmo_rotate_callback((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), (void*)callback);
 
-unsigned int
-get_legend_texture_width()
+void
+register_on_update_geometry_info_callback(canvas, callback)
+        SV *canvas;
+        SV *callback;
     CODE:
-        RETVAL = _3DScene::get_legend_texture_width();
-    OUTPUT:
-        RETVAL
-
-unsigned int
-get_legend_texture_height()
-    CODE:
-        RETVAL = _3DScene::get_legend_texture_height();
-    OUTPUT:
-        RETVAL
+        _3DScene::register_on_update_geometry_info_callback((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), (void*)callback);
              
 void
 reset_legend_texture()
     CODE:
         _3DScene::reset_legend_texture();
-
-void
-generate_warning_texture(std::string msg)
-    CODE:
-        _3DScene::generate_warning_texture(msg);
-
-unsigned int
-finalize_warning_texture()
-    CODE:
-        RETVAL = _3DScene::finalize_warning_texture();
-    OUTPUT:
-        RETVAL
-
-unsigned int
-get_warning_texture_width()
-    CODE:
-        RETVAL = _3DScene::get_warning_texture_width();
-    OUTPUT:
-        RETVAL
-
-unsigned int
-get_warning_texture_height()
-    CODE:
-        RETVAL = _3DScene::get_warning_texture_height();
-    OUTPUT:
-        RETVAL
-
-void
-reset_warning_texture()
-    CODE:
-        _3DScene::reset_warning_texture();
 
 std::vector<int>
 load_model_object(canvas, model_object, obj_idx, instance_idxs)
@@ -689,27 +663,6 @@ reload_scene(canvas, force)
     CODE:
         _3DScene::reload_scene((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), force);
 
-void
-load_print_toolpaths(canvas)
-        SV *canvas;
-    CODE:
-        _3DScene::load_print_toolpaths((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"));
-
-void 
-load_print_object_toolpaths(canvas, print_object, tool_colors)
-        SV                       *canvas;
-        PrintObject              *print_object;
-        std::vector<std::string> tool_colors;
-    CODE:
-        _3DScene::load_print_object_toolpaths((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), print_object, tool_colors);
-
-void
-load_wipe_tower_toolpaths(canvas, tool_colors)
-        SV                       *canvas;
-        std::vector<std::string> tool_colors;
-    CODE:
-        _3DScene::load_wipe_tower_toolpaths((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), tool_colors);
-
 void 
 load_gcode_preview(canvas, preview_data, str_tool_colors)
         SV                       *canvas;
@@ -717,5 +670,12 @@ load_gcode_preview(canvas, preview_data, str_tool_colors)
         std::vector<std::string> str_tool_colors;
     CODE:
         _3DScene::load_gcode_preview((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), preview_data, str_tool_colors);
-        
+
+void
+load_preview(canvas, str_tool_colors)
+        SV                       *canvas;
+        std::vector<std::string> str_tool_colors;
+    CODE:
+        _3DScene::load_preview((wxGLCanvas*)wxPli_sv_2_object(aTHX_ canvas, "Wx::GLCanvas"), str_tool_colors);
+
 %}

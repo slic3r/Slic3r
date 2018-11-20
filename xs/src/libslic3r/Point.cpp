@@ -1,6 +1,7 @@
 #include "Point.hpp"
 #include "Line.hpp"
 #include "MultiPoint.hpp"
+#include "Int128.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -262,6 +263,12 @@ operator<<(std::ostream &stm, const Pointf &pointf)
     return stm << pointf.x << "," << pointf.y;
 }
 
+double
+Pointf::ccw(const Pointf &p1, const Pointf &p2) const
+{
+    return (double)(p2.x - p1.x)*(double)(this->y - p1.y) - (double)(p2.y - p1.y)*(double)(this->x - p1.x);
+}
+
 std::string
 Pointf::wkt() const
 {
@@ -373,6 +380,22 @@ Vectorf3
 Pointf3::vector_to(const Pointf3 &point) const
 {
     return Vectorf3(point.x - this->x, point.y - this->y, point.z - this->z);
+}
+
+namespace int128 {
+
+int orient(const Point &p1, const Point &p2, const Point &p3)
+{
+    Slic3r::Vector v1(p2 - p1);
+    Slic3r::Vector v2(p3 - p1);
+    return Int128::sign_determinant_2x2_filtered(v1.x, v1.y, v2.x, v2.y);
+}
+
+int cross(const Point &v1, const Point &v2)
+{
+    return Int128::sign_determinant_2x2_filtered(v1.x, v1.y, v2.x, v2.y);
+}
+
 }
 
 }

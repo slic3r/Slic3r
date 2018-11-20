@@ -133,7 +133,7 @@ _constant()
     ~Print();
 
     Ref<StaticPrintConfig> config()
-        %code%{ RETVAL = &THIS->config; %};
+        %code%{ RETVAL = static_cast<GCodeConfig*>(&THIS->config); %};
     Ref<StaticPrintConfig> default_object_config()
         %code%{ RETVAL = &THIS->default_object_config; %};
     Ref<StaticPrintConfig> default_region_config()
@@ -145,8 +145,10 @@ _constant()
         %code%{ RETVAL = &THIS->skirt; %};
     Ref<ExtrusionEntityCollection> brim()
         %code%{ RETVAL = &THIS->brim; %};
-    std::string estimated_print_time()
-        %code%{ RETVAL = THIS->estimated_print_time; %};
+    std::string estimated_normal_print_time()
+        %code%{ RETVAL = THIS->estimated_normal_print_time; %};
+    std::string estimated_silent_print_time()
+        %code%{ RETVAL = THIS->estimated_silent_print_time; %};
 
     PrintObjectPtrs* objects()
         %code%{ RETVAL = &THIS->objects; %};
@@ -274,6 +276,36 @@ Print::total_cost(...)
             THIS->total_cost = (double)SvNV(ST(1));
         }
         RETVAL = THIS->total_cost;
+    OUTPUT:
+        RETVAL
+
+double
+Print::total_wipe_tower_cost(...)
+    CODE:
+        if (items > 1) {
+            THIS->total_wipe_tower_cost = (double)SvNV(ST(1));
+        }
+        RETVAL = THIS->total_wipe_tower_cost;
+    OUTPUT:
+        RETVAL
+
+double
+Print::total_wipe_tower_filament(...)
+    CODE:
+        if (items > 1) {
+            THIS->total_wipe_tower_filament = (double)SvNV(ST(1));
+        }
+        RETVAL = THIS->total_wipe_tower_filament;
+    OUTPUT:
+        RETVAL
+
+int
+Print::m_wipe_tower_number_of_toolchanges(...)
+    CODE:
+        if (items > 1) {
+            THIS->m_wipe_tower_number_of_toolchanges = (double)SvNV(ST(1));
+        }
+        RETVAL = THIS->m_wipe_tower_number_of_toolchanges;
     OUTPUT:
         RETVAL        
 %}

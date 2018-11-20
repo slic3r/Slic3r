@@ -4,6 +4,7 @@
 #include <functional>
 #include <thread>
 #include <deque>
+#include <sstream>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/format.hpp>
 
@@ -42,6 +43,7 @@ struct Http::priv
 	// Used for storing file streams added as multipart form parts
 	// Using a deque here because unlike vector it doesn't ivalidate pointers on insertion
 	std::deque<fs::ifstream> form_files;
+	std::string postfields;
 	size_t limit;
 	bool cancel;
 
@@ -60,6 +62,7 @@ struct Http::priv
 	static size_t form_file_read_cb(char *buffer, size_t size, size_t nitems, void *userp);
 
 	void form_add_file(const char *name, const fs::path &path, const char* filename);
+	void set_post_body(const fs::path &path);
 
 	std::string curl_error(CURLcode curlcode);
 	std::string body_size_error();
@@ -187,6 +190,13 @@ void Http::priv::form_add_file(const char *name, const fs::path &path, const cha
 	}
 }
 
+void Http::priv::set_post_body(const fs::path &path)
+{
+	std::ifstream file(path.string());
+	std::string file_content { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
+	postfields = file_content;
+}
+
 std::string Http::priv::curl_error(CURLcode curlcode)
 {
 	return (boost::format("%1% (%2%)")
@@ -227,6 +237,11 @@ void Http::priv::http_perform()
 
 	if (form != nullptr) {
 		::curl_easy_setopt(curl, CURLOPT_HTTPPOST, form);
+	}
+
+	if (!postfields.empty()) {
+		::curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields.c_str());
+		::curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, postfields.size());
 	}
 
 	CURLcode res = ::curl_easy_perform(curl);
@@ -338,6 +353,12 @@ Http& Http::form_add_file(const std::string &name, const fs::path &path, const s
 	return *this;
 }
 
+Http& Http::set_post_body(const fs::path &path)
+{
+	if (p) { p->set_post_body(path);}
+	return *this;
+}
+
 Http& Http::on_complete(CompleteFn fn)
 {
 	if (p) { p->completefn = std::move(fn); }
@@ -398,6 +419,21 @@ bool Http::ca_file_supported()
 	bool res = priv::ca_file_supported(curl);
 	if (curl != nullptr) { ::curl_easy_cleanup(curl); }
 	return res;
+}
+
+std::string Http::url_encode(const std::string &str)
+{
+	::CURL *curl = ::curl_easy_init();
+	if (curl == nullptr) {
+		return str;
+	}
+	char *ce = ::curl_easy_escape(curl, str.c_str(), str.length());
+	std::string encoded = std::string(ce);
+
+	::curl_free(ce);
+	::curl_easy_cleanup(curl);
+
+	return encoded;
 }
 
 std::ostream& operator<<(std::ostream &os, const Http::Progress &progress)

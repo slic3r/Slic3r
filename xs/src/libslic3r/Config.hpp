@@ -291,6 +291,8 @@ public:
     ConfigOptionFloats() : ConfigOptionVector<double>() {}
     explicit ConfigOptionFloats(size_t n, double value) : ConfigOptionVector<double>(n, value) {}
     explicit ConfigOptionFloats(std::initializer_list<double> il) : ConfigOptionVector<double>(std::move(il)) {}
+    explicit ConfigOptionFloats(const std::vector<double> &vec) : ConfigOptionVector<double>(vec) {}
+    explicit ConfigOptionFloats(std::vector<double> &&vec) : ConfigOptionVector<double>(std::move(vec)) {}
 
     static ConfigOptionType static_type() { return coFloats; }
     ConfigOptionType        type()  const override { return static_type(); }
@@ -1169,6 +1171,7 @@ public:
     // Allow DynamicConfig to be instantiated on ints own without a definition.
     // If the definition is not defined, the method requiring the definition will throw NoDefinitionException.
     const ConfigDef*        def() const override { return nullptr; };
+    bool                    has(const t_config_option_key &opt_key) const { return this->options.find(opt_key) != this->options.end(); }
     template<class T> T*    opt(const t_config_option_key &opt_key, bool create = false)
         { return dynamic_cast<T*>(this->option(opt_key, create)); }
     template<class T> const T* opt(const t_config_option_key &opt_key) const
@@ -1212,7 +1215,7 @@ public:
     bool                opt_bool(const t_config_option_key &opt_key) const                      { return this->option<ConfigOptionBool>(opt_key)->value != 0; }
     bool                opt_bool(const t_config_option_key &opt_key, unsigned int idx) const    { return this->option<ConfigOptionBools>(opt_key)->get_at(idx) != 0; }
 
-private:
+protected:
     typedef std::map<t_config_option_key,ConfigOption*> t_options_map;
     t_options_map options;
 };

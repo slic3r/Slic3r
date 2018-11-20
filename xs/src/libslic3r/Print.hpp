@@ -24,6 +24,7 @@ class Print;
 class PrintObject;
 class ModelObject;
 
+
 // Print step IDs for keeping track of the print state.
 enum PrintStep {
     psSkirt, psBrim, psWipeTower, psCount,
@@ -79,7 +80,10 @@ public:
 
     Print* print() { return this->_print; }
     Flow flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, const PrintObject &object) const;
+    // Average diameter of nozzles participating on extruding this region.
     coordf_t nozzle_dmr_avg(const PrintConfig &print_config) const;
+    // Average diameter of nozzles participating on extruding this region.
+    coordf_t bridging_height_avg(const PrintConfig &print_config) const;
 
 private:
     Print* _print;
@@ -208,6 +212,12 @@ public:
     void combine_infill();
     void _generate_support_material();
 
+    bool is_printable() const { return !this->_shifted_copies.empty(); }
+
+    // Helpers to slice support enforcer / blocker meshes by the support generator.
+    std::vector<ExPolygons>     slice_support_enforcers() const;
+    std::vector<ExPolygons>     slice_support_blockers() const;
+
 private:
     Print* _print;
     ModelObject* _model_object;
@@ -219,6 +229,7 @@ private:
     ~PrintObject() {}
 
     std::vector<ExPolygons> _slice_region(size_t region_id, const std::vector<float> &z, bool modifier);
+    std::vector<ExPolygons> _slice_volumes(const std::vector<float> &z, const std::vector<const ModelVolume*> &volumes) const;
 };
 
 typedef std::vector<PrintObject*> PrintObjectPtrs;
@@ -235,8 +246,9 @@ public:
     PrintRegionPtrs regions;
     PlaceholderParser placeholder_parser;
     // TODO: status_cb
-    std::string                     estimated_print_time;
-    double                          total_used_filament, total_extruded_volume, total_cost, total_weight;
+    std::string                     estimated_normal_print_time;
+    std::string                     estimated_silent_print_time;
+    double                          total_used_filament, total_extruded_volume, total_cost, total_weight, total_wipe_tower_cost, total_wipe_tower_filament;
     std::map<size_t, float>         filament_stats;
     PrintState<PrintStep, psCount>  state;
 
@@ -255,6 +267,8 @@ public:
     void reload_object(size_t idx);
     bool reload_model_instances();
 
+    PrintObjectPtrs get_printable_objects() const;
+
     // methods for handling regions
     PrintRegion* get_region(size_t idx) { return regions.at(idx); }
     const PrintRegion* get_region(size_t idx) const  { return regions.at(idx); }
@@ -267,6 +281,7 @@ public:
     
     void add_model_object(ModelObject* model_object, int idx = -1);
     bool apply_config(DynamicPrintConfig config);
+    float get_wipe_tower_depth() const { return m_wipe_tower_depth; }
     bool has_infinite_skirt() const;
     bool has_skirt() const;
     // Returns an empty string if valid, otherwise returns an error message.
@@ -285,6 +300,9 @@ public:
     bool has_support_material() const;
     void auto_assign_extruders(ModelObject* model_object) const;
 
+    // Returns extruder this eec should be printed with, according to PrintRegion config:
+    static int get_extruder(const ExtrusionEntityCollection& fill, const PrintRegion &region);
+
     void _make_skirt();
     void _make_brim();
 
@@ -299,6 +317,8 @@ public:
     std::unique_ptr<WipeTower::ToolChangeResult>          m_wipe_tower_priming;
     std::vector<std::vector<WipeTower::ToolChangeResult>> m_wipe_tower_tool_changes;
     std::unique_ptr<WipeTower::ToolChangeResult>          m_wipe_tower_final_purge;
+    std::vector<float>                                    m_wipe_tower_used_filament;
+    int                                                   m_wipe_tower_number_of_toolchanges = -1;
 
     std::string output_filename();
     std::string output_filepath(const std::string &path);
@@ -311,14 +331,19 @@ public:
     void restart() { m_canceled = false; }
     // Has the calculation been canceled?
     bool canceled() { return m_canceled; }
-    
+
+
 private:
     bool invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
     PrintRegionConfig _region_config_from_model_volume(const ModelVolume &volume);
 
+    // Depth of the wipe tower to pass to GLCanvas3D for exact bounding box:
+    float m_wipe_tower_depth = 0.f;
+
     // Has the calculation been canceled?
     tbb::atomic<bool>   m_canceled;
 };
+
 
 #define FOREACH_BASE(type, container, iterator) for (type::const_iterator iterator = (container).begin(); iterator != (container).end(); ++iterator)
 #define FOREACH_REGION(print, region)       FOREACH_BASE(PrintRegionPtrs, (print)->regions, region)

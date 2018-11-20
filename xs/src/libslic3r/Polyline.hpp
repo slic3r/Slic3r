@@ -19,6 +19,8 @@ public:
     Polyline() {};
     Polyline(const Polyline &other) : MultiPoint(other.points) {}
     Polyline(Polyline &&other) : MultiPoint(std::move(other.points)) {}
+    explicit Polyline(const Points &points) : MultiPoint(points) {}
+    explicit Polyline(Points &&points) : MultiPoint(std::move(points)) {}
     Polyline& operator=(const Polyline &other) { points = other.points; return *this; }
     Polyline& operator=(Polyline &&other) { points = std::move(other.points); return *this; }
 	static Polyline new_scale(std::vector<Pointf> points) {
@@ -79,8 +81,8 @@ extern BoundingBox get_extents(const Polylines &polylines);
 
 inline double total_length(const Polylines &polylines) {
     double total = 0;
-    for (Polylines::const_iterator it = polylines.begin(); it != polylines.end(); ++it)
-        total += it->length();
+    for (const Polyline &pl : polylines)
+        total += pl.length();
     return total;
 }
 

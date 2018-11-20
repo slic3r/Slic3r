@@ -9,6 +9,7 @@ namespace Slic3r {
 
 extern void set_logging_level(unsigned int level);
 extern void trace(unsigned int level, const char *message);
+extern void disable_multi_threading();
 
 // Set a path with GUI resource files.
 void set_var_dir(const std::string &path);
@@ -42,6 +43,11 @@ typedef std::string local_encoded_string;
 extern local_encoded_string encode_path(const char *src);
 extern std::string decode_path(const char *src);
 extern std::string normalize_utf8_nfc(const char *src);
+
+// Safely rename a file even if the target exists.
+// On Windows, the file explorer (or anti-virus or whatever else) often locks the file
+// for a short while, so the file may not be movable. Retry while we see recoverable errors.
+extern int rename_file(const std::string &from, const std::string &to);
 
 // File path / name / extension splitting utilities, working with UTF-8,
 // to be published to Perl.
@@ -84,6 +90,8 @@ inline T next_highest_power_of_2(T v)
     return ++ v;
 }
 
+extern std::string xml_escape(std::string text);
+
 class PerlCallback {
 public:
     PerlCallback(void *sv) : m_callback(nullptr) { this->register_callback(sv); }
@@ -96,7 +104,8 @@ public:
     void call(int i, int j) const;
     void call(const std::vector<int>& ints) const;
     void call(double d) const;
-    void call(double x, double y) const;
+    void call(double a, double b) const;
+    void call(double a, double b, double c, double d) const;
     void call(bool b) const;
 private:
     void *m_callback;

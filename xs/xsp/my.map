@@ -216,6 +216,8 @@ Ref<PrintObjectSupportMaterial>   O_OBJECT_SLIC3R_T
 Clone<PrintObjectSupportMaterial> O_OBJECT_SLIC3R_T
 
 AppConfig*	                O_OBJECT_SLIC3R
+AppController*              O_OBJECT_SLIC3R
+PrintController*            O_OBJECT_SLIC3R
 Ref<AppConfig>         		O_OBJECT_SLIC3R_T
 
 GLShader*                  	O_OBJECT_SLIC3R
@@ -237,9 +239,7 @@ Ref<TabIface> 				O_OBJECT_SLIC3R_T
 PresetUpdater*              O_OBJECT_SLIC3R
 Ref<PresetUpdater>          O_OBJECT_SLIC3R_T
 
-OctoPrint*                  O_OBJECT_SLIC3R
-Ref<OctoPrint>              O_OBJECT_SLIC3R_T
-Clone<OctoPrint>            O_OBJECT_SLIC3R_T
+PrintHost*                  O_OBJECT_SLIC3R
 
 Axis                  T_UV
 ExtrusionLoopRole     T_UV

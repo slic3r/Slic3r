@@ -7,6 +7,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
 
 #if __APPLE__
 #import <IOKit/pwr_mgt/IOPMLib.h>
@@ -56,8 +57,9 @@
 
 #include "../Utils/PresetUpdater.hpp"
 #include "../Config/Snapshot.hpp"
-#include "3DScene.hpp"
 
+#include "3DScene.hpp"
+#include "libslic3r/I18N.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -110,6 +112,7 @@ wxNotebook  *g_wxTabPanel   = nullptr;
 AppConfig	*g_AppConfig	= nullptr;
 PresetBundle *g_PresetBundle= nullptr;
 PresetUpdater *g_PresetUpdater = nullptr;
+_3DScene	*g_3DScene		= nullptr;
 wxColour    g_color_label_modified;
 wxColour    g_color_label_sys;
 wxColour    g_color_label_default;
@@ -117,6 +120,9 @@ wxColour    g_color_label_default;
 std::vector<Tab *> g_tabs_list;
 
 wxLocale*	g_wxLocale;
+
+wxFont		g_small_font;
+wxFont		g_bold_font;
 
 std::shared_ptr<ConfigOptionsGroup>	m_optgroup;
 double m_brim_width = 0.0;
@@ -150,10 +156,25 @@ void update_label_colours_from_appconfig()
 	}
 }
 
+static void init_fonts()
+{
+	g_small_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+	g_bold_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT).Bold();
+#ifdef __WXMAC__
+	g_small_font.SetPointSize(11);
+	g_bold_font.SetPointSize(13);
+#endif /*__WXMAC__*/
+}
+
+static std::string libslic3r_translate_callback(const char *s) { return wxGetTranslation(wxString(s, wxConvUTF8)).utf8_str().data(); }
+
 void set_wxapp(wxApp *app)
 {
     g_wxApp = app;
+    // Let the libslic3r know the callback, which will translate messages on demand.
+	Slic3r::I18N::set_translate_callback(libslic3r_translate_callback);
     init_label_colours();
+	init_fonts();
 }
 
 void set_main_frame(wxFrame *main_frame)
@@ -179,6 +200,11 @@ void set_preset_bundle(PresetBundle *preset_bundle)
 void set_preset_updater(PresetUpdater *updater)
 {
 	g_PresetUpdater = updater;
+}
+
+void set_3DScene(_3DScene *scene)
+{
+	g_3DScene = scene;
 }
 
 std::vector<Tab *>& get_tabs_list()
@@ -225,6 +251,7 @@ bool select_language(wxArrayString & names,
 		g_wxLocale->AddCatalogLookupPathPrefix(wxPathOnly(localization_dir()));
 		g_wxLocale->AddCatalog(g_wxApp->GetAppName());
 		wxSetlocale(LC_NUMERIC, "C");
+		Preset::update_suffix_modified();
 		return true;
 	}
 	return false;
@@ -250,6 +277,7 @@ bool load_language()
 			g_wxLocale->AddCatalogLookupPathPrefix(wxPathOnly(localization_dir()));
 			g_wxLocale->AddCatalog(g_wxApp->GetAppName());
 			wxSetlocale(LC_NUMERIC, "C");
+			Preset::update_suffix_modified();
 			return true;
 		}
 	}
@@ -317,7 +345,7 @@ void add_config_menu(wxMenuBar *menu, int event_preferences_changed, int event_l
     auto local_menu = new wxMenu();
     wxWindowID config_id_base = wxWindow::NewControlId((int)ConfigMenuCnt);
 
-	auto config_wizard_name = _(ConfigWizard::name().wx_str());
+	const auto config_wizard_name = _(ConfigWizard::name().wx_str());
 	const auto config_wizard_tooltip = wxString::Format(_(L("Run %s")), config_wizard_name);
     // Cmd+, is standard on OS X - what about other operating systems?
 	local_menu->Append(config_id_base + ConfigMenuWizard, 		config_wizard_name + dots,					config_wizard_tooltip);
@@ -577,6 +605,8 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
 				config.set_key_value(opt_key, new ConfigOptionEnum<SupportMaterialPattern>(boost::any_cast<SupportMaterialPattern>(value)));
 			else if (opt_key.compare("seam_position") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<SeamPosition>(boost::any_cast<SeamPosition>(value)));
+			else if (opt_key.compare("host_type") == 0)
+				config.set_key_value(opt_key, new ConfigOptionEnum<PrintHostType>(boost::any_cast<PrintHostType>(value)));
 			}
 			break;
 		case coPoints:{
@@ -669,6 +699,14 @@ void set_label_clr_sys(const wxColour& clr) {
 	std::string str = clr_str.ToStdString();
 	g_AppConfig->set("label_clr_sys", str);
 	g_AppConfig->save();
+}
+
+const wxFont& small_font(){
+	return g_small_font;
+}
+
+const wxFont& bold_font(){
+	return g_bold_font;
 }
 
 const wxColour& get_label_clr_default() {
@@ -789,7 +827,7 @@ void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFl
 				double brim_width = config->opt_float("brim_width");
 				if (boost::any_cast<bool>(value) == true)
 				{
-					new_val = m_brim_width == 0.0 ? 10 :
+					new_val = m_brim_width == 0.0 ? 5 :
 						m_brim_width < 0.0 ? m_brim_width * (-1) :
 						m_brim_width;
 				}
@@ -868,6 +906,7 @@ void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFl
                     std::vector<float> extruders = dlg.get_extruders();
                     (config.option<ConfigOptionFloats>("wiping_volumes_matrix"))->values = std::vector<double>(matrix.begin(),matrix.end());
                     (config.option<ConfigOptionFloats>("wiping_volumes_extruders"))->values = std::vector<double>(extruders.begin(),extruders.end());
+                    g_on_request_update_callback.call();
                 }
 			}));
 			return sizer;
@@ -883,7 +922,6 @@ ConfigOptionsGroup* get_optgroup()
 {
 	return m_optgroup.get();
 }
-
 
 wxButton* get_wiping_dialog_button()
 {
@@ -937,13 +975,65 @@ int get_export_option(wxFileDialog* dlg)
 
 }
 
-void get_current_screen_size(unsigned &width, unsigned &height)
+bool get_current_screen_size(wxWindow *window, unsigned &width, unsigned &height)
 {
-	wxDisplay display(wxDisplay::GetFromWindow(g_wxMainFrame));
+	const auto idx = wxDisplay::GetFromWindow(window);
+	if (idx == wxNOT_FOUND) {
+		return false;
+	}
+
+	wxDisplay display(idx);
 	const auto disp_size = display.GetClientArea();
 	width = disp_size.GetWidth();
 	height = disp_size.GetHeight();
+
+	return true;
 }
+
+void save_window_size(wxTopLevelWindow *window, const std::string &name)
+{
+	const wxSize size = window->GetSize();
+	const wxPoint pos = window->GetPosition();
+	const auto maximized = window->IsMaximized() ? "1" : "0";
+
+	g_AppConfig->set((boost::format("window_%1%_size") % name).str(), (boost::format("%1%;%2%") % size.GetWidth() % size.GetHeight()).str());
+	g_AppConfig->set((boost::format("window_%1%_maximized") % name).str(), maximized);
+}
+
+void restore_window_size(wxTopLevelWindow *window, const std::string &name)
+{
+	// XXX: This still doesn't behave nicely in some situations (mostly on Linux).
+	// The problem is that it's hard to obtain window position with respect to screen geometry reliably
+	// from wxWidgets. Sometimes wxWidgets claim a window is located on a different screen than on which
+	// it's actually visible. I suspect this has something to do with window initialization (maybe we
+	// restore window geometry too early), but haven't yet found a workaround.
+
+	const auto display_idx = wxDisplay::GetFromWindow(window);
+	if (display_idx == wxNOT_FOUND) { return; }
+
+	const auto display = wxDisplay(display_idx).GetClientArea();
+	std::vector<std::string> pair;
+
+	try {
+		const auto key_size = (boost::format("window_%1%_size") % name).str();
+		if (g_AppConfig->has(key_size)) {
+			if (unescape_strings_cstyle(g_AppConfig->get(key_size), pair) && pair.size() == 2) {
+				auto width = boost::lexical_cast<int>(pair[0]);
+				auto height = boost::lexical_cast<int>(pair[1]);
+
+				window->SetSize(width, height);
+			}
+		}
+	} catch(const boost::bad_lexical_cast &) {}
+
+	// Maximizing should be the last thing to do.
+	// This ensure the size and position are sane when the user un-maximizes the window.
+	const auto key_maximized = (boost::format("window_%1%_maximized") % name).str();
+	if (g_AppConfig->get(key_maximized) == "1") {
+		window->Maximize(true);
+	}
+}
+
 
 void about()
 {

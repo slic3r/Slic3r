@@ -40,6 +40,7 @@ public:
     void scale(const Pointf3 &versor);
     void translate(float x, float y, float z);
     void rotate(float angle, const Axis &axis);
+    void rotate(float angle, Pointf3 axis);
     void rotate_x(float angle);
     void rotate_y(float angle);
     void rotate_z(float angle);
@@ -53,8 +54,13 @@ public:
     TriangleMeshPtrs split() const;
     void merge(const TriangleMesh &mesh);
     ExPolygons horizontal_projection() const;
+    const float* first_vertex() const;
     Polygon convex_hull();
     BoundingBoxf3 bounding_box() const;
+    // Returns the bbox of this TriangleMesh transformed by the given matrix
+    BoundingBoxf3 transformed_bounding_box(const std::vector<float>& matrix) const;
+    // Returns the convex hull of this TriangleMesh
+    TriangleMesh convex_hull_3d() const;
     void reset_repair_stats();
     bool needed_repair() const;
     size_t facets_count() const;
@@ -66,7 +72,7 @@ public:
     // Count disconnected triangle patches.
     size_t number_of_patches() const;
 
-    stl_file stl;
+    mutable stl_file stl;
     bool repaired;
     
 private:
@@ -76,7 +82,7 @@ private:
 
 enum FacetEdgeType { 
     // A general case, the cutting plane intersect a face at two different edges.
-    feNone,
+    feGeneral,
     // Two vertices are aligned with the cutting plane, the third vertex is below the cutting plane.
     feTop,
     // Two vertices are aligned with the cutting plane, the third vertex is above the cutting plane.
@@ -110,6 +116,14 @@ public:
 class IntersectionLine : public Line
 {
 public:
+    IntersectionLine() : a_id(-1), b_id(-1), edge_a_id(-1), edge_b_id(-1), edge_type(feGeneral), flags(0) {}
+
+    bool skip() const { return (this->flags & SKIP) != 0; }
+    void set_skip() { this->flags |= SKIP; }
+
+    bool is_seed_candidate() const { return (this->flags & NO_SEED) == 0 && ! this->skip(); }
+    void set_no_seed(bool set) { if (set) this->flags |= NO_SEED; else this->flags &= ~NO_SEED; }
+    
     // Inherits Point a, b
     // For each line end point, either {a,b}_id or {a,b}edge_a_id is set, the other is left to -1.
     // Vertex indices of the line end points.
@@ -118,11 +132,23 @@ public:
     // Source mesh edges of the line end points.
     int             edge_a_id;
     int             edge_b_id;
-    // feNone, feTop, feBottom, feHorizontal
+    // feGeneral, feTop, feBottom, feHorizontal
     FacetEdgeType   edge_type;
-    // Used by TriangleMeshSlicer::make_loops() to skip duplicate edges.
-    bool            skip;
-    IntersectionLine() : a_id(-1), b_id(-1), edge_a_id(-1), edge_b_id(-1), edge_type(feNone), skip(false) {};
+    // Used by TriangleMeshSlicer::slice() to skip duplicate edges.
+    enum {
+        // Triangle edge added, because it has no neighbor.
+        EDGE0_NO_NEIGHBOR   = 0x001,
+        EDGE1_NO_NEIGHBOR   = 0x002,
+        EDGE2_NO_NEIGHBOR   = 0x004,
+        // Triangle edge added, because it makes a fold with another horizontal edge.
+        EDGE0_FOLD          = 0x010,
+        EDGE1_FOLD          = 0x020,
+        EDGE2_FOLD          = 0x040,
+        // The edge cannot be a seed of a greedy loop extraction (folds are not safe to become seeds).
+        NO_SEED             = 0x100,
+        SKIP                = 0x200,
+    };
+    uint32_t        flags;
 };
 typedef std::vector<IntersectionLine> IntersectionLines;
 typedef std::vector<IntersectionLine*> IntersectionLinePtrs;
@@ -133,7 +159,12 @@ public:
     TriangleMeshSlicer(TriangleMesh* _mesh);
     void slice(const std::vector<float> &z, std::vector<Polygons>* layers) const;
     void slice(const std::vector<float> &z, std::vector<ExPolygons>* layers) const;
-    bool slice_facet(float slice_z, const stl_facet &facet, const int facet_idx,
+    enum FacetSliceType {
+        NoSlice = 0,
+        Slicing = 1,
+        Cutting = 2
+    };
+    FacetSliceType slice_facet(float slice_z, const stl_facet &facet, const int facet_idx,
         const float min_z, const float max_z, IntersectionLine *line_out) const;
     void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const;
     

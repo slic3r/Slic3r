@@ -75,6 +75,7 @@ bool PrintObject::delete_last_copy()
 
 bool PrintObject::set_copies(const Points &points)
 {
+    bool copies_num_changed = this->_copies.size() != points.size();
     this->_copies = points;
     
     // order copies with a nearest neighbor search and translate them by _copies_shift
@@ -93,6 +94,8 @@ bool PrintObject::set_copies(const Points &points)
     
     bool invalidated = this->_print->invalidate_step(psSkirt);
     invalidated |= this->_print->invalidate_step(psBrim);
+    if (copies_num_changed)
+        invalidated |= this->_print->invalidate_step(psWipeTower);
     return invalidated;
 }
 
@@ -101,7 +104,10 @@ bool PrintObject::reload_model_instances()
     Points copies;
     copies.reserve(this->_model_object->instances.size());
     for (const ModelInstance *mi : this->_model_object->instances)
-        copies.emplace_back(Point::new_scale(mi->offset.x, mi->offset.y));
+    {
+        if (mi->is_printable())
+            copies.emplace_back(Point::new_scale(mi->offset.x, mi->offset.y));
+    }
     return this->set_copies(copies);
 }
 
@@ -166,6 +172,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             steps.emplace_back(posSlice);
         } else if (
                opt_key == "support_material"
+            || opt_key == "support_material_auto"
             || opt_key == "support_material_angle"
             || opt_key == "support_material_buildplate_only"
             || opt_key == "support_material_enforce_layers"
@@ -232,7 +239,10 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "perimeter_speed"
             || opt_key == "small_perimeter_speed"
             || opt_key == "solid_infill_speed"
-            || opt_key == "top_solid_infill_speed") {
+            || opt_key == "top_solid_infill_speed"
+            || opt_key == "wipe_into_infill"    // when these these two are changed, we only need to invalidate the wipe tower,
+            || opt_key == "wipe_into_objects"   // which we already did at the very beginning - nothing more to be done
+            ) {
             // these options only affect G-code export, so nothing to invalidate
         } else {
             // for legacy, if we can't handle this option let's invalidate all steps
@@ -272,6 +282,8 @@ bool PrintObject::invalidate_step(PrintObjectStep step)
     }
 
     // Wipe tower depends on the ordering of extruders, which in turn depends on everything.
+    // It also decides about what the wipe_into_infill / wipe_into_object features will do,
+    // and that too depends on many of the settings.
     invalidated |= this->_print->invalidate_step(psWipeTower);
     return invalidated;
 }
@@ -285,6 +297,9 @@ bool PrintObject::has_support_material() const
 
 void PrintObject::_prepare_infill()
 {
+    if (!this->is_printable())
+        return;
+
     // This will assign a type (top/bottom/internal) to $layerm->slices.
     // Then the classifcation of $layerm->slices is transfered onto 
     // the $layerm->fill_surfaces by clipping $layerm->fill_surfaces
@@ -900,7 +915,7 @@ void PrintObject::discover_vertical_shells()
 #if 1
                     // Intentionally inflate a bit more than how much the region has been shrunk, 
                     // so there will be some overlap between this solid infill and the other infill regions (mainly the sparse infill).
-                    shell = offset2(shell, - 0.5f * min_perimeter_infill_spacing, 0.8f * min_perimeter_infill_spacing, ClipperLib::jtSquare);
+                    shell = offset(offset_ex(union_ex(shell), - 0.5f * min_perimeter_infill_spacing), 0.8f * min_perimeter_infill_spacing, ClipperLib::jtSquare);
                     if (shell.empty())
                         continue;
 #else
@@ -1171,8 +1186,8 @@ void PrintObject::_slice()
 
     this->typed_slices = false;
 
-#if 0
-    // Disable parallelization for debugging purposes.
+#ifdef SLIC3R_PROFILE
+    // Disable parallelization so the Shiny profiler works
     static tbb::task_scheduler_init *tbb_init = nullptr;
     tbb_init = new tbb::task_scheduler_init(1);
 #endif
@@ -1306,29 +1321,62 @@ end:
 
 std::vector<ExPolygons> PrintObject::_slice_region(size_t region_id, const std::vector<float> &z, bool modifier)
 {
-    std::vector<ExPolygons> layers;
+    std::vector<const ModelVolume*> volumes;
     if (region_id < this->region_volumes.size()) {
-        std::vector<int> &volumes = this->region_volumes[region_id];
-        if (! volumes.empty()) {
-            // Compose mesh.
-            //FIXME better to perform slicing over each volume separately and then to use a Boolean operation to merge them.
-            TriangleMesh mesh;
-            for (int volume_id : volumes) {
-                ModelVolume *volume = this->model_object()->volumes[volume_id];
-                if (volume->modifier == modifier)
-                    mesh.merge(volume->mesh);
-            }
-            if (mesh.stl.stats.number_of_facets > 0) {
-                // transform mesh
-                // we ignore the per-instance transformations currently and only 
-                // consider the first one
-                this->model_object()->instances.front()->transform_mesh(&mesh, true);
-                // align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
-                mesh.translate(- float(unscale(this->_copies_shift.x)), - float(unscale(this->_copies_shift.y)), -float(this->model_object()->bounding_box().min.z));
-                // perform actual slicing
-                TriangleMeshSlicer mslicer(&mesh);
-                mslicer.slice(z, &layers);
-            }
+        for (int volume_id : this->region_volumes[region_id]) {
+            const ModelVolume *volume = this->model_object()->volumes[volume_id];
+            if (modifier ? volume->is_modifier() : volume->is_model_part())
+                volumes.emplace_back(volume);
+        }
+    }
+    return this->_slice_volumes(z, volumes);
+}
+
+std::vector<ExPolygons> PrintObject::slice_support_enforcers() const
+{
+    std::vector<const ModelVolume*> volumes;
+    for (const ModelVolume *volume : this->model_object()->volumes)
+        if (volume->is_support_enforcer())
+            volumes.emplace_back(volume);
+    std::vector<float> zs;
+    zs.reserve(this->layers.size());
+    for (const Layer *l : this->layers)
+        zs.emplace_back(l->slice_z);
+    return this->_slice_volumes(zs, volumes);
+}
+
+std::vector<ExPolygons> PrintObject::slice_support_blockers() const
+{
+    std::vector<const ModelVolume*> volumes;
+    for (const ModelVolume *volume : this->model_object()->volumes)
+        if (volume->is_support_blocker())
+            volumes.emplace_back(volume);
+    std::vector<float> zs;
+    zs.reserve(this->layers.size());
+    for (const Layer *l : this->layers)
+        zs.emplace_back(l->slice_z);
+    return this->_slice_volumes(zs, volumes);
+}
+
+std::vector<ExPolygons> PrintObject::_slice_volumes(const std::vector<float> &z, const std::vector<const ModelVolume*> &volumes) const
+{
+    std::vector<ExPolygons> layers;
+    if (! volumes.empty()) {
+        // Compose mesh.
+        //FIXME better to perform slicing over each volume separately and then to use a Boolean operation to merge them.
+        TriangleMesh mesh;
+        for (const ModelVolume *v : volumes)
+            mesh.merge(v->mesh);
+        if (mesh.stl.stats.number_of_facets > 0) {
+            // transform mesh
+            // we ignore the per-instance transformations currently and only 
+            // consider the first one
+            this->model_object()->instances.front()->transform_mesh(&mesh, true);
+            // align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
+            mesh.translate(- float(unscale(this->_copies_shift.x)), - float(unscale(this->_copies_shift.y)), -float(this->model_object()->bounding_box().min.z));
+            // perform actual slicing
+            TriangleMeshSlicer mslicer(&mesh);
+            mslicer.slice(z, &layers);
         }
     }
     return layers;
@@ -1436,6 +1484,9 @@ void PrintObject::_simplify_slices(double distance)
 
 void PrintObject::_make_perimeters()
 {
+    if (!this->is_printable())
+        return;
+
     if (this->state.is_done(posPerimeters)) return;
     this->state.set_started(posPerimeters);
 
@@ -1544,6 +1595,9 @@ void PrintObject::_make_perimeters()
 
 void PrintObject::_infill()
 {
+    if (!this->is_printable())
+        return;
+
     if (this->state.is_done(posInfill)) return;
     this->state.set_started(posInfill);
     
@@ -1948,6 +2002,9 @@ void PrintObject::combine_infill()
 
 void PrintObject::_generate_support_material()
 {
+    if (!this->is_printable())
+        return;
+
     PrintObjectSupportMaterial support_material(this, PrintObject::slicing_parameters());
     support_material.generate(*this);
 }

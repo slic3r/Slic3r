@@ -141,12 +141,12 @@ sub OnInit {
     $self->CallAfter(sub {
         eval {
             if (! $self->{preset_updater}->config_update()) {
-                exit 0;
+                $self->{mainframe}->Close;
             }
         };
         if ($@) {
-            warn $@ . "\n";
-            fatal_error(undef, $@);
+            show_error(undef, $@);
+            $self->{mainframe}->Close;
         }
     });
 
@@ -169,7 +169,8 @@ sub OnInit {
         $self->update_ui_from_settings;
     });
     
-    # The following event is emited by PresetUpdater (C++)
+    # The following event is emited by PresetUpdater (C++) to inform about
+    # the newer Slic3r application version avaiable online.
     EVT_COMMAND($self, -1, $VERSION_ONLINE_EVENT, sub {
         my ($self, $event) = @_;
         my $version = $event->GetString;
@@ -352,30 +353,6 @@ sub set_menu_item_icon {
     # SetBitmap was not available on OS X before Wx 0.9927
     if ($icon && $menuItem->can('SetBitmap')) {
         $menuItem->SetBitmap(Wx::Bitmap->new(Slic3r::var($icon), wxBITMAP_TYPE_PNG));
-    }
-}
-
-sub save_window_pos {
-    my ($self, $window, $name) = @_;
-    
-    $self->{app_config}->set("${name}_pos", join ',', $window->GetScreenPositionXY);
-    $self->{app_config}->set("${name}_size", join ',', $window->GetSizeWH);
-    $self->{app_config}->set("${name}_maximized", $window->IsMaximized);
-    $self->{app_config}->save;
-}
-
-sub restore_window_pos {
-    my ($self, $window, $name) = @_;
-    if ($self->{app_config}->has("${name}_pos")) {
-        my $size = [ split ',', $self->{app_config}->get("${name}_size"), 2 ];
-        $window->SetSize($size);
-        
-        my $display = Wx::Display->new->GetClientArea();
-        my $pos = [ split ',', $self->{app_config}->get("${name}_pos"), 2 ];
-        if (($pos->[0] + $size->[0]/2) < $display->GetRight && ($pos->[1] + $size->[1]/2) < $display->GetBottom) {
-            $window->Move($pos);
-        }
-        $window->Maximize(1) if $self->{app_config}->get("${name}_maximized");
     }
 }
 

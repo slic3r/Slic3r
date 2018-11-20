@@ -14,6 +14,7 @@ use Wx qw(:button :colour :cursor :dialog :filedialog :keycode :icon :font :id :
 use Wx::Event qw(EVT_BUTTON EVT_TOGGLEBUTTON EVT_COMMAND EVT_KEY_DOWN EVT_LIST_ITEM_ACTIVATED 
     EVT_LIST_ITEM_DESELECTED EVT_LIST_ITEM_SELECTED EVT_LEFT_DOWN EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL 
     EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED);
+use Slic3r::Geometry qw(PI);
 use base 'Wx::Panel';
 
 use constant TB_ADD             => &Wx::NewId;
@@ -45,13 +46,14 @@ use constant FILAMENT_CHOOSERS_SPACING => 0;
 use constant PROCESS_DELAY => 0.5 * 1000; # milliseconds
 
 my $PreventListEvents = 0;
+our $appController;
 
 sub new {
     my ($class, $parent) = @_;
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $self->{config} = Slic3r::Config::new_from_defaults_keys([qw(
         bed_shape complete_objects extruder_clearance_radius skirts skirt_distance brim_width variable_layer_height
-        serial_port serial_speed octoprint_host octoprint_apikey octoprint_cafile
+        serial_port serial_speed host_type print_host printhost_apikey printhost_cafile
         nozzle_diameter single_extruder_multi_material wipe_tower wipe_tower_x wipe_tower_y wipe_tower_width
 	wipe_tower_rotation_angle extruder_colour filament_colour max_print_height printer_model
     )]);
@@ -115,6 +117,8 @@ sub new {
 
         my $model_object = $self->{model}->objects->[$obj_idx];
         my $model_instance = $model_object->instances->[0];
+
+        $self->stop_background_process;
         
         my $variation = $scale / $model_instance->scaling_factor;
         #FIXME Scale the layer height profile?
@@ -123,15 +127,44 @@ sub new {
             $range->[1] *= $variation;
         }
         $_->set_scaling_factor($scale) for @{ $model_object->instances };
-        $object->transform_thumbnail($self->{model}, $obj_idx);
+        
+        $self->{list}->SetItem($obj_idx, 2, ($model_object->instances->[0]->scaling_factor * 100) . "%");
+#        $object->transform_thumbnail($self->{model}, $obj_idx);
     
         #update print and start background processing
-        $self->stop_background_process;
         $self->{print}->add_model_object($model_object, $obj_idx);
     
         $self->selection_changed(1);  # refresh info (size, volume etc.)
         $self->update;
         $self->schedule_background_process;
+    };
+    
+    # callback to react to gizmo rotate
+    # omitting last three parameters means rotation around Z
+    # otherwise they are the components of the rotation axis vector
+    my $on_gizmo_rotate = sub {
+        my ($angle, $axis_x, $axis_y, $axis_z) = @_;
+	if (!defined $axis_x) {
+            $self->rotate(rad2deg($angle), Z, 'absolute');
+        }
+        else {
+            $self->rotate(rad2deg($angle), undef, 'absolute', $axis_x, $axis_y, $axis_z) if $angle != 0;
+        }
+    };
+
+    # callback to update object's geometry info while using gizmos
+    my $on_update_geometry_info = sub {
+        my ($size_x, $size_y, $size_z, $scale_factor) = @_;
+    
+        my ($obj_idx, $object) = $self->selected_object;
+    
+        if ((defined $obj_idx) && ($self->{object_info_size})) { # have we already loaded the info pane?
+            $self->{object_info_size}->SetLabel(sprintf("%.2f x %.2f x %.2f", $size_x, $size_y, $size_z));
+            my $model_object = $self->{model}->objects->[$obj_idx];
+            if (my $stats = $model_object->mesh_stats) {
+                $self->{object_info_volume}->SetLabel(sprintf('%.2f', $stats->{volume} * $scale_factor**3));
+            }
+        }
     };
     
     # Initialize 3D plater
@@ -151,7 +184,9 @@ sub new {
         Slic3r::GUI::_3DScene::register_on_instance_moved_callback($self->{canvas3D}, $on_instances_moved);
         Slic3r::GUI::_3DScene::register_on_enable_action_buttons_callback($self->{canvas3D}, $enable_action_buttons);
         Slic3r::GUI::_3DScene::register_on_gizmo_scale_uniformly_callback($self->{canvas3D}, $on_gizmo_scale_uniformly);
-#        Slic3r::GUI::_3DScene::enable_gizmos($self->{canvas3D}, 1);
+        Slic3r::GUI::_3DScene::register_on_gizmo_rotate_callback($self->{canvas3D}, $on_gizmo_rotate);
+        Slic3r::GUI::_3DScene::register_on_update_geometry_info_callback($self->{canvas3D}, $on_update_geometry_info);
+        Slic3r::GUI::_3DScene::enable_gizmos($self->{canvas3D}, 1);
         Slic3r::GUI::_3DScene::enable_shader($self->{canvas3D}, 1);
         Slic3r::GUI::_3DScene::enable_force_zoom_to_bed($self->{canvas3D}, 1);
 
@@ -168,25 +203,28 @@ sub new {
                 $self->schedule_background_process;
             } else {
                 # Hide the print info box, it is no more valid.
-                $self->{"print_info_box_show"}->(0);
+                $self->print_info_box_show(0);
             }
         });
 
         Slic3r::GUI::_3DScene::register_on_viewport_changed_callback($self->{canvas3D}, sub { Slic3r::GUI::_3DScene::set_viewport_from_scene($self->{preview3D}->canvas, $self->{canvas3D}); });
     }
+
+    Slic3r::GUI::register_on_request_update_callback(sub { $self->schedule_background_process; });
     
-    # Initialize 2D preview canvas
-    $self->{canvas} = Slic3r::GUI::Plater::2D->new($self->{preview_notebook}, wxDefaultSize, $self->{objects}, $self->{model}, $self->{config});
-    $self->{preview_notebook}->AddPage($self->{canvas}, L('2D'));
-    $self->{canvas}->on_select_object($on_select_object);
-    $self->{canvas}->on_double_click($on_double_click);
-    $self->{canvas}->on_right_click(sub { $on_right_click->($self->{canvas}, @_); });
-    $self->{canvas}->on_instances_moved($on_instances_moved);
+#    # Initialize 2D preview canvas
+#    $self->{canvas} = Slic3r::GUI::Plater::2D->new($self->{preview_notebook}, wxDefaultSize, $self->{objects}, $self->{model}, $self->{config});
+#    $self->{preview_notebook}->AddPage($self->{canvas}, L('2D'));
+#    $self->{canvas}->on_select_object($on_select_object);
+#    $self->{canvas}->on_double_click($on_double_click);
+#    $self->{canvas}->on_right_click(sub { $on_right_click->($self->{canvas}, @_); });
+#    $self->{canvas}->on_instances_moved($on_instances_moved);
     
     # Initialize 3D toolpaths preview
     if ($Slic3r::GUI::have_OpenGL) {
         $self->{preview3D} = Slic3r::GUI::Plater::3DPreview->new($self->{preview_notebook}, $self->{print}, $self->{gcode_preview_data}, $self->{config});
         Slic3r::GUI::_3DScene::enable_legend_texture($self->{preview3D}->canvas, 1);
+        Slic3r::GUI::_3DScene::enable_dynamic_background($self->{preview3D}->canvas, 1);
         Slic3r::GUI::_3DScene::register_on_viewport_changed_callback($self->{preview3D}->canvas, sub { Slic3r::GUI::_3DScene::set_viewport_from_scene($self->{canvas3D}, $self->{preview3D}->canvas); });
         $self->{preview_notebook}->AddPage($self->{preview3D}, L('Preview'));
         $self->{preview3D_page_idx} = $self->{preview_notebook}->GetPageCount-1;
@@ -266,9 +304,9 @@ sub new {
     $self->{right_panel} = Wx::Panel->new($self, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     
     ### Scrolled Window for info boxes
-    my $scrolled_window_sizer = Wx::BoxSizer->new(wxVERTICAL);
+    my $scrolled_window_sizer = $self->{scrolled_window_sizer} = Wx::BoxSizer->new(wxVERTICAL);
     $scrolled_window_sizer->SetMinSize([310, -1]);
-    my $scrolled_window_panel = Wx::ScrolledWindow->new($self->{right_panel}, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    my $scrolled_window_panel = $self->{scrolled_window_panel} = Wx::ScrolledWindow->new($self->{right_panel}, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     $scrolled_window_panel->SetSizer($scrolled_window_sizer);
     $scrolled_window_panel->SetScrollbars(1, 1, 1, 1);    
 
@@ -284,6 +322,9 @@ sub new {
         my ($list, $event) = @_;
         if ($event->GetKeyCode == WXK_TAB) {
             $list->Navigate($event->ShiftDown ? &Wx::wxNavigateBackward : &Wx::wxNavigateForward);
+        } elsif ($event->GetKeyCode == WXK_DELETE ||
+                ($event->GetKeyCode == WXK_BACK && &Wx::wxMAC) ) {
+            $self->remove;
         } else {
             $event->Skip;
         }
@@ -373,7 +414,8 @@ sub new {
     
     $_->SetDropTarget(Slic3r::GUI::Plater::DropTarget->new($self))
         for grep defined($_),
-            $self, $self->{canvas}, $self->{canvas3D}, $self->{preview3D}, $self->{list};
+            $self, $self->{canvas3D}, $self->{preview3D}, $self->{list};
+#            $self, $self->{canvas}, $self->{canvas3D}, $self->{preview3D}, $self->{list};
     
     EVT_COMMAND($self, -1, $PROGRESS_BAR_EVENT, sub {
         my ($self, $event) = @_;
@@ -404,7 +446,7 @@ sub new {
         });
     }
     
-    $self->{canvas}->update_bed_size;
+#    $self->{canvas}->update_bed_size;
     if ($self->{canvas3D}) {
         Slic3r::GUI::_3DScene::set_bed_shape($self->{canvas3D}, $self->{config}->bed_shape);
         Slic3r::GUI::_3DScene::zoom_to_bed($self->{canvas3D});
@@ -494,34 +536,9 @@ sub new {
             }
         }
 
-        my $print_info_sizer;
-        {
-            my $box = Wx::StaticBox->new($scrolled_window_panel, -1, L("Sliced Info"));
-            $print_info_sizer = Wx::StaticBoxSizer->new($box, wxVERTICAL);
-            $print_info_sizer->SetMinSize([300,-1]);
-            my $grid_sizer = Wx::FlexGridSizer->new(2, 2, 5, 5);
-            $grid_sizer->SetFlexibleDirection(wxHORIZONTAL);
-            $grid_sizer->AddGrowableCol(1, 1);
-            $grid_sizer->AddGrowableCol(3, 1);
-            $print_info_sizer->Add($grid_sizer, 0, wxEXPAND);
-            my @info = (
-                fil_m   => L("Used Filament (m)"),
-                fil_mm3 => L("Used Filament (mm³)"),
-                fil_g   => L("Used Filament (g)"),
-                cost    => L("Cost"),
-                time    => L("Estimated printing time"),
-            );
-            while (my $field = shift @info) {
-                my $label = shift @info;
-                my $text = Wx::StaticText->new($scrolled_window_panel, -1, "$label:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
-                $text->SetFont($Slic3r::GUI::small_font);
-                $grid_sizer->Add($text, 0);
-                
-                $self->{"print_info_$field"} = Wx::StaticText->new($scrolled_window_panel, -1, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-                $self->{"print_info_$field"}->SetFont($Slic3r::GUI::small_font);
-                $grid_sizer->Add($self->{"print_info_$field"}, 0);
-            }
-        }
+        my $print_info_sizer = $self->{print_info_sizer} = Wx::StaticBoxSizer->new(
+                Wx::StaticBox->new($scrolled_window_panel, -1, L("Sliced Info")), wxVERTICAL);
+        $print_info_sizer->SetMinSize([300,-1]);
         
         my $buttons_sizer = Wx::BoxSizer->new(wxHORIZONTAL);
         $self->{buttons_sizer} = $buttons_sizer;
@@ -542,19 +559,8 @@ sub new {
         $right_sizer->Add($frequently_changed_parameters_sizer, 0, wxEXPAND | wxTOP, 0) if defined $frequently_changed_parameters_sizer;
         $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
         $right_sizer->Add($scrolled_window_panel, 1, wxEXPAND | wxALL, 1);
-        # Callback for showing / hiding the print info box.
-        $self->{"print_info_box_show"} = sub {
-#            if ($right_sizer->IsShown(5) != $_[0]) { 
-#                $right_sizer->Show(5, $_[0]); 
-#                $self->Layout
-#            }
-            if ($scrolled_window_sizer->IsShown(2) != $_[0]) { 
-                $scrolled_window_sizer->Show(2, $_[0]); 
-                $scrolled_window_panel->Layout
-            }
-        };
         # Show the box initially, let it be shown after the slicing is finished.
-        $self->{"print_info_box_show"}->(0);
+        $self->print_info_box_show(0);
 
         $self->{right_panel}->SetSizer($right_sizer);
 
@@ -761,6 +767,15 @@ sub load_files {
             $model->convert_multipart_object(scalar(@$nozzle_dmrs)) if $dialog->ShowModal() == wxID_YES;
         }
         
+        # objects imported from 3mf require a call to center_around_origin to have gizmos working properly and this call
+        # need to be done after looks_like_multipart_object detection
+        if ($input_file =~ /.3[mM][fF]$/)
+        {
+            foreach my $model_object (@{$model->objects}) {
+                $model_object->center_around_origin;  # also aligns object to Z = 0
+            }
+        }
+        
         if ($one_by_one) {
             push @obj_idx, $self->load_model_objects(@{$model->objects});
         } else {
@@ -855,8 +870,8 @@ sub load_model_objects {
     
         $self->{list}->SetItem($obj_idx, 1, $model_object->instances_count);
         $self->{list}->SetItem($obj_idx, 2, ($model_object->instances->[0]->scaling_factor * 100) . "%");
-    
-        $self->reset_thumbnail($obj_idx);
+
+#        $self->reset_thumbnail($obj_idx);
     }
     $self->arrange if $need_arrange;
     $self->update;
@@ -996,9 +1011,10 @@ sub set_number_of_copies {
     my $model_object = $self->{model}->objects->[$obj_idx];
     
     # prompt user
-    my $copies = Wx::GetNumberFromUser("", L("Enter the number of copies of the selected object:"), L("Copies"), $model_object->instances_count, 0, 1000, $self);
+    my $copies = -1;
+    $copies = Wx::GetNumberFromUser("", L("Enter the number of copies of the selected object:"), L("Copies"), $model_object->instances_count, 0, 1000, $self);
     my $diff = $copies - $model_object->instances_count;
-    if ($diff == 0) {
+    if ($diff == 0 || $copies == -1) {
         # no variation
         $self->resume_background_process;
     } elsif ($diff > 0) {
@@ -1031,43 +1047,67 @@ sub _get_number_from_user {
 }
 
 sub rotate {
-    my ($self, $angle, $axis, $relative_key) = @_;
+    my ($self, $angle, $axis, $relative_key, $axis_x, $axis_y, $axis_z) = @_;
     $relative_key //= 'absolute'; # relative or absolute coordinates
-    $axis //= Z; # angle is in degrees
-
+    $axis_x //= 0;
+    $axis_y //= 0;
+    $axis_z //= 0;
     my $relative = $relative_key eq 'relative';    
-    
+
     my ($obj_idx, $object) = $self->selected_object;
     return if !defined $obj_idx;
-    
+
     my $model_object = $self->{model}->objects->[$obj_idx];
     my $model_instance = $model_object->instances->[0];
-        
+
     if (!defined $angle) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
         my $default = $axis == Z ? rad2deg($model_instance->rotation) : 0;
         $angle = $self->_get_number_from_user(L("Enter the rotation angle:"), L("Rotate around ").$axis_name.(" axis"), L("Invalid rotation angle entered"), $default);
         return if $angle eq '';
     }
+
+    # Let's calculate vector of rotation axis (if we don't have it already)
+    # The minus is there so that the direction is the same as was established
+    if (defined $axis) {
+        if ($axis == X) {
+            $axis_x = -1;
+        }
+        if ($axis == Y) {
+            $axis_y = -1;
+        }
+    }
     
     $self->stop_background_process;
     
-    if ($axis == Z) {
+    if (defined $axis && $axis == Z) {
         my $new_angle = deg2rad($angle);
-        $_->set_rotation(($relative ? $_->rotation : 0.) + $new_angle) for @{ $model_object->instances };
-        $object->transform_thumbnail($self->{model}, $obj_idx);
-    } else {
-        # rotation around X and Y needs to be performed on mesh
-        # so we first apply any Z rotation
-        if ($model_instance->rotation != 0) {
-            $model_object->rotate($model_instance->rotation, Z);
-            $_->set_rotation(0) for @{ $model_object->instances };
+        foreach my $inst (@{ $model_object->instances }) {
+            my $rotation = ($relative ? $inst->rotation : 0.) + $new_angle;
+            while ($rotation > 2.0 * PI) {
+                $rotation -= 2.0 * PI;
+            }
+            while ($rotation < 0.0) {
+                $rotation += 2.0 * PI;
+            }
+            $inst->set_rotation($rotation);
+            Slic3r::GUI::_3DScene::update_gizmos_data($self->{canvas3D}) if ($self->{canvas3D});            
         }
-        $model_object->rotate(deg2rad($angle), $axis);
+#        $object->transform_thumbnail($self->{model}, $obj_idx);
+    } else {
+        if (defined $axis) {
+            # rotation around X and Y needs to be performed on mesh
+            # so we first apply any Z rotation
+            if ($model_instance->rotation != 0) {
+                $model_object->rotate($model_instance->rotation, Slic3r::Pointf3->new(0, 0, -1));
+                $_->set_rotation(0) for @{ $model_object->instances };
+            }
+        }
+        $model_object->rotate(deg2rad($angle), Slic3r::Pointf3->new($axis_x, $axis_y, $axis_z));
         
-        # realign object to Z = 0
-        $model_object->center_around_origin;
-        $self->reset_thumbnail($obj_idx);
+#        # realign object to Z = 0
+#        $model_object->center_around_origin;
+#        $self->reset_thumbnail($obj_idx);
     }
     
     # update print and start background processing
@@ -1089,15 +1129,15 @@ sub mirror {
     
     # apply Z rotation before mirroring
     if ($model_instance->rotation != 0) {
-        $model_object->rotate($model_instance->rotation, Z);
+        $model_object->rotate($model_instance->rotation, Slic3r::Pointf3->new(0, 0, 1));
         $_->set_rotation(0) for @{ $model_object->instances };
     }
     
     $model_object->mirror($axis);
     
-    # realign object to Z = 0
-    $model_object->center_around_origin;
-    $self->reset_thumbnail($obj_idx);
+#    # realign object to Z = 0
+#    $model_object->center_around_origin;
+#    $self->reset_thumbnail($obj_idx);
         
     # update print and start background processing
     $self->stop_background_process;
@@ -1117,8 +1157,7 @@ sub changescale {
     my $model_object = $self->{model}->objects->[$obj_idx];
     my $model_instance = $model_object->instances->[0];
     
-    my $object_size = $model_object->bounding_box->size;
-    my $bed_size = Slic3r::Polygon->new_scale(@{$self->{config}->bed_shape})->bounding_box->size;
+    my $object_size = $model_object->instance_bounding_box(0)->size;
     
     if (defined $axis) {
         my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
@@ -1126,7 +1165,7 @@ sub changescale {
         if ($tosize) {
             my $cursize = $object_size->[$axis];
             my $newsize = $self->_get_number_from_user(
-                sprintf(L('Enter the new size for the selected object (print bed: %smm):'), unscale($bed_size->[$axis])), 
+                L('Enter the new size for the selected object:'), 
                 L("Scale along ").$axis_name, L('Invalid scaling value entered'), $cursize, 1);
             return if $newsize eq '';
             $scale = $newsize / $cursize * 100;
@@ -1137,7 +1176,7 @@ sub changescale {
         
         # apply Z rotation before scaling
         if ($model_instance->rotation != 0) {
-            $model_object->rotate($model_instance->rotation, Z);
+            $model_object->rotate($model_instance->rotation, Slic3r::Pointf3->new(0, 0, 1));
             $_->set_rotation(0) for @{ $model_object->instances };
         }
         
@@ -1147,7 +1186,7 @@ sub changescale {
         #FIXME Scale the layer height profile when $axis == Z?
         #FIXME Scale the layer height ranges $axis == Z?
         # object was already aligned to Z = 0, so no need to realign it
-        $self->reset_thumbnail($obj_idx);
+#        $self->reset_thumbnail($obj_idx);
     } else {
         my $scale;
         if ($tosize) {
@@ -1171,7 +1210,7 @@ sub changescale {
             $range->[1] *= $variation;
         }
         $_->set_scaling_factor($scale) for @{ $model_object->instances };
-        $object->transform_thumbnail($self->{model}, $obj_idx);
+#        $object->transform_thumbnail($self->{model}, $obj_idx);
     }
     
     # update print and start background processing
@@ -1188,13 +1227,17 @@ sub arrange {
     
     $self->pause_background_process;
     
-    my $bb = Slic3r::Geometry::BoundingBoxf->new_from_points($self->{config}->bed_shape);
-    my $success = $self->{model}->arrange_objects(wxTheApp->{preset_bundle}->full_config->min_object_distance, $bb);
+    # my $bb = Slic3r::Geometry::BoundingBoxf->new_from_points($self->{config}->bed_shape);
+    # my $success = $self->{model}->arrange_objects(wxTheApp->{preset_bundle}->full_config->min_object_distance, $bb);
+    
+    # Update is not implemented in C++ so we cannot call this for now
+    $self->{appController}->arrange_model;
+
     # ignore arrange failures on purpose: user has visual feedback and we don't need to warn him
     # when parts don't fit in print bed
     
     # Force auto center of the aligned grid of of objects on the print bed.
-    $self->update(1);
+    $self->update(0);
 }
 
 sub split_object {
@@ -1256,7 +1299,7 @@ sub async_apply_config {
     $self->{canvas3D}->Refresh if Slic3r::GUI::_3DScene::is_layers_editing_enabled($self->{canvas3D});
 
     # Hide the slicing results if the current slicing status is no more valid.    
-    $self->{"print_info_box_show"}->(0) if $invalidated;
+    $self->print_info_box_show(0) if $invalidated;
 
     if (wxTheApp->{app_config}->get("background_processing")) {    
         if ($invalidated) {
@@ -1275,6 +1318,13 @@ sub async_apply_config {
         $self->{gcode_preview_data}->reset;
         $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
         $self->{preview3D}->reload_print if $self->{preview3D};
+
+        # We also need to reload 3D scene because of the wipe tower preview box
+        if ($self->{config}->wipe_tower) {
+            my $selections = $self->collect_selections;
+            Slic3r::GUI::_3DScene::set_objects_selections($self->{canvas3D}, \@$selections);
+	        Slic3r::GUI::_3DScene::reload_scene($self->{canvas3D}, 1) if $self->{canvas3D}
+        }
     }
 }
 
@@ -1487,6 +1537,11 @@ sub on_process_completed {
     return if $error;
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+
+    # in case this was MM print, wipe tower bounding box on 3D tab might need redrawing with exact depth:
+    my $selections = $self->collect_selections;
+    Slic3r::GUI::_3DScene::set_objects_selections($self->{canvas3D}, \@$selections);
+    Slic3r::GUI::_3DScene::reload_scene($self->{canvas3D}, 1);
     
     # if we have an export filename, start a new thread for exporting G-code
     if ($self->{export_gcode_output_file}) {
@@ -1548,7 +1603,7 @@ sub on_export_completed {
             $message = L("File added to print queue");
             $do_print = 1;
         } elsif ($self->{send_gcode_file}) {
-            $message = L("Sending G-code file to the OctoPrint server...");
+            $message = L("Sending G-code file to the Printer Host ...");
             $send_gcode = 1;
         } else {
             $message = L("G-code file exported to ") . $self->{export_gcode_output_file};
@@ -1564,9 +1619,10 @@ sub on_export_completed {
 
     # Send $self->{send_gcode_file} to OctoPrint.
     if ($send_gcode) {
-        my $op = Slic3r::OctoPrint->new($self->{config});
-        if ($op->send_gcode($self->{send_gcode_file})) {
-            $self->statusbar->SetStatusText(L("OctoPrint upload finished."));
+        my $host = Slic3r::PrintHost::get_print_host($self->{config});
+
+        if ($host->send_gcode($self->{send_gcode_file})) {
+            $self->statusbar->SetStatusText(L("Upload to host finished."));
         } else {
             $self->statusbar->SetStatusText("");
         }
@@ -1574,12 +1630,7 @@ sub on_export_completed {
 
     $self->{print_file} = undef;
     $self->{send_gcode_file} = undef;
-    $self->{"print_info_cost"}->SetLabel(sprintf("%.2f" , $self->{print}->total_cost));
-    $self->{"print_info_fil_g"}->SetLabel(sprintf("%.2f" , $self->{print}->total_weight));
-    $self->{"print_info_fil_mm3"}->SetLabel(sprintf("%.2f" , $self->{print}->total_extruded_volume));
-    $self->{"print_info_time"}->SetLabel($self->{print}->estimated_print_time);
-    $self->{"print_info_fil_m"}->SetLabel(sprintf("%.2f" , $self->{print}->total_used_filament / 1000));
-    $self->{"print_info_box_show"}->(1);
+    $self->print_info_box_show(1);
 
     # this updates buttons status
     $self->object_list_changed;
@@ -1587,6 +1638,69 @@ sub on_export_completed {
     # refresh preview
     $self->{toolpaths2D}->reload_print if $self->{toolpaths2D};
     $self->{preview3D}->reload_print if $self->{preview3D};
+}
+
+# Fill in the "Sliced info" box with the result of the G-code generator.
+sub print_info_box_show {
+    my ($self, $show) = @_;
+    my $scrolled_window_panel = $self->{scrolled_window_panel}; 
+    my $scrolled_window_sizer = $self->{scrolled_window_sizer};
+    return if (!$show && ($scrolled_window_sizer->IsShown(2) == $show));
+
+    if ($show) {
+        my $print_info_sizer = $self->{print_info_sizer};
+        $print_info_sizer->Clear(1);
+        my $grid_sizer = Wx::FlexGridSizer->new(2, 2, 5, 5);
+        $grid_sizer->SetFlexibleDirection(wxHORIZONTAL);
+        $grid_sizer->AddGrowableCol(1, 1);
+        $grid_sizer->AddGrowableCol(3, 1);
+        $print_info_sizer->Add($grid_sizer, 0, wxEXPAND);
+        my $is_wipe_tower = $self->{print}->total_wipe_tower_filament > 0;
+        my @info = (
+            L("Used Filament (m)")
+                =>  $is_wipe_tower ?
+                       sprintf("%.2f  (%.2f %s + %.2f %s)" , $self->{print}->total_used_filament / 1000,
+                                                            ($self->{print}->total_used_filament - $self->{print}->total_wipe_tower_filament) / 1000,
+                                                             L("objects"),
+							     $self->{print}->total_wipe_tower_filament / 1000,
+                                                             L("wipe tower")) :
+                       sprintf("%.2f" , $self->{print}->total_used_filament / 1000),
+
+            L("Used Filament (mm³)")
+                => sprintf("%.2f" , $self->{print}->total_extruded_volume),
+            L("Used Filament (g)"),
+                => sprintf("%.2f" , $self->{print}->total_weight),
+            L("Cost"),
+                => $is_wipe_tower ?
+                       sprintf("%.2f  (%.2f %s + %.2f %s)" , $self->{print}->total_cost,
+                                                            ($self->{print}->total_cost - $self->{print}->total_wipe_tower_cost),
+                                                             L("objects"),
+							     $self->{print}->total_wipe_tower_cost,
+                                                             L("wipe tower")) :
+                       sprintf("%.2f" , $self->{print}->total_cost),
+            L("Estimated printing time (normal mode)")
+                => $self->{print}->estimated_normal_print_time,
+            L("Estimated printing time (silent mode)")
+                => $self->{print}->estimated_silent_print_time
+        );
+        # if there is a wipe tower, insert number of toolchanges info into the array:
+        splice (@info, 8, 0, L("Number of tool changes") => sprintf("%.d", $self->{print}->m_wipe_tower_number_of_toolchanges))  if ($is_wipe_tower);
+
+        while ( my $label = shift @info) {
+            my $value = shift @info;
+            next if $value eq "N/A";
+            my $text = Wx::StaticText->new($scrolled_window_panel, -1, "$label:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+            $text->SetFont($Slic3r::GUI::small_font);
+            $grid_sizer->Add($text, 0);            
+            my $field = Wx::StaticText->new($scrolled_window_panel, -1, $value, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+            $field->SetFont($Slic3r::GUI::small_font);
+            $grid_sizer->Add($field, 0);
+        }
+    }
+
+    $scrolled_window_sizer->Show(2, $show);
+    $scrolled_window_panel->Layout;
+    $self->Layout;
 }
 
 sub do_print {
@@ -1621,7 +1735,7 @@ sub reload_from_disk {
     my $model_object = $self->{model}->objects->[$obj_idx];
     #FIXME convert to local file encoding
     return if !$model_object->input_file
-        || !-e $model_object->input_file;
+        || !-e Slic3r::encode_path($model_object->input_file);
     
     my @new_obj_idx = $self->load_files([$model_object->input_file]);
     return if !@new_obj_idx;
@@ -1758,10 +1872,10 @@ sub _get_export_file {
     return $output_file;
 }
 
-sub reset_thumbnail {
-    my ($self, $obj_idx) = @_;
-    $self->{objects}[$obj_idx]->thumbnail(undef);
-}
+#sub reset_thumbnail {
+#    my ($self, $obj_idx) = @_;
+#    $self->{objects}[$obj_idx]->thumbnail(undef);
+#}
 
 # this method gets called whenever print center is changed or the objects' bounding box changes
 # (i.e. when an object is added/removed/moved/rotated/scaled)
@@ -1785,7 +1899,9 @@ sub update {
         $self->resume_background_process;
     }
 
-    $self->{canvas}->reload_scene if $self->{canvas};
+    $self->print_info_box_show(0);
+    
+#    $self->{canvas}->reload_scene if $self->{canvas};
     my $selections = $self->collect_selections;
     Slic3r::GUI::_3DScene::set_objects_selections($self->{canvas3D}, \@$selections);
     Slic3r::GUI::_3DScene::reload_scene($self->{canvas3D}, 0);
@@ -1842,7 +1958,7 @@ sub on_config_change {
     foreach my $opt_key (@{$self->{config}->diff($config)}) {
         $self->{config}->set($opt_key, $config->get($opt_key));
         if ($opt_key eq 'bed_shape') {
-            $self->{canvas}->update_bed_size;
+#            $self->{canvas}->update_bed_size;
             Slic3r::GUI::_3DScene::set_bed_shape($self->{canvas3D}, $self->{config}->bed_shape) if $self->{canvas3D};
             Slic3r::GUI::_3DScene::set_bed_shape($self->{preview3D}->canvas, $self->{config}->bed_shape) if $self->{preview3D};
             $update_scheduled = 1;
@@ -1851,8 +1967,8 @@ sub on_config_change {
         } elsif ($opt_key eq 'serial_port') {
             $self->{btn_print}->Show($config->get('serial_port'));
             $self->Layout;
-        } elsif ($opt_key eq 'octoprint_host') {
-            $self->{btn_send_gcode}->Show($config->get('octoprint_host'));
+        } elsif ($opt_key eq 'print_host') {
+            $self->{btn_send_gcode}->Show($config->get('print_host'));
             $self->Layout;
         } elsif ($opt_key eq 'variable_layer_height') {
             if ($config->get('variable_layer_height') != 1) {
@@ -1902,7 +2018,7 @@ sub list_item_deselected {
     $self->{_lecursor} = Wx::BusyCursor->new();
     if ($self->{list}->GetFirstSelected == -1) {
         $self->select_object(undef);
-        $self->{canvas}->Refresh;
+#        $self->{canvas}->Refresh;
         Slic3r::GUI::_3DScene::deselect_volumes($self->{canvas3D}) if $self->{canvas3D};
         Slic3r::GUI::_3DScene::render($self->{canvas3D}) if $self->{canvas3D};
     }
@@ -1915,7 +2031,7 @@ sub list_item_selected {
     $self->{_lecursor} = Wx::BusyCursor->new();
     my $obj_idx = $event->GetIndex;
     $self->select_object($obj_idx);
-    $self->{canvas}->Refresh;
+#    $self->{canvas}->Refresh;
     if ($self->{canvas3D}) {
         my $selections = $self->collect_selections;
         Slic3r::GUI::_3DScene::update_volumes_selection($self->{canvas3D}, \@$selections);
@@ -2012,19 +2128,19 @@ sub object_settings_dialog {
 	$self->pause_background_process;
 	$dlg->ShowModal;
 	
-    # update thumbnail since parts may have changed
-    if ($dlg->PartsChanged) {
-	    # recenter and re-align to Z = 0
-	    $model_object->center_around_origin;
-        $self->reset_thumbnail($obj_idx);
-    }
+#    # update thumbnail since parts may have changed
+#    if ($dlg->PartsChanged) {
+#	    # recenter and re-align to Z = 0
+#	    $model_object->center_around_origin;
+#        $self->reset_thumbnail($obj_idx);
+#    }
 	
 	# update print
 	if ($dlg->PartsChanged || $dlg->PartSettingsChanged) {
 	    $self->stop_background_process;
         $self->{print}->reload_object($obj_idx);
         $self->schedule_background_process;
-        $self->{canvas}->reload_scene if $self->{canvas};
+#        $self->{canvas}->reload_scene if $self->{canvas};
         my $selections = $self->collect_selections;
         Slic3r::GUI::_3DScene::set_objects_selections($self->{canvas3D}, \@$selections);
         Slic3r::GUI::_3DScene::reload_scene($self->{canvas3D}, 0);
@@ -2056,7 +2172,8 @@ sub object_list_changed {
 
     my $export_in_progress = $self->{export_gcode_output_file} || $self->{send_gcode_file};
     my $model_fits = $self->{canvas3D} ? Slic3r::GUI::_3DScene::check_volumes_outside_state($self->{canvas3D}, $self->{config}) : 1;
-    my $method = ($have_objects && ! $export_in_progress && $model_fits) ? 'Enable' : 'Disable';
+    # $model_fits == 1 -> ModelInstance::PVS_Partly_Outside
+    my $method = ($have_objects && ! $export_in_progress && ($model_fits != 1)) ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
         for grep $self->{"btn_$_"}, qw(reslice export_gcode print send_gcode);
 }
@@ -2309,48 +2426,48 @@ package Slic3r::GUI::Plater::Object;
 use Moo;
 
 has 'name'                  => (is => 'rw', required => 1);
-has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms
-has 'transformed_thumbnail' => (is => 'rw');
-has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units
+#has 'thumbnail'             => (is => 'rw'); # ExPolygon::Collection in scaled model units with no transforms
+#has 'transformed_thumbnail' => (is => 'rw');
+#has 'instance_thumbnails'   => (is => 'ro', default => sub { [] });  # array of ExPolygon::Collection objects, each one representing the actual placed thumbnail of each instance in pixel units
 has 'selected'              => (is => 'rw', default => sub { 0 });
 
-sub make_thumbnail {
-    my ($self, $model, $obj_idx) = @_;
-    # make method idempotent
-    $self->thumbnail->clear;
-    # raw_mesh is the non-transformed (non-rotated, non-scaled, non-translated) sum of non-modifier object volumes.
-    my $mesh = $model->objects->[$obj_idx]->raw_mesh;
-#FIXME The "correct" variant could be extremely slow.
-#    if ($mesh->facets_count <= 5000) {
-#        # remove polygons with area <= 1mm
-#        my $area_threshold = Slic3r::Geometry::scale 1;
-#        $self->thumbnail->append(
-#            grep $_->area >= $area_threshold,
-#            @{ $mesh->horizontal_projection },   # horizontal_projection returns scaled expolygons
-#        );
-#        $self->thumbnail->simplify(0.5);
-#    } else {
-        my $convex_hull = Slic3r::ExPolygon->new($mesh->convex_hull);
-        $self->thumbnail->append($convex_hull);
-#    }
-    return $self->thumbnail;
-}
-
-sub transform_thumbnail {
-    my ($self, $model, $obj_idx) = @_;
-    
-    return unless defined $self->thumbnail;
-    
-    my $model_object = $model->objects->[$obj_idx];
-    my $model_instance = $model_object->instances->[0];
-    
-    # the order of these transformations MUST be the same everywhere, including
-    # in Slic3r::Print->add_model_object()
-    my $t = $self->thumbnail->clone;
-    $t->rotate($model_instance->rotation, Slic3r::Point->new(0,0));
-    $t->scale($model_instance->scaling_factor);
-    
-    $self->transformed_thumbnail($t);
-}
+#sub make_thumbnail {
+#    my ($self, $model, $obj_idx) = @_;
+#    # make method idempotent
+#    $self->thumbnail->clear;
+#    # raw_mesh is the non-transformed (non-rotated, non-scaled, non-translated) sum of non-modifier object volumes.
+#    my $mesh = $model->objects->[$obj_idx]->raw_mesh;
+##FIXME The "correct" variant could be extremely slow.
+##    if ($mesh->facets_count <= 5000) {
+##        # remove polygons with area <= 1mm
+##        my $area_threshold = Slic3r::Geometry::scale 1;
+##        $self->thumbnail->append(
+##            grep $_->area >= $area_threshold,
+##            @{ $mesh->horizontal_projection },   # horizontal_projection returns scaled expolygons
+##        );
+##        $self->thumbnail->simplify(0.5);
+##    } else {
+#        my $convex_hull = Slic3r::ExPolygon->new($mesh->convex_hull);
+#        $self->thumbnail->append($convex_hull);
+##    }
+#    return $self->thumbnail;
+#}
+#
+#sub transform_thumbnail {
+#    my ($self, $model, $obj_idx) = @_;
+#    
+#    return unless defined $self->thumbnail;
+#    
+#    my $model_object = $model->objects->[$obj_idx];
+#    my $model_instance = $model_object->instances->[0];
+#    
+#    # the order of these transformations MUST be the same everywhere, including
+#    # in Slic3r::Print->add_model_object()
+#    my $t = $self->thumbnail->clone;
+#    $t->rotate($model_instance->rotation, Slic3r::Point->new(0,0));
+#    $t->scale($model_instance->scaling_factor);
+#    
+#    $self->transformed_thumbnail($t);
+#}
 
 1;

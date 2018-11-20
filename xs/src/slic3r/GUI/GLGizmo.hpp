@@ -10,6 +10,7 @@ namespace Slic3r {
 
 class BoundingBoxf3;
 class Pointf3;
+class ModelObject;
 
 namespace GUI {
 
@@ -57,22 +58,27 @@ public:
     EState get_state() const;
     void set_state(EState state);
 
-    unsigned int get_textures_id() const;
+    unsigned int get_texture_id() const;
     int get_textures_size() const;
 
     int get_hover_id() const;
     void set_hover_id(int id);
 
     void start_dragging();
+    void stop_dragging();
     void update(const Pointf& mouse_pos);
+    void refresh();
 
     void render(const BoundingBoxf3& box) const;
     void render_for_picking(const BoundingBoxf3& box) const;
 
 protected:
     virtual bool on_init() = 0;
+    virtual void on_set_state();
     virtual void on_start_dragging();
+    virtual void on_stop_dragging();
     virtual void on_update(const Pointf& mouse_pos) = 0;
+    virtual void on_refresh();
     virtual void on_render(const BoundingBoxf3& box) const = 0;
     virtual void on_render_for_picking(const BoundingBoxf3& box) const = 0;
 
@@ -96,13 +102,19 @@ class GLGizmoRotate : public GLGizmoBase
 
     mutable Pointf m_center;
     mutable float m_radius;
+    mutable bool m_keep_initial_values;
 
 public:
     GLGizmoRotate();
 
+    float get_angle_z() const;
+    void set_angle_z(float angle_z);
+
 protected:
     virtual bool on_init();
+    virtual void on_set_state();
     virtual void on_update(const Pointf& mouse_pos);
+    virtual void on_refresh();
     virtual void on_render(const BoundingBoxf3& box) const;
     virtual void on_render_for_picking(const BoundingBoxf3& box) const;
 
@@ -120,9 +132,9 @@ class GLGizmoScale : public GLGizmoBase
     static const float Offset;
 
     float m_scale;
+    float m_starting_scale;
 
     Pointf m_starting_drag_position;
-    float m_starting_scale;
 
 public:
     GLGizmoScale();
@@ -137,6 +149,56 @@ protected:
     virtual void on_render(const BoundingBoxf3& box) const;
     virtual void on_render_for_picking(const BoundingBoxf3& box) const;
 };
+
+
+class GLGizmoFlatten : public GLGizmoBase
+{
+// This gizmo does not use grabbers. The m_hover_id relates to polygon managed by the class itself.
+
+private:
+    mutable Pointf3 m_normal;
+
+    struct PlaneData {
+        std::vector<Pointf3> vertices;
+        Pointf3 normal;
+        float area;
+    };
+    struct SourceDataSummary {
+        std::vector<BoundingBoxf3> bounding_boxes; // bounding boxes of convex hulls of individual volumes
+        float scaling_factor;
+        float rotation;
+        Pointf3 mesh_first_point;
+    };
+
+    // This holds information to decide whether recalculation is necessary:
+    SourceDataSummary m_source_data;
+
+    std::vector<PlaneData> m_planes;
+    std::vector<Pointf> m_instances_positions;
+    mutable std::unique_ptr<Pointf3> m_center = nullptr;
+    const ModelObject* m_model_object = nullptr;
+    void update_planes();
+    bool is_plane_update_necessary() const;
+
+public:
+    GLGizmoFlatten();
+
+    void set_flattening_data(const ModelObject* model_object);
+    Pointf3 get_flattening_normal() const;
+
+protected:
+    bool on_init() override;
+    void on_start_dragging() override;
+    void on_update(const Pointf& mouse_pos) override {};
+    void on_render(const BoundingBoxf3& box) const override;
+    void on_render_for_picking(const BoundingBoxf3& box) const override;
+    void on_set_state() override {
+        if (m_state == On && is_plane_update_necessary())
+            update_planes();
+    }
+};
+
+
 
 } // namespace GUI
 } // namespace Slic3r

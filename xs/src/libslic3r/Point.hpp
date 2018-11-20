@@ -81,6 +81,17 @@ inline Point operator*(double scalar, const Point& point2) { return Point(scalar
 inline int64_t cross(const Point &v1, const Point &v2) { return int64_t(v1.x) * int64_t(v2.y) - int64_t(v1.y) * int64_t(v2.x); }
 inline int64_t dot(const Point &v1, const Point &v2) { return int64_t(v1.x) * int64_t(v2.x) + int64_t(v1.y) * int64_t(v2.y); }
 
+namespace int128 {
+
+// Exact orientation predicate,
+// returns +1: CCW, 0: collinear, -1: CW.
+int orient(const Point &p1, const Point &p2, const Point &p3);
+
+// Exact orientation predicate,
+// returns +1: CCW, 0: collinear, -1: CW.
+int cross(const Point &v1, const Slic3r::Point &v2);
+}
+
 // To be used by std::unordered_map, std::unordered_multimap and friends.
 struct PointHash {
     size_t operator()(const Point &pt) const {
@@ -139,6 +150,24 @@ public:
             m_map.emplace(std::make_pair(Point(pt->x>>m_grid_log2, pt->y>>m_grid_log2), std::move(value)));
     }
 
+    // Erase a data point equal to value. (ValueType has to declare the operator==).
+    // Returns true if the data point equal to value was found and removed.
+    bool erase(const ValueType &value) {
+        const Point *pt = m_point_accessor(value);
+        if (pt != nullptr) {
+            // Range of fragment starts around grid_corner, close to pt.
+            auto range = m_map.equal_range(Point(pt->x>>m_grid_log2, pt->y>>m_grid_log2));
+            // Remove the first item.
+            for (auto it = range.first; it != range.second; ++ it) {
+                if (it->second == value) {
+                    m_map.erase(it);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // Return a pair of <ValueType*, distance_squared>
     std::pair<const ValueType*, double> find(const Point &pt) {
         // Iterate over 4 closest grid cells around pt,
@@ -166,7 +195,7 @@ public:
                 }
             }
         }
-        return (value_min != nullptr && dist_min < coordf_t(m_search_radius * m_search_radius)) ? 
+        return (value_min != nullptr && dist_min < coordf_t(m_search_radius) * coordf_t(m_search_radius)) ? 
             std::make_pair(value_min, dist_min) : 
             std::make_pair(nullptr, std::numeric_limits<double>::max());
     }
@@ -210,6 +239,7 @@ public:
     static Pointf new_unscale(const Point &p) {
         return Pointf(unscale(p.x), unscale(p.y));
     };
+    double ccw(const Pointf &p1, const Pointf &p2) const;
     std::string wkt() const;
     std::string dump_perl() const;
     void scale(double factor);
