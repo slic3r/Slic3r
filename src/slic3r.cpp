@@ -17,6 +17,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/iostream.hpp>
+#include <stdexcept>
 
 #ifdef USE_WX
     #include "GUI/GUI.hpp"
@@ -47,8 +48,6 @@ int CLI::run(int argc, char **argv) {
         this->print_help();
         return 1;
     }
-    
-    // TODO: validate this->config (min, max etc.)
     
     // parse actions and transform options
     for (auto const &opt_key : opt_order) {
@@ -293,7 +292,7 @@ int CLI::run(int argc, char **argv) {
                 const std::string outfile = this->output_filepath(model, IO::Gcode);
                 try {
                     print.export_gcode(outfile);
-                } catch (InvalidPrintException &e) {
+                } catch (std::runtime_error &e) {
                     boost::nowide::cerr << e.what() << std::endl;
                     return 1;
                 }
