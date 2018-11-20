@@ -9,7 +9,17 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
+#include <thread>
+#include <sstream>
+
+#ifdef __cpp_lib_quoted_string_io
+    #include <iomanip>
+#else
+    #include <boost/algorithm/string.hpp>
+#endif
 
 namespace Slic3r {
 
@@ -717,7 +727,6 @@ Print::export_gcode(std::ostream& output, bool quiet)
 
     auto export_handler {Slic3r::PrintGCode(*this, output)};
     export_handler.output();
-
 }
 
 void
@@ -726,10 +735,46 @@ Print::export_gcode(std::string outfile, bool quiet)
     // compute the actual output filepath
     outfile = this->output_filepath(outfile);
     
-    std::ofstream outstream(outfile);
+    // write G-code to a temporary file in order to make the export atomic
+    const std::string tempfile{ outfile + ".tmp" };
+    std::ofstream outstream(tempfile);
     this->export_gcode(outstream);
     
-    // TODO: export_gcode() is not ported completely from Perl
+    // rename the temporary file to the destination file
+    // When renaming, some other application (thank you, Windows Explorer) 
+    // may keep the file locked. Try to wait a bit and then rename the file again.
+    for (int i = 0; std::rename(tempfile.c_str(), outfile.c_str()) != 0; ++i) {
+        if (i == 4) {
+            std::stringstream ss;
+            ss << "Failed to remove the output G-code file from "
+                << tempfile << " to " << outfile << ". Is " << tempfile << " locked?";
+            throw std::runtime_error(ss.str());
+        } else {
+            // Wait for 1/4 seconds and try to rename once again.
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+    }
+    
+    // run post-processing scripts
+    if (!this->config.post_process.values.empty()) {
+        if (this->status_cb != nullptr) 
+            this->status_cb(95, "Running post-processing scripts...");
+        
+        this->config.setenv_();
+        for (std::string ppscript : this->config.post_process.values) {
+            #ifdef __cpp_lib_quoted_string_io
+                ppscript += " " + std::quoted(outfile);
+            #else
+                boost::replace_all(ppscript, "\"", "\\\"");
+                ppscript += " \"" + outfile + "\"";
+            #endif
+            system(ppscript.c_str());
+        
+            // TODO: system() should be only used if user enabled an option for explicitly
+            // supporting arguments, otherwise we should use exec*() and call the executable
+            // directly without launching a shell. #4000
+        }
+    }
 }
 
 
