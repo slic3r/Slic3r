@@ -3,7 +3,9 @@
 #include <ctime>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <exception> // std::runtime_error
+#include <set>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/erase.hpp>
@@ -208,6 +210,16 @@ ConfigOptionDef::~ConfigOptionDef()
         delete this->default_value;
 }
 
+std::vector<std::string>
+ConfigOptionDef::cli_args() const
+{
+    std::string cli = this->cli.substr(0, this->cli.find("="));
+    boost::trim_right_if(cli, boost::is_any_of("!"));
+    std::vector<std::string> args;
+    boost::split(args, cli, boost::is_any_of("|"));
+    return args;
+}
+
 ConfigOptionDef*
 ConfigDef::add(const t_config_option_key &opt_key, ConfigOptionType type)
 {
@@ -229,17 +241,114 @@ ConfigDef::has(const t_config_option_key &opt_key) const
     return this->options.count(opt_key) > 0;
 }
 
-const ConfigOptionDef*
+const ConfigOptionDef&
 ConfigDef::get(const t_config_option_key &opt_key) const
 {
-    if (this->options.count(opt_key) == 0) return NULL;
-    return &const_cast<ConfigDef*>(this)->options[opt_key];
+    if (this->options.count(opt_key) == 0)
+        throw UnknownOptionException(opt_key);
+    return this->options.at(opt_key);
 }
 
 void
 ConfigDef::merge(const ConfigDef &other)
 {
     this->options.insert(other.options.begin(), other.options.end());
+}
+
+std::ostream&
+ConfigDef::print_cli_help(std::ostream& out, bool show_defaults) const
+{
+    // prepare a function for wrapping text
+    auto wrap = [](std::string text, size_t line_length) -> std::string {
+        std::istringstream words(text);
+        std::ostringstream wrapped;
+        std::string word;
+ 
+        if (words >> word) {
+            wrapped << word;
+            size_t space_left = line_length - word.length();
+            while (words >> word) {
+                if (space_left < word.length() + 1) {
+                    wrapped << '\n' << word;
+                    space_left = line_length - word.length();
+                } else {
+                    wrapped << ' ' << word;
+                    space_left -= word.length() + 1;
+                }
+            }
+        }
+        return wrapped.str();
+    };
+    
+    // get the unique categories
+    std::set<std::string> categories;
+    for (const auto& opt : this->options) {
+        const ConfigOptionDef& def = opt.second;
+        categories.insert(def.category);
+    }
+    
+    for (auto category : categories) {
+        if (category != "") {
+            out << category << ":" << std::endl;
+        } else if (categories.size() > 1) {
+            out << "Misc options:" << std::endl;
+        }
+        
+        for (const auto& opt : this->options) {
+            const ConfigOptionDef& def = opt.second;
+            if (def.category != category) continue;
+            
+            if (!def.cli.empty()) {
+                // get all possible variations: --foo, --foobar, -f...
+                auto cli_args = def.cli_args();
+                for (auto& arg : cli_args) {
+                    arg.insert(0, (arg.size() == 1) ? "-" : "--");
+                    if (def.type == coFloat || def.type == coInt || def.type == coFloatOrPercent
+                        || def.type == coFloats || def.type == coInts) {
+                        arg += " N";
+                    } else if (def.type == coPoint) {
+                        arg += " X,Y";
+                    } else if (def.type == coPoint3) {
+                        arg += " X,Y,Z";
+                    } else if (def.type == coString || def.type == coStrings) {
+                        arg += " ABCD";
+                    }
+                }
+            
+                // left: command line options
+                const std::string cli = boost::algorithm::join(cli_args, ", ");
+                out << " " << std::left << std::setw(20) << cli;
+            
+                // right: option description
+                std::string descr = def.tooltip;
+                if (show_defaults && def.default_value != nullptr && def.type != coBool
+                    && (def.type != coString || !def.default_value->serialize().empty())) {
+                    descr += " (";
+                    if (!def.sidetext.empty()) {
+                        descr += def.sidetext + ", ";
+                    } else if (!def.enum_values.empty()) {
+                        descr += boost::algorithm::join(def.enum_values, ", ") + "; ";
+                    }
+                    descr += "default: " + def.default_value->serialize() + ")";
+                }
+            
+                // wrap lines of description
+                descr = wrap(descr, 80);
+                std::vector<std::string> lines;
+                boost::split(lines, descr, boost::is_any_of("\n"));
+            
+                // if command line options are too long, print description in new line
+                for (size_t i = 0; i < lines.size(); ++i) {
+                    if (i == 0 && cli.size() > 19)
+                        out << std::endl;
+                    if (i > 0 || cli.size() > 19)
+                        out << std::string(21, ' ');
+                    out << lines[i] << std::endl;
+                }
+            }
+        }
+    }
+    return out;
 }
 
 bool
@@ -314,27 +423,26 @@ ConfigBase::serialize(const t_config_option_key &opt_key) const {
 
 bool
 ConfigBase::set_deserialize(t_config_option_key opt_key, std::string str, bool append) {
-    const ConfigOptionDef* optdef = this->def->get(opt_key);
-    if (optdef == NULL) {
+    if (!this->def->has(opt_key)) {
         // If we didn't find an option, look for any other option having this as an alias.
         for (const auto &opt : this->def->options) {
-            for (const t_config_option_key &opt_key2 : opt.second.aliases) {
-                if (opt_key2 == opt_key) {
-                    opt_key = opt_key2;
-                    optdef = &opt.second;
+            for (const t_config_option_key& alias : opt.second.aliases) {
+                if (alias == opt_key) {
+                    opt_key = alias;
                     break;
                 }
             }
-            if (optdef != NULL) break;
         }
-        if (optdef == NULL)
-            throw UnknownOptionException(opt_key);
     }
+    if (!this->def->has(opt_key)) {
+        throw UnknownOptionException(opt_key);
     
-    if (!optdef->shortcut.empty()) {
-        for (const t_config_option_key &shortcut : optdef->shortcut) {
-            if (!this->set_deserialize(shortcut, str)) return false;
-        }
+    const ConfigOptionDef& optdef = this->def->options.at(opt_key);
+    if (!optdef.shortcut.empty())
+        for (const t_config_option_key& shortcut : optdef.shortcut)
+            if (!this->set_deserialize(shortcut, str))
+                return false;
+        
         return true;
     }
     
@@ -350,11 +458,11 @@ ConfigBase::get_abs_value(const t_config_option_key &opt_key) const {
     const ConfigOption* opt = this->option(opt_key);
     if (const ConfigOptionFloatOrPercent* optv = dynamic_cast<const ConfigOptionFloatOrPercent*>(opt)) {
         // get option definition
-        const ConfigOptionDef* def = this->def->get(opt_key);
-        assert(def != NULL);
+        assert(this->def->has(opt_key));
+        const ConfigOptionDef& def = this->def->get(opt_key);
         
         // compute absolute value over the absolute value of the base option
-        return optv->get_abs_value(this->get_abs_value(def->ratio_over));
+        return optv->get_abs_value(this->get_abs_value(def.ratio_over));
     } else if (const ConfigOptionFloat* optv = dynamic_cast<const ConfigOptionFloat*>(opt)) {
         return optv->value;
     } else {
@@ -468,24 +576,24 @@ ConfigBase::validate() const
 {
     for (auto &opt_key : this->keys()) {
         // get option definition
-        const ConfigOptionDef* def = this->def->get(opt_key);
-        assert(def != nullptr);
+        assert(this->def->has(opt_key));
+        const ConfigOptionDef& def = this->def->get(opt_key);
         
-        if (def->type == coInt) {
+        if (def.type == coInt) {
             auto &value = this->opt<ConfigOptionInt>(opt_key)->value;
-            if (value < def->min || value > def->max)
+            if (value < def.min || value > def.max)
                 throw InvalidOptionException(opt_key);
-        } else if (def->type == coFloat) {
+        } else if (def.type == coFloat) {
             auto &value = this->opt<ConfigOptionFloat>(opt_key)->value;
-            if (value < def->min || value > def->max)
+            if (value < def.min || value > def.max)
                 throw InvalidOptionException(opt_key);
-        } else if (def->type == coInts) {
+        } else if (def.type == coInts) {
             for (auto &value : this->opt<ConfigOptionInts>(opt_key)->values)
-                if (value < def->min || value > def->max)
+                if (value < def.min || value > def.max)
                     throw InvalidOptionException(opt_key);
-        } else if (def->type == coFloats) {
+        } else if (def.type == coFloats) {
             for (auto &value : this->opt<ConfigOptionFloats>(opt_key)->values)
-                if (value < def->min || value > def->max)
+                if (value < def.min || value > def.max)
                     throw InvalidOptionException(opt_key);
         }
         // TODO: validate coFloatOrPercent (semantics of min/max are ambiguous for it)
@@ -521,40 +629,40 @@ ConfigOption*
 DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
     if (this->options.count(opt_key) == 0) {
         if (create) {
-            const ConfigOptionDef* optdef = this->def->get(opt_key);
-            if (optdef == NULL) return NULL;
+            if (!this->def->has(opt_key)) return nullptr;
+            const ConfigOptionDef& optdef = this->def->options.at(opt_key);
             ConfigOption* opt;
-            if (optdef->default_value != nullptr) {
-                opt = optdef->default_value->clone();
-            } else if (optdef->type == coFloat) {
+            if (optdef.default_value != nullptr) {
+                opt = optdef.default_value->clone();
+            } else if (optdef.type == coFloat) {
                 opt = new ConfigOptionFloat ();
-            } else if (optdef->type == coFloats) {
+            } else if (optdef.type == coFloats) {
                 opt = new ConfigOptionFloats ();
-            } else if (optdef->type == coInt) {
+            } else if (optdef.type == coInt) {
                 opt = new ConfigOptionInt ();
-            } else if (optdef->type == coInts) {
+            } else if (optdef.type == coInts) {
                 opt = new ConfigOptionInts ();
-            } else if (optdef->type == coString) {
+            } else if (optdef.type == coString) {
                 opt = new ConfigOptionString ();
-            } else if (optdef->type == coStrings) {
+            } else if (optdef.type == coStrings) {
                 opt = new ConfigOptionStrings ();
-            } else if (optdef->type == coPercent) {
+            } else if (optdef.type == coPercent) {
                 opt = new ConfigOptionPercent ();
-            } else if (optdef->type == coFloatOrPercent) {
+            } else if (optdef.type == coFloatOrPercent) {
                 opt = new ConfigOptionFloatOrPercent ();
-            } else if (optdef->type == coPoint) {
+            } else if (optdef.type == coPoint) {
                 opt = new ConfigOptionPoint ();
-            } else if (optdef->type == coPoint3) {
+            } else if (optdef.type == coPoint3) {
                 opt = new ConfigOptionPoint3 ();
-            } else if (optdef->type == coPoints) {
+            } else if (optdef.type == coPoints) {
                 opt = new ConfigOptionPoints ();
-            } else if (optdef->type == coBool) {
+            } else if (optdef.type == coBool) {
                 opt = new ConfigOptionBool ();
-            } else if (optdef->type == coBools) {
+            } else if (optdef.type == coBools) {
                 opt = new ConfigOptionBools ();
-            } else if (optdef->type == coEnum) {
+            } else if (optdef.type == coEnum) {
                 ConfigOptionEnumGeneric* optv = new ConfigOptionEnumGeneric ();
-                optv->keys_map = &optdef->enum_keys_map;
+                optv->keys_map = &optdef.enum_keys_map;
                 opt = static_cast<ConfigOption*>(optv);
             } else {
                 throw std::runtime_error("Unknown option type");
@@ -610,15 +718,9 @@ DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra, t_co
 {
     // cache the CLI option => opt_key mapping
     std::map<std::string,std::string> opts;
-    for (const auto &oit : this->def->options) {
-        std::string cli = oit.second.cli;
-        cli = cli.substr(0, cli.find("="));
-        boost::trim_right_if(cli, boost::is_any_of("!"));
-        std::vector<std::string> tokens;
-        boost::split(tokens, cli, boost::is_any_of("|"));
-        for (const std::string &t : tokens)
+    for (const auto &oit : this->def->options)
+        for (auto t : this->def->get(oit.first).cli_args())
             opts[t] = oit.first;
-    }
     
     bool parse_options = true;
     for (int i = 1; i < argc; ++i) {
@@ -711,12 +813,9 @@ StaticConfig::set_defaults()
 {
     // use defaults from definition
     if (this->def == NULL) return;
-    t_config_option_keys keys = this->keys();
-    for (t_config_option_keys::const_iterator it = keys.begin(); it != keys.end(); ++it) {
-        const ConfigOptionDef* def = this->def->get(*it);
-        if (def->default_value != nullptr)
-            this->option(*it)->set(*def->default_value);
-    }
+    for (auto opt_key : this->keys())
+        if (this->def->has(opt_key))
+            this->option(opt_key)->set(*this->def->options.at(opt_key).default_value);
 }
 
 t_config_option_keys

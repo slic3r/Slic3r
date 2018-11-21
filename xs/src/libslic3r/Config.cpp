@@ -25,7 +25,7 @@ Config::new_from_defaults(t_config_option_keys init)
     auto my_config(std::make_shared<Config>());
     for (auto& opt_key : init) {
         if (print_config_def.has(opt_key)) {
-            const std::string value { print_config_def.get(opt_key)->default_value->serialize() };
+            const std::string value { print_config_def.get(opt_key).default_value->serialize() };
             my_config->_config.set_deserialize(opt_key, value);
         }
     }

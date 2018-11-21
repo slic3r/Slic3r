@@ -245,6 +245,8 @@ int CLI::run(int argc, char **argv) {
     for (auto const &opt_key : this->actions) {
         if (opt_key == "help") {
             this->print_help();
+        } else if (opt_key == "help_options") {
+            this->print_help(true);
         } else if (opt_key == "save") {
             this->print_config.save(config.getString("save"));
         } else if (opt_key == "info") {
@@ -317,7 +319,8 @@ int CLI::run(int argc, char **argv) {
     if (actions.empty()) {
 #ifdef USE_WX
         GUI::App *gui = new GUI::App();
-
+        gui->autosave = this->config.getString("autosave");
+        gui->datadir  = this->config.getString("datadir");
         GUI::App::SetInstance(gui);
         wxEntry(argc, argv);
 #else
@@ -329,19 +332,33 @@ int CLI::run(int argc, char **argv) {
 }
 
 void
-CLI::print_help() const {
-    std::cout << "Slic3r " << SLIC3R_VERSION << " is a STL-to-GCODE translator for RepRap 3D printers" << "\n"
-              << "written by Alessandro Ranellucci & the Slic3r community - https://slic3r.org/ - https://github.com/slic3r/Slic3r" << "\n"
-              << "Git Version " << BUILD_COMMIT << "\n\n"
-              << "Usage (C++ only): ./slic3r [ OPTIONS ] [ file.stl ] [ file2.stl ] ..." << "\n";
-    // CLI Options
-    std::cout << "** CLI OPTIONS **\n";
-    print_cli_options(boost::nowide::cout);
-    std::cout << "****\n";
-        // Print options
-        std::cout << "** PRINT OPTIONS **\n";
-    print_print_options(boost::nowide::cout);
-    std::cout << "****\n";
+CLI::print_help(bool include_print_options) const {
+    boost::nowide::cout
+        << "Slic3r " << SLIC3R_VERSION << " (build commit: " << BUILD_COMMIT << ")" << std::endl
+        << "https://slic3r.org/ - https://github.com/slic3r/Slic3r" << std::endl << std::endl
+        << "Usage: slic3r [ ACTIONS ] [ TRANSFORM ] [ OPTIONS ] [ file.stl ... ]" << std::endl
+        << std::endl
+        << "Actions:" << std::endl;
+    cli_actions_config_def.print_cli_help(boost::nowide::cout, false);
+    
+    boost::nowide::cout
+        << std::endl
+        << "Transform options:" << std::endl;
+        cli_transform_config_def.print_cli_help(boost::nowide::cout, false);
+    
+    boost::nowide::cout
+        << std::endl
+        << "Other options:" << std::endl;
+        cli_misc_config_def.print_cli_help(boost::nowide::cout, false);
+    
+    if (include_print_options) {
+        boost::nowide::cout << std::endl;
+        print_config_def.print_cli_help(boost::nowide::cout, true);
+    } else {
+        boost::nowide::cout
+            << std::endl
+            << "Run --help-options to see the full listing of print/G-code options." << std::endl;
+    }
 }
 
 void

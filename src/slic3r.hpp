@@ -19,7 +19,7 @@ class CLI {
     t_config_option_keys input_files, actions, transforms;
     std::vector<Model> models;
     
-    void print_help() const;
+    void print_help(bool include_print_options = false) const;
     void export_models(IO::ExportFormat format);
     std::string output_filepath(const Model &model, IO::ExportFormat format) const;
 };
