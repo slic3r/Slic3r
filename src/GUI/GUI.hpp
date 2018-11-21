@@ -42,6 +42,7 @@ private:
 
     void load_presets();
 
+    wxString autosave {""};
     wxString datadir {""};
     const std::string LogChannel {"APP"}; //< Which log these messages should go to.
 

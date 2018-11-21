@@ -661,11 +661,6 @@ extern const CLIActionsConfigDef    cli_actions_config_def;
 extern const CLITransformConfigDef  cli_transform_config_def;
 extern const CLIMiscConfigDef       cli_misc_config_def;
 
-/// Iterate through all of the print options and write them to a stream.
-std::ostream& print_print_options(std::ostream& out);
-/// Iterate through all of the CLI options and write them to a stream.
-std::ostream& print_cli_options(std::ostream& out);
-
 }
 
 #endif
