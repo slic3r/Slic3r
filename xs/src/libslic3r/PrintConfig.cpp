@@ -35,7 +35,7 @@ PrintConfigDef::PrintConfigDef()
     def->category = __TRANS("Layers and Perimeters");
     def->tooltip = __TRANS("Controls the quality / printing time tradeoff for adaptive layer generation. 0 -> fastest printing with max layer height, 100 -> highest quality, min layer height");
     def->sidetext = "%";
-    def->cli = "adaptive_slicing_quality=f";
+    def->cli = "adaptive-slicing-quality=f";
     def->min = 0;
     def->max = 100;
     def->gui_type = "slider";
@@ -51,6 +51,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("bed_shape", coPoints);
     def->label = __TRANS("Bed shape");
+    def->tooltip = __TRANS("Shape of the print bed.");
     {
         ConfigOptionPoints* opt = new ConfigOptionPoints();
         opt->values.push_back(Pointf(0,0));
@@ -196,7 +197,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("disable_fan_first_layers", coInt);
     def->label = __TRANS("Disable fan for the first");
-    def->tooltip = __TRANS("This disables the fan completely for the first N layers to aid in the adhesion of media to the bed. (default 3)");
+    def->tooltip = __TRANS("This disables the fan completely for the first N layers to aid in the adhesion of media to the bed.");
     def->sidetext = __TRANS("layers");
     def->cli = "disable-fan-first-layers=i";
     def->min = 0;
@@ -1032,7 +1033,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("pressure_advance", coFloat);
     def->label = __TRANS("Pressure advance");
-    def->category = __TRANS("Extruder");
+    def->category = __TRANS("Extruders");
     def->tooltip = __TRANS("When set to a non-zero value, this experimental option enables pressure regulation. It's the K constant for the advance algorithm that pushes more or less filament upon speed changes. It's useful for Bowden-tube extruders. Reasonable values are in range 0-10.");
     def->cli = "pressure-advance=f";
     def->min = 0;
@@ -1942,12 +1943,12 @@ CLIActionsConfigDef::CLIActionsConfigDef()
     def = this->add("help", coBool);
     def->label = __TRANS("Help");
     def->tooltip = __TRANS("Show this help.");
-    def->cli = "help";
+    def->cli = "help|h";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("help_options", coBool);
     def->label = __TRANS("Help (options)");
-    def->tooltip = __TRANS("Show the list of configuration options.");
+    def->tooltip = __TRANS("Show the full list of print/G-code configuration options.");
     def->cli = "help-options";
     def->default_value = new ConfigOptionBool(false);
     
@@ -2016,15 +2017,10 @@ CLITransformConfigDef::CLITransformConfigDef()
     def->cli = "duplicate=i";
     def->min = 1;
     
-    def = this->add("duplicate_grid", coInts);
+    def = this->add("duplicate_grid", coPoint);
     def->label = __TRANS("Duplicate by grid");
     def->tooltip = __TRANS("Multiply copies by creating a grid.");
-    def->cli = "duplicate-grid=i@";
-    
-    def = this->add("load", coStrings);
-    def->label = __TRANS("Load config file");
-    def->tooltip = __TRANS("Load configuration from the specified file. It can be used more than once to load options from multiple files.");
-    def->cli = "load";
+    def->cli = "duplicate-grid";
 
     def = this->add("merge", coBool);
     def->label = __TRANS("Merge");
@@ -2082,46 +2078,31 @@ CLIMiscConfigDef::CLIMiscConfigDef()
     def->tooltip = __TRANS("Do not fail if a file supplied to --load does not exist.");
     def->cli = "ignore-nonexistent-config";
     
+    def = this->add("load", coStrings);
+    def->label = __TRANS("Load config file");
+    def->tooltip = __TRANS("Load configuration from the specified file. It can be used more than once to load options from multiple files.");
+    def->cli = "load";
+    
     def = this->add("output", coString);
     def->label = __TRANS("Output File");
     def->tooltip = __TRANS("The file where the output will be written (if not specified, it will be based on the input file).");
     def->cli = "output";
+    
+    #ifdef USE_WX
+    def = this->add("autosave", coString);
+    def->label = __TRANS("Autosave");
+    def->tooltip = __TRANS("Automatically export current configuration to the specified file.");
+    def->cli = "autosave";
+    
+    def = this->add("datadir", coString);
+    def->label = __TRANS("Data directory");
+    def->tooltip = __TRANS("Load and store settings at the given directory. This is useful for maintaining different profiles or including configurations from a network storage.");
+    def->cli = "datadir";
+    #endif
 }
 
 const CLIActionsConfigDef    cli_actions_config_def;
 const CLITransformConfigDef  cli_transform_config_def;
 const CLIMiscConfigDef       cli_misc_config_def;
-
-std::ostream&
-print_cli_options(std::ostream& out) {
-    /*
-    for (const auto& opt : cli_config_def.options) {
-        if (opt.second.cli.size() != 0) {
-            out << "\t" << std::left << std::setw(40) << std::string("--") + opt.second.cli; 
-            out << "\t" << opt.second.tooltip << "\n";
-            if (opt.second.default_value != nullptr) 
-                out << "\t" << std::setw(40) << " " << "\t" << " (default: " << opt.second.default_value->serialize() << ")";
-            out << "\n";
-        }
-    }
-    std::cerr << std::endl;
-    */
-    return out;
-}
-
-std::ostream&
-print_print_options(std::ostream& out) {
-    for (const auto& opt : print_config_def.options) {
-        if (opt.second.cli.size() != 0) {
-            out << "\t" << std::left << std::setw(40) << std::string("--") + opt.second.cli; 
-            out << "\t" << opt.second.tooltip << "\n";
-            if (opt.second.default_value != nullptr) 
-                out << "\t" << std::setw(40) << " " << "\t" << " (default: " << opt.second.default_value->serialize() << ")";
-            out << "\n";
-        }
-    }
-    std::cerr << std::endl;
-    return out;
-}
 
 }

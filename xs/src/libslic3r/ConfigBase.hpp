@@ -662,6 +662,9 @@ class ConfigOptionDef
     ConfigOptionDef(const ConfigOptionDef &other);
     ~ConfigOptionDef();
     
+    /// Returns the alternative CLI arguments for the given option.
+    std::vector<std::string> cli_args() const;
+    
     private:
     ConfigOptionDef& operator= (ConfigOptionDef other);
 };
@@ -681,8 +684,11 @@ class ConfigDef
     ConfigOptionDef* add(const t_config_option_key &opt_key, ConfigOptionType type);
     ConfigOptionDef* add(const t_config_option_key &opt_key, const ConfigOptionDef &def);
     bool has(const t_config_option_key &opt_key) const;
-    const ConfigOptionDef* get(const t_config_option_key &opt_key) const;
+    const ConfigOptionDef& get(const t_config_option_key &opt_key) const;
     void merge(const ConfigDef &other);
+    
+    /// Iterate through all of the CLI options and write them to a stream.
+    std::ostream& print_cli_help(std::ostream& out, bool show_defaults = true) const;
 };
 
 /// An abstract configuration store.

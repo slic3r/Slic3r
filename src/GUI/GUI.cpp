@@ -24,10 +24,11 @@ bool App::OnInit()
 {
     this->SetAppName("Slic3r");
     this->notifier = std::unique_ptr<Notifier>();
-
-    datadir = decode_path(wxStandardPaths::Get().GetUserDataDir());
+    
+    if (datadir.empty())
+        datadir = decode_path(wxStandardPaths::Get().GetUserDataDir());
     wxString enc_datadir = encode_path(datadir);
-
+    
     const wxString& slic3r_ini  {datadir + "/slic3r.ini"};
     const wxString& print_ini   {datadir + "/print"};
     const wxString& printer_ini {datadir + "/printer"};
