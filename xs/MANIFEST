@@ -147,6 +147,8 @@ src/libslic3r/PrintGCode.cpp
 src/libslic3r/PrintGCode.hpp
 src/libslic3r/PrintObject.cpp
 src/libslic3r/PrintRegion.cpp
+src/libslic3r/SimplePrint.cpp
+src/libslic3r/SimplePrint.hpp
 src/libslic3r/SLAPrint.cpp
 src/libslic3r/SLAPrint.hpp
 src/libslic3r/SlicingAdaptive.cpp
