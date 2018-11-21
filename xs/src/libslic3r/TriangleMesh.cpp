@@ -108,7 +108,6 @@ void TriangleMesh::clone(const TriangleMesh& other) {
     }
 }
 
-#ifndef SLIC3RXS
 TriangleMesh::TriangleMesh(TriangleMesh&& other) {
     this->repaired = std::move(other.repaired);
     this->stl = std::move(other.stl);
@@ -123,7 +122,6 @@ TriangleMesh& TriangleMesh::operator= (TriangleMesh&& other)
 
     return *this;
 }
-#endif
 
 void
 TriangleMesh::swap(TriangleMesh &other)
@@ -399,8 +397,6 @@ void TriangleMesh::rotate(double angle, const Point& center)
     this->translate(+center.x, +center.y, 0);
 }
 
-#ifndef SLIC3RXS
-
 Pointf3s TriangleMesh::vertices()
 {
     Pointf3s tmp {};
@@ -512,10 +508,6 @@ void TriangleMesh::cut(Axis axis, double z, TriangleMesh* upper, TriangleMesh* l
             Slic3r::Log::error("TriangleMesh", "Invalid Axis supplied to cut()");
     }
 }
-
-
-
-#endif // SLIC3RXS
 
 TriangleMeshPtrs
 TriangleMesh::split() const

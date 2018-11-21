@@ -1,5 +1,3 @@
-#ifndef SLIC3RXS
-
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 
@@ -45,9 +43,6 @@ public:
     
     /// Factory method to construct a Config with specific default values loaded.
     static std::shared_ptr<Config> new_from_defaults(t_config_option_keys init);
-
-    /// Factory method to construct a Config from CLI options.
-    static std::shared_ptr<Config> new_from_cli(const int& argc, const char* argv[]);
 
     /// Factory method to construct a Config from an ini file.
     static std::shared_ptr<Config> new_from_ini(const std::string& inifile);
@@ -145,5 +140,3 @@ bool is_valid_float(const std::string& type, const ConfigOptionDef& opt, const s
 } // namespace Slic3r
 
 #endif // CONFIG_HPP
-
-#endif // SLIC3RXS

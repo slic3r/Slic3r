@@ -952,7 +952,6 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
     return layers;
 }
 
-#ifndef SLIC3RXS
 void
 PrintObject::make_perimeters()
 {
@@ -998,7 +997,6 @@ PrintObject::slice()
     this->state.set_done(posSlice);
 }
 
-#endif // SLIC3RXS
 void
 PrintObject::_make_perimeters()
 {
@@ -1142,7 +1140,6 @@ PrintObject::_infill()
     this->state.set_done(posInfill);
 }
 
-#ifndef SLIC3RXS
 void
 PrintObject::prepare_infill()
 {
@@ -1304,8 +1301,6 @@ PrintObject::infill()
     this->_infill();
 }
 
-#endif //SLIC3RXS
-
 SupportMaterial *
 PrintObject::_support_material()
 {
@@ -1357,7 +1352,7 @@ PrintObject::_support_material_flow(FlowRole role)
 
     return support_flow;
 }
-#ifndef SLIC3RXS
+
 void
 PrintObject::generate_support_material() 
 {
@@ -1645,5 +1640,4 @@ PrintObject::clip_fill_surfaces()
     }
 }
 
-#endif // SLIC3RXS
 }

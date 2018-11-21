@@ -2029,7 +2029,7 @@ CLITransformConfigDef::CLITransformConfigDef()
 
     def = this->add("repair", coBool);
     def->label = __TRANS("Repair");
-    def->tooltip = __TRANS("Try to repair any non-manifold meshes (this option is implicitly added whenever we need to slice the model to perform the requested action.");
+    def->tooltip = __TRANS("Try to repair any non-manifold meshes (this option is implicitly added whenever we need to slice the model to perform the requested action).");
     def->cli = "repair";
     
     def = this->add("rotate", coFloat);

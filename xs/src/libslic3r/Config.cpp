@@ -1,4 +1,3 @@
-#ifndef SLIC3RXS
 #include "Config.hpp"
 #include "Log.hpp"
 
@@ -34,12 +33,6 @@ Config::new_from_defaults(t_config_option_keys init)
 }
 
 std::shared_ptr<Config> 
-new_from_cli(const int& argc, const char* argv[])
-{
-    return std::make_shared<Config>();
-}
-
-std::shared_ptr<Config> 
 Config::new_from_ini(const std::string& inifile) 
 { 
     
@@ -48,6 +41,7 @@ Config::new_from_ini(const std::string& inifile)
     return my_config;
 }
 
+// TODO: this should be merged into ConfigBase::validate()
 bool
 Config::validate()
 {
@@ -354,7 +348,3 @@ is_valid_float(const std::string& type, const ConfigOptionDef& opt, const std::s
 Config::Config() : _config(DynamicPrintConfig()) {};
 
 } // namespace Slic3r
-
-
-
-#endif // SLIC3RXS

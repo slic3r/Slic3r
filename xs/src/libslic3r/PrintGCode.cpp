@@ -1,4 +1,3 @@
-#ifndef SLIC3RXS
 #include "PrintGCode.hpp"
 #include "PrintConfig.hpp"
 
@@ -783,4 +782,4 @@ PrintGCode::PrintGCode(Slic3r::Print& print, std::ostream& _fh) :
 }
 
 } // namespace Slic3r
-#endif //SLIC3RXS
+

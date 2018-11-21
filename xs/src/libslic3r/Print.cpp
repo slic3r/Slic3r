@@ -103,8 +103,6 @@ Print::delete_object(size_t idx)
     // TODO: purge unused regions
 }
 
-#ifndef SLIC3RXS
-
 void
 Print::process() 
 {
@@ -302,8 +300,6 @@ Print::make_skirt()
     this->skirt.reverse();
     this->state.set_done(psSkirt);
 }
-
-#endif // SLIC3RXS
 
 void
 Print::reload_object(size_t idx)
@@ -714,8 +710,6 @@ Print::add_model_object(ModelObject* model_object, int idx)
     }
 }
 
-#ifndef SLIC3RXS
-
 void
 Print::export_gcode(std::ostream& output, bool quiet)
 {
@@ -777,13 +771,12 @@ Print::export_gcode(std::string outfile, bool quiet)
     }
 }
 
-
+#ifndef SLIC3RXS
 bool
 Print::apply_config(config_ptr config) {
     // dereference the stored pointer and pass the resulting data to apply_config()
     return this->apply_config(config->config());
 }
-
 #endif
 
 bool
