@@ -47,11 +47,10 @@ class TriangleMesh
     ///  copy assignment
     TriangleMesh& operator= (const TriangleMesh& other);
 
-#ifndef SLIC3RXS
     /// Move assignment
     TriangleMesh& operator= (TriangleMesh&& other);
     TriangleMesh(TriangleMesh&& other);
-#endif 
+
     void swap(TriangleMesh &other);
     ~TriangleMesh();
     void ReadSTLFile(const std::string &input_file);
@@ -99,9 +98,7 @@ class TriangleMesh
     void extrude_tin(float offset);
     void require_shared_vertices();
     void reverse_normals();
-
-#ifndef SLIC3RXS // Don't build these functions when also building the Perl interface.
-
+    
     /// Return a copy of the vertex array defining this mesh.
     Pointf3s vertices();
 
@@ -127,8 +124,6 @@ class TriangleMesh
 
     /// Perform a cut of the mesh and put the output in upper and lower
     void cut(Axis axis, double z, TriangleMesh* upper, TriangleMesh* lower);
-    
-#endif // SLIC3RXS
 	
 	/// Generate a mesh representing a cube with dimensions (x, y, z), with one corner at (0,0,0).
     static TriangleMesh make_cube(double x, double y, double z);

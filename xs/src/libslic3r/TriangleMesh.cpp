@@ -108,7 +108,6 @@ void TriangleMesh::clone(const TriangleMesh& other) {
     }
 }
 
-#ifndef SLIC3RXS
 TriangleMesh::TriangleMesh(TriangleMesh&& other) {
     this->repaired = std::move(other.repaired);
     this->stl = std::move(other.stl);
@@ -123,7 +122,6 @@ TriangleMesh& TriangleMesh::operator= (TriangleMesh&& other)
 
     return *this;
 }
-#endif
 
 void
 TriangleMesh::swap(TriangleMesh &other)
@@ -399,8 +397,6 @@ void TriangleMesh::rotate(double angle, const Point& center)
     this->translate(+center.x, +center.y, 0);
 }
 
-#ifndef SLIC3RXS
-
 Pointf3s TriangleMesh::vertices()
 {
     Pointf3s tmp {};
@@ -408,7 +404,7 @@ Pointf3s TriangleMesh::vertices()
         if (this->stl.v_shared == nullptr) 
             stl_generate_shared_vertices(&stl); // build the list of vertices
         for (auto i = 0; i < this->stl.stats.shared_vertices; i++) {
-            const auto& v {this->stl.v_shared[i]};
+            const stl_vertex& v { this->stl.v_shared[i] };
             tmp.emplace_back(Pointf3(v.x, v.y, v.z));
         }
     } else {
@@ -424,7 +420,7 @@ Point3s TriangleMesh::facets()
         if (this->stl.v_shared == nullptr) 
             stl_generate_shared_vertices(&stl); // build the list of vertices
         for (auto i = 0; i < stl.stats.number_of_facets; i++) {
-            const auto& v {stl.v_indices[i]};
+            const v_indices_struct& v { stl.v_indices[i] };
             tmp.emplace_back(Point3(v.vertex[0], v.vertex[1], v.vertex[2]));
         }
     } else {
@@ -438,7 +434,7 @@ Pointf3s TriangleMesh::normals() const
     Pointf3s tmp {};
     if (this->repaired) {
         for (auto i = 0; i < stl.stats.number_of_facets; i++) {
-            const auto& n {stl.facet_start[i].normal};
+            const auto& n = stl.facet_start[i].normal;
             tmp.emplace_back(Pointf3(n.x, n.y, n.z));
         }
     } else {
@@ -449,7 +445,7 @@ Pointf3s TriangleMesh::normals() const
 
 Pointf3 TriangleMesh::size() const
 {
-    const auto& sz {stl.stats.size};
+    const auto& sz = stl.stats.size;
     return Pointf3(sz.x, sz.y, sz.z);
 }
 
@@ -512,10 +508,6 @@ void TriangleMesh::cut(Axis axis, double z, TriangleMesh* upper, TriangleMesh* l
             Slic3r::Log::error("TriangleMesh", "Invalid Axis supplied to cut()");
     }
 }
-
-
-
-#endif // SLIC3RXS
 
 TriangleMeshPtrs
 TriangleMesh::split() const

@@ -378,7 +378,7 @@ ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_
             continue;
         }
         if (default_nonexistent && !other.has(opt_key)) {
-            auto* def_opt = this->def->get(opt_key)->default_value->clone();
+            auto* def_opt = this->def->get(opt_key).default_value->clone();
             // not the most efficient way, but easier than casting pointers to subclasses
             bool res = my_opt->deserialize( def_opt->serialize() );
             if (!res) {
@@ -434,11 +434,11 @@ ConfigBase::set_deserialize(t_config_option_key opt_key, std::string str, bool a
             }
         }
     }
-    if (!this->def->has(opt_key)) {
+    if (!this->def->has(opt_key))
         throw UnknownOptionException(opt_key);
     
     const ConfigOptionDef& optdef = this->def->options.at(opt_key);
-    if (!optdef.shortcut.empty())
+    if (!optdef.shortcut.empty()) {
         for (const t_config_option_key& shortcut : optdef.shortcut)
             if (!this->set_deserialize(shortcut, str))
                 return false;

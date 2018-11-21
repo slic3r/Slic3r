@@ -12,7 +12,6 @@ class SimplePrint {
     bool center{true};
     std::function<void(int, const std::string&)> status_cb {nullptr};
     
-    bool apply_config(config_ptr config) { return this->_print.apply_config(config); }
     bool apply_config(DynamicPrintConfig config) { return this->_print.apply_config(config); }
     double total_used_filament() const { return this->_print.total_used_filament; }
     double total_extruded_volume() const { return this->_print.total_extruded_volume; }

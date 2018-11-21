@@ -103,8 +103,6 @@ Print::delete_object(size_t idx)
     // TODO: purge unused regions
 }
 
-#ifndef SLIC3RXS
-
 void
 Print::process() 
 {
@@ -176,11 +174,11 @@ Print::make_skirt()
     // $skirt_height_z in this case is the highest possible skirt height for safety.
     double skirt_height_z {-1.0};
     for (const auto& object : this->objects) {
-        size_t skirt_height {
+        const size_t skirt_height {
             this->has_infinite_skirt() ? object->layer_count() :
             std::min(size_t(this->config.skirt_height()), object->layer_count())
         };
-        auto* highest_layer {object->get_layer(skirt_height - 1)};
+        const Layer* highest_layer { object->get_layer(skirt_height - 1) };
         skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
     }
 
@@ -302,8 +300,6 @@ Print::make_skirt()
     this->skirt.reverse();
     this->state.set_done(psSkirt);
 }
-
-#endif // SLIC3RXS
 
 void
 Print::reload_object(size_t idx)
@@ -714,8 +710,6 @@ Print::add_model_object(ModelObject* model_object, int idx)
     }
 }
 
-#ifndef SLIC3RXS
-
 void
 Print::export_gcode(std::ostream& output, bool quiet)
 {
@@ -724,9 +718,8 @@ Print::export_gcode(std::ostream& output, bool quiet)
     
     if (this->status_cb != nullptr) 
         this->status_cb(90, "Exporting G-Code...");
-
-    auto export_handler {Slic3r::PrintGCode(*this, output)};
-    export_handler.output();
+    
+    Slic3r::PrintGCode(*this, output).output();
 }
 
 void
@@ -777,13 +770,12 @@ Print::export_gcode(std::string outfile, bool quiet)
     }
 }
 
-
+#ifndef SLIC3RXS
 bool
 Print::apply_config(config_ptr config) {
     // dereference the stored pointer and pass the resulting data to apply_config()
     return this->apply_config(config->config());
 }
-
 #endif
 
 bool
@@ -934,12 +926,19 @@ Print::validate() const
                 object->model_object()->instances.front()->transform_polygon(&convex_hull);
                 
                 // grow convex hull with the clearance margin
-                convex_hull = offset(convex_hull, scale_(this->config.extruder_clearance_radius.value)/2, 1, jtRound, scale_(0.1)).front();
+                convex_hull = offset(
+                    convex_hull,
+                    // safety_offset in intersection() is not enough for preventing false positives
+                    scale_(this->config.extruder_clearance_radius.value)/2 - scale_(0.01),
+                    CLIPPER_OFFSET_SCALE,
+                    jtRound, scale_(0.1)
+                ).front();
                 
                 // now we check that no instance of convex_hull intersects any of the previously checked object instances
                 for (Points::const_iterator copy = object->_shifted_copies.begin(); copy != object->_shifted_copies.end(); ++copy) {
                     Polygon p = convex_hull;
                     p.translate(*copy);
+                    
                     if (!intersection(a, p).empty())
                         throw InvalidPrintException{"Some objects are too close; your extruder will collide with them."};
                     
