@@ -5,6 +5,7 @@
 #include "Notifier.hpp"
 #include <string>
 #include <vector>
+#include <array>
 #include <stack>
 #include <mutex>
 
@@ -32,7 +33,10 @@ public:
 
     void OnUnhandledException() override;
 
-    std::vector<Presets> presets { preset_types, Presets() };
+    preset_store presets { Presets() };
+    std::array<wxString, preset_types> preset_ini { };
+    Settings* settings() { return ui_settings.get(); }
+
 private:
     std::unique_ptr<Notifier> notifier {nullptr};
 

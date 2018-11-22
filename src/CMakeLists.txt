@@ -125,22 +125,41 @@ set(GUI_TESTDIR ${CMAKE_CURRENT_SOURCE_DIR}/test/GUI/)
 # directory that contains the dependent non-source files, like models and configurations
 set(TESTFILE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test/inputs/)
 
+set(EXPAT_INCLUDES
+    ${LIBDIR}/expat
+)
+set(ADMESH_INCLUDES
+    ${LIBDIR}/admesh
+)
 
-include_directories(${LIBDIR})
-include_directories(${LIBDIR}/libslic3r)
-include_directories(${LIBDIR}/slic3r/GUI/)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/standalone/)
-include_directories(${LIBDIR}/admesh/)
-include_directories(${LIBDIR}/BSpline/)
-include_directories(${LIBDIR}/expat/)
-include_directories(${LIBDIR}/poly2tri/)
-include_directories(${LIBDIR}/poly2tri/sweep)
-include_directories(${LIBDIR}/poly2tri/common)
+set(BSPLINE_INCLUDES
+    ${LIBDIR}/BSpline/
+)
+
+set(POLY2TRI_INCLUDES
+    ${LIBDIR}/poly2tri
+    ${LIBDIR}/poly2tri/sweep
+    ${LIBDIR}/poly2tri/common
+)
+set(COMMON_INCLUDES
+    ${LIBDIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/standalone/
+)
+set(SLIC3R_INCLUDES
+    ${COMMON_INCLUDES}
+    ${LIBDIR}/libslic3r
+    ${EXPAT_INCLUDES}
+    ${ADMESH_INCLUDES}
+    ${POLY2TRI_INCLUDES}
+    ${BSPLINE_INCLUDES}
+)
+
 
 add_library(ZipArchive STATIC
     ${LIBDIR}/Zip/ZipArchive.cpp
 )
 target_compile_features(ZipArchive PUBLIC cxx_std_11)
+target_include_directories(ZipArchive PUBLIC ${COMMON_INCLUDES})
 
 add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/BoundingBox.cpp
@@ -203,10 +222,12 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/utils.cpp
 )
 target_compile_features(libslic3r PUBLIC cxx_std_11)
+target_include_directories(libslic3r PUBLIC ${SLIC3R_INCLUDES})
 
 add_library(BSpline STATIC
     ${LIBDIR}/BSpline/BSpline.cpp
 )
+target_include_directories(BSpline PUBLIC ${BSPLINE_INCLUDES})
 
 add_library(admesh STATIC
     ${LIBDIR}/admesh/connect.c
@@ -216,9 +237,12 @@ add_library(admesh STATIC
     ${LIBDIR}/admesh/stlinit.c
     ${LIBDIR}/admesh/util.c
 )
+target_include_directories(admesh PUBLIC ${ADMESH_INCLUDES} ${COMMON_INCLUDES})
 set_property(TARGET admesh PROPERTY C_STANDARD 99)
 
+
 add_library(clipper STATIC ${LIBDIR}/clipper.cpp)
+target_include_directories(clipper PUBLIC ${COMMON_INCLUDES})
 
 add_library(expat STATIC
     ${LIBDIR}/expat/xmlparse.c
@@ -226,8 +250,11 @@ add_library(expat STATIC
     ${LIBDIR}/expat/xmltok.c
 )
 target_compile_features(clipper PUBLIC cxx_std_11)
+target_include_directories(expat PUBLIC ${EXPAT_INCLUDES})
 
 add_library(polypartition STATIC ${LIBDIR}/polypartition.cpp)
+target_include_directories(polypartition PUBLIC ${COMMON_INCLUDES})
+
 add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/common/shapes.cc
     ${LIBDIR}/poly2tri/sweep/advancing_front.cc
@@ -235,6 +262,7 @@ add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/sweep/sweep_context.cc
     ${LIBDIR}/poly2tri/sweep/sweep.cc
 )
+target_include_directories(poly2tri PUBLIC ${COMMON_INCLUDES})
 
 set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/testableframe.cpp
@@ -249,6 +277,8 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_field_colorpicker.cpp
     ${GUI_TESTDIR}/test_field_slider.cpp
     ${GUI_TESTDIR}/test_optionsgroup.cpp
+    ${GUI_TESTDIR}/test_preset.cpp
+    ${GUI_TESTDIR}/test_preset_chooser.cpp
     ${GUI_TESTDIR}/test_misc_ui.cpp
 )
 
@@ -269,6 +299,7 @@ set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/libslic3r/test_gcodewriter.cpp
 )
 
+
 add_executable(slic3r slic3r.cpp)
 target_compile_features(slic3r PUBLIC cxx_std_14)
 #set_target_properties(slic3r PROPERTIES LINK_SEARCH_START_STATIC 1)
@@ -278,8 +309,8 @@ if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 3.10)
 cmake_policy(SET CMP0072 NEW)
 endif (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 3.10)
 
-find_package(OpenGL)
 
+find_package(OpenGL)
 
 if(SLIC3R_STATIC)
     set(Boost_USE_STATIC_LIBS ON)
@@ -332,13 +363,19 @@ set(LIBSLIC3R_DEPENDS
     ${CMAKE_THREAD_LIBS_INIT} 
 )
 
-IF(wxWidgets_FOUND AND Enable_GUI)
+set(SLIC3R_GUI_INCLUDES
+    ${LIBDIR}/libslic3r
+    ${LIBDIR}/slic3r/GUI
+    ${GUI_LIBDIR}
+    ${OPENGL_INCLUDE_DIR}
+    ${wxWidgets_INCLUDE}
+)
+
+
+IF(wxWidgets_FOUND AND OPENGL_FOUND AND Enable_GUI)
     MESSAGE("wx found!")
+    MESSAGE("OpenGL found!")
     INCLUDE("${wxWidgets_USE_FILE}")
-
-
-    include_directories(${GUI_LIBDIR})
-    include_directories(${wxWidgets_INCLUDE})
 
     add_library(slic3r_gui STATIC 
     ${GUI_LIBDIR}/Dialogs/AboutDialog.cpp
@@ -350,11 +387,13 @@ IF(wxWidgets_FOUND AND Enable_GUI)
     ${GUI_LIBDIR}/GUI.cpp
     ${GUI_LIBDIR}/MainFrame.cpp
     ${GUI_LIBDIR}/Plater.cpp
+    ${GUI_LIBDIR}/Preset.cpp
     ${GUI_LIBDIR}/Scene3D.cpp
     ${GUI_LIBDIR}/Plater/Plate2D.cpp
     ${GUI_LIBDIR}/Plater/Plate3D.cpp
     ${GUI_LIBDIR}/Plater/Preview3D.cpp
     ${GUI_LIBDIR}/Plater/PlaterObject.cpp
+    ${GUI_LIBDIR}/Plater/PresetChooser.cpp
     ${GUI_LIBDIR}/ProgressStatusBar.cpp
     ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
@@ -367,6 +406,7 @@ IF(wxWidgets_FOUND AND Enable_GUI)
     ${LIBDIR}/slic3r/GUI/3DScene.cpp
     )
     target_compile_features(slic3r_gui PUBLIC cxx_std_14)
+    target_include_directories(slic3r_gui PUBLIC ${SLIC3R_GUI_INCLUDES} ${SLIC3R_INCLUDES} )
     #only build GUI lib if building with wx
     target_link_libraries (slic3r slic3r_gui ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES})
     add_compile_options(-DUSE_WX)
@@ -404,18 +444,24 @@ IF(wxWidgets_FOUND AND Enable_GUI)
         endif()
         add_executable(gui_test ${UI_TEST_SOURCES}) 
         add_test(NAME TestGUI COMMAND gui_test)
-        target_link_libraries(gui_test PUBLIC libslic3r slic3r_gui Catch ${wxWidgets_LIBRARIES} ${LIBSLIC3R_DEPENDS} ${OPENGL_LIBRARIES})
+        target_link_libraries(gui_test PUBLIC slic3r_gui libslic3r Catch ${wxWidgets_LIBRARIES} ${LIBSLIC3R_DEPENDS} ${OPENGL_LIBRARIES})
+        target_include_directories(gui_test PUBLIC cxx_std_14 ${SLIC3R_GUI_INCLUDES} )
     endif()
     if (WIN32)
         target_link_libraries(slic3r uxtheme)    
     endif()    
-ELSE(wxWidgets_FOUND AND Enable_GUI)
+ELSE(wxWidgets_FOUND AND OPENGL_FOUND AND Enable_GUI)
     # For convenience. When we cannot continue, inform the user
     if (Enable_GUI)
-        MESSAGE("wx not found!")
+        if (NOT wxWidgets_FOUND)
+            MESSAGE("wx not found!")
+        endif (NOT wxWidgets_FOUND)
+        if (NOT OPENGL_FOUND)
+            MESSAGE("OpenGL not found!")
+        endif (NOT OPENGL_FOUND)
     endif (Enable_GUI)
     #skip gui when no wx included
-ENDIF(wxWidgets_FOUND AND Enable_GUI)
+ENDIF(wxWidgets_FOUND AND OPENGL_FOUND AND Enable_GUI)
 
 target_link_libraries (slic3r libslic3r ${LIBSLIC3R_DEPENDS})
 
@@ -482,6 +528,7 @@ if (SLIC3R_BUILD_TESTS)
     add_executable(slic3r_test ${SLIC3R_TEST_SOURCES}) 
     add_test(NAME TestSlic3r COMMAND slic3r_test)
     target_compile_features(slic3r_test PUBLIC cxx_std_14)
+    target_include_directories(slic3r_test PUBLIC cxx_std_14 ${SLIC3R_INCLUDES})
 
     target_link_libraries(slic3r_test PUBLIC libslic3r Catch ${LIBSLIC3R_DEPENDS})
 endif()

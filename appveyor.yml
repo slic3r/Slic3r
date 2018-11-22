@@ -1,4 +1,8 @@
 version: 1.3.0-{branch}-{build}
+branches:
+  only:
+  - master
+  - cppgui
 image: WMF 5
 init:
 - ps: 
