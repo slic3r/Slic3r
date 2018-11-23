@@ -635,3 +635,6 @@ SCENARIO( "_Log output filtering on topic name" ) {
             }
         }
 }
+
+SCENARIO("Log file redirection") {
+}

@@ -10,6 +10,8 @@
 #include <set>
 #include <codecvt> // good until c++17
 
+#include "ExtrusionEntity.hpp"
+#include "ExPolygon.hpp"
 
 namespace Slic3r {
 
@@ -66,10 +68,13 @@ public:
     void add_topic(const std::string& topic) { this->_topics.insert(topic); }
     void clear_topic(const std::string& topic);
 
+    void open(const std::string& logname); 
+    void close();
+
 //    _Log(_Log const&)            = delete;
 //    void operator=(_Log const&)  = delete;
 private:
-    std::ostream& _out;
+    std::ostream* _out_ptr {nullptr};
     _Log();
     _Log(std::ostream& out);
     bool _inclusive_levels { true };
@@ -80,6 +85,9 @@ private:
 
     bool _has_log_level(log_t lvl);
     bool _has_topic(const std::string& topic);
+
+    /// Internal method to return a reference to std::ostream based on context.
+    std::ostream& _out();
 
 };
 
@@ -200,6 +208,21 @@ public:
     /// \note Default option removes all filters.
     static void clear_topic(const std::string& topic = "") {
         slic3r_log->clear_topic(topic);
+    }
+
+    /// Write an ExtrusionPath to an SVG file.
+    /// Provides SVG elements
+    /// \param topic [in] The filename/general topic.
+    /// \param path [in] a single path to write out to an SVG file.
+    /// \param append [in] Whether or not to append this to the existing topic or to generate a new unique file. \default true
+    template <class T>
+    static void debug_svg(const std::string& topic, const T& path, bool append = true) {
+        slic3r_log->debug_svg(topic, path, append);
+    }
+
+    template <class T>
+    static void debug_svg(const std::string& topic, const T* path, bool append = true) {
+        slic3r_log->debug_svg(topic, path, append);
     }
 };
 
