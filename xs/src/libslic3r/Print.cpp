@@ -174,11 +174,11 @@ Print::make_skirt()
     // $skirt_height_z in this case is the highest possible skirt height for safety.
     double skirt_height_z {-1.0};
     for (const auto& object : this->objects) {
-        size_t skirt_height {
+        const size_t skirt_height {
             this->has_infinite_skirt() ? object->layer_count() :
             std::min(size_t(this->config.skirt_height()), object->layer_count())
         };
-        auto* highest_layer {object->get_layer(skirt_height - 1)};
+        const Layer* highest_layer { object->get_layer(skirt_height - 1) };
         skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
     }
 
