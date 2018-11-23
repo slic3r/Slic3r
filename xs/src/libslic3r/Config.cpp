@@ -85,7 +85,7 @@ void
 Config::set(const t_config_option_key& opt_key, const std::string& value)
 {
     try {
-        const auto& def {print_config_def.options.at(opt_key)};
+        const auto& def = print_config_def.options.at(opt_key);
         switch (def.type) {
             case coInt:
                 {
@@ -150,7 +150,7 @@ void
 Config::set(const t_config_option_key& opt_key, const bool value) 
 {
     try {
-        const auto& def {print_config_def.options.at(opt_key)};
+        const auto& def = print_config_def.options.at(opt_key);
         switch (def.type) {
             case coBool:
                 {   
@@ -203,7 +203,7 @@ void
 Config::set(const t_config_option_key& opt_key, const int value)
 {
     try {
-        const auto& def {print_config_def.options.at(opt_key)};
+        const auto& def = print_config_def.options.at(opt_key);
         switch (def.type) {
             case coBool:
                 {   
@@ -256,7 +256,7 @@ void
 Config::set(const t_config_option_key& opt_key, const double value)
 {
     try {
-        const auto& def {print_config_def.options.at(opt_key)};
+        const auto& def = print_config_def.options.at(opt_key);
         switch (def.type) {
             case coInt:
                 {
