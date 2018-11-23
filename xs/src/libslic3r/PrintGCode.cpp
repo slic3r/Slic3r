@@ -523,7 +523,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
                     gcode += _gcodegen.set_extruder(extruder_id);
 
                 // adjust flow according to layer height
-                auto& loop {*(dynamic_cast<ExtrusionLoop*>(skirt_loops.at(i)))};
+                auto& loop = *dynamic_cast<ExtrusionLoop*>(skirt_loops.at(i));
                 {
                     Flow layer_skirt_flow(skirt_flow);
                     layer_skirt_flow.height = layer->height;
@@ -628,12 +628,12 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
             } catch (std::out_of_range &e) {
                 continue; // if no regions, bail;
             }
-            auto* region {_print.get_region(region_id)};
+            const PrintRegion* region { _print.get_region(region_id) };
             // process perimeters
             {
                 auto extruder_id = region->config.perimeter_extruder-1;
                 // Casting away const just to avoid double dereferences
-                for(auto* perimeter_coll : layerm->perimeters.flatten().entities) {
+                for(const auto* perimeter_coll : layerm->perimeters.flatten().entities) {
 
                     if(perimeter_coll->length() == 0) continue;  // this shouldn't happen but first_point() would fail
                     
