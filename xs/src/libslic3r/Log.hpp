@@ -86,47 +86,95 @@ extern std::unique_ptr<_Log> slic3r_log;
 ///
 class Log {
 public:
+
+    /// Logs a fatal error with Slic3r.
+    /// \param topic [in] file or heading for error
+    /// \param message [in] text of the logged error message
     static void fatal_error(std::string topic, std::wstring message) {
         slic3r_log->fatal_error(topic, message);
     }
+
+    /// Logs a regular error with Slic3r.
+    /// \param topic [in] file or heading for error
+    /// \param message [in] text of the logged error message
     static void error(std::string topic, std::wstring message) {
         slic3r_log->error(topic, message);
     }
 
+    /// Logs a fatal error with Slic3r.
+    /// \param topic [in] file or heading for error
+    /// \param message [in] text of the logged error message
     static void error(std::string topic, std::string message) {
         slic3r_log->error(topic, message);
     }
 
+    /// Logs an informational message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \param message [in] text of the logged message
     static void info(std::string topic, std::wstring message) {
         slic3r_log->info(topic, message);
     }
+    /// Logs an informational message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \param message [in] text of the logged message
     static void info(std::string topic, std::string message) {
         slic3r_log->info(topic, message);
     }
 
+    /// Logs a warning message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \param message [in] text of the logged message
     static void warn(std::string topic, std::wstring message) {
         slic3r_log->warn(topic, message);
     }
+
+    /// Logs a warning message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \param message [in] text of the logged message
     static void warn(std::string topic, std::string message) {
         slic3r_log->warn(topic, message);
     }
 
+    /// Logs a debugging message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \param message [in] text of the logged message
     static void debug(std::string topic, std::wstring message) {
         slic3r_log->debug(topic, message);
     }
+    /// Logs a debugging message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \param message [in] text of the logged message
     static void debug(std::string topic, std::string message) {
         slic3r_log->debug(topic, message);
     }
+
+
+    /// Logs an error message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \return reference to output ostream for << chaining.
+    /// \note Developer is expected to add newlines.
     static std::ostream& error(std::string topic) {
         return slic3r_log->error(topic);
     }
+    /// Logs a debugging message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \return reference to output ostream for << chaining.
+    /// \note Developer is expected to add newlines.
     static std::ostream& debug(std::string topic) {
         return slic3r_log->debug(topic);
     }
 
+    /// Logs a warning message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \return reference to output ostream for << chaining.
+    /// \note Developer is expected to add newlines.
     static std::ostream& warn(std::string topic) {
         return slic3r_log->warn(topic);
     }
+    /// Logs an informational message with Slic3r.
+    /// \param topic [in] file or heading for message
+    /// \return reference to output ostream for << chaining.
+    /// \note Developer is expected to add newlines.
     static std::ostream& info(std::string topic) {
         return slic3r_log->info(topic);
     }
