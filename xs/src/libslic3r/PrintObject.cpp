@@ -969,17 +969,12 @@ PrintObject::slice()
     this->_slice(); 
 
     // detect slicing errors
-    bool warning_thrown = false;
-    for (size_t i = 0U; i < this->layer_count(); ++i) {
-        auto* layer {this->get_layer(i)};
-        if (!layer->slicing_errors) continue;
-        if (!warning_thrown) {
-            Slic3r::Log::warn("PrintObject") << "The model has overlapping or self-intersecting facets. " 
-                                             << "I tried to repair it, however you might want to check " 
-                                             << "the results or repair the input file and retry.\n";
-            warning_thrown = true;
-        }
-    }
+    if (std::any_of(this->layers.cbegin(), this->layers.cend(),
+        [](const Layer* l){ return l->slicing_errors; }))
+        Slic3r::Log::warn("PrintObject") << "The model has overlapping or self-intersecting facets. " 
+                                         << "I tried to repair it, however you might want to check " 
+                                         << "the results or repair the input file and retry.\n";
+    
     if (this->layers.size() == 0) {
         Slic3r::Log::error("PrintObject") << "slice(): " << "No layers were detected. You might want to repair your STL file(s) or check their size or thickness and retry.\n";
         return; // make this throw an exception instead?
@@ -1349,8 +1344,6 @@ PrintObject::_support_material_flow(FlowRole role)
 void
 PrintObject::generate_support_material() 
 {
-    auto* print { this->_print };
-    const auto& config { this->config };
     //prereqs 
     this->slice();
     if (this->state.is_done(posSupportMaterial)) { return; }
@@ -1367,8 +1360,8 @@ PrintObject::generate_support_material()
         this->state.set_done(posSupportMaterial);
         return;
     }
-    if (print->status_cb != nullptr)
-        print->status_cb(85, "Generating support material");
+    if (_print->status_cb != nullptr)
+        _print->status_cb(85, "Generating support material");
 
     this->_support_material()->generate(this);
 
@@ -1376,8 +1369,8 @@ PrintObject::generate_support_material()
 
     std::stringstream stats {""};
 
-    if (print->status_cb != nullptr)
-        print->status_cb(85, stats.str().c_str());
+    if (_print->status_cb != nullptr)
+        _print->status_cb(85, stats.str().c_str());
 
 }
 
@@ -1385,11 +1378,10 @@ PrintObject::generate_support_material()
 void 
 PrintObject::discover_horizontal_shells()
 {
-    auto* print {this->print()};
-    for (size_t region_id = 0U; region_id < print->regions.size(); ++region_id) {
+    for (size_t region_id = 0U; region_id < _print->regions.size(); ++region_id) {
         for (size_t i = 0; i < this->layer_count(); ++i) {
-            auto* layerm {this->get_layer(i)->regions.at(region_id)};
-            const auto& region_config {layerm->region()->config};
+            auto* layerm = this->get_layer(i)->get_region(region_id);
+            const auto& region_config = layerm->region()->config;
 
             if (region_config.solid_infill_every_layers() > 0 && region_config.fill_density() > 0
                 && (i % region_config.solid_infill_every_layers()) == 0) {
