@@ -434,7 +434,7 @@ Pointf3s TriangleMesh::normals() const
     Pointf3s tmp {};
     if (this->repaired) {
         for (auto i = 0; i < stl.stats.number_of_facets; i++) {
-            const auto& n {stl.facet_start[i].normal};
+            const auto& n = stl.facet_start[i].normal;
             tmp.emplace_back(Pointf3(n.x, n.y, n.z));
         }
     } else {
@@ -445,7 +445,7 @@ Pointf3s TriangleMesh::normals() const
 
 Pointf3 TriangleMesh::size() const
 {
-    const auto& sz {stl.stats.size};
+    const auto& sz = stl.stats.size;
     return Pointf3(sz.x, sz.y, sz.z);
 }
 
