@@ -718,9 +718,8 @@ Print::export_gcode(std::ostream& output, bool quiet)
     
     if (this->status_cb != nullptr) 
         this->status_cb(90, "Exporting G-Code...");
-
-    auto export_handler {Slic3r::PrintGCode(*this, output)};
-    export_handler.output();
+    
+    Slic3r::PrintGCode(*this, output).output();
 }
 
 void
