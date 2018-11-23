@@ -1288,7 +1288,7 @@ PrintConfigDef::PrintConfigDef()
     def->sidetext = "mm";
     def->cli = "small-perimeter-length=f";
     def->min = 0;
-    def->default_value = new ConfigOptionFloat(6.5*2*PI);
+    def->default_value = new ConfigOptionFloat(6.5);
 
     def = this->add("solid_infill_below_area", coFloat);
     def->label = __TRANS("Solid infill threshold area");
