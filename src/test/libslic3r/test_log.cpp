@@ -588,3 +588,50 @@ SCENARIO( "_Log output set filtering with std::string methods" ) {
         }
     }
 }
+
+SCENARIO( "_Log output filtering on topic name" ) {
+        std::stringstream log;
+        std::unique_ptr<_Log> cut { _Log::make_log(log) };
+        cut->set_inclusive(true);
+        cut->set_level(log_t::ALL);
+        WHEN("Topic is \"t1\"") {
+            cut->add_topic("t1");
+            cut->debug("t1") << "TEXT FOR T1 ";
+            cut->debug("t2") << "TEXT FOR T2 ";
+            cut->debug("t3") << "TEXT FOR T3";
+            THEN("Log text is \"TEXT FOR T1 \"") {
+                REQUIRE(log.str() == "t1 DEBUG: TEXT FOR T1 ");
+            }
+        }
+
+        WHEN("Topic is \"t2\"") {
+            cut->add_topic("t2");
+            cut->debug("t1") << "TEXT FOR T1 ";
+            cut->debug("t2") << "TEXT FOR T2 ";
+            cut->debug("t3") << "TEXT FOR T3";
+            THEN("Log text is \"TEXT FOR T2 \"") {
+                REQUIRE(log.str() == "t2 DEBUG: TEXT FOR T2 ");
+            }
+        }
+
+        WHEN("Topic is \"t3\"") {
+            cut->add_topic("t3");
+            cut->debug("t1") << "TEXT FOR T1 ";
+            cut->debug("t2") << "TEXT FOR T2 ";
+            cut->debug("t3") << "TEXT FOR T3";
+            THEN("Log text is \"TEXT FOR T3\"") {
+                REQUIRE(log.str() == "t3 DEBUG: TEXT FOR T3");
+            }
+        }
+
+        WHEN("Topic is \"t3\" and \"t2\"") {
+            cut->add_topic("t2");
+            cut->add_topic("t3");
+            cut->debug("t1") << "TEXT FOR T1 ";
+            cut->debug("t2") << "TEXT FOR T2 ";
+            cut->debug("t3") << "TEXT FOR T3";
+            THEN("Log text is \"TEXT FOR T2 TEXT FOR T3\"") {
+                REQUIRE(log.str() == "t2 DEBUG: TEXT FOR T2 t3 DEBUG: TEXT FOR T3");
+            }
+        }
+}

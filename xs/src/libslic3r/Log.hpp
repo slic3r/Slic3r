@@ -63,6 +63,8 @@ public:
     void set_level(log_t level);
     void clear_level(log_t level);
     void set_inclusive(bool v) { this->_inclusive_levels = v; }
+    void add_topic(const std::string& topic) { this->_topics.insert(topic); }
+    void clear_topic(const std::string& topic);
 
 //    _Log(_Log const&)            = delete;
 //    void operator=(_Log const&)  = delete;
@@ -72,10 +74,12 @@ private:
     _Log(std::ostream& out);
     bool _inclusive_levels { true };
     std::set<log_t> _log_level { };
+    std::set<std::string> _topics { };
 
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 
     bool _has_log_level(log_t lvl);
+    bool _has_topic(const std::string& topic);
 
 };
 
@@ -182,6 +186,20 @@ public:
     /// Unadorned ostream output for multiline constructions.
     static std::ostream& raw() {
         return slic3r_log->raw();
+    }
+
+    /// Adds a topic to filter on with Slic3r's debug system.
+    /// \param topic [in] name of topic to filter on.
+    /// Only shows registered topics.
+    static void add_topic(const std::string& topic) {
+        slic3r_log->add_topic(topic);
+    }
+
+    /// Removes a topic from the filter list with Slic3r's debug system.
+    /// \param topic [in] name of topic to remove from filter.
+    /// \note Default option removes all filters.
+    static void clear_topic(const std::string& topic = "") {
+        slic3r_log->clear_topic(topic);
     }
 };
 

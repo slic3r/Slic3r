@@ -34,6 +34,10 @@ bool _Log::_has_log_level(log_t lvl) {
     return false;
 }
 
+bool _Log::_has_topic(const std::string& topic) {
+    return this->_topics.find(topic) != this->_topics.end() || this->_topics.size() == 0;
+}
+
 void _Log::fatal_error(const std::string& topic, const std::wstring& message) { this->fatal_error(topic, this->converter.to_bytes(message)); }
 void _Log::error(const std::string& topic, const std::wstring& message) { this->error(topic, this->converter.to_bytes(message)); }
 void _Log::warn(const std::string& topic, const std::wstring& message) { this->warn(topic, this->converter.to_bytes(message)); }
@@ -44,7 +48,7 @@ void _Log::fatal_error(const std::string& topic, const std::string& message) {
     this->fatal_error(topic) << message << std::endl;
 }
 std::ostream& _Log::fatal_error(const std::string& topic) {
-    if (this->_has_log_level(log_t::FERR)) {
+    if (this->_has_log_level(log_t::FERR) && this->_has_topic(topic)) {
         _out << topic << std::setfill(' ') << std::setw(6) << "FERR" << ": ";
         return _out;
     }
@@ -55,7 +59,7 @@ void _Log::error(const std::string& topic, const std::string& message) {
     this->error(topic) << message << std::endl;
 }
 std::ostream& _Log::error(const std::string& topic) {
-    if (this->_has_log_level(log_t::ERR)) {
+    if (this->_has_log_level(log_t::ERR) && this->_has_topic(topic)) {
         _out << topic << std::setfill(' ') << std::setw(6) << "ERR" << ": ";
         return _out;
     }
@@ -67,7 +71,7 @@ void _Log::info(const std::string& topic, const std::string& message) {
 }
 
 std::ostream& _Log::info(const std::string& topic) {
-    if (this->_has_log_level(log_t::INFO)) {
+    if (this->_has_log_level(log_t::INFO) && this->_has_topic(topic)) {
         _out << topic << std::setfill(' ') << std::setw(6) << "INFO" << ": ";
         return _out;
     }
@@ -79,7 +83,7 @@ void _Log::warn(const std::string& topic, const std::string& message) {
 }
 
 std::ostream& _Log::warn(const std::string& topic) {
-    if (this->_has_log_level(log_t::WARN)) {
+    if (this->_has_log_level(log_t::WARN) && this->_has_topic(topic)) {
         _out << topic << std::setfill(' ') << std::setw(6) << "WARN" << ": ";
         return _out;
     }
@@ -91,7 +95,7 @@ void _Log::debug(const std::string& topic, const std::string& message) {
 }
 
 std::ostream& _Log::debug(const std::string& topic) {
-    if (this->_has_log_level(log_t::DEBUG)) {
+    if (this->_has_log_level(log_t::DEBUG) && this->_has_topic(topic)) {
         _out << topic << std::setfill(' ') << std::setw(6) << "DEBUG" << ": ";
         return _out;
     }
@@ -128,6 +132,14 @@ void _Log::clear_level(log_t level) {
     } else {
         if (this->_log_level.find(level) != this->_log_level.end())
             this->_log_level.erase(level);
+    }
+}
+
+void _Log::clear_topic(const std::string& topic) {
+    if (topic == "") {
+        this->_topics.clear();
+    } else {
+        if (this->_topics.find(topic) != this->_topics.end()) this->_topics.erase(topic);
     }
 }
 
