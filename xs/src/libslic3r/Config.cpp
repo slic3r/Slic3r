@@ -48,7 +48,7 @@ Config::validate()
     // general validation
     for (auto k : this->_config.keys()) {
         if (print_config_def.options.count(k) == 0) continue; // skip over keys that aren't in the master list
-        const auto& opt {print_config_def.options.at(k)};
+        const ConfigOptionDef& opt { print_config_def.options.at(k) };
         if (opt.cli == "" || std::regex_search(opt.cli, _match_info, _cli_pattern) == false) continue;
         auto type {_match_info.str(1)};
         std::vector<std::string> values;
@@ -89,24 +89,24 @@ Config::set(const t_config_option_key& opt_key, const std::string& value)
         switch (def.type) {
             case coInt:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionInt*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionInt* ptr {dynamic_cast<ConfigOptionInt*>(this->_config.optptr(opt_key, true))};
                     ptr->value = std::stoi(value);
                 } break;
             case coInts:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionInts*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionInts* ptr {dynamic_cast<ConfigOptionInts*>(this->_config.optptr(opt_key, true))};
                     if (!ptr->deserialize(value, true) ) {
                         throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
                     }
                 } break;
             case coFloat:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloat*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloat* ptr {dynamic_cast<ConfigOptionFloat*>(this->_config.optptr(opt_key, true))};
                     ptr->setFloat(std::stod(value));
                 } break;
             case coFloatOrPercent:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloatOrPercent* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
                     const size_t perc = value.find("%");
                     ptr->percent = (perc != std::string::npos);
                     if (ptr->percent) {
@@ -119,21 +119,21 @@ Config::set(const t_config_option_key& opt_key, const std::string& value)
                 } break;
             case coFloats:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloats* ptr {dynamic_cast<ConfigOptionFloats*>(this->_config.optptr(opt_key, true))};
                     if (!ptr->deserialize(value, true) ) {
                         throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
                     }
                 } break;
             case coString:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionString*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionString* ptr {dynamic_cast<ConfigOptionString*>(this->_config.optptr(opt_key, true))};
                     if (!ptr->deserialize(value) ) {
                         throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
                     }
                 } break;
             case coBool:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionBool*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionBool* ptr {dynamic_cast<ConfigOptionBool*>(this->_config.optptr(opt_key, true))};
                     ptr->deserialize(value);
                 } break;
             default: 
@@ -154,38 +154,38 @@ Config::set(const t_config_option_key& opt_key, const bool value)
         switch (def.type) {
             case coBool:
                 {   
-                    auto* ptr {dynamic_cast<ConfigOptionBool*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionBool* ptr {dynamic_cast<ConfigOptionBool*>(this->_config.optptr(opt_key, true))};
                     ptr->value = value;
                 } break;
             case coInt:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionInt*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionInt* ptr {dynamic_cast<ConfigOptionInt*>(this->_config.optptr(opt_key, true))};
                     ptr->setInt(value);
                 } break;
             case coInts:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionInts*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionInts* ptr {dynamic_cast<ConfigOptionInts*>(this->_config.optptr(opt_key, true))};
                     ptr->deserialize(std::to_string(value), true);
                 } break;
             case coFloat:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloat*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloat* ptr {dynamic_cast<ConfigOptionFloat*>(this->_config.optptr(opt_key, true))};
                     ptr->setFloat(value);
                 } break;
             case coFloatOrPercent:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloatOrPercent* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
                     ptr->setFloat(value);
                     ptr->percent = false;
                 } break;
             case coFloats:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloats* ptr {dynamic_cast<ConfigOptionFloats*>(this->_config.optptr(opt_key, true))};
                     ptr->deserialize(std::to_string(value), true);
                 } break;
             case coString:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionString*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionString* ptr {dynamic_cast<ConfigOptionString*>(this->_config.optptr(opt_key, true))};
                     if (!ptr->deserialize(std::to_string(value)) ) {
                         throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
                     }
@@ -207,38 +207,38 @@ Config::set(const t_config_option_key& opt_key, const int value)
         switch (def.type) {
             case coBool:
                 {   
-                    auto* ptr {dynamic_cast<ConfigOptionBool*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionBool* ptr {dynamic_cast<ConfigOptionBool*>(this->_config.optptr(opt_key, true))};
                     ptr->value = (value != 0);
                 } break;
             case coInt:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionInt*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionInt* ptr {dynamic_cast<ConfigOptionInt*>(this->_config.optptr(opt_key, true))};
                     ptr->setInt(value);
                 } break;
             case coInts:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionInts*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionInts* ptr {dynamic_cast<ConfigOptionInts*>(this->_config.optptr(opt_key, true))};
                     ptr->deserialize(std::to_string(value), true);
                 } break;
             case coFloat:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloat*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloat* ptr {dynamic_cast<ConfigOptionFloat*>(this->_config.optptr(opt_key, true))};
                     ptr->setFloat(value);
                 } break;
             case coFloatOrPercent:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloatOrPercent* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
                     ptr->setFloat(value);
                     ptr->percent = false;
                 } break;
             case coFloats:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloats* ptr {dynamic_cast<ConfigOptionFloats*>(this->_config.optptr(opt_key, true))};
                     ptr->deserialize(std::to_string(value), true);
                 } break;
             case coString:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionString*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionString* ptr {dynamic_cast<ConfigOptionString*>(this->_config.optptr(opt_key, true))};
                     if (!ptr->deserialize(std::to_string(value)) ) {
                         throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
                     }
@@ -260,33 +260,33 @@ Config::set(const t_config_option_key& opt_key, const double value)
         switch (def.type) {
             case coInt:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionInt*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionInt* ptr {dynamic_cast<ConfigOptionInt*>(this->_config.optptr(opt_key, true))};
                     ptr->setInt(std::round(value));
                 } break;
             case coInts:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionInts*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionInts* ptr {dynamic_cast<ConfigOptionInts*>(this->_config.optptr(opt_key, true))};
                     ptr->deserialize(std::to_string(std::round(value)), true);
                 } break;
             case coFloat:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloat*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloat* ptr {dynamic_cast<ConfigOptionFloat*>(this->_config.optptr(opt_key, true))};
                     ptr->setFloat(value);
                 } break;
             case coFloatOrPercent:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloatOrPercent* ptr {dynamic_cast<ConfigOptionFloatOrPercent*>(this->_config.optptr(opt_key, true))};
                     ptr->setFloat(value);
                     ptr->percent = false;
                 } break;
             case coFloats:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionFloats*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionFloats* ptr {dynamic_cast<ConfigOptionFloats*>(this->_config.optptr(opt_key, true))};
                     ptr->deserialize(std::to_string(value), true);
                 } break;
             case coString:
                 {
-                    auto* ptr {dynamic_cast<ConfigOptionString*>(this->_config.optptr(opt_key, true))};
+                    ConfigOptionString* ptr {dynamic_cast<ConfigOptionString*>(this->_config.optptr(opt_key, true))};
                     if (!ptr->deserialize(std::to_string(value)) ) {
                         throw InvalidOptionValue(std::string(opt_key) + std::string(" set with invalid value."));
                     }
