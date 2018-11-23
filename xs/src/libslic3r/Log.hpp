@@ -90,62 +90,50 @@ public:
         slic3r_log->fatal_error(topic, message);
     }
     static void error(std::string topic, std::wstring message) {
-        std::cerr << topic << "  ERR" << ": ";
-        std::wcerr << message << std::endl;
+        slic3r_log->error(topic, message);
     }
 
     static void error(std::string topic, std::string message) {
-        std::cerr << topic << "  ERR" << ": ";
-        std::cerr << message << std::endl;
+        slic3r_log->error(topic, message);
     }
 
     static void info(std::string topic, std::wstring message) {
-        std::clog << topic << " INFO" << ": ";
-        std::wclog << message << std::endl;
+        slic3r_log->info(topic, message);
     }
     static void info(std::string topic, std::string message) {
-        std::clog << topic << " INFO" << ": ";
-        std::clog << message << std::endl;
+        slic3r_log->info(topic, message);
     }
 
     static void warn(std::string topic, std::wstring message) {
-        std::cerr << topic << " WARN" << ": ";
-        std::wcerr << message << std::endl;
+        slic3r_log->warn(topic, message);
     }
     static void warn(std::string topic, std::string message) {
-        std::cerr << topic << " WARN" << ": ";
-        std::cerr << message << std::endl;
+        slic3r_log->warn(topic, message);
     }
 
     static void debug(std::string topic, std::wstring message) {
-        std::cerr << topic << " DEBUG" << ": ";
-        std::wcerr << message << std::endl;
+        slic3r_log->debug(topic, message);
     }
     static void debug(std::string topic, std::string message) {
-        std::cerr << topic << " DEBUG" << ": ";
-        std::cerr << message << std::endl;
+        slic3r_log->debug(topic, message);
     }
     static std::ostream& error(std::string topic) {
-        std::cerr << topic << "   ERR" << ": ";
-        return std::cerr;
+        return slic3r_log->error(topic);
     }
     static std::ostream& debug(std::string topic) {
-        std::cerr << topic << " DEBUG" << ": ";
-        return std::cerr;
+        return slic3r_log->debug(topic);
     }
 
     static std::ostream& warn(std::string topic) {
-        std::cerr << topic << "  WARN" << ": ";
-        return std::cerr;
+        return slic3r_log->warn(topic);
     }
     static std::ostream& info(std::string topic) {
-        std::cerr << topic << "  INFO" << ": ";
-        return std::cerr;
+        return slic3r_log->info(topic);
     }
 
     /// Unadorned ostream output for multiline constructions.
     static std::ostream& raw() {
-        return std::cerr;
+        return slic3r_log->raw();
     }
 };
 
