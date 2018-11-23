@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <iomanip>
+#include <algorithm>
 
 #include "Log.hpp"
 
