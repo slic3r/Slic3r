@@ -78,9 +78,7 @@ if ($^O eq 'darwin') {
     }
 }
 if ($mswin) {
-    # In case windows.h is included, we don't want the min / max macros to be active.
-    # If <math.h> is included, we want the #defines to be active (M_PI etc.)
-    push @cflags, qw(-DNOMINMAX -D_USE_MATH_DEFINES);
+    push @cflags, qw(-DNOMINMAX);
 }
 
 my @INC  = qw(-Isrc/libslic3r);
