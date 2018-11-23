@@ -21,7 +21,7 @@ Config::new_from_defaults(std::initializer_list<std::string> init)
 std::shared_ptr<Config> 
 Config::new_from_defaults(t_config_option_keys init)
 {
-    auto my_config(std::make_shared<Config>());
+    std::shared_ptr<Config>  my_config(std::make_shared<Config>());
     for (auto& opt_key : init) {
         if (print_config_def.has(opt_key)) {
             const std::string value { print_config_def.get(opt_key).default_value->serialize() };
@@ -36,7 +36,7 @@ std::shared_ptr<Config>
 Config::new_from_ini(const std::string& inifile) 
 { 
     
-    auto my_config(std::make_shared<Config>());
+    std::shared_ptr<Config> my_config(std::make_shared<Config>());
     my_config->read_ini(inifile);
     return my_config;
 }
@@ -50,7 +50,7 @@ Config::validate()
         if (print_config_def.options.count(k) == 0) continue; // skip over keys that aren't in the master list
         const ConfigOptionDef& opt { print_config_def.options.at(k) };
         if (opt.cli == "" || std::regex_search(opt.cli, _match_info, _cli_pattern) == false) continue;
-        auto type {_match_info.str(1)};
+        std::string type { _match_info.str(1) };
         std::vector<std::string> values;
         if (std::regex_search(type, _match_info, std::regex("@$"))) {
             type = std::regex_replace(type, std::regex("@$"), std::string("")); // strip off the @ for later;
@@ -60,7 +60,7 @@ Config::validate()
             } catch (std::bad_cast& e) {
                 throw InvalidOptionType((std::string("(cast failure) Invalid value for ") + std::string(k)).c_str());
             }
-            auto tmp_str {tmp_opt->vserialize()};
+            std::string tmp_str { tmp_opt->vserialize() };
             values.insert(values.end(), tmp_str.begin(), tmp_str.end());
         } else {
             Slic3r::Log::debug("Config::validate", std::string("Not an array"));
