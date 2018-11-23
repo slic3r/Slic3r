@@ -927,12 +927,19 @@ Print::validate() const
                 object->model_object()->instances.front()->transform_polygon(&convex_hull);
                 
                 // grow convex hull with the clearance margin
-                convex_hull = offset(convex_hull, scale_(this->config.extruder_clearance_radius.value)/2, 1, jtRound, scale_(0.1)).front();
+                convex_hull = offset(
+                    convex_hull,
+                    // safety_offset in intersection() is not enough for preventing false positives
+                    scale_(this->config.extruder_clearance_radius.value)/2 - scale_(0.01),
+                    CLIPPER_OFFSET_SCALE,
+                    jtRound, scale_(0.1)
+                ).front();
                 
                 // now we check that no instance of convex_hull intersects any of the previously checked object instances
                 for (Points::const_iterator copy = object->_shifted_copies.begin(); copy != object->_shifted_copies.end(); ++copy) {
                     Polygon p = convex_hull;
                     p.translate(*copy);
+                    
                     if (!intersection(a, p).empty())
                         throw InvalidPrintException{"Some objects are too close; your extruder will collide with them."};
                     
