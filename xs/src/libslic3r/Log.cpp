@@ -19,13 +19,10 @@ static std::ostream null_log(&log_null);
 
 std::unique_ptr<_Log> slic3r_log {_Log::make_log()};
 
-_Log::_Log() : _out(std::clog), _wout(std::wclog) {
+_Log::_Log() : _out(std::clog) {
 }
 
-_Log::_Log(std::ostream& out) : _out(out), _wout(std::wclog) {
-}
-
-_Log::_Log(std::wostream& out) : _out(std::clog), _wout(out) {
+_Log::_Log(std::ostream& out) : _out(out) {
 }
 
 bool _Log::_has_log_level(log_t lvl) {
@@ -37,13 +34,12 @@ bool _Log::_has_log_level(log_t lvl) {
     return false;
 }
 
-void _Log::fatal_error(const std::string& topic, const std::wstring& message) {
-//    _wout << this->converter.from_bytes(topic);
-    if (this->_has_log_level(log_t::FERR)) {
-        _wout << std::setw(6) << "FERR" << ": ";
-        _wout << message << std::endl;
-    }
-}
+void _Log::fatal_error(const std::string& topic, const std::wstring& message) { this->fatal_error(topic, this->converter.to_bytes(message)); }
+void _Log::error(const std::string& topic, const std::wstring& message) { this->error(topic, this->converter.to_bytes(message)); }
+void _Log::warn(const std::string& topic, const std::wstring& message) { this->warn(topic, this->converter.to_bytes(message)); }
+void _Log::info(const std::string& topic, const std::wstring& message) { this->info(topic, this->converter.to_bytes(message)); }
+void _Log::debug(const std::string& topic, const std::wstring& message) { this->debug(topic, this->converter.to_bytes(message)); }
+
 void _Log::fatal_error(const std::string& topic, const std::string& message) {
     this->fatal_error(topic) << message << std::endl;
 }
@@ -105,6 +101,7 @@ std::ostream& _Log::debug(const std::string& topic) {
 void _Log::raw(const std::string& message) {
     this->raw() << message << std::endl;
 }
+void _Log::raw(const std::wstring& message) { this->raw(this->converter.to_bytes(message)); }
 
 std::ostream& _Log::raw() {
     return _out;

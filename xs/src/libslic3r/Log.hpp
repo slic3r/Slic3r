@@ -34,25 +34,25 @@ public:
         std::unique_ptr<_Log> tmp {new _Log(out)};
         return tmp;
     }
-    static std::unique_ptr<_Log> make_log(std::wostream& out) {
-        std::unique_ptr<_Log> tmp {new _Log(out)};
-        return tmp;
-    }
-    void fatal_error(const std::string& topic, const std::wstring& message);
     void fatal_error(const std::string& topic, const std::string& message);
+    void fatal_error(const std::string& topic, const std::wstring& message);
     std::ostream& fatal_error(const std::string& topic);
 
-    void error(const std::string& topic, const std::wstring& message);
     void error(const std::string& topic, const std::string& message);
+    void error(const std::string& topic, const std::wstring& message);
     std::ostream& error(const std::string& topic);
 
     void info(const std::string& topic, const std::string& message);
+    void info(const std::string& topic, const std::wstring& message);
     std::ostream& info(const std::string& topic);
     void debug(const std::string& topic, const std::string& message);
+    void debug(const std::string& topic, const std::wstring& message);
     std::ostream& debug(const std::string& topic);
     void warn(const std::string& topic, const std::string& message);
+    void warn(const std::string& topic, const std::wstring& message);
     std::ostream& warn(const std::string& topic);
     void raw(const std::string& message);
+    void raw(const std::wstring& message);
     std::ostream& raw();
 
     template <class T>
@@ -68,10 +68,8 @@ public:
 //    void operator=(_Log const&)  = delete;
 private:
     std::ostream& _out;
-    std::wostream& _wout;
     _Log();
     _Log(std::ostream& out);
-    _Log(std::wostream& out);
     bool _inclusive_levels { true };
     std::set<log_t> _log_level { };
 
