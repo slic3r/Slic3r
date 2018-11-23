@@ -60,7 +60,7 @@ Config::validate()
             } catch (std::bad_cast& e) {
                 throw InvalidOptionType((std::string("(cast failure) Invalid value for ") + std::string(k)).c_str());
             }
-            std::string tmp_str { tmp_opt->vserialize() };
+            const std::vector<std::string> tmp_str { tmp_opt->vserialize() };
             values.insert(values.end(), tmp_str.begin(), tmp_str.end());
         } else {
             Slic3r::Log::debug("Config::validate", std::string("Not an array"));
