@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# This is too strict for source $HOME/perl5/perlbrew/etc/bashrc:
+# -u is too strict for source $HOME/perl5/perlbrew/etc/bashrc:
 ### set -euo pipefail
+set -eo pipefail
 
 if [ ! -d $HOME/perl5/perlbrew/perls/slic3r-perl ]; then
     echo "Downloading slic3r-perlbrew-5.24.tar.bz2"
