@@ -38,12 +38,6 @@ PrintObject::~PrintObject()
 {
 }
 
-Print*
-PrintObject::print()
-{
-    return this->_print;
-}
-
 Points
 PrintObject::copies() const
 {
@@ -965,11 +959,10 @@ PrintObject::make_perimeters()
 void
 PrintObject::slice()
 {
-    auto* print {this->print()};
     if (this->state.is_done(posSlice)) return;
     this->state.set_started(posSlice);
-    if (print->status_cb != nullptr) {
-        print->status_cb(10, "Processing triangulated mesh");
+    if (_print->status_cb != nullptr) {
+        _print->status_cb(10, "Processing triangulated mesh");
     }
 
 
@@ -1400,7 +1393,7 @@ PrintObject::discover_horizontal_shells()
 
             if (region_config.solid_infill_every_layers() > 0 && region_config.fill_density() > 0
                 && (i % region_config.solid_infill_every_layers()) == 0) {
-                const auto type {region_config.fill_density() == 100 ? stInternalSolid : stInternalBridge };
+                const auto type = region_config.fill_density() == 100 ? stInternalSolid : stInternalBridge;
                 // set the surface type to internal for the types
                 std::for_each(layerm->fill_surfaces.begin(), layerm->fill_surfaces.end(), [type] (Surface& s) { s.surface_type = (s.surface_type == type ? stInternal : s.surface_type); });
             }
@@ -1412,7 +1405,7 @@ PrintObject::discover_horizontal_shells()
 void
 PrintObject::_discover_external_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id)
 {
-    const auto& region_config {layerm->region()->config};
+    const auto& region_config = layerm->region()->config;
     for (auto& type : { stTop, stBottom, stBottomBridge }) {
         // find slices of current type for current layer
         // use slices instead of fill_surfaces because they also include the perimeter area
@@ -1425,7 +1418,7 @@ PrintObject::_discover_external_horizontal_shells(LayerRegion* layerm, const siz
         // too much solid infill inside nearly-vertical slopes.
       
         Polygons solid; 
-        auto tmp {layerm->slices.filter_by_type(type)};
+        auto tmp = layerm->slices.filter_by_type(type);
         polygons_append(solid, tmp);
         tmp.clear();
         tmp = layerm->fill_surfaces.filter_by_type(type);
@@ -1433,11 +1426,11 @@ PrintObject::_discover_external_horizontal_shells(LayerRegion* layerm, const siz
 
         if (solid.size() == 0) continue;
 
-        auto solid_layers { type == stTop ? region_config.top_solid_layers() : region_config.bottom_solid_layers() };
+        auto solid_layers = type == stTop ? region_config.top_solid_layers() : region_config.bottom_solid_layers();
 
         if (region_config.min_top_bottom_shell_thickness() > 0) {
-            auto current_shell_thick { static_cast<coordf_t>(solid_layers) * this->get_layer(i)->height };
-            const auto& min_shell_thick { region_config.min_top_bottom_shell_thickness() };
+            auto current_shell_thick = static_cast<coordf_t>(solid_layers) * this->get_layer(i)->height;
+            const auto min_shell_thick = region_config.min_top_bottom_shell_thickness();
             while (std::abs(min_shell_thick - current_shell_thick) > Slic3r::Geometry::epsilon) {
                 solid_layers++;
                 current_shell_thick = static_cast<coordf_t>(solid_layers) * this->get_layer(i)->height;
@@ -1450,19 +1443,19 @@ PrintObject::_discover_external_horizontal_shells(LayerRegion* layerm, const siz
 void
 PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id, const SurfaceType& type, Polygons& solid, const size_t& solid_layers)
 {
-    const auto& region_config {layerm->region()->config};
+    const auto& region_config = layerm->region()->config;
 
     for (int n = (type == stTop ? i-1 : i+1); std::abs(n-int(i)) < solid_layers; (type == stTop ? n-- : n++)) {
         if (n < 0 || static_cast<size_t>(n) >= this->layer_count()) continue;
 
-        auto* neighbor_layerm { this->get_layer(n)->regions.at(region_id) };
+        LayerRegion* neighbor_layerm { this->get_layer(n)->get_region(region_id) };
         // make a copy so we can use them even after clearing the original collection
-        auto  neighbor_fill_surfaces{ SurfaceCollection(neighbor_layerm->fill_surfaces) };
+        SurfaceCollection neighbor_fill_surfaces{ neighbor_layerm->fill_surfaces };
         // find intersection between neighbor and current layer's surfaces
         // intersections have contours and holes
         Polygons filtered_poly;
         polygons_append(filtered_poly, neighbor_fill_surfaces.filter_by_type({stInternal, stInternalSolid}));
-        auto new_internal_solid { intersection(solid, filtered_poly , 1 ) };
+        auto new_internal_solid = intersection(solid, filtered_poly , 1 );
         if (new_internal_solid.size() == 0) {
             // No internal solid needed on this layer. In order to decide whether to continue
             // searching on the next neighbor (thus enforcing the configured number of solid
@@ -1485,8 +1478,8 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
             // than a perimeter width, since it's probably just crossing a sloping wall
             // and it's not wanted in a hollow print even if it would make sense when
             // obeying the solid shell count option strictly (DWIM!)
-            auto margin { neighbor_layerm->flow(frExternalPerimeter).scaled_width()};
-            auto too_narrow { diff(new_internal_solid, offset2(new_internal_solid, -margin, +margin, CLIPPER_OFFSET_SCALE, ClipperLib::jtMiter, 5), 1)}; 
+            const auto margin = neighbor_layerm->flow(frExternalPerimeter).scaled_width();
+            const auto too_narrow = diff(new_internal_solid, offset2(new_internal_solid, -margin, +margin, CLIPPER_OFFSET_SCALE, ClipperLib::jtMiter, 5), 1); 
             if (too_narrow.size() > 0) 
                 new_internal_solid = solid = diff(new_internal_solid, too_narrow);
         }
@@ -1494,16 +1487,16 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
         // make sure the new internal solid is wide enough, as it might get collapsed
         // when spacing is added in Slic3r::Fill
         {
-            auto margin {3 * layerm->flow(frSolidInfill).scaled_width()};
+            const auto margin = 3 * layerm->flow(frSolidInfill).scaled_width();
 
             // we use a higher miterLimit here to handle areas with acute angles
             // in those cases, the default miterLimit would cut the corner and we'd
             // get a triangle in $too_narrow; if we grow it below then the shell
             // would have a different shape from the external surface and we'd still
             // have the same angle, so the next shell would be grown even more and so on.
-            auto too_narrow { diff(new_internal_solid, offset2(new_internal_solid, -margin, +margin, CLIPPER_OFFSET_SCALE, ClipperLib::jtMiter, 5), 1) };
+            const auto too_narrow = diff(new_internal_solid, offset2(new_internal_solid, -margin, +margin, CLIPPER_OFFSET_SCALE, ClipperLib::jtMiter, 5), 1);
 
-            if (too_narrow.size() > 0) {
+            if (!too_narrow.empty()) {
                 // grow the collapsing parts and add the extra area to  the neighbor layer 
                 // as well as to our original surfaces so that we support this 
                 // additional area in the next shell too
@@ -1513,16 +1506,16 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
                 for (auto& s : neighbor_fill_surfaces) {
                     if (s.is_internal() && !s.is_bridge()) tmp_internal.emplace_back(Polygon(s.expolygon)); 
                 }
-                auto grown {intersection(
-                offset(too_narrow, +margin),
-                // Discard bridges as they are grown for anchoring and we cant
-                // remove such anchors. (This may happen when a bridge is being 
-                // anchored onto a wall where little space remains after the bridge
-                // is grown, and that little space is an internal solid shell so 
-                // it triggers this too_narrow logic.)
-                tmp_internal)
-                };
-                new_internal_solid = solid = diff(new_internal_solid, too_narrow);
+                const auto grown = intersection(
+                    offset(too_narrow, +margin),
+                    // Discard bridges as they are grown for anchoring and we cant
+                    // remove such anchors. (This may happen when a bridge is being 
+                    // anchored onto a wall where little space remains after the bridge
+                    // is grown, and that little space is an internal solid shell so 
+                    // it triggers this too_narrow logic.)
+                    tmp_internal
+                );
+                new_internal_solid = solid = diff(grown, new_internal_solid);
             }
         }
         // internal-solid are the union of the existing internal-solid surfaces
@@ -1530,11 +1523,11 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
         
         Polygons tmp_internal { to_polygons(neighbor_fill_surfaces.filter_by_type(stInternalSolid)) };
         polygons_append(tmp_internal, neighbor_fill_surfaces.surfaces);
-        auto internal_solid {union_ex(tmp_internal)};
+        const auto internal_solid = union_ex(tmp_internal);
 
         // subtract intersections from layer surfaces to get resulting internal surfaces
         tmp_internal = to_polygons(neighbor_fill_surfaces.filter_by_type(stInternal));
-        auto internal { diff_ex(tmp_internal, to_polygons(internal_solid), 1) };
+        const auto internal = diff_ex(tmp_internal, to_polygons(internal_solid), 1);
 
         // assign resulting internal surfaces to layer
         neighbor_fill_surfaces.clear();
@@ -1558,7 +1551,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
             both_solids.insert(both_solids.end(), internal_solid.begin(), internal_solid.end());
             both_solids.insert(both_solids.end(), internal.begin(), internal.end());
 
-            auto solid_surfaces { diff_ex(pp, to_polygons(both_solids), 1) };
+            const auto solid_surfaces = diff_ex(pp, to_polygons(both_solids), 1);
             for (auto exp : solid_surfaces) 
                 neighbor_fill_surfaces.surfaces.emplace_back(Surface(s.surface_type, exp));
         }
