@@ -88,4 +88,4 @@ Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark 
 
 ### How can I invoke Slic3r using the command line?
 
-The command line is documented in the relevent [manual page](http://manual.slic3r.org/advanced/command-line).
+The command line is documented in the relevant [manual page](https://manual.slic3r.org/advanced/command-line).
