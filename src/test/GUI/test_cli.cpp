@@ -253,17 +253,17 @@ SCENARIO("CLI positioning arguments", "[!shouldfail]") {
                         max_y = std::max(max_y, static_cast<double>(self.Y));
                     }
                 });
-                AND_THEN("Minimum X encountered is about -29.9") {
-                    REQUIRE(min_x == Approx(-29.9));
+                AND_THEN("Minimum X encountered is about 30.1") {
+                    REQUIRE(min_x == Approx(30.1));
                 }
-                AND_THEN("Minimum Y encountered is about -29.9") {
-                    REQUIRE(min_y == Approx(-29.9));
+                AND_THEN("Minimum Y encountered is about 30.1") {
+                    REQUIRE(min_y == Approx(30.1));
                 }
-                AND_THEN("Maximum X encountered is about 39.9") {
-                    REQUIRE(max_x == Approx(39.9));
+                AND_THEN("Maximum X encountered is about 49.9") {
+                    REQUIRE(max_x == Approx(49.9));
                 }
-                AND_THEN("Maximum Y encountered is about 39.9") {
-                    REQUIRE(max_y == Approx(39.9));
+                AND_THEN("Maximum Y encountered is about 49.9") {
+                    REQUIRE(max_y == Approx(49.9));
                 }
             }
         }
