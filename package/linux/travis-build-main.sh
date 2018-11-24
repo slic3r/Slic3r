@@ -28,5 +28,5 @@ if [ ! -e ./local-lib/lib/perl5/x86_64-linux-thread-multi/Wx.pm ]; then
     tar -C$HOME -xjf /tmp/wx302.tar.bz2
 fi
 
-SLIC3R_STATIC=1 CC=g++-4.9 CXX=g++-4.9 BOOST_DIR=$HOME/boost_1_63_0 perl ./Build.PL
+SLIC3R_STATIC=1 CC=g++-7 CXX=g++-7 BOOST_DIR=$HOME/boost_1_63_0 perl ./Build.PL
 perl ./Build.PL --gui
