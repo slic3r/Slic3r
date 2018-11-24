@@ -198,6 +198,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/LayerRegionFill.cpp
     ${LIBDIR}/libslic3r/LayerHeightSpline.cpp
     ${LIBDIR}/libslic3r/Line.cpp
+    ${LIBDIR}/libslic3r/Log.cpp
     ${LIBDIR}/libslic3r/Model.cpp
     ${LIBDIR}/libslic3r/MotionPlanner.cpp
     ${LIBDIR}/libslic3r/MultiPoint.cpp
@@ -284,18 +285,19 @@ set(UI_TEST_SOURCES
 set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/test_harness.cpp
     ${TESTDIR}/test_data.cpp
-    ${TESTDIR}/libslic3r/test_trianglemesh.cpp
     ${TESTDIR}/libslic3r/test_config.cpp
-    ${TESTDIR}/libslic3r/test_support_material.cpp
     ${TESTDIR}/libslic3r/test_fill.cpp
     ${TESTDIR}/libslic3r/test_flow.cpp
-    ${TESTDIR}/libslic3r/test_model.cpp
-    ${TESTDIR}/libslic3r/test_printgcode.cpp
-    ${TESTDIR}/libslic3r/test_print.cpp
-    ${TESTDIR}/libslic3r/test_skirt_brim.cpp
-    ${TESTDIR}/libslic3r/test_test_data.cpp
-    ${TESTDIR}/libslic3r/test_geometry.cpp
     ${TESTDIR}/libslic3r/test_gcodewriter.cpp
+    ${TESTDIR}/libslic3r/test_geometry.cpp
+    ${TESTDIR}/libslic3r/test_log.cpp
+    ${TESTDIR}/libslic3r/test_model.cpp
+    ${TESTDIR}/libslic3r/test_print.cpp
+    ${TESTDIR}/libslic3r/test_printgcode.cpp
+    ${TESTDIR}/libslic3r/test_skirt_brim.cpp
+    ${TESTDIR}/libslic3r/test_support_material.cpp
+    ${TESTDIR}/libslic3r/test_test_data.cpp
+    ${TESTDIR}/libslic3r/test_trianglemesh.cpp
 )
 
 
