@@ -657,8 +657,13 @@ class CLIMiscConfigDef : public ConfigDef
     CLIMiscConfigDef();
 };
 
+// This class defines the command line options representing actions.
 extern const CLIActionsConfigDef    cli_actions_config_def;
+
+// This class defines the command line options representing transforms.
 extern const CLITransformConfigDef  cli_transform_config_def;
+
+// This class defines all command line options that are not actions or transforms.
 extern const CLIMiscConfigDef       cli_misc_config_def;
 
 }
