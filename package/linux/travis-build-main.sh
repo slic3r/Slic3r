@@ -4,9 +4,9 @@
 ### set -euo pipefail
 
 if [ ! -d $HOME/perl5/perlbrew/perls/slic3r-perl ]; then
-    echo "Downloading slic3r-perlbrew-5.24.tar.bz2"
-    curl -L "http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.gcc49.travis.tar.bz2" -o /tmp/slic3r-perlbrew-5.24.tar.bz2; 
-    tar -C$HOME/perl5/perlbrew/perls -xjf /tmp/slic3r-perlbrew-5.24.tar.bz2
+    echo "Downloading slic3r-perlbrew-5.28.tar.bz2"
+    curl -L "http://www.siusgs.com/slic3r/buildserver/slic3r-perl.528.gcc7.travis.tar.bz2" -o /tmp/slic3r-perlbrew.tar.bz2;
+    tar -C$HOME/perl5/perlbrew/perls -xjf /tmp/slic3r-perlbrew.tar.bz2
 fi
 
 source $HOME/perl5/perlbrew/etc/bashrc
