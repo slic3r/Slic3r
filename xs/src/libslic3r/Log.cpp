@@ -4,6 +4,10 @@
 #include <iomanip>
 #include <algorithm>
 
+// Boost
+#include <boost/locale.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
+
 #include "Log.hpp"
 
 /// Local class to suppress output
@@ -39,11 +43,11 @@ bool _Log::_has_topic(const std::string& topic) {
     return this->_topics.find(topic) != this->_topics.end() || this->_topics.size() == 0;
 }
 
-void _Log::fatal_error(const std::string& topic, const std::wstring& message) { this->fatal_error(topic, this->converter.to_bytes(message)); }
-void _Log::error(const std::string& topic, const std::wstring& message) { this->error(topic, this->converter.to_bytes(message)); }
-void _Log::warn(const std::string& topic, const std::wstring& message) { this->warn(topic, this->converter.to_bytes(message)); }
-void _Log::info(const std::string& topic, const std::wstring& message) { this->info(topic, this->converter.to_bytes(message)); }
-void _Log::debug(const std::string& topic, const std::wstring& message) { this->debug(topic, this->converter.to_bytes(message)); }
+void _Log::fatal_error(const std::string& topic, const std::wstring& message) { this->fatal_error(topic, boost::locale::conv::utf_to_utf<char>(message)); }
+void _Log::error(const std::string& topic, const std::wstring& message) { this->error(topic, boost::locale::conv::utf_to_utf<char>(message)); }
+void _Log::warn(const std::string& topic, const std::wstring& message) { this->warn(topic, boost::locale::conv::utf_to_utf<char>(message)); }
+void _Log::info(const std::string& topic, const std::wstring& message) { this->info(topic, boost::locale::conv::utf_to_utf<char>(message)); }
+void _Log::debug(const std::string& topic, const std::wstring& message) { this->debug(topic, boost::locale::conv::utf_to_utf<char>(message)); }
 
 void _Log::fatal_error(const std::string& topic, const std::string& message) {
     this->fatal_error(topic) << message << std::endl;
