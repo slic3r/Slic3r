@@ -10,6 +10,8 @@ namespace Slic3r {
 class CLI {
     public:
     int run(int argc, char **argv);
+
+    const FullPrintConfig& full_print_config_ref() { return this->full_print_config; }
     
     private:
     ConfigDef config_def;
