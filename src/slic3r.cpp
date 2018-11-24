@@ -25,10 +25,12 @@
 
 using namespace Slic3r;
 
+#ifndef BUILD_TEST
 int
 main(int argc, char **argv) {
     return CLI().run(argc, argv);
 }
+#endif // BUILD_TEST
 
 int CLI::run(int argc, char **argv) {
     // Convert arguments to UTF-8 (needed on Windows).
