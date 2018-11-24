@@ -266,6 +266,7 @@ add_library(poly2tri STATIC
 target_include_directories(poly2tri PUBLIC ${COMMON_INCLUDES})
 
 set(UI_TEST_SOURCES
+    slic3r.cpp
     ${GUI_TESTDIR}/testableframe.cpp
     ${GUI_TESTDIR}/test_harness_gui.cpp
     ${GUI_TESTDIR}/test_field_checkbox.cpp
@@ -281,6 +282,7 @@ set(UI_TEST_SOURCES
     ${GUI_TESTDIR}/test_preset.cpp
     ${GUI_TESTDIR}/test_preset_chooser.cpp
     ${GUI_TESTDIR}/test_misc_ui.cpp
+    ${GUI_TESTDIR}/test_cli.cpp
 )
 
 set(SLIC3R_TEST_SOURCES
@@ -450,6 +452,7 @@ IF(wxWidgets_FOUND AND OPENGL_FOUND AND Enable_GUI)
         target_link_libraries(gui_test PUBLIC slic3r_gui libslic3r Catch ${wxWidgets_LIBRARIES} ${LIBSLIC3R_DEPENDS} ${OPENGL_LIBRARIES})
         target_include_directories(gui_test PUBLIC cxx_std_14 ${SLIC3R_GUI_INCLUDES} )
         target_include_directories(gui_test PUBLIC ${TESTDIR})
+        target_compile_options(gui_test PUBLIC -DBUILD_TEST)
     endif()
     if (WIN32)
         target_link_libraries(slic3r uxtheme)    
