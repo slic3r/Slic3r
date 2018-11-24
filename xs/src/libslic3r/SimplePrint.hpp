@@ -17,6 +17,8 @@ class SimplePrint {
     double total_extruded_volume() const { return this->_print.total_extruded_volume; }
     void set_model(const Model &model);
     void export_gcode(std::string outfile);
+    const Model& model() const { return this->_model; };
+    const Print& print() const { return this->_print; };
     
     private:
     Model _model;

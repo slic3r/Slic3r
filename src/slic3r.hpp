@@ -19,8 +19,12 @@ class CLI {
     t_config_option_keys input_files, actions, transforms;
     std::vector<Model> models;
     
+    /// Prints usage of the CLI.
     void print_help(bool include_print_options = false) const;
+    
+    /// Exports loaded models to a file of the specified format, according to the options affecting output filename.
     void export_models(IO::ExportFormat format);
+    
     std::string output_filepath(const Model &model, IO::ExportFormat format) const;
 };
 

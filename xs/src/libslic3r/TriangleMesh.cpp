@@ -404,7 +404,7 @@ Pointf3s TriangleMesh::vertices()
         if (this->stl.v_shared == nullptr) 
             stl_generate_shared_vertices(&stl); // build the list of vertices
         for (auto i = 0; i < this->stl.stats.shared_vertices; i++) {
-            const stl_vertex& v { this->stl.v_shared[i] };
+            const auto& v = this->stl.v_shared[i];
             tmp.emplace_back(Pointf3(v.x, v.y, v.z));
         }
     } else {
@@ -420,7 +420,7 @@ Point3s TriangleMesh::facets()
         if (this->stl.v_shared == nullptr) 
             stl_generate_shared_vertices(&stl); // build the list of vertices
         for (auto i = 0; i < stl.stats.number_of_facets; i++) {
-            const v_indices_struct& v { stl.v_indices[i] };
+            const auto& v = stl.v_indices[i];
             tmp.emplace_back(Point3(v.vertex[0], v.vertex[1], v.vertex[2]));
         }
     } else {
