@@ -110,7 +110,7 @@ std::ostream& _Log::debug(const std::string& topic) {
 void _Log::raw(const std::string& message) {
     this->raw() << message << std::endl;
 }
-void _Log::raw(const std::wstring& message) { this->raw(this->converter.to_bytes(message)); }
+void _Log::raw(const std::wstring& message) { this->raw(boost::locale::conv::utf_to_utf<char>(message)); }
 
 std::ostream& _Log::raw() {
     return _out;
