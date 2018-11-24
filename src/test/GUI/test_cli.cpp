@@ -111,20 +111,36 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
         WHEN ( "[ ACTION ] is export-svg") { 
             in_args.emplace(in_args.cend()-1, "--export-svg");
             CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
-            THEN ("SVG file is created.") {
-                REQUIRE(file_exists("test_cli/20mmbox", "svg"));
+            THEN ("SVG files are created.") {
+                REQUIRE(file_exists("test_cli/20mmbox_0", "svg"));
+                REQUIRE(file_exists("test_cli/20mmbox_1", "svg"));
+                REQUIRE(file_exists("test_cli/20mmbox_2", "svg"));
+                REQUIRE(file_exists("test_cli/20mmbox_3", "svg"));
+                REQUIRE(file_exists("test_cli/20mmbox_4", "svg"));
             }
             clean_array(in_args.size(), args_cli);
-            clean_file("test_cli/20mmbox", "svg");
+            clean_file("test_cli/20mmbox_0", "svg", true);
+            clean_file("test_cli/20mmbox_1", "svg", true);
+            clean_file("test_cli/20mmbox_2", "svg", true);
+            clean_file("test_cli/20mmbox_3", "svg", true);
+            clean_file("test_cli/20mmbox_4", "svg", true);
         }
         WHEN ( "[ ACTION ] is export-sla-svg") { 
             in_args.emplace(in_args.cend()-1, "--export-sla-svg");
             CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
-            THEN ("SVG file is created.") {
-                REQUIRE(file_exists("test_cli/20mmbox", "svg"));
+            THEN ("SVG files are created.") {
+                REQUIRE(file_exists("test_cli/20mmbox_0", "svg"));
+                REQUIRE(file_exists("test_cli/20mmbox_1", "svg"));
+                REQUIRE(file_exists("test_cli/20mmbox_2", "svg"));
+                REQUIRE(file_exists("test_cli/20mmbox_3", "svg"));
+                REQUIRE(file_exists("test_cli/20mmbox_4", "svg"));
             }
             clean_array(in_args.size(), args_cli);
-            clean_file("test_cli/20mmbox", "svg");
+            clean_file("test_cli/20mmbox_0", "svg", true);
+            clean_file("test_cli/20mmbox_1", "svg", true);
+            clean_file("test_cli/20mmbox_2", "svg", true);
+            clean_file("test_cli/20mmbox_3", "svg", true);
+            clean_file("test_cli/20mmbox_4", "svg", true);
         }
         WHEN ( "[ ACTION ] is sla") { 
             in_args.emplace(in_args.cend()-1, "--sla");
