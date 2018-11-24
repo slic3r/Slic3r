@@ -62,6 +62,64 @@ SCENARIO( "_Log output with std::string methods" ) {
         }
     }
 }
+SCENARIO( "_Log output with std::wstring methods" ) {
+    GIVEN("A log stream and a _Log object") {
+        std::stringstream log;
+        std::unique_ptr<_Log> cut { _Log::make_log(log) };
+        cut->set_level(log_t::DEBUG);
+        cut->set_inclusive(true);
+        WHEN("fatal_error is called with topic \"Topic\" and text \"This\"") {
+            log.clear();
+            cut->fatal_error("Topic", L"This");
+            THEN("Output string is Topic  FERR: This\\n") {
+                REQUIRE(log.str() == "Topic  FERR: This\n");
+            }
+        }
+        WHEN("error is called with topic \"Topic\" and text \"This\"") {
+            log.clear();
+            cut->error("Topic", L"This");
+            THEN("Output string is Topic   ERR: This\\n") {
+                REQUIRE(log.str() == "Topic   ERR: This\n");
+            }
+        }
+        WHEN("info is called with topic \"Topic\" and text \"This\"") {
+            log.clear();
+            cut->info("Topic", L"This");
+            THEN("Output string is Topic  INFO: This\\n") {
+                REQUIRE(log.str() == "Topic  INFO: This\n");
+            }
+        }
+        WHEN("warn is called with topic \"Topic\" and text \"This\"") {
+            log.clear();
+            cut->warn("Topic", L"This");
+            THEN("Output string is Topic  WARN: This\\n") {
+                REQUIRE(log.str() == "Topic  WARN: This\n");
+            }
+        }
+        WHEN("info is called with topic \"Topic\" and text \"This\"") {
+            log.clear();
+            cut->info("Topic", L"This");
+            THEN("Output string is Topic  INFO: This\\n") {
+                REQUIRE(log.str() == "Topic  INFO: This\n");
+            }
+        }
+        WHEN("debug is called with topic \"Topic\" and text \"This\"") {
+            log.clear();
+            cut->debug("Topic", L"This");
+            THEN("Output string is Topic DEBUG: This\\n") {
+                REQUIRE(log.str() == "Topic DEBUG: This\n");
+            }
+        }
+        WHEN("msg is called with text \"This\"") {
+            log.clear();
+            cut->raw(L"This");
+            THEN("Output string is This\\n") {
+                REQUIRE(log.str() == "This\n");
+            }
+        }
+    }
+}
+
 SCENARIO( "_Log output with << methods" ) {
     GIVEN("A log stream and a _Log object") {
         std::stringstream log;

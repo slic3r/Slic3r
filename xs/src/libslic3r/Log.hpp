@@ -6,9 +6,7 @@
 #include <sstream>
 #include <iostream>
 #include <memory>
-#include <locale>
 #include <set>
-#include <codecvt> // good until c++17
 
 
 namespace Slic3r {
@@ -75,8 +73,6 @@ private:
     bool _inclusive_levels { true };
     std::set<log_t> _log_level { };
     std::set<std::string> _topics { };
-
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 
     bool _has_log_level(log_t lvl);
     bool _has_topic(const std::string& topic);
