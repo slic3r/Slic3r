@@ -30,6 +30,6 @@ fi
 
 SLIC3R_STATIC=1 CC=g++-7 CXX=g++-7 BOOST_DIR=$HOME/boost_1_63_0 perl ./Build.PL
 excode=$?
-if [ $excode -ne 0 ]; then return $excode; fi
+if [ $excode -ne 0 ]; then exit $excode; fi
 perl ./Build.PL --gui
 exit $?
