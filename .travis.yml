@@ -28,7 +28,6 @@ branches:
   only:
   - master
   - cppgui
-  - coverity-scan
 
 addons:
   apt:
@@ -82,6 +81,9 @@ matrix:
             - package/linux/travis-deploy-cpp.sh
 
         - os: linux
+          branches:
+            only:
+             - coverity-scan
           env: 
             - TARGET=coverity
             - CACHE=$HOME/cache
