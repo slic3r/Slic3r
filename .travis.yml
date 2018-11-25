@@ -16,7 +16,7 @@ dist: trusty
 before_install:
     - sh package/common/travis-decrypt-key
     - export SLIC3R_GIT_VERSION=$(git rev-parse --short HEAD)
-    - echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+    - echo -n | openssl s_client -connect 'https://scan.coverity.com:443' | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
 
 script:
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "main" ]]; then ./package/linux/travis-build-main.sh || travis_terminate 1; fi
@@ -124,9 +124,9 @@ addons:
       name: "slic3r/Slic3r"
       description: "Open source 3D printing toolbox"
     notification_email: lordofhyphens@gmail.com
-    build_command_prepend: "mkdir build && cd build && cmake ../src"
-    build_command: "cmake . --build -- -j4"
-    branch_pattern: coverity_scan
+    build_command_prepend: ""
+    build_command: "./package/linux/travis-build-cpp.sh"
+    branch_pattern: coverity-scan
 
 notifications:
   irc:
