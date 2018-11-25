@@ -1928,6 +1928,12 @@ CLIActionsConfigDef::CLIActionsConfigDef()
     def->cli = "export-3mf";
     def->default_value = new ConfigOptionBool(false);
 
+    def = this->add("export_amf", coBool);
+    def->label = __TRANS("Export AMF");
+    def->tooltip = __TRANS("Export the model(s) as AMF.");
+    def->cli = "export-amf";
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("export_stl", coBool);
     def->label = __TRANS("Export STL");
     def->tooltip = __TRANS("Export the model(s) as STL.");
