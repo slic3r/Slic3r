@@ -418,23 +418,23 @@ IF(wxWidgets_FOUND AND OPENGL_FOUND AND Enable_GUI)
             include (ExternalProject)
             if(IS_TRAVIS_BUILD)     # on travis, use git for fetching instead of wget
                 set(FETCH_EXTERNAL_CATCH
-                    GIT_REPOSITORY https://github.com/philsquared/Catch.git
-                    GIT_TAG 19ab2117c5bac2f376f8da4a4b25e183137bcec0)
+                    GIT_REPOSITORY https://github.com/catchorg/Catch.git
+                    GIT_TAG 03d122a35c3f5c398c43095a87bc82ed44642516)
             elseif(WIN32)
                 set(FETCH_EXTERNAL_CATCH
-                    URL https://github.com/catchorg/Catch2/archive/v2.0.1.zip
-                    URL_HASH MD5=1abca1b324b99b1631e999119b172620)
+                    URL https://github.com/catchorg/Catch2/archive/v2.4.2.zip
+                    URL_HASH MD5=6a2ffb9c69d368ebc1ad13146c5a5e1e)
             else()
                 set(FETCH_EXTERNAL_CATCH
-                    URL https://github.com/catchorg/Catch2/archive/v2.0.1.tar.gz
-                    URL_HASH MD5=2080f4696579351d9323b3b5a8c3c71b)
+                    URL https://github.com/catchorg/Catch2/archive/v2.4.2.tar.gz
+                    URL_HASH MD5=26927b878b1f42633f15a9ef1c4bd8e7)
             endif()
             ExternalProject_Add(Catch-External
                 PREFIX ${CMAKE_BINARY_DIR}/external/Catch
                 ${FETCH_EXTERNAL_CATCH}
                 CONFIGURE_COMMAND ""
                 BUILD_COMMAND ""
-                INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/external/Catch/src/Catch-External/single_include/catch.hpp
+                INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/external/Catch/src/Catch-External/single_include/catch2/catch.hpp
                                                          ${CMAKE_BINARY_DIR}/external/Catch/include/catch.hpp
             )
             add_library(Catch INTERFACE)
@@ -500,23 +500,23 @@ if (SLIC3R_BUILD_TESTS)
         include (ExternalProject)
         if(IS_TRAVIS_BUILD)     # on travis, use git for fetching instead of wget
             set(FETCH_EXTERNAL_CATCH
-                GIT_REPOSITORY https://github.com/philsquared/Catch.git
-                GIT_TAG 19ab2117c5bac2f376f8da4a4b25e183137bcec0)
+                GIT_REPOSITORY https://github.com/catchorg/Catch.git
+                GIT_TAG 03d122a35c3f5c398c43095a87bc82ed44642516)
         elseif(WIN32)
             set(FETCH_EXTERNAL_CATCH
-                URL https://github.com/catchorg/Catch2/archive/v2.0.1.zip
-                URL_HASH MD5=1abca1b324b99b1631e999119b172620)
+                URL https://github.com/catchorg/Catch2/archive/v2.4.2.zip
+                URL_HASH MD5=6a2ffb9c69d368ebc1ad13146c5a5e1e)
         else()
             set(FETCH_EXTERNAL_CATCH
-                URL https://github.com/catchorg/Catch2/archive/v2.0.1.tar.gz
-                URL_HASH MD5=2080f4696579351d9323b3b5a8c3c71b)
+                URL https://github.com/catchorg/Catch2/archive/v2.4.2.tar.gz
+                URL_HASH MD5=26927b878b1f42633f15a9ef1c4bd8e7)
         endif()
         ExternalProject_Add(Catch-External
             PREFIX ${CMAKE_BINARY_DIR}/external/Catch
             ${FETCH_EXTERNAL_CATCH}
             CONFIGURE_COMMAND ""
             BUILD_COMMAND ""
-            INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/external/Catch/src/Catch-External/single_include/catch.hpp
+            INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/external/Catch/src/Catch-External/single_include/catch2/catch.hpp
                                                      ${CMAKE_BINARY_DIR}/external/Catch/include/catch.hpp
         )
         add_library(Catch INTERFACE)
