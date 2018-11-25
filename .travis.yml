@@ -27,6 +27,7 @@ branches:
   only:
   - master
   - cppgui
+  - coverity-scan
 
 addons:
   apt:
