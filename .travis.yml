@@ -80,7 +80,10 @@ matrix:
             # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
             #   via the "travis encrypt" command using the project repo's public key
             - secure: "J2exlMTgOBNmGkNwofJezWlIX9ZAa9WqZsgTmHaceWRVAkgOYnekG6/NHStGQV6ttfmkowRWuOZW4mkuR0xZiOk2ZNH3CHyk986V9A3XMUH2bVXsxhSTyDpWc12mVjPApZEvfa1hzBHr6TZWPZtpcg1xrqpG3706YBOXaIQlYF0="
-
+          cache:
+            apt: true
+            directories:
+              - $HOME/cache
 
         # While this works, it does not appear to be needed as the 10.13 builds
         # work on 10.12 as well.
