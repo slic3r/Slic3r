@@ -185,12 +185,14 @@ bool
 Model::add_default_instances()
 {
     // apply a default position to all objects not having one
-    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
-        if ((*o)->instances.empty()) {
-            (*o)->add_instance();
+    bool added = false;
+    for (ModelObject* o : this->objects) {
+        if (o->instances.empty()) {
+            o->add_instance();
+            added = true;
         }
     }
-    return true;
+    return added;
 }
 
 // this returns the bounding box of the *transformed* instances
