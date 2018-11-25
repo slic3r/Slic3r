@@ -47,6 +47,14 @@ addons:
     - libwxgtk3.0-dev
     - wx-common
   ssh_known_hosts: dl.slic3r.org
+  coverity_scan:
+    project:
+      name: "slic3r/Slic3r"
+      description: "Open source 3D printing toolbox"
+    notification_email: lordofhyphens@gmail.com
+    build_command_prepend: ""
+    build_command: "./package/linux/travis-build-cpp.sh"
+    branch_pattern: coverity-scan
 
 matrix:
     include:
@@ -84,18 +92,6 @@ matrix:
             apt: true
             directories:
               - $HOME/cache
-
-          addons:
-            coverity_scan:
-              project:
-                name: "slic3r/Slic3r"
-                description: "Open source 3D printing toolbox"
-              notification_email: lordofhyphens@gmail.com
-              build_command_prepend: ""
-              build_command: "./package/linux/travis-build-cpp.sh"
-              branch_pattern: coverity-scan
-
-
 
         # While this works, it does not appear to be needed as the 10.13 builds
         # work on 10.12 as well.
