@@ -110,7 +110,7 @@ _constant()
     Ref<Layer> add_layer(int id, coordf_t height, coordf_t print_z,
         coordf_t slice_z);
     void delete_layer(int idx);
-
+    %name{support_material_flow} Clone<Flow> _support_material_flow(FlowRole role = frSupportMaterial);
     size_t support_layer_count();
     void clear_support_layers();
     Ref<SupportLayer> get_support_layer(int idx);

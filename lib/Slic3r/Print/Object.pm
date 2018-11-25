@@ -247,7 +247,7 @@ sub _support_material {
         print_config        => $self->print->config,
         object_config       => $self->config,
         first_layer_flow    => $first_layer_flow,
-        flow                => $self->support_material_flow,
+        flow                => $self->support_material_flow(FLOW_ROLE_SUPPORT_MATERIAL),
         interface_flow      => $self->support_material_flow(FLOW_ROLE_SUPPORT_MATERIAL_INTERFACE),
     );
 }
@@ -568,30 +568,6 @@ sub _simplify_slices {
         $layer->slices->simplify($distance);
         $_->slices->simplify($distance) for @{$layer->regions};
     }
-}
-
-sub support_material_flow {
-    my ($self, $role) = @_;
-    
-    $role //= FLOW_ROLE_SUPPORT_MATERIAL;
-    my $extruder = ($role == FLOW_ROLE_SUPPORT_MATERIAL)
-        ? $self->config->support_material_extruder
-        : $self->config->support_material_interface_extruder;
-
-    my $width = $self->config->support_material_extrusion_width || $self->config->extrusion_width;
-    if ($role == FLOW_ROLE_SUPPORT_MATERIAL_INTERFACE) {
-        $width = $self->config->support_material_interface_extrusion_width || $width;
-    }
-    
-    # we use a bogus layer_height because we use the same flow for all
-    # support material layers
-    return Slic3r::Flow->new_from_width(
-        width               => $width,
-        role                => $role,
-        nozzle_diameter     => $self->print->config->nozzle_diameter->[$extruder-1] // $self->print->config->nozzle_diameter->[0],
-        layer_height        => $self->config->layer_height,
-        bridge_flow_ratio   => 0,
-    );
 }
 
 1;

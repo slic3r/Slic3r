@@ -1316,29 +1316,26 @@ PrintObject::_support_material()
 Flow
 PrintObject::_support_material_flow(FlowRole role)
 {
-    // Create support flow.
-    int extruder =
-        (role == frSupportMaterial) ?
-        config.support_material_extruder.value : config
-            .support_material_interface_extruder.value;
+    const int extruder = (role == frSupportMaterial)
+        ? this->config.support_material_extruder.value
+        : this->config.support_material_interface_extruder.value;
 
-    auto width = config.support_material_extrusion_width; // || config.extrusion_width;
+    auto width = this->config.support_material_extrusion_width;
+    if (width.value == 0) width = this->config.extrusion_width;
 
-    if (role == frSupportMaterialInterface)
-        width = config.support_material_interface_extrusion_width;  // || width;
-
+    if (role == frSupportMaterialInterface
+        && this->config.support_material_interface_extrusion_width.value > 0)
+        width = this->config.support_material_interface_extrusion_width;
+    
     // We use a bogus layer_height because we use the same flow for all
     // support material layers.
-    Flow support_flow = Flow::new_from_config_width(
+    return Flow::new_from_config_width(
         role,
         width,
-        static_cast<float>(print()->config.nozzle_diameter
-            .get_at(static_cast<size_t>(extruder - 1))), // Check this line $self->print->config->nozzle_diameter->[0].
-        static_cast<float>(config.layer_height.value),
+        this->_print->config.nozzle_diameter.get_at(extruder-1),
+        this->config.layer_height.value,
         0
     );
-
-    return support_flow;
 }
 
 void
