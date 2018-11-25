@@ -28,6 +28,7 @@ branches:
   only:
   - master
   - cppgui
+  - coverity-scan
 
 addons:
   apt:
@@ -58,6 +59,7 @@ addons:
 matrix:
     include:
         - os: linux
+          if: branch != coverity-scan
           env:
             - TARGET=main
           cache:
@@ -70,6 +72,7 @@ matrix:
             - if [[ "${TRAVIS_BRANCH}" == "master" ]]; then ./package/linux/travis-deploy-main.sh; fi
 
         - os: linux
+          if: branch != coverity-scan
           env: 
             - TARGET=cpp
             - CACHE=$HOME/cache
@@ -81,9 +84,7 @@ matrix:
             - package/linux/travis-deploy-cpp.sh
 
         - os: linux
-          branches:
-            only:
-             - coverity-scan
+          if: branch = coverity-scan
           env: 
             - TARGET=coverity
             - CACHE=$HOME/cache
@@ -109,6 +110,7 @@ matrix:
         #       - local-lib
 
         - os: osx
+          if: branch != coverity-scan
           osx_image: xcode9.4 # OS X 10.13
           env:
             - TARGET=main
@@ -121,6 +123,7 @@ matrix:
             - if [[ "${TRAVIS_BRANCH}" == "master" ]]; then ./package/osx/travis-deploy-main.sh; fi
 
         - os: osx
+          if: branch != coverity-scan
           osx_image: xcode9.4
           env:
             - TARGET=cpp
