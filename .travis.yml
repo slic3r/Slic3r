@@ -23,6 +23,7 @@ script:
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "cpp"  ]]; then ./package/linux/travis-build-cpp.sh || travis_terminate 1; fi
     - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "main" ]]; then ./package/osx/travis-build-main.sh || travis_terminate 1; fi
     - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "cpp"  ]]; then ./package/osx/travis-build-cpp.sh || travis_terminate 1; fi
+    - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "coverity"  ]]; then ./package/linux/travis-build-cpp.sh || travis_terminate 1; fi
 
 branches:
   only:
@@ -60,7 +61,7 @@ matrix:
               - $HOME/wx302
               - local-lib
           after_success:
-            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/linux/travis-deploy-main.sh; fi
+            - if [[ "${TRAVIS_BRANCH}" == "master" ]]; then ./package/linux/travis-deploy-main.sh; fi
 
         - os: linux
           env: 
@@ -72,6 +73,15 @@ matrix:
               - $HOME/cache
           after_success:
             - package/linux/travis-deploy-cpp.sh
+
+        - os: linux
+          env: 
+            - TARGET=coverity
+            - CACHE=$HOME/cache
+            # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+            #   via the "travis encrypt" command using the project repo's public key
+            - secure: "J2exlMTgOBNmGkNwofJezWlIX9ZAa9WqZsgTmHaceWRVAkgOYnekG6/NHStGQV6ttfmkowRWuOZW4mkuR0xZiOk2ZNH3CHyk986V9A3XMUH2bVXsxhSTyDpWc12mVjPApZEvfa1hzBHr6TZWPZtpcg1xrqpG3706YBOXaIQlYF0="
+
 
         # While this works, it does not appear to be needed as the 10.13 builds
         # work on 10.12 as well.
@@ -96,7 +106,7 @@ matrix:
               - $HOME/Library/Caches/Homebrew
               - local-lib
           after_success:
-            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/osx/travis-deploy-main.sh; fi
+            - if [[ "${TRAVIS_BRANCH}" == "master" ]]; then ./package/osx/travis-deploy-main.sh; fi
 
         - os: osx
           osx_image: xcode9.4
@@ -114,9 +124,6 @@ env:
   global:
   - secure: eEVRZNMv7FM6jrOU9iAFkDhWxFQ1WtHBEaObImcvtFUxy6vWSt3ehFFeTRouj3uHQAnbvUzziDyvPPm8/95alv5g/du8ML6YzzqKBKfazM0xQ7SF6R2DQL8lfFIp+RSV7T02byEP1f1g7Zva7xH9szIlDcSfU0pXW4KWbkBFMd8=
   - secure: gj338h+qHGccTD/VQFmEJkqdg2McIe2pO0iZ4Ae9BvY5vxkIML4BpoYZQXQTqiAOETnUjlcknY9lx0hI/PfkDD9MSJc5BC/3fMYRCu3SgAclEwklWf9vvtodUeT69mtnZuw1zze1nTbExuOw2mepbqFjxKKMl+9l5oCz4O54fXU=
-  # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
-  #   via the "travis encrypt" command using the project repo's public key
-  - secure: "J2exlMTgOBNmGkNwofJezWlIX9ZAa9WqZsgTmHaceWRVAkgOYnekG6/NHStGQV6ttfmkowRWuOZW4mkuR0xZiOk2ZNH3CHyk986V9A3XMUH2bVXsxhSTyDpWc12mVjPApZEvfa1hzBHr6TZWPZtpcg1xrqpG3706YBOXaIQlYF0="
 
 addons:
   coverity_scan:
