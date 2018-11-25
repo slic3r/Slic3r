@@ -16,6 +16,7 @@ dist: trusty
 before_install:
     - sh package/common/travis-decrypt-key
     - export SLIC3R_GIT_VERSION=$(git rev-parse --short HEAD)
+    - echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
 
 script:
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "main" ]]; then ./package/linux/travis-build-main.sh || travis_terminate 1; fi
@@ -113,6 +114,19 @@ env:
   global:
   - secure: eEVRZNMv7FM6jrOU9iAFkDhWxFQ1WtHBEaObImcvtFUxy6vWSt3ehFFeTRouj3uHQAnbvUzziDyvPPm8/95alv5g/du8ML6YzzqKBKfazM0xQ7SF6R2DQL8lfFIp+RSV7T02byEP1f1g7Zva7xH9szIlDcSfU0pXW4KWbkBFMd8=
   - secure: gj338h+qHGccTD/VQFmEJkqdg2McIe2pO0iZ4Ae9BvY5vxkIML4BpoYZQXQTqiAOETnUjlcknY9lx0hI/PfkDD9MSJc5BC/3fMYRCu3SgAclEwklWf9vvtodUeT69mtnZuw1zze1nTbExuOw2mepbqFjxKKMl+9l5oCz4O54fXU=
+  # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+  #   via the "travis encrypt" command using the project repo's public key
+  - secure: "J2exlMTgOBNmGkNwofJezWlIX9ZAa9WqZsgTmHaceWRVAkgOYnekG6/NHStGQV6ttfmkowRWuOZW4mkuR0xZiOk2ZNH3CHyk986V9A3XMUH2bVXsxhSTyDpWc12mVjPApZEvfa1hzBHr6TZWPZtpcg1xrqpG3706YBOXaIQlYF0="
+
+addons:
+  coverity_scan:
+    project:
+      name: "slic3r/Slic3r"
+      description: "Open source 3D printing toolbox"
+    notification_email: lordofhyphens@gmail.com
+    build_command_prepend: "mkdir build && cd build && cmake ../src"
+    build_command: "cmake . --build -- -j4"
+    branch_pattern: coverity_scan
 
 notifications:
   irc:
