@@ -2516,6 +2516,9 @@ sub reload_from_disk {
         }
         Slic3r::GUI->save_settings if $save;
         $dlg->Destroy;
+    } else {
+        $reload_behavior = 0; # if we have no reason to pop the dialog
+                              # then discard.
     }
 
     my $volume_unmatched=0;
