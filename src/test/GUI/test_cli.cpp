@@ -130,12 +130,12 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
                 REQUIRE(file_exists("test_cli/20mmbox_3", "svg"));
                 REQUIRE(file_exists("test_cli/20mmbox_4", "svg"));
             }
-            clean_array(in_args.size(), args_cli);
             clean_file("test_cli/20mmbox_0", "svg", true);
             clean_file("test_cli/20mmbox_1", "svg", true);
             clean_file("test_cli/20mmbox_2", "svg", true);
             clean_file("test_cli/20mmbox_3", "svg", true);
             clean_file("test_cli/20mmbox_4", "svg", true);
+            clean_array(in_args.size(), args_cli);
         }
         WHEN ( "[ ACTION ] is export-sla-svg") {
             in_args.emplace(in_args.cend()-1, "--export-sla-svg");
@@ -205,7 +205,7 @@ SCENARIO("CLI Transform arguments", "[!shouldfail]") {
 }
 
 // Test the --center and --dont-arrange parameters.
-SCENARIO("CLI positioning arguments", "[!shouldfail]") {
+SCENARIO("CLI positioning arguments") {
     char* args_cli[20];
     std::vector<std::string> in_args;
     in_args.reserve(20);
@@ -226,17 +226,19 @@ SCENARIO("CLI positioning arguments", "[!shouldfail]") {
                 std::string exported { read_to_string("test_cli/20mmbox.gcode"s)};
                 auto reader {GCodeReader()};
                 REQUIRE(exported != ""s);
-                double min_x = 0.0, max_x = 0.0, min_y = 0.0, max_y = 0.0;
+                double min_x = 50.0, max_x = -50.0, min_y = 50.0, max_y = -50.0;
                 reader.apply_config(cut.full_print_config_ref());
                 reader.parse(exported, [&min_x, &min_y, &max_x, &max_y] (GCodeReader& self, const GCodeReader::GCodeLine& line)
                 {
-                    if (self.Z < 0.6) {
-                        min_x = std::min(min_x, static_cast<double>(self.X));
-                        min_y = std::min(min_y, static_cast<double>(self.Y));
-                        max_x = std::max(max_x, static_cast<double>(self.X));
-                        max_y = std::max(max_y, static_cast<double>(self.Y));
+                    if (self.X != 0.0 && self.Y != 0.0) { // avoid the first pass
+                        if (self.Z <= 0.6 and self.Z > 0.3) {
+                            min_x = std::min(min_x, static_cast<double>(self.X));
+                            min_y = std::min(min_y, static_cast<double>(self.Y));
+                            max_x = std::max(max_x, static_cast<double>(self.X));
+                            max_y = std::max(max_y, static_cast<double>(self.Y));
+                        }
                     }
-                });
+                    });
                 AND_THEN("Minimum X encountered is about 30.1") {
                     REQUIRE(min_x == Approx(30.1));
                 }
@@ -249,27 +251,27 @@ SCENARIO("CLI positioning arguments", "[!shouldfail]") {
                 AND_THEN("Maximum Y encountered is about 49.9") {
                     REQUIRE(max_y == Approx(49.9));
                 }
+                }
             }
-        }
-        WHEN("--dont-arrange is supplied") {
-            in_args.emplace(in_args.cend()-1, "--dont-arrange");
-            cut.run(in_args.size(), to_cstr_array(in_args, args_cli));
+            WHEN("--dont-arrange is supplied") {
+                in_args.emplace(in_args.cend()-1, "--dont-arrange");
+                cut.run(in_args.size(), to_cstr_array(in_args, args_cli));
 
-            THEN ("The first layer of the print should be centered around 0,0") {
-                auto reader {GCodeReader()};
-                std::string exported { read_to_string("test_cli/20mmbox.gcode"s)};
-                REQUIRE(exported != ""s);
-                double min_x, max_x, min_y, max_y;
-                reader.apply_config(cut.full_print_config_ref());
-                reader.parse(exported, [&min_x, &min_y, &max_x, &max_y] (GCodeReader& self, const GCodeReader::GCodeLine& line)
-                {
-                    if (self.Z < 0.6) {
-                        min_x = std::min(min_x, static_cast<double>(self.X));
-                        min_y = std::min(min_y, static_cast<double>(self.Y));
-                        max_x = std::max(max_x, static_cast<double>(self.X));
-                        max_y = std::max(max_y, static_cast<double>(self.Y));
-                    }
-                });
+                THEN ("The first layer of the print should be centered around 0,0") {
+                    auto reader {GCodeReader()};
+                    std::string exported { read_to_string("test_cli/20mmbox.gcode"s)};
+                    REQUIRE(exported != ""s);
+                    double min_x, max_x, min_y, max_y;
+                    reader.apply_config(cut.full_print_config_ref());
+                    reader.parse(exported, [&min_x, &min_y, &max_x, &max_y] (GCodeReader& self, const GCodeReader::GCodeLine& line)
+                    {
+                        if (self.Z < 0.6) {
+                            min_x = std::min(min_x, static_cast<double>(self.X));
+                            min_y = std::min(min_y, static_cast<double>(self.Y));
+                            max_x = std::max(max_x, static_cast<double>(self.X));
+                            max_y = std::max(max_y, static_cast<double>(self.Y));
+                        }
+                    });
                 AND_THEN("Minimum X encountered is about -9.9") {
                     REQUIRE(min_x == Approx(-9.9));
                 }
