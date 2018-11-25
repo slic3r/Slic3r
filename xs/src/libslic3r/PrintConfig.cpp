@@ -2092,7 +2092,7 @@ CLIMiscConfigDef::CLIMiscConfigDef()
     def = this->add("output", coString);
     def->label = __TRANS("Output File");
     def->tooltip = __TRANS("The file where the output will be written (if not specified, it will be based on the input file).");
-    def->cli = "output";
+    def->cli = "output|o";
     
     #ifdef USE_WX
     def = this->add("autosave", coString);

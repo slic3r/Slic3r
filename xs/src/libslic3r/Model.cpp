@@ -933,7 +933,7 @@ ModelObject::print_info() const
     cout << fixed;
     cout << "[" << boost::filesystem::path(this->input_file).filename().string() << "]" << endl;
     
-    TriangleMesh mesh = this->raw_mesh();
+    TriangleMesh mesh = this->mesh();
     mesh.check_topology();
     BoundingBoxf3 bb = mesh.bounding_box();
     Sizef3 size = bb.size();

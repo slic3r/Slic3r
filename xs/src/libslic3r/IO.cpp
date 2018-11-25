@@ -170,20 +170,17 @@ bool
 POV::write(const Model &model, std::string output_file)
 {
     TriangleMesh mesh{ model.mesh() };
-    return STL::write(mesh, output_file);
+    return POV::write(mesh, output_file);
 }
 
 bool
 POV::write(const TriangleMesh& mesh, std::string output_file)
 {
-    TriangleMesh mesh2 = mesh;
-    mesh2.center_around_origin();
-    
     using namespace std;
     boost::nowide::ofstream pov;
     pov.open(output_file.c_str(), ios::out | ios::trunc);
-    for (int i = 0; i < mesh2.stl.stats.number_of_facets; ++i) {
-        const stl_facet &f = mesh2.stl.facet_start[i];
+    for (int i = 0; i < mesh.stl.stats.number_of_facets; ++i) {
+        const stl_facet &f = mesh.stl.facet_start[i];
         pov << "triangle { ";
         pov << "<" << f.vertex[0].x << "," << f.vertex[0].y << "," << f.vertex[0].z << ">,";
         pov << "<" << f.vertex[1].x << "," << f.vertex[1].y << "," << f.vertex[1].z << ">,";

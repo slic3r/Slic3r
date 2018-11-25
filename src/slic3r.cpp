@@ -119,6 +119,19 @@ int CLI::run(int argc, char **argv) {
             Model m;
             for (auto &model : this->models)
                 m.merge(model);
+            
+            // Rearrange instances unless --dont-arrange is supplied
+            if (!this->config.getBool("dont_arrange")) {
+                m.add_default_instances();
+                const BoundingBoxf bb{ this->full_print_config.bed_shape.values };
+                m.arrange_objects(
+                    this->full_print_config.min_object_distance(),
+                    // if we are going to use the merged model for printing, honor
+                    // the configured print bed for arranging, otherwise do it freely
+                    this->has_print_action() ? &bb : nullptr
+                );
+            }
+            
             this->models = {m};
         } else if (opt_key == "duplicate") {
             const BoundingBoxf bb{ this->full_print_config.bed_shape.values };
@@ -144,30 +157,38 @@ int CLI::run(int argc, char **argv) {
                 model.duplicate_objects_grid(x, y, (distance > 0) ? distance : 6);  // TODO: this is not the right place for setting a default
         } else if (opt_key == "center") {
             for (auto &model : this->models) {
+                model.add_default_instances();
+                // this affects instances:
                 model.center_instances_around_point(config.opt<ConfigOptionPoint>("center")->value);
+                // this affects volumes:
                 model.align_to_ground();
             }
         } else if (opt_key == "align_xy") {
             const Pointf p{ this->config.opt<ConfigOptionPoint>("align_xy")->value };
             for (auto &model : this->models) {
                 BoundingBoxf3 bb{ model.bounding_box() };
+                // this affects volumes:
                 model.translate(-(bb.min.x - p.x), -(bb.min.y - p.y), -bb.min.z);
             }
         } else if (opt_key == "rotate") {
             for (auto &model : this->models)
                 for (auto &o : model.objects)
+                    // this affects volumes:
                     o->rotate(Geometry::deg2rad(config.getFloat(opt_key)), Z);
         } else if (opt_key == "rotate_x") {
             for (auto &model : this->models)
                 for (auto &o : model.objects)
+                    // this affects volumes:
                     o->rotate(Geometry::deg2rad(config.getFloat(opt_key)), X);
         } else if (opt_key == "rotate_y") {
             for (auto &model : this->models)
                 for (auto &o : model.objects)
+                    // this affects volumes:
                     o->rotate(Geometry::deg2rad(config.getFloat(opt_key)), Y);
         } else if (opt_key == "scale") {
             for (auto &model : this->models)
                 for (auto &o : model.objects)
+                    // this affects volumes:
                     o->scale(config.get_abs_value(opt_key, 1));
         } else if (opt_key == "scale_to_fit") {
             const auto opt = config.opt<ConfigOptionPoint3>(opt_key);
@@ -177,6 +198,7 @@ int CLI::run(int argc, char **argv) {
             }
             for (auto &model : this->models)
                 for (auto &o : model.objects)
+                    // this affects volumes:
                     o->scale_to_fit(opt->value);
         } else if (opt_key == "cut" || opt_key == "cut_x" || opt_key == "cut_y") {
             std::vector<Model> new_models;
@@ -253,13 +275,21 @@ int CLI::run(int argc, char **argv) {
             this->print_config.save(config.getString("save"));
         } else if (opt_key == "info") {
             // --info works on unrepaired model
-            for (const Model &model : this->models)
+            for (Model &model : this->models) {
+                model.add_default_instances();
                 model.print_info();
+            }
         } else if (opt_key == "export_stl") {
+            for (auto &model : this->models)
+                model.add_default_instances();
             this->export_models(IO::STL);
         } else if (opt_key == "export_obj") {
+            for (auto &model : this->models)
+                model.add_default_instances();
             this->export_models(IO::OBJ);
         } else if (opt_key == "export_pov") {
+            for (auto &model : this->models)
+                model.add_default_instances();
             this->export_models(IO::POV);
         } else if (opt_key == "export_amf") {
             this->export_models(IO::AMF);
@@ -278,11 +308,16 @@ int CLI::run(int argc, char **argv) {
             }
         } else if (opt_key == "export_gcode") {
             for (const Model &model : this->models) {
+                // If all objects have defined instances, their relative positions will be
+                // honored when printing (they will be only centered, unless --dont-arrange
+                // is supplied); if any object has no instances, it will get a default one
+                // and all instances will be rearranged (unless --dont-arrange is supplied).
                 SimplePrint print;
                 print.status_cb = [](int ln, const std::string& msg) {
                     boost::nowide::cout << msg << std::endl;
                 };
                 print.apply_config(this->print_config);
+                print.arrange = !this->config.getBool("dont_arrange");
                 print.center = !this->config.has("center")
                     && !this->config.has("align_xy")
                     && !this->config.getBool("dont_arrange");
@@ -365,8 +400,7 @@ CLI::print_help(bool include_print_options) const {
 
 void
 CLI::export_models(IO::ExportFormat format) {
-    for (size_t i = 0; i < this->models.size(); ++i) {
-        Model &model = this->models[i];
+    for (const Model& model : this->models) {
         const std::string outfile = this->output_filepath(model, format);
         
         IO::write_model.at(format)(model, outfile);
