@@ -141,18 +141,10 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
             in_args.emplace(in_args.cend()-1, "--export-sla-svg");
             CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
             THEN ("SVG files are created.") {
-                REQUIRE(file_exists("test_cli/20mmbox_0", "svg"));
-                REQUIRE(file_exists("test_cli/20mmbox_1", "svg"));
-                REQUIRE(file_exists("test_cli/20mmbox_2", "svg"));
-                REQUIRE(file_exists("test_cli/20mmbox_3", "svg"));
-                REQUIRE(file_exists("test_cli/20mmbox_4", "svg"));
+                REQUIRE(file_exists("test_cli/20mmbox", "svg"));
             }
             clean_array(in_args.size(), args_cli);
-            clean_file("test_cli/20mmbox_0", "svg", true);
-            clean_file("test_cli/20mmbox_1", "svg", true);
-            clean_file("test_cli/20mmbox_2", "svg", true);
-            clean_file("test_cli/20mmbox_3", "svg", true);
-            clean_file("test_cli/20mmbox_4", "svg", true);
+            clean_file("test_cli/20mmbox", "svg", true);
         }
         WHEN ( "[ ACTION ] is sla") {
             in_args.emplace(in_args.cend()-1, "--sla");
@@ -163,24 +155,16 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
             clean_array(in_args.size(), args_cli);
             clean_file("test_cli/20mmbox", "svg", true);
         }
-        WHEN ( "[ ACTION ] is sla and --output-file-format is output_[padded_layer_num].svg") {
+        WHEN ( "[ ACTION ] is sla and --output is output.svg") {
             in_args.emplace(in_args.cend()-1, "--sla");
-            in_args.emplace(in_args.cend()-1, "--output-file-format output_[padded_layer_num].svg");
-            in_args.emplace(in_args.cend()-1, "--layer-height 5");
+            in_args.emplace(in_args.cend()-1, "--output");
+            in_args.emplace(in_args.cend()-1, testfile("output.svg"));
             CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
             THEN ("SVG files are created.") {
-                REQUIRE(file_exists("test_cli/output_0", "svg"));
-                REQUIRE(file_exists("test_cli/output_1", "svg"));
-                REQUIRE(file_exists("test_cli/output_2", "svg"));
-                REQUIRE(file_exists("test_cli/output_3", "svg"));
-                REQUIRE(file_exists("test_cli/output_4", "svg"));
+                REQUIRE(file_exists("output", "svg"));
             }
             clean_array(in_args.size(), args_cli);
-            clean_file("test_cli/output_0", "svg", true);
-            clean_file("test_cli/output_1", "svg", true);
-            clean_file("test_cli/output_2", "svg", true);
-            clean_file("test_cli/output_3", "svg", true);
-            clean_file("test_cli/output_4", "svg", true);
+            clean_file("output", "svg", true);
         }
         WHEN ( "[ ACTION ] is save") {
             in_args.emplace(in_args.cend()-1, "--save");
