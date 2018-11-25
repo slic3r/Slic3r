@@ -1550,6 +1550,8 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
     }
 }
 
+// Idempotence of this method is guaranteed by the fact that we don't remove things from
+// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
 void
 PrintObject::clip_fill_surfaces()
 {
@@ -1562,62 +1564,73 @@ PrintObject::clip_fill_surfaces()
     // internal support material.
     // Proceed top-down, skipping the bottom layer.
     Polygons upper_internal;
-    for (int layer_id = int(this->layers.size()) - 1; layer_id > 0; -- layer_id) {
-        Layer *layer       = this->layers[layer_id];
+    for (int layer_id = int(this->layers.size()) - 1; layer_id > 0; --layer_id) {
+        const Layer *layer = this->layers[layer_id];
         Layer *lower_layer = this->layers[layer_id - 1];
+        
         // Detect things that we need to support.
-        // Cummulative slices.
-        Polygons slices;
-        for (const ExPolygon &expoly : layer->slices.expolygons)
-            polygons_append(slices, to_polygons(expoly));
-        // Cummulative fill surfaces.
-        Polygons fill_surfaces;
         // Solid surfaces to be supported.
         Polygons overhangs;
-        for (const LayerRegion *layerm : layer->regions)
+        for (const LayerRegion *layerm : layer->regions) {
             for (const Surface &surface : layerm->fill_surfaces.surfaces) {
                 Polygons polygons = to_polygons(surface.expolygon);
                 if (surface.is_solid())
                     polygons_append(overhangs, polygons);
-                polygons_append(fill_surfaces, std::move(polygons));
+                //polygons_append(fill_surfaces, std::move(polygons));
             }
-        Polygons lower_layer_fill_surfaces;
-        Polygons lower_layer_internal_surfaces;
-        for (const LayerRegion *layerm : lower_layer->regions)
-            for (const Surface &surface : layerm->fill_surfaces.surfaces) {
-                Polygons polygons = to_polygons(surface.expolygon);
-                if (surface.surface_type == stInternal || surface.surface_type == stInternalVoid)
-                    polygons_append(lower_layer_internal_surfaces, polygons);
-                polygons_append(lower_layer_fill_surfaces, std::move(polygons));
-            }
+        }
+        
         // We also need to support perimeters when there's at least one full unsupported loop
         {
             // Get perimeters area as the difference between slices and fill_surfaces
+            Polygons fill_surfaces;
+            for (const LayerRegion *layerm : layer->regions)
+                polygons_append(fill_surfaces, (Polygons)layerm->fill_surfaces);
+            Polygons perimeters = diff(layer->slices, fill_surfaces);
+            
             // Only consider the area that is not supported by lower perimeters
-            Polygons perimeters = intersection(diff(slices, fill_surfaces), lower_layer_fill_surfaces);
+            Polygons lower_layer_fill_surfaces;
+            for (const LayerRegion *layerm : lower_layer->regions)
+                polygons_append(lower_layer_fill_surfaces, (Polygons)layerm->fill_surfaces);
+            perimeters = intersection(perimeters, lower_layer_fill_surfaces, true);
+            
             // Only consider perimeter areas that are at least one extrusion width thick.
             //FIXME Offset2 eats out from both sides, while the perimeters are create outside in.
             //Should the pw not be half of the current value?
             float pw = FLT_MAX;
             for (const LayerRegion *layerm : layer->regions)
                 pw = std::min<float>(pw, layerm->flow(frPerimeter).scaled_width());
+            perimeters = offset2(perimeters, -pw, +pw);
+            
             // Append such thick perimeters to the areas that need support
-            polygons_append(overhangs, offset2(perimeters, -pw, +pw));
+            polygons_append(overhangs, perimeters);
         }
+        
         // Find new internal infill.
-        polygons_append(overhangs, std::move(upper_internal));
-        upper_internal = intersection(overhangs, lower_layer_internal_surfaces);
+        {
+            polygons_append(overhangs, std::move(upper_internal));
+            
+            // get our current internal fill boundaries
+            Polygons lower_layer_internal_surfaces;
+            for (const auto* layerm : lower_layer->regions)
+                for (const auto* s : layerm->fill_surfaces.filter_by_type({ stInternal, stInternalVoid }))
+                    polygons_append(lower_layer_internal_surfaces, *s);
+            upper_internal = intersection(overhangs, lower_layer_internal_surfaces);
+        }
+        
         // Apply new internal infill to regions.
-        for (LayerRegion *layerm : lower_layer->regions) {
+        for (auto* layerm : lower_layer->regions) {
             if (layerm->region()->config.fill_density.value == 0)
                 continue;
+            
             Polygons internal;
-            for (Surface &surface : layerm->fill_surfaces.surfaces)
-                if (surface.surface_type == stInternal || surface.surface_type == stInternalVoid)
-                    polygons_append(internal, std::move(surface.expolygon));
+            for (const auto* s : layerm->fill_surfaces.filter_by_type({ stInternal, stInternalVoid }))
+                polygons_append(internal, *s);
+            
             layerm->fill_surfaces.remove_types({ stInternal, stInternalVoid });
             layerm->fill_surfaces.append(intersection_ex(internal, upper_internal, true), stInternal);
             layerm->fill_surfaces.append(diff_ex        (internal, upper_internal, true), stInternalVoid);
+            
             // If there are voids it means that our internal infill is not adjacent to
             // perimeters. In this case it would be nice to add a loop around infill to
             // make it more robust and nicer. TODO.

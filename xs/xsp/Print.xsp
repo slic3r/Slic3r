@@ -129,6 +129,7 @@ _constant()
     %name{_detect_surfaces_type} void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    void clip_fill_surfaces();
     void _slice();
     SV* _slice_region(size_t region_id, std::vector<double> z, bool modifier)
         %code%{
