@@ -9,6 +9,7 @@ namespace Slic3r {
 
 class SimplePrint {
     public:
+    bool arrange{true};
     bool center{true};
     std::function<void(int, const std::string&)> status_cb {nullptr};
     

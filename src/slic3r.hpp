@@ -27,6 +27,10 @@ class CLI {
     /// Exports loaded models to a file of the specified format, according to the options affecting output filename.
     void export_models(IO::ExportFormat format);
     
+    bool has_print_action() const {
+        return this->config.has("export_gcode") || this->config.has("export_sla_svg");
+    };
+    
     std::string output_filepath(const Model &model, IO::ExportFormat format) const;
 };
 

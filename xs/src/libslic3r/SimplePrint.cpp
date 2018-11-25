@@ -11,15 +11,19 @@ SimplePrint::set_model(const Model &model) {
     // make method idempotent so that the object is reusable
     this->_print.clear_objects();
     
-    // make sure all objects have at least one defined instance
-    this->_model.add_default_instances();
-    
     // align to z = 0
     for (ModelObject* o : this->_model.objects)
         o->translate(0, 0, -o->bounding_box().min.z);
     
+    // make sure all objects have at least one defined instance
+    if (this->_model.add_default_instances() && this->arrange) {
+        // if we added at least one default instance, we need to rearrange
+        const BoundingBoxf bb{ this->_print.config.bed_shape.values };
+        this->_model.arrange_objects(this->_print.config.min_object_distance(), &bb);
+    }
+    
     if (this->center) {
-        Polygon bed_polygon{ scale(this->_print.config.bed_shape.values) };
+        const Polygon bed_polygon{ scale(this->_print.config.bed_shape.values) };
         this->_model.center_instances_around_point(Slic3r::Pointf::new_unscale(bed_polygon.centroid()));
     }
     
