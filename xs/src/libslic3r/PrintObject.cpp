@@ -544,10 +544,10 @@ PrintObject::bridge_over_infill()
         }
     }
     
-    this->replaceSurfaceType( stInternalSolid, stInternalOverBridge, stInternalBridge);
-    this->replaceSurfaceType( stInternalSolid, stInternalOverBridge, stBottomBridge);
-    this->replaceSurfaceType( stTop, stTopOverBridge, stInternalBridge);
-    this->replaceSurfaceType( stTop, stTopOverBridge, stBottomBridge);
+    this->replaceSurfaceType( stInternalSolid, stInternalSolid & stOverBridge, stInternalBridge);
+    this->replaceSurfaceType( stInternalSolid, stInternalSolid & stOverBridge, stBottomBridge);
+    this->replaceSurfaceType( stTop, stTop & stOverBridge, stInternalBridge);
+    this->replaceSurfaceType( stTop, stTop & stOverBridge, stBottomBridge);
 }
 
 void

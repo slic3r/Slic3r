@@ -15,9 +15,8 @@ enum SurfaceType {
     stInternal           = 0b1000, 
     stInternalSolid      = 0b10000, 
     stInternalBridge     = 0b100000, 
-    stInternalOverBridge = 0b1000000,
-    stTopOverBridge      = 0b10000000,
-    stInternalVoid       = 0b100000000
+    stInternalVoid       = 0b1000000,
+    stOverBridge         = 0b10000000
 };
 
 class Surface
