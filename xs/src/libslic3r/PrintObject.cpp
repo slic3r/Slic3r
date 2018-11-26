@@ -335,11 +335,11 @@ PrintObject::has_support_material() const
 void
 PrintObject::detect_surfaces_type()
 {
-    // prerequisites
-    this->slice();
-    
     if (this->state.is_done(posDetectSurfaces)) return;
     this->state.set_started(posDetectSurfaces);
+    
+    // prerequisites
+    this->slice();
     
     parallelize<Layer*>(
         std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
@@ -1187,11 +1187,11 @@ PrintObject::make_perimeters()
 void
 PrintObject::infill()
 {
-    // prerequisites
-    this->prepare_infill();
-    
     if (this->state.is_done(posInfill)) return;
     this->state.set_started(posInfill);
+    
+    // prerequisites
+    this->prepare_infill();
     
     parallelize<Layer*>(
         std::queue<Layer*>(std::deque<Layer*>(this->layers.begin(), this->layers.end())),  // cast LayerPtrs to std::queue<Layer*>
