@@ -130,6 +130,12 @@ SurfaceCollection::append(const SurfaceCollection &coll)
 }
 
 void
+SurfaceCollection::append(const Surface &surface)
+{
+    this->surfaces.push_back(surface);
+}
+
+void
 SurfaceCollection::append(const Surfaces &surfaces)
 {
     append_to(this->surfaces, surfaces);
@@ -209,6 +215,14 @@ SurfaceCollection::keep_types(std::initializer_list<SurfaceType> types) {
     }
 }
 /* group surfaces by common properties */
+std::vector<SurfacesPtr>
+SurfaceCollection::group()
+{
+    std::vector<SurfacesPtr> retval;
+    this->group(&retval);
+    return retval;
+}
+
 void
 SurfaceCollection::group(std::vector<SurfacesPtr> *retval)
 {

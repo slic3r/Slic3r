@@ -41,6 +41,7 @@ class SurfaceCollection
         remove_types(types.data(), types.size());
     }
     /// group surfaces by common properties
+    std::vector<SurfacesPtr> group();
     void group(std::vector<SurfacesPtr> *retval);
 
     /// Deletes every surface other than the ones that match the provided type.
@@ -64,6 +65,7 @@ class SurfaceCollection
     void set(Surfaces &&src) { clear(); this->append(std::move(src)); }
 
     void append(const SurfaceCollection &coll);
+    void append(const Surface &surface);
     void append(const Surfaces &surfaces);
     void append(const ExPolygons &src, const Surface &templ);
     void append(const ExPolygons &src, SurfaceType surfaceType);
