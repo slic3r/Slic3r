@@ -132,6 +132,7 @@ _constant()
     void combine_infill();
     void discover_horizontal_shells();
     void clip_fill_surfaces();
+    void slice();
     void _slice();
     SV* _slice_region(size_t region_id, std::vector<double> z, bool modifier)
         %code%{

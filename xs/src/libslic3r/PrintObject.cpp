@@ -956,6 +956,17 @@ PrintObject::make_perimeters()
     this->_make_perimeters();
 }
 
+/*
+    1) Decides Z positions of the layers,
+    2) Initializes layers and their regions
+    3) Slices the object meshes
+    4) Slices the modifier meshes and reclassifies the slices of the object meshes by the slices of the modifier meshes
+    5) Applies size compensation (offsets the slices in XY plane)
+    6) Replaces bad slices by the slices reconstructed from the upper/lower layer
+    Resulting expolygons of layer regions are marked as Internal.
+
+    This should be idempotent.
+*/
 void
 PrintObject::slice()
 {
@@ -964,8 +975,7 @@ PrintObject::slice()
     if (_print->status_cb != nullptr) {
         _print->status_cb(10, "Processing triangulated mesh");
     }
-
-
+    
     this->_slice(); 
 
     // detect slicing errors
@@ -975,12 +985,75 @@ PrintObject::slice()
                                          << "I tried to repair it, however you might want to check " 
                                          << "the results or repair the input file and retry.\n";
     
-    if (this->layers.size() == 0) {
+    bool warning_thrown = false;
+    for (size_t i = 0; i < this->layer_count(); ++i) {
+        Layer* layer{ this->get_layer(i) };
+        if (!layer->slicing_errors) continue;
+        if (!warning_thrown) {
+            Slic3r::Log::warn("PrintObject") << "The model has overlapping or self-intersecting facets. " 
+                                             << "I tried to repair it, however you might want to check " 
+                                             << "the results or repair the input file and retry.\n";
+            warning_thrown = true;
+        }
+        
+        // try to repair the layer surfaces by merging all contours and all holes from
+        // neighbor layers
+        #ifdef SLIC3R_DEBUG
+        std::cout << "Attempting to repair layer " << i << std::endl;
+        #endif
+        
+        for (size_t region_id = 0; region_id < layer->region_count(); ++region_id) {
+            LayerRegion* layerm{ layer->get_region(region_id) };
+            
+            ExPolygons slices;
+            for (size_t j = i+1; j < this->layer_count(); ++j) {
+                const Layer* upper = this->get_layer(j);
+                if (!upper->slicing_errors) {
+                    append_to(slices, (ExPolygons)upper->get_region(region_id)->slices);
+                    break;
+                }
+            }
+            for (int j = i-1; j >= 0; --j) {
+                const Layer* lower = this->get_layer(j);
+                if (!lower->slicing_errors) {
+                    append_to(slices, (ExPolygons)lower->get_region(region_id)->slices);
+                    break;
+                }
+            }
+            
+            // TODO: do we actually need to split contours and holes before performing the diff?
+            Polygons contours, holes;
+            for (ExPolygon ex : slices)
+                contours.push_back(ex.contour);
+            for (ExPolygon ex : slices)
+                append_to(holes, ex.holes);
+            
+            const ExPolygons diff = diff_ex(contours, holes);
+            
+            layerm->slices.clear();
+            layerm->slices.append(diff, stInternal);
+        }
+            
+        // update layer slices after repairing the single regions
+        layer->make_slices();
+    }
+    
+    // remove empty layers from bottom
+    while (!this->layers.empty() && this->get_layer(0)->slices.empty()) {
+        this->delete_layer(0);
+        for (Layer* layer : this->layers)
+            layer->set_id(layer->id()-1);
+    }
+    
+    // simplify slices if required
+    if (this->_print->config.resolution() > 0)
+        this->_simplify_slices(scale_(this->_print->config.resolution()));
+    
+    if (this->layers.empty()) {
         Slic3r::Log::error("PrintObject") << "slice(): " << "No layers were detected. You might want to repair your STL file(s) or check their size or thickness and retry.\n";
         return; // make this throw an exception instead?
     }
-
-
+    
     this->typed_slices = false;
     this->state.set_done(posSlice);
 }
