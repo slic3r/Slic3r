@@ -8,7 +8,7 @@ namespace Slic3r {
 
 /// Surface type enumerations.
 /// As it is very unlikely that there will be more than 32 or 64 of these surface types, pack into a flag 
-enum SurfaceType { 
+enum SurfaceType : uint16_t{ 
     stTop                = 0b1, 
     stBottom             = 0b10, 
     stBottomBridge       = 0b100, 
@@ -18,6 +18,8 @@ enum SurfaceType {
     stInternalVoid       = 0b1000000,
     stOverBridge         = 0b10000000
 };
+inline SurfaceType operator|(SurfaceType a, SurfaceType b)
+{return static_cast<SurfaceType>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));}
 
 class Surface
 {
