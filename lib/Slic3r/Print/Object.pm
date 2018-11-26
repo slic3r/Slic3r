@@ -75,15 +75,6 @@ sub prepare_infill {
     $self->set_step_done(STEP_PREPARE_INFILL);
 }
 
-sub infill {
-    my ($self) = @_;
-    
-    # prerequisites
-    $self->prepare_infill;
-    
-    $self->_infill;
-}
-
 sub generate_support_material {
     my $self = shift;
     

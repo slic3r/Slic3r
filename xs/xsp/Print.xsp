@@ -154,7 +154,7 @@ _constant()
             RETVAL = (SV*)newRV_noinc((SV*)layers_av);
         %};
     void make_perimeters();
-    void _infill();
+    void infill();
     void _simplify_slices(double distance);
     
     int ptr()

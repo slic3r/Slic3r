@@ -1054,6 +1054,9 @@ PrintObject::slice()
 void
 PrintObject::make_perimeters()
 {
+    // prerequisites
+    this->slice();
+    
     if (this->state.is_done(posPerimeters)) return;
     this->state.set_started(posPerimeters);
     
@@ -1062,9 +1065,6 @@ PrintObject::make_perimeters()
     // will just call merge_slices() to undo the typed slices and invalidate posDetectSurfaces.
     if (this->typed_slices)
         this->state.invalidate(posSlice);
-    
-    // prerequisites
-    this->slice();
     
     // merge slices if they were split into types
     // This is not currently taking place because since merge_slices + detect_surfaces_type
@@ -1185,8 +1185,11 @@ PrintObject::make_perimeters()
 }
 
 void
-PrintObject::_infill()
+PrintObject::infill()
 {
+    // prerequisites
+    this->prepare_infill();
+    
     if (this->state.is_done(posInfill)) return;
     this->state.set_started(posInfill);
     
@@ -1381,13 +1384,6 @@ PrintObject::combine_infill()
             }
         }
     }
-}
-
-void
-PrintObject::infill()
-{
-    this->prepare_infill();
-    this->_infill();
 }
 
 SupportMaterial *
