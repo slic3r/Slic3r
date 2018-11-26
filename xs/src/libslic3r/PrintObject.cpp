@@ -1054,9 +1054,6 @@ PrintObject::slice()
 void
 PrintObject::make_perimeters()
 {
-    // prerequisites
-    this->slice();
-    
     if (this->state.is_done(posPerimeters)) return;
     this->state.set_started(posPerimeters);
     
@@ -1065,6 +1062,9 @@ PrintObject::make_perimeters()
     // will just call merge_slices() to undo the typed slices and invalidate posDetectSurfaces.
     if (this->typed_slices)
         this->state.invalidate(posSlice);
+    
+    // prerequisites
+    this->slice();
     
     // merge slices if they were split into types
     // This is not currently taking place because since merge_slices + detect_surfaces_type
@@ -1209,7 +1209,8 @@ PrintObject::infill()
 void
 PrintObject::prepare_infill()
 {
-    if (this->state.is_done(posInfill)) return;
+    if (this->state.is_done(posPrepareInfill)) return;
+    
     // This prepare_infill() is not really idempotent.
     // TODO: It should clear and regenerate fill_surfaces at every run 
     // instead of modifying it in place.
@@ -1222,16 +1223,13 @@ PrintObject::prepare_infill()
     // prerequisites
     this->detect_surfaces_type();
 
-    if (this->print()->status_cb != nullptr) 
-        this->print()->status_cb(30, "Preparing infill");
+    if (this->_print->status_cb != nullptr) 
+        this->_print->status_cb(30, "Preparing infill");
     
-
     // decide what surfaces are to be filled
-    for (auto& layer : this->layers) {
-        for (auto& region : layer->regions) {
-            region->prepare_fill_surfaces();
-        }
-    }
+    for (auto& layer : this->layers)
+        for (auto& layerm : layer->regions)
+            layerm->prepare_fill_surfaces();
 
     // this will detect bridges and reverse bridges
     // and rearrange top/bottom/internal surfaces

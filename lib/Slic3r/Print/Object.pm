@@ -34,47 +34,6 @@ sub support_layers {
     return [ map $self->get_support_layer($_), 0..($self->support_layer_count - 1) ];
 }
 
-sub prepare_infill {
-    my ($self) = @_;
-    
-    return if $self->step_done(STEP_PREPARE_INFILL);
-    
-    # This prepare_infill() is not really idempotent.
-    # TODO: It should clear and regenerate fill_surfaces at every run 
-    # instead of modifying it in place.
-    $self->invalidate_step(STEP_PERIMETERS);
-    $self->make_perimeters;
-    
-    # Do this after invalidating STEP_PERIMETERS because that would re-invalidate STEP_PREPARE_INFILL
-    $self->set_step_started(STEP_PREPARE_INFILL);
-    
-    # prerequisites
-    $self->detect_surfaces_type;
-    
-    $self->print->status_cb->(30, "Preparing infill");
-    
-    # decide what surfaces are to be filled
-    $_->prepare_fill_surfaces for map @{$_->regions}, @{$self->layers};
-
-    # this will detect bridges and reverse bridges
-    # and rearrange top/bottom/internal surfaces
-    $self->process_external_surfaces;
-
-    # detect which fill surfaces are near external layers
-    # they will be split in internal and internal-solid surfaces
-    $self->discover_horizontal_shells;
-    $self->clip_fill_surfaces;
-    
-    # the following step needs to be done before combination because it may need
-    # to remove only half of the combined infill
-    $self->bridge_over_infill;
-
-    # combine fill surfaces to honor the "infill every N layers" option
-    $self->combine_infill;
-    
-    $self->set_step_done(STEP_PREPARE_INFILL);
-}
-
 sub generate_support_material {
     my $self = shift;
     
