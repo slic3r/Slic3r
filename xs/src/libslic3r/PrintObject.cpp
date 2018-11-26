@@ -946,16 +946,6 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
     return layers;
 }
 
-void
-PrintObject::make_perimeters()
-{
-    if (this->state.is_done(posPerimeters)) return;
-    if (this->typed_slices)
-        this->state.invalidate(posSlice);
-    this->slice(); // take care of prereqs
-    this->_make_perimeters();
-}
-
 /*
     1) Decides Z positions of the layers,
     2) Initializes layers and their regions
@@ -1059,10 +1049,19 @@ PrintObject::slice()
 }
 
 void
-PrintObject::_make_perimeters()
+PrintObject::make_perimeters()
 {
     if (this->state.is_done(posPerimeters)) return;
     this->state.set_started(posPerimeters);
+    
+    // Temporary workaround for detect_surfaces_type() not being idempotent (see #3764).
+    // We can remove this when idempotence is restored. This make_perimeters() method
+    // will just call merge_slices() to undo the typed slices and invalidate posDetectSurfaces.
+    if (this->typed_slices)
+        this->state.invalidate(posSlice);
+    
+    // prerequisites
+    this->slice();
     
     // merge slices if they were split into types
     // This is not currently taking place because since merge_slices + detect_surfaces_type

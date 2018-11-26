@@ -153,7 +153,7 @@ _constant()
             }
             RETVAL = (SV*)newRV_noinc((SV*)layers_av);
         %};
-    void _make_perimeters();
+    void make_perimeters();
     void _infill();
     void _simplify_slices(double distance);
     

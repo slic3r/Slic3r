@@ -34,24 +34,6 @@ sub support_layers {
     return [ map $self->get_support_layer($_), 0..($self->support_layer_count - 1) ];
 }
 
-sub make_perimeters {
-    my ($self) = @_;
-    
-    return if $self->step_done(STEP_PERIMETERS);
-    
-    # Temporary workaround for detect_surfaces_type() not being idempotent (see #3764).
-    # We can remove this when idempotence is restored. This make_perimeters() method
-    # will just call merge_slices() to undo the typed slices and invalidate posDetectSurfaces.
-    if ($self->typed_slices) {
-        $self->invalidate_step(STEP_SLICE);
-    }
-    
-    # prerequisites
-    $self->slice;
-    
-    $self->_make_perimeters;
-}
-
 # This will assign a type (top/bottom/internal) to $layerm->slices
 # and transform $layerm->fill_surfaces from expolygon 
 # to typed top/bottom/internal surfaces;
