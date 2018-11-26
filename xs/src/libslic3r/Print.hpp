@@ -198,6 +198,8 @@ class PrintObject
     /// Idempotence of this method is guaranteed by the fact that we don't remove things from
     /// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
     void clip_fill_surfaces();
+    
+    void _simplify_slices(double distance);
       
     private:
     Print* _print;

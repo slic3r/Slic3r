@@ -1635,4 +1635,17 @@ PrintObject::clip_fill_surfaces()
     }
 }
 
+// Simplify the sliced model, if "resolution" configuration parameter > 0.
+// The simplification is problematic, because it simplifies the slices independent from each other,
+// which makes the simplified discretization visible on the object surface.
+void
+PrintObject::_simplify_slices(double distance)
+{
+    for (auto* layer : this->layers) {
+        layer->slices.simplify(distance);
+        for (auto* layerm : layer->regions)
+            layerm->slices.simplify(distance);
+    }
+}
+
 }

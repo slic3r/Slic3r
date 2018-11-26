@@ -558,16 +558,4 @@ sub combine_infill {
     }
 }
 
-# Simplify the sliced model, if "resolution" configuration parameter > 0.
-# The simplification is problematic, because it simplifies the slices independent from each other,
-# which makes the simplified discretization visible on the object surface.
-sub _simplify_slices {
-    my ($self, $distance) = @_;
-    
-    foreach my $layer (@{$self->layers}) {
-        $layer->slices->simplify($distance);
-        $_->slices->simplify($distance) for @{$layer->regions};
-    }
-}
-
 1;

@@ -152,6 +152,7 @@ _constant()
         %};
     void _make_perimeters();
     void _infill();
+    void _simplify_slices(double distance);
     
     int ptr()
         %code%{ RETVAL = (int)(intptr_t)THIS; %};
