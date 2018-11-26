@@ -1,4 +1,3 @@
-#ifndef SLIC3RXS
 #ifndef slic3r_PrintGCode_hpp
 #define slic3r_PrintGCode_hpp
 
@@ -77,4 +76,3 @@ private:
 } // namespace Slic3r
 
 #endif // slic3r_PrintGCode_hpp
-#endif // SLIC3RXS

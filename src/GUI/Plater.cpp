@@ -37,7 +37,8 @@ const auto TB_SETTINGS      {wxNewId()};
 const auto PROGRESS_BAR_EVENT = wxNewEventType();
 
 Plater::Plater(wxWindow* parent, const wxString& title) : 
-    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, title)
+    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, title),
+    _presets(new PresetChooser(dynamic_cast<wxWindow*>(this), this->print))
 {
 
     // Set callback for status event for worker threads
@@ -46,6 +47,7 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
         wxPostEvent(this, new wxPlThreadEvent(-1, PROGRESS_BAR_EVENT, 
     });
     */
+    _presets->load();
 
     // Initialize handlers for canvases
     auto on_select_object {[this](ObjIdx obj_idx) { this->select_object(obj_idx); }};
@@ -148,7 +150,6 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
         });
     });
     */
-    build_preset_chooser();
     wxStaticBoxSizer* object_info_sizer {nullptr};
     {
         auto* box {new wxStaticBox(this, wxID_ANY, _("Info"))};
@@ -217,7 +218,7 @@ Plater::Plater(wxWindow* parent, const wxString& title) :
 
     // right panel sizer
     auto* right_sizer {this->right_sizer};
-    if (this->presets_sizer != nullptr) right_sizer->Add(this->presets_sizer, 0, wxEXPAND | wxTOP, 10);
+    right_sizer->Add(this->_presets, 0, wxEXPAND | wxTOP, 10);
 //    $right_sizer->Add($buttons_sizer, 0, wxEXPAND | wxBOTTOM, 5);
 //    $right_sizer->Add($self->{settings_override_panel}, 1, wxEXPAND, 5);
     right_sizer->Add(object_info_sizer, 0, wxEXPAND, 0);
@@ -717,12 +718,12 @@ void Plater::remove(int obj_idx, bool dont_push) {
     Slic3r::Log::info(LogChannel, "Assigned obj_ref");
     try {
         this->model->delete_object(obj_ref->identifier);
-    } catch (InvalidObjectException& ex) {
+    } catch (out_of_range &ex) {
         Slic3r::Log::error(LogChannel, LOG_WSTRING("Failed to delete object " << obj_ref->identifier << " from Model."));
     }
     try {
         this->print->delete_object(obj_ref->identifier);
-    } catch (InvalidObjectException& ex) {
+    } catch (out_of_range &ex) {
         Slic3r::Log::error(LogChannel, LOG_WSTRING("Failed to delete object " << obj_ref->identifier << " from Print."));
     }
 
@@ -1081,214 +1082,14 @@ void Plater::center_selected_object_on_bed() {
     this->refresh_canvases();
 
 }
-void Plater::build_preset_chooser() {
-    this->presets_sizer = new wxFlexGridSizer(3,3,1,2);
-    auto& presets {this->presets_sizer}; // reference for local use
 
-    presets->AddGrowableCol(1,1);
-    presets->SetFlexibleDirection(wxHORIZONTAL);
-
-    this->preset_choosers.clear();
-    for (auto group : { preset_t::Print, preset_t::Material, preset_t::Printer }) {
-        wxString name = "";
-        switch(group) {
-            case preset_t::Print:
-                name << _("Print settings:");
-                break;
-            case preset_t::Material:
-                name << _("Material:");
-                break;
-            case preset_t::Printer:
-                name << _("Printer:");
-                break;
-            default:
-                break;
-        }
-        auto* text {new wxStaticText(this, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT)};
-        text->SetFont(ui_settings->small_font());
-
-        auto* choice {new wxBitmapComboBox(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY)};
-        this->preset_choosers[static_cast<int>(group)] = choice;
-        
-        // setup listener. 
-        // On a combobox event, puts a call to _on_change_combobox() on the evt_idle stack.
-        choice->Bind(wxEVT_COMBOBOX, 
-            [=](wxCommandEvent& e) { 
-                wxTheApp->CallAfter([=]() { this->_on_change_combobox(group, choice);} );
-            });
-
-        // Settings button
-        auto* settings_btn {new wxBitmapButton(this, wxID_ANY, wxBitmap(var("cog.png"), wxBITMAP_TYPE_PNG), wxDefaultPosition, wxDefaultSize, wxBORDER_NONE)};
-
-        settings_btn->Bind(wxEVT_BUTTON, [=](wxCommandEvent& e) { 
-            this->show_preset_editor(group, 0);
-        });
-
-        presets->Add(text, 0, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL | wxRIGHT, 4);
-        presets->Add(choice, 1, wxALIGN_CENTER_VERTICAL | wxEXPAND | wxBOTTOM, 0);
-        presets->Add(settings_btn, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND | wxLEFT, 3);
-
-    }
-/*
-        my %group_labels = (
-            print       => 'Print settings',
-            filament    => 'Filament',
-            printer     => 'Printer',
-        );
-        $self->{preset_choosers} = {};
-        $self->{preset_choosers_names} = {};  # wxChoice* => []
-        for my $group (qw(print filament printer)) {
-            # label
-            my $text = Wx::StaticText->new($self, -1, "$group_labels{$group}:", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
-            $text->SetFont($Slic3r::GUI::small_font);
-            
-            # dropdown control
-            my $choice = Wx::BitmapComboBox->new($self, -1, "", wxDefaultPosition, wxDefaultSize, [], wxCB_READONLY);
-            $self->{preset_choosers}{$group} = [$choice];
-            # setup the listener
-            EVT_COMBOBOX($choice, $choice, sub {
-                my ($choice) = @_;
-                wxTheApp->CallAfter(sub {
-                    $self->_on_change_combobox($group, $choice);
-                });
-            });
-            
-            # settings button
-            my $settings_btn = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("cog.png"), wxBITMAP_TYPE_PNG), 
-                wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
-            EVT_BUTTON($self, $settings_btn, sub {
-                $self->show_preset_editor($group, 0);
-            });
-            
-            $presets->Add($text, 0, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL | wxRIGHT, 4);
-            $presets->Add($choice, 1, wxALIGN_CENTER_VERTICAL | wxEXPAND | wxBOTTOM, 0);
-            $presets->Add($settings_btn, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND | wxLEFT, 3);
-            */
-}
-
-void Plater::_on_change_combobox(preset_t preset, wxBitmapComboBox* choice) {
+void Plater::show_preset_editor(preset_t group, unsigned int idx) {
     
-    // Prompt for unsaved changes and undo selections if cancelled and return early
-    // Callback to close preset editor tab, close editor tabs, reload presets.
-    wxTheApp->CallAfter([=](){
-
-        this->_on_select_preset(preset);
-        // reload presets; removes the modified mark
-        this->load_presets();
-    });
-    /*
-    sub _on_change_combobox {
-    my ($self, $group, $choice) = @_;
-    
-    if (0) {
-        # This code is disabled because wxPerl doesn't provide GetCurrentSelection
-        my $current_name = $self->{preset_choosers_names}{$choice}[$choice->GetCurrentSelection];
-        my $current = first { $_->name eq $current_name } @{wxTheApp->presets->{$group}};
-        if (!$current->prompt_unsaved_changes($self)) {
-            # Restore the previous one
-            $choice->SetSelection($choice->GetCurrentSelection);
-            return;
-        }
-    } else {
-        return 0 if !$self->prompt_unsaved_changes;
-    }
-    wxTheApp->CallAfter(sub {
-        # Close the preset editor tab if any
-        if (exists $self->GetFrame->{preset_editor_tabs}{$group}) {
-            my $tabpanel = $self->GetFrame->{tabpanel};
-            $tabpanel->DeletePage($tabpanel->GetPageIndex($self->GetFrame->{preset_editor_tabs}{$group}));
-            delete $self->GetFrame->{preset_editor_tabs}{$group};
-            $tabpanel->SetSelection(0); # without this, a newly created tab will not be selected by wx
-        }
-        
-        $self->_on_select_preset($group);
-        
-        # This will remove the "(modified)" mark from any dirty preset handled here.
-        $self->load_presets;
-    });
-}
-*/
 }
 
-void Plater::show_preset_editor(preset_t preset, unsigned int idx) {
-    
-    std::function<void ()> cbfunc {
-        [this, preset, idx]() {
-            auto presets { this->selected_presets(preset) };
-            auto* mainframe {this->GetFrame()};
-            auto* tabpanel {mainframe->tabs()};
-            if (mainframe->preset_editor_tabs[preset] != nullptr) {
-                // editor is already open
-                tabpanel->SetSelection(tabpanel->GetPageIndex(mainframe->preset_editor_tabs[preset]));
-                return;
-            } else if (ui_settings->preset_editor_tabs) {
-                // open a tab
-                PresetEditor* tab {nullptr};
-                switch (preset) {
-                    case preset_t::Print:
-                        tab = new PrintEditor(this);
-                    break;
-                    /*
-                    case preset_t::Material:
-                        tab = new MaterialEditor(this);
-                    break;
-                    case preset_t::Printer:
-                        tab = new PrinterEditor(this);
-                    break;
-                    */
-                    default: // do nothing
-                        return;
-                }
-                tabpanel->AddPage(tab, wxString(tab->name()) + wxString(" Settings"));
-
-            } else {
-                // pop a dialog
-                switch (preset) {
-                    case preset_t::Print:
-                    break;
-                    case preset_t::Material:
-                    break;
-                    case preset_t::Printer:
-                    break;
-                    default:; // do nothing
-                        return;
-                }
-            }
-        
-        }
-    };
-    SLIC3RAPP->CallAfter(cbfunc); 
-
-}
-
-Preset* Plater::selected_presets(preset_t preset) {
-    auto& preset_list {SLIC3RAPP->presets.at(static_cast<int>(preset))};
-    auto sel = this->preset_choosers.at(static_cast<int>(preset))->GetSelection();
-    if (sel == -1) sel = 0;
-
-    // Retrieve the string associated with this
-    auto preset_name {this->preset_choosers.at(static_cast<int>(preset))->GetString(sel)};
-    auto iter = std::find(preset_list.begin(), preset_list.end(), preset_name);
-    if (iter == preset_list.end()) { 
-        Slic3r::Log::warn(LogChannel, LOG_WSTRING(preset_name + LOG_WSTRING(" not found in Presets list.")));
-        iter = preset_list.begin(); // get the first one if not found for some reason.
-    }
-    return &(*iter);
-}
-
-std::vector<Preset*> Plater::selected_presets() {
-    std::vector<Preset*> tmp(static_cast<int>(preset_t::Last)); // preallocate
-    for (uint8_t i = 0; i < static_cast<uint8_t>(preset_t::Last); i++) {
-        tmp[i] = selected_presets(static_cast<preset_t>(i));
-    }
-    return tmp;
-}
 
 void Plater::load_presets() {
-
-    for (auto group : {preset_t::Printer, preset_t::Material, preset_t::Print}) {
-        // skip presets not compatible with selected printer 
-    }
+    this->_presets->load();
 }
 
 }} // Namespace Slic3r::GUI

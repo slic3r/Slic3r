@@ -1,5 +1,5 @@
 /** 
- * https://github.com/alexrj/Slic3r/wiki/Conditional-Gcode-Syntax-Spec
+ * https://github.com/slic3r/Slic3r/wiki/Conditional-Gcode-Syntax-Spec
  * 
  */
 

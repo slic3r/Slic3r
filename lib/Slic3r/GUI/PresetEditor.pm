@@ -28,7 +28,7 @@ sub new {
     my $left_sizer = Wx::BoxSizer->new(wxVERTICAL);
     $self->{sizer}->Add($left_sizer, 0, wxEXPAND | wxLEFT | wxTOP | wxBOTTOM, 3);
     
-    my $left_col_width = 150;
+    my $left_col_width = -1;
     
     # preset chooser
     {

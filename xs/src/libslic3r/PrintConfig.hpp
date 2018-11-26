@@ -642,78 +642,33 @@ class SLAPrintConfig
     };
 };
 
-class CLIConfigDef : public ConfigDef
+class CLIActionsConfigDef : public ConfigDef
 {
     public:
-    CLIConfigDef();
+    CLIActionsConfigDef();
 };
 
-extern const CLIConfigDef cli_config_def;
-
-class CLIConfig
-    : public virtual ConfigBase, public StaticConfig
+class CLITransformConfigDef : public ConfigDef
 {
     public:
-    ConfigOptionFloat               cut;
-    ConfigOptionPoint               cut_grid;
-    ConfigOptionFloat               cut_x;
-    ConfigOptionFloat               cut_y;
-    ConfigOptionBool                export_obj;
-    ConfigOptionBool                export_pov;
-    ConfigOptionBool                export_svg;
-    ConfigOptionBool                export_3mf;
-    ConfigOptionBool                gui;
-    ConfigOptionBool                info;
-    ConfigOptionBool                help;
-    ConfigOptionStrings             load;
-    ConfigOptionString              output;
-    ConfigOptionFloat               rotate;
-    ConfigOptionFloat               rotate_x;
-    ConfigOptionFloat               rotate_y;
-    ConfigOptionString              save;
-    ConfigOptionFloat               scale;
-    ConfigOptionPoint3              scale_to_fit;
-    ConfigOptionPoint               center;
-    ConfigOptionBool                slice;
-    ConfigOptionBool                threads;
-    
-    CLIConfig() : ConfigBase(), StaticConfig() {
-        this->def = &cli_config_def;
-        this->set_defaults();
-    };
-    
-    virtual ConfigOption* optptr(const t_config_option_key &opt_key, bool create = false) {
-        OPT_PTR(cut);
-        OPT_PTR(cut_grid);
-        OPT_PTR(cut_x);
-        OPT_PTR(cut_y);
-        OPT_PTR(export_obj);
-        OPT_PTR(export_pov);
-        OPT_PTR(export_svg);
-        OPT_PTR(export_3mf);
-        OPT_PTR(gui);
-        OPT_PTR(help);
-        OPT_PTR(info);
-        OPT_PTR(load);
-        OPT_PTR(output);
-        OPT_PTR(rotate);
-        OPT_PTR(rotate_x);
-        OPT_PTR(rotate_y);
-        OPT_PTR(save);
-        OPT_PTR(scale);
-        OPT_PTR(scale_to_fit);
-        OPT_PTR(slice);
-        OPT_PTR(threads);
-        
-        return NULL;
-    };
+    CLITransformConfigDef();
 };
 
-/// Iterate through all of the print options and write them to a stream.
-std::ostream& print_print_options(std::ostream& out);
-/// Iterate through all of the CLI options and write them to a stream.
-std::ostream&
-print_cli_options(std::ostream& out);
+class CLIMiscConfigDef : public ConfigDef
+{
+    public:
+    CLIMiscConfigDef();
+};
+
+// This class defines the command line options representing actions.
+extern const CLIActionsConfigDef    cli_actions_config_def;
+
+// This class defines the command line options representing transforms.
+extern const CLITransformConfigDef  cli_transform_config_def;
+
+// This class defines all command line options that are not actions or transforms.
+extern const CLIMiscConfigDef       cli_misc_config_def;
+
 }
 
 #endif

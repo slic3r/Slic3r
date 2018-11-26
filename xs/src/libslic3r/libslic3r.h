@@ -4,7 +4,12 @@
 // this needs to be included early for MSVC (listing it in Build.PL is not enough)
 #include <ostream>
 #include <iostream>
+
+// Otherwise #defines like M_PI are undeclared under Visual Studio
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
+#endif
+
 #include <math.h>
 #include <queue>
 #include <sstream>

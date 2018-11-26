@@ -11,6 +11,7 @@
 
 #include "libslic3r.h"
 #include "ColorScheme.hpp"
+#include "Preset.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -26,7 +27,7 @@ enum class ReloadBehavior {
 /// TODO: Incorporate the system from libslic3r
 class Settings { 
     public:
-        bool show_host {false};
+        bool show_host {true};
         bool version_check {true};
         bool autocenter {true};
         bool autoalignz {true};
@@ -51,7 +52,9 @@ class Settings {
 
         void save_settings();
         void load_settings();
-        
+
+        std::array<std::vector<wxString>, preset_types> default_presets {};
+
         /// Storage for window positions
         std::map<wxString, std::tuple<wxPoint, wxSize, bool> > window_pos { std::map<wxString, std::tuple<wxPoint, wxSize, bool> >() };
 

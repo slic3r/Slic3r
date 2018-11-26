@@ -1,5 +1,3 @@
-#ifndef SLIC3RXS
-
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 
@@ -33,6 +31,7 @@ public:
 
 class Config;
 using config_ptr = std::shared_ptr<Config>;
+using config_ref = std::weak_ptr<Config>;
 
 class Config {
 public:
@@ -45,9 +44,6 @@ public:
     
     /// Factory method to construct a Config with specific default values loaded.
     static std::shared_ptr<Config> new_from_defaults(t_config_option_keys init);
-
-    /// Factory method to construct a Config from CLI options.
-    static std::shared_ptr<Config> new_from_cli(const int& argc, const char* argv[]);
 
     /// Factory method to construct a Config from an ini file.
     static std::shared_ptr<Config> new_from_ini(const std::string& inifile);
@@ -63,7 +59,6 @@ public:
         if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getFloat();
     }
-
     int getInt(const t_config_option_key& opt_key, bool create=true) {
         if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
         return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getInt();
@@ -123,10 +118,20 @@ public:
     /// Pass-through of apply()
     void apply(const config_ptr& other) { _config.apply(other->config()); }
     void apply(const Slic3r::Config& other) { _config.apply(other.config()); }
+   
+    /// Apply only configuration options in the array.
+    void apply_with_defaults(const config_ptr& other, const t_config_option_keys& keys) { _config.apply_only(other->_config, keys, false, true); }
+    void apply(const config_ptr& other, const t_config_option_keys& keys) { _config.apply_only(other->_config, keys, false, false); }
 
     /// Allow other configs to be applied to this one.
     void apply(const Slic3r::ConfigBase& other) { _config.apply(other); }
 
+    /// Pass-through of diff()
+    t_config_option_keys diff(const config_ptr& other) { return _config.diff(other->config()); };
+    t_config_option_keys diff(const Slic3r::Config& other) { return _config.diff(other.config()); }
+
+    /// Return whether or not the underlying ConfigBase contains a key k
+    bool has(const t_config_option_key& k) const { return _config.has(k); };
 
     /// Do not use; prefer static factory methods instead.
     Config(); 
@@ -146,5 +151,3 @@ bool is_valid_float(const std::string& type, const ConfigOptionDef& opt, const s
 } // namespace Slic3r
 
 #endif // CONFIG_HPP
-
-#endif // SLIC3RXS

@@ -9,7 +9,17 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
+#include <thread>
+#include <sstream>
+
+#ifdef __cpp_lib_quoted_string_io
+    #include <iomanip>
+#else
+    #include <boost/algorithm/string.hpp>
+#endif
 
 namespace Slic3r {
 
@@ -80,7 +90,7 @@ Print::delete_object(size_t idx)
 {
     PrintObjectPtrs::iterator i = this->objects.begin() + idx;
     if (i >= this->objects.end()) 
-        throw InvalidObjectException();
+        throw std::out_of_range("Object not found");
     
     // before deleting object, invalidate all of its steps in order to 
     // invalidate all of the dependent ones in Print
@@ -92,8 +102,6 @@ Print::delete_object(size_t idx)
 
     // TODO: purge unused regions
 }
-
-#ifndef SLIC3RXS
 
 void
 Print::process() 
@@ -166,11 +174,11 @@ Print::make_skirt()
     // $skirt_height_z in this case is the highest possible skirt height for safety.
     double skirt_height_z {-1.0};
     for (const auto& object : this->objects) {
-        size_t skirt_height {
+        const size_t skirt_height {
             this->has_infinite_skirt() ? object->layer_count() :
             std::min(size_t(this->config.skirt_height()), object->layer_count())
         };
-        auto* highest_layer {object->get_layer(skirt_height - 1)};
+        const Layer* highest_layer { object->get_layer(skirt_height - 1) };
         skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
     }
 
@@ -292,8 +300,6 @@ Print::make_skirt()
     this->skirt.reverse();
     this->state.set_done(psSkirt);
 }
-
-#endif // SLIC3RXS
 
 void
 Print::reload_object(size_t idx)
@@ -704,33 +710,72 @@ Print::add_model_object(ModelObject* model_object, int idx)
     }
 }
 
-#ifndef SLIC3RXS
 void
 Print::export_gcode(std::ostream& output, bool quiet)
 {
+    // prerequisites
     this->process();
+    
     if (this->status_cb != nullptr) 
         this->status_cb(90, "Exporting G-Code...");
-
-    auto export_handler {Slic3r::PrintGCode(*this, output)};
-    export_handler.output();
-
+    
+    Slic3r::PrintGCode(*this, output).output();
 }
 
 void
-Print::export_gcode(const std::string& outfile, bool quiet)
+Print::export_gcode(std::string outfile, bool quiet)
 {
-    std::ofstream outstream(outfile);
+    // compute the actual output filepath
+    outfile = this->output_filepath(outfile);
+    
+    // write G-code to a temporary file in order to make the export atomic
+    const std::string tempfile{ outfile + ".tmp" };
+    std::ofstream outstream(tempfile);
     this->export_gcode(outstream);
+    
+    // rename the temporary file to the destination file
+    // When renaming, some other application (thank you, Windows Explorer) 
+    // may keep the file locked. Try to wait a bit and then rename the file again.
+    for (int i = 0; std::rename(tempfile.c_str(), outfile.c_str()) != 0; ++i) {
+        if (i == 4) {
+            std::stringstream ss;
+            ss << "Failed to remove the output G-code file from "
+                << tempfile << " to " << outfile << ". Is " << tempfile << " locked?";
+            throw std::runtime_error(ss.str());
+        } else {
+            // Wait for 1/4 seconds and try to rename once again.
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+    }
+    
+    // run post-processing scripts
+    if (!this->config.post_process.values.empty()) {
+        if (this->status_cb != nullptr) 
+            this->status_cb(95, "Running post-processing scripts...");
+        
+        this->config.setenv_();
+        for (std::string ppscript : this->config.post_process.values) {
+            #ifdef __cpp_lib_quoted_string_io
+                ppscript += " " + std::quoted(outfile);
+            #else
+                boost::replace_all(ppscript, "\"", "\\\"");
+                ppscript += " \"" + outfile + "\"";
+            #endif
+            system(ppscript.c_str());
+        
+            // TODO: system() should be only used if user enabled an option for explicitly
+            // supporting arguments, otherwise we should use exec*() and call the executable
+            // directly without launching a shell. #4000
+        }
+    }
 }
 
-
+#ifndef SLIC3RXS
 bool
 Print::apply_config(config_ptr config) {
     // dereference the stored pointer and pass the resulting data to apply_config()
     return this->apply_config(config->config());
 }
-
 #endif
 
 bool
@@ -850,7 +895,7 @@ bool Print::has_skirt() const
         || this->has_infinite_skirt();
 }
 
-std::string
+void
 Print::validate() const
 {
     if (this->config.complete_objects) {
@@ -881,14 +926,21 @@ Print::validate() const
                 object->model_object()->instances.front()->transform_polygon(&convex_hull);
                 
                 // grow convex hull with the clearance margin
-                convex_hull = offset(convex_hull, scale_(this->config.extruder_clearance_radius.value)/2, 1, jtRound, scale_(0.1)).front();
+                convex_hull = offset(
+                    convex_hull,
+                    // safety_offset in intersection() is not enough for preventing false positives
+                    scale_(this->config.extruder_clearance_radius.value)/2 - scale_(0.01),
+                    CLIPPER_OFFSET_SCALE,
+                    jtRound, scale_(0.1)
+                ).front();
                 
                 // now we check that no instance of convex_hull intersects any of the previously checked object instances
                 for (Points::const_iterator copy = object->_shifted_copies.begin(); copy != object->_shifted_copies.end(); ++copy) {
                     Polygon p = convex_hull;
                     p.translate(*copy);
+                    
                     if (!intersection(a, p).empty())
-                        return "Some objects are too close; your extruder will collide with them.";
+                        throw InvalidPrintException{"Some objects are too close; your extruder will collide with them."};
                     
                     a = union_(a, p);
                 }
@@ -907,7 +959,7 @@ Print::validate() const
             // it will be printed as last one so its height doesn't matter
             object_height.pop_back();
             if (!object_height.empty() && object_height.back() > scale_(this->config.extruder_clearance_height.value))
-                return "Some objects are too tall and cannot be printed without extruder collisions.";
+                throw InvalidPrintException{"Some objects are too tall and cannot be printed without extruder collisions."};
         }
     } // end if (this->config.complete_objects)
     
@@ -915,15 +967,13 @@ Print::validate() const
         size_t total_copies_count = 0;
         FOREACH_OBJECT(this, i_object) total_copies_count += (*i_object)->copies().size();
         if (total_copies_count > 1 && !this->config.complete_objects.getBool())
-            return "The Spiral Vase option can only be used when printing a single object.";
+            throw InvalidPrintException{"The Spiral Vase option can only be used when printing a single object."};
         if (this->regions.size() > 1)
-            return "The Spiral Vase option can only be used when printing single material objects.";
+            throw InvalidPrintException{"The Spiral Vase option can only be used when printing single material objects."};
     }
     
     if (this->extruders().empty())
-        return "The supplied settings will cause an empty print.";
-    
-    return std::string();
+        throw InvalidPrintException{"The supplied settings will cause an empty print."};
 }
 
 // the bounding box of objects placed in copies position

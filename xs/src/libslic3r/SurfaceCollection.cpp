@@ -91,28 +91,29 @@ SurfaceCollection::any_bottom_contains(const T &item) const
 template bool SurfaceCollection::any_bottom_contains<Polyline>(const Polyline &item) const;
 
 SurfacesPtr
-SurfaceCollection::filter_by_type(SurfaceType type)
-{
-    SurfacesPtr ss;
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if (surface->surface_type == type) ss.push_back(&*surface);
-    }
-    return ss;
-}
-
-SurfacesPtr
 SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types)
 {
     size_t n {0};
-    SurfacesPtr ss;
-    for (const auto& t : types) {
+    for (const auto& t : types)
         n |= t;
-    }
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if ((surface->surface_type & n) == surface->surface_type) ss.push_back(&*surface);
-    }
+    SurfacesPtr ss;
+    for (auto& s : this->surfaces)
+        if ((s.surface_type & n) == s.surface_type) ss.push_back(&s);
     return ss;
 }
+
+SurfacesConstPtr
+SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types) const
+{
+    size_t n {0};
+    for (const auto& t : types)
+        n |= t;
+    SurfacesConstPtr ss;
+    for (auto& s : this->surfaces)
+        if ((s.surface_type & n) == s.surface_type) ss.push_back(&s);
+    return ss;
+}
+
 void
 SurfaceCollection::filter_by_type(SurfaceType type, Polygons* polygons)
 {
@@ -126,6 +127,12 @@ void
 SurfaceCollection::append(const SurfaceCollection &coll)
 {
     this->append(coll.surfaces);
+}
+
+void
+SurfaceCollection::append(const Surface &surface)
+{
+    this->surfaces.push_back(surface);
 }
 
 void
@@ -208,6 +215,14 @@ SurfaceCollection::keep_types(std::initializer_list<SurfaceType> types) {
     }
 }
 /* group surfaces by common properties */
+std::vector<SurfacesPtr>
+SurfaceCollection::group()
+{
+    std::vector<SurfacesPtr> retval;
+    this->group(&retval);
+    return retval;
+}
+
 void
 SurfaceCollection::group(std::vector<SurfacesPtr> *retval)
 {

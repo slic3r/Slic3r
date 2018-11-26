@@ -38,12 +38,12 @@ class SLAPrint
     };
     std::vector<SupportPillar> sm_pillars;
     
-    SLAPrint(Model* _model) : model(_model) {};
+    SLAPrint(const Model* _model) : model(_model) {};
     void slice();
     void write_svg(const std::string &outputfile) const;
     
     private:
-    Model* model;
+    const Model* model;
     BoundingBoxf3 bb;
     
     void _infill_layer(size_t i, const Fill* fill);
