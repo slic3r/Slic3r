@@ -2403,7 +2403,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         }
     }
     if (this->on_first_layer())
-        speed = m_config.get_abs_value("first_layer_speed", speed);
+        speed = std::min(m_config.get_abs_value("first_layer_speed", speed), speed);
     if (m_volumetric_speed != 0. && speed == 0)
         speed = m_volumetric_speed / path.mm3_per_mm;
     if (m_config.max_volumetric_speed.value > 0) {
