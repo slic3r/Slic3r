@@ -1175,40 +1175,48 @@ PrintObject::prepare_infill()
 }
 
 
+// combine fill surfaces across layers
+// Idempotence of this method is guaranteed by the fact that we don't remove things from
+// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
 void
 PrintObject::combine_infill()
 {
     // Work on each region separately.
     for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id) {
         const PrintRegion *region = this->print()->regions[region_id];
-        const int every = region->config.infill_every_layers.value;
+        const int every = region->config.infill_every_layers();
         if (every < 2 || region->config.fill_density == 0.)
             continue;
+        
         // Limit the number of combined layers to the maximum height allowed by this regions' nozzle.
-        //FIXME limit the layer height to max_layer_height
-        double nozzle_diameter = std::min(
-                this->print()->config.nozzle_diameter.get_at(region->config.infill_extruder.value - 1),
-                this->print()->config.nozzle_diameter.get_at(region->config.solid_infill_extruder.value - 1));
+        // FIXME: limit the layer height to max_layer_height
+        const double nozzle_diameter = std::min(
+            this->_print->config.nozzle_diameter.get_at(region->config.infill_extruder.value - 1),
+            this->_print->config.nozzle_diameter.get_at(region->config.solid_infill_extruder.value - 1)
+        );
+        
         // define the combinations
-        std::vector<size_t> combine(this->layers.size(), 0);
+        std::vector<size_t> combine(this->layers.size(), 0); // layer_idx => number of additional combined lower layers
         {
             double current_height = 0.;
             size_t num_layers = 0;
-            for (size_t layer_idx = 0; layer_idx < this->layers.size(); ++ layer_idx) {
+            for (size_t layer_idx = 0; layer_idx < this->layers.size(); ++layer_idx) {
                 const Layer *layer = this->layers[layer_idx];
+                
+                // Skip first print layer (which may not be first layer in array because of raft).
                 if (layer->id() == 0)
-                    // Skip first print layer (which may not be first layer in array because of raft).
                     continue;
+                
                 // Check whether the combination of this layer with the lower layers' buffer
                 // would exceed max layer height or max combined layer count.
-                if (current_height + layer->height >= nozzle_diameter + EPSILON || (every < 0 || num_layers >= static_cast<size_t>(every)) ) {
+                if (current_height + layer->height >= nozzle_diameter + EPSILON || num_layers >= static_cast<size_t>(every) ) {
                     // Append combination to lower layer.
                     combine[layer_idx - 1] = num_layers;
                     current_height = 0.;
                     num_layers = 0;
                 }
                 current_height += layer->height;
-                ++ num_layers;
+                ++num_layers;
             }
 
             // Append lower layers (if any) to uppermost layer.
@@ -1216,66 +1224,84 @@ PrintObject::combine_infill()
         }
 
         // loop through layers to which we have assigned layers to combine
-        for (size_t layer_idx = 0; layer_idx < this->layers.size(); ++ layer_idx) {
-            size_t num_layers = combine[layer_idx];
+        for (size_t layer_idx = 0; layer_idx < combine.size(); ++layer_idx) {
+            const size_t& num_layers = combine[layer_idx];
             if (num_layers <= 1)
                 continue;
+            
             // Get all the LayerRegion objects to be combined.
             std::vector<LayerRegion*> layerms;
             layerms.reserve(num_layers);
-            for (size_t i = layer_idx + 1 - num_layers; i <= layer_idx; ++ i)
-                layerms.emplace_back(this->layers[i]->regions[region_id]);
+            for (size_t i = layer_idx + 1 - num_layers; i <= layer_idx; ++i)
+                layerms.push_back(this->layers[i]->regions[region_id]);
+            
             // We need to perform a multi-layer intersection, so let's split it in pairs.
+            
             // Initialize the intersection with the candidates of the lowest layer.
             ExPolygons intersection = to_expolygons(layerms.front()->fill_surfaces.filter_by_type(stInternal));
+            
             // Start looping from the second layer and intersect the current intersection with it.
-            for (size_t i = 1; i < layerms.size(); ++ i)
+            for (size_t i = 1; i < layerms.size(); ++i)
                 intersection = intersection_ex(
-                        to_polygons(intersection),
-                        to_polygons(layerms[i]->fill_surfaces.filter_by_type(stInternal)),
-                        false);
-            double area_threshold = layerms.front()->infill_area_threshold();
-            if (! intersection.empty() && area_threshold > 0.)
-                intersection.erase(std::remove_if(intersection.begin(), intersection.end(), 
-                            [area_threshold](const ExPolygon &expoly) { return expoly.area() <= area_threshold; }), 
-                        intersection.end());
+                    to_polygons(intersection),
+                    to_polygons(layerms[i]->fill_surfaces.filter_by_type(stInternal))
+                );
+            
+            // Remove ExPolygons whose area is <= infill_area_threshold()
+            const double area_threshold = layerms.front()->infill_area_threshold();
+            intersection.erase(std::remove_if(intersection.begin(), intersection.end(), 
+                [area_threshold](const ExPolygon &expoly) { return expoly.area() <= area_threshold; }), 
+                intersection.end());
+            
             if (intersection.empty())
                 continue;
-            //            Slic3r::debugf "  combining %d %s regions from layers %d-%d\n",
-            //                scalar(@$intersection),
-            //                ($type == S_TYPE_INTERNAL ? 'internal' : 'internal-solid'),
-            //                $layer_idx-($every-1), $layer_idx;
+            
+            #ifdef SLIC3R_DEBUG
+            std::cout << "  combining " << intersection.size()
+                << " internal regions from layers " << (layer_idx-(every-1))
+                << "-" << layer_idx << std::endl;
+            #endif
+            
             // intersection now contains the regions that can be combined across the full amount of layers,
             // so let's remove those areas from all layers.
+            
+            const float clearance_offset = 
+                0.5f * layerms.back()->flow(frPerimeter).scaled_width() +
+                    // Because fill areas for rectilinear and honeycomb are grown 
+                    // later to overlap perimeters, we need to counteract that too.
+                    ((region->config.fill_pattern == ipRectilinear   ||
+                      region->config.fill_pattern == ipGrid          ||
+                      region->config.fill_pattern == ipHoneycomb) ? 1.5f : 0.5f)
+                      * layerms.back()->flow(frSolidInfill).scaled_width();
+            
             Polygons intersection_with_clearance;
             intersection_with_clearance.reserve(intersection.size());
-            float clearance_offset = 
-                0.5f * layerms.back()->flow(frPerimeter).scaled_width() +
-                // Because fill areas for rectilinear and honeycomb are grown 
-                // later to overlap perimeters, we need to counteract that too.
-                ((region->config.fill_pattern == ipRectilinear   ||
-                  region->config.fill_pattern == ipGrid          ||
-                  region->config.fill_pattern == ipHoneycomb) ? 1.5f : 0.5f) * 
-                layerms.back()->flow(frSolidInfill).scaled_width();
-            for (ExPolygon &expoly : intersection)
+            for (const ExPolygon &expoly : intersection)
                 polygons_append(intersection_with_clearance, offset(expoly, clearance_offset));
+            
             for (LayerRegion *layerm : layerms) {
-                Polygons internal = to_polygons(layerm->fill_surfaces.filter_by_type(stInternal));
+                const Polygons internal = to_polygons(layerm->fill_surfaces.filter_by_type(stInternal));
                 layerm->fill_surfaces.remove_type(stInternal);
-                layerm->fill_surfaces.append(diff_ex(internal, intersection_with_clearance, false), stInternal);
+                
+                layerm->fill_surfaces.append(
+                    diff_ex(internal, intersection_with_clearance),
+                    stInternal
+                );
+                
                 if (layerm == layerms.back()) {
                     // Apply surfaces back with adjusted depth to the uppermost layer.
                     Surface templ(stInternal, ExPolygon());
                     templ.thickness = 0.;
-                    for (LayerRegion *layerm2 : layerms)
+                    for (const LayerRegion *layerm2 : layerms)
                         templ.thickness += layerm2->layer()->height;
                     templ.thickness_layers = (unsigned short)layerms.size();
                     layerm->fill_surfaces.append(intersection, templ);
                 } else {
                     // Save void surfaces.
                     layerm->fill_surfaces.append(
-                            intersection_ex(internal, intersection_with_clearance, false),
-                            stInternalVoid);
+                        intersection_ex(internal, intersection_with_clearance),
+                        stInternalVoid
+                    );
                 }
             }
         }
@@ -1624,8 +1650,9 @@ PrintObject::clip_fill_surfaces()
             // get our current internal fill boundaries
             Polygons lower_layer_internal_surfaces;
             for (const auto* layerm : lower_layer->regions)
-                for (const auto* s : layerm->fill_surfaces.filter_by_type({ stInternal, stInternalVoid }))
-                    polygons_append(lower_layer_internal_surfaces, *s);
+                polygons_append(lower_layer_internal_surfaces, to_polygons(
+                    layerm->fill_surfaces.filter_by_type({ stInternal, stInternalVoid })
+                ));
             upper_internal = intersection(overhangs, lower_layer_internal_surfaces);
         }
         
@@ -1634,10 +1661,7 @@ PrintObject::clip_fill_surfaces()
             if (layerm->region()->config.fill_density.value == 0)
                 continue;
             
-            Polygons internal;
-            for (const auto* s : layerm->fill_surfaces.filter_by_type({ stInternal, stInternalVoid }))
-                polygons_append(internal, *s);
-            
+            Polygons internal{ to_polygons(layerm->fill_surfaces.filter_by_type({ stInternal, stInternalVoid })) };            
             layerm->fill_surfaces.remove_types({ stInternal, stInternalVoid });
             layerm->fill_surfaces.append(intersection_ex(internal, upper_internal, true), stInternal);
             layerm->fill_surfaces.append(diff_ex        (internal, upper_internal, true), stInternalVoid);
