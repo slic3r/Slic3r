@@ -34,18 +34,6 @@ sub support_layers {
     return [ map $self->get_support_layer($_), 0..($self->support_layer_count - 1) ];
 }
 
-# This will assign a type (top/bottom/internal) to $layerm->slices
-# and transform $layerm->fill_surfaces from expolygon 
-# to typed top/bottom/internal surfaces;
-sub detect_surfaces_type {
-    my ($self) = @_;
-    
-    # prerequisites
-    $self->slice;
-    
-    $self->_detect_surfaces_type;
-}
-
 sub prepare_infill {
     my ($self) = @_;
     

@@ -329,11 +329,14 @@ PrintObject::has_support_material() const
         || this->config.support_material_enforce_layers > 0;
 }
 
+// This will assign a type (top/bottom/internal) to layerm->slices
+// and transform layerm->fill_surfaces from expolygon 
+// to typed top/bottom/internal surfaces;
 void
 PrintObject::detect_surfaces_type()
 {
     // prerequisites
-    // this->slice();
+    this->slice();
     
     if (this->state.is_done(posDetectSurfaces)) return;
     this->state.set_started(posDetectSurfaces);
