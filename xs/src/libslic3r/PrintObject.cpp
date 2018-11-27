@@ -1856,6 +1856,7 @@ std::vector<ExPolygons> PrintObject::_slice_volumes(const std::vector<float> &z,
             mesh.translate(- float(unscale(this->_copies_shift.x)), - float(unscale(this->_copies_shift.y)), -float(this->model_object()->bounding_box().min.z));
             // perform actual slicing
             TriangleMeshSlicer mslicer(&mesh);
+            mslicer.safety_offset = (this->config.remove_small_gaps ? scale_(0.0499) : SCALED_EPSILON);
             mslicer.slice(z, &layers);
         }
     }

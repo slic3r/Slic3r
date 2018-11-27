@@ -308,6 +308,7 @@ const std::vector<std::string>& Preset::print_options()
         "only_one_perimeter_top", "single_extruder_multi_material_priming", "compatible_printers", "compatible_printers_condition", "inherits", 
         "infill_dense", "infill_dense_algo", "no_perimeter_unsupported", "min_perimeter_unsupported", "noperi_bridge_only",
         "support_material_solid_first_layer", "perimeter_loop", "perimeter_loop_seam", "seam_travel"
+        , "remove_small_gaps"
     };
     return s_opts;
 }

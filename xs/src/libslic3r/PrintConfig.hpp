@@ -341,6 +341,7 @@ class PrintObjectConfig : public StaticPrintConfig
     STATIC_PRINT_CONFIG_CACHE(PrintObjectConfig)
 public:
     ConfigOptionBool                clip_multipart_objects;
+    ConfigOptionBool                remove_small_gaps;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloat               elefant_foot_compensation;
     ConfigOptionFloatOrPercent      extrusion_width;
@@ -388,6 +389,7 @@ protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
         OPT_PTR(clip_multipart_objects);
+        OPT_PTR(remove_small_gaps);
         OPT_PTR(dont_support_bridges);
         OPT_PTR(elefant_foot_compensation);
         OPT_PTR(extrusion_width);

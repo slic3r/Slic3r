@@ -26,13 +26,21 @@ PrintConfigDef::PrintConfigDef()
     // Maximum extruder temperature, bumped to 1500 to support printing of glass.
     const int max_temp = 1500;
 
-	def = this->add("avoid_crossing_perimeters", coBool);
+    def = this->add("avoid_crossing_perimeters", coBool);
     def->label = L("Avoid crossing perimeters");
-	def->tooltip = L("Optimize travel moves in order to minimize the crossing of perimeters. "
-                   "This is mostly useful with Bowden extruders which suffer from oozing. "
-                   "This feature slows down both the print and the G-code generation.");
+    def->tooltip = L("Optimize travel moves in order to minimize the crossing of perimeters. "
+        "This is mostly useful with Bowden extruders which suffer from oozing. "
+        "This feature slows down both the print and the G-code generation.");
     def->cli = "avoid-crossing-perimeters!";
     def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("remove_small_gaps", coBool);
+    def->label = L("Remove small gaps");
+    def->tooltip = L("Remove the small gaps in the 3D model when slicing. Disable it if you "
+        "are very confident on your model, or you want to print an item with a geometry "
+        "designed for vase mode.");
+    def->cli = "remove-small-gaps!";
+    def->default_value = new ConfigOptionBool(true);
 
     def = this->add("bed_shape", coPoints);
 	def->label = L("Bed shape");
