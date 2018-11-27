@@ -937,7 +937,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = L("Enable the creation of a support layer under the first solid layer. Allow to use lower infill ratio without compromizing the top quality."
         " The dense infill is layed out with a 50% infill density.");
     def->cli = "infill-dense!";
-    def->default_value = new ConfigOptionBool(1);
+    def->default_value = new ConfigOptionBool(false);
 
     def = this->add("infill_dense_algo", coEnum);
     def->label = L("Algorithm");
@@ -1342,7 +1342,7 @@ PrintConfigDef::PrintConfigDef()
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Experimental option to remove perimeters where there are nothing under and a bridged infill should be better.");
     def->cli = "no-perimeter-unsupported!";
-    def->default_value = new ConfigOptionBool(true);
+    def->default_value = new ConfigOptionBool(false);
 
     def = this->add("min_perimeter_unsupported", coInt);
     def->label = L("Minimum perimeters");

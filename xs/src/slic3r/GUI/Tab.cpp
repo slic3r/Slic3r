@@ -819,7 +819,7 @@ void TabPrint::build()
         optgroup->append_line(line);
 
         optgroup = page->new_optgroup(_(L("Advanced")));
-        line = { _(L("Avoid unsupported perimeters")), "" };
+        line = { _(L("Seam options")), "" };
         line.append_option(optgroup->get_option("seam_position"));
         line.append_option(optgroup->get_option("seam_travel"));
         optgroup->append_line(line);
