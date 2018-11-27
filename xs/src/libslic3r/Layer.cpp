@@ -331,7 +331,7 @@ Layer::detect_surfaces_type()
             const SurfaceType surface_type_bottom =
                 (object.config.support_material.value && object.config.support_material_contact_distance.value == 0)
                 ? stBottom
-                : stBottomBridge;
+                : stBottom | stBridge;
         
             // Any surface lying on the void is a true bottom bridge (an overhang)
             bottom.append(
@@ -370,7 +370,7 @@ Layer::detect_surfaces_type()
             // just like any other bottom surface lying on the void
             const SurfaceType surface_type_bottom =
                 (object.config.raft_layers.value > 0 && object.config.support_material_contact_distance.value > 0)
-                ? stBottomBridge
+                ? stBottom | stBridge
                 : stBottom;
             for (Surface &s : bottom.surfaces) s.surface_type = surface_type_bottom;
         }
