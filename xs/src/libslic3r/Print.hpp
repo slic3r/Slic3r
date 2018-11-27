@@ -164,7 +164,6 @@ class PrintObject
     void _slice();
     std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
 
-    void _make_perimeters();
     void _infill();
 
     /// Initialize and generate support material.
