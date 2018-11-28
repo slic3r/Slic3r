@@ -5,29 +5,12 @@
 #include <initializer_list>
 #include <memory>
 #include <regex>
+#include <string>
 
 #include "PrintConfig.hpp"
 #include "ConfigBase.hpp"
 
 namespace Slic3r {
-
-/// Exception class for invalid (but correct type) option values. 
-/// Thrown by validate()
-class InvalidOptionValue : public std::runtime_error {
-public:
-    InvalidOptionValue(const char* v) : runtime_error(v) {}
-    InvalidOptionValue(const std::string v) : runtime_error(v.c_str()) {}
-};
-
-/// Exception class to handle config options that don't exist.
-class InvalidConfigOption : public std::runtime_error {};
-
-/// Exception class for type mismatches
-class InvalidOptionType : public std::runtime_error {
-public:
-    InvalidOptionType(const char* v) : runtime_error(v) {}
-    InvalidOptionType(const std::string v) : runtime_error(v.c_str()) {}
-};
 
 class Config;
 using config_ptr = std::shared_ptr<Config>;
@@ -47,70 +30,67 @@ public:
 
     /// Factory method to construct a Config from an ini file.
     static std::shared_ptr<Config> new_from_ini(const std::string& inifile);
-
-    /// Write a windows-style opt=value ini file with categories from the configuration store.
-    void write_ini(const std::string& file) const;
-
-    /// Parse a windows-style opt=value ini file with categories and load the configuration store.
-    void read_ini(const std::string& file);
-
-
-    double getFloat(const t_config_option_key& opt_key, bool create=true) {
-        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
-        return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getFloat();
+    
+    double getFloat(const t_config_option_key& opt_key) const {
+        return this->_config.getFloat(opt_key);
     }
-    int getInt(const t_config_option_key& opt_key, bool create=true) {
-        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
-        return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getInt();
+    int getInt(const t_config_option_key& opt_key) const {
+        return this->_config.getInt(opt_key);
     }
-    bool getBool(const t_config_option_key& opt_key, bool create=true) {
-        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
-        return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getBool();
+    bool getBool(const t_config_option_key& opt_key) const {
+        return this->_config.getBool(opt_key);
     }
-    std::string getString(const t_config_option_key& opt_key, bool create=true) {
-        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
-        return (dynamic_cast<ConfigOption*>(this->_config.optptr(opt_key, create)))->getString();
+    std::string getString(const t_config_option_key& opt_key) const {
+        return this->_config.getString(opt_key);
     }
 
 
     /// Template function to dynamic cast and leave it in pointer form.
     template <class T>
     T* get_ptr(const t_config_option_key& opt_key, bool create=true) {
-        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
-        return dynamic_cast<T*>(this->_config.optptr(opt_key, create));
+        return this->_config.opt_throw<T>(opt_key, create);
     }
 
     /// Template function to retrieve and cast in hopefully a slightly nicer 
     /// format than longwinded dynamic_cast<> 
     template <class T>
     T& get(const t_config_option_key& opt_key, bool create=true) {
-        if (print_config_def.options.count(opt_key) == 0) throw InvalidOptionType(opt_key + std::string(" is an invalid option.")); 
-        return *(dynamic_cast<T*>(this->_config.optptr(opt_key, create)));
+        return *this->_config.opt_throw<T>(opt_key, create);
     }
     
     /// Function to parse value from a string to whatever opt_key is.
-    void set(const t_config_option_key& opt_key, const std::string& value);
+    void set(const t_config_option_key& opt_key, const std::string& value) {
+        this->_config.set_deserialize_throw(opt_key, value);
+    };
 
-    void set(const t_config_option_key& opt_key, const char* value) { this->set(opt_key, std::string(value));} 
+    void set(const t_config_option_key& opt_key, const char* value) {
+        this->set(opt_key, std::string(value));
+    };
     
     /// Function to parse value from an integer to whatever opt_key is, if
     /// opt_key is a numeric type. This will throw an exception and do 
     /// nothing if called with an incorrect type.
-    void set(const t_config_option_key& opt_key, const int value);
+    void set(const t_config_option_key& opt_key, const int value) {
+        this->_config.setInt(opt_key, value);
+    };
 
     /// Function to parse value from an boolean to whatever opt_key is, if
     /// opt_key is a numeric type. This will throw an exception and do 
     /// nothing if called with an incorrect type.
-    void set(const t_config_option_key& opt_key, const bool value);
+    void set(const t_config_option_key& opt_key, const bool value) {
+        this->_config.setBool(opt_key, value);
+    };
     
     /// Function to parse value from an integer to whatever opt_key is, if
     /// opt_key is a numeric type. This will throw an exception and do 
     /// nothing if called with an incorrect type.
-    void set(const t_config_option_key& opt_key, const double value);
+    void set(const t_config_option_key& opt_key, const double value) {
+        this->_config.setFloat(opt_key, value);
+    };
 
     /// Method to validate the different configuration options. 
-    /// It will throw InvalidConfigOption exceptions on failure.
-    bool validate();
+    /// It will throw InvalidOptionException exceptions on failure.
+    void validate() { this->_config.validate(); };
 
     const DynamicPrintConfig& config() const { return _config; }
     bool empty() const { return _config.empty(); }
@@ -134,19 +114,12 @@ public:
     bool has(const t_config_option_key& k) const { return _config.has(k); };
 
     /// Do not use; prefer static factory methods instead.
-    Config(); 
+    Config() : _config(DynamicPrintConfig()) {}; 
 
 private:
-    std::regex _cli_pattern {"=(.+)$"};
-    std::smatch _match_info {};
-
-
     /// Underlying configuration store.
     DynamicPrintConfig _config {};
 };
-
-bool is_valid_int(const std::string& type, const ConfigOptionDef& opt, const std::string& ser_value);
-bool is_valid_float(const std::string& type, const ConfigOptionDef& opt, const std::string& ser_value);
 
 } // namespace Slic3r
 

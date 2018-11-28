@@ -397,6 +397,16 @@ ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_
     }
 }
 
+void
+ConfigBase::set_defaults(const t_config_option_keys &opt_keys)
+{
+    // use defaults from definition
+    if (this->def == NULL) return;
+    for (auto opt_key : opt_keys)
+        if (this->def->has(opt_key))
+            this->option(opt_key, true)->set(*this->def->options.at(opt_key).default_value);
+}
+
 bool
 ConfigBase::equals(const ConfigBase &other) const {
     return this->diff(other).empty();
@@ -451,6 +461,12 @@ ConfigBase::set_deserialize(t_config_option_key opt_key, std::string str, bool a
     return opt->deserialize(str, append);
 }
 
+void
+ConfigBase::set_deserialize_throw(t_config_option_key opt_key, std::string str, bool append) {
+    bool res = this->set_deserialize(opt_key, str, append);
+    if (!res) throw BadOptionTypeException();
+}
+
 // Return an absolute value of a possibly relative config variable.
 // For example, return absolute infill extrusion width, either from an absolute value, or relative to the layer height.
 double
@@ -483,33 +499,83 @@ ConfigBase::get_abs_value(const t_config_option_key &opt_key, double ratio_over)
 }
 
 bool
+ConfigBase::getBool(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getBool();
+}
+
+bool
 ConfigBase::getBool(const t_config_option_key &opt_key, bool default_value) const {
-    auto opt = this->opt<ConfigOptionBool>(opt_key);
-    return opt == nullptr ? default_value : opt->value;
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getBool();
+}
+
+void
+ConfigBase::setBool(const t_config_option_key &opt_key, bool value) {
+    this->option(opt_key, true)->setBool(value);
+}
+
+double
+ConfigBase::getFloat(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getFloat();
 }
 
 double
 ConfigBase::getFloat(const t_config_option_key &opt_key, double default_value) const {
-    auto opt = this->opt<ConfigOptionFloat>(opt_key);
-    return opt == nullptr ? default_value : opt->value;
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getFloat();
+}
+
+void
+ConfigBase::setFloat(const t_config_option_key &opt_key, double value) {
+    this->option(opt_key, true)->setFloat(value);
 }
 
 int
-ConfigBase::getInt(const t_config_option_key &opt_key, double default_value) const {
-    auto opt = this->opt<ConfigOptionInt>(opt_key);
-    return opt == nullptr ? default_value : opt->value;
+ConfigBase::getInt(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getInt();
+}
+
+int
+ConfigBase::getInt(const t_config_option_key &opt_key, int default_value) const {
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getInt();
+}
+
+void
+ConfigBase::setInt(const t_config_option_key &opt_key, int value) {
+    this->option(opt_key, true)->setInt(value);
+}
+
+std::string
+ConfigBase::getString(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getString();
 }
 
 std::string
 ConfigBase::getString(const t_config_option_key &opt_key, std::string default_value) const {
-    auto opt = this->opt<ConfigOptionString>(opt_key);
-    return opt == nullptr ? default_value : opt->value;
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getString();
+}
+
+void
+ConfigBase::setString(const t_config_option_key &opt_key, std::string value) {
+    this->option(opt_key, true)->setString(value);
+}
+
+std::vector<std::string>
+ConfigBase::getStrings(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getStrings();
 }
 
 std::vector<std::string>
 ConfigBase::getStrings(const t_config_option_key &opt_key, std::vector<std::string> default_value) const {
-    auto opt = this->opt<ConfigOptionStrings>(opt_key);
-    return opt == nullptr ? default_value : opt->values;
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getStrings();
+}
+
+void
+ConfigBase::setStrings(const t_config_option_key &opt_key, std::vector<std::string> value) {
+    this->option(opt_key, true)->setStrings(value);
 }
 
 void
@@ -527,9 +593,23 @@ ConfigBase::option(const t_config_option_key &opt_key) const {
     return const_cast<ConfigBase*>(this)->option(opt_key, false);
 }
 
+const ConfigOption*
+ConfigBase::option_throw(const t_config_option_key &opt_key) const {
+    const auto opt = this->option(opt_key);
+    if (opt == nullptr) throw UnknownOptionException(opt_key);
+    return opt;
+}
+
 ConfigOption*
 ConfigBase::option(const t_config_option_key &opt_key, bool create) {
     return this->optptr(opt_key, create);
+}
+
+ConfigOption*
+ConfigBase::option_throw(const t_config_option_key &opt_key, bool create) {
+    auto opt = this->optptr(opt_key, create);
+    if (opt == nullptr) throw UnknownOptionException(opt_key);
+    return opt;
 }
 
 void
@@ -587,6 +667,11 @@ ConfigBase::validate() const
             auto &value = this->opt<ConfigOptionFloat>(opt_key)->value;
             if (value < def.min || value > def.max)
                 throw InvalidOptionException(opt_key);
+        } else if (def.type == coFloatOrPercent) {
+            const auto* opt = this->opt<ConfigOptionFloatOrPercent>(opt_key);
+            auto &value = opt->value;
+            if (!opt->percent && (value < def.min || value > def.max))
+                throw InvalidOptionException(opt_key);
         } else if (def.type == coInts) {
             for (auto &value : this->opt<ConfigOptionInts>(opt_key)->values)
                 if (value < def.min || value > def.max)
@@ -596,7 +681,6 @@ ConfigBase::validate() const
                 if (value < def.min || value > def.max)
                     throw InvalidOptionException(opt_key);
         }
-        // TODO: validate coFloatOrPercent (semantics of min/max are ambiguous for it)
     }
 }
 
@@ -629,7 +713,7 @@ ConfigOption*
 DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
     if (this->options.count(opt_key) == 0) {
         if (create) {
-            if (!this->def->has(opt_key)) return nullptr;
+            if (!this->def->has(opt_key)) throw UnknownOptionException(opt_key);
             const ConfigOptionDef& optdef = this->def->options.at(opt_key);
             ConfigOption* opt;
             if (optdef.default_value != nullptr) {
@@ -811,11 +895,7 @@ DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra, t_co
 void
 StaticConfig::set_defaults()
 {
-    // use defaults from definition
-    if (this->def == NULL) return;
-    for (auto opt_key : this->keys())
-        if (this->def->has(opt_key))
-            this->option(opt_key)->set(*this->def->options.at(opt_key).default_value);
+    ConfigBase::set_defaults(this->keys());
 }
 
 t_config_option_keys
