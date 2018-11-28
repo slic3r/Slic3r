@@ -16,7 +16,7 @@ Surface::area() const
 bool
 Surface::is_solid() const
 {
-    return this->surface_type & (stTop | stBottom | stSolid | stBridge) != 0;
+    return (this->surface_type & (stTop | stBottom | stSolid | stBridge)) != 0;
 }
 
 bool
@@ -28,25 +28,25 @@ Surface::is_external() const
 bool
 Surface::is_internal() const
 {
-    return this->surface_type & stInternal != 0;
+    return (this->surface_type & stInternal) != 0;
 }
 
 bool
 Surface::is_bottom() const
 {
-    return this->surface_type & stBottom != 0;
+    return (this->surface_type & stBottom) != 0;
 }
 
 bool
 Surface::is_top() const
 {
-    return this->surface_type & stTop != 0;
+    return (this->surface_type & stTop) != 0;
 }
 
 bool
 Surface::is_bridge() const
 {
-    return this->surface_type & stBridge != 0;
+    return (this->surface_type & stBridge) != 0;
 }
 
 }
