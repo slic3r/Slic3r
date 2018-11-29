@@ -239,11 +239,11 @@ LayerRegion::prepare_fill_surfaces()
     // if no solid layers are requested, turn top/bottom surfaces to internal
     if (this->region()->config.top_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
         for (Surface &surface : this->fill_surfaces.surfaces) {
-            if (surface->surface_type == stTop) {
+            if (surface.surface_type == stTop) {
                 if (this->layer()->object()->config.infill_only_where_needed) {
-                    surface->surface_type = (stInternal | stVoid);
+                    surface.surface_type = (stInternal | stVoid);
                 } else {
-                    surface->surface_type = stInternal;
+                    surface.surface_type = stInternal;
                 }
             }
         }
@@ -251,8 +251,8 @@ LayerRegion::prepare_fill_surfaces()
     
     if (this->region()->config.bottom_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
         for (Surface &surface : this->fill_surfaces.surfaces) {
-            if (surface->is_bottom())
-                surface->surface_type = stInternal;
+            if (surface.is_bottom())
+                surface.surface_type = stInternal;
         }
     }
 
