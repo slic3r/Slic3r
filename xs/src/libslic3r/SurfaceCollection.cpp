@@ -107,7 +107,7 @@ SurfacesConstPtr
 SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types) const
 {
     SurfacesConstPtr ss;
-    for (Surface& s : this->surfaces)
+    for (const Surface& s : this->surfaces)
         for (const SurfaceType& t : types)
             if (s.surface_type == t) {
                 ss.push_back(&s);
