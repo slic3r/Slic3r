@@ -230,7 +230,7 @@ Print::make_skirt()
         skirts = 1;
     
     const std::set<size_t> extruders{ this->extruders() };
-    auto extruder_it { extruders.begin() };
+    auto extruder_it = extruders.begin();
     std::vector<float> e_per_mm{0}, extruded_length{0};
     if (this->config.min_skirt_length() > 0)
         for (auto i : extruders)
