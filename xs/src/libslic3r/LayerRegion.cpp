@@ -263,7 +263,7 @@ LayerRegion::prepare_fill_surfaces()
         // (we don't use scale_() because it would overflow the coord_t range
         const double min_area = this->region()->config.solid_infill_below_area.value / SCALING_FACTOR / SCALING_FACTOR;
         for (Surface &surface : this->fill_surfaces.surfaces) {
-            if (!surface.is_internal() && surface.area() <= min_area)
+            if (surface.surface_type == stInternal && surface.area() <= min_area)
                 surface.surface_type = (stInternal | stSolid);
         }
     }
