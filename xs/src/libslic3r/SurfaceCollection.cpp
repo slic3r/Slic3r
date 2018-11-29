@@ -200,12 +200,23 @@ SurfaceCollection::keep_type(const SurfaceType type)
 void
 SurfaceCollection::keep_types(const SurfaceType *types, size_t ntypes) 
 {
-    size_t n {0};
-    for (size_t i = 0; i < ntypes; ++i)
-        n |= types[i]; // form bitmask.
-    // Use stl remove_if to remove 
-    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[n] (const Surface& s) { return (s.surface_type & n) != s.surface_type; });
-    surfaces.erase(ptr, surfaces.cend());
+    size_t j = 0;
+    for (size_t i = 0; i < surfaces.size(); ++ i) {
+        bool keep = false;
+        for (int k = 0; k < ntypes; ++ k) {
+            if (surfaces[i].surface_type == types[k]) {
+                keep = true;
+                break;
+            }
+        }
+        if (keep) {
+            if (j < i)
+                std::swap(surfaces[i], surfaces[j]);
+            ++ j;
+        }
+    }
+    if (j < surfaces.size())
+        surfaces.erase(surfaces.begin() + j, surfaces.end());
 }
 
 void 

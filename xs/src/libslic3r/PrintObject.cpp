@@ -1641,7 +1641,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
         // assign top and bottom surfaces to layer
         SurfaceCollection tmp_coll;
         for (const auto& s : neighbor_fill_surfaces.surfaces)
-            if (s.surface_type == stTop || s.is_bottom())
+            if (s.is_top() || s.is_bottom())
                 tmp_coll.append(s);
         
         for (auto s : tmp_coll.group()) {
