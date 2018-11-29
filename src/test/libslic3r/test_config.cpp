@@ -14,13 +14,7 @@ SCENARIO("Generic config validation performs as expected.") {
         WHEN( "perimeter_extrusion_width is set to 250%, a valid value") {
             config->set("perimeter_extrusion_width", "250%");
             THEN( "The config is read as valid.") {
-                auto except_thrown {false};
-                try {
-                    config->validate();
-                } catch (const InvalidOptionException& e) {
-                    except_thrown = true;
-                }
-                REQUIRE(except_thrown == false);
+                REQUIRE_NOTHROW(config->validate());
             }
         }
         WHEN( "perimeter_extrusion_width is set to -10, an invalid value") {
@@ -168,7 +162,7 @@ SCENARIO("Config accessor functions perform as expected.") {
         }
 
         WHEN("An invalid option is requested during get.") {
-            THEN("A BadOptionTypeException exception is thrown.") {
+            THEN("A UnknownOptionException exception is thrown.") {
                 REQUIRE_THROWS_AS(config->get<ConfigOptionString>("deadbeef_invalid_option", false), UnknownOptionException);
                 REQUIRE_THROWS_AS(config->get<ConfigOptionFloat>("deadbeef_invalid_option", false), UnknownOptionException);
                 REQUIRE_THROWS_AS(config->get<ConfigOptionInt>("deadbeef_invalid_option", false), UnknownOptionException);
@@ -176,7 +170,7 @@ SCENARIO("Config accessor functions perform as expected.") {
             }
         }
         WHEN("An invalid option is requested during get_ptr.") {
-            THEN("A BadOptionTypeException exception is thrown.") {
+            THEN("A UnknownOptionException exception is thrown.") {
                 REQUIRE_THROWS_AS(config->get_ptr<ConfigOptionString>("deadbeef_invalid_option", false), UnknownOptionException);
                 REQUIRE_THROWS_AS(config->get_ptr<ConfigOptionFloat>("deadbeef_invalid_option", false), UnknownOptionException);
                 REQUIRE_THROWS_AS(config->get_ptr<ConfigOptionInt>("deadbeef_invalid_option", false), UnknownOptionException);
