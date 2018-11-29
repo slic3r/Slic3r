@@ -241,7 +241,7 @@ LayerRegion::prepare_fill_surfaces()
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
             if (surface->surface_type == stTop) {
                 if (this->layer()->object()->config.infill_only_where_needed) {
-                    surface->surface_type = stInternal | stVoid;
+                    surface->surface_type = (stInternal | stVoid);
                 } else {
                     surface->surface_type = stInternal;
                 }
@@ -264,7 +264,7 @@ LayerRegion::prepare_fill_surfaces()
         const double min_area = this->region()->config.solid_infill_below_area.value / SCALING_FACTOR / SCALING_FACTOR;
         for (Surface &surface : this->fill_surfaces.surfaces) {
             if (!surface.is_internal() && surface.area() <= min_area)
-                surface.surface_type = stInternal | stSolid;
+                surface.surface_type = (stInternal | stSolid);
         }
     }
 }

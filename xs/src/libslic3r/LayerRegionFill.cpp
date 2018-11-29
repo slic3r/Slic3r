@@ -137,7 +137,7 @@ LayerRegion::make_fill()
         );
             
         Polygons to_subtract;
-        surfaces.filter_by_type(stInternal | stVoid, &to_subtract);
+        surfaces.filter_by_type((stInternal | stVoid), &to_subtract);
                 
         append_to(to_subtract, collapsed);
         surfaces.append(
@@ -146,7 +146,7 @@ LayerRegion::make_fill()
                 to_subtract,
                 true
             ),
-            stInternal | stSolid
+            (stInternal | stSolid)
         );
     }
 
