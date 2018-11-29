@@ -105,11 +105,10 @@ _constant()
   ALIAS:
     S_TYPE_TOP              = stTop
     S_TYPE_BOTTOM           = stBottom
-    S_TYPE_BOTTOMBRIDGE     = stBottom | stBridge
     S_TYPE_INTERNAL         = stInternal
-    S_TYPE_INTERNALSOLID    = stInternal | stSolid
-    S_TYPE_INTERNALBRIDGE   = stInternal | stBridge
-    S_TYPE_INTERNALVOID     = stInternal | stVoid
+    S_TYPE_SOLID            = stSolid
+    S_TYPE_BRIDGE           = stBridge
+    S_TYPE_VOID             = stVoid
   PROTOTYPE:
   CODE:
     RETVAL = ix;
