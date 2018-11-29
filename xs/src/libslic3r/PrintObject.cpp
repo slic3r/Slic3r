@@ -1376,7 +1376,7 @@ PrintObject::combine_infill()
                     // Save void surfaces.
                     layerm->fill_surfaces.append(
                             intersection_ex(internal, intersection_with_clearance),
-                            stInternal | stVoid);
+                            (stInternal | stVoid));
                 }
             }
         }
@@ -1534,7 +1534,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
 {
     const auto& region_config = layerm->region()->config;
 
-    for (int n = (type == stTop ? i-1 : i+1); std::abs(n-int(i)) < solid_layers; (type == stTop ? n-- : n++)) {
+    for (int n = ((type & stTop) != 0 ? i-1 : i+1); std::abs(n-int(i)) < solid_layers; ((type & stTop) != 0 ? n-- : n++)) {
         if (n < 0 || static_cast<size_t>(n) >= this->layer_count()) continue;
 
         LayerRegion* neighbor_layerm { this->get_layer(n)->get_region(region_id) };
@@ -1545,7 +1545,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
         // intersections have contours and holes
         Polygons new_internal_solid = intersection(
             solid,
-            to_polygons(neighbor_fill_surfaces.filter_by_type({ (stInternal, stInternal) | stSolid})),
+            to_polygons(neighbor_fill_surfaces.filter_by_type({stInternal, (stInternal | stSolid)})),
             true
         );
         if (new_internal_solid.empty()) {
@@ -1625,11 +1625,11 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
         // and new ones
         Polygons tmp { to_polygons(neighbor_fill_surfaces.filter_by_type(stInternal | stSolid)) };
         polygons_append(tmp, new_internal_solid);
-        const auto internal_solid = union_ex(tmp);
+        const ExPolygons internal_solid = union_ex(tmp);
 
         // subtract intersections from layer surfaces to get resulting internal surfaces
         tmp = to_polygons(neighbor_fill_surfaces.filter_by_type(stInternal));
-        const auto internal = diff_ex(tmp, to_polygons(internal_solid), 1);
+        const ExPolygons internal = diff_ex(tmp, to_polygons(internal_solid), 1);
 
         // assign resulting internal surfaces to layer
         neighbor_layerm->fill_surfaces.clear();
@@ -1640,7 +1640,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
 
         // assign top and bottom surfaces to layer
         SurfaceCollection tmp_coll;
-        for (const auto& s : neighbor_fill_surfaces.surfaces)
+        for (const Surface& s : neighbor_fill_surfaces.surfaces)
             if (s.is_top() || s.is_bottom())
                 tmp_coll.append(s);
         
@@ -1719,7 +1719,7 @@ PrintObject::clip_fill_surfaces()
             Polygons lower_layer_internal_surfaces;
             for (const auto* layerm : lower_layer->regions)
                 polygons_append(lower_layer_internal_surfaces, to_polygons(
-                    layerm->fill_surfaces.filter_by_type({ stInternal, stInternal | stVoid })
+                    layerm->fill_surfaces.filter_by_type({ stInternal, (stInternal | stVoid) })
                 ));
             upper_internal = intersection(overhangs, lower_layer_internal_surfaces);
         }

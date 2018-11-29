@@ -175,7 +175,7 @@ LayerRegion::make_fill()
         if (surface.is_solid()) {
             density = 100.;
             fill_pattern = (surface.is_top()) ? this->region()->config.top_infill_pattern.value
-                : (surface.is_bottom() && !is_bridge)      ? this->region()->config.bottom_infill_pattern.value
+                : (surface.is_bottom() && !is_bridge) ? this->region()->config.bottom_infill_pattern.value
                 : ipRectilinear;
         } else if (density <= 0)
             continue;
