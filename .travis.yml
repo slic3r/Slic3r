@@ -53,6 +53,8 @@ matrix:
           env:
             - TARGET=main
             - WXDIR=$HOME/wx302
+            - PERL_BIN=$HOME/perl5/perlbrew/perls/slic3r-perl/bin/perl
+            - PP_BIN=$HOME/perl5/perlbrew/perls/slic3r-perl/bin/pp
           cache:
             directories:
               - $HOME/boost_1_63_0
