@@ -2,7 +2,7 @@
 set -euo pipefail
 
 perlbrew switch slic3r-perl
-cpan local::lib
+cpanm local::lib
 eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
 cd package/linux && make -f build_shell.mk && mv Slic3r* $TRAVIS_BUILD_DIR && cd $TRAVIS_BUILD_DIR
 
