@@ -53,8 +53,6 @@ matrix:
           env:
             - TARGET=main
             - WXDIR=$HOME/wx302
-            - PERL_BIN=$HOME/perl5/perlbrew/perls/slic3r-perl/bin/perl
-            - PP_BIN=$HOME/perl5/perlbrew/perls/slic3r-perl/bin/pp
           cache:
             directories:
               - $HOME/boost_1_63_0
@@ -62,7 +60,7 @@ matrix:
               - $HOME/wx302
               - local-lib
           after_success:
-            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/linux/travis-deploy-main.sh || travis_terminate 1; fi
+            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then source ${HOME}/perl5/perlbrew/etc/bashrc; perlbrew switch slic3r-perl; ./package/linux/travis-deploy-main.sh || travis_terminate 1; fi
 
         - os: linux
           env: 
