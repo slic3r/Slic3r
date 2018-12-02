@@ -409,7 +409,7 @@ SupportMaterial::contact_area(PrintObject *object)
                     if (1) {
                         // Remove the entire bridges and only support the unsupported edges.
                         ExPolygons bridges;
-                        for (auto surface : layer_m->fill_surfaces.filter_by_type(stBottomBridge)) {
+                        for (auto surface : layer_m->fill_surfaces.filter_by_type(stBottom | stBridge)) {
                             if (surface->bridge_angle != -1) {
                                 bridges.push_back(surface->expolygon);
                             }

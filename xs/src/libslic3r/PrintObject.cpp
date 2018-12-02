@@ -395,7 +395,7 @@ PrintObject::bridge_over_infill()
             
             // extract the stInternalSolid surfaces that might be transformed into bridges
             Polygons internal_solid;
-            layerm->fill_surfaces.filter_by_type(stInternalSolid, &internal_solid);
+            layerm->fill_surfaces.filter_by_type((stInternal | stSolid), &internal_solid);
             if (internal_solid.empty()) continue;
             
             // check whether we should bridge or not according to density
@@ -492,15 +492,15 @@ PrintObject::bridge_over_infill()
             {
                 Surfaces new_surfaces;
                 for (Surfaces::const_iterator surface = layerm->fill_surfaces.surfaces.begin(); surface != layerm->fill_surfaces.surfaces.end(); ++surface) {
-                    if (surface->surface_type != stInternalSolid)
+                    if (surface->surface_type != (stInternal | stSolid))
                         new_surfaces.push_back(*surface);
                 }
                 
                 for (ExPolygons::const_iterator ex = to_bridge.begin(); ex != to_bridge.end(); ++ex)
-                    new_surfaces.push_back(Surface(stInternalBridge, *ex));
+                    new_surfaces.push_back(Surface( (stInternal | stBridge), *ex));
                 
                 for (ExPolygons::const_iterator ex = not_to_bridge.begin(); ex != not_to_bridge.end(); ++ex)
-                    new_surfaces.push_back(Surface(stInternalSolid, *ex));
+                    new_surfaces.push_back(Surface( (stInternal | stSolid), *ex));
                 
                 layerm->fill_surfaces.surfaces = new_surfaces;
             }
@@ -524,7 +524,7 @@ PrintObject::bridge_over_infill()
                                 )};
                             push @new_surfaces, map Slic3r::Surface->new(
                                 expolygon       => $_,
-                                surface_type    => S_TYPE_INTERNALVOID,
+                                surface_type    => S_TYPE_INTERNAL + S_TYPE_VOID,
                             ), @{intersection_ex(
                                 [ map $_->p, @$group ],
                                 [ map @$_, @$to_bridge ],
@@ -1375,9 +1375,8 @@ PrintObject::combine_infill()
                 } else {
                     // Save void surfaces.
                     layerm->fill_surfaces.append(
-                        intersection_ex(internal, intersection_with_clearance),
-                        stInternalVoid
-                    );
+                            intersection_ex(internal, intersection_with_clearance),
+                            (stInternal | stVoid));
                 }
             }
         }
@@ -1481,7 +1480,7 @@ PrintObject::discover_horizontal_shells()
 
             if (region_config.solid_infill_every_layers() > 0 && region_config.fill_density() > 0
                 && (i % region_config.solid_infill_every_layers()) == 0) {
-                const auto type = region_config.fill_density() == 100 ? stInternalSolid : stInternalBridge;
+                const auto type = region_config.fill_density() == 100 ? (stInternal | stSolid) : (stInternal | stBridge);
                 for (auto* s : layerm->fill_surfaces.filter_by_type(stInternal))
                     s->surface_type = type;
             }
@@ -1494,7 +1493,7 @@ void
 PrintObject::_discover_external_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id)
 {
     const auto& region_config = layerm->region()->config;
-    for (auto& type : { stTop, stBottom, stBottomBridge }) {
+    for (auto& type : { stTop, stBottom, (stBottom | stBridge) }) {
         // find slices of current type for current layer
         // use slices instead of fill_surfaces because they also include the perimeter area
         // which needs to be propagated in shells; we need to grow slices like we did for
@@ -1535,7 +1534,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
 {
     const auto& region_config = layerm->region()->config;
 
-    for (int n = (type == stTop ? i-1 : i+1); std::abs(n-int(i)) < solid_layers; (type == stTop ? n-- : n++)) {
+    for (int n = ((type & stTop) != 0 ? i-1 : i+1); std::abs(n-int(i)) < solid_layers; ((type & stTop) != 0 ? n-- : n++)) {
         if (n < 0 || static_cast<size_t>(n) >= this->layer_count()) continue;
 
         LayerRegion* neighbor_layerm { this->get_layer(n)->get_region(region_id) };
@@ -1546,7 +1545,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
         // intersections have contours and holes
         Polygons new_internal_solid = intersection(
             solid,
-            to_polygons(neighbor_fill_surfaces.filter_by_type({stInternal, stInternalSolid})),
+            to_polygons(neighbor_fill_surfaces.filter_by_type({stInternal, (stInternal | stSolid)})),
             true
         );
         if (new_internal_solid.empty()) {
@@ -1624,25 +1623,25 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
         
         // internal-solid are the union of the existing internal-solid surfaces
         // and new ones
-        Polygons tmp { to_polygons(neighbor_fill_surfaces.filter_by_type(stInternalSolid)) };
+        Polygons tmp { to_polygons(neighbor_fill_surfaces.filter_by_type(stInternal | stSolid)) };
         polygons_append(tmp, new_internal_solid);
-        const auto internal_solid = union_ex(tmp);
+        const ExPolygons internal_solid = union_ex(tmp);
 
         // subtract intersections from layer surfaces to get resulting internal surfaces
         tmp = to_polygons(neighbor_fill_surfaces.filter_by_type(stInternal));
-        const auto internal = diff_ex(tmp, to_polygons(internal_solid), 1);
+        const ExPolygons internal = diff_ex(tmp, to_polygons(internal_solid), 1);
 
         // assign resulting internal surfaces to layer
         neighbor_layerm->fill_surfaces.clear();
         neighbor_layerm->fill_surfaces.append(internal, stInternal);
 
         // assign new internal-solid surfaces to layer
-        neighbor_layerm->fill_surfaces.append(internal_solid, stInternalSolid);
+        neighbor_layerm->fill_surfaces.append(internal_solid, (stInternal | stSolid));
 
         // assign top and bottom surfaces to layer
         SurfaceCollection tmp_coll;
-        for (const auto& s : neighbor_fill_surfaces.surfaces)
-            if (s.surface_type == stTop || s.is_bottom())
+        for (const Surface& s : neighbor_fill_surfaces.surfaces)
+            if (s.is_top() || s.is_bottom())
                 tmp_coll.append(s);
         
         for (auto s : tmp_coll.group()) {
@@ -1720,7 +1719,7 @@ PrintObject::clip_fill_surfaces()
             Polygons lower_layer_internal_surfaces;
             for (const auto* layerm : lower_layer->regions)
                 polygons_append(lower_layer_internal_surfaces, to_polygons(
-                    layerm->fill_surfaces.filter_by_type({ stInternal, stInternalVoid })
+                    layerm->fill_surfaces.filter_by_type({ stInternal, (stInternal | stVoid) })
                 ));
             upper_internal = intersection(overhangs, lower_layer_internal_surfaces);
         }
@@ -1730,10 +1729,10 @@ PrintObject::clip_fill_surfaces()
             if (layerm->region()->config.fill_density.value == 0)
                 continue;
             
-            Polygons internal{ to_polygons(layerm->fill_surfaces.filter_by_type({ stInternal, stInternalVoid })) };            
-            layerm->fill_surfaces.remove_types({ stInternal, stInternalVoid });
+            Polygons internal{ to_polygons(layerm->fill_surfaces.filter_by_type({ stInternal, (stInternal | stVoid) })) };            
+            layerm->fill_surfaces.remove_types({ stInternal, (stInternal | stVoid) });
             layerm->fill_surfaces.append(intersection_ex(internal, upper_internal, true), stInternal);
-            layerm->fill_surfaces.append(diff_ex        (internal, upper_internal, true), stInternalVoid);
+            layerm->fill_surfaces.append(diff_ex        (internal, upper_internal, true), (stInternal | stVoid));
             
             // If there are voids it means that our internal infill is not adjacent to
             // perimeters. In this case it would be nice to add a loop around infill to
