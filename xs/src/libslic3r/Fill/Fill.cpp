@@ -145,7 +145,7 @@ Fill::fill_surface_extrusion(const Surface &surface, const Flow &flow, Extrusion
             if (flow.bridge) {
                 good_role = erBridgeInfill;
             } else if (surface.is_solid()) {
-                good_role = (surface.surface_type == stTop) ? erTopSolidInfill : erSolidInfill;
+                good_role = (surface.is_top()) ? erTopSolidInfill : erSolidInfill;
             } else {
                 good_role = erInternalInfill;
             }

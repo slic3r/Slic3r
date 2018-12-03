@@ -540,11 +540,9 @@ PrintObject::bridge_over_infill()
             */
         }
     }
-    
-    this->replaceSurfaceType( stInternalSolid, stInternalSolid | stOverBridge, stInternalBridge);
-    this->replaceSurfaceType( stInternalSolid, stInternalSolid | stOverBridge, stBottomBridge);
-    this->replaceSurfaceType( stTop, stTop | stOverBridge, stInternalBridge);
-    this->replaceSurfaceType( stTop, stTop | stOverBridge, stBottomBridge);
+	
+    this->replaceSurfaceType( stInternal | stSolid, stInternal | stSolid | stOverBridge, stBridge);
+    this->replaceSurfaceType( stTop, stTop | stOverBridge, stBridge);
 }
 
 void
@@ -572,7 +570,7 @@ PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replac
                 // iterate through regions and collect internal surfaces
                 Polygons lower_internal;
                 FOREACH_LAYERREGION(lower_layer, lower_layerm_it){
-                    (*lower_layerm_it)->fill_surfaces.filter_by_type(st_under_it, &lower_internal);
+                    (*lower_layerm_it)->fill_surfaces.filter_by_incl_type(st_under_it, &lower_internal);
                 }
                         
                 // intersect such lower internal surfaces with the candidate solid surfaces
@@ -586,13 +584,13 @@ PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replac
             // build the new collection of fill_surfaces
             {
                 Surfaces new_surfaces;
-                for (Surfaces::const_iterator surface = layerm->fill_surfaces.surfaces.begin(); surface != layerm->fill_surfaces.surfaces.end(); ++surface) {
-                    if (surface->surface_type != st_to_replace)
-                        new_surfaces.push_back(*surface);
+                for (Surface& surface : layerm->fill_surfaces.surfaces) {
+                    if (surface.surface_type != st_to_replace)
+                        new_surfaces.push_back(surface);
                 }
 
-            for (ExPolygon &ex : union_ex(poly_to_replace)) {
-                new_surfaces.push_back(Surface(st_replacement, ex));
+                for (ExPolygon &ex : union_ex(poly_to_replace)) {
+                    new_surfaces.push_back(Surface(st_replacement, ex));
                 }
                 for (ExPolygon &ex : not_expoly_to_replace){
                     new_surfaces.push_back(Surface(st_to_replace, ex));
