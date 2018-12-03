@@ -613,8 +613,12 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
     // polyline, after we extend the start point it will be caught by the intersection()
     // call, so we keep the inner point until we perform the second intersection() as well
     if (polyline.endpoints.second && !bounds.has_boundary_point(polyline.points.back())) {
-        Line line(*(polyline.points.end() - 2), polyline.points.back());
-
+        size_t first_idx = polyline.points.size() - 2;
+        Line line(*(polyline.points.begin() + first_idx), polyline.points.back());
+        while (line.length() < SCALED_RESOLUTION && first_idx>0) {
+            first_idx--;
+            line.a = *(polyline.points.begin() + first_idx);
+        }
         // prevent the line from touching on the other side, otherwise intersection() might return that solution
         if (polyline.points.size() == 2) line.a = line.midpoint();
 
@@ -624,14 +628,18 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
             new_back = polyline.points.back();
         } else {
             (void)this->expolygon.contour.first_intersection(line, &new_back);
+            // safety check if no intersection
+            if (new_back.x == 0 && new_back.y == 0) new_back = line.b;
             polyline.points.push_back(new_back);
             polyline.width.push_back(polyline.width.back());
         }
         Point new_bound;
         (void)bounds.contour.first_intersection(line, &new_bound);
-       /* if (new_bound.coincides_with_epsilon(new_back)) {
-            return;
-        }*/
+        // safety check if no intersection
+        if (new_bound.x == 0 && new_bound.y == 0) {
+            if (line.b.coincides_with_epsilon(polyline.points.back())) return;
+            new_bound = line.b;
+        }
         // find anchor
         Point best_anchor;
         double shortest_dist = max_width;
@@ -761,7 +769,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 coord_t biggest_main_branch_length = 0;
                 for (size_t k = 0; k < pp.size(); ++k) {
                     //std::cout << "try to find main : " << k << " ? " << i << " " << j << " ";
-                    if (k == i | k == j) continue;
+                    if (k == i || k == j) continue;
                     ThickPolyline& main = pp[k];
                     if (polyline.first_point().coincides_with(main.last_point())) {
                         main.reverse();
@@ -989,19 +997,23 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
         while (polyline.points.size() > 1 && polyline.width.front() < this->min_width && polyline.endpoints.first) {
             //try to split if possible
             if (polyline.width[1] > min_width) {
-                double percent_can_keep = (min_width - polyline.width[0]) / (polyline.width[1] - polyline.width[0]);
-                if (polyline.points.front().distance_to(polyline.points[1]) * percent_can_keep > this->max_width / 2
-                    && polyline.points.front().distance_to(polyline.points[1])* (1 - percent_can_keep) > this->max_width / 2) {
+                double percent_can_keep = 1 - (min_width - polyline.width[0]) / (polyline.width[1] - polyline.width[0]);
+                if (polyline.points.front().distance_to(polyline.points[1]) * percent_can_keep > SCALED_RESOLUTION) {
                     //Can split => move the first point and assign a new weight.
                     //the update of endpoints wil be performed in concatThickPolylines
                     polyline.points.front().x = polyline.points.front().x +
-                        (coord_t)((polyline.points[1].x - polyline.points.front().x) * percent_can_keep);
+                        (coord_t)((polyline.points[1].x - polyline.points.front().x) * (1 - percent_can_keep));
                     polyline.points.front().y = polyline.points.front().y +
-                        (coord_t)((polyline.points[1].y - polyline.points.front().y) * percent_can_keep);
+                        (coord_t)((polyline.points[1].y - polyline.points.front().y) * (1 - percent_can_keep));
                     polyline.width.front() = min_width;
-                    changes = true;
-                    break;
+                } else {
+                    /// almost 0-length, Remove
+                    std::cout << id << " remove the point"<<"\n";
+                    polyline.points.erase(polyline.points.begin());
+                    polyline.width.erase(polyline.width.begin());
                 }
+                changes = true;
+                break;
             }
             polyline.points.erase(polyline.points.begin());
             polyline.width.erase(polyline.width.begin());
@@ -1010,19 +1022,22 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
         while (polyline.points.size() > 1 && polyline.width.back() < this->min_width && polyline.endpoints.second) {
             //try to split if possible
             if (polyline.width[polyline.points.size() - 2] > min_width) {
-                double percent_can_keep = (min_width - polyline.width.back()) / (polyline.width[polyline.points.size() - 2] - polyline.width.back());
-                if (polyline.points.back().distance_to(polyline.points[polyline.points.size() - 2]) * percent_can_keep > this->max_width / 2
-                    && polyline.points.back().distance_to(polyline.points[polyline.points.size() - 2]) * (1 - percent_can_keep) > this->max_width / 2) {
+                double percent_can_keep = 1 - (min_width - polyline.width.back()) / (polyline.width[polyline.points.size() - 2] - polyline.width.back());
+                if (polyline.points.back().distance_to(polyline.points[polyline.points.size() - 2]) * percent_can_keep > SCALED_RESOLUTION) {
                     //Can split => move the first point and assign a new weight.
                     //the update of endpoints wil be performed in concatThickPolylines
                     polyline.points.back().x = polyline.points.back().x +
-                        (coord_t)((polyline.points[polyline.points.size() - 2].x - polyline.points.back().x) * percent_can_keep);
+                        (coord_t)((polyline.points[polyline.points.size() - 2].x - polyline.points.back().x) * (1 - percent_can_keep));
                     polyline.points.back().y = polyline.points.back().y +
-                        (coord_t)((polyline.points[polyline.points.size() - 2].y - polyline.points.back().y) * percent_can_keep);
+                        (coord_t)((polyline.points[polyline.points.size() - 2].y - polyline.points.back().y) * (1 - percent_can_keep));
                     polyline.width.back() = min_width;
-                    changes = true;
-                    break;
+                } else {
+                    /// almost 0-length, Remove
+                    polyline.points.erase(polyline.points.end() - 1);
+                    polyline.width.erase(polyline.width.end() - 1);
                 }
+                changes = true;
+                break;
             }
             polyline.points.erase(polyline.points.end() - 1);
             polyline.width.erase(polyline.width.end() - 1);
