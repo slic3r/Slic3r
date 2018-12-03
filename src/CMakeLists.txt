@@ -199,6 +199,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/LayerHeightSpline.cpp
     ${LIBDIR}/libslic3r/Line.cpp
     ${LIBDIR}/libslic3r/Log.cpp
+    ${LIBDIR}/libslic3r/MedialAxis.cpp
     ${LIBDIR}/libslic3r/Model.cpp
     ${LIBDIR}/libslic3r/MotionPlanner.cpp
     ${LIBDIR}/libslic3r/MultiPoint.cpp

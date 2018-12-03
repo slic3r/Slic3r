@@ -31,6 +31,25 @@ class MultiPoint
 
     int find_point(const Point &point) const;
     bool has_boundary_point(const Point &point) const;
+	/// return the index of the closest point in this polygon in relation with "point"
+	/// \param point the point to compare with. 
+	/// \return the index of the closest point in the points vector. 
+    size_t closest_point_index(const Point &point) const {
+        size_t idx = -1;
+        if (! this->points.empty()) {
+            idx = 0;
+            double dist_min = this->points.front().distance_to_sq(point);
+            for (size_t i = 1; i < this->points.size(); ++ i) {
+                double d = this->points[i].distance_to_sq(point);
+                if (d < dist_min) {
+                    dist_min = d;
+                    idx = i;
+                }
+            }
+        }
+        return idx;
+    }
+    const Point* closest_point(const Point &point) const { return this->points.empty() ? nullptr : &this->points[this->closest_point_index(point)]; }
     BoundingBox bounding_box() const;
     
     // Return true if there are exact duplicates.

@@ -121,20 +121,21 @@ PerimeterGenerator::process()
                         // medial axis requires non-overlapping geometry
                         Polygons thin_zones = diff(last, no_thin_zone, true);
                         //don't use offset2_ex, because we don't want to merge the zones that have been separated.
-                        Polygons expp = offset(thin_zones, (float)(-min_width / 2));
+                        ExPolygons expp = offset_ex(thin_zones, (float)(-min_width / 2));
                         //we push the bits removed and put them into what we will use as our anchor
                         if (expp.size() > 0) {
-                            no_thin_zone = diff(last, offset(expp, (float)(min_width / 2)), true);
+                            no_thin_zone = diff(last, to_polygons(offset_ex(expp, (float)(min_width / 2))), true);
                         }
                         // compute a bit of overlap to anchor thin walls inside the print.
-                        for (Polygon &ex : expp) {
+                        for (ExPolygon &ex : expp) {
                             //growing back the polygon
                             //a very little bit of overlap can be created here with other thin polygons, but it's more useful than worisome.
                             ex.remove_point_too_near(SCALED_RESOLUTION);
                             ExPolygons ex_bigger = offset_ex(ex, (float)(min_width / 2));
                             if (ex_bigger.size() != 1) continue; // impossible error, growing a single polygon can't create multiple or 0.
-                            ExPolygons anchor = intersection_ex(offset(ex, (float)(ext_pwidth / 2), 
-                                    CLIPPER_OFFSET_SCALE, jtSquare, 3), no_thin_zone, true);
+                            ExPolygons anchor = intersection_ex(
+                                to_polygons(offset_ex(ex, (float)(ext_pwidth / 2), CLIPPER_OFFSET_SCALE, jtSquare, 3)), 
+                                no_thin_zone, true);
                             ExPolygons bounds = _clipper_ex(ClipperLib::ctUnion, to_polygons(ex_bigger), to_polygons(anchor), true);
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(ex_bigger[0], bound).empty()) {

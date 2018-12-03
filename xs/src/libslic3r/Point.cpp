@@ -187,6 +187,14 @@ Point::distance_to(const Point &point) const
     return sqrt(dx*dx + dy*dy);
 }
 
+double
+Point::distance_to_sq(const Point &point) const
+{
+    double dx = ((double)point.x - this->x);
+    double dy = ((double)point.y - this->y);
+    return dx*dx + dy*dy;
+}
+
 /* distance to the closest point of line */
 double
 Point::distance_to(const Line &line) const

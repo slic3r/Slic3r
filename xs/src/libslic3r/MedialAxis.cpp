@@ -44,7 +44,7 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
     }
     */
     
-    typedef const VD::vertex_type vert_t;
+    // typedef const VD::vertex_type vert_t;
     typedef const VD::edge_type   edge_t;
     
     // collect valid edges (i.e. prune those not belonging to MAT)
@@ -168,10 +168,10 @@ bool
 MedialAxis::validate_edge(const VD::edge_type* edge)
 {
     // prevent overflows and detect almost-infinite edges
-    if (std::abs(edge->vertex0()->x()) > double(CLIPPER_MAX_COORD_UNSCALED) || 
-        std::abs(edge->vertex0()->y()) > double(CLIPPER_MAX_COORD_UNSCALED) || 
-        std::abs(edge->vertex1()->x()) > double(CLIPPER_MAX_COORD_UNSCALED) ||
-        std::abs(edge->vertex1()->y()) > double(CLIPPER_MAX_COORD_UNSCALED))
+    if (std::abs(edge->vertex0()->x()) > double(MAX_COORD) || 
+        std::abs(edge->vertex0()->y()) > double(MAX_COORD) || 
+        std::abs(edge->vertex1()->x()) > double(MAX_COORD) ||
+        std::abs(edge->vertex1()->y()) > double(MAX_COORD))
         return false;
 
     // construct the line representing this edge of the Voronoi diagram
@@ -1355,7 +1355,7 @@ MedialAxis::build(ThickPolylines* polylines_out)
 
     // Loop through all returned polylines in order to extend their endpoints to the 
     //   expolygon boundaries
-    const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
+    const ExPolygons anchors = offset2_ex(to_polygons(diff_ex(this->bounds, this->expolygon)), -SCALED_RESOLUTION, SCALED_RESOLUTION);
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         extends_line(polyline, anchors, min_width);
