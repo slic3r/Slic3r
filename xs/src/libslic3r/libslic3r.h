@@ -4,7 +4,12 @@
 // this needs to be included early for MSVC (listing it in Build.PL is not enough)
 #include <ostream>
 #include <iostream>
+
+// Otherwise #defines like M_PI are undeclared under Visual Studio
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
+#endif
+
 #include <math.h>
 #include <queue>
 #include <sstream>
@@ -44,14 +49,16 @@ namespace Slic3r {
 
 constexpr auto SLIC3R_VERSION = "1.3.1-dev";
 
-#ifndef SLIC3RXS
+
 #ifndef SLIC3R_BUILD_COMMIT
 #define SLIC3R_BUILD_COMMIT (Unknown revision)
 #endif 
 #define VER1_(x) #x
 #define VER_(x) VER1_(x)
 #define BUILD_COMMIT VER_(SLIC3R_BUILD_COMMIT)
-#endif
+
+const auto SLIC3R_GIT_STR = std::string(BUILD_COMMIT);
+const auto SLIC3R_GIT = SLIC3R_GIT_STR.c_str();
 
 #ifdef _WIN32
 typedef int64_t coord_t;

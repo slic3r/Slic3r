@@ -388,9 +388,10 @@ TMFEditor::~TMFEditor(){
 }
 
 bool
-TMF::write(Model& model, std::string output_file)
+TMF::write(const Model& model, std::string output_file)
 {
-    TMFEditor tmf_writer(std::move(output_file), &model);
+    Model m2{model};
+    TMFEditor tmf_writer(std::move(output_file), &m2);
     return tmf_writer.produce_TMF();
 }
 

@@ -73,7 +73,9 @@ class Model
     /// \param  input_file std::string the file path expressed in UTF-8
     /// \return Model the read Model
     static Model read_from_file(std::string input_file);
-
+    
+    void merge(const Model &other);
+    
     /// Create a new object and add it to the current Model.
     /// \return ModelObject* a pointer to the new Model
     ModelObject* add_object();
@@ -133,13 +135,17 @@ class Model
     /// Repair the ModelObjects of the current Model.
     /// This function calls repair function on each TriangleMesh of each model object volume
     void repair();
-
+    
+    /// Split the meshes of the ModelObjects into several distinct ModelObjects.
+    void split();
+    
     /// Center the total bounding box of the instances around a point.
     /// This transformation works in the XY plane only and no transformation in Z is performed.
     /// \param point pointf object to center the model instances of model objects around
     void center_instances_around_point(const Pointf &point);
 
     void align_instances_to_origin();
+    void align_to_ground();
 
     /// Translate each ModelObject with x, y, z units.
     /// \param x coordf_t units in the x direction

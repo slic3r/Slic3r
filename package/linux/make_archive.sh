@@ -46,8 +46,12 @@ resourcefolder=$appfolder
 echo "Appfolder: $appfolder, archivefolder: $archivefolder"
 
 # Our slic3r dir and location of perl
-PERL_BIN=$(which perl)
-PP_BIN=$(which pp)
+if [[ ! -z "$PERL_BIN" ]]; then
+    PERL_BIN=$(which perl)
+fi
+if [[! -z "$PP_BIN" ]]; then
+    PP_BIN=$(which pp)
+fi
 SLIC3R_DIR="./"
 
 if [[ -d "${appfolder}" ]]; then

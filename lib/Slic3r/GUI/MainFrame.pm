@@ -9,9 +9,8 @@ use File::Basename qw(basename dirname);
 use List::Util qw(min);
 use Slic3r::Geometry qw(X Y Z);
 use Wx qw(:frame :bitmap :id :misc :panel :sizer :menu :dialog :filedialog
-    :font :icon :aui wxTheApp);
-use Wx::AUI;
-use Wx::Event qw(EVT_CLOSE EVT_AUINOTEBOOK_PAGE_CHANGED EVT_AUINOTEBOOK_PAGE_CLOSE);
+    :font :icon :notebook wxTheApp);
+use Wx::Event qw(EVT_CLOSE EVT_NOTEBOOK_PAGE_CHANGED);
 use base 'Wx::Frame';
 
 our $qs_last_input_file;
@@ -94,31 +93,22 @@ sub new {
 sub _init_tabpanel {
     my ($self) = @_;
     
-    $self->{tabpanel} = my $panel = Wx::AuiNotebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxAUI_NB_TOP);
-    EVT_AUINOTEBOOK_PAGE_CHANGED($self, $self->{tabpanel}, sub {
-        my $panel = $self->{tabpanel}->GetPage($self->{tabpanel}->GetSelection);
+    $self->{tabpanel} = my $panel = Wx::Notebook->new($self, -1, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL);
+    EVT_NOTEBOOK_PAGE_CHANGED($self, $self->{tabpanel}, sub {
+        my $panel = $self->{tabpanel}->GetCurrentPage;
         $panel->OnActivate if $panel->can('OnActivate');
-        if ($self->{tabpanel}->GetSelection > 1) {
-            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
-        } elsif(($Slic3r::GUI::Settings->{_}{show_host} == 0) && ($self->{tabpanel}->GetSelection == 1)){
-            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag | wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
-        } else {
-            $self->{tabpanel}->SetWindowStyle($self->{tabpanel}->GetWindowStyleFlag & ~wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
-        }
-    });
-    EVT_AUINOTEBOOK_PAGE_CLOSE($self, $self->{tabpanel}, sub {
-        my $panel = $self->{tabpanel}->GetPage($self->{tabpanel}->GetSelection);
-        if ($panel->isa('Slic3r::GUI::PresetEditor')) {
-            delete $self->{preset_editor_tabs}{$panel->name};
-        }
-        wxTheApp->CallAfter(sub {
-            $self->{tabpanel}->SetSelection(0);
-        });
     });
     
     $panel->AddPage($self->{plater} = Slic3r::GUI::Plater->new($panel), "Plater");
     $panel->AddPage($self->{controller} = Slic3r::GUI::Controller->new($panel), "Controller")
         if ($Slic3r::GUI::Settings->{_}{show_host});
+
+    if ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
+        foreach my $group (qw(print filament printer)) {
+            $self->{plater}->show_preset_editor($group, 0, $panel);
+        }
+    }
+
 }
 
 sub _init_menubar {
@@ -290,7 +280,17 @@ sub _init_menubar {
             $self->select_tab(0);
         }, undef, 'application_view_tile.png');
         wxTheApp->append_menu_item($windowMenu, "&Controller\tCtrl+Y", 'Show the printer controller', sub {
-            $self->select_tab(1);
+            if ($Slic3r::GUI::Settings->{_}{show_host}) {
+                $self->select_tab(1);
+            } else {
+                my $confirm = Wx::MessageDialog->new($self, "The printer controller is currently disabled in the preferences. Do you want to enable it?",
+                    'Controller', wxICON_QUESTION | wxYES_NO | wxYES_DEFAULT);
+                if ($confirm->ShowModal == wxID_YES) {
+                    $Slic3r::GUI::Settings->{_}{show_host} = 1;
+                    wxTheApp->save_settings;
+                    Slic3r::GUI::show_info($self, "The controller is now enabled. You must restart Slic3r now to make the change effective.", "Controller");
+                }
+            }
         }, undef, 'printer_empty.png');
         wxTheApp->append_menu_item($windowMenu, "DLP Projector…\tCtrl+P", 'Open projector window for DLP printing', sub {
             $self->{plater}->pause_background_process;

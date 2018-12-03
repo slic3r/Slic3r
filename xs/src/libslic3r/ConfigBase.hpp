@@ -45,6 +45,7 @@ class ConfigOption {
     virtual void setFloat(double val) {};
     virtual void setString(std::string val) {};
     virtual std::string getString() const { return ""; };
+    virtual std::vector<std::string> getStrings() const { return std::vector<std::string>(); };
     friend bool operator== (const ConfigOption &a, const ConfigOption &b);
     friend bool operator!= (const ConfigOption &a, const ConfigOption &b);
 };
@@ -259,6 +260,8 @@ class ConfigOptionStrings : public ConfigOptionVector<std::string>
     ConfigOptionStrings(const std::vector<std::string> _values) : ConfigOptionVector<std::string>(_values) {};
     ConfigOptionStrings* clone() const { return new ConfigOptionStrings(this->values); };
     
+    std::vector<std::string> getStrings() const { return this->values; };
+    
     std::string serialize() const {
         return escape_strings_cstyle(this->values);
     };
@@ -387,7 +390,7 @@ class ConfigOptionPoint3 : public ConfigOptionSingle<Pointf3>
     
     bool deserialize(std::string str, bool append = false);
     
-    bool is_positive_volume () {
+    bool is_positive_volume() const {
         return this->value.x > 0 && this->value.y > 0 && this->value.z > 0;
     };
 };
@@ -659,6 +662,9 @@ class ConfigOptionDef
     ConfigOptionDef(const ConfigOptionDef &other);
     ~ConfigOptionDef();
     
+    /// Returns the alternative CLI arguments for the given option.
+    std::vector<std::string> cli_args() const;
+    
     private:
     ConfigOptionDef& operator= (ConfigOptionDef other);
 };
@@ -678,8 +684,11 @@ class ConfigDef
     ConfigOptionDef* add(const t_config_option_key &opt_key, ConfigOptionType type);
     ConfigOptionDef* add(const t_config_option_key &opt_key, const ConfigOptionDef &def);
     bool has(const t_config_option_key &opt_key) const;
-    const ConfigOptionDef* get(const t_config_option_key &opt_key) const;
+    const ConfigOptionDef& get(const t_config_option_key &opt_key) const;
     void merge(const ConfigDef &other);
+    
+    /// Iterate through all of the CLI options and write them to a stream.
+    std::ostream& print_cli_help(std::ostream& out, bool show_defaults = true) const;
 };
 
 /// An abstract configuration store.
@@ -708,15 +717,28 @@ class ConfigBase
     virtual t_config_option_keys keys() const = 0;
     void apply(const ConfigBase &other, bool ignore_nonexistent = false);
     void apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent = false);
+
+    /// Apply one configuration store to another. 
+    /// @param other configuration store to apply from
+    /// @param opt_keys Vector of string keys to apply one to the other
+    /// @param ignore_nonexistant if true, don't throw an exception if the key is not known to Slic3r
+    /// @default nonexistant Set the configuration option to its default if it is not found in other.
+    void apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent = false, bool default_nonexistent = false);
     bool equals(const ConfigBase &other) const;
     t_config_option_keys diff(const ConfigBase &other) const;
     std::string serialize(const t_config_option_key &opt_key) const;
     virtual bool set_deserialize(t_config_option_key opt_key, std::string str, bool append = false);
     double get_abs_value(const t_config_option_key &opt_key) const;
     double get_abs_value(const t_config_option_key &opt_key, double ratio_over) const;
+    bool getBool(const t_config_option_key &opt_key, bool default_value = false) const;
+    double getFloat(const t_config_option_key &opt_key, double default_value = 0.0) const;
+    int getInt(const t_config_option_key &opt_key, double default_value = 0) const;
+    std::string getString(const t_config_option_key &opt_key, std::string default_value = "") const;
+    std::vector<std::string> getStrings(const t_config_option_key &opt_key, std::vector<std::string> default_value = std::vector<std::string>()) const;
     void setenv_();
     void load(const std::string &file);
     void save(const std::string &file) const;
+    void validate() const;
 };
 
 /// Configuration store with dynamic number of configuration values.
@@ -735,8 +757,8 @@ class DynamicConfig : public virtual ConfigBase
     void erase(const t_config_option_key &opt_key);
     void clear();
     bool empty() const;
-    void read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra);
-    bool read_cli(int argc, char** argv, t_config_option_keys* extra);
+    void read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra, t_config_option_keys* keys = nullptr);
+    bool read_cli(int argc, char** argv, t_config_option_keys* extra, t_config_option_keys* keys = nullptr);
     
     private:
     typedef std::map<t_config_option_key,ConfigOption*> t_options_map;
@@ -760,7 +782,25 @@ class StaticConfig : public virtual ConfigBase
 };
 
 /// Specialization of std::exception to indicate that an unknown config option has been encountered.
-class UnknownOptionException : public std::exception {};
+class ConfigOptionException : public std::exception {
+    public:
+    t_config_option_key opt_key;
+    ConfigOptionException(t_config_option_key _opt_key)
+        : opt_key(_opt_key) {};
+};
+class UnknownOptionException : public ConfigOptionException {
+    using ConfigOptionException::ConfigOptionException;
+};
+class InvalidOptionException : public ConfigOptionException {
+    using ConfigOptionException::ConfigOptionException;
+    
+    public:
+    virtual const char* what() const noexcept {
+        std::string s("Invalid value for option: ");
+        s += this->opt_key;
+        return s.c_str();
+    }
+};
 
 }
 

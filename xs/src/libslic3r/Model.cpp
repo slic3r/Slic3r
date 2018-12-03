@@ -48,8 +48,11 @@ Model::~Model()
 Model
 Model::read_from_file(std::string input_file)
 {
-    Model model;
+    if (!boost::filesystem::exists(input_file)) {
+        throw std::runtime_error("No such file");
+    }
     
+    Model model;
     if (boost::algorithm::iends_with(input_file, ".stl")) {
         IO::STL::read(input_file, &model);
     } else if (boost::algorithm::iends_with(input_file, ".obj")) {
@@ -70,6 +73,13 @@ Model::read_from_file(std::string input_file)
         (*o)->input_file = input_file;
     
     return model;
+}
+
+void
+Model::merge(const Model &other)
+{
+    for (ModelObject* o : other.objects)
+        this->add_object(*o, true);
 }
 
 ModelObject*
@@ -175,12 +185,14 @@ bool
 Model::add_default_instances()
 {
     // apply a default position to all objects not having one
-    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
-        if ((*o)->instances.empty()) {
-            (*o)->add_instance();
+    bool added = false;
+    for (ModelObject* o : this->objects) {
+        if (o->instances.empty()) {
+            o->add_instance();
+            added = true;
         }
     }
-    return true;
+    return added;
 }
 
 // this returns the bounding box of the *transformed* instances
@@ -199,6 +211,18 @@ Model::repair()
 {
     for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o)
         (*o)->repair();
+}
+
+void
+Model::split()
+{
+    Model new_model;
+    for (ModelObject* o : this->objects)
+        o->split(&new_model.objects);
+    
+    this->clear_objects();
+    for (ModelObject* o : new_model.objects)
+        this->add_object(*o);
 }
 
 void
@@ -281,16 +305,14 @@ Model::arrange_objects(coordf_t dist, const BoundingBoxf* bb)
     // get the (transformed) size of each instance so that we take
     // into account their different transformations when packing
     Pointfs instance_sizes;
-    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
-        for (size_t i = 0; i < (*o)->instances.size(); ++i) {
-            instance_sizes.push_back((*o)->instance_bounding_box(i).size());
-        }
-    }
+    for (const ModelObject* o : this->objects)
+        for (size_t i = 0; i < o->instances.size(); ++i)
+            instance_sizes.push_back(o->instance_bounding_box(i).size());
     
     Pointfs positions;
     if (! this->_arrange(instance_sizes, dist, bb, positions))
         return false;
-    
+
     for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
         for (ModelInstancePtrs::const_iterator i = (*o)->instances.begin(); i != (*o)->instances.end(); ++i) {
             (*i)->offset = positions.back();
@@ -330,13 +352,12 @@ Model::duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb)
 void
 Model::duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb)
 {
-    for (ModelObjectPtrs::const_iterator o = this->objects.begin(); o != this->objects.end(); ++o) {
+    for (ModelObject* o : this->objects) {
         // make a copy of the pointers in order to avoid recursion when appending their copies
-        ModelInstancePtrs instances = (*o)->instances;
-        for (ModelInstancePtrs::const_iterator i = instances.begin(); i != instances.end(); ++i) {
+        const auto instances = o->instances;
+        for (const ModelInstance* i : instances)
             for (size_t k = 2; k <= copies_num; ++k)
-                (*o)->add_instance(**i);
-        }
+                o->add_instance(*i);
     }
     
     this->arrange_objects(dist, bb);
@@ -642,6 +663,14 @@ Model::align_instances_to_origin()
     new_center.translate(-new_center.x/2, -new_center.y/2);
     this->center_instances_around_point(new_center);
 }
+	
+void
+Model::align_to_ground()
+{
+    BoundingBoxf3 bb = this->bounding_box();
+    for (ModelObject* o : this->objects)
+        o->translate(0, 0, -bb.min.z);
+}
 
 void
 ModelObject::align_to_ground()
@@ -819,8 +848,16 @@ ModelObject::cut(Axis axis, coordf_t z, Model* model) const
     ModelObject* lower = model->add_object(*this);
     upper->clear_volumes();
     lower->clear_volumes();
-    upper->input_file = "";
-    lower->input_file = "";
+    
+    // remove extension from filename and add suffix
+    if (this->input_file.empty()) {
+        upper->input_file = "upper";
+        lower->input_file = "lower";
+    } else {
+        const boost::filesystem::path p{this->input_file};
+        upper->input_file = (p.parent_path() / p.stem()).string() + "_upper";
+        lower->input_file = (p.parent_path() / p.stem()).string() + "_lower";
+    }
     
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         ModelVolume* volume = *v;
@@ -898,7 +935,7 @@ ModelObject::print_info() const
     cout << fixed;
     cout << "[" << boost::filesystem::path(this->input_file).filename().string() << "]" << endl;
     
-    TriangleMesh mesh = this->raw_mesh();
+    TriangleMesh mesh = this->mesh();
     mesh.check_topology();
     BoundingBoxf3 bb = mesh.bounding_box();
     Sizef3 size = bb.size();

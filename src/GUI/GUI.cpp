@@ -1,9 +1,10 @@
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
+    #include <wx/display.h>
+    #include <wx/filefn.h> 
+    #include <wx/dir.h>
 #endif
-#include <wx/display.h>
-#include <wx/filefn.h> 
 #include <string>
 
 
@@ -24,14 +25,19 @@ bool App::OnInit()
 {
     this->SetAppName("Slic3r");
     this->notifier = std::unique_ptr<Notifier>();
-
-    datadir = decode_path(wxStandardPaths::Get().GetUserDataDir());
+    
+    if (datadir.empty())
+        datadir = decode_path(wxStandardPaths::Get().GetUserDataDir());
     wxString enc_datadir = encode_path(datadir);
-
+    
     const wxString& slic3r_ini  {datadir + "/slic3r.ini"};
-    const wxString& print_ini   {datadir + "/print"};
-    const wxString& printer_ini {datadir + "/printer"};
-    const wxString& material_ini {datadir + "/filament"};
+    this->preset_ini[static_cast<int>(preset_t::Print)] = {datadir + "/print"};
+    this->preset_ini[static_cast<int>(preset_t::Printer)] = {datadir + "/printer"};
+    this->preset_ini[static_cast<int>(preset_t::Material)] = {datadir + "/filament"};
+    const wxString& print_ini = this->preset_ini[static_cast<int>(preset_t::Print)];
+    const wxString& printer_ini = this->preset_ini[static_cast<int>(preset_t::Printer)];
+    const wxString& material_ini = this->preset_ini[static_cast<int>(preset_t::Material)];
+
 
     // if we don't have a datadir or a slic3r.ini, prompt for wizard.
     bool run_wizard = (wxDirExists(datadir) && wxFileExists(slic3r_ini));
@@ -156,47 +162,44 @@ void App::restore_window_pos(wxTopLevelWindow* window, const wxString& name ) {
 
         window->Maximize(std::get<2>(tmp));
     }
-    catch (std::out_of_range e) {
+    catch (std::out_of_range& e) {
         // config was empty
     }
 }
 
 void App::load_presets() {
-/*
-    for my $group (qw(printer filament print)) {
-        my $presets = $self->{presets}{$group};
-        
-        # keep external or dirty presets
-        @$presets = grep { ($_->external && $_->file_exists) || $_->dirty } @$presets;
-        
-        my $dir = "$Slic3r::GUI::datadir/$group";
-        opendir my $dh, Slic3r::encode_path($dir)
-            or die "Failed to read directory $dir (errno: $!)\n";
-        foreach my $file (grep /\.ini$/i, readdir $dh) {
-            $file = Slic3r::decode_path($file);
-            my $name = basename($file);
-            $name =~ s/\.ini$//i;
-            
-            # skip if we already have it
-            next if any { $_->name eq $name } @$presets;
-            
-            push @$presets, Slic3r::GUI::Preset->new(
-                group   => $group,
-                name    => $name,
-                file    => "$dir/$file",
-            );
+    for (size_t group = 0; group < preset_types; ++group) {
+        Presets& preset_list = this->presets.at(group);
+        wxString& ini = this->preset_ini.at(group);
+        // keep external or dirty presets
+        preset_list.erase(std::remove_if(preset_list.begin(), preset_list.end(), 
+                    [](const Preset& t) -> bool { return (t.external && t.file_exists()) || t.dirty(); }),
+                preset_list.end());
+        if (wxDirExists(ini)) {
+            auto sink { wxDirTraverserSimple() };
+            sink.file_cb = ([&preset_list, group] (const wxString& filename) {
+
+                    // skip if we already have it
+                    if (std::find_if(preset_list.begin(), preset_list.end(), 
+                            [filename] (const Preset& t) 
+                                { return filename.ToStdString() == t.name; }) != preset_list.end()) return;
+                    wxString path, name, ext;
+                    wxFileName::SplitPath(filename, &path, &name, &ext);
+
+                    preset_list.push_back(Preset(path.ToStdString(), (name + wxString(".") + ext).ToStdString(), static_cast<preset_t>(group)));
+                    });
+
+            wxDir dir(ini);
+            dir.Traverse(sink, "*.ini");
+
+            // Sort the list by name
+            std::sort(preset_list.begin(), preset_list.end(), [] (const Preset& x, const Preset& y) -> bool { return x.name < y.name; });
+
+            // Prepend default Preset
+            preset_list.emplace(preset_list.begin(), Preset(true, "- default -"s, static_cast<preset_t>(group)));
         }
-        closedir $dh;
-    
-        @$presets = sort { $a->name cmp $b->name } @$presets;
-    
-        unshift @$presets, Slic3r::GUI::Preset->new(
-            group   => $group,
-            default => 1,
-            name    => '- default -',
-        );
+
     }
-*/
 }
 
 void App::CallAfter(std::function<void()> cb_function) {
