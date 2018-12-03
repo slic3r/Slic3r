@@ -249,16 +249,18 @@ void PerimeterGenerator::process()
 
                         // detect edge case where a curve can be split in multiple small chunks.
                         ExPolygons no_thin_onion = offset_ex(last, -(float)(ext_perimeter_width / 2));
-                        if (no_thin_onion.size()>0 && next_onion.size() > 3 * no_thin_onion.size()) {
+                        float div = 2;
+                        while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && no_thin_onion.size() + next_onion.size() > 3) {
+                            div += 0.5;
                             //use a sightly smaller spacing to try to drastically improve the split
                             ExPolygons next_onion_secondTry = offset2_ex(
                                 last,
-                                -(float)(ext_perimeter_width / 2 + ext_min_spacing / 2.5 - 1),
-                                +(float)(ext_min_spacing / 2.5 - 1));
-                            if (abs(((int32_t)next_onion.size()) - ((int32_t)no_thin_onion.size())) > 
-                                2*abs(((int32_t)next_onion_secondTry.size()) - ((int32_t)no_thin_onion.size()))) {
+                                -(float)(ext_perimeter_width / 2 + ext_min_spacing / div - 1),
+                                +(float)(ext_min_spacing / div - 1));
+                            if (next_onion.size() >  next_onion_secondTry.size()) {
                                 next_onion = next_onion_secondTry;
                             }
+                            if (div > 3) break;
                         }
 
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
@@ -269,27 +271,32 @@ void PerimeterGenerator::process()
                         // medial axis requires non-overlapping geometry
                         ExPolygons thin_zones = diff_ex(last, no_thin_zone, true);
                         //don't use offset2_ex, because we don't want to merge the zones that have been separated.
-                        ExPolygons expp = offset_ex(thin_zones, (float)(-min_width / 2));
+                            //a very little bit of overlap can be created here with other thin polygons, but it's more useful than worisome.
+                        ExPolygons half_thins = offset_ex(thin_zones, (float)(-min_width / 2));
+                        //simplify them
+                        for (ExPolygon &half_thin : half_thins) {
+                            half_thin.remove_point_too_near(SCALED_RESOLUTION);
+                        }
                         //we push the bits removed and put them into what we will use as our anchor
-                        if (expp.size() > 0) {
-                            no_thin_zone = diff_ex(last, offset_ex(expp, (float)(min_width / 2)), true);
+                        if (half_thins.size() > 0) {
+                            no_thin_zone = diff_ex(last, offset_ex(half_thins, (float)(min_width / 2) - SCALED_EPSILON), true);
                         }
                         // compute a bit of overlap to anchor thin walls inside the print.
-                        for (ExPolygon &ex : expp) {
+                        for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
-                            //a very little bit of overlap can be created here with other thin polygons, but it's more useful than worisome.
-                            ex.remove_point_too_near(SCALED_RESOLUTION);
-                            ExPolygons ex_bigger = offset_ex(ex, (float)(min_width / 2));
-                            if (ex_bigger.size() != 1) continue; // impossible error, growing a single polygon can't create multiple or 0.
-                            ExPolygons anchor = intersection_ex(offset_ex(ex, (float)(min_width / 2) + 
+                            ExPolygons thin = offset_ex(half_thin, (float)(min_width / 2));
+                            if (thin.size() != 1) continue; // impossible error, growing a single polygon can't create multiple or 0.
+                            ExPolygons anchor = intersection_ex(offset_ex(half_thin, (float)(min_width / 2) +
                                 (float)(ext_perimeter_width / 2), jtSquare), no_thin_zone, true);
-                            ExPolygons bounds = union_ex(ex_bigger, anchor, true);
+                            ExPolygons bounds = union_ex(thin, anchor, true);
                             for (ExPolygon &bound : bounds) {
-                                if (!intersection_ex(ex_bigger[0], bound).empty()) {
+                                if (!intersection_ex(thin[0], bound).empty()) {
                                     //be sure it's not too small to extrude reliably
-                                    if (ex_bigger[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
+                                    thin[0].remove_point_too_near(SCALED_RESOLUTION);
+                                    if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
+                                        bound.remove_point_too_near(SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        ex_bigger[0].medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width,
+                                        thin[0].medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width,
                                             &thin_walls, this->layer_height);
                                     }
                                     break;
