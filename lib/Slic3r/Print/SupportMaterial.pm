@@ -269,7 +269,7 @@ sub contact_area {
                         # remove the entire bridges and only support the unsupported edges
                         my @bridges = map $_->expolygon,
                             grep $_->bridge_angle != -1,
-                            @{$layerm->fill_surfaces->filter_by_type(S_TYPE_BOTTOMBRIDGE)};
+                            @{$layerm->fill_surfaces->filter_by_type(S_TYPE_BOTTOM + S_TYPE_BRIDGE)};
                         
                         $diff = diff(
                             $diff,

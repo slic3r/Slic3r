@@ -238,21 +238,21 @@ LayerRegion::prepare_fill_surfaces()
     
     // if no solid layers are requested, turn top/bottom surfaces to internal
     if (this->region()->config.top_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
-        for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
+        for (Surface &surface : this->fill_surfaces.surfaces) {
             if (surface->is_top()) {
                 if (this->layer()->object()->config.infill_only_where_needed) {
-                    surface->surface_type = stInternalVoid;
+                    surface.surface_type = (stInternal | stVoid);
                 } else {
-                    surface->surface_type = stInternal;
+                    surface.surface_type = stInternal;
                 }
             }
         }
     }
     
     if (this->region()->config.bottom_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
-        for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->surface_type == stBottom || surface->surface_type == stBottomBridge)
-                surface->surface_type = stInternal;
+        for (Surface &surface : this->fill_surfaces.surfaces) {
+            if (surface.is_bottom())
+                surface.surface_type = stInternal;
         }
     }
 
@@ -264,7 +264,7 @@ LayerRegion::prepare_fill_surfaces()
         const double min_area = this->region()->config.solid_infill_below_area.value / SCALING_FACTOR / SCALING_FACTOR;
         for (Surface &surface : this->fill_surfaces.surfaces) {
             if (surface.surface_type == stInternal && surface.area() <= min_area)
-                surface.surface_type = stInternalSolid;
+                surface.surface_type = (stInternal | stSolid);
         }
     }
 }

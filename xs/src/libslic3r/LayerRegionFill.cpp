@@ -137,7 +137,7 @@ LayerRegion::make_fill()
         );
             
         Polygons to_subtract;
-        surfaces.filter_by_type(stInternalVoid, &to_subtract);
+        surfaces.filter_by_type((stInternal | stVoid), &to_subtract);
                 
         append_to(to_subtract, collapsed);
         surfaces.append(
@@ -146,7 +146,7 @@ LayerRegion::make_fill()
                 to_subtract,
                 true
             ),
-            stInternalSolid
+            (stInternal | stSolid)
         );
     }
 
@@ -162,7 +162,7 @@ LayerRegion::make_fill()
         surface_it != surfaces.surfaces.end(); ++surface_it) {
         
         const Surface &surface = *surface_it;
-        if (surface.surface_type == stInternalVoid)
+        if (surface.surface_type == (stInternal | stVoid))
             continue;
         
         InfillPattern fill_pattern = this->region()->config.fill_pattern.value;
@@ -175,7 +175,7 @@ LayerRegion::make_fill()
         if (surface.is_solid()) {
             density = 100.;
             fill_pattern = (surface.is_top()) ? this->region()->config.top_infill_pattern.value
-                : (surface.is_bottom() && !is_bridge)      ? this->region()->config.bottom_infill_pattern.value
+                : (surface.is_bottom() && !is_bridge) ? this->region()->config.bottom_infill_pattern.value
                 : ipRectilinear;
         } else if (density <= 0)
             continue;

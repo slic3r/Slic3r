@@ -74,6 +74,8 @@ class ExtrusionEntityCollection : public ExtrusionEntity
     virtual bool is_solid_infill() const;
     ExtrusionEntitiesPtr::iterator begin() { return entities.begin(); }
     ExtrusionEntitiesPtr::iterator end() { return entities.end(); }
+    ExtrusionEntitiesPtr::const_iterator begin() const { return entities.cbegin(); }
+    ExtrusionEntitiesPtr::const_iterator end() const { return entities.cend(); }
     ExtrusionEntitiesPtr::const_iterator cbegin() const { return entities.cbegin(); }
     ExtrusionEntitiesPtr::const_iterator cend() const { return entities.cend(); }
 

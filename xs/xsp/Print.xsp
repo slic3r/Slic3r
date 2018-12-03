@@ -126,11 +126,13 @@ _constant()
     void set_step_started(PrintObjectStep step)
         %code%{ THIS->state.set_started(step); %};
     
-    %name{_detect_surfaces_type} void detect_surfaces_type();
+    void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    void combine_infill();
     void discover_horizontal_shells();
     void clip_fill_surfaces();
+    void slice();
     void _slice();
     SV* _slice_region(size_t region_id, std::vector<double> z, bool modifier)
         %code%{
@@ -151,8 +153,9 @@ _constant()
             }
             RETVAL = (SV*)newRV_noinc((SV*)layers_av);
         %};
-    void _make_perimeters();
-    void _infill();
+    void make_perimeters();
+    void prepare_infill();
+    void infill();
     void _simplify_slices(double distance);
     
     int ptr()
@@ -284,6 +287,7 @@ _constant()
     double skirt_first_layer_height();
     Clone<Flow> brim_flow();
     Clone<Flow> skirt_flow();
+    void make_skirt();
     void _make_brim();
 %{
 

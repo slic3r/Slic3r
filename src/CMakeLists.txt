@@ -299,7 +299,6 @@ set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/libslic3r/test_print.cpp
     ${TESTDIR}/libslic3r/test_printgcode.cpp
     ${TESTDIR}/libslic3r/test_skirt_brim.cpp
-    ${TESTDIR}/libslic3r/test_support_material.cpp
     ${TESTDIR}/libslic3r/test_test_data.cpp
     ${TESTDIR}/libslic3r/test_trianglemesh.cpp
 )

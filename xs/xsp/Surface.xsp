@@ -19,6 +19,7 @@
     bool is_external() const;
     bool is_internal() const;
     bool is_bottom() const;
+    bool is_top() const;
     bool is_bridge() const;
 %{
 
@@ -104,11 +105,10 @@ _constant()
   ALIAS:
     S_TYPE_TOP              = stTop
     S_TYPE_BOTTOM           = stBottom
-    S_TYPE_BOTTOMBRIDGE     = stBottomBridge
     S_TYPE_INTERNAL         = stInternal
-    S_TYPE_INTERNALSOLID    = stInternalSolid
-    S_TYPE_INTERNALBRIDGE   = stInternalBridge
-    S_TYPE_INTERNALVOID     = stInternalVoid
+    S_TYPE_SOLID            = stSolid
+    S_TYPE_BRIDGE           = stBridge
+    S_TYPE_VOID             = stVoid
   PROTOTYPE:
   CODE:
     RETVAL = ix;

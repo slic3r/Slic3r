@@ -52,6 +52,7 @@ matrix:
         - os: linux
           env:
             - TARGET=main
+            - WXDIR=$HOME/wx302
           cache:
             directories:
               - $HOME/boost_1_63_0
@@ -59,7 +60,7 @@ matrix:
               - $HOME/wx302
               - local-lib
           after_success:
-            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/linux/travis-deploy-main.sh; fi
+            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then source ${HOME}/perl5/perlbrew/etc/bashrc; perlbrew switch slic3r-perl; ./package/linux/travis-deploy-main.sh || travis_terminate 1; fi
 
         - os: linux
           env: 
@@ -95,7 +96,7 @@ matrix:
               - $HOME/Library/Caches/Homebrew
               - local-lib
           after_success:
-            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/osx/travis-deploy-main.sh; fi
+            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/osx/travis-deploy-main.sh || travis_terminate 1; fi
 
         - os: osx
           osx_image: xcode9.4

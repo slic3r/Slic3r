@@ -93,24 +93,26 @@ template bool SurfaceCollection::any_bottom_contains<Polyline>(const Polyline &i
 SurfacesPtr
 SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types)
 {
-    size_t n {0};
-    for (const auto& t : types)
-        n |= t;
     SurfacesPtr ss;
-    for (auto& s : this->surfaces)
-        if ((s.surface_type & n) == s.surface_type) ss.push_back(&s);
+    for (Surface& s : this->surfaces)
+        for (const SurfaceType& t : types)
+            if (s.surface_type == t) {
+                ss.push_back(&s);
+                break;
+            }
     return ss;
 }
 
 SurfacesConstPtr
 SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types) const
 {
-    size_t n {0};
-    for (const auto& t : types)
-        n |= t;
     SurfacesConstPtr ss;
-    for (auto& s : this->surfaces)
-        if ((s.surface_type & n) == s.surface_type) ss.push_back(&s);
+    for (const Surface& s : this->surfaces)
+        for (const SurfaceType& t : types)
+            if (s.surface_type == t) {
+                ss.push_back(&s);
+                break;
+            }
     return ss;
 }
 
@@ -200,12 +202,23 @@ SurfaceCollection::keep_type(const SurfaceType type)
 void
 SurfaceCollection::keep_types(const SurfaceType *types, size_t ntypes) 
 {
-    size_t n {0};
-    for (size_t i = 0; i < ntypes; ++i)
-        n |= types[i]; // form bitmask.
-    // Use stl remove_if to remove 
-    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[n] (const Surface& s) { return (s.surface_type & n) != s.surface_type; });
-    surfaces.erase(ptr, surfaces.cend());
+    size_t j = 0;
+    for (size_t i = 0; i < surfaces.size(); ++ i) {
+        bool keep = false;
+        for (int k = 0; k < ntypes; ++ k) {
+            if (surfaces[i].surface_type == types[k]) {
+                keep = true;
+                break;
+            }
+        }
+        if (keep) {
+            if (j < i)
+                std::swap(surfaces[i], surfaces[j]);
+            ++ j;
+        }
+    }
+    if (j < surfaces.size())
+        surfaces.erase(surfaces.begin() + j, surfaces.end());
 }
 
 void 
