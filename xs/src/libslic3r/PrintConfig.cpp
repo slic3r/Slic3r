@@ -346,7 +346,9 @@ PrintConfigDef::PrintConfigDef()
     def->label = L("Enforce 100% fill volume");
     def->category = L("Infill");
     def->tooltip = L("Experimental option wich modify (top/bottom) fill flow to have the exact amount of plastic inside the volume to fill "
-        "(it generally changes the flow from -7% to +4%, depending on the size of the surface to fill and the overlap parameters).");
+        "(it generally changes the flow from -7% to +4%, depending on the size of the surface to fill and the overlap parameters, "
+        "but it can go as high as +50% for infill in very small area where rectilinear doesn't have a good coverage). It has the advantage "
+        "to remove the over-extrusion seen in thin infill area, from the overlap ratio");
     def->cli = "enforce-full-fill-volume!";
     def->default_value = new ConfigOptionBool(true);
 
