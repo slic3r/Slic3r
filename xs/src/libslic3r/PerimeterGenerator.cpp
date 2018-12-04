@@ -117,7 +117,7 @@ PerimeterGenerator::process()
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
                         
-                        Polygons no_thin_zone = offset(offsets, ext_pwidth/2, jtSquare);
+                        Polygons no_thin_zone = offset(offsets, ext_pwidth/2, CLIPPER_OFFSET_SCALE, jtSquare, 3);
                         // medial axis requires non-overlapping geometry
                         Polygons thin_zones = diff(last, no_thin_zone, true);
                         //don't use offset2_ex, because we don't want to merge the zones that have been separated.
