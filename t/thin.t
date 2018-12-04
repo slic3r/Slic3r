@@ -103,7 +103,7 @@ if (0) {
     
     # check whether turns are all CCW or all CW
     my @lines = @{$res->[0]->lines};
-    my @angles = map { $lines[$_-1]->ccw($lines[$_]->b) } 1..$#lines;
+    my @angles = map { $lines[$_-2]->ccw($lines[$_-1]->b) } 3..$#lines;
     ok !!(none { $_ < 0 } @angles) || (none { $_ > 0 } @angles),
         'all medial axis segments of a semicircumference have the same orientation';
 }
