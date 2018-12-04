@@ -102,7 +102,7 @@ PerimeterGenerator::process()
                         // detect edge case where a curve can be split in multiple small chunks.
                         Polygons no_thin_onion = offset(last, -(float)(ext_pwidth / 2));
                         if (no_thin_onion.size()>0 && offsets.size() > 3 * no_thin_onion.size()) {
-                            //use a sightly smaller spacing to try to drastically improve the split
+                            //use a sightly smaller offset2 spacing to try to drastically improve the split
                             Polygons next_onion_secondTry = offset2(
                                 last,
                                 -(float)(ext_pwidth / 2 + ext_min_spacing / 2.5 - 1),
@@ -117,32 +117,35 @@ PerimeterGenerator::process()
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
                         
-                        Polygons no_thin_zone = offset(offsets, +ext_pwidth/2, jtSquare);
+                        Polygons no_thin_zone = offset(offsets, ext_pwidth/2, jtSquare);
                         // medial axis requires non-overlapping geometry
                         Polygons thin_zones = diff(last, no_thin_zone, true);
                         //don't use offset2_ex, because we don't want to merge the zones that have been separated.
-                        ExPolygons expp = offset_ex(thin_zones, (float)(-min_width / 2));
+                        //a very little bit of overlap can be created here with other thin polygons, but it's more useful than worisome.
+                        ExPolygons half_thins = offset_ex(thin_zones, (float)(-min_width / 2));
+                        //simplify them
+                        for (ExPolygon &half_thin : half_thins) {
+                            half_thin.remove_point_too_near(SCALED_RESOLUTION);
+                        }
                         //we push the bits removed and put them into what we will use as our anchor
-                        if (expp.size() > 0) {
-                            no_thin_zone = diff(last, to_polygons(offset_ex(expp, (float)(min_width / 2))), true);
+                        if (half_thins.size() > 0) {
+                            no_thin_zone = diff(last, to_polygons(offset_ex(half_thins, (float)(min_width / 2) - SCALED_EPSILON)), true);
                         }
                         // compute a bit of overlap to anchor thin walls inside the print.
-                        for (ExPolygon &ex : expp) {
+                        for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
-                            //a very little bit of overlap can be created here with other thin polygons, but it's more useful than worisome.
-                            ex.remove_point_too_near(SCALED_RESOLUTION);
-                            ExPolygons ex_bigger = offset_ex(ex, (float)(min_width / 2));
-                            if (ex_bigger.size() != 1) continue; // impossible error, growing a single polygon can't create multiple or 0.
+                            ExPolygons thin = offset_ex(half_thin, (float)(min_width / 2));
+                            if (thin.size() != 1) continue; // impossible error, growing a single polygon can't create multiple or 0.
                             ExPolygons anchor = intersection_ex(
-                                to_polygons(offset_ex(ex, (float)(ext_pwidth / 2), CLIPPER_OFFSET_SCALE, jtSquare, 3)), 
+                                to_polygons(offset_ex(half_thin, (float)(min_width / 2 + ext_pwidth / 2), CLIPPER_OFFSET_SCALE, jtSquare, 3)), 
                                 no_thin_zone, true);
-                            ExPolygons bounds = _clipper_ex(ClipperLib::ctUnion, to_polygons(ex_bigger), to_polygons(anchor), true);
+                            ExPolygons bounds = _clipper_ex(ClipperLib::ctUnion, to_polygons(thin), to_polygons(anchor), true);
                             for (ExPolygon &bound : bounds) {
-                                if (!intersection_ex(ex_bigger[0], bound).empty()) {
+                                if (!intersection_ex(thin[0], bound).empty()) {
                                     //be sure it's not too small to extrude reliably
-                                    if (ex_bigger[0].area() > min_width*(ext_pwidth + ext_pspacing2)) {
+                                    if (thin[0].area() > min_width*(ext_pwidth + ext_pspacing2)) {
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        ex_bigger[0].medial_axis(bound, ext_pwidth + ext_pspacing2, min_width,
+                                        thin[0].medial_axis(bound, ext_pwidth + ext_pspacing2, min_width,
                                             &thin_walls, this->layer_height);
                                     }
                                     break;

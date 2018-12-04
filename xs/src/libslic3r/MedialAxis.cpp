@@ -1008,7 +1008,6 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
                     polyline.width.front() = min_width;
                 } else {
                     /// almost 0-length, Remove
-                    std::cout << id << " remove the point"<<"\n";
                     polyline.points.erase(polyline.points.begin());
                     polyline.width.erase(polyline.width.begin());
                 }
