@@ -499,6 +499,7 @@ IF (WIN32)
     target_include_directories(boost-nowide PUBLIC ${SLIC3R_GUI_INCLUDES} ${SLIC3R_INCLUDES} )
     target_link_libraries(boost-nowide ${Boost_LIBRARIES})
     target_link_libraries(slic3r boost-nowide)
+    target_link_libraries(libslic3r boost-nowide)
 
     # MinGW apparently has some multiple definitions of UUID-related items
     # deal with it.
