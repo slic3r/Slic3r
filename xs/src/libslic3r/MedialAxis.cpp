@@ -1042,7 +1042,7 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
             polyline.width.erase(polyline.width.end() - 1);
             changes = true;
         }
-        if (polyline.points.size() < 2) {
+        if (polyline.points.size() < 2 || polyline.length() < max_width) {
             //remove self if too small
             pp.erase(pp.begin() + i);
             --i;
@@ -1066,7 +1066,6 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
     Optimisation of the old algorithm : now we select the most "strait line" choice
     when we merge with an other line at a point with more than two meet.
     */
-    bool changes = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
@@ -1076,8 +1075,11 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
         size_t best_idx = 0;
 
         // find another polyline starting here
-        for (size_t j = i + 1; j < pp.size(); ++j) {
+        for (size_t j = 0; j < pp.size(); ++j) {
+            if (j == i) continue;
             ThickPolyline& other = pp[j];
+            if (other.endpoints.first && other.endpoints.second) continue;
+
             if (polyline.last_point().coincides_with(other.last_point())) {
                 other.reverse();
             } else if (polyline.first_point().coincides_with(other.last_point())) {
@@ -1101,16 +1103,14 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
             }
         }
         if (best_candidate != nullptr) {
-
             polyline.points.insert(polyline.points.end(), best_candidate->points.begin() + 1, best_candidate->points.end());
             polyline.width.insert(polyline.width.end(), best_candidate->width.begin() + 1, best_candidate->width.end());
             polyline.endpoints.second = best_candidate->endpoints.second;
             assert(polyline.width.size() == polyline.points.size());
-            changes = true;
+            if (best_idx < i) i--;
             pp.erase(pp.begin() + best_idx);
         }
     }
-    if (changes) concatThickPolylines(pp);
 }
 
 void

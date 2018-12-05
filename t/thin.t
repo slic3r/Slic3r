@@ -1,4 +1,4 @@
-use Test::More tests => 28;
+use Test::More tests => 29;
 use strict;
 use warnings;
 
@@ -102,10 +102,12 @@ if (0) {
     is scalar(@$res), 1, 'medial axis of a semicircumference is a single line';
     
     # check whether turns are all CCW or all CW
-    my @lines = @{$res->[0]->lines};
-    my @angles = map { $lines[$_-2]->ccw($lines[$_-1]->b) } 3..$#lines;
+    my @all_lines = @{$res->[0]->lines};
+	# remove lines that are near the end.
+	my @lines = grep($_->a->y >= 1578184 || $_->b->y >= 1578184, @all_lines);
+    my @angles = map { $lines[$_-1]->ccw($lines[$_]->b) } 1..$#lines;
     ok !!(none { $_ < 0 } @angles) || (none { $_ > 0 } @angles),
-        'all medial axis segments of a semicircumference have the same orientation';
+        'all medial axis segments of a semicircumference have the same orientation (but the 2 end points)';
 }
 
 {
@@ -117,6 +119,14 @@ if (0) {
     is scalar(@$res), 2, 'medial axis of a (bit too narrow) french cross is two lines';
     ok unscale($res->[0]->length) >= (9.9) - epsilon, 'medial axis has reasonable length';
     ok unscale($res->[1]->length) >= (9.9) - epsilon, 'medial axis has reasonable length';
+	
+	my @lines1 = @{$res->[0]->lines};
+    my @angles1 = map { $lines1[$_-1]->ccw($lines1[$_]->b) } 1..$#lines1;
+	my @lines2 = @{$res->[1]->lines};
+    my @angles2 = map { $lines2[$_-1]->ccw($lines2[$_]->b) } 1..$#lines2;
+    my @angles = (@angles1, @angles2);
+    ok !!(none { $_ != 0 } @angles),
+        'medial axis of a (bit too narrow) french cross is two lines has only strait lines';
 }
 
 {
