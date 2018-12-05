@@ -1042,7 +1042,8 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
             polyline.width.erase(polyline.width.end() - 1);
             changes = true;
         }
-        if (polyline.points.size() < 2 || polyline.length() < max_width) {
+        //remove empty lines and bits that comes from a "main line"
+        if (polyline.points.size() < 2 || (changes && polyline.length() < max_width && polyline.points.size() ==2)) {
             //remove self if too small
             pp.erase(pp.begin() + i);
             --i;
@@ -1288,6 +1289,9 @@ MedialAxis::build(ThickPolylines* polylines_out)
     this->id++;
 
     this->expolygon = simplify_polygon_frontier();
+    //safety check
+    if (this->expolygon.area() < this->max_width * this->min_width) this->expolygon = this->surface;
+    if (this->expolygon.area() < this->max_width * this->min_width) return;
 
 
     // compute the Voronoi diagram and extract medial axis polylines

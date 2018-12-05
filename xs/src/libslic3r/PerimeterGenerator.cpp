@@ -101,16 +101,18 @@ PerimeterGenerator::process()
 
                         // detect edge case where a curve can be split in multiple small chunks.
                         Polygons no_thin_onion = offset(last, -(float)(ext_pwidth / 2));
-                        if (no_thin_onion.size()>0 && offsets.size() > 3 * no_thin_onion.size()) {
-                            //use a sightly smaller offset2 spacing to try to drastically improve the split
+                        float div = 2;
+                        while (no_thin_onion.size()>0 && offsets.size() > no_thin_onion.size() && no_thin_onion.size() + offsets.size() > 3) {
+                            div += 0.5;
+                            //use a sightly smaller offset2 spacing to try to improve the split
                             Polygons next_onion_secondTry = offset2(
                                 last,
-                                -(float)(ext_pwidth / 2 + ext_min_spacing / 2.5 - 1),
-                                +(float)(ext_min_spacing / 2.5 - 1));
-                            if (abs(((int32_t)offsets.size()) - ((int32_t)no_thin_onion.size())) > 
-                                2*abs(((int32_t)next_onion_secondTry.size()) - ((int32_t)no_thin_onion.size()))) {
+                                -(float)(ext_pwidth / 2 + ext_min_spacing / div - 1),
+                                +(float)(ext_min_spacing / div - 1));
+                            if (offsets.size() >  next_onion_secondTry.size()) {
                                 offsets = next_onion_secondTry;
                             }
+                            if (div > 3) break;
                         }
                         
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
@@ -143,7 +145,9 @@ PerimeterGenerator::process()
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(thin[0], bound).empty()) {
                                     //be sure it's not too small to extrude reliably
+									thin[0].remove_point_too_near(SCALED_RESOLUTION);
                                     if (thin[0].area() > min_width*(ext_pwidth + ext_pspacing2)) {
+										bound.remove_point_too_near(SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                                         thin[0].medial_axis(bound, ext_pwidth + ext_pspacing2, min_width,
                                             &thin_walls, this->layer_height);
