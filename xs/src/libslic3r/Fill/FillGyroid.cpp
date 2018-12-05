@@ -154,7 +154,7 @@ void FillGyroid::_fill_surface_single(
     polylines = intersection_pl(polylines, (Polygons)expolygon);
 
     // connect lines
-    if (! params.dont_connect && ! polylines.empty()) { // prevent calling leftmost_point() on empty collections
+    if (! polylines.empty()) { // prevent calling leftmost_point() on empty collections
         ExPolygon expolygon_off;
         {
             ExPolygons expolygons_off = offset_ex(expolygon, (float)SCALED_EPSILON);
@@ -169,7 +169,7 @@ void FillGyroid::_fill_surface_single(
             PolylineCollection::leftmost_point(polylines), false); // reverse allowed
         bool first = true;
         for (Polyline &polyline : chained) {
-            if (! first) {
+            if (!params.dont_connect && !first) {
                 // Try to connect the lines.
                 Points &pts_end = polylines_out.back().points;
                 const Point &first_point = polyline.points.front();

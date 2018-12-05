@@ -206,6 +206,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "infill_every_layers"
             || opt_key == "solid_infill_every_layers"
             || opt_key == "infill_dense"
+            || opt_key == "infill_not_connected"
             || opt_key == "infill_dense_algo"
             || opt_key == "bottom_solid_layers"
             || opt_key == "top_solid_layers"

@@ -330,7 +330,7 @@ public:
 	size_t		m_sys_extruders_count;
 
 	TabPrinter() {}
-	TabPrinter(wxNotebook* parent, bool no_controller) : Tab(parent, _(L("Printer Settings")), "printer", no_controller) {}
+	TabPrinter(wxNotebook* parent, bool no_controller) : Tab(parent, _(L("Hardware Settings")), "printer", no_controller) {}
 	~TabPrinter(){}
 
 	void		build() override;

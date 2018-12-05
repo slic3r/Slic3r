@@ -461,6 +461,7 @@ public:
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
+    ConfigOptionBool                infill_not_connected;
     ConfigOptionBool                infill_dense;
     ConfigOptionEnum<DenseInfillAlgo> infill_dense_algo;
     ConfigOptionBool                infill_first;
@@ -518,6 +519,7 @@ protected:
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
         OPT_PTR(infill_dense);
+        OPT_PTR(infill_not_connected);
         OPT_PTR(infill_dense_algo);
         OPT_PTR(infill_first);
         OPT_PTR(overhangs);

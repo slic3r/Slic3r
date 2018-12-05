@@ -830,15 +830,18 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("perimeter_loop_seam"));
         optgroup->append_line(line);
 
-        page = add_options_page(_(L("Infill")), "infill.png");
-		optgroup = page->new_optgroup(_(L("Infill")));
-		optgroup->append_single_option_line("fill_density");
-		optgroup->append_single_option_line("fill_pattern");
-		optgroup->append_single_option_line("top_fill_pattern");
-		optgroup->append_single_option_line("bottom_fill_pattern");
-		optgroup->append_single_option_line("enforce_full_fill_volume");
+    page = add_options_page(_(L("Infill")), "infill.png");
+        optgroup = page->new_optgroup(_(L("Infill")));
+        optgroup->append_single_option_line("fill_density");
+        line = { _(L("Inside")), "" };
+        line.append_option(optgroup->get_option("fill_pattern"));
+        line.append_option(optgroup->get_option("infill_not_connected"));
+        optgroup->append_line(line);
+        optgroup->append_single_option_line("top_fill_pattern");
+        optgroup->append_single_option_line("bottom_fill_pattern");
+        optgroup->append_single_option_line("enforce_full_fill_volume");
 
-		optgroup = page->new_optgroup(_(L("Reducing printing time")));
+        optgroup = page->new_optgroup(_(L("Reducing printing time")));
         optgroup->append_single_option_line("infill_every_layers");
         optgroup->append_single_option_line("infill_only_where_needed");
         line = { _(L("Suporting dense layer")), "" };
