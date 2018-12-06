@@ -820,21 +820,30 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("noperi_bridge_only")); 
         optgroup->append_line(line);
 
-		optgroup = page->new_optgroup(_(L("Advanced")));
-        optgroup->append_single_option_line("seam_position");
+        optgroup = page->new_optgroup(_(L("Advanced")));
+        optgroup->append_single_option_line("remove_small_gaps");
+        line = { _(L("Avoid unsupported perimeters")), "" };
+        line.append_option(optgroup->get_option("seam_position"));
+        line.append_option(optgroup->get_option("seam_travel"));
+        optgroup->append_line(line);
         optgroup->append_single_option_line("external_perimeters_first");
-        optgroup->append_single_option_line("perimeter_loop");
+        line = { _(L("Looping perimeter")), "" };
+        line.append_option(optgroup->get_option("perimeter_loop"));
+        line.append_option(optgroup->get_option("perimeter_loop_seam"));
+        optgroup->append_line(line);
 
-	page = add_options_page(_(L("Infill")), "infill.png");
-		optgroup = page->new_optgroup(_(L("Infill")));
+    page = add_options_page(_(L("Infill")), "infill.png");
+        optgroup = page->new_optgroup(_(L("Infill")));
         optgroup->append_single_option_line("fill_density");
-        optgroup->append_single_option_line("fill_pattern");
-        line = { _(L("Fill external pattern")), "" };
+        line = { _(L("Fill internal")), "" };
+        line.append_option(optgroup->get_option("fill_pattern"));
+        line.append_option(optgroup->get_option("infill_not_connected"));
+        optgroup->append_line(line);
+        line = { _(L("Fill external")), "" };
         line.append_option(optgroup->get_option("top_fill_pattern"));
         line.append_option(optgroup->get_option("bottom_fill_pattern"));
         optgroup->append_line(line);
-
-		optgroup = page->new_optgroup(_(L("Reducing printing time")));
+        optgroup = page->new_optgroup(_(L("Reducing printing time")));
         optgroup->append_single_option_line("infill_every_layers");
         optgroup->append_single_option_line("infill_only_where_needed");
         line = { _(L("Suporting dense layer")), "" };
@@ -915,8 +924,11 @@ void TabPrint::build()
 		optgroup = page->new_optgroup(_(L("Speed for non-print moves")));
 		optgroup->append_single_option_line("travel_speed");
 
-		optgroup = page->new_optgroup(_(L("Modifiers")));
-		optgroup->append_single_option_line("first_layer_speed");
+        optgroup = page->new_optgroup(_(L("Modifiers")));
+        line = { _(L("First layer speed")), "" };
+        line.append_option(optgroup->get_option("first_layer_speed"));
+        line.append_option(optgroup->get_option("first_layer_infill_speed"));
+        optgroup->append_line(line);
 
 		optgroup = page->new_optgroup(_(L("Acceleration control (advanced)")));
 		optgroup->append_single_option_line("perimeter_acceleration");
@@ -1193,11 +1205,13 @@ void TabPrint::update()
 		}
 	}
 
-	bool have_perimeters = m_config->opt_int("perimeters") > 0;
-	for (auto el : {"extra_perimeters", "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", "overhangs",
-					"seam_position", "external_perimeters_first", "external_perimeter_extrusion_width",
-					"perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "perimeter_loop" })
-		get_field(el)->toggle(have_perimeters);
+    bool have_perimeters = m_config->opt_int("perimeters") > 0;
+    for (auto el : { "extra_perimeters", "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", "overhangs",
+        "seam_position", "external_perimeters_first", "external_perimeter_extrusion_width",
+        "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
+        get_field(el)->toggle(have_perimeters);
+
+    get_field("perimeter_loop_seam")->toggle(m_config->opt_bool("perimeter_loop"));
 
     bool have_no_perimeter_unsupported = have_perimeters && m_config->opt_bool("no_perimeter_unsupported");
     for (auto el : { "min_perimeter_unsupported", "noperi_bridge_only" })

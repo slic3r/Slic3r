@@ -126,6 +126,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "first_layer_acceleration",
         "first_layer_bed_temperature",
         "first_layer_speed",
+        "first_layer_infill_speed",
         "gcode_comments",
         "gcode_flavor",
         "infill_acceleration",

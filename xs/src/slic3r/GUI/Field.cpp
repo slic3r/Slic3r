@@ -527,7 +527,28 @@ void Choice::set_value(const boost::any& value, bool change_event)
 			}
 			else
 				val = 0;
-		}
+        } else if (m_opt_id.compare("perimeter_loop_seam") == 0) {
+            if (!m_opt.enum_values.empty()) {
+                std::string key;
+                t_config_enum_values map_names = ConfigOptionEnum<SeamPosition>::get_enum_values();
+                for (auto it : map_names) {
+                    if (val == it.second) {
+                        key = it.first;
+                        break;
+                    }
+                }
+
+                size_t idx = 0;
+                for (auto el : m_opt.enum_values) {
+                    if (el.compare(key) == 0)
+                        break;
+                    ++idx;
+                }
+
+                val = idx == m_opt.enum_values.size() ? 0 : idx;
+            } else
+                val = 3;
+        }
 		dynamic_cast<wxComboBox*>(window)->SetSelection(val);
 		break;
 	}
@@ -588,10 +609,18 @@ boost::any& Choice::get_value()
 		else if (m_opt_id.compare("gcode_flavor") == 0)
 			m_value = static_cast<GCodeFlavor>(ret_enum);
 		else if (m_opt_id.compare("support_material_pattern") == 0)
-			m_value = static_cast<SupportMaterialPattern>(ret_enum);
-		else if (m_opt_id.compare("seam_position") == 0)
+            m_value = static_cast<SupportMaterialPattern>(ret_enum);
+        else if (m_opt_id.compare("seam_position") == 0)
             m_value = static_cast<SeamPosition>(ret_enum);
-        else if (m_opt_id.compare("host_type") == 0)
+        else if (m_opt_id.compare("perimeter_loop_seam") == 0) {
+            if (!m_opt.enum_values.empty()) {
+                std::string key = m_opt.enum_values[ret_enum];
+                t_config_enum_values map_names = ConfigOptionEnum<SeamPosition>::get_enum_values();
+                int value = map_names.at(key);
+                m_value = static_cast<SeamPosition>(value);
+            } else
+                m_value = static_cast<SeamPosition>(3);
+        } else if (m_opt_id.compare("host_type") == 0)
             m_value = static_cast<PrintHostType>(ret_enum);
         else if (m_opt_id.compare("infill_dense_algo") == 0)
             m_value = static_cast<DenseInfillAlgo>(ret_enum);

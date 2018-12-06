@@ -279,6 +279,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         params.density = 0.01 * density;
         params.dont_adjust = false;
         params.fill_exactly = layerm.region()->config.enforce_full_fill_volume.getBool();
+        params.dont_connect = layerm.region()->config.infill_not_connected.getBool();
 
         // calculate actual flow from spacing (which might have been adjusted by the infill
         // pattern generator)

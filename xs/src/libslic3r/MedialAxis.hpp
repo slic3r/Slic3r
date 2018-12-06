@@ -22,6 +22,7 @@ namespace Slic3r {
         const double max_width;
         const double min_width;
         const double height;
+        bool do_not_overextrude = true;
         MedialAxis(const ExPolygon &_expolygon, const ExPolygon &_bounds, const double _max_width, const double _min_width, const double _height)
             : surface(_expolygon), bounds(_bounds), max_width(_max_width), min_width(_min_width), height(_height) {
         };

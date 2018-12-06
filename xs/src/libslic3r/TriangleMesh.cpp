@@ -1792,7 +1792,7 @@ void TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slic
     //}
 
     // perform a safety offset to merge very close facets (TODO: find test case for this)
-    double safety_offset = scale_(0.0499);
+    //double safety_offset = scale_(0.0499); // now a config value
 //FIXME see https://github.com/prusa3d/Slic3r/issues/520
 //    double safety_offset = scale_(0.0001);
 

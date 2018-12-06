@@ -45,9 +45,9 @@ public:
         int idx = -1;
         if (! this->points.empty()) {
             idx = 0;
-            double dist_min = this->points.front().distance_to(point);
+            double dist_min = this->points.front().distance_to_sq(point);
             for (int i = 1; i < int(this->points.size()); ++ i) {
-                double d = this->points[i].distance_to(point);
+                double d = this->points[i].distance_to_sq(point);
                 if (d < dist_min) {
                     dist_min = d;
                     idx = i;

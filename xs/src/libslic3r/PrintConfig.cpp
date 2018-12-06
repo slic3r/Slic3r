@@ -34,6 +34,14 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "avoid-crossing-perimeters!";
     def->default_value = new ConfigOptionBool(false);
 
+    def = this->add("remove_small_gaps", coBool);
+    def->label = L("Remove small gaps");
+    def->tooltip = L("Remove the small gaps in the 3D model when slicing. Disable it if you "
+        "are very confident on your model, or you want to print an item with a geometry "
+        "designed for vase mode.");
+    def->cli = "remove-small-gaps!";
+    def->default_value = new ConfigOptionBool(true);
+
     def = this->add("bed_shape", coPoints);
     def->label = L("Bed shape");
     def->default_value = new ConfigOptionPoints { Pointf(0,0), Pointf(200,0), Pointf(200,200), Pointf(0,200) };
@@ -301,7 +309,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("top_fill_pattern", coEnum);
-    def->label = L("   Top");
+    def->label = L("Top Pattern");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for top infill. This only affects the top external visible layer, and not its adjacent solid shells.");
     def->cli = "top-fill-pattern|solid-fill-pattern=s";
@@ -325,7 +333,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("bottom_fill_pattern", coEnum);
-    def->label = L("Bottom");
+    def->label = L("Bottom Pattern");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for bottom infill. This only affects the bottom external visible layer, and not its adjacent solid shells.");
     def->cli = "bottom-fill-pattern|solid-fill-pattern=s";
@@ -401,13 +409,25 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("perimeter_loop", coBool);
-    def->label = L("Looping perimeters");
+    def->label = L(" ");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Join the perimeters to create only one continuous extrusion without any z-hop."
         " Long inside travel (from external to holes) are not extruded to give some place to the infill.");
     def->cli = "loop-perimeter!";
     def->default_value = new ConfigOptionBool(false);
-
+    
+    def = this->add("perimeter_loop_seam", coEnum);
+    def->label = L("Seam position");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Position of perimeters starting points.");
+    def->cli = "perimeter-seam-position=s";
+    def->enum_keys_map = &ConfigOptionEnum<SeamPosition>::get_enum_values();
+    def->enum_values.push_back("nearest");
+    def->enum_values.push_back("rear");
+    def->enum_labels.push_back(L("Nearest"));
+    def->enum_labels.push_back(L("Rear"));
+    def->default_value = new ConfigOptionEnum<SeamPosition>(spRear); 
+    
     def = this->add("extra_perimeters", coBool);
     def->label = L("Extra perimeters if needed");
     def->category = L("Layers and Perimeters");
@@ -787,8 +807,8 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionPercent(18);
 
     def = this->add("fill_pattern", coEnum);
-    def->label = L("Inside");
-    def->category = L("Sparse fill pattern");
+    def->label = L("Pattern");
+    def->category = L("Infill");
     def->tooltip = L("Fill pattern for general low-density infill.");
     def->cli = "fill-pattern=s";
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
@@ -861,17 +881,31 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "first-layer-height=s";
     def->ratio_over = "layer_height";
     def->default_value = new ConfigOptionFloatOrPercent(0.35, false);
-
+    
     def = this->add("first_layer_speed", coFloatOrPercent);
-    def->label = L("First layer speed");
+    def->label = L("default");
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
-                   "of the first layer, regardless of their type. If expressed as a percentage "
-                   "(for example: 40%) it will scale the default speeds.");
+                   "but infill of the first layer, it can be overwrite by the 'default' (default depends of the type of the path) "
+                   "speed if it's lower than that. If expressed as a percentage "
+                   "(for example: 40%) it will scale the 'default' speeds . "
+                   "If expressed as absolute value, it can be overwrite by the 'default' speed if it's lower than that.");
     def->sidetext = L("mm/s or %");
     def->cli = "first-layer-speed=s";
     def->min = 0;
     def->default_value = new ConfigOptionFloatOrPercent(30, false);
-
+    
+    def = this->add("first_layer_infill_speed", coFloatOrPercent);
+    def->label = L("infill");
+    def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to infill moves "
+                   "of the first layer, it can be overwrite by the 'default' (solid infill or infill if not bottom) "
+                   "speed if it's lower than that. If expressed as a percentage "
+                   "(for example: 40%) it will scale the 'default' speed. "
+                   "If expressed as absolute value, it can be overwrite by the 'default' speed if it's lower than that.");
+    def->sidetext = L("mm/s or %");
+    def->cli = "first-layer-infill-speed=s";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloatOrPercent(30, false);
+    
     def = this->add("first_layer_temperature", coInts);
     def->label = L("First layer");
     def->tooltip = L("Extruder temperature for first layer. If you want to control temperature manually "
@@ -964,6 +998,13 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "infill-dense!";
     def->default_value = new ConfigOptionBool(false);
 
+    def = this->add("infill_not_connected", coBool);
+    def->label = ("Do not connect infill lines to each other.");
+    def->category = L("Infill");
+    def->tooltip = L("If checked, the infill algorithm will try to not connect the lines near the infill. Can be useful for art or with high infill/perimeter overlap.");
+    def->cli = "infill-not-connected!";
+    def->default_value = new ConfigOptionBool(false);
+    
     def = this->add("infill_dense_algo", coEnum);
     def->label = L("Algorithm");
     def->tooltip = L("Choose the way the dense layer is lay out."
@@ -1644,11 +1685,20 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("nearest");
     def->enum_values.push_back("aligned");
     def->enum_values.push_back("rear");
+    def->enum_values.push_back("hidden");
     def->enum_labels.push_back(L("Random"));
     def->enum_labels.push_back(L("Nearest"));
     def->enum_labels.push_back(L("Aligned"));
-    def->enum_labels.push_back(L("Rear")); 
+    def->enum_labels.push_back(L("Rear"));
+    def->enum_labels.push_back(L("Hidden"));
     def->default_value = new ConfigOptionEnum<SeamPosition>(spAligned);
+
+    def = this->add("seam_travel", coBool);
+    def->label = L("Travel move reduced");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Add a big cost to travel paths when possible (when going into a loop), so it will prefer a less optimal seam posistion if it's nearer.");
+    def->cli = "seam-travel!";
+    def->default_value = new ConfigOptionBool(false);
 
 #if 0
     def = this->add("seam_preferred_direction", coFloat);

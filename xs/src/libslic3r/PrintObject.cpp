@@ -158,6 +158,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "thin_walls"
             || opt_key == "external_perimeters_first"
             || opt_key == "perimeter_loop"
+            || opt_key == "perimeter_loop_seam"
             || opt_key == "no_perimeter_unsupported"
             || opt_key == "min_perimeter_unsupported"
             || opt_key == "noperi_bridge_only") {
@@ -207,6 +208,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "infill_every_layers"
             || opt_key == "solid_infill_every_layers"
             || opt_key == "infill_dense"
+            || opt_key == "infill_not_connected"
             || opt_key == "infill_dense_algo"
             || opt_key == "bottom_solid_layers"
             || opt_key == "top_solid_layers"
@@ -243,6 +245,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             steps.emplace_back(posInfill);
         } else if (
                opt_key == "seam_position"
+            || opt_key == "seam_travel"
             || opt_key == "seam_preferred_direction"
             || opt_key == "seam_preferred_direction_jitter"
             || opt_key == "support_material_speed"
@@ -1856,6 +1859,7 @@ std::vector<ExPolygons> PrintObject::_slice_volumes(const std::vector<float> &z,
             mesh.translate(- float(unscale(this->_copies_shift.x)), - float(unscale(this->_copies_shift.y)), -float(this->model_object()->bounding_box().min.z));
             // perform actual slicing
             TriangleMeshSlicer mslicer(&mesh);
+            mslicer.safety_offset = (this->config.remove_small_gaps ? scale_(0.0499) : SCALED_EPSILON);
             mslicer.slice(z, &layers);
         }
     }
