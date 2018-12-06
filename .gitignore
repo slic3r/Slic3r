@@ -11,3 +11,4 @@ xs/MANIFEST.bak
 xs/assertlib*
 .init_bundle.ini
 local-lib
+build*
