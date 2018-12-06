@@ -1290,8 +1290,8 @@ MedialAxis::build(ThickPolylines* polylines_out)
 
     this->expolygon = simplify_polygon_frontier();
     //safety check
-    if (this->expolygon.area() < this->max_width * this->min_width) this->expolygon = this->surface;
-    if (this->expolygon.area() < this->max_width * this->min_width) return;
+    if (this->expolygon.area() < this->min_width * this->min_width) this->expolygon = this->surface;
+    if (this->expolygon.area() < this->min_width * this->min_width) return;
 
 
     // compute the Voronoi diagram and extract medial axis polylines

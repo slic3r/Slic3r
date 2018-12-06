@@ -115,6 +115,7 @@ if (0) {
         [4.3, 4], [4.3, 0], [4,0], [4,4], [0,4], [0,4.5], [4,4.5], [4,10], [4.3,10], [4.3, 4.5],
         [6, 4.5], [6,10], [6.2,10], [6.2,4.5], [10,4.5], [10,4], [6.2,4], [6.2,0], [6, 0], [6, 4],
     ));
+	$expolygon->contour->make_counter_clockwise();
     my $res = $expolygon->medial_axis(scale 0.55, scale 0.25);
     is scalar(@$res), 2, 'medial axis of a (bit too narrow) french cross is two lines';
     ok unscale($res->[0]->length) >= (9.9) - epsilon, 'medial axis has reasonable length';
@@ -133,6 +134,7 @@ if (0) {
     my $expolygon = Slic3r::ExPolygon->new(Slic3r::Polygon->new_scale(
         [0.86526705,1.4509841], [0.57696039,1.8637021], [0.4502297,2.5569978], [0.45626199,3.2965596], [1.1218851,3.3049455], [0.96681072,2.8243202], [0.86328971,2.2056997], [0.85367905,1.7790778],
     ));
+	$expolygon->contour->make_counter_clockwise();
     my $res = $expolygon->medial_axis(scale 1, scale 0.25);
     is scalar(@$res), 1, 'medial axis of a (bit too narrow) french cross is two lines';
     ok unscale($res->[0]->length) >= (1.4) - epsilon, 'medial axis has reasonable length';
