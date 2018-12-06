@@ -367,7 +367,7 @@ get_coeff_from_angle_countour(Point &point, const ExPolygon &contour, coord_t mi
     size_t id_near = 0;
     for (size_t id_point = 1; id_point < contour.contour.points.size(); ++id_point) {
         if (nearest_dist > point.distance_to(contour.contour.points[id_point])) {
-            //update near
+            //update point_near
             id_near = id_nearest;
             point_near = point_nearest;
             near_dist = nearest_dist;
@@ -627,17 +627,30 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
         if (this->expolygon.contour.has_boundary_point(polyline.points.back())) {
             new_back = polyline.points.back();
         } else {
+            //TODO: verify also for holes.
             (void)this->expolygon.contour.first_intersection(line, &new_back);
             // safety check if no intersection
             if (new_back.x == 0 && new_back.y == 0) new_back = line.b;
+
             polyline.points.push_back(new_back);
             polyline.width.push_back(polyline.width.back());
         }
         Point new_bound;
+        //TODO: verify also for holes.
         (void)bounds.contour.first_intersection(line, &new_bound);
         // safety check if no intersection
         if (new_bound.x == 0 && new_bound.y == 0) {
             if (line.b.coincides_with_epsilon(polyline.points.back())) return;
+            //check if we don't over-shoot inside us
+            bool is_in_anchor = false;
+            for (const ExPolygon& a : anchors) {
+                if (a.contains(line.b)) {
+                    is_in_anchor = true;
+                    break;
+                }
+            }
+            if (!is_in_anchor) std::cout << "not in anchor:\n";
+            if (!is_in_anchor) return;
             new_bound = line.b;
         }
         // find anchor
@@ -1298,6 +1311,7 @@ MedialAxis::build(ThickPolylines* polylines_out)
     ThickPolylines pp;
     this->polyline_from_voronoi(this->expolygon.lines(), &pp);
     
+    concatThickPolylines(pp);
 
     //{
     //    stringstream stri;
@@ -1326,8 +1340,6 @@ MedialAxis::build(ThickPolylines* polylines_out)
     //    svg.draw(pp);
     //    svg.Close();
     //}
-
-    concatThickPolylines(pp);
 
     // Aligned fusion: Fusion the bits at the end of lines by "increasing thickness"
     // For that, we have to find other lines,
