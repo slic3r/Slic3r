@@ -913,8 +913,11 @@ void TabPrint::build()
 		optgroup = page->new_optgroup(_(L("Speed for non-print moves")));
 		optgroup->append_single_option_line("travel_speed");
 
-		optgroup = page->new_optgroup(_(L("Modifiers")));
-		optgroup->append_single_option_line("first_layer_speed");
+        optgroup = page->new_optgroup(_(L("Modifiers")));
+        line = { _(L("First layer speed")), "" };
+        line.append_option(optgroup->get_option("first_layer_speed"));
+        line.append_option(optgroup->get_option("first_layer_infill_speed"));
+        optgroup->append_line(line);
 
 		optgroup = page->new_optgroup(_(L("Acceleration control (advanced)")));
 		optgroup->append_single_option_line("perimeter_acceleration");

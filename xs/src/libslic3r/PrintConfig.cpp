@@ -852,17 +852,31 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "first-layer-height=s";
     def->ratio_over = "layer_height";
     def->default_value = new ConfigOptionFloatOrPercent(0.35, false);
-
+    
     def = this->add("first_layer_speed", coFloatOrPercent);
-    def->label = L("First layer speed");
+    def->label = L("default");
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
-                   "of the first layer, regardless of their type. If expressed as a percentage "
-                   "(for example: 40%) it will scale the default speeds.");
+                   "but infill of the first layer, it can be overwrite by the 'default' (default depends of the type of the path) "
+                   "speed if it's lower than that. If expressed as a percentage "
+                   "(for example: 40%) it will scale the 'default' speeds . "
+                   "If expressed as absolute value, it can be overwrite by the 'default' speed if it's lower than that.");
     def->sidetext = L("mm/s or %");
     def->cli = "first-layer-speed=s";
     def->min = 0;
     def->default_value = new ConfigOptionFloatOrPercent(30, false);
-
+    
+    def = this->add("first_layer_infill_speed", coFloatOrPercent);
+    def->label = L("infill");
+    def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to infill moves "
+                   "of the first layer, it can be overwrite by the 'default' (solid infill or infill if not bottom) "
+                   "speed if it's lower than that. If expressed as a percentage "
+                   "(for example: 40%) it will scale the 'default' speed. "
+                   "If expressed as absolute value, it can be overwrite by the 'default' speed if it's lower than that.");
+    def->sidetext = L("mm/s or %");
+    def->cli = "first-layer-infill-speed=s";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloatOrPercent(30, false);
+    
     def = this->add("first_layer_temperature", coInts);
     def->label = L("First layer");
     def->tooltip = L("Extruder temperature for first layer. If you want to control temperature manually "
