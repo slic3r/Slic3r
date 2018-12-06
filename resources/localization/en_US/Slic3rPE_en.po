@@ -862,7 +862,7 @@ msgstr "Filament Settings"
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.hpp:228
 msgid "Printer Settings"
-msgstr "Printer Settings"
+msgstr "Hardware Settings"
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.hpp:248
 msgid "Save preset"
@@ -1071,7 +1071,7 @@ msgid ""
 "Suppress \" - default - \" presets in the Print / Filament / Printer "
 "selections once there are any other valid presets available."
 msgstr ""
-"Suppress \" - default - \" presets in the Print / Filament / Printer "
+"Suppress \" - default - \" presets in the Print / Filament / Hardware "
 "selections once there are any other valid presets available."
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Preferences.cpp:67
@@ -2358,7 +2358,7 @@ msgstr "(minimum)"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1014
 msgid "Printer notes"
-msgstr "Printer notes"
+msgstr "Hardware notes"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1015
 msgid "You can put your notes regarding the printer here."
