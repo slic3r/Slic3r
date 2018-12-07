@@ -1011,8 +1011,10 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "infill-dense-algo=s";
     def->enum_keys_map = &ConfigOptionEnum<DenseInfillAlgo>::get_enum_values();
     def->enum_values.push_back("automatic");
-    def->enum_values.push_back("enxtended");
+    def->enum_values.push_back("autosmall");
+    def->enum_values.push_back("enlarged");
     def->enum_labels.push_back(L("Automatic"));
+    def->enum_labels.push_back(L("Automatic, only for small areas"));
     def->enum_labels.push_back(L("Anchored"));
     def->default_value = new ConfigOptionEnum<DenseInfillAlgo>(dfaAutomatic);
 

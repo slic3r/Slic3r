@@ -50,7 +50,7 @@ enum FilamentType {
 };
 
 enum DenseInfillAlgo {
-    dfaAutomatic, dfaEnlarged,
+    dfaAutomatic, dfaAutoNotFull, dfaEnlarged,
 };
 
 template<> inline t_config_enum_values& ConfigOptionEnum<GCodeFlavor>::get_enum_values() {
@@ -145,6 +145,7 @@ template<> inline t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_e
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
         keys_map["automatic"] = dfaAutomatic;
+        keys_map["autosmall"] = dfaAutoNotFull;
         keys_map["enlarged"] = dfaEnlarged;
     }
     return keys_map;
