@@ -335,7 +335,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("bottom_fill_pattern", coEnum);
-    def->label = L("bottom fill pattern");
+    def->label = L("Bottom fill pattern");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for bottom infill. This only affects the bottom external visible layer, and not its adjacent solid shells.");
     def->cli = "bottom-fill-pattern|solid-fill-pattern=s";
@@ -976,8 +976,10 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "infill-dense-algo=s";
     def->enum_keys_map = &ConfigOptionEnum<DenseInfillAlgo>::get_enum_values();
     def->enum_values.push_back("automatic");
-    def->enum_values.push_back("enxtended");
+    def->enum_values.push_back("autosmall");
+    def->enum_values.push_back("enlarged");
     def->enum_labels.push_back(L("Automatic"));
+    def->enum_labels.push_back(L("Automatic, only for small areas"));
     def->enum_labels.push_back(L("Anchored"));
     def->default_value = new ConfigOptionEnum<DenseInfillAlgo>(dfaAutomatic);
 

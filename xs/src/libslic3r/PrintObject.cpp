@@ -544,8 +544,15 @@ void PrintObject::count_distance_solid() {
                                         uint64_t area_intersect = 0;
                                         for (ExPolygon poly_inter : intersect) area_intersect += poly_inter.area();
                                         //if it's in a dense area and the current surface isn't a dense one yet and the not-dense is too small.
-                                        if (surf.area() > area_intersect * COEFF_SPLIT &&
+                                        std::cout << idx_layer << " dfaEnlarged: " << layerm->region()->config.infill_dense_algo << "\n";
+                                        std::cout << idx_layer << " dfaEnlarged: 1-" << (layerm->region()->config.infill_dense_algo == dfaEnlarged) << "\n";
+                                        std::cout << idx_layer << " dfaEnlarged: 2-" << (surf.area() > area_intersect * COEFF_SPLIT) << "\n";
+                                        std::cout << idx_layer << " dfaEnlarged: 3-" << (surf.maxNbSolidLayersOnTop > nb_dense_layers) << "\n";
+                                        std::cout << idx_layer << " dfaEnlarged: surf.area()=" << unscale(unscale(surf.area())) << ", area_intersect=" << unscale(unscale(area_intersect)) << "\n";
+                                        std::cout << idx_layer << " dfaEnlarged: surf.maxNbSolidLayersOnTop=" << surf.maxNbSolidLayersOnTop << ", NB_DENSE_LAYERS=" << NB_DENSE_LAYERS << "\n";
+                                        if ((surf.area() > area_intersect * COEFF_SPLIT) &&
                                             surf.maxNbSolidLayersOnTop > nb_dense_layers) {
+                                            std::cout << idx_layer << " split in two: " << "\n";
                                             //split in two
                                             if (dist == 1) {
                                                 //if just under the solid area, we can expand a bit
@@ -575,7 +582,7 @@ void PrintObject::count_distance_solid() {
                                     } else {
                                         surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
                                     }
-                                } else if (layerm->region()->config.infill_dense_algo == dfaAutomatic) {
+                                } else if (layerm->region()->config.infill_dense_algo == dfaAutoNotFull || layerm->region()->config.infill_dense_algo == dfaAutomatic) {
                                     double area_intersect = 0;
                                     for (ExPolygon poly_inter : intersect) area_intersect += poly_inter.area();
                                     //like intersect.empty() but more resilient
@@ -584,7 +591,7 @@ void PrintObject::count_distance_solid() {
                                         if (dist <= NB_DENSE_LAYERS) {
                                             // it will be a dense infill, split the surface if needed
                                             //if the not-dense is too big to do a full dense and the current surface isn't a dense one yet.
-                                            if (surf.area() > area_intersect * COEFF_SPLIT &&
+                                            if ((layerm->region()->config.infill_dense_algo == dfaAutomatic || surf.area() > area_intersect * COEFF_SPLIT) &&
                                                 surf.maxNbSolidLayersOnTop > NB_DENSE_LAYERS) {
                                                 //split in two
                                                 if (dist == 1) {
@@ -623,6 +630,65 @@ void PrintObject::count_distance_solid() {
                                                     surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
                                             }
                                         } else {
+                                            surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
+                                        }
+                                    }
+                                } else if (layerm->region()->config.infill_dense_algo == dfaAutomatic) {
+                                    double area_intersect = 0;
+                                    for (ExPolygon poly_inter : intersect) area_intersect += poly_inter.area();
+                                    std::cout << idx_layer << " dfaAutomatic: area_intersect=" << unscale(unscale(area_intersect)) << "\n";
+                                    //like intersect.empty() but more resilient
+                                    if (area_intersect > layerm->flow(frInfill).scaled_width() * layerm->flow(frInfill).scaled_width() * 2) {
+                                        std::cout << idx_layer << " dfaAutomatic: ok\n";
+                                        uint16_t dist = (uint16_t)(upp.maxNbSolidLayersOnTop + 1);
+                                        if (dist <= NB_DENSE_LAYERS) {
+                                            std::cout << idx_layer << " dfaAutomatic: dist=" << dist << "\n";
+                                            // it will be a dense infill, split the surface if needed
+                                            //if the not-dense is too big to do a full dense and the current surface isn't a dense one yet.
+                                            if (surf.maxNbSolidLayersOnTop > NB_DENSE_LAYERS) {
+                                                std::cout << idx_layer << " dfaAutomatic: surf.maxNbSolidLayersOnTop=" << surf.maxNbSolidLayersOnTop << "\n";
+                                                //split in two
+                                                if (dist == 1) {
+                                                    //if just under the solid area, we can expand a bit
+                                                    ExPolygons cover_intersect;
+                                                    for (ExPolygon &expoly_tocover : intersect) {
+                                                        std::cout << idx_layer << " dfaAutomatic: fit_to_size\n";
+                                                        ExPolygons temp = (fit_to_size(expoly_tocover, expoly_tocover,
+                                                            diff_ex(offset_ex(layerm->fill_no_overlap_expolygons, layerm->flow(frInfill).scaled_width()),
+                                                            offset_ex(layerm->fill_no_overlap_expolygons, -layerm->flow(frInfill).scaled_width())),
+                                                            surf.expolygon,
+                                                            4 * layerm->flow(frInfill).scaled_width(), 0.01));
+                                                        cover_intersect.insert(cover_intersect.end(), temp.begin(), temp.end());
+                                                    }
+                                                    intersect = offset_ex(cover_intersect,
+                                                        layerm->flow(frInfill).scaled_width());// +scale_(expandby));
+                                                    //layerm->region()->config.external_infill_margin));
+                                                } else {
+                                                    std::cout << "dfaAutomatic: remove too small sections\n";
+                                                    //just remove too small sections
+                                                    intersect = offset_ex(intersect,
+                                                        layerm->flow(frInfill).scaled_width());
+                                                }
+                                                if (!intersect.empty()) {
+                                                    ExPolygons sparse_surfaces = offset2_ex(
+                                                        diff_ex(sparse_polys, intersect, true),
+                                                        -layerm->flow(frInfill).scaled_width(),
+                                                        layerm->flow(frInfill).scaled_width());
+                                                    ExPolygons dense_surfaces = diff_ex(sparse_polys, sparse_surfaces, true);
+                                                    //assign (copy)
+                                                    sparse_polys.clear();
+                                                    sparse_polys.insert(sparse_polys.begin(), sparse_surfaces.begin(), sparse_surfaces.end());
+                                                    dense_polys.insert(dense_polys.end(), dense_surfaces.begin(), dense_surfaces.end());
+                                                    dense_dist = std::min(dense_dist, dist);
+                                                    std::cout << "dfaAutomatic: assign\n";
+                                                }
+                                            } else {
+                                                std::cout << "dfaAutomatic: set dist ?" << (area_intersect < layerm->flow(frInfill).scaled_width() * layerm->flow(frInfill).scaled_width() * 2) << " (1)\n";
+                                                if (area_intersect < layerm->flow(frInfill).scaled_width() * layerm->flow(frInfill).scaled_width() * 2)
+                                                    surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
+                                            }
+                                        } else {
+                                            std::cout << "dfaAutomatic: set dist (2)\n";
                                             surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
                                         }
                                     }
