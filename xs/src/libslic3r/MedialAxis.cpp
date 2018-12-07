@@ -1360,6 +1360,18 @@ MedialAxis::build(ThickPolylines* polylines_out)
     //fusion right-angle corners.
     fusion_corners(pp);
 
+    // Loop through all returned polylines in order to extend their endpoints to the 
+    //   expolygon boundaries (if done here, it may be cut later if not thick enough)
+    if (stop_at_min_width) {
+		const ExPolygons anchors = offset2_ex(to_polygons(diff_ex(this->bounds, this->expolygon)), -SCALED_RESOLUTION, SCALED_RESOLUTION);
+        for (size_t i = 0; i < pp.size(); ++i) {
+            ThickPolyline& polyline = pp[i];
+            extends_line(polyline, anchors, min_width);
+            polyline.reverse();
+            extends_line(polyline, anchors, min_width);
+        }
+    }
+
     //reduce extrusion when it's too thin to be printable
     remove_too_thin_extrusion(pp);
     //{
@@ -1385,13 +1397,15 @@ MedialAxis::build(ThickPolylines* polylines_out)
 
     // Loop through all returned polylines in order to extend their endpoints to the 
     //   expolygon boundaries
-    const ExPolygons anchors = offset2_ex(to_polygons(diff_ex(this->bounds, this->expolygon)), -SCALED_RESOLUTION, SCALED_RESOLUTION);
-    for (size_t i = 0; i < pp.size(); ++i) {
-        ThickPolyline& polyline = pp[i];
-        extends_line(polyline, anchors, min_width);
-        polyline.reverse();
-        extends_line(polyline, anchors, min_width);
-    }
+    if (!stop_at_min_width) {
+		const ExPolygons anchors = offset2_ex(to_polygons(diff_ex(this->bounds, this->expolygon)), -SCALED_RESOLUTION, SCALED_RESOLUTION);
+		for (size_t i = 0; i < pp.size(); ++i) {
+			ThickPolyline& polyline = pp[i];
+			extends_line(polyline, anchors, min_width);
+			polyline.reverse();
+			extends_line(polyline, anchors, min_width);
+		}
+	}
     //{
     //    stringstream stri;
     //    stri << "medial_axis_5_expand_" << id << ".svg";

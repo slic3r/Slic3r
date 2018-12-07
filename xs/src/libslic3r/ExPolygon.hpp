@@ -43,7 +43,7 @@ class ExPolygon
     ExPolygons simplify(double tolerance) const;
     void simplify(double tolerance, ExPolygons* expolygons) const;
     void remove_point_too_near(const coord_t tolerance);
-    void medial_axis(const ExPolygon &bounds, double max_width, double min_width, ThickPolylines* polylines, double height) const;
+    void medial_axis(const ExPolygon &bounds, double max_width, double min_width, ThickPolylines* polylines, double height, bool stop_at_min_width = true) const;
     void medial_axis(double max_width, double min_width, Polylines* polylines) const;
     void get_trapezoids(Polygons* polygons) const;
     void get_trapezoids(Polygons* polygons, double angle) const;
