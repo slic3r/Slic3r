@@ -77,7 +77,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionString("");
 
     def = this->add("bottom_solid_layers", coInt);
-    def->label = L("          Bottom");
+    def->label = L("Bottom");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Number of solid layers to generate on bottom surfaces.");
     def->cli = "bottom-solid-layers=i";
@@ -273,7 +273,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("elefant_foot_compensation", coFloat);
     def->label = L("First layer");
     def->category = L("Advanced");
-    def->tooltip = L("The first layer will be  grown / shrunk in the XY plane by the configured value "
+    def->tooltip = L("The first layer will be grown / shrunk in the XY plane by the configured value "
                    "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)");
     def->sidetext = L("mm");
     def->cli = "elefant-foot-compensation=f";
@@ -353,7 +353,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("enforce_full_fill_volume", coBool);
     def->label = L("Enforce 100% fill volume");
     def->category = L("Infill");
-    def->tooltip = L("Experimental option wich modify (top/bottom) fill flow to have the exact amount of plastic inside the volume to fill "
+    def->tooltip = L("Experimental option wich modify (in solid infill) fill flow to have the exact amount of plastic inside the volume to fill "
         "(it generally changes the flow from -7% to +4%, depending on the size of the surface to fill and the overlap parameters, "
         "but it can go as high as +50% for infill in very small area where rectilinear doesn't have a good coverage). It has the advantage "
         "to remove the over-extrusion seen in thin infill area, from the overlap ratio");
@@ -883,12 +883,11 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionFloatOrPercent(0.35, false);
     
     def = this->add("first_layer_speed", coFloatOrPercent);
-    def->label = L("default");
+    def->label = L("Default");
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
                    "but infill of the first layer, it can be overwrite by the 'default' (default depends of the type of the path) "
                    "speed if it's lower than that. If expressed as a percentage "
-                   "(for example: 40%) it will scale the 'default' speeds . "
-                   "If expressed as absolute value, it can be overwrite by the 'default' speed if it's lower than that.");
+                   "(for example: 40%) it will scale the 'default' speeds.");
     def->sidetext = L("mm/s or %");
     def->cli = "first-layer-speed=s";
     def->min = 0;
@@ -899,8 +898,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to infill moves "
                    "of the first layer, it can be overwrite by the 'default' (solid infill or infill if not bottom) "
                    "speed if it's lower than that. If expressed as a percentage "
-                   "(for example: 40%) it will scale the 'default' speed. "
-                   "If expressed as absolute value, it can be overwrite by the 'default' speed if it's lower than that.");
+                   "(for example: 40%) it will scale the 'default' speed.");
     def->sidetext = L("mm/s or %");
     def->cli = "first-layer-infill-speed=s";
     def->min = 0;
@@ -999,7 +997,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("infill_not_connected", coBool);
-    def->label = ("Do not connect infill lines to each other.");
+    def->label = ("Do not connect infill lines to each other");
     def->category = L("Infill");
     def->tooltip = L("If checked, the infill algorithm will try to not connect the lines near the infill. Can be useful for art or with high infill/perimeter overlap.");
     def->cli = "infill-not-connected!";
@@ -1420,7 +1418,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("min_perimeter_unsupported", coInt);
     def->label = L("Minimum perimeters");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Number of permieter exluded from this option.");
+    def->tooltip = L("Number of perimeters exluded from this option.");
     def->cli = "min-perimeter-unsupported=i";
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);

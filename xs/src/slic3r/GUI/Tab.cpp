@@ -822,7 +822,7 @@ void TabPrint::build()
 
         optgroup = page->new_optgroup(_(L("Advanced")));
         optgroup->append_single_option_line("remove_small_gaps");
-        line = { _(L("Avoid unsupported perimeters")), "" };
+        line = { _(L("Seam")), "" };
         line.append_option(optgroup->get_option("seam_position"));
         line.append_option(optgroup->get_option("seam_travel"));
         optgroup->append_line(line);

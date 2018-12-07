@@ -309,7 +309,7 @@ const std::vector<std::string>& Preset::print_options()
         "infill_dense", "infill_dense_algo", "no_perimeter_unsupported", "min_perimeter_unsupported", "noperi_bridge_only",
         "support_material_solid_first_layer"
         , "exact_last_layer_height"
-        , "perimeter_loop", 
+        , "perimeter_loop"
         , "perimeter_loop_seam"
         , "seam_travel"
         , "remove_small_gaps"
