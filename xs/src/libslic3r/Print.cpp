@@ -128,6 +128,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "first_layer_speed",
         "first_layer_infill_speed",
         "gcode_comments",
+        "label_printed_objects",
         "gcode_flavor",
         "infill_acceleration",
         "layer_gcode",

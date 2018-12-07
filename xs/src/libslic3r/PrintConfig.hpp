@@ -630,6 +630,7 @@ public:
     ConfigOptionFloats              filament_cooling_final_speed;
     ConfigOptionStrings             filament_ramming_parameters;
     ConfigOptionBool                gcode_comments;
+    ConfigOptionBool                label_printed_objects;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionString              layer_gcode;
     ConfigOptionFloat               max_print_speed;
@@ -698,6 +699,7 @@ protected:
         OPT_PTR(filament_cooling_final_speed);
         OPT_PTR(filament_ramming_parameters);
         OPT_PTR(gcode_comments);
+        OPT_PTR(label_printed_objects);
         OPT_PTR(gcode_flavor);
         OPT_PTR(layer_gcode);
         OPT_PTR(max_print_speed);

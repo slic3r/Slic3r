@@ -314,7 +314,8 @@ const std::vector<std::string>& Preset::print_options()
         , "seam_travel"
         , "remove_small_gaps"
         , "infill_not_connected"
-        ,"first_layer_infill_speed"
+        , "first_layer_infill_speed"
+        , "label_printed_objects"
     };
     return s_opts;
 }

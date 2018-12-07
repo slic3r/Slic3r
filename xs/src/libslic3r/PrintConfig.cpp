@@ -934,9 +934,15 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("gcode_comments", coBool);
     def->label = L("Verbose G-code");
     def->tooltip = L("Enable this to get a commented G-code file, with each line explained by a descriptive text. "
-                   "If you print from SD card, the additional weight of the file could make your firmware "
-                   "slow down.");
+        "If you print from SD card, the additional weight of the file could make your firmware "
+        "slow down.");
     def->cli = "gcode-comments!";
+    def->default_value = new ConfigOptionBool(0);
+
+    def = this->add("label_printed_objects", coBool);
+    def->label = "Label Prints with Object ID";
+    def->tooltip = "Enable this to add comments in the G-Code that label print moves with what object they belong. Can be used with Octoprint CancelObject plugin.";
+    def->cli = "label-printed-objects!";
     def->default_value = new ConfigOptionBool(0);
 
     def = this->add("gcode_flavor", coEnum);
