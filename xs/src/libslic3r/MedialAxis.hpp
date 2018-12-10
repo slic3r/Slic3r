@@ -5,6 +5,8 @@
 #include "ExPolygon.hpp"
 #include "Polyline.hpp"
 #include "Geometry.hpp"
+#include "ExtrusionEntityCollection.hpp"
+#include "Flow.hpp"
 #include <vector>
 
 #include "boost/polygon/voronoi.hpp"
@@ -58,6 +60,9 @@ namespace Slic3r {
         void remove_too_short_polylines(ThickPolylines& pp, const coord_t min_size);
         void ensure_not_overextrude(ThickPolylines& pp);
     };
+
+    ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow);
+
 }
 
 

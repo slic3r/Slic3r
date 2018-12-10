@@ -448,7 +448,7 @@ void PerimeterGenerator::process()
 
                 // append thin walls
                 if (!thin_walls.empty()) {
-                    ExtrusionEntityCollection tw = this->_variable_width
+                    ExtrusionEntityCollection tw = thin_variable_width
                         (thin_walls, erExternalPerimeter, this->ext_perimeter_flow);
 
                     entities.append(tw.entities);
@@ -488,7 +488,7 @@ void PerimeterGenerator::process()
                 }
             }
             if (!polylines.empty()) {
-                ExtrusionEntityCollection gap_fill = this->_variable_width(polylines, 
+                ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, 
                     erGapFill, this->solid_infill_flow);
                 this->gap_fill->append(gap_fill.entities);
                 /*  Make sure we don't infill narrow parts that are already gap-filled
@@ -608,7 +608,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     
     // append thin walls to the nearest-neighbor search (only for first iteration)
     if (!thin_walls.empty()) {
-        ExtrusionEntityCollection tw = this->_variable_width
+        ExtrusionEntityCollection tw = thin_variable_width
             (thin_walls, erExternalPerimeter, this->ext_perimeter_flow);
         
         coll.append(tw.entities);
@@ -1220,109 +1220,6 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
     }
 
     return my_loop;
-}
-
-
-ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow) const
-{
-    // this value determines granularity of adaptive width, as G-code does not allow
-    // variable extrusion within a single move; this value shall only affect the amount
-    // of segments, and any pruning shall be performed before we apply this tolerance
-    const double tolerance = scale_(0.05);
-    
-    int id_line = 0;
-    ExtrusionEntityCollection coll;
-    for (const ThickPolyline &p : polylines) {
-        id_line++;
-        ExtrusionPaths paths;
-        ExtrusionPath path(role);
-        ThickLines lines = p.thicklines();
-        
-        for (int i = 0; i < (int)lines.size(); ++i) {
-            const ThickLine& line = lines[i];
-            
-            const coordf_t line_len = line.length();
-            if (line_len < SCALED_EPSILON) continue;
-            
-            double thickness_delta = fabs(line.a_width - line.b_width);
-            if (thickness_delta > tolerance) {
-                const unsigned short segments = ceil(thickness_delta / tolerance);
-                const coordf_t seg_len = line_len / segments;
-                Points pp;
-                std::vector<coordf_t> width;
-                {
-                    pp.push_back(line.a);
-                    width.push_back(line.a_width);
-                    for (size_t j = 1; j < segments; ++j) {
-                        pp.push_back(line.point_at(j*seg_len));
-                        
-                        coordf_t w = line.a_width + (j*seg_len) * (line.b_width-line.a_width) / line_len;
-                        width.push_back(w);
-                        width.push_back(w);
-                    }
-                    pp.push_back(line.b);
-                    width.push_back(line.b_width);
-                    
-                    assert(pp.size() == segments + 1);
-                    assert(width.size() == segments*2);
-                }
-                
-                // delete this line and insert new ones
-                lines.erase(lines.begin() + i);
-                for (size_t j = 0; j < segments; ++j) {
-                    ThickLine new_line(pp[j], pp[j+1]);
-                    new_line.a_width = width[2*j];
-                    new_line.b_width = width[2*j+1];
-                    lines.insert(lines.begin() + i + j, new_line);
-                }
-                
-                --i;
-                continue;
-            }
-            
-            const double w = fmax(line.a_width, line.b_width);
-            if (path.polyline.points.empty()) {
-                path.polyline.append(line.a);
-                path.polyline.append(line.b);
-                // Convert from spacing to extrusion width based on the extrusion model
-                // of a square extrusion ended with semi circles.
-                flow.width = unscale(w) + flow.height * (1. - 0.25 * PI);
-                #ifdef SLIC3R_DEBUG
-                printf("  filling %f gap\n", flow.width);
-                #endif
-                path.mm3_per_mm  = flow.mm3_per_mm();
-                path.width       = flow.width;
-                path.height      = flow.height;
-            } else {
-                thickness_delta = fabs(scale_(flow.width) - w);
-                if (thickness_delta <= tolerance/2) {
-                    // the width difference between this line and the current flow width is 
-                    // within the accepted tolerance
-                    path.polyline.append(line.b);
-                } else {
-                    // we need to initialize a new line
-                    paths.emplace_back(std::move(path));
-                    path = ExtrusionPath(role);
-                    --i;
-                }
-            }
-        }
-        if (path.polyline.is_valid())
-            paths.emplace_back(std::move(path));        
-        // Append paths to collection.
-        if (!paths.empty()) {
-            if (paths.front().first_point().coincides_with(paths.back().last_point())) {
-                coll.append(ExtrusionLoop(paths));
-            } else {
-                //not a loop : avoid to "sort" it.
-                ExtrusionEntityCollection unsortable_coll(paths);
-                unsortable_coll.no_sort = true;
-                coll.append(unsortable_coll);
-            }
-        }
-    }
-
-    return coll;
 }
 
 bool PerimeterGeneratorLoop::is_internal_contour() const

@@ -303,6 +303,18 @@ inline void extrusion_entities_append_paths(ExtrusionEntitiesPtr &dst, Polylines
     polylines.clear();
 }
 
+inline void extrusion_entities_append_loops(ExtrusionEntitiesPtr &dst, Polygons &loops, ExtrusionRole role, double mm3_per_mm, float width, float height) {
+    dst.reserve(dst.size() + loops.size());
+    for (Polygon &poly : loops) {
+        if (poly.is_valid()) {
+            ExtrusionPath path(role, mm3_per_mm, width, height);
+            path.polyline.points = poly.points;
+            path.polyline.points.push_back(path.polyline.points.front());
+            dst.emplace_back(new ExtrusionLoop(std::move(path)));
+        }
+    }
+}
+
 inline void extrusion_entities_append_loops(ExtrusionEntitiesPtr &dst, Polygons &&loops, ExtrusionRole role, double mm3_per_mm, float width, float height)
 {
     dst.reserve(dst.size() + loops.size());
