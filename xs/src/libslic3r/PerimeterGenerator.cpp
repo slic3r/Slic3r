@@ -133,6 +133,7 @@ PerimeterGenerator::process()
                         if (half_thins.size() > 0) {
                             no_thin_zone = diff(last, to_polygons(offset_ex(half_thins, (float)(min_width / 2) - SCALED_EPSILON)), true);
                         }
+                        ExPolygons thin_zones_extruded;
                         // compute a bit of overlap to anchor thin walls inside the print.
                         for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
@@ -145,17 +146,20 @@ PerimeterGenerator::process()
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(thin[0], bound).empty()) {
                                     //be sure it's not too small to extrude reliably
-									thin[0].remove_point_too_near(SCALED_RESOLUTION);
+                                    thin[0].remove_point_too_near(SCALED_RESOLUTION);
                                     if (thin[0].area() > min_width*(ext_pwidth + ext_pspacing2)) {
-										bound.remove_point_too_near(SCALED_RESOLUTION);
+                                        bound.remove_point_too_near(SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                                         thin[0].medial_axis(bound, ext_pwidth + ext_pspacing2, min_width,
                                             &thin_walls, this->layer_height);
+                                        thin_zones_extruded.emplace_back(thin[0]);
                                     }
                                     break;
                                 }
                             }
                         }
+                        // recompute the next onion, to be sure to not miss any small areas that can't be extruded by thin_walls
+                        offsets = to_polygons(diff_ex(offset_ex(last, -(float)(ext_pwidth / 2)), thin_zones_extruded, true));
                         #ifdef DEBUG
                         printf("  %zu thin walls detected\n", thin_walls.size());
                         #endif

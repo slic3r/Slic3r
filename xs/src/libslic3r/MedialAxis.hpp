@@ -17,7 +17,7 @@ namespace Slic3r {
     public:
         Lines lines; //lines is here only to avoid appassing it in argument of amny method. Initialized in polyline_from_voronoi.
         ExPolygon expolygon;
-		
+        
         const ExPolygon& surface;
         const ExPolygon& bounds;
         const double max_width;
