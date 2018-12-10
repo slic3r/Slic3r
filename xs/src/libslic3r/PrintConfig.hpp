@@ -34,7 +34,7 @@ enum PrintHostType {
 enum InfillPattern {
     ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipSmooth, ipSmoothHilbert, ipSmoothTriple,
-    ipRectiWithPerimeter,
+    ipRectiWithPerimeter, ipConcentricGapFill
 };
 
 enum SupportMaterialPattern {
@@ -89,6 +89,7 @@ template<> inline t_config_enum_values& ConfigOptionEnum<InfillPattern>::get_enu
         keys_map["cubic"]               = ipCubic;
         keys_map["line"]                = ipLine;
         keys_map["concentric"]          = ipConcentric;
+        keys_map["concentricgapfill"]   = ipConcentricGapFill;
         keys_map["honeycomb"]           = ipHoneycomb;
         keys_map["3dhoneycomb"]         = ip3DHoneycomb;
         keys_map["gyroid"]              = ipGyroid;
