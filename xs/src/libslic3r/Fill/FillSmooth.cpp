@@ -269,8 +269,9 @@ namespace Slic3r {
             }
         }
 
-        if (!eecroot->entities.empty())
+        if (!eecroot->entities.empty()) 
             out.push_back(eecroot);
+        else delete eecroot;
 
     }
 
