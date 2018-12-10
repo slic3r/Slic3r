@@ -301,13 +301,14 @@ remove_point_too_near(ThickPolyline* to_reduce)
             to_reduce->points.erase(to_reduce->points.begin() + id);
             to_reduce->width.erase(to_reduce->width.begin() + id);
             newdist = to_reduce->points[id].distance_to(to_reduce->points[id - 1]);
+            //if you removed a point, it check if the next one isn't too near from the previous one.
+            // if not, it bypass it.
+            if (newdist > smallest) {
+                ++id;
+            }
         }
         //go to next one
-        //if you removed a point, it check if the next one isn't too near from the previous one.
-        // if not, it byepass it.
-        if (newdist > smallest) {
-            ++id;
-        }
+        else ++id;
     }
 }
 
@@ -620,20 +621,33 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
             line.a = *(polyline.points.begin() + first_idx);
         }
         // prevent the line from touching on the other side, otherwise intersection() might return that solution
-        if (polyline.points.size() == 2) line.a = line.midpoint();
+        if (polyline.points.size() == 2 && this->expolygon.contains(line.midpoint())) line.a = line.midpoint();
 
         line.extend_end(max_width);
         Point new_back;
         if (this->expolygon.contour.has_boundary_point(polyline.points.back())) {
             new_back = polyline.points.back();
         } else {
-            //TODO: verify also for holes.
-            (void)this->expolygon.contour.first_intersection(line, &new_back);
+            bool finded = this->expolygon.contour.first_intersection(line, &new_back);
+            //verify also for holes.
+            Point new_back_temp;
+            for (Polygon hole : this->expolygon.holes) {
+                if (hole.first_intersection(line, &new_back_temp)) {
+                    if (!finded || line.a.distance_to(new_back_temp) < line.a.distance_to(new_back)) {
+                        finded = true;
+                        new_back = new_back_temp;
+                    }
+                }
+            }
             // safety check if no intersection
-            if (new_back.x == 0 && new_back.y == 0) {
+            if (!finded) {
                 if (!this->expolygon.contains(line.b)) {
                     //it's outside!!!
-                    std::cout << "Error, a line is formed that start in a polygon, end outside of it can don't cross it!\n";
+                    if (!this->expolygon.contains(line.a)) {
+                        std::cout << "Error, a line is formed that start outside a polygon, end outside of it and don't cross it!\n";
+                    } else {
+                        std::cout << "Error, a line is formed that start in a polygon, end outside of it and don't cross it!\n";
+                    }
                 }
                 new_back = line.b;
             }
@@ -641,10 +655,19 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
             polyline.width.push_back(polyline.width.back());
         }
         Point new_bound;
-        //TODO: verify also for holes.
-        (void)bounds.contour.first_intersection(line, &new_bound);
+        bool finded = bounds.contour.first_intersection(line, &new_bound);
+        //verify also for holes.
+        Point new_bound_temp;
+        for (Polygon hole : bounds.holes) {
+            if (hole.first_intersection(line, &new_bound_temp)) {
+                if (!finded || line.a.distance_to(new_bound_temp) < line.a.distance_to(new_bound)) {
+                    finded = true;
+                    new_bound = new_bound_temp;
+                }
+            }
+        }
         // safety check if no intersection
-        if (new_bound.x == 0 && new_bound.y == 0) {
+        if (!finded) {
             if (line.b.coincides_with_epsilon(polyline.points.back())) {
                 return;
             }

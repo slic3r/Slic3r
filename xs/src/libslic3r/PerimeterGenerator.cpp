@@ -282,6 +282,7 @@ void PerimeterGenerator::process()
                             no_thin_zone = diff_ex(last, offset_ex(half_thins, (float)(min_width / 2) - SCALED_EPSILON), true);
                         }
                         // compute a bit of overlap to anchor thin walls inside the print.
+                        ExPolygons thin_zones_extruded;
                         for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
                             ExPolygons thin = offset_ex(half_thin, (float)(min_width / 2));
@@ -298,11 +299,13 @@ void PerimeterGenerator::process()
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                                         thin[0].medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width,
                                             &thin_walls, this->layer_height);
+                                        thin_zones_extruded.emplace_back(thin[0]);
                                     }
                                     break;
                                 }
                             }
                         }
+                        next_onion = diff_ex(offset_ex(last, -(float)(ext_perimeter_width / 2)), thin_zones_extruded, true);
                     }
                 } else {
                     //FIXME Is this offset correct if the line width of the inner perimeters differs
