@@ -12,14 +12,27 @@ public:
 
 protected:
     virtual Fill* clone() const { return new FillConcentric(*this); };
-	virtual void _fill_surface_single(
-	    const FillParams                &params, 
-	    unsigned int                     thickness_layers,
-	    const std::pair<float, Point>   &direction, 
-	    ExPolygon                       &expolygon, 
-	    Polylines                       &polylines_out);
+    virtual void _fill_surface_single(
+        const FillParams                &params,
+        unsigned int                     thickness_layers,
+        const std::pair<float, Point>   &direction,
+        ExPolygon                       &expolygon,
+        Polylines                       &polylines_out);
 
 	virtual bool no_sort() const { return true; }
+};
+
+
+class FillConcentricWGapFill : public Fill {
+public:
+    virtual ~FillConcentricWGapFill() {}
+
+protected:
+    virtual Fill* clone() const { return new FillConcentricWGapFill(*this); };
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params,
+        const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out);
+
+    virtual bool no_sort() const { return true; }
 };
 
 } // namespace Slic3r

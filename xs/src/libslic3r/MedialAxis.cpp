@@ -301,13 +301,14 @@ remove_point_too_near(ThickPolyline* to_reduce)
             to_reduce->points.erase(to_reduce->points.begin() + id);
             to_reduce->width.erase(to_reduce->width.begin() + id);
             newdist = to_reduce->points[id].distance_to(to_reduce->points[id - 1]);
+            //if you removed a point, it check if the next one isn't too near from the previous one.
+            // if not, it bypass it.
+            if (newdist > smallest) {
+                ++id;
+            }
         }
         //go to next one
-        //if you removed a point, it check if the next one isn't too near from the previous one.
-        // if not, it byepass it.
-        if (newdist > smallest) {
-            ++id;
-        }
+        else ++id;
     }
 }
 
@@ -620,20 +621,33 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
             line.a = *(polyline.points.begin() + first_idx);
         }
         // prevent the line from touching on the other side, otherwise intersection() might return that solution
-        if (polyline.points.size() == 2) line.a = line.midpoint();
+        if (polyline.points.size() == 2 && this->expolygon.contains(line.midpoint())) line.a = line.midpoint();
 
         line.extend_end(max_width);
         Point new_back;
         if (this->expolygon.contour.has_boundary_point(polyline.points.back())) {
             new_back = polyline.points.back();
         } else {
-            //TODO: verify also for holes.
-            (void)this->expolygon.contour.first_intersection(line, &new_back);
+            bool finded = this->expolygon.contour.first_intersection(line, &new_back);
+            //verify also for holes.
+            Point new_back_temp;
+            for (Polygon hole : this->expolygon.holes) {
+                if (hole.first_intersection(line, &new_back_temp)) {
+                    if (!finded || line.a.distance_to(new_back_temp) < line.a.distance_to(new_back)) {
+                        finded = true;
+                        new_back = new_back_temp;
+                    }
+                }
+            }
             // safety check if no intersection
-            if (new_back.x == 0 && new_back.y == 0) {
+            if (!finded) {
                 if (!this->expolygon.contains(line.b)) {
                     //it's outside!!!
-                    std::cout << "Error, a line is formed that start in a polygon, end outside of it can don't cross it!\n";
+                    if (!this->expolygon.contains(line.a)) {
+                        std::cout << "Error, a line is formed that start outside a polygon, end outside of it and don't cross it!\n";
+                    } else {
+                        std::cout << "Error, a line is formed that start in a polygon, end outside of it and don't cross it!\n";
+                    }
                 }
                 new_back = line.b;
             }
@@ -641,10 +655,19 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
             polyline.width.push_back(polyline.width.back());
         }
         Point new_bound;
-        //TODO: verify also for holes.
-        (void)bounds.contour.first_intersection(line, &new_bound);
+        bool finded = bounds.contour.first_intersection(line, &new_bound);
+        //verify also for holes.
+        Point new_bound_temp;
+        for (Polygon hole : bounds.holes) {
+            if (hole.first_intersection(line, &new_bound_temp)) {
+                if (!finded || line.a.distance_to(new_bound_temp) < line.a.distance_to(new_bound)) {
+                    finded = true;
+                    new_bound = new_bound_temp;
+                }
+            }
+        }
         // safety check if no intersection
-        if (new_bound.x == 0 && new_bound.y == 0) {
+        if (!finded) {
             if (line.b.coincides_with_epsilon(polyline.points.back())) {
                 return;
             }
@@ -1477,6 +1500,107 @@ MedialAxis::build(ThickPolylines* polylines_out)
 
     polylines_out->insert(polylines_out->end(), pp.begin(), pp.end());
 
+}
+
+ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow) {
+    // this value determines granularity of adaptive width, as G-code does not allow
+    // variable extrusion within a single move; this value shall only affect the amount
+    // of segments, and any pruning shall be performed before we apply this tolerance
+    const double tolerance = scale_(0.05);
+
+    int id_line = 0;
+    ExtrusionEntityCollection coll;
+    for (const ThickPolyline &p : polylines) {
+        id_line++;
+        ExtrusionPaths paths;
+        ExtrusionPath path(role);
+        ThickLines lines = p.thicklines();
+
+        for (int i = 0; i < (int)lines.size(); ++i) {
+            const ThickLine& line = lines[i];
+
+            const coordf_t line_len = line.length();
+            if (line_len < SCALED_EPSILON) continue;
+
+            double thickness_delta = fabs(line.a_width - line.b_width);
+            if (thickness_delta > tolerance) {
+                const unsigned short segments = ceil(thickness_delta / tolerance);
+                const coordf_t seg_len = line_len / segments;
+                Points pp;
+                std::vector<coordf_t> width;
+                {
+                    pp.push_back(line.a);
+                    width.push_back(line.a_width);
+                    for (size_t j = 1; j < segments; ++j) {
+                        pp.push_back(line.point_at(j*seg_len));
+
+                        coordf_t w = line.a_width + (j*seg_len) * (line.b_width - line.a_width) / line_len;
+                        width.push_back(w);
+                        width.push_back(w);
+                    }
+                    pp.push_back(line.b);
+                    width.push_back(line.b_width);
+
+                    assert(pp.size() == segments + 1);
+                    assert(width.size() == segments * 2);
+                }
+
+                // delete this line and insert new ones
+                lines.erase(lines.begin() + i);
+                for (size_t j = 0; j < segments; ++j) {
+                    ThickLine new_line(pp[j], pp[j + 1]);
+                    new_line.a_width = width[2 * j];
+                    new_line.b_width = width[2 * j + 1];
+                    lines.insert(lines.begin() + i + j, new_line);
+                }
+
+                --i;
+                continue;
+            }
+
+            const double w = fmax(line.a_width, line.b_width);
+            if (path.polyline.points.empty()) {
+                path.polyline.append(line.a);
+                path.polyline.append(line.b);
+                // Convert from spacing to extrusion width based on the extrusion model
+                // of a square extrusion ended with semi circles.
+                flow.width = unscale(w) + flow.height * (1. - 0.25 * PI);
+#ifdef SLIC3R_DEBUG
+                printf("  filling %f gap\n", flow.width);
+#endif
+                path.mm3_per_mm = flow.mm3_per_mm();
+                path.width = flow.width;
+                path.height = flow.height;
+            } else {
+                thickness_delta = fabs(scale_(flow.width) - w);
+                if (thickness_delta <= tolerance / 2) {
+                    // the width difference between this line and the current flow width is 
+                    // within the accepted tolerance
+                    path.polyline.append(line.b);
+                } else {
+                    // we need to initialize a new line
+                    paths.emplace_back(std::move(path));
+                    path = ExtrusionPath(role);
+                    --i;
+                }
+            }
+        }
+        if (path.polyline.is_valid())
+            paths.emplace_back(std::move(path));
+        // Append paths to collection.
+        if (!paths.empty()) {
+            if (paths.front().first_point().coincides_with(paths.back().last_point())) {
+                coll.append(ExtrusionLoop(paths));
+            } else {
+                //not a loop : avoid to "sort" it.
+                ExtrusionEntityCollection unsortable_coll(paths);
+                unsortable_coll.no_sort = true;
+                coll.append(unsortable_coll);
+            }
+        }
+    }
+
+    return coll;
 }
 
 } // namespace Slic3r

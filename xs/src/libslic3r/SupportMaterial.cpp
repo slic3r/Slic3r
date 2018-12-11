@@ -3098,7 +3098,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
         size_t idx_layer_top_contact      = size_t(-1);
         size_t idx_layer_intermediate     = size_t(-1);
         size_t idx_layer_inteface         = size_t(-1);
-        std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(m_slicing_params.soluble_interface ? ipConcentric : ipRectilinear));
+        std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(m_slicing_params.soluble_interface ? ipConcentricGapFill : ipRectilinear));
         std::unique_ptr<Fill> filler_support = std::unique_ptr<Fill>(Fill::new_from_type(infill_pattern));
         std::unique_ptr<Fill> filler_solid = std::unique_ptr<Fill>(Fill::new_from_type(ipRectiWithPerimeter));
         filler_interface->set_bounding_box(bbox_object);

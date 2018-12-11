@@ -316,6 +316,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("concentric");
+    def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
@@ -324,10 +325,11 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("smoothhilbert");
     def->enum_labels.push_back(L("Rectilinear"));
     def->enum_labels.push_back(L("Concentric"));
+    def->enum_labels.push_back(L("Concentric (filled)"));
     def->enum_labels.push_back(L("Hilbert Curve"));
     def->enum_labels.push_back(L("Archimedean Chords"));
     def->enum_labels.push_back(L("Octagram Spiral"));
-    def->enum_labels.push_back("Ironing");
+    def->enum_labels.push_back(L("Ironing"));
     // solid_fill_pattern is an obsolete equivalent to top_fill_pattern/bottom_fill_pattern.
     def->aliases = { "solid_fill_pattern" };
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
@@ -340,14 +342,16 @@ PrintConfigDef::PrintConfigDef()
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("concentric");
+    def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
-    def->enum_labels.push_back("Rectilinear");
-    def->enum_labels.push_back("Concentric");
-    def->enum_labels.push_back("Hilbert Curve");
-    def->enum_labels.push_back("Archimedean Chords");
-    def->enum_labels.push_back("Octagram Spiral");
+    def->enum_labels.push_back(L("Rectilinear"));
+    def->enum_labels.push_back(L("Concentric"));
+    def->enum_labels.push_back(L("Concentric (filled)"));
+    def->enum_labels.push_back(L("Hilbert Curve"));
+    def->enum_labels.push_back(L("Archimedean Chords"));
+    def->enum_labels.push_back(L("Octagram Spiral"));
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("enforce_full_fill_volume", coBool);
@@ -819,6 +823,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("cubic");
     def->enum_values.push_back("line");
     def->enum_values.push_back("concentric");
+    def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("honeycomb");
     def->enum_values.push_back("3dhoneycomb");
     def->enum_values.push_back("gyroid");
@@ -832,6 +837,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back(L("Cubic"));
     def->enum_labels.push_back(L("Line"));
     def->enum_labels.push_back(L("Concentric"));
+    def->enum_labels.push_back(L("Concentric (filled)"));
     def->enum_labels.push_back(L("Honeycomb"));
     def->enum_labels.push_back(L("3D Honeycomb"));
     def->enum_labels.push_back(L("Gyroid"));

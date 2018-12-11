@@ -1,10 +1,13 @@
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
 #include "../Surface.hpp"
+#include "../ExtrusionEntityCollection.hpp"
+#include "../MedialAxis.hpp"
 
 #include "FillConcentric.hpp"
 
 namespace Slic3r {
+    
 
 void FillConcentric::_fill_surface_single(
     const FillParams                &params, 
@@ -59,6 +62,100 @@ void FillConcentric::_fill_surface_single(
     //TODO: return ExtrusionLoop objects to get better chained paths,
     // otherwise the outermost loop starts at the closest point to (0, 0).
     // We want the loops to be split inside the G-code generator to get optimum path planning.
+}
+
+void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params,
+    const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out) {
+
+    // Perform offset.
+    Slic3r::ExPolygons expp = offset_ex(surface->expolygon, float(scale_(0 - 0.5 * this->spacing)));
+    // Create the infills for each of the regions.
+    Polylines polylines_out;
+    for (size_t i = 0; i < expp.size(); ++i) {
+        //_fill_surface_single(
+        //params,
+        //surface->thickness_layers,
+        //_infill_direction(surface),
+        //expp[i],
+        //polylines_out);
+        ExPolygon expolygon = expp[i];
+
+        coordf_t init_spacing = this->spacing;
+
+        // no rotation is supported for this infill pattern
+        BoundingBox bounding_box = expolygon.contour.bounding_box();
+
+        coord_t min_spacing = scale_(this->spacing);
+        coord_t distance = coord_t(min_spacing / params.density);
+
+        if (params.density > 0.9999f && !params.dont_adjust) {
+            distance = this->_adjust_solid_spacing(bounding_box.size().x, distance);
+            this->spacing = unscale(distance);
+        }
+
+        ExPolygons gaps;
+        Polygons loops = (Polygons)expolygon;
+        Polygons last = loops;
+        while (!last.empty()) {
+            Polygons next_onion = offset2(last, -(distance + min_spacing / 2), +min_spacing / 2);
+            loops.insert(loops.end(), next_onion.begin(), next_onion.end());
+            append(gaps, diff_ex(
+                offset(last, -0.5f * distance),
+                offset(next_onion, 0.5f * distance + 10)));  // safety offset
+            last = next_onion;
+        }
+
+        // generate paths from the outermost to the innermost, to avoid
+        // adhesion problems of the first central tiny loops
+        //note: useless if we don't apply no_sort flag
+        //loops = union_pt_chained(loops, false);
+
+
+        //get the role
+        ExtrusionRole good_role = role;
+        if (good_role == erNone || good_role == erCustom) {
+            good_role = (flow.bridge ? erBridgeInfill :
+                (surface->is_solid() ?
+                ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+                erInternalInfill));
+        }
+
+        ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
+        coll_nosort->no_sort = true; //can be sorted inside the pass
+        extrusion_entities_append_loops(
+            coll_nosort->entities, loops,
+            good_role,
+            flow.mm3_per_mm() * params.flow_mult,
+            flow.width * params.flow_mult,
+            flow.height);
+
+        //add gapfills
+        if (!gaps.empty() && params.density >= 1) {
+            // collapse 
+            double min = 0.2 * distance * (1 - INSET_OVERLAP_TOLERANCE);
+            double max = 2. * distance;
+            ExPolygons gaps_ex = diff_ex(
+                offset2_ex(gaps, -min / 2, +min / 2),
+                offset2_ex(gaps, -max / 2, +max / 2),
+                true);
+            ThickPolylines polylines;
+            for (const ExPolygon &ex : gaps_ex) {
+                //remove too small gaps that are too hard to fill.
+                //ie one that are smaller than an extrusion with width of min and a length of max.
+                if (ex.area() > min*max) {
+                    ex.medial_axis(ex, max, min, &polylines, flow.height);
+                }
+            }
+            if (!polylines.empty()) {
+                ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, flow);
+                coll_nosort->append(gap_fill.entities);
+            }
+        }
+
+        if (!coll_nosort->entities.empty())
+            out.push_back(coll_nosort);
+        else delete coll_nosort;
+    }
 }
 
 } // namespace Slic3r
