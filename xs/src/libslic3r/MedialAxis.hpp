@@ -15,7 +15,7 @@ namespace Slic3r {
 
     class MedialAxis {
     public:
-        Lines lines; //lines is here only to avoid appassing it in argument of amny method. Initialized in polyline_from_voronoi.
+        Lines lines; //lines is here only to avoid passing it in argument of many methods. Initialized in polyline_from_voronoi.
         ExPolygon expolygon;
         
         const ExPolygon& surface;

@@ -138,7 +138,7 @@ PerimeterGenerator::process()
                         for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
                             ExPolygons thin = offset_ex(half_thin, (float)(min_width / 2));
-                            if (thin.size() != 1) continue; // impossible error, growing a single polygon can't create multiple or 0.
+                            assert(thin.size() == 1);
                             ExPolygons anchor = intersection_ex(
                                 to_polygons(offset_ex(half_thin, (float)(min_width / 2 + ext_pwidth / 2), CLIPPER_OFFSET_SCALE, jtSquare, 3)), 
                                 no_thin_zone, true);

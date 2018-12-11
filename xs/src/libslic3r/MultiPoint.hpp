@@ -31,9 +31,9 @@ class MultiPoint
 
     int find_point(const Point &point) const;
     bool has_boundary_point(const Point &point) const;
-	/// return the index of the closest point in this polygon in relation with "point"
-	/// \param point the point to compare with. 
-	/// \return the index of the closest point in the points vector. 
+    /// return the index of the closest point in this polygon in relation with "point"
+    /// \param point the point to compare with. 
+    /// \return the index of the closest point in the points vector, or max(size_t) if points is empty. 
     size_t closest_point_index(const Point &point) const {
         size_t idx = -1;
         if (! this->points.empty()) {

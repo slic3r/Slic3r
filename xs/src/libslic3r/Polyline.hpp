@@ -38,7 +38,7 @@ class Polyline : public MultiPoint {
 
 
 /// ThickPolyline : a polyline with a width for each point
-/// This calss has a vector of coordf_t, it must be the same size than points.
+/// This class has a vector of coordf_t, it must be the same size as points.
 /// it's used to store the size of the line at this point.
 /// Also, the endpoint let us know if the front() and back() of the polyline 
 /// join something or is a dead-end.
