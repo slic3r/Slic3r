@@ -607,6 +607,17 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
 
 
 void
+MedialAxis::extends_line_both_side(ThickPolylines& pp) {
+    const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline& polyline = pp[i];
+        this->extends_line(polyline, anchors, this->min_width);
+        polyline.reverse();
+        this->extends_line(polyline, anchors, this->min_width);
+    }
+}
+
+void
 MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, const coord_t join_width)
 {
     // extend initial and final segments of each polyline if they're actual endpoints
@@ -722,18 +733,19 @@ void
 MedialAxis::main_fusion(ThickPolylines& pp)
 {
     //int idf = 0;
-    //reoder pp by length (ascending) It's really important to do that to avoid building the line from the width insteand of the length
-    std::sort(pp.begin(), pp.end(), [](const ThickPolyline & a, const ThickPolyline & b) {
-        bool ahas0 = a.width.front() == 0 || a.width.back() == 0;
-        bool bhas0 = b.width.front() == 0 || b.width.back() == 0;
-        if (ahas0 && !bhas0) return true;
-        if (!ahas0 && bhas0) return false;
-        return a.length() < b.length();
-    });
 
     bool changes = true;
     map<Point, double> coeff_angle_cache;
     while (changes) {
+        concatThickPolylines(pp);
+        //reoder pp by length (ascending) It's really important to do that to avoid building the line from the width insteand of the length
+        std::sort(pp.begin(), pp.end(), [](const ThickPolyline & a, const ThickPolyline & b) {
+            bool ahas0 = a.width.front() == 0 || a.width.back() == 0;
+            bool bhas0 = b.width.front() == 0 || b.width.back() == 0;
+            if (ahas0 && !bhas0) return true;
+            if (!ahas0 && bhas0) return false;
+            return a.length() < b.length();
+        });
         changes = false;
         for (size_t i = 0; i < pp.size(); ++i) {
             ThickPolyline& polyline = pp[i];
@@ -962,12 +974,12 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                         //Add last point
                         polyline.points.push_back(best_candidate->points[idx_point]);
                         polyline.width.push_back(best_candidate->width[idx_point]);
-                        //select if an end opccur
+                        //select if an end occur
                         polyline.endpoints.second &= best_candidate->endpoints.second;
                     }
 
                 } else {
-                    //select if an end opccur
+                    //select if an end occur
                     polyline.endpoints.second &= best_candidate->endpoints.second;
                 }
 
@@ -1017,17 +1029,6 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 changes = true;
                 break;
             }
-        }
-        if (changes) {
-            concatThickPolylines(pp);
-            ///reorder, in case of change
-            std::sort(pp.begin(), pp.end(), [](const ThickPolyline & a, const ThickPolyline & b) {
-                bool ahas0 = a.width.front() == 0 || a.width.back() == 0;
-                bool bhas0 = b.width.front() == 0 || b.width.back() == 0;
-                if (ahas0 && !bhas0) return true;
-                if (!ahas0 && bhas0) return false;
-                return a.length() < b.length();
-            });
         }
     }
 }
@@ -1239,7 +1240,7 @@ MedialAxis::remove_too_short_polylines(ThickPolylines& pp, const coord_t min_siz
 
             }
         }
-        if (shortest_idx >= 0 && shortest_idx < pp.size()) {
+        if (shortest_idx < pp.size()) {
             pp.erase(pp.begin() + shortest_idx);
             changes = true;
         }
@@ -1255,7 +1256,7 @@ MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
     double surface = 0;
     double volume = 0;
     for (ThickPolyline& polyline : pp) {
-        for (ThickLine l : polyline.thicklines()) {
+        for (ThickLine &l : polyline.thicklines()) {
             surface += l.length() * (l.a_width + l.b_width) / 2;
             double width_mean = (l.a_width + l.b_width) / 2;
             volume += height * (width_mean - height * (1. - 0.25 * PI)) * l.length();
@@ -1269,8 +1270,8 @@ MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
     double perimeterRoundGap = bounds.contour.length() * height * (1 - 0.25*PI) * 0.5;
     // add holes "perimeter gaps"
     double holesGaps = 0;
-    for (auto hole = bounds.holes.begin(); hole != bounds.holes.end(); ++hole) {
-        holesGaps += hole->length() * height * (1 - 0.25*PI) * 0.5;
+    for (const Polygon &hole : bounds.holes) {
+        holesGaps += hole.length() * height * (1 - 0.25*PI) * 0.5;
     }
     boundsVolume += perimeterRoundGap + holesGaps;
 
@@ -1278,7 +1279,7 @@ MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
         //reduce width
         double reduce_by = boundsVolume / volume;
         for (ThickPolyline& polyline : pp) {
-            for (ThickLine l : polyline.thicklines()) {
+            for (ThickLine &l : polyline.thicklines()) {
                 l.a_width *= reduce_by;
                 l.b_width *= reduce_by;
             }
@@ -1291,8 +1292,7 @@ MedialAxis::simplify_polygon_frontier()
 {
 
     //simplify the boundary between us and the bounds.
-    //int firstIdx = 0;
-    //while (firstIdx < contour.points.size() && bounds.contour.contains(contour.points[firstIdx])) firstIdx++;
+    //it will remove every point in the surface contour that aren't on the bounds contour
     ExPolygon simplified_poly = this->surface;
     if (&this->surface != &this->bounds) {
         bool need_intersect = false;
@@ -1410,14 +1410,8 @@ MedialAxis::build(ThickPolylines* polylines_out)
     //fusion right-angle corners.
     fusion_corners(pp);
 
-    if (do_not_overextrude) {
-        const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
-        for (size_t i = 0; i < pp.size(); ++i) {
-            ThickPolyline& polyline = pp[i];
-            extends_line(polyline, anchors, min_width);
-            polyline.reverse();
-            extends_line(polyline, anchors, min_width);
-        }
+    if (stop_at_min_width) {
+        extends_line_both_side(pp);
     }
 
     //reduce extrusion when it's too thin to be printable
@@ -1445,14 +1439,8 @@ MedialAxis::build(ThickPolylines* polylines_out)
 
     // Loop through all returned polylines in order to extend their endpoints to the 
     //   expolygon boundaries
-    if (!do_not_overextrude) {
-        const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
-        for (size_t i = 0; i < pp.size(); ++i) {
-            ThickPolyline& polyline = pp[i];
-            extends_line(polyline, anchors, min_width);
-            polyline.reverse();
-            extends_line(polyline, anchors, min_width);
-        }
+    if (!stop_at_min_width) {
+        extends_line_both_side(pp);
     }
     //{
     //    stringstream stri;
