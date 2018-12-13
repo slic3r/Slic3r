@@ -17,14 +17,14 @@ namespace Slic3r {
 
     class MedialAxis {
     public:
-        Lines lines; //lines is here only to avoid appassing it in argument of amny method. Initialized in polyline_from_voronoi.
+        Lines lines; //lines is here only to avoid passing it in argument of many methods. Initialized in polyline_from_voronoi.
         ExPolygon expolygon;
         const ExPolygon& bounds;
         const ExPolygon& surface;
         const double max_width;
         const double min_width;
         const double height;
-        bool do_not_overextrude = true;
+        bool stop_at_min_width = true;
         MedialAxis(const ExPolygon &_expolygon, const ExPolygon &_bounds, const double _max_width, const double _min_width, const double _height)
             : surface(_expolygon), bounds(_bounds), max_width(_max_width), min_width(_min_width), height(_height) {
         };
@@ -53,6 +53,7 @@ namespace Slic3r {
         void fusion_curve(ThickPolylines &pp);
         void main_fusion(ThickPolylines& pp);
         void fusion_corners(ThickPolylines &pp);
+        void extends_line_both_side(ThickPolylines& pp);
         void extends_line(ThickPolyline& polyline, const ExPolygons& anchors, const coord_t join_width);
         void remove_too_thin_extrusion(ThickPolylines& pp);
         void concatenate_polylines_with_crossing(ThickPolylines& pp);
