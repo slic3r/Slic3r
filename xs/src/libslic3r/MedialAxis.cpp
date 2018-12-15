@@ -1325,7 +1325,8 @@ MedialAxis::simplify_polygon_frontier()
         }
     }
 
-    simplified_poly.remove_point_too_near(SCALED_RESOLUTION);
+    if (!simplified_poly.contour.points.empty())
+        simplified_poly.remove_point_too_near(SCALED_RESOLUTION);
     return simplified_poly;
 }
 
