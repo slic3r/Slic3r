@@ -357,17 +357,17 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("enforce_full_fill_volume", coBool);
     def->label = L("Enforce 100% fill volume");
     def->category = L("Infill");
-    def->tooltip = L("Experimental option wich modify (in solid infill) fill flow to have the exact amount of plastic inside the volume to fill "
+    def->tooltip = L("Experimental option which modifies (in solid infill) fill flow to have the exact amount of plastic inside the volume to fill "
         "(it generally changes the flow from -7% to +4%, depending on the size of the surface to fill and the overlap parameters, "
-        "but it can go as high as +50% for infill in very small area where rectilinear doesn't have a good coverage). It has the advantage "
-        "to remove the over-extrusion seen in thin infill area, from the overlap ratio");
+        "but it can go as high as +50% for infill in very small areas where rectilinear doesn't have good coverage). It has the advantage "
+        "to remove the over-extrusion seen in thin infill areas, from the overlap ratio");
     def->cli = "enforce-full-fill-volume!";
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("external_infill_margin", coFloat);
     def->label = L("Default");
     def->category = L("Infill");
-    def->tooltip = L("This parameter grow the top/bottom/solid layers by some mm to anchor them into the part. Put 0 to deactivate it.");
+    def->tooltip = L("This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
     def->sidetext = L("mm");
     def->cli = "top-layer-anchor=f";
     def->min = 0;
@@ -376,7 +376,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("bridged_infill_margin", coFloat);
     def->label = L("Bridged");
     def->category = L("Infill");
-    def->tooltip = L("This parameter grow the bridged solid infill layers by some mm to anchor them into the part. Put 0 to deactivate it.");
+    def->tooltip = L("This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
     def->sidetext = L("mm");
     def->cli = "top-layer-anchor=f";
     def->min = 0;
@@ -416,7 +416,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = L(" ");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Join the perimeters to create only one continuous extrusion without any z-hop."
-        " Long inside travel (from external to holes) are not extruded to give some place to the infill.");
+        " Long inside travel (from external to holes) are not extruded to give some space to the infill.");
     def->cli = "loop-perimeter!";
     def->default_value = new ConfigOptionBool(false);
     
@@ -922,8 +922,8 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("gap_fill", coBool);
     def->label = L("Gap fill");
     def->category = L("Advanced");
-    def->tooltip = L("Enable gap fill algorithm. It will extrude small lines between perimeter "
-        "when there are not enough space for an other perimeter or an infill.");
+    def->tooltip = L("Enable gap fill algorithm. It will extrude small lines between perimeters "
+        "when there is not enough space for another perimeter or an infill.");
     def->cli = "gap-fill!";
     def->default_value = new ConfigOptionBool(true);
 
@@ -1003,8 +1003,8 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("infill_dense", coBool);
     def->label = ("");
     def->category = L("Infill");
-    def->tooltip = L("Enable the creation of a support layer under the first solid layer. Allow to use lower infill ratio without compromizing the top quality."
-        " The dense infill is layed out with a 50% infill density.");
+    def->tooltip = L("Enables the creation of a support layer under the first solid layer. This allows you to use a lower infill ratio without compromising the top quality."
+        " The dense infill is laid out with a 50% infill density.");
     def->cli = "infill-dense!";
     def->default_value = new ConfigOptionBool(false);
 
@@ -1425,7 +1425,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("no_perimeter_unsupported", coBool);
     def->label = L("");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Experimental option to remove perimeters where there are nothing under and where a bridged infill should be better. Computationaly intensive!");
+    def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. Computationally intensive!");
     def->cli = "no-perimeter-unsupported!";
     def->default_value = new ConfigOptionBool(false);
 
@@ -1438,9 +1438,9 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInt(0);
 
     def = this->add("noperi_bridge_only", coBool);
-    def->label = L("Only on briged area");
+    def->label = L("Only on bridged areas");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Only remove perimeters over area marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
+    def->tooltip = L("Only remove perimeters over areas marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
     def->cli = "noperi-bridge-only!";
     def->default_value = new ConfigOptionBool(true);
 
