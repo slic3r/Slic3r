@@ -367,7 +367,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("external_infill_margin", coFloat);
     def->label = L("Default");
     def->category = L("Infill");
-    def->tooltip = L("This parameter grow the top/bottom/solid layers by some mm to anchor them into the part. Put 0 to deactivate it.");
+    def->tooltip = L("This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
     def->sidetext = L("mm");
     def->cli = "top-layer-anchor=f";
     def->min = 0;
@@ -376,7 +376,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("bridged_infill_margin", coFloat);
     def->label = L("Bridged");
     def->category = L("Infill");
-    def->tooltip = L("This parameter grow the bridged solid infill layers by some mm to anchor them into the part. Put 0 to deactivate it.");
+    def->tooltip = L("This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
     def->sidetext = L("mm");
     def->cli = "top-layer-anchor=f";
     def->min = 0;
@@ -922,8 +922,8 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("gap_fill", coBool);
     def->label = L("Gap fill");
     def->category = L("Advanced");
-    def->tooltip = L("Enable gap fill algorithm. It will extrude small lines between perimeter "
-        "when there are not enough space for an other perimeter or an infill.");
+    def->tooltip = L("Enable gap fill algorithm. It will extrude small lines between perimeters "
+        "when there is not enough space for another perimeter or an infill.");
     def->cli = "gap-fill!";
     def->default_value = new ConfigOptionBool(true);
 
@@ -1003,8 +1003,8 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("infill_dense", coBool);
     def->label = ("");
     def->category = L("Infill");
-    def->tooltip = L("Enable the creation of a support layer under the first solid layer. Allow to use lower infill ratio without compromizing the top quality."
-        " The dense infill is layed out with a 50% infill density.");
+    def->tooltip = L("Enables the creation of a support layer under the first solid layer. This allows you to use a lower infill ratio without compromising the top quality."
+        " The dense infill is laid out with a 50% infill density.");
     def->cli = "infill-dense!";
     def->default_value = new ConfigOptionBool(false);
 
