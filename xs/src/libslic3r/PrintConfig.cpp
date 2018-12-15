@@ -1440,7 +1440,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("noperi_bridge_only", coBool);
     def->label = L("Only on bridged areas");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Only remove perimeters and over area marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
+    def->tooltip = L("Only remove perimeters over areas marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
     def->cli = "noperi-bridge-only!";
     def->default_value = new ConfigOptionBool(true);
 
