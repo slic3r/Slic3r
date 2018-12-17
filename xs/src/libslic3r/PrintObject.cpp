@@ -430,9 +430,20 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface)
             svg.Close();
             
             //check if current surface collides with previous collider
-            if (!intersection(layerm_slices_surfaces, diff(collider,nonplanar_polygon)).empty()){
-                //collsion found
-                return true;
+            ExPolygons collisions = union_ex(intersection(layerm_slices_surfaces, diff(collider,nonplanar_polygon)));
+            
+            
+            if (!collisions.empty()){
+                double area = 0;
+                for (auto& c : collisions){
+                    area += c.area();
+                    
+                }
+                std::cout << unscale(unscale(area)) << '\n';
+                //collsion found abort when area > 1.0 mm²
+                if (1.0 < unscale(unscale(area))) {
+                    return true;
+                }
             }
             
             if (layer->upper_layer != NULL) {
