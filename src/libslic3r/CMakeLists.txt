@@ -51,6 +51,8 @@ add_library(libslic3r STATIC
     Fill/FillRectilinear2.hpp
     Fill/FillRectilinear3.cpp
     Fill/FillRectilinear3.hpp
+    Fill/FillSmooth.cpp
+    Fill/FillSmooth.hpp
     Flow.cpp
     Flow.hpp
     Format/3mf.cpp
@@ -105,6 +107,8 @@ add_library(libslic3r STATIC
     "${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h"
     Line.cpp
     Line.hpp
+    MedialAxis.cpp
+    MedialAxis.hpp
     Model.cpp
     Model.hpp
     ModelArrange.hpp
