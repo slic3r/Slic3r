@@ -52,6 +52,7 @@ namespace Slic3r {
         void fusion_curve(ThickPolylines &pp);
         void main_fusion(ThickPolylines& pp);
         void fusion_corners(ThickPolylines &pp);
+        void extends_line_both_side(ThickPolylines& pp);
         void extends_line(ThickPolyline& polyline, const ExPolygons& anchors, const coord_t join_width);
         void remove_too_thin_extrusion(ThickPolylines& pp);
         void concatenate_polylines_with_crossing(ThickPolylines& pp);

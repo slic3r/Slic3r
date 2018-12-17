@@ -605,6 +605,16 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
     }
 }
 
+void
+MedialAxis::extends_line_both_side(ThickPolylines& pp) {
+    const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline& polyline = pp[i];
+        this->extends_line(polyline, anchors, this->min_width);
+        polyline.reverse();
+        this->extends_line(polyline, anchors, this->min_width);
+    }
+}
 
 void
 MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, const coord_t join_width)
@@ -1246,7 +1256,7 @@ MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
     double perimeterRoundGap = bounds.contour.length() * height * (1 - 0.25*PI) * 0.5;
     // add holes "perimeter gaps"
     double holesGaps = 0;
-    for (auto hole = bounds.holes.begin(); hole != bounds.holes.end(); ++hole) {
+    for (const Polygon &hole : bounds.holes) {
         holesGaps += hole->length() * height * (1 - 0.25*PI) * 0.5;
     }
     boundsVolume += perimeterRoundGap + holesGaps;
@@ -1300,8 +1310,7 @@ MedialAxis::simplify_polygon_frontier()
             }
         }
     }
-
-    simplified_poly.remove_point_too_near(SCALED_RESOLUTION);
+    if (!simplified_poly.contour.points.empty()) simplified_poly.remove_point_too_near(SCALED_RESOLUTION);
     return simplified_poly;
 }
 
@@ -1372,13 +1381,7 @@ MedialAxis::build(ThickPolylines* polylines_out)
     // Loop through all returned polylines in order to extend their endpoints to the 
     //   expolygon boundaries (if done here, it may be cut later if not thick enough)
     if (stop_at_min_width) {
-        const ExPolygons anchors = offset2_ex(to_polygons(diff_ex(this->bounds, this->expolygon)), -SCALED_RESOLUTION, SCALED_RESOLUTION);
-        for (size_t i = 0; i < pp.size(); ++i) {
-            ThickPolyline& polyline = pp[i];
-            extends_line(polyline, anchors, min_width);
-            polyline.reverse();
-            extends_line(polyline, anchors, min_width);
-        }
+        extends_line_both_side(pp);
     }
 
     //reduce extrusion when it's too thin to be printable
@@ -1407,13 +1410,7 @@ MedialAxis::build(ThickPolylines* polylines_out)
     // Loop through all returned polylines in order to extend their endpoints to the 
     //   expolygon boundaries
     if (!stop_at_min_width) {
-        const ExPolygons anchors = offset2_ex(to_polygons(diff_ex(this->bounds, this->expolygon)), -SCALED_RESOLUTION, SCALED_RESOLUTION);
-        for (size_t i = 0; i < pp.size(); ++i) {
-            ThickPolyline& polyline = pp[i];
-            extends_line(polyline, anchors, min_width);
-            polyline.reverse();
-            extends_line(polyline, anchors, min_width);
-        }
+        extends_line_both_side(pp);
     }
     //{
     //    stringstream stri;
