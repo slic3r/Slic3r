@@ -38,11 +38,10 @@ my %cli_options = ();
         'load=s@'               => \$opt{load},
         'autosave=s'            => \$opt{autosave},
         'ignore-nonexistent-config' => \$opt{ignore_nonexistent_config},
-        'no-controller'         => \$opt{no_controller},
         'no-plater'             => \$opt{no_plater},
         'gui-mode=s'            => \$opt{obsolete_ignore_this_option_gui_mode},
         'datadir=s'             => \$opt{datadir},
-        'export-svg'            => \$opt{export_svg},
+        'export-png'            => \$opt{export_png},
         'merge|m'               => \$opt{merge},
         'repair'                => \$opt{repair},
         'cut=f'                 => \$opt{cut},
@@ -107,7 +106,6 @@ if ((!@ARGV || $opt{gui}) && !$opt{no_gui} && !$opt{save} && eval "require Slic3
     {
         no warnings 'once';
         $Slic3r::GUI::datadir       = Slic3r::decode_path($opt{datadir} // '');
-        $Slic3r::GUI::no_controller = $opt{no_controller};
         $Slic3r::GUI::no_plater     = $opt{no_plater};
         $Slic3r::GUI::autosave      = $opt{autosave};
     }
@@ -202,10 +200,6 @@ if (@ARGV) {  # slicing from command line
             duplicate_grid  => $opt{duplicate_grid} // [1,1],
             print_center    => $opt{print_center}   // Slic3r::Pointf->new(100,100),
             dont_arrange    => $opt{dont_arrange}   // 0,
-            status_cb       => sub {
-                my ($percent, $message) = @_;
-                printf "=> %s\n", $message;
-            },
             output_file     => $opt{output},
         );
         
@@ -215,8 +209,8 @@ if (@ARGV) {  # slicing from command line
         # Do the apply_config once again to validate the layer height profiles at all the newly added PrintObjects.
         $sprint->apply_config($config);
         
-        if ($opt{export_svg}) {
-            $sprint->export_svg;
+        if ($opt{export_png}) {
+            $sprint->export_png;
         } else {
             my $t0 = [gettimeofday];
             # The following call may die if the output_filename_format template substitution fails,
@@ -281,7 +275,7 @@ Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
                         and [input_filename] (default: $config->{output_filename_format})
     --post-process      Generated G-code will be processed with the supplied script;
                         call this more than once to process through multiple scripts.
-    --export-svg        Export a SVG file containing slices instead of G-code.
+    --export-png        Export zipped PNG files containing slices instead of G-code.
     -m, --merge         If multiple files are supplied, they will be composed into a single 
                         print rather than processed individually.
   
