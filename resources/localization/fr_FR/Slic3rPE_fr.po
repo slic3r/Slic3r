@@ -4490,7 +4490,7 @@ msgid "Fill external"
 msgstr "Remplissage plein externe"
 
 #: supermerill's add: tab.cpp
-msgid "Suporting dense layer"
+msgid "Supporting dense layer"
 msgstr "Couche de support pour remplissage plein"
 
 #: supermerill's add: tab.cpp
@@ -4594,7 +4594,7 @@ msgid "Minimum perimeters"
 msgstr "Nombre min de périmètres"
 
 #: supermerill's add: PrintConfig.cpp
-msgid "Only on briged area"
+msgid "Only on bridged areas"
 msgstr "Seulement sur ponts"
 
 #: supermerill's add: PrintConfig.cpp
@@ -4671,23 +4671,23 @@ msgid "Fill pattern for bottom infill. This only affects the bottom external vis
 msgstr "Motif pour les surfaces du dessous. Ceci affecte seulement la couche externe visible, et non les coques pleines adjacentes."
 
 #: supermerill's add: PrintConfig.cpp
-msgid "Experimental option wich modify (in solid infill) fill flow to have the exact amount of plastic inside the volume to fill "
+msgid "Experimental option which modifies (in solid infill) fill flow to have the exact amount of plastic inside the volume to fill "
         "(it generally changes the flow from -7% to +4%, depending on the size of the surface to fill and the overlap parameters, "
-        "but it can go as high as +50% for infill in very small area where rectilinear doesn't have a good coverage). It has the advantage "
-        "to remove the over-extrusion seen in thin infill area, from the overlap ratio"
+        "but it can go as high as +50% for infill in very small areas where rectilinear doesn't have good coverage). It has the advantage "
+        "to remove the over-extrusion seen in thin infill areas, from the overlap ratio"
 msgstr "Option expérimentale qui modifie le débit dans les couches pleines pour s'assurer que le volume extrudé est égal au volume à remplir. En génral, le débit n'ets modifié que de 4-7% mais cela peut aller jusqu'a +50% dans les très petites zones où il est difficile de circuler. Le pricipal avantage est de retirer l'effet de sur-extrusion souvent vues dans les zones de remplissage étroites."
 
 #: supermerill's add: PrintConfig.cpp
-msgid "This parameter grow the top/bottom/solid layers by some mm to anchor them into the part. Put 0 to deactivate it."
+msgid This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it."
 msgstr "Ce paramètre agrandi les couches pleines par X mm pour bien les ancrer dans la pièce. Mettre 0 pour désactiver cette fonction."
 
 #: supermerill's add: PrintConfig.cpp
-msgid "This parameter grow the bridged solid infill layers by some mm to anchor them into the part. Put 0 to deactivate it."
+msgid "This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it."
 msgstr "Ce paramètre agrandi les couches de pont par X mm pour bien les ancrer dans la pièce. Mettre 0 pour désactiver cette fonction."
 
 #: supermerill's add: PrintConfig.cpp
 msgid "Join the perimeters to create only one continuous extrusion without any z-hop."
-        " Long inside travel (from external to holes) are not extruded to give some place to the infill."
+        " Long inside travel (from external to holes) are not extruded to give some space to the infill."
 msgstr "Rabouter les périmètres pour en créer une unique et longue extrusion. Lors d'un passage de périmètre extérieur vers intérieur, si l'espace est grand, un déplacemnt sera tout de même utilisé."
 
 #: supermerill's add: PrintConfig.cpp
@@ -4713,13 +4713,13 @@ msgid "If expressed as absolute value in mm/s, this speed will be applied to inf
 msgstr "Si exprimée avec une valeur absolue en mm/s, cette vitesse sera appliquée aux impressions de remplissage de la première couche (et si la vitesse par défaut est plus petite, elle sera utilisée à la place). Si exprimée comme un pourcentage (par exemple 40%), cela modulera la vitesse par défaut."
 
 #: supermerill's add: PrintConfig.cpp
-msgid "Enable gap fill algorithm. It will extrude small lines between perimeter "
-        "when there are not enough space for an other perimeter or an infill."
+msgid "Enable gap fill algorithm. It will extrude small lines between perimeters "
+        "when there is not enough space for another perimeter or an infill."
 msgstr "Active les impression de remplissage des petits trous qui peuvent subsister entre les périmètres et sui sont trop petits pour faire du remplissage."
 
 #: supermerill's add: PrintConfig.cpp
-msgid "Enable the creation of a support layer under the first solid layer. Allow to use lower infill ratio without compromizing the top quality."
-        " The dense infill is layed out with a 50% infill density."
+msgid "Enables the creation of a support layer under the first solid layer. This allows you to use a lower infill ratio without compromising the top quality."
+        " The dense infill is laid out with a 50% infill density."
 msgstr "Active le remplacement du motif de remplissage sous les remplissage plein afin de permettre un meilleur support de ceux-ci. Cela permet de choisir un ratio de remplissage plus petit."
 
 #: supermerill's add: PrintConfig.cpp
@@ -4749,7 +4749,7 @@ msgid "This setting controls the height of last object layers to put the last la
 msgstr "Ce paramètre fonctionne mal, ne l'utilisez pas. Il aurait dû placer la dernière couche exactement à la hauteur de l'objet, mais ça marche mal."
 
 #: supermerill's add: PrintConfig.cpp
-msgid "Experimental option to remove perimeters where there are nothing under and where a bridged infill should be better. Computationaly intensive!"
+msgid "Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. Computationally intensive!"
 msgstr "option très expérimentale pour permettre de ne pas mettre de périmètres s'il n'y a pas de couches en support en-dessous."
 
 #: supermerill's add: PrintConfig.cpp
@@ -4757,7 +4757,7 @@ msgid "Number of perimeters exluded from this option."
 msgstr "Nombre de périmètre qui ne sont pas retirés par cette fonction"
 
 #: supermerill's add: PrintConfig.cpp
-msgid "Only remove perimeters over area marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable."
+msgid "Only remove perimeters over areas marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable."
 msgstr "Ne retirer les périmètres qu'au dessus des endroit où il peut y avoir des ponts. Utile pour garder les surplombs."
 
 #: supermerill's add: PrintConfig.cpp
