@@ -359,14 +359,14 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("enforce_full_fill_volume", coBool);
     def->label = L("Enforce full fill volume");
     def->category = L("Infill");
-    def->tooltip = L("Experimental option wich modify (top/bottom) fill flow to have the exact amount of plastic inside the volume to fill.");
+    def->tooltip = L("Experimental option which modifies (top/bottom) fill flow to have the exact amount of plastic inside the volume to fill.");
     def->cli = "enforce-full-fill-volume!";
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("external_infill_margin", coFloat);
     def->label = L("Default");
     def->category = L("Infill");
-    def->tooltip = L("This parameter grow the top/bottom/solid layers by some mm to anchor them into the part. Put 0 to deactivate it.");
+    def->tooltip = L("This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
     def->sidetext = L("mm");
     def->cli = "top-layer-anchor=f";
     def->min = 0;
@@ -375,7 +375,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("bridged_infill_margin", coFloat);
     def->label = L("Bridged");
     def->category = L("Infill");
-    def->tooltip = L("This parameter grow the bridged solid infill layers by some mm to anchor them into the part. Put 0 to deactivate it.");
+    def->tooltip = L("This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
     def->sidetext = L("mm");
     def->cli = "top-layer-anchor=f";
     def->min = 0;
@@ -415,7 +415,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = L(" ");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Join the perimeters to create only one continuous extrusion without any z-hop."
-        " Long inside travel (from external to holes) are not extruded to give some place to the infill.");
+        " Long inside travel (from external to holes) are not extruded to give some space to the infill.");
     def->cli = "loop-perimeter!";
     def->default_value = new ConfigOptionBool(false);
     
@@ -962,8 +962,8 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("infill_dense", coBool);
     def->label = ("");
     def->category = L("Infill");
-    def->tooltip = L("Enable the creation of a support layer under the first solid layer. Allow to use lower infill ratio without compromizing the top quality."
-        " The dense infill is layed out with a 50% infill density.");
+    def->tooltip = L("Enables the creation of a support layer under the first solid layer. This allows you to use a lower infill ratio without compromizing the top quality."
+        " The dense infill is laid out with a 50% infill density.");
     def->cli = "infill-dense!";
     def->default_value = new ConfigOptionBool(false);
 
@@ -1377,7 +1377,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("no_perimeter_unsupported", coBool);
     def->label = L("");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Experimental option to remove perimeters where there are nothing under and a bridged infill should be better.");
+    def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and a bridged infill should be better.");
     def->cli = "no-perimeter-unsupported!";
     def->default_value = new ConfigOptionBool(false);
 
@@ -1390,9 +1390,9 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInt(0);
 
     def = this->add("noperi_bridge_only", coBool);
-    def->label = L("Only on briged area");
+    def->label = L("Only on bridged areas");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Only remove perimeters over area marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
+    def->tooltip = L("Only remove perimeters over areas marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
     def->cli = "noperi-bridge-only!";
     def->default_value = new ConfigOptionBool(true);
 
