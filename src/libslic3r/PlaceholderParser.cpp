@@ -94,27 +94,76 @@ void PlaceholderParser::update_timestamp(DynamicConfig &config)
     config.set_key_value("second", new ConfigOptionInt(timeinfo->tm_sec));
 }
 
+// Ignore this key by the placeholder parser.
+static inline bool placeholder_parser_ignore(const ConfigDef *def, const std::string &opt_key)
+{
+    const ConfigOptionDef *opt_def = def->get(opt_key);
+    assert(opt_def != nullptr);
+    return (opt_def->multiline && boost::ends_with(opt_key, "_gcode")) || opt_key == "post_process";
+}
+
+static inline bool opts_equal(const DynamicConfig &config_old, const DynamicConfig &config_new, const std::string &opt_key)
+{
+	const ConfigOption *opt_old = config_old.option(opt_key);
+	const ConfigOption *opt_new = config_new.option(opt_key);
+	assert(opt_new != nullptr);
+	if (opt_old == nullptr)
+        return false;
+    return (opt_new->type() == coFloatOrPercent) ?
+		dynamic_cast<const ConfigOptionFloat*>(opt_old)->value == config_new.get_abs_value(opt_key) :
+        *opt_new == *opt_old;
+}
+
+std::vector<std::string> PlaceholderParser::config_diff(const DynamicPrintConfig &rhs)
+{
+    const ConfigDef *def = rhs.def();
+    std::vector<std::string> diff_keys;
+    for (const t_config_option_key &opt_key : rhs.keys())
+        if (! placeholder_parser_ignore(def, opt_key) && ! opts_equal(m_config, rhs, opt_key))
+            diff_keys.emplace_back(opt_key);
+    return diff_keys;
+}
+
 // Scalar configuration values are stored into m_single,
 // vector configuration values are stored into m_multiple.
 // All vector configuration values stored into the PlaceholderParser
 // are expected to be addressed by the extruder ID, therefore
 // if a vector configuration value is addressed without an index,
 // a current extruder ID is used.
-void PlaceholderParser::apply_config(const DynamicPrintConfig &rhs)
+bool PlaceholderParser::apply_config(const DynamicPrintConfig &rhs)
 {
     const ConfigDef *def = rhs.def();
+    bool modified = false;
     for (const t_config_option_key &opt_key : rhs.keys()) {
-        const ConfigOptionDef *opt_def = def->get(opt_key);
-        if ((opt_def->multiline && boost::ends_with(opt_key, "_gcode")) || opt_key == "post_process")
+        if (placeholder_parser_ignore(def, opt_key))
             continue;
-        const ConfigOption *opt = rhs.option(opt_key);
+        if (! opts_equal(m_config, rhs, opt_key)) {
+            // Store a copy of the config option.
+            // Convert FloatOrPercent values to floats first.
+            //FIXME there are some ratio_over chains, which end with empty ratio_with.
+            // For example, XXX_extrusion_width parameters are not handled by get_abs_value correctly.
+			const ConfigOption *opt_rhs = rhs.option(opt_key);
+			this->set(opt_key, (opt_rhs->type() == coFloatOrPercent) ?
+                new ConfigOptionFloat(rhs.get_abs_value(opt_key)) :
+                opt_rhs->clone());
+            modified = true;
+        }
+    }
+    return modified;
+}
+
+void PlaceholderParser::apply_only(const DynamicPrintConfig &rhs, const std::vector<std::string> &keys)
+{
+    for (const t_config_option_key &opt_key : keys) {
+        assert(! placeholder_parser_ignore(rhs.def(), opt_key));
         // Store a copy of the config option.
         // Convert FloatOrPercent values to floats first.
         //FIXME there are some ratio_over chains, which end with empty ratio_with.
         // For example, XXX_extrusion_width parameters are not handled by get_abs_value correctly.
-        this->set(opt_key, (opt->type() == coFloatOrPercent) ?
+        const ConfigOption *opt_rhs = rhs.option(opt_key);
+        this->set(opt_key, (opt_rhs->type() == coFloatOrPercent) ?
             new ConfigOptionFloat(rhs.get_abs_value(opt_key)) :
-            opt->clone());
+            opt_rhs->clone());
     }
 }
 
@@ -442,7 +491,7 @@ namespace client
                 param1.data.d = d;
                 param1.type = TYPE_DOUBLE;
             } else {
-                int i = 0.;
+                int i = 0;
                 switch (fun) {
                     case FUNCTION_MIN:  i = std::min(param1.as_i(), param2.as_i()); break;
                     case FUNCTION_MAX:  i = std::max(param1.as_i(), param2.as_i()); break;

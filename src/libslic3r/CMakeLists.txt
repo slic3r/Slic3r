@@ -1,7 +1,13 @@
 project(libslic3r)
 cmake_minimum_required(VERSION 2.6)
 
+include(PrecompiledHeader)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libslic3r_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h @ONLY)
+
 add_library(libslic3r STATIC
+    pchheader.cpp
+    pchheader.hpp
     BoundingBox.cpp
     BoundingBox.hpp
     BridgeDetector.cpp
@@ -96,11 +102,13 @@ add_library(libslic3r STATIC
     Layer.hpp
     LayerRegion.cpp
     libslic3r.h
+    "${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h"
     Line.cpp
     Line.hpp
     Model.cpp
     Model.hpp
     ModelArrange.hpp
+    ModelArrange.cpp
     MotionPlanner.cpp
     MotionPlanner.hpp
     MultiPoint.cpp
@@ -120,6 +128,8 @@ add_library(libslic3r STATIC
     PolylineCollection.hpp
     Print.cpp
     Print.hpp
+    PrintBase.cpp
+    PrintBase.hpp
     PrintExport.hpp
     PrintConfig.cpp
     PrintConfig.hpp
@@ -127,6 +137,10 @@ add_library(libslic3r STATIC
     PrintRegion.cpp
     Rasterizer/Rasterizer.hpp
     Rasterizer/Rasterizer.cpp
+    SLAPrint.cpp
+    SLAPrint.hpp
+    SLA/SLAAutoSupports.hpp
+    SLA/SLAAutoSupports.cpp
     Slicing.cpp
     Slicing.hpp
     SlicingAdaptive.cpp
@@ -142,30 +156,42 @@ add_library(libslic3r STATIC
     Technologies.hpp
     TriangleMesh.cpp
     TriangleMesh.hpp
-    SLABasePool.hpp
-    SLABasePool.cpp
     utils.cpp
     Utils.hpp
+    MTUtils.hpp
+    SLA/SLABoilerPlate.hpp
+    SLA/SLABasePool.hpp
+    SLA/SLABasePool.cpp
+    SLA/SLASupportTree.hpp
+    SLA/SLASupportTree.cpp
+    SLA/SLASupportTreeIGL.cpp
+    SLA/SLARotfinder.hpp
+    SLA/SLARotfinder.cpp
+    SLA/SLABoostAdapter.hpp
+    SLA/SLASpatIndex.hpp
 )
 
+if (NOT SLIC3R_SYNTAXONLY)
+    add_precompiled_header(libslic3r pchheader.hpp FORCEINCLUDE)
+endif ()
+
 target_compile_definitions(libslic3r PUBLIC -DUSE_TBB ${PNG_DEFINITIONS})
-target_include_directories(libslic3r PUBLIC BEFORE ${LIBNEST2D_INCLUDES} ${PNG_INCLUDE_DIRS})
+target_include_directories(libslic3r PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${LIBNEST2D_INCLUDES} ${PNG_INCLUDE_DIRS} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(libslic3r
-    ${LIBNEST2D_LIBRARIES}
+    libnest2d
     admesh
-    miniz 
+    miniz
     ${Boost_LIBRARIES}
-    clipper 
+    clipper
     nowide
-    ${EXPAT_LIBRARIES} 
-    ${GLEW_LIBRARIES} 
+    ${EXPAT_LIBRARIES}
+    ${GLEW_LIBRARIES}
     ${PNG_LIBRARIES}
-    polypartition 
-    poly2tri 
+    polypartition
+    poly2tri
     qhull
     semver
-    ${TBB_LIBRARIES} 
-#    ${wxWidgets_LIBRARIES}
+    tbb
     )
 
 if(SLIC3R_PROFILE)

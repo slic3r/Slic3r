@@ -2,7 +2,7 @@
 #include "../Model.hpp"
 #include "../Utils.hpp"
 #include "../GCode.hpp"
-#include "../slic3r/GUI/PresetBundle.hpp"
+#include "../Geometry.hpp"
 
 #include "3mf.hpp"
 
@@ -30,6 +30,7 @@ const std::string RELATIONSHIPS_FILE = "_rels/.rels";
 const std::string PRINT_CONFIG_FILE = "Metadata/Slic3r_PE.config";
 const std::string MODEL_CONFIG_FILE = "Metadata/Slic3r_PE_model.config";
 const std::string LAYER_HEIGHTS_PROFILE_FILE = "Metadata/Slic3r_PE_layer_heights_profile.txt";
+const std::string SLA_SUPPORT_POINTS_FILE = "Metadata/Slic3r_PE_sla_support_points.txt";
 
 const char* MODEL_TAG = "model";
 const char* RESOURCES_TAG = "resources";
@@ -322,6 +323,7 @@ namespace Slic3r {
         typedef std::map<int, ObjectMetadata> IdToMetadataMap;
         typedef std::map<int, Geometry> IdToGeometryMap;
         typedef std::map<int, std::vector<coordf_t>> IdToLayerHeightsProfileMap;
+        typedef std::map<int, std::vector<Vec3f>> IdToSlaSupportPointsMap;
 
         // Version of the 3mf file
         unsigned int m_version;
@@ -337,23 +339,27 @@ namespace Slic3r {
         CurrentConfig m_curr_config;
         IdToMetadataMap m_objects_metadata;
         IdToLayerHeightsProfileMap m_layer_heights_profiles;
+        IdToSlaSupportPointsMap m_sla_support_points;
         std::string m_curr_metadata_name;
         std::string m_curr_characters;
+        std::string m_name;
 
     public:
         _3MF_Importer();
         ~_3MF_Importer();
 
-        bool load_model_from_file(const std::string& filename, Model& model, PresetBundle& bundle);
+        bool load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config);
 
     private:
         void _destroy_xml_parser();
         void _stop_xml_parser();
 
-        bool _load_model_from_file(const std::string& filename, Model& model, PresetBundle& bundle);
+        bool _load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config);
         bool _extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
         void _extract_layer_heights_profile_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
-        void _extract_print_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, PresetBundle& bundle, const std::string& archive_filename);
+        void _extract_sla_support_points_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
+
+        void _extract_print_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, DynamicPrintConfig& config, const std::string& archive_filename);
         bool _extract_model_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, Model& model);
 
         // handlers to parse the .model file
@@ -439,6 +445,7 @@ namespace Slic3r {
         , m_unit_factor(1.0f)
         , m_curr_metadata_name("")
         , m_curr_characters("")
+        , m_name("")
     {
     }
 
@@ -447,7 +454,7 @@ namespace Slic3r {
         _destroy_xml_parser();
     }
 
-    bool _3MF_Importer::load_model_from_file(const std::string& filename, Model& model, PresetBundle& bundle)
+    bool _3MF_Importer::load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config)
     {
         m_version = 0;
         m_model = &model;
@@ -461,11 +468,12 @@ namespace Slic3r {
         m_curr_config.volume_id = -1;
         m_objects_metadata.clear();
         m_layer_heights_profiles.clear();
+        m_sla_support_points.clear();
         m_curr_metadata_name.clear();
         m_curr_characters.clear();
         clear_errors();
 
-        return _load_model_from_file(filename, model, bundle);
+        return _load_model_from_file(filename, model, config);
     }
 
     void _3MF_Importer::_destroy_xml_parser()
@@ -483,7 +491,7 @@ namespace Slic3r {
             XML_StopParser(m_xml_parser, false);
     }
 
-    bool _3MF_Importer::_load_model_from_file(const std::string& filename, Model& model, PresetBundle& bundle)
+    bool _3MF_Importer::_load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config)
     {
         mz_zip_archive archive;
         mz_zip_zero_struct(&archive);
@@ -498,6 +506,8 @@ namespace Slic3r {
         mz_uint num_entries = mz_zip_reader_get_num_files(&archive);
 
         mz_zip_archive_file_stat stat;
+
+        m_name = boost::filesystem::path(filename).filename().stem().string();
 
         // we first loop the entries to read from the archive the .model file only, in order to extract the version from it
         for (mz_uint i = 0; i < num_entries; ++i)
@@ -533,10 +543,15 @@ namespace Slic3r {
                     // extract slic3r lazer heights profile file
                     _extract_layer_heights_profile_config_from_archive(archive, stat);
                 }
+                else if (boost::algorithm::iequals(name, SLA_SUPPORT_POINTS_FILE))
+                {
+                    // extract sla support points file
+                    _extract_sla_support_points_from_archive(archive, stat);
+                }
                 else if (boost::algorithm::iequals(name, PRINT_CONFIG_FILE))
                 {
                     // extract slic3r print config file
-                    _extract_print_config_from_archive(archive, stat, bundle, filename);
+                    _extract_print_config_from_archive(archive, stat, config, filename);
                 }
                 else if (boost::algorithm::iequals(name, MODEL_CONFIG_FILE))
                 {
@@ -571,6 +586,10 @@ namespace Slic3r {
                 object.second->layer_height_profile = obj_layer_heights_profile->second;
                 object.second->layer_height_profile_valid = true;
             }
+
+            IdToSlaSupportPointsMap::iterator obj_sla_support_points = m_sla_support_points.find(object.first);
+            if (obj_sla_support_points != m_sla_support_points.end() && !obj_sla_support_points->second.empty())
+                object.second->sla_support_points = obj_sla_support_points->second;
 
             IdToMetadataMap::iterator obj_metadata = m_objects_metadata.find(object.first);
             if (obj_metadata != m_objects_metadata.end())
@@ -656,7 +675,7 @@ namespace Slic3r {
         return true;
     }
 
-    void _3MF_Importer::_extract_print_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, PresetBundle& bundle, const std::string& archive_filename)
+    void _3MF_Importer::_extract_print_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, DynamicPrintConfig& config, const std::string& archive_filename)
     {
         if (stat.m_uncomp_size > 0)
         {
@@ -667,7 +686,7 @@ namespace Slic3r {
                 add_error("Error while reading config data to buffer");
                 return;
             }
-            bundle.load_config_string(buffer.data(), archive_filename.c_str());
+            config.load_from_gcode_string(buffer.data());
         }
     }
 
@@ -741,6 +760,71 @@ namespace Slic3r {
             }
         }
     }
+
+    void _3MF_Importer::_extract_sla_support_points_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat)
+    {
+        if (stat.m_uncomp_size > 0)
+        {
+            std::string buffer((size_t)stat.m_uncomp_size, 0);
+            mz_bool res = mz_zip_reader_extract_file_to_mem(&archive, stat.m_filename, (void*)buffer.data(), (size_t)stat.m_uncomp_size, 0);
+            if (res == 0)
+            {
+                add_error("Error while reading sla support points data to buffer");
+                return;
+            }
+
+            if (buffer.back() == '\n')
+                buffer.pop_back();
+
+            std::vector<std::string> objects;
+            boost::split(objects, buffer, boost::is_any_of("\n"), boost::token_compress_off);
+
+            for (const std::string& object : objects)
+            {
+                std::vector<std::string> object_data;
+                boost::split(object_data, object, boost::is_any_of("|"), boost::token_compress_off);
+                if (object_data.size() != 2)
+                {
+                    add_error("Error while reading object data");
+                    continue;
+                }
+
+                std::vector<std::string> object_data_id;
+                boost::split(object_data_id, object_data[0], boost::is_any_of("="), boost::token_compress_off);
+                if (object_data_id.size() != 2)
+                {
+                    add_error("Error while reading object id");
+                    continue;
+                }
+
+                int object_id = std::atoi(object_data_id[1].c_str());
+                if (object_id == 0)
+                {
+                    add_error("Found invalid object id");
+                    continue;
+                }
+
+                IdToSlaSupportPointsMap::iterator object_item = m_sla_support_points.find(object_id);
+                if (object_item != m_sla_support_points.end())
+                {
+                    add_error("Found duplicated SLA support points");
+                    continue;
+                }
+
+                std::vector<std::string> object_data_points;
+                boost::split(object_data_points, object_data[1], boost::is_any_of(" "), boost::token_compress_off);
+
+                std::vector<Vec3f> sla_support_points;
+
+                for (unsigned int i=0; i<object_data_points.size(); i+=3)
+                    sla_support_points.push_back(Vec3d(std::atof(object_data_points[i+0].c_str()), std::atof(object_data_points[i+1].c_str()), std::atof(object_data_points[i+2].c_str())).cast<float>());
+
+                if (!sla_support_points.empty())
+                    m_sla_support_points.insert(IdToSlaSupportPointsMap::value_type(object_id, sla_support_points));
+            }
+        }
+    }
+
 
     bool _3MF_Importer::_extract_model_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, Model& model)
     {
@@ -971,6 +1055,9 @@ namespace Slic3r {
 
             // set object data
             m_curr_object.object->name = get_attribute_value_string(attributes, num_attributes, NAME_ATTR);
+            if (m_curr_object.object->name.empty())
+                m_curr_object.object->name = m_name + "_" + std::to_string(m_model->objects.size());
+
             m_curr_object.id = get_attribute_value_int(attributes, num_attributes, ID_ATTR);
         }
 
@@ -1249,57 +1336,49 @@ namespace Slic3r {
 
     void _3MF_Importer::_apply_transform(ModelInstance& instance, const Transform3d& transform)
     {
-        // slic3r ModelInstance cannot be transformed using a matrix
-        // we extract from the given matrix only the values currently used
+#if ENABLE_MODELVOLUME_TRANSFORM
+        Slic3r::Geometry::Transformation t(transform);
+        // invalid scale value, return
+        if (!t.get_scaling_factor().all())
+            return;
 
-        // translation
-#if ENABLE_MODELINSTANCE_3D_OFFSET
-        Vec3d offset(transform(0, 3), transform(1, 3), transform(2, 3));
+        instance.set_transformation(t);
 #else
-        double offset_x = transform(0, 3);
-        double offset_y = transform(1, 3);
-        double offset_z = transform(2, 3);
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+        // translation
+        Vec3d offset = transform.matrix().block(0, 3, 3, 1);
+
+        Eigen::Matrix<double, 3, 3, Eigen::DontAlign> m3x3 = transform.matrix().block(0, 0, 3, 3);
+        // mirror
+        // it is impossible to reconstruct the original mirroring factors from a matrix,
+        // we can only detect if the matrix contains a left handed reference system
+        // in which case we reorient it back to right handed by mirroring the x axis
+        Vec3d mirror = Vec3d::Ones();
+        if (m3x3.col(0).dot(m3x3.col(1).cross(m3x3.col(2))) < 0.0)
+        {
+            mirror(0) = -1.0;
+            // remove mirror
+            m3x3.col(0) *= -1.0;
+        }
 
         // scale
-        double sx = ::sqrt(sqr(transform(0, 0)) + sqr(transform(1, 0)) + sqr(transform(2, 0)));
-        double sy = ::sqrt(sqr(transform(0, 1)) + sqr(transform(1, 1)) + sqr(transform(2, 1)));
-        double sz = ::sqrt(sqr(transform(0, 2)) + sqr(transform(1, 2)) + sqr(transform(2, 2)));
+        Vec3d scale(m3x3.col(0).norm(), m3x3.col(1).norm(), m3x3.col(2).norm());
 
         // invalid scale value, return
-        if ((sx == 0.0) || (sy == 0.0) || (sz == 0.0))
+        if ((scale(0) == 0.0) || (scale(1) == 0.0) || (scale(2) == 0.0))
             return;
 
-        // non-uniform scale value, return
-        if ((std::abs(sx - sy) > 0.00001) || (std::abs(sx - sz) > 0.00001))
-            return;
+        // remove scale
+        m3x3.col(0).normalize();
+        m3x3.col(1).normalize();
+        m3x3.col(2).normalize();
 
-        double inv_sx = 1.0 / sx;
-        double inv_sy = 1.0 / sy;
-        double inv_sz = 1.0 / sz;
+        Vec3d rotation = Slic3r::Geometry::extract_euler_angles(m3x3);
 
-        Eigen::Matrix3d m3x3;
-        m3x3 << transform(0, 0) * inv_sx, transform(0, 1) * inv_sy, transform(0, 2) * inv_sz,
-                transform(1, 0) * inv_sx, transform(1, 1) * inv_sy, transform(1, 2) * inv_sz,
-                transform(2, 0) * inv_sx, transform(2, 1) * inv_sy, transform(2, 2) * inv_sz;
-
-        Eigen::AngleAxisd rotation;
-        rotation.fromRotationMatrix(m3x3);
-
-        // invalid rotation axis, we currently handle only rotations around Z axis
-        if ((rotation.angle() != 0.0) && (rotation.axis() != Vec3d::UnitZ()) && (rotation.axis() != -Vec3d::UnitZ()))
-            return;
-
-        double angle_z = (rotation.axis() == Vec3d::UnitZ()) ? rotation.angle() : -rotation.angle();
-
-#if ENABLE_MODELINSTANCE_3D_OFFSET
         instance.set_offset(offset);
-#else
-        instance.offset(0) = offset_x;
-        instance.offset(1) = offset_y;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
-        instance.scaling_factor = sx;
-        instance.rotation = angle_z;
+        instance.set_scaling_factor(scale);
+        instance.set_rotation(rotation);
+        instance.set_mirror(mirror);
+#endif // ENABLE_MODELVOLUME_TRANSFORM
     }
 
     bool _3MF_Importer::_handle_start_config(const char** attributes, unsigned int num_attributes)
@@ -1344,7 +1423,7 @@ namespace Slic3r {
             return false;
         }
 
-        m_curr_config.volume_id = object->second.volumes.size();
+        m_curr_config.volume_id = (int)object->second.volumes.size();
 
         unsigned int first_triangle_id = (unsigned int)get_attribute_value_int(attributes, num_attributes, FIRST_TRIANGLE_ID_ATTR);
         unsigned int last_triangle_id = (unsigned int)get_attribute_value_int(attributes, num_attributes, LAST_TRIANGLE_ID_ATTR);
@@ -1402,7 +1481,7 @@ namespace Slic3r {
             return false;
         }
 
-        unsigned int geo_tri_count = geometry.triangles.size() / 3;
+        unsigned int geo_tri_count = (unsigned int)geometry.triangles.size() / 3;
 
         for (const ObjectMetadata::VolumeMetadata& volume_data : volumes)
         {
@@ -1423,7 +1502,7 @@ namespace Slic3r {
 
             unsigned int src_start_id = volume_data.first_triangle_id * 3;
 
-            for (size_t i = 0; i < triangles_count; ++i)
+            for (unsigned int i = 0; i < triangles_count; ++i)
             {
                 unsigned int ii = i * 3;
                 stl_facet& facet = stl.facet_start[i];
@@ -1536,10 +1615,10 @@ namespace Slic3r {
         IdToObjectDataMap m_objects_data;
 
     public:
-        bool save_model_to_file(const std::string& filename, Model& model, const Print& print, bool export_print_config);
+        bool save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config);
 
     private:
-        bool _save_model_to_file(const std::string& filename, Model& model, const Print& print, bool export_print_config);
+        bool _save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config);
         bool _add_content_types_file_to_archive(mz_zip_archive& archive);
         bool _add_relationships_file_to_archive(mz_zip_archive& archive);
         bool _add_model_file_to_archive(mz_zip_archive& archive, Model& model);
@@ -1547,17 +1626,18 @@ namespace Slic3r {
         bool _add_mesh_to_object_stream(std::stringstream& stream, ModelObject& object, VolumeToOffsetsMap& volumes_offsets);
         bool _add_build_to_model_stream(std::stringstream& stream, const BuildItemsList& build_items);
         bool _add_layer_height_profile_file_to_archive(mz_zip_archive& archive, Model& model);
-        bool _add_print_config_file_to_archive(mz_zip_archive& archive, const Print& print);
+        bool _add_sla_support_points_file_to_archive(mz_zip_archive& archive, Model& model);
+        bool _add_print_config_file_to_archive(mz_zip_archive& archive, const DynamicPrintConfig &config);
         bool _add_model_config_file_to_archive(mz_zip_archive& archive, const Model& model);
     };
 
-    bool _3MF_Exporter::save_model_to_file(const std::string& filename, Model& model, const Print& print, bool export_print_config)
+    bool _3MF_Exporter::save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config)
     {
         clear_errors();
-        return _save_model_to_file(filename, model, print, export_print_config);
+        return _save_model_to_file(filename, model, config);
     }
 
-    bool _3MF_Exporter::_save_model_to_file(const std::string& filename, Model& model, const Print& print, bool export_print_config)
+    bool _3MF_Exporter::_save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config)
     {
         mz_zip_archive archive;
         mz_zip_zero_struct(&archive);
@@ -1603,10 +1683,18 @@ namespace Slic3r {
             return false;
         }
 
-        // adds slic3r print config file
-        if (export_print_config)
+        // adds sla support points file
+        if (!_add_sla_support_points_file_to_archive(archive, model))
         {
-            if (!_add_print_config_file_to_archive(archive, print))
+            mz_zip_writer_end(&archive);
+            boost::filesystem::remove(filename);
+            return false;
+        }
+
+        // adds slic3r print config file
+        if (config != nullptr)
+        {
+            if (!_add_print_config_file_to_archive(archive, *config))
             {
                 mz_zip_writer_end(&archive);
                 boost::filesystem::remove(filename);
@@ -1747,7 +1835,7 @@ namespace Slic3r {
                 stream << "   </" << COMPONENTS_TAG << ">\n";
             }
 
-            Transform3d t = instance->world_matrix();
+            Transform3d t = instance->get_matrix();
             build_items.emplace_back(instance_id, t);
 
             stream << "  </" << OBJECT_TAG << ">\n";
@@ -1770,7 +1858,7 @@ namespace Slic3r {
             if (volume == nullptr)
                 continue;
 
-            VolumeToOffsetsMap::iterator volume_it = volumes_offsets.insert(VolumeToOffsetsMap::value_type(volume, Offsets(vertices_count))).first;
+            volumes_offsets.insert(VolumeToOffsetsMap::value_type(volume, Offsets(vertices_count))).first;
 
             if (!volume->mesh.repaired)
                 volume->mesh.repair();
@@ -1787,12 +1875,23 @@ namespace Slic3r {
 
             vertices_count += stl.stats.shared_vertices;
 
+#if ENABLE_MODELVOLUME_TRANSFORM
+            const Transform3d& matrix = volume->get_matrix();
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+
             for (int i = 0; i < stl.stats.shared_vertices; ++i)
             {
                 stream << "     <" << VERTEX_TAG << " ";
+#if ENABLE_MODELVOLUME_TRANSFORM
+                Vec3d v = matrix * stl.v_shared[i].cast<double>();
+                stream << "x=\"" << v(0) << "\" ";
+                stream << "y=\"" << v(1) << "\" ";
+                stream << "z=\"" << v(2) << "\" />\n";
+#else
                 stream << "x=\"" << stl.v_shared[i](0) << "\" ";
                 stream << "y=\"" << stl.v_shared[i](1) << "\" ";
                 stream << "z=\"" << stl.v_shared[i](2) << "\" />\n";
+#endif // ENABLE_MODELVOLUME_TRANSFORM
             }
         }
 
@@ -1900,13 +1999,51 @@ namespace Slic3r {
         return true;
     }
 
-    bool _3MF_Exporter::_add_print_config_file_to_archive(mz_zip_archive& archive, const Print& print)
+    bool _3MF_Exporter::_add_sla_support_points_file_to_archive(mz_zip_archive& archive, Model& model)
+    {
+        std::string out = "";
+        char buffer[1024];
+
+        unsigned int count = 0;
+        for (const ModelObject* object : model.objects)
+        {
+            ++count;
+            const std::vector<Vec3f>& sla_support_points = object->sla_support_points;
+            if (!sla_support_points.empty())
+            {
+                sprintf(buffer, "object_id=%d|", count);
+                out += buffer;
+
+                // Store the layer height profile as a single space separated list.
+                for (size_t i = 0; i < sla_support_points.size(); ++i)
+                {
+                    sprintf(buffer, (i==0 ? "%f %f %f" : " %f %f %f"),  sla_support_points[i](0), sla_support_points[i](1), sla_support_points[i](2));
+                    out += buffer;
+                }
+                out += "\n";
+            }
+        }
+
+        if (!out.empty())
+        {
+            if (!mz_zip_writer_add_mem(&archive, SLA_SUPPORT_POINTS_FILE.c_str(), (const void*)out.data(), out.length(), MZ_DEFAULT_COMPRESSION))
+            {
+                add_error("Unable to add sla support points file to archive");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool _3MF_Exporter::_add_print_config_file_to_archive(mz_zip_archive& archive, const DynamicPrintConfig &config)
     {
         char buffer[1024];
         sprintf(buffer, "; %s\n\n", header_slic3r_generated().c_str());
         std::string out = buffer;
 
-        GCode::append_full_config(print, out);
+        for (const std::string &key : config.keys())
+            if (key != "compatible_printers")
+                out += "; " + key + " = " + config.serialize(key) + "\n";
 
         if (!out.empty())
         {
@@ -1995,24 +2132,24 @@ namespace Slic3r {
         return true;
     }
 
-    bool load_3mf(const char* path, PresetBundle* bundle, Model* model)
+    bool load_3mf(const char* path, DynamicPrintConfig* config, Model* model)
     {
-        if ((path == nullptr) || (bundle == nullptr) || (model == nullptr))
+        if ((path == nullptr) || (config == nullptr) || (model == nullptr))
             return false;
 
         _3MF_Importer importer;
-        bool res = importer.load_model_from_file(path, *model, *bundle);
+        bool res = importer.load_model_from_file(path, *model, *config);
         importer.log_errors();
         return res;
     }
 
-    bool store_3mf(const char* path, Model* model, Print* print, bool export_print_config)
+    bool store_3mf(const char* path, Model* model, const DynamicPrintConfig* config)
     {
-        if ((path == nullptr) || (model == nullptr) || (print == nullptr))
+        if ((path == nullptr) || (model == nullptr))
             return false;
 
         _3MF_Exporter exporter;
-        bool res = exporter.save_model_to_file(path, *model, *print, export_print_config);
+        bool res = exporter.save_model_to_file(path, *model, config);
 
         if (!res)
             exporter.log_errors();

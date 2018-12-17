@@ -1,3 +1,4 @@
+#include "libslic3r.h"
 #include "Geometry.hpp"
 #include "ClipperUtils.hpp"
 #include "ExPolygon.hpp"
@@ -368,12 +369,6 @@ contains(const std::vector<T> &vector, const Point &point)
     return false;
 }
 template bool contains(const ExPolygons &vector, const Point &point);
-
-double
-rad2deg(double angle)
-{
-    return angle / PI * 180.0;
-}
 
 double
 rad2deg_dir(double angle)
@@ -898,5 +893,229 @@ private:
     const Lines &lines;
 };
 
+
+void assemble_transform(Transform3d& transform, const Vec3d& translation, const Vec3d& rotation, const Vec3d& scale, const Vec3d& mirror)
+{
+    transform = Transform3d::Identity();
+    transform.translate(translation);
+    transform.rotate(Eigen::AngleAxisd(rotation(2), Vec3d::UnitZ()));
+    transform.rotate(Eigen::AngleAxisd(rotation(1), Vec3d::UnitY()));
+    transform.rotate(Eigen::AngleAxisd(rotation(0), Vec3d::UnitX()));
+    transform.scale(scale);
+    transform.scale(mirror);
+}
+
+Transform3d assemble_transform(const Vec3d& translation, const Vec3d& rotation, const Vec3d& scale, const Vec3d& mirror)
+{
+    Transform3d transform;
+    assemble_transform(transform, translation, rotation, scale, mirror);
+    return transform;
+}
+
+Vec3d extract_euler_angles(const Eigen::Matrix<double, 3, 3, Eigen::DontAlign>& rotation_matrix)
+{
+    // see: https://www.learnopencv.com/rotation-matrix-to-euler-angles/
+    double sy = ::sqrt(sqr(rotation_matrix(0, 0)) + sqr(rotation_matrix(1, 0)));
+
+    Vec3d angles = Vec3d::Zero();
+
+    if (sy >= 1e-6)
+    {
+        angles(0) = ::atan2(rotation_matrix(2, 1), rotation_matrix(2, 2));
+        angles(1) = ::atan2(-rotation_matrix(2, 0), sy);
+        angles(2) = ::atan2(rotation_matrix(1, 0), rotation_matrix(0, 0));
+    }
+    else
+    {
+        angles(0) = ::atan2(-rotation_matrix(1, 2), rotation_matrix(1, 1));
+        angles(1) = ::atan2(-rotation_matrix(2, 0), sy);
+        angles(2) = 0.0;
+    }
+
+    return angles;
+}
+
+Vec3d extract_euler_angles(const Transform3d& transform)
+{
+    // use only the non-translational part of the transform
+    Eigen::Matrix<double, 3, 3, Eigen::DontAlign> m = transform.matrix().block(0, 0, 3, 3);
+    // remove scale
+    m.col(0).normalize();
+    m.col(1).normalize();
+    m.col(2).normalize();
+    return extract_euler_angles(m);
+}
+
+#if ENABLE_MODELVOLUME_TRANSFORM
+Transformation::Flags::Flags()
+    : dont_translate(true)
+    , dont_rotate(true)
+    , dont_scale(true)
+    , dont_mirror(true)
+{
+}
+
+bool Transformation::Flags::needs_update(bool dont_translate, bool dont_rotate, bool dont_scale, bool dont_mirror) const
+{
+    return (this->dont_translate != dont_translate) || (this->dont_rotate != dont_rotate) || (this->dont_scale != dont_scale) || (this->dont_mirror != dont_mirror);
+}
+
+void Transformation::Flags::set(bool dont_translate, bool dont_rotate, bool dont_scale, bool dont_mirror)
+{
+    this->dont_translate = dont_translate;
+    this->dont_rotate = dont_rotate;
+    this->dont_scale = dont_scale;
+    this->dont_mirror = dont_mirror;
+}
+
+Transformation::Transformation()
+    : m_offset(Vec3d::Zero())
+    , m_rotation(Vec3d::Zero())
+    , m_scaling_factor(Vec3d::Ones())
+    , m_mirror(Vec3d::Ones())
+    , m_matrix(Transform3d::Identity())
+    , m_dirty(false)
+{
+}
+
+Transformation::Transformation(const Transform3d& transform)
+{
+    set_from_transform(transform);
+}
+
+void Transformation::set_offset(const Vec3d& offset)
+{
+    set_offset(X, offset(0));
+    set_offset(Y, offset(1));
+    set_offset(Z, offset(2));
+}
+
+void Transformation::set_offset(Axis axis, double offset)
+{
+    if (m_offset(axis) != offset)
+    {
+        m_offset(axis) = offset;
+        m_dirty = true;
+    }
+}
+
+void Transformation::set_rotation(const Vec3d& rotation)
+{
+    set_rotation(X, rotation(0));
+    set_rotation(Y, rotation(1));
+    set_rotation(Z, rotation(2));
+}
+
+void Transformation::set_rotation(Axis axis, double rotation)
+{
+    rotation = angle_to_0_2PI(rotation);
+
+    if (m_rotation(axis) != rotation)
+    {
+        m_rotation(axis) = rotation;
+        m_dirty = true;
+    }
+}
+
+void Transformation::set_scaling_factor(const Vec3d& scaling_factor)
+{
+    set_scaling_factor(X, scaling_factor(0));
+    set_scaling_factor(Y, scaling_factor(1));
+    set_scaling_factor(Z, scaling_factor(2));
+}
+
+void Transformation::set_scaling_factor(Axis axis, double scaling_factor)
+{
+    if (m_scaling_factor(axis) != std::abs(scaling_factor))
+    {
+        m_scaling_factor(axis) = std::abs(scaling_factor);
+        m_dirty = true;
+    }
+}
+
+void Transformation::set_mirror(const Vec3d& mirror)
+{
+    set_mirror(X, mirror(0));
+    set_mirror(Y, mirror(1));
+    set_mirror(Z, mirror(2));
+}
+
+void Transformation::set_mirror(Axis axis, double mirror)
+{
+    double abs_mirror = std::abs(mirror);
+    if (abs_mirror == 0.0)
+        mirror = 1.0;
+    else if (abs_mirror != 1.0)
+        mirror /= abs_mirror;
+
+    if (m_mirror(axis) != mirror)
+    {
+        m_mirror(axis) = mirror;
+        m_dirty = true;
+    }
+}
+
+void Transformation::set_from_transform(const Transform3d& transform)
+{
+    // offset
+    set_offset(transform.matrix().block(0, 3, 3, 1));
+
+    Eigen::Matrix<double, 3, 3, Eigen::DontAlign> m3x3 = transform.matrix().block(0, 0, 3, 3);
+
+    // mirror
+    // it is impossible to reconstruct the original mirroring factors from a matrix,
+    // we can only detect if the matrix contains a left handed reference system
+    // in which case we reorient it back to right handed by mirroring the x axis
+    Vec3d mirror = Vec3d::Ones();
+    if (m3x3.col(0).dot(m3x3.col(1).cross(m3x3.col(2))) < 0.0)
+    {
+        mirror(0) = -1.0;
+        // remove mirror
+        m3x3.col(0) *= -1.0;
+    }
+    set_mirror(mirror);
+
+    // scale
+    set_scaling_factor(Vec3d(m3x3.col(0).norm(), m3x3.col(1).norm(), m3x3.col(2).norm()));
+
+    // remove scale
+    m3x3.col(0).normalize();
+    m3x3.col(1).normalize();
+    m3x3.col(2).normalize();
+
+    // rotation
+    set_rotation(extract_euler_angles(m3x3));
+
+    // forces matrix recalculation matrix
+    m_matrix = get_matrix();
+
+//    // debug check
+//    if (!m_matrix.isApprox(transform))
+//        std::cout << "something went wrong in extracting data from matrix" << std::endl;
+}
+
+const Transform3d& Transformation::get_matrix(bool dont_translate, bool dont_rotate, bool dont_scale, bool dont_mirror) const
+{
+    if (m_dirty || m_flags.needs_update(dont_translate, dont_rotate, dont_scale, dont_mirror))
+    {
+        m_matrix = Geometry::assemble_transform(
+            dont_translate ? Vec3d::Zero() : m_offset, 
+            dont_rotate ? Vec3d::Zero() : m_rotation,
+            dont_scale ? Vec3d::Ones() : m_scaling_factor,
+            dont_mirror ? Vec3d::Ones() : m_mirror
+            );
+
+        m_flags.set(dont_translate, dont_rotate, dont_scale, dont_mirror);
+        m_dirty = false;
+    }
+
+    return m_matrix;
+}
+
+Transformation Transformation::operator * (const Transformation& other) const
+{
+    return Transformation(get_matrix() * other.get_matrix());
+}
+#endif // ENABLE_MODELVOLUME_TRANSFORM
 
 } }

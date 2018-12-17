@@ -19,35 +19,68 @@
 
 namespace Slic3r {
 
-    unsigned int Model::s_auto_extruder_id = 1;
+unsigned int Model::s_auto_extruder_id = 1;
 
-Model::Model(const Model &other)
+size_t ModelBase::s_last_id = 0;
+
+Model& Model::assign_copy(const Model &rhs)
 {
+    this->copy_id(rhs);
     // copy materials
-    for (const auto &m : other.materials)
-        this->add_material(m.first, *m.second);
+    this->clear_materials();
+    this->materials = rhs.materials;
+    for (std::pair<const t_model_material_id, ModelMaterial*> &m : this->materials) {
+        // Copy including the ID and m_model.
+        m.second = new ModelMaterial(*m.second);
+        m.second->set_model(this);
+    }
     // copy objects
-    this->objects.reserve(other.objects.size());
-    for (const ModelObject *o : other.objects)
-        this->add_object(*o, true);
-}
-
-Model& Model::operator=(Model other)
-{
-    this->swap(other);
+    this->clear_objects();
+    this->objects.reserve(rhs.objects.size());
+	for (const ModelObject *model_object : rhs.objects) {
+        // Copy including the ID, leave ID set to invalid (zero).
+        auto mo = ModelObject::new_copy(*model_object);
+        mo->set_model(this);
+		this->objects.emplace_back(mo);
+    }
     return *this;
 }
 
-void Model::swap(Model &other)
+Model& Model::assign_copy(Model &&rhs)
 {
-    std::swap(this->materials,  other.materials);
-    std::swap(this->objects,    other.objects);
+    this->copy_id(rhs);
+	// Move materials, adjust the parent pointer.
+    this->clear_materials();
+    this->materials = std::move(rhs.materials);
+    for (std::pair<const t_model_material_id, ModelMaterial*> &m : this->materials)
+        m.second->set_model(this);
+    rhs.materials.clear();
+    // Move objects, adjust the parent pointer.
+    this->clear_objects();
+	this->objects = std::move(rhs.objects);
+    for (ModelObject *model_object : this->objects)
+        model_object->set_model(this);
+	rhs.objects.clear();
+    return *this;
 }
 
-Model Model::read_from_file(const std::string &input_file, bool add_default_instances)
+void Model::assign_new_unique_ids_recursive()
+{
+    this->set_new_unique_id();
+    for (std::pair<const t_model_material_id, ModelMaterial*> &m : this->materials)
+        m.second->assign_new_unique_ids_recursive();
+    for (ModelObject *model_object : this->objects)
+        model_object->assign_new_unique_ids_recursive();
+}
+
+Model Model::read_from_file(const std::string &input_file, DynamicPrintConfig *config, bool add_default_instances)
 {
     Model model;
-    
+
+    DynamicPrintConfig temp_config;
+    if (config == nullptr)
+        config = &temp_config;
+
     bool result = false;
     if (boost::algorithm::iends_with(input_file, ".stl"))
         result = load_stl(input_file.c_str(), &model);
@@ -55,11 +88,11 @@ Model Model::read_from_file(const std::string &input_file, bool add_default_inst
         result = load_obj(input_file.c_str(), &model);
     else if (!boost::algorithm::iends_with(input_file, ".zip.amf") && (boost::algorithm::iends_with(input_file, ".amf") ||
         boost::algorithm::iends_with(input_file, ".amf.xml")))
-        result = load_amf(input_file.c_str(), nullptr, &model);
-#ifdef SLIC3R_PRUS
+        result = load_amf(input_file.c_str(), config, &model);
+    else if (boost::algorithm::iends_with(input_file, ".3mf"))
+        result = load_3mf(input_file.c_str(), config, &model);
     else if (boost::algorithm::iends_with(input_file, ".prusa"))
         result = load_prus(input_file.c_str(), &model);
-#endif /* SLIC3R_PRUS */
     else
         throw std::runtime_error("Unknown file format. Input file must have .stl, .obj, .amf(.xml) or .prusa extension.");
 
@@ -78,15 +111,15 @@ Model Model::read_from_file(const std::string &input_file, bool add_default_inst
     return model;
 }
 
-Model Model::read_from_archive(const std::string &input_file, PresetBundle* bundle, bool add_default_instances)
+Model Model::read_from_archive(const std::string &input_file, DynamicPrintConfig *config, bool add_default_instances)
 {
     Model model;
 
     bool result = false;
     if (boost::algorithm::iends_with(input_file, ".3mf"))
-        result = load_3mf(input_file.c_str(), bundle, &model);
+        result = load_3mf(input_file.c_str(), config, &model);
     else if (boost::algorithm::iends_with(input_file, ".zip.amf"))
-        result = load_amf(input_file.c_str(), bundle, &model);
+        result = load_amf(input_file.c_str(), config, &model);
     else
         throw std::runtime_error("Unknown file format. Input file must have .3mf or .zip.amf extension.");
 
@@ -111,6 +144,12 @@ Model Model::read_from_archive(const std::string &input_file, PresetBundle* bund
         model.add_default_instances();
 
     return model;
+}
+
+void Model::repair()
+{
+    for (ModelObject *o : this->objects)
+        o->repair();
 }
 
 ModelObject* Model::add_object()
@@ -143,9 +182,10 @@ ModelObject* Model::add_object(const char *name, const char *path, TriangleMesh 
     return new_object;
 }
 
-ModelObject* Model::add_object(const ModelObject &other, bool copy_volumes)
+ModelObject* Model::add_object(const ModelObject &other)
 {
-    ModelObject* new_object = new ModelObject(this, other, copy_volumes);
+	ModelObject* new_object = ModelObject::new_clone(other);
+    new_object->set_model(this);
     this->objects.push_back(new_object);
     return new_object;
 }
@@ -157,21 +197,36 @@ void Model::delete_object(size_t idx)
     this->objects.erase(i);
 }
 
-void Model::delete_object(ModelObject* object)
+bool Model::delete_object(ModelObject* object)
 {
-    if (object == nullptr)
-        return;
-
-    for (ModelObjectPtrs::iterator it = objects.begin(); it != objects.end(); ++it)
-    {
-        ModelObject* obj = *it;
-        if (obj == object)
-        {
-            delete obj;
-            objects.erase(it);
-            return;
+    if (object != nullptr) {
+        size_t idx = 0;
+        for (ModelObject *model_object : objects) {
+            if (model_object == object) {
+                delete model_object;
+                objects.erase(objects.begin() + idx);
+                return true;
+            }
+            ++ idx;
         }
     }
+    return false;
+}
+
+bool Model::delete_object(ModelID id)
+{
+    if (id.id != 0) {
+        size_t idx = 0;
+        for (ModelObject *model_object : objects) {
+            if (model_object->id() == id) {
+                delete model_object;
+                objects.erase(objects.begin() + idx);
+                return true;
+            }
+            ++ idx;
+        }
+    }
+    return false;
 }
 
 void Model::clear_objects()
@@ -199,6 +254,7 @@ void Model::clear_materials()
 
 ModelMaterial* Model::add_material(t_model_material_id material_id)
 {
+    assert(! material_id.empty());
     ModelMaterial* material = this->get_material(material_id);
     if (material == nullptr)
         material = this->materials[material_id] = new ModelMaterial(this);
@@ -207,11 +263,13 @@ ModelMaterial* Model::add_material(t_model_material_id material_id)
 
 ModelMaterial* Model::add_material(t_model_material_id material_id, const ModelMaterial &other)
 {
+    assert(! material_id.empty());
     // delete existing material if any
     ModelMaterial* material = this->get_material(material_id);
     delete material;
     // set new material
-    material = new ModelMaterial(this, other);
+	material = new ModelMaterial(other);
+	material->set_model(this);
     this->materials[material_id] = material;
     return material;
 }
@@ -235,28 +293,33 @@ BoundingBoxf3 Model::bounding_box() const
     return bb;
 }
 
-void Model::center_instances_around_point(const Vec2d &point)
+unsigned int Model::update_print_volume_state(const BoundingBoxf3 &print_volume) 
+{
+    unsigned int num_printable = 0;
+    for (ModelObject *model_object : this->objects)
+        num_printable += model_object->check_instances_print_volume_state(print_volume);
+    return num_printable;
+}
+
+bool Model::center_instances_around_point(const Vec2d &point)
 {
     BoundingBoxf3 bb;
     for (ModelObject *o : this->objects)
         for (size_t i = 0; i < o->instances.size(); ++ i)
             bb.merge(o->instance_bounding_box(i, false));
 
-#if ENABLE_MODELINSTANCE_3D_OFFSET
     Vec2d shift2 = point - to_2d(bb.center());
-    Vec3d shift3 = Vec3d(shift2(0), shift2(1), 0.0);
-#else
-    Vec2d shift = point - 0.5 * to_2d(bb.size()) - to_2d(bb.min);
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
-    for (ModelObject *o : this->objects) {
-        for (ModelInstance *i : o->instances)
-#if ENABLE_MODELINSTANCE_3D_OFFSET
-            i->set_offset(i->get_offset() + shift3);
-#else
-            i->offset += shift;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
-        o->invalidate_bounding_box();
-    }
+	if (std::abs(shift2(0)) < EPSILON && std::abs(shift2(1)) < EPSILON)
+		// No significant shift, don't do anything.
+		return false;
+
+	Vec3d shift3 = Vec3d(shift2(0), shift2(1), 0.0);
+	for (ModelObject *o : this->objects) {
+		for (ModelInstance *i : o->instances)
+			i->set_offset(i->get_offset() + shift3);
+		o->invalidate_bounding_box();
+	}
+	return true;
 }
 
 // flattens everything to a single mesh
@@ -320,12 +383,8 @@ bool Model::arrange_objects(coordf_t dist, const BoundingBoxf* bb)
     size_t idx = 0;
     for (ModelObject *o : this->objects) {
         for (ModelInstance *i : o->instances) {
-#if ENABLE_MODELINSTANCE_3D_OFFSET
             Vec2d offset_xy = positions[idx] - instance_centers[idx];
             i->set_offset(Vec3d(offset_xy(0), offset_xy(1), i->get_offset(Z)));
-#else
-            i->offset = positions[idx] - instance_centers[idx];
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
             ++idx;
         }
         o->invalidate_bounding_box();
@@ -350,11 +409,7 @@ void Model::duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb)
         for (const ModelInstance *i : instances) {
             for (const Vec2d &pos : positions) {
                 ModelInstance *instance = o->add_instance(*i);
-#if ENABLE_MODELINSTANCE_3D_OFFSET
                 instance->set_offset(instance->get_offset() + Vec3d(pos(0), pos(1), 0.0));
-#else
-                instance->offset += pos;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
             }
         }
         o->invalidate_bounding_box();
@@ -384,21 +439,12 @@ void Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
     ModelObject* object = this->objects.front();
     object->clear_instances();
 
-#if ENABLE_MODELINSTANCE_3D_OFFSET
     Vec3d ext_size = object->bounding_box().size() + dist * Vec3d::Ones();
-#else
-    Vec3d size = object->bounding_box().size();
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
 
     for (size_t x_copy = 1; x_copy <= x; ++x_copy) {
         for (size_t y_copy = 1; y_copy <= y; ++y_copy) {
             ModelInstance* instance = object->add_instance();
-#if ENABLE_MODELINSTANCE_3D_OFFSET
             instance->set_offset(Vec3d(ext_size(0) * (double)(x_copy - 1), ext_size(1) * (double)(y_copy - 1), 0.0));
-#else
-            instance->offset(0) = (size(0) + dist) * (x_copy - 1);
-            instance->offset(1) = (size(1) + dist) * (y_copy - 1);
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
         }
     }
 }
@@ -430,6 +476,8 @@ void Model::convert_multipart_object(unsigned int max_extruders)
     
     ModelObject* object = new ModelObject(this);
     object->input_file = this->objects.front()->input_file;
+    object->name = this->objects.front()->name;
+    //FIXME copy the config etc?
 
     reset_auto_extruder_id();
 
@@ -464,7 +512,7 @@ void Model::adjust_min_z()
             {
                 coordf_t obj_min_z = obj->bounding_box().min(2);
                 if (obj_min_z < 0.0)
-                    obj->translate(0.0, 0.0, -obj_min_z);
+                    obj->translate_instances(Vec3d(0.0, 0.0, -obj_min_z));
             }
         }
     }
@@ -478,7 +526,7 @@ unsigned int Model::get_auto_extruder_id(unsigned int max_extruders)
         // to a profile with a lower number of extruders.
         reset_auto_extruder_id();
         id = s_auto_extruder_id;
-    } else if (++s_auto_extruder_id > max_extruders) {
+    } else if (++ s_auto_extruder_id > max_extruders) {
         reset_auto_extruder_id();
     }
     return id;
@@ -496,49 +544,13 @@ void Model::reset_auto_extruder_id()
     s_auto_extruder_id = 1;
 }
 
-ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volumes) :  
-    name(other.name),
-    input_file(other.input_file),
-    instances(),
-    volumes(),
-    config(other.config),
-    layer_height_ranges(other.layer_height_ranges),
-    layer_height_profile(other.layer_height_profile),
-    layer_height_profile_valid(other.layer_height_profile_valid),
-    origin_translation(other.origin_translation),
-    m_bounding_box(other.m_bounding_box),
-    m_bounding_box_valid(other.m_bounding_box_valid),
-    m_model(model)
+std::string Model::propose_export_file_name() const
 {
-    if (copy_volumes) {
-        this->volumes.reserve(other.volumes.size());
-        for (ModelVolumePtrs::const_iterator i = other.volumes.begin(); i != other.volumes.end(); ++i)
-            this->add_volume(**i);
-    }
-    
-    this->instances.reserve(other.instances.size());
-    for (ModelInstancePtrs::const_iterator i = other.instances.begin(); i != other.instances.end(); ++i)
-        this->add_instance(**i);
-}
-
-ModelObject& ModelObject::operator=(ModelObject other)
-{
-    this->swap(other);
-    return *this;
-}
-
-void ModelObject::swap(ModelObject &other)
-{
-    std::swap(this->input_file,             other.input_file);
-    std::swap(this->instances,              other.instances);
-    std::swap(this->volumes,                other.volumes);
-    std::swap(this->config,                 other.config);
-    std::swap(this->layer_height_ranges,    other.layer_height_ranges);
-    std::swap(this->layer_height_profile,   other.layer_height_profile);
-    std::swap(this->layer_height_profile_valid,    other.layer_height_profile_valid);
-    std::swap(this->origin_translation,     other.origin_translation);
-    std::swap(m_bounding_box,               other.m_bounding_box);
-    std::swap(m_bounding_box_valid,         other.m_bounding_box_valid);
+    for (const ModelObject *model_object : this->objects)
+        for (ModelInstance *model_instance : model_object->instances)
+            if (model_instance->is_printable())
+                return model_object->input_file;
+    return std::string();
 }
 
 ModelObject::~ModelObject()
@@ -546,6 +558,84 @@ ModelObject::~ModelObject()
     this->clear_volumes();
     this->clear_instances();
 }
+
+// maintains the m_model pointer
+ModelObject& ModelObject::assign_copy(const ModelObject &rhs)
+{
+    this->copy_id(rhs);
+
+    this->name                        = rhs.name;
+    this->input_file                  = rhs.input_file;
+    this->config                      = rhs.config;
+    this->sla_support_points          = rhs.sla_support_points;
+    this->layer_height_ranges         = rhs.layer_height_ranges;
+    this->layer_height_profile        = rhs.layer_height_profile;
+    this->layer_height_profile_valid  = rhs.layer_height_profile_valid;
+    this->origin_translation          = rhs.origin_translation;
+    m_bounding_box                    = rhs.m_bounding_box;
+    m_bounding_box_valid              = rhs.m_bounding_box_valid;
+
+    this->clear_volumes();
+    this->volumes.reserve(rhs.volumes.size());
+    for (ModelVolume *model_volume : rhs.volumes) {
+        this->volumes.emplace_back(new ModelVolume(*model_volume));
+        this->volumes.back()->set_model_object(this);
+    }
+    this->clear_instances();
+	this->instances.reserve(rhs.instances.size());
+    for (const ModelInstance *model_instance : rhs.instances) {
+        this->instances.emplace_back(new ModelInstance(*model_instance));
+        this->instances.back()->set_model_object(this);
+    }
+
+    return *this;
+}
+
+// maintains the m_model pointer
+ModelObject& ModelObject::assign_copy(ModelObject &&rhs)
+{
+    this->copy_id(rhs);
+
+    this->name                        = std::move(rhs.name);
+    this->input_file                  = std::move(rhs.input_file);
+    this->config                      = std::move(rhs.config);
+    this->sla_support_points          = std::move(rhs.sla_support_points);
+    this->layer_height_ranges         = std::move(rhs.layer_height_ranges);
+    this->layer_height_profile        = std::move(rhs.layer_height_profile);
+    this->layer_height_profile_valid  = std::move(rhs.layer_height_profile_valid);
+    this->origin_translation          = std::move(rhs.origin_translation);
+    m_bounding_box                    = std::move(rhs.m_bounding_box);
+    m_bounding_box_valid              = std::move(rhs.m_bounding_box_valid);
+
+    this->clear_volumes();
+	this->volumes = std::move(rhs.volumes);
+	rhs.volumes.clear();
+    for (ModelVolume *model_volume : this->volumes)
+        model_volume->set_model_object(this);
+    this->clear_instances();
+	this->instances = std::move(rhs.instances);
+	rhs.instances.clear();
+    for (ModelInstance *model_instance : this->instances)
+        model_instance->set_model_object(this);
+
+	return *this;
+}
+
+void ModelObject::assign_new_unique_ids_recursive()
+{
+    this->set_new_unique_id();
+    for (ModelVolume *model_volume : this->volumes)
+        model_volume->assign_new_unique_ids_recursive();
+    for (ModelInstance *model_instance : this->instances)
+        model_instance->assign_new_unique_ids_recursive();
+}
+
+// Clone this ModelObject including its volumes and instances, keep the IDs of the copies equal to the original.
+// Called by Print::apply() to clone the Model / ModelObject hierarchy to the back end for background processing.
+//ModelObject* ModelObject::clone(Model *parent)
+//{
+//    return new ModelObject(parent, *this, true);
+//}
 
 ModelVolume* ModelObject::add_volume(const TriangleMesh &mesh)
 {
@@ -571,11 +661,37 @@ ModelVolume* ModelObject::add_volume(const ModelVolume &other)
     return v;
 }
 
+ModelVolume* ModelObject::add_volume(const ModelVolume &other, TriangleMesh &&mesh)
+{
+    ModelVolume* v = new ModelVolume(this, other, std::move(mesh));
+    this->volumes.push_back(v);
+    this->invalidate_bounding_box();
+    return v;
+}
+
 void ModelObject::delete_volume(size_t idx)
 {
     ModelVolumePtrs::iterator i = this->volumes.begin() + idx;
     delete *i;
     this->volumes.erase(i);
+
+    if (this->volumes.size() == 1)
+    {
+        // only one volume left
+        // center it and update the instances accordingly
+        // rationale: the volume may be shifted with respect to the object center and this may lead to wrong rotation and scaling 
+        // when modifying the instance matrix of the derived GLVolume
+        ModelVolume* v = this->volumes.front();
+        v->center_geometry();
+        const Vec3d& vol_offset = v->get_offset();
+        for (ModelInstance* inst : this->instances)
+        {
+            inst->set_offset(inst->get_offset() + inst->get_matrix(true) * vol_offset);
+        }
+        v->set_offset(Vec3d::Zero());
+        v->set_new_unique_id();
+    }
+
     this->invalidate_bounding_box();
 }
 
@@ -601,6 +717,15 @@ ModelInstance* ModelObject::add_instance(const ModelInstance &other)
     this->instances.push_back(i);
     this->invalidate_bounding_box();
     return i;
+}
+
+ModelInstance* ModelObject::add_instance(const Vec3d &offset, const Vec3d &scaling_factor, const Vec3d &rotation)
+{
+    auto *instance = add_instance();
+    instance->set_offset(offset);
+    instance->set_scaling_factor(scaling_factor);
+    instance->set_rotation(rotation);
+    return instance;
 }
 
 void ModelObject::delete_instance(size_t idx)
@@ -632,8 +757,16 @@ const BoundingBoxf3& ModelObject::bounding_box() const
         BoundingBoxf3 raw_bbox;
         for (const ModelVolume *v : this->volumes)
             if (v->is_model_part())
+#if ENABLE_MODELVOLUME_TRANSFORM
+            {
+                TriangleMesh m = v->mesh;
+                m.transform(v->get_matrix());
+                raw_bbox.merge(m.bounding_box());
+            }
+#else
                 // mesh.bounding_box() returns a cached value.
                 raw_bbox.merge(v->mesh.bounding_box());
+#endif // ENABLE_MODELVOLUME_TRANSFORM
         BoundingBoxf3 bb;
         for (const ModelInstance *i : this->instances)
             bb.merge(i->transform_bounding_box(raw_bbox));
@@ -664,7 +797,15 @@ TriangleMesh ModelObject::raw_mesh() const
     TriangleMesh mesh;
     for (const ModelVolume *v : this->volumes)
         if (v->is_model_part())
-            mesh.merge(v->mesh);
+#if ENABLE_MODELVOLUME_TRANSFORM
+        {
+            TriangleMesh vol_mesh(v->mesh);
+            vol_mesh.transform(v->get_matrix());
+            mesh.merge(vol_mesh);
+        }
+#else
+        mesh.merge(v->mesh);
+#endif // ENABLE_MODELVOLUME_TRANSFORM
     return mesh;
 }
 
@@ -677,7 +818,14 @@ BoundingBoxf3 ModelObject::raw_bounding_box() const
         if (v->is_model_part()) {
             if (this->instances.empty())
                 throw std::invalid_argument("Can't call raw_bounding_box() with no instances");
-            bb.merge(this->instances.front()->transform_mesh_bounding_box(&v->mesh, true));
+
+#if ENABLE_MODELVOLUME_TRANSFORM
+            TriangleMesh vol_mesh(v->mesh);
+            vol_mesh.transform(v->get_matrix());
+            bb.merge(this->instances.front()->transform_mesh_bounding_box(vol_mesh, true));
+#else
+            bb.merge(this->instances.front()->transform_mesh_bounding_box(v->mesh, true));
+#endif // ENABLE_MODELVOLUME_TRANSFORM
         }
     return bb;
 }
@@ -686,9 +834,21 @@ BoundingBoxf3 ModelObject::raw_bounding_box() const
 BoundingBoxf3 ModelObject::instance_bounding_box(size_t instance_idx, bool dont_translate) const
 {
     BoundingBoxf3 bb;
+#if ENABLE_MODELVOLUME_TRANSFORM
+    for (ModelVolume *v : this->volumes)
+    {
+        if (v->is_model_part())
+        {
+            TriangleMesh mesh(v->mesh);
+            mesh.transform(v->get_matrix());
+            bb.merge(this->instances[instance_idx]->transform_mesh_bounding_box(mesh, dont_translate));
+        }
+    }
+#else
     for (ModelVolume *v : this->volumes)
         if (v->is_model_part())
             bb.merge(this->instances[instance_idx]->transform_mesh_bounding_box(&v->mesh, dont_translate));
+#endif // ENABLE_MODELVOLUME_TRANSFORM
     return bb;
 }
 
@@ -701,39 +861,47 @@ void ModelObject::center_around_origin()
         if (v->is_model_part())
 			bb.merge(v->mesh.bounding_box());
     
-    // Shift is the vector from the center of the bottom face of the bounding box to the origin
+    // Shift is the vector from the center of the bounding box to the origin
     Vec3d shift = -bb.center();
-    shift(2) = -bb.min(2);
 
     this->translate(shift);
     this->origin_translation += shift;
 
-#if ENABLE_MODELINSTANCE_3D_OFFSET
-    // set z to zero, translation in z has already been done within the mesh
-    shift(2) = 0.0;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
-
+#if !ENABLE_MODELVOLUME_TRANSFORM
     if (!this->instances.empty()) {
         for (ModelInstance *i : this->instances) {
-            // apply rotation and scaling to vector as well before translating instance,
-            // in order to leave final position unaltered
-#if ENABLE_MODELINSTANCE_3D_OFFSET
-            i->set_offset(i->get_offset() + i->transform_vector(-shift, true));
-#else
-            Vec3d i_shift = i->world_matrix(true) * shift;
-            i->offset -= to_2d(i_shift);
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+            i->set_offset(i->get_offset() - shift);
         }
         this->invalidate_bounding_box();
     }
+#endif // !ENABLE_MODELVOLUME_TRANSFORM
 }
 
-void ModelObject::translate(coordf_t x, coordf_t y, coordf_t z)
+void ModelObject::ensure_on_bed()
+{
+    translate_instances(Vec3d(0.0, 0.0, -get_min_z()));
+}
+
+void ModelObject::translate_instances(const Vec3d& vector)
+{
+    for (size_t i = 0; i < instances.size(); ++i)
+    {
+        translate_instance(i, vector);
+    }
+}
+
+void ModelObject::translate_instance(size_t instance_idx, const Vec3d& vector)
+{
+    ModelInstance* i = instances[instance_idx];
+    i->set_offset(i->get_offset() + vector);
+    invalidate_bounding_box();
+}
+
+void ModelObject::translate(double x, double y, double z)
 {
     for (ModelVolume *v : this->volumes)
     {
-        v->mesh.translate(float(x), float(y), float(z));
-        v->m_convex_hull.translate(float(x), float(y), float(z));
+        v->translate(x, y, z);
     }
 
     if (m_bounding_box_valid)
@@ -744,51 +912,55 @@ void ModelObject::scale(const Vec3d &versor)
 {
     for (ModelVolume *v : this->volumes)
     {
-        v->mesh.scale(versor);
-        v->m_convex_hull.scale(versor);
+        v->scale(versor);
     }
+#if !ENABLE_MODELVOLUME_TRANSFORM
     // reset origin translation since it doesn't make sense anymore
     this->origin_translation = Vec3d::Zero();
+#endif // !ENABLE_MODELVOLUME_TRANSFORM
     this->invalidate_bounding_box();
 }
 
-void ModelObject::rotate(float angle, const Axis& axis)
+void ModelObject::rotate(double angle, Axis axis)
 {
     for (ModelVolume *v : this->volumes)
     {
-        v->mesh.rotate(angle, axis);
-        v->m_convex_hull.rotate(angle, axis);
+        v->rotate(angle, axis);
     }
 
     center_around_origin();
 
+#if !ENABLE_MODELVOLUME_TRANSFORM
     this->origin_translation = Vec3d::Zero();
+#endif // !ENABLE_MODELVOLUME_TRANSFORM
     this->invalidate_bounding_box();
 }
 
-void ModelObject::rotate(float angle, const Vec3d& axis)
+void ModelObject::rotate(double angle, const Vec3d& axis)
 {
     for (ModelVolume *v : this->volumes)
     {
-        v->mesh.rotate(angle, axis);
-        v->m_convex_hull.rotate(angle, axis);
+        v->rotate(angle, axis);
     }
 
     center_around_origin();
 
+#if !ENABLE_MODELVOLUME_TRANSFORM
     this->origin_translation = Vec3d::Zero();
+#endif // !ENABLE_MODELVOLUME_TRANSFORM
     this->invalidate_bounding_box();
 }
 
-void ModelObject::mirror(const Axis &axis)
+void ModelObject::mirror(Axis axis)
 {
     for (ModelVolume *v : this->volumes)
     {
-        v->mesh.mirror(axis);
-        v->m_convex_hull.mirror(axis);
+        v->mirror(axis);
     }
 
+#if !ENABLE_MODELVOLUME_TRANSFORM
     this->origin_translation = Vec3d::Zero();
+#endif // !ENABLE_MODELVOLUME_TRANSFORM
     this->invalidate_bounding_box();
 }
 
@@ -817,45 +989,144 @@ bool ModelObject::needed_repair() const
     return false;
 }
 
-void ModelObject::cut(coordf_t z, Model* model) const
+ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, bool keep_lower, bool rotate_lower)
 {
-    // clone this one to duplicate instances, materials etc.
-    ModelObject* upper = model->add_object(*this);
-    ModelObject* lower = model->add_object(*this);
-    upper->clear_volumes();
-    lower->clear_volumes();
-    upper->input_file = "";
-    lower->input_file = "";
-    
-    for (ModelVolume *volume : this->volumes) {
+    if (!keep_upper && !keep_lower) { return {}; }
+
+    // Clone the object to duplicate instances, materials etc.
+    ModelObject* upper = keep_upper ? ModelObject::new_clone(*this) : nullptr;
+    ModelObject* lower = keep_lower ? ModelObject::new_clone(*this) : nullptr;
+
+    if (keep_upper) {
+        upper->set_model(nullptr);
+        upper->sla_support_points.clear();
+        upper->clear_volumes();
+        upper->input_file = "";
+    }
+
+    if (keep_lower) {
+        lower->set_model(nullptr);
+        lower->sla_support_points.clear();
+        lower->clear_volumes();
+        lower->input_file = "";
+    }
+
+    // Because transformations are going to be applied to meshes directly,
+    // we reset transformation of all instances and volumes,
+    // except for translation and Z-rotation on instances, which are preserved
+    // in the transformation matrix and not applied to the mesh transform.
+
+    // const auto instance_matrix = instances[instance]->get_matrix(true);
+    const auto instance_matrix = Geometry::assemble_transform(
+        Vec3d::Zero(),  // don't apply offset
+        instances[instance]->get_rotation().cwiseProduct(Vec3d(1.0, 1.0, 0.0)),   // don't apply Z-rotation
+        instances[instance]->get_scaling_factor(),
+        instances[instance]->get_mirror()
+    );
+
+    z -= instances[instance]->get_offset()(2);
+
+    // Lower part per-instance bounding boxes
+    std::vector<BoundingBoxf3> lower_bboxes { instances.size() };
+
+    for (ModelVolume *volume : volumes) {
+        const auto volume_matrix = volume->get_matrix();
+
         if (! volume->is_model_part()) {
-            // don't cut modifiers
-            upper->add_volume(*volume);
-            lower->add_volume(*volume);
+            // Modifiers are not cut, but we still need to add the instance transformation
+            // to the modifier volume transformation to preserve their shape properly.
+
+            volume->set_transformation(Geometry::Transformation(instance_matrix * volume_matrix));
+
+            if (keep_upper) { upper->add_volume(*volume); }
+            if (keep_lower) { lower->add_volume(*volume); }
         } else {
             TriangleMesh upper_mesh, lower_mesh;
+
+            // Transform the mesh by the combined transformation matrix
+            volume->mesh.transform(instance_matrix * volume_matrix);
+
+            // Perform cut
             TriangleMeshSlicer tms(&volume->mesh);
             tms.cut(z, &upper_mesh, &lower_mesh);
 
-            upper_mesh.repair();
-            lower_mesh.repair();
-            upper_mesh.reset_repair_stats();
-            lower_mesh.reset_repair_stats();
-            
-            if (upper_mesh.facets_count() > 0) {
+            // Reset volume transformation except for offset
+            const Vec3d offset = volume->get_offset();
+            volume->set_transformation(Geometry::Transformation());
+            volume->set_offset(offset);
+
+            if (keep_upper) {
+                upper_mesh.repair();
+                upper_mesh.reset_repair_stats();
+            }
+            if (keep_lower) {
+                lower_mesh.repair();
+                lower_mesh.reset_repair_stats();
+            }
+
+            if (keep_upper && upper_mesh.facets_count() > 0) {
                 ModelVolume* vol    = upper->add_volume(upper_mesh);
                 vol->name           = volume->name;
                 vol->config         = volume->config;
                 vol->set_material(volume->material_id(), *volume->material());
             }
-            if (lower_mesh.facets_count() > 0) {
+            if (keep_lower && lower_mesh.facets_count() > 0) {
                 ModelVolume* vol    = lower->add_volume(lower_mesh);
                 vol->name           = volume->name;
                 vol->config         = volume->config;
                 vol->set_material(volume->material_id(), *volume->material());
+
+                // Compute the lower part instances' bounding boxes to figure out where to place
+                // the upper part
+                if (keep_upper) {
+                    for (size_t i = 0; i < instances.size(); i++) {
+                        lower_bboxes[i].merge(instances[i]->transform_mesh_bounding_box(lower_mesh, true));
+                    }
+                }
             }
         }
     }
+
+    ModelObjectPtrs res;
+
+    if (keep_upper && upper->volumes.size() > 0) {
+        upper->invalidate_bounding_box();
+        upper->center_around_origin();
+
+        // Reset instance transformation except offset and Z-rotation
+        for (size_t i = 0; i < instances.size(); i++) {
+            auto &instance = upper->instances[i];
+            const Vec3d offset = instance->get_offset();
+            const double rot_z = instance->get_rotation()(2);
+            // The upper part displacement is set to half of the lower part bounding box
+            // this is done in hope at least a part of the upper part will always be visible and draggable
+            const Vec3d displace = lower_bboxes[i].size().cwiseProduct(Vec3d(-0.5, -0.5, 0.0));
+
+            instance->set_transformation(Geometry::Transformation());
+            instance->set_offset(offset + displace);
+            instance->set_rotation(Vec3d(0.0, 0.0, rot_z));
+        }
+
+        res.push_back(upper);
+    }
+    if (keep_lower && lower->volumes.size() > 0) {
+        lower->invalidate_bounding_box();
+        lower->center_around_origin();
+
+        // Reset instance transformation except offset and Z-rotation
+        for (auto *instance : lower->instances) {
+            const Vec3d offset = instance->get_offset();
+            const double rot_z = instance->get_rotation()(2);
+
+            instance->set_transformation(Geometry::Transformation());
+            instance->set_offset(offset);
+            instance->set_rotation(Vec3d(rotate_lower ? Geometry::deg2rad(180.0) : 0.0, 0.0, rot_z));
+        }
+
+        res.push_back(lower);
+    }
+
+    return res;
 }
 
 void ModelObject::split(ModelObjectPtrs* new_objects)
@@ -863,53 +1134,130 @@ void ModelObject::split(ModelObjectPtrs* new_objects)
     if (this->volumes.size() > 1) {
         // We can't split meshes if there's more than one volume, because
         // we can't group the resulting meshes by object afterwards
-        new_objects->push_back(this);
+        new_objects->emplace_back(this);
         return;
     }
     
     ModelVolume* volume = this->volumes.front();
     TriangleMeshPtrs meshptrs = volume->mesh.split();
     for (TriangleMesh *mesh : meshptrs) {
-        // Snap the mesh to Z=0.
-        float z0 = FLT_MAX;
-        
         mesh->repair();
         
-        ModelObject* new_object = m_model->add_object(*this, false);
-        new_object->input_file  = "";
-        ModelVolume* new_volume = new_object->add_volume(*mesh);
-        new_volume->name        = volume->name;
-        new_volume->config      = volume->config;
-        new_volume->set_type(volume->type());
-        new_volume->material_id(volume->material_id());
-        
-        new_objects->push_back(new_object);
+        // XXX: this seems to be the only real usage of m_model, maybe refactor this so that it's not needed?
+        ModelObject* new_object = m_model->add_object();    
+		new_object->name   = this->name;
+		new_object->config = this->config;
+		new_object->instances.reserve(this->instances.size());
+		for (const ModelInstance *model_instance : this->instances)
+			new_object->add_instance(*model_instance);
+#if ENABLE_MODELVOLUME_TRANSFORM
+        ModelVolume* new_vol = new_object->add_volume(*volume, std::move(*mesh));
+        new_vol->center_geometry();
+
+        for (ModelInstance* model_instance : new_object->instances)
+        {
+            Vec3d shift = model_instance->get_transformation().get_matrix(true) * new_vol->get_offset();
+            model_instance->set_offset(model_instance->get_offset() + shift);
+        }
+
+        new_vol->set_offset(Vec3d::Zero());
+#else
+        new_object->add_volume(*volume, std::move(*mesh));
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+        new_objects->emplace_back(new_object);
         delete mesh;
     }
     
     return;
 }
 
-// Called by Print::validate() from the UI thread.
-void ModelObject::check_instances_print_volume_state(const BoundingBoxf3& print_volume)
+void ModelObject::repair()
 {
-    for (const ModelVolume* vol : this->volumes)
-    {
-        if (vol->is_model_part())
-        {
-            for (ModelInstance* inst : this->instances)
-            {
-                BoundingBoxf3 bb = vol->get_convex_hull().transformed_bounding_box(inst->world_matrix());
+    for (ModelVolume *v : this->volumes)
+        v->mesh.repair();
+}
 
-                if (print_volume.contains(bb))
-                    inst->print_volume_state = ModelInstance::PVS_Inside;
-                else if (print_volume.intersects(bb))
-                    inst->print_volume_state = ModelInstance::PVS_Partly_Outside;
-                else
-                    inst->print_volume_state = ModelInstance::PVS_Fully_Outside;
-            }
+double ModelObject::get_min_z() const
+{
+    if (instances.empty())
+        return 0.0;
+    else
+    {
+        double min_z = DBL_MAX;
+        for (size_t i = 0; i < instances.size(); ++i)
+        {
+            min_z = std::min(min_z, get_instance_min_z(i));
         }
+        return min_z;
     }
+}
+
+double ModelObject::get_instance_min_z(size_t instance_idx) const
+{
+    double min_z = DBL_MAX;
+
+    ModelInstance* inst = instances[instance_idx];
+    const Transform3d& mi = inst->get_matrix(true);
+
+    for (const ModelVolume* v : volumes)
+    {
+        if (!v->is_model_part())
+            continue;
+
+#if ENABLE_MODELVOLUME_TRANSFORM
+        Transform3d mv = mi * v->get_matrix();
+        const TriangleMesh& hull = v->get_convex_hull();
+        for (uint32_t f = 0; f < hull.stl.stats.number_of_facets; ++f)
+        {
+            const stl_facet* facet = hull.stl.facet_start + f;
+            min_z = std::min(min_z, Vec3d::UnitZ().dot(mv * facet->vertex[0].cast<double>()));
+            min_z = std::min(min_z, Vec3d::UnitZ().dot(mv * facet->vertex[1].cast<double>()));
+            min_z = std::min(min_z, Vec3d::UnitZ().dot(mv * facet->vertex[2].cast<double>()));
+        }
+#else
+        for (uint32_t f = 0; f < v->mesh.stl.stats.number_of_facets; ++f)
+        {
+            const stl_facet* facet = v->mesh.stl.facet_start + f;
+            min_z = std::min(min_z, Vec3d::UnitZ().dot(mi * facet->vertex[0].cast<double>()));
+            min_z = std::min(min_z, Vec3d::UnitZ().dot(mi * facet->vertex[1].cast<double>()));
+            min_z = std::min(min_z, Vec3d::UnitZ().dot(mi * facet->vertex[2].cast<double>()));
+        }
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+    }
+
+    return min_z + inst->get_offset(Z);
+}
+
+unsigned int ModelObject::check_instances_print_volume_state(const BoundingBoxf3& print_volume)
+{
+    unsigned int num_printable = 0;
+    enum {
+        INSIDE  = 1,
+        OUTSIDE = 2
+    };
+    for (ModelInstance *model_instance : this->instances) {
+        unsigned int inside_outside = 0;
+        for (const ModelVolume *vol : this->volumes)
+            if (vol->is_model_part()) {
+#if ENABLE_MODELVOLUME_TRANSFORM
+                BoundingBoxf3 bb = vol->get_convex_hull().transformed_bounding_box(model_instance->get_matrix() * vol->get_matrix());
+#else
+                BoundingBoxf3 bb = vol->get_convex_hull().transformed_bounding_box(model_instance->get_matrix());
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+                if (print_volume.contains(bb))
+                    inside_outside |= INSIDE;
+                else if (print_volume.intersects(bb))
+                    inside_outside |= INSIDE | OUTSIDE;
+                else
+                    inside_outside |= OUTSIDE;
+            }
+        model_instance->print_volume_state = 
+            (inside_outside == (INSIDE | OUTSIDE)) ? ModelInstance::PVS_Partly_Outside :
+            (inside_outside == INSIDE) ? ModelInstance::PVS_Inside : ModelInstance::PVS_Fully_Outside;
+        if (inside_outside == INSIDE)
+            ++ num_printable;
+    }
+    return num_printable;
 }
 
 void ModelObject::print_info() const
@@ -954,33 +1302,48 @@ void ModelObject::print_info() const
     cout << "volume = "           << mesh.volume()                  << endl;
 }
 
-void ModelVolume::material_id(t_model_material_id material_id)
+void ModelVolume::set_material_id(t_model_material_id material_id)
 {
-    this->_material_id = material_id;
-    
-    // ensure this->_material_id references an existing material
-    (void)this->object->get_model()->add_material(material_id);
+    m_material_id = material_id;
+    // ensure m_material_id references an existing material
+    if (! material_id.empty())
+        this->object->get_model()->add_material(material_id);
 }
 
 ModelMaterial* ModelVolume::material() const
 { 
-    return this->object->get_model()->get_material(this->_material_id);
+    return this->object->get_model()->get_material(m_material_id);
 }
 
 void ModelVolume::set_material(t_model_material_id material_id, const ModelMaterial &material)
 {
-    this->_material_id = material_id;
-    (void)this->object->get_model()->add_material(material_id, material);
+    m_material_id = material_id;
+    if (! material_id.empty())
+        this->object->get_model()->add_material(material_id, material);
 }
 
-ModelMaterial* ModelVolume::assign_unique_material()
+// Extract the current extruder ID based on this ModelVolume's config and the parent ModelObject's config.
+int ModelVolume::extruder_id() const
 {
-    Model* model = this->get_object()->get_model();
-    
-    // as material-id "0" is reserved by the AMF spec we start from 1
-    this->_material_id = 1 + model->materials.size();  // watchout for implicit cast
-    return model->add_material(this->_material_id);
+    int extruder_id = -1;
+    if (this->is_model_part()) {
+        const ConfigOption *opt = this->config.option("extruder");
+        if (opt == nullptr)
+            opt = this->object->config.option("extruder");
+        extruder_id = (opt == nullptr) ? 0 : opt->getInt();
+    }
+    return extruder_id;
 }
+
+#if ENABLE_MODELVOLUME_TRANSFORM
+void ModelVolume::center_geometry()
+{
+    Vec3d shift = -mesh.bounding_box().center();
+    mesh.translate((float)shift(0), (float)shift(1), (float)shift(2));
+    m_convex_hull.translate((float)shift(0), (float)shift(1), (float)shift(2));
+    translate(-shift);
+}
+#endif // ENABLE_MODELVOLUME_TRANSFORM
 
 void ModelVolume::calculate_convex_hull()
 {
@@ -1040,16 +1403,28 @@ size_t ModelVolume::split(unsigned int max_extruders)
     std::string name = this->name;
 
     Model::reset_auto_extruder_id();
+#if ENABLE_MODELVOLUME_TRANSFORM
+    Vec3d offset = this->get_offset();
+#endif // ENABLE_MODELVOLUME_TRANSFORM
 
     for (TriangleMesh *mesh : meshptrs) {
         mesh->repair();
         if (idx == 0)
+        {
             this->mesh = std::move(*mesh);
+            this->calculate_convex_hull();
+            // Assign a new unique ID, so that a new GLVolume will be generated.
+            this->set_new_unique_id();
+        }
         else
-            this->object->volumes.insert(this->object->volumes.begin() + (++ ivolume), new ModelVolume(object, *this, std::move(*mesh)));
-        char str_idx[64];
-        sprintf(str_idx, "_%d", idx + 1);
-        this->object->volumes[ivolume]->name = name + str_idx;
+            this->object->volumes.insert(this->object->volumes.begin() + (++ivolume), new ModelVolume(object, *this, std::move(*mesh)));
+
+#if ENABLE_MODELVOLUME_TRANSFORM
+        this->object->volumes[ivolume]->set_offset(Vec3d::Zero());
+        this->object->volumes[ivolume]->center_geometry();
+        this->object->volumes[ivolume]->translate(offset);
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+        this->object->volumes[ivolume]->name = name + "_" + std::to_string(idx + 1);
         this->object->volumes[ivolume]->config.set_deserialize("extruder", Model::get_auto_extruder_id_as_string(max_extruders));
         delete mesh;
         ++ idx;
@@ -1058,33 +1433,160 @@ size_t ModelVolume::split(unsigned int max_extruders)
     return idx;
 }
 
-void ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
+void ModelVolume::translate(const Vec3d& displacement)
 {
-    mesh->transform(world_matrix(dont_translate).cast<float>());
+#if ENABLE_MODELVOLUME_TRANSFORM
+    set_offset(get_offset() + displacement);
+#else
+    mesh.translate((float)displacement(0), (float)displacement(1), (float)displacement(2));
+    m_convex_hull.translate((float)displacement(0), (float)displacement(1), (float)displacement(2));
+#endif // ENABLE_MODELVOLUME_TRANSFORM
 }
 
-BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate) const
+void ModelVolume::scale(const Vec3d& scaling_factors)
+{
+#if ENABLE_MODELVOLUME_TRANSFORM
+    set_scaling_factor(get_scaling_factor().cwiseProduct(scaling_factors));
+#else
+    mesh.scale(scaling_factors);
+    m_convex_hull.scale(scaling_factors);
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+}
+
+void ModelVolume::rotate(double angle, Axis axis)
+{
+#if ENABLE_MODELVOLUME_TRANSFORM
+    switch (axis)
+    {
+    case X: { rotate(angle, Vec3d::UnitX()); break; }
+    case Y: { rotate(angle, Vec3d::UnitY()); break; }
+    case Z: { rotate(angle, Vec3d::UnitZ()); break; }
+    }
+#else
+    mesh.rotate(angle, axis);
+    m_convex_hull.rotate(angle, axis);
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+}
+
+void ModelVolume::rotate(double angle, const Vec3d& axis)
+{
+#if ENABLE_MODELVOLUME_TRANSFORM
+    set_rotation(get_rotation() + Geometry::extract_euler_angles(Eigen::Quaterniond(Eigen::AngleAxisd(angle, axis)).toRotationMatrix()));
+#else
+    mesh.rotate(angle, axis);
+    m_convex_hull.rotate(angle, axis);
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+}
+
+void ModelVolume::mirror(Axis axis)
+{
+#if ENABLE_MODELVOLUME_TRANSFORM
+    Vec3d mirror = get_mirror();
+    switch (axis)
+    {
+    case X: { mirror(0) *= -1.0; break; }
+    case Y: { mirror(1) *= -1.0; break; }
+    case Z: { mirror(2) *= -1.0; break; }
+    }
+    set_mirror(mirror);
+#else
+    mesh.mirror(axis);
+    m_convex_hull.mirror(axis);
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+}
+
+#if !ENABLE_MODELVOLUME_TRANSFORM
+void ModelInstance::set_rotation(const Vec3d& rotation)
+{
+    set_rotation(X, rotation(0));
+    set_rotation(Y, rotation(1));
+    set_rotation(Z, rotation(2));
+}
+
+void ModelInstance::set_rotation(Axis axis, double rotation)
+{
+    static const double TWO_PI = 2.0 * (double)PI;
+    while (rotation < 0.0)
+    {
+        rotation += TWO_PI;
+    }
+    while (TWO_PI < rotation)
+    {
+        rotation -= TWO_PI;
+    }
+    m_rotation(axis) = rotation;
+}
+
+void ModelInstance::set_scaling_factor(const Vec3d& scaling_factor)
+{
+    set_scaling_factor(X, scaling_factor(0));
+    set_scaling_factor(Y, scaling_factor(1));
+    set_scaling_factor(Z, scaling_factor(2));
+}
+
+void ModelInstance::set_scaling_factor(Axis axis, double scaling_factor)
+{
+    m_scaling_factor(axis) = std::abs(scaling_factor);
+}
+
+void ModelInstance::set_mirror(const Vec3d& mirror)
+{
+    set_mirror(X, mirror(0));
+    set_mirror(Y, mirror(1));
+    set_mirror(Z, mirror(2));
+}
+
+void ModelInstance::set_mirror(Axis axis, double mirror)
+{
+    double abs_mirror = std::abs(mirror);
+    if (abs_mirror == 0.0)
+        mirror = 1.0;
+    else if (abs_mirror != 1.0)
+        mirror /= abs_mirror;
+
+    m_mirror(axis) = mirror;
+}
+#endif // !ENABLE_MODELVOLUME_TRANSFORM
+
+void ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
+{
+    mesh->transform(get_matrix(dont_translate));
+}
+
+BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh& mesh, bool dont_translate) const
 {
     // Rotate around mesh origin.
-    TriangleMesh copy(*mesh);
-    copy.transform(world_matrix(true, false, true).cast<float>());
+    TriangleMesh copy(mesh);
+    copy.transform(get_matrix(true, false, true, true));
     BoundingBoxf3 bbox = copy.bounding_box();
 
     if (!empty(bbox)) {
-        // Scale the bounding box uniformly.
-        if (std::abs(this->scaling_factor - 1.) > EPSILON) {
-            bbox.min *= this->scaling_factor;
-			bbox.max *= this->scaling_factor;
+        // Scale the bounding box along the three axes.
+        for (unsigned int i = 0; i < 3; ++i)
+        {
+#if ENABLE_MODELVOLUME_TRANSFORM
+            if (std::abs(get_scaling_factor((Axis)i)-1.0) > EPSILON)
+            {
+                bbox.min(i) *= get_scaling_factor((Axis)i);
+                bbox.max(i) *= get_scaling_factor((Axis)i);
+#else
+            if (std::abs(this->m_scaling_factor(i) - 1.0) > EPSILON)
+            {
+                bbox.min(i) *= this->m_scaling_factor(i);
+                bbox.max(i) *= this->m_scaling_factor(i);
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+            }
         }
+
         // Translate the bounding box.
         if (! dont_translate) {
-#if ENABLE_MODELINSTANCE_3D_OFFSET
+#if ENABLE_MODELVOLUME_TRANSFORM
+            bbox.min += get_offset();
+            bbox.max += get_offset();
+#else
             bbox.min += this->m_offset;
             bbox.max += this->m_offset;
-#else
-            Eigen::Map<Vec2d>(bbox.min.data()) += this->offset;
-            Eigen::Map<Vec2d>(bbox.max.data()) += this->offset;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+#endif // ENABLE_MODELVOLUME_TRANSFORM
         }
     }
     return bbox;
@@ -1092,38 +1594,151 @@ BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mes
 
 BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, bool dont_translate) const
 {
-    return bbox.transformed(world_matrix(dont_translate));
+    return bbox.transformed(get_matrix(dont_translate));
 }
 
 Vec3d ModelInstance::transform_vector(const Vec3d& v, bool dont_translate) const
 {
-    return world_matrix(dont_translate) * v;
+    return get_matrix(dont_translate) * v;
 }
 
 void ModelInstance::transform_polygon(Polygon* polygon) const
 {
-    polygon->rotate(this->rotation);                // rotate around polygon origin
-    polygon->scale(this->scaling_factor);           // scale around polygon origin
-}
-
-Transform3d ModelInstance::world_matrix(bool dont_translate, bool dont_rotate, bool dont_scale) const
-{
-    Transform3d m = Transform3d::Identity();
-
-    if (!dont_translate)
-#if ENABLE_MODELINSTANCE_3D_OFFSET
-        m.translate(m_offset);
+#if ENABLE_MODELVOLUME_TRANSFORM
+    // CHECK_ME -> Is the following correct or it should take in account all three rotations ?
+    polygon->rotate(get_rotation(Z)); // rotate around polygon origin
+    // CHECK_ME -> Is the following correct ?
+    polygon->scale(get_scaling_factor(X), get_scaling_factor(Y)); // scale around polygon origin
 #else
-        m.translate(Vec3d(offset(0), offset(1), 0.0));
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
-
-    if (!dont_rotate)
-        m.rotate(Eigen::AngleAxisd(rotation, Vec3d::UnitZ()));
-
-    if (!dont_scale)
-        m.scale(scaling_factor);
-
-    return m;
+    // CHECK_ME -> Is the following correct or it should take in account all three rotations ?
+    polygon->rotate(this->m_rotation(2));                // rotate around polygon origin
+    // CHECK_ME -> Is the following correct ?
+    polygon->scale(this->m_scaling_factor(0), this->m_scaling_factor(1));           // scale around polygon origin
+#endif // ENABLE_MODELVOLUME_TRANSFORM
 }
+
+#if !ENABLE_MODELVOLUME_TRANSFORM
+Transform3d ModelInstance::get_matrix(bool dont_translate, bool dont_rotate, bool dont_scale, bool dont_mirror) const
+{
+    Vec3d translation = dont_translate ? Vec3d::Zero() : m_offset;
+    Vec3d rotation = dont_rotate ? Vec3d::Zero() : m_rotation;
+    Vec3d scale = dont_scale ? Vec3d::Ones() : m_scaling_factor;
+    Vec3d mirror = dont_mirror ? Vec3d::Ones() : m_mirror;
+    return Geometry::assemble_transform(translation, rotation, scale, mirror);
+}
+#endif // !ENABLE_MODELVOLUME_TRANSFORM
+
+// Test whether the two models contain the same number of ModelObjects with the same set of IDs
+// ordered in the same order. In that case it is not necessary to kill the background processing.
+bool model_object_list_equal(const Model &model_old, const Model &model_new)
+{
+    if (model_old.objects.size() != model_new.objects.size())
+        return false;
+    for (size_t i = 0; i < model_old.objects.size(); ++ i)
+        if (model_old.objects[i]->id() != model_new.objects[i]->id())
+            return false;
+    return true;
+}
+
+// Test whether the new model is just an extension of the old model (new objects were added
+// to the end of the original list. In that case it is not necessary to kill the background processing.
+bool model_object_list_extended(const Model &model_old, const Model &model_new)
+{
+    if (model_old.objects.size() >= model_new.objects.size())
+        return false;
+    for (size_t i = 0; i < model_old.objects.size(); ++ i)
+        if (model_old.objects[i]->id() != model_new.objects[i]->id())
+            return false;
+    return true;
+}
+
+bool model_volume_list_changed(const ModelObject &model_object_old, const ModelObject &model_object_new, const ModelVolume::Type type)
+{
+    bool modifiers_differ = false;
+    size_t i_old, i_new;
+    for (i_old = 0, i_new = 0; i_old < model_object_old.volumes.size() && i_new < model_object_new.volumes.size();) {
+        const ModelVolume &mv_old = *model_object_old.volumes[i_old];
+        const ModelVolume &mv_new = *model_object_new.volumes[i_new];
+        if (mv_old.type() != type) {
+            ++ i_old;
+            continue;
+        }
+        if (mv_new.type() != type) {
+            ++ i_new;
+            continue;
+        }
+        if (mv_old.id() != mv_new.id())
+            return true;
+        //FIXME test for the content of the mesh!
+
+#if ENABLE_MODELVOLUME_TRANSFORM
+        if (!mv_old.get_matrix().isApprox(mv_new.get_matrix()))
+            return true;
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+        ++i_old;
+        ++ i_new;
+    }
+    for (; i_old < model_object_old.volumes.size(); ++ i_old) {
+        const ModelVolume &mv_old = *model_object_old.volumes[i_old];
+        if (mv_old.type() == type)
+            // ModelVolume was deleted.
+            return true;
+    }
+    for (; i_new < model_object_new.volumes.size(); ++ i_new) {
+        const ModelVolume &mv_new = *model_object_new.volumes[i_new];
+        if (mv_new.type() == type)
+            // ModelVolume was added.
+            return true;
+    }
+    return false;
+}
+
+#ifdef _DEBUG
+// Verify whether the IDs of Model / ModelObject / ModelVolume / ModelInstance / ModelMaterial are valid and unique.
+void check_model_ids_validity(const Model &model)
+{
+    std::set<ModelID> ids;
+    auto check = [&ids](ModelID id) { 
+        assert(id.id > 0);
+        assert(ids.find(id) == ids.end());
+        ids.insert(id);
+    };
+    for (const ModelObject *model_object : model.objects) {
+        check(model_object->id());
+        for (const ModelVolume *model_volume : model_object->volumes)
+            check(model_volume->id());
+        for (const ModelInstance *model_instance : model_object->instances)
+            check(model_instance->id());
+    }
+    for (const auto mm : model.materials)
+        check(mm.second->id());
+}
+
+void check_model_ids_equal(const Model &model1, const Model &model2)
+{
+    // Verify whether the IDs of model1 and model match.
+    assert(model1.objects.size() == model2.objects.size());
+    for (size_t idx_model = 0; idx_model < model2.objects.size(); ++ idx_model) {
+        const ModelObject &model_object1 = *model1.objects[idx_model];
+        const ModelObject &model_object2 = *  model2.objects[idx_model];
+        assert(model_object1.id() == model_object2.id());
+        assert(model_object1.volumes.size() == model_object2.volumes.size());
+        assert(model_object1.instances.size() == model_object2.instances.size());
+        for (size_t i = 0; i < model_object1.volumes.size(); ++ i)
+            assert(model_object1.volumes[i]->id() == model_object2.volumes[i]->id());
+        for (size_t i = 0; i < model_object1.instances.size(); ++ i)
+            assert(model_object1.instances[i]->id() == model_object2.instances[i]->id());
+    }
+    assert(model1.materials.size() == model2.materials.size());
+    {
+        auto it1 = model1.materials.begin();
+        auto it2 = model2.materials.begin();
+        for (; it1 != model1.materials.end(); ++ it1, ++ it2) {
+            assert(it1->first == it2->first); // compare keys
+            assert(it1->second->id() == it2->second->id());
+        }
+    }
+}
+#endif /* _DEBUG */
 
 }

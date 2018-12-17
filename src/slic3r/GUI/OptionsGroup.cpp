@@ -5,7 +5,8 @@
 #include <wx/numformatter.h>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
-#include "Utils.hpp"
+#include "libslic3r/Utils.hpp"
+#include "I18N.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -22,18 +23,18 @@ const t_field& OptionsGroup::build_field(const t_config_option_key& id, const Co
     // is the normal type.
     if (opt.gui_type.compare("select") == 0) {
     } else if (opt.gui_type.compare("select_open") == 0) {
-		m_fields.emplace(id, STDMOVE(Choice::Create<Choice>(parent(), opt, id)));
+		m_fields.emplace(id, std::move(Choice::Create<Choice>(parent(), opt, id)));
     } else if (opt.gui_type.compare("color") == 0) {
-		m_fields.emplace(id, STDMOVE(ColourPicker::Create<ColourPicker>(parent(), opt, id)));
+		m_fields.emplace(id, std::move(ColourPicker::Create<ColourPicker>(parent(), opt, id)));
     } else if (opt.gui_type.compare("f_enum_open") == 0 || 
                 opt.gui_type.compare("i_enum_open") == 0 ||
                 opt.gui_type.compare("i_enum_closed") == 0) {
-		m_fields.emplace(id, STDMOVE(Choice::Create<Choice>(parent(), opt, id)));
+		m_fields.emplace(id, std::move(Choice::Create<Choice>(parent(), opt, id)));
     } else if (opt.gui_type.compare("slider") == 0) {
-		m_fields.emplace(id, STDMOVE(SliderCtrl::Create<SliderCtrl>(parent(), opt, id)));
+		m_fields.emplace(id, std::move(SliderCtrl::Create<SliderCtrl>(parent(), opt, id)));
     } else if (opt.gui_type.compare("i_spin") == 0) { // Spinctrl
     } else if (opt.gui_type.compare("legend") == 0) { // StaticText
-		m_fields.emplace(id, STDMOVE(StaticText::Create<StaticText>(parent(), opt, id)));
+		m_fields.emplace(id, std::move(StaticText::Create<StaticText>(parent(), opt, id)));
     } else { 
         switch (opt.type) {
             case coFloatOrPercent:
@@ -43,21 +44,21 @@ const t_field& OptionsGroup::build_field(const t_config_option_key& id, const Co
 			case coPercents:
 			case coString:
 			case coStrings:
-				m_fields.emplace(id, STDMOVE(TextCtrl::Create<TextCtrl>(parent(), opt, id)));
+				m_fields.emplace(id, std::move(TextCtrl::Create<TextCtrl>(parent(), opt, id)));
                 break;
 			case coBool:
 			case coBools:
-				m_fields.emplace(id, STDMOVE(CheckBox::Create<CheckBox>(parent(), opt, id)));
+				m_fields.emplace(id, std::move(CheckBox::Create<CheckBox>(parent(), opt, id)));
 				break;
 			case coInt:
 			case coInts:
-				m_fields.emplace(id, STDMOVE(SpinCtrl::Create<SpinCtrl>(parent(), opt, id)));
+				m_fields.emplace(id, std::move(SpinCtrl::Create<SpinCtrl>(parent(), opt, id)));
 				break;
             case coEnum:
-				m_fields.emplace(id, STDMOVE(Choice::Create<Choice>(parent(), opt, id)));
+				m_fields.emplace(id, std::move(Choice::Create<Choice>(parent(), opt, id)));
 				break;
             case coPoints:
-				m_fields.emplace(id, STDMOVE(PointCtrl::Create<PointCtrl>(parent(), opt, id)));
+				m_fields.emplace(id, std::move(PointCtrl::Create<PointCtrl>(parent(), opt, id)));
 				break;
             case coNone:   break;
             default:
@@ -66,26 +67,31 @@ const t_field& OptionsGroup::build_field(const t_config_option_key& id, const Co
     }
     // Grab a reference to fields for convenience
     const t_field& field = m_fields[id];
-	field->m_on_change = [this](std::string opt_id, boost::any value){
+	field->m_on_change = [this](const std::string& opt_id, const boost::any& value) {
 			//! This function will be called from Field.					
 			//! Call OptionGroup._on_change(...)
 			if (!m_disabled) 
 				this->on_change_OG(opt_id, value);
 	};
-	field->m_on_kill_focus = [this](){
+    field->m_on_kill_focus = [this](const std::string& opt_id) {
 			//! This function will be called from Field.					
 			if (!m_disabled) 
-				this->on_kill_focus();
+				this->on_kill_focus(opt_id);
+	};
+    field->m_on_set_focus = [this](const std::string& opt_id) {
+			//! This function will be called from Field.					
+			if (!m_disabled) 
+				this->on_set_focus(opt_id);
 	};
     field->m_parent = parent();
 	
 	//! Label to change background color, when option is modified
 	field->m_Label = label;
-	field->m_back_to_initial_value = [this](std::string opt_id){
+	field->m_back_to_initial_value = [this](std::string opt_id) {
 		if (!m_disabled)
 			this->back_to_initial_value(opt_id);
 	};
-	field->m_back_to_sys_value = [this](std::string opt_id){
+	field->m_back_to_sys_value = [this](std::string opt_id) {
 		if (!this->m_disabled)
 			this->back_to_sys_value(opt_id);
 	};
@@ -97,8 +103,8 @@ const t_field& OptionsGroup::build_field(const t_config_option_key& id, const Co
 void OptionsGroup::add_undo_buttuns_to_sizer(wxSizer* sizer, const t_field& field)
 {
 	if (!m_show_modified_btns) {
-		field->m_Undo_btn->Hide();
-		field->m_Undo_to_sys_btn->Hide();
+        field->m_Undo_btn->set_as_hidden();
+		field->m_Undo_to_sys_btn->set_as_hidden();
 		return;
 	}
 
@@ -106,9 +112,9 @@ void OptionsGroup::add_undo_buttuns_to_sizer(wxSizer* sizer, const t_field& fiel
 	sizer->Add(field->m_Undo_btn, 0, wxALIGN_CENTER_VERTICAL);
 }
 
-void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* = nullptr*/) {
-//!    if (line.sizer != nullptr || (line.widget != nullptr && line.full_width > 0)){
-	if ( (line.sizer != nullptr || line.widget != nullptr) && line.full_width){
+void OptionsGroup::append_line(const Line& line, wxStaticText**	full_Label/* = nullptr*/) {
+//!    if (line.sizer != nullptr || (line.widget != nullptr && line.full_width > 0)) {
+	if ( (line.sizer != nullptr || line.widget != nullptr) && line.full_width) {
 		if (line.sizer != nullptr) {
             sizer->Add(line.sizer, 0, wxEXPAND | wxALL, wxOSX ? 0 : 15);
             return;
@@ -122,6 +128,10 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
 	auto option_set = line.get_options();
 	for (auto opt : option_set) 
 		m_options.emplace(opt.opt_id, opt);
+
+    // add mode value for current line to m_options_mode
+    if (!option_set.empty())
+        m_options_mode.push_back(option_set[0].opt.mode);
 
 	// if we have a single option with no label, no sidetext just add it directly to sizer
 	if (option_set.size() == 1 && label_width == 0 && option_set.front().opt.full_width &&
@@ -156,16 +166,8 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
 #endif /* __WXGTK__ */
 
 	// if we have an extra column, build it
-	if (extra_column) {
-		if (extra_column) {
-			grid_sizer->Add(extra_column(parent(), line), 0, wxALIGN_CENTER_VERTICAL|wxRIGHT, 3);
-		}
-		else {
-			// if the callback provides no sizer for the extra cell, put a spacer
-			grid_sizer->AddSpacer(1);
-		}
-	}
-
+	if (extra_column)
+		grid_sizer->Add(extra_column(parent(), line), 0, wxALIGN_CENTER_VERTICAL|wxRIGHT, 3);
 
     // Build a label if we have it
 	wxStaticText* label=nullptr;
@@ -182,33 +184,32 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
         label->SetFont(label_font);
         label->Wrap(label_width); // avoid a Linux/GTK bug
         if (!line.near_label_widget)
-		    grid_sizer->Add(label, 0, (staticbox ? 0 : wxALIGN_RIGHT | wxRIGHT) | 
-						    (m_flag == ogSIDE_OPTIONS_VERTICAL ? wxTOP : wxALIGN_CENTER_VERTICAL), 5);
+		    grid_sizer->Add(label, 0, (staticbox ? 0 : wxALIGN_RIGHT | wxRIGHT) | wxALIGN_CENTER_VERTICAL, 5);
         else {
             // If we're here, we have some widget near the label
             // so we need a horizontal sizer to arrange these things
             auto sizer = new wxBoxSizer(wxHORIZONTAL);
             grid_sizer->Add(sizer, 0, wxEXPAND | (staticbox ? wxALL : wxBOTTOM | wxTOP | wxLEFT), staticbox ? 0 : 1);
             sizer->Add(line.near_label_widget(parent()), 0, wxRIGHT, 7);
-            sizer->Add(label, 0, (staticbox ? 0 : wxALIGN_RIGHT | wxRIGHT) |
-                (m_flag == ogSIDE_OPTIONS_VERTICAL ? wxTOP : wxALIGN_CENTER_VERTICAL), 5);
+            sizer->Add(label, 0, (staticbox ? 0 : wxALIGN_RIGHT | wxRIGHT) | wxALIGN_CENTER_VERTICAL, 5);
         }
 		if (line.label_tooltip.compare("") != 0)
 			label->SetToolTip(line.label_tooltip);
     }
 
+	if (full_Label != nullptr) 
+        *full_Label = label; // Initiate the pointer to the control of the full label, if we need this one.
     // If there's a widget, build it and add the result to the sizer.
 	if (line.widget != nullptr) {
 		auto wgt = line.widget(parent());
 		// If widget doesn't have label, don't use border
 		grid_sizer->Add(wgt, 0, wxEXPAND | wxBOTTOM | wxTOP, (wxOSX || line.label.IsEmpty()) ? 0 : 5);
-		if (colored_Label != nullptr) *colored_Label = label;
 		return;
 	}
 	
 	// If we're here, we have more than one option or a single option with sidetext
     // so we need a horizontal sizer to arrange these things
-	auto sizer = new wxBoxSizer(m_flag == ogSIDE_OPTIONS_VERTICAL ? wxVERTICAL : wxHORIZONTAL);
+	auto sizer = new wxBoxSizer(wxHORIZONTAL);
 	grid_sizer->Add(sizer, 0, wxEXPAND | (staticbox ? wxALL : wxBOTTOM | wxTOP | wxLEFT), staticbox ? 0 : 1);
 	// If we have a single option with no sidetext just add it directly to the grid sizer
 	if (option_set.size() == 1 && option_set.front().opt.sidetext.size() == 0 &&
@@ -218,23 +219,16 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
 
 		add_undo_buttuns_to_sizer(sizer, field);
 		if (is_window_field(field)) 
-			sizer->Add(field->getWindow(), option.opt.full_width ? 1 : 0, (option.opt.full_width ? wxEXPAND : 0) |
-							wxBOTTOM | wxTOP | wxALIGN_CENTER_VERTICAL, (wxOSX||!staticbox) ? 0 : 2);
+			sizer->Add(field->getWindow(), option.opt.full_width ? 1 : 0, //(option.opt.full_width ? wxEXPAND : 0) |
+            wxBOTTOM | wxTOP | (option.opt.full_width ? wxEXPAND : wxALIGN_CENTER_VERTICAL), (wxOSX || !staticbox) ? 0 : 2);
 		if (is_sizer_field(field)) 
-			sizer->Add(field->getSizer(), 1, (option.opt.full_width ? wxEXPAND : 0) | wxALIGN_CENTER_VERTICAL, 0);
+			sizer->Add(field->getSizer(), 1, /*(*/option.opt.full_width ? wxEXPAND : /*0) |*/ wxALIGN_CENTER_VERTICAL, 0);
 		return;
 	}
 
     for (auto opt : option_set) {
 		ConfigOptionDef option = opt.opt;
-		wxSizer* sizer_tmp;
-		if (m_flag == ogSIDE_OPTIONS_VERTICAL){
-			auto sz = new wxFlexGridSizer(1, 3, 2, 2);
-			sz->RemoveGrowableCol(2);
-			sizer_tmp = sz;
-		}
-    	else
-    		sizer_tmp = sizer;
+		wxSizer* sizer_tmp = sizer;
 		// add label if any
 		if (option.label != "") {
 			wxString str_label = _(option.label);
@@ -244,7 +238,7 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
 // 								L_str(option.label);
 			label = new wxStaticText(parent(), wxID_ANY, str_label + ":", wxDefaultPosition, wxDefaultSize);
 			label->SetFont(label_font);
-			sizer_tmp->Add(label, 0, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL, 0);
+			sizer_tmp->Add(label, 0, /*wxALIGN_RIGHT |*/ wxALIGN_CENTER_VERTICAL, 0);
 		}
 
 		// add field
@@ -260,7 +254,7 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
 			auto sidetext = new wxStaticText(	parent(), wxID_ANY, _(option.sidetext), wxDefaultPosition, 
 												wxSize(sidetext_width, -1)/*wxDefaultSize*/, wxALIGN_LEFT);
 			sidetext->SetFont(sidetext_font);
-			sizer_tmp->Add(sidetext, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, m_flag == ogSIDE_OPTIONS_VERTICAL ? 0 : 4);
+			sizer_tmp->Add(sidetext, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, 4);
 			field->set_side_text_ptr(sidetext);
 		}
 
@@ -269,13 +263,10 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	colored_Label/* 
 			sizer_tmp->Add(opt.side_widget(parent())/*!.target<wxWindow>()*/, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, 1);	//! requires verification
 		}
 
-		if (opt.opt_id != option_set.back().opt_id && m_flag != ogSIDE_OPTIONS_VERTICAL) //! istead of (opt != option_set.back())
+		if (opt.opt_id != option_set.back().opt_id) //! istead of (opt != option_set.back())
 		{
 			sizer_tmp->AddSpacer(6);
 	    }
-
-		if (m_flag == ogSIDE_OPTIONS_VERTICAL)
-			sizer->Add(sizer_tmp, 0, wxALIGN_RIGHT|wxALL, 0);
 	}
 	// add extra sizers if any
 	for (auto extra_widget : line.get_extra_widgets()) {
@@ -289,6 +280,12 @@ Line OptionsGroup::create_single_option_line(const Option& option) const {
     tmp.opt.label = std::string("");
     retval.append_option(tmp);
     return retval;
+}
+
+void OptionsGroup::on_set_focus(const std::string& opt_key)
+{
+    if (m_set_focus != nullptr)
+        m_set_focus(opt_key);
 }
 
 void OptionsGroup::on_change_OG(const t_config_option_key& opt_id, const boost::any& value) {
@@ -329,7 +326,7 @@ void ConfigOptionsGroup::on_change_OG(const t_config_option_key& opt_id, const b
 		// get value
 //!		auto field_value = get_value(opt_id);
 		if (option.gui_flags.compare("serialized")==0) {
-			if (opt_index != -1){
+			if (opt_index != -1) {
 				// 		die "Can't set serialized option indexed value" ;
 			}
 			change_opt_value(*m_config, opt_key, value);
@@ -371,7 +368,7 @@ void ConfigOptionsGroup::back_to_sys_value(const std::string& opt_key)
 void ConfigOptionsGroup::back_to_config_value(const DynamicPrintConfig& config, const std::string& opt_key)
 {
 	boost::any value;
-	if (opt_key == "extruders_count"){
+	if (opt_key == "extruders_count") {
 		auto   *nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(config.option("nozzle_diameter"));
 		value = int(nozzle_diameter->values.size());
 	}
@@ -392,7 +389,16 @@ void ConfigOptionsGroup::back_to_config_value(const DynamicPrintConfig& config, 
 	on_change_OG(opt_key, get_value(opt_key));
 }
 
-void ConfigOptionsGroup::reload_config(){
+void ConfigOptionsGroup::on_kill_focus(const std::string& opt_key)
+{
+    if (m_fill_empty_value) {
+        m_fill_empty_value(opt_key);
+        return;
+    }
+    reload_config();
+}
+
+void ConfigOptionsGroup::reload_config() {
 	for (t_opt_map::iterator it = m_opt_map.begin(); it != m_opt_map.end(); ++it) {
 		auto opt_id = it->first;
 		std::string opt_key = m_opt_map.at(opt_id).first;
@@ -403,7 +409,50 @@ void ConfigOptionsGroup::reload_config(){
 
 }
 
-boost::any ConfigOptionsGroup::config_value(const std::string& opt_key, int opt_index, bool deserialize){
+void ConfigOptionsGroup::Hide()
+{
+    Show(false);
+}
+
+void ConfigOptionsGroup::Show(const bool show)
+{
+    sizer->ShowItems(show);
+#ifdef __WXGTK__
+    m_panel->Show(show);
+    m_grid_sizer->Show(show);
+#endif /* __WXGTK__ */
+}
+
+bool ConfigOptionsGroup::update_visibility(ConfigOptionMode mode) {
+    if (m_options_mode.empty())
+        return true;
+    if (m_grid_sizer->GetEffectiveRowsCount() != m_options_mode.size() &&
+        m_options_mode.size() == 1)
+        return m_options_mode[0] <= mode;
+
+    Show(true);
+
+    int coef = 0;
+    int hidden_row_cnt = 0;
+    const int cols = m_grid_sizer->GetCols();
+    for (auto opt_mode : m_options_mode) {
+		const bool show = opt_mode <= mode;
+        if (!show) {
+            hidden_row_cnt++;
+            for (int i = 0; i < cols; ++i)
+                m_grid_sizer->Show(coef + i, show);
+        }
+        coef+= cols;
+	}
+
+    if (hidden_row_cnt == m_options_mode.size()) {
+        sizer->ShowItems(false);
+        return false;
+    }
+    return true;
+}
+
+boost::any ConfigOptionsGroup::config_value(const std::string& opt_key, int opt_index, bool deserialize) {
 
 	if (deserialize) {
 		// Want to edit a vector value(currently only multi - strings) in a single edit box.
@@ -427,7 +476,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 	boost::any ret;
 	wxString text_value = wxString("");
 	const ConfigOptionDef* opt = config.def()->get(opt_key);
-	switch (opt->type){
+	switch (opt->type) {
 	case coFloatOrPercent:{
 		const auto &value = *config.option<ConfigOptionFloatOrPercent>(opt_key);
 		if (value.percent)
@@ -460,13 +509,13 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		ret = static_cast<wxString>(config.opt_string(opt_key));
 		break;
 	case coStrings:
-		if (opt_key.compare("compatible_printers") == 0){
+		if (opt_key.compare("compatible_printers") == 0) {
 			ret = config.option<ConfigOptionStrings>(opt_key)->values;
 			break;
 		}
 		if (config.option<ConfigOptionStrings>(opt_key)->values.empty())
 			ret = text_value;
-		else if (opt->gui_flags.compare("serialized") == 0){
+		else if (opt->gui_flags.compare("serialized") == 0) {
 			std::vector<std::string> values = config.option<ConfigOptionStrings>(opt_key)->values;
 			if (!values.empty() && values[0].compare("") != 0)
 				for (auto el : values)
@@ -490,24 +539,27 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		break;
 	case coEnum:{
 		if (opt_key.compare("top_fill_pattern") == 0 || opt_key.compare("bottom_fill_pattern") == 0 ||
-			opt_key.compare("fill_pattern") == 0 ){
+			opt_key.compare("fill_pattern") == 0 ) {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
 		}
-		else if (opt_key.compare("gcode_flavor") == 0 ){
+		else if (opt_key.compare("gcode_flavor") == 0 ) {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<GCodeFlavor>>(opt_key)->value);
 		}
-		else if (opt_key.compare("support_material_pattern") == 0){
+		else if (opt_key.compare("support_material_pattern") == 0) {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<SupportMaterialPattern>>(opt_key)->value);
         }
         else if (opt_key.compare("seam_position") == 0 || opt_key.compare("perimeter_loop_seam") == 0) {
             ret = static_cast<int>(config.option<ConfigOptionEnum<SeamPosition>>(opt_key)->value);
         }
-		else if (opt_key.compare("host_type") == 0){
-			ret = static_cast<int>(config.option<ConfigOptionEnum<PrintHostType>>(opt_key)->value);
-		}
-		else if (opt_key.compare("infill_dense_algo") == 0){
+        else if (opt_key.compare("host_type") == 0) {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<PrintHostType>>(opt_key)->value);
+        }
+        else if (opt_key.compare("infill_dense_algo") == 0){
             ret = static_cast<int>(config.option<ConfigOptionEnum<DenseInfillAlgo>>(opt_key)->value);
-		}
+        }
+        else if (opt_key.compare("display_orientation") == 0) {
+            ret  = static_cast<int>(config.option<ConfigOptionEnum<SLADisplayOrientation>>(opt_key)->value);
+        }
 	}
 		break;
 	case coPoints:
@@ -523,13 +575,14 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 	return ret;
 }
 
-Field* ConfigOptionsGroup::get_fieldc(const t_config_option_key& opt_key, int opt_index){
+Field* ConfigOptionsGroup::get_fieldc(const t_config_option_key& opt_key, int opt_index)
+{
 	Field* field = get_field(opt_key);
 	if (field != nullptr)
 		return field;
 	std::string opt_id = "";
 	for (t_opt_map::iterator it = m_opt_map.begin(); it != m_opt_map.end(); ++it) {
-		if (opt_key == m_opt_map.at(it->first).first && opt_index == m_opt_map.at(it->first).second){
+		if (opt_key == m_opt_map.at(it->first).first && opt_index == m_opt_map.at(it->first).second) {
 			opt_id = it->first;
 			break;
 		}

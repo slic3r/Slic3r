@@ -14,6 +14,15 @@ void MultiPoint::scale(double factor)
         pt *= factor;
 }
 
+void MultiPoint::scale(double factor_x, double factor_y)
+{
+    for (Point &pt : points)
+    {
+        pt(0) *= factor_x;
+        pt(1) *= factor_y;
+    }
+}
+
 void MultiPoint::translate(double x, double y)
 {
     Vector v(x, y);
@@ -190,44 +199,171 @@ Point MultiPoint::point_projection(const Point &point) const {
     return proj;
 }
 
-//FIXME This is very inefficient in term of memory use.
-// The recursive algorithm shall run in place, not allocating temporary data in each recursion.
 Points
 MultiPoint::_douglas_peucker(const Points &points, const double tolerance)
 {
-    assert(points.size() >= 2);
-    Points results;
-    double dmax = 0;
-    size_t index = 0;
-    Line full(points.front(), points.back());
-    for (Points::const_iterator it = points.begin() + 1; it != points.end(); ++it) {
-        // we use shortest distance, not perpendicular distance
-        double d = full.distance_to(*it);
-        if (d > dmax) {
-            index = it - points.begin();
-            dmax = d;
+    std::vector<Point> result_pts;
+    if (! pts.empty()) {
+        const Point  *anchor      = &pts.front();
+        size_t        anchor_idx  = 0;
+        const Point  *floater     = &pts.back();
+        size_t        floater_idx = pts.size() - 1;
+        result_pts.reserve(pts.size());
+        result_pts.emplace_back(*anchor);
+        if (anchor_idx != floater_idx) {
+            assert(pts.size() > 1);
+            std::vector<size_t> dpStack;
+            dpStack.reserve(pts.size());
+            dpStack.emplace_back(floater_idx);
+            for (;;) {
+                double max_distSq   = 0.0;
+                size_t furthest_idx = anchor_idx;
+                // find point furthest from line seg created by (anchor, floater) and note it
+                for (size_t i = anchor_idx + 1; i < floater_idx; ++ i) {
+                    double dist = Line::distance_to_squared(pts[i], *anchor, *floater);
+                    if (dist > max_distSq) {
+                        max_distSq   = dist;
+                        furthest_idx = i;
+                    }
+                }
+                // remove point if less than tolerance
+                if (max_distSq <= tolerance) {
+                    result_pts.emplace_back(*floater);
+                    anchor_idx = floater_idx;
+                    anchor     = floater;
+                    assert(dpStack.back() == floater_idx);
+                    dpStack.pop_back();
+                    if (dpStack.empty())
+                        break;
+                    floater_idx = dpStack.back();
+                } else {
+                    floater_idx = furthest_idx;
+                    dpStack.emplace_back(floater_idx);
+                }
+                floater = &pts[floater_idx];
+            }
         }
     }
-    if (dmax >= tolerance) {
-        Points dp0;
-        dp0.reserve(index + 1);
-        dp0.insert(dp0.end(), points.begin(), points.begin() + index + 1);
-        // Recursive call.
-        Points dp1 = MultiPoint::_douglas_peucker(dp0, tolerance);
-        results.reserve(results.size() + dp1.size() - 1);
-        results.insert(results.end(), dp1.begin(), dp1.end() - 1);
-        
-        dp0.clear();
-        dp0.reserve(points.size() - index);
-        dp0.insert(dp0.end(), points.begin() + index, points.end());
-        // Recursive call.
-        dp1 = MultiPoint::_douglas_peucker(dp0, tolerance);
-        results.reserve(results.size() + dp1.size());
-        results.insert(results.end(), dp1.begin(), dp1.end());
-    } else {
-        results.push_back(points.front());
-        results.push_back(points.back());
+    return result_pts;
+}
+
+// Visivalingam simplification algorithm https://github.com/slic3r/Slic3r/pull/3825
+// thanks to @fuchstraumer
+/*
+     struct - vis_node
+     Used with the visivalignam simplification algorithm, which needs to be able to find a points
+    successors and predecessors to operate succesfully. Since this struct is only used in one
+    location, it could probably be dropped into a namespace to avoid polluting the slic3r namespace.
+     Source: https://github.com/shortsleeves/visvalingam_simplify
+     ^ Provided original algorithm implementation. I've only changed things a bit to "clean" them up
+    (i.e be more like my personal style), and managed to do this without requiring a binheap implementation
+ */
+struct vis_node{
+    vis_node(const size_t& idx, const size_t& _prev_idx, const size_t& _next_idx, const double& _area) : pt_idx(idx), prev_idx(_prev_idx), next_idx(_next_idx), area(_area) {}
+    // Indices into a Points container, from which this object was constructed
+    size_t pt_idx, prev_idx, next_idx;
+    // Effective area of this "node"
+    double area;
+    // Overloaded operator used to sort the binheap
+    // Greater area = "more important" node. So, this node is less than the 
+    // other node if it's area is less than the other node's area
+    bool operator<(const vis_node& other) { return (this->area < other.area); }
+};
+Points MultiPoint::visivalingam(const Points& pts, const double& tolerance)
+{
+    // Make sure there's enough points in "pts" to bother with simplification.
+    assert(pts.size() >= 2);
+     // Result object
+    Points results;
+     // Lambda to calculate effective area spanned by a point and its immediate 
+    // successor + predecessor.
+    auto effective_area = [pts](const size_t& curr_pt_idx, const size_t& prev_pt_idx, const size_t& next_pt_idx)->coordf_t {
+        const Point& curr = pts[curr_pt_idx];
+        const Point& prev = pts[prev_pt_idx];
+        const Point& next = pts[next_pt_idx];
+        // Use point objects as vector-distances
+		const Vec2d curr_to_next = (next - curr).cast<double>();
+		const Vec2d prev_to_next = (prev - curr).cast<double>();
+        // Take cross product of these two vector distances
+		return 0.50 * abs(cross2(curr_to_next, prev_to_next));
+    };
+     // We store the effective areas for each node
+    std::vector<coordf_t> areas;
+    areas.reserve(pts.size());
+     // Construct the initial set of nodes. We will make a heap out of the "heap" vector using 
+    // std::make_heap. node_list is used later.
+    std::vector<vis_node*> node_list;
+    node_list.resize(pts.size());
+    std::vector<vis_node*> heap;
+    heap.reserve(pts.size());
+    for (size_t i = 1; i < pts.size() - 1; ++ i) {
+        // Get effective area of current node.
+        coordf_t area = effective_area(i, i - 1, i + 1);
+        // If area is greater than some arbitrarily small value, use it.
+        node_list[i] = new vis_node(i, i - 1, i + 1, area);
+        heap.push_back(node_list[i]);
     }
+     // Call std::make_heap, which uses the < operator by default to make "heap" into 
+    // a binheap, sorted by the < operator we defind in the vis_node struct
+    std::make_heap(heap.begin(), heap.end());
+     // Start comparing areas. Set min_area to an outrageous value initially.
+    double min_area = -std::numeric_limits<double>::max();
+    while (!heap.empty()) {
+         // Get current node.
+        vis_node* curr = heap.front();
+         // Pop node we just retrieved off the heap. pop_heap moves front element in vector
+        // to the back, so we can call pop_back()
+        std::pop_heap(heap.begin(), heap.end());
+        heap.pop_back();
+         // Sanity assert check
+        assert(curr == node_list[curr->pt_idx]);
+         // If the current pt'ss area is less than that of the previous pt's area
+        // use the last pt's area instead. This ensures we don't elimate the current
+        // point without eliminating the previous 
+        min_area = std::max(min_area, curr->area);
+         // Update prev
+        vis_node* prev = node_list[curr->prev_idx];
+        if(prev != nullptr){
+            prev->next_idx = curr->next_idx;
+            prev->area = effective_area(prev->pt_idx, prev->prev_idx, prev->next_idx);
+            // For some reason, std::make_heap() is the fastest way to resort the heap. Probably needs testing.
+            std::make_heap(heap.begin(), heap.end());
+        }
+         // Update next
+        vis_node* next = node_list[curr->next_idx];
+        if(next != nullptr){
+            next->prev_idx = curr->prev_idx;
+            next->area = effective_area(next->pt_idx, next->prev_idx, next->next_idx);
+            std::make_heap(heap.begin(), heap.end());
+        }
+         areas[curr->pt_idx] = min_area;
+        node_list[curr->pt_idx] = nullptr;
+        delete curr;
+    }
+    // Clear node list and shrink_to_fit() (to free actual memory). Not necessary. Could be removed.
+    node_list.clear();
+    node_list.shrink_to_fit();
+    // This lambda is how we test whether or not to keep a point.
+    auto use_point = [areas, tolerance](const size_t& idx)->bool {
+        assert(idx < areas.size());
+        // Return true at front/back of path/areas
+        if(idx == 0 || idx == areas.size() - 1){
+            return true;
+        }
+        // Return true if area at idx is greater than minimum area to consider "valid"
+        else{
+            return areas[idx] > tolerance;
+        }
+    };
+    // Use previously defined lambda to build results.
+    for (size_t i = 0; i < pts.size(); ++i) {
+        if (use_point(i)){
+            results.push_back(pts[i]);
+        }
+    }
+     // Check that results has at least two points
+    assert(results.size() >= 2);
+     // Return simplified vector of points
     return results;
 }
 

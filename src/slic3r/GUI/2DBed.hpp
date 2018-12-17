@@ -2,7 +2,7 @@
 #define slic3r_2DBed_hpp_
 
 #include <wx/wx.h>
-#include "Config.hpp"
+#include "libslic3r/Config.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -28,18 +28,19 @@ public:
 	Bed_2D(wxWindow* parent) 
 	{
 		Create(parent, wxID_ANY, wxDefaultPosition, wxSize(250, -1), wxTAB_TRAVERSAL);
+        SetBackgroundStyle(wxBG_STYLE_PAINT); // to avoid assert message after wxAutoBufferedPaintDC 
 //		m_user_drawn_background = $^O ne 'darwin';
 #ifdef __APPLE__
 		m_user_drawn_background = false;
 #endif /*__APPLE__*/
 		Bind(wxEVT_PAINT, ([this](wxPaintEvent e) { repaint(); }));
 //		EVT_ERASE_BACKGROUND($self, sub{}) if $self->{user_drawn_background};
-//		Bind(EVT_MOUSE_EVENTS, ([this](wxMouseEvent  event){/*mouse_event()*/; }));
-		Bind(wxEVT_LEFT_DOWN, ([this](wxMouseEvent  event){ mouse_event(event); }));
-		Bind(wxEVT_MOTION, ([this](wxMouseEvent  event){ mouse_event(event); }));
+//		Bind(EVT_MOUSE_EVENTS, ([this](wxMouseEvent  event) {/*mouse_event()*/; }));
+		Bind(wxEVT_LEFT_DOWN, ([this](wxMouseEvent  event) { mouse_event(event); }));
+		Bind(wxEVT_MOTION, ([this](wxMouseEvent  event) { mouse_event(event); }));
 		Bind(wxEVT_SIZE, ([this](wxSizeEvent e) { Refresh(); }));
 	}
-	~Bed_2D(){}
+	~Bed_2D() {}
 
 	std::vector<Vec2d>		m_bed_shape;
 		

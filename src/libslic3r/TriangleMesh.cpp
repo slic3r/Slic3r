@@ -1,7 +1,6 @@
 #include "TriangleMesh.hpp"
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
-#include "MultiPoint.hpp"
 #include "qhull/src/libqhullcpp/Qhull.h"
 #include "qhull/src/libqhullcpp/QhullFacetList.h"
 #include "qhull/src/libqhullcpp/QhullVertexSet.h"
@@ -109,21 +108,23 @@ void TriangleMesh::repair()
     BOOST_LOG_TRIVIAL(debug) << "TriangleMesh::repair() started";
     
     // checking exact
-    stl_check_facets_exact(&stl);
+	BOOST_LOG_TRIVIAL(trace) << "\tstl_check_faces_exact";
+	stl_check_facets_exact(&stl);
     stl.stats.facets_w_1_bad_edge = (stl.stats.connected_facets_2_edge - stl.stats.connected_facets_3_edge);
     stl.stats.facets_w_2_bad_edge = (stl.stats.connected_facets_1_edge - stl.stats.connected_facets_2_edge);
     stl.stats.facets_w_3_bad_edge = (stl.stats.number_of_facets - stl.stats.connected_facets_1_edge);
     
     // checking nearby
     //int last_edges_fixed = 0;
-    float tolerance = stl.stats.shortest_edge;
+	float tolerance = stl.stats.shortest_edge;
     float increment = stl.stats.bounding_diameter / 10000.0;
     int iterations = 2;
     if (stl.stats.connected_facets_3_edge < stl.stats.number_of_facets) {
         for (int i = 0; i < iterations; i++) {
             if (stl.stats.connected_facets_3_edge < stl.stats.number_of_facets) {
                 //printf("Checking nearby. Tolerance= %f Iteration=%d of %d...", tolerance, i + 1, iterations);
-                stl_check_facets_nearby(&stl, tolerance);
+				BOOST_LOG_TRIVIAL(trace) << "\tstl_check_faces_nearby";
+				stl_check_facets_nearby(&stl, tolerance);
                 //printf("  Fixed %d edges.\n", stl.stats.edges_fixed - last_edges_fixed);
                 //last_edges_fixed = stl.stats.edges_fixed;
                 tolerance += increment;
@@ -135,29 +136,31 @@ void TriangleMesh::repair()
     
     // remove_unconnected
     if (stl.stats.connected_facets_3_edge <  stl.stats.number_of_facets) {
+        BOOST_LOG_TRIVIAL(trace) << "\tstl_remove_unconnected_facets";
         stl_remove_unconnected_facets(&stl);
     }
     
     // fill_holes
-#if 0
-    // Don't fill holes, the current algorithm does more harm than good on complex holes.
-    // Rather let the slicing algorithm close gaps in 2D slices.
     if (stl.stats.connected_facets_3_edge < stl.stats.number_of_facets) {
+        BOOST_LOG_TRIVIAL(trace) << "\tstl_fill_holes";
         stl_fill_holes(&stl);
         stl_clear_error(&stl);
     }
-#endif
 
     // normal_directions
+    BOOST_LOG_TRIVIAL(trace) << "\tstl_fix_normal_directions";
     stl_fix_normal_directions(&stl);
 
     // normal_values
+    BOOST_LOG_TRIVIAL(trace) << "\tstl_fix_normal_values";
     stl_fix_normal_values(&stl);
     
     // always calculate the volume and reverse all normals if volume is negative
+    BOOST_LOG_TRIVIAL(trace) << "\tstl_calculate_volume";
     stl_calculate_volume(&stl);
     
     // neighbors
+    BOOST_LOG_TRIVIAL(trace) << "\tstl_verify_neighbors";
     stl_verify_neighbors(&stl);
 
     this->repaired = true;
@@ -269,9 +272,9 @@ void TriangleMesh::rotate(float angle, const Vec3d& axis)
     if (angle == 0.f)
         return;
 
-    Vec3f axis_norm = axis.cast<float>().normalized();
-    Transform3f m = Transform3f::Identity();
-    m.rotate(Eigen::AngleAxisf(angle, axis_norm));
+    Vec3d axis_norm = axis.normalized();
+    Transform3d m = Transform3d::Identity();
+    m.rotate(Eigen::AngleAxisd(angle, axis_norm));
     stl_transform(&stl, m);
 }
 
@@ -287,7 +290,7 @@ void TriangleMesh::mirror(const Axis &axis)
     stl_invalidate_shared_vertices(&this->stl);
 }
 
-void TriangleMesh::transform(const Transform3f& t)
+void TriangleMesh::transform(const Transform3d& t)
 {
     stl_transform(&stl, t);
 }
@@ -518,6 +521,7 @@ BoundingBoxf3 TriangleMesh::transformed_bounding_box(const Transform3d& t) const
 
     if (stl.stats.shared_vertices > 0)
     {
+		assert(stl.v_shared != nullptr);
         stl_vertex* vertex_ptr = stl.v_shared;
         for (int i = 0; i < stl.stats.shared_vertices; ++i)
         {
@@ -855,12 +859,12 @@ void TriangleMeshSlicer::_slice_do(size_t facet_idx, std::vector<IntersectionLin
     // find layer extents
     std::vector<float>::const_iterator min_layer, max_layer;
     min_layer = std::lower_bound(z.begin(), z.end(), min_z); // first layer whose slice_z is >= min_z
-    max_layer = std::upper_bound(z.begin() + (min_layer - z.begin()), z.end(), max_z) - 1; // last layer whose slice_z is <= max_z
+    max_layer = std::upper_bound(z.begin() + (min_layer - z.begin()), z.end(), max_z); // first layer, whose slice_z is > max_z
     #ifdef SLIC3R_TRIANGLEMESH_DEBUG
-    printf("layers: min = %d, max = %d\n", (int)(min_layer - z.begin()), (int)(max_layer - z.begin()));
+    printf("layers: min = %d, max = %d\n", (int)(min_layer - z.begin()), (int)(max_layer - z.begin()) - 1);
     #endif /* SLIC3R_TRIANGLEMESH_DEBUG */
     
-    for (std::vector<float>::const_iterator it = min_layer; it != max_layer + 1; ++it) {
+    for (std::vector<float>::const_iterator it = min_layer; it != max_layer; ++it) {
         std::vector<float>::size_type layer_idx = it - z.begin();
         IntersectionLine il;
         if (this->slice_facet(*it / SCALING_FACTOR, facet, facet_idx, min_z, max_z, &il) == TriangleMeshSlicer::Slicing) {
@@ -1207,16 +1211,6 @@ static inline void remove_tangent_edges(std::vector<IntersectionLine> &lines)
     }
 }
 
-void TriangleMeshSlicer::make_loops(std::vector<IntersectionLine> &lines, Polygons* loops) const
-{
-#if 0
-//FIXME slice_facet() may create zero length edges due to rounding of doubles into coord_t.
-//#ifdef _DEBUG
-    for (const Line &l : lines)
-        assert(l.a != l.b);
-#endif /* _DEBUG */
-
-    remove_tangent_edges(lines);
 
     struct OpenPolyline {
         OpenPolyline() {};
@@ -1234,31 +1228,33 @@ void TriangleMeshSlicer::make_loops(std::vector<IntersectionLine> &lines, Polygo
 // Depending on "try_connect_reversed", it may or may not connect segments crossing triangles of opposite orientation.
 static void chain_open_polylines_exact(std::vector<OpenPolyline> &open_polylines, Polygons &loops, bool try_connect_reversed)
 {
-    // Store the end points of open_polylines into vectors sorted
-    struct OpenPolylineEnd {
-        OpenPolylineEnd(OpenPolyline *polyline, bool start) : polyline(polyline), start(start) {}
-        OpenPolyline    *polyline;
-        // Is it the start or end point?
-        bool             start;
-        const IntersectionReference& ipref() const { return start ? polyline->start : polyline->end; }
-        // Return a unique ID for the intersection point.
-        // Return a positive id for a point, or a negative id for an edge.
-        int id() const { const IntersectionReference &r = ipref(); return (r.point_id >= 0) ? r.point_id : - r.edge_id; }
-        bool operator==(const OpenPolylineEnd &rhs) const { return this->polyline == rhs.polyline && this->start == rhs.start; }
-    };
-    std::vector<OpenPolyline> open_polylines;
-    {
-        // Build a map of lines by edge_a_id and a_id.
-        std::vector<IntersectionLine*> by_edge_a_id;
-        std::vector<IntersectionLine*> by_a_id;
-        by_edge_a_id.reserve(lines.size());
-        by_a_id.reserve(lines.size());
-        for (IntersectionLine &line : lines) {
-            if (! line.skip()) {
-                if (line.edge_a_id != -1)
-                    by_edge_a_id.emplace_back(&line);
-                if (line.a_id != -1)
-                    by_a_id.emplace_back(&line);
+    // Build a map of lines by edge_a_id and a_id.
+    std::vector<IntersectionLine*> by_edge_a_id;
+    std::vector<IntersectionLine*> by_a_id;
+    by_edge_a_id.reserve(lines.size());
+    by_a_id.reserve(lines.size());
+    for (IntersectionLine &line : lines) {
+        if (! line.skip()) {
+            if (line.edge_a_id != -1)
+                by_edge_a_id.emplace_back(&line);
+            if (line.a_id != -1)
+                by_a_id.emplace_back(&line);
+        }
+    }
+    auto by_edge_lower = [](const IntersectionLine* il1, const IntersectionLine *il2) { return il1->edge_a_id < il2->edge_a_id; };
+    auto by_vertex_lower = [](const IntersectionLine* il1, const IntersectionLine *il2) { return il1->a_id < il2->a_id; };
+    std::sort(by_edge_a_id.begin(), by_edge_a_id.end(), by_edge_lower);
+    std::sort(by_a_id.begin(), by_a_id.end(), by_vertex_lower);
+    // Chain the segments with a greedy algorithm, collect the loops and unclosed polylines.
+    IntersectionLines::iterator it_line_seed = lines.begin();
+    for (;;) {
+        // take first spare line and start a new loop
+        IntersectionLine *first_line = nullptr;
+        for (; it_line_seed != lines.end(); ++ it_line_seed)
+            if (it_line_seed->is_seed_candidate()) {
+            //if (! it_line_seed->skip()) {
+                first_line = &(*it_line_seed ++);
+                break;
             }
         }
         auto by_edge_lower = [](const IntersectionLine* il1, const IntersectionLine *il2) { return il1->edge_a_id < il2->edge_a_id; };
@@ -1268,81 +1264,49 @@ static void chain_open_polylines_exact(std::vector<OpenPolyline> &open_polylines
         // Chain the segments with a greedy algorithm, collect the loops and unclosed polylines.
         IntersectionLines::iterator it_line_seed = lines.begin();
         for (;;) {
-            // take first spare line and start a new loop
-            IntersectionLine *first_line = nullptr;
-            for (; it_line_seed != lines.end(); ++ it_line_seed)
-                if (it_line_seed->is_seed_candidate()) {
-                //if (! it_line_seed->skip()) {
-                    first_line = &(*it_line_seed ++);
-                    break;
+            // find a line starting where last one finishes
+            IntersectionLine* next_line = nullptr;
+            if (last_line->edge_b_id != -1) {
+                key.edge_a_id = last_line->edge_b_id;
+                auto it_begin = std::lower_bound(by_edge_a_id.begin(), by_edge_a_id.end(), &key, by_edge_lower);
+                if (it_begin != by_edge_a_id.end()) {
+                    auto it_end = std::upper_bound(it_begin, by_edge_a_id.end(), &key, by_edge_lower);
+                    for (auto it_line = it_begin; it_line != it_end; ++ it_line)
+                        if (! (*it_line)->skip()) {
+                            next_line = *it_line;
+                            break;
+                        }
                 }
-                opl->points.clear();
+            }
+            if (next_line == nullptr && last_line->b_id != -1) {
+                key.a_id = last_line->b_id;
+                auto it_begin = std::lower_bound(by_a_id.begin(), by_a_id.end(), &key, by_vertex_lower);
+                if (it_begin != by_a_id.end()) {
+                    auto it_end = std::upper_bound(it_begin, by_a_id.end(), &key, by_vertex_lower);
+                    for (auto it_line = it_begin; it_line != it_end; ++ it_line)
+                        if (! (*it_line)->skip()) {
+                            next_line = *it_line;
+                            break;
+                        }
+                }
+            }
+            if (next_line == nullptr) {
+                // Check whether we closed this loop.
+                if ((first_line->edge_a_id != -1 && first_line->edge_a_id == last_line->edge_b_id) || 
+                    (first_line->a_id      != -1 && first_line->a_id      == last_line->b_id)) {
+                    // The current loop is complete. Add it to the output.
+                    loops.emplace_back(std::move(loop_pts));
+                    #ifdef SLIC3R_TRIANGLEMESH_DEBUG
+                    printf("  Discovered %s polygon of %d points\n", (p.is_counter_clockwise() ? "ccw" : "cw"), (int)p.points.size());
+                    #endif
+                } else {
+                    // This is an open polyline. Add it to the list of open polylines. These open polylines will processed later.
+                    loop_pts.emplace_back(last_line->b);
+                    open_polylines.emplace_back(OpenPolyline(
+                        IntersectionReference(first_line->a_id, first_line->edge_a_id), 
+                        IntersectionReference(last_line->b_id, last_line->edge_b_id), std::move(loop_pts)));
+                }
                 break;
-            first_line->set_skip();
-            Points loop_pts;
-            loop_pts.emplace_back(first_line->a);
-            IntersectionLine *last_line = first_line;
-            
-            /*
-            printf("first_line edge_a_id = %d, edge_b_id = %d, a_id = %d, b_id = %d, a = %d,%d, b = %d,%d\n", 
-                first_line->edge_a_id, first_line->edge_b_id, first_line->a_id, first_line->b_id,
-                first_line->a.x, first_line->a.y, first_line->b.x, first_line->b.y);
-            */
-            
-            IntersectionLine key;
-            for (;;) {
-                // find a line starting where last one finishes
-                IntersectionLine* next_line = nullptr;
-                if (last_line->edge_b_id != -1) {
-                    key.edge_a_id = last_line->edge_b_id;
-                    auto it_begin = std::lower_bound(by_edge_a_id.begin(), by_edge_a_id.end(), &key, by_edge_lower);
-                    if (it_begin != by_edge_a_id.end()) {
-                        auto it_end = std::upper_bound(it_begin, by_edge_a_id.end(), &key, by_edge_lower);
-                        for (auto it_line = it_begin; it_line != it_end; ++ it_line)
-                            if (! (*it_line)->skip()) {
-                                next_line = *it_line;
-                                break;
-                            }
-                    }
-                }
-                if (next_line == nullptr && last_line->b_id != -1) {
-                    key.a_id = last_line->b_id;
-                    auto it_begin = std::lower_bound(by_a_id.begin(), by_a_id.end(), &key, by_vertex_lower);
-                    if (it_begin != by_a_id.end()) {
-                        auto it_end = std::upper_bound(it_begin, by_a_id.end(), &key, by_vertex_lower);
-                        for (auto it_line = it_begin; it_line != it_end; ++ it_line)
-                            if (! (*it_line)->skip()) {
-                                next_line = *it_line;
-                                break;
-                            }
-                    }
-                }
-                if (next_line == nullptr) {
-                    // Check whether we closed this loop.
-                    if ((first_line->edge_a_id != -1 && first_line->edge_a_id == last_line->edge_b_id) || 
-                        (first_line->a_id      != -1 && first_line->a_id      == last_line->b_id)) {
-                        // The current loop is complete. Add it to the output.
-                        loops->emplace_back(std::move(loop_pts));
-                        #ifdef SLIC3R_TRIANGLEMESH_DEBUG
-                        printf("  Discovered %s polygon of %d points\n", (p.is_counter_clockwise() ? "ccw" : "cw"), (int)p.points.size());
-                        #endif
-                    } else {
-                        // This is an open polyline. Add it to the list of open polylines. These open polylines will processed later.
-                        loop_pts.emplace_back(last_line->b);
-                        open_polylines.emplace_back(OpenPolyline(
-                            IntersectionReference(first_line->a_id, first_line->edge_a_id), 
-                            IntersectionReference(last_line->b_id, last_line->edge_b_id), std::move(loop_pts)));
-                    }
-                    break;
-                }
-                /*
-                printf("next_line edge_a_id = %d, edge_b_id = %d, a_id = %d, b_id = %d, a = %d,%d, b = %d,%d\n", 
-                    next_line->edge_a_id, next_line->edge_b_id, next_line->a_id, next_line->b_id,
-                    next_line->a.x, next_line->a.y, next_line->b.x, next_line->b.y);
-                */
-                loop_pts.emplace_back(next_line->a);
-                last_line = next_line;
-                next_line->set_skip();
             }
             // Continue with the current loop.
         }
@@ -1376,59 +1340,88 @@ static void chain_open_polylines_close_gaps(std::vector<OpenPolyline> &open_poly
                             }
                     }
                 }
-                if (next_start == nullptr && end.point_id() != -1) {
-                    auto it_begin = std::lower_bound(by_point_id.begin(), by_point_id.end(), end, by_point_lower);
-                    if (it_begin != by_point_id.end()) {
-                        auto it_end = std::upper_bound(it_begin, by_point_id.end(), end, by_point_lower);
-                        for (auto it_point = it_begin; it_point != it_end; ++ it_point)
-                            if (! it_point->polyline->consumed) {
-                                next_start = &(*it_point);
-                                break;
-                            }
-                    }
-                }
-                if (next_start == nullptr) {
-                    // The current loop could not be closed. Unmark the segment.
-                    opl.consumed = false;
-                    break;
-                }
-                // Attach this polyline to the end of the initial polyline.
-                if (next_start->start) {
-                    auto it = next_start->polyline->points.begin();
-                    std::copy(++ it, next_start->polyline->points.end(), back_inserter(opl.points));
-                    //opl.points.insert(opl.points.back(), ++ it, next_start->polyline->points.end());
+                opl->points.clear();
+                break;
+            }
+            // Continue with the current loop.
+        }
+    }
+}
+
+// called by TriangleMeshSlicer::make_loops() to connect remaining open polylines across shared triangle edges and vertices, 
+// possibly closing small gaps.
+// Depending on "try_connect_reversed", it may or may not connect segments crossing triangles of opposite orientation.
+static void chain_open_polylines_close_gaps(std::vector<OpenPolyline> &open_polylines, Polygons &loops, double max_gap, bool try_connect_reversed)
+{
+    const coord_t max_gap_scaled = (coord_t)scale_(max_gap);
+
+    // Sort the open polylines by their length, so the new loops will be seeded from longer chains.
+    // Update the polyline lengths, return only not yet consumed polylines.
+    std::vector<OpenPolyline*> sorted_by_length = open_polylines_sorted(open_polylines, true);
+
+    // Store the end points of open_polylines into ClosestPointInRadiusLookup<OpenPolylineEnd>.
+    struct OpenPolylineEnd {
+        OpenPolylineEnd(OpenPolyline *polyline, bool start) : polyline(polyline), start(start) {}
+        OpenPolyline    *polyline;
+        // Is it the start or end point?
+        bool             start;
+        const Point&     point() const { return start ? polyline->points.front() : polyline->points.back(); }
+        bool operator==(const OpenPolylineEnd &rhs) const { return this->polyline == rhs.polyline && this->start == rhs.start; }
+    };
+    struct OpenPolylineEndAccessor {
+        const Point* operator()(const OpenPolylineEnd &pt) const { return pt.polyline->consumed ? nullptr : &pt.point(); }
+    };
+    typedef ClosestPointInRadiusLookup<OpenPolylineEnd, OpenPolylineEndAccessor> ClosestPointLookupType;
+    ClosestPointLookupType closest_end_point_lookup(max_gap_scaled);
+    for (OpenPolyline *opl : sorted_by_length) {
+        closest_end_point_lookup.insert(OpenPolylineEnd(opl, true));
+        if (try_connect_reversed)
+            closest_end_point_lookup.insert(OpenPolylineEnd(opl, false));
+    }
+    // Try to connect the loops.
+    for (OpenPolyline *opl : sorted_by_length) {
+        if (opl->consumed)
+            continue;
+        OpenPolylineEnd end(opl, false);
+        if (try_connect_reversed)
+            // The end point of this polyline will be modified, thus the following entry will become invalid. Remove it.
+            closest_end_point_lookup.erase(end);
+        opl->consumed = true;
+        size_t n_segments_joined = 1;
+        for (;;) {
+            // Find a line starting where last one finishes, only return non-consumed open polylines (OpenPolylineEndAccessor returns null for consumed).
+            std::pair<const OpenPolylineEnd*, double> next_start_and_dist = closest_end_point_lookup.find(end.point());
+            const OpenPolylineEnd *next_start = next_start_and_dist.first;
+            // Check whether we closed this loop.
+			double current_loop_closing_distance2 = (opl->points.back() - opl->points.front()).cast<double>().squaredNorm();
+            bool   loop_closed = current_loop_closing_distance2 < coordf_t(max_gap_scaled) * coordf_t(max_gap_scaled);
+            if (next_start != nullptr && loop_closed && current_loop_closing_distance2 < next_start_and_dist.second) {
+                // Heuristics to decide, whether to close the loop, or connect another polyline.
+                // One should avoid closing loops shorter than max_gap_scaled.
+                loop_closed = sqrt(current_loop_closing_distance2) < 0.3 * length(opl->points);
+            }
+            if (loop_closed) {
+                // Remove the start point of the current polyline from the lookup.
+                // Mark the current segment as not consumed, otherwise the closest_end_point_lookup.erase() would fail.
+                opl->consumed = false;
+                closest_end_point_lookup.erase(OpenPolylineEnd(opl, true));
+                if (current_loop_closing_distance2 == 0.) {
+                    // Remove the duplicate last point.
+                    opl->points.pop_back();
                 } else {
                     // The end points are different, keep both of them.
                 }
-                end = *next_start;
-                end.start = !end.start;
-                next_start->polyline->points.clear();
-                next_start->polyline->consumed = true;
-                // Check whether we closed this loop.
-                const IntersectionReference &ip1 = opl.start;
-                const IntersectionReference &ip2 = end.ipref();
-                if ((ip1.edge_id  != -1 && ip1.edge_id  == ip2.edge_id) ||
-                    (ip1.point_id != -1 && ip1.point_id == ip2.point_id)) {
-                    // The current loop is complete. Add it to the output.
-                    //assert(opl.points.front().point_id == opl.points.back().point_id);
-                    //assert(opl.points.front().edge_id  == opl.points.back().edge_id);
-                    // Remove the duplicate last point.
-                    opl.points.pop_back();
-                    if (opl.points.size() >= 3) {
+                if (opl->points.size() >= 3) {
+                    if (try_connect_reversed && n_segments_joined > 1 && area(opl->points) < 0)
                         // The closed polygon is patched from pieces with messed up orientation, therefore
                         // the orientation of the patched up polygon is not known.
                         // Orient the patched up polygons CCW. This heuristic may close some holes and cavities.
-                        double area = 0.;
-                        for (size_t i = 0, j = opl.points.size() - 1; i < opl.points.size(); j = i ++)
-                            area += double(opl.points[j](0) + opl.points[i](0)) * double(opl.points[i](1) - opl.points[j](1));
-                        if (area < 0)
-                            std::reverse(opl.points.begin(), opl.points.end());
-                        loops->emplace_back(std::move(opl.points));
-                    }
-                    opl.points.clear();
-                    break;
+                        std::reverse(opl->points.begin(), opl->points.end());
+                    loops.emplace_back(std::move(opl->points));
                 }
-                // Continue with the current loop.
+                opl->points.clear();
+                opl->consumed = true;
+                break;
             }
             if (next_start == nullptr) {
                 // The current loop could not be closed. Unmark the segment.
@@ -1512,19 +1505,19 @@ void TriangleMeshSlicer::make_loops(std::vector<IntersectionLine> &lines, Polygo
     chain_open_polylines_exact(open_polylines, *loops, true);
 
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
-	{
-		static int iRun = 0;
-		SVG svg(debug_out_path("TriangleMeshSlicer_make_loops-polylines2-%d.svg", iRun++).c_str(), bbox_svg);
-		svg.draw(union_ex(*loops));
-		for (const OpenPolyline &pl : open_polylines) {
+    {
+        static int iRun = 0;
+        SVG svg(debug_out_path("TriangleMeshSlicer_make_loops-polylines2-%d.svg", iRun++).c_str(), bbox_svg);
+        svg.draw(union_ex(*loops));
+        for (const OpenPolyline &pl : open_polylines) {
             if (pl.points.empty())
                 continue;
-			svg.draw(Polyline(pl.points), "red");
+            svg.draw(Polyline(pl.points), "red");
             svg.draw(pl.points.front(), "blue");
             svg.draw(pl.points.back(), "blue");
         }
-		svg.Close();
-	}
+        svg.Close();
+    }
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
 
     // Try to close gaps.
@@ -1535,10 +1528,10 @@ void TriangleMeshSlicer::make_loops(std::vector<IntersectionLine> &lines, Polygo
     chain_open_polylines_close_gaps(open_polylines, *loops, max_gap, true);
 
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
-	{
-		static int iRun = 0;
-		SVG svg(debug_out_path("TriangleMeshSlicer_make_loops-polylines-final-%d.svg", iRun++).c_str(), bbox_svg);
-		svg.draw(union_ex(*loops));
+    {
+        static int iRun = 0;
+        SVG svg(debug_out_path("TriangleMeshSlicer_make_loops-polylines-final-%d.svg", iRun++).c_str(), bbox_svg);
+        svg.draw(union_ex(*loops));
         for (const OpenPolyline &pl : open_polylines) {
             if (pl.points.empty())
                 continue;
@@ -1546,8 +1539,8 @@ void TriangleMeshSlicer::make_loops(std::vector<IntersectionLine> &lines, Polygo
             svg.draw(pl.points.front(), "blue");
             svg.draw(pl.points.back(), "blue");
         }
-		svg.Close();
-	}
+        svg.Close();
+    }
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
 }
 
@@ -1683,9 +1676,10 @@ void TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slic
     //        p_slices = diff(p_slices, *loop);
     //}
 
-    // perform a safety offset to merge very close facets (TODO: find test case for this)
-    //double safety_offset = scale_(0.0499); // now a config value
-//FIXME see https://github.com/prusa3d/Slic3r/issues/520
+    // Perform a safety offset to merge very close facets (TODO: find test case for this)
+    // 0.0499 comes from https://github.com/slic3r/Slic3r/issues/959
+//    double safety_offset = scale_(0.0499);
+    // 0.0001 is set to satisfy GH #520, #1029, #1364
 //    double safety_offset = scale_(0.0001);
 
     /* The following line is commented out because it can generate wrong polygons,

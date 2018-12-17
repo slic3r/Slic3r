@@ -4,8 +4,6 @@
 #include <memory>
 #include <functional>
 
-#include "callback.hpp"
-
 class wxTimer;
 class wxGauge;
 class wxButton;
@@ -22,11 +20,12 @@ namespace Slic3r {
  * of the Slicer main window. It consists of a message area to the left and a
  * progress indication area to the right with an optional cancel button.
  */
-class ProgressStatusBar {
+class ProgressStatusBar 
+{
     wxStatusBar *self;      // we cheat! It should be the base class but: perl!
-    wxTimer *timer_;
-    wxGauge *prog_;
-    wxButton *cancelbutton_;
+    wxTimer *m_timer;
+    wxGauge *m_prog;
+    wxButton *m_cancelbutton;
 public:
 
     /// Cancel callback function type
@@ -35,28 +34,31 @@ public:
     ProgressStatusBar(wxWindow *parent = nullptr, int id = -1);
     ~ProgressStatusBar();
 
-    int  get_progress() const;
-    void set_progress(int);
-    int  get_range() const;
-    void set_range(int = 100);
-    void show_progress(bool);
-    void start_busy(int = 100);
-    void stop_busy();
-    inline bool is_busy() const { return busy_; }
-    void set_cancel_callback(CancelFn = CancelFn());
-    inline void remove_cancel_callback() { set_cancel_callback(); }
-    void run(int rate);
-    void embed(wxFrame *frame = nullptr);
-    void set_status_text(const wxString& txt);
+    int         get_progress() const;
+    // if the argument is less than 0 it shows the last state or
+    // pulses if no state was set before.
+    void        set_progress(int);
+    int         get_range() const;
+    void        set_range(int = 100);
+    void        show_progress(bool);
+    void        start_busy(int = 100);
+    void        stop_busy();
+    inline bool is_busy() const { return m_busy; }
+    void        set_cancel_callback(CancelFn = CancelFn());
+    inline void reset_cancel_callback() { set_cancel_callback(); }
+    void        run(int rate);
+    void        embed(wxFrame *frame = nullptr);
+    void        set_status_text(const wxString& txt);
+    void        set_status_text(const std::string& txt);
+    void        set_status_text(const char *txt);
 
     // Temporary methods to satisfy Perl side
-    void show_cancel_button();
-    void hide_cancel_button();
+    void        show_cancel_button();
+    void        hide_cancel_button();
 
-    PerlCallback m_perl_cancel_callback;
 private:
-    bool busy_ = false;
-    CancelFn cancel_cb_;
+    bool m_busy = false;
+    CancelFn m_cancel_cb;
 };
 
 namespace GUI {

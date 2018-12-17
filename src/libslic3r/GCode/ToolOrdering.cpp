@@ -68,12 +68,11 @@ ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool
 {
     m_print_config_ptr = &print.config();
 
-    PrintObjectPtrs objects = print.get_printable_objects();
     // Initialize the print layers for all objects and all layers.
     coordf_t object_bottom_z = 0.;
     {
         std::vector<coordf_t> zs;
-        for (auto object : objects) {
+        for (auto object : print.objects()) {
             zs.reserve(zs.size() + object->layers().size() + object->support_layers().size());
             for (auto layer : object->layers())
                 zs.emplace_back(layer->print_z);
@@ -86,7 +85,7 @@ ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool
     }
 
     // Collect extruders reuqired to print the layers.
-    for (auto object : objects)
+    for (auto object : print.objects())
         this->collect_extruders(*object);
 
     // Reorder the extruders to minimize tool switches.
@@ -151,7 +150,7 @@ void ToolOrdering::collect_extruders(const PrintObject &object)
     for (auto layer : object.layers()) {
         LayerTools &layer_tools = this->tools_for_layer(layer->print_z);
         // What extruders are required to print this object layer?
-        for (size_t region_id = 0; region_id < object.print()->regions().size(); ++ region_id) {
+        for (size_t region_id = 0; region_id < object.region_volumes.size(); ++ region_id) {
 			const LayerRegion *layerm = (region_id < layer->regions().size()) ? layer->regions()[region_id] : nullptr;
             if (layerm == nullptr)
                 continue;
@@ -451,7 +450,7 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
         return volume_to_wipe;      // Soluble filament cannot be wiped in a random infill, neither the filament after it
 
     // we will sort objects so that dedicated for wiping are at the beginning:
-    PrintObjectPtrs object_list = print.get_printable_objects();
+    PrintObjectPtrs object_list = print.objects();
     std::sort(object_list.begin(), object_list.end(), [](const PrintObject* a, const PrintObject* b) { return a->config().wipe_into_objects; });
 
     // We will now iterate through
@@ -479,7 +478,7 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
 
         for (unsigned int copy = 0; copy < num_of_copies; ++copy) {    // iterate through copies first, so that we mark neighbouring infills to minimize travel moves
 
-            for (size_t region_id = 0; region_id < object->print()->regions().size(); ++ region_id) {
+            for (size_t region_id = 0; region_id < object->region_volumes.size(); ++ region_id) {
                 const auto& region = *object->print()->regions()[region_id];
 
                 if (!region.config().wipe_into_infill && !object->config().wipe_into_objects)
@@ -547,8 +546,7 @@ void WipingExtrusions::ensure_perimeters_infills_order(const Print& print)
     unsigned int first_nonsoluble_extruder = first_nonsoluble_extruder_on_layer(print.config());
     unsigned int last_nonsoluble_extruder = last_nonsoluble_extruder_on_layer(print.config());
 
-    PrintObjectPtrs printable_objects = print.get_printable_objects();
-    for (const PrintObject* object : printable_objects) {
+    for (const PrintObject* object : print.objects()) {
         // Finds this layer:
         auto this_layer_it = std::find_if(object->layers().begin(), object->layers().end(), [&lt](const Layer* lay) { return std::abs(lt.print_z - lay->print_z)<EPSILON; });
         if (this_layer_it == object->layers().end())
@@ -557,7 +555,7 @@ void WipingExtrusions::ensure_perimeters_infills_order(const Print& print)
         unsigned int num_of_copies = object->copies().size();
 
         for (unsigned int copy = 0; copy < num_of_copies; ++copy) {    // iterate through copies first, so that we mark neighbouring infills to minimize travel moves
-            for (size_t region_id = 0; region_id < object->print()->regions().size(); ++ region_id) {
+            for (size_t region_id = 0; region_id < object->region_volumes.size(); ++ region_id) {
                 const auto& region = *object->print()->regions()[region_id];
 
                 if (!region.config().wipe_into_infill && !object->config().wipe_into_objects)

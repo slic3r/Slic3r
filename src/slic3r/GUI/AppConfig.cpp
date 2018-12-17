@@ -1,5 +1,5 @@
-#include "../../libslic3r/libslic3r.h"
-#include "../../libslic3r/Utils.hpp"
+#include "libslic3r/libslic3r.h"
+#include "libslic3r/Utils.hpp"
 #include "AppConfig.hpp"
 
 #include <stdio.h>
@@ -17,7 +17,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/format.hpp>
-
 
 namespace Slic3r {
 
@@ -129,7 +128,6 @@ void AppConfig::save()
 {
     // The config is first written to a file with a PID suffix and then moved
     // to avoid race conditions with multiple instances of Slic3r
-
     const auto path = config_path();
     std::string path_pid = (boost::format("%1%.%2%") % path % get_current_pid()).str();
 
@@ -165,7 +163,6 @@ void AppConfig::save()
     c.close();
 
     rename_file(path_pid, path);
-
     m_dirty = false;
 }
 
@@ -252,6 +249,7 @@ void AppConfig::reset_selections()
     if (it != m_storage.end()) {
         it->second.erase("print");
         it->second.erase("filament");
+        it->second.erase("sla_print");
         it->second.erase("sla_material");
         it->second.erase("printer");
         m_dirty = true;

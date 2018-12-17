@@ -13,6 +13,7 @@
 #include "libslic3r/Utils.hpp"
 #include "avrdude/avrdude-slic3r.hpp"
 #include "GUI.hpp"
+#include "I18N.hpp"
 #include "MsgDialog.hpp"
 #include "../Utils/HexFile.hpp"
 #include "../Utils/Serial.hpp"
@@ -35,6 +36,7 @@
 #include <wx/collpane.h>
 #include <wx/msgdlg.h>
 #include <wx/filefn.h>
+#include "GUI_App.hpp"
 
 
 namespace fs = boost::filesystem;
@@ -213,7 +215,7 @@ void FirmwareDialog::priv::flashing_start(unsigned tasks)
 	modal_response = wxID_NONE;
 	txt_stdout->Clear();
 	set_txt_status(label_status_flashing);
-	txt_status->SetForegroundColour(GUI::get_label_clr_modified());
+    txt_status->SetForegroundColour(GUI::wxGetApp().get_label_clr_modified());
 	port_picker->Disable();
 	btn_rescan->Disable();
 	hex_picker->Disable();

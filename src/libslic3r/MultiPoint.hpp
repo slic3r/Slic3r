@@ -26,6 +26,7 @@ public:
     MultiPoint& operator=(const MultiPoint &other) { points = other.points; return *this; }
     MultiPoint& operator=(MultiPoint &&other) { points = std::move(other.points); return *this; }
     void scale(double factor);
+    void scale(double factor_x, double factor_y);
     void translate(double x, double y);
     void translate(const Point &vector);
     void rotate(double angle) { this->rotate(cos(angle), sin(angle)); }
@@ -82,6 +83,7 @@ public:
     virtual Point point_projection(const Point &point) const;
     
     static Points _douglas_peucker(const Points &points, const double tolerance);
+    static Points visivalingam(const Points& pts, const double& tolerance);
 };
 
 class MultiPoint3
@@ -112,7 +114,7 @@ inline double length(const Points &pts) {
     if (! pts.empty()) {
         auto it = pts.begin();
         for (auto it_prev = it ++; it != pts.end(); ++ it, ++ it_prev)
-            total += it->distance_to(*it_prev);
+            total += (*it - *it_prev).cast<double>().norm();
     }
     return total;
 }
@@ -120,7 +122,7 @@ inline double length(const Points &pts) {
 inline double area(const Points &polygon) {
     double area = 0.;
     for (size_t i = 0, j = polygon.size() - 1; i < polygon.size(); j = i ++)
-        area += double(polygon[j].x + polygon[i].x) * double(polygon[i].y - polygon[j].y);
+		area += double(polygon[i](0) + polygon[j](0)) * double(polygon[i](1) - polygon[j](1));
     return area;
 }
 

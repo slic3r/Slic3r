@@ -6,8 +6,8 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
-#include "../../libslic3r/libslic3r.h"
-#include "../../libslic3r/PrintConfig.hpp"
+#include "libslic3r/libslic3r.h"
+#include "libslic3r/PrintConfig.hpp"
 #include "slic3r/Utils/Semver.hpp"
 
 class wxBitmap;
@@ -22,6 +22,7 @@ class PresetBundle;
 
 namespace GUI {
 	class BitmapCache;
+    class PresetComboBox;
 }
 
 enum ConfigFileType
@@ -83,6 +84,7 @@ public:
     {
         TYPE_INVALID,
         TYPE_PRINT,
+        TYPE_SLA_PRINT,
         TYPE_FILAMENT,
         TYPE_SLA_MATERIAL,
         TYPE_PRINTER,
@@ -124,9 +126,6 @@ public:
     // Configuration data, loaded from a file, or set from the defaults.
     DynamicPrintConfig  config;
 
-    // Load this profile for the following keys only.
-    DynamicPrintConfig& load(const std::vector<std::string> &keys, const StaticPrintConfig &defaults);
-
     void                save();
 
     // Return a label of this preset, consisting of a name and a "(modified)" suffix, if this preset is dirty.
@@ -137,6 +136,7 @@ public:
     void                set_dirty(bool dirty = true) { this->is_dirty = dirty; }
     void                reset_dirty() { this->is_dirty = false; }
 
+    bool                is_compatible_with_print(const Preset &active_print) const;
     bool                is_compatible_with_printer(const Preset &active_printer, const DynamicPrintConfig *extra_config) const;
     bool                is_compatible_with_printer(const Preset &active_printer) const;
 
@@ -145,17 +145,28 @@ public:
     std::string&        inherits() { return Preset::inherits(this->config); }
     const std::string&  inherits() const { return Preset::inherits(const_cast<Preset*>(this)->config); }
 
+    // Returns the "compatible_prints_condition".
+    static std::string& compatible_prints_condition(DynamicPrintConfig &cfg) { return cfg.option<ConfigOptionString>("compatible_prints_condition", true)->value; }
+    std::string&        compatible_prints_condition() { 
+		assert(this->type == TYPE_FILAMENT || this->type == TYPE_SLA_MATERIAL);
+        return Preset::compatible_prints_condition(this->config);
+    }
+    const std::string&  compatible_prints_condition() const { return const_cast<Preset*>(this)->compatible_prints_condition(); }
+
     // Returns the "compatible_printers_condition".
     static std::string& compatible_printers_condition(DynamicPrintConfig &cfg) { return cfg.option<ConfigOptionString>("compatible_printers_condition", true)->value; }
-    std::string&        compatible_printers_condition() { return Preset::compatible_printers_condition(this->config); }
-    const std::string&  compatible_printers_condition() const { return Preset::compatible_printers_condition(const_cast<Preset*>(this)->config); }
+    std::string&        compatible_printers_condition() {
+		assert(this->type == TYPE_PRINT || this->type == TYPE_SLA_PRINT || this->type == TYPE_FILAMENT || this->type == TYPE_SLA_MATERIAL);
+        return Preset::compatible_printers_condition(this->config);
+    }
+    const std::string&  compatible_printers_condition() const { return const_cast<Preset*>(this)->compatible_printers_condition(); }
 
     static PrinterTechnology& printer_technology(DynamicPrintConfig &cfg) { return cfg.option<ConfigOptionEnum<PrinterTechnology>>("printer_technology", true)->value; }
     PrinterTechnology&        printer_technology() { return Preset::printer_technology(this->config); }
     const PrinterTechnology&  printer_technology() const { return Preset::printer_technology(const_cast<Preset*>(this)->config); }
 
     // Mark this preset as compatible if it is compatible with active_printer.
-    bool                update_compatible_with_printer(const Preset &active_printer, const DynamicPrintConfig *extra_config);
+    bool                update_compatible(const Preset &active_printer, const DynamicPrintConfig *extra_config, const Preset *active_print = nullptr);
 
     // Set is_visible according to application config
     void                set_visible_from_appconfig(const AppConfig &app_config);
@@ -175,13 +186,16 @@ public:
 
     static const std::vector<std::string>&  sla_printer_options();
     static const std::vector<std::string>&  sla_material_options();
+    static const std::vector<std::string>&  sla_print_options();
 
-	static void update_suffix_modified();
+	static void                             update_suffix_modified();
+    static void                             normalize(DynamicPrintConfig &config);
+    // Report configuration fields, which are misplaced into a wrong group, remove them from the config.
+    static std::string                      remove_invalid_keys(DynamicPrintConfig &config, const DynamicPrintConfig &default_config);
 
 protected:
     friend class        PresetCollection;
     friend class        PresetBundle;
-    static void         normalize(DynamicPrintConfig &config);
     // Resize the extruder specific vectors ()
     static void         set_num_extruders(DynamicPrintConfig &config, unsigned int n);
     static const std::string& suffix_modified();
@@ -199,9 +213,11 @@ public:
     typedef std::deque<Preset>::iterator Iterator;
     typedef std::deque<Preset>::const_iterator ConstIterator;
     Iterator        begin() { return m_presets.begin() + m_num_default_presets; }
-    ConstIterator   begin() const { return m_presets.begin() + m_num_default_presets; }
+    ConstIterator   begin() const { return m_presets.cbegin() + m_num_default_presets; }
+    ConstIterator   cbegin() const { return m_presets.cbegin() + m_num_default_presets; }
     Iterator        end() { return m_presets.end(); }
-    ConstIterator   end() const { return m_presets.end(); }
+    ConstIterator   end() const { return m_presets.cend(); }
+    ConstIterator   cend() const { return m_presets.cend(); }
 
     void            reset(bool delete_files);
 
@@ -278,8 +294,9 @@ public:
 	static const std::string&	get_suffix_modified();
 
     // Return a preset possibly with modifications.
-	Preset&			default_preset()			{ return m_presets.front(); }
-    const Preset&   default_preset() const      { return m_presets.front(); }
+	Preset&			default_preset(size_t idx = 0)		 { assert(idx < m_num_default_presets); return m_presets[idx]; }
+	const Preset&   default_preset(size_t idx = 0) const { assert(idx < m_num_default_presets); return m_presets[idx]; }
+	virtual const Preset& default_preset_for(const DynamicPrintConfig & /* config */) const { return this->default_preset(); }
     // Return a preset by an index. If the preset is active, a temporary copy is returned.
     Preset&         preset(size_t idx)          { return (int(idx) == m_idx_selected) ? m_edited_preset : m_presets[idx]; }
     const Preset&   preset(size_t idx) const    { return const_cast<PresetCollection*>(this)->preset(idx); }
@@ -328,14 +345,14 @@ public:
 
     // For Print / Filament presets, disable those, which are not compatible with the printer.
     template<typename PreferedCondition>
-    void            update_compatible_with_printer(const Preset &active_printer, bool select_other_if_incompatible, PreferedCondition prefered_condition)
+    void            update_compatible(const Preset &active_printer, const Preset *active_print, bool select_other_if_incompatible, PreferedCondition prefered_condition)
     {
-        if (this->update_compatible_with_printer_internal(active_printer, select_other_if_incompatible) == (size_t)-1)
+        if (this->update_compatible_internal(active_printer, active_print, select_other_if_incompatible) == (size_t)-1)
             // Find some other compatible preset, or the "-- default --" preset.
             this->select_preset(this->first_compatible_idx(prefered_condition));        
     }
-    void            update_compatible_with_printer(const Preset &active_printer, bool select_other_if_incompatible)
-        { this->update_compatible_with_printer(active_printer, select_other_if_incompatible, [](const std::string&){return true;}); }
+    void            update_compatible(const Preset &active_printer, const Preset *active_print, bool select_other_if_incompatible)
+        { this->update_compatible(active_printer, active_print, select_other_if_incompatible, [](const std::string&){return true;}); }
 
     size_t          num_visible() const { return std::count_if(m_presets.begin(), m_presets.end(), [](const Preset &preset){return preset.is_visible;}); }
 
@@ -355,7 +372,7 @@ public:
     // Update the choice UI from the list of presets.
     // Only the compatible presets are shown.
     // If an incompatible preset is selected, it is shown as well.
-    void            update_platter_ui(wxBitmapComboBox *ui);
+    void            update_platter_ui(GUI::PresetComboBox *ui);
 
     // Update a dirty floag of the current preset, update the labels of the UI component accordingly.
     // Return true if the dirty flag changed.
@@ -403,7 +420,7 @@ private:
     std::deque<Preset>::const_iterator find_preset_internal(const std::string &name) const
         { return const_cast<PresetCollection*>(this)->find_preset_internal(name); }
 
-    size_t update_compatible_with_printer_internal(const Preset &active_printer, bool unselect_if_incompatible);
+    size_t update_compatible_internal(const Preset &active_printer, const Preset *active_print, bool unselect_if_incompatible);
 
     static std::vector<std::string> dirty_options(const Preset *edited, const Preset *reference, const bool is_printer_type = false);
 
@@ -437,6 +454,16 @@ private:
 
     // to access select_preset_by_name_strict()
     friend class PresetBundle;
+};
+
+// Printer supports the FFF and SLA technologies, with different set of configuration values,
+// therefore this PresetCollection needs to handle two defaults.
+class PrinterPresetCollection : public PresetCollection
+{
+public:
+    PrinterPresetCollection(Preset::Type type, const std::vector<std::string> &keys, const Slic3r::StaticPrintConfig &defaults, const std::string &default_name = "- default -") :
+		PresetCollection(type, keys, defaults, default_name) {}
+    const Preset&   default_preset_for(const DynamicPrintConfig &config) const override;
 };
 
 } // namespace Slic3r

@@ -2,6 +2,7 @@
 #include <sstream>
 #include "WipeTowerDialog.hpp"
 #include "GUI.hpp"
+#include "I18N.hpp"
 
 #include <wx/sizer.h>
 
@@ -108,7 +109,7 @@ RammingPanel::RammingPanel(wxWindow* parent, const std::string& parameters)
     m_widget_time->Bind(wxEVT_CHAR,[](wxKeyEvent&){});      // do nothing - prevents the user to change the value
     m_widget_volume->Bind(wxEVT_CHAR,[](wxKeyEvent&){});    // do nothing - prevents the user to change the value   
     Bind(EVT_WIPE_TOWER_CHART_CHANGED,[this](wxCommandEvent&) {m_widget_volume->SetValue(m_chart->get_volume()); m_widget_time->SetValue(m_chart->get_time());} );
-    Refresh(this);
+    Refresh(true); // erase background
 }
 
 void RammingPanel::line_parameters_changed() {

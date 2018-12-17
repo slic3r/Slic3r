@@ -12,14 +12,15 @@
 #include <wx/timer.h>
 
 #include "slic3r/GUI/GUI.hpp"
+#include "slic3r/GUI/I18N.hpp"
 #include "slic3r/Utils/Bonjour.hpp"
-
 
 namespace Slic3r {
 
 
-struct BonjourReplyEvent : public wxEvent
+class BonjourReplyEvent : public wxEvent
 {
+public:
 	BonjourReply reply;
 
 	BonjourReplyEvent(wxEventType eventType, int winid, BonjourReply &&reply) :

@@ -17,6 +17,16 @@ Layer::~Layer()
     m_regions.clear();
 }
 
+// Test whether whether there are any slices assigned to this layer.
+bool Layer::empty() const
+{
+	for (const LayerRegion *layerm : m_regions)
+        if (layerm != nullptr && ! layerm->slices.empty())
+            // Non empty layer.
+            return false;
+    return true;
+}
+
 LayerRegion* Layer::add_region(PrintRegion* print_region)
 {
     m_regions.emplace_back(new LayerRegion(this, print_region));
@@ -32,9 +42,8 @@ void Layer::make_slices()
         slices = m_regions.front()->slices;
     } else {
         Polygons slices_p;
-        FOREACH_LAYERREGION(this, layerm) {
-            polygons_append(slices_p, to_polygons((*layerm)->slices));
-        }
+        for (LayerRegion *layerm : m_regions)
+            polygons_append(slices_p, to_polygons(layerm->slices));
         slices = union_ex(slices_p);
     }
     
@@ -53,7 +62,7 @@ void Layer::make_slices()
     
     // populate slices vector
     for (size_t i : order)
-        this->slices.expolygons.push_back(STDMOVE(slices[i]));
+        this->slices.expolygons.push_back(std::move(slices[i]));
 }
 
 void Layer::merge_slices()
@@ -63,10 +72,9 @@ void Layer::merge_slices()
         // but use the non-split islands of a layer. For a single region print, these shall be equal.
         m_regions.front()->slices.set(this->slices.expolygons, stInternal);
     } else {
-        FOREACH_LAYERREGION(this, layerm) {
+        for (LayerRegion *layerm : m_regions)
             // without safety offset, artifacts are generated (GH #2494)
-            (*layerm)->slices.set(union_ex(to_polygons(STDMOVE((*layerm)->slices.surfaces)), true), stInternal);
-        }
+            layerm->slices.set(union_ex(to_polygons(std::move(layerm->slices.surfaces)), true), stInternal);
     }
 }
 
@@ -80,7 +88,7 @@ void Layer::make_perimeters()
     // keep track of regions whose perimeters we have already generated
     std::set<size_t> done;
     
-    FOREACH_LAYERREGION(this, layerm) {
+    for (LayerRegionPtrs::iterator layerm = m_regions.begin(); layerm != m_regions.end(); ++ layerm) {
         size_t region_id = layerm - m_regions.begin();
         if (done.find(region_id) != done.end()) continue;
         BOOST_LOG_TRIVIAL(trace) << "Generating perimeters for layer " << this->id() << ", region " << region_id;
@@ -138,7 +146,7 @@ void Layer::make_perimeters()
                     // Separate the fill surfaces.
                     ExPolygons expp = intersection_ex(to_polygons(fill_surfaces), (*l)->slices);
                     (*l)->fill_expolygons = expp;
-                    (*l)->fill_surfaces.set(STDMOVE(expp), fill_surfaces.surfaces.front());
+                    (*l)->fill_surfaces.set(std::move(expp), fill_surfaces.surfaces.front());
                 }
             }
         }
@@ -155,7 +163,7 @@ void Layer::make_fills()
         layerm->fills.clear();
         make_fill(*layerm, layerm->fills);
 #ifndef NDEBUG
-        for (size_t i = 0; i < layerm.fills.entities.size(); ++ i)
+        for (size_t i = 0; i < layerm->fills.entities.size(); ++ i)
             assert(dynamic_cast<ExtrusionEntityCollection*>(layerm->fills.entities[i]) != NULL);
 #endif
     }

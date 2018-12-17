@@ -13,6 +13,7 @@
 #include "libslic3r.h"
 #include "Point.hpp"
 
+#include <boost/format.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 namespace Slic3r {
@@ -59,6 +60,12 @@ enum ConfigOptionType {
     coBools         = coBool + coVectorType,
     // a generic enum
     coEnum          = 8,
+};
+
+enum ConfigOptionMode {
+    comSimple,
+    comAdvanced,
+    comExpert
 };
 
 // A generic value of a configuration option.
@@ -756,7 +763,7 @@ public:
     }
 
     //FIXME this smells, the parent class has the method declared returning (unsigned char&).
-    bool get_at(size_t i) const { return bool((i < this->values.size()) ? this->values[i] : this->values.front()); }
+    bool get_at(size_t i) const { return ((i < this->values.size()) ? this->values[i] : this->values.front()) != 0; }
 
     std::string serialize() const override
     {
@@ -810,6 +817,22 @@ public:
     ConfigOption*           clone() const override { return new ConfigOptionEnum<T>(*this); }
     ConfigOptionEnum<T>&    operator=(const ConfigOption *opt) { this->set(opt); return *this; }
     bool                    operator==(const ConfigOptionEnum<T> &rhs) const { return this->value == rhs.value; }
+    int                     getInt() const override { return (int)this->value; }
+
+    bool operator==(const ConfigOption &rhs) const override
+    {
+        if (rhs.type() != this->type())
+            throw std::runtime_error("ConfigOptionEnum<T>: Comparing incompatible types");
+        // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
+        return this->value == (T)rhs.getInt();
+    }
+
+    void set(const ConfigOption *rhs) override {
+        if (rhs->type() != this->type())
+            throw std::runtime_error("ConfigOptionEnum<T>: Assigning an incompatible type");
+        // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
+        this->value = (T)rhs->getInt();
+    }
 
     std::string serialize() const override
     {
@@ -878,6 +901,21 @@ public:
     ConfigOption*               clone() const override { return new ConfigOptionEnumGeneric(*this); }
     ConfigOptionEnumGeneric&    operator=(const ConfigOption *opt) { this->set(opt); return *this; }
     bool                        operator==(const ConfigOptionEnumGeneric &rhs) const { return this->value == rhs.value; }
+
+    bool operator==(const ConfigOption &rhs) const override
+    {
+        if (rhs.type() != this->type())
+            throw std::runtime_error("ConfigOptionEnumGeneric: Comparing incompatible types");
+        // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
+        return this->value == rhs.getInt();
+    }
+
+    void set(const ConfigOption *rhs) override {
+        if (rhs->type() != this->type())
+            throw std::runtime_error("ConfigOptionEnumGeneric: Assigning an incompatible type");
+        // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
+        this->value = rhs->getInt();
+    }
 
     std::string serialize() const override
     {
@@ -951,6 +989,7 @@ public:
     // By setting min=0, only nonnegative input is allowed.
     int                                 min = INT_MIN;
     int                                 max = INT_MAX;
+    ConfigOptionMode                    mode = comSimple;
     // Legacy names for this configuration option.
     // Used when parsing legacy configuration file.
     std::vector<t_config_option_key>    aliases;
@@ -976,7 +1015,7 @@ public:
 // Map from a config option name to its definition.
 // The definition does not carry an actual value of the config option, only its constant default value.
 // t_config_option_key is std::string
-typedef std::map<t_config_option_key,ConfigOptionDef> t_optiondef_map;
+typedef std::map<t_config_option_key, ConfigOptionDef> t_optiondef_map;
 
 // Definition of configuration values for the purpose of GUI presentation, editing, value mapping and config file handling.
 // The configuration definition is static: It does not carry the actual configuration values,
@@ -984,17 +1023,32 @@ typedef std::map<t_config_option_key,ConfigOptionDef> t_optiondef_map;
 class ConfigDef
 {
 public:
-    t_optiondef_map options;
-    ~ConfigDef() { for (auto &opt : this->options) delete opt.second.default_value; }
-    ConfigOptionDef*        add(const t_config_option_key &opt_key, ConfigOptionType type) {
-        ConfigOptionDef* opt = &this->options[opt_key];
-        opt->type = type;
-        return opt;
-    }
+	~ConfigDef() { 
+		for (std::pair<const t_config_option_key, ConfigOptionDef> &def : this->options) 
+			delete def.second.default_value;
+        this->options.clear();
+	}
+
+    t_optiondef_map         options;
+
     bool                    has(const t_config_option_key &opt_key) const { return this->options.count(opt_key) > 0; }
     const ConfigOptionDef*  get(const t_config_option_key &opt_key) const {
         t_optiondef_map::iterator it = const_cast<ConfigDef*>(this)->options.find(opt_key);
         return (it == this->options.end()) ? nullptr : &it->second;
+    }
+    std::vector<std::string> keys() const {
+        std::vector<std::string> out;
+        out.reserve(options.size());
+        for(auto const& kvp : options)
+            out.push_back(kvp.first);
+        return out;
+    }
+
+protected:
+    ConfigOptionDef*        add(const t_config_option_key &opt_key, ConfigOptionType type) {
+        ConfigOptionDef* opt = &this->options[opt_key];
+        opt->type = type;
+        return opt;
     }
 };
 
@@ -1051,9 +1105,6 @@ public:
     void apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent = false);
     bool equals(const ConfigBase &other) const { return this->diff(other).empty(); }
     t_config_option_keys diff(const ConfigBase &other) const;
-	// Use deep_diff to correct return of changed options,
-	// considering individual options for each extruder
-	t_config_option_keys deep_diff(const ConfigBase &other) const;
     t_config_option_keys equal(const ConfigBase &other) const;
     std::string serialize(const t_config_option_key &opt_key) const;
     // Set a configuration value from a string, it will call an overridable handle_legacy() 
@@ -1062,11 +1113,12 @@ public:
 
     double get_abs_value(const t_config_option_key &opt_key) const;
     double get_abs_value(const t_config_option_key &opt_key, double ratio_over) const;
-    void setenv_();
+    void setenv_() const;
     void load(const std::string &file);
     void load_from_ini(const std::string &file);
     void load_from_gcode_file(const std::string &file);
-    void load_from_gcode_string(const char* str);
+    // Returns number of key/value pairs extracted.
+    size_t load_from_gcode_string(const char* str);
     void load(const boost::property_tree::ptree &tree);
     void save(const std::string &file) const;
 
@@ -1176,7 +1228,6 @@ public:
     // Allow DynamicConfig to be instantiated on ints own without a definition.
     // If the definition is not defined, the method requiring the definition will throw NoDefinitionException.
     const ConfigDef*        def() const override { return nullptr; };
-    bool                    has(const t_config_option_key &opt_key) const { return this->options.find(opt_key) != this->options.end(); }
     template<class T> T*    opt(const t_config_option_key &opt_key, bool create = false)
         { return dynamic_cast<T*>(this->option(opt_key, create)); }
     template<class T> const T* opt(const t_config_option_key &opt_key) const
@@ -1185,6 +1236,7 @@ public:
     ConfigOption*           optptr(const t_config_option_key &opt_key, bool create = false) override;
     // Overrides ConfigBase::keys(). Collect names of all configuration values maintained by this configuration store.
     t_config_option_keys    keys() const override;
+    bool                    empty() const { return options.empty(); }
 
     // Set a value for an opt_key. Returns true if the value did not exist yet.
     // This DynamicConfig will take ownership of opt.
@@ -1217,11 +1269,21 @@ public:
     int&                opt_int(const t_config_option_key &opt_key, unsigned int idx)           { return this->option<ConfigOptionInts>(opt_key)->get_at(idx); }
     const int           opt_int(const t_config_option_key &opt_key, unsigned int idx) const     { return dynamic_cast<const ConfigOptionInts*>(this->option(opt_key))->get_at(idx); }
 
+    template<typename ENUM>
+	ENUM                opt_enum(const t_config_option_key &opt_key) const                      { return (ENUM)dynamic_cast<const ConfigOptionEnumGeneric*>(this->option(opt_key))->value; }
+
     bool                opt_bool(const t_config_option_key &opt_key) const                      { return this->option<ConfigOptionBool>(opt_key)->value != 0; }
     bool                opt_bool(const t_config_option_key &opt_key, unsigned int idx) const    { return this->option<ConfigOptionBools>(opt_key)->get_at(idx) != 0; }
 
-protected:
+    // Command line processing
+    void                read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra);
+    bool                read_cli(int argc, char** argv, t_config_option_keys* extra);
+
     typedef std::map<t_config_option_key,ConfigOption*> t_options_map;
+    t_options_map::const_iterator cbegin() const { return options.cbegin(); }
+    t_options_map::const_iterator cend()   const { return options.cend(); }
+
+private:
     t_options_map options;
 };
 

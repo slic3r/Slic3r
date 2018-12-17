@@ -1,29 +1,16 @@
 #ifndef slic3r_Print_hpp_
 #define slic3r_Print_hpp_
 
-#include "libslic3r.h"
-#include <atomic>
-#include <set>
-#include <vector>
-#include <string>
-#include <functional>
+#include "PrintBase.hpp"
+
 #include "BoundingBox.hpp"
 #include "Flow.hpp"
-#include "PrintConfig.hpp"
 #include "Point.hpp"
 #include "Layer.hpp"
 #include "Model.hpp"
-#include "PlaceholderParser.hpp"
 #include "Slicing.hpp"
 #include "GCode/ToolOrdering.hpp"
 #include "GCode/WipeTower.hpp"
-
-#include "tbb/atomic.h"
-// tbb/mutex.h includes Windows, which in turn defines min/max macros. Convince Windows.h to not define these min/max macros.
-#ifndef NOMINMAX
-    #define NOMINMAX
-#endif
-#include "tbb/mutex.h"
 
 namespace Slic3r {
 
@@ -42,89 +29,6 @@ enum PrintObjectStep {
     posInfill, posSupportMaterial, posCount,
 };
 
-class CanceledException : public std::exception {
-public:
-   const char* what() const throw() { return "Background processing has been canceled"; }
-};
-
-// To be instantiated over PrintStep or PrintObjectStep enums.
-template <class StepType, size_t COUNT>
-class PrintState
-{
-public:
-    PrintState() { for (size_t i = 0; i < COUNT; ++ i) m_state[i].store(INVALID, std::memory_order_relaxed); }
-
-    enum State {
-        INVALID,
-        STARTED,
-        DONE,
-    };
-    
-    // With full memory barrier.
-    bool is_done(StepType step) const { return m_state[step] == DONE; }
-
-    // Set the step as started. Block on mutex while the Print / PrintObject / PrintRegion objects are being
-    // modified by the UI thread.
-    // This is necessary to block until the Print::apply_config() updates its state, which may
-    // influence the processing step being entered.
-    void set_started(StepType step, tbb::mutex &mtx) {
-        mtx.lock();
-        m_state[step].store(STARTED, std::memory_order_relaxed);
-        mtx.unlock();
-    }
-
-    // Set the step as done. Block on mutex while the Print / PrintObject / PrintRegion objects are being
-    // modified by the UI thread.
-    void set_done(StepType step, tbb::mutex &mtx) { 
-        mtx.lock();
-        m_state[step].store(DONE, std::memory_order_relaxed);
-        mtx.unlock();
-    }
-
-    // Make the step invalid.
-    // The provided mutex should be locked at this point, guarding access to m_state.
-    // In case the step has already been entered or finished, cancel the background
-    // processing by calling the cancel callback.
-    template<typename CancelationCallback>
-    bool invalidate(StepType step, tbb::mutex &mtx, CancelationCallback &cancel) {
-        bool invalidated = m_state[step].load(std::memory_order_relaxed) != INVALID;
-        if (invalidated) {
-#if 0
-            if (mtx.state != mtx.HELD) {
-                printf("Not held!\n");
-            }
-#endif
-            mtx.unlock();
-            cancel();
-            mtx.lock();
-        }
-        return invalidated;
-    }
-
-    // Make all steps invalid.
-    // The provided mutex should be locked at this point, guarding access to m_state.
-    // In case any step has already been entered or finished, cancel the background
-    // processing by calling the cancel callback.
-    template<typename CancelationCallback>
-    bool invalidate_all(tbb::mutex &mtx, CancelationCallback &cancel) {
-        bool invalidated = false;
-        for (size_t i = 0; i < COUNT; ++ i)
-            if (m_state[i].load(std::memory_order_relaxed) != INVALID) {
-                if (! invalidated) {
-                    mtx.unlock();
-                    cancel();
-                    mtx.lock();
-                    invalidated = true;
-                }
-                m_state[i].store(INVALID, std::memory_order_relaxed);
-            }
-        return invalidated;
-    }
-
-private:
-    std::atomic<State>          m_state[COUNT];
-};
-
 // A PrintRegion object represents a group of volumes to print
 // sharing the same config (including the same assigned extruder(s))
 class PrintRegion
@@ -139,19 +43,25 @@ public:
     // Average diameter of nozzles participating on extruding this region.
     coordf_t                    nozzle_dmr_avg(const PrintConfig &print_config) const;
     // Average diameter of nozzles participating on extruding this region.
-    coordf_t bridging_height_avg(const PrintConfig &print_config) const;
+    coordf_t                    bridging_height_avg(const PrintConfig &print_config) const;
 
 // Methods modifying the PrintRegion's state:
 public:
     Print*                      print() { return m_print; }
-    void                        config_apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent = false) { this->m_config.apply_only(other, keys, ignore_nonexistent); }
+    void                        set_config(const PrintRegionConfig &config) { m_config = config; }
+    void                        set_config(PrintRegionConfig &&config) { m_config = std::move(config); }
+    void                        config_apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent = false) 
+                                        { this->m_config.apply_only(other, keys, ignore_nonexistent); }
+
+protected:
+    size_t             m_refcnt;
 
 private:
     Print             *m_print;
     PrintRegionConfig  m_config;
     
-    PrintRegion(Print* print) : m_print(print) {}
-    PrintRegion(Print* print, const PrintRegionConfig &config) : m_print(print), m_config(config) {}
+    PrintRegion(Print* print) : m_refcnt(0), m_print(print) {}
+    PrintRegion(Print* print, const PrintRegionConfig &config) : m_refcnt(0), m_print(print), m_config(config) {}
     ~PrintRegion() {}
 };
 
@@ -160,14 +70,14 @@ typedef std::vector<Layer*> LayerPtrs;
 typedef std::vector<SupportLayer*> SupportLayerPtrs;
 class BoundingBoxf3;        // TODO: for temporary constructor parameter
 
-class PrintObject
+class PrintObject : public PrintObjectBaseWithState<Print, PrintObjectStep, posCount>
 {
-    friend class Print;
+private: // Prevents erroneous use by other classes.
+    typedef PrintObjectBaseWithState<Print, PrintObjectStep, posCount> Inherited;
 
 public:
     // vector of (vectors of volume ids), indexed by region_id
     std::vector<std::vector<int>> region_volumes;
-    t_layer_height_ranges   layer_height_ranges;
 
     // Profile of increasing z to a layer height, to be linearly interpolated when calculating the layers.
     // The pairs of <z, layer_height> are packed into a 1D array to simplify handling by the Perl XS.
@@ -185,22 +95,12 @@ public:
 
     Vec3crd                 size;           // XYZ in scaled coordinates
 
-    Print*                  print()                 { return m_print; }
-    const Print*            print() const           { return m_print; }
-    ModelObject*            model_object()          { return m_model_object; }
-    const ModelObject*      model_object() const    { return m_model_object; }
     const PrintObjectConfig& config() const         { return m_config; }    
-    void                    config_apply(const ConfigBase &other, bool ignore_nonexistent = false) { this->m_config.apply(other, ignore_nonexistent); }
-    void                    config_apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent = false) { this->m_config.apply_only(other, keys, ignore_nonexistent); }
     const LayerPtrs&        layers() const          { return m_layers; }
     const SupportLayerPtrs& support_layers() const  { return m_support_layers; }
+    const Transform3d&      trafo() const           { return m_trafo; }
+    const Points&           copies() const { return m_copies; }
 
-    const Points& copies() const { return m_copies; }
-    bool add_copy(const Vec2d &point);
-    bool delete_last_copy();
-    bool delete_all_copies() { return this->set_copies(Points()); }
-    bool set_copies(const Points &points);
-    bool reload_model_instances();
     // since the object is aligned to origin, bounding box coincides with size
     BoundingBox bounding_box() const { return BoundingBox(Point(0,0), to_2d(this->size)); }
 
@@ -229,12 +129,6 @@ public:
     SupportLayerPtrs::const_iterator insert_support_layer(SupportLayerPtrs::const_iterator pos, int id, coordf_t height, coordf_t print_z, coordf_t slice_z);
     void delete_support_layer(int idx);
     
-    // methods for handling state
-    bool invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
-    bool invalidate_step(PrintObjectStep step);
-    bool invalidate_all_steps();
-    bool is_step_done(PrintObjectStep step) const { return m_state.is_done(step); }
-
     // To be used over the layer_height_profile of both the PrintObject and ModelObject
     // to initialize the height profile with the height ranges.
     bool update_layer_height_profile(std::vector<coordf_t> &layer_height_profile) const;
@@ -260,6 +154,24 @@ public:
     std::vector<ExPolygons>     slice_support_enforcers() const;
     std::vector<ExPolygons>     slice_support_blockers() const;
 
+protected:
+    // to be called from Print only.
+    friend class Print;
+
+	PrintObject(Print* print, ModelObject* model_object, bool add_instances = true);
+	~PrintObject() {}
+
+    void                    config_apply(const ConfigBase &other, bool ignore_nonexistent = false) { this->m_config.apply(other, ignore_nonexistent); }
+    void                    config_apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent = false) { this->m_config.apply_only(other, keys, ignore_nonexistent); }
+    void                    set_trafo(const Transform3d& trafo) { m_trafo = trafo; }
+    bool                    set_copies(const Points &points);
+    // Invalidates the step, and its depending steps in PrintObject and Print.
+    bool                    invalidate_step(PrintObjectStep step);
+    // Invalidates all PrintObject and Print steps.
+    bool                    invalidate_all_steps();
+    // Invalidate steps based on a set of parameters changed.
+    bool                    invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
+
 private:
     void make_perimeters();
     void prepare_infill();
@@ -280,11 +192,9 @@ private:
     void combine_infill();
     void _generate_support_material();
 
-    bool is_printable() const { return ! m_copies.empty(); }
-
-    Print                                  *m_print;
-    ModelObject                            *m_model_object;
     PrintObjectConfig                       m_config;
+    // Translation in Z + Rotation + Scaling / Mirroring.
+    Transform3d                             m_trafo = Transform3d::Identity();
     // Slic3r::Point objects in scaled G-code coordinates
     Points                                  m_copies;
     // scaled coordinates to add to copies (to compensate for the alignment
@@ -295,15 +205,6 @@ private:
     LayerPtrs                               m_layers;
     SupportLayerPtrs                        m_support_layers;
 
-    PrintState<PrintObjectStep, posCount>   m_state;
-
-    // TODO: call model_object->get_bounding_box() instead of accepting
-        // parameter
-    PrintObject(Print* print, ModelObject* model_object, const BoundingBoxf3 &modobj_bbox);
-    ~PrintObject() {}
-
-    void set_started(PrintObjectStep step);
-    void set_done(PrintObjectStep step);
     std::vector<ExPolygons> _slice_region(size_t region_id, const std::vector<float> &z, bool modifier);
     std::vector<ExPolygons> _slice_volumes(const std::vector<float> &z, const std::vector<const ModelVolume*> &volumes) const;
 };
@@ -348,6 +249,13 @@ struct PrintStatistics
     double                          total_wipe_tower_filament;
     std::map<size_t, float>         filament_stats;
 
+    // Config with the filled in print statistics.
+    DynamicConfig           config() const;
+    // Config with the statistics keys populated with placeholder strings.
+    static DynamicConfig    placeholders();
+    // Replace the print statistics placeholders in the path.
+    std::string             finalize_output_path(const std::string &path_in) const;
+
     void clear() {
         estimated_normal_print_time.clear();
         estimated_silent_print_time.clear();
@@ -365,39 +273,48 @@ typedef std::vector<PrintObject*> PrintObjectPtrs;
 typedef std::vector<PrintRegion*> PrintRegionPtrs;
 
 // The complete print tray with possibly multiple objects.
-class Print
+class Print : public PrintBaseWithState<PrintStep, psCount>
 {
+private: // Prevents erroneous use by other classes.
+    typedef PrintBaseWithState<PrintStep, psCount> Inherited;
+
 public:
-    Print() { restart(); }
-    ~Print() { clear_objects(); }
+    Print() {}
+	virtual ~Print() { this->clear(); }
+
+	PrinterTechnology	technology() const noexcept { return ptFFF; }
 
     // Methods, which change the state of Print / PrintObject / PrintRegion.
     // The following methods are synchronized with process() and export_gcode(),
     // so that process() and export_gcode() may be called from a background thread.
     // In case the following methods need to modify data processed by process() or export_gcode(),
     // a cancellation callback is executed to stop the background processing before the operation.
-    void                clear_objects();
-    void                delete_object(size_t idx);
+    void                clear() override;
+    bool                empty() const override { return m_objects.empty(); }
+
+    ApplyStatus         apply(const Model &model, const DynamicPrintConfig &config) override;
+
+    // The following three methods are used by the Perl tests only. Get rid of them!
     void                reload_object(size_t idx);
-    bool                reload_model_instances();
     void                add_model_object(ModelObject* model_object, int idx = -1);
     bool                apply_config(DynamicPrintConfig config);
-    void                process();
+
+    void                process() override;
     void                export_gcode(const std::string &path_template, GCodePreviewData *preview_data);
-    // SLA export, temporary.
-    void                export_png(const std::string &dirpath);
 
     // methods for handling state
-    bool                is_step_done(PrintStep step) const { return m_state.is_done(step); }
+    bool                is_step_done(PrintStep step) const { return Inherited::is_step_done(step); }
+    // Returns true if an object step is done on all objects and there's at least one object.    
     bool                is_step_done(PrintObjectStep step) const;
+    // Returns true if the last step was finished with success.
+    bool                finished() const override { return this->is_step_done(psGCodeExport); }
 
     bool                has_infinite_skirt() const;
     bool                has_skirt() const;
-    PrintObjectPtrs     get_printable_objects() const;
     float               get_wipe_tower_depth() const { return m_wipe_tower_data.depth; }
 
     // Returns an empty string if valid, otherwise returns an error message.
-    std::string         validate() const;
+    std::string         validate() const override;
     BoundingBox         bounding_box() const;
     BoundingBox         total_bounding_box() const;
     double              skirt_first_layer_height() const;
@@ -416,12 +333,15 @@ public:
     const PrintObjectConfig&    default_object_config() const { return m_default_object_config; }
     const PrintRegionConfig&    default_region_config() const { return m_default_region_config; }
     const PrintObjectPtrs&      objects() const { return m_objects; }
-    const PrintObject*          get_object(int idx) const { return m_objects[idx]; }
+    PrintObject*                get_object(size_t idx) { return m_objects[idx]; }
+    const PrintObject*          get_object(size_t idx) const { return m_objects[idx]; }
     const PrintRegionPtrs&      regions() const { return m_regions; }
-    const PlaceholderParser&    placeholder_parser() const { return m_placeholder_parser; }
+    // How many of PrintObject::copies() over all print objects are there?
+    // If zero, then the print is empty and the print shall not be executed.
+    unsigned int                num_object_instances() const;
 
     // Returns extruder this eec should be printed with, according to PrintRegion config:
-    static int get_extruder(const ExtrusionEntityCollection& fill, const PrintRegion &region);
+    static int                  get_extruder(const ExtrusionEntityCollection& fill, const PrintRegion &region);
 
     const ExtrusionEntityCollection& skirt() const { return m_skirt; }
     const ExtrusionEntityCollection& brim() const { return m_brim; }
@@ -432,81 +352,36 @@ public:
     bool                        has_wipe_tower() const;
     const WipeTowerData&        wipe_tower_data() const { return m_wipe_tower_data; }
 
-    std::string                 output_filename() const;
-    std::string                 output_filepath(const std::string &path) const;
-
-    typedef std::function<void(int, const std::string&)>  status_callback_type;
-    // Default status console print out in the form of percent => message.
-    void                set_status_default() { m_status_callback = nullptr; }
-    // No status output or callback whatsoever, useful mostly for automatic tests.
-    void                set_status_silent() { m_status_callback = [](int, const std::string&){}; }
-    // Register a custom status callback.
-    void                set_status_callback(status_callback_type cb) { m_status_callback = cb; }
-    // Calls a registered callback to update the status, or print out the default message.
-    void                set_status(int percent, const std::string &message) { 
-        if (m_status_callback) m_status_callback(percent, message);
-        else printf("%d => %s\n", percent, message.c_str());
-    }
-
-    typedef std::function<void()>  cancel_callback_type;
-    // Various methods will call this callback to stop the background processing (the Print::process() call)
-    // in case a successive change of the Print / PrintObject / PrintRegion instances changed
-    // the state of the finished or running calculations.
-    void                set_cancel_callback(cancel_callback_type cancel_callback) { m_cancel_callback = cancel_callback; }
-    // Has the calculation been canceled?
-    bool                canceled() const { return m_canceled; }
-    // Cancel the running computation. Stop execution of all the background threads.
-    void                cancel() { m_canceled = true; }
-    // Cancel the running computation. Stop execution of all the background threads.
-    void                restart() { m_canceled = false; }
+	std::string                 output_filename() const override;
 
     // Accessed by SupportMaterial
     const PrintRegion*  get_region(size_t idx) const  { return m_regions[idx]; }
 
 protected:
-	void                set_started(PrintStep step) { m_state.set_started(step, m_mutex); throw_if_canceled(); }
-	void                set_done(PrintStep step) { m_state.set_done(step, m_mutex); throw_if_canceled(); }
-    bool                invalidate_step(PrintStep step);
-    bool                invalidate_all_steps() { return m_state.invalidate_all(m_mutex, m_cancel_callback); }
-
     // methods for handling regions
     PrintRegion*        get_region(size_t idx)        { return m_regions[idx]; }
     PrintRegion*        add_region();
     PrintRegion*        add_region(const PrintRegionConfig &config);
 
+    // Invalidates the step, and its depending steps in Print.
+    bool                invalidate_step(PrintStep step);
+
 private:
     bool                invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
-    PrintRegionConfig   _region_config_from_model_volume(const ModelVolume &volume);
-
-    // If the background processing stop was requested, throw CanceledException.
-    // To be called by the worker thread and its sub-threads (mostly launched on the TBB thread pool) regularly.
-    void                throw_if_canceled() const { if (m_canceled) throw CanceledException(); }
 
     void                _make_skirt();
     void                _make_brim();
     void                _make_wipe_tower();
     void                _simplify_slices(double distance);
 
-    PrintState<PrintStep, psCount>          m_state;
-    // Mutex used for synchronization of the worker thread with the UI thread:
-    // The mutex will be used to guard the worker thread against entering a stage
-    // while the data influencing the stage is modified.
-    mutable tbb::mutex                      m_mutex;
-
-    // Has the calculation been canceled?
-    tbb::atomic<bool>                       m_canceled;
-    // Callback to be evoked regularly to update state of the UI thread.
-    status_callback_type                    m_status_callback;
-
-    // Callback to be evoked to stop the background processing before a state is updated.
-    cancel_callback_type                    m_cancel_callback = [](){};
+    // Declared here to have access to Model / ModelObject / ModelInstance
+    static void         model_volume_list_update_supports(ModelObject &model_object_dst, const ModelObject &model_object_src);
 
     PrintConfig                             m_config;
     PrintObjectConfig                       m_default_object_config;
     PrintRegionConfig                       m_default_region_config;
     PrintObjectPtrs                         m_objects;
     PrintRegionPtrs                         m_regions;
-    PlaceholderParser                       m_placeholder_parser;
 
     // Ordered collections of extrusion paths to build skirt loops and brim.
     ExtrusionEntityCollection               m_skirt;
@@ -524,12 +399,6 @@ private:
     friend class PrintObject;
 };
 
-
-#define FOREACH_BASE(type, container, iterator) for (type::const_iterator iterator = (container).begin(); iterator != (container).end(); ++iterator)
-#define FOREACH_OBJECT(print, object)       FOREACH_BASE(PrintObjectPtrs, (print)->m_objects, object)
-#define FOREACH_LAYER(object, layer)        FOREACH_BASE(LayerPtrs, (object)->m_layers, layer)
-#define FOREACH_LAYERREGION(layer, layerm)  FOREACH_BASE(LayerRegionPtrs, (layer)->m_regions, layerm)
-
-}
+} /* slic3r_Print_hpp_ */
 
 #endif

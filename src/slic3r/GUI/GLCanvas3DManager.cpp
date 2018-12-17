@@ -110,13 +110,28 @@ std::string GLCanvas3DManager::GLInfo::to_string(bool format_as_html, bool exten
     return out.str();
 }
 
+GLCanvas3DManager::EMultisampleState GLCanvas3DManager::s_multisample = GLCanvas3DManager::MS_Unknown;
+
 GLCanvas3DManager::GLCanvas3DManager()
-    : m_current(nullptr)
+#if ENABLE_USE_UNIQUE_GLCONTEXT
+    : m_context(nullptr)
+#endif // ENABLE_USE_UNIQUE_GLCONTEXT
     , m_gl_initialized(false)
     , m_use_legacy_opengl(false)
     , m_use_VBOs(false)
 {
 }
+
+#if ENABLE_USE_UNIQUE_GLCONTEXT
+GLCanvas3DManager::~GLCanvas3DManager()
+{
+    if (m_context != nullptr)
+    {
+        delete m_context;
+        m_context = nullptr;
+    }
+}
+#endif // ENABLE_USE_UNIQUE_GLCONTEXT
 
 bool GLCanvas3DManager::add(wxGLCanvas* canvas)
 {
@@ -131,6 +146,18 @@ bool GLCanvas3DManager::add(wxGLCanvas* canvas)
         return false;
 
     canvas3D->bind_event_handlers();
+
+#if ENABLE_USE_UNIQUE_GLCONTEXT
+    if (m_context == nullptr)
+    {
+        m_context = new wxGLContext(canvas);
+        if (m_context == nullptr)
+            return false;
+    }
+
+    canvas3D->set_context(m_context);
+#endif // ENABLE_USE_UNIQUE_GLCONTEXT
+
     m_canvases.insert(CanvasesMap::value_type(canvas, canvas3D));
 
     return true;
@@ -182,11 +209,6 @@ std::string GLCanvas3DManager::get_gl_info(bool format_as_html, bool extensions)
     return m_gl_info.to_string(format_as_html, extensions);
 }
 
-bool GLCanvas3DManager::use_VBOs() const
-{
-    return m_use_VBOs;
-}
-
 bool GLCanvas3DManager::init(wxGLCanvas* canvas)
 {
     CanvasesMap::const_iterator it = _get_canvas(canvas);
@@ -196,605 +218,28 @@ bool GLCanvas3DManager::init(wxGLCanvas* canvas)
         return false;
 }
 
-void GLCanvas3DManager::set_as_dirty(wxGLCanvas* canvas)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_as_dirty();
-}
-
-unsigned int GLCanvas3DManager::get_volumes_count(wxGLCanvas* canvas) const
+GLCanvas3D* GLCanvas3DManager::get_canvas(wxGLCanvas* canvas)
 {
     CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->get_volumes_count() : 0;
+    return (it != m_canvases.end()) ? it->second : nullptr;
 }
 
-void GLCanvas3DManager::reset_volumes(wxGLCanvas* canvas)
+wxGLCanvas* GLCanvas3DManager::create_wxglcanvas(wxWindow *parent)
 {
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->reset_volumes();
-}
+    int attribList[] = { WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 24, WX_GL_SAMPLE_BUFFERS, GL_TRUE, WX_GL_SAMPLES, 4, 0 };
 
-void GLCanvas3DManager::deselect_volumes(wxGLCanvas* canvas)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->deselect_volumes();
-}
-
-void GLCanvas3DManager::select_volume(wxGLCanvas* canvas, unsigned int id)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->select_volume(id);
-}
-
-void GLCanvas3DManager::update_volumes_selection(wxGLCanvas* canvas, const std::vector<int>& selections)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->update_volumes_selection(selections);
-}
-
-int GLCanvas3DManager::check_volumes_outside_state(wxGLCanvas* canvas, const DynamicPrintConfig* config) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->check_volumes_outside_state(config) : false;
-}
-
-bool GLCanvas3DManager::move_volume_up(wxGLCanvas* canvas, unsigned int id)
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->move_volume_up(id) : false;
-}
-
-bool GLCanvas3DManager::move_volume_down(wxGLCanvas* canvas, unsigned int id)
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->move_volume_down(id) : false;
-}
-
-void GLCanvas3DManager::set_objects_selections(wxGLCanvas* canvas, const std::vector<int>& selections)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_objects_selections(selections);
-}
-
-void GLCanvas3DManager::set_config(wxGLCanvas* canvas, DynamicPrintConfig* config)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_config(config);
-}
-
-void GLCanvas3DManager::set_print(wxGLCanvas* canvas, Print* print)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_print(print);
-}
-
-void GLCanvas3DManager::set_model(wxGLCanvas* canvas, Model* model)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_model(model);
-}
-
-void GLCanvas3DManager::set_bed_shape(wxGLCanvas* canvas, const Pointfs& shape)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_bed_shape(shape);
-}
-
-void GLCanvas3DManager::set_auto_bed_shape(wxGLCanvas* canvas)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_auto_bed_shape();
-}
-
-BoundingBoxf3 GLCanvas3DManager::get_volumes_bounding_box(wxGLCanvas* canvas)
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->volumes_bounding_box() : BoundingBoxf3();
-}
-
-void GLCanvas3DManager::set_axes_length(wxGLCanvas* canvas, float length)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_axes_length(length);
-}
-
-void GLCanvas3DManager::set_cutting_plane(wxGLCanvas* canvas, float z, const ExPolygons& polygons)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_cutting_plane(z, polygons);
-}
-
-void GLCanvas3DManager::set_color_by(wxGLCanvas* canvas, const std::string& value)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_color_by(value);
-}
-
-void GLCanvas3DManager::set_select_by(wxGLCanvas* canvas, const std::string& value)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_select_by(value);
-}
-
-void GLCanvas3DManager::set_drag_by(wxGLCanvas* canvas, const std::string& value)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_drag_by(value);
-}
-
-std::string GLCanvas3DManager::get_select_by(wxGLCanvas* canvas) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->get_select_by() : "";
-}
-
-bool GLCanvas3DManager::is_layers_editing_enabled(wxGLCanvas* canvas) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->is_layers_editing_enabled() : false;
-}
-
-bool GLCanvas3DManager::is_layers_editing_allowed(wxGLCanvas* canvas) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->is_layers_editing_allowed() : false;
-}
-
-bool GLCanvas3DManager::is_shader_enabled(wxGLCanvas* canvas) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->is_shader_enabled() : false;
-}
-
-bool GLCanvas3DManager::is_reload_delayed(wxGLCanvas* canvas) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->is_reload_delayed() : false;
-}
-
-void GLCanvas3DManager::enable_layers_editing(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_layers_editing(enable);
-}
-
-void GLCanvas3DManager::enable_warning_texture(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_warning_texture(enable);
-}
-
-void GLCanvas3DManager::enable_legend_texture(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_legend_texture(enable);
-}
-
-void GLCanvas3DManager::enable_picking(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_picking(enable);
-}
-
-void GLCanvas3DManager::enable_moving(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_moving(enable);
-}
-
-void GLCanvas3DManager::enable_gizmos(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_gizmos(enable);
-}
-
-void GLCanvas3DManager::enable_toolbar(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_toolbar(enable);
-}
-
-void GLCanvas3DManager::enable_shader(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_shader(enable);
-}
-
-void GLCanvas3DManager::enable_force_zoom_to_bed(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_force_zoom_to_bed(enable);
-}
-
-void GLCanvas3DManager::enable_dynamic_background(wxGLCanvas* canvas, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_dynamic_background(enable);
-}
-
-void GLCanvas3DManager::allow_multisample(wxGLCanvas* canvas, bool allow)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->allow_multisample(allow);
-}
-
-void GLCanvas3DManager::enable_toolbar_item(wxGLCanvas* canvas, const std::string& name, bool enable)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->enable_toolbar_item(name, enable);
-}
-
-bool GLCanvas3DManager::is_toolbar_item_pressed(wxGLCanvas* canvas, const std::string& name) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->is_toolbar_item_pressed(name) : false;
-}
-
-void GLCanvas3DManager::zoom_to_bed(wxGLCanvas* canvas)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->zoom_to_bed();
-}
-
-void GLCanvas3DManager::zoom_to_volumes(wxGLCanvas* canvas)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->zoom_to_volumes();
-}
-
-void GLCanvas3DManager::select_view(wxGLCanvas* canvas, const std::string& direction)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->select_view(direction);
-}
-
-void GLCanvas3DManager::set_viewport_from_scene(wxGLCanvas* canvas, wxGLCanvas* other)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
+    if (s_multisample == MS_Unknown)
     {
-        CanvasesMap::iterator other_it = _get_canvas(other);
-        if (other_it != m_canvases.end())
-            it->second->set_viewport_from_scene(*other_it->second);
+        _detect_multisample(attribList);
+        // debug output
+        std::cout << "Multisample " << (can_multisample() ? "enabled" : "disabled") << std::endl;
     }
-}
 
-void GLCanvas3DManager::update_volumes_colors_by_extruder(wxGLCanvas* canvas)
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->update_volumes_colors_by_extruder();
-}
-
-void GLCanvas3DManager::update_gizmos_data(wxGLCanvas* canvas)
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->update_gizmos_data();
-}
-
-void GLCanvas3DManager::render(wxGLCanvas* canvas) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->render();
-}
-
-std::vector<double> GLCanvas3DManager::get_current_print_zs(wxGLCanvas* canvas, bool active_only) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->get_current_print_zs(active_only) : std::vector<double>();
-}
-
-void GLCanvas3DManager::set_toolpaths_range(wxGLCanvas* canvas, double low, double high)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->set_toolpaths_range(low, high);
-}
-
-std::vector<int> GLCanvas3DManager::load_object(wxGLCanvas* canvas, const ModelObject* model_object, int obj_idx, std::vector<int> instance_idxs)
-{
-    if (model_object == nullptr)
-        return std::vector<int>();
-
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->load_object(*model_object, obj_idx, instance_idxs) : std::vector<int>();
-}
-
-std::vector<int> GLCanvas3DManager::load_object(wxGLCanvas* canvas, const Model* model, int obj_idx)
-{
-    if (model == nullptr)
-        return std::vector<int>();
-
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->load_object(*model, obj_idx) : std::vector<int>();
-}
-
-int GLCanvas3DManager::get_first_volume_id(wxGLCanvas* canvas, int obj_idx) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->get_first_volume_id(obj_idx) : -1;
-}
-
-int GLCanvas3DManager::get_in_object_volume_id(wxGLCanvas* canvas, int scene_vol_idx) const
-{
-    CanvasesMap::const_iterator it = _get_canvas(canvas);
-    return (it != m_canvases.end()) ? it->second->get_in_object_volume_id(scene_vol_idx) : -1;
-}
-
-void GLCanvas3DManager::reload_scene(wxGLCanvas* canvas, bool force)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->reload_scene(force);
-}
-
-void GLCanvas3DManager::load_gcode_preview(wxGLCanvas* canvas, const GCodePreviewData* preview_data, const std::vector<std::string>& str_tool_colors)
-{
-    if (preview_data == nullptr)
-        return;
-
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->load_gcode_preview(*preview_data, str_tool_colors);
-}
-
-void GLCanvas3DManager::load_preview(wxGLCanvas* canvas, const std::vector<std::string>& str_tool_colors)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->load_preview(str_tool_colors);
-}
-
-void GLCanvas3DManager::reset_legend_texture()
-{
-    for (CanvasesMap::value_type& canvas : m_canvases)
-    {
-        if (canvas.second != nullptr)
-            canvas.second->reset_legend_texture();
+    if (! can_multisample()) {
+        attribList[4] = 0;
     }
-}
 
-void GLCanvas3DManager::register_on_viewport_changed_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_viewport_changed_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_double_click_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_double_click_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_right_click_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_right_click_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_select_object_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_select_object_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_model_update_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_model_update_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_remove_object_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_remove_object_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_arrange_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_arrange_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_rotate_object_left_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_rotate_object_left_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_rotate_object_right_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_rotate_object_right_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_scale_object_uniformly_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_scale_object_uniformly_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_increase_objects_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_increase_objects_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_decrease_objects_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_decrease_objects_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_instance_moved_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_instance_moved_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_wipe_tower_moved_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_wipe_tower_moved_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_enable_action_buttons_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_enable_action_buttons_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_gizmo_scale_uniformly_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_gizmo_scale_uniformly_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_gizmo_rotate_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_gizmo_rotate_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_gizmo_flatten_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_gizmo_flatten_callback(callback);
-}
-
-void GLCanvas3DManager::register_on_update_geometry_info_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_on_update_geometry_info_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_add_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_add_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_delete_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_delete_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_deleteall_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_deleteall_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_arrange_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_arrange_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_more_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_more_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_fewer_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_fewer_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_split_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_split_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_cut_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_cut_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_settings_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_settings_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_layersediting_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_layersediting_callback(callback);
-}
-
-void GLCanvas3DManager::register_action_selectbyparts_callback(wxGLCanvas* canvas, void* callback)
-{
-    CanvasesMap::iterator it = _get_canvas(canvas);
-    if (it != m_canvases.end())
-        it->second->register_action_selectbyparts_callback(callback);
+    return new wxGLCanvas(parent, wxID_ANY, attribList);
 }
 
 GLCanvas3DManager::CanvasesMap::iterator GLCanvas3DManager::_get_canvas(wxGLCanvas* canvas)
@@ -813,6 +258,19 @@ bool GLCanvas3DManager::_init(GLCanvas3D& canvas)
         init_gl();
 
     return canvas.init(m_use_VBOs, m_use_legacy_opengl);
+}
+
+void GLCanvas3DManager::_detect_multisample(int* attribList)
+{
+    int wxVersion = wxMAJOR_VERSION * 10000 + wxMINOR_VERSION * 100 + wxRELEASE_NUMBER;
+    const AppConfig* app_config = GUI::get_app_config();
+    bool enable_multisample = app_config != nullptr
+        && app_config->get("use_legacy_opengl") != "1"
+        && wxVersion >= 30003;
+
+    s_multisample = (enable_multisample && wxGLCanvas::IsDisplaySupported(attribList)) ? MS_Enabled : MS_Disabled;
+    // Alternative method: it was working on previous version of wxWidgets but not with the latest, at least on Windows
+    // s_multisample = enable_multisample && wxGLCanvas::IsExtensionSupported("WGL_ARB_multisample");
 }
 
 } // namespace GUI

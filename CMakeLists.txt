@@ -1,6 +1,10 @@
 project(Slic3r)
 cmake_minimum_required(VERSION 3.2)
 
+include("version.inc")
+set(SLIC3R_RESOURCES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
+file(TO_NATIVE_PATH "${SLIC3R_RESOURCES_DIR}" SLIC3R_RESOURCES_DIR_WIN)
+
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type selected, default to Release")
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
@@ -18,42 +22,27 @@ endif()
 
 option(SLIC3R_STATIC 			"Compile Slic3r with static libraries (Boost, TBB, glew)" ${SLIC3R_STATIC_INITIAL})
 option(SLIC3R_GUI    			"Compile Slic3r with GUI components (OpenGL, wxWidgets)" 1)
-option(SLIC3R_PRUSACONTROL		"Compile Slic3r with the PrusaControl prject file format (requires wxWidgets base library)" 1)
 option(SLIC3R_PROFILE 			"Compile Slic3r with an invasive Shiny profiler" 0)
 option(SLIC3R_MSVC_COMPILE_PARALLEL "Compile on Visual Studio in parallel" 1)
 option(SLIC3R_MSVC_PDB          "Generate PDB files on MSVC in Release mode" 1)
+option(SLIC3R_PERL_XS           "Compile XS Perl module and enable Perl unit and integration tests" 0)
+option(SLIC3R_ASAN              "Enable ASan on Clang and GCC" 0)
+option(SLIC3R_SYNTAXONLY        "Only perform source code correctness checking, no binary output (UNIX only)" 0)
 
-if (MSVC AND SLIC3R_MSVC_COMPILE_PARALLEL)
-	add_compile_options(/MP)
+# Proposal for C++ unit tests and sandboxes
+option(SLIC3R_BUILD_SANDBOXES   "Build development sandboxes" OFF)
+option(SLIC3R_BUILD_TESTS       "Build unit tests" OFF)
+
+if (MSVC)
+    if (SLIC3R_MSVC_COMPILE_PARALLEL)
+	   add_compile_options(/MP)
+    endif ()
+    # /bigobj (Increase Number of Sections in .Obj file)
+    # error C3859: virtual memory range for PCH exceeded; please recompile with a command line option of '-Zm90' or greater
+    add_compile_options(-bigobj -Zm316)
 endif ()
 
-# Find the Perl interpreter, add local-lib to PATH and PERL5LIB environment variables,
-# so the locally installed modules (mainly the Alien::wxPerl) will be reached.
-if (WIN32)
-    set(ENV_PATH_SEPARATOR ";")
-else()
-    set(ENV_PATH_SEPARATOR ":")
-endif()
-set(ENV{PATH}     "${PROJECT_SOURCE_DIR}/local-lib/bin${ENV_PATH_SEPARATOR}$ENV{PATH}")
-set(PERL_INCLUDE  "${PROJECT_SOURCE_DIR}/local-lib/lib/perl5${ENV_PATH_SEPARATOR}$ENV{PERL5LIB}")
-message("PATH: $ENV{PATH}")
-message("PERL_INCLUDE: ${PERL_INCLUDE}")
-find_package(Perl REQUIRED)
-if (WIN32)
-    # On Windows passing the PERL5LIB variable causes various problems (such as with MAX_PATH and others),
-    # basically I've found no good way to do it on Windows.
-    set(PERL5LIB_ENV_CMD "")
-else()
-    set(PERL5LIB_ENV_CMD ${CMAKE_COMMAND} -E env PERL5LIB=${PERL_INCLUDE})
-endif()
-
-# CMAKE_PREFIX_PATH is used to point CMake to the remaining dependencies (Boost, TBB, ...)
-# We pick it from environment if it is not defined in another way
-if(NOT DEFINED CMAKE_PREFIX_PATH)
-	if(DEFINED ENV{CMAKE_PREFIX_PATH})
-		set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}")
-	endif()
-endif()
+message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 
 # Add our own cmake module path.
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules/)
@@ -63,10 +52,12 @@ enable_testing ()
 # Enable C++11 language standard.
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Enable C11 language standard.
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+
+# To be able to link libslic3r with the Perl XS module.
+# Once we get rid of Perl and libslic3r is linked statically, we can get rid of -fPIC
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # WIN10SDK_PATH is used to point CMake to the WIN10 SDK installation directory.
 # We pick it from environment if it is not defined in another way
@@ -82,17 +73,59 @@ if(WIN32)
 		message("STL fixing by the Netfabb service will not be compiled")
 		unset(WIN10SDK_PATH)
 	endif()
+    if(WIN10SDK_PATH)
+        message("Building with Win10 Netfabb STL fixing service support")
+        add_definitions(-DHAS_WIN10SDK)
+        include_directories("${WIN10SDK_PATH}/Include")
+    else()
+        message("Building without Win10 Netfabb STL fixing service support")
+    endif()
 endif()
+
+if (APPLE)
+    if (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "OS X Deployment target (SDK version)" FORCE)
+    endif ()
+    message(STATUS "Mac OS deployment target (SDK version): ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+endif ()
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Workaround for an old CMake, which does not understand CMAKE_CXX_STANDARD.
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-reorder" )
+    add_compile_options(-std=c++11 -Wall -Wno-reorder)
     find_package(PkgConfig REQUIRED)
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUXX)
     # Adding -fext-numeric-literals to enable GCC extensions on definitions of quad float literals, which are required by Boost.
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fext-numeric-literals" )
+    add_compile_options(-fext-numeric-literals)
+
+    if (SLIC3R_SYNTAXONLY)
+        set(CMAKE_CXX_ARCHIVE_CREATE "true")
+        set(CMAKE_C_ARCHIVE_CREATE "true")
+        set(CMAKE_CXX_ARCHIVE_APPEND "true")
+        set(CMAKE_C_ARCHIVE_APPEND "true")
+        set(CMAKE_RANLIB "true")
+        set(CMAKE_C_LINK_EXECUTABLE "true")
+        set(CMAKE_CXX_LINK_EXECUTABLE "true")
+
+        set(CMAKE_C_COMPILE_OBJECT "<CMAKE_C_COMPILER> -fsyntax-only <DEFINES> <INCLUDES> <FLAGS> -c <SOURCE> && touch <OBJECT>")
+        set(CMAKE_CXX_COMPILE_OBJECT "<CMAKE_CXX_COMPILER> -fsyntax-only <DEFINES> <INCLUDES> <FLAGS> -c <SOURCE> && touch <OBJECT>")
+    endif ()
+endif()
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    # On GCC and Clang, no return from a non-void function is a warning only. Here, we make it an error.
+    add_compile_options(-Werror=return-type)
+
+    if (SLIC3R_ASAN)
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
+
+        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lasan")
+        endif ()
+    endif ()
 endif()
 
 # Where all the bundled libraries reside?
@@ -100,12 +133,12 @@ set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/src/)
 # For the bundled boost libraries (boost::nowide)
 include_directories(${LIBDIR})
 # For libslic3r.h
-include_directories(${LIBDIR}/libslic3r ${LIBDIR}/clipper ${LIBDIR}/polypartition)
+include_directories(${LIBDIR}/clipper ${LIBDIR}/polypartition)
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(WIN32)
     # BOOST_ALL_NO_LIB: Avoid the automatic linking of Boost libraries on Windows. Rather rely on explicit linking.
-    add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB -DBOOST_USE_WINAPI_VERSION=0x601)
+    add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -DBOOST_ALL_NO_LIB -DBOOST_USE_WINAPI_VERSION=0x601 -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
 endif()
 
 add_definitions(-DwxUSE_UNICODE -D_UNICODE -DUNICODE -DWXINTL_NO_GETTEXT_MACRO)
@@ -115,25 +148,19 @@ if (SLIC3R_PROFILE)
     add_definitions(-DSLIC3R_PROFILE)
 endif ()
 
-# Perl specific stuff
-find_package(PerlLibs REQUIRED)
-set(PerlEmbed_DEBUG 1)
-find_package(PerlEmbed REQUIRED)
-# If the Perl is compiled with optimization off, disable optimization over the whole project.
-if (WIN32 AND ";${PerlEmbed_CCFLAGS};" MATCHES ";[-/]Od;")
+# Disable optimization even with debugging on.
+if (0)
     message(STATUS "Perl compiled without optimization. Disabling optimization for the Slic3r build.")
     message("Old CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
     message("Old CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELEASE}")
     message("Old CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS_RELEASE}")
-    set(CMAKE_CXX_FLAGS_RELEASE "/MD /Od /Zi /EHsc /DNDEBUG /DWIN32 /DTBB_USE_ASSERT")
-    set(CMAKE_C_FLAGS_RELEASE "/MD /Od /Zi /DNDEBUG /DWIN32 /DTBB_USE_ASSERT")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MD /Od /Zi /EHsc /DNDEBUG /DWIN32 /DTBB_USE_ASSERT")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MD /Od /Zi /DNDEBUG /DWIN32 /DTBB_USE_ASSERT")
-    set(CMAKE_CXX_FLAGS "/MD /Od /Zi /EHsc /DNDEBUG /DWIN32 /DTBB_USE_ASSERT")
-    set(CMAKE_C_FLAGS "/MD /Od /Zi /DNDEBUG /DWIN32 /DTBB_USE_ASSERT")
+    set(CMAKE_CXX_FLAGS_RELEASE "/MD /Od /Zi /EHsc /DWIN32 /DTBB_USE_ASSERT")
+    set(CMAKE_C_FLAGS_RELEASE "/MD /Od /Zi /DWIN32 /DTBB_USE_ASSERT")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MD /Od /Zi /EHsc /DWIN32 /DTBB_USE_ASSERT")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MD /Od /Zi /DWIN32 /DTBB_USE_ASSERT")
+    set(CMAKE_CXX_FLAGS "/MD /Od /Zi /EHsc /DWIN32 /DTBB_USE_ASSERT")
+    set(CMAKE_C_FLAGS "/MD /Od /Zi /DWIN32 /DTBB_USE_ASSERT")
 endif()
-# The following line will add -fPIC on Linux to make the XS.so rellocable.
-add_definitions(${PerlEmbed_CCCDLFLAGS})
 
 # Find and configure boost
 if(SLIC3R_STATIC)
@@ -143,6 +170,7 @@ if(SLIC3R_STATIC)
     # set(Boost_USE_STATIC_RUNTIME ON)
 endif()
 #set(Boost_DEBUG ON)
+# set(Boost_COMPILER "-vc120")
 find_package(Boost REQUIRED COMPONENTS system filesystem thread log locale regex)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
@@ -170,33 +198,7 @@ endif()
 # The Intel TBB library will use the std::exception_ptr feature of C++11.
 add_definitions(-DTBB_USE_CAPTURED_EXCEPTION=0)
 
-# Find and configure wxWidgets
-if (SLIC3R_PRUSACONTROL)
-    set(wxWidgets_UseAlienWx 1)
-    if (wxWidgets_UseAlienWx)
-        set(AlienWx_DEBUG 1)
-        find_package(AlienWx REQUIRED COMPONENTS base core adv html gl)
-        include_directories(${AlienWx_INCLUDE_DIRS})
-        #add_compile_options(${AlienWx_CXX_FLAGS})
-        add_definitions(${AlienWx_DEFINITIONS})
-        set(wxWidgets_LIBRARIES ${AlienWx_LIBRARIES})
-        # On Linux / gtk, we need to have a direct access to gtk+ for some workarounds.
-        if (AlienWx_GUI_TOOLKIT STREQUAL "gtk2")
-            pkg_check_modules(GTK2 gtk+-2.0)
-            include_directories(${GTK2_INCLUDE_DIRS})
-        endif()
-        if (AlienWx_GUI_TOOLKIT STREQUAL "gtk3")
-            pkg_check_modules(GTK3 gtk+-3.0)
-            include_directories(${GTK3_INCLUDE_DIRS})
-        endif()
-    else ()
-        find_package(wxWidgets REQUIRED COMPONENTS base core adv html gl)
-        include(${wxWidgets_USE_FILE})
-    endif ()
-#FIXME rewrite the PRUS format to miniz!
-#    add_definitions(-DSLIC3R_GUI -DSLIC3R_PRUS)
-endif()
-
+#set(CURL_DEBUG 1)
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIRS})
 
@@ -259,32 +261,34 @@ endif ()
 include_directories(${GLEW_INCLUDE_DIRS})
 
 # l10n
-add_subdirectory(resources/localization)
+set(L10N_DIR "${SLIC3R_RESOURCES_DIR}/localization")
+add_custom_target(pot
+    # FIXME: file list stale
+    COMMAND xgettext --keyword=L --from-code=UTF-8 --debug
+        -f "${L10N_DIR}/list.txt"
+        -o "${L10N_DIR}/Slic3rPE.pot"
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMENT "Generate pot file from strings in the source tree"
+)
 
 # libslic3r, Slic3r GUI and the slic3r executable.
 add_subdirectory(src)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT slic3r_app_console)
 
 # Perl bindings, currently only used for the unit / integration tests of libslic3r.
-add_subdirectory(xs)
-
-get_filename_component(PERL_BIN_PATH "${PERL_EXECUTABLE}" DIRECTORY)
-if (MSVC)
-	# By default the startup project in MSVC is the 'ALL_BUILD' cmake-created project,
-	# but we want 'slic3r' as the startup one because debugging run command is associated with it.
-	# (Unfortunatelly it cannot be associated with ALL_BUILD using CMake.)
-	# Note: For some reason this needs to be set in the top-level CMakeLists.txt
-	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT XS)
-	set(PERL_PROVE "${PERL_BIN_PATH}/prove.bat")
-else ()
-	set(PERL_PROVE "${PERL_BIN_PATH}/prove")
+# Also runs the unit / integration tests.
+#FIXME Port the tests into C++ to finally get rid of the Perl!
+if (SLIC3R_PERL_XS)
+    add_subdirectory(xs)
 endif ()
 
-add_test (NAME xs COMMAND "${PERL_EXECUTABLE}" ${PERL_PROVE} -I ${PROJECT_SOURCE_DIR}/local-lib/lib/perl5 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/xs)
-add_test (NAME integration COMMAND "${PERL_EXECUTABLE}" ${PERL_PROVE} WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+if(SLIC3R_BUILD_SANDBOXES)
+    add_subdirectory(sandboxes)
+endif()
 
-#install(PROGRAMS slic3r.pl DESTINATION bin RENAME slic3r-prusa3d)
+if(SLIC3R_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
 
 file(GLOB MyVar var/*.png)
 install(FILES ${MyVar} DESTINATION share/slic3r-prusa3d)
-install(FILES lib/Slic3r.pm DESTINATION lib/slic3r-prusa3d)
-install(DIRECTORY lib/Slic3r DESTINATION lib/slic3r-prusa3d)
