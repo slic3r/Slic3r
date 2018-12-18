@@ -607,7 +607,7 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
 
 void
 MedialAxis::extends_line_both_side(ThickPolylines& pp) {
-    const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
+    const ExPolygons anchors = offset2_ex(to_polygons(diff_ex(this->bounds, this->expolygon)), -SCALED_RESOLUTION, SCALED_RESOLUTION);
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         this->extends_line(polyline, anchors, this->min_width);
@@ -1257,7 +1257,7 @@ MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
     // add holes "perimeter gaps"
     double holesGaps = 0;
     for (const Polygon &hole : bounds.holes) {
-        holesGaps += hole->length() * height * (1 - 0.25*PI) * 0.5;
+        holesGaps += hole.length() * height * (1 - 0.25*PI) * 0.5;
     }
     boundsVolume += perimeterRoundGap + holesGaps;
 
@@ -1265,9 +1265,8 @@ MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
         //reduce width
         double reduce_by = boundsVolume / volume;
         for (ThickPolyline& polyline : pp) {
-            for (ThickLine &l : polyline.thicklines()) {
-                l.a_width *= reduce_by;
-                l.b_width *= reduce_by;
+            for (coordf_t &width : polyline.width) {
+                width *= reduce_by;
             }
         }
     }
