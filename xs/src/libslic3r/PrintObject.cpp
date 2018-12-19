@@ -439,9 +439,10 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface)
                     area += c.area();
                     
                 }
-                std::cout << unscale(unscale(area)) << '\n';
+                
                 //collsion found abort when area > 1.0 mm²
                 if (1.0 < unscale(unscale(area))) {
+                    std::cout << "Surface removed: collision on layer " << layer->print_z << "mm (" << unscale(unscale(area)) << " mm²)" << '\n';
                     return true;
                 }
             }

@@ -189,6 +189,7 @@ bool
 NonplanarSurface::check_max_printing_height(float height) 
 {
     if ((this->stats.max.z - this->stats.min.z) > height ) {
+        std::cout << "Surface removed: printheight too heigh (" << (this->stats.max.z - this->stats.min.z) << " mm)" << '\n';
         return true;
     } else {
         return false;
@@ -204,6 +205,7 @@ NonplanarSurface::check_surface_area()
         area += facet.second.calculate_surface_area();
     }
     if (area < 20.0f) {
+        std::cout << "Surface removed: area too small (" << area << " mm²)" << '\n';
         return true;
     } else {
         return false;
