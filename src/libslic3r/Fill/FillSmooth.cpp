@@ -37,12 +37,12 @@ namespace Slic3r {
         double volumeToOccupy = 0;
         for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
             // add external "perimeter gap"
-            double poylineVolume = flow.height*unscale(unscale(poly->area()));
-            double perimeterRoundGap = unscale(poly->contour.length()) * flow.height * (1 - 0.25*PI) * 0.5;
+            double poylineVolume = flow.height*unscaled(unscaled(poly->area()));
+            double perimeterRoundGap = unscaled(poly->contour.length()) * flow.height * (1 - 0.25*PI) * 0.5;
             // add holes "perimeter gaps"
             double holesGaps = 0;
             for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
-                holesGaps += unscale(hole->length()) * flow.height * (1 - 0.25*PI) * 0.5;
+                holesGaps += unscaled(hole->length()) * flow.height * (1 - 0.25*PI) * 0.5;
             }
             poylineVolume += perimeterRoundGap + holesGaps;
 
@@ -88,7 +88,7 @@ namespace Slic3r {
                 for (auto pline = polylines_layer1.begin(); pline != polylines_layer1.end(); ++pline) {
                     Lines lines = pline->lines();
                     for (auto line = lines.begin(); line != lines.end(); ++line) {
-                        lengthTot += unscale(line->length());
+                        lengthTot += unscaled(line->length());
                         nbLines++;
                     }
                 }
@@ -102,7 +102,7 @@ namespace Slic3r {
                 eecroot->entities.push_back(eec);
                 eec->no_sort = false; //can be sorted inside the pass
                 extrusion_entities_append_paths(
-                    eec->entities, STDMOVE(polylines_layer1),
+                    eec->entities, std::move(polylines_layer1),
                     flow.bridge ? erBridgeInfill : rolePass[0],
                     //reduced flow height for a better view (it's only a gui thing)
                     params.flow_mult * flow.mm3_per_mm() * percentFlow[0] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1),
@@ -122,18 +122,18 @@ namespace Slic3r {
                     for (auto pline = polylines_layer1.begin(); pline != polylines_layer1.end(); ++pline) {
                         Lines lines = pline->lines();
                         for (auto line = lines.begin(); line != lines.end(); ++line) {
-                            lengthTot += unscale(line->length());
+                            lengthTot += unscaled(line->length());
                             nbLines++;
                         }
                     }
 
                     // add external "perimeter gap"
-                    double poylineVolume = flow.height*unscale(unscale(poly->area()));
-                    double perimeterRoundGap = unscale(poly->contour.length()) * flow.height * (1 - 0.25*PI) * 0.5;
+                    double poylineVolume = flow.height*unscaled(unscaled(poly->area()));
+                    double perimeterRoundGap = unscaled(poly->contour.length()) * flow.height * (1 - 0.25*PI) * 0.5;
                     // add holes "perimeter gaps"
                     double holesGaps = 0;
                     for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
-                        holesGaps += unscale(hole->length()) * flow.height * (1 - 0.25*PI) * 0.5;
+                        holesGaps += unscaled(hole->length()) * flow.height * (1 - 0.25*PI) * 0.5;
                     }
                     poylineVolume += perimeterRoundGap + holesGaps;
 
@@ -149,7 +149,7 @@ namespace Slic3r {
                         good_role = flow.bridge ? erBridgeInfill : rolePass[0];
                     }
                     extrusion_entities_append_paths(
-                        eec->entities, STDMOVE(polylines_layer1),
+                        eec->entities, std::move(polylines_layer1),
                         good_role,
                         //reduced flow height for a better view (it's only a gui thing)
                         params.flow_mult * flow.mm3_per_mm() * percentFlow[0] * (params.fill_exactly ? poylineVolume / extrudedVolume : 1),
@@ -187,7 +187,7 @@ namespace Slic3r {
                 for (auto pline = polylines_layer2.begin(); pline != polylines_layer2.end(); ++pline){
                     Lines lines = pline->lines();
                     for (auto line = lines.begin(); line != lines.end(); ++line){
-                        lengthTot += unscale(line->length());
+                        lengthTot += unscaled(line->length());
                         nbLines++;
                     }
                 }
@@ -205,7 +205,7 @@ namespace Slic3r {
                 }
                 // print thin
                 extrusion_entities_append_paths(
-                    eec->entities, STDMOVE(polylines_layer2),
+                    eec->entities, std::move(polylines_layer2),
                     good_role,
                     params.flow_mult * flow.mm3_per_mm() * percentFlow[1] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1),
                     //min-reduced flow width for a better view (it's only a gui thing)
@@ -244,7 +244,7 @@ namespace Slic3r {
                 for (auto pline = polylines_layer3.begin(); pline != polylines_layer3.end(); ++pline){
                     Lines lines = pline->lines();
                     for (auto line = lines.begin(); line != lines.end(); ++line){
-                        lengthTot += unscale(line->length());
+                        lengthTot += unscaled(line->length());
                         nbLines++;
                     }
                 }
@@ -261,7 +261,7 @@ namespace Slic3r {
                 }
                 // print thin
                 extrusion_entities_append_paths(
-                    eec->entities, STDMOVE(polylines_layer3),
+                    eec->entities, std::move(polylines_layer3),
                     good_role, //slow (if last)
                     //reduced flow width for a better view (it's only a gui thing)
                     params.flow_mult * flow.mm3_per_mm() * percentFlow[2] * (params.fill_exactly ? volumeToOccupy / extrudedVolume : 1),

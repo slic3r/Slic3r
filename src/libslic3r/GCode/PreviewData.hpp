@@ -71,6 +71,7 @@ public:
             Feedrate,
             VolumetricRate,
             Tool,
+            Filament,
             ColorPrint,
             Num_View_Types
         };

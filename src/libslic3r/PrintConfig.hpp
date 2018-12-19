@@ -164,13 +164,12 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<FilamentType>::ge
     return keys_map;
 }
 
-template<> inline t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["automatic"] = dfaAutomatic;
-        keys_map["autosmall"] = dfaAutoNotFull;
-        keys_map["enlarged"] = dfaEnlarged;
-    }
+template<> inline const t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
+    static const t_config_enum_values keys_map = {
+        { "automatic", dfaAutomatic },
+        { "autosmall", dfaAutoNotFull },
+        { "enlarged", dfaEnlarged }
+    };
     return keys_map;
 }
 

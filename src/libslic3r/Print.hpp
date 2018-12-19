@@ -179,6 +179,7 @@ private:
     void generate_support_material();
 
     void _slice();
+    void _offsetHoles(float hole_delta, LayerRegion *layerm);
     std::string _fix_slicing_errors();
     void _simplify_slices(double distance);
     void _make_perimeters();
@@ -187,7 +188,9 @@ private:
     void process_external_surfaces();
     void discover_vertical_shells();
     void bridge_over_infill();
+    void replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replacement, SurfaceType st_under_it);
     void clip_fill_surfaces();
+    void count_distance_solid();
     void discover_horizontal_shells();
     void combine_infill();
     void _generate_support_material();

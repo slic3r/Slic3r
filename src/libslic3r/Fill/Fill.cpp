@@ -59,7 +59,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         layerm.fill_surfaces.group(&groups);
 
         //if internal infill can be dense, place it on his own group
-        if (layerm.region()->config.infill_dense.getBool() && layerm.region()->config.fill_density<40) {
+        if (layerm.region()->config().infill_dense.getBool() && layerm.region()->config().fill_density<40) {
             SurfacesPtr *denseGroup = NULL;
             const uint32_t nbGroups = groups.size();
             for (uint32_t num_group = 0; num_group < nbGroups; ++num_group) {
@@ -193,8 +193,8 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 (surface.is_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().bottom_fill_pattern.value) :
                 ipRectilinear;
         } else {
-            if (layerm.region()->config.infill_dense.getBool()
-                && layerm.region()->config.fill_density<40
+            if (layerm.region()->config().infill_dense.getBool()
+                && layerm.region()->config().fill_density<40
                 && surface.maxNbSolidLayersOnTop <= 1
                 && surface.maxNbSolidLayersOnTop > 0) {
                 density = 42;
@@ -262,8 +262,8 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         f->loop_clipping = scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER;
         //give the overlap size to let the infill do his overlap
         //add overlap if at least one perimeter
-        if (layerm.region()->config.perimeters.getInt() > 0) {
-            f->overlap = layerm.region()->config.get_abs_value("infill_overlap", (perimeter_spacing + (f->spacing)) / 2);
+        if (layerm.region()->config().perimeters > 0) {
+            f->overlap = layerm.region()->config().get_abs_value("infill_overlap", (perimeter_spacing + (f->spacing)) / 2);
             if (f->overlap!=0) {
                 f->no_overlap_expolygons = intersection_ex(layerm.fill_no_overlap_expolygons, ExPolygons() = { surface.expolygon });
             } else {
@@ -278,8 +278,8 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         FillParams params;
         params.density = 0.01 * density;
         params.dont_adjust = false;
-        params.fill_exactly = layerm.region()->config.enforce_full_fill_volume.getBool();
-        params.dont_connect = layerm.region()->config.infill_not_connected.getBool();
+        params.fill_exactly = layerm.region()->config().enforce_full_fill_volume.getBool();
+        params.dont_connect = layerm.region()->config().infill_not_connected.getBool();
 
         // calculate actual flow from spacing (which might have been adjusted by the infill
         // pattern generator)
@@ -293,8 +293,8 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         
         float flow_percent = 1;
         if(surface.is_overBridge()){
-            params.density = layerm.region()->config.over_bridge_flow_ratio;
-            //params.flow_mult = layerm.region()->config.over_bridge_flow_ratio;
+            params.density = layerm.region()->config().over_bridge_flow_ratio;
+            //params.flow_mult = layerm.region()->config().over_bridge_flow_ratio;
         }
         
         f->fill_surface_extrusion(&surface, params, flow, erNone, out.entities);

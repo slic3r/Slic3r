@@ -695,18 +695,18 @@ void PrintObject::count_distance_solid() {
     // sparse area = layer's fill area - solid area
     const float COEFF_SPLIT = 2;
     const int NB_DENSE_LAYERS = 1;
-    for (int idx_region = 0; idx_region < this->_print->regions.size(); ++idx_region) {
+    for (size_t idx_region = 0; idx_region < this->m_print->regions().size(); ++idx_region) {
         //count how many surface there are on each one
         LayerRegion *previousOne = NULL;
-        if (this->layers.size() > 1) previousOne = this->layers[this->layers.size() - 1]->get_region(idx_region);
-        if (previousOne != NULL && previousOne->region()->config.infill_dense.getBool() && previousOne->region()->config.fill_density<40) {
+        if (this->layers().size() > 1) previousOne = this->layers()[this->layers().size() - 1]->get_region(idx_region);
+        if (previousOne != NULL && previousOne->region()->config().infill_dense.getBool() && previousOne->region()->config().fill_density<40) {
             for (Surface &surf : previousOne->fill_surfaces.surfaces) {
                 if (surf.is_solid()) {
                     surf.maxNbSolidLayersOnTop = 0;
                 }
             }
-            for (int idx_layer = this->layers.size() - 2; idx_layer >= 0; --idx_layer){
-                LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
+            for (size_t idx_layer = this->layers().size() - 2; idx_layer >= 0; --idx_layer){
+                LayerRegion *layerm = this->layers()[idx_layer]->get_region(idx_region);
                 Surfaces surf_to_add;
                 for (auto it_surf = layerm->fill_surfaces.surfaces.begin(); it_surf != layerm->fill_surfaces.surfaces.end(); ++it_surf) {
                     Surface &surf = *it_surf;
@@ -721,7 +721,7 @@ void PrintObject::count_distance_solid() {
                             // upp.expolygon.overlaps(surf.expolygon) or surf.expolygon.overlaps(upp.expolygon)
                             ExPolygons intersect = intersection_ex(sparse_polys, offset_ex(upp.expolygon, -layerm->flow(frInfill).scaled_width()), true);
                             if (!intersect.empty()) {
-                                if (layerm->region()->config.infill_dense_algo == dfaEnlarged) {
+                                if (layerm->region()->config().infill_dense_algo == dfaEnlarged) {
                                     uint16_t dist = (uint16_t)(upp.maxNbSolidLayersOnTop + 1);
                                     const int nb_dense_layers = 1;
                                     if (dist <= nb_dense_layers) {
@@ -729,11 +729,11 @@ void PrintObject::count_distance_solid() {
                                         uint64_t area_intersect = 0;
                                         for (ExPolygon poly_inter : intersect) area_intersect += poly_inter.area();
                                         //if it's in a dense area and the current surface isn't a dense one yet and the not-dense is too small.
-                                        std::cout << idx_layer << " dfaEnlarged: " << layerm->region()->config.infill_dense_algo << "\n";
-                                        std::cout << idx_layer << " dfaEnlarged: 1-" << (layerm->region()->config.infill_dense_algo == dfaEnlarged) << "\n";
+                                        std::cout << idx_layer << " dfaEnlarged: " << layerm->region()->config().infill_dense_algo << "\n";
+                                        std::cout << idx_layer << " dfaEnlarged: 1-" << (layerm->region()->config().infill_dense_algo == dfaEnlarged) << "\n";
                                         std::cout << idx_layer << " dfaEnlarged: 2-" << (surf.area() > area_intersect * COEFF_SPLIT) << "\n";
                                         std::cout << idx_layer << " dfaEnlarged: 3-" << (surf.maxNbSolidLayersOnTop > nb_dense_layers) << "\n";
-                                        std::cout << idx_layer << " dfaEnlarged: surf.area()=" << unscale(unscale(surf.area())) << ", area_intersect=" << unscale(unscale(area_intersect)) << "\n";
+                                        std::cout << idx_layer << " dfaEnlarged: surf.area()=" << unscale<double, double>(unscale<double, double>(surf.area())) << ", area_intersect=" << unscale<double, double>(unscale<double, double>(area_intersect)) << "\n";
                                         std::cout << idx_layer << " dfaEnlarged: surf.maxNbSolidLayersOnTop=" << surf.maxNbSolidLayersOnTop << ", NB_DENSE_LAYERS=" << NB_DENSE_LAYERS << "\n";
                                         if ((surf.area() > area_intersect * COEFF_SPLIT) &&
                                             surf.maxNbSolidLayersOnTop > nb_dense_layers) {
@@ -742,8 +742,7 @@ void PrintObject::count_distance_solid() {
                                             if (dist == 1) {
                                                 //if just under the solid area, we can expand a bit
                                                 //remove too small sections and grew a bit to anchor it into the part
-                                                intersect = offset_ex(intersect,
-                                                    layerm->flow(frInfill).scaled_width() + scale_(layerm->region()->config.bridged_infill_margin));
+                                                intersect = offset_ex(intersect, layerm->flow(frInfill).scaled_width() + scale_(layerm->region()->config().bridged_infill_margin));
                                             } else {
                                                 //just remove too small sections
                                                 intersect = offset_ex(intersect,
@@ -767,7 +766,7 @@ void PrintObject::count_distance_solid() {
                                     } else {
                                         surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
                                     }
-                                } else if (layerm->region()->config.infill_dense_algo == dfaAutoNotFull || layerm->region()->config.infill_dense_algo == dfaAutomatic) {
+                                } else if (layerm->region()->config().infill_dense_algo == dfaAutoNotFull || layerm->region()->config().infill_dense_algo == dfaAutomatic) {
                                     double area_intersect = 0;
                                     for (ExPolygon poly_inter : intersect) area_intersect += poly_inter.area();
                                     //like intersect.empty() but more resilient
@@ -776,7 +775,7 @@ void PrintObject::count_distance_solid() {
                                         if (dist <= NB_DENSE_LAYERS) {
                                             // it will be a dense infill, split the surface if needed
                                             //if the not-dense is too big to do a full dense and the current surface isn't a dense one yet.
-                                            if ((layerm->region()->config.infill_dense_algo == dfaAutomatic || surf.area() > area_intersect * COEFF_SPLIT) &&
+                                            if ((layerm->region()->config().infill_dense_algo == dfaAutomatic || surf.area() > area_intersect * COEFF_SPLIT) &&
                                                 surf.maxNbSolidLayersOnTop > NB_DENSE_LAYERS) {
                                                 //split in two
                                                 if (dist == 1) {
@@ -792,7 +791,7 @@ void PrintObject::count_distance_solid() {
                                                     }
                                                     intersect = offset_ex(cover_intersect,
                                                         layerm->flow(frInfill).scaled_width());// +scale_(expandby));
-                                                    //layerm->region()->config.external_infill_margin));
+                                                    //layerm->region()->config().external_infill_margin));
                                                 } else {
                                                     //just remove too small sections
                                                     intersect = offset_ex(intersect,
@@ -818,10 +817,10 @@ void PrintObject::count_distance_solid() {
                                             surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
                                         }
                                     }
-                                } else if (layerm->region()->config.infill_dense_algo == dfaAutomatic) {
+                                } else if (layerm->region()->config().infill_dense_algo == dfaAutomatic) {
                                     double area_intersect = 0;
                                     for (ExPolygon poly_inter : intersect) area_intersect += poly_inter.area();
-                                    std::cout << idx_layer << " dfaAutomatic: area_intersect=" << unscale(unscale(area_intersect)) << "\n";
+                                    std::cout << idx_layer << " dfaAutomatic: area_intersect=" << unscale<double, double>(unscale<double, double>(area_intersect)) << "\n";
                                     //like intersect.empty() but more resilient
                                     if (area_intersect > layerm->flow(frInfill).scaled_width() * layerm->flow(frInfill).scaled_width() * 2) {
                                         std::cout << idx_layer << " dfaAutomatic: ok\n";
@@ -847,7 +846,7 @@ void PrintObject::count_distance_solid() {
                                                     }
                                                     intersect = offset_ex(cover_intersect,
                                                         layerm->flow(frInfill).scaled_width());// +scale_(expandby));
-                                                    //layerm->region()->config.external_infill_margin));
+                                                    //layerm->region()->config().external_infill_margin));
                                                 } else {
                                                     std::cout << "dfaAutomatic: remove too small sections\n";
                                                     //just remove too small sections
@@ -978,7 +977,7 @@ void PrintObject::detect_surfaces_type()
                     // unless internal shells are requested
                     Layer       *upper_layer = (idx_layer + 1 < this->layer_count()) ? m_layers[idx_layer + 1] : nullptr;
                     Layer       *lower_layer = (idx_layer > 0) ? m_layers[idx_layer - 1] : nullptr;
-                    Layer       *under_lower_layer = (idx_layer > 1) ? this->layers[idx_layer - 2] : nullptr;
+                    Layer       *under_lower_layer = (idx_layer > 1) ? this->layers()[idx_layer - 2] : nullptr;
                     // collapse very narrow parts (using the safety offset in the diff is not enough)
                     float        offset = layerm->flow(frExternalPerimeter).scaled_width() / 10.f;
 
@@ -1672,15 +1671,16 @@ void PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_r
 {
     BOOST_LOG_TRIVIAL(info) << "overextrude over Bridge...";
 
-    FOREACH_REGION(this->_print, region) {
-        size_t region_id = region - this->_print->regions.begin();
-        
-        FOREACH_LAYER(this, layer_it) {
+    for (size_t region_id = 0; region_id < this->region_volumes.size(); ++region_id) {
+        const PrintRegion &region = *m_print->regions()[region_id];
+
+        for (LayerPtrs::iterator layer_it = m_layers.begin(); layer_it != m_layers.end(); ++layer_it) {
+
             // skip first layer
-            if (layer_it == this->layers.begin()) continue;
+            if (layer_it == this->layers().begin()) continue;
             
             Layer* layer        = *layer_it;
-            LayerRegion* layerm = layer->regions[region_id];
+            LayerRegion* layerm = layer->regions()[region_id];
             
             // extract the stInternalSolid surfaces that might be transformed into bridges
             Polygons internal_solid;
@@ -1717,24 +1717,25 @@ void PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_r
                 Polygons to_overextrude_pp = internal_solid;
                 
                 // get previous layer
-                if (int(layer_it - this->layers.begin()) - 1 >= 0) {
-                    const Layer* lower_layer = this->layers[int(layer_it - this->layers.begin()) - 1];
+                if (int(layer_it - this->layers().begin()) - 1 >= 0) {
+                    const Layer* lower_layer = this->layers()[int(layer_it - this->layers().begin()) - 1];
                     
                     // iterate through regions and collect internal surfaces
                     Polygons lower_internal;
-                    FOREACH_LAYERREGION(lower_layer, lower_layerm_it){
+                    for (LayerRegion *lower_layerm : lower_layer->m_regions) {
+                        lower_layerm->fill_surfaces.filter_by_type(stInternal, &lower_internal);
                         Polygons lower_internal_OK;
                         Polygons lower_internal_Bridge;
                         Polygons lower_internal_Over;
-                        (*lower_layerm_it)->fill_surfaces.filter_by_type(st_replacement, &lower_internal_OK);
-                        (*lower_layerm_it)->fill_surfaces.filter_by_type(st_under_it, &lower_internal_Bridge);
-                        (*lower_layerm_it)->fill_surfaces.filter_by_type(st_to_replace, &lower_internal_Over);
+                        lower_layerm->fill_surfaces.filter_by_type(st_replacement, &lower_internal_OK);
+                        lower_layerm->fill_surfaces.filter_by_type(st_under_it, &lower_internal_Bridge);
+                        lower_layerm->fill_surfaces.filter_by_type(st_to_replace, &lower_internal_Over);
                         double okarea =0, bridgearea=0, overarea=0;
                         for (ExPolygon &ex : union_ex(lower_internal_OK)) okarea+=ex.area();
                         for (ExPolygon &ex : union_ex(lower_internal_Bridge)) bridgearea+=ex.area();
                         for (ExPolygon &ex : union_ex(lower_internal_Over)) overarea+=ex.area();
 
-                        (*lower_layerm_it)->fill_surfaces.filter_by_type(st_under_it, &lower_internal);
+                        lower_layerm->fill_surfaces.filter_by_type(st_under_it, &lower_internal);
                     }
                         double sumarea=0;
                         for (ExPolygon &ex : union_ex(lower_internal)) sumarea+=ex.area();
@@ -1990,7 +1991,7 @@ end:
                 Layer *layer = m_layers[layer_id];
                 // Apply size compensation and perform clipping of multi-part objects.
                 float delta = float(scale_(m_config.xy_size_compensation.value));
-                float hole_delta = float(scale_(this->config.hole_size_compensation.value));
+                float hole_delta = float(scale_(this->config().hole_size_compensation.value));
                 if (layer_id == 0)
                     delta -= float(scale_(m_config.elefant_foot_compensation.value));
                 bool  scale = delta != 0.f;
@@ -2001,7 +2002,7 @@ end:
                         LayerRegion *layerm = layer->m_regions.front();
                         layerm->slices.set(offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), delta), stInternal);
                     }
-                    _offsetHoles(hole_delta, layer->regions.front());
+                    _offsetHoles(hole_delta, layer->regions().front());
                 } else if (scale || clip || hole_delta != 0.f) {
                     // Multiple regions, growing, shrinking or just clipping one region by the other.
                     // When clipping the regions, priority is given to the first regions.

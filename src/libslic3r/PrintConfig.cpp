@@ -84,12 +84,9 @@ void PrintConfigDef::init_fff_params()
         "are very confident on your model, or you want to print an item with a geometry "
         "designed for vase mode.");
     def->cli = "remove-small-gaps!";
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(true);
 
-    def = this->add("bed_shape", coPoints);
-	def->label = L("Bed shape");
-    def->default_value = new ConfigOptionPoints { Pointf(0,0), Pointf(200,0), Pointf(200,200), Pointf(0,200) };
-    
     def = this->add("bed_temperature", coInts);
     def->label = L("Other layers");
     def->tooltip = L("Bed temperature for layers after the first one. "
@@ -170,6 +167,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "top-fan-speed=i@";
     def->min = 0;
     def->max = 100;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionInts{ 100 };
 
     def = this->add("bridge_flow_ratio", coFloat);
@@ -191,9 +189,10 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("This factor affects the amount of plastic to overextrude "
                    "when we are filling on top of a bridge surface."
                    "With a number >1, we can retreive the correct z-height "
-				   "even if the bridged layer has fallen a bit.");
+                   "even if the bridged layer has fallen a bit.");
     def->cli = "over-bridge-flow-ratio=f";
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(1);
 
     def = this->add("bridge_speed", coFloat);
@@ -439,6 +438,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Hilbert Curve"));
     def->enum_labels.push_back(L("Archimedean Chords"));
     def->enum_labels.push_back(L("Octagram Spiral"));
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("enforce_full_fill_volume", coBool);
@@ -446,6 +446,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Infill");
     def->tooltip = L("Experimental option which modifies (top/bottom) fill flow to have the exact amount of plastic inside the volume to fill.");
     def->cli = "enforce-full-fill-volume!";
+    def->mode = comExpert;
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("external_infill_margin", coFloat);
@@ -455,6 +456,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm");
     def->cli = "top-layer-anchor=f";
     def->min = 0;
+    def->mode = comExpert;
     def->default_value = new ConfigOptionFloat(1.5);
 
     def = this->add("bridged_infill_margin", coFloat);
@@ -464,6 +466,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm");
     def->cli = "top-layer-anchor=f";
     def->min = 0;
+    def->mode = comExpert;
     def->default_value = new ConfigOptionFloat(2);
 
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
@@ -504,6 +507,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Join the perimeters to create only one continuous extrusion without any z-hop."
         " Long inside travel (from external to holes) are not extruded to give some space to the infill.");
     def->cli = "loop-perimeter!";
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(false);
     
     def = this->add("perimeter_loop_seam", coEnum);
@@ -516,9 +520,10 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("rear");
     def->enum_labels.push_back(L("Nearest"));
     def->enum_labels.push_back(L("Rear"));
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionEnum<SeamPosition>(spRear); 
     
-    def = this->add("extra_perimeters", coBool);
+    def = this->add("extra_perimeters", coBool);avoid
     def->label = L("Extra perimeters if needed");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Add more perimeters when needed for avoiding gaps in sloping walls. "
@@ -903,7 +908,6 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("cubic");
     def->enum_values.push_back("line");
     def->enum_values.push_back("concentric");
-    def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("honeycomb");
     def->enum_values.push_back("3dhoneycomb");
     def->enum_values.push_back("gyroid");
@@ -917,7 +921,6 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Cubic"));
     def->enum_labels.push_back(L("Line"));
     def->enum_labels.push_back(L("Concentric"));
-    def->enum_labels.push_back(L("Concentric (filled)"));
     def->enum_labels.push_back(L("Honeycomb"));
     def->enum_labels.push_back(L("3D Honeycomb"));
     def->enum_labels.push_back(L("Gyroid"));
@@ -969,7 +972,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "first-layer-height=s";
     def->ratio_over = "layer_height";
     def->default_value = new ConfigOptionFloatOrPercent(0.35, false);
-    
+
     def = this->add("first_layer_speed", coFloatOrPercent);
     def->label = L("default");
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
@@ -993,6 +996,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s or %");
     def->cli = "first-layer-infill-speed=s";
     def->min = 0;
+    def->mode = comExpert;
     def->default_value = new ConfigOptionFloatOrPercent(30, false);
     
     def = this->add("first_layer_temperature", coInts);
@@ -1090,6 +1094,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Enables the creation of a support layer under the first solid layer. This allows you to use a lower infill ratio without compromizing the top quality."
         " The dense infill is laid out with a 50% infill density.");
     def->cli = "infill-dense!";
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("infill_not_connected", coBool);
@@ -1097,6 +1102,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Infill");
     def->tooltip = L("If checked, the infill algorithm will try to not connect the lines near the infill. Can be useful for art or with high infill/perimeter overlap.");
     def->cli = "infill-not-connected!";
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(false);
     
     def = this->add("infill_dense_algo", coEnum);
@@ -1112,6 +1118,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Automatic"));
     def->enum_labels.push_back(L("Automatic, only for small areas"));
     def->enum_labels.push_back(L("Anchored"));
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionEnum<DenseInfillAlgo>(dfaAutomatic);
 
     def = this->add("infill_extruder", coInt);
@@ -1522,6 +1529,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and a bridged infill should be better.");
     def->cli = "no-perimeter-unsupported!";
+    def->mode = comExpert;
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("min_perimeter_unsupported", coInt);
@@ -1530,6 +1538,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Number of permieter exluded from this option.");
     def->cli = "min-perimeter-unsupported=i";
     def->min = 0;
+    def->mode = comExpert;
     def->default_value = new ConfigOptionInt(0);
 
     def = this->add("noperi_bridge_only", coBool);
@@ -1537,6 +1546,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Only remove perimeters over areas marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
     def->cli = "noperi-bridge-only!";
+    def->mode = comExpert;
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("parking_pos_retraction", coFloat);
@@ -1665,6 +1675,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Support material");
     def->tooltip = L("Use a solid layer instead of a raft for the layer that touch the build plate.");
     def->cli = "support-material-solid-first-layer!";
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("raft_layers", coInt);
@@ -1825,6 +1836,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Add a big cost to travel paths when possible (when going into a loop), so it will prefer a less optimal seam posistion if it's nearer.");
     def->cli = "seam-travel!";
+    def->mode = comExpert;
     def->default_value = new ConfigOptionBool(false);
 
 #if 0
@@ -2463,7 +2475,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "wipe-tower-rotation-angle=f";
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(0.);
-    
+
     def = this->add("wipe_into_infill", coBool);
     def->category = L("Extruders");
     def->label = L("Wipe into this object's infill");
@@ -2509,6 +2521,7 @@ void PrintConfigDef::init_fff_params()
                    " This might be useful for fine-tuning hole sizes.");
     def->sidetext = L("mm");
     def->cli = "hole-size-compensation=f";
+    def->mode = comExpert;
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("z_offset", coFloat);

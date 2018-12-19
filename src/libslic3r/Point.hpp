@@ -51,6 +51,9 @@ inline coord_t cross2(const Vec2crd &v1, const Vec2crd &v2) { return v1(0) * v2(
 inline float   cross2(const Vec2f   &v1, const Vec2f   &v2) { return v1(0) * v2(1) - v1(1) * v2(0); }
 inline double  cross2(const Vec2d   &v1, const Vec2d   &v2) { return v1(0) * v2(1) - v1(1) * v2(0); }
 
+inline coordf_t dot(const Vec2d &v1, const Vec2d &v2) { return v1.x() * v2.x() + v1.y() * v2.y(); }
+inline coordf_t dot(const Vec2d &v) { return v.x() * v.x() + v.y() * v.y(); }
+
 inline Vec2crd to_2d(const Vec3crd &pt3) { return Vec2crd(pt3(0), pt3(1)); }
 inline Vec2i64 to_2d(const Vec3i64 &pt3) { return Vec2i64(pt3(0), pt3(1)); }
 inline Vec2f   to_2d(const Vec3f   &pt3) { return Vec2f  (pt3(0), pt3(1)); }
@@ -118,6 +121,13 @@ public:
     double ccw_angle(const Point &p1, const Point &p2) const;
     Point  projection_onto(const MultiPoint &poly) const;
     Point  projection_onto(const Line &line) const;
+
+    double distance_to(const Point &point) const { return (point - *this).cast<double>().norm(); }
+    double distance_to(const Line &line) const;
+    bool coincides_with(const Point &point) const { return this->x() == point.x() && this->y() == point.y(); }
+    bool coincides_with_epsilon(const Point &point) const {
+        return std::abs(this->x() - point.x()) < SCALED_EPSILON && std::abs(this->y() - point.y()) < SCALED_EPSILON;
+    }
 };
 
 namespace int128 {

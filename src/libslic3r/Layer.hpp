@@ -35,6 +35,8 @@ public:
     // Unspecified fill polygons, used for overhang detection ("ensure vertical wall thickness feature")
     // and for re-starting of infills.
     ExPolygons                  fill_expolygons;
+    // Unspecified fill polygons, used for interecting when we don't want the infill/perimeter overlap
+    ExPolygons                  fill_no_overlap_expolygons;
     // collection of surfaces for infill generation
     SurfaceCollection           fill_surfaces;
 
@@ -110,8 +112,8 @@ public:
     ExPolygonCollection slices;
 
     size_t                  region_count() const { return m_regions.size(); }
-    const LayerRegion*      get_region(int idx) const { return m_regions.at(idx); }
-    LayerRegion*            get_region(int idx) { return m_regions[idx]; }
+    const LayerRegion*      get_region(size_t idx) const { return m_regions.at(idx); }
+    LayerRegion*            get_region(size_t idx) { return m_regions[idx]; }
     LayerRegion*            add_region(PrintRegion* print_region);
     const LayerRegionPtrs&  regions() const { return m_regions; }
     // Test whether whether there are any slices assigned to this layer.

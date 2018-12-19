@@ -485,7 +485,7 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
                     continue;
 
 
-                if ((!print.config().infill_first ? perimeters_done : !perimeters_done) || (!object->config().wipe_into_objects && region.config().wipe_into_infill)) {
+                if ((!region.config().infill_first ? perimeters_done : !perimeters_done) || (!object->config().wipe_into_objects && region.config().wipe_into_infill)) {
                     for (const ExtrusionEntity* ee : this_layer->regions()[region_id]->fills.entities) {                      // iterate through all infill Collections
                         auto* fill = dynamic_cast<const ExtrusionEntityCollection*>(ee);
 
@@ -498,7 +498,7 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
                         if (volume_to_wipe<=0)
                             continue;
 
-                        if (!object->config().wipe_into_objects && !print.config().infill_first && region.config().wipe_into_infill)
+                        if (!object->config().wipe_into_objects && !region.config().infill_first && region.config().wipe_into_infill)
                             // In this case we must check that the original extruder is used on this layer before the one we are overridding
                             // (and the perimeters will be finished before the infill is printed):
                             if (!lt.is_extruder_order(region.config().perimeter_extruder - 1, new_extruder))
@@ -512,7 +512,7 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
                 }
 
                 // Now the same for perimeters - see comments above for explanation:
-                if (object->config().wipe_into_objects && (print.config().infill_first ? perimeters_done : !perimeters_done))
+                if (object->config().wipe_into_objects && (region.config().infill_first ? perimeters_done : !perimeters_done))
                 {
                     for (const ExtrusionEntity* ee : this_layer->regions()[region_id]->perimeters.entities) {
                         auto* fill = dynamic_cast<const ExtrusionEntityCollection*>(ee);
@@ -572,12 +572,12 @@ void WipingExtrusions::ensure_perimeters_infills_order(const Print& print)
                     // printed before its perimeter, or not be printed at all (in case its original extruder has
                     // not been added to LayerTools
                     // Either way, we will now force-override it with something suitable:
-                    if (print.config().infill_first
+                    if (region.config().infill_first
                     || object->config().wipe_into_objects  // in this case the perimeter is overridden, so we can override by the last one safely
                     || lt.is_extruder_order(region.config().perimeter_extruder - 1, last_nonsoluble_extruder    // !infill_first, but perimeter is already printed when last extruder prints
                     || std::find(lt.extruders.begin(), lt.extruders.end(), region.config().infill_extruder - 1) == lt.extruders.end()) // we have to force override - this could violate infill_first (FIXME)
                       )
-                        set_extruder_override(fill, copy, (print.config().infill_first ? first_nonsoluble_extruder : last_nonsoluble_extruder), num_of_copies);
+                      set_extruder_override(fill, copy, (region.config().infill_first ? first_nonsoluble_extruder : last_nonsoluble_extruder), num_of_copies);
                     else {
                         // In this case we can (and should) leave it to be printed normally.
                         // Force overriding would mean it gets printed before its perimeter.
@@ -591,7 +591,7 @@ void WipingExtrusions::ensure_perimeters_infills_order(const Print& print)
                      || is_entity_overridden(fill, copy) )
                         continue;
 
-                    set_extruder_override(fill, copy, (print.config().infill_first ? last_nonsoluble_extruder : first_nonsoluble_extruder), num_of_copies);
+                    set_extruder_override(fill, copy, (region.config().infill_first ? last_nonsoluble_extruder : first_nonsoluble_extruder), num_of_copies);
                 }
             }
         }

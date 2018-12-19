@@ -344,10 +344,10 @@ add_point_same_percent(ThickPolyline* pattern, ThickPolyline* to_modify)
             coordf_t new_width = to_modify->width[idx_other - 1] * (1 - percent_dist);
             new_width += to_modify->width[idx_other] * (percent_dist);
             Point new_point;
-            new_point.x = (coord_t)((double)(to_modify->points[idx_other - 1].x) * (1 - percent_dist));
-            new_point.x += (coord_t)((double)(to_modify->points[idx_other].x) * (percent_dist));
-            new_point.y = (coord_t)((double)(to_modify->points[idx_other - 1].y) * (1 - percent_dist));
-            new_point.y += (coord_t)((double)(to_modify->points[idx_other].y) * (percent_dist));
+            new_point.x() = (coord_t)((double)(to_modify->points[idx_other - 1].x()) * (1 - percent_dist));
+            new_point.x() += (coord_t)((double)(to_modify->points[idx_other].x()) * (percent_dist));
+            new_point.y() = (coord_t)((double)(to_modify->points[idx_other - 1].y()) * (1 - percent_dist));
+            new_point.y() += (coord_t)((double)(to_modify->points[idx_other].y()) * (percent_dist));
             to_modify->width.insert(to_modify->width.begin() + idx_other, new_width);
             to_modify->points.insert(to_modify->points.begin() + idx_other, new_point);
         }
@@ -425,9 +425,11 @@ get_coeff_from_angle_countour(Point &point, const ExPolygon &contour, coord_t mi
 double
 dot(Line l1, Line l2)
 {
-    Vectorf v_1 = normalize(Vectorf(l1.b.x - l1.a.x, l1.b.y - l1.a.y));
-    Vectorf v_2 = normalize(Vectorf(l2.b.x - l2.a.x, l2.b.y - l2.a.y));
-    return v_1.x*v_2.x + v_1.y*v_2.y;
+    Vec2d v_1(l1.b.x() - l1.a.x(), l1.b.y() - l1.a.y());
+    v_1.normalize();
+    Vec2d v_2(l2.b.x() - l2.a.x(), l2.b.y() - l2.a.y());
+    v_2.normalize();
+    return v_1.x()*v_2.x() + v_1.y()*v_2.y();
 }
 
 void
@@ -503,19 +505,19 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
         //length_pull *= 0.144 * get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, polyline.length() / 2));
 
         ////compute dir
-        //Vectorf pull_direction(polyline.points[1].x - polyline.points[0].x, polyline.points[1].y - polyline.points[0].y);
+        //Vectorf pull_direction(polyline.points[1].x() - polyline.points[0].x(), polyline.points[1].y() - polyline.points[0].y());
         //pull_direction = normalize(pull_direction);
-        //pull_direction.x *= length_pull;
-        //pull_direction.y *= length_pull;
+        //pull_direction.x() *= length_pull;
+        //pull_direction.y() *= length_pull;
 
         ////pull the points
         //Point &p1 = pp[crosspoint[0]].points[0];
-        //p1.x = p1.x + (coord_t)pull_direction.x;
-        //p1.y = p1.y + (coord_t)pull_direction.y;
+        //p1.x() = p1.x() + (coord_t)pull_direction.x();
+        //p1.y() = p1.y() + (coord_t)pull_direction.y();
 
         //Point &p2 = pp[crosspoint[1]].points[0];
-        //p2.x = p2.x + (coord_t)pull_direction.x;
-        //p2.y = p2.y + (coord_t)pull_direction.y;
+        //p2.x() = p2.x() + (coord_t)pull_direction.x();
+        //p2.y() = p2.y() + (coord_t)pull_direction.y();
 
         //delete the now unused polyline
         pp.erase(pp.begin() + i);
@@ -579,19 +581,19 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
         length_pull *= 0.144 * get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, polyline.length() / 2));
 
         //compute dir
-        Vectorf pull_direction(polyline.points[1].x - polyline.points[0].x, polyline.points[1].y - polyline.points[0].y);
-        pull_direction = normalize(pull_direction);
-        pull_direction.x *= length_pull;
-        pull_direction.y *= length_pull;
+        Vec2d pull_direction(polyline.points[1].x() - polyline.points[0].x(), polyline.points[1].y() - polyline.points[0].y());
+        pull_direction.normalize();
+        pull_direction.x() *= length_pull;
+        pull_direction.y() *= length_pull;
 
         //pull the points
         Point &p1 = pp[crosspoint[0]].points[0];
-        p1.x = p1.x + pull_direction.x;
-        p1.y = p1.y + pull_direction.y;
+        p1.x() = p1.x() + pull_direction.x();
+        p1.y() = p1.y() + pull_direction.y();
 
         Point &p2 = pp[crosspoint[1]].points[0];
-        p2.x = p2.x + pull_direction.x;
-        p2.y = p2.y + pull_direction.y;
+        p2.x() = p2.x() + pull_direction.x();
+        p2.y() = p2.y() + pull_direction.y();
 
         //delete the now unused polyline
         pp.erase(pp.begin() + i);
@@ -711,10 +713,10 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
                 best_anchor = p_maybe_inside;
             }
         }
-        if (best_anchor.x != 0 && best_anchor.y != 0) {
+        if (best_anchor.x() != 0 && best_anchor.y() != 0) {
             Point p_obj = best_anchor + new_bound;
-            p_obj.x /= 2;
-            p_obj.y /= 2;
+            p_obj.x() /= 2;
+            p_obj.y() /= 2;
             Line l2 = Line(new_back, p_obj);
             l2.extend_end(max_width);
             (void)bounds.contour.first_intersection(l2, &new_bound);
@@ -937,8 +939,8 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 size_t idx_point = 1;
                 while (idx_point < min(polyline.points.size(), best_candidate->points.size())) {
                     //fusion
-                    polyline.points[idx_point].x = polyline.points[idx_point].x * coeff_poly + best_candidate->points[idx_point].x * coeff_candi;
-                    polyline.points[idx_point].y = polyline.points[idx_point].y * coeff_poly + best_candidate->points[idx_point].y * coeff_candi;
+                    polyline.points[idx_point].x() = polyline.points[idx_point].x() * coeff_poly + best_candidate->points[idx_point].x() * coeff_candi;
+                    polyline.points[idx_point].y() = polyline.points[idx_point].y() * coeff_poly + best_candidate->points[idx_point].y() * coeff_candi;
 
                     // The width decrease with distance from the centerline.
                     // This formula is what works the best, even if it's not perfect (created empirically).  0->3% error on a gap fill on some tests.
@@ -1048,10 +1050,10 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
                 if (polyline.points.front().distance_to(polyline.points[1]) * percent_can_keep > SCALED_RESOLUTION) {
                     //Can split => move the first point and assign a new weight.
                     //the update of endpoints wil be performed in concatThickPolylines
-                    polyline.points.front().x = polyline.points.front().x +
-                        (coord_t)((polyline.points[1].x - polyline.points.front().x) * (1 - percent_can_keep));
-                    polyline.points.front().y = polyline.points.front().y +
-                        (coord_t)((polyline.points[1].y - polyline.points.front().y) * (1 - percent_can_keep));
+                    polyline.points.front().x() = polyline.points.front().x() +
+                        (coord_t)((polyline.points[1].x() - polyline.points.front().x()) * (1 - percent_can_keep));
+                    polyline.points.front().y() = polyline.points.front().y() +
+                        (coord_t)((polyline.points[1].y() - polyline.points.front().y()) * (1 - percent_can_keep));
                     polyline.width.front() = min_width;
                 } else {
                     /// almost 0-length, Remove
@@ -1072,10 +1074,10 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
                 if (polyline.points.back().distance_to(polyline.points[polyline.points.size() - 2]) * percent_can_keep > SCALED_RESOLUTION) {
                     //Can split => move the first point and assign a new weight.
                     //the update of endpoints wil be performed in concatThickPolylines
-                    polyline.points.back().x = polyline.points.back().x +
-                        (coord_t)((polyline.points[polyline.points.size() - 2].x - polyline.points.back().x) * (1 - percent_can_keep));
-                    polyline.points.back().y = polyline.points.back().y +
-                        (coord_t)((polyline.points[polyline.points.size() - 2].y - polyline.points.back().y) * (1 - percent_can_keep));
+                    polyline.points.back().x() = polyline.points.back().x() +
+                        (coord_t)((polyline.points[polyline.points.size() - 2].x() - polyline.points.back().x()) * (1 - percent_can_keep));
+                    polyline.points.back().y() = polyline.points.back().y() +
+                        (coord_t)((polyline.points[polyline.points.size() - 2].y() - polyline.points.back().y()) * (1 - percent_can_keep));
                     polyline.width.back() = min_width;
                 } else {
                     /// almost 0-length, Remove
@@ -1139,11 +1141,11 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
                 continue;
             }
 
-            Pointf v_poly(polyline.lines().back().vector().x, polyline.lines().back().vector().y);
-            v_poly.scale(1 / std::sqrt(v_poly.x*v_poly.x + v_poly.y*v_poly.y));
-            Pointf v_other(other.lines().front().vector().x, other.lines().front().vector().y);
-            v_other.scale(1 / std::sqrt(v_other.x*v_other.x + v_other.y*v_other.y));
-            float other_dot = v_poly.x*v_other.x + v_poly.y*v_other.y;
+            Vec2d v_poly(polyline.lines().back().vector().x(), polyline.lines().back().vector().y());
+            v_poly *= (1 / std::sqrt(v_poly.x()*v_poly.x() + v_poly.y()*v_poly.y()));
+            Vec2d v_other(other.lines().front().vector().x(), other.lines().front().vector().y());
+            v_other *= (1 / std::sqrt(v_other.x()*v_other.x() + v_other.y()*v_other.y()));
+            float other_dot = v_poly.x()*v_other.x() + v_poly.y()*v_other.y();
             if (other_dot > best_dot) {
                 best_candidate = &other;
                 best_idx = j;
@@ -1306,8 +1308,8 @@ MedialAxis::simplify_polygon_frontier()
                 const Point* closest = bounds.contour.closest_point(p_check);
                 if (closest != nullptr && closest->distance_to(p_check) + SCALED_EPSILON
                     < min(p_check.distance_to(simplified_poly.contour.points[prev_i]), p_check.distance_to(simplified_poly.contour.points[next_i])) / 2) {
-                    p_check.x = closest->x;
-                    p_check.y = closest->y;
+                    p_check.x() = closest->x();
+                    p_check.y() = closest->y();
                     need_intersect = true;
                 } else {
                     simplified_poly.contour.points.erase(simplified_poly.contour.points.begin() + i);
@@ -1553,7 +1555,7 @@ ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, E
                 path.polyline.append(line.b);
                 // Convert from spacing to extrusion width based on the extrusion model
                 // of a square extrusion ended with semi circles.
-                flow.width = unscale(w) + flow.height * (1. - 0.25 * PI);
+                flow.width = unscaled(w) + flow.height * (1. - 0.25 * PI);
 #ifdef SLIC3R_DEBUG
                 printf("  filling %f gap\n", flow.width);
 #endif

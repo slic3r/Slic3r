@@ -180,13 +180,13 @@ Point MultiPoint::point_projection(const Point &point) const {
                 dmin = d;
                 proj = pt1;
             }
-            Pointf v1(coordf_t(pt1.x - pt0.x), coordf_t(pt1.y - pt0.y));
+            Vec2d v1(coordf_t(pt1(0) - pt0(0)), coordf_t(pt1(1) - pt0(1)));
             coordf_t div = dot(v1);
             if (div > 0.) {
-                Pointf v2(coordf_t(point.x - pt0.x), coordf_t(point.y - pt0.y));
+                Vec2d v2(coordf_t(point(0) - pt0(0)), coordf_t(point(1) - pt0(1)));
                 coordf_t t = dot(v1, v2) / div;
                 if (t > 0. && t < 1.) {
-                    Point foot(coord_t(floor(coordf_t(pt0.x) + t * v1.x + 0.5)), coord_t(floor(coordf_t(pt0.y) + t * v1.y + 0.5)));
+                    Point foot(coord_t(floor(coordf_t(pt0(0)) + t * v1(0) + 0.5)), coord_t(floor(coordf_t(pt0(1)) + t * v1(1) + 0.5)));
                     d = foot.distance_to(point);
                     if (d < dmin) {
                         dmin = d;
@@ -199,8 +199,7 @@ Point MultiPoint::point_projection(const Point &point) const {
     return proj;
 }
 
-Points
-MultiPoint::_douglas_peucker(const Points &points, const double tolerance)
+std::vector<Point> MultiPoint::_douglas_peucker(const std::vector<Point>& pts, const double tolerance)
 {
     std::vector<Point> result_pts;
     if (! pts.empty()) {

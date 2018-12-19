@@ -80,6 +80,8 @@ namespace Slic3r {
 template<typename T, typename Q>
 inline T unscale(Q v) { return T(v) * T(SCALING_FACTOR); }
 
+inline double unscaled(double v) { return v * SCALING_FACTOR; }
+
 enum Axis { X=0, Y, Z, E, F, NUM_AXES };
 
 template <class T>

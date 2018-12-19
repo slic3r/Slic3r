@@ -174,7 +174,7 @@ public:
         const float min_z, const float max_z, IntersectionLine *line_out) const;
     void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const;
     
-    double safety_offset = scale_(0.0499);
+    double safety_offset = scale_(0.02);
 private:
     const TriangleMesh      *mesh;
     // Map from a facet to an edge index.

@@ -93,15 +93,15 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollec
 void LayerRegion::process_external_surfaces(const Layer* lower_layer)
 {
     const Surfaces &surfaces = this->fill_surfaces.surfaces;
-    const bool has_infill = this->region()->config.fill_density.value > 0.;
-    coord_t margin = scale_(this->region()->config.external_infill_margin.getFloat());
-    coord_t margin_bridged = scale_(this->region()->config.bridged_infill_margin.getFloat());
+    const bool has_infill = this->region()->config().fill_density.value > 0.;
+    coord_t margin = scale_(this->region()->config().external_infill_margin.getFloat());
+    coord_t margin_bridged = scale_(this->region()->config().bridged_infill_margin.getFloat());
     //if no infill, reduce the margin for averythign to only the perimeter
     if (!has_infill) {
-        if ((this->region()->config.perimeters.value > 0)) {
-            const coord_t perimeter_width = scale_(this->region()->config.perimeter_extrusion_width.get_abs_value(this->layer()->object()->config.layer_height.value));
-            const coord_t first_perimeter_width = scale_(this->region()->config.external_perimeter_extrusion_width.get_abs_value(this->layer()->object()->config.layer_height.value));
-            margin = first_perimeter_width + perimeter_width * (this->region()->config.perimeters.value - 1);
+        if ((this->region()->config().perimeters > 0)) {
+            const coord_t perimeter_width = scale_(this->region()->config().perimeter_extrusion_width.get_abs_value(this->layer()->object()->config().layer_height.value));
+            const coord_t first_perimeter_width = scale_(this->region()->config().external_perimeter_extrusion_width.get_abs_value(this->layer()->object()->config().layer_height.value));
+            margin = first_perimeter_width + perimeter_width * (this->region()->config().perimeters.value - 1);
         } else margin = 0;
         margin_bridged = margin;
     }

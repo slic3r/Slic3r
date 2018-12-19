@@ -115,4 +115,15 @@ Vec3d Linef3::intersect_plane(double z) const
     return Vec3d(this->a(0) + v(0) * t, this->a(1) + v(1) * t, z);
 }
 
+Point Line::point_at(double distance) const {
+    Point point;
+    double len = this->length();
+    point = this->a;
+    if (this->a.x() != this->b.x())
+        point.x() = this->a.x() + (this->b.x() - this->a.x()) * distance / len;
+    if (this->a.y() != this->b.y())
+        point.y() = this->a.y() + (this->b.y() - this->a.y()) * distance / len;
+    return point;
+}
+
 }

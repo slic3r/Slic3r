@@ -244,26 +244,26 @@ Polygons BridgeDetector::coverage(double angle, bool precise) const {
                         if (n_supported >= 2) {
                             // trim it to not allow to go outside of the intersections
                             BoundingBox center_bound = intersects[0].bounding_box();
-                            coord_t min_y = center_bound.center().y, max_y = center_bound.center().y;
+                            coord_t min_y = center_bound.center()(1), max_y = center_bound.center()(1);
                             for (Polygon &poly_bound : intersects) {
                                 center_bound = poly_bound.bounding_box();
-                                if (min_y > center_bound.center().y) min_y = center_bound.center().y;
-                                if (max_y < center_bound.center().y) max_y = center_bound.center().y;
+                                if (min_y > center_bound.center()(1)) min_y = center_bound.center()(1);
+                                if (max_y < center_bound.center()(1)) max_y = center_bound.center()(1);
                             }
-                            coord_t min_x = trapezoid[0].x, max_x = trapezoid[0].x;
+                            coord_t min_x = trapezoid[0](0), max_x = trapezoid[0](0);
                             for (Point &p : trapezoid.points) {
-                                if (min_x > p.x) min_x = p.x;
-                                if (max_x < p.x) max_x = p.x;
+                                if (min_x > p(0)) min_x = p(0);
+                                if (max_x < p(0)) max_x = p(0);
                             }
                             //add what get_trapezoids3 has removed (+EPSILON)
                             min_x -= (this->spacing / 4 + 1);
                             max_x += (this->spacing / 4 + 1);
                             coord_t mid_x = (min_x + max_x) / 2;
                             for (Point &p : trapezoid.points) {
-                                if (p.y < min_y) p.y = min_y;
-                                if (p.y > max_y) p.y = max_y;
-                                if (p.x > min_x && p.x < mid_x) p.x = min_x;
-                                if (p.x < max_x && p.x > mid_x) p.x = max_x;
+                                if (p(1) < min_y) p(1) = min_y;
+                                if (p(1) > max_y) p(1) = max_y;
+                                if (p(0) > min_x && p(0) < mid_x) p(0) = min_x;
+                                if (p(0) < max_x && p(0) > mid_x) p(0) = max_x;
                             }
                         }
                     }

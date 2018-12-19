@@ -1502,7 +1502,7 @@ void GCode::process_layer(
                                         // fill->first_point fits inside ith slice
                                         point_inside_surface(i, fill->first_point())) {
                                         if (islands[i].by_region.empty()) {
-                                            islands[i].by_region.assign(print.regions.size(), ObjectByExtruder::Island::Region());
+                                            islands[i].by_region.assign(print.regions().size(), ObjectByExtruder::Island::Region());
                                         }
                                         //don't do fill->entities because it will discard no_sort
                                         islands[i].by_region[region_id].append(entity_type, fill, entity_overrides, layer_to_print.object()->copies().size());
@@ -2293,8 +2293,8 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
 {
     std::string gcode;
     for (const ObjectByExtruder::Island::Region &region : by_region) {
-        if (print.regions[&region - &by_region.front()]->config().infill_first == is_infill_first) {
-            m_config.apply(print.regions[&region - &by_region.front()]->config);
+        if (print.regions()[&region - &by_region.front()]->config().infill_first == is_infill_first) {
+            m_config.apply(print.regions()[&region - &by_region.front()]->config());
             ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
             gcode += extrude_entity(chained, "infill");
         }
