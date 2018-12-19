@@ -48,7 +48,7 @@ wxFrame(NULL, wxID_ANY, SLIC3R_BUILD, wxDefaultPosition, wxDefaultSize, wxDEFAUL
 	m_statusbar->embed(this);
 	m_statusbar->set_status_text(_(L("Version ")) +
 		SLIC3R_VERSION +
-		_(L(" - Remember to check for updates at http://github.com/prusa3d/slic3r/releases")));
+		_(L(" - Remember to check for updates at http://github.com/supermerill/slic3r/releases")));
 
     // initialize tabpanel and menubar
     init_tabpanel();
@@ -392,10 +392,12 @@ void MainFrame::init_menubar()
     // Help menu
     auto helpMenu = new wxMenu();
     {
-        append_menu_item(helpMenu, wxID_ANY, _(L("Prusa 3D Drivers")), _(L("Open the Prusa3D drivers download page in your browser")), 
-            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://www.prusa3d.com/drivers/"); });
-        append_menu_item(helpMenu, wxID_ANY, _(L("Prusa Edition Releases")), _(L("Open the Prusa Edition releases page in your browser")), 
-            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/slic3r/releases"); });
+        append_menu_item(helpMenu, wxID_ANY, _(L("Slic3r++ Releases")), _(L("Open the slic3r++ releases page in your browser")),
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/slic3r/releases"); });
+        append_menu_item(helpMenu, wxID_ANY, _(L("Slic3r++ website")), _(L("Open the slic3r++ website in your browser")),
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/slic3r"); });
+        append_menu_item(helpMenu, wxID_ANY, _(L("Prusa Edition website")), _(L("Open the Prusa Edition website in your browser")), 
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/slic3r"); });
 //#        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", "Check for new Slic3r versions", sub{
 //#            wxTheApp->check_version(1);
 //#        });
@@ -409,8 +411,8 @@ void MainFrame::init_menubar()
             [this](wxCommandEvent&) { wxGetApp().system_info(); });
         append_menu_item(helpMenu, wxID_ANY, _(L("Show Configuration Folder")), _(L("Show user configuration folder (datadir)")),
             [this](wxCommandEvent&) { Slic3r::GUI::desktop_open_datadir_folder(); });
-        append_menu_item(helpMenu, wxID_ANY, _(L("Report an Issue")), _(L("Report an issue on the Slic3r Prusa Edition")), 
-            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/slic3r/issues/new"); });
+        append_menu_item(helpMenu, wxID_ANY, _(L("Report an Issue")), _(L("Report an issue on Slic3r++")), 
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/supermerill/issues/new"); });
         append_menu_item(helpMenu, wxID_ANY, _(L("About Slic3r")), _(L("Show about dialog")),
             [this](wxCommandEvent&) { Slic3r::GUI::about(); });
     }

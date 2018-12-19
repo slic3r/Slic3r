@@ -167,7 +167,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "top-fan-speed=i@";
     def->min = 0;
     def->max = 100;
-    def->mode = comAdvanced;
+    def->mode = comExpert;
     def->default_value = new ConfigOptionInts{ 100 };
 
     def = this->add("bridge_flow_ratio", coFloat);
@@ -212,7 +212,6 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm");
     def->cli = "brim-width=f";
     def->min = 0;
-    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("clip_multipart_objects", coBool);
@@ -524,7 +523,7 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionEnum<SeamPosition>(spRear); 
     
-    def = this->add("extra_perimeters", coBool);avoid
+    def = this->add("extra_perimeters", coBool);
     def->label = L("Extra perimeters if needed");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Add more perimeters when needed for avoiding gaps in sloping walls. "
@@ -1041,6 +1040,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Enable gap fill algorithm. It will extrude small lines between perimeters "
         "when there is not enough space for another perimeter or an infill.");
     def->cli = "gap-fill!";
+    def->mode = comExpert;
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("gap_fill_speed", coFloat);
@@ -1066,6 +1066,7 @@ void PrintConfigDef::init_fff_params()
     def->label = "Label Prints with Object ID";
     def->tooltip = "Enable this to add comments in the G-Code that label print moves with what object they belong. Can be used with Octoprint CancelObject plugin.";
     def->cli = "label-printed-objects!";
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(0);
 
     def = this->add("gcode_flavor", coEnum);
@@ -1262,6 +1263,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Layers and Perimeters");
     def->tooltip = L("This setting controls the height of last object layers to put the last layer at the exact highest height possible. Experimental.");
     def->cli = "exact_last-layer-height=f";
+    def->mode = comExpert;
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("remaining_times", coBool);
@@ -1380,7 +1382,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "max-fan-speed=i@";
     def->min = 0;
     def->max = 100;
-    def->mode = comExpert;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionInts { 100 };
 
     def = this->add("max_layer_height", coFloats);
@@ -1447,7 +1449,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "min-fan-speed=i@";
     def->min = 0;
     def->max = 100;
-    def->mode = comExpert;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionInts { 35 };
 
     def = this->add("min_layer_height", coFloats);
