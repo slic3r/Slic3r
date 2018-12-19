@@ -1,6 +1,6 @@
 _Q: Oh cool, a new fork of slic3r?_
 
-A: Yes.
+A: Yeah!
 
 Slic3r
 ======
@@ -19,7 +19,6 @@ See the [project homepage](http://slic3r.org/) at slic3r.org and the
 ### What language is it written in?
 
 Almost everything are written in C++,
-Perl is used a bit but the prusa fork is getting rid of it (unless for scripting, maybe).
 
 The C++ API is public and its use in other projects is encouraged.
 The goal is to make Slic3r fully modular so that any part of its logic
@@ -28,9 +27,14 @@ can be used separately.
 ### What are this fork main features/differences?
 
 * **Ironing** top surface & many new settings to fine-tune the top surface quality.
-* A denser infill option for 1-X layers before the top solid layers to better support them.
+* A "denser infill" option for supporting the (solid) top layers.
 * Better overhangs (add perimeters if needed, slice them in opposite direction each layer).
 * Better Thin walls (anchored inside the print, no more random bits at the ends).
+* Can join perimeters into a big one to avoid travel moves.
+* Many other little options and corrections (like the filled concentric pattern).
+* It has also all the current slic3rPE features.
+
+See the wiki for examples.
 
 ### What are Slic3r's main features?
 
