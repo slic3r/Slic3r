@@ -3,6 +3,8 @@
 
 #include <locale>
 #include <ctime>
+#include <cstdarg>
+#include <stdio.h>
 
 #ifdef WIN32
 #include <windows.h>
@@ -24,6 +26,8 @@
 #include <boost/nowide/integration/filesystem.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/nowide/cstdio.hpp>
+
+#include <tbb/task_scheduler_init.h>
 
 #include <tbb/task_scheduler_init.h>
 
@@ -294,6 +298,25 @@ namespace PerlUtils {
     // Get a directory without the trailing slash.
     std::string path_to_parent_path(const char *src)    { return boost::filesystem::path(src).parent_path().string(); }
 };
+
+
+std::string string_printf(const char *format, ...)
+{
+    va_list args1;
+    va_start(args1, format);
+    va_list args2;
+    va_copy(args2, args1);
+
+    size_t needed_size = ::vsnprintf(nullptr, 0, format, args1) + 1;
+    va_end(args1);
+
+    std::string res(needed_size, '\0');
+    ::vsnprintf(&res.front(), res.size(), format, args2);
+    va_end(args2);
+
+    return res;
+}
+
 
 std::string timestamp_str()
 {

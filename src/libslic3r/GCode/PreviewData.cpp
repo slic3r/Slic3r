@@ -1,7 +1,6 @@
 #include "Analyzer.hpp"
 #include "PreviewData.hpp"
 #include <float.h>
-#include <wx/intl.h> 
 #include <I18N.hpp>
 
 #include <boost/format.hpp>
@@ -220,6 +219,7 @@ void GCodePreviewData::Travel::set_default()
     width = Default_Width;
     height = Default_Height;
     ::memcpy((void*)type_colors, (const void*)Default_Type_Colors, Num_Types * sizeof(Color));
+    color_print_idx = 0;
 
     is_visible = false;
 }
@@ -377,12 +377,14 @@ std::string GCodePreviewData::get_legend_title() const
         return L("Tool");
     case Extrusion::Filament:
         return L("Filament");
+    case Extrusion::ColorPrint:
+        return L("Color Print");
     }
 
     return "";
 }
 
-GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::vector<float>& tool_colors) const
+GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::vector<float>& tool_colors, const std::vector</*double*/std::pair<double, double>>& cp_values) const
 {
     struct Helper
     {
@@ -449,6 +451,34 @@ GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::
                 items.emplace_back((boost::format(Slic3r::I18N::translate(L("Extruder %d"))) % (i + 1)).str(), color);
             }
 
+            break;
+        }
+    case Extrusion::ColorPrint:
+        {
+            const auto color_print_cnt = cp_values.size();
+            for (int i = color_print_cnt; i >= 0 ; --i)
+            {
+                int val = i;
+                while (val >= GCodePreviewData::Range::Colors_Count)
+                    val -= GCodePreviewData::Range::Colors_Count;
+                GCodePreviewData::Color color = Range::Default_Colors[val];
+
+                if (color_print_cnt == 0) {
+                    items.emplace_back(Slic3r::I18N::translate(L("Default print color")), color);
+                    break;
+                }
+                if (i == 0) {
+                    items.emplace_back((boost::format(Slic3r::I18N::translate(L("up to %.2f mm"))) % cp_values[0].first).str(), color);
+                    break;
+                }
+                if (i == color_print_cnt) {
+                    items.emplace_back((boost::format(Slic3r::I18N::translate(L("above %.2f mm"))) % cp_values[i-1].second).str(), color);
+                    continue;
+                }
+
+//                 items.emplace_back((boost::format(Slic3r::I18N::translate(L("%.2f - %.2f mm"))) %  cp_values[i-1] % cp_values[i]).str(), color);
+                items.emplace_back((boost::format(Slic3r::I18N::translate(L("%.2f - %.2f mm"))) %  cp_values[i-1].second % cp_values[i].first).str(), color);
+            }
             break;
         }
     }

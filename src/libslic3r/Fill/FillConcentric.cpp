@@ -89,8 +89,8 @@ void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, cons
         coord_t distance = coord_t(min_spacing / params.density);
 
         if (params.density > 0.9999f && !params.dont_adjust) {
-            distance = this->_adjust_solid_spacing(bounding_box.size().x, distance);
-            this->spacing = unscale(distance);
+            distance = this->_adjust_solid_spacing(bounding_box.size().x(), distance);
+            this->spacing = unscaled(distance);
         }
 
         ExPolygons gaps;

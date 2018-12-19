@@ -314,11 +314,11 @@ ExPolygon::get_trapezoids3_half(Polygons* polygons, float spacing) const {
     BoundingBox bb(pp);
 
     // get all x coordinates
-    int min_x = pp[0].x, max_x = pp[0].x;
+    int min_x = pp[0].x(), max_x = pp[0].x();
     std::vector<coord_t> xx;
     for (Points::const_iterator p = pp.begin(); p != pp.end(); ++p) {
-        if (min_x > p->x) min_x = p->x;
-        if (max_x < p->x) max_x = p->x;
+        if (min_x > p->x()) min_x = p->x();
+        if (max_x < p->x()) max_x = p->x();
     }
     for (int x = min_x; x < max_x-spacing/2; x += spacing) {
         xx.push_back(x);
@@ -334,14 +334,14 @@ ExPolygon::get_trapezoids3_half(Polygons* polygons, float spacing) const {
         // build rectangle
         Polygon poly;
         poly.points.resize(4);
-        poly[0].x = *x +spacing / 4;
-        poly[0].y = bb.min.y;
-        poly[1].x = next_x -spacing / 4;
-        poly[1].y = bb.min.y;
-        poly[2].x = next_x -spacing / 4;
-        poly[2].y = bb.max.y;
-        poly[3].x = *x +spacing / 4;
-        poly[3].y = bb.max.y;
+        poly[0].x() = *x + spacing / 4;
+        poly[0].y() = bb.min(1);
+        poly[1].x() = next_x - spacing / 4;
+        poly[1].y() = bb.min(1);
+        poly[2].x() = next_x - spacing / 4;
+        poly[2].y() = bb.max(1);
+        poly[3].x() = *x + spacing / 4;
+        poly[3].y() = bb.max(1);
 
         // intersect with this expolygon
         // append results to return value

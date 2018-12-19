@@ -1,6 +1,8 @@
 #ifndef _libslic3r_h_
 #define _libslic3r_h_
 
+#include "libslic3r_version.h"
+
 // this needs to be included early for MSVC (listing it in Build.PL is not enough)
 #include <ostream>
 #include <iostream>
@@ -14,10 +16,6 @@
 #include <boost/thread.hpp>
 
 #include "Technologies.hpp"
-
-#define SLIC3R_FORK_NAME "Slic3r++"
-#define SLIC3R_VERSION "1.41.2-beta"
-#define SLIC3R_BUILD "UNKNOWN"
 
 typedef int32_t coord_t;
 typedef double  coordf_t;
@@ -45,19 +43,6 @@ typedef double  coordf_t;
 //inline coord_t scale_(coordf_t v) { return coord_t(floor(v / SCALING_FACTOR + 0.5f)); }
 #define scale_(val) ((val) / SCALING_FACTOR)
 #define SCALED_EPSILON scale_(EPSILON)
-
-// Which C++ version is supported?
-// For example, could optimized functions with move semantics be used?
-#if __cplusplus==201402L
-	#define SLIC3R_CPPVER 14
-	#define STDMOVE(WHAT) std::move(WHAT)
-#elif __cplusplus==201103L
-	#define SLIC3R_CPPVER 11
-	#define STDMOVE(WHAT) std::move(WHAT)
-#else
-	#define SLIC3R_CPPVER 0
-	#define STDMOVE(WHAT) (WHAT)
-#endif
 
 #define SLIC3R_DEBUG_OUT_PATH_PREFIX "out/"
 
@@ -94,6 +79,8 @@ namespace Slic3r {
 
 template<typename T, typename Q>
 inline T unscale(Q v) { return T(v) * T(SCALING_FACTOR); }
+
+inline double unscaled(double v) { return v * SCALING_FACTOR; }
 
 enum Axis { X=0, Y, Z, E, F, NUM_AXES };
 

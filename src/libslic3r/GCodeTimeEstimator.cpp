@@ -484,14 +484,14 @@ namespace Slic3r {
     {
         _state.filament_load_times.clear();
         for (double t : filament_load_times)
-            _state.filament_load_times.push_back(t);
+            _state.filament_load_times.push_back((float)t);
     }
 
     void GCodeTimeEstimator::set_filament_unload_times(const std::vector<double> &filament_unload_times)
     {
         _state.filament_unload_times.clear();
         for (double t : filament_unload_times)
-            _state.filament_unload_times.push_back(t);
+            _state.filament_unload_times.push_back((float)t);
     }
 
     float GCodeTimeEstimator::get_filament_load_time(unsigned int id_extruder)
@@ -731,7 +731,7 @@ namespace Slic3r {
 #endif // ENABLE_MOVE_STATS
         }
 
-        _last_st_synchronized_block_id = _blocks.size() - 1;
+        _last_st_synchronized_block_id = (int)_blocks.size() - 1;
         // The additional time has been consumed (added to the total time), reset it to zero.
         set_additional_time(0.);
     }
@@ -1223,7 +1223,8 @@ namespace Slic3r {
             return;
 
         // see http://reprap.org/wiki/G-code#M203:_Set_maximum_feedrate
-        float factor = (dialect == gcfMarlin) ? 1.0f : MMMIN_TO_MMSEC;
+        // http://smoothieware.org/supported-g-codes
+        float factor = (dialect == gcfMarlin || dialect == gcfSmoothie) ? 1.0f : MMMIN_TO_MMSEC;
 
         if (line.has_x())
             set_axis_max_feedrate(X, line.x() * factor);

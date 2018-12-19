@@ -4,6 +4,7 @@
 #include <libnest2d.h>
 #include "printer_parts.h"
 #include <libnest2d/geometry_traits_nfp.hpp>
+#include "../tools/svgtools.hpp"
 //#include "../tools/libnfpglue.hpp"
 //#include "../tools/nfp_svgnest_glue.hpp"
 
@@ -125,7 +126,7 @@ TEST(GeometryAlgorithms, boundingCircle) {
         c = boundingCircle(part.transformedShape());
         if(std::isnan(c.radius())) std::cout << "fail: radius is nan" << std::endl;
 
-        else for(auto v : shapelike::getContour(part.transformedShape()) ) {
+        else for(auto v : shapelike::contour(part.transformedShape()) ) {
             auto d = pointlike::distance(v, c.center());
             if(d > c.radius() ) {
                 auto e = std::abs( 1.0 - d/c.radius());
@@ -787,15 +788,6 @@ TEST(GeometryAlgorithms, nfpConvexConvex) {
 //TEST(GeometryAlgorithms, nfpConcaveConcave) {
 //    testNfp<NfpLevel::BOTH_CONCAVE, 1000>(nfp_concave_testdata);
 //}
-
-TEST(GeometryAlgorithms, nfpConcaveConcave) {
-    using namespace libnest2d;
-
-//    Rectangle r1(10, 10);
-//    Rectangle r2(20, 20);
-//    auto result = Nfp::nfpSimpleSimple(r1.transformedShape(),
-//                                       r2.transformedShape());
-}
 
 TEST(GeometryAlgorithms, pointOnPolygonContour) {
     using namespace libnest2d;

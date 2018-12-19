@@ -13,8 +13,6 @@ namespace GUI {
     class BitmapCache;
 };
 
-class PlaceholderParser;
-
 // Bundle of Print + Filament + Printer presets.
 class PresetBundle
 {
@@ -35,13 +33,12 @@ public:
 
     // Export selections (current print, current filaments, current printer) into config.ini
     void            export_selections(AppConfig &config);
-    // Export selections (current print, current filaments, current printer) into a placeholder parser.
-    void            export_selections(PlaceholderParser &pp);
 
     PresetCollection            prints;
+    PresetCollection            sla_prints;
     PresetCollection            filaments;
     PresetCollection            sla_materials;
-    PresetCollection            printers;
+    PrinterPresetCollection     printers;
     // Filament preset names for a multi-extruder or multi-material print.
     // extruders.size() should be the same as printers.get_edited_preset().config.nozzle_diameter.size()
     std::vector<std::string>    filament_presets;
@@ -57,6 +54,7 @@ public:
 
     struct ObsoletePresets {
         std::vector<std::string> prints;
+        std::vector<std::string> sla_prints;
         std::vector<std::string> filaments;
         std::vector<std::string> sla_materials;
         std::vector<std::string> printers;
@@ -67,22 +65,24 @@ public:
         { return prints.has_defaults_only() && filaments.has_defaults_only() && printers.has_defaults_only(); }
 
     DynamicPrintConfig          full_config() const;
+    // full_config() with the "printhost_apikey" and "printhost_cafile" removed.
+    DynamicPrintConfig          full_config_secure() const;
 
     // Load user configuration and store it into the user profiles.
     // This method is called by the configuration wizard.
     void                        load_config(const std::string &name, DynamicPrintConfig config)
         { this->load_config_file_config(name, false, std::move(config)); }
 
+    // Load configuration that comes from a model file containing configuration, such as 3MF et al.
+    // This method is called by the Plater.
+    void                        load_config_model(const std::string &name, DynamicPrintConfig config)
+        { this->load_config_file_config(name, true, std::move(config)); }
+
     // Load an external config file containing the print, filament and printer presets.
     // Instead of a config file, a G-code may be loaded containing the full set of parameters.
     // In the future the configuration will likely be read from an AMF file as well.
     // If the file is loaded successfully, its print / filament / printer profiles will be activated.
     void                        load_config_file(const std::string &path);
-
-    // Load an external config source containing the print, filament and printer presets.
-    // The given string must contain the full set of parameters (same as those exported to gcode).
-    // If the string is parsed successfully, its print / filament / printer profiles will be activated.
-    void                        load_config_string(const char* str, const char* source_filename = nullptr);
 
     // Load a config bundle file, into presets and store the loaded presets into separate files
     // of the local configuration directory.
@@ -102,10 +102,10 @@ public:
     size_t                      load_configbundle(const std::string &path, unsigned int flags = LOAD_CFGBNDLE_SAVE);
 
     // Export a config bundle file containing all the presets and the names of the active presets.
-    void                        export_configbundle(const std::string &path); // , const DynamicPrintConfig &settings);
+    void                        export_configbundle(const std::string &path, bool export_system_settings = false);
 
     // Update a filament selection combo box on the platter for an idx_extruder.
-    void                        update_platter_filament_ui(unsigned int idx_extruder, wxBitmapComboBox *ui);
+    void                        update_platter_filament_ui(unsigned int idx_extruder, GUI::PresetComboBox *ui);
 
     // Enable / disable the "- default -" preset.
     void                        set_default_suppressed(bool default_suppressed);
@@ -119,11 +119,11 @@ public:
     void                        update_multi_material_filament_presets();
 
     // Update the is_compatible flag of all print and filament presets depending on whether they are marked
-    // as compatible with the currently selected printer.
+    // as compatible with the currently selected printer (and print in case of filament presets).
     // Also updates the is_visible flag of each preset.
     // If select_other_if_incompatible is true, then the print or filament preset is switched to some compatible
     // preset if the current print or filament preset is not compatible.
-    void                        update_compatible_with_printer(bool select_other_if_incompatible);
+    void                        update_compatible(bool select_other_if_incompatible);
 
     static bool                 parse_color(const std::string &scolor, unsigned char *rgb_out);
 

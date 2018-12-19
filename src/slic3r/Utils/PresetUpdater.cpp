@@ -18,9 +18,11 @@
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/Utils.hpp"
 #include "slic3r/GUI/GUI.hpp"
+#include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/PresetBundle.hpp"
 #include "slic3r/GUI/UpdateDialogs.hpp"
 #include "slic3r/GUI/ConfigWizard.hpp"
+#include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/Utils/Http.hpp"
 #include "slic3r/Config/Version.hpp"
 #include "slic3r/Config/Snapshot.hpp"
@@ -90,7 +92,6 @@ struct Updates
 
 struct PresetUpdater::priv
 {
-	int version_online_event;
 	std::vector<Index> index_db;
 
 	bool enabled_version_check;
@@ -105,7 +106,7 @@ struct PresetUpdater::priv
 	bool cancel;
 	std::thread thread;
 
-	priv(int version_online_event);
+	priv();
 
 	void set_download_prefs(AppConfig *app_config);
 	bool get_file(const std::string &url, const fs::path &target_path) const;
@@ -120,15 +121,14 @@ struct PresetUpdater::priv
 	static void copy_file(const fs::path &from, const fs::path &to);
 };
 
-PresetUpdater::priv::priv(int version_online_event) :
-	version_online_event(version_online_event),
+PresetUpdater::priv::priv() :
 	had_config_update(false),
 	cache_path(fs::path(Slic3r::data_dir()) / "cache"),
 	rsrc_path(fs::path(resources_dir()) / "profiles"),
 	vendor_path(fs::path(Slic3r::data_dir()) / "vendor"),
 	cancel(false)
 {
-	set_download_prefs(GUI::get_app_config());
+	set_download_prefs(GUI::wxGetApp().app_config);
 	check_install_indices();
 	index_db = std::move(Index::load_db());
 }
@@ -209,9 +209,11 @@ void PresetUpdater::priv::sync_version() const
 		.on_complete([&](std::string body, unsigned /* http_status */) {
 			boost::trim(body);
 			BOOST_LOG_TRIVIAL(info) << boost::format("Got Slic3rPE online version: `%1%`. Sending to GUI thread...") % body;
-			wxCommandEvent* evt = new wxCommandEvent(version_online_event);
-			evt->SetString(body);
-			GUI::get_app()->QueueEvent(evt);
+// 			wxCommandEvent* evt = new wxCommandEvent(version_online_event);
+// 			evt->SetString(body);
+// 			GUI::get_app()->QueueEvent(evt);
+	        GUI::wxGetApp().app_config->set("version_online", body);
+	        GUI::wxGetApp().app_config->save();
 		})
 		.perform_sync();
 }
@@ -395,7 +397,7 @@ void PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 	if (updates.incompats.size() > 0) {
 		if (snapshot) {
 			BOOST_LOG_TRIVIAL(info) << "Taking a snapshot...";
-			SnapshotDB::singleton().take_snapshot(*GUI::get_app_config(), Snapshot::SNAPSHOT_DOWNGRADE);
+			SnapshotDB::singleton().take_snapshot(*GUI::wxGetApp().app_config, Snapshot::SNAPSHOT_DOWNGRADE);
 		}
 
 		BOOST_LOG_TRIVIAL(info) << boost::format("Deleting %1% incompatible bundles") % updates.incompats.size();
@@ -408,7 +410,7 @@ void PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 	else if (updates.updates.size() > 0) {
 		if (snapshot) {
 			BOOST_LOG_TRIVIAL(info) << "Taking a snapshot...";
-			SnapshotDB::singleton().take_snapshot(*GUI::get_app_config(), Snapshot::SNAPSHOT_UPGRADE);
+			SnapshotDB::singleton().take_snapshot(*GUI::wxGetApp().app_config, Snapshot::SNAPSHOT_UPGRADE);
 		}
 
 		BOOST_LOG_TRIVIAL(info) << boost::format("Performing %1% updates") % updates.updates.size();
@@ -447,7 +449,8 @@ void PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 
 			for (const auto &name : bundle.obsolete_presets.prints)    { obsolete_remover("print", name); }
 			for (const auto &name : bundle.obsolete_presets.filaments) { obsolete_remover("filament", name); }
-			for (const auto &name : bundle.obsolete_presets.filaments) { obsolete_remover("sla_material", name); }
+			for (const auto &name : bundle.obsolete_presets.sla_prints) { obsolete_remover("sla_print", name); } 
+			for (const auto &name : bundle.obsolete_presets.sla_materials/*filaments*/) { obsolete_remover("sla_material", name); } 
 			for (const auto &name : bundle.obsolete_presets.printers)  { obsolete_remover("printer", name); }
 		}
 	}
@@ -466,8 +469,8 @@ void PresetUpdater::priv::copy_file(const fs::path &source, const fs::path &targ
 }
 
 
-PresetUpdater::PresetUpdater(int version_online_event) :
-	p(new priv(version_online_event))
+PresetUpdater::PresetUpdater() :
+	p(new priv())
 {}
 
 
@@ -485,7 +488,7 @@ PresetUpdater::~PresetUpdater()
 
 void PresetUpdater::sync(PresetBundle *preset_bundle)
 {
-	p->set_download_prefs(GUI::get_app_config());
+	p->set_download_prefs(GUI::wxGetApp().app_config);
 	if (!p->enabled_version_check && !p->enabled_config_update) { return; }
 
 	// Copy the whole vendors data for use in the background thread
@@ -509,7 +512,7 @@ void PresetUpdater::slic3r_update_notify()
 		return;
 	}
 
-	auto* app_config = GUI::get_app_config();
+	auto* app_config = GUI::wxGetApp().app_config;
 	const auto ver_slic3r = Semver::parse(SLIC3R_VERSION);
 	const auto ver_online_str = app_config->get("version_online");
 	const auto ver_online = Semver::parse(ver_online_str);
@@ -569,10 +572,10 @@ bool PresetUpdater::config_update() const
 			BOOST_LOG_TRIVIAL(info) << "User wants to re-configure...";
 			p->perform_updates(std::move(updates));
 			GUI::ConfigWizard wizard(nullptr, GUI::ConfigWizard::RR_DATA_INCOMPAT);
-			if (! wizard.run(GUI::get_preset_bundle(), this)) {
+			if (! wizard.run(GUI::wxGetApp().preset_bundle, this)) {
 				return false;
 			}
-			GUI::load_current_presets();
+			GUI::wxGetApp().load_current_presets();
 		} else {
 			BOOST_LOG_TRIVIAL(info) << "User wants to exit Slic3r, bye...";
 			return false;
@@ -601,9 +604,9 @@ bool PresetUpdater::config_update() const
 			p->perform_updates(std::move(updates));
 
 			// Reload global configuration
-			auto *app_config = GUI::get_app_config();
-			GUI::get_preset_bundle()->load_presets(*app_config);
-			GUI::load_current_presets();
+			auto *app_config = GUI::wxGetApp().app_config;
+            GUI::wxGetApp().preset_bundle->load_presets(*app_config);
+			GUI::wxGetApp().load_current_presets();
 		} else {
 			BOOST_LOG_TRIVIAL(info) << "User refused the update";
 		}

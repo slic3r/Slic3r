@@ -31,7 +31,7 @@ enum PrinterTechnology
 };
 
 enum GCodeFlavor {
-    gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfSailfish, gcfMach3, gcfMachinekit, 
+    gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfSailfish, gcfMach3, gcfMachinekit,
     gcfSmoothie, gcfNoExtrusion,
 };
 
@@ -61,7 +61,12 @@ enum DenseInfillAlgo {
     dfaAutomatic, dfaAutoNotFull, dfaEnlarged,
 };
 
-template<> inline t_config_enum_values& ConfigOptionEnum<GCodeFlavor>::get_enum_values() {
+enum SLADisplayOrientation {
+    sladoLandscape,
+    sladoPortrait
+};
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<PrinterTechnology>::get_enum_values() {
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
         keys_map["FFF"]             = ptFFF;
@@ -159,13 +164,21 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<FilamentType>::ge
     return keys_map;
 }
 
-template<> inline t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["automatic"] = dfaAutomatic;
-        keys_map["autosmall"] = dfaAutoNotFull;
-        keys_map["enlarged"] = dfaEnlarged;
-    }
+template<> inline const t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
+    static const t_config_enum_values keys_map = {
+        { "automatic", dfaAutomatic },
+        { "autosmall", dfaAutoNotFull },
+        { "enlarged", dfaEnlarged }
+    };
+    return keys_map;
+}
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<SLADisplayOrientation>::get_enum_values() {
+    static const t_config_enum_values keys_map = {
+        { "landscape", sladoLandscape},
+        { "portrait",  sladoPortrait}
+    };
+
     return keys_map;
 }
 
@@ -186,9 +199,9 @@ private:
 
 // The one and only global definition of SLic3r configuration options.
 // This definition is constant.
-extern PrintConfigDef print_config_def;
+extern const PrintConfigDef print_config_def;
 
-// Slic3r dynamic configuration, used to override the configuration 
+// Slic3r dynamic configuration, used to override the configuration
 // per object, per modification volume or per printing material.
 // The dynamic configuration is also used to store user modifications of the print global parameters,
 // so the modified configuration values may be diffed against the active configuration
@@ -210,10 +223,6 @@ public:
 
     // Validate the PrintConfig. Returns an empty string on success, otherwise an error message is returned.
     std::string         validate();
-
-    // Remove all keys not in "valid_keys", return number of removed keys and add the list of keys to "removed_keys_message.
-    // valid_keys has to be sorted lexicographically.
-    size_t              remove_keys_not_in(const DynamicPrintConfig &default_config, std::string &removed_keys_message);
 
     // Verify whether the opt_key has not been obsoleted or renamed.
     // Both opt_key and value may be modified by handle_legacy().
@@ -514,7 +523,7 @@ public:
     ConfigOptionInt                 top_solid_layers;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
     ConfigOptionBool                wipe_into_infill;
-    
+
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
@@ -681,6 +690,7 @@ public:
     ConfigOptionBool                variable_layer_height;
     ConfigOptionFloat               cooling_tube_retraction;
     ConfigOptionFloat               cooling_tube_length;
+    ConfigOptionBool                high_current_on_filament_swap;
     ConfigOptionFloat               parking_pos_retraction;
     ConfigOptionBool                remaining_times;
     ConfigOptionBool                silent_mode;
@@ -750,6 +760,7 @@ protected:
         OPT_PTR(variable_layer_height);
         OPT_PTR(cooling_tube_retraction);
         OPT_PTR(cooling_tube_length);
+        OPT_PTR(high_current_on_filament_swap);
         OPT_PTR(parking_pos_retraction);
         OPT_PTR(remaining_times);
         OPT_PTR(silent_mode);
@@ -774,6 +785,7 @@ public:
     ConfigOptionInts                top_fan_speed;
     ConfigOptionFloat               brim_width;
     ConfigOptionBool                complete_objects;
+    ConfigOptionFloats              colorprint_heights;
     ConfigOptionBools               cooling;
     ConfigOptionFloat               default_acceleration;
     ConfigOptionInts                disable_fan_first_layers;
@@ -837,7 +849,7 @@ public:
     ConfigOptionInt                 pixel_height;
     ConfigOptionFloat               exp_time;
     ConfigOptionFloat               exp_time_first;
-    
+
 protected:
     PrintConfig(int) : GCodeConfig(1) {}
     void initialize(StaticCacheBase &cache, const char *base_ptr)
@@ -852,6 +864,7 @@ protected:
         OPT_PTR(top_fan_speed);
         OPT_PTR(brim_width);
         OPT_PTR(complete_objects);
+        OPT_PTR(colorprint_heights);
         OPT_PTR(cooling);
         OPT_PTR(default_acceleration);
         OPT_PTR(disable_fan_first_layers);
@@ -928,7 +941,7 @@ public:
     ConfigOptionString              printhost_cafile;
     ConfigOptionString              serial_port;
     ConfigOptionInt                 serial_speed;
-    
+
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
@@ -942,8 +955,8 @@ protected:
 };
 
 // This object is mapped to Perl as Slic3r::Config::Full.
-class FullPrintConfig : 
-    public PrintObjectConfig, 
+class FullPrintConfig :
+    public PrintObjectConfig,
     public PrintRegionConfig,
     public PrintConfig,
     public HostConfig
@@ -967,11 +980,116 @@ protected:
     }
 };
 
+// This object is mapped to Perl as Slic3r::Config::PrintRegion.
+class SLAPrintConfig : public StaticPrintConfig
+{
+    STATIC_PRINT_CONFIG_CACHE(SLAPrintConfig)
+public:
+    ConfigOptionString     output_filename_format;
+
+protected:
+    void initialize(StaticCacheBase &cache, const char *base_ptr)
+    {
+        OPT_PTR(output_filename_format);
+    }
+};
+
+class SLAPrintObjectConfig : public StaticPrintConfig
+{
+    STATIC_PRINT_CONFIG_CACHE(SLAPrintObjectConfig)
+public:
+    ConfigOptionFloat layer_height;
+
+    // Enabling or disabling support creation
+    ConfigOptionBool  supports_enable;
+
+    // Diameter in mm of the pointing side of the head.
+    ConfigOptionFloat support_head_front_diameter /*= 0.2*/;
+
+    // How much the pinhead has to penetrate the model surface
+    ConfigOptionFloat support_head_penetration /*= 0.2*/;
+
+    // Width in mm from the back sphere center to the front sphere center.
+    ConfigOptionFloat support_head_width /*= 1.0*/;
+
+    // Radius in mm of the support pillars.
+    ConfigOptionFloat support_pillar_diameter /*= 0.8*/;
+
+    // TODO: unimplemented at the moment. This coefficient will have an impact
+    // when bridges and pillars are merged. The resulting pillar should be a bit
+    // thicker than the ones merging into it. How much thicker? I don't know
+    // but it will be derived from this value.
+    ConfigOptionFloat support_pillar_widening_factor;
+
+    // Radius in mm of the pillar base.
+    ConfigOptionFloat support_base_diameter /*= 2.0*/;
+
+    // The height of the pillar base cone in mm.
+    ConfigOptionFloat support_base_height /*= 1.0*/;
+
+    // The default angle for connecting support sticks and junctions.
+    ConfigOptionFloat support_critical_angle /*= 45*/;
+
+    // The max length of a bridge in mm
+    ConfigOptionFloat support_max_bridge_length /*= 15.0*/;
+
+    // The elevation in Z direction upwards. This is the space between the pad
+    // and the model object's bounding box bottom. Units in mm.
+    ConfigOptionFloat support_object_elevation /*= 5.0*/;
+
+    /////// Following options influence automatic support points placement:
+    ConfigOptionInt support_density_at_horizontal;
+    ConfigOptionInt support_density_at_45;
+    ConfigOptionFloat support_minimal_z;
+
+    // Now for the base pool (pad) /////////////////////////////////////////////
+
+    // Enabling or disabling support creation
+    ConfigOptionBool  pad_enable;
+
+    // The thickness of the pad walls
+    ConfigOptionFloat pad_wall_thickness /*= 2*/;
+
+    // The height of the pad from the bottom to the top not considering the pit
+    ConfigOptionFloat pad_wall_height /*= 5*/;
+
+    // The greatest distance where two individual pads are merged into one. The
+    // distance is measured roughly from the centroids of the pads.
+    ConfigOptionFloat pad_max_merge_distance /*= 50*/;
+
+    // The smoothing radius of the pad edges
+    ConfigOptionFloat pad_edge_radius /*= 1*/;
+
+protected:
+    void initialize(StaticCacheBase &cache, const char *base_ptr)
+    {
+        OPT_PTR(layer_height);
+        OPT_PTR(supports_enable);
+        OPT_PTR(support_head_front_diameter);
+        OPT_PTR(support_head_penetration);
+        OPT_PTR(support_head_width);
+        OPT_PTR(support_pillar_diameter);
+        OPT_PTR(support_pillar_widening_factor);
+        OPT_PTR(support_base_diameter);
+        OPT_PTR(support_base_height);
+        OPT_PTR(support_critical_angle);
+        OPT_PTR(support_max_bridge_length);
+        OPT_PTR(support_density_at_horizontal);
+        OPT_PTR(support_density_at_45);
+        OPT_PTR(support_minimal_z);
+        OPT_PTR(support_object_elevation);
+        OPT_PTR(pad_enable);
+        OPT_PTR(pad_wall_thickness);
+        OPT_PTR(pad_wall_height);
+        OPT_PTR(pad_max_merge_distance);
+        OPT_PTR(pad_edge_radius);
+    }
+};
+
 class SLAMaterialConfig : public StaticPrintConfig
 {
     STATIC_PRINT_CONFIG_CACHE(SLAMaterialConfig)
 public:
-    ConfigOptionFloat                       layer_height;
     ConfigOptionFloat                       initial_layer_height;
     ConfigOptionFloat                       exposure_time;
     ConfigOptionFloat                       initial_exposure_time;
@@ -980,7 +1098,6 @@ public:
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
-        OPT_PTR(layer_height);
         OPT_PTR(initial_layer_height);
         OPT_PTR(exposure_time);
         OPT_PTR(initial_exposure_time);
@@ -1000,6 +1117,7 @@ public:
     ConfigOptionFloat                       display_height;
     ConfigOptionInt                         display_pixels_x;
     ConfigOptionInt                         display_pixels_y;
+    ConfigOptionEnum<SLADisplayOrientation> display_orientation;
     ConfigOptionFloats                      printer_correction;
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
@@ -1011,14 +1129,15 @@ protected:
         OPT_PTR(display_height);
         OPT_PTR(display_pixels_x);
         OPT_PTR(display_pixels_y);
+        OPT_PTR(display_orientation);
         OPT_PTR(printer_correction);
     }
 };
 
-class SLAFullPrintConfig : public SLAPrinterConfig, public SLAMaterialConfig
+class SLAFullPrintConfig : public SLAPrinterConfig, public SLAPrintConfig, public SLAPrintObjectConfig, public SLAMaterialConfig
 {
     STATIC_PRINT_CONFIG_CACHE_DERIVED(SLAFullPrintConfig)
-    SLAFullPrintConfig() : SLAPrinterConfig(0), SLAMaterialConfig(0) { initialize_cache(); *this = s_cache_SLAFullPrintConfig.defaults(); }
+    SLAFullPrintConfig() : SLAPrinterConfig(0), SLAPrintConfig(0), SLAPrintObjectConfig(0), SLAMaterialConfig(0) { initialize_cache(); *this = s_cache_SLAFullPrintConfig.defaults(); }
 
 public:
     // Validate the SLAFullPrintConfig. Returns an empty string on success, otherwise an error message is returned.
@@ -1026,11 +1145,13 @@ public:
 
 protected:
     // Protected constructor to be called to initialize ConfigCache::m_default.
-    SLAFullPrintConfig(int) : SLAPrinterConfig(0), SLAMaterialConfig(0) {}
+    SLAFullPrintConfig(int) : SLAPrinterConfig(0), SLAPrintConfig(0), SLAPrintObjectConfig(0), SLAMaterialConfig(0) {}
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
-        this->SLAPrinterConfig ::initialize(cache, base_ptr);
-        this->SLAMaterialConfig::initialize(cache, base_ptr);
+        this->SLAPrinterConfig    ::initialize(cache, base_ptr);
+        this->SLAPrintConfig      ::initialize(cache, base_ptr);
+        this->SLAPrintObjectConfig::initialize(cache, base_ptr);
+        this->SLAMaterialConfig   ::initialize(cache, base_ptr);
     }
 };
 
@@ -1039,6 +1160,102 @@ protected:
 #undef STATIC_PRINT_CONFIG_CACHE_DERIVED
 #undef OPT_PTR
 
-}
+class CLIConfigDef : public ConfigDef
+{
+public:
+    CLIConfigDef();
+};
+
+extern const CLIConfigDef cli_config_def;
+
+#define OPT_PTR(KEY) if (opt_key == #KEY) return &this->KEY
+
+class CLIConfig : public virtual ConfigBase, public StaticConfig
+{
+public:
+    ConfigOptionFloat               cut;
+    ConfigOptionString              datadir;
+    ConfigOptionBool                dont_arrange;
+    ConfigOptionBool                export_3mf;
+    ConfigOptionBool                gui;
+    ConfigOptionBool                info;
+    ConfigOptionBool                help;
+    ConfigOptionStrings             load;
+    ConfigOptionBool                no_gui;
+    ConfigOptionString              output;
+    ConfigOptionPoint               print_center;
+    ConfigOptionFloat               rotate;
+    ConfigOptionFloat               rotate_x;
+    ConfigOptionFloat               rotate_y;
+    ConfigOptionString              save;
+    ConfigOptionFloat               scale;
+//    ConfigOptionPoint3              scale_to_fit;
+    ConfigOptionBool                slice;
+
+    CLIConfig() : ConfigBase(), StaticConfig()
+    {
+        this->set_defaults();
+    };
+
+    // Overrides ConfigBase::def(). Static configuration definition. Any value stored into this ConfigBase shall have its definition here.
+    const ConfigDef*		def() const override { return &cli_config_def; }
+    t_config_option_keys    keys() const override { return cli_config_def.keys(); }
+
+    ConfigOption*			optptr(const t_config_option_key &opt_key, bool create = false) override
+    {
+        OPT_PTR(cut);
+        OPT_PTR(datadir);
+        OPT_PTR(dont_arrange);
+        OPT_PTR(export_3mf);
+        OPT_PTR(gui);
+        OPT_PTR(help);
+        OPT_PTR(info);
+        OPT_PTR(load);
+        OPT_PTR(no_gui);
+        OPT_PTR(output);
+        OPT_PTR(print_center);
+        OPT_PTR(rotate);
+        OPT_PTR(rotate_x);
+        OPT_PTR(rotate_y);
+        OPT_PTR(save);
+        OPT_PTR(scale);
+//        OPT_PTR(scale_to_fit);
+        OPT_PTR(slice);
+        return NULL;
+    }
+};
+
+#undef OPT_PTR
+
+class DynamicPrintAndCLIConfig : public DynamicPrintConfig
+{
+public:
+    DynamicPrintAndCLIConfig() { this->apply(FullPrintConfig::defaults()); this->apply(CLIConfig()); }
+    DynamicPrintAndCLIConfig(const DynamicPrintAndCLIConfig &other) : DynamicPrintConfig(other) {}
+
+    // Overrides ConfigBase::def(). Static configuration definition. Any value stored into this ConfigBase shall have its definition here.
+    const ConfigDef*        def() const override { return &s_def; }
+    t_config_option_keys    keys() const override { return s_def.keys(); }
+
+private:
+    class PrintAndCLIConfigDef : public ConfigDef
+    {
+    public:
+        PrintAndCLIConfigDef() {
+            this->options.insert(print_config_def.options.begin(), print_config_def.options.end());
+            this->options.insert(cli_config_def.options.begin(), cli_config_def.options.end());
+        }
+        // Do not release the default values, they are handled by print_config_def & cli_config_def.
+        ~PrintAndCLIConfigDef() { this->options.clear(); }
+    };
+    static PrintAndCLIConfigDef s_def;
+};
+
+/// Iterate through all of the print options and write them to a stream.
+std::ostream& print_print_options(std::ostream& out);
+/// Iterate through all of the CLI options and write them to a stream.
+std::ostream& print_cli_options(std::ostream& out);
+
+} // namespace Slic3r
 
 #endif

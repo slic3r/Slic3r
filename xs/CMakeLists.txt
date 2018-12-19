@@ -1,5 +1,30 @@
 project(XS)
 
+# Find the Perl interpreter, add local-lib to PATH and PERL5LIB environment variables,
+# so the locally installed modules (mainly the Alien::wxPerl) will be reached.
+if (WIN32)
+    set(ENV_PATH_SEPARATOR ";")
+else()
+    set(ENV_PATH_SEPARATOR ":")
+endif()
+set(ENV{PATH}     "${PROJECT_SOURCE_DIR}/local-lib/bin${ENV_PATH_SEPARATOR}$ENV{PATH}")
+set(PERL_INCLUDE  "${PROJECT_SOURCE_DIR}/local-lib/lib/perl5${ENV_PATH_SEPARATOR}$ENV{PERL5LIB}")
+message("PATH: $ENV{PATH}")
+message("PERL_INCLUDE: ${PERL_INCLUDE}")
+find_package(Perl REQUIRED)
+if (WIN32)
+    # On Windows passing the PERL5LIB variable causes various problems (such as with MAX_PATH and others),
+    # basically I've found no good way to do it on Windows.
+    set(PERL5LIB_ENV_CMD "")
+else()
+    set(PERL5LIB_ENV_CMD ${CMAKE_COMMAND} -E env PERL5LIB=${PERL_INCLUDE})
+endif()
+
+# Perl specific stuff
+find_package(PerlLibs REQUIRED)
+set(PerlEmbed_DEBUG 1)
+find_package(PerlEmbed REQUIRED)
+
 # Generate the Slic3r Perl module (XS) typemap file.
 set(MyTypemap ${CMAKE_CURRENT_BINARY_DIR}/typemap)
 add_custom_command(
@@ -74,11 +99,7 @@ else()
 endif()
 add_library(XS ${XS_SHARED_LIBRARY_TYPE}
     ${XS_MAIN_CPP}
-#    ${LIBDIR}/libslic3r/utils.cpp
-#    ${LIBDIR}/slic3r/GUI/wxPerlIface.cpp
     src/perlglue.cpp
-#    src/callback.cpp
-#    src/callback.hpp
     src/ppport.h
     src/xsinit.h
     xsp/my.map
@@ -92,24 +113,17 @@ if(APPLE)
     # Ignore undefined symbols of the perl interpreter, they will be found in the caller image.
     target_link_libraries(XS "-undefined dynamic_lookup")
 endif()
-target_link_libraries(XS libslic3r admesh miniz clipper nowide polypartition poly2tri semver avrdude qhull)
-if(SLIC3R_PROFILE)
-    target_link_libraries(XS Shiny)
-endif()
+target_link_libraries(XS libslic3r)
 
-target_include_directories(XS PRIVATE src src/libslic3r) # Local include directories
+target_include_directories(XS PRIVATE src ${LIBDIR}/libslic3r)
 target_compile_definitions(XS PRIVATE -DSLIC3RXS)
 set_target_properties(XS PROPERTIES PREFIX "") # Prevent cmake from generating libXS.so instead of XS.so
 
 target_link_libraries(XS ${Boost_LIBRARIES})
-# target_link_libraries(XS ${wxWidgets_LIBRARIES})
-# target_link_libraries(XS ${CURL_LIBRARIES})
-# target_link_libraries(XS ${OPENSSL_LIBRARIES})
 
 if (APPLE)
-#    add_compile_options(-stdlib=libc++)
-#    add_definitions(-DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE)
-    target_link_libraries(XS "-framework IOKit" "-framework CoreFoundation" -lc++)
+    # -liconv: boost links to libiconv by default
+    target_link_libraries(XS "-liconv -framework IOKit" "-framework CoreFoundation" -lc++)
 elseif (MSVC)
     target_link_libraries(XS )
 else ()
@@ -142,14 +156,6 @@ if (WIN32)
     target_link_libraries(XS ${PERL_LIBRARY})
 endif()
 
-# Find and configure boost
-if(SLIC3R_STATIC)
-    # Use static boost libraries.
-    set(Boost_USE_STATIC_LIBS ON)
-    # Use boost libraries linked statically to the C++ runtime.
-    # set(Boost_USE_STATIC_RUNTIME ON)
-endif()
-
 target_link_libraries(XS ${Boost_LIBRARIES})
 target_link_libraries(XS ${TBB_LIBRARIES})
 # target_link_libraries(XS ${wxWidgets_LIBRARIES})
@@ -157,7 +163,7 @@ target_link_libraries(XS ${EXPAT_LIBRARIES})
 # target_link_libraries(XS ${GLEW_LIBRARIES})
 
 # Install the XS.pm and XS.{so,dll,bundle} into the local-lib directory.
-set(PERL_LOCAL_LIB_DIR "../local-lib/lib/perl5/${PerlEmbed_ARCHNAME}")
+set(PERL_LOCAL_LIB_DIR "../../local-lib/lib/perl5/${PerlEmbed_ARCHNAME}")
 add_custom_command(
     TARGET XS
     POST_BUILD
@@ -174,8 +180,6 @@ if(APPLE)
             COMMAND ${CMAKE_COMMAND} -E rename "${PERL_LOCAL_LIB_DIR}/auto/Slic3r/XS/XS" "${PERL_LOCAL_LIB_DIR}/auto/Slic3r/XS/XS.bundle"
     )
 endif()
-
-target_include_directories(XS PRIVATE src src/libslic3r)
 
 if(SLIC3R_PROFILE)
     target_link_libraries(Shiny)
@@ -194,3 +198,14 @@ endif()
 # Installation
 install(TARGETS XS DESTINATION ${PERL_VENDORARCH}/auto/Slic3r/XS)
 install(FILES lib/Slic3r/XS.pm DESTINATION ${PERL_VENDORLIB}/Slic3r)
+
+# Unit / integration tests
+enable_testing()
+get_filename_component(PERL_BIN_PATH "${PERL_EXECUTABLE}" DIRECTORY)
+if (MSVC)
+    set(PERL_PROVE "${PERL_BIN_PATH}/prove.bat")
+else ()
+    set(PERL_PROVE "${PERL_BIN_PATH}/prove")
+endif ()
+add_test (NAME xs COMMAND "${PERL_EXECUTABLE}" ${PERL_PROVE} -I ${PROJECT_SOURCE_DIR}/../local-lib/lib/perl5 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+add_test (NAME integration COMMAND "${PERL_EXECUTABLE}" ${PERL_PROVE} WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/..)

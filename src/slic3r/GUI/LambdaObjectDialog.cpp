@@ -3,12 +3,12 @@
 #include <wx/window.h>
 #include <wx/button.h>
 #include "OptionsGroup.hpp"
+#include "I18N.hpp"
 
 namespace Slic3r
 {
 namespace GUI
 {
-static wxString dots("…", wxConvUTF8);
 
 LambdaObjectDialog::LambdaObjectDialog(wxWindow* parent,
                                        const wxString type_name):
@@ -39,8 +39,8 @@ LambdaObjectDialog::LambdaObjectDialog(wxWindow* parent,
     ConfigOptionDef def;
     def.width = 70;
 	auto optgroup = init_modificator_options_page(_(L("Box")));
-    if (optgroup){
-		optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value){
+    if (optgroup) {
+		optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
 			int opt_id =	opt_key == "l" ? 0 :
 							opt_key == "w" ? 1 : 
 							opt_key == "h" ? 2 : -1;
@@ -50,22 +50,22 @@ LambdaObjectDialog::LambdaObjectDialog(wxWindow* parent,
 
 		def.type = coFloat;
 		def.default_value = new ConfigOptionFloat{ 1.0 };
-		def.label = L("L");
+		def.label = L("Length");
 		Option option(def, "l");
 		optgroup->append_single_option_line(option);
 		
-		def.label = L("W");
+		def.label = L("Width");
 		option = Option(def, "w");
 		optgroup->append_single_option_line(option);
 		
-		def.label = L("H");
+		def.label = L("Height");
 		option = Option(def, "h");
 		optgroup->append_single_option_line(option);
 	}
 
 	optgroup = init_modificator_options_page(_(L("Cylinder")));
-	if (optgroup){
-		optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value){
+	if (optgroup) {
+		optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
 			int val = boost::any_cast<int>(value);
 			if (opt_key == "cyl_r")
 				object_parameters.cyl_r = val;
@@ -86,8 +86,8 @@ LambdaObjectDialog::LambdaObjectDialog(wxWindow* parent,
     }
 
 	optgroup = init_modificator_options_page(_(L("Sphere")));
-	if (optgroup){
-		optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value){
+	if (optgroup) {
+		optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
 			if (opt_key == "sph_rho")
 				object_parameters.sph_rho = boost::any_cast<double>(value);
 			else return;
@@ -101,8 +101,8 @@ LambdaObjectDialog::LambdaObjectDialog(wxWindow* parent,
 	}
 
 	optgroup = init_modificator_options_page(_(L("Slab")));
-	if (optgroup){
-		optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value){
+	if (optgroup) {
+		optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
 			double val = boost::any_cast<double>(value);
 			if (opt_key == "slab_z")
 				object_parameters.slab_z = val;
@@ -113,7 +113,7 @@ LambdaObjectDialog::LambdaObjectDialog(wxWindow* parent,
 
 		def.type = coFloat;
 		def.default_value = new ConfigOptionFloat{ 1.0 };
-		def.label = L("H");
+		def.label = L("Height");
 		auto option = Option(def, "slab_h");
 		optgroup->append_single_option_line(option);
 
@@ -172,7 +172,8 @@ LambdaObjectDialog::LambdaObjectDialog(wxWindow* parent,
 
 // Called from the constructor.
 // Create a panel for a rectangular / circular / custom bed shape.
-ConfigOptionsGroupShp LambdaObjectDialog::init_modificator_options_page(const wxString& title){
+ConfigOptionsGroupShp LambdaObjectDialog::init_modificator_options_page(const wxString& title)
+{
     if (!m_type_name.IsEmpty() && m_type_name != title)
         return nullptr;
 

@@ -131,7 +131,7 @@ void PerimeterGenerator::process()
                                         //it's not dangerous as it will be intersected by 'unsupported' later
                                         //FIXME: add overlap in this->fill_surfaces->append
                                         // add overlap (perimeter_spacing/4 was good in test, ie 25%)
-                                        coord_t overlap = scale_(this->config->get_abs_value("infill_overlap", unscale(perimeter_spacing)));
+                                        coord_t overlap = scale_(this->config->get_abs_value("infill_overlap", unscale<double>(perimeter_spacing)));
                                         unsupported_filtered = intersection_ex(unsupported_filtered, offset_ex(bridgeable_simplified, overlap));
                                     } else {
                                         unsupported_filtered.clear();
@@ -675,7 +675,7 @@ PerimeterGenerator::_get_nearest_point(const PerimeterGeneratorLoops &children, 
                     const double dist = nearest_p.distance_to(p);
                     //Try to find a point in the far side, aligning them
                     if (dist + dist_cut / 20 < intersect.distance || 
-                        (config->perimeter_loop_seam.value == spRear && (intersect.idx_polyline_outter <0 || p.y > intersect.outter_best.y)
+                        (config->perimeter_loop_seam.value == spRear && (intersect.idx_polyline_outter <0 || p.y() > intersect.outter_best.y())
                             && dist <= max_dist && intersect.distance + dist_cut / 20)) {
                         //ok, copy the idx
                         intersect.distance = (coord_t)nearest_p.distance_to(p);
@@ -692,7 +692,7 @@ PerimeterGenerator::_get_nearest_point(const PerimeterGeneratorLoops &children, 
                     const Point &nearest_p = *child.polygon.closest_point(p);
                     const double dist = nearest_p.distance_to(p);
                     if (dist + SCALED_EPSILON < intersect.distance || 
-                        (config->perimeter_loop_seam.value == spRear && (intersect.idx_polyline_outter<0 || p.y < intersect.outter_best.y)
+                        (config->perimeter_loop_seam.value == spRear && (intersect.idx_polyline_outter<0 || p.y() < intersect.outter_best.y())
                             && dist <= max_dist && intersect.distance + dist_cut / 20)) {
                         //ok, copy the idx
                         intersect.distance = (coord_t)nearest_p.distance_to(p);
@@ -1131,8 +1131,8 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 travel_path_begin[2].extruder_id = -1;
                 Line line(outer_start->polyline.points.back(), inner_start->polyline.points.front());
                 Point p_dist_cut_extrude = (line.b - line.a);
-                p_dist_cut_extrude.x = (coord_t)(p_dist_cut_extrude.x * ((double)max_width_extrusion) / (line.length() * 2));
-                p_dist_cut_extrude.y = (coord_t)(p_dist_cut_extrude.y * ((double)max_width_extrusion) / (line.length() * 2));
+                p_dist_cut_extrude.x() = (coord_t)(p_dist_cut_extrude.x() * ((double)max_width_extrusion) / (line.length() * 2));
+                p_dist_cut_extrude.y() = (coord_t)(p_dist_cut_extrude.y() * ((double)max_width_extrusion) / (line.length() * 2));
                 //extrude a bit after the turn, to close the loop
                 Point p_start_travel = line.a;
                 p_start_travel += p_dist_cut_extrude;
@@ -1168,8 +1168,8 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 travel_path_end[2].extruder_id = -1;
                 Line line(inner_end->polyline.points.back(), outer_end->polyline.points.front());
                 Point p_dist_cut_extrude = (line.b - line.a);
-                p_dist_cut_extrude.x = (coord_t)(p_dist_cut_extrude.x * ((double)max_width_extrusion) / (line.length() * 2));
-                p_dist_cut_extrude.y = (coord_t)(p_dist_cut_extrude.y * ((double)max_width_extrusion) / (line.length() * 2));
+                p_dist_cut_extrude.x() = (coord_t)(p_dist_cut_extrude.x() * ((double)max_width_extrusion) / (line.length() * 2));
+                p_dist_cut_extrude.y() = (coord_t)(p_dist_cut_extrude.y() * ((double)max_width_extrusion) / (line.length() * 2));
                 //extrude a bit after the turn, to close the loop
                 Point p_start_travel_2 = line.a;
                 p_start_travel_2 += p_dist_cut_extrude;

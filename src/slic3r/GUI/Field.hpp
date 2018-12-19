@@ -13,12 +13,11 @@
 #include <wx/spinctrl.h>
 #include <wx/clrpicker.h>
 
-#include "../../libslic3r/libslic3r.h"
-#include "../../libslic3r/Config.hpp"
+#include "libslic3r/libslic3r.h"
+#include "libslic3r/Config.hpp"
+#include "libslic3r/Utils.hpp"
 
-//#include "slic3r_gui.hpp"
 #include "GUI.hpp"
-#include "Utils.hpp"
 
 #ifdef __WXMSW__
 #define wxMSW true
@@ -30,11 +29,11 @@ namespace Slic3r { namespace GUI {
 
 class Field;
 using t_field = std::unique_ptr<Field>;
-using t_kill_focus = std::function<void()>;
-using t_change = std::function<void(t_config_option_key, const boost::any&)>;
+using t_kill_focus = std::function<void(const std::string&)>;
+using t_change = std::function<void(const t_config_option_key&, const boost::any&)>;
 using t_back_to_init = std::function<void(const std::string&)>;
 
-wxString double_to_string(double const value);
+wxString double_to_string(double const value, const int max_precision = 4);
 
 class MyButton : public wxButton
 {
@@ -54,10 +53,13 @@ public:
 	virtual bool
 		AcceptsFocusFromKeyboard() const { return false; }
 
+    void set_as_hidden() {
+        Hide();
+        hidden = true;
+	}
+
     virtual bool Show(bool show = true) override {
-        if (!show)
-            hidden = true;
-        return wxButton::Show(!hidden);
+        return wxButton::Show(hidden ? false : show);
 	}
 };
 
@@ -74,6 +76,8 @@ protected:
 	//! in another case we can't unfocused control at all
 	void			on_kill_focus(wxEvent& event);
     /// Call the attached on_change method. 
+    void			on_set_focus(wxEvent& event);
+    /// Call the attached on_change method. 
     void			on_change_field();
     /// Call the attached m_back_to_initial_value method. 
 	void			on_back_to_initial_value();
@@ -86,6 +90,9 @@ public:
 
     /// Function object to store callback passed in from owning object.
 	t_kill_focus	m_on_kill_focus {nullptr};
+
+    /// Function object to store callback passed in from owning object.
+	t_kill_focus	m_on_set_focus {nullptr};
 
     /// Function object to store callback passed in from owning object.
 	t_change		m_on_change {nullptr};
@@ -126,6 +133,7 @@ public:
 
     Field(const ConfigOptionDef& opt, const t_config_option_key& id) : m_opt(opt), m_opt_id(id) {};
     Field(wxWindow* parent, const ConfigOptionDef& opt, const t_config_option_key& id) : m_parent(parent), m_opt(opt), m_opt_id(id) {};
+    virtual ~Field() {}
 
     /// If you don't know what you are getting back, check both methods for nullptr. 
     virtual wxSizer*	getSizer()  { return nullptr; }
@@ -136,7 +144,7 @@ public:
 
     /// Factory method for generating new derived classes.
     template<class T>
-    static t_field Create(wxWindow* parent, const ConfigOptionDef& opt, const t_config_option_key& id)  // interface for creating shared objects
+    static t_field Create(wxWindow* parent, const ConfigOptionDef& opt, const t_config_option_key& id)// interface for creating shared objects
     {
         auto p = Slic3r::make_unique<T>(parent, opt, id);
         p->PostInitialize();
@@ -218,7 +226,7 @@ protected:
 
 	// current value
 	boost::any			m_value;
-
+    
 	friend class OptionsGroup;
 };
 
@@ -258,7 +266,8 @@ public:
     }
 
 	boost::any&		get_value() override;
-
+    bool            is_defined_input_value() const ;
+    
     virtual void	enable();
     virtual void	disable();
     virtual wxWindow* getWindow() { return window; }

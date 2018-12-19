@@ -12,10 +12,10 @@
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
-#include "../../libslic3r/libslic3r.h"
-#include "../../libslic3r/Config.hpp"
-#include "../../libslic3r/FileParserError.hpp"
-#include "../../libslic3r/Utils.hpp"
+#include "libslic3r/libslic3r.h"
+#include "libslic3r/Config.hpp"
+#include "libslic3r/FileParserError.hpp"
+#include "libslic3r/Utils.hpp"
 
 #define SLIC3R_SNAPSHOTS_DIR "snapshots"
 #define SLIC3R_SNAPSHOT_FILE "snapshot.ini"
@@ -406,7 +406,7 @@ const Snapshot&	SnapshotDB::take_snapshot(const AppConfig &app_config, Snapshot:
                 cfg.version.min_slic3r_version = it->min_slic3r_version;
                 cfg.version.max_slic3r_version = it->max_slic3r_version;
             }
-        } catch (const std::runtime_error &err) {
+        } catch (const std::runtime_error & /* err */) {
         }
         snapshot.vendor_configs.emplace_back(std::move(cfg));
     }
@@ -521,7 +521,7 @@ SnapshotDB& SnapshotDB::singleton()
 			// Update the min / max slic3r versions compatible with the configurations stored inside the snapshots
 			// based on the min / max slic3r versions defined by the vendor specific config indices.
 			instance.update_slic3r_versions(index_db);
-		} catch (std::exception &ex) {
+		} catch (std::exception & /* ex */) {
 		}
 	}
 	return instance;

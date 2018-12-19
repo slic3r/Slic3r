@@ -1,21 +1,21 @@
 #ifndef slic3r_3DScene_hpp_
 #define slic3r_3DScene_hpp_
 
-#include "../../libslic3r/libslic3r.h"
-#include "../../libslic3r/Point.hpp"
-#include "../../libslic3r/Line.hpp"
-#include "../../libslic3r/TriangleMesh.hpp"
-#include "../../libslic3r/Utils.hpp"
-#include "../../libslic3r/Model.hpp"
-#include "../../slic3r/GUI/GLCanvas3DManager.hpp"
-
-class wxBitmap;
-class wxWindow;
+#include "libslic3r/libslic3r.h"
+#include "libslic3r/Point.hpp"
+#include "libslic3r/Line.hpp"
+#include "libslic3r/TriangleMesh.hpp"
+#include "libslic3r/Utils.hpp"
+#include "libslic3r/Model.hpp"
+#include "slic3r/GUI/GLCanvas3DManager.hpp"
 
 namespace Slic3r {
 
 class Print;
 class PrintObject;
+class SLAPrint;
+class SLAPrintObject;
+enum  SLAPrintObjectStep : unsigned int;
 class Model;
 class ModelObject;
 class GCodePreviewData;
@@ -249,50 +249,79 @@ public:
     static const float HOVER_COLOR[4];
     static const float OUTSIDE_COLOR[4];
     static const float SELECTED_OUTSIDE_COLOR[4];
+    static const float DISABLED_COLOR[4];
+    static const float SLA_SUPPORT_COLOR[4];
+    static const float SLA_PAD_COLOR[4];
 
     GLVolume(float r = 1.f, float g = 1.f, float b = 1.f, float a = 1.f);
     GLVolume(const float *rgba) : GLVolume(rgba[0], rgba[1], rgba[2], rgba[3]) {}
+    ~GLVolume();
 
 private:
+#if ENABLE_MODELVOLUME_TRANSFORM
+    Geometry::Transformation m_instance_transformation;
+    Geometry::Transformation m_volume_transformation;
+#else
     // Offset of the volume to be rendered.
     Vec3d                 m_offset;
-    // Rotation around Z axis of the volume to be rendered.
-    double                m_rotation;
-    // Scale factor of the volume to be rendered.
-    double                m_scaling_factor;
+    // Rotation around three axes of the volume to be rendered.
+    Vec3d                 m_rotation;
+    // Scale factor along the three axes of the volume to be rendered.
+    Vec3d                 m_scaling_factor;
+    // Mirroring along the three axes of the volume to be rendered.
+    Vec3d m_mirror;
     // World matrix of the volume to be rendered.
     mutable Transform3f   m_world_matrix;
     // Whether or not is needed to recalculate the world matrix.
     mutable bool          m_world_matrix_dirty;
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+    // Shift in z required by sla supports+pad
+    double                m_sla_shift_z;
     // Bounding box of this volume, in unscaled coordinates.
     mutable BoundingBoxf3 m_transformed_bounding_box;
     // Whether or not is needed to recalculate the transformed bounding box.
     mutable bool          m_transformed_bounding_box_dirty;
     // Pointer to convex hull of the original mesh, if any.
+    // This object may or may not own the convex hull instance based on m_convex_hull_owned
     const TriangleMesh*   m_convex_hull;
+    bool                  m_convex_hull_owned;
     // Bounding box of this volume, in unscaled coordinates.
     mutable BoundingBoxf3 m_transformed_convex_hull_bounding_box;
     // Whether or not is needed to recalculate the transformed convex hull bounding box.
     mutable bool          m_transformed_convex_hull_bounding_box_dirty;
 
 public:
-
     // Bounding box of this volume, in unscaled coordinates.
     BoundingBoxf3       bounding_box;
     // Color of the triangles / quads held by this volume.
     float               color[4];
     // Color used to render this volume.
     float               render_color[4];
-    // An ID containing the object ID, volume ID and instance ID.
-    int                 composite_id;
-    // An ID for group selection. It may be the same for all meshes of all object instances, or for just a single object instance.
-    int                 select_group_id;
-    // An ID for group dragging. It may be the same for all meshes of all object instances, or for just a single object instance.
-    int                 drag_group_id;
+    struct CompositeID {
+        CompositeID(int object_id, int volume_id, int instance_id) : object_id(object_id), volume_id(volume_id), instance_id(instance_id) {}
+        CompositeID() : object_id(-1), volume_id(-1), instance_id(-1) {}
+        // Object ID, which is equal to the index of the respective ModelObject in Model.objects array.
+        int             object_id;
+        // Volume ID, which is equal to the index of the respective ModelVolume in ModelObject.volumes array.
+        // If negative, it is an index of a geometry produced by the PrintObject for the respective ModelObject,
+        // and which has no associated ModelVolume in ModelObject.volumes. For example, SLA supports.
+        // Volume with a negative volume_id cannot be picked independently, it will pick the associated instance.
+        int             volume_id;
+        // Instance ID, which is equal to the index of the respective ModelInstance in ModelObject.instances array.
+        int             instance_id;
+    };
+    CompositeID         composite_id;
+    // Fingerprint of the source geometry. For ModelVolumes, it is the ModelVolume::ID and ModelInstanceID, 
+    // for generated volumes it is the timestamp generated by PrintState::invalidate() or PrintState::set_done(),
+    // and the associated ModelInstanceID.
+    // Valid geometry_id should always be positive.
+    std::pair<size_t, size_t> geometry_id;
     // An ID containing the extruder ID (used to select color).
     int                 extruder_id;
     // Is this object selected?
     bool                selected;
+    // Is this object disabled from selection?
+    bool                disabled;
     // Whether or not this volume is active for rendering
     bool                is_active;
     // Whether or not to use this volume when applying zoom_to_volumes()
@@ -326,25 +355,93 @@ public:
     void set_render_color(const float* rgba, unsigned int size);
     // Sets render color in dependence of current state
     void set_render_color();
+    // set color according to model volume
+    void set_color_from_model_volume(const ModelVolume *model_volume);
 
-    double get_rotation();
-    void set_rotation(double rotation);
+#if ENABLE_MODELVOLUME_TRANSFORM
+    const Geometry::Transformation& get_instance_transformation() const { return m_instance_transformation; }
+    void set_instance_transformation(const Geometry::Transformation& transformation) { m_instance_transformation = transformation; set_bounding_boxes_as_dirty(); }
+
+    const Vec3d& get_instance_offset() const { return m_instance_transformation.get_offset(); }
+    double get_instance_offset(Axis axis) const { return m_instance_transformation.get_offset(axis); }
+
+    void set_instance_offset(const Vec3d& offset) { m_instance_transformation.set_offset(offset); set_bounding_boxes_as_dirty(); }
+    void set_instance_offset(Axis axis, double offset) { m_instance_transformation.set_offset(axis, offset); set_bounding_boxes_as_dirty(); }
+
+    const Vec3d& get_instance_rotation() const { return m_instance_transformation.get_rotation(); }
+    double get_instance_rotation(Axis axis) const { return m_instance_transformation.get_rotation(axis); }
+
+    void set_instance_rotation(const Vec3d& rotation) { m_instance_transformation.set_rotation(rotation); set_bounding_boxes_as_dirty(); }
+    void set_instance_rotation(Axis axis, double rotation) { m_instance_transformation.set_rotation(axis, rotation); set_bounding_boxes_as_dirty(); }
+
+    Vec3d get_instance_scaling_factor() const { return m_instance_transformation.get_scaling_factor(); }
+    double get_instance_scaling_factor(Axis axis) const { return m_instance_transformation.get_scaling_factor(axis); }
+
+    void set_instance_scaling_factor(const Vec3d& scaling_factor) { m_instance_transformation.set_scaling_factor(scaling_factor); set_bounding_boxes_as_dirty(); }
+    void set_instance_scaling_factor(Axis axis, double scaling_factor) { m_instance_transformation.set_scaling_factor(axis, scaling_factor); set_bounding_boxes_as_dirty(); }
+
+    const Vec3d& get_instance_mirror() const { return m_instance_transformation.get_mirror(); }
+    double get_instance_mirror(Axis axis) const { return m_instance_transformation.get_mirror(axis); }
+
+    void set_instance_mirror(const Vec3d& mirror) { m_instance_transformation.set_mirror(mirror); set_bounding_boxes_as_dirty(); }
+    void set_instance_mirror(Axis axis, double mirror) { m_instance_transformation.set_mirror(axis, mirror); set_bounding_boxes_as_dirty(); }
+
+    const Geometry::Transformation& get_volume_transformation() const { return m_volume_transformation; }
+    void set_volume_transformation(const Geometry::Transformation& transformation) { m_volume_transformation = transformation; set_bounding_boxes_as_dirty(); }
+
+    const Vec3d& get_volume_offset() const { return m_volume_transformation.get_offset(); }
+    double get_volume_offset(Axis axis) const { return m_volume_transformation.get_offset(axis); }
+
+    void set_volume_offset(const Vec3d& offset) { m_volume_transformation.set_offset(offset); set_bounding_boxes_as_dirty(); }
+    void set_volume_offset(Axis axis, double offset) { m_volume_transformation.set_offset(axis, offset); set_bounding_boxes_as_dirty(); }
+
+    const Vec3d& get_volume_rotation() const { return m_volume_transformation.get_rotation(); }
+    double get_volume_rotation(Axis axis) const { return m_volume_transformation.get_rotation(axis); }
+
+    void set_volume_rotation(const Vec3d& rotation) { m_volume_transformation.set_rotation(rotation); set_bounding_boxes_as_dirty(); }
+    void set_volume_rotation(Axis axis, double rotation) { m_volume_transformation.set_rotation(axis, rotation); set_bounding_boxes_as_dirty(); }
+
+    Vec3d get_volume_scaling_factor() const { return m_volume_transformation.get_scaling_factor(); }
+    double get_volume_scaling_factor(Axis axis) const { return m_volume_transformation.get_scaling_factor(axis); }
+
+    void set_volume_scaling_factor(const Vec3d& scaling_factor) { m_volume_transformation.set_scaling_factor(scaling_factor); set_bounding_boxes_as_dirty(); }
+    void set_volume_scaling_factor(Axis axis, double scaling_factor) { m_volume_transformation.set_scaling_factor(axis, scaling_factor); set_bounding_boxes_as_dirty(); }
+
+    const Vec3d& get_volume_mirror() const { return m_volume_transformation.get_mirror(); }
+    double get_volume_mirror(Axis axis) const { return m_volume_transformation.get_mirror(axis); }
+
+    void set_volume_mirror(const Vec3d& mirror) { m_volume_transformation.set_mirror(mirror); set_bounding_boxes_as_dirty(); }
+    void set_volume_mirror(Axis axis, double mirror) { m_volume_transformation.set_mirror(axis, mirror); set_bounding_boxes_as_dirty(); }
+#else
+    const Vec3d& get_rotation() const;
+    void set_rotation(const Vec3d& rotation);
+
+    const Vec3d& get_scaling_factor() const;
+    void set_scaling_factor(const Vec3d& scaling_factor);
+
+    const Vec3d& get_mirror() const;
+    double get_mirror(Axis axis) const;
+    void set_mirror(const Vec3d& mirror);
+    void set_mirror(Axis axis, double mirror);
 
     const Vec3d& get_offset() const;
     void set_offset(const Vec3d& offset);
+#endif // ENABLE_MODELVOLUME_TRANSFORM
+     
+    double get_sla_shift_z() const { return m_sla_shift_z; }
+    void set_sla_shift_z(double z) { m_sla_shift_z = z; }
 
-    void set_scaling_factor(double factor);
+    void set_convex_hull(const TriangleMesh *convex_hull, bool owned);
 
-    void set_convex_hull(const TriangleMesh& convex_hull);
+    int                 object_idx() const { return this->composite_id.object_id; }
+    int                 volume_idx() const { return this->composite_id.volume_id; }
+    int                 instance_idx() const { return this->composite_id.instance_id; }
 
-    void set_select_group_id(const std::string& select_by);
-    void set_drag_group_id(const std::string& drag_by);
-
-    int                 object_idx() const { return this->composite_id / 1000000; }
-    int                 volume_idx() const { return (this->composite_id / 1000) % 1000; }
-    int                 instance_idx() const { return this->composite_id % 1000; }
-
+#if ENABLE_MODELVOLUME_TRANSFORM
+    Transform3d world_matrix() const;
+#else
     const Transform3f&   world_matrix() const;
+#endif // ENABLE_MODELVOLUME_TRANSFORM
     const BoundingBoxf3& transformed_bounding_box() const;
     const BoundingBoxf3& transformed_convex_hull_bounding_box() const;
 
@@ -394,7 +491,13 @@ public:
     }
 
     void reset_layer_height_texture_data() { layer_height_texture_data.reset(); }
+
+#if ENABLE_MODELVOLUME_TRANSFORM
+    void set_bounding_boxes_as_dirty() { m_transformed_bounding_box_dirty = true; m_transformed_convex_hull_bounding_box_dirty = true; }
+#endif // ENABLE_MODELVOLUME_TRANSFORM
 };
+
+typedef std::vector<GLVolume*> GLVolumePtrs;
 
 class GLVolumeCollection
 {
@@ -402,9 +505,12 @@ class GLVolumeCollection
     float print_box_min[3];
     float print_box_max[3];
 
+    // z range for clipping in shaders
+    float z_range[2];
+
 public:
-    std::vector<GLVolume*> volumes;
-    
+    GLVolumePtrs volumes;
+
     GLVolumeCollection() {};
     ~GLVolumeCollection() { clear(); };
 
@@ -413,9 +519,27 @@ public:
         int                      obj_idx,
         const std::vector<int>  &instance_idxs,
         const std::string       &color_by,
-        const std::string       &select_by,
-        const std::string       &drag_by,
         bool                     use_VBOs);
+
+    int load_object_volume(
+        const ModelObject       *model_object,
+        std::shared_ptr<LayersTexture> &layer_height_texture,
+        int                      obj_idx,
+        int                      volume_idx,
+        int                      instance_idx,
+        const std::string       &color_by,
+        bool                     use_VBOs);
+
+    // Load SLA auxiliary GLVolumes (for support trees or pad).
+    void load_object_auxiliary(
+        const SLAPrintObject           *print_object,
+        int                             obj_idx,
+        // pairs of <instance_idx, print_instance_idx>
+        const std::vector<std::pair<size_t, size_t>> &instances,
+        SLAPrintObjectStep              milestone,
+        // Timestamp of the last change of the milestone
+        size_t                          timestamp,
+        bool                            use_VBOs);
 
     int load_wipe_tower_preview(
         int obj_idx, float pos_x, float pos_y, float width, float depth, float height, float rotation_angle, bool use_VBOs, bool size_unknown, float brim_width);
@@ -442,15 +566,14 @@ public:
         print_box_max[0] = max_x; print_box_max[1] = max_y; print_box_max[2] = max_z;
     }
 
+    void set_z_range(float min_z, float max_z) { z_range[0] = min_z; z_range[1] = max_z; }
+
     // returns true if all the volumes are completely contained in the print volume
     // returns the containment state in the given out_state, if non-null
     bool check_outside_state(const DynamicPrintConfig* config, ModelInstance::EPrintVolumeState* out_state);
     void reset_outside_state();
 
     void update_colors_by_extruder(const DynamicPrintConfig* config);
-
-    void set_select_by(const std::string& select_by);
-    void set_drag_by(const std::string& drag_by);
 
     // Returns a vector containing the sorted list of all the print_zs of the volumes contained in this collection
     std::vector<double> get_current_print_zs(bool active_only) const;
@@ -465,9 +588,7 @@ class _3DScene
     static GUI::GLCanvas3DManager s_canvas_mgr;
 
 public:
-    static void init_gl();
     static std::string get_gl_info(bool format_as_html, bool extensions);
-    static bool use_VBOs();
 
     static bool add_canvas(wxGLCanvas* canvas);
     static bool remove_canvas(wxGLCanvas* canvas);
@@ -475,116 +596,7 @@ public:
 
     static bool init(wxGLCanvas* canvas);
 
-    static void set_as_dirty(wxGLCanvas* canvas);
-
-    static unsigned int get_volumes_count(wxGLCanvas* canvas);
-    static void reset_volumes(wxGLCanvas* canvas);
-    static void deselect_volumes(wxGLCanvas* canvas);
-    static void select_volume(wxGLCanvas* canvas, unsigned int id);
-    static void update_volumes_selection(wxGLCanvas* canvas, const std::vector<int>& selections);
-    static int check_volumes_outside_state(wxGLCanvas* canvas, const DynamicPrintConfig* config);
-    static bool move_volume_up(wxGLCanvas* canvas, unsigned int id);
-    static bool move_volume_down(wxGLCanvas* canvas, unsigned int id);
-
-    static void set_objects_selections(wxGLCanvas* canvas, const std::vector<int>& selections);
-
-    static void set_config(wxGLCanvas* canvas, DynamicPrintConfig* config);
-    static void set_print(wxGLCanvas* canvas, Print* print);
-    static void set_model(wxGLCanvas* canvas, Model* model);
-
-    static void set_bed_shape(wxGLCanvas* canvas, const Pointfs& shape);
-    static void set_auto_bed_shape(wxGLCanvas* canvas);
-
-    static BoundingBoxf3 get_volumes_bounding_box(wxGLCanvas* canvas);
-
-    static void set_axes_length(wxGLCanvas* canvas, float length);
-
-    static void set_cutting_plane(wxGLCanvas* canvas, float z, const ExPolygons& polygons);
-
-    static void set_color_by(wxGLCanvas* canvas, const std::string& value);
-    static void set_select_by(wxGLCanvas* canvas, const std::string& value);
-    static void set_drag_by(wxGLCanvas* canvas, const std::string& value);
-
-    static std::string get_select_by(wxGLCanvas* canvas);
-
-    static bool is_layers_editing_enabled(wxGLCanvas* canvas);
-    static bool is_layers_editing_allowed(wxGLCanvas* canvas);
-    static bool is_shader_enabled(wxGLCanvas* canvas);
-
-    static bool is_reload_delayed(wxGLCanvas* canvas);
-
-    static void enable_layers_editing(wxGLCanvas* canvas, bool enable);
-    static void enable_warning_texture(wxGLCanvas* canvas, bool enable);
-    static void enable_legend_texture(wxGLCanvas* canvas, bool enable);
-    static void enable_picking(wxGLCanvas* canvas, bool enable);
-    static void enable_moving(wxGLCanvas* canvas, bool enable);
-    static void enable_gizmos(wxGLCanvas* canvas, bool enable);
-    static void enable_toolbar(wxGLCanvas* canvas, bool enable);
-    static void enable_shader(wxGLCanvas* canvas, bool enable);
-    static void enable_force_zoom_to_bed(wxGLCanvas* canvas, bool enable);
-    static void enable_dynamic_background(wxGLCanvas* canvas, bool enable);
-    static void allow_multisample(wxGLCanvas* canvas, bool allow);
-
-    static void enable_toolbar_item(wxGLCanvas* canvas, const std::string& name, bool enable);
-    static bool is_toolbar_item_pressed(wxGLCanvas* canvas, const std::string& name);
-
-    static void zoom_to_bed(wxGLCanvas* canvas);
-    static void zoom_to_volumes(wxGLCanvas* canvas);
-    static void select_view(wxGLCanvas* canvas, const std::string& direction);
-    static void set_viewport_from_scene(wxGLCanvas* canvas, wxGLCanvas* other);
-
-    static void update_volumes_colors_by_extruder(wxGLCanvas* canvas);
-    static void update_gizmos_data(wxGLCanvas* canvas);
-
-    static void render(wxGLCanvas* canvas);
-
-    static std::vector<double> get_current_print_zs(wxGLCanvas* canvas, bool active_only);
-    static void set_toolpaths_range(wxGLCanvas* canvas, double low, double high);
-
-    static void register_on_viewport_changed_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_double_click_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_right_click_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_select_object_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_model_update_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_remove_object_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_arrange_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_rotate_object_left_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_rotate_object_right_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_scale_object_uniformly_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_increase_objects_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_decrease_objects_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_instance_moved_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_wipe_tower_moved_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_enable_action_buttons_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_gizmo_scale_uniformly_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_gizmo_rotate_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_gizmo_flatten_callback(wxGLCanvas* canvas, void* callback);
-    static void register_on_update_geometry_info_callback(wxGLCanvas* canvas, void* callback);
-
-    static void register_action_add_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_delete_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_deleteall_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_arrange_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_more_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_fewer_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_split_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_cut_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_settings_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_layersediting_callback(wxGLCanvas* canvas, void* callback);
-    static void register_action_selectbyparts_callback(wxGLCanvas* canvas, void* callback);
-
-    static std::vector<int> load_object(wxGLCanvas* canvas, const ModelObject* model_object, int obj_idx, std::vector<int> instance_idxs);
-    static std::vector<int> load_object(wxGLCanvas* canvas, const Model* model, int obj_idx);
-
-    static int get_first_volume_id(wxGLCanvas* canvas, int obj_idx);
-    static int get_in_object_volume_id(wxGLCanvas* canvas, int scene_vol_idx);
-
-    static void reload_scene(wxGLCanvas* canvas, bool force);
-
-    static void load_gcode_preview(wxGLCanvas* canvas, const GCodePreviewData* preview_data, const std::vector<std::string>& str_tool_colors);
-    static void load_preview(wxGLCanvas* canvas, const std::vector<std::string>& str_tool_colors);
-
-    static void reset_legend_texture();
+    static GUI::GLCanvas3D* get_canvas(wxGLCanvas* canvas);
 
     static void thick_lines_to_verts(const Lines& lines, const std::vector<double>& widths, const std::vector<double>& heights, bool closed, double top_z, GLVolume& volume);
     static void thick_lines_to_verts(const Lines3& lines, const std::vector<double>& widths, const std::vector<double>& heights, bool closed, GLVolume& volume);

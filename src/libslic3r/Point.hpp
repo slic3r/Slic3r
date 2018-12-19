@@ -51,10 +51,18 @@ inline coord_t cross2(const Vec2crd &v1, const Vec2crd &v2) { return v1(0) * v2(
 inline float   cross2(const Vec2f   &v1, const Vec2f   &v2) { return v1(0) * v2(1) - v1(1) * v2(0); }
 inline double  cross2(const Vec2d   &v1, const Vec2d   &v2) { return v1(0) * v2(1) - v1(1) * v2(0); }
 
+inline coordf_t dot(const Vec2d &v1, const Vec2d &v2) { return v1.x() * v2.x() + v1.y() * v2.y(); }
+inline coordf_t dot(const Vec2d &v) { return v.x() * v.x() + v.y() * v.y(); }
+
 inline Vec2crd to_2d(const Vec3crd &pt3) { return Vec2crd(pt3(0), pt3(1)); }
 inline Vec2i64 to_2d(const Vec3i64 &pt3) { return Vec2i64(pt3(0), pt3(1)); }
 inline Vec2f   to_2d(const Vec3f   &pt3) { return Vec2f  (pt3(0), pt3(1)); }
 inline Vec2d   to_2d(const Vec3d   &pt3) { return Vec2d  (pt3(0), pt3(1)); }
+
+inline Vec3d to_3d(const Vec2d &v, double z) { return Vec3d(v(0), v(1), z); }
+inline Vec3f to_3d(const Vec2f &v, float z) { return Vec3f(v(0), v(1), z); }
+inline Vec3i64 to_3d(const Vec2i64 &v, float z) { return Vec3i64(int64_t(v(0)), int64_t(v(1)), int64_t(z)); }
+inline Vec3crd to_3d(const Vec3crd &p, coord_t z) { return Vec3crd(p(0), p(1), z); }
 
 inline Vec2d   unscale(coord_t x, coord_t y) { return Vec2d(unscale<double>(x), unscale<double>(y)); }
 inline Vec2d   unscale(const Vec2crd &pt) { return Vec2d(unscale<double>(pt(0)), unscale<double>(pt(1))); }
@@ -113,6 +121,13 @@ public:
     double ccw_angle(const Point &p1, const Point &p2) const;
     Point  projection_onto(const MultiPoint &poly) const;
     Point  projection_onto(const Line &line) const;
+
+    double distance_to(const Point &point) const { return (point - *this).cast<double>().norm(); }
+    double distance_to(const Line &line) const;
+    bool coincides_with(const Point &point) const { return this->x() == point.x() && this->y() == point.y(); }
+    bool coincides_with_epsilon(const Point &point) const {
+        return std::abs(this->x() - point.x()) < SCALED_EPSILON && std::abs(this->y() - point.y()) < SCALED_EPSILON;
+    }
 };
 
 namespace int128 {
@@ -182,6 +197,24 @@ public:
             m_map.emplace(std::make_pair(Vec2crd(pt->x()>>m_grid_log2, pt->y()>>m_grid_log2), std::move(value)));
     }
 
+    // Erase a data point equal to value. (ValueType has to declare the operator==).
+    // Returns true if the data point equal to value was found and removed.
+    bool erase(const ValueType &value) {
+        const Point *pt = m_point_accessor(value);
+        if (pt != nullptr) {
+            // Range of fragment starts around grid_corner, close to pt.
+            auto range = m_map.equal_range(Point((*pt)(0)>>m_grid_log2, (*pt)(1)>>m_grid_log2));
+            // Remove the first item.
+            for (auto it = range.first; it != range.second; ++ it) {
+                if (it->second == value) {
+                    m_map.erase(it);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // Return a pair of <ValueType*, distance_squared>
     std::pair<const ValueType*, double> find(const Vec2crd &pt) {
         // Iterate over 4 closest grid cells around pt,
@@ -209,7 +242,7 @@ public:
                 }
             }
         }
-        return (value_min != nullptr && dist_min < coordf_t(m_search_radius * m_search_radius)) ? 
+        return (value_min != nullptr && dist_min < coordf_t(m_search_radius) * coordf_t(m_search_radius)) ? 
             std::make_pair(value_min, dist_min) : 
             std::make_pair(nullptr, std::numeric_limits<double>::max());
     }

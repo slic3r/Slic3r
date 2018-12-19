@@ -35,7 +35,7 @@ public:
     void repair();
     float volume();
     void check_topology();
-    bool is_manifold() const { return this->stl.stats.connected_facets_3_edge == this->stl.stats.number_of_facets; }
+    bool is_manifold() const { return this->stl.stats.connected_facets_3_edge == (int)this->stl.stats.number_of_facets; }
     void WriteOBJFile(char* output_file);
     void scale(float factor);
     void scale(const Vec3d &versor);
@@ -49,7 +49,7 @@ public:
     void mirror_x() { this->mirror(X); }
     void mirror_y() { this->mirror(Y); }
     void mirror_z() { this->mirror(Z); }
-    void transform(const Transform3f& t);
+    void transform(const Transform3d& t);
     void align_to_origin();
     void rotate(double angle, Point* center);
     TriangleMeshPtrs split() const;
@@ -65,6 +65,7 @@ public:
     void reset_repair_stats();
     bool needed_repair() const;
     size_t facets_count() const { return this->stl.stats.number_of_facets; }
+    bool   empty() const { return this->facets_count() == 0; }
 
     // Returns true, if there are two and more connected patches in the mesh.
     // Returns false, if one or zero connected patch is in the mesh.
@@ -173,7 +174,7 @@ public:
         const float min_z, const float max_z, IntersectionLine *line_out) const;
     void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const;
     
-    double safety_offset = scale_(0.0499);
+    double safety_offset = scale_(0.02);
 private:
     const TriangleMesh      *mesh;
     // Map from a facet to an edge index.

@@ -8,8 +8,8 @@
 #include "../libslic3r.h"
 #include "../Model.hpp"
 #include "../GCode.hpp"
+#include "../PrintConfig.hpp"
 #include "../Utils.hpp"
-#include "../slic3r/GUI/PresetBundle.hpp"
 #include "AMF.hpp"
 
 #include <boost/filesystem/operations.hpp>
@@ -29,12 +29,11 @@
 // VERSION NUMBERS
 // 0 : .amf, .amf.xml and .zip.amf files saved by older slic3r. No version definition in them.
 // 1 : Introduction of amf versioning. No other change in data saved into amf files.
-#if ENABLE_MODELINSTANCE_3D_OFFSET
-// 2 : Added z component of offset.
+// 2 : Added z component of offset
+//     Added x and y components of rotation
+//     Added x, y and z components of scale
+//     Added x, y and z components of mirror
 const unsigned int VERSION_AMF = 2;
-#else
-const unsigned int VERSION_AMF = 1;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
 const char* SLIC3RPE_AMF_VERSION = "slic3rpe_amf_version";
 
 const char* SLIC3R_CONFIG_TYPE = "slic3rpe_config";
@@ -44,7 +43,7 @@ namespace Slic3r
 
 struct AMFParserContext
 {
-    AMFParserContext(XML_Parser parser, const std::string& archive_filename, PresetBundle* preset_bundle, Model *model) :
+    AMFParserContext(XML_Parser parser, DynamicPrintConfig *config, Model *model) :
         m_version(0),
         m_parser(parser),
         m_model(*model), 
@@ -52,8 +51,7 @@ struct AMFParserContext
         m_volume(nullptr),
         m_material(nullptr),
         m_instance(nullptr),
-        m_preset_bundle(preset_bundle),
-        m_archive_filename(archive_filename)
+        m_config(config)
     {
         m_path.reserve(12);
     }
@@ -124,37 +122,58 @@ struct AMFParserContext
         NODE_TYPE_INSTANCE,             // amf/constellation/instance
         NODE_TYPE_DELTAX,               // amf/constellation/instance/deltax
         NODE_TYPE_DELTAY,               // amf/constellation/instance/deltay
-#if ENABLE_MODELINSTANCE_3D_OFFSET
         NODE_TYPE_DELTAZ,               // amf/constellation/instance/deltaz
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+        NODE_TYPE_RX,                   // amf/constellation/instance/rx
+        NODE_TYPE_RY,                   // amf/constellation/instance/ry
         NODE_TYPE_RZ,                   // amf/constellation/instance/rz
         NODE_TYPE_SCALE,                // amf/constellation/instance/scale
+        NODE_TYPE_SCALEX,               // amf/constellation/instance/scalex
+        NODE_TYPE_SCALEY,               // amf/constellation/instance/scaley
+        NODE_TYPE_SCALEZ,               // amf/constellation/instance/scalez
+        NODE_TYPE_MIRRORX,              // amf/constellation/instance/mirrorx
+        NODE_TYPE_MIRRORY,              // amf/constellation/instance/mirrory
+        NODE_TYPE_MIRRORZ,              // amf/constellation/instance/mirrorz
         NODE_TYPE_METADATA,             // anywhere under amf/*/metadata
     };
 
     struct Instance {
-#if ENABLE_MODELINSTANCE_3D_OFFSET
-        Instance() : deltax_set(false), deltay_set(false), deltaz_set(false), rz_set(false), scale_set(false) {}
-#else
-        Instance() : deltax_set(false), deltay_set(false), rz_set(false), scale_set(false) {}
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+        Instance()
+            : deltax_set(false), deltay_set(false), deltaz_set(false)
+            , rx_set(false), ry_set(false), rz_set(false)
+            , scalex_set(false), scaley_set(false), scalez_set(false)
+            , mirrorx_set(false), mirrory_set(false), mirrorz_set(false) {}
         // Shift in the X axis.
         float deltax;
         bool  deltax_set;
         // Shift in the Y axis.
         float deltay;
         bool  deltay_set;
-#if ENABLE_MODELINSTANCE_3D_OFFSET
         // Shift in the Z axis.
         float deltaz;
         bool  deltaz_set;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+        // Rotation around the X axis.
+        float rx;
+        bool  rx_set;
+        // Rotation around the Y axis.
+        float ry;
+        bool  ry_set;
         // Rotation around the Z axis.
         float rz;
         bool  rz_set;
-        // Scaling factor
-        float scale;
-        bool  scale_set;
+        // Scaling factors
+        float scalex;
+        bool  scalex_set;
+        float scaley;
+        bool  scaley_set;
+        float scalez;
+        bool  scalez_set;
+        // Mirroring factors
+        float mirrorx;
+        bool  mirrorx_set;
+        float mirrory;
+        bool  mirrory_set;
+        float mirrorz;
+        bool  mirrorz_set;
     };
 
     struct Object {
@@ -187,10 +206,8 @@ struct AMFParserContext
     Instance                *m_instance;
     // Generic string buffer for vertices, face indices, metadata etc.
     std::string              m_value[3];
-    // Pointer to preset bundle to update if config data are stored inside the amf file
-    PresetBundle*            m_preset_bundle;
-    // Fullpath name of the amf file
-    std::string              m_archive_filename;
+    // Pointer to config to update if config data are stored inside the amf file
+    DynamicPrintConfig      *m_config;
 
 private:
     AMFParserContext& operator=(AMFParserContext&);
@@ -271,14 +288,28 @@ void AMFParserContext::startElement(const char *name, const char **atts)
                 node_type_new = NODE_TYPE_DELTAX; 
             else if (strcmp(name, "deltay") == 0)
                 node_type_new = NODE_TYPE_DELTAY;
-#if ENABLE_MODELINSTANCE_3D_OFFSET
             else if (strcmp(name, "deltaz") == 0)
                 node_type_new = NODE_TYPE_DELTAZ;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+            else if (strcmp(name, "rx") == 0)
+                node_type_new = NODE_TYPE_RX;
+            else if (strcmp(name, "ry") == 0)
+                node_type_new = NODE_TYPE_RY;
             else if (strcmp(name, "rz") == 0)
                 node_type_new = NODE_TYPE_RZ;
+            else if (strcmp(name, "scalex") == 0)
+                node_type_new = NODE_TYPE_SCALEX;
+            else if (strcmp(name, "scaley") == 0)
+                node_type_new = NODE_TYPE_SCALEY;
+            else if (strcmp(name, "scalez") == 0)
+                node_type_new = NODE_TYPE_SCALEZ;
             else if (strcmp(name, "scale") == 0)
                 node_type_new = NODE_TYPE_SCALE;
+            else if (strcmp(name, "mirrorx") == 0)
+                node_type_new = NODE_TYPE_MIRRORX;
+            else if (strcmp(name, "mirrory") == 0)
+                node_type_new = NODE_TYPE_MIRRORY;
+            else if (strcmp(name, "mirrorz") == 0)
+                node_type_new = NODE_TYPE_MIRRORZ;
         }
         break;
     case 4:
@@ -335,15 +366,19 @@ void AMFParserContext::characters(const XML_Char *s, int len)
     {
         switch (m_path.size()) {
         case 4:
-#if ENABLE_MODELINSTANCE_3D_OFFSET
-            if (m_path.back() == NODE_TYPE_DELTAX || 
-                m_path.back() == NODE_TYPE_DELTAY || 
-                m_path.back() == NODE_TYPE_DELTAZ || 
-                m_path.back() == NODE_TYPE_RZ || 
-                m_path.back() == NODE_TYPE_SCALE)
-#else
-            if (m_path.back() == NODE_TYPE_DELTAX || m_path.back() == NODE_TYPE_DELTAY || m_path.back() == NODE_TYPE_RZ || m_path.back() == NODE_TYPE_SCALE)
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+            if (m_path.back() == NODE_TYPE_DELTAX ||
+                m_path.back() == NODE_TYPE_DELTAY ||
+                m_path.back() == NODE_TYPE_DELTAZ ||
+                m_path.back() == NODE_TYPE_RX ||
+                m_path.back() == NODE_TYPE_RY ||
+                m_path.back() == NODE_TYPE_RZ ||
+                m_path.back() == NODE_TYPE_SCALEX ||
+                m_path.back() == NODE_TYPE_SCALEY ||
+                m_path.back() == NODE_TYPE_SCALEZ ||
+                m_path.back() == NODE_TYPE_SCALE ||
+                m_path.back() == NODE_TYPE_MIRRORX ||
+                m_path.back() == NODE_TYPE_MIRRORY ||
+                m_path.back() == NODE_TYPE_MIRRORZ)
                 m_value[0].append(s, len);
             break;
         case 6:
@@ -383,14 +418,24 @@ void AMFParserContext::endElement(const char * /* name */)
         m_instance->deltay_set = true;
         m_value[0].clear();
         break;
-#if ENABLE_MODELINSTANCE_3D_OFFSET
     case NODE_TYPE_DELTAZ:
         assert(m_instance);
         m_instance->deltaz = float(atof(m_value[0].c_str()));
         m_instance->deltaz_set = true;
         m_value[0].clear();
         break;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+    case NODE_TYPE_RX:
+        assert(m_instance);
+        m_instance->rx = float(atof(m_value[0].c_str()));
+        m_instance->rx_set = true;
+        m_value[0].clear();
+        break;
+    case NODE_TYPE_RY:
+        assert(m_instance);
+        m_instance->ry = float(atof(m_value[0].c_str()));
+        m_instance->ry_set = true;
+        m_value[0].clear();
+        break;
     case NODE_TYPE_RZ:
         assert(m_instance);
         m_instance->rz = float(atof(m_value[0].c_str()));
@@ -399,8 +444,48 @@ void AMFParserContext::endElement(const char * /* name */)
         break;
     case NODE_TYPE_SCALE:
         assert(m_instance);
-        m_instance->scale = float(atof(m_value[0].c_str()));
-        m_instance->scale_set = true;
+        m_instance->scalex = float(atof(m_value[0].c_str()));
+        m_instance->scalex_set = true;
+        m_instance->scaley = float(atof(m_value[0].c_str()));
+        m_instance->scaley_set = true;
+        m_instance->scalez = float(atof(m_value[0].c_str()));
+        m_instance->scalez_set = true;
+        m_value[0].clear();
+        break;
+    case NODE_TYPE_SCALEX:
+        assert(m_instance);
+        m_instance->scalex = float(atof(m_value[0].c_str()));
+        m_instance->scalex_set = true;
+        m_value[0].clear();
+        break;
+    case NODE_TYPE_SCALEY:
+        assert(m_instance);
+        m_instance->scaley = float(atof(m_value[0].c_str()));
+        m_instance->scaley_set = true;
+        m_value[0].clear();
+        break;
+    case NODE_TYPE_SCALEZ:
+        assert(m_instance);
+        m_instance->scalez = float(atof(m_value[0].c_str()));
+        m_instance->scalez_set = true;
+        m_value[0].clear();
+        break;
+    case NODE_TYPE_MIRRORX:
+        assert(m_instance);
+        m_instance->mirrorx = float(atof(m_value[0].c_str()));
+        m_instance->mirrorx_set = true;
+        m_value[0].clear();
+        break;
+    case NODE_TYPE_MIRRORY:
+        assert(m_instance);
+        m_instance->mirrory = float(atof(m_value[0].c_str()));
+        m_instance->mirrory_set = true;
+        m_value[0].clear();
+        break;
+    case NODE_TYPE_MIRRORZ:
+        assert(m_instance);
+        m_instance->mirrorz = float(atof(m_value[0].c_str()));
+        m_instance->mirrorz_set = true;
         m_value[0].clear();
         break;
 
@@ -466,9 +551,8 @@ void AMFParserContext::endElement(const char * /* name */)
         break;
 
     case NODE_TYPE_METADATA:
-        if ((m_preset_bundle != nullptr) && strncmp(m_value[0].c_str(), SLIC3R_CONFIG_TYPE, strlen(SLIC3R_CONFIG_TYPE)) == 0) {
-            m_preset_bundle->load_config_string(m_value[1].c_str(), m_archive_filename.c_str());
-        }
+        if ((m_config != nullptr) && strncmp(m_value[0].c_str(), SLIC3R_CONFIG_TYPE, strlen(SLIC3R_CONFIG_TYPE)) == 0)
+            m_config->load_from_gcode_string(m_value[1].c_str());
         else if (strncmp(m_value[0].c_str(), "slic3r.", 7) == 0) {
             const char *opt_key = m_value[0].c_str() + 7;
             if (print_config_def.options.find(opt_key) != print_config_def.options.end()) {
@@ -495,7 +579,28 @@ void AMFParserContext::endElement(const char * /* name */)
 					p = end + 1;
                 }
                 m_object->layer_height_profile_valid = true;
-            } else if (m_path.size() == 5 && m_path[3] == NODE_TYPE_VOLUME && m_volume) {
+            }
+            else if (m_path.size() == 3 && m_path[1] == NODE_TYPE_OBJECT && m_object && strcmp(opt_key, "sla_support_points") == 0) {
+                // Parse object's layer height profile, a semicolon separated list of floats.
+                unsigned char coord_idx = 0;
+                Vec3f point(Vec3f::Zero());
+                char *p = const_cast<char*>(m_value[1].c_str());
+                for (;;) {
+                    char *end = strchr(p, ';');
+                    if (end != nullptr)
+	                    *end = 0;
+
+                    point(coord_idx) = atof(p);
+                    if (++coord_idx == 3) {
+                        m_object->sla_support_points.push_back(point);
+                        coord_idx = 0;
+                    }
+					if (end == nullptr)
+						break;
+					p = end + 1;
+                }
+            }
+            else if (m_path.size() == 5 && m_path[3] == NODE_TYPE_VOLUME && m_volume) {
                 if (strcmp(opt_key, "modifier") == 0) {
                     // Is this volume a modifier volume?
                     // "modifier" flag comes first in the XML file, so it may be later overwritten by the "type" flag.
@@ -526,7 +631,6 @@ void AMFParserContext::endElement(const char * /* name */)
     default:
         break;
     }
-
     m_path.pop_back();
 }
 
@@ -540,20 +644,16 @@ void AMFParserContext::endDocument()
         for (const Instance &instance : object.second.instances)
             if (instance.deltax_set && instance.deltay_set) {
                 ModelInstance *mi = m_model.objects[object.second.idx]->add_instance();
-#if ENABLE_MODELINSTANCE_3D_OFFSET
-                mi->set_offset(Vec3d((double)instance.deltax, (double)instance.deltay, (double)instance.deltaz));
-#else
-                mi->offset(0) = instance.deltax;
-                mi->offset(1) = instance.deltay;
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
-                mi->rotation = instance.rz_set ? instance.rz : 0.f;
-                mi->scaling_factor = instance.scale_set ? instance.scale : 1.f;
+                mi->set_offset(Vec3d(instance.deltax_set ? (double)instance.deltax : 0.0, instance.deltay_set ? (double)instance.deltay : 0.0, instance.deltaz_set ? (double)instance.deltaz : 0.0));
+                mi->set_rotation(Vec3d(instance.rx_set ? (double)instance.rx : 0.0, instance.ry_set ? (double)instance.ry : 0.0, instance.rz_set ? (double)instance.rz : 0.0));
+                mi->set_scaling_factor(Vec3d(instance.scalex_set ? (double)instance.scalex : 1.0, instance.scaley_set ? (double)instance.scaley : 1.0, instance.scalez_set ? (double)instance.scalez : 1.0));
+                mi->set_mirror(Vec3d(instance.mirrorx_set ? (double)instance.mirrorx : 1.0, instance.mirrory_set ? (double)instance.mirrory : 1.0, instance.mirrorz_set ? (double)instance.mirrorz : 1.0));
             }
     }
 }
 
 // Load an AMF file into a provided model.
-bool load_amf_file(const char *path, PresetBundle* bundle, Model *model)
+bool load_amf_file(const char *path, DynamicPrintConfig *config, Model *model)
 {
     if ((path == nullptr) || (model == nullptr))
         return false;
@@ -570,7 +670,7 @@ bool load_amf_file(const char *path, PresetBundle* bundle, Model *model)
         return false;
     }
 
-    AMFParserContext ctx(parser, path, bundle, model);
+    AMFParserContext ctx(parser, config, model);
     XML_SetUserData(parser, (void*)&ctx);
     XML_SetElementHandler(parser, AMFParserContext::startElement, AMFParserContext::endElement);
     XML_SetCharacterDataHandler(parser, AMFParserContext::characters);
@@ -605,7 +705,7 @@ bool load_amf_file(const char *path, PresetBundle* bundle, Model *model)
     return result;
 }
 
-bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, const char* path, PresetBundle* bundle, Model* model, unsigned int& version)
+bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, DynamicPrintConfig* config, Model* model, unsigned int& version)
 {
     if (stat.m_uncomp_size == 0)
     {
@@ -621,7 +721,7 @@ bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_fi
         return false;
     }
 
-    AMFParserContext ctx(parser, path, bundle, model);
+    AMFParserContext ctx(parser, config, model);
     XML_SetUserData(parser, (void*)&ctx);
     XML_SetElementHandler(parser, AMFParserContext::startElement, AMFParserContext::endElement);
     XML_SetCharacterDataHandler(parser, AMFParserContext::characters);
@@ -657,7 +757,7 @@ bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_fi
 }
 
 // Load an AMF archive into a provided model.
-bool load_amf_archive(const char *path, PresetBundle* bundle, Model *model)
+bool load_amf_archive(const char *path, DynamicPrintConfig *config, Model *model)
 {
     if ((path == nullptr) || (model == nullptr))
         return false;
@@ -684,7 +784,7 @@ bool load_amf_archive(const char *path, PresetBundle* bundle, Model *model)
         {
             if (boost::iends_with(stat.m_filename, ".amf"))
             {
-                if (!extract_model_from_archive(archive, stat, path, bundle, model, version))
+                if (!extract_model_from_archive(archive, stat, config, model, version))
                 {
                     mz_zip_reader_end(&archive);
                     printf("Archive does not contain a valid model");
@@ -712,12 +812,12 @@ bool load_amf_archive(const char *path, PresetBundle* bundle, Model *model)
 }
 
 // Load an AMF file into a provided model.
-// If bundle is not a null pointer, updates it if the amf file/archive contains config data
-bool load_amf(const char *path, PresetBundle* bundle, Model *model)
+// If config is not a null pointer, updates it if the amf file/archive contains config data
+bool load_amf(const char *path, DynamicPrintConfig *config, Model *model)
 {
     if (boost::iends_with(path, ".amf.xml"))
         // backward compatibility with older slic3r output
-        return load_amf_file(path, bundle, model);
+        return load_amf_file(path, config, model);
     else if (boost::iends_with(path, ".amf"))
     {
         boost::nowide::ifstream file(path, boost::nowide::ifstream::binary);
@@ -728,15 +828,15 @@ bool load_amf(const char *path, PresetBundle* bundle, Model *model)
         file.read(const_cast<char*>(zip_mask.data()), 2);
         file.close();
 
-        return (zip_mask == "PK") ? load_amf_archive(path, bundle, model) : load_amf_file(path, bundle, model);
+        return (zip_mask == "PK") ? load_amf_archive(path, config, model) : load_amf_file(path, config, model);
     }
     else
         return false;
 }
 
-bool store_amf(const char *path, Model *model, Print* print, bool export_print_config)
+bool store_amf(const char *path, Model *model, const DynamicPrintConfig *config)
 {
-    if ((path == nullptr) || (model == nullptr) || (print == nullptr))
+    if ((path == nullptr) || (model == nullptr))
         return false;
 
     // forces ".zip.amf" extension
@@ -757,11 +857,13 @@ bool store_amf(const char *path, Model *model, Print* print, bool export_print_c
     stream << "<metadata type=\"cad\">Slic3r " << SLIC3R_VERSION << "</metadata>\n";
     stream << "<metadata type=\"" << SLIC3RPE_AMF_VERSION << "\">" << VERSION_AMF << "</metadata>\n";
 
-    if (export_print_config)
+    if (config != nullptr)
     {
-        std::string config = "\n";
-        GCode::append_full_config(*print, config);
-        stream << "<metadata type=\"" << SLIC3R_CONFIG_TYPE << "\">" << xml_escape(config) << "</metadata>\n";
+        std::string str_config = "\n";
+        for (const std::string &key : config->keys())
+            if (key != "compatible_printers")
+                str_config += "; " + key + " = " + config->serialize(key) + "\n";
+        stream << "<metadata type=\"" << SLIC3R_CONFIG_TYPE << "\">" << xml_escape(str_config) << "</metadata>\n";
     }
 
     for (const auto &material : model->materials) {
@@ -793,6 +895,19 @@ bool store_amf(const char *path, Model *model, Print* print, bool export_print_c
                 stream << "\n    </metadata>\n";
         }
         //FIXME Store the layer height ranges (ModelObject::layer_height_ranges)
+
+        const std::vector<Vec3f>& sla_support_points = object->sla_support_points;
+        if (!sla_support_points.empty()) {
+            // Store the SLA supports as a single semicolon separated list.
+            stream << "    <metadata type=\"slic3r.sla_support_points\">";
+            for (size_t i = 0; i < sla_support_points.size(); ++i) {
+                if (i != 0)
+                    stream << ";";
+                stream << sla_support_points[i](0) << ";" << sla_support_points[i](1) << ";" << sla_support_points[i](2);
+            }
+            stream << "\n    </metadata>\n";
+        }
+
         stream << "    <mesh>\n";
         stream << "      <vertices>\n";
         std::vector<int> vertices_offsets;
@@ -830,7 +945,7 @@ bool store_amf(const char *path, Model *model, Print* print, bool export_print_c
             if (volume->is_modifier())
                 stream << "        <metadata type=\"slic3r.modifier\">1</metadata>\n";
             stream << "        <metadata type=\"slic3r.volume_type\">" << ModelVolume::type_to_string(volume->type()) << "</metadata>\n";
-            for (int i = 0; i < volume->mesh.stl.stats.number_of_facets; ++i) {
+            for (int i = 0; i < (int)volume->mesh.stl.stats.number_of_facets; ++i) {
                 stream << "        <triangle>\n";
                 for (int j = 0; j < 3; ++j)
                 stream << "          <v" << j + 1 << ">" << volume->mesh.stl.v_indices[i].vertex[j] + vertices_offset << "</v" << j + 1 << ">\n";
@@ -847,23 +962,31 @@ bool store_amf(const char *path, Model *model, Print* print, bool export_print_c
                     "    <instance objectid=\"" PRINTF_ZU "\">\n"
                     "      <deltax>%lf</deltax>\n"
                     "      <deltay>%lf</deltay>\n"
-#if ENABLE_MODELINSTANCE_3D_OFFSET
                     "      <deltaz>%lf</deltaz>\n"
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
+                    "      <rx>%lf</rx>\n"
+                    "      <ry>%lf</ry>\n"
                     "      <rz>%lf</rz>\n"
-                    "      <scale>%lf</scale>\n"
+                    "      <scalex>%lf</scalex>\n"
+                    "      <scaley>%lf</scaley>\n"
+                    "      <scalez>%lf</scalez>\n"
+                    "      <mirrorx>%lf</mirrorx>\n"
+                    "      <mirrory>%lf</mirrory>\n"
+                    "      <mirrorz>%lf</mirrorz>\n"
                     "    </instance>\n",
                     object_id,
-#if ENABLE_MODELINSTANCE_3D_OFFSET
                     instance->get_offset(X),
                     instance->get_offset(Y),
                     instance->get_offset(Z),
-#else
-                    instance->offset(0),
-                    instance->offset(1),
-#endif // ENABLE_MODELINSTANCE_3D_OFFSET
-                    instance->rotation,
-                    instance->scaling_factor);
+                    instance->get_rotation(X),
+                    instance->get_rotation(Y),
+                    instance->get_rotation(Z),
+                    instance->get_scaling_factor(X),
+                    instance->get_scaling_factor(Y),
+                    instance->get_scaling_factor(Z),
+                    instance->get_mirror(X),
+                    instance->get_mirror(Y),
+                    instance->get_mirror(Z));
+
                 //FIXME missing instance->scaling_factor
                 instances.append(buf);
             }

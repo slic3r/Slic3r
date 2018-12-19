@@ -373,11 +373,10 @@ std::vector<std::pair<coordf_t, std::vector<GCode::LayerToPrint>>> GCode::collec
         size_t      layer_idx;
     };
 
-    PrintObjectPtrs printable_objects = print.get_printable_objects();
-    std::vector<std::vector<LayerToPrint>>  per_object(printable_objects.size(), std::vector<LayerToPrint>());
+    std::vector<std::vector<LayerToPrint>>  per_object(print.objects().size(), std::vector<LayerToPrint>());
     std::vector<OrderingItem>               ordering;
-    for (size_t i = 0; i < printable_objects.size(); ++i) {
-        per_object[i] = collect_layers_to_print(*printable_objects[i]);
+    for (size_t i = 0; i < print.objects().size(); ++i) {
+        per_object[i] = collect_layers_to_print(*print.objects()[i]);
         OrderingItem ordering_item;
         ordering_item.object_idx = i;
         ordering.reserve(ordering.size() + per_object[i].size());
@@ -402,7 +401,7 @@ std::vector<std::pair<coordf_t, std::vector<GCode::LayerToPrint>>> GCode::collec
         std::pair<coordf_t, std::vector<LayerToPrint>> merged;
         // Assign an average print_z to the set of layers with nearly equal print_z.
         merged.first = 0.5 * (ordering[i].print_z + ordering[j-1].print_z);
-        merged.second.assign(printable_objects.size(), LayerToPrint());
+        merged.second.assign(print.objects().size(), LayerToPrint());
         for (; i < j; ++ i) {
             const OrderingItem &oi = ordering[i];
             assert(merged.second[oi.object_idx].layer() == nullptr);
@@ -445,7 +444,7 @@ void GCode::do_export(Print *print, const char *path, GCodePreviewData *preview_
             boost::nowide::remove(path_tmp.c_str());
             throw std::runtime_error(std::string("G-code export to ") + path + " failed\nIs the disk full?\n");
         }
-    } catch (std::exception &ex) {
+    } catch (std::exception & /* ex */) {
         // Rethrow on any exception. std::runtime_exception and CanceledException are expected to be thrown.
         // Close and remove the file.
         fclose(file);
@@ -455,9 +454,12 @@ void GCode::do_export(Print *print, const char *path, GCodePreviewData *preview_
     fclose(file);
 
     if (print->config().remaining_times.value) {
+        BOOST_LOG_TRIVIAL(debug) << "Processing remaining times for normal mode";
         m_normal_time_estimator.post_process_remaining_times(path_tmp, 60.0f);
-        if (m_silent_time_estimator_enabled)
+        if (m_silent_time_estimator_enabled) {
+            BOOST_LOG_TRIVIAL(debug) << "Processing remaining times for silent mode";
             m_silent_time_estimator.post_process_remaining_times(path_tmp, 60.0f);
+        }
     }
 
     if (! m_placeholder_parser_failed_templates.empty()) {
@@ -566,10 +568,9 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
     // How many times will be change_layer() called?
     // change_layer() in turn increments the progress bar status.
     m_layer_count = 0;
-    PrintObjectPtrs printable_objects = print.get_printable_objects();
     if (print.config().complete_objects.value) {
         // Add each of the object's layers separately.
-        for (auto object : printable_objects) {
+        for (auto object : print.objects()) {
             std::vector<coordf_t> zs;
             zs.reserve(object->layers().size() + object->support_layers().size());
             for (auto layer : object->layers())
@@ -582,7 +583,7 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
     } else {
         // Print all objects with the same print_z together.
         std::vector<coordf_t> zs;
-        for (auto object : printable_objects) {
+        for (auto object : print.objects()) {
             zs.reserve(zs.size() + object->layers().size() + object->support_layers().size());
             for (auto layer : object->layers())
                 zs.push_back(layer->print_z);
@@ -598,15 +599,18 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
     this->apply_print_config(print.config());
     this->set_extruders(print.extruders());
     
+    // Initialize colorprint.
+    m_colorprint_heights = cast<float>(print.config().colorprint_heights.values);
+
     // Initialize autospeed.
     {
         // get the minimum cross-section used in the print
         std::vector<double> mm3_per_mm;
-        for (auto object : printable_objects) {
-            for (size_t region_id = 0; region_id < print.regions().size(); ++region_id) {
-                auto region = print.regions()[region_id];
+        for (auto object : print.objects()) {
+            for (size_t region_id = 0; region_id < object->region_volumes.size(); ++ region_id) {
+                const PrintRegion* region = print.regions()[region_id];
                 for (auto layer : object->layers()) {
-                    auto layerm = layer->regions()[region_id];
+                    const LayerRegion* layerm = layer->regions()[region_id];
                     if (region->config().get_abs_value("perimeter_speed"          ) == 0 || 
                         region->config().get_abs_value("small_perimeter_speed"    ) == 0 || 
                         region->config().get_abs_value("external_perimeter_speed" ) == 0 || 
@@ -667,11 +671,10 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
     print.throw_if_canceled();
 
     // Write some terse information on the slicing parameters.
-    const PrintObject *first_object         = printable_objects.front();
+    const PrintObject *first_object         = print.objects().front();
     const double       layer_height         = first_object->config().layer_height.value;
     const double       first_layer_height   = first_object->config().first_layer_height.get_abs_value(layer_height);
-    for (size_t region_id = 0; region_id < print.regions().size(); ++ region_id) {
-        auto region = print.regions()[region_id];
+    for (const PrintRegion* region : print.regions()) {
         _write_format(file, "; external perimeters extrusion width = %.2fmm\n", region->flow(frExternalPerimeter, layer_height, false, false, -1., *first_object).width);
         _write_format(file, "; perimeters extrusion width = %.2fmm\n",          region->flow(frPerimeter,         layer_height, false, false, -1., *first_object).width);
         _write_format(file, "; infill extrusion width = %.2fmm\n",              region->flow(frInfill,            layer_height, false, false, -1., *first_object).width);
@@ -706,8 +709,8 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
     bool         has_wipe_tower      = false;
     if (print.config().complete_objects.value) {
         // Find the 1st printing object, find its tool ordering and the initial extruder ID.
-        for (; initial_print_object_id < printable_objects.size(); ++initial_print_object_id) {
-            tool_ordering = ToolOrdering(*printable_objects[initial_print_object_id], initial_extruder_id);
+        for (; initial_print_object_id < print.objects().size(); ++initial_print_object_id) {
+            tool_ordering = ToolOrdering(*print.objects()[initial_print_object_id], initial_extruder_id);
             if ((initial_extruder_id = tool_ordering.first_extruder()) != (unsigned int)-1)
                 break;
         }
@@ -791,7 +794,7 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
         // Collect outer contours of all objects over all layers.
         // Discard objects only containing thin walls (offset would fail on an empty polygon).
         Polygons islands;
-        for (const PrintObject *object : printable_objects)
+        for (const PrintObject *object : print.objects())
             for (const Layer *layer : object->layers())
                 for (const ExPolygon &expoly : layer->slices.expolygons)
                     for (const Point &copy : object->copies()) {
@@ -844,7 +847,7 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
     if (print.config().complete_objects.value) {
         // Print objects from the smallest to the tallest to avoid collisions
         // when moving onto next object starting point.
-        std::vector<PrintObject*> objects(printable_objects);
+        std::vector<PrintObject*> objects(print.objects());
         std::sort(objects.begin(), objects.end(), [](const PrintObject* po1, const PrintObject* po2) { return po1->size(2) < po2->size(2); });       
         size_t finished_objects = 0;
         for (size_t object_id = initial_print_object_id; object_id < objects.size(); ++ object_id) {
@@ -907,8 +910,7 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
         // Order objects using a nearest neighbor search.
         std::vector<size_t> object_indices;
         Points object_reference_points;
-        PrintObjectPtrs printable_objects = print.get_printable_objects();
-        for (PrintObject *object : printable_objects)
+        for (PrintObject *object : print.objects())
             object_reference_points.push_back(object->copies().front());
         Slic3r::Geometry::chained_path(object_reference_points, object_indices);
         // Sort layers by Z.
@@ -923,7 +925,7 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
                 // Verify, whether the print overaps the priming extrusions.
                 BoundingBoxf bbox_print(get_print_extrusions_extents(print));
                 coordf_t twolayers_printz = ((layers_to_print.size() == 1) ? layers_to_print.front() : layers_to_print[1]).first + EPSILON;
-                for (const PrintObject *print_object : printable_objects)
+                for (const PrintObject *print_object : print.objects())
                     bbox_print.merge(get_print_object_extrusions_extents(*print_object, twolayers_printz));
                 bbox_print.merge(get_wipe_tower_extrusions_extents(print, twolayers_printz));
                 BoundingBoxf bbox_prime(get_wipe_tower_priming_extrusions_extents(print));
@@ -1033,9 +1035,11 @@ void GCode::_do_export(Print &print, FILE *file, GCodePreviewData *preview_data)
     }
     print.throw_if_canceled();
 
-    // starts analizer calculations
-    if (preview_data != nullptr)
+    // starts analyzer calculations
+    if (preview_data != nullptr) {
+        BOOST_LOG_TRIVIAL(debug) << "Preparing G-code preview data";
         m_analyzer.calc_gcode_preview_data(*preview_data);
+    }
 }
 
 std::string GCode::placeholder_parser_process(const std::string &name, const std::string &templ, unsigned int current_extruder_id, const DynamicConfig *config_override)
@@ -1233,7 +1237,7 @@ void GCode::process_layer(
     const size_t                     single_object_idx)
 {
     assert(! layers.empty());
-    assert(! layer_tools.extruders.empty());
+//    assert(! layer_tools.extruders.empty());
     // Either printing all copies of all objects, or just a single copy of a single object.
     assert(single_object_idx == size_t(-1) || layers.size() == 1);
 
@@ -1313,6 +1317,18 @@ void GCode::process_layer(
         // Mark the temperature transition from 1st to 2nd layer to be finished.
         m_second_layer_things_done = true;
     }
+
+    // Let's issue a filament change command if requested at this layer.
+    // In case there are more toolchange requests that weren't done yet and should happen simultaneously, erase them all.
+    // (Layers can be close to each other, model could have been resliced with bigger layer height, ...).
+    bool colorprint_change = false;
+    while (!m_colorprint_heights.empty() && m_colorprint_heights.front()-EPSILON < layer.print_z) {
+        m_colorprint_heights.erase(m_colorprint_heights.begin());
+        colorprint_change = true;
+    }
+    if (colorprint_change && print.extruders().size()==1)
+        gcode += "M600\n";
+
 
     // Extrude skirt at the print_z of the raft layers and normal object layers
     // not at the print_z of the interlaced support material layers.
@@ -1437,7 +1453,7 @@ void GCode::process_layer(
             };
 
             for (size_t region_id = 0; region_id < print.regions().size(); ++ region_id) {
-                const LayerRegion *layerm = layer.regions()[region_id];
+                const LayerRegion *layerm = (region_id < layer.regions().size()) ? layer.regions()[region_id] : nullptr;
                 if (layerm == nullptr)
                     continue;
                 const PrintRegion &region = *print.regions()[region_id];
@@ -1486,7 +1502,7 @@ void GCode::process_layer(
                                         // fill->first_point fits inside ith slice
                                         point_inside_surface(i, fill->first_point())) {
                                         if (islands[i].by_region.empty()) {
-                                            islands[i].by_region.assign(print.regions.size(), ObjectByExtruder::Island::Region());
+                                            islands[i].by_region.assign(print.regions().size(), ObjectByExtruder::Island::Region());
                                         }
                                         //don't do fill->entities because it will discard no_sort
                                         islands[i].by_region[region_id].append(entity_type, fill, entity_overrides, layer_to_print.object()->copies().size());
@@ -1653,9 +1669,10 @@ void GCode::append_full_config(const Print& print, std::string& str)
     }
     const DynamicConfig &full_config = print.placeholder_parser().config();
 	for (const char *key : {
-		"print_settings_id", "filament_settings_id", "printer_settings_id",
-		"printer_model", "printer_variant", "default_print_profile", "default_filament_profile",
-		"compatible_printers_condition_cummulative", "inherits_cummulative" }) {
+		"print_settings_id", "filament_settings_id", "sla_print_settings_id", "sla_material_settings_id", "printer_settings_id",
+		"printer_model", "printer_variant", 
+	    "default_print_profile", "default_filament_profile", "default_sla_print_profile", "default_sla_material_profile",
+		"compatible_prints_condition_cummulative", "compatible_printers_condition_cummulative", "inherits_cummulative" }) {
 		const ConfigOption *opt = full_config.option(key);
 		if (opt != nullptr)
 			str += std::string("; ") + key + " = " + opt->serialize() + "\n";
@@ -2167,9 +2184,11 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
         m_wipe.path = paths.front().polyline;  // TODO: don't limit wipe to last path
     
     // make a little move inwards before leaving loop
-    if (paths.back().role() == erExternalPerimeter && m_layer != NULL && m_config.perimeters.value > 1) {
+	if (paths.back().role() == erExternalPerimeter && m_layer != NULL && m_config.perimeters.value > 1 && paths.front().size() >= 2 && paths.back().polyline.points.size() >= 3) {
         // detect angle between last and first segment
         // the side depends on the original winding order of the polygon (left for contours, right for holes)
+		//FIXME improve the algorithm in case the loop is tiny.
+		//FIXME improve the algorithm in case the loop is split into segments with a low number of points (see the Point b query).
         Point a = paths.front().polyline.points[1];  // second point
         Point b = *(paths.back().polyline.points.end()-3);       // second to last point
         if (was_clockwise) {
@@ -2274,8 +2293,8 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
 {
     std::string gcode;
     for (const ObjectByExtruder::Island::Region &region : by_region) {
-        if (print.regions[&region - &by_region.front()]->config().infill_first == is_infill_first) {
-            m_config.apply(print.regions[&region - &by_region.front()]->config);
+        if (print.regions()[&region - &by_region.front()]->config().infill_first == is_infill_first) {
+            m_config.apply(print.regions()[&region - &by_region.front()]->config());
             ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
             gcode += extrude_entity(chained, "infill");
         }

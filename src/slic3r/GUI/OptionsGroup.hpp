@@ -14,6 +14,7 @@
 #include "libslic3r/libslic3r.h"
 
 #include "Field.hpp"
+#include "GUI_App.hpp"
 
 // Translate the ifdef 
 #ifdef __WXOSX__
@@ -25,11 +26,6 @@
 #define BORDER(a, b) ((wxOSX ? a : b))
 
 namespace Slic3r { namespace GUI {
-
-enum ogDrawFlag{
-	ogDEFAULT,
-	ogSIDE_OPTIONS_VERTICAL
-};
 
 /// Widget type describes a function object that returns a wxWindow (our widget) and accepts a wxWidget (parent window).
 using widget_t = std::function<wxSizer*(wxWindow*)>;//!std::function<wxWindow*(wxWindow*)>;
@@ -89,7 +85,9 @@ public:
     size_t			label_width {200};
     wxSizer*		sizer {nullptr};
     column_t		extra_column {nullptr};
-    t_change		m_on_change {nullptr};
+    t_change		m_on_change { nullptr };
+    t_kill_focus    m_fill_empty_value { nullptr };
+    t_kill_focus    m_set_focus { nullptr };
 	std::function<DynamicPrintConfig()>	m_get_initial_config{ nullptr };
 	std::function<DynamicPrintConfig()>	m_get_sys_config{ nullptr };
 	std::function<bool()>	have_sys_config{ nullptr };
@@ -114,7 +112,7 @@ public:
     }
 #endif /* __WXGTK__ */
 
-	void		append_line(const Line& line, wxStaticText** colored_Label = nullptr);
+	void		append_line(const Line& line, wxStaticText** full_Label = nullptr);
     Line		create_single_option_line(const Option& option) const;
     void		append_single_option_line(const Option& option) { append_line(create_single_option_line(option)); }
 
@@ -150,20 +148,20 @@ public:
 
 	inline void		enable() { for (auto& field : m_fields) field.second->enable(); }
     inline void		disable() { for (auto& field : m_fields) field.second->disable(); }
-	void			set_flag(ogDrawFlag flag) { m_flag = flag; }
 	void			set_grid_vgap(int gap) { m_grid_sizer->SetVGap(gap); }
 
-	void set_show_modified_btns_val(bool show) {
-		m_show_modified_btns = show;
+	void            set_show_modified_btns_val(bool show) {
+		                m_show_modified_btns = show;
     }
 
 	OptionsGroup(	wxWindow* _parent, const wxString& title, bool is_tab_opt = false, 
-					ogDrawFlag flag = ogDEFAULT, column_t extra_clmn = nullptr) :
-					m_parent(_parent), title(title), m_show_modified_btns(is_tab_opt),
-					staticbox(title!=""), m_flag(flag), extra_column(extra_clmn){
+					column_t extra_clmn = nullptr) :
+					m_parent(_parent), title(title), 
+                    m_show_modified_btns(is_tab_opt),
+					staticbox(title!=""), extra_column(extra_clmn) {
         if (staticbox) {
             stb = new wxStaticBox(_parent, wxID_ANY, title);
-            stb->SetFont(bold_font());
+            stb->SetFont(wxGetApp().bold_font());
         }
         sizer = (staticbox ? new wxStaticBoxSizer(stb, wxVERTICAL) : new wxBoxSizer(wxVERTICAL));
         auto num_columns = 1U;
@@ -171,7 +169,7 @@ public:
         if (extra_column != nullptr) num_columns++;
         m_grid_sizer = new wxFlexGridSizer(0, num_columns, 1,0);
         static_cast<wxFlexGridSizer*>(m_grid_sizer)->SetFlexibleDirection(wxBOTH/*wxHORIZONTAL*/);
-        static_cast<wxFlexGridSizer*>(m_grid_sizer)->AddGrowableCol(label_width != 0);
+        static_cast<wxFlexGridSizer*>(m_grid_sizer)->AddGrowableCol(label_width == 0 ? 0 : !extra_column ? 1 : 2 );
 #ifdef __WXGTK__
         m_panel = new wxPanel( _parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
         sizer->Fit(m_panel);
@@ -181,11 +179,12 @@ public:
 #endif /* __WXGTK__ */
     }
 
-    wxGridSizer*        get_grid_sizer(){ return m_grid_sizer; }
+    wxGridSizer*        get_grid_sizer() { return m_grid_sizer; }
 
 protected:
 	std::map<t_config_option_key, Option>	m_options;
     wxWindow*				m_parent {nullptr};
+    std::vector<ConfigOptionMode>           m_options_mode;
 
     /// Field list, contains unique_ptrs of the derived type.
     /// using types that need to know what it is beyond the public interface 
@@ -195,8 +194,6 @@ protected:
     wxGridSizer*			m_grid_sizer {nullptr};
 	// "true" if option is created in preset tabs
 	bool					m_show_modified_btns{ false };
-
-	ogDrawFlag				m_flag{ ogDEFAULT };
 
 	// This panel is needed for correct showing of the ToolTips for Button, StaticText and CheckBox
 	// Tooltips on GTK doesn't work inside wxStaticBoxSizer unless you insert a panel 
@@ -213,23 +210,25 @@ protected:
 	const t_field&		build_field(const Option& opt, wxStaticText* label = nullptr);
 	void				add_undo_buttuns_to_sizer(wxSizer* sizer, const t_field& field);
 
-    virtual void		on_kill_focus (){};
+    virtual void		on_kill_focus(const std::string& opt_key) {};
+	virtual void		on_set_focus(const std::string& opt_key);
 	virtual void		on_change_OG(const t_config_option_key& opt_id, const boost::any& value);
-	virtual void		back_to_initial_value(const std::string& opt_key){}
-	virtual void		back_to_sys_value(const std::string& opt_key){}
+	virtual void		back_to_initial_value(const std::string& opt_key) {}
+	virtual void		back_to_sys_value(const std::string& opt_key) {}
 };
 
 class ConfigOptionsGroup: public OptionsGroup {
 public:
 	ConfigOptionsGroup(	wxWindow* parent, const wxString& title, DynamicPrintConfig* _config = nullptr, 
-						bool is_tab_opt = false, ogDrawFlag flag = ogDEFAULT, column_t extra_clmn = nullptr) :
-		OptionsGroup(parent, title, is_tab_opt, flag, extra_clmn), m_config(_config) {}
+						bool is_tab_opt = false, column_t extra_clmn = nullptr) :
+		OptionsGroup(parent, title, is_tab_opt, extra_clmn), m_config(_config) {}
 
     /// reference to libslic3r config, non-owning pointer (?).
     DynamicPrintConfig*		m_config {nullptr};
     bool					m_full_labels {0};
 	t_opt_map				m_opt_map;
 
+    void        set_config(DynamicPrintConfig* config) { m_config = config; }
 	Option		get_option(const std::string& opt_key, int opt_index = -1);
 	Line		create_single_option_line(const std::string& title, int idx = -1) /*const*/{
 		Option option = get_option(title, idx);
@@ -248,8 +247,12 @@ public:
 	void		back_to_initial_value(const std::string& opt_key) override;
 	void		back_to_sys_value(const std::string& opt_key) override;
 	void		back_to_config_value(const DynamicPrintConfig& config, const std::string& opt_key);
-	void		on_kill_focus() override{ reload_config();}
+    void		on_kill_focus(const std::string& opt_key) override;// { reload_config(); }
 	void		reload_config();
+    // return value shows visibility : false => all options are hidden
+    void        Hide();
+    void        Show(const bool show);
+    bool        update_visibility(ConfigOptionMode mode);
 	boost::any	config_value(const std::string& opt_key, int opt_index, bool deserialize);
 	// return option value from config 
 	boost::any	get_config_value(const DynamicPrintConfig& config, const std::string& opt_key, int opt_index = -1);
@@ -260,8 +263,8 @@ public:
 class ogStaticText :public wxStaticText{
 public:
 	ogStaticText() {}
-	ogStaticText(wxWindow* parent, const char *text) : wxStaticText(parent, wxID_ANY, text, wxDefaultPosition, wxDefaultSize){}
-	~ogStaticText(){}
+	ogStaticText(wxWindow* parent, const char *text) : wxStaticText(parent, wxID_ANY, text, wxDefaultPosition, wxDefaultSize) {}
+	~ogStaticText() {}
 
 	void		SetText(const wxString& value, bool wrap = true);
 };

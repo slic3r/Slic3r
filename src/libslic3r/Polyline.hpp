@@ -26,7 +26,7 @@ public:
     Polyline& operator=(const Polyline &other) { points = other.points; return *this; }
     Polyline& operator=(Polyline &&other) { points = std::move(other.points); return *this; }
     static Polyline new_scale(const std::vector<Vec2d> &points) {
-		Polyline pl;
+        Polyline pl;
         pl.points.reserve(points.size());
         for (const Vec2d &pt : points)
             pl.points.emplace_back(Point::new_scale(pt(0), pt(1)));
@@ -138,6 +138,11 @@ bool remove_degenerate(Polylines &polylines);
 /// join something or is a dead-end.
 class ThickPolyline : public Polyline {
 public:
+    /// width size must be == point size
+    std::vector<coordf_t> width;
+    /// if true => it's an endpoint, if false it join an other ThickPolyline. first is at front(), second is at back()
+    std::pair<bool, bool> endpoints;
+
     ThickPolyline() : endpoints(std::make_pair(false, false)) {}
     ThickLines thicklines() const;
     void reverse() {
@@ -145,14 +150,6 @@ public:
         std::reverse(this->width.begin(), this->width.end());
         std::swap(this->endpoints.first, this->endpoints.second);
     }
-
-    /// width size must be == point size
-    std::vector<coordf_t> width;
-    /// if true => it's an endpoint, if false it join an other ThickPolyline. first is at front(), second is at back()
-    std::pair<bool,bool> endpoints;
-    ThickPolyline() : endpoints(std::make_pair(false, false)) {};
-    ThickLines thicklines() const;
-    void reverse();
 };
 
 /// concatenate poylines if possible and refresh the endpoints

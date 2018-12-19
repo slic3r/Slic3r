@@ -1,12 +1,14 @@
 #include "BedShapeDialog.hpp"
 
+#include <wx/wx.h> 
+#include <wx/numformatter.h>
 #include <wx/sizer.h>
 #include <wx/statbox.h>
-#include <wx/wx.h> 
-#include "Polygon.hpp"
-#include "BoundingBox.hpp"
-#include <wx/numformatter.h>
-#include "Model.hpp"
+
+#include "libslic3r/BoundingBox.hpp"
+#include "libslic3r/Model.hpp"
+#include "libslic3r/Polygon.hpp"
+
 #include "boost/nowide/iostream.hpp"
 
 #include <algorithm>
@@ -28,7 +30,7 @@ void BedShapeDialog::build_dialog(ConfigOptionPoints* default_pt)
 	main_sizer->SetSizeHints(this);
 
 	// needed to actually free memory
-	this->Bind(wxEVT_CLOSE_WINDOW, ([this](wxCloseEvent e){
+	this->Bind(wxEVT_CLOSE_WINDOW, ([this](wxCloseEvent e) {
 		EndModal(wxID_OK);
 		Destroy();
 	}));
@@ -115,14 +117,15 @@ void BedShapePanel::build_panel(ConfigOptionPoints* default_pt)
 
 // Called from the constructor.
 // Create a panel for a rectangular / circular / custom bed shape.
-ConfigOptionsGroupShp BedShapePanel::init_shape_options_page(wxString title){
+ConfigOptionsGroupShp BedShapePanel::init_shape_options_page(wxString title)
+{
 
 	auto panel = new wxPanel(m_shape_options_book);
 	ConfigOptionsGroupShp optgroup;
 	optgroup = std::make_shared<ConfigOptionsGroup>(panel, _(L("Settings")));
 
 	optgroup->label_width = 100;
-	optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value){
+	optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
 		update_shape();
 	};
 		
@@ -234,14 +237,15 @@ void BedShapePanel::update_shape()
 		Vec2d rect_origin(Vec2d::Zero());
 		try{
 			rect_size = boost::any_cast<Vec2d>(m_optgroups[SHAPE_RECTANGULAR]->get_value("rect_size")); }
-		catch (const std::exception &e){
+		catch (const std::exception & /* e */) {
 			return;
 		}
-		try{
+		try {
 			rect_origin = boost::any_cast<Vec2d>(m_optgroups[SHAPE_RECTANGULAR]->get_value("rect_origin"));
 		}
-		catch (const std::exception &e){
-			return;}
+		catch (const std::exception & /* e */) {
+			return;
+		}
 		
 		auto x = rect_size(0);
 		auto y = rect_size(1);
@@ -269,7 +273,7 @@ void BedShapePanel::update_shape()
 		try{
 			diameter = boost::any_cast<double>(m_optgroups[SHAPE_CIRCULAR]->get_value("diameter"));
 		}
-		catch (const std::exception &e){
+		catch (const std::exception & /* e */) {
 			return;
 		} 
  		if (diameter == 0.0) return ;
@@ -277,7 +281,7 @@ void BedShapePanel::update_shape()
 		auto twopi = 2 * PI;
 		auto edges = 60;
 		std::vector<Vec2d> points;
-		for (size_t i = 1; i <= 60; ++i){
+		for (size_t i = 1; i <= 60; ++i) {
 			auto angle = i * twopi / edges;
 			points.push_back(Vec2d(r*cos(angle), r*sin(angle)));
 		}
@@ -291,14 +295,8 @@ void BedShapePanel::update_shape()
 // Loads an stl file, projects it to the XY plane and calculates a polygon.
 void BedShapePanel::load_stl()
 {
-	t_file_wild_card vec_FILE_WILDCARDS = get_file_wild_card();
-    std::vector<std::string> file_types = { "known", "stl", "obj", "amf", "3mf", "prusa" };
-    wxString MODEL_WILDCARD;
-	for (auto file_type: file_types)
-		MODEL_WILDCARD += vec_FILE_WILDCARDS.at(file_type) + "|";
-
 	auto dialog = new wxFileDialog(this, _(L("Choose a file to import bed shape from (STL/OBJ/AMF/3MF/PRUSA):")), "", "",
-		MODEL_WILDCARD, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+		file_wildcards(FT_MODEL), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	if (dialog->ShowModal() != wxID_OK) {
 		dialog->Destroy();
 		return;
