@@ -12,3 +12,4 @@ xs/assertlib*
 .init_bundle.ini
 local-lib
 build*
+deps/deps-build
