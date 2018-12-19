@@ -71,8 +71,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = L("Avoid crossing perimeters");
     def->tooltip = L("Optimize travel moves in order to minimize the crossing of perimeters. "
-        "This is mostly useful with Bowden extruders which suffer from oozing. "
-        "This feature slows down both the print and the G-code generation.");
+                   "This is mostly useful with Bowden extruders which suffer from oozing. "
+                   "This feature slows down both the print and the G-code generation.");
     def->cli = "avoid-crossing-perimeters!";
     def->default_value = new ConfigOptionBool(false);
 
@@ -85,7 +85,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("bed_shape", coPoints);
-	def->label = L("Bed shape");
+    def->label = L("Bed shape");
     def->default_value = new ConfigOptionPoints { Pointf(0,0), Pointf(200,0), Pointf(200,200), Pointf(0,200) };
     
     def = this->add("bed_temperature", coInts);
@@ -137,12 +137,12 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("bridge_angle", coFloat);
-    def->label = L("Bridging angle");
+    def->label = L("Bridging");
     def->category = L("Infill");
     def->tooltip = L("Bridging angle override. If left to zero, the bridging angle will be calculated "
                    "automatically. Otherwise the provided angle will be used for all bridges. "
                    "Use 180° for zero angle.");
-	def->sidetext = L("°");
+    def->sidetext = L("°");
     def->cli = "bridge-angle=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0.);
@@ -166,7 +166,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionInts{ 100 };
 
     def = this->add("bridge_flow_ratio", coFloat);
-    def->label = L("Bridge flow ratio");
+    def->label = L("Bridge");
     def->category = L("Advanced");
     def->tooltip = L("This factor affects the amount of plastic for bridging. "
                    "You can decrease it slightly to pull the extrudates and prevent sagging, "
@@ -174,19 +174,20 @@ void PrintConfigDef::init_fff_params()
                    "with cooling (use a fan) before tweaking this.");
     def->cli = "bridge-flow-ratio=f";
     def->min = 0;
-	def->max = 2;
-	def->default_value = new ConfigOptionFloat(1);
+    def->max = 2;
+    def->default_value = new ConfigOptionFloat(1);
 
     def = this->add("over_bridge_flow_ratio", coFloat);
-    def->label = L("Over-bridge flow ratio");
+    def->label = L("Above the bridges");
     def->category = L("Advanced");
     def->tooltip = L("This factor affects the amount of plastic to overextrude "
                    "when we are filling on top of a bridge surface."
-                   "With a number >1, we can retreive the correct z-height "
-				   "even if the bridged layer has fallen a bit.");
+                   "With a number >1, we can retrieve a correct z-height "
+                   "even if the bridged layer has fallen a bit. "
+                   "It's useful if you want to have a nice flat top layer.");
     def->cli = "over-bridge-flow-ratio=f";
     def->min = 0;
-    def->default_value = new ConfigOptionFloat(1);
+    def->default_value = new ConfigOptionFloat(1.15);
 
     def = this->add("bridge_speed", coFloat);
     def->label = L("Bridges");
@@ -312,13 +313,12 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloat(6);
 
     def = this->add("elefant_foot_compensation", coFloat);
-    def->label = L("Elephant foot compensation");
+    def->label = L("First layer");
     def->category = L("Advanced");
-    def->tooltip = L("The first layer will be shrunk in the XY plane by the configured value "
-                   "to compensate for the 1st layer squish aka an Elephant Foot effect.");
+    def->tooltip = L("The first layer will be grown / shrunk in the XY plane by the configured value "
+                   "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)");
     def->sidetext = L("mm");
     def->cli = "elefant-foot-compensation=f";
-    def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("end_gcode", coString);
@@ -351,7 +351,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("top_fill_pattern", coEnum);
-    def->label = L("Top fill pattern");
+    def->label = L("Top Pattern");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for top infill. This only affects the top external visible layer, and not its adjacent solid shells.");
     def->cli = "top-fill-pattern|solid-fill-pattern=s";
@@ -372,14 +372,12 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Archimedean Chords"));
     def->enum_labels.push_back(L("Octagram Spiral"));
     def->enum_labels.push_back(L("Ironing"));
-    def->enum_labels.push_back(L("Ironing (triple)"));
-    def->enum_labels.push_back(L("Ironing (hilbert)"));
     // solid_fill_pattern is an obsolete equivalent to top_fill_pattern/bottom_fill_pattern.
     def->aliases = { "solid_fill_pattern" };
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("bottom_fill_pattern", coEnum);
-    def->label = L("Bottom fill pattern");
+    def->label = L("Bottom Pattern");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for bottom infill. This only affects the bottom external visible layer, and not its adjacent solid shells.");
     def->cli = "bottom-fill-pattern|solid-fill-pattern=s";
@@ -399,9 +397,12 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("enforce_full_fill_volume", coBool);
-    def->label = L("Enforce full fill volume");
+    def->label = L("Enforce 100% fill volume");
     def->category = L("Infill");
-    def->tooltip = L("Experimental option which modifies (top/bottom) fill flow to have the exact amount of plastic inside the volume to fill.");
+    def->tooltip = L("Experimental option which modifies (in solid infill) fill flow to have the exact amount of plastic inside the volume to fill "
+        "(it generally changes the flow from -7% to +4%, depending on the size of the surface to fill and the overlap parameters, "
+        "but it can go as high as +50% for infill in very small areas where rectilinear doesn't have good coverage). It has the advantage "
+        "to remove the over-extrusion seen in thin infill areas, from the overlap ratio");
     def->cli = "enforce-full-fill-volume!";
     def->default_value = new ConfigOptionBool(true);
 
@@ -434,7 +435,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloatOrPercent(0, false);
 
     def = this->add("external_perimeter_speed", coFloatOrPercent);
-    def->label = L("External perimeters");
+    def->label = L("External");
     def->category = L("Speed");
     def->tooltip = L("This separate setting will affect the speed of external perimeters (the visible ones). "
                    "If expressed as percentage (for example: 80%) it will be calculated "
@@ -772,7 +773,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionStrings { "" };
 
     def = this->add("fill_angle", coFloat);
-    def->label = L("Fill angle");
+    def->label = L("Fill");
     def->category = L("Infill");
     def->tooltip = L("Default base angle for infill orientation. Cross-hatching will be applied to this. "
                    "Bridges will be infilled using the best direction Slic3r can detect, so this setting "
@@ -793,6 +794,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "fill-density=s";
     def->min = 0;
     def->max = 100;
+    /*
     def->enum_values.push_back("0");
     def->enum_values.push_back("5");
     def->enum_values.push_back("10");
@@ -821,7 +823,34 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back("80%");
     def->enum_labels.push_back("90%");
     def->enum_labels.push_back("100%");
-    def->default_value = new ConfigOptionPercent(20);
+    */
+    def->enum_values.push_back("0");
+    def->enum_values.push_back("4");
+    def->enum_values.push_back("5.5");
+    def->enum_values.push_back("7.5");
+    def->enum_values.push_back("10");
+    def->enum_values.push_back("13");
+    def->enum_values.push_back("18");
+    def->enum_values.push_back("23");
+    def->enum_values.push_back("31");
+    def->enum_values.push_back("42");
+    def->enum_values.push_back("55");
+    def->enum_values.push_back("75");
+    def->enum_values.push_back("100");
+    def->enum_labels.push_back("0");
+    def->enum_labels.push_back("4");
+    def->enum_labels.push_back("5.5");
+    def->enum_labels.push_back("7.5");
+    def->enum_labels.push_back("10");
+    def->enum_labels.push_back("13");
+    def->enum_labels.push_back("18");
+    def->enum_labels.push_back("23");
+    def->enum_labels.push_back("31");
+    def->enum_labels.push_back("42");
+    def->enum_labels.push_back("55");
+    def->enum_labels.push_back("75");
+    def->enum_labels.push_back("100");
+    def->default_value = new ConfigOptionPercent(18);
 
     def = this->add("fill_pattern", coEnum);
     def->label = L("Pattern");
@@ -902,12 +931,11 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloatOrPercent(0.35, false);
     
     def = this->add("first_layer_speed", coFloatOrPercent);
-    def->label = L("default");
+    def->label = L("Default");
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
                    "but infill of the first layer, it can be overwrite by the 'default' (default depends of the type of the path) "
                    "speed if it's lower than that. If expressed as a percentage "
-                   "(for example: 40%) it will scale the 'default' speeds . "
-                   "If expressed as absolute value, it can be overwrite by the 'default' speed if it's lower than that.");
+                   "(for example: 40%) it will scale the 'default' speeds.");
     def->sidetext = L("mm/s or %");
     def->cli = "first-layer-speed=s";
     def->min = 0;
@@ -918,8 +946,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to infill moves "
                    "of the first layer, it can be overwrite by the 'default' (solid infill or infill if not bottom) "
                    "speed if it's lower than that. If expressed as a percentage "
-                   "(for example: 40%) it will scale the 'default' speed. "
-                   "If expressed as absolute value, it can be overwrite by the 'default' speed if it's lower than that.");
+                   "(for example: 40%) it will scale the 'default' speed.");
     def->sidetext = L("mm/s or %");
     def->cli = "first-layer-infill-speed=s";
     def->min = 0;
@@ -932,13 +959,21 @@ void PrintConfigDef::init_fff_params()
     def->cli = "first-layer-temperature=i@";
     def->min = 0;
     def->max = max_temp;
-    def->default_value = new ConfigOptionInts { 200 };
-    
+    def->default_value = new ConfigOptionInts{ 200 };
+
+    def = this->add("gap_fill", coBool);
+    def->label = L("Gap fill");
+    def->category = L("Advanced");
+    def->tooltip = L("Enable gap fill algorithm. It will extrude small lines between perimeters "
+        "when there is not enough space for another perimeter or an infill.");
+    def->cli = "gap-fill!";
+    def->default_value = new ConfigOptionBool(true);
+
     def = this->add("gap_fill_speed", coFloat);
     def->label = L("Gap fill");
     def->category = L("Speed");
     def->tooltip = L("Speed for filling small gaps using short zigzag moves. Keep this reasonably low "
-                   "to avoid too much shaking and resonance issues. Set zero to disable gaps filling.");
+        "to avoid too much shaking and resonance issues. Set zero to disable gaps filling.");
     def->sidetext = L("mm/s");
     def->cli = "gap-fill-speed=f";
     def->min = 0;
@@ -947,9 +982,15 @@ void PrintConfigDef::init_fff_params()
     def = this->add("gcode_comments", coBool);
     def->label = L("Verbose G-code");
     def->tooltip = L("Enable this to get a commented G-code file, with each line explained by a descriptive text. "
-                   "If you print from SD card, the additional weight of the file could make your firmware "
-                   "slow down.");
+        "If you print from SD card, the additional weight of the file could make your firmware "
+        "slow down.");
     def->cli = "gcode-comments!";
+    def->default_value = new ConfigOptionBool(0);
+
+    def = this->add("label_printed_objects", coBool);
+    def->label = "Label Prints with Object ID";
+    def->tooltip = "Enable this to add comments in the G-Code that label print moves with what object they belong. Can be used with Octoprint CancelObject plugin.";
+    def->cli = "label-printed-objects!";
     def->default_value = new ConfigOptionBool(0);
 
     def = this->add("gcode_flavor", coEnum);
@@ -1004,13 +1045,13 @@ void PrintConfigDef::init_fff_params()
     def = this->add("infill_dense", coBool);
     def->label = ("");
     def->category = L("Infill");
-    def->tooltip = L("Enables the creation of a support layer under the first solid layer. This allows you to use a lower infill ratio without compromizing the top quality."
+    def->tooltip = L("Enables the creation of a support layer under the first solid layer. This allows you to use a lower infill ratio without compromising the top quality."
         " The dense infill is laid out with a 50% infill density.");
     def->cli = "infill-dense!";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("infill_not_connected", coBool);
-    def->label = ("Do not connect infill lines to each other.");
+    def->label = ("Do not connect infill lines to each other");
     def->category = L("Infill");
     def->tooltip = L("If checked, the infill algorithm will try to not connect the lines near the infill. Can be useful for art or with high infill/perimeter overlap.");
     def->cli = "infill-not-connected!";
@@ -1078,7 +1119,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloatOrPercent(25, true);
 
     def = this->add("infill_speed", coFloat);
-    def->label = L("Infill");
+    def->label = L("Sparse");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing the internal fill. Set to zero for auto.");
     def->sidetext = L("mm/s");
@@ -1118,6 +1159,13 @@ void PrintConfigDef::init_fff_params()
     def->full_width = true;
     def->height = 50;
     def->default_value = new ConfigOptionString("");
+
+    def = this->add("exact_last_layer_height", coBool);
+    def->label = L("Exact last layer height");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("This setting controls the height of last object layers to put the last layer at the exact highest height possible. Experimental.");
+    def->cli = "exact_last-layer-height=f";
+    def->default_value = new ConfigOptionBool(false);
 
     def = this->add("remaining_times", coBool);
     def->label = L("Supports remaining times");
@@ -1402,14 +1450,14 @@ void PrintConfigDef::init_fff_params()
     def = this->add("no_perimeter_unsupported", coBool);
     def->label = L("");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and a bridged infill should be better.");
+    def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. Computationally intensive!");
     def->cli = "no-perimeter-unsupported!";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("min_perimeter_unsupported", coInt);
     def->label = L("Minimum perimeters");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Number of permieter exluded from this option.");
+    def->tooltip = L("Number of perimeters exluded from this option.");
     def->cli = "min-perimeter-unsupported=i";
     def->min = 0;
     def->default_value = new ConfigOptionInt(0);
@@ -1470,7 +1518,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloatOrPercent(0, false);
 
     def = this->add("perimeter_speed", coFloat);
-    def->label = L("Perimeters");
+    def->label = L("Default");
     def->category = L("Speed");
     def->tooltip = L("Speed for perimeters (contours, aka vertical shells). Set to zero for auto.");
     def->sidetext = L("mm/s");
@@ -1773,7 +1821,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionInts { 5 };
 
     def = this->add("small_perimeter_speed", coFloatOrPercent);
-    def->label = L("Small perimeters");
+    def->label = L("Small");
     def->category = L("Speed");
     def->tooltip = L("This separate setting will affect the speed of perimeters having radius <= 6.5mm "
                    "(usually holes). If expressed as percentage (for example: 80%) it will be calculated "
@@ -1824,7 +1872,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloatOrPercent(0, false);
 
     def = this->add("solid_infill_speed", coFloatOrPercent);
-    def->label = L("Solid infill");
+    def->label = L("Solid");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing solid regions (top/bottom/internal horizontal shells). "
                    "This can be expressed as a percentage (for example: 80%) over the default "
@@ -2034,7 +2082,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
-    def->label = L("Support material interface");
+    def->label = L("Interface");
     def->category = L("Support material");
     def->tooltip = L("Speed for printing support material interface layers. If expressed as percentage "
                    "(for example 50%) it will be calculated over support material speed.");
@@ -2068,7 +2116,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloat(2.5);
 
     def = this->add("support_material_speed", coFloat);
-    def->label = L("Support material");
+    def->label = L("Default");
     def->category = L("Support material");
     def->tooltip = L("Speed for printing support material.");
     def->sidetext = L("mm/s");
@@ -2159,7 +2207,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloatOrPercent(0, false);
 
     def = this->add("top_solid_infill_speed", coFloatOrPercent);
-    def->label = L("Top solid infill");
+    def->label = L("Top solid");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing top solid layers (it only applies to the uppermost "
                    "external layers and not to their internal solid layers). You may want "
@@ -2256,14 +2304,14 @@ void PrintConfigDef::init_fff_params()
                                                   140.f, 140.f, 140.f, 140.f,   0.f };
 
     def = this->add("wipe_tower_x", coFloat);
-    def->label = L("Position X");
+    def->label = L("X");
     def->tooltip = L("X coordinate of the left front corner of a wipe tower");
     def->sidetext = L("mm");
     def->cli = "wipe-tower-x=f";
     def->default_value = new ConfigOptionFloat(180.);
 
     def = this->add("wipe_tower_y", coFloat);
-    def->label = L("Position Y");
+    def->label = L("Y");
     def->tooltip = L("Y coordinate of the left front corner of a wipe tower");
     def->sidetext = L("mm");
     def->cli = "wipe-tower-y=f";
@@ -2309,7 +2357,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloat(10.);
 
     def = this->add("xy_size_compensation", coFloat);
-    def->label = L("XY Size Compensation");
+    def->label = L("All layers");
     def->category = L("Advanced");
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
                    "(negative = inwards, positive = outwards). This might be useful "
@@ -2321,7 +2369,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("hole_size_compensation", coFloat);
     def->label = L("Holes");
     def->category = L("Advanced");
-    def->tooltip = L("The convex holes will be grown in the XY plane by the configured value"
+    def->tooltip = L("The convex holes will be grown / shrunk in the XY plane by the configured value"
                    " (negative = inwards, positive = outwards, should be positive as the holes are always a bit smaller)."
                    " This might be useful for fine-tuning hole sizes.");
     def->sidetext = L("mm");
@@ -2597,9 +2645,13 @@ void DynamicPrintConfig::normalize()
             opt->values.assign(opt->values.size(), false);  // set all values to false
         }
         {
-            this->opt<ConfigOptionInt>("perimeters", true)->value       = 1;
+            this->opt<ConfigOptionInt>("perimeters", true)->value = 1;
             this->opt<ConfigOptionInt>("top_solid_layers", true)->value = 0;
-            this->opt<ConfigOptionPercent>("fill_density", true)->value  = 0;
+            this->opt<ConfigOptionPercent>("fill_density", true)->value = 0;
+            this->opt<ConfigOptionBool>("support_material", true)->value = false;
+            this->opt<ConfigOptionInt>("support_material_enforce_layers")->value = 0;
+            this->opt<ConfigOptionBool>("exact_last_layer_height", true)->value  = false;
+            this->opt<ConfigOptionBool>("ensure_vertical_shell_thickness", true)->value  = false;
         }
     }
 }

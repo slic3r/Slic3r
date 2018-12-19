@@ -1583,7 +1583,7 @@ void GCode::process_layer(
                 
                 unsigned int copy_id = 0;
                 for (const Point &copy : copies) {
-                    if (this->config().gcode_comments){
+                    if (this->config().label_printed_objects) {
                         gcode += ((std::ostringstream&)(std::ostringstream() << "; printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_id << "\n")).str();
                     }
                     // When starting a new object, use the external motion planner for the first travel move.
@@ -1606,7 +1606,7 @@ void GCode::process_layer(
                         gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[layer_id]);
                         gcode += this->extrude_infill(print, by_region_specific, false);
                     }
-                    if (this->config().gcode_comments) {
+                    if (this->config().label_printed_objects) {
                         gcode += ((std::ostringstream&)(std::ostringstream() << "; stop printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_id << "\n")).str();
                     }
                     ++copy_id;

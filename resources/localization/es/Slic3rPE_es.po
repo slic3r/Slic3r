@@ -86,8 +86,8 @@ msgstr ""
 "No es un valor numérico."
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:66
-msgid " - Remember to check for updates at http://github.com/prusa3d/slic3r/releases"
-msgstr " - Recuerda comprobar si hay actualizaciones en http://github.com/prusa3d/slic3r/releases"
+msgid " - Remember to check for updates at http://github.com/supermerill/slic3r/releases"
+msgstr " - Recuerda comprobar si hay actualizaciones en http://github.com/supermerill/slic3r/releases"
 
 # Used in this context: _("Save ") + title + _(" as:")
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.cpp:1751
@@ -1605,8 +1605,8 @@ msgstr "Altura de la falda expresada en capas. Establezca esto en un valor alto 
 
 #: xs/src/slic3r/GUI/ConfigWizard.cpp:213
 #, c-format
-msgid "Hello, welcome to Slic3r Prusa Edition! This %s helps you with the initial configuration; just a few settings and you will be ready to print."
-msgstr "Hola, bienvenido a Slic3r  Prusa Edition! Este %s te ayuda con la configuración inicial; sólo unos pocos ajustes y estarás preparado para imprimir."
+msgid "Hello, welcome to Slic3r Slic3r++! This %s helps you with the initial configuration; just a few settings and you will be ready to print."
+msgstr "Hola, bienvenido a Slic3r  Slic3r++! Este %s te ayuda con la configuración inicial; sólo unos pocos ajustes y estarás preparado para imprimir."
 
 #: xs/src/slic3r/GUI/WipeTowerDialog.cpp:218
 msgid "Here you can adjust required purging volume (mm³) for any given pair of tools."
@@ -2347,8 +2347,8 @@ msgid "Open the object editor dialog"
 msgstr "Abrir el cuadro del editor de objetos"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Open the Prusa Edition releases page in your browser"
-msgstr "Abrir la página de lanzamientos de Prusa Edition en su navegador"
+msgid "Open the Slic3r++ releases page in your browser"
+msgstr "Abrir la página de lanzamientos de Slic3r++ en su navegador"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:385
 msgid "Open the Prusa3D drivers download page in your browser"
@@ -2594,7 +2594,7 @@ msgid "Prusa 3D Drivers"
 msgstr "Controladores de Prusa 3D"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Prusa Edition Releases"
+msgid "Slic3r++ Releases"
 msgstr "Lanzamientos de la Edición Prusa"
 
 #: xs/src/slic3r/GUI/GUI.cpp:908
@@ -2753,7 +2753,7 @@ msgid "Report an Issue"
 msgstr "Informar de un problema"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:405
-msgid "Report an issue on the Slic3r Prusa Edition"
+msgid "Report an issue on the Slic3r Slic3r++"
 msgstr "Informar de un problema de Slic3r Edición Prusa"
 
 #: xs/src/slic3r/Utils/PresetUpdater.cpp:514

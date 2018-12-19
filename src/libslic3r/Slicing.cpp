@@ -71,6 +71,7 @@ SlicingParameters SlicingParameters::create_from_config(
     // Miniumum/maximum of the minimum layer height over all extruders.
     params.min_layer_height = MIN_LAYER_HEIGHT;
     params.max_layer_height = std::numeric_limits<double>::max();
+    params.exact_last_layer_height = object_config.exact_last_layer_height.value;
     if (object_config.support_material.value || params.base_raft_layers > 0) {
         // Has some form of support. Add the support layers to the minimum / maximum layer height limits.
         params.min_layer_height = std::max(
@@ -553,7 +554,7 @@ std::vector<coordf_t> generate_object_layers(
     }
 
     // Adjust the last layer to align with the top object layer exactly
-    if (out.size() > 0 && slicing_params.object_print_z_height() != out[out.size()-1]){
+    if (out.size() > 0 && slicing_params.object_print_z_height() != out[out.size() - 1] && slicing_params.exact_last_layer_height) {
         float neededPrintZ = slicing_params.object_print_z_height();
         int idx_layer = out.size() / 2 - 1;
         float diffZ = neededPrintZ - out[idx_layer * 2 + 1];

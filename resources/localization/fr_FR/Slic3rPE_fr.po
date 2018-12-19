@@ -86,8 +86,8 @@ msgstr ""
 "Valeur non-numérique."
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:66
-msgid " - Remember to check for updates at http://github.com/prusa3d/slic3r/releases"
-msgstr " - Pensez à vérifier les mises à jours sur http://github.com/prusa3d/slic3r/releases"
+msgid " - Remember to check for updates at http://github.com/supermerill/slic3r/releases"
+msgstr " - Pensez à vérifier les mises à jours sur http://github.com/supermerill/slic3r/releases"
 
 # Used in this context: _("Save ") + title + _(" as:")
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.cpp:1751
@@ -329,7 +329,7 @@ msgstr "Ajouter plus de périmètres si nécessaire pour éviter des trous dans 
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:240
 msgid "Add solid infill near sloping surfaces to guarantee the vertical shell thickness (top+bottom solid layers)."
-msgstr "Ajouter un remplissage plein à proximité des surfaces inclinées pour garantir une épaisseur de coque verticale (couches solides supérieures+inférieures)."
+msgstr "Ajouter un remplissage plein à proximité des surfaces inclinées pour garantir une épaisseur de coque verticale (couches pleines supérieures+inférieures)."
 
 #: xs/src/slic3r/GUI/Tab.cpp:754
 msgid "Additional information:"
@@ -572,7 +572,7 @@ msgstr "Dessous"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:72
 msgid "Bottom solid layers"
-msgstr "Couches solides inférieures"
+msgstr "Couches pleines inférieures"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:370
 msgid "Bottom View"
@@ -580,11 +580,7 @@ msgstr "Vue du Dessous"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:77
 msgid "Bridge"
-msgstr "Pont"
-
-#: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:106
-msgid "Bridge flow ratio"
-msgstr "Ratio de flux pour les ponts"
+msgstr "Ponts"
 
 #: c:\src\Slic3r\xs\src\libslic3r\GCode\PreviewData.cpp:144
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater\3DPreview.pm:86
@@ -600,12 +596,12 @@ msgid "Bridges fan speed"
 msgstr "Vitesse du ventilateur pour les ponts"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:86
-msgid "Bridging angle"
-msgstr "Angle du pont"
+msgid "Bridging"
+msgstr "Pont"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:88
 msgid "Bridging angle override. If left to zero, the bridging angle will be calculated automatically. Otherwise the provided angle will be used for all bridges. Use 180° for zero angle."
-msgstr "Contournement de l'angle du pont. Si laissé à zéro, l'angle du pont sera calculé automatiquement. Sinon, l'angle fourni sera utilisé pour tous les ponts. Utilisez 180° pour un angle nul."
+msgstr "Ecraser l'angle des ponts. Si laissé à zéro, l'angle des ponts sera calculé automatiquement. Sinon, l'angle fourni sera utilisé pour tous les ponts. Utilisez 180° pour un angle nul."
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\PresetHints.cpp:214
 msgid "Bridging volumetric"
@@ -613,11 +609,11 @@ msgstr "Volumétrie des ponts"
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.cpp:371
 msgid "Brim"
-msgstr "Bordure"
+msgstr "Jupe"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:127
 msgid "Brim width"
-msgstr "Largeur de la bordure"
+msgstr "Largeur de la jupe"
 
 #: xs/src/slic3r/GUI/ButtonsDescription.cpp:13
 msgid "Buttons And Text Colors Description"
@@ -977,7 +973,7 @@ msgstr "Distance entre les copies"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1213
 msgid "Distance between skirt and object(s). Set this to zero to attach the skirt to the object(s) and get a brim for better adhesion."
-msgstr "Distance entre le ou les objet(s) et la jupe. Mettez zéro pour attacher la jupe a(ux) objet(s) et obtenir une bordure pour une meilleure adhésion."
+msgstr "Distance entre le ou les objet(s) et la clôture. Mettez zéro pour attacher la clôture a(ux) objet(s) et obtenir une jupe, mais dans ce cas préférez l'utilisation du paramètre de la taille de jupe."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1212
 msgid "Distance from object"
@@ -1429,7 +1425,7 @@ msgstr "Motif pour les remplissages de faible densité."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:248
 msgid "Fill pattern for top/bottom infill. This only affects the external visible layer, and not its adjacent solid shells."
-msgstr "Motif pour les remplissages supérieurs/inférieurs. Ceci affecte seulement la couche externe visible, et non les coques solides adjacentes."
+msgstr "Motif pour les surfaces supérieurs/inférieurs. Ceci affecte seulement la couche externe visible, et non les replissages plein adjacents."
 
 #: xs/src/slic3r/GUI/BonjourDialog.cpp:194
 msgid "Finished"
@@ -1520,11 +1516,11 @@ msgstr ""
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1264
 msgid "Force solid infill for regions having a smaller area than the specified threshold."
-msgstr "Forcer un remplissage solide pour les zones ayant une surface plus petite que la valeur indiquée."
+msgstr "Forcer un remplissage plein pour les zones ayant une surface plus petite que la valeur indiquée."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:758
 msgid "Force the generation of solid shells between adjacent materials/volumes. Useful for multi-extruder prints with translucent materials or manual soluble support material."
-msgstr "Force la génération de coques solides entre des volumes/matériaux adjacents. Utile pour des impressions multi-extrudeurs avec des matériaux translucides ou avec un support manuel soluble."
+msgstr "Force la génération de coques pleines entre des volumes/matériaux adjacents. Utile pour des impressions multi-extrudeurs avec des matériaux translucides ou avec un support manuel soluble."
 
 #: xs/src/slic3r/GUI/WipeTowerDialog.cpp:260
 msgid "From"
@@ -1567,7 +1563,7 @@ msgstr "Général"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:875
 msgid "Generate no less than the number of skirt loops required to consume the specified amount of filament on the bottom layer. For multi-extruder machines, this minimum applies to each extruder."
-msgstr "Nombre minimum de contours à générer afin de consommer la quantité de filament spécifiée sur la couche inférieure. Pour les machines multi-extrudeurs, ce minimum s'applique à chaque extrudeur."
+msgstr "Nombre minimum de clôtures à générer afin de consommer la quantité de filament spécifiée sur la couche inférieure. Pour les machines multi-extrudeurs, ce minimum s'applique à chaque extrudeur."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1379
 msgid "Generate support material"
@@ -1596,12 +1592,12 @@ msgstr "Hauteur (mm)"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1222
 msgid "Height of skirt expressed in layers. Set this to a tall value to use skirt as a shield against drafts."
-msgstr "Hauteur de la jupe exprimée en couches. Mettez une valeur élevée pour utiliser la jupe comme un bouclier contre les flux d'airs."
+msgstr "Hauteur de la clôture exprimée en couches. Mettez une valeur élevée pour utiliser la clôture comme un bouclier contre les flux d'airs."
 
 #: xs/src/slic3r/GUI/ConfigWizard.cpp:213
 #, c-format
-msgid "Hello, welcome to Slic3r Prusa Edition! This %s helps you with the initial configuration; just a few settings and you will be ready to print."
-msgstr "Bonjour, bienvenu dans Slic3r Prusa Edition ! Ce %s vous aide à la configuration initiale ; juste quelques paramètres et vous serez prêt à imprimer."
+msgid "Hello, welcome to Slic3r Slic3r++! This %s helps you with the initial configuration; just a few settings and you will be ready to print."
+msgstr "Bonjour, bienvenu dans Slic3r Slic3r++ ! Ce %s vous aide à la configuration initiale ; juste quelques paramètres et vous serez prêt à imprimer."
 
 #: xs/src/slic3r/GUI/WipeTowerDialog.cpp:218
 msgid "Here you can adjust required purging volume (mm³) for any given pair of tools."
@@ -1613,7 +1609,7 @@ msgstr "Coques horizontales"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:128
 msgid "Horizontal width of the brim that will be printed around each object on the first layer."
-msgstr "Largeur horizontale de la bordure qui sera imprimée autour de chaque objet sur la première couche."
+msgstr "Largeur horizontale de la jupe qui sera imprimée autour de chaque objet sur la première couche."
 
 #: xs/src/slic3r/GUI/BonjourDialog.cpp:67
 msgid "Hostname"
@@ -2261,19 +2257,19 @@ msgstr "Nombre de couches d'interface à insérer entre le(s) objet(s) et les su
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1231
 msgid "Number of loops for the skirt. If the Minimum Extrusion Length option is set, the number of loops might be greater than the one configured here. Set this to zero to disable skirt completely."
-msgstr "Nombre de boucles pour la jupe. Si la Longueur Minimale d'Extrusion est paramétrée, le nombre de boucles minimal sera plus grand que celui configuré ici. Mettez à zéro pour désactiver complètement la jupe."
+msgstr "Nombre de boucles pour la clôture. Si la Longueur Minimale d'Extrusion est paramétrée, le nombre de boucles minimale sera plus grand que celui configuré ici. Mettez à zéro pour désactiver complètement la clôture."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:70
 msgid "Number of solid layers to generate on bottom surfaces."
-msgstr "Nombre de couches solides à générer sur les surfaces inférieures."
+msgstr "Nombre de couches pleines à générer sur les surfaces inférieures."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1315
 msgid "Number of solid layers to generate on top and bottom surfaces."
-msgstr "Nombre de couches solides à générer sur les surfaces supérieures et inférieures."
+msgstr "Nombre de couches pleines à générer sur les surfaces supérieures et inférieures."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1640
 msgid "Number of solid layers to generate on top surfaces."
-msgstr "Nombre de couches solides à générer sur les surfaces supérieures."
+msgstr "Nombre de couches pleines à générer sur les surfaces supérieures."
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater.pm:745
 msgid "Object too large?"
@@ -2340,8 +2336,8 @@ msgid "Open the object editor dialog"
 msgstr "Ouvrir la boîte de dialogue d'édition d'objet"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Open the Prusa Edition releases page in your browser"
-msgstr "Ouvrir la page des publications de la Prusa Edition dans votre navigateur"
+msgid "Open the Slic3r++ releases page in your browser"
+msgstr "Ouvrir la page des publications de la Slic3r++ dans votre navigateur"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:385
 msgid "Open the Prusa3D drivers download page in your browser"
@@ -2587,8 +2583,8 @@ msgid "Prusa 3D Drivers"
 msgstr "Drivers Prusa 3D"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Prusa Edition Releases"
-msgstr "Publication de la Prusa Edition"
+msgid "Slic3r++ Releases"
+msgstr "Publication de la Slic3r++"
 
 #: xs/src/slic3r/GUI/GUI.cpp:908
 msgid "Purging volumes"
@@ -2746,8 +2742,8 @@ msgid "Report an Issue"
 msgstr "Signaler un problème"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:405
-msgid "Report an issue on the Slic3r Prusa Edition"
-msgstr "Signaler un problème sur la Prusa Edition de Slic3r"
+msgid "Report an issue on the Slic3r Slic3r++"
+msgstr "Signaler un problème sur la Slic3r++ de Slic3r"
 
 #: xs/src/slic3r/Utils/PresetUpdater.cpp:514
 #, c-format
@@ -3050,11 +3046,11 @@ msgstr "Réglez ce paramètre sur une valeur non-nulle pour définir manuellemen
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1293
 msgid "Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. If expressed as percentage (for example 90%) it will be computed over layer height."
-msgstr "Réglez ce paramètre sur une valeur non-nulle pour définir manuellement la largeur d’extrusion pour le remplissage ou les surfaces solides. Si la valeur reste sur zéro, la largeur d’extrusion par défaut sera utilisée si définie, sinon la valeur 1.125 x diamètre de la buse sera utilisée. Si la valeur est exprimée en pourcentage (par exemple : 90%), elle sera calculée par rapport à la hauteur de couche."
+msgstr "Réglez ce paramètre sur une valeur non-nulle pour définir manuellement la largeur d’extrusion pour le remplissage ou pour les surfaces pleines. Si la valeur reste sur zéro, la largeur d’extrusion par défaut sera utilisée si définie, sinon la valeur 1.125 x diamètre de la buse sera utilisée. Si la valeur est exprimée en pourcentage (par exemple : 90%), elle sera calculée par rapport à la hauteur de couche."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1615
 msgid "Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. If expressed as percentage (for example 90%) it will be computed over layer height."
-msgstr "Réglez ce paramètre sur une valeur non-nulle pour définir manuellement la largeur d’extrusion pour le remplissage ou les surfaces supérieures. Vous voudrez peut-être utiliser des extrudats plus fins pour remplir les zones les plus étroites et obtenir des finitions plus lisses. Si la valeur reste sur zéro, la largeur d’extrusion par défaut sera utilisée si définie, sinon le diamètre de la buse sera utilisé. Si la valeur est exprimée en pourcentage (par exemple : 90%), elle sera calculée par rapport à la hauteur de couche."
+msgstr "Réglez ce paramètre sur une valeur non-nulle pour définir manuellement la largeur d’extrusion pour le remplissage ou pour les surfaces supérieures. Vous voudrez peut-être utiliser des extrudats plus fins pour remplir les zones les plus étroites et obtenir des finitions plus lisses. Si la valeur reste sur zéro, la largeur d’extrusion par défaut sera utilisée si définie, sinon le diamètre de la buse sera utilisé. Si la valeur est exprimée en pourcentage (par exemple : 90%), elle sera calculée par rapport à la hauteur de couche."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:711
 msgid "Set this to a non-zero value to set a manual extrusion width for infill. If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. You may want to use fatter extrudates to speed up the infill and make your parts stronger. If expressed as percentage (for example 90%) it will be computed over layer height."
@@ -3180,19 +3176,19 @@ msgstr "Taille en X et Y du plateau rectangulaire."
 #: c:\src\Slic3r\xs\src\libslic3r\GCode\PreviewData.cpp:146
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater\3DPreview.pm:88
 msgid "Skirt"
-msgstr "Jupe"
+msgstr "Clôture"
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.cpp:364
 msgid "Skirt and brim"
-msgstr "Jupe et bordure"
+msgstr "Jupe et Clôture"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1221
 msgid "Skirt height"
-msgstr "Hauteur de la jupe"
+msgstr "Hauteur de la clôture"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1230
 msgid "Skirt Loops"
-msgstr "Boucles de la Jupe"
+msgstr "Boucles de la clôture"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:398
 msgid "Slic3r &Manual"
@@ -3297,7 +3293,7 @@ msgstr "Ralentir si le temps d'impression de la couche est inférieur à"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1250
 msgid "Small perimeters"
-msgstr "Périmètres courts"
+msgstr "Périmètres fins"
 
 #: xs/src/slic3r/GUI/GUI.cpp:417
 msgid "Snapshot name"
@@ -3305,31 +3301,31 @@ msgstr "Nom du snapshot"
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\PresetHints.cpp:179
 msgid "solid infill"
-msgstr "remplissage solide"
+msgstr "remplissage plein"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1291
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1301
 #: c:\src\Slic3r\xs\src\libslic3r\GCode\PreviewData.cpp:142
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater\3DPreview.pm:84
 msgid "Solid infill"
-msgstr "Remplissage solide"
+msgstr "Remplissage plein"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1279
 msgid "Solid infill every"
-msgstr "Remplissage solide toutes les"
+msgstr "Remplissage plein toutes les"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1271
 msgid "Solid infill extruder"
-msgstr "Extrudeur pour le remplissage solide"
+msgstr "Extrudeur pour le remplissage plein"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1262
 msgid "Solid infill threshold area"
-msgstr "Surface de seuil pour le remplissage solide"
+msgstr "Surface de seuil pour le remplissage plein"
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.cpp:330
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1314
 msgid "Solid layers"
-msgstr "Couches solides"
+msgstr "Couches pleines"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:470
 msgid "Soluble material"
@@ -3349,7 +3345,7 @@ msgstr "Certaines imprimantes ou certains réglages d'imprimante peuvent rencont
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1490
 msgid "Spacing between interface lines. Set zero to get a solid interface."
-msgstr "Espacement entre les lignes d'interface. Mettez à zéro pour obtenir une interface solide."
+msgstr "Espacement entre les lignes d'interface. Mettez à zéro pour obtenir une interface pleine."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1526
 msgid "Spacing between support material lines."
@@ -3399,7 +3395,7 @@ msgstr "Vitesse d'impression des ponts."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1303
 msgid "Speed for printing solid regions (top/bottom/internal horizontal shells). This can be expressed as a percentage (for example: 80%) over the default infill speed above. Set to zero for auto."
-msgstr "Vitesse pour imprimer des zones solides (supérieures/inférieures/parois horizontales internes). Peut être exprimée en pourcentage (par exemple: 80%) de la vitesse de remplissage par défaut susmentionnée. Réglez sur zéro pour un ajustement automatique."
+msgstr "Vitesse pour imprimer des zones pleines (supérieures/inférieures/parois horizontales internes). Peut être exprimée en pourcentage (par exemple: 80%) de la vitesse de remplissage par défaut susmentionnée. Réglez sur zéro pour un ajustement automatique."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1499
 msgid "Speed for printing support material interface layers. If expressed as percentage (for example 50%) it will be calculated over support material speed."
@@ -3415,7 +3411,7 @@ msgstr "Vitesse pour imprimer le remplissage interne. Réglez sur zéro pour un 
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1626
 msgid "Speed for printing top solid layers (it only applies to the uppermost external layers and not to their internal solid layers). You may want to slow down this to get a nicer surface finish. This can be expressed as a percentage (for example: 80%) over the solid infill speed above. Set to zero for auto."
-msgstr "Vitesse pour imprimer les couches solides supérieures (ne s'applique qu'aux couches externes les plus hautes et pas aux couches internes solides). Vous voudrez peut-être abaisser cette vitesse afin d'avoir une finition de surface plus nette. Peut être exprimé en pourcentage (par exemple: 80%) de la vitesse de remplissage solide susmentionnée. Réglez sur zéro pour un ajustement automatique."
+msgstr "Vitesse pour imprimer les couches pleines du dessus (ne s'applique qu'aux couches externes les plus hautes et pas aux couches pleines internes). Vous voudrez peut-être abaisser cette vitesse afin d'avoir une finition de surface plus nette. Peut être exprimé en pourcentage (par exemple: 80%) de la vitesse de remplissage pleine susmentionnée. Réglez sur zéro pour un ajustement automatique."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1648
 msgid "Speed for travel moves (jumps between distant extrusion points)."
@@ -3431,11 +3427,11 @@ msgstr "Vitesse utilisée pour décharger le filament sur la tour de nettoyage (
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1322
 msgid "Spiral vase"
-msgstr "Vase spiral"
+msgstr "Mode vase (spirale)"
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.cpp:540
 msgid "Spiral Vase"
-msgstr "Vase Spiral"
+msgstr "Mode vase (spirale)"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater.pm:188
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater.pm:204
@@ -3530,7 +3526,7 @@ msgstr "Extrudeur pour l'interface des supports/du radeau"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1444
 msgid "Support material/raft/skirt extruder"
-msgstr "Extrudeur pour support/raft/jupe"
+msgstr "Extrudeur pour support/tapis/clôture"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1408
 msgid "Support on build plate only"
@@ -3608,7 +3604,7 @@ msgstr "Température "
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1333
 msgid "Temperature difference to be applied when an extruder is not active. Enables a full-height \"sacrificial\" skirt on which the nozzles are periodically wiped."
-msgstr "Différence de température devant être appliquée quand un extrudeur n'est pas actif. Permet la génération d'un contour complet \"sacrificiel\" sur lequel les buses sont nettoyées régulièrement."
+msgstr "Différence de température devant être appliquée quand un extrudeur n'est pas actif. Permet la génération d'une clôture complète \"sacrificielle\" sur lequel les buses sont nettoyées régulièrement."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1332
 msgid "Temperature variation"
@@ -3638,11 +3634,11 @@ msgstr "L'extrudeur à utiliser pour imprimer le remplissage."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:959
 msgid "The extruder to use when printing perimeters and brim. First extruder is 1."
-msgstr "L'extrudeur à utiliser pour imprimer les périmètres et la bordure. Le premier extrudeur a le numéro 1."
+msgstr "L'extrudeur à utiliser pour imprimer les périmètres et la jupe. Le premier extrudeur a le numéro 1."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1273
 msgid "The extruder to use when printing solid infill."
-msgstr "L'extrudeur à utiliser pour imprimer les remplissages solides."
+msgstr "L'extrudeur à utiliser pour imprimer les remplissages plein."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1472
 msgid "The extruder to use when printing support material interface (1+, 0 to use the current extruder to minimize tool changes). This affects raft too."
@@ -3650,14 +3646,16 @@ msgstr "L'extrudeur à utiliser pour imprimer les intercalaires du support (1+,0
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1446
 msgid "The extruder to use when printing support material, raft and skirt (1+, 0 to use the current extruder to minimize tool changes)."
-msgstr "L'extrudeur à utiliser pour imprimer des supports, du raft ou des contours (1+,0 pour utiliser l'extrudeur actuel et limiter les changements d'outil)."
+msgstr "L'extrudeur à utiliser pour imprimer des supports, du tapis ou des clôtures (1+,0 pour utiliser l'extrudeur actuel et limiter les changements d'outil)."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:209
 msgid "The first layer will be shrunk in the XY plane by the configured value to compensate for the 1st layer squish aka an Elephant Foot effect."
 msgstr "La première couche sera réduite sur le plan XY selon la valeur configurée afin de compenser l'écrasement de la première couche également connu sous le nom d'effet Pied d'Éléphant."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1734
-msgid "The object will be grown/shrunk in the XY plane by the configured value (negative = inwards, positive = outwards). This might be useful for fine-tuning hole sizes."
+msgid "The object will be grown/shrunk in the XY plane by the configured value "
+                   "(negative = inwards, positive = outwards). This might be useful "
+                   "for fine-tuning sizes."
 msgstr "L'objet sera agrandi/réduit sur les plans XY selon la valeur indiquée (négatif = réduit, positif = agrandi). Ce réglage peut être utile pour un réglage fin des tailles de trous."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1031
@@ -3704,14 +3702,14 @@ msgid ""
 "\n"
 "Shall I adjust those settings in order to enable Spiral Vase?"
 msgstr ""
-"Le mode Vase Spiral requiert :\n"
-"-Un périmètre\n"
-"-Pas de couches solides supérieures\n"
+"Le mode Vase requiert :\n"
+"-Un seul périmètre\n"
+"-Pas de couches pleines sur le dessus\n"
 "-Une densité de remplissage de 0%\n"
 "-Pas de supports\n"
-"-Pas de ensure_vertical_shell_thickness\n"
+"-'S'assurer de l'épaisseur de la coque verticale' décochée\n"
 "\n"
-"Voulez-vous que je modifie ces réglages afin d'activer le Vase Spirale?"
+"Voulez-vous que je modifie ces réglages afin d'activer le mode Vase?"
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.cpp:1560
 msgid "The supplied name is empty. It can't be saved."
@@ -3812,11 +3810,11 @@ msgstr "Cette fonction permet de combiner le remplissage afin d'accélérer l'im
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1281
 msgid "This feature allows to force a solid layer every given number of layers. Zero to disable. You can set this to any value (for example 9999); Slic3r will automatically choose the maximum possible number of layers to combine according to nozzle diameter and layer height."
-msgstr "Cette fonction permet de forcer l'impression d'une couche solide après le nombre de couches indiqué. Réglez sur zéro pour la désactiver. Vous pouvez indiquer n'importe quelle valeur (par exemple 9999); Slic3r choisira automatiquement le nombre maximum de couches a combiner en fonction du diamètre de la buse et de l'épaisseur des couches."
+msgstr "Cette fonction permet de forcer l'impression d'une couche pleine après le nombre de couches indiqué. Réglez sur zéro pour la désactiver. Vous pouvez indiquer n'importe quelle valeur (par exemple 9999); Slic3r choisira automatiquement le nombre maximum de couches a combiner en fonction du diamètre de la buse et de l'épaisseur des couches."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1323
 msgid "This feature will raise Z gradually while printing a single-walled object in order to remove any visible seam. This option requires a single perimeter, no infill, no top solid layers and no support material. You can still set any number of bottom solid layers as well as skirt/brim loops. It won't work when printing more than an object."
-msgstr "Cette fonction élèvera le Z graduellement en cas d'impression d'un objet à paroi unique, afin de rendre invisibles les jointures. Cette option nécessite de n'avoir qu'un seul périmètre, de ne pas avoir de remplissage, ni de surface solide supérieure, ni de support. Vous pouvez toujours choisir le nombre de surface solides inférieures de même que les boucles des jupes et des bordures. Cela ne fonctionnera pas si vous imprimez plus d'un objet."
+msgstr "Afin de rendre invisible les jointures, cette fonction élèvera la tête d'impresion graduellement (en cas d'impression d'un objet à paroi unique). Cette option nécessite de n'avoir qu'un seul périmètre, de ne pas avoir de remplissage, ni de surface pleine supérieure, ni de support. Vous pouvez toujours choisir le nombre de surface pleines inférieures de même que les boucles des jupes et des clôtures. Cela ne fonctionnera pas si vous imprimez plus d'un objet."
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater.pm:663
 msgid ""
@@ -3832,7 +3830,7 @@ msgstr "Cette option active la logique de refroidissement automatique, qui ajust
 
 #: xs/src/slic3r/GUI/GUI.cpp:899
 msgid "This flag enables the brim that will be printed around each object on the first layer."
-msgstr "Cette option permet l'impression de la bordure qui entoure chaque objet lors de la première couche."
+msgstr "Cette option permet l'impression de la jupe qui entoure chaque objet lors de la première couche."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1066
 msgid "This flag enforces a retraction whenever a Z move is done."
@@ -3890,7 +3888,7 @@ msgstr "Cette option définit le nombre de périmètres à générer pour chaque
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:923
 msgid "This option will drop the temperature of the inactive extruders to prevent oozing. It will enable a tall skirt automatically and move extruders outside such skirt when changing temperatures."
-msgstr "Cette option abaissera la température des extrudeurs inutilisés pour prévenir le oozing (suintement). Cela active automatiquement la génération d'une grande jupe et le déplacement des extrudeurs hors de cette jupe lors des changements de température."
+msgstr "Cette option abaissera la température des extrudeurs inutilisés pour prévenir le oozing (suintement). Cela active automatiquement la génération d'une grande clôture et le déplacement des extrudeurs hors de cette clôture lors des changements de température."
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:728
 msgid "This option will limit infill to the areas actually needed for supporting ceilings (it will act as internal support material). If enabled, slows down the G-code generation due to the multiple checks involved."
@@ -4010,18 +4008,18 @@ msgstr "Haut"
 
 #: c:\src\Slic3r\xs\src\slic3r\GUI\PresetHints.cpp:187
 msgid "top solid infill"
-msgstr "remplissage solide supérieur"
+msgstr "remplissage plein du dessus"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1613
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1624
 #: c:\src\Slic3r\xs\src\libslic3r\GCode\PreviewData.cpp:143
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater\3DPreview.pm:85
 msgid "Top solid infill"
-msgstr "Remplissage solide supérieur"
+msgstr "Remplissage plein du dessus"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:1642
 msgid "Top solid layers"
-msgstr "Couches supérieures solides"
+msgstr "Couches pleines du dessus"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:369
 msgid "Top View"
@@ -4029,7 +4027,7 @@ msgstr "Vue du Dessus"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:246
 msgid "Top/bottom fill pattern"
-msgstr "Motif de remplissage supérieur/inférieur"
+msgstr "Motif de remplissage dessus/dessous"
 
 #: xs/src/slic3r/GUI/WipeTowerDialog.cpp:245
 msgid "Total purging volume is calculated by summing two values below, depending on which tools are loaded/unloaded."
@@ -4074,24 +4072,24 @@ msgid ""
 "UNLOCKED LOCK icon indicates that some settings were changed and are not equal to the system values for the current option group.\n"
 "Click to reset all settings for current option group to the system values."
 msgstr ""
-"L'icône CADENAS OUVERT indique que certains paramètres ont été modifiés et ne sont pas égaux aux valeurs du système pour le groupe d'options actuel.\n"
-"Cliquez pour régler tous les paramètres pour le groupe d'options actuel sur les valeurs du système."
+"L'icône CADENAS OUVERT indique que certains paramètres ont été modifiés et ne sont pas égaux aux valeurs par défaut pour le groupe d'options actuel.\n"
+"Cliquez pour régler tous les paramètres pour le groupe d'options actuel sur les valeurs par défaut."
 
 #: xs/src/slic3r/GUI/Tab.cpp:2498
 msgid ""
 "UNLOCKED LOCK icon indicates that the value was changed and is not equal to the system value.\n"
 "Click to reset current value to the system value."
 msgstr ""
-"L'icône CADENAS OUVERT indique que la valeur a été changée et n'est pas égale à la valeur du système.\n"
-"Cliquez pour régler la valeur actuelle sur les valeurs du système."
+"L'icône CADENAS OUVERT indique que la valeur a été changée et n'est pas égale à la valeur par défaut.\n"
+"Cliquez pour régler la valeur actuelle sur la valeur par défaut."
 
 #: xs/src/slic3r/GUI/Tab.cpp:2445
 msgid ""
 "UNLOCKED LOCK;indicates that some settings were changed and are not equal to the system values for the current option group.\n"
 "Click the UNLOCKED LOCK icon to reset all settings for current option group to the system values."
 msgstr ""
-"CADENAS OUVERT;indique que certains paramètres ont été modifiés et ne sont pas égaux aux valeurs du système pour le groupe d'options actuel.\n"
-"Cliquez sur l'icône CADENAS OUVERT pour régler tous les paramètres pour le groupe d'options actuel sur les valeurs du système."
+"CADENAS OUVERT;indique que certains paramètres ont été modifiés et ne sont pas égaux aux valeurs par défaut pour le groupe d'options actuel.\n"
+"Cliquez sur l'icône CADENAS OUVERT pour régler tous les paramètres pour le groupe d'options actuel sur les valeurs par défaut."
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater\3DPreview.pm:97
 msgid "Unretractions"
@@ -4470,3 +4468,364 @@ msgstr "°"
 #: xs/src/slic3r/GUI/ConfigWizard.cpp:498
 msgid "°C"
 msgstr "°C"
+
+#: supermerill's add: tab.cpp
+msgid "Avoid unsupported perimeters"
+msgstr "Eviter les périmètres sans support"
+
+#: supermerill's add: tab.cpp
+msgid "Seam"
+msgstr "Jointures"
+
+#: supermerill's add: tab.cpp
+msgid "Looping perimeter"
+msgstr "Périmètres en boucle"
+
+#: supermerill's add: tab.cpp
+msgid "Fill internal"
+msgstr "Remplissage interne"
+
+#: supermerill's add: tab.cpp
+msgid "Fill external"
+msgstr "Remplissage plein externe"
+
+#: supermerill's add: tab.cpp
+msgid "Supporting dense layer"
+msgstr "Couche de support pour remplissage plein"
+
+#: supermerill's add: tab.cpp
+msgid "Anchor solid infill by X mm"
+msgstr "Ancrage des remplissages plein de X mm "
+
+#: supermerill's add: tab.cpp
+msgid "Perimeter speed"
+msgstr "Vitesses pour les périmètres"
+
+#: supermerill's add: tab.cpp
+msgid "Infill speed"
+msgstr "Vitesses pour les remplissages"
+
+#: supermerill's add: tab.cpp
+msgid "Support speed"
+msgstr "Vitesses pour les supports"
+
+#: supermerill's add: tab.cpp
+msgid "First layer speed"
+msgstr "Vitesses pour la première couche"
+
+#: supermerill's add: tab.cpp
+msgid "Wipe tower position"
+msgstr "Position de la tour de vidage"
+
+#: supermerill's add: tab.cpp
+msgid "Bridge flow ratio"
+msgstr "Débit lors de ponts"
+
+#: supermerill's add: tab.cpp
+msgid "XY compensation"
+msgstr "Compensation en XY"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "remove_small_gaps"
+msgstr "Retirer les petites imperfections"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Top fan speed"
+msgstr "Vitesse du ventilateur pour le dessus"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Above the bridges"
+msgstr "Au-dessus des ponts"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "First layer"
+msgstr "Première couche"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Top Pattern"
+msgstr "Motif du dessus"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Bottom Pattern"
+msgstr "Motif du dessous"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Enforce 100% fill volume"
+msgstr "S'assurer que les remplissages sont exacts en volume"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Bridged"
+msgstr "Ponts"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "External"
+msgstr "Externe"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Seam position"
+msgstr "Position des jointures"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Only one perimeter on Top surfaces"
+msgstr "Seulement un périmètre autoir des surfaces du dessus"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Fill"
+msgstr "Remplissage"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Do not connect infill lines to each other"
+msgstr "Ne pas connecter les lignes de remplissage entre elles"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Algorithm"
+msgstr "Algorithme"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Sparse"
+msgstr "Epars"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Exact last layer height"
+msgstr "Mettre la dernière tranche à la heuteur exacte"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Minimum perimeters"
+msgstr "Nombre min de périmètres"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Only on bridged areas"
+msgstr "Seulement sur ponts"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Solid first layer"
+msgstr "Première couche pleine"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Travel move reduced"
+msgstr "Moins de déplacements"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Hidden"
+msgstr "Cachée"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Small"
+msgstr "Fins"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Solid"
+msgstr "Plein"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Interface"
+msgstr "Interface"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Top solid"
+msgstr "Plein du dessus"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "All layers"
+msgstr "Toutes les couches"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Holes"
+msgstr "Trous"
+
+#: tooltips
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Remove small gaps"
+msgstr "Retire les mini-espaces/imperfections"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Remove the small gaps in the 3D model when slicing. Disable it if you "
+        "are very confident on your model, or you want to print an item with a geometry "
+        "designed for vase mode."
+msgstr "Retire touts les petits trous et espaces (imperfections) qui peuvent être présent sur le modèle. A ne décocher que si le modèle 3D à été crée exprès, pour le mode vase."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "This fan speed is enforced during all top fills."
+msgstr "Cette vitesse de ventilation est utilisé pour toutes les surface du dessus."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "This factor affects the amount of plastic to overextrude "
+                   "when we are filling on top of a bridge surface."
+                   "With a number >1, we can retrieve a correct z-height "
+                   "even if the bridged layer has fallen a bit. "
+                   "It's useful if you want to have a nice flat top layer."
+msgstr "Ce paramètre affecxte la quantité de matière déposée au-dessus des ponts. Sachant que les ponts s'affaissent un peu, avec un paramètre légèrement supérieur à 1, on peut revenir à la bonne hauteur. C'est surtotu utile si on veut obtenir des surfaces supérieure bien plate et jolie."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "The first layer will be grown / shrunk in the XY plane by the configured value "
+                   "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)"
+msgstr "La première couche est agrandie / rétrécie en XY par cette valeur pour compenser la déformation de la première couche. (negatif = vers l'intérieur de la pièce, positif = vers l'extérieur) !!! Devrait être négative  (<0) afin de rétrécir la pièce !!!"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Fill pattern for top infill. This only affects the top external visible layer, and not its adjacent solid shells."
+msgstr "Motif pour les surfaces du dessus. Ceci affecte seulement la couche externe visible, et non les coques pleines adjacentes."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Fill pattern for bottom infill. This only affects the bottom external visible layer, and not its adjacent solid shells."
+msgstr "Motif pour les surfaces du dessous. Ceci affecte seulement la couche externe visible, et non les coques pleines adjacentes."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Experimental option which modifies (in solid infill) fill flow to have the exact amount of plastic inside the volume to fill "
+        "(it generally changes the flow from -7% to +4%, depending on the size of the surface to fill and the overlap parameters, "
+        "but it can go as high as +50% for infill in very small areas where rectilinear doesn't have good coverage). It has the advantage "
+        "to remove the over-extrusion seen in thin infill areas, from the overlap ratio"
+msgstr "Option expérimentale qui modifie le débit dans les couches pleines pour s'assurer que le volume extrudé est égal au volume à remplir. En génral, le débit n'ets modifié que de 4-7% mais cela peut aller jusqu'a +50% dans les très petites zones où il est difficile de circuler. Le pricipal avantage est de retirer l'effet de sur-extrusion souvent vues dans les zones de remplissage étroites."
+
+#: supermerill's add: PrintConfig.cpp
+msgid This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it."
+msgstr "Ce paramètre agrandi les couches pleines par X mm pour bien les ancrer dans la pièce. Mettre 0 pour désactiver cette fonction."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it."
+msgstr "Ce paramètre agrandi les couches de pont par X mm pour bien les ancrer dans la pièce. Mettre 0 pour désactiver cette fonction."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Join the perimeters to create only one continuous extrusion without any z-hop."
+        " Long inside travel (from external to holes) are not extruded to give some space to the infill."
+msgstr "Rabouter les périmètres pour en créer une unique et longue extrusion. Lors d'un passage de périmètre extérieur vers intérieur, si l'espace est grand, un déplacemnt sera tout de même utilisé."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Position of perimeters starting points."
+msgstr "Position des point de départ des jonctions entre périmètres"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Use only one perimeter on flat top surface, to let more space to the top infill pattern."
+msgstr "Utiliser seulement une seule ligne de périmètre sur les surfaces du dessus, afin de laisser le plus de place possible au motif de remplissage du dessus."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
+                   "but infill of the first layer, it can be overwrite by the 'default' (default depends of the type of the path) "
+                   "speed if it's lower than that. If expressed as a percentage "
+                   "(for example: 40%) it will scale the 'default' speeds."
+msgstr "Si exprimée avec une valeur absolue en mm/s, cette vitesse sera appliquée à toutes les impressions de la première couche, sauf les remplissages (et si la vitesse par défaut est plus petite, elle sera utilisée à la place). Si exprimée comme un pourcentage (par exemple 40%), cela modulera la vitesse par défaut."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "If expressed as absolute value in mm/s, this speed will be applied to infill moves "
+                   "of the first layer, it can be overwrite by the 'default' (solid infill or infill if not bottom) "
+                   "speed if it's lower than that. If expressed as a percentage "
+                   "(for example: 40%) it will scale the 'default' speed."
+msgstr "Si exprimée avec une valeur absolue en mm/s, cette vitesse sera appliquée aux impressions de remplissage de la première couche (et si la vitesse par défaut est plus petite, elle sera utilisée à la place). Si exprimée comme un pourcentage (par exemple 40%), cela modulera la vitesse par défaut."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Enable gap fill algorithm. It will extrude small lines between perimeters "
+        "when there is not enough space for another perimeter or an infill."
+msgstr "Active les impression de remplissage des petits trous qui peuvent subsister entre les périmètres et sui sont trop petits pour faire du remplissage."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Enables the creation of a support layer under the first solid layer. This allows you to use a lower infill ratio without compromising the top quality."
+        " The dense infill is laid out with a 50% infill density."
+msgstr "Active le remplacement du motif de remplissage sous les remplissage plein afin de permettre un meilleur support de ceux-ci. Cela permet de choisir un ratio de remplissage plus petit."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "If checked, the infill algorithm will try to not connect the lines near the infill. Can be useful for art or with high infill/perimeter overlap."
+msgstr "Si coché, l'algorithme de dessin des patrons de remplissage va essayer de ne pas connecter ses lignes entre elles, en bordure des périmètres."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Choose the way the dense layer is lay out."
+        " The automatic option let it try to draw the smallest surface with only strait lines inside the sparse infill."
+        " The anchored just enlarge a bit (by bridged anchor) the surfaces that need a better support."
+msgstr "Choisissez la façon dont la couche de support est dessinée. L'option eutomatique essayera de trouver une surface sans virage au milieu du vide. L'option ancrée utilisera une surface un peu plus grande que celle supoortée."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Automatic"
+msgstr "Automatique"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Automatic, only for small areas"
+msgstr "Automatique, sur les zones étroites"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Anchored"
+msgstr "Ancré"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "This setting controls the height of last object layers to put the last layer at the exact highest height possible. Experimental."
+msgstr "Ce paramètre fonctionne mal, ne l'utilisez pas. Il aurait dû placer la dernière couche exactement à la hauteur de l'objet, mais ça marche mal."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. Computationally intensive!"
+msgstr "option très expérimentale pour permettre de ne pas mettre de périmètres s'il n'y a pas de couches en support en-dessous."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Number of perimeters exluded from this option."
+msgstr "Nombre de périmètre qui ne sont pas retirés par cette fonction"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Only remove perimeters over areas marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable."
+msgstr "Ne retirer les périmètres qu'au dessus des endroit où il peut y avoir des ponts. Utile pour garder les surplombs."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Use a solid layer instead of a raft for the layer that touch the build plate."
+msgstr "Dépose une couche peinle sur le plateur à la place d'un quadriallage."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Add a big cost to travel paths when possible (when going into a loop), so it will prefer a less optimal seam posistion if it's nearer."
+msgstr "Ajoute un fort coût aux déplacement pour les minimiser davantage."
+
+#: supermerill's add: PrintConfig.cpp
+msgid "The convex holes will be grown / shrunk in the XY plane by the configured value"
+                   " (negative = inwards, positive = outwards, should be positive as the holes are always a bit smaller)."
+                   " This might be useful for fine-tuning hole sizes."
+msgstr "Les trous convexes vont être agrandis/rétécis en XY par cette valeur pour compenser la rétractation du palstique. (negatif = vers l'intérieur de la pièce, positif = vers l'extérieur) !!! Devrait être négative (<0) afin d'agrandir le trou!!!"
+
+#: supermerill's add: PrintConfig.cpp
+msgid "Invalid value for --over-bridge-flow-ratio"
+msgstr "Valeur invalide pour --over-bridge-flow-ratio"
+
+#: supermerill's add: others Tab.hpp
+msgid "Hardware Settings"
+msgstr "Paramètres du matériel"
+
+msgid "Rectilinear"
+msgstr "Rectilinéaire"
+
+msgid "Grid"
+msgstr "Grille"
+
+msgid "Stars"
+msgstr "Etoiles"
+
+msgid "Cubic"
+msgstr "Tri-Cubique"
+
+msgid "Line"
+msgstr "Lignes"
+
+msgid "Concentric"
+msgstr "Concentrique"
+
+msgid "Honeycomb"
+msgstr "Hexagones"
+
+msgid "3D Honeycomb"
+msgstr "Hexagonal 3D"
+
+msgid "Gyroid"
+msgstr "Gyroide"
+
+msgid "Hilbert Curve"
+msgstr "Hilbert (Fractale)"
+
+msgid "Ironing"
+msgstr "Lissée"
+
+msgid "Concentric"
+msgstr "Concentrique"
+
+msgid "Nearest"
+msgstr "Au plus près"
+
+msgid "Random"
+msgstr "Aléatoire"
+
+msgid "Aligned"
+msgstr "Aligné"
+
+msgid "Concentric"
+msgstr "Concentrique"

@@ -374,6 +374,7 @@ public:
     // Force the generation of solid shells between adjacent materials/volumes.
     ConfigOptionBool                interface_shells;
     ConfigOptionFloat               layer_height;
+    ConfigOptionBool                exact_last_layer_height;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
     ConfigOptionBool                seam_travel;
@@ -421,6 +422,7 @@ protected:
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
+        OPT_PTR(exact_last_layer_height);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);
         OPT_PTR(seam_travel);
@@ -479,6 +481,7 @@ public:
     ConfigOptionFloat               fill_angle;
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
+    ConfigOptionBool                gap_fill;
     ConfigOptionFloat               gap_fill_speed;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
@@ -536,6 +539,7 @@ protected:
         OPT_PTR(fill_angle);
         OPT_PTR(fill_density);
         OPT_PTR(fill_pattern);
+        OPT_PTR(gap_fill);
         OPT_PTR(gap_fill_speed);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
@@ -649,6 +653,7 @@ public:
     ConfigOptionFloats              filament_cooling_final_speed;
     ConfigOptionStrings             filament_ramming_parameters;
     ConfigOptionBool                gcode_comments;
+    ConfigOptionBool                label_printed_objects;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionString              layer_gcode;
     ConfigOptionFloat               max_print_speed;
@@ -717,6 +722,7 @@ protected:
         OPT_PTR(filament_cooling_final_speed);
         OPT_PTR(filament_ramming_parameters);
         OPT_PTR(gcode_comments);
+        OPT_PTR(label_printed_objects);
         OPT_PTR(gcode_flavor);
         OPT_PTR(layer_gcode);
         OPT_PTR(max_print_speed);

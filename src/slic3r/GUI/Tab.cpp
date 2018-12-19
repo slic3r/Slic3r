@@ -481,11 +481,11 @@ void Tab::update_changed_tree_ui()
 			}
 			if (title == _("Dependencies")){
 				if (name() != "printer")
-					get_sys_and_mod_flags("compatible_printers", sys_page, modified_page);
+				get_sys_and_mod_flags("compatible_printers", sys_page, modified_page);
 				else {
 					sys_page = m_presets->get_selected_preset_parent() ? true:false;
 					modified_page = false;
-				}
+			}
 			}
 			for (auto group : page->m_optgroups)
 			{
@@ -819,7 +819,8 @@ void TabPrint::build()
 	auto page = add_options_page(_(L("Layers and perimeters")), "layers.png");
 		auto optgroup = page->new_optgroup(_(L("Layer height")));
 		optgroup->append_single_option_line("layer_height");
-		optgroup->append_single_option_line("first_layer_height");
+        optgroup->append_single_option_line("first_layer_height");
+        optgroup->append_single_option_line("exact_last_layer_height");
 
 		optgroup = page->new_optgroup(_(L("Vertical shells")));
 		optgroup->append_single_option_line("perimeters");
@@ -836,7 +837,8 @@ void TabPrint::build()
 		line = { _(L("Solid layers")), "" };
 		line.append_option(optgroup->get_option("top_solid_layers"));
 		line.append_option(optgroup->get_option("bottom_solid_layers"));
-		optgroup->append_line(line);
+        optgroup->append_line(line);
+        optgroup->append_single_option_line("enforce_full_fill_volume");
 
 		optgroup = page->new_optgroup(_(L("Quality (slower slicing)")));
 		optgroup->append_single_option_line("extra_perimeters");
@@ -853,7 +855,7 @@ void TabPrint::build()
 
         optgroup = page->new_optgroup(_(L("Advanced")));
         optgroup->append_single_option_line("remove_small_gaps");
-        line = { _(L("Avoid unsupported perimeters")), "" };
+        line = { _(L("Seam")), "" };
         line.append_option(optgroup->get_option("seam_position"));
         line.append_option(optgroup->get_option("seam_travel"));
         optgroup->append_line(line);
@@ -866,14 +868,14 @@ void TabPrint::build()
     page = add_options_page(_(L("Infill")), "infill.png");
         optgroup = page->new_optgroup(_(L("Infill")));
         optgroup->append_single_option_line("fill_density");
-        line = { _(L("Inside")), "" };
+        line = { _(L("Fill internal")), "" };
         line.append_option(optgroup->get_option("fill_pattern"));
         line.append_option(optgroup->get_option("infill_not_connected"));
         optgroup->append_line(line);
-        optgroup->append_single_option_line("top_fill_pattern");
-        optgroup->append_single_option_line("bottom_fill_pattern");
-        optgroup->append_single_option_line("enforce_full_fill_volume");
-
+        line = { _(L("Fill external")), "" };
+        line.append_option(optgroup->get_option("top_fill_pattern"));
+        line.append_option(optgroup->get_option("bottom_fill_pattern"));
+        optgroup->append_line(line);
         optgroup = page->new_optgroup(_(L("Reducing printing time")));
         optgroup->append_single_option_line("infill_every_layers");
         optgroup->append_single_option_line("infill_only_where_needed");
@@ -882,17 +884,20 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("infill_dense_algo"));
         optgroup->append_line(line);
 
-        optgroup = page->new_optgroup(_(L("Advanced")));
-        optgroup->append_single_option_line("solid_infill_every_layers");
-        optgroup->append_single_option_line("solid_infill_below_area");
-        optgroup->append_single_option_line("fill_angle");
-        optgroup->append_single_option_line("bridge_angle");
+		optgroup = page->new_optgroup(_(L("Advanced")));
+		optgroup->append_single_option_line("solid_infill_every_layers");
+		optgroup->append_single_option_line("solid_infill_below_area");
+        line = { _(L("Angle")), "" };
+        line.append_option(optgroup->get_option("fill_angle"));
+        line.append_option(optgroup->get_option("bridge_angle"));
+        optgroup->append_line(line);
         line = { _(L("Anchor solid infill by X mm")), "" };
         line.append_option(optgroup->get_option("external_infill_margin"));
         line.append_option(optgroup->get_option("bridged_infill_margin"));
         optgroup->append_line(line);
-        optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
+		optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
         optgroup->append_single_option_line("infill_first");
+        optgroup->append_single_option_line("gap_fill");
 
 	page = add_options_page(_(L("Skirt and brim")), "box.png");
 		optgroup = page->new_optgroup(_(L("Skirt")));
@@ -931,15 +936,21 @@ void TabPrint::build()
 		optgroup->append_single_option_line("support_material_synchronize_layers");
 
 	page = add_options_page(_(L("Speed")), "time.png");
-		optgroup = page->new_optgroup(_(L("Speed for print moves")));
-		optgroup->append_single_option_line("perimeter_speed");
-		optgroup->append_single_option_line("small_perimeter_speed");
-		optgroup->append_single_option_line("external_perimeter_speed");
-		optgroup->append_single_option_line("infill_speed");
-		optgroup->append_single_option_line("solid_infill_speed");
-		optgroup->append_single_option_line("top_solid_infill_speed");
-		optgroup->append_single_option_line("support_material_speed");
-		optgroup->append_single_option_line("support_material_interface_speed");
+        optgroup = page->new_optgroup(_(L("Speed for print moves")));
+        line = { _(L("Perimeter speed")), "" };
+        line.append_option(optgroup->get_option("perimeter_speed"));
+        line.append_option(optgroup->get_option("external_perimeter_speed"));
+        line.append_option(optgroup->get_option("small_perimeter_speed"));
+        optgroup->append_line(line);
+        line = { _(L("Infill speed")), "" };
+        line.append_option(optgroup->get_option("infill_speed"));
+        line.append_option(optgroup->get_option("solid_infill_speed"));
+        line.append_option(optgroup->get_option("top_solid_infill_speed"));
+        optgroup->append_line(line);
+        line = { _(L("Support speed")), "" };
+        line.append_option(optgroup->get_option("support_material_speed"));
+        line.append_option(optgroup->get_option("support_material_interface_speed"));
+        optgroup->append_line(line);
 		optgroup->append_single_option_line("bridge_speed");
 		optgroup->append_single_option_line("gap_fill_speed");
 
@@ -978,9 +989,11 @@ void TabPrint::build()
 		optgroup->append_single_option_line("standby_temperature_delta");
 
 		optgroup = page->new_optgroup(_(L("Wipe tower")));
-		optgroup->append_single_option_line("wipe_tower");
-		optgroup->append_single_option_line("wipe_tower_x");
-		optgroup->append_single_option_line("wipe_tower_y");
+        optgroup->append_single_option_line("wipe_tower");
+        line = { _(L("Wipe tower position")), "" };
+        line.append_option(optgroup->get_option("wipe_tower_x"));
+        line.append_option(optgroup->get_option("wipe_tower_y"));
+        optgroup->append_line(line);
 		optgroup->append_single_option_line("wipe_tower_width");
 		optgroup->append_single_option_line("wipe_tower_rotation_angle");
         optgroup->append_single_option_line("wipe_tower_bridging");
@@ -1003,15 +1016,19 @@ void TabPrint::build()
 		optgroup = page->new_optgroup(_(L("Overlap")));
 		optgroup->append_single_option_line("infill_overlap");
 
-		optgroup = page->new_optgroup(_(L("Flow")));
-		optgroup->append_single_option_line("bridge_flow_ratio");
-		optgroup->append_single_option_line("over_bridge_flow_ratio");
+        optgroup = page->new_optgroup(_(L("Flow")));
+        line = { _(L("Bridge flow ratio")), "" };
+        line.append_option(optgroup->get_option("bridge_flow_ratio"));
+        line.append_option(optgroup->get_option("over_bridge_flow_ratio"));
+        optgroup->append_line(line);
 
 		optgroup = page->new_optgroup(_(L("Other")));
-		optgroup->append_single_option_line("clip_multipart_objects");
-		optgroup->append_single_option_line("elefant_foot_compensation");
-		optgroup->append_single_option_line("xy_size_compensation");
-		optgroup->append_single_option_line("hole_size_compensation");
+        optgroup->append_single_option_line("clip_multipart_objects");
+        line = { _(L("XY compensation")), "" };
+        line.append_option(optgroup->get_option("xy_size_compensation"));
+        line.append_option(optgroup->get_option("elefant_foot_compensation"));
+        line.append_option(optgroup->get_option("hole_size_compensation"));
+        optgroup->append_line(line);
 //		#            optgroup->append_single_option_line("threads");
 		optgroup->append_single_option_line("resolution");
 
@@ -1027,8 +1044,9 @@ void TabPrint::build()
 		line.append_option(option);
 		optgroup->append_line(line);
 
-		optgroup = page->new_optgroup(_(L("Output file")));
-		optgroup->append_single_option_line("gcode_comments");
+        optgroup = page->new_optgroup(_(L("Output file"))); 
+        optgroup->append_single_option_line("gcode_comments");
+        optgroup->append_single_option_line("label_printed_objects");
 		option = optgroup->get_option("output_filename_format");
 		option.opt.full_width = true;
 		optgroup->append_single_option_line(option);
@@ -1081,15 +1099,22 @@ void TabPrint::update()
 
 	double fill_density = m_config->option<ConfigOptionPercent>("fill_density")->value;
 
-	if (m_config->opt_bool("spiral_vase") &&
-		!(m_config->opt_int("perimeters") == 1 && m_config->opt_int("top_solid_layers") == 0 &&
-		fill_density == 0)) {
+    if (m_config->opt_bool("spiral_vase") && !(
+        m_config->opt_int("perimeters") == 1 
+        && m_config->opt_int("top_solid_layers") == 0
+        && fill_density == 0
+        && m_config->opt_bool("support_material") == false
+        && m_config->opt_int("support_material_enforce_layers") == 0
+        && m_config->opt_bool("exact_last_layer_height") == false
+        && m_config->opt_bool("ensure_vertical_shell_thickness") == false
+        )) {
 		wxString msg_text = _(L("The Spiral Vase mode requires:\n"
 			"- one perimeter\n"
 			"- no top solid layers\n"
 			"- 0% fill density\n"
 			"- no support material\n"
 			"- no ensure_vertical_shell_thickness\n"
+			"- unchecked 'exact last layer height'\n"
 			"\nShall I adjust those settings in order to enable Spiral Vase?"));
 		auto dialog = new wxMessageDialog(parent(), msg_text, _(L("Spiral Vase")), wxICON_WARNING | wxYES | wxNO);
 		DynamicPrintConfig new_conf = *m_config;
@@ -1098,7 +1123,8 @@ void TabPrint::update()
 			new_conf.set_key_value("top_solid_layers", new ConfigOptionInt(0));
 			new_conf.set_key_value("fill_density", new ConfigOptionPercent(0));
 			new_conf.set_key_value("support_material", new ConfigOptionBool(false));
-			new_conf.set_key_value("support_material_enforce_layers", new ConfigOptionInt(0));
+            new_conf.set_key_value("support_material_enforce_layers", new ConfigOptionInt(0));
+            new_conf.set_key_value("exact_last_layer_height", new ConfigOptionBool(false));
 			new_conf.set_key_value("ensure_vertical_shell_thickness", new ConfigOptionBool(false));
 			fill_density = 0;
 		}
@@ -1252,7 +1278,7 @@ void TabPrint::update()
 					"infill_speed", "bridge_speed" })
 		get_field(el)->toggle(have_infill || have_solid_infill);
 
-	get_field("gap_fill_speed")->toggle(have_perimeters && have_infill);
+    get_field("gap_fill_speed")->toggle(have_perimeters && m_config->opt_bool("gap_fill"));
 
 	bool have_top_solid_infill = m_config->opt_int("top_solid_layers") > 0;
 	for (auto el : { "top_infill_extrusion_width", "top_solid_infill_speed" })

@@ -15,7 +15,7 @@
 
 #include "Technologies.hpp"
 
-#define SLIC3R_FORK_NAME "Slic3r Prusa Edition"
+#define SLIC3R_FORK_NAME "Slic3r++"
 #define SLIC3R_VERSION "1.41.2-beta"
 #define SLIC3R_BUILD "UNKNOWN"
 

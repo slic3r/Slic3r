@@ -477,6 +477,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
     for (const t_config_option_key &opt_key : opt_keys) {
         if (   opt_key == "perimeters"
             || opt_key == "extra_perimeters"
+            || opt_key == "gap_fill"
             || opt_key == "gap_fill_speed"
             || opt_key == "overhangs"
             || opt_key == "first_layer_extrusion_width"
@@ -493,6 +494,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
         } else if (
                opt_key == "layer_height"
             || opt_key == "first_layer_height"
+            || opt_key == "exact_last_layer_height"
             || opt_key == "raft_layers") {
             steps.emplace_back(posSlice);
             this->reset_layer_height_profile();
@@ -2032,7 +2034,7 @@ end:
                 float delta = float(scale_(m_config.xy_size_compensation.value));
                 float hole_delta = float(scale_(this->config.hole_size_compensation.value));
                 if (layer_id == 0)
-                    delta -= float(scale_(m_config.elefant_foot_compensation.value));
+                    delta += float(scale_(m_config.elefant_foot_compensation.value));
                 bool  scale = delta != 0.f;
                 bool  clip  = m_config.clip_multipart_objects.value || delta > 0.f;
                 if (layer->m_regions.size() == 1) {

@@ -74,7 +74,7 @@ sub new {
     # initialize status bar
     $self->{statusbar} = Slic3r::GUI::ProgressStatusBar->new();
     $self->{statusbar}->Embed;
-    $self->{statusbar}->SetStatusText(L("Version ").$Slic3r::VERSION.L(" - Remember to check for updates at http://github.com/prusa3d/slic3r/releases"));
+    $self->{statusbar}->SetStatusText(L("Version ").$Slic3r::VERSION.L(" - Remember to check for updates at http://github.com/supermerill/slic3r/releases"));
     # Make the global status bar and its progress indicator available in C++
     Slic3r::GUI::set_progress_status_bar($self->{statusbar});
     $appController->set_global_progress_indicator($self->{statusbar});
@@ -389,11 +389,11 @@ sub _init_menubar {
     # Help menu
     my $helpMenu = Wx::Menu->new;
     {
-        $self->_append_menu_item($helpMenu, L("Prusa 3D Drivers"), L('Open the Prusa3D drivers download page in your browser'), sub {
-            Wx::LaunchDefaultBrowser('http://www.prusa3d.com/drivers/');
-        });
-        $self->_append_menu_item($helpMenu, L("Prusa Edition Releases"), L('Open the Prusa Edition releases page in your browser'), sub {
-            Wx::LaunchDefaultBrowser('http://github.com/prusa3d/slic3r/releases');
+        
+        
+        
+        $self->_append_menu_item($helpMenu, L("Slic3r++ Releases"), L('Open the Slic3r++ releases page in your browser'), sub {
+            Wx::LaunchDefaultBrowser('http://github.com/supermerill/slic3r/releases');
         });
 #        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", 'Check for new Slic3r versions', sub {
 #            wxTheApp->check_version(1);
@@ -412,8 +412,8 @@ sub _init_menubar {
         $self->_append_menu_item($helpMenu, L("Show &Configuration Folder"), L('Show user configuration folder (datadir)'), sub {
             Slic3r::GUI::desktop_open_datadir_folder();
         });
-        $self->_append_menu_item($helpMenu, L("Report an Issue"), L('Report an issue on the Slic3r Prusa Edition'), sub {
-            Wx::LaunchDefaultBrowser('http://github.com/prusa3d/slic3r/issues/new');
+        $self->_append_menu_item($helpMenu, L("Report an Issue"), L('Report an issue on the Slic3r++ github'), sub {
+            Wx::LaunchDefaultBrowser('http://github.com/supermerill/slic3r/issues/new');
         });
         $self->_append_menu_item($helpMenu, L("&About Slic3r"), L('Show about dialog'), sub {
             Slic3r::GUI::about;

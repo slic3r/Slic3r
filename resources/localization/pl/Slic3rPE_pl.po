@@ -86,8 +86,8 @@ msgstr ""
 "Wartość nie jest liczbą."
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:66
-msgid " - Remember to check for updates at http://github.com/prusa3d/slic3r/releases"
-msgstr " - Pamiętaj aby sprawdzać aktualizacja na http://github.com/prusa3d/slic3r/releases"
+msgid " - Remember to check for updates at http://github.com/supermerill/slic3r/releases"
+msgstr " - Pamiętaj aby sprawdzać aktualizacja na http://github.com/supermerill/slic3r/releases"
 
 # Used in this context: _("Save ") + title + _(" as:")
 #: c:\src\Slic3r\xs\src\slic3r\GUI\Tab.cpp:1751
@@ -1605,8 +1605,8 @@ msgstr "Wysokość skirtu wyrażona w warstwach. Ustawienie wysokiej wartości s
 
 #: xs/src/slic3r/GUI/ConfigWizard.cpp:213
 #, c-format
-msgid "Hello, welcome to Slic3r Prusa Edition! This %s helps you with the initial configuration; just a few settings and you will be ready to print."
-msgstr "Witaj w Slic3r Prusa Edition! Ten %s pomoże we wstępnej konfiguracji - tylko kilka ustawień dzieli Cię od gotowości do drukowania."
+msgid "Hello, welcome to Slic3r Slic3r++! This %s helps you with the initial configuration; just a few settings and you will be ready to print."
+msgstr "Witaj w Slic3r Slic3r++! Ten %s pomoże we wstępnej konfiguracji - tylko kilka ustawień dzieli Cię od gotowości do drukowania."
 
 #: xs/src/slic3r/GUI/WipeTowerDialog.cpp:218
 msgid "Here you can adjust required purging volume (mm³) for any given pair of tools."
@@ -2348,8 +2348,8 @@ msgid "Open the object editor dialog"
 msgstr "Otwórz menu edytora modelu"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Open the Prusa Edition releases page in your browser"
-msgstr "Otwórz stronę z wydaniami Prusa Edition w przeglądarce"
+msgid "Open the Slic3r++ releases page in your browser"
+msgstr "Otwórz stronę z wydaniami Slic3r++ w przeglądarce"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:385
 msgid "Open the Prusa3D drivers download page in your browser"
@@ -2595,8 +2595,8 @@ msgid "Prusa 3D Drivers"
 msgstr "Sterowniki Prusa3D"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:388
-msgid "Prusa Edition Releases"
-msgstr "Wydania Prusa Edition"
+msgid "Slic3r++ Releases"
+msgstr "Wydania Slic3r++"
 
 #: xs/src/slic3r/GUI/GUI.cpp:908
 msgid "Purging volumes"
@@ -2754,8 +2754,8 @@ msgid "Report an Issue"
 msgstr "Zgłoś problem"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:405
-msgid "Report an issue on the Slic3r Prusa Edition"
-msgstr "Zgłoś problem z Slic3r Prusa Edition"
+msgid "Report an issue on the Slic3r Slic3r++"
+msgstr "Zgłoś problem z Slic3r Slic3r++"
 
 #: xs/src/slic3r/Utils/PresetUpdater.cpp:514
 #, c-format

@@ -293,7 +293,7 @@ const std::vector<std::string>& Preset::print_options()
         "max_volumetric_speed", "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative", 
         "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "infill_speed", "solid_infill_speed", 
         "top_solid_infill_speed", "support_material_speed", "support_material_xy_spacing", "support_material_interface_speed",
-        "bridge_speed", "gap_fill_speed", "travel_speed", "first_layer_speed", "perimeter_acceleration", "infill_acceleration", 
+        "bridge_speed", "gap_fill", "gap_fill_speed", "travel_speed", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
         "bridge_acceleration", "first_layer_acceleration", "default_acceleration", "skirts", "skirt_distance", "skirt_height",
         "min_skirt_length", "brim_width", "support_material", "support_material_auto", "support_material_threshold", "support_material_enforce_layers", 
         "raft_layers", "support_material_pattern", "support_material_with_sheath", "support_material_spacing", 
@@ -310,10 +310,15 @@ const std::vector<std::string>& Preset::print_options()
         "wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging",
         "only_one_perimeter_top", "single_extruder_multi_material_priming", "compatible_printers", "compatible_printers_condition", "inherits", 
         "infill_dense", "infill_dense_algo", "no_perimeter_unsupported", "min_perimeter_unsupported", "noperi_bridge_only",
-        "support_material_solid_first_layer", "perimeter_loop", "perimeter_loop_seam", "seam_travel"
+        "support_material_solid_first_layer"
+        , "exact_last_layer_height"
+        , "perimeter_loop"
+        , "perimeter_loop_seam"
+        , "seam_travel"
         , "remove_small_gaps"
         , "infill_not_connected"
-        ,"first_layer_infill_speed"
+        , "first_layer_infill_speed"
+        , "label_printed_objects"
     };
     return s_opts;
 }

@@ -53,7 +53,7 @@ AboutDialog::AboutDialog()
 
     // title
     {
-        wxStaticText* title = new wxStaticText(this, wxID_ANY, "Slic3r Prusa Edition", wxDefaultPosition, wxDefaultSize);
+        wxStaticText* title = new wxStaticText(this, wxID_ANY, "Slic3r++", wxDefaultPosition, wxDefaultSize);
         wxFont title_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
         title_font.SetWeight(wxFONTWEIGHT_BOLD);
         title_font.SetFamily(wxFONTFAMILY_ROMAN);
@@ -92,12 +92,13 @@ AboutDialog::AboutDialog()
             "<html>"
             "<body bgcolor= %s link= %s>"
             "<font color=%s>"
+            "Copyright &copy; 2018 Durand Rémi. <br />"
             "Copyright &copy; 2016-2018 Prusa Research. <br />"
             "Copyright &copy; 2011-2017 Alessandro Ranellucci. <br />"
             "<a href=\"http://slic3r.org/\">Slic3r</a> is licensed under the "
             "<a href=\"http://www.gnu.org/licenses/agpl-3.0.html\">GNU Affero General Public License, version 3</a>."
             "<br /><br />"
-            "Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik and numerous others. "
+            "Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi and numerous others. "
             "Manual by Gary Hodgson. Inspired by the RepRap community. <br />"
             "Slic3r logo designed by Corey Daniels, <a href=\"http://www.famfamfam.com/lab/icons/silk/\">Silk Icon Set</a> designed by Mark James. "
             "</font>"

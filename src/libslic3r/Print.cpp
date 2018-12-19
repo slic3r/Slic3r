@@ -151,6 +151,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "first_layer_speed",
         "first_layer_infill_speed",
         "gcode_comments",
+        "label_printed_objects",
         "gcode_flavor",
         "infill_acceleration",
         "layer_gcode",
@@ -1221,7 +1222,7 @@ void Print::_make_wipe_tower()
         float(m_config.wipe_tower_rotation_angle.value), float(m_config.cooling_tube_retraction.value),
         float(m_config.cooling_tube_length.value), float(m_config.parking_pos_retraction.value),
         float(m_config.extra_loading_move.value), float(m_config.wipe_tower_bridging), wipe_volumes,
-        m_wipe_tower_data.tool_ordering.first_extruder());
+        m_wipe_tower_data.tool_ordering.first_extruder(), float(m_config.first_layer_extrusion_width));
 
     //wipe_tower.set_retract();
     //wipe_tower.set_zhop();
