@@ -422,12 +422,12 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface)
             Polygons layerm_slices_surfaces = layerm.slices;
             
             //debug
-            SVG svg("svg/collider" + std::to_string(layer->id()) + ".svg");
-            svg.draw(layerm_slices_surfaces, "blue");
-            svg.draw(union_ex(diff(collider,nonplanar_polygon)), "red", 0.7f);
-            svg.draw_outline(collider);
-            svg.arrows = false;
-            svg.Close();
+            // SVG svg("svg/collider" + std::to_string(layer->id()) + ".svg");
+            // svg.draw(layerm_slices_surfaces, "blue");
+            // svg.draw(union_ex(diff(collider,nonplanar_polygon)), "red", 0.7f);
+            // svg.draw_outline(collider);
+            // svg.arrows = false;
+            // svg.Close();
             
             //check if current surface collides with previous collider
             ExPolygons collisions = union_ex(intersection(layerm_slices_surfaces, diff(collider,nonplanar_polygon)));
