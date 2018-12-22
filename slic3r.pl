@@ -19,6 +19,7 @@ use Time::HiRes qw(gettimeofday tv_interval);
 $|++;
 binmode STDOUT, ':utf8';
 binmode STDERR, ':utf8';
+$ENV{GDK_BACKEND} = 'x11';
 
 our %opt = ();
 my %cli_options = ();
