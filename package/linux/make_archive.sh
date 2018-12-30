@@ -6,12 +6,13 @@
 # Adapted from script written by bubnikv for Prusa3D.
 # Run from slic3r repo root directory.
 
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $(basename $0) arch_name"
-    echo "This script should be called from the main source directory for Slic3r."
+if [ "$#" -lt 1 ]; then
+    echo "Usage: $(basename $0) arch_name [source_dir]"
+    echo "source_dir is the path to Slic3r's main directory. Default: $(pwd)"
     exit 1;
 fi
-libdirs=$(find ./local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
+
+echo "WD: $(dirname $0)"
 WD=./$(dirname $0)
 source $(dirname $0)/../common/util.sh
 # Determine if this is a tagged (release) commit.
@@ -25,6 +26,8 @@ set_branch
 set_app_name
 set_pr_id
 install_par
+
+libdirs=$(find ${SLIC3R_DIR}/local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
 
 # If we're on a branch, add the branch name to the app name.
 if [ "$current_branch" == "master" ]; then
