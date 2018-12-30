@@ -17,6 +17,7 @@ source $(dirname $0)/../common/util.sh
 # Determine if this is a tagged (release) commit.
 # Change the build id accordingly.
 
+set_source_dir $2
 set_version
 get_commit
 set_build_id
