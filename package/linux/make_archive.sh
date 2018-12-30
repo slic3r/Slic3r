@@ -51,11 +51,11 @@ resourcefolder=$appfolder
 echo "Appfolder: $appfolder, archivefolder: $archivefolder, resourcefolder=$resourcefolder"
 
 # Our slic3r dir and location of perl
-if [[ ! -z "$PERL_BIN" ]]; then
+if [[ -z ${PERL_BIN+x} ]]; then
     PERL_BIN=$(which perl)
     echo "Found perl at $PERL_BIN"
 fi
-if [[ ! -z "$PP_BIN" ]]; then
+if [[ -z ${PP_BIN+x} ]]; then
     PP_BIN=$(which pp)
     echo "Found pp at $PP_BIN"
 fi
