@@ -74,10 +74,10 @@ if [[ -e "${dmgfile}" ]]; then
 fi
 
 echo "Creating new app folder: $appfolder"
-mkdir -p $appfolder 
+mkdir -p $appfolder
 
 echo "Copying resources..." 
-cp -rf $SLIC3R_DIR/var $resourcefolder/
+cp -rf ${SLIC3R_DIR}/var $resourcefolder/
 
 echo "Copying Slic3r..."
 cp $SLIC3R_DIR/slic3r.pl $archivefolder/slic3r.pl
@@ -114,7 +114,7 @@ unzip -qq -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
 cp -rf $WD/_tmp/shlib $archivefolder/
 rm -rf $WD/_tmp
-for i in $(cat $WD/libpaths.txt | grep -v "^#" | awk -F# '{print $1}'); do 
+for i in $(cat $WD/libpaths.txt | grep -v "^#" | awk -F# '{print $1}'); do
 	install -v $i $archivefolder/bin
 done
 
