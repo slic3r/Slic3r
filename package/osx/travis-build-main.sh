@@ -11,7 +11,7 @@ brew install boost     || brew upgrade boost
 brew install perl      || brew upgrade perl
 brew install cpanminus || brew upgrade cpanminus
 brew install wxwidgets || brew upgrade wxwidgets
-brew install greadlink || brew upgrade greadlink
+brew install coreutils || brew upgrade coreutils
 brew link --overwrite perl cpanminus
 
 export SLIC3R_STATIC=1
