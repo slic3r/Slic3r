@@ -134,4 +134,5 @@ find $archivefolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
 rm -rf $archivefolder/local-lib/lib/perl5/*/Alien/wxWidgets/*/include
 find $archivefolder/local-lib -depth -type d -empty -exec rmdir "{}" \;
 
-tar -C$(pwd)/$(dirname $appfolder) -cjf $(pwd)/$dmgfile "$appname"
+echo "Archiving from $appfolder"
+tar -C$WD -cjf $(pwd)/$dmgfile "$(basename $appfolder)"
