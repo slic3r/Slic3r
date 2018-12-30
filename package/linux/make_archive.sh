@@ -124,9 +124,9 @@ rm -rf $archivefolder/local-lib/lib/perl5/App
 rm -rf $archivefolder/local-lib/lib/perl5/Devel/CheckLib.pm
 rm -rf $archivefolder/local-lib/lib/perl5/ExtUtils
 rm -rf $archivefolder/local-lib/lib/perl5/Module/Build*
-rm -rf $(pwd)$archivefolder/local-lib/lib/perl5/TAP
-rm -rf $(pwd)/$archivefolder/local-lib/lib/perl5/Test*
-find $(pwd)/$archivefolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
+rm -rf $archivefolder/local-lib/lib/perl5/TAP
+rm -rf $archivefolder/local-lib/lib/perl5/Test*
+find $archivefolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
     -or -name DocView -or -name STC -or -name IPC \
     -or -name Calendar -or -name DataView \
     -or -name DateTime -or -name Media -or -name PerlTest \
