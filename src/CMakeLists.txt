@@ -147,11 +147,13 @@ set(COMMON_INCLUDES
 )
 set(SLIC3R_INCLUDES
     ${COMMON_INCLUDES}
-    ${LIBDIR}/libslic3r
     ${EXPAT_INCLUDES}
     ${ADMESH_INCLUDES}
     ${POLY2TRI_INCLUDES}
     ${BSPLINE_INCLUDES}
+)
+set(LIBSLIC3R_INCLUDES
+    ${LIBDIR}/libslic3r
 )
 
 
@@ -160,6 +162,7 @@ add_library(ZipArchive STATIC
 )
 target_compile_features(ZipArchive PUBLIC cxx_std_11)
 target_include_directories(ZipArchive PUBLIC ${COMMON_INCLUDES})
+target_compile_options(ZipArchive PUBLIC -w)
 
 add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/BoundingBox.cpp
@@ -223,12 +226,14 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/utils.cpp
 )
 target_compile_features(libslic3r PUBLIC cxx_std_11)
-target_include_directories(libslic3r PUBLIC ${SLIC3R_INCLUDES})
+target_include_directories(libslic3r SYSTEM PUBLIC ${SLIC3R_INCLUDES})
+target_include_directories(libslic3r PUBLIC ${LIBSLIC3R_INCLUDES})
 
 add_library(BSpline STATIC
     ${LIBDIR}/BSpline/BSpline.cpp
 )
 target_include_directories(BSpline PUBLIC ${BSPLINE_INCLUDES})
+target_compile_options(BSpline PUBLIC -w)
 
 add_library(admesh STATIC
     ${LIBDIR}/admesh/connect.c
@@ -240,21 +245,25 @@ add_library(admesh STATIC
 )
 target_include_directories(admesh PUBLIC ${ADMESH_INCLUDES} ${COMMON_INCLUDES})
 set_property(TARGET admesh PROPERTY C_STANDARD 99)
+target_compile_options(admesh PUBLIC -w)
 
 
 add_library(clipper STATIC ${LIBDIR}/clipper.cpp)
 target_include_directories(clipper PUBLIC ${COMMON_INCLUDES})
+target_compile_options(clipper PUBLIC -w)
 
 add_library(expat STATIC
     ${LIBDIR}/expat/xmlparse.c
     ${LIBDIR}/expat/xmlrole.c
     ${LIBDIR}/expat/xmltok.c
 )
-target_compile_features(clipper PUBLIC cxx_std_11)
+target_compile_features(expat PUBLIC cxx_std_11)
 target_include_directories(expat PUBLIC ${EXPAT_INCLUDES})
+target_compile_options(expat PUBLIC -w)
 
 add_library(polypartition STATIC ${LIBDIR}/polypartition.cpp)
 target_include_directories(polypartition PUBLIC ${COMMON_INCLUDES})
+target_compile_options(polypartition PUBLIC -w)
 
 add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/common/shapes.cc
@@ -264,6 +273,7 @@ add_library(poly2tri STATIC
     ${LIBDIR}/poly2tri/sweep/sweep.cc
 )
 target_include_directories(poly2tri PUBLIC ${COMMON_INCLUDES})
+target_compile_options(poly2tri PUBLIC -w)
 
 set(UI_TEST_SOURCES
     slic3r.cpp
