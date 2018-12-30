@@ -59,13 +59,6 @@ if [[ ! -z "$PP_BIN" ]]; then
     PP_BIN=$(which pp)
     echo "Found pp at $PP_BIN"
 fi
-if [[ ! -z "$TRAVIS_BUILD_DIR" ]]; then
-    SLIC3R_DIR="./"
-else
-    SLIC3R_DIR="$TRAVIS_BUILD_DIR"
-fi
-echo "Set SLIC3R_DIR to $SLIC3R_DIR".
-
 
 if [[ -d "${appfolder}" ]]; then
     echo "Deleting old working folder: ${appfolder}"
