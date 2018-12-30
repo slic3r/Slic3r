@@ -12,6 +12,12 @@ EXT=$1
 shift
 FILES=$*
 
+if [ -z ${READLINK+x} ]; then
+    READLINK_BIN=readlink
+else
+    READLINK_BIN=$READLINK
+fi
+
 source $(dirname $0)/../common/util.sh
 set_pr_id
 set_branch
@@ -21,7 +27,7 @@ fi
 
 if [ -s $KEY ]; then
     for i in $FILES; do 
-         filepath=$(readlink -f "$i")
+         filepath=$(${READLINK_BIN} -f "$i")
          filepath=$(basename $filepath)
          tmpfile=$(mktemp)
 
