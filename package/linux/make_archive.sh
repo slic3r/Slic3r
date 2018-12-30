@@ -44,7 +44,7 @@ appfolder="$WD/${appname}"
 archivefolder=$appfolder
 resourcefolder=$appfolder
 
-echo "Appfolder: $appfolder, archivefolder: $archivefolder"
+echo "Appfolder: $appfolder, archivefolder: $archivefolder, resourcefolder=$resourcefolder"
 
 # Our slic3r dir and location of perl
 if [[ ! -z "$PERL_BIN" ]]; then
