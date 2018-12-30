@@ -19,7 +19,7 @@ function set_source_dir ()
 # must be run from the root
 function set_version ()
 {
-SLIC3R_VERSION=$(grep "VERSION" xs/src/libslic3r/libslic3r.h | awk -F\" '{print $2}')
+SLIC3R_VERSION=$(grep "VERSION" ${SLIC3R_DIR}/xs/src/libslic3r/libslic3r.h | awk -F\" '{print $2}')
 }
 # Cache the SHA1 for this build commit.
 function get_commit () {
