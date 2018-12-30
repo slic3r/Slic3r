@@ -2,7 +2,7 @@ use Test::More;
 use strict;
 use warnings;
 
-plan tests => 95;
+plan tests => 97;
 
 BEGIN {
     use FindBin;
@@ -241,7 +241,7 @@ sub scale_points (@) { map [scale $_->[X], scale $_->[Y]], @_ }
         'chained path';
 }
 
-for my $pattern (qw(rectilinear honeycomb hilbertcurve concentric)) {
+for my $pattern (qw(smooth rectilinear honeycomb hilbertcurve concentric)) {
     my $config = Slic3r::Config->new_from_defaults;
     $config->set('fill_pattern', $pattern);
     $config->set('external_fill_pattern', $pattern);
