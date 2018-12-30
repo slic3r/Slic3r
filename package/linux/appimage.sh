@@ -9,6 +9,7 @@
 
 source $(dirname $0)/../common/util.sh
 
+set_source_dir $2
 set_version
 get_commit
 set_build_id
