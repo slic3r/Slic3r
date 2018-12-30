@@ -8,6 +8,7 @@
 
 if [ "$#" -ne 1 ]; then
     echo "Usage: $(basename $0) arch_name"
+    echo "This script should be called from the main source directory for Slic3r."
     exit 1;
 fi
 libdirs=$(find ./local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
