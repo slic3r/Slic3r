@@ -76,7 +76,7 @@ fi
 echo "Creating new app folder: $appfolder"
 mkdir -p $appfolder
 
-echo "Copying resources..." 
+echo "Copying resources... from ${SLIC3R_DIR}/var to $resourcefolder"
 cp -rf ${SLIC3R_DIR}/var $resourcefolder/
 
 echo "Copying Slic3r..."
