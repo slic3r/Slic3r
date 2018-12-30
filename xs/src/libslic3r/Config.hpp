@@ -4,7 +4,6 @@
 
 #include <initializer_list>
 #include <memory>
-#include <regex>
 #include <string>
 
 #include "PrintConfig.hpp"
