@@ -386,9 +386,9 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     // check for usage of spiralvase logic.
     this->_spiral_vase.enable = (
             layer->id() > 0 
-            && (_print.config.skirts == 0 || (layer->id() >= _print.config.skirt_height && !_print.has_infinite_skirt()))
+            && (_print.config.skirts == 0 || (layer->id() >= static_cast<size_t>(_print.config.skirt_height.value) && !_print.has_infinite_skirt()))
             && std::find_if(layer->regions.cbegin(), layer->regions.cend(), [layer] (const LayerRegion* l) 
-                { return    l->region()->config.bottom_solid_layers > layer->id() 
+                { return    static_cast<size_t>(l->region()->config.bottom_solid_layers) > layer->id() 
                          || l->perimeters.items_count() > 1 
                          || l->fills.items_count() > 0; 
                 }) == layer->regions.cend()

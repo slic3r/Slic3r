@@ -123,13 +123,13 @@ CoolingBuffer::flush()
             gcode = new_gcode;
         }
     }
-    if (this->_layer_id < gg.config.disable_fan_first_layers)
+    if (this->_layer_id < static_cast<size_t>(gg.config.disable_fan_first_layers.value))
         fan_speed = 0;
     
     gcode = gg.writer.set_fan(fan_speed) + gcode;
     
     // bridge fan speed
-    if (!gg.config.cooling || gg.config.bridge_fan_speed == 0 || this->_layer_id < gg.config.disable_fan_first_layers) {
+    if (!gg.config.cooling || gg.config.bridge_fan_speed == 0 || this->_layer_id < static_cast<size_t>(gg.config.disable_fan_first_layers)) {
         boost::replace_all(gcode, ";_BRIDGE_FAN_START", "");
         boost::replace_all(gcode, ";_BRIDGE_FAN_END", "");
     } else {

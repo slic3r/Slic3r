@@ -14,8 +14,8 @@ void
 SupportMaterial::generate_toolpaths(PrintObject *object,
                                     map<coordf_t, Polygons> overhang,
                                     map<coordf_t, Polygons> contact,
-                                    map<int, Polygons> _interface,
-                                    map<int, Polygons> base)
+                                    map<size_t, Polygons> _interface,
+                                    map<size_t, Polygons> base)
 {
     // Assign the object to the supports class.
     this->object = object;
@@ -80,18 +80,18 @@ SupportMaterial::generate(PrintObject *object)
                                                   get_max_layer_height(object));
     // If we wanted to apply some special logic to the first support layers lying on
     // object's top surfaces this is the place to detect them.
-    map<int, Polygons> shape;
+    map<size_t, Polygons> shape;
     if (object_config->support_material_pattern.value == smpPillars)
         this->generate_pillars_shape(contact, support_z, shape);
 
     // Propagate contact layers downwards to generate interface layers.
-    map<int, Polygons> _interface = generate_interface_layers(support_z, contact, top);
+    map<size_t, Polygons> _interface = generate_interface_layers(support_z, contact, top);
     clip_with_object(_interface, support_z, *object);
     if (!shape.empty())
         clip_with_shape(_interface, shape);
     // Propagate contact layers and interface layers downwards to generate
     // the main support layers.
-    map<int, Polygons> base = generate_base_layers(support_z, contact, _interface, top);
+    map<size_t, Polygons> base = generate_base_layers(support_z, contact, _interface, top);
     clip_with_object(base, support_z, *object);
     if (!shape.empty())
         clip_with_shape(base, shape);
@@ -100,7 +100,7 @@ SupportMaterial::generate(PrintObject *object)
     // lie above object's top surfaces.
     generate_bottom_interface_layers(support_z, base, top, _interface);
     // Install support layers into object.
-    for (int i = 0; i < int(support_z.size()); i++) {
+    for (size_t i = 0; i < support_z.size(); i++) {
         object->add_support_layer(
             i, // id.
             (i == 0) ? support_z[0] - 0 : (support_z[i] - support_z[i - 1]), // height.
@@ -123,19 +123,19 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
 {
     // Quick table to check whether a given Z is a top surface.
     map<coordf_t, bool> is_top;
-    for (auto z : top_z) is_top[z] = true;
+    for (coordf_t z : top_z) is_top[z] = true;
 
     // determine layer height for any non-contact layer
     // we use max() to prevent many ultra-thin layers to be inserted in case
     // layer_height > nozzle_diameter * 0.75.
-    auto nozzle_diameter = config->nozzle_diameter.get_at(static_cast<size_t>(
+    coordf_t nozzle_diameter = config->nozzle_diameter.get_at(static_cast<size_t>(
                                                               object_config->support_material_extruder - 1));
-    auto support_material_height = max(max_object_layer_height, (nozzle_diameter * 0.75));
+    coordf_t support_material_height = max(max_object_layer_height, (nozzle_diameter * 0.75));
     coordf_t _contact_distance = this->contact_distance(support_material_height, nozzle_diameter);
     // Initialize known, fixed, support layers.
     vector<coordf_t> z;
-    for (auto c_z : contact_z) z.push_back(c_z);
-    for (auto t_z : top_z) {
+    for (coordf_t c_z : contact_z) z.push_back(c_z);
+    for (coordf_t t_z : top_z) {
         z.push_back(t_z);
         z.push_back(t_z + _contact_distance);
     }
@@ -154,8 +154,8 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
 
         // since we already have two raft layers ($z[0] and $z[1]) we need to insert
         // raft_layers-2 more
-        int idx = 1;
-        for (int j = 1; j <= object_config->raft_layers - 2; j++) {
+        size_t idx = 1;
+        for (size_t j = 1; j <= static_cast<size_t>(object_config->raft_layers.value) - 2; j++) {
             float z_new =
                 roundf(static_cast<float>((z[0] + height * idx) * 100)) / 100; // round it to 2 decimal places.
             z.insert(z.begin() + idx, z_new);
@@ -164,7 +164,7 @@ SupportMaterial::support_layers_z(vector<coordf_t> contact_z,
     }
 
     // Create other layers (skip raft layers as they're already done and use thicker layers).
-    for (auto i = static_cast<int>(z.size()) - 1; i >= object_config->raft_layers; i--) {
+    for (size_t i = z.size() - 1; i >= static_cast<size_t>(object_config->raft_layers.value); i--) {
         coordf_t target_height = support_material_height;
         if (i > 0 && is_top.count(z[i - 1]) > 0 && is_top[z[i - 1]]) {
             target_height = nozzle_diameter;
@@ -218,7 +218,7 @@ SupportMaterial::contact_area(PrintObject *object)
     // Determine contact areas.
     map<coordf_t, Polygons> contact; // contact_z => [ polygons ].
     map<coordf_t, Polygons> overhang; // This stores the actual overhang supported by each contact layer
-    for (int layer_id = 0; layer_id < object->layers.size(); layer_id++) {
+    for (size_t layer_id = 0; layer_id < object->layers.size(); layer_id++) {
         // Note $layer_id might != $layer->id when raft_layers > 0
         // so $layer_id == 0 means first object layer
         // and $layer->id == 0 means first print layer (including raft).
@@ -232,7 +232,7 @@ SupportMaterial::contact_area(PrintObject *object)
         // enough layer that enforce-supports no longer applies.
         if (layer_id > 0
             && !conf.support_material
-            && (layer_id >= conf.support_material_enforce_layers))
+            && (layer_id >= static_cast<size_t>(conf.support_material_enforce_layers.value)))
             // If we are only going to generate raft just check
             // the 'overhangs' of the first object layer.
             break;
@@ -240,15 +240,15 @@ SupportMaterial::contact_area(PrintObject *object)
         Layer *layer = object->get_layer(layer_id);
 
         if (conf.support_material_max_layers
-            && layer_id > conf.support_material_max_layers)
+            && layer_id > static_cast<size_t>(conf.support_material_max_layers.value))
             break;
 
         if (buildplate_only) {
             // Collect the top surfaces up to this layer and merge them. TODO @Ask about this line.
             Polygons projection_new;
-            for (auto const &region : layer->regions) {
-                SurfacesPtr top_surfaces = region->slices.filter_by_type(stTop);
-                for (const auto &polygon : p(top_surfaces)) {
+            for (const LayerRegion* region : layer->regions) {
+                SurfacesConstPtr top_surfaces = region->slices.filter_by_type(stTop);
+                for (const Polygon &polygon : surfaces_to_polygons(top_surfaces)) {
                     projection_new.push_back(polygon);
                 }
             }
@@ -270,7 +270,7 @@ SupportMaterial::contact_area(PrintObject *object)
             // this is the first object layer, so we're here just to get the object
             // footprint for the raft.
             // we only consider contours and discard holes to get a more continuous raft.
-            for (auto const &contour : layer->slices.contours())
+            for (const Polygon &contour : layer->slices.contours())
                 tmp_overhang.push_back(contour);
 
             Polygons polygons = offset(tmp_overhang, scale_(+SUPPORT_MATERIAL_MARGIN));
@@ -278,18 +278,18 @@ SupportMaterial::contact_area(PrintObject *object)
         }
         else {
             Layer *lower_layer = object->get_layer(layer_id - 1);
-            for (auto layer_m : layer->regions) {
-                auto fw = layer_m->flow(frExternalPerimeter).scaled_width();
+            for (const LayerRegion* layer_m : layer->regions) {
+                coord_t fw = layer_m->flow(frExternalPerimeter).scaled_width();
                 Polygons difference;
 
                 // If a threshold angle was specified, use a different logic for detecting overhangs.
                 if ((conf.support_material && threshold_rad != 0.0)
-                    || layer_id <= conf.support_material_enforce_layers
+                    || layer_id <= static_cast<size_t>(conf.support_material_enforce_layers.value)
                     || (conf.raft_layers > 0 && layer_id
                         == 0)) { // TODO ASK @Samir why layer_id ==0 check , layer_id will never equal to zero
                     float d = 0;
                     float layer_threshold_rad = threshold_rad;
-                    if (layer_id <= conf.support_material_enforce_layers) {
+                    if (layer_id <= static_cast<size_t>(conf.support_material_enforce_layers.value)) {
                         // Use ~45 deg number for enforced supports if we are in auto.
                         layer_threshold_rad = static_cast<float>(Geometry::deg2rad(89));
                     }
@@ -332,7 +332,7 @@ SupportMaterial::contact_area(PrintObject *object)
                     // Compute the area of bridging perimeters.
                     Polygons bridged_perimeters;
                     {
-                        auto bridge_flow = layer_m->flow(FlowRole::frPerimeter, 1);
+                        Flow bridge_flow = layer_m->flow(FlowRole::frPerimeter, 1);
 
                         // Get the lower layer's slices and grow them by half the nozzle diameter
                         // because we will consider the upper perimeters supported even if half nozzle
@@ -353,36 +353,36 @@ SupportMaterial::contact_area(PrintObject *object)
                         // TODO: split_at_first_point() (called by as_polyline() for ExtrusionLoops)
                         // could split a bridge mid-way.
                         Polylines overhang_perimeters;
-                        for (auto extr_path : ExtrusionPaths(layer_m->perimeters.flatten())) {
+                        for (const ExtrusionPath &extr_path : ExtrusionPaths(layer_m->perimeters.flatten())) {
                             overhang_perimeters.push_back(extr_path.as_polyline());
                         }
 
                         // Only consider the overhang parts of such perimeters,
                         // overhangs being those parts not supported by
                         // workaround for Clipper bug, see Slic3r::Polygon::clip_as_polyline()
-                        for (auto &overhang_perimeter : overhang_perimeters)
+                        for (Polyline &overhang_perimeter : overhang_perimeters)
                             overhang_perimeter.translate(1, 0);
                         overhang_perimeters = diff_pl(overhang_perimeters, lower_grown_slices);
 
                         // Only consider straight overhangs.
                         Polylines new_overhangs_perimeters_polylines;
-                        for (const auto &p : overhang_perimeters)
-                            if (p.is_straight())
-                                new_overhangs_perimeters_polylines.push_back(p);
+                        for (const Polyline &overhang_perimeter : overhang_perimeters)
+                            if (overhang_perimeter.is_straight())
+                                new_overhangs_perimeters_polylines.push_back(overhang_perimeter);
 
                         overhang_perimeters = new_overhangs_perimeters_polylines;
 
                         // Only consider overhangs having endpoints inside layer's slices
-                        for (auto &p : overhang_perimeters) {
-                            p.extend_start(fw);
-                            p.extend_end(fw);
+                        for (Polyline &overhang_perimeter : overhang_perimeters) {
+                            overhang_perimeter.extend_start(fw);
+                            overhang_perimeter.extend_end(fw);
                         }
 
                         new_overhangs_perimeters_polylines = Polylines();
-                        for (const auto &p : overhang_perimeters) {
-                            if (layer->slices.contains_b(p.first_point())
-                                && layer->slices.contains_b(p.last_point())) {
-                                new_overhangs_perimeters_polylines.push_back(p);
+                        for (const Polyline &overhang_perimeter : overhang_perimeters) {
+                            if (layer->slices.contains_b(overhang_perimeter.first_point())
+                                && layer->slices.contains_b(overhang_perimeter.last_point())) {
+                                new_overhangs_perimeters_polylines.push_back(overhang_perimeter);
                             }
                         }
 
@@ -398,7 +398,7 @@ SupportMaterial::contact_area(PrintObject *object)
                                                 fw,
                                                 layer_m->flow(FlowRole::frPerimeter).scaled_width()};
 
-                            auto w = *max_element(widths, widths + 4);
+                            coord_t w = *max_element(widths, widths + 4);
 
                             // Also apply safety offset to ensure no gaps are left in between.
                             Polygons ps = offset(overhang_perimeters, w / 2 + 10);
@@ -409,7 +409,7 @@ SupportMaterial::contact_area(PrintObject *object)
                     if (1) {
                         // Remove the entire bridges and only support the unsupported edges.
                         ExPolygons bridges;
-                        for (auto surface : layer_m->fill_surfaces.filter_by_type(stBottom | stBridge)) {
+                        for (const Surface* surface : layer_m->fill_surfaces.filter_by_type(stBottom | stBridge)) {
                             if (surface->bridge_angle != -1) {
                                 bridges.push_back(surface->expolygon);
                             }
@@ -466,7 +466,7 @@ SupportMaterial::contact_area(PrintObject *object)
                     vector<coord_t> scale_vector
                         (static_cast<unsigned long>(SUPPORT_MATERIAL_MARGIN / MARGIN_STEP), scale_(MARGIN_STEP));
                     scale_vector.push_back(fw / 2);
-                    for (int i = static_cast<int>(scale_vector.size()) - 1; i >= 0; i--) {
+                    for (size_t i = scale_vector.size() - 1; i >= 0; i--) {
                         difference = diff(
                             offset(difference, i),
                             slices_margin
@@ -483,20 +483,17 @@ SupportMaterial::contact_area(PrintObject *object)
         {
             // Get the average nozzle diameter used on this layer.
             vector<double> nozzle_diameters;
-            for (auto region : layer->regions) {
-                nozzle_diameters.push_back(config->nozzle_diameter.get_at(static_cast<size_t>(
-                                                                              region->region()->config
-                                                                                  .perimeter_extruder - 1)));
-                nozzle_diameters.push_back(config->nozzle_diameter.get_at(static_cast<size_t>(
-                                                                              region->region()->config
-                                                                                  .infill_extruder - 1)));
-                nozzle_diameters.push_back(config->nozzle_diameter.get_at(static_cast<size_t>(
-                                                                              region->region()->config
-                                                                                  .solid_infill_extruder - 1)));
+            for (const LayerRegion* region : layer->regions) {
+                nozzle_diameters.push_back(config->nozzle_diameter.get_at(
+				    static_cast<size_t>(region->region()->config.perimeter_extruder - 1)));
+                nozzle_diameters.push_back(config->nozzle_diameter.get_at(
+				    static_cast<size_t>(region->region()->config.infill_extruder - 1)));
+                nozzle_diameters.push_back(config->nozzle_diameter.get_at(
+				    static_cast<size_t>(region->region()->config.solid_infill_extruder - 1)));
             }
 
-            int nozzle_diameters_count = static_cast<int>(!nozzle_diameters.empty() ? nozzle_diameters.size() : 1);
-            auto nozzle_diameter =
+            size_t nozzle_diameters_count = !nozzle_diameters.empty() ? nozzle_diameters.size() : 1;
+            coordf_t nozzle_diameter =
                 accumulate(nozzle_diameters.begin(), nozzle_diameters.end(), 0.0) / nozzle_diameters_count;
 
             coordf_t contact_z = layer->print_z - contact_distance(layer->height, nozzle_diameter);
@@ -523,12 +520,12 @@ SupportMaterial::object_top(PrintObject *object, map<coordf_t, Polygons> *contac
         return top;
 
     Polygons projection;
-    for (auto i = static_cast<int>(object->layers.size()) - 1; i >= 0; i--) {
+    for (size_t i = object->layers.size() - 1; i >= 0; i--) {
 
         Layer *layer = object->layers[i];
-        SurfacesPtr m_top;
+        SurfacesConstPtr m_top;
 
-        for (auto r : layer->regions)
+        for (const LayerRegion* r : layer->regions)
             append_to(m_top, r->slices.filter_by_type(stTop));
 
         if (m_top.empty()) continue;
@@ -543,11 +540,11 @@ SupportMaterial::object_top(PrintObject *object, map<coordf_t, Polygons> *contac
         // having the same Z of top layers.
         for (auto el : *contact)
             if (el.first > layer->print_z && el.first <= min_top)
-                for (const auto &p : el.second)
+                for (const Polygon &p : el.second)
                     projection.push_back(p);
 
         // Now find whether any projection falls onto this top surface.
-        Polygons touching = intersection(projection, p(m_top));
+        Polygons touching = intersection(projection, surfaces_to_polygons(m_top));
         if (!touching.empty()) {
             // Grow top surfaces so that interface and support generation are generated
             // with some spacing from object - it looks we don't need the actual
@@ -566,7 +563,7 @@ SupportMaterial::object_top(PrintObject *object, map<coordf_t, Polygons> *contac
 void
 SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
                                         const vector<coordf_t> &support_z,
-                                        map<int, Polygons> &shape)
+                                        map<size_t, Polygons> &shape)
 {
     // This prevents supplying an empty point set to BoundingBox constructor.
     if (contact.empty()) return;
@@ -593,8 +590,8 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
             bb = BoundingBox(bb_points);
         }
 
-        for (auto x = bb.min.x; x <= bb.max.x - pillar_size; x += pillar_spacing) {
-            for (auto y = bb.min.y; y <= bb.max.y - pillar_size; y += pillar_spacing) {
+        for (coord_t x = bb.min.x; x <= bb.max.x - pillar_size; x += pillar_spacing) {
+            for (coord_t y = bb.min.y; y <= bb.max.y - pillar_size; y += pillar_spacing) {
                 pillars.push_back(pillar);
                 pillar.translate(x, y);
             }
@@ -603,14 +600,14 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
         grid = union_(pillars);
     }
     // Add pillars to every layer.
-    for (auto i = 0; i < support_z.size(); i++) {
+    for (size_t i = 0; i < support_z.size(); i++) {
         shape[i] = grid;
     }
     // Build capitals.
-    for (auto i = 0; i < support_z.size(); i++) {
+    for (size_t i = 0; i < support_z.size(); i++) {
         coordf_t z = support_z[i];
 
-        auto capitals = intersection(
+        Polygons capitals = intersection(
             grid,
             contact.count(z) > 0 ? contact.at(z) : Polygons()
         );
@@ -618,13 +615,12 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
         // but store the contact area supported by the capital because we need to make
         // sure nothing is left.
         Polygons contact_supported_by_capitals;
-        for (auto capital : capitals) {
+        for (Polygon capital : capitals) {
             // Enlarge capital tops.
-            auto capital_polygons = offset(Polygons({capital}), +(pillar_spacing - pillar_size) / 2);
+            Polygons capital_polygons = offset(Polygons({capital}), +(pillar_spacing - pillar_size) / 2);
             append_to(contact_supported_by_capitals, capital_polygons);
 
-            for (int j = i - 1; j >= 0; j--) {
-                auto jz = support_z[j];
+            for (size_t j = i - 1; j >= 0; j--) {
                 capital_polygons = offset(Polygons{capital}, -interface_flow.scaled_width() / 2);
                 if (capitals.empty()) break;
                 append_to(shape[i], capital_polygons);
@@ -633,33 +629,32 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
         // Work on one pillar at time (if any) to prevent the capitals from being merged
         // but store the contact area supported by the capital because we need to make
         // sure nothing is left.
-        auto contact_not_supported_by_capitals = diff(
+        Polygons contact_not_supported_by_capitals = diff(
             contact.count(z) > 0 ? contact.at(z) : Polygons(),
             contact_supported_by_capitals
         );
 
         if (!contact_not_supported_by_capitals.empty()) {
-            for (int j = i - 1; j >= 0; j--) {
+            for (size_t j = i - 1; j >= 0; j--) {
                 append_to(shape[j], contact_not_supported_by_capitals);
             }
         }
     }
 }
 
-map<int, Polygons>
+map<size_t, Polygons>
 SupportMaterial::generate_base_layers(vector<coordf_t> support_z,
                                       map<coordf_t, Polygons> contact,
-                                      map<int, Polygons> _interface,
+                                      map<size_t, Polygons> _interface,
                                       map<coordf_t, Polygons> top)
 {
     // Let's now generate support layers under interface layers.
-    map<int, Polygons> base;
+    map<size_t, Polygons> base;
     {
-        for (auto i = static_cast<int>(support_z.size()) - 1; i >= 0; i--) {
-            auto z = support_z[i];
-            auto overlapping_layers = this->overlapping_layers(i, support_z);
+        for (size_t i = support_z.size() - 1; i >= 0; i--) {
+            vector<size_t> overlapping_layers = this->overlapping_layers(i, support_z);
             vector<coordf_t> overlapping_z;
-            for (auto el : overlapping_layers)
+            for (size_t el : overlapping_layers)
                 overlapping_z.push_back(support_z[el]);
 
             // In case we have no interface layers, look at upper contact
@@ -675,7 +670,7 @@ SupportMaterial::generate_base_layers(vector<coordf_t> support_z,
             append_to(ps_1, upper_contact); // contact regions on upper layer
 
             Polygons ps_2;
-            for (auto el : overlapping_z) {
+            for (coordf_t el : overlapping_z) {
                 if (top.count(el) > 0)
                     append_to(ps_2, top[el]); // top slices on this layer.
                 if (_interface.count(el) > 0)
@@ -694,28 +689,27 @@ SupportMaterial::generate_base_layers(vector<coordf_t> support_z,
     return base;
 }
 
-map<int, Polygons>
+map<size_t, Polygons>
 SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
                                            map<coordf_t, Polygons> contact,
                                            map<coordf_t, Polygons> top)
 {
     // let's now generate interface layers below contact areas.
-    map<int, Polygons> _interface;
-    auto interface_layers_num = object_config->support_material_interface_layers.value;
+    map<size_t, Polygons> _interface;
+    size_t interface_layers_num = static_cast<size_t>(object_config->support_material_interface_layers.value);
 
-    for (int layer_id = 0; layer_id < support_z.size(); layer_id++) {
-        auto z = support_z[layer_id];
+    for (size_t layer_id = 0; layer_id < support_z.size(); layer_id++) {
+        coordf_t z = support_z[layer_id];
 
         if (contact.count(z) <= 0)
             continue;
         Polygons &_contact = contact[z];
 
         // Count contact layer as interface layer.
-        for (int i = layer_id - 1; i >= 0 && i > layer_id - interface_layers_num; i--) {
-            auto _z = support_z[i];
-            auto overlapping_layers = this->overlapping_layers(i, support_z);
+        for (size_t i = layer_id - 1; i >= 0 && i > layer_id - interface_layers_num; i--) {
+            vector<size_t> overlapping_layers = this->overlapping_layers(i, support_z);
             vector<coordf_t> overlapping_z;
-            for (auto z_el : overlapping_layers)
+            for (size_t z_el : overlapping_layers)
                 overlapping_z.push_back(support_z[z_el]);
 
             // Compute interface area on this layer as diff of upper contact area
@@ -729,7 +723,7 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
             append_to(ps_1, _interface[i]); // _interface regions already applied to this layer.
 
             Polygons ps_2;
-            for (auto el : overlapping_z) {
+            for (coordf_t el : overlapping_z) {
                 if (top.count(el) > 0)
                     append_to(ps_2, top[el]); // top slices on this layer.
                 if (contact.count(el) > 0)
@@ -748,15 +742,16 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
 
 void
 SupportMaterial::generate_bottom_interface_layers(const vector<coordf_t> &support_z,
-                                                  map<int, Polygons> &base,
+                                                  map<size_t, Polygons> &base,
                                                   map<coordf_t, Polygons> &top,
-                                                  map<int, Polygons> &_interface)
+                                                  map<size_t, Polygons> &_interface)
 {
     // If no interface layers are allowed, don't generate bottom interface layers.
     if (object_config->support_material_interface_layers.value == 0)
         return;
 
-    auto area_threshold = interface_flow.scaled_spacing() * interface_flow.scaled_spacing();
+	//use double to avoid overflow (and it's not precision-critical)
+    double area_threshold = (double)(interface_flow.scaled_spacing()) * interface_flow.scaled_spacing();
 
     // Loop through object's top surfaces. TODO CHeck if the keys are sorted.
     for (auto &top_el : top) {
@@ -765,21 +760,21 @@ SupportMaterial::generate_bottom_interface_layers(const vector<coordf_t> &suppor
 
         // Loop through support layers until we find the one(s) right above the top
         // surface.
-        for (int layer_id = 0; layer_id < support_z.size(); layer_id++) {
-            auto z = support_z[layer_id];
+        for (size_t layer_id = 0; layer_id < support_z.size(); layer_id++) {
+            coordf_t z = support_z[layer_id];
             if (z <= top_el.first) // next unless $z > $top_z;
                 continue;
 
             if (base.count(layer_id) > 0) {
                 // Get the support material area that should be considered interface.
-                auto interface_area = intersection(
+                Polygons interface_area = intersection(
                     base[layer_id],
                     top_el.second
                 );
 
                 // Discard too small areas.
                 Polygons new_interface_area;
-                for (auto p : interface_area) {
+                for (Polygon p : interface_area) {
                     if (abs(p.area()) >= area_threshold)
                         new_interface_area.push_back(p);
                 }
@@ -797,7 +792,7 @@ SupportMaterial::generate_bottom_interface_layers(const vector<coordf_t> &suppor
 
             interface_layers++;
             if (interface_layers == object_config->support_material_interface_layers.value)
-                layer_id = static_cast<int>(support_z.size());
+                layer_id = support_z.size();
         }
     }
 }
@@ -814,15 +809,15 @@ SupportMaterial::contact_distance(coordf_t layer_height, coordf_t nozzle_diamete
     }
 }
 
-vector<int>
-SupportMaterial::overlapping_layers(int layer_idx, const vector<coordf_t> &support_z)
+vector<size_t>
+SupportMaterial::overlapping_layers(size_t layer_idx, const vector<coordf_t> &support_z)
 {
-    vector<int> ret;
+    vector<size_t> ret;
 
     coordf_t z_max = support_z[layer_idx];
     coordf_t z_min = layer_idx == 0 ? 0 : support_z[layer_idx - 1];
 
-    for (int i = 0; i < support_z.size(); i++) {
+    for (size_t i = 0; i < support_z.size(); i++) {
         if (i == layer_idx) continue;
 
         coordf_t z_max2 = support_z[i];
@@ -836,23 +831,23 @@ SupportMaterial::overlapping_layers(int layer_idx, const vector<coordf_t> &suppo
 }
 
 void
-SupportMaterial::clip_with_shape(map<int, Polygons> &support, map<int, Polygons> &shape)
+SupportMaterial::clip_with_shape(map<size_t, Polygons> &support, map<size_t, Polygons> &shape)
 {
     for (auto layer : support) {
         // Don't clip bottom layer with shape so that we
         // can generate a continuous base flange
         // also don't clip raft layers
         if (layer.first == 0) continue;
-        else if (layer.first < object_config->raft_layers) continue;
+        else if (layer.first < static_cast<size_t>(object_config->raft_layers.value)) continue;
 
         layer.second = intersection(layer.second, shape[layer.first]);
     }
 }
 
 void
-SupportMaterial::clip_with_object(map<int, Polygons> &support, vector<coordf_t> support_z, PrintObject &object)
+SupportMaterial::clip_with_object(map<size_t, Polygons> &support, vector<coordf_t> support_z, PrintObject &object)
 {
-    int i = 0;
+    size_t i = 0;
     for (auto support_layer: support) {
         if (support_layer.second.empty()) {
             i++;
@@ -861,8 +856,8 @@ SupportMaterial::clip_with_object(map<int, Polygons> &support, vector<coordf_t> 
         coordf_t z_max = support_z[i];
         coordf_t z_min = (i == 0) ? 0 : support_z[i - 1];
 
-        LayerPtrs layers;
-        for (auto layer : object.layers) {
+        std::vector<const Layer*> layers;
+        for (const Layer* layer : object.layers) {
             if (layer->print_z > z_min && (layer->print_z - layer->height) < z_max) {
                 layers.push_back(layer);
             }
@@ -873,8 +868,8 @@ SupportMaterial::clip_with_object(map<int, Polygons> &support, vector<coordf_t> 
         // material, thus including the width of its foremost extrusion.
         // We leave a gap equal to a full extrusion width. TODO ask about this line @samir
         Polygons slices;
-        for (Layer *l : layers) {
-            for (auto s : l->slices.contours()) {
+        for (const Layer *l : layers) {
+            for (const Polygon &s : l->slices.contours()) {
                 slices.push_back(s);
             }
         }
@@ -889,7 +884,7 @@ SupportMaterial::clip_with_object(map<int, Polygons> &support, vector<coordf_t> 
 }
 
 void
-SupportMaterial::process_layer(int layer_id, toolpaths_params params)
+SupportMaterial::process_layer(size_t layer_id, toolpaths_params params)
 {
     SupportLayer *layer = this->object->support_layers[layer_id];
     coordf_t z = layer->print_z;
@@ -928,18 +923,15 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
         Polygons loops0;
         {
             // Find centerline of the external loop of the contours.
-            auto external_loops = contact;
+            Polygons external_loops = contact;
 
             // Only consider the loops facing the overhang.
             {
-                auto overhang_with_margin = offset(overhang, +_interface_flow.scaled_width() / 2);
+                Polygons overhang_with_margin = offset(overhang, +_interface_flow.scaled_width() / 2);
                 {
                     Polygons ps;
-                    for (auto p : external_loops) {
-                        if (!intersection_pl(
-                            p.split_at_first_point(),
-                            overhang_with_margin).empty()
-                            )
+                    for (const Polygon &p : external_loops) {
+                        if (!intersection_pl( p.split_at_first_point(), overhang_with_margin).empty())
                             ps.push_back(p);
                     }
                     external_loops = ps;
@@ -948,10 +940,10 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
 
             // Apply a pattern to the loop.
             Points positions;
-            for (auto p : external_loops)
-                append_to(positions, Polygon(p).equally_spaced_points(params.circle_distance));
+            for (const Polygon &p : external_loops)
+                append_to(positions, p.equally_spaced_points(params.circle_distance));
             Polygons circles;
-            for (auto pos : positions) {
+            for (const Point &pos : positions) {
                 circles.push_back(params.circle);
                 circles.back().translate(pos.x, pos.y);
             }
@@ -963,9 +955,9 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
 
         // TODO Revise the loop range.
         // Make more loops.
-        auto loops = loops0;
-        for (int i = 2; i <= params.contact_loops; i++) {
-            auto d = (i - 1) * _interface_flow.scaled_spacing();
+        Polygons loops = loops0;
+        for (size_t i = 2; i <= static_cast<size_t>(params.contact_loops); i++) {
+            coord_t d = (i - 1) * _interface_flow.scaled_spacing();
             append_to(loops,
                       offset2(loops0,
                               -d - 0.5 * _interface_flow.scaled_spacing(),
@@ -974,10 +966,10 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
 
         // Clip such loops to the side oriented towards the object.
         Polylines ps;
-        for (auto p : loops)
+        for (const Polygon &p : loops)
             ps.push_back(p.split_at_first_point());
 
-        auto new_loops = intersection_pl(
+        Polylines new_loops = intersection_pl(
             ps,
             offset(overhang, scale_(SUPPORT_MATERIAL_MARGIN))
         );
@@ -989,7 +981,7 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
         // solution should be found to achieve both goals.
         {
             Polygons ps;
-            for (auto pl : new_loops)
+            for (const Polyline &pl : new_loops)
                 append_to(ps, offset(pl, params.circle_radius * 1.1));
 
             contact_infill = diff(
@@ -999,9 +991,9 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
         }
 
         // Transform loops into ExtrusionPath objects.
-        auto mm3_per_mm = _interface_flow.mm3_per_mm();
+        double mm3_per_mm = _interface_flow.mm3_per_mm();
         ExtrusionPaths loops_extrusion_paths;
-        for (auto l : new_loops) {
+        for (const Polyline &l : new_loops) {
             ExtrusionPath extrusion_path(erSupportMaterialInterface);
             extrusion_path.polyline = l;
             extrusion_path.mm3_per_mm = mm3_per_mm;
@@ -1046,7 +1038,7 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
         {
             Polygons ps = _interface;
             _interface = Polygons();
-            for (auto p: ps) {
+            for (const Polygon &p: ps) {
                 if (p.is_clockwise()) {
                     Polygon p2 = p;
                     p2.make_counter_clockwise();
@@ -1060,16 +1052,16 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
 
         ExtrusionPaths paths;
         ExPolygons expolygons = union_ex(_interface);
-        for (auto expolygon : expolygons) {
+        for (const ExPolygon &expolygon : expolygons) {
             Surface surface(stInternal, expolygon);
             fillers["interface"]->density = params.interface_density;
             fillers["interface"]->complete = true;
             // TODO What layer height come from FIXME. or Polyline collection
             Polylines ps = fillers["interface"]->fill_surface(surface);
 
-            auto mm3_per_mm = _interface_flow.mm3_per_mm();
+            const double mm3_per_mm = _interface_flow.mm3_per_mm();
 
-            for (auto p : ps) {
+            for (const Polyline &p : ps) {
                 ExtrusionPath extrusion_path(erSupportMaterialInterface);
                 extrusion_path.polyline = p;
                 extrusion_path.mm3_per_mm = mm3_per_mm;
@@ -1091,7 +1083,7 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
         // value that guarantees that all layers are correctly aligned.
         filler->min_spacing = flow.spacing();
 
-        auto density = params.support_density;
+        coordf_t density = params.support_density;
         Flow *base_flow = &_flow;
 
         // Find centerline of the external loop/extrusions.
@@ -1127,8 +1119,8 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
         else {
             // Draw a perimeter all around support infill.
             // TODO: use brim ordering algorithm.
-            auto mm3_per_mm = _flow.mm3_per_mm();
-            for (auto p : to_infill) {
+            const double mm3_per_mm = _flow.mm3_per_mm();
+            for (const Polygon &p : to_infill) {
                 ExtrusionPath extrusionPath(erSupportMaterial);
                 extrusionPath.polyline = p.split_at_first_point();
                 extrusionPath.mm3_per_mm = mm3_per_mm;
@@ -1142,15 +1134,15 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
             new_to_infill = offset_ex(to_infill, -_flow.scaled_spacing());
         }
 
-        auto mm3_per_mm = base_flow->mm3_per_mm();
-        for (const auto &expolygon : new_to_infill) {
+        const double mm3_per_mm = base_flow->mm3_per_mm();
+        for (const ExPolygon &expolygon : new_to_infill) {
             Surface surface(stInternal, expolygon);
             filler->density = static_cast<float>(density);
             filler->complete = true;
             // TODO What layer height come from FIXME. or Polyline collection
             Polylines ps = filler->fill_surface(surface);
 
-            for (auto pl : ps) {
+            for (const Polyline &pl : ps) {
                 ExtrusionPath extrusionPath(erSupportMaterial);
                 extrusionPath.polyline = pl;
                 extrusionPath.mm3_per_mm = mm3_per_mm;
@@ -1166,12 +1158,12 @@ SupportMaterial::process_layer(int layer_id, toolpaths_params params)
 }
 
 Polygons
-SupportMaterial::p(SurfacesPtr &surfaces)
+SupportMaterial::surfaces_to_polygons(SurfacesConstPtr &surfaces)
 {
     Polygons ret;
-    for (auto surface : surfaces) {
+    for (const Surface* surface : surfaces) {
         ret.push_back(surface->expolygon.contour);
-        for (const auto &hole_polygon : surface->expolygon.holes) {
+        for (const Polygon &hole_polygon : surface->expolygon.holes) {
             ret.push_back(hole_polygon);
         }
     }
@@ -1181,7 +1173,7 @@ SupportMaterial::p(SurfacesPtr &surfaces)
 void
 SupportMaterial::append_polygons(Polygons &dst, Polygons &src)
 {
-    for (const auto polygon : src) {
+    for (const Polygon &polygon : src) {
         dst.push_back(polygon);
     }
 }
@@ -1200,7 +1192,7 @@ coordf_t
 SupportMaterial::get_max_layer_height(PrintObject *object)
 {
     coordf_t ret = -1;
-    for (auto layer : object->layers)
+    for (const Layer* layer : object->layers)
         ret = max(ret, layer->height);
     return ret;
 }
@@ -1215,7 +1207,7 @@ SupportMaterial::create_circle(coordf_t radius)
                             2 * PI / 3,
                             PI / 3,
                             0};
-    for (auto pos : positions) {
+    for (coordf_t pos : positions) {
         points.emplace_back(radius * cos(pos), (radius * sin(pos)));
     }
 
