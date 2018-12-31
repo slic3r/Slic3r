@@ -145,6 +145,10 @@ Flow::solid_spacing(const T total_width, const T spacing)
     const double factor_max = 1.2;
     if (factor > factor_max)
         spacing_new = floor((double)spacing * factor_max + 0.5);
+    // There is an edge case where spacing with the max factor still ends up to be 0
+    // In this case, use the full factor and don't round it
+    if (spacing_new == 0)
+        spacing_new = (static_cast<double>(spacing) * factor);
     
     assert((spacing_new * number_of_intervals) <= total_width);
     
