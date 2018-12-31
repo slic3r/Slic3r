@@ -136,6 +136,22 @@ SCENARIO("Flow: Flow math for non-bridges", "[!mayfail]") {
             }
         }
     }
+
+
+    /// Check for an edge case in the maths where the spacing could be 0; original
+    /// math is 0.99. Slic3r issue #4654
+    GIVEN("Input spacing of 0.414159 and a total width of 2") {
+        double in_spacing = 0.414159;
+        double total_width = 2.0;
+        auto flow {Flow::new_from_spacing(1.0, 0.4, 0.3, false)};
+        WHEN("solid_spacing() is called") {
+            double result = flow.solid_spacing(total_width, in_spacing);
+            THEN("Yielded spacing is greater than 0") {
+                REQUIRE(result > 0);
+            }
+        }
+    }
+
 }
 
 /// Spacing, width calculation for bridge extrusions
