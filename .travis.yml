@@ -52,7 +52,6 @@ matrix:
         - os: linux
           env:
             - TARGET=main
-            - WXDIR=$HOME/wx302
           cache:
             directories:
               - $HOME/boost_1_63_0
