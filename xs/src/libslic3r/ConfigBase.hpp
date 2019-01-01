@@ -29,8 +29,8 @@ extern bool unescape_strings_cstyle(const std::string &str, std::vector<std::str
 /// Specialization of std::exception to indicate that an unknown config option has been encountered.
 class ConfigOptionException : public std::exception {
     public:
-    t_config_option_key opt_key;
-    ConfigOptionException(t_config_option_key _opt_key)
+    const t_config_option_key opt_key;
+    ConfigOptionException(const t_config_option_key _opt_key)
         : opt_key(_opt_key) {};
 };
 class UnknownOptionException : public ConfigOptionException {
