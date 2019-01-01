@@ -30,7 +30,7 @@ extern bool unescape_strings_cstyle(const std::string &str, std::vector<std::str
 class ConfigOptionException : public std::exception {
     public:
     const t_config_option_key opt_key;
-    ConfigOptionException(const t_config_option_key& _opt_key)
+    ConfigOptionException(const t_config_option_key _opt_key)
         : opt_key(_opt_key) {};
 };
 class UnknownOptionException : public ConfigOptionException {
