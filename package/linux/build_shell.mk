@@ -4,10 +4,10 @@ src=../common/shell.cpp
 CXX ?= g++
 
 # Path to perl header files
-INCLUDEDIR ?= ${HOME}/perl5/perlbrew/perls/slic3r-perl/lib/5.24.0/x86_64-linux-thread-multi/CORE
+INCLUDEDIR ?= ${HOME}/perl5/perlbrew/perls/slic3r-perl/lib/5.28.1/x86_64-linux-thread-multi/CORE
 
 # path to library files for perl
-LIBDIR ?= ${HOME}/perl5/perlbrew/perls/slic3r-perl/lib/5.24.0/x86_64-linux-thread-multi/CORE
+LIBDIR ?= ${HOME}/perl5/perlbrew/perls/slic3r-perl/lib/5.28.1/x86_64-linux-thread-multi/CORE
 
 LIBS += -lperl -lpthread -lcrypt
 
