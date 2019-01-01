@@ -17,6 +17,8 @@ set_branch
 set_app_name
 set_pr_id
 
+SCRIPTDIR=$(dirname $0)
+
 WD=${PWD}/$(dirname $0)
 srcfolder="$WD/${appname}"
 export ARCH=$(arch)
@@ -48,22 +50,18 @@ for i in $(cat $WD/libpaths.appimage.txt | grep -v "^#" | awk -F# '{print $1}');
     install -v $i ${WD}/${APP}.AppDir/usr/lib
 done
 
+# Workaround to increase compatibility with older systems; see https://github.com/darealshinji/AppImageKit-checkrt for details
+mkdir -p ${WD}/${APP}.AppDir/usr/optional/
+wget -c https://github.com/darealshinji/AppImageKit-checkrt/releases/download/continuous/exec-x86_64.so -O ./Slic3r.AppDir/usr/optional/exec.so
+
+mkdir -p ${WD}/${APP}.AppDir/usr/optional/libstdc++/
+cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./Slic3r.AppDir/usr/optional/libstdc++/
+mkdir -p ${WD}/${APP}.AppDir/usr/optional/libgcc/
+cp /lib/x86_64-linux-gnu/libgcc_s.so.1 ./Slic3r.AppDir/usr/optional/libgcc/
 
 cp -R $srcfolder/local-lib ${WD}/${APP}.AppDir/usr/lib/local-lib
 
-cat > $WD/${APP}.AppDir/AppRun << 'EOF'
-#!/usr/bin/env bash
-# some magic to find out the real location of this script dealing with symlinks
-DIR=`readlink "$0"` || DIR="$0";
-DIR=`dirname "$DIR"`;
-cd "$DIR"
-DIR=`pwd`
-cd - > /dev/null
-# disable parameter expansion to forward all arguments unprocessed to the VM
-set -f
-# run the VM and pass along all arguments as is
-LD_LIBRARY_PATH="$DIR/usr/lib" "${DIR}/usr/bin/perl-local" -I"${DIR}/usr/lib/local-lib/lib/perl5" "${DIR}/usr/bin/slic3r.pl" --gui "$@"
-EOF
+cp ${WD}/appimage-apprun.sh ${WD}/${APP}.AppDir/AppRun
 
 chmod +x AppRun
 
