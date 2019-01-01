@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Cribbed from https://github.com/darealshinji/AppImageKit-checkrt/blob/master/AppRun.sh
+
 # some magic to find out the real location of this script dealing with symlinks
 DIR=`readlink "$0"` || DIR="$0";
 DIR=`dirname "$DIR"`;
