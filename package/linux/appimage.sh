@@ -55,9 +55,12 @@ mkdir -p ${WD}/${APP}.AppDir/usr/optional/
 wget -c https://github.com/darealshinji/AppImageKit-checkrt/releases/download/continuous/exec-x86_64.so -O ./Slic3r.AppDir/usr/optional/exec.so
 
 mkdir -p ${WD}/${APP}.AppDir/usr/optional/libstdc++/
-cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./Slic3r.AppDir/usr/optional/libstdc++/
+cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ${WD}/${APP}.AppDir/usr/optional/libstdc++/
 mkdir -p ${WD}/${APP}.AppDir/usr/optional/libgcc/
-cp /lib/x86_64-linux-gnu/libgcc_s.so.1 ./Slic3r.AppDir/usr/optional/libgcc/
+cp /lib/x86_64-linux-gnu/libgcc_s.so.1 ${WD}/${APP}.AppDir/usr/optional/libgcc/
+
+mkdir -p ${WD}/${APP}.AppDir/usr/optional/swrast_dri/
+cp /usr/lib/x86_64-linux-gnu/dri/swrast_dri.so	${WD}/${APP}.AppDir/usr/optional/swrast_dri/
 
 cp -R $srcfolder/local-lib ${WD}/${APP}.AppDir/usr/lib/local-lib
 

@@ -34,12 +34,21 @@ if [ -e "./optional/libgcc/libgcc_s.so.1" ]; then
   fi
 fi
 
-if [ -n "$cxxpath" ] || [ -n "$gccpath" ]; then
+if [ -e "./optional/swrast_dri/swrast_dri.so" ]; then
+  lib="$(PATH="/sbin:$PATH" ldconfig -p | grep "swrast_dri\.so\ ($libc6arch)" | awk 'NR==1{print $NF}')"
+  sym_sys=$(tr '\0' '\n' < "$lib" | grep -e '^GCC_[0-9]\\.[0-9]' | tail -n1)
+  sym_app=$(tr '\0' '\n' < "./optional/swrast_dri/swrast_dri.so" | grep -e '^GCC_[0-9]\\.[0-9]' | tail -n1)
+  if [ "$(printf "${sym_sys}\n${sym_app}"| sort -V | tail -1)" != "$sym_sys" ]; then
+    swrastpath="./optional/swrast_dri:"
+  fi
+fi
+
+if [ -n "$cxxpath" ] || [ -n "$gccpath" ] || [ -n "$swrastpath" ]; then
   if [ -e "./optional/exec.so" ]; then
     execpre=""
     export LD_PRELOAD="./optional/exec.so:${LD_PRELOAD}"
   fi
-  export LD_LIBRARY_PATH="${cxxpath}${gccpath}${LD_LIBRARY_PATH}"
+  export LD_LIBRARY_PATH="${cxxpath}${gccpath}${swrastpath}${LD_LIBRARY_PATH}"
 fi
 
 # disable parameter expansion to forward all arguments unprocessed to the VM
