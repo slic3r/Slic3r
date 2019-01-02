@@ -2567,7 +2567,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Holes");
     def->category = L("Advanced");
     def->tooltip = L("The convex holes will be grown / shrunk in the XY plane by the configured value"
-                   " (negative = inwards, positive = outwards, should be positive as the holes are always a bit smaller)."
+                   " (negative = inwards, positive = outwards, should be negative as the holes are always a bit smaller irl)."
                    " This might be useful for fine-tuning hole sizes.");
     def->sidetext = L("mm");
     def->cli = "hole-size-compensation=f";

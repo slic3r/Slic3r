@@ -82,6 +82,13 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                     }
                 }
             }
+            //remove empty groups
+            for (size_t i = 0; i < groups.size(); ++i) {
+                if (groups[i].empty()) {
+                    groups.erase(groups.begin() + i);
+                    i--;
+                }
+            }
         }
         
         // merge compatible groups (we can generate continuous infill for them)

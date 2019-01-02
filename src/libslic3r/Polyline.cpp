@@ -234,8 +234,12 @@ ThickLines ThickPolyline::thicklines() const
     ThickLines lines;
     if (this->points.size() >= 2) {
         lines.reserve(this->points.size() - 1);
-        for (size_t i = 0; i + 1 < this->points.size(); ++ i)
-            lines.emplace_back(this->points[i], this->points[i + 1], this->width[2 * i], this->width[2 * i + 1]);
+        for (size_t i = 0; i < this->points.size() - 1; ++i) {
+            ThickLine line(this->points[i], this->points[i + 1]);
+            line.a_width = this->width[i];
+            line.b_width = this->width[i + 1];
+            lines.push_back(line);
+        }
     }
     return lines;
 }
