@@ -172,7 +172,7 @@ Print::make_skirt()
     // include the thickest object first. It is just guaranteed that a skirt is
     // prepended to the first 'n' layers (with 'n' = skirt_height).
     // $skirt_height_z in this case is the highest possible skirt height for safety.
-    double skirt_height_z {-1.0};
+    this->skirt_height_z = -1.0;
     for (const auto* object : this->objects) {
         const size_t skirt_height {
             this->has_infinite_skirt()
@@ -180,7 +180,7 @@ Print::make_skirt()
                 : std::min(size_t(this->config.skirt_height()), object->layer_count())
         };
         const Layer* highest_layer { object->get_layer(skirt_height - 1) };
-        skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
+        this->skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
     }
 
     // collect points from all layers contained in skirt height
@@ -188,16 +188,16 @@ Print::make_skirt()
     for (auto* object : this->objects) {
         Points object_points;
         
-        // get object layers up to skirt_height_z
+        // get object layers up to this->skirt_height_z
         for (const auto* layer : object->layers) {
-            if (layer->print_z > skirt_height_z) break;
+            if (layer->print_z > this->skirt_height_z) break;
             for (const ExPolygon ex : layer->slices)
                 append_to(object_points, static_cast<Points>(ex));
         }
         
-        // get support layers up to skirt_height_z
+        // get support layers up to this->skirt_height_z
         for (const auto* layer : object->support_layers) {
-            if (layer->print_z > skirt_height_z) break;
+            if (layer->print_z > this->skirt_height_z) break;
             for (auto* ee : layer->support_fills)
                 append_to(object_points, ee->as_polyline().points);
             for (auto* ee : layer->support_interface_fills)

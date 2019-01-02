@@ -11,7 +11,7 @@ using namespace Slic3r;
 TEST_CASE("Skirt height is honored") {
     auto config {Config::new_from_defaults()};
     config->set("skirts", 1);
-    config->set("skirt_height", 2);
+    config->set("skirt_height", 5);
     config->set("perimeters", 0);
     config->set("support_material_speed", 99);
 
@@ -22,15 +22,14 @@ TEST_CASE("Skirt height is honored") {
     
     std::map<double, bool> layers_with_skirt;
     auto gcode {std::stringstream("")};
+    gcode.clear();
     auto parser {Slic3r::GCodeReader()};
     Slic3r::Model model;
 
-    std::cerr << __LINE__ << "\n";
     SECTION("printing a single object") {
         auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
         Slic3r::Test::gcode(gcode, print);
     }
-    std::cerr << __LINE__ << "\n";
 
     SECTION("printing multiple objects") {
         auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20, TestMesh::cube_20x20x20}, model, config)};
@@ -38,13 +37,10 @@ TEST_CASE("Skirt height is honored") {
     }
     parser.parse_stream(gcode, [&layers_with_skirt, &support_speed] (Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line) 
     {
-        if (self.Z > 0) {
-            if (line.extruding() && line.new_F() == Approx(support_speed)) {
-                layers_with_skirt[self.Z] = 1;
-            }
+        if (line.extruding() && self.F == Approx(support_speed)) {
+            layers_with_skirt[self.Z] = 1;
         }
     });
-    std::cerr << __LINE__ << "\n";
 
     REQUIRE(layers_with_skirt.size() == (size_t)config->getInt("skirt_height"));
 }
