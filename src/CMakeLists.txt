@@ -249,6 +249,7 @@ target_compile_options(admesh PUBLIC -w)
 
 
 add_library(clipper STATIC ${LIBDIR}/clipper.cpp)
+target_compile_features(clipper PUBLIC cxx_std_11)
 target_include_directories(clipper PUBLIC ${COMMON_INCLUDES})
 target_compile_options(clipper PUBLIC -w)
 
