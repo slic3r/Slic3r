@@ -49,14 +49,23 @@ SCENARIO("Config accessor functions perform as expected.") {
     GIVEN("A config generated from default options") {
         auto config {Slic3r::Config::new_from_defaults()};
         WHEN("A boolean option is set to a boolean value") {
-            THEN("A BadOptionTypeException exception is thrown.") {
-                REQUIRE_THROWS_AS(config->set("gcode_comments", true), BadOptionTypeException);
-            }
-        }
-        WHEN("A boolean option is set to a string value") {
-            config->set("gcode_comments", "1");
+            REQUIRE_NOTHROW(config->set("gcode_comments", true));
             THEN("The underlying value is set correctly.") {
                 REQUIRE(config->get<ConfigOptionBool>("gcode_comments").getBool() == true);
+            }
+        }
+        WHEN("A boolean option is set to a string value representing a 0 or 1") {
+            CHECK_NOTHROW(config->set("gcode_comments", "1"));
+            THEN("The underlying value is set correctly.") {
+                REQUIRE(config->get<ConfigOptionBool>("gcode_comments").getBool() == true);
+            }
+        }
+        WHEN("A boolean option is set to a string value representing something other than 0 or 1") {
+            THEN("A BadOptionTypeException exception is thrown.") {
+                REQUIRE_THROWS_AS(config->set("gcode_comments", "Z"), BadOptionTypeException);
+            }
+            AND_THEN("Value is unchanged.") {
+                REQUIRE(config->get<ConfigOptionBool>("gcode_comments").getBool() == false);
             }
         }
         WHEN("A string option is set to an int value") {
