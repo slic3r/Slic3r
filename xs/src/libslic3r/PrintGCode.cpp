@@ -550,7 +550,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     }
 
     // extrude brim
-    if (this->_brim_done) {
+    if (!this->_brim_done) {
         gcode += _gcodegen.set_extruder(_print.brim_extruder() - 1);
         _gcodegen.set_origin(Pointf(0,0));
         _gcodegen.avoid_crossing_perimeters.use_external_mp = true;
