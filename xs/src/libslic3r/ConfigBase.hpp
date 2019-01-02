@@ -480,12 +480,16 @@ class ConfigOptionBool : public ConfigOptionSingle<bool>
     ConfigOptionBool* clone() const { return new ConfigOptionBool(this->value); };
     
     bool getBool() const { return this->value; };
+    void setBool(bool val) { this->value = val; }
     
     std::string serialize() const {
         return std::string(this->value ? "1" : "0");
     };
     
     bool deserialize(std::string str, bool append = false) {
+        // Enforce the type on deserialize.
+        if (str.compare("1") != 0 && str.compare("0") != 0)
+            return false;
         this->value = (str.compare("1") == 0);
         return true;
     };
