@@ -28,7 +28,7 @@ PrintGCode::output()
         {
             const Flow flow { region->flow(frExternalPerimeter, layer_height, false, false, -1, first_object) };
             auto vol_speed = flow.mm3_per_mm() * region->config.get_abs_value("external_perimeter_speed");
-            if (config.max_volumetric_speed.getInt() > 0)
+            if (config.max_volumetric_speed.getFloat() > 0)
                 vol_speed = std::min(vol_speed, config.max_volumetric_speed.getFloat());
             fh << "; external perimeters extrusion width = ";
             fh << std::fixed << std::setprecision(2) << flow.width << "mm ";
@@ -37,7 +37,7 @@ PrintGCode::output()
         {
             const Flow flow { region->flow(frPerimeter, layer_height, false, false, -1, first_object) };
             auto vol_speed = flow.mm3_per_mm() * region->config.get_abs_value("perimeter_speed");
-            if (config.max_volumetric_speed.getInt() > 0)
+            if (config.max_volumetric_speed.getFloat() > 0)
                 vol_speed = std::min(vol_speed, config.max_volumetric_speed.getFloat());
             fh << "; perimeters extrusion width = ";
             fh << std::fixed << std::setprecision(2) << flow.width << "mm ";
@@ -46,7 +46,7 @@ PrintGCode::output()
         {
             const Flow flow { region->flow(frInfill, layer_height, false, false, -1, first_object) };
             auto vol_speed = flow.mm3_per_mm() * region->config.get_abs_value("infill_speed");
-            if (config.max_volumetric_speed.getInt() > 0)
+            if (config.max_volumetric_speed.getFloat() > 0)
                 vol_speed = std::min(vol_speed, config.max_volumetric_speed.getFloat());
             fh << "; infill extrusion width = ";
             fh << std::fixed << std::setprecision(2) << flow.width << "mm ";
@@ -55,7 +55,7 @@ PrintGCode::output()
         {
             const Flow flow { region->flow(frSolidInfill, layer_height, false, false, -1, first_object) };
             auto vol_speed = flow.mm3_per_mm() * region->config.get_abs_value("solid_infill_speed");
-            if (config.max_volumetric_speed.getInt() > 0)
+            if (config.max_volumetric_speed.getFloat() > 0)
                 vol_speed = std::min(vol_speed, config.max_volumetric_speed.getFloat());
             fh << "; solid infill extrusion width = ";
             fh << std::fixed << std::setprecision(2) << flow.width << "mm ";
@@ -64,7 +64,7 @@ PrintGCode::output()
         {
             const Flow flow { region->flow(frTopSolidInfill, layer_height, false, false, -1, first_object) };
             auto vol_speed = flow.mm3_per_mm() * region->config.get_abs_value("top_solid_infill_speed");
-            if (config.max_volumetric_speed.getInt() > 0)
+            if (config.max_volumetric_speed.getFloat() > 0)
                 vol_speed = std::min(vol_speed, config.max_volumetric_speed.getFloat());
             fh << "; top solid infill extrusion width = ";
             fh << std::fixed << std::setprecision(2) << flow.width << "mm ";
@@ -73,16 +73,16 @@ PrintGCode::output()
         if (_print.has_support_material()) {
             const Flow flow { first_object._support_material_flow() };
             auto vol_speed = flow.mm3_per_mm() * first_object.config.get_abs_value("support_material_speed");
-            if (config.max_volumetric_speed.getInt() > 0)
+            if (config.max_volumetric_speed.getFloat() > 0)
                 vol_speed = std::min(vol_speed, config.max_volumetric_speed.getFloat());
             fh << "; support material extrusion width = ";
             fh << std::fixed << std::setprecision(2) << flow.width << "mm ";
             fh << "(" << vol_speed << "mm^3/s)\n";
         }
-        if (_print.config.first_layer_extrusion_width.getFloat() > 0) {
+        if (_print.config.first_layer_extrusion_width.get_abs_value(layer_height) > 0) {
             const Flow flow { region->flow(frPerimeter, layer_height, false, false, -1, first_object) };
 //          auto vol_speed = flow.mm3_per_mm() * _print.config.get_abs_value("first_layer_speed");
-//          if (config.max_volumetric_speed.getInt() > 0)
+//          if (config.max_volumetric_speed.getFloat() > 0)
 //              vol_speed = std::min(vol_speed, config.max_volumetric_speed.getFloat());
             fh << "; first layer extrusion width = ";
             fh << std::fixed << std::setprecision(2) << flow.width << "mm ";
@@ -103,7 +103,7 @@ PrintGCode::output()
     }
 
     // set bed temperature
-    const auto temp = config.first_layer_bed_temperature.getFloat();
+    const auto temp = config.first_layer_bed_temperature.getInt();
     if (config.has_heatbed && temp > 0 && std::regex_search(config.start_gcode.getString(), bed_temp_regex)) {
         fh << _gcodegen.writer.set_bed_temperature(temp, 1);
     }
