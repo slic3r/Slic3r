@@ -2187,8 +2187,9 @@ void TabPrinter::build_extruder_pages()
 			optgroup->append_single_option_line("retract_length", extruder_idx);
 			optgroup->append_single_option_line("retract_lift", extruder_idx);
 				Line line = { _(L("Only lift Z")), "" };
-				line.append_option(optgroup->get_option("retract_lift_above", extruder_idx));
-				line.append_option(optgroup->get_option("retract_lift_below", extruder_idx));
+                line.append_option(optgroup->get_option("retract_lift_above", extruder_idx));
+                line.append_option(optgroup->get_option("retract_lift_below", extruder_idx));
+                line.append_option(optgroup->get_option("retract_lift_not_last_layer", extruder_idx));
 				optgroup->append_line(line);
 			
 			optgroup->append_single_option_line("retract_speed", extruder_idx);
@@ -2319,7 +2320,7 @@ void TabPrinter::update_fff()
 
 		// retract lift above / below only applies if using retract lift
 		vec.resize(0);
-		vec = { "retract_lift_above", "retract_lift_below" };
+		vec = { "retract_lift_above", "retract_lift_below", "retract_lift_not_last_layer" };
 		for (auto el : vec)
 			get_field(el, i)->toggle(retraction && m_config->opt_float("retract_lift", i) > 0);
 

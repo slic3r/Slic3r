@@ -153,6 +153,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "retract_lift",
         "retract_lift_above",
         "retract_lift_below",
+        "retract_lift_not_last_layer",
         "retract_restart_extra",
         "retract_restart_extra_toolchange",
         "retract_speed",

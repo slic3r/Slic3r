@@ -1825,6 +1825,13 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloats { 0. };
 
+    def = this->add("retract_lift_not_last_layer", coBool);
+    def->label = L("Not on top");
+    def->category = L("Support material");
+    def->tooltip = L("Select this option to not use the z-lift on a top surface.");
+    def->mode = comAdvanced;
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("retract_restart_extra", coFloats);
     def->label = L("Extra length on restart");
     def->tooltip = L("When the retraction is compensated after the travel move, the extruder will push "

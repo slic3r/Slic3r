@@ -2482,15 +2482,15 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
     {
         if (path.role() != m_last_extrusion_role)
         {
-            m_last_extrusion_role = path.role();
             if (m_enable_extrusion_role_markers)
             {
                 char buf[32];
-                sprintf(buf, ";_EXTRUSION_ROLE:%d\n", int(m_last_extrusion_role));
+                sprintf(buf, ";_EXTRUSION_ROLE:%d\n", int(path.role()));
                 gcode += buf;
             }
         }
     }
+    m_last_extrusion_role = path.role();
 
     // adds analyzer tags and updates analyzer's tracking data
     if (m_enable_analyzer)
@@ -2665,9 +2665,9 @@ std::string GCode::retract(bool toolchange)
         methods even if we performed wipe, since this will ensure the entire retraction
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
-    
-    if (m_writer.extruder()->retract_length() > 0 || m_config.use_firmware_retraction)
-        gcode += m_writer.lift();
+    if (toolchange || !this->m_config.retract_lift_not_last_layer.value || !(this->m_last_extrusion_role == ExtrusionRole::erTopSolidInfill))
+        if (m_writer.extruder()->retract_length() > 0 || m_config.use_firmware_retraction)
+            gcode += m_writer.lift();
     
     return gcode;
 }

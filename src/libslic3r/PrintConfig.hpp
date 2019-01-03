@@ -677,6 +677,7 @@ public:
     ConfigOptionFloats              retract_lift;
     ConfigOptionFloats              retract_lift_above;
     ConfigOptionFloats              retract_lift_below;
+    ConfigOptionBool                retract_lift_not_last_layer;
     ConfigOptionFloats              retract_restart_extra;
     ConfigOptionFloats              retract_restart_extra_toolchange;
     ConfigOptionFloats              retract_speed;
@@ -747,6 +748,7 @@ protected:
         OPT_PTR(retract_lift);
         OPT_PTR(retract_lift_above);
         OPT_PTR(retract_lift_below);
+        OPT_PTR(retract_lift_not_last_layer);
         OPT_PTR(retract_restart_extra);
         OPT_PTR(retract_restart_extra_toolchange);
         OPT_PTR(retract_speed);

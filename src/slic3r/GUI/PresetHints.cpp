@@ -252,7 +252,7 @@ std::string PresetHints::recommended_thin_wall_thickness(const PresetBundle &pre
     
     std::string out;
 	if (layer_height <= 0.f){
-		out += _CHB(L("Recommended object thin wall thickness: Not available due to invalid layer height."));
+		out += _CHB(L("Recommended object min wall thickness: Not available due to invalid layer height."));
 		return out;
 	}
 
@@ -269,14 +269,14 @@ std::string PresetHints::recommended_thin_wall_thickness(const PresetBundle &pre
     if (num_perimeters > 0) {
         int num_lines = std::min(num_perimeters * 2, 10);
 		char buf[MIN_BUF_LENGTH/*256*/];
-        sprintf(buf, _CHB(L("Recommended object thin wall thickness for layer height %.2f and ")), layer_height);
+        sprintf(buf, _CHB(L("Recommended object min wall thickness for layer height %.2f and ")), layer_height);
         out += buf;
         // Start with the width of two closely spaced 
         double width = external_perimeter_flow.width + external_perimeter_flow.spacing();
         for (int i = 2; i <= num_lines; thin_walls ? ++ i : i += 2) {
             if (i > 2)
                 out += ", ";
-            sprintf(buf, _CHB(L("%d lines: %.2lf mm")), i, width);
+            sprintf(buf, _CHB(L("%d perimeter: %.2lf mm")), i/2, width);
             out += buf;
             width += perimeter_flow.spacing() * (thin_walls ? 1.f : 2.f);
         }
