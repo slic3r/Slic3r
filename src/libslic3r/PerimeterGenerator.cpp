@@ -265,7 +265,7 @@ void PerimeterGenerator::process()
 
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
                         // (actually, something larger than that still may exist due to mitering or other causes)
-                        coord_t min_width = (coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
+                        coord_t min_width = (coord_t)scale_(this->config->thin_walls_min_width.get_abs_value(this->ext_perimeter_flow.nozzle_diameter));
                         
                         ExPolygons no_thin_zone = offset_ex(next_onion, (float)(ext_perimeter_width / 2), jtSquare);
                         // medial axis requires non-overlapping geometry
@@ -297,8 +297,9 @@ void PerimeterGenerator::process()
                                     if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
                                         bound.remove_point_too_near(SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        thin[0].medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width,
-                                            &thin_walls, this->layer_height);
+                                        Slic3r::MedialAxis ma(thin[0], bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, this->layer_height);
+                                        ma.nozzle_diameter = (coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter);
+                                        ma.build(&thin_walls);
                                         thin_zones_extruded.emplace_back(thin[0]);
                                     }
                                     break;

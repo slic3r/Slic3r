@@ -110,6 +110,7 @@ void Layer::make_perimeters()
                 && config.overhangs         == other_config.overhangs
                 && config.serialize("perimeter_extrusion_width").compare(other_config.serialize("perimeter_extrusion_width")) == 0
                 && config.thin_walls == other_config.thin_walls
+                && config.thin_walls_min_width == other_config.thin_walls_min_width
                 && config.external_perimeters_first == other_config.external_perimeters_first
                 && config.perimeter_loop == other_config.perimeter_loop) {
                 layerms.push_back(other_layerm);

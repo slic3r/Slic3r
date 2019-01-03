@@ -353,6 +353,7 @@ const std::vector<std::string>& Preset::print_options()
         , "infill_not_connected"
         , "first_layer_infill_speed"
         , "label_printed_objects"
+        , "thin_walls_min_width"
     };
     return s_opts;
 }

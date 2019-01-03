@@ -21,12 +21,14 @@ namespace Slic3r {
         ExPolygon expolygon;
         const ExPolygon& bounds;
         const ExPolygon& surface;
-        const double max_width;
-        const double min_width;
-        const double height;
+        const coord_t max_width;
+        const coord_t min_width;
+        const coord_t height;
+        coord_t nozzle_diameter;
         bool stop_at_min_width = true;
-        MedialAxis(const ExPolygon &_expolygon, const ExPolygon &_bounds, const double _max_width, const double _min_width, const double _height)
+        MedialAxis(const ExPolygon &_expolygon, const ExPolygon &_bounds, const coord_t _max_width, const coord_t _min_width, const coord_t _height)
             : surface(_expolygon), bounds(_bounds), max_width(_max_width), min_width(_min_width), height(_height) {
+            nozzle_diameter = _min_width;
         };
         void build(ThickPolylines* polylines_out);
         void build(Polylines* polylines);
@@ -60,6 +62,7 @@ namespace Slic3r {
         void remove_too_thin_points(ThickPolylines& pp);
         void remove_too_short_polylines(ThickPolylines& pp, const coord_t min_size);
         void ensure_not_overextrude(ThickPolylines& pp);
+        void grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchors);
     };
 
     ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow);

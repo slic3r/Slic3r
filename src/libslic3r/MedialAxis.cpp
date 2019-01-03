@@ -578,7 +578,7 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
         //FIXME: also pull (a bit less) points that are near to this one.
         // if true, pull it a bit, depends on my size, the dot?, and the coeff at my 0-end (~14% for a square, almost 0 for a gentle curve)
         coord_t length_pull = polyline.length();
-        length_pull *= 0.144 * get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, polyline.length() / 2));
+        length_pull *= 0.144 * get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, (coord_t)(polyline.length() / 2)));
 
         //compute dir
         Vec2d pull_direction(polyline.points[1].x() - polyline.points[0].x(), polyline.points[1].y() - polyline.points[0].y());
@@ -801,11 +801,11 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 //test if we don't merge with something too different and without any relevance.
                 double coeffSizePolyI = 1;
                 if (polyline.width.back() == 0) {
-                    coeffSizePolyI = 0.1 + 0.9*get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, polyline.length() / 2));
+                    coeffSizePolyI = 0.1 + 0.9*get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, (coord_t)(polyline.length() / 2)));
                 }
                 double coeffSizeOtherJ = 1;
                 if (other.width.back() == 0) {
-                    coeffSizeOtherJ = 0.1 + 0.9*get_coeff_from_angle_countour(other.points.back(), this->expolygon, min(min_width, polyline.length() / 2));
+                    coeffSizeOtherJ = 0.1 + 0.9*get_coeff_from_angle_countour(other.points.back(), this->expolygon, min(min_width, (coord_t)(polyline.length() / 2)));
                 }
                 //std::cout << " try2 : " << i << ":" << j << " : "
                 //    << (abs(polyline.length()*coeffSizePolyI - other.length()*coeffSizeOtherJ) > max_width / 2)
@@ -904,10 +904,10 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 //TODO: try if we can achieve a better result if we use a different algo if the angle is <90°
                 const double coeff_angle_poly = (coeff_angle_cache.find(polyline.points.back()) != coeff_angle_cache.end())
                     ? coeff_angle_cache[polyline.points.back()]
-                    : (get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, polyline.length() / 2)));
+                    : (get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, (coord_t)(polyline.length() / 2))));
                 const double coeff_angle_candi = (coeff_angle_cache.find(best_candidate->points.back()) != coeff_angle_cache.end())
                     ? coeff_angle_cache[best_candidate->points.back()]
-                    : (get_coeff_from_angle_countour(best_candidate->points.back(), this->expolygon, min(min_width, best_candidate->length() / 2)));
+                    : (get_coeff_from_angle_countour(best_candidate->points.back(), this->expolygon, min(min_width, (coord_t)(best_candidate->length() / 2))));
 
                 //this will encourage to follow the curve, a little, because it's shorter near the center
                 //without that, it tends to go to the outter rim.
@@ -1488,9 +1488,29 @@ MedialAxis::build(ThickPolylines* polylines_out)
     //    svg.draw(pp);
     //    svg.Close();
     //}
+    if (nozzle_diameter != min_width)
+        grow_to_nozzle_diameter(pp, diff_ex(this->bounds, this->expolygon));
 
     polylines_out->insert(polylines_out->end(), pp.begin(), pp.end());
 
+}
+
+
+void
+MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchors) {
+    //ensure the width is not lower than 0.4.
+    for (ThickPolyline& polyline : pp) {
+        for (int i = 0; i < polyline.points.size(); ++i) {
+            bool is_anchored = false;
+            for (const ExPolygon &poly : anchors) {
+                if (poly.contains(polyline.points[i])) {
+                    is_anchored = true;
+                    break;
+                }
+            }
+            if (!is_anchored && polyline.width[i]<nozzle_diameter) polyline.width[i] = nozzle_diameter;
+        }
+    }
 }
 
 ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow) {
