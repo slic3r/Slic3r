@@ -21,24 +21,13 @@ class DynamicPrintConfig;
 class Print;
 class BackgroundSlicingProcess;
 class GCodePreviewData;
-#if ENABLE_REMOVE_TABS_FROM_PLATER
 class Model;
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
 
 namespace GUI {
 
 class GLCanvas3D;
-#if ENABLE_TOOLBAR_BACKGROUND_TEXTURE
-#if ENABLE_REMOVE_TABS_FROM_PLATER
 class GLToolbar;
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
-#else
-#if ENABLE_REMOVE_TABS_FROM_PLATER
-class GLRadioToolbar;
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
-#endif // ENABLE_TOOLBAR_BACKGROUND_TEXTURE
 
-#if ENABLE_REMOVE_TABS_FROM_PLATER
 class View3D : public wxPanel
 {
     wxGLCanvas* m_canvas_widget;
@@ -59,11 +48,7 @@ public:
     wxGLCanvas* get_wxglcanvas() { return m_canvas_widget; }
     GLCanvas3D* get_canvas3d() { return m_canvas; }
 
-#if ENABLE_TOOLBAR_BACKGROUND_TEXTURE
     void set_view_toolbar(GLToolbar* toolbar);
-#else
-    void set_view_toolbar(GLRadioToolbar* toolbar);
-#endif // ENABLE_TOOLBAR_BACKGROUND_TEXTURE
 
     void set_as_dirty();
     void set_bed_shape(const Pointfs& shape);
@@ -89,7 +74,6 @@ public:
 private:
     bool init(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSlicingProcess* process);
 };
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
 
 class Preview : public wxPanel
 {
@@ -117,30 +101,18 @@ class Preview : public wxPanel
 
     bool m_loaded;
     bool m_enabled;
-    bool m_force_sliders_full_range;
 
     PrusaDoubleSlider* m_slider {nullptr};
 
 public:
-#if ENABLE_REMOVE_TABS_FROM_PLATER
     Preview(wxWindow* parent, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data, std::function<void()> schedule_background_process = [](){});
-#else
-    Preview(wxNotebook* notebook, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data, std::function<void()> schedule_background_process = [](){});
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
     virtual ~Preview();
 
     wxGLCanvas* get_wxglcanvas() { return m_canvas_widget; }
 
-#if ENABLE_REMOVE_TABS_FROM_PLATER
-#if ENABLE_TOOLBAR_BACKGROUND_TEXTURE
     void set_view_toolbar(GLToolbar* toolbar);
-#else
-    void set_view_toolbar(GLRadioToolbar* toolbar);
-#endif // ENABLE_TOOLBAR_BACKGROUND_TEXTURE
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
 
     void set_number_extruders(unsigned int number_extruders);
-    void reset_gcode_preview_data();
     void set_canvas_as_dirty();
     void set_enabled(bool enabled);
     void set_bed_shape(const Pointfs& shape);
@@ -154,11 +126,7 @@ public:
     void refresh_print();
 
 private:
-#if ENABLE_REMOVE_TABS_FROM_PLATER
     bool init(wxWindow* parent, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data);
-#else
-    bool init(wxNotebook* notebook, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data);
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
 
     void bind_event_handlers();
     void unbind_event_handlers();
@@ -178,12 +146,9 @@ private:
 
     // Create/Update/Reset double slider on 3dPreview
     void create_double_slider();
-    void update_double_slider(const std::vector<double>& layers_z, bool force_sliders_full_range);
+    void update_double_slider(const std::vector<double>& layers_z, bool force_sliders_full_range = false);
     void fill_slider_values(std::vector<std::pair<int, double>> &values,
                             const std::vector<double> &layers_z);
-    void set_double_slider_thumbs(  const std::vector<double> &layers_z,
-                                    const double z_low, 
-                                    const double z_high);
     void reset_double_slider();
     // update DoubleSlider after keyDown in canvas
     void update_double_slider_from_canvas(wxKeyEvent& event);

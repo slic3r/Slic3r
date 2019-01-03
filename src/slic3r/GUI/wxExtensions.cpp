@@ -37,7 +37,7 @@ wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const
 wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const wxString& description,
     std::function<void(wxCommandEvent& event)> cb, const std::string& icon, wxEvtHandler* event_handler)
 {
-    const wxBitmap& bmp = !icon.empty() ? wxBitmap(Slic3r::var(icon), wxBITMAP_TYPE_PNG) : wxNullBitmap;
+    const wxBitmap& bmp = !icon.empty() ? wxBitmap(wxString::FromUTF8(Slic3r::var(icon)), wxBITMAP_TYPE_PNG) : wxNullBitmap;
     return append_menu_item(menu, id, string, description, cb, bmp, event_handler);
 }
 
@@ -48,7 +48,7 @@ wxMenuItem* append_submenu(wxMenu* menu, wxMenu* sub_menu, int id, const wxStrin
 
     wxMenuItem* item = new wxMenuItem(menu, id, string, description);
     if (!icon.empty())
-        item->SetBitmap(wxBitmap(Slic3r::var(icon), wxBITMAP_TYPE_PNG));
+        item->SetBitmap(wxBitmap(wxString::FromUTF8(Slic3r::var(icon)), wxBITMAP_TYPE_PNG));
 
     item->SetSubMenu(sub_menu);
     menu->Append(item);
@@ -1506,6 +1506,21 @@ void PrusaDoubleSlider::SetHigherValue(const int higher_val)
     ProcessWindowEvent(e);
 }
 
+void PrusaDoubleSlider::SetSelectionSpan(const int lower_val, const int higher_val)
+{
+    m_lower_value  = std::max(lower_val, m_min_value);
+    m_higher_value = std::max(std::min(higher_val, m_max_value), m_lower_value);
+    if (m_lower_value < m_higher_value)
+        m_is_one_layer = false;
+
+    Refresh();
+    Update();
+
+    wxCommandEvent e(wxEVT_SCROLL_CHANGED);
+    e.SetEventObject(this);
+    ProcessWindowEvent(e);
+}
+
 void PrusaDoubleSlider::SetMaxValue(const int max_value)
 {
     m_max_value = max_value;
@@ -2043,7 +2058,7 @@ void PrusaDoubleSlider::enter_window(wxMouseEvent& event, const bool enter)
 //    -  value decrease (if wxSL_HORIZONTAL) 
 void PrusaDoubleSlider::move_current_thumb(const bool condition)
 {
-    m_is_one_layer = wxGetKeyState(WXK_CONTROL);
+//     m_is_one_layer = wxGetKeyState(WXK_CONTROL);
     int delta = condition ? -1 : 1;
     if (is_horizontal())
         delta *= -1;

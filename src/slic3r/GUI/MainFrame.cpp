@@ -18,6 +18,7 @@
 #include "ProgressStatusBar.hpp"
 #include "3DScene.hpp"
 #include "AppConfig.hpp"
+#include "PrintHostDialogs.hpp"
 #include "wxExtensions.hpp"
 #include "I18N.hpp"
 
@@ -27,10 +28,9 @@
 namespace Slic3r {
 namespace GUI {
 
-MainFrame::MainFrame(const bool no_plater, const bool loaded) :
+MainFrame::MainFrame() :
 wxFrame(NULL, wxID_ANY, SLIC3R_BUILD, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE),
-        m_no_plater(no_plater),
-        m_loaded(loaded)
+        m_printhost_queue_dlg(new PrintHostQueueDialog(this))
 {
     // Load the icon either from the exe, or from the ico file.
 #if _WIN32
@@ -123,11 +123,9 @@ void MainFrame::init_tabpanel()
         }
     });
 
-    if (!m_no_plater) {
-        m_plater = new Slic3r::GUI::Plater(m_tabpanel, this);
-        wxGetApp().plater_ = m_plater;
-        m_tabpanel->AddPage(m_plater, _(L("Plater")));
-    }
+    m_plater = new Slic3r::GUI::Plater(m_tabpanel, this);
+    wxGetApp().plater_ = m_plater;
+    m_tabpanel->AddPage(m_plater, _(L("Plater")));
 
     // The following event is emited by Tab implementation on config value change.
     Bind(EVT_TAB_VALUE_CHANGED, &MainFrame::on_value_changed, this);
@@ -226,7 +224,7 @@ void MainFrame::init_menubar()
         wxMenuItem* item_open = append_menu_item(fileMenu, wxID_ANY, _(L("Open…\tCtrl+O")), _(L("Open a project file")),
             [this](wxCommandEvent&) { if (m_plater) m_plater->load_project(); }, "brick_add.png");
         wxMenuItem* item_save = append_menu_item(fileMenu, wxID_ANY, _(L("Save\tCtrl+S")), _(L("Save current project file")),
-            [this](wxCommandEvent&) { if (m_plater) m_plater->export_3mf(m_plater->get_project_filename().wx_str()); }, "disk.png");
+            [this](wxCommandEvent&) { if (m_plater) m_plater->export_3mf(into_path(m_plater->get_project_filename())); }, "disk.png");
         wxMenuItem* item_save_as = append_menu_item(fileMenu, wxID_ANY, _(L("Save as…\tCtrl+Alt+S")), _(L("Save current project file as")),
             [this](wxCommandEvent&) { if (m_plater) m_plater->export_3mf(); }, "disk.png");
 
@@ -325,43 +323,46 @@ void MainFrame::init_menubar()
     {
         size_t tab_offset = 0;
         if (m_plater) {
-#if ENABLE_REMOVE_TABS_FROM_PLATER
-            append_menu_item(windowMenu, wxID_ANY, L("Plater Tab\tCtrl+1"), L("Show the plater"),
+            append_menu_item(windowMenu, wxID_HIGHEST + 1, L("Plater Tab\tCtrl+1"), L("Show the plater"),
                 [this](wxCommandEvent&) { select_tab(0); }, "application_view_tile.png");
-#else
-            append_menu_item(windowMenu, wxID_ANY, L("Select Plater Tab\tCtrl+1"), L("Show the plater"),
-                [this](wxCommandEvent&) { select_tab(0); }, "application_view_tile.png");
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
             tab_offset += 1;
         }
         if (tab_offset > 0) {
             windowMenu->AppendSeparator();
         }
-#if ENABLE_REMOVE_TABS_FROM_PLATER
-        append_menu_item(windowMenu, wxID_ANY, L("Print Settings Tab\tCtrl+2"), L("Show the print settings"),
+        append_menu_item(windowMenu, wxID_HIGHEST + 2, L("Print Settings Tab\tCtrl+2"), L("Show the print settings"),
             [this, tab_offset](wxCommandEvent&) { select_tab(tab_offset + 0); }, "cog.png");
-        append_menu_item(windowMenu, wxID_ANY, L("Filament Settings Tab\tCtrl+3"), L("Show the filament settings"),
+        append_menu_item(windowMenu, wxID_HIGHEST + 3, L("Filament Settings Tab\tCtrl+3"), L("Show the filament settings"),
             [this, tab_offset](wxCommandEvent&) { select_tab(tab_offset + 1); }, "spool.png");
-        append_menu_item(windowMenu, wxID_ANY, L("Printer Settings Tab\tCtrl+4"), L("Show the printer settings"),
+        append_menu_item(windowMenu, wxID_HIGHEST + 4, L("Printer Settings Tab\tCtrl+4"), L("Show the printer settings"),
             [this, tab_offset](wxCommandEvent&) { select_tab(tab_offset + 2); }, "printer_empty.png");
         if (m_plater) {
             windowMenu->AppendSeparator();
-            wxMenuItem* item_3d = append_menu_item(windowMenu, wxID_ANY, L("3D\tCtrl+5"), L("Show the 3D editing view"),
-            [this](wxCommandEvent&) { m_plater->select_view_3D("3D"); }, "");
-            wxMenuItem* item_preview = append_menu_item(windowMenu, wxID_ANY, L("Preview\tCtrl+6"), L("Show the 3D slices preview"),
-            [this](wxCommandEvent&) { m_plater->select_view_3D("Preview"); }, "");
+            wxMenuItem* item_3d = append_menu_item(windowMenu, wxID_HIGHEST + 5, L("3D\tCtrl+5"), L("Show the 3D editing view"),
+                [this](wxCommandEvent&) { m_plater->select_view_3D("3D"); }, "");
+            wxMenuItem* item_preview = append_menu_item(windowMenu, wxID_HIGHEST + 6, L("Preview\tCtrl+6"), L("Show the 3D slices preview"),
+                [this](wxCommandEvent&) { m_plater->select_view_3D("Preview"); }, "");
 
             Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_change_view()); }, item_3d->GetId());
             Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_change_view()); }, item_preview->GetId());
         }
-#else
-        append_menu_item(windowMenu, wxID_ANY, L("Select Print Settings Tab\tCtrl+2"), L("Show the print settings"),
-            [this, tab_offset](wxCommandEvent&) { select_tab(tab_offset + 0); }, "cog.png");
-        append_menu_item(windowMenu, wxID_ANY, L("Select Filament Settings Tab\tCtrl+3"), L("Show the filament settings"),
-            [this, tab_offset](wxCommandEvent&) { select_tab(tab_offset + 1); }, "spool.png");
-        append_menu_item(windowMenu, wxID_ANY, L("Select Printer Settings Tab\tCtrl+4"), L("Show the printer settings"),
-            [this, tab_offset](wxCommandEvent&) { select_tab(tab_offset + 2); }, "printer_empty.png");
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
+
+#if _WIN32
+        // This is needed on Windows to fake the CTRL+# of the window menu when using the numpad
+        wxAcceleratorEntry entries[6];
+        entries[0].Set(wxACCEL_CTRL, WXK_NUMPAD1, wxID_HIGHEST + 1);
+        entries[1].Set(wxACCEL_CTRL, WXK_NUMPAD2, wxID_HIGHEST + 2);
+        entries[2].Set(wxACCEL_CTRL, WXK_NUMPAD3, wxID_HIGHEST + 3);
+        entries[3].Set(wxACCEL_CTRL, WXK_NUMPAD4, wxID_HIGHEST + 4);
+        entries[4].Set(wxACCEL_CTRL, WXK_NUMPAD5, wxID_HIGHEST + 5);
+        entries[5].Set(wxACCEL_CTRL, WXK_NUMPAD6, wxID_HIGHEST + 6);
+        wxAcceleratorTable accel(6, entries);
+        SetAcceleratorTable(accel);
+#endif // _WIN32
+
+        windowMenu->AppendSeparator();
+        append_menu_item(windowMenu, wxID_ANY, L("Print Host Upload Queue"), L("Display the Print Host Upload Queue window"),
+            [this](wxCommandEvent&) { m_printhost_queue_dlg->Show(); }, "arrow_up.png");
     }
 
     // View menu
@@ -415,6 +416,9 @@ void MainFrame::init_menubar()
             [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/supermerill/issues/new"); });
         append_menu_item(helpMenu, wxID_ANY, _(L("About Slic3r")), _(L("Show about dialog")),
             [this](wxCommandEvent&) { Slic3r::GUI::about(); });
+        helpMenu->AppendSeparator();
+        append_menu_item(helpMenu, wxID_ANY, _(L("Keyboard Shortcuts")) + "\t?", _(L("Show the list of the keyboard shortcuts")),
+            [this](wxCommandEvent&) { wxGetApp().keyboard_shortcuts(); });
     }
 
     // menubar
@@ -795,7 +799,7 @@ void MainFrame::on_value_changed(wxCommandEvent& event)
 void MainFrame::update_ui_from_settings()
 {
     bool bp_on = wxGetApp().app_config->get("background_processing") == "1";
-    m_menu_item_reslice_now->Enable(bp_on);
+    m_menu_item_reslice_now->Enable(!bp_on);
     m_plater->sidebar().show_reslice(!bp_on);
     m_plater->sidebar().Layout();
     if (m_plater)

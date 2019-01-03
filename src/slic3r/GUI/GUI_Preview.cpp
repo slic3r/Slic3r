@@ -27,7 +27,6 @@
 namespace Slic3r {
 namespace GUI {
 
-#if ENABLE_REMOVE_TABS_FROM_PLATER
     View3D::View3D(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSlicingProcess* process)
     : m_canvas_widget(nullptr)
     , m_canvas(nullptr)
@@ -70,7 +69,6 @@ bool View3D::init(wxWindow* parent, Model* model, DynamicPrintConfig* config, Ba
     m_canvas->set_config(config);
     m_canvas->enable_gizmos(true);
     m_canvas->enable_toolbar(true);
-    m_canvas->enable_shader(true);
     m_canvas->enable_force_zoom_to_bed(true);
 
 #if !ENABLE_IMGUI
@@ -92,11 +90,7 @@ bool View3D::init(wxWindow* parent, Model* model, DynamicPrintConfig* config, Ba
     return true;
 }
 
-#if ENABLE_TOOLBAR_BACKGROUND_TEXTURE
 void View3D::set_view_toolbar(GLToolbar* toolbar)
-#else
-void View3D::set_view_toolbar(GLRadioToolbar* toolbar)
-#endif // ENABLE_TOOLBAR_BACKGROUND_TEXTURE
 {
     if (m_canvas != nullptr)
         m_canvas->set_view_toolbar(toolbar);
@@ -189,13 +183,8 @@ void View3D::render()
     if (m_canvas != nullptr)
         m_canvas->render();
 }
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
 
-#if ENABLE_REMOVE_TABS_FROM_PLATER
 Preview::Preview(wxWindow* parent, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data, std::function<void()> schedule_background_process_func)
-#else
-Preview::Preview(wxNotebook* notebook, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data, std::function<void()> schedule_background_process_func)
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
     : m_canvas_widget(nullptr)
     , m_canvas(nullptr)
     , m_double_slider_sizer(nullptr)
@@ -214,51 +203,27 @@ Preview::Preview(wxNotebook* notebook, DynamicPrintConfig* config, BackgroundSli
     , m_preferred_color_mode("feature")
     , m_loaded(false)
     , m_enabled(false)
-    , m_force_sliders_full_range(false)
     , m_schedule_background_process(schedule_background_process_func)
 {
-#if ENABLE_REMOVE_TABS_FROM_PLATER
     if (init(parent, config, process, gcode_preview_data))
     {
         show_hide_ui_elements("none");
         load_print();
     }
-#else
-    if (init(notebook, config, process, gcode_preview_data))
-    {
-        notebook->AddPage(this, _(L("Preview")));
-        show_hide_ui_elements("none");
-        load_print();
-    }
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
 }
 
-#if ENABLE_REMOVE_TABS_FROM_PLATER
 bool Preview::init(wxWindow* parent, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data)
-#else
-bool Preview::init(wxNotebook* notebook, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data)
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
 {
-#if ENABLE_REMOVE_TABS_FROM_PLATER
     if ((config == nullptr) || (process == nullptr) || (gcode_preview_data == nullptr))
         return false;
 
     if (!Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize))
         return false;
-#else
-    if ((notebook == nullptr) || (config == nullptr) || (process == nullptr) || (gcode_preview_data == nullptr))
-        return false;
-
-    // creates this panel add append it to the given notebook as a new page
-    if (!Create(notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize))
-        return false;
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
 
     m_canvas_widget = GLCanvas3DManager::create_wxglcanvas(this);
 	_3DScene::add_canvas(m_canvas_widget);
 	m_canvas = _3DScene::get_canvas(this->m_canvas_widget);
     m_canvas->allow_multisample(GLCanvas3DManager::can_multisample());
-    m_canvas->enable_shader(true);
     m_canvas->set_config(m_config);
     m_canvas->set_process(process);
     m_canvas->enable_legend_texture(true);
@@ -368,41 +333,25 @@ Preview::~Preview()
     }
 }
 
-#if ENABLE_REMOVE_TABS_FROM_PLATER
-#if ENABLE_TOOLBAR_BACKGROUND_TEXTURE
 void Preview::set_view_toolbar(GLToolbar* toolbar)
-#else
-void Preview::set_view_toolbar(GLRadioToolbar* toolbar)
-#endif // ENABLE_TOOLBAR_BACKGROUND_TEXTURE
 {
     if (m_canvas != nullptr)
         m_canvas->set_view_toolbar(toolbar);
 }
-#endif // ENABLE_REMOVE_TABS_FROM_PLATER
 
 void Preview::set_number_extruders(unsigned int number_extruders)
 {
     if (m_number_extruders != number_extruders)
     {
         m_number_extruders = number_extruders;
-        int type = 0; // color by a feature type
-        if (number_extruders > 1)
-        {
-            int tool_idx = m_choice_view_type->FindString(_(L("Tool")));
-            int type = (number_extruders > 1) ? tool_idx /* color by a tool number */  : 0; // color by a feature type
-            m_choice_view_type->SetSelection(type);
-            if ((0 <= type) && (type < (int)GCodePreviewData::Extrusion::Num_View_Types))
-                m_gcode_preview_data->extrusion.view_type = (GCodePreviewData::Extrusion::EViewType)type;
+        int tool_idx = m_choice_view_type->FindString(_(L("Tool")));
+        int type = (number_extruders > 1) ? tool_idx /* color by a tool number */  : 0; // color by a feature type
+        m_choice_view_type->SetSelection(type);
+        if ((0 <= type) && (type < (int)GCodePreviewData::Extrusion::Num_View_Types))
+            m_gcode_preview_data->extrusion.view_type = (GCodePreviewData::Extrusion::EViewType)type;
 
-            m_preferred_color_mode = (type == tool_idx) ? "tool_or_feature" : "feature";
-        }
+        m_preferred_color_mode = (type == tool_idx) ? "tool_or_feature" : "feature";
     }
-}
-
-void Preview::reset_gcode_preview_data()
-{
-    m_gcode_preview_data->reset();
-    m_canvas->reset_legend_texture();
 }
 
 void Preview::set_canvas_as_dirty()
@@ -455,6 +404,7 @@ void Preview::load_print()
 void Preview::reload_print(bool force)
 {
     m_canvas->reset_volumes();
+    m_canvas->reset_legend_texture();
     m_loaded = false;
 
     if (!IsShown() && !force)
@@ -523,14 +473,14 @@ void Preview::show_hide_ui_elements(const std::string& what)
 void Preview::reset_sliders()
 {
     m_enabled = false;
-    reset_double_slider();
+//    reset_double_slider();
     m_double_slider_sizer->Hide((size_t)0);
 }
 
 void Preview::update_sliders(const std::vector<double>& layers_z)
 {
     m_enabled = true;
-    update_double_slider(layers_z, m_force_sliders_full_range);
+    update_double_slider(layers_z);
     m_double_slider_sizer->Show((size_t)0);
     Layout();
 }
@@ -596,7 +546,8 @@ void Preview::create_double_slider()
             auto& config = wxGetApp().preset_bundle->project_config;
             ((config.option<ConfigOptionFloats>("colorprint_heights"))->values) = (m_slider->GetTicksValues());
             m_schedule_background_process();
-            int type = m_choice_view_type->FindString(_(L("Color Print")));
+            bool color_print = !config.option<ConfigOptionFloats>("colorprint_heights")->values.empty();
+            int type = m_choice_view_type->FindString(color_print ? _(L("Color Print")) : _(L("Feature type")) );
             if (m_choice_view_type->GetSelection() != type) {
                 m_choice_view_type->SetSelection(type);
                 if ((0 <= type) && (type < (int)GCodePreviewData::Extrusion::Num_View_Types))
@@ -606,25 +557,69 @@ void Preview::create_double_slider()
         });
 }
 
+// Find an index of a value in a sorted vector, which is in <z-eps, z+eps>.
+// Returns -1 if there is no such member.
+static int find_close_layer_idx(const std::vector<double>& zs, double &z, double eps)
+{
+    if (zs.empty())
+        return -1;
+    auto it_h = std::lower_bound(zs.begin(), zs.end(), z);
+    if (it_h == zs.end()) {
+        auto it_l = it_h;
+        -- it_l;
+        if (z - *it_l < eps)
+            return int(zs.size() - 1);
+    } else if (it_h == zs.begin()) {
+        if (*it_h - z < eps)
+            return 0;
+    } else {
+        auto it_l = it_h;
+        -- it_l;
+        double dist_l = z - *it_l;
+        double dist_h = *it_h - z;
+        if (std::min(dist_l, dist_h) < eps) {
+            return (dist_l < dist_h) ? int(it_l - zs.begin()) : int(it_h - zs.begin());
+        }
+    }
+    return -1;
+}
+
 void Preview::update_double_slider(const std::vector<double>& layers_z, bool force_sliders_full_range)
 {
+    // Save the initial slider span.
+    double z_low        = m_slider->GetLowerValueD();
+    double z_high       = m_slider->GetHigherValueD();
+    bool   was_empty    = m_slider->GetMaxValue() == 0;
+    bool   span_changed = layers_z.empty() || std::abs(layers_z.back() - m_slider->GetMaxValueD()) > 1e-6;
+    force_sliders_full_range |= was_empty | span_changed;
+	bool   snap_to_min  = force_sliders_full_range || m_slider->is_lower_at_min();
+	bool   snap_to_max  = force_sliders_full_range || m_slider->is_higher_at_max();
+
     std::vector<std::pair<int, double>> values;
     fill_slider_values(values, layers_z);
-
-    m_slider->SetMaxValue(layers_z.size() - 1);
-    if (force_sliders_full_range)
-        m_slider->SetHigherValue(layers_z.size() - 1);
-
     m_slider->SetSliderValues(values);
-    const double z_low = m_slider->GetLowerValueD();
-    const double z_high = m_slider->GetHigherValueD();
+    assert(m_slider->GetMinValue() == 0);
+    m_slider->SetMaxValue(layers_z.empty() ? 0 : layers_z.size() - 1);
+
+    int idx_low  = 0;
+    int idx_high = m_slider->GetMaxValue();
+    if (! layers_z.empty()) {
+        if (! snap_to_min) {
+            int idx_new = find_close_layer_idx(layers_z, z_low, 1e-6);
+            if (idx_new != -1)
+                idx_low = idx_new;
+        }
+        if (! snap_to_max) {
+            int idx_new = find_close_layer_idx(layers_z, z_high, 1e-6);
+            if (idx_new != -1)
+                idx_high = idx_new;
+        }
+    }
+    m_slider->SetSelectionSpan(idx_low, idx_high);
 
     const auto& config = wxGetApp().preset_bundle->project_config;
     const std::vector<double> &ticks_from_config = (config.option<ConfigOptionFloats>("colorprint_heights"))->values;
-
     m_slider->SetTicksValues(ticks_from_config);
-
-    set_double_slider_thumbs(layers_z, z_low, z_high);
 
     bool color_print_enable = (wxGetApp().plater()->printer_technology() == ptFFF);
     if (color_print_enable) {
@@ -647,40 +642,13 @@ void Preview::fill_slider_values(std::vector<std::pair<int, double>> &values,
     // All ticks that would end up outside the slider range should be erased.
     // TODO: this should be placed into more appropriate part of code,
     // this function is e.g. not called when the last object is deleted
-    auto& config = wxGetApp().preset_bundle->project_config;
-    std::vector<double> &ticks_from_config = (config.option<ConfigOptionFloats>("colorprint_heights"))->values;
+    std::vector<double> &ticks_from_config = (wxGetApp().preset_bundle->project_config.option<ConfigOptionFloats>("colorprint_heights"))->values;
     unsigned int old_size = ticks_from_config.size();
     ticks_from_config.erase(std::remove_if(ticks_from_config.begin(), ticks_from_config.end(),
                                            [values](double val) { return values.back().second < val; }),
                             ticks_from_config.end());
     if (ticks_from_config.size() != old_size)
         m_schedule_background_process();
-}
-
-void Preview::set_double_slider_thumbs(const std::vector<double> &layers_z,
-                                       const double z_low, 
-                                       const double z_high)
-{
-    // Force slider full range only when slider is created.
-    // Support selected diapason on the all next steps
-    if (z_high == 0.0) {
-        m_slider->SetLowerValue(0);
-        m_slider->SetHigherValue(layers_z.size() - 1);
-        return;
-    }
-
-    for (int i = layers_z.size() - 1; i >= 0; i--)
-//         if (z_low >= layers_z[i]) {
-        if (fabs(z_low - layers_z[i]) <= 1e-6) {
-            m_slider->SetLowerValue(i);
-            break;
-        }
-    for (int i = layers_z.size() - 1; i >= 0; i--)
-//         if (z_high >= layers_z[i]) {
-        if (fabs(z_high-layers_z[i]) <= 1e-6) {
-            m_slider->SetHigherValue(i);
-            break;
-        }
 }
 
 void Preview::reset_double_slider()
@@ -701,7 +669,7 @@ void Preview::update_double_slider_from_canvas(wxKeyEvent& event)
     if (key == 'U' || key == 'D') {
         const int new_pos = key == 'U' ? m_slider->GetHigherValue() + 1 : m_slider->GetHigherValue() - 1;
         m_slider->SetHigherValue(new_pos);
-        if (event.ShiftDown()) m_slider->SetLowerValue(m_slider->GetHigherValue());
+		if (event.ShiftDown() || m_slider->is_one_layer()) m_slider->SetLowerValue(m_slider->GetHigherValue());
     }
     else if (key == 'S')
         m_slider->ChangeOneLayerLock();
@@ -763,7 +731,8 @@ void Preview::load_print_as_fff()
 
     // Collect colors per extruder.
     std::vector<std::string> colors;
-    if (!m_gcode_preview_data->empty() || (m_gcode_preview_data->extrusion.view_type == GCodePreviewData::Extrusion::Tool))
+    bool gcode_preview_data_valid = print->is_step_done(psGCodeExport) && ! m_gcode_preview_data->empty();
+    if (gcode_preview_data_valid || (m_gcode_preview_data->extrusion.view_type == GCodePreviewData::Extrusion::Tool))
     {
         const ConfigOptionStrings* extruders_opt = dynamic_cast<const ConfigOptionStrings*>(m_config->option("extruder_colour"));
         const ConfigOptionStrings* filamemts_opt = dynamic_cast<const ConfigOptionStrings*>(m_config->option("filament_colour"));
@@ -786,18 +755,8 @@ void Preview::load_print_as_fff()
 
     if (IsShown())
     {
-        // used to set the sliders to the extremes of the current zs range
-        m_force_sliders_full_range = false;
-
-        if (m_gcode_preview_data->empty())
+        if (gcode_preview_data_valid)
         {
-            // load skirt and brim
-            m_canvas->load_preview(colors);
-            show_hide_ui_elements("simple");
-        }
-        else
-        {
-            m_force_sliders_full_range = (m_canvas->get_volumes_count() == 0);
             m_canvas->load_gcode_preview(*m_gcode_preview_data, colors);
             show_hide_ui_elements("full");
 
@@ -809,7 +768,14 @@ void Preview::load_print_as_fff()
                 reset_sliders();
                 m_canvas_widget->Refresh();
             }
+        } 
+        else
+        {
+            // load skirt and brim
+            m_canvas->load_preview(colors);
+            show_hide_ui_elements("simple");
         }
+
 
         if (n_layers > 0)
             update_sliders(m_canvas->get_current_print_zs(true));
@@ -856,7 +822,6 @@ void Preview::load_print_as_sla()
         {
             std::vector<double> layer_zs;
             std::copy(zs.begin(), zs.end(), std::back_inserter(layer_zs));
-            m_force_sliders_full_range = true;
             update_sliders(layer_zs);
         }
 

@@ -8,10 +8,11 @@
 #include "SLABoilerPlate.hpp"
 #include "SLASpatIndex.hpp"
 #include "SLABasePool.hpp"
-#include <libnest2d/tools/benchmark.h>
-#include "ClipperUtils.hpp"
 
+#include "ClipperUtils.hpp"
 #include "Model.hpp"
+
+#include <boost/log/trivial.hpp>
 
 /**
  * Terminology:
@@ -612,7 +613,9 @@ double ray_mesh_intersect(const Vec3d& s,
                           const Vec3d& dir,
                           const EigenMesh3D& m);
 
-PointSet normals(const PointSet& points, const EigenMesh3D& mesh);
+PointSet normals(const PointSet& points, const EigenMesh3D& mesh,
+                 double eps = 0.05,  // min distance from edges
+                 std::function<void()> throw_on_cancel = [](){});
 
 inline Vec2d to_vec2(const Vec3d& v3) {
     return {v3(X), v3(Y)};
@@ -718,6 +721,10 @@ public:
                           const PoolConfig& cfg) {
         m_pad = Pad(object_supports, baseplate, ground_level, cfg);
         return m_pad;
+    }
+
+    void remove_pad() {
+        m_pad = Pad();
     }
 
     const Pad& pad() const { return m_pad; }
@@ -1049,7 +1056,7 @@ bool SLASupportTree::generate(const PointSet &points,
         tifcl();
 
         // calculate the normals to the triangles belonging to filtered points
-        auto nmls = sla::normals(filt_pts, mesh);
+        auto nmls = sla::normals(filt_pts, mesh, cfg.head_front_radius_mm, tifcl);
 
         head_norm.resize(count, 3);
         head_pos.resize(count, 3);
@@ -1078,7 +1085,8 @@ bool SLASupportTree::generate(const PointSet &points,
             double polar = std::acos(z / r);
             double azimuth = std::atan2(n(1), n(0));
 
-            if(polar >= PI / 2) { // skip if the tilt is not sane
+            // skip if the tilt is not sane
+            if(polar >= PI - cfg.normal_cutoff_angle) {
 
                 // We saturate the polar angle to 3pi/4
                 polar = std::max(polar, 3*PI / 4);
@@ -1109,7 +1117,9 @@ bool SLASupportTree::generate(const PointSet &points,
                     head_norm.row(pcount) = nn;
 
                     ++pcount;
-                } else {
+                } else if( polar >= 3*PI/4 ) {
+                    // Headless supports do not tilt like the headed ones so
+                    // the normal should point almost to the ground.
                     headless_norm.row(hlcount) = nn;
                     headless_pos.row(hlcount++) = hp;
                 }
@@ -1238,7 +1248,7 @@ bool SLASupportTree::generate(const PointSet &points,
                 result.add_bridge(sj, ej, pillar.r);
 
                 // double bridging: (crosses)
-                if(bridge_distance > 2*cfg.base_radius_mm) {
+                if(pillar_dist > 2*cfg.base_radius_mm) {
                     // If the columns are close together, no need to
                     // double bridge them
                     Vec3d bsj(ej(X), ej(Y), sj(Z));
@@ -1509,22 +1519,39 @@ bool SLASupportTree::generate(const PointSet &points,
     {
         // TODO: connect these to the ground pillars if possible
         for(auto idx : nogndidx) { tifcl();
+            double gh = gndheight[idx];
+            double base_width = cfg.head_width_mm;
+
             auto& head = result.head(idx);
+
+            // In this case there is no room for the base pinhead.
+            if(gh < head.fullwidth()) {
+                base_width = gh - 2 * cfg.head_front_radius_mm -
+                        2*cfg.head_back_radius_mm + cfg.head_penetration_mm;
+            }
+
             head.transform();
 
-            double gh = gndheight[idx];
             Vec3d headend = head.junction_point();
 
             Head base_head(cfg.head_back_radius_mm,
                  cfg.head_front_radius_mm,
-                 cfg.head_width_mm,
+                 base_width,
                  cfg.head_penetration_mm,
                  {0.0, 0.0, 1.0},
                  {headend(X), headend(Y), headend(Z) - gh});
 
             base_head.transform();
 
-            double hl = head.fullwidth() - head.r_back_mm;
+            // Robustness check:
+            if(headend(Z) < base_head.junction_point()(Z)) {
+                // This should not happen it is against all assumptions
+                BOOST_LOG_TRIVIAL(warning)
+                        << "Ignoring invalid supports connecting to model body";
+                continue;
+            }
+
+            double hl = base_head.fullwidth() - head.r_back_mm;
 
             result.add_pillar(idx,
                 Vec3d{headend(X), headend(Y), headend(Z) - gh + hl},
@@ -1547,7 +1574,7 @@ bool SLASupportTree::generate(const PointSet &points,
         const double HWIDTH_MM = R/3;
 
         // We will sink the pins into the model surface for a distance of 1/3 of
-        // HWIDTH_MM
+        // the pin radius
         for(int i = 0; i < headless_pts.rows(); i++) { tifcl();
             Vec3d sp = headless_pts.row(i);
 
@@ -1558,7 +1585,7 @@ bool SLASupportTree::generate(const PointSet &points,
             Vec3d sj = sp + R * n;
             double dist = ray_mesh_intersect(sj, dir, emesh);
 
-            if(std::isinf(dist) || std::isnan(dist)) continue;
+            if(std::isinf(dist) || std::isnan(dist) || dist < 2*R) continue;
 
             Vec3d ej = sj + (dist + HWIDTH_MM)* dir;
             result.add_compact_bridge(sp, ej, n, R);
@@ -1725,6 +1752,11 @@ const TriangleMesh &SLASupportTree::add_pad(const SliceLayer& baseplate,
 const TriangleMesh &SLASupportTree::get_pad() const
 {
     return m_impl->pad().tmesh;
+}
+
+void SLASupportTree::remove_pad()
+{
+    m_impl->remove_pad();
 }
 
 SLASupportTree::SLASupportTree(const PointSet &points,

@@ -67,6 +67,10 @@ struct SupportConfig {
     // The elevation in Z direction upwards. This is the space between the pad
     // and the model object's bounding box bottom.
     double object_elevation_mm = 10;
+
+    // The max Z angle for a normal at which it will get completely ignored.
+    double normal_cutoff_angle = 110.0 * M_PI / 180.0;
+
 };
 
 struct PoolConfig;
@@ -163,6 +167,8 @@ public:
 
     /// Get the pad geometry
     const TriangleMesh& get_pad() const;
+
+    void remove_pad();
 
 };
 

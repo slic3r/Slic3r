@@ -107,8 +107,8 @@ public:
     // adds region_id, too, if necessary
     void add_region_volume(unsigned int region_id, int volume_id) {
         if (region_id >= region_volumes.size())
-            region_volumes.resize(region_id + 1);
-        region_volumes[region_id].push_back(volume_id);
+			region_volumes.resize(region_id + 1);
+        region_volumes[region_id].emplace_back(volume_id);
     }
     // This is the *total* layer count (including support layers)
     // this value is not supposed to be compared with Layer::id
@@ -164,7 +164,7 @@ protected:
     void                    config_apply(const ConfigBase &other, bool ignore_nonexistent = false) { this->m_config.apply(other, ignore_nonexistent); }
     void                    config_apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent = false) { this->m_config.apply_only(other, keys, ignore_nonexistent); }
     void                    set_trafo(const Transform3d& trafo) { m_trafo = trafo; }
-    bool                    set_copies(const Points &points);
+    PrintBase::ApplyStatus  set_copies(const Points &points);
     // Invalidates the step, and its depending steps in PrintObject and Print.
     bool                    invalidate_step(PrintObjectStep step);
     // Invalidates all PrintObject and Print steps.

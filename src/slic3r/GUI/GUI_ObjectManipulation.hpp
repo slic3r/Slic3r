@@ -14,12 +14,35 @@ namespace GUI {
 
 class ObjectManipulation : public OG_Settings
 {
-    bool        m_is_percent_scale = false;         // true  -> percentage scale unit  
-                                                    // false -> uniform scale unit  
-    bool        m_is_uniform_scale = false;         // It indicates if scale is uniform
+#if ENABLE_IMPROVED_SIDEBAR_OBJECTS_MANIPULATION
+    Vec3d m_cache_position;
+    Vec3d m_cache_rotation;
+    Vec3d m_cache_scale;
+    Vec3d m_cache_size;
+#else
+    Vec3d       m_cache_position{ 0., 0., 0. };
+    Vec3d       m_cache_rotation{ 0., 0., 0. };
+    Vec3d       m_cache_scale{ 100., 100., 100. };
+    Vec3d       m_cache_size{ 0., 0., 0. };
+#endif // ENABLE_IMPROVED_SIDEBAR_OBJECTS_MANIPULATION
 
-    Vec3d       cache_position   { 0., 0., 0. };
     wxStaticText*   m_move_Label = nullptr;
+    wxStaticText*   m_scale_Label = nullptr;
+    wxStaticText*   m_rotate_Label = nullptr;
+
+#if !ENABLE_IMPROVED_SIDEBAR_OBJECTS_MANIPULATION
+    // Needs to be updated from OnIdle?
+    bool            m_dirty = false;
+#endif // !ENABLE_IMPROVED_SIDEBAR_OBJECTS_MANIPULATION
+    // Cached labels for the delayed update, not localized!
+    std::string     m_new_move_label_string;
+	std::string     m_new_rotate_label_string;
+	std::string     m_new_scale_label_string;
+    Vec3d           m_new_position;
+    Vec3d           m_new_rotation;
+    Vec3d           m_new_scale;
+    Vec3d           m_new_size;
+    bool            m_new_enabled;
 
 public:
     ObjectManipulation(wxWindow* parent);
@@ -29,38 +52,24 @@ public:
     bool        IsShown() override;
     void        UpdateAndShow(const bool show) override;
 
-    int ol_selection();
+    void        update_settings_value(const GLCanvas3D::Selection& selection);
 
-    void update_settings_value(const GLCanvas3D::Selection& selection);
+	// Called from the App to update the UI if dirty.
+	void		update_if_dirty();
+
+private:
     void reset_settings_value();
-    void reset_position_value();
-    void reset_rotation_value();
-    void reset_scale_value();
 
-    void update_values();
-    // update position values displacements or "gizmos"
-    void update_position_values();
-    void update_position_value(const Vec3d& position);
-    // update scale values after scale unit changing or "gizmos"
-    void update_scale_values();
-    void update_scale_value(const Vec3d& scaling_factor);
-    // update rotation values object selection changing
-    void update_rotation_values();
+    // update size values after scale unit changing or "gizmos"
+    void update_size_value(const Vec3d& size);
     // update rotation value after "gizmos"
-    void update_rotation_value(double angle, Axis axis);
     void update_rotation_value(const Vec3d& rotation);
-
-    void set_uniform_scaling(const bool uniform_scale) { m_is_uniform_scale = uniform_scale; }
-
 
     // change values 
     void    change_position_value(const Vec3d& position);
     void    change_rotation_value(const Vec3d& rotation);
     void    change_scale_value(const Vec3d& scale);
-
-
-private:
-    void    print_cashe_value(const std::string& label, const Vec3d& value);
+    void    change_size_value(const Vec3d& size);
 };
 
 }}

@@ -163,17 +163,42 @@ void Field::get_value_by_opt_type(wxString& str)
 		break; }
 	case coString:
 	case coStrings:
-	case coFloatOrPercent:
-		m_value = str.ToStdString();
-		break;
+    case coFloatOrPercent: {
+        if (m_opt.type == coFloatOrPercent && !str.IsEmpty() &&  str.Last() != '%')
+        {
+            double val;
+            if (!str.ToCDouble(&val))
+            {
+                show_error(m_parent, _(L("Input value contains incorrect symbol(s).\nUse, please, only digits")));
+                set_value(double_to_string(val), true);                
+            }
+            else if (m_opt.sidetext.rfind("mm/s") != std::string::npos && val > m_opt.max ||
+                     m_opt.sidetext.rfind("mm ") != std::string::npos && val > 1)
+            {
+                std::string sidetext = m_opt.sidetext.rfind("mm/s") != std::string::npos ? "mm/s" : "mm";
+                const int nVal = int(val);
+                wxString msg_text = wxString::Format(_(L("Do you mean %d%% instead of %d %s?\n"
+                    "Select YES if you want to change this value to %d%%, \n"
+                    "or NO if you are sure that %d %s is a correct value.")), nVal, nVal, sidetext, nVal, nVal, sidetext);
+                auto dialog = new wxMessageDialog(m_parent, msg_text, _(L("Parameter validation")), wxICON_WARNING | wxYES | wxNO);
+                if (dialog->ShowModal() == wxID_YES) {
+                    set_value(wxString::Format("%s%%", str), true);
+                    str += "%%";
+                }
+            }
+        }
+    
+        m_value = str.ToStdString();
+		break; }
 	default:
 		break;
 	}
 }
 
-bool TextCtrl::is_defined_input_value() const 
+template<class T>
+bool is_defined_input_value(wxWindow* win, const ConfigOptionType& type)
 {
-    if (static_cast<wxTextCtrl*>(window)->GetValue().empty() && m_opt.type != coString && m_opt.type != coStrings)
+    if (static_cast<T*>(win)->GetValue().empty() && type != coString && type != coStrings)
         return false;
     return true;
 }
@@ -251,8 +276,7 @@ void TextCtrl::BUILD() {
 		e.Skip();
 		temp->GetToolTip()->Enable(true);
 #endif // __WXGTK__
-//         if (!is_defined_input_value()) 
-        if (is_defined_input_value())
+        if (is_defined_input_value<wxTextCtrl>(window, m_opt.type))
             on_change_field();
         else
             on_kill_focus(e);
@@ -376,7 +400,11 @@ void SpinCtrl::BUILD() {
 	auto temp = new wxSpinCtrl(m_parent, wxID_ANY, text_value, wxDefaultPosition, size,
 		0, min_val, max_val, default_value);
 
-// 	temp->Bind(wxEVT_SPINCTRL, ([this](wxCommandEvent e) { tmp_value = undef_spin_val; on_change_field(); }), temp->GetId());
+#ifndef __WXOSX__
+    // #ys_FIXME_KILL_FOCUS 
+    // wxEVT_KILL_FOCUS doesn't handled on OSX now (wxWidgets 3.1.1)
+    // So, we will update values on KILL_FOCUS & SPINCTRL events under MSW and GTK
+    // and on TEXT event under OSX
 	temp->Bind(wxEVT_KILL_FOCUS, ([this](wxEvent& e)
 	{
         if (tmp_value < 0)
@@ -386,6 +414,10 @@ void SpinCtrl::BUILD() {
             on_change_field();
         }
 	}), temp->GetId());
+
+	temp->Bind(wxEVT_SPINCTRL, ([this](wxCommandEvent e) {  on_change_field();  }), temp->GetId());
+#endif
+
 	temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent e)
 	{
 // 		# On OSX / Cocoa, wxSpinCtrl::GetValue() doesn't return the new value
@@ -397,10 +429,14 @@ void SpinCtrl::BUILD() {
 		if (is_matched(value, "^\\d+$"))
 			tmp_value = std::stoi(value);
         else tmp_value = -9999;
-// 		on_change_field();
-// 		# We don't reset tmp_value here because _on_change might put callbacks
-// 		# in the CallAfter queue, and we want the tmp value to be available from
-// 		# them as well.
+#ifdef __WXOSX__
+        if (tmp_value < 0) {
+            if (m_on_kill_focus != nullptr)
+                m_on_kill_focus(m_opt_id);
+        }
+        else 
+            on_change_field();
+#endif
 	}), temp->GetId());
 	
 	temp->SetToolTip(get_tooltip_text(text_value));
@@ -432,8 +468,23 @@ void Choice::BUILD() {
 		}
 		set_selection();
 	}
- 	temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());
+// 	temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());
  	temp->Bind(wxEVT_COMBOBOX, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());
+
+    if (temp->GetWindowStyle() != wxCB_READONLY) {
+        temp->Bind(wxEVT_KILL_FOCUS, ([this](wxEvent& e) {
+            e.Skip();
+            double old_val = !m_value.empty() ? boost::any_cast<double>(m_value) : -99999;
+            if (is_defined_input_value<wxComboBox>(window, m_opt.type)) {
+                if (fabs(old_val - boost::any_cast<double>(get_value())) <= 0.0001)
+                    return;
+                else
+                    on_change_field();
+            }
+            else
+                on_kill_focus(e);
+        }), temp->GetId());
+    }
 
 	temp->SetToolTip(get_tooltip_text(temp->GetValue()));
 }
@@ -632,9 +683,7 @@ boost::any& Choice::get_value()
 		if (m_opt_id == rp_option)
 			return m_value = boost::any(ret_str);
 
-	if (m_opt.type != coEnum)
-		/*m_value = */get_value_by_opt_type(ret_str);
-	else
+	if (m_opt.type == coEnum)
 	{
 		int ret_enum = static_cast<wxComboBox*>(window)->GetSelection(); 
 		if (m_opt_id.compare("top_fill_pattern") == 0 || m_opt_id.compare("bottom_fill_pattern") == 0 )
@@ -671,7 +720,16 @@ boost::any& Choice::get_value()
             m_value = static_cast<DenseInfillAlgo>(ret_enum);
 		else if (m_opt_id.compare("display_orientation") == 0)
 			m_value = static_cast<SLADisplayOrientation>(ret_enum);
-	}	
+	}
+    else if (m_opt.gui_type == "f_enum_open") {
+        const int ret_enum = static_cast<wxComboBox*>(window)->GetSelection();
+        if (ret_enum < 0 || m_opt.enum_values.empty())
+            get_value_by_opt_type(ret_str);
+        else 
+            m_value = atof(m_opt.enum_values[ret_enum].c_str());
+    }
+	else	
+        get_value_by_opt_type(ret_str);
 
 	return m_value;
 }
@@ -735,14 +793,27 @@ void PointCtrl::BUILD()
 	temp->Add(new wxStaticText(m_parent, wxID_ANY, "   y : "), 0, wxALIGN_CENTER_VERTICAL, 0);
 	temp->Add(y_textctrl);
 
-	x_textctrl->Bind(wxEVT_TEXT, ([this](wxCommandEvent e) { on_change_field(); }), x_textctrl->GetId());
-	y_textctrl->Bind(wxEVT_TEXT, ([this](wxCommandEvent e) { on_change_field(); }), y_textctrl->GetId());
+// 	x_textctrl->Bind(wxEVT_TEXT, ([this](wxCommandEvent e) { on_change_field(); }), x_textctrl->GetId());
+// 	y_textctrl->Bind(wxEVT_TEXT, ([this](wxCommandEvent e) { on_change_field(); }), y_textctrl->GetId());
+
+    x_textctrl->Bind(wxEVT_KILL_FOCUS, ([this](wxEvent& e) { OnKillFocus(e, x_textctrl); }), x_textctrl->GetId());
+    y_textctrl->Bind(wxEVT_KILL_FOCUS, ([this](wxEvent& e) { OnKillFocus(e, x_textctrl); }), y_textctrl->GetId());
 
 	// 	// recast as a wxWindow to fit the calling convention
 	sizer = dynamic_cast<wxSizer*>(temp);
 
 	x_textctrl->SetToolTip(get_tooltip_text(X+", "+Y));
 	y_textctrl->SetToolTip(get_tooltip_text(X+", "+Y));
+}
+
+void PointCtrl::OnKillFocus(wxEvent& e, wxTextCtrl* win)
+{
+    e.Skip();
+    if (!win->GetValue().empty()) {
+        on_change_field();
+    }
+    else
+        on_kill_focus(e);
 }
 
 void PointCtrl::set_value(const Vec2d& value, bool change_event)

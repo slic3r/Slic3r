@@ -8,6 +8,7 @@
 #include "libslic3r/Geometry.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/SLA/SLASupportTree.hpp"
+#include "libslic3r/SLAPrint.hpp"
 
 #include <cstdio>
 #include <numeric>
@@ -859,14 +860,10 @@ void GLGizmoScale3D::on_render(const GLCanvas3D::Selection& selection) const
     bool single_selection = single_instance || single_volume;
 
     Vec3f scale = 100.0f * Vec3f::Ones();
-#if ENABLE_MODELVOLUME_TRANSFORM
     if (single_instance)
         scale = 100.0f * selection.get_volume(*selection.get_volume_idxs().begin())->get_instance_scaling_factor().cast<float>();
     else if (single_volume)
         scale = 100.0f * selection.get_volume(*selection.get_volume_idxs().begin())->get_volume_scaling_factor().cast<float>();
-#else
-    Vec3f scale = single_instance ? 100.0f * selection.get_volume(*selection.get_volume_idxs().begin())->get_scaling_factor().cast<float>() : 100.0f * m_scale.cast<float>();
-#endif // ENABLE_MODELVOLUME_TRANSFORM
 
     if ((single_selection && ((m_hover_id == 0) || (m_hover_id == 1))) || m_grabbers[0].dragging || m_grabbers[1].dragging)
         set_tooltip("X: " + format(scale(0), 4) + "%");
@@ -914,37 +911,22 @@ void GLGizmoScale3D::on_render(const GLCanvas3D::Selection& selection) const
 
         // gets transform from first selected volume
         const GLVolume* v = selection.get_volume(*idxs.begin());
-#if ENABLE_MODELVOLUME_TRANSFORM
         transform = v->get_instance_transformation().get_matrix();
         // gets angles from first selected volume
         angles = v->get_instance_rotation();
         // consider rotation+mirror only components of the transform for offsets
         offsets_transform = Geometry::assemble_transform(Vec3d::Zero(), angles, Vec3d::Ones(), v->get_instance_mirror());
         grabber_size = v->get_instance_transformation().get_matrix(true, true, false, true) * box.size();
-#else
-        transform = v->world_matrix().cast<double>();
-        // gets angles from first selected volume
-        angles = v->get_rotation();
-        // consider rotation+mirror only components of the transform for offsets
-        offsets_transform = Geometry::assemble_transform(Vec3d::Zero(), angles, Vec3d::Ones(), v->get_mirror());
-#endif // ENABLE_MODELVOLUME_TRANSFORM
     }
     else if (single_volume)
     {
         const GLVolume* v = selection.get_volume(*selection.get_volume_idxs().begin());
         box = v->bounding_box;
-#if ENABLE_MODELVOLUME_TRANSFORM
         transform = v->world_matrix();
         angles = Geometry::extract_euler_angles(transform);
         // consider rotation+mirror only components of the transform for offsets
         offsets_transform = Geometry::assemble_transform(Vec3d::Zero(), angles, Vec3d::Ones(), v->get_instance_mirror());
         grabber_size = v->get_volume_transformation().get_matrix(true, true, false, true) * box.size();
-#else
-        transform = v->world_matrix().cast<double>();
-        angles = Geometry::extract_euler_angles(transform);
-        // consider rotation+mirror only components of the transform for offsets
-        offsets_transform = Geometry::assemble_transform(Vec3d::Zero(), angles, Vec3d::Ones(), v->get_mirror());
-#endif // ENABLE_MODELVOLUME_TRANSFORM
     }
     else
     {
@@ -1465,6 +1447,7 @@ void GLGizmoFlatten::on_render(const GLCanvas3D::Selection& selection) const
         const Transform3d& m = selection.get_volume(*selection.get_volume_idxs().begin())->get_instance_transformation().get_matrix();
         ::glPushMatrix();
         ::glMultMatrixd(m.data());
+        ::glTranslatef(0.f, 0.f, selection.get_volume(*selection.get_volume_idxs().begin())->get_sla_shift_z());
         for (int i = 0; i < (int)m_planes.size(); ++i)
         {
             if (i == m_hover_id)
@@ -1496,6 +1479,7 @@ void GLGizmoFlatten::on_render_for_picking(const GLCanvas3D::Selection& selectio
         const Transform3d& m = selection.get_volume(*selection.get_volume_idxs().begin())->get_instance_transformation().get_matrix();
         ::glPushMatrix();
         ::glMultMatrixd(m.data());
+        ::glTranslatef(0.f, 0.f, selection.get_volume(*selection.get_volume_idxs().begin())->get_sla_shift_z());
         for (int i = 0; i < (int)m_planes.size(); ++i)
         {
             ::glColor3f(1.0f, 1.0f, picking_color_component(i));
@@ -1526,7 +1510,6 @@ void GLGizmoFlatten::update_planes()
 {
     TriangleMesh ch;
     for (const ModelVolume* vol : m_model_object->volumes)
-#if ENABLE_MODELVOLUME_TRANSFORM
     {
         if (vol->type() != ModelVolume::Type::MODEL_PART)
             continue;
@@ -1534,9 +1517,6 @@ void GLGizmoFlatten::update_planes()
         vol_ch.transform(vol->get_matrix());
         ch.merge(vol_ch);
     }
-#else
-        ch.merge(vol->get_convex_hull());
-#endif // ENABLE_MODELVOLUME_TRANSFORM
 
     ch = ch.convex_hull_3d();
 
@@ -1786,6 +1766,18 @@ void GLGizmoSlaSupports::set_sla_support_data(ModelObject* model_object, const G
     {
         if (is_mesh_update_necessary())
             update_mesh();
+
+        // If there are no points, let's ask the backend if it calculated some.
+        if (model_object->sla_support_points.empty() && m_parent.sla_print()->is_step_done(slaposSupportPoints)) {
+            for (const SLAPrintObject* po : m_parent.sla_print()->objects()) {
+                if (po->model_object()->id() == model_object->id()) {
+                    const Eigen::MatrixXd& points = po->get_support_points();
+                    for (unsigned int i=0; i<points.rows();++i)
+                        model_object->sla_support_points.push_back(Vec3f(po->trafo().inverse().cast<float>() * Vec3f(points(i,0), points(i,1), points(i,2))));
+                        break;
+                }
+            }
+        }
     }
 }
 #else
@@ -2170,6 +2162,9 @@ void GLGizmoSlaSupports::render_tooltip_texture() const {
 #if ENABLE_IMGUI
 void GLGizmoSlaSupports::on_render_input_window(float x, float y, const GLCanvas3D::Selection& selection)
 {
+    bool first_run = true; // This is a hack to redraw the button when all points are removed,
+                           // so it is not delayed until the background process finishes.
+RENDER_AGAIN:
     m_imgui->set_next_window_pos(x, y, ImGuiCond_Always);
     m_imgui->set_next_window_bg_alpha(0.5f);
     m_imgui->begin(on_get_name(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
@@ -2184,22 +2179,11 @@ void GLGizmoSlaSupports::on_render_input_window(float x, float y, const GLCanvas
 
     m_imgui->end();
 
-    if (remove_all_clicked)
+    if (remove_all_clicked) {
         delete_current_grabber(true);
-
-    if (generate) {
-        const DynamicPrintConfig& cfg = *wxGetApp().get_tab(Preset::TYPE_SLA_PRINT)->get_config();
-        SLAAutoSupports::Config config;
-        config.density_at_horizontal = cfg.opt_int("support_density_at_horizontal") / 10000.f;
-        config.density_at_45 = cfg.opt_int("support_density_at_45") / 10000.f;
-        config.minimal_z = cfg.opt_float("support_minimal_z");
-
-        SLAAutoSupports sas(*m_model_object, config);
-        sas.generate();
-        m_grabbers.clear();
-        for (const Vec3f& point : m_model_object->sla_support_points) {
-            m_grabbers.push_back(Grabber());
-            m_grabbers.back().center = point.cast<double>();
+        if (first_run) {
+            first_run = false;
+            goto RENDER_AGAIN;
         }
     }
 

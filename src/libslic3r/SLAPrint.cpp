@@ -1,6 +1,7 @@
 #include "SLAPrint.hpp"
 #include "SLA/SLASupportTree.hpp"
 #include "SLA/SLABasePool.hpp"
+#include "SLA/SLAAutoSupports.hpp"
 #include "MTUtils.hpp"
 
 #include <unordered_set>
@@ -36,8 +37,7 @@ namespace {
 const std::array<unsigned, slaposCount>     OBJ_STEP_LEVELS =
 {
     10,     // slaposObjectSlice,
-    10,     // slaposSupportIslands,
-    20,     // slaposSupportPoints,
+    30,     // slaposSupportPoints,
     25,     // slaposSupportTree,
     25,     // slaposBasePool,
     5,      // slaposSliceSupports,
@@ -47,8 +47,7 @@ const std::array<unsigned, slaposCount>     OBJ_STEP_LEVELS =
 const std::array<std::string, slaposCount> OBJ_STEP_LABELS =
 {
     L("Slicing model"),                 // slaposObjectSlice,
-    L("Generating islands"),            // slaposSupportIslands,
-    L("Scanning model structure"),      // slaposSupportPoints,
+    L("Generating support points"),      // slaposSupportPoints,
     L("Generating support tree"),       // slaposSupportTree,
     L("Generating base pool"),          // slaposBasePool,
     L("Slicing supports"),              // slaposSliceSupports,
@@ -185,6 +184,7 @@ SLAPrint::ApplyStatus SLAPrint::apply(const Model &model, const DynamicPrintConf
         update_apply_status(this->invalidate_all_steps());
         for (SLAPrintObject *object : m_objects) {
             model_object_status.emplace(object->model_object()->id(), ModelObjectStatus::Deleted);
+            update_apply_status(object->invalidate_all_steps());
             delete object;
         }
         m_objects.clear();
@@ -377,11 +377,12 @@ SLAPrint::ApplyStatus SLAPrint::apply(const Model &model, const DynamicPrintConf
         bool deleted_objects = false;
         for (auto &pos : print_object_status)
             if (pos.status == PrintObjectStatus::Unknown || pos.status == PrintObjectStatus::Deleted) {
-                // update_apply_status(pos.print_object->invalidate_all_steps());
+                update_apply_status(pos.print_object->invalidate_all_steps());
                 delete pos.print_object;
                 deleted_objects = true;
             }
-        update_apply_status(new_objects);
+        if (new_objects)
+            update_apply_status(false);
     }
 
     this->update_object_placeholders();
@@ -420,11 +421,33 @@ void swapXY(ExPolygon& expoly) {
 
 }
 
+std::vector<float> SLAPrint::calculate_heights(const BoundingBoxf3& bb3d,
+                                               float elevation,
+                                               float initial_layer_height,
+                                               float layer_height) const
+{
+    std::vector<float> heights;
+    float minZ = float(bb3d.min(Z)) - float(elevation);
+    float maxZ = float(bb3d.max(Z));
+    auto flh = float(layer_height);
+    auto gnd = float(bb3d.min(Z));
+
+    // The first layer (the one before the initial height) is added only
+    // if there is no pad and no elevation value
+    if(minZ >= gnd) heights.emplace_back(minZ);
+
+    for(float h = minZ + initial_layer_height; h < maxZ; h += flh)
+        if(h >= gnd) heights.emplace_back(h);
+
+    return heights;
+}
+
 template<class...Args>
 void report_status(SLAPrint& p, int st, const std::string& msg, Args&&...args) {
     BOOST_LOG_TRIVIAL(info) << st << "% " << msg;
     p.set_status(st, msg, std::forward<Args>(args)...);
 }
+
 
 void SLAPrint::process()
 {
@@ -462,47 +485,66 @@ void SLAPrint::process()
 
         TriangleMesh mesh = po.transformed_mesh();
         TriangleMeshSlicer slicer(&mesh);
-        auto bb3d = mesh.bounding_box();
-
-        double elevation = po.get_elevation();
-
-        float minZ = float(bb3d.min(Z)) - float(elevation);
-        float maxZ = float(bb3d.max(Z)) ;
-        auto flh = float(lh);
-        auto gnd = float(bb3d.min(Z));
 
         // The 1D grid heights
-        std::vector<float> heights;
-
-        // The first layer (the one before the initial height) is added only
-        // if there is no pad and no elevation value
-        if(minZ >= gnd) heights.emplace_back(minZ);
-
-        for(float h = minZ + ilh; h < maxZ; h += flh)
-            if(h >= gnd) heights.emplace_back(h);
+        std::vector<float> heights = calculate_heights(mesh.bounding_box(),
+                                                       float(po.get_elevation()),
+                                                       ilh, float(lh));
 
         auto& layers = po.m_model_slices; layers.clear();
         slicer.slice(heights, &layers, [this](){ throw_if_canceled(); });
     };
 
-    // this procedure simply converts the points and copies them into
-    // the support data cache
-    auto support_points = [](SLAPrintObject& po) {
-        ModelObject& mo = *po.m_model_object;
+    // In this step we check the slices, identify island and cover them with
+    // support points. Then we sprinkle the rest of the mesh.
+    auto support_points = [this, ilh](SLAPrintObject& po) {
+        const ModelObject& mo = *po.m_model_object;
         po.m_supportdata.reset(new SLAPrintObject::SupportData());
+        po.m_supportdata->emesh = sla::to_eigenmesh(po.transformed_mesh());
 
-        if(!mo.sla_support_points.empty()) {
-            po.m_supportdata->emesh = sla::to_eigenmesh(po.transformed_mesh());
+        BOOST_LOG_TRIVIAL(debug) << "Support point count "
+                                 << mo.sla_support_points.size();
+
+        // If there are no points on the front-end, we will do the
+        // autoplacement. Otherwise we will just blindly copy the frontend data
+        // into the backend cache.
+        if(mo.sla_support_points.empty()) {
+            // calculate heights of slices (slices are calculated already)
+            double lh = po.m_config.layer_height.getFloat();
+
+            std::vector<float> heights =
+                    calculate_heights(po.transformed_mesh().bounding_box(),
+                                      float(po.get_elevation()),
+                                      ilh, float(lh));
+
+            this->throw_if_canceled();
+            SLAAutoSupports::Config config;
+            const SLAPrintObjectConfig& cfg = po.config();
+            config.minimal_z = float(cfg.support_minimal_z);
+            config.density_at_45 = cfg.support_density_at_45 / 10000.f;
+            config.density_at_horizontal = cfg.support_density_at_horizontal / 10000.f;
+
+            // Construction of this object does the calculation.
+            this->throw_if_canceled();
+            SLAAutoSupports auto_supports(po.transformed_mesh(),
+                                          po.m_supportdata->emesh,
+                                          po.get_model_slices(),
+                                          heights,
+                                          config, 
+                                          [this]() { throw_if_canceled(); });
+
+            // Now let's extract the result.
+            const std::vector<Vec3d>& points = auto_supports.output();
+            this->throw_if_canceled();
+            po.m_supportdata->support_points = sla::to_point_set(points);
+
+            BOOST_LOG_TRIVIAL(debug) << "Automatic support points: "
+                                     << po.m_supportdata->support_points.rows();
+        }
+        else {
+            // There are some points on the front-end, no calculation will be done.
             po.m_supportdata->support_points =
                     sla::to_point_set(po.transformed_support_points());
-        } else if(po.m_config.supports_enable.getBool()) {
-            // Supports are enabled but there are no support points to process.
-            // We throw here a runtime exception with some explanation and
-            // the background processing framework will handle it.
-            throw std::runtime_error(
-                L("Supports are enabled but no support points selected."
-                  " Hint: create some support points or disable support "
-                  "creation."));
         }
     };
 
@@ -545,8 +587,18 @@ void SLAPrint::process()
 
             // Create the unified mesh
             auto rc = SlicingStatus::RELOAD_SCENE;
+
+            // This is to prevent "Done." being displayed during merged_mesh()
             report_status(*this, -1, L("Visualizing supports"));
             po.m_supportdata->support_tree_ptr->merged_mesh();
+
+            BOOST_LOG_TRIVIAL(debug) << "Processed support point count "
+                                     << po.m_supportdata->support_points.rows();
+
+            // Check the mesh for later troubleshooting.
+            if(po.support_mesh().empty())
+                BOOST_LOG_TRIVIAL(warning) << "Support mesh is empty";
+
             report_status(*this, -1, L("Visualizing supports"), rc);
         } catch(sla::SLASupportsStoppedException&) {
             // no need to rethrow
@@ -560,9 +612,13 @@ void SLAPrint::process()
         // and before the supports had been sliced. (or the slicing has to be
         // repeated)
 
-        if(po.m_config.pad_enable.getBool() &&
-           po.m_supportdata &&
-           po.m_supportdata->support_tree_ptr)
+        if(!po.m_supportdata || !po.m_supportdata->support_tree_ptr) {
+            BOOST_LOG_TRIVIAL(warning) << "Uninitialized support data at "
+                                       << "pad creation.";
+            return;
+        }
+
+        if(po.m_config.pad_enable.getBool())
         {
             double wt = po.m_config.pad_wall_thickness.getFloat();
             double h =  po.m_config.pad_wall_height.getFloat();
@@ -586,6 +642,8 @@ void SLAPrint::process()
 
             pcfg.throw_on_cancel = thrfn;
             po.m_supportdata->support_tree_ptr->add_pad(bp, pcfg);
+        } else {
+            po.m_supportdata->support_tree_ptr->remove_pad();
         }
 
         po.throw_if_canceled();
@@ -816,8 +874,7 @@ void SLAPrint::process()
 
     // This is the actual order of steps done on each PrintObject
     std::array<SLAPrintObjectStep, slaposCount> objectsteps = {
-        slaposObjectSlice,      // Support Islands will need this step
-        slaposSupportIslands,
+        slaposObjectSlice,      // SupportPoints will need this step
         slaposSupportPoints,
         slaposSupportTree,
         slaposBasePool,
@@ -828,7 +885,6 @@ void SLAPrint::process()
     std::array<slaposFn, slaposCount> pobj_program =
     {
         slice_model,
-        [](SLAPrintObject&){}, // slaposSupportIslands now empty
         support_points,
         support_tree,
         base_pool,
@@ -866,6 +922,7 @@ void SLAPrint::process()
             if(po->m_stepmask[currentstep] && po->set_started(currentstep)) {
                 report_status(*this, int(st), OBJ_STEP_LABELS[currentstep]);
                 pobj_program[currentstep](*po);
+                throw_if_canceled();
                 po->set_done(currentstep);
             }
 
@@ -891,6 +948,7 @@ void SLAPrint::process()
         {
             report_status(*this, int(st), PRINT_STEP_LABELS[currentstep]);
             print_program[currentstep]();
+            throw_if_canceled();
             set_done(currentstep);
         }
 
@@ -1031,9 +1089,6 @@ bool SLAPrintObject::invalidate_step(SLAPrintObjectStep step)
     // propagate to dependent steps
     if (step == slaposObjectSlice) {
         invalidated |= this->invalidate_all_steps();
-    } else if (step == slaposSupportIslands) {
-        invalidated |= this->invalidate_steps({ slaposSupportPoints, slaposSupportTree, slaposBasePool, slaposSliceSupports, slaposIndexSlices });
-        invalidated |= m_print->invalidate_step(slapsRasterize);
     } else if (step == slaposSupportPoints) {
         invalidated |= this->invalidate_steps({ slaposSupportTree, slaposBasePool, slaposSliceSupports, slaposIndexSlices });
         invalidated |= m_print->invalidate_step(slapsRasterize);
@@ -1083,17 +1138,23 @@ double SLAPrintObject::get_current_elevation() const
     bool se = m_config.supports_enable.getBool();
     bool has_supports = is_step_done(slaposSupportTree);
     bool has_pad = is_step_done(slaposBasePool);
-    if(!has_supports && !has_pad) return 0;
+
+    if(!has_supports && !has_pad)
+        return 0;
     else if(has_supports && !has_pad)
         return se ? m_config.support_object_elevation.getFloat() : 0;
-    else return get_elevation();
 
-    return 0;
+    return get_elevation();
 }
 
 namespace { // dummy empty static containers for return values in some methods
 const std::vector<ExPolygons> EMPTY_SLICES;
 const TriangleMesh EMPTY_MESH;
+}
+
+const Eigen::MatrixXd& SLAPrintObject::get_support_points() const
+{
+    return m_supportdata->support_points;
 }
 
 const std::vector<ExPolygons> &SLAPrintObject::get_support_slices() const

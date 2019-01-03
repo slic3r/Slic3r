@@ -3,6 +3,7 @@
 
 #include <string>
 #include <wx/string.h>
+#include <boost/optional.hpp>
 
 #include "PrintHost.hpp"
 
@@ -16,25 +17,40 @@ class Http;
 class OctoPrint : public PrintHost
 {
 public:
-	OctoPrint(DynamicPrintConfig *config);
-	virtual ~OctoPrint();
+    OctoPrint(DynamicPrintConfig *config);
+    virtual ~OctoPrint();
 
-	bool test(wxString &curl_msg) const;
-	wxString get_test_ok_msg () const;
-	wxString get_test_failed_msg (wxString &msg) const;
-	// Send gcode file to octoprint, filename is expected to be in UTF-8
-	bool send_gcode(const std::string &filename) const;
-	bool upload(PrintHostUpload upload_data) const;
-	bool has_auto_discovery() const;
-	bool can_test() const;
+    virtual bool test(wxString &curl_msg) const;
+    virtual wxString get_test_ok_msg () const;
+    virtual wxString get_test_failed_msg (wxString &msg) const;
+    virtual bool upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, ErrorFn error_fn) const;
+    virtual bool has_auto_discovery() const;
+    virtual bool can_test() const;
+    virtual std::string get_host() const { return host; }
+
+protected:
+    virtual bool validate_version_text(const boost::optional<std::string> &version_text) const;
+
 private:
-	std::string host;
-	std::string apikey;
-	std::string cafile;
+    std::string host;
+    std::string apikey;
+    std::string cafile;
 
-	void set_auth(Http &http) const;
-	std::string make_url(const std::string &path) const;
-	static wxString format_error(const std::string &body, const std::string &error, unsigned status);
+    void set_auth(Http &http) const;
+    std::string make_url(const std::string &path) const;
+};
+
+
+class SLAHost: public OctoPrint
+{
+public:
+    SLAHost(DynamicPrintConfig *config) : OctoPrint(config) {}
+    virtual ~SLAHost();
+
+    virtual wxString get_test_ok_msg () const;
+    virtual wxString get_test_failed_msg (wxString &msg) const;
+protected:
+    virtual bool validate_version_text(const boost::optional<std::string> &version_text) const;
 };
 
 

@@ -11,6 +11,7 @@
 #include <curl/curl.h>
 
 #include "libslic3r/libslic3r.h"
+#include "libslic3r/Utils.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -31,6 +32,7 @@ class CurlGlobalInit
 struct Http::priv
 {
 	enum {
+		DEFAULT_TIMEOUT_CONNECT = 10,
 		DEFAULT_SIZE_LIMIT = 5 * 1024 * 1024,
 	};
 
@@ -44,6 +46,7 @@ struct Http::priv
 	// Using a deque here because unlike vector it doesn't ivalidate pointers on insertion
 	std::deque<fs::ifstream> form_files;
 	std::string postfields;
+	std::string error_buffer;    // Used for CURLOPT_ERRORBUFFER
 	size_t limit;
 	bool cancel;
 
@@ -61,6 +64,7 @@ struct Http::priv
 	static int xfercb_legacy(void *userp, double dltotal, double dlnow, double ultotal, double ulnow);
 	static size_t form_file_read_cb(char *buffer, size_t size, size_t nitems, void *userp);
 
+	void set_timeout_connect(long timeout);
 	void form_add_file(const char *name, const fs::path &path, const char* filename);
 	void set_post_body(const fs::path &path);
 
@@ -69,20 +73,23 @@ struct Http::priv
 	void http_perform();
 };
 
-Http::priv::priv(const std::string &url) :
-	curl(::curl_easy_init()),
-	form(nullptr),
-	form_end(nullptr),
-	headerlist(nullptr),
-	limit(0),
-	cancel(false)
+Http::priv::priv(const std::string &url)
+	: curl(::curl_easy_init())
+	, form(nullptr)
+	, form_end(nullptr)
+	, headerlist(nullptr)
+	, error_buffer(CURL_ERROR_SIZE + 1, '\0')
+	, limit(0)
+	, cancel(false)
 {
 	if (curl == nullptr) {
 		throw std::runtime_error(std::string("Could not construct Curl object"));
 	}
 
+	set_timeout_connect(DEFAULT_TIMEOUT_CONNECT);
 	::curl_easy_setopt(curl, CURLOPT_URL, url.c_str());   // curl makes a copy internally
 	::curl_easy_setopt(curl, CURLOPT_USERAGENT, SLIC3R_FORK_NAME "/" SLIC3R_VERSION);
+	::curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, &error_buffer.front());
 }
 
 Http::priv::~priv()
@@ -142,7 +149,9 @@ int Http::priv::xfercb(void *userp, curl_off_t dltotal, curl_off_t dlnow, curl_o
 		self->progressfn(progress, cb_cancel);
 	}
 
-	return self->cancel || cb_cancel;
+	if (cb_cancel) { self->cancel = true; }
+
+	return self->cancel;
 }
 
 int Http::priv::xfercb_legacy(void *userp, double dltotal, double dlnow, double ultotal, double ulnow)
@@ -161,6 +170,11 @@ size_t Http::priv::form_file_read_cb(char *buffer, size_t size, size_t nitems, v
 	}
 
 	return stream->gcount();
+}
+
+void Http::priv::set_timeout_connect(long timeout)
+{
+	::curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, timeout);
 }
 
 void Http::priv::form_add_file(const char *name, const fs::path &path, const char* filename)
@@ -199,8 +213,9 @@ void Http::priv::set_post_body(const fs::path &path)
 
 std::string Http::priv::curl_error(CURLcode curlcode)
 {
-	return (boost::format("%1% (%2%)")
+	return (boost::format("%1%:\n%2%\n[Error %3%]")
 		% ::curl_easy_strerror(curlcode)
+		% error_buffer.c_str()
 		% curlcode
 	).str();
 }
@@ -221,15 +236,15 @@ void Http::priv::http_perform()
 #if LIBCURL_VERSION_MAJOR >= 7 && LIBCURL_VERSION_MINOR >= 32
 	::curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, xfercb);
 	::curl_easy_setopt(curl, CURLOPT_XFERINFODATA, static_cast<void*>(this));
+#ifndef _WIN32
 	(void)xfercb_legacy;   // prevent unused function warning
+#endif
 #else
 	::curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, xfercb);
 	::curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, static_cast<void*>(this));
 #endif
 
-#ifndef NDEBUG
-	::curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
+	::curl_easy_setopt(curl, CURLOPT_VERBOSE, get_logging_level() >= 4);
 
 	if (headerlist != nullptr) {
 		::curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
@@ -266,7 +281,7 @@ void Http::priv::http_perform()
 	} else {
 		long http_status = 0;
 		::curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_status);
-		
+
 		if (http_status >= 400) {
 			if (errorfn) { errorfn(std::move(buffer), std::string(), http_status); }
 		} else {
@@ -289,6 +304,13 @@ Http::~Http()
 	}
 }
 
+
+Http& Http::timeout_connect(long timeout)
+{
+	if (timeout < 1) { timeout = priv::DEFAULT_TIMEOUT_CONNECT; }
+	if (p) { p->set_timeout_connect(timeout); }
+	return *this;
+}
 
 Http& Http::size_limit(size_t sizeLimit)
 {

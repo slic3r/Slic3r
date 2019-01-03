@@ -35,6 +35,7 @@
 #include "Preferences.hpp"
 #include "Tab.hpp"
 #include "SysInfoDialog.hpp"
+#include "KBShortcutsDialog.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -42,7 +43,7 @@ namespace GUI {
 
 wxString file_wildcards(FileType file_type, const std::string &custom_extension)
 {
-    static const wxString defaults[FT_SIZE] = {
+    static const std::string defaults[FT_SIZE] = {
         /* FT_STL */   "STL files (*.stl)|*.stl;*.STL",
         /* FT_OBJ */   "OBJ files (*.obj)|*.obj;*.OBJ",
         /* FT_AMF */   "AMF files (*.amf)|*.zip.amf;*.amf;*.AMF;*.xml;*.XML",
@@ -53,16 +54,20 @@ wxString file_wildcards(FileType file_type, const std::string &custom_extension)
 
         /* FT_INI */   "INI files (*.ini)|*.ini;*.INI",
         /* FT_SVG */   "SVG files (*.svg)|*.svg;*.SVG",
-        /* FT_PNGZIP */"Zipped PNG files (*.zip)|*.zip;*.ZIP",    // This is lame, but that's what we use for SLA
+        /* FT_PNGZIP */"Zipped PNG files (*.dwz)|*.dwz;*.DWZ",    // This is lame, but that's what we use for SLA
     };
 
-    wxString out = defaults[file_type];
+	std::string out = defaults[file_type];
     if (! custom_extension.empty()) {
-        // Append the custom extension to the wildcards, so that the file dialog would not add the default extension to it.
-        out += ";*";
-        out += from_u8(custom_extension);
+        // Find the custom extension in the template.
+        if (out.find(std::string("*") + custom_extension + ",") == std::string::npos && out.find(std::string("*") + custom_extension + ")") == std::string::npos) {
+            // The custom extension was not found in the template.
+            // Append the custom extension to the wildcards, so that the file dialog would not add the default extension to it.
+			boost::replace_first(out, ")|", std::string(", *") + custom_extension + ")|");
+			out += std::string(";*") + custom_extension;
+        }
     }
-    return out;
+	return wxString::FromUTF8(out.c_str());
 }
 
 static std::string libslic3r_translate_callback(const char *s) { return wxGetTranslation(wxString(s, wxConvUTF8)).utf8_str().data(); }
@@ -73,7 +78,6 @@ GUI_App::GUI_App()
     : wxApp()
 #if ENABLE_IMGUI
     , m_imgui(new ImGuiWrapper())
-    , m_printhost_queue(new PrintHostJobQueue())
 #endif // ENABLE_IMGUI
 {}
 
@@ -137,10 +141,12 @@ bool GUI_App::OnInit()
     std::cerr << "Creating main frame..." << std::endl;
     if (wxImage::FindHandler(wxBITMAP_TYPE_PNG) == nullptr)
         wxImage::AddHandler(new wxPNGHandler());
-    mainframe = new MainFrame(no_plater, false);
+    mainframe = new MainFrame();
     sidebar().obj_list()->init_objects(); // propagate model objects to object list
-    update_mode();
+//     update_mode(); // do that later
     SetTopWindow(mainframe);
+
+    m_printhost_job_queue.reset(new PrintHostJobQueue(mainframe->printhost_queue_dlg()));
 
     CallAfter([this]() {
         // temporary workaround for the correct behavior of the Scrolled sidebar panel 
@@ -148,8 +154,10 @@ bool GUI_App::OnInit()
         if (panel.obj_list()->GetMinHeight() > 200) {
             wxWindowUpdateLocker noUpdates_sidebar(&panel);
             panel.obj_list()->SetMinSize(wxSize(-1, 200));
-            panel.Layout();
+//          panel.Layout();
         }
+        update_mode(); // update view mode after fix of the object_list size 
+                       // to correct later layouts
     });
 
     // This makes CallAfter() work
@@ -175,6 +183,11 @@ bool GUI_App::OnInit()
 
         if (app_config->dirty())
             app_config->save();
+
+#if !ENABLE_IMPROVED_SIDEBAR_OBJECTS_MANIPULATION
+        if (this->plater() != nullptr)
+            this->obj_manipul()->update_if_dirty();
+#endif // !ENABLE_IMPROVED_SIDEBAR_OBJECTS_MANIPULATION
     });
 
     // On OS X the UI tends to freeze in weird ways if modal dialogs(config wizard, update notifications, ...)
@@ -275,15 +288,30 @@ void GUI_App::recreate_GUI()
 {
     std::cerr << "recreate_GUI" << std::endl;
 
-    auto topwindow = GetTopWindow();
-    mainframe = new MainFrame(no_plater,false);
+    MainFrame* topwindow = dynamic_cast<MainFrame*>(GetTopWindow());
+    mainframe = new MainFrame();
     sidebar().obj_list()->init_objects(); // propagate model objects to object list
-    update_mode();
-
+//     update_mode(); // do that later
     if (topwindow) {
         SetTopWindow(mainframe);
         topwindow->Destroy();
     }
+
+    m_printhost_job_queue.reset(new PrintHostJobQueue(mainframe->printhost_queue_dlg()));
+
+    CallAfter([this]() {
+        // temporary workaround for the correct behavior of the Scrolled sidebar panel
+        auto& panel = sidebar();
+        if (panel.obj_list()->GetMinHeight() > 200) {
+            wxWindowUpdateLocker noUpdates_sidebar(&panel);
+            panel.obj_list()->SetMinSize(wxSize(-1, 200));
+//             panel.Layout();
+        }
+        update_mode(); // update view mode after fix of the object_list size 
+        			   // to correct later layouts
+    });
+ 
+    mainframe->Show(true);
 
     // On OSX the UI was not initialized correctly if the wizard was called
     // before the UI was up and running.
@@ -296,6 +324,13 @@ void GUI_App::recreate_GUI()
 void GUI_App::system_info()
 {
     SysInfoDialog dlg;
+    dlg.ShowModal();
+    dlg.Destroy();
+}
+
+void GUI_App::keyboard_shortcuts()
+{
+    KBShortcutsDialog dlg;
     dlg.ShowModal();
     dlg.Destroy();
 }
@@ -347,7 +382,7 @@ void GUI_App::import_model(wxWindow *parent, wxArrayString& input_files)
     input_files.Clear();
     wxFileDialog dialog(parent ? parent : GetTopWindow(),
         _(L("Choose one or more files (STL/OBJ/AMF/3MF/PRUSA):")),
-        app_config->get_last_dir(), "",
+        from_u8(app_config->get_last_dir()), "",
         file_wildcards(FT_MODEL), wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST);
 
     if (dialog.ShowModal() == wxID_OK)
@@ -424,9 +459,12 @@ bool GUI_App::select_language(  wxArrayString & names,
     {
         m_wxLocale = new wxLocale;
         m_wxLocale->Init(identifiers[index]);
-        m_wxLocale->AddCatalogLookupPathPrefix(localization_dir());
-        m_wxLocale->AddCatalog(GetAppName());
+		m_wxLocale->AddCatalogLookupPathPrefix(wxString::FromUTF8(localization_dir()));
+        m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3rPE");
         wxSetlocale(LC_NUMERIC, "C");
+#ifdef WIN32
+        ::SetLocaleInfoA(LOCALE_CUSTOM_DEFAULT, LOCALE_SDECIMAL, ".");
+#endif /* WIN32 */
         Preset::update_suffix_modified();
         return true;
     }
@@ -451,10 +489,13 @@ bool GUI_App::load_language()
         {
             m_wxLocale = new wxLocale;
             m_wxLocale->Init(identifiers[i]);
-            m_wxLocale->AddCatalogLookupPathPrefix(localization_dir());
-            m_wxLocale->AddCatalog(GetAppName());
+			m_wxLocale->AddCatalogLookupPathPrefix(wxString::FromUTF8(localization_dir()));
+            m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3rPE");
             wxSetlocale(LC_NUMERIC, "C");
-            Preset::update_suffix_modified();
+#ifdef WIN32
+			::SetLocaleInfoA(LOCALE_CUSTOM_DEFAULT, LOCALE_SDECIMAL, ".");
+#endif /* WIN32 */
+			Preset::update_suffix_modified();
             return true;
         }
     }
@@ -478,7 +519,7 @@ void GUI_App::get_installed_languages(wxArrayString & names, wxArrayLong & ident
     names.Clear();
     identifiers.Clear();
 
-    wxDir dir(localization_dir());
+	wxDir dir(wxString::FromUTF8(localization_dir()));
     wxString filename;
     const wxLanguageInfo * langinfo;
     wxString name = wxLocale::GetLanguageName(wxLANGUAGE_DEFAULT);
@@ -495,7 +536,8 @@ void GUI_App::get_installed_languages(wxArrayString & names, wxArrayLong & ident
         {
             auto full_file_name = dir.GetName() + wxFileName::GetPathSeparator() +
                 filename + wxFileName::GetPathSeparator() +
-                GetAppName() + wxT(".mo");
+                /*GetAppName()*/"Slic3rPE" + 
+                wxT(".mo");
             if (wxFileExists(full_file_name))
             {
                 names.Add(langinfo->Description);
@@ -523,6 +565,13 @@ ConfigMenuIDs GUI_App::get_view_mode()
            mode == "simple" ? ConfigMenuModeSimple : ConfigMenuModeAdvanced;
 }
 
+ConfigOptionMode GUI_App::get_opt_mode()  {
+    const ConfigMenuIDs mode = wxGetApp().get_view_mode();
+
+    return  mode == ConfigMenuModeSimple ? comSimple :
+            mode == ConfigMenuModeExpert ? comExpert : comAdvanced;
+}
+
 // Update view mode according to selected menu
 void GUI_App::update_mode()
 {
@@ -537,10 +586,8 @@ void GUI_App::update_mode()
 
     sidebar().Layout();
 
-    ConfigOptionMode opt_mode = mode == ConfigMenuModeSimple ? comSimple :
-                                mode == ConfigMenuModeExpert ? comExpert : comAdvanced;
     for (auto tab : tabs_list)
-        tab->update_visibility(opt_mode);
+        tab->update_visibility();
 
     plater()->update_object_menu();
 }

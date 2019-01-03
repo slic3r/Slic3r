@@ -71,7 +71,6 @@ static wxString dots("…", wxConvUTF8);
 
 class GUI_App : public wxApp
 {
-    bool            no_plater{ false };
     bool            app_conf_exists{ false };
 
     // Lock to guard the callback stack
@@ -92,7 +91,7 @@ class GUI_App : public wxApp
     std::unique_ptr<ImGuiWrapper> m_imgui;
 #endif // ENABLE_IMGUI
 
-    std::unique_ptr<PrintHostJobQueue> m_printhost_queue;
+    std::unique_ptr<PrintHostJobQueue> m_printhost_job_queue;
 
 public:
     bool            OnInit() override;
@@ -115,6 +114,7 @@ public:
 
     void            recreate_GUI();
     void            system_info();
+    void            keyboard_shortcuts();
     void            load_project(wxWindow *parent, wxString& input_file);
     void            import_model(wxWindow *parent, wxArrayString& input_files);
     static bool     catch_error(std::function<void()> cb,
@@ -135,6 +135,7 @@ public:
 
     Tab*            get_tab(Preset::Type type);
     ConfigMenuIDs   get_view_mode();
+    ConfigOptionMode get_opt_mode();
     void            update_mode();
 
     void            add_config_menu(wxMenuBar *menu);
@@ -164,7 +165,7 @@ public:
     ImGuiWrapper* imgui() { return m_imgui.get(); }
 #endif // ENABLE_IMGUI
 
-    PrintHostJobQueue& printhost_queue() { return *m_printhost_queue.get(); }
+    PrintHostJobQueue& printhost_job_queue() { return *m_printhost_job_queue.get(); }
 
 };
 DECLARE_APP(GUI_App)

@@ -8,13 +8,14 @@
 #include "SupportMaterial.hpp"
 #include "GCode.hpp"
 #include "GCode/WipeTowerPrusaMM.hpp"
-#include <algorithm>
-#include <unordered_set>
-#include <boost/log/trivial.hpp>
+#include "Utils.hpp"
 
 #include "PrintExport.hpp"
 
+#include <algorithm>
+#include <unordered_set>
 #include <boost/filesystem/path.hpp>
+#include <boost/log/trivial.hpp>
 
 //! macro used to mark string used at localization, 
 //! return same string
@@ -762,7 +763,8 @@ Print::ApplyStatus Print::apply(const Model &model, const DynamicPrintConfig &co
         update_apply_status(this->invalidate_all_steps());
         for (PrintObject *object : m_objects) {
             model_object_status.emplace(object->model_object()->id(), ModelObjectStatus::Deleted);
-            delete object;
+			update_apply_status(object->invalidate_all_steps());
+			delete object;
         }
         m_objects.clear();
         for (PrintRegion *region : m_regions)
@@ -992,12 +994,9 @@ Print::ApplyStatus Print::apply(const Model &model, const DynamicPrintConfig &co
                         const_cast<PrintObjectStatus*>(*it_old)->status = PrintObjectStatus::Deleted;
                 } else {
                     // The PrintObject already exists and the copies differ.
-                    if ((*it_old)->print_object->copies().size() != new_instances.copies.size())
-                        update_apply_status(this->invalidate_step(psWipeTower));
-					if ((*it_old)->print_object->set_copies(new_instances.copies)) {
-						// Invalidated
-						update_apply_status(this->invalidate_steps({ psSkirt, psBrim, psGCodeExport }));
-					}
+					PrintBase::ApplyStatus status = (*it_old)->print_object->set_copies(new_instances.copies);
+                    if (status != PrintBase::APPLY_STATUS_UNCHANGED)
+						update_apply_status(status == PrintBase::APPLY_STATUS_INVALIDATED);
 					print_objects_new.emplace_back((*it_old)->print_object);
 					const_cast<PrintObjectStatus*>(*it_old)->status = PrintObjectStatus::Reused;
 				}
@@ -1011,13 +1010,14 @@ Print::ApplyStatus Print::apply(const Model &model, const DynamicPrintConfig &co
             bool deleted_objects = false;
             for (auto &pos : print_object_status)
                 if (pos.status == PrintObjectStatus::Unknown || pos.status == PrintObjectStatus::Deleted) {
-                    // update_apply_status(pos.print_object->invalidate_all_steps());
+                    update_apply_status(pos.print_object->invalidate_all_steps());
                     delete pos.print_object;
 					deleted_objects = true;
                 }
 			if (new_objects || deleted_objects)
 				update_apply_status(this->invalidate_steps({ psSkirt, psBrim, psWipeTower, psGCodeExport }));
-            update_apply_status(new_objects);
+			if (new_objects)
+	            update_apply_status(false);
         }
         print_object_status.clear();
     }
@@ -1055,10 +1055,12 @@ Print::ApplyStatus Print::apply(const Model &model, const DynamicPrintConfig &co
                             goto print_object_end;
                     } else {
                         this_region_config = region_config_from_model_volume(m_default_region_config, volume, num_extruders);
-                        for (size_t i = 0; i < region_id; ++ i)
-                            if (m_regions[i]->config().equals(this_region_config))
-                                // Regions were merged. Reset this print_object.
-                                goto print_object_end;
+						for (size_t i = 0; i < region_id; ++i) {
+							const PrintRegion &region_other = *m_regions[i];
+							if (region_other.m_refcnt != 0 && region_other.config().equals(this_region_config))
+								// Regions were merged. Reset this print_object.
+								goto print_object_end;
+						}
                         this_region_config_set = true;
                     }
                 }
@@ -1096,8 +1098,10 @@ Print::ApplyStatus Print::apply(const Model &model, const DynamicPrintConfig &co
 			bool         fresh = print_object.region_volumes.empty();
             unsigned int volume_id = 0;
             for (const ModelVolume *volume : model_object.volumes) {
-                if (! volume->is_model_part() && ! volume->is_modifier())
-                    continue;
+                if (! volume->is_model_part() && ! volume->is_modifier()) {
+					++ volume_id;
+					continue;
+				}
                 int region_id = -1;
                 if (&print_object == &print_object0) {
                     // Get the config applied to this volume.
@@ -1105,9 +1109,10 @@ Print::ApplyStatus Print::apply(const Model &model, const DynamicPrintConfig &co
                     // Find an existing print region with the same config.
 					int idx_empty_slot = -1;
 					for (int i = 0; i < (int)m_regions.size(); ++ i) {
-						if (m_regions[i]->m_refcnt == 0)
-							idx_empty_slot = i;
-                        else if (config.equals(m_regions[i]->config())) {
+						if (m_regions[i]->m_refcnt == 0) {
+                            if (idx_empty_slot == -1)
+                                idx_empty_slot = i;
+                        } else if (config.equals(m_regions[i]->config())) {
                             region_id = i;
                             break;
                         }
@@ -1473,7 +1478,7 @@ void Print::auto_assign_extruders(ModelObject* model_object) const
 // Slicing process, running at a background thread.
 void Print::process()
 {
-    BOOST_LOG_TRIVIAL(info) << "Staring the slicing process.";
+    BOOST_LOG_TRIVIAL(info) << "Staring the slicing process." << log_memory_info();
     for (PrintObject *obj : m_objects)
         obj->make_perimeters();
     this->set_status(70, "Infilling layers");
@@ -1505,7 +1510,7 @@ void Print::process()
         }
        this->set_done(psWipeTower);
     }
-    BOOST_LOG_TRIVIAL(info) << "Slicing process finished.";
+    BOOST_LOG_TRIVIAL(info) << "Slicing process finished." << log_memory_info();
 }
 
 // G-code export process, running at a background thread.
@@ -1630,7 +1635,9 @@ void Print::_make_skirt()
         {
             Polygons loops = offset(convex_hull, distance, ClipperLib::jtRound, scale_(0.1));
             Geometry::simplify_polygons(loops, scale_(0.05), &loops);
-            loop = loops.front();
+			if (loops.empty())
+				break;
+			loop = loops.front();
         }
         // Extrude the skirt loop.
         ExtrusionLoop eloop(elrSkirt);

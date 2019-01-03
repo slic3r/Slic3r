@@ -2,6 +2,7 @@
 #include "PreviewData.hpp"
 #include <float.h>
 #include <I18N.hpp>
+#include "Utils.hpp"
 
 #include <boost/format.hpp>
 
@@ -205,6 +206,18 @@ bool GCodePreviewData::Extrusion::is_role_flag_set(unsigned int flags, Extrusion
     return GCodeAnalyzer::is_valid_extrusion_role(role) && (flags & (1 << (role - erPerimeter))) != 0;
 }
 
+size_t GCodePreviewData::Extrusion::memory_used() const
+{
+    size_t out = sizeof(*this);
+    out += SLIC3R_STDVEC_MEMSIZE(this->layers, Layer);
+    for (const Layer &layer : this->layers) {
+        out += SLIC3R_STDVEC_MEMSIZE(layer.paths, ExtrusionPath);
+        for (const ExtrusionPath &path : layer.paths)
+			out += SLIC3R_STDVEC_MEMSIZE(path.polyline.points, Point);
+    }
+	return out;
+}
+
 const float GCodePreviewData::Travel::Default_Width = 0.075f;
 const float GCodePreviewData::Travel::Default_Height = 0.075f;
 const GCodePreviewData::Color GCodePreviewData::Travel::Default_Type_Colors[Num_Types] =
@@ -224,6 +237,15 @@ void GCodePreviewData::Travel::set_default()
     is_visible = false;
 }
 
+size_t GCodePreviewData::Travel::memory_used() const
+{
+    size_t out = sizeof(*this);
+    out += SLIC3R_STDVEC_MEMSIZE(this->polylines, Polyline);
+	for (const Polyline &polyline : this->polylines)
+		out += SLIC3R_STDVEC_MEMSIZE(polyline.polyline.points, Vec3crd);
+    return out;
+}
+
 const GCodePreviewData::Color GCodePreviewData::Retraction::Default_Color = GCodePreviewData::Color(1.0f, 1.0f, 1.0f, 1.0f);
 
 GCodePreviewData::Retraction::Position::Position(const Vec3crd& position, float width, float height)
@@ -237,6 +259,11 @@ void GCodePreviewData::Retraction::set_default()
 {
     color = Default_Color;
     is_visible = false;
+}
+
+size_t GCodePreviewData::Retraction::memory_used() const
+{
+	return sizeof(*this) + SLIC3R_STDVEC_MEMSIZE(this->positions, Position);
 }
 
 void GCodePreviewData::Shell::set_default()
@@ -484,6 +511,33 @@ GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::
     }
 
     return items;
+}
+
+// Return an estimate of the memory consumed by the time estimator.
+size_t GCodePreviewData::memory_used() const
+{
+    return 
+        this->extrusion.memory_used() + 
+        this->travel.memory_used() + 
+        this->retraction.memory_used() + 
+        this->unretraction.memory_used() + 
+        sizeof(shell) + sizeof(ranges);
+}
+
+GCodePreviewData::Color operator + (const GCodePreviewData::Color& c1, const GCodePreviewData::Color& c2)
+{
+    return GCodePreviewData::Color(clamp(0.0f, 1.0f, c1.rgba[0] + c2.rgba[0]),
+        clamp(0.0f, 1.0f, c1.rgba[1] + c2.rgba[1]),
+        clamp(0.0f, 1.0f, c1.rgba[2] + c2.rgba[2]),
+        clamp(0.0f, 1.0f, c1.rgba[3] + c2.rgba[3]));
+}
+
+GCodePreviewData::Color operator * (float f, const GCodePreviewData::Color& color)
+{
+    return GCodePreviewData::Color(clamp(0.0f, 1.0f, f * color.rgba[0]),
+        clamp(0.0f, 1.0f, f * color.rgba[1]),
+        clamp(0.0f, 1.0f, f * color.rgba[2]),
+        clamp(0.0f, 1.0f, f * color.rgba[3]));
 }
 
 } // namespace Slic3r
