@@ -143,7 +143,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("over_bridge_flow_ratio", coFloat);
     def->label = __TRANS("Over-bridge flow ratio");
     def->category = __TRANS("Advanced");
-    def->tooltip = __TRANS("This factor affects the amount of plastic for compensate about the fall of bridged section. You can increase it slightly to pull the top layer at the correct height. It's very useful for the smooth/ironing top surface, to prevent region where the second pass can't smotth it because there's not enough plastic (recommended: 1.1 to 1.2).");
+    def->tooltip = __TRANS("Flow ratio to compensate for the gaps in a bridged top surface. Used for ironing infill pattern to prevent regions where the low-flow pass does not provide a smooth surface due to a lack of plastic. You can increase it slightly to pull the top layer at the correct height. Recommended maximum: 1.2.");
     def->cli = "over-bridge-flow-ratio=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(1);
