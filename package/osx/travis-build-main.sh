@@ -11,6 +11,7 @@ brew install boost     || brew upgrade boost
 brew install perl      || brew upgrade perl
 brew install cpanminus || brew upgrade cpanminus
 brew install wxwidgets || brew upgrade wxwidgets
+brew install coreutils || brew upgrade coreutils
 brew link --overwrite perl cpanminus
 
 export SLIC3R_STATIC=1
@@ -23,7 +24,7 @@ sudo rm -rf /opt/X11*
 export LIBRARY_PATH=/usr/local/lib
 
 # One Wx test fails on 10.12; seems harmless
-if [ $TRAVIS_OSX_IMAGE == 'xcode9.2']; then
+if [ $TRAVIS_OSX_IMAGE == 'xcode9.2' ]; then
     cpanm --local-lib local-lib -f Wx
 fi
 

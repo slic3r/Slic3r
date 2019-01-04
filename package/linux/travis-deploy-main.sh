@@ -6,7 +6,11 @@ cpanm local::lib
 eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
 cd package/linux && make -f build_shell.mk && mv Slic3r* $TRAVIS_BUILD_DIR && cd $TRAVIS_BUILD_DIR
 
+if [ -z ${WXDIR+x} ]; then
+package/linux/make_archive.sh linux-x64
+else
 LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
+fi
 
 package/linux/appimage.sh x86_64
 

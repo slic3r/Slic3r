@@ -9,6 +9,7 @@ mkdir -p $CACHE
 ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )&
 brew update -v
 brew install ccache || brew upgrade ccache
+brew install coreutils || brew upgrade coreutils
 
 if [[ "$WXVERSION" != "pkg" ]]; then
     WXVER_EXPANDED=${WXVERSION:0:1}.${WXVERSION:1:1}.${WXVERSION:2:1}
