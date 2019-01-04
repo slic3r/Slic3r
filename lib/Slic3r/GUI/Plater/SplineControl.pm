@@ -267,10 +267,10 @@ sub _update_canvas_size {
     my @size = ($canvas_w - 2*$padding, $canvas_h - 2*$padding);
     $self->{canvas_size} = [@size];
     
-    if ($self->{max_layer_height} == $self->{min_layer_height}) {
-        $self->{scaling_factor_x} = 1.0;
-    } else {
+    if ($self->{max_layer_height} > $self->{min_layer_height}) {
         $self->{scaling_factor_x} = $size[0]/($self->{max_layer_height} - $self->{min_layer_height});
+    } else {
+        $self->{scaling_factor_x} = 1.0;
     }
     $self->{scaling_factor_y} = $size[1]/$self->{object_height};
 }
