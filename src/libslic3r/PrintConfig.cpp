@@ -186,11 +186,9 @@ void PrintConfigDef::init_fff_params()
     def = this->add("over_bridge_flow_ratio", coFloat);
     def->label = L("Above the bridges");
     def->category = L("Advanced");
-    def->tooltip = L("This factor affects the amount of plastic to overextrude "
-                   "when we are filling on top of a bridge surface."
-                   "With a number >1, we can retrieve a correct z-height "
-                   "even if the bridged layer has fallen a bit. "
-                   "It's useful if you want to have a nice flat top layer.");
+    def->tooltip = L("Flow ratio to compensate for the gaps in a bridged top surface. Used for ironing infill"
+        "pattern to prevent regions where the low-flow pass does not provide a smooth surface due to a lack of plastic."
+        " You can increase it slightly to pull the top layer at the correct height. Recommended maximum: 1.2.");
     def->cli = "over-bridge-flow-ratio=f";
     def->min = 0;
     def->mode = comAdvanced;
