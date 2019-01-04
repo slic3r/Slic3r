@@ -1331,7 +1331,7 @@ MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchor
 }
 
 void
-MedialAxis::tapper_ends(ThickPolylines& pp) {
+MedialAxis::taper_ends(ThickPolylines& pp) {
     //ensure the width is not lower than 0.4.
     for (ThickPolyline& polyline : pp) {
         if (polyline.length() < nozzle_diameter * 2) continue;
@@ -1501,7 +1501,7 @@ MedialAxis::build(ThickPolylines* polylines_out)
 
     if (nozzle_diameter != min_width) {
         grow_to_nozzle_diameter(pp, diff_ex(this->bounds, this->expolygon));
-        tapper_ends(pp);
+        taper_ends(pp);
     }
 
     polylines_out->insert(polylines_out->end(), pp.begin(), pp.end());

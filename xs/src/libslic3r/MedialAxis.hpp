@@ -62,7 +62,7 @@ namespace Slic3r {
         void remove_too_short_polylines(ThickPolylines& pp, const coord_t min_size);
         void ensure_not_overextrude(ThickPolylines& pp);
         void grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchors);
-        void tapper_ends(ThickPolylines& pp);
+        void taper_ends(ThickPolylines& pp);
     };
 }
 
