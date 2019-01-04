@@ -117,7 +117,7 @@ PerimeterGenerator::process()
                         
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
                         // (actually, something larger than that still may exist due to mitering or other causes)
-                        coord_t min_width = scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
+                        coord_t min_width = scale_(this->config->thin_walls_min_width.get_abs_value(this->ext_perimeter_flow.nozzle_diameter));
                         
                         Polygons no_thin_zone = offset(offsets, ext_pwidth/2, CLIPPER_OFFSET_SCALE, jtSquare, 3);
                         // medial axis requires non-overlapping geometry
@@ -150,8 +150,9 @@ PerimeterGenerator::process()
                                     if (thin[0].area() > min_width*(ext_pwidth + ext_pspacing2)) {
                                         bound.remove_point_too_near(SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        thin[0].medial_axis(bound, ext_pwidth + ext_pspacing2, min_width,
-                                            &thin_walls, this->layer_height);
+                                        Slic3r::MedialAxis ma(thin[0], bound, ext_pwidth + ext_pspacing2, min_width, this->layer_height);
+                                        ma.nozzle_diameter = (coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter);
+                                        ma.build(&thin_walls);
                                         thin_zones_extruded.emplace_back(thin[0]);
                                     }
                                     break;

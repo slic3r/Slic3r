@@ -1596,11 +1596,19 @@ PrintConfigDef::PrintConfigDef()
     }
     
     def = this->add("thin_walls", coBool);
-    def->label = __TRANS("Detect thin walls");
+    def->label = __TRANS("");
     def->category = __TRANS("Layers and Perimeters");
     def->tooltip = __TRANS("Detect single-width walls (parts where two extrusions don't fit and we need to collapse them into a single trace).");
     def->cli = "thin-walls!";
     def->default_value = new ConfigOptionBool(true);
+
+    def = this->add("thin_walls_min_width", coFloatOrPercent);
+    def->label = __TRANS("min width");
+    def->category = __TRANS("Layers and Perimeters");
+    def->tooltip = __TRANS("Minimum width for the extrusion to be extruded (widths lower than the nozzle diameter will be over-extruded at the nozzle diameter). Can be percent of the nozzle size.");
+    def->cli = "thin-walls-min-width=s";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloatOrPercent(33,true);
 
     def = this->add("threads", coInt);
     def->label = __TRANS("Threads");
