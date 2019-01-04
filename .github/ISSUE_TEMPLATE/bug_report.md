@@ -4,6 +4,8 @@ about: Create a report to help us improve
 
 ---
 
+### Do not report Prusa3D Slic3r bugs here without confirming it is a problem on a development release of Slic3r, or your issue will be closed. [Development builds of Slic3r](https://dl.slic3r.org/dev). [Prusa3D Issue Tracker](https://github.com/Prusa3D/Slic3r/issues)
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 

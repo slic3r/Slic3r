@@ -36,8 +36,8 @@ addons:
     packages:
     - g++-7
     - gcc-7
-    - g++-4.9
-    - gcc-4.9
+    - g++-8
+    - gcc-8
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
@@ -52,7 +52,6 @@ matrix:
         - os: linux
           env:
             - TARGET=main
-            - WXDIR=$HOME/wx302
           cache:
             directories:
               - $HOME/boost_1_63_0
