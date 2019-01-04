@@ -2083,7 +2083,7 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
     //! So, to get selected string we do 
     //!     combo->GetString(combo->GetSelection()) 
     //! instead of 
-    //!     combo->GetStringSelection().ToStdString()); 
+    //!     combo->GetStringSelection().ToUTF8().data()); 
 
     std::string selected_string = combo->GetString(combo->GetSelection()).ToUTF8().data();
 
@@ -2628,7 +2628,7 @@ void Plater::increase_instances(size_t num)
     float offset = 10.0;
     for (size_t i = 0; i < num; i++, offset += 10.0) {
         Vec3d offset_vec = model_instance->get_offset() + Vec3d(offset, offset, 0.0);
-        model_object->add_instance(offset_vec, model_instance->get_scaling_factor(), model_instance->get_rotation());
+        model_object->add_instance(offset_vec, model_instance->get_scaling_factor(), model_instance->get_rotation(), model_instance->get_mirror());
 //        p->print.get_object(obj_idx)->add_copy(Slic3r::to_2d(offset_vec));
     }
 
