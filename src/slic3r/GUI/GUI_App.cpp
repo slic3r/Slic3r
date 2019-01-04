@@ -87,8 +87,8 @@ bool GUI_App::OnInit()
     wxCHECK_MSG(m_imgui->init(), false, "Failed to initialize ImGui");
 #endif // ENABLE_IMGUI
 
-    SetAppName("Slic3rPE-alpha");
-    SetAppDisplayName("Slic3r Prusa Edition");
+    SetAppName("Slic3r++_alpha");
+    SetAppDisplayName("Slic3r++");
 
 //     Slic3r::debugf "wxWidgets version %s, Wx version %s\n", wxVERSION_STRING, wxVERSION;
 
@@ -460,7 +460,7 @@ bool GUI_App::select_language(  wxArrayString & names,
         m_wxLocale = new wxLocale;
         m_wxLocale->Init(identifiers[index]);
 		m_wxLocale->AddCatalogLookupPathPrefix(wxString::FromUTF8(localization_dir()));
-        m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3rPE");
+        m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3r++");
 		//FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
 		wxSetlocale(LC_NUMERIC, "C");
         Preset::update_suffix_modified();
@@ -488,7 +488,7 @@ bool GUI_App::load_language()
             m_wxLocale = new wxLocale;
             m_wxLocale->Init(identifiers[i]);
 			m_wxLocale->AddCatalogLookupPathPrefix(wxString::FromUTF8(localization_dir()));
-            m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3rPE");
+            m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3r++");
 			//FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
             wxSetlocale(LC_NUMERIC, "C");
 			Preset::update_suffix_modified();
@@ -532,7 +532,7 @@ void GUI_App::get_installed_languages(wxArrayString & names, wxArrayLong & ident
         {
             auto full_file_name = dir.GetName() + wxFileName::GetPathSeparator() +
                 filename + wxFileName::GetPathSeparator() +
-                /*GetAppName()*/"Slic3rPE" + 
+                /*GetAppName()*/"Slic3r++" + 
                 wxT(".mo");
             if (wxFileExists(full_file_name))
             {
