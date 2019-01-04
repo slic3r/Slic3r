@@ -1331,6 +1331,33 @@ MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchor
 }
 
 void
+MedialAxis::tapper_ends(ThickPolylines& pp) {
+    //ensure the width is not lower than 0.4.
+    for (ThickPolyline& polyline : pp) {
+        if (polyline.length() < nozzle_diameter * 2) continue;
+        if (polyline.endpoints.first) {
+            polyline.width[0] = min_width;
+            coord_t current_dist = min_width;
+            for (size_t i = 1; i<polyline.width.size(); ++i) {
+                current_dist += polyline.points[i - 1].distance_to(polyline.points[i]);
+                if (current_dist > polyline.width[i]) break;
+                polyline.width[i] = current_dist;
+            }
+        }
+        if (polyline.endpoints.second) {
+            size_t last_idx = polyline.width.size() - 1;
+            polyline.width[last_idx] = min_width;
+            coord_t current_dist = min_width;
+            for (size_t i = 1; i<polyline.width.size(); ++i) {
+                current_dist += polyline.points[last_idx - i + 1].distance_to(polyline.points[last_idx - i]);
+                if (current_dist > polyline.width[last_idx - i]) break;
+                polyline.width[last_idx - i] = current_dist;
+            }
+        }
+    }
+}
+
+void
 MedialAxis::build(ThickPolylines* polylines_out)
 {
     this->id++;
@@ -1472,8 +1499,10 @@ MedialAxis::build(ThickPolylines* polylines_out)
     //    svg.Close();
     //}
 
-    if (nozzle_diameter != min_width)
+    if (nozzle_diameter != min_width) {
         grow_to_nozzle_diameter(pp, diff_ex(this->bounds, this->expolygon));
+        tapper_ends(pp);
+    }
 
     polylines_out->insert(polylines_out->end(), pp.begin(), pp.end());
 
