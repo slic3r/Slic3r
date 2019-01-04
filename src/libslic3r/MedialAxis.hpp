@@ -63,6 +63,7 @@ namespace Slic3r {
         void remove_too_short_polylines(ThickPolylines& pp, const coord_t min_size);
         void ensure_not_overextrude(ThickPolylines& pp);
         void grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchors);
+        void taper_ends(ThickPolylines& pp);
     };
 
     ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow);
