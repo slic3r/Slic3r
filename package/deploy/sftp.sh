@@ -24,7 +24,7 @@ if [ -s $KEY ]; then
          if [ ! -z ${PR_ID+x} ] || [ $current_branch != "master" ]; then
              # clean up old copies of the same branch/PR
              if [ ! -z ${PR_ID+x} ]; then
-                 echo "rm *${PR_ID}*" | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+                 echo "rm *PR${PR_ID}*" | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
              fi
              if [ $current_branch != "master" ]; then
                  echo "rm *${current_branch}*" | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
