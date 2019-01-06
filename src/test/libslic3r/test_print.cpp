@@ -91,7 +91,7 @@ SCENARIO("Print: Changing number of solid surfaces does not cause all surfaces t
             print->regions[0]->config.top_solid_layers = 3;
             print->objects[0]->invalidate_step(posPrepareInfill);
             print->process();
-            THEN("Print object does not have 0 bottom surfaces.") {
+            THEN("Print object does not have 0 solid bottom layers.") {
                 test_is_solid_infill(print, 0, 0);
             }
             AND_THEN("Print object has 3 top solid layers") {
