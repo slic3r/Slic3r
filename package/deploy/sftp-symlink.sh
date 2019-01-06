@@ -21,6 +21,9 @@ fi
 source $(dirname $0)/../common/util.sh
 set_pr_id
 set_branch
+if [ ! -z ${PR_ID+x} ]; then
+    exit 0
+fi
 if [ ! -z ${PR_ID+x} ] || [ $current_branch != "master" ]; then
     DIR=${DIR}/branches
 fi
