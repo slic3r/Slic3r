@@ -11,9 +11,12 @@ set -euo pipefail
 # using the perl binary we have in path, so make sure they belong
 # to the same Perl instance:
 
-
 source $(dirname $0)/../common/util.sh
-set_source_dir $2
+if [ $# -lt 1 ]; then
+    set_source_dir
+else
+    set_source_dir $1
+fi
 set_pr_id
 set_branch
 set_build_id
