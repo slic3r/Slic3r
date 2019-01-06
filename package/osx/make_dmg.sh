@@ -18,9 +18,12 @@ else
     set_source_dir $1
 fi
 set_version
-set_pr_id
-set_branch
+get_commit
 set_build_id
+set_branch
+set_app_name
+set_pr_id
+
 
 if !(perl -Mlocal::lib=local-lib -MPAR::Packer -e1 2> /dev/null); then
     echo "The PAR::Packer module was not found; installing..."
