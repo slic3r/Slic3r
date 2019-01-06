@@ -59,7 +59,11 @@ if (!($arch -eq "64bit" -Or $arch -eq "32bit")) {
 }
 
 if ($env:APPVEYOR) {
-    $output_zip = "${scriptDir}\..\..\Slic3r-${branch}.${currentDate}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).${arch}.zip"
+    if ($env:APPVEYOR_PULL_REQUEST_NUMBER -eq "") {
+        $output_zip = "${scriptDir}\..\..\Slic3r-${branch}.${currentDate}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).${arch}.zip"
+    } else {
+        $output_zip = "${scriptDir}\..\..\Slic3r-${branch}.${currentDate}.${env:APPVEYOR_BUILD_NUMBER}.$(git rev-parse --short HEAD).${arch}-PR${APPVEYOR_PULL_REQUEST_NUMBER}.zip"
+    }
 } else {
     $output_zip = "${scriptDir}\..\..\Slic3r-${branch}.${currentDate}.$(git rev-parse --short HEAD).${arch}.zip"
 }
