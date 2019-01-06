@@ -36,14 +36,20 @@ if [ -e "./optional/libgcc/libgcc_s.so.1" ]; then
   fi
 fi
 
-if [ -e "./optional/swrast_dri/swrast_dri.so" ]; then
-  lib="$(PATH="/sbin:$PATH" ldconfig -p | grep "swrast_dri\.so\ ($libc6arch)" | awk 'NR==1{print $NF}')"
-  sym_sys=$(tr '\0' '\n' < "$lib" | grep -e '^GCC_[0-9]\\.[0-9]' | tail -n1)
-  sym_app=$(tr '\0' '\n' < "./optional/swrast_dri/swrast_dri.so" | grep -e '^GCC_[0-9]\\.[0-9]' | tail -n1)
-  if [ "$(printf "${sym_sys}\n${sym_app}"| sort -V | tail -1)" != "$sym_sys" ]; then
-    swrastpath="./optional/swrast_dri:"
-  fi
-fi
+# Don't load swrast_dir for now, it is breaking new systems and this mechanism doesn't 
+# work for detecting whether or not it is necessary.
+# if [ -e "./optional/swrast_dri/swrast_dri.so" ]; then
+#   lib="$(PATH="/sbin:$PATH" ldconfig -p | grep "swrast_dri\.so ($libc6arch)" | awk 'NR==1{print $NF}')"
+#   if [ "$lib" == "" ]; then
+#       swrastpath=""
+#   else
+#       sym_sys=$(tr '\0' '\n' < "$lib" | grep -e '^GCC_[0-9]\\.[0-9]' | tail -n1)
+#       sym_app=$(tr '\0' '\n' < "./optional/swrast_dri/swrast_dri.so" | grep -e '^GCC_[0-9]\\.[0-9]' | tail -n1)
+#       if [ "$(printf "${sym_sys}\n${sym_app}"| sort -V | tail -1)" != "$sym_sys" ]; then
+#         swrastpath="./optional/swrast_dri:"
+#       fi
+#   fi
+# fi
 
 if [ -n "$cxxpath" ] || [ -n "$gccpath" ] || [ -n "$swrastpath" ]; then
   if [ -e "./optional/exec.so" ]; then
