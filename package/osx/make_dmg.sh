@@ -17,6 +17,7 @@ if [ $# -lt 1 ]; then
 else
     set_source_dir $1
 fi
+set_version
 set_pr_id
 set_branch
 set_build_id
