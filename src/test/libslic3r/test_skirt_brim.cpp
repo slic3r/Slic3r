@@ -1,43 +1,55 @@
 #include <catch.hpp>
 #include "test_data.hpp" // get access to init_print, etc
 #include "GCodeReader.hpp"
+#include "Config.hpp"
+
 
 using namespace Slic3r::Test;
 using namespace Slic3r;
 
-SCENARIO("Original Slic3r Skirt/Brim tests", "[!mayfail]") {
-    GIVEN("Configuration with a skirt height of 2") {
-        auto config {Config::new_from_defaults()};
-        config->set("skirts", 1);
-        config->set("skirt_height", 2);
-        config->set("perimeters", 0);
-        config->set("support_material_speed", 99);
 
-        // avoid altering speeds unexpectedly
-        config->set("cooling", 0);
-        config->set("first_layer_speed", "100%");
+TEST_CASE("Skirt height is honored") {
+    auto config {Config::new_from_defaults()};
+    config->set("skirts", 1);
+    config->set("skirt_height", 2);
+    config->set("perimeters", 0);
+    config->set("support_material_speed", 99);
 
-        WHEN("multiple objects are printed") {
-            auto gcode {std::stringstream("")};
-            Slic3r::Model model;
-            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20, TestMesh::cube_20x20x20}, model, config)};
-            std::map<double, bool> layers_with_skirt;
-            Slic3r::Test::gcode(gcode, print);
-            auto parser {Slic3r::GCodeReader()};
-            parser.parse_stream(gcode, [&layers_with_skirt, &config] (Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line) 
-            {
-                if (self.Z > 0) {
-                    if (line.extruding() && line.new_F() == config->getFloat("support_material_speed") * 60.0) {
-                        layers_with_skirt[self.Z] = 1;
-                    }
-                }
-            });
+    // avoid altering speeds unexpectedly
+    config->set("cooling", false);
+    config->set("first_layer_speed", "100%");
+    auto support_speed = config->get<ConfigOptionFloat>("support_material_speed") * MM_PER_MIN;
+    
+    std::map<double, bool> layers_with_skirt;
+    auto gcode {std::stringstream("")};
+    auto parser {Slic3r::GCodeReader()};
+    Slic3r::Model model;
 
-            THEN("skirt_height is honored") {
-                REQUIRE(layers_with_skirt.size() == (size_t)config->getInt("skirt_height"));
+    std::cerr << __LINE__ << "\n";
+    SECTION("printing a single object") {
+        auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+        Slic3r::Test::gcode(gcode, print);
+    }
+    std::cerr << __LINE__ << "\n";
+
+    SECTION("printing multiple objects") {
+        auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20, TestMesh::cube_20x20x20}, model, config)};
+        Slic3r::Test::gcode(gcode, print);
+    }
+    parser.parse_stream(gcode, [&layers_with_skirt, &support_speed] (Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line) 
+    {
+        if (self.Z > 0) {
+            if (line.extruding() && line.new_F() == Approx(support_speed)) {
+                layers_with_skirt[self.Z] = 1;
             }
         }
-    }
+    });
+    std::cerr << __LINE__ << "\n";
+
+    REQUIRE(layers_with_skirt.size() == (size_t)config->getInt("skirt_height"));
+}
+
+SCENARIO("Original Slic3r Skirt/Brim tests", "[!mayfail]") {
     GIVEN("A default configuration") {
         auto config {Config::new_from_defaults()};
         config->set("support_material_speed", 99);

@@ -11,6 +11,8 @@
 
 namespace Slic3r { namespace Test {
 
+constexpr double MM_PER_MIN = 60.0;
+
 /// Enumeration of test meshes
 enum class TestMesh {
     A,
