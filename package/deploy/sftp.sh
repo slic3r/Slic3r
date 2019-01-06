@@ -21,6 +21,15 @@ if [ -s $KEY ]; then
          filepath=$i  # this is expected to be an absolute path
          tmpfile=$(mktemp)
          echo put $filepath > $tmpfile 
+         if [ ! -z ${PR_ID+x} ] || [ $current_branch != "master" ]; then
+             # clean up old copies of the same branch/PR
+             if [ ! -z ${PR_ID+x} ]; then
+                 echo "rm *${PR_ID}*" | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+             fi
+             if [ $current_branch != "master" ]; then
+                 echo "rm *${current_branch}*" | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+             fi
+         fi
          sftp -b $tmpfile -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
          result=$?
          if [ $? -eq 1 ]; then 
