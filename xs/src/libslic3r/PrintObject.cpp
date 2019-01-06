@@ -1060,8 +1060,11 @@ PrintObject::make_perimeters()
     // Temporary workaround for detect_surfaces_type() not being idempotent (see #3764).
     // We can remove this when idempotence is restored. This make_perimeters() method
     // will just call merge_slices() to undo the typed slices and invalidate posDetectSurfaces.
-    if (this->typed_slices)
+    if (this->typed_slices) {
         this->state.invalidate(posSlice);
+        // also invalidate posDetectSurfaces
+        this->state.invalidate(posDetectSurfaces);
+    }
     
     // prerequisites
     this->slice();
