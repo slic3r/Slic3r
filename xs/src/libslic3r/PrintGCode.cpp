@@ -491,8 +491,11 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
 
     // extrude skirt along raft layers and normal obj layers
     // (not along interlaced support material layers)
+
     if (layer->id() < static_cast<size_t>(obj.config.raft_layers)
-        || ((_print.has_infinite_skirt() || _skirt_done.size() == 0 || (_skirt_done.rbegin())->first < _print.config.skirt_height)
+        || ((_print.has_infinite_skirt()
+        || _skirt_done.size() == 0
+        || (_skirt_done.rbegin())->first < scale_(_print.skirt_height_z))
         && _skirt_done.count(scale_(layer->print_z)) == 0
         && typeid(layer) != typeid(SupportLayer*)) ) {
 
@@ -547,7 +550,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     }
 
     // extrude brim
-    if (this->_brim_done) {
+    if (!this->_brim_done) {
         gcode += _gcodegen.set_extruder(_print.brim_extruder() - 1);
         _gcodegen.set_origin(Pointf(0,0));
         _gcodegen.avoid_crossing_perimeters.use_external_mp = true;
