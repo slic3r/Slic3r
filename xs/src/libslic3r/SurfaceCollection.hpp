@@ -78,6 +78,8 @@ class SurfaceCollection
     Surfaces::iterator end() { return this->surfaces.end();}
     Surfaces::const_iterator cbegin() const { return this->surfaces.cbegin();}
     Surfaces::const_iterator cend() const { return this->surfaces.cend();}
+    Surfaces::const_iterator begin() const { return this->surfaces.cbegin();}
+    Surfaces::const_iterator end() const { return this->surfaces.cend();}
 };
 
 }
