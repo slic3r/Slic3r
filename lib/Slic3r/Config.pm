@@ -272,7 +272,7 @@ sub validate {
     }
     # --min-layer-height and --max-layer-height
         die "Max layer height should be greater than min layer height."
-            if !($self->max_layer_height > $self->min_layer_height);
+            if $self->adaptive_slicing && ($self->max_layer_height < $self->min_layer_height);
     
     # extrusion widths
     {
