@@ -1,4 +1,5 @@
 #include <catch.hpp>
+#include <regex>
 
 #include "libslic3r.h"
 #include "SupportMaterial.hpp"
@@ -46,7 +47,7 @@ void check_support_layers(config_ptr config, std::vector<double> contact_z = std
     }
 }
 
-SCENARIO("Support: Layer heights and spacing.", "[!mayfail]") {
+SCENARIO("Support: Layer heights and spacing.") {
     auto config {Config::new_from_defaults()};
     GIVEN("A slic3r config and a test model, initial contact [1.9], top_z [1.9]") {
         std::vector<double> contact_z {1.9};
@@ -72,49 +73,48 @@ SCENARIO("Support: Layer heights and spacing.", "[!mayfail]") {
         }
     }
 }
-/*
-{
-    my $config = Slic3r::Config->new_from_defaults;
-    $config->set('support_material', 1);
-    my @contact_z = my @top_z = ();
-    
-    my $test = sub {
-        my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
-        my $flow = $print->print->objects->[0]->support_material_flow(FLOW_ROLE_SUPPORT_MATERIAL);
-        my $support = Slic3r::Print::SupportMaterial->new(
-            object_config       => $print->print->objects->[0]->config,
-            print_config        => $print->print->config,
-            flow                => $flow,
-            interface_flow      => $flow,
-            first_layer_flow    => $flow,
-        );
-        my $support_z = $support->support_layers_z(\@contact_z, \@top_z, $config->layer_height);
-        my $expected_top_spacing = $support->contact_distance($config->layer_height, $config->nozzle_diameter->[0]);
-        
-        is $support_z->[0], $config->first_layer_height,
-            'first layer height is honored';
-        is scalar(grep { $support_z->[$_]-$support_z->[$_-1] <= 0 } 1..$#$support_z), 0,
-            'no null or negative support layers';
-        is scalar(grep { $support_z->[$_]-$support_z->[$_-1] > $config->nozzle_diameter->[0] + epsilon } 1..$#$support_z), 0,
-            'no layers thicker than nozzle diameter';
-        
-        my $wrong_top_spacing = 0;
-        foreach my $top_z (@top_z) {
 
+SCENARIO("Support: Raft Generation", "[!mayfail]") {
+    auto config {Config::new_from_defaults()};
+    Slic3r::Model model;
+    auto parser {Slic3r::GCodeReader()};
+    auto gcode {std::stringstream("")};
+    gcode.clear();
+    GIVEN("Overhang model with some raft layers, no brim") {
+        config->set("raft_layers", 3);
+        config->set("brim_width",  0);
+        config->set("skirts", 0);
+        config->set("support_material_extruder", 2);
+        config->set("support_material_interface_extruder", 2);
+        config->set("layer_height", 0.4);
+        config->set("first_layer_height", 0.4);
+        WHEN("Gcode is generated") {
+            auto print {Slic3r::Test::init_print({TestMesh::overhang}, model, config)};
+            REQUIRE_NOTHROW(Slic3r::Test::gcode(gcode, print));
+            bool found_support = false;
+            THEN("Raft is extruded with the support material extruder.") {
+                int tool {-1};
+                std::regex tool_regex("^T(\\d+)");
+                std::smatch m;
+                double raft_layers {config->getInt("raft_layers")};
+                double layer_height {config->getFloat("layer_height")};
+                parser.parse_stream(gcode, [&tool, &m, tool_regex, config, raft_layers, layer_height, &found_support] (Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
+                        {
+                            if (std::regex_match(line.cmd, m, tool_regex)) {
+                                tool = std::stoi(m[1].str());
+                            } else if (line.extruding()) {
+                                if (self.Z <= (raft_layers * layer_height)) {
+                                    CHECK(tool == config->getInt("support_material_extruder")-1);
+                                    found_support = true;
+                                } else {
+                                    CHECK(tool != config->getInt("support_material_extruder")-1);
+                                    // TODO: Test that full support is generated with raft.
+                                }
+                            }
+                        });
+                // make sure that support did get generated
+                REQUIRE(found_support);
+            }
         }
-        ok !$wrong_top_spacing, 'layers above top surfaces are spaced correctly';
-    };
-    
-    $config->set('layer_height', 0.2);
-    $config->set('first_layer_height', 0.3);
-    @contact_z = (1.9);
-    @top_z = (1.1);
-    $test->();
-    
-    $config->set('first_layer_height', 0.4);
-    $test->();
-    
-    $config->set('layer_height', $config->nozzle_diameter->[0]);
-    $test->();
+    }
 }
-*/
