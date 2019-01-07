@@ -16,17 +16,16 @@ void check_support_layers(config_ptr config, std::vector<double> contact_z = std
     config->set("support_material", true);
     auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
     const double layer_height { config->getFloat("layer_height") };
+    const double first_layer_height { config->get<ConfigOptionFloatOrPercent>("first_layer_height").get_abs_value(layer_height) };
     const double nozzle_diameter {config->get<ConfigOptionFloats>("nozzle_diameter").values[0]};
 
-    auto gcode {std::stringstream("")};
-    Slic3r::Test::gcode(gcode, print);
     auto flow { print->objects[0]->_support_material_flow(frSupportMaterial)};
     SupportMaterial support {SupportMaterial(&print->config, &print->objects[0]->config, flow, flow, flow)};
-    auto support_z {support.support_layers_z(contact_z, top_z, config->get<ConfigOptionFloatOrPercent>("layer_height").get_abs_value(layer_height))};
+    auto support_z {support.support_layers_z(contact_z, top_z, first_layer_height )};
     auto expected_top_spacing {support.contact_distance(layer_height, nozzle_diameter)};
 
     // first layer height is honored
-    CHECK(support_z.at(0) == Approx(config->get<ConfigOptionFloatOrPercent>("first_layer_height").get_abs_value(layer_height)));
+    CHECK(support_z.at(0) == Approx(first_layer_height));
 
     std::vector<double> support_height;
     std::transform(support_z.begin(), support_z.end()-1, support_z.begin()+1, std::back_inserter(support_height), 
@@ -35,7 +34,7 @@ void check_support_layers(config_ptr config, std::vector<double> contact_z = std
     // Verify that all support layers are not null/negative and that they are bigger than  the nozzle diameter.
     for (const auto& s_h : support_height) {
         CHECK(s_h > 0);
-        CHECK(s_h > nozzle_diameter + EPSILON);
+        CHECK(s_h < nozzle_diameter + EPSILON);
     }
 
     for (auto tz : top_z) {
@@ -49,24 +48,27 @@ void check_support_layers(config_ptr config, std::vector<double> contact_z = std
 
 SCENARIO("Support: Layer heights and spacing.", "[!mayfail]") {
     auto config {Config::new_from_defaults()};
-    GIVEN("A slic3r config and a test model.") {
-        WHEN("layer height is 0.2, first_layer_height is 0.3, and intital contact 1.9 and top_z 1.1") {
+    GIVEN("A slic3r config and a test model, initial contact [1.9], top_z [1.9]") {
+        std::vector<double> contact_z {1.9};
+        std::vector<double> top_z {1.1};
+        WHEN("layer height is 0.2, first_layer_height is 0.3") {
             config->set("layer_height", 0.2);
             config->set("first_layer_height", 0.3);
-            std::vector<double> contact_z {1.9};
-            std::vector<double> top_z {1.1};
             check_support_layers(config, contact_z, top_z);
         }
         WHEN("first_layer_height is 0.4, layer_height 0.2") {
             config->set("layer_height", 0.2);
             config->set("first_layer_height", 0.4);
-            check_support_layers(config);
+            std::vector<double> contact_z {1.9};
+            std::vector<double> top_z {1.1};
+            check_support_layers(config, contact_z, top_z);
         }
         WHEN("first_layer_height is 0.4, layer_height is nozzle diameter") {
             auto nozzle_diameter { config->get<ConfigOptionFloats>("nozzle_diameter").values[0] };
             config->set("layer_height", nozzle_diameter);
             config->set("first_layer_height", 0.4);
-            check_support_layers(config);
+            std::vector<double> top_z {1.1};
+            check_support_layers(config, contact_z, top_z);
         }
     }
 }
