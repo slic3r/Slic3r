@@ -380,7 +380,7 @@ static bool prepare_infill_hatching_segments(
     out.direction.rotate(out.angle + 0.5 * M_PI);
     out.segs.clear();
 
-    assert(params.density > 0.0001f && params.density <= 1.f);
+    assert(params.density > 0.0001f);
     coord_t line_spacing = coord_t(scale_(fill_dir_params.spacing) / params.density);
 
     // Bounding box around the source contour, aligned with out.angle.
@@ -1531,7 +1531,7 @@ static bool fill_hatching_segments_legacy(
 
 bool FillRectilinear3::fill_surface_by_lines(const Surface *surface, const FillParams &params, std::vector<FillDirParams> &fill_dir_params, Polylines &polylines_out)
 {
-    assert(params.density > 0.0001f && params.density <= 1.f);
+    assert(params.density > 0.0001f);
 
     const float INFILL_OVERLAP_OVER_SPACING = 0.45f;
     assert(INFILL_OVERLAP_OVER_SPACING > 0 && INFILL_OVERLAP_OVER_SPACING < 0.5f);

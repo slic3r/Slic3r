@@ -773,7 +773,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     std::pair<float, Point> rotate_vector = this->_infill_direction(surface);
     rotate_vector.first += angleBase;
 
-    assert(params.density > 0.0001f && params.density <= 1.f);
+    assert(params.density > 0.0001f);
     coord_t line_spacing = coord_t(scale_(this->spacing) / params.density);
 
     // On the polygons of poly_with_offset, the infill lines will be connected.

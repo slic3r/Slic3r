@@ -279,7 +279,7 @@ std::string WipeTowerIntegration::rotate_wipe_tower_moves(const std::string& gco
 
 std::string WipeTowerIntegration::prime(GCode &gcodegen)
 {
-    assert(m_layer_idx == 0);
+    //assert(m_layer_idx == 0);
     std::string gcode;
 
     if (&m_priming != nullptr && ! m_priming.extrusions.empty()) {
@@ -931,6 +931,7 @@ void GCode::_do_export(Print &print, FILE *file)
             m_wipe_tower.reset(new WipeTowerIntegration(print.config(), *print.wipe_tower_data().priming.get(), print.wipe_tower_data().tool_changes, *print.wipe_tower_data().final_purge.get()));
             _write(file, m_writer.travel_to_z(first_layer_height + m_config.z_offset.value, "Move to the first layer height"));
             if (print.config().single_extruder_multi_material_priming) {
+				//m_wipe_tower->next_layer();
                 _write(file, m_wipe_tower->prime(*this));
                 // Verify, whether the print overaps the priming extrusions.
                 BoundingBoxf bbox_print(get_print_extrusions_extents(print));
@@ -2665,7 +2666,7 @@ std::string GCode::retract(bool toolchange)
         methods even if we performed wipe, since this will ensure the entire retraction
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
-    if (toolchange || !this->m_config.retract_lift_not_last_layer.value || !(this->m_last_extrusion_role == ExtrusionRole::erTopSolidInfill))
+	if (toolchange || !this->m_config.retract_lift_not_last_layer.get_at(m_writer.extruder()->id()) || !(this->m_last_extrusion_role == ExtrusionRole::erTopSolidInfill))
         if (m_writer.extruder()->retract_length() > 0 || m_config.use_firmware_retraction)
             gcode += m_writer.lift();
     
