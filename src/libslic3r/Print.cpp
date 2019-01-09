@@ -1740,31 +1740,11 @@ void Print::_make_brim_ears() {
 
     //create ear pattern
     coord_t size_ear = (scale_(m_config.brim_width.value) - flow.scaled_spacing());
-    Polygon point_round;
-    point_round.points.push_back(Point(size_ear * 1, 0 * size_ear));
-    point_round.points.push_back(Point(size_ear*0.966, 0.26*size_ear));
-    point_round.points.push_back(Point(size_ear*0.87, 0.5*size_ear));
-    point_round.points.push_back(Point(size_ear*0.7, 0.7*size_ear));
-    point_round.points.push_back(Point(size_ear*0.5, 0.87*size_ear));
-    point_round.points.push_back(Point(size_ear*0.26, 0.966*size_ear));
-    point_round.points.push_back(Point(size_ear * 0, 1 * size_ear));
-    point_round.points.push_back(Point(size_ear*-0.26, 0.966*size_ear));
-    point_round.points.push_back(Point(size_ear*-0.5, 0.87*size_ear));
-    point_round.points.push_back(Point(size_ear*-0.7, 0.7*size_ear));
-    point_round.points.push_back(Point(size_ear*-0.87, 0.5*size_ear));
-    point_round.points.push_back(Point(size_ear*-0.966, 0.26*size_ear));
-    point_round.points.push_back(Point(size_ear*-1, 0 * size_ear));
-    point_round.points.push_back(Point(size_ear*-0.966, -0.26*size_ear));
-    point_round.points.push_back(Point(size_ear*-0.87, -0.5*size_ear));
-    point_round.points.push_back(Point(size_ear*-0.7, -0.7*size_ear));
-    point_round.points.push_back(Point(size_ear*-0.5, -0.87*size_ear));
-    point_round.points.push_back(Point(size_ear*-0.26, -0.966*size_ear));
-    point_round.points.push_back(Point(size_ear * 0, -1 * size_ear));
-    point_round.points.push_back(Point(size_ear*0.26, -0.966*size_ear));
-    point_round.points.push_back(Point(size_ear*0.5, -0.87*size_ear));
-    point_round.points.push_back(Point(size_ear*0.7, -0.7*size_ear));
-    point_round.points.push_back(Point(size_ear*0.87, -0.5*size_ear));
-    point_round.points.push_back(Point(size_ear*0.966, -0.26*size_ear));
+    Polygon point_round; 
+    for (size_t i = 0; i < POLY_SIDES; i++) {
+        double angle = (2.0 * PI * i) / POLY_SIDES;
+        point_round.points.emplace_back(size_ear * cos(angle), size_ear * sin(angle));
+    }
 
     //create ears
     Polygons mouse_ears;
@@ -1840,8 +1820,6 @@ void Print::_make_brim_ears() {
 
                 //update last position
                 previous = &lines_sorted.back();
-            } else {
-                previous == NULL;
             }
             
         }

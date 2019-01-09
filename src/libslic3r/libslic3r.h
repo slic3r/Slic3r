@@ -35,6 +35,8 @@ typedef double  coordf_t;
 // RESOLUTION, SCALED_RESOLUTION: Used as an error threshold for a Douglas-Peucker polyline simplification algorithm.
 #define RESOLUTION 0.0125
 #define SCALED_RESOLUTION (RESOLUTION / SCALING_FACTOR)
+//for creating circles (for brim_ear)
+#define POLY_SIDES 24
 #define PI 3.141592653589793238
 // When extruding a closed loop, the loop is interrupted and shortened a bit to reduce the seam.
 #define LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER 0.15
