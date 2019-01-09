@@ -433,6 +433,8 @@ class PrintConfig : public GCodeConfig
     ConfigOptionFloat               bridge_acceleration;
     ConfigOptionInt                 bridge_fan_speed;
     ConfigOptionFloat               brim_connections_width;
+    ConfigOptionBool                brim_ears;
+    ConfigOptionFloat               brim_ears_max_angle;
     ConfigOptionFloat               brim_width;
     ConfigOptionBool                complete_objects;
     ConfigOptionBool                cooling;
@@ -495,6 +497,8 @@ class PrintConfig : public GCodeConfig
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
         OPT_PTR(brim_connections_width);
+        OPT_PTR(brim_ears);
+        OPT_PTR(brim_ears_max_angle);
         OPT_PTR(brim_width);
         OPT_PTR(complete_objects);
         OPT_PTR(cooling);
