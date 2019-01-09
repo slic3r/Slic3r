@@ -195,7 +195,9 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "min_skirt_length"
             || opt_key == "ooze_prevention") {
             steps.emplace_back(psSkirt);
-        } else if (opt_key == "brim_width") {
+        } else if (opt_key == "brim_width"
+            || opt_key == "brim_ears"
+            || opt_key == "brim_ears_max_angle") {
             steps.emplace_back(psBrim);
             steps.emplace_back(psSkirt);
         } else if (
@@ -1499,7 +1501,10 @@ void Print::process()
         m_brim.clear();
         if (m_config.brim_width > 0) {
             this->set_status(88, "Generating brim");
-            this->_make_brim();
+            if (config().brim_ears)
+                this->_make_brim_ears();
+            else
+                this->_make_brim();
         }
        this->set_done(psBrim);
     }
@@ -1673,8 +1678,7 @@ void Print::_make_skirt()
     m_skirt.reverse();
 }
 
-void Print::_make_brim()
-{
+void Print::_make_brim() {
     // Brim is only printed on first layer and uses perimeter extruder.
     Flow        flow = this->brim_flow();
     Polygons    islands;
@@ -1682,7 +1686,7 @@ void Print::_make_brim()
         Polygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
             object_islands.push_back(expoly.contour);
-        if (! object->support_layers().empty())
+        if (!object->support_layers().empty())
             object->support_layers().front()->support_fills.polygons_covered_by_spacing(object_islands, float(SCALED_EPSILON));
         islands.reserve(islands.size() + object_islands.size() * object->m_copies.size());
         for (const Point &pt : object->m_copies)
@@ -1693,7 +1697,7 @@ void Print::_make_brim()
     }
     Polygons loops;
     size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
-    for (size_t i = 0; i < num_loops; ++ i) {
+    for (size_t i = 0; i < num_loops; ++i) {
         this->throw_if_canceled();
         islands = offset(islands, float(flow.scaled_spacing()), jtSquare);
         for (Polygon &poly : islands) {
@@ -1705,10 +1709,170 @@ void Print::_make_brim()
         }
         polygons_append(loops, offset(islands, -0.5f * float(flow.scaled_spacing())));
     }
-    
+
     loops = union_pt_chained(loops, false);
     std::reverse(loops.begin(), loops.end());
     extrusion_entities_append_loops(m_brim.entities, std::move(loops), erSkirt, float(flow.mm3_per_mm()), float(flow.width), float(this->skirt_first_layer_height()));
+}
+
+void Print::_make_brim_ears() {
+    Flow        flow = this->brim_flow();
+    Points pt_ears;
+    Polygons islands;
+    for (PrintObject *object : m_objects) {
+        Polygons object_islands;
+        for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
+            object_islands.push_back(expoly.contour);
+        if (!object->support_layers().empty())
+            object->support_layers().front()->support_fills.polygons_covered_by_spacing(object_islands, float(SCALED_EPSILON));
+        islands.reserve(islands.size() + object_islands.size() * object->m_copies.size());
+        for (const Point &copy_pt : object->m_copies)
+            for (const Polygon &poly : object_islands) {
+                islands.push_back(poly);
+                islands.back().translate(copy_pt);
+                for (const Point &p : poly.convex_points(config().brim_ears_max_angle.value * PI / 180.0)) {
+                    pt_ears.push_back(p);
+                    pt_ears.back() += (copy_pt);
+                }
+            }
+    }
+
+    //create loops (same as standard brim)
+    Polygons loops;
+    size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
+    for (size_t i = 0; i < num_loops; ++i) {
+        this->throw_if_canceled();
+        islands = offset(islands, float(flow.scaled_spacing()), jtSquare);
+        for (Polygon &poly : islands) {
+            // poly.simplify(SCALED_RESOLUTION);
+            poly.points.push_back(poly.points.front());
+            Points p = MultiPoint::_douglas_peucker(poly.points, SCALED_RESOLUTION);
+            p.pop_back();
+            poly.points = std::move(p);
+        }
+        polygons_append(loops, offset(islands, -0.5f * float(flow.scaled_spacing())));
+    }
+    loops = union_pt_chained(loops, false);
+
+
+    //create ear pattern
+    coord_t size_ear = (scale_(m_config.brim_width.value) - flow.scaled_spacing());
+    Polygon point_round;
+    point_round.points.push_back(Point(size_ear * 1, 0 * size_ear));
+    point_round.points.push_back(Point(size_ear*0.966, 0.26*size_ear));
+    point_round.points.push_back(Point(size_ear*0.87, 0.5*size_ear));
+    point_round.points.push_back(Point(size_ear*0.7, 0.7*size_ear));
+    point_round.points.push_back(Point(size_ear*0.5, 0.87*size_ear));
+    point_round.points.push_back(Point(size_ear*0.26, 0.966*size_ear));
+    point_round.points.push_back(Point(size_ear * 0, 1 * size_ear));
+    point_round.points.push_back(Point(size_ear*-0.26, 0.966*size_ear));
+    point_round.points.push_back(Point(size_ear*-0.5, 0.87*size_ear));
+    point_round.points.push_back(Point(size_ear*-0.7, 0.7*size_ear));
+    point_round.points.push_back(Point(size_ear*-0.87, 0.5*size_ear));
+    point_round.points.push_back(Point(size_ear*-0.966, 0.26*size_ear));
+    point_round.points.push_back(Point(size_ear*-1, 0 * size_ear));
+    point_round.points.push_back(Point(size_ear*-0.966, -0.26*size_ear));
+    point_round.points.push_back(Point(size_ear*-0.87, -0.5*size_ear));
+    point_round.points.push_back(Point(size_ear*-0.7, -0.7*size_ear));
+    point_round.points.push_back(Point(size_ear*-0.5, -0.87*size_ear));
+    point_round.points.push_back(Point(size_ear*-0.26, -0.966*size_ear));
+    point_round.points.push_back(Point(size_ear * 0, -1 * size_ear));
+    point_round.points.push_back(Point(size_ear*0.26, -0.966*size_ear));
+    point_round.points.push_back(Point(size_ear*0.5, -0.87*size_ear));
+    point_round.points.push_back(Point(size_ear*0.7, -0.7*size_ear));
+    point_round.points.push_back(Point(size_ear*0.87, -0.5*size_ear));
+    point_round.points.push_back(Point(size_ear*0.966, -0.26*size_ear));
+
+    //create ears
+    Polygons mouse_ears;
+    for (Point pt : pt_ears) {
+        mouse_ears.push_back(point_round);
+        mouse_ears.back().translate(pt);
+    }
+
+    //intersection
+    Polylines lines = intersection_pl(loops, mouse_ears);
+
+    //reorder them
+    std::sort(lines.begin(), lines.end(), [](const Polyline &a, const Polyline &b)->bool { return a.closest_point(Point(0, 0))->y() < b.closest_point(Point(0, 0))->y(); });
+    Polylines lines_sorted;
+    Polyline* previous = NULL;
+    Polyline* best = NULL;
+    double best_dist = -1;
+    size_t best_idx = 0;
+    while (lines.size() > 0) {
+        if (previous == NULL) {
+            lines_sorted.push_back(lines.back());
+            previous = &lines_sorted.back();
+            lines.erase(lines.end() - 1);
+        } else {
+            best = NULL;
+            best_dist = -1;
+            best_idx = 0;
+            for (size_t i = 0; i < lines.size(); ++i) {
+                Polyline &viewed_line = lines[i];
+                double dist = viewed_line.points.front().distance_to(previous->points.front());
+                dist = std::min(dist, viewed_line.points.front().distance_to(previous->points.back()));
+                dist = std::min(dist, viewed_line.points.back().distance_to(previous->points.front()));
+                dist = std::min(dist, viewed_line.points.back().distance_to(previous->points.back()));
+                if (dist < best_dist || best == NULL) {
+                    best = &viewed_line;
+                    best_dist = dist;
+                    best_idx = i;
+                }
+            }
+            if (best != NULL) {
+                //copy new line inside the sorted array.
+                lines_sorted.push_back(lines[best_idx]);
+                lines.erase(lines.begin() + best_idx);
+
+                //connect if near enough
+                if (lines_sorted.size() > 1) {
+                    size_t idx = lines_sorted.size() - 2;
+                    bool connect = false;
+                    if (lines_sorted[idx].points.back().distance_to(lines_sorted[idx + 1].points.front()) < flow.scaled_spacing() * 2) {
+                        connect = true;
+                    } else if (lines_sorted[idx].points.back().distance_to(lines_sorted[idx + 1].points.back()) < flow.scaled_spacing() * 2) {
+                        lines_sorted[idx + 1].reverse();
+                        connect = true;
+                    } else if (lines_sorted[idx].points.front().distance_to(lines_sorted[idx + 1].points.front()) < flow.scaled_spacing() * 2) {
+                        lines_sorted[idx].reverse();
+                        connect = true;
+                    } else if (lines_sorted[idx].points.front().distance_to(lines_sorted[idx + 1].points.back()) < flow.scaled_spacing() * 2) {
+                        lines_sorted[idx].reverse();
+                        lines_sorted[idx + 1].reverse();
+                        connect = true;
+                    }
+
+                    if (connect) {
+                        //connect them
+                        lines_sorted[idx].points.insert(
+                            lines_sorted[idx].points.end(),
+                            lines_sorted[idx + 1].points.begin(),
+                            lines_sorted[idx + 1].points.end());
+                        lines_sorted.erase(lines_sorted.begin() + idx + 1);
+                        idx--;
+                    }
+                }
+
+                //update last position
+                previous = &lines_sorted.back();
+            } else {
+                previous == NULL;
+            }
+            
+        }
+    }
+
+    //push into extrusions
+    extrusion_entities_append_paths(
+        m_brim.entities,
+        lines_sorted,
+        erSkirt,
+        float(flow.mm3_per_mm()),
+        float(flow.width),
+        float(this->skirt_first_layer_height())
+        );
 }
 
 // Wipe tower support.

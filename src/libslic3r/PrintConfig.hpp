@@ -788,6 +788,8 @@ public:
     ConfigOptionInts                bridge_fan_speed;
     ConfigOptionInts                top_fan_speed;
     ConfigOptionFloat               brim_width;
+    ConfigOptionBool                brim_ears;
+    ConfigOptionFloat               brim_ears_max_angle;
     ConfigOptionBool                complete_objects;
     ConfigOptionFloats              colorprint_heights;
     ConfigOptionBools               cooling;
@@ -867,6 +869,8 @@ protected:
         OPT_PTR(bridge_fan_speed);
         OPT_PTR(top_fan_speed);
         OPT_PTR(brim_width);
+        OPT_PTR(brim_ears);
+        OPT_PTR(brim_ears_max_angle);
         OPT_PTR(complete_objects);
         OPT_PTR(colorprint_heights);
         OPT_PTR(cooling);

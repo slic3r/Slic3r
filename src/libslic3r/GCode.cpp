@@ -1567,7 +1567,7 @@ void GCode::process_layer(
             this->set_origin(0., 0.);
             m_avoid_crossing_perimeters.use_external_mp = true;
             for (const ExtrusionEntity *ee : print.brim().entities)
-                gcode += this->extrude_loop(*dynamic_cast<const ExtrusionLoop*>(ee), "brim", m_config.support_material_speed.value);
+                gcode += this->extrude_entity(*ee, "brim", m_config.support_material_speed.value);
             m_brim_done = true;
             m_avoid_crossing_perimeters.use_external_mp = false;
             // Allow a straight travel move to the first object point.

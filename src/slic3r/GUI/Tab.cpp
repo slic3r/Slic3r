@@ -988,7 +988,11 @@ void TabPrint::build()
 		optgroup->append_single_option_line("min_skirt_length");
 
 		optgroup = page->new_optgroup(_(L("Brim")));
-		optgroup->append_single_option_line("brim_width");
+        optgroup->append_single_option_line("brim_width");
+        line = { _(L("Brim ears")), "" };
+        line.append_option(optgroup->get_option("brim_ears"));
+        line.append_option(optgroup->get_option("brim_ears_max_angle"));
+        optgroup->append_line(line);
 
 	page = add_options_page(_(L("Support material")), "building.png");
 		optgroup = page->new_optgroup(_(L("Support material")));
@@ -1378,6 +1382,9 @@ void TabPrint::update()
 	bool have_brim = m_config->opt_float("brim_width") > 0;
 	// perimeter_extruder uses the same logic as in Print::extruders()
 	get_field("perimeter_extruder")->toggle(have_perimeters || have_brim);
+
+    get_field("brim_ears")->toggle(have_brim);
+    get_field("brim_ears_max_angle")->toggle(have_brim && m_config->opt_bool("brim_ears"));
 
 	bool have_raft = m_config->opt_int("raft_layers") > 0;
 	bool have_support_material = m_config->opt_bool("support_material") || have_raft;

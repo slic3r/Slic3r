@@ -212,6 +212,21 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
 
+    def = this->add("brim_ears", coBool);
+    def->label = L(" ");
+    def->tooltip = L("Only draw brim over the sharp edges of the model.");
+    def->cli = "brim-ears!";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("brim_ears_max_angle", coFloat);
+    def->label = L("max angle");
+    def->tooltip = L("Maximum angle to let a brim ear appear.");
+    def->sidetext = L("°");
+    def->cli = "brim-ears-max-angle=f";
+    def->min = 0;
+    def->max = 180;
+    def->default_value = new ConfigOptionFloat(125);
+
     def = this->add("clip_multipart_objects", coBool);
     def->label = L("Clip multi-part objects");
     def->tooltip = L("When printing multi-material objects, this settings will make slic3r "

@@ -374,6 +374,7 @@ private:
 
     void                _make_skirt();
     void                _make_brim();
+    void                _make_brim_ears();
     void                _make_wipe_tower();
     void                _simplify_slices(double distance);
 
