@@ -153,6 +153,51 @@ SCENARIO("Original Slic3r Skirt/Brim tests", "[!mayfail]") {
                 REQUIRE(tool == config->getInt("support_material_extruder") - 1);
             }
         }
+        WHEN("brim width to 1 with layer_width of 0.5") {
+            config->set("skirts", 0);
+            config->set("first_layer_extrusion_width", 0.5);
+            config->set("brim_width", 1);
+            config->set("brim_ears", false);
+			
+            THEN("2 brim lines") {
+                Slic3r::Model model;
+                auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+                print->process();
+                REQUIRE(print->brim.size() == 2);
+            }
+        }
+
+        WHEN("brim ears on a square") {
+            config->set("skirts", 0);
+            config->set("first_layer_extrusion_width", 0.5);
+            config->set("brim_width", 1);
+            config->set("brim_ears", true);
+            config->set("brim_ears_max_angle", 91);
+			
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+            print->process();
+
+            THEN("Four brim ears") {
+                REQUIRE(print->brim.size() == 4);
+            }
+        }
+
+
+        WHEN("brim ears on a square but with a too small max angle") {
+            config->set("skirts", 0);
+            config->set("first_layer_extrusion_width", 0.5);
+            config->set("brim_width", 1);
+            config->set("brim_ears", true);
+            config->set("brim_ears_max_angle", 89);
+			
+            THEN("no brim") {
+                Slic3r::Model model;
+                auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+                print->process();
+                REQUIRE(print->brim.size() == 0);
+            }
+        }
 
         WHEN("Object is plated with overhang support and a brim") {
             config->set("layer_height", 0.4);
