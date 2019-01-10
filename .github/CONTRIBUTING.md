@@ -44,12 +44,8 @@ contributing to the Slic3r project.
 	* Please comment in the related GitHub issue that you are working on it so that other people know.
 * Review the [TODO wiki page](https://github.com/slic3r/Slic3r/wiki/TODO).
 * Contribute to the [Manual](http://manual.slic3r.org/)! (see its [GitHub repository](https://github.com/slic3r/Slic3r-Manual))
-* You can also find us in #slic3r on [FreeNode](https://webchat.freenode.net): talk to _Sound_, _LoH_ or the other members of the Slic3r community.
 * Add an [issue](https://github.com/slic3r/Slic3r/issues) to the GitHub tracker if it isn't already present.
 * Update Slic3r's test suite to improve test coverage [Writing Test Cases](https://github.com/slic3r/Slic3r/wiki/Code:-Writing-Test-Cases)
-* Drop Alessandro a line at aar@cpan.org.
-* Drop Joseph a line at lenox.joseph@gmail.com
-
 * A good place to start if you can is to look over the [Pull Request or Bust](https://github.com/alexrj/Slic3r/milestones/Pull%20Request%20or%20Bust) milestone. This contains all of the things (mostly new feature requests) that there isn't time or resources to address at this time. 
      * Things that are probably fixable via scripts (usually marked as such) have the lowest bar to getting something that works, as you don't need to recompile Slic3r to test.
 * If you're starting on an issue, please say something in the related issues thread so that someone else doesn't start working on it too.
@@ -58,3 +54,9 @@ contributing to the Slic3r project.
      * Pull requests that contain unrelated changes will be rejected.
      * A common workflow is to fork the master branch, create your new branch and do your work there. git-rebase and git-cherry-pick are also helpful for separating out unrelated changes.
 * If you are pushing Slic3r code changes that touch the main application, it is very much appreciated if you write some tests that check the functionality of the code. It's much easier to vet and merge in code that includes tests and doing so will likely speed things up.
+
+## Communication
+
+* #slic3r on [FreeNode](https://webchat.freenode.net): talk to _Sound_, _LoH_ or the other members of the Slic3r community.
+* Drop Alessandro a line at aar@cpan.org.
+* Drop Joseph a line at lenox.joseph@gmail.com
