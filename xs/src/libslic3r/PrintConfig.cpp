@@ -163,14 +163,14 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("brim_ears", coBool);
     def->label = __TRANS("Exterior brim ears");
     def->category = __TRANS("Skirt and brim");
-    def->tooltip = __TRANS("Only draw the exterior brim over the sharp edges of the model.");
+    def->tooltip = __TRANS("Draw the brim only over the sharp edges of the model.");
     def->cli = "brim-ears!";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("brim_ears_max_angle", coFloat);
-    def->label = __TRANS("Brim ears max angle");
+    def->label = __TRANS("Brim ears Maximum Angle");
     def->category = __TRANS("Skirt and brim");
-    def->tooltip = __TRANS("Maximum angle to let a brim ear appear.");
+    def->tooltip = __TRANS("Maximum angle for a corner to place a brim ear.");
     def->sidetext = "°";
     def->cli = "brim-ears-max-angle=f";
     def->min = 0;
