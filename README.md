@@ -70,7 +70,7 @@ Sure! You can do the following to find things that are available to help with:
 ### Directory structure
 
 * `package/`: the scripts used for packaging the executables
-* `src/`: the C++ source of the `slic3r` executable the and CMake definition file for compiling it
+* `src/`: the C++ source of the `slic3r` executable and the CMake definition file for compiling it
 * `src/GUI`: The C++ GUI.
 * `src/test`: New test suite for libslic3r and the GUI. Implemented with [Catch2](https://github.com/catchorg/Catch2)
 * `t/`: the test suite (deprecated)
