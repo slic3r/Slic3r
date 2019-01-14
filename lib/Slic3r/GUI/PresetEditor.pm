@@ -612,6 +612,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Raft');
             $optgroup->append_single_option_line('raft_layers');
+            $optgroup->append_single_option_line('raft_offset');
         }
         {
             my $optgroup = $page->new_optgroup('Options for support material and raft');
