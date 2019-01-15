@@ -271,9 +271,11 @@ sub validate {
             if $self->support_material || $self->support_material_enforce_layers > 0;
     }
     # --min-layer-height and --max-layer-height
+    for (my $extruder=0; $extruder < scalar @{$self->max_layer_height}; $extruder++) {
         die "Max layer height should be greater than min layer height."
-            if $self->adaptive_slicing && ($self->max_layer_height < $self->min_layer_height);
-    
+            if $self->adaptive_slicing && ($self->max_layer_height->[$extruder] < $self->min_layer_height->[$extruder]);
+    };
+
     # extrusion widths
     {
         my $max_nozzle_diameter = max(@{ $self->nozzle_diameter });
