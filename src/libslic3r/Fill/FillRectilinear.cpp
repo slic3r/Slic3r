@@ -81,7 +81,7 @@ void FillRectilinear::_fill_surface_single(
     size_t n_polylines_out_old = polylines_out.size();
 
     // connect lines
-    if (! params.dont_connect && ! polylines.empty()) { // prevent calling leftmost_point() on empty collections
+    if (! polylines.empty()) { // prevent calling leftmost_point() on empty collections
         // offset the expolygon by max(min_spacing/2, extra)
         ExPolygon expolygon_off;
         {
@@ -97,7 +97,7 @@ void FillRectilinear::_fill_surface_single(
             PolylineCollection::leftmost_point(polylines), false); // reverse allowed
         bool first = true;
         for (Polylines::iterator it_polyline = chained.begin(); it_polyline != chained.end(); ++ it_polyline) {
-            if (! first) {
+            if (!params.dont_connect && !first) {
                 // Try to connect the lines.
                 Points &pts_end = polylines_out.back().points;
                 const Point &first_point = it_polyline->points.front();
