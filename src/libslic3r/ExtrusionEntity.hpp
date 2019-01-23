@@ -287,9 +287,15 @@ inline void extrusion_entities_append_paths(ExtrusionEntitiesPtr &dst, Polylines
     dst.reserve(dst.size() + polylines.size());
     for (Polyline &polyline : polylines)
         if (polyline.is_valid()) {
-            ExtrusionPath *extrusion_path = new ExtrusionPath(role, mm3_per_mm, width, height);
-            dst.push_back(extrusion_path);
-            extrusion_path->polyline = polyline;
+            if (polyline.points.back() == polyline.points.front()) {
+                ExtrusionPath path(role, mm3_per_mm, width, height);
+                path.polyline.points = polyline.points;
+                dst.emplace_back(new ExtrusionLoop(std::move(path)));
+            } else {
+                ExtrusionPath *extrusion_path = new ExtrusionPath(role, mm3_per_mm, width, height);
+                dst.push_back(extrusion_path);
+                extrusion_path->polyline = polyline;
+            }
         }
 }
 
@@ -298,9 +304,15 @@ inline void extrusion_entities_append_paths(ExtrusionEntitiesPtr &dst, Polylines
     dst.reserve(dst.size() + polylines.size());
     for (Polyline &polyline : polylines)
         if (polyline.is_valid()) {
-            ExtrusionPath *extrusion_path = new ExtrusionPath(role, mm3_per_mm, width, height);
-            dst.push_back(extrusion_path);
-            extrusion_path->polyline = std::move(polyline);
+            if (polyline.points.back() == polyline.points.front()) {
+                ExtrusionPath path(role, mm3_per_mm, width, height);
+                path.polyline.points = polyline.points;
+                dst.emplace_back(new ExtrusionLoop(std::move(path)));
+            } else {
+                ExtrusionPath *extrusion_path = new ExtrusionPath(role, mm3_per_mm, width, height);
+                dst.push_back(extrusion_path);
+                extrusion_path->polyline = std::move(polyline);
+            }
         }
     polylines.clear();
 }
