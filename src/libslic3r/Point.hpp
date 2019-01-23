@@ -123,6 +123,11 @@ public:
     Point  projection_onto(const Line &line) const;
 
     double distance_to(const Point &point) const { return (point - *this).cast<double>().norm(); }
+    double distance_to_square(const Point &point) const {
+        double dx = (point.x() - this->x());
+        double dy = (point.y() - this->y());
+        return dx*dx + dy*dy;
+    }
     double distance_to(const Line &line) const;
     bool coincides_with(const Point &point) const { return this->x() == point.x() && this->y() == point.y(); }
     bool coincides_with_epsilon(const Point &point) const {
